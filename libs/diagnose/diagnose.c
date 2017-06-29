@@ -1,3 +1,6 @@
+#ifndef WINDOWS
+//#define DEPURAR 1
+#endif
 /*==============================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
@@ -112,22 +115,10 @@ static void STestInit ( STest * self, const KDiagnose * test )
     self -> vmgr = test -> vmgr;
 
     self -> verbosity = test -> verbosity;
-    switch ( self -> verbosity ) {
-        case -3: /* none  ( KVERBOSITY_NONE  ) */
-        case -2: /* error ( KVERBOSITY_ERROR ) */
-        case -1: /* info  ( KVERBOSITY_INFO  ) */
-            break;
-        case 0: /* max */
-            self -> verbosity = sizeof self -> n / sizeof self -> n [ 0 ] - 1;
-            break;
-        default:
-            if ( self -> verbosity >= 0 )
-                -- self -> verbosity;
-            else
-                self -> verbosity
-                    = sizeof self -> n / sizeof self -> n [ 0 ] - 1;
-            break;
-    }
+    if ( self -> verbosity > 0 )
+        -- self -> verbosity;
+    else if ( self -> verbosity == 0 ) /* max */
+        self -> verbosity = sizeof self -> n / sizeof self -> n [ 0 ] - 1;
 }
 
 static void STestFini ( STest * self ) {
@@ -139,7 +130,7 @@ static void STestFini ( STest * self ) {
     if ( self -> n [ 0 ] == 0 || self -> n [ 1 ] != 0 || self -> level != 0 )
         OUTMSG ( ( "= TEST WAS NOT COMPLETED\n" ) );
 
-    OUTMSG ( ( "= %d (%d) tests were performed\n",
+    OUTMSG ( ( "= %d (%d) tests performed\n",
                self -> n [ 0 ], self -> total ) );
 }
 
@@ -187,7 +178,7 @@ const char*c=self->msg.base;
                 OUTMSG ( ( "CANNOT PRINT: %R\n", rc ) );
         }
     if ( rc == 0 )
-        rc = KDataBufferPrintf ( & self -> msg, " %s: ", b );
+        rc = KDataBufferPrintf ( & self -> msg, " %s ", b );
         if ( rc != 0 )
             OUTMSG ( ( "CANNOT PRINT: %R\n", rc ) );
 
@@ -226,6 +217,29 @@ static rc_t STestVEnd ( STest * self, EOK ok,
                         const char * fmt, va_list args )
 {
     rc_t rc = 0;
+#ifdef DEPURAR
+switch(ok){
+case eFAIL:
+rc=0;
+break;
+case eOK:
+rc=1;
+break;
+case eMSG:
+rc=2;
+break;
+case eEndFAIL:
+rc=3;
+break;
+case eEndOK:
+rc=4;
+break;
+case eDONE:
+rc=5;
+break;
+}
+rc=0;
+#endif
     bool failedWhileSilent = self -> failedWhileSilent;
     bool print = false;
     char b [ 512 ] = "";
@@ -252,18 +266,19 @@ const char*c=self->msg.base;
     }
 
     if ( self -> level > self -> verbosity ) {
-        if ( ok == eEndFAIL ) {
-            rc = KDataBufferPrintf ( & self -> msg,  "%s\n", b );
+        if ( ok == eEndFAIL || ok == eMSG ) {
+            rc = KDataBufferPrintf ( & self -> msg, b );
             if ( rc != 0 )
                 OUTMSG ( ( "CANNOT PRINT: %R", rc ) );
-            else {
+            else if ( ok == eEndFAIL ) {
+                rc = KDataBufferPrintf ( & self -> msg, "\n" );
                 if ( self -> started ) {
                     OUTMSG ( ( "\n" ) );
                     self -> failedWhileSilent = true;
                     self -> started = false;
                 }
                 if ( self -> level >= KVERBOSITY_ERROR )
-                    OUTMSG ( ( "%s", self -> msg . base ) );
+                    OUTMSG ( ( self -> msg . base ) );
                 assert ( self -> msg . base );
                 ( ( char * ) self -> msg . base)  [ 0 ] = '\0';
                 self -> msg . elem_count = 0;
@@ -436,7 +451,7 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
     rc_t rc = STestStart ( self, true, "Support of Range requests" );
     uint64_t pos = 0;
     size_t bytes = 4096;
-    size_t ebytes = bytes;
+    uint64_t ebytes = bytes;
     bool https = false;
     char buffer [ 1024 ] = "";
     size_t num_read = 0;
@@ -811,7 +826,7 @@ static String * KConfig_Resolver ( const KConfig * self ) {
 }
 
 static int KConfig_Verbosity ( const KConfig * self ) {
-    int v = -1;
+    int64_t v = -1;
 
     String * s = NULL;
     rc_t rc = KConfigReadString ( self,
@@ -828,7 +843,7 @@ static int KConfig_Verbosity ( const KConfig * self ) {
     free ( s );
     s = NULL;
 
-    return v;
+    return ( int ) v;
 }
 
 static const char * STestCallCgi ( STest * self, const String * acc,
@@ -927,7 +942,7 @@ static const char * STestCallCgi ( STest * self, const String * acc,
             STestEnd ( self, eEndOK, "'%s': OK", response );
             if ( rs == 0 ) {
                 int i = 0;
-                int p = 0;
+                unsigned p = 0;
                 for ( i = 0; p < * resp_read ; ++ i ) {
                     char * n = string_chr ( response + p,
                                             * resp_read - p, '|' );
@@ -1097,7 +1112,7 @@ static rc_t STestCheckNetwork ( STest * self, const Data * data,
 static const char CLASSNAME [] = "KDirectory";
 
 LIB_EXPORT rc_t CC KDiagnoseMakeExt ( KDiagnose ** test, KConfig * kfg,
-                                      KNSManager * kmgr, VFSManager * vmgr )
+    KNSManager * kmgr, VFSManager * vmgr )
 {
     rc_t rc = 0;
 
@@ -1192,11 +1207,10 @@ LIB_EXPORT rc_t CC KDiagnoseRelease ( const KDiagnose * cself ) {
     return rc;
 }
 
-LIB_EXPORT rc_t CC KDiagnoseRun ( KDiagnose * self ) {
+LIB_EXPORT rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests ) {
     rc_t rc = 0;
 
     const char exp [] = "NCBI.sra\210\031\003\005\001\0\0\0";
-    rc_t r1 = 0;
     rc_t r2 = 0;
     STest t;
 
@@ -1209,74 +1223,87 @@ LIB_EXPORT rc_t CC KDiagnoseRun ( KDiagnose * self ) {
 
     assert ( self );
 
+    if ( tests == DIAGNOSE_ALL )
+        tests = ~ 0;
+
     STestInit ( & t, self );
 
-    rc = STestStart ( & t, true, "Network" );
-    {
+    if ( tests & DIAGNOSE_CONFIG ) {
+        rc_t r1 = STestStart ( & t, true, "Configuration" );
+        STestEnd ( & t, r1 == 0 ? eOK : eFAIL, "Configuration" );
+        if ( rc == 0 )
+            rc = r1;
+    }
+
+    if ( tests & DIAGNOSE_NETWORK ) {
+        rc_t r1 = STestStart ( & t, true, "Network" );
+        {
 #undef  HOST
 #define HOST "www.ncbi.nlm.nih.gov"
-        String h;
-        Data d;
-        CONST_STRING ( & h, HOST );
-        r2 = DataInit ( & d, self -> vmgr, "https://" HOST );
-        if ( r2 == 0 )
-            r2 = STestCheckNetwork ( & t, & d, 0, 0,
-                                     NULL, "Access to '%S'", & h );
-        if ( r1 == 0 )
-            r1 = r2;
-        DataFini ( & d );
-    }
-    {
+            String h;
+            Data d;
+            CONST_STRING ( & h, HOST );
+            r2 = DataInit ( & d, self -> vmgr, "https://" HOST );
+            if ( r2 == 0 )
+                r2 = STestCheckNetwork ( & t, & d, 0, 0,
+                                         NULL, "Access to '%S'", & h );
+            if ( r1 == 0 )
+                r1 = r2;
+            DataFini ( & d );
+        }
+        {
 #undef  HOST
 #define HOST "sra-download.ncbi.nlm.nih.gov"
-        String h;
-        Data d;
-        CONST_STRING ( & h, HOST );
-        r2 = DataInit ( & d, self -> vmgr,
-                             "https://" HOST "/srapub/SRR042846" );
-        if ( r2 == 0 )
-            r2 = STestCheckNetwork ( & t, & d, exp, sizeof exp - 1,
-                                     NULL, "Access to '%S'", & h );
-        if ( r1 == 0 )
-            r1 = r2;
-        DataFini ( & d );
-    }
-    {
+            String h;
+            Data d;
+            CONST_STRING ( & h, HOST );
+            r2 = DataInit ( & d, self -> vmgr,
+                            "https://" HOST "/srapub/SRR042846" );
+            if ( r2 == 0 )
+                r2 = STestCheckNetwork ( & t, & d, exp, sizeof exp - 1,
+                                         NULL, "Access to '%S'", & h );
+            if ( r1 == 0 )
+                r1 = r2;
+            DataFini ( & d );
+        }
+        {
 #undef  HOST
 #define HOST "ftp-trace.ncbi.nlm.nih.gov"
-        String h;
-        Data d;
-        Data v;
-        CONST_STRING ( & h, HOST );
-        r2 = DataInit ( & d, self -> vmgr,
-            "https://" HOST "/sra/refseq/KC702174.1" );
-        if ( r2 == 0 )
-            r2 = DataInit ( & v, self -> vmgr,
-                "https://" HOST "/sra/sdk/current/sratoolkit.current.version" );
-        if ( r2 == 0 )
-            r2 = STestCheckNetwork ( & t, & d, exp, sizeof exp - 1,
-                                     & v, "Access to '%S'", & h );
-        if ( r1 == 0 )
-            r1 = r2;
-        DataFini ( & d );
-    }
-    {
+            String h;
+            Data d;
+            Data v;
+            CONST_STRING ( & h, HOST );
+            r2 = DataInit ( & d, self -> vmgr,
+                            "https://" HOST "/sra/refseq/KC702174.1" );
+            if ( r2 == 0 )
+                r2 = DataInit ( & v, self -> vmgr, "https://" HOST
+                                "/sra/sdk/current/sratoolkit.current.version" );
+            if ( r2 == 0 )
+                r2 = STestCheckNetwork ( & t, & d, exp, sizeof exp - 1,
+                                         & v, "Access to '%S'", & h );
+            if ( r1 == 0 )
+                r1 = r2;
+            DataFini ( & d );
+        }
+        {
 #undef  HOST
 #define HOST "gap-download.ncbi.nlm.nih.gov"
-        String h;
-        Data d;
-        CONST_STRING ( & h, HOST );
-        r2 = DataInit ( & d, self -> vmgr, "https://" HOST );
-        if ( r2 == 0 )
-            r2 = STestCheckNetwork ( & t, & d, NULL, 0, 
-                                     NULL, "Access to '%S'", & h );
-        if ( r1 == 0 )
-            r1 = r2;
-        DataFini ( & d );
+            String h;
+            Data d;
+            CONST_STRING ( & h, HOST );
+            r2 = DataInit ( & d, self -> vmgr, "https://" HOST );
+            if ( r2 == 0 )
+                r2 = STestCheckNetwork ( & t, & d, NULL, 0, 
+                                         NULL, "Access to '%S'", & h );
+            if ( r1 == 0 )
+                r1 = r2;
+            DataFini ( & d );
+        }
+        STestEnd ( & t, r1 == 0 ? eOK : eFAIL, "Network" );
+        if ( rc == 0 )
+            rc = r1;
     }
-    STestEnd ( & t, r1 == 0 ? eOK : eFAIL, "Network" );
-    if ( rc == 0 )
-        rc = r1;
+
     STestFini ( & t );
     KDiagnoseRelease ( self );
     return rc;

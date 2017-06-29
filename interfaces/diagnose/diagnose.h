@@ -58,7 +58,11 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseRelease ( const KDiagnose * self );
 #define KVERBOSITY_MAX    0
 DIAGNOSE_EXTERN rc_t CC KDiagnoseSetVerbosity ( KDiagnose * self,
                                                 int verbosity );
-DIAGNOSE_EXTERN rc_t CC KDiagnoseRun ( KDiagnose * self );
+
+#define DIAGNOSE_ALL     0
+#define DIAGNOSE_CONFIG  1
+#define DIAGNOSE_NETWORK 2
+DIAGNOSE_EXTERN rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests );
 
 
 #ifdef __cplusplus
