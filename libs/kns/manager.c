@@ -956,22 +956,40 @@ LIB_EXPORT bool CC KNSManagerSetHTTPProxyEnabled ( KNSManager * self, bool enabl
 }
 
 
-static bool KConfig_GetNCBI_VDB_NET ( const KConfig* self ) {
+static void KNSManagerSetNCBI_VDB_NET ( KNSManager * self, const KConfig * kfg )
+{
     rc_t rc = 0;
 
     const KConfigNode * node = NULL;
 
-    if ( self == NULL )
-        return false;
+    if ( self == NULL || kfg == NULL )
+        return;
 
-    rc = KConfigOpenNodeRead ( self, & node, "/libs/kns/NCBI_VDB_NET" );
-    if ( rc != 0 )
-        return false;
+    rc = KConfigOpenNodeRead ( kfg, & node, "/libs/kns/NCBI_VDB_NET" );
+    if ( rc != 0 ) {
+        self -> NCBI_VDB_NETkfgValueSet = self -> NCBI_VDB_NETkfgValue = false;
+        return;
+    }
+    else {
+        char buffer [ 1 ] = "";
+        size_t num_read = 0;
+        self -> NCBI_VDB_NETkfgValueSet = true;
+        rc = KConfigNodeRead ( node, 0, buffer, sizeof buffer, & num_read, 0 );
+        if ( num_read == 0 )
+            self -> NCBI_VDB_NETkfgValue = false;
+        else switch ( buffer [ 0 ] ) {
+            case '0':
+            case 'f': /* false */
+                self -> NCBI_VDB_NETkfgValue = false;
+                break;
+            default:
+                self -> NCBI_VDB_NETkfgValue = true;
+                break;
+        }
+    }
 
     KConfigNodeRelease ( node );
     node = NULL;
-
-    return true;
 } 
 
 
@@ -1016,8 +1034,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
                     {
                         KNSManagerLoadAWS ( mgr, kfg );
                         KNSManagerHttpProxyInit ( mgr, kfg );
-                        mgr -> NCBI_VDB_NETkfgValue
-                            = KConfig_GetNCBI_VDB_NET ( kfg );
+                        KNSManagerSetNCBI_VDB_NET ( mgr, kfg );
 
                         * mgrp = mgr;
 
@@ -1073,13 +1090,37 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char ** user_agent )
     return rc;
 }
 
+/******************************************************************************/
+
 #define NCBI_VDB_NET 1 /* VDB-3399 : temporarily enable for internal testing */
 
-bool LogNcbiVdbNetError ( bool force ) {
+bool KNSManagerLogNcbiVdbNetError ( const KNSManager * self ) {
+    if ( self == NULL )
 #ifdef NCBI_VDB_NET
     return true;
+#else
+    return false;
 #endif
-    if ( force )
+    else {
+        const char * e = getenv ( "NCBI_VDB_NET" );
+        if ( e != NULL ) {
+            if ( e [ 0 ] == '0' ||
+                 e [ 0 ] == 'f' ) /* false */
+            {
+                return false;
+            }
+            else
+                return true;
+        }
+        else {
+            if ( self -> NCBI_VDB_NETkfgValueSet )
+                return self -> NCBI_VDB_NETkfgValue;
+        }
+
+#ifdef NCBI_VDB_NET
         return true;
-    return getenv ( "NCBI_VDB_NET" ) != NULL;
+#else
+        return false;
+#endif
+    }
 }

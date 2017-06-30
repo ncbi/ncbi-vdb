@@ -378,7 +378,8 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
     
     if ( rc == 0 )
     {
-        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedRead(pos=%lu)\n", pos ) );
+        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
+            ( "KHttpFileTimedRead(pos=%lu,size=%zu)...\n", pos, bsize ) );
         
         /* loop using existing KClientHttp object */
         while ( rc == 0 ) 
@@ -406,6 +407,10 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
             }
             if ( ! KHttpRetrierWait ( & retrier, http_status ) )
             {
+                assert ( num_read );
+                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
+                    ( "...KHttpFileTimedRead(pos=%lu,size=%zu)=%zu\n\n",
+                      pos, bsize, * num_read ) );
                 break;
             }
             rc = KClientHttpReopen ( self -> http );
@@ -424,9 +429,18 @@ static
 rc_t CC KHttpFileRead ( const KHttpFile *self, uint64_t pos,
      void *buffer, size_t bsize, size_t *num_read )
 {
+    rc_t rc = 0;
     struct timeout_t tm;
     TimeoutInit ( & tm, self -> kns -> http_read_timeout );
-    return KHttpFileTimedRead ( self, pos, buffer, bsize, num_read, & tm );
+    rc = KHttpFileTimedRead ( self, pos, buffer, bsize, num_read, & tm );
+    if ( rc != 0 && KNSManagerLogNcbiVdbNetError ( self -> kns ) ) {
+        KEndPoint ep;
+        KClientHttpGetEndpoint ( self -> http, & ep );
+        PLOGERR ( klogErr, ( klogErr, rc,
+            "Failed to KHttpFileRead('$(path)' ($(ip)))", "path=%s,ip=%s",
+            self -> url_buffer . base, ep . ip_address ) );
+    }
+    return rc;
 }
 
 static
@@ -590,7 +604,7 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                                 else {
                                                     KEndPoint ep;
                                                     KClientHttpGetEndpoint ( http, & ep );
-                                                    if ( LogNcbiVdbNetError ( self -> NCBI_VDB_NETkfgValue ) ) {
+                                                    if ( KNSManagerLogNcbiVdbNetError ( self ) ) {
                                                         assert ( buf );
                                                         PLOGERR ( klogErr,
                                                             ( klogErr, rc,
