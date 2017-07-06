@@ -113,6 +113,8 @@ typedef struct {
 
 static void STestInit ( STest * self, const KDiagnose * test )
 {
+    rc_t rc = 0;
+
     assert ( self && test );
 
     memset ( self, 0, sizeof * self );
@@ -129,7 +131,7 @@ static void STestInit ( STest * self, const KDiagnose * test )
     else if ( self -> verbosity == 0 ) /* max */
         self -> verbosity = sizeof self -> n / sizeof self -> n [ 0 ] - 1;
 
-    rc_t rc = KDirectoryNativeDir ( & self -> dir );
+    rc = KDirectoryNativeDir ( & self -> dir );
     if ( rc != 0 )
         OUTMSG ( ( "CANNOT KDirectoryNativeDir: %R\n", rc ) );
 
@@ -667,9 +669,10 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
     rc_t rc = 0;
     size_t total = 0;
     char buffer [ 1024 ] = "";
-    assert ( cache && cacheSize );
     KFile * out = NULL;
     rc_t rw = 0;
+    uint64_t pos = 0;
+    assert ( cache && cacheSize );
     if ( cache [ 0 ] != '\0' ) {
         if ( KDirectory_RemoveCache ( self -> dir, cache ) == kptNotFound ) {
             rw = KDirectoryCreateFile ( self -> dir, & out, false,  0664,
@@ -679,7 +682,6 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
         }
     }
     STestStart ( self, false, "KStreamRead(KHttpResult):" );
-    uint64_t pos = 0;
     while ( rc == 0 ) {
         size_t num_read = 0;
         rc = KStreamRead ( stream, buffer, sizeof buffer, & num_read );
@@ -745,9 +747,11 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
             break;
         }
     }
-    rc_t r2 = KFileRelease ( out );
-    if ( rw == 0 )
-        rw = r2;
+    {
+        rc_t r2 = KFileRelease ( out );
+        if ( rw == 0 )
+            rw = r2;
+    }
     if ( rw == 0 )
         * cacheSize = pos;
     return rc;
@@ -1059,6 +1063,10 @@ static rc_t STestCheckFasp ( STest * self, const Data * data, const char * url,
 {
     rc_t rc = 0;
 
+    uint32_t m = 0;
+    String fasp;
+    String schema;
+
     assert ( self && data );
 
     if ( ! self -> ascpChecked ) {
@@ -1078,16 +1086,14 @@ static rc_t STestCheckFasp ( STest * self, const Data * data, const char * url,
         return 0;
     }
 
-    String fasp;
     CONST_STRING ( & fasp, "fasp://" );
 
-    uint32_t m = string_measure ( url, NULL );
+    m = string_measure ( url, NULL );
     if ( m < fasp . size ) {
         OUTMSG ( ( "UNEXPECTED SCHEMA IN '%s'", url ) );
         return 0;
     }
 
-    String schema;
     StringInit( & schema, url, fasp . size, fasp . len );
     if ( ! StringEqual ( & schema, & fasp ) ) {
         OUTMSG ( ( "UNEXPECTED SCHEMA IN '%s'", url ) );
@@ -1120,6 +1126,12 @@ static rc_t STestCheckAcc ( STest * self, const Data * data,
     String acc;
     bool checked = false;
 
+    const VPath * vcache = NULL;
+    char faspCache [ PATH_MAX ] = "";
+    uint64_t faspCacheSize = 0;
+    char httpCache [ PATH_MAX ] = "";
+    uint64_t httpCacheSize = 0;
+
     assert ( self && data );
 
     memset ( & acc, 0, sizeof acc );
@@ -1128,19 +1140,14 @@ static rc_t STestCheckAcc ( STest * self, const Data * data,
         url = STestCallCgi ( self, & acc,
                              response, sizeof response, & resp_len );
     }
-    const VPath * vcache = NULL;
-    char faspCache [ PATH_MAX ] = "";
-    uint64_t faspCacheSize = 0;
-    char httpCache [ PATH_MAX ] = "";
-    uint64_t httpCacheSize = 0;
     if ( acc . size != 0 ) {
+        String cache;
         VPath * path = NULL;
         rc_t rc = VFSManagerMakePath ( self -> vmgr, & path,
                                        "%S", data -> acc );
         if ( rc == 0 )
             rc = VResolverQuery ( self -> resolver, eProtocolFasp,
                                   path, NULL, NULL, & vcache);
-        String cache;
         if ( rc == 0 )
             rc = VPathGetPath ( vcache, & cache );
         if ( rc == 0 ) {
@@ -1284,11 +1291,12 @@ static rc_t STestCheckAcc ( STest * self, const Data * data,
             RELEASE ( KFile, http );
         }
         if ( r1 == 0 ) {
+            rc_t r2 = 0;
             r1 = KDirectoryRemove ( self -> dir, false, faspCache );
             if ( r1 != 0 )
                 STestEnd ( self, eEndFAIL, "FAILURE: cannot remove '%s': %R",
                                            faspCache, r1 );
-            rc_t r2 = KDirectoryRemove ( self -> dir, false, httpCache );
+            r2 = KDirectoryRemove ( self -> dir, false, httpCache );
             if ( r2 != 0 ) {
                 if ( r1 == 0 ) {
                     r1 = r2;
