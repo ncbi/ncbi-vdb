@@ -1,5 +1,5 @@
 #ifndef WINDOWS
-//#define DEPURAR 1
+#define DEPURAR 1
 #endif
 /*==============================================================================
 *
@@ -41,6 +41,7 @@
 #include <klib/rc.h>
 #include <klib/text.h> /* String */
 
+#include <kns/ascp.h> /* aspera_get */
 #include <kns/endpoint.h> /* KNSManagerInitDNSEndpoint */
 #include <kns/http.h> /* KHttpRequest */
 #include <kns/manager.h> /* KNSManager */
@@ -49,6 +50,7 @@
 
 #include <vfs/manager.h> /* VFSManagerOpenDirectoryRead */
 #include <vfs/path.h> /* VFSManagerMakePath */
+#include <vfs/resolver.h> /* VResolverRelease */
 
 #include <strtol.h> /* strtoi64 */
 
@@ -100,6 +102,13 @@ typedef struct {
     const KConfig * kfg;
     const KNSManager * kmgr;
     const VFSManager * vmgr;
+    VResolver * resolver;
+    VResolverEnableState cacheState;
+    KDirectory * dir;
+
+    bool ascpChecked;
+    const char * ascp;
+    const char * asperaKey;
 } STest;
 
 static void STestInit ( STest * self, const KDiagnose * test )
@@ -119,19 +128,44 @@ static void STestInit ( STest * self, const KDiagnose * test )
         -- self -> verbosity;
     else if ( self -> verbosity == 0 ) /* max */
         self -> verbosity = sizeof self -> n / sizeof self -> n [ 0 ] - 1;
+
+    rc_t rc = KDirectoryNativeDir ( & self -> dir );
+    if ( rc != 0 )
+        OUTMSG ( ( "CANNOT KDirectoryNativeDir: %R\n", rc ) );
+
+    rc = VFSManagerGetResolver ( self -> vmgr, & self -> resolver);
+    if ( rc != 0 )
+        OUTMSG ( ( "CANNOT GetResolver: %R\n", rc ) );
+    else
+        self -> cacheState = VResolverCacheEnable ( self -> resolver,
+                                                    vrAlwaysEnable );
 }
 
 static void STestFini ( STest * self ) {
+    rc_t rc = 0;
+
     assert ( self );
 
-    if ( self -> level < KVERBOSITY_INFO )
-        return;
+    if ( self -> level >= KVERBOSITY_INFO ) {
+        if ( self -> n [ 0 ] == 0 || self -> n [ 1 ] != 0 ||
+             self -> level != 0 )
+        {
+            OUTMSG ( ( "= TEST WAS NOT COMPLETED\n" ) );
+        }
 
-    if ( self -> n [ 0 ] == 0 || self -> n [ 1 ] != 0 || self -> level != 0 )
-        OUTMSG ( ( "= TEST WAS NOT COMPLETED\n" ) );
+        OUTMSG ( ( "= %d (%d) tests performed\n",
+                   self -> n [ 0 ], self -> total ) );
+    }
 
-    OUTMSG ( ( "= %d (%d) tests performed\n",
-               self -> n [ 0 ], self -> total ) );
+    VResolverCacheEnable ( self -> resolver, self -> cacheState );
+
+    RELEASE ( KDirectory, self -> dir );    
+    RELEASE ( VResolver, self -> resolver );    
+
+    free ( ( void * ) self -> ascp );
+    free ( ( void * ) self -> asperaKey );
+
+    memset ( self, 0, sizeof * self );
 }
 
 static rc_t STestVStart ( STest * self, bool checking,
@@ -605,19 +639,63 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
     return rc;
 }
 
+static KPathType KDirectory_RemoveCache ( KDirectory * self,
+                                          const char * cache )
+{
+    KPathType type = KDirectoryPathType ( self, cache );
+
+    if ( type != kptNotFound ) {
+        if ( ( type & ~ kptAlias ) == kptFile ) {
+            rc_t rc = KDirectoryRemove ( self, false, cache );
+            if ( rc != 0 )
+                OUTMSG ( ( "CANNOT REMOVE '%s': %R\n", cache, rc ) );
+            else
+                type = kptNotFound;
+        }
+        else
+            OUTMSG ( ( "UNEXPECTED FILE TYPE OF '%s': %d\n",
+                        cache, type ) );
+    }
+
+    return type;
+}
+
 static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
-    uint64_t sz, bool print, const char * exp, size_t esz )
+    const char * cache, uint64_t * cacheSize, uint64_t sz, bool print,
+    const char * exp, size_t esz )
 {
     rc_t rc = 0;
     size_t total = 0;
     char buffer [ 1024 ] = "";
+    assert ( cache && cacheSize );
+    KFile * out = NULL;
+    rc_t rw = 0;
+    if ( cache [ 0 ] != '\0' ) {
+        if ( KDirectory_RemoveCache ( self -> dir, cache ) == kptNotFound ) {
+            rw = KDirectoryCreateFile ( self -> dir, & out, false,  0664,
+                                        kcmCreate | kcmParents, cache );
+            if ( rw != 0 )
+                OUTMSG ( ( "CANNOT CreateFile '%s': %R\n", cache, rw ) );
+        }
+    }
     STestStart ( self, false, "KStreamRead(KHttpResult):" );
+    uint64_t pos = 0;
     while ( rc == 0 ) {
         size_t num_read = 0;
         rc = KStreamRead ( stream, buffer, sizeof buffer, & num_read );
         if ( rc != 0 )
             STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
         else if ( num_read != 0 ) {
+            if ( rw == 0 && out != NULL ) {
+                size_t num_writ = 0;
+                rw = KFileWriteAll ( out, pos, buffer, num_read, & num_writ );
+                if ( rw == 0 ) {
+                    assert ( num_writ == num_read );
+                    pos += num_writ;
+                }
+                else
+                    OUTMSG ( ( "CANNOT WRITE TO '%s': %R\n", cache, rw ) );
+            }
             if ( total == 0 && esz > 0 ) {
                 int i = 0;
                 int s = esz;
@@ -667,11 +745,17 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
             break;
         }
     }
+    rc_t r2 = KFileRelease ( out );
+    if ( rw == 0 )
+        rw = r2;
+    if ( rw == 0 )
+        * cacheSize = pos;
     return rc;
 }
 
-static rc_t STestCheckHttpUrl ( STest * self, const Data * data, bool print,
-                                const char * exp, size_t esz )
+static rc_t STestCheckHttpUrl ( STest * self, const Data * data,
+    const char * cache, uint64_t * cacheSize,
+    bool print, const char * exp, size_t esz )
 {
     rc_t rc = 0;
     KHttpRequest * req = NULL;
@@ -730,7 +814,8 @@ static rc_t STestCheckHttpUrl ( STest * self, const Data * data, bool print,
             OUTMSG ( (
                 "KHttpResultGetInputStream(KHttpResult) = %R\n", rc ) );
         else
-            rc = STestCheckStreamRead ( self, stream, sz, print, exp, esz );
+            rc = STestCheckStreamRead ( self, stream, cache, cacheSize,
+                                        sz, print, exp, esz );
         KStreamRelease ( stream );
         stream = NULL;
     }
@@ -779,16 +864,18 @@ static rc_t STestCheckVfsUrl ( STest * self, const Data * data ) {
     return rc;
 }
 
-static rc_t STestCheckUrlImpl ( STest * self, const Data * data, bool print,
-                                const char * exp, size_t esz )
+static rc_t STestCheckUrlImpl ( STest * self, const Data * data,
+    const char * cache, uint64_t * cacheSize,
+    bool print, const char * exp, size_t esz )
 {
-    rc_t rc = STestCheckHttpUrl ( self, data, print, exp, esz );
+    rc_t rc = STestCheckHttpUrl ( self, data,
+                                  cache, cacheSize, print, exp, esz );
     rc_t r2 = STestCheckVfsUrl  ( self, data );
     return rc != 0 ? rc : r2;
 }
 
-static rc_t STestCheckUrl ( STest * self, const Data * data, bool print,
-                            const char * exp, size_t esz )
+static rc_t STestCheckUrl ( STest * self, const Data * data, const char * cache,
+    uint64_t * cacheSize, bool print, const char * exp, size_t esz )
 {
     rc_t rc = 0;
 
@@ -805,7 +892,7 @@ static rc_t STestCheckUrl ( STest * self, const Data * data, bool print,
     if ( path . size == 0 ) /* does not exist */
         return 0;
 
-    return STestCheckUrlImpl ( self, data, print, exp, esz );
+    return STestCheckUrlImpl ( self, data, cache, cacheSize, print, exp, esz );
 }
 
 static String * KConfig_Resolver ( const KConfig * self ) {
@@ -967,6 +1054,62 @@ static const char * STestCallCgi ( STest * self, const String * acc,
     return url;
 }
 
+static rc_t STestCheckFasp ( STest * self, const Data * data, const char * url,
+                             const char * cache, uint64_t * cacheSz )
+{
+    rc_t rc = 0;
+
+    assert ( self && data );
+
+    if ( ! self -> ascpChecked ) {
+        rc = ascp_locate ( & self -> ascp, & self -> asperaKey,
+                                true, true);
+        self -> ascpChecked = true;
+        if ( rc != 0 ) {
+            OUTMSG ( ( "FAILED TO LOCATE ASCP LOCATION: %R\n", rc ) );
+            return rc;
+        }
+    }
+
+    STestStart ( self, false, "ascp dwonload test:" );
+
+    if ( self -> ascp == NULL ) {
+        STestEnd ( self, eEndOK, "skipped: ascp not found" );
+        return 0;
+    }
+
+    String fasp;
+    CONST_STRING ( & fasp, "fasp://" );
+
+    uint32_t m = string_measure ( url, NULL );
+    if ( m < fasp . size ) {
+        OUTMSG ( ( "UNEXPECTED SCHEMA IN '%s'", url ) );
+        return 0;
+    }
+
+    String schema;
+    StringInit( & schema, url, fasp . size, fasp . len );
+    if ( ! StringEqual ( & schema, & fasp ) ) {
+        OUTMSG ( ( "UNEXPECTED SCHEMA IN '%s'", url ) );
+        return 0;
+    }
+
+    if ( rc == 0 ) {
+        KDirectory_RemoveCache ( self -> dir, cache );
+        rc = aspera_get ( self -> ascp, self -> asperaKey,
+                          url + fasp . size, cache, 0 );
+    }
+
+    if ( rc == 0 )
+        rc = KDirectoryFileSize ( self -> dir, cacheSz, cache );
+    if ( rc == 0 )
+        STestEnd ( self, eEndOK, "OK" );
+    else
+        STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+
+    return rc;
+}
+
 static rc_t STestCheckAcc ( STest * self, const Data * data,
                             bool print, const char * exp, size_t esz )
 {
@@ -985,6 +1128,31 @@ static rc_t STestCheckAcc ( STest * self, const Data * data,
         url = STestCallCgi ( self, & acc,
                              response, sizeof response, & resp_len );
     }
+    const VPath * vcache = NULL;
+    char faspCache [ PATH_MAX ] = "";
+    uint64_t faspCacheSize = 0;
+    char httpCache [ PATH_MAX ] = "";
+    uint64_t httpCacheSize = 0;
+    if ( acc . size != 0 ) {
+        VPath * path = NULL;
+        rc_t rc = VFSManagerMakePath ( self -> vmgr, & path,
+                                       "%S", data -> acc );
+        if ( rc == 0 )
+            rc = VResolverQuery ( self -> resolver, eProtocolFasp,
+                                  path, NULL, NULL, & vcache);
+        String cache;
+        if ( rc == 0 )
+            rc = VPathGetPath ( vcache, & cache );
+        if ( rc == 0 ) {
+            rc_t r1 = string_printf ( faspCache, sizeof faspCache, NULL,
+                                      "%S.fasp", & cache );
+            rc      = string_printf ( httpCache, sizeof httpCache, NULL,
+                                      "%S.http", & cache );
+            if ( rc == 0 )
+                rc = r1;
+        }
+        RELEASE ( VPath, path );
+    }
     if ( url != NULL ) {
         char * p = string_chr ( url, resp_len - ( url - response ), '|' );
         if ( p == NULL ) {
@@ -1002,21 +1170,34 @@ static rc_t STestCheckAcc ( STest * self, const Data * data,
                 d = p;
             while ( d != NULL && d <= p ) {
                 if ( ! checked && full != NULL && string_cmp ( full -> addr,
-                                    full -> size, url, d - url, d - url ) == 0 )
+                        full -> size, url, d - url, d - url ) == 0 )
                 {
                     checked = true;
                 }
                 * d = '\0';
-                if ( * url == 'h' ) {
-                    Data dt;
-                    if ( rc == 0 )
-                        rc = DataInit ( & dt, self -> vmgr, url );
-                    if ( rc == 0 ) {
-                        rc_t r1 = STestCheckUrl ( self, & dt, print, exp, esz );
+                switch ( * url ) {
+                    case 'h': {
+                        Data dt;
+                        if ( rc == 0 )
+                            rc = DataInit ( & dt, self -> vmgr, url );
+                        if ( rc == 0 ) {
+                            rc_t r1 = STestCheckUrl ( self, & dt,
+                                httpCache, & httpCacheSize, print, exp, esz );
+                            if ( rc == 0 )
+                                rc = r1;
+                        }
+                        DataFini ( & dt );
+                        break;
+                    }
+                    case 'f': {
+                        rc_t r1 = STestCheckFasp ( self, data, url,
+                                                   faspCache, & faspCacheSize );
                         if ( rc == 0 )
                             rc = r1;
+                        break;
                     }
-                    DataFini ( & dt );
+                    default:
+                        break;
                 }
                 if ( d == p )
                     break;
@@ -1030,12 +1211,102 @@ static rc_t STestCheckAcc ( STest * self, const Data * data,
         }
     }
     if ( ! checked ) {
-        rc_t r1 = STestCheckUrl ( self, data, print, exp, esz );
+        rc_t r1 = STestCheckUrl ( self, data, httpCache, & httpCacheSize,
+                                  print, exp, esz );
         if ( rc == 0 )
             rc = r1;
     }
+    if ( faspCacheSize != 0 && httpCacheSize != 0 ) {
+        uint64_t pos = 0;
+        rc_t r1 = 0;
+        STestStart ( self, false, "HTTP vs ASCP download:" );
+        if ( faspCacheSize != httpCacheSize ) {
+            r1 = RC ( rcExe, rcFile, rcComparing, rcSize, rcUnequal );
+            STestEnd ( self, eEndFAIL, "FAILURE: size does not match: "
+                       "ascp(%lu)/http(%lu)", faspCacheSize, httpCacheSize );
+        }
+        else {
+            const KFile * ascp = NULL;
+            const KFile * http = NULL;
+            rc_t r1 = KDirectoryOpenFileRead ( self -> dir, & ascp, faspCache );
+            if ( r1 != 0 )
+                OUTMSG ( ( "KDirectoryOpenFileRead(%s)=%R\n", faspCache, r1 ) );
+            else {
+                r1 = KDirectoryOpenFileRead ( self -> dir, & http, httpCache );
+                if ( r1 != 0 )
+                    OUTMSG ( ( "KDirectoryOpenFileRead(%s)=%R\n",
+                                                       httpCache, r1 ) );
+            }
+            if ( r1 == 0 ) {
+                char bAscp [ 1024 ] = "";
+                char bHttp [ 1024 ] = "";
+                size_t ascp_read = 0;
+                size_t http_read = 0;
+                while ( r1 == 0 ) {
+                    r1 = KFileReadAll ( ascp, pos, bAscp, sizeof bAscp,
+                                        & ascp_read );
+                    if ( r1 != 0 ) {
+                        STestEnd ( self, eEndFAIL, "FAILURE to read '%s': %R",
+                                                   faspCache, r1 );
+                        break;
+                    }
+                    r1 = KFileReadAll ( http, pos, bHttp, sizeof bHttp,
+                                        & http_read );
+                    if ( r1 != 0 ) {
+                        STestEnd ( self, eEndFAIL, "FAILURE to read '%s': %R",
+                                                   httpCache, r1 );
+                        break;
+                    }
+                    else if ( ascp_read != http_read ) {
+                        r1 = RC (
+                            rcExe, rcFile, rcComparing, rcSize, rcUnequal );
+                        STestEnd ( self, eEndFAIL,
+                            "FAILURE to read the same amount from files" );
+                        break;
+                    }
+                    else if ( ascp_read == 0 )
+                        break;
+                    else {
+                        pos += ascp_read;
+                        if ( string_cmp ( bAscp, ascp_read,
+                                          bHttp, http_read, ascp_read ) != 0 )
+                        {
+                            r1 = RC (
+                                rcExe, rcFile, rcComparing, rcData, rcUnequal );
+                            STestEnd ( self, eEndFAIL,
+                                       "FAILURE: files are different" );
+                            break;
+                        }
+                    }
+                }
+            }
+            RELEASE ( KFile, ascp );
+            RELEASE ( KFile, http );
+        }
+        if ( r1 == 0 ) {
+            r1 = KDirectoryRemove ( self -> dir, false, faspCache );
+            if ( r1 != 0 )
+                STestEnd ( self, eEndFAIL, "FAILURE: cannot remove '%s': %R",
+                                           faspCache, r1 );
+            rc_t r2 = KDirectoryRemove ( self -> dir, false, httpCache );
+            if ( r2 != 0 ) {
+                if ( r1 == 0 ) {
+                    r1 = r2;
+                    STestEnd ( self, eEndFAIL,
+                        "FAILURE: cannot remove '%s': %R", httpCache, r1 );
+                }
+                else
+                    OUTMSG ( ( "Cannot remove '%s': %R\n", httpCache, r2 ) );
+            }
+            if ( r1 == 0 )
+                STestEnd ( self, eEndOK, "%lu bytes compared: OK", pos );
+            else if ( rc == 0 )
+                rc = r1;
+        }
+    }
     if ( acc . size != 0 )
         STestEnd ( self, rc == 0 ? eOK : eFAIL, "Access to '%S'", & acc );
+    RELEASE ( VPath, vcache );
     return rc;
 }
 
@@ -1054,7 +1325,7 @@ static rc_t STestCheckNetwork ( STest * self, const Data * data,
     va_start ( args, fmt );
     rc = string_vprintf ( b, sizeof b, NULL, fmt, args );
     if ( rc != 0 )
-        OUTMSG ( ( "CANNOT PREPARE MEGGAGE: %R\n", rc ) );
+        OUTMSG ( ( "CANNOT PREPARE MESSAGE: %R\n", rc ) );
     va_end ( args );
 
     assert ( self && data );
@@ -1258,7 +1529,7 @@ LIB_EXPORT rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests ) {
             Data d;
             CONST_STRING ( & h, HOST );
             r2 = DataInit ( & d, self -> vmgr,
-                            "https://" HOST "/srapub/SRR042846" );
+                            "https://" HOST "/srapub/SRR029074" );
             if ( r2 == 0 )
                 r2 = STestCheckNetwork ( & t, & d, exp, sizeof exp - 1,
                                          NULL, "Access to '%S'", & h );
