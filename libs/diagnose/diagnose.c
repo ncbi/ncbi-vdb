@@ -1069,17 +1069,12 @@ static rc_t STestCheckFasp ( STest * self, const Data * data, const char * url,
 
     assert ( self && data );
 
-    if ( ! self -> ascpChecked ) {
-        rc = ascp_locate ( & self -> ascp, & self -> asperaKey,
-                                true, true);
-        self -> ascpChecked = true;
-        if ( rc != 0 ) {
-            OUTMSG ( ( "FAILED TO LOCATE ASCP LOCATION: %R\n", rc ) );
-            return rc;
-        }
-    }
-
     STestStart ( self, false, "ascp dwonload test:" );
+
+    if ( ! self -> ascpChecked ) {
+        ascp_locate ( & self -> ascp, & self -> asperaKey, true, true);
+        self -> ascpChecked = true;
+    }
 
     if ( self -> ascp == NULL ) {
         STestEnd ( self, eEndOK, "skipped: ascp not found" );
