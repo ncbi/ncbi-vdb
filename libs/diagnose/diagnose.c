@@ -1075,7 +1075,7 @@ static rc_t STestCheckFasp ( STest * self, const Data * data, const char * url,
         ascp_locate ( & self -> ascp, & self -> asperaKey, true, true);
         self -> ascpChecked = true;
 
-        if ( self -> ascp == NULL ) {
+        if ( self -> ascp == NULL )
             STestEnd ( self, eEndOK, "skipped: ascp not found" );
     }
 
