@@ -45,24 +45,39 @@ struct KConfig;
 struct KNSManager;
 struct VFSManager;
 
+
 typedef struct KDiagnose KDiagnose;
+typedef struct KDiagnoseError KDiagnoseError;
 
 
 DIAGNOSE_EXTERN rc_t CC KDiagnoseMakeExt ( KDiagnose ** test,
     struct KConfig * kfg, struct KNSManager * kmg, struct VFSManager * vmgr );
+DIAGNOSE_EXTERN rc_t CC KDiagnoseAddRef ( const KDiagnose * self );
 DIAGNOSE_EXTERN rc_t CC KDiagnoseRelease ( const KDiagnose * self );
+
 
 #define KVERBOSITY_NONE  -3
 #define KVERBOSITY_ERROR -2
 #define KVERBOSITY_INFO  -1
 #define KVERBOSITY_MAX    0
 DIAGNOSE_EXTERN rc_t CC KDiagnoseSetVerbosity ( KDiagnose * self,
-                                                int verbosity );
+    int verbosity );
+
 
 #define DIAGNOSE_ALL     0
 #define DIAGNOSE_CONFIG  1
 #define DIAGNOSE_NETWORK 2
 DIAGNOSE_EXTERN rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests );
+
+
+DIAGNOSE_EXTERN rc_t CC KDiagnoseGetErrorCount ( const KDiagnose * self,
+    uint32_t * count );
+DIAGNOSE_EXTERN rc_t CC KDiagnoseGetError ( const KDiagnose * self,
+    uint32_t idx, const KDiagnoseError ** error );
+
+
+DIAGNOSE_EXTERN rc_t CC KDiagnoseErrorAddRef ( const KDiagnoseError * self );
+DIAGNOSE_EXTERN rc_t CC KDiagnoseErrorRelease ( const KDiagnoseError * self );
 
 
 #ifdef __cplusplus
