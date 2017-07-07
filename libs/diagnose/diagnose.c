@@ -1,5 +1,5 @@
 #ifndef WINDOWS
-#define DEPURAR 1
+//#define DEPURAR 1
 #endif
 /*==============================================================================
 *
@@ -40,6 +40,7 @@
 #include <klib/printf.h> /* string_vprintf */
 #include <klib/rc.h>
 #include <klib/text.h> /* String */
+#include <klib/vector.h> /* Vector */
 
 #include <kns/ascp.h> /* aspera_get */
 #include <kns/endpoint.h> /* KNSManagerInitDNSEndpoint */
@@ -64,6 +65,45 @@
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
 
+struct KDiagnoseError {
+    atomic32_t refcount;
+
+    const char * message;
+};
+
+static const char DIAGNOSERROR_CLSNAME [] = "KDiagnoseError";
+
+LIB_EXPORT rc_t CC KDiagnoseErrorAddRef ( const KDiagnoseError * self ) {
+    if ( self != NULL )
+        switch ( KRefcountAdd ( & self -> refcount, DIAGNOSERROR_CLSNAME ) ) {
+            case krefLimit:
+                return RC ( rcRuntime,
+                            rcData, rcAttaching, rcRange, rcExcessive );
+        }
+
+    return 0;
+}
+
+DIAGNOSE_EXTERN
+rc_t CC KDiagnoseErrorRelease ( const KDiagnoseError * cself )
+{
+    rc_t rc = 0;
+
+    KDiagnoseError * self = ( KDiagnoseError * ) cself;
+
+    if ( self != NULL )
+        switch ( KRefcountDrop ( & self -> refcount, DIAGNOSERROR_CLSNAME ) ) {
+            case krefWhack:
+                free ( self );
+                break;
+            case krefNegative:
+                return RC ( rcRuntime,
+                            rcData, rcReleasing, rcRange, rcExcessive );
+        }
+
+    return rc;
+}
+
 struct KDiagnose {
     atomic32_t refcount;
 
@@ -72,15 +112,60 @@ struct KDiagnose {
     VFSManager * vmgr;
 
     int verbosity;
+
+    Vector errors;
 };
 
-rc_t KDiagnoseSetVerbosity ( KDiagnose * self, int verbosity ) {
+LIB_EXPORT rc_t CC KDiagnoseSetVerbosity ( KDiagnose * self, int verbosity )
+{
     if ( self == NULL )
         return RC ( rcRuntime, rcData, rcAccessing, rcSelf, rcNull );
 
     self -> verbosity = verbosity - 1;
 
     return 0;
+}
+
+LIB_EXPORT
+rc_t CC KDiagnoseGetErrorCount ( const KDiagnose * self, uint32_t * count )
+{
+    if ( count == NULL )
+        return RC ( rcRuntime, rcData, rcAccessing, rcParam, rcNull );
+
+    * count = 0;
+
+    if ( self == NULL )
+        return RC ( rcRuntime, rcData, rcAccessing, rcSelf, rcNull );
+
+    * count = VectorLength ( & self -> errors );
+    return 0;
+}
+
+LIB_EXPORT rc_t CC KDiagnoseGetError ( const KDiagnose * self, uint32_t idx,
+                                       const KDiagnoseError ** error )
+{
+    rc_t rc = 0;
+
+    const KDiagnoseError * e = NULL;
+
+    if ( error == NULL )
+        return RC ( rcRuntime, rcData, rcAccessing, rcParam, rcNull );
+
+    * error = NULL;
+
+    if ( self == NULL )
+        return RC ( rcRuntime, rcData, rcAccessing, rcSelf, rcNull );
+
+    if ( idx >= VectorLength ( & self -> errors ) )
+        return RC ( rcRuntime, rcData, rcAccessing, rcParam, rcInvalid );
+
+    e = VectorGet ( & self -> errors, idx );
+
+    rc = KDiagnoseErrorAddRef ( e );
+    if ( rc == 0 )
+        * error = e;
+
+    return rc;
 }
 
 typedef struct {
@@ -96,6 +181,8 @@ typedef struct {
                        0... last printed index of n [] */
 
     int total;
+    int failures;
+    Vector * errors;
 
     KDataBuffer msg;
 
@@ -111,7 +198,7 @@ typedef struct {
     const char * asperaKey;
 } STest;
 
-static void STestInit ( STest * self, const KDiagnose * test )
+static void STestInit ( STest * self, KDiagnose * test )
 {
     rc_t rc = 0;
 
@@ -124,6 +211,7 @@ static void STestInit ( STest * self, const KDiagnose * test )
     self -> kfg = test -> kfg;
     self -> kmgr = test -> kmgr;
     self -> vmgr = test -> vmgr;
+    self -> errors = & test -> errors;
 
     self -> verbosity = test -> verbosity;
     if ( self -> verbosity > 0 )
@@ -155,8 +243,16 @@ static void STestFini ( STest * self ) {
             OUTMSG ( ( "= TEST WAS NOT COMPLETED\n" ) );
         }
 
-        OUTMSG ( ( "= %d (%d) tests performed\n",
-                   self -> n [ 0 ], self -> total ) );
+        OUTMSG ( ( "= %d (%d) tests performed, %d failed\n",
+                   self -> n [ 0 ], self -> total, self -> failures ) );
+        if ( self -> failures > 0 ) {
+            uint32_t i = 0;
+            OUTMSG ( ( "Errors:\n" ) );
+            for ( i = 0; i < VectorLength ( self -> errors ); ++ i ) {
+                char * c = VectorGet ( self -> errors, i );
+                OUTMSG ( ( " %d: %s\n", i, c ) );
+            }
+        }
     }
 
     VResolverCacheEnable ( self -> resolver, self -> cacheState );
@@ -246,7 +342,7 @@ typedef enum {
     eMSG,
     eEndFAIL,
     eEndOK,
-    eDONE,
+    eDONE, /* never used */
 } EOK;
 
 static rc_t STestVEnd ( STest * self, EOK ok,
@@ -271,7 +367,7 @@ case eEndOK:
 rc=4;
 break;
 case eDONE:
-rc=5;
+rc=5; /* never used */
 break;
 }
 rc=0;
@@ -288,6 +384,8 @@ rc=0;
         else {
             self -> ended = true;
             ++ self -> total;
+            if ( ok == eFAIL || ok == eEndFAIL )
+                ++ self -> failures;
         }
     }
 
@@ -301,12 +399,26 @@ const char*c=self->msg.base;
         return rc;
     }
 
+    if ( ok == eEndFAIL || ok == eMSG ) {
+        rc = KDataBufferPrintf ( & self -> msg, b );
+        if ( rc != 0 )
+            OUTMSG ( ( "CANNOT PRINT: %R", rc ) );
+        else if ( ok == eEndFAIL ) {
+            const char * c = string_dup_measure ( self -> msg . base, NULL );
+            if ( c == NULL )
+                return RC
+                    ( rcRuntime, rcData, rcAllocating, rcMemory, rcExhausted );
+            rc = VectorAppend ( self -> errors, NULL, c );
+            if ( rc != 0 ) {
+                OUTMSG ( ( "CANNOT rcRuntime: %R", rc ) );
+                return rc;
+            }
+        }
+    }
+
     if ( self -> level > self -> verbosity ) {
         if ( ok == eEndFAIL || ok == eMSG ) {
-            rc = KDataBufferPrintf ( & self -> msg, b );
-            if ( rc != 0 )
-                OUTMSG ( ( "CANNOT PRINT: %R", rc ) );
-            else if ( ok == eEndFAIL ) {
+            if ( ok == eEndFAIL ) {
                 rc = KDataBufferPrintf ( & self -> msg, "\n" );
                 if ( self -> started ) {
                     OUTMSG ( ( "\n" ) );
@@ -762,6 +874,7 @@ static rc_t STestCheckHttpUrl ( STest * self, const Data * data,
     bool print, const char * exp, size_t esz )
 {
     rc_t rc = 0;
+    rc_t r2 = 0;
     KHttpRequest * req = NULL;
     KHttpResult * rslt = NULL;
     const String * full = NULL;
@@ -774,8 +887,7 @@ static rc_t STestCheckHttpUrl ( STest * self, const Data * data,
         rc = STestStart ( self, true, "Access to '%S'", full );
     if ( rc == 0 )
         rc = STestCheckFileSize ( self, full, & sz );
-    if ( rc == 0 )
-        rc = STestCheckRanges ( self, data, sz );
+    r2 = STestCheckRanges ( self, data, sz );
     if ( rc == 0 ) {
         STestStart ( self, false,
                      "KHttpRequest = KNSManagerMakeRequest(%S):", full );
@@ -823,6 +935,8 @@ static rc_t STestCheckHttpUrl ( STest * self, const Data * data,
         KStreamRelease ( stream );
         stream = NULL;
     }
+    if ( rc == 0 )
+        rc = r2;
     STestEnd ( self, rc == 0 ? eOK : eFAIL, "Access to '%S'", full );
     free ( ( void * ) full );
     full = NULL;
@@ -1070,19 +1184,19 @@ static rc_t STestCheckFasp ( STest * self, const Data * data, const char * url,
     assert ( self && data );
 
     if ( ! self -> ascpChecked ) {
-        STestStart ( self, false, "ascp dwonload test:" );
-
         ascp_locate ( & self -> ascp, & self -> asperaKey, true, true);
         self -> ascpChecked = true;
 
-        if ( self -> ascp == NULL )
+        if ( self -> ascp == NULL ) {
+            STestStart ( self, false, "ascp download test:" );
             STestEnd ( self, eEndOK, "skipped: ascp not found" );
+        }
     }
 
     if ( self -> ascp == NULL )
         return 0;
 
-    STestStart ( self, false, "ascp dwonload test:" );
+    STestStart ( self, false, "ascp download test:" );
 
     CONST_STRING ( & fasp, "fasp://" );
 
@@ -1166,10 +1280,10 @@ static rc_t STestCheckAcc ( STest * self, const Data * data,
         }
         else {
             const String * full = NULL;
-            rc_t rc = VPathMakeString ( data -> vpath, & full );
+            rc_t r2 = VPathMakeString ( data -> vpath, & full );
             char * d = NULL;
-            if ( rc != 0 )
-                OUTMSG ( ( "CANNOT VPathMakeString: %R\n", rc ) );
+            if ( r2 != 0 )
+                OUTMSG ( ( "CANNOT VPathMakeString: %R\n", r2 ) );
             d = string_chr ( url, resp_len - ( url - response ), '$' );
             if ( d == NULL )
                 d = p;
@@ -1343,18 +1457,18 @@ static rc_t STestCheckNetwork ( STest * self, const Data * data,
     else {
         rc_t r1 = 0;
         uint16_t port = 443;
-        STestStart ( self, false, "KNSManagerInitDNSEndpoint(%S:%hu) =",
+        STestStart ( self, false, "KNSManagerInitDNSEndpoint(%S:%hu)",
                                   & host, port );
         rc = KNSManagerInitDNSEndpoint ( self -> kmgr, & ep, & host, port );
         if ( rc != 0 )
-            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+            STestEnd ( self, eEndFAIL, ": FAILURE: %R", rc );
         else {
             char endpoint [ 1024 ] = "";
             rc_t rx = endpoint_to_string ( endpoint, sizeof endpoint, & ep );
             if ( rx != 0 )
                 STestEnd ( self, eEndFAIL, "CANNOT CONVERT TO STRING" );
             else
-                STestEnd ( self, eEndOK, "'%s': OK", endpoint );
+                STestEnd ( self, eEndOK, "= '%s': OK", endpoint );
         }
         port = 80;
         STestStart ( self, false, "KNSManagerInitDNSEndpoint(%S:%hu) =",
@@ -1386,7 +1500,7 @@ static rc_t STestCheckNetwork ( STest * self, const Data * data,
     return rc;
 }
 
-static const char CLASSNAME [] = "KDirectory";
+static const char DIAGNOSE_CLSNAME [] = "KDiagnose";
 
 LIB_EXPORT rc_t CC KDiagnoseMakeExt ( KDiagnose ** test, KConfig * kfg,
     KNSManager * kmgr, VFSManager * vmgr )
@@ -1443,7 +1557,7 @@ LIB_EXPORT rc_t CC KDiagnoseMakeExt ( KDiagnose ** test, KConfig * kfg,
 
     if ( rc == 0 ) {
         p -> verbosity = KConfig_Verbosity ( p -> kfg );
-        KRefcountInit ( & p -> refcount, 1, CLASSNAME, "init", "" );
+        KRefcountInit ( & p -> refcount, 1, DIAGNOSE_CLSNAME, "init", "" );
         * test = p;
     }
     else
@@ -1454,7 +1568,7 @@ LIB_EXPORT rc_t CC KDiagnoseMakeExt ( KDiagnose ** test, KConfig * kfg,
 
 LIB_EXPORT rc_t CC KDiagnoseAddRef ( const KDiagnose * self ) {
     if ( self != NULL )
-        switch ( KRefcountAdd ( & self -> refcount, CLASSNAME ) ) {
+        switch ( KRefcountAdd ( & self -> refcount, DIAGNOSE_CLSNAME ) ) {
             case krefLimit:
                 return RC ( rcRuntime,
                             rcData, rcAttaching, rcRange, rcExcessive );
@@ -1463,17 +1577,20 @@ LIB_EXPORT rc_t CC KDiagnoseAddRef ( const KDiagnose * self ) {
     return 0;
 }
 
+static void CC whack ( void *item, void *data ) { free ( item ); }
+
 LIB_EXPORT rc_t CC KDiagnoseRelease ( const KDiagnose * cself ) {
     rc_t rc = 0;
 
     KDiagnose * self = ( KDiagnose * ) cself;
 
     if ( self != NULL )
-        switch ( KRefcountDrop ( & self -> refcount, CLASSNAME ) ) {
+        switch ( KRefcountDrop ( & self -> refcount, DIAGNOSE_CLSNAME ) ) {
             case krefWhack:
                 RELEASE ( KConfig   , self -> kfg );
                 RELEASE ( KNSManager, self -> kmgr );
                 RELEASE ( VFSManager, self -> vmgr );
+                VectorWhack ( & self -> errors, & whack, NULL );
                 free ( self );
                 break;
             case krefNegative:
