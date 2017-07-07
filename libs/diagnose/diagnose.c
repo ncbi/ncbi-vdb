@@ -1133,7 +1133,7 @@ static const char * STestCallCgi ( STest * self, const String * acc,
                 STestEnd ( self, eEndFAIL, "FAILURE: %R", r2 );
         }
         else
-            STestEnd ( self, eEndOK, "= '%.*s'", ( int ) num_read, buffer );
+            STestEnd ( self, eEndFAIL, "= '%.*s'", ( int ) num_read, buffer );
     }
     if ( rc == 0 ) {
         rc = KHttpResultGetInputStream ( rslt, & stream );
