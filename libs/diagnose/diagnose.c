@@ -116,7 +116,8 @@ struct KDiagnose {
     Vector errors;
 };
 
-LIB_EXPORT rc_t CC KDiagnoseSetVerbosity ( KDiagnose * self, int verbosity )
+LIB_EXPORT
+rc_t CC KDiagnoseSetVerbosity ( KDiagnose * self, int verbosity )
 {
     if ( self == NULL )
         return RC ( rcRuntime, rcData, rcAccessing, rcSelf, rcNull );
@@ -126,8 +127,8 @@ LIB_EXPORT rc_t CC KDiagnoseSetVerbosity ( KDiagnose * self, int verbosity )
     return 0;
 }
 
-LIB_EXPORT
-rc_t CC KDiagnoseGetErrorCount ( const KDiagnose * self, uint32_t * count )
+LIB_EXPORT rc_t CC KDiagnoseGetErrorCount ( const KDiagnose * self,
+                                            uint32_t * count )
 {
     if ( count == NULL )
         return RC ( rcRuntime, rcData, rcAccessing, rcParam, rcNull );
@@ -1116,6 +1117,23 @@ static const char * STestCallCgi ( STest * self, const String * acc,
                 rs = RC ( rcExe, rcFile, rcReading, rcFile, rcInvalid );
             }
         }
+    }
+    if ( rc == 0 ) {
+        const char name [] = "Location";
+        rc_t r2 = 0;
+        char buffer [ PATH_MAX ] = "";
+        size_t num_read = 0;
+        STestStart ( self, false, "KClientHttpResultGetHeader(%s)", name );
+        r2 = KClientHttpResultGetHeader ( rslt, name,
+                                          buffer, sizeof buffer, & num_read );
+        if ( r2 != 0 ) {
+            if ( r2 == SILENT_RC ( rcNS,rcTree,rcSearching,rcName,rcNotFound ) )
+                STestEnd ( self, eEndOK, ": not found: OK" );
+            else
+                STestEnd ( self, eEndFAIL, "FAILURE: %R", r2 );
+        }
+        else
+            STestEnd ( self, eEndOK, "= '%.*s'", ( int ) num_read, buffer );
     }
     if ( rc == 0 ) {
         rc = KHttpResultGetInputStream ( rslt, & stream );
