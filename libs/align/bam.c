@@ -1821,7 +1821,7 @@ LIB_EXPORT rc_t CC BAMFileMakeWithVPath(const BAMFile **cself, const VPath *path
     rc = VFSManagerMake(&vfs);
     if (rc) return rc;
 
-    rc = VFSManagerOpenFileRead(vfs, &fp, path);
+    rc = VFSManagerOpenFileRead ( NULL, vfs, &fp, path);
     VFSManagerRelease(vfs);
     if (rc) return rc;
 
@@ -4172,7 +4172,7 @@ LIB_EXPORT rc_t CC BAMFileOpenIndexWithVPath(const BAMFile *self, const VPath *p
     rc = VFSManagerMake(&vfs);
     if (rc) return rc;
 
-    rc = VFSManagerOpenFileRead(vfs, &fp, path);
+    rc = VFSManagerOpenFileRead( NULL, vfs, &fp, path);
     VFSManagerRelease(vfs);
     if (rc) return rc;
 

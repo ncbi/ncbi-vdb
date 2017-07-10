@@ -356,7 +356,7 @@ static rc_t tokenize_file_and_progname_into_argv( const char * filename, const c
         else
         {
             struct KFile const *my_file;
-            rc = VFSManagerOpenFileRead ( vfs_mgr, &my_file, vfs_path );
+            rc = VFSManagerOpenFileRead ( NULL, vfs_mgr, &my_file, vfs_path );
             if ( rc != 0 )
                 LOGERR( klogInt, rc, "VFSManagerOpenFileRead() failed" );
             else
