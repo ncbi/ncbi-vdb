@@ -49,7 +49,7 @@
 #define MAX_BIT64 (~((uint64_t)-1 >> 1))
 
 static bool _is_set_read_id_reference_bit(uint64_t read_id) {
-    return read_id & MAX_BIT64 == 0 ? false : true;
+    return ( read_id & MAX_BIT64 ) == 0 ? false : true;
 }
 
 static
