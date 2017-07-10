@@ -79,6 +79,12 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseGetError ( const KDiagnose * self,
 DIAGNOSE_EXTERN rc_t CC KDiagnoseErrorAddRef ( const KDiagnoseError * self );
 DIAGNOSE_EXTERN rc_t CC KDiagnoseErrorRelease ( const KDiagnoseError * self );
 
+/* GetErrorGetMsg:
+ * Get Error Message.
+ * Returned string remains valid while "self" is valid
+ */
+DIAGNOSE_EXTERN rc_t CC KDiagnoseErrorGetMsg ( const KDiagnoseError * self,
+                                               const char ** message );
 
 #ifdef __cplusplus
 }

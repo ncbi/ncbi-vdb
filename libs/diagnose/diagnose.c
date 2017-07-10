@@ -68,12 +68,14 @@
 struct KDiagnoseError {
     atomic32_t refcount;
 
-    const char * message;
+    char * message;
 };
 
 static const char DIAGNOSERROR_CLSNAME [] = "KDiagnoseError";
 
-LIB_EXPORT rc_t CC KDiagnoseErrorAddRef ( const KDiagnoseError * self ) {
+LIB_EXPORT
+rc_t CC KDiagnoseErrorAddRef ( const KDiagnoseError * self )
+{
     if ( self != NULL )
         switch ( KRefcountAdd ( & self -> refcount, DIAGNOSERROR_CLSNAME ) ) {
             case krefLimit:
@@ -84,7 +86,14 @@ LIB_EXPORT rc_t CC KDiagnoseErrorAddRef ( const KDiagnoseError * self ) {
     return 0;
 }
 
-DIAGNOSE_EXTERN
+static void KDiagnoseErrorWhack ( KDiagnoseError * self ) {
+    assert ( self );
+    free ( self -> message );
+    free ( self );
+    memset ( self, 0, sizeof * self );
+}
+
+LIB_EXPORT
 rc_t CC KDiagnoseErrorRelease ( const KDiagnoseError * cself )
 {
     rc_t rc = 0;
@@ -92,9 +101,11 @@ rc_t CC KDiagnoseErrorRelease ( const KDiagnoseError * cself )
     KDiagnoseError * self = ( KDiagnoseError * ) cself;
 
     if ( self != NULL )
-        switch ( KRefcountDrop ( & self -> refcount, DIAGNOSERROR_CLSNAME ) ) {
+        switch ( KRefcountDrop ( & self -> refcount,
+                                 DIAGNOSERROR_CLSNAME ) )
+        {
             case krefWhack:
-                free ( self );
+                KDiagnoseErrorWhack ( self );
                 break;
             case krefNegative:
                 return RC ( rcRuntime,
@@ -102,6 +113,47 @@ rc_t CC KDiagnoseErrorRelease ( const KDiagnoseError * cself )
         }
 
     return rc;
+}
+
+LIB_EXPORT rc_t CC KDiagnoseErrorGetMsg ( const KDiagnoseError * self,
+                                          const char ** message )
+{
+    if ( message == NULL )
+        return RC ( rcRuntime, rcData, rcAccessing, rcParam, rcNull );
+
+    * message = NULL;
+
+    if ( self == NULL )
+        return RC ( rcRuntime, rcData, rcAccessing, rcSelf, rcNull );
+
+    * message = self -> message;
+    return 0;
+}
+
+static rc_t KDiagnoseErrorMake ( const KDiagnoseError ** self,
+                                 const char * message )
+{
+    KDiagnoseError * p = NULL;
+
+    assert ( self );
+
+    * self = NULL;
+
+    p = calloc ( 1, sizeof * self );
+    if ( p == NULL )
+        return RC ( rcRuntime, rcData, rcAllocating, rcMemory, rcExhausted );
+
+    p -> message = string_dup_measure ( message, NULL );
+    if ( p == NULL ) {
+        KDiagnoseErrorWhack ( p );
+        return RC ( rcRuntime, rcData, rcAllocating, rcMemory, rcExhausted );
+    }
+
+    KRefcountInit ( & p -> refcount, 1, DIAGNOSERROR_CLSNAME, "init", "" );
+
+    * self = p;
+
+    return 0;
 }
 
 struct KDiagnose {
@@ -246,12 +298,14 @@ static void STestFini ( STest * self ) {
 
         OUTMSG ( ( "= %d (%d) tests performed, %d failed\n",
                    self -> n [ 0 ], self -> total, self -> failures ) );
+
         if ( self -> failures > 0 ) {
             uint32_t i = 0;
             OUTMSG ( ( "Errors:\n" ) );
             for ( i = 0; i < VectorLength ( self -> errors ); ++ i ) {
-                char * c = VectorGet ( self -> errors, i );
-                OUTMSG ( ( " %d: %s\n", i, c ) );
+                const KDiagnoseError * e = VectorGet ( self -> errors, i );
+                assert ( e );
+                OUTMSG ( ( " %d: %s\n", i + 1, e -> message ) );
             }
         }
     }
@@ -405,11 +459,11 @@ const char*c=self->msg.base;
         if ( rc != 0 )
             OUTMSG ( ( "CANNOT PRINT: %R", rc ) );
         else if ( ok == eEndFAIL ) {
-            const char * c = string_dup_measure ( self -> msg . base, NULL );
-            if ( c == NULL )
-                return RC
-                    ( rcRuntime, rcData, rcAllocating, rcMemory, rcExhausted );
-            rc = VectorAppend ( self -> errors, NULL, c );
+            const KDiagnoseError * e = NULL;
+            rc = KDiagnoseErrorMake ( & e, self -> msg . base );
+            if ( rc != 0 )
+                return rc;
+            rc = VectorAppend ( self -> errors, NULL, e );
             if ( rc != 0 ) {
                 OUTMSG ( ( "CANNOT rcRuntime: %R", rc ) );
                 return rc;
@@ -1052,19 +1106,20 @@ static int KConfig_Verbosity ( const KConfig * self ) {
     return ( int ) v;
 }
 
-static const char * STestCallCgi ( STest * self, const String * acc,
-    char * response, size_t response_sz, size_t * resp_read )
+static rc_t STestCallCgi ( STest * self, const String * acc,
+    char * response, size_t response_sz, size_t * resp_read, const char ** url )
 {
     rc_t rc = 0;
 
     rc_t rs = 0;
-    const char * url = NULL;
     KHttpRequest * req = NULL;
     const String * cgi = NULL;
     KHttpResult * rslt = NULL;
     KStream * stream = NULL;
 
-    assert ( self );
+    assert ( self && url );
+
+    * url = NULL;
 
     STestStart ( self, true, "Access to '%S'", acc );
     cgi = KConfig_Resolver ( self -> kfg );
@@ -1172,7 +1227,7 @@ static const char * STestCallCgi ( STest * self, const String * acc,
                     if ( n != NULL )
                         p = n - response + 1;
                     if ( i == 6 ) {
-                        url = n + 1;
+                        * url = n + 1;
                         break;
                     }
                 }
@@ -1187,7 +1242,7 @@ static const char * STestCallCgi ( STest * self, const String * acc,
     req = NULL;
     free ( ( void * ) cgi );
     cgi = NULL;
-    return url;
+    return rc;
 }
 
 static rc_t STestCheckFasp ( STest * self, const Data * data, const char * url,
@@ -1267,28 +1322,30 @@ static rc_t STestCheckAcc ( STest * self, const Data * data,
     memset ( & acc, 0, sizeof acc );
     if ( DataIsAccession ( data ) ) {
         acc = * data -> acc;
-        url = STestCallCgi ( self, & acc,
-                             response, sizeof response, & resp_len );
+        rc = STestCallCgi ( self, & acc,
+                            response, sizeof response, & resp_len, & url );
     }
     if ( acc . size != 0 ) {
         String cache;
         VPath * path = NULL;
-        rc_t rc = VFSManagerMakePath ( self -> vmgr, & path,
+        rc_t r2 = VFSManagerMakePath ( self -> vmgr, & path,
                                        "%S", data -> acc );
-        if ( rc == 0 )
-            rc = VResolverQuery ( self -> resolver, eProtocolFasp,
+        if ( r2 == 0 )
+            r2 = VResolverQuery ( self -> resolver, eProtocolFasp,
                                   path, NULL, NULL, & vcache);
-        if ( rc == 0 )
-            rc = VPathGetPath ( vcache, & cache );
-        if ( rc == 0 ) {
+        if ( r2 == 0 )
+            r2 = VPathGetPath ( vcache, & cache );
+        if ( r2 == 0 ) {
             rc_t r1 = string_printf ( faspCache, sizeof faspCache, NULL,
                                       "%S.fasp", & cache );
-            rc      = string_printf ( httpCache, sizeof httpCache, NULL,
+            r2      = string_printf ( httpCache, sizeof httpCache, NULL,
                                       "%S.http", & cache );
-            if ( rc == 0 )
-                rc = r1;
+            if ( r2 == 0 )
+                r2 = r1;
         }
         RELEASE ( VPath, path );
+        if ( rc == 0 )
+            rc = r2;
     }
     if ( url != NULL ) {
         char * p = string_chr ( url, resp_len - ( url - response ), '|' );
