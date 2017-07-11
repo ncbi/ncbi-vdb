@@ -559,6 +559,28 @@ static rc_t STestStart ( STest * self, bool checking,
     return rc;
 }
 
+static rc_t STestFail ( STest * self, rc_t failure,
+                        const char * start,  ...  )
+{
+    va_list args;
+
+    rc_t rc = 0;
+
+    rc_t r2 = 0;
+
+    va_start ( args, start );
+
+    rc = STestVStart ( self, false, start, args );
+
+    r2= STestEnd ( self, eEndFAIL, "FAILURE: %R", failure );
+    if ( rc == 0 )
+        rc = r2;
+
+    va_end ( args );
+
+    return rc;
+}
+
 typedef struct {
     VPath * vpath;
     const String * acc;
@@ -631,7 +653,7 @@ static rc_t STestCheckFileSize ( STest * self, const String * path,
         if ( rc == 0 ) {
             STestEnd ( self, eEndOK, "OK" );
 
-            rc = STestStart ( self, false, "KFileSize(KFile(%S)) =", path );
+            STestStart ( self, false, "KFileSize(KFile(%S)) =", path );
             rc = KFileSize ( file, sz );
             if ( rc == 0 )
                 STestEnd ( self, eEndOK, "%lu: OK", * sz );
@@ -651,7 +673,7 @@ static rc_t STestCheckFileSize ( STest * self, const String * path,
 static
 rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
 {
-    rc_t rc = STestStart ( self, true, "Support of Range requests" );
+    rc_t rc = 0;
     uint64_t pos = 0;
     size_t bytes = 4096;
     uint64_t ebytes = bytes;
@@ -664,13 +686,14 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
     String host;
     String scheme;
     assert ( self && data );
+    STestStart ( self, true, "Support of Range requests" );
     rc = VPathGetHost ( data -> vpath, & host );
     if ( rc != 0 )
-        OUTMSG ( ( "Cannot VPathGetHost(%R)\n", rc ) );
+        STestFail ( self, rc, "VPathGetHost" );
     if ( rc == 0 )
         rc = VPathGetScheme ( data -> vpath, & scheme );
     if ( rc != 0 )
-        OUTMSG ( ( "Cannot VPathGetScheme(%R)\n", rc ) );
+        STestFail ( self, rc, "VPathGetScheme" );
     if ( rc == 0 ) {
         String sHttps;
         String sHttp;
@@ -707,11 +730,11 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
         String path;
         rc = VPathGetPath ( data -> vpath, & path );
         if ( rc != 0 )
-            OUTMSG ( ( "Cannot VPathGetPath(%R)\n", rc ) );
+            STestFail ( self, rc, "VPathGetPath" );
         else {
             rc = KHttpMakeRequest ( http, & req, "%S", & path );
             if ( rc != 0 )
-                OUTMSG ( ( "KHttpMakeRequest(%S) = %R\n", & path, rc ) );
+                STestFail ( self, rc, "KHttpMakeRequest(%S)", & path );
         }
     }
     if ( rc == 0 ) {
@@ -775,16 +798,20 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
         rc = KClientHttpResultRange ( rslt, & po, & byte );
         if ( rc == 0 ) {
             if ( po != pos || ( ebytes > 0 && byte != ebytes ) ) {
-                STestStart ( self, false,
+                rc = RC ( rcExe, rcFile, rcReading, rcRange, rcOutofrange );
+                STestFail ( self, rc,
+                    "KClientHttpResultRange(KHttpResult,&p,&b): "
+                    "got:{%lu,%zu}", pos, ebytes, po, byte );
+/*              STestStart ( self, false,
                              "KClientHttpResultRange(KHttpResult,&p,&b):" );
                 STestEnd ( self, eEndFAIL, "FAILURE: expected:{%lu,%zu}, "
-                            "got:{%lu,%zu}", pos, ebytes, po, byte );
-                rc = RC ( rcExe, rcFile, rcReading, rcRange, rcOutofrange );
+                            "got:{%lu,%zu}", pos, ebytes, po, byte );*/
             }
         }
         else {
-            STestStart ( self, false, "KClientHttpResultRange(KHttpResult):" );
-            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+            STestFail ( self, rc, "KClientHttpResultRange(KHttpResult)" );
+/*          STestStart ( self, false, "KClientHttpResultRange(KHttpResult):" );
+            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );*/
         }
     }
     if ( rc == 0 ) {
@@ -808,16 +835,18 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
     return rc;
 }
 
-static KPathType KDirectory_RemoveCache ( KDirectory * self,
-                                          const char * cache )
-{
-    KPathType type = KDirectoryPathType ( self, cache );
+static KPathType STestRemoveCache ( STest * self, const char * cache ) {
+    KPathType type = kptNotFound;
+
+    assert ( self );
+
+    type = KDirectoryPathType ( self -> dir, cache );
 
     if ( type != kptNotFound ) {
         if ( ( type & ~ kptAlias ) == kptFile ) {
-            rc_t rc = KDirectoryRemove ( self, false, cache );
+            rc_t rc = KDirectoryRemove ( self -> dir, false, cache );
             if ( rc != 0 )
-                OUTMSG ( ( "CANNOT REMOVE '%s': %R\n", cache, rc ) );
+                STestFail ( self, rc, "KDirectoryRemove(%s)", cache );
             else
                 type = kptNotFound;
         }
@@ -841,7 +870,7 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
     uint64_t pos = 0;
     assert ( cache && cacheSize );
     if ( cache [ 0 ] != '\0' ) {
-        if ( KDirectory_RemoveCache ( self -> dir, cache ) == kptNotFound ) {
+        if ( STestRemoveCache ( self, cache ) == kptNotFound ) {
             rw = KDirectoryCreateFile ( self -> dir, & out, false,  0664,
                                         kcmCreate | kcmParents, cache );
             if ( rw != 0 )
@@ -937,9 +966,9 @@ static rc_t STestCheckHttpUrl ( STest * self, const Data * data,
     assert ( self && data );
     rc = VPathMakeString ( data -> vpath, & full );
     if ( rc != 0 )
-        OUTMSG ( ( "CANNOT VPathMakeString: %R\n", rc ) );
+        STestFail ( self, rc, "VPathMakeString" );
     if ( rc == 0 )
-        rc = STestStart ( self, true, "Access to '%S'", full );
+        STestStart ( self, true, "Access to '%S'", full );
     if ( rc == 0 )
         rc = STestCheckFileSize ( self, full, & sz );
     r2 = STestCheckRanges ( self, data, sz );
@@ -982,8 +1011,7 @@ static rc_t STestCheckHttpUrl ( STest * self, const Data * data,
         KStream * stream = NULL;
         rc = KHttpResultGetInputStream ( rslt, & stream );
         if ( rc != 0 )
-            OUTMSG ( (
-                "KHttpResultGetInputStream(KHttpResult) = %R\n", rc ) );
+            STestFail ( self, rc, "KHttpResultGetInputStream(KHttpResult)" );
         else
             rc = STestCheckStreamRead ( self, stream, cache, cacheSize,
                                         sz, print, exp, esz );
@@ -1021,7 +1049,7 @@ static rc_t STestCheckVfsUrl ( STest * self, const Data * data ) {
 
     rc = VPathGetPath ( data -> vpath, & path );
     if ( rc != 0 ) {
-        OUTMSG ( ( "Cannot VPathGetPath(%R)", rc ) );
+        STestFail ( self, rc, "VPathGetPath" );
         return rc;
     }
 
@@ -1058,7 +1086,7 @@ static rc_t STestCheckUrl ( STest * self, const Data * data, const char * cache,
 
     rc = VPathGetPath ( data -> vpath, & path );
     if ( rc != 0 ) {
-        OUTMSG ( ( "Cannot VPathGetPath(%R)", rc ) );
+        STestFail ( self, rc, "VPathGetPath" );
         return rc;
     }
 
@@ -1135,19 +1163,21 @@ static rc_t STestCallCgi ( STest * self, const String * acc,
         const char param [] = "accept-proto";
         rc = KHttpRequestAddPostParam ( req, "%s=https,http,fasp", param );
         if ( rc != 0 )
-            OUTMSG ( ( "KHttpRequestAddPostParam() = %R\n", rc ) );
+            STestFail ( self, rc,
+                "KHttpRequestAddPostParam(%s=https,http,fasp)", param );
     }
     if ( rc == 0 ) {
         const char param [] = "object";
         rc = KHttpRequestAddPostParam ( req, "%s=0||%S", param, acc );
         if ( rc != 0 )
-            OUTMSG ( ( "KHttpRequestAddPostParam() = %R\n", rc ) );
+            STestFail ( self, rc,
+                        "KHttpRequestAddPostParam(%s=0||%S)", param, acc );
     }
     if ( rc == 0 ) {
         const char param [] = "version";
         rc = KHttpRequestAddPostParam ( req, "%s=3.0", param );
         if ( rc != 0 )
-            OUTMSG ( ( "KHttpRequestAddPostParam() = %R\n", rc ) );
+            STestFail ( self, rc, "KHttpRequestAddPostParam(%s=3.0)", param );
     }
     if ( rc == 0 ) {
         STestStart ( self, false, "KHttpRequestPOST(KHttpRequest(%S)):", cgi );
@@ -1193,7 +1223,7 @@ static rc_t STestCallCgi ( STest * self, const String * acc,
     if ( rc == 0 ) {
         rc = KHttpResultGetInputStream ( rslt, & stream );
         if ( rc != 0 )
-            OUTMSG ( ( "KHttpResultGetInputStream() = %R\n", rc ) );
+            STestFail ( self, rc, "KHttpResultGetInputStream" );
     }
     if ( rc == 0 ) {
         assert ( resp_read );
@@ -1286,7 +1316,7 @@ static rc_t STestCheckFasp ( STest * self, const Data * data, const char * url,
     }
 
     if ( rc == 0 ) {
-        KDirectory_RemoveCache ( self -> dir, cache );
+        STestRemoveCache ( self, cache );
         rc = aspera_get ( self -> ascp, self -> asperaKey,
                           url + fasp . size, cache, 0 );
     }
@@ -1350,8 +1380,8 @@ static rc_t STestCheckAcc ( STest * self, const Data * data,
     if ( url != NULL ) {
         char * p = string_chr ( url, resp_len - ( url - response ), '|' );
         if ( p == NULL ) {
-            OUTMSG (( "UNEXPECTED RESOLVER RESPONSE\n" ));
             rc = RC ( rcExe, rcString ,rcParsing, rcString, rcIncorrect );
+            STestFail ( self, rc, "UNEXPECTED RESOLVER RESPONSE" );
         }
         else {
             const String * full = NULL;
@@ -1520,7 +1550,7 @@ static rc_t STestCheckNetwork ( STest * self, const Data * data,
     va_start ( args, fmt );
     rc = string_vprintf ( b, sizeof b, NULL, fmt, args );
     if ( rc != 0 )
-        OUTMSG ( ( "CANNOT PREPARE MESSAGE: %R\n", rc ) );
+        STestFail ( self, rc, "CANNOT PREPARE MESSAGE" );
     va_end ( args );
 
     assert ( self && data );
@@ -1528,7 +1558,7 @@ static rc_t STestCheckNetwork ( STest * self, const Data * data,
     STestStart ( self, true, b );
     rc = VPathGetHost ( data -> vpath, & host );
     if ( rc != 0 )
-        OUTMSG ( ( "Cannot VPathGetHost(%R)", rc ) );
+        STestFail ( self, rc, "VPathGetHost" );
     else {
         rc_t r1 = 0;
         uint16_t port = 443;
