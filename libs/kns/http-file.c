@@ -605,13 +605,29 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                                     KEndPoint ep;
                                                     KClientHttpGetEndpoint ( http, & ep );
                                                     if ( KNSManagerLogNcbiVdbNetError ( self ) ) {
-                                                        assert ( buf );
-                                                        PLOGERR ( klogErr,
+                                                        bool print = true;
+                                                        String vdbcache;
+                                                        CONST_STRING ( & vdbcache, ".vdbcache" );
+                                                        if ( buf -> elem_count > vdbcache . size ) {
+                                                            String ext;
+                                                            StringInit ( & ext, ( char * ) buf -> base
+                                                                            + buf -> elem_count - vdbcache . size - 1,
+                                                                vdbcache . size, vdbcache . size );
+                                                            if ( ext . addr [ ext . size ] == '\0' &&
+                                                                 StringEqual ( & vdbcache, & ext ) )
+                                                            {
+                                                                print = false;
+                                                            }
+                                                        }
+                                                        if ( print ) {
+                                                          assert ( buf );
+                                                          PLOGERR ( klogErr,
                                                             ( klogErr, rc,
                                                             "Failed to KNSManagerVMakeHttpFileInt('$(path)' ($(ip)))",
                                                             "path=%.*s,ip=%s",
                                                             ( int ) buf -> elem_count, buf -> base, ep . ip_address
-                                                        ) );
+                                                          ) );
+                                                        }
                                                     }
                                                     else
                                                         DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
