@@ -71,6 +71,8 @@ struct FIXTURE {
         if ( _path == NULL )
             return;
 
+TEST_MESSAGE ( "FIXTURE: " << _path );
+
         KDirectory * native = NULL;
         rc_t rc = KDirectoryNativeDir ( & native );
         if ( rc != 0 )
