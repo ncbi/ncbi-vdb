@@ -75,16 +75,20 @@ TEST_MESSAGE ( "FIXTURE: " << _path );
 
         KDirectory * native = NULL;
         rc_t rc = KDirectoryNativeDir ( & native );
+TEST_MESSAGE ( "KDirectoryNativeDir = " << rc );
         if ( rc != 0 )
             throw rc;
 
         rc = KDirectoryOpenDirRead ( native, & _dir, false, _path );
+TEST_MESSAGE ( "KDirectoryOpenDirRead = " << rc );
         if ( rc != 0 )
             throw rc;
 
         rc = KDirectoryRelease ( native );
+TEST_MESSAGE ( "KDirectoryRelease = " << rc );
         if ( rc != 0 )
             throw rc;
+TEST_MESSAGE ( "exiting FIXTURE()" );
     }
 
     ~FIXTURE ( void ) {
