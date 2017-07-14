@@ -283,7 +283,7 @@ extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
 
     rc_t KMain ( int argc, char * argv [] ) {
-ncbi::NK::TestEnv::SetVerbosity(ncbi::NK::LogLevel::e_test_suite);
+ncbi::NK::TestEnv::SetVerbosity(ncbi::NK::LogLevel::e_all);
         rc_t rc = DuSuite ( argc, argv );
 
         s_path = NULL;
