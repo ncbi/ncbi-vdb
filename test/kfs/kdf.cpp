@@ -206,6 +206,7 @@ TEST_CASE ( testKDirectoryGetDiskFreeSpace ) {
     FIXTURE fixture ( "~" );
 
     char command [ 256 ] = "";
+    TEST_MESSAGE ( fixture . _path );
     REQUIRE_RC ( string_printf
         ( command, sizeof command, NULL, "df -k %s", fixture . _path ) );
 
