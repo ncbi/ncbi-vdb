@@ -41,6 +41,7 @@ extern "C" {
 #endif
 
 struct progressbar;
+typedef uint32_t percent_t;
 
 /*--------------------------------------------------------------------------
  * make_progressbar
@@ -52,8 +53,17 @@ struct progressbar;
  *          2  ... update_progressbar( pb, 715 )	---> 7.15%
  *  digits > 2 are internally stored as 2
  */
+ 
+ /*
+    writes to stdout, but only if stdout is a terminal ( not redirected to a file/pipe )
+ */
 KLIB_EXTERN rc_t CC make_progressbar( struct progressbar ** pb, const uint8_t digits );
 
+
+ /*
+    writes to stderr, but only if stderr is a terminal ( not redirected to a file/pipe )
+ */
+KLIB_EXTERN rc_t CC make_progressbar_stderr( struct progressbar ** pb, const uint8_t digits );
 
 /*--------------------------------------------------------------------------
  * destroy_progressbar
@@ -76,7 +86,7 @@ KLIB_EXTERN rc_t CC destroy_progressbar( struct progressbar * pb );
  *  expects the percents in increasing order ( does not jump back )
  *  writes a growing bar made from '-'-chars with the value at the end
  */
-KLIB_EXTERN rc_t CC update_progressbar( struct progressbar * pb, const uint32_t percent );
+KLIB_EXTERN rc_t CC update_progressbar( struct progressbar * pb, const percent_t percent );
 
 #ifdef __cplusplus
 }

@@ -38,7 +38,8 @@ TEST_TOOLS = \
 	test-SraReleaseVersion \
 	test-time \
 	test-klib \
-	test-vnamelist
+	test-vnamelist \
+	test-progressbar
     
 include $(TOP)/build/Makefile.env
 
@@ -208,4 +209,24 @@ $(TEST_BINDIR)/test-vnamelist: $(TEST_VNAMELIST_OBJ)
 
 VNAMELIST: test-vnamelist
 	$(TEST_BINDIR)/test-vnamelist
+
+#-------------------------------------------------------------------------------
+# test-progressbar
+#
+TEST_PROGRESSBAR_SRC = \
+	test-progress
+
+TEST_PROGRESSBAR_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_PROGRESSBAR_SRC))
+
+TEST_PROGRESSBAR_LIB = \
+	-skapp \
+	-sncbi-vdb \
+	-sktst \
+
+$(TEST_BINDIR)/test-progressbar: $(TEST_PROGRESSBAR_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_PROGRESSBAR_LIB)
+
+PROGRESSBAR: test-progressbar
+	$(TEST_BINDIR)/test-progressbar
 
