@@ -558,7 +558,39 @@ TEST_CASE( CacheTee_Multiple_Users_with_Promoting )
 	uint32_t pt = KDirectoryPathType ( dir, "%s", CACHEFILE1 );
 	REQUIRE( pt == kptNotFound );
 	
-	REQUIRE_RC( KFileRelease( org ) );	
+	REQUIRE_RC( KFileRelease( org ) );
+	REQUIRE_RC( KDirectoryRelease( dir ) );
+}
+
+TEST_CASE( CacheTee_None_Promoting )
+{
+	KOutMsg( "Test: CacheTee_Multiple_Users_without_Promoting\n" );
+	remove_file( CACHEFILE );	// to start with a clean slate on caching...
+	remove_file( CACHEFILE1 );
+
+    KDirectory * dir;
+    REQUIRE_RC( KDirectoryNativeDir( &dir ) );
+
+	const KFile * org;
+    REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE ) );
+
+    /* make a non-promotiong CacheTeeFile */
+	const KFile * tee;
+	REQUIRE_RC( KDirectoryMakeCacheTee ( dir, &tee, org, BLOCKSIZE, "%s", CACHEFILE ) );
+    
+	/* read all from tee and release it, that should not trigger promotion !!! */
+	REQUIRE_RC( read_all( tee, 1024 * 32 )	);
+	REQUIRE_RC( KFileRelease( tee ) );
+
+	/* the cache.dat.cache - file should still be there */
+	uint32_t pt = KDirectoryPathType ( dir, "%s", CACHEFILE1 );
+	REQUIRE( pt == kptFile );
+    
+	/* the cache.dat - file should not be there */
+	pt = KDirectoryPathType ( dir, "%s", CACHEFILE );
+	REQUIRE( pt == kptNotFound );
+
+	REQUIRE_RC( KFileRelease( org ) );
 	REQUIRE_RC( KDirectoryRelease( dir ) );
 }
 
@@ -596,7 +628,6 @@ rc_t CC KMain ( int argc, char *argv [] )
 		rc = CacheTeeTests( argc, argv );
 		finish_cachetee_tests();
 	}
-	KOutMsg( "and the result is: %R\n", rc );
     return rc;
 }
 
