@@ -1265,7 +1265,7 @@ static rc_t VFSManagerOpenFileReadWithPromoteFlag ( const VFSManager *self,
 }
 
 
-LIB_EXPORT rc_t CC VFSManagerOpenFileRead ( remove_t * remove, const VFSManager *self,
+LIB_EXPORT rc_t CC VFSManagerOpenFileRead ( const VFSManager *self,
                                             KFile const **f,
                                             const VPath * path )
 {
@@ -2771,7 +2771,7 @@ LIB_EXPORT rc_t CC VFSManagerUpdateKryptoPassword (const VFSManager * self,
 
                         if (old_exists)
                         {
-                            rc = VFSManagerOpenFileRead (NULL, self, &fold, vold);
+                            rc = VFSManagerOpenFileRead ( self, &fold, vold );
 
                             if (rc)
                                 PLOGERR (klogErr,
