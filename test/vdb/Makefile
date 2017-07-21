@@ -36,8 +36,9 @@ TEST_TOOLS = \
 	test-sparse-col-rd \
 	test-blob-val \
 	test-VDB-3060 \
-	test-VDB-3061
-    
+	test-VDB-3061 \
+	test-bytecode
+
 include $(TOP)/build/Makefile.env
 
 
@@ -52,7 +53,7 @@ endif
 $(TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
-runtests: setup 
+runtests: setup
 
 setup:
 	@ mkdir -p db
@@ -80,10 +81,10 @@ $(TEST_BINDIR)/test-vdb: $(TEST_VDB_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_VDB_LIB)
 
 vdb: test-vdb
-	$(TEST_BINDIR)/test-vdb    
+	$(TEST_BINDIR)/test-vdb
 
 valgrind_vdb: std
-	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-vdb    
+	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-vdb
 
 #-------------------------------------------------------------------------------
 # test-dependencies
@@ -103,7 +104,7 @@ $(TEST_BINDIR)/test-dependencies: $(TEST_DEPS_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_DEPS_LIB)
 
 valgrind_deps: std
-	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-dependencies    
+	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-dependencies
 
 #-------------------------------------------------------------------------------
 # test-wvdb
@@ -123,22 +124,22 @@ $(TEST_BINDIR)/test-wvdb: $(TEST_WVDB_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_WVDB_LIB)
 
 wvdb: test-wvdb
-	$(TEST_BINDIR)/test-wvdb    
+	$(TEST_BINDIR)/test-wvdb
 
 valgrind_wvdb: std
-	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-wvdb    
+	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-wvdb
 
 #-------------------------------------------------------------------------------
 # test-sparse-col
 #  We will compile the same test file first in read/write mode, create DB and
-#  run tests using libncbi-wvdb library; then compile the same test with -DREAD_ONLY 
+#  run tests using libncbi-wvdb library; then compile the same test with -DREAD_ONLY
 #  and link it against read-only lincbi-vdb library
 TEST_SPARSE_COL_SRC = \
 	test-sparse-col
 
 TEST_SPARSE_COL_OBJ_RW = \
 	$(addsuffix .$(OBJX),$(TEST_SPARSE_COL_SRC)-rw)
-	
+
 TEST_SPARSE_COL_OBJ_RD = \
 	$(addsuffix .$(OBJX),$(TEST_SPARSE_COL_SRC)-rd)
 
@@ -150,7 +151,7 @@ $(TEST_SPARSE_COL_OBJ_RW): $(TEST_SPARSE_COL_SRC).cpp
 	$(CP) -o $@ $(OPT) $< $(LOC_INFO) -D__file_ext__=cpp
 
 $(TEST_SPARSE_COL_OBJ_RD): $(TEST_SPARSE_COL_SRC).cpp
-	$(CP) -o $@ $(OPT) $< $(LOC_INFO) -D__file_ext__=cpp -DREAD_ONLY	
+	$(CP) -o $@ $(OPT) $< $(LOC_INFO) -D__file_ext__=cpp -DREAD_ONLY
 
 $(TEST_BINDIR)/test-sparse-col-rw: $(TEST_SPARSE_COL_OBJ_RW)
 	$(LP) --exe -o $@ $^ $(TEST_SPARSE_COL_LIB) -sncbi-wvdb
@@ -164,8 +165,8 @@ sparse-col: test-sparse-col-rw test-sparse-col-rd
 
 valgrind_sparse-col: std
 	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-sparse-col-rw
-	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-sparse-col-rd   
-	
+	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-sparse-col-rd
+
 #-------------------------------------------------------------------------------
 # test-blob-val
 #
@@ -174,7 +175,7 @@ TEST_BLOB_VAL_SRC = \
 
 TEST_BLOB_VAL_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_BLOB_VAL_SRC))
-	
+
 TEST_BLOB_VAL_LIB = \
 	-skapp \
 	-sktst \
@@ -244,3 +245,24 @@ $(TEST_BINDIR)/test-VDB-3061: $(VDB_3061_OBJ)
 
 VDB-3061: test-VDB-3061
 	$(TEST_BINDIR)/test-VDB-3061
+
+#-------------------------------------------------------------------------------
+# byte code
+#
+VDB_BYTECODE_SRC = \
+	test-bytecode
+
+VDB_BYTECODE_OBJ = \
+	$(addsuffix .$(OBJX),$(VDB_BYTECODE_SRC))
+
+VDB_BYTECODE_LIB = \
+	-skapp \
+	-sktst \
+	-sncbi-wvdb
+
+$(TEST_BINDIR)/test-bytecode: $(VDB_BYTECODE_OBJ)
+	$(LP) --exe -o $@ $^ $(VDB_BYTECODE_LIB)
+
+bytecode: test-bytecode
+	$(TEST_BINDIR)/test-bytecode
+

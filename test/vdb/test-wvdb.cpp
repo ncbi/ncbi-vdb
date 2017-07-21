@@ -24,11 +24,8 @@
 
 #include <klib/log.h>
 
-#include <vdb/manager.h> // VDBManager
-#include <vdb/database.h>
 #include <vdb/table.h>
 #include <vdb/cursor.h>
-#include <vdb/schema.h> /* VSchemaRelease */
 #include <vdb/vdb-priv.h>
 
 #include <sra/sraschema.h> // VDBManagerMakeSRASchema
@@ -36,70 +33,18 @@
 #include <kdb/meta.h>
 #include <kdb/table.h>
 
-#include <ktst/unit_test.hpp> // TEST_CASE
-
 #include <sysalloc.h>
 
 #include <sstream>
 #include <cstdlib>
 
+#include "wvdb-fixture.hpp"
+
 using namespace std;
 
 TEST_SUITE( WVdbTestSuite )
 
-const string ScratchDir = "./db/";
-
-class WVDB_Fixture
-{
-public:
-    WVDB_Fixture()
-    : m_db ( 0 )
-    {
-    }
-    ~WVDB_Fixture()
-    {
-        if ( m_db )
-        {
-            VDatabaseRelease ( m_db );
-        }
-        RemoveDatabase();
-    }
-
-    void RemoveDatabase ()
-    {
-        if ( ! m_databaseName . empty () )
-        {
-            KDirectory* wd;
-            KDirectoryNativeDir ( & wd );
-            KDirectoryRemove ( wd, true, m_databaseName . c_str () );
-            KDirectoryRelease ( wd );
-        }
-    }
-
-    void MakeDatabase ( const string& p_schemaText, const string& p_schemaSpec )
-    {
-        RemoveDatabase();
-
-        VDBManager* mgr;
-        THROW_ON_RC ( VDBManagerMakeUpdate ( & mgr, NULL ) );
-        VSchema* schema;
-        THROW_ON_RC ( VDBManagerMakeSchema ( mgr, & schema ) );
-        THROW_ON_RC ( VSchemaParseText(schema, NULL, p_schemaText . c_str(), p_schemaText . size () ) );
-
-        THROW_ON_RC ( VDBManagerCreateDB ( mgr,
-                                          & m_db,
-                                          schema,
-                                          p_schemaSpec . c_str (),
-                                          kcmInit + kcmMD5,
-                                          "%s",
-                                          m_databaseName . c_str () ) );
-        THROW_ON_RC ( VSchemaRelease ( schema ) );
-        THROW_ON_RC ( VDBManagerRelease ( mgr ) );
-    }
-
-    string m_databaseName;
-    VDatabase* m_db;
-};
+const string ScratchDir = "./wvdb/";
 
 // this test case is not very useful but is here as a blueprint for other write-side tests
 FIXTURE_TEST_CASE ( BlobCorruptOnCommit, WVDB_Fixture)

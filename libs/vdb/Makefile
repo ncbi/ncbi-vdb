@@ -120,7 +120,8 @@ VDBCMN_SRC = \
 	index_lookup \
 	transpose \
 	delta_average \
-	report-vdb
+	report-vdb \
+	bytecode
 
 VDB_SRC = \
 	$(VDBCMN_SRC) \
