@@ -35,6 +35,8 @@
 #include <klib/defs.h> /* rc_t */
 #endif
 
+#include <stdarg.h> /* va_list */
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,6 +50,7 @@ struct VFSManager;
 
 typedef struct KDiagnose KDiagnose;
 typedef struct KDiagnoseError KDiagnoseError;
+typedef struct KDiagnoseTest KDiagnoseTest;
 
 
 DIAGNOSE_EXTERN rc_t CC KDiagnoseMakeExt ( KDiagnose ** test,
@@ -62,6 +65,14 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseRelease ( const KDiagnose * self );
 #define KVERBOSITY_MAX    0
 DIAGNOSE_EXTERN rc_t CC KDiagnoseSetVerbosity ( KDiagnose * self,
     int verbosity );
+
+DIAGNOSE_EXTERN rc_t CC KDiagnoseLogHandlerSet ( KDiagnose * self,
+        rc_t ( CC * logger ) ( int verbosity,
+                            unsigned type, /* TBD */
+                            const char * fmt, va_list args )
+    );
+
+DIAGNOSE_EXTERN rc_t CC KDiagnoseLogHandlerSetKOutMsg ( KDiagnose * self );
 
 
 #define DIAGNOSE_ALL     0
@@ -85,6 +96,17 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseErrorRelease ( const KDiagnoseError * self );
  */
 DIAGNOSE_EXTERN rc_t CC KDiagnoseErrorGetMsg ( const KDiagnoseError * self,
                                                const char ** message );
+
+
+DIAGNOSE_EXTERN rc_t CC KDiagnoseGetTests ( const KDiagnose * self,
+                                            const KDiagnoseTest ** test );
+
+DIAGNOSE_EXTERN rc_t CC KDiagnoseTestNext ( const KDiagnoseTest * self,
+                                            const KDiagnoseTest ** test );
+
+DIAGNOSE_EXTERN rc_t CC KDiagnoseTestChild ( const KDiagnoseTest * self, 
+                               uint32_t idx, const KDiagnoseTest ** test );
+
 
 #ifdef __cplusplus
 }

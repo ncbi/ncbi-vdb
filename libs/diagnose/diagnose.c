@@ -65,6 +65,126 @@
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
 
+static rc_t CC OutMsg ( int level, unsigned type,
+                        const char * fmt, va_list args )
+{
+    return KOutVMsg ( fmt, args );
+}
+
+static
+rc_t ( CC * LOGGER ) ( int level, unsigned type, const char * fmt, va_list args );
+
+LIB_EXPORT rc_t CC KDiagnoseLogHandlerSet ( KDiagnose * self,
+        rc_t ( CC * logger ) ( int level, unsigned type,
+                               const char * fmt, va_list args )
+    )
+{
+    LOGGER = logger;
+    return 0;
+}
+
+DIAGNOSE_EXTERN
+rc_t CC KDiagnoseLogHandlerSetKOutMsg ( KDiagnose * self )
+{
+    return KDiagnoseLogHandlerSet ( self, OutMsg );
+}
+
+static rc_t LogOut ( int level, unsigned type, const char * fmt, ... )
+{
+    rc_t rc = 0;
+
+    va_list args;
+    va_start ( args, fmt );
+
+    if ( LOGGER != NULL )
+        rc = LOGGER ( level, type, fmt, args );
+
+    va_end ( args );
+
+    return rc;
+}
+
+struct KDiagnose {
+    atomic32_t refcount;
+
+    KConfig    * kfg;
+    KNSManager * kmgr;
+    VFSManager * vmgr;
+
+    int verbosity;
+
+    Vector tests;
+    Vector errors;
+};
+
+struct KDiagnoseTest {
+    struct KDiagnoseTest * parent;
+    const struct KDiagnoseTest * next;
+    const struct KDiagnoseTest * nextChild;
+    const struct KDiagnoseTest * firstChild;
+    struct KDiagnoseTest * crntChild;
+    char * name;
+};
+
+static void KDiagnoseTestWhack ( KDiagnoseTest * self ) {
+    assert ( self );
+    free ( self -> name );
+    free ( self );
+    memset ( self, 0, sizeof * self );
+}
+
+LIB_EXPORT rc_t CC KDiagnoseGetTests ( const KDiagnose * self,
+                                       const KDiagnoseTest ** test )
+{
+    if ( test == NULL )
+        return RC ( rcRuntime, rcData, rcAccessing, rcParam, rcNull );
+
+    * test = NULL;
+
+    if ( self == NULL )
+        return RC ( rcRuntime, rcData, rcAccessing, rcSelf, rcNull );
+
+    * test = VectorGet ( & self -> tests, 0 );
+    return 0;
+}
+
+LIB_EXPORT rc_t CC KDiagnoseTestNext ( const KDiagnoseTest * self,
+                                       const KDiagnoseTest ** test )
+{
+    if ( test == NULL )
+        return RC ( rcRuntime, rcData, rcAccessing, rcParam, rcNull );
+
+    * test = NULL;
+
+    if ( self == NULL )
+        return RC ( rcRuntime, rcData, rcAccessing, rcSelf, rcNull );
+
+    * test = self -> next;
+    return 0;
+}
+
+LIB_EXPORT rc_t CC KDiagnoseTestChild ( const KDiagnoseTest * self, 
+                          uint32_t idx, const KDiagnoseTest ** test )
+{
+    const KDiagnoseTest * t = NULL; 
+    uint32_t i = 0;
+    
+    if ( test == NULL )
+        return RC ( rcRuntime, rcData, rcAccessing, rcParam, rcNull );
+
+    * test = NULL;
+
+    if ( self == NULL )
+        return RC ( rcRuntime, rcData, rcAccessing, rcSelf, rcNull );
+
+    for ( i = i, t = self -> firstChild; i < idx && t != NULL;
+          ++ i, t = t->nextChild );
+
+    * test = t;
+    return 0;
+}
+
+
 struct KDiagnoseError {
     atomic32_t refcount;
 
@@ -156,18 +276,6 @@ static rc_t KDiagnoseErrorMake ( const KDiagnoseError ** self,
     return 0;
 }
 
-struct KDiagnose {
-    atomic32_t refcount;
-
-    KConfig    * kfg;
-    KNSManager * kmgr;
-    VFSManager * vmgr;
-
-    int verbosity;
-
-    Vector errors;
-};
-
 LIB_EXPORT
 rc_t CC KDiagnoseSetVerbosity ( KDiagnose * self, int verbosity )
 {
@@ -222,7 +330,7 @@ LIB_EXPORT rc_t CC KDiagnoseGetError ( const KDiagnose * self, uint32_t idx,
 }
 
 typedef struct {
-    int n [ 6 ];
+    int n [ 7 ];
     int level;
     bool ended;
     bool started;           /*  TestStart did not terminale string by EOL */
@@ -235,6 +343,8 @@ typedef struct {
 
     int total;
     int failures;
+    KDiagnoseTest * crnt;
+    Vector * tests;
     Vector * errors;
 
     KDataBuffer msg;
@@ -265,6 +375,7 @@ static void STestInit ( STest * self, KDiagnose * test )
     self -> kmgr = test -> kmgr;
     self -> vmgr = test -> vmgr;
     self -> errors = & test -> errors;
+    self -> tests = & test -> tests;
 
     self -> verbosity = test -> verbosity;
     if ( self -> verbosity > 0 )
@@ -274,11 +385,11 @@ static void STestInit ( STest * self, KDiagnose * test )
 
     rc = KDirectoryNativeDir ( & self -> dir );
     if ( rc != 0 )
-        OUTMSG ( ( "CANNOT KDirectoryNativeDir: %R\n", rc ) );
+        LogOut ( KVERBOSITY_ERROR, 0, "CANNOT KDirectoryNativeDir: %R\n", rc );
 
     rc = VFSManagerGetResolver ( self -> vmgr, & self -> resolver);
     if ( rc != 0 )
-        OUTMSG ( ( "CANNOT GetResolver: %R\n", rc ) );
+        LogOut ( KVERBOSITY_ERROR, 0, "CANNOT GetResolver: %R\n", rc );
     else
         self -> cacheState = VResolverCacheEnable ( self -> resolver,
                                                     vrAlwaysEnable );
@@ -293,19 +404,19 @@ static void STestFini ( STest * self ) {
         if ( self -> n [ 0 ] == 0 || self -> n [ 1 ] != 0 ||
              self -> level != 0 )
         {
-            OUTMSG ( ( "= TEST WAS NOT COMPLETED\n" ) );
+            LogOut ( KVERBOSITY_INFO, 0, "= TEST WAS NOT COMPLETED\n" );
         }
 
-        OUTMSG ( ( "= %d (%d) tests performed, %d failed\n",
-                   self -> n [ 0 ], self -> total, self -> failures ) );
+        LogOut ( KVERBOSITY_INFO, 0, "= %d (%d) tests performed, %d failed\n",
+                   self -> n [ 0 ], self -> total, self -> failures );
 
         if ( self -> failures > 0 ) {
             uint32_t i = 0;
-            OUTMSG ( ( "Errors:\n" ) );
+            LogOut ( KVERBOSITY_INFO, 0, "Errors:\n" );
             for ( i = 0; i < VectorLength ( self -> errors ); ++ i ) {
                 const KDiagnoseError * e = VectorGet ( self -> errors, i );
                 assert ( e );
-                OUTMSG ( ( " %d: %s\n", i + 1, e -> message ) );
+                LogOut ( KVERBOSITY_INFO, 0, " %d: %s\n", i + 1, e -> message );
             }
         }
     }
@@ -324,23 +435,56 @@ static void STestFini ( STest * self ) {
 static rc_t STestVStart ( STest * self, bool checking,
                           const char * fmt, va_list args  )
 {
+    KDiagnoseTest * test = NULL;
     rc_t rc = 0;
     int i = 0;
     char b [ 512 ] = "";
+    bool next = false;
     KDataBuffer bf;
     memset ( & bf, 0, sizeof bf );
     rc = string_vprintf ( b, sizeof b, NULL, fmt, args );
     if ( rc != 0 ) {
-        OUTMSG ( ( "CANNOT PRINT: %R\n", rc ) );
+        LogOut ( KVERBOSITY_ERROR, 0, "CANNOT PRINT: %R\n", rc );
         return rc;
     }
 
     assert ( self );
 
-    if ( self -> ended )
+    test = calloc ( 1, sizeof * test );
+    if ( test == NULL )
+        return RC ( rcRuntime, rcData, rcAllocating, rcMemory, rcExhausted );
+    test -> name = strdup (b);//TODO
+    if ( test -> name == NULL ) {
+        free ( test );
+        return RC ( rcRuntime, rcData, rcAllocating, rcMemory, rcExhausted );
+    }
+
+    if ( self -> ended ) {
+        next = true;
         self -> ended = false;
+    }
     else
         ++ self -> level;
+
+    if ( self -> crnt != NULL ) {
+        if ( next )
+            self -> crnt -> next = test;
+        else {
+            if ( self -> crnt -> firstChild == NULL )
+                self -> crnt -> firstChild = test;
+            else {
+                KDiagnoseTest * child = self -> crnt -> crntChild;
+                assert ( child );
+                child -> nextChild = test;
+            }
+            self -> crnt -> crntChild = test;
+        }
+        test -> parent = self -> crnt;
+    }
+    self -> crnt = test;
+    rc = VectorAppend ( self -> tests, NULL, test );
+    if ( rc != 0 )
+        return rc;
 
     assert ( self -> level >= 0 );
     assert ( self -> level < sizeof self -> n / sizeof self -> n [ 0 ] );
@@ -357,32 +501,32 @@ static rc_t STestVStart ( STest * self, bool checking,
 const char*c=self->msg.base;
 #endif
     if ( rc != 0 )
-        OUTMSG ( ( "CANNOT PRINT: %R\n", rc ) );
+        LogOut ( KVERBOSITY_ERROR, 0, "CANNOT PRINT: %R\n", rc );
     else 
         for ( i = 1; rc == 0 && i <= self -> level; ++ i ) {
             rc = KDataBufferPrintf ( & self -> msg, ".%d", self -> n [ i ] );
             if ( rc != 0 )
-                OUTMSG ( ( "CANNOT PRINT: %R\n", rc ) );
+                LogOut ( KVERBOSITY_ERROR, 0, "CANNOT PRINT: %R\n", rc );
         }
     if ( rc == 0 )
         rc = KDataBufferPrintf ( & self -> msg, " %s ", b );
         if ( rc != 0 )
-            OUTMSG ( ( "CANNOT PRINT: %R\n", rc ) );
+            LogOut ( KVERBOSITY_ERROR, 0, "CANNOT PRINT: %R\n", rc );
 
     if ( self -> level <= self -> verbosity ) {
-        OUTMSG ( ( "> %d", self -> n [ 0 ] ) );
+        rc = LogOut ( self -> level, 0, "> %d", self -> n [ 0 ] );
         for ( i = 1; i <= self -> level; ++ i )
-            OUTMSG ( ( ".%d", self -> n [ i ] ) );
+            rc = LogOut ( self -> level, 0, ".%d", self -> n [ i ] );
 
-        rc = OUTMSG ( ( " %s%s%s", checking ? "Checking " : "", b,
-                        checking ? "..." : " " ) );
+        rc = LogOut ( self -> level, 0, " %s%s%s",
+                      checking ? "Checking " : "", b, checking ? "..." : " " );
         if ( checking ) {
             if ( self -> level < self -> verbosity ) {
-                OUTMSG ( ( "\n" ) );
+                rc = LogOut ( self -> level, 0, "\n" );
                 self -> started = false;
             }
             else {
-                OUTMSG ( ( " " ) );
+                rc = LogOut ( self -> level, 0, " " );
                 self -> started = true;
             }
         }
@@ -434,8 +578,10 @@ rc=0;
     assert ( self );
 
     if ( ok != eMSG ) {
-        if ( self -> ended )
+        if ( self -> ended ) {
+            self -> crnt = self -> crnt -> parent;
             self -> n [ self -> level -- ] = 0;
+        }
         else {
             self -> ended = true;
             ++ self -> total;
@@ -450,14 +596,14 @@ const char*c=self->msg.base;
 #endif
     rc = string_vprintf ( b, sizeof b, NULL, fmt, args );
     if ( rc != 0 ) {
-        OUTMSG ( ( "CANNOT PRINT: %R", rc ) );
+        LogOut ( KVERBOSITY_ERROR, 0, "CANNOT PRINT: %R", rc );
         return rc;
     }
 
     if ( ok == eEndFAIL || ok == eMSG ) {
         rc = KDataBufferPrintf ( & self -> msg, b );
         if ( rc != 0 )
-            OUTMSG ( ( "CANNOT PRINT: %R", rc ) );
+            LogOut ( KVERBOSITY_ERROR, 0, "CANNOT PRINT: %R", rc );
         else if ( ok == eEndFAIL ) {
             const KDiagnoseError * e = NULL;
             rc = KDiagnoseErrorMake ( & e, self -> msg . base );
@@ -465,7 +611,7 @@ const char*c=self->msg.base;
                 return rc;
             rc = VectorAppend ( self -> errors, NULL, e );
             if ( rc != 0 ) {
-                OUTMSG ( ( "CANNOT rcRuntime: %R", rc ) );
+                LogOut ( KVERBOSITY_ERROR, 0, "CANNOT rcRuntime: %R", rc );
                 return rc;
             }
         }
@@ -476,12 +622,12 @@ const char*c=self->msg.base;
             if ( ok == eEndFAIL ) {
                 rc = KDataBufferPrintf ( & self -> msg, "\n" );
                 if ( self -> started ) {
-                    OUTMSG ( ( "\n" ) );
+                    LogOut ( KVERBOSITY_ERROR, 0,  "\n" );
                     self -> failedWhileSilent = true;
                     self -> started = false;
                 }
                 if ( self -> level >= KVERBOSITY_ERROR )
-                    OUTMSG ( ( self -> msg . base ) );
+                    LogOut ( KVERBOSITY_ERROR, 0, self -> msg . base );
                 assert ( self -> msg . base );
                 ( ( char * ) self -> msg . base)  [ 0 ] = '\0';
                 self -> msg . elem_count = 0;
@@ -494,35 +640,35 @@ const char*c=self->msg.base;
     if ( ok == eFAIL || ok == eOK || ok == eDONE ) {
         if ( print ) {
             int i = 0;
-            rc = OUTMSG ( ( "< %d", self -> n [ 0 ] ) );
+            rc = LogOut ( self -> level, 0, "< %d", self -> n [ 0 ] );
             for ( i = 1; i <= self -> level; ++ i )
-                OUTMSG ( ( ".%d", self -> n [ i ] ) );
-            OUTMSG ( ( " " ) );
+                rc = LogOut ( self -> level, 0, ".%d", self -> n [ i ] );
+            rc = LogOut ( self -> level, 0, " " );
         }
     }
     if ( print ||
             ( self -> level == self -> verbosity &&
               ok != eFAIL && ok != eOK ) )
     {
-        OUTMSG ( ( b ) );
+        rc = LogOut ( self -> level, 0, b );
     }
 
     if ( print )
         switch ( ok ) {
-            case eFAIL: OUTMSG ( ( ": FAILURE\n" ) ); break;
-            case eOK  : OUTMSG ( ( ": OK\n"      ) ); break;
+            case eFAIL: rc = LogOut ( self -> level, 0, ": FAILURE\n" ); break;
+            case eOK  : rc = LogOut ( self -> level, 0, ": OK\n"      ); break;
             case eEndFAIL:
             case eEndOK :
-            case eDONE: OUTMSG ( (     "\n"      ) ); break;
+            case eDONE: rc = LogOut ( self -> level, 0, "\n"      ); break;
             default   :                               break;
         }
     else if ( self -> level == self -> verbosity )
         switch ( ok ) {
-            case eFAIL: OUTMSG ( ( "FAILURE\n" ) ); break;
-            case eOK  : OUTMSG ( ( "OK\n"      ) ); break;
+            case eFAIL: rc = LogOut ( self -> level, 0, "FAILURE\n" ); break;
+            case eOK  : rc = LogOut ( self -> level, 0, "OK\n"      ); break;
             case eEndFAIL:
             case eEndOK :
-            case eDONE: OUTMSG ( (   "\n"      ) ); break;
+            case eDONE: rc = LogOut ( self -> level, 0, "\n"      ); break;
             default   :                             break;
         }
 
@@ -531,7 +677,9 @@ const char*c=self->msg.base;
     return rc;
 }
 
-static rc_t STestEnd ( STest * self, EOK ok, const char * fmt, ...  )  {
+static rc_t STestEndOr ( STest * self, rc_t * failure,
+                         EOK ok, const char * fmt, ...  )
+{
     rc_t rc = 0;
 
     va_list args;
@@ -540,6 +688,27 @@ static rc_t STestEnd ( STest * self, EOK ok, const char * fmt, ...  )  {
     rc = STestVEnd ( self, ok, fmt, args );
 
     va_end ( args );
+
+    if ( LOGGER == OutMsg ) {
+        assert ( rc == 0 );
+    }
+
+    return rc;
+}
+
+static rc_t STestEnd ( STest * self, EOK ok, const char * fmt, ...  ) {
+    rc_t rc = 0;
+
+    va_list args;
+    va_start ( args, fmt );
+
+    rc = STestVEnd ( self, ok, fmt, args );
+
+    va_end ( args );
+
+    if ( LOGGER == OutMsg ) {
+        assert ( rc == 0 );
+    }
 
     return rc;
 }
@@ -555,6 +724,10 @@ static rc_t STestStart ( STest * self, bool checking,
     rc = STestVStart ( self, checking, fmt, args );
 
     va_end ( args );
+
+    if ( LOGGER == OutMsg ) {
+        assert ( rc == 0 );
+    }
 
     return rc;
 }
@@ -597,7 +770,8 @@ static rc_t DataInit ( Data * self, const VFSManager * mgr,
 
     rc = VFSManagerMakePath ( mgr, & self -> vpath, path );
     if ( rc != 0 )
-        OUTMSG ( ( "VFSManagerMakePath(%s) = %R\n", path, rc ) );
+        LogOut ( KVERBOSITY_ERROR, 0,
+                 "VFSManagerMakePath(%s) = %R\n", path, rc );
     else {
         VPath * vacc = NULL;
         rc = VFSManagerExtractAccessionOrOID ( mgr, & vacc, self -> vpath );
@@ -609,8 +783,8 @@ static rc_t DataInit ( Data * self, const VFSManager * mgr,
             if ( rc == 0 )
                 StringCopy ( & self -> acc, & acc );
             else
-                OUTMSG ( ( "Cannot VPathGetPath"
-                           "(VFSManagerExtractAccessionOrOID(%R))\n", rc ) );
+                LogOut ( KVERBOSITY_ERROR, 0, "Cannot VPathGetPath"
+                           "(VFSManagerExtractAccessionOrOID(%R))\n", rc );
         }
     }
 
@@ -650,18 +824,18 @@ static rc_t STestCheckFileSize ( STest * self, const String * path,
     if ( rc != 0 )
         STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
     else {
-        if ( rc == 0 ) {
-            STestEnd ( self, eEndOK, "OK" );
-
+        if ( rc == 0 )
+            STestEndOr ( self, & rc, eEndOK, "OK" );
+        if ( rc != 0 )
+            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+        else {
             STestStart ( self, false, "KFileSize(KFile(%S)) =", path );
             rc = KFileSize ( file, sz );
             if ( rc == 0 )
-                STestEnd ( self, eEndOK, "%lu: OK", * sz );
-            else
+                STestEndOr ( self, & rc, eEndOK, "%lu: OK", * sz );
+            if ( rc != 0 )
                 STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
         }
-        else
-            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
     }
 
     KFileRelease ( file );
@@ -704,7 +878,8 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
         else if ( StringEqual ( & scheme, & sHttp ) )
             https = false;
         else {
-            OUTMSG ( ( "Unexpected scheme '(%S)'\n", & scheme ) );
+            LogOut ( KVERBOSITY_ERROR, 0,
+                     "Unexpected scheme '(%S)'\n", & scheme );
             return 0;
         }
     }
@@ -722,8 +897,8 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
                                             HTTP_VERSION, & host, 0 );
         }
         if ( rc == 0 )
-            STestEnd ( self, eEndOK, "OK" );
-        else
+            STestEndOr ( self, & rc, eEndOK, "OK" );
+        if ( rc != 0 )
             STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
     }
     if ( rc == 0 ) {
@@ -742,8 +917,8 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
             "KHttpRequestHEAD(KHttpMakeRequest(KClientHttp)):" );
         rc = KHttpRequestHEAD ( req, & rslt );
         if ( rc == 0 )
-            STestEnd ( self, eEndOK, "OK" );
-        else
+            STestEndOr ( self, & rc, eEndOK, "OK" );
+        if ( rc != 0 )
             STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
     }
     if ( rc == 0 ) {
@@ -779,8 +954,8 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
                         "(KHttpMakeRequest, %lu, %zu):", pos, bytes );
         rc = KHttpRequestByteRange ( req, pos, bytes );
         if ( rc == 0 )
-            STestEnd ( self, eEndOK, "OK" );
-        else
+            STestEndOr ( self, & rc, eEndOK, "OK" );
+        if ( rc != 0 )
             STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
     }
     if ( rc == 0 ) {
@@ -788,8 +963,8 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
             "KHttpResult = KHttpRequestGET(KHttpMakeRequest(KClientHttp)):" );
         rc = KHttpRequestGET ( req, & rslt );
         if ( rc == 0 )
-            STestEnd ( self, eEndOK, "OK" );
-        else
+            STestEndOr ( self, & rc, eEndOK, "OK" );
+        if ( rc != 0 )
             STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
     }
     if ( rc == 0 ) {
@@ -820,9 +995,9 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
         rc = KHttpResultGetHeader ( rslt, "Content-Range",
                                     buffer, sizeof buffer, & num_read );
         if ( rc == 0 )
-            STestEnd ( self, eEndOK, "'%.*s': OK",
+            STestEndOr ( self, & rc, eEndOK, "'%.*s': OK",
                                     ( int ) num_read, buffer );
-        else
+        if ( rc != 0 )
             STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
     }
     KHttpResultRelease ( rslt );
@@ -851,8 +1026,8 @@ static KPathType STestRemoveCache ( STest * self, const char * cache ) {
                 type = kptNotFound;
         }
         else
-            OUTMSG ( ( "UNEXPECTED FILE TYPE OF '%s': %d\n",
-                        cache, type ) );
+            LogOut ( KVERBOSITY_ERROR, 0,
+                     "UNEXPECTED FILE TYPE OF '%s': %d\n", cache, type );
     }
 
     return type;
@@ -874,7 +1049,8 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
             rw = KDirectoryCreateFile ( self -> dir, & out, false,  0664,
                                         kcmCreate | kcmParents, cache );
             if ( rw != 0 )
-                OUTMSG ( ( "CANNOT CreateFile '%s': %R\n", cache, rw ) );
+                LogOut ( KVERBOSITY_ERROR, 0,
+                         "CANNOT CreateFile '%s': %R\n", cache, rw );
         }
     }
     STestStart ( self, false, "KStreamRead(KHttpResult):" );
@@ -892,7 +1068,8 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
                     pos += num_writ;
                 }
                 else
-                    OUTMSG ( ( "CANNOT WRITE TO '%s': %R\n", cache, rw ) );
+                    LogOut ( KVERBOSITY_ERROR, 0,
+                             "CANNOT WRITE TO '%s': %R\n", cache, rw );
             }
             if ( total == 0 && esz > 0 ) {
                 int i = 0;
@@ -978,8 +1155,8 @@ static rc_t STestCheckHttpUrl ( STest * self, const Data * data,
         rc = KNSManagerMakeRequest ( self -> kmgr, & req,
                                      HTTP_VERSION, NULL, "%S", full );
         if ( rc == 0 )
-            STestEnd ( self, eEndOK, "OK"  );
-        else
+            STestEndOr ( self, & rc, eEndOK, "OK"  );
+        if ( rc != 0 )
             STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
     }
     if ( rc == 0 ) {
@@ -987,8 +1164,8 @@ static rc_t STestCheckHttpUrl ( STest * self, const Data * data,
                      "KHttpResult = KHttpRequestGET(KHttpRequest):" );
         rc = KHttpRequestGET ( req, & rslt );
         if ( rc == 0 )
-            STestEnd ( self, eEndOK, "OK" );
-        else
+            STestEndOr ( self, & rc, eEndOK, "OK" );
+        if ( rc != 0 )
             STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
     }
     if ( rc == 0 ) {
@@ -1056,8 +1233,8 @@ static rc_t STestCheckVfsUrl ( STest * self, const Data * data ) {
     STestStart ( self, false, "VFSManagerOpenDirectoryRead(%S):", & path );
     rc = VFSManagerOpenDirectoryRead ( self -> vmgr, & d, data -> vpath );
     if ( rc == 0 )
-        STestEnd ( self, eEndOK, "OK"  );
-    else
+        STestEndOr ( self, & rc, eEndOK, "OK"  );
+    if ( rc != 0 )
         STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
 
     RELEASE ( KDirectory, d );
@@ -1134,8 +1311,79 @@ static int KConfig_Verbosity ( const KConfig * self ) {
     return ( int ) v;
 }
 
-static rc_t STestCallCgi ( STest * self, const String * acc,
-    char * response, size_t response_sz, size_t * resp_read, const char ** url )
+typedef struct {
+    KDataBuffer response;
+    uint32_t code;
+} Abuse;
+
+static void TestInit ( Abuse * self ) {
+    assert ( self );
+    memset ( self, 0, sizeof * self );
+}
+
+static void TestSetStatus ( Abuse * self, uint32_t code ) {
+    assert ( self );
+    self -> code = code;
+}
+
+static rc_t TestAdd ( Abuse * self, const char * txt, int sz ) {
+    rc_t rc = 0;
+    assert ( self );
+    if ( rc == 0 )
+        return KDataBufferPrintf ( & self -> response,  "%s", txt );
+    else
+        return KDataBufferPrintf ( & self -> response,  "%.*s", sz, txt );
+}
+
+static rc_t TestAnalyze ( STest * self, Abuse * test, bool * ok, bool * abuse ) {
+    size_t i = 0;
+    const char * s = NULL;
+    String misuse;
+    CONST_STRING ( & misuse,
+        "https://misuse.ncbi.nlm.nih.gov/error/abuse.shtml" );
+    assert ( test && ok && abuse );
+    * ok = * abuse = false;
+    if ( test -> code == 200 ) {
+        * ok = true;
+        return 0;
+    }
+    if ( test -> code != 302 )
+        return 0;
+    s = test -> response . base;
+    while ( true ) {
+        const char * h = NULL;
+        assert ( test -> response . elem_count >= i );
+        h = string_chr ( s + i, ( size_t ) test -> response . elem_count - i,
+                         'h' );
+        if ( h == NULL )
+            break;
+        i = h - s;
+        if ( i < misuse . size )
+            break;
+        if ( string_cmp ( h, misuse . size,
+                          misuse . addr, misuse . size, misuse . size ) == 0 )
+        {
+            rc_t rc = 0;
+            const KFile * file = NULL;
+            char buffer [ 1024 ] = "";
+            uint64_t pos = 0;
+         if(0){rc = KNSManagerMakeReliableHttpFile ( self -> kmgr, & file, NULL,
+                HTTP_VERSION, "%S", & misuse );
+            while ( rc == 0 ) {
+                size_t num_read = 0;
+                rc = KFileRead ( file, pos, buffer, sizeof buffer, & num_read );
+                }}//TODO
+            RELEASE ( KFile, file );
+            * abuse = true;
+            return rc;
+        }
+        ++ i;
+    }
+    return 0;
+}
+
+static rc_t STestCallCgi ( STest * self, const String * acc, char * response,
+    size_t response_sz, size_t * resp_read, const char ** url, Abuse * test )
 {
     rc_t rc = 0;
 
@@ -1156,8 +1404,8 @@ static rc_t STestCallCgi ( STest * self, const String * acc,
     rc = KNSManagerMakeReliableClientRequest ( self -> kmgr, & req,
         HTTP_VERSION, NULL, "%S", cgi);
     if ( rc == 0 )
-        STestEnd ( self, eEndOK, "OK"  );
-    else
+        STestEndOr ( self, & rc, eEndOK, "OK"  );
+    if ( rc != 0 )
         STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
     if ( rc == 0 ) {
         const char param [] = "accept-proto";
@@ -1183,8 +1431,8 @@ static rc_t STestCallCgi ( STest * self, const String * acc,
         STestStart ( self, false, "KHttpRequestPOST(KHttpRequest(%S)):", cgi );
         rc = KHttpRequestPOST ( req, & rslt );
         if ( rc == 0 )
-            STestEnd ( self, eEndOK, "OK"  );
-        else
+            STestEndOr ( self, & rc, eEndOK, "OK"  );
+        if ( rc != 0 )
             STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
     }
     if ( rc == 0 ) {
@@ -1272,6 +1520,16 @@ static rc_t STestCallCgi ( STest * self, const String * acc,
     req = NULL;
     free ( ( void * ) cgi );
     cgi = NULL;
+TestSetStatus(test,302);
+TestAdd(test,"<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n"
+"<html><head>\n"
+"<title>302 Found</title>\n"
+"</head><body>\n"
+"<h1>Found</h1>\n"
+"<p>The document has moved <a href=\"https://misuse.ncbi.nlm.nih.gov/error/abuse.shtml\">here</a>.</p>\n"
+"</body></html>",0);
+{bool ok, abuse;
+TestAnalyze(self,test,&ok,&abuse);}
     return rc;
 }
 
@@ -1305,13 +1563,13 @@ static rc_t STestCheckFasp ( STest * self, const Data * data, const char * url,
 
     m = string_measure ( url, NULL );
     if ( m < fasp . size ) {
-        OUTMSG ( ( "UNEXPECTED SCHEMA IN '%s'", url ) );
+        LogOut ( KVERBOSITY_ERROR, 0, "UNEXPECTED SCHEMA IN '%s'", url );
         return 0;
     }
 
     StringInit( & schema, url, fasp . size, fasp . len );
     if ( ! StringEqual ( & schema, & fasp ) ) {
-        OUTMSG ( ( "UNEXPECTED SCHEMA IN '%s'", url ) );
+        LogOut ( KVERBOSITY_ERROR, 0, "UNEXPECTED SCHEMA IN '%s'", url );
         return 0;
     }
 
@@ -1324,8 +1582,8 @@ static rc_t STestCheckFasp ( STest * self, const Data * data, const char * url,
     if ( rc == 0 )
         rc = KDirectoryFileSize ( self -> dir, cacheSz, cache );
     if ( rc == 0 )
-        STestEnd ( self, eEndOK, "OK" );
-    else
+        STestEndOr ( self, & rc, eEndOK, "OK" );
+    if ( rc != 0 )
         STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
 
     return rc;
@@ -1351,9 +1609,11 @@ static rc_t STestCheckAcc ( STest * self, const Data * data,
 
     memset ( & acc, 0, sizeof acc );
     if ( DataIsAccession ( data ) ) {
+        Abuse test;
+        TestInit ( & test );
         acc = * data -> acc;
-        rc = STestCallCgi ( self, & acc,
-                            response, sizeof response, & resp_len, & url );
+        rc = STestCallCgi ( self, & acc, response, sizeof response,
+                            & resp_len, & url, & test );
     }
     if ( acc . size != 0 ) {
         String cache;
@@ -1363,6 +1623,7 @@ static rc_t STestCheckAcc ( STest * self, const Data * data,
         if ( r2 == 0 )
             r2 = VResolverQuery ( self -> resolver, eProtocolFasp,
                                   path, NULL, NULL, & vcache);
+// find another cache location if r2 != 0
         if ( r2 == 0 )
             r2 = VPathGetPath ( vcache, & cache );
         if ( r2 == 0 ) {
@@ -1388,7 +1649,8 @@ static rc_t STestCheckAcc ( STest * self, const Data * data,
             rc_t r2 = VPathMakeString ( data -> vpath, & full );
             char * d = NULL;
             if ( r2 != 0 )
-                OUTMSG ( ( "CANNOT VPathMakeString: %R\n", r2 ) );
+                LogOut ( KVERBOSITY_ERROR, 0,
+                         "CANNOT VPathMakeString: %R\n", r2 );
             d = string_chr ( url, resp_len - ( url - response ), '$' );
             if ( d == NULL )
                 d = p;
@@ -1454,12 +1716,13 @@ static rc_t STestCheckAcc ( STest * self, const Data * data,
             const KFile * http = NULL;
             rc_t r1 = KDirectoryOpenFileRead ( self -> dir, & ascp, faspCache );
             if ( r1 != 0 )
-                OUTMSG ( ( "KDirectoryOpenFileRead(%s)=%R\n", faspCache, r1 ) );
+                LogOut ( KVERBOSITY_ERROR, 0,
+                         "KDirectoryOpenFileRead(%s)=%R\n", faspCache, r1 );
             else {
                 r1 = KDirectoryOpenFileRead ( self -> dir, & http, httpCache );
                 if ( r1 != 0 )
-                    OUTMSG ( ( "KDirectoryOpenFileRead(%s)=%R\n",
-                                                       httpCache, r1 ) );
+                    LogOut ( KVERBOSITY_ERROR, 0,
+                             "KDirectoryOpenFileRead(%s)=%R\n", httpCache, r1 );
             }
             if ( r1 == 0 ) {
                 char bAscp [ 1024 ] = "";
@@ -1521,7 +1784,8 @@ static rc_t STestCheckAcc ( STest * self, const Data * data,
                         "FAILURE: cannot remove '%s': %R", httpCache, r1 );
                 }
                 else
-                    OUTMSG ( ( "Cannot remove '%s': %R\n", httpCache, r2 ) );
+                    LogOut ( KVERBOSITY_ERROR, 0,
+                             "Cannot remove '%s': %R\n", httpCache, r2 );
             }
             if ( r1 == 0 )
                 STestEnd ( self, eEndOK, "%lu bytes compared: OK", pos );
@@ -1570,10 +1834,10 @@ static rc_t STestCheckNetwork ( STest * self, const Data * data,
         else {
             char endpoint [ 1024 ] = "";
             rc_t rx = endpoint_to_string ( endpoint, sizeof endpoint, & ep );
+            if ( rx == 0 )
+                STestEndOr ( self, & rx, eEndOK, "= '%s': OK", endpoint );
             if ( rx != 0 )
-                STestEnd ( self, eEndFAIL, "CANNOT CONVERT TO STRING" );
-            else
-                STestEnd ( self, eEndOK, "= '%s': OK", endpoint );
+                STestEnd ( self, eEndFAIL, "CANNOT CONVERT TO STRING: %R", rx );
         }
         port = 80;
         STestStart ( self, false, "KNSManagerInitDNSEndpoint(%S:%hu) =",
@@ -1585,10 +1849,10 @@ static rc_t STestCheckNetwork ( STest * self, const Data * data,
         else {
             char endpoint [ 1024 ] = "";
             rc_t rx = endpoint_to_string ( endpoint, sizeof endpoint, & ep );
+            if ( rx == 0 )
+                STestEndOr ( self, & rx, eEndOK, "'%s': OK", endpoint );
             if ( rx != 0 )
-                STestEnd ( self, eEndFAIL, "CANNOT CONVERT TO STRING" );
-            else
-                STestEnd ( self, eEndOK, "'%s': OK", endpoint );
+                STestEnd ( self, eEndFAIL, "CANNOT CONVERT TO STRING: %R", rx );
         }
         if ( rc == 0 ) {
             rc = STestCheckAcc ( self, data, false, exp, esz );
@@ -1682,7 +1946,9 @@ LIB_EXPORT rc_t CC KDiagnoseAddRef ( const KDiagnose * self ) {
     return 0;
 }
 
-static void CC whack ( void *item, void *data ) { free ( item ); }
+static void CC whack ( void * item, void * data ) { free ( item ); }
+static void CC testsWhack ( void * item, void * data )
+{   KDiagnoseTestWhack ( item ); }
 
 LIB_EXPORT rc_t CC KDiagnoseRelease ( const KDiagnose * cself ) {
     rc_t rc = 0;
@@ -1695,7 +1961,8 @@ LIB_EXPORT rc_t CC KDiagnoseRelease ( const KDiagnose * cself ) {
                 RELEASE ( KConfig   , self -> kfg );
                 RELEASE ( KNSManager, self -> kmgr );
                 RELEASE ( VFSManager, self -> vmgr );
-                VectorWhack ( & self -> errors, & whack, NULL );
+                VectorWhack ( & self -> tests , & testsWhack, NULL );
+                VectorWhack ( & self -> errors, & whack     , NULL );
                 free ( self );
                 break;
             case krefNegative:
@@ -1727,15 +1994,22 @@ LIB_EXPORT rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests ) {
 
     STestInit ( & t, self );
 
+    STestStart ( & t, true, "The System" );
+
+
     if ( tests & DIAGNOSE_CONFIG ) {
-        rc_t r1 = STestStart ( & t, true, "Configuration" );
+        rc_t r1 = 0;
+        STestStart ( & t, true, "Configuration" );
+        STestStart ( & t, false, "node" );
+        STestEndOr ( & t, & r1, eEndOK, "OK" );
         STestEnd ( & t, r1 == 0 ? eOK : eFAIL, "Configuration" );
         if ( rc == 0 )
             rc = r1;
     }
 
     if ( tests & DIAGNOSE_NETWORK ) {
-        rc_t r1 = STestStart ( & t, true, "Network" );
+        rc_t r1 = 0;
+        STestStart ( & t, true, "Network" );
         {
 #undef  HOST
 #define HOST "www.ncbi.nlm.nih.gov"
@@ -1802,6 +2076,8 @@ LIB_EXPORT rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests ) {
         if ( rc == 0 )
             rc = r1;
     }
+
+    STestEnd ( & t, rc == 0 ? eOK : eFAIL, "The System" );
 
     STestFini ( & t );
     KDiagnoseRelease ( self );
