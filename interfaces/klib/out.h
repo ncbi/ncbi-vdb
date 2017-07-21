@@ -64,6 +64,7 @@ KLIB_EXTERN void * CC KOutDataGet (void);
 KLIB_EXTERN rc_t CC KOutInit (void);
 
 KLIB_EXTERN rc_t CC KOutMsg (const char * fmt, ...);
+KLIB_EXTERN rc_t CC KOutVMsg ( const char * fmt, va_list args );
 
 #define KOutStr(str) KOutMsg("%s",str)
 
