@@ -714,7 +714,7 @@ static rc_t CC KNSManagerVSetHTTPProxyPathImpl
                         rc = RC ( rcNS, rcMgr, rcUpdating, rcPath, rcInvalid );
                     else
                     {
-                        proxy_port = ( uint64_t ) port_num;
+                        proxy_port = ( uint16_t ) port_num;
                         s = colon - p;
                     }
                 }
