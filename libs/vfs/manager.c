@@ -129,8 +129,6 @@ struct VFSManager
     KRefcount refcount;
 
     VRemoteProtocols protocols;
-    
-    uint32_t cache_tee_blocksize;
 };
 
 static const char kfsmanager_classname [] = "VFSManager";
@@ -214,26 +212,6 @@ LIB_EXPORT rc_t CC VFSManagerRelease ( const VFSManager *self )
     return rc;
 }
 
-LIB_EXPORT rc_t CC VFSManagerSetCacheTeeBlockSize ( const VFSManager *self, uint32_t new_blocksize )
-{
-    if ( self == NULL )
-        return RC ( rcVFS, rcMgr, rcResolving, rcSelf, rcNull );
-    if ( new_blocksize < 32768 )
-        return RC ( rcVFS, rcMgr, rcResolving, rcItem, rcTooShort );
-    ( ( VFSManager * )self ) -> cache_tee_blocksize = new_blocksize;
-    return 0;
-}
-
-
-LIB_EXPORT rc_t CC VFSManagerGetCacheTeeBlockSize ( const VFSManager *self, uint32_t * blocksize )
-{
-    if ( self == NULL )
-        return RC ( rcVFS, rcMgr, rcResolving, rcSelf, rcNull );
-    if ( blocksize == NULL )
-        return RC ( rcVFS, rcMgr, rcResolving, rcParam, rcNull );
-    *blocksize = self -> cache_tee_blocksize;
-    return 0;
-}
 
 /*--------------------------------------------------------------------------
  * VFSManagerMakeHTTPFile
@@ -241,7 +219,7 @@ LIB_EXPORT rc_t CC VFSManagerGetCacheTeeBlockSize ( const VFSManager *self, uint
 static
 rc_t VFSManagerMakeHTTPFile( const VFSManager * self, const KFile **cfp,
                              const char * url, const char * cache_location,
-                             bool high_reliability )
+                             bool high_reliability, uint32_t blocksize )
 {
     rc_t rc;
 
@@ -255,7 +233,7 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self, const KFile **cfp,
 		const KFile *temp_file;
 		/* we do have a cache_location! wrap the remote file in a cacheteefile */
 		rc_t rc2 = KDirectoryMakeCacheTee ( self->cwd, &temp_file, *cfp,
-											self->cache_tee_blocksize, "%s", cache_location );
+											blocksize, "%s", cache_location );
 												
         if ( rc2 == 0 )
         {
@@ -1118,7 +1096,8 @@ rc_t VFSManagerOpenFileReadDirectoryRelativeInt (const VFSManager *self,
 /* we will create a KFile from a http or ftp url... */
 static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
                                      KFile const **f,
-                                     const VPath * path )
+                                     const VPath * path,
+                                     uint32_t blocksize )
 {
     rc_t rc;
 /*    const char * url; */
@@ -1146,7 +1125,7 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
             if ( rc == 0 )
             {
                 /* we did find a place for local cache --> use it! */
-                rc = VFSManagerMakeHTTPFile( self, f, uri->addr, local_cache->path.addr, high_reliability );
+                rc = VFSManagerMakeHTTPFile( self, f, uri->addr, local_cache->path.addr, high_reliability, blocksize );
                 {
                     rc_t rc2 = VPathRelease ( local_cache );
                     if ( rc == 0 )
@@ -1157,11 +1136,11 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
             }
             else
                 /* we did NOT find a place for local cache --> we are not caching! */
-                rc = VFSManagerMakeHTTPFile( self, f, uri->addr, NULL, high_reliability );
+                rc = VFSManagerMakeHTTPFile( self, f, uri->addr, NULL, high_reliability, blocksize );
         }
         else
         {
-            rc = VFSManagerMakeHTTPFile( self, f, uri->addr, NULL, high_reliability );
+            rc = VFSManagerMakeHTTPFile( self, f, uri->addr, NULL, high_reliability, blocksize );
         }
         free( ( void * )uri );
     }
@@ -1214,9 +1193,10 @@ static rc_t ResolveVPathBySRAPath( const VPath ** path )
 }
 
 
-LIB_EXPORT rc_t CC VFSManagerOpenFileRead ( const VFSManager *self,
+LIB_EXPORT rc_t CC VFSManagerOpenFileReadWithBlocksize ( const VFSManager *self,
                                             KFile const **f,
-                                            const VPath * path_ )
+                                            const VPath * path_,
+                                            uint32_t blocksize )
 {
     rc_t rc;
 
@@ -1273,7 +1253,7 @@ LIB_EXPORT rc_t CC VFSManagerOpenFileRead ( const VFSManager *self,
                 case vpuri_http:
                 case vpuri_https:
                 case vpuri_ftp:
-                    rc = VFSManagerOpenCurlFile ( self, f, path );
+                    rc = VFSManagerOpenCurlFile ( self, f, path, blocksize );
                     break;
                 }
                 VPathRelease (path);
@@ -1283,6 +1263,12 @@ LIB_EXPORT rc_t CC VFSManagerOpenFileRead ( const VFSManager *self,
     return rc;
 }
 
+LIB_EXPORT rc_t CC VFSManagerOpenFileRead ( const VFSManager *self,
+                                            KFile const **f,
+                                            const VPath * path_ )
+{
+    return VFSManagerOpenFileReadWithBlocksize ( self, f, path_, DEFAULT_CACHE_BLOCKSIZE );
+}
 
 LIB_EXPORT rc_t CC VFSManagerOpenFileReadDecrypt (const VFSManager *self,
                                                   KFile const **f,
@@ -1447,7 +1433,7 @@ rc_t VFSManagerOpenDirectoryReadHttp (const VFSManager *self,
     rc_t rc;
     const KFile * file = NULL;
 
-    rc = VFSManagerOpenCurlFile ( self, &file, path );
+    rc = VFSManagerOpenCurlFile ( self, &file, path, DEFAULT_CACHE_BLOCKSIZE );
     if ( rc != 0 )
     {
         const char extension[] = ".vdbcache";
@@ -1539,7 +1525,12 @@ rc_t VFSManagerOpenDirectoryReadHttpResolved (const VFSManager *self,
         bool high_reliability = VPathIsHighlyReliable ( path );
 
         const KFile * file = NULL;
-        rc = VFSManagerMakeHTTPFile( self, &file, uri->addr, cache == NULL ? NULL : cache->path.addr, high_reliability );
+        rc = VFSManagerMakeHTTPFile( self,
+                                     &file,
+                                     uri->addr,
+                                     cache == NULL ? NULL : cache->path.addr,
+                                     high_reliability,
+                                     DEFAULT_CACHE_BLOCKSIZE );
         if ( rc != 0 )
         {
             if ( high_reliability )
@@ -2408,8 +2399,6 @@ LIB_EXPORT rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
             /* hard-coded default */
             obj -> protocols = DEFAULT_PROTOCOLS;
 
-            obj -> cache_tee_blocksize = DEFAULT_CACHE_BLOCKSIZE;
-            
             rc = KDirectoryNativeDir ( & obj -> cwd );
             if ( rc == 0 )
             {
