@@ -78,6 +78,8 @@ clean: stdclean
 
 ifeq (mac,$(OS))
 INCDIRS += -I/usr/local/include/osxfuse/fuse
+else
+INCDIRS += -I/usr/include/fuse
 endif
 
 #-------------------------------------------------------------------------------
