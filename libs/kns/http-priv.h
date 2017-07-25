@@ -118,7 +118,10 @@ rc_t KClientHttpMakeRequestInt ( struct KClientHttp const *self,
     struct KClientHttpRequest **req, const struct URLBlock *block, const KDataBuffer *buf );
 
 
-void KClientHttpGetEndpoint ( const struct KClientHttp * self, struct KEndPoint * ep );
+void KClientHttpGetRemoteEndpoint ( const struct KClientHttp * self,
+                                    struct KEndPoint * ep );
+void KClientHttpGetLocalEndpoint ( const struct KClientHttp * self,
+                                   struct KEndPoint * ep );
 
 
 /* exported private functions
