@@ -642,11 +642,12 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                                           assert ( buf );
                                                           PLOGERR ( klogErr,
                                                             ( klogErr, rc,
-                                                            "Failed to KNSManagerVMakeHttpFileInt('$(path)' ($(ip)))"
-                                                            " from '$(local)'", "path=%.*s,ip=%s,local=%s",
-                                                            ( int ) buf -> elem_count, buf -> base,
-                                                            ep . ip_address, local_ep . ip_address
-                                                        ) );
+                                                             "Failed to KNSManagerVMakeHttpFileInt('$(path)' ($(ip)))"
+                                                             " from '$(local)'", "path=%.*s,ip=%s,local=%s",
+                                                             ( int ) buf -> elem_count, buf -> base,
+                                                             ep . ip_address, local_ep . ip_address
+                                                            ) );
+                                                        }
                                                     }
                                                     else
                                                         DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
