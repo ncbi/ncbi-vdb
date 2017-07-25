@@ -132,11 +132,14 @@ struct KClientHttp
     int32_t read_timeout;
     int32_t write_timeout;
 
+    /* Remote EndPoint */
     KEndPoint ep;
     bool ep_valid;
     bool proxy_ep;
     bool proxy_default_port;
     
+    KEndPoint local_ep; /* Local EndPoint */
+
     bool reliable;
     bool tls;
 
@@ -455,8 +458,15 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
     /* if the connection is open */
     else
     {
-        STATUS ( STAT_USR, "%s - connected to %S (%s)\n", __func__, hostname,
-            self -> ep . ip_address );
+        rc_t r = KSocketGetLocalEndpoint ( sock, & self -> local_ep );
+        if ( r == 0 )
+            STATUS ( STAT_USR, "%s - connected from '%s' to %S (%s)\n",
+                               __func__, self -> local_ep . ip_address,
+                               hostname, self -> ep . ip_address );
+        else
+            STATUS ( STAT_USR, "%s - connected to %S (%s)\n",
+                               __func__, hostname, self -> ep . ip_address );
+
         if ( self -> tls )
         {
             KTLSStream * tls_stream;
@@ -469,13 +479,16 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
                 if ( ! proxy_ep ) {
                     if ( KNSManagerLogNcbiVdbNetError ( mgr ) )
                         PLOGERR ( klogSys, ( klogSys, rc,
-                            "Failed to create TLS stream for '$(host)' ($(ip))",
-                            "host=%S,ip=%s", aHostname, self -> ep . ip_address
+                            "Failed to create TLS stream for '$(host)' ($(ip)) "
+                            "from '$(local)'", "host=%S,ip=%s,local=%s",
+                            aHostname, self -> ep . ip_address,
+                            self -> local_ep . ip_address
                         ) );
                     else
                         DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_TLS ),
-                            ( "Failed to create TLS stream for '%S' (%s)\n",
-                              aHostname, self -> ep . ip_address ) );
+                            ( "Failed to create TLS stream for '%S' (%s) from '%s'\n",
+                              aHostname, self -> ep . ip_address,
+                              self -> local_ep . ip_address ) );
                 }
                 else
                 {
@@ -2601,12 +2614,18 @@ LIB_EXPORT rc_t CC KClientHttpMakeRequest ( const KClientHttp *self,
     return rc;
 }
 
-void KClientHttpGetEndpoint ( const KClientHttp * self, KEndPoint * ep ) {
+static void KClientHttpGetEndpoint ( const KClientHttp * self, KEndPoint * ep, bool remote ) {
     assert ( ep );
     memset ( ep, 0, sizeof * ep );
     if ( self != NULL )
-        * ep = self -> ep;
+        * ep = remote ? self -> ep : self -> local_ep;
 }
+
+void KClientHttpGetRemoteEndpoint ( const KClientHttp * self, KEndPoint * ep )
+{   KClientHttpGetEndpoint ( self, ep, true ); }
+
+void KClientHttpGetLocalEndpoint ( const KClientHttp * self, KEndPoint * ep )
+{   KClientHttpGetEndpoint ( self, ep, false ); }
 
 /* MakeRequest
  *  create a request that can be used to contact HTTP server
