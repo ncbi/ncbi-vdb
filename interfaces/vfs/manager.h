@@ -150,6 +150,17 @@ VFS_EXTERN rc_t CC VFSManagerRemove (const VFSManager *self, bool force,
  */
 VFS_EXTERN rc_t CC VFSManagerMake ( VFSManager ** pmanager );
 
+/* SetCacheTeeBlockSize
+ *  set a different blocksize for the cacheteefile that is eventually created by calling
+ *  VFSManagerOpenFileRead()
+ *
+ * ! new_blocksize should not be smaller than 32k
+ * ! the VFSManager is a singleton, this call might influence other parts of your software
+ * ! if a cache-file is found, but it has a different blocksize, it is not used - but discarded
+ */
+VFS_EXTERN rc_t CC VFSManagerSetCacheTeeBlockSize ( const VFSManager *self, uint32_t new_blocksize );
+VFS_EXTERN rc_t CC VFSManagerGetCacheTeeBlockSize ( const VFSManager *self, uint32_t * blocksize );
+
 /* GetCWD
  */
 VFS_EXTERN rc_t CC VFSManagerGetCWD (const VFSManager * self, struct KDirectory ** cwd);

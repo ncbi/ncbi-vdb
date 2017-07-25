@@ -129,6 +129,8 @@ struct VFSManager
     KRefcount refcount;
 
     VRemoteProtocols protocols;
+    
+    uint32_t cache_tee_blocksize;
 };
 
 static const char kfsmanager_classname [] = "VFSManager";
@@ -212,7 +214,26 @@ LIB_EXPORT rc_t CC VFSManagerRelease ( const VFSManager *self )
     return rc;
 }
 
+LIB_EXPORT rc_t CC VFSManagerSetCacheTeeBlockSize ( const VFSManager *self, uint32_t new_blocksize )
+{
+    if ( self == NULL )
+        return RC ( rcVFS, rcMgr, rcResolving, rcSelf, rcNull );
+    if ( new_blocksize < 32768 )
+        return RC ( rcVFS, rcMgr, rcResolving, rcItem, rcTooShort );
+    ( ( VFSManager * )self ) -> cache_tee_blocksize = new_blocksize;
+    return 0;
+}
 
+
+LIB_EXPORT rc_t CC VFSManagerGetCacheTeeBlockSize ( const VFSManager *self, uint32_t * blocksize )
+{
+    if ( self == NULL )
+        return RC ( rcVFS, rcMgr, rcResolving, rcSelf, rcNull );
+    if ( blocksize == NULL )
+        return RC ( rcVFS, rcMgr, rcResolving, rcParam, rcNull );
+    *blocksize = self -> cache_tee_blocksize;
+    return 0;
+}
 
 /*--------------------------------------------------------------------------
  * VFSManagerMakeHTTPFile
@@ -234,7 +255,7 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self, const KFile **cfp,
 		const KFile *temp_file;
 		/* we do have a cache_location! wrap the remote file in a cacheteefile */
 		rc_t rc2 = KDirectoryMakeCacheTee ( self->cwd, &temp_file, *cfp,
-											DEFAULT_CACHE_BLOCKSIZE, "%s", cache_location );
+											self->cache_tee_blocksize, "%s", cache_location );
 												
         if ( rc2 == 0 )
         {
@@ -2387,6 +2408,8 @@ LIB_EXPORT rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
             /* hard-coded default */
             obj -> protocols = DEFAULT_PROTOCOLS;
 
+            obj -> cache_tee_blocksize = DEFAULT_CACHE_BLOCKSIZE;
+            
             rc = KDirectoryNativeDir ( & obj -> cwd );
             if ( rc == 0 )
             {
