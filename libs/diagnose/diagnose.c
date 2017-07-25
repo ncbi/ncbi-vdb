@@ -2077,6 +2077,10 @@ LIB_EXPORT rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests ) {
             rc = r1;
     }
 
+    if ( tests & DIAGNOSE_FAIL ) {
+      rc = 1;
+    }
+
     STestEnd ( & t, rc == 0 ? eOK : eFAIL, "The System" );
 
     STestFini ( & t );
