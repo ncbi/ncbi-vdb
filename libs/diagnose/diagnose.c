@@ -129,8 +129,8 @@ struct KDiagnoseTest {
 static void KDiagnoseTestWhack ( KDiagnoseTest * self ) {
     assert ( self );
     free ( self -> name );
-    free ( self );
     memset ( self, 0, sizeof * self );
+    free ( self );
 }
 
 LIB_EXPORT rc_t CC KDiagnoseGetTests ( const KDiagnose * self,
@@ -425,6 +425,8 @@ static void STestFini ( STest * self ) {
 
     RELEASE ( KDirectory, self -> dir );    
     RELEASE ( VResolver, self -> resolver );    
+
+    KDataBufferWhack ( & self -> msg );
 
     free ( ( void * ) self -> ascp );
     free ( ( void * ) self -> asperaKey );
@@ -785,6 +787,7 @@ static rc_t DataInit ( Data * self, const VFSManager * mgr,
             else
                 LogOut ( KVERBOSITY_ERROR, 0, "Cannot VPathGetPath"
                            "(VFSManagerExtractAccessionOrOID(%R))\n", rc );
+            RELEASE ( VPath, vacc );
         }
     }
 
@@ -807,14 +810,14 @@ static rc_t DataFini ( Data * self ) {
 
 static const ver_t HTTP_VERSION = 0x01010000;
 
-static rc_t STestCheckFileSize ( STest * self, const String * path,
-                                 uint64_t * sz )
+static rc_t STestCheckFile ( STest * self, const String * path,
+                             uint64_t * sz, rc_t * rc_read )
 {
     rc_t rc = 0;
 
     const KFile * file = NULL;
 
-    assert ( self );
+    assert ( self && sz && rc_read );
 
     STestStart ( self, false,
                  "KFile = KNSManagerMakeReliableHttpFile(%S):", path );
@@ -836,6 +839,26 @@ static rc_t STestCheckFileSize ( STest * self, const String * path,
             if ( rc != 0 )
                 STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
         }
+    }
+
+    if ( rc == 0 ) {
+        char buffer [ 304 ] = "";
+        uint64_t pos = 0;
+        size_t bsize = sizeof buffer;
+        size_t num_read = 0;
+        if ( * sz < 256 ) {
+            pos = 0;
+            bsize = ( size_t ) * sz;
+        }
+        else
+            pos = ( * sz - sizeof buffer ) / 2;
+        STestStart ( self, false,
+                    "KFileRead(%S,%lu,%zu):", path, pos, bsize );
+        * rc_read = KFileRead ( file, pos, buffer, bsize, & num_read );
+        if ( * rc_read == 0 )
+            STestEndOr ( self, rc_read, eEndOK, "OK" );
+        if ( * rc_read != 0 )
+            STestEnd ( self, eEndFAIL, "FAILURE: %R", * rc_read );
     }
 
     KFileRelease ( file );
@@ -1078,7 +1101,7 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
                     s = num_read;
                 STestEnd ( self, eMSG, "'" );
                 for ( i = 0; i < s; ++ i ) {
-                    if ( isprint ( buffer [ i ] ) )
+                    if ( isprint ( ( unsigned char ) buffer [ i ] ) )
                         STestEnd ( self, eMSG, "%c", buffer [ i ] );
                     else if ( buffer [ i ] == 0 )
                         STestEnd ( self, eMSG, "\\0" );
@@ -1135,6 +1158,7 @@ static rc_t STestCheckHttpUrl ( STest * self, const Data * data,
     bool print, const char * exp, size_t esz )
 {
     rc_t rc = 0;
+    rc_t rc_read = 0;
     rc_t r2 = 0;
     KHttpRequest * req = NULL;
     KHttpResult * rslt = NULL;
@@ -1147,7 +1171,7 @@ static rc_t STestCheckHttpUrl ( STest * self, const Data * data,
     if ( rc == 0 )
         STestStart ( self, true, "Access to '%S'", full );
     if ( rc == 0 )
-        rc = STestCheckFileSize ( self, full, & sz );
+        rc = STestCheckFile ( self, full, & sz, & rc_read );
     r2 = STestCheckRanges ( self, data, sz );
     if ( rc == 0 ) {
         STestStart ( self, false,
@@ -1197,6 +1221,12 @@ static rc_t STestCheckHttpUrl ( STest * self, const Data * data,
     }
     if ( rc == 0 )
         rc = r2;
+    if ( rc == 0 )
+        rc = rc_read;
+    KHttpRequestRelease ( req );
+    req = NULL;
+    KHttpResultRelease ( rslt );
+    rslt = NULL;
     STestEnd ( self, rc == 0 ? eOK : eFAIL, "Access to '%S'", full );
     free ( ( void * ) full );
     full = NULL;
@@ -1316,17 +1346,25 @@ typedef struct {
     uint32_t code;
 } Abuse;
 
-static void TestInit ( Abuse * self ) {
+static void AbuseInit ( Abuse * self ) {
     assert ( self );
     memset ( self, 0, sizeof * self );
 }
 
-static void TestSetStatus ( Abuse * self, uint32_t code ) {
+static rc_t AbuseFini ( Abuse * self ) {
+    rc_t rc = 0;
+    assert ( self );
+    rc = KDataBufferWhack ( & self -> response );
+    memset ( self, 0, sizeof * self );
+    return rc;
+}
+
+static void AbuseSetStatus ( Abuse * self, uint32_t code ) {
     assert ( self );
     self -> code = code;
 }
 
-static rc_t TestAdd ( Abuse * self, const char * txt, int sz ) {
+static rc_t AbuseAdd ( Abuse * self, const char * txt, int sz ) {
     rc_t rc = 0;
     assert ( self );
     if ( rc == 0 )
@@ -1335,7 +1373,9 @@ static rc_t TestAdd ( Abuse * self, const char * txt, int sz ) {
         return KDataBufferPrintf ( & self -> response,  "%.*s", sz, txt );
 }
 
-static rc_t TestAnalyze ( STest * self, Abuse * test, bool * ok, bool * abuse ) {
+static rc_t TestAnalyze ( STest * self, Abuse * test,
+                          bool * ok, bool * abuse )
+{
     size_t i = 0;
     const char * s = NULL;
     String misuse;
@@ -1383,7 +1423,8 @@ static rc_t TestAnalyze ( STest * self, Abuse * test, bool * ok, bool * abuse ) 
 }
 
 static rc_t STestCallCgi ( STest * self, const String * acc, char * response,
-    size_t response_sz, size_t * resp_read, const char ** url, Abuse * test )
+    size_t response_sz, size_t * resp_read,
+    const char ** url, Abuse * test )
 {
     rc_t rc = 0;
 
@@ -1514,14 +1555,16 @@ static rc_t STestCallCgi ( STest * self, const String * acc, char * response,
     }
     if ( rc == 0 )
         rc = rs;
+    KStreamRelease ( stream );
+    stream = NULL;
     KHttpResultRelease ( rslt );
     rslt = NULL;
     KHttpRequestRelease ( req );
     req = NULL;
     free ( ( void * ) cgi );
     cgi = NULL;
-TestSetStatus(test,302);
-TestAdd(test,"<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n"
+AbuseSetStatus(test,302);
+AbuseAdd(test,"<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n"
 "<html><head>\n"
 "<title>302 Found</title>\n"
 "</head><body>\n"
@@ -1610,10 +1653,11 @@ static rc_t STestCheckAcc ( STest * self, const Data * data,
     memset ( & acc, 0, sizeof acc );
     if ( DataIsAccession ( data ) ) {
         Abuse test;
-        TestInit ( & test );
+        AbuseInit ( & test );
         acc = * data -> acc;
         rc = STestCallCgi ( self, & acc, response, sizeof response,
                             & resp_len, & url, & test );
+        AbuseFini ( & test );
     }
     if ( acc . size != 0 ) {
         String cache;
@@ -1623,7 +1667,7 @@ static rc_t STestCheckAcc ( STest * self, const Data * data,
         if ( r2 == 0 )
             r2 = VResolverQuery ( self -> resolver, eProtocolFasp,
                                   path, NULL, NULL, & vcache);
-// find another cache location if r2 != 0
+// TODO: find another cache location if r2 != 0
         if ( r2 == 0 )
             r2 = VPathGetPath ( vcache, & cache );
         if ( r2 == 0 ) {
@@ -1854,6 +1898,7 @@ static rc_t STestCheckNetwork ( STest * self, const Data * data,
             if ( rx != 0 )
                 STestEnd ( self, eEndFAIL, "CANNOT CONVERT TO STRING: %R", rx );
         }
+        rc = KNSManagerInitDNSEndpoint ( self -> kmgr, & ep, & host, port );
         if ( rc == 0 ) {
             rc = STestCheckAcc ( self, data, false, exp, esz );
             if ( data2 != NULL ) {
@@ -2056,6 +2101,7 @@ LIB_EXPORT rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests ) {
                                          & v, "Access to '%S'", & h );
             if ( r1 == 0 )
                 r1 = r2;
+            DataFini ( & v );
             DataFini ( & d );
         }
         {
