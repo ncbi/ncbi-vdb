@@ -78,7 +78,7 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseLogHandlerSetKOutMsg ( KDiagnose * self );
 #define DIAGNOSE_ALL     0
 #define DIAGNOSE_CONFIG  1
 #define DIAGNOSE_NETWORK 2
-#define DIAGNOSE_FAIL    3
+#define DIAGNOSE_FAIL    4
 DIAGNOSE_EXTERN rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests );
 
 
