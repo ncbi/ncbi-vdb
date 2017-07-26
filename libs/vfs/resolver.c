@@ -1118,8 +1118,11 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
 #endif
                 )
             {*/
+                const String * id = & accession;
+                if ( id -> size == 0 )
+                    id = & obj_id;
                 rc = VPathMakeFromUrl ( ( VPath** ) path, & url,
-                    & download_ticket, true, & accession, size, date,
+                    & download_ticket, true, id, size, date,
                     has_md5 ? ud5 : NULL, 0 );
             /*}
             else
@@ -3063,7 +3066,7 @@ rc_t get_query_accession ( const VPath * query, String * accession, char * oid_s
 
 static
 rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
-    const VPath * query, const VPath ** local, const VPath ** remote, const VPath ** cache )
+    const VPath * query, const VPath ** local, const VPath ** remote, const VPath ** cache, const char * version )
 {
     rc_t rc;
 
@@ -3189,7 +3192,7 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
                         rc = VResolverRemoteResolve ( self, protocols,
             & accession, remote,
             ( mapped_query == NULL && cache != NULL ) ? & remote_mapping : NULL,
-            NULL, refseq_ctx, true, NULL );
+            NULL, refseq_ctx, true, version );
 
                         if ( rc == 0 && mapped_query == NULL && cache != NULL && remote_mapping == NULL )
                         {
@@ -3582,7 +3585,7 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
                 break;
 
             case vpOID:
-                rc = VResolverQueryOID ( self, protocols, query, local, remote, cache );
+                rc = VResolverQueryOID ( self, protocols, query, local, remote, cache, version );
                 break;
 
             case vpAccession:
@@ -3590,7 +3593,7 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
                 break;
 
             case vpNameOrOID:
-                rc = VResolverQueryOID ( self, protocols, query, local, remote, cache );
+                rc = VResolverQueryOID ( self, protocols, query, local, remote, cache, version );
                 if ( rc != 0 )
                     goto try_name;
                 break;
