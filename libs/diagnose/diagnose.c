@@ -71,8 +71,8 @@ static rc_t CC OutMsg ( int level, unsigned type,
     return KOutVMsg ( fmt, args );
 }
 
-static
-rc_t ( CC * LOGGER ) ( int level, unsigned type, const char * fmt, va_list args );
+static rc_t ( CC * LOGGER )
+    ( int level, unsigned type, const char * fmt, va_list args );
 
 LIB_EXPORT rc_t CC KDiagnoseLogHandlerSet ( KDiagnose * self,
         rc_t ( CC * logger ) ( int level, unsigned type,
@@ -1373,7 +1373,7 @@ static rc_t AbuseAdd ( Abuse * self, const char * txt, int sz ) {
         return KDataBufferPrintf ( & self -> response,  "%.*s", sz, txt );
 }
 
-static rc_t TestAnalyze ( STest * self, Abuse * test,
+static rc_t TestAbuse ( STest * self, Abuse * test,
                           bool * ok, bool * abuse )
 {
     size_t i = 0;
@@ -1381,7 +1381,7 @@ static rc_t TestAnalyze ( STest * self, Abuse * test,
     String misuse;
     CONST_STRING ( & misuse,
         "https://misuse.ncbi.nlm.nih.gov/error/abuse.shtml" );
-    assert ( test && ok && abuse );
+    assert ( self && test && ok && abuse );
     * ok = * abuse = false;
     if ( test -> code == 200 ) {
         * ok = true;
@@ -1404,16 +1404,41 @@ static rc_t TestAnalyze ( STest * self, Abuse * test,
                           misuse . addr, misuse . size, misuse . size ) == 0 )
         {
             rc_t rc = 0;
-            const KFile * file = NULL;
-            char buffer [ 1024 ] = "";
-            uint64_t pos = 0;
-         if(0){rc = KNSManagerMakeReliableHttpFile ( self -> kmgr, & file, NULL,
-                HTTP_VERSION, "%S", & misuse );
+            KHttpRequest * req = NULL;
+            KHttpResult * rslt = NULL;
+            KStream * stream = NULL;
+            KDataBuffer buffer;
+            size_t total = 0;
+            const char * base = NULL;
+            rc = KDataBufferMakeBytes ( & buffer, 4096 );
+            if ( rc == 0 )
+                rc = KNSManagerMakeRequest ( self -> kmgr, & req, HTTP_VERSION,
+                                             NULL, "%S", & misuse );
+            if ( rc == 0 )
+                rc = KHttpRequestGET ( req, & rslt );
+            if ( rc == 0 )
+                rc = KHttpResultGetInputStream ( rslt, & stream );
             while ( rc == 0 ) {
                 size_t num_read = 0;
-                rc = KFileRead ( file, pos, buffer, sizeof buffer, & num_read );
-                }}//TODO
-            RELEASE ( KFile, file );
+                uint64_t avail = buffer . elem_count - total;
+                if ( avail == 0 ) {
+                    rc = KDataBufferResize ( & buffer,
+                                             buffer . elem_count + 1024 );
+                    if ( rc != 0 )
+                        break;
+                }
+                base = buffer . base;
+                rc = KStreamRead ( stream, & base [ total ],
+                    ( size_t ) buffer . elem_count - total, & num_read );
+                if ( num_read == 0 )
+                    break;
+                if ( rc != 0 ) /* TBD - look more closely at rc */
+                    rc = 0;
+                total += num_read;
+            }
+            RELEASE ( KStream, stream );
+            RELEASE ( KHttpResult, rslt );
+            RELEASE ( KHttpRequest, req );
             * abuse = true;
             return rc;
         }
@@ -1572,7 +1597,7 @@ AbuseAdd(test,"<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n"
 "<p>The document has moved <a href=\"https://misuse.ncbi.nlm.nih.gov/error/abuse.shtml\">here</a>.</p>\n"
 "</body></html>",0);
 {bool ok, abuse;
-TestAnalyze(self,test,&ok,&abuse);}
+TestAbuse(self,test,&ok,&abuse);}
     return rc;
 }
 
@@ -1632,8 +1657,8 @@ static rc_t STestCheckFasp ( STest * self, const Data * data, const char * url,
     return rc;
 }
 
-static rc_t STestCheckAcc ( STest * self, const Data * data,
-                            bool print, const char * exp, size_t esz )
+static rc_t STestCheckAcc ( STest * self, const Data * data, bool print,
+                            const char * exp, size_t esz )
 {
     rc_t rc = 0;
     char response [ 4096 ] = "";
