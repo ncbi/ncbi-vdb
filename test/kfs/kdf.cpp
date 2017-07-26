@@ -71,18 +71,24 @@ struct FIXTURE {
         if ( _path == NULL )
             return;
 
+TEST_MESSAGE ( "FIXTURE: " << _path );
+
         KDirectory * native = NULL;
         rc_t rc = KDirectoryNativeDir ( & native );
+TEST_MESSAGE ( "KDirectoryNativeDir = " << rc );
         if ( rc != 0 )
             throw rc;
 
         rc = KDirectoryOpenDirRead ( native, & _dir, false, _path );
+TEST_MESSAGE ( "KDirectoryOpenDirRead = " << rc );
         if ( rc != 0 )
             throw rc;
 
         rc = KDirectoryRelease ( native );
+TEST_MESSAGE ( "KDirectoryRelease = " << rc );
         if ( rc != 0 )
             throw rc;
+TEST_MESSAGE ( "exiting FIXTURE()" );
     }
 
     ~FIXTURE ( void ) {
@@ -206,6 +212,7 @@ TEST_CASE ( testKDirectoryGetDiskFreeSpace ) {
     FIXTURE fixture ( "~" );
 
     char command [ 256 ] = "";
+    TEST_MESSAGE ( fixture . _path );
     REQUIRE_RC ( string_printf
         ( command, sizeof command, NULL, "df -k %s", fixture . _path ) );
 
@@ -283,6 +290,7 @@ extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
 
     rc_t KMain ( int argc, char * argv [] ) {
+ncbi::NK::TestEnv::SetVerbosity(ncbi::NK::LogLevel::e_all);
         rc_t rc = DuSuite ( argc, argv );
 
         s_path = NULL;

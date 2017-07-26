@@ -419,6 +419,8 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
         ( & it, & hostname, & port, & proxy_default_port, & proxy_ep ) )
     {
         rc = KNSManagerInitDNSEndpoint ( mgr, & self -> ep, hostname, port );
+        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ),
+            ( "KNSManagerInitDNSEndpoint(%S:%d)=%R\n", hostname, port, rc ) );
         if ( rc == 0 )
         {
             self -> proxy_default_port = proxy_default_port;
