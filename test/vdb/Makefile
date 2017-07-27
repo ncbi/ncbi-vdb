@@ -36,8 +36,9 @@ TEST_TOOLS = \
 	test-sparse-col-rd \
 	test-blob-val \
 	test-VDB-3060 \
-	test-VDB-3061 \
-	test-VDB-3418
+	test-VDB-3061
+
+#	test-VDB-3418
 
 include $(TOP)/build/Makefile.env
 
