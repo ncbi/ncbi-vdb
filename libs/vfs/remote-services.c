@@ -1765,7 +1765,9 @@ static rc_t SRowMake ( SRow ** self, const String * src, const SRequest * req,
         size_t l
             = string_measure ( req -> request . object [ 0 ] . objectId, NULL );
         StringInit ( & acc, req -> request . object [ 0 ] . objectId, l, l );
-        if ( ! StringEqual ( & p -> typed . accession, & acc ) &&
+        assert ( acc . size == 0 || acc . addr != NULL );
+        if ( acc . size > 2 && acc . addr [1] == 'R' && acc . addr [2] == 'R' &&
+             ! StringEqual ( & p -> typed . accession, & acc ) &&
              ! StringEqual ( & p -> typed . objectId , & acc ) )
         {
             return RC ( rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt );
