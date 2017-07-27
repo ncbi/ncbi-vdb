@@ -98,7 +98,7 @@ void vdb_mbedtls_ssl_cookie_free( mbedtls_ssl_cookie_ctx *ctx )
     vdb_mbedtls_md_free( &ctx->hmac_ctx );
 
 #if defined(MBEDTLS_THREADING_C)
-    mbedtls_mutex_init( &ctx->mutex );
+    mbedtls_mutex_free( &ctx->mutex );
 #endif
 
     mbedtls_zeroize( ctx, sizeof( mbedtls_ssl_cookie_ctx ) );

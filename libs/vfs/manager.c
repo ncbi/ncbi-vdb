@@ -1881,6 +1881,8 @@ LIB_EXPORT rc_t CC VFSManagerOpenDirectoryRead (const VFSManager *self,
                                                 KDirectory const **d,
                                                 const VPath * path)
 {
+    if ( self == NULL )
+        return RC (rcVFS, rcDirectory, rcOpening, rcSelf, rcNull);
     return VFSManagerOpenDirectoryReadDirectoryRelativeInt (self, self->cwd, d, path, false);
 }
 
@@ -2383,7 +2385,7 @@ LIB_EXPORT rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
                 kfsmanager_classname, "init", "singleton" );
 
             /* hard-coded default */
-            obj -> protocols = eProtocolHttpHttps;
+            obj -> protocols = DEFAULT_PROTOCOLS;
 
             rc = KDirectoryNativeDir ( & obj -> cwd );
             if ( rc == 0 )

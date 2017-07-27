@@ -226,6 +226,17 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlob_Size, FragmentBlobFixture )
     EXIT;
 }
 
+FIXTURE_TEST_CASE ( NGS_FragmentBlob_Run, FragmentBlobFixture )
+{
+    ENTRY;
+    MakeBlob ( SRA_Accession, 1 );
+
+    const NGS_String * run = NGS_FragmentBlobRun ( m_blob, m_ctx );
+    REQUIRE_EQ ( string ( SRA_Accession ), string ( NGS_StringData ( run, m_ctx ) , NGS_StringSize ( run, m_ctx ) ) );
+
+    EXIT;
+}
+
 FIXTURE_TEST_CASE ( NGS_FragmentBlob_InfoByOffset_BadSelf, FragmentBlobFixture )
 {
     ENTRY;

@@ -861,6 +861,8 @@ static rc_t KSocketGetEndpointV4 ( const KSocket * self, KEndPoint * ep, bool re
         ep -> u . ipv4.addr = ntohl( addr . sin_addr . s_addr );
         ep -> u . ipv4.port = ntohs( addr . sin_port );
         ep -> type = epIPV4;
+        string_copy_measure ( ep -> ip_address, sizeof ep -> ip_address,
+                              inet_ntoa ( addr . sin_addr ) );
         return 0;
     }
 

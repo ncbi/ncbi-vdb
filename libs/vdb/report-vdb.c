@@ -252,8 +252,8 @@ static rc_t VDBDependenciesReportDepend1(const VDBDependencies *self,
                             if (rc == 0) {
                                 char buffer[1024];
                                 size_t num_read = 0;
-                                size_t bsize =
-                                    size > sizeof buffer ? sizeof buffer : size;
+                                size_t bsize = size > sizeof buffer
+                                             ? sizeof buffer : ( size_t ) size;
                                 rc = KFileReadAll(f,
                                     0, buffer, bsize, &num_read);
                                 if (rc == 0 && num_read != bsize) {

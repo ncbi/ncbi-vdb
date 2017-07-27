@@ -212,6 +212,23 @@ NGS_FragmentBlobSize ( const struct NGS_FragmentBlob * self, ctx_t ctx )
     return 0;
 }
 
+const struct NGS_String *
+NGS_FragmentBlobRun ( const struct NGS_FragmentBlob * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcBlob, rcAccessing );
+
+    if ( self == NULL )
+    {
+        INTERNAL_ERROR ( xcParamNull, "bad object reference" );
+    }
+    else
+    {
+        return self -> run;
+    }
+    return 0;
+}
+
+
 static
 void
 GetFragInfo ( const NGS_FragmentBlob * self, ctx_t ctx, int64_t p_rowId, uint64_t p_offsetInRow, uint64_t* fragStart, uint64_t* baseCount, int32_t* bioNumber )
