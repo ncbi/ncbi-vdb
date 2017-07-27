@@ -1495,10 +1495,10 @@ static rc_t EVPathInitMapping
     rc_t rc = 0;
     const VPath * vsrc = NULL;
     assert ( self && src && version );
-    if ( self -> http == NULL && self -> fasp == NULL ) {
+    if ( self -> https == NULL && self -> http == NULL && self -> fasp == NULL )
         return 0;
-    }
-    vsrc = self -> http ? self -> http : self -> fasp;
+    vsrc = self -> http ? self -> http 
+	    : ( self -> https ? self -> https : self -> fasp );
     rc = VPathCheckFromNamesCGI ( vsrc, & src -> ticket,
         ( const struct VPath ** ) ( & self -> mapping ) );
     if ( rc == 0) {
