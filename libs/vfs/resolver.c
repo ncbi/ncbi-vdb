@@ -1116,16 +1116,16 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
 #if DO_NOT_USE_TIC_HACK
                  || mapping != NULL
 #endif
-                )
-            {*/
+                )*/
+            {
                 const String * id = & accession;
                 if ( id -> size == 0 )
                     id = & obj_id;
                 rc = VPathMakeFromUrl ( ( VPath** ) path, & url,
                     & download_ticket, true, id, size, date,
                     has_md5 ? ud5 : NULL, 0 );
-            /*}
-            else
+            }
+            /*else
             {
                 * protected response *
                 rc = VPath MakeFmtExt ( ( VPath** ) path, true, & accession,
