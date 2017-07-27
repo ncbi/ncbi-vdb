@@ -36,7 +36,8 @@ TEST_TOOLS = \
 	test-sparse-col-rd \
 	test-blob-val \
 	test-VDB-3060 \
-	test-VDB-3061
+	test-VDB-3061 \
+	test-VDB-3418
 
 include $(TOP)/build/Makefile.env
 
@@ -264,3 +265,24 @@ $(TEST_BINDIR)/test-VDB-3305: $(VDB_3305_OBJ)
 
 VDB-3305: test-VDB-3305
 	$(TEST_BINDIR)/test-VDB-3305
+
+
+#-------------------------------------------------------------------------------
+# VDB-3418
+#
+VDB_3418_SRC = \
+	test-VDB-3418
+
+VDB_3418_OBJ = \
+	$(addsuffix .$(OBJX),$(VDB_3418_SRC))
+
+VDB_3418_LIB = \
+	-skapp \
+	-sktst \
+	-sncbi-vdb
+
+$(TEST_BINDIR)/test-VDB-3418: $(VDB_3418_OBJ)
+	$(LP) --exe -o $@ $^ $(VDB_3418_LIB)
+
+VDB-3418: test-VDB-3418
+	$(TEST_BINDIR)/test-VDB-3418
