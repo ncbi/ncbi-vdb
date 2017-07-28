@@ -580,12 +580,13 @@ table NCBI:align:tbl:local_ref_block #1.0.0
  *  common interface and implementation for alignment object
  *
  * History:
- *  2.1 - added REF_OFFSET_TYPE and RNA_ORIENTATION columns
- *        updated all cigar calculations
+ *  2.1.0 - added REF_OFFSET_TYPE and RNA_ORIENTATION columns
+ *          updated all cigar calculations
+ *  2.1.1 - update ancestry
  */
-table NCBI:align:tbl:align_cmn #2.1
+table NCBI:align:tbl:align_cmn #2.1.1
     = NCBI:tbl:base_space_common #1.0.3
-    , NCBI:SRA:tbl:stats #1.2.0
+    , NCBI:SRA:tbl:stats #1.2.1
     , NCBI:align:tbl:ref_block_cmn #1.0.0
 {
     bool is_secondary = out_is_secondary;
@@ -896,10 +897,11 @@ table NCBI:align:tbl:align_cmn #2.1
  *  alignment transcript is calculated
  *
  * History:
- *  1.1 - respond to changes in base table
+ *  1.1.0 - respond to changes in base table
+ *  1.1.1 - respond to changes in base table
  */
-table NCBI:align:tbl:align_full #1.1
-    = NCBI:align:tbl:align_cmn #2.1
+table NCBI:align:tbl:align_full #1.1.1
+    = NCBI:align:tbl:align_cmn #2.1.1
 {
     bool out_is_secondary = <bool> echo < true > ();
     // restore reads to its raw form (orientation is restored)
@@ -975,10 +977,11 @@ table NCBI:align:tbl:align_full #1.1
  *  original sequence is reconstructed
  *
  * History:
- *  1.2 - respond to changes in base table
+ *  1.2.0 - respond to changes in base table
+ *  1.2.1 - respond to changes in base table
  */
-table NCBI:align:tbl:compressed_by_reference #1.2
-    = NCBI:align:tbl:align_cmn #2.1
+table NCBI:align:tbl:compressed_by_reference #1.2.1
+    = NCBI:align:tbl:align_cmn #2.1.1
 {
     bool out_is_secondary = <bool> echo < false > ();
 
@@ -1044,10 +1047,11 @@ table NCBI:align:tbl:compressed_by_reference #1.2
  *  deflated alignment data sorted against reference
  *
  * History:
- *  1.2 - respond to changes in base table
+ *  1.2.0 - respond to changes in base table
+ *  1.2.1 - respond to changes in base table
  */
-table NCBI:align:tbl:align_sorted #1.2
-    = NCBI:align:tbl:compressed_by_reference #1.2
+table NCBI:align:tbl:align_sorted #1.2.1
+    = NCBI:align:tbl:compressed_by_reference #1.2.1
     , NCBI:align:tbl:global_ref_block #1.0.0
 {
     // 128K
@@ -1059,10 +1063,11 @@ table NCBI:align:tbl:align_sorted #1.2
  *  deflated alignment unsorted data
  *
  * History:
- *  1.2 - respond to changes in base table
+ *  1.2.0 - respond to changes in base table
+ *  1.2.1 - respond to changes in base table
  */
-table NCBI:align:tbl:align_unsorted #1.2
-    = NCBI:align:tbl:compressed_by_reference #1.2
+table NCBI:align:tbl:align_unsorted #1.2.1
+    = NCBI:align:tbl:compressed_by_reference #1.2.1
     , NCBI:align:tbl:local_ref_block #1.0.0
 {
     // 128K
@@ -1073,10 +1078,11 @@ table NCBI:align:tbl:align_unsorted #1.2
 /* align_mate_sorted
  *
  * History:
- *  1.1 - respond to changes in base table
+ *  1.1.0 - respond to changes in base table
+ *  1.1.1 - respond to changes in base table
  */
-table NCBI:align:tbl:align_mate_sorted #1.1
-    = NCBI:align:tbl:align_full #1.1
+table NCBI:align:tbl:align_mate_sorted #1.1.1
+    = NCBI:align:tbl:align_full #1.1.1
     , NCBI:align:tbl:global_ref_block #1.0.0
 {
     // 128K
@@ -1087,10 +1093,11 @@ table NCBI:align:tbl:align_mate_sorted #1.1
 /* align_mate_unsorted
  *
  * History:
- *  1.1 - respond to changes in base table
+ *  1.1.0 - respond to changes in base table
+ *  1.1.1 - respond to changes in base table
  */
-table NCBI:align:tbl:align_mate_unsorted #1.1
-    = NCBI:align:tbl:align_full #1.1
+table NCBI:align:tbl:align_mate_unsorted #1.1.1
+    = NCBI:align:tbl:align_full #1.1.1
     , NCBI:align:tbl:local_ref_block #1.0.0
 {
     // 128K
@@ -1101,10 +1108,11 @@ table NCBI:align:tbl:align_mate_unsorted #1.1
  *  alleles coverage extension
  *
  * History:
- *  1.2 - respond to changes in base table
+ *  1.2.0 - respond to changes in base table
+ *  1.2.1 - respond to changes in base table
  */
-table NCBI:align:tbl:align_allele #1.2
-    = NCBI:align:tbl:align_unsorted #1.2
+table NCBI:align:tbl:align_allele #1.2.1
+    = NCBI:align:tbl:align_unsorted #1.2.1
 {
     extern column < I64 > izip_encoding EVIDENCE_ALIGNMENT_IDS;
 
@@ -1118,8 +1126,13 @@ table NCBI:align:tbl:align_allele #1.2
  * seq
  *  alignment sequence table
  *
+<<<<<<< HEAD
  * history:
  *  2.0.0 - NCBI:tbl:base_space uses metadata RNA_Flag to support RNA reads
+=======
+ * History:
+ *  1.1.1 - respond to changes in base table
+>>>>>>> responded to a single change for NAME in schema
  */
 physical
 I64 NCBI:align:sorted:alignment_id_encoding #1.0
@@ -1137,12 +1150,22 @@ I64 NCBI:align:sorted:alignment_id_encoding #1.0
     }
 }
 
+<<<<<<< HEAD
  table NCBI:align:tbl:seq #2 =
     NCBI:tbl:base_space #3,
     NCBI:tbl:phred_quality #2.0.4,
     NCBI:align:tbl:cmp_base_space #1,
     NCBI:SRA:tbl:spotdesc #1.0.2,
     NCBI:SRA:tbl:stats #1.2.0
+=======
+
+table NCBI:align:tbl:seq #1.1.1
+    = NCBI:tbl:base_space #2.0.3
+    , NCBI:tbl:phred_quality #2.0.4
+    , NCBI:align:tbl:cmp_base_space #1
+    , NCBI:SRA:tbl:spotdesc #1.0.2
+    , NCBI:SRA:tbl:stats #1.2.1
+>>>>>>> responded to a single change for NAME in schema
 {
     // 128K
     column default limit = 131072;
@@ -1178,6 +1201,7 @@ I64 NCBI:align:sorted:alignment_id_encoding #1.0
 };
 
 /***********************************
+<<<<<<< HEAD
 * Reference table - to store reference sequences
 * Sequences are divided in chunks. Two sequences never share a chunk.
 * SEQ_LEN     - real size of a chunk should never exceed MAX_SEQ_LEN when it is set
@@ -1201,6 +1225,33 @@ table NCBI:align:tbl:reference #3 =
     NCBI:tbl:base_space #3,
     NCBI:tbl:seqloc #1,
     NCBI:SRA:tbl:stats #1.2.0
+=======
+ * Reference table - to store reference sequences
+ * Sequences are divided in chunks. Two sequences never share a chunk.
+ * SEQ_LEN     - real size of a chunk should never exceed MAX_SEQ_LEN when it is set
+ * READ        - inherited from NCBI:tbl:base_space
+ * CMP_READ,CMP_ALTREAD - are inherited from NCBI:align:tbl:cmp_base_space
+ * SEQ_ID,SEQ_START,SEQ_LEN are inherited from  NCBI:align:tbl:seqloc
+ * .skey contains NAME of the chunk - it corresponds to actual name used in BAM (chr1,chr2, etc....)
+ *
+ * SEQ_START,SEQ_LEN,MAX_SEQ_LEN,SEQID and rowlen(READ) operate the following way
+ * - SEQ_LEN < MAX_SEQ_LEN - should only happen on the last chunk of the sequence
+ * - .READ is absent - there should be a retrieval from external services by SEQ_ID,SEQ_START,SEQ_LEN
+ * - rowlen(.READ) = 0  && SEQ_START==0 (used as flag) -  the sequence is SEQ_LEN repetition of 'N'
+ * - rowlen(.READ) = 0  && SEQ_START >= 1 - the sequence have to be fetched from external sources
+ * - 0 < rowlen(.READ)< SEQ_LEN -- the sequence have to be filled with 'N's
+ *
+ *
+ * History:
+ *  2.0.1 - respond to changes in base table
+ *
+ ***********************************/
+table NCBI:align:tbl:reference #2.0.1
+    = NCBI:align:tbl:cmp_base_space #1
+    , NCBI:tbl:base_space #2.0.3
+    , NCBI:tbl:seqloc #1
+    , NCBI:SRA:tbl:stats #1.2.1
+>>>>>>> responded to a single change for NAME in schema
 {
     INSDC:quality:phred out_qual_phred
         = < INSDC:quality:phred > echo < 30 > ( out_dcmp_4na_bin );
@@ -1298,8 +1349,8 @@ table NCBI:align:tbl:reference #3 =
 database NCBI:align:db:alignment_sorted #2
 {
     table NCBI:align:tbl:reference #3 REFERENCE;
-    table NCBI:align:tbl:align_sorted #1.2 PRIMARY_ALIGNMENT;
-    table NCBI:align:tbl:align_mate_sorted #1.1 SECONDARY_ALIGNMENT;
+    table NCBI:align:tbl:align_sorted #1.2.1 PRIMARY_ALIGNMENT;
+    table NCBI:align:tbl:align_mate_sorted #1.1.1 SECONDARY_ALIGNMENT;
     table NCBI:align:tbl:seq #2 SEQUENCE;
     table NCBI:align:tbl:qstat #1.0 QUAL_STAT;
 };
@@ -1307,8 +1358,8 @@ database NCBI:align:db:alignment_sorted #2
 database NCBI:align:db:alignment_unsorted #2
 {
     table NCBI:align:tbl:reference #3 REFERENCE;
-    table NCBI:align:tbl:align_unsorted #1.2 PRIMARY_ALIGNMENT;
-    table NCBI:align:tbl:align_mate_unsorted #1.1 SECONDARY_ALIGNMENT;
+    table NCBI:align:tbl:align_unsorted #1.2.1 PRIMARY_ALIGNMENT;
+    table NCBI:align:tbl:align_mate_unsorted #1.1.1 SECONDARY_ALIGNMENT;
     table NCBI:align:tbl:seq #2 SEQUENCE;
     table NCBI:align:tbl:qstat #1.0 QUAL_STAT;
 };
@@ -1316,10 +1367,10 @@ database NCBI:align:db:alignment_unsorted #2
 database NCBI:align:db:alignment_evidence #2
 {
     table NCBI:align:tbl:reference #3 REFERENCE;
-    table NCBI:align:tbl:align_unsorted #1.2 PRIMARY_ALIGNMENT;
-    table NCBI:align:tbl:align_mate_unsorted #1.1 SECONDARY_ALIGNMENT;
-    table NCBI:align:tbl:align_allele #1.2 EVIDENCE_INTERVAL;
-    table NCBI:align:tbl:align_mate_unsorted #1.1 EVIDENCE_ALIGNMENT;
+    table NCBI:align:tbl:align_unsorted #1.2.1 PRIMARY_ALIGNMENT;
+    table NCBI:align:tbl:align_mate_unsorted #1.1.1 SECONDARY_ALIGNMENT;
+    table NCBI:align:tbl:align_allele #1.2.1 EVIDENCE_INTERVAL;
+    table NCBI:align:tbl:align_mate_unsorted #1.1.1 EVIDENCE_ALIGNMENT;
     table NCBI:align:tbl:seq #2 SEQUENCE;
     table NCBI:align:tbl:qstat #1.0 QUAL_STAT;
 };
@@ -1327,10 +1378,10 @@ database NCBI:align:db:alignment_evidence #2
 database NCBI:align:db:alignment_evidence_sorted #2
 {
     table NCBI:align:tbl:reference #3 REFERENCE;
-    table NCBI:align:tbl:align_sorted #1.2 PRIMARY_ALIGNMENT;
-    table NCBI:align:tbl:align_mate_sorted #1.1 SECONDARY_ALIGNMENT;
-    table NCBI:align:tbl:align_allele #1.2 EVIDENCE_INTERVAL;
-    table NCBI:align:tbl:align_mate_unsorted #1.1 EVIDENCE_ALIGNMENT;
+    table NCBI:align:tbl:align_sorted #1.2.1 PRIMARY_ALIGNMENT;
+    table NCBI:align:tbl:align_mate_sorted #1.1.1 SECONDARY_ALIGNMENT;
+    table NCBI:align:tbl:align_allele #1.2.1 EVIDENCE_INTERVAL;
+    table NCBI:align:tbl:align_mate_unsorted #1.1.1 EVIDENCE_ALIGNMENT;
     table NCBI:align:tbl:seq #2 SEQUENCE;
     table NCBI:align:tbl:qstat #1.0 QUAL_STAT;
 };

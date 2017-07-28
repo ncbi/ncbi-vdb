@@ -209,12 +209,13 @@ extern function INSDC:SRA:xread_type
  * nucleotide
  *
  * history:
+ *  1.1.1 - update due to hierarchy
  *  2.0.0 - NCBI:tbl:base_space uses metadata RNA_Flag to support RNA reads
  */
 table NCBI:WGS:tbl:nucleotide #2
     = NCBI:tbl:base_space #3
     , NCBI:tbl:phred_quality #2.0.4
-    , NCBI:SRA:tbl:stats #1.2.0
+    , NCBI:SRA:tbl:stats #1.2.1
 {
     /* ACCESSION
      *  [<opt-prefix>]<4-letter-prefix><2-digit-version><6-or-7-digit-contig>
