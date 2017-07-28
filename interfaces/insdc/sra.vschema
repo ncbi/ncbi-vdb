@@ -120,9 +120,9 @@ table INSDC:SRA:tbl:spotcoord #1
  *
  * history:
  *  1.0.1 - split X and Y into spotcoord table
- *  1.0.2 - added ability to get name from TRACE_NAME
+ *  1.1.0 - added ability to get name from TRACE_NAME
  */
-table INSDC:SRA:tbl:spotname #1.0.2 = INSDC:SRA:tbl:spotcoord #1
+table INSDC:SRA:tbl:spotname #1.1 = INSDC:SRA:tbl:spotcoord #1
 {
     /* NAME
      *  external name for spot
@@ -347,6 +347,7 @@ table INSDC:SRA:tbl:stats #1.1
  *  1.0.1 - base explicitly upon spotname #1.0.1
  *  1.0.2 - base explicitly upon sequence #1.0.1, spotdesc #1.0.1
  *  1.0.3 - base upon spotdesc #1.0.2
+ *  1.0.4 - base upon spotname #1.1
  */
 
 // platform constants from <insdc/sra.h>
@@ -362,8 +363,8 @@ const INSDC:SRA:platform_id SRA_PLATFORM_ION_TORRENT       = 7;
 const INSDC:SRA:platform_id SRA_PLATFORM_CAPILLARY         = 8;
 const INSDC:SRA:platform_id SRA_PLATFORM_OXFORD_NANOPORE   = 9;
 
-table INSDC:SRA:tbl:sra #1.0.3 =
-    INSDC:tbl:sequence #1.0.1, INSDC:SRA:tbl:spotname #1.0.1,
+table INSDC:SRA:tbl:sra #1.0.4 =
+    INSDC:tbl:sequence #1.0.1, INSDC:SRA:tbl:spotname #1.1,
     INSDC:SRA:tbl:spotdesc #1.0.2, INSDC:SRA:tbl:stats #1.1.0
 {
     /* PLATFORM

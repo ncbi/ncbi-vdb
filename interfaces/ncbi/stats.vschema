@@ -81,8 +81,9 @@ U8 NCBI:SRA:phred_stats_trigger #1 ( INSDC:quality:phred qual_bin );
  *  1.1.0 - incorporate stats from compressed read
  *  1.1.1 - sra #1.0.2
  *  1.1.2 - sra #1.0.3 + cmp_base_count or to base_count
+ *  1.2.1 - sra #1.0.4
  */
-table NCBI:SRA:tbl:stats #1.2.0 = INSDC:SRA:tbl:stats #1.1, INSDC:SRA:tbl:sra #1.0.3
+table NCBI:SRA:tbl:stats #1.2.1 = INSDC:SRA:tbl:stats #1.1, INSDC:SRA:tbl:sra #1.0.4
 {
     INSDC:SRA:spotid_t min_spot_id
         = < INSDC:SRA:spotid_t > meta:value < "STATS/TABLE/SPOT_MIN" > ();

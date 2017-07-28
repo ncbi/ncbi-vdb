@@ -53,8 +53,9 @@ extern function NCBI:SRA:spot_name_token
  *  1.0.1 - base explicitly upon changes to sra #1.0.1
  *  1.0.2 - base explicitly upon sra #1.0.2
  *  1.0.3 - base explicitly upon sra #1.0.3
+ *  1.0.4 - base explicitly upon sra #1.0.4
  */
-table NCBI:SRA:ABI:common #1.0.3 = INSDC:SRA:tbl:sra #1.0.3
+table NCBI:SRA:ABI:common #1.0.4 = INSDC:SRA:tbl:sra #1.0.4
 {
     // platform name is always 'ABSOLID'
     ascii platform_name
@@ -149,6 +150,7 @@ table NCBI:SRA:ABI:common #1.0.3 = INSDC:SRA:tbl:sra #1.0.3
  *  1.0.2 - changes to common #1.0.2
  *  1.0.3 - sra #2.1.2, color_space #2.0.2, common #1.0.3
  *  1.0.4 - updated ancestry
+ *  1.0.5 - updated ancestry
  */
 physical NCBI:SRA:swapped_fsamp4 NCBI:SRA:ABI:encoding:SIGNAL #2
 {
@@ -156,11 +158,11 @@ physical NCBI:SRA:swapped_fsamp4 NCBI:SRA:ABI:encoding:SIGNAL #2
     encode { return NCBI:SRA:fsamp4:encode #2 < 14, 10 > ( @ ); }
 }
 
-table NCBI:SRA:ABI:tbl:v2 #1.0.4
-    = NCBI:SRA:tbl:sra #2.1.3
+table NCBI:SRA:ABI:tbl:v2 #1.0.5
+    = NCBI:SRA:tbl:sra #2.1.4
     , NCBI:tbl:color_space #2.1.0
     , NCBI:tbl:phred_quality #2.0.4
-    , NCBI:SRA:ABI:common #1.0.3
+    , NCBI:SRA:ABI:common #1.0.4
 {
     /* NAME tokenizing and coordinates
      *  most work happens in skeyname table
