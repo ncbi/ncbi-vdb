@@ -35,6 +35,7 @@ TEST_TOOLS = \
 	test-path \
 	test-path-c \
 	test-resolver \
+	test-resolver-with-log \
 	test-vfsmanager \
 
 include $(TOP)/build/Makefile.env
@@ -150,4 +151,17 @@ RESOLVERTEST_LIB = \
 	-sncbi-vdb \
 
 $(TEST_BINDIR)/test-resolver: $(RESOLVERTEST_OBJ)
+	$(LP) --exe -o $@ $^ $(RESOLVERTEST_LIB)
+
+#----------------------------------------------------------------
+# Test of names service
+#
+
+RESOLVERTESTLOG_SRC = \
+	test-resolver-with-log 
+
+RESOLVERTESTLOG_OBJ = \
+	$(addsuffix .$(OBJX),$(RESOLVERTESTLOG_SRC))
+
+$(TEST_BINDIR)/test-resolver-with-log: $(RESOLVERTESTLOG_OBJ)
 	$(LP) --exe -o $@ $^ $(RESOLVERTEST_LIB)
