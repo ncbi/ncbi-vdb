@@ -313,7 +313,7 @@ NGS_Read * SRA_DB_ReadCollectionGetReadRange ( SRA_DB_ReadCollection * self, ctx
 
     TRY ( const NGS_Cursor * curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "SEQUENCE", sequence_col_specs, seq_NUM_COLS ) )
     {
-        NGS_Read * ret = SRA_ReadIteratorMakeRange ( ctx, curs, self -> run_name, first, count, wants_full, wants_partial, wants_unaligned );
+        NGS_Read * ret = SRA_ReadIteratorMakeRange ( ctx, curs, self -> run_name, first, count, /*wants_full, wants_partial*/ true, true, wants_unaligned );
         NGS_CursorRelease ( curs, ctx );
         return ret;
     }
