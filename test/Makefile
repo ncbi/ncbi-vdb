@@ -44,10 +44,10 @@ SUBDIRS =       \
     klib        \
     kfg         \
     kapp        \
+    vfs         \
     kns         \
     kdb         \
     kproc       \
-    vfs         \
     vdb         \
     ngs         \
     ngs-c++     \
