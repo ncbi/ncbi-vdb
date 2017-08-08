@@ -72,9 +72,15 @@ public:
         RELEASE ( VPath, _query );
         RELEASE ( VPath, _remote );
 
-        std::cerr << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n"; 
+        std::cerr << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
     }
 };
+
+FIXTURE_TEST_CASE ( AFVF01, Fixture ) {
+    REQUIRE_RC ( VFSManagerMakePath ( _mgr, & _query, "AFVF01.1" ) );
+    REQUIRE_RC ( VResolverQuery
+        ( _resolver, eProtocolHttpHttps, _query, NULL, & _remote, NULL ) );
+}
 
 FIXTURE_TEST_CASE ( AAAB01, Fixture ) {
     REQUIRE_RC ( VFSManagerMakePath ( _mgr, & _query, "AAAB01" ) );
