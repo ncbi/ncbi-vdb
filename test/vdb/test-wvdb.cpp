@@ -44,13 +44,12 @@ using namespace std;
 
 TEST_SUITE( WVdbTestSuite )
 
-const string ScratchDir = "./wvdb/";
+const string ScratchDir = "./db/";
 
 // this test case is not very useful but is here as a blueprint for other write-side tests
 FIXTURE_TEST_CASE ( BlobCorruptOnCommit, WVDB_Fixture)
 {
     m_databaseName = ScratchDir + GetName();
-    RemoveDatabase();
 
     const string schemaText =
 "function < type T > T echo #1.0 < T val > ( * any row_len ) = vdb:echo;\n"
@@ -114,7 +113,6 @@ FIXTURE_TEST_CASE ( BlobCorruptOnCommit, WVDB_Fixture)
 FIXTURE_TEST_CASE ( ColumnOpenMetadata, WVDB_Fixture )
 {   // setting column metadata in a freshly created VDatabase
     m_databaseName = ScratchDir + GetName();
-    RemoveDatabase();
 
     string schemaText = "table table1 #1.0.0 { column ascii column1; };"
                         "database root_database #1 { table table1 #1 TABLE1; } ;";
@@ -179,7 +177,6 @@ FIXTURE_TEST_CASE ( ColumnOpenMetadata, WVDB_Fixture )
 FIXTURE_TEST_CASE ( VTableDropColumn_PhysicalColumn, WVDB_Fixture )
 {
     m_databaseName = ScratchDir + GetName();
-    RemoveDatabase();
 
     string schemaText = "table table1 #1.0.0 { column ascii column1; column ascii column2; };"
                         "database root_database #1 { table table1 #1 TABLE1; } ;";
@@ -295,7 +292,6 @@ FIXTURE_TEST_CASE ( CreateTableInNestedDatabase, WVDB_Fixture )
 FIXTURE_TEST_CASE ( VTableDropColumn_MetadataColumn_VDB_2735, WVDB_Fixture )
 {
     m_databaseName = ScratchDir + GetName();
-    RemoveDatabase();
 
     string schemaText = "table table1 #1.0.0 { column ascii column1; column ascii column2; };"
                         "database root_database #1 { table table1 #1 TABLE1; } ;";
@@ -366,7 +362,6 @@ FIXTURE_TEST_CASE ( VTableDropColumn_MetadataColumn_VDB_2735, WVDB_Fixture )
 FIXTURE_TEST_CASE ( VCursor_FindNextRowIdDirect, WVDB_Fixture )
 {
     m_databaseName = ScratchDir + GetName();
-    RemoveDatabase();
 
     string schemaText = "table table1 #1.0.0 { column ascii column1; };"
                         "database root_database #1 { table table1 #1 TABLE1; } ;";
