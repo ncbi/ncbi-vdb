@@ -30,12 +30,12 @@ MODULE = test/vfs
 
 TEST_TOOLS = \
 	redirect-rejected-names-cgi-http-to-https \
+	test-resolver-with-log \
 	test-caching \
 	test-names-30 \
 	test-path \
 	test-path-c \
 	test-resolver \
-	test-resolver-with-log \
 	test-vfsmanager \
 
 include $(TOP)/build/Makefile.env
