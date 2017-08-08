@@ -47,6 +47,7 @@ SUBDIRS =       \
     kns         \
     kdb         \
     kproc       \
+    vxf         \
     vdb         \
     ngs         \
     ngs-c++     \
@@ -55,7 +56,6 @@ SUBDIRS =       \
     search      \
     vfs         \
     sraxf       \
-    vxf         \
     loader      \
     krypto      \
     cipher      \
