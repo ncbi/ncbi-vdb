@@ -47,15 +47,15 @@ SUBDIRS =       \
     kns         \
     kdb         \
     kproc       \
-    vxf         \
+    vfs         \
     vdb         \
     ngs         \
     ngs-c++     \
     ngs-java    \
     ngs-python  \
     search      \
-    vfs         \
     sraxf       \
+    vxf         \
     loader      \
     krypto      \
     cipher      \
