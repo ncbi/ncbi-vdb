@@ -37,7 +37,14 @@
 *  starts at rowId, ends before a repeated value or at the end of the blob
 */
 void
-VByteBlob_ContiguousChunk ( const VBlob* p_blob,  ctx_t ctx, int64_t rowId, uint64_t p_maxRows, const void** p_data, uint64_t* p_size, bool p_stopAtRepeat )
+VByteBlob_ContiguousChunk ( const VBlob*    p_blob,
+                            ctx_t           ctx,
+                            int64_t         p_rowId,
+                            uint64_t        p_maxRows,
+                            bool            p_stopAtRepeat,
+                            const void **   p_data,
+                            uint64_t *      p_size,
+                            uint64_t *      p_rowCount)
 {
     FUNC_ENTRY ( ctx, rcSRA, rcBlob, rcAccessing );
 
@@ -50,19 +57,14 @@ VByteBlob_ContiguousChunk ( const VBlob* p_blob,  ctx_t ctx, int64_t rowId, uint
         const void *base;
         uint32_t boff;
         uint32_t row_len;
-        rc_t rc = VBlobCellData ( p_blob,
-                                  rowId,
-                                  & elem_bits,
-                                  & base,
-                                  & boff,
-                                  & row_len );
-        if ( rc != 0 )
+        TRY ( VByteBlob_CellData ( p_blob,
+                                   ctx,
+                                   p_rowId,
+                                   & elem_bits,
+                                   & base,
+                                   & boff,
+                                   & row_len ) )
         {
-            INTERNAL_ERROR ( xcUnexpected, "VBlobCellData() rc = %R", rc );
-        }
-        else
-        {
-			rc_t rc;
             int64_t first;
             uint64_t count;
 
@@ -71,72 +73,115 @@ VByteBlob_ContiguousChunk ( const VBlob* p_blob,  ctx_t ctx, int64_t rowId, uint
             *p_data = base;
             *p_size = 0;
 
-            rc = VBlobIdRange ( p_blob, & first, & count );
-            if ( rc != 0  )
+            TRY ( VByteBlob_IdRange ( p_blob, ctx, & first, & count ) )
             {
-                INTERNAL_ERROR ( xcUnexpected, "VBlobIdRange() rc = %R", rc );
-            }
-            else if ( p_stopAtRepeat )
-            {
-                PageMapIterator pmIt;
+                if ( p_stopAtRepeat )
+                {   /* iterate until enough rows are collected, or a repeated row is seen, or we are out of rows in this blob */
+                    PageMapIterator pmIt;
 
-                assert ( rowId >= first && rowId < first + (int64_t)count );
+                    assert ( p_rowId >= first && p_rowId < first + (int64_t)count );
 
-                if ( rowId - first + 1 < (int64_t)count ) /* more rows in the blob */
-                {   /* *p_size is the size of value on rowId. Increase size to include subsequent rows, until we see a repeat, p_maxRows is reached or the blob ends */
-                    rc = PageMapNewIterator ( (const PageMap*)p_blob->pm, &pmIt, rowId - first, count - ( rowId - first ) ); /* here, rowId is relative to the blob */
-                    if ( rc != 0 )
-                    {
-                        INTERNAL_ERROR ( xcUnexpected, "PageMapNewIterator() rc = %R", rc );
-                    }
-                    else
-                    {
-                        do
-                        {
-                            row_count_t  repeat;
-                            *p_size += PageMapIteratorDataLength ( &pmIt );
-                            repeat = PageMapIteratorRepeatCount ( &pmIt );
-                            if ( p_maxRows != 0 )
+                    if ( p_rowId - first + 1 < (int64_t)count ) /* more rows in the blob after p_rowId */
+                    {   /* *p_size is the size of value on rowId. Increase size to include subsequent rows, until we see a repeat, p_maxRows is reached or the blob ends */
+                        TRY ( VByteBlob_PageMapNewIterator ( p_blob, ctx, &pmIt, p_rowId - first, count - ( p_rowId - first ) ) ) /* here, rowId is relative to the blob */
+                        {   /* there will always be at least one row */
+                            uint64_t rowCount = 0;
+                            do
                             {
-                                if ( repeat < p_maxRows )
-                                {
-                                    p_maxRows -= repeat;
+                                ++ rowCount;
+                                * p_size += PageMapIteratorDataLength ( &pmIt );
+                                if ( PageMapIteratorRepeatCount ( &pmIt ) > 1 )
+                                {   /* repeated row found */
+                                    break;
                                 }
-                                else
-                                {   /* p_maxRows reached */
+                                if ( p_maxRows != 0 && rowCount == p_maxRows )
+                                {   /* this is all we were asked for  */
                                     break;
                                 }
                             }
-                            if ( PageMapIteratorRepeatCount ( &pmIt ) > 1 )
-                            {   /* repeated row found */
-                                break;
-                            }
+                            while ( PageMapIteratorNext ( &pmIt ) );
 
+                            if ( p_rowCount != 0 )
+                            {
+                                * p_rowCount = rowCount;
+                            }
                         }
-                        while ( PageMapIteratorNext ( &pmIt ) );
+                    }
+                    else /* p_rowId is the last row of the blob; return the entire blob */
+                    {
+                        * p_size = row_len;
+                        if ( p_rowCount != 0 )
+                        {
+                            * p_rowCount = count;
+                        }
+                    }
+                }
+                else if ( p_maxRows > 0 && p_maxRows < count - ( p_rowId - first ) )
+                {   /* return the size of the first p_maxRows rows */
+                    const uint8_t* firstRow = (const uint8_t*)base;
+                    VByteBlob_CellData ( p_blob,
+                                         ctx,
+                                         p_rowId + p_maxRows,
+                                         & elem_bits,
+                                         & base,
+                                         & boff,
+                                         & row_len );
+                    * p_size = (const uint8_t*)( base ) - firstRow;
+                    if ( p_rowCount != 0 )
+                    {
+                        * p_rowCount = p_maxRows;
                     }
                 }
                 else
-                {
-                    *p_size = row_len;
+                {   /* set the size to include the rest of the blob's data */
+                    * p_size = BlobBufferBytes ( p_blob ) - ( (const uint8_t*)( base ) - (const uint8_t*)( p_blob -> data . base ) );
+                    if ( p_rowCount != 0 )
+                    {
+                        * p_rowCount = count;
+                    }
                 }
-            }
-            else if ( p_maxRows > 0 && p_maxRows < count - ( rowId - first ) )
-            {   /* return the size of the first p_maxRows rows */
-                const uint8_t* firstRow = (const uint8_t*)base;
-                rc = VBlobCellData ( p_blob,
-                                     rowId + p_maxRows,
-                                     & elem_bits,
-                                     & base,
-                                     & boff,
-                                     & row_len );
-                *p_size = (const uint8_t*)( base ) - firstRow;
-            }
-            else
-            {   /* set the size to include the rest of the blob's data */
-                *p_size = BlobBufferBytes ( p_blob ) - ( (const uint8_t*)( base ) - (const uint8_t*)( p_blob -> data . base ) );
             }
         }
     }
 }
 
+void
+VByteBlob_IdRange ( const struct VBlob * p_blob,  ctx_t ctx, int64_t * p_first, uint64_t * p_count )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcBlob, rcAccessing );
+    rc_t rc = VBlobIdRange ( p_blob, p_first, p_count );
+    if ( rc != 0  )
+    {
+        INTERNAL_ERROR ( xcUnexpected, "VBlobIdRange() rc = %R", rc );
+    }
+}
+
+void VByteBlob_CellData ( const struct VBlob *  p_blob,
+                          ctx_t                 ctx,
+                          int64_t               p_row_id,
+                          uint32_t *            p_elem_bits,
+                          const void **         p_base,
+                          uint32_t *            p_boff,
+                          uint32_t *            p_row_len )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcBlob, rcAccessing );
+    rc_t rc = VBlobCellData ( p_blob, p_row_id, p_elem_bits, p_base, p_boff, p_row_len );
+    if ( rc != 0  )
+    {
+        INTERNAL_ERROR ( xcUnexpected, "VBlobCellData() rc = %R", rc );
+    }
+}
+
+void VByteBlob_PageMapNewIterator ( const struct VBlob *    p_blob,
+                                    ctx_t                   ctx,
+                                    PageMapIterator *       p_iter,
+                                    uint64_t                p_first_row,
+                                    uint64_t                p_num_rows )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcBlob, rcAccessing );
+    rc_t rc = PageMapNewIterator ( p_blob -> pm, p_iter, p_first_row, p_num_rows );
+    if ( rc != 0  )
+    {
+        INTERNAL_ERROR ( xcUnexpected, "PageMapNewIterator() rc = %R", rc );
+    }
+}
