@@ -171,6 +171,12 @@ XFS_FUSE_mount_v1 ( struct XFSControl * self )
     Result = fuse_opt_add_arg( & FuseArgs, "big_writes" );
 #endif /* MAC */
 
+#define _X_AWS_
+#ifdef _X_AWS_
+    Result = fuse_opt_add_arg ( & FuseArgs, "-o" );
+    Result = fuse_opt_add_arg( & FuseArgs, "allow_other" );
+#endif /* _X_AWS_ */
+
     if ( Result != 0 ) {
         LogErr ( klogErr, XFS_RC ( rcFailed ), "Can not mount" );
         return XFS_RC ( rcFailed ); 
