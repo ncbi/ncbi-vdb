@@ -152,6 +152,9 @@ $(TEST_BINDIR)/test-cachetee: $(TEST_CACHETEE_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_CACHETEE_LIB)
 	rm *.o *.d
 
+cachetee: $(TEST_BINDIR)/test-cachetee
+	$(TEST_BINDIR)/test-cachetee
+
 #-------------------------------------------------------------------------------
 # fuse-proxy ( needed for the cachetee_out_of_space - test
 #

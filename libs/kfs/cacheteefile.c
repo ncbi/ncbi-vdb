@@ -24,7 +24,6 @@
  */
 
 #include <kfs/extern.h>
-#include <stdio.h>
 
 struct KCacheTeeFile;
 #define KFILE_IMPL struct KCacheTeeFile
