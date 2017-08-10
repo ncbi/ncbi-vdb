@@ -383,7 +383,7 @@ struct NGS_String * CSRA1_ReferenceGetChunk ( CSRA1_Reference * self, ctx_t ctx,
                 rc_t rc;
                 const void* data;
                 uint64_t cont_size;
-                TRY ( VByteBlob_ContiguousChunk ( blob, ctx, rowId, 0, &data, &cont_size, true ) ) /* stop at a repeated row */
+                TRY ( VByteBlob_ContiguousChunk ( blob, ctx, rowId, 0, true, & data, & cont_size, 0 ) ) /* stop at a repeated row */
                 {
                     uint64_t offsetInBlob =  offset % self -> chunk_size;
                     if ( size == (uint64_t)-1 || offsetInBlob + size > cont_size )
