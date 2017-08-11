@@ -61,6 +61,161 @@ struct KCacheTee2File;
  B ... used blocksize  ( uint32_t ) 4 bytes
  */
 
+/*--------------------------------------------------------------------------
+ * little helper to clean a KQueue ( used by Recorder and Cachetee )
+ */
+static void release_q( KQueue * pool )
+{
+    if ( pool != NULL )
+    {
+        void * page;
+        while ( KQueuePop( pool, &page, NULL ) == 0 )
+        {
+            free( page );
+        }
+
+        KQueueRelease ( pool );
+    }
+}
+ 
+/*--------------------------------------------------------------------------
+ * cache-tee-access-recorder....
+ */
+
+typedef struct Recorder
+{
+    KFile * f;
+    uint64_t pos;
+    KQueue * pool;
+    size_t buflen;
+} Recorder;
+
+LIB_EXPORT rc_t CC MakeVRecorder ( struct KDirectory * self,
+                                   struct Recorder ** recorder,
+                                   size_t buflen,
+                                   bool append,
+                                   const char * path,
+                                   va_list args )
+{
+    rc_t rc = 0;
+    
+    if ( recorder == NULL )
+        rc = RC ( rcFS, rcFile, rcAllocating, rcParam, rcNull );
+    else
+    {
+        *recorder = NULL;
+        if ( self == NULL )
+            rc = RC ( rcFS, rcFile, rcAllocating, rcSelf, rcNull );
+        else if ( path == NULL )
+            rc = RC ( rcFS, rcFile, rcAllocating, rcPath, rcNull );
+        else if ( path [ 0 ] == 0 )
+            rc = RC ( rcFS, rcFile, rcAllocating, rcPath, rcEmpty );
+    }
+    
+    if ( rc == 0 )
+    {
+        KQueue * pool;
+        rc = KQueueMake( &pool, 8 );
+        if ( rc == 0 )
+        {
+            KFile * f;
+            rc = KDirectoryVCreateFile ( self, &f, true, 0664, kcmOpen | kcmParents, path, args );
+            if ( rc == 0 )
+            {
+                uint64_t fs = 0;
+                if ( append )
+                    rc = KFileSize ( f, &fs );
+                else
+                    rc = KFileSetSize ( f, 0 );
+                if ( rc == 0 )
+                {
+                    Recorder * r = malloc ( sizeof * r );
+                    if ( r == NULL )
+                        rc = RC ( rcFS, rcFile, rcAllocating, rcMemory, rcExhausted );
+                    else
+                    {
+                        r -> f = f;
+                        r -> pos = fs;
+                        r -> pool = pool;
+                        if ( buflen == 0  )
+                            r -> buflen = 1024;
+                        else
+                            r -> buflen = buflen;
+                        *recorder = r;
+                    }
+                }
+                if ( rc != 0 )
+                    KFileRelease ( f );
+            }
+            if ( rc != 0 )
+                KQueueRelease ( pool );
+        }
+    }
+    return rc;
+}
+
+LIB_EXPORT rc_t CC MakeRecorder ( struct KDirectory * self,
+                                  struct Recorder ** recorder,
+                                  size_t buflen,
+                                  bool append,
+                                  const char * path,
+                                  ... )
+{
+    rc_t rc;
+    va_list args;
+    va_start ( args, path );
+    rc = MakeVRecorder ( self, recorder, buflen, append, path, args );
+    va_end ( args );
+    return rc;
+}
+
+LIB_EXPORT rc_t CC ReleaseRecorder ( struct Recorder * self )
+{
+    if ( self != NULL )
+    {
+        if ( self -> f != NULL )
+            KFileRelease ( self -> f );
+        release_q( self -> pool );
+        free ( ( void * ) self );
+    }
+    return 0;
+}
+
+LIB_EXPORT rc_t CC WriteToVRecorder ( struct Recorder * self, const char * fmt, va_list args )
+{
+    rc_t rc;
+    void * page;
+    
+    if ( KQueuePop ( self -> pool, ( void ** )&page, NULL ) != 0 )
+        page = malloc ( self -> buflen );
+    if ( page == NULL )
+        rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
+    else
+    {
+        size_t num_writ1;
+        rc = string_vprintf ( page, self -> buflen, &num_writ1, fmt, args );
+        if ( rc == 0 )
+        {
+            size_t num_writ2;
+            rc = KFileWriteAll ( self -> f, self -> pos, ( const void * ) page, num_writ1, &num_writ2 );
+            if ( rc == 0 )
+                self -> pos += num_writ2;
+        }
+        if ( KQueuePush ( self -> pool, page, NULL ) != 0 )
+            free ( page );
+    }
+    return rc;
+}
+
+LIB_EXPORT rc_t CC WriteToRecorder ( struct Recorder * self, const char * fmt, ... )
+{
+    rc_t rc;
+    va_list args;
+    va_start ( args, fmt );
+    rc = WriteToVRecorder ( self, fmt, args );
+    va_end ( args );
+    return rc;
+}
 
 /*--------------------------------------------------------------------------
  * KCacheTeeFile2
@@ -69,6 +224,7 @@ struct KCacheTee2File;
 #define CACHE_TEE_DEFAULT_BLOCKSIZE ( 128 * 1024 )
 #define READ_BLOCK_SIZE_TRYS 3
 #define READ_CONTENT_SIZE_TRYS 3
+#define RECORDING 1
 
 typedef struct KCacheTee2File
 {
@@ -85,7 +241,10 @@ typedef struct KCacheTee2File
     
     atomic32_t * bitmap;                    /* the bitmap: each bit represents one block */
     KQueue * scratch_pool;                  /* this is necessary to make KCacheTeeFile thread-safe! */
-    
+
+#if RECORDING
+    struct Recorder * recorder;             /* optional recorder ( see above ) */
+#endif
     uint32_t block_size;                    /* how big is a block ( aka 1 bit in the bitmap )*/
 
     bool read_only;
@@ -385,14 +544,7 @@ static rc_t CC KCacheTee2FileDestroy( KCacheTee2File * self )
     if ( self->bitmap != NULL )
         free( ( void * ) self->bitmap );
     
-    {
-        void * page;
-        while ( KQueuePop( self -> scratch_pool, &page, NULL ) == 0 )
-        {
-            free( page );
-        }
-    }
-    KQueueRelease( self -> scratch_pool );
+    release_q( self -> scratch_pool );
     
     KFileRelease ( self -> wrapped );
     KFileRelease ( self -> cache );
@@ -536,8 +688,15 @@ static void get_read_info ( const KCacheTee2File *cself, uint64_t pos, size_t le
 static rc_t KCacheTee2FileRead_rw_using_caller_buffer ( const KCacheTee2File *cself,
         uint64_t pos, void *buffer, size_t *num_read, read_info * info )
 {
+    rc_t rc;
+    
+#if RECORDING
+    if ( cself -> recorder != NULL )
+        WriteToRecorder ( cself -> recorder, "\tremote.usr\t%lu\t%lu\n", info -> start_pos, info -> to_read );
+#endif
+
     /* read whole blocks from the wrapped file */
-    rc_t rc = read_from_wrapped ( cself -> wrapped, info -> start_pos, buffer, info -> to_read, num_read );
+    rc = read_from_wrapped ( cself -> wrapped, info -> start_pos, buffer, info -> to_read, num_read );
     if ( rc == 0 )
     {
         /* store them in the cache-file... */
@@ -589,6 +748,11 @@ static rc_t KCacheTee2FileRead_rw_using_scratch_buffer ( const KCacheTee2File *c
         rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
     else
     {
+#if RECORDING
+        if ( cself -> recorder != NULL )
+            WriteToRecorder ( cself -> recorder, "\tremote.scratch\t%lu\t%lu\n", info -> start_pos, info -> to_read );
+#endif
+    
         /* read one block from the wrapped file */
         rc = read_from_wrapped ( cself -> wrapped, info -> start_pos, page,
                                  cself -> block_size, num_read );
@@ -651,7 +815,12 @@ static rc_t KCacheTee2FileRead_rw ( const KCacheTee2File *cself, uint64_t pos,
 {
     rc_t rc = 0;
     read_info info;
-    
+
+#if RECORDING
+    if ( cself -> recorder != NULL )
+        WriteToRecorder ( cself -> recorder, "\nrw\t%lu\t%lu\n", pos, bsize );
+#endif
+
     *num_read = 0;
     if ( pos > cself -> wrapped_size )
         return rc;
@@ -686,6 +855,12 @@ static rc_t KCacheTee2FileRead_rw ( const KCacheTee2File *cself, uint64_t pos,
         info . to_read -= ( pos - info . start_pos );
         if ( info . to_read > bsize )
             info . to_read = bsize;
+
+#if RECORDING
+        if ( cself -> recorder != NULL )
+            WriteToRecorder ( cself -> recorder, "\tcache\t%lu\t%lu\n", pos, info . to_read );
+#endif
+
         rc = KFileReadAll( cself -> cache, pos, buffer, info . to_read, num_read );
     }
     else
@@ -737,7 +912,12 @@ static rc_t KCacheTee2FileRead_ro ( const KCacheTee2File *cself, uint64_t pos,
 {
     rc_t rc = 0;
     read_info info;
-    
+
+#if RECORDING
+    if ( cself -> recorder != NULL )
+        WriteToRecorder ( cself -> recorder, "\nro\t%lu\t%lu\n", pos, bsize );
+#endif
+
     if ( pos > cself -> wrapped_size )
         return rc;
     else if ( ( pos + bsize ) > cself -> wrapped_size )
@@ -753,10 +933,21 @@ static rc_t KCacheTee2FileRead_ro ( const KCacheTee2File *cself, uint64_t pos,
         info . to_read -= ( pos - info . start_pos );
         if ( info . to_read > bsize )
             info . to_read = bsize;
+
+#if RECORDING
+        if ( cself -> recorder != NULL )
+            WriteToRecorder ( cself -> recorder, "\tcache\t%lu\t%lu\n", pos, info . to_read );
+#endif
+
         rc = KFileReadAll( cself -> cache, pos, buffer, info . to_read, num_read );
     }
     else
     {
+#if RECORDING
+        if ( cself -> recorder != NULL )
+            WriteToRecorder ( cself -> recorder, "\tremote\t%lu\t%lu\n", pos, info . to_read );
+#endif
+    
         rc = read_from_wrapped ( cself -> wrapped, pos, buffer, info . to_read, num_read );
     }
     return rc;
@@ -905,6 +1096,9 @@ static rc_t finish_tee( struct KFile const **tee,
                     cf -> scratch_pool = pool;
                     cf -> block_size = ctp -> block_size;
                     cf -> read_only = ctp -> read_only;
+#if RECORDING
+                    cf -> recorder = NULL;
+#endif
                     string_copy ( cf -> cache_path,
                                  ctp -> resolved_path_size + 1,
                                  ctp -> resolved_path,
@@ -1561,7 +1755,26 @@ LIB_EXPORT rc_t CC IsCacheTee2FileComplete( const struct KFile * self, bool * is
 
 LIB_EXPORT bool CC KFileIsKCacheTee2File( const struct KFile * self )
 {
-    bool res = &self->vt->v1 == &vtKCacheTee2File_rw;
-    if ( !res ) res = &self->vt->v1 == &vtKCacheTee2File_ro;
+    bool res = false;
+    if ( self != NULL )
+    {
+        res = &self->vt->v1 == &vtKCacheTee2File_rw;
+        if ( !res ) res = &self->vt->v1 == &vtKCacheTee2File_ro;
+    }
+    return res;
+}
+
+LIB_EXPORT bool CC CacheTee2FileSetRecorder( const struct KFile * self, struct Recorder * r )
+{
+    bool res = false;
+
+    if ( KFileIsKCacheTee2File( self ) )
+    {
+#if RECORDING
+        struct KCacheTee2File * ctf = ( struct KCacheTee2File * )self;
+        ctf -> recorder = r;
+        res = true;
+#endif
+    }   
     return res;
 }
