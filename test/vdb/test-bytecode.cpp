@@ -110,6 +110,7 @@ public:
         THROW_ON_RC ( VCursorRelease ( m_cursor ) );
         THROW_ON_RC ( VTableRelease ( m_table ) );
         THROW_ON_RC ( VDatabaseRelease ( m_db ) );
+        m_db = 0;
     }
 
     uint32_t AddColumn ( const char * p_name, bool p_openCursor = true )
@@ -412,37 +413,6 @@ FIXTURE_TEST_CASE ( FunctionProdCallArrayFunc, ByteCodeFixture )
     CloseDb();
 }
 
-#if NEED_HELP_WITH_THIS
-
-FIXTURE_TEST_CASE ( FunctionProdCallLegacyBlobFunc, ByteCodeFixture )
-{   // bcFunctionProdCallLegacyBlobFunc
-    CreateDb ( GetName (),
-                "fmtdef NCBI:zlib_encoded_t;"
-                "extern function any NCBI:unzip #1.0 ( NCBI:zlib_encoded_t in );"
-                "extern function NCBI:zlib_encoded_t NCBI:zlib_compress #1.0 ( any in );"
-                "table table1 #1.0.0 { "
-                "   column U32 column1; "
-                "   column U64 column2 = NCBI:zlib_compress ( column1 );"
-                "}"
-                "database root_database #1 { table table1 #1 TABLE1; } ;",
-                "column1"
-                );
-    uint32_t v1 = 1;
-    uint32_t v2 = 2;
-    Append ( m_column_idx1, v1 );
-    Append ( m_column_idx1, v2 );
-    CommitDb();
-
-    OpenDb();
-    m_column_idx1 = AddColumn ( "column2" );
-
-    VerifyValue ( m_column_idx1, 1, v1 );
-    VerifyValue ( m_column_idx1, 2, v2 );
-
-    CloseDb();
-}
-#endif
-
 FIXTURE_TEST_CASE ( FunctionProdCallPageFunc, ByteCodeFixture )
 {   // bcFunctionProdCallPageFunc
     CreateDb ( GetName (),
@@ -494,29 +464,45 @@ FIXTURE_TEST_CASE ( FunctionProdCallBlobFunc, ByteCodeFixture )
     VerifyDb ( "column1", v1, v2 );
 }
 
-#if SHOW_UNIMPLEMENTED
-FIXTURE_TEST_CASE ( PhysicalRead, ByteCodeFixture )
+FIXTURE_TEST_CASE ( PhysicalConvertStatic, ByteCodeFixture )
 {
-    // bcPhysicalRead
+    // bcPre_PhysicalConvertStatic
+    // bcPhysicalConvertStatic
+    // bcPost_PhysicalConvertStatic
+    // bcPhysicalReadStatic
     CreateDb ( GetName (),
-                "typeset integer_set { I8, U8, I16, U16, I32, U32, I64, U64 };"
-                "typeset izip_set { integer_set };"
-                "fmtdef izip_fmt;"
-                "function izip_fmt izip #2.1 ( izip_set in ) = vdb:izip;"
-                "function izip_set iunzip #2.1 ( izip_fmt in ) = vdb:iunzip;"
-                "physical < type T > T izip_encoding #1.0 { decode { return ( T ) iunzip ( @ ); } encode { return izip ( @ ); } };"
+                "table table1 #1.0.0 { column ascii column1; };"
+                "database root_database #1 { table table1 #1 TABLE1; } ;",
+              "column1" );
+
+    // need to insert 2 rows with different values to make the column physical
+    const string v1 = "baaa";
+    const string v2 = "eee";
+    Append ( m_column_idx1, v1 );
+    REQUIRE_RC ( VCursorCommit ( m_cursor ) ); // creates a static row
+
+    Append ( m_column_idx1, v2 );
+    CommitDb(); // converts static into non-static
+
+    VerifyDb ( "column1", v1, v2 );
+}
+
+#ifdef SHOW_UNIMPLEMENTED
+FIXTURE_TEST_CASE ( FunctionProdCallLegacyBlobFunc, ByteCodeFixture )
+{   // bcFunctionProdCallLegacyBlobFunc - the support for this is likely to go away
+    CreateDb ( GetName (),
+                "fmtdef NCBI:zlib_encoded_t;"
+                "extern function any NCBI:unzip #1.0 ( NCBI:zlib_encoded_t in );"
+                "extern function NCBI:zlib_encoded_t NCBI:zlib_compress #1.0 ( any in );"
                 "table table1 #1.0.0 { "
-                "   column U8 column1;"
-                "   physical column < U8 > izip_encoding .c1 = column1; "
-                "   column U8 column2 = .c1;"
+                "   column U32 column1; "
+                "   column U64 column2 = NCBI:zlib_compress ( column1 );"
                 "}"
                 "database root_database #1 { table table1 #1 TABLE1; } ;",
-                "column1",
-                ".c1"
+                "column1"
                 );
-
-    uint8_t v1 = 1;
-    uint8_t v2 = 2;
+    uint32_t v1 = 1;
+    uint32_t v2 = 2;
     Append ( m_column_idx1, v1 );
     Append ( m_column_idx1, v2 );
     CommitDb();
@@ -528,24 +514,17 @@ FIXTURE_TEST_CASE ( PhysicalRead, ByteCodeFixture )
     VerifyValue ( m_column_idx1, 2, v2 );
 
     CloseDb();
-
 }
 #endif
 
 //TODO:
 // bcFunctionProdCallCompare1 - suggest combining with VFunctionProdCallCompare
 
-// bcFunctionProdCallLegacyBlobFunc -- need help with (see above)
+// bcFunctionProdCallLegacyBlobFunc -- to be removed (see above)
 
-// bcPhysicalRead
+// bcPhysicalRead = bcPhysicalReadBlob (read side only)
 
-// bcPre_PhysicalConvertStatic
-// bcPhysicalConvertStatic
-// bcPost_PhysicalConvertStatic
-
-// bcPhysicalReadStatic
-
-// bcReturn ?
+// bcReturn - remove ?
 
 //////////////////////////////////////////// Main
 extern "C"
