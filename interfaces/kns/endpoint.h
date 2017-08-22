@@ -31,7 +31,7 @@
 #endif
 
 #ifndef _h_klib_defs_
-#include <klib/defs.h> /* rc_t */
+#include <klib/defs.h>
 #endif
 
 #ifdef __cplusplus
@@ -69,13 +69,13 @@ struct KEndPoint
 	{
 		struct
 		{
-			uint32_t addr;
+			uint32_t addr [ 16 ];
 			uint16_t port;
 		} ipv4;
 
         struct
         {
-            uint8_t addr[ 16 ];
+            uint16_t addr [ 16 ] [ 8 ];
 			uint16_t port;
         } ipv6;
 
@@ -83,6 +83,8 @@ struct KEndPoint
 	} u;
 
     char ip_address [ 256 ];
+
+    uint16_t num_ips;
 
     KEndPointType type;
 };

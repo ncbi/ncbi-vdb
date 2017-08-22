@@ -1,0 +1,6 @@
+01. Java-like names for functions and methods/messages ( lower camelCase )
+02. C-like names for parameters and local variables ( lowercase, underscores between words )
+03. Types are upper CamelCase with leading upper case
+04. PP symbols are all upper case
+05. document methods using Doxygen-compatible notation, /* comments, etc. */
+

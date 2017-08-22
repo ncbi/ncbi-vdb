@@ -64,8 +64,9 @@ rc_t CC KNSManagerInitIPv4Endpoint ( struct KNSManager const *self,
         else
         {
             ep -> type = epIPV4;
-            ep -> u . ipv4. addr = ipv4;
+            ep -> u . ipv4. addr [ 0 ] = ipv4;
             ep -> u. ipv4 . port = port;
+            ep -> num_ips = 1;
             return 0;
         }
 
@@ -106,10 +107,11 @@ rc_t CC KNSManagerInitIPv6Endpoint ( struct KNSManager const *self,
         {
             ep -> type = epIPV6;
             if ( ipv6 == NULL )
-                memset ( ep -> u . ipv6 . addr, 0, sizeof ( ep -> u . ipv6 . addr ) );
+                memset ( & ep -> u . ipv6 . addr [ 0 ], 0, sizeof ( ep -> u . ipv6 . addr [ 0 ] ) );
             else
-                memmove ( ep -> u . ipv6 . addr, ipv6, sizeof ( ep -> u . ipv6 . addr ) );
+                memmove ( & ep -> u . ipv6 . addr [ 0 ], ipv6, sizeof ( ep -> u . ipv6 . addr [ 0 ] ) );
             ep -> u. ipv6 . port = port;
+            ep -> num_ips = 1;
             return 0;
         }
 
@@ -146,6 +148,7 @@ rc_t CC KNSManagerInitIPCEndpoint ( struct KNSManager const *self,
                 rc = RC ( rcNS, rcNoTarg, rcInitializing, rcSize, rcExcessive );
             ep -> u.ipc_name[copied] = 0;
             ep -> type = epIPC;
+            ep -> num_ips = 0;
             return 0;
         }
 
