@@ -304,8 +304,8 @@ struct AlignAccessAlignmentEnumerator {
     uint64_t endpos;
     uint64_t startpos;
     atomic32_t refcount;
-    int atend;
-    int refSeqID;
+    uint32_t refSeqID;
+    bool atend;
 };
 
 static rc_t CC AlignAccessDBMakeEnumerator(const AlignAccessDB *self, AlignAccessAlignmentEnumerator **align_enum) {
@@ -319,10 +319,10 @@ static rc_t CC AlignAccessDBMakeEnumerator(const AlignAccessDB *self, AlignAcces
     lhs->parent = self;
     AlignAccessDBAddRef(lhs->parent);
     atomic32_set(&lhs->refcount, 1);
-    lhs->atend = 0;
-    lhs->refSeqID = -1;
     lhs->endpos = 0;
     lhs->startpos = 0;
+    lhs->refSeqID = ( uint32_t ) -1;
+    lhs->atend = false;
     
     return 0;
 }
@@ -401,14 +401,14 @@ AGAIN:
         BAMAlignmentRelease(self->innerSelf);
         self->innerSelf = NULL;
     }
-    if (self->atend != 0)
+    if (self->atend)
         return AlignAccessAlignmentEnumeratorEOFCode;
     
     if (self->slice == NULL) {
         rc = BAMFileRead2(self->parent->innerSelf, &self->innerSelf);
         if (rc) {
             if (GetRCState(rc) == rcNotFound && GetRCObject(rc) == rcRow) {
-                self->atend = 1;
+                self->atend = true;
                 rc = AlignAccessAlignmentEnumeratorEOFCode;
             }
         }
@@ -417,7 +417,7 @@ AGAIN:
     rc = BAMFileReadSlice(self->parent->innerSelf, &self->innerSelf, self->slice);
     if (rc) {
         if (GetRCState(rc) == rcNotFound && GetRCObject(rc) == rcRow) {
-            self->atend = 1;
+            self->atend = true;
             rc = AlignAccessAlignmentEnumeratorEOFCode;
         }
         return rc;
@@ -427,7 +427,7 @@ AGAIN:
 
     BAMAlignmentGetRefSeqId(self->innerSelf, &refSeqID);
     if (self->refSeqID != refSeqID) {
-        self->atend = 1;
+        self->atend = true;
         rc = AlignAccessAlignmentEnumeratorEOFCode;
     }
     else if (self->endpos != 0) {
@@ -436,11 +436,11 @@ AGAIN:
 
         BAMAlignmentGetPosition2(self->innerSelf, &pos, &length);
         if (pos >= (int64_t)self->endpos) {
-            self->atend = 1;
+            self->atend = true;
             rc = AlignAccessAlignmentEnumeratorEOFCode;
         }
         else {
-            int64_t const endpos = pos + length;
+            uint64_t const endpos = pos + length;
             if (endpos <= self->startpos)
                 goto AGAIN;
         }

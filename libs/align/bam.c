@@ -261,7 +261,7 @@ static uint64_t BGZFileGetPos(const BGZFile *self)
 /* returns the position as proportion of the whole file */ 
 static float BGZFileProPos(BGZFile const *const self)
 {
-    return BGZFileGetPos(self) / (double)self->fsize;
+    return ( float ) ( BGZFileGetPos(self) / (double)self->fsize );
 }
 
 static rc_t BGZFileSetPos(BGZFile *const self, uint64_t const pos)
@@ -2476,7 +2476,7 @@ LIB_EXPORT rc_t CC BAMFileRead(const BAMFile *cself, const BAMAlignment **rhs)
 LIB_EXPORT rc_t CC BAMFileGetRefSeqById(const BAMFile *cself, int32_t id, const BAMRefSeq **rhs)
 {
     *rhs = NULL;
-    if (id >= 0 && id < cself->refSeqs)
+    if (id >= 0 && ( uint32_t ) id < cself->refSeqs)
         *rhs = &cself->refSeq[id];
     return 0;
 }
@@ -2694,7 +2694,7 @@ LIB_EXPORT rc_t CC BAMAlignmentGetAlignmentDetail(
             break;
         }
         
-        if (rslt[i].read_pos > rlen)
+        if (rslt[i].read_pos > ( int32_t ) rlen)
             return RC(rcAlign, rcFile, rcReading, rcData, rcInvalid);
     }
     if (pfirst)
@@ -3928,8 +3928,7 @@ rc_t WalkIndexStructure(uint8_t const buf[], size_t const blen,
                         )
 {
     unsigned cp = 0;
-    int32_t nrefs;
-    unsigned i;
+    int32_t i, nrefs;
     rc_t rc;
     
     DBGMSG(DBG_ALIGN, DBG_FLAG(DBG_ALIGN_BAM), ("Index data length: %u", blen));
@@ -3955,7 +3954,7 @@ rc_t WalkIndexStructure(uint8_t const buf[], size_t const blen,
         int32_t bins;
         int32_t chunks;
         int32_t intervals;
-        unsigned di;
+        int32_t di;
         
         DBGMSG(DBG_ALIGN, DBG_FLAG(DBG_ALIGN_BAM), ("Index reference %u: starts at %u", i, cp));
         if (cp + 4 > blen)
