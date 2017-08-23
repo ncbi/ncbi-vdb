@@ -29,8 +29,9 @@
 #include <klib/text.h>
 #include <klib/printf.h>
 #include <klib/rc.h>
-#include <klib/status.h> /* STATUS */
+#include <klib/status.h>
 #include <klib/data-buffer.h>
+#include <klib/debug.h>
 
 #include "stream-priv.h"
 
@@ -38,6 +39,8 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <assert.h>
+
+#include <errno.h>
 
 #include <sysalloc.h>
 
@@ -97,42 +100,101 @@ rc_t CC KNSManagerInitDNSEndpoint ( struct KNSManager const *self,
                 if ( rc ==  0 )
                 {
                     struct hostent *remote = gethostbyname ( hostname );
-                    if ( remote != NULL )
-                    { 
-                        struct in_addr ** addr_list
-                            = ( struct in_addr ** ) remote -> h_addr_list;
-                        string_copy_measure ( ep -> ip_address,
-                            sizeof ep -> ip_address,
-                            inet_ntoa ( * addr_list [ 0 ] ));
-                        STATUS ( STAT_PRG, "%s resolved to %s\n",
-                                           hostname , ep -> ip_address );
-
-                        ep -> type = epIPV4;
-                        memmove ( & ep -> u . ipv4 . addr, remote -> h_addr_list [ 0 ], sizeof ep -> u . ipv4 . addr );
-                        ep -> u . ipv4 . addr = htonl ( ep -> u . ipv4 . addr );
-                        ep -> u . ipv4 . port = ( uint16_t ) port;
-                    }
-                    else switch ( h_errno )
+                    if ( remote == NULL )
                     {
-                    case HOST_NOT_FOUND: /* The specified host is unknown */
-                        rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcNotFound );
-                        break;
-                    case NO_ADDRESS: /* The requested names valid but does not have an IP address */
-                        rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcInconsistent );
-                        break;
+                        switch ( h_errno )
+                        {
+                        case HOST_NOT_FOUND: /* The specified host is unknown */
+                            rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcNotFound );
+                            break;
+                        case NO_ADDRESS: /* The requested names valid but does not have an IP address */
+                            rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcInconsistent );
+                            break;
 #if ! defined NO_ADDRESS || ! defined NO_DATA || NO_ADDRESS != NO_DATA
-                    case NO_DATA: /* The requested name s valid but does not have an IP address */
-                        rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcEmpty );
-                        break;
+                        case NO_DATA: /* The requested name s valid but does not have an IP address */
+                            rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcEmpty );
+                            break;
 #endif
-                    case NO_RECOVERY: /* A nonrecoverable name server error occured */
-                        rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcDestroyed );
-                        break;
-                    case TRY_AGAIN: /* A temporary error occured on an authoritative name server. Try again later */
-                        rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcBusy );
-                        break;
-                    default :
-                        rc = RC ( rcNS, rcNoTarg, rcValidating, rcError, rcUnknown );
+                        case NO_RECOVERY: /* A nonrecoverable name server error occured */
+                            rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcDestroyed );
+                            break;
+                        case TRY_AGAIN: /* A temporary error occured on an authoritative name server. Try again later */
+                            rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcBusy );
+                            break;
+                        default :
+                            rc = RC ( rcNS, rcNoTarg, rcValidating, rcError, rcUnknown );
+                        }
+                    }
+                    else if ( remote -> h_addrtype == AF_INET )
+                    {
+                        uint32_t i;
+                        const uint32_t max_ips = sizeof ep -> u . ipv4 . addr / sizeof ep -> u . ipv4 . addr [ 0 ];
+
+                        /* these are IPv4 addresses in network order */
+                        const uint8_t * first_addr = ( const uint8_t * ) remote -> h_addr_list [ 0 ];
+                        assert ( remote -> h_length == sizeof ep -> u . ipv4 . addr [ 0 ] );
+                        
+                        /* copy the first out as a textual representation */
+                        string_printf ( ep -> ip_address, sizeof ep -> ip_address, NULL,
+                            "%u.%u.%u.%u", first_addr [ 0 ], first_addr [ 1 ], first_addr [ 2 ], first_addr [ 3 ] );
+
+                        /* issue a status message at programmer level */
+                        STATUS ( STAT_PRG, "'%s' resolved to '%s'\n", hostname , ep -> ip_address );
+
+                        /* copy the ip addresses */
+                        for ( i = 0; remote -> h_addr_list [ i ] != NULL && i < max_ips; ++ i )
+                        {
+                            memmove ( & ep -> u . ipv4 . addr [ i ], remote -> h_addr_list [ i ], sizeof ep -> u . ipv4 . addr [ 0 ] );
+                            ep -> u . ipv4 . addr [ i ] = htonl ( ep -> u . ipv4 . addr [ i ] );
+                        }
+
+                        /* record the port number */
+                        ep -> u . ipv4 . port = ( uint16_t ) port;
+
+                        /* record the number of ips */
+                        ep -> num_ips = ( uint16_t ) i;
+
+                        /* mark endpoint type */
+                        ep -> type = epIPV4;
+                    }
+                    else if ( remote -> h_addrtype == AF_INET6 )
+                    {
+                        uint32_t i;
+                        const uint32_t max_ips = sizeof ep -> u . ipv6 . addr / sizeof ep -> u . ipv6 . addr [ 0 ];
+                        
+                        /* these are IPv6 addresses in network order */
+                        const uint8_t * first_addr = ( const uint8_t * ) remote -> h_addr_list [ 0 ];
+                        assert ( remote -> h_length == sizeof ep -> u . ipv6 . addr [ 0 ] );
+                        
+                        /* copy the first out as a textual representation */
+                        /* NB - this lacks the nicety of collapsing runs of 0... */
+                        string_printf ( ep -> ip_address, sizeof ep -> ip_address, NULL,
+                                        "%x:%x:%x:%x:%x:%x:%x:%x"
+                                        , first_addr [ 0 ], first_addr [ 1 ], first_addr [ 2 ], first_addr [ 3 ]
+                                        , first_addr [ 4 ], first_addr [ 5 ], first_addr [ 6 ], first_addr [ 7 ]
+                            );
+
+                        /* issue a status message at programmer level */
+                        STATUS ( STAT_PRG, "'%s' resolved to '%s'\n", hostname , ep -> ip_address );
+
+                        /* copy the ip addresses */
+                        for ( i = 0; remote -> h_addr_list [ i ] != NULL && i < max_ips; ++ i )
+                        {
+                            memmove ( & ep -> u . ipv6 . addr [ i ], remote -> h_addr_list [ i ], sizeof ep -> u . ipv6 . addr [ 0 ] );
+                        }
+
+                        /* record the port number */
+                        ep -> u . ipv6 . port = ( uint16_t ) port;
+
+                        /* record the number of ips */
+                        ep -> num_ips = ( uint16_t ) i;
+
+                        /* mark endpoint type */
+                        ep -> type = epIPV6;
+                    }
+                    else
+                    {
+                        rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcUnknown );
                     }
                 }
             }

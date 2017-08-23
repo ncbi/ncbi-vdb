@@ -29,9 +29,9 @@
 #include <klib/text.h>
 #include <klib/printf.h>
 #include <klib/rc.h>
-#include <klib/status.h> /* STATUS */
+#include <klib/status.h>
 #include <klib/data-buffer.h>
-#include <klib/debug.h> /* DBGMSG */
+#include <klib/debug.h>
 
 #include "stream-priv.h"
 
@@ -40,7 +40,7 @@
 #include <arpa/inet.h>
 #include <assert.h>
 
-#include <errno.h>  /* ERANGE definition */
+#include <errno.h>
 
 #include <sysalloc.h>
 

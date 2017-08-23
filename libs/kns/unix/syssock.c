@@ -908,17 +908,19 @@ rc_t KSocketConnectIPv6 ( KSocket *self, const KEndPoint *from, const KEndPoint 
     if ( from != NULL )
     {
         ss_from . sin6_family = AF_INET6;
+        assert ( sizeof ss_from . sin6_addr . s6_addr == sizeof from -> u . ipv6 . addr [ 0 ] );
         memmove ( ss_from . sin6_addr . s6_addr,
-                 from -> u . ipv6 . addr,
-                 sizeof ( from -> u . ipv6 . addr ) );
+                 & from -> u . ipv6 . addr [ 0 ],
+                 sizeof ss_from . sin6_addr . s6_addr );
         ss_from . sin6_port = htons ( from -> u . ipv6 . port );
     }
 
     memset ( & ss_to, 0, sizeof ss_to );
     ss_to . sin6_family = AF_INET6;
+    assert ( sizeof ss_to . sin6_addr . s6_addr == sizeof to -> u . ipv6 . addr [ 0 ] );
     memmove ( ss_to . sin6_addr . s6_addr,
-             to -> u . ipv6 . addr,
-             sizeof ( to -> u . ipv6 . addr ) );
+             & to -> u . ipv6 . addr [ 0 ],
+             sizeof ss_to . sin6_addr . s6_addr );
     ss_to . sin6_port = htons ( to -> u . ipv6 . port );
 
     /* create the OS socket */
@@ -1139,9 +1141,10 @@ rc_t KNSManagerMakeIPv6Listener ( KSocket *listener, const KEndPoint * ep )
         memset ( & ss, 0, sizeof ss );
         ss . sin6_family = AF_INET6;
 
+        assert ( sizeof ss . sin6_addr . s6_addr == sizeof ep -> u . ipv6 . addr [ 0 ] );
         memmove ( ss . sin6_addr . s6_addr,
-                 ep -> u . ipv6 . addr,
-                 sizeof ( ep -> u . ipv6 . addr ) );
+                 & ep -> u . ipv6 . addr [ 0 ],
+                 sizeof ss . sin6_addr . s6_addr );
 
         ss . sin6_port = htons ( ep -> u . ipv6 . port );
 
