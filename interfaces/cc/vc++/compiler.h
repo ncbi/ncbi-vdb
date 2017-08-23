@@ -40,7 +40,9 @@ float roundf( float value_in )
     return ( value_in < 0 ) ? ceilf ( value_in - 0.5F ) : floorf ( value_in + 0.5F );
 }
 
+#ifndef lroundf
 #define lroundf( x ) (long int)roundf( x )
+#endif
 
 static __inline
 double round( double value_in )
@@ -50,7 +52,9 @@ double round( double value_in )
 
 typedef double double_t;
 
+#ifndef isnan
 #define isnan( x ) _isnan ( x )
+#endif
 
 static __inline
 float truncf( float value_in )
