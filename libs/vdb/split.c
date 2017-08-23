@@ -249,7 +249,7 @@ static rc_t VBlobSplit_v2(VBlob **lhs, const VBlob *self, uint32_t index, uint32
     }
     if (rc)
         return rc;
-    if (map > num_maps || map < 0)
+    if (map > num_maps)
         return RC(rcVDB, rcBlob, rcConstructing, rcData, rcInvalid);
     
     if (self->spmc == 0) {

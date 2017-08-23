@@ -62,19 +62,19 @@ LIB_EXPORT
 bool CC
 SRACacheMetricsLessThan(const SRACacheMetrics* a, const SRACacheMetrics* b)
 {
-    if (a->bytes >= 0 && b->bytes >= 0 && a->bytes > b->bytes)
+    if (a->bytes > b->bytes)
         return false;
-    if (a->elements >= 0 && b->elements >= 0 && a->elements > b->elements)
+    if (a->elements > b->elements)
         return false;
-    if (a->threads >= 0 && b->threads >= 0 && a->threads > b->threads)
+    if (a->threads > b->threads)
         return false;
-    if (a->fds >= 0 && b->fds >= 0 && a->fds > b->fds)
+    if (a->fds > b->fds)
         return false;
         
-    if (a->bytes    >= 0 && b->bytes    >= 0 && a->bytes    == b->bytes && 
-        a->elements >= 0 && b->elements >= 0 && a->elements == b->elements &&
-        a->threads  >= 0 && b->threads  >= 0 && a->threads  == b->threads &&
-        a->fds      >= 0 && b->fds      >= 0 && a->fds      == b->fds)
+    if (a->bytes    == b->bytes && 
+        a->elements == b->elements &&
+        a->threads  == b->threads &&
+        a->fds      == b->fds)
         return false;
         
     return true;
