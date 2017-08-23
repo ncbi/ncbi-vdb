@@ -363,7 +363,7 @@ LIB_EXPORT rc_t CC AlignmentIteratorNext ( AlignmentIterator *self )
         self->flags = 0;
         self->rel_ref_pos++;
 
-        if ( self->rel_ref_pos >= self->ref_len )
+        if ( self->rel_ref_pos >= ( int32_t ) self->ref_len )
             rc = SILENT_RC( rcAlign, rcIterator, rcPositioning, rcItem, rcDone );
         else
         {
@@ -395,7 +395,7 @@ LIB_EXPORT int32_t CC AlignmentIteratorState ( const AlignmentIterator *self,
     if ( self != NULL )
     {
         INSDC_coord_zero pos = self->seq_pos;
-        if ( pos < self->read_len )
+        if ( pos < ( INSDC_coord_zero ) self->read_len )
         {
             res = ( self->read[ pos ] & 0x0F );
 

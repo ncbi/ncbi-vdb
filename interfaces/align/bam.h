@@ -357,9 +357,9 @@ ALIGN_EXTERN rc_t CC BAMAlignmentGetCigar ( const BAMAlignment *self,
 ALIGN_EXTERN rc_t CC BAMAlignmentGetInsertSize ( const BAMAlignment *self, int64_t *size );
 
 ALIGN_EXTERN rc_t CC BAMAlignmentFormatSAM(const BAMAlignment *self,
-                                           size_t *actsize,
-                                           size_t maxsize,
-                                           char *buffer);
+                                           size_t * const actsize,
+                                           size_t const maxsize,
+                                           char * const buffer);
 
 /* OptDataForEach
  *  DANGER
@@ -470,7 +470,7 @@ rc_t CC BAMAlignmentGetCGCigar(BAMAlignment const *self,
 ALIGN_EXTERN rc_t BAMAlignmentGetTI(BAMAlignment const *self, uint64_t *ti);
 
 /* strand = '+', '-', or ' ' */
-ALIGN_EXTERN rc_t BAMAlignmentGetRNAStrand(BAMAlignment const *self, uint8_t *strand);
+ALIGN_EXTERN rc_t BAMAlignmentGetRNAStrand(BAMAlignment const * const self, uint8_t * const strand);
 
 ALIGN_EXTERN rc_t BAMAlignmentGetCGAlignGroup(BAMAlignment const *self,
                                               char buffer[],
