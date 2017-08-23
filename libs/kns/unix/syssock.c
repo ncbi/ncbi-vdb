@@ -350,10 +350,11 @@ static rc_t KSocketGetEndpointV6 ( const KSocket * self, KEndPoint * ep, bool re
     else
     {
         /* the remote part was already recorded through calling accept() */
-        memmove ( ep -> u . ipv6 . addr,
+        memmove ( & ep -> u . ipv6 . addr [ 0 ],
                  self -> remote_addr . v6 . sin6_addr . s6_addr,
-                 sizeof ( ep -> u . ipv6 . addr ) );
+                 sizeof ep -> u . ipv6 . addr [ 0 ] );
         ep->u.ipv6.port = ntohs( self -> remote_addr . v6 . sin6_port );
+        ep->num_ips = 1;
         ep->type = epIPV6;
         return 0;
     }
@@ -362,7 +363,7 @@ static rc_t KSocketGetEndpointV6 ( const KSocket * self, KEndPoint * ep, bool re
     {
         memmove ( & ep -> u . ipv6 . addr [ 0 ],
                  addr . sin6_addr . s6_addr,
-                 sizeof ( ep -> u . ipv6 . addr ) );
+                 sizeof ep -> u . ipv6 . addr [ 0 ] );
         ep->u.ipv6.port = ntohs( addr . sin6_port );
         ep->num_ips = 1;
         ep->type = epIPV6;
@@ -867,8 +868,8 @@ rc_t KSocketConnectIPv4 ( KSocket *self, const KEndPoint *from, const KEndPoint 
                 
         if ( rc == 0 )
         {
-            ss . sin_port = htons ( to -> u . ipv4 . port );
             ss . sin_addr . s_addr = htonl ( to -> u . ipv4 . addr [ 0 ] );
+            ss . sin_port = htons ( to -> u . ipv4 . port );
 
             /* connect */
             if ( connect ( self -> fd, ( struct sockaddr* ) & ss, sizeof ss ) != 0 )
@@ -947,6 +948,10 @@ rc_t KSocketConnectIPv6 ( KSocket *self, const KEndPoint *from, const KEndPoint 
                 /* set non-blocking mode */
                 flag = fcntl ( self -> fd, F_GETFL );
                 fcntl ( self -> fd, F_SETFL, flag | O_NONBLOCK );
+
+                string_copy_measure ( self -> ip_address,
+                    sizeof self -> ip_address, to -> ip_address );
+
                 return 0;
             }
         }

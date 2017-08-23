@@ -93,7 +93,7 @@ rc_t CC KNSManagerInitIPv4Endpoint ( struct KNSManager const *self,
  */
 LIB_EXPORT
 rc_t CC KNSManagerInitIPv6Endpoint ( struct KNSManager const *self,
-    KEndPoint *ep, uint8_t *ipv6, uint16_t port )
+    KEndPoint *ep, uint16_t ipv6 [ 8 ], uint16_t port )
 {
     rc_t rc;
 

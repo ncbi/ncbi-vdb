@@ -122,7 +122,7 @@ KNS_EXTERN rc_t CC KNSManagerInitIPv4Endpoint ( struct KNSManager const *self,
  *   if the special port number 0 is given, it represents any available port.
  */
 KNS_EXTERN rc_t CC KNSManagerInitIPv6Endpoint ( struct KNSManager const *self,
-    KEndPoint *ep, uint8_t *ipv6, uint16_t port );
+    KEndPoint *ep, uint16_t ipv6 [ 8 ], uint16_t port );
 
 
 /* InitDNSEndpoint
