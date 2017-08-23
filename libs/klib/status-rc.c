@@ -73,19 +73,19 @@ size_t KWrtFmt_rc_t ( char * pout, size_t max, const char * fmt, rc_t rc_in )
         obj = GetRCObject (rc_in);
         state = GetRCState (rc_in);
 
-        if ((mod < 0) || (mod > rcLastModule_v1_1))
+        if (mod > rcLastModule_v1_1)
             mod = rcLastModule_v1_1;
 
-        if ((targ < 0) || (targ > rcLastTarget_v1_1))
+        if (targ > rcLastTarget_v1_1)
             targ = rcLastTarget_v1_1;
 
-        if ((ctx < 0) || (ctx > rcLastContext_v1_1))
+        if (ctx > rcLastContext_v1_1)
             ctx = rcLastContext_v1_1;
 
-        if ((obj < 0) || (obj > rcLastObject_v1_1))
+        if (obj > rcLastObject_v1_1)
             obj = rcLastObject_v1_1;
 
-        if ((state < 0) || (state > rcLastState_v1_1))
+        if (state > rcLastState_v1_1)
             state = rcLastState_v1_1;
 
         mod_str = RCModuleStrings[mod];
