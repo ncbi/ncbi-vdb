@@ -4047,7 +4047,7 @@ rc_t LoadIndex2(const uint8_t data[], size_t dlen, unsigned refNo,
             if (self->bin == NULL)
                 self->bin = dst;
             self->binSize[binNo] = elements;
-            self->binStart[binNo] = dst - self->bin;
+            self->binStart[binNo] = (int)(dst - self->bin);
             for (i = 0; i < elements; ++i) {
                 dst[i].start = get_pos(data + 16 * i + 0);
                 dst[i].end   = get_pos(data + 16 * i + 8);
@@ -4189,7 +4189,7 @@ LIB_EXPORT bool CC BAMFileIsIndexed(const BAMFile *self)
 
 LIB_EXPORT bool CC BAMFileIndexHasRefSeqId(const BAMFile *self, uint32_t refSeqId)
 {
-	if (self && self->ndx && refSeqId < self->ndx->numRefs)
+	if (self && self->ndx && refSeqId < (uint32_t)self->ndx->numRefs)
 		return true;
 	return false;
 }
@@ -4323,7 +4323,7 @@ static BAMFileSlice *makeSlice(BAMFile const *const self,
     unsigned const startBin = alignStart >> 14;
     unsigned const endBin = ((alignEnd - 1) >> 14) + 1;
     BAMFilePosition const minPos = refIndex->interval[startBin];
-    BAMFilePosition const maxPos = endBin < refIndex->intervals ? refIndex->interval[endBin] : refIndex->end;
+    BAMFilePosition const maxPos = endBin < (unsigned)refIndex->intervals ? refIndex->interval[endBin] : refIndex->end;
     unsigned const ranges = countRanges(refIndex, minPos, maxPos, bins.range);
     BAMFileSlice *slice;
     
@@ -4357,7 +4357,7 @@ LIB_EXPORT rc_t CC BAMFileMakeSlice(const BAMFile *self, BAMFileSlice **rslt, ui
         return RC(rcAlign, rcFile, rcPositioning, rcIndex, rcNotFound);
     if (refSeqId >= self->refSeqs)
         return RC(rcAlign, rcFile, rcPositioning, rcData, rcNotFound);
-    if (self->ndx->numRefs <= refSeqId)
+    if ((uint32_t)self->ndx->numRefs <= refSeqId)
         return RC(rcAlign, rcFile, rcPositioning, rcData, rcNotFound);
     if (alignStart >= self->refSeq[refSeqId].length)
         return RC(rcAlign, rcFile, rcPositioning, rcData, rcNotFound);
@@ -4365,7 +4365,7 @@ LIB_EXPORT rc_t CC BAMFileMakeSlice(const BAMFile *self, BAMFileSlice **rslt, ui
     if (alignEnd > self->refSeq[refSeqId].length)
         alignEnd = self->refSeq[refSeqId].length;
 
-    *rslt = makeSlice(self, refSeqId, alignStart, alignEnd);
+    *rslt = makeSlice(self, refSeqId, (unsigned)alignStart, (unsigned)alignEnd);
     return 0;
 }
 
@@ -4617,7 +4617,7 @@ rc_t BAMValidateHeader(const uint8_t data[],
     if (hlen < 0)
         return RC(rcAlign, rcFile, rcValidating, rcData, rcInvalid);
     
-    if (dsize < hlen + 12)
+    if (dsize < (unsigned)hlen + 12)
         return RC(rcAlign, rcFile, rcValidating, rcData, rcIncomplete);
     
     refs = LE2HI32(&data[hlen + 8]);
@@ -4755,7 +4755,7 @@ static rc_t BAMValidateIndex(struct VPath const *bampath,
                             goto BAD_BLOCK_OFFSET;
                         }
                         dsize += temp;
-                        if (dsize - bpos < 4 || dsize - bpos < rsize)
+                        if (dsize < (uint32_t)bpos + 4 || dsize < (uint32_t)(rsize + bpos))
                             goto BAD_BLOCK_OFFSET;
                     }
                     rsize = LE2HI32(data + bpos);
@@ -4766,7 +4766,7 @@ static rc_t BAMValidateIndex(struct VPath const *bampath,
                         ++i;
                         continue;
                     }
-                    if (dsize - bpos < rsize)
+                    if (dsize < (uint32_t)(rsize + bpos))
                         goto READ_MORE;
 /*                    rc = BAMAlignmentParse(&algn, data + bpos + 4, rsize); */
                     if (rc)
@@ -4820,14 +4820,14 @@ static rc_t BAMValidate3(BAMValidate_ctx_t *ctx,
     unsigned const mapQ = getMapQual(algn);
     bool const aligned =
         ((flags & BAMFlags_SelfIsUnmapped) == 0) && 
-        (refSeqId >= 0) && (refSeqId < ctx->nrefs) &&
+        (refSeqId >= 0) && ((unsigned)refSeqId < ctx->nrefs) &&
         (refPos >= 0) && (refPos < ctx->refLen[refSeqId]) && (mapQ > 0);
     
     if (ctx->options & bvo_ExtraFields) {
     }
     if (aligned) {
         if ((ctx->options & bvo_Sorted) != 0) {
-            if (ctx->lastRefId < refSeqId || (ctx->lastRefId == refSeqId && ctx->lastRefPos <= refPos))
+            if (ctx->lastRefId < (uint32_t)refSeqId || (ctx->lastRefId == (uint32_t)refSeqId && ctx->lastRefPos <= (uint32_t)refPos))
                 ++ctx->stats->inOrder.good;
             else
                 ++ctx->stats->inOrder.error;
@@ -4882,7 +4882,7 @@ static rc_t BAMValidate2(void *Ctx, const BGZFile *file,
             unsigned nrefs;
             unsigned data_start;
             
-            rc2 = BAMValidateHeader(ctx->buf, ctx->bsize,
+            rc2 = BAMValidateHeader(ctx->buf, (unsigned)ctx->bsize,
                                        &header_len, &refs_start,
                                        &nrefs, &data_start);
             
@@ -4921,7 +4921,7 @@ static rc_t BAMValidate2(void *Ctx, const BGZFile *file,
         }
         if (rc == 0) {
             if (ctx->stats->bamHeaderIsGood) {
-                unsigned cp = ctx->dnext;
+                size_t cp = ctx->dnext;
                 
                 while (cp + 4 < ctx->bsize) {
                     int32_t rsize;
@@ -4932,7 +4932,7 @@ static rc_t BAMValidate2(void *Ctx, const BGZFile *file,
                         ctx->options = bvo_BlockStructure;
                         
                         /* throw away the rest of the current buffer */
-                        if (cp >= ctx->bsize - dsize)
+                        if (cp + dsize >= ctx->bsize)
                             cp = ctx->bsize;
                         else
                             cp = ctx->bsize - dsize;
