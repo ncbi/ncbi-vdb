@@ -259,8 +259,6 @@ rc_t CC KMain ( int argc, char *argv [] )
 
             VPathRelease ( path );
             VFSManagerRelease ( vfs );
-
-            cout << endl;
         }
         cout << "Failed: " << failed << " out of " << fileCount << endl;
 

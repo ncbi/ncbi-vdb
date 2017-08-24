@@ -185,10 +185,8 @@ union YYSTYPE
   AST*          node;
   AST_FQN*      fqn;
   AST_Expr*     expr;
-  AST_ParamSig* paramSig;
-  bool          boolean;
 
-#line 192 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast-tokens.h" /* yacc.c:1909  */
+#line 190 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast-tokens.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

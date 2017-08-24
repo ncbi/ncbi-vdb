@@ -103,10 +103,10 @@ namespace ncbi
                                  AST *          schema,
                                  AST *          returnType,
                                  AST_FQN *      name,
-                                 AST_ParamSig * fact,
-                                 AST_ParamSig*  params,
-                                 AST*           prologue );
-            AST * PhysicalDecl ( const Token *, AST * schema, AST * returnType, AST_FQN * name, AST_ParamSig * fact, AST * body );
+                                 AST  *         fact,
+                                 AST *          params,
+                                 AST *          prologue );
+            AST * PhysicalDecl ( const Token *, AST * schema, AST * returnType, AST_FQN * name, AST * fact, AST * body );
             AST * TableDef ( const Token *, AST_FQN * name, AST * parents, AST * body );
             AST * DatabaseDef ( const Token *, AST_FQN * name, AST * parent, AST * body );
             AST * Include ( const Token *, const Token * filename );
@@ -136,15 +136,11 @@ namespace ncbi
             struct SExpression * HandlePhysicalBody ( const String & p_name,
                                                       const AST & p_schema,
                                                       const AST & p_returnType,
-                                                      const AST_ParamSig & p_fact,
+                                                      const AST & p_fact,
                                                       const AST & p_body,
                                                       SFunction & p_func,
                                                       bool p_makeReturn );
 
-            bool HandleTableOverload ( const struct STable *    p_table,
-                                       uint32_t                 p_version,
-                                       const KSymbol *          p_priorDecl,
-                                       uint32_t *               p_id );
             bool HandleDbOverload ( const struct SDatabase *     p_db,
                                     uint32_t                     p_version,
                                     const KSymbol *              p_priorDecl,
@@ -159,47 +155,27 @@ namespace ncbi
             bool FillSchemaParms ( const AST & p_parms, Vector & p_v );
             bool FillFactoryParms ( const AST & p_parms, Vector & p_v );
             bool FillArguments ( const AST & p_parms, Vector & p_v );
-            struct SExpression * MakePhysicalEncodingSpec ( const KSymbol & p_sym,
-                                                            const AST_FQN & p_fqn,
-                                                            const AST * p_schemaArgs,
-                                                            const AST * p_factoryArgs,
-                                                            VTypedecl & p_type );
 
             const void * SelectVersion ( const AST_FQN & fqn,
                                          const struct KSymbol & p_ovl,
                                          int64_t ( CC * p_cmp ) ( const void *item, const void *n ),
                                          uint32_t * p_version = 0 ); // OUT, NULL OK
 
+            const KSymbol * TypeSpec ( const AST & p_spec, VTypedecl & p_td );
+
         private:
             bool Init();
 
             void DeclareType ( const AST_FQN& fqn, const KSymbol& super, const AST_Expr* dimension_opt );
             void DeclareTypeSet ( const AST_FQN& fqn, const BSTree& types, uint32_t typeCount );
-            const KSymbol * TypeSpec ( const AST & p_spec, VTypedecl & p_td );
 
-            struct SFormParmlist * MakeFactoryParams ( const AST_ParamSig & );
+            struct SFormParmlist * MakeFactoryParams ( const AST & );
             void AddFactoryParams ( Vector& sig, const AST & params );
 
-            struct SFormParmlist * MakeFormalParams ( const AST_ParamSig & );
+            struct SFormParmlist * MakeFormalParams ( const AST & );
             void AddFormalParams ( Vector& sig, const AST & params );
 
             uint64_t EvalConstExpr ( const AST_Expr &expr );
-
-            void HandleTableParents ( STable & p_table, const AST & p_parents );
-            void HandleTableBody    ( STable & p_table, const AST & p_body );
-            bool HandleTypedColumn ( STable & p_table, struct SColumn & p_col, const AST & p_typedCol );
-
-            void AddColumn ( STable & p_table, const AST & p_modifiers, const AST & p_decl, const AST * p_default );
-            void AddPhysicalColumn ( STable & p_table, const AST & p_decl, bool p_static );
-            bool MakePhysicalColumnType ( const AST &           p_schemaArgs,
-                                          const AST_FQN &       p_fqn_opt_vers,
-                                          const AST &           p_factoryArgs,
-                                          struct SPhysMember &  p_col );
-            void AddUntyped ( STable & p_table, const AST_FQN & p_fqn );
-
-            void HandleDbBody ( SDatabase & p_db, const AST & p_body );
-            void HandleDbMemberDb ( SDatabase & p_db, const AST & p_member );
-            void HandleDbMemberTable ( SDatabase & p_db, const AST & p_member );
 
             const struct KFile * OpenIncludeFile ( const Token :: Location & p_loc, const char * p_fmt, ... );
 

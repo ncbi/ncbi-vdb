@@ -177,6 +177,9 @@ REQUIRE_TERMINAL ( PhysicalIdentifier,  PHYSICAL_IDENTIFIER_1_0, ".T" )
 REQUIRE_TERMINAL ( Version_Maj,         VERSION, "#1" )
 REQUIRE_TERMINAL ( Version_MajMin,      VERSION, "#1.2" )
 REQUIRE_TERMINAL ( Version_MajMinRel,   VERSION, "#1.2.3" )
+REQUIRE_TERMINAL ( Version_Ws_Maj,         VERSION, "# 1" )
+REQUIRE_TERMINAL ( Version_Ws_MajMin,      VERSION, "#  1.2" )
+REQUIRE_TERMINAL ( Version_Ws_MajMinRel,   VERSION, "#    1.2.3" )
 
 #define REQUIRE_KEYWORD(word) \
 TEST_CASE ( kw_##word ) \

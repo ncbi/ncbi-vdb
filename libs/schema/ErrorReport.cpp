@@ -66,7 +66,7 @@ void CC
 WhackError ( void *item, void *data )
 {
     ErrorReport :: Error * it = reinterpret_cast < ErrorReport :: Error * > ( item );
-    delete ( it );
+    delete ( it ); // was allocated with new (see below)
 }
 
 void

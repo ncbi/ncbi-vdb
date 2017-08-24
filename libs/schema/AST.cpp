@@ -166,32 +166,6 @@ AST :: AddNode ( const Token * p_child )
     AddChild ( new AST ( p_child ) );
 }
 
-// AST_Schema
-
-AST_Schema :: AST_Schema ()
-:   m_version ( 0 )
-{
-}
-
-
-AST_Schema :: AST_Schema ( const Token * p_token, AST* p_decls /*NULL OK*/ )
-:   AST ( p_token ),
-    m_version ( 0 )
-{
-    if ( p_decls != 0 )
-    {
-        MoveChildren ( * p_decls );
-        delete p_decls;
-    }
-}
-
-void
-AST_Schema :: SetVersion ( const char* ) // version specified as "#maj[.min[.rel]]]"
-{
-    assert ( false );
-}
-
-
 // AST_FQN
 
 AST_FQN :: AST_FQN ( const Token* p_token )
@@ -1019,25 +993,4 @@ ncbi :: SchemaParser :: ToExpr ( const AST * p_ast)
     const AST_Expr * ret = dynamic_cast < const AST_Expr * > ( p_ast );
     assert ( ret != 0 );
     return ret;
-}
-
-
-// AST_ParamSig
-
-AST_ParamSig :: AST_ParamSig ( const Token * p_token, AST * p_mandatory, AST * p_optional, bool p_variadic )
-:   AST ( p_token ),
-    m_isVariadic ( p_variadic )
-{
-    AddNode ( p_mandatory == 0 ? new AST () : p_mandatory );
-    AddNode ( p_optional == 0 ? new AST () : p_optional );
-}
-
-// AST_Formal
-
-AST_Formal :: AST_Formal ( const Token * p_token, AST * p_typespec, const Token* p_id, bool p_control )
-:   AST ( p_token ),
-    m_hasControl ( p_control )
-{
-    AddNode ( p_typespec );
-    AddNode ( p_id );
 }

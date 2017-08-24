@@ -59,8 +59,6 @@
   AST*          node;
   AST_FQN*      fqn;
   AST_Expr*     expr;
-  AST_ParamSig* paramSig;
-  bool          boolean;
 }
 
 %define parse.error verbose
@@ -224,15 +222,12 @@
 %type <node> db_member template_opt include func_parms_opt expr_list schema_parts_opt
 %type <node> physmbr_decl col_schema_parms_opt col_schema_parms
 %type <node> col_schema_value col_schema_parm phys_coldef factory_parms_list
+%type <node> vararg param_sig param_signature fact_sig
 
 %type <fqn> fqn qualnames fqn_opt_vers ident fqn_vers
 
 %type <expr> expr cond_expr cond_chain uint_expr func_expr float_expr string_expr const_vect_expr
 %type <expr> bool_expr negate_expr cast_expr
-
-%type <paramSig> param_sig param_signature fact_sig
-
-%type <boolean> vararg
 
 %type <tok> END_SOURCE version_1 PT_VERSION_1_0 PT_VERSION_2 PT_SCHEMA_1_0 FLOAT version_2
 %type <tok> PT_TYPEDEF PT_IDENT IDENTIFIER_1_0 DECIMAL PT_ASTLIST PT_ARRAY PT_TYPESET
@@ -246,7 +241,7 @@
 %type <tok> KW_template KW_database PT_DBMEMBER PT_TBLMEMBER KW_include STRING
 %type <tok> PT_FUNCEXPR PT_COLSCHEMAPARMS KW_static PT_PHYSMBR PT_PHYSCOLDEF PT_COLSCHEMAPARAM
 %type <tok> KW_physical PT_COLUNTYPED EXP_FLOAT ESCAPED_STRING PT_CONSTVECT KW_true KW_false
-%type <tok> PT_NEGATE PT_CASTEXPR '@'
+%type <tok> PT_NEGATE PT_CASTEXPR '@' KW_control
 
 %%
 
@@ -257,8 +252,8 @@ parse
 
 source
     : PT_SOURCE '(' schema_1 ')'                    { $$ = $3; }
-    | PT_SOURCE '(' version_1 schema_1 ')'          { $$ = $4; }
-    | PT_SOURCE '(' version_2 schema_2 ')'          { $$ = $4; dynamic_cast < AST_Schema* > ( $$ ) -> SetVersion ( $3 -> GetValue () ); }
+    | PT_SOURCE '(' version_1 schema_1 ')'          { $$ = $4; $$ -> AddNode ( $3 ); }
+    | PT_SOURCE '(' version_2 schema_2 ')'          { $$ = $4; $$ -> AddNode ( $3 ); }
     ;
 
 version_1
@@ -270,11 +265,11 @@ version_2
     ;
 
 schema_1
-    : PT_SCHEMA_1_0 '(' schema_decls ')'            { $$ = new AST_Schema ( $1, $3 ); }
+    : PT_SCHEMA_1_0 '(' schema_decls ')'            { $$ = new AST ( $1, $3 ); }
     ;
 
  schema_2:
-    %empty  { $$ = new AST_Schema (); }             /*TODO*/
+    %empty  { $$ = new AST (); }             /*TODO*/
     ;
 
 
@@ -381,7 +376,7 @@ return_type
     ;
 
 fact_sig
-    : PT_EMPTY                                   { $$ = new AST_ParamSig ( $1, 0, 0, false); }
+    : PT_EMPTY                                   { $$ = new AST ( $1 ); }
     | PT_FACTSIG '(' '<' param_signature '>' ')' { $$ = $4; }
     ;
 
@@ -390,11 +385,11 @@ param_sig
     ;
 
 param_signature
-    : PT_EMPTY                                                          { $$ = new AST_ParamSig ( $1, 0, 0, false); }
-    | PT_FUNCPARAMS '(' formals_list vararg ')'                         { $$ = new AST_ParamSig ( $1, $3, 0, $4 ); }
-    | PT_FUNCPARAMS '(' '*' formals_list vararg ')'                     { $$ = new AST_ParamSig ( $1, 0, $4, $5 ); }
-    | PT_FUNCPARAMS '(' formals_list '*' formals_list vararg ')'        { $$ = new AST_ParamSig ( $1, $3, $5, $6 ); }
-    | PT_FUNCPARAMS '(' formals_list ',' '*' formals_list vararg ')'    { $$ = new AST_ParamSig ( $1, $3, $6, $7 ); }
+    : PT_EMPTY                                                          { $$ = new AST ( $1 ); }
+    | PT_FUNCPARAMS '(' formals_list vararg ')'                         { $$ = new AST ( $1, $3, new AST (), $4 ); }
+    | PT_FUNCPARAMS '(' '*' formals_list vararg ')'                     { $$ = new AST ( $1, new AST (), $4, $5 ); }
+    | PT_FUNCPARAMS '(' formals_list '*' formals_list vararg ')'        { $$ = new AST ( $1, $3, $5, $6 ); }
+    | PT_FUNCPARAMS '(' formals_list ',' '*' formals_list vararg ')'    { $$ = new AST ( $1, $3, $6, $7 ); }
     ;
 
 formals_list
@@ -407,13 +402,13 @@ formals
     ;
 
 formal
-    : PT_FORMALPARAM '(' typespec IDENTIFIER_1_0 ')'            { $$ = new AST_Formal ( $1, $3, $4, false ); }
-    | PT_FORMALPARAM '(' KW_control typespec IDENTIFIER_1_0 ')' { $$ = new AST_Formal ( $1, $4, $5, true ); }
+    : PT_FORMALPARAM '(' typespec IDENTIFIER_1_0 ')'            { $$ = new AST ( $1, $3, new AST ( $4 ), new AST () ); }
+    | PT_FORMALPARAM '(' KW_control typespec IDENTIFIER_1_0 ')' { $$ = new AST ( $1, $4, new AST ( $5 ), new AST ( $3 ) ); }
     ;
 
 vararg
-    : PT_EMPTY                          { $$ = false; }
-    | PT_ELLIPSIS '(' ',' ELLIPSIS ')'  { $$ = true; }
+    : PT_EMPTY                          { $$ = new AST ( $1 ); }
+    | PT_ELLIPSIS '(' ',' ELLIPSIS ')'  { $$ = new AST ( $1 ); }
     ;
 
 prologue

@@ -129,6 +129,9 @@ TESTAST_OBJ = \
 $(TEST_BINDIR)/wb-test-schema-ast: $(TESTAST_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_LIB)
 
+ast: wb-test-schema-ast
+	$(TEST_BINDIR)/$^
+
 #-------------------------------------------------------------------------------
 # runtests
 #

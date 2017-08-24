@@ -77,7 +77,9 @@ SCHEMA_SRC = \
     schema-ast \
     AST \
     ASTBuilder \
+    ASTBuilder-type \
     ASTBuilder-func \
+    ASTBuilder-phys \
     ASTBuilder-tbl \
     ASTBuilder-db \
 	ErrorReport \

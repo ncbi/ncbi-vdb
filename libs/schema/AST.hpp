@@ -67,20 +67,6 @@ namespace ncbi
             const char* GetTokenValue () const { return GetToken () . GetValue (); }
         };
 
-        class AST_Schema : public AST
-        {
-        public:
-            AST_Schema ( const Token*,
-                         AST* decls ); // NULL OK; is deleted here
-            explicit AST_Schema ();
-
-            void SetVersion ( const char* ); // version specified as "#maj[.min[.rel]]]"
-            uint32_t GetVersion () const { return m_version; } // encoded as ( maj << 24 ) | ( min << 16 ) | ( rel )
-
-        private:
-            uint32_t m_version;
-        };
-
         class AST_FQN : public AST
         {
         public:
@@ -131,36 +117,9 @@ namespace ncbi
         };
 
         // these conversion function will assert if the argument is NULL or not an AST_Expr,
-        // otherwise guarantee to return a non-NULL AST_FQN*
+        // otherwise guarantee to return a non-NULL AST_Expr*
         extern AST_Expr * ToExpr ( AST * p_ast);
         extern const AST_Expr * ToExpr ( const AST * p_ast);
-
-
-        class AST_ParamSig : public AST
-        {
-        public:
-            AST_ParamSig ( const Token *, AST * mandatory /*NULL OK*/, AST * optional /*NULL OK*/, bool variadic );
-
-            const AST & GetMandatory () const { return * GetChild ( 0 ); }
-            const AST & GetOptional () const { return * GetChild ( 1 ); }
-            bool IsVariadic () const { return m_isVariadic; }
-
-        private:
-            bool m_isVariadic;
-        };
-
-        class AST_Formal : public AST
-        {
-        public:
-            AST_Formal ( const Token *, AST * typespec, const Token* id, bool control );
-
-            const AST & GetType () const { return * GetChild ( 0 ); }
-            const char * GetIdent () const { return GetChild ( 1 ) -> GetTokenValue (); }
-            bool HasControl () const { return m_hasControl; }
-
-        private:
-            bool m_hasControl;
-        };
 
     }
 }

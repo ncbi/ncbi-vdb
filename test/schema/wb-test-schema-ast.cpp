@@ -172,13 +172,6 @@ TEST_CASE ( AST_FQN_WithVersionMajMinRel )
     delete fqn;
 }
 
-TEST_CASE ( AST_ParamSig_Empty )
-{
-    Token tok ( PT_FUNCPARAMS );
-    AST_ParamSig* sig = new AST_ParamSig ( & tok, 0, 0, false );
-    delete sig;
-}
-
 // AST builder
 
 FIXTURE_TEST_CASE(Empty_Source, AST_Fixture)
@@ -217,9 +210,10 @@ FIXTURE_TEST_CASE(Version1, AST_Fixture)
 {
     MakeAst ( "version 1; ;" );
 
-    REQUIRE_EQ ( PT_SCHEMA_1_0, TokenType ( m_ast ) );
-    REQUIRE_EQ ( 1u,            m_ast -> ChildrenCount () );
-    REQUIRE_EQ ( PT_EMPTY,      TokenType ( m_ast -> GetChild ( 0 ) ) );
+    REQUIRE_EQ ( PT_SCHEMA_1_0,     TokenType ( m_ast ) );
+    REQUIRE_EQ ( 2u,                m_ast -> ChildrenCount () );
+    REQUIRE_EQ ( PT_EMPTY,          TokenType ( m_ast -> GetChild ( 0 ) ) );
+    REQUIRE_EQ ( PT_VERSION_1_0,    TokenType ( m_ast -> GetChild ( 1 ) ) );
 }
 
 FIXTURE_TEST_CASE(MultipleCallsToBuilder, AST_Fixture)
@@ -227,8 +221,7 @@ FIXTURE_TEST_CASE(MultipleCallsToBuilder, AST_Fixture)
     MakeAst ( "version 1; ;" );
 
     REQUIRE_EQ ( PT_SCHEMA_1_0, TokenType ( m_ast ) );
-    REQUIRE_EQ ( 1u,            m_ast -> ChildrenCount () );
-    REQUIRE_EQ ( PT_EMPTY,      TokenType ( m_ast -> GetChild ( 0 ) ) );
+    REQUIRE_EQ ( 2u,                m_ast -> ChildrenCount () );
 
     MakeAst ( "version 1; ;;" );
 
@@ -242,10 +235,13 @@ FIXTURE_TEST_CASE(MultipleDecls, AST_Fixture)
     MakeAst ( "version 1; ; ;;" );
 
     REQUIRE_EQ ( PT_SCHEMA_1_0, TokenType ( m_ast ) );
-    REQUIRE_EQ ( 3u,            m_ast -> ChildrenCount () );
-    REQUIRE_EQ ( PT_EMPTY,      TokenType ( m_ast -> GetChild ( 0 ) ) );
-    REQUIRE_EQ ( PT_EMPTY,      TokenType ( m_ast -> GetChild ( 1 ) ) );
-    REQUIRE_EQ ( PT_EMPTY,      TokenType ( m_ast -> GetChild ( 2 ) ) );
+    REQUIRE_EQ ( 2u, m_ast -> ChildrenCount () );
+    // next level of decls
+    const AST * child = m_ast -> GetChild ( 0 );
+    REQUIRE_EQ ( PT_EMPTY,  TokenType ( child ) );
+    REQUIRE_EQ ( 3u,        child -> ChildrenCount () );
+    REQUIRE_EQ ( PT_EMPTY,  TokenType ( child -> GetChild ( 0 ) ) );
+    REQUIRE_EQ ( PT_EMPTY,  TokenType ( child -> GetChild ( 1 ) ) );
 }
 
 ///////// typedef

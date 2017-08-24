@@ -345,10 +345,15 @@ FIXTURE_TEST_CASE(Table_Parent_MultuipleInheritedOverride, AST_Table_Fixture)
     REQUIRE_EQ ( 0u, t . VirtualProductionCount () ); // c is not seen as introduced in child table
 }
 
+FIXTURE_TEST_CASE(Table_Parent_NotAParent, AST_Table_Fixture)
+{
+    VerifyErrorMessage (
+        "function U16 dad1#1(); table t#1 = dad1#1 { U16 b = c; }",
+        "Not a table: 'dad1'" );
+}
+
 //TODO: introduce in one parent, resolve in another
 //TODO: introduce in parent, resolve in child, make sure forward reference in parent is fixed
-
-//TODO: parent not a table
 
 // table body
 
