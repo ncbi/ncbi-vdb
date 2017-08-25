@@ -76,7 +76,8 @@ typedef struct KSocket KSocket;
  *
  *  "to" [ IN ] - server endpoint 
  *
- *  both endpoints have to be of type epIP; creates a TCP connection
+ *  both endpoints have to be of type epIPV4 or epIPV6
+ *  creates a TCP connection
  */
 KNS_EXTERN rc_t CC KNSManagerMakeConnection ( struct KNSManager const * self,
     struct KSocket ** conn, struct KEndPoint const * from, struct KEndPoint const * to );
