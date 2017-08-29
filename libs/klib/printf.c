@@ -42,6 +42,8 @@
 #include <stdio.h>
 #include <assert.h>
 #include <va_copy.h>
+#include <endian.h>
+#include <byteswap.h>
 
 /* the number of PrintFmt, PrintArg and String
    elements to allocate in function-local storage */
@@ -1102,6 +1104,97 @@ rc_t string_flush_vprintf ( char *dst, size_t bsize, const KWrtHandler *flush,
             memmove ( & buff [ i = ( uint32_t ) ( sizeof buff - sz ) ], buff, sz );
             goto insert_integer;
 
+            /* IP address */
+        case 'a':
+#if __BYTE_ORDER == __BIG_ENDIAN
+        case 'A':
+#endif
+
+            if ( long_size )
+            {
+                const uint16_t * ipv6 = va_arg ( args, const uint16_t * );
+                
+                rc = string_printf ( buff, sizeof buff, & sz
+                                     , "%x:%x:%x:%x:%x:%x:%x:%x"
+                                     , ipv6 [ 0 ]
+                                     , ipv6 [ 1 ]
+                                     , ipv6 [ 2 ]
+                                     , ipv6 [ 3 ]
+                                     , ipv6 [ 4 ]
+                                     , ipv6 [ 5 ]
+                                     , ipv6 [ 6 ]
+                                     , ipv6 [ 7 ]
+                    );
+            }
+            else
+            {
+                u32 = va_arg ( args, uint32_t );
+
+                rc = string_printf ( buff, sizeof buff, & sz
+                                     , "%u.%u.%u.%u"
+                                     , ( uint32_t ) ( uint8_t ) ( u32 >> 24 )
+                                     , ( uint32_t ) ( uint8_t ) ( u32 >> 16 )
+                                     , ( uint32_t ) ( uint8_t ) ( u32 >>  8 )
+                                     , ( uint32_t ) ( uint8_t ) ( u32 >>  0 )
+                    );
+            }
+
+            have_precision = false;
+            precision = 0;
+
+            if ( rc != 0 )
+                break;
+
+            use_sign = 0;
+            padding = ' ';
+            memmove ( & buff [ i = ( uint32_t ) ( sizeof buff - sz ) ], buff, sz );
+            goto insert_integer;
+
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+        case 'A':
+
+            if ( long_size )
+            {
+                const uint16_t * ipv6 = va_arg ( args, const uint16_t * );
+                
+                rc = string_printf ( buff, sizeof buff, & sz
+                                     , "%x:%x:%x:%x:%x:%x:%x:%x"
+                                     , bswap_16 ( ipv6 [ 0 ] )
+                                     , bswap_16 ( ipv6 [ 1 ] )
+                                     , bswap_16 ( ipv6 [ 2 ] )
+                                     , bswap_16 ( ipv6 [ 3 ] )
+                                     , bswap_16 ( ipv6 [ 4 ] )
+                                     , bswap_16 ( ipv6 [ 5 ] )
+                                     , bswap_16 ( ipv6 [ 6 ] )
+                                     , bswap_16 ( ipv6 [ 7 ] )
+                    );
+            }
+            else
+            {
+                u32 = va_arg ( args, uint32_t );
+                u32 = bswap_32 ( u32 );
+
+                rc = string_printf ( buff, sizeof buff, & sz
+                                     , "%u.%u.%u.%u"
+                                     , ( uint32_t ) ( uint8_t ) ( u32 >> 24 )
+                                     , ( uint32_t ) ( uint8_t ) ( u32 >> 16 )
+                                     , ( uint32_t ) ( uint8_t ) ( u32 >>  8 )
+                                     , ( uint32_t ) ( uint8_t ) ( u32 >>  0 )
+                    );
+            }
+
+            have_precision = false;
+            precision = 0;
+
+            if ( rc != 0 )
+                break;
+
+            use_sign = 0;
+            padding = ' ';
+            memmove ( & buff [ i = ( uint32_t ) ( sizeof buff - sz ) ], buff, sz );
+            goto insert_integer;
+#endif
+
         case 'R':
 
             rc = va_arg ( args, rc_t );
@@ -1880,6 +1973,18 @@ rc_t parse_format_string ( const char *fmt_str, va_list vargs,
             fmt [ fmt_idx ] . fmt = spfOSErr;
             break;
 
+            /* IP address */
+        case 'a':
+            fmt [ fmt_idx ] . fmt = spfNativeIPAddr;
+            has_precision = 0;
+            break;
+
+        case 'A':
+            fmt [ fmt_idx ] . fmt = spfNetworkIPAddr;
+            has_precision = 0;
+            break;
+            
+
 #if SUPPORT_PERCENT_N
             /* awful out parameter giving characters printed so far */
         case 'n':
@@ -2154,6 +2259,29 @@ rc_t parse_format_string ( const char *fmt_str, va_list vargs,
                 fmt [ fmt_idx ] . type = sptPointer;
                 args [ arg_idx ] . p = va_arg ( vargs, const void* );
                 break;
+
+            case 'a':
+            case 'A':
+                switch ( size_modifier )
+                {
+                case 'l':
+                    /* ipv6 */
+                    fmt [ fmt_idx ] . pointer_arg = 1;
+                    fmt [ fmt_idx ] . radix = 16;
+                    fmt [ fmt_idx ] . type = sptIPv6;
+                    args [ arg_idx ] . ipv6 = va_arg ( vargs, const uint16_t* );
+                    break;
+                case 0:
+                    /* ipv4 */
+                    fmt [ fmt_idx ] . radix = 10;
+                    fmt [ fmt_idx ] . type = sptIPv4;
+                    args [ arg_idx ] . ipv4 = va_arg ( vargs, uint32_t );
+                    break;
+                default:
+                    return RC ( rcText, rcString, rcFormatting, rcFormat, rcIncorrect );
+                }
+                break;
+                
 
 #if SUPPORT_PERCENT_N
             case 'n':
@@ -2714,6 +2842,13 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
             ++ arg_idx;
             continue;
 #endif
+        case sptIPv4:
+            u64 = args [ arg_idx ] . ipv4;
+            break;
+        case sptIPv6:
+            p = args [ arg_idx ] . ipv6;
+            break;
+            
         default:
             return RC ( rcText, rcString, rcConverting, rcType, rcUnrecognized );
         }
@@ -3119,6 +3254,74 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
             dst_len = (uint32_t) KWrtFmt_error_code ( text, sizeof text, ( int ) i64 );
             StringInit ( & S, text, dst_len, dst_len );
             break;
+
+        case spfNativeIPAddr:
+#if __BYTE_ORDER == __BIG_ENDIAN
+        case spfNetworkIPAddr:
+#endif
+            switch ( f . type )
+            {
+            case sptIPv4:
+                dst_len = sprintf ( text
+                                    , "%u.%u.%u.%u"
+                                    , ( uint32_t ) ( uint8_t ) ( u64 >> 24 )
+                                    , ( uint32_t ) ( uint8_t ) ( u64 >> 16 )
+                                    , ( uint32_t ) ( uint8_t ) ( u64 >>  8 )
+                                    , ( uint32_t ) ( uint8_t ) ( u64 >>  0 )
+                    );
+                break;
+            case sptIPv6:
+                dst_len = sprintf ( text
+                                    , "%x:%x:%x:%x:%x:%x:%x:%x"
+                                    , ( uint32_t ) ( ( const uint16_t * ) p ) [ 0 ]
+                                    , ( uint32_t ) ( ( const uint16_t * ) p ) [ 1 ]
+                                    , ( uint32_t ) ( ( const uint16_t * ) p ) [ 2 ]
+                                    , ( uint32_t ) ( ( const uint16_t * ) p ) [ 3 ]
+                                    , ( uint32_t ) ( ( const uint16_t * ) p ) [ 4 ]
+                                    , ( uint32_t ) ( ( const uint16_t * ) p ) [ 5 ]
+                                    , ( uint32_t ) ( ( const uint16_t * ) p ) [ 6 ]
+                                    , ( uint32_t ) ( ( const uint16_t * ) p ) [ 7 ]
+                    );
+                break;
+            default:
+                return RC ( rcText, rcString, rcConverting, rcType, rcUnrecognized );
+            }
+            StringInit ( & S, text, dst_len, dst_len );
+            break;
+
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+        case spfNetworkIPAddr:
+            switch ( f . type )
+            {
+            case sptIPv4:
+                u64 = bswap_32 ( ( uint32_t ) u64 );
+                dst_len = sprintf ( text
+                                    , "%u.%u.%u.%u"
+                                    , ( uint32_t ) ( uint8_t ) ( u64 >> 24 )
+                                    , ( uint32_t ) ( uint8_t ) ( u64 >> 16 )
+                                    , ( uint32_t ) ( uint8_t ) ( u64 >>  8 )
+                                    , ( uint32_t ) ( uint8_t ) ( u64 >>  0 )
+                    );
+                break;
+            case sptIPv6:
+                dst_len = sprintf ( text
+                                    , "%x:%x:%x:%x:%x:%x:%x:%x"
+                                    , ( uint32_t ) bswap_16 ( ( ( const uint16_t * ) p ) [ 0 ] )
+                                    , ( uint32_t ) bswap_16 ( ( ( const uint16_t * ) p ) [ 1 ] )
+                                    , ( uint32_t ) bswap_16 ( ( ( const uint16_t * ) p ) [ 2 ] )
+                                    , ( uint32_t ) bswap_16 ( ( ( const uint16_t * ) p ) [ 3 ] )
+                                    , ( uint32_t ) bswap_16 ( ( ( const uint16_t * ) p ) [ 4 ] )
+                                    , ( uint32_t ) bswap_16 ( ( ( const uint16_t * ) p ) [ 5 ] )
+                                    , ( uint32_t ) bswap_16 ( ( ( const uint16_t * ) p ) [ 6 ] )
+                                    , ( uint32_t ) bswap_16 ( ( ( const uint16_t * ) p ) [ 7 ] )
+                    );
+                break;
+            default:
+                return RC ( rcText, rcString, rcConverting, rcType, rcUnrecognized );
+            }
+            StringInit ( & S, text, dst_len, dst_len );
+            break;
+#endif
 
         default:
             return RC ( rcText, rcString, rcConverting, rcFormat, rcUnrecognized );

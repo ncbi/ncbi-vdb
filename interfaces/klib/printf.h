@@ -128,6 +128,10 @@ struct KWrtHandler;
         | 'z'           : date, time and zone
         ;
 
+    IP-address-modifier
+        = 'l'           : IPv6
+        ;
+
     scalar storage-class
         = 'd' | 'i'     : decimal signed integer
         | 'u'           : decimal unsigned integer
@@ -165,6 +169,13 @@ struct KWrtHandler;
         | 's' | 'S'     : bounded character vector
         ;
 
+    IP address tuples *(10)(11)
+        = 'a'           : 'a' is a host byte-order IPv4 address,
+                          'la' is a host byte-order IPv6 address
+        | 'A'           : 'A' is a network byte-order IPv4 address
+                          'lA' is a network byte-order IPv6 address
+        ;
+
   Notes:
      1. field-width and precision measure characters, not bytes
      2. for version numbers, precision gives the number of fields,
@@ -184,6 +195,12 @@ struct KWrtHandler;
         the default end index is $.
      9. a character vector is NOT assumed to be NUL-terminated,
         and in this case the default end index is the start index.
+    10. IP addresses are tuples, where IPv4 is a quadruple and
+        IPv6 is an octuple. IPv4 address parameters are expected to
+        be formated as a uint32_t in host byte order. IPv6 address
+        parameters are expected to be uint16_t [ 8 ] where each array
+        element is a uint16_t in host byte-order.
+    11. same as *10 except that parameters are expected in network byte order
 
  */
 
@@ -249,7 +266,9 @@ enum
     spfSymbol,                                  /* 'N'                                */
     spfTime,                                    /* [ 'hlz' + ] 'T'                    */
     spfRC,                                      /* 'R'                                */
-    spfOSErr                                    /* '!'                                */
+    spfOSErr,                                   /* '!'                                */
+    spfNativeIPAddr,                            /* 'a'                                */
+    spfNetworkIPAddr                            /* 'A'                                */
 };
 
 /* types
@@ -279,10 +298,12 @@ enum
     sptUTF32String,                             /* vector character    - arg is S     */
     sptPointer,                                 /* object reference    - arg is p     */
     sptRowId,                                   /* current row id      - arg is d     */
-    sptRowLen                                   /* current row length  - arg is u     */
+    sptRowLen,                                  /* current row length  - arg is u     */
 #if SUPPORT_PERCENT_N
-    , sptBytesPrinted                           /* output parameter    - arg is n     */
+    sptBytesPrinted,                            /* output parameter    - arg is n     */
 #endif
+    sptIPv4,                                    /* IP address version 4               */
+    sptIPv6                                     /* IP address version 6               */
 };
 
 
@@ -369,10 +390,13 @@ union PrintArg
     struct String const *S;                     /* character vector                   */
 
     const void *p;                              /* object reference                   */
-
+    
 #if SUPPORT_PERCENT_N
     uint32_t *n;                                /* output parameter                   */
 #endif
+
+    uint32_t ipv4;                              /* ip addresses                       */
+    const uint16_t *ipv6;
 };
 
 
