@@ -132,15 +132,24 @@ struct KClientHttp
     int32_t read_timeout;
     int32_t write_timeout;
 
-    /* Remote EndPoint */
-    KEndPoint ep;
+    /* resolved endpoint */
+    KEndPoint resolved_ep;
+
+    /* actual connected endpoints */
+    KEndPoint local_ep;
+    KEndPoint remote_ep;
+
+    /* is resolved endpoint valid */
     bool ep_valid;
+
+    /* is resolved endpoint a proxy, and does it use default port */
     bool proxy_ep;
     bool proxy_default_port;
     
-    KEndPoint local_ep; /* Local EndPoint */
-
+    /* is the connection intended to be reliable */
     bool reliable;
+
+    /* is the scheme using TLS */
     bool tls;
 
     bool close_connection;
@@ -160,6 +169,8 @@ void KClientHttpClose ( KClientHttp *self )
 {
     KStreamRelease ( self -> sock );
     self -> sock = NULL;
+
+    self -> local_ep . type = self -> remote_ep . type = epInvalid;
 
     KClientHttpBlockBufferReset ( self );
     KClientHttpLineBufferReset ( self );
@@ -418,7 +429,7 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
     while ( KEndPointArgsIteratorNext
         ( & it, & hostname, & port, & proxy_default_port, & proxy_ep ) )
     {
-        rc = KNSManagerInitDNSEndpoint ( mgr, & self -> ep, hostname, port );
+        rc = KNSManagerInitDNSEndpoint ( mgr, & self -> resolved_ep, hostname, port );
         DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ),
             ( "KNSManagerInitDNSEndpoint(%S:%d)=%R\n", hostname, port, rc ) );
         if ( rc == 0 )
@@ -430,7 +441,7 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
         {
             /* try to establish a connection */
             rc = KNSManagerMakeTimedConnection ( mgr, & sock,
-              self -> read_timeout, self -> write_timeout, NULL, & self -> ep );
+              self -> read_timeout, self -> write_timeout, NULL, & self -> resolved_ep );
 
             /* if we connected to a proxy, try to follow-through to server */
             if ( proxy_ep && self -> tls && rc == 0 )
@@ -449,23 +460,51 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
         }
     }
 
-    if ( rc != 0 ) {
+    if ( rc != 0 )
+    {
         if ( KNSManagerLogNcbiVdbNetError ( mgr ) )
+        {
             PLOGERR ( klogSys, ( klogSys, rc, "Failed to Make Connection "
-                "in KClientHttpOpen to '$(host):$(port)",
-                "host=%S,port=%hd", aHostname, aPort ) );
+                "in KClientHttpOpen to '$(host):$(port)'",
+                "host=%S,port=%u", aHostname, aPort ) );
+        }
     }
     /* if the connection is open */
     else
     {
-        rc_t r = KSocketGetLocalEndpoint ( sock, & self -> local_ep );
-        if ( r == 0 )
-            STATUS ( STAT_USR, "%s - connected from '%s' to %S (%s)\n",
-                               __func__, self -> local_ep . ip_address,
-                               hostname, self -> ep . ip_address );
-        else
-            STATUS ( STAT_USR, "%s - connected to %S (%s)\n",
-                               __func__, hostname, self -> ep . ip_address );
+        rc_t rr = KSocketGetRemoteEndpoint ( sock, & self -> remote_ep );
+        rc_t rl = KSocketGetLocalEndpoint ( sock, & self -> local_ep );
+        if ( rr == 0 )
+        {
+            if ( rl == 0 )
+            {
+                STATUS ( STAT_USR
+                         , "%s - connected from %E to '%S' (%E)\n"
+                         , __func__
+                         , & self -> local_ep
+                         , hostname
+                         , & self -> remote_ep
+                    );
+            }
+            else
+            {
+                STATUS ( STAT_USR
+                         , "%s - connected to '%S' (%E)\n"
+                         , __func__
+                         , hostname
+                         , & self -> remote_ep
+                    );
+            }
+        }
+        else if ( rl == 0 )
+        {
+            STATUS ( STAT_USR
+                     , "%s - connected from %E to '%S' (address unknown)\n"
+                     , __func__
+                     , & self -> local_ep
+                     , hostname
+                );
+        }
 
         if ( self -> tls )
         {
@@ -476,19 +515,29 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
 
             if ( rc != 0 )
             {
-                if ( ! proxy_ep ) {
+                if ( ! proxy_ep )
+                {
                     if ( KNSManagerLogNcbiVdbNetError ( mgr ) )
+                    {
                         PLOGERR ( klogSys, ( klogSys, rc,
-                            "Failed to create TLS stream for '$(host)' ($(ip)) "
-                            "from '$(local)'", "host=%S,ip=%s,local=%s",
-                            aHostname, self -> ep . ip_address,
-                            self -> local_ep . ip_address
-                        ) );
+                                             "Failed to create TLS stream for '$(host)' ($(remote)) from $(local)"
+                                             , "host=%S,remote=%E,local=%E"
+                                             , aHostname
+                                             , & self -> remote_ep
+                                             , & self -> local_ep
+                                      )
+                            );
+                    }
                     else
+                    {
                         DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_TLS ),
-                            ( "Failed to create TLS stream for '%S' (%s) from '%s'\n",
-                              aHostname, self -> ep . ip_address,
-                              self -> local_ep . ip_address ) );
+                                 ( "Failed to create TLS stream for '%S' (%E) from %E\n"
+                                   , aHostname
+                                   , & self -> remote_ep
+                                   , & self -> local_ep
+                                 )
+                            );
+                    }
                 }
                 else
                 {
@@ -2614,18 +2663,25 @@ LIB_EXPORT rc_t CC KClientHttpMakeRequest ( const KClientHttp *self,
     return rc;
 }
 
-static void KClientHttpGetEndpoint ( const KClientHttp * self, KEndPoint * ep, bool remote ) {
-    assert ( ep );
-    memset ( ep, 0, sizeof * ep );
-    if ( self != NULL )
-        * ep = remote ? self -> ep : self -> local_ep;
+static
+void KClientHttpGetEndpoint ( const KClientHttp * self, KEndPoint * ep, bool remote )
+{
+    assert ( ep != NULL );
+    if ( self == NULL )
+        memset ( ep, 0, sizeof * ep );
+    else
+        * ep = remote ? self -> remote_ep : self -> local_ep;
 }
 
 void KClientHttpGetRemoteEndpoint ( const KClientHttp * self, KEndPoint * ep )
-{   KClientHttpGetEndpoint ( self, ep, true ); }
+{
+    KClientHttpGetEndpoint ( self, ep, true );
+}
 
 void KClientHttpGetLocalEndpoint ( const KClientHttp * self, KEndPoint * ep )
-{   KClientHttpGetEndpoint ( self, ep, false ); }
+{
+    KClientHttpGetEndpoint ( self, ep, false );
+}
 
 /* MakeRequest
  *  create a request that can be used to contact HTTP server
