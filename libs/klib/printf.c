@@ -2551,18 +2551,72 @@ size_t print_ipv4 ( char * out, uint32_t ipv4 )
 static
 size_t print_native_ipv6 ( char * out, const uint16_t * ipv6 )
 {
-    /* TBD - if desired, implement algorithm to replace longest run of 0 with '::' */
-    return sprintf ( out
-                     , "%x:%x:%x:%x:%x:%x:%x:%x"
-                     , ( uint32_t ) ipv6 [ 0 ]
-                     , ( uint32_t ) ipv6 [ 1 ]
-                     , ( uint32_t ) ipv6 [ 2 ]
-                     , ( uint32_t ) ipv6 [ 3 ]
-                     , ( uint32_t ) ipv6 [ 4 ]
-                     , ( uint32_t ) ipv6 [ 5 ]
-                     , ( uint32_t ) ipv6 [ 6 ]
-                     , ( uint32_t ) ipv6 [ 7 ]
-        );
+    /* algorithm to replace runs of zeros, common today in ipv6 */
+    uint32_t run_lengths [ 8 ] = { 8, 7, 6, 5, 4, 3, 2, 1 };
+    uint32_t i, best, best_idx, adj = 0;
+
+    for ( i = 8; i > 0; )
+    {
+        -- i;
+
+        if ( ipv6 [ i ] != 0 )
+            adj = 8 - i;
+
+        run_lengths [ i ] -= adj;
+    }
+
+    /* the index is irrelevant unless "best" >= 2 */
+    best = best_idx = 1;
+    for ( i = 0; i < 8; ++ i )
+    {
+        if ( run_lengths [ i ] > best )
+        {
+            best_idx = i;
+            best = run_lengths [ i ];
+        }
+    }
+
+    /* if there were no runs of zero >= 2, just print everything */
+    if ( best < 2 )
+    {
+        return sprintf ( out
+                         , "%x:%x:%x:%x:%x:%x:%x:%x"
+                         , ( uint32_t ) ipv6 [ 0 ]
+                         , ( uint32_t ) ipv6 [ 1 ]
+                         , ( uint32_t ) ipv6 [ 2 ]
+                         , ( uint32_t ) ipv6 [ 3 ]
+                         , ( uint32_t ) ipv6 [ 4 ]
+                         , ( uint32_t ) ipv6 [ 5 ]
+                         , ( uint32_t ) ipv6 [ 6 ]
+                         , ( uint32_t ) ipv6 [ 7 ]
+            );
+    }
+
+    /* print everything up to best_idx */
+    adj = 0;
+    if ( best_idx != 0 )
+    {
+        adj = sprintf ( out, "%x",( uint32_t ) ipv6 [ 0 ] );
+        for ( i = 1; i < best_idx; ++ i )
+            adj += sprintf ( & out [ adj ], ":%x", ( uint32_t ) ipv6 [ i ] );
+    }
+
+    /* substitute run of zeros with a "::" */
+    out [ adj + 0 ] = ':';
+    out [ adj + 1 ] = ':';
+    out [ adj + 2 ] = 0;
+    adj += 2;
+
+    /* print remaining */
+    i = best_idx + run_lengths [ best_idx ];
+    if ( i < 8 )
+    {
+        adj += sprintf ( & out [ adj ], "%x",( uint32_t ) ipv6 [ i ] );
+        for ( ++ i; i < 8; ++ i )
+            adj += sprintf ( & out [ adj ], ":%x", ( uint32_t ) ipv6 [ i ] );
+    }
+
+    return adj;
 }
 
 static

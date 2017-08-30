@@ -42,6 +42,7 @@
 #include <stdarg.h>
 #include <va_copy.h>
 #include <time.h>
+#include <endian.h>
 
 static
 rc_t test_vprintf ( const char *expected, const char *fmt, va_list args )
@@ -768,28 +769,56 @@ rc_t run ( const char *progname )
           ( ( uint32_t ) ( c ) <<  8 ) |    \
           ( ( uint32_t ) ( d ) <<  0 )      \
         )
+#if __BYTE_ORDER == __BIG_ENDIAN
+#define MAKE_NETWORK( x ) \
+        ( uint16_t ) ( x )
+#elif __BYTE_ORDER == __LITTLE_ENDIAN
+#define MAKE_NETWORK( x ) \
+        ( uint16_t ) ( ( ( uint16_t ) ( x ) >> 8 ) | ( ( uint16_t ) ( x ) << 8 ) )
+#else
+#error "what kind of machine is this?"
+#endif
 #define MAKE_IPV6( a, b, c, d, e, f, g, h ) \
         {                                   \
-            ( uint16_t ) ( a )              \
-          , ( uint16_t ) ( b )              \
-          , ( uint16_t ) ( c )              \
-          , ( uint16_t ) ( d )              \
-          , ( uint16_t ) ( e )              \
-          , ( uint16_t ) ( f )              \
-          , ( uint16_t ) ( g )              \
-          , ( uint16_t ) ( h )              \
+            MAKE_NETWORK ( a )              \
+          , MAKE_NETWORK ( b )              \
+          , MAKE_NETWORK ( c )              \
+          , MAKE_NETWORK ( d )              \
+          , MAKE_NETWORK ( e )              \
+          , MAKE_NETWORK ( f )              \
+          , MAKE_NETWORK ( g )              \
+          , MAKE_NETWORK ( h )              \
         }
         uint16_t ipv6_1 [ 8 ] = MAKE_IPV6 (1,2,3,4,5,6,7,8);
         uint16_t ipv6_2 [ 8 ] = MAKE_IPV6 (1234,2345,3456,4567,5678,6789,7890,8999);
 
+        uint16_t ipv6_3 [ 8 ] = MAKE_IPV6 (0,0,0,0,0,0,0,0);
+        uint16_t ipv6_4 [ 8 ] = MAKE_IPV6 (0,0,0,0,0,0,0,1);
+        uint16_t ipv6_5 [ 8 ] = MAKE_IPV6 (1,0,0,0,0,0,0,1);
+        uint16_t ipv6_6 [ 8 ] = MAKE_IPV6 (1,0,1,0,0,0,0,1);
+        uint16_t ipv6_7 [ 8 ] = MAKE_IPV6 (1,0,1,0,0,0,0,0);
+        uint16_t ipv6_8 [ 8 ] = MAKE_IPV6 (0,0,1,0,0,1,0,0);
+        uint16_t ipv6_9 [ 8 ] = MAKE_IPV6 (0,0,1,0,0,0,1,0);
+
+        /* ipv4 addresses - in host order by default */
         test_printf ( "127.0.0.1", "%a", MAKE_IPV4 ( 127, 0, 0, 1 ) );
         test_printf ( "123.234.1.2", "%a", MAKE_IPV4 ( 123, 234, 1, 2 ) );
         test_printf ( "2.1.234.123", "%A", MAKE_IPV4 ( 123, 234, 1, 2 ) );
 
-        test_printf ( "1:2:3:4:5:6:7:8", "%la", ipv6_1 );
-        test_printf ( "4d2:929:d80:11d7:162e:1a85:1ed2:2327", "%la", ipv6_2 );
-        test_printf ( "100:200:300:400:500:600:700:800", "%lA", ipv6_1 );
-        test_printf ( "d204:2909:800d:d711:2e16:851a:d21e:2723", "%lA", ipv6_2 );
+        /* ipv6 addresses - in NETWORK order by default */
+        test_printf ( "1:2:3:4:5:6:7:8", "%lA", ipv6_1 );
+        test_printf ( "4d2:929:d80:11d7:162e:1a85:1ed2:2327", "%lA", ipv6_2 );
+        test_printf ( "100:200:300:400:500:600:700:800", "%la", ipv6_1 );
+        test_printf ( "d204:2909:800d:d711:2e16:851a:d21e:2723", "%la", ipv6_2 );
+
+        /* special cases with runs of 0 */
+        test_printf ( "::", "%lA", ipv6_3 );
+        test_printf ( "::1", "%lA", ipv6_4 );
+        test_printf ( "1::1", "%lA", ipv6_5 );
+        test_printf ( "1:0:1::1", "%lA", ipv6_6 );
+        test_printf ( "1:0:1::", "%lA", ipv6_7 );
+        test_printf ( "::1:0:0:1:0:0", "%lA", ipv6_8 );
+        test_printf ( "0:0:1::1:0", "%lA", ipv6_9 );
 
 #ifdef _h_kns_endpoint_
 
@@ -824,14 +853,21 @@ rc_t run ( const char *progname )
         ep . u . ipv6 . port = 54321;
         ep . num_ips = 1;
         ep . type = epIPV6;
-        test_printf ( "[100:200:300:400:500:600:700:800]:54321", "%E", & ep );
+        test_printf ( "[1:2:3:4:5:6:7:8]:54321", "%E", & ep );
 
         memmove ( & ep . u . ipv6 . addr [ 1 ], ipv6_2, sizeof ep . u . ipv6 . addr [ 1 ] );
         ep . num_ips = 2;
-        test_printf ( "[100:200:300:400:500:600:700:800,d204:2909:800d:d711:2e16:851a:d21e:2723]:54321", "%E", & ep );
-        test_printf ( "[100:200:300:400:500:600:700:800]:54321", "%.0E", & ep );
-        test_printf ( "[d204:2909:800d:d711:2e16:851a:d21e:2723]:54321", "%.1E", & ep );
-        test_printf ( "[100:200:300:400:500:600:700:800]:54321", "%.2E", & ep );
+        test_printf ( "[1:2:3:4:5:6:7:8,4d2:929:d80:11d7:162e:1a85:1ed2:2327]:54321", "%E", & ep );
+        test_printf ( "[1:2:3:4:5:6:7:8]:54321", "%.0E", & ep );
+        test_printf ( "[4d2:929:d80:11d7:162e:1a85:1ed2:2327]:54321", "%.1E", & ep );
+        test_printf ( "[1:2:3:4:5:6:7:8]:54321", "%.2E", & ep );
+
+        memmove ( & ep . u . ipv6 . addr [ 2 ], ipv6_4, sizeof ep . u . ipv6 . addr [ 2 ] );
+        ep . num_ips = 3;
+        test_printf ( "[1:2:3:4:5:6:7:8,4d2:929:d80:11d7:162e:1a85:1ed2:2327,::1]:54321", "%E", & ep );
+        test_printf ( "[1:2:3:4:5:6:7:8]:54321", "%.0E", & ep );
+        test_printf ( "[4d2:929:d80:11d7:162e:1a85:1ed2:2327]:54321", "%.1E", & ep );
+        test_printf ( "[::1]:54321", "%.2E", & ep );
 #endif
     }
 
