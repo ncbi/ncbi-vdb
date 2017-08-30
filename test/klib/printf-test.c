@@ -839,6 +839,12 @@ rc_t run ( const char *progname )
         test_printf ( "127.0.0.1:1234", "%.1E", & ep );
         test_printf ( "127.0.0.1:1234", "%.*E", 2, & ep );
 
+        /* the "half" size indicates only the address portion of the endpoint */
+        test_printf ( "127.0.0.1", "%hE", & ep );
+        test_printf ( "127.0.0.1", "%.0hE", & ep );
+        test_printf ( "127.0.0.1", "%.1hE", & ep );
+        test_printf ( "127.0.0.1", "%.*hE", 2, & ep );
+
         ep . u . ipv4 . addr [ 1 ] = MAKE_IPV4 ( 1, 2, 3, 4 );
         ep . u . ipv4 . addr [ 2 ] = MAKE_IPV4 ( 4, 3, 2, 1 );
         ep . num_ips = 3;
@@ -848,6 +854,12 @@ rc_t run ( const char *progname )
         test_printf ( "4.3.2.1:1234", "%.*E", 2, & ep );
         test_printf ( "127.0.0.1:1234", "%.*E", 3, & ep );
 
+        test_printf ( "<127.0.0.1,1.2.3.4,4.3.2.1>", "%hE", & ep );
+        test_printf ( "127.0.0.1", "%.0hE", & ep );
+        test_printf ( "1.2.3.4", "%.1hE", & ep );
+        test_printf ( "4.3.2.1", "%.*hE", 2, & ep );
+        test_printf ( "127.0.0.1", "%.*hE", 3, & ep );
+        
         /* ipv6 endpoints - always in NETWORK order */
         memmove ( & ep . u . ipv6 . addr [ 0 ], ipv6_1, sizeof ep . u . ipv6 . addr [ 0 ] );
         ep . u . ipv6 . port = 54321;
@@ -868,6 +880,11 @@ rc_t run ( const char *progname )
         test_printf ( "[1:2:3:4:5:6:7:8]:54321", "%.0E", & ep );
         test_printf ( "[4d2:929:d80:11d7:162e:1a85:1ed2:2327]:54321", "%.1E", & ep );
         test_printf ( "[::1]:54321", "%.2E", & ep );
+
+        test_printf ( "[1:2:3:4:5:6:7:8,4d2:929:d80:11d7:162e:1a85:1ed2:2327,::1]", "%hE", & ep );
+        test_printf ( "1:2:3:4:5:6:7:8", "%.0hE", & ep );
+        test_printf ( "4d2:929:d80:11d7:162e:1a85:1ed2:2327", "%.1hE", & ep );
+        test_printf ( "::1", "%.2hE", & ep );
 #endif
     }
 

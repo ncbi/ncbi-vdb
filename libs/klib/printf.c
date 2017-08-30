@@ -1987,9 +1987,15 @@ rc_t parse_format_string ( const char *fmt_str, va_list vargs,
 
         case 'E':
             fmt [ fmt_idx ] . fmt = spfEndpoint;
+            switch ( size_modifier )
+            {
+            case 'h':
+                break;
+            default:
+                fmt [ fmt_idx ] . endpoint_print_port = 1;
+            }
             if ( has_precision )
                 fmt [ fmt_idx ] . endpoint_precision = 1;
-            size_modifier = 0;
             break;
             
 
@@ -3433,14 +3439,20 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
                             assert ( 22 < sizeof text );
                             dst_len = print_ipv4 ( text, ep -> u . ipv4 . addr [ u64 ] );
                         }
-                        else
+                        else if ( f . endpoint_print_port )
                         {
                             /* account for up to 39 ipv6 chars, square brackets, colon, up to 5 port digits and NUL */
-                            assert ( 47 < sizeof text );
+                            assert ( 48 < sizeof text );
                             text [ 0 ] = '[';
                             dst_len = print_network_ipv6 ( & text [ 1 ], ep -> u . ipv6 . addr [ u64 ] ) + 1;
                             text [ dst_len ++ ] = ']';
                             text [ dst_len ] = 0;
+                        }
+                        else
+                        {
+                            /* account for up to 39 ipv6 chars and NUL */
+                            assert ( 40 < sizeof text );
+                            dst_len = print_network_ipv6 ( text, ep -> u . ipv6 . addr [ u64 ] );
                         }
                     }
                     else
@@ -3475,15 +3487,18 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
                             text [ dst_len ] = 0;
                         }
                     }
-                    text [ dst_len ++ ] = ':';
-                    if ( ep -> type == epIPV4 )
-                        dst_len += sprintf ( & text [ dst_len ], "%u", ep -> u . ipv4 . port );
-                    else
-                        dst_len += sprintf ( & text [ dst_len ], "%u", ep -> u . ipv6 . port );
+                    if ( f . endpoint_print_port )
+                    {
+                        text [ dst_len ++ ] = ':';
+                        if ( ep -> type == epIPV4 )
+                            dst_len += sprintf ( & text [ dst_len ], "%u", ep -> u . ipv4 . port );
+                        else
+                            dst_len += sprintf ( & text [ dst_len ], "%u", ep -> u . ipv6 . port );
+                    }
                     break;
                 case epIPC:
                     assert ( sizeof ep -> u . ipc_name < sizeof text );
-                    dst_len = snprintf ( text, sizeof text, "'%s'", ep -> u . ipc_name );
+                    dst_len = string_copy_measure ( text, sizeof text, ep -> u . ipc_name );
                     break;
                 default:
                     dst_len = string_copy_measure ( text, sizeof text, "<unrecognized>" );
