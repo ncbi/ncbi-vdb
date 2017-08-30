@@ -2626,7 +2626,7 @@ size_t print_swapped_ipv6 ( char * out, const uint16_t * ipv6 )
     swapped [ 0 ] = bswap_16 ( ipv6 [ 0 ] );
     swapped [ 1 ] = bswap_16 ( ipv6 [ 1 ] );
     swapped [ 2 ] = bswap_16 ( ipv6 [ 2 ] );
-    swapped [ 3 ] = bswap_16 ( ipv6 [ 3] );
+    swapped [ 3 ] = bswap_16 ( ipv6 [ 3 ] );
     swapped [ 4 ] = bswap_16 ( ipv6 [ 4 ] );
     swapped [ 5 ] = bswap_16 ( ipv6 [ 5 ] );
     swapped [ 6 ] = bswap_16 ( ipv6 [ 6 ] );
