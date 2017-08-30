@@ -148,8 +148,9 @@ struct KWrtHandler;
         | 'V' *(2)      : tri-part version [ ver_t ]
         | 'R'           : return code [ rc_t ]
         | 'T'           : const KTime*  [ <klib/time.h> ]
-        | '!'           ; operating specific error code ( i.e. errno or GetLastError() )
-        | 'n' *(5)      ; output of number of characters printed so far to uint32_t*
+        | '!'           : operating specific error code ( i.e. errno or GetLastError() )
+        | 'n' *(5)      : output of number of characters printed so far to uint32_t*
+        | 'E'           : one or all address of KEndpoint, selected by precision
         ;
 
     single-index vector storage-class *(6)(7)
@@ -268,7 +269,8 @@ enum
     spfRC,                                      /* 'R'                                */
     spfOSErr,                                   /* '!'                                */
     spfNativeIPAddr,                            /* 'a'                                */
-    spfNetworkIPAddr                            /* 'A'                                */
+    spfNetworkIPAddr,                           /* 'A'                                */
+    spfEndpoint                                 /* 'E'                                */
 };
 
 /* types
@@ -353,6 +355,7 @@ struct PrintFmt
     unsigned int explain_rc           : 1;
     unsigned int type_cast            : 1;      /* if true, convert type for fmt      */
     unsigned int pointer_arg          : 1;      /* argument is a pointer              */
+    unsigned int endpoint_precision   : 1;      /* value in precision valid ep index  */
     uint32_t radix;                             /* 0 default, 2, 8, 10, 16, .. 36     */
     uint8_t fmt;                                /* spf... from above                  */
     uint8_t type;                               /* spt... from above                  */

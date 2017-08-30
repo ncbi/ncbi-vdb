@@ -34,6 +34,7 @@
 #include <klib/out.h>
 #include <klib/rc.h>
 #include <kfg/config.h>
+#include <kns/endpoint.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -757,6 +758,9 @@ rc_t run ( const char *progname )
     }
 
     {
+#ifdef _h_kns_endpoint_
+        KEndPoint ep;
+#endif
 #define MAKE_IPV4( a, b, c, d )             \
         ( uint32_t ) (                      \
           ( ( uint32_t ) ( a ) << 24 ) |    \
@@ -786,6 +790,49 @@ rc_t run ( const char *progname )
         test_printf ( "4d2:929:d80:11d7:162e:1a85:1ed2:2327", "%la", ipv6_2 );
         test_printf ( "100:200:300:400:500:600:700:800", "%lA", ipv6_1 );
         test_printf ( "d204:2909:800d:d711:2e16:851a:d21e:2723", "%lA", ipv6_2 );
+
+#ifdef _h_kns_endpoint_
+
+        /* NULL parameters just print <NULL> */
+        test_printf ( "<NULL>", "%E", NULL );
+
+        /* invalid endpoints */
+        memset ( & ep, 0, sizeof ep );
+        test_printf ( "<invalid>", "%E", & ep );
+
+        /* ipv4 endpoints - always in native byte order */
+        ep . u . ipv4 . addr [ 0 ] = MAKE_IPV4 ( 127, 0, 0, 1 );
+        ep . u . ipv4 . port = 1234;
+        ep . num_ips = 1;
+        ep . type = epIPV4;
+        test_printf ( "127.0.0.1:1234", "%E", & ep );
+        test_printf ( "127.0.0.1:1234", "%.0E", & ep );
+        test_printf ( "127.0.0.1:1234", "%.1E", & ep );
+        test_printf ( "127.0.0.1:1234", "%.*E", 2, & ep );
+
+        ep . u . ipv4 . addr [ 1 ] = MAKE_IPV4 ( 1, 2, 3, 4 );
+        ep . u . ipv4 . addr [ 2 ] = MAKE_IPV4 ( 4, 3, 2, 1 );
+        ep . num_ips = 3;
+        test_printf ( "<127.0.0.1,1.2.3.4,4.3.2.1>:1234", "%E", & ep );
+        test_printf ( "127.0.0.1:1234", "%.0E", & ep );
+        test_printf ( "1.2.3.4:1234", "%.1E", & ep );
+        test_printf ( "4.3.2.1:1234", "%.*E", 2, & ep );
+        test_printf ( "127.0.0.1:1234", "%.*E", 3, & ep );
+
+        /* ipv6 endpoints - always in NETWORK order */
+        memmove ( & ep . u . ipv6 . addr [ 0 ], ipv6_1, sizeof ep . u . ipv6 . addr [ 0 ] );
+        ep . u . ipv6 . port = 54321;
+        ep . num_ips = 1;
+        ep . type = epIPV6;
+        test_printf ( "[100:200:300:400:500:600:700:800]:54321", "%E", & ep );
+
+        memmove ( & ep . u . ipv6 . addr [ 1 ], ipv6_2, sizeof ep . u . ipv6 . addr [ 1 ] );
+        ep . num_ips = 2;
+        test_printf ( "[100:200:300:400:500:600:700:800,d204:2909:800d:d711:2e16:851a:d21e:2723]:54321", "%E", & ep );
+        test_printf ( "[100:200:300:400:500:600:700:800]:54321", "%.0E", & ep );
+        test_printf ( "[d204:2909:800d:d711:2e16:851a:d21e:2723]:54321", "%.1E", & ep );
+        test_printf ( "[100:200:300:400:500:600:700:800]:54321", "%.2E", & ep );
+#endif
     }
 
 #if LINUX

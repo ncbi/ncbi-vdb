@@ -32,6 +32,7 @@
 #include <klib/time.h>
 #include <klib/data-buffer.h>
 #include <klib/rc.h>
+#include <kns/endpoint.h>
 
 #include "writer-priv.h"
 
@@ -1983,6 +1984,13 @@ rc_t parse_format_string ( const char *fmt_str, va_list vargs,
             fmt [ fmt_idx ] . fmt = spfNetworkIPAddr;
             has_precision = 0;
             break;
+
+        case 'E':
+            fmt [ fmt_idx ] . fmt = spfEndpoint;
+            if ( has_precision )
+                fmt [ fmt_idx ] . endpoint_precision = 1;
+            size_modifier = 0;
+            break;
             
 
 #if SUPPORT_PERCENT_N
@@ -2108,9 +2116,8 @@ rc_t parse_format_string ( const char *fmt_str, va_list vargs,
 
             case 's':
 #if STDC_COMPATIBILITY
-                if ( args [ arg_idx ] . p == NULL ) {
+                if ( args [ arg_idx ] . p == NULL )
                     args [ arg_idx ] . p = NULL_STRING_TEXT;
-                }
 #endif
                 /* NUL-terminated string issues */
                 if ( args [ arg_idx ] . p != NULL && infinite_first )
@@ -2253,9 +2260,10 @@ rc_t parse_format_string ( const char *fmt_str, va_list vargs,
                 args [ arg_idx ] . S = va_arg ( vargs, const String* );
                 break;
 
-                /* KSymbol or KTime object */
+                /* KSymbol, KTime or KEndpoint object */
             case 'N':
             case 'T':
+            case 'E':
                 fmt [ fmt_idx ] . type = sptPointer;
                 args [ arg_idx ] . p = va_arg ( vargs, const void* );
                 break;
@@ -2528,6 +2536,57 @@ rc_t print_literal ( KBufferedWrtHandler *out, const char *text, size_t size )
     return write_buffer ( out, text, size );
 }
 
+static
+size_t print_ipv4 ( char * out, uint32_t ipv4 )
+{
+    return sprintf ( out
+                     , "%u.%u.%u.%u"
+                     , ( uint32_t ) ( uint8_t ) ( ipv4 >> 24 )
+                     , ( uint32_t ) ( uint8_t ) ( ipv4 >> 16 )
+                     , ( uint32_t ) ( uint8_t ) ( ipv4 >>  8 )
+                     , ( uint32_t ) ( uint8_t ) ( ipv4 >>  0 )
+        );
+}
+
+static
+size_t print_native_ipv6 ( char * out, const uint16_t * ipv6 )
+{
+    /* TBD - if desired, implement algorithm to replace longest run of 0 with '::' */
+    return sprintf ( out
+                     , "%x:%x:%x:%x:%x:%x:%x:%x"
+                     , ( uint32_t ) ipv6 [ 0 ]
+                     , ( uint32_t ) ipv6 [ 1 ]
+                     , ( uint32_t ) ipv6 [ 2 ]
+                     , ( uint32_t ) ipv6 [ 3 ]
+                     , ( uint32_t ) ipv6 [ 4 ]
+                     , ( uint32_t ) ipv6 [ 5 ]
+                     , ( uint32_t ) ipv6 [ 6 ]
+                     , ( uint32_t ) ipv6 [ 7 ]
+        );
+}
+
+static
+size_t print_swapped_ipv6 ( char * out, const uint16_t * ipv6 )
+{
+    uint16_t swapped [ 8 ];
+    swapped [ 0 ] = bswap_16 ( ipv6 [ 0 ] );
+    swapped [ 1 ] = bswap_16 ( ipv6 [ 1 ] );
+    swapped [ 2 ] = bswap_16 ( ipv6 [ 2 ] );
+    swapped [ 3 ] = bswap_16 ( ipv6 [ 3] );
+    swapped [ 4 ] = bswap_16 ( ipv6 [ 4 ] );
+    swapped [ 5 ] = bswap_16 ( ipv6 [ 5 ] );
+    swapped [ 6 ] = bswap_16 ( ipv6 [ 6 ] );
+    swapped [ 7 ] = bswap_16 ( ipv6 [ 7 ] );
+    return print_native_ipv6 ( out, swapped );
+}
+
+#if __BYTE_ORDER == __BIG_ENDIAN
+#define print_network_ipv6( out, ipv6 ) \
+    print_native_ipv6 ( out, ipv6 )
+#elif __BYTE_ORDER == __LITTLE_ENDIAN
+#define print_network_ipv6( out, ipv6 ) \
+    print_swapped_ipv6 ( out, ipv6 )
+#endif
 
 /* structured_print_engine
  *  prints into a buffer
@@ -2860,7 +2919,7 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
         case sptSignedInt16Vect:
         case sptSignedInt32Vect:
         case sptSignedInt64Vect:
-            f64 = (double) i64;
+            f64 = ( double ) i64;
             break;
 
         case sptUnsignedInt:
@@ -2868,14 +2927,14 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
         case sptUnsignedInt16Vect:
         case sptUnsignedInt32Vect:
         case sptUnsignedInt64Vect:
-            f64 = (double) u64;
+            f64 = ( double ) u64;
             break;
 
         case sptFloat:
         case sptFloat32Vect:
         case sptFloat64Vect:
         case sptFloatLongVect:
-            i64 = (int64_t) f64;
+            i64 = ( int64_t ) f64;
             break;
 
         case sptChar:
@@ -2890,10 +2949,10 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
             return RC ( rcText, rcString, rcConverting, rcType, rcUnsupported );
 
         case sptRowId:
-            f64 = (double) i64;
+            f64 = ( double ) i64;
             break;
         case sptRowLen:
-            f64 = (double) u64;
+            f64 = ( double ) u64;
             break;
 
 #if SUPPORT_PERCENT_N
@@ -3262,26 +3321,10 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
             switch ( f . type )
             {
             case sptIPv4:
-                dst_len = sprintf ( text
-                                    , "%u.%u.%u.%u"
-                                    , ( uint32_t ) ( uint8_t ) ( u64 >> 24 )
-                                    , ( uint32_t ) ( uint8_t ) ( u64 >> 16 )
-                                    , ( uint32_t ) ( uint8_t ) ( u64 >>  8 )
-                                    , ( uint32_t ) ( uint8_t ) ( u64 >>  0 )
-                    );
+                dst_len = print_ipv4 ( text, ( uint32_t ) u64 );
                 break;
             case sptIPv6:
-                dst_len = sprintf ( text
-                                    , "%x:%x:%x:%x:%x:%x:%x:%x"
-                                    , ( uint32_t ) ( ( const uint16_t * ) p ) [ 0 ]
-                                    , ( uint32_t ) ( ( const uint16_t * ) p ) [ 1 ]
-                                    , ( uint32_t ) ( ( const uint16_t * ) p ) [ 2 ]
-                                    , ( uint32_t ) ( ( const uint16_t * ) p ) [ 3 ]
-                                    , ( uint32_t ) ( ( const uint16_t * ) p ) [ 4 ]
-                                    , ( uint32_t ) ( ( const uint16_t * ) p ) [ 5 ]
-                                    , ( uint32_t ) ( ( const uint16_t * ) p ) [ 6 ]
-                                    , ( uint32_t ) ( ( const uint16_t * ) p ) [ 7 ]
-                    );
+                dst_len = print_native_ipv6 ( text, ( const uint16_t * ) p );
                 break;
             default:
                 return RC ( rcText, rcString, rcConverting, rcType, rcUnrecognized );
@@ -3294,27 +3337,10 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
             switch ( f . type )
             {
             case sptIPv4:
-                u64 = bswap_32 ( ( uint32_t ) u64 );
-                dst_len = sprintf ( text
-                                    , "%u.%u.%u.%u"
-                                    , ( uint32_t ) ( uint8_t ) ( u64 >> 24 )
-                                    , ( uint32_t ) ( uint8_t ) ( u64 >> 16 )
-                                    , ( uint32_t ) ( uint8_t ) ( u64 >>  8 )
-                                    , ( uint32_t ) ( uint8_t ) ( u64 >>  0 )
-                    );
+                dst_len = print_ipv4 ( text, bswap_32 ( ( uint32_t ) u64 ) );
                 break;
             case sptIPv6:
-                dst_len = sprintf ( text
-                                    , "%x:%x:%x:%x:%x:%x:%x:%x"
-                                    , ( uint32_t ) bswap_16 ( ( ( const uint16_t * ) p ) [ 0 ] )
-                                    , ( uint32_t ) bswap_16 ( ( ( const uint16_t * ) p ) [ 1 ] )
-                                    , ( uint32_t ) bswap_16 ( ( ( const uint16_t * ) p ) [ 2 ] )
-                                    , ( uint32_t ) bswap_16 ( ( ( const uint16_t * ) p ) [ 3 ] )
-                                    , ( uint32_t ) bswap_16 ( ( ( const uint16_t * ) p ) [ 4 ] )
-                                    , ( uint32_t ) bswap_16 ( ( ( const uint16_t * ) p ) [ 5 ] )
-                                    , ( uint32_t ) bswap_16 ( ( ( const uint16_t * ) p ) [ 6 ] )
-                                    , ( uint32_t ) bswap_16 ( ( ( const uint16_t * ) p ) [ 7 ] )
-                    );
+                dst_len = print_swapped_ipv6 ( text, ( const uint16_t * ) p );
                 break;
             default:
                 return RC ( rcText, rcString, rcConverting, rcType, rcUnrecognized );
@@ -3322,6 +3348,96 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
             StringInit ( & S, text, dst_len, dst_len );
             break;
 #endif
+
+        case spfEndpoint:
+            if ( p == NULL )
+                dst_len = sprintf ( text, "<NULL>" );
+            else
+            {
+                const KEndPoint * ep = ( const KEndPoint *) p;
+                switch ( ep -> type )
+                {
+                case epInvalid:
+                    dst_len = string_copy_measure ( text, sizeof text, "<invalid>" );
+                    break;
+                case epIPV4:
+                case epIPV6:
+                    if ( ep -> num_ips == 0 )
+                    {
+                        dst_len = string_copy_measure ( text, sizeof text, "<empty>" );
+                        break;
+                    }
+                    
+                    if ( ep -> num_ips == 1 || f . endpoint_precision )
+                    {
+                        u64 = f . u . f . precision;
+                        if ( u64 >= ( uint64_t ) ep -> num_ips )
+                            u64 = 0;
+                        if ( ep -> type == epIPV4 )
+                        {
+                            /* account for up to 15 ipv4 chars, colon, up to 5 port digits and NUL */
+                            assert ( 22 < sizeof text );
+                            dst_len = print_ipv4 ( text, ep -> u . ipv4 . addr [ u64 ] );
+                        }
+                        else
+                        {
+                            /* account for up to 39 ipv6 chars, square brackets, colon, up to 5 port digits and NUL */
+                            assert ( 47 < sizeof text );
+                            text [ 0 ] = '[';
+                            dst_len = print_network_ipv6 ( & text [ 1 ], ep -> u . ipv6 . addr [ u64 ] ) + 1;
+                            text [ dst_len ++ ] = ']';
+                            text [ dst_len ] = 0;
+                        }
+                    }
+                    else
+                    {
+                        uint32_t i;
+                        if ( ep -> type == epIPV4 )
+                        { 
+                            /* account for repeats of up to 15 ipv4 chars, commas, angle brackets, colon, up to 5 port digits and NUL */
+                            assert ( sizeof ep -> u . ipv4 . addr / sizeof ep -> u . ipv4 . addr [ 0 ] * 16 + 9 < sizeof text );
+                            text [ 0 ] = '<';
+                            dst_len = print_ipv4 ( & text [ 1 ], ep -> u . ipv4 . addr [ 0 ] ) + 1;
+                            for ( i = 1; i < ( uint32_t ) ep -> num_ips; ++ i )
+                            {
+                                text [ dst_len ++ ] = ',';
+                                dst_len += print_ipv4 ( & text [ dst_len ], ep -> u . ipv4 . addr [ i ] );
+                            }
+                            text [ dst_len ++ ] = '>';
+                            text [ dst_len ] = 0;
+                        }
+                        else
+                        {
+                            /* account for repeats of up to 39 ipv6 chars, commas, square brackets, colon, up to 5 port digits and NUL */
+                            assert ( sizeof ep -> u . ipv4 . addr / sizeof ep -> u . ipv4 . addr [ 0 ] * 40 + 9 < sizeof text );
+                            text [ 0 ] = '[';
+                            dst_len = print_network_ipv6 ( & text [ 1 ], ep -> u . ipv6 . addr [ 0 ] ) + 1;
+                            for ( i = 1; i < ( uint32_t ) ep -> num_ips; ++ i )
+                            {
+                                text [ dst_len ++ ] = ',';
+                                dst_len += print_network_ipv6 ( & text [ dst_len ], ep -> u . ipv6 . addr [ i ] );
+                            }
+                            text [ dst_len ++ ] = ']';
+                            text [ dst_len ] = 0;
+                        }
+                    }
+                    text [ dst_len ++ ] = ':';
+                    if ( ep -> type == epIPV4 )
+                        dst_len += sprintf ( & text [ dst_len ], "%u", ep -> u . ipv4 . port );
+                    else
+                        dst_len += sprintf ( & text [ dst_len ], "%u", ep -> u . ipv6 . port );
+                    break;
+                case epIPC:
+                    assert ( sizeof ep -> u . ipc_name < sizeof text );
+                    dst_len = snprintf ( text, sizeof text, "'%s'", ep -> u . ipc_name );
+                    break;
+                default:
+                    dst_len = string_copy_measure ( text, sizeof text, "<unrecognized>" );
+                    break;
+                }
+            }
+            StringInit ( & S, text, dst_len, dst_len );
+            break;
 
         default:
             return RC ( rcText, rcString, rcConverting, rcFormat, rcUnrecognized );
