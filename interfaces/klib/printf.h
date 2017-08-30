@@ -355,6 +355,7 @@ struct PrintFmt
     unsigned int explain_rc           : 1;
     unsigned int type_cast            : 1;      /* if true, convert type for fmt      */
     unsigned int pointer_arg          : 1;      /* argument is a pointer              */
+    unsigned int endpoint_print_port  : 1;      /* print addr:port                    */
     unsigned int endpoint_precision   : 1;      /* value in precision valid ep index  */
     uint32_t radix;                             /* 0 default, 2, 8, 10, 16, .. 36     */
     uint8_t fmt;                                /* spf... from above                  */
