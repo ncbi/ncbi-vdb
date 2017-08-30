@@ -71,7 +71,7 @@ rc_t CC KNSManagerInitDNSEndpoint ( struct KNSManager const *self,
         else if ( dns == NULL )
             rc = RC ( rcNS, rcNoTarg, rcInitializing, rcParam, rcNull );
         else if ( dns -> size == 0 )
-            rc = RC ( rcNS, rcNoTarg, rcInitializing, rcSelf, rcInsufficient );
+            rc = RC ( rcNS, rcNoTarg, rcInitializing, rcPath, rcEmpty );
         else
         {
             KDataBuffer b;
@@ -138,7 +138,10 @@ rc_t CC KNSManagerInitDNSEndpoint ( struct KNSManager const *self,
                     }
                     else if ( remote == NULL )
                     {
-                        rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcUnknown );
+                        /* the great function ( deprecated, I know... ) "gethostbyname_r()"
+                           will happily return a zero status code AND a null pointer in the
+                           case of entry not found. */
+                        rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcNotFound );
                     }
                     else if ( remote -> h_addrtype == AF_INET )
                     {
@@ -146,15 +149,7 @@ rc_t CC KNSManagerInitDNSEndpoint ( struct KNSManager const *self,
                         const uint32_t max_ips = sizeof ep -> u . ipv4 . addr / sizeof ep -> u . ipv4 . addr [ 0 ];
 
                         /* these are IPv4 addresses in network order */
-                        const uint8_t * first_addr = ( const uint8_t * ) remote -> h_addr_list [ 0 ];
                         assert ( remote -> h_length == sizeof ep -> u . ipv4 . addr [ 0 ] );
-                        
-                        /* copy the first out as a textual representation */
-                        string_printf ( ep -> ip_address, sizeof ep -> ip_address, NULL,
-                            "%u.%u.%u.%u", first_addr [ 0 ], first_addr [ 1 ], first_addr [ 2 ], first_addr [ 3 ] );
-
-                        /* issue a status message at programmer level */
-                        STATUS ( STAT_PRG, "'%s' resolved to '%s'\n", hostname , ep -> ip_address );
 
                         /* copy the ip addresses */
                         for ( i = 0; remote -> h_addr_list [ i ] != NULL && i < max_ips; ++ i )
@@ -171,6 +166,9 @@ rc_t CC KNSManagerInitDNSEndpoint ( struct KNSManager const *self,
 
                         /* mark endpoint type */
                         ep -> type = epIPV4;
+
+                        /* issue a status message at programmer level */
+                        STATUS ( STAT_PRG, "'%s' resolved to %hE\n", hostname , ep );
                     }
                     else if ( remote -> h_addrtype == AF_INET6 )
                     {
@@ -178,19 +176,7 @@ rc_t CC KNSManagerInitDNSEndpoint ( struct KNSManager const *self,
                         const uint32_t max_ips = sizeof ep -> u . ipv6 . addr / sizeof ep -> u . ipv6 . addr [ 0 ];
                         
                         /* these are IPv6 addresses in network order */
-                        const uint8_t * first_addr = ( const uint8_t * ) remote -> h_addr_list [ 0 ];
                         assert ( remote -> h_length == sizeof ep -> u . ipv6 . addr [ 0 ] );
-                        
-                        /* copy the first out as a textual representation */
-                        /* NB - this lacks the nicety of collapsing runs of 0... */
-                        string_printf ( ep -> ip_address, sizeof ep -> ip_address, NULL,
-                                        "%x:%x:%x:%x:%x:%x:%x:%x"
-                                        , first_addr [ 0 ], first_addr [ 1 ], first_addr [ 2 ], first_addr [ 3 ]
-                                        , first_addr [ 4 ], first_addr [ 5 ], first_addr [ 6 ], first_addr [ 7 ]
-                            );
-
-                        /* issue a status message at programmer level */
-                        STATUS ( STAT_PRG, "'%s' resolved to '%s'\n", hostname , ep -> ip_address );
 
                         /* copy the ip addresses */
                         for ( i = 0; remote -> h_addr_list [ i ] != NULL && i < max_ips; ++ i )
@@ -206,6 +192,9 @@ rc_t CC KNSManagerInitDNSEndpoint ( struct KNSManager const *self,
 
                         /* mark endpoint type */
                         ep -> type = epIPV6;
+
+                        /* issue a status message at programmer level */
+                        STATUS ( STAT_PRG, "'%s' resolved to %hE\n", hostname , ep );
                     }
                     else
                     {

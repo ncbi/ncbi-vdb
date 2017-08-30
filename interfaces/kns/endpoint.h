@@ -82,8 +82,6 @@ struct KEndPoint
 		char ipc_name [ IPC_NAME_MAX ];
 	} u;
 
-    char ip_address [ 256 ];
-
     uint16_t num_ips;
 
     KEndPointType type;
