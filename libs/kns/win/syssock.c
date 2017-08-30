@@ -840,15 +840,24 @@ static rc_t KListenerIPv4Accept ( KSocket * self, struct KSocket ** out )
 static rc_t KSocketGetEndpointV4 ( const KSocket * self, KEndPoint * ep, bool remote )
 {
     rc_t rc = 0;
+
+    uint16_t sa_family = AF_INET;
+
     const KSocketIPv4 * data = &( self -> type_data . ipv4_data );
     struct sockaddr_in addr;
     int l = sizeof( addr );
     int res = 0;
 
     if ( ! remote )
+    {
         res = getsockname( data -> fd, ( struct sockaddr * )&addr, &l );
+        sa_family = addr . sin_family;
+    }
     else if ( ! data -> remote_addr_valid )
+    {
         res = getpeername( data -> fd, ( struct sockaddr * )&addr, &l );
+        sa_family = addr . sin_family;
+    }
     else
     {
         /* the remote part was already recorded through calling accept() */
@@ -858,11 +867,13 @@ static rc_t KSocketGetEndpointV4 ( const KSocket * self, KEndPoint * ep, bool re
 
     if ( res == 0 )
     {
+        if ( sa_family != AF_INET )
+            return RC ( rcNS, rcSocket, rcIdentifying, rcType, rcInvalid );
+
         ep -> u . ipv4.addr [ 0 ] = ntohl( addr . sin_addr . s_addr );
         ep -> u . ipv4.port = ntohs( addr . sin_port );
+        ep -> num_ips = 1;
         ep -> type = epIPV4;
-        string_copy_measure ( ep -> ip_address, sizeof ep -> ip_address,
-                              inet_ntoa ( addr . sin_addr ) );
         return 0;
     }
 
@@ -1003,15 +1014,24 @@ static rc_t KListenerIPv6Accept ( KSocket * self, struct KSocket ** out )
 static rc_t KSocketGetEndpointV6 ( const KSocket * self, KEndPoint * ep, bool remote )
 {
     rc_t rc = 0;
+
+    uint16_t sa_family = AF_INET6;
+
     const KSocketIPv6 * data = &( self -> type_data.ipv6_data );
     struct sockaddr_in6 addr;
     int l = sizeof( addr );
     int res = 0;
 
     if ( ! remote )
+    {
         res = getsockname( data -> fd, ( struct sockaddr * )&addr, &l );
+        sa_family = addr . sin6_family;
+    }
     else if ( ! data -> remote_addr_valid )
+    {
         res = getpeername( data -> fd, ( struct sockaddr * )&addr, &l );
+        sa_family = addr . sin6_family;
+    }
     else
     {
         /* the remote part was already recorded through calling accept() */
@@ -1027,6 +1047,9 @@ static rc_t KSocketGetEndpointV6 ( const KSocket * self, KEndPoint * ep, bool re
 
     if ( res == 0 )
     {
+        if ( sa_family != AF_INET6 )
+            return RC ( rcNS, rcSocket, rcIdentifying, rcType, rcInvalid );
+
         memmove ( & ep -> u . ipv6 . addr [ 0 ],
                  addr . sin6_addr . s6_addr,
                  sizeof ep -> u . ipv6 . addr [ 0 ] );

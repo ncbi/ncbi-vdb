@@ -1055,39 +1055,49 @@ LIB_EXPORT rc_t CC KNSManagerMakeTLSStream ( const KNSManager * self,
                         *plaintext = ktls;
                         return 0;
                     }
-                    else {
-                        if ( KNSManagerLogNcbiVdbNetError ( self ) ) {
-                            KEndPoint ep, local_ep;
-                            rc_t rr = KSocketGetRemoteEndpoint ( ciphertext,
-                                                                 & ep );
-                            rc_t rl = KSocketGetLocalEndpoint ( ciphertext,
-                                                                 & local_ep );
-                            if ( rr != 0 )
-                                LOGERR ( klogInt, rr
-                                    , "cannot KSocketGetRemoteEndpoint"
-                                );
-                            if ( rl != 0 )
-                                LOGERR ( klogInt, rl
-                                    , "cannot KSocketGetLocalEndpoint"
-                                );
-                            if ( rr == 0 || rl == 0 ) {
-                                if ( rr == 0 )
-                                    if ( rl == 0 )
-                                        PLOGERR ( klogSys, ( klogSys, rc,
-                                            "ktls_handshake failed while accessing '$(ip)' from '$(local)'"
-                                            , "ip=%s,local=%s", ep . ip_address, local_ep . ip_address
-                                        ) );
-                                    else
-                                        PLOGERR ( klogSys, ( klogSys, rc,
-                                            "ktls_handshake failed while accessing '$(ip)'"
-                                            , "ip=%s", ep . ip_address
-                                        ) );
-                                else
-                                    PLOGERR ( klogSys, ( klogSys, rc,
-                                        "ktls_handshake failed while accessing unknown IP from '$(local)'"
-                                        , "local=%s", local_ep . ip_address
-                                    ) );
+
+                    if ( KNSManagerLogNcbiVdbNetError ( self ) )
+                    {
+                        KEndPoint remote_ep, local_ep;
+                        rc_t rr = KSocketGetRemoteEndpoint ( ciphertext, & remote_ep );
+                        rc_t rl = KSocketGetLocalEndpoint ( ciphertext, & local_ep );
+
+                        if ( rr != 0 )
+                            LOGERR ( klogInt, rr, "cannot KSocketGetRemoteEndpoint" );
+                        if ( rl != 0 )
+                            LOGERR ( klogInt, rl, "cannot KSocketGetLocalEndpoint" );
+
+                        if ( rr == 0 )
+                        {
+                            if ( rl == 0 )
+                            {
+                                PLOGERR ( klogSys,
+                                          ( klogSys, rc,
+                                            "ktls_handshake failed while accessing $(remote) from $(local)"
+                                            , "remote=%E,local=%E"
+                                            , & remote_ep
+                                            , & local_ep
+                                          )
+                                    );
                             }
+                            else
+                            {
+                                PLOGERR ( klogSys,
+                                          ( klogSys, rc,
+                                            "ktls_handshake failed while accessing '$(remote)'"
+                                            , "remote=%E", & remote_ep
+                                          )
+                                    );
+                            }
+                        }
+                        else if ( rl == 0 )
+                        {
+                            PLOGERR ( klogSys,
+                                      ( klogSys, rc,
+                                        "ktls_handshake failed while accessing unknown IP from $(local)"
+                                        , "local=%E", & local_ep
+                                      )
+                                );
                         }
                     }
                 }

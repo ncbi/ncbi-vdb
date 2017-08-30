@@ -94,20 +94,30 @@
 struct KSocket
 {
     KStream dad;
+
+    /* for file-system based sockets */
     const char * path;
+
+    /* type is from enum in <kns/socket.h> */
     uint32_t type;
+
+    /* I/O timeouts - negative is infinite blocking, 0 is non-blocking,
+       positive values will block for the indicated number of milli-seconds */
     int32_t read_timeout;
     int32_t write_timeout;
 
+    /* a socket */
     int fd;
+
+    /* the following members allow capture of a remote address
+       from an incoming connection, since this information is provided
+       already for free, and capturing it removes the need to make a call. */
     union
     {
         struct sockaddr_in  v4;     /* for ipv4 */
         struct sockaddr_in6 v6;     /* for ipv6 */
     } remote_addr;
     bool remote_addr_valid;
-
-    char ip_address [ 256 ];
 };
 
 LIB_EXPORT rc_t CC KSocketAddRef( const KSocket *self )
@@ -158,7 +168,7 @@ rc_t CC KSocketWhack ( KSocket *self )
     
     while ( 1 ) 
     {
-        char buffer [ 1024 ];
+        char buffer [ 1024 * 8 ];
         ssize_t result = recv ( self -> fd, buffer, sizeof buffer, MSG_DONTWAIT );
         if ( result <= 0 )
             break;
@@ -338,92 +348,112 @@ rc_t KSocketHandleAcceptCall ( int status )
 
 static rc_t KSocketGetEndpointV6 ( const KSocket * self, KEndPoint * ep, bool remote )
 {
-    rc_t rc = 0;
-    struct sockaddr_in6 addr;
-    socklen_t l = sizeof addr;
-    int res = 0;
+    int saved_errno = 0;
 
+    uint16_t sa_family = AF_INET6;
+
+    struct sockaddr_storage sas;
+    socklen_t l = sizeof sas;
+
+    struct sockaddr_in6 * addr = ( struct sockaddr_in6 * ) & sas;
+
+    int res = 0;
     if ( ! remote )
-        res = getsockname( self -> fd, ( struct sockaddr * )&addr, &l );
+    {
+        res = getsockname( self -> fd, ( struct sockaddr * ) & sas, & l );
+        saved_errno = errno;
+        sa_family = addr -> sin6_family;
+    }
     else if ( ! self -> remote_addr_valid )
-        res = getpeername( self -> fd, ( struct sockaddr * )&addr, &l );
-    else
+    {
+        res = getpeername( self -> fd, ( struct sockaddr * ) & sas, & l );
+        saved_errno = errno;
+        sa_family = addr -> sin6_family;
+    }
+    else 
     {
         /* the remote part was already recorded through calling accept() */
-        memmove ( & ep -> u . ipv6 . addr [ 0 ],
-                 self -> remote_addr . v6 . sin6_addr . s6_addr,
-                 sizeof ep -> u . ipv6 . addr [ 0 ] );
-        ep->u.ipv6.port = ntohs( self -> remote_addr . v6 . sin6_port );
-        ep->num_ips = 1;
-        ep->type = epIPV6;
-        return 0;
+        memmove ( & addr -> sin6_addr . s6_addr,
+                  self -> remote_addr . v6 . sin6_addr . s6_addr,
+                  sizeof addr -> sin6_addr . s6_addr );
+        addr -> sin6_port = self -> remote_addr . v6.sin6_port;
     }
 
     if ( res == 0 )
     {
-        memmove ( & ep -> u . ipv6 . addr [ 0 ],
-                 addr . sin6_addr . s6_addr,
-                 sizeof ep -> u . ipv6 . addr [ 0 ] );
-        ep->u.ipv6.port = ntohs( addr . sin6_port );
-        ep->num_ips = 1;
-        ep->type = epIPV6;
+        if ( sa_family != AF_INET6 )
+            return RC ( rcNS, rcSocket, rcIdentifying, rcType, rcInvalid );
+
+        memmove ( & ep -> u . ipv6.addr [ 0 ], addr -> sin6_addr . s6_addr, sizeof ep -> u . ipv6.addr [ 0 ] );
+        ep -> u . ipv6.port = ntohs ( addr -> sin6_port );
+        ep -> num_ips = 1;
+        ep -> type = epIPV6;
+
         return 0;
     }
 
-    rc = KSocketHandleSocknameCall ( errno );
-
-    ep -> type = epInvalid;
-
-    return rc;
+    return KSocketHandleSocknameCall ( saved_errno );
 }
 
 
-static rc_t KSocketGetEndpointV4 ( const KSocket * self, KEndPoint * ep, bool remote )
+static
+rc_t KSocketGetEndpointV4 ( const KSocket * self, KEndPoint * ep, bool remote )
 {
-    rc_t rc = 0;
-    struct sockaddr_in addr;
-    socklen_t l = sizeof addr;
-    int res = 0;
+    int saved_errno = 0;
 
+    uint16_t sa_family = AF_INET;
+
+    struct sockaddr_storage sas;
+    socklen_t l = sizeof sas;
+
+    struct sockaddr_in * addr = ( struct sockaddr_in * ) & sas;
+
+    int res = 0;
     if ( ! remote )
-        res = getsockname( self -> fd, ( struct sockaddr * )&addr, &l );
+    {
+        res = getsockname( self -> fd, ( struct sockaddr * ) & sas, & l );
+        saved_errno = errno;
+        sa_family = addr -> sin_family;
+    }
     else if ( ! self -> remote_addr_valid )
-        res = getpeername( self -> fd, ( struct sockaddr * )&addr, &l );
-    else
+    {
+        res = getpeername( self -> fd, ( struct sockaddr * ) & sas, & l );
+        saved_errno = errno;
+        sa_family = addr -> sin_family;
+    }
+    else 
     {
         /* the remote part was already recorded through calling accept() */
-        addr.sin_addr.s_addr = self -> remote_addr.v4.sin_addr.s_addr;
-        addr.sin_port        = self -> remote_addr.v4.sin_port;
+        addr -> sin_addr.s_addr = self -> remote_addr.v4.sin_addr.s_addr;
+        addr -> sin_port        = self -> remote_addr.v4.sin_port;
     }
 
     if ( res == 0 )
     {
-        ep->u.ipv4.addr [ 0 ] = ntohl ( addr.sin_addr.s_addr );
-        ep->u.ipv4.port = ntohs ( addr.sin_port );
-        ep->num_ips = 1;
-        ep->type = epIPV4;
-        string_copy_measure ( ep -> ip_address, sizeof ep -> ip_address,
-                              inet_ntoa ( addr . sin_addr ) );
+        if ( sa_family != AF_INET )
+            return RC ( rcNS, rcSocket, rcIdentifying, rcType, rcInvalid );
+
+        ep -> u . ipv4.addr [ 0 ] = ntohl ( addr -> sin_addr.s_addr );
+        ep -> u . ipv4.port = ntohs ( addr -> sin_port );
+        ep -> num_ips = 1;
+        ep -> type = epIPV4;
+
         return 0;
     }
 
-    rc = KSocketHandleSocknameCall ( errno );
-
-    ep -> type = epInvalid;
-
-    return rc;
+    return KSocketHandleSocknameCall ( saved_errno );
 }
 
 
-static rc_t KSocketGetEndpoint ( const KSocket * self, KEndPoint * ep, bool remote )
+static
+rc_t KSocketGetEndpoint ( const KSocket * self, KEndPoint * ep, bool remote )
 {
     rc_t rc = 0;
     if ( ep == NULL )
         rc = RC ( rcNS, rcSocket, rcEvaluating, rcParam, rcNull );
     else
     {
-        memset ( ep, 0, sizeof * ep );
-
+        ep -> num_ips = 0;
         ep -> type = epInvalid;
 
         if ( self == NULL )
@@ -470,7 +500,13 @@ rc_t CC KSocketTimedRead ( const KSocket *self,
     assert ( self != NULL );
     assert ( num_read != NULL );
 
-    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead(%d, %d)...\n", self, bsize, tm == NULL ? -1 : tm -> mS ) );
+    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ),
+             ( "%p: KSocketTimedRead(%d, %d)...\n"
+               , self
+               , bsize
+               , tm == NULL ? -1 : tm -> mS
+             )
+        );
     
     /* wait for socket to become readable */
     revents = socket_wait ( self -> fd
@@ -794,7 +830,9 @@ rc_t KSocketMakePath ( const char * name, char * buf, size_t buf_size )
 #if 0
     rc_t rc;
     struct passwd* pwd;
-    errno = 0; /* man page claims errno should be set to 0 before call if wanting to check after */
+
+    /* man page claims errno should be set to 0 before call if wanting to check after */
+    errno = 0;
     pwd = getpwuid ( geteuid () );
     if ( pwd == NULL )
     {
@@ -881,9 +919,6 @@ rc_t KSocketConnectIPv4 ( KSocket *self, const KEndPoint *from, const KEndPoint 
                 flag = fcntl ( self -> fd, F_GETFL );
                 fcntl ( self -> fd, F_SETFL, flag | O_NONBLOCK );
 
-                string_copy_measure ( self -> ip_address,
-                    sizeof self -> ip_address, to -> ip_address );
-
                 return 0;
             }
         }
@@ -948,9 +983,6 @@ rc_t KSocketConnectIPv6 ( KSocket *self, const KEndPoint *from, const KEndPoint 
                 /* set non-blocking mode */
                 flag = fcntl ( self -> fd, F_GETFL );
                 fcntl ( self -> fd, F_SETFL, flag | O_NONBLOCK );
-
-                string_copy_measure ( self -> ip_address,
-                    sizeof self -> ip_address, to -> ip_address );
 
                 return 0;
             }
@@ -1153,10 +1185,10 @@ rc_t KNSManagerMakeIPv6Listener ( KSocket *listener, const KEndPoint * ep )
 
         ss . sin6_port = htons ( ep -> u . ipv6 . port );
 
-        if ( bind ( listener -> fd, ( struct sockaddr* ) & ss, sizeof ss ) != 0 )
-           rc = KSocketHandleBindCall ( errno );
-        else
+        if ( bind ( listener -> fd, ( struct sockaddr* ) & ss, sizeof ss ) == 0 )
             return 0;
+
+        rc = KSocketHandleBindCall ( errno );
         
         close ( listener -> fd );
         listener -> fd = -1;
@@ -1186,10 +1218,10 @@ rc_t KNSManagerMakeIPv4Listener ( KSocket *listener, const KEndPoint * ep )
         ss . sin_addr . s_addr = htonl ( ep -> u . ipv4 . addr [ 0 ] );
         ss . sin_port = htons ( ep -> u . ipv4 . port );
 
-        if ( bind ( listener -> fd, ( struct sockaddr* ) & ss, sizeof ss ) != 0 )
-            rc = KSocketHandleBindCall ( errno );
-        else
+        if ( bind ( listener -> fd, ( struct sockaddr* ) & ss, sizeof ss ) == 0 )
             return 0;
+
+        rc = KSocketHandleBindCall ( errno );
 
         close ( listener -> fd );
         listener -> fd = -1;
@@ -1220,13 +1252,13 @@ rc_t KNSManagerMakeIPCListener ( KSocket *listener, const KEndPoint * ep )
             else
             {
                 unlink ( ss . sun_path );
-                if ( bind ( listener -> fd, ( struct sockaddr* ) & ss, sizeof ss ) != 0 )
-                    rc = KSocketHandleBindCall ( errno );
-                else
+                if ( bind ( listener -> fd, ( struct sockaddr* ) & ss, sizeof ss ) == 0 )
                 {
                     listener -> path = path;
                     return 0;
                 }
+
+                rc = KSocketHandleBindCall ( errno );
 
                 free ( path );
             }
