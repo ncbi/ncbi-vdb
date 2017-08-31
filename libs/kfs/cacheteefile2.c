@@ -40,6 +40,7 @@ struct KCacheTee2File;
 #include <kfs/cachetee2file.h>
 #include <kfs/defs.h>
 #include <kproc/queue.h>
+#include <kproc/lock.h>
 #include <atomic32.h>
 
 #include <sysalloc.h>
@@ -218,6 +219,164 @@ LIB_EXPORT rc_t CC WriteToRecorder ( struct Recorder * self, const char * fmt, .
 }
 
 /*--------------------------------------------------------------------------
+ * pool-page with pos and length....
+ */
+typedef struct PoolPage
+{
+    uint64_t pos, len;
+    uint8_t * data;
+    uint32_t readers, usage, blocks;
+    bool writing;
+} PoolPage;
+
+#define NUMPAGES 8
+
+typedef struct ThePool
+{
+    PoolPage pages[ NUMPAGES ];
+    KLock * lock;
+} ThePool;
+
+static rc_t make_pool ( ThePool ** pool )
+{
+    rc_t rc = 0;
+    ThePool * p = calloc ( 1, sizeof * p );
+    if ( p == NULL )
+        rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
+    else
+    {
+        rc = KLockMake ( & p -> lock );
+        if ( rc == 0 )
+            *pool = p;
+        else
+            free ( ( void * ) p );
+    }
+    return rc;
+}
+
+static void pool_release ( ThePool * self )
+{
+    uint32_t i;
+    for ( i = 0; i < NUMPAGES; ++i )
+    {
+        PoolPage * p = & self -> pages[ i ];
+        if ( p -> data != NULL )
+            free( ( void * ) p -> data );
+    }
+    KLockRelease ( self -> lock );
+    free ( ( void * ) self );
+}
+
+static rc_t find_page_for_read ( ThePool * self, PoolPage ** found, uint64_t pos )
+{
+    rc_t rc = KLockAcquire ( self -> lock );
+    *found = NULL;    
+    if ( rc == 0 )
+    {
+        /* now we have exclusive access to the PoolPage */
+        uint32_t i;
+        for ( i = 0; i < NUMPAGES && *found == NULL; ++i )
+        {
+            PoolPage * p = & self -> pages[ i ];
+            if ( ( p -> data != NULL ) &&
+                 ( pos >= p -> pos ) &&
+                 ( pos < ( p -> pos + p -> len ) ) &&
+                 ( ! p -> writing ) )
+            {
+                p -> readers += 1;
+                p -> usage += 1;
+                *found = p;
+            }
+        }
+        KLockUnlock ( self -> lock );
+    }
+    return rc;
+}
+
+static rc_t read_from_page ( const PoolPage * p, uint64_t pos, void *buffer,
+                             size_t bsize, size_t *num_read )
+{
+    uint64_t shift_by = ( pos - p -> pos );
+    size_t to_read = ( p -> len - shift_by );
+
+    if ( to_read > bsize ) to_read = bsize;
+    memmove( buffer, p -> data + shift_by, to_read );
+    *num_read = to_read;
+    return 0;
+}
+
+static rc_t release_page_for_read ( ThePool * self, PoolPage * p )
+{
+    rc_t rc = KLockAcquire ( self -> lock );
+    if ( rc == 0 )
+    {
+        if ( p -> readers > 0 )
+            p -> readers -= 1;
+        KLockUnlock ( self -> lock );    
+    }
+    return rc;
+}
+
+static rc_t find_page_for_write ( ThePool * self, PoolPage ** found )
+{
+    rc_t rc = KLockAcquire ( self -> lock );
+    *found = NULL;    
+    if ( rc == 0 )
+    {
+        /* now we have exclusive access to the PoolPage */
+        uint32_t i;
+        
+        /* first try: find a not used entry */
+        for ( i = 0; i < NUMPAGES && *found == NULL; ++i )
+        {
+            PoolPage * p = & self -> pages[ i ];
+            if ( ( p -> data == NULL ) &&
+                 ( ! p -> writing ) )
+            {
+                *found = p;
+            }
+        }
+        
+        /* second try: find the least used entry,
+           not currently used for reading or writing */
+        if ( *found == NULL )
+        {
+            uint32_t used = 0xFFFFFFFF;
+            for ( i = 0; i < NUMPAGES; ++i )
+            {
+                PoolPage * p = & self -> pages[ i ];
+                if ( ( p -> data != NULL ) &&
+                     ( ! p -> writing ) &&
+                     ( p -> usage < used ) &&
+                     ( p -> readers == 0 ) )
+                {
+                    used = p -> usage;
+                    *found = p;
+                }
+            }
+        }
+        if ( *found != NULL )
+        {
+            ( *found ) -> writing = true;
+            ( *found ) -> usage = 1;
+        }
+        KLockUnlock ( self -> lock );
+    }
+    return rc;
+}
+
+static rc_t release_page_for_write ( ThePool * self, PoolPage * p )
+{
+    rc_t rc = KLockAcquire ( self -> lock );
+    if ( rc == 0 )
+    {
+        p -> writing = false;
+        KLockUnlock ( self -> lock );    
+    }
+    return rc;
+}
+
+/*--------------------------------------------------------------------------
  * KCacheTeeFile2
  */
 
@@ -240,8 +399,10 @@ typedef struct KCacheTee2File
     uint64_t bitmap_bytes;                  /* how many bytes do we need to store the bitmap */
     
     atomic32_t * bitmap;                    /* the bitmap: each bit represents one block */
+    
     KQueue * scratch_pool;                  /* this is necessary to make KCacheTeeFile thread-safe! */
-
+    ThePool * pool;                         /* have a cache to answer from RAM! */
+    
 #if RECORDING
     struct Recorder * recorder;             /* optional recorder ( see above ) */
 #endif
@@ -545,6 +706,9 @@ static rc_t CC KCacheTee2FileDestroy( KCacheTee2File * self )
         free( ( void * ) self->bitmap );
     
     release_q( self -> scratch_pool );
+
+    if ( self -> pool != NULL )
+        pool_release ( self -> pool );
     
     KFileRelease ( self -> wrapped );
     KFileRelease ( self -> cache );
@@ -635,29 +799,34 @@ typedef struct read_info
     block_span available;
     
     /* where the available span starts */
-    uint64_t start_pos;
+    uint64_t first_block_pos;
     
     /* how many bytes are in the available span */
-    uint64_t to_read;
+    uint64_t bytes_to_read;
 
-    /* is the available block_span in cache? */
+    /* is the available block_span in cache ? */
     bool in_cache;
 
-    /* is the last block incomplete? */
-    bool last_incomplete;
-
+    PoolPage * pp;
 } read_info;
 
+
+/* cself ... the KCacheTee2File ( used: block_size, block_count, wrapped_size, bitmap )
+   pos ..... zero-based offset into the file ( unmodified from caller )
+   len ..... length of slice ( adjusted to not hang over the end, caller does not allow zero )
+   info .... the structure above, telling the caller what is available in cache
+*/
 static void get_read_info ( const KCacheTee2File *cself, uint64_t pos, size_t len, read_info * info ) 
 {
     block_span request;
     bool consecutiv = true;
-
+    bool last_block_incomplete;
+    
     request . first = ( pos / cself -> block_size );
     request . last  = ( ( pos + len - 1 ) / cself -> block_size );
 
-    info -> last_incomplete = ( request . last >= cself -> block_count );
-    if ( info -> last_incomplete )
+    last_block_incomplete = ( request . last >= cself -> block_count );
+    if ( last_block_incomplete )
         request . last = ( cself -> block_count - 1 );
 
     request . count = ( request . last - request . first ) + 1;
@@ -666,7 +835,7 @@ static void get_read_info ( const KCacheTee2File *cself, uint64_t pos, size_t le
     info -> available . last  = request . first;
     info -> available . count = 1;
     
-    info -> in_cache = IS_CACHE_BIT( cself, info -> available . last );
+    info -> in_cache = IS_CACHE_BIT( cself, info -> available . first );
     while ( consecutiv && ( info -> available . count < request . count ) )
     {
         bool b = IS_CACHE_BIT( cself, info -> available . last + 1 );
@@ -677,11 +846,110 @@ static void get_read_info ( const KCacheTee2File *cself, uint64_t pos, size_t le
             info -> available . count += 1;
         }
     }
-    info -> start_pos = ( info -> available . first * cself -> block_size );
-    if ( info -> last_incomplete )
-        info -> to_read = ( ( cself -> wrapped_size + 1 ) - info -> start_pos );
+    
+    info -> first_block_pos = ( info -> available . first * cself -> block_size );
+    
+    if ( last_block_incomplete )
+        info -> bytes_to_read = ( ( cself -> wrapped_size + 1 ) - info -> first_block_pos );
     else
-        info -> to_read = ( info -> available . count * cself -> block_size );
+        info -> bytes_to_read = ( info -> available . count * cself -> block_size );
+    
+    info -> pp = NULL;
+    if ( info -> in_cache )
+    {
+        info -> bytes_to_read -= ( pos - info -> first_block_pos );
+        if ( info -> bytes_to_read > len )
+            info -> bytes_to_read = len;
+            
+        find_page_for_read ( cself -> pool, &( info -> pp ), pos );
+    }
+}
+
+
+static rc_t prepare_pool_page_for_write( const KCacheTee2File *cself, PoolPage * pp, read_info * info )
+{
+    rc_t rc = 0;
+    uint64_t len;
+    pp -> blocks = info -> available . count > 2 ? 2 : info -> available . count;
+    len = pp -> blocks * cself -> block_size;
+    if ( pp -> data == NULL )
+    {
+        /* the page has a NULL-data-ptr : allocate as much buffer as we need */
+        pp -> data = malloc( len );
+        if ( pp -> data == NULL )
+            rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
+    }
+    else if ( len > pp -> len )
+    {
+        /* the page has a valid data-ptr, but it does not have enough buffer : reallocate as much buffer as we need */
+        free ( ( void * ) pp -> data );
+        pp -> data = malloc( len );
+        if ( pp -> data == NULL )
+            rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
+    }
+    if ( rc == 0 )
+    {
+        pp -> len = len;
+        pp -> pos = info -> first_block_pos;
+        pp -> usage = 1;
+    }
+    return rc;
+}
+
+static rc_t KCacheTee2FileRead_from_wrapped_using_page ( const KCacheTee2File *cself, PoolPage * pp,
+        uint64_t pos, void * buffer, size_t bsize, size_t *num_read, read_info * info )
+{
+    /* we have control of the page and can make as much buffer as we need to */
+    rc_t rc = prepare_pool_page_for_write( cself, pp, info );
+    if ( rc == 0 )
+    {
+        size_t from_wrapped;
+        
+        /* read from the wrapped file into the page-buffer */
+        rc = read_from_wrapped ( cself -> wrapped, pp -> pos, pp -> data, pp -> len, &from_wrapped );
+        if ( rc == 0 )
+        {
+            size_t num_written_to_cache;
+            /* write the buffer into the local cache -file */
+            rc = KFileWriteAll ( cself -> cache, pp -> pos, pp -> data, from_wrapped, &num_written_to_cache );
+            if ( rc != 0 || num_written_to_cache != from_wrapped )
+            {
+                /* switch to read-only, because for some reason we cannot write any more...
+                   it can happen that we are not able to write to the bitmap because we run out of space
+                   on the local filesystem. */
+                rc = switch_to_read_only( cself, rc );
+            }
+            else
+            {
+                /* set the block-bits in the bitmap... */
+                set_bitmap ( cself -> bitmap, info -> available . first, pp -> blocks );
+                rc = write_bitmap ( cself, info -> available . first, pp -> blocks );
+                if ( rc != 0 )
+                {
+                    /* switch to read-only, because for some reason we cannot write any more... */
+                    rc = switch_to_read_only( cself, rc );
+                }
+            }
+        }
+        if ( rc == 0 )
+            rc = read_from_page ( pp, pos, buffer, bsize, num_read );
+
+    }
+    return rc;
+}
+
+static rc_t KCacheTee2FileRead_from_cache_using_page ( const KCacheTee2File *cself, PoolPage * pp,
+        uint64_t pos, void * buffer, size_t bsize, size_t *num_read, read_info * info )
+{
+    rc_t rc = prepare_pool_page_for_write( cself, pp, info );
+    if ( rc == 0 )
+    {
+        size_t from_cache;
+        rc = KFileReadAll( cself -> cache, pp -> pos, pp -> data, pp -> len, &from_cache );
+        if ( rc == 0 )
+            rc = read_from_page ( pp, pos, buffer, bsize, num_read );
+    }
+    return rc;
 }
 
 /* */
@@ -692,16 +960,16 @@ static rc_t KCacheTee2FileRead_rw_using_caller_buffer ( const KCacheTee2File *cs
     
 #if RECORDING
     if ( cself -> recorder != NULL )
-        WriteToRecorder ( cself -> recorder, "\tremote.usr\t%lu\t%lu\n", info -> start_pos, info -> to_read );
+        WriteToRecorder ( cself -> recorder, "\tremote.usr\t%lu\t%lu\n", info -> first_block_pos, info -> bytes_to_read );
 #endif
 
     /* read whole blocks from the wrapped file */
-    rc = read_from_wrapped ( cself -> wrapped, info -> start_pos, buffer, info -> to_read, num_read );
+    rc = read_from_wrapped ( cself -> wrapped, info -> first_block_pos, buffer, info -> bytes_to_read, num_read );
     if ( rc == 0 )
     {
         /* store them in the cache-file... */
         size_t num_written_to_cache;
-        rc = KFileWriteAll ( cself -> cache, info -> start_pos, buffer, *num_read, &num_written_to_cache );
+        rc = KFileWriteAll ( cself -> cache, info -> first_block_pos, buffer, *num_read, &num_written_to_cache );
         if ( rc != 0 || num_written_to_cache != *num_read )
         {
             /* switch to read-only, because for some reason we cannot write any more...
@@ -724,12 +992,12 @@ static rc_t KCacheTee2FileRead_rw_using_caller_buffer ( const KCacheTee2File *cs
     if ( rc == 0 )
     {
         /* now we have to shift the given buffer into place... */
-        uint64_t shift_by = ( pos - info -> start_pos );
+        uint64_t shift_by = ( pos - info -> first_block_pos );
         if ( shift_by > 0 )
         {
             uint8_t * src = buffer;
             src += shift_by;
-            *num_read = ( info -> to_read - shift_by );
+            *num_read = ( info -> bytes_to_read - shift_by );
             memmove( buffer, src, *num_read );
         }
     }
@@ -750,17 +1018,17 @@ static rc_t KCacheTee2FileRead_rw_using_scratch_buffer ( const KCacheTee2File *c
     {
 #if RECORDING
         if ( cself -> recorder != NULL )
-            WriteToRecorder ( cself -> recorder, "\tremote.scratch\t%lu\t%lu\n", info -> start_pos, info -> to_read );
+            WriteToRecorder ( cself -> recorder, "\tremote.scratch\t%lu\t%lu\n", info -> first_block_pos, info -> bytes_to_read );
 #endif
     
         /* read one block from the wrapped file */
-        rc = read_from_wrapped ( cself -> wrapped, info -> start_pos, page,
+        rc = read_from_wrapped ( cself -> wrapped, info -> first_block_pos, page,
                                  cself -> block_size, num_read );
         if ( rc == 0 )
         {
             /* store it in the cache-file... */
             size_t num_written;
-            rc = KFileWriteAll ( cself -> cache, info -> start_pos, page, *num_read, &num_written );
+            rc = KFileWriteAll ( cself -> cache, info -> first_block_pos, page, *num_read, &num_written );
             if ( rc != 0 || num_written != *num_read )
             {
                 /* switch to read-only, because for some reason we cannot write any more...
@@ -785,7 +1053,7 @@ static rc_t KCacheTee2FileRead_rw_using_scratch_buffer ( const KCacheTee2File *c
         {
             /* now we have to shift the given buffer into place... */
             uint8_t * src = page;
-            uint64_t shift_by = ( pos - info -> start_pos );
+            uint64_t shift_by = ( pos - info -> first_block_pos );
             if ( shift_by > 0 )
             {
                 src += shift_by;
@@ -822,15 +1090,30 @@ static rc_t KCacheTee2FileRead_rw ( const KCacheTee2File *cself, uint64_t pos,
 #endif
 
     *num_read = 0;
+
     if ( pos > cself -> wrapped_size )
+        /* the caller asked for data beyond the end of the file */
         return rc;
     else if ( ( pos + bsize ) > cself -> wrapped_size )
+        /* the caller asked for a slice of data reaching beyond the end of the file */
         bsize = cself -> wrapped_size - pos;
+
+    /* if the caller asked for */
     if ( bsize == 0 )
         return rc;
         
     get_read_info ( cself, pos, bsize, &info );
-        
+
+#if RECORDING
+    if ( cself -> recorder != NULL )
+    {
+        WriteToRecorder ( cself -> recorder,
+                          "info: available: %ld.%d ( in_cache=%s )\n",
+                          info . available.first, info . available . count,
+                          info . in_cache ? "yes" : "no" );
+    }
+#endif
+
     if ( info . in_cache )
     {
         /* deliver from cache, maybe less than requested, let the caller come back for more... 
@@ -852,16 +1135,34 @@ static rc_t KCacheTee2FileRead_rw ( const KCacheTee2File *cself, uint64_t pos,
         file:     .................
 
         */
-        info . to_read -= ( pos - info . start_pos );
-        if ( info . to_read > bsize )
-            info . to_read = bsize;
-
 #if RECORDING
         if ( cself -> recorder != NULL )
-            WriteToRecorder ( cself -> recorder, "\tcache\t%lu\t%lu\n", pos, info . to_read );
+        {
+            if ( info . pp != NULL )
+                WriteToRecorder ( cself -> recorder, "\tram\t%lu\t%lu\n", info . pp -> pos, info . pp -> len );
+            else
+                WriteToRecorder ( cself -> recorder, "\tcache\t%lu\t%lu\n", pos, info . bytes_to_read );
+        }
 #endif
 
-        rc = KFileReadAll( cself -> cache, pos, buffer, info . to_read, num_read );
+        if ( info . pp != NULL )
+        {
+            /* we found it in the memory-cache! ---> GREAT! let's get it from there */
+            rc = read_from_page ( info . pp, pos, buffer, bsize, num_read );
+        }
+        else
+        {
+            /* we did not find it in the memory-cache! ---> but we have it in the cache-file...
+               let us read it from the cache-file, but store it in the memory-cache */
+            PoolPage * pp;
+            if ( find_page_for_write ( cself -> pool, &pp ) == 0 )
+            {
+                rc = KCacheTee2FileRead_from_cache_using_page ( cself, pp, pos, buffer, bsize, num_read, &info );
+                release_page_for_write ( cself -> pool, pp );
+            }
+            else
+                rc = KFileReadAll( cself -> cache, pos, buffer, info . bytes_to_read, num_read );
+        }
     }
     else
     {
@@ -877,7 +1178,14 @@ static rc_t KCacheTee2FileRead_rw ( const KCacheTee2File *cself, uint64_t pos,
        
         */
         
-        if ( info . to_read <= bsize )
+        PoolPage * pp;
+        /* first we try to allocate a pool-page ... */
+        if ( find_page_for_write ( cself -> pool, &pp ) == 0 )
+        {
+            rc = KCacheTee2FileRead_from_wrapped_using_page ( cself, pp, pos, buffer, bsize, num_read, &info );
+            release_page_for_write ( cself -> pool, pp );
+        }
+        else if ( info . bytes_to_read <= bsize )
         {
             /* we do have enough caller buffer to do the whole thing... */
             rc = KCacheTee2FileRead_rw_using_caller_buffer ( cself, pos, buffer, num_read, &info );
@@ -891,7 +1199,7 @@ static rc_t KCacheTee2FileRead_rw ( const KCacheTee2File *cself, uint64_t pos,
             if ( info . available . count > 0 )
             {
                 /* we have been given enough buffer from the caller to handle all blocks... */
-                info . to_read = ( info . available . count * cself -> block_size );
+                info . bytes_to_read = ( info . available . count * cself -> block_size );
                 rc = KCacheTee2FileRead_rw_using_caller_buffer ( cself, pos, buffer, num_read, &info );
             }
             else
@@ -901,6 +1209,9 @@ static rc_t KCacheTee2FileRead_rw ( const KCacheTee2File *cself, uint64_t pos,
             }
         }
     }
+    
+    if ( info . pp != NULL )
+        release_page_for_read ( cself -> pool, info . pp );
     return rc;
 }
 
@@ -918,6 +1229,8 @@ static rc_t KCacheTee2FileRead_ro ( const KCacheTee2File *cself, uint64_t pos,
         WriteToRecorder ( cself -> recorder, "\nro\t%lu\t%lu\n", pos, bsize );
 #endif
 
+    *num_read = 0;
+    
     if ( pos > cself -> wrapped_size )
         return rc;
     else if ( ( pos + bsize ) > cself -> wrapped_size )
@@ -930,26 +1243,47 @@ static rc_t KCacheTee2FileRead_ro ( const KCacheTee2File *cself, uint64_t pos,
     
     if ( info . in_cache )
     {
-        info . to_read -= ( pos - info . start_pos );
-        if ( info . to_read > bsize )
-            info . to_read = bsize;
-
 #if RECORDING
         if ( cself -> recorder != NULL )
-            WriteToRecorder ( cself -> recorder, "\tcache\t%lu\t%lu\n", pos, info . to_read );
+        {
+            if ( info . pp != NULL )
+                WriteToRecorder ( cself -> recorder, "\tram\t%lu\t%lu\n", info . pp -> pos, info . pp -> len );
+            else
+                WriteToRecorder ( cself -> recorder, "\tcache\t%lu\t%lu\n", pos, info . bytes_to_read );
+        }
 #endif
-
-        rc = KFileReadAll( cself -> cache, pos, buffer, info . to_read, num_read );
+        if ( info . pp != NULL )
+        {
+            /* we found it in the memory-cache! ---> GREAT! let's get it from there */
+            rc = read_from_page ( info . pp, pos, buffer, bsize, num_read );
+        }
+        else
+        {
+            /* we did not find it in the memory-cache! ---> but we have it in the cache-file...
+               ( let's see if we can put it into memory )
+            */
+            PoolPage * pp;
+            if ( find_page_for_write ( cself -> pool, &pp ) == 0 )
+            {
+                rc = KCacheTee2FileRead_from_cache_using_page ( cself, pp, pos, buffer, bsize, num_read, &info );
+                release_page_for_write ( cself -> pool, pp );
+            }
+            else
+                rc = KFileReadAll( cself -> cache, pos, buffer, info . bytes_to_read, num_read );
+        }
     }
     else
     {
 #if RECORDING
         if ( cself -> recorder != NULL )
-            WriteToRecorder ( cself -> recorder, "\tremote\t%lu\t%lu\n", pos, info . to_read );
+            WriteToRecorder ( cself -> recorder, "\tremote\t%lu\t%lu\n", pos, info . bytes_to_read );
 #endif
     
-        rc = read_from_wrapped ( cself -> wrapped, pos, buffer, info . to_read, num_read );
+        rc = read_from_wrapped ( cself -> wrapped, pos, buffer, info . bytes_to_read, num_read );
     }
+
+    if ( info . pp != NULL )
+        release_page_for_read ( cself -> pool, info . pp );
     return rc;
 }
 
@@ -1075,64 +1409,72 @@ static rc_t finish_tee( struct KFile const **tee,
         rc = KFileAddRef ( ctp -> to_wrap );
         if ( rc == 0 )
         {
-            KQueue * pool;
-            rc = KQueueMake( &pool, 32 );
+            KQueue * q;
+            rc = KQueueMake( &q, 32 );
             if ( rc == 0 )
             {
-                KCacheTee2File * cf = malloc ( sizeof * cf + ctp -> resolved_path_size + 1 );
-                if ( cf == NULL )
-                    rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
-                else
+                ThePool * pool;
+                rc = make_pool ( &pool );
+                if ( rc == 0 )
                 {
-                    /* now we can enter everything into the cf - struct */
-                    cf -> wrapped = ctp -> to_wrap;
-                    cf -> cache = ctp -> cache;
-                    cf -> dir = ctp -> dir;
-                    cf -> wrapped_size = ctp -> to_wrap_size;
-                    cf -> cache_size = ctp -> cache_size;
-                    cf -> block_count = block_count;
-                    cf -> bitmap = bitmap;
-                    cf -> bitmap_bytes = bitmap_bytes;
-                    cf -> scratch_pool = pool;
-                    cf -> block_size = ctp -> block_size;
-                    cf -> read_only = ctp -> read_only;
-#if RECORDING
-                    cf -> recorder = NULL;
-#endif
-                    string_copy ( cf -> cache_path,
-                                 ctp -> resolved_path_size + 1,
-                                 ctp -> resolved_path,
-                                 ctp -> resolved_path_size );
+                    KCacheTee2File * cf = malloc ( sizeof * cf + ctp -> resolved_path_size + 1 );
+                    if ( cf == NULL )
+                        rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
+                    else
+                    {
+                        /* now we can enter everything into the cf - struct */
+                        cf -> wrapped = ctp -> to_wrap;
+                        cf -> cache = ctp -> cache;
+                        cf -> dir = ctp -> dir;
+                        cf -> wrapped_size = ctp -> to_wrap_size;
+                        cf -> cache_size = ctp -> cache_size;
+                        cf -> block_count = block_count;
+                        cf -> bitmap = bitmap;
+                        cf -> bitmap_bytes = bitmap_bytes;
+                        cf -> scratch_pool = q;
+                        cf -> pool = pool;
+                        cf -> block_size = ctp -> block_size;
+                        cf -> read_only = ctp -> read_only;
+    #if RECORDING
+                        cf -> recorder = NULL;
+    #endif
+                        string_copy ( cf -> cache_path,
+                                     ctp -> resolved_path_size + 1,
+                                     ctp -> resolved_path,
+                                     ctp -> resolved_path_size );
 
-                    if ( ctp -> read_only )
-                    {
-                        rc = KFileInit ( &cf -> dad,
-                                         ( const union KFile_vt * ) &vtKCacheTee2File_ro,
-                                         "KCacheTee2File",
-                                         ctp -> resolved_path,
-                                         true,
-                                         false );
+                        if ( ctp -> read_only )
+                        {
+                            rc = KFileInit ( &cf -> dad,
+                                             ( const union KFile_vt * ) &vtKCacheTee2File_ro,
+                                             "KCacheTee2File",
+                                             ctp -> resolved_path,
+                                             true,
+                                             false );
+                        }
+                        else
+                        {
+                            rc = KFileInit ( &cf -> dad,
+                                             ( const union KFile_vt * ) &vtKCacheTee2File_rw,
+                                             "KCacheTee2File",
+                                             ctp -> resolved_path,
+                                             true,
+                                             false );
+                        }
+                        
+                        if ( rc != 0 )
+                            free( ( void * ) cf );
+                        else
+                        {
+                            /* the wrapper is ready to use now! */
+                            *tee = ( const KFile * ) &cf -> dad;
+                        }
                     }
-                    else
-                    {
-                        rc = KFileInit ( &cf -> dad,
-                                         ( const union KFile_vt * ) &vtKCacheTee2File_rw,
-                                         "KCacheTee2File",
-                                         ctp -> resolved_path,
-                                         true,
-                                         false );
-                    }
-                    
                     if ( rc != 0 )
-                        free( ( void * ) cf );
-                    else
-                    {
-                        /* the wrapper is ready to use now! */
-                        *tee = ( const KFile * ) &cf -> dad;
-                    }
+                        pool_release ( pool );
                 }
                 if ( rc != 0 )
-                    KQueueRelease( pool );
+                    KQueueRelease( q );
             }
             if ( rc != 0 )
                 KFileRelease ( ctp -> to_wrap );

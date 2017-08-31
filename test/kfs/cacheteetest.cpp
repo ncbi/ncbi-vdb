@@ -619,7 +619,7 @@ TEST_CASE( CacheTee_with_Protcol )
 
     REQUIRE( CacheTee2FileSetRecorder( tee, rec ) );
     
-    REQUIRE_RC( read_partial( tee, 100, BLOCKSIZE * 10 ) );
+    REQUIRE_RC( read_partial( tee, 100, BLOCKSIZE * 20 ) );
     
     REQUIRE_RC( KFileRelease( tee ) );
     REQUIRE_RC( ReleaseRecorder ( rec ) );
