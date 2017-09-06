@@ -72,11 +72,11 @@ typedef struct KSocket KSocket;
  *   when 0, return immediately, positive gives maximum wait time in mS
  *   for reads and writes respectively.
  *
- *  "from" [ IN ] - client endpoint
+ *  "from" [ IN, NULL OKAY ] - client endpoint
  *
  *  "to" [ IN ] - server endpoint 
  *
- *  both endpoints have to be of type epIPV4 or epIPV6
+ *  both endpoints have to be of type epIPV4 or epIPV6 or IPC
  *  creates a TCP connection
  */
 KNS_EXTERN rc_t CC KNSManagerMakeConnection ( struct KNSManager const * self,
@@ -96,6 +96,50 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
     struct KEndPoint const * from, struct KEndPoint const * to );
 
 
+/* MakeIdxConnection
+ * MakeIdxTimedConnection
+ * MakeIdxRetryConnection
+ * MakeIdxRetryTimedConnection
+ *  indexed versions of functions named above
+ *  used only for IP connections
+ *
+ *  "conn" [ OUT ] - a stream for communication with the server
+ *
+ *  "retryTimeout" [ IN ] - the connect request should be repeated upon failure
+ *   until this timeout expires.
+ *
+ *  "readMillis" [ IN ] and "writeMillis" - when negative, infinite timeout
+ *   when 0, return immediately, positive gives maximum wait time in mS
+ *   for reads and writes respectively.
+ *
+ *  "from" [ IN, NULL OKAY ] - client endpoint
+ *
+ *  "to" [ IN ] - server endpoint 
+ *
+ *  "idx" [ IN ] - zero-based index into "to" ip address.
+ *   if >= to.num_ips, treat as if idx = 0.
+ *   ignored for IPC.
+ *
+ *  both endpoints have to be of type epIPV4 or epIPV6
+ *  creates a TCP connection
+ */
+KNS_EXTERN rc_t CC KNSManagerMakeIdxConnection ( struct KNSManager const * self,
+    struct KSocket ** conn, struct KEndPoint const * from, struct KEndPoint const * to, uint32_t idx );
+
+KNS_EXTERN rc_t CC KNSManagerMakeIdxTimedConnection ( struct KNSManager const * self,
+    struct KSocket ** conn, int32_t readMillis, int32_t writeMillis,
+    struct KEndPoint const * from, struct KEndPoint const * to, uint32_t idx );
+
+KNS_EXTERN rc_t CC KNSManagerMakeIdxRetryConnection ( struct KNSManager const * self,
+    struct KSocket ** conn, struct timeout_t * retryTimeout,
+    struct KEndPoint const * from, struct KEndPoint const * to, uint32_t idx );
+
+KNS_EXTERN rc_t CC KNSManagerMakeIdxRetryTimedConnection ( struct KNSManager const * self,
+    struct KSocket ** conn, struct timeout_t * retryTimeout,
+    int32_t readMillis, int32_t writeMillis,
+    struct KEndPoint const * from, struct KEndPoint const * to, uint32_t idx );
+
+
 /* AddRef
  * Release
  */
@@ -113,6 +157,7 @@ KNS_EXTERN rc_t CC KSocketGetStream ( const KSocket * self, struct KStream ** s 
 KNS_EXTERN rc_t CC KSocketGetRemoteEndpoint ( const KSocket * self, struct KEndPoint * ep );
 KNS_EXTERN rc_t CC KSocketGetLocalEndpoint ( const KSocket * self, struct KEndPoint * ep );
 
+
 /*--------------------------------------------------------------------------
  * KListener
  */
@@ -128,6 +173,21 @@ typedef struct KListener KListener;
  */
 KNS_EXTERN rc_t CC KNSManagerMakeListener ( struct KNSManager const *self,
     KListener **listener, struct KEndPoint const * ep );
+
+/* MakeIdxListener
+ *  create a listener socket for accepting incoming connections
+ *  enter listening state upon first use,
+ *
+ *  "ep" [ IN ] - a local endpoint
+ *
+ *  "listener" [ IN ] - a listener socket
+ *
+ *  "idx" [ IN ] - zero-based index into "ep" ip address.
+ *   if >= to.num_ips, treat as if idx = 0.
+ *   ignored for IPC.
+ */
+KNS_EXTERN rc_t CC KNSManagerMakeIdxListener ( struct KNSManager const *self,
+    KListener **listener, struct KEndPoint const * ep, uint32_t idx );
 
 
 /* AddRef

@@ -470,7 +470,8 @@ LIB_EXPORT bool KNSManagerIsVerbose ( const KNSManager *self )
  *
  *  "to" [ IN ] - server endpoint 
  *
- *  both endpoints have to be of type epIP; creates a TCP connection
+ *  both endpoints have to be of type epIPV4 or epIPV6 or IPC
+ *  creates a TCP connection
  */
 LIB_EXPORT rc_t CC KNSManagerMakeConnection ( const KNSManager * self,
     struct KSocket **conn, struct KEndPoint const *from, struct KEndPoint const *to )
@@ -492,6 +493,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeConnection ( const KNSManager * self,
     return KNSManagerMakeRetryTimedConnection ( self, conn, 
         & tm, self -> conn_read_timeout, self -> conn_write_timeout, from, to );
 }
+
 /* MakeTimedConnection
  *  create a connection-oriented stream
  *
@@ -508,7 +510,8 @@ LIB_EXPORT rc_t CC KNSManagerMakeConnection ( const KNSManager * self,
  *
  *  "to" [ IN ] - server endpoint 
  *
- *  both endpoints have to be of type epIP; creates a TCP connection
+ *  both endpoints have to be of type epIPV4 or epIPV6 or IPC
+ *  creates a TCP connection
  */
 LIB_EXPORT rc_t CC KNSManagerMakeTimedConnection ( struct KNSManager const * self,
     struct KSocket **conn, int32_t readMillis, int32_t writeMillis,
@@ -544,7 +547,8 @@ LIB_EXPORT rc_t CC KNSManagerMakeTimedConnection ( struct KNSManager const * sel
  *
  *  "to" [ IN ] - server endpoint 
  *
- *  both endpoints have to be of type epIP; creates a TCP connection
+ *  both endpoints have to be of type epIPV4 or epIPV6 or IPC
+ *  creates a TCP connection
  */    
 LIB_EXPORT rc_t CC KNSManagerMakeRetryConnection ( struct KNSManager const * self,
     struct KSocket ** conn, timeout_t * retryTimeout,
@@ -562,6 +566,117 @@ LIB_EXPORT rc_t CC KNSManagerMakeRetryConnection ( struct KNSManager const * sel
 
     return KNSManagerMakeRetryTimedConnection ( self, conn, 
         retryTimeout, self -> conn_read_timeout, self -> conn_write_timeout, from, to );
+}    
+
+
+/* MakeIdxConnection
+ *  create a connection-oriented stream
+ *
+ *  "conn" [ OUT ] - a stream for communication with the server
+ *
+ *  "from" [ IN ] - client endpoint
+ *
+ *  "to" [ IN ] - server endpoint 
+ *
+ *  "idx" [ IN ] - zero-based index into "to" ip address.
+ *   if >= to.num_ips, treat as if idx = 0.
+ *   ignored for IPC.
+ */
+LIB_EXPORT rc_t CC KNSManagerMakeIdxConnection ( const KNSManager * self,
+    struct KSocket **conn, struct KEndPoint const *from, struct KEndPoint const *to, uint32_t idx )
+{
+    timeout_t tm;
+
+    if ( self == NULL )
+    {
+        if ( conn == NULL )
+            return RC ( rcNS, rcStream, rcConstructing, rcParam, rcNull );
+
+        * conn = NULL;
+
+        return RC ( rcNS, rcStream, rcConstructing, rcSelf, rcNull );
+    }
+
+    TimeoutInit ( & tm, self -> conn_timeout );
+
+    return KNSManagerMakeIdxRetryTimedConnection ( self, conn, 
+        & tm, self -> conn_read_timeout, self -> conn_write_timeout, from, to, idx );
+}
+
+/* MakeIdxTimedConnection
+ *  create a connection-oriented stream
+ *
+ *  "conn" [ OUT ] - a stream for communication with the server
+ *
+ *  "retryTimeout" [ IN ] - if connection is refused, retry with 1ms intervals: when negative, retry infinitely,
+ *   when 0, do not retry, positive gives maximum wait time in seconds 
+ *
+ *  "readMillis" [ IN ] and "writeMillis" - when negative, infinite timeout
+ *   when 0, return immediately, positive gives maximum wait time in mS
+ *   for reads and writes respectively.
+ *
+ *  "from" [ IN ] - client endpoint
+ *
+ *  "to" [ IN ] - server endpoint 
+ *
+ *  "idx" [ IN ] - zero-based index into "to" ip address.
+ *   if >= to.num_ips, treat as if idx = 0.
+ *   ignored for IPC.
+ */
+LIB_EXPORT rc_t CC KNSManagerMakeIdxTimedConnection ( struct KNSManager const * self,
+    struct KSocket **conn, int32_t readMillis, int32_t writeMillis,
+    struct KEndPoint const *from, struct KEndPoint const *to, uint32_t idx )
+{
+    timeout_t tm;
+
+    if ( self == NULL )
+    {
+        if ( conn == NULL )
+            return RC ( rcNS, rcStream, rcConstructing, rcParam, rcNull );
+
+        * conn = NULL;
+
+        return RC ( rcNS, rcStream, rcConstructing, rcSelf, rcNull );
+    }
+
+    TimeoutInit ( & tm, self -> conn_timeout );
+
+    return KNSManagerMakeIdxRetryTimedConnection ( self, conn, 
+        & tm, readMillis, writeMillis, from, to, idx );
+}    
+    
+/* MakeIdxRetryConnection
+ *  create a connection-oriented stream
+ *
+ *  "conn" [ OUT ] - a stream for communication with the server
+ *
+ *  "retryTimeout" [ IN ] - if connection is refused, retry with 1ms intervals: when negative, retry infinitely,
+ *   when 0, do not retry, positive gives maximum wait time in seconds 
+ *
+ *  "from" [ IN ] - client endpoint
+ *
+ *  "to" [ IN ] - server endpoint 
+ *
+ *  "idx" [ IN ] - zero-based index into "to" ip address.
+ *   if >= to.num_ips, treat as if idx = 0.
+ *   ignored for IPC.
+ */    
+LIB_EXPORT rc_t CC KNSManagerMakeIdxRetryConnection ( struct KNSManager const * self,
+    struct KSocket ** conn, timeout_t * retryTimeout,
+    struct KEndPoint const * from, struct KEndPoint const * to, uint32_t idx )
+{
+    if ( self == NULL )
+    {
+        if ( conn == NULL )
+            return RC ( rcNS, rcStream, rcConstructing, rcParam, rcNull );
+
+        * conn = NULL;
+
+        return RC ( rcNS, rcStream, rcConstructing, rcSelf, rcNull );
+    }
+
+    return KNSManagerMakeIdxRetryTimedConnection ( self, conn, 
+        retryTimeout, self -> conn_read_timeout, self -> conn_write_timeout, from, to, idx );
 }    
 
 /* SetConnectionTimeouts

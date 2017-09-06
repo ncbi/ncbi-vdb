@@ -689,7 +689,7 @@ rc_t KSocketHandleSocknameCallWin ()
 }
 
 static
-rc_t KSocketConnectIPv4 ( KSocket * self, const KEndPoint * from, const KEndPoint * to )
+rc_t KSocketConnectIPv4 ( KSocket * self, const KEndPoint * from, const KEndPoint * to, uint32_t idx )
 {
     rc_t rc = 0;
 
@@ -712,8 +712,9 @@ rc_t KSocketConnectIPv4 ( KSocket * self, const KEndPoint * from, const KEndPoin
                 
         if ( rc == 0 )
         {
+            assert ( idx < to -> num_ips );
             ss . sin_port = htons ( to -> u . ipv4 . port );
-            ss . sin_addr . s_addr = htonl ( to -> u . ipv4 . addr [ 0 ] );
+            ss . sin_addr . s_addr = htonl ( to -> u . ipv4 . addr [ idx ] );
                 
             if ( connect ( self -> type_data . ipv4_data . fd, ( struct sockaddr * ) & ss, sizeof ss ) == SOCKET_ERROR )
                 rc = KSocketHandleConnectCallWin ();
@@ -729,7 +730,7 @@ rc_t KSocketConnectIPv4 ( KSocket * self, const KEndPoint * from, const KEndPoin
         }
     }
 
-    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketConnectIPv4 failed - %R\n", self, rc ) );    
+    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: %s failed - %R\n", self, __func__, rc ) ); 
     return rc;
 }
 
@@ -897,7 +898,7 @@ static rc_t KSocketGetEndpointV4 ( const KSocket * self, KEndPoint * ep, bool re
 ********************************************************************************************* */
 
 static
-rc_t KSocketConnectIPv6 ( KSocket * self, const KEndPoint * from, const KEndPoint * to )
+rc_t KSocketConnectIPv6 ( KSocket * self, const KEndPoint * from, const KEndPoint * to, uint32_t idx )
 {
     return RC ( rcNS, rcSocket, rcConstructing, rcFunction, rcUnsupported ); 
 }
@@ -1837,6 +1838,10 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
 {
     rc_t rc = 0;
 
+    /* early short-circuit for IPC connections */
+    if ( to != NULL && to -> type == epIPC )
+        return KNSManagerMakeIdxRetryTimedConnection ( self, out, retryTimeout, readMillis, writeMillis, from, to, 0 );
+
     if ( out == NULL )
         rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcNull );
     else
@@ -1872,6 +1877,180 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
                     rc = RC ( rcNS, rcSocket, rcConstructing, rcFunction, rcUnsupported ); 
                     break;
 
+                default:
+                    rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcIncorrect );
+                }
+
+                /* initialize the socket */
+                if ( rc == 0 )
+                    rc = KStreamInit ( & conn -> dad, vt, "KSocket", "", true, true );
+
+                /* prepare the timeout */
+                if ( rc == 0 )
+                    rc = TimeoutPrepare ( retryTimeout );
+
+                if ( rc == 0 )
+                {
+                    /* detect empty "num_ips" */
+                    if ( to -> num_ips == 0 )
+                        rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcEmpty );
+                    else
+                    {
+                        /* assume that the structure declaration is sane */
+                        assert ( ( sizeof to -> u . ipv4 . addr / sizeof to -> u . ipv4 . addr [ 0 ] ) ==
+                                 ( sizeof to -> u . ipv6 . addr / sizeof to -> u . ipv6 . addr [ 0 ] ) );
+
+                        /* detect bad "num_ips" */
+                        if ( to -> num_ips > ( sizeof to -> u . ipv4 . addr / sizeof to -> u . ipv4 . addr [ 0 ] ) )
+                            rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcInvalid );
+                    }
+                }
+
+                if ( rc == 0 )
+                {
+                    uint32_t retry;
+
+                    /* a retry loop - retry upon a schedule for the alloted time */
+                    for ( retry = 0; ; ++ retry )
+                    {
+                        uint32_t remaining, delay, idx;
+
+                        /* try to connect using appropriate protocol */
+                        for ( idx = 0; idx < to -> num_ips; ++ idx )
+                        {
+                            switch ( to -> type )
+                            {
+                            case epIPV4:
+                                rc = KSocketConnectIPv4 ( conn, from, to, idx );
+                                break;
+
+                            case epIPV6:
+                                rc = KSocketConnectIPv6 ( conn, from, to, idx );
+                                break;
+                            }
+
+                            /* if connection was successful, return socket */
+                            if ( rc == 0 )
+                            {
+                                * out = conn;
+                                return 0;
+                            }
+                        }
+
+                        /* check time remaining on timeout ( if any ) */
+                        remaining = TimeoutRemaining ( retryTimeout );
+
+                        /* break out of loop if no time left */
+                        if ( remaining == 0 )
+                            break;
+
+                        /* apply delay schedule */
+                        switch ( retry )
+                        {
+                        case 0:
+                            /* try immediately */
+                            continue;
+                        case 1:
+                        case 2:
+                        case 3:
+                            /* wait for 100mS between tries */
+                            delay = 100;
+                            break;
+                        default:
+                            /* wait for 250mS between tries */
+                            delay = 250;
+                        }
+
+                        /* never wait for more than the remaining timeout */
+                        if ( delay > remaining )
+                            delay = remaining;
+
+                        KSleepMs ( delay );
+                    }
+
+                    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET),
+                           ( "%p: %s timed out\n", self, __func__ ) ); 
+                }
+
+                free ( conn );
+            }
+        }
+
+        * out = NULL;
+    }
+
+    return rc;
+}
+
+KNS_EXTERN rc_t CC KNSManagerMakeIdxRetryTimedConnection ( struct KNSManager const * self,
+    struct KSocket ** out, timeout_t * retryTimeout, int32_t readMillis, int32_t writeMillis,
+    struct KEndPoint const * from, struct KEndPoint const * to, uint32_t idx )
+{
+    rc_t rc = 0;
+
+    if ( out == NULL )
+        rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcNull );
+    else
+    {
+        if ( self == NULL )
+            rc = RC ( rcNS, rcStream, rcConstructing, rcSelf, rcNull );
+        else if ( retryTimeout == NULL || to == NULL )
+            rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcNull );
+        else if ( from != NULL && from -> type != to -> type )
+            rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcIncorrect );
+        else
+        {
+            KSocket *conn = calloc ( 1, sizeof * conn );
+            if ( conn == NULL )
+                rc = RC ( rcNS, rcStream, rcConstructing, rcMemory, rcExhausted );
+            else
+            {
+                const KStream_vt * vt;
+
+                conn -> read_timeout = readMillis;
+                conn -> write_timeout = writeMillis;
+
+                conn -> type = to -> type;
+                switch ( to -> type )
+                {
+                case epIPV4:
+                case epIPV6:
+                    /* detect empty "num_ips" */
+                    if ( to -> num_ips == 0 )
+                    {
+                        rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcEmpty );
+                        break;
+                    }
+
+                    /* assume that the structure declaration is sane */
+                    assert ( ( sizeof to -> u . ipv4 . addr / sizeof to -> u . ipv4 . addr [ 0 ] ) ==
+                             ( sizeof to -> u . ipv6 . addr / sizeof to -> u . ipv6 . addr [ 0 ] ) );
+                    
+                    /* detect bad "num_ips" */
+                    if ( to -> num_ips > ( sizeof to -> u . ipv4 . addr / sizeof to -> u . ipv4 . addr [ 0 ] ) )
+                    {
+                        rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcInvalid );
+                        break;
+                    }
+
+                    /* clobber the index if it is incorrect */
+                    if ( idx >= to -> num_ips )
+                        idx = idx % to -> num_ips;
+
+                    switch ( to -> type )
+                    {
+                    case epIPV4:
+                        conn -> type_data . ipv4_data . fd = INVALID_SOCKET;
+                        vt = ( const KStream_vt * ) & vtKIpv4Socket;
+                        break;
+                    
+                    case epIPV6:
+                        conn -> type_data . ipv6_data . fd = INVALID_SOCKET;
+                        rc = RC ( rcNS, rcSocket, rcConstructing, rcFunction, rcUnsupported ); 
+                        break;
+                    }
+                    break;
+
                 case epIPC:
                     conn -> type_data . ipc_data . pipe = INVALID_HANDLE_VALUE;
                     vt = ( const KStream_vt * ) & vtKIPCSocket;
@@ -1902,11 +2081,11 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
                         switch ( to -> type )
                         {
                         case epIPV4:
-                            rc = KSocketConnectIPv4 ( conn, from, to );
+                            rc = KSocketConnectIPv4 ( conn, from, to, idx );
                             break;
 
                         case epIPV6:
-                            rc = KSocketConnectIPv6 ( conn, from, to );
+                            rc = KSocketConnectIPv6 ( conn, from, to, idx );
                             break;
 
                         case epIPC:
@@ -1965,57 +2144,6 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
 
     return rc;
 }
-
-#if 0
-LIB_EXPORT rc_t CC KNSManagerMakeRetryTimedConnection ( const KNSManager * self,
-                                                        KSocket **out,
-                                                        timeout_t * retryTimeout,
-                                                        int32_t readMillis,
-                                                        int32_t writeMillis,
-                                                        const KEndPoint *from,
-                                                        const KEndPoint *to )
-{
-    rc_t rc;
-
-    if ( out == NULL )
-        rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcNull );
-    else
-    {
-        if ( self == NULL )
-            rc = RC ( rcNS, rcStream, rcConstructing, rcSelf, rcNull );
-        else if ( retryTimeout == NULL || to == NULL )
-            rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcNull );
-        else if ( from != NULL && from -> type != to -> type )
-            rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcIncorrect );
-        else
-        {
-            switch ( to -> type )
-            {
-            case epIPV4 :
-                rc = KNSManagerMakeIPv4Connection ( self, out, from, to, retryTimeoutMillis, readMillis, writeMillis );
-                break;
-
-            case epIPV6 :
-                rc = KNSManagerMakeIPv6Connection ( self, out, from, to, retryTimeoutMillis, readMillis, writeMillis );
-                break;
-
-            case epIPC :
-                rc = KNSManagerMakeIPCConnection ( self, out, to, retryTimeoutMillis, readMillis, writeMillis );
-                break;
-
-            default:
-                rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcIncorrect );
-            }
-
-            if ( rc == 0 )
-                return 0;
-        }
-
-        * out = NULL;
-    }
-    return rc;
-}
-#endif
 
 LIB_EXPORT rc_t CC KSocketAddRef( const KSocket *self )
 {   /* this will handle all derived types */
