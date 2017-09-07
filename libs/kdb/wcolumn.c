@@ -2229,13 +2229,8 @@ LIB_EXPORT rc_t CC KColumnBlobRead ( const KColumnBlob *self,
             size_t size = self -> num_writ;
             const KColumn *col = self -> col;
 
-            if ( size != 0 )
-                pm = & self -> pmnew;
-            else
-            {
-                pm = & self -> pmorig;
+            if ( size == 0 )
                 size = self -> loc . u . blob . size;
-            }
 
             if ( offset > size )
                 offset = size;
