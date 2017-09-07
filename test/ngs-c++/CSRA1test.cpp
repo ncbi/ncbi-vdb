@@ -1096,6 +1096,8 @@ const char UsageDefaultName[] = "test-ngs_csra1-c++";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+const char * p = getenv("http_proxy");
+cerr << "http_proxy = '" << ( p == NULL ? "NULL" : p ) << "'\n";
     KConfigDisableUserSettings();
     rc_t rc=NgsCsra1CppTestSuite(argc, argv);
     return rc;

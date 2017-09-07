@@ -48,6 +48,8 @@
  *  reference counted
  */
 
+#define ILLEGAL_COL_IDX 0xFFFFFFFF
+
 struct NGS_Cursor
 {
     NGS_Refcount dad;
@@ -161,6 +163,7 @@ const NGS_Cursor * NGS_CursorMake ( ctx_t ctx, const struct VTable* table, const
                 rc_t rc = VCursorAddColumn ( ref -> curs, & ref -> col_idx [ 0 ], "%s", col_spec );
                 if ( rc != 0 )
                 {
+                    ref -> col_idx [ 0 ] = ILLEGAL_COL_IDX;
                     INTERNAL_ERROR ( xcColumnNotFound, "VCursorAddColumn %s rc = %R", col_spec, rc );
                     NGS_CursorWhack ( ref, ctx );
                     free ( ref );
@@ -257,16 +260,24 @@ const NGS_Cursor * NGS_CursorDuplicate ( const NGS_Cursor * self, ctx_t ctx )
 static
 void
 AddColumn ( const NGS_Cursor *self, ctx_t ctx, uint32_t colIdx )
-{   /* lazy add */
+{
+    /* lazy add */
     if ( self -> col_idx [ colIdx ] == 0 )
     {
         const char * col_spec = self -> col_specs [ colIdx ];
         rc_t rc = VCursorAddColumn ( self -> curs, & self -> col_idx [ colIdx ], "%s", col_spec );
         if ( rc != 0 && GetRCState ( rc ) != rcExists )
         {
+            self -> col_idx [ colIdx ] = ILLEGAL_COL_IDX;
             INTERNAL_ERROR ( xcColumnNotFound, "VCursorAddColumn failed: '%s' rc = %R", col_spec, rc );
         }
     }
+    else if ( self -> col_idx [ colIdx ] == ILLEGAL_COL_IDX )
+    {
+        const char * col_spec = self -> col_specs [ colIdx ];
+        INTERNAL_ERROR ( xcColumnNotFound, "VCursorAddColumn previously failed: '%s'", col_spec );
+    }
+
 }
 
 void NGS_CursorCellDataDirect ( const NGS_Cursor *self,
