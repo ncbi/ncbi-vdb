@@ -58,6 +58,7 @@
 #include <kfs/buffile.h>
 #include <kfs/quickmount.h>
 #include <kfs/cacheteefile.h>
+#include <kfs/cachetee2file.h>
 #include <kfs/lockfile.h>
 #include <kfs/defs.h>
 
@@ -213,6 +214,41 @@ LIB_EXPORT rc_t CC VFSManagerRelease ( const VFSManager *self )
 }
 
 
+typedef struct caching_params
+{
+    uint32_t cache_tee_version;
+    uint32_t blocksize;
+    uint32_t recording;
+} caching_params;
+
+static void get_caching_params( caching_params * params )
+{
+    KConfig * cfg;
+    rc_t rc = KConfigMake ( &cfg, NULL );
+
+    /* set some default values... */
+    params -> cache_tee_version = 0;
+    params -> blocksize = DEFAULT_CACHE_BLOCKSIZE;
+    params -> recording = 0;
+    
+    if ( rc == 0 )
+    {
+        uint64_t value;
+        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/CACHETEEVER", &value );
+        if ( rc == 0 )
+            params -> cache_tee_version = (uint32_t)( value & 0x1 );
+            
+        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/BLOCKSIZE", &value );
+        if ( rc == 0 )
+            params -> blocksize = (uint32_t)( value & 0xFFFFFFFF );
+
+        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/RECORDING", &value );
+        if ( rc == 0 )
+            params -> recording = (uint32_t)( value & 0x1 );
+
+        KConfigRelease ( cfg );
+    }
+}
 
 /*--------------------------------------------------------------------------
  * VFSManagerMakeHTTPFile
@@ -223,24 +259,73 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self, const KFile **cfp,
                              bool high_reliability )
 {
     rc_t rc;
+    caching_params cps;
 
     if ( high_reliability )
         rc = KNSManagerMakeReliableHttpFile ( self -> kns, cfp, NULL, 0x01010000, url );
     else
         rc = KNSManagerMakeHttpFile ( self -> kns, cfp, NULL, 0x01010000, url );
 
-    if ( rc == 0 && cache_location != NULL )
+    /* in case we are not able to open the remote-file : return with error-code */
+    if ( rc != 0 )
+        return rc;
+
+    /* let's try to get some details about how to do caching from the configuration */
+    get_caching_params( &cps );
+
+    if ( cache_location != NULL )
     {
+        /* in case there is a cache-location we wrap the remote-file in a cachetee-file */
+        
 		const KFile *temp_file;
 		/* we do have a cache_location! wrap the remote file in a cacheteefile */
-		rc_t rc2 = KDirectoryMakeCacheTee ( self->cwd, &temp_file, *cfp,
-											DEFAULT_CACHE_BLOCKSIZE, "%s", cache_location );
-												
+		rc_t rc2;
+        
+        if ( cps . cache_tee_version == 0 )
+        {
+            rc2 = KDirectoryMakeCacheTee ( self -> cwd,
+                                           &temp_file,
+                                           *cfp,
+                                           cps . blocksize,
+                                           "%s", cache_location );
+        }
+        else
+        {
+            rc2 = KDirectoryMakeCacheTee2 ( self -> cwd,
+                                            &temp_file,
+                                            *cfp,
+                                            cps . blocksize,
+                                            "%s", cache_location );
+            if ( rc2 == 0 && cps . recording > 0 )
+            {
+                struct Recorder * rec;
+                rc_t rc3 =  MakeRecorder ( self -> cwd,
+                                           &rec,
+                                           1024,
+                                           true,
+                                           "%s.rec", cache_location );
+                
+                if ( rc3 == 0 )
+                    CacheTee2FileSetRecorder( temp_file, rec );
+            }
+        }
         if ( rc2 == 0 )
         {
+            /* the creation of the cache-tee-file was successfull */
             KFileRelease ( * cfp );
             * cfp = temp_file;
         }
+        else
+        {
+            /* the creation of the cache-tee-file was NOT successfull:
+               we should at least try to wrap the remote file in memory-buffering */
+            
+        }
+    }
+    else
+    {
+        /* in case there is no cache-location, we wrap the remote-file in memory-buffering */
+        
     }
     return rc;
 }
@@ -1140,6 +1225,7 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
         }
         else
         {
+            /* no resolver has been found ---> we cannot do caching! */
             rc = VFSManagerMakeHTTPFile( self, f, uri->addr, NULL, high_reliability );
         }
         free( ( void * )uri );

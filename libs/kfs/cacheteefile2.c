@@ -223,9 +223,9 @@ LIB_EXPORT rc_t CC WriteToRecorder ( struct Recorder * self, const char * fmt, .
  */
 typedef struct PoolPage
 {
-    uint64_t pos, len;
+    uint64_t pos, data_len, allocated;
     uint8_t * data;
-    uint32_t readers, usage, blocks;
+    uint32_t idx, readers, usage, blocks;
     bool writing;
 } PoolPage;
 
@@ -245,6 +245,9 @@ static rc_t make_pool ( ThePool ** pool )
         rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
     else
     {
+        uint32_t idx;
+        for ( idx = 0; idx < NUMPAGES; ++idx )
+            p -> pages[ idx ] . idx = idx;
         rc = KLockMake ( & p -> lock );
         if ( rc == 0 )
             *pool = p;
@@ -280,7 +283,7 @@ static rc_t find_page_for_read ( ThePool * self, PoolPage ** found, uint64_t pos
             PoolPage * p = & self -> pages[ i ];
             if ( ( p -> data != NULL ) &&
                  ( pos >= p -> pos ) &&
-                 ( pos < ( p -> pos + p -> len ) ) &&
+                 ( pos < ( p -> pos + p -> data_len ) ) &&
                  ( ! p -> writing ) )
             {
                 p -> readers += 1;
@@ -297,7 +300,7 @@ static rc_t read_from_page ( const PoolPage * p, uint64_t pos, void *buffer,
                              size_t bsize, size_t *num_read )
 {
     uint64_t shift_by = ( pos - p -> pos );
-    size_t to_read = ( p -> len - shift_by );
+    size_t to_read = ( p -> data_len - shift_by );
 
     if ( to_read > bsize ) to_read = bsize;
     memmove( buffer, p -> data + shift_by, to_read );
@@ -715,7 +718,15 @@ static rc_t CC KCacheTee2FileDestroy( KCacheTee2File * self )
 
     if ( already_promoted_by_other_instance )
         KDirectoryRemove ( self -> dir, true, "%s.cache", self -> cache_path );
-        
+
+#if RECORDING
+    if ( self -> recorder != NULL )
+    {
+        WriteToRecorder ( self -> recorder, "recorder released\n" );    
+        ReleaseRecorder ( self -> recorder );
+    }
+#endif
+
     KDirectoryRelease ( self -> dir );
     
     free ( self );
@@ -828,7 +839,7 @@ static void get_read_info ( const KCacheTee2File *cself, uint64_t pos, size_t le
     last_block_incomplete = ( request . last >= cself -> block_count );
     if ( last_block_incomplete )
         request . last = ( cself -> block_count - 1 );
-
+    
     request . count = ( request . last - request . first ) + 1;
 
     info -> available . first = request . first;
@@ -876,20 +887,21 @@ static rc_t prepare_pool_page_for_write( const KCacheTee2File *cself, PoolPage *
     {
         /* the page has a NULL-data-ptr : allocate as much buffer as we need */
         pp -> data = malloc( len );
-        if ( pp -> data == NULL )
-            rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
+        pp -> allocated = len;
     }
-    else if ( len > pp -> len )
+    else if ( len > pp -> allocated )
     {
         /* the page has a valid data-ptr, but it does not have enough buffer : reallocate as much buffer as we need */
         free ( ( void * ) pp -> data );
         pp -> data = malloc( len );
-        if ( pp -> data == NULL )
-            rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
+        pp -> allocated = len;
     }
+    if ( pp -> data == NULL )
+        rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
+    
     if ( rc == 0 )
     {
-        pp -> len = len;
+        pp -> data_len = len;
         pp -> pos = info -> first_block_pos;
         pp -> usage = 1;
     }
@@ -906,7 +918,7 @@ static rc_t KCacheTee2FileRead_from_wrapped_using_page ( const KCacheTee2File *c
         size_t from_wrapped;
         
         /* read from the wrapped file into the page-buffer */
-        rc = read_from_wrapped ( cself -> wrapped, pp -> pos, pp -> data, pp -> len, &from_wrapped );
+        rc = read_from_wrapped ( cself -> wrapped, pp -> pos, pp -> data, pp -> data_len, &from_wrapped );
         if ( rc == 0 )
         {
             size_t num_written_to_cache;
@@ -945,7 +957,7 @@ static rc_t KCacheTee2FileRead_from_cache_using_page ( const KCacheTee2File *cse
     if ( rc == 0 )
     {
         size_t from_cache;
-        rc = KFileReadAll( cself -> cache, pp -> pos, pp -> data, pp -> len, &from_cache );
+        rc = KFileReadAll( cself -> cache, pp -> pos, pp -> data, pp -> data_len, &from_cache );
         if ( rc == 0 )
             rc = read_from_page ( pp, pos, buffer, bsize, num_read );
     }
@@ -1086,29 +1098,43 @@ static rc_t KCacheTee2FileRead_rw ( const KCacheTee2File *cself, uint64_t pos,
 
 #if RECORDING
     if ( cself -> recorder != NULL )
-        WriteToRecorder ( cself -> recorder, "\nrw\t%lu\t%lu\n", pos, bsize );
+        WriteToRecorder ( cself -> recorder, "\nrw\tat:%lu\tlen:%lu\n", pos, bsize );
 #endif
 
     *num_read = 0;
 
     if ( pos > cself -> wrapped_size )
+    {
         /* the caller asked for data beyond the end of the file */
+#if RECORDING
+        if ( cself -> recorder != NULL )
+            WriteToRecorder ( cself -> recorder, "request beyond end of file (%ld)\n", cself -> wrapped_size );
+#endif
         return rc;
+    }
     else if ( ( pos + bsize ) > cself -> wrapped_size )
+    {
         /* the caller asked for a slice of data reaching beyond the end of the file */
+#if RECORDING
+        if ( cself -> recorder != NULL )
+            WriteToRecorder ( cself -> recorder, "touching end of file (%ld)\n", cself -> wrapped_size );
+#endif
         bsize = cself -> wrapped_size - pos;
-
-    /* if the caller asked for */
+    }
+    
+    /* if the caller asked for nothing... */
     if ( bsize == 0 )
+    {
         return rc;
-        
+    }
+    
     get_read_info ( cself, pos, bsize, &info );
 
 #if RECORDING
     if ( cself -> recorder != NULL )
     {
         WriteToRecorder ( cself -> recorder,
-                          "info: available: %ld.%d ( in_cache=%s )\n",
+                          "\tavailable: blk #%ld . %d blks ( in_cache=%s )\n",
                           info . available.first, info . available . count,
                           info . in_cache ? "yes" : "no" );
     }
@@ -1139,9 +1165,10 @@ static rc_t KCacheTee2FileRead_rw ( const KCacheTee2File *cself, uint64_t pos,
         if ( cself -> recorder != NULL )
         {
             if ( info . pp != NULL )
-                WriteToRecorder ( cself -> recorder, "\tram\t%lu\t%lu\n", info . pp -> pos, info . pp -> len );
+                WriteToRecorder ( cself -> recorder, "\tram\tat:%lu\tlen:%lu ( idx = %d )\n",
+                                  info . pp -> pos, info . pp -> data_len, info . pp -> idx );
             else
-                WriteToRecorder ( cself -> recorder, "\tcache\t%lu\t%lu\n", pos, info . bytes_to_read );
+                WriteToRecorder ( cself -> recorder, "\tcache\tat:%lu\tlen:%lu\n", pos, info . bytes_to_read );
         }
 #endif
 
@@ -1157,11 +1184,28 @@ static rc_t KCacheTee2FileRead_rw ( const KCacheTee2File *cself, uint64_t pos,
             PoolPage * pp;
             if ( find_page_for_write ( cself -> pool, &pp ) == 0 )
             {
+#if RECORDING
+                if ( cself -> recorder != NULL )
+                    WriteToRecorder ( cself -> recorder, "\twriting to page #%d\n", pp -> idx );
+#endif
                 rc = KCacheTee2FileRead_from_cache_using_page ( cself, pp, pos, buffer, bsize, num_read, &info );
+                
+#if RECORDING
+                if ( cself -> recorder != NULL )
+                    WriteToRecorder ( cself -> recorder, "\twritten to page #%d ( rc:%d, at:%ld, len:%ld )\n",
+                                      pp -> idx, rc, pp -> pos, pp -> data_len );
+#endif
+                
                 release_page_for_write ( cself -> pool, pp );
             }
             else
+            {
+#if RECORDING
+                if ( cself -> recorder != NULL )
+                    WriteToRecorder ( cself -> recorder, "\tno page for write found\n" );
+#endif
                 rc = KFileReadAll( cself -> cache, pos, buffer, info . bytes_to_read, num_read );
+            }
         }
     }
     else
@@ -1212,6 +1256,11 @@ static rc_t KCacheTee2FileRead_rw ( const KCacheTee2File *cself, uint64_t pos,
     
     if ( info . pp != NULL )
         release_page_for_read ( cself -> pool, info . pp );
+
+#if RECORDING
+    if ( cself -> recorder != NULL )
+        WriteToRecorder ( cself -> recorder, "\treturned:%lu\n", *num_read );
+#endif
     return rc;
 }
 
@@ -1226,7 +1275,7 @@ static rc_t KCacheTee2FileRead_ro ( const KCacheTee2File *cself, uint64_t pos,
 
 #if RECORDING
     if ( cself -> recorder != NULL )
-        WriteToRecorder ( cself -> recorder, "\nro\t%lu\t%lu\n", pos, bsize );
+        WriteToRecorder ( cself -> recorder, "\nro\tat:%lu\tlen:%lu\n", pos, bsize );
 #endif
 
     *num_read = 0;
@@ -1247,9 +1296,9 @@ static rc_t KCacheTee2FileRead_ro ( const KCacheTee2File *cself, uint64_t pos,
         if ( cself -> recorder != NULL )
         {
             if ( info . pp != NULL )
-                WriteToRecorder ( cself -> recorder, "\tram\t%lu\t%lu\n", info . pp -> pos, info . pp -> len );
+                WriteToRecorder ( cself -> recorder, "\tram\tat:%lu\tlen:%lu\n", info . pp -> pos, info . pp -> data_len );
             else
-                WriteToRecorder ( cself -> recorder, "\tcache\t%lu\t%lu\n", pos, info . bytes_to_read );
+                WriteToRecorder ( cself -> recorder, "\tcache\tat>%lu\tlen:%lu\n", pos, info . bytes_to_read );
         }
 #endif
         if ( info . pp != NULL )
@@ -1276,7 +1325,7 @@ static rc_t KCacheTee2FileRead_ro ( const KCacheTee2File *cself, uint64_t pos,
     {
 #if RECORDING
         if ( cself -> recorder != NULL )
-            WriteToRecorder ( cself -> recorder, "\tremote\t%lu\t%lu\n", pos, info . bytes_to_read );
+            WriteToRecorder ( cself -> recorder, "\tremote\tat:%lu\tlen:%lu\n", pos, info . bytes_to_read );
 #endif
     
         rc = read_from_wrapped ( cself -> wrapped, pos, buffer, info . bytes_to_read, num_read );
@@ -1745,6 +1794,9 @@ LIB_EXPORT rc_t CC KDirectoryVMakeCacheTee2 ( struct KDirectory * self,
                 ctp . resolved_path_size = string_size ( ctp . resolved_path );
                 ctp . read_only = false;
                 
+                /* let the blocksize be a multiple of 16 */
+                ctp . block_size &= 0xFFFFF0;
+                
                 /* lets see if we can open the cache-file in read/write - mode */
                 rc = KDirectoryOpenFileWrite ( self,
                                                &( ctp . cache ),
@@ -2115,6 +2167,7 @@ LIB_EXPORT bool CC CacheTee2FileSetRecorder( const struct KFile * self, struct R
 #if RECORDING
         struct KCacheTee2File * ctf = ( struct KCacheTee2File * )self;
         ctf -> recorder = r;
+        WriteToRecorder ( r, "recorder set\n" );
         res = true;
 #endif
     }   
