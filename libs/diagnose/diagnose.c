@@ -83,7 +83,7 @@ LIB_EXPORT rc_t CC KDiagnoseLogHandlerSet ( KDiagnose * self,
     return 0;
 }
 
-DIAGNOSE_EXTERN
+LIB_EXPORT
 rc_t CC KDiagnoseLogHandlerSetKOutMsg ( KDiagnose * self )
 {
     return KDiagnoseLogHandlerSet ( self, OutMsg );
@@ -273,6 +273,17 @@ static rc_t KDiagnoseErrorMake ( const KDiagnoseError ** self,
 
     * self = p;
 
+    return 0;
+}
+
+static
+void ( CC * CALLBACK ) ( EKDiagTestState state, const KDiagnoseTest * test );
+
+LIB_EXPORT rc_t CC KDiagnoseTestHandlerSet ( KDiagnose * self,
+    void ( CC * callback ) ( EKDiagTestState state, const KDiagnoseTest * test )
+)
+{
+    CALLBACK = callback;
     return 0;
 }
 
@@ -534,6 +545,9 @@ const char*c=self->msg.base;
         }
     }
 
+    if ( CALLBACK )
+         CALLBACK ( eKDTS_Started, test );
+
     return rc;
 }
 
@@ -675,6 +689,17 @@ const char*c=self->msg.base;
         }
 
     self -> failedWhileSilent = false;
+
+    if ( CALLBACK && ok != eMSG ) {
+        EKDiagTestState state = eKDTS_Succeed;
+        switch ( ok ) {
+            case eEndOK: state = eKDTS_Succeed; break;
+            case eOK   : state = eKDTS_Succeed; break;
+            case eFAIL : state = eKDTS_Failed ; break;
+            default    : state = eKDTS_Failed ; break;
+        }
+        CALLBACK ( state, self -> crnt );
+    }
 
     return rc;
 }
@@ -1409,7 +1434,7 @@ static rc_t TestAbuse ( STest * self, Abuse * test,
             KStream * stream = NULL;
             KDataBuffer buffer;
             size_t total = 0;
-            const char * base = NULL;
+            char * base = NULL;
             rc = KDataBufferMakeBytes ( & buffer, 4096 );
             if ( rc == 0 )
                 rc = KNSManagerMakeRequest ( self -> kmgr, & req, HTTP_VERSION,
@@ -1909,7 +1934,7 @@ static rc_t STestCheckNetwork ( STest * self, const Data * data,
                 STestEnd ( self, eEndFAIL, "CANNOT CONVERT TO STRING: %R", rx );
         }
         port = 80;
-        STestStart ( self, false, "KNSManagerInitDNSEndpoint(%S:%hu) =",
+        STestStart ( self, false, "KNSManagerInitDNSEndpoint(%S:%hu)",
                                   & host, port );
         r1 = KNSManagerInitDNSEndpoint ( self -> kmgr, & ep,
                                               & host, port );
@@ -1919,7 +1944,7 @@ static rc_t STestCheckNetwork ( STest * self, const Data * data,
             char endpoint [ 1024 ] = "";
             rc_t rx = endpoint_to_string ( endpoint, sizeof endpoint, & ep );
             if ( rx == 0 )
-                STestEndOr ( self, & rx, eEndOK, "'%s': OK", endpoint );
+                STestEndOr ( self, & rx, eEndOK, "= '%s': OK", endpoint );
             if ( rx != 0 )
                 STestEnd ( self, eEndFAIL, "CANNOT CONVERT TO STRING: %R", rx );
         }
@@ -2060,7 +2085,7 @@ LIB_EXPORT rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests ) {
     assert ( self );
 
     if ( tests == DIAGNOSE_ALL )
-        tests = ~ 0;
+        tests = ~ DIAGNOSE_FAIL;
 
     STestInit ( & t, self );
 

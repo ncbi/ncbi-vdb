@@ -75,10 +75,30 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseLogHandlerSet ( KDiagnose * self,
 DIAGNOSE_EXTERN rc_t CC KDiagnoseLogHandlerSetKOutMsg ( KDiagnose * self );
 
 
+/*
+ * TestHandlerSet: set a test callback
+ * the callback is called when each test is started or finished
+ *
+ * state - state of the test
+ * test - test being executed.
+ *      test remains valid when KDiagnose is valid;
+ *      KDiagnoseTestAddRef if you want to keep it after KDiagnose is released
+ */
+typedef enum {
+    eKDTS_Started, /* test started */
+    eKDTS_Succeed, /* test finished successfully */
+    eKDTS_Failed,  /* test finished with failure */
+} EKDiagTestState;
+DIAGNOSE_EXTERN rc_t CC KDiagnoseTestHandlerSet ( KDiagnose * self,
+        void ( CC * callback )
+             ( EKDiagTestState state, const KDiagnoseTest * test )
+    );
+
+
 #define DIAGNOSE_ALL     0
-#define DIAGNOSE_CONFIG  1
-#define DIAGNOSE_NETWORK 2
-#define DIAGNOSE_FAIL    4
+#define DIAGNOSE_FAIL    1
+#define DIAGNOSE_CONFIG  2
+#define DIAGNOSE_NETWORK 4
 DIAGNOSE_EXTERN rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests );
 
 
