@@ -359,9 +359,19 @@ LogMsg ( klogWarn, "Can not find definition for 'public' area in config file" );
         return RCt;
     }
 
+    RCt = XFSAccessPanelNodeMake ( & TheNode );
+    if ( RCt == 0 ) {
+        RCt = XFSContNodeAddChild ( & ( self -> node ) . node, TheNode );
+    }
+    if ( RCt != 0 ) {
+        if ( TheNode != NULL ) {
+            XFSNodeDispose ( TheNode );
+        }
+        return RCt;
+    }
+
     return RCt;
 }   /* _GapProjectNodeAddChildren () */
-
 
 LIB_EXPORT
 rc_t CC

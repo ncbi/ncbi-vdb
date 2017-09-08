@@ -131,6 +131,8 @@ XFS_SRC = \
     gapf    \
     lockdpt \
     lreader \
+    access  \
+    accesspanel  \
     schwarzschraube \
     zehr    \
     mehr

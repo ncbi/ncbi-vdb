@@ -42,6 +42,7 @@
 
 #include <krypto/key.h>
 
+#include <xfs/path.h>
 #include "schwarzschraube.h"
 #include "zehr.h"
 #include "mehr.h"
@@ -101,6 +102,115 @@ XFS_LoadConfig_ZHR (
 
     return RCt;
 }   /* XFS_LoadConfig_ZHR () */
+
+/*  JOJOBA: That is very very dangerous method :LOL:
+ */
+static
+const char * CC
+_UserHomeDir ()
+{
+    const char * Ret = getenv ( "HOME" );
+    if ( Ret == NULL ) {
+            /* Possibly that is Windows then */
+        Ret = getenv ( "USERPROFILE" );
+    }
+    return Ret;
+}   /* _UserHomeDir () */
+
+LIB_EXPORT
+rc_t CC
+XFS_UserHomeDir_ZHR ( char ** UserHome )
+{
+    rc_t RCt;
+    const char * Var;
+
+    RCt = 0;
+    Var = NULL;
+
+    XFS_CSAN ( UserHome )
+    XFS_CAN ( UserHome )
+
+    Var = _UserHomeDir ();
+    if ( Var != NULL ) {
+        RCt = XFS_StrDup ( Var, ( const char ** ) UserHome );
+    }
+    else {
+        RCt = XFS_RC ( rcInvalid );
+    }
+
+    return RCt;
+}   /* XFS_UserHomeDir_ZHR () */
+
+LIB_EXPORT
+rc_t CC
+XFS_UserConfigDir_ZHR ( char ** UserConfig )
+{
+    rc_t RCt;
+    const char * Var;
+    const struct XFSPath * Path;
+
+    RCt = 0;
+    Var = NULL;
+    Path = NULL;
+
+    XFS_CSAN ( UserConfig )
+    XFS_CAN ( UserConfig )
+
+    Var = _UserHomeDir ();
+    if ( Var == NULL ) {
+        RCt = XFS_RC ( rcInvalid );
+    }
+    else {
+        RCt = XFSPathMake ( & Path, false, "%s/.ncbi", Var );
+        if ( RCt == 0 ) {
+            RCt = XFS_StrDup (
+                            XFSPathGet ( Path ) ,
+                            ( const char ** ) UserConfig
+                            );
+            XFSPathRelease ( Path );
+        }
+    }
+
+    return RCt;
+}   /* XFS_UserConfigDir_ZHR () */
+
+LIB_EXPORT
+rc_t CC
+XFS_UserAccessList_ZHR ( char ** AccessList, uint32_t ProjectId )
+{
+    rc_t RCt;
+    const char * Var;
+    const struct XFSPath * Path;
+
+    RCt = 0;
+    Var = NULL;
+    Path = NULL;
+
+    XFS_CSAN ( AccessList )
+    XFS_CAN ( AccessList )
+
+    Var = _UserHomeDir ();
+    if ( Var == NULL ) {
+        RCt = XFS_RC ( rcInvalid );
+    }
+    else {
+        if ( ProjectId == 0 ) {
+        }
+        RCt = ProjectId == 0
+                ?  XFSPathMake ( & Path, false, "%s/.ncbi/dbGap.acl", Var )
+                : XFSPathMake ( & Path, false, "%s/.ncbi/dbGap-%d.acl", Var, ProjectId )
+                ;
+        if ( RCt == 0 ) {
+            RCt = XFS_StrDup (
+                            XFSPathGet ( Path ) ,
+                            ( const char ** ) AccessList
+                            );
+            XFSPathRelease ( Path );
+        }
+    }
+
+    return RCt;
+}   /* XFS_UserAccessList_ZHR () */
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 

@@ -53,6 +53,8 @@
 
 #include <sysalloc.h>
 
+#define KART_FILES_NAME "kart-files"
+
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 /*))    XFSGapProject and XFSGapDepot
@@ -585,13 +587,14 @@ XFSGapKartfiles ( char ** Kartfiles )
     XFS_CSAN ( Kartfiles )
     XFS_CAN ( Kartfiles )
 
-    RCt = XFSGapUserConfigDir ( & UserConfigDir );
+    RCt = XFS_UserConfigDir_ZHR ( & UserConfigDir );
     if ( RCt == 0 ) {
         RCt= XFSPathMake (
                         & Path,
                         false,
-                        "%s/kart-files",
-                        UserConfigDir
+                        "%s/%s",
+                        UserConfigDir,
+                        KART_FILES_NAME
                         );
         if ( RCt == 0 ) {
             RCt = XFS_StrDup (
@@ -607,75 +610,6 @@ XFSGapKartfiles ( char ** Kartfiles )
 
     return RCt;
 }   /* XFSGapKartfiles () */
-
-static
-const char * CC
-_GapUserHomeDir ()
-{
-    const char * Ret = getenv ( "HOME" );
-    if ( Ret == NULL ) {
-        Ret = getenv ( "USERPROFILE" );
-    }
-
-    return Ret;
-}   /* _GapUserHomeDir () */
-
-LIB_EXPORT
-rc_t CC
-XFSGapUserHome ( char ** UserHome )
-{
-    rc_t RCt;
-    const char * Var;
-
-    RCt = 0;
-    Var = NULL;
-
-    XFS_CSAN ( UserHome )
-    XFS_CAN ( UserHome )
-
-    Var = _GapUserHomeDir ();
-    if ( Var != NULL ) {
-        RCt = XFS_StrDup ( Var, ( const char ** ) UserHome );
-    }
-    else {
-        RCt = XFS_RC ( rcInvalid );
-    }
-
-    return RCt;
-}   /* XFSGapUserHome () */
-
-LIB_EXPORT
-rc_t CC
-XFSGapUserConfigDir ( char ** UserConfigDir )
-{
-    rc_t RCt;
-    const char * Var;
-    const struct XFSPath * Path;
-
-    RCt = 0;
-    Var = NULL;
-    Path = NULL;
-
-    XFS_CSAN ( UserConfigDir )
-    XFS_CAN ( UserConfigDir )
-
-    Var = _GapUserHomeDir ();
-    if ( Var == NULL ) {
-        RCt = XFS_RC ( rcInvalid );
-    }
-    else {
-        RCt= XFSPathMake ( & Path, false, "%s/.ncbi", Var );
-        if ( RCt == 0 ) {
-            RCt = XFS_StrDup (
-                            XFSPathGet ( Path ) ,
-                            ( const char ** ) UserConfigDir
-                            );
-            XFSPathRelease ( Path );
-        }
-    }
-
-    return RCt;
-}   /* XFSGapUserConfigDir () */
 
 static
 rc_t CC

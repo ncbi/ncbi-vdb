@@ -49,7 +49,7 @@ extern "C" {
  *      
  *      XFSModelMake ( & TheModel );
  *      XFSTreeMake ( Model, & TheTree );
- *      XFSControlMake ( TheTree, & TheControl );
+ *      XFSControlMake ( & TheControl, TheTree );
  *          ... here some initialisation action, like arg settings
  *      XFSControlSetArg ( TheControl, Arg, Value );
  *      XFSStart ( TheControl, true/false );
@@ -68,8 +68,8 @@ struct XFSTree;
 /*  Init/Destroy XFSControl structure
  */
 XFS_EXTERN rc_t CC XFSControlMake(
-                            const struct XFSTree * Tree,
-                            struct XFSControl ** Control
+                            struct XFSControl ** Control,
+                            const struct XFSTree * Tree
                             );
 XFS_EXTERN rc_t CC XFSControlDispose( struct XFSControl * self );
 
@@ -147,7 +147,7 @@ XFS_EXTERN bool CC XFSControlIsDaemonize (
                     );
 
 /*  That method setup a label which will be shown in /etc/mtab entry
-    You may use NULL, and in that case label will be "XFS"
+ *  You may use NULL, and in that case label will be "XFS"
  */
 XFS_EXTERN rc_t CC XFSControlSetLabel(
                     struct XFSControl * self,

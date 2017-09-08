@@ -58,6 +58,8 @@ static const uint32_t _sFlavorOfGapKarts          = 14;
 static const uint32_t _sFlavorOfGapKart           = 15;
 static const uint32_t _sFlavorOfGapFile           = 16;
 static const uint32_t _sFlavorOfGapKartFiles      = 17;
+static const uint32_t _sFlavorOfAccessPanel       = 18;
+static const uint32_t _sFlavorOfAccessAgent       = 19;
 
 /*))    Methods related to all commonly used nodes
  ((*/
@@ -209,6 +211,12 @@ XFS_EXTERN rc_t CC XFSGapCacheNodeMake (
                             uint32_t ProjectId,     /* public if NULL */
                             const char * Perm       /* could be NULL */
                             );
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/* AccessPanel - implemented in accesspanel.c                        */
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+XFS_EXTERN rc_t CC XFSAccessPanelNodeMake ( struct XFSNode ** Node );
 
 #ifdef __cplusplus
 }

@@ -234,6 +234,11 @@ XFS_EXTERN rc_t CC XFSGapFileProvider (
                                 const struct XFSTeleport ** Teleport
                                 );
 
+#define ACCESS_PANEL_NAME               "access-panel"
+XFS_EXTERN rc_t CC XFSAccessPanelProvider (
+                                const struct XFSTeleport ** Teleport
+                                );
+
 static
 rc_t CC
 _TeleportInit ()
@@ -347,6 +352,14 @@ _TeleportInit ()
         RCt = _TeleportAdd (
                         GAP_FILE_NAME,
                         XFSGapFileProvider
+                        );
+        if ( RCt != 0 ) { 
+            break;
+        }
+
+        RCt = _TeleportAdd (
+                        ACCESS_PANEL_NAME,
+                        XFSAccessPanelProvider
                         );
         if ( RCt != 0 ) { 
             break;

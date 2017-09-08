@@ -52,6 +52,23 @@ XFS_EXTERN rc_t CC XFS_LoadConfig_ZHR (
                                     const struct KConfig ** Konfig
                                     );
 
+    /* Don't forget to free UserHome, cuz it is part of a system
+     */
+XFS_EXTERN rc_t CC XFS_UserHomeDir_ZHR ( char ** UserHome );
+
+    /* Don't forget to free UserConfig, cuz it is part of a system
+     */
+XFS_EXTERN rc_t CC XFS_UserConfigDir_ZHR ( char ** UserConfig );
+
+    /*
+     *  Quite simple : returns "XFS_UserConfigDir_ZHR()/dbGaP-####.acl"
+     *  or if ProjectId == 0 : "XFS_UserConfigDir_ZHR()/dbGaP.acl"
+     *  Don't forget to free AccessList, cuz it is part of a system
+     */
+XFS_EXTERN rc_t CC XFS_UserAccessList_ZHR (
+                                        char ** AccessList,
+                                        uint32_t ProjectId
+                                        );
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 

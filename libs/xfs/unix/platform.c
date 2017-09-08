@@ -36,6 +36,9 @@
 #include "xfs-priv.h"
 #include "schwarzschraube.h"
 
+#include <sys/types.h>  /* using geteuid () */
+#include <pwd.h>        /* using getpwuid () */
+#include <grp.h>        /* using getgrgid () */
 #include <stdlib.h>     /* using malloc() */
 #include <string.h>     /* using memset() */
 #include <unistd.h>     /* using STDOUT_FILENO, STDERR_FILENO */
@@ -363,3 +366,66 @@ XFSUnmountAndDestroy ( const char * MountPoint )
     fuse_unmount_compat22 ( MountPoint );
     return 0;
 }   /* XFSUnmountAndDestroy () */
+
+/*))    Access methods
+ ((*/
+LIB_EXPORT
+rc_t
+XFSOwnerUserName ( const char ** Name )
+{
+    rc_t RCt;
+    struct passwd * Pwd;
+    const char * Bf;
+
+    RCt = 0;
+    Pwd = NULL;
+    Bf = NULL;
+
+    XFS_CSAN ( Name )
+    XFS_CAN ( Name )
+
+    Pwd = getpwuid ( geteuid () );
+
+    if ( Pwd == NULL ) {
+        RCt = XFS_RC ( rcNotFound );
+    }
+    else {
+        RCt = XFS_StrDup ( Pwd -> pw_name, & Bf );
+        if ( RCt == 0 ) {
+            * Name = Bf;
+        }
+    }
+
+    return RCt;
+}   /* XFSOwnerUserName () */
+
+LIB_EXPORT
+rc_t
+XFSOwnerGroupName ( const char ** Name )
+{
+    rc_t RCt;
+    struct group * Grp;
+    const char * Bf;
+
+    RCt = 0;
+    Grp = NULL;
+    Bf = NULL;
+
+    XFS_CSAN ( Name )
+    XFS_CAN ( Name )
+
+    Grp = getgrgid ( getegid () );
+
+    if ( Grp == NULL ) {
+        RCt = XFS_RC ( rcNotFound );
+    }
+    else {
+        RCt = XFS_StrDup ( Grp -> gr_name, & Bf );
+        if ( RCt == 0 ) {
+            * Name = Bf;
+        }
+    }
+
+    return RCt;
+}   /* XFSOwnerGroupName () */
+

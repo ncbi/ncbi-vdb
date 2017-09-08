@@ -90,8 +90,8 @@ XFSControlStandardSelfCheck( const struct XFSControl * self )
 LIB_EXPORT
 rc_t CC
 XFSControlMake (
-            const struct XFSTree * Tree,
-            struct XFSControl ** Control
+                struct XFSControl ** Control,
+                const struct XFSTree * Tree
 )
 {
     rc_t RCt;
@@ -111,30 +111,30 @@ XFSControlMake (
         return XFS_RC ( rcExhausted );
     }
 
-    RCt = XFSOwpMake ( & ( TheControl -> Arguments ) );
     if ( RCt == 0 ) {
-
-        RCt = XFSControlPlatformInit ( TheControl );
+        RCt = XFSOwpMake ( & ( TheControl -> Arguments ) );
         if ( RCt == 0 ) {
 
-            RCt = XFSTreeDepotMake (
-                        ( const struct XFSTreeDepot ** )
-                                & ( TheControl -> TreeDepot )
-                        );
+            RCt = XFSControlPlatformInit ( TheControl );
             if ( RCt == 0 ) {
 
-                RCt = XFSTreeDepotSet ( TheControl -> TreeDepot, Tree );
+                RCt = XFSTreeDepotMake (
+                            ( const struct XFSTreeDepot ** )
+                                    & ( TheControl -> TreeDepot )
+                            );
                 if ( RCt == 0 ) {
 
-                    RCt = TheControl -> vt -> v1.init ( TheControl );
+                    RCt = XFSTreeDepotSet ( TheControl -> TreeDepot, Tree );
                     if ( RCt == 0 ) {
-                        * Control = TheControl;
+                        RCt = TheControl -> vt -> v1.init ( TheControl );
+                        if ( RCt == 0 ) {
+                            * Control = TheControl;
+                        }
                     }
                 }
             }
         }
     }
-
 
     if ( RCt != 0 ) {
         XFSControlDispose ( TheControl );
@@ -401,3 +401,4 @@ XFSVeryMainLoop ( void * Data )
 
     return TheControl -> vt -> v1.loop ( TheControl );
 }   /* XFSVeryMainLoop () */
+

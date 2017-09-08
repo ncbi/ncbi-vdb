@@ -220,17 +220,6 @@ XFS_EXTERN rc_t CC XFSGapKartfiles ( char ** Kartfiles );
      */
 XFS_EXTERN rc_t CC XFSGapPublicfiles ( char ** PublicFiles );
 
-/*)))   For those, who are lame. Apparently, there should be a
- |||    method in kfg/config.h for that ... but ...
-(((*/
-    /* Don't forget to free UserHome, cuz it is part of a system
-     */
-XFS_EXTERN rc_t CC XFSGapUserHome ( char ** UserHome );
-
-    /* Don't forget to free UserConfigDir, cuz it is part of a system
-     */
-XFS_EXTERN rc_t CC XFSGapUserConfigDir ( char ** UserConfigDir );
-
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/

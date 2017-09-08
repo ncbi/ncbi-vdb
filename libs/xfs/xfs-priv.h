@@ -37,6 +37,7 @@ extern "C" {
 /*  Forwards forewer
  */
 struct XFSTreeDepot;
+struct XFSAccess;
 
 union XFSControl_vt;
 struct XFSControlArgs;
@@ -77,6 +78,11 @@ struct XFSControl {
             BTW, prolly I need to use BSTree here, not sure.
          */
     struct XFSOwp * Arguments;
+
+        /*  That is for checking acces for user to whole or part
+            of rendered file tree.
+         */
+    const struct XFSAccess * Access;
 };
 
 /*
@@ -110,6 +116,14 @@ union XFSControl_vt {
 #define XFS_CONTROL_LABEL       "label"
 #define XFS_CONTROL_LOGFILE     "logfile"
 #define XFS_CONTROL_DAEMONIZE   "daemonize"
+
+/*))    Something outstanding
+ ((*/
+XFS_EXTERN bool CheckAccess (
+                            const char * User,
+                            const char * Grop,
+                            const char * Path
+                            );
 
 #ifdef __cplusplus
 }

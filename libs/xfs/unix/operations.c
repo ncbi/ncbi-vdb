@@ -55,7 +55,9 @@
 #include <xfs/editors.h>
 #include <xfs/perm.h>
 #include <xfs/path.h>
+#include <xfs/access.h>
 
+#include "xfs-priv.h"
 #include "schwarzschraube.h"
 
 #include <sysalloc.h>
@@ -64,9 +66,11 @@
 #include <unistd.h>
 
 #include <errno.h>
-#include <sys/types.h>
+#include <sys/types.h>  /* using geteuid () */
 #include <sys/stat.h>
 #include <sys/statvfs.h>
+#include <pwd.h>        /* using getpwuid () */
+#include <grp.h>        /* using getgrgid () */
 
 #include "operations.h"
 
@@ -117,9 +121,8 @@
 #define USE_XFS_FUSE_IOCTL        0     /* - */ /* Do not need */
 #define USE_XFS_FUSE_POLL         0     /* - */ /* Do not need */
 
-
 /*****************************************************
- * Something unusual
+ * Something unusual - I
  * NOTE: that procedure is getting presetted peer from
  *       fuse_context structure and context is valid
  *       only while operation call. So, do not use that
@@ -150,6 +153,55 @@ _FUSE_tree_depot ( const struct XFSTreeDepot ** Depot )
     return 0;
 }   /* _FUSE_tree_depot () */
 
+/*****************************************************
+ * Something unusual - II
+ * NOTE: that procedure is using presetted Control from
+ *       fuse_context structure and context is valid
+ *       only while operation call. So, do not use that
+ *       method withoud being harmed
+ *****************************************************/
+static
+bool
+_FUSE_approve ( const char * Path )
+{
+    struct fuse_context * TheContext;
+    struct passwd * Pwd;
+    struct group * Grp;
+
+    TheContext = NULL;
+    Pwd = NULL;
+    Grp = NULL;
+
+    if ( Path == NULL ) {
+        return false;
+    }
+
+    TheContext = fuse_get_context();
+    if ( TheContext == NULL ) {
+        LogErr (
+                klogErr,
+                XFS_RC ( rcNull ),
+                "ERROR: improper usage of 'fuse_get_context()'"
+                );
+        return true;
+    }
+
+        /* Majiik */
+    Pwd = getpwuid ( TheContext -> uid );
+    Grp = getgrgid ( TheContext -> gid );
+
+    if ( ! XFSAccessApprove ( Pwd -> pw_name, Grp -> gr_name, Path ) ) {
+            /*  It is not really error, but we should report it :LOL:
+             */
+        pLogMsg ( klogDebug, "ERROR(Fuse): User [$(user)] does not have right to path [$(path)]", "user=%s,path=%s", Pwd -> pw_name, Path );
+    }
+
+    return true;
+}   /* _FUSE_tree_approve () */
+
+/*****************************************************
+ * JOJOBA
+ *****************************************************/
 static
 rc_t
 _FUSE_make_v_path (
@@ -666,6 +718,12 @@ pLogMsg ( klogDebug, "GETATTR(Fuse,cont): [$(path)] [INVALID]", "path=%s", ThePa
     }
     memset ( TheStat, 0, sizeof ( struct stat ) );
 
+        /*)) That is standard for now
+         ((*/
+    if ( ! _FUSE_approve ( ThePath ) ) {
+        return EPERM * - 1;
+    }
+
     RCt = _FUSE_get_path_and_node ( ThePath, NULL, & Node, & Type );
     if ( RCt == 0 ) {
         if ( Type == kxfsNotFound ) {
@@ -760,6 +818,12 @@ XFS_FUSE_mkdir ( const char * ThePath, mode_t TheMode )
         return EINVAL * - 1;
     }
 
+        /*)) That is standard for now
+         ((*/
+    if ( ! _FUSE_approve ( ThePath ) ) {
+        return EPERM * - 1;
+    }
+
     RCt = _FUSE_get_parent_node ( ThePath, & Parent, NULL, & Child );
     if ( RCt == 0 ) {
         RCt = XFSNodeDirEditor ( Parent, & Editor );
@@ -795,6 +859,12 @@ XFS_FUSE_unlink ( const char * ThePath )
         return EINVAL * - 1;
     }
 
+        /*)) That is standard for now
+         ((*/
+    if ( ! _FUSE_approve ( ThePath ) ) {
+        return EPERM * - 1;
+    }
+
     RCt = _FUSE_delete_file_dir ( ThePath );
 
     return XFS_FUSE_rc_to_errno ( RCt ) * - 1;
@@ -817,6 +887,12 @@ XFS_FUSE_rmdir ( const char * ThePath )
 
     if ( ThePath == NULL ) {
         return EINVAL * - 1;
+    }
+
+        /*)) That is standard for now
+         ((*/
+    if ( ! _FUSE_approve ( ThePath ) ) {
+        return EPERM * - 1;
     }
 
     RCt = _FUSE_delete_file_dir ( ThePath );
@@ -862,6 +938,12 @@ XFS_FUSE_rename ( const char * OldPath, const char * NewPath )
 
     if ( OldPath == NULL || NewPath == NULL ) {
         return EINVAL * - 1;
+    }
+
+        /*)) That is standard for now
+         ((*/
+    if ( ! _FUSE_approve ( OldPath ) ) {
+        return EPERM * - 1;
     }
 
     RCt = _FUSE_get_parent_node ( OldPath, & OldDir, NULL, & OldName );
@@ -925,6 +1007,12 @@ XFS_FUSE_chmod ( const char * ThePath, mode_t TheMode )
         return EINVAL * - 1;
     }
 
+        /*)) That is standard for now
+         ((*/
+    if ( ! _FUSE_approve ( ThePath ) ) {
+        return EPERM * - 1;
+    }
+
     RCt = XFSPermToChar ( TheMode, Buf, sizeof ( Buf ) );
     if ( RCt == 0 ) {
         RCt = _FUSE_get_path_and_node ( ThePath, NULL, & Node, NULL );
@@ -978,6 +1066,12 @@ XFS_FUSE_truncate ( const char * ThePath, off_t TheSize )
         return EINVAL * - 1;
     }
 
+        /*)) That is standard for now
+         ((*/
+    if ( ! _FUSE_approve ( ThePath ) ) {
+        return EPERM * - 1;
+    }
+
     RCt = _FUSE_get_path_and_node ( ThePath, NULL, & Node, NULL );
     if ( RCt == 0 ) {
         RCt = XFSNodeFileEditor ( Node, & Editor );
@@ -1012,6 +1106,12 @@ XFS_FUSE_utime ( const char * ThePath, struct utimbuf * TheBuf )
 
     if ( ThePath == NULL ) {
         return EINVAL * - 1;
+    }
+
+        /*)) That is standard for now
+         ((*/
+    if ( ! _FUSE_approve ( ThePath ) ) {
+        return EPERM * - 1;
     }
 
     RCt = _FUSE_get_path_and_node ( ThePath, NULL, & Node, NULL );
@@ -1056,6 +1156,12 @@ XFS_FUSE_open ( const char * ThePath, struct fuse_file_info * TheInfo )
 
     if ( ThePath == NULL || TheInfo == NULL ) {
         return EINVAL * - 1;
+    }
+
+        /*)) That is standard for now
+         ((*/
+    if ( ! _FUSE_approve ( ThePath ) ) {
+        return EPERM * - 1;
     }
 
     if ( ( Flags & O_RDWR ) == O_RDWR ) {
@@ -1138,6 +1244,12 @@ XFS_FUSE_read (
         return EINVAL * - 1;
     }
 
+        /*)) That is standard for now
+         ((*/
+    if ( ! _FUSE_approve ( ThePath ) ) {
+        return EPERM * - 1;
+    }
+
     if ( Handle == NULL ) {
         return EBADF * - 1;
     }
@@ -1197,6 +1309,12 @@ XFS_FUSE_write (
         return EINVAL * - 1;
     }
 
+        /*)) That is standard for now
+         ((*/
+    if ( ! _FUSE_approve ( ThePath ) ) {
+        return EPERM * - 1;
+    }
+
     if ( Handle == NULL ) {
         return EBADF * - 1;
     }
@@ -1234,7 +1352,7 @@ XFS_FUSE_statfs (
             struct statvfs * TheFSStat
 )
 {
-    pLogMsg ( klogDebug, "STATFS(!): [$(path)]", "path=%d", ThePath );
+    pLogMsg ( klogDebug, "STATFS(!): [$(path)]", "path=%s", ThePath );
 
     return -EPERM;
 }   /* XFS_FUSE_statfs() */
@@ -1251,7 +1369,7 @@ XFS_FUSE_flush (
             struct fuse_file_info * TheFileInfo
 )
 {
-    pLogMsg ( klogDebug, "FLUSH(DUMMY): [$(path)] FI[$(info)]", "path=%d,info=%p", ThePath, TheFileInfo );
+    pLogMsg ( klogDebug, "FLUSH(DUMMY): [$(path)] FI[$(info)]", "path=%s,info=%p", ThePath, TheFileInfo );
 
     return 0;
 }   /* XFS_FUSE_flush() */
@@ -1279,10 +1397,16 @@ XFS_FUSE_release (
                         : ( const struct XFSHandle * ) TheFileInfo -> fh
                         ;
 
-    pLogMsg ( klogDebug, "RELEASE(Fuse): [$(path)] FI[$(info)] FH[$(handle)]", "path=%d,info=%p,handle=%p", ThePath, TheFileInfo, Handle );
+    pLogMsg ( klogDebug, "RELEASE(Fuse): [$(path)] FI[$(info)] FH[$(handle)]", "path=%s,info=%p,handle=%p", ThePath, TheFileInfo, Handle );
 
     if ( ThePath == NULL || TheFileInfo == NULL ) {
         return EINVAL * - 1;
+    }
+
+        /*)) That is standard for now
+         ((*/
+    if ( ! _FUSE_approve ( ThePath ) ) {
+        return EPERM * - 1;
     }
 
     if ( Handle != NULL ) {
@@ -1313,7 +1437,7 @@ XFS_FUSE_fsync (
             struct fuse_file_info * TheFileInfo
 )
 {
-    pLogMsg ( klogDebug, "FSYNC(DUMMY): [$(path)] FI[$(info)] DT[$(data)]", "path=%d,info=%p,data=%p", ThePath, TheFileInfo, DataSync );
+    pLogMsg ( klogDebug, "FSYNC(DUMMY): [$(path)] FI[$(info)] DT[$(data)]", "path=%s,info=%p,data=%p", ThePath, TheFileInfo, DataSync );
 	return 0;
 }   /* XFS_FUSE_fsync() */
 
@@ -1332,7 +1456,7 @@ XFS_FUSE_setxattr (
             int TheFlags
 )
 {
-    pLogMsg ( klogDebug, "SETXATTR(!): [$(path)]", "path=%d", ThePath );
+    pLogMsg ( klogDebug, "SETXATTR(!): [$(path)]", "path=%s", ThePath );
 
     return -EPERM;
 }   /* XFS_FUSE_setxattr() */
@@ -1351,7 +1475,7 @@ XFS_FUSE_getxattr (
             size_t TheValueSize
 )
 {
-    pLogMsg ( klogDebug, "GETXATTR(!): [$(path)]", "path=%d", ThePath );
+    pLogMsg ( klogDebug, "GETXATTR(!): [$(path)]", "path=%s", ThePath );
 
     return -EPERM;
 }   /* XFS_FUSE_getxattr() */
@@ -1369,7 +1493,7 @@ XFS_FUSE_listxattr (
             size_t TheListSize
 )
 {
-    pLogMsg ( klogDebug, "LISTXATTR(!): [$(path)]", "path=%d", ThePath );
+    pLogMsg ( klogDebug, "LISTXATTR(!): [$(path)]", "path=%s", ThePath );
 
     return -EPERM;
 }   /* XFS_FUSE_listxattr() */
@@ -1383,7 +1507,7 @@ static
 int
 XFS_FUSE_removexattr ( const char * ThePath, const char * TheName)
 {
-    pLogMsg ( klogDebug, "REMOVEXATTR(!): [$(path)]", "path=%d", ThePath );
+    pLogMsg ( klogDebug, "REMOVEXATTR(!): [$(path)]", "path=%s", ThePath );
 
     return -EPERM;
 }   /* XFS_FUSE_removexattr() */
@@ -1414,7 +1538,13 @@ XFS_FUSE_opendir (
         return EINVAL * - 1;
     }
 
-    pLogMsg ( klogDebug, "OPENDIR(Fuse): [$(path)] FI[$(info)] FL[$(flags)]", "path=%d,info=%p,flags=%d", ThePath, TheFileInfo, TheFileInfo -> flags );
+    pLogMsg ( klogDebug, "OPENDIR(Fuse): [$(path)] FI[$(info)] FL[$(flags)]", "path=%s,info=%p,flags=%d", ThePath, TheFileInfo, TheFileInfo -> flags );
+
+        /*)) That is standard for now
+         ((*/
+    if ( ! _FUSE_approve ( ThePath ) ) {
+        return EPERM * - 1;
+    }
 
     RCt = _FUSE_get_path_and_node ( ThePath, NULL, & Node, & Type );
     if ( RCt == 0 ) {
@@ -1484,7 +1614,7 @@ XFS_FUSE_readdir (
 
     Handle = ( const struct XFSHandle * ) TheFileInfo -> fh;
 
-    pLogMsg ( klogDebug, "READDIR(Fuse): [$(path)] FI[$(info)] FH[$(handle)]", "path=%d,info=%p,handle=%p", ThePath, TheFileInfo, ( void * ) Handle );
+    pLogMsg ( klogDebug, "READDIR(Fuse): [$(path)] FI[$(info)] FH[$(handle)]", "path=%s,info=%p,handle=%p", ThePath, TheFileInfo, ( void * ) Handle );
 
     if ( Handle != NULL ) {
         Node = XFSHandleNode ( Handle );
@@ -1564,7 +1694,7 @@ XFS_FUSE_releasedir (
 
     Handle = ( const struct XFSHandle * ) TheFileInfo -> fh;
 
-    pLogMsg ( klogDebug, "RELEASEDIR(Fuse): [$(path)] FI[$(info)] FH[$(handle)]", "path=%d,info=%p,handle=%p", ThePath, TheFileInfo, ( void * ) Handle );
+    pLogMsg ( klogDebug, "RELEASEDIR(Fuse): [$(path)] FI[$(info)] FH[$(handle)]", "path=%s,info=%p,handle=%p", ThePath, TheFileInfo, ( void * ) Handle );
 
     if ( Handle != NULL ) {
         RCt = XFSHandleRelease ( Handle );
@@ -1589,7 +1719,7 @@ XFS_FUSE_fsyncdir (
             struct fuse_file_info * TheFileInfo
 )
 {
-    pLogMsg ( klogDebug, "FSYNCDIR(!): [$(path)]", "path=%d", ThePath );
+    pLogMsg ( klogDebug, "FSYNCDIR(!): [$(path)]", "path=%s", ThePath );
 
     return -EPERM;
 }   /* XFS_FUSE_fsyncdir() */
@@ -1783,6 +1913,7 @@ XFS_FUSE_create (
         free ( Child );
     }
 
+pLogMsg ( klogDebug, " R-CREATE(Fuse,cont): [$(path)] rc[$(rc)]", "path=%s,rc=%d", ThePath, RCt );
     pLogMsg ( klogDebug, "CREATE(Fuse,cont): [$(path)] FI[$(info)] FH[$(handle)] MD[$(mode)]", "path=%s,info=%p,handle=%p,mode=%d", ThePath, TheFileInfo, Handle, Mode );
 
     return XFS_FUSE_rc_to_errno ( RCt ) * - 1;
