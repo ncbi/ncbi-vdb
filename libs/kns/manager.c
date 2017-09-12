@@ -724,11 +724,11 @@ LIB_EXPORT rc_t CC KNSManagerSetHTTPTimeouts ( KNSManager *self,
         return RC ( rcNS, rcMgr, rcUpdating, rcSelf, rcNull );
 
     /* limit values */
-    if ( readMillis < 0 || readMillis > MAX_HTTP_READ_LIMIT )
-        readMillis = MAX_HTTP_READ_LIMIT;
+    if ( readMillis < 0 || readMillis > MAX_CONN_READ_LIMIT )
+        readMillis = MAX_CONN_READ_LIMIT;
 
-    if ( writeMillis < 0 || writeMillis > MAX_HTTP_WRITE_LIMIT )
-        writeMillis = MAX_HTTP_WRITE_LIMIT;
+    if ( writeMillis < 0 || writeMillis > MAX_CONN_WRITE_LIMIT )
+        writeMillis = MAX_CONN_WRITE_LIMIT;
 
     self -> http_read_timeout = readMillis;
     self -> http_write_timeout = writeMillis;
@@ -736,6 +736,60 @@ LIB_EXPORT rc_t CC KNSManagerSetHTTPTimeouts ( KNSManager *self,
     return 0;
 }
 
+
+static
+void KNSManagerTimeoutInit ( KNSManager * self, const KConfig * kfg )
+{
+    rc_t rc;
+    const KConfigNode * timeouts;
+
+    assert ( self != NULL );
+    assert ( kfg != NULL );
+
+    rc = KConfigOpenNodeRead ( kfg, & timeouts, "/http/timeouts" );
+    if ( rc == 0 )
+    {
+        int64_t mS;
+        const KConfigNode * value;
+
+        int32_t readMillis = self -> http_read_timeout;
+        int32_t writeMillis = self -> http_write_timeout;
+
+        rc = KConfigNodeOpenNodeRead ( timeouts, & value, "http_read_timeout" );
+        if ( rc == 0 )
+        {
+            rc = KConfigNodeReadI64 ( value, & mS );
+            if ( rc == 0 )
+            {
+                if ( mS >= 0 && mS <= MAX_CONN_READ_LIMIT )
+                    readMillis = ( int32_t ) mS;
+            }
+
+            KConfigNodeRelease ( value );
+        }
+        
+        rc = KConfigNodeOpenNodeRead ( timeouts, & value, "write_read_timeout" );
+        if ( rc == 0 )
+        {
+            rc = KConfigNodeReadI64 ( value, & mS );
+            if ( rc == 0 )
+            {
+                if ( mS >= 0 && mS <= MAX_CONN_WRITE_LIMIT )
+                    writeMillis = ( int32_t ) mS;
+            }
+
+            KConfigNodeRelease ( value );
+        }
+        
+        KConfigNodeRelease ( timeouts );
+
+        if ( readMillis != self -> http_read_timeout ||
+             writeMillis != self -> http_write_timeout )
+        {
+            KNSManagerSetHTTPTimeouts ( self, readMillis, writeMillis );
+        }
+    }
+}
 
 /* GetHTTPProxyPath
  *  returns path to HTTP proxy server ( if set ) or NULL.
@@ -1143,7 +1197,8 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
                     ver_t version = RELEASE_VERS;
                     KNSManagerSetUserAgent ( mgr, PKGNAMESTR " ncbi-vdb.%V", version );
                 }
-
+                
+                KNSManagerTimeoutInit ( mgr, kfg );
                 rc = HttpRetrySpecsInit ( & mgr -> retry_specs, kfg );
                 if ( rc == 0 )
                 {
