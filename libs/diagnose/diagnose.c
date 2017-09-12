@@ -124,11 +124,17 @@ struct KDiagnoseTest {
     const struct KDiagnoseTest * firstChild;
     struct KDiagnoseTest * crntChild;
     char * name;
+    int level;
+    char * number;
+    char * message;
+    EKDiagTestState state;
 };
 
 static void KDiagnoseTestWhack ( KDiagnoseTest * self ) {
     assert ( self );
     free ( self -> name );
+    free ( self -> number );
+    free ( self -> message );
     memset ( self, 0, sizeof * self );
     free ( self );
 }
@@ -355,6 +361,7 @@ typedef struct {
     int total;
     int failures;
     KDiagnoseTest * crnt;
+    KDiagnoseTest * root;
     Vector * tests;
     Vector * errors;
 
@@ -479,9 +486,14 @@ static rc_t STestVStart ( STest * self, bool checking,
     else
         ++ self -> level;
 
+    test -> level = self -> level;
+    test -> state = eKDTS_Started;
+
     if ( self -> crnt != NULL ) {
-        if ( next )
+        if ( next ) {
             self -> crnt -> next = test;
+            test -> parent = self -> crnt -> parent;
+        }
         else {
             if ( self -> crnt -> firstChild == NULL )
                 self -> crnt -> firstChild = test;
@@ -491,9 +503,11 @@ static rc_t STestVStart ( STest * self, bool checking,
                 child -> nextChild = test;
             }
             self -> crnt -> crntChild = test;
+            test -> parent = self -> crnt;
         }
-        test -> parent = self -> crnt;
     }
+    else
+        self -> root = test;
     self -> crnt = test;
     rc = VectorAppend ( self -> tests, NULL, test );
     if ( rc != 0 )
@@ -515,12 +529,20 @@ const char*c=self->msg.base;
 #endif
     if ( rc != 0 )
         LogOut ( KVERBOSITY_ERROR, 0, "CANNOT PRINT: %R\n", rc );
-    else 
+    else {
         for ( i = 1; rc == 0 && i <= self -> level; ++ i ) {
             rc = KDataBufferPrintf ( & self -> msg, ".%d", self -> n [ i ] );
             if ( rc != 0 )
                 LogOut ( KVERBOSITY_ERROR, 0, "CANNOT PRINT: %R\n", rc );
         }
+        assert ( self -> msg . base && self -> msg . elem_count > 2 );
+        test -> number = string_dup_measure ( ( char * ) self -> msg . base + 2,
+                                              NULL );
+        if ( test -> number == NULL )
+            return RC ( rcRuntime,
+                        rcData, rcAllocating, rcMemory, rcExhausted );
+
+    }
     if ( rc == 0 )
         rc = KDataBufferPrintf ( & self -> msg, " %s ", b );
         if ( rc != 0 )
@@ -590,6 +612,7 @@ rc=0;
     bool failedWhileSilent = self -> failedWhileSilent;
     bool print = false;
     char b [ 512 ] = "";
+    size_t num_writ = 0;
 
     assert ( self );
 
@@ -610,10 +633,28 @@ rc=0;
 #ifdef DEPURAR
 const char*c=self->msg.base;
 #endif
-    rc = string_vprintf ( b, sizeof b, NULL, fmt, args );
+    rc = string_vprintf ( b, sizeof b, & num_writ, fmt, args );
     if ( rc != 0 ) {
         LogOut ( KVERBOSITY_ERROR, 0, "CANNOT PRINT: %R", rc );
         return rc;
+    }
+
+    if ( self -> crnt -> message == NULL )
+        self -> crnt -> message = string_dup_measure ( b, NULL );
+    else {
+        size_t m = string_measure ( self -> crnt -> message, NULL);
+        size_t s = m + num_writ + 1;
+        char * tmp = realloc ( self -> crnt -> message, s );
+        if ( tmp == NULL )
+            return RC ( rcRuntime,
+                        rcData, rcAllocating, rcMemory, rcExhausted );
+        self -> crnt -> message = tmp;
+        rc = string_printf ( self -> crnt -> message + m, s, NULL, b );
+        assert ( rc == 0 );
+    }
+    if ( ok == eOK ) {
+        free ( self -> crnt -> message );
+        self -> crnt -> message = string_dup_measure ( "OK", NULL );
     }
 
     if ( ok == eEndFAIL || ok == eMSG ) {
@@ -649,46 +690,52 @@ const char*c=self->msg.base;
                 self -> msg . elem_count = 0;
             }
         }
-        return rc;
     }
-
-    print = self -> level < self -> verbosity || failedWhileSilent;
-    if ( ok == eFAIL || ok == eOK || ok == eDONE ) {
-        if ( print ) {
-            int i = 0;
-            rc = LogOut ( self -> level, 0, "< %d", self -> n [ 0 ] );
-            for ( i = 1; i <= self -> level; ++ i )
-                rc = LogOut ( self -> level, 0, ".%d", self -> n [ i ] );
-            rc = LogOut ( self -> level, 0, " " );
+    else {
+        print = self -> level < self -> verbosity || failedWhileSilent;
+        if ( ok == eFAIL || ok == eOK || ok == eDONE ) {
+            if ( print ) {
+                int i = 0;
+                rc = LogOut ( self -> level, 0, "< %d", self -> n [ 0 ] );
+                for ( i = 1; i <= self -> level; ++ i )
+                    rc = LogOut ( self -> level, 0, ".%d", self -> n [ i ] );
+                rc = LogOut ( self -> level, 0, " " );
+            }
         }
-    }
-    if ( print ||
-            ( self -> level == self -> verbosity &&
-              ok != eFAIL && ok != eOK ) )
-    {
-        rc = LogOut ( self -> level, 0, b );
-    }
-
-    if ( print )
-        switch ( ok ) {
-            case eFAIL: rc = LogOut ( self -> level, 0, ": FAILURE\n" ); break;
-            case eOK  : rc = LogOut ( self -> level, 0, ": OK\n"      ); break;
-            case eEndFAIL:
-            case eEndOK :
-            case eDONE: rc = LogOut ( self -> level, 0, "\n"      ); break;
-            default   :                               break;
-        }
-    else if ( self -> level == self -> verbosity )
-        switch ( ok ) {
-            case eFAIL: rc = LogOut ( self -> level, 0, "FAILURE\n" ); break;
-            case eOK  : rc = LogOut ( self -> level, 0, "OK\n"      ); break;
-            case eEndFAIL:
-            case eEndOK :
-            case eDONE: rc = LogOut ( self -> level, 0, "\n"      ); break;
-            default   :                             break;
+        if ( print ||
+                ( self -> level == self -> verbosity &&
+                  ok != eFAIL && ok != eOK ) )
+        {
+            rc = LogOut ( self -> level, 0, b );
         }
 
-    self -> failedWhileSilent = false;
+        if ( print )
+            switch ( ok ) {
+                case eFAIL: rc = LogOut ( self -> level, 0, ": FAILURE\n" );
+                            break;
+                case eOK  : rc = LogOut ( self -> level, 0, ": OK\n"      );
+                            break;
+                case eEndFAIL:
+                case eEndOK :
+                case eDONE: rc = LogOut ( self -> level, 0, "\n"      );
+                            break;
+                default   : break;
+            }
+        else if ( self -> level == self -> verbosity )
+            switch ( ok ) {
+                case eFAIL: rc = LogOut ( self -> level, 0, "FAILURE\n" );
+                            break;
+                case eOK  : rc = LogOut ( self -> level, 0, "OK\n"      );
+                            break;
+                case eEndFAIL:
+                case eEndOK :
+                case eDONE: rc = LogOut ( self -> level, 0, "\n"      );
+                            break;
+                default   : break;
+            }
+
+        self -> failedWhileSilent = false;
+    }
 
     if ( CALLBACK && ok != eMSG ) {
         EKDiagTestState state = eKDTS_Succeed;
@@ -698,6 +745,7 @@ const char*c=self->msg.base;
             case eFAIL : state = eKDTS_Failed ; break;
             default    : state = eKDTS_Failed ; break;
         }
+        self -> crnt -> state = state;
         CALLBACK ( state, self -> crnt );
     }
 
@@ -1465,6 +1513,7 @@ static rc_t TestAbuse ( STest * self, Abuse * test,
             RELEASE ( KHttpResult, rslt );
             RELEASE ( KHttpRequest, req );
             * abuse = true;
+            KDataBufferWhack ( & buffer );
             return rc;
         }
         ++ i;
