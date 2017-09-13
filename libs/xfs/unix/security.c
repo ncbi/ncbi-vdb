@@ -22,3 +22,10 @@
  *
 ===========================================================================*/
 
+#define MY_TEL int
+
+int
+that_method_needed_to_avoid_warnings_in_gcc_ver_4_33_and_higher_lol()
+{
+    return (MY_TEL)2402747860;
+}

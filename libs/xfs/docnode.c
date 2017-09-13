@@ -30,11 +30,11 @@
 
 #include <kfs/file.h>
 
-#include <xfs/node.h>
 #include <xfs/editors.h>
 #include <xfs/perm.h>
 #include <xfs/doc.h>
 
+#include "node-dpf.h"
 #include "schwarzschraube.h"
 #include "common.h"
 
@@ -50,11 +50,9 @@
  |||
 (((*/
 struct XFSDocNode {
-    struct XFSNode node;
+    struct XFSNodeDPF node;
 
     const struct XFSDoc * doc;
-    const char * perm;
-    uint32_t flavor;
 };
 
 struct XFSDocFileEditor {
@@ -76,9 +74,6 @@ struct XFSDocFileEditor {
  +++    DocNode virtual table is Living here :lol:
  |||
 (((*/
-static rc_t CC _DocNodeFlavor_v1 (
-                                const struct XFSNode * self
-                                );
 static rc_t CC _DocNodeDispose_v1 (
                                 const struct XFSNode * self
                                 );
@@ -104,7 +99,7 @@ static rc_t CC _DocNodeDescribe_v1 (
 
 static const struct XFSNode_vt_v1 _sDocNodeVT_v1 = {
                                         1, 1,   /* nin naj */
-                                        _DocNodeFlavor_v1,
+                                        XFSNodeDPF_vt_flavor,
                                         _DocNodeDispose_v1,
                                         _DocNodeFindNode_v1,
                                         NULL,   /* NO DIR */
@@ -142,72 +137,53 @@ XFSDocNodeMakeWithFlavor (
 )
 {
     rc_t RCt;
-    struct XFSDocNode * TheNode;
+    struct XFSNode * xNode;
 
     RCt = 0;
-    TheNode = NULL;
+    xNode = NULL;
 
-    if ( Node != NULL ) {
-        * Node = NULL;
-    }
+    XFS_CSAN ( Node )
+    XFS_CAN ( Node )
+    XFS_CAN ( Name )
+    XFS_CAN ( Doc )
 
-    if ( Node == NULL || Name == NULL || Doc == NULL ) {
-        return XFS_RC ( rcNull );
-    }
 
-    TheNode = calloc ( 1, sizeof ( struct XFSDocNode ) );
-    if ( TheNode == NULL ) {
+    xNode = calloc ( 1, sizeof ( struct XFSDocNode ) );
+    if ( xNode == NULL ) {
         RCt = XFS_RC ( rcExhausted );
     }
     else {
         RCt = XFSNodeInitVT (
-                        & ( TheNode -> node),
+                        xNode,
                         Name,
                         ( const union XFSNode_vt * ) & _sDocNodeVT_v1
                         );
         if ( RCt == 0 ) {
-            if ( Perm != NULL ) {
-                RCt = XFS_StrDup ( Perm, & ( TheNode -> perm ) );
-            }
-
+            RCt = XFSNodeDPF_Init ( xNode, Perm, 0, Flavor );
             if ( RCt == 0 ) {
                 RCt = XFSDocAddRef ( Doc );
                 if ( RCt == 0 ) {
-                    TheNode -> doc = Doc;
+                    ( ( struct XFSDocNode * ) xNode ) -> doc = Doc;
 
-                    TheNode -> flavor = Flavor;
-
-                    * Node = & ( TheNode -> node );
+                    * Node = xNode;
                 }
             }
         }
     }
 
     if ( RCt != 0 ) {
-        if ( TheNode != NULL ) {
-            XFSNodeDispose ( & ( TheNode -> node ) );
-            TheNode = NULL;
+        if ( xNode != NULL ) {
+            XFSNodeDispose ( xNode );
+            xNode = NULL;
         }
     }
 
 /*
-pLogMsg ( klogDebug, "XFSDocNodeMake ND[$(node)] NM[$(name)] Doc[$(doc)]", "node=%p,name=%s,doc=%s", ( void * ) TheNode, Name, Doc );
+pLogMsg ( klogDebug, "XFSDocNodeMake ND[$(node)] NM[$(name)] Doc[$(doc)]", "node=%p,name=%s,doc=%s", ( void * ) xNode, Name, Doc );
 */
 
     return RCt;
 }   /* XFSDocNodeMakeWithFlavor () */
-
-uint32_t CC
-_DocNodeFlavor_v1 ( const struct XFSNode * self )
-{
-    const struct XFSDocNode * Node = ( const struct XFSDocNode * ) self;
-
-    if ( Node != NULL ) {
-        return Node -> flavor;
-    }
-
-    return _sFlavorLess;
-}   /* _DocNodeFlavor_v1 () */
 
 static
 rc_t CC
@@ -219,19 +195,16 @@ XFSDocNodeDispose ( const struct XFSDocNode * self )
 pLogMsg ( klogDebug, "XFSDocNodeDispose ( $(node) ) [$(doc)]", "node=%p,doc=%p", ( void * ) Node, ( void * ) Node -> doc );
 */
 
-    if ( Node == 0 ) {
+    if ( self == 0 ) {
         return 0;
-    }
-
-    if ( Node -> perm != NULL ) {
-        free ( ( char * ) Node -> perm );
-        Node -> perm = NULL;
     }
 
     if ( Node -> doc != NULL ) {
         XFSDocRelease ( Node -> doc );
         Node -> doc = NULL;
     }
+
+    XFSNodeDPF_Dispose ( ( struct XFSNode * ) Node );
 
     free ( Node );
 
@@ -324,9 +297,7 @@ _DocFile_open_v1 (
     File = NULL;
     RCt = 0;
 
-    if ( self == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( self )
 
     Node = ( const struct XFSDocNode * ) XFSEditorNode (
                                                 & ( self -> Papahen )
@@ -340,7 +311,7 @@ _DocFile_open_v1 (
     }
 
     RCt = XFSDocFileMake (
-                        XFSNodeName ( & ( Node -> node ) ),
+                        XFSNodeName ( ( struct XFSNode * ) Node ),
                         Node -> doc,
                         & File
                         );
@@ -361,10 +332,7 @@ _DocFile_close_v1 ( const struct XFSFileEditor * self )
     Editor = NULL;
     RCt = 0;
 
-    if ( self == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
+    XFS_CAN ( self )
 
     Editor = ( struct XFSDocFileEditor * ) self;
 
@@ -393,9 +361,7 @@ _DocFile_read_v1 (
     Editor = NULL;
     RCt = 0;
 
-    if ( self == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( self )
 
     Editor = ( struct XFSDocFileEditor * ) self;
 
@@ -431,10 +397,9 @@ _DocFile_size_v1 (
     TempSize = 0;
     RCt = 0;
 
-    if ( Size == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-    * Size = 0;
+    XFS_CSA ( Size, 0 )
+    XFS_CAN ( self )
+    XFS_CAN ( Size )
 
     Node = ( const struct XFSDocNode * ) XFSEditorNode (
                                                 & ( self -> Papahen )
@@ -470,11 +435,9 @@ _DocNodeFile_v1 (
     FileEditor = NULL;
     Editor = NULL;
 
-    if ( self == NULL || File == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    * File = NULL;
+    XFS_CSAN ( File )
+    XFS_CAN ( self )
+    XFS_CAN ( File )
 
     FileEditor = calloc ( 1, sizeof ( struct XFSDocFileEditor ) );
     if ( FileEditor == NULL ) { 
@@ -527,52 +490,6 @@ _DocAttr_dispose_v1 ( const struct XFSEditor * self )
     return 0;
 }   /* _DocAttr_dispose_v1 () */
 
-/*))    Something unusual. Will check-initialize NativeDir and Node
- //     NativeDir and Node could be NULL
-((*/
-static
-rc_t CC
-_DocAttr_init_check_v1 (
-                    const struct XFSAttrEditor * self,
-                    const struct XFSDocNode ** Node
-
-)
-{
-    rc_t RCt;
-    const struct XFSDocNode * RetNode;
-
-    RCt = 0;
-    RetNode = NULL;
-
-    if ( Node != NULL ) {
-        * Node = NULL;
-    }
-
-    if ( self == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    RetNode = ( const struct XFSDocNode * ) XFSEditorNode (
-                                                & ( self -> Papahen )
-                                                );
-
-    if ( RetNode == NULL ) {
-        return XFS_RC ( rcInvalid );
-    }
-
-    if ( RetNode -> doc == NULL ) {
-        return XFS_RC ( rcInvalid );
-    }
-
-    if ( RCt == 0 ) {
-        if ( Node != NULL ) {
-            * Node = RetNode;
-        }
-    }
-
-    return RCt;
-}   /* _DocAttr_init_check_v1 () */
-
 static
 rc_t CC
 _DocAttr_permissions_v1 (
@@ -580,56 +497,22 @@ _DocAttr_permissions_v1 (
                         const char ** Permissions
 )
 {
-    const struct XFSDocNode * Node;
-    rc_t RCt;
+    rc_t RCt = 0;
 
-    Node = NULL;
-    RCt = 0;
+    XFS_CSAN ( Permissions )
+    XFS_CAN ( self )
+    XFS_CAN ( Permissions )
 
-    if ( Permissions == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-    * Permissions = NULL;
-
-    RCt = _DocAttr_init_check_v1 ( self, & Node );
-    if ( RCt == 0 ) {
-        if ( Node -> perm != NULL ) {
-            * Permissions = Node -> perm;
-        }
-        else {
-            * Permissions = XFSPermRODefNodeChar ();
-        }
+    RCt = XFSNodeDPF_Permissions (
+                            XFSEditorNode ( & ( self -> Papahen ) ),
+                            Permissions
+                            );
+    if ( * Permissions == NULL ) {
+        * Permissions = XFSPermRODefNodeChar ();
     }
 
     return RCt;
 }   /* _DocAttr_permissions_v1 () */
-
-static
-rc_t CC
-_DocAttr_date_v1 (
-                        const struct XFSAttrEditor * self,
-                        KTime_t * Time
-)
-{
-    const struct XFSDocNode * Node;
-    rc_t RCt;
-
-    Node = NULL;
-    RCt = 0;
-
-    if ( Time == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-    * Time = 0;
-
-    RCt = _DocAttr_init_check_v1 ( self, & Node );
-    if ( RCt == 0 ) {
-            /* TODO IMPORTANT - make time !!! */
-        * Time = 0;
-    }
-
-    return RCt;
-}   /* _DocAttr_date_v1 () */
 
 static
 rc_t CC
@@ -680,9 +563,9 @@ _DocNodeAttr_v1 (
 
     if ( RCt == 0 ) {
         Editor -> permissions = _DocAttr_permissions_v1;
-        Editor -> set_permissions = NULL;
-        Editor -> date = _DocAttr_date_v1;
-        Editor -> set_date = NULL;
+        Editor -> set_permissions = XFSNodeDPF_vt_set_permissions;
+        Editor -> date = XFSNodeDPF_vt_date;
+        Editor -> set_date = XFSNodeDPF_vt_set_date;
         Editor -> type = _DocAttr_type_v1;
 
         * Attr = Editor;

@@ -429,3 +429,12 @@ XFSOwnerGroupName ( const char ** Name )
     return RCt;
 }   /* XFSOwnerGroupName () */
 
+LIB_EXPORT
+bool
+XFSDoesUserExist ( const char * Name )
+{
+    return Name == NULL
+                ? false
+                : ( getpwnam ( Name ) != NULL ) 
+                ;
+}   /* XFSDoesUserExist () */

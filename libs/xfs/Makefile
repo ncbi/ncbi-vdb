@@ -96,6 +96,7 @@ XFS_SRC = \
     model    \
     tree    \
     node    \
+    node-dpf    \
     path    \
     perm    \
     editors \

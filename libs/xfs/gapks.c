@@ -403,6 +403,21 @@ _GapKartsNodeAttr_date_v1 (
 
 static
 rc_t CC
+_GapKartsNodeAttr_set_date_v1 (
+                            const struct XFSAttrEditor * self,
+                            KTime_t Time
+)
+{
+    XFS_CAN ( self )
+    XFS_CAN ( XFSEditorNode ( & ( self -> Papahen ) ) );
+
+    XFSGapKartDepotRefresh ();
+
+    return 0;
+}   /* _GapKartsNodeAttr_set_date_v1 () */
+
+static
+rc_t CC
 _GapKartsNodeAttr_type_v1 (
                             const struct XFSAttrEditor * self,
                             XFSNType * Type
@@ -449,6 +464,7 @@ _GapKartsNodeAttr_v1 (
     if ( RCt == 0 ) {
         Editor -> permissions = _GapKartsNodeAttr_permissions_v1;
         Editor -> date = _GapKartsNodeAttr_date_v1;
+        Editor -> set_date = _GapKartsNodeAttr_set_date_v1;
         Editor -> type = _GapKartsNodeAttr_type_v1;
 
         * Attr = Editor;

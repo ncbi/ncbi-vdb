@@ -27,7 +27,7 @@
 #ifndef _h_contnode_
 #define _h_contnode_
 
-#include <xfs/xfs-defs.h>
+#include "node-dpf.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,14 +48,11 @@ struct XFSContNode;
 typedef rc_t ( CC * _tContNodeDisposer ) ( struct XFSContNode * self );
 
 struct XFSContNode {
-    struct XFSNode node;
+    struct XFSNodeDPF node;
 
     _tContNodeDisposer disposer;
 
     struct XFSNodeContainer * container;
-
-    const char * security;
-    uint32_t flavor;
 };
 
 XFS_EXTERN rc_t CC XFSContNodeInit (

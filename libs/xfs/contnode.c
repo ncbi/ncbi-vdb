@@ -58,9 +58,6 @@
  +++    Simple Container virtual table is Living here :lol:
  |||
 (((*/
-static rc_t CC _ContNodeFlavor_v1 (
-                                const struct XFSNode * self
-                                );
 static rc_t CC _ContNodeDispose_v1 (
                                 const struct XFSNode * self
                                 );
@@ -86,7 +83,7 @@ static rc_t CC _ContNodeDescribe_v1 (
 
 static const struct XFSNode_vt_v1 _sContNodeVT_v1 = {
                                         1, 1,   /* nin naj */
-                                        _ContNodeFlavor_v1,
+                                        XFSNodeDPF_vt_flavor,
                                         _ContNodeDispose_v1,
                                         _ContNodeFindNode_v1,
                                         _ContNodeDir_v1,
@@ -114,10 +111,7 @@ pLogMsg ( klogDebug, "_ContNodeDispose ( $(container) )", "container=0x%p", ( vo
         Container -> container = NULL;
     }
 
-    if ( Container -> security != NULL ) {
-        free ( ( char * ) Container -> security );
-        Container -> security = NULL;
-    }
+    XFSNodeDPF_Dispose ( ( const struct XFSNode * ) self );
 
     if ( Container -> disposer != NULL ) {
         Container -> disposer ( Container );
@@ -134,12 +128,6 @@ pLogMsg ( klogDebug, "_ContNodeDispose ( $(container) )", "container=0x%p", ( vo
  +++    Here we are creating and disposing that node
  |||
 (((*/
-
-uint32_t CC
-_ContNodeFlavor_v1 ( const struct XFSNode * self )
-{
-    return ( ( const struct XFSContNode * ) self ) -> flavor;
-}   /* _ContNodeFlavor_v1 () */
 
 rc_t CC
 _ContNodeDispose_v1 ( const struct XFSNode * self )
@@ -258,13 +246,10 @@ _ContNodeDir_find_v1 (
 {
     struct XFSContNode * Cont = NULL;
 
-    if ( Node != NULL ) {
-        * Node = NULL;
-    }
-
-    if ( self == NULL || Name == NULL || Node == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( Node )
+    XFS_CAN ( self )
+    XFS_CAN ( Name )
+    XFS_CAN ( Node )
 
     Cont = ( struct XFSContNode * ) ( self -> Papahen ) . Node;
     if ( Cont == NULL ) {
@@ -282,13 +267,9 @@ _ContNodeDir_list_v1 (
 {
     struct XFSContNode * Cont = NULL;
 
-    if ( List != NULL ) {
-        * List = NULL;
-    }
-
-    if ( self == NULL || List == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( List )
+    XFS_CAN ( self )
+    XFS_CAN ( List )
 
     Cont = ( struct XFSContNode * ) ( self -> Papahen ) . Node;
     if ( Cont == NULL ) {
@@ -310,13 +291,9 @@ _ContNodeDir_v1 (
     RCt = 0;
     Editor = NULL;
 
-    if ( Dir != NULL ) {
-        * Dir = NULL;
-    }
-
-    if ( self == NULL || Dir == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( Dir )
+    XFS_CAN ( self )
+    XFS_CAN ( Dir )
 
     Editor = calloc ( 1, sizeof ( struct XFSDirEditor ) );
     if ( Editor == NULL ) {
@@ -373,51 +350,24 @@ _ContNodeAttr_permissions_v1 (
                             const char ** Permissions
                             )
 {
-    const struct XFSNode * Node = NULL;
+    rc_t RCt = 0;
 
-    if ( Permissions != NULL ) {
-        * Permissions = NULL;
+    XFS_CSAN ( Permissions )
+    XFS_CAN ( self )
+    XFS_CAN ( Permissions )
+
+    RCt = XFSNodeDPF_Permissions (
+                            XFSEditorNode ( & ( self -> Papahen ) ),
+                            Permissions
+                            );
+    if ( RCt == 0 ) {
+	    if ( * Permissions == NULL ) {
+		    * Permissions = XFSPermRODefContChar ();
+        }
     }
 
-    if ( self == NULL || Permissions == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    Node = XFSEditorNode ( & ( self -> Papahen ) );
-    if ( Node == NULL ) {
-        return XFS_RC ( rcInvalid );
-    }
-
-    * Permissions = ( ( struct XFSContNode * ) Node ) -> security;
-
-	if ( * Permissions == NULL ) {
-		* Permissions = XFSPermRODefContChar ();
-	}
-
-    return 0;
+    return RCt;
 }   /* _ContNodeAttr_permisiions_v1 () */
-
-static
-rc_t CC
-_ContNodeAttr_date_v1 (
-                            const struct XFSAttrEditor * self,
-                            KTime_t * Time
-)
-{
-    if ( Time != NULL ) {
-        * Time = 0;
-    }
-
-    if ( self == NULL || Time == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    if ( XFSEditorNode ( & ( self -> Papahen ) ) == NULL ) {
-        return XFS_RC ( rcInvalid );
-    }
-
-    return 0;
-}   /* _ContNodeAttr_date_v1 () */
 
 static
 rc_t CC
@@ -426,13 +376,9 @@ _ContNodeAttr_type_v1 (
                             XFSNType * Type
 )
 {
-    if ( Type != NULL ) {
-        * Type = kxfsNotFound;
-    }
-
-    if ( self == NULL || Type == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSA ( Type, kxfsNotFound )
+    XFS_CAN ( self )
+    XFS_CAN ( Type )
 
     if ( XFSEditorNode ( & ( self -> Papahen ) ) == NULL ) {
         return XFS_RC ( rcInvalid );
@@ -454,13 +400,9 @@ _ContNodeAttr_v1 (
 
     RCt = 0;
 
-    if ( Attr != NULL ) {
-        * Attr = NULL;
-    }
-
-    if ( self == NULL || Attr == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( Attr )
+    XFS_CAN ( self )
+    XFS_CAN ( Attr )
 
     Editor = calloc ( 1, sizeof ( struct XFSAttrEditor ) );
     if ( Editor == NULL ) {
@@ -474,7 +416,8 @@ _ContNodeAttr_v1 (
                         );
     if ( RCt == 0 ) {
         Editor -> permissions = _ContNodeAttr_permissions_v1;
-        Editor -> date = _ContNodeAttr_date_v1;
+        Editor -> date = XFSNodeDPF_vt_date;
+        Editor -> set_date = XFSNodeDPF_vt_set_date;
         Editor -> type = _ContNodeAttr_type_v1;
 
         * Attr = Editor;
@@ -553,25 +496,18 @@ XFSContNodeInit (
     RCt = 0;
     Cont = ( struct XFSContNode * ) self;
 
-    if ( Cont == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( Cont )
 
     RCt = XFSNodeInitVT (
-                    & ( Cont -> node ),
+                    self,
                     Name,
                     ( const union XFSNode_vt * ) & _sContNodeVT_v1
                     );
     if ( RCt == 0 ) {
         RCt = XFSNodeContainerMake ( ( const struct XFSNodeContainer ** ) & Cont -> container );
         if ( RCt == 0 ) {
-
-            if ( Perm != NULL ) {
-                RCt = XFS_StrDup ( Perm, & ( Cont -> security ) );
-            }
-
+            RCt = XFSNodeDPF_Init ( self, Perm, 0, Flavor );
             if ( RCt == 0 ) {
-                Cont -> flavor = Flavor;
                 Cont -> disposer = Disposer;
             }
         }
@@ -606,34 +542,29 @@ XFSContNodeMakeWithFlavor (
 )
 {
     rc_t RCt;
-    struct XFSContNode * Cont;
+    struct XFSNode * xNode;
 
     RCt = 0;
-    Cont = NULL;
+    xNode = NULL;
 
-    if ( Node != NULL ) {
-        * Node = NULL;
-    }
+    XFS_CSAN ( Node )
+    XFS_CAN ( Node )
+    XFS_CAN ( Name )
 
-    if ( Node == NULL || Name == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    Cont = calloc ( 1, sizeof ( struct XFSContNode ) );
-    if ( Cont == NULL ) {
+    xNode = calloc ( 1, sizeof ( struct XFSContNode ) );
+    if ( xNode == NULL ) {
         return XFS_RC ( rcExhausted );
     }
 
-    RCt = XFSContNodeInit ( & ( Cont -> node ), Name, Perm, Flavor, NULL );
+    RCt = XFSContNodeInit ( xNode, Name, Perm, Flavor, NULL );
     if ( RCt == 0 ) {
-        * Node = & ( Cont -> node );
+        * Node = xNode;
     }
     else {
-        if ( Cont != NULL ) {
-            XFSNodeDispose ( & ( Cont -> node ) );
-        }
-
         * Node = NULL;
+        if ( xNode != NULL ) {
+            XFSNodeDispose ( xNode );
+        }
     }
 /*
 pLogMsg ( klogDebug, "_ContNodeMake ND[$(container)] NM[$(name)]", "container=0x%p,name=%s", ( void * ) Cont, Name );

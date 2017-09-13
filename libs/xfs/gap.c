@@ -126,7 +126,7 @@ _GapProjectNodeMake (
     }
     else {
         RCt = XFSContNodeInit (
-                            & ( GapNode -> node . node ),
+                            ( struct XFSNode * ) GapNode,
                             Name,
                             Perm,
                             _sFlavorOfGapProject,
@@ -267,7 +267,7 @@ _GapProjectNodeAddChildren ( struct _GapProjectNode * self )
                                 );
         if ( RCt == 0 ) {
             RCt = XFSContNodeAddChild (
-                                    & ( self -> node ) . node,
+                                    ( struct XFSNode * ) self,
                                     TheNode
                                     );
         }
@@ -295,7 +295,7 @@ pLogErr ( klogErr, RCt, "ERROR: Can not find definition of Project $(project_id)
                         NULL                    /* perm is automatic */
                         );
     if ( RCt == 0 ) {
-        RCt = XFSContNodeAddChild ( & ( self -> node ) . node, TheNode );
+        RCt = XFSContNodeAddChild ( ( struct XFSNode * ) self, TheNode );
     }
     else {
 /* TODO - use approved output method
@@ -317,7 +317,7 @@ pLogErr ( klogErr, RCt, "ERROR: Can not find definition of Project $(project_id)
                         NULL                    /* perm is automatic */
                         );
     if ( RCt == 0 ) {
-        RCt = XFSContNodeAddChild ( & ( self -> node ) . node, TheNode );
+        RCt = XFSContNodeAddChild ( ( struct XFSNode * ) self, TheNode );
     }
     else {
         RCt = 0;
@@ -335,7 +335,7 @@ LogMsg ( klogWarn, "Can not find definition for 'public' area in config file" );
 
     RCt = XFSGapKartFilesNodeMake ( & TheNode, NULL );
     if ( RCt == 0 ) {
-        RCt = XFSContNodeAddChild ( & ( self -> node ) . node, TheNode );
+        RCt = XFSContNodeAddChild ( ( struct XFSNode * ) self, TheNode );
     }
     if ( RCt != 0 ) {
         if ( TheNode != NULL ) {
@@ -350,7 +350,7 @@ LogMsg ( klogWarn, "Can not find definition for 'public' area in config file" );
                             NULL
                             );
     if ( RCt == 0 ) {
-        RCt = XFSContNodeAddChild ( & ( self -> node ) . node, TheNode );
+        RCt = XFSContNodeAddChild ( ( struct XFSNode * ) self, TheNode );
     }
     if ( RCt != 0 ) {
         if ( TheNode != NULL ) {
@@ -361,7 +361,7 @@ LogMsg ( klogWarn, "Can not find definition for 'public' area in config file" );
 
     RCt = XFSAccessPanelNodeMake ( & TheNode );
     if ( RCt == 0 ) {
-        RCt = XFSContNodeAddChild ( & ( self -> node ) . node, TheNode );
+        RCt = XFSContNodeAddChild ( ( struct XFSNode * ) self, TheNode );
     }
     if ( RCt != 0 ) {
         if ( TheNode != NULL ) {
@@ -403,7 +403,7 @@ XFSGapProjectNodeMake (
     if ( RCt == 0 ) {
         RCt = _GapProjectNodeAddChildren ( GapNode );
         if ( RCt == 0 ) {
-            * Node = & ( GapNode -> node . node );
+            * Node = ( struct XFSNode * ) GapNode;
         }
     }
 
@@ -411,7 +411,7 @@ XFSGapProjectNodeMake (
         * Node = NULL;
 
         if ( GapNode != NULL ) {
-            XFSNodeDispose ( & ( GapNode -> node . node ) );
+            XFSNodeDispose ( ( struct XFSNode * ) GapNode );
             GapNode = NULL;
         }
     }
@@ -506,7 +506,7 @@ _GapProjectNodeConstructorEx (
     if ( RCt == 0 ) {
         RCt = _GapProjectNodeAddChildren ( TheNode );
         if ( RCt == 0 ) {
-            * Node = & ( TheNode -> node . node );
+            * Node = ( struct XFSNode * ) TheNode;
         }
     }
 
@@ -514,7 +514,7 @@ _GapProjectNodeConstructorEx (
         * Node = NULL;
 
         if ( TheNode != NULL ) {
-            XFSNodeDispose ( & ( TheNode -> node . node ) );
+            XFSNodeDispose ( ( struct XFSNode * ) TheNode );
 
             TheNode = NULL;
         }

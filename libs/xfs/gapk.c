@@ -115,7 +115,7 @@ _AddKartItem (
 
     if ( RCt == 0 ) {
         RCt = XFSContNodeAddChild (
-                                & ( Node -> node . node ),
+                                ( struct XFSNode * ) Node,
                                 ItemNode
                                 );
         if ( GetRCState ( RCt ) == rcExists ) {
@@ -164,7 +164,7 @@ _AddSignatureFile ( struct XFSKartNode * Node )
                                         );
             if ( RCt == 0 ) {
                 RCt = XFSContNodeAddChild (
-                                        & ( Node -> node . node ),
+                                        ( struct XFSNode * ) Node,
                                         Sign
                                         );
             }
@@ -205,7 +205,7 @@ _LoadKart ( struct XFSKartNode * Node )
     if ( RCt == 0 ) {
         RCt = XFSGapKartDepotGet (
                             & Kart,
-                            XFSNodeName ( & ( Node -> node . node ) )
+                            XFSNodeName ( ( struct XFSNode * ) Node )
                             );
         if ( RCt == 0 ) {
 
@@ -281,7 +281,7 @@ XFSGapKartNodeMake (
     }
     else {
         RCt = XFSContNodeInit (
-                            & ( KartNode -> node . node ),
+                            ( struct XFSNode * ) KartNode,
                             Name,
                             Perm,
                             _sFlavorOfGapKart,
@@ -301,7 +301,7 @@ XFSGapKartNodeMake (
         * Node = NULL;
 
         if ( KartNode != NULL ) {
-            XFSNodeDispose ( & ( KartNode -> node . node ) );
+            XFSNodeDispose ( ( struct XFSNode * )  KartNode );
             KartNode = NULL;
         }
     }
