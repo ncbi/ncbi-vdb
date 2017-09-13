@@ -104,6 +104,10 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseTestHandlerSet ( KDiagnose * self,
 #define DIAGNOSE_NETWORK 4
 DIAGNOSE_EXTERN rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests );
 
+DIAGNOSE_EXTERN rc_t CC KDiagnosePause  ( KDiagnose * self );
+DIAGNOSE_EXTERN rc_t CC KDiagnoseResume ( KDiagnose * self );
+DIAGNOSE_EXTERN rc_t CC KDiagnoseCancel ( KDiagnose * self );
+
 
 DIAGNOSE_EXTERN rc_t CC KDiagnoseGetErrorCount ( const KDiagnose * self,
     uint32_t * count );
