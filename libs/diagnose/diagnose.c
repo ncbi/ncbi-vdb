@@ -326,13 +326,13 @@ static rc_t KDiagnoseErrorMake ( const KDiagnoseError ** self,
 }
 
 static
-void ( CC * CALLBACK ) ( EKDiagTestState state, const KDiagnoseTest * test );
+void ( CC * CALL_BACK ) ( EKDiagTestState state, const KDiagnoseTest * test );
 
 LIB_EXPORT rc_t CC KDiagnoseTestHandlerSet ( KDiagnose * self,
     void ( CC * callback ) ( EKDiagTestState state, const KDiagnoseTest * test )
 )
 {
-    CALLBACK = callback;
+    CALL_BACK = callback;
     return 0;
 }
 
@@ -610,8 +610,8 @@ const char*c=self->msg.base;
         }
     }
 
-    if ( CALLBACK )
-         CALLBACK ( eKDTS_Started, test );
+    if ( CALL_BACK )
+         CALL_BACK ( eKDTS_Started, test );
 
     return rc;
 }
@@ -780,7 +780,7 @@ const char*c=self->msg.base;
         self -> failedWhileSilent = false;
     }
 
-    if ( CALLBACK && ok != eMSG ) {
+    if ( CALL_BACK && ok != eMSG ) {
         EKDiagTestState state = eKDTS_Succeed;
         switch ( ok ) {
             case eEndOK: state = eKDTS_Succeed; break;
@@ -789,7 +789,7 @@ const char*c=self->msg.base;
             default    : state = eKDTS_Failed ; break;
         }
         self -> crnt -> state = state;
-        CALLBACK ( state, self -> crnt );
+        CALL_BACK ( state, self -> crnt );
     }
 
     return rc;
@@ -2159,6 +2159,10 @@ LIB_EXPORT rc_t CC KDiagnoseRelease ( const KDiagnose * cself ) {
 
     return rc;
 }
+
+LIB_EXPORT rc_t CC KDiagnosePause  ( KDiagnose * self ) { return 0; }
+LIB_EXPORT rc_t CC KDiagnoseResume ( KDiagnose * self ) { return 0; }
+LIB_EXPORT rc_t CC KDiagnoseCancel ( KDiagnose * self ) { return 0; }
 
 LIB_EXPORT rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests ) {
     rc_t rc = 0;
