@@ -124,7 +124,7 @@ struct KDiagnoseTest {
     const struct KDiagnoseTest * firstChild;
     struct KDiagnoseTest * crntChild;
     char * name;
-    int level;
+    uint32_t level;
     char * number;
     char * message;
     EKDiagTestState state;
@@ -138,6 +138,7 @@ static void KDiagnoseTestWhack ( KDiagnoseTest * self ) {
     memset ( self, 0, sizeof * self );
     free ( self );
 }
+
 
 LIB_EXPORT rc_t CC KDiagnoseGetTests ( const KDiagnose * self,
                                        const KDiagnoseTest ** test )
@@ -189,6 +190,48 @@ LIB_EXPORT rc_t CC KDiagnoseTestChild ( const KDiagnoseTest * self,
     * test = t;
     return 0;
 }
+
+#define TEST_GET_INT( PROPERTY )       \
+    do {                               \
+        if ( PROPERTY == NULL )        \
+            return RC ( rcRuntime, rcData, rcAccessing, rcParam, rcNull ); \
+        * PROPERTY = 0;             \
+        if ( self == NULL )            \
+            return RC ( rcRuntime, rcData, rcAccessing, rcSelf, rcNull );  \
+        * PROPERTY = self -> PROPERTY; \
+        return 0;                      \
+    } while ( 0 )
+
+#define TEST_GET( PROPERTY )       \
+    do {                               \
+        if ( PROPERTY == NULL )        \
+            return RC ( rcRuntime, rcData, rcAccessing, rcParam, rcNull ); \
+        * PROPERTY = NULL;             \
+        if ( self == NULL )            \
+            return RC ( rcRuntime, rcData, rcAccessing, rcSelf, rcNull );  \
+        * PROPERTY = self -> PROPERTY; \
+        return 0;                      \
+    } while ( 0 )
+
+LIB_EXPORT rc_t CC KDiagnoseTestName ( const KDiagnoseTest * self,
+                                       const char ** name )
+{   TEST_GET ( name ); }
+
+LIB_EXPORT rc_t CC KDiagnoseTestLevel ( const KDiagnoseTest * self,
+                                        uint32_t * level )
+{   TEST_GET_INT ( level ); }
+
+LIB_EXPORT rc_t CC KDiagnoseTestNumber ( const KDiagnoseTest * self,
+                                         const char ** number )
+{   TEST_GET ( number ); }
+
+LIB_EXPORT rc_t CC KDiagnoseTestMessage ( const KDiagnoseTest * self,
+                                          const char ** message )
+{   TEST_GET ( message ); }
+
+LIB_EXPORT rc_t CC KDiagnoseTestState ( const KDiagnoseTest * self,
+                                        EKDiagTestState * state )
+{   TEST_GET_INT ( state ); }
 
 
 struct KDiagnoseError {

@@ -85,9 +85,12 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseLogHandlerSetKOutMsg ( KDiagnose * self );
  *      KDiagnoseTestAddRef if you want to keep it after KDiagnose is released
  */
 typedef enum {
-    eKDTS_Started, /* test started */
-    eKDTS_Succeed, /* test finished successfully */
-    eKDTS_Failed,  /* test finished with failure */
+    eKDTS_NotStarted,/* test not started yet */
+    eKDTS_Started,   /* test started */
+    eKDTS_Succeed,   /* test finished successfully */
+    eKDTS_Failed,    /* test finished with failure */
+    eKDTS_Skipped,   /* test execution was skipped */
+    eKDTS_Warning,   /* test finished successfully but has a warning for user */
 } EKDiagTestState;
 DIAGNOSE_EXTERN rc_t CC KDiagnoseTestHandlerSet ( KDiagnose * self,
         void ( CC * callback )
@@ -111,7 +114,7 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseGetError ( const KDiagnose * self,
 DIAGNOSE_EXTERN rc_t CC KDiagnoseErrorAddRef ( const KDiagnoseError * self );
 DIAGNOSE_EXTERN rc_t CC KDiagnoseErrorRelease ( const KDiagnoseError * self );
 
-/* GetErrorGetMsg:
+/* GetMsg:
  * Get Error Message.
  * Returned string remains valid while "self" is valid
  */
@@ -121,6 +124,44 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseErrorGetMsg ( const KDiagnoseError * self,
 
 DIAGNOSE_EXTERN rc_t CC KDiagnoseGetTests ( const KDiagnose * self,
                                             const KDiagnoseTest ** test );
+
+/* Level
+ *
+ * Get test level in tests hierarchy.
+ * 0 is the highest level
+ * tests of 'level 1' are run from test of 'level 0' etc
+ */
+DIAGNOSE_EXTERN rc_t CC KDiagnoseTestLevel ( const KDiagnoseTest * self,
+                                             uint32_t * level );
+
+/* Number
+ *
+ * Get hiererchical number of test inside of est level in tests hierarchy.
+ * E.g., 0.2.2
+ */
+DIAGNOSE_EXTERN rc_t CC KDiagnoseTestNumber ( const KDiagnoseTest * self,
+                                              const char ** number );
+
+/* Name
+ *
+ * Get test name.
+ */
+DIAGNOSE_EXTERN rc_t CC KDiagnoseTestName ( const KDiagnoseTest * self,
+                                            const char ** name );
+
+/* Message
+ *
+ * Get test message (is set when test is finished)
+ */
+DIAGNOSE_EXTERN rc_t CC KDiagnoseTestMessage ( const KDiagnoseTest * self,
+                                               const char ** message );
+
+/* Message
+ *
+ * Get test state ( changes during test execution )
+ */
+DIAGNOSE_EXTERN rc_t CC KDiagnoseTestState ( const KDiagnoseTest * self,
+                                             EKDiagTestState * state );
 
 DIAGNOSE_EXTERN rc_t CC KDiagnoseTestNext ( const KDiagnoseTest * self,
                                             const KDiagnoseTest ** test );
@@ -133,5 +174,6 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseTestChild ( const KDiagnoseTest * self,
 }
 #endif
 
+/******************************************************************************/
 
 #endif /* _h_diagnose_diagnose_ */
