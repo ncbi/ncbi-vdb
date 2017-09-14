@@ -1613,7 +1613,6 @@ _ApproveAccessToPath ( const char * Path, const char * Name )
     else {
         RetVal = _FUSE_approve ( Buf );
     }
-printf ( " [ FUSE APP ] [%d] [%d] [%s]\n", __LINE__, RetVal, Buf );
 
     return RetVal;
 }   /* _ApproveAccessToPath () */

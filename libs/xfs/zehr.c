@@ -197,8 +197,8 @@ XFS_UserAccessList_ZHR ( char ** AccessList, uint32_t ProjectId )
         if ( ProjectId == 0 ) {
         }
         RCt = ProjectId == 0
-                ?  XFSPathMake ( & Path, false, "%s/.ncbi/dbGap.acl", Var )
-                : XFSPathMake ( & Path, false, "%s/.ncbi/dbGap-%d.acl", Var, ProjectId )
+                ?  XFSPathMake ( & Path, false, "%s/.ncbi/dbGaP.acl", Var )
+                : XFSPathMake ( & Path, false, "%s/.ncbi/dbGaP-%d.acl", Var, ProjectId )
                 ;
         if ( RCt == 0 ) {
             RCt = XFS_StrDup (
