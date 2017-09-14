@@ -49,6 +49,9 @@
 #include <kns/kns-mgr-priv.h> /* KNSManagerMakeReliableHttpFile */
 #include <kns/stream.h> /* KStream */
 
+#include <kproc/cond.h> /* KConditionRelease */
+#include <kproc/lock.h> /* KLockRelease */
+
 #include <vfs/manager.h> /* VFSManagerOpenDirectoryRead */
 #include <vfs/path.h> /* VFSManagerMakePath */
 #include <vfs/resolver.h> /* VResolverRelease */
@@ -115,6 +118,14 @@ struct KDiagnose {
 
     Vector tests;
     Vector errors;
+
+    enum EState {
+        eRunning,
+        ePaused,
+        eCanceled,
+    } state;
+    KLock * lock;
+    KCondition * condition;
 };
 
 struct KDiagnoseTest {
@@ -125,9 +136,11 @@ struct KDiagnoseTest {
     struct KDiagnoseTest * crntChild;
     char * name;
     uint32_t level;
-    char * number;
     char * message;
     EKDiagTestState state;
+
+    char * number;
+    char * numberNode;
 };
 
 static void KDiagnoseTestWhack ( KDiagnoseTest * self ) {
@@ -420,6 +433,8 @@ typedef struct {
     bool ascpChecked;
     const char * ascp;
     const char * asperaKey;
+
+    const KDiagnose * boss;
 } STest;
 
 static void STestInit ( STest * self, KDiagnose * test )
@@ -429,6 +444,8 @@ static void STestInit ( STest * self, KDiagnose * test )
     assert ( self && test );
 
     memset ( self, 0, sizeof * self );
+
+    self -> boss = test;
 
     self -> level = -1;
 
@@ -495,6 +512,60 @@ static void STestFini ( STest * self ) {
     memset ( self, 0, sizeof * self );
 }
 
+static rc_t KDiagnoseCheckState ( const KDiagnose * self ) {
+    rc_t rc = 0;
+
+    assert ( self );
+
+    while ( self -> state != eRunning ) {
+        rc_t r2;
+
+        rc = KLockAcquire ( self -> lock );
+        if ( rc == 0 )
+            switch ( self -> state ) {
+                case eRunning:
+                    break;
+
+                case ePaused:
+                    LogOut ( KVERBOSITY_INFO, 0, "= PAUSED DIAGNOSTICS\n" );
+                    if ( CALL_BACK )
+                        CALL_BACK ( eKDTS_Paused, NULL );
+
+                    rc = KConditionWait ( self -> condition, self -> lock );
+                    if ( rc != 0 )
+                        LogOut ( KVERBOSITY_INFO, 0,
+                                 "= FAILURE DURING PAUSE: %R\n" );
+                    else if ( self -> state == eRunning ) {
+                        LogOut ( KVERBOSITY_INFO, 0,
+                                 "= RESUMED DIAGNOSTICS\n" );
+                        if ( CALL_BACK )
+                            CALL_BACK ( eKDTS_Resumed, NULL );
+                    }
+
+                    break;
+
+                case eCanceled:
+                    LogOut ( KVERBOSITY_INFO, 0, "= CANCELED DIAGNOSTICS\n" );
+                    if ( rc == 0 )
+                        rc = RC ( rcRuntime, rcProcess, rcExecuting,
+                                  rcProcess, rcCanceled );
+                    if ( CALL_BACK )
+                        CALL_BACK ( eKDTS_Canceled, NULL );
+
+                    break;
+            }
+
+        r2 = KLockUnlock ( self -> lock );
+        if ( rc == 0 && r2 != 0 )
+            rc = r2;
+
+        if ( self -> state == eCanceled )
+            break;
+    }
+
+    return rc;
+}
+
 static rc_t STestVStart ( STest * self, bool checking,
                           const char * fmt, va_list args  )
 {
@@ -504,6 +575,9 @@ static rc_t STestVStart ( STest * self, bool checking,
     char b [ 512 ] = "";
     bool next = false;
     KDataBuffer bf;
+
+//assert(self->boss);rc=KDiagnoseCheckState(self->boss);if ( rc != 0 )return rc;
+
     memset ( & bf, 0, sizeof bf );
     rc = string_vprintf ( b, sizeof b, NULL, fmt, args );
     if ( rc != 0 ) {
@@ -573,6 +647,7 @@ const char*c=self->msg.base;
     if ( rc != 0 )
         LogOut ( KVERBOSITY_ERROR, 0, "CANNOT PRINT: %R\n", rc );
     else {
+        size_t size = 0;
         for ( i = 1; rc == 0 && i <= self -> level; ++ i ) {
             rc = KDataBufferPrintf ( & self -> msg, ".%d", self -> n [ i ] );
             if ( rc != 0 )
@@ -584,6 +659,20 @@ const char*c=self->msg.base;
         if ( test -> number == NULL )
             return RC ( rcRuntime,
                         rcData, rcAllocating, rcMemory, rcExhausted );
+
+        test -> numberNode = string_dup_measure ( test -> number, & size );
+        if ( test -> numberNode == NULL )
+            return RC ( rcRuntime,
+                        rcData, rcAllocating, rcMemory, rcExhausted );
+        else {
+            while ( true ) {
+                char * c = string_chr ( test -> numberNode, size, '.' );
+                if ( c == NULL )
+                    break;
+                else
+                    * c = '/';
+            }
+        }
 
     }
     if ( rc == 0 )
@@ -623,6 +712,7 @@ typedef enum {
     eEndFAIL,
     eEndOK,
     eDONE, /* never used */
+    eCANCELED,
 } EOK;
 
 static rc_t STestVEnd ( STest * self, EOK ok,
@@ -736,7 +826,7 @@ const char*c=self->msg.base;
     }
     else {
         print = self -> level < self -> verbosity || failedWhileSilent;
-        if ( ok == eFAIL || ok == eOK || ok == eDONE ) {
+        if ( ok == eFAIL || ok == eOK || ok == eDONE || ok == eCANCELED) {
             if ( print ) {
                 int i = 0;
                 rc = LogOut ( self -> level, 0, "< %d", self -> n [ 0 ] );
@@ -758,6 +848,7 @@ const char*c=self->msg.base;
                             break;
                 case eOK  : rc = LogOut ( self -> level, 0, ": OK\n"      );
                             break;
+                case eCANCELED:
                 case eEndFAIL:
                 case eEndOK :
                 case eDONE: rc = LogOut ( self -> level, 0, "\n"      );
@@ -783,33 +874,83 @@ const char*c=self->msg.base;
     if ( CALL_BACK && ok != eMSG ) {
         EKDiagTestState state = eKDTS_Succeed;
         switch ( ok ) {
-            case eEndOK: state = eKDTS_Succeed; break;
-            case eOK   : state = eKDTS_Succeed; break;
-            case eFAIL : state = eKDTS_Failed ; break;
-            default    : state = eKDTS_Failed ; break;
+            case eEndOK   : state = eKDTS_Succeed ; break;
+            case eOK      : state = eKDTS_Succeed ; break;
+            case eFAIL    : state = eKDTS_Failed  ; break;
+            case eCANCELED: state = eKDTS_Canceled; break;
+            default       : state = eKDTS_Failed  ; break;
         }
         self -> crnt -> state = state;
         CALL_BACK ( state, self -> crnt );
     }
 
+    if ( rc == 0 ) {
+        assert ( self -> boss );
+        rc = KDiagnoseCheckState ( self -> boss );
+    }
+
     return rc;
+}
+
+static bool _RcCanceled ( rc_t rc ) {
+    return rc == SILENT_RC ( rcRuntime,
+                             rcProcess, rcExecuting, rcProcess, rcCanceled );
+}
+static bool STestCanceled ( const STest * self, rc_t rc ) {
+    assert ( self && self -> boss );
+    return _RcCanceled ( rc ) && self -> boss -> state == eCanceled;
+}
+
+static rc_t STestFailure ( const STest * self ) {
+    rc_t failure = 0;
+
+    rc_t rc = RC ( rcRuntime, rcProcess, rcExecuting, rcProcess, rcCanceled );
+    const KConfigNode * node = NULL;
+
+    assert ( self && self -> crnt && self -> crnt -> numberNode );
+
+    rc = KConfigOpenNodeRead ( self -> kfg, & node,
+        "tools/test-sra/diagnose/%s", self -> crnt -> numberNode );
+    if ( rc == 0 ) {
+        uint64_t result = 0;
+        rc = KConfigNodeReadU64 ( node, & result );
+        if ( rc == 0 ) {
+            failure = ( rc_t ) result;
+// if ( _RcCanceled ( failure ) && CALL_BACK ) CALL_BACK ( eKDTS_Canceled,NULL);
+        }
+
+        KConfigNodeRelease ( node );
+        node = NULL;
+    }
+
+    return failure;
 }
 
 static rc_t STestEndOr ( STest * self, rc_t * failure,
                          EOK ok, const char * fmt, ...  )
 {
     rc_t rc = 0;
+    bool canceled = false;
 
     va_list args;
     va_start ( args, fmt );
 
+    assert ( failure );
+    * failure = 0;
+
     rc = STestVEnd ( self, ok, fmt, args );
+    canceled = STestCanceled ( self, rc );
 
     va_end ( args );
 
     if ( LOGGER == OutMsg ) {
-        assert ( rc == 0 );
+        assert ( rc == 0 || canceled );
     }
+
+    if ( canceled )
+        * failure = rc;
+    else if ( rc == 0 )
+        * failure = STestFailure ( self );
 
     return rc;
 }
@@ -825,7 +966,7 @@ static rc_t STestEnd ( STest * self, EOK ok, const char * fmt, ...  ) {
     va_end ( args );
 
     if ( LOGGER == OutMsg ) {
-        assert ( rc == 0 );
+        assert ( rc == 0 || STestCanceled ( self, rc ) );
     }
 
     return rc;
@@ -863,8 +1004,8 @@ static rc_t STestFail ( STest * self, rc_t failure,
 
     rc = STestVStart ( self, false, start, args );
 
-    r2= STestEnd ( self, eEndFAIL, "FAILURE: %R", failure );
-    if ( rc == 0 )
+    r2 = STestEnd ( self, eEndFAIL, "FAILURE: %R", failure );
+    if ( rc == 0 && r2 != 0 )
         rc = r2;
 
     va_end ( args );
@@ -945,15 +1086,23 @@ static rc_t STestCheckFile ( STest * self, const String * path,
     else {
         if ( rc == 0 )
             STestEndOr ( self, & rc, eEndOK, "OK" );
-        if ( rc != 0 )
-            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+        if ( rc != 0 ) {
+            if ( _RcCanceled ( rc ) )
+                STestEnd ( self, eCANCELED, "CANCELED" );
+            else
+                STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+        }
         else {
             STestStart ( self, false, "KFileSize(KFile(%S)) =", path );
             rc = KFileSize ( file, sz );
             if ( rc == 0 )
                 STestEndOr ( self, & rc, eEndOK, "%lu: OK", * sz );
-            if ( rc != 0 )
-                STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+            if ( rc != 0 ) {
+                if ( _RcCanceled ( rc ) )
+                    STestEnd ( self, eCANCELED, "CANCELED" );
+                else
+                    STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+            }
         }
     }
 
@@ -973,8 +1122,12 @@ static rc_t STestCheckFile ( STest * self, const String * path,
         * rc_read = KFileRead ( file, pos, buffer, bsize, & num_read );
         if ( * rc_read == 0 )
             STestEndOr ( self, rc_read, eEndOK, "OK" );
-        if ( * rc_read != 0 )
-            STestEnd ( self, eEndFAIL, "FAILURE: %R", * rc_read );
+        if ( * rc_read != 0 ) {
+            if ( _RcCanceled ( * rc_read ) )
+                STestEnd ( self, eCANCELED, "CANCELED" );
+            else
+                STestEnd ( self, eEndFAIL, "FAILURE: %R", * rc_read );
+        }
     }
 
     KFileRelease ( file );
@@ -1037,8 +1190,12 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
         }
         if ( rc == 0 )
             STestEndOr ( self, & rc, eEndOK, "OK" );
-        if ( rc != 0 )
-            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+        if ( rc != 0 ) {
+            if ( _RcCanceled ( rc ) )
+                STestEnd ( self, eCANCELED, "CANCELED" );
+            else
+                STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+        }
     }
     if ( rc == 0 ) {
         String path;
@@ -1057,8 +1214,12 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
         rc = KHttpRequestHEAD ( req, & rslt );
         if ( rc == 0 )
             STestEndOr ( self, & rc, eEndOK, "OK" );
-        if ( rc != 0 )
-            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+        if ( rc != 0 ) {
+            if ( _RcCanceled ( rc ) )
+                STestEnd ( self, eCANCELED, "CANCELED" );
+            else
+                STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+        }
     }
     if ( rc == 0 ) {
         STestStart ( self, false,
@@ -1070,7 +1231,7 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
             if ( string_cmp ( buffer, num_read, bytes, sizeof bytes - 1,
                               sizeof bytes - 1 ) == 0 )
             {
-                STestEnd ( self, eEndOK, "'%.*s': OK",
+                rc = STestEnd ( self, eEndOK, "'%.*s': OK",
                                         ( int ) num_read, buffer );
             }
             else {
@@ -1094,8 +1255,12 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
         rc = KHttpRequestByteRange ( req, pos, bytes );
         if ( rc == 0 )
             STestEndOr ( self, & rc, eEndOK, "OK" );
-        if ( rc != 0 )
-            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+        if ( rc != 0 ) {
+            if ( _RcCanceled ( rc ) )
+                STestEnd ( self, eCANCELED, "CANCELED" );
+            else
+                STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+        }
     }
     if ( rc == 0 ) {
         STestStart ( self, false,
@@ -1103,8 +1268,12 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
         rc = KHttpRequestGET ( req, & rslt );
         if ( rc == 0 )
             STestEndOr ( self, & rc, eEndOK, "OK" );
-        if ( rc != 0 )
-            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+        if ( rc != 0 ) {
+            if ( _RcCanceled ( rc ) )
+                STestEnd ( self, eCANCELED, "CANCELED" );
+            else
+                STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+        }
     }
     if ( rc == 0 ) {
         uint64_t po = 0;
@@ -1136,8 +1305,12 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
         if ( rc == 0 )
             STestEndOr ( self, & rc, eEndOK, "'%.*s': OK",
                                     ( int ) num_read, buffer );
-        if ( rc != 0 )
-            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+        if ( rc != 0 ) {
+            if ( _RcCanceled ( rc ) )
+                STestEnd ( self, eCANCELED, "CANCELED" );
+            else
+                STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+        }
     }
     KHttpResultRelease ( rslt );
     rslt = NULL;
@@ -1145,7 +1318,17 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
     req = NULL;
     KHttpRelease ( http );
     http = NULL;
-    STestEnd ( self, rc == 0 ? eOK : eFAIL, "Support of Range requests" );
+
+    if ( rc == 0 ) {
+        rc_t r2 = STestEnd ( self, eOK, "Support of Range requests" );
+        if ( r2 != 0 && rc == 0 )
+            rc = r2;
+    }
+    else if ( _RcCanceled ( rc ) )
+        STestEnd ( self, eCANCELED, "Support of Range requests: CANCELED" );
+    else
+        STestEnd ( self, eFAIL, "Support of Range requests" );
+
     return rc;
 }
 
@@ -1215,17 +1398,32 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
                 int s = esz;
                 if ( num_read < esz )
                     s = num_read;
-                STestEnd ( self, eMSG, "'" );
-                for ( i = 0; i < s; ++ i ) {
-                    if ( isprint ( ( unsigned char ) buffer [ i ] ) )
-                        STestEnd ( self, eMSG, "%c", buffer [ i ] );
-                    else if ( buffer [ i ] == 0 )
-                        STestEnd ( self, eMSG, "\\0" );
+                rc = STestEnd ( self, eMSG, "'" );
+                if ( rc != 0 ) {
+                    if ( STestCanceled ( self, rc ) )
+                        STestEnd ( self, eCANCELED, "CANCELED" );
                     else
-                        STestEnd ( self, eMSG, "\\%03o",
+                        STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+                    break;
+                }
+                for ( i = 0; i < s && rc == 0; ++ i ) {
+                    if ( isprint ( ( unsigned char ) buffer [ i ] ) )
+                        rc = STestEnd ( self, eMSG, "%c", buffer [ i ] );
+                    else if ( buffer [ i ] == 0 )
+                        rc = STestEnd ( self, eMSG, "\\0" );
+                    else
+                        rc = STestEnd ( self, eMSG, "\\%03o",
                                                ( unsigned char ) buffer [ i ] );
                 }
-                STestEnd ( self, eMSG, "': " );
+                if ( rc == 0 )
+                    rc = STestEnd ( self, eMSG, "': " );
+                if ( rc != 0 ) {
+                    if ( STestCanceled ( self, rc ) )
+                        STestEnd ( self, eCANCELED, "CANCELED" );
+                    else
+                        STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+                    break;
+                }
                 if ( string_cmp ( buffer, num_read, exp, esz, esz ) != 0 ) {
                     STestEnd ( self, eEndFAIL, " FAILURE: bad content" );
                     rc = RC ( rcExe, rcFile, rcReading, rcString, rcUnequal );
@@ -1249,9 +1447,16 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
                                 break;
                         }
                     }
-                    STestEnd ( self, eMSG, "%s: ", buffer );
+                    rc = STestEnd ( self, eMSG, "%s: ", buffer );
                 }
-                STestEnd ( self, eEndOK, "OK" );
+                if ( rc == 0 )
+                    rc = STestEnd ( self, eEndOK, "OK" );
+                if ( rc != 0 ) {
+                    if ( STestCanceled ( self, rc ) )
+                        STestEnd ( self, eCANCELED, "CANCELED" );
+                    else
+                        STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+                }
             }
             else
                 STestEnd ( self, eEndFAIL, "%s: SIZE DO NOT MATCH (%zu)\n",
@@ -1296,8 +1501,12 @@ static rc_t STestCheckHttpUrl ( STest * self, const Data * data,
                                      HTTP_VERSION, NULL, "%S", full );
         if ( rc == 0 )
             STestEndOr ( self, & rc, eEndOK, "OK"  );
-        if ( rc != 0 )
-            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+        if ( rc != 0 ) {
+            if ( _RcCanceled ( rc ) )
+                STestEnd ( self, eCANCELED, "CANCELED" );
+            else
+                STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+        }
     }
     if ( rc == 0 ) {
         STestStart ( self, false,
@@ -1305,8 +1514,12 @@ static rc_t STestCheckHttpUrl ( STest * self, const Data * data,
         rc = KHttpRequestGET ( req, & rslt );
         if ( rc == 0 )
             STestEndOr ( self, & rc, eEndOK, "OK" );
-        if ( rc != 0 )
-            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+        if ( rc != 0 ) {
+            if ( _RcCanceled ( rc ) )
+                STestEnd ( self, eCANCELED, "CANCELED" );
+            else
+                STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+        }
     }
     if ( rc == 0 ) {
         uint32_t code = 0;
@@ -1315,13 +1528,18 @@ static rc_t STestCheckHttpUrl ( STest * self, const Data * data,
         if ( rc != 0 )
             STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
         else {
-            STestEnd ( self, eMSG, "%u: ", code );
-            if ( code == 200 )
-                STestEnd ( self, eEndOK, "OK" );
-            else {
-                STestEnd ( self, eEndFAIL, "FAILURE" );
-                rc = RC ( rcExe, rcFile, rcReading, rcFile, rcInvalid );
-            }
+            rc = STestEnd ( self, eMSG, "%u: ", code );
+            if ( rc == 0 )
+                if ( code == 200 )
+                    STestEnd ( self, eEndOK, "OK" );
+                else {
+                    STestEnd ( self, eEndFAIL, "FAILURE" );
+                    rc = RC ( rcExe, rcFile, rcReading, rcFile, rcInvalid );
+                }
+            else  if ( STestCanceled ( self, rc ) )
+                STestEnd ( self, eCANCELED, "CANCELED" );
+            else
+                STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
         }
     }
     if ( rc == 0 ) {
@@ -1335,15 +1553,22 @@ static rc_t STestCheckHttpUrl ( STest * self, const Data * data,
         KStreamRelease ( stream );
         stream = NULL;
     }
-    if ( rc == 0 )
+    if ( rc == 0 && r2 != 0 )
         rc = r2;
-    if ( rc == 0 )
+    if ( rc == 0 && rc_read != 0 )
         rc = rc_read;
     KHttpRequestRelease ( req );
     req = NULL;
     KHttpResultRelease ( rslt );
     rslt = NULL;
-    STestEnd ( self, rc == 0 ? eOK : eFAIL, "Access to '%S'", full );
+
+    if ( rc == 0 )
+        STestEnd ( self, eOK, "Access to '%S'", full );
+    else if ( _RcCanceled ( rc ) )
+        STestEnd ( self, eCANCELED, "Access to '%S': CANCELED", full );
+    else
+        STestEnd ( self, eFAIL, "Access to '%S'", full );
+
     free ( ( void * ) full );
     full = NULL;
     return rc;
@@ -1380,8 +1605,12 @@ static rc_t STestCheckVfsUrl ( STest * self, const Data * data ) {
     rc = VFSManagerOpenDirectoryRead ( self -> vmgr, & d, data -> vpath );
     if ( rc == 0 )
         STestEndOr ( self, & rc, eEndOK, "OK"  );
-    if ( rc != 0 )
-        STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+    if ( rc != 0 ) {
+        if ( _RcCanceled ( rc ) )
+            STestEnd ( self, eCANCELED, "CANCELED" );
+        else
+            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+    }
 
     RELEASE ( KDirectory, d );
 
@@ -1588,8 +1817,12 @@ static rc_t STestCallCgi ( STest * self, const String * acc, char * response,
         HTTP_VERSION, NULL, "%S", cgi);
     if ( rc == 0 )
         STestEndOr ( self, & rc, eEndOK, "OK"  );
-    if ( rc != 0 )
-        STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+    if ( rc != 0 ) {
+        if ( _RcCanceled ( rc ) )
+            STestEnd ( self, eCANCELED, "CANCELED" );
+        else
+            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+    }
     if ( rc == 0 ) {
         const char param [] = "accept-proto";
         rc = KHttpRequestAddPostParam ( req, "%s=https,http,fasp", param );
@@ -1615,8 +1848,12 @@ static rc_t STestCallCgi ( STest * self, const String * acc, char * response,
         rc = KHttpRequestPOST ( req, & rslt );
         if ( rc == 0 )
             STestEndOr ( self, & rc, eEndOK, "OK"  );
-        if ( rc != 0 )
-            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+        if ( rc != 0 ) {
+            if ( _RcCanceled ( rc ) )
+                STestEnd ( self, eCANCELED, "CANCELED" );
+            else
+                STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+        }
     }
     if ( rc == 0 ) {
         uint32_t code = 0;
@@ -1625,13 +1862,18 @@ static rc_t STestCallCgi ( STest * self, const String * acc, char * response,
         if ( rc != 0 )
             STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
         else {
-            STestEnd ( self, eMSG, "%u: ", code );
-            if ( code == 200 )
-                STestEnd ( self, eEndOK, "OK" );
-            else {
-                STestEnd ( self, eEndFAIL, "FAILURE" );
-                rs = RC ( rcExe, rcFile, rcReading, rcFile, rcInvalid );
-            }
+            rc = STestEnd ( self, eMSG, "%u: ", code );
+            if ( rc == 0 )
+                if ( code == 200 )
+                    STestEnd ( self, eEndOK, "OK" );
+                else {
+                    STestEnd ( self, eEndFAIL, "FAILURE" );
+                    rs = RC ( rcExe, rcFile, rcReading, rcFile, rcInvalid );
+                }
+            else  if ( STestCanceled ( self, rc ) )
+                STestEnd ( self, eCANCELED, "CANCELED" );
+            else
+                STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
         }
     }
     if ( rc == 0 ) {
@@ -1644,7 +1886,7 @@ static rc_t STestCallCgi ( STest * self, const String * acc, char * response,
                                           buffer, sizeof buffer, & num_read );
         if ( r2 != 0 ) {
             if ( r2 == SILENT_RC ( rcNS,rcTree,rcSearching,rcName,rcNotFound ) )
-                STestEnd ( self, eEndOK, ": not found: OK" );
+                rc = STestEnd ( self, eEndOK, ": not found: OK" );
             else
                 STestEnd ( self, eEndFAIL, "FAILURE: %R", r2 );
         }
@@ -1678,7 +1920,7 @@ static rc_t STestCallCgi ( STest * self, const String * acc, char * response,
                     response [ * resp_read ] = '\0';
                 }
             }
-            STestEnd ( self, eEndOK, "'%s': OK", response );
+            rc = STestEnd ( self, eEndOK, "'%s': OK", response );
             if ( rs == 0 ) {
                 int i = 0;
                 unsigned p = 0;
@@ -1695,7 +1937,7 @@ static rc_t STestCallCgi ( STest * self, const String * acc, char * response,
             }
         }
     }
-    if ( rc == 0 )
+    if ( rc == 0 && rs != 0 )
         rc = rs;
     KStreamRelease ( stream );
     stream = NULL;
@@ -1735,12 +1977,12 @@ static rc_t STestCheckFasp ( STest * self, const Data * data, const char * url,
 
         if ( self -> ascp == NULL ) {
             STestStart ( self, false, "ascp download test:" );
-            STestEnd ( self, eEndOK, "skipped: ascp not found" );
+            rc = STestEnd ( self, eEndOK, "skipped: ascp not found" );
         }
     }
 
     if ( self -> ascp == NULL )
-        return 0;
+        return rc;
 
     STestStart ( self, false, "ascp download test:" );
 
@@ -1768,8 +2010,12 @@ static rc_t STestCheckFasp ( STest * self, const Data * data, const char * url,
         rc = KDirectoryFileSize ( self -> dir, cacheSz, cache );
     if ( rc == 0 )
         STestEndOr ( self, & rc, eEndOK, "OK" );
-    if ( rc != 0 )
-        STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+    if ( rc != 0 ) {
+        if ( _RcCanceled ( rc ) )
+            STestEnd ( self, eCANCELED, "CANCELED" );
+        else
+            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+    }
 
     return rc;
 }
@@ -1821,7 +2067,7 @@ static rc_t STestCheckAcc ( STest * self, const Data * data, bool print,
                 r2 = r1;
         }
         RELEASE ( VPath, path );
-        if ( rc == 0 )
+        if ( rc == 0 && r2 != 0 )
             rc = r2;
     }
     if ( url != NULL ) {
@@ -1855,7 +2101,7 @@ static rc_t STestCheckAcc ( STest * self, const Data * data, bool print,
                         if ( rc == 0 ) {
                             rc_t r1 = STestCheckUrl ( self, & dt,
                                 httpCache, & httpCacheSize, print, exp, esz );
-                            if ( rc == 0 )
+                            if ( rc == 0 && r1 != 0 )
                                 rc = r1;
                         }
                         DataFini ( & dt );
@@ -1864,7 +2110,7 @@ static rc_t STestCheckAcc ( STest * self, const Data * data, bool print,
                     case 'f': {
                         rc_t r1 = STestCheckFasp ( self, data, url,
                                                    faspCache, & faspCacheSize );
-                        if ( rc == 0 )
+                        if ( rc == 0 && r1 != 0 )
                             rc = r1;
                         break;
                     }
@@ -1885,7 +2131,7 @@ static rc_t STestCheckAcc ( STest * self, const Data * data, bool print,
     if ( ! checked ) {
         rc_t r1 = STestCheckUrl ( self, data, httpCache, & httpCacheSize,
                                   print, exp, esz );
-        if ( rc == 0 )
+        if ( rc == 0 && r1 != 0 )
             rc = r1;
     }
     if ( faspCacheSize != 0 && httpCacheSize != 0 ) {
@@ -1974,13 +2220,21 @@ static rc_t STestCheckAcc ( STest * self, const Data * data, bool print,
                              "Cannot remove '%s': %R\n", httpCache, r2 );
             }
             if ( r1 == 0 )
-                STestEnd ( self, eEndOK, "%lu bytes compared: OK", pos );
+                rc = STestEnd ( self, eEndOK, "%lu bytes compared: OK", pos );
             else if ( rc == 0 )
                 rc = r1;
         }
     }
-    if ( acc . size != 0 )
-        STestEnd ( self, rc == 0 ? eOK : eFAIL, "Access to '%S'", & acc );
+
+    if ( acc . size != 0 ) {
+        if ( rc == 0 )
+            rc = STestEnd ( self, eOK, "Access to '%S'", & acc );
+        else if ( _RcCanceled ( rc ) )
+            STestEnd ( self, eCANCELED, "Access to '%S': CANCELED", & acc );
+        else
+            STestEnd ( self, eFAIL, "Access to '%S'", & acc );
+    }
+
     RELEASE ( VPath, vcache );
     return rc;
 }
@@ -2022,8 +2276,13 @@ static rc_t STestCheckNetwork ( STest * self, const Data * data,
             rc_t rx = endpoint_to_string ( endpoint, sizeof endpoint, & ep );
             if ( rx == 0 )
                 STestEndOr ( self, & rx, eEndOK, "= '%s': OK", endpoint );
-            if ( rx != 0 )
-                STestEnd ( self, eEndFAIL, "CANNOT CONVERT TO STRING: %R", rx );
+            if ( rx != 0 ) {
+                if ( _RcCanceled ( rx ) )
+                    STestEnd ( self, eCANCELED, "CANCELED" );
+                else
+                    STestEnd ( self, eEndFAIL,
+                               "CANNOT CONVERT TO STRING: %R", rx );
+            }
         }
         port = 80;
         STestStart ( self, false, "KNSManagerInitDNSEndpoint(%S:%hu)",
@@ -2037,22 +2296,33 @@ static rc_t STestCheckNetwork ( STest * self, const Data * data,
             rc_t rx = endpoint_to_string ( endpoint, sizeof endpoint, & ep );
             if ( rx == 0 )
                 STestEndOr ( self, & rx, eEndOK, "= '%s': OK", endpoint );
-            if ( rx != 0 )
-                STestEnd ( self, eEndFAIL, "CANNOT CONVERT TO STRING: %R", rx );
+            if ( rx != 0 ) {
+                if ( _RcCanceled ( rx ) )
+                    STestEnd ( self, eCANCELED, "CANCELED" );
+                else
+                    STestEnd ( self, eEndFAIL,
+                               "CANNOT CONVERT TO STRING: %R", rx );
+            }
         }
         rc = KNSManagerInitDNSEndpoint ( self -> kmgr, & ep, & host, port );
         if ( rc == 0 ) {
             rc = STestCheckAcc ( self, data, false, exp, esz );
             if ( data2 != NULL ) {
                 rc_t r2 = STestCheckAcc ( self, data2, true, 0, 0 );
-                if ( rc == 0 )
+                if ( rc == 0 && r2 != 0 )
                     rc = r2;
             }
         }
-        if ( rc == 0 )
+        if ( rc == 0 && r1 != 0 )
             rc = r1;
     }
-    STestEnd ( self, rc == 0 ? eOK : eFAIL, b );
+
+    if ( rc == 0 )
+        rc = STestEnd ( self, eOK, b );
+    else  if ( _RcCanceled ( rc ) )
+        STestEnd ( self, eCANCELED, "%s: CANCELED", b );
+    else
+        STestEnd ( self, eFAIL, b );
     return rc;
 }
 
@@ -2074,7 +2344,7 @@ LIB_EXPORT rc_t CC KDiagnoseMakeExt ( KDiagnose ** test, KConfig * kfg,
 
     if ( kfg == NULL ) {
         rc_t r2 = KConfigMake ( & p -> kfg, NULL );
-        if ( rc == 0 )
+        if ( rc == 0 && r2 != 0 )
             rc = r2;
     }
     else {
@@ -2087,7 +2357,7 @@ LIB_EXPORT rc_t CC KDiagnoseMakeExt ( KDiagnose ** test, KConfig * kfg,
 
     if ( kmgr == NULL ) {
         rc_t r2 = KNSManagerMake ( & p -> kmgr );
-        if ( rc == 0 )
+        if ( rc == 0 && r2 != 0 )
             rc = r2;
     }
     else {
@@ -2100,7 +2370,7 @@ LIB_EXPORT rc_t CC KDiagnoseMakeExt ( KDiagnose ** test, KConfig * kfg,
 
     if ( vmgr == NULL ) {
         rc_t r2 = VFSManagerMake ( & p -> vmgr );
-        if ( rc == 0 )
+        if ( rc == 0 && r2 != 0 )
             rc = r2;
     }
     else {
@@ -2110,6 +2380,11 @@ LIB_EXPORT rc_t CC KDiagnoseMakeExt ( KDiagnose ** test, KConfig * kfg,
         else if ( rc == 0 )
             rc = r2;
     }
+
+    if ( rc == 0 )
+        rc = KLockMake ( & p -> lock );
+    if ( rc == 0 )
+        rc = KConditionMake ( & p -> condition );
 
     if ( rc == 0 ) {
         p -> verbosity = KConfig_Verbosity ( p -> kfg );
@@ -2148,6 +2423,8 @@ LIB_EXPORT rc_t CC KDiagnoseRelease ( const KDiagnose * cself ) {
                 RELEASE ( KConfig   , self -> kfg );
                 RELEASE ( KNSManager, self -> kmgr );
                 RELEASE ( VFSManager, self -> vmgr );
+                RELEASE ( KLock     , self -> lock );
+                RELEASE ( KCondition, self -> condition );
                 VectorWhack ( & self -> tests , & testsWhack, NULL );
                 VectorWhack ( & self -> errors, & whack     , NULL );
                 free ( self );
@@ -2160,9 +2437,39 @@ LIB_EXPORT rc_t CC KDiagnoseRelease ( const KDiagnose * cself ) {
     return rc;
 }
 
-LIB_EXPORT rc_t CC KDiagnosePause  ( KDiagnose * self ) { return 0; }
-LIB_EXPORT rc_t CC KDiagnoseResume ( KDiagnose * self ) { return 0; }
-LIB_EXPORT rc_t CC KDiagnoseCancel ( KDiagnose * self ) { return 0; }
+static rc_t _KDiagnoseSetState ( KDiagnose * self, enum EState state ) {
+    rc_t rc = 0;
+    rc_t r2 = 0;
+
+    if ( self == NULL )
+        return RC ( rcRuntime, rcData, rcAccessing, rcSelf, rcNull );
+
+    rc = KLockAcquire ( self -> lock );
+
+    if ( rc == 0 ) {
+        self -> state = state;
+
+        rc = KConditionSignal ( self -> condition );
+    }
+
+    r2 = KLockUnlock ( self -> lock );
+    if ( rc == 0 && r2 != 0 )
+        rc = r2;
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KDiagnosePause  ( KDiagnose * self ) {
+    return _KDiagnoseSetState ( self, ePaused );
+}
+
+LIB_EXPORT rc_t CC KDiagnoseResume ( KDiagnose * self ) {
+    return _KDiagnoseSetState ( self, eRunning );
+}
+
+LIB_EXPORT rc_t CC KDiagnoseCancel ( KDiagnose * self ) {
+    return _KDiagnoseSetState ( self, eCanceled );
+}
 
 LIB_EXPORT rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests ) {
     rc_t rc = 0;
@@ -2193,12 +2500,19 @@ LIB_EXPORT rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests ) {
         STestStart ( & t, true, "Configuration" );
         STestStart ( & t, false, "node" );
         STestEndOr ( & t, & r1, eEndOK, "OK" );
-        STestEnd ( & t, r1 == 0 ? eOK : eFAIL, "Configuration" );
-        if ( rc == 0 )
+        if ( r1 == 0 )
+            r1 = STestEnd ( & t, eOK, "Configuration" );
+        else {
+            if ( _RcCanceled ( r1 ) )
+                STestEnd ( & t, eCANCELED, "Configuration: CANCELED" );
+            else
+                STestEnd ( & t, eFAIL, "Configuration" );
+        }
+        if ( rc == 0 && r1 != 0 )
             rc = r1;
     }
 
-    if ( tests & DIAGNOSE_NETWORK ) {
+    if ( tests & DIAGNOSE_NETWORK && ! _RcCanceled ( rc ) ) {
         rc_t r1 = 0;
         STestStart ( & t, true, "Network" );
         {
@@ -2264,16 +2578,26 @@ LIB_EXPORT rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests ) {
                 r1 = r2;
             DataFini ( & d );
         }
-        STestEnd ( & t, r1 == 0 ? eOK : eFAIL, "Network" );
-        if ( rc == 0 )
+
+        if ( r1 == 0)
+            r1 = STestEnd ( & t, eOK, "Network" );
+        else  if ( _RcCanceled ( r1 ) )
+            STestEnd ( & t, eCANCELED, "Network: CANCELED" );
+        else
+            STestEnd ( & t, eFAIL, "Network" );
+        if ( rc == 0 && r1 != 0 )
             rc = r1;
     }
 
-    if ( tests & DIAGNOSE_FAIL ) {
+    if ( rc == 0 && tests & DIAGNOSE_FAIL )
       rc = 1;
-    }
 
-    STestEnd ( & t, rc == 0 ? eOK : eFAIL, "The System" );
+    if ( rc == 0)
+        STestEnd ( & t, eOK, "The System" );
+    else  if ( _RcCanceled ( rc ) )
+        STestEnd ( & t, eCANCELED, "The System: CANCELED" );
+    else
+        STestEnd ( & t, eFAIL, "The System" );
 
     STestFini ( & t );
     KDiagnoseRelease ( self );

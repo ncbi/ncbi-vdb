@@ -91,7 +91,15 @@ typedef enum {
     eKDTS_Failed,    /* test finished with failure */
     eKDTS_Skipped,   /* test execution was skipped */
     eKDTS_Warning,   /* test finished successfully but has a warning for user */
+    eKDTS_Paused,    /* KDiagnosePause was called */
+    eKDTS_Resumed,   /* KDiagnoseResume was called */
+    eKDTS_Canceled,  /* KDiagnoseCancel was called */
 } EKDiagTestState;
+/* test is NULL when state is one of:
+ *                                    eKDTS_Paused
+ *                                    eKDTS_Resumed
+ *                                    eKDTS_Canceled
+ */
 DIAGNOSE_EXTERN rc_t CC KDiagnoseTestHandlerSet ( KDiagnose * self,
         void ( CC * callback )
              ( EKDiagTestState state, const KDiagnoseTest * test )
@@ -102,6 +110,13 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseTestHandlerSet ( KDiagnose * self,
 #define DIAGNOSE_FAIL    1
 #define DIAGNOSE_CONFIG  2
 #define DIAGNOSE_NETWORK 4
+/* Run
+ *
+ * tests is combination of DIAGNOSE_* values
+ *
+ * When "tests | DIAGNOSE_FAIL != 0" - KDiagnoseRun will return non-0 rc
+ * When KDiagnoseCancel is called - KDiagnoseRun will return rcCanceled
+ */
 DIAGNOSE_EXTERN rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests );
 
 DIAGNOSE_EXTERN rc_t CC KDiagnosePause  ( KDiagnose * self );
