@@ -45,6 +45,7 @@
 #include <klib/refcount.h>
 #include <klib/defs.h>
 #include <klib/log.h>
+#include <klib/printf.h>
 #include <vfs/path.h>
 #include <vfs/manager.h>
 
@@ -191,13 +192,15 @@ _FUSE_approve ( const char * Path )
     Grp = getgrgid ( TheContext -> gid );
 
     if ( ! XFSAccessApprove ( Pwd -> pw_name, Grp -> gr_name, Path ) ) {
-            /*  It is not really error, but we should report it :LOL:
+            /*  It is really error, but we should report it :LOL:
              */
         pLogMsg ( klogDebug, "ERROR(Fuse): User [$(user)] does not have right to path [$(path)]", "user=%s,path=%s", Pwd -> pw_name, Path );
+
+        return false;
     }
 
     return true;
-}   /* _FUSE_tree_approve () */
+}   /* _FUSE_approve () */
 
 /*****************************************************
  * JOJOBA
@@ -1581,6 +1584,39 @@ XFS_FUSE_opendir (
  *                  off_t off
  *                  );
  *****************************************************************/
+static
+bool
+_ApproveAccessToPath ( const char * Path, const char * Name )
+{
+    rc_t RCt;
+    bool RetVal;
+    char Buf [ 4096 ];
+    size_t BufLen, OutLen;
+
+    RCt = 0;
+    RetVal = true;
+    BufLen = sizeof ( Buf );
+    OutLen = 0;
+    * Buf = 0;
+
+    RCt = string_printf (
+                    Buf,
+                    BufLen,
+                    & OutLen,
+                    ( Path [ strlen ( Path ) - 1 ] == '/' ? "%s%s" : "%s/%s" ),
+                    Path,
+                    Name
+                    );
+    if ( RCt != 0 ) {
+        RetVal = false;
+    }
+    else {
+        RetVal = _FUSE_approve ( Buf );
+    }
+printf ( " [ FUSE APP ] [%d] [%d] [%s]\n", __LINE__, RetVal, Buf );
+
+    return RetVal;
+}   /* _ApproveAccessToPath () */
 
 static
 int
@@ -1635,12 +1671,14 @@ XFS_FUSE_readdir (
                             for ( llp = 0; llp < ListQty; llp ++ ) {
                                 RCt = KNamelistGet ( List, llp, & Name );
                                 if ( RCt == 0 ) { 
-                                    TheFiller (
-                                            TheBuffer,
-                                            Name,
-                                            NULL,
-                                            0
-                                            );
+                                    if ( _ApproveAccessToPath ( ThePath, Name ) ) {
+                                        TheFiller (
+                                                TheBuffer,
+                                                Name,
+                                                NULL,
+                                                0
+                                                );
+                                    }
                                 }
 
                                 if ( RCt != 0 ) {
