@@ -650,6 +650,25 @@ _AccessApprove (
         return true;
     }
 
+        /*  JOJOBA: ugly, but have space to thing
+         *  LOL ...
+         */
+#define DAS_STRUNG "/access-panel"
+    if ( strncmp ( Path, DAS_STRUNG, strlen ( DAS_STRUNG) ) == 0 ) {
+        return false;
+    }
+#undef DAS_STRUNG
+#define DAS_STRUNG "/cache"
+    if ( strncmp ( Path, DAS_STRUNG, strlen ( DAS_STRUNG) ) == 0 ) {
+        return false;
+    }
+#undef DAS_STRUNG
+#define DAS_STRUNG "/kart-files"
+    if ( strncmp ( Path, DAS_STRUNG, strlen ( DAS_STRUNG) ) == 0 ) {
+        return false;
+    }
+#undef DAS_STRUNG
+
         /*  First : Find agent for user
          */
     _AccessGet ( self, User, & xAgent );
