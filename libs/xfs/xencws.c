@@ -581,10 +581,19 @@ _DirEReadContent ( const struct _DirE * self )
                             );
 
     if ( RCt == 0 ) {
+            /*  Always use that cuz when file is empty, reader is not 
+             *  good, even if it is open without errors
+             */
         if ( XFSLineReaderGood ( Reader ) ) {
             do {
                 RCt = XFSLineReaderGet ( Reader, & Line );
                 if ( RCt == 0 ) {
+                    if ( Line . len == 0 ) {
+                            /* Empty Line JOJOBA : think about it
+                             */
+                        continue;
+                    }
+
                     RCt = _DirEParse ( & Line, & Entry );
                     if ( RCt == 0 ) {
                         RCt = _DirEAddEntryNoLock ( self, Entry );

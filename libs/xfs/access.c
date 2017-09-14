@@ -315,28 +315,35 @@ _AccessLoad ( const struct _Access * self, const char * Path )
 
                     RCt = XFSLineReaderOpen ( & Reader, Path );
                     if ( RCt == 0 ) {
-                        while ( XFSLineReaderNext ( Reader ) ) {
-                            RCt = XFSLineReaderGet ( Reader, & Line );
-                            if ( RCt == 0 ) {
-                                RCt = XFS_SStrDup ( & Line, & AgentName );
+                            /* We need that check, because in the 
+                             * case of existing empty file Reader
+                             * will open it without error, but it
+                             * will not be good
+                             */
+                        if ( XFSLineReaderGood ( Reader ) ) {
+                            do {
+                                RCt = XFSLineReaderGet ( Reader, & Line );
                                 if ( RCt == 0 ) {
-                                    /*  Adding everybody except yourself
-                                     */
-                                    if ( strcmp ( AgentName, self -> User ) != 0 ) {
-                                        RCt = _AccessAdd_noLock (
+                                    RCt = XFS_SStrDup ( & Line, & AgentName );
+                                    if ( RCt == 0 ) {
+                                        /*  Adding everybody except yourself
+                                         */
+                                        if ( strcmp ( AgentName, self -> User ) != 0 ) {
+                                            RCt = _AccessAdd_noLock (
                                                             self,
                                                             AgentName,
                                                             NULL
                                                             );
+                                        }
+                                        free ( ( char * ) AgentName );
                                     }
-                                    free ( ( char * ) AgentName );
                                 }
-                            }
 
-                            if ( RCt != 0 ) {
-                                break;
-                            }
-                        };
+                                if ( RCt != 0 ) {
+                                    break;
+                                }
+                            } while ( XFSLineReaderNext ( Reader ) );
+                        }
 
                         XFSLineReaderRelease ( Reader );
                     }
