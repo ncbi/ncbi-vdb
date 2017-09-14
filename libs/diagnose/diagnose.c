@@ -30,6 +30,8 @@
 #include "diagnose/diagnose.h" /* KDiagnoseRun */
 #include "diagnose.h" /* endpoint_to_string */
 
+#include <kapp/main.h> /* Quitting */
+
 #include <kfg/config.h> /* KConfigReadString */
 
 #include <kfs/directory.h> /* KDirectoryRelease */
@@ -146,8 +148,9 @@ struct KDiagnoseTest {
 static void KDiagnoseTestWhack ( KDiagnoseTest * self ) {
     assert ( self );
     free ( self -> name );
-    free ( self -> number );
     free ( self -> message );
+    free ( self -> number );
+    free ( self -> numberNode );
     memset ( self, 0, sizeof * self );
     free ( self );
 }
@@ -434,7 +437,7 @@ typedef struct {
     const char * ascp;
     const char * asperaKey;
 
-    const KDiagnose * boss;
+    KDiagnose * boss;
 } STest;
 
 static void STestInit ( STest * self, KDiagnose * test )
@@ -512,10 +515,21 @@ static void STestFini ( STest * self ) {
     memset ( self, 0, sizeof * self );
 }
 
-static rc_t KDiagnoseCheckState ( const KDiagnose * self ) {
+static rc_t KDiagnoseCheckState ( KDiagnose * self ) {
     rc_t rc = 0;
 
     assert ( self );
+
+    if ( ( rc = Quitting () ) != 0 )
+        if ( rc == SILENT_RC ( rcExe,
+                               rcProcess, rcExecuting, rcProcess, rcCanceled ) )
+        {
+            LogOut ( KVERBOSITY_INFO, 0,
+                     "= Signal caught: CANCELED DIAGNOSTICS\n" );
+            self -> state = eCanceled;
+            if ( CALL_BACK )
+                CALL_BACK ( eKDTS_Canceled, NULL );
+        }
 
     while ( self -> state != eRunning ) {
         rc_t r2;
@@ -893,7 +907,9 @@ const char*c=self->msg.base;
 }
 
 static bool _RcCanceled ( rc_t rc ) {
-    return rc == SILENT_RC ( rcRuntime,
+    return rc == SILENT_RC ( rcExe,
+                             rcProcess, rcExecuting, rcProcess, rcCanceled )
+        || rc == SILENT_RC ( rcRuntime,
                              rcProcess, rcExecuting, rcProcess, rcCanceled );
 }
 static bool STestCanceled ( const STest * self, rc_t rc ) {
