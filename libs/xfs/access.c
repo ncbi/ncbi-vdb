@@ -315,7 +315,7 @@ _AccessLoad ( const struct _Access * self, const char * Path )
 
                     RCt = XFSLineReaderOpen ( & Reader, Path );
                     if ( RCt == 0 ) {
-                        do {
+                        while ( XFSLineReaderNext ( Reader ) ) {
                             RCt = XFSLineReaderGet ( Reader, & Line );
                             if ( RCt == 0 ) {
                                 RCt = XFS_SStrDup ( & Line, & AgentName );
@@ -336,7 +336,7 @@ _AccessLoad ( const struct _Access * self, const char * Path )
                             if ( RCt != 0 ) {
                                 break;
                             }
-                        } while ( XFSLineReaderNext ( Reader ) );
+                        };
 
                         XFSLineReaderRelease ( Reader );
                     }
@@ -437,7 +437,7 @@ _AccessMake4Gap ( const struct _Access ** Acc, uint32_t ProjectId )
          */
     RCt = XFS_UserAccessList_ZHR ( & Path, ProjectId );
     if ( RCt == 0 ) {
-        _AccessMake ( Acc, Path );
+        RCt = _AccessMake ( Acc, Path );
 
         free ( Path );
     }
