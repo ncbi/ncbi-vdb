@@ -59,6 +59,8 @@
 #include <kfs/quickmount.h>
 #include <kfs/cacheteefile.h>
 #include <kfs/cachetee2file.h>
+#include <kfs/rrcachedfile.h>
+#include <kfs/recorder.h>
 #include <kfs/lockfile.h>
 #include <kfs/defs.h>
 
@@ -95,6 +97,7 @@
 
 
 #define DEFAULT_CACHE_BLOCKSIZE ( 32768 * 4 )
+#define DEFAULT_PAGE_COUNT 8
 
 #define VFS_KRYPTO_PASSWORD_MAX_SIZE 4096
 
@@ -217,7 +220,9 @@ LIB_EXPORT rc_t CC VFSManagerRelease ( const VFSManager *self )
 typedef struct caching_params
 {
     uint32_t cache_tee_version;
+    uint32_t rr_cached;
     uint32_t blocksize;
+    uint32_t pagecount;
     uint32_t recording;
 } caching_params;
 
@@ -227,8 +232,10 @@ static void get_caching_params( caching_params * params )
     rc_t rc = KConfigMake ( &cfg, NULL );
 
     /* set some default values... */
+    params -> rr_cached = 0;    
     params -> cache_tee_version = 0;
     params -> blocksize = DEFAULT_CACHE_BLOCKSIZE;
+    params -> pagecount = DEFAULT_PAGE_COUNT;
     params -> recording = 0;
     
     if ( rc == 0 )
@@ -237,10 +244,18 @@ static void get_caching_params( caching_params * params )
         rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/CACHETEEVER", &value );
         if ( rc == 0 )
             params -> cache_tee_version = (uint32_t)( value & 0x1 );
+
+        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/RRCACHED", &value );
+        if ( rc == 0 )
+            params -> rr_cached = (uint32_t)( value & 0xFFFFFFFF );
             
         rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/BLOCKSIZE", &value );
         if ( rc == 0 )
             params -> blocksize = (uint32_t)( value & 0xFFFFFFFF );
+
+        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/PAGECOUNT", &value );
+        if ( rc == 0 )
+            params -> pagecount = (uint32_t)( value & 0xFFFFFFFF );
 
         rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/RECORDING", &value );
         if ( rc == 0 )
@@ -258,8 +273,10 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self, const KFile **cfp,
                              const char * url, const char * cache_location,
                              bool high_reliability )
 {
-    rc_t rc;
+    rc_t rc, rc2;
     caching_params cps;
+    const KFile *temp_file;
+    struct Recorder * rec = NULL;
 
     if ( high_reliability )
         rc = KNSManagerMakeReliableHttpFile ( self -> kns, cfp, NULL, 0x01010000, url );
@@ -276,11 +293,6 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self, const KFile **cfp,
     if ( cache_location != NULL )
     {
         /* in case there is a cache-location we wrap the remote-file in a cachetee-file */
-        
-		const KFile *temp_file;
-		/* we do have a cache_location! wrap the remote file in a cacheteefile */
-		rc_t rc2;
-        
         if ( cps . cache_tee_version == 0 )
         {
             rc2 = KDirectoryMakeCacheTee ( self -> cwd,
@@ -298,34 +310,63 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self, const KFile **cfp,
                                             "%s", cache_location );
             if ( rc2 == 0 && cps . recording > 0 )
             {
-                struct Recorder * rec;
-                rc_t rc3 =  MakeRecorder ( self -> cwd,
-                                           &rec,
-                                           1024,
-                                           true,
-                                           "%s.rec", cache_location );
-                
-                if ( rc3 == 0 )
+                if ( MakeRecorder ( self -> cwd,
+                                    &rec,
+                                    1024,
+                                    true,
+                                    "%s.rec", cache_location ) == 0 )
                     CacheTee2FileSetRecorder( temp_file, rec );
             }
         }
+        
         if ( rc2 == 0 )
         {
             /* the creation of the cache-tee-file was successfull */
             KFileRelease ( * cfp );
             * cfp = temp_file;
         }
-        else
+        else if ( cps . rr_cached )
         {
             /* the creation of the cache-tee-file was NOT successfull:
                we should at least try to wrap the remote file in memory-buffering */
-            
+            if ( cps . recording > 0 )
+                MakeRecorder ( self -> cwd, &rec, 1024, true, "%s.rec", cache_location );
+
+            if ( MakeRRCached ( &temp_file, *cfp, cps . blocksize, cps . pagecount, rec ) == 0 )
+            {
+                KFileRelease ( * cfp );
+                * cfp = temp_file;
+            }
         }
     }
-    else
+    else if ( cps . rr_cached )
     {
-        /* in case there is no cache-location, we wrap the remote-file in memory-buffering */
+        if ( cps . recording > 0 )
+        {
+            /* we have to find the end of the url.... */
+            VNamelist * nl;
+            rc_t rc3 = VNamelistFromStr ( &nl, url, '/' );
+            if ( rc3 == 0 )
+            {
+                uint32_t count;
+                rc3 = VNameListCount ( nl, &count );
+                if ( rc3 == 0 && count > 2 )
+                {
+                    const char * s = NULL;
+                    rc3 = VNameListGet ( nl, count - 1, &s );
+                    if ( rc3 == 0 && s != NULL )
+                        MakeRecorder ( self -> cwd, &rec, 1024, true, "%s.rec", s );
+                }
+                VNamelistRelease( nl );
+            }
+        }
         
+        /* in case there is no cache-location, we wrap the remote-file in memory-buffering */
+        if ( MakeRRCached ( &temp_file, *cfp, cps . blocksize, cps . pagecount, rec ) == 0 )
+        {
+            KFileRelease ( * cfp );
+            * cfp = temp_file;
+        }
     }
     return rc;
 }

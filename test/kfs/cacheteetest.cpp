@@ -52,7 +52,7 @@ using namespace std;
 #define CACHEFILE "cache.dat"
 #define CACHEFILE1 "cache.dat.cache"
 #define DATAFILESIZE ( ( 1024 * 1024 ) + 300 )
-#define BLOCKSIZE 128
+#define BLOCKSIZE ( 1024 * 16 )
 
 TEST_SUITE( CacheTeeTests );
 
