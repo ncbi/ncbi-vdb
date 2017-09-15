@@ -128,11 +128,12 @@ static rc_t RRCachedRead ( const RRCachedFile *cself, uint64_t pos,
                            void *buffer, size_t bsize, size_t *num_read )
 {
     rc_t rc = 0;
-    struct PoolPage * pp;
-    
+    struct PoolPage * pp = NULL;
+
 #if RECORDING
-    if ( cself -> recorder != NULL )
-        WriteToRecorder ( cself -> recorder, "\nrr\tat:%lu\tlen:%lu\n", pos, bsize );
+    bool in_ram = false;
+    uint64_t rec_block_pos = 0;
+    size_t rec_block_size = 0;
 #endif
 
     if ( pool_page_find ( cself -> pool, &pp, pos ) == 0 && pp != NULL )
@@ -143,19 +144,13 @@ static rc_t RRCachedRead ( const RRCachedFile *cself, uint64_t pos,
         if ( rc == 0 )
         {
 #if RECORDING
-            if ( cself -> recorder != NULL )
-                WriteToRecorder ( cself -> recorder, "\tram at:%lu\tlen:%lu\n", pos, bsize );
+            in_ram = true;
 #endif
         }
         else
         {
             /* we have not other choice than reading directly from the wrapped file */
             rc = KFileReadAll( cself -> wrapped, pos, buffer, bsize, num_read );
-            
-#if RECORDING
-            if ( cself -> recorder != NULL )
-                WriteToRecorder ( cself -> recorder, "\tpool_page_get(1) failed at:%lu\tlen:%lu\n", pos, bsize );
-#endif
         }
     }
     else
@@ -165,11 +160,6 @@ static rc_t RRCachedRead ( const RRCachedFile *cself, uint64_t pos,
         {
             /* we have not other choice than reading directly from the wrapped file */
             rc = KFileReadAll( cself -> wrapped, pos, buffer, bsize, num_read );
-
-#if RECORDING
-            if ( cself -> recorder != NULL )
-                WriteToRecorder ( cself -> recorder, "\tpool_page_find_new() failed at:%lu\tlen:%lu\n", pos, bsize );
-#endif
         }
         else
         {
@@ -184,41 +174,39 @@ static rc_t RRCachedRead ( const RRCachedFile *cself, uint64_t pos,
                 if ( rc == 0 )
                 {
                     rc = pool_page_get ( pp, pos, buffer, bsize, num_read );
-                    
-                    if ( rc != 0 )
+                    if ( rc == 0 )
+                    {
+#if RECORDING
+                        rec_block_pos = block_pos;
+                        rec_block_size = cself -> block_size;
+#endif
+                    }
+                    else
                     {
                         /* we have not other choice than reading directly from the wrapped file */
                         rc = KFileReadAll( cself -> wrapped, pos, buffer, bsize, num_read );
-
-#if RECORDING
-                        if ( cself -> recorder != NULL )
-                            WriteToRecorder ( cself -> recorder, "\tpool_page_get(2) failed at:%lu\tlen:%lu\n", pos, bsize );
-#endif                
                     }
                 }
                 else
                 {
                     /* we have not other choice than reading directly from the wrapped file */
                     rc = KFileReadAll( cself -> wrapped, pos, buffer, bsize, num_read );
-
-#if RECORDING
-                    if ( cself -> recorder != NULL )
-                        WriteToRecorder ( cself -> recorder, "\tpool_page_read_from_file() failed at:%lu\tlen:%lu\n", pos, bsize );
-#endif                
                 }
             }
             else
             {
                 /* we have not other choice than reading directly from the wrapped file */
                 rc = KFileReadAll( cself -> wrapped, pos, buffer, bsize, num_read );
-
-#if RECORDING
-            if ( cself -> recorder != NULL )
-                WriteToRecorder ( cself -> recorder, "\tpool_page_prepare() failed at:%lu\tlen:%lu\n", pos, bsize );
-#endif                
             }
         }
     }
+
+#if RECORDING
+    if ( cself -> recorder != NULL )
+        WriteToRecorder ( cself -> recorder,
+                          "%lu\t%lu\t%lu\t%s\t%lu\t%lu\n",
+                          pos, bsize, *num_read, in_ram ? "Y" : "N", rec_block_pos, rec_block_size );
+#endif                
     
     if ( pp != NULL )
         pool_page_release ( pp );

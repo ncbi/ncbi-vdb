@@ -177,11 +177,14 @@ rc_t pool_page_find_new ( ThePool * self, PoolPage ** found )
                 }
             }
         }
+
         if ( *found != NULL )
         {
             ( *found ) -> writing = true;
             ( *found ) -> usage = 1;
         }
+        else
+            rc = RC ( rcFS, rcFile, rcReading, rcItem, rcNoFound );
         KLockUnlock ( self -> lock );
     }
     return rc;
