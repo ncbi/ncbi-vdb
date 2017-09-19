@@ -38,8 +38,9 @@ typedef struct PoolPage
 typedef struct ThePool
 {
     PoolPage * pages;
+        uint32_t * scratch;
     KLock * lock;
-    uint32_t block_size, page_count;
+    uint32_t block_size, page_count, scratch_select;
 } ThePool;
 
 rc_t make_pool ( ThePool ** pool, uint32_t block_size, uint32_t page_count )
@@ -55,18 +56,26 @@ rc_t make_pool ( ThePool ** pool, uint32_t block_size, uint32_t page_count )
         p -> pages = calloc( page_count, sizeof *( p -> pages ) );
         if ( p -> pages != NULL )
         {
-            for ( idx = 0; idx < page_count; ++idx )
+            p -> scratch = calloc( page_count, sizeof *( p -> scratch ) );
+            if ( p -> scratch )
             {
-                p -> pages[ idx ] . idx = idx;
-                p -> pages[ idx ] . pool = p;
+                for ( idx = 0; idx < page_count; ++idx )
+                {
+                    p -> pages[ idx ] . idx = idx;
+                    p -> pages[ idx ] . pool = p;
+                }
+                p -> block_size = block_size;
+                p -> page_count = page_count;
+                rc = KLockMake ( & p -> lock );
+                if ( rc == 0 )
+                    *pool = p;
+                else
+                    free ( ( void * ) p -> pages );
             }
-            p -> block_size = block_size;
-            p -> page_count = page_count;
-            rc = KLockMake ( & p -> lock );
-            if ( rc == 0 )
-                *pool = p;
             else
-                free ( ( void * ) p -> pages );
+            {
+                free( ( void * ) p -> pages );
+            }
         }
         else
         {
@@ -87,6 +96,7 @@ void pool_release ( ThePool * self )
             free( ( void * ) p -> data );
     }
     free( self -> pages );
+    free( self -> scratch );
     KLockRelease ( self -> lock );
     free ( ( void * ) self );
 }
@@ -99,6 +109,11 @@ uint32_t pool_page_blocks ( const PoolPage * self )
 uint32_t pool_page_idx ( const PoolPage * self )
 {
     return self -> idx;
+}
+
+uint32_t pool_page_usage ( const PoolPage * self )
+{
+    return self -> usage;
 }
 
 rc_t pool_page_find ( ThePool * self, PoolPage ** found, uint64_t pos )
@@ -157,23 +172,50 @@ rc_t pool_page_find_new ( ThePool * self, PoolPage ** found )
             {
                 *found = p;
             }
+            else
+            {
+                if ( p -> usage > 1 )
+                    p -> usage -= 1;
+            }
         }
         
         /* second try: find the least used entry,
            not currently used for reading or writing */
         if ( *found == NULL )
         {
-            uint32_t used = 0xFFFFFFFF;
+            uint32_t min_used = 0xFFFFFFFF;
+            /* step 1 : find the min-usage value that is not busy */
             for ( i = 0; i < self -> page_count; ++i )
             {
                 PoolPage * p = & self -> pages[ i ];
                 if ( ( p -> data != NULL ) &&
                      ( ! p -> writing ) &&
-                     ( p -> usage < used ) &&
+                     ( p -> usage < min_used ) &&
                      ( p -> readers == 0 ) )
                 {
-                    used = p -> usage;
-                    *found = p;
+                    min_used = p -> usage;
+                }
+            }
+            /* step 2 : record the pages that have this value in the scratch */
+            if ( min_used < 0xFFFFFFFF )
+            {
+                uint32_t dst = 0;
+                for ( i = 0; i < self -> page_count; ++i )
+                {
+                    PoolPage * p = & self -> pages[ i ];
+                    if ( ( p -> data != NULL ) &&
+                         ( ! p -> writing ) &&
+                         ( p -> usage == min_used ) &&
+                         ( p -> readers == 0 ) )
+                    {
+                        self -> scratch[ dst++ ] = p -> idx;
+                    }
+                }
+                if ( dst > 0 )
+                {
+                    if ( self -> scratch_select >= dst )
+                        self -> scratch_select = 0;
+                    *found = & self -> pages[ self -> scratch[ self -> scratch_select ++ ] ];
                 }
             }
         }
@@ -184,7 +226,7 @@ rc_t pool_page_find_new ( ThePool * self, PoolPage ** found )
             ( *found ) -> usage = 1;
         }
         else
-            rc = RC ( rcFS, rcFile, rcReading, rcItem, rcNoFound );
+            rc = SILENT_RC ( rcFS, rcFile, rcReading, rcItem, rcNotFound );
         KLockUnlock ( self -> lock );
     }
     return rc;

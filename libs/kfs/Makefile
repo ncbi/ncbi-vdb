@@ -123,6 +123,7 @@ KFS_CMN = \
 	cacheteefile2 \
 	rrcachedfile \
 	recorder \
+	logfile \
 	poolpages \
 	from_to_namelist \
 	limitfile

@@ -39,7 +39,6 @@ struct RRCachedFile;
 #include <kfs/recorder.h>
 #include "poolpages.h"
 #include <kproc/queue.h>
-#include <kfs/cachetee2file.h>
 
 #include <sysalloc.h>
 #include <stdlib.h>
@@ -134,6 +133,8 @@ static rc_t RRCachedRead ( const RRCachedFile *cself, uint64_t pos,
     bool in_ram = false;
     uint64_t rec_block_pos = 0;
     size_t rec_block_size = 0;
+    uint32_t rec_block_idx = 0;
+    uint32_t rec_block_usage = 0;
 #endif
 
     if ( pool_page_find ( cself -> pool, &pp, pos ) == 0 && pp != NULL )
@@ -145,6 +146,8 @@ static rc_t RRCachedRead ( const RRCachedFile *cself, uint64_t pos,
         {
 #if RECORDING
             in_ram = true;
+            rec_block_idx = pool_page_idx ( pp ) + 1;
+            rec_block_usage = pool_page_usage( pp );
 #endif
         }
         else
@@ -179,6 +182,8 @@ static rc_t RRCachedRead ( const RRCachedFile *cself, uint64_t pos,
 #if RECORDING
                         rec_block_pos = block_pos;
                         rec_block_size = cself -> block_size;
+                        rec_block_idx = pool_page_idx ( pp ) + 1;
+                        rec_block_usage = pool_page_usage( pp );
 #endif
                     }
                     else
@@ -204,8 +209,9 @@ static rc_t RRCachedRead ( const RRCachedFile *cself, uint64_t pos,
 #if RECORDING
     if ( cself -> recorder != NULL )
         WriteToRecorder ( cself -> recorder,
-                          "%lu\t%lu\t%lu\t%s\t%lu\t%lu\n",
-                          pos, bsize, *num_read, in_ram ? "Y" : "N", rec_block_pos, rec_block_size );
+                          "%lu\t%lu\t%lu\t%s\t%lu\t%lu\t%d.%d\n",
+                          pos, bsize, *num_read, in_ram ? "Y" : "N",
+                          rec_block_pos, rec_block_size, rec_block_idx, rec_block_usage );
 #endif                
     
     if ( pp != NULL )

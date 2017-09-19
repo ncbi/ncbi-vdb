@@ -37,6 +37,8 @@ uint32_t pool_page_blocks ( const struct PoolPage * self );
 
 uint32_t pool_page_idx ( const struct PoolPage * self );
 
+uint32_t pool_page_usage ( const struct PoolPage * self );
+
 rc_t pool_page_find ( struct ThePool * self, struct PoolPage ** found, uint64_t pos );
 
 rc_t pool_page_get ( const struct PoolPage * self, uint64_t pos, void *buffer,
