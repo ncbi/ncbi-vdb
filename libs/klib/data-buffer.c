@@ -27,6 +27,7 @@
 #include <klib/extern.h>
 #include <klib/data-buffer.h>
 #include <klib/rc.h>
+#include <klib/debug.h>
 #include <atomic32.h>
 #include <bitstr.h>
 #include <sysalloc.h>
@@ -46,6 +47,34 @@
 #if _DEBUGGING
 #define DEBUG_MALLOC_FREE 1
 #include <stdio.h>
+#endif
+
+#define TRAC_ALLOC 1
+
+#if TRAC_ALLOC
+static size_t max_allocated_memory = 0;
+#define MIN_ALLOC_REPORT 1024
+
+static void track_alloc( size_t to_alloc )
+{
+    if ( to_alloc > max_allocated_memory )
+    {
+        max_allocated_memory = to_alloc;
+        if ( to_alloc > MIN_ALLOC_REPORT )
+            DBGMSG( DBG_KLIB, DBG_FLAG( DBG_KLIB_ALLOC ), ( "alloc: %,lu\n", to_alloc ) );
+    }
+}
+
+static void track_realloc( size_t to_alloc )
+{
+    if ( to_alloc > max_allocated_memory )
+    {
+        max_allocated_memory = to_alloc;
+        if ( to_alloc > MIN_ALLOC_REPORT )
+            DBGMSG( DBG_KLIB, DBG_FLAG( DBG_KLIB_ALLOC ), ( "realloc: %,lu\n", to_alloc ) );
+    }
+}
+
 #endif
 
 #if DEBUG_ALIGNMENT
@@ -116,14 +145,21 @@ static size_t roundup(size_t value, unsigned bits)
 }
 
 static
-rc_t allocate(buffer_impl_t **target, size_t capacity) {
-    buffer_impl_t *y = malloc(capacity + sizeof(*y));
+rc_t allocate ( buffer_impl_t **target, size_t capacity )
+{
+    buffer_impl_t * y;
+    size_t to_alloc = capacity + sizeof( *y );
+    y = malloc( to_alloc );
 
-    if (y == NULL)
-        return RC(rcRuntime, rcBuffer, rcAllocating, rcMemory, rcExhausted);
+#if TRAC_ALLOC
+    track_alloc( to_alloc );
+#endif
+    
+    if ( y == NULL )
+        return RC( rcRuntime, rcBuffer, rcAllocating, rcMemory, rcExhausted );
 
     y->allocated = capacity;
-    atomic32_set(&y->refcount, 1);
+    atomic32_set( &y -> refcount, 1 );
     
 #if DEBUG_MALLOC_FREE
     y->foo = 0;
@@ -171,19 +207,31 @@ static rc_t reallocate(buffer_impl_t **target, size_t capacity) {
         return 0;
 
     /* check reference count for copies */
-    if (atomic32_read(&self->refcount) <= 1)
+    if ( atomic32_read( &self->refcount ) <= 1 )
     {
-        temp = realloc(self, capacity + sizeof(*temp));
-        if (temp == NULL)
-            return RC(rcRuntime, rcBuffer, rcResizing, rcMemory, rcExhausted);
+        size_t to_alloc = capacity + sizeof( *temp );
+        temp = realloc( self, to_alloc );
+
+#if TRAC_ALLOC
+        track_realloc( to_alloc );
+#endif
+
+        if ( temp == NULL )
+            return RC( rcRuntime, rcBuffer, rcResizing, rcMemory, rcExhausted );
     }
     else
     {
-        temp = malloc(capacity + sizeof(*temp));
-        if (temp == NULL)
-            return RC(rcRuntime, rcBuffer, rcResizing, rcMemory, rcExhausted);
-        memmove(temp, self, self->allocated + sizeof(*temp));
-        release(self);
+        size_t to_alloc = capacity + sizeof( *temp );
+        temp = malloc( to_alloc );
+
+#if TRAC_ALLOC
+        track_alloc( to_alloc );
+#endif
+
+        if ( temp == NULL )
+            return RC( rcRuntime, rcBuffer, rcResizing, rcMemory, rcExhausted) ;
+        memmove ( temp, self, self -> allocated + sizeof( *temp ) );
+        release( self );
     }
     self = temp;
     self->allocated = capacity;
@@ -197,11 +245,18 @@ static rc_t shrink(buffer_impl_t **target, size_t capacity)
 {
     buffer_impl_t *self = *target;
     
-    if (capacity < self->allocated && atomic32_read(&self->refcount) == 1) {
-        buffer_impl_t *temp = realloc(self, capacity + sizeof(*temp));
+    if ( capacity < self->allocated && atomic32_read( &self->refcount ) == 1 )
+    {
+        buffer_impl_t *temp;
+        size_t to_alloc = capacity + sizeof( *temp );
+        temp = realloc( self, to_alloc );
+
+#if TRAC_ALLOC
+        track_realloc( to_alloc );
+#endif
         
-        if (temp == NULL)
-            return RC(rcRuntime, rcBuffer, rcResizing, rcMemory, rcExhausted);
+        if ( temp == NULL )
+            return RC( rcRuntime, rcBuffer, rcResizing, rcMemory, rcExhausted );
 
         temp->allocated = capacity;
         *target = temp;
@@ -216,11 +271,19 @@ static rc_t shrink(buffer_impl_t **target, size_t capacity)
 static buffer_impl_t* make_copy(buffer_impl_t *self) {
     if (atomic32_read_and_add_eq(&self->refcount, 1, 1)==1)
         return self;
-    else {
-        buffer_impl_t *copy = malloc(self->allocated + sizeof(*self));
-        if (copy) {
-            memmove(copy, self, self->allocated + sizeof(*copy));
-            atomic32_set(&copy->refcount, 1);
+    else
+    {
+        size_t to_alloc = self -> allocated + sizeof( *self );
+        buffer_impl_t *copy = malloc( to_alloc );
+
+#if TRAC_ALLOC
+        track_alloc( to_alloc );
+#endif
+        
+        if ( copy )
+        {
+            memmove( copy, self, self -> allocated + sizeof( *copy ) );
+            atomic32_set( &copy->refcount, 1 );
         }
         return copy;
     }
