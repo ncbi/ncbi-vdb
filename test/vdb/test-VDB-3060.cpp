@@ -109,7 +109,7 @@ const char other_path[] = "/some/other/path";
 
 /*
     test VDBManagerSetCacheRoot() with invalid and valid parameters
-    set the value to "/home/raetzw/somepath"
+    set the value to "/home/user/somepath"
 */
 TEST_CASE( SetCacheRoot_1 )
 {

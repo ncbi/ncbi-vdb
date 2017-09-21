@@ -104,7 +104,7 @@ rc_t CC seqRestoreLinkageGroup(void *const Self,
         rc_t const rc = KDataBufferResize(rslt->data, linkageGroupLen);
         rslt->elem_count = linkageGroupLen;
         if (rc == 0)
-            memcpy(rslt->data->base, linkageGroup, linkageGroupLen);
+            memmove(rslt->data->base, linkageGroup, linkageGroupLen);
         return rc;
     }
     else {
@@ -120,7 +120,7 @@ rc_t CC seqRestoreLinkageGroup(void *const Self,
             assert(offset == 0);
             rslt->elem_count = linkageGroupLen;
             if (rc == 0)
-                memcpy(rslt->data->base, linkageGroup, linkageGroupLen);
+                memmove(rslt->data->base, linkageGroup, linkageGroupLen);
             return rc;
         }
         return rc;

@@ -71,7 +71,7 @@ rc_t TableReaderWGS_MakeTable(TableReaderWGS const **const pself,
     {
         TableReaderWGS *const self = calloc(1, sizeof(*self));
     
-        memcpy(self->cols, TableReaderWGS_cols, sizeof(TableReaderWGS_cols));
+        memmove(self->cols, TableReaderWGS_cols, sizeof(TableReaderWGS_cols));
         self->read = &self->cols[0];
     
         if (options != 0) {
@@ -160,7 +160,7 @@ rc_t TableReaderWGS_Read(TableReaderWGS const *const self, int64_t const row,
                 INSDC_coord_len const N = end < max ? (end - offset) : (max - offset);
         
                 *written = N;
-                memcpy(buffer, src, N);
+                memmove(buffer, src, N);
             }
         }
         ALIGN_DBGERR(rc);

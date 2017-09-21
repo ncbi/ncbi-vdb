@@ -180,7 +180,7 @@ rc_t CMEMBER(SetEncryptIvec) (CIPHER_IMPL * self,
     assert (self);
     assert (ivec);
 
-    memcpy (self->dad.encrypt_ivec, ivec, self->dad.block_size);
+    memmove (self->dad.encrypt_ivec, ivec, self->dad.block_size);
 
     return 0;
 }
@@ -193,7 +193,7 @@ rc_t CMEMBER(SetDecryptIvec) (CIPHER_IMPL * self,
     assert (self);
     assert (ivec);
 
-    memcpy (self->dad.decrypt_ivec, ivec, self->dad.block_size);
+    memmove (self->dad.decrypt_ivec, ivec, self->dad.block_size);
 
     return 0;
 }

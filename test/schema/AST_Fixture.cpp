@@ -106,7 +106,10 @@ AST_Fixture :: PrintTree ( const ParseTree& p_tree )
             case_ ( PT_COLSTMT );
             case_ ( PT_DBBODY );
             case_ ( PT_DBMEMBER );
-
+            case_ ( PT_PHYSMBR );
+            case_ ( PT_PHYSCOL );
+            case_ ( PT_PHYSCOLDEF );
+            case_ ( PT_COLSCHEMAPARMS );
             default:
                 if ( tt < 256 )
                 {

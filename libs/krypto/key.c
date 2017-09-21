@@ -83,7 +83,7 @@ static rc_t KKeyInitInt (KKey * self, KKeyType key_type,
             z = 256/8;
             break;
         }
-        memcpy (self->text, digest, z);
+        memmove (self->text, digest, z);
     }
     return 0;
 }

@@ -863,7 +863,7 @@ rc_t KSysDirMakeSimulatedFSPath ( const KSysDir* self, enum RCContext ctx, bool 
     /* prepend UTF-16 directory path */
     if ( buffer_length_in_wchars != 0 )
     {
-        memcpy ( buffer, self -> path, buffer_length_in_wchars * sizeof * buffer );
+        memmove ( buffer, self -> path, buffer_length_in_wchars * sizeof * buffer );
 
         /* if path is relative, expect trailing '\\'
             if path is full, expect NO trailing '\\' */
@@ -3010,7 +3010,7 @@ rc_t KSysDirInit ( KSysDir *self, enum RCContext ctx, uint32_t dad_root,
 
     if ( path != NULL )
     {
-        memcpy( self->path, path, path_size );
+        memmove( self->path, path, path_size );
     }
 
     self->root = chroot ? path_length : dad_root;
@@ -3133,4 +3133,36 @@ LIB_EXPORT rc_t CC KSysDirVRealPath ( struct KSysDir const *self,
        its components, etc. to come up with a real path, then
        3) rewrite the path as a UTF-8 POSIX path */
     return KSysDirResolvePath ( self, true, real, bsize, path, args );
+}
+
+LIB_EXPORT rc_t CC KDirectoryGetDiskFreeSpace_v1 ( const KDirectory * self,
+    uint64_t * free_bytes_available, uint64_t * total_number_of_bytes )
+{
+    if ( self == NULL )
+        return RC ( rcFS, rcDirectory, rcAccessing, rcSelf, rcNull );
+    else {
+        KSysDir_v1 * dir = ( KSysDir_v1 * ) self;
+
+	LPCTSTR lpszMultibyte = dir -> path;
+
+	unsigned __int64 i64FreeBytesToCaller = 0;
+	unsigned __int64 i64TotalBytes = 0;
+	unsigned __int64 i64FreeBytes = 0;
+
+	if ( GetDiskFreeSpaceEx (lpszMultibyte,
+	    ( PULARGE_INTEGER ) & i64FreeBytesToCaller,
+            ( PULARGE_INTEGER ) & i64TotalBytes,
+            ( PULARGE_INTEGER ) & i64FreeBytes ) )
+	{
+            if ( free_bytes_available != NULL ) {
+                * free_bytes_available  = i64FreeBytes;
+            }
+            if ( total_number_of_bytes != NULL ) {
+                * total_number_of_bytes = i64TotalBytes;
+            }
+            return 0;
+        }
+
+        return RC ( rcFS, rcDirectory, rcAccessing, rcError, rcUnknown );
+    }
 }

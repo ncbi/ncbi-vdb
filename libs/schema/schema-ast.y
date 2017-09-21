@@ -221,10 +221,12 @@
 %type <node> script_prologue physical phys_prologue phys_body phys_body_stmt
 %type <node> phys_return_type table parents_opt tbl_body tbl_stmts tbl_stmt
 %type <node> tbl_parents production column_decl col_modifiers_opt col_modifiers
-%type <node> col_modifier col_decl col_ident col_body col_stmt typed_col column_expr
+%type <node> col_modifier col_decl col_ident col_body col_stmt typed_col
 %type <node> factory_parms factory_parms_opt schema_parm schema_parms arrayspec
 %type <node> phys_enc_ref col_body_opt database opt_dbdad dbbody db_members
 %type <node> db_member template_opt
+%type <node> physmbr_decl col_schema_parms_opt col_schema_parms
+%type <node> col_schema_value col_schema_parm phys_coldef
 
 %type <fqn> fqn qualnames fqn_opt_vers ident fqn_vers
 
@@ -244,6 +246,8 @@
 %type <tok> PT_NOHEADER KW_decode KW_encode KW___row_length PT_COLDECL PT_TYPEDCOL PT_TYPEEXPR
 %type <tok> PT_PHYSENCEXPR PT_PHYSENCREF KW_column PT_TYPEDCOLEXPR PT_DATABASE PT_DBBODY
 %type <tok> KW_template KW_database PT_DBMEMBER PT_TBLMEMBER
+%type <tok> PT_COLSCHEMAPARMS
+%type <tok> KW_static PT_PHYSMBR PT_PHYSCOLDEF PT_COLSCHEMAPARAM KW_physical
 
 %%
 
@@ -520,20 +524,19 @@ tbl_stmts
     ;
 
 tbl_stmt
-    : production    { $$ = $1; }
-    | column_decl   { $$ = $1; }
-    | column_expr   { $$ = $1; }
+    : production                                                        { $$ = $1; }
+    | column_decl                                                       { $$ = $1; }
+    | PT_COLUMNEXPR '(' KW_column KW_limit '=' expr ';' ')'             { $$ = new AST ( $1, $6 ); }
+    | PT_COLUMNEXPR '(' KW_column KW_default KW_limit '=' expr ';' ')'  { $$ = new AST ( $1, $7 ); }
+    | PT_PHYSCOL '(' KW_static physmbr_decl ')'                         { $$ = new AST ( $3, $4 ); }
+    | PT_PHYSCOL '(' KW_physical physmbr_decl ')'                       { $$ = new AST ( $3, $4 ); }
+    | PT_PHYSCOL '(' KW_static KW_physical physmbr_decl ')'             { $$ = new AST ( $3, $5 ); }
+    /*TODO: default view */
+    /*TODO: untyped */
     ;
 
 column_decl
     : PT_COLUMN '(' col_modifiers_opt col_decl ')' { $$ = new AST ( $1, $3, $4 ); }
-    ;
-
-column_expr
-    : PT_COLUMNEXPR '(' KW_column KW_limit '=' expr ';' ')'
-        { $$ = new AST ( $1, $6 ); }
-    | PT_COLUMNEXPR '(' KW_column KW_default KW_limit '=' expr ';' ')'
-        { $$ = new AST ( $1, $7 ); }
     ;
 
 col_modifiers_opt
@@ -559,18 +562,16 @@ col_decl
     ;
 
 phys_enc_ref
-    : PT_PHYSENCREF '(' '<' PT_ASTLIST '(' schema_parms ')' '>' fqn_opt_vers factory_parms_opt ')' { $$ = new AST ( $1, $6, $9, $10 ); }
-    | PT_PHYSENCREF '(' fqn_vers factory_parms_opt ')'                          { $$ = new AST ( $1, $3, $4 ); }
-    | PT_PHYSENCREF '(' fqn '<' factory_parms '>' ')'                           { $$ = new AST ( $1, $3, $5 ); }
+    : PT_PHYSENCREF '(' '<' PT_ASTLIST '(' schema_parms ')' '>' fqn_opt_vers factory_parms_opt ')'
+                                                        { $$ = new AST ( $1, $6, $9, $10 ); }
+    | PT_PHYSENCREF '(' fqn_vers factory_parms_opt ')'  { $$ = new AST ( $1, $3, $4 ); }
+    | PT_PHYSENCREF '(' fqn '<' factory_parms '>' ')'   { $$ = new AST ( $1, $3, $5 ); }
     ;
 
 typed_col
-    : PT_TYPEDCOL '(' col_ident '{' col_body_opt '}' ')'
-            {  $$ = new AST ( $1, $3, $5 ); }
-    | PT_TYPEDCOLEXPR '(' col_ident '=' cond_expr ';' ')'
-            {  $$ = new AST ( $1, $3, $5 ); }
-    | PT_TYPEDCOL '(' col_ident ';' ')'
-            {  $$ = new AST ( $1, $3 ); }
+    : PT_TYPEDCOL '(' col_ident '{' col_body_opt '}' ')'    {  $$ = new AST ( $1, $3, $5 ); }
+    | PT_TYPEDCOLEXPR '(' col_ident '=' cond_expr ';' ')'   {  $$ = new AST ( $1, $3, $5 ); }
+    | PT_TYPEDCOL '(' col_ident ';' ')'                     {  $$ = new AST ( $1, $3 ); }
     ;
 
 col_ident
@@ -589,10 +590,45 @@ col_body
     ;
 
 col_stmt
-    : ';'                                           { $$ = new AST (); }
+    : ';'                                               { $$ = new AST (); }
     | PT_COLSTMT '(' KW_read '=' cond_expr ';' ')'      { $$ = new AST ( $1, new AST ( $3 ), $5 ); }
     | PT_COLSTMT '(' KW_validate '=' cond_expr ';' ')'  { $$ = new AST ( $1, new AST ( $3 ), $5 ); }
     | PT_COLSTMT '(' KW_limit '=' uint_expr ';' ')'     { $$ = new AST ( $1, new AST ( $3 ), $5 ); }
+    ;
+
+physmbr_decl
+    : PT_PHYSMBR '(' phys_coldef PHYSICAL_IDENTIFIER_1_0 ';' ')'
+                                                { $$ = new AST ( $1, $3, new AST ( $4 ) ); }
+    | PT_PHYSMBR '(' KW_column phys_coldef PHYSICAL_IDENTIFIER_1_0 ';' ')'
+                                                { $$ = new AST ( $1, $4, new AST ( $5 ) ); }
+    | PT_PHYSMBR '(' phys_coldef PHYSICAL_IDENTIFIER_1_0 '=' cond_expr ';' ')'
+                                                { $$ = new AST ( $1, $3, new AST ( $4 ), $6 ); }
+    | PT_PHYSMBR '(' KW_column phys_coldef PHYSICAL_IDENTIFIER_1_0 '=' cond_expr ';' ')'
+                                                { $$ = new AST ( $1, $4, new AST ( $5 ), $7 ); }
+    ;
+
+phys_coldef
+    : PT_PHYSCOLDEF '(' col_schema_parms_opt fqn_opt_vers factory_parms_opt ')'    { $$ = new AST ( $1, $3, $4, $5 ); }
+    ;
+
+col_schema_parms_opt
+    : PT_EMPTY                                                              { $$ = new AST (); }
+    | PT_COLSCHEMAPARMS '(' '<' PT_ASTLIST '(' col_schema_parms ')' '>' ')' { $$ = $6; }
+    ;
+
+col_schema_parms
+    : col_schema_parm                   { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    | col_schema_parms col_schema_parm  { $$ = $1; $$ -> AddNode ( $2 ); }
+    ;
+
+col_schema_parm
+    : PT_COLSCHEMAPARAM '(' fqn '=' col_schema_value ')'    { $$ = new AST ( $1, $3, $5 ); }
+    | col_schema_value                                      { $$ = $1; }
+    ;
+
+col_schema_value
+    : fqn       { $$ = $1; }
+    | uint_expr { $$ = $1; }
     ;
 
 /* expressions */

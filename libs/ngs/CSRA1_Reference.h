@@ -61,15 +61,16 @@ enum ReferenceTableColumns
     reference_NUM_COLS
 };
 
+extern const char * reference_col_specs [];
 
-struct NGS_Reference * CSRA1_ReferenceMake ( ctx_t ctx, 
+struct NGS_Reference * CSRA1_ReferenceMake ( ctx_t ctx,
                                              struct NGS_ReadCollection * coll,
                                              const struct VDatabase * db,
-                                             const struct NGS_Cursor * curs, 
+                                             const struct NGS_Cursor * curs,
                                              const char * spec,
                                              uint64_t align_id_offset );
 
-struct NGS_Reference * CSRA1_ReferenceIteratorMake ( ctx_t ctx, 
+struct NGS_Reference * CSRA1_ReferenceIteratorMake ( ctx_t ctx,
                                                      struct NGS_ReadCollection * coll,
                                                      const struct VDatabase * db,
                                                      const struct NGS_Cursor * curs,

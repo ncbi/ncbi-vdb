@@ -1589,7 +1589,8 @@ rc_t function_decl ( KSymTable *tbl, KTokenSource *src, KToken *t,
                         assert ( exist -> id < f -> id );
                         VectorSwap ( & self -> func, f -> id, NULL, & ignore );
                         VectorSwap ( & self -> func, f -> id = exist -> id, f, & ignore );
-                        f = exist;
+                        SFunctionWhack ( exist, NULL );
+                        return 0;
                     }
 
                     /* exists is not an error */

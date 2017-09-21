@@ -202,7 +202,7 @@ rc_t CC KTrieIndexWrite_v1 ( void *param,
 
         if ( to_write > 0 )
         {
-            memcpy ( pb -> buffer + pb -> marker,
+            memmove ( pb -> buffer + pb -> marker,
                 ( const uint8_t* ) buffer + total, to_write );
             pb -> marker += to_write;
         }
@@ -228,7 +228,7 @@ rc_t CC KTrieIndexWrite_v1 ( void *param,
             pb -> pos += num_flushed;
 
             if ( pb -> marker != 0 )
-                memcpy ( pb -> buffer, pb -> buffer + num_flushed, pb -> marker );
+                memmove ( pb -> buffer, pb -> buffer + num_flushed, pb -> marker );
         }
     }
 
@@ -648,7 +648,7 @@ bool CC KTrieIndexPopulate_v1 ( PTNode *n, void *data )
     /* capture node id */
     uint32_t id;
     assert ( n -> data . size == sizeof id );
-    memcpy ( & id, n -> data . addr, sizeof id );
+    memmove ( & id, n -> data . addr, sizeof id );
 
     /* reject already mapped */
     if ( id == pb -> id )
@@ -990,7 +990,7 @@ rc_t KTrieIndexDelete_v1 ( KTrieIndex_v1 *self, bool proj, const char *str )
         }
         else if ( node -> id == self -> first )
         {
-            memcpy ( self -> id2node, self -> id2node + 1,
+            memmove ( self -> id2node, self -> id2node + 1,
                 ( self -> last - self -> first ) * sizeof self -> id2node [ 0 ] );
             ++ self -> first;
         }
@@ -1023,7 +1023,7 @@ rc_t KTrieIndexFind_v1 ( const KTrieIndex_v1 *self, const char *str, uint32_t *i
             if ( nid != 0 )
             {
                 assert ( n . data . size == sizeof * id );
-                memcpy ( id, n . data . addr, sizeof * id );
+                memmove ( id, n . data . addr, sizeof * id );
                 return 0;
             }
         }

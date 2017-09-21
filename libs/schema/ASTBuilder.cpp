@@ -217,12 +217,12 @@ ASTBuilder :: CreateFqnSymbol ( const AST_FQN& p_fqn, uint32_t p_type, const voi
     return ret;
 }
 
-const KSymbol*
+KSymbol*
 ASTBuilder :: Resolve ( const char* p_ident, bool p_reportUnknown )
 {
     String name;
     StringInitCString ( & name, p_ident );
-    const KSymbol* ret = KSymTableFind ( & m_symtab, & name );
+    KSymbol* ret = KSymTableFind ( & m_symtab, & name );
     if ( ret == 0 && p_reportUnknown )
     {
         ReportError ( "Undeclared identifier: '%s'", p_ident ); //TODO: add location
