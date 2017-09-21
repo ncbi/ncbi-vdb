@@ -80,8 +80,8 @@ rc_t TestArgConvAppender(const Args * args, uint32_t arg_index, const char * arg
     char * res = (char *)malloc(arg_len + arg_append_string_len + 1);
     assert(res);
     
-    memcpy(res, arg, arg_len);
-    memcpy(res + arg_len, arg_append_string, arg_append_string_len);
+    memmove(res, arg, arg_len);
+    memmove(res + arg_len, arg_append_string, arg_append_string_len);
     res[arg_len + arg_append_string_len] = 0;
     
     *result = res;

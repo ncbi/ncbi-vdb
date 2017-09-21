@@ -861,6 +861,8 @@ static rc_t KSocketGetEndpointV4 ( const KSocket * self, KEndPoint * ep, bool re
         ep -> u . ipv4.addr = ntohl( addr . sin_addr . s_addr );
         ep -> u . ipv4.port = ntohs( addr . sin_port );
         ep -> type = epIPV4;
+        string_copy_measure ( ep -> ip_address, sizeof ep -> ip_address,
+                              inet_ntoa ( addr . sin_addr ) );
         return 0;
     }
 
@@ -922,7 +924,7 @@ static rc_t KNSManagerMakeIPv6Listener ( const KNSManager *self, KSocket **out, 
 
                 memset ( & ss, 0, sizeof ss );
                 ss . sin6_family = AF_INET6;
-                memcpy ( ss . sin6_addr . s6_addr,
+                memmove ( ss . sin6_addr . s6_addr,
                          ep -> u . ipv6 . addr,
                          sizeof ( ep -> u . ipv6 . addr ) );
                 ss . sin6_port = htons ( ep -> u . ipv6 . port );
@@ -1010,7 +1012,7 @@ static rc_t KSocketGetEndpointV6 ( const KSocket * self, KEndPoint * ep, bool re
     else
     {
         /* the remote part was already recorded through calling accept() */
-        memcpy ( ep -> u . ipv6 . addr,
+        memmove ( ep -> u . ipv6 . addr,
                  data -> remote_addr . sin6_addr . s6_addr,
                  sizeof ( ep -> u . ipv6 . addr ) );
         ep->u.ipv6.port = ntohs( data -> remote_addr . sin6_port );
@@ -1020,7 +1022,7 @@ static rc_t KSocketGetEndpointV6 ( const KSocket * self, KEndPoint * ep, bool re
 
     if ( res == 0 )
     {
-        memcpy ( ep -> u . ipv6 . addr,
+        memmove ( ep -> u . ipv6 . addr,
                  addr . sin6_addr . s6_addr,
                  sizeof ( ep -> u . ipv6 . addr ) );
         ep -> u.ipv6.port = ntohs( addr . sin6_port );

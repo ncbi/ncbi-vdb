@@ -237,7 +237,7 @@ static RefSeq *RefSeq_RefSeq_init(RefSeq *const super,
 {
     struct RefSeq_RefSeq *const self = &super->u.refSeq;
     
-    memcpy(self->name, name, namelen);
+    memmove(self->name, name, namelen);
     self->name[namelen] = '\0';
     super->mgr = mgr;
     
@@ -265,7 +265,7 @@ static RefSeq *RefSeq_WGS_init(RefSeq *const super,
     assert(prefixLen > 0);
     assert(prefixLen < namelen);
 
-    memcpy(self->name, name, namelen);
+    memmove(self->name, name, namelen);
     self->name[prefixLen] = '\0';
     self->prefixLen = prefixLen;
     super->mgr = mgr;

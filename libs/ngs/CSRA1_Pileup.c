@@ -271,7 +271,7 @@ void CSRA1_Pileup_RefCursorDataInit ( ctx_t ctx, CSRA1_Pileup_RefCursorData * ob
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcDestroying );
 
     assert ( obj != NULL );
-    assert ( curs != NULL );    
+    assert ( curs != NULL );
 
     TRY ( obj -> curs = NGS_CursorDuplicate ( curs, ctx ) )
     {
@@ -479,7 +479,7 @@ void CSRA1_PileupWhack ( CSRA1_Pileup * self, ctx_t ctx )
 
     /* reference cursor, blobs */
     CSRA1_Pileup_RefCursorDataWhack ( & self -> ref, ctx );
-    
+
     CSRA1_PileupEventWhack ( & self -> dad, ctx );
 }
 
@@ -536,7 +536,7 @@ char CSRA1_PileupGetReferenceBase ( const CSRA1_Pileup * cself, ctx_t ctx )
             }
 
             assert ( self -> ref . max_seq_len != 0 );
-            self -> ref_base = self -> ref_chunk_bases [ self -> ref_zpos % self -> ref . max_seq_len ]; 
+            self -> ref_base = self -> ref_chunk_bases [ self -> ref_zpos % self -> ref . max_seq_len ];
         }
 
         return self -> ref_base;
@@ -639,7 +639,7 @@ PRINT ( ">>> adding alignment at refpos %ld, row-id %ld: %ld-%ld ( zero-based, h
 
     /* update cached REFERENCE values at current position */
     self -> ref_base = 0;
-    
+
     return self -> ref_zpos< self -> slice_xend;
 }
 
@@ -841,7 +841,7 @@ void CSRA1_PileupGatherIds ( CSRA1_Pileup * self, ctx_t ctx, uint32_t id_limit )
 
 /*  Get RD_FILTER and check if it's present
     e.g for SRR1164787 SECONDARY_ALIGNMENT row_id == 3
-    has invalid data (SEQ_ID == 0, no RD_FILTER) - 
+    has invalid data (SEQ_ID == 0, no RD_FILTER) -
     we need to ignore such records
 
     return: true - there is a valid RD_FILTER value in the db
@@ -1478,11 +1478,11 @@ static NGS_Pileup_vt CSRA1_Pileup_vt =
         CSRA1_PileupEventIteratorReset
     },
 
-    CSRA1_PileupGetReferenceSpec,    
+    CSRA1_PileupGetReferenceSpec,
     CSRA1_PileupGetReferencePosition,
-    CSRA1_PileupGetReferenceBase,           
-    CSRA1_PileupGetDepth,            
-    CSRA1_PileupIteratorGetNext     
+    CSRA1_PileupGetReferenceBase,
+    CSRA1_PileupGetDepth,
+    CSRA1_PileupIteratorGetNext
 };
 
 
@@ -1586,7 +1586,7 @@ void CSRA1_PileupPopulatePACurs ( CSRA1_Pileup * obj, ctx_t ctx, const char * tb
 
     const void * base;
     uint32_t elem_bits, boff, row_len;
-    
+
     /* need to ensure PRIMARY_ALIGNMENT_IDS are in ref_curs */
     TRY ( NGS_CursorCellDataDirect ( obj -> ref . curs, ctx, obj -> reference_start_id,
               reference_PRIMARY_ALIGNMENT_IDS, & elem_bits, & base, & boff, & row_len ) )
@@ -1603,7 +1603,7 @@ void CSRA1_PileupPopulateSACurs ( CSRA1_Pileup * obj, ctx_t ctx, const char * tb
 
     const void * base;
     uint32_t elem_bits, boff, row_len;
-    
+
     /* need to ensure SECONDARY_ALIGNMENT_IDS are in ref_curs */
     TRY ( NGS_CursorCellDataDirect ( obj -> ref . curs, ctx, obj -> reference_start_id,
               reference_SECONDARY_ALIGNMENT_IDS, & elem_bits, & base, & boff, & row_len ) )
@@ -1619,13 +1619,13 @@ void CSRA1_PileupInitAlignment ( CSRA1_Pileup * obj, ctx_t ctx,
     void ( * init_curs ) ( CSRA1_Pileup * obj, ctx_t ctx, const char * tblname ) )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
-    
+
     const VTable * tbl;
     rc_t rc = VDatabaseOpenTableRead ( db, & tbl, "%s", tblname );
     if ( rc != 0 )
     {
-        INTERNAL_ERROR ( xcTableOpenFailed, 
-                         "ERROR: VDatabaseOpenTableRead(%s) failed with error: 0x%08x (%u) [%R]", 
+        INTERNAL_ERROR ( xcTableOpenFailed,
+                         "ERROR: VDatabaseOpenTableRead(%s) failed with error: 0x%08x (%u) [%R]",
                          tblname, rc, rc, rc );
     }
     else
@@ -1648,18 +1648,18 @@ void CSRA1_PileupInitAlignment ( CSRA1_Pileup * obj, ctx_t ctx,
 
 
 static
-void CSRA1_PileupInit ( ctx_t ctx, CSRA1_Pileup * obj, const char * instname, 
+void CSRA1_PileupInit ( ctx_t ctx, CSRA1_Pileup * obj, const char * instname,
     NGS_Reference * ref, const VDatabase * db, const NGS_Cursor * ref_curs,
     int64_t first_row_id, int64_t last_row_id, bool wants_primary, bool wants_secondary,
     uint32_t filters, int32_t map_qual )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
-    
+
     assert ( obj != NULL );
     assert ( ref != NULL );
 
-    /* initialize superclass */    
-    TRY ( CSRA1_PileupEventInit ( ctx, & obj -> dad, & CSRA1_Pileup_vt, "CSRA1_Pileup", instname, ref ) ) 
+    /* initialize superclass */
+    TRY ( CSRA1_PileupEventInit ( ctx, & obj -> dad, & CSRA1_Pileup_vt, "CSRA1_Pileup", instname, ref ) )
     {
         /* capture reference cursor */
         TRY ( CSRA1_Pileup_RefCursorDataInit ( ctx, & obj -> ref, ref_curs, first_row_id ) )
@@ -1727,9 +1727,9 @@ NGS_Pileup * CSRA1_PileupIteratorMake ( ctx_t ctx,
     {
         TRY ( NGS_String * ref_spec = NGS_ReferenceGetCommonName ( ref, ctx ) )
         {
-            SYSTEM_ERROR ( xcNoMemory, 
-                           "allocating CSRA1_Pileup on '%.*s'", 
-                           NGS_StringSize ( ref_spec, ctx ), 
+            SYSTEM_ERROR ( xcNoMemory,
+                           "allocating CSRA1_Pileup on '%.*s'",
+                           NGS_StringSize ( ref_spec, ctx ),
                            NGS_StringData ( ref_spec, ctx ) );
             NGS_StringRelease ( ref_spec, ctx );
         }
@@ -1745,11 +1745,11 @@ NGS_Pileup * CSRA1_PileupIteratorMake ( ctx_t ctx,
         char instname [ 256 ];
         TRY ( NGS_String * ref_spec = NGS_ReferenceGetCommonName ( ref, ctx ) )
         {
-            string_printf ( instname, 
-                            sizeof instname, 
-                            NULL, 
-                            "%.*s", 
-                            NGS_StringSize ( ref_spec, ctx ), 
+            string_printf ( instname,
+                            sizeof instname,
+                            NULL,
+                            "%.*s",
+                            NGS_StringSize ( ref_spec, ctx ),
                             NGS_StringData ( ref_spec, ctx )
                 );
             NGS_StringRelease ( ref_spec, ctx );
@@ -1778,7 +1778,7 @@ NGS_Pileup * CSRA1_PileupIteratorMake ( ctx_t ctx,
 
 NGS_Pileup * CSRA1_PileupIteratorMakeSlice ( ctx_t ctx,
     NGS_Reference * ref, const VDatabase * db, const NGS_Cursor * curs_ref,
-    int64_t first_row_id, int64_t last_row_id, uint64_t slice_zstart, 
+    int64_t first_row_id, int64_t last_row_id, uint64_t slice_zstart,
     uint64_t slice_size, bool wants_primary, bool wants_secondary,
     uint32_t filters, int32_t map_qual )
 {
@@ -1793,12 +1793,12 @@ NGS_Pileup * CSRA1_PileupIteratorMakeSlice ( ctx_t ctx,
         {
             TRY ( NGS_String * ref_spec = NGS_ReferenceGetCommonName ( ref, ctx ) )
             {
-                USER_ERROR ( xcParamOutOfBounds, 
+                USER_ERROR ( xcParamOutOfBounds,
                              "slice start %lu, reference length %lu, "
-                             "allocating CSRA1_Pileup on '%.*s'", 
+                             "allocating CSRA1_Pileup on '%.*s'",
                              slice_zstart,
                              ref_len,
-                             NGS_StringSize ( ref_spec, ctx ), 
+                             NGS_StringSize ( ref_spec, ctx ),
                              NGS_StringData ( ref_spec, ctx ) );
                 NGS_StringRelease ( ref_spec, ctx );
             }
@@ -1820,7 +1820,7 @@ NGS_Pileup * CSRA1_PileupIteratorMakeSlice ( ctx_t ctx,
                 if ( self -> circular )
                 {
                     /* limit to ref_len */
-                    if ( slice_size > ref_len ) 
+                    if ( slice_size > ref_len )
                         slice_size = ref_len;
                 }
                 else

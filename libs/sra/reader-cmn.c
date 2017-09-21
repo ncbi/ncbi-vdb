@@ -146,7 +146,7 @@ rc_t SRAReaderInit(const SRAReader* self, int options, const SRAReaderColumn* co
     }
     me->options = SRAREADER_COL_OPTIONAL | options; /* always try to open optional cols */
     /* copy mandatory columns */
-    memcpy(me->cols, SRAReader_mandatory_cols, sizeof(SRAReader_mandatory_cols));
+    memmove(me->cols, SRAReader_mandatory_cols, sizeof(SRAReader_mandatory_cols));
     /* copy reader specific columns */
     for(i = 0; cols[i].name != NULL && m < 64; i++, m++) {
         for(j = 0; j < m; j++) {
@@ -155,7 +155,7 @@ rc_t SRAReaderInit(const SRAReader* self, int options, const SRAReaderColumn* co
                 return RC(rcSRA, rcFormatter, rcConstructing, rcData, rcDuplicate);
             }
         }
-        memcpy(&me->cols[m], &cols[i], sizeof(SRAReaderColumn));
+        memmove(&me->cols[m], &cols[i], sizeof(SRAReaderColumn));
     }
     if( (rc = SRAReader_ColumnsOpen(me)) == 0 &&
         (rc = SRAReader_FindColData(me, &SRAReader_mandatory_cols[0], &me->spot_name, NULL)) == 0 &&

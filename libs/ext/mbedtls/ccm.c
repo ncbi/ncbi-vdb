@@ -45,7 +45,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#define mbedtls_printf printf
+#define vdb_mbedtls_printf printf
 #endif /* MBEDTLS_PLATFORM_C */
 #endif /* MBEDTLS_SELF_TEST && MBEDTLS_AES_C */
 
@@ -60,12 +60,12 @@ static void mbedtls_zeroize( void *v, size_t n ) {
 /*
  * Initialize context
  */
-void mbedtls_ccm_init( mbedtls_ccm_context *ctx )
+void vdb_mbedtls_ccm_init( mbedtls_ccm_context *ctx )
 {
     memset( ctx, 0, sizeof( mbedtls_ccm_context ) );
 }
 
-int mbedtls_ccm_setkey( mbedtls_ccm_context *ctx,
+int vdb_mbedtls_ccm_setkey( mbedtls_ccm_context *ctx,
                         mbedtls_cipher_id_t cipher,
                         const unsigned char *key,
                         unsigned int keybits )
@@ -73,19 +73,19 @@ int mbedtls_ccm_setkey( mbedtls_ccm_context *ctx,
     int ret;
     const mbedtls_cipher_info_t *cipher_info;
 
-    cipher_info = mbedtls_cipher_info_from_values( cipher, keybits, MBEDTLS_MODE_ECB );
+    cipher_info = vdb_mbedtls_cipher_info_from_values( cipher, keybits, MBEDTLS_MODE_ECB );
     if( cipher_info == NULL )
         return( MBEDTLS_ERR_CCM_BAD_INPUT );
 
     if( cipher_info->block_size != 16 )
         return( MBEDTLS_ERR_CCM_BAD_INPUT );
 
-    mbedtls_cipher_free( &ctx->cipher_ctx );
+    vdb_mbedtls_cipher_free( &ctx->cipher_ctx );
 
-    if( ( ret = mbedtls_cipher_setup( &ctx->cipher_ctx, cipher_info ) ) != 0 )
+    if( ( ret = vdb_mbedtls_cipher_setup( &ctx->cipher_ctx, cipher_info ) ) != 0 )
         return( ret );
 
-    if( ( ret = mbedtls_cipher_setkey( &ctx->cipher_ctx, key, keybits,
+    if( ( ret = vdb_mbedtls_cipher_setkey( &ctx->cipher_ctx, key, keybits,
                                MBEDTLS_ENCRYPT ) ) != 0 )
     {
         return( ret );
@@ -97,9 +97,9 @@ int mbedtls_ccm_setkey( mbedtls_ccm_context *ctx,
 /*
  * Free context
  */
-void mbedtls_ccm_free( mbedtls_ccm_context *ctx )
+void vdb_mbedtls_ccm_free( mbedtls_ccm_context *ctx )
 {
-    mbedtls_cipher_free( &ctx->cipher_ctx );
+    vdb_mbedtls_cipher_free( &ctx->cipher_ctx );
     mbedtls_zeroize( ctx, sizeof( mbedtls_ccm_context ) );
 }
 
@@ -116,7 +116,7 @@ void mbedtls_ccm_free( mbedtls_ccm_context *ctx )
     for( i = 0; i < 16; i++ )                                               \
         y[i] ^= b[i];                                                       \
                                                                             \
-    if( ( ret = mbedtls_cipher_update( &ctx->cipher_ctx, y, 16, y, &olen ) ) != 0 ) \
+    if( ( ret = vdb_mbedtls_cipher_update( &ctx->cipher_ctx, y, 16, y, &olen ) ) != 0 ) \
         return( ret );
 
 /*
@@ -125,7 +125,7 @@ void mbedtls_ccm_free( mbedtls_ccm_context *ctx )
  * This avoids allocating one more 16 bytes buffer while allowing src == dst.
  */
 #define CTR_CRYPT( dst, src, len  )                                            \
-    if( ( ret = mbedtls_cipher_update( &ctx->cipher_ctx, ctr, 16, b, &olen ) ) != 0 )  \
+    if( ( ret = vdb_mbedtls_cipher_update( &ctx->cipher_ctx, ctr, 16, b, &olen ) ) != 0 )  \
         return( ret );                                                         \
                                                                                \
     for( i = 0; i < len; i++ )                                                 \
@@ -304,7 +304,7 @@ static int ccm_auth_crypt( mbedtls_ccm_context *ctx, int mode, size_t length,
 /*
  * Authenticated encryption
  */
-int mbedtls_ccm_encrypt_and_tag( mbedtls_ccm_context *ctx, size_t length,
+int vdb_mbedtls_ccm_encrypt_and_tag( mbedtls_ccm_context *ctx, size_t length,
                          const unsigned char *iv, size_t iv_len,
                          const unsigned char *add, size_t add_len,
                          const unsigned char *input, unsigned char *output,
@@ -317,7 +317,7 @@ int mbedtls_ccm_encrypt_and_tag( mbedtls_ccm_context *ctx, size_t length,
 /*
  * Authenticated decryption
  */
-int mbedtls_ccm_auth_decrypt( mbedtls_ccm_context *ctx, size_t length,
+int vdb_mbedtls_ccm_auth_decrypt( mbedtls_ccm_context *ctx, size_t length,
                       const unsigned char *iv, size_t iv_len,
                       const unsigned char *add, size_t add_len,
                       const unsigned char *input, unsigned char *output,
@@ -397,19 +397,19 @@ static const unsigned char res[NB_TESTS][32] = {
         0x48, 0x43, 0x92, 0xfb, 0xc1, 0xb0, 0x99, 0x51 }
 };
 
-int mbedtls_ccm_self_test( int verbose )
+int vdb_mbedtls_ccm_self_test( int verbose )
 {
     mbedtls_ccm_context ctx;
     unsigned char out[32];
     size_t i;
     int ret;
 
-    mbedtls_ccm_init( &ctx );
+    vdb_mbedtls_ccm_init( &ctx );
 
-    if( mbedtls_ccm_setkey( &ctx, MBEDTLS_CIPHER_ID_AES, key, 8 * sizeof key ) != 0 )
+    if( vdb_mbedtls_ccm_setkey( &ctx, MBEDTLS_CIPHER_ID_AES, key, 8 * sizeof key ) != 0 )
     {
         if( verbose != 0 )
-            mbedtls_printf( "  CCM: setup failed" );
+            vdb_mbedtls_printf( "  CCM: setup failed" );
 
         return( 1 );
     }
@@ -417,9 +417,9 @@ int mbedtls_ccm_self_test( int verbose )
     for( i = 0; i < NB_TESTS; i++ )
     {
         if( verbose != 0 )
-            mbedtls_printf( "  CCM-AES #%u: ", (unsigned int) i + 1 );
+            vdb_mbedtls_printf( "  CCM-AES #%u: ", (unsigned int) i + 1 );
 
-        ret = mbedtls_ccm_encrypt_and_tag( &ctx, msg_len[i],
+        ret = vdb_mbedtls_ccm_encrypt_and_tag( &ctx, msg_len[i],
                                    iv, iv_len[i], ad, add_len[i],
                                    msg, out,
                                    out + msg_len[i], tag_len[i] );
@@ -428,12 +428,12 @@ int mbedtls_ccm_self_test( int verbose )
             memcmp( out, res[i], msg_len[i] + tag_len[i] ) != 0 )
         {
             if( verbose != 0 )
-                mbedtls_printf( "failed\n" );
+                vdb_mbedtls_printf( "failed\n" );
 
             return( 1 );
         }
 
-        ret = mbedtls_ccm_auth_decrypt( &ctx, msg_len[i],
+        ret = vdb_mbedtls_ccm_auth_decrypt( &ctx, msg_len[i],
                                 iv, iv_len[i], ad, add_len[i],
                                 res[i], out,
                                 res[i] + msg_len[i], tag_len[i] );
@@ -442,19 +442,19 @@ int mbedtls_ccm_self_test( int verbose )
             memcmp( out, msg, msg_len[i] ) != 0 )
         {
             if( verbose != 0 )
-                mbedtls_printf( "failed\n" );
+                vdb_mbedtls_printf( "failed\n" );
 
             return( 1 );
         }
 
         if( verbose != 0 )
-            mbedtls_printf( "passed\n" );
+            vdb_mbedtls_printf( "passed\n" );
     }
 
-    mbedtls_ccm_free( &ctx );
+    vdb_mbedtls_ccm_free( &ctx );
 
     if( verbose != 0 )
-        mbedtls_printf( "\n" );
+        vdb_mbedtls_printf( "\n" );
 
     return( 0 );
 }

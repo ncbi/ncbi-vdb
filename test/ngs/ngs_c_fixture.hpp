@@ -64,7 +64,7 @@
 #define ENTRY_ACC(acc) \
     ENTRY; \
     m_acc = acc; \
-    m_coll = NGS_ReadCollectionMake ( ctx, acc );
+    ON_FAIL ( m_coll = NGS_ReadCollectionMake ( ctx, acc ) ) { throw std :: logic_error ( string ( "NGS_ReadCollectionMake(" ) + m_acc + ") failed" ); } \
 
 #define ENTRY_GET_READ(acc, readNo) \
     ENTRY_ACC(acc); \

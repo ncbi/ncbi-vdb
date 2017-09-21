@@ -1,5 +1,34 @@
 # NCBI External Developer Release:
 
+## NCBI VDB 2.8.2
+**March 6, 2017**
+
+  **blast**: Updated blast library to be able to process runs having empty rows  
+  **build**: Added ability to specify ncbi-vdb/configure --with-magic-prefix. Look for libraries in (lib lib64) when running "configure --with-...-prefix"  
+  **build**: configure detects location of ngs libraries  
+  **build**: configure was fixed to skip options unrecognized by gcc 4.4.7  
+  **build**: created sra-toolkit Debian package  
+  **build**: fixed a bug in 'configure' when in could not find source files in repository saved with non-standard name  
+  **build, kfg**: install updates certs.kfg along with other configuration files  
+  **build, ncbi-vdb, sra-tools**: installation will back up old configuration files if they differ from the ones being installed  
+  **kfs, vdb**: Fixes errors occuring when configuration is missing  
+  **klib**: Fixed logging error reported as "log failure: RC(rcText,rcString,rcConverting,rcBuffer,rcInsufficient)"  
+  **kns**: SRA tools respect standard set of environment variables for proxy specification  
+  **kns**: rewrote socket code to use proper local error code switches, especially Windows   
+  **kns**: updated mbedtls library to version 2.4.1  
+  **ncbi-vdb**: configure in detects existence of ngs jar file  
+  **ncbi-vdb, ngs, ngs-tools, sra-tools**: eliminated memcpy from sources due to potential for overlap  
+  **test**: Improved testing framework  
+  **vdb**: increased tenacity in flushing data to disk to accommodate behaviors of file systems such as Lustre.  
+  **vdb-blast**: Implemented vdb-blast API for retrieving reference sequence  
+
+
+## NCBI VDB 2.8.1
+**December 22, 2016**
+
+  **kfg**: added possibility to create an empty KConfig object that does not try to load any file  
+
+
 ## NCBI VDB 2.8.0
 **October 7, 2016**
 

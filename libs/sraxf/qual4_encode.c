@@ -73,7 +73,7 @@ static size_t qual4_encode(
 		qual4 out_val;
 		int codes;
 		
-        memcpy(in_val, src + i, 4);
+        memmove(in_val, src + i, 4);
 		if (in_val[0] > qmax || in_val[0] < qmin ||
             in_val[1] > qmax || in_val[1] < qmin ||
             in_val[2] > qmax || in_val[2] < qmin ||
@@ -153,7 +153,7 @@ static size_t qual4_encode(
         if (dst + codes > dend)
             return dst + codes - Dst;
         
-        memcpy(dst, out_val, codes);
+        memmove(dst, out_val, codes);
 		dst += codes;
 	}
 	return dst - Dst;

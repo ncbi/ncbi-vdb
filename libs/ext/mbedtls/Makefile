@@ -171,7 +171,6 @@ $(ILIBDIR)/libmbedtls: $(addprefix $(ILIBDIR)/libmbedtls.,$(LIBX))
 
 TLS_SRC =            \
 	debug            \
-	net              \
 	ssl_cache        \
 	ssl_ciphersuites \
 	ssl_cli          \
@@ -179,6 +178,8 @@ TLS_SRC =            \
 	ssl_srv          \
 	ssl_ticket       \
 	ssl_tls
+
+#	net              \
 
 TLS_OBJ = \
 	$(addsuffix .$(LOBX),$(TLS_SRC))

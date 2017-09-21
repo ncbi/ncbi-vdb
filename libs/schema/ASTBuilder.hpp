@@ -43,8 +43,8 @@ struct SColumn;
 struct SExpression;
 struct SDatabase;
 struct VTypedecl;
-struct SNameOverload;
 struct KFile;
+struct SPhysMember;
 
 namespace ncbi
 {
@@ -61,7 +61,7 @@ namespace ncbi
             AST* Build ( const ParseTree& p_root, bool p_debugParse = false );
 
             const KSymbol* Resolve ( const AST_FQN& p_fqn, bool p_reportUnknown = true );
-            const KSymbol* Resolve ( const char* p_ident, bool p_reportUnknown = true );
+            KSymbol* Resolve ( const char* p_ident, bool p_reportUnknown = true );
 
             uint32_t IntrinsicTypeId ( const char * p_type ) const;
 
@@ -91,7 +91,14 @@ namespace ncbi
             AST * AliasDef  ( const Token *, AST_FQN * name, AST_FQN * newName );
             AST * UntypedFunctionDecl ( const Token *, AST_FQN * name );
             AST * RowlenFunctionDecl ( const Token *, AST_FQN * name );
-            AST * FunctionDecl ( const Token *, bool script, AST * schema, AST * returnType, AST_FQN * name, AST_ParamSig * fact, AST_ParamSig* params, AST* prologue );
+            AST * FunctionDecl ( const Token *,
+                                 bool           script,
+                                 AST *          schema,
+                                 AST *          returnType,
+                                 AST_FQN *      name,
+                                 AST_ParamSig * fact,
+                                 AST_ParamSig*  params,
+                                 AST*           prologue );
             AST * PhysicalDecl ( const Token *, AST * schema, AST * returnType, AST_FQN * name, AST_ParamSig * fact, AST * body );
             AST * TableDef ( const Token *, AST_FQN * name, AST * parents, AST * body );
             AST * DatabaseDef ( const Token *, AST_FQN * name, AST * parent, AST * body );
@@ -108,11 +115,23 @@ namespace ncbi
             // false - failed, error reported
             bool VectorAppend ( Vector & self, uint32_t *idx, const void *item );
 
-            const KSymbol * CreateOverload ( const AST_FQN & p_name, const void * p_object, int p_type, int64_t CC (*p_sort)(const void *, const void *), Vector & p_objects, Vector & p_names, uint32_t * p_id );
+            const KSymbol * CreateOverload ( const AST_FQN & p_name,
+                                             const void * p_object,
+                                             int p_type,
+                                             int64_t CC (*p_sort)(const void *, const void *),
+                                             Vector & p_objects,
+                                             Vector & p_names,
+                                             uint32_t * p_id );
 
             bool HandleFunctionOverload ( const void * p_object, uint32_t p_version, const KSymbol * p_priorDecl, uint32_t * p_id );
             bool HandlePhysicalOverload ( const void * p_object, uint32_t p_version, const KSymbol * p_priorDecl, uint32_t * p_id );
-            struct SExpression * HandlePhysicalBody ( const String & p_name, const AST & p_schema, const AST & p_returnType, const AST_ParamSig & p_fact, const AST & p_body, SFunction & p_func, bool p_makeReturn );
+            struct SExpression * HandlePhysicalBody ( const String & p_name,
+                                                      const AST & p_schema,
+                                                      const AST & p_returnType,
+                                                      const AST_ParamSig & p_fact,
+                                                      const AST & p_body,
+                                                      SFunction & p_func,
+                                                      bool p_makeReturn );
 
             bool HandleTableOverload ( const struct STable *    p_table,
                                        uint32_t                 p_version,
@@ -152,6 +171,11 @@ namespace ncbi
             bool HandleTypedColumn ( STable & p_table, struct SColumn & p_col, const AST & p_typedCol );
 
             void AddColumn ( STable & p_table, const AST & p_modifiers, const AST & p_decl, const AST * p_default );
+            void AddPhysicalColumn ( STable & p_table, const AST & p_decl, bool p_static );
+            bool MakePhysicalColumnType ( const AST &           p_schemaArgs,
+                                          const AST_FQN &       p_fqn_opt_vers,
+                                          const AST &           p_factoryArgs,
+                                          struct SPhysMember &  p_col );
 
             void HandleDbBody ( SDatabase & p_db, const AST & p_body );
             void HandleDbMemberDb ( SDatabase & p_db, const AST & p_member );

@@ -53,7 +53,7 @@ alias INSDC:quality:phred NCBI:qual1;
 alias NCBI:quality:n_encoded:phred NCBI:SRA:enc_qual1;
 
 // 16-bit integer sample data
-typedef I16 NCBI:isamp1;
+typedef I16 NCBI:isamp1, NCBI:isamp4 [ 4 ];
 
 // 32-bit floating point sample data
 typedef F32 NCBI:fsamp1, NCBI:fsamp4 [ 4 ];

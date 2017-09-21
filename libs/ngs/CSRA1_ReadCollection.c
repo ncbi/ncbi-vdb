@@ -130,7 +130,7 @@ void CSRA1_ReadCollectionWhack ( CSRA1_ReadCollection * self, ctx_t ctx )
     VDatabaseRelease ( self -> db );
 }
 
-static const char * reference_col_specs [] =
+const char * reference_col_specs [] =
 {
     "(bool)CIRCULAR",
     "(utf8)NAME",
@@ -331,7 +331,7 @@ NGS_Reference * CSRA1_ReadCollectionGetReference ( CSRA1_ReadCollection * self, 
 
     ret = CSRA1_ReferenceMake ( ctx, & self -> dad, self -> db, curs, spec, self -> primaryId_count );
 #if ! 0
-    // release cursor if we generate new cursor for the reference each time
+    /* release cursor if we generate new cursor for the reference each time */
     NGS_CursorRelease ( curs, ctx );
 #endif
 

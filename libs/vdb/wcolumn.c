@@ -281,7 +281,7 @@ rc_t WColumnSetDefault ( VColumn *vcol,
     if ( ( ( boff | to_copy ) & 7 ) != 0 )
         bitcpy ( self -> dflt . base, 0, buffer, boff, to_copy );
     else
-        memcpy ( self -> dflt . base, & ( ( const uint8_t* ) buffer ) [ boff >> 3 ], to_copy >> 3 );
+        memmove ( self -> dflt . base, & ( ( const uint8_t* ) buffer ) [ boff >> 3 ], to_copy >> 3 );
 
     self -> have_dflt = true;
     return 0;
@@ -398,7 +398,7 @@ rc_t WColumnWrite ( VColumn *cself,
         bitcpy ( self -> data . base, doff, buffer, boff, num_bits );
     else
     {
-        memcpy ( & ( ( uint8_t* ) self -> data . base ) [ doff >> 3 ],
+        memmove ( & ( ( uint8_t* ) self -> data . base ) [ doff >> 3 ],
                  & ( ( const uint8_t* ) buffer ) [ boff >> 3 ], num_bits >> 3 );
     }
 
@@ -901,7 +901,7 @@ bool WColumnSplitBuffer ( WColumn *self, int64_t end_id, size_t rm_idx )
         if ( ( ( boff | to_copy ) & 7 ) != 0 )
             bitcpy ( data . base, 0, self -> data . base, boff, to_copy );
         else
-            memcpy ( data . base, & ( ( const uint8_t* ) self -> data . base ) [ boff >> 3 ], to_copy >> 3 );
+            memmove ( data . base, & ( ( const uint8_t* ) self -> data . base ) [ boff >> 3 ], to_copy >> 3 );
 
         self -> data = data;
         self -> bits_in_buffer = to_copy;

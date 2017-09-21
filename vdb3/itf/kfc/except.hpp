@@ -27,13 +27,25 @@
 #ifndef _hpp_vdb3_kfc_except_
 #define _hpp_vdb3_kfc_except_
 
-#ifndef _hpp_vdb3_kfc_defs_
-#include <kfc/defs.hpp>
+/*------------------------------------------------------------------
+ * XC_DECLARE
+ *  provides a simple means of declaring a new exception type
+ */
+//#ifdef _hpp_vdb3_kfc_string_
+#ifdef __FILE__
+#define XC_DECLARE ( new_xc, parent_xc )                            \
+    struct new_xc : parent_xc                                      \
+    { new_xc ( vdb3 :: U32 lineno, const char * msg )              \
+          : parent_xc ( lineno, msg ) {} }
+#else
+#define XC_DECLARE ( new_xc, parent_xc )                            \
+    struct new_xc : parent_xc                                      \
+    { new_xc ( vdb3 :: U32 lineno, const vdb3 :: String & msg )    \
+          : parent_xc ( lineno, msg ) {} }
 #endif
 
-#ifndef _hpp_vdb3_kfc_string_
+#include <kfc/defs.hpp>
 #include <kfc/string.hpp>
-#endif
 
 namespace vdb3
 {
@@ -100,22 +112,6 @@ namespace vdb3
         U32 lineno;
     };
 
-
-    /*------------------------------------------------------------------
-     * XC_DECLARE
-     *  provides a simple means of declaring a new exception type
-     */
-#ifdef _hpp_vdb3_kfc_string_
-#define XC_DECLARE( new_xc, parent_xc )                            \
-    struct new_xc : parent_xc                                      \
-    { new_xc ( vdb3 :: U32 lineno, const vdb3 :: String & msg )    \
-          : parent_xc ( lineno, msg ) {} }
-#else
-#define XC_DECLARE( new_xc, parent_xc )                            \
-    struct new_xc : parent_xc                                      \
-    { new_xc ( vdb3 :: U32 lineno, const char * msg )              \
-          : parent_xc ( lineno, msg ) {} }
-#endif
 
     XC_DECLARE ( logic_err, exception );
     XC_DECLARE ( runtime_err, exception );

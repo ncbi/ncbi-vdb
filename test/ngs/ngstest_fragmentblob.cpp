@@ -172,7 +172,7 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlob_RowRange, FragmentBlobFixture )
     EXIT;
 }
 
-FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_DuplicateRelease, FragmentBlobFixture )
+FIXTURE_TEST_CASE ( NGS_FragmentBlob_DuplicateRelease, FragmentBlobFixture )
 {
     ENTRY;
     MakeBlob ( SRA_Accession, 1 );
@@ -186,7 +186,7 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_DuplicateRelease, FragmentBlobFixture )
     EXIT;
 }
 
-FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_Data_BadArg, FragmentBlobFixture )
+FIXTURE_TEST_CASE ( NGS_FragmentBlob_Data_BadArg, FragmentBlobFixture )
 {
     ENTRY;
 
@@ -195,7 +195,7 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_Data_BadArg, FragmentBlobFixture )
 
     EXIT;
 }
-FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_Data, FragmentBlobFixture )
+FIXTURE_TEST_CASE ( NGS_FragmentBlob_Data, FragmentBlobFixture )
 {
     ENTRY;
     MakeBlob ( SRA_Accession, 1 );
@@ -207,7 +207,7 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_Data, FragmentBlobFixture )
     EXIT;
 }
 
-FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_Size_BadArg, FragmentBlobFixture )
+FIXTURE_TEST_CASE ( NGS_FragmentBlob_Size_BadArg, FragmentBlobFixture )
 {
     ENTRY;
 
@@ -216,7 +216,7 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_Size_BadArg, FragmentBlobFixture )
 
     EXIT;
 }
-FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_Size, FragmentBlobFixture )
+FIXTURE_TEST_CASE ( NGS_FragmentBlob_Size, FragmentBlobFixture )
 {
     ENTRY;
     MakeBlob ( SRA_Accession, 1 );
@@ -226,7 +226,18 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_Size, FragmentBlobFixture )
     EXIT;
 }
 
-FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_InfoByOffset_BadSelf, FragmentBlobFixture )
+FIXTURE_TEST_CASE ( NGS_FragmentBlob_Run, FragmentBlobFixture )
+{
+    ENTRY;
+    MakeBlob ( SRA_Accession, 1 );
+
+    const NGS_String * run = NGS_FragmentBlobRun ( m_blob, m_ctx );
+    REQUIRE_EQ ( string ( SRA_Accession ), string ( NGS_StringData ( run, m_ctx ) , NGS_StringSize ( run, m_ctx ) ) );
+
+    EXIT;
+}
+
+FIXTURE_TEST_CASE ( NGS_FragmentBlob_InfoByOffset_BadSelf, FragmentBlobFixture )
 {
     ENTRY;
 
@@ -241,7 +252,7 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_InfoByOffset_BadSelf, FragmentBlobFixtu
 }
 // TODO: NULL for optional parameters
 
-FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_InfoByOffset_Biological, FragmentBlobFixture )
+FIXTURE_TEST_CASE ( NGS_FragmentBlob_InfoByOffset_Biological, FragmentBlobFixture )
 {
     ENTRY;
     MakeBlob ( SRA_Accession, 1 );
@@ -265,7 +276,7 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_InfoByOffset_Biological, FragmentBlobFi
     EXIT;
 }
 
-FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_InfoByOffset_Technical, FragmentBlobFixture )
+FIXTURE_TEST_CASE ( NGS_FragmentBlob_InfoByOffset_Technical, FragmentBlobFixture )
 {
     ENTRY;
     MakeBlob ( SRA_Accession, 1 );
@@ -289,7 +300,7 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_InfoByOffset_Technical, FragmentBlobFix
     EXIT;
 }
 
-FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_InfoByOffset_WithRepeat, FragmentBlobFixture )
+FIXTURE_TEST_CASE ( NGS_FragmentBlob_InfoByOffset_WithRepeat, FragmentBlobFixture )
 {   // VDB-3026, VDB-2809
     ENTRY;
 

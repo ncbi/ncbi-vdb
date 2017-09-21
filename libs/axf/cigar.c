@@ -619,7 +619,7 @@ VTRANSFACT_IMPL ( ALIGN_cigar, 1, 0, 0 ) ( const void *Self, const VXfactInfo *i
     rslt->u.rf = cigar_impl;
     rslt->variant = vftRow;
     rslt -> self = malloc ( sizeof self );
-    memcpy(rslt -> self,&self,sizeof(self));
+    memmove(rslt -> self,&self,sizeof(self));
     rslt -> whack = self_whack;
 
     return 0;
@@ -660,7 +660,7 @@ VTRANSFACT_IMPL ( ALIGN_cigar_2, 2, 0, 0 ) ( const void *Self, const VXfactInfo 
     if (rslt->self == NULL)
         return RC( rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted );
 
-    memcpy(rslt->self, &self, sizeof(self));
+    memmove(rslt->self, &self, sizeof(self));
     rslt->whack = self_whack;
     return 0;
 }
@@ -1107,7 +1107,7 @@ rc_t CC generate_mismatch_impl ( void *data, const VXformInfo *info, int64_t row
     if ( rc != 0 )
         return rc;
     rslt -> elem_count = len;
-    memcpy( rslt -> data->base, buf, len );
+    memmove( rslt -> data->base, buf, len );
     return 0;
 }
 
@@ -1155,7 +1155,7 @@ rc_t CC generate_mismatch_qual_impl ( void *data, const VXformInfo *info, int64_
         return rc;
     rslt -> elem_count = mm_cnt;
     if ( mm_cnt > 0 )
-        memcpy( rslt -> data->base, buf, mm_cnt );
+        memmove( rslt -> data->base, buf, mm_cnt );
 
     return 0;
 }
@@ -1259,7 +1259,7 @@ rc_t CC left_soft_clip_impl ( void *data, const VXformInfo *info, int64_t row_id
     rslt->elem_count = 1;
     rc = KDataBufferResize( rslt->data, 1 );
     if ( rc == 0 )
-        memcpy( rslt->data->base, &result, sizeof( result ) );
+        memmove( rslt->data->base, &result, sizeof( result ) );
 
     return rc;
 }
@@ -1421,7 +1421,7 @@ rc_t CC right_soft_clip_impl ( void *data, const VXformInfo *info, int64_t row_i
     rslt->elem_count = 1;
     rc = KDataBufferResize( rslt->data, 1 );
     if ( rc == 0 )
-        memcpy( rslt->data->base, &result, sizeof( result ) );
+        memmove( rslt->data->base, &result, sizeof( result ) );
 
     return rc;
 }
@@ -1665,7 +1665,7 @@ rc_t CC clipped_cigar_impl ( void *data, const VXformInfo *info, int64_t row_id,
     rslt->elem_count = ( end > start ) ? end - start : 0;
     rc = KDataBufferResize( rslt->data, rslt->elem_count );
     if ( rc == 0 && rslt->elem_count > 0 )
-        memcpy( rslt->data->base, &cigar[ start ], ( size_t )rslt->elem_count );
+        memmove( rslt->data->base, &cigar[ start ], ( size_t )rslt->elem_count );
     
     return rc;
 }
@@ -1744,7 +1744,7 @@ rc_t CC clipped_cigar_impl_v2 ( void *data, const VXformInfo *info, int64_t row_
                 if ( rc == 0 )
                 {
                     char* b = rslt->data->base;
-                    memcpy( &b[ rslt->elem_count ], &cigar[ start ], ( size_t )x );
+                    memmove( &b[ rslt->elem_count ], &cigar[ start ], ( size_t )x );
                     rslt->elem_count += x;
                 }
             }
@@ -1827,7 +1827,7 @@ rc_t CC clipped_ref_offset_impl ( void *data, const VXformInfo *info, int64_t ro
     rslt->elem_count = n_offsets - start;
     rc = KDataBufferResize( rslt->data, rslt->elem_count );
     if ( rc == 0 )
-        memcpy( rslt->data->base,
+        memmove( rslt->data->base,
                 &ref_offset[ start ],
                 ( size_t )( sizeof( ref_offset[ 0 ] ) * rslt->elem_count ) );
 
@@ -1890,7 +1890,7 @@ rc_t CC get_ref_len_impl ( void *data, const VXformInfo *info, int64_t row_id,
         {
             for ( i = 0, ires = read_len - right; i < n_offsets; i++ )
             {
-                memcpy( &rov, ref_offset + i, sizeof rov );
+                memmove( &rov, ref_offset + i, sizeof rov );
                 ires += rov;
             }
         }
@@ -1899,7 +1899,7 @@ rc_t CC get_ref_len_impl ( void *data, const VXformInfo *info, int64_t row_id,
             int32_t sum_pos, sum_neg;
             for ( i = 0, sum_pos = sum_neg = 0; i < n_offsets; i++ )
             {
-                memcpy( &rov, ref_offset + i, sizeof rov );
+                memmove( &rov, ref_offset + i, sizeof rov );
                 if ( rov > 0 )
                     sum_pos += rov;
                 else
@@ -1919,7 +1919,7 @@ rc_t CC get_ref_len_impl ( void *data, const VXformInfo *info, int64_t row_id,
                     {
                         if ( i >= n_offsets )
                             return RC( rcXF, rcFunction, rcExecuting, rcData, rcInvalid );
-                        memcpy( &rov, ref_offset + i, sizeof rov );
+                        memmove( &rov, ref_offset + i, sizeof rov );
                         ires += rov;
                         i++;
                     }
@@ -1939,7 +1939,7 @@ rc_t CC get_ref_len_impl ( void *data, const VXformInfo *info, int64_t row_id,
     rslt->elem_count = 1;
     rc = KDataBufferResize( rslt->data, rslt->elem_count );
     if ( rc == 0 )
-        memcpy( rslt->data->base, &result, sizeof( result ) );
+        memmove( rslt->data->base, &result, sizeof( result ) );
 
     return rc;
 }
@@ -2021,7 +2021,7 @@ rc_t CC clip_impl ( void *data, const VXformInfo *info, int64_t row_id,
     {
         if ( ( rslt->data->elem_bits & 7 ) == 0 )
         {
-            memcpy( rslt->data->base,
+            memmove( rslt->data->base,
                     &( ( char const * )argv[ 0 ].u.data.base )[ ( ( left + argv[ 0 ].u.data.first_elem ) * argv[ 0 ].u.data.elem_bits ) >> 3 ],
                     ( size_t )( ( rslt->elem_count * rslt->data->elem_bits ) >> 3 ) );
         }
