@@ -55,14 +55,14 @@ mbedtls_arc4_context;
  *
  * \param ctx      ARC4 context to be initialized
  */
-void mbedtls_arc4_init( mbedtls_arc4_context *ctx );
+void vdb_mbedtls_arc4_init( mbedtls_arc4_context *ctx );
 
 /**
  * \brief          Clear ARC4 context
  *
  * \param ctx      ARC4 context to be cleared
  */
-void mbedtls_arc4_free( mbedtls_arc4_context *ctx );
+void vdb_mbedtls_arc4_free( mbedtls_arc4_context *ctx );
 
 /**
  * \brief          ARC4 key schedule
@@ -71,7 +71,7 @@ void mbedtls_arc4_free( mbedtls_arc4_context *ctx );
  * \param key      the secret key
  * \param keylen   length of the key, in bytes
  */
-void mbedtls_arc4_setup( mbedtls_arc4_context *ctx, const unsigned char *key,
+void vdb_mbedtls_arc4_setup( mbedtls_arc4_context *ctx, const unsigned char *key,
                  unsigned int keylen );
 
 /**
@@ -84,7 +84,7 @@ void mbedtls_arc4_setup( mbedtls_arc4_context *ctx, const unsigned char *key,
  *
  * \return         0 if successful
  */
-int mbedtls_arc4_crypt( mbedtls_arc4_context *ctx, size_t length, const unsigned char *input,
+int vdb_mbedtls_arc4_crypt( mbedtls_arc4_context *ctx, size_t length, const unsigned char *input,
                 unsigned char *output );
 
 #ifdef __cplusplus
@@ -104,7 +104,7 @@ extern "C" {
  *
  * \return         0 if successful, or 1 if the test failed
  */
-int mbedtls_arc4_self_test( int verbose );
+int vdb_mbedtls_arc4_self_test( int verbose );
 
 #ifdef __cplusplus
 }

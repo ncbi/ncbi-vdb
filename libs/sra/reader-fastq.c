@@ -408,13 +408,13 @@ LIB_EXPORT rc_t CC FastqReaderBase(const FastqReader* self, uint32_t readId, cha
     if( me->dad.options & eColorSpace ) {
         const char* b = self->csread->base;
         data[0] = me->csKey == '\0' ? (*self->cs_key)[readId] : me->csKey;
-        memcpy(&data[1], &b[read_start], read_len - 1);
+        memmove(&data[1], &b[read_start], read_len - 1);
         if( read_len > 1 ) {
             rc = FastqReader_CSconvert((*self->cs_key)[readId], data[0], &data[1]);
         }
     } else {
         const char* b = self->read->base;
-        memcpy(data, &b[read_start], read_len);
+        memmove(data, &b[read_start], read_len);
     }
     data[read_len] = '\0';
     return rc;

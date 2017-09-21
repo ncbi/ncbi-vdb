@@ -224,7 +224,7 @@ TFillFile ( struct KFile * file, const uint8_t* filler, size_t filler_size, uint
 
     for (size_t i = 0; i < filler_sizes_in_buffer; ++i)
     {
-        memcpy(buffer + i*filler_size, filler, filler_size);
+        memmove(buffer + i*filler_size, filler, filler_size);
     }
 
     uint64_t num_written_total = 0;
@@ -277,7 +277,7 @@ TCheckFileContent ( struct KFile * file, const uint8_t* filler, size_t filler_si
     
     for (size_t i = 0; i < filler_sizes_in_buffer; ++i)
     {
-        memcpy(reference_buffer + i*filler_size, filler, filler_size);
+        memmove(reference_buffer + i*filler_size, filler, filler_size);
     }
     
     uint64_t num_read_total = 0;

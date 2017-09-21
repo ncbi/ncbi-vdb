@@ -35,6 +35,10 @@
 #include <kfs/file.h>
 #endif
 
+#ifndef _h_kfs_directory_
+#include <kfs/directory.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -78,7 +82,13 @@ KFS_EXTERN rc_t CC WriteNameListToKFile( struct KFile * self, const VNamelist * 
 KFS_EXTERN rc_t CC WriteNamelistToFileByName( const VNamelist * namelist,
      const char * filename, const char * delim );
 
-
+/* ReadDirEntriesIntoToNamelist
+ * creates a VNamelist-instance, iterates over the entries of the given KDirectory,
+ * and enters them into the created Namelist ( sorted on request )
+ */
+KFS_EXTERN rc_t CC ReadDirEntriesIntoToNamelist( VNamelist ** namelist, const KDirectory * dir,
+    bool perform_sort, bool add_files, bool add_dirs, const char * path );
+     
 #ifdef __cplusplus
 }
 #endif

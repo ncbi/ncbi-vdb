@@ -28,6 +28,8 @@
 * Unit tests for Kdb interface
 */
 
+#include <kapp/args.h>
+
 #include <ktst/unit_test.hpp>
 
 #include <sysalloc.h>
@@ -41,7 +43,8 @@
 
 using namespace std;
 
-TEST_SUITE(KdbTestSuite);
+static rc_t argsHandler(int argc, char* argv[]);
+TEST_SUITE_WITH_ARGS_HANDLER(KdbTestSuite, argsHandler);
 
 #define KDB_MANAGER_MAKE(mgr, wd) KDBManagerMakeRead((const KDBManager **)mgr, (struct KDirectory const *)wd)
 #include "remote_open_test.cpp"
@@ -57,9 +60,9 @@ TEST_CASE(KDBManagerVPathType)
             const struct KFile *dummy1;
             const struct VPath *dummy2;
             REQUIRE_RC(VFSManagerResolveSpec ( vfsmgr, "SRR000123", &vpath, &dummy1, &dummy2, true));
-            
+
             path = ToString(vpath);
-            
+
             REQUIRE_RC(KFileRelease(dummy1));
             REQUIRE_RC(VPathRelease(dummy2));
             REQUIRE_RC(VPathRelease(vpath));
@@ -73,9 +76,9 @@ TEST_CASE(KDBManagerVPathType)
 
 //cout << path << endl;
     REQUIRE_EQ((int)kptTable, KDBManagerPathType(mgr, path.c_str()));
-    
+
     REQUIRE_RC(KDBManagerRelease(mgr));
-    
+
 }
 
 // KColumnBlob
@@ -90,15 +93,15 @@ public:
     {
         const KDBManager* mgr;
         THROW_ON_RC ( KDBManagerMakeRead ( & mgr, NULL ) );
-        
+
         const KTable* tbl;
         THROW_ON_RC ( KDBManagerOpenTableRead ( mgr, & tbl, "SRR000123" ) );
-        
+
         const KColumn* col;
         THROW_ON_RC ( KTableOpenColumnRead ( tbl, & col, "X" ) );
-        
+
         THROW_ON_RC ( KColumnOpenBlobRead ( col, & m_blob, 1 ) );
-        
+
         THROW_ON_RC ( KColumnRelease ( col ) );
         THROW_ON_RC ( KTableRelease ( tbl ) );
         THROW_ON_RC ( KDBManagerRelease ( mgr ) );
@@ -114,9 +117,9 @@ public:
 };
 
 FIXTURE_TEST_CASE ( ColumnBlobRead_basic, ColumnBlobReadFixture )
-{   
-    const size_t BlobSize = 1882; 
-    const size_t BufSize = 2024; 
+{
+    const size_t BlobSize = 1882;
+    const size_t BufSize = 2024;
     char buffer [ BufSize ];
     REQUIRE_RC ( KColumnBlobRead ( m_blob, 0, buffer, BufSize, & m_num_read, & m_remaining ) );
     REQUIRE_EQ ( BlobSize, m_num_read );
@@ -124,9 +127,9 @@ FIXTURE_TEST_CASE ( ColumnBlobRead_basic, ColumnBlobReadFixture )
 }
 
 FIXTURE_TEST_CASE ( ColumnBlobRead_insufficient_buffer, ColumnBlobReadFixture )
-{   
-    const size_t BlobSize = 1882; 
-    const size_t BufSize = 1024; 
+{
+    const size_t BlobSize = 1882;
+    const size_t BufSize = 1024;
     char buffer [ BufSize ];
     // first read incomplete
     REQUIRE_RC ( KColumnBlobRead ( m_blob, 0, buffer, BufSize, & m_num_read, & m_remaining ) );
@@ -139,6 +142,12 @@ FIXTURE_TEST_CASE ( ColumnBlobRead_insufficient_buffer, ColumnBlobReadFixture )
 }
 
 //////////////////////////////////////////// Main
+static rc_t argsHandler(int argc, char* argv[]) {
+    Args* args = NULL;
+    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
+    ArgsWhack(args);
+    return rc;
+}
 extern "C"
 {
 
@@ -165,7 +174,8 @@ const char UsageDefaultName[] = "test-kdb";
 rc_t CC KMain ( int argc, char *argv [] )
 {
     //assert(!KDbgSetString("KFG"));
-    //assert(!KDbgSetString("VFS"));
+    assert(!KDbgSetString("VFS"));
+    //KDbgSetModConds ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), DBG_FLAG ( DBG_KNS_SOCKET ) );
     KConfigDisableUserSettings();
     rc_t rc=KdbTestSuite(argc, argv);
     return rc;

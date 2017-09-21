@@ -836,7 +836,7 @@ apprentice_load(struct magic_set *ms, struct magic **magicp, uint32_t *nmagicp,
 
 	mentrycount = 0;
 	for (i = 0; i < marraycount; i++) {
-		(void)memcpy(*magicp + mentrycount, marray[i].mp,
+		(void)memmove(*magicp + mentrycount, marray[i].mp,
 		    marray[i].cont_count * sizeof(**magicp));
 		mentrycount += marray[i].cont_count;
 	}

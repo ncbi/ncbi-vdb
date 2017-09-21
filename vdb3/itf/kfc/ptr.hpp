@@ -27,13 +27,12 @@
 #ifndef _hpp_vdb3_kfc_ptr_
 #define _hpp_vdb3_kfc_ptr_
 
-#ifndef _hpp_vdb3_kfc_memory_
-#include <kfc/memory.hpp>
-#endif
-
-#ifndef _hpp_vdb3_kfc_except_
+/*
 #include <kfc/except.hpp>
-#endif
+#include <kfc/memory.hpp>
+#include <kfc/ref.hpp>
+#include <kfc/string.hpp>
+*/
 
 namespace vdb3
 {
@@ -41,6 +40,14 @@ namespace vdb3
     /*------------------------------------------------------------------
      * exceptions
      */
+
+    class new_xc : vdb3::exception
+    {
+      public:
+        new_xc ( vdb3 :: U32 lineno, const vdb3 :: String & msg ) : logic_err( lineno, msg )
+        {}
+    }
+
     XC_DECLARE ( xc_ptr_space_err, logic_err );
     XC_DECLARE ( xc_ptr_size_err, xc_elem_size_err );
 
@@ -170,5 +177,4 @@ namespace vdb3
             : OpaquePtr ( m, sizeof ( T ) ) {}
     };
 }
-
 #endif // _hpp_vdb3_kfc_ptr_

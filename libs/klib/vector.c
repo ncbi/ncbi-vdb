@@ -91,7 +91,7 @@ LIB_EXPORT rc_t CC VectorCopy ( const Vector *self, Vector *copy )
     if ( copy -> v == NULL )
         return RC ( rcCont, rcVector, rcCopying, rcMemory, rcExhausted );
 
-    memcpy ( copy -> v, self -> v, self -> len * sizeof copy -> v [ 0 ] );
+    memmove ( copy -> v, self -> v, self -> len * sizeof copy -> v [ 0 ] );
     copy -> len = self -> len;
 
     return 0;

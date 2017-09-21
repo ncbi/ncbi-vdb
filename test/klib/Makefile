@@ -36,6 +36,7 @@ TEST_TOOLS = \
 	test-log \
 	test-out \
 	test-SraReleaseVersion \
+	test-time \
 	test-klib \
 	test-vnamelist \
     test-symtab \
@@ -142,6 +143,18 @@ valgrind_sra_release_version:
 
 .PHONY: valgrind_SraReleaseVersion
 
+
+#-------------------------------------------------------------------------------
+# test-time
+#
+TEST_TIME_SRC = \
+	test-time
+
+TEST_TIME_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_TIME_SRC))
+    
+$(TEST_BINDIR)/test-time: $(TEST_TIME_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_SRA_RELEASE_VERSION_LIB)
 
 #-------------------------------------------------------------------------------
 # test-out

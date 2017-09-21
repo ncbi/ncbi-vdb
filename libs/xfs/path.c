@@ -220,7 +220,7 @@ _StrCReserve ( struct _StrC * self, size_t Amount )
 
         if ( self -> e != NULL ) {
             if ( self -> q != 0 ) {
-                memcpy (
+                memmove (
                         NewArr,
                         self -> e,
                         sizeof ( char * ) * self -> q
@@ -332,7 +332,7 @@ _StrCAdd (
         return XFS_RC ( rcExhausted );
     }
 
-    memcpy ( TheStr, Str, sizeof ( char ) * StrLen );
+    memmove ( TheStr, Str, sizeof ( char ) * StrLen );
     * ( TheStr + StrLen ) = 0;
 
     RCt = _StrCInsert ( self, TheStr, _StrCCount ( self ) );

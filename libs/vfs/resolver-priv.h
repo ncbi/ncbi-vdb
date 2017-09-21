@@ -35,6 +35,7 @@
 extern "C" {
 #endif
 
+#define DEFAULT_PROTOCOLS eProtocolHttpHttps
 
 /*--------------------------------------------------------------------------
  * KConfig Repository Structure
@@ -140,8 +141,6 @@ struct KNSManager;
 struct String;
 struct VResolverAlg;
 
-void VFSManagerSetNameResolverVersion3_0(void);
-
 rc_t VPathCheckFromNamesCGI(const struct VPath *path,
     const struct String *ticket, const struct VPath **mapping);
 
@@ -215,7 +214,7 @@ rc_t VResolverAlgParseResolverCGIResponse_3_0(const char *start,
 rc_t VResolverAlgRemoteProtectedResolve( const struct VResolverAlg *self,
     const struct KNSManager *kns, VRemoteProtocols protocols,
     const struct String *acc, const struct VPath **path,
-    const struct VPath **mapping, bool legacy_wgs_refseq);
+    const struct VPath **mapping, bool legacy_wgs_refseq, const char * version);
 
 /** get projectId ( valid for protected user repository ) */
 rc_t VResolverGetProjectId ( const VResolver * self, uint32_t * projectId );
@@ -232,7 +231,7 @@ rc_t VResolverGetProjectId ( const VResolver * self, uint32_t * projectId );
 rc_t VResolverRemoteResolve ( const VResolver *self,
     VRemoteProtocols protocols, const struct String * accession,
     const struct VPath ** path, const struct VPath **mapping,
-    const struct KFile ** opt_file_rtn, bool refseq_ctx, bool is_oid );
+    const struct KFile ** opt_file_rtn, bool refseq_ctx, bool is_oid, const char * version );
 
 
 void KConfigReadRemoteProtocols ( struct KConfig const * self, VRemoteProtocols * remote_protos );

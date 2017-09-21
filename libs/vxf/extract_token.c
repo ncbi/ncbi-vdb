@@ -83,7 +83,7 @@ rc_t CC extract_token ( void *data, const VXformInfo *info, int64_t row_id,
         {
             /* copy substring */
             rslt -> elem_count = tok [ tt_len ];
-            memcpy ( dst -> base, & str [ elem_bytes * tok [ tt_start ] ], sub_bytes );
+            memmove ( dst -> base, & str [ elem_bytes * tok [ tt_start ] ], sub_bytes );
         }
     }
 
