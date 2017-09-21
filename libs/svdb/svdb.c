@@ -1836,7 +1836,7 @@ static void svdb_enable_col( p_svdb_tab tab, const char *defline,
         cast = calloc( 1, l );
         if ( cast != NULL )
         {
-            memcpy( cast, &defline[ start_cast + 1 ], l-1 );
+            memmove( cast, &defline[ start_cast + 1 ], l-1 );
             svdb_trim( cast );
         }
     }
@@ -1847,7 +1847,7 @@ static void svdb_enable_col( p_svdb_tab tab, const char *defline,
         name = calloc( 1, l + 1 );
         if ( name != NULL )
         {
-            memcpy( name, &defline[ start_name ], l );
+            memmove( name, &defline[ start_name ], l );
             svdb_trim( name );
         }
     }

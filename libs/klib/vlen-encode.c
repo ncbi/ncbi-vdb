@@ -325,7 +325,7 @@ LIB_EXPORT rc_t CC vlen_decode ( int64_t *Y, uint64_t ycount,
 #endif
         XTYPE x;
         
-        memcpy (& x, src + i, sizeof x); /* may be misaligned */        
+        memmove (& x, src + i, sizeof x); /* may be misaligned */        
 #if __BYTE_ORDER == __BIG_ENDIAN
 #if XTYPE_SIZE == 32
         x = bswap_32(x);

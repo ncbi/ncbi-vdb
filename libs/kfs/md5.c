@@ -130,7 +130,7 @@ rc_t KMD5SumEntryMake ( KMD5SumEntry **ep,
     if ( entry == NULL )
         return RC ( rcFS, rcFile, rcUpdating, rcMemory, rcExhausted );
 
-    memcpy ( entry -> digest, digest, sizeof entry -> digest );
+    memmove ( entry -> digest, digest, sizeof entry -> digest );
     entry -> bin = bin;
     strcpy ( entry -> path, path );
 
@@ -565,7 +565,7 @@ LIB_EXPORT rc_t CC KMD5SumFmtGet ( const KMD5SumFmt *self, uint32_t idx,
         else
         {
             /* copy everything out */
-            memcpy ( digest, entry -> digest, sizeof entry -> digest );
+            memmove ( digest, entry -> digest, sizeof entry -> digest );
             if ( bin != NULL )
                 * bin = entry -> bin;
 
@@ -630,7 +630,7 @@ LIB_EXPORT rc_t CC KMD5SumFmtFind ( const KMD5SumFmt *self,
         else
         {
             /* copy everything out */
-            memcpy ( digest, entry -> digest, sizeof entry -> digest );
+            memmove ( digest, entry -> digest, sizeof entry -> digest );
             if ( bin != NULL )
                 * bin = entry -> bin;
 
@@ -773,7 +773,7 @@ LIB_EXPORT rc_t CC KMD5SumFmtUpdate ( KMD5SumFmt *self, const char *path,
                 if ( memcmp ( exist -> digest, entry -> digest, sizeof exist -> digest ) != 0 ||
                      exist -> bin != entry -> bin )
                 {
-                    memcpy ( exist -> digest, entry -> digest, sizeof exist -> digest );
+                    memmove ( exist -> digest, entry -> digest, sizeof exist -> digest );
                     exist -> bin = entry -> bin;
                     self -> dirty = true;
                 }
@@ -991,9 +991,9 @@ rc_t CC KMD5FileWhackAppend ( KMD5File *self )
 
         /* create a closing tag with current MD5State */
         uint8_t closer [ sizeof MD5TAG + sizeof ENDIANTAG + sizeof self -> md5 ];
-        memcpy ( closer, MD5TAG, sizeof MD5TAG );
-        memcpy ( & closer [ sizeof MD5TAG ], ENDIANTAG, sizeof ENDIANTAG );
-        memcpy ( & closer [ sizeof MD5TAG + sizeof ENDIANTAG ], & self -> md5, sizeof self -> md5 );
+        memmove ( closer, MD5TAG, sizeof MD5TAG );
+        memmove ( & closer [ sizeof MD5TAG ], ENDIANTAG, sizeof ENDIANTAG );
+        memmove ( & closer [ sizeof MD5TAG + sizeof ENDIANTAG ], & self -> md5, sizeof self -> md5 );
             
         /* append this to the file */
         rc = KMD5FileWrite ( self, self -> position, closer, sizeof closer, & num_writ );
@@ -1513,7 +1513,7 @@ LIB_EXPORT rc_t CC KFileMakeMD5Read ( const KFile **fp,
                     f -> type = KMD5FileTypeRead;
                     f -> u . rd . rc = 0;
                     f -> u . rd . eof = 0;
-                    memcpy ( f -> u . rd . digest, digest, sizeof f -> u . rd . digest );
+                    memmove ( f -> u . rd . digest, digest, sizeof f -> u . rd . digest );
 
                     * fp = & f -> dad;
                     return 0;
@@ -1770,7 +1770,7 @@ LIB_EXPORT rc_t CC KMD5FileMakeAppend ( KMD5File **fp, KFile *out, KMD5SumFmt *m
                                     {
                                         /* forget about the MD5 state */
                                         f -> position -= sizeof buffer;
-                                        memcpy ( & f -> md5, & buffer [ sizeof MD5TAG + sizeof ENDIANTAG ], sizeof f -> md5 );
+                                        memmove ( & f -> md5, & buffer [ sizeof MD5TAG + sizeof ENDIANTAG ], sizeof f -> md5 );
                                         
                                         /* check for proper byte order */
                                         if ( memcmp ( & buffer [ sizeof MD5TAG ], ENDIANTAG, sizeof ENDIANTAG ) == 0 )

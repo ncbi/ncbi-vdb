@@ -283,7 +283,7 @@ rc_t CC KTocFileRead ( const KTocFile *self, uint64_t _pos,
             to_read = self->header_size - (size_t)pos;
             if (to_read > bsize)
                 to_read = bsize;
-            memcpy (buffer, self->header + pos, to_read);
+            memmove (buffer, self->header + pos, to_read);
 
             pos += to_read;
             bsize -= to_read;

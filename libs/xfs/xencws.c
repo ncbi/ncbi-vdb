@@ -957,7 +957,7 @@ _DirEVMakeContent (
     if ( RCt == 0 ) {
         BSTreeInit ( & ( Cont -> tree ) );
 
-        memcpy ( & ( Cont -> key ), Key, sizeof ( struct KKey ) );
+        memmove ( & ( Cont -> key ), Key, sizeof ( struct KKey ) );
 
         RCt = _DirEReadContent ( self );
     }

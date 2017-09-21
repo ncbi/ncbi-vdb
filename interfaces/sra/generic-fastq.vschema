@@ -32,6 +32,7 @@ version 1;
 include 'insdc/sra.vschema';
 include 'ncbi/sra.vschema';
 include 'ncbi/clip.vschema';
+include 'sra/illumina.vschema';
 include 'ncbi/spotname.vschema';
 
 /* tokenize_spot_name - currently ascii only capability */
@@ -78,6 +79,14 @@ table NCBI:SRA:GenericFastq:sequence #1
 database NCBI:SRA:GenericFastq:db #1
 {
     table NCBI:SRA:GenericFastq:sequence #1.0 SEQUENCE;
+};
+
+/*--------------------------------------------------------------------------
+ * Illumina db defined based on sra/illumina.vschema
+ */
+database NCBI:SRA:Illumina:db #1
+{
+    table NCBI:SRA:Illumina:tbl:phred:v2 #1.0.4 SEQUENCE;
 };
 
 /*--------------------------------------------------------------------------

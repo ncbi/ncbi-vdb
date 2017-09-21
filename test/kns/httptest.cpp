@@ -32,6 +32,7 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <klib/debug.h> /* KDbgSetString */
 #include <klib/log.h>
 #include <klib/rc.h>
 #include <kfg/config.h>
@@ -109,13 +110,13 @@ public:
         
         if ( response.size() >= bsize )
         {
-            memcpy(buffer, response.c_str(), bsize);
+            memmove(buffer, response.c_str(), bsize);
             * num_read = bsize; 
             response = response.substr(bsize);
         }
         else
         {
-            memcpy(buffer, response.c_str(), response.size());
+            memmove(buffer, response.c_str(), response.size());
             * num_read = response.size();
             response.clear();
         }
@@ -796,7 +797,8 @@ TEST_CASE(ContentLength) {
     REQUIRE_RC ( KNSManagerMakeReliableClientRequest ( kns, & req, 0x01000000,
         NULL, "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" ) ); 
     REQUIRE_RC ( KHttpRequestAddPostParam ( req, "acc=AAAB01" ) );
-    REQUIRE_RC ( KHttpRequestAddPostParam ( req, "accept-proto=http" ) );
+    REQUIRE_RC ( KHttpRequestAddPostParam ( req, "accept-proto=https" ) );
+    REQUIRE_RC ( KHttpRequestAddPostParam ( req, "version=1.2" ) );
     REQUIRE_RC ( KHttpRequestPOST ( req, & rslt ) );
     REQUIRE_RC ( KClientHttpResultStatus ( rslt, & code, NULL, 0, NULL ) );
     REQUIRE_EQ ( code, 200u );
@@ -858,6 +860,8 @@ const char UsageDefaultName[] = "test-http";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    if ( 0 ) assert ( ! KDbgSetString ( "VFS" ) );
+
     KConfigDisableUserSettings();
 
 	// this makes messages from the test code appear

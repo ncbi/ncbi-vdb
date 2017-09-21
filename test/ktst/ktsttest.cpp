@@ -150,6 +150,58 @@ TEST_CASE(ArgHandlerCalled)
     REQUIRE(argHandlerCalled);
 }
 
+
+struct Shared : SharedTest {
+    Shared ( TestCase * dad, bool ok = true ) : SharedTest ( dad, "Shared" ) {
+        CHECK ( ok );
+    }
+};
+
+TEST_CASE ( SharedSucceed ) {
+    REQUIRE_EQ ( this -> GetErrorCounter (), 0 );
+    Shared test ( this );
+    REQUIRE_EQ ( this -> GetErrorCounter (), 0 );
+}
+
+TEST_CASE ( SharedFailed ) {
+    REQUIRE_EQ ( GetErrorCounter (), 0 ); // no error when starting
+    Shared test ( this, false );          // make shared SharedTest
+
+    // ErrorCounter is adjusted when SharedTest goes out of scope
+    REQUIRE_EQ ( GetErrorCounter (), 0 );
+
+    // compensate SharedTest failure - make this test case succeed
+    ErrorCounterAdd ( -1 );
+}
+
+TEST_CASE ( SharedFailedAndDetected ) {
+    REQUIRE_EQ ( GetErrorCounter (), 0 ); // no error when starting
+
+    {
+        Shared test ( this, false );      // make SharedTest fail
+
+        // ErrorCounter is adjusted when SharedTest goes out of scope
+        REQUIRE_EQ ( GetErrorCounter (), 0 );
+    }
+    REQUIRE_EQ ( GetErrorCounter (), 1 );
+
+    // compensate SharedTest failure - make this test case succeed
+    ErrorCounterAdd ( -1 );
+}
+
+TEST_CASE ( SharedSucceedInBlock ) {
+    REQUIRE_EQ ( GetErrorCounter (), 0 ); // no error when starting
+
+    {
+        Shared test ( this );             // make SharedTest succeed
+
+        // ErrorCounter is adjusted when SharedTest goes out of scope
+        REQUIRE_EQ ( GetErrorCounter (), 0 );
+    }
+    REQUIRE_EQ ( GetErrorCounter (), 0 );
+}
+
+
 //TODO: test FIXTURE_TEST_CASE, PROCESS_FIXTURE_TEST_CASE
 //TODO: test GET_GLOBAL_FIXTURE
 //TODO: test REQUIRE_THROW, THROW_ON_RC

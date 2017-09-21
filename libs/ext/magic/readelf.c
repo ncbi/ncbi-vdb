@@ -376,7 +376,7 @@ donote(struct magic_set *ms, void *vbuf, size_t offset, size_t size,
 	uint32_t namesz, descsz;
 	unsigned char *nbuf = CAST(unsigned char *, vbuf);
 
-	(void)memcpy(xnh_addr, &nbuf[offset], xnh_sizeof);
+	(void)memmove(xnh_addr, &nbuf[offset], xnh_sizeof);
 	offset += xnh_sizeof;
 
 	namesz = xnh_namesz;
@@ -425,7 +425,7 @@ donote(struct magic_set *ms, void *vbuf, size_t offset, size_t size,
 	if (namesz == 4 && strcmp((char *)&nbuf[noff], "GNU") == 0 &&
 	    xnh_type == NT_GNU_VERSION && descsz == 16) {
 		uint32_t desc[4];
-		(void)memcpy(desc, &nbuf[doff], sizeof(desc));
+		(void)memmove(desc, &nbuf[doff], sizeof(desc));
 
 		if (file_printf(ms, ", for GNU/") == -1)
 			return size;
@@ -464,7 +464,7 @@ donote(struct magic_set *ms, void *vbuf, size_t offset, size_t size,
 	if (namesz == 7 && strcmp((char *)&nbuf[noff], "NetBSD") == 0 &&
 	    xnh_type == NT_NETBSD_VERSION && descsz == 4) {
 		uint32_t desc;
-		(void)memcpy(&desc, &nbuf[doff], sizeof(desc));
+		(void)memmove(&desc, &nbuf[doff], sizeof(desc));
 		desc = elf_getu32(swap, desc);
 
 		if (file_printf(ms, ", for NetBSD") == -1)
@@ -510,7 +510,7 @@ donote(struct magic_set *ms, void *vbuf, size_t offset, size_t size,
 	if (namesz == 8 && strcmp((char *)&nbuf[noff], "FreeBSD") == 0 &&
 	    xnh_type == NT_FREEBSD_VERSION && descsz == 4) {
 		uint32_t desc;
-		(void)memcpy(&desc, &nbuf[doff], sizeof(desc));
+		(void)memmove(&desc, &nbuf[doff], sizeof(desc));
 		desc = elf_getu32(swap, desc);
 		if (file_printf(ms, ", for FreeBSD") == -1)
 			return size;
@@ -599,7 +599,7 @@ donote(struct magic_set *ms, void *vbuf, size_t offset, size_t size,
 		uint32_t desc;
 		if (file_printf(ms, ", for DragonFly") == -1)
 			return size;
-		(void)memcpy(&desc, &nbuf[doff], sizeof(desc));
+		(void)memmove(&desc, &nbuf[doff], sizeof(desc));
 		desc = elf_getu32(swap, desc);
 		if (file_printf(ms, " %d.%d.%d", desc / 100000,
 		    desc / 10000 % 10, desc % 10000) == -1)
@@ -665,7 +665,7 @@ core:
 			 * Extract the signal number.  It is at
 			 * offset 0x08.
 			 */
-			(void)memcpy(&signo, &nbuf[doff + 0x08],
+			(void)memmove(&signo, &nbuf[doff + 0x08],
 			    sizeof(signo));
 			if (file_printf(ms, " (signal %u)",
 			    elf_getu32(swap, signo)) == -1)
@@ -916,7 +916,7 @@ doshn(struct magic_set *ms, int clazz, int swap, int fd, off_t off, int num,
 					file_badread(ms);
 					return -1;
 				}
-				(void)memcpy(xcap_addr, cbuf, xcap_sizeof);
+				(void)memmove(xcap_addr, cbuf, xcap_sizeof);
 				switch (xcap_tag) {
 				case CA_SUNW_NULL:
 					break;

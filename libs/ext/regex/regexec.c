@@ -382,10 +382,10 @@ re_search_2_stub (bufp, string1, length1, string2, length2, start, range, regs,
 	if (BE (s == NULL, 0))
 	  return -2;
 #ifdef _LIBC
-	memcpy (__mempcpy (s, string1, length1), string2, length2);
+	memmove (__mempcpy (s, string1, length1), string2, length2);
 #else
-	memcpy (s, string1, length1);
-	memcpy (s + length1, string2, length2);
+	memmove (s, string1, length1);
+	memmove (s + length1, string2, length2);
 #endif
 	str = s;
 	free_str = 1;
@@ -1358,7 +1358,7 @@ push_fail_stack (struct re_fail_stack_t *fs, int str_idx, int dest_node,
   fs->stack[num].regs = re_malloc (regmatch_t, nregs);
   if (fs->stack[num].regs == NULL)
     return REG_ESPACE;
-  memcpy (fs->stack[num].regs, regs, sizeof (regmatch_t) * nregs);
+  memmove (fs->stack[num].regs, regs, sizeof (regmatch_t) * nregs);
   err = re_node_set_init_copy (&fs->stack[num].eps_via_nodes, eps_via_nodes);
   return err;
 }
@@ -1371,7 +1371,7 @@ pop_fail_stack (struct re_fail_stack_t *fs, int *pidx, int nregs,
   int num = --fs->num;
   assert (num >= 0);
   *pidx = fs->stack[num].idx;
-  memcpy (regs, fs->stack[num].regs, sizeof (regmatch_t) * nregs);
+  memmove (regs, fs->stack[num].regs, sizeof (regmatch_t) * nregs);
   re_node_set_free (eps_via_nodes);
   re_free (fs->stack[num].regs);
   *eps_via_nodes = fs->stack[num].eps_via_nodes;
@@ -1425,7 +1425,7 @@ set_regs (const regex_t *preg, const re_match_context_t *mctx, size_t nmatch,
 	}
       prev_idx_match_malloced = 1;
     }
-  memcpy (prev_idx_match, pmatch, sizeof (regmatch_t) * nmatch);
+  memmove (prev_idx_match, pmatch, sizeof (regmatch_t) * nmatch);
 
   for (idx = pmatch[0].rm_so; idx <= pmatch[0].rm_eo ;)
     {
@@ -1535,7 +1535,7 @@ update_regs (const re_dfa_t *dfa, regmatch_t *pmatch,
 	      pmatch[reg_num].rm_eo = cur_idx;
 	      /* This is a non-empty match or we are not inside an optional
 		 subexpression.  Accept this right away.  */
-	      memcpy (prev_idx_match, pmatch, sizeof (regmatch_t) * nmatch);
+	      memmove (prev_idx_match, pmatch, sizeof (regmatch_t) * nmatch);
 	    }
 	  else
 	    {
@@ -1546,7 +1546,7 @@ update_regs (const re_dfa_t *dfa, regmatch_t *pmatch,
 		   first match.  Copy back the old content of the registers
 		   so that matches of an inner subexpression are undone as
 		   well, like in ((a?))*.  */
-		memcpy (pmatch, prev_idx_match, sizeof (regmatch_t) * nmatch);
+		memmove (pmatch, prev_idx_match, sizeof (regmatch_t) * nmatch);
 	      else
 		/* We completed a subexpression, but it may be part of
 		   an optional one, so do not update PREV_IDX_MATCH.  */

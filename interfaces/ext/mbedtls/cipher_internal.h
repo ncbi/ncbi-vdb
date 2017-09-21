@@ -98,9 +98,9 @@ typedef struct
     const mbedtls_cipher_info_t *info;
 } mbedtls_cipher_definition_t;
 
-extern const mbedtls_cipher_definition_t mbedtls_cipher_definitions[];
+extern const mbedtls_cipher_definition_t vdb_mbedtls_cipher_definitions[];
 
-extern int mbedtls_cipher_supported[];
+extern int vdb_mbedtls_cipher_supported[];
 
 #ifdef __cplusplus
 }
