@@ -30,6 +30,7 @@
 // turn on INT64_C, UINT64_C etc.
 #define __STDC_CONSTANT_MACROS
 #include <klib/defs.h>
+#undef memcpy
 
 #include <string>
 #include <vector>
@@ -167,15 +168,15 @@ private:
 #endif
 };
 
+
 class TestCase {
-    void Init(const char* name);
+    void Init(const std::string& name);
 
 public:
     typedef void ( TestCase ::* TestMethod ) ();
 
 protected:
-    TestCase(const std::string &name) { Init(name.c_str()); }
-    TestCase(const char* name)        { Init(name); }
+    TestCase(const std::string &name) { Init(name); }
 
 public:    
     // explicit destruction, to be used before calling exit() in out-of-process test runner
@@ -183,7 +184,7 @@ public:
 
 public:
     ncbi::NK::counter_t GetErrorCounter(void) { return _ec; }
-    const char* GetName(void) const { return _name; }
+    const char * GetName(void) const { return _name . c_str (); }
     void ErrorCounterAdd(ncbi::NK::counter_t ec) { _ec += ec; }
 
 protected:
@@ -433,9 +434,27 @@ protected:
 #define REQUIRE_NOT_NULL(e1) AssertNotNull((e1), #e1, __FILE__,__LINE__, true)
 
 private:
-    const char* _name;
+    std::string _name;
     ncbi::NK::counter_t _ec;
 };
+
+
+class SharedTest : protected TestCase {
+    TestCase * _dad;
+
+protected:
+    SharedTest ( TestCase * dad, const char * name )
+        : TestCase ( std::string ( dad -> GetName () ) + "." + name )
+        , _dad ( dad )
+    {
+        assert ( _dad );
+    }
+
+    ~SharedTest ( void ) {
+        _dad -> ErrorCounterAdd ( GetErrorCounter () );
+    }
+};
+
 
 class TestInvoker {
 protected:

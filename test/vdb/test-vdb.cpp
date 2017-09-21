@@ -197,7 +197,7 @@ class VdbFixture
 {
 public:
     VdbFixture()
-    : mgr(0), curs(0), col_idx(~0)
+    : mgr(0), curs(0)
     {
         if ( VDBManagerMakeRead(&mgr, NULL) != 0 )
             throw logic_error ( "VdbFixture: VDBManagerMakeRead failed" );
@@ -211,7 +211,7 @@ public:
             throw logic_error ( "~VdbFixture: VCursorRelease failed" );
     }
 
-    rc_t Setup( const char * acc, const char* column = "READ_LEN" )
+    rc_t Setup( const char * acc, const char* column[] )
     {
         const VDatabase *db = NULL;
         rc_t rc = VDBManagerOpenDBRead ( mgr, &db, NULL, acc );
@@ -242,16 +242,22 @@ public:
             }
         }
 
-        if ( rc == 0 )
+        if ( rc == 0 && column[0] != NULL )
         {
             rc = VTableCreateCursorRead(tbl, &curs);
             if ( rc == 0 )
             {
-                col_idx = ~0;
-                rc = VCursorAddColumn ( curs, &col_idx, column );
-                if ( rc == 0 )
-                {
-                    rc = VCursorOpen(curs);
+                int i;
+                int const N = (int)(sizeof(col_idx)/sizeof(col_idx[0]));
+                for (i = 0; i < N; ++i)
+                    col_idx[i] = (uint32_t)(~0);
+                for (i = 0; column[i] != NULL && rc == 0; ++i) {
+                    assert(i < N);
+                    rc = VCursorAddColumn ( curs, col_idx + i, column[i] );
+                    if ( rc == 0 )
+                    {
+                        rc = VCursorOpen(curs);
+                    }
                 }
             }
         }
@@ -276,7 +282,7 @@ public:
         THROW_ON_RC ( VCursorOpenRow ( curs ) );
 
         struct VBlob const *blob;
-        THROW_ON_RC ( VCursorGetBlob ( curs, &blob, col_idx ) );
+        THROW_ON_RC ( VCursorGetBlob ( curs, &blob, col_idx[0] ) );
 
         bool ret = true;
 
@@ -302,51 +308,57 @@ public:
 
     const VDBManager * mgr;
     const VCursor * curs;
-    uint32_t col_idx;
+    uint32_t col_idx[20];
 };
 
 FIXTURE_TEST_CASE(TestCursorIsStatic_SingleRowRun1, VdbFixture)
 {
-    REQUIRE_RC ( Setup ( "SRR002749", "READ_LEN" ) );
+    static char const *columns[] = { "READ_LEN", 0 };
+    REQUIRE_RC ( Setup ( "SRR002749", columns ) );
     bool is_static = false;
-    REQUIRE_RC ( VCursorIsStaticColumn ( curs, col_idx, &is_static) );
+    REQUIRE_RC ( VCursorIsStaticColumn ( curs, col_idx[0], &is_static) );
     REQUIRE ( is_static );
 }
 FIXTURE_TEST_CASE(TestCursorIsStatic_VariableREAD_LEN, VdbFixture)
 {
-    REQUIRE_RC ( Setup ( "SRR050566", "READ_LEN" ) );
+    static char const *columns[] = { "READ_LEN", 0 };
+    REQUIRE_RC ( Setup ( "SRR050566", columns ) );
     bool is_static = true;
-    REQUIRE_RC ( VCursorIsStaticColumn ( curs, col_idx, &is_static) );
+    REQUIRE_RC ( VCursorIsStaticColumn ( curs, col_idx[0], &is_static) );
     REQUIRE ( ! is_static );
 }
 #if 0
 FIXTURE_TEST_CASE(TestCursorIsStatic_SingleRowRun2, VdbFixture)
 {
-    REQUIRE_RC ( Setup ( "SRR053325", "READ_LEN" ) );
+    static char const *columns[] = { "READ_LEN", 0 };
+    REQUIRE_RC ( Setup ( "SRR053325", columns ) );
     bool is_static = false;
-    REQUIRE_RC ( VCursorIsStaticColumn ( curs, col_idx, &is_static) );
+    REQUIRE_RC ( VCursorIsStaticColumn ( curs, col_idx[0], &is_static) );
     REQUIRE ( is_static );
 }
 #endif
 FIXTURE_TEST_CASE(TestCursorIsStatic_FixedREAD_LEN_MultipleRows, VdbFixture)
 {
-    REQUIRE_RC ( Setup ( "SRR125365", "READ_LEN" ) );
+    static char const *columns[] = { "READ_LEN", 0 };
+    REQUIRE_RC ( Setup ( "SRR125365", columns ) );
     bool is_static = false;
-    REQUIRE_RC ( VCursorIsStaticColumn ( curs, col_idx, &is_static) );
+    REQUIRE_RC ( VCursorIsStaticColumn ( curs, col_idx[0], &is_static) );
     REQUIRE ( is_static );
 }
 FIXTURE_TEST_CASE(TestCursorIsStatic_DB_FixedREAD_LEN_MultipleRows, VdbFixture)
 {
-    REQUIRE_RC ( Setup ( "SRR600096", "READ_LEN" ) );
+    static char const *columns[] = { "READ_LEN", 0 };
+    REQUIRE_RC ( Setup ( "SRR600096", columns ) );
     bool is_static = false;
-    REQUIRE_RC ( VCursorIsStaticColumn ( curs, col_idx, &is_static) );
+    REQUIRE_RC ( VCursorIsStaticColumn ( curs, col_idx[0], &is_static) );
     REQUIRE ( is_static );
 }
 FIXTURE_TEST_CASE(TestCursorIsStatic_DB_VariableREAD_LEN_MultipleRows, VdbFixture)
 {
-    REQUIRE_RC ( Setup ( "SRR619505", "READ_LEN" ) );
+    static char const *columns[] = { "READ_LEN", 0 };
+    REQUIRE_RC ( Setup ( "SRR619505", columns ) );
     bool is_static = true;
-    REQUIRE_RC ( VCursorIsStaticColumn ( curs, col_idx, &is_static) );
+    REQUIRE_RC ( VCursorIsStaticColumn ( curs, col_idx[0], &is_static) );
     REQUIRE ( ! is_static );
 }
 
@@ -354,7 +366,8 @@ FIXTURE_TEST_CASE(TestCursorIsStatic_DB_VariableREAD_LEN_MultipleRows, VdbFixtur
 
 FIXTURE_TEST_CASE(VCursor_GetBlob_SRA, VdbFixture)
 {   // multiple fragments per row (some are technical), multiple rows per blob
-    REQUIRE_RC ( Setup ( "SRR000123", "READ" ) );
+    static char const *columns[] = { "READ", 0 };
+    REQUIRE_RC ( Setup ( "SRR000123", columns ) );
     REQUIRE_RC ( VCursorOpen (curs ) );
 
     {
@@ -362,7 +375,7 @@ FIXTURE_TEST_CASE(VCursor_GetBlob_SRA, VdbFixture)
         REQUIRE_RC ( VCursorOpenRow (curs ) );
 
         struct VBlob const *blob;
-        REQUIRE_RC ( VCursorGetBlob ( curs, &blob, col_idx ) );
+        REQUIRE_RC ( VCursorGetBlob ( curs, &blob, col_idx[0] ) );
 
         int64_t first;
         uint64_t count;
@@ -408,7 +421,7 @@ FIXTURE_TEST_CASE(VCursor_GetBlob_SRA, VdbFixture)
 
         int64_t first;
         uint64_t count;
-        REQUIRE_RC ( VCursorGetBlob ( curs, &blob, col_idx ) );
+        REQUIRE_RC ( VCursorGetBlob ( curs, &blob, col_idx[0] ) );
         REQUIRE_RC ( VBlobIdRange ( blob, &first, &count ) );
         REQUIRE_EQ ( (int64_t)5, first );
         REQUIRE_EQ ( (uint64_t)4, count );
@@ -424,7 +437,8 @@ FIXTURE_TEST_CASE(VCursor_GetBlob_SRA, VdbFixture)
 
 FIXTURE_TEST_CASE(VCursor_GetBlob_WGS, VdbFixture)
 {   // single fragment per row, multiple rows per blob
-    REQUIRE_RC ( Setup ( "ALWZ01", "READ" ) );
+    static char const *columns[] = { "READ", 0 };
+    REQUIRE_RC ( Setup ( "ALWZ01", columns ) );
     REQUIRE_RC ( VCursorOpen (curs ) );
 
     {
@@ -432,7 +446,7 @@ FIXTURE_TEST_CASE(VCursor_GetBlob_WGS, VdbFixture)
         REQUIRE_RC ( VCursorOpenRow (curs ) );
 
         struct VBlob const *blob;
-        REQUIRE_RC ( VCursorGetBlob ( curs, &blob, col_idx ) );
+        REQUIRE_RC ( VCursorGetBlob ( curs, &blob, col_idx[0] ) );
 
         int64_t first;
         uint64_t count;
@@ -478,7 +492,7 @@ FIXTURE_TEST_CASE(VCursor_GetBlob_WGS, VdbFixture)
 
         int64_t first;
         uint64_t count;
-        REQUIRE_RC ( VCursorGetBlob ( curs, &blob, col_idx ) );
+        REQUIRE_RC ( VCursorGetBlob ( curs, &blob, col_idx[0] ) );
         REQUIRE_RC ( VBlobIdRange ( blob, &first, &count ) );
         REQUIRE_EQ ( (int64_t)5, first );
         REQUIRE_EQ ( (uint64_t)4, count );
@@ -494,7 +508,8 @@ FIXTURE_TEST_CASE(VCursor_GetBlob_WGS, VdbFixture)
 
 FIXTURE_TEST_CASE(VCursor_GetBlob_SequentialAccess, VdbFixture)
 {   // VDB-2858: sequential access to blobs broken
-    REQUIRE_RC ( Setup ( "ALAI01", "READ" ) );
+    static char const *columns[] = { "READ", 0 };
+    REQUIRE_RC ( Setup ( "ALAI01", columns ) );
     REQUIRE_RC ( VCursorOpen (curs ) );
 
     int64_t first;
@@ -509,7 +524,7 @@ FIXTURE_TEST_CASE(VCursor_GetBlob_SequentialAccess, VdbFixture)
         REQUIRE_RC ( VCursorOpenRow ( curs ) );
 
         struct VBlob const *blob;
-        if ( VCursorGetBlob ( curs, &blob, col_idx ) != 0 )
+        if ( VCursorGetBlob ( curs, &blob, col_idx[0] ) != 0 )
         {
             break;
         }
@@ -526,7 +541,8 @@ FIXTURE_TEST_CASE(VCursor_GetBlob_SequentialAccess, VdbFixture)
 
 FIXTURE_TEST_CASE(VCursor_GetBlob_RandomAccess, VdbFixture)
 {
-    REQUIRE_RC ( Setup ( "SRR000001", "READ" ) );
+    static char const *columns[] = { "READ", 0 };
+    REQUIRE_RC ( Setup ( "SRR000001", columns ) );
     REQUIRE_RC ( VCursorOpen (curs ) );
 
     // when accessing randomly, blob sizes stay very small
@@ -543,7 +559,8 @@ FIXTURE_TEST_CASE(VCursor_GetBlob_RandomAccess, VdbFixture)
 
 FIXTURE_TEST_CASE(PageMapIterator_WGS, VdbFixture)
 {   // single fragment per row, multiple rows per blob
-    REQUIRE_RC ( Setup ( "ALWZ01", "READ" ) );
+    static char const *columns[] = { "READ", 0 };
+    REQUIRE_RC ( Setup ( "ALWZ01", columns ) );
     REQUIRE_RC ( VCursorOpen (curs ) );
 
     {
@@ -551,7 +568,7 @@ FIXTURE_TEST_CASE(PageMapIterator_WGS, VdbFixture)
         REQUIRE_RC ( VCursorOpenRow (curs ) );
 
         struct VBlob const *blob;
-        REQUIRE_RC ( VCursorGetBlob ( curs, &blob, col_idx ) );
+        REQUIRE_RC ( VCursorGetBlob ( curs, &blob, col_idx[0] ) );
 
         PageMapIterator pmIt;
         REQUIRE_RC ( PageMapNewIterator ( (const PageMap*)blob->pm, &pmIt, 0, 4 ) );
@@ -583,12 +600,13 @@ FIXTURE_TEST_CASE(PageMapIterator_WGS, VdbFixture)
 
 FIXTURE_TEST_CASE ( VCursor_FindNextRowIdDirect, VdbFixture )
 {
-    REQUIRE_RC ( Setup ( "SRR000001", "READ" ) );
+    static char const *columns[] = { "SPOT_ID", "READ", 0 };
+    REQUIRE_RC ( Setup ( "SRR000001", columns ) );
     REQUIRE_RC ( VCursorOpen (curs ) );
     int64_t next;
-    REQUIRE_RC ( VCursorFindNextRowIdDirect ( curs, col_idx, 1, & next ) );
+    REQUIRE_RC ( VCursorFindNextRowIdDirect ( curs, 0, 1, & next ) );
     REQUIRE_EQ ( (int64_t)1, next ) ;
-    REQUIRE_RC ( VCursorFindNextRowIdDirect ( curs, col_idx, 2, & next ) );
+    REQUIRE_RC ( VCursorFindNextRowIdDirect ( curs, 0, 2, & next ) );
     REQUIRE_EQ ( (int64_t)2, next ) ; // VDB-3075: next == 1
 }
 

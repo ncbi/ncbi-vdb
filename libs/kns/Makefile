@@ -75,6 +75,7 @@ clean: stdclean
 $(ILIBDIR)/libkns: $(addprefix $(ILIBDIR)/libkns.,$(ILIBEXT))
 
 KNS_NO_HTTP_SRC = \
+	stream-from-buffer \
 	kns_manager-ext \
 	manager \
 	buffered-stream \

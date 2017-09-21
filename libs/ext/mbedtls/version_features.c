@@ -117,6 +117,9 @@ static const char *features[] = {
 #if defined(MBEDTLS_SHA512_ALT)
     "MBEDTLS_SHA512_ALT",
 #endif /* MBEDTLS_SHA512_ALT */
+#if defined(MBEDTLS_ECP_ALT)
+    "MBEDTLS_ECP_ALT",
+#endif /* MBEDTLS_ECP_ALT */
 #if defined(MBEDTLS_MD2_PROCESS_ALT)
     "MBEDTLS_MD2_PROCESS_ALT",
 #endif /* MBEDTLS_MD2_PROCESS_ALT */
@@ -159,6 +162,33 @@ static const char *features[] = {
 #if defined(MBEDTLS_AES_DECRYPT_ALT)
     "MBEDTLS_AES_DECRYPT_ALT",
 #endif /* MBEDTLS_AES_DECRYPT_ALT */
+#if defined(MBEDTLS_ECP_INTERNAL_ALT)
+    "MBEDTLS_ECP_INTERNAL_ALT",
+#endif /* MBEDTLS_ECP_INTERNAL_ALT */
+#if defined(MBEDTLS_ECP_RANDOMIZE_JAC_ALT)
+    "MBEDTLS_ECP_RANDOMIZE_JAC_ALT",
+#endif /* MBEDTLS_ECP_RANDOMIZE_JAC_ALT */
+#if defined(MBEDTLS_ECP_ADD_MIXED_ALT)
+    "MBEDTLS_ECP_ADD_MIXED_ALT",
+#endif /* MBEDTLS_ECP_ADD_MIXED_ALT */
+#if defined(MBEDTLS_ECP_DOUBLE_JAC_ALT)
+    "MBEDTLS_ECP_DOUBLE_JAC_ALT",
+#endif /* MBEDTLS_ECP_DOUBLE_JAC_ALT */
+#if defined(MBEDTLS_ECP_NORMALIZE_JAC_MANY_ALT)
+    "MBEDTLS_ECP_NORMALIZE_JAC_MANY_ALT",
+#endif /* MBEDTLS_ECP_NORMALIZE_JAC_MANY_ALT */
+#if defined(MBEDTLS_ECP_NORMALIZE_JAC_ALT)
+    "MBEDTLS_ECP_NORMALIZE_JAC_ALT",
+#endif /* MBEDTLS_ECP_NORMALIZE_JAC_ALT */
+#if defined(MBEDTLS_ECP_DOUBLE_ADD_MXZ_ALT)
+    "MBEDTLS_ECP_DOUBLE_ADD_MXZ_ALT",
+#endif /* MBEDTLS_ECP_DOUBLE_ADD_MXZ_ALT */
+#if defined(MBEDTLS_ECP_RANDOMIZE_MXZ_ALT)
+    "MBEDTLS_ECP_RANDOMIZE_MXZ_ALT",
+#endif /* MBEDTLS_ECP_RANDOMIZE_MXZ_ALT */
+#if defined(MBEDTLS_ECP_NORMALIZE_MXZ_ALT)
+    "MBEDTLS_ECP_NORMALIZE_MXZ_ALT",
+#endif /* MBEDTLS_ECP_NORMALIZE_MXZ_ALT */
 #if defined(MBEDTLS_TEST_NULL_ENTROPY)
     "MBEDTLS_TEST_NULL_ENTROPY",
 #endif /* MBEDTLS_TEST_NULL_ENTROPY */
@@ -324,9 +354,6 @@ static const char *features[] = {
 #if defined(MBEDTLS_SHA256_SMALLER)
     "MBEDTLS_SHA256_SMALLER",
 #endif /* MBEDTLS_SHA256_SMALLER */
-#if defined(MBEDTLS_SSL_AEAD_RANDOM_IV)
-    "MBEDTLS_SSL_AEAD_RANDOM_IV",
-#endif /* MBEDTLS_SSL_AEAD_RANDOM_IV */
 #if defined(MBEDTLS_SSL_ALL_ALERT_MESSAGES)
     "MBEDTLS_SSL_ALL_ALERT_MESSAGES",
 #endif /* MBEDTLS_SSL_ALL_ALERT_MESSAGES */
@@ -465,6 +492,9 @@ static const char *features[] = {
 #if defined(MBEDTLS_CIPHER_C)
     "MBEDTLS_CIPHER_C",
 #endif /* MBEDTLS_CIPHER_C */
+#if defined(MBEDTLS_CMAC_C)
+    "MBEDTLS_CMAC_C",
+#endif /* MBEDTLS_CMAC_C */
 #if defined(MBEDTLS_CTR_DRBG_C)
     "MBEDTLS_CTR_DRBG_C",
 #endif /* MBEDTLS_CTR_DRBG_C */
@@ -625,7 +655,7 @@ static const char *features[] = {
     NULL
 };
 
-int mbedtls_version_check_feature( const char *feature )
+int vdb_mbedtls_version_check_feature( const char *feature )
 {
     const char **idx = features;
 

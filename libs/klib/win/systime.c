@@ -25,6 +25,9 @@
 */
 
 #include <klib/extern.h>
+
+#include<klib/printf.h> /* string_printf */
+#include <klib/rc.h> /* SILENT_RC */
 #include <klib/time.h>
 
 /* do not include windows.h, it is included already by os-native.h */
@@ -347,9 +350,152 @@ LIB_EXPORT KTime_t CC KTimeMakeTime ( const KTime *self )
     return ts;
 }
 
+
+/* YYYY-MM-DDThh:mm:ssTZD */
+LIB_EXPORT size_t CC KTimeIso8601 ( KTime_t ts, char * s, size_t size )
+{
+    rc_t rc = 0;
+    size_t num_writ = 0;
+
+    const KTime * r = NULL;
+    KTime ktime;
+
+    time_t unix_time = ( time_t ) ts;
+    struct tm t;
+
+    if ( ts == 0 || s == NULL || size < 19 )
+        return 0;
+
+    r = KTimeGlobal ( & ktime, ts );
+    if ( r == NULL )
+        return 0;
+
+    rc = string_printf ( s, size, & num_writ, "%04d-02d-02dT02d:%02d:%02dZ",
+        ktime . year, ktime . month + 1, ktime . day + 1,
+        ktime . hour, ktime . minute, ktime . second );
+    if ( rc == 0 )
+        return num_writ;
+    else if ( rc ==
+          SILENT_RC ( rcText, rcString, rcConverting, rcBuffer, rcInsufficient )
+        && num_writ == size )
+    {
+        return num_writ;
+    }
+    return 0;
+}
+
+
+LIB_EXPORT const KTime* CC KTimeFromIso8601 ( KTime *kt, const char * s,
+                                              size_t size )
+{
+    int i = 0;
+    int tmp = 0;
+    char c = 0;
+
+    if ( kt == NULL || s == NULL || size < 18 || size > 20 )
+        return NULL;
+
+    memset ( kt, 0, sizeof * kt );
+
+    for ( i = 0, tmp = 0; i < 4; ++ i ) {
+        char c = s [ i ];
+        if ( ! isdigit ( c ) )
+            return NULL;
+        tmp = tmp * 10 + c - '0';
+    }
+    kt -> year = tmp;
+
+    if ( s [ i ] != '-' )
+        return NULL;
+
+    c = s [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return NULL;
+    tmp = c - '0';
+    c = s [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return NULL;
+    tmp = tmp * 10 + c - '0';
+    if ( tmp == 0 || tmp > 12 )
+        return NULL;
+    kt -> month = tmp - 1;
+
+    c = s [ ++ i ];
+    if ( c != '-' )
+        return NULL;
+
+    c = s [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return NULL;
+    tmp = c - '0';
+    c = s [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return NULL;
+    tmp = tmp * 10 + c - '0';
+    if ( tmp == 0 || tmp > 31 )
+        return NULL;
+    kt -> day = tmp;
+
+    c = s [ ++ i ];
+    if ( c != 'T' )
+        return NULL;
+
+    c = s [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return NULL;
+    tmp = c - '0';
+    c = s [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return NULL;
+    tmp = tmp * 10 + c - '0';
+    if ( tmp > 23 )
+        return NULL;
+    kt -> hour = tmp;
+
+    c = s [ ++ i ];
+    if ( c != ':' )
+        return NULL;
+
+    c = s [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return NULL;
+    tmp = c - '0';
+    c = s [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return NULL;
+    tmp = tmp * 10 + c - '0';
+    if ( tmp > 59 )
+        return NULL;
+    kt -> minute = tmp;
+
+    c = s [ ++ i ];
+    if ( c != ':' )
+        return NULL;
+
+    c = s [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return NULL;
+    tmp = c - '0';
+    c = s [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return NULL;
+    tmp = tmp * 10 + c - '0';
+    if ( tmp > 59 )
+        return NULL;
+    kt -> second = tmp;
+
+    if ( size > 19 ) {
+        c = s [ ++ i ];
+        if ( c != 'Z' )
+            return NULL;
+    }
+
+    return kt;
+}
+
+
 LIB_EXPORT rc_t CC KSleepMs(uint32_t milliseconds) 
 {
     Sleep ( milliseconds );
     return 0;
 }
-

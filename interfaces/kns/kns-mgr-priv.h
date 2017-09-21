@@ -141,7 +141,6 @@ struct URLBlock
 extern void URLBlockInit ( URLBlock *self );
 extern rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size );
 
-
 #ifdef __cplusplus
 }
 #endif

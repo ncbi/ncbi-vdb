@@ -620,14 +620,14 @@ int sra_decompress_prb_slx ( KDataBuffer *dst, KDataBuffer *alt, const void* src
           /*uval.val = lval*/;
           break;
       }
-      memcpy (poprb+pos, &uval.c[0], sizeof(uint32_t));
+      memmove (poprb+pos, &uval.c[0], sizeof(uint32_t));
       pos += 4;
     }
   }
   else
   if (magic == SRA_CT_UNCOMPRESSED)
   {
-      memcpy (poprb, peprb+9, osize);
+      memmove (poprb, peprb+9, osize);
   }
 
   assert ( osize <= dst -> elem_count );
@@ -658,7 +658,7 @@ static void _s_decode_slx (uchar_t magic, const uchar_t* pesig, uchar_t* posig, 
       uval = 0;
       _get_short (pesig, &offset, rbpos, &uval, 1);
       fval =     (float) (uval-baseline);
-      memcpy     (posig+pos, &fval, sizeof(float));
+      memmove     (posig+pos, &fval, sizeof(float));
       pos += sizeof(float);
     }
   }
@@ -684,7 +684,7 @@ static void _s_decode_slx (uchar_t magic, const uchar_t* pesig, uchar_t* posig, 
       fval = uf.fval;
       _get_short (pesig, &offset, rbpos, &sval, 1);
       fval *= sval; fval += fmin;
-      memcpy     (posig+pos, &fval, sizeof(float));
+      memmove     (posig+pos, &fval, sizeof(float));
       pos += sizeof(float);
     }
   }
