@@ -106,18 +106,45 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseTestHandlerSet ( KDiagnose * self,
     );
 
 
-#define DIAGNOSE_ALL     0
-#define DIAGNOSE_FAIL    1
-#define DIAGNOSE_CONFIG  2
-#define DIAGNOSE_NETWORK 4
+#define DIAGNOSE_ALL             0
+
+#define DIAGNOSE_FAIL            1
+
+#define DIAGNOSE_CONFIG_COMMON   2
+#define DIAGNOSE_CONFIG_DB_GAP   4
+#define DIAGNOSE_CONFIG ( DIAGNOSE_CONFIG_COMMON | DIAGNOSE_CONFIG_DB_GAP )
+
+#define DIAGNOSE_NETWORK_NCBI    8
+#define DIAGNOSE_NETWORK_HTTPS  16
+#define DIAGNOSE_NETWORK_ASPERA 32
+#define DIAGNOSE_NETWORK_DB_GAP 64
+#define DIAGNOSE_NETWORK \
+    ( DIAGNOSE_NETWORK_NCBI | DIAGNOSE_NETWORK_HTTPS | DIAGNOSE_NETWORK_ASPERA \
+                            | DIAGNOSE_NETWORK_DB_GAP )
+
 /* Run
  *
  * tests is combination of DIAGNOSE_* values
  *
+ * projectId, ... is the sequence of dbGaP projectId-s to check
+ *  should be terminated by projectId = 0
+ *
  * When "tests | DIAGNOSE_FAIL != 0" - KDiagnoseRun will return non-0 rc
  * When KDiagnoseCancel is called - KDiagnoseRun will return rcCanceled
+ *
+ *
+ * If no 'projectId' is provided but 'tests' contain DIAGNOSE_CONFIG_DB_GAP
+ * and/or DIAGNOSE_NETWORK_HTTPS/DIAGNOSE_NETWORK_ASPERA
+ * - we will try to check existing dbGaP configuration and access to dbGaP
+ * servers and issue WARNINGS if something is not correct.
+ *
+ * If a 'projectId' is provided - configuration WILL BE checked for VALIDIRY of 
+ * projectId's project and access to gbGaP servers.
+ * KDiagnoseRun WILL FAIL if configuration is not complete or no gbGaP server
+ * can be accessed.
  */
-DIAGNOSE_EXTERN rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests );
+DIAGNOSE_EXTERN rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests,
+    uint32_t projectId, ... );
 
 DIAGNOSE_EXTERN rc_t CC KDiagnosePause  ( KDiagnose * self );
 DIAGNOSE_EXTERN rc_t CC KDiagnoseResume ( KDiagnose * self );
