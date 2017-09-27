@@ -2275,7 +2275,8 @@ static rc_t _STestCheckAcc ( STest * self, const Data * data, bool print,
     RELEASE ( VPath, vcache );
     return rc;
 }
-
+*/
+# if 0
 static rc_t _STestCheckNetwork ( STest * self, const Data * data,
     const char * exp, size_t esz, const Data * data2,
     const char * fmt, ... )
@@ -2360,7 +2361,7 @@ static rc_t _STestCheckNetwork ( STest * self, const Data * data,
         STestEnd ( self, eFAIL, b );
     return rc;
 }
-*/
+#endif
 
 struct KDiagnoseTestDesc {
     const char * name;
@@ -2418,8 +2419,7 @@ static rc_t KDiagnoseMakeDesc ( KDiagnose * self ) {
     KDiagnoseTestDesc * netAscp = NULL;
     assert ( self );
     if ( rc == 0 )
-        rc = KDiagnoseTestDescMake ( & root, 0, "System",
-                                     DIAGNOSE_CONFIG | DIAGNOSE_NETWORK );
+        rc = KDiagnoseTestDescMake ( & root, 0, "System", DIAGNOSE_ALL );
     if ( rc == 0 ) {
         rc = KDiagnoseTestDescMake ( & kfg, 1, "Configuration",
                                      DIAGNOSE_CONFIG );
@@ -2724,6 +2724,64 @@ static rc_t STestCheckNcbiAccess ( STest * self ) {
     return rc;
 }
 
+static rc_t STestCache ( const STest * self, const String * acc,
+    char * cache, size_t sCache, const char * suffix )
+{
+    String rCache;
+    VPath * path = NULL;
+    rc_t rc = VFSManagerMakePath ( self -> vmgr, & path, "%S", acc );
+
+    const VPath * vcache = NULL;
+    if ( rc == 0 )
+        rc = VResolverQuery ( self -> resolver, eProtocolHttps, path,
+                              NULL, NULL, & vcache );
+    if ( rc == 0 )
+        rc = VPathGetPath ( vcache, & rCache );
+    if ( rc == 0 ) {
+        rc = string_printf ( cache, sCache, NULL, "%S.%s", & rCache, suffix );
+        RELEASE ( VPath, vcache );
+    }
+    RELEASE ( VPath, path );
+
+    if ( rc != 0 ) {
+        const char * p = getenv ( "TMPDIR" );
+        if ( p == NULL )
+            p          = getenv ( "TEMP" );
+        if ( p == NULL )
+            p          = getenv ( "TMP" );
+        if ( p == NULL )
+            p          = getenv ( "TEMPDIR" );
+        if ( p != NULL )
+            rc = string_printf ( cache, sCache, NULL, "%s.%S.%s",
+                                                      p, acc, suffix );
+    }
+
+    if ( rc != 0 ) {
+        String * p = NULL;
+        rc = KConfigReadString ( self -> kfg, "NCBI_HOME", & p );
+        if ( rc == 0 ) {
+            rc = string_printf ( cache, sCache, NULL, "%S.%S.%s",
+                                                      p, acc, suffix );
+            free ( p );
+        }
+    }
+
+    if ( rc != 0 ) {
+        String * p = NULL;
+        rc = KConfigReadString ( self -> kfg, "HOME", & p );
+        if ( rc == 0 ) {
+            rc = string_printf ( cache, sCache, NULL, "%S.%S.%s",
+                                                      p, acc, suffix );
+            free ( p );
+        }
+    }
+
+    if ( rc != 0 )
+        rc = string_printf ( cache, sCache, NULL, "%S.%s", acc, suffix );
+
+    return rc;
+}
+
 static rc_t STestCheckHttp ( STest * self, const String * acc, bool print,
     char * downloaded, size_t sDownloaded, uint64_t * downloadedSize,
     const char * exp, size_t esz )
@@ -2740,24 +2798,9 @@ static rc_t STestCheckHttp ( STest * self, const String * acc, bool print,
                         & resp_len, & url, & test, true );
     AbuseFini ( & test );
     if ( rc == 0 ) {
-        String cache;
-        VPath * path = NULL;
-        rc_t r2 = VFSManagerMakePath ( self -> vmgr, & path, "%S", acc );
-        const VPath * vcache = NULL;
-        if ( r2 == 0 )
-            r2 = VResolverQuery ( self -> resolver, eProtocolHttps,
-                                  path, NULL, NULL, & vcache);
-// TODO: find another cache location if r2 != 0
-        if ( r2 == 0 )
-            r2 = VPathGetPath ( vcache, & cache );
-        if ( r2 == 0 ) {
-            r2      = string_printf ( downloaded, sDownloaded, NULL,
-                                      "%S.http", & cache );
-            RELEASE ( VPath, vcache );
-        }
-        RELEASE ( VPath, path );
-        if ( rc == 0 && r2 != 0 )
-            rc = r2;
+        rc = STestCache ( self, acc, downloaded, sDownloaded, "http" );
+        if ( rc != 0 )
+            STestFail ( self, rc, "Cannot find cache location" );
     }
     if ( rc == 0 && url != NULL ) {
         char * p = string_chr ( url, resp_len - ( url - response ), '|' );
@@ -2809,24 +2852,9 @@ static rc_t STestCheckFasp ( STest * self, const String * acc, bool print,
                         & resp_len, & url, & test, false );
     AbuseFini ( & test );
     if ( rc == 0 ) {
-        String cache;
-        VPath * path = NULL;
-        rc_t r2 = VFSManagerMakePath ( self -> vmgr, & path, "%S", acc );
-        const VPath * vcache = NULL;
-        if ( r2 == 0 )
-            r2 = VResolverQuery ( self -> resolver, eProtocolFasp,
-                                  path, NULL, NULL, & vcache);
-// TODO: find another cache location if r2 != 0
-        if ( r2 == 0 )
-            r2 = VPathGetPath ( vcache, & cache );
-        if ( r2 == 0 ) {
-            r2 = string_printf ( downloaded, sDownloaded, NULL,
-                                 "%S.fasp", & cache );
-            RELEASE ( VPath, vcache );
-        }
-        RELEASE ( VPath, path );
-        if ( rc == 0 && r2 != 0 )
-            rc = r2;
+        rc = STestCache ( self, acc, downloaded, sDownloaded, "fasp" );
+        if ( rc != 0 )
+            STestFail ( self, rc, "Cannot find cache location" );
     }
     if ( rc == 0 && url != NULL ) {
         char * p = string_chr ( url, resp_len - ( url - response ), '|' );
