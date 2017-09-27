@@ -90,7 +90,9 @@
 %token UNTERM_STRING
 %token UNTERM_ESCAPED_STRING
 
-%token VERS_1_0 /* recognized under special flex state */
+/* version numbers recognized under special flex state */
+%token VERS_1_0
+%token VERS_2_0
 
 %token KW___no_header
 %token KW___row_length
@@ -203,6 +205,9 @@
 %token PT_ARRAY
 %token PT_PHYSENCREF
 %token PT_TYPEDCOLEXPR
+%token PT_VIEW
+%token PT_VIEWPARAM
+%token PT_VIEWPARENTS
 
  /* !!! Keep token declarations above in synch with schema-grammar.y */
 

@@ -677,7 +677,42 @@ TEST_CASE ( PhysicalIdent )
 
 TEST_CASE ( VersionOther )
 {
-    REQUIRE ( ParseAndVerify ( "version 3.14; $" ) ); //TODO
+    REQUIRE ( ! ParseAndVerify ( "version 3.14; $" ) );
+}
+
+TEST_CASE ( Version2_Decl1 )
+{
+    REQUIRE ( ParseAndVerify ( "version 2; include \"qq\";" ) );
+}
+
+TEST_CASE ( View_InVers1 )
+{
+    REQUIRE ( ! ParseAndVerify ( "view X#1 < T t > {};" ) );
+}
+
+TEST_CASE ( Decls_1_And_2 )
+{
+    REQUIRE ( ParseAndVerify ( "version 2;  include \"qq\"; view X#1< T t > { U8 p = 1; };" ) );
+}
+
+TEST_CASE ( View_OneParam_OneStmt )
+{
+    REQUIRE ( ParseAndVerify ( "version 2; view X#1 < T t > { U8 p = 1; };" ) );
+}
+
+TEST_CASE ( View_Params_Stmts )
+{
+    REQUIRE ( ParseAndVerify ( "version 2; view X#1 < T1 t1, T2 t2 > { U8 p = 1; ; column U32 c = p; };" ) );
+}
+
+TEST_CASE ( View_OneParent )
+{
+    REQUIRE ( ParseAndVerify ( "version 2; view X#1 < T t > = V { U8 p = 1; };" ) );
+}
+
+TEST_CASE ( View_TwoParents )
+{
+    REQUIRE ( ParseAndVerify ( "version 2; view X#1 < T t > = V#1,W { U8 p = 1; };" ) );
 }
 
 //////////////////////////////////////////// Main

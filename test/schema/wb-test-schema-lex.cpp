@@ -258,7 +258,7 @@ TEST_CASE ( WhiteSpace )
     REQUIRE_TOKEN ( "abc", t ); \
 }
 
-TEST_CASE ( VERS_1 )
+TEST_CASE ( Version_1 )
 {
     SchemaScanner s ( "version 1;" );
     REQUIRE_EQ ( ( Token :: TokenType ) KW_version, s . NextToken () . GetType () );
@@ -266,12 +266,26 @@ TEST_CASE ( VERS_1 )
     REQUIRE_EQ ( ( Token :: TokenType ) ';', s . NextToken () . GetType () );
 }
 
-TEST_CASE ( VERS_1_comment )
+TEST_CASE ( Version_1_comment )
 {
     SchemaScanner s ( "version /*!!*/ 1;" );
     REQUIRE_EQ ( ( Token :: TokenType ) KW_version, s . NextToken () . GetType () );
     REQUIRE_EQ ( ( Token :: TokenType ) VERS_1_0, s . NextToken () . GetType () );
     REQUIRE_EQ ( ( Token :: TokenType ) ';', s . NextToken () . GetType () );
+}
+
+TEST_CASE ( Version_2 )
+{
+    SchemaScanner s ( "version 2;" );
+    REQUIRE_EQ ( ( Token :: TokenType ) KW_version, s . NextToken () . GetType () );
+    REQUIRE_EQ ( ( Token :: TokenType ) VERS_2_0, s . NextToken () . GetType () );
+}
+
+TEST_CASE ( Version_2_0 )
+{
+    SchemaScanner s ( "version 2.0;" );
+    REQUIRE_EQ ( ( Token :: TokenType ) KW_version, s . NextToken () . GetType () );
+    REQUIRE_EQ ( ( Token :: TokenType ) VERS_2_0, s . NextToken () . GetType () );
 }
 
 //////////////////////////////////////////// Main
