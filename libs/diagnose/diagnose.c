@@ -121,6 +121,8 @@ struct KDiagnose {
     Vector tests;
     Vector errors;
 
+    KDiagnoseTestDesc * desc;
+
     enum EState {
         eRunning,
         ePaused,
@@ -2360,6 +2362,130 @@ static rc_t _STestCheckNetwork ( STest * self, const Data * data,
 }
 */
 
+struct KDiagnoseTestDesc {
+    const char * name;
+    const char * desc;
+    uint64_t code;
+    uint32_t level;
+    KDiagnoseTestDesc * next;
+    KDiagnoseTestDesc * child;
+    const KDiagnoseTestDesc * depends;
+};
+
+static rc_t KDiagnoseTestDescRelease ( KDiagnoseTestDesc * self ) {
+    if ( self != NULL ) {
+        if ( self -> child )
+            KDiagnoseTestDescRelease ( self -> child );
+
+        if ( self -> next )
+            KDiagnoseTestDescRelease ( self -> next );
+
+        memset ( self, 0, sizeof * self );
+
+        free ( self );
+    }
+
+    return 0;
+}
+
+static rc_t KDiagnoseTestDescMake ( KDiagnoseTestDesc ** self,
+    uint32_t level, const char * name, uint64_t code )
+{
+    assert ( self );
+
+    * self = calloc ( 1, sizeof ** self );
+
+    if ( * self == NULL )
+        return RC ( rcRuntime, rcData, rcAllocating, rcMemory, rcExhausted );
+    else {
+        ( * self ) -> name  = name;
+        ( * self ) -> desc  = "";
+        ( * self ) -> code  = code;
+        ( * self ) -> level = level;
+
+        return 0;
+    }
+}
+
+static rc_t KDiagnoseMakeDesc ( KDiagnose * self ) {
+    rc_t rc = 0;
+    KDiagnoseTestDesc * root = NULL;
+    KDiagnoseTestDesc * kfg = NULL;
+    KDiagnoseTestDesc * kfgCommon = NULL;
+    KDiagnoseTestDesc * net = NULL;
+    KDiagnoseTestDesc * netNcbi = NULL;
+    KDiagnoseTestDesc * netHttp = NULL;
+    KDiagnoseTestDesc * netAscp = NULL;
+    assert ( self );
+    if ( rc == 0 )
+        rc = KDiagnoseTestDescMake ( & root, 0, "System",
+                                     DIAGNOSE_CONFIG | DIAGNOSE_NETWORK );
+    if ( rc == 0 ) {
+        rc = KDiagnoseTestDescMake ( & kfg, 1, "Configuration",
+                                     DIAGNOSE_CONFIG );
+        if ( rc == 0 )
+            root -> child = kfg;
+    }
+    if ( rc == 0 ) {
+        rc = KDiagnoseTestDescMake ( & kfgCommon, 2, "Common configuration",
+                                     DIAGNOSE_CONFIG_COMMON );
+        if ( rc == 0 )
+            kfg -> child = kfgCommon;
+    }
+    if ( rc == 0 ) {
+        KDiagnoseTestDesc * kfgGap = NULL;
+        rc = KDiagnoseTestDescMake ( & kfgGap, 2, "DbGaP configuration",
+                                     DIAGNOSE_CONFIG_DB_GAP );
+        if ( rc == 0 ) {
+            kfgCommon -> next = kfgGap;
+            kfgGap -> depends = kfgCommon;
+        }
+    }
+    if ( rc == 0 ) {
+        rc = KDiagnoseTestDescMake ( & net, 1, "Network", DIAGNOSE_NETWORK );
+        if ( rc == 0 )
+            kfg -> next = net;
+    }
+    if ( rc == 0 ) {
+        rc = KDiagnoseTestDescMake ( & netNcbi, 2, "Access to NCBI",
+                                     DIAGNOSE_NETWORK_NCBI );
+        if ( rc == 0 ) {
+            net -> child = netNcbi;
+            netNcbi -> depends = kfgCommon;
+        }
+    }
+    if ( rc == 0 ) {
+        rc = KDiagnoseTestDescMake ( & netHttp, 2, "HTTPS download",
+                                     DIAGNOSE_NETWORK_HTTPS );
+        if ( rc == 0 ) {
+            netNcbi -> next = netHttp;
+            netHttp -> depends = netNcbi;
+        }
+    }
+    if ( rc == 0 ) {
+        rc = KDiagnoseTestDescMake ( & netAscp, 2, "Aspera download",
+                                     DIAGNOSE_NETWORK_ASPERA );
+        if ( rc == 0 ) {
+            netHttp -> next = netAscp;
+            netAscp -> depends = netNcbi;
+        }
+    }
+    if ( rc == 0 ) {
+        KDiagnoseTestDesc * gap = NULL;
+        rc = KDiagnoseTestDescMake ( & gap, 2, "Access to dbGaP",
+                                     DIAGNOSE_NETWORK_DB_GAP );
+        if ( rc == 0 ) {
+            netAscp -> next = gap;
+            gap -> depends = netNcbi;
+        }
+    }
+    if ( rc != 0 )
+        KDiagnoseTestDescRelease ( root );
+    else
+        self -> desc = root;
+    return rc;
+}
+
 static const char DIAGNOSE_CLSNAME [] = "KDiagnose";
 
 LIB_EXPORT rc_t CC KDiagnoseMakeExt ( KDiagnose ** test, KConfig * kfg,
@@ -2420,6 +2546,9 @@ LIB_EXPORT rc_t CC KDiagnoseMakeExt ( KDiagnose ** test, KConfig * kfg,
     if ( rc == 0 )
         rc = KConditionMake ( & p -> condition );
 
+    if ( rc == 0 )
+        rc = KDiagnoseMakeDesc ( p );
+
     if ( rc == 0 ) {
         p -> verbosity = KConfig_Verbosity ( p -> kfg );
         KRefcountInit ( & p -> refcount, 1, DIAGNOSE_CLSNAME, "init", "" );
@@ -2461,6 +2590,9 @@ LIB_EXPORT rc_t CC KDiagnoseRelease ( const KDiagnose * cself ) {
                 RELEASE ( KCondition, self -> condition );
                 VectorWhack ( & self -> tests , & testsWhack, NULL );
                 VectorWhack ( & self -> errors, & whack     , NULL );
+
+                RELEASE ( KDiagnoseTestDesc, self -> desc  );
+
                 free ( self );
                 break;
             case krefNegative:
@@ -2503,6 +2635,22 @@ LIB_EXPORT rc_t CC KDiagnoseResume ( KDiagnose * self ) {
 
 LIB_EXPORT rc_t CC KDiagnoseCancel ( KDiagnose * self ) {
     return _KDiagnoseSetState ( self, eCanceled );
+}
+
+LIB_EXPORT rc_t CC KDiagnoseGetDesc ( const KDiagnose * self,
+    const KDiagnoseTestDesc ** desc )
+{
+    if ( desc == NULL )
+        return RC ( rcRuntime, rcData, rcAccessing, rcParam, rcNull );
+
+    * desc = NULL;
+
+    if ( self == NULL )
+        return RC ( rcRuntime, rcData, rcAccessing, rcSelf, rcNull );
+
+    * desc = self -> desc;
+
+    return 0;
 }
 
 static rc_t STestKNSManagerInitDNSEndpoint ( STest * self, const String * host,
@@ -2802,12 +2950,16 @@ LIB_EXPORT rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests,
 
     assert ( self );
 
-    if ( tests == DIAGNOSE_ALL )
-        tests = ~ DIAGNOSE_FAIL;
-
     STestInit ( & t, self );
 
     STestStart ( & t, true, "System" );
+
+    if ( tests & DIAGNOSE_NETWORK_HTTPS  ||
+         tests & DIAGNOSE_NETWORK_ASPERA ||
+         tests & DIAGNOSE_NETWORK_DB_GAP )
+    {   tests |= DIAGNOSE_NETWORK_NCBI; }
+    if ( tests & DIAGNOSE_NETWORK_NCBI )
+        tests |= DIAGNOSE_CONFIG_COMMON;
 
     if ( tests & DIAGNOSE_CONFIG ) {
         rc_t r1 = 0;
@@ -2868,7 +3020,7 @@ LIB_EXPORT rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests,
         if ( tests & DIAGNOSE_NETWORK_NCBI && ! _RcCanceled ( r1 ) ) {
             rc_t r2 = 0;
             STestStart ( & t, true,        "Access to NCBI" );
-            rc = STestCheckNcbiAccess ( & t );
+            r2 = STestCheckNcbiAccess ( & t );
             if ( r2 == 0 )
                 r2 = STestEnd ( & t, eOK,      "Access to NCBI" );
             else {

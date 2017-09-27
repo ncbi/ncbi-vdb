@@ -51,6 +51,7 @@ struct VFSManager;
 typedef struct KDiagnose KDiagnose;
 typedef struct KDiagnoseError KDiagnoseError;
 typedef struct KDiagnoseTest KDiagnoseTest;
+typedef struct KDiagnoseTestDesc KDiagnoseTestDesc;
 
 
 DIAGNOSE_EXTERN rc_t CC KDiagnoseMakeExt ( KDiagnose ** test,
@@ -106,8 +107,6 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseTestHandlerSet ( KDiagnose * self,
     );
 
 
-#define DIAGNOSE_ALL             0
-
 #define DIAGNOSE_FAIL            1
 
 #define DIAGNOSE_CONFIG_COMMON   2
@@ -121,6 +120,8 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseTestHandlerSet ( KDiagnose * self,
 #define DIAGNOSE_NETWORK \
     ( DIAGNOSE_NETWORK_NCBI | DIAGNOSE_NETWORK_HTTPS | DIAGNOSE_NETWORK_ASPERA \
                             | DIAGNOSE_NETWORK_DB_GAP )
+
+#define DIAGNOSE_ALL ( DIAGNOSE_CONFIG | DIAGNOSE_NETWORK )
 
 /* Run
  *
@@ -168,8 +169,69 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseErrorGetMsg ( const KDiagnoseError * self,
                                                const char ** message );
 
 
+/* GetDesc:
+ * Get description of available tests
+ * Returned object remains valid while "self" is valid
+ */
+DIAGNOSE_EXTERN rc_t CC KDiagnoseGetDesc ( const KDiagnose * self,
+                                           const KDiagnoseTestDesc ** desc );
+
+/* KDiagnoseTestDesc...:
+ * Get description KDiagnoseTestDesc
+ * Returned object remains valid while "self" is valid
+ */
+
+/* Name:
+ * test name
+ */
+DIAGNOSE_EXTERN rc_t CC KDiagnoseTestDescName ( const KDiagnoseTestDesc * self,
+                                                const char ** name );
+
+/* Desc:
+ * test description
+ */
+DIAGNOSE_EXTERN rc_t CC KDiagnoseTestDescDesc ( const KDiagnoseTestDesc * self,
+                                                const char ** desc );
+
+/* Desc:
+ * test code to be used to form 'tests' argument of KDiagnoseRun()
+ */
+DIAGNOSE_EXTERN rc_t CC KDiagnoseTestDescCode ( const KDiagnoseTestDesc * self,
+                                                uint64_t * code );
+
+/* Level:
+ * test level in tests hierarchy.
+ * 0 is the highest level
+ * tests of 'level 1' are subtests of 'level 0' etc
+ */
+DIAGNOSE_EXTERN rc_t CC KDiagnoseTestDescLevel ( const KDiagnoseTestDesc * self,
+                                                 uint32_t * level );
+
+/* Next:
+ * next test of the same level
+ */
+DIAGNOSE_EXTERN rc_t CC KDiagnoseTestDescNext ( const KDiagnoseTestDesc * self,
+                                             const KDiagnoseTestDesc ** next );
+
+/* Child:
+ * the first child test of next level
+ */
+DIAGNOSE_EXTERN rc_t CC KDiagnoseTestDescChild ( const KDiagnoseTestDesc * self,
+                                             const KDiagnoseTestDesc ** child );
+
+/* Depends:
+ * the test 'self' cannot be executed if test 'depends' fails
+ */
+DIAGNOSE_EXTERN rc_t CC KDiagnoseTestDescDepends (
+    const KDiagnoseTestDesc * self, const KDiagnoseTestDesc * depends );
+
+
+/* GetTests:
+ * Get executed tests
+ */
 DIAGNOSE_EXTERN rc_t CC KDiagnoseGetTests ( const KDiagnose * self,
                                             const KDiagnoseTest ** test );
+
 
 /* Level
  *
