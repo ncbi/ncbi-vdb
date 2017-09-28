@@ -151,11 +151,6 @@ public:
         return TableAccess ( ret );
     }
 
-    uint32_t Version ( uint32_t p_major, uint32_t p_minor = 0, uint32_t p_release = 0 )
-    {
-        return ( p_major << 24 ) + ( p_minor << 16 ) + p_release;
-    }
-
 #define THROW_ON_TRUE(cond) if ( cond ) throw logic_error ( "VerifyImplicitPhysicalColumn: " #cond );
     void VerifyImplicitPhysicalColumn ( const SColumn & p_col )
     {

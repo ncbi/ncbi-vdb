@@ -82,6 +82,7 @@ VDBCMN_SRC = \
 	schema-expr \
 	schema-eval \
 	schema-tbl \
+	schema-view \
 	schema-db \
 	schema-dump \
 	schema-int \
@@ -121,7 +122,7 @@ VDBCMN_SRC = \
 	transpose \
 	delta_average \
 	report-vdb \
-	bytecode
+	bytecode \
 
 VDB_SRC = \
 	$(VDBCMN_SRC) \

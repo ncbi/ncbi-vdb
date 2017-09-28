@@ -482,6 +482,7 @@ void VSchemaClearMark ( const VSchema *self )
     VectorForEach ( & self -> phys, false, SPhysicalClearMark, NULL );
     VectorForEach ( & self -> tbl, false, STableClearMark, NULL );
     VectorForEach ( & self -> db, false, SDatabaseClearMark, NULL );
+    /*TODO: self -> view ? */
 
     if ( self -> dad != NULL )
         VSchemaClearMark ( self -> dad );
@@ -525,6 +526,9 @@ void CC VSchemaDestroy ( VSchema *self )
     VectorWhack ( & self -> db, SDatabaseWhack, NULL );
     VectorWhack ( & self -> dname, SNameOverloadWhack, NULL );
 #endif
+
+    VectorWhack ( & self -> view, SViewWhack, NULL );
+    VectorWhack ( & self -> vname, SNameOverloadWhack, NULL );
 
     free ( self );
 }
@@ -656,11 +660,13 @@ rc_t VSchemaMake ( VSchema **sp,  const VSchema *dad )
     VSchemaVectorInit ( schema, dad, phys, 0, 32 );
     VSchemaVectorInit ( schema, dad, tbl, 0, 16 );
     VSchemaVectorInit ( schema, dad, db, 0, 4 );
+    VSchemaVectorInit ( schema, dad, view, 0, 16 );
 
     VectorInit ( & schema -> fname, 0, 64 );
     VectorInit ( & schema -> pname, 0, 32 );
     VectorInit ( & schema -> tname, 0, 16 );
     VectorInit ( & schema -> dname, 0, 4 );
+    VectorInit ( & schema -> vname, 0, 16 );
 
     KRefcountInit ( & schema -> refcount, 1, "VSchema", "make", "vschema" );
     schema -> file_count = 0;

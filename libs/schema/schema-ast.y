@@ -138,6 +138,7 @@
 %token PT_VERSION_1_0
 %token PT_VERSION_2
 %token PT_SCHEMA_1_0
+%token PT_SCHEMA_2_0
 %token PT_INCLUDE
 %token PT_TYPEDEF
 %token PT_FQN
@@ -228,6 +229,7 @@
 %type <node> physmbr_decl col_schema_parms_opt col_schema_parms
 %type <node> col_schema_value col_schema_parm phys_coldef factory_parms_list
 %type <node> vararg param_sig param_signature fact_sig
+%type <node> view view_parms view_parm view_body view_member opt_view_parents view_parents
 
 %type <fqn> fqn qualnames fqn_opt_vers ident fqn_vers
 
@@ -246,7 +248,8 @@
 %type <tok> KW_template KW_database PT_DBMEMBER PT_TBLMEMBER KW_include STRING
 %type <tok> PT_FUNCEXPR PT_COLSCHEMAPARMS KW_static PT_PHYSMBR PT_PHYSCOLDEF PT_COLSCHEMAPARAM
 %type <tok> KW_physical PT_COLUNTYPED EXP_FLOAT ESCAPED_STRING PT_CONSTVECT KW_true KW_false
-%type <tok> PT_NEGATE PT_CASTEXPR '@' KW_control
+%type <tok> PT_NEGATE PT_CASTEXPR '@' KW_control PT_SCHEMA_2_0
+%type <tok> PT_VIEW PT_VIEWPARAM PT_VIEWPARENTS
 
 %%
 
@@ -266,15 +269,15 @@ version_1
     ;
 
 version_2
-    : PT_VERSION_2 '(' KW_version FLOAT ';' ')'     { $$ = $4; }
+    : PT_VERSION_2 '(' KW_version VERS_2_0 ';' ')'     { $$ = $1; }
     ;
 
 schema_1
     : PT_SCHEMA_1_0 '(' schema_decls ')'            { $$ = new AST ( $1, $3 ); }
     ;
 
- schema_2:
-    %empty  { $$ = new AST (); }             /*TODO*/
+ schema_2
+    : PT_SCHEMA_2_0 '(' schema_decls ')'            { $$ = new AST ( $1, $3 ); }
     ;
 
 
@@ -299,6 +302,7 @@ schema_decl
     | table             { $$ = $1; }
     | database          { $$ = $1; }
     | include           { $$ = $1; }
+    | view              { $$ = $1; }
     | ';'               { $$ = new AST (); }
     ;
 
@@ -799,3 +803,39 @@ fqn_vers
     : PT_VERSNAME '(' fqn VERSION ')'   { $$ = $3; $$ -> SetVersion ( $4 -> GetValue () ); }
     ;
 
+/* view */
+view
+    : PT_VIEW '(' KW_view fqn_vers '<' PT_ASTLIST '(' view_parms ')' '>'
+                        opt_view_parents '{' PT_ASTLIST '(' view_body ')' '}' ')'
+        { $$ = p_builder . ViewDef ( $1, $4, $8, $11, $15 ); }
+    ;
+
+view_parms
+    : view_parm                 { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    | view_parms ',' view_parm  { $$ = $1; $$ -> AddNode ( $3 ); }
+    ;
+
+view_parm
+    : PT_VIEWPARAM '(' fqn_opt_vers ident ')'   { $$ = new AST ( $1, $3, $4 ); }
+    ;
+
+view_body
+    : view_member           { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    | view_body view_member { $$ = $1; $$ -> AddNode ( $2 ); }
+    ;
+
+view_member
+    : PT_PRODSTMT '(' typespec ident '=' cond_expr ';' ')'          { $$ = new AST ( $1, $3, $4, $6 ); }
+    | PT_COLUMN '(' KW_column typespec ident '=' cond_expr ';' ')'  { $$ = new AST ( $1, $4, $5, $7 ); }
+    | ';'                                                           { $$ = new AST ( PT_EMPTY ); }
+    ;
+
+opt_view_parents
+    : PT_EMPTY                                  { $$ = new AST ( $1 ); }
+    | PT_VIEWPARENTS '(' '=' view_parents ')'   { $$ = new AST ( $1, $4 ); }
+    ;
+
+view_parents
+    : fqn_opt_vers                  { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    | view_parents ',' fqn_opt_vers { $$ = $1; $$ -> AddNode ( $3 ); }
+    ;

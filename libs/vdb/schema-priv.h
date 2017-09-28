@@ -289,6 +289,10 @@ struct VSchema
     Vector db;
     Vector dname;
 
+    /* views */
+    Vector view;
+    Vector vname;
+
     KRefcount refcount;
 
     uint32_t file_count;
@@ -1376,6 +1380,66 @@ rc_t CC VSchemaOpenFile ( const VSchema *self, const struct KFile **fp,
  */
 rc_t CC VIncludedPathMake ( BSTree *paths, uint32_t *count, const char *path );
 
+/*--------------------------------------------------------------------------
+ * SView
+ *  view declaration
+ */
+typedef struct SView SView;
+struct SView
+{
+    /* symbolic name */
+    struct KSymbol const *name;
+
+    /* required version */
+    uint32_t version;
+
+    /* view id */
+    uint32_t id;
+
+    /* view parameters - tables and views */
+    Vector tables;
+    Vector views;
+
+    /* scope */
+    BSTree scope;
+
+#if NOT_SURE_IF_THESE_ARE_NEEDED_YET
+
+    /* parents */
+    Vector parents;
+
+    /* overrides ( inherited virtual productions )
+       contents are grouped by introducing parent */
+    Vector overrides;
+
+    /* columns */
+    Vector col;
+    Vector cname;
+
+    /* assignment statements */
+    Vector prod;
+
+    /* introduced virtual ( undefined ) productions
+       contents are unowned KSymbol pointers */
+    Vector vprods;
+
+    /* owned KSymbols that are not in scope */
+    Vector syms;
+
+    /* source file & line */
+    String src_file;
+    uint32_t src_line;
+
+    /* marking */
+    bool marked;
+#endif
+};
+
+/* Whack
+ */
+void CC SViewWhack ( void *self, void *ignore );
+
+int64_t CC SViewSort ( const void *item, const void *n );
 
 #ifdef __cplusplus
 }

@@ -55,7 +55,7 @@ namespace ncbi
             AST ( const Token* token, AST*, AST*, AST* );
             AST ( const Token* token, AST*, AST*, AST*, AST * );
             AST ( const Token* token, AST*, AST*, AST*, AST *, AST * );
-            AST ( const Token* token, AST*, AST*, AST*, AST*, AST*, AST* );
+            AST ( const Token* token, AST*, AST*, AST*, AST *, AST *, AST* );
 
             void AddNode ( AST * ); // allocate with new
             void AddNode ( const Token * );

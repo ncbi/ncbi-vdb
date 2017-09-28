@@ -110,6 +110,7 @@ namespace ncbi
             AST * TableDef ( const Token *, AST_FQN * name, AST * parents, AST * body );
             AST * DatabaseDef ( const Token *, AST_FQN * name, AST * parent, AST * body );
             AST * Include ( const Token *, const Token * filename );
+            AST * ViewDef ( const Token *, AST_FQN * name, AST * params, AST * parents, AST * body );
 
         public: // schema object construction helpers
             const KSymbol* CreateFqnSymbol ( const AST_FQN& fqn, uint32_t type, const void * obj );

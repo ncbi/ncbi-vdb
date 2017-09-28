@@ -142,6 +142,9 @@ enum
     /* database member */
     eDBMember,
 
+    /* view */
+    eView,
+
     /* keywords */
     eFirstKeyword,
 
