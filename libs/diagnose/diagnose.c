@@ -729,6 +729,7 @@ typedef enum {
     eEndOK,
     eDONE, /* never used */
     eCANCELED,
+    eWarning
 } EOK;
 
 static rc_t STestVEnd ( STest * self, EOK ok,
@@ -867,6 +868,7 @@ const char*c=self->msg.base;
                 case eCANCELED:
                 case eEndFAIL:
                 case eEndOK :
+                case eWarning:
                 case eDONE: rc = LogOut ( self -> level, 0, "\n"      );
                             break;
                 default   : break;
@@ -879,6 +881,7 @@ const char*c=self->msg.base;
                             break;
                 case eEndFAIL:
                 case eEndOK :
+                case eWarning:
                 case eDONE: rc = LogOut ( self -> level, 0, "\n"      );
                             break;
                 default   : break;
@@ -887,17 +890,19 @@ const char*c=self->msg.base;
         self -> failedWhileSilent = false;
     }
 
-    if ( CALL_BACK && ok != eMSG ) {
+    if (  ok != eMSG ) {
         EKDiagTestState state = eKDTS_Succeed;
         switch ( ok ) {
             case eEndOK   : state = eKDTS_Succeed ; break;
             case eOK      : state = eKDTS_Succeed ; break;
             case eFAIL    : state = eKDTS_Failed  ; break;
             case eCANCELED: state = eKDTS_Canceled; break;
+            case eWarning : state = eKDTS_Warning ; break;
             default       : state = eKDTS_Failed  ; break;
         }
         self -> crnt -> state = state;
-        CALL_BACK ( state, self -> crnt );
+        if ( CALL_BACK )
+            CALL_BACK ( state, self -> crnt );
     }
 
     if ( rc == 0 ) {
@@ -2961,8 +2966,329 @@ rc_t STestHttpVsFasp ( STest * self, const char * http, uint64_t httpSize,
     return rc;
 }
 
+static rc_t StringRelease ( String * self ) {
+    if ( self != NULL )
+        free ( self );
+    return 0;
+}
+
+static rc_t STestWarning ( STest * self,
+                           const char * msg, const char * fmt, ... )
+{
+    rc_t rc = 0;
+
+    va_list args;
+    va_start ( args, fmt );
+
+    rc = STestVStart ( self, false, fmt, args );
+    STestEnd ( self, eMSG, "WARNING: %s", msg );
+    if ( CALL_BACK )
+        CALL_BACK ( eKDTS_Warning, self -> crnt );
+    rc = STestEnd ( self, eWarning, "" );
+
+    va_end ( args );
+
+    return rc;
+}
+
+static rc_t STestCheckNodeExists ( STest * self, const char * path,
+    const char * msg, const char * fmt, String ** value )
+{
+    String * p = NULL;
+    rc_t rc = KConfigReadString ( self -> kfg, path, & p );
+
+    if ( rc != 0 ) {
+        if ( rc != SILENT_RC ( rcKFG, rcNode, rcOpening, rcPath, rcNotFound ) )
+            STestFail ( self, rc, "Failed to read '%s'", path );
+        else {
+            STestWarning ( self, msg, fmt );
+            rc = 0;
+        }
+
+        p = NULL;
+    }
+
+    if ( value != NULL )
+        * value = p;
+    else
+        RELEASE ( String, p );
+
+    return rc;
+}
+
+static rc_t STestCheckCommonKfg ( STest * self ) {
+    rc_t rc = 0;
+    rc_t r1 = 0;
+    bool rRemote = false;
+    bool rSite  = false;
+    bool rUser  = false;
+    String * p = NULL;
+    String sTrue;
+    CONST_STRING ( & sTrue, "true" );
+    {
+        const char * path = "/repository/remote/disabled";
+        rc_t r1 = KConfigReadString ( self -> kfg, path, & p );
+        if ( r1 != 0 ) {
+            if ( r1 !=
+                 SILENT_RC ( rcKFG, rcNode, rcOpening, rcPath, rcNotFound ) )
+            {
+                STestFail ( self, r1, "Failed to read '%s'", path );
+                if ( rc == 0 )
+                    rc = r1;
+            }
+        }
+        else {
+            if ( StringEqual ( p, & sTrue ) )
+                STestWarning ( self, "Remote repository is disabled",
+                                     "Remote repository disabled:"  );
+            RELEASE ( String, p );
+        }
+    }
+    {
+        const char * path = "/repository/remote/main/CGI/resolver-cgi";
+        rc_t r1 = KConfigReadString ( self -> kfg, path, & p );
+        if ( r1 != 0 ) {
+            if ( r1 !=
+                 SILENT_RC ( rcKFG, rcNode, rcOpening, rcPath, rcNotFound ) )
+            {
+                STestFail ( self, r1, "Failed to read '%s'", path );
+                if ( rc == 0 )
+                    rc = r1;
+            }
+            else
+                STestWarning ( self, "Main resolver-cgi is not set",
+                                     "Main resolver-cgi:"  );
+        }
+        else {
+            String v;
+            CONST_STRING ( & v,
+                "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
+            if ( ! StringEqual ( p, & v ) )
+                STestWarning ( self, "Main resolver-cgi is not standard",
+                                     "Main resolver-cgi: %S: ", p  );
+            RELEASE ( String, p );
+
+            rRemote = true;
+        }
+    }
+    /*{
+        const char * path = "/repository/remote/protected/CGI/resolver-cgi";
+        rc_t r1 = KConfigReadString ( self -> kfg, path, & p );
+        if ( r1 != 0 ) {
+            if ( r1 !=
+                 SILENT_RC ( rcKFG, rcNode, rcOpening, rcPath, rcNotFound ) )
+            {
+                STestFail ( self, r1, "Failed to read '%s'", path );
+                if ( rc == 0 )
+                    rc = r1;
+            }
+        }
+        else {
+            String v;
+            CONST_STRING ( & v,
+                "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
+            if ( ! StringEqual ( p, & v ) )
+                STestWarning ( self, "Protected resolver-cgi is not standard",
+                                     "Protected resolver-cgi: %S: ", p  );
+            RELEASE ( String, p );
+        }
+    }*/
+    {
+#define SITE "/repository/site"
+        const char * path = SITE;
+        const KConfigNode * node = NULL;
+        KNamelist * names = NULL;
+        uint32_t count = 0;
+        rc_t r1 = KConfigOpenNodeRead ( self -> kfg, & node, path );
+        if ( r1 != 0 ) {
+            if ( r1 != SILENT_RC
+                        ( rcKFG, rcNode, rcOpening, rcPath, rcNotFound ) )
+            {
+                STestFail ( self, r1, "Failed to read '%s'", path );
+                if ( rc == 0 )
+                    rc = r1;
+            }
+        }
+        if ( r1 == 0 ) {
+            r1 = KConfigNodeListChildren ( node, & names );
+            if ( r1 != 0 ) {
+                STestFail ( self, r1, "Failed to list children of '%s'", path );
+                if ( rc == 0 )
+                    rc = r1;
+            }
+        }
+        if ( r1 == 0 ) {
+            r1 = KNamelistCount ( names, & count );
+            if ( r1 != 0 ) {
+                STestFail ( self, r1, "Failed to count children of '%s'",
+                                      path );
+                if ( rc == 0 )
+                    rc = r1;
+            }
+            else if ( count > 0 )
+                rSite = true;
+        }
+        if ( r1 == 0 ) {
+            const char * path = SITE "/disabled";
+            r1 = KConfigReadString ( self -> kfg, path, & p );
+            if ( r1 != 0 ) {
+                if ( r1 != SILENT_RC
+                            ( rcKFG, rcNode, rcOpening, rcPath, rcNotFound ) )
+                {
+                    STestFail ( self, r1, "Failed to read '%s'", path );
+                    if ( rc == 0 )
+                        rc = r1;
+                }
+            }
+            else {
+                if ( StringEqual ( p, & sTrue ) ) {
+                    rSite = false;
+                    if ( count > 1 )
+                        STestWarning ( self, "Site repository is disabled",
+                                             "Site repository disabled:"  );
+                }
+                RELEASE ( String, p );
+            }
+        }
+        RELEASE ( KNamelist, names );
+        RELEASE ( KConfigNode, node );
+    }
+    {
+        const char * path = "/repository/user/cache-disabled";
+        rc_t r1 = KConfigReadString ( self -> kfg, path, & p );
+        if ( r1 != 0 ) {
+            if ( r1 !=
+                 SILENT_RC ( rcKFG, rcNode, rcOpening, rcPath, rcNotFound ) )
+            {
+                STestFail ( self, r1, "Failed to read '%s'", path );
+                if ( rc == 0 )
+                    rc = r1;
+            }
+        }
+        else {
+            if ( StringEqual ( p, & sTrue ) )
+                STestWarning ( self, "User repository caching is disabled",
+                                     "User repository cache:"  );
+            RELEASE ( String, p );
+        }
+    }
+    {
+        const char * path = "/repository/user/main/public";
+        const KConfigNode * node = NULL;
+        rc_t r1 = KConfigOpenNodeRead ( self -> kfg, & node, path );
+        if ( r1 == 0 )
+            rUser = true;
+        else if ( r1 != SILENT_RC
+                        ( rcKFG, rcNode, rcOpening, rcPath, rcNotFound ) )
+        {
+            STestFail ( self, r1, "Failed to read '%s'", path );
+            if ( rc == 0 )
+                rc = r1;
+        }
+    }
+    r1 = STestCheckNodeExists ( self,
+        "/repository/user/main/public/apps/file/volumes/flat",
+        "User repository is incomplete", "User repository file app:", NULL );
+    if ( r1 != 0 && rc == 0 )
+        rc = r1;
+
+    r1 = STestCheckNodeExists ( self,
+        "/repository/user/main/public/apps/nakmer/volumes/nakmerFlat",
+        "User repository is incomplete", "User repository nakmer app:", NULL );
+    if ( r1 != 0 && rc == 0 )
+        rc = r1;
+
+    r1 = STestCheckNodeExists ( self,
+        "/repository/user/main/public/apps/nannot/volumes/nannotFlat",
+        "User repository is incomplete", "User repository nannot app:", NULL );
+    if ( r1 != 0 && rc == 0 )
+        rc = r1;
+
+    {
+        r1 = STestCheckNodeExists ( self,
+            "/repository/user/main/public/apps/refseq/volumes/refseq",
+            "User repository is incomplete", "User repository refseq app:",
+            & p );
+        if ( r1 != 0 ) {
+            if ( rc == 0 )
+                rc = r1;
+        }
+        else if ( p == NULL )
+            rUser = false;
+        RELEASE ( String, p );
+    }
+    {
+        r1 = STestCheckNodeExists ( self,
+            "/repository/user/main/public/apps/sra/volumes/sraFlat",
+            "User repository is incomplete", "User repository sra app:", & p );
+        if ( r1 != 0 ) {
+            if ( rc == 0 )
+                rc = r1;
+        }
+        else if ( p == NULL )
+            rUser = false;
+        RELEASE ( String, p );
+    }
+
+    r1 = STestCheckNodeExists ( self,
+        "/repository/user/main/public/apps/wgs/volumes/wgsFlat",
+        "User repository is incomplete", "User repository wgs app:", NULL );
+    if ( r1 != 0 && rc == 0 )
+        rc = r1;
+
+    {
+        bool user = false;
+        r1 = STestCheckNodeExists ( self,
+            "/repository/user/main/public/root",
+            "User repository's root path is not set",
+            "User repository root path:",
+            & p );
+        if ( r1 != 0 ) {
+            if ( rc == 0 )
+                rc = r1;
+        }
+        else if ( p != NULL ) {
+            if ( p -> size == 0 )
+                STestWarning ( self, "User repository's root path is empty",
+                                     "User repository root path:"  );
+            else {
+                KPathType type = kptFirstDefined;
+                type = KDirectoryPathType ( self -> dir, p -> addr )
+                        & ~ kptAlias;
+                if ( type == kptNotFound )
+                    STestWarning ( self,
+                                 "User repository's root path does not exist",
+                                 "User repository root path: '%S':", p );
+                else if ( type != kptDir )
+                    STestWarning ( self,
+                                 "User repository's root path is not directory",
+                                 "User repository root path: '%S':", p );
+                else
+                    user = true;
+            }
+            RELEASE ( String, p );
+        }
+        if ( ! user )
+            rUser  = false;
+    }
+
+    r1 = STestCheckNodeExists ( self,
+        "/tools/ascp/max_rate",
+        "ascp max transfer rate is not set", "ascp transfer rate:", NULL );
+    if ( r1 != 0 && rc == 0 )
+        rc = r1;
+
+    if ( ! rRemote && ! rSite && ! rUser ) {
+        if ( rc == 0 )
+            rc = RC ( rcRuntime, rcNode, rcValidating, rcNode, rcInsufficient );
+        STestFail ( self, rc, "No repositories in configuration: " );
+    }
+
+    return rc;
+}
+
 LIB_EXPORT rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests,
-                                  uint32_t projectId, ... )
+    const char * acc, uint32_t projectId, ... )
 {
     rc_t rc = 0;
 
@@ -2997,6 +3323,7 @@ LIB_EXPORT rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests,
         if ( tests & DIAGNOSE_CONFIG_COMMON && ! _RcCanceled ( r1 ) ) {
             rc_t r2 = 0;
             STestStart ( & t, true,        "Common configuration" );
+            r2 = STestCheckCommonKfg ( & t );
             if ( r2 == 0 )
                 r2 = STestEnd ( & t, eOK,  "Common configuration" );
             else {

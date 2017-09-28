@@ -143,9 +143,13 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseTestHandlerSet ( KDiagnose * self,
  * projectId's project and access to gbGaP servers.
  * KDiagnoseRun WILL FAIL if configuration is not complete or no gbGaP server
  * can be accessed.
+ *
+ * If 'acc' is provided: it will be checked for possibility to access and
+ * download ( in scope of 'projectId' - just one 'projectId' is expected in this
+ * case )
  */
 DIAGNOSE_EXTERN rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests,
-    uint32_t projectId, ... );
+    const char * acc, uint32_t projectId, ... );
 
 DIAGNOSE_EXTERN rc_t CC KDiagnosePause  ( KDiagnose * self );
 DIAGNOSE_EXTERN rc_t CC KDiagnoseResume ( KDiagnose * self );
