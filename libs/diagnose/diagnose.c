@@ -276,8 +276,8 @@ rc_t CC KDiagnoseErrorAddRef ( const KDiagnoseError * self )
 static void KDiagnoseErrorWhack ( KDiagnoseError * self ) {
     assert ( self );
     free ( self -> message );
-    free ( self );
     memset ( self, 0, sizeof * self );
+    free ( self );
 }
 
 LIB_EXPORT
@@ -326,7 +326,7 @@ static rc_t KDiagnoseErrorMake ( const KDiagnoseError ** self,
 
     * self = NULL;
 
-    p = calloc ( 1, sizeof * self );
+    p = calloc ( 1, sizeof * p );
     if ( p == NULL )
         return RC ( rcRuntime, rcData, rcAllocating, rcMemory, rcExhausted );
 
@@ -421,6 +421,7 @@ typedef struct {
 
     int total;
     int failures;
+    int warnings;
     KDiagnoseTest * crnt;
     KDiagnoseTest * root;
     Vector * tests;
@@ -763,6 +764,7 @@ rc=0;
     bool print = false;
     char b [ 512 ] = "";
     size_t num_writ = 0;
+    size_t num_warn = 0;
 
     assert ( self );
 
@@ -776,6 +778,8 @@ rc=0;
             ++ self -> total;
             if ( ok == eFAIL || ok == eEndFAIL )
                 ++ self -> failures;
+            else if ( ok == eWarning )
+                ++ self -> warnings;
         }
     }
 
@@ -783,7 +787,11 @@ rc=0;
 #ifdef DEPURAR
 const char*c=self->msg.base;
 #endif
-    rc = string_vprintf ( b, sizeof b, & num_writ, fmt, args );
+    if ( ok == eWarning )
+        rc = string_printf ( b, sizeof b, & num_warn, "WARNING: " );
+    rc = string_vprintf ( b + num_warn, sizeof b - num_warn,
+                          & num_writ, fmt, args );
+    num_writ += num_warn;
     if ( rc != 0 ) {
         LogOut ( KVERBOSITY_ERROR, 0, "CANNOT PRINT: %R", rc );
         return rc;
@@ -2576,7 +2584,8 @@ LIB_EXPORT rc_t CC KDiagnoseAddRef ( const KDiagnose * self ) {
     return 0;
 }
 
-static void CC whack ( void * item, void * data ) { free ( item ); }
+static void CC errorWhack ( void * item, void * data )
+{   KDiagnoseErrorWhack ( item ); }
 static void CC testsWhack ( void * item, void * data )
 {   KDiagnoseTestWhack ( item ); }
 
@@ -2594,7 +2603,7 @@ LIB_EXPORT rc_t CC KDiagnoseRelease ( const KDiagnose * cself ) {
                 RELEASE ( KLock     , self -> lock );
                 RELEASE ( KCondition, self -> condition );
                 VectorWhack ( & self -> tests , & testsWhack, NULL );
-                VectorWhack ( & self -> errors, & whack     , NULL );
+                VectorWhack ( & self -> errors, & errorWhack, NULL );
 
                 RELEASE ( KDiagnoseTestDesc, self -> desc  );
 
@@ -2972,7 +2981,7 @@ static rc_t StringRelease ( String * self ) {
     return 0;
 }
 
-static rc_t STestWarning ( STest * self,
+/*static rc_t STestWarning ( STest * self,
                            const char * msg, const char * fmt, ... )
 {
     rc_t rc = 0;
@@ -2989,7 +2998,7 @@ static rc_t STestWarning ( STest * self,
     va_end ( args );
 
     return rc;
-}
+}*/
 
 static rc_t STestCheckNodeExists ( STest * self, const char * path,
     const char * msg, const char * fmt, String ** value )
@@ -2997,11 +3006,13 @@ static rc_t STestCheckNodeExists ( STest * self, const char * path,
     String * p = NULL;
     rc_t rc = KConfigReadString ( self -> kfg, path, & p );
 
+    STestStart ( self, false, fmt );
+
     if ( rc != 0 ) {
         if ( rc != SILENT_RC ( rcKFG, rcNode, rcOpening, rcPath, rcNotFound ) )
-            STestFail ( self, rc, "Failed to read '%s'", path );
+            STestEnd ( self, eEndFAIL, "Failed to read '%s': %R", path, rc );
         else {
-            STestWarning ( self, msg, fmt );
+            STestEnd ( self, eWarning, msg );
             rc = 0;
         }
 
@@ -3010,8 +3021,10 @@ static rc_t STestCheckNodeExists ( STest * self, const char * path,
 
     if ( value != NULL )
         * value = p;
-    else
+    else {
+        STestEnd ( self, eEndOK, "'%S': OK", p );
         RELEASE ( String, p );
+    }
 
     return rc;
 }
@@ -3026,50 +3039,66 @@ static rc_t STestCheckCommonKfg ( STest * self ) {
     String sTrue;
     CONST_STRING ( & sTrue, "true" );
     {
+        bool printed = false;
         const char * path = "/repository/remote/disabled";
         rc_t r1 = KConfigReadString ( self -> kfg, path, & p );
+        STestStart ( self, false, "Remote repository disabled:" );
         if ( r1 != 0 ) {
             if ( r1 !=
                  SILENT_RC ( rcKFG, rcNode, rcOpening, rcPath, rcNotFound ) )
             {
-                STestFail ( self, r1, "Failed to read '%s'", path );
+                STestEnd ( self, eEndFAIL, "Failed to read '%s': %R",
+                                           path, r1 );
+                printed = true;
                 if ( rc == 0 )
                     rc = r1;
             }
         }
         else {
-            if ( StringEqual ( p, & sTrue ) )
-                STestWarning ( self, "Remote repository is disabled",
-                                     "Remote repository disabled:"  );
+            if ( StringEqual ( p, & sTrue ) ) {
+                STestEnd ( self, eWarning, "Remote repository is disabled" );
+                printed = true;
+            }
             RELEASE ( String, p );
         }
+        if ( ! printed )
+            STestEnd ( self, eEndOK, "false: OK" );
     }
     {
+        bool printed = false;
         const char * path = "/repository/remote/main/CGI/resolver-cgi";
         rc_t r1 = KConfigReadString ( self -> kfg, path, & p );
+        STestStart ( self, false, "Main resolver-cgi:" );
         if ( r1 != 0 ) {
             if ( r1 !=
                  SILENT_RC ( rcKFG, rcNode, rcOpening, rcPath, rcNotFound ) )
             {
-                STestFail ( self, r1, "Failed to read '%s'", path );
+                STestEnd ( self, eEndFAIL, "Failed to read '%s': %R",
+                                           path, r1 );
+                printed = true;
                 if ( rc == 0 )
                     rc = r1;
             }
-            else
-                STestWarning ( self, "Main resolver-cgi is not set",
-                                     "Main resolver-cgi:"  );
+            else {
+                STestEnd ( self, eWarning, "Main resolver-cgi is not set" );
+                printed = true;
+            }
         }
         else {
             String v;
             CONST_STRING ( & v,
                 "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
-            if ( ! StringEqual ( p, & v ) )
-                STestWarning ( self, "Main resolver-cgi is not standard",
-                                     "Main resolver-cgi: %S: ", p  );
+            if ( ! StringEqual ( p, & v ) ) {
+                STestEnd ( self, eWarning,
+                    "Main resolver-cgi is not standard: '%S'", p );
+                printed = true;
+            }
             RELEASE ( String, p );
 
             rRemote = true;
         }
+        if ( ! printed )
+            STestEnd ( self, eEndOK, "OK" );
     }
     /*{
         const char * path = "/repository/remote/protected/CGI/resolver-cgi";
@@ -3094,25 +3123,35 @@ static rc_t STestCheckCommonKfg ( STest * self ) {
         }
     }*/
     {
+        bool printed = false;
 #define SITE "/repository/site"
         const char * path = SITE;
         const KConfigNode * node = NULL;
         KNamelist * names = NULL;
         uint32_t count = 0;
         rc_t r1 = KConfigOpenNodeRead ( self -> kfg, & node, path );
+        STestStart ( self, false, "Site repository:" );
         if ( r1 != 0 ) {
-            if ( r1 != SILENT_RC
-                        ( rcKFG, rcNode, rcOpening, rcPath, rcNotFound ) )
+            if ( r1 != SILENT_RC ( rcKFG, rcNode, rcOpening,
+                                   rcPath, rcNotFound ) )
             {
-                STestFail ( self, r1, "Failed to read '%s'", path );
+                STestEnd ( self, eEndFAIL, "Failed to read '%s': %R",
+                                           path, r1 );
+                printed = true;
                 if ( rc == 0 )
                     rc = r1;
+            }
+            else {
+                STestEnd ( self, eEndOK, "not found: OK" );
+                printed = true;
             }
         }
         if ( r1 == 0 ) {
             r1 = KConfigNodeListChildren ( node, & names );
             if ( r1 != 0 ) {
-                STestFail ( self, r1, "Failed to list children of '%s'", path );
+                STestEnd ( self, eEndFAIL,
+                           "Failed to list children of '%s': %R", path, r1 );
+                printed = true;
                 if ( rc == 0 )
                     rc = r1;
             }
@@ -3120,8 +3159,9 @@ static rc_t STestCheckCommonKfg ( STest * self ) {
         if ( r1 == 0 ) {
             r1 = KNamelistCount ( names, & count );
             if ( r1 != 0 ) {
-                STestFail ( self, r1, "Failed to count children of '%s'",
-                                      path );
+                STestEnd ( self, eEndFAIL,
+                           "Failed to count children of '%s': %R", path, r1 );
+                printed = true;
                 if ( rc == 0 )
                     rc = r1;
             }
@@ -3132,10 +3172,12 @@ static rc_t STestCheckCommonKfg ( STest * self ) {
             const char * path = SITE "/disabled";
             r1 = KConfigReadString ( self -> kfg, path, & p );
             if ( r1 != 0 ) {
-                if ( r1 != SILENT_RC
-                            ( rcKFG, rcNode, rcOpening, rcPath, rcNotFound ) )
+                if ( r1 != SILENT_RC ( rcKFG, rcNode, rcOpening,
+                                       rcPath, rcNotFound ) )
                 {
-                    STestFail ( self, r1, "Failed to read '%s'", path );
+                    STestEnd ( self, eEndFAIL, "Failed to read '%s': %R",
+                                               path, r1 );
+                    printed = true;
                     if ( rc == 0 )
                         rc = r1;
                 }
@@ -3143,34 +3185,46 @@ static rc_t STestCheckCommonKfg ( STest * self ) {
             else {
                 if ( StringEqual ( p, & sTrue ) ) {
                     rSite = false;
-                    if ( count > 1 )
-                        STestWarning ( self, "Site repository is disabled",
-                                             "Site repository disabled:"  );
+                    if ( count > 1 ) {
+                        STestEnd ( self, eWarning,
+                                   "Site repository is disabled" );
+                        printed = true;
+                    }
                 }
                 RELEASE ( String, p );
             }
         }
         RELEASE ( KNamelist, names );
         RELEASE ( KConfigNode, node );
+        if ( ! printed )
+            STestEnd ( self, eEndOK, "OK" );
     }
     {
+        bool printed = false;
         const char * path = "/repository/user/cache-disabled";
         rc_t r1 = KConfigReadString ( self -> kfg, path, & p );
+        STestStart ( self, false, "User repository caching:" );
         if ( r1 != 0 ) {
             if ( r1 !=
                  SILENT_RC ( rcKFG, rcNode, rcOpening, rcPath, rcNotFound ) )
             {
-                STestFail ( self, r1, "Failed to read '%s'", path );
+                STestEnd ( self, eEndFAIL, "Failed to read '%s': %R",
+                                           path, r1 );
+                printed = true;
                 if ( rc == 0 )
                     rc = r1;
             }
         }
         else {
-            if ( StringEqual ( p, & sTrue ) )
-                STestWarning ( self, "User repository caching is disabled",
-                                     "User repository cache:"  );
+            if ( StringEqual ( p, & sTrue ) ) {
+                STestEnd ( self, eWarning,
+                           "User repository caching is disabled" );
+                printed = true;
+            }
             RELEASE ( String, p );
         }
+        if ( ! printed )
+            STestEnd ( self, eEndOK, "enabled: OK" );
     }
     {
         const char * path = "/repository/user/main/public";
@@ -3185,6 +3239,7 @@ static rc_t STestCheckCommonKfg ( STest * self ) {
             if ( rc == 0 )
                 rc = r1;
         }
+        RELEASE ( KConfigNode, node );
     }
     r1 = STestCheckNodeExists ( self,
         "/repository/user/main/public/apps/file/volumes/flat",
@@ -3215,6 +3270,8 @@ static rc_t STestCheckCommonKfg ( STest * self ) {
         }
         else if ( p == NULL )
             rUser = false;
+        else
+            STestEnd ( self, eEndOK, "'%S': OK", p );
         RELEASE ( String, p );
     }
     {
@@ -3227,6 +3284,8 @@ static rc_t STestCheckCommonKfg ( STest * self ) {
         }
         else if ( p == NULL )
             rUser = false;
+        else
+            STestEnd ( self, eEndOK, "'%S': OK", p );
         RELEASE ( String, p );
     }
 
@@ -3249,22 +3308,23 @@ static rc_t STestCheckCommonKfg ( STest * self ) {
         }
         else if ( p != NULL ) {
             if ( p -> size == 0 )
-                STestWarning ( self, "User repository's root path is empty",
-                                     "User repository root path:"  );
+                STestEnd ( self, eWarning,
+                           "User repository's root path is empty" );
             else {
                 KPathType type = kptFirstDefined;
                 type = KDirectoryPathType ( self -> dir, p -> addr )
                         & ~ kptAlias;
                 if ( type == kptNotFound )
-                    STestWarning ( self,
-                                 "User repository's root path does not exist",
-                                 "User repository root path: '%S':", p );
+                    STestEnd ( self, eWarning,
+                        "User repository's root path does not exist: '%S'", p );
                 else if ( type != kptDir )
-                    STestWarning ( self,
-                                 "User repository's root path is not directory",
-                                 "User repository root path: '%S':", p );
-                else
+                    STestEnd ( self, eWarning,
+                        "User repository's root path is not directory: '%S'",
+                        p );
+                else {
+                    STestEnd ( self, eEndOK, "'%S': OK", p );
                     user = true;
+                }
             }
             RELEASE ( String, p );
         }
