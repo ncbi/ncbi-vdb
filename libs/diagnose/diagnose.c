@@ -2740,7 +2740,7 @@ static rc_t STestCheckNcbiAccess ( STest * self ) {
 
 static rc_t STestCache ( const STest * self, const String * acc,
     char * cache, size_t sCache, const char * suffix )
-{
+{//TODO make sure cache is writable
     String rCache;
     VPath * path = NULL;
     rc_t rc = VFSManagerMakePath ( self -> vmgr, & path, "%S", acc );
@@ -3100,28 +3100,6 @@ static rc_t STestCheckCommonKfg ( STest * self ) {
         if ( ! printed )
             STestEnd ( self, eEndOK, "OK" );
     }
-    /*{
-        const char * path = "/repository/remote/protected/CGI/resolver-cgi";
-        rc_t r1 = KConfigReadString ( self -> kfg, path, & p );
-        if ( r1 != 0 ) {
-            if ( r1 !=
-                 SILENT_RC ( rcKFG, rcNode, rcOpening, rcPath, rcNotFound ) )
-            {
-                STestFail ( self, r1, "Failed to read '%s'", path );
-                if ( rc == 0 )
-                    rc = r1;
-            }
-        }
-        else {
-            String v;
-            CONST_STRING ( & v,
-                "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
-            if ( ! StringEqual ( p, & v ) )
-                STestWarning ( self, "Protected resolver-cgi is not standard",
-                                     "Protected resolver-cgi: %S: ", p  );
-            RELEASE ( String, p );
-        }
-    }*/
     {
         bool printed = false;
 #define SITE "/repository/site"
@@ -3319,7 +3297,7 @@ static rc_t STestCheckCommonKfg ( STest * self ) {
                         "User repository's root path does not exist: '%S'", p );
                 else if ( type != kptDir )
                     STestEnd ( self, eWarning,
-                        "User repository's root path is not directory: '%S'",
+                        "User repository's root path is not a directory: '%S'",
                         p );
                 else {
                     STestEnd ( self, eEndOK, "'%S': OK", p );
@@ -3347,8 +3325,302 @@ static rc_t STestCheckCommonKfg ( STest * self ) {
     return rc;
 }
 
-LIB_EXPORT rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests,
-    const char * acc, uint32_t projectId, ... )
+static rc_t STestCheckGapKfg ( STest * self ) {
+    rc_t rc = 0;
+    String * p = NULL;
+    {
+        bool printed = false;
+        const char * path = "/repository/remote/protected/CGI/resolver-cgi";
+        rc_t r1 = KConfigReadString ( self -> kfg, path, & p );
+        STestStart ( self, false, "Protected resolver-cgi:" );
+        if ( r1 != 0 ) {
+            if ( r1 !=
+                 SILENT_RC ( rcKFG, rcNode, rcOpening, rcPath, rcNotFound ) )
+            {
+                STestEnd ( self, eEndFAIL, "Failed to read '%s': %R",
+                                           path, r1 );
+                printed = true;
+                if ( rc == 0 )
+                    rc = r1;
+            }
+            else {
+                STestEnd ( self, eEndOK, "not set: OK" );
+                printed = true;
+            }
+        }
+        else {
+            String v;
+            CONST_STRING ( & v,
+                "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
+            if ( ! StringEqual ( p, & v ) ) {
+                STestEnd ( self, eWarning,
+                    "Protected resolver-cgi is not standard: '%S'", p );
+                printed = true;
+            }
+            RELEASE ( String, p );
+        }
+        if ( ! printed )
+            STestEnd ( self, eEndOK, "OK" );
+    }
+    {
+        const char * path = "/repository/user/protected";
+        const KConfigNode * nProtected = NULL;
+        rc_t r1 = KConfigOpenNodeRead ( self -> kfg, & nProtected, path );
+        if ( r1 != 0 ) {
+            if ( r1 != SILENT_RC ( rcKFG, rcNode, rcOpening,
+                                   rcPath, rcNotFound ) )
+            {
+                STestFail ( self, r1,
+                    "Protected repositories: failed to read '%s'", path );
+                if ( rc == 0 )
+                    rc = r1;
+            }
+            else {
+                STestStart ( self, false, "Protected repositories:" );
+                STestEnd ( self, eEndOK, "not found: OK" );
+            }
+        }
+        else {
+            bool printed = false;
+            rc_t r1 = 0;
+            KNamelist * names = NULL;
+            uint32_t count = 0;
+            STestStart ( self, true, "Protected repositories" );
+            if ( r1 == 0 ) {
+                r1 = KConfigNodeListChildren ( nProtected, & names );
+                if ( r1 != 0 ) {
+                    STestEnd ( self, eEndFAIL,
+                        "Failed to list children of '%s': %R", path, r1 );
+                    printed = true;
+                }
+            }
+            if ( r1 == 0 ) {
+                r1 = KNamelistCount ( names, & count );
+                if ( r1 != 0 ) {
+                    STestEnd ( self, eEndFAIL,
+                        "Failed to count children of '%s': %R", path, r1 );
+                    printed = true;
+                }
+            }
+            if ( r1 == 0 ) {
+                uint32_t i = 0;
+                for ( i = 0; i < count; ++ i ) {
+                    const KConfigNode * node = NULL;
+                    const char * name = NULL;
+                    r1 = KNamelistGet ( names, i, & name );
+                    if ( r1 != 0 ) {
+                        STestEnd ( self, eEndFAIL,
+                            "Failed to get child of '%s': %R", path, r1 );
+                        printed = true;
+                        break;
+                    }
+                    STestStart ( self, true, name );
+                    {
+                        rc_t r2 = KConfigOpenNodeRead ( self -> kfg, & node,
+                            "%s/%s/apps/file/volumes/flat", path, name );
+                        STestStart ( self, false, "%s file app:", name );
+                        if ( r2 != 0 ) {
+                            if ( r2 != SILENT_RC ( rcKFG, rcNode, rcOpening,
+                                                   rcPath, rcNotFound ) )
+                                STestEnd ( self, eEndFAIL, "Failed to read "
+                                    "'%s/%s/apps/file/volumes/flat': %R",
+                                    path, name, r2 );
+                            else
+                                STestEnd ( self, eEndFAIL,
+                                           "FAILURE: not found" );
+                        }
+                        else
+                            STestEnd ( self, eEndOK, "OK" );
+                        RELEASE ( KConfigNode, node );
+                        if ( r2 != 0 && r1 == 0 )
+                            r1 = r2;
+                    }
+                    {
+                        rc_t r2 = KConfigOpenNodeRead ( self -> kfg, & node,
+                            "%s/%s/apps/sra/volumes/sraFlat", path, name );
+                        STestStart ( self, false, "%s sra app:", name );
+                        if ( r2 != 0 ) {
+                            if ( r2 != SILENT_RC ( rcKFG, rcNode, rcOpening,
+                                                   rcPath, rcNotFound ) )
+                                STestEnd ( self, eEndFAIL, "Failed to read "
+                                    "'%s/%s/apps/sra/volumes/sraFlat': %R",
+                                    path, name, r2 );
+                            else
+                                STestEnd ( self, eEndFAIL,
+                                           "FAILURE: not found" );
+                        }
+                        else
+                            STestEnd ( self, eEndOK, "OK" );
+                        RELEASE ( KConfigNode, node );
+                        if ( r2 != 0 && r1 == 0 )
+                            r1 = r2;
+                    }
+                    {
+                        rc_t r2 = KConfigOpenNodeRead ( self -> kfg, & node,
+                            "%s/%s/cache-enabled", path, name );
+                        STestStart ( self, false, "%s caching:", name );
+                        if ( r2 != 0 ) {
+                            if ( r2 != SILENT_RC ( rcKFG, rcNode, rcOpening,
+                                                   rcPath, rcNotFound ) )
+                                STestEnd ( self, eEndFAIL, "Failed to open "
+                                    "'%s/%s/cache-enabled': %R",
+                                    path, name, r2 );
+                            else {
+                                STestEnd ( self, eEndOK, "not found: OK" );
+                                r2 = 0;
+                            }
+                        }
+                        else {
+                            String sFalse;
+                            CONST_STRING ( & sFalse, "false" );
+                            r2 = KConfigNodeReadString ( node, & p );
+                            if ( r2 != 0 )
+                                STestEnd ( self, eEndFAIL, "Failed to read "
+                                    "'%s/%s/cache-enabled': %R",
+                                    path, name, r2 );
+                            else if ( StringEqual ( p, & sFalse ) )
+                                STestEnd ( self, eWarning,
+                                    "caching is disabled" );
+                            else
+                                STestEnd ( self, eEndOK, "OK" );
+                            RELEASE ( String, p );
+                        }
+                        RELEASE ( KConfigNode, node );
+                        if ( r2 != 0 && r1 == 0 )
+                            r1 = r2;
+                    }
+                    {
+                        rc_t r2 = KConfigOpenNodeRead ( self -> kfg, & node,
+                            "%s/%s/download-ticket", path, name );
+                        STestStart ( self, false, "%s download-ticket:", name );
+                        if ( r2 != 0 ) {
+                            if ( r2 != SILENT_RC ( rcKFG, rcNode, rcOpening,
+                                                   rcPath, rcNotFound ) )
+                                STestEnd ( self, eEndFAIL, "Failed to read "
+                                    "'%s/%s/download-ticket': %R",
+                                    path, name, r2 );
+                            else
+                                STestEnd ( self, eEndFAIL,
+                                           "FAILURE: not found" );
+                        }
+                        else
+                            STestEnd ( self, eEndOK, "OK" );
+                        RELEASE ( KConfigNode, node );
+                        if ( r2 != 0 && r1 == 0 )
+                            r1 = r2;
+                    }
+                    {
+                        rc_t r2 = KConfigOpenNodeRead ( self -> kfg, & node,
+                            "%s/%s/encryption-key", path, name );
+                        STestStart ( self, false, "%s encryption-key:", name );
+                        if ( r2 != 0 ) {
+                            if ( r2 != SILENT_RC ( rcKFG, rcNode, rcOpening,
+                                                   rcPath, rcNotFound ) )
+                                STestEnd ( self, eEndFAIL, "Failed to read "
+                                    "'%s/%s/encryption-key': %R",
+                                    path, name, r2 );
+                            else {
+                                r2 = KConfigOpenNodeRead ( self -> kfg, & node,
+                                    "%s/%s/encryption-key-path", path, name );
+                                if ( r2 != 0 ) {
+                                    if ( r2 != SILENT_RC ( rcKFG, rcNode,
+                                        rcOpening, rcPath, rcNotFound ) )
+                                    {
+                                        STestEnd ( self, eEndFAIL,
+                                            "Failed to read "
+                                            "'%s/%s/encryption-key-path': %R",
+                                            path, name, r2 );
+                                    }
+                                    else
+                                        STestEnd ( self, eEndFAIL,
+                                                   "FAILURE: not found" );
+                                }
+                            }
+                        }
+                        if ( r2 == 0 )
+                            STestEnd ( self, eEndOK, "OK" );
+                        RELEASE ( KConfigNode, node );
+                        if ( r2 != 0 && r1 == 0 )
+                            r1 = r2;
+                    }
+                    {
+                        rc_t r2 = KConfigOpenNodeRead ( self -> kfg, & node,
+                            "%s/%s/root", path, name );
+                        STestStart ( self, false, "%s root:", name );
+                        if ( r2 != 0 ) {
+                            if ( r2 != SILENT_RC ( rcKFG, rcNode, rcOpening,
+                                                   rcPath, rcNotFound ) )
+                                STestEnd ( self, eEndFAIL, "Failed to open "
+                                    "'%s/%s/root': %R",
+                                    path, name, r2 );
+                            else
+                                STestEnd ( self, eEndFAIL,
+                                           "FAILURE: not found" );
+                        }
+                        else {
+                            r2 = KConfigNodeReadString ( node, & p );
+                            if ( r2 != 0 )
+                                STestEnd ( self, eEndFAIL, "Failed to read "
+                                    "'%s/%s/root': %R",
+                                    path, name, r2 );
+                            else if ( p -> size == 0 )
+                                STestEnd ( self, eWarning,
+                                    "'%s' root path is empty", name );
+                            else {
+                                KPathType type = kptFirstDefined;
+                                type = KDirectoryPathType
+                                    ( self -> dir, p -> addr ) & ~ kptAlias;
+                                if ( type == kptNotFound )
+                                    STestEnd ( self, eWarning, "'%s' root path "
+                                        "does not exist: '%S'", name, p );
+                                else if ( type != kptDir )
+                                    STestEnd ( self, eWarning, "'%s' root path "
+                                        "is not a directory: '%S'", name, p );
+                                else
+                                    STestEnd ( self, eEndOK, "'%S': OK", p );
+                            }
+                            RELEASE ( String, p );
+                            RELEASE ( KConfigNode, node );
+                        }
+                        if ( r2 != 0 && r1 == 0 )
+                            r1 = r2;
+                    }
+                    if ( r1 == 0 ) {
+                        rc_t r2 = STestEnd ( self, eOK, name );
+                        if ( r2 != 0 && r1 == 0 )
+                            r1 = r2;
+                    }
+                    else if ( _RcCanceled ( r1 ) )
+                        STestEnd ( self, eCANCELED, name );
+                    else
+                        STestEnd ( self, eFAIL, name );
+                }
+            }
+            RELEASE ( KNamelist, names  );
+            RELEASE ( KConfigNode, nProtected  );
+            if ( ! printed ) {
+                printed = true;
+                if ( r1 == 0 ) {
+                    rc_t r2 = STestEnd ( self, eOK, "Protected repositories" );
+                    if ( r2 != 0 && r1 == 0 )
+                        r1 = r2;
+                }
+                else if ( _RcCanceled ( r1 ) )
+                    STestEnd ( self, eCANCELED,
+                                         "Protected repositories: CANCELED" );
+                else
+                    STestEnd ( self, eFAIL, "Protected repositories" );
+            }
+            if ( r1 != 0 && rc == 0 )
+                rc = r1;
+        }
+    }
+    return rc;
+}
+
+static rc_t CC KDiagnoseVRunImpl ( KDiagnose * self, uint64_t tests,
+    const KFile * kart, uint32_t numberOfKartItemsToCheck,
+    const char * acc, uint32_t projectId, va_list args )
 {
     rc_t rc = 0;
 
@@ -3399,6 +3671,7 @@ LIB_EXPORT rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests,
         if ( tests & DIAGNOSE_CONFIG_DB_GAP && ! _RcCanceled ( r1 ) ) {
             rc_t r2 = 0;
             STestStart ( & t, true,        "DbGaP configuration" );
+            r2 = STestCheckGapKfg ( & t );
             if ( r2 == 0 )
                 r2 = STestEnd ( & t, eOK,  "DbGaP configuration" );
             else {
@@ -3633,4 +3906,41 @@ LIB_EXPORT rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests,
     STestFini ( & t );
     KDiagnoseRelease ( self );
     return rc;
+}
+
+static rc_t CC KDiagnoseRunImpl ( KDiagnose * self, uint64_t tests,
+    const KFile * kart, uint32_t numberOfKartItemsToCheck,
+    const char * acc, uint32_t projectId, ... )
+{
+    rc_t rc = 0;
+    va_list args;
+    va_start ( args, projectId );
+    rc = KDiagnoseVRunImpl ( self, tests, NULL, 0, NULL, projectId, args );
+    va_end ( args );
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests )
+{   return KDiagnoseRunImpl ( self, tests, NULL, 0, NULL, 0 ); }
+
+LIB_EXPORT rc_t CC KDiagnoseAcc ( KDiagnose * self, uint64_t tests,
+    const char * acc, uint32_t projectId )
+{   return KDiagnoseRunImpl ( self, tests, NULL, 0, acc, 0 ); }
+
+DIAGNOSE_EXTERN rc_t CC KDiagnoseDbGap ( KDiagnose * self, uint64_t tests,
+    uint32_t projectId, ... )
+{
+    rc_t rc = 0;
+    va_list args;
+    va_start ( args, projectId );
+    rc = KDiagnoseRunImpl ( self, tests, NULL, 0, NULL, projectId, args );
+    va_end ( args );
+    return rc;
+}
+
+DIAGNOSE_EXTERN rc_t CC KDiagnoseKart ( KDiagnose * self, uint64_t tests,
+    const struct KFile * kart, uint32_t numberOfKartItemsToCheck )
+{
+    return ( KDiagnoseRunImpl ( self, tests, kart, numberOfKartItemsToCheck,
+                                NULL, 0 ) );
 }
