@@ -104,7 +104,8 @@ typedef enum {
  */
 DIAGNOSE_EXTERN rc_t CC KDiagnoseTestHandlerSet ( KDiagnose * self,
         void ( CC * callback )
-             ( EKDiagTestState state, const KDiagnoseTest * test )
+             ( EKDiagTestState state, const KDiagnoseTest * test, void * data ),
+        void * data
     );
 
 

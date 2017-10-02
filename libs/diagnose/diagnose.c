@@ -343,14 +343,18 @@ static rc_t KDiagnoseErrorMake ( const KDiagnoseError ** self,
     return 0;
 }
 
-static
-void ( CC * CALL_BACK ) ( EKDiagTestState state, const KDiagnoseTest * test );
+static void ( CC * CALL_BACK )
+    ( EKDiagTestState state, const KDiagnoseTest * test, void * data );
+static void * CALL_BACK_DATA;
 
 LIB_EXPORT rc_t CC KDiagnoseTestHandlerSet ( KDiagnose * self,
-    void ( CC * callback ) ( EKDiagTestState state, const KDiagnoseTest * test )
+    void ( CC * callback )
+        ( EKDiagTestState state, const KDiagnoseTest * test, void * data ),
+    void * data
 )
 {
     CALL_BACK = callback;
+    CALL_BACK_DATA = data;
     return 0;
 }
 
@@ -531,7 +535,7 @@ static rc_t KDiagnoseCheckState ( KDiagnose * self ) {
                      "= Signal caught: CANCELED DIAGNOSTICS\n" );
             self -> state = eCanceled;
             if ( CALL_BACK )
-                CALL_BACK ( eKDTS_Canceled, NULL );
+                CALL_BACK ( eKDTS_Canceled, NULL, CALL_BACK_DATA );
         }
 
     while ( self -> state != eRunning ) {
@@ -546,7 +550,7 @@ static rc_t KDiagnoseCheckState ( KDiagnose * self ) {
                 case ePaused:
                     LogOut ( KVERBOSITY_INFO, 0, "= PAUSED DIAGNOSTICS\n" );
                     if ( CALL_BACK )
-                        CALL_BACK ( eKDTS_Paused, NULL );
+                        CALL_BACK ( eKDTS_Paused, NULL, CALL_BACK_DATA );
 
                     rc = KConditionWait ( self -> condition, self -> lock );
                     if ( rc != 0 )
@@ -556,7 +560,7 @@ static rc_t KDiagnoseCheckState ( KDiagnose * self ) {
                         LogOut ( KVERBOSITY_INFO, 0,
                                  "= RESUMED DIAGNOSTICS\n" );
                         if ( CALL_BACK )
-                            CALL_BACK ( eKDTS_Resumed, NULL );
+                            CALL_BACK ( eKDTS_Resumed, NULL, CALL_BACK_DATA );
                     }
 
                     break;
@@ -567,7 +571,7 @@ static rc_t KDiagnoseCheckState ( KDiagnose * self ) {
                         rc = RC ( rcRuntime, rcProcess, rcExecuting,
                                   rcProcess, rcCanceled );
                     if ( CALL_BACK )
-                        CALL_BACK ( eKDTS_Canceled, NULL );
+                        CALL_BACK ( eKDTS_Canceled, NULL, CALL_BACK_DATA );
 
                     break;
             }
@@ -717,7 +721,7 @@ const char*c=self->msg.base;
     }
 
     if ( CALL_BACK )
-         CALL_BACK ( eKDTS_Started, test );
+         CALL_BACK ( eKDTS_Started, test, CALL_BACK_DATA );
 
     return rc;
 }
@@ -910,7 +914,7 @@ const char*c=self->msg.base;
         }
         self -> crnt -> state = state;
         if ( CALL_BACK )
-            CALL_BACK ( state, self -> crnt );
+            CALL_BACK ( state, self -> crnt, CALL_BACK_DATA );
     }
 
     if ( rc == 0 ) {
