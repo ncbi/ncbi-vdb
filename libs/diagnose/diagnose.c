@@ -2742,6 +2742,8 @@ static rc_t STestCheckNcbiAccess ( STest * self ) {
     return rc;
 }
 
+static bool writable () { return true; }
+
 static rc_t STestCache ( const STest * self, const String * acc,
     char * cache, size_t sCache, const char * suffix )
 {//TODO make sure cache is writable
@@ -3329,7 +3331,7 @@ static rc_t STestCheckCommonKfg ( STest * self ) {
     return rc;
 }
 
-static rc_t STestCheckGapKfg ( STest * self ) {
+static rc_t STestCheckGapKfg ( STest * self, bool failWhenIncorrect ) {
     rc_t rc = 0;
     String * p = NULL;
     {
@@ -3675,7 +3677,7 @@ static rc_t CC KDiagnoseVRunImpl ( KDiagnose * self, uint64_t tests,
         if ( tests & DIAGNOSE_CONFIG_DB_GAP && ! _RcCanceled ( r1 ) ) {
             rc_t r2 = 0;
             STestStart ( & t, true,        "DbGaP configuration" );
-            r2 = STestCheckGapKfg ( & t );
+            r2 = STestCheckGapKfg ( & t, false );
             if ( r2 == 0 )
                 r2 = STestEnd ( & t, eOK,  "DbGaP configuration" );
             else {
