@@ -126,34 +126,36 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseTestHandlerSet ( KDiagnose * self,
 #define DIAGNOSE_ALL ( DIAGNOSE_CONFIG | DIAGNOSE_NETWORK )
 
 /******************************************************************************/
-/* Run KDiagnose tests
+/* Acc
+ * Diagnose user system, make sure 'acc' (optional) can be accessed in the
+ * scope of projectId ( 'projectId' = 0 : public accession ).
+ * Return non-0 rc when it cannot be accessed or downloaded
+ */
+DIAGNOSE_EXTERN rc_t CC KDiagnoseAcc ( KDiagnose * self, const char * acc,
+    uint32_t projectId, bool checkDownload, uint64_t advanced );
+
+/* Kart
+ * Diagnose that the kart file can be accessed.
+ * Check 'numberOfKartItemsToCheck' rows ( 0 means 'all' )
+ */
+DIAGNOSE_EXTERN rc_t CC KDiagnoseKart ( KDiagnose * self,
+    const struct KFile * kart, uint32_t numberOfKartItemsToCheck,
+    uint64_t advanced );
+
+/* Advanced
+ * Run KDiagnose tests
  *
  * tests is combination of DIAGNOSE_* values
  *
- * When "tests | DIAGNOSE_FAIL != 0" - KDiagnoseRun will return non-0 rc
- * When KDiagnoseCancel is called - KDiagnoseRun will return rcCanceled
- */
-
-/* Run
+ * When "tests | DIAGNOSE_FAIL != 0" - KDiagnoseAdvanced will return non-0 rc
+ * When KDiagnoseCancel is called - KDiagnose will return rcCanceled
  *
  * If 'tests' contain DIAGNOSE_CONFIG_DB_GAP
  * and/or DIAGNOSE_NETWORK_HTTPS/DIAGNOSE_NETWORK_ASPERA
  * - we will try to check existing dbGaP configuration and access to dbGaP
  * servers and issue WARNINGS if something is not correct.
  */
-
-/* Run
- * Diagnose user system
- */
-DIAGNOSE_EXTERN rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests );
-
-/* Acc
- * Diagnose user system, make sure 'acc' can be accessed in the scope of
- * projectId ( 'projectId' = 0 : public accessiom ).
- * Return non-0 rc when it cannot be accessed or downloaded
- */
-DIAGNOSE_EXTERN rc_t CC KDiagnoseAcc ( KDiagnose * self, uint64_t tests,
-    const char * acc, uint32_t projectId );
+DIAGNOSE_EXTERN rc_t CC KDiagnoseAdvanced ( KDiagnose * self, uint64_t tests );
 
 /* DbGap
  * Diagnose user system, projects with 'projectId' can be accessed.
@@ -164,16 +166,8 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseAcc ( KDiagnose * self, uint64_t tests,
  * KDiagnoseDbGap WILL FAIL if configuration is not complete or no gbGaP server
  * can be accessed.
  *
- */
 DIAGNOSE_EXTERN rc_t CC KDiagnoseDbGap ( KDiagnose * self, uint64_t tests,
-    uint32_t projectId, ... );
-
-/* Kart
- * Diagnose that the kart file can be accessed.
- * Check 'numberOfKartItemsToCheck' rows ( 0 means 'all' )
- */
-DIAGNOSE_EXTERN rc_t CC KDiagnoseKart ( KDiagnose * self, uint64_t tests,
-    const struct KFile * kart, uint32_t numberOfKartItemsToCheck );
+    uint32_t projectId, ... );*/
 /******************************************************************************/
 
 
@@ -224,7 +218,7 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseTestDescDesc ( const KDiagnoseTestDesc * self,
                                                 const char ** desc );
 
 /* Desc:
- * test code to be used to form 'tests' argument of KDiagnoseRun()
+ * test code to be used to form 'tests' argument of KDiagnoseAdvanced()
  */
 DIAGNOSE_EXTERN rc_t CC KDiagnoseTestDescCode ( const KDiagnoseTestDesc * self,
                                                 uint64_t * code );

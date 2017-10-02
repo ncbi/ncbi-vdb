@@ -27,7 +27,7 @@
 *
 */
 
-#include "diagnose/diagnose.h" /* KDiagnoseRun */
+#include "diagnose/diagnose.h" /* KDiagnoseAdvanced */
 #include "diagnose.h" /* endpoint_to_string */
 
 #include <kapp/main.h> /* Quitting */
@@ -2742,7 +2742,36 @@ static rc_t STestCheckNcbiAccess ( STest * self ) {
     return rc;
 }
 
-static bool writable () { return true; }
+static bool STestWritable ( const STest * self, const char * path ) {
+    char tmp [ PATH_MAX ] = "";
+
+    int i = 0;
+
+    if ( path == NULL )
+        return false;
+
+    assert ( self );
+
+    for ( i = 0; i <= 0; ++i ) {
+        rc_t rc = string_printf ( tmp, sizeof tmp, NULL, "%s/tmp-ncbi-vdb%d",
+                                                         path, i );
+        if ( rc != 0 )
+            return false;
+
+        if ( KDirectoryPathType ( self -> dir, tmp ) != kptNotFound )
+            continue;
+
+        rc = KDirectoryCreateDir ( self -> dir, 0775, kcmCreate, tmp );
+        if ( rc == 0 ) {
+            rc = KDirectoryRemove ( self -> dir, false, tmp );
+            return rc == 0;
+        }
+        else
+            return false;
+    }
+
+    return false;
+}
 
 static rc_t STestCache ( const STest * self, const String * acc,
     char * cache, size_t sCache, const char * suffix )
@@ -2760,10 +2789,12 @@ static rc_t STestCache ( const STest * self, const String * acc,
     if ( rc == 0 ) {
         rc = string_printf ( cache, sCache, NULL, "%S.%s", & rCache, suffix );
         RELEASE ( VPath, vcache );
+        if ( rc != 0 || ! STestWritable ( self, cache ) )
+            cache [ 0 ] = '\0';
     }
     RELEASE ( VPath, path );
 
-    if ( rc != 0 ) {
+    if ( cache [ 0 ] == '\0' ) {
         const char * p = getenv ( "TMPDIR" );
         if ( p == NULL )
             p          = getenv ( "TEMP" );
@@ -2774,6 +2805,8 @@ static rc_t STestCache ( const STest * self, const String * acc,
         if ( p != NULL )
             rc = string_printf ( cache, sCache, NULL, "%s.%S.%s",
                                                       p, acc, suffix );
+        if ( rc != 0 || ! STestWritable ( self, cache ) )
+            cache [ 0 ] = '\0';
     }
 
     if ( rc != 0 ) {
@@ -3926,14 +3959,14 @@ static rc_t CC KDiagnoseRunImpl ( KDiagnose * self, uint64_t tests,
     return rc;
 }
 
-LIB_EXPORT rc_t CC KDiagnoseRun ( KDiagnose * self, uint64_t tests )
+LIB_EXPORT rc_t CC KDiagnoseAdvanced ( KDiagnose * self, uint64_t tests )
 {   return KDiagnoseRunImpl ( self, tests, NULL, 0, NULL, 0 ); }
 
-LIB_EXPORT rc_t CC KDiagnoseAcc ( KDiagnose * self, uint64_t tests,
-    const char * acc, uint32_t projectId )
+LIB_EXPORT rc_t CC KDiagnoseAcc ( KDiagnose * self,  const char * acc,
+    uint32_t projectId, bool checkDownload, uint64_t tests  )
 {   return KDiagnoseRunImpl ( self, tests, NULL, 0, acc, 0 ); }
 
-DIAGNOSE_EXTERN rc_t CC KDiagnoseDbGap ( KDiagnose * self, uint64_t tests,
+/*DIAGNOSE_EXTERN rc_t CC KDiagnoseDbGap ( KDiagnose * self, uint64_t tests,
     uint32_t projectId, ... )
 {
     rc_t rc = 0;
@@ -3942,10 +3975,11 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseDbGap ( KDiagnose * self, uint64_t tests,
     rc = KDiagnoseRunImpl ( self, tests, NULL, 0, NULL, projectId, args );
     va_end ( args );
     return rc;
-}
+}*/
 
-DIAGNOSE_EXTERN rc_t CC KDiagnoseKart ( KDiagnose * self, uint64_t tests,
-    const struct KFile * kart, uint32_t numberOfKartItemsToCheck )
+DIAGNOSE_EXTERN rc_t CC KDiagnoseKart ( KDiagnose * self,
+    const struct KFile * kart, uint32_t numberOfKartItemsToCheck,
+    uint64_t tests )
 {
     return ( KDiagnoseRunImpl ( self, tests, kart, numberOfKartItemsToCheck,
                                 NULL, 0 ) );
