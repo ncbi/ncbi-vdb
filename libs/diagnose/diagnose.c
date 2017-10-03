@@ -4053,6 +4053,11 @@ static rc_t CC KDiagnoseRunImpl ( KDiagnose * self, uint64_t tests,
     return rc;
 }
 
+LIB_EXPORT rc_t CC KDiagnoseAll ( KDiagnose * self, uint64_t tests ) {
+    return KDiagnoseRunImpl ( self, KDIAGN_ALL, NULL, 0,
+                              true, true, true, NULL, 0 );
+}
+
 /*LIB_EXPORT
 rc_t CC KDiagnoseAdvanced ( KDiagnose * self, uint64_t tests )
 {
@@ -4065,7 +4070,7 @@ LIB_EXPORT rc_t CC KDiagnoseAcc ( KDiagnose * self,  const char * acc,
     uint32_t projectId, bool checkHttp, bool checkAspera, bool checkDownload,
     uint64_t tests )
 {
-    return KDiagnoseRunImpl ( self, tests, NULL, 0,
+    return KDiagnoseRunImpl ( self, KDIAGN_ALL, NULL, 0,
                               checkHttp, checkAspera, checkDownload, acc, 0 );
 }
 
@@ -4084,6 +4089,6 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseKart ( KDiagnose * self,
     const struct KFile * kart, uint32_t numberOfKartItemsToCheck,
     bool checkHttp, bool checkAspera, uint64_t tests )
 {
-    return KDiagnoseRunImpl ( self, tests, kart, numberOfKartItemsToCheck,
+    return KDiagnoseRunImpl ( self, KDIAGN_ALL, kart, numberOfKartItemsToCheck,
                               checkHttp, checkAspera, true, NULL, 0 );
 }

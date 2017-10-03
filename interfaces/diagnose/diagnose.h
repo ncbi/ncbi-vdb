@@ -119,8 +119,9 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseLogHandlerSetKOutMsg ( KDiagnose * self );
  * Default function to execute - diagnose the system.
  * Check everything and warn when something is not right.
  * Do not fail when it might not cause failure.
+ * set 'advanced' to 0
  */
-DIAGNOSE_EXTERN rc_t CC KDiagnoseAll ( KDiagnose * self );
+DIAGNOSE_EXTERN rc_t CC KDiagnoseAll ( KDiagnose * self, uint64_t advanced );
 
 /* Acc
  * Diagnose user system, make sure 'acc' (optional) can be accessed in the
