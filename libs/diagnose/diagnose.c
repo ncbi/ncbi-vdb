@@ -121,7 +121,7 @@ struct KDiagnose {
     Vector tests;
     Vector errors;
 
-    KDiagnoseTestDesc * desc;
+//  KDiagnoseTestDesc * desc;
 
     enum EState {
         eRunning,
@@ -2380,7 +2380,7 @@ static rc_t _STestCheckNetwork ( STest * self, const Data * data,
 }
 #endif
 
-struct KDiagnoseTestDesc {
+/*struct KDiagnoseTestDesc {
     const char * name;
     const char * desc;
     uint64_t code;
@@ -2436,7 +2436,7 @@ static rc_t KDiagnoseMakeDesc ( KDiagnose * self ) {
     KDiagnoseTestDesc * netAscp = NULL;
     assert ( self );
     if ( rc == 0 )
-        rc = KDiagnoseTestDescMake ( & root, 0, "System", DIAGNOSE_ALL );
+        rc = KDiagnoseTestDescMake ( & root, 0, "System", KDIAGN_ALL );
     if ( rc == 0 ) {
         rc = KDiagnoseTestDescMake ( & kfg, 1, "Configuration",
                                      DIAGNOSE_CONFIG );
@@ -2445,14 +2445,14 @@ static rc_t KDiagnoseMakeDesc ( KDiagnose * self ) {
     }
     if ( rc == 0 ) {
         rc = KDiagnoseTestDescMake ( & kfgCommon, 2, "Common configuration",
-                                     DIAGNOSE_CONFIG_COMMON );
+                                     KDIAGN_REPO_USER );
         if ( rc == 0 )
             kfg -> child = kfgCommon;
     }
     if ( rc == 0 ) {
         KDiagnoseTestDesc * kfgGap = NULL;
         rc = KDiagnoseTestDescMake ( & kfgGap, 2, "DbGaP configuration",
-                                     DIAGNOSE_CONFIG_DB_GAP );
+                                     KDIAGN_REPO_GAP );
         if ( rc == 0 ) {
             kfgCommon -> next = kfgGap;
             kfgGap -> depends = kfgCommon;
@@ -2501,7 +2501,7 @@ static rc_t KDiagnoseMakeDesc ( KDiagnose * self ) {
     else
         self -> desc = root;
     return rc;
-}
+}*/
 
 static const char DIAGNOSE_CLSNAME [] = "KDiagnose";
 
@@ -2563,8 +2563,8 @@ LIB_EXPORT rc_t CC KDiagnoseMakeExt ( KDiagnose ** test, KConfig * kfg,
     if ( rc == 0 )
         rc = KConditionMake ( & p -> condition );
 
-    if ( rc == 0 )
-        rc = KDiagnoseMakeDesc ( p );
+/*  if ( rc == 0 )
+        rc = KDiagnoseMakeDesc ( p );*/
 
     if ( rc == 0 ) {
         p -> verbosity = KConfig_Verbosity ( p -> kfg );
@@ -2609,7 +2609,7 @@ LIB_EXPORT rc_t CC KDiagnoseRelease ( const KDiagnose * cself ) {
                 VectorWhack ( & self -> tests , & testsWhack, NULL );
                 VectorWhack ( & self -> errors, & errorWhack, NULL );
 
-                RELEASE ( KDiagnoseTestDesc, self -> desc  );
+//              RELEASE ( KDiagnoseTestDesc, self -> desc  );
 
                 free ( self );
                 break;
@@ -2655,7 +2655,7 @@ LIB_EXPORT rc_t CC KDiagnoseCancel ( KDiagnose * self ) {
     return _KDiagnoseSetState ( self, eCanceled );
 }
 
-LIB_EXPORT rc_t CC KDiagnoseGetDesc ( const KDiagnose * self,
+/*LIB_EXPORT rc_t CC KDiagnoseGetDesc ( const KDiagnose * self,
     const KDiagnoseTestDesc ** desc )
 {
     if ( desc == NULL )
@@ -2669,7 +2669,7 @@ LIB_EXPORT rc_t CC KDiagnoseGetDesc ( const KDiagnose * self,
     * desc = self -> desc;
 
     return 0;
-}
+}*/
 
 static rc_t STestKNSManagerInitDNSEndpoint ( STest * self, const String * host,
                                              uint16_t port )
@@ -2742,7 +2742,9 @@ static rc_t STestCheckNcbiAccess ( STest * self ) {
     return rc;
 }
 
-static bool STestWritable ( const STest * self, const char * path ) {
+static bool STestWritableImpl ( const STest * self,
+                                const char * path, bool dir )
+{
     char tmp [ PATH_MAX ] = "";
 
     int i = 0;
@@ -2751,6 +2753,27 @@ static bool STestWritable ( const STest * self, const char * path ) {
         return false;
 
     assert ( self );
+
+    if ( ! dir ) {
+        rc_t rc = 0;
+        KFile * f = NULL;
+
+        if ( KDirectoryPathType ( self -> dir, path ) != kptNotFound ) {
+            rc = KDirectoryRemove ( self -> dir, false, path );
+            if ( rc != 0 )
+                return false;
+        }
+
+        rc = KDirectoryCreateFile ( self -> dir, & f, false,
+                                    0775, kcmCreate | kcmParents, path);
+        if ( rc != 0 )
+            return false;
+
+        RELEASE ( KFile, f );
+
+        rc = KDirectoryRemove ( self -> dir, false, path );
+        return rc == 0;
+    }
 
     for ( i = 0; i <= 0; ++i ) {
         rc_t rc = string_printf ( tmp, sizeof tmp, NULL, "%s/tmp-ncbi-vdb%d",
@@ -2761,7 +2784,8 @@ static bool STestWritable ( const STest * self, const char * path ) {
         if ( KDirectoryPathType ( self -> dir, tmp ) != kptNotFound )
             continue;
 
-        rc = KDirectoryCreateDir ( self -> dir, 0775, kcmCreate, tmp );
+        rc = KDirectoryCreateDir ( self -> dir,
+                                   0775, kcmCreate | kcmParents, tmp );
         if ( rc == 0 ) {
             rc = KDirectoryRemove ( self -> dir, false, tmp );
             return rc == 0;
@@ -2773,9 +2797,15 @@ static bool STestWritable ( const STest * self, const char * path ) {
     return false;
 }
 
+static bool STestWritable ( const STest * self, const char * path )
+{   return STestWritableImpl ( self, path, true ); }
+
+static bool STestCanCreate ( const STest * self, const char * path )
+{   return STestWritableImpl ( self, path, false ); }
+
 static rc_t STestCache ( const STest * self, const String * acc,
     char * cache, size_t sCache, const char * suffix )
-{//TODO make sure cache is writable
+{
     String rCache;
     VPath * path = NULL;
     rc_t rc = VFSManagerMakePath ( self -> vmgr, & path, "%S", acc );
@@ -2789,48 +2819,83 @@ static rc_t STestCache ( const STest * self, const String * acc,
     if ( rc == 0 ) {
         rc = string_printf ( cache, sCache, NULL, "%S.%s", & rCache, suffix );
         RELEASE ( VPath, vcache );
-        if ( rc != 0 || ! STestWritable ( self, cache ) )
+        if ( rc != 0 || ! STestCanCreate ( self, cache ) )
             cache [ 0 ] = '\0';
     }
     RELEASE ( VPath, path );
 
     if ( cache [ 0 ] == '\0' ) {
         const char * p = getenv ( "TMPDIR" );
-        if ( p == NULL )
+        while ( cache [ 0 ] == '\0' ) {
+            if ( STestWritable ( self, p ) )
+                break;
             p          = getenv ( "TEMP" );
-        if ( p == NULL )
+            if ( STestWritable ( self, p ) )
+                break;
             p          = getenv ( "TMP" );
-        if ( p == NULL )
+            if ( STestWritable ( self, p ) )
+                break;
             p          = getenv ( "TEMPDIR" );
-        if ( p != NULL )
-            rc = string_printf ( cache, sCache, NULL, "%s.%S.%s",
+            if ( STestWritable ( self, p ) )
+                break;
+            p = NULL;
+            break;
+        }
+        if ( p != NULL ) {
+            rc = string_printf ( cache, sCache, NULL, "%s/%S.%s",
                                                       p, acc, suffix );
-        if ( rc != 0 || ! STestWritable ( self, cache ) )
+            if ( rc != 0 )
+                cache [ 0 ] = '\0';
+        }
+    }
+
+    if ( cache [ 0 ] == '\0' ) {
+        String * p = NULL;
+        rc = KConfigReadString ( self -> kfg,
+                                 "/repository/user/default-path", & p );
+        if ( rc == 0 && STestWritable ( self, p -> addr ) ) {
+            rc = string_printf ( cache, sCache, NULL, "%S/%S.%s",
+                                                      p, acc, suffix );
+            free ( p );
+        }
+        if ( rc != 0 )
             cache [ 0 ] = '\0';
     }
 
-    if ( rc != 0 ) {
+    if ( cache [ 0 ] == '\0' ) {
         String * p = NULL;
         rc = KConfigReadString ( self -> kfg, "NCBI_HOME", & p );
-        if ( rc == 0 ) {
-            rc = string_printf ( cache, sCache, NULL, "%S.%S.%s",
+        if ( rc == 0 && STestWritable ( self, p -> addr ) ) {
+            rc = string_printf ( cache, sCache, NULL, "%S/%S.%s",
                                                       p, acc, suffix );
             free ( p );
         }
+        if ( rc != 0 )
+            cache [ 0 ] = '\0';
     }
 
-    if ( rc != 0 ) {
+    if ( cache [ 0 ] == '\0' ) {
         String * p = NULL;
         rc = KConfigReadString ( self -> kfg, "HOME", & p );
-        if ( rc == 0 ) {
-            rc = string_printf ( cache, sCache, NULL, "%S.%S.%s",
+        if ( rc == 0 && STestWritable ( self, p -> addr ) ) {
+            rc = string_printf ( cache, sCache, NULL, "%S/%S.%s",
                                                       p, acc, suffix );
             free ( p );
         }
+        if ( rc != 0 )
+            cache [ 0 ] = '\0';
     }
 
-    if ( rc != 0 )
-        rc = string_printf ( cache, sCache, NULL, "%S.%s", acc, suffix );
+    if ( cache [ 0 ] == '\0' ) {
+        rc = string_printf ( cache, sCache, NULL, "%S/%s", acc, suffix );
+        if ( rc != 0 )
+            cache [ 0 ] = '\0';
+        else if ( ! STestWritable ( self, "." ) ) {
+            cache [ 0 ] = '\0';
+            rc = RC ( rcRuntime,
+                      rcDirectory, rcAccessing, rcDirectory, rcUnauthorized );
+        }
+    }
 
     return rc;
 }
@@ -3657,150 +3722,151 @@ static rc_t STestCheckGapKfg ( STest * self, bool failWhenIncorrect ) {
     return rc;
 }
 
-static rc_t CC KDiagnoseVRunImpl ( KDiagnose * self, uint64_t tests,
+static rc_t CC STestRun ( STest /*KDiagnose*/ * self, uint64_t tests,
     const KFile * kart, uint32_t numberOfKartItemsToCheck,
-    const char * acc, uint32_t projectId, va_list args )
+    bool checkHttp, bool checkAspera, bool checkDownload, const char * acc,
+    uint32_t projectId, va_list args )
 {
     rc_t rc = 0;
 
     const char exp [] = "NCBI.sra\210\031\003\005\001\0\0\0";
-    STest t;
+    /*STest t;
 
     if ( self == NULL )
         rc = KDiagnoseMakeExt ( & self, NULL, NULL, NULL );
     else
         rc = KDiagnoseAddRef ( self );
     if ( rc != 0 )
-        return rc;
+        return rc;*/
 
     assert ( self );
 
-    STestInit ( & t, self );
+    //STestInit ( & t, self );
 
-    STestStart ( & t, true, "System" );
+//    STestStart ( self/*& t*/, true, "System" );
 
-    if ( tests & DIAGNOSE_NETWORK_HTTPS  ||
+/*  if ( tests & DIAGNOSE_NETWORK_HTTPS  ||
          tests & DIAGNOSE_NETWORK_ASPERA ||
          tests & DIAGNOSE_NETWORK_DB_GAP )
     {   tests |= DIAGNOSE_NETWORK_NCBI; }
     if ( tests & DIAGNOSE_NETWORK_NCBI )
-        tests |= DIAGNOSE_CONFIG_COMMON;
+        tests |= KDIAGN_REPO_USER;*/
 
-    if ( tests & DIAGNOSE_CONFIG ) {
+    if ( tests & KDIAGN_ALL ) { // DIAGNOSE_CONFIG ) {
         rc_t r1 = 0;
-        if ( tests & DIAGNOSE_CONFIG_DB_GAP )
-            tests |= DIAGNOSE_CONFIG_COMMON;
-        STestStart ( & t, true, "Configuration" );
-        if ( tests & DIAGNOSE_CONFIG_COMMON && ! _RcCanceled ( r1 ) ) {
+        if ( tests & KDIAGN_REPO_GAP )
+            tests |= KDIAGN_REPO_USER;
+        STestStart ( self/*& t*/, true, "Configuration" );
+        if ( tests & KDIAGN_REPO_USER && ! _RcCanceled ( r1 ) ) {
             rc_t r2 = 0;
-            STestStart ( & t, true,        "Common configuration" );
-            r2 = STestCheckCommonKfg ( & t );
+            STestStart ( self/*& t*/, true,        "Common configuration" );
+            r2 = STestCheckCommonKfg ( self/*& t*/ );
             if ( r2 == 0 )
-                r2 = STestEnd ( & t, eOK,  "Common configuration" );
+                r2 = STestEnd ( self/*& t*/, eOK,  "Common configuration" );
             else {
                 if ( _RcCanceled ( r2 ) )
-                    STestEnd ( & t, eCANCELED,
+                    STestEnd ( self/*& t*/, eCANCELED,
                                            "Common configuration: CANCELED" );
                 else
-                    STestEnd ( & t, eFAIL, "Common configuration" );
+                    STestEnd ( self/*& t*/, eFAIL, "Common configuration" );
             }
             if ( r1 == 0 && r2 != 0 )
                 r1 = r2;
         }
-        if ( tests & DIAGNOSE_CONFIG_DB_GAP && ! _RcCanceled ( r1 ) ) {
+        if ( tests & KDIAGN_REPO_GAP && ! _RcCanceled ( r1 ) ) {
             rc_t r2 = 0;
-            STestStart ( & t, true,        "DbGaP configuration" );
-            r2 = STestCheckGapKfg ( & t, false );
+            STestStart ( self/*& t*/, true,        "DbGaP configuration" );
+            r2 = STestCheckGapKfg ( self/*& t*/, false );
             if ( r2 == 0 )
-                r2 = STestEnd ( & t, eOK,  "DbGaP configuration" );
+                r2 = STestEnd ( self/*& t*/, eOK,  "DbGaP configuration" );
             else {
                 if ( _RcCanceled ( r2 ) )
-                    STestEnd ( & t, eCANCELED,
+                    STestEnd ( self/*& t*/, eCANCELED,
                                            "DbGaP configuration: CANCELED" );
                 else
-                    STestEnd ( & t, eFAIL, "DbGaP configuration" );
+                    STestEnd ( self/*& t*/, eFAIL, "DbGaP configuration" );
             }
             if ( r1 == 0 && r2 != 0 )
                 r1 = r2;
         }
         if ( r1 == 0 )
-            r1 = STestEnd ( & t, eOK,      "Configuration" );
+            r1 = STestEnd ( self/*& t*/, eOK,      "Configuration" );
         else {
             if ( _RcCanceled ( r1 ) )
-                STestEnd ( & t, eCANCELED, "Configuration: CANCELED" );
+                STestEnd ( self/*& t*/, eCANCELED, "Configuration: CANCELED" );
             else
-                STestEnd ( & t, eFAIL,     "Configuration" );
+                STestEnd ( self/*& t*/, eFAIL,     "Configuration" );
         }
         if ( rc == 0 && r1 != 0 )
             rc = r1;
     }
 
-    if ( tests & DIAGNOSE_NETWORK && ! _RcCanceled ( rc ) ) {
+    if ( tests & KDIAGN_ALL/*DIAGNOSE_NETWORK*/ && ! _RcCanceled ( rc ) ) {
         rc_t r1 = 0;
         String run;
         char http [ PATH_MAX ] = "";
         uint64_t httpSize = 0;
         CONST_STRING ( & run, "SRR029074" );
-        if ( tests & DIAGNOSE_NETWORK_HTTPS || tests & DIAGNOSE_NETWORK_ASPERA )
-            tests |= DIAGNOSE_NETWORK_NCBI;
-        STestStart ( & t, true, "Network" );
-        if ( tests & DIAGNOSE_NETWORK_NCBI && ! _RcCanceled ( r1 ) ) {
+        /*if ( tests & DIAGNOSE_NETWORK_HTTPS || tests & DIAGNOSE_NETWORK_ASPERA )
+            tests |= DIAGNOSE_NETWORK_NCBI;*/
+        STestStart ( self/*& t*/, true, "Network" );
+        if ( tests & KDIAGN_ALL/*DIAGNOSE_NETWORK_NCBI*/ && ! _RcCanceled ( r1 ) ) {
             rc_t r2 = 0;
-            STestStart ( & t, true,        "Access to NCBI" );
-            r2 = STestCheckNcbiAccess ( & t );
+            STestStart ( self/*& t*/, true,        "Access to NCBI" );
+            r2 = STestCheckNcbiAccess ( self/*& t*/ );
             if ( r2 == 0 )
-                r2 = STestEnd ( & t, eOK,      "Access to NCBI" );
+                r2 = STestEnd ( self/*& t*/, eOK,      "Access to NCBI" );
             else {
                 if ( _RcCanceled ( r2 ) )
-                    STestEnd ( & t, eCANCELED, "Access to NCBI: CANCELED" );
+                    STestEnd ( self/*& t*/, eCANCELED, "Access to NCBI: CANCELED" );
                 else
-                    STestEnd ( & t, eFAIL,     "Access to NCBI" );
+                    STestEnd ( self/*& t*/, eFAIL,     "Access to NCBI" );
             }
             if ( r1 == 0 && r2 != 0 )
                 r1 = r2;
         }
-        if ( tests & DIAGNOSE_NETWORK_HTTPS && ! _RcCanceled ( r1 ) ) {
+        if ( tests & KDIAGN_ALL/*DIAGNOSE_NETWORK_HTTPS*/ && ! _RcCanceled ( r1 ) ) {
             rc_t r2 = 0;
-            STestStart ( & t, true,        "HTTPS download" );
-            r2 = STestCheckHttp ( & t, & run, false, http, sizeof http,
+            STestStart ( self/*& t*/, true,        "HTTPS download" );
+            r2 = STestCheckHttp ( self/*& t*/, & run, false, http, sizeof http,
                                   & httpSize, exp, sizeof exp - 1 );
             if ( r2 == 0 )
-                r2 = STestEnd ( & t, eOK,      "HTTPS download" );
+                r2 = STestEnd ( self/*& t*/, eOK,      "HTTPS download" );
             else {
                 if ( _RcCanceled ( r2 ) )
-                    STestEnd ( & t, eCANCELED, "HTTPS download: CANCELED" );
+                    STestEnd ( self/*& t*/, eCANCELED, "HTTPS download: CANCELED" );
                 else
-                    STestEnd ( & t, eFAIL,     "HTTPS download" );
+                    STestEnd ( self/*& t*/, eFAIL,     "HTTPS download" );
             }
             if ( r1 == 0 && r2 != 0 )
                 r1 = r2;
         }
-        if ( tests & DIAGNOSE_NETWORK_ASPERA && ! _RcCanceled ( r1 ) ) {
+        if ( tests & KDIAGN_ALL/*DIAGNOSE_NETWORK_ASPERA*/ && ! _RcCanceled ( r1 ) ) {
             rc_t r2 = 0;
             char fasp [ PATH_MAX ] = "";
             uint64_t faspSize = 0;
-            STestStart ( & t, true,        "Aspera download" );
-            r2 = STestCheckFasp ( & t, & run, false, fasp, sizeof fasp,
+            STestStart ( self/*& t*/, true,        "Aspera download" );
+            r2 = STestCheckFasp ( self/*& t*/, & run, false, fasp, sizeof fasp,
                                   & faspSize, exp, sizeof exp - 1 );
             if ( r2 == 0 )
-                r2 = STestEnd ( & t, eOK,      "Aspera download" );
+                r2 = STestEnd ( self/*& t*/, eOK,      "Aspera download" );
             else {
                 if ( _RcCanceled ( r2 ) )
-                    STestEnd ( & t, eCANCELED, "Aspera download: CANCELED" );
+                    STestEnd ( self/*& t*/, eCANCELED, "Aspera download: CANCELED" );
                 else
-                    STestEnd ( & t, eFAIL,     "Aspera download" );
+                    STestEnd ( self/*& t*/, eFAIL,     "Aspera download" );
             }
             if ( r1 == 0 && r2 != 0 )
                 r1 = r2;
             if ( r2 == 0 && httpSize != 0 && faspSize != 0 ) {
-                r2 = STestHttpVsFasp ( & t, http, httpSize, fasp, faspSize );
+                r2 = STestHttpVsFasp ( self/*& t*/, http, httpSize, fasp, faspSize );
                 if ( r1 == 0 && r2 != 0 )
                     r1 = r2;
             }
             if ( * fasp != '\0' ) {
-                rc_t r2 = KDirectoryRemove ( t . dir, false, fasp );
+                rc_t r2 = KDirectoryRemove ( self-> dir, false, fasp );
                 if ( r2 != 0 ) {
-                    STestFail ( & t, r2, "FAILURE: cannot remove '%s': %R",
+                    STestFail ( self/*& t*/, r2, "FAILURE: cannot remove '%s': %R",
                                           fasp, r2 );
                     if ( r1 == 0 && r2 != 0 )
                         r1 = r2;
@@ -3810,9 +3876,9 @@ static rc_t CC KDiagnoseVRunImpl ( KDiagnose * self, uint64_t tests,
             }
         }
         if ( * http != '\0' ) {
-            rc_t r2 = KDirectoryRemove ( t . dir, false, http );
+            rc_t r2 = KDirectoryRemove ( self-> dir, false, http );
             if ( r2 != 0 ) {
-                STestFail ( & t, r2, "FAILURE: cannot remove '%s': %R",
+                STestFail ( self/*& t*/, r2, "FAILURE: cannot remove '%s': %R",
                                       http, r2 );
                 if ( r1 == 0 && r2 != 0 )
                     r1 = r2;
@@ -3821,11 +3887,11 @@ static rc_t CC KDiagnoseVRunImpl ( KDiagnose * self, uint64_t tests,
                 * http = '\0';
         }
         if ( r1 == 0)
-            r1 = STestEnd ( & t, eOK,  "Network" );
+            r1 = STestEnd ( self/*& t*/, eOK,  "Network" );
         else  if ( _RcCanceled ( r1 ) )
-            STestEnd ( & t, eCANCELED, "Network: CANCELED" );
+            STestEnd ( self/*& t*/, eCANCELED, "Network: CANCELED" );
         else
-            STestEnd ( & t, eFAIL,     "Network" );
+            STestEnd ( self/*& t*/, eFAIL,     "Network" );
         if ( rc == 0 && r1 != 0 )
             rc = r1;
     }
@@ -3932,7 +3998,47 @@ static rc_t CC KDiagnoseVRunImpl ( KDiagnose * self, uint64_t tests,
     }
 #endif
 
-    if ( rc == 0 && tests & DIAGNOSE_FAIL )
+/*    if ( rc == 0 && tests & KDIAGN_FAIL )
+      rc = 1;
+
+  if ( rc == 0)
+        STestEnd ( & t, eOK,       "System" );
+    else  if ( _RcCanceled ( rc ) )
+        STestEnd ( & t, eCANCELED, "System: CANCELED" );
+    else
+        STestEnd ( & t, eFAIL,     "System" );
+
+    STestFini ( & t );
+    KDiagnoseRelease ( self );*/
+    return rc;
+}
+
+static rc_t CC KDiagnoseRunImpl ( KDiagnose * self, uint64_t tests,
+    const KFile * kart, uint32_t numberOfKartItemsToCheck,
+    bool checkHttp, bool checkAspera, bool checkDownload,
+    const char * acc, uint32_t projectId, ... )
+{
+    rc_t rc = 0;
+    STest t;
+    va_list args;
+    va_start ( args, projectId );
+    if ( self == NULL )
+        rc = KDiagnoseMakeExt ( & self, NULL, NULL, NULL );
+    else
+        rc = KDiagnoseAddRef ( self );
+    if ( rc != 0 )
+        return rc;
+
+    assert ( self );
+
+    STestInit ( & t, self );
+
+    STestStart ( & t, true, "System" );
+
+    rc = STestRun ( & t, tests, kart, numberOfKartItemsToCheck,
+        checkHttp, checkAspera, checkDownload, acc, projectId, args );
+    va_end ( args );
+    if ( rc == 0 && tests & KDIAGN_FAIL )
       rc = 1;
 
     if ( rc == 0)
@@ -3947,24 +4053,21 @@ static rc_t CC KDiagnoseVRunImpl ( KDiagnose * self, uint64_t tests,
     return rc;
 }
 
-static rc_t CC KDiagnoseRunImpl ( KDiagnose * self, uint64_t tests,
-    const KFile * kart, uint32_t numberOfKartItemsToCheck,
-    const char * acc, uint32_t projectId, ... )
+/*LIB_EXPORT
+rc_t CC KDiagnoseAdvanced ( KDiagnose * self, uint64_t tests )
 {
-    rc_t rc = 0;
-    va_list args;
-    va_start ( args, projectId );
-    rc = KDiagnoseVRunImpl ( self, tests, NULL, 0, NULL, projectId, args );
-    va_end ( args );
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KDiagnoseAdvanced ( KDiagnose * self, uint64_t tests )
-{   return KDiagnoseRunImpl ( self, tests, NULL, 0, NULL, 0 ); }
+    return KDiagnoseRunImpl ( self, tests, NULL, 0,
+        tests & DIAGNOSE_NETWORK_HTTPS,
+        tests & DIAGNOSE_NETWORK_ASPERA, true, NULL, 0 );
+}*/
 
 LIB_EXPORT rc_t CC KDiagnoseAcc ( KDiagnose * self,  const char * acc,
-    uint32_t projectId, bool checkDownload, uint64_t tests  )
-{   return KDiagnoseRunImpl ( self, tests, NULL, 0, acc, 0 ); }
+    uint32_t projectId, bool checkHttp, bool checkAspera, bool checkDownload,
+    uint64_t tests )
+{
+    return KDiagnoseRunImpl ( self, tests, NULL, 0,
+                              checkHttp, checkAspera, checkDownload, acc, 0 );
+}
 
 /*DIAGNOSE_EXTERN rc_t CC KDiagnoseDbGap ( KDiagnose * self, uint64_t tests,
     uint32_t projectId, ... )
@@ -3979,8 +4082,8 @@ LIB_EXPORT rc_t CC KDiagnoseAcc ( KDiagnose * self,  const char * acc,
 
 DIAGNOSE_EXTERN rc_t CC KDiagnoseKart ( KDiagnose * self,
     const struct KFile * kart, uint32_t numberOfKartItemsToCheck,
-    uint64_t tests )
+    bool checkHttp, bool checkAspera, uint64_t tests )
 {
-    return ( KDiagnoseRunImpl ( self, tests, kart, numberOfKartItemsToCheck,
-                                NULL, 0 ) );
+    return KDiagnoseRunImpl ( self, tests, kart, numberOfKartItemsToCheck,
+                              checkHttp, checkAspera, true, NULL, 0 );
 }
