@@ -430,7 +430,7 @@ pLogMsg ( klogDebug, "_GapNodeMake ND[$(node)] NM[$(name)] PJ[$(project_id)]", "
 
 /*)))
  |||
- +++  There KartItemNode Find
+ +++  There Node Find
  |||
 (((*/
 
