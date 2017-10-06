@@ -1573,6 +1573,7 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
 {
     rc_t rc = 0;
     bool made = false;
+    bool logError = true;
     KLogLevel lvl = klogInt;
     assert ( self && src && r );
 
@@ -1648,6 +1649,7 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
           If it is a real response then this assession is not found.
           What if it is a DB failure? Will be retried if configured to do so? */
             rc = RC ( rcVFS, rcQuery, rcResolving, rcName, rcNotFound );
+            logError = false;
             break;
         case 410:
             rc = RC ( rcVFS, rcQuery, rcResolving, rcName, rcNotFound );
@@ -1676,7 +1678,7 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
     }
 
     /* log message to user */
-    if ( req -> errorsToIgnore == 0 ) {
+    if ( req -> errorsToIgnore == 0 && logError ) {
         if ( src -> objectId . size > 0 )
             PLOGERR ( lvl, ( lvl, rc,
                 "failed to resolve accession '$(acc)' - $(msg) ( $(code) )",
@@ -3151,7 +3153,7 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
             if ( rc != 0 || num_read == 0 )
                 break;
             DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
-                ( "%.*s\n", ( int ) num_read - 1, buffer + offW ) );
+                ( "%.*s", ( int ) num_read - 1, buffer + offW ) );
             sizeR += num_read;
             offW += num_read;
             if (sizeW >= num_read )
@@ -3168,6 +3170,14 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                     ( rcVFS, rcQuery, rcExecuting, rcString, rcInsufficient );
                 break;
             }
+            else {
+                memmove ( buffer, buffer + offR, sizeR );
+                if ( sizeR < sizeof buffer )
+                    buffer [ sizeR ] = '\0';
+                sizeW = sizeof buffer - sizeR;
+                offR = 0;
+                offW = sizeR;
+            }
             rc = KStreamTimedRead
                 ( stream, buffer + offW, sizeW, & num_read, & tm );
             if ( rc != 0 ) {
@@ -3182,6 +3192,8 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                     ( rcVFS, rcQuery, rcExecuting, rcString, rcInsufficient ); 
                 break;
             }
+            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
+                ( "%.*s", ( int ) num_read - 1, buffer + offW ) );
             sizeR += num_read;
             offW += num_read;
             if (sizeW >= num_read )
@@ -3204,8 +3216,10 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
             else {
                 bool end = false;
                 rc = KServiceProcessLine ( self, & s, & end );
-                if ( end || rc != 0 )
+                if ( end || rc != 0 ) {
+                    DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( "\n" ) );
                     break;
+                }
             }
             ++ size;
             offR += size;
