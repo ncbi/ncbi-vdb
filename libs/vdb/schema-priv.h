@@ -982,7 +982,7 @@ void CC STableWhack ( void *self, void *ignore );
  *  creates an initially transparent table extension
  *  used by cursor to permit addition of implicit productions
  */
-rc_t STableCloneExtend ( const STable *self, STable **clone, VSchema *schema );
+rc_t CC STableCloneExtend ( const STable *self, STable **clone, VSchema *schema );
 
 /* Cmp
  * Sort
@@ -994,7 +994,7 @@ int64_t CC STableSort ( const void *item, const void *n );
  * Deep comparison of 2 tables, taking versions into account
  * exhaustive: if false, stop at first mismatch
  */
-rc_t STableCompare ( const STable *a, const STable *b, const STable **newer, bool exhaustive );
+rc_t CC STableCompare ( const STable *a, const STable *b, const STable **newer, bool exhaustive );
 
 /* Find
  *  generic object find within table scope
@@ -1017,7 +1017,7 @@ rc_t STableCompare ( const STable *a, const STable *b, const STable **newer, boo
  *  returns principal object identified. if NULL but "name" is not
  *  NULL, then the object was only partially identified.
  */
-const void *STableFind ( const STable *self,
+const void * CC STableFind ( const STable *self,
     const VSchema *schema, VTypedecl *td, const SNameOverload **name,
     uint32_t *type, const char *expr, const char *ctx, bool dflt );
 
@@ -1025,12 +1025,12 @@ const void *STableFind ( const STable *self,
 /* FindOverride
  *  finds an inherited or introduced overridden symbol
  */
-struct KSymbol *STableFindOverride ( const STable *self, const VCtxId *cid );
+struct KSymbol * CC STableFindOverride ( const STable *self, const VCtxId *cid );
 
 /* FindOrdAncestor
  *  finds a parent or grandparent by order
  */
-const STable *STableFindOrdAncestor ( const STable *self, uint32_t i );
+const STable * CC STableFindOrdAncestor ( const STable *self, uint32_t i );
 
 /* Mark
  */
@@ -1038,7 +1038,7 @@ void CC STableClearMark ( void *self, void *ignore );
 /*
 void CC STableMark ( const STable *self, const VSchema *schema );
 */
-void STableNameMark ( const SNameOverload *self, const VSchema *schema );
+void CC STableNameMark ( const SNameOverload *self, const VSchema *schema );
 
 /* Dump
  *  dump "table" { }
@@ -1046,20 +1046,15 @@ void STableNameMark ( const SNameOverload *self, const VSchema *schema );
 bool CC STableDefDump ( void *self, void *dumper );
 rc_t STableDump ( const STable *self, struct SDumper *d );
 
-rc_t VSchemaDumpTableName ( const VSchema *self, uint32_t mode, const STable *stbl,
-    rc_t ( CC * flush ) ( void *dst, const void *buffer, size_t bsize ), void *dst );
-rc_t VSchemaDumpTableDecl ( const VSchema *self, uint32_t mode, const STable *stbl,
-    rc_t ( CC * flush ) ( void *dst, const void *buffer, size_t bsize ), void *dst );
-
 /* Extend
  * records a parent table
  */
-rc_t STableExtend ( struct KSymTable *tbl, STable *self, const STable *dad );
+rc_t CC STableExtend ( struct KSymTable *tbl, STable *self, const STable *dad );
 
 /* schema_update_tbl_ref
  * updates references to a table's ancestor with the ancestor's newer version
  */
-rc_t schema_update_tbl_ref ( VSchema *self, const STable *exist, const STable *table );
+rc_t CC schema_update_tbl_ref ( VSchema *self, const STable *exist, const STable *table );
 
 /* table_fwd_scan
  *  converts unresolved column references to virtual columns
@@ -1085,8 +1080,12 @@ bool CC STableScanVirtuals ( void *item, void *data );
 /* table_fix_forward_refs
  * fix forward references to newly resolved productions
  */
-rc_t
-table_fix_forward_refs ( const STable *table );
+rc_t CC table_fix_forward_refs ( const STable *table );
+
+/* OverloadTestForTypeCollision
+ * used for tables and views
+*/
+bool CC SOverloadTestForTypeCollision ( const SNameOverload *a, const SNameOverload *b );
 
 /*--------------------------------------------------------------------------
  * SColumn
@@ -1403,8 +1402,6 @@ struct SView
     /* scope */
     BSTree scope;
 
-#if NOT_SURE_IF_THESE_ARE_NEEDED_YET
-
     /* parents */
     Vector parents;
 
@@ -1421,7 +1418,9 @@ struct SView
 
     /* introduced virtual ( undefined ) productions
        contents are unowned KSymbol pointers */
-    Vector vprods;
+       Vector vprods;
+
+#if NOT_NEEDED_YET
 
     /* owned KSymbols that are not in scope */
     Vector syms;
@@ -1435,11 +1434,26 @@ struct SView
 #endif
 };
 
+/* Extend
+ * records a parent view
+ */
+rc_t CC SViewExtend ( struct KSymTable *tbl, SView *self, const SView *dad );
+
 /* Whack
  */
 void CC SViewWhack ( void *self, void *ignore );
 
+/* Cmp
+ * Sort
+ */
+int64_t CC SViewCmp ( const void *item, const void *n );
 int64_t CC SViewSort ( const void *item, const void *n );
+
+/* push/pop view scope
+ *
+ */
+void CC pop_view_scope ( struct KSymTable * tbl, const SView * view );
+rc_t CC push_view_scope ( struct KSymTable * tbl, const SView * view );
 
 #ifdef __cplusplus
 }

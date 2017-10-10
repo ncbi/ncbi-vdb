@@ -159,6 +159,10 @@ parsetest: test-schema-parse
 	-$(TEST_BINDIR)/test-schema-parse $(SCHEMATA)
 	@echo "Schema parser test complete"
 
+mv:test-schema-diff
+	mkdir -p $(OBJDIR)/data
+	-$(TEST_BINDIR)/test-schema-diff -I$(TOP)/interfaces -o$(OBJDIR)/data mv.vschema
+
 difftest: test-schema-diff
 	mkdir -p $(OBJDIR)/data
 	-$(TEST_BINDIR)/test-schema-diff -I$(TOP)/interfaces -o$(OBJDIR)/data \

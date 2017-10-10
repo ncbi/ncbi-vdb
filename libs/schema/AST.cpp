@@ -807,6 +807,70 @@ AST_Expr :: MakeCast ( ASTBuilder & p_builder ) const
 }
 
 SExpression *
+AST_Expr :: MakeMember ( ASTBuilder & p_builder ) const
+{
+    assert ( GetTokenType () == PT_MEMBEREXPR );
+    assert ( ChildrenCount () == 2 );
+    const AST & struc = * GetChild ( 0 );
+    assert ( struc . GetTokenType () == PT_IDENT );
+    assert ( struc . ChildrenCount () == 1 );
+    const AST & member = * GetChild ( 1 );
+    assert ( member . GetTokenType () == PT_IDENT );
+    assert ( member . ChildrenCount () == 1 );
+
+    const KSymbol * sym = p_builder . Resolve ( struc . GetChild ( 0 ) -> GetLocation (),
+                                                struc . GetChild ( 0 ) -> GetTokenValue (),
+                                                true );
+    if ( sym != 0 )
+    {
+        switch ( sym -> type )
+        {
+        case eTable:
+            {
+                const STable * t = static_cast < const STable * > ( sym -> u . obj );
+                // find member . GetChild ( 0 ) in t -> scope
+                String memName;
+                StringInitCString ( & memName, member . GetChild ( 0 ) -> GetTokenValue () );
+                const KSymbol * sym = ( const KSymbol* ) BSTreeFind ( & t -> scope, & memName, KSymbolCmp );
+                if ( sym != 0 )
+                {
+                    assert ( sym -> type == eColumn || sym -> type == eProduction );
+                    return SSymExprMake ( p_builder, eColExpr, sym );
+                }
+                else
+                {
+                    p_builder . ReportError ( GetLocation (), "Column/production not found", memName );
+                }
+            }
+            break;
+        case eView:
+            {
+                const SView * v = static_cast < const SView * > ( sym -> u . obj );
+                // find member . GetChild ( 0 ) in v -> scope
+                String memName;
+                StringInitCString ( & memName, member . GetChild ( 0 ) -> GetTokenValue () );
+                const KSymbol * sym = ( const KSymbol* ) BSTreeFind ( & v -> scope, & memName, KSymbolCmp );
+                if ( sym != 0 )
+                {
+                    assert ( sym -> type == eColumn || sym -> type == eProduction );
+                    return SSymExprMake ( p_builder, eColExpr, sym );
+                }
+                else
+                {
+                    p_builder . ReportError ( GetLocation (), "Column/production not found", memName );
+                }
+            }
+            break;
+    default:
+            //error
+            break;
+        }
+    }
+
+    return 0;
+}
+
+SExpression *
 AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
 {
     switch ( GetTokenType () )
@@ -969,6 +1033,9 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
 
     case PT_CASTEXPR:
         return MakeCast ( p_builder );
+
+    case PT_MEMBEREXPR:
+        return MakeMember ( p_builder );
 
     default:
         p_builder . ReportError ( GetLocation (), "Not yet implemented" );

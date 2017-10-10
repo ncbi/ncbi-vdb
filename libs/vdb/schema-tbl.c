@@ -515,7 +515,7 @@ int64_t CC STableSort ( const void *item, const void *n )
  *  returns principal object identified. if NULL but "name" is not
  *  NULL, then the object was only partially identified.
  */
-const void *STableFind ( const STable *self,
+const void * CC STableFind ( const STable *self,
     const VSchema *schema, VTypedecl *td, const SNameOverload **name,
     uint32_t *type, const char *expr, const char *ctx, bool dflt )
 {
@@ -542,7 +542,7 @@ const void *STableFind ( const STable *self,
 /* FindOverride
  *  finds an inherited or introduced overridden symbol
  */
-KSymbol *STableFindOverride ( const STable *self, const VCtxId *cid )
+KSymbol * CC STableFindOverride ( const STable *self, const VCtxId *cid )
 {
     const STableOverrides *to;
 
@@ -561,7 +561,7 @@ KSymbol *STableFindOverride ( const STable *self, const VCtxId *cid )
 /* FindOrdAncestor
  *  finds a parent or grandparent by order
  */
-const STable *STableFindOrdAncestor ( const STable *self, uint32_t i )
+const STable * CC STableFindOrdAncestor ( const STable *self, uint32_t i )
 {
     const STableOverrides *to = ( const void* ) VectorGet ( & self -> overrides, i );
     if ( to == NULL )
@@ -580,8 +580,10 @@ bool CC STableHasDad ( void *item, void *data )
     return false;
 }
 
-static
-bool STableTestForTypeCollision ( const SNameOverload *a, const SNameOverload *b )
+/* OverloadTestForTypeCollision
+ * used for tables and views
+*/
+bool CC SOverloadTestForTypeCollision ( const SNameOverload *a, const SNameOverload *b )
 {
     uint32_t ax, bx, ctx;
 
@@ -660,7 +662,7 @@ bool STableTestForSymCollision ( const KSymbol *sym, void *data )
             found_col = found -> u . obj;
             assert ( sym_col != NULL && found_col != NULL );
             if ( sym_col -> cid . ctx == found_col -> cid . ctx )
-                return STableTestForTypeCollision ( sym_col, found_col );
+                return SOverloadTestForTypeCollision ( sym_col, found_col );
         }
     case eProduction:
     case ePhysMember:
@@ -786,7 +788,7 @@ bool CC STableScanVirtuals ( void *item, void *data )
     return false;
 }
 
-rc_t STableExtend ( KSymTable *tbl, STable *self, const STable *dad )
+rc_t CC STableExtend ( KSymTable *tbl, STable *self, const STable *dad )
 {
     rc_t rc;
 
@@ -842,7 +844,7 @@ rc_t STableExtend ( KSymTable *tbl, STable *self, const STable *dad )
  *  creates an initially transparent table extension
  *  used by cursor to permit addition of implicit productions
  */
-rc_t STableCloneExtend ( const STable *self, STable **clone, VSchema *schema )
+rc_t CC STableCloneExtend ( const STable *self, STable **clone, VSchema *schema )
 {
     rc_t rc;
     KSymTable tbl;
@@ -1140,7 +1142,7 @@ enum
     stbl_cmp_older     = 1 << 4
 };
 
-rc_t STableCompare ( const STable *a, const STable *b, const STable **newer, bool exhaustive )
+rc_t CC STableCompare ( const STable *a, const STable *b, const STable **newer, bool exhaustive )
 {
     rc_t stage_rc, cmp_rc = 0;
     uint32_t stage_bits, cmp_bits = 0;
@@ -1333,7 +1335,7 @@ void CC STableMark ( void * item, void * data )
     }
 }
 
-void STableNameMark ( const SNameOverload *self, const VSchema *schema )
+void CC STableNameMark ( const SNameOverload *self, const VSchema *schema )
 {
     if ( self != NULL )
     {
@@ -2675,7 +2677,7 @@ void CC table_set_context ( STable *self )
 }
 
 #if NO_UPDATE_TBL_REF || 0
-rc_t schema_update_tbl_ref ( VSchema *, const STable *, const STable * )
+rc_t CC schema_update_tbl_ref ( VSchema *, const STable *, const STable * )
 {
     return 0;
 }

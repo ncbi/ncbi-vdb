@@ -51,6 +51,7 @@ namespace ncbi
         public:
             Token ( const SchemaToken & );
             Token ( TokenType, const char * value = 0 );
+            Token ( TokenType, const char * value, const Location & loc );
             Token ( const Token & );
             ~Token ();
 

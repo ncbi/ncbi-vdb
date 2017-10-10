@@ -66,6 +66,15 @@ TEST_CASE(Token_Construct)
     REQUIRE ( ! st . IsFake () );
 }
 
+TEST_CASE(Token_Construct_WithLocation)
+{
+    Token :: Location loc ("qq", 1, 2 );
+    Token t ( KW_virtual, "virtual", loc );
+    REQUIRE_EQ ( string ( loc . m_file ), string ( t . GetLocation () . m_file ) );
+    REQUIRE_EQ ( loc . m_line, t . GetLocation () . m_line );
+    REQUIRE_EQ ( loc . m_column, t . GetLocation () . m_column );
+}
+
 TEST_CASE(Token_Construct_Fake)
 {
     Token t ( 42 );
@@ -207,10 +216,10 @@ PrintParseTree ( const ParseTree * p_t, ostream& p_out )
 
 static
 bool
-ParseAndVerify ( const char* p_source )
+ParseAndVerify ( const char* p_source, bool p_debug = false )
 {
     SchemaParser p;
-    if ( ! p . ParseString ( p_source ) )
+    if ( ! p . ParseString ( p_source, p_debug ) )
     {
         return false;
     }
@@ -713,6 +722,21 @@ TEST_CASE ( View_OneParent )
 TEST_CASE ( View_TwoParents )
 {
     REQUIRE ( ParseAndVerify ( "version 2; view X#1 < T t > = V#1,W { U8 p = 1; };" ) );
+}
+
+TEST_CASE ( View_OneParam_EmptyBody )
+{
+    REQUIRE ( ParseAndVerify ( "version 2; view X#1 < T t > {};" ) );
+}
+
+TEST_CASE ( View_NoPhysicalColumns )
+{
+    REQUIRE ( ! ParseAndVerify ( "version 2; view X#1 < T t > { column U8 .PHYS = 1; };" ) );
+}
+
+TEST_CASE ( View_MemberExpression )
+{
+    REQUIRE ( ParseAndVerify ( "version 2; table T#1 { column U8 c1 = 1; }; view W#1 <T t> { column U8 c2 = t . c1; }" ) );
 }
 
 //////////////////////////////////////////// Main

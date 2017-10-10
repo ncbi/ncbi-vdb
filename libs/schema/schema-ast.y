@@ -209,6 +209,7 @@
 %token PT_VIEW
 %token PT_VIEWPARAM
 %token PT_VIEWPARENTS
+%token PT_MEMBEREXPR
 
  /* !!! Keep token declarations above in synch with schema-grammar.y */
 
@@ -224,17 +225,18 @@
 %type <node> tbl_parents production column_decl col_modifiers_opt col_modifiers
 %type <node> col_modifier col_decl col_ident col_body col_stmt typed_col
 %type <node> factory_parms factory_parms_opt schema_parm schema_parms arrayspec
-%type <node> phys_enc_ref col_body_opt database opt_dbdad dbbody db_members
+%type <node> phys_enc_ref col_body_opt database dbdad_opt dbbody db_members
 %type <node> db_member template_opt include func_parms_opt expr_list schema_parts_opt
 %type <node> physmbr_decl col_schema_parms_opt col_schema_parms
 %type <node> col_schema_value col_schema_parm phys_coldef factory_parms_list
 %type <node> vararg param_sig param_signature fact_sig
-%type <node> view view_parms view_parm view_body view_member opt_view_parents view_parents
+%type <node> view view_parms view_parm view_body_opt view_body view_member
+%type <node> view_parents_opt view_parents
 
 %type <fqn> fqn qualnames fqn_opt_vers ident fqn_vers
 
 %type <expr> expr cond_expr cond_chain uint_expr func_expr float_expr string_expr const_vect_expr
-%type <expr> bool_expr negate_expr cast_expr
+%type <expr> bool_expr negate_expr cast_expr member_expr
 
 %type <tok> END_SOURCE version_1 PT_VERSION_1_0 PT_VERSION_2 PT_SCHEMA_1_0 FLOAT version_2
 %type <tok> PT_TYPEDEF PT_IDENT IDENTIFIER_1_0 DECIMAL PT_ASTLIST PT_ARRAY PT_TYPESET
@@ -249,7 +251,7 @@
 %type <tok> PT_FUNCEXPR PT_COLSCHEMAPARMS KW_static PT_PHYSMBR PT_PHYSCOLDEF PT_COLSCHEMAPARAM
 %type <tok> KW_physical PT_COLUNTYPED EXP_FLOAT ESCAPED_STRING PT_CONSTVECT KW_true KW_false
 %type <tok> PT_NEGATE PT_CASTEXPR '@' KW_control PT_SCHEMA_2_0
-%type <tok> PT_VIEW PT_VIEWPARAM PT_VIEWPARENTS
+%type <tok> PT_VIEW PT_VIEWPARAM PT_VIEWPARENTS PT_MEMBEREXPR
 
 %%
 
@@ -635,10 +637,10 @@ col_schema_value
 
 /* database */
 database
-    : PT_DATABASE '(' KW_database fqn_vers opt_dbdad dbbody ')' { $$ = p_builder . DatabaseDef ( $1, $4, $5, $6 ); }
+    : PT_DATABASE '(' KW_database fqn_vers dbdad_opt dbbody ')' { $$ = p_builder . DatabaseDef ( $1, $4, $5, $6 ); }
     ;
 
-opt_dbdad
+dbdad_opt
     : PT_EMPTY                             { $$ = new AST ( $1 ); }
     | PT_DBDAD '(' '=' fqn_opt_vers ')'    { $$ = $4; }
 
@@ -696,6 +698,7 @@ expr
     | negate_expr                   { $$ = $1; }
     | PT_UNARYPLUS '(' '+' expr ')' { $$ = $4; }
     | cast_expr                     { $$ = $1; }
+    | member_expr                   { $$ = $1; }
     ;
 
 func_expr
@@ -779,6 +782,19 @@ type_expr
     | PT_TYPEEXPR '(' fqn '/' fqn ')'   { $$ = new AST ( $1, $3, $5 ); }
     ;
 
+member_expr
+    : PT_MEMBEREXPR '(' ident '.' ident ')'                 { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $3 ); $$ -> AddNode ( $5 ); }
+    | PT_MEMBEREXPR '(' ident PHYSICAL_IDENTIFIER_1_0 ')'
+        {   /* remove leading '.'*/
+            $$ = new AST_Expr ( $1 );
+            $$ -> AddNode ( $3 );
+            AST * ident = new AST ( PT_IDENT );
+            Token t ( IDENTIFIER_1_0, $4 -> GetValue() + 1, $$ -> GetLocation() );
+            ident -> AddNode ( & t );
+            $$ -> AddNode ( ident );
+        }
+    ;
+
 /* commonly used productions */
 
 fqn
@@ -806,8 +822,8 @@ fqn_vers
 /* view */
 view
     : PT_VIEW '(' KW_view fqn_vers '<' PT_ASTLIST '(' view_parms ')' '>'
-                        opt_view_parents '{' PT_ASTLIST '(' view_body ')' '}' ')'
-        { $$ = p_builder . ViewDef ( $1, $4, $8, $11, $15 ); }
+                        view_parents_opt '{' view_body_opt '}' ')'
+        { $$ = p_builder . ViewDef ( $1, $4, $8, $11, $13 ); }
     ;
 
 view_parms
@@ -817,6 +833,11 @@ view_parms
 
 view_parm
     : PT_VIEWPARAM '(' fqn_opt_vers ident ')'   { $$ = new AST ( $1, $3, $4 ); }
+    ;
+
+view_body_opt
+    : PT_EMPTY                      { $$ = new AST ( $1 ); }
+    | PT_ASTLIST '(' view_body ')'  { $$ = $3; }
     ;
 
 view_body
@@ -830,9 +851,9 @@ view_member
     | ';'                                                           { $$ = new AST ( PT_EMPTY ); }
     ;
 
-opt_view_parents
-    : PT_EMPTY                                  { $$ = new AST ( $1 ); }
-    | PT_VIEWPARENTS '(' '=' view_parents ')'   { $$ = new AST ( $1, $4 ); }
+view_parents_opt
+    : PT_EMPTY                                                      { $$ = new AST ( $1 ); }
+    | PT_VIEWPARENTS '(' '=' PT_ASTLIST '(' view_parents ')' ')'    { $$ = new AST ( $1, $6 ); }
     ;
 
 view_parents

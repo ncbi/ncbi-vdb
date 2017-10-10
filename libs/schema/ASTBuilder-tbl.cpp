@@ -189,7 +189,7 @@ TableDeclaration :: HandleParents ( const AST & p_parents )
         {
             if ( parentDecl -> type != eTable )
             {
-                m_builder . ReportError ( "Not a table", parent );
+                m_builder . ReportError ( "A table's parent has to be a table", parent );
                 continue;
             }
             const STable * dad = static_cast < const STable * > ( m_builder . SelectVersion ( parent, * parentDecl, STableCmp ) );
@@ -197,7 +197,7 @@ TableDeclaration :: HandleParents ( const AST & p_parents )
             {
                 rc_t rc = STableExtend ( & m_builder . GetSymTab (), m_self, dad );
                 if ( rc != 0 )
-                {
+                {   //TODO: check for (rcTable, rcExists), (rcName, rcExists)
                     m_builder . ReportRc ( "STableExtend", rc );
                     break;
                 }
