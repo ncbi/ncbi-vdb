@@ -636,7 +636,7 @@ rc_t CC KartMakeNextItem ( const Kart * cself, const KartItem **item )
         }
 
         line = self->text;
-        next = string_chr(self->text, self->len, '\n');
+        next = string_chr(self->text, ( size_t ) self->len, '\n');
         if (next == NULL) {
             return RC(rcKFG, rcFile, rcLoading, rcFile, rcInsufficient);
         }
@@ -669,7 +669,8 @@ rc_t CC KartMakeNextItem ( const Kart * cself, const KartItem **item )
         rc_t rc = 0;
         uint32_t l = VectorLength ( & self -> rows );
         if ( self -> len < l ) {
-            KartItem * result = VectorGet ( & self -> rows, self -> len ++ );
+            KartItem * result = VectorGet ( & self -> rows,
+                                            ( uint32_t ) self -> len ++ );
             if ( result != NULL ) {
                 rc = KartItemAddRef ( result );
                 if ( rc == 0 ) {
@@ -752,7 +753,9 @@ static rc_t KartProcessHeader(Kart *self) {
     {
         const char version[] = "version ";
         size_t l = sizeof version - 1;
-        if (string_cmp(version, l, self->text, self->len, (uint32_t)l) != 0) {
+        if (string_cmp(version, l,
+                       self->text, ( size_t ) self->len, (uint32_t)l) != 0)
+        {
             return RC(rcKFG, rcMgr, rcUpdating, rcFormat, rcUnrecognized);
         }
 
@@ -794,7 +797,8 @@ static rc_t read_textkart(KDataBuffer *mem, const KFile *orig) {
             rc = KDataBufferResize(mem, eof);
             if ( rc != 0 )
                 return rc;
-            rc = KFileReadAll ( orig, 0, mem -> base, eof, & num_read );
+            rc = KFileReadAll ( orig, 0, mem -> base, ( size_t ) eof,
+                                & num_read );
             if ( rc != 0 )
                 return rc;
         }

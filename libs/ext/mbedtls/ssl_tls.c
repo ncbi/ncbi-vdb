@@ -3473,7 +3473,6 @@ static int ssl_handle_possible_reconnect( mbedtls_ssl_context *ssl )
  */
 static int ssl_parse_record_header( mbedtls_ssl_context *ssl )
 {
-    int ret;
     int major_ver, minor_ver;
 
     MBEDTLS_SSL_DEBUG_BUF( 4, "input record header", ssl->in_hdr, vdb_mbedtls_ssl_hdr_len( ssl ) );
@@ -3494,14 +3493,8 @@ static int ssl_parse_record_header( mbedtls_ssl_context *ssl )
         ssl->in_msgtype != MBEDTLS_SSL_MSG_APPLICATION_DATA )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "unknown record type" ) );
-
-        if( ( ret = vdb_mbedtls_ssl_send_alert_message( ssl,
-                        MBEDTLS_SSL_ALERT_LEVEL_FATAL,
-                        MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE ) ) != 0 )
-        {
-            return( ret );
-        }
-
+        vdb_mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                        MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE );
         return( MBEDTLS_ERR_SSL_INVALID_RECORD );
     }
 
@@ -4030,6 +4023,7 @@ int vdb_mbedtls_ssl_send_alert_message( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> send alert message" ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "send alert level=%u message=%u", level, message ));
 
     ssl->out_msgtype = MBEDTLS_SSL_MSG_ALERT;
     ssl->out_msglen = 2;
@@ -4041,7 +4035,6 @@ int vdb_mbedtls_ssl_send_alert_message( mbedtls_ssl_context *ssl,
         MBEDTLS_SSL_DEBUG_RET( 1, "vdb_mbedtls_ssl_write_record", ret );
         return( ret );
     }
-
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= send alert message" ) );
 
     return( 0 );
@@ -4057,6 +4050,7 @@ int vdb_mbedtls_ssl_send_alert_message( mbedtls_ssl_context *ssl,
     !defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED) && \
     !defined(MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED)    && \
     !defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED)
+/* No certificate support -> dummy functions */
 int vdb_mbedtls_ssl_write_certificate( mbedtls_ssl_context *ssl )
 {
     const mbedtls_ssl_ciphersuite_t *ciphersuite_info = ssl->transform_negotiate->ciphersuite_info;
@@ -4096,7 +4090,10 @@ int vdb_mbedtls_ssl_parse_certificate( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
     return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 }
+
 #else
+/* Some certificate support -> implement write and parse */
+
 int vdb_mbedtls_ssl_write_certificate( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE;
@@ -4219,6 +4216,7 @@ int vdb_mbedtls_ssl_parse_certificate( mbedtls_ssl_context *ssl )
     size_t i, n;
     const mbedtls_ssl_ciphersuite_t *ciphersuite_info = ssl->transform_negotiate->ciphersuite_info;
     int authmode = ssl->conf->authmode;
+    uint8_t alert;
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse certificate" ) );
 
@@ -4258,6 +4256,8 @@ int vdb_mbedtls_ssl_parse_certificate( mbedtls_ssl_context *ssl )
 
     if( ( ret = vdb_mbedtls_ssl_read_record( ssl ) ) != 0 )
     {
+        /* vdb_mbedtls_ssl_read_record may have sent an alert already. We
+           let it decide whether to alert. */
         MBEDTLS_SSL_DEBUG_RET( 1, "vdb_mbedtls_ssl_read_record", ret );
         return( ret );
     }
@@ -4279,6 +4279,9 @@ int vdb_mbedtls_ssl_parse_certificate( mbedtls_ssl_context *ssl )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "SSLv3 client has no certificate" ) );
 
+            /* The client was asked for a certificate but didn't send
+               one. The client should know what's going on, so we
+               don't send an alert. */
             ssl->session_negotiate->verify_result = MBEDTLS_X509_BADCERT_MISSING;
             if( authmode == MBEDTLS_SSL_VERIFY_OPTIONAL )
                 return( 0 );
@@ -4300,6 +4303,9 @@ int vdb_mbedtls_ssl_parse_certificate( mbedtls_ssl_context *ssl )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "TLSv1 client has no certificate" ) );
 
+            /* The client was asked for a certificate but didn't send
+               one. The client should know what's going on, so we
+               don't send an alert. */
             ssl->session_negotiate->verify_result = MBEDTLS_X509_BADCERT_MISSING;
             if( authmode == MBEDTLS_SSL_VERIFY_OPTIONAL )
                 return( 0 );
@@ -4314,6 +4320,8 @@ int vdb_mbedtls_ssl_parse_certificate( mbedtls_ssl_context *ssl )
     if( ssl->in_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate message" ) );
+        vdb_mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                        MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE );
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
     }
 
@@ -4321,6 +4329,8 @@ int vdb_mbedtls_ssl_parse_certificate( mbedtls_ssl_context *ssl )
         ssl->in_hslen < vdb_mbedtls_ssl_hs_hdr_len( ssl ) + 3 + 3 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate message" ) );
+        vdb_mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                        MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
         return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
     }
 
@@ -4335,6 +4345,8 @@ int vdb_mbedtls_ssl_parse_certificate( mbedtls_ssl_context *ssl )
         ssl->in_hslen != n + 3 + vdb_mbedtls_ssl_hs_hdr_len( ssl ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate message" ) );
+        vdb_mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                        MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
         return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
     }
 
@@ -4350,6 +4362,8 @@ int vdb_mbedtls_ssl_parse_certificate( mbedtls_ssl_context *ssl )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "alloc(%d bytes) failed",
                        sizeof( mbedtls_x509_crt ) ) );
+        vdb_mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                        MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR );
         return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
     }
 
@@ -4362,6 +4376,8 @@ int vdb_mbedtls_ssl_parse_certificate( mbedtls_ssl_context *ssl )
         if( ssl->in_msg[i] != 0 )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate message" ) );
+            vdb_mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                            MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
             return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
         }
 
@@ -4372,13 +4388,33 @@ int vdb_mbedtls_ssl_parse_certificate( mbedtls_ssl_context *ssl )
         if( n < 128 || i + n > ssl->in_hslen )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate message" ) );
+            vdb_mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                            MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
             return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
         }
 
         ret = vdb_mbedtls_x509_crt_parse_der( ssl->session_negotiate->peer_cert,
                                   ssl->in_msg + i, n );
-        if( 0 != ret && ( MBEDTLS_ERR_X509_UNKNOWN_SIG_ALG + MBEDTLS_ERR_OID_NOT_FOUND ) != ret )
+        switch( ret )
         {
+        case 0: /*ok*/
+        case MBEDTLS_ERR_X509_UNKNOWN_SIG_ALG + MBEDTLS_ERR_OID_NOT_FOUND:
+            /* Ignore certificate with an unknown algorithm: maybe a
+               prior certificate was already trusted. */
+            break;
+
+        case MBEDTLS_ERR_X509_ALLOC_FAILED:
+            alert = MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR;
+            goto crt_parse_der_failed;
+
+        case MBEDTLS_ERR_X509_UNKNOWN_VERSION:
+            alert = MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_CERT;
+            goto crt_parse_der_failed;
+
+        default:
+            alert = MBEDTLS_SSL_ALERT_MSG_BAD_CERT;
+        crt_parse_der_failed:
+            vdb_mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL, alert );
             MBEDTLS_SSL_DEBUG_RET( 1, " vdb_mbedtls_x509_crt_parse_der", ret );
             return( ret );
         }
@@ -4399,6 +4435,8 @@ int vdb_mbedtls_ssl_parse_certificate( mbedtls_ssl_context *ssl )
         if( ssl->session->peer_cert == NULL )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "new server cert during renegotiation" ) );
+            vdb_mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                            MBEDTLS_SSL_ALERT_MSG_ACCESS_DENIED );
             return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
         }
 
@@ -4409,6 +4447,8 @@ int vdb_mbedtls_ssl_parse_certificate( mbedtls_ssl_context *ssl )
                     ssl->session->peer_cert->raw.len ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "server cert changed during renegotiation" ) );
+            vdb_mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                            MBEDTLS_SSL_ALERT_MSG_ACCESS_DENIED );
             return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE );
         }
     }
@@ -4430,12 +4470,6 @@ int vdb_mbedtls_ssl_parse_certificate( mbedtls_ssl_context *ssl )
         {
             ca_chain = ssl->conf->ca_chain;
             ca_crl   = ssl->conf->ca_crl;
-        }
-
-        if( ca_chain == NULL )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "got no CA chain" ) );
-            return( MBEDTLS_ERR_SSL_CA_CHAIN_REQUIRED );
         }
 
         /*
@@ -4466,6 +4500,8 @@ int vdb_mbedtls_ssl_parse_certificate( mbedtls_ssl_context *ssl )
             if( vdb_mbedtls_pk_can_do( pk, MBEDTLS_PK_ECKEY ) &&
                 vdb_mbedtls_ssl_check_curve( ssl, vdb_mbedtls_pk_ec( *pk )->grp.id ) != 0 )
             {
+                ssl->session_negotiate->verify_result |= MBEDTLS_X509_BADCERT_BAD_KEY;
+
                 MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate (EC key curve)" ) );
                 if( ret == 0 )
                     ret = MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE;
@@ -4474,8 +4510,8 @@ int vdb_mbedtls_ssl_parse_certificate( mbedtls_ssl_context *ssl )
 #endif /* MBEDTLS_ECP_C */
 
         if( vdb_mbedtls_ssl_check_cert_usage( ssl->session_negotiate->peer_cert,
-                                  ciphersuite_info,
-                                  ! ssl->conf->endpoint,
+                                 ciphersuite_info,
+                                 ! ssl->conf->endpoint,
                                  &ssl->session_negotiate->verify_result ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate (usage extensions)" ) );
@@ -4483,8 +4519,67 @@ int vdb_mbedtls_ssl_parse_certificate( mbedtls_ssl_context *ssl )
                 ret = MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE;
         }
 
-        if( authmode == MBEDTLS_SSL_VERIFY_OPTIONAL )
+        /* vdb_mbedtls_x509_crt_verify_with_profile is supposed to report a
+         * verification failure through MBEDTLS_ERR_X509_CERT_VERIFY_FAILED,
+         * with details encoded in the verification flags. All other kinds
+         * of error codes, including those from the user provided f_vrfy
+         * functions, are treated as fatal and lead to a failure of
+         * ssl_parse_certificate even if verification was optional. */
+        if( authmode == MBEDTLS_SSL_VERIFY_OPTIONAL &&
+            ( ret == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED ||
+              ret == MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE ) )
+        {
             ret = 0;
+        }
+
+        if( ca_chain == NULL && authmode == MBEDTLS_SSL_VERIFY_REQUIRED )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "got no CA chain" ) );
+            ret = MBEDTLS_ERR_SSL_CA_CHAIN_REQUIRED;
+        }
+
+        if( ret != 0 )
+        {
+            /* The certificate may have been rejected for several reasons.
+               Pick one and send the corresponding alert. Which alert to send
+               may be a subject of debate in some cases. */
+            if( ssl->session_negotiate->verify_result & MBEDTLS_X509_BADCERT_OTHER )
+                alert = MBEDTLS_SSL_ALERT_MSG_ACCESS_DENIED;
+            else if( ssl->session_negotiate->verify_result & MBEDTLS_X509_BADCERT_CN_MISMATCH )
+                alert = MBEDTLS_SSL_ALERT_MSG_BAD_CERT;
+            else if( ssl->session_negotiate->verify_result & MBEDTLS_X509_BADCERT_KEY_USAGE )
+                alert = MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_CERT;
+            else if( ssl->session_negotiate->verify_result & MBEDTLS_X509_BADCERT_EXT_KEY_USAGE )
+                alert = MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_CERT;
+            else if( ssl->session_negotiate->verify_result & MBEDTLS_X509_BADCERT_NS_CERT_TYPE )
+                alert = MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_CERT;
+            else if( ssl->session_negotiate->verify_result & MBEDTLS_X509_BADCERT_BAD_PK )
+                alert = MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_CERT;
+            else if( ssl->session_negotiate->verify_result & MBEDTLS_X509_BADCERT_BAD_KEY )
+                alert = MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_CERT;
+            else if( ssl->session_negotiate->verify_result & MBEDTLS_X509_BADCERT_EXPIRED )
+                alert = MBEDTLS_SSL_ALERT_MSG_CERT_EXPIRED;
+            else if( ssl->session_negotiate->verify_result & MBEDTLS_X509_BADCERT_REVOKED )
+                alert = MBEDTLS_SSL_ALERT_MSG_CERT_REVOKED;
+            else if( ssl->session_negotiate->verify_result & MBEDTLS_X509_BADCERT_NOT_TRUSTED )
+                alert = MBEDTLS_SSL_ALERT_MSG_UNKNOWN_CA;
+            else
+                alert = MBEDTLS_SSL_ALERT_MSG_CERT_UNKNOWN;
+            vdb_mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                            alert );
+        }
+
+#if defined(MBEDTLS_DEBUG_C)
+        if( ssl->session_negotiate->verify_result != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 3, ( "! Certificate verification flags %x",
+                                        ssl->session_negotiate->verify_result ) );
+        }
+        else
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 3, ( "Certificate verification flags clear" ) );
+        }
+#endif /* MBEDTLS_DEBUG_C */
     }
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= parse certificate" ) );
@@ -4537,12 +4632,16 @@ int vdb_mbedtls_ssl_parse_change_cipher_spec( mbedtls_ssl_context *ssl )
     if( ssl->in_msgtype != MBEDTLS_SSL_MSG_CHANGE_CIPHER_SPEC )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad change cipher spec message" ) );
+        vdb_mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                        MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE );
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
     }
 
     if( ssl->in_msglen != 1 || ssl->in_msg[0] != 1 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad change cipher spec message" ) );
+        vdb_mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                        MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
         return( MBEDTLS_ERR_SSL_BAD_HS_CHANGE_CIPHER_SPEC );
     }
 
@@ -4565,6 +4664,8 @@ int vdb_mbedtls_ssl_parse_change_cipher_spec( mbedtls_ssl_context *ssl )
         if( ++ssl->in_epoch == 0 )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "DTLS epoch would wrap" ) );
+            /* This is highly unlikely to happen for legitimate reasons, so
+               treat it as an attack and don't send an alert. */
             return( MBEDTLS_ERR_SSL_COUNTER_WRAPPING );
         }
     }
@@ -4589,6 +4690,8 @@ int vdb_mbedtls_ssl_parse_change_cipher_spec( mbedtls_ssl_context *ssl )
         if( ( ret = mbedtls_ssl_hw_record_activate( ssl, MBEDTLS_SSL_CHANNEL_INBOUND ) ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_hw_record_activate", ret );
+            vdb_mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                            MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR );
             return( MBEDTLS_ERR_SSL_HW_ACCEL_FAILED );
         }
     }
@@ -5167,6 +5270,8 @@ int vdb_mbedtls_ssl_parse_finished( mbedtls_ssl_context *ssl )
     if( ssl->in_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad finished message" ) );
+        vdb_mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                        MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE );
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
     }
 
@@ -5182,6 +5287,8 @@ int vdb_mbedtls_ssl_parse_finished( mbedtls_ssl_context *ssl )
         ssl->in_hslen  != vdb_mbedtls_ssl_hs_hdr_len( ssl ) + hash_len )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad finished message" ) );
+        vdb_mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                        MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
         return( MBEDTLS_ERR_SSL_BAD_HS_FINISHED );
     }
 
@@ -5189,6 +5296,8 @@ int vdb_mbedtls_ssl_parse_finished( mbedtls_ssl_context *ssl )
                       buf, hash_len ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad finished message" ) );
+        vdb_mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                        MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
         return( MBEDTLS_ERR_SSL_BAD_HS_FINISHED );
     }
 
@@ -5244,7 +5353,11 @@ static void ssl_handshake_params_init( mbedtls_ssl_handshake_params *handshake )
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
     handshake->update_checksum = ssl_update_checksum_start;
-    handshake->sig_alg = MBEDTLS_SSL_HASH_SHA1;
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2) && \
+    defined(MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED)
+    vdb_mbedtls_ssl_sig_hash_set_init( &handshake->hash_algs );
+#endif
 
 #if defined(MBEDTLS_DHM_C)
     vdb_mbedtls_dhm_init( &handshake->dhm_ctx );
@@ -6050,6 +6163,14 @@ void vdb_mbedtls_ssl_conf_fallback( mbedtls_ssl_config *conf, char fallback )
 }
 #endif
 
+#if defined(MBEDTLS_SSL_SRV_C)
+void vdb_mbedtls_ssl_conf_cert_req_ca_list( mbedtls_ssl_config *conf,
+                                          char cert_req_ca_list )
+{
+    conf->cert_req_ca_list = cert_req_ca_list;
+}
+#endif
+
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
 void vdb_mbedtls_ssl_conf_encrypt_then_mac( mbedtls_ssl_config *conf, char etm )
 {
@@ -6639,11 +6760,11 @@ int vdb_mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t l
 #if defined(MBEDTLS_SSL_PROTO_SSL3)
                 if( ssl->minor_ver == MBEDTLS_SSL_MINOR_VERSION_0 )
                 {
-                    /*
-                     * SSLv3 does not have a "no_renegotiation" alert
-                     */
-                    if( ( ret = vdb_mbedtls_ssl_send_fatal_handshake_failure( ssl ) ) != 0 )
-                        return( ret );
+                    /* SSLv3 does not have a "no_renegotiation" warning, so
+                       we send a fatal alert and abort the connection. */
+                    vdb_mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                                    MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE );
+                    return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
                 }
                 else
 #endif /* MBEDTLS_SSL_PROTO_SSL3 */
@@ -7150,7 +7271,7 @@ static int ssl_preset_default_hashes[] = {
     MBEDTLS_MD_SHA256,
     MBEDTLS_MD_SHA224,
 #endif
-#if defined(MBEDTLS_SHA1_C)
+#if defined(MBEDTLS_SHA1_C) && defined(MBEDTLS_TLS_DEFAULT_ALLOW_SHA1_IN_KEY_EXCHANGE)
     MBEDTLS_MD_SHA1,
 #endif
     MBEDTLS_MD_NONE
@@ -7230,6 +7351,10 @@ int vdb_mbedtls_ssl_config_defaults( mbedtls_ssl_config *conf,
 
 #if defined(MBEDTLS_SSL_DTLS_ANTI_REPLAY)
     conf->anti_replay = MBEDTLS_SSL_ANTI_REPLAY_ENABLED;
+#endif
+
+#if defined(MBEDTLS_SSL_SRV_C)
+    conf->cert_req_ca_list = MBEDTLS_SSL_CERT_REQ_CA_LIST_ENABLED;
 #endif
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
@@ -7375,6 +7500,19 @@ unsigned char vdb_mbedtls_ssl_sig_from_pk( mbedtls_pk_context *pk )
     return( MBEDTLS_SSL_SIG_ANON );
 }
 
+unsigned char vdb_mbedtls_ssl_sig_from_pk_alg( mbedtls_pk_type_t type )
+{
+    switch( type ) {
+        case MBEDTLS_PK_RSA:
+            return( MBEDTLS_SSL_SIG_RSA );
+        case MBEDTLS_PK_ECDSA:
+        case MBEDTLS_PK_ECKEY:
+            return( MBEDTLS_SSL_SIG_ECDSA );
+        default:
+            return( MBEDTLS_SSL_SIG_ANON );
+    }
+}
+
 mbedtls_pk_type_t vdb_mbedtls_ssl_pk_alg_from_sig( unsigned char sig )
 {
     switch( sig )
@@ -7392,6 +7530,57 @@ mbedtls_pk_type_t vdb_mbedtls_ssl_pk_alg_from_sig( unsigned char sig )
     }
 }
 #endif /* MBEDTLS_PK_C && ( MBEDTLS_RSA_C || MBEDTLS_ECDSA_C ) */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2) && \
+    defined(MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED)
+
+/* Find an entry in a signature-hash set matching a given hash algorithm. */
+mbedtls_md_type_t vdb_mbedtls_ssl_sig_hash_set_find( mbedtls_ssl_sig_hash_set_t *set,
+                                                 mbedtls_pk_type_t sig_alg )
+{
+    switch( sig_alg )
+    {
+        case MBEDTLS_PK_RSA:
+            return( set->rsa );
+        case MBEDTLS_PK_ECDSA:
+            return( set->ecdsa );
+        default:
+            return( MBEDTLS_MD_NONE );
+    }
+}
+
+/* Add a signature-hash-pair to a signature-hash set */
+void vdb_mbedtls_ssl_sig_hash_set_add( mbedtls_ssl_sig_hash_set_t *set,
+                                   mbedtls_pk_type_t sig_alg,
+                                   mbedtls_md_type_t md_alg )
+{
+    switch( sig_alg )
+    {
+        case MBEDTLS_PK_RSA:
+            if( set->rsa == MBEDTLS_MD_NONE )
+                set->rsa = md_alg;
+            break;
+
+        case MBEDTLS_PK_ECDSA:
+            if( set->ecdsa == MBEDTLS_MD_NONE )
+                set->ecdsa = md_alg;
+            break;
+
+        default:
+            break;
+    }
+}
+
+/* Allow exactly one hash algorithm for each signature. */
+void vdb_mbedtls_ssl_sig_hash_set_const_hash( mbedtls_ssl_sig_hash_set_t *set,
+                                          mbedtls_md_type_t md_alg )
+{
+    set->rsa   = md_alg;
+    set->ecdsa = md_alg;
+}
+
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2) &&
+          MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED */
 
 /*
  * Convert from MBEDTLS_SSL_HASH_XXX to MBEDTLS_MD_XXX
@@ -7653,8 +7842,7 @@ int vdb_mbedtls_ssl_set_calc_verify_md( mbedtls_ssl_context *ssl, int md )
 #if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1)
 #if defined(MBEDTLS_MD5_C)
         case MBEDTLS_SSL_HASH_MD5:
-            ssl->handshake->calc_verify = ssl_calc_verify_tls;
-            break;
+            return MBEDTLS_ERR_SSL_INVALID_VERIFY_HASH;
 #endif
 #if defined(MBEDTLS_SHA1_C)
         case MBEDTLS_SSL_HASH_SHA1:

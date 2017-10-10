@@ -203,7 +203,8 @@ public:
     {
 #define WGS "AFVF01"
         const char * acc = type == eRefseq ? "KC702199.1" :
-                           type == eSra    ? "SRR053325" : WGS ".1"; 
+                           type == eSra    ? "SRR003325" : WGS ".1"; 
+//                         type == eSra    ? "SRR053325" : WGS ".1"; 
         rc_t rc = 0;
         KDirectory * native  = NULL;
         REQUIRE_RC ( KDirectoryNativeDir ( & native ) );
@@ -610,6 +611,7 @@ extern "C" {
         return 0;
     }
     rc_t CC KMain ( int argc, char * argv [] ) {
+        KConfigDisableUserSettings ();
         return CachingSuite ( argc, argv );
     }
 }

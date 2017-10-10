@@ -1731,9 +1731,12 @@ EndText
         foreach my $href (@REQ) {
             next unless (optional($href->{type}));
             my %a = %$href;
-            if ($a{option} =~ /-sources$/) {
+            if ($a{option} && $a{option} =~ /-sources$/) {
                 println "  --$a{option}=DIR    search for $a{name} package";
                 println "                                source files in DIR";
+            } elsif ($a{boption} && $a{boption} =~ /-build$/) {
+                println "  --$a{boption}=DIR     search for $a{name} package";
+                println "                                 build output in DIR";
             } else {
                 println "  --$a{option}=DIR    search for $a{name} files in DIR"
             }
