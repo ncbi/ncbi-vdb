@@ -50,3 +50,8 @@ LIB_EXPORT bool CC KProcMgrOnMainThread ( void )
     }
     return on_main_thread;
 }
+
+uint32_t sys_GetPID ( void )
+{
+    return getpid ();
+}

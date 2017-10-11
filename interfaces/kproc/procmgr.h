@@ -112,6 +112,10 @@ KPROC_EXTERN rc_t CC KProcMgrRemoveCleanupTask ( KProcMgr *self,
  */
 KPROC_EXTERN bool CC KProcMgrOnMainThread ( void );
 
+/* GetPID
+ *  returns true if running on main thread
+ */
+KPROC_EXTERN rc_t CC KProcMgrGetPID ( const KProcMgr * self, uint32_t * pid );
 
 #ifdef __cplusplus
 }

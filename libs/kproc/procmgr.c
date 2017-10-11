@@ -443,3 +443,20 @@ LIB_EXPORT rc_t CC KProcMgrRemoveCleanupTask ( KProcMgr *self, const KTaskTicket
 
     return rc;
 }
+
+uint32_t sys_GetPID ( void );
+
+LIB_EXPORT rc_t CC KProcMgrGetPID ( const KProcMgr * self, uint32_t * pid )
+{
+    rc_t rc = 0;
+
+    if ( self == NULL )
+        rc = RC ( rcPS, rcMgr, rcAccessing, rcSelf, rcNull );
+    else if ( self != s_proc_mgr . ptr )
+        rc = RC ( rcPS, rcMgr, rcAccessing, rcSelf, rcIncorrect );
+    else if ( pid == NULL )
+        rc = RC ( rcPS, rcMgr, rcAccessing, rcId, rcNull );
+    else
+        *pid = sys_GetPID ();
+    return rc;
+}

@@ -35,3 +35,8 @@ LIB_EXPORT bool CC KProcMgrOnMainThread ( void )
     /* don't know how to do this on Winders */
     return false;
 }
+
+uint32_t sys_GetPID ( void )
+{
+    return ( uint32_t) GetCurrentProcessId();
+}
