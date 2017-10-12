@@ -42,7 +42,6 @@ TEST_TOOLS = \
 	test-progressbar \
     test-symtab \
 
->>>>>>> engineering
 include $(TOP)/build/Makefile.env
 
 std: $(TEST_TOOLS)
