@@ -112,7 +112,10 @@ struct SDatabase;
 struct VDBManager;
 struct SExpression;
 struct SDumper;
-
+struct KSymTable;
+struct SchemaEnv;
+struct KFile;
+struct KDirectory;
 
 /*--------------------------------------------------------------------------
  * VCtxId
@@ -196,7 +199,7 @@ bool VFormatdeclCommonAncestor ( const VFormatdecl *self, const VSchema *schema,
 /*--------------------------------------------------------------------------
  * SNameOverload
  *  describes an overloaded name
- *  used to implement versioning 
+ *  used to implement versioning
  */
 typedef struct SNameOverload SNameOverload;
 struct SNameOverload
@@ -983,6 +986,12 @@ rc_t STableCloneExtend ( const STable *self, STable **clone, VSchema *schema );
 int64_t CC STableCmp ( const void *item, const void *n );
 int64_t CC STableSort ( const void *item, const void *n );
 
+/*
+ * Deep comparison of 2 tables, taking versions into account
+ * exhaustive: if false, stop at first mismatch
+ */
+rc_t STableCompare ( const STable *a, const STable *b, const STable **newer, bool exhaustive );
+
 /* Find
  *  generic object find within table scope
  *
@@ -1038,6 +1047,26 @@ rc_t VSchemaDumpTableName ( const VSchema *self, uint32_t mode, const STable *st
 rc_t VSchemaDumpTableDecl ( const VSchema *self, uint32_t mode, const STable *stbl,
     rc_t ( CC * flush ) ( void *dst, const void *buffer, size_t bsize ), void *dst );
 
+/* Extend
+ * records a parent table
+ */
+rc_t STableExtend ( struct KSymTable *tbl, STable *self, const STable *dad );
+
+/* schema_update_tbl_ref
+ * updates references to a table's ancestor with the ancestor's newer version
+ */
+rc_t schema_update_tbl_ref ( VSchema *self, const STable *exist, const STable *table );
+
+/* table_fwd_scan
+ *  converts unresolved column references to virtual columns
+ */
+typedef struct STableScanData STableScanData;
+struct STableScanData
+{
+    STable *self;
+    rc_t rc;
+};
+bool CC table_fwd_scan ( BSTNode *n, void *data );
 
 /*--------------------------------------------------------------------------
  * SColumn
@@ -1106,6 +1135,10 @@ rc_t STableImplicitColMember ( STable *self,
 bool CC SColumnDefDump ( void *item, void *dumper );
 rc_t SColumnDump ( const SColumn *self, struct SDumper *d );
 
+/* Create an implicit physical member for a simple column
+ */
+rc_t implicit_physical_member ( struct KSymTable *tbl, const struct SchemaEnv *env,
+    struct STable *table, struct SColumn *c, struct KSymbol *sym );
 
 /*--------------------------------------------------------------------------
  * SPhysMember
@@ -1238,6 +1271,14 @@ void CC SDatabaseNameMark ( const SNameOverload *self, const VSchema *schema );
 bool CC SDatabaseDefDump ( void *self, void *dumper );
 rc_t SDatabaseDump ( const SDatabase *self, struct SDumper *d );
 
+/* Extend
+ * records a parent database
+ */
+rc_t CC SDatabaseExtend ( SDatabase *self, const SDatabase *dad );
+
+/* Compare
+*/
+rc_t SDatabaseCompare ( const SDatabase *a, const SDatabase *b, const SDatabase **newer, bool exhaustive );
 
 /*--------------------------------------------------------------------------
  * STblMember
@@ -1299,6 +1340,25 @@ struct SDBMember
  */
 bool CC SDBMemberDefDump ( void *item, void *dumper );
 rc_t SDBMemberDump ( const SDBMember *self, struct SDumper *d );
+
+/*--------------------------------------------------------------------------
+ * Include files
+ */
+
+/* OpenFile
+ *  opens a file, using include paths
+ */
+rc_t CC VSchemaTryOpenFile ( const VSchema *self, const struct KDirectory *dir, const struct KFile **fp,
+    char *path, size_t path_max, const char *name, va_list args );
+
+/* OpenFile
+ */
+rc_t CC VSchemaOpenFile ( const VSchema *self, const struct KFile **fp,
+    char *path, size_t path_max, const char *name, va_list args );
+
+/* Make
+ */
+rc_t CC VIncludedPathMake ( BSTree *paths, uint32_t *count, const char *path );
 
 
 #ifdef __cplusplus

@@ -567,14 +567,14 @@ static rc_t SVersionInit
         if ( end == NULL || * end != '.' ) {
             return RC ( rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt );
         }
-        self -> major = l;
+        self -> major = ( uint8_t ) l;
         s = ++ end;
 
         l = strtoul ( s, & end, 10 );
         if ( end == NULL || * end != '\0' ) {
             return RC ( rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt );
         }
-        self -> minor = l;
+        self -> minor = ( uint8_t ) l;
 
         self -> version = self -> major << 24 | self -> minor << 16;
 
@@ -898,7 +898,7 @@ static rc_t size_tInit ( void * p, const String * src ) {
     size_t * self = ( size_t * ) p;
     size_t s = 0;
     if ( src -> size != 0  && src -> len != 0 ) {
-        s = StringToU64 ( src, & rc );
+        s = ( size_t ) StringToU64 ( src, & rc );
     }
     if ( rc == 0 ) {
         assert ( self );
@@ -911,7 +911,7 @@ static rc_t size_tInit ( void * p, const String * src ) {
 static rc_t uint32_tInit ( void * p, const String * src ) {
     rc_t rc = 0;
     uint32_t * self = ( uint32_t * ) p;
-    uint32_t s = StringToU64 ( src, & rc );
+    uint32_t s = ( uint32_t ) StringToU64 ( src, & rc );
     if ( rc == 0 ) {
         assert ( self );
         * self = s;
@@ -1495,10 +1495,10 @@ static rc_t EVPathInitMapping
     rc_t rc = 0;
     const VPath * vsrc = NULL;
     assert ( self && src && version );
-    if ( self -> http == NULL && self -> fasp == NULL ) {
+    if ( self -> https == NULL && self -> http == NULL && self -> fasp == NULL )
         return 0;
-    }
-    vsrc = self -> http ? self -> http : self -> fasp;
+    vsrc = self -> http ? self -> http 
+	    : ( self -> https ? self -> https : self -> fasp );
     rc = VPathCheckFromNamesCGI ( vsrc, & src -> ticket,
         ( const struct VPath ** ) ( & self -> mapping ) );
     if ( rc == 0) {
@@ -1573,6 +1573,7 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
 {
     rc_t rc = 0;
     bool made = false;
+    bool logError = true;
     KLogLevel lvl = klogInt;
     assert ( self && src && r );
 
@@ -1648,6 +1649,7 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
           If it is a real response then this assession is not found.
           What if it is a DB failure? Will be retried if configured to do so? */
             rc = RC ( rcVFS, rcQuery, rcResolving, rcName, rcNotFound );
+            logError = false;
             break;
         case 410:
             rc = RC ( rcVFS, rcQuery, rcResolving, rcName, rcNotFound );
@@ -1676,7 +1678,7 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
     }
 
     /* log message to user */
-    if ( req -> errorsToIgnore == 0 ) {
+    if ( req -> errorsToIgnore == 0 && logError ) {
         if ( src -> objectId . size > 0 )
             PLOGERR ( lvl, ( lvl, rc,
                 "failed to resolve accession '$(acc)' - $(msg) ( $(code) )",
@@ -1765,7 +1767,9 @@ static rc_t SRowMake ( SRow ** self, const String * src, const SRequest * req,
         size_t l
             = string_measure ( req -> request . object [ 0 ] . objectId, NULL );
         StringInit ( & acc, req -> request . object [ 0 ] . objectId, l, l );
-        if ( ! StringEqual ( & p -> typed . accession, & acc ) &&
+        assert ( acc . size == 0 || acc . addr != NULL );
+        if ( acc . size > 2 && acc . addr [1] == 'R' && acc . addr [2] == 'R' &&
+             ! StringEqual ( & p -> typed . accession, & acc ) &&
              ! StringEqual ( & p -> typed . objectId , & acc ) )
         {
             return RC ( rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt );
@@ -2365,7 +2369,7 @@ static rc_t STicketsAppend ( STickets * self, uint32_t project,
         char * p = ( char * ) self -> str . base;
         assert ( comma );
         rc = string_printf ( p + self -> size,
-            self -> str . elem_count - self -> size, & num_writ,
+            ( size_t ) self -> str . elem_count - self -> size, & num_writ,
             "%s%s", comma, ticket );
         if ( rc == 0 ) {
             rc_t r2 = 0;
@@ -2392,7 +2396,7 @@ static rc_t STicketsAppend ( STickets * self, uint32_t project,
         else if ( GetRCState ( rc ) == rcInsufficient
             && GetRCObject ( rc ) == ( enum RCObject ) rcBuffer )
         {
-            size_t needed = BICKETS;
+            size_t needed = ( size_t ) BICKETS;
             if ( self -> str . elem_count - self -> size + needed < num_writ )
                 needed = num_writ;
             rc = KDataBufferResize
@@ -3049,6 +3053,7 @@ rc_t KServiceProcessLine ( KService * self,
         const SConverters * f = NULL;
         rc = SConvertersMake ( & f, & self -> resp . header );
         if ( rc == 0 ) {
+            bool append = true;
             SRow * row = NULL;
             rc_t r2 = SRowMake ( & row, line, & self -> req, f,
                 & self -> resp . header . version );
@@ -3058,22 +3063,47 @@ rc_t KServiceProcessLine ( KService * self,
                         ( & self -> resp . header. version )
                     || l == 0 )
                 {
-                    r2 = VectorAppend ( & self -> resp . rows, NULL, row );
+                    if ( l == 1 &&
+                         self -> req . request . objects == 1 )
+                    {
+/* SRA-5283 VDB-3423: names.cgi version 3.0 incorrectly returns
+           2 rows for filtered runs instead of 1: here we compensate this bug */
+                        const KSrvError * error = NULL;
+                        SRow * prev = VectorGet ( & self -> resp . rows, 0 );
+                        assert ( prev );
+                        error = row -> path . error;
+                        if ( error != NULL && 
+                             error -> code == 403 &&
+                             error ->        objectType == eOT_sragap && 
+                             prev -> typed . objectType == eOT_srapub &&
+                             row -> typed . ordId == prev -> typed . ordId &&
+                             StringEqual ( & row  -> typed . objectId,
+                                           & prev -> typed . objectId ) )
+                        {
+                            append = false;
+                        }
+                    }
                 }
                 else {
-            /* ACC.vdbcashe : TODO : search for vdb.cache extension */
-                    if ( row -> typed . objectId . len == 18 || 
-                         row -> typed . objectId . len == 19 )
+/* ignore ACC.vdbcache : TODO : search for vdb.cache extension */
+                    if ( l == 1 && ( row -> typed . objectId . len == 18 || 
+                                     row -> typed . objectId . len == 19   ) )
                     {
-                        r2 = SRowWhack ( row );
-                        row = NULL;
+                        append = false;
                     }
+                }
+                if ( append )
+                    r2 = VectorAppend ( & self -> resp . rows, NULL, row );
+                else {
+                    r2 = SRowWhack ( row );
+                    row = NULL;
                 }
             }
             if ( r2 == 0 ) {
-                if ( SVersionHasMultpileObjects
-                        ( & self -> resp . header . version)
-                     || KSrvResponseLength ( self -> resp . list ) == 0 )
+                if ( append && ( SVersionHasMultpileObjects
+                                     ( & self -> resp . header . version)
+                          || KSrvResponseLength ( self -> resp . list ) == 0 ) )
+                            
                 {
                     r2 = KSrvResponseAppend ( self -> resp . list, row -> set );
                 }
@@ -3123,7 +3153,7 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
             if ( rc != 0 || num_read == 0 )
                 break;
             DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
-                ( "%.*s\n", ( int ) num_read - 1, buffer + offW ) );
+                ( "%.*s", ( int ) num_read - 1, buffer + offW ) );
             sizeR += num_read;
             offW += num_read;
             if (sizeW >= num_read )
@@ -3140,6 +3170,14 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                     ( rcVFS, rcQuery, rcExecuting, rcString, rcInsufficient );
                 break;
             }
+            else {
+                memmove ( buffer, buffer + offR, sizeR );
+                if ( sizeR < sizeof buffer )
+                    buffer [ sizeR ] = '\0';
+                sizeW = sizeof buffer - sizeR;
+                offR = 0;
+                offW = sizeR;
+            }
             rc = KStreamTimedRead
                 ( stream, buffer + offW, sizeW, & num_read, & tm );
             if ( rc != 0 ) {
@@ -3154,6 +3192,8 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                     ( rcVFS, rcQuery, rcExecuting, rcString, rcInsufficient ); 
                 break;
             }
+            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
+                ( "%.*s", ( int ) num_read - 1, buffer + offW ) );
             sizeR += num_read;
             offW += num_read;
             if (sizeW >= num_read )
@@ -3176,8 +3216,10 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
             else {
                 bool end = false;
                 rc = KServiceProcessLine ( self, & s, & end );
-                if ( end || rc != 0 )
+                if ( end || rc != 0 ) {
+                    DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( "\n" ) );
                     break;
+                }
             }
             ++ size;
             offR += size;
@@ -3372,12 +3414,12 @@ static rc_t CC KService1NameWithVersionAndType ( const KNSManager * mgr,
 
     if ( rc == 0 ) {
         if ( VectorLength ( & service . resp . rows ) != 1)
-            rc = 1;
+            rc = RC ( rcVFS, rcQuery, rcExecuting, rcRow, rcIncorrect );
         else {
             uint32_t l = KSrvResponseLength ( service . resp . list );
             if ( rc == 0 ) {
                 if ( l != 1 )
-                    rc = 3;
+                    rc = RC ( rcVFS, rcQuery, rcExecuting, rcRow, rcIncorrect );
                 else {
                     const KSrvError * error = NULL;
                     rc = KSrvResponseGetPath ( service . resp . list, 0, 
@@ -3390,7 +3432,8 @@ static rc_t CC KService1NameWithVersionAndType ( const KNSManager * mgr,
                         const SRow * r =
                             ( SRow * ) VectorGet ( & service . resp . rows, 0 );
                         if ( r == NULL)
-                            rc = 2;
+                            rc = RC
+                                ( rcVFS, rcQuery, rcExecuting, rcRow, rcNull );
                         else {
                             const VPath * path = NULL;
                             VRemoteProtocols protos = protocols;
@@ -3436,14 +3479,14 @@ static rc_t CC KService1NameWithVersionAndType ( const KNSManager * mgr,
     if ( rc == 0 ) {
         uint32_t l = KSrvResponseLength ( service . resp . list );
         if ( l != 1)
-            rc = 3;
+            rc = RC ( rcVFS, rcQuery, rcResolving, rcQuery, rcUnauthorized );
         else {
             const VPathSet * s = NULL;
             rc = KSrvResponseGet ( service . resp . list, 0, & s );
             if ( rc != 0 ) {
             }
             else if ( s == NULL )
-                rc = 4;
+                rc = RC ( rcVFS, rcQuery, rcExecuting, rcRow, rcIncorrect );
             else {
                 const VPath * path = NULL;
                 const VPath * cache = NULL;
@@ -3749,13 +3792,13 @@ rc_t KServiceProcessStreamTestNames1 ( const KNSManager * mgr,
         rc = KServiceProcessStream ( & service, stream );
     if ( rc == 0 ) {
         if ( VectorLength ( & service . resp . rows ) != 1 )
-            rc = 1;
+            rc = RC ( rcVFS, rcQuery, rcExecuting, rcRow, rcExcessive );
         else {
             const VPath * path = NULL;
             const SRow * r
                 = ( SRow * ) VectorGet ( & service . resp . rows, 0 );
             if ( r == NULL)
-                rc = 2;
+                rc = RC ( rcVFS, rcQuery, rcExecuting, rcVector, rcEmpty );
             else
                 if ( r -> path . error != NULL )
                     rc = r -> path . error -> rc;

@@ -57,6 +57,7 @@ SUBDIRS =    \
 	loader   \
 	blast    \
 	ascp     \
+	schema   \
 	sra      \
 	ngs      \
 	ngs-c++  \
@@ -72,12 +73,12 @@ include $(TOP)/build/Makefile.targets
 
 $(SUBDIRS):
 	@ $(MAKE) -C $@
-	
-ncbi-vdb: $(patsubst ncbi-vdb,,$(SUBDIRS))	
+
+ncbi-vdb: $(patsubst ncbi-vdb,,$(SUBDIRS))
 
 test:
 	@true
-    
+
 .PHONY: default $(SUBDIRS) test
 
 #-------------------------------------------------------------------------------

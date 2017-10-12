@@ -39,8 +39,10 @@ TEST_TOOLS = \
 	test-time \
 	test-klib \
 	test-vnamelist \
-	test-progressbar
-    
+	test-progressbar \
+    test-symtab \
+
+>>>>>>> engineering
 include $(TOP)/build/Makefile.env
 
 std: $(TEST_TOOLS)
@@ -60,7 +62,7 @@ TEST_ASM_SRC = \
 
 TEST_ASM_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_ASM_SRC))
-    
+
 TEST_ASM_LIB = \
 	-skapp \
 	-sncbi-vdb \
@@ -68,7 +70,7 @@ TEST_ASM_LIB = \
 
 $(TEST_BINDIR)/test-asm: $(TEST_ASM_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_ASM_LIB)
-    
+
 #-------------------------------------------------------------------------------
 # test-md5append
 #
@@ -77,7 +79,7 @@ TEST_MD5APPEND_SRC = \
 
 TEST_MD5APPEND_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_MD5APPEND_SRC))
-    
+
 TEST_MD5APPEND_LIB = \
 	-skapp \
 	-sncbi-vdb \
@@ -85,7 +87,7 @@ TEST_MD5APPEND_LIB = \
 
 $(TEST_BINDIR)/test-md5append: $(TEST_MD5APPEND_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_MD5APPEND_LIB)
-    
+
 #-------------------------------------------------------------------------------
 # test-printf
 #
@@ -94,7 +96,7 @@ TEST_PRINTF_SRC = \
 
 TEST_PRINTF_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_PRINTF_SRC))
-    
+
 TEST_PRINTF_LIB = \
 	-skapp \
 	-sncbi-vdb \
@@ -102,7 +104,7 @@ TEST_PRINTF_LIB = \
 
 $(TEST_BINDIR)/test-printf: $(TEST_PRINTF_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_PRINTF_LIB)
-    
+
 #-------------------------------------------------------------------------------
 # test-log
 #
@@ -111,7 +113,7 @@ TEST_LOG_SRC = \
 
 TEST_LOG_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_LOG_SRC))
-    
+
 TEST_LOG_LIB = \
 	-skapp \
 	-sncbi-vdb \
@@ -119,7 +121,7 @@ TEST_LOG_LIB = \
 
 $(TEST_BINDIR)/test-log: $(TEST_LOG_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_LOG_LIB)
-    
+
 #-------------------------------------------------------------------------------
 # test-SraReleaseVersion
 #
@@ -128,7 +130,7 @@ TEST_SRA_RELEASE_VERSION_SRC = \
 
 TEST_SRA_RELEASE_VERSION_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_SRA_RELEASE_VERSION_SRC))
-    
+
 TEST_SRA_RELEASE_VERSION_LIB = \
 	-skapp \
 	-sncbi-vdb \
@@ -137,10 +139,10 @@ TEST_SRA_RELEASE_VERSION_LIB = \
 
 $(TEST_BINDIR)/test-SraReleaseVersion: $(TEST_SRA_RELEASE_VERSION_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_SRA_RELEASE_VERSION_LIB)
-    
+
 valgrind_sra_release_version:
 	valgrind --ncbi $(TEST_BINDIR)/test-SraReleaseVersion
-    
+
 .PHONY: valgrind_SraReleaseVersion
 
 
@@ -171,7 +173,7 @@ TEST_OUT_LIB = \
 
 $(TEST_BINDIR)/test-out: $(TEST_OUT_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_OUT_LIB)
-    
+
 #-------------------------------------------------------------------------------
 # test-klib
 #
@@ -188,7 +190,7 @@ TEST_KLIB_LIB = \
 
 $(TEST_BINDIR)/test-klib: $(TEST_KLIB_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
-    
+
 
 #-------------------------------------------------------------------------------
 # test-vnamelist
@@ -230,3 +232,22 @@ $(TEST_BINDIR)/test-progressbar: $(TEST_PROGRESSBAR_OBJ)
 PROGRESSBAR: test-progressbar
 	$(TEST_BINDIR)/test-progressbar
 
+#-------------------------------------------------------------------------------
+# test-symtab
+#
+TEST_SYMTAB_SRC = \
+	test-symtab
+
+TEST_SYMTAB_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_SYMTAB_SRC))
+
+TEST_SYMTAB_LIB = \
+	-skapp \
+	-sncbi-vdb \
+	-sktst \
+
+$(TEST_BINDIR)/test-symtab: $(TEST_SYMTAB_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_SYMTAB_LIB)
+
+symtab: test-symtab
+	$(TEST_BINDIR)/test-symtab
