@@ -57,6 +57,7 @@ MAIN_SUBDIRS = \
 	loader   \
 	blast    \
 	ascp     \
+	schema   \
 	sra      \
 	ngs      \
 	ngs-c++  \
@@ -86,7 +87,7 @@ vdb-sqlite: $(NCBI_VDB_SUBDIRS)
 
 test:
 	@true
-    
+
 .PHONY: default $(SUBDIRS) test
 
 #-------------------------------------------------------------------------------
