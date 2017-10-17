@@ -40,3 +40,8 @@ uint32_t sys_GetPID ( void )
 {
     return ( uint32_t) GetCurrentProcessId();
 }
+
+int sys_GetHostName ( char * buffer, size_t buffer_size )
+{
+    return gethostname( buffer, buffer_size );
+}

@@ -113,9 +113,14 @@ KPROC_EXTERN rc_t CC KProcMgrRemoveCleanupTask ( KProcMgr *self,
 KPROC_EXTERN bool CC KProcMgrOnMainThread ( void );
 
 /* GetPID
- *  returns true if running on main thread
+ *  returns the process-id
  */
 KPROC_EXTERN rc_t CC KProcMgrGetPID ( const KProcMgr * self, uint32_t * pid );
+
+/* GetHostName
+ *  returns the name of the host-computer
+ */
+KPROC_EXTERN rc_t CC KProcMgrGetHostName ( const KProcMgr * self, char * buffer, size_t buffer_size );
 
 #ifdef __cplusplus
 }
