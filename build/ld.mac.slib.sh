@@ -40,7 +40,7 @@ SELF_NAME="$(basename $0)"
 source "${0%slib.sh}cmn.sh"
 
 # initialize command
-CMD="libtool -static -o "
+CMD="ar -rc"
 
 # versioned output
 if [ "$VERS" = "" ]
