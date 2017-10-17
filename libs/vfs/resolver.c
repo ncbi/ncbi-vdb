@@ -91,10 +91,13 @@
 #define NAME_SERVICE_MAJ_VERS_ 1
 #define NAME_SERVICE_MIN_VERS_ 2
 #define ONE_DOT_ONE 0x01010000
-static uint32_t NAME_SERVICE_MAJ_VERS = NAME_SERVICE_MAJ_VERS_;
-static uint32_t NAME_SERVICE_MIN_VERS = NAME_SERVICE_MIN_VERS_;
-static uint32_t NAME_SERVICE_VERS
-    = NAME_SERVICE_MAJ_VERS_ << 24 | NAME_SERVICE_MIN_VERS_ << 16;
+
+#ifdef TESTING_SERVICES_VS_OLD_RESOLVING
+    static uint32_t NAME_SERVICE_MAJ_VERS = NAME_SERVICE_MAJ_VERS_;
+    static uint32_t NAME_SERVICE_MIN_VERS = NAME_SERVICE_MIN_VERS_;
+    static uint32_t NAME_SERVICE_VERS
+        = NAME_SERVICE_MAJ_VERS_ << 24 | NAME_SERVICE_MIN_VERS_ << 16;
+#endif
 
 
 /*--------------------------------------------------------------------------

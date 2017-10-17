@@ -74,11 +74,14 @@ VDB_SQLITE_SRC = \
 VDB_SQLITE_OBJ = \
 	$(addsuffix .$(LOBX),$(VDB_SQLITE_SRC))
 
-VDB_SQLITE = \
+VDB_SQLITE_LIB = \
 	-sncbi-vdb
-    
+
+VDB_SQLITE_VERS = \
+	$(SRCDIR)/../ncbi-vdb/libncbi-vdb.vers
+
 $(LIBDIR)/libvdb-sqlite.$(SHLX): $(VDB_SQLITE_OBJ)
-	$(LD) --dlib --vers $(SRCDIR)/libvdb-sqlite.vers -o $@ $(VDB_SQLITE) $(VDB_SQLITE_OBJ)
+	$(LD) --dlib --vers $(VDB_SQLITE_VERS) -o $@ $(VDB_SQLITE_OBJ) $(VDB_SQLITE_LIB)
 
 $(LIBDIR)/libvdb-sqlite.$(LIBX): $(VDB_SQLITE_OBJ)
-	$(LD) --slib --vers $(SRCDIR)/libvdb-sqlite.vers -o $@ $(VDB_SQLITE) $(VDB_SQLITE_OBJ)
+	$(LD) --slib --vers $(VDB_SQLITE_VERS) -o $@ $(VDB_SQLITE_OBJ) $(VDB_SQLITE_LIB)
