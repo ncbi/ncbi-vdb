@@ -478,7 +478,13 @@ LIB_EXPORT rc_t CC KProcMgrGetHostName ( const KProcMgr * self, char * buffer, s
     else if ( buffer_size == 0 )
         rc = RC ( rcPS, rcMgr, rcAccessing, rcParam, rcInvalid );    
     else
-        rc = sys_GetHostName ( buffer, buffer_size );
-
+    {
+        int res = sys_GetHostName ( buffer, buffer_size );
+        if ( res == 0 )
+            rc = 0;
+        else
+            rc = RC ( rcPS, rcMgr, rcAccessing, rcName, rcFailed );    
+    }
+    
     return rc;
 }
