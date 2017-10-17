@@ -40,7 +40,7 @@ SELF_NAME="$(basename $0)"
 source "${0%slib.sh}cmn.sh"
 
 # initialize command
-CMD="ar -rc"
+CMD="libtool -static -o"
 
 # versioned output
 if [ "$VERS" = "" ]
@@ -51,8 +51,28 @@ else
     CMD="$CMD $OUTDIR/$NAME$DBGAP.a.$VERS"
 fi
 
+# create alternate names for object files
+mkdir -p ld-tmp
+
+ALT_OBJS=""
+for f in $OBJS
+do
+    d="$(dirname $f)"
+    f="$(basename $f)"
+    if [ "$d" != "${d#/}" ]
+    then
+#        echo ln -sf $d/$f ld-tmp/$NAME.$f
+        ln -sf $d/$f ld-tmp/$NAME.$f
+    else
+#        echo ln -sf ../$d/$f ld-tmp/$NAME.$f
+        ln -sf ../$d/$f ld-tmp/$NAME.$f
+    fi
+#    echo ALT_OBJS="ALT_OBJS ld-tmp/$NAME.$f"
+    ALT_OBJS="$ALT_OBJS ld-tmp/$NAME.$f"
+done
+
 # tack on object files
-CMD="$CMD $OBJS"
+CMD="$CMD $ALT_OBJS"
 
 # initial dependency upon Makefile and vers file
 DEPS="$SRCDIR/Makefile"
