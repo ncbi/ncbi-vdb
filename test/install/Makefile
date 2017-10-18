@@ -92,11 +92,13 @@ test-install: cleanup
 	@ for i in $(INSTALLED_FILES); do test -f "$$i" || ( echo "$$i is not found" >>$(INST_INCDIR)/missing ); done
 	@ ! test -f $(INST_INCDIR)/missing || ! cat $(INST_INCDIR)/missing
 	@ #
+	@ #
 	@ echo "2. uninstall"
 	@ #
 	@ $(SUBMAKE) uninstall
 	@ for i in $(INSTALLED_FILES); do ! test -f "$$i" || ( echo "$$i still exists" >>$(INST_INCDIR)/exist ); done
 	@ ! test -f $(INST_INCDIR)/exist || ! cat $(INST_INCDIR)/exist
+	@ #
 	@ #
 	@ echo "3. re-install, preserving modified .kfg files"
 	@ #
@@ -109,17 +111,33 @@ test-install: cleanup
 	@ # reinstall
 	@ $(SUBMAKE) install
 	@ # verify changed files have been saved
-	@ grep newcert    $(KONFIG_DIR)/certs.kfg.orig       >/dev/null
-	@ grep newdflt    $(KONFIG_DIR)/default.kfg.orig     >/dev/null
-	@ grep newncbi    $(KONFIG_DIR)/ncbi-vdb.kfg.orig    >/dev/null
-	@ ! test -f $(KONFIG_DIR)/ncbi-vdb.kfg          # gone ...
+	@ ( grep newcert  $(KONFIG_DIR)/certs.kfg.orig       >/dev/null ) || ( echo "Error: $(KONFIG_DIR)/certs.kfg.orig has unexpected content" && exit 1 )
+	@ ( grep newdflt  $(KONFIG_DIR)/default.kfg.orig     >/dev/null ) || ( echo "Error: $(KONFIG_DIR)/default.kfg.orig has unexpected content" && exit 1 )
+	@ ( grep newncbi  $(KONFIG_DIR)/ncbi-vdb.kfg.orig    >/dev/null ) || ( echo "Error: $(KONFIG_DIR)/ncbi-vdb.kfg.orig has unexpected content" && exit 1 )
+	@ ( ! test -f $(KONFIG_DIR)/ncbi-vdb.kfg  ) || ( echo "Error: $(KONFIG_DIR)/ncbi-vdb.kfg exists" && exit 1 )  # gone ...
 	@ # verify that further reinstall does not overwrite previously saved files if there is no change
 	@ $(SUBMAKE) install
 	@ # verify saved files are still there
-	@ grep newcert    $(KONFIG_DIR)/certs.kfg.orig       >/dev/null
-	@ grep newdflt    $(KONFIG_DIR)/default.kfg.orig     >/dev/null
-	@ grep newncbi    $(KONFIG_DIR)/ncbi-vdb.kfg.orig    >/dev/null
+	@ ( grep newcert  $(KONFIG_DIR)/certs.kfg.orig       >/dev/null ) || ( echo "Error: $(KONFIG_DIR)/certs.kfg.orig has unexpected content after reinstallation" && exit 1 )
+	@ ( grep newdflt  $(KONFIG_DIR)/default.kfg.orig     >/dev/null ) || ( echo "Error: $(KONFIG_DIR)/default.kfg.orig has unexpected content after reinstallation" && exit 1 )
+	@ ( grep newncbi  $(KONFIG_DIR)/ncbi-vdb.kfg.orig    >/dev/null ) || ( echo "Error: $(KONFIG_DIR)/ncbi-vdb.kfg.orig has unexpected content after reinstallation" && exit 1 )
 	@ ! test -f $(KONFIG_DIR)/ncbi-vdb.kfg          # ... and stays gone
+	@ #
+	@ #
+	@ echo "4. install, discarding older versions of .kfg files"
+	@ rm -f $(KONFIG_DIR)/*.orig
+	@ $(SUBMAKE) install
+	@ # replace .kfg files with older versions
+	@ cp $(SRCDIR)/default.kfg.2.8.1 $(KONFIG_DIR)/default.kfg
+	@ cp $(SRCDIR)/certs.kfg.2.8.1 $(KONFIG_DIR)/certs.kfg
+	@ # reinstall
+	@ $(SUBMAKE) install
+	@ # verify newer files are installed
+	@ diff $(TOP)/libs/kfg/default.kfg $(KONFIG_DIR)/default.kfg
+	@ diff $(TOP)/libs/kfg/certs.kfg $(KONFIG_DIR)/certs.kfg
+	@ # verify no old files were saved
+	@ ( ! test -f $(KONFIG_DIR)/default.kfg.orig ) || ( echo "Error: $(KONFIG_DIR)/default.kfg.orig exists" && exit 1 )
+	@ ( ! test -f $(KONFIG_DIR)/certs.kfg.orig ) || ( echo "Error: $(KONFIG_DIR)/certs.kfg.orig exists" && exit 1 )
 	@ #
 	@ #
 ifeq (,$(LINUX_ROOT))
