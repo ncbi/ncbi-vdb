@@ -91,6 +91,10 @@ void print_int_fixup   (char * fmt, size_t * len, size_t max);
 void print_float_fixup (char * fmt, size_t * len, size_t max);
 void print_char_fixup  (char * fmt, size_t * len, size_t max);
 
+/* implemented in the platform-specific syswriter.c files */
+size_t CC sys_simple_write( int fd, const void * buf, size_t count );
+int CC sys_is_a_tty( int fd );
+
 extern const char *gRCModule_str [];
 extern const char *gRCTarget_str [];
 extern const char *gRCContext_str [];
