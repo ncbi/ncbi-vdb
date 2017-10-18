@@ -66,6 +66,11 @@ private:
                                   const AST &      p_factoryArgs,
                                   SPhysMember &    p_col );
     bool HandleTypedColumn ( SColumn & p_col, const AST & p_typedCol );
+    bool Extend ( const Token :: Location & p_loc, const STable * p_dad );
+    bool CheckParentForCollisions ( const Token :: Location & p_loc, const STable * p_dad );
+    bool CheckForCollisions ( const STable & p_table, const String *& p_name );
+    bool CheckForSymCollision ( const KSymbol *sym );
+    bool ScanVirtuals ( const Token :: Location & p_loc, STableOverrides * p_to );
 
 private:
     ASTBuilder &    m_builder;
@@ -177,6 +182,188 @@ TableDeclaration :: HandleOverload ( const KSymbol * p_priorDecl )
     return false;
 }
 
+static
+bool
+CopyColumnNames ( void *item, void *data )
+{
+    rc_t rc;
+    STable *self= (STable*)data;
+    SNameOverload *copy;
+    const SNameOverload *orig = ( const SNameOverload* ) item;
+    const KSymbol *sym = ( const KSymbol* )
+        BSTreeFind ( & self -> scope, & orig -> name -> name, KSymbolCmp );
+    if ( sym == NULL )
+    {
+        rc = SNameOverloadCopy ( & self -> scope, & copy, orig );
+        if ( rc == 0 )
+        {
+            rc = VectorAppend ( & self -> cname, & copy -> cid . id, copy );
+            if ( rc != 0 )
+                SNameOverloadWhack ( copy, NULL );
+        }
+    }
+    else
+    {
+        copy = ( SNameOverload* ) sym -> u . obj;
+        assert ( copy -> cid . ctx == orig -> cid . ctx );
+        rc = VectorMerge ( & copy -> items, true, & orig -> items, SColumnSort );
+    }
+
+    return rc != 0;
+}
+
+bool
+TableDeclaration :: CheckForSymCollision ( const KSymbol *sym )
+{
+    const KSymbol *found = KSymTableFindSymbol ( & m_builder . GetSymTab (), sym );
+    if ( found != NULL && found != sym )
+    {
+        if ( found -> type == eColumn && sym -> type == eColumn )
+        {   /* when colliding columns originated in the same
+                table, consider them to be compatible extensions */
+            const SNameOverload * found_col = static_cast < const SNameOverload * > ( found -> u . obj );
+            const SNameOverload * sym_col = static_cast < const SNameOverload * > ( sym -> u . obj );
+            assert ( sym_col != NULL && found_col != NULL );
+            if ( sym_col -> cid . ctx == found_col -> cid . ctx )
+            {
+                return ! SOverloadTestForTypeCollision ( sym_col, found_col );
+            }
+        }
+        return false;
+    }
+    return true;
+}
+
+bool
+TableDeclaration :: CheckForCollisions ( const STable & p_table, const String *& p_name )
+{
+    /* test column names */
+    uint32_t start = VectorStart ( & p_table . cname );
+    uint32_t count = VectorLength ( & p_table . cname );
+    for ( uint32_t i = 0; i < count; ++ i )
+    {
+        const SNameOverload * no = static_cast < const SNameOverload * > ( VectorGet ( & p_table . cname, start + i ) );
+        if  ( ! CheckForSymCollision ( no -> name ) )
+        {
+            p_name = & no -> name -> name;
+            return false;
+        }
+    }
+
+    /* test physical names */
+    start = VectorStart ( & p_table . phys );
+    count = VectorLength ( & p_table . phys );
+    for ( uint32_t i = 0; i < count; ++ i )
+    {
+        const SPhysMember * phys = static_cast < const SPhysMember * > ( VectorGet ( & p_table . phys, start + i ) );
+        if  ( ! CheckForSymCollision ( phys -> name ) )
+        {
+            p_name = & phys -> name -> name;
+            return false;
+        }
+    }
+
+    /* test production names */
+    start = VectorStart ( & p_table .prod );
+    count = VectorLength ( & p_table . prod );
+    for ( uint32_t i = 0; i < count; ++ i )
+    {
+        const SProduction * prod = static_cast < const SProduction * > ( VectorGet ( & p_table . prod, start + i ) );
+        if  ( ! CheckForSymCollision ( prod -> name ) )
+        {
+            p_name = & prod -> name -> name;
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool
+TableDeclaration :: CheckParentForCollisions ( const Token :: Location & p_loc, const STable * p_dad )
+{
+    const String * name;
+    if ( ! CheckForCollisions ( * p_dad, name )
+        //|| VectorDoUntil ( & p_dad -> overrides, false, STableOverridesTestForCollisions, & m_builder . GetSymTab () ) NOTE: STableOverridesTestForCollisions is done in the old parser but looks redundant
+        )
+    {
+        m_builder . ReportError ( p_loc, "Duplicate symbol in parent table hierarchy", * name );
+        return false;
+    }
+    return true;
+}
+
+bool
+TableDeclaration :: Extend ( const Token :: Location & p_loc, const STable * p_dad )
+{
+    /* reject if direct parent already there */
+    uint32_t count = VectorLength ( & m_self -> parents );
+    for ( uint32_t i = 0; i < count; ++ i )
+    {
+        if ( VectorGet ( & m_self -> parents, i ) == p_dad )
+        {
+            m_builder . ReportError ( p_loc, "Same table inherited from more than once", p_dad -> name -> name );
+            return false;
+        }
+    }
+
+    /* if parent is already in ancestry, treat as redundant */
+    if ( VectorFind ( & m_self -> overrides, & p_dad -> id, NULL, STableOverridesCmp ) != NULL )
+    {
+        return m_builder . VectorAppend ( m_self -> parents, NULL, p_dad );
+    }
+
+    /* enter scope for this table */
+    rc_t rc = push_tbl_scope ( & m_builder . GetSymTab (), m_self );
+    if ( rc != 0 )
+    {
+        m_builder . ReportRc ( "push_tbl_scope", rc );
+        return false;
+    }
+
+    /* test for any collisions */
+    if ( ! CheckParentForCollisions ( p_loc, p_dad ) )
+    {
+        pop_tbl_scope ( & m_builder . GetSymTab (), m_self );
+        return false;
+    }
+
+    /* pop table scope */
+    pop_tbl_scope ( & m_builder . GetSymTab (), m_self );
+
+    /* add "p_dad" to parent list */
+    if ( ! m_builder . VectorAppend ( m_self -> parents, NULL, p_dad ) )
+    {
+        return false;
+    }
+
+    /* copy column names from parent - should already contain all grandparents */
+    if ( VectorDoUntil ( & p_dad -> cname, false, CopyColumnNames, m_self ) )
+    {
+        m_builder . ReportError ( p_loc, "???", m_self -> name -> name );//TODO - handle rc inside CopyColumnNames
+        return false;
+    }
+
+    /* add "p_dad" to overrides */
+    rc = STableOverridesMake ( & m_self -> overrides, p_dad, & p_dad -> vprods );
+    if ( rc == 0 )
+    {
+        /* add all grandparents */
+        if ( VectorDoUntil ( & p_dad -> overrides, false, STableOverridesClone, & m_self -> overrides ) )
+        {
+            m_builder . ReportError ( p_loc, "???", m_self -> name -> name ); //TODO
+            return false;
+        }
+    }
+    else if ( GetRCState ( rc ) != rcExists )
+    {
+        m_builder . ReportRc ( "STableOverridesMake", rc );
+        return false;
+    }
+
+    return true;
+}
+
 void
 TableDeclaration :: HandleParents ( const AST & p_parents )
 {
@@ -187,23 +374,71 @@ TableDeclaration :: HandleParents ( const AST & p_parents )
         const KSymbol * parentDecl = m_builder . Resolve ( parent, true );
         if ( parentDecl != 0 )
         {
-            if ( parentDecl -> type != eTable )
+            if ( parentDecl -> type == eTable )
+            {
+                const STable * dad = static_cast < const STable * > ( m_builder . SelectVersion ( parent, * parentDecl, STableCmp ) );
+                if ( dad != 0 )
+                {
+                    Extend ( parent . GetLocation (), dad );
+                }
+            }
+            else
             {
                 m_builder . ReportError ( "A table's parent has to be a table", parent );
-                continue;
-            }
-            const STable * dad = static_cast < const STable * > ( m_builder . SelectVersion ( parent, * parentDecl, STableCmp ) );
-            if ( dad != 0 )
-            {
-                rc_t rc = STableExtend ( & m_builder . GetSymTab (), m_self, dad );
-                if ( rc != 0 )
-                {   //TODO: check for (rcTable, rcExists), (rcName, rcExists)
-                    m_builder . ReportRc ( "STableExtend", rc );
-                    break;
-                }
             }
         }
     }
+}
+
+bool
+TableDeclaration :: ScanVirtuals ( const Token :: Location & p_loc, STableOverrides * p_to )
+{
+    uint32_t start = VectorStart ( & p_to -> overrides );
+    uint32_t count = VectorLength ( & p_to -> overrides );
+    for ( uint32_t i = 0; i < count; ++ i )
+    {
+        uint32_t idx = start + i;
+        const KSymbol * orig = static_cast < const KSymbol * > ( VectorGet ( & p_to -> overrides, idx ) );
+        assert ( orig != NULL );
+        if ( orig -> type == eVirtual )
+        {
+            void *ignore;
+
+            /* since the virtual productions in one parent could be
+               defined by another parent, test for the possibility */
+            const KSymbol *def = KSymTableFindSymbol ( & m_builder . GetSymTab (), orig );
+            if ( def != NULL )
+            {
+                if ( def -> type == eProduction || def -> type == eVirtual )
+                {
+                    VectorSwap ( & p_to -> overrides, idx, def, & ignore );
+                }
+                else
+                {
+                    m_builder . ReportError ( p_loc,
+                                              "a virtual production from one parent defined as non-production in another",
+                                              def -> name );
+                    return false;
+                }
+            }
+            else
+            {
+                /* copy the original */
+                BSTree * scope = static_cast < BSTree * > ( VectorLast ( & m_builder . GetSymTab () . stack ) );
+                KSymbol *copy;
+                rc_t rc = KSymbolCopy ( scope, & copy, orig );
+                if ( rc != 0 )
+                {
+                    m_builder . ReportRc ( "KSymbolCopy", rc );
+                    return false;
+                }
+
+                /* replace the parent virtual with an updatable copy */
+                VectorSwap ( & p_to -> overrides, idx, copy, & ignore );
+            }
+        }
+    }
+    return true;
 }
 
 void
@@ -213,6 +448,18 @@ TableDeclaration :: HandleBody ( const AST & p_body )
     if ( rc == 0 )
     {
         /* scan override tables for virtual symbols */
+        uint32_t start = VectorStart ( & m_self -> overrides );
+        uint32_t count = VectorLength ( & m_self -> overrides );
+        for ( uint32_t i = 0; i < count; ++ i )
+        {
+            STableOverrides * ov = static_cast < STableOverrides * > ( VectorGet ( & m_self -> overrides, start + i ) );
+            if ( ! ScanVirtuals ( p_body . GetLocation (), ov ) )
+            {
+                pop_tbl_scope ( & m_builder . GetSymTab (), m_self );
+                return;
+            }
+        }
+
         if ( VectorDoUntil ( & m_self -> overrides, false, STableScanVirtuals, & m_builder . GetSymTab () ) == 0 )
         {
             /* handle table declarations */
@@ -300,11 +547,6 @@ TableDeclaration :: HandleBody ( const AST & p_body )
             {
                 m_builder . ReportRc ( "table_fwd_scan", pb . rc );
             }
-        }
-        else
-        {
-            rc = RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted );
-            m_builder . ReportRc ( "STableScanVirtuals", rc );
         }
 
         pop_tbl_scope ( & m_builder . GetSymTab (), m_self );
@@ -604,8 +846,7 @@ TableDeclaration :: HandleTypedColumn ( SColumn & p_col, const AST & p_typedCol 
     {
         switch ( priorDecl -> type )
         {
-        case eForward:
-        case eVirtual:
+            case eForward:
             /* if column was forwarded, give it a type */
             p_col . name = priorDecl;
             priorDecl -> type = eColumn;
@@ -646,8 +887,9 @@ TableDeclaration :: HandleTypedColumn ( SColumn & p_col, const AST & p_typedCol 
                 }
             }
             break;
+        case eVirtual: // cannot define virtual productions as columns
         default:
-            m_builder . ReportError ( p_typedCol . GetLocation (), "Columne name is already in use", ident );
+            m_builder . ReportError ( p_typedCol . GetLocation (), "Column name is already in use", ident );
             return false;
         }
     }

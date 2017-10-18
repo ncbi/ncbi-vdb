@@ -130,9 +130,15 @@ void CC SViewWhack ( void * item, void *ignore )
     VectorWhack ( & self -> tables, NULL, NULL );
     VectorWhack ( & self -> views, NULL, NULL );
     VectorWhack ( & self -> parents, NULL, NULL );
+
     VectorWhack ( & self -> col, SColumnWhack, NULL );
     VectorWhack ( & self -> cname, SNameOverloadWhack, NULL );
+
     VectorWhack ( & self -> prod, SProductionWhack, NULL );
+    VectorWhack ( & self -> vprods, NULL, NULL );
+    VectorWhack ( & self -> syms, ( void ( CC * ) ( void*, void* ) ) KSymbolWhack, NULL );
+
+    VectorWhack ( & self -> overrides, SViewOverridesWhack, NULL );
 
     BSTreeWhack ( & self -> scope, KSymbolWhack, NULL );
 
@@ -210,7 +216,7 @@ push_view_scope ( struct KSymTable * tbl, const SView * view )
 }
 
 static
-bool STableTestForSymCollision ( const KSymbol *sym, void *data )
+bool SViewTestForSymCollision ( const KSymbol *sym, void *data )
 {
     const KSymTable *tbl = ( const void* ) data;
     const KSymbol *found = KSymTableFindSymbol ( tbl, sym );
@@ -242,20 +248,20 @@ static
 bool CC SViewTestColCollisions ( void *item, void *data )
 {
     const SNameOverload *no = ( const void* ) item;
-    return STableTestForSymCollision ( no -> name, data );
+    return SViewTestForSymCollision ( no -> name, data );
 }
 
 static
 bool CC SViewTestProdCollisions ( void *item, void *data )
 {
     const SProduction *prod = ( const void* ) item;
-    return STableTestForSymCollision ( prod -> name, data );
+    return SViewTestForSymCollision ( prod -> name, data );
 }
 
 static
 bool SViewTestForCollisions ( void *item, void *data )
 {
-    const STable *self = ( const void* ) item;
+    const SView *self = ( const void* ) item;
 
     /* test column names */
     if ( VectorDoUntil ( & self -> cname, false, SViewTestColCollisions, data ) )
@@ -305,59 +311,74 @@ bool CC SViewCopyColumnNames ( void *item, void *data )
     return ( rc != 0 ) ? true : false;
 }
 
-rc_t CC SViewExtend ( KSymTable *tbl, SView *self, const SView *dad )
+bool CC view_fwd_scan ( BSTNode *n, void *data )
 {
-    rc_t rc;
-    /* reject if direct parent already there */
-    if ( VectorDoUntil ( & self -> parents, false, SViewHasDad, ( void* ) dad ) )
+    SViewScanData *pb = data;
+    KSymbol *sym = ( KSymbol* ) n;
+    SView *self = pb -> self;
+
+    /* process forwarded symbols */
+    if ( sym -> type == eForward )
     {
-        return RC ( rcVDB, rcSchema, rcParsing, rcTable, rcExists );
+        /* this symbol was introduced in THIS view */
+        sym -> u . fwd . ctx = self -> id;
+
+        /* add it to the introduced virtual productions and make it virtual */
+        pb -> rc = VectorAppend ( & self -> vprods, & sym -> u . fwd . id, sym );
+        if ( pb -> rc != 0 )
+            return true;
+        sym -> type = eVirtual;
+    }
+    /* symbols other than fwd or virtual are ignored */
+    else if ( sym -> type != eVirtual )
+    {
+        return false;
     }
 
-    /* if parent is already in ancestry, treat as redundant */
-    if ( VectorFind ( & self -> overrides, & dad -> id, NULL, SViewOverridesCmp ) != NULL )
-    {
-        return VectorAppend ( & self -> parents, NULL, dad );
-    }
-#if 0
-        /* enter scope for this table */
-    rc = push_view_scope ( tbl, self );
-    if ( rc != 0 )
-        return rc;
+    /* add symbol to vector to track ownership */
+    pb -> rc = VectorAppend ( & self -> syms, NULL, sym );
+    if ( pb -> rc != 0 )
+        return true;
 
-    /* test for any collisions */
-    if ( SViewTestForCollisions ( ( void* ) dad, tbl ) ||
-         VectorDoUntil ( & dad -> overrides, false, SViewOverridesTestForCollisions, tbl ) )
-    {
-        pop_view_scope ( tbl, self );
-        return RC ( rcVDB, rcSchema, rcParsing, rcName, rcExists );
-    }
-
-    /* pop table scope */
-    pop_view_scope ( tbl, self );
-#endif
-    /* add "dad" to parent list */
-    rc = VectorAppend ( & self -> parents, NULL, dad );
-    if ( rc != 0 )
-        return rc;
-
-#if 0
-    /* copy column names from parent - should already contain all grandparents */
-    if ( VectorDoUntil ( & dad -> cname, false, SViewCopyColumnNames, self ) )
-        return RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted );
-
-    /* add "dad" to overrides */
-    rc = SViewOverridesMake ( & self -> overrides, dad, & dad -> vprods );
-    if ( rc == 0 )
-    {
-        /* add all grandparents */
-        if ( VectorDoUntil ( & dad -> overrides, false, SViewOverridesClone, & self -> overrides ) )
-            rc = RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted );
-    }
-    else if ( GetRCState ( rc ) == rcExists )
-    {
-        rc = 0;
-    }
-#endif
-    return rc;
+    /* remove from symbol table */
+    BSTreeUnlink ( & self -> scope, & sym -> n );
+    return false;
 }
+
+static
+void CC column_set_context ( void *item, void *data )
+{
+    SColumn *self = item;
+    self -> cid . ctx = * ( const uint32_t* ) data;
+}
+
+static
+void CC name_set_context ( void *item, void *data )
+{
+    SNameOverload *self = item;
+    if ( ( int32_t ) self -> cid . ctx < 0 )
+        self -> cid . ctx = * ( const uint32_t* ) data;
+}
+
+static
+void CC production_set_context ( void *item, void *data )
+{
+    SProduction *self = item;
+    self -> cid . ctx = * ( const uint32_t* ) data;
+}
+
+static
+void CC symbol_set_context ( void *item, void *data )
+{
+    KSymbol *self = item;
+    self -> u . fwd . ctx = * ( const uint32_t* ) data;
+}
+
+void CC view_set_context ( SView *self )
+{
+    VectorForEach ( & self -> col, false, column_set_context, & self -> id );
+    VectorForEach ( & self -> cname, false, name_set_context, & self -> id );
+    VectorForEach ( & self -> prod, false, production_set_context, & self -> id );
+    VectorForEach ( & self -> vprods, false, symbol_set_context, & self -> id );
+}
+

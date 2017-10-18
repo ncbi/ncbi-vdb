@@ -342,18 +342,10 @@ bool CC SPhysMemberDefDump ( void *item, void *data )
  */
 
 #if SLVL >= 6
-typedef struct STableOverrides STableOverrides;
-struct STableOverrides
-{
-    const STable *dad;
-    Vector overrides;
-    uint32_t ctx;
-};
 
 /* Cmp
  * Sort
  */
-static
 int64_t CC STableOverridesCmp ( const void *item, const void *n )
 {
     const uint32_t *a = item;
@@ -389,7 +381,6 @@ void CC STableOverridesWhack ( void *item, void *ignore )
 
 /* Make
  */
-static
 rc_t STableOverridesMake ( Vector *parents, const STable *dad, const Vector *overrides )
 {
     rc_t rc;
@@ -425,7 +416,6 @@ rc_t STableOverridesMake ( Vector *parents, const STable *dad, const Vector *ove
     return 0;
 }
 
-static
 bool CC STableOverridesClone ( void *item, void *data )
 {
     const STableOverrides *self = ( const void* ) item;
@@ -771,7 +761,20 @@ bool CC STableScanVirtuals ( void *item, void *data )
                defined by another parent, test for the possibility */
             const KSymbol *def = KSymTableFindSymbol ( tbl, orig );
             if ( def != NULL )
-                VectorSwap ( & to -> overrides, i, def, & ignore );
+            {
+                if ( def -> type == eProduction || def -> type == eVirtual )
+                {
+                    VectorSwap ( & to -> overrides, i, def, & ignore );
+                }
+                else
+                {
+                    PLOGMSG ( klogErr, ( klogErr, "a virtual production from one parent defined as non-production in another: '$(sym)'"
+                        , "sym=%S"
+                        , & def -> name
+                    ));
+                    return true;
+                }
+            }
             else
             {
                 /* copy the original */
@@ -1861,7 +1864,7 @@ rc_t typed_column_decl ( KSymTable *tbl, KTokenSource *src, KToken *t,
     rc_t rc = 0;
 
     /* if column was forwarded, give it a type */
-    if ( t -> id == eForward || t -> id == eVirtual )
+    if ( t -> id == eForward /*|| t -> id == eVirtual */ ) /* a virtual production cannot be resolved into a column */
     {
         c -> name = t -> sym;
         t -> sym -> type = eColumn;

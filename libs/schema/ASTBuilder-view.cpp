@@ -57,6 +57,7 @@ public:
 private:
     bool HandleOverload ( const AST_FQN & p_fqn, const KSymbol * p_priorDecl );
     void AddColumn ( const AST & p_type, const AST & p_ident, const AST_Expr & p_expr );
+    bool Extend ( const Token :: Location & p_loc, const SView *dad );
 
     ASTBuilder &    m_builder;
     SView *         m_self;
@@ -211,6 +212,75 @@ ViewDeclaration :: HandleParameters ( const AST & p_params )
     }
 }
 
+bool
+ViewDeclaration :: Extend ( const Token :: Location & p_loc, const SView * p_dad )
+{
+    /* reject if direct parent already there */
+    uint32_t count = VectorLength ( & m_self -> parents );
+    for ( uint32_t i = 0; i < count; ++ i )
+    {
+        if ( VectorGet ( & m_self -> parents, i ) == p_dad )
+        {
+            m_builder . ReportError ( p_loc, "Same view inherited from more than once", p_dad -> name -> name );
+            return false;
+        }
+    }
+
+    /* if parent is already in ancestry, treat as redundant */
+    if ( VectorFind ( & m_self -> overrides, & p_dad -> id, NULL, SViewOverridesCmp ) != NULL )
+    {
+        return VectorAppend ( & m_self -> parents, NULL, p_dad );
+    }
+
+    /* test for any collisions */
+    rc_t rc = push_view_scope ( & m_builder . GetSymTab (), m_self );
+    if ( rc != 0 )
+    {
+        m_builder . ReportRc ( "push_tbl_scope", rc );
+        return false;
+    }
+
+    if ( ! CheckParentForCollisions ( p_loc, p_dad ) )
+    {
+        pop_view_scope ( & m_builder . GetSymTab (), m_self );
+        return false;
+    }
+
+    pop_view_scope ( & m_builder . GetSymTab (), m_self );
+
+    /* add "dad" to parent list */
+    if ( ! m_builder . VectorAppend ( m_self -> parents, NULL, p_dad ) )
+    {
+        return false;
+    }
+
+    /* copy column names from parent - should already contain all grandparents */
+    if ( VectorDoUntil ( & p_dad -> cname, false, SViewCopyColumnNames, m_self ) )
+    {
+        m_builder . ReportError ( p_loc, "???", m_self -> name -> name );//TODO - handle rc inside CopyColumnNames
+        return false;
+    }
+
+    /* add "dad" to overrides */
+    rc = SViewOverridesMake ( & m_self -> overrides, p_dad, & p_dad -> vprods );
+    if ( rc == 0 )
+    {
+        /* add all grandparents */
+        if ( VectorDoUntil ( & p_dad -> overrides, false, SViewOverridesClone, & m_self -> overrides ) )
+        {
+            m_builder . ReportError ( p_loc, "???", m_self -> name -> name ); //TODO
+            return false;
+        }
+    }
+    else if ( GetRCState ( rc ) == rcExists )
+    {
+        m_builder . ReportRc ( "STableOverridesMake", rc );
+        return false;
+    }
+
+    return true;
+}
+
 void
 ViewDeclaration :: HandleParents ( const AST & p_parents )
 {
@@ -225,32 +295,21 @@ ViewDeclaration :: HandleParents ( const AST & p_parents )
             const KSymbol * parentDecl = m_builder . Resolve ( parent ); // will report unknown name
             if ( parentDecl != 0 )
             {
-                if ( parentDecl -> type != eView )
+                if ( parentDecl -> type == eView )
+                {
+                    const SView * dad = static_cast < const SView * > ( m_builder . SelectVersion ( parent, * parentDecl, SViewCmp ) );
+                    if ( dad != 0 )
+                    {
+                        Extend ( parent . GetLocation (), dad );
+                    }
+                }
+                else
                 {
                     m_builder . ReportError ( "A view's parent has to be a view", parent );
-                    continue;
-                }
-                const SView * dad = static_cast < const SView * > ( m_builder . SelectVersion ( parent, * parentDecl, SViewCmp ) );
-                if ( dad != 0 )
-                {
-                    rc_t rc = SViewExtend ( & m_builder . GetSymTab (), m_self, dad );
-                    if ( rc != 0 )
-                    {
-                        if ( GetRCObject(rc) == (enum RCObject)rcTable && GetRCState(rc) == rcExists )
-                        {
-                            m_builder . ReportError ( "Same view inherited from more than once", parent );
-                        } //TODO: check for (rcName, rcExists)
-                        else
-                        {
-                            m_builder . ReportRc ( "SViewExtend", rc );
-                            break;
-                        }
-                    }
                 }
             }
         }
     }
-
 }
 
 void
@@ -347,16 +406,17 @@ ViewDeclaration :: HandleBody ( const AST & p_body )
                     assert ( false );
                 }
             }
-#if NOT_SURE_IF_NEEDED
-            STableScanData pb;
+
+            SViewScanData pb;
             pb . self = m_self;
             pb . rc = 0;
 
-            /* scan table scope for unresolved forward references */
-            if ( BSTreeDoUntil ( & m_self -> scope, false, table_fwd_scan, & pb ) )
+            /* scan view scope for unresolved forward references */
+            if ( BSTreeDoUntil ( & m_self -> scope, false, view_fwd_scan, & pb ) )
             {
-                m_builder . ReportRc ( "table_fwd_scan", pb . rc );
+                m_builder . ReportRc ( "view_fwd_scan", pb . rc );
             }
+#if NOT_SURE_IF_NEEDED
         }
         else
         {
@@ -364,7 +424,6 @@ ViewDeclaration :: HandleBody ( const AST & p_body )
             m_builder . ReportRc ( "STableViewVirtuals", rc );
         }
 #endif
-
         pop_view_scope ( & m_builder . GetSymTab (), m_self );
 
 #if NOT_SURE_IF_NEEDED
@@ -377,9 +436,9 @@ ViewDeclaration :: HandleBody ( const AST & p_body )
                 m_builder . ReportRc ( "table_fix_forward_refs", rc );
             }
         }
-
-        table_set_context ( m_self );
 #endif
+
+        view_set_context ( m_self );
     }
     else
     {

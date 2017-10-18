@@ -411,6 +411,7 @@ ASTBuilder :: CreateOverload ( const KSymbol *  p_name,
             {
                 if ( VectorAppend ( p_names, & ovl -> cid . id, ovl ) )
                 {
+                    ovl -> cid . ctx = -1;
                     return true;
                 }
             }

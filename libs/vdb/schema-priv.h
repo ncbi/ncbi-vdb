@@ -1088,6 +1088,29 @@ rc_t CC table_fix_forward_refs ( const STable *table );
 bool CC SOverloadTestForTypeCollision ( const SNameOverload *a, const SNameOverload *b );
 
 /*--------------------------------------------------------------------------
+ * STableOverrides
+ *  describes extended parent
+ */
+
+typedef struct STableOverrides STableOverrides;
+struct STableOverrides
+{
+    const STable *dad;
+    Vector overrides;
+    uint32_t ctx;
+};
+
+/* Cmp
+ */
+int64_t CC STableOverridesCmp ( const void *item, const void *n );
+
+/* Make
+ */
+rc_t STableOverridesMake ( Vector *parents, const STable *dad, const Vector *overrides );
+
+bool CC STableOverridesClone ( void *item, void *data );
+
+/*--------------------------------------------------------------------------
  * SColumn
  *  column declaration
  */
@@ -1418,12 +1441,12 @@ struct SView
 
     /* introduced virtual ( undefined ) productions
        contents are unowned KSymbol pointers */
-       Vector vprods;
-
-#if NOT_NEEDED_YET
+    Vector vprods;
 
     /* owned KSymbols that are not in scope */
     Vector syms;
+
+#if NOT_NEEDED_YET
 
     /* source file & line */
     String src_file;
@@ -1454,6 +1477,23 @@ int64_t CC SViewSort ( const void *item, const void *n );
  */
 void CC pop_view_scope ( struct KSymTable * tbl, const SView * view );
 rc_t CC push_view_scope ( struct KSymTable * tbl, const SView * view );
+
+/* view_fwd_scan
+ *  converts unresolved column references to virtual columns
+ */
+typedef struct SViewScanData SViewScanData;
+struct SViewScanData
+{
+    SView *self;
+    rc_t rc;
+};
+
+bool CC view_fwd_scan ( BSTNode *n, void *data );
+
+/* view_set_context
+ * set the view id on all members
+ */
+void CC view_set_context ( SView *self );
 
 #ifdef __cplusplus
 }

@@ -415,6 +415,22 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_Simple, AST_Table_Fixture)
     VerifyImplicitPhysicalColumn ( c );
 }
 
+FIXTURE_TEST_CASE(Table_ColumnDecl_Context, AST_Table_Fixture)
+{
+    TableAccess v = ParseTable (
+        "table T#1 {};"
+        "table W#1 { column U8 c1 = 1; column U8 c2 = 2; }",
+    "W", 1 );
+    const SNameOverload * ovl = v . GetColumnName ( 0 );
+    REQUIRE_NOT_NULL ( ovl );
+    REQUIRE_EQ ( 1u, ovl -> cid . ctx );
+    REQUIRE_EQ ( 0u, ovl -> cid . id );
+    ovl = v . GetColumnName ( 1 );
+    REQUIRE_NOT_NULL ( ovl );
+    REQUIRE_EQ ( 1u, ovl -> cid . ctx );
+    REQUIRE_EQ ( 1u, ovl -> cid . id );
+}
+
 FIXTURE_TEST_CASE(Table_ColumnDecl_SimpleColumn_Typeset, AST_Table_Fixture)
 {
     VerifyErrorMessage ( "typeset TypeSet {U8}; table t#1 { column TypeSet c; }",
@@ -494,6 +510,48 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_PhysicalColumn_PredefineAndOverload, AST_Tabl
 FIXTURE_TEST_CASE(Table_ColumnDecl_NotAType, AST_Table_Fixture)
 {
     VerifyErrorMessage ( "table t1#1 {}; table t2#1 { column t1 c; }", "Cannot be used as a column type: 't1'" );
+}
+
+FIXTURE_TEST_CASE(Table_Parents_ColumnCollision, AST_Table_Fixture)
+{
+    VerifyErrorMessage (
+        "table T1#1 { column U8 p = 1; }; "
+        "table T2#1 { column U16 p = 2; }; "
+        "table T#1 = T1, T2 { };",
+        "Duplicate symbol in parent table hierarchy: 'p'" );
+}
+FIXTURE_TEST_CASE(Table_Parents_PhysicalColumn_Collision, AST_Table_Fixture)
+{
+    VerifyErrorMessage (
+        "table T1#1 { physical U8 .p = 1; }; "
+        "table T2#1 { physical U16 .p = 2; }; "
+        "table T#1 = T1, T2 {};",
+        "Duplicate symbol in parent table hierarchy: '.p'" );
+}
+FIXTURE_TEST_CASE(Table_Parents_Production_Collision, AST_Table_Fixture)
+{
+    VerifyErrorMessage (
+        "table T1#1 { U8 p = 1; }; "
+        "table T2#1 { U8 p = 2; }; "
+        "table T#1 = T1, T2 { U8 blah =0; };",
+        "Duplicate symbol in parent table hierarchy: 'p'" );
+}
+
+FIXTURE_TEST_CASE(Table_Parents_Virtual_DefinedAsColumn, AST_Table_Fixture)
+{
+    VerifyErrorMessage (
+        "table T1#1 { U8 p1 = v; }; "
+        "table T#1 = T1 { column U8 v; };",
+        "Column name is already in use: 'v'" );
+}
+
+FIXTURE_TEST_CASE(Table_Parents_Virtual_DefinedAsColumn_InAnotherParent, AST_Table_Fixture)
+{
+    VerifyErrorMessage (
+        "table T1#1 { U8 p1 = v; }; "
+        "table T2#1 { column U8 v; }; "
+        "table T#1 = T1, T2 { U8 blah = 1; };",
+        "a virtual production from one parent defined as non-production in another: 'v'" );
 }
 
 static
@@ -739,6 +797,13 @@ FIXTURE_TEST_CASE(Table_ColumnDeclBody_All, AST_Table_Fixture)
     REQUIRE_NOT_NULL ( c . validate );
     REQUIRE_NOT_NULL ( c . limit );
     REQUIRE ( ! c . simple );
+}
+
+FIXTURE_TEST_CASE(Table_ColumnDecl_Forward, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable  ( "table t#1 { U8 p1 = v; column U8 v; };", "t" );
+    const SColumn & c = * t . GetColumn ( 0 );
+    REQUIRE ( c . simple );
 }
 
 FIXTURE_TEST_CASE(Table_ColumnDecl_Init, AST_Table_Fixture)

@@ -47,6 +47,7 @@ public:
     }
 
     uint32_t Version () const { return m_self -> version; }
+    uint32_t Id () const { return m_self -> id; }
 
     uint32_t OverloadCount () const
     {
@@ -103,6 +104,12 @@ public:
         return static_cast < const SProduction * > ( VectorGet ( & m_self -> prod, p_idx ) );
     }
 
+    uint32_t VirtualProductionCount () const { return VectorLength ( & m_self -> vprods ); }
+    const KSymbol * GetVirtualProduction ( uint32_t p_idx ) const
+    {
+        return static_cast < const KSymbol * > ( VectorGet ( & m_self -> vprods, p_idx ) );
+    }
+
     const KSymbol * VectorGetSymbol ( const Vector & p_vect, uint32_t p_idx ) const
     {
         return static_cast < const KSymbol * > ( VectorGet ( & p_vect, p_idx ) );
@@ -152,6 +159,16 @@ FIXTURE_TEST_CASE(View_OneTable_NoParents, AST_View_Fixture)
     REQUIRE_EQ ( 1u, VectorLength ( & GetSchema () -> vname ) );
     REQUIRE_EQ ( 1u, v . OverloadCount () );
     REQUIRE_EQ ( v . GetOverloads (), ( const SNameOverload * ) VectorGet ( & GetSchema () -> vname, 0 ) );
+}
+
+FIXTURE_TEST_CASE(View_Id, AST_View_Fixture)
+{   // both version are registered
+    ViewAccess v1 = ParseView ( "version 2; table T#1 {}; view v#1 <T t> {}; view v#2 <T t> {}", "v" );
+    ViewAccess v2 = GetView ( 1 );
+
+    REQUIRE_EQ ( 2u, VectorLength ( & GetSchema () -> view ) );
+    REQUIRE_EQ ( 0u, v1 . Id () );
+    REQUIRE_EQ ( 1u, v2 . Id () );
 }
 
 // Version
@@ -440,6 +457,23 @@ FIXTURE_TEST_CASE(View_Column_ReferenceToParamViewsColumn_Undefined, AST_View_Fi
         "Column/production not found: 'c22222222'" );
 }
 
+FIXTURE_TEST_CASE(View_Column_Context, AST_View_Fixture)
+{
+    ViewAccess v = ParseView (
+        "version 2; table T#1 {};"
+        " view V#1 <T t> {}"
+        " view W#1 <T t> { column U8 c1 = 1; column U8 c2 = 2; }",
+    "W", 1 );
+    const SNameOverload * ovl = v . GetColumnName ( 0 );
+    REQUIRE_NOT_NULL ( ovl );
+    REQUIRE_EQ ( 1u, ovl -> cid . ctx );
+    REQUIRE_EQ ( 0u, ovl -> cid . id );
+    ovl = v . GetColumnName ( 1 );
+    REQUIRE_NOT_NULL ( ovl );
+    REQUIRE_EQ ( 1u, ovl -> cid . ctx );
+    REQUIRE_EQ ( 1u, ovl -> cid . id );
+}
+
 // View body: productions
 
 FIXTURE_TEST_CASE(View_Production, AST_View_Fixture)
@@ -459,59 +493,87 @@ FIXTURE_TEST_CASE(View_Production, AST_View_Fixture)
     REQUIRE ( ! p . control );
 }
 
+FIXTURE_TEST_CASE(View_Production_ClashWithColumn, AST_View_Fixture)
+{
+    VerifyErrorMessage (
+        "version 2; table T#1 {}; view V#1 <T v> { column U8 c = 1; U8 c = 1; }",
+        "Production name is already in use: 'c'" );
+}
+
+FIXTURE_TEST_CASE(View_Production_IntroducingVirtual, AST_View_Fixture)
+{
+    ViewAccess v = ParseView ( "version 2; table T#1 {}; view V#1 <T v> { column U8 p = vp; }", "V" );
+    REQUIRE_EQ ( 1u, v . VirtualProductionCount () );
+    REQUIRE_EQ ( string ("vp"), ToCppString ( v . GetVirtualProduction ( 0 ) -> name ) );
+}
+
 // Inheritance
-
-//TODO: column name clashes with parents
-//TODO: column/production names clash within body
-//TODO: View_ReferenceToParentsColumn
-//TODO: View_ReferenceToParentsProduction
-
-//TODO: redeclaring parents' column (error)
-
-//TODO: resolving parent's virtual productions
-//TODO: resolving parent's virtual production as a column (error)
-
-#if NOT_IMPLEMENTED
 
 FIXTURE_TEST_CASE(View_Parents_ColumnsInherited, AST_View_Fixture)
 {
     ViewAccess v = ParseView (
         "version 2; table T#1 {}; "
-        "view V#1 <T t> { U8 v = 1; }; "
-        "view W#1 <T t> { U16 w = 1; }; "
-        "view X#1 <T v> = V, W {}",
+        "view V#1 <T t> { column U8  v = 1; }; "
+        "view W#1 <T t> { column U16 w = 1; }; "
+        "view X#1 <T t> = V, W {}",
         "X", 2 );
-    REQUIRE_EQ ( 2u, v . ColumnOverloadCount () );
-//        const SNameOverload * GetColumnOverload ( uint32_t p_idx ) const
+    REQUIRE_EQ ( 2u, v . ColumnNameCount () );
+    // v and w are seen as X's columns
+    REQUIRE_EQ ( string ("v"), ToCppString ( v . GetColumnName ( 0 ) -> name -> name ) );
+    REQUIRE_EQ ( string ("w"), ToCppString ( v . GetColumnName ( 1 ) -> name -> name ) );
 }
 
-//TODO: productions inherited
-//TODO: virtual productions inherited
-//TODO: multilevel inheritance
+FIXTURE_TEST_CASE(View_Parents_ProductionsInherited, AST_View_Fixture)
+{
+    ViewAccess v = ParseView (
+        "version 2; table T#1 {}; "
+        "view V#1 <T t> { U8  v = 1; }; "
+        "view X#1 <T t> = V { U8 _v = v; }",
+        "X", 1 );
+    // v does not count as X's production but is accessible
+    REQUIRE_EQ ( 1u, v . ProductionCount () );
+    REQUIRE_EQ ( string ("_v"), ToCppString ( v . GetProduction ( 0 ) -> name -> name ) );
+}
 
-FIXTURE_TEST_CASE(View_Parents_NameCollision, AST_View_Fixture)
+FIXTURE_TEST_CASE(View_Parents_ColumnCollision, AST_View_Fixture)
+{
+    VerifyErrorMessage (
+        "version 2; table T#1 {}; "
+        "view V#1 <T t> { column U8 p = 1; }; "
+        "view W#1 <T t> { column U8 p = 2; }; "
+        "view X#1 <T v> = V, W {}",
+        "Duplicate symbol in parent view hierarchy: 'p'" );
+}
+
+#if NOT_IMPLEMENTED
+//TODO: name+type collisions between parents' productions
+FIXTURE_TEST_CASE(View_Parents_ProductionCollision, AST_View_Fixture)
 {
     VerifyErrorMessage (
         "version 2; table T#1 {}; "
         "view V#1 <T t> { U8 p = 1; }; "
-        "view W#1 <T t> { U16 p = 1; }; "
+        "view W#1 <T t> { U8 p = 2; }; "
         "view X#1 <T v> = V, W {}",
         "" );
 }
-
-//TODO: bad version of a parent
 #endif
 
-// View body
-//TODO: read-only columns only
-//TODO: .ident not allowed
+//TODO: virtual productions inherited
+//TODO: virtual productions in one parent defined by another parent
+//TODO: multilevel inheritance
+
 //TODO: column name clashes with parents
-//TODO: column/production names clash within body
-//TODO: refer to parameter's column
-//TODO: refer to parent's column
-//TODO: refer to parameter's production
-//TODO: refer to parent's production
+
+//TODO: View_ReferenceToParentsColumn
+//TODO: View_ReferenceToParentsProduction
+
+//TODO: redeclaring parents' column (error)
+
 //TODO: overloading parents' column
-//TODO: overloading own column
-//TODO: overloading own production
+
 //TODO: resolving parent's virtual productions
+//TODO: resolving parent's virtual production as a column (error)
+
+//TODO: bad version of a parent
+
+
