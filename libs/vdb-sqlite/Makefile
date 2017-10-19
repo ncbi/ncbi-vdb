@@ -39,11 +39,22 @@ include $(TOP)/build/Makefile.env
 #-------------------------------------------------------------------------------
 # outer targets
 #
+ifeq (1,$(HAVE_XML2))
+
 all std: makedirs
 	@ $(MAKE_CMD) $(TARGDIR)/std
 
 $(EXT_LIBS): makedirs
 	@ $(MAKE_CMD) $(LIBDIR)/$@
+
+else
+
+all std: $(ALL_LIBS)
+
+$(EXT_LIBS):
+	@ echo "NOTE - library $(@F) cannot be built:"                  \
+		"It requires 'libxml2' and its development headers."
+endif
 
 .PHONY: all std $(ALL_LIBS)
 
