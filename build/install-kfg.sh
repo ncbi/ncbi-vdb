@@ -44,7 +44,7 @@ if [ -f ${TGT_FILE} ] ; then
     # echo "$1 md5=$md5"
     if [ "$(grep ${md5} ${MD5SUMS})" == "" ] ; then
         # not a known version of the file; create a backup copy
-        mv -b -v ${TGT_FILE} ${TGT_FILE}.orig
+        mv -v ${TGT_FILE} ${TGT_FILE}.orig
     fi
 fi
 
