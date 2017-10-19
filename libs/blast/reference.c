@@ -49,7 +49,7 @@
 #define MAX_BIT64 (~((uint64_t)-1 >> 1))
 
 static bool _is_set_read_id_reference_bit(uint64_t read_id) {
-    return read_id & MAX_BIT64;
+    return ( read_id & MAX_BIT64 ) == 0 ? false : true;
 }
 
 static
@@ -185,7 +185,8 @@ static VdbBlastStatus _VdbBlastRefSetCounts(VdbBlastRef *self, uint64_t cur_row,
             return eVdbBlastErr;
         }
         else {
-            self->base_count = (self->count - 1) * MAX_SEQ_LEN + read_len;
+            self->base_count
+                = ( size_t ) ( (self->count - 1) * MAX_SEQ_LEN + read_len );
         }
 
     }
@@ -202,16 +203,15 @@ static VdbBlastStatus _VdbBlastRefSetCounts(VdbBlastRef *self, uint64_t cur_row,
 void _RefSetFini(RefSet *self) {
     size_t i = 0;
 
-    if (self == NULL) {
+    if (self == NULL)
         return;
-    }
 
     BSTreeWhack(&self->tRuns   , BstNodeWhack, NULL);
     BSTreeWhack(&self->tExtRefs, BstNodeWhack, NULL);
-
-    for (i = 0; i < self->rfdk; ++i) {
+    BSTreeWhack(&self->tIntRefs, BstNodeWhack, NULL);
+    
+    for (i = 0; i < self->rfdk; ++i)
         _VdbBlastRefWhack(&self->rfd[i]);
-    }
 
     free(self->rfd);
 
@@ -274,6 +274,7 @@ const References* _RunSetMakeReferences
     }
     BSTreeInit(&refs->tRuns);
     BSTreeInit(&refs->tExtRefs);
+    BSTreeInit(&refs->tIntRefs);
     r->rs = self;
     r->refs = refs;
     for (irun = 0; irun < self->krun; ++irun) {
@@ -285,9 +286,9 @@ const References* _RunSetMakeReferences
         uint64_t count = 0;
         uint64_t cur_row = 0;
         const VdbBlastRun *run = &self->run[irun];
-        if (run->obj == NULL || run->obj->db == NULL) {
+        if (run->obj == NULL || run->obj->db == NULL)
             continue;
-        }
+
         {
             BstNode *n
                 = (BstNode*)BSTreeFind(&refs->tRuns, run->acc, BstNodeCmpStr);
@@ -479,9 +480,14 @@ const References* _RunSetMakeReferences
                     totalLen += bc;
                 }
 
-                if (external) {
+#ifndef UNIQ_INTERNAL_SEQ_ID_REFS
+                if (external)
+#endif
+                {
+                    BSTree * tRefs
+                        = external ? & refs->tExtRefs : & refs->tIntRefs;
                     BstNode *n = (BstNode*)
-                        BSTreeFind(&refs->tExtRefs, SEQ_ID, BstNodeCmpStr);
+                        BSTreeFind(tRefs, SEQ_ID, BstNodeCmpStr);
                     if (n != NULL) {  /* we already have this reference */
                         free(SEQ_ID); /* in one of the previous runs */
                         SEQ_ID = NULL;
@@ -493,12 +499,12 @@ const References* _RunSetMakeReferences
                             return NULL;
                         }
                         BstNodeInit(n, SEQ_ID, refs->rfdk);
-                        BSTreeInsert(&refs->tExtRefs, (BSTNode*)n, RunBstSort);
+                        BSTreeInsert(tRefs, (BSTNode*)n, RunBstSort);
                     }
                 }
 
                 if (SEQ_ID != NULL) { /* we already have it in refs->tExtRefs */
-                    rfd->iRun     = irun;
+                    rfd->iRun     = irun;                /* or refs->tIntRefs */
                     rfd->SEQ_ID   = SEQ_ID;
                     rfd->first    = cur_row;
                     rfd->circular = CIRCULAR;
@@ -687,9 +693,8 @@ VdbBlastStatus _ReferencesGetReadId(const References *self,
                acc.addr, acc.size, acc.size));
         for (rfdi = n->rfdi; rfdi < refs->rfdk; ++rfdi) {
             const VdbBlastRef *r = &refs->rfd[rfdi];
-            if (r->iRun != iRun) {
+            if (r->iRun != iRun)
                 return eVdbBlastErr;
-            }
             if (string_cmp(seq.addr, seq.size,
                 r->SEQ_ID, string_size(r->SEQ_ID), string_size(r->SEQ_ID)) == 0)
             {
@@ -698,15 +703,15 @@ VdbBlastStatus _ReferencesGetReadId(const References *self,
                 break;
             }
         }
-        if (!found) {
+        if (!found)
             return eVdbBlastErr;
-        }
     }
     else {
-        n = (BstNode*)BSTreeFind(&refs->tExtRefs, &seq, BstNodeCmpString);
-        if (n == NULL) {
+        n     = (BstNode*)BSTreeFind(&refs->tExtRefs, &seq, BstNodeCmpString);
+        if (n == NULL)
+            n = (BstNode*)BSTreeFind(&refs->tIntRefs, &seq, BstNodeCmpString);
+        if (n == NULL)
             return eVdbBlastErr;
-        }
         rfdi = n->rfdi;
         assert(refs->rfd[rfdi].external);
     }

@@ -23,6 +23,7 @@
 * ==============================================================================
 *
 */
+
 #include <kns/extern.h>
 
 #define KSTREAM_IMPL KClientHttpStream
@@ -32,6 +33,7 @@ typedef struct KClientHttpStream KClientHttpStream;
 #include <kns/http.h>
 #include <kns/adapt.h>
 #include <kns/endpoint.h>
+#include <kns/http-priv.h> /* KClientHttpResultFormatMsg */
 #include <kns/socket.h>
 #include <kns/stream.h>
 #include <kns/tls.h>
@@ -130,13 +132,18 @@ struct KClientHttp
     int32_t read_timeout;
     int32_t write_timeout;
 
+    /* Remote EndPoint */
     KEndPoint ep;
     bool ep_valid;
     bool proxy_ep;
     bool proxy_default_port;
     
+    KEndPoint local_ep; /* Local EndPoint */
+
     bool reliable;
     bool tls;
+
+    bool close_connection;
 };
 
 
@@ -178,6 +185,14 @@ rc_t KClientHttpClear ( KClientHttp *self )
 static
 rc_t KClientHttpWhack ( KClientHttp * self )
 {
+    if ( self -> close_connection )
+    {
+        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ),
+            ("*** closing connection ***\n"));
+        KClientHttpClose ( self );
+        self -> close_connection = false;
+    }
+
     KClientHttpClear ( self );
     
     KDataBufferWhack ( & self -> block_buffer );
@@ -280,8 +295,6 @@ bool KEndPointArgsIteratorNext ( KEndPointArgsIterator * self,
 
 static
 rc_t KClientHttpGetLine ( KClientHttp *self, struct timeout_t *tm );
-
-rc_t KClientHttpGetStatusLine ( KClientHttp *self, timeout_t *tm, String *msg, uint32_t *status, ver_t *version );
 
 static
 rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint32_t port, KSocket * sock,
@@ -397,14 +410,17 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
 
     STATUS ( STAT_QA, "%s - opening socket to %S:%u\n", __func__, aHostname, aPort );
 
-    assert ( self != NULL );
+    assert ( self );
     mgr = self -> mgr;
+    assert ( mgr );
 
     KEndPointArgsIteratorMake ( & it, mgr, aHostname, aPort  );
     while ( KEndPointArgsIteratorNext
         ( & it, & hostname, & port, & proxy_default_port, & proxy_ep ) )
     {
         rc = KNSManagerInitDNSEndpoint ( mgr, & self -> ep, hostname, port );
+        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ),
+            ( "KNSManagerInitDNSEndpoint(%S:%d)=%R\n", hostname, port, rc ) );
         if ( rc == 0 )
         {
             self -> proxy_default_port = proxy_default_port;
@@ -433,10 +449,24 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
         }
     }
 
+    if ( rc != 0 ) {
+        if ( KNSManagerLogNcbiVdbNetError ( mgr ) )
+            PLOGERR ( klogSys, ( klogSys, rc, "Failed to Make Connection "
+                "in KClientHttpOpen to '$(host):$(port)",
+                "host=%S,port=%hd", aHostname, aPort ) );
+    }
     /* if the connection is open */
-    if ( rc == 0 )
+    else
     {
-        STATUS ( STAT_USR, "%s - connected to %S\n", __func__, hostname );
+        rc_t r = KSocketGetLocalEndpoint ( sock, & self -> local_ep );
+        if ( r == 0 )
+            STATUS ( STAT_USR, "%s - connected from '%s' to %S (%s)\n",
+                               __func__, self -> local_ep . ip_address,
+                               hostname, self -> ep . ip_address );
+        else
+            STATUS ( STAT_USR, "%s - connected to %S (%s)\n",
+                               __func__, hostname, self -> ep . ip_address );
+
         if ( self -> tls )
         {
             KTLSStream * tls_stream;
@@ -446,14 +476,26 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
 
             if ( rc != 0 )
             {
-                if ( ! proxy_ep )
-                    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to create TLS stream for '%S'\n", aHostname ) );
+                if ( ! proxy_ep ) {
+                    if ( KNSManagerLogNcbiVdbNetError ( mgr ) )
+                        PLOGERR ( klogSys, ( klogSys, rc,
+                            "Failed to create TLS stream for '$(host)' ($(ip)) "
+                            "from '$(local)'", "host=%S,ip=%s,local=%s",
+                            aHostname, self -> ep . ip_address,
+                            self -> local_ep . ip_address
+                        ) );
+                    else
+                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_TLS ),
+                            ( "Failed to create TLS stream for '%S' (%s) from '%s'\n",
+                              aHostname, self -> ep . ip_address,
+                              self -> local_ep . ip_address ) );
+                }
                 else
                 {
                     STATUS ( STAT_PRG, "%s - retrying TLS wrapper on socket with proxy hostname\n", __func__ );
                     rc = KNSManagerMakeTLSStream ( mgr, & tls_stream, sock, hostname );
                     if ( rc != 0 )
-                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to create TLS stream for '%S'\n", hostname ) );
+                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_TLS ), ( "Failed to create TLS stream for '%S'\n", hostname ) );
                 }
             }
 
@@ -813,6 +855,26 @@ LIB_EXPORT rc_t CC KClientHttpRelease ( const KClientHttp *self )
     return 0;
 }
 
+
+LIB_EXPORT rc_t CC KClientHttpRead ( const KClientHttp *self,
+    void *buffer, size_t bsize, size_t *num_read )
+{
+    if ( self == NULL )
+        return RC ( rcNS, rcNoTarg, rcReading, rcSelf, rcNull );
+
+    return KStreamRead ( self -> sock, buffer, bsize, num_read );
+}
+
+LIB_EXPORT rc_t CC KClientHttpWriteAll ( const KClientHttp *self,
+    const void *buffer, size_t size, size_t *num_writ )
+{
+    if ( self == NULL )
+        return RC ( rcNS, rcNoTarg, rcReading, rcSelf, rcNull );
+
+     return KStreamWriteAll ( self -> sock, buffer, size, num_writ );
+}
+
+
 /* Communication Methods
  *  Read in the http response and return 1 char at a time
  */
@@ -1141,15 +1203,19 @@ rc_t KClientHttpGetHeaderLine ( KClientHttp *self, timeout_t *tm, BSTree *hdrs,
     if ( rc == 0 )
     {
         /* blank = empty line_buffer = separation between headers and body of response */
-        if ( self -> line_valid == 0 )
+        if ( self -> line_valid == 0 ) {
             * blank = true;
+
+            /* print an empty string to separate response headers */
+            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "\n"  ) );
+        }
         else
         {
             char * sep;
             const char * buffer = ( char * ) self -> line_buffer . base;
             const char * end = buffer + self -> line_valid;
 
-            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("HTTP receive '%s'\n", buffer));
+            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP), ("HTTP receive '%s'\n", buffer));
 
             /* find the separation between name: value */
             sep = string_chr ( buffer, end - buffer, ':' );
@@ -1195,7 +1261,7 @@ rc_t KClientHttpGetHeaderLine ( KClientHttp *self, timeout_t *tm, BSTree *hdrs,
                             if ( strcase_cmp ( name . addr, name . size, "Connection", name . size, ( uint32_t ) name . size ) == 0 &&
                                  strcase_cmp ( value . addr, value . size, "close", value . size, ( uint32_t ) value . size ) == 0 )
                             {
-                                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
+                                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ),
                                        ("*** seen connection close ***\n"));
                                 * close_connection = true;
                             }
@@ -1276,7 +1342,7 @@ rc_t KClientHttpGetStatusLine ( KClientHttp *self, timeout_t *tm, String *msg, u
         const char * buffer = ( char * ) self -> line_buffer . base;
         const char * end = buffer + self -> line_valid;
 
-        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("HTTP receive '%s'\n", buffer));
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP), ("HTTP receive '%s'\n", buffer));
 
         /* Detect protocol
            expect HTTP/1.[01]<sp><digit>+<sp><msg>\r\n */
@@ -1292,7 +1358,7 @@ rc_t KClientHttpGetStatusLine ( KClientHttp *self, timeout_t *tm, String *msg, u
             if ( strcase_cmp ( "http", 4, buffer, sep - buffer, 4 ) != 0 )
             {
                 rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcUnsupported );
-                DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("%s: protocol given as '%.*s'\n", __func__, ( uint32_t ) ( sep - buffer ), buffer ));
+                DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP), ("%s: protocol given as '%.*s'\n", __func__, ( uint32_t ) ( sep - buffer ), buffer ));
             }
             else
             {
@@ -1702,22 +1768,19 @@ struct KClientHttpResult
 
     KRefcount refcount;
     bool len_zero;
-    bool close_connection;
 };
 
 static
 rc_t KClientHttpResultWhack ( KClientHttpResult * self )
 {
     BSTreeWhack ( & self -> hdrs, KHttpHeaderWhack, NULL );
-    if ( self -> close_connection )
-    {
-        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
-            ("*** closing connection ***\n"));
-        KClientHttpClose ( self -> http );
-    }
+
     KClientHttpRelease ( self -> http );
+
     KRefcountWhack ( & self -> refcount, "KClientHttpResult" );
+
     free ( self );
+
     return 0;
 }
 
@@ -1737,7 +1800,7 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
     if ( KNSManagerIsVerbose ( self -> mgr ) )
         KOutMsg ( "KClientHttpSendReceiveMsg: '%.*s'\n", len, buffer );
 #endif
-    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS),
+    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP),
         ("HTTP send '%S' '%.*s'\n\n", &self->hostname, len, buffer));
 
     /* reopen connection if NULL */
@@ -1832,7 +1895,7 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
                     for ( blank = false; ! blank && rc == 0; )
                     {
                         rc = KClientHttpGetHeaderLine ( self, & tm, & result -> hdrs,
-                            & blank, & result -> len_zero, & result -> close_connection );
+                            & blank, & result -> len_zero, & self -> close_connection );
                     }
 
                     if ( rc == 0 && status != 100 )
@@ -2435,8 +2498,11 @@ LIB_EXPORT rc_t CC KClientHttpResultGetInputStream ( KClientHttpResult *self, KS
                 return KClientHttpStreamMake ( self -> http, s, "KClientHttpStream", content_length, false );
 
             /* detect connection: close or pre-HTTP/1.1 dynamic content */
-            if ( self -> close_connection || self -> version < 0x01010000 )
+            if ( self -> http -> close_connection ||
+                 self -> version < 0x01010000 )
+            {
                 return KClientHttpStreamMake ( self -> http, s, "KClientHttpStream", 0, true );
+            }
 
 #if _DEBUGGING
             KOutMsg ( "HTTP/%.2V %03u %S\n", self -> version, self -> status, & self -> msg );
@@ -2626,6 +2692,19 @@ LIB_EXPORT rc_t CC KClientHttpMakeRequest ( const KClientHttp *self,
 
     return rc;
 }
+
+static void KClientHttpGetEndpoint ( const KClientHttp * self, KEndPoint * ep, bool remote ) {
+    assert ( ep );
+    memset ( ep, 0, sizeof * ep );
+    if ( self != NULL )
+        * ep = remote ? self -> ep : self -> local_ep;
+}
+
+void KClientHttpGetRemoteEndpoint ( const KClientHttp * self, KEndPoint * ep )
+{   KClientHttpGetEndpoint ( self, ep, true ); }
+
+void KClientHttpGetLocalEndpoint ( const KClientHttp * self, KEndPoint * ep )
+{   KClientHttpGetEndpoint ( self, ep, false ); }
 
 /* MakeRequest
  *  create a request that can be used to contact HTTP server
@@ -2972,20 +3051,99 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddPostParam ( KClientHttpRequest *self, co
 }
 
 
-static
-rc_t KClientHttpRequestFormatMsg ( KClientHttpRequest *self,
+LIB_EXPORT rc_t CC KClientHttpResultFormatMsg (
+    const struct KClientHttpResult * self, char * buffer,
+    size_t bsize, size_t * len, const char * bol, const char * eol )
+{
+    rc_t rc = 0;
+    size_t total = 0;
+
+    if ( self == NULL ) {
+        return RC ( rcNS, rcNoTarg, rcReading, rcSelf, rcNull );
+    }
+
+    if ( len == NULL || bol == NULL || eol == NULL ) {
+        return RC ( rcNS, rcNoTarg, rcReading, rcParam, rcNull );
+    }
+
+    rc = string_printf ( buffer, bsize, len, 
+            "%sHTTP/%.2V %d %S%s", bol
+            , self -> version
+            , self -> status
+            , & self -> msg, eol
+        );
+    total = * len;
+
+    if ( rc == 0 ||
+        ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
+          GetRCState ( rc ) == rcInsufficient ) )
+    {
+        const KHttpHeader * node = NULL;
+        for ( node = ( const KHttpHeader* ) BSTreeFirst ( & self -> hdrs );
+              node != NULL;
+              node = ( const KHttpHeader* ) BSTNodeNext ( & node -> dad ) )
+        {
+            size_t p_bsize
+                = rc == 0
+                    ? bsize >= total ? bsize - total : 0
+                    : 0;
+            /* add header line */
+            rc_t r2 = string_printf ( & buffer [ total ], p_bsize, len,
+                             "%s%S: %S\r%s", bol
+                             , & node -> name
+                             , & node -> value, eol );
+            total += * len;
+            if ( rc == 0 ) {
+                rc = r2;
+            }
+        }
+    }
+
+    if ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
+        GetRCState ( rc ) == rcInsufficient )
+    {
+        ++ total;
+    }
+
+
+    * len = total;
+
+    return rc;
+}
+
+
+LIB_EXPORT
+rc_t CC KClientHttpRequestFormatMsg ( const KClientHttpRequest *self,
     char *buffer, size_t bsize, const char *method, size_t *len )
 {
     rc_t rc;
+    rc_t r2 = 0;
     bool have_user_agent = false;
     String user_agent_string;
     size_t total;
+    size_t p_bsize = 0;
     const KHttpHeader *node;
+    size_t dummy;
 
-    KClientHttp *http = self -> http;
+    const char * has_query = NULL;
+    String hostname;
+    KClientHttp * http = NULL;
+
+    if ( self == NULL ) {
+         return RC ( rcNS, rcNoTarg, rcReading, rcSelf, rcNull );
+    }
+    if ( buffer == NULL ) {
+         return RC ( rcNS, rcNoTarg, rcReading, rcParam, rcNull );
+    }
+
+    if ( len == NULL ) {
+        len = & dummy;
+    }
+
+    http = self -> http;
 
     /* determine if there is a query */
-    const char *has_query = ( self -> url_block . query . size == 0 ) ? "" : "?";
+    has_query = ( self -> url_block . query . size == 0 ) ? "" : "?";
 
 
     /* there are 2 places where the can be a host name stored
@@ -2994,7 +3152,7 @@ rc_t KClientHttpRequestFormatMsg ( KClientHttpRequest *self,
        If that one is empty, we look at the http object for its
        host name.
        Error if both are empty */
-    String hostname = self -> url_block . host;
+    hostname = self -> url_block . host;
     if ( hostname . size == 0 )
     {
         hostname = http -> hostname;
@@ -3053,7 +3211,10 @@ rc_t KClientHttpRequestFormatMsg ( KClientHttpRequest *self,
     /* print all headers remaining into buffer */
     total = * len;
     for ( node = ( const KHttpHeader* ) BSTreeFirst ( & self -> hdrs );
-          rc == 0 && node != NULL;
+          ( rc == 0  ||
+            ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
+              GetRCState ( rc ) == rcInsufficient )
+          ) && node != NULL;
           node = ( const KHttpHeader* ) BSTNodeNext ( & node -> dad ) )
     {
         /* look for "User-Agent" */
@@ -3063,33 +3224,57 @@ rc_t KClientHttpRequestFormatMsg ( KClientHttpRequest *self,
                 have_user_agent = true;
         }
 
+        p_bsize = bsize >= total ? bsize - total : 0;
+
         /* add header line */
-        rc = string_printf ( & buffer [ total ], bsize - total, len,
+        r2 = string_printf ( & buffer [ total ], p_bsize, len,
                              "%S: %S\r\n"
                              , & node -> name
                              , & node -> value );
         total += * len;
+        if ( rc == 0 ) {
+            rc = r2;
+        }
     }
 
     /* add an User-Agent header from the kns-manager if we did not find one already in the header tree */
     if ( !have_user_agent )
     {
         const char * ua = NULL;
-        rc = KNSManagerGetUserAgent ( &ua );
-        if ( rc == 0 )
+        rc_t r3 = KNSManagerGetUserAgent ( &ua );
+        if ( r3 == 0 )
         {
-            rc = string_printf ( & buffer [ total ], bsize - total, len, "User-Agent: %s\r\n", ua );
+            p_bsize = bsize >= total ? bsize - total : 0;
+            r2 = string_printf ( & buffer [ total ],
+                p_bsize, len, "User-Agent: %s\r\n", ua );
             total += * len;
+            if ( rc == 0 ) {
+                rc = r2;
+            }
         }
     }
 
     /* add terminating empty header line */
-    if ( rc == 0 )
+    if ( rc == 0 ||
+        ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
+          GetRCState ( rc ) == rcInsufficient ) )
     {
-        rc = string_printf ( & buffer [ total ], bsize - total, len, "\r\n" );
-        * len += total;
+        p_bsize = bsize >= total ? bsize - total : 0;
+        r2 = string_printf ( & buffer [ total ], p_bsize, len, "\r\n" );
+        total += * len;
+        if ( rc == 0 ) {
+            rc = r2;
+        }
     }
     
+    if ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
+        GetRCState ( rc ) == rcInsufficient )
+    {
+        ++ total;
+    }
+
+    * len = total;
+
     return rc;
 }
 
@@ -3228,7 +3413,7 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
 
         default:
 
-            if ( ! rslt -> len_zero || rslt -> close_connection )
+            if ( ! rslt -> len_zero || self -> http -> close_connection )
             {
                 /* the connection is no good */
                 KClientHttpClose ( self -> http );
@@ -3408,7 +3593,7 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
 
         default:
 
-            if ( ! rslt -> len_zero || rslt -> close_connection )
+            if ( ! rslt -> len_zero || self -> http -> close_connection )
             {
                 /* the connection is no good */
                 KClientHttpClose ( self -> http );
@@ -3448,7 +3633,7 @@ static bool GovSiteByHttp ( const char * path ) {
              strcase_cmp ( path, size, http . addr, size, size ) == 0 )
         {
             EUrlParseState state = eUPSBegin;
-            int i = 0;
+            unsigned i = 0;
             for ( i = 7; i < path_size && state != eUPSDone; ++i ) {
                 switch ( state ) {
                     case eUPSBegin:

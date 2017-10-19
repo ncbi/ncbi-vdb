@@ -57,7 +57,7 @@ typedef struct
  *                  pointers and initialize global mutexes. If used, this
  *                  function must be called once in the main thread before any
  *                  other mbed TLS function is called, and
- *                  mbedtls_threading_free_alt() must be called once in the main
+ *                  vdb_mbedtls_threading_free_alt() must be called once in the main
  *                  thread after all other mbed TLS functions.
  *
  * \note            mutex_init() and mutex_free() don't return a status code.
@@ -70,7 +70,7 @@ typedef struct
  * \param mutex_lock    the lock function implementation
  * \param mutex_unlock  the unlock function implementation
  */
-void mbedtls_threading_set_alt( void (*mutex_init)( mbedtls_threading_mutex_t * ),
+void vdb_mbedtls_threading_set_alt( void (*mutex_init)( mbedtls_threading_mutex_t * ),
                        void (*mutex_free)( mbedtls_threading_mutex_t * ),
                        int (*mutex_lock)( mbedtls_threading_mutex_t * ),
                        int (*mutex_unlock)( mbedtls_threading_mutex_t * ) );
@@ -78,7 +78,7 @@ void mbedtls_threading_set_alt( void (*mutex_init)( mbedtls_threading_mutex_t * 
 /**
  * \brief               Free global mutexes.
  */
-void mbedtls_threading_free_alt( void );
+void vdb_mbedtls_threading_free_alt( void );
 #endif /* MBEDTLS_THREADING_ALT */
 
 #if defined(MBEDTLS_THREADING_C)
@@ -95,8 +95,11 @@ extern int (*mbedtls_mutex_unlock)( mbedtls_threading_mutex_t *mutex );
 /*
  * Global mutexes
  */
-extern mbedtls_threading_mutex_t mbedtls_threading_readdir_mutex;
-extern mbedtls_threading_mutex_t mbedtls_threading_gmtime_mutex;
+extern mbedtls_threading_mutex_t vdb_mbedtls_threading_readdir_mutex;
+extern mbedtls_threading_mutex_t vdb_mbedtls_threading_gmtime_mutex;
+#if defined(MBEDTLS_ECP_INTERNAL_ALT)
+extern mbedtls_threading_mutex_t vdb_mbedtls_threading_ecp_mutex;
+#endif
 #endif /* MBEDTLS_THREADING_C */
 
 #ifdef __cplusplus

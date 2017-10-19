@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="kfc">
@@ -1188,10 +1188,14 @@
     <ClCompile Include="..\..\..\libs\vdb\transpose.c">
       <Filter>vdb</Filter>
     </ClCompile>
+
     <ClCompile Include="..\..\..\libs\vfs\manager.c">
       <Filter>vfs</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\vfs\path.c">
+      <Filter>vfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vfs\remote-services.c">
       <Filter>vfs</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\vfs\resolver.c">
@@ -1200,9 +1204,16 @@
     <ClCompile Include="..\..\..\libs\vfs\resolver-3.0.c">
       <Filter>vfs</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\vfs\services.c">
+      <Filter>vfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vfs\srv-response.c">
+      <Filter>vfs</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\vfs\win\syspath.c">
       <Filter>vfs</Filter>
     </ClCompile>
+
     <ClCompile Include="..\..\..\libs\vxf\add-row-id.c">
       <Filter>vxf</Filter>
     </ClCompile>

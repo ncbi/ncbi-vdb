@@ -55,12 +55,12 @@ mbedtls_gcm_context;
 
 /**
  * \brief           Initialize GCM context (just makes references valid)
- *                  Makes the context ready for mbedtls_gcm_setkey() or
- *                  mbedtls_gcm_free().
+ *                  Makes the context ready for vdb_mbedtls_gcm_setkey() or
+ *                  vdb_mbedtls_gcm_free().
  *
  * \param ctx       GCM context to initialize
  */
-void mbedtls_gcm_init( mbedtls_gcm_context *ctx );
+void vdb_mbedtls_gcm_init( mbedtls_gcm_context *ctx );
 
 /**
  * \brief           GCM initialization (encryption)
@@ -72,7 +72,7 @@ void mbedtls_gcm_init( mbedtls_gcm_context *ctx );
  *
  * \return          0 if successful, or a cipher specific error code
  */
-int mbedtls_gcm_setkey( mbedtls_gcm_context *ctx,
+int vdb_mbedtls_gcm_setkey( mbedtls_gcm_context *ctx,
                         mbedtls_cipher_id_t cipher,
                         const unsigned char *key,
                         unsigned int keybits );
@@ -99,7 +99,7 @@ int mbedtls_gcm_setkey( mbedtls_gcm_context *ctx,
  *
  * \return         0 if successful
  */
-int mbedtls_gcm_crypt_and_tag( mbedtls_gcm_context *ctx,
+int vdb_mbedtls_gcm_crypt_and_tag( mbedtls_gcm_context *ctx,
                        int mode,
                        size_t length,
                        const unsigned char *iv,
@@ -132,7 +132,7 @@ int mbedtls_gcm_crypt_and_tag( mbedtls_gcm_context *ctx,
  * \return         0 if successful and authenticated,
  *                 MBEDTLS_ERR_GCM_AUTH_FAILED if tag does not match
  */
-int mbedtls_gcm_auth_decrypt( mbedtls_gcm_context *ctx,
+int vdb_mbedtls_gcm_auth_decrypt( mbedtls_gcm_context *ctx,
                       size_t length,
                       const unsigned char *iv,
                       size_t iv_len,
@@ -155,7 +155,7 @@ int mbedtls_gcm_auth_decrypt( mbedtls_gcm_context *ctx,
  *
  * \return         0 if successful
  */
-int mbedtls_gcm_starts( mbedtls_gcm_context *ctx,
+int vdb_mbedtls_gcm_starts( mbedtls_gcm_context *ctx,
                 int mode,
                 const unsigned char *iv,
                 size_t iv_len,
@@ -165,7 +165,7 @@ int mbedtls_gcm_starts( mbedtls_gcm_context *ctx,
 /**
  * \brief           Generic GCM update function. Encrypts/decrypts using the
  *                  given GCM context. Expects input to be a multiple of 16
- *                  bytes! Only the last call before mbedtls_gcm_finish() can be less
+ *                  bytes! Only the last call before vdb_mbedtls_gcm_finish() can be less
  *                  than 16 bytes!
  *
  * \note On decryption, the output buffer cannot be the same as input buffer.
@@ -179,7 +179,7 @@ int mbedtls_gcm_starts( mbedtls_gcm_context *ctx,
  *
  * \return         0 if successful or MBEDTLS_ERR_GCM_BAD_INPUT
  */
-int mbedtls_gcm_update( mbedtls_gcm_context *ctx,
+int vdb_mbedtls_gcm_update( mbedtls_gcm_context *ctx,
                 size_t length,
                 const unsigned char *input,
                 unsigned char *output );
@@ -190,12 +190,12 @@ int mbedtls_gcm_update( mbedtls_gcm_context *ctx,
  *                  16 bytes.
  *
  * \param ctx       GCM context
- * \param tag       buffer for holding the tag (may be NULL if tag_len is 0)
- * \param tag_len   length of the tag to generate
+ * \param tag       buffer for holding the tag
+ * \param tag_len   length of the tag to generate (must be at least 4)
  *
  * \return          0 if successful or MBEDTLS_ERR_GCM_BAD_INPUT
  */
-int mbedtls_gcm_finish( mbedtls_gcm_context *ctx,
+int vdb_mbedtls_gcm_finish( mbedtls_gcm_context *ctx,
                 unsigned char *tag,
                 size_t tag_len );
 
@@ -204,14 +204,14 @@ int mbedtls_gcm_finish( mbedtls_gcm_context *ctx,
  *
  * \param ctx       GCM context to free
  */
-void mbedtls_gcm_free( mbedtls_gcm_context *ctx );
+void vdb_mbedtls_gcm_free( mbedtls_gcm_context *ctx );
 
 /**
  * \brief          Checkup routine
  *
  * \return         0 if successful, or 1 if the test failed
  */
-int mbedtls_gcm_self_test( int verbose );
+int vdb_mbedtls_gcm_self_test( int verbose );
 
 #ifdef __cplusplus
 }

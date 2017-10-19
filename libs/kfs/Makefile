@@ -120,7 +120,8 @@ KFS_CMN = \
 	lockfile \
 	syslockfile \
 	cacheteefile \
-	from_to_namelist
+	from_to_namelist \
+	limitfile
 
 KFS_SRC = \
 	mmap \

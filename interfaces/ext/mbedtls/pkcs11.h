@@ -58,7 +58,7 @@ typedef struct {
  * Initialize a mbedtls_pkcs11_context.
  * (Just making memory references valid.)
  */
-void mbedtls_pkcs11_init( mbedtls_pkcs11_context *ctx );
+void vdb_mbedtls_pkcs11_init( mbedtls_pkcs11_context *ctx );
 
 /**
  * Fill in a mbed TLS certificate, based on the given PKCS11 helper certificate.
@@ -68,7 +68,7 @@ void mbedtls_pkcs11_init( mbedtls_pkcs11_context *ctx );
  *
  * \return              0 on success.
  */
-int mbedtls_pkcs11_x509_cert_bind( mbedtls_x509_crt *cert, pkcs11h_certificate_t pkcs11h_cert );
+int vdb_mbedtls_pkcs11_x509_cert_bind( mbedtls_x509_crt *cert, pkcs11h_certificate_t pkcs11h_cert );
 
 /**
  * Set up a mbedtls_pkcs11_context storing the given certificate. Note that the
@@ -80,7 +80,7 @@ int mbedtls_pkcs11_x509_cert_bind( mbedtls_x509_crt *cert, pkcs11h_certificate_t
  *
  * \return              0 on success
  */
-int mbedtls_pkcs11_priv_key_bind( mbedtls_pkcs11_context *priv_key,
+int vdb_mbedtls_pkcs11_priv_key_bind( mbedtls_pkcs11_context *priv_key,
         pkcs11h_certificate_t pkcs11_cert );
 
 /**
@@ -89,7 +89,7 @@ int mbedtls_pkcs11_priv_key_bind( mbedtls_pkcs11_context *priv_key,
  *
  * \param priv_key      Private key structure to cleanup
  */
-void mbedtls_pkcs11_priv_key_free( mbedtls_pkcs11_context *priv_key );
+void vdb_mbedtls_pkcs11_priv_key_free( mbedtls_pkcs11_context *priv_key );
 
 /**
  * \brief          Do an RSA private key decrypt, then remove the message
@@ -108,7 +108,7 @@ void mbedtls_pkcs11_priv_key_free( mbedtls_pkcs11_context *priv_key );
  *                 of ctx->N (eg. 128 bytes if RSA-1024 is used) otherwise
  *                 an error is thrown.
  */
-int mbedtls_pkcs11_decrypt( mbedtls_pkcs11_context *ctx,
+int vdb_mbedtls_pkcs11_decrypt( mbedtls_pkcs11_context *ctx,
                        int mode, size_t *olen,
                        const unsigned char *input,
                        unsigned char *output,
@@ -130,7 +130,7 @@ int mbedtls_pkcs11_decrypt( mbedtls_pkcs11_context *ctx,
  * \note           The "sig" buffer must be as large as the size
  *                 of ctx->N (eg. 128 bytes if RSA-1024 is used).
  */
-int mbedtls_pkcs11_sign( mbedtls_pkcs11_context *ctx,
+int vdb_mbedtls_pkcs11_sign( mbedtls_pkcs11_context *ctx,
                     int mode,
                     mbedtls_md_type_t md_alg,
                     unsigned int hashlen,
@@ -140,26 +140,26 @@ int mbedtls_pkcs11_sign( mbedtls_pkcs11_context *ctx,
 /**
  * SSL/TLS wrappers for PKCS#11 functions
  */
-static inline int mbedtls_ssl_pkcs11_decrypt( void *ctx, int mode, size_t *olen,
+static inline int vdb_mbedtls_ssl_pkcs11_decrypt( void *ctx, int mode, size_t *olen,
                         const unsigned char *input, unsigned char *output,
                         size_t output_max_len )
 {
-    return mbedtls_pkcs11_decrypt( (mbedtls_pkcs11_context *) ctx, mode, olen, input, output,
+    return vdb_mbedtls_pkcs11_decrypt( (mbedtls_pkcs11_context *) ctx, mode, olen, input, output,
                            output_max_len );
 }
 
-static inline int mbedtls_ssl_pkcs11_sign( void *ctx,
+static inline int vdb_mbedtls_ssl_pkcs11_sign( void *ctx,
                      int (*f_rng)(void *, unsigned char *, size_t), void *p_rng,
                      int mode, mbedtls_md_type_t md_alg, unsigned int hashlen,
                      const unsigned char *hash, unsigned char *sig )
 {
     ((void) f_rng);
     ((void) p_rng);
-    return mbedtls_pkcs11_sign( (mbedtls_pkcs11_context *) ctx, mode, md_alg,
+    return vdb_mbedtls_pkcs11_sign( (mbedtls_pkcs11_context *) ctx, mode, md_alg,
                         hashlen, hash, sig );
 }
 
-static inline size_t mbedtls_ssl_pkcs11_key_len( void *ctx )
+static inline size_t vdb_mbedtls_ssl_pkcs11_key_len( void *ctx )
 {
     return ( (mbedtls_pkcs11_context *) ctx )->len;
 }

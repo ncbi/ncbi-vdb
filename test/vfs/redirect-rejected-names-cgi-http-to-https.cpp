@@ -24,13 +24,19 @@
 *
 */
 
+
+#include <kapp/args.h> /* ArgsMakeAndHandle */
+
 #include <kfg/config.h> /* KConfig */
+
 #include <kfs/directory.h> /* KDirectory */
+
 #include <klib/debug.h> /* KDbgSetString */
 #include <klib/rc.h>
+
 #include <kns/http.h> /* KClientHttpRequest */
 #include <kns/manager.h> /* KNSManager */
-#include <ktst/unit_test.hpp>
+
 #include <vfs/manager.h> /* VFSManager */
 #include <vfs/manager-priv.h> /* VFSManagerMakeFromKfg */
 #include <vfs/path.h> /* VPath */
@@ -38,27 +44,33 @@
 
 #include "../../libs/kns/http-priv.h" /* KNSManagerMakeClientHttpInt */
 
+#include <ktst/unit_test.hpp>
+
+
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
 
+
 extern "C" { void TESTING_VDB_3162 ( void ); }
+
 
 using std::cerr;
 
-TEST_SUITE(VResolverTestSuite);
+
+static rc_t argsHandler(int argc, char* argv[]);
+TEST_SUITE_WITH_ARGS_HANDLER(VResolverTestSuite, argsHandler);
+
 
 typedef enum {
     e200,
     e403,
 } EForbidden;
 
-class Test : protected ncbi :: NK :: TestCase {
-    TestCase * _dad;
-public:
+struct Test : protected ncbi :: NK :: SharedTest {
     Test ( const std :: string & description, TestCase * dad,
             EForbidden forbidden, const char * name, const char * url,
             bool fail = false )
-        : TestCase ( name ), _dad ( dad )
+        : SharedTest ( dad, name )
     {
         rc_t rc = 0;
 
@@ -132,32 +144,31 @@ public:
 
         REQUIRE ( ! rc );
     }
-    ~Test ( void ) {
-        assert( _dad );
-        _dad -> ErrorCounterAdd ( GetErrorCounter () );
-    }
 };
 
 TEST_CASE(TEST) {
+
+#define RESOLVER_CGI_HEAD "test.ncbi.nlm.nih."
+
 #ifdef VDB_3162
 #else
     DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS ),
         ( "Simulation 403 in VFS library was DISABLED\n\n" ) );
 #endif
     Test ( "Called over HTTP: retry over HTTPS after 403", this, e403 , "HTTP",
-        "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
+        "http://" RESOLVER_CGI_HEAD "gov/Traces/names/names.cgi" );
     Test ( "Called over htTP: retry over https after 403", this, e403 , "htTP",
-        "hTtP://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
+        "hTtP://" RESOLVER_CGI_HEAD "gov/Traces/names/names.cgi" );
     Test ( "Called over http to GOV: retry over HTTPS after 403",
         this, e403 , "http-gOv",
-        "http://www.ncbi.nlm.nih.GoV/Traces/names/names.cgi" );
+        "http://" RESOLVER_CGI_HEAD "GoV/Traces/names/names.cgi" );
 
     Test ( "Called over HTTPS: got 200", this, e200, "HTTPS",
-       "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
+       "https://" RESOLVER_CGI_HEAD "gov/Traces/names/names.cgi" );
     Test ( "Called over httPS: got 200", this, e200, "httPS",
-       "httPS://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
+       "httPS://" RESOLVER_CGI_HEAD "gov/Traces/names/names.cgi" );
     Test ( "Called over HTTPS to Gov: got 200", this, e200, "https to Gov",
-       "https://www.ncbi.nlm.nih.GoV/Traces/names/names.cgi" );
+       "https://" RESOLVER_CGI_HEAD "GoV/Traces/names/names.cgi" );
 
 #if NOW_NAMES_CGI_ALWAYS_RETURNS_403_WHEN_ASKED_FOR_HTTP 
     Test (
@@ -173,10 +184,36 @@ TEST_CASE(TEST) {
 
     DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS ), ( "\n" ) );
     Test ( "Called over HTTPS: fail after 403", this, e403, "403 by HTTPS",
-       "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi", true );
+       "https://" RESOLVER_CGI_HEAD "gov/Traces/names/names.cgi", true );
     DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS ), ( "\n" ) );
     Test ( "Called over httPS: fail after 403", this, e403, "403 by httPS",
-       "httPS://www.ncbi.nlm.nih.gov/Traces/names/names.cgi", true );
+       "httPS://" RESOLVER_CGI_HEAD "gov/Traces/names/names.cgi", true );
+}
+
+
+static rc_t argsHandler(int argc, char* argv[]) {
+    return ArgsMakeAndHandle ( NULL, argc, argv, 0, NULL, 0 );
+}
+
+static bool out_of_ncbi() {
+    KNSManager * mgr = NULL;
+    rc_t rc = KNSManagerMake ( &mgr );
+    KHttpRequest * req = NULL;
+    if (rc == 0)
+        rc = KNSManagerMakeRequest(mgr, & req, 0x01010000, NULL,
+            "https://" RESOLVER_CGI_HEAD "gov/Traces/names/names.cgi");
+    KHttpResult * rslt = NULL;
+    if (rc == 0)
+        rc = KHttpRequestGET ( req, & rslt );
+    uint32_t code = 1;
+    if (rc == 0)
+        rc = KHttpResultStatus ( rslt, & code, NULL, 0, NULL );
+    if ( rc == 0 && code != 200 )
+        rc = code;
+    KHttpResultRelease(rslt);
+    KHttpRequestRelease(req);
+    KNSManagerRelease(mgr);
+    return rc != 0;
 }
 
 extern "C" {
@@ -186,6 +223,10 @@ extern "C" {
     const char UsageDefaultName[] = "redirect-rejected-names-cgi-http-to-https";
     rc_t CC KMain ( int argc, char *argv [] ) {
         if ( 0 ) assert ( ! KDbgSetString ( "VFS" ) );
+                if ( out_of_ncbi() ) {
+            std::cerr << "Disabled outside of NCBI\n";
+            return 0;
+        }
         return VResolverTestSuite ( argc, argv );
     }
 }

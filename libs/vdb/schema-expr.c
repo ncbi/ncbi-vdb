@@ -226,7 +226,7 @@ rc_t STypeExprDump ( const STypeExpr *self, SDumper *b )
                 rc = SDumperPrint ( b, " [ * ]" );
         }
     }
-    
+
     return rc;
 }
 
@@ -1241,7 +1241,7 @@ rc_t type_expr_impl ( const KSymTable *tbl, KTokenSource *src, KToken *t,
             return rc;
         }
     }
-    
+
     * fd = & x -> dad;
     return 0;
 }
@@ -1376,7 +1376,7 @@ rc_t sym_expr ( KSymTable *tbl, KTokenSource *src, KToken *t,
 
 /*
  * param-expr         = <func-param>
- * 
+ *
  */
 #if SLVL >= 4
 
@@ -1388,7 +1388,7 @@ rc_t sym_expr ( KSymTable *tbl, KTokenSource *src, KToken *t,
 
 /*
  * prod-expr          = <production>
- * 
+ *
  */
 #if SLVL >= 4
 
@@ -1507,7 +1507,7 @@ rc_t schema_value ( KSymTable *tbl, KTokenSource *src, KToken *t,
 
 /*
  * fact-parms         = <fact-param> [ ',' <fact-parms> ]
- * fact-param         = [ ID '=' ] <fact-value>
+ * fact-param         = [ ID '=' ] <fact-value>         ( "ID =" not implemented )
  * fact-value         = <func-name>
  *                    | '[' <fact-const-list> ']'
  */
@@ -2141,7 +2141,7 @@ rc_t phys_encoding_expr ( KSymTable *tbl, KTokenSource *src, KToken *t,
         }
 
         /* evaluate type expression */
-        if ( td != NULL )
+        if ( x -> phys != NULL && td != NULL )
         {
             /* bind schema parameters */
             Vector prior, cx_bind;

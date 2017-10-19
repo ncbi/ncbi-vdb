@@ -71,6 +71,7 @@ struct KSysDirListing;
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/statvfs.h> /* statvfs */
 #include <utime.h>
 #include <assert.h>
 
@@ -2411,4 +2412,27 @@ LIB_EXPORT rc_t CC KDirectoryNativeDir_v1 ( KDirectory_v1 **dirp )
     }
 
     return rc;
+}
+
+LIB_EXPORT rc_t CC KDirectoryGetDiskFreeSpace_v1 ( const KDirectory * self,
+    uint64_t * free_bytes_available, uint64_t * total_number_of_bytes )
+{
+    if ( self == NULL )
+        return RC ( rcFS, rcDirectory, rcAccessing, rcSelf, rcNull );
+    else {
+        KSysDir_v1 * dir = ( KSysDir_v1 * ) self;
+        struct statvfs buf;
+        memset ( & buf, 0, sizeof buf );
+        if ( statvfs ( dir -> path, & buf) == 0 ) {
+            if ( free_bytes_available != NULL ) {
+                * free_bytes_available  = buf . f_bavail * buf . f_frsize;
+            }
+            if ( total_number_of_bytes != NULL ) {
+                * total_number_of_bytes = buf . f_blocks * buf . f_frsize;
+            }
+            return 0;
+        }
+
+        return RC ( rcFS, rcDirectory, rcAccessing, rcError, rcUnknown );
+    }
 }
