@@ -1082,8 +1082,10 @@ rc_t KClientHttpAddHeaderString
         {
           /* find the current size of the data in the node */
           size_t cursize = node -> name . size + node -> value . size;
-          if ( add ) { /* add value to node -> value */
-            /* resize databuffer to hold the additional value data + comma + nul */
+          if ( add ) { /* add value to node -> value
+                          do not add value if node -> value == value */
+           if ( ! StringEqual ( & node -> value, value ) ) {
+         /* resize databuffer to hold the additional value data + comma + nul */
             rc = KDataBufferResize ( & node -> value_storage, cursize + value -> size + 1 + 1 );
             if ( rc == 0 )
             {
@@ -1105,6 +1107,7 @@ rc_t KClientHttpAddHeaderString
                    restore values to what they were */
                 KDataBufferResize ( & node -> value_storage, cursize + 1 );
             }
+           }
           } else { /* replace value with node -> value */
             if ( ! StringEqual ( & node -> value, value ) )
             /* values are not equal - need to replace */
@@ -1196,6 +1199,7 @@ rc_t KClientHttpGetHeaderLine ( KClientHttp *self, timeout_t *tm, BSTree *hdrs,
 {
     /* Starting from the second line of the response */
     rc_t rc = KClientHttpGetLine ( self, tm );
+    assert ( len_zero );
     if ( rc == 0 )
     {
         /* blank = empty line_buffer = separation between headers and body of response */
@@ -1311,7 +1315,7 @@ rc_t KClientHttpFindHeader ( const BSTree *hdrs, const char *_name, char *buffer
             /* return the amount needed */
             * num_read = node -> value . size;
             
-            return RC ( rcNS, rcNoTarg, rcParsing, rcParam, rcInsufficient );
+            return RC ( rcNS, rcNoTarg, rcParsing, rcBuffer, rcInsufficient );
         }
         
         /* copy data and return the num_read */
@@ -2375,6 +2379,81 @@ void PrintHeaders ( BSTNode *n, void *ignore )
               & node -> value );
 }
 #endif
+
+/* TestHeaderValue
+ *  test for existence of header and a particular value
+ *  if the header exists and has a comma-separated list of values,
+ *  test each value individually, i.e. splits on comma before comparison
+ */
+LIB_EXPORT bool CC KClientHttpResultTestHeaderValue ( const KClientHttpResult *self,
+    const char *name, const char *value )
+{
+    if ( value != NULL && value [ 0 ] != '\0' )
+    {
+        size_t num_read;
+        char buffer [ 4096 ], * p = buffer;
+        rc_t rc = KClientHttpResultGetHeader ( self, name, buffer, sizeof buffer, & num_read );
+        if ( rc != 0 )
+        {
+            /* we're only interested in a case where the 4K buffer was too small */
+            if ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer && GetRCState ( rc ) == rcInsufficient )
+            {
+                /* allocate dynamic memory and try again */
+                p = malloc ( num_read + 1 );
+                if ( p != 0 )
+                    rc = KClientHttpResultGetHeader ( self, name, p, num_read + 1, & num_read );
+            }
+        }
+
+        if ( rc == 0 )
+        {
+            size_t val_size;
+            const char * start, * end;
+
+            /* must either be stack buffer or malloc'd memory */
+            assert ( p != NULL );
+
+            /* the header value start and end */
+            start = p;
+            end = p + num_read;
+            assert ( end [ 0 ] == '\0' );
+
+            /* the size in bytes of value string */
+            val_size = string_size ( value );
+
+            do
+            {
+                /* look for a comma */
+                const char * sep = string_chr ( start, end - start, ',' );
+
+                /* if not found, use the end of the header value */
+                if ( sep == NULL )
+                    sep = end;
+
+                /* test for case-insensitive match of value */
+                if ( strcase_cmp ( start, sep - start, value, val_size, -1 ) == 0 )
+                {
+                    /* found it - delete p if malloc'd */
+                    if ( p != buffer && p != NULL )
+                        free ( p );
+                    return true;
+                }
+
+                /* move to next value in list or beyond end */
+                start = sep + 1;
+            }
+            while ( start < end );
+        }
+
+        /* if we malloc'd memory */
+        if ( p != buffer && p != NULL )
+            free ( p );
+    }
+
+    /* not found */
+    return false;
+}
+
 
 /* GetInputStream
  *  access the body of response as a stream
