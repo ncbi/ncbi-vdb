@@ -525,16 +525,17 @@ int vdb_mbedtls_x509_crl_parse( mbedtls_x509_crl *chain, const unsigned char *bu
             if( ( ret = vdb_mbedtls_x509_crl_parse_der( chain,
                                             pem.buf, pem.buflen ) ) != 0 )
             {
+                vdb_mbedtls_pem_free( &pem );
                 return( ret );
             }
-
-            vdb_mbedtls_pem_free( &pem );
         }
-        else if( ret != MBEDTLS_ERR_PEM_NO_HEADER_FOOTER_PRESENT )
+        else if( is_pem )
         {
             vdb_mbedtls_pem_free( &pem );
             return( ret );
         }
+
+        vdb_mbedtls_pem_free( &pem );
     }
     /* In the PEM case, buflen is 1 at the end, for the terminated NULL byte.
      * And a valid CRL cannot be less than 1 byte anyway. */

@@ -85,7 +85,7 @@ NGS_FragmentBlobIteratorMake ( ctx_t ctx, const NGS_String* run, const struct VT
         else
         {
             TRY ( NGS_RefcountInit ( ctx, & ret -> dad, & ITF_Refcount_vt . dad, & NGS_FragmentBlobIterator_vt, "NGS_FragmentBlobIterator", "" ) )
-            {
+            {   /* initialize cursor and iteration boundaries */
                 TRY ( ret -> curs = NGS_CursorMake ( ctx, tbl, sequence_col_specs, seq_NUM_COLS ) )
                 {
                     TRY ( ret -> run = NGS_StringDuplicate ( run, ctx ) )
@@ -160,7 +160,7 @@ NGS_FragmentBlobIteratorNext ( NGS_FragmentBlobIterator * self, ctx_t ctx )
         INTERNAL_ERROR ( xcSelfNull, "NULL FragmentBlobIterator accessed" );
     }
     else if ( self -> next_row <= self -> last_row )
-    {
+    {   /* advance to the next non-NULL row in the READ column, retrieve its blob */
         int64_t nextRow;
         rc_t rc = VCursorFindNextRowIdDirect ( NGS_CursorGetVCursor ( self -> curs ),
                                                NGS_CursorGetColumnIndex ( self -> curs, ctx, seq_READ ),

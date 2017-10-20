@@ -43,6 +43,7 @@ public:
         , _dad ( dad )
     {
         ostringstream cmd;
+        cmd << "unset http_proxy ;";
 
         ostringstream s;
         s << "test-proxy/" << testcase << "/environment";

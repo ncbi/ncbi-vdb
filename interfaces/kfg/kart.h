@@ -43,7 +43,30 @@
 extern "C" {
 #endif
 
+
+/* EObjectType
+ * Extensible controlled vocabulary object type.
+ * The list is defined in Described in Cart File Format 2.0 */
+typedef enum {
+    eOT_undefined,
+    eOT_empty,
+    eOT_dbgap,
+    eOT_provisional,
+    eOT_srapub,
+    eOT_sragap,
+    eOT_srapub_source,
+    eOT_sragap_source,
+    eOT_srapub_files,
+    eOT_sragap_files,
+    eOT_refseq,
+    eOT_wgs,
+    eOT_na,
+    eOT_nakmer,
+} EObjectType;
+
+
 struct KDirectory;
+struct KSrvError;
 
 /* AA-833 */
 
@@ -54,8 +77,8 @@ KFG_EXTERN rc_t CC KartItemRelease(const KartItem *self);
 
 /** Do not release the returned String !
  *  N.B. returned String is not required to be NULL-terminated !
-KFG_EXTERN rc_t CC KartItemTypeId(const KartItem *self, const String **elem);
  */
+/* VERSION 1.0 ****************************************************************/
 KFG_EXTERN rc_t CC KartItemProjId(const KartItem *self, const String **elem);
 KFG_EXTERN rc_t CC KartItemProjIdNumber(const KartItem *self, uint64_t *id);
 KFG_EXTERN rc_t CC KartItemItemId(const KartItem *self, const String **elem);
@@ -63,6 +86,18 @@ KFG_EXTERN rc_t CC KartItemItemIdNumber(const KartItem *self, uint64_t *id);
 KFG_EXTERN rc_t CC KartItemAccession(const KartItem *self, const String **elem);
 KFG_EXTERN rc_t CC KartItemName(const KartItem *self, const String **elem);
 KFG_EXTERN rc_t CC KartItemItemDesc(const KartItem *self, const String **elem);
+/* VERSION 2.0 ****************************************************************/
+KFG_EXTERN rc_t CC KartItemObjType (const KartItem *self, const String **elem );
+KFG_EXTERN rc_t CC KartItemPath (const KartItem *self, const String **elem );
+KFG_EXTERN rc_t CC KartItemSize (const KartItem *self, const String **elem );
+
+/* Kart object can be created:
+ * - from a kart file,
+ * - or as result to search service call. 
+ * In the latter it can contain errors.
+ */
+KFG_EXTERN rc_t CC KartItemGetError (const KartItem *self,
+    const struct KSrvError ** error );
 
 typedef struct Kart Kart;
 
@@ -79,9 +114,10 @@ KFG_EXTERN rc_t CC KartMakeText(const struct KDirectory *dir, const char *path,
 KFG_EXTERN rc_t CC KartPrint(const Kart *self);
 KFG_EXTERN rc_t CC KartPrintNumbered(const Kart *self);
 
-KFG_EXTERN rc_t CC KartMakeNextItem(Kart *self, const KartItem **item);
+KFG_EXTERN rc_t CC KartMakeNextItem(const Kart *self, const KartItem **item);
 
 KFG_EXTERN rc_t CC KartItemsProcessed(const Kart *self, uint16_t *number);
+
 
 #ifdef __cplusplus
 }

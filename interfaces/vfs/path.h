@@ -268,7 +268,7 @@ VFS_EXTERN rc_t CC VPathMakeSysPath ( const VPath * self,
 VFS_EXTERN rc_t CC VPathMakeString ( const VPath * self,
     struct String const ** str );
 
-
+    
 /* Get*
  *  retrieves internal parts
  *  returns pointers to internal String data
@@ -285,6 +285,15 @@ VFS_EXTERN rc_t CC VPathGetParam ( const VPath * self, const char * param, struc
 VFS_EXTERN rc_t CC VPathGetFragment ( const VPath * self, struct String * str );
 /* TEMPORARY */
 VFS_EXTERN uint32_t CC VPathGetOid ( const VPath * self );
+
+/* The following parts are set
+   when VPath was created from name resolver response */
+/* GetId: retrieve object-id returned by name resolver */
+VFS_EXTERN rc_t CC VPathGetId ( const VPath * self, struct String * str );
+VFS_EXTERN rc_t CC VPathGetTicket ( const VPath * self, struct String * str );
+VFS_EXTERN KTime_t CC VPathGetModDate ( const VPath * self );
+VFS_EXTERN size_t CC VPathGetSize ( const VPath * self );
+VFS_EXTERN const uint8_t * CC VPathGetMd5 ( const VPath * self );
 
 
 #ifdef __cplusplus

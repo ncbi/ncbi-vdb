@@ -44,6 +44,7 @@ SUBDIRS =       \
     klib        \
     kfg         \
     kapp        \
+    vfs         \
     kns         \
     kdb         \
     kproc       \
@@ -53,7 +54,6 @@ SUBDIRS =       \
     ngs-java    \
     ngs-python  \
     search      \
-    vfs         \
     sraxf       \
     vxf         \
     loader      \
