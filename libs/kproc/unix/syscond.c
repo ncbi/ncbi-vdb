@@ -283,6 +283,9 @@ LIB_EXPORT rc_t CC KConditionSignal ( KCondition *self )
     if ( self == NULL )
         return RC ( rcPS, rcCondition, rcSignaling, rcSelf, rcNull );
 
+    CMSG ( "%s[%p]: calling 'pthread_cond_signal ( cond = %p )'...\n"
+           , __func__, self, & self -> cond
+        );
     status = pthread_cond_signal ( & self -> cond );
     switch ( status )
     {
@@ -307,6 +310,9 @@ LIB_EXPORT rc_t CC KConditionBroadcast ( KCondition *self )
     if ( self == NULL )
         return RC ( rcPS, rcCondition, rcSignaling, rcSelf, rcNull );
 
+    CMSG ( "%s[%p]: calling 'pthread_cond_broadcast ( cond = %p )'...\n"
+           , __func__, self, & self -> cond
+        );
     status = pthread_cond_broadcast ( & self -> cond );
     switch ( status )
     {
