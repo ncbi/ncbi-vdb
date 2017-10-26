@@ -1885,20 +1885,31 @@ rc_t KSysDirOpenFileWrite_v1 ( KSysDir_v1 * self,
     rc_t rc = KSysDirMakePath_v1 ( self, rcOpening, false, full, sizeof full, path, args );
     if ( rc == 0 )
     {
-        int fd = open ( full, update ? O_RDWR : O_WRONLY );
-    if ( getenv("TEAMCITY_SH")) {
         char cmd[PATH_MAX];
+        char c[PATH_MAX];
         FILE *fp;
+        int fd;
         sprintf(cmd,"ls -l %s", full);
-        printf("KSysDirOpenFileWrite_v1: open(%s,%s) returned: %d\n",full,(update?"O_RDWR" : "O_WRONLY"),fd);
-        fp = popen(cmd, "r");
-        if(fp) {
-          while (fgets(cmd, sizeof(cmd)-1, fp) != NULL)
-            printf("%s", cmd);
-          pclose(fp);
+        if ( getenv("TEAMCITY_SH")) {
+            printf("Calling open...\n");
+            fp = popen(cmd, "r");
+            if (fp) {
+              while (fgets(c, sizeof(c)-1, fp) != NULL)
+                printf("%s", c);
+              pclose(fp);
+            }
         }
-    }
-
+        fd = open ( full, update ? O_RDWR : O_WRONLY );
+        if ( getenv("TEAMCITY_SH")) {
+            printf("KSysDirOpenFileWrite_v1: open(%s,%s) returned: %d\n",full,(update?"O_RDWR" : "O_WRONLY"),fd);
+            fp = popen(cmd, "r");
+            if (fp) {
+              while (fgets(c, sizeof(c)-1, fp) != NULL)
+                printf("%s", c);
+              pclose(fp);
+            }
+            printf("...called open\n");
+        }
         if ( fd < 0 ) switch ( errno )
         {
         case ENOENT:
