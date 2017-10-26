@@ -712,10 +712,16 @@ static rc_t CC KNSManagerVSetHTTPProxyPathImpl
                     port_spec = colon + 1;
              /* it is true that some day we might read symbolic port names... */
                     port_num = strtol ( port_spec, & end, 10 );
-                    if ( port_num <= 0 || port_num >= 0x10000 ||
-                         ( end [ 0 ] != 0 && comma == NULL ) )
+                    if ( port_num <= 0 || port_num >= 0x10000)
                         rc = RC ( rcNS, rcMgr, rcUpdating, rcPath, rcInvalid );
-                    else
+                    else if ( end [ 0 ] != 0 && comma == NULL ) {
+                        if ( * end != '/' && * end != '?' ) {
+                            /* skip everyting after '/' or '?' */
+                            rc = RC ( rcNS, rcMgr, rcUpdating,
+                                        rcPath, rcInvalid );
+                        }
+                    }
+                    if ( rc == 0 )
                     {
                         proxy_port = ( uint16_t ) port_num;
                         s = colon - p;

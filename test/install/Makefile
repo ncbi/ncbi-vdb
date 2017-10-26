@@ -128,7 +128,7 @@ test-install: cleanup
 	@ rm -f $(KONFIG_DIR)/*.orig
 	@ $(SUBMAKE) install
 	@ # replace .kfg files with older versions
-	@ cp $(SRCDIR)/default.kfg.2.8.1 $(KONFIG_DIR)/default.kfg
+	@ cp $(SRCDIR)/default.kfg.2.7.0 $(KONFIG_DIR)/default.kfg
 	@ cp $(SRCDIR)/certs.kfg.2.8.1 $(KONFIG_DIR)/certs.kfg
 	@ # reinstall
 	@ $(SUBMAKE) install

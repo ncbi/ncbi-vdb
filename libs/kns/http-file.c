@@ -563,20 +563,11 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                             uint64_t size;
                                             uint32_t status;
 
-                                            size_t num_read;
-                                            char buffer [ 64 ];
-
                                             /* get the file size from HEAD query */
                                             bool have_size = KClientHttpResultSize ( rslt, & size );
 
                                             /* see if the server accepts partial content range requests */
-                                            bool accept_ranges = false;
-                                            rc = KClientHttpResultGetHeader ( rslt, "Accept-Ranges", buffer, sizeof buffer, & num_read );
-                                            if ( rc == 0 && num_read == sizeof "bytes" - 1 &&
-                                                 strcase_cmp ( buffer, num_read, "bytes", sizeof "bytes" - 1, -1 ) == 0 )
-                                            {
-                                                accept_ranges = true;
-                                            }
+                                            bool accept_ranges = KClientHttpResultTestHeaderValue ( rslt, "Accept-Ranges", "bytes" );
 
                                             /* check the result status */
                                             rc = KClientHttpResultStatus ( rslt, & status, NULL, 0, NULL );

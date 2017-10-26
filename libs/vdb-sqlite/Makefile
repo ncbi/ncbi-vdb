@@ -52,8 +52,7 @@ else
 all std: $(ALL_LIBS)
 
 $(EXT_LIBS):
-	@ echo "NOTE - library $(@F) cannot be built:"                  \
-		"It requires 'libxml2' and its development headers."
+	@ echo "NOTE - library $(@F) cannot be built: It requires 'libxml2'."
 endif
 
 .PHONY: all std $(ALL_LIBS)

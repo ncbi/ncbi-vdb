@@ -23,7 +23,7 @@
 # ===========================================================================
 
 ## DEFAULT CONFIGURATION FOR SRA-TOOLKIT
-## modified for testing purposes 
+# 
 #  These settings are intended to allow the tools to work under conditions
 #  when the user has not yet performed any configuration.
 /config/default = "true"
