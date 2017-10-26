@@ -486,11 +486,11 @@ TEST_CASE( CacheTee_ReadOnly )
 	remove_file( CACHEFILE );	// to start with a clean slate on caching...
 	remove_file( CACHEFILE1 );
 
-    KDirectory * dir;
-    REQUIRE_RC( KDirectoryNativeDir( &dir ) );
+	KDirectory * dir;
+	REQUIRE_RC( KDirectoryNativeDir( &dir ) );
 
 	const KFile * org;
-    REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE ) );
+	REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE ) );
 
 	/* make a fresh cache-tee and read 100 bytes from it... */
 	const KFile * tee;
@@ -498,14 +498,10 @@ TEST_CASE( CacheTee_ReadOnly )
 	REQUIRE_RC( read_partial( tee, 100, 100 ) );
 	REQUIRE_RC( KFileRelease( tee ) );
 
-if (getenv("TEAMCITY_SH")) system("ls -l " CACHEFILE1);
 	REQUIRE_RC( KDirectorySetAccess ( dir, false, 0, 0222, "%s", CACHEFILE1 ) );
-if (getenv("TEAMCITY_SH")) system("ls -l " CACHEFILE1);
     
 	/* make a second cache-tee and read all from it... */
-if (getenv("TEAMCITY_SH")) printf("Calling KDirectoryMakeCacheTee...\n");
 	REQUIRE_RC( KDirectoryMakeCacheTee ( dir, &tee, org, BLOCKSIZE, "%s", CACHEFILE ) );
-if (getenv("TEAMCITY_SH")) printf("...called KDirectoryMakeCacheTee\n");
 
 	REQUIRE_RC( read_all( tee, 1024 * 32 )	);
 	REQUIRE_RC( KFileRelease( tee ) );
