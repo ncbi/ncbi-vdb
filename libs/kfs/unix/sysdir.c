@@ -1886,6 +1886,13 @@ rc_t KSysDirOpenFileWrite_v1 ( KSysDir_v1 * self,
     if ( rc == 0 )
     {
         int fd = open ( full, update ? O_RDWR : O_WRONLY );
+    if ( getenv("TEAMCITY_SH")) {
+        char cmd[PATH_MAX];
+        sprintf(cmd,"ls -l %s", full);
+        printf("KSysDirOpenFileWrite_v1: open(%s,%s) returned: %d\n",full,(update?"O_RDWR" : "O_WRONLY"),fd);
+        system(cmd);
+    }
+
         if ( fd < 0 ) switch ( errno )
         {
         case ENOENT:
