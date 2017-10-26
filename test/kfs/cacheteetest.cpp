@@ -479,7 +479,7 @@ TEST_CASE( CacheTee_Multiple_Users_Single_Inst )
 }
 
 // TODO: fix, this does not work on Windows
-#if !defined(WINDOWS) && !defined(_WIN32)
+#if !defined(WINDOWS) && !defined(_WIN32) && !defined(MAC)
 TEST_CASE( CacheTee_ReadOnly )
 {
 	KOutMsg( "Test: CacheTee_ReadOnly %s\n", CACHEFILE1 );
