@@ -498,12 +498,15 @@ TEST_CASE( CacheTee_ReadOnly )
 	REQUIRE_RC( read_partial( tee, 100, 100 ) );
 	REQUIRE_RC( KFileRelease( tee ) );
 
-system("ls -l " CACHEFILE1);
+if (getenv("TEAMCITY_SH")) system("ls -l " CACHEFILE1);
 	REQUIRE_RC( KDirectorySetAccess ( dir, false, 0, 0222, "%s", CACHEFILE1 ) );
-system("ls -l " CACHEFILE1);
+if (getenv("TEAMCITY_SH")) system("ls -l " CACHEFILE1);
     
 	/* make a second cache-tee and read all from it... */
+if (getenv("TEAMCITY_SH")) printf("Calling KDirectoryMakeCacheTee...\n");
 	REQUIRE_RC( KDirectoryMakeCacheTee ( dir, &tee, org, BLOCKSIZE, "%s", CACHEFILE ) );
+if (getenv("TEAMCITY_SH")) printf("...called KDirectoryMakeCacheTee\n");
+
 	REQUIRE_RC( read_all( tee, 1024 * 32 )	);
 	REQUIRE_RC( KFileRelease( tee ) );
 
