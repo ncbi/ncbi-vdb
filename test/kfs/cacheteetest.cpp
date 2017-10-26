@@ -482,7 +482,7 @@ TEST_CASE( CacheTee_Multiple_Users_Single_Inst )
 #if !defined(WINDOWS) && !defined(_WIN32)
 TEST_CASE( CacheTee_ReadOnly )
 {
-	KOutMsg( "Test: CacheTee_ReadOnly\n" );
+	KOutMsg( "Test: CacheTee_ReadOnly %s\n", CACHEFILE1 );
 	remove_file( CACHEFILE );	// to start with a clean slate on caching...
 	remove_file( CACHEFILE1 );
 
@@ -498,7 +498,9 @@ TEST_CASE( CacheTee_ReadOnly )
 	REQUIRE_RC( read_partial( tee, 100, 100 ) );
 	REQUIRE_RC( KFileRelease( tee ) );
 
+system("ls -l " CACHEFILE1);
 	REQUIRE_RC( KDirectorySetAccess ( dir, false, 0, 0222, "%s", CACHEFILE1 ) );
+system("ls -l " CACHEFILE1);
     
 	/* make a second cache-tee and read all from it... */
 	REQUIRE_RC( KDirectoryMakeCacheTee ( dir, &tee, org, BLOCKSIZE, "%s", CACHEFILE ) );
