@@ -772,13 +772,13 @@ TEST_CASE(IsUserAnAdminTest)
     }
     else
     {
-#if ! defined ( MAC )
         REQUIRE ( !is_iser_an_admin() );
-#endif
     }
 #else
-    // Linux or not under TeamCity
+#if !defined (MAC)
+    // Linux
     REQUIRE ( !is_iser_an_admin() );
+#endif
 #endif
 }
 
