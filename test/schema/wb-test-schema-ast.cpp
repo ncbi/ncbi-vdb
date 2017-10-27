@@ -951,13 +951,15 @@ FIXTURE_TEST_CASE(FuncCall_Vararg, AST_Fixture)
 //TODO: invalid float
 //TODO: nested vector constants - error
 //TODO: negation applied to non-scalar - error
+//TODO: eFwdExpr
+//TODO: eCastExpr
+//TODO: eVectorExpr
+//TODO: eCondExpr
 
 #include "wb-test-schema-func.cpp"
 #include "wb-test-schema-table.cpp"
 #include "wb-test-schema-db.cpp"
 #include "wb-test-schema-view.cpp"
-
-//TODO: formatted type in production in a table (not allowed?)
 
 //////////////////////////////////////////// Main
 #include <kapp/args.h>

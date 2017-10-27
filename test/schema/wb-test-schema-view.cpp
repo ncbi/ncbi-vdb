@@ -41,79 +41,42 @@ FIXTURE_TEST_CASE(Version_2_Empty_Source, AST_Fixture)
 class ViewAccess // encapsulates access to an STable in a VSchema
 {
 public:
-    ViewAccess ( const SView* p_fn )
-    : m_self ( p_fn )
-    {
-    }
+    ViewAccess ( const SView* p_fn ) : m_self ( p_fn ) {}
 
     uint32_t Version () const { return m_self -> version; }
     uint32_t Id () const { return m_self -> id; }
 
-    uint32_t OverloadCount () const
-    {
-        const SNameOverload * ovl = static_cast < const SNameOverload * > ( m_self -> name -> u . obj );
-        return VectorLength ( & ovl -> items );
-    }
     const SNameOverload * GetOverloads () const
     {
         return static_cast < const SNameOverload * > ( m_self -> name -> u . obj );
     }
-    const SView * GetOverload ( uint32_t p_idx ) const
-    {
-        return static_cast < const SView * > ( VectorGet ( & GetOverloads () -> items, p_idx ) );
-    }
 
-    uint32_t ParamTableCount () const { return VectorLength ( & m_self -> tables ); }
+    VdbVector < SView > Overloads () const { return VdbVector < SView > ( GetOverloads () -> items ); }
+
+    VdbVector < STable > ParamTables () const { return VdbVector < STable > ( m_self -> tables ); }
     const STable * GetParamTable ( uint32_t p_idx ) const
     {
-        return static_cast < const STable * > ( VectorGetSymbol ( m_self -> tables, p_idx ) -> u . obj );
+        const KSymbol * sym = VdbVector < KSymbol > ( m_self -> tables ) . Get ( p_idx );
+        return static_cast < const STable * > ( sym -> u . obj );
     }
-    uint32_t ParamViewCount () const { return VectorLength ( & m_self -> views ); }
+
+    VdbVector < SView > ParamViews () const { return VdbVector < SView > ( m_self -> views ); }
     const SView * GetParamView ( uint32_t p_idx ) const
     {
-        return static_cast < const SView * > ( VectorGetSymbol ( m_self -> views, p_idx ) -> u . obj);
+        const KSymbol * sym = VdbVector < KSymbol > ( m_self -> views ) . Get ( p_idx );
+        return static_cast < const SView * > ( sym -> u . obj );
     }
 
-    uint32_t ParentCount () const { return VectorLength ( & m_self -> parents ); }
-    const SView * GetParent ( uint32_t p_idx ) const
-    {
-        return static_cast < const SView * > ( VectorGet ( & m_self -> parents, p_idx ) );
-    }
+    VdbVector < SView > Parents () const { return VdbVector < SView > ( m_self -> parents ); }
 
-    uint32_t OverrideCount () const { return VectorLength ( & m_self -> overrides ); }
-    const SView * GetOverride ( uint32_t p_idx ) const
-    {
-        return static_cast < const SView * > ( VectorGet ( & m_self -> parents, p_idx ) );
-    }
+    /* overrides ( inherited virtual productions )
+       contents are grouped by introducing parent */
+    VdbVector < SViewOverrides > Overrides () const { return VdbVector < SViewOverrides > ( m_self -> overrides ); }
 
-    uint32_t ColumnCount () const { return VectorLength ( & m_self -> col ); }
-    const SColumn * GetColumn ( uint32_t p_idx ) const
-    {
-        return static_cast < const SColumn * > ( VectorGet ( & m_self -> col, p_idx ) );
-    }
-
-    uint32_t ColumnNameCount () const { return VectorLength ( & m_self -> cname ); }
-    const SNameOverload * GetColumnName ( uint32_t p_idx ) const
-    {
-        return static_cast < const SNameOverload * > ( VectorGet ( & m_self -> cname, p_idx ) );
-    }
-
-    uint32_t ProductionCount () const { return VectorLength ( & m_self -> prod ); }
-    const SProduction * GetProduction ( uint32_t p_idx ) const
-    {
-        return static_cast < const SProduction * > ( VectorGet ( & m_self -> prod, p_idx ) );
-    }
-
-    uint32_t VirtualProductionCount () const { return VectorLength ( & m_self -> vprods ); }
-    const KSymbol * GetVirtualProduction ( uint32_t p_idx ) const
-    {
-        return static_cast < const KSymbol * > ( VectorGet ( & m_self -> vprods, p_idx ) );
-    }
-
-    const KSymbol * VectorGetSymbol ( const Vector & p_vect, uint32_t p_idx ) const
-    {
-        return static_cast < const KSymbol * > ( VectorGet ( & p_vect, p_idx ) );
-    }
+    VdbVector < SColumn > Columns () const { return VdbVector < SColumn > ( m_self -> col ); }
+    VdbVector < SNameOverload > ColumnNames () const { return VdbVector < SNameOverload > ( m_self -> cname ); }
+    VdbVector < SProduction > Productions () const { return VdbVector < SProduction > ( m_self -> prod ); }
+    VdbVector < KSymbol > VirtualProductions () const { return VdbVector < KSymbol > ( m_self -> vprods ); }
 
     const SView * m_self;
 };
@@ -126,11 +89,6 @@ public:
     }
     ~AST_View_Fixture ()
     {
-    }
-
-    const STable * GetTable ( uint32_t p_idx )
-    {
-        return static_cast < const STable* > ( VectorGet ( & GetSchema () -> tbl, p_idx ) );
     }
 
     ViewAccess ParseView ( const char * p_source, const char * p_name, uint32_t p_idx = 0 )
@@ -147,6 +105,24 @@ public:
     {
         return ViewAccess ( static_cast < const SView* > ( VectorGet ( & GetSchema () -> view, p_idx ) ) );
     }
+
+    #define THROW_ON_TRUE(cond) if ( cond ) throw logic_error ( string ( __func__ ) + " : " #cond );
+
+        void VerifySymExpr( const SExpression * p_expr,
+                            uint32_t            p_exprType,
+                            const string &      p_ident,
+                            uint32_t            p_objType )
+        {
+            THROW_ON_TRUE ( p_expr == 0 );
+            THROW_ON_TRUE ( p_exprType != p_expr -> var );
+            const SSymExpr * sym = reinterpret_cast < const SSymExpr * > ( p_expr );
+            THROW_ON_TRUE ( sym == 0 );
+            THROW_ON_TRUE ( sym -> _sym == 0 );
+            THROW_ON_TRUE ( p_ident != ToCppString( sym -> _sym -> name ) );
+            THROW_ON_TRUE ( p_objType != sym -> _sym -> type );
+        }
+    #undef THROW_ON_TRUE
+
 };
 
 FIXTURE_TEST_CASE(View_OneTable_NoParents, AST_View_Fixture)
@@ -157,7 +133,7 @@ FIXTURE_TEST_CASE(View_OneTable_NoParents, AST_View_Fixture)
     REQUIRE_EQ ( ( uint32_t ) eView, v . m_self -> name -> type );
     // verify entry in the container of (overloaded) view names
     REQUIRE_EQ ( 1u, VectorLength ( & GetSchema () -> vname ) );
-    REQUIRE_EQ ( 1u, v . OverloadCount () );
+    REQUIRE_EQ ( 1u, v . Overloads () . Count () );
     REQUIRE_EQ ( v . GetOverloads (), ( const SNameOverload * ) VectorGet ( & GetSchema () -> vname, 0 ) );
 }
 
@@ -196,7 +172,7 @@ FIXTURE_TEST_CASE(View_NewerMajorVersion, AST_View_Fixture)
 
     // 1 entry in the table of view overloads, the entry points to the 2 versions of the view, the views point back
     REQUIRE_EQ ( 1u, VectorLength ( & GetSchema () -> vname ) );
-    REQUIRE_EQ ( 2u, v1 . OverloadCount () );
+    REQUIRE_EQ ( 2u, v1 . Overloads () . Count () );
     REQUIRE_EQ ( v1 . GetOverloads (), v2 . GetOverloads () );
     REQUIRE_EQ ( v1 . GetOverloads (), ( const SNameOverload * ) VectorGet ( & GetSchema () -> vname, 0 ) );
 }
@@ -212,7 +188,7 @@ FIXTURE_TEST_CASE(View_OlderMajorVersion, AST_View_Fixture)
 
     // 1 entry in the table of view overloads, the entry points to the 2 versions of the view, the views point back
     REQUIRE_EQ ( 1u, VectorLength ( & GetSchema () -> vname ) );
-    REQUIRE_EQ ( 2u, v1 . OverloadCount () );
+    REQUIRE_EQ ( 2u, v1 . Overloads () . Count () );
 }
 
 FIXTURE_TEST_CASE(View_OlderMinorVersion, AST_View_Fixture)
@@ -223,7 +199,7 @@ FIXTURE_TEST_CASE(View_OlderMinorVersion, AST_View_Fixture)
     REQUIRE_EQ ( Version ( 1, 2 ), v . Version () );
 
     REQUIRE_EQ ( 1u, VectorLength ( & GetSchema () -> vname ) );
-    REQUIRE_EQ ( 1u, v . OverloadCount () );
+    REQUIRE_EQ ( 1u, v . Overloads () . Count () );
 }
 
 FIXTURE_TEST_CASE(View_NewerMinorVersion, AST_View_Fixture)
@@ -234,31 +210,31 @@ FIXTURE_TEST_CASE(View_NewerMinorVersion, AST_View_Fixture)
     REQUIRE_EQ ( Version ( 1, 2 ), v . Version () );
 
     REQUIRE_EQ ( 1u, VectorLength ( & GetSchema () -> vname ) );
-    REQUIRE_EQ ( 1u, v . OverloadCount () );
+    REQUIRE_EQ ( 1u, v . Overloads () . Count () );
 }
 
 // Parameters
 FIXTURE_TEST_CASE(View_Parameter_Table, AST_View_Fixture)
 {
     ViewAccess v = ParseView ( "version 2; table T#1 {}; view v#1 <T t> {}", "v" );
-    REQUIRE_EQ ( 1u, v . ParamTableCount () );
-    REQUIRE_EQ ( 0u, v . ParamViewCount () );
+    REQUIRE_EQ ( 1u, v . ParamTables () . Count () );
+    REQUIRE_EQ ( 0u, v . ParamViews () . Count () );
     REQUIRE_EQ ( GetTable ( 0 ), v . GetParamTable ( 0 ) );
 }
 
 FIXTURE_TEST_CASE(View_Parameter_View, AST_View_Fixture)
 {
     ViewAccess v = ParseView ( "version 2; table T#1 {}; view X#1 <T t> {}; view v#1 <X v> {}", "v", 1 );
-    REQUIRE_EQ ( 0u, v . ParamTableCount () );
-    REQUIRE_EQ ( 1u, v . ParamViewCount () );
+    REQUIRE_EQ ( 0u, v . ParamTables() . Count () );
+    REQUIRE_EQ ( 1u, v . ParamViews () . Count () );
     REQUIRE_EQ ( GetView ( 0 ) .  m_self, v . GetParamView ( 0 ) );
 }
 
 FIXTURE_TEST_CASE(View_Parameter_TableAndView, AST_View_Fixture)
 {
     ViewAccess v = ParseView ( "version 2; table T#1 {}; view X#1 <T t> {}; view v#1 <T t, X v> {}", "v", 1 );
-    REQUIRE_EQ ( 1u, v . ParamTableCount () );
-    REQUIRE_EQ ( 1u, v . ParamViewCount () );
+    REQUIRE_EQ ( 1u, v . ParamTables() . Count () );
+    REQUIRE_EQ ( 1u, v . ParamViews () . Count () );
     REQUIRE_EQ ( GetTable ( 0 ), v . GetParamTable ( 0 ) );
     REQUIRE_EQ ( GetView ( 0 ) .  m_self, v . GetParamView ( 0 ) );
 }
@@ -309,7 +285,7 @@ FIXTURE_TEST_CASE(View_Parameter_DuplicateName, AST_View_Fixture)
 FIXTURE_TEST_CASE(View_Parents_NoParents, AST_View_Fixture)
 {
     ViewAccess v = ParseView ( "version 2; table T#1 {}; view W#1 <T v> {}", "W" );
-    REQUIRE_EQ ( 0u, v . ParentCount () );
+    REQUIRE_EQ ( 0u, v . Parents () . Count () );
 }
 
 FIXTURE_TEST_CASE(View_Parents_Multiple, AST_View_Fixture)
@@ -320,9 +296,9 @@ FIXTURE_TEST_CASE(View_Parents_Multiple, AST_View_Fixture)
         "view V2#2 <T t> {}; "
         "view W#1 <T v> = V1, V2 {}",
         "W", 2 );
-    REQUIRE_EQ ( 2u, v . ParentCount () );
-    REQUIRE_EQ ( GetView ( 0 ) . m_self, v . GetParent ( 0 ) );
-    REQUIRE_EQ ( GetView ( 1 ) . m_self, v . GetParent ( 1 ) );
+    REQUIRE_EQ ( 2u, v . Parents () . Count () );
+    REQUIRE_EQ ( GetView ( 0 ) . m_self, v . Parents () . Get ( 0 ) );
+    REQUIRE_EQ ( GetView ( 1 ) . m_self, v . Parents () . Get ( 1 ) );
 }
 
 FIXTURE_TEST_CASE(View_Parents_Unknown, AST_View_Fixture)
@@ -359,7 +335,16 @@ FIXTURE_TEST_CASE(View_Parents_Redundant, AST_View_Fixture)
         "view V2#1 <T t> = V1 {}"
         "view V3#1 <T t> = V2, V1 {}", // V1 does not collide with itself here
         "V3", 2 );
-    REQUIRE_EQ ( 2u, v . ParentCount () );
+    REQUIRE_EQ ( 2u, v . Parents () . Count () );
+}
+
+FIXTURE_TEST_CASE(View_Parents_BadVersion, AST_View_Fixture)
+{
+    VerifyErrorMessage (
+        "version 2; table T#1 {}; "
+        "view V#1 <T t> {}; "
+        "view W#1 <T v> = V#2 {}",
+        "Requested version does not exist: 'V#2'" );
 }
 
 // View body: columns
@@ -367,8 +352,8 @@ FIXTURE_TEST_CASE(View_Parents_Redundant, AST_View_Fixture)
 FIXTURE_TEST_CASE(View_Column, AST_View_Fixture)
 {
     ViewAccess v = ParseView ( "version 2; table T#1 {}; view W#1 <T v> { column U8 c = 1; }", "W" );
-    REQUIRE_EQ ( 1u, v . ColumnCount () );
-    const SColumn & c = * v . GetColumn ( 0 );
+    REQUIRE_EQ ( 1u, v . Columns () . Count () );
+    const SColumn & c = * v . Columns () . Get ( 0 );
     REQUIRE_NOT_NULL ( c . name );
     REQUIRE_EQ ( ( uint32_t ) eColumn, c . name -> type );
 
@@ -387,21 +372,40 @@ FIXTURE_TEST_CASE(View_Column, AST_View_Fixture)
     REQUIRE ( c . read_only );
     REQUIRE ( ! c . simple );
 
-    REQUIRE_EQ ( ( const void * ) v . GetColumnName ( 0 ), c . name -> u . obj );
+    REQUIRE_EQ ( ( const void * ) v . ColumnNames () . Get ( 0 ), c . name -> u . obj );
 }
 
-FIXTURE_TEST_CASE(View_Column_Redeclared, AST_View_Fixture)
+FIXTURE_TEST_CASE(View_Column_ColumnExists, AST_View_Fixture)
 {
     VerifyErrorMessage (
-        "version 2; table T#1 {}; view W#1 <T v> { column U8 c = 1; column U8 c = 2; }",
-        "Object already defined: 'c'" );
+        "version 2; table T#1 {};"
+        "view W#1 <T v> { column U8 c = 1; column U8 c = 2; }",
+        "Column already defined: 'c'" );
+}
+
+FIXTURE_TEST_CASE(View_Column_Overloaded, AST_View_Fixture)
+{   // with a different type, not an error but an overload
+    ViewAccess v = ParseView (
+        "version 2; table T#1 {}; "
+        "view W#1 <T v> { column U8 c = 1; column U16 c = 2; }",
+        "W" );
+    REQUIRE_EQ ( 1u, v . ColumnNames () . Count () );
+    const SNameOverload * ovl = v . ColumnNames () . Get ( 0 );
+    REQUIRE_NOT_NULL ( ovl );
+    REQUIRE_EQ ( string ("c"), ToCppString ( ovl -> name -> name ) );
+    REQUIRE_EQ ( 0u, ovl -> cid . ctx );
+    REQUIRE_EQ ( 0u, ovl -> cid . id );
+    VdbVector < SColumn > names ( ovl -> items );
+    REQUIRE_EQ ( 2u, names . Count () );
+    REQUIRE_EQ ( v . Columns () . Get ( 0 ), names . Get ( 0 ) );
+    REQUIRE_EQ ( v . Columns () . Get ( 1 ), names . Get ( 1 ) );
 }
 
 FIXTURE_TEST_CASE(View_Column_Reference, AST_View_Fixture)
 {
     ViewAccess v = ParseView ( "version 2; table T#1 {}; view W#1 <T v> { column U8 c1 = 1; column U8 c2 = c1; }", "W" );
-    REQUIRE_EQ ( 2u, v . ColumnCount () );
-    const SColumn & c = * v . GetColumn ( 1 );
+    REQUIRE_EQ ( 2u, v . Columns () . Count () );
+    const SColumn & c = * v . Columns () . Get ( 1 );
     REQUIRE_NOT_NULL ( c . name );
     REQUIRE_EQ ( string ("c2"), ToCppString ( c . name -> name ) );
     REQUIRE_NOT_NULL ( c . read );
@@ -411,8 +415,8 @@ FIXTURE_TEST_CASE(View_Column_Reference, AST_View_Fixture)
 FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesColumn, AST_View_Fixture)
 {   // introducing member expressions
     ViewAccess v = ParseView ( "version 2; table T#1 { column U8 c1 = 1; }; view W#1 <T t> { column U8 c2 = t . c1; }", "W" );
-    REQUIRE_EQ ( 1u, v . ColumnCount () );
-    const SColumn & c = * v . GetColumn ( 0 );
+    REQUIRE_EQ ( 1u, v . Columns () . Count () );
+    const SColumn & c = * v . Columns () . Get ( 0 );
     REQUIRE_NOT_NULL ( c . name );
     REQUIRE_EQ ( string ("c2"), ToCppString ( c . name -> name ) );
     REQUIRE_NOT_NULL ( c . read );
@@ -421,12 +425,12 @@ FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesColumn, AST_View_Fixture)
 FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesColumn_PseudoPhysicalToken, AST_View_Fixture)
 {   // .b looks like a physical identifier
     ViewAccess v = ParseView ( "version 2; table T#1 { column U8 c1 = 1; }; view W#1 <T t> { column U8 c2 = t .c1; }", "W" );
-    REQUIRE_EQ ( ( uint32_t ) eColExpr, v . GetColumn ( 0 ) -> read -> var );
+    REQUIRE_EQ ( ( uint32_t ) eColExpr, v . Columns () . Get ( 0 ) -> read -> var );
 }
 FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesProduction, AST_View_Fixture)
 {
     ViewAccess v = ParseView ( "version 2; table T#1 { U8 c1 = 1; }; view W#1 <T t> { column U8 c2 = t . c1; }", "W" );
-    REQUIRE_EQ ( ( uint32_t ) eColExpr, v . GetColumn ( 0 ) -> read -> var );
+    REQUIRE_EQ ( ( uint32_t ) eColExpr, v . Columns () . Get ( 0 ) -> read -> var );
 }
 
 FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesColumn_Undefined, AST_View_Fixture)
@@ -443,9 +447,9 @@ FIXTURE_TEST_CASE(View_Column_ReferenceToParamViewsColumn, AST_View_Fixture)
         " view V#1 <T t> { column U8 c2 = t . c1; }"
         " view W#1 <V v> { column U8 c3 = v . c2; }",
     "W", 1 );
-    const SColumn & c = * v . GetColumn ( 0 );
+    const SColumn & c = * v . Columns () . Get ( 0 );
     REQUIRE_NOT_NULL ( c . read );
-    REQUIRE_EQ ( ( uint32_t ) eColExpr, v . GetColumn ( 0 ) -> read -> var );
+    REQUIRE_EQ ( ( uint32_t ) eColExpr, c . read -> var );
 }
 
 FIXTURE_TEST_CASE(View_Column_ReferenceToParamViewsColumn_Undefined, AST_View_Fixture)
@@ -464,14 +468,28 @@ FIXTURE_TEST_CASE(View_Column_Context, AST_View_Fixture)
         " view V#1 <T t> {}"
         " view W#1 <T t> { column U8 c1 = 1; column U8 c2 = 2; }",
     "W", 1 );
-    const SNameOverload * ovl = v . GetColumnName ( 0 );
+    const SNameOverload * ovl = v . ColumnNames () . Get ( 0 );
     REQUIRE_NOT_NULL ( ovl );
     REQUIRE_EQ ( 1u, ovl -> cid . ctx );
     REQUIRE_EQ ( 0u, ovl -> cid . id );
-    ovl = v . GetColumnName ( 1 );
+    ovl = v . ColumnNames () . Get ( 1 );
     REQUIRE_NOT_NULL ( ovl );
     REQUIRE_EQ ( 1u, ovl -> cid . ctx );
     REQUIRE_EQ ( 1u, ovl -> cid . id );
+}
+
+FIXTURE_TEST_CASE(View_ForwardReference, AST_View_Fixture)
+{
+    ViewAccess v = ParseView (
+        "version 2; table T#1 {}; view V#1 <T v> { column U16 a = p; column U8 p = 1; }", "V" );
+    REQUIRE_EQ ( 2u, v . Columns () . Count () );
+    const SColumn * a = v . Columns () . Get ( 0 );
+    VerifySymExpr ( a -> read, eColExpr, "p", eColumn );
+}
+
+FIXTURE_TEST_CASE(View_ColumnDecl_OutsideIdent, AST_View_Fixture)
+{
+    ParseView ("version 2; table T#1 {}; const U8 c = 1; view V#1 <T v> { column U8 c = 1; }", "V" );
 }
 
 // View body: productions
@@ -479,8 +497,8 @@ FIXTURE_TEST_CASE(View_Column_Context, AST_View_Fixture)
 FIXTURE_TEST_CASE(View_Production, AST_View_Fixture)
 {
     ViewAccess v = ParseView ( "version 2; table T#1 {}; view V#1 <T v> { U8 p = 1; }", "V" );
-    REQUIRE_EQ ( 1u, v . ProductionCount () );
-    const SProduction & p = * v . GetProduction ( 0 );
+    REQUIRE_EQ ( 1u, v . Productions () . Count () );
+    const SProduction & p = * v . Productions () . Get ( 0 );
     REQUIRE_NOT_NULL ( p . name );
     REQUIRE_EQ ( string ("p"), ToCppString ( p . name -> name ) );
     REQUIRE_EQ ( ( uint32_t ) eProduction, p . name -> type );
@@ -488,7 +506,10 @@ FIXTURE_TEST_CASE(View_Production, AST_View_Fixture)
     REQUIRE_NOT_NULL ( p . expr );
     REQUIRE_EQ ( ( uint32_t ) eConstExpr, p . expr -> var );
 
-    REQUIRE_NOT_NULL ( p . fd ); //TODO: verify: STypeExpr* representing U8
+    REQUIRE_NOT_NULL ( p . fd );
+    REQUIRE_EQ ( ( uint32_t ) eTypeExpr, p . fd -> var );
+    const STypeExpr * type = reinterpret_cast < const STypeExpr * > ( p . fd );
+    REQUIRE_EQ ( U8_id, type -> dt -> id );
     REQUIRE ( ! p . trigger );
     REQUIRE ( ! p . control );
 }
@@ -503,8 +524,18 @@ FIXTURE_TEST_CASE(View_Production_ClashWithColumn, AST_View_Fixture)
 FIXTURE_TEST_CASE(View_Production_IntroducingVirtual, AST_View_Fixture)
 {
     ViewAccess v = ParseView ( "version 2; table T#1 {}; view V#1 <T v> { column U8 p = vp; }", "V" );
-    REQUIRE_EQ ( 1u, v . VirtualProductionCount () );
-    REQUIRE_EQ ( string ("vp"), ToCppString ( v . GetVirtualProduction ( 0 ) -> name ) );
+    REQUIRE_EQ ( 1u, v . VirtualProductions () . Count () );
+    REQUIRE_EQ ( string ("vp"), ToCppString ( v . VirtualProductions () . Get ( 0 ) -> name ) );
+}
+
+FIXTURE_TEST_CASE(View_Production_ForwardReference_DefinedAsProduction, AST_View_Fixture)
+{
+    ViewAccess v = ParseView ( "version 2; table T#1 {}; view V#1 <T v> { U16 a = p; U8 p = 1; }", "V" );
+    REQUIRE_EQ ( 2u, v . Productions () . Count () );
+    const SProduction * a = v . Productions () . Get ( 0 );
+    VerifySymExpr ( a -> expr, eProdExpr, "p", eProduction );
+    // once defined, p is not virtual anymore
+    REQUIRE_EQ ( 0u, v . VirtualProductions () . Count  () );
 }
 
 // Inheritance
@@ -517,10 +548,10 @@ FIXTURE_TEST_CASE(View_Parents_ColumnsInherited, AST_View_Fixture)
         "view W#1 <T t> { column U16 w = 1; }; "
         "view X#1 <T t> = V, W {}",
         "X", 2 );
-    REQUIRE_EQ ( 2u, v . ColumnNameCount () );
+    REQUIRE_EQ ( 2u, v . ColumnNames () . Count () );
     // v and w are seen as X's columns
-    REQUIRE_EQ ( string ("v"), ToCppString ( v . GetColumnName ( 0 ) -> name -> name ) );
-    REQUIRE_EQ ( string ("w"), ToCppString ( v . GetColumnName ( 1 ) -> name -> name ) );
+    REQUIRE_EQ ( string ("v"), ToCppString ( v . ColumnNames () . Get ( 0 ) -> name -> name ) );
+    REQUIRE_EQ ( string ("w"), ToCppString ( v . ColumnNames () . Get ( 1 ) -> name -> name ) );
 }
 
 FIXTURE_TEST_CASE(View_Parents_ProductionsInherited, AST_View_Fixture)
@@ -531,8 +562,8 @@ FIXTURE_TEST_CASE(View_Parents_ProductionsInherited, AST_View_Fixture)
         "view X#1 <T t> = V { U8 _v = v; }",
         "X", 1 );
     // v does not count as X's production but is accessible
-    REQUIRE_EQ ( 1u, v . ProductionCount () );
-    REQUIRE_EQ ( string ("_v"), ToCppString ( v . GetProduction ( 0 ) -> name -> name ) );
+    REQUIRE_EQ ( 1u, v . Productions () . Count () );
+    REQUIRE_EQ ( string ("_v"), ToCppString ( v . Productions () . Get ( 0 ) -> name -> name ) );
 }
 
 FIXTURE_TEST_CASE(View_Parents_ColumnCollision, AST_View_Fixture)
@@ -545,8 +576,6 @@ FIXTURE_TEST_CASE(View_Parents_ColumnCollision, AST_View_Fixture)
         "Duplicate symbol in parent view hierarchy: 'p'" );
 }
 
-#if NOT_IMPLEMENTED
-//TODO: name+type collisions between parents' productions
 FIXTURE_TEST_CASE(View_Parents_ProductionCollision, AST_View_Fixture)
 {
     VerifyErrorMessage (
@@ -554,26 +583,112 @@ FIXTURE_TEST_CASE(View_Parents_ProductionCollision, AST_View_Fixture)
         "view V#1 <T t> { U8 p = 1; }; "
         "view W#1 <T t> { U8 p = 2; }; "
         "view X#1 <T v> = V, W {}",
-        "" );
+        "Duplicate symbol in parent view hierarchy: 'p'" );
 }
-#endif
 
-//TODO: virtual productions inherited
-//TODO: virtual productions in one parent defined by another parent
-//TODO: multilevel inheritance
+FIXTURE_TEST_CASE(View_Parents_VirtualProductionDefined, AST_View_Fixture)
+{
+    ViewAccess v = ParseView (
+        "version 2; table T#1 {}; "
+        "view V#1 <T t> { U8 p = v; }; "
+        "view X#1 <T t> = V { U8 v = 1; }",
+        "X", 1 );
+    REQUIRE_EQ ( 1u, v . Productions () . Count () );
+    REQUIRE_EQ ( string ("v"), ToCppString ( v . Productions () . Get ( 0 ) -> name -> name ) );
 
-//TODO: column name clashes with parents
+    // verify p and its reference to v
+    const SProduction * p = GetView ( 0 ) . Productions () . Get ( 0 );
+    REQUIRE_NOT_NULL ( p );
+    VerifySymExpr ( p -> expr, eFwdExpr, "v", eVirtual );
+}
 
-//TODO: View_ReferenceToParentsColumn
-//TODO: View_ReferenceToParentsProduction
+FIXTURE_TEST_CASE(View_Parents_VirtualProductionDefinedAcrossParents, AST_View_Fixture)
+{
+    ViewAccess v = ParseView (
+        "version 2; table T#1 {}; "
+        "view V#1 <T t> { column U8 c = v; }; "
+        "view W#1 <T t> { U8 v = 1; }; "
+        "view X#1 <T t> = V, W {}",
+        "X", 2 );
+    REQUIRE_EQ ( 0u, v . Productions () . Count () );
+    // verify c and its reference to W.v
+    const SColumn * p = GetView ( 0 ) . Columns () . Get ( 0 );
+    REQUIRE_NOT_NULL ( p );
+    VerifySymExpr ( p -> read, eFwdExpr, "v", eVirtual );
+}
 
-//TODO: redeclaring parents' column (error)
+FIXTURE_TEST_CASE(View_Parents_InheritedVirtualProduction, AST_View_Fixture)
+{
+    ViewAccess t = ParseView (
+        "version 2; table T#1 {}; "
+        "view granddad #1 <T t> { U8 a = v; }; "
+        "view dad #1 <T t> = granddad { U8 b = v; }; "
+        "view t #1 <T t> = dad { }",
+        "t", 2 );
 
-//TODO: overloading parents' column
+    // verify overrides
+    // dad
+    ViewAccess dad = GetView ( 1 );
+    REQUIRE_EQ ( 1u, dad . Overrides () . Count () ); // inherits from granddad
+    VdbVector < const KSymbol > dadOvr ( dad . Overrides () . Get ( 0 ) -> by_parent );
+    REQUIRE_EQ ( 1u, dadOvr . Count () ); // 1 override copied from granddad
 
-//TODO: resolving parent's virtual productions
-//TODO: resolving parent's virtual production as a column (error)
+    // t
+    REQUIRE_EQ ( 2u, t . Overrides () . Count () ); // v inherits from dad and granddad
 
-//TODO: bad version of a parent
+    VdbVector < const KSymbol > tDadOvr ( t . Overrides () . Get ( 0 ) -> by_parent );
+    REQUIRE_EQ ( 1u, tDadOvr . Count () ); // 1 override copied from granddad
+    REQUIRE_EQ ( string ( "v" ), ToCppString ( tDadOvr . Get ( 0 ) -> name ) );
+
+    VdbVector < const KSymbol > tGdadOvr ( t . Overrides () . Get ( 1 ) -> by_parent );
+    REQUIRE_EQ ( 0u, tGdadOvr . Count () ); // no overrides copied from granddad
+
+
+    // v is not resolved in t
+    REQUIRE_EQ ( 0u, t . VirtualProductions () . Count  () );
+}
+
+FIXTURE_TEST_CASE(View_Parents_VirtualProductionDefinedAcrossParentsAsColumn, AST_View_Fixture)
+{
+    VerifyErrorMessage (
+        "version 2; table T#1 {}; "
+        "view V#1 <T t> { U8 a = v; }; "
+        "view W#1 <T t> { column U8 v = 1; }; "
+        "view X#1 <T t> = V, W {}",
+        "a virtual production from one parent defined as non-production in another: 'v'" );
+}
+
+FIXTURE_TEST_CASE(View_Parents_RedeclaringParentsColumn, AST_View_Fixture)
+{
+    VerifyErrorMessage (
+        "version 2; table T#1 {}; "
+        "view W#1 <T t>     { column U8 c = 1; }; "
+        "view X#1 <T t> = W { column U8 c = 2; }",
+        "Column already defined: 'c'" );
+}
+
+FIXTURE_TEST_CASE(View_Parents_OverloadingParentsColumn, AST_View_Fixture)
+{
+    ViewAccess v = ParseView (
+        "version 2; table T#1 {}; "
+        "view W#1 <T t>     { column U8 c = 1; }; "
+        "view X#1 <T t> = W { column U16 c = 2; }",
+        "X", 1 );
+    ViewAccess dad = GetView ( 0 );
+
+    REQUIRE_EQ ( 1u, v . Columns () . Count () );
+    REQUIRE_EQ ( 1u, v . ColumnNames () . Count () );
+    const SNameOverload * ovl = v . ColumnNames () . Get ( 0 );
+    REQUIRE_NOT_NULL ( ovl );
+    REQUIRE_EQ ( string ("c"), ToCppString ( ovl -> name -> name ) );
+    REQUIRE_EQ ( 0u, ovl -> cid . ctx );
+    REQUIRE_EQ ( 0u, ovl -> cid . id );
+
+    VdbVector < SColumn > names ( ovl -> items );
+    REQUIRE_EQ ( 2u, names . Count () );
+    REQUIRE_EQ ( dad . Columns () . Get ( 0 ), names . Get ( 0 ) );
+    REQUIRE_EQ ( v . Columns () . Get ( 0 ), names . Get ( 1 ) );
+}
+
 
 

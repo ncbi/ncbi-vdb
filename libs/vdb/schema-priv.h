@@ -1096,7 +1096,7 @@ typedef struct STableOverrides STableOverrides;
 struct STableOverrides
 {
     const STable *dad;
-    Vector overrides;
+    Vector by_parent;
     uint32_t ctx;
 };
 
@@ -1107,8 +1107,6 @@ int64_t CC STableOverridesCmp ( const void *item, const void *n );
 /* Make
  */
 rc_t STableOverridesMake ( Vector *parents, const STable *dad, const Vector *overrides );
-
-bool CC STableOverridesClone ( void *item, void *data );
 
 /*--------------------------------------------------------------------------
  * SColumn
@@ -1494,6 +1492,26 @@ bool CC view_fwd_scan ( BSTNode *n, void *data );
  * set the view id on all members
  */
 void CC view_set_context ( SView *self );
+
+/* view_fix_forward_refs
+ * fix forward references to newly resolved productions
+ */
+
+rc_t CC view_fix_forward_refs ( const SView *table );
+
+/* SViewOverrides
+*/
+typedef struct SViewOverrides SViewOverrides;
+struct SViewOverrides
+{
+    const SView *dad;
+    Vector by_parent;
+    uint32_t ctx;
+};
+
+rc_t SViewOverridesMake ( Vector *parents, const SView *dad, const Vector *overrides );
+
+int64_t CC SViewOverridesCmp ( const void *item, const void *n );
 
 #ifdef __cplusplus
 }

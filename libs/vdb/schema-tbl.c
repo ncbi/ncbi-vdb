@@ -375,7 +375,7 @@ static
 void CC STableOverridesWhack ( void *item, void *ignore )
 {
     STableOverrides *self = item;
-    VectorWhack ( & self -> overrides, NULL, NULL );
+    VectorWhack ( & self -> by_parent, NULL, NULL );
     free ( self );
 }
 
@@ -396,7 +396,7 @@ rc_t STableOverridesMake ( Vector *parents, const STable *dad, const Vector *ove
         return RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted );
 
     /* shallow clone */
-    rc = VectorCopy ( overrides, & to -> overrides );
+    rc = VectorCopy ( overrides, & to -> by_parent );
     if ( rc != 0 )
     {
         free ( to );
@@ -416,10 +416,11 @@ rc_t STableOverridesMake ( Vector *parents, const STable *dad, const Vector *ove
     return 0;
 }
 
+static
 bool CC STableOverridesClone ( void *item, void *data )
 {
     const STableOverrides *self = ( const void* ) item;
-    rc_t rc = STableOverridesMake ( data, self -> dad, & self -> overrides );
+    rc_t rc = STableOverridesMake ( data, self -> dad, & self -> by_parent );
     return ( rc != 0 && GetRCState ( rc ) != rcExists ) ? true : false;
 }
 
@@ -545,7 +546,7 @@ KSymbol * CC STableFindOverride ( const STable *self, const VCtxId *cid )
     if ( to == NULL )
         return NULL;
 
-    return VectorGet ( & to -> overrides, cid -> id );
+    return VectorGet ( & to -> by_parent, cid -> id );
 }
 
 /* FindOrdAncestor
@@ -747,11 +748,11 @@ bool CC STableScanVirtuals ( void *item, void *data )
     KSymTable *tbl = data;
     STableOverrides *to = item;
     BSTree *scope = VectorLast ( & tbl -> stack );
-    uint32_t i = VectorStart ( & to -> overrides );
-    uint32_t end = VectorLength ( & to -> overrides );
+    uint32_t i = VectorStart ( & to -> by_parent );
+    uint32_t end = VectorLength ( & to -> by_parent );
     for ( end += i; i < end; ++ i )
     {
-        const KSymbol *orig = ( const void* ) VectorGet ( & to -> overrides, i );
+        const KSymbol *orig = ( const void* ) VectorGet ( & to -> by_parent, i );
         assert ( orig != NULL );
         if ( orig -> type == eVirtual )
         {
@@ -764,7 +765,7 @@ bool CC STableScanVirtuals ( void *item, void *data )
             {
                 if ( def -> type == eProduction || def -> type == eVirtual )
                 {
-                    VectorSwap ( & to -> overrides, i, def, & ignore );
+                    VectorSwap ( & to -> by_parent, i, def, & ignore );
                 }
                 else
                 {
@@ -784,7 +785,7 @@ bool CC STableScanVirtuals ( void *item, void *data )
                     return true;
 
                 /* replace the parent virtual with an updatable copy */
-                VectorSwap ( & to -> overrides, i, copy, & ignore );
+                VectorSwap ( & to -> by_parent, i, copy, & ignore );
             }
         }
     }
@@ -1399,13 +1400,13 @@ bool CC SProductionDumpOverrides ( void *item, void *data )
 {
     SDumper *b = data;
     const STableOverrides *to = ( const void* ) item;
-    if ( VectorLength ( & to -> overrides ) == 0 )
+    if ( VectorLength ( & to -> by_parent ) == 0 )
         return false;
 
     b -> rc = SDumperPrint ( b, "\n\t/* %N inherited virtual productions\n", to -> dad -> name );
     if ( b -> rc != 0 )
         return true;
-    if ( VectorDoUntil ( & to -> overrides, false, SProductionDumpVirtuals, b ) )
+    if ( VectorDoUntil ( & to -> by_parent, false, SProductionDumpVirtuals, b ) )
         return true;
     b -> rc = SDumperPrint ( b, "\t */\n" );
 
@@ -2730,8 +2731,8 @@ bool CC table_update_tbl_ref ( void *item, void *data )
             is_ancestor = true;
 
             /* rewrite overrides to have updated parent */
-            VectorWhack ( & to -> overrides, NULL, NULL );
-            pb -> rc = VectorCopy ( & pb -> table -> vprods, & to -> overrides );
+            VectorWhack ( & to -> by_parent, NULL, NULL );
+            pb -> rc = VectorCopy ( & pb -> table -> vprods, & to -> by_parent );
             if ( pb -> rc != 0 )
                 return true;
             to -> dad = pb -> table;

@@ -33,20 +33,9 @@
 #include "schema-priv.h"
 #include "schema-parse.h"
 
-/* SViewOverrides
-*/
-typedef struct SViewOverrides SViewOverrides;
-struct SViewOverrides
-{
-    const SView *dad;
-    Vector overrides;
-    uint32_t ctx;
-};
-
 /* Cmp
  * Sort
  */
-static
 int64_t CC SViewOverridesCmp ( const void *item, const void *n )
 {
     const uint32_t *a = item;
@@ -70,13 +59,12 @@ static
 void CC SViewOverridesWhack ( void *item, void *ignore )
 {
     SViewOverrides *self = item;
-    VectorWhack ( & self -> overrides, NULL, NULL );
+    VectorWhack ( & self -> by_parent, NULL, NULL );
     free ( self );
 }
 
 /* Make
  */
-static
 rc_t SViewOverridesMake ( Vector *parents, const SView *dad, const Vector *overrides )
 {
     rc_t rc;
@@ -92,7 +80,7 @@ rc_t SViewOverridesMake ( Vector *parents, const SView *dad, const Vector *overr
         return RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted );
 
     /* shallow clone */
-    rc = VectorCopy ( overrides, & to -> overrides );
+    rc = VectorCopy ( overrides, & to -> by_parent );
     if ( rc != 0 )
     {
         free ( to );
@@ -110,14 +98,6 @@ rc_t SViewOverridesMake ( Vector *parents, const SView *dad, const Vector *overr
     }
 
     return 0;
-}
-
-static
-bool CC SViewOverridesClone ( void *item, void *data )
-{
-    const SViewOverrides *self = ( const void* ) item;
-    rc_t rc = SViewOverridesMake ( data, self -> dad, & self -> overrides );
-    return ( rc != 0 && GetRCState ( rc ) != rcExists ) ? true : false;
 }
 
 /* SView
@@ -166,13 +146,6 @@ int64_t CC SViewSort ( const void *item, const void *n )
     return ( int64_t ) ( a -> version >> 24 ) - ( int64_t ) ( b -> version >> 24 );
 }
 
-static
-bool
-SViewHasDad ( void *item, void *data )
-{
-    return item == data;
-}
-
 /*
  * push-view-scope
  * pop-view-scope
@@ -213,102 +186,6 @@ push_view_scope ( struct KSymTable * tbl, const SView * view )
     }
 
     return rc;
-}
-
-static
-bool SViewTestForSymCollision ( const KSymbol *sym, void *data )
-{
-    const KSymTable *tbl = ( const void* ) data;
-    const KSymbol *found = KSymTableFindSymbol ( tbl, sym );
-    if ( found != NULL && found != sym ) switch ( found -> type )
-    {
-    case eColumn:
-        if ( sym -> type == eColumn )
-        {
-            /* when colliding columns originated in the same
-               view, consider them to be compatible extensions */
-            const SNameOverload *found_col, *sym_col;
-            sym_col = sym -> u . obj;
-            found_col = found -> u . obj;
-            assert ( sym_col != NULL && found_col != NULL );
-            if ( sym_col -> cid . ctx == found_col -> cid . ctx )
-                return SOverloadTestForTypeCollision ( sym_col, found_col );
-        }
-    case eProduction:
-        PLOGMSG ( klogErr, ( klogErr, "duplicate symbol '$(sym)' in parent view hierarchy"
-                             , "sym=%S"
-                             , & sym -> name
-                      ));
-        return true;
-    }
-    return false;
-}
-
-static
-bool CC SViewTestColCollisions ( void *item, void *data )
-{
-    const SNameOverload *no = ( const void* ) item;
-    return SViewTestForSymCollision ( no -> name, data );
-}
-
-static
-bool CC SViewTestProdCollisions ( void *item, void *data )
-{
-    const SProduction *prod = ( const void* ) item;
-    return SViewTestForSymCollision ( prod -> name, data );
-}
-
-static
-bool SViewTestForCollisions ( void *item, void *data )
-{
-    const SView *self = ( const void* ) item;
-
-    /* test column names */
-    if ( VectorDoUntil ( & self -> cname, false, SViewTestColCollisions, data ) )
-        return true;
-
-    /* test production names */
-    if ( VectorDoUntil ( & self -> prod, false, SViewTestProdCollisions, data ) )
-        return true;
-
-    return false;
-}
-
-
-static
-bool CC SViewOverridesTestForCollisions ( void *item, void *data )
-{
-    const SViewOverrides *to = ( const void* ) item;
-    return SViewTestForCollisions ( ( void* ) to -> dad, data );
-}
-
-static
-bool CC SViewCopyColumnNames ( void *item, void *data )
-{
-    rc_t rc;
-    SView *self= data;
-    SNameOverload *copy;
-    const SNameOverload *orig = ( const void* ) item;
-    const KSymbol *sym = ( const KSymbol* )
-        BSTreeFind ( & self -> scope, & orig -> name -> name, KSymbolCmp );
-    if ( sym == NULL )
-    {
-        rc = SNameOverloadCopy ( & self -> scope, & copy, orig );
-        if ( rc == 0 )
-        {
-            rc = VectorAppend ( & self -> cname, & copy -> cid . id, copy );
-            if ( rc != 0 )
-                SNameOverloadWhack ( copy, NULL );
-        }
-    }
-    else
-    {
-        copy = ( void* ) sym -> u . obj;
-        assert ( copy -> cid . ctx == orig -> cid . ctx );
-        rc = VectorMerge ( & copy -> items, true, & orig -> items, SColumnSort );
-    }
-
-    return ( rc != 0 ) ? true : false;
 }
 
 bool CC view_fwd_scan ( BSTNode *n, void *data )
@@ -380,5 +257,59 @@ void CC view_set_context ( SView *self )
     VectorForEach ( & self -> cname, false, name_set_context, & self -> id );
     VectorForEach ( & self -> prod, false, production_set_context, & self -> id );
     VectorForEach ( & self -> vprods, false, symbol_set_context, & self -> id );
+}
+
+static
+bool CC view_prod_syntax ( void *item, void *data )
+{
+    rc_t *rc = data;
+    const SProduction *prod = ( const SProduction* ) item;
+
+    * rc = eval_expr_syntax ( prod -> fd );
+    if ( * rc == 0 )
+        * rc = eval_expr_syntax ( prod -> expr );
+
+    return ( * rc != 0 ) ? true : false;
+}
+
+static
+rc_t view_stmt_syntax ( const SView * view )
+{
+    rc_t rc = 0;
+    VectorDoUntil ( & view -> prod, false, view_prod_syntax, & rc );
+    return rc;
+}
+
+static
+bool CC view_typed_column_syntax ( void *item, void *data )
+{
+    rc_t *rc = data;
+    const SColumn *col = ( const SColumn* ) item;
+
+    if ( col -> read != NULL )
+        * rc = eval_expr_syntax ( col -> read );
+    if ( * rc == 0 && col -> validate != NULL )
+        * rc = eval_expr_syntax ( col -> validate );
+    if ( * rc == 0 && col -> limit != NULL )
+        * rc = eval_expr_syntax ( col -> limit );
+
+    return ( * rc != 0 ) ? true : false;
+}
+
+static
+rc_t view_column_syntax ( const SView *view )
+{
+    rc_t rc = 0;
+    VectorDoUntil ( & view -> col, false, view_typed_column_syntax, & rc );
+    return rc;
+}
+
+rc_t
+view_fix_forward_refs ( const SView * view )
+{
+    rc_t rc = view_stmt_syntax ( view );
+    if ( rc == 0 )
+        rc = view_column_syntax ( view );
+    return rc;
 }
 

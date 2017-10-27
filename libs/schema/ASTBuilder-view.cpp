@@ -58,6 +58,11 @@ private:
     bool HandleOverload ( const AST_FQN & p_fqn, const KSymbol * p_priorDecl );
     void AddColumn ( const AST & p_type, const AST & p_ident, const AST_Expr & p_expr );
     bool Extend ( const Token :: Location & p_loc, const SView *dad );
+    bool CheckForCollisions ( const SView & p_table, const String *& p_name );
+    bool CopyColumnNames ( const SNameOverload *orig );
+    bool ScanVirtuals ( const Token :: Location & p_loc, Vector & p_byParent );
+    void HandleStatement ( const AST & p_stmt );
+    bool AddNewColumn ( SColumn & p_col, String & p_name );
 
     ASTBuilder &    m_builder;
     SView *         m_self;
@@ -67,7 +72,16 @@ ViewDeclaration :: ViewDeclaration ( ASTBuilder & p_builder )
 :   m_builder ( p_builder ),
     m_self ( m_builder . Alloc < SView > () )
 {
-    //TODO: prepare vectors
+    // prepare vectors
+    VectorInit ( & m_self -> tables, 0, 4 );
+    VectorInit ( & m_self -> views, 0, 4 );
+    VectorInit ( & m_self -> parents, 0, 4 );
+    VectorInit ( & m_self -> overrides, 0, 4 );
+    VectorInit ( & m_self -> col, 0, 16 );
+    VectorInit ( & m_self -> cname, 0, 16 );
+    VectorInit ( & m_self -> prod, 0, 64 );
+    VectorInit ( & m_self -> vprods, 1, 16 );
+    VectorInit ( & m_self -> syms, 1, 32 );
 }
 
 ViewDeclaration :: ~ViewDeclaration ()
@@ -213,6 +227,77 @@ ViewDeclaration :: HandleParameters ( const AST & p_params )
 }
 
 bool
+ViewDeclaration :: CheckForCollisions ( const SView & p_table, const String *& p_name )
+{
+    /* test column names */
+    uint32_t start = VectorStart ( & p_table . cname );
+    uint32_t count = VectorLength ( & p_table . cname );
+    for ( uint32_t i = 0; i < count; ++ i )
+    {
+        const SNameOverload * no = static_cast < const SNameOverload * > ( VectorGet ( & p_table . cname, start + i ) );
+        if  ( ! m_builder . CheckForColumnCollision ( no -> name ) )
+        {
+            p_name = & no -> name -> name;
+            return false;
+        }
+    }
+
+    /* test production names */
+    start = VectorStart ( & p_table .prod );
+    count = VectorLength ( & p_table . prod );
+    for ( uint32_t i = 0; i < count; ++ i )
+    {
+        const SProduction * prod = static_cast < const SProduction * > ( VectorGet ( & p_table . prod, start + i ) );
+        if  ( ! m_builder . CheckForColumnCollision ( prod -> name ) )
+        {
+            p_name = & prod -> name -> name;
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool
+ViewDeclaration :: CopyColumnNames ( const SNameOverload *orig )
+{
+    rc_t rc;
+    SView *self= m_self;
+    SNameOverload *copy;
+    const KSymbol *sym = ( const KSymbol* ) BSTreeFind ( & self -> scope, & orig -> name -> name, KSymbolCmp );
+    if ( sym == NULL )
+    {
+        rc = SNameOverloadCopy ( & self -> scope, & copy, orig );
+        if ( rc == 0 )
+        {
+            if ( ! m_builder . VectorAppend ( self -> cname, & copy -> cid . id, copy ) )
+            {
+                SNameOverloadWhack ( copy, NULL );
+                return false;
+            }
+        }
+        else
+        {
+            m_builder . ReportRc ( "SNameOverloadCopy", rc );
+            return false;
+        }
+    }
+    else
+    {
+        copy = ( SNameOverload* ) sym -> u . obj;
+        assert ( copy -> cid . ctx == orig -> cid . ctx );
+        rc = VectorMerge ( & copy -> items, true, & orig -> items, SColumnSort );
+        if ( rc != 0 )
+        {
+            m_builder . ReportRc ( "VectorMerge", rc );
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool
 ViewDeclaration :: Extend ( const Token :: Location & p_loc, const SView * p_dad )
 {
     /* reject if direct parent already there */
@@ -240,8 +325,10 @@ ViewDeclaration :: Extend ( const Token :: Location & p_loc, const SView * p_dad
         return false;
     }
 
-    if ( ! CheckParentForCollisions ( p_loc, p_dad ) )
+    const String * name;
+    if ( ! CheckForCollisions ( * p_dad, name ) )
     {
+        m_builder . ReportError ( p_loc, "Duplicate symbol in parent view hierarchy", * name );
         pop_view_scope ( & m_builder . GetSymTab (), m_self );
         return false;
     }
@@ -255,10 +342,15 @@ ViewDeclaration :: Extend ( const Token :: Location & p_loc, const SView * p_dad
     }
 
     /* copy column names from parent - should already contain all grandparents */
-    if ( VectorDoUntil ( & p_dad -> cname, false, SViewCopyColumnNames, m_self ) )
+    uint32_t start = VectorStart ( & p_dad -> cname );
+    count = VectorLength ( & p_dad -> cname );
+    for ( uint32_t i = 0; i < count; ++ i )
     {
-        m_builder . ReportError ( p_loc, "???", m_self -> name -> name );//TODO - handle rc inside CopyColumnNames
-        return false;
+        const SNameOverload * ovl = static_cast < const SNameOverload * > ( VectorGet ( & p_dad -> cname, start + i ) );
+        if ( ! CopyColumnNames ( ovl ) )
+        {
+            return false;
+        }
     }
 
     /* add "dad" to overrides */
@@ -266,10 +358,17 @@ ViewDeclaration :: Extend ( const Token :: Location & p_loc, const SView * p_dad
     if ( rc == 0 )
     {
         /* add all grandparents */
-        if ( VectorDoUntil ( & p_dad -> overrides, false, SViewOverridesClone, & m_self -> overrides ) )
+        start = VectorStart ( & p_dad -> overrides );
+        count = VectorLength ( & p_dad -> overrides );
+        for ( uint32_t i = 0; i < count; ++ i )
         {
-            m_builder . ReportError ( p_loc, "???", m_self -> name -> name ); //TODO
-            return false;
+            const SViewOverrides * ovr = static_cast < const SViewOverrides * > ( VectorGet ( & p_dad -> overrides, start + i ) );
+            rc = SViewOverridesMake ( & m_self -> overrides, ovr -> dad, & ovr -> by_parent );
+            if ( rc != 0 && GetRCState ( rc ) != rcExists)
+            {
+                m_builder . ReportRc ( "STableOverridesMake", rc );
+                return false;
+            }
         }
     }
     else if ( GetRCState ( rc ) == rcExists )
@@ -312,6 +411,23 @@ ViewDeclaration :: HandleParents ( const AST & p_parents )
     }
 }
 
+bool
+ViewDeclaration :: AddNewColumn ( SColumn & p_col, String & p_name )
+{   // new column: add p_col to m_self -> col, a new overload to m_self -> cname
+    rc_t rc = KSymTableCreateConstSymbol ( & m_builder . GetSymTab (), & p_col . name, & p_name, eColumn, & p_col );
+    if ( rc != 0 )
+    {
+        m_builder . ReportRc ( "KSymTableCreateConstSymbol", rc );
+        return false;
+    }
+    return m_builder .CreateOverload ( p_col . name,
+                                       & p_col,
+                                       SColumnSort,
+                                       m_self -> col,
+                                       m_self -> cname,
+                                       0 );
+}
+
 void
 ViewDeclaration :: AddColumn ( const AST & p_type, const AST & p_ident, const AST_Expr & p_expr )
 {
@@ -329,20 +445,8 @@ ViewDeclaration :: AddColumn ( const AST & p_type, const AST & p_ident, const AS
         StringInitCString ( & name, ident );
         KSymbol * priorDecl = const_cast < KSymbol * > ( m_builder . Resolve ( p_ident . GetLocation (), ident, false ) );
         if ( priorDecl == 0 )
-        {   // new column: add c to m_self -> col, a new overload to m_self -> cname
-            rc_t rc = KSymTableCreateConstSymbol ( & m_builder . GetSymTab (), & c -> name, & name, eColumn, & c );
-            if ( rc != 0 )
-            {
-                m_builder . ReportRc ( "KSymTableCreateConstSymbol", rc );
-                SColumnWhack ( c, 0 );
-                return;
-            }
-            if ( ! m_builder .CreateOverload ( c -> name,
-                                               c,
-                                               SColumnSort,
-                                               m_self -> col,
-                                               m_self -> cname,
-                                               0 ) )
+        {
+            if ( ! AddNewColumn ( * c, name ) )
             {
                 SColumnWhack ( c, 0 );
                 return;
@@ -350,13 +454,108 @@ ViewDeclaration :: AddColumn ( const AST & p_type, const AST & p_ident, const AS
         }
         else // column name seen before
         {
-            m_builder . ReportError ( p_ident . GetLocation (), "Object already defined", ident );
-            SColumnWhack ( c, 0 );
-            return;
+            switch ( priorDecl -> type )
+            {
+            case eForward:
+                {
+                    c -> name = priorDecl;
+                    priorDecl -> type = eColumn;
+                    if ( ! m_builder .CreateOverload ( c -> name,
+                                                        c,
+                                                        SColumnSort,
+                                                        m_self -> col,
+                                                        m_self -> cname,
+                                                        0 ) )
+                    {
+                        SColumnWhack ( c, 0 );
+                        return;
+                    }
+                }
+                break;
+            case eColumn:
+                {
+                    SNameOverload * ovl = ( SNameOverload* ) priorDecl -> u . obj;
+                    if ( VectorFind ( & ovl -> items, & c -> td, NULL, SColumnCmp ) != NULL )
+                    {
+                        m_builder . ReportError ( p_ident . GetLocation (), "Column already defined", ident );
+                        SColumnWhack ( c, 0 );
+                        return;
+                    }
+                    c -> name = priorDecl;
+                    // add column to m_self -> col
+                    if ( ! m_builder . VectorAppend ( m_self -> col, 0, c ) )
+                    {
+                        SColumnWhack ( c, 0 );
+                        return;
+                    }
+                    // add a column overload
+                    rc_t rc = VectorInsertUnique ( & ovl -> items, c, NULL, SColumnSort );
+                    if ( rc != 0 )
+                    {
+                        m_builder . ReportRc ( "VectorInsertUnique", rc );
+                        SColumnWhack ( c, 0 );
+                        return;
+                    }
+                }
+                break;
+            case eVirtual:
+                m_builder . ReportError ( p_ident . GetLocation (), "Virtual production defined as a column", ident );
+                SColumnWhack ( c, 0 );
+                return;
+            default:
+                /* allow names defined in scopes other than table and intrinsic */
+                if ( KSymTableFindShallow ( & m_builder . GetSymTab (), & name ) != 0 ||
+                    KSymTableFindIntrinsic ( & m_builder . GetSymTab (), & name ) )
+                {
+                    m_builder . ReportError ( p_ident . GetLocation (), "Column name already in use", ident );
+                    SColumnWhack ( c, 0 );
+                    return;
+                }
+                else if ( ! AddNewColumn ( * c, name ) )
+                {
+                    SColumnWhack ( c, 0 );
+                    return;
+                }
+                break;
+            }
         }
 
         // type checking/conversion is supposed to be done in the run time, like for v1 tables
         c -> read = p_expr . MakeExpression ( m_builder );
+    }
+}
+
+void
+ViewDeclaration :: HandleStatement ( const AST & p_stmt )
+{
+    switch ( p_stmt . GetTokenType () )
+    {
+    case PT_PRODSTMT:
+        {   // typespec ident cond_expr
+            assert ( p_stmt . ChildrenCount () == 3 );
+            const AST * datatype = p_stmt . GetChild ( 0 );
+            const AST * ident = p_stmt . GetChild ( 1 );
+            const AST * expr = p_stmt . GetChild ( 2 );
+            assert ( ident -> ChildrenCount () == 1 );
+            m_builder . AddProduction ( * ident,
+                                        m_self -> prod,
+                                        ident -> GetChild ( 0 ) -> GetTokenValue (),
+                                        * ToExpr ( expr ),
+                                        datatype );
+        }
+        break;
+    case PT_COLUMN:
+        {   // typespec ident cond_expr
+            assert ( p_stmt . ChildrenCount () == 3 );
+            AddColumn ( * p_stmt . GetChild ( 0 ), * p_stmt . GetChild ( 1 ), * ToExpr ( p_stmt . GetChild ( 2 ) ) );
+        }
+        break;
+
+    case PT_EMPTY:
+        break;
+
+    default:
+        assert ( false );
     }
 }
 
@@ -366,77 +565,47 @@ ViewDeclaration :: HandleBody ( const AST & p_body )
     rc_t rc = push_view_scope ( & m_builder . GetSymTab (), m_self );
     if ( rc == 0 )
     {
-#if NOT_SURE_IF_NEEDED
-        /* scan override tables for virtual symbols */
-        if ( VectorDoUntil ( & m_self -> overrides, false, SViewScanVirtuals, & m_builder . GetSymTab () ) == 0 )
+        /* scan override views for virtual symbols */
+        uint32_t start = VectorStart ( & m_self -> overrides );
+        uint32_t count = VectorLength ( & m_self -> overrides );
+        for ( uint32_t i = 0; i < count; ++ i )
         {
-#endif
-            /* handle table declarations */
-            uint32_t count = p_body . ChildrenCount ();
-            for ( uint32_t i = 0 ; i < count; ++ i )
+            SViewOverrides * ov = static_cast < SViewOverrides * > ( VectorGet ( & m_self -> overrides, start + i ) );
+            if ( ! m_builder . ScanVirtuals ( p_body . GetLocation (), ov -> by_parent ) )
             {
-                const AST & stmt = * p_body . GetChild ( i );
-                switch ( stmt . GetTokenType () )
-                {
-                case PT_PRODSTMT:
-                    {   // typespec ident cond_expr
-                        assert ( stmt . ChildrenCount () == 3 );
-                        const AST * datatype = stmt . GetChild ( 0 );
-                        const AST * ident = stmt . GetChild ( 1 );
-                        const AST * expr = stmt . GetChild ( 2 );
-                        assert ( ident -> ChildrenCount () == 1 );
-                        m_builder . AddProduction ( * ident,
-                                                    m_self -> prod,
-                                                    ident -> GetChild ( 0 ) -> GetTokenValue (),
-                                                    * ToExpr ( expr ),
-                                                    datatype );
-                    }
-                    break;
-                case PT_COLUMN:
-                    {   // typespec ident cond_expr
-                        assert ( stmt . ChildrenCount () == 3 );
-                        AddColumn ( * stmt . GetChild ( 0 ), * stmt . GetChild ( 1 ), * ToExpr ( stmt . GetChild ( 2 ) ) );
-                    }
-                    break;
-
-                case PT_EMPTY:
-                    break;
-
-                default:
-                    assert ( false );
-                }
+                pop_view_scope ( & m_builder . GetSymTab (), m_self );
+                return;
             }
-
-            SViewScanData pb;
-            pb . self = m_self;
-            pb . rc = 0;
-
-            /* scan view scope for unresolved forward references */
-            if ( BSTreeDoUntil ( & m_self -> scope, false, view_fwd_scan, & pb ) )
-            {
-                m_builder . ReportRc ( "view_fwd_scan", pb . rc );
-            }
-#if NOT_SURE_IF_NEEDED
         }
-        else
+
+        /* handle view declarations */
+        count = p_body . ChildrenCount ();
+        for ( uint32_t i = 0 ; i < count; ++ i )
         {
-            rc = RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted );
-            m_builder . ReportRc ( "STableViewVirtuals", rc );
+            HandleStatement ( * p_body . GetChild ( i ) );
         }
-#endif
+
+        SViewScanData pb;
+        pb . self = m_self;
+        pb . rc = 0;
+
+        /* scan view scope for unresolved forward references */
+        if ( BSTreeDoUntil ( & m_self -> scope, false, view_fwd_scan, & pb ) )
+        {
+            m_builder . ReportRc ( "view_fwd_scan", pb . rc );
+        }
+
         pop_view_scope ( & m_builder . GetSymTab (), m_self );
 
-#if NOT_SURE_IF_NEEDED
         /* fix forward references */
         if ( rc == 0 )
         {
-            rc = table_fix_forward_refs ( m_self );
+            rc = view_fix_forward_refs ( m_self );
             if ( rc != 0 )
             {
                 m_builder . ReportRc ( "table_fix_forward_refs", rc );
             }
         }
-#endif
 
         view_set_context ( m_self );
     }
@@ -455,7 +624,7 @@ ASTBuilder :: ViewDef ( const Token * p_token, AST_FQN * p_name, AST * p_params,
     assert ( p_name != 0 );
     if ( view . SetName ( * p_name ) )
     {
-        rc_t rc = KSymTablePushScope ( & m_symtab, view . Scope () ); //TODO: add parents
+        rc_t rc = KSymTablePushScope ( & m_symtab, view . Scope () );
         if ( rc == 0 )
         {
             assert ( p_params != 0 );
@@ -474,3 +643,5 @@ ASTBuilder :: ViewDef ( const Token * p_token, AST_FQN * p_name, AST * p_params,
     }
     return ret;
 }
+
+//TODO: remove cname and everything to do with overloading column names

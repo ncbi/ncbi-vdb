@@ -471,3 +471,77 @@ ASTBuilder :: AddProduction ( const AST & p_node, Vector & p_list, const char * 
         }
     }
 }
+
+bool
+ASTBuilder :: CheckForColumnCollision ( const KSymbol *sym )
+{
+    const KSymbol *found = KSymTableFindSymbol ( &  GetSymTab (), sym );
+    if ( found != NULL && found != sym )
+    {
+        if ( found -> type == eColumn && sym -> type == eColumn )
+        {   /* when colliding columns originated in the same
+                table/view, consider them to be compatible extensions */
+            const SNameOverload * found_col = static_cast < const SNameOverload * > ( found -> u . obj );
+            const SNameOverload * sym_col = static_cast < const SNameOverload * > ( sym -> u . obj );
+            assert ( sym_col != NULL && found_col != NULL );
+            if ( sym_col -> cid . ctx == found_col -> cid . ctx )
+            {
+                return ! SOverloadTestForTypeCollision ( sym_col, found_col );
+            }
+        }
+        return false;
+    }
+    return true;
+}
+
+bool
+ASTBuilder :: ScanVirtuals ( const Token :: Location & p_loc, Vector & p_byParent )
+{
+    uint32_t start = VectorStart ( & p_byParent );
+    uint32_t count = VectorLength ( & p_byParent );
+    for ( uint32_t i = 0; i < count; ++ i )
+    {
+        uint32_t idx = start + i;
+        const KSymbol * orig = static_cast < const KSymbol * > ( VectorGet ( & p_byParent, idx ) );
+        assert ( orig != NULL );
+        if ( orig -> type == eVirtual )
+        {
+            void *ignore;
+
+            /* since the virtual productions in one parent could be
+               defined by another parent, test for the possibility */
+            const KSymbol *def = KSymTableFindSymbol ( & GetSymTab (), orig );
+            if ( def != NULL )
+            {
+                if ( def -> type == eProduction || def -> type == eVirtual )
+                {
+                    VectorSwap ( & p_byParent, idx, def, & ignore );
+                }
+                else
+                {
+                    ReportError ( p_loc,
+                                  "a virtual production from one parent defined as non-production in another",
+                                  def -> name );
+                    return false;
+                }
+            }
+            else
+            {
+                /* copy the original */
+                BSTree * scope = static_cast < BSTree * > ( VectorLast ( & GetSymTab () . stack ) );
+                KSymbol *copy;
+                rc_t rc = KSymbolCopy ( scope, & copy, orig );
+                if ( rc != 0 )
+                {
+                    ReportRc ( "KSymbolCopy", rc );
+                    return false;
+                }
+
+                /* replace the parent virtual with an updatable copy */
+                VectorSwap ( & p_byParent, idx, copy, & ignore );
+            }
+        }
+    }
+    return true;
+}
+
