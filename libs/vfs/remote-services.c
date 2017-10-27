@@ -1240,7 +1240,7 @@ static const SConverters * SConvertersNames3_0Make ( void ) {
         uint32_tInit,        /*  0 ord-id */
         EObjectTypeInit,     /*  1 object-type */
         aStringInit,         /*  2 object-id */
-        size_tInit,          /*  3 size */
+        uint64_tInit,        /*  3 osize */
         KTimeInitFromIso8601,/*  4 date */
         md5Init,             /*  5 md5 */
         aStringInit,         /*  6 ticket */
