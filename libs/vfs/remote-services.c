@@ -189,7 +189,7 @@ typedef struct {
     String accession; /* versios 1.1/1.2 only */
     String objectId;
     String name;
-    size_t size;
+    uint64_t osize;
     KTime_t date;
     SMd5 md5;
     String ticket;
@@ -920,6 +920,18 @@ static rc_t uint32_tInit ( void * p, const String * src ) {
 }
 
 
+static rc_t uint64_tInit ( void * p, const String * src ) {
+    rc_t rc = 0;
+    uint64_t * self = ( uint64_t * ) p;
+    uint64_t s = StringToU64 ( src, & rc );
+    if ( rc == 0 ) {
+        assert ( self );
+        * self = s;
+    }
+    return rc;
+}
+
+
 #if 0 && LINUX
 #define TODO 1;
 static
@@ -1145,7 +1157,7 @@ static void * STypedGetFieldNames1_1 ( STyped * self, int n ) {
         case  0: return & self -> accession;
         case  1: return & self -> objectId;
         case  2: return & self -> name;
-        case  3: return & self -> size;
+        case  3: return & self -> osize;
         case  4: return & self -> date;
         case  5: return & self -> md5;
         case  6: return & self -> ticket;
@@ -1162,7 +1174,7 @@ static const SConverters * SConvertersNames1_1Make ( void ) {
         aStringInit,
         aStringInit,
         aStringInit,
-        size_tInit,
+        uint64_tInit,
         KTimeInitFromIso8601,
         md5Init,
         aStringInit,
@@ -1181,7 +1193,7 @@ static const SConverters * SConvertersNames1_2Make ( void ) {
         aStringInit,
         aStringInit,
         aStringInit,
-        size_tInit,
+        uint64_tInit,
         KTimeInitFromIso8601,
         md5Init,
         aStringInit,
@@ -1202,7 +1214,7 @@ static void * STypedGetFieldNames3_0 ( STyped * self, int n ) {
         case  0: return & self -> ordId;
         case  1: return & self -> objectType;
         case  2: return & self -> objectId;
-        case  3: return & self -> size;
+        case  3: return & self -> osize;
         case  4: return & self -> date;
         case  5: return & self -> md5;
         case  6: return & self -> ticket;
@@ -1477,7 +1489,8 @@ static bool VPathMakeOrNot ( VPath ** new_path, const String * src,
         if ( src -> size == 0 )
             assert ( src -> addr != NULL );
 
-        * rc = VPathMakeFromUrl ( new_path, src, ticket, ext, id, typed -> size,
+        * rc = VPathMakeFromUrl ( new_path, src, ticket, ext, id,
+            typed -> osize,
             useDates ? typed -> date : 0,
 			typed -> md5 . has_md5 ? typed -> md5 . md5 : NULL,
             useDates ? typed -> expiration : 0 );

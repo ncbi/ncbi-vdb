@@ -3340,10 +3340,10 @@ LIB_EXPORT KTime_t CC VPathGetModDate ( const VPath * self  )
     return 0;
 }
 
-LIB_EXPORT size_t CC VPathGetSize ( const VPath * self )
+LIB_EXPORT uint64_t CC VPathGetSize ( const VPath * self )
 {
     if ( self != NULL )
-        return self -> size;
+        return self -> osize;
     return 0;
 }
 
@@ -3799,7 +3799,7 @@ rc_t LegacyVPathMakeFmt ( VPath ** new_path, const char * fmt, ... )
 
 static
 rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
-    const String * tick, size_t size, KTime_t date, const uint8_t md5 [ 16 ],
+    const String * tick, uint64_t osize, KTime_t date, const uint8_t md5 [ 16 ],
     KTime_t exp_date, const char * fmt, va_list args )
 {
     rc_t rc;
@@ -3828,7 +3828,7 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
                 }
 
                 path -> ext = ext;
-                path -> size = size;
+                path -> osize = osize;
                 path -> modification = date;
                 path -> expiration = exp_date;
 
@@ -3869,7 +3869,7 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
 
 static
 rc_t VPathMakeFmtExt ( VPath ** new_path, bool ext, const String * id,
-	const String * tick, size_t size, KTime_t date, const uint8_t md5 [ 16 ],
+	const String * tick, uint64_t osize, KTime_t date, const uint8_t md5 [ 16 ],
 	KTime_t exp_date, const char * fmt, ... )
 {
     EVPathType t = ext ? eVPext : eVPWithId; 
@@ -3878,7 +3878,7 @@ rc_t VPathMakeFmtExt ( VPath ** new_path, bool ext, const String * id,
     va_list args;
     va_start ( args, fmt );
 
-    rc = VPathMakeVFmtExt ( t, new_path, id, tick, size, date, md5, exp_date,
+    rc = VPathMakeVFmtExt ( t, new_path, id, tick, osize, date, md5, exp_date,
 		fmt, args );
 
     va_end ( args );
@@ -3887,14 +3887,14 @@ rc_t VPathMakeFmtExt ( VPath ** new_path, bool ext, const String * id,
 }
 
 rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
-    const String * tick, bool ext, const String * id, size_t size, KTime_t date,
-    const uint8_t md5 [ 16 ], KTime_t exp_date )
+    const String * tick, bool ext, const String * id, uint64_t osize,
+    KTime_t date, const uint8_t md5 [ 16 ], KTime_t exp_date )
 {
     if ( tick == NULL || tick -> addr == NULL || tick -> size == 0 )
-        return VPathMakeFmtExt ( new_path, ext, id, tick, size, date, md5,
+        return VPathMakeFmtExt ( new_path, ext, id, tick, osize, date, md5,
 		                         exp_date, "%S", url  );
     else
-        return VPathMakeFmtExt ( new_path, ext, id, tick, size, date, md5,
+        return VPathMakeFmtExt ( new_path, ext, id, tick, osize, date, md5,
                                  exp_date, "%S?tic=%S", url, tick );
 }
 
