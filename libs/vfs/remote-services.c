@@ -923,10 +923,14 @@ static rc_t uint32_tInit ( void * p, const String * src ) {
 static rc_t uint64_tInit ( void * p, const String * src ) {
     rc_t rc = 0;
     uint64_t * self = ( uint64_t * ) p;
-    uint64_t s = StringToU64 ( src, & rc );
-    if ( rc == 0 ) {
-        assert ( self );
-        * self = s;
+    uint64_t s = 0;
+    assert ( src && self );
+    if ( src -> size == 0 )
+        * self = 0;
+    else {
+        s = StringToU64 ( src, & rc );
+        if ( rc == 0 )
+            * self = s;
     }
     return rc;
 }
