@@ -28,11 +28,7 @@
 
 #include <klib/symbol.h>
 
-// hide an unfortunately named C function typename()
-#define typename __typename
 #include "../vdb/schema-parse.h"
-#undef typename
-#include "../vdb/schema-priv.h"
 #include "../vdb/schema-expr.h"
 
 using namespace ncbi::SchemaParser;
@@ -394,7 +390,7 @@ ASTBuilder :: CreateConstSymbol ( const char* p_name, int p_type, void * p_obj )
 bool
 ASTBuilder :: CreateOverload ( const KSymbol *  p_name,
                                const void *     p_object,
-                               int64_t CC       (*p_sort)(const void *, const void *),
+                               int64_t          (CC *p_sort)(const void *, const void *),
                                Vector &         p_objects,
                                Vector &         p_names,
                                uint32_t *       p_id )

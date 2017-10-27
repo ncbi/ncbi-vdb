@@ -34,12 +34,8 @@
 #include <klib/printf.h>
 #include <klib/rc.h>
 
-// hide an unfortunately named C function typename()
-#define typename __typename
 #include "../vdb/schema-parse.h"
-#undef typename
 #include "../vdb/dbmgr-priv.h"
-#include "../vdb/schema-priv.h"
 #include "../vdb/schema-expr.h"
 
 using namespace ncbi::SchemaParser;
@@ -224,7 +220,7 @@ AST_FQN :: GetPartialName ( char* p_buf, size_t p_bufSize, uint32_t p_lastMember
         }
     }
 
-    p_buf [ p_bufSize ] = 0;
+    p_buf [ p_bufSize - 1 ] = 0;
 }
 
 void

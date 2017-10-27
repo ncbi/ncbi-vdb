@@ -61,7 +61,7 @@ namespace ncbi
             uint32_t GetCount() const { return VectorLength ( & m_errors ); }
 
             const Error * GetError ( uint32_t p_idx ) const;
-            const char *  GetMessage ( uint32_t p_idx ) const; // if not interested in location
+            const char *  GetMessageText ( uint32_t p_idx ) const; // if not interested in location
 
             void Clear ();
 

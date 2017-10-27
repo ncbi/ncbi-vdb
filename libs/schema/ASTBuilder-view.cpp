@@ -28,11 +28,7 @@
 
 #include <klib/symbol.h>
 
-// hide an unfortunately named C function typename()
-#define typename __typename
 #include "../vdb/schema-parse.h"
-#undef typename
-#include "../vdb/schema-priv.h"
 #include "../vdb/schema-expr.h"
 
 using namespace ncbi::SchemaParser;
@@ -314,7 +310,7 @@ ViewDeclaration :: Extend ( const Token :: Location & p_loc, const SView * p_dad
     /* if parent is already in ancestry, treat as redundant */
     if ( VectorFind ( & m_self -> overrides, & p_dad -> id, NULL, SViewOverridesCmp ) != NULL )
     {
-        return VectorAppend ( & m_self -> parents, NULL, p_dad );
+        return m_builder . VectorAppend ( m_self -> parents, NULL, p_dad );
     }
 
     /* test for any collisions */

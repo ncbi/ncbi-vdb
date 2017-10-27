@@ -31,12 +31,8 @@
 #include <kfs/directory.h>
 #include <kfs/mmap.h>
 
-// hide an unfortunately named C function typename()
-#define typename __typename
 #include "../vdb/schema-parse.h"
-#undef typename
 #include "../vdb/dbmgr-priv.h"
-#include "../vdb/schema-priv.h"
 #include "../vdb/schema-expr.h"
 
 #include "SchemaParser.hpp"
@@ -71,7 +67,7 @@ ASTBuilder :: DeclareType ( const AST_FQN& p_fqn, const KSymbol& p_super, const 
                 dt -> super     = super;
                 dt -> byte_swap = super -> byte_swap;
                 dt -> name      = symbol;
-                uint32_t dimension = p_dimension == 0 ? 1 : EvalConstExpr ( * p_dimension );
+                uint32_t dimension = p_dimension == 0 ? 1 : ( uint32_t ) EvalConstExpr ( * p_dimension );
                 dt -> size      = super -> size * dimension;
                 dt -> dim       = dimension;
                 dt -> domain    = super -> domain;
@@ -169,7 +165,7 @@ ASTBuilder :: MakeTypeExpr ( const AST & p_type )
                             SConstExpr* cexpr = reinterpret_cast < SConstExpr* > ( expr );
                             // this may change as more kinds of const expressions are supported
                             assert ( cexpr -> td . type_id == IntrinsicTypeId ( "U64" ) );
-                            ret -> fd . td . dim = cexpr -> u . u64 [ 0 ];
+                            ret -> fd . td . dim = ( uint32_t ) cexpr -> u . u64 [ 0 ];
                             ret -> dim = expr;
                         }
                         break;
@@ -562,7 +558,7 @@ ASTBuilder :: TypeSpec ( const AST & p_spec, VTypedecl & p_td )
             }
             const SDatatype * typeDef = static_cast < const SDatatype * > ( ret -> u . obj );
             p_td . type_id    = typeDef -> id;
-            p_td . dim        = EvalConstExpr ( * ToExpr ( p_spec . GetChild ( 1 ) ) );
+            p_td.dim = (uint32_t) EvalConstExpr(*ToExpr(p_spec.GetChild(1)));
         }
     }
     return ret;
@@ -744,7 +740,7 @@ ASTBuilder :: ConstDef  ( const Token* p_token, AST* p_type, AST_FQN* p_fqn, AST
                     cnst -> expr = p_expr -> EvaluateConst ( *this ); // will report problems
                     const SDatatype * typeDef = static_cast < const SDatatype * > ( sym -> u . obj );
                     cnst -> td . type_id    = typeDef -> id;
-                    cnst -> td . dim        = EvalConstExpr ( * ToExpr ( p_type -> GetChild ( 1 ) ) );
+                    cnst->td.dim = (uint32_t) EvalConstExpr(*ToExpr(p_type->GetChild(1)));
                 }
             }
         }

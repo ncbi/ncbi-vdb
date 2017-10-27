@@ -119,7 +119,7 @@ ErrorReport :: GetError ( uint32_t p_idx ) const
 }
 
 const char *
-ErrorReport :: GetMessage ( uint32_t p_idx ) const
+ErrorReport :: GetMessageText ( uint32_t p_idx ) const
 {
     const Error * err = reinterpret_cast < const Error * > ( VectorGet ( & m_errors, p_idx ) );
     return err == 0 ? 0 : err -> m_message;

@@ -1342,7 +1342,7 @@ rc_t VSchemaRuntimeTablePrint ( VSchemaRuntimeTable *self, const char *fmt, ... 
  *   either a single super-table type string or multiple comma-separated tables
  */
 LIB_EXPORT rc_t CC VSchemaMakeRuntimeTable ( VSchema *self,
-    VSchemaRuntimeTable **tblp, const char *typename, const char *supertype_spec )
+    VSchemaRuntimeTable **tblp, const char *type_name, const char *supertype_spec )
 {
     rc_t rc;
 
@@ -1352,9 +1352,9 @@ LIB_EXPORT rc_t CC VSchemaMakeRuntimeTable ( VSchema *self,
     {
         if ( self == NULL )
             rc = RC ( rcVDB, rcSchema, rcConstructing, rcSelf, rcNull );
-        else if ( typename == NULL )
+        else if ( type_name == NULL )
             rc = RC ( rcVDB, rcSchema, rcConstructing, rcType, rcNull );
-        else if ( typename [ 0 ] == 0 )
+        else if ( type_name [ 0 ] == 0 )
             rc = RC ( rcVDB, rcSchema, rcConstructing, rcType, rcEmpty );
         else
         {
@@ -1370,14 +1370,14 @@ LIB_EXPORT rc_t CC VSchemaMakeRuntimeTable ( VSchema *self,
                     if ( rc == 0 )
                     {
                         const char *dflt_vers = "";
-                        if ( strchr ( typename, '#' ) == NULL )
+                        if ( strchr ( type_name, '#' ) == NULL )
                             dflt_vers = "#1.0";
 
                         tbl -> schema = self;
                         tbl -> bytes = 0;
 
                         /* open the table */
-                        rc = VSchemaRuntimeTablePrint ( tbl, "table %s%s", typename, dflt_vers );
+                        rc = VSchemaRuntimeTablePrint ( tbl, "table %s%s", type_name, dflt_vers );
                         if ( rc == 0 )
                         {
                             if ( supertype_spec != NULL && supertype_spec [ 0 ] != 0 )

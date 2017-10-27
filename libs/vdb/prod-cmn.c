@@ -67,7 +67,7 @@
 #include <stdio.h>
 #include <limits.h>
 
-#include <bytecode.h>
+#include "bytecode.h"
 
 #if !defined(WINDOWS)  &&  !defined(_WIN32)  &&  !defined(NCBI_WITHOUT_MT)
 #define LAUNCH_PAGEMAP_THREAD 1

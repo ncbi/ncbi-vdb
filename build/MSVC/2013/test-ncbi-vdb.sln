@@ -1,6 +1,8 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.40629.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-judy", "test-judy.vcxproj", "{9DF843FA-AA45-4EB1-BB76-84342AED550C}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-kfc", "test-kfc.vcxproj", "{3B04D703-5180-492E-B4B1-0F60CA71810D}"
@@ -98,6 +100,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-kfs_ramfile", "test-kfs_ramfile.vcxproj", "{6858571F-A608-9599-A02C-6DAB76BEBBDB}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-kfs_resolve", "test-kfs_resolve.vcxproj", "{9C8F1BFC-2830-55D5-A722-1551B4208999}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wb-test-schema-ast", "wb-test-schema-ast.vcxproj", "{CC5555CB-3424-441A-8656-A5961B7EECAF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -499,6 +503,14 @@ Global
 		{9C8F1BFC-2830-55D5-A722-1551B4208999}.Release|Win32.Build.0 = Release|Win32
 		{9C8F1BFC-2830-55D5-A722-1551B4208999}.Release|x64.ActiveCfg = Release|x64
 		{9C8F1BFC-2830-55D5-A722-1551B4208999}.Release|x64.Build.0 = Release|x64
+		{CC5555CB-3424-441A-8656-A5961B7EECAF}.Debug|Win32.ActiveCfg = Debug|Win32
+		{CC5555CB-3424-441A-8656-A5961B7EECAF}.Debug|Win32.Build.0 = Debug|Win32
+		{CC5555CB-3424-441A-8656-A5961B7EECAF}.Debug|x64.ActiveCfg = Debug|x64
+		{CC5555CB-3424-441A-8656-A5961B7EECAF}.Debug|x64.Build.0 = Debug|x64
+		{CC5555CB-3424-441A-8656-A5961B7EECAF}.Release|Win32.ActiveCfg = Release|Win32
+		{CC5555CB-3424-441A-8656-A5961B7EECAF}.Release|Win32.Build.0 = Release|Win32
+		{CC5555CB-3424-441A-8656-A5961B7EECAF}.Release|x64.ActiveCfg = Release|x64
+		{CC5555CB-3424-441A-8656-A5961B7EECAF}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

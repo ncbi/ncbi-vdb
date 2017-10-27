@@ -27,6 +27,7 @@
 #ifndef _hpp_ASTBuilder_
 #define _hpp_ASTBuilder_
 
+#include <kfc/callconv.h>
 #include <klib/rc.h>
 
 #include "AST.hpp"
@@ -77,7 +78,7 @@ namespace ncbi
 
             // error list is cleared by a call to Build
             uint32_t GetErrorCount() const { return m_errors . GetCount (); }
-            const char* GetErrorMessage ( uint32_t p_idx ) const { return m_errors . GetMessage ( p_idx ); }
+            const char* GetErrorMessage ( uint32_t p_idx ) const { return m_errors . GetMessageText ( p_idx ); }
             const ErrorReport & GetErrors () const { return m_errors; }
 
             // uses malloc(); reports allocation failure
@@ -127,7 +128,7 @@ namespace ncbi
 
             bool CreateOverload ( const KSymbol * p_name,
                                   const void * p_object,
-                                  int64_t CC (*p_sort)(const void *, const void *),
+                                  int64_t (CC * p_sort)(const void *, const void *),
                                   Vector & p_objects,
                                   Vector & p_names,
                                   uint32_t * p_id );

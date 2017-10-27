@@ -29,10 +29,7 @@
 #include <klib/symbol.h>
 #include <klib/printf.h>
 
-// hide an unfortunately named C function typename()
-#define typename __typename
 #include "../vdb/schema-parse.h"
-#undef typename
 #include "../vdb/dbmgr-priv.h"
 #include "../vdb/schema-expr.h"
 

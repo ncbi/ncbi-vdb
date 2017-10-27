@@ -335,7 +335,7 @@ rc_t dim ( const KSymTable *tbl, KTokenSource *src, KToken *t,
  * typename           = <fqn>
  * typedecl           = <typename> [ <dim> ]
  */
-rc_t typename ( const KSymTable *tbl, KTokenSource *src, KToken *t,
+rc_t type_name ( const KSymTable *tbl, KTokenSource *src, KToken *t,
     const SchemaEnv *env, uint32_t *id );
 rc_t typedecl ( const KSymTable *tbl, KTokenSource *src, KToken *t,
     const SchemaEnv *env, const VSchema *self, VTypedecl *td );

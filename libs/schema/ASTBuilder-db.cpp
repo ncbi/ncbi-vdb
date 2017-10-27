@@ -28,11 +28,7 @@
 
 #include <klib/symbol.h>
 
-// hide an unfortunately named C function typename()
-#define typename __typename
 #include "../vdb/schema-parse.h"
-#undef typename
-#include "../vdb/schema-priv.h"
 #include "../vdb/dbmgr-priv.h"
 
 using namespace ncbi::SchemaParser;
