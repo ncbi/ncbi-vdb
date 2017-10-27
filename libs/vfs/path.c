@@ -4051,8 +4051,8 @@ rc_t VPathClose ( const VPath * l, const VPath * r, int * notequal,
                     * notequal |= 0x200;
             }
             {
-                size_t p = VPathGetSize ( l );
-                size_t e = VPathGetSize ( r );
+                uint64_t p = VPathGetSize ( l );
+                uint64_t e = VPathGetSize ( r );
                 if ( p != e )
                     * notequal |= 0x400;
             }
