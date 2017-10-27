@@ -114,8 +114,8 @@ alphanum    [a-zA-Z_0-9]
 0[xX][0-9a-fA-F]+           { return HEX; }
 [0-9]+\.[0-9]*[eE][0-9]+    { return EXP_FLOAT; }
 \.[0-9]+[eE][0-9]+          { return EXP_FLOAT; }
-[0-9]+\.[0-9]*              { return FLOAT; }
-\.[0-9]+                    { return FLOAT; }
+[0-9]+\.[0-9]*              { return FLOAT_; }
+\.[0-9]+                    { return FLOAT_; }
 
  /* single quoted strings */
 '{sstr_char}*'              { return STRING; }
@@ -168,7 +168,7 @@ alphanum    [a-zA-Z_0-9]
 <VERSION_STATE>2\.0             { yy_pop_state ( yyscanner ); return VERS_2_0; }
 <VERSION_STATE>2                { yy_pop_state ( yyscanner ); return VERS_2_0; }
  /* reject versions we do not know about
-    <VERSION_STATE>[0-9]+\.[0-9]+   { yy_pop_state ( yyscanner ); return FLOAT; }
+    <VERSION_STATE>[0-9]+\.[0-9]+   { yy_pop_state ( yyscanner ); return FLOAT_; }
     <VERSION_STATE>[0-9]+           { yy_pop_state ( yyscanner ); return DECIMAL; }
  */
 

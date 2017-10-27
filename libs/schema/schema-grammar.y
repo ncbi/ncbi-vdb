@@ -151,7 +151,7 @@
 %token DECIMAL
 %token OCTAL
 %token HEX
-%token FLOAT
+%token FLOAT_
 %token EXP_FLOAT
 %token STRING
 %token ESCAPED_STRING
@@ -872,7 +872,7 @@ uint_expr_1_0
     ;
 
 float_expr_1_0
-    : FLOAT                     { $$ . subtree = T ( $1 ); }
+    : FLOAT_                     { $$ . subtree = T ( $1 ); }
     | EXP_FLOAT                 { $$ . subtree = T ( $1 ); }
     ;
 

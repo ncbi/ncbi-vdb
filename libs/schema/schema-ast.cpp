@@ -133,7 +133,7 @@ extern int AST_debug;
     DECIMAL = 261,
     OCTAL = 262,
     HEX = 263,
-    FLOAT = 264,
+    FLOAT_ = 264,
     EXP_FLOAT = 265,
     STRING = 266,
     ESCAPED_STRING = 267,
@@ -632,7 +632,7 @@ static const yytype_uint16 yyrline[] =
 static const char *const yytname[] =
 {
   "\"end of source\"", "error", "$undefined", "UNRECOGNIZED", "ELLIPSIS",
-  "INCREMENT", "DECIMAL", "OCTAL", "HEX", "FLOAT", "EXP_FLOAT", "STRING",
+  "INCREMENT", "DECIMAL", "OCTAL", "HEX", "FLOAT_", "EXP_FLOAT", "STRING",
   "ESCAPED_STRING", "IDENTIFIER_1_0", "PHYSICAL_IDENTIFIER_1_0", "VERSION",
   "UNTERM_STRING", "UNTERM_ESCAPED_STRING", "VERS_1_0", "VERS_2_0",
   "KW___no_header", "KW___row_length", "KW___untyped", "KW_alias",

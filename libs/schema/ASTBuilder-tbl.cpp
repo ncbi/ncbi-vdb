@@ -389,9 +389,9 @@ TableDeclaration :: HandleStatement ( const AST & p_stmt )
     case PT_PRODSTMT:
     case PT_PRODTRIGGER:
         {
-            const AST * datatype;
-            const AST * ident;
-            const AST * expr;
+            const AST * datatype = 0;
+            const AST * ident = 0;
+            const AST * expr = 0;
             switch ( p_stmt . ChildrenCount () )
             {
             case 2: // trigger

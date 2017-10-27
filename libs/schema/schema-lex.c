@@ -1465,12 +1465,12 @@ YY_RULE_SETUP
 case 28:
 YY_RULE_SETUP
 #line 117 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
-{ return FLOAT; }
+{ return FLOAT_; }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
 #line 118 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
-{ return FLOAT; }
+{ return FLOAT_; }
 	YY_BREAK
 /* single quoted strings */
 case 30:
@@ -1704,7 +1704,7 @@ YY_RULE_SETUP
 { yy_pop_state ( yyscanner ); return VERS_2_0; }
 	YY_BREAK
 /* reject versions we do not know about
-    <VERSION_STATE>[0-9]+\.[0-9]+   { yy_pop_state ( yyscanner ); return FLOAT; }
+    <VERSION_STATE>[0-9]+\.[0-9]+   { yy_pop_state ( yyscanner ); return FLOAT_; }
     <VERSION_STATE>[0-9]+           { yy_pop_state ( yyscanner ); return DECIMAL; }
  */
 case 74:

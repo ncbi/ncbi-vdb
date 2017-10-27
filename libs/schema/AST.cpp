@@ -451,7 +451,7 @@ AST_Expr :: MakeUnsigned ( ASTBuilder & p_builder ) const
 SExpression *
 AST_Expr :: MakeFloat ( ASTBuilder & p_builder ) const
 {
-    assert ( GetTokenType () == FLOAT || GetTokenType () == EXP_FLOAT );
+    assert ( GetTokenType () == FLOAT_ || GetTokenType () == EXP_FLOAT );
     SConstExpr * x = p_builder . Alloc < SConstExpr > ( sizeof * x - sizeof x -> u + sizeof x -> u . u64 [ 0 ] );
     if ( x != 0 )
     {
@@ -907,7 +907,7 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
     case PT_UINT:
         return MakeUnsigned ( p_builder );
 
-    case FLOAT:
+    case FLOAT_:
     case EXP_FLOAT:
         return MakeFloat ( p_builder );
 

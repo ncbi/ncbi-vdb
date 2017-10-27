@@ -52,7 +52,7 @@ extern int AST_debug;
     DECIMAL = 261,
     OCTAL = 262,
     HEX = 263,
-    FLOAT = 264,
+    FLOAT_ = 264,
     EXP_FLOAT = 265,
     STRING = 266,
     ESCAPED_STRING = 267,

@@ -77,7 +77,7 @@
 %token DECIMAL
 %token OCTAL
 %token HEX
-%token FLOAT
+%token FLOAT_
 %token EXP_FLOAT
 %token STRING
 %token ESCAPED_STRING
@@ -238,7 +238,7 @@
 %type <expr> expr cond_expr cond_chain uint_expr func_expr float_expr string_expr const_vect_expr
 %type <expr> bool_expr negate_expr cast_expr member_expr
 
-%type <tok> END_SOURCE version_1 PT_VERSION_1_0 PT_VERSION_2 PT_SCHEMA_1_0 FLOAT version_2
+%type <tok> END_SOURCE version_1 PT_VERSION_1_0 PT_VERSION_2 PT_SCHEMA_1_0 FLOAT_ version_2
 %type <tok> PT_TYPEDEF PT_IDENT IDENTIFIER_1_0 DECIMAL PT_ASTLIST PT_ARRAY PT_TYPESET
 %type <tok> PT_FORMAT PT_CONST PT_UINT PT_ALIAS PT_EMPTY PT_ELLIPSIS KW_return
 %type <tok> VERSION PT_UNTYPED PT_ROWLENGTH PT_FUNCDECL PT_FUNCPARAMS PT_FORMALPARAM
@@ -752,7 +752,7 @@ uint_expr
     ;
 
 float_expr
-    : FLOAT     { $$ = new AST_Expr ( $1 ); }
+    : FLOAT_     { $$ = new AST_Expr ( $1 ); }
     | EXP_FLOAT { $$ = new AST_Expr ( $1 ); }
     ;
 
