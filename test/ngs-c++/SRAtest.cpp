@@ -469,6 +469,8 @@ const char UsageDefaultName[] = "test-ngs_sra-c++";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+const char * p = getenv("http_proxy");
+cerr << "http_proxy = '" << ( p == NULL ? "NULL" : p ) << "'\n";
     rc_t rc=NgsSraCppTestSuite(argc, argv);
     return rc;
 }

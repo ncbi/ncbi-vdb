@@ -48,6 +48,8 @@ TEST_SUITE(NgsByteBlobTestSuite);
 const char* CSRA1_Accession = "SRR1063272";
 const char* CSRA1_Accession_WithRepeats = "SRR600094";
 
+const uint32_t ChunkSize = 5000;
+
 //////////////////////////////////////////// VByteBlob
 
 class ByteBlobFixture : public NGS_C_Fixture
@@ -55,7 +57,10 @@ class ByteBlobFixture : public NGS_C_Fixture
 public:
     ByteBlobFixture ()
     :   m_curs ( 0 ),
-        m_blob ( 0 )
+        m_blob ( 0 ),
+        m_data ( 0 ),
+        m_size ( 0 ),
+        m_rowCount ( 0 )
     {
     }
 
@@ -119,6 +124,7 @@ public:
 
     const void* m_data;
     uint64_t m_size;
+    uint64_t m_rowCount;
 };
 
 // void VByteBlob_ContiguousChunk ( const struct VBlob* blob,  ctx_t ctx, int64_t rowId, uint64_t maxRows, const void** data, uint64_t* size, bool stopAtRepeat );
@@ -127,7 +133,7 @@ FIXTURE_TEST_CASE ( VByteBlob_BadRowId, ByteBlobFixture )
     ENTRY;
     GetBlob ( CSRA1_Accession, 1 );
 
-    VByteBlob_ContiguousChunk ( m_blob, ctx, 0, 0, &m_data, &m_size, false );
+    VByteBlob_ContiguousChunk ( m_blob, ctx, 0, 0, false, &m_data, &m_size, 0 );
     REQUIRE_FAILED();
 
     EXIT;
@@ -138,9 +144,10 @@ FIXTURE_TEST_CASE ( VByteBlob_GoodRowId, ByteBlobFixture )
     ENTRY;
     GetBlob ( CSRA1_Accession, 1 );
 
-    VByteBlob_ContiguousChunk ( m_blob, ctx, 1, 0, &m_data, &m_size, false );
+    VByteBlob_ContiguousChunk ( m_blob, ctx, 1, 0, false, &m_data, &m_size, &m_rowCount );
     REQUIRE ( ! FAILED() );
     CheckRange ( ctx, 1, 4 );
+    REQUIRE_EQ ( ( uint64_t ) 4, m_rowCount );
 
     EXIT;
 }
@@ -150,7 +157,7 @@ FIXTURE_TEST_CASE ( VByteBlob_LargeRowId, ByteBlobFixture )
     ENTRY;
     GetBlob ( CSRA1_Accession, 1 );
 
-    VByteBlob_ContiguousChunk ( m_blob, ctx, 4000, 0, &m_data, &m_size, false ); // accession row-count = 3,781
+    VByteBlob_ContiguousChunk ( m_blob, ctx, 4000, 0, false, &m_data, &m_size, 0 ); // accession row-count = 3,781
     REQUIRE_FAILED();
 
     EXIT;
@@ -161,10 +168,11 @@ FIXTURE_TEST_CASE ( VByteBlob_StopAtRepeat_NoRepeat, ByteBlobFixture )
     ENTRY;
     GetBlob ( CSRA1_Accession, 1 );
 
-    VByteBlob_ContiguousChunk ( m_blob, ctx, 1, 0, &m_data, &m_size, true );
+    VByteBlob_ContiguousChunk ( m_blob, ctx, 1, 0, true, &m_data, &m_size, & m_rowCount );
     REQUIRE ( ! FAILED() );
     CheckRange ( ctx, 1, 4 );
-    REQUIRE_EQ ( (uint64_t)20000, m_size );
+    REQUIRE_EQ ( ( uint64_t ) 4, m_rowCount );
+    REQUIRE_EQ ( ( uint64_t ) m_rowCount * ChunkSize, m_size );
 
     EXIT;
 }
@@ -180,9 +188,10 @@ FIXTURE_TEST_CASE ( VByteBlob_StopAtRepeat_YesRepeat, ByteBlobFixture )
     m_blob = NGS_CursorGetVBlob ( m_curs, m_ctx, 33, reference_READ ); // this blob has 9 repeated rows, 37-45; 16 rows total
     CheckRange ( ctx, 33, 16 ); // full blob
 
-    VByteBlob_ContiguousChunk ( m_blob, ctx, 33, 0, &m_data, &m_size, true );
+    VByteBlob_ContiguousChunk ( m_blob, ctx, 33, 0, true, &m_data, &m_size, & m_rowCount );
     REQUIRE ( ! FAILED() );
-    REQUIRE_EQ ( (uint64_t)5*5000, m_size ); // only 5 first rows included into the contiguous chunk (up to the first repetition)
+    REQUIRE_EQ ( ( uint64_t ) 5, m_rowCount ); // only 5 first rows included into the contiguous chunk (up to the first repetition)
+    REQUIRE_EQ ( ( uint64_t ) m_rowCount * ChunkSize, m_size );
 
     EXIT;
 }
@@ -197,9 +206,10 @@ FIXTURE_TEST_CASE ( VByteBlob_NoStopAtRepeat_YesRepeat, ByteBlobFixture )
     m_blob = NGS_CursorGetVBlob ( m_curs, m_ctx, 17, reference_READ ); VBlobRelease ( m_blob );
     m_blob = NGS_CursorGetVBlob ( m_curs, m_ctx, 33, reference_READ ); // this blob has 9 repeated rows, 37-45; 16 rows total, 8 packed
 
-    VByteBlob_ContiguousChunk ( m_blob, ctx, 33, 0, &m_data, &m_size, false ); // ignore repeats
+    VByteBlob_ContiguousChunk ( m_blob, ctx, 33, 0, false, &m_data, &m_size, & m_rowCount ); // ignore repeats
     REQUIRE ( ! FAILED() );
-    REQUIRE_EQ ( (uint64_t)8*5000, m_size ); // all rows included: 8 = 7 unpacked + 9 packed into 1
+    REQUIRE_EQ ( ( uint64_t ) 16, m_rowCount ); // all rows included: 8 = 7 unpacked + 9 packed into 1
+    REQUIRE_EQ ( ( uint64_t ) 8 * ChunkSize, m_size );  // 16 rows packed into 8 chunks
 
     EXIT;
 }
@@ -209,10 +219,11 @@ FIXTURE_TEST_CASE ( VByteBlob_MaxRows_MoreThanPresent, ByteBlobFixture )
     ENTRY;
     GetBlob ( CSRA1_Accession, 1 );
 
-    VByteBlob_ContiguousChunk ( m_blob, ctx, 1, 10, &m_data, &m_size, false );
+    VByteBlob_ContiguousChunk ( m_blob, ctx, 1, 10, false, &m_data, &m_size, & m_rowCount );
     REQUIRE ( ! FAILED() );
     CheckRange ( ctx, 1, 4 );
-    REQUIRE_EQ ( (uint64_t)4*5000, m_size );
+    REQUIRE_EQ ( ( uint64_t ) 4, m_rowCount );
+    REQUIRE_EQ ( ( uint64_t ) m_rowCount * ChunkSize, m_size );
 
     EXIT;
 }
@@ -222,9 +233,10 @@ FIXTURE_TEST_CASE ( VByteBlob_MaxRows_LessThanPresent, ByteBlobFixture )
     ENTRY;
     GetBlob ( CSRA1_Accession, 1 );
 
-    VByteBlob_ContiguousChunk ( m_blob, ctx, 1, 2, &m_data, &m_size, false );
+    VByteBlob_ContiguousChunk ( m_blob, ctx, 1, 2, false, &m_data, &m_size, & m_rowCount );
     REQUIRE ( ! FAILED() );
-    REQUIRE_EQ ( (uint64_t)2*5000, m_size );
+    REQUIRE_EQ ( ( uint64_t ) 2, m_rowCount );
+    REQUIRE_EQ ( ( uint64_t ) m_rowCount * ChunkSize, m_size );
 
     EXIT;
 }
@@ -240,9 +252,10 @@ FIXTURE_TEST_CASE ( VByteBlob_MaxRows_LessThanPresent_WithRepeatsAfter, ByteBlob
     m_blob = NGS_CursorGetVBlob ( m_curs, m_ctx, 17, reference_READ ); VBlobRelease ( m_blob );
     m_blob = NGS_CursorGetVBlob ( m_curs, m_ctx, 33, reference_READ ); // this blob has 9 repeated rows, 37-45; 16 rows total, 8 packed
 
-    VByteBlob_ContiguousChunk ( m_blob, ctx, 33, 4, &m_data, &m_size, true );
+    VByteBlob_ContiguousChunk ( m_blob, ctx, 33, 4, true, &m_data, &m_size, & m_rowCount );
     REQUIRE ( ! FAILED() );
-    REQUIRE_EQ ( (uint64_t)4*5000, m_size ); // 4 rows (repeats come after)
+    REQUIRE_EQ ( ( uint64_t ) 4, m_rowCount ); // 4 rows (repeats come after)
+    REQUIRE_EQ ( ( uint64_t ) m_rowCount * ChunkSize, m_size );
 
     EXIT;
 }
@@ -257,9 +270,10 @@ FIXTURE_TEST_CASE ( VByteBlob_MaxRows_LessThanPresent_WithRepeatsBefore, ByteBlo
     m_blob = NGS_CursorGetVBlob ( m_curs, m_ctx, 17, reference_READ ); VBlobRelease ( m_blob );
     m_blob = NGS_CursorGetVBlob ( m_curs, m_ctx, 33, reference_READ ); // this blob has 9 repeated rows, 37-45; 16 rows total, 8 packed
 
-    VByteBlob_ContiguousChunk ( m_blob, ctx, 33, 14, &m_data, &m_size, true );
+    VByteBlob_ContiguousChunk ( m_blob, ctx, 33, 14, true, &m_data, &m_size, & m_rowCount );
     REQUIRE ( ! FAILED() );
-    REQUIRE_EQ ( (uint64_t)5*5000, m_size ); // only 5 first rows included into the contiguous chunk (up to the first repetition)
+    REQUIRE_EQ ( ( uint64_t ) 5, m_rowCount ); // only 5 first rows included into the contiguous chunk (up to the first repetition)
+    REQUIRE_EQ ( ( uint64_t ) m_rowCount * ChunkSize, m_size );
 
     EXIT;
 }
@@ -274,9 +288,10 @@ FIXTURE_TEST_CASE ( VByteBlob_MaxRows_LessThanPresent_WithRepeatsOverlapping, By
     m_blob = NGS_CursorGetVBlob ( m_curs, m_ctx, 17, reference_READ ); VBlobRelease ( m_blob );
     m_blob = NGS_CursorGetVBlob ( m_curs, m_ctx, 33, reference_READ ); // this blob has 9 repeated rows, 37-45; 16 rows total, 8 packed
 
-    VByteBlob_ContiguousChunk ( m_blob, ctx, 33, 7, &m_data, &m_size, true ); // 4 rows and 3 of the repeated
+    VByteBlob_ContiguousChunk ( m_blob, ctx, 33, 7, true, &m_data, &m_size, & m_rowCount ); // 4 rows and 3 of the repeated
     REQUIRE ( ! FAILED() );
-    REQUIRE_EQ ( (uint64_t)5*5000, m_size ); // only 5 first rows included into the contiguous chunk (up to the first repetition)
+    REQUIRE_EQ ( ( uint64_t ) 5, m_rowCount ); // only 5 first rows included into the contiguous chunk (up to the first repetition)
+    REQUIRE_EQ ( ( uint64_t ) m_rowCount * ChunkSize, m_size );
 
     EXIT;
 }
