@@ -3754,6 +3754,7 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
             assert ( p && * p == NULL && oath == NULL );
         else {
             int notequal = ~ 0;
+            VPathMarkHighReliability ( ( VPath * ) oath, true );
             assert ( ! VPathEqual ( * remote, oath, & notequal ) );
             if ( notequal )
                 assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
