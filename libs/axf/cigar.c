@@ -2229,8 +2229,7 @@ rc_t CC get_ref_insert_impl ( void *data, const VXformInfo *info, int64_t row_id
     rslt->data->elem_bits = sizeof( bool ) * 8;
     rslt->elem_count = ref_len[ argv[ 3 ].u.data.first_elem ];
     rc = KDataBufferResize( rslt->data, rslt->elem_count );
-    if ( rc == 0 )
-    {
+    if (rc == 0 && rslt->elem_count > 0) {
         bool *result = ( bool* )rslt->data->base;
         unsigned j;
         unsigned ri;
