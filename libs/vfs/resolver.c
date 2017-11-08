@@ -1092,12 +1092,12 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
             uint8_t ud5 [ 16 ];
             bool has_md5 = false;
             KTime_t date = 0;
-            size_t size = 0;
+            uint64_t osize = 0;
             if ( size_str . size != 0  && size_str . len != 0 ) {
                 rc_t r2 = 0;
-                size = StringToU64 ( & size_str, & r2 );
+                osize = StringToU64 ( & size_str, & r2 );
                 if ( r2 != 0 )
-                    size = 0;
+                    osize = 0;
             }
             if ( mod_date . addr != NULL && mod_date . size > 0 ) {
                 KTime kt;
@@ -1109,7 +1109,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
             if ( md5 . addr != NULL && md5 . size == 32 ) {
                 int i = 0;
                 for ( i = 0; i < 16 && rc == 0; ++ i ) {
-                    ud5 [ i ]  = getDigit ( md5 . addr [ 2 * i     ], & rc ) * 16;
+                    ud5 [ i ]  = getDigit ( md5 . addr [ 2 * i ], & rc ) * 16;
                     ud5 [ i ] += getDigit ( md5 . addr [ 2 * i + 1 ], & rc );
                 }
                 has_md5 = rc == 0;
@@ -1125,7 +1125,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
                 if ( id -> size == 0 )
                     id = & obj_id;
                 rc = VPathMakeFromUrl ( ( VPath** ) path, & url,
-                    & download_ticket, true, id, size, date,
+                    & download_ticket, true, id, osize, date,
                     has_md5 ? ud5 : NULL, 0 );
             }
             /*else
@@ -3754,6 +3754,7 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
             assert ( p && * p == NULL && oath == NULL );
         else {
             int notequal = ~ 0;
+            VPathMarkHighReliability ( ( VPath * ) oath, true );
             assert ( ! VPathEqual ( * remote, oath, & notequal ) );
             if ( notequal )
                 assert ( VPathHasRefseqContext ( query ) && notequal == 2 );

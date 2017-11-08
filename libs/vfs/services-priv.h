@@ -113,9 +113,8 @@ rc_t KServiceSearchTest (
 /******************************************************************************/
 
 /* THE FOLLOWING DEFINE TURNS ON COMPARING OLD/NEW RESOLVING CALLS AND
-   ASSERTING WHEN THE RESULTS DO NOT MATCH.
+   ASSERTING WHEN THE RESULTS DO NOT MATCH. */
 #define TESTING_SERVICES_VS_OLD_RESOLVING 1
- */
 
 #ifdef __cplusplus
 }

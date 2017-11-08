@@ -187,11 +187,19 @@ class TestProxy : private ncbi::NK::TestCase {
             } else {
                 REQUIRE_EQ ( static_cast < int> ( port), 3128 );
                 REQUIRE ( proxy_default_port );
+
                 REQUIRE ( KEndPointArgsIterator_Next ( i, & hostname,
                              & port, & proxy_default_port, & proxy_ep ) );
                 REQUIRE ( proxy_ep );
                 REQUIRE ( StringEqual ( hostname, & host ) );
                 REQUIRE_EQ ( static_cast < int> ( port ), 8080 );
+                REQUIRE ( proxy_default_port );
+
+                REQUIRE ( KEndPointArgsIterator_Next ( i, & hostname,
+                             & port, & proxy_default_port, & proxy_ep ) );
+                REQUIRE ( proxy_ep );
+                REQUIRE ( StringEqual ( hostname, & host ) );
+                REQUIRE_EQ ( static_cast < int> ( port ), 80 );
                 REQUIRE ( proxy_default_port );
             }
             e = e -> next;

@@ -257,4 +257,22 @@ run-test-proxy-with-scheme:
 	http_proxy=http://      $(BINDIR)/test-proxy-with-scheme
 	http_proxy=http://:3128 $(BINDIR)/test-proxy-with-scheme
 
+	# VDB-3329: http_proxy specification with trailing slash
+	ping -c1 webproxy > /dev/null && \
+	http_proxy=http://webproxy.ncbi.nlm.nih.gov:3128/     \
+		$(BINDIR)/test-proxy-with-scheme                       SUCCESS || echo skipped
+	ping -c1 webproxy > /dev/null && \
+	http_proxy=http://webproxy.ncbi.nlm.nih.gov:3128///   \
+		$(BINDIR)/test-proxy-with-scheme                       SUCCESS || echo skipped
+	ping -c1 webproxy > /dev/null && \
+	http_proxy=http://webproxy.ncbi.nlm.nih.gov:3128/:    \
+		$(BINDIR)/test-proxy-with-scheme                       SUCCESS || echo skipped
+	ping -c1 webproxy > /dev/null && \
+	http_proxy=http://webproxy.ncbi.nlm.nih.gov:3128???XY \
+		$(BINDIR)/test-proxy-with-scheme                       SUCCESS || echo skipped
+	http_proxy=http://webproxy.ncbi.nlm.nih.gov/X         \
+		$(BINDIR)/test-proxy-with-scheme
+	http_proxy=http://webproxy.ncbi.nlm.nih.gov?X         \
+		$(BINDIR)/test-proxy-with-scheme
+
 	@ echo ... test-proxy-with-scheme: END

@@ -479,18 +479,18 @@ TEST_CASE( CacheTee_Multiple_Users_Single_Inst )
 }
 
 // TODO: fix, this does not work on Windows
-#if !defined(WINDOWS) && !defined(_WIN32)
+#if !defined(WINDOWS) && !defined(_WIN32) && !defined(MAC)
 TEST_CASE( CacheTee_ReadOnly )
 {
-	KOutMsg( "Test: CacheTee_ReadOnly\n" );
+	KOutMsg( "Test: CacheTee_ReadOnly %s\n", CACHEFILE1 );
 	remove_file( CACHEFILE );	// to start with a clean slate on caching...
 	remove_file( CACHEFILE1 );
 
-    KDirectory * dir;
-    REQUIRE_RC( KDirectoryNativeDir( &dir ) );
+	KDirectory * dir;
+	REQUIRE_RC( KDirectoryNativeDir( &dir ) );
 
 	const KFile * org;
-    REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE ) );
+	REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE ) );
 
 	/* make a fresh cache-tee and read 100 bytes from it... */
 	const KFile * tee;
@@ -502,6 +502,7 @@ TEST_CASE( CacheTee_ReadOnly )
     
 	/* make a second cache-tee and read all from it... */
 	REQUIRE_RC( KDirectoryMakeCacheTee ( dir, &tee, org, BLOCKSIZE, "%s", CACHEFILE ) );
+
 	REQUIRE_RC( read_all( tee, 1024 * 32 )	);
 	REQUIRE_RC( KFileRelease( tee ) );
 
