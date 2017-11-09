@@ -54,17 +54,27 @@ static rc_t make_progressbar_cmn( progressbar ** pb, const uint8_t digits, bool 
         rc = RC( rcVDB, rcNoTarg, rcConstructing, rcSelf, rcNull );
 	else
 	{
-		progressbar	* p = calloc( 1, sizeof( *p ) );
-		if ( p == NULL )
-			rc = RC( rcVDB, rcNoTarg, rcConstructing, rcMemory, rcExhausted );
-		else
-		{
-            p->digits = digits > MAX_DIGITS ? MAX_DIGITS : digits;
-            p->out_fd = use_stderr ? STDERR_FD : STDOUT_FD;
-            if ( sys_is_a_tty( p->out_fd ) != 1 )
-                p->out_fd = 0;
-			*pb = p;
-		}
+        int * h_stdout;
+        int * h_stderr;
+        
+        *pb = NULL;
+        rc = KWrtSysInit( ( void** )&h_stdout, ( void** )&h_stderr );
+        if ( rc == 0 )
+        {
+            int out_fd = use_stderr ? *h_stderr : *h_stdout;
+            if ( sys_is_a_tty( out_fd ) == 1 )
+            {
+                progressbar	* p = calloc( 1, sizeof( *p ) );
+                if ( p == NULL )
+                    rc = RC( rcVDB, rcNoTarg, rcConstructing, rcMemory, rcExhausted );
+                else
+                {
+                    p -> digits = digits > MAX_DIGITS ? MAX_DIGITS : digits;
+                    p -> out_fd = out_fd;
+                    *pb = p;
+                }
+            }
+        }
 	}
     return rc;
 }
