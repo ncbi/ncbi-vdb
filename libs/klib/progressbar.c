@@ -62,7 +62,8 @@ static rc_t make_progressbar_cmn( progressbar ** pb, const uint8_t digits, bool 
         if ( rc == 0 )
         {
             int out_fd = use_stderr ? *h_stderr : *h_stdout;
-            if ( sys_is_a_tty( out_fd ) == 1 )
+            int is_tty = 1; /* sys_is_a_tty( out_fd ) ... this does not work on WINDOWS! */
+            if ( is_tty == 1 )
             {
                 progressbar	* p = calloc( 1, sizeof( *p ) );
                 if ( p == NULL )
