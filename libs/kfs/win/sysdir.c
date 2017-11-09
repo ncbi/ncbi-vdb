@@ -396,46 +396,49 @@ struct KSysDir
 static
 rc_t translate_file_error( DWORD error, enum RCContext ctx )
 {
+    rc_t rc;
     switch ( error )
     {
-    case ERROR_FILE_NOT_FOUND :
-    case ERROR_PATH_NOT_FOUND :
-    case ERROR_INVALID_DRIVE :
-        return RC ( rcFS, rcDirectory, ctx, rcPath, rcNotFound );
+        case ERROR_FILE_NOT_FOUND :
+        case ERROR_PATH_NOT_FOUND :
+        case ERROR_INVALID_DRIVE :
+            rc = RC ( rcFS, rcDirectory, ctx, rcPath, rcNotFound ); break;
 
-    case ERROR_ALREADY_EXISTS:
-    case ERROR_FILE_EXISTS :
-        return RC ( rcFS, rcDirectory, ctx, rcPath, rcExists );
+        case ERROR_ALREADY_EXISTS:
+        case ERROR_FILE_EXISTS :
+            rc = RC ( rcFS, rcDirectory, ctx, rcPath, rcExists ); break;
 
-/*    case ERROR_PATH_NOT_FOUND : */
-    case ERROR_INVALID_NAME :
-    case ERROR_BAD_PATHNAME :
-        return RC ( rcFS, rcDirectory, ctx, rcPath, rcInvalid );
+    /*    case ERROR_PATH_NOT_FOUND : */
+        case ERROR_INVALID_NAME :
+        case ERROR_BAD_PATHNAME :
+            rc = RC ( rcFS, rcDirectory, ctx, rcPath, rcInvalid ); break;
 
-    case ERROR_ACCESS_DENIED :
-    case ERROR_INVALID_ACCESS :
-    case ERROR_SHARING_VIOLATION :
-    case ERROR_LOCK_VIOLATION :
-    case ERROR_PATH_BUSY :
-    case ERROR_WRITE_PROTECT :
-    case ERROR_DELETE_PENDING :
-        return RC ( rcFS, rcDirectory, ctx, rcDirectory, rcUnauthorized );
+        case ERROR_ACCESS_DENIED :
+        case ERROR_INVALID_ACCESS :
+        case ERROR_SHARING_VIOLATION :
+        case ERROR_LOCK_VIOLATION :
+        case ERROR_PATH_BUSY :
+        case ERROR_WRITE_PROTECT :
+        case ERROR_DELETE_PENDING :
+            rc = RC ( rcFS, rcDirectory, ctx, rcDirectory, rcUnauthorized ); break;
 
-    case ERROR_NOT_ENOUGH_MEMORY :
-    case ERROR_OUTOFMEMORY :
-        return RC ( rcFS, rcDirectory, ctx, rcMemory, rcExhausted );
+        case ERROR_NOT_ENOUGH_MEMORY :
+        case ERROR_OUTOFMEMORY :
+            rc = RC ( rcFS, rcDirectory, ctx, rcMemory, rcExhausted ); break;
 
-    case ERROR_TOO_MANY_OPEN_FILES :
-        return RC ( rcFS, rcDirectory, ctx, rcFileDesc, rcExhausted );
+        case ERROR_TOO_MANY_OPEN_FILES :
+            rc = RC ( rcFS, rcDirectory, ctx, rcFileDesc, rcExhausted ); break;
 
-    case ERROR_HANDLE_DISK_FULL :
-        return RC ( rcFS, rcDirectory, ctx, rcStorage, rcExhausted );
+        case ERROR_HANDLE_DISK_FULL :
+            rc = RC ( rcFS, rcDirectory, ctx, rcStorage, rcExhausted ); break;
 
-    case ERROR_BUFFER_OVERFLOW :
-    case ERROR_FILENAME_EXCED_RANGE :
-        return RC ( rcFS, rcDirectory, ctx, rcPath, rcExcessive );
+        case ERROR_BUFFER_OVERFLOW :
+        case ERROR_FILENAME_EXCED_RANGE :
+            rc = RC ( rcFS, rcDirectory, ctx, rcPath, rcExcessive );
+        
+        default : RC ( rcFS, rcDirectory, ctx, rcNoObj, rcUnknown );
     }
-    return RC ( rcFS, rcDirectory, ctx, rcNoObj, rcUnknown );
+    return rc;
 }
 
 
