@@ -2276,6 +2276,68 @@ rc_t KSysDirCreateDir_v1 ( KSysDir_v1 * self,
     return rc;
 }
 
+
+/* FileLocator
+ *  returns a 64-bit key pertinent only to the particular file
+ *  system device holding that file.
+ *
+ *  It can be used as a form of sort key except that it is not 
+ *  guaranteed to be unique.
+ *
+ *  "locator" [ OUT ] - return parameter for file locator
+ *
+ *  "path" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting target file
+ */
+static
+rc_t CC KSysDirFileLocator_v1 ( const KSysDir_v1 *self,
+    uint64_t *locator, const char *path, va_list args )
+{
+    /* TBD - could return an inode */
+    assert ( locator != NULL );
+    * locator = 0;
+    return RC ( rcFS, rcDirectory, rcAccessing, rcFunction, rcUnsupported );
+}
+
+/* FilePhysicalSize
+ *  returns physical allocated size in bytes of target file.  It might
+ * or might not differ from FileSize
+ *
+ *  "size" [ OUT ] - return parameter for file size
+ *
+ *  "path" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting target file
+ */
+static
+rc_t CC KSysDirFilePhysicalSize_v1 ( const KSysDir_v1 *self,
+    uint64_t *size, const char *path, va_list args )
+{
+    /* TBD - can be completed */
+    assert ( size != NULL );
+    * size = 0;
+    return RC ( rcFS, rcDirectory, rcAccessing, rcFunction, rcUnsupported );
+}
+
+/* FileContiguous
+ *  returns true if the file is "contiguous".  Chunked or sparse files are not
+ *  contiguous while most data files are.  Virtual generated files would likely
+ *  not be contiguous.  
+ *
+ *  "contiguous" [ OUT ] - return parameter for file contiguous
+ *
+ *  "path" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting target file
+ */
+static
+rc_t CC KSysDirFileContiguous_v1 ( const KSysDir_v1 *self,
+    bool *contiguous, const char *path, va_list args )
+{
+    assert ( contiguous != NULL );
+    * contiguous = true;
+    return 0;
+}
+
+
 /* KDirectoryNativeDir
  *  returns a native file-system directory node reference
  *  the directory root will be "/" and set to the native
@@ -2290,10 +2352,10 @@ rc_t KSysDirCreateDir_v1 ( KSysDir_v1 * self,
 
 static KDirectory_vt_v1 vtKSysDir =
 {
-    /* version 1.1 */
-    1, 1,
+    /* version 1.4 */
+    1, 4,
 
-    /* start minor version 0 methods*/
+    /* start minor version 0*/
     KSysDirDestroy_v1,
     KSysDirList_v1,
 
@@ -2323,13 +2385,26 @@ static KDirectory_vt_v1 vtKSysDir =
     KSysDirOpenDirUpdate_v1,
     KSysDirCreateDir_v1,
     NULL, /* we don't track files*/
-    /* end minor version 0 methods*/
+    /* end minor version 0*/
 
-    /* start minor version 1 methods*/
+    /* start minor version 1*/
     KSysDirVDate,
     KSysDirVSetDate,
-    KSysDirGetSysdir_v1
-    /* end minor version 1 methods*/
+    KSysDirGetSysdir_v1,
+    /* end minor version 1*/
+
+    /* start minor version 2 */
+    KSysDirFileLocator_v1,
+    /* end minor version 2 */
+
+    /* start minor version 3 */
+    KSysDirFilePhysicalSize_v1,
+    KSysDirFileContiguous_v1,
+    /* end minor version 3 */
+
+    /* start minor version 4 */
+    KSysDirOpenFileWrite_v1
+    /* end minor version 4 */
 };
 
 /* KSysDirInit
