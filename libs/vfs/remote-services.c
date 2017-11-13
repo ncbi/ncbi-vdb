@@ -189,7 +189,7 @@ typedef struct {
     String accession; /* versios 1.1/1.2 only */
     String objectId;
     String name;
-    size_t size;
+    uint64_t osize;
     KTime_t date;
     SMd5 md5;
     String ticket;
@@ -920,6 +920,22 @@ static rc_t uint32_tInit ( void * p, const String * src ) {
 }
 
 
+static rc_t uint64_tInit ( void * p, const String * src ) {
+    rc_t rc = 0;
+    uint64_t * self = ( uint64_t * ) p;
+    uint64_t s = 0;
+    assert ( src && self );
+    if ( src -> size == 0 )
+        * self = 0;
+    else {
+        s = StringToU64 ( src, & rc );
+        if ( rc == 0 )
+            * self = s;
+    }
+    return rc;
+}
+
+
 #if 0 && LINUX
 #define TODO 1;
 static
@@ -1145,7 +1161,7 @@ static void * STypedGetFieldNames1_1 ( STyped * self, int n ) {
         case  0: return & self -> accession;
         case  1: return & self -> objectId;
         case  2: return & self -> name;
-        case  3: return & self -> size;
+        case  3: return & self -> osize;
         case  4: return & self -> date;
         case  5: return & self -> md5;
         case  6: return & self -> ticket;
@@ -1162,7 +1178,7 @@ static const SConverters * SConvertersNames1_1Make ( void ) {
         aStringInit,
         aStringInit,
         aStringInit,
-        size_tInit,
+        uint64_tInit,
         KTimeInitFromIso8601,
         md5Init,
         aStringInit,
@@ -1181,7 +1197,7 @@ static const SConverters * SConvertersNames1_2Make ( void ) {
         aStringInit,
         aStringInit,
         aStringInit,
-        size_tInit,
+        uint64_tInit,
         KTimeInitFromIso8601,
         md5Init,
         aStringInit,
@@ -1202,7 +1218,7 @@ static void * STypedGetFieldNames3_0 ( STyped * self, int n ) {
         case  0: return & self -> ordId;
         case  1: return & self -> objectType;
         case  2: return & self -> objectId;
-        case  3: return & self -> size;
+        case  3: return & self -> osize;
         case  4: return & self -> date;
         case  5: return & self -> md5;
         case  6: return & self -> ticket;
@@ -1224,7 +1240,7 @@ static const SConverters * SConvertersNames3_0Make ( void ) {
         uint32_tInit,        /*  0 ord-id */
         EObjectTypeInit,     /*  1 object-type */
         aStringInit,         /*  2 object-id */
-        size_tInit,          /*  3 size */
+        uint64_tInit,        /*  3 osize */
         KTimeInitFromIso8601,/*  4 date */
         md5Init,             /*  5 md5 */
         aStringInit,         /*  6 ticket */
@@ -1477,7 +1493,8 @@ static bool VPathMakeOrNot ( VPath ** new_path, const String * src,
         if ( src -> size == 0 )
             assert ( src -> addr != NULL );
 
-        * rc = VPathMakeFromUrl ( new_path, src, ticket, ext, id, typed -> size,
+        * rc = VPathMakeFromUrl ( new_path, src, ticket, ext, id,
+            typed -> osize,
             useDates ? typed -> date : 0,
 			typed -> md5 . has_md5 ? typed -> md5 . md5 : NULL,
             useDates ? typed -> expiration : 0 );
@@ -1573,6 +1590,7 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
 {
     rc_t rc = 0;
     bool made = false;
+    bool logError = true;
     KLogLevel lvl = klogInt;
     assert ( self && src && r );
 
@@ -1648,6 +1666,7 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
           If it is a real response then this assession is not found.
           What if it is a DB failure? Will be retried if configured to do so? */
             rc = RC ( rcVFS, rcQuery, rcResolving, rcName, rcNotFound );
+            logError = false;
             break;
         case 410:
             rc = RC ( rcVFS, rcQuery, rcResolving, rcName, rcNotFound );
@@ -1676,7 +1695,7 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
     }
 
     /* log message to user */
-    if ( req -> errorsToIgnore == 0 ) {
+    if ( req -> errorsToIgnore == 0 && logError ) {
         if ( src -> objectId . size > 0 )
             PLOGERR ( lvl, ( lvl, rc,
                 "failed to resolve accession '$(acc)' - $(msg) ( $(code) )",
@@ -3151,7 +3170,7 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
             if ( rc != 0 || num_read == 0 )
                 break;
             DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
-                ( "%.*s\n", ( int ) num_read - 1, buffer + offW ) );
+                ( "%.*s", ( int ) num_read - 1, buffer + offW ) );
             sizeR += num_read;
             offW += num_read;
             if (sizeW >= num_read )
@@ -3168,6 +3187,14 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                     ( rcVFS, rcQuery, rcExecuting, rcString, rcInsufficient );
                 break;
             }
+            else {
+                memmove ( buffer, buffer + offR, sizeR );
+                if ( sizeR < sizeof buffer )
+                    buffer [ sizeR ] = '\0';
+                sizeW = sizeof buffer - sizeR;
+                offR = 0;
+                offW = sizeR;
+            }
             rc = KStreamTimedRead
                 ( stream, buffer + offW, sizeW, & num_read, & tm );
             if ( rc != 0 ) {
@@ -3182,6 +3209,8 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                     ( rcVFS, rcQuery, rcExecuting, rcString, rcInsufficient ); 
                 break;
             }
+            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
+                ( "%.*s", ( int ) num_read - 1, buffer + offW ) );
             sizeR += num_read;
             offW += num_read;
             if (sizeW >= num_read )
@@ -3204,8 +3233,10 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
             else {
                 bool end = false;
                 rc = KServiceProcessLine ( self, & s, & end );
-                if ( end || rc != 0 )
+                if ( end || rc != 0 ) {
+                    DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( "\n" ) );
                     break;
+                }
             }
             ++ size;
             offR += size;

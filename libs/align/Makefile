@@ -112,6 +112,7 @@ $(ILIBDIR)/libalign-reader: $(addprefix $(ILIBDIR)/libalign-reader.,$(ILIBEXT))
 ALIGN_READER_SRC = \
 	align_mgr \
 	al_iterator \
+	unsupported_pileup_estimator \
 	ref_iterator \
 	pl_iterator \
 	dna-reverse-cmpl \

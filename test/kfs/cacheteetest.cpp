@@ -43,8 +43,9 @@
 #include <kfs/defs.h>
 #include <kfs/directory.h>
 #include <kfs/file.h>
-/* #include <kfs/cacheteefile.h> */
+#include <kfs/cacheteefile.h>
 #include <kfs/cachetee2file.h>
+#include <kfs/recorder.h>
 
 using namespace std;
 
@@ -513,19 +514,19 @@ TEST_CASE( CacheTee_Multiple_Users_Single_Inst )
     REQUIRE_RC( KDirectoryRelease( dir ) );
 }
 
-// TODO: fix, this does not work on Windows ( because KDirectorySetAccess() is a NOOP on windows! )
-#if !defined(WINDOWS) && !defined(_WIN32)
+// TODO: fix, this does not work on Windows
+#if !defined(WINDOWS) && !defined(_WIN32) && !defined(MAC)
 TEST_CASE( CacheTee_ReadOnly )
 {
-    KOutMsg( "Test: CacheTee_ReadOnly\n" );
-    remove_file( CACHEFILE );    // to start with a clean slate on caching...
-    remove_file( CACHEFILE1 );
+	KOutMsg( "Test: CacheTee_ReadOnly %s\n", CACHEFILE1 );
+	remove_file( CACHEFILE );	// to start with a clean slate on caching...
+	remove_file( CACHEFILE1 );
 
-    KDirectory * dir;
-    REQUIRE_RC( KDirectoryNativeDir( &dir ) );
+	KDirectory * dir;
+	REQUIRE_RC( KDirectoryNativeDir( &dir ) );
 
-    const KFile * org;
-    REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE ) );
+	const KFile * org;
+	REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE ) );
 
     /* make a fresh cache-tee and read 100 bytes from it... */
     const KFile * tee;
@@ -548,13 +549,26 @@ TEST_CASE( CacheTee_ReadOnly )
     REQUIRE_RC_FAIL( KDirectoryOpenFileRead( dir, &cache, "%s", CACHEFILE ) );
     REQUIRE_RC( KDirectoryOpenFileRead( dir, &cache, "%s", CACHEFILE1 ) );
     
-    bool is_complete;
-    REQUIRE_RC( IsCacheTee2FileComplete( cache, &is_complete ) );    
-    REQUIRE( !is_complete );
+	/* make a second cache-tee and read all from it... */
+	REQUIRE_RC( KDirectoryMakeCacheTee ( dir, &tee, org, BLOCKSIZE, "%s", CACHEFILE ) );
 
-    REQUIRE_RC( KFileRelease( cache ) );        
-    REQUIRE_RC( KFileRelease( org ) );    
-    REQUIRE_RC( KDirectoryRelease( dir ) );
+	REQUIRE_RC( read_all( tee, 1024 * 32 )	);
+	REQUIRE_RC( KFileRelease( tee ) );
+
+	/* we read all from the tee-file that should have promoted it on Release,
+	   but we made it read only before the creation of the 2nd tee-file
+	   because of that it should not be promoted and not complete */
+	
+	REQUIRE_RC_FAIL( KDirectoryOpenFileRead( dir, &cache, "%s", CACHEFILE ) );
+	REQUIRE_RC( KDirectoryOpenFileRead( dir, &cache, "%s", CACHEFILE1 ) );
+	
+	bool is_complete;
+	REQUIRE_RC( IsCacheFileComplete( cache, &is_complete ) );	
+	REQUIRE( !is_complete );
+
+	REQUIRE_RC( KFileRelease( cache ) );		
+	REQUIRE_RC( KFileRelease( org ) );	
+	REQUIRE_RC( KDirectoryRelease( dir ) );
   
 }
 #endif

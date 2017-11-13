@@ -93,6 +93,12 @@ typedef struct KWrtHandler
     void *     data;    /* the actual type depends upon the writer function */
 } KWrtHandler;
 
+/* ----
+ * calls the platfrom-specific version of write() and isatty()
+ * introduced to support the progressbar
+ */
+KLIB_EXTERN size_t CC simple_write( int fd, const void * buf, size_t count );
+KLIB_EXTERN int CC is_a_tty( int fd );
 
 /*--------------------------------------------------------------------------
  * nvp - name/value pair

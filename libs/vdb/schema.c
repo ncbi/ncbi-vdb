@@ -430,7 +430,6 @@ int64_t CC VIncludedPathSortByOrder ( const BSTNode *item, const BSTNode *n )
 
 /* Make
  */
-static
 rc_t CC VIncludedPathMake ( BSTree *paths, uint32_t *count, const char *path )
 {
     VIncludedPath *p = malloc ( sizeof * p + strlen ( path ) );
@@ -495,7 +494,7 @@ static
 void CC VSchemaDestroy ( VSchema *self )
 {
     REFMSG ( "VSchema", "destroy", & self -> refcount );
-    
+
     BSTreeWhack ( & self -> scope, KSymbolWhack, NULL );
     BSTreeWhack ( & self -> paths, BSTreeMbrWhack, NULL );
     VectorWhack ( & self -> inc, KDirRefRelease, NULL );
@@ -684,7 +683,7 @@ rc_t VSchemaMake ( VSchema **sp,  const VSchema *dad )
             return rc;
         }
     }
-    
+
     * sp = schema;
     return 0;
 }
@@ -743,7 +742,7 @@ rc_t CC VSchemaParseTextInt ( VSchema *self,
     KTokenSource src;
     String str, path;
     rc_t rc;
-    
+
     if ( name == NULL || name [ 0 ] == 0 )
         CONST_STRING ( & path, "<unnamed>" );
     else
@@ -754,12 +753,12 @@ rc_t CC VSchemaParseTextInt ( VSchema *self,
     KTokenSourceInit ( & src, & tt );
 
     rc = schema ( & src, self );
-    
+
     if (rc == 0)
         PARSE_DEBUG( ("Parsed schema from %s\n", name) );
     else
         PARSE_DEBUG( ("Failed to parse schema from %s\n", name) );
-    
+
     return rc;
 }
 
@@ -809,7 +808,6 @@ rc_t VSchemaParseTextCallback ( VSchema *self, const char *name,
 /* OpenFile
  *  opens a file, using include paths
  */
-static
 rc_t CC VSchemaTryOpenFile ( const VSchema *self, const KDirectory *dir, const KFile **fp,
     char *path, size_t path_max, const char *name, va_list args )
 {
@@ -836,7 +834,6 @@ rc_t CC VSchemaTryOpenFile ( const VSchema *self, const KDirectory *dir, const K
     return rc;
 }
 
-static
 rc_t CC VSchemaOpenFile ( const VSchema *self, const KFile **fp,
     char *path, size_t path_max, const char *name, va_list args )
 {
@@ -916,10 +913,10 @@ LIB_EXPORT rc_t CC VSchemaVParseFile ( VSchema *self, const char *name, va_list 
                     if ( rc == 0 )
                         rc = VSchemaParseTextInt ( self, path, addr, size );
                 }
-            
+
                 KMMapRelease ( mm );
             }
-        
+
             KFileRelease ( f );
         }
     }
@@ -1086,7 +1083,7 @@ LIB_EXPORT rc_t CC VSchemaVResolveTypedecl ( const VSchema *self,
             return 0;
 
         rc = RC ( rcVDB, rcSchema, rcResolving, rcType, rcIncorrect );
-        
+
         resolved -> type_id = 0;
         resolved -> dim = 0;
     }
@@ -1241,7 +1238,7 @@ LIB_EXPORT rc_t CC VSchemaListLegacyTables ( const VSchema *self, KNamelist **li
                     rc = pb . rc;
                 else
                     rc = VNamelistToNamelist ( pb . list, listp );
-                    
+
                 VNamelistRelease ( pb . list );
             }
         }
@@ -1469,7 +1466,7 @@ LIB_EXPORT rc_t CC VSchemaRuntimeTableCommit ( VSchemaRuntimeTable *self )
  *  "name" [ IN ] - NUL-terminated simple ASCII name
  *   conforming to column name requirements
  */
-LIB_EXPORT rc_t CC VSchemaRuntimeTableVAddColumn ( VSchemaRuntimeTable *self, 
+LIB_EXPORT rc_t CC VSchemaRuntimeTableVAddColumn ( VSchemaRuntimeTable *self,
     const VTypedecl *td, const char *encoding, const char *name, va_list args )
 {
     rc_t rc;
@@ -1506,7 +1503,7 @@ LIB_EXPORT rc_t CC VSchemaRuntimeTableVAddColumn ( VSchemaRuntimeTable *self,
     return rc;
 }
 
-LIB_EXPORT rc_t CC VSchemaRuntimeTableAddColumn ( VSchemaRuntimeTable *self, 
+LIB_EXPORT rc_t CC VSchemaRuntimeTableAddColumn ( VSchemaRuntimeTable *self,
     const VTypedecl *td, const char *encoding, const char *name, ... )
 {
     rc_t rc;

@@ -195,6 +195,27 @@ static rc_t argsHandler(int argc, char* argv[]) {
     return ArgsMakeAndHandle ( NULL, argc, argv, 0, NULL, 0 );
 }
 
+static bool out_of_ncbi() {
+    KNSManager * mgr = NULL;
+    rc_t rc = KNSManagerMake ( &mgr );
+    KHttpRequest * req = NULL;
+    if (rc == 0)
+        rc = KNSManagerMakeRequest(mgr, & req, 0x01010000, NULL,
+            "https://" RESOLVER_CGI_HEAD "gov/Traces/names/names.cgi");
+    KHttpResult * rslt = NULL;
+    if (rc == 0)
+        rc = KHttpRequestGET ( req, & rslt );
+    uint32_t code = 1;
+    if (rc == 0)
+        rc = KHttpResultStatus ( rslt, & code, NULL, 0, NULL );
+    if ( rc == 0 && code != 200 )
+        rc = code;
+    KHttpResultRelease(rslt);
+    KHttpRequestRelease(req);
+    KNSManagerRelease(mgr);
+    return rc != 0;
+}
+
 extern "C" {
     ver_t CC KAppVersion ( void                     ) { return 0; }
     rc_t CC UsageSummary ( const char     * progname) { return 0; }
@@ -202,6 +223,10 @@ extern "C" {
     const char UsageDefaultName[] = "redirect-rejected-names-cgi-http-to-https";
     rc_t CC KMain ( int argc, char *argv [] ) {
         if ( 0 ) assert ( ! KDbgSetString ( "VFS" ) );
+                if ( out_of_ncbi() ) {
+            std::cerr << "Disabled outside of NCBI\n";
+            return 0;
+        }
         return VResolverTestSuite ( argc, argv );
     }
 }
