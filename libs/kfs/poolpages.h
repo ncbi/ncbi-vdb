@@ -52,6 +52,6 @@ rc_t pool_page_prepare( struct PoolPage * self, uint32_t count, uint64_t pos );
 
 rc_t pool_page_read_from_file( struct PoolPage * self, const struct KFile * f, size_t * read );
 
-rc_t pool_page_write_to_file( const struct PoolPage * self, struct KFile * f, size_t * written );
+rc_t pool_page_write_to_file( const struct PoolPage * self, struct KFile * f, size_t to_write, size_t * written );
 
 rc_t pool_page_write_to_recorder( const struct PoolPage * self, struct Recorder * rec );

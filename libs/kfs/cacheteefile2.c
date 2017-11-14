@@ -311,7 +311,7 @@ static rc_t verify_file_structure ( const uint64_t cache_size, const uint32_t bl
     return rc;
 }
 
-static rc_t switch_to_read_only ( const KCacheTee2File *cself, rc_t rc );
+static rc_t switch_to_read_only ( const KCacheTee2File *cself, rc_t rc, int tag );
 
 /* called from: KCacheTee2FileDestroy() */
 static rc_t promote_cache ( KCacheTee2File * self )
@@ -464,7 +464,7 @@ static rc_t write_bitmap ( const KCacheTee2File *cself, uint64_t start_block, ui
     {
         /* it can happen that we are not able to write to the bitmap because we run out of space
            on the local filesystem. */
-        rc = switch_to_read_only( cself, rc );
+        rc = switch_to_read_only( cself, rc, 1 );
     }
     return rc;
 }
@@ -565,13 +565,19 @@ static rc_t KCacheTee2FileRead_from_wrapped_using_page ( const KCacheTee2File *c
         {
             size_t num_written_to_cache;
             /* write the buffer into the local cache -file */
-            rc = pool_page_write_to_file( pp, cself -> cache, &num_written_to_cache );
+            rc = pool_page_write_to_file( pp, cself -> cache, from_wrapped, &num_written_to_cache );
             if ( rc != 0 || num_written_to_cache != from_wrapped )
             {
                 /* switch to read-only, because for some reason we cannot write any more...
                    it can happen that we are not able to write to the bitmap because we run out of space
                    on the local filesystem. */
-                rc = switch_to_read_only( cself, rc );
+                rc = switch_to_read_only( cself, rc, 2 );
+                PLOGERR( klogInt,
+                         ( klogInt,
+                           rc,
+                          "read: $(read), written:$(written)",
+                          "read=%lu,written=%lu",
+                           from_wrapped, num_written_to_cache ) );
             }
             else
             {
@@ -582,7 +588,7 @@ static rc_t KCacheTee2FileRead_from_wrapped_using_page ( const KCacheTee2File *c
                 if ( rc != 0 )
                 {
                     /* switch to read-only, because for some reason we cannot write any more... */
-                    rc = switch_to_read_only( cself, rc );
+                    rc = switch_to_read_only( cself, rc, 3 );
                 }
             }
         }
@@ -630,7 +636,7 @@ static rc_t KCacheTee2FileRead_rw_using_caller_buffer ( const KCacheTee2File *cs
             /* switch to read-only, because for some reason we cannot write any more...
                it can happen that we are not able to write to the bitmap because we run out of space
                on the local filesystem. */
-            rc = switch_to_read_only( cself, rc );
+            rc = switch_to_read_only( cself, rc, 4 );
         }
         else
         {
@@ -640,7 +646,7 @@ static rc_t KCacheTee2FileRead_rw_using_caller_buffer ( const KCacheTee2File *cs
             if ( rc != 0 )
             {
                 /* switch to read-only, because for some reason we cannot write any more... */
-                rc = switch_to_read_only( cself, rc );
+                rc = switch_to_read_only( cself, rc, 5 );
             }
         }
     }
@@ -688,7 +694,7 @@ static rc_t KCacheTee2FileRead_rw_using_scratch_buffer ( const KCacheTee2File *c
                 /* switch to read-only, because for some reason we cannot write any more...
                    it can happen that we are not able to write to the bitmap because we run out of space
                    on the local filesystem. */
-                rc = switch_to_read_only( cself, rc );
+                rc = switch_to_read_only( cself, rc, 6 );
             }
             else
             {
@@ -698,7 +704,7 @@ static rc_t KCacheTee2FileRead_rw_using_scratch_buffer ( const KCacheTee2File *c
                 if ( rc != 0 )
                 {
                     /* switch to read-only, because for some reason we cannot write any more... */
-                    rc = switch_to_read_only( cself, rc );
+                    rc = switch_to_read_only( cself, rc, 7 );
                 }
             }
         }
@@ -1035,13 +1041,19 @@ static KFile_vt_v1 vtKCacheTee2File_ro =
 };
 
 
-static rc_t switch_to_read_only ( const KCacheTee2File *cself, rc_t rc )
+static rc_t switch_to_read_only ( const KCacheTee2File *cself, rc_t rc, int tag )
 {
     KFile_v1 * p1 = ( KFile_v1 * )cself;
     KFile_vt * p2 = ( KFile_vt * )p1 -> vt;
     p2 -> v1 = vtKCacheTee2File_ro;
     ( ( KCacheTee2File * )cself ) -> read_only = true;
-    LOGERR( klogInt, rc, "switching cache-tee-file to read-only" );
+    PLOGERR( klogInt,
+             ( klogInt,
+               rc,
+              "switch_to_read_only( tag:$(tag) )",
+              "tag=%d",
+               tag ) );
+/*    LOGERR( klogInt, rc, "switching cache-tee-file to read-only" ); */
     return 0;
 }
 

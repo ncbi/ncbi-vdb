@@ -285,9 +285,9 @@ rc_t pool_page_read_from_file( PoolPage * self, const KFile * f, size_t * read )
     return KFileReadAll ( f, self -> pos, self -> data, self -> data_len, read );
 }
 
-rc_t pool_page_write_to_file( const PoolPage * self, KFile * f, size_t * written )
+rc_t pool_page_write_to_file( const PoolPage * self, KFile * f, size_t to_write, size_t * written )
 {
-    return KFileWriteAll ( f, self -> pos, self -> data, self -> data_len, written );
+    return KFileWriteAll ( f, self -> pos, self -> data, to_write, written );
 }
 
 rc_t pool_page_write_to_recorder( const PoolPage * self, struct Recorder * rec )
