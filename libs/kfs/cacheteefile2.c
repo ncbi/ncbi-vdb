@@ -1443,7 +1443,7 @@ LIB_EXPORT rc_t CC KDirectoryVMakeCacheTee2 ( struct KDirectory * self,
                 else
                 {
                     /* lets see if we can open the cache-file in read/write - mode */
-                    rc = KDirectoryOpenFileWrite ( self,
+                    rc = KDirectoryOpenFileSharedWrite ( self,
                                                    &( ctp . cache ),
                                                    true,
                                                    "%s.cache",
