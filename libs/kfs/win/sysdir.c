@@ -3080,7 +3080,7 @@ static KDirectory_vt_v1 vtKSysDir =
     /* end minor version 3 */
 
     /* start minor version 4 */
-    KSysDirOpenFileSharedWrite_v1
+    KSysDirOpenFileSharedWrite
     /* end minor version 4 */
 };
 
