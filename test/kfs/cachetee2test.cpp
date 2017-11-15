@@ -603,9 +603,11 @@ TEST_CASE( CacheTee_Multiple_Users_with_Promoting )
     REQUIRE_RC( KFileRelease( tee1 ) );
 
     /* the .cache - file has to be gone */
+#if !defined(WINDOWS) && !defined(_WIN32)
     uint32_t pt = KDirectoryPathType ( dir, "%s", CACHEFILE1 );
     REQUIRE( pt == kptNotFound );
-    
+#endif
+
     REQUIRE_RC( KFileRelease( org ) );    
     REQUIRE_RC( KDirectoryRelease( dir ) );
 }

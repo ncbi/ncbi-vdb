@@ -606,43 +606,15 @@ TEST_CASE( CacheTee_Multiple_Users_with_Promoting )
     REQUIRE_RC( KFileRelease( tee1 ) );
 
     /* the .cache - file has to be gone */
+#if !defined(WINDOWS) && !defined(_WIN32)
     uint32_t pt = KDirectoryPathType ( dir, "%s", CACHEFILE1 );
     REQUIRE( pt == kptNotFound );
-    
-    REQUIRE_RC( KFileRelease( org ) );    
-    REQUIRE_RC( KDirectoryRelease( dir ) );
-}
-
-#if 0
-TEST_CASE( CacheTee_with_Protcol )
-{
-    KOutMsg( "Test: CacheTee_with_Protocol\n" );
-    remove_file( CACHEFILE );    // to start with a clean slate on caching...
-    remove_file( CACHEFILE1 );
-
-    KDirectory * dir;
-    REQUIRE_RC( KDirectoryNativeDir( &dir ) );
-
-    const KFile * org;
-    REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE ) );
-
-    /* make a cache-tee */
-    const KFile * tee;
-    REQUIRE_RC( KDirectoryMakeCacheTee2( dir, &tee, org, BLOCKSIZE, "%s", CACHEFILE ) );
-
-    Recorder * rec;
-    REQUIRE_RC( MakeRecorder ( dir, &rec, 1024, false, "%s.rec", CACHEFILE ) );
-
-    REQUIRE( CacheTee2FileSetRecorder( tee, rec ) );
-    
-    REQUIRE_RC( read_partial( tee, 100, BLOCKSIZE * 20 ) );
-    
-    REQUIRE_RC( KFileRelease( tee ) );
-    REQUIRE_RC( ReleaseRecorder ( rec ) );
-    REQUIRE_RC( KFileRelease( org ) );    
-    REQUIRE_RC( KDirectoryRelease( dir ) );
-}
 #endif
+
+    REQUIRE_RC( KFileRelease( org ) );    
+    REQUIRE_RC( KDirectoryRelease( dir ) );
+}
+
 
 //////////////////////////////////////////// Main
 extern "C"
