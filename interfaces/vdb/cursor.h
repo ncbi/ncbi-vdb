@@ -53,6 +53,7 @@ struct VBlob;
 struct VTable;
 struct VTypedesc;
 struct VTypedecl;
+struct VView;
 
 
 /*--------------------------------------------------------------------------
@@ -103,6 +104,15 @@ VDB_EXTERN rc_t CC VCursorRelease ( const VCursor *self );
 VDB_EXTERN rc_t CC VTableCreateCursorRead ( struct VTable const *self, const VCursor **curs );
 VDB_EXTERN rc_t CC VTableCreateCursorWrite ( struct VTable *self, VCursor **curs, KCreateMode mode );
 
+/* ViewCreateCursor
+ *  creates a read cursor object onto view
+ *
+ *  "curs" [ OUT ] - return parameter for newly created cursor
+ *
+ *  "capacity" [ IN ] - the maximum bytes to cache on the cursor before
+ *  dropping least recently used blobs
+ */
+VDB_EXTERN rc_t CC VViewCreateCursor ( struct VView const *self, const VCursor **curs, size_t capacity );
 
 /* CreateCachedCursorRead
  *  creates a read cursor object onto table with a cache limit in bytes
@@ -395,19 +405,19 @@ VDB_EXTERN rc_t CC VCursorCellDataDirect ( const VCursor *self, int64_t row_id,
 
 /* VCursorDataPrefetch
  * -- will prefecth rows into CursorCache (if it exists)
- * -- no OUT parameters - just primes the cache 
+ * -- no OUT parameters - just primes the cache
  * -- will cache every produced blob (even a small one)
  * -- will suspend flushing the cache after inserting first row
  * -- conducts sort-unique on row_ids to linearize data access
  *
  * "row_ids" [ IN ] - rows to be prefetched
- * 
+ *
  * "col_idx" [ IN ] - index of column to be read, returned by "AddColumn"
- * 
+ *
  * "num_rows" [ IN ] -  number of rows in row_ids
  *
  * "min/max_valid_row_id [IN] - ignor all row_ids[i] which will not hit this range
- * 
+ *
  * "continue_on_error" [ IN ] - whether to continue on a failure to prefetch a rows
  */
 

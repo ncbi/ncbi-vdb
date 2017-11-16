@@ -111,6 +111,38 @@ TEST_CASE(WalkParseTree)
     delete root;
 }
 
+// ErrorReport
+TEST_CASE ( ErrorReport_Formatting_NullBuf )
+{
+    ErrorReport rep;
+    rep . ReportError ( ErrorReport :: Location ( "", 0, 0 ), "" );
+    const ErrorReport :: Error * err = rep . GetError ( 0 );
+    REQUIRE_NOT_NULL ( err );
+    REQUIRE ( ! err -> Format ( 0, 1024 ) );
+}
+
+TEST_CASE ( ErrorReport_Formatting_ShortBuf )
+{
+    ErrorReport rep;
+    rep . ReportError ( ErrorReport :: Location ( "", 0, 0 ), "msg" );
+    const ErrorReport :: Error * err = rep . GetError ( 0 );
+    REQUIRE_NOT_NULL ( err );
+    char buf [1];
+    REQUIRE ( ! err -> Format ( buf, sizeof ( buf ) ) );
+}
+
+TEST_CASE ( ErrorReport_Formatting )
+{
+    ErrorReport rep;
+    ErrorReport :: Location loc ( "dir/file", 1, 2 ); // file/line/col
+    rep . ReportError ( loc, "msg: %s, num: %i", "error message", 42 );
+    const ErrorReport :: Error * err = rep . GetError ( 0 );
+    REQUIRE_NOT_NULL ( err );
+    char buf [ 1024 ];
+    REQUIRE ( err -> Format ( buf, sizeof buf ) );
+    REQUIRE_EQ ( string ( buf ), string ( "dir/file:1:2 msg: error message, num: 42" ) );
+}
+
 // AST subclasses
 
 TEST_CASE ( AST_FQN_NakedIdent )

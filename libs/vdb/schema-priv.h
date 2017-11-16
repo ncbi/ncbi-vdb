@@ -51,6 +51,10 @@
 #include <klib/refcount.h>
 #endif
 
+#ifndef _h_klib_data_buffer
+#include <klib/data-buffer.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -1416,14 +1420,13 @@ struct SView
     /* view id */
     uint32_t id;
 
-    /* view parameters - tables and views */
-    Vector tables;
-    Vector views;
+    /* view parameters - const KSymbol (a table or a view) */
+    Vector params;
 
     /* scope */
     BSTree scope;
 
-    /* parents */
+    /* instantiated parents - SViewInstance */
     Vector parents;
 
     /* overrides ( inherited virtual productions )
@@ -1512,6 +1515,18 @@ struct SViewOverrides
 rc_t SViewOverridesMake ( Vector *parents, const SView *dad, const Vector *overrides );
 
 int64_t CC SViewOverridesCmp ( const void *item, const void *n );
+
+/* SViewInstance
+ * A view with specified parameters
+*/
+typedef struct SViewInstance SViewInstance;
+struct SViewInstance
+{
+    const SView * dad;
+    Vector params; /* const KSymbol* */
+};
+
+void CC SViewInstanceWhack ( void *item, void *ignore );
 
 #ifdef __cplusplus
 }

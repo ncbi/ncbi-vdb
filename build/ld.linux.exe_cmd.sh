@@ -1,1 +1,1 @@
-EXE_CMD="$LD  -static-libgcc"
+EXE_CMD="$LD -static-libstdc++ -static-libgcc"

@@ -283,6 +283,7 @@
 %token PT_VIEW
 %token PT_VIEWPARAM
 %token PT_VIEWPARENTS
+%token PT_VIEWPARENT
 %token PT_MEMBEREXPR
 
  /* !!! Keep token declarations above in synch with schema-ast.y */
@@ -1052,7 +1053,16 @@ opt_view_parents
     ;
 
 view_parents
-    : fqn_opt_vers                  { $$ . subtree = MakeList ( $1 ); }
-    | view_parents ',' fqn_opt_vers { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
+    : view_parent                  { $$ . subtree = MakeList ( $1 ); }
+    | view_parents ',' view_parent { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
     ;
 
+view_parent
+    : fqn_opt_vers '<' view_parent_parms'>'
+        { $$ . subtree = MakeTree ( PT_VIEWPARENT, P ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ) ); }
+    ;
+
+view_parent_parms
+    : ident_1_0                         { $$ . subtree = MakeList ( $1 ); }
+    | view_parent_parms ',' ident_1_0   { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
+    ;

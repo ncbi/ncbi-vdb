@@ -176,7 +176,8 @@ extern int AST_debug;
     PT_VIEW = 385,
     PT_VIEWPARAM = 386,
     PT_VIEWPARENTS = 387,
-    PT_MEMBEREXPR = 388
+    PT_VIEWPARENT = 388,
+    PT_MEMBEREXPR = 389
   };
 #endif
 
@@ -192,7 +193,7 @@ union YYSTYPE
   AST_FQN*      fqn;
   AST_Expr*     expr;
 
-#line 196 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast-tokens.h" /* yacc.c:1909  */
+#line 197 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast-tokens.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

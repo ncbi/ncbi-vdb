@@ -40,6 +40,8 @@ public:
     uint32_t Version () const { return m_self -> version; }
     uint32_t Id () const { return m_self -> id; }
 
+    const BSTree & Scope () const { return m_self -> scope; }
+
     uint32_t DbMemberCount () const { return VectorLength ( & m_self -> db ); }
     const SDBMember * GetDbMember ( uint32_t p_idx ) const
     {
@@ -139,6 +141,10 @@ FIXTURE_TEST_CASE(DB_DbMember, AST_Db_Fixture)
     REQUIRE ( ! m -> tmpl );
     REQUIRE_NOT_NULL ( m -> db );
     REQUIRE_EQ ( 0u, m -> db -> id );
+    const KSymbol * sym = reinterpret_cast < const KSymbol * > ( BSTreeFirst ( & db . Scope () ) );
+    REQUIRE_NOT_NULL ( sym );
+    REQUIRE_EQ ( string ( "m_p" ), ToCppString ( sym -> name ) );
+    REQUIRE_EQ ( (uint32_t)eDBMember, sym -> type );
 }
 
 FIXTURE_TEST_CASE(DB_DbMemberDeclaredTwice, AST_Table_Fixture)
@@ -185,6 +191,10 @@ FIXTURE_TEST_CASE(DB_TableMember, AST_Db_Fixture)
     REQUIRE ( ! m -> tmpl );
     REQUIRE_NOT_NULL ( m -> tbl );
     REQUIRE_EQ ( 0u, m -> tbl -> id );
+    const KSymbol * sym = reinterpret_cast < const KSymbol * > ( BSTreeFirst ( & db . Scope () ) );
+    REQUIRE_NOT_NULL ( sym );
+    REQUIRE_EQ ( string ( "m_p" ), ToCppString ( sym -> name ) );
+    REQUIRE_EQ ( (uint32_t)eTblMember, sym -> type );
 }
 
 FIXTURE_TEST_CASE(DB_TableMemberTemplate, AST_Db_Fixture)

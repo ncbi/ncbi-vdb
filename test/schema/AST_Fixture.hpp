@@ -43,10 +43,7 @@
 using namespace ncbi::SchemaParser;
 #include "../../libs/schema/schema-tokens.h"
 
-// hide an unfortunately named C function
-#define typename __typename
 #include "../../libs/vdb/schema-parse.h"
-#undef typename
 
 struct KSymbol;
 struct SDatatype;

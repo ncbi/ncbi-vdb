@@ -30,6 +30,8 @@
 #include <vdb/database.h>
 #include <vdb/manager.h>
 #include <vdb/schema.h>
+#include <vdb/cursor.h>
+#include <vdb/table.h>
 
 #include <ktst/unit_test.hpp> // THROW_ON_RC
 
@@ -37,15 +39,26 @@ class WVDB_Fixture
 {
 public:
     WVDB_Fixture()
-    : m_db ( 0 )
+    :   m_mgr ( 0 ),
+        m_schema ( 0 ),
+        m_db ( 0 )
     {
     }
     ~WVDB_Fixture()
     {
-        if ( m_db )
+        if ( m_db != 0 )
         {
             VDatabaseRelease ( m_db );
         }
+        if ( m_schema != 0 )
+        {
+            VSchemaRelease ( m_schema );
+        }
+        if ( m_mgr != 0 )
+        {
+            VDBManagerRelease ( m_mgr );
+        }
+
         RemoveDatabase();
     }
 
@@ -64,25 +77,55 @@ public:
     {
         RemoveDatabase();
 
-        VDBManager* mgr;
-        THROW_ON_RC ( VDBManagerMakeUpdate ( & mgr, NULL ) );
-        VSchema* schema;
-        THROW_ON_RC ( VDBManagerMakeSchema ( mgr, & schema ) );
-        THROW_ON_RC ( VSchemaParseText(schema, NULL, p_schemaText . c_str(), p_schemaText . size () ) );
-
-        THROW_ON_RC ( VDBManagerCreateDB ( mgr,
+        THROW_ON_RC ( VDBManagerMakeUpdate ( & m_mgr, NULL ) );
+        THROW_ON_RC ( VDBManagerMakeSchema ( m_mgr, & m_schema ) );
+        ParseSchema ( m_schema, p_schemaText );
+        THROW_ON_RC ( VDBManagerCreateDB ( m_mgr,
                                           & m_db,
-                                          schema,
+                                          m_schema,
                                           p_schemaSpec . c_str (),
                                           kcmInit + kcmMD5,
                                           "%s",
                                           m_databaseName . c_str () ) );
-        THROW_ON_RC ( VSchemaRelease ( schema ) );
-        THROW_ON_RC ( VDBManagerRelease ( mgr ) );
     }
 
-    std :: string m_databaseName;
-    VDatabase* m_db;
+    virtual void ParseSchema ( VSchema * p_schema, const std :: string & p_schemaText )
+    {
+        THROW_ON_RC ( VSchemaParseText ( p_schema, NULL, p_schemaText . c_str(), p_schemaText . size () ) );
+    }
+
+    VCursor * CreateTable ( const char * p_tableName ) // returns write cursor
+    {
+        VTable* table;
+        THROW_ON_RC ( VDatabaseCreateTable ( m_db, & table, p_tableName, kcmCreate | kcmMD5, "%s", p_tableName ) );
+        VCursor * ret;
+        THROW_ON_RC ( VTableCreateCursorWrite ( table, & ret, kcmInsert ) );
+        THROW_ON_RC ( VTableRelease ( table ) );
+        return ret;
+    }
+
+    const VCursor * OpenTable ( const char * p_tableName ) // returns read cursor
+    {
+        const VTable* table;
+        THROW_ON_RC ( VDatabaseOpenTableRead ( m_db, & table, "%s", p_tableName ) );
+        const VCursor * ret;
+        THROW_ON_RC ( VTableCreateCursorRead ( table, & ret ) );
+        THROW_ON_RC ( VTableRelease ( table ) );
+        return ret;
+    }
+
+    void WriteRow ( VCursor * p_cursor, uint32_t p_colIdx, const std :: string & p_value )
+    {
+        THROW_ON_RC ( VCursorOpenRow ( p_cursor ) );
+        THROW_ON_RC ( VCursorWrite ( p_cursor, p_colIdx, 8, p_value . c_str (), 0, p_value . length () ) );
+        THROW_ON_RC ( VCursorCommitRow ( p_cursor ) );
+        THROW_ON_RC ( VCursorCloseRow ( p_cursor ) );
+    }
+
+    std :: string   m_databaseName;
+    VDBManager *    m_mgr;
+    VSchema *       m_schema;
+    VDatabase *     m_db;
 };
 
 #endif

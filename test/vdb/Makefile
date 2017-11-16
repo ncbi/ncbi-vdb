@@ -37,7 +37,8 @@ TEST_TOOLS = \
 	test-blob-val \
 	test-VDB-3060 \
 	test-VDB-3061 \
-	test-bytecode
+	test-bytecode \
+	test-view
 
 include $(TOP)/build/Makefile.env
 
@@ -265,4 +266,25 @@ $(TEST_BINDIR)/test-bytecode: $(VDB_BYTECODE_OBJ)
 
 bytecode: test-bytecode
 	$(TEST_BINDIR)/test-bytecode
+
+#-------------------------------------------------------------------------------
+# v2 View
+#
+VDB_VIEW_SRC = \
+	test-view
+
+VDB_VIEW_OBJ = \
+	$(addsuffix .$(OBJX),$(VDB_VIEW_SRC))
+
+VDB_VIEW_LIB = \
+	-skapp \
+	-sktst \
+	-sncbi-wvdb \
+	-sschema
+
+$(TEST_BINDIR)/test-view: $(VDB_VIEW_OBJ)
+	$(LP) --exe -o $@ $^ $(VDB_VIEW_LIB)
+
+view: test-view
+	$(TEST_BINDIR)/test-view
 

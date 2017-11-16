@@ -558,7 +558,6 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_ColumnExists, AST_Table_Fixture)
 
 FIXTURE_TEST_CASE(Table_ColumnDecl_ColumnOverload, AST_Table_Fixture)
 {
-    m_newParse = false;
     TableAccess t = ParseTable (
         "table t#1 {"
         " column U8 c { read = 1; };"

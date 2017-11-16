@@ -37,6 +37,8 @@
 using namespace ncbi::SchemaParser;
 using namespace std;
 
+///////////////////////////////////////// Error Report :: Error
+
 ErrorReport :: Error :: Error( const char * p_message, const ErrorReport :: Location & p_location )
 :   m_message ( string_dup_measure ( p_message, 0 ) )
 {
@@ -50,6 +52,20 @@ ErrorReport :: Error :: ~Error()
     free ( m_message );
     free ( m_file );
 }
+
+bool
+ErrorReport :: Error :: Format ( char * p_buf, size_t p_bufSize ) const
+{
+    if ( p_buf == 0 )
+    {
+        return false;
+    }
+    return string_printf ( p_buf, p_bufSize, 0,
+                           "%s:%u:%u %s",
+                           m_file, m_line, m_column, m_message ) == 0;
+}
+
+///////////////////////////////////////// Error Report
 
 ErrorReport :: ErrorReport ()
 {

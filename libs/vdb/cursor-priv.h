@@ -84,7 +84,7 @@ struct VSchema;
 struct SColumn;
 struct VColumn;
 struct VPhysical;
-
+struct VView;
 
 /*--------------------------------------------------------------------------
  * VCursorCache
@@ -180,7 +180,7 @@ struct VCursor
     void *user;
     void ( CC * user_whack ) ( void *data );
 
-    /* external named cursor parameters */    
+    /* external named cursor parameters */
     BSTree named_params;
 
     /* linked cursors */
@@ -191,13 +191,13 @@ struct VCursor
 
     /* external row of VColumn* by ord ( owned ) */
     Vector row;
-    
+
     Vector v_cache_curs;
     Vector v_cache_cidx;
     /** trying to prevent forward prefetch on rows which are cached ***/
     bool    cache_col_active;
     int64_t cache_empty_start; /** first rowid where cache is detected to be empty **/
-    int64_t cache_empty_end;   /** last  rowid  **/ 
+    int64_t cache_empty_end;   /** last  rowid  **/
 
     /* column objects by cid ( not-owned ) */
     VCursorCache col;
@@ -233,7 +233,7 @@ struct VCursor
     /* support suspension of schema-declared triggers **/
     bool suspend_triggers;
     /* cursor used in sub-selects */
-    bool is_sub_cursor; 
+    bool is_sub_cursor;
     /* cursor for VDB columns located in separate db.tbl ***/
     const struct VCursor* cache_curs;
 };
@@ -242,6 +242,7 @@ struct VCursor
 /* Make
  */
 rc_t VCursorMake ( struct VCursor **cursp, struct VTable const *tbl );
+rc_t VCursorMakeFromView ( struct VCursor **cursp, struct VView const * view );
 
 rc_t VTableCreateCursorWriteInt ( struct VTable *self, struct VCursor **cursp, KCreateMode mode, bool create_thread );
 

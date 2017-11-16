@@ -49,6 +49,8 @@ namespace ncbi
 
                 Error( const char * p_message, const ErrorReport :: Location & p_location );
                 ~Error();
+
+                bool Format ( char * p_buf, size_t p_bufSize ) const;
             };
 
         public:

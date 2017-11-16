@@ -176,7 +176,8 @@ extern int Schema_debug;
     PT_VIEW = 385,
     PT_VIEWPARAM = 386,
     PT_VIEWPARENTS = 387,
-    PT_MEMBEREXPR = 388
+    PT_VIEWPARENT = 388,
+    PT_MEMBEREXPR = 389
   };
 #endif
 

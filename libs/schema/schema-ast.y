@@ -42,7 +42,7 @@
 
     void AST_error ( void * p_parser, ASTBuilder & p_builder, ParseTreeScanner & p_sb, const char * p_msg )
     {
-        p_builder . ReportInternalError ( p_msg, p_sb . GetSource () );
+        p_builder . ReportInternalError ( p_msg, p_sb . GetSourceFileName () );
     }
 
 %}
@@ -209,6 +209,7 @@
 %token PT_VIEW
 %token PT_VIEWPARAM
 %token PT_VIEWPARENTS
+%token PT_VIEWPARENT
 %token PT_MEMBEREXPR
 
  /* !!! Keep token declarations above in synch with schema-grammar.y */
@@ -231,7 +232,7 @@
 %type <node> col_schema_value col_schema_parm phys_coldef factory_parms_list
 %type <node> vararg param_sig param_signature fact_sig
 %type <node> view view_parms view_parm view_body_opt view_body view_member
-%type <node> view_parents_opt view_parents
+%type <node> view_parents_opt view_parents view_parent view_parent_parms
 
 %type <fqn> fqn qualnames fqn_opt_vers ident fqn_vers
 
@@ -251,7 +252,7 @@
 %type <tok> PT_FUNCEXPR PT_COLSCHEMAPARMS KW_static PT_PHYSMBR PT_PHYSCOLDEF PT_COLSCHEMAPARAM
 %type <tok> KW_physical PT_COLUNTYPED EXP_FLOAT ESCAPED_STRING PT_CONSTVECT KW_true KW_false
 %type <tok> PT_NEGATE PT_CASTEXPR '@' KW_control PT_SCHEMA_2_0
-%type <tok> PT_VIEW PT_VIEWPARAM PT_VIEWPARENTS PT_MEMBEREXPR
+%type <tok> PT_VIEW PT_VIEWPARAM PT_VIEWPARENTS PT_MEMBEREXPR PT_VIEWPARENT
 
 %%
 
@@ -857,6 +858,16 @@ view_parents_opt
     ;
 
 view_parents
-    : fqn_opt_vers                  { $$ = new AST (); $$ -> AddNode ( $1 ); }
-    | view_parents ',' fqn_opt_vers { $$ = $1; $$ -> AddNode ( $3 ); }
+    : view_parent                   { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    | view_parents ',' view_parent  { $$ = $1; $$ -> AddNode ( $3 ); }
+    ;
+
+view_parent
+    : PT_VIEWPARENT '(' fqn_opt_vers '<' PT_ASTLIST '(' view_parent_parms ')' '>' ')'
+        { $$ = new AST ( $1, $3, $7 ); }
+    ;
+
+view_parent_parms
+    : ident                         { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    | view_parent_parms ',' ident   { $$ = $1; $$ -> AddNode ( $3 ); }
     ;

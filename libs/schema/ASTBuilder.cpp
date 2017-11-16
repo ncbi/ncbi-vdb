@@ -344,7 +344,7 @@ ASTBuilder :: SelectVersion ( const AST_FQN & p_fqn,
 }
 
 KSymbol *
-ASTBuilder :: CreateLocalSymbol ( const AST & p_node, const String & p_name, int p_type, void * p_obj )
+ASTBuilder :: CreateLocalSymbol ( const AST & p_node, const String & p_name, int p_type, const void * p_obj )
 {
     KSymbol * ret = 0;
 
@@ -366,7 +366,7 @@ ASTBuilder :: CreateLocalSymbol ( const AST & p_node, const String & p_name, int
 }
 
 KSymbol *
-ASTBuilder :: CreateLocalSymbol ( const AST & p_node, const char* p_name, int p_type, void * p_obj )
+ASTBuilder :: CreateLocalSymbol ( const AST & p_node, const char* p_name, int p_type, const void * p_obj )
 {
     String name;
     StringInitCString ( & name, p_name );
@@ -374,7 +374,7 @@ ASTBuilder :: CreateLocalSymbol ( const AST & p_node, const char* p_name, int p_
 }
 
 KSymbol *
-ASTBuilder :: CreateConstSymbol ( const char* p_name, int p_type, void * p_obj )
+ASTBuilder :: CreateConstSymbol ( const char* p_name, int p_type, const void * p_obj )
 {
     KSymbol * ret = 0;
     String name;

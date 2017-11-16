@@ -78,13 +78,7 @@ FIXTURE_TEST_CASE ( BlobCorruptOnCommit, WVDB_Fixture)
     MakeDatabase ( schemaText, schemaSpec );
 
     // MakeCursor
-    VCursor* cursor;
-    {
-        VTable* table;
-        REQUIRE_RC ( VDatabaseCreateTable ( m_db, & table, "REFERENCE", kcmCreate | kcmMD5, "%s", "REFERENCE" ) );
-        REQUIRE_RC ( VTableCreateCursorWrite ( table, & cursor, kcmInsert ) );
-        REQUIRE_RC ( VTableRelease ( table ) );
-    }
+    VCursor* cursor = CreateTable ( "REFERENCE" );
 
     // AddColumns
     uint32_t columnIdx;
@@ -96,11 +90,7 @@ FIXTURE_TEST_CASE ( BlobCorruptOnCommit, WVDB_Fixture)
     {
         ostringstream out;
         out << rand();
-
-        REQUIRE_RC ( VCursorOpenRow ( cursor ) );
-        REQUIRE_RC ( VCursorWrite ( cursor, columnIdx, 8, out.str().c_str(), 0, out.str().size() ) );
-        REQUIRE_RC ( VCursorCommitRow ( cursor ) );
-        REQUIRE_RC ( VCursorCloseRow ( cursor ) );
+        WriteRow ( cursor, columnIdx, out.str() );
 
         //REQUIRE_RC ( VCursorFlushPage ( cursor ) ); // kaboom
     }
@@ -123,30 +113,19 @@ FIXTURE_TEST_CASE ( ColumnOpenMetadata, WVDB_Fixture )
     MakeDatabase ( schemaText, "root_database" );
 
     {
-        VTable* table;
-        REQUIRE_RC ( VDatabaseCreateTable ( m_db , & table, TableName, kcmInit + kcmMD5, TableName ) );
+        VCursor* cursor = CreateTable ( TableName );
 
-        VCursor* cursor;
-        REQUIRE_RC ( VTableCreateCursorWrite ( table, & cursor, kcmInsert ) );
         uint32_t column_idx;
         REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, ColumnName ) );
         REQUIRE_RC ( VCursorOpen ( cursor ) );
 
         // need to insert 2 rows with different values to make the column physical
-        REQUIRE_RC ( VCursorOpenRow ( cursor ) );
-        REQUIRE_RC ( VCursorWrite ( cursor, column_idx, 8, "blah", 0, 4 ) );
-        REQUIRE_RC ( VCursorCommitRow ( cursor ) );
-        REQUIRE_RC ( VCursorCloseRow ( cursor ) );
-
-        REQUIRE_RC ( VCursorOpenRow ( cursor ) );
-        REQUIRE_RC ( VCursorWrite ( cursor, column_idx, 8, "eeee", 0, 4 ) );
-        REQUIRE_RC ( VCursorCommitRow ( cursor ) );
-        REQUIRE_RC ( VCursorCloseRow ( cursor ) );
+        WriteRow ( cursor, column_idx, "blah" );
+        WriteRow ( cursor, column_idx, "eeee" );
 
         REQUIRE_RC ( VCursorCommit ( cursor ) );
 
         REQUIRE_RC ( VCursorRelease ( cursor ) );
-        REQUIRE_RC ( VTableRelease ( table ) );
     }
     // update the column's metadata without re-opening the database
     {
@@ -187,11 +166,8 @@ FIXTURE_TEST_CASE ( VTableDropColumn_PhysicalColumn, WVDB_Fixture )
 
     MakeDatabase ( schemaText, "root_database" );
     {
-        VTable* table;
-        REQUIRE_RC ( VDatabaseCreateTable ( m_db , & table, TableName, kcmInit + kcmMD5, TableName ) );
+        VCursor* cursor = CreateTable ( TableName );
 
-        VCursor* cursor;
-        REQUIRE_RC ( VTableCreateCursorWrite ( table, & cursor, kcmInsert ) );
         uint32_t column_idx1;
         uint32_t column_idx2;
         REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx1, ColumnName1 ) );
@@ -214,7 +190,6 @@ FIXTURE_TEST_CASE ( VTableDropColumn_PhysicalColumn, WVDB_Fixture )
         REQUIRE_RC ( VCursorCommit ( cursor ) );
 
         REQUIRE_RC ( VCursorRelease ( cursor ) );
-        REQUIRE_RC ( VTableRelease ( table ) );
     }
     // drop column1
     {
@@ -302,11 +277,8 @@ FIXTURE_TEST_CASE ( VTableDropColumn_MetadataColumn_VDB_2735, WVDB_Fixture )
 
     MakeDatabase ( schemaText, "root_database" );
     {
-        VTable* table;
-        REQUIRE_RC ( VDatabaseCreateTable ( m_db , & table, TableName, kcmInit + kcmMD5, TableName ) );
+        VCursor* cursor = CreateTable ( TableName );
 
-        VCursor* cursor;
-        REQUIRE_RC ( VTableCreateCursorWrite ( table, & cursor, kcmInsert ) );
         uint32_t column_idx1;
         uint32_t column_idx2;
         REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx1, ColumnName1 ) );
@@ -329,7 +301,6 @@ FIXTURE_TEST_CASE ( VTableDropColumn_MetadataColumn_VDB_2735, WVDB_Fixture )
         REQUIRE_RC ( VCursorCommit ( cursor ) );
 
         REQUIRE_RC ( VCursorRelease ( cursor ) );
-        REQUIRE_RC ( VTableRelease ( table ) );
     }
     // drop column1
     {
@@ -340,10 +311,7 @@ FIXTURE_TEST_CASE ( VTableDropColumn_MetadataColumn_VDB_2735, WVDB_Fixture )
     }
     // finally, check resulted db
     {
-        VTable* table;
-        REQUIRE_RC ( VDatabaseOpenTableUpdate ( m_db , & table, TableName ) );
-        const VCursor* cursor;
-        REQUIRE_RC ( VTableCreateCursorRead ( (const VTable*) table, & cursor ) );
+        const VCursor* cursor = OpenTable ( TableName );
         uint32_t column_idx1;
         uint32_t column_idx2;
         REQUIRE_RC ( VCursorOpen ( cursor ) );
@@ -355,7 +323,6 @@ FIXTURE_TEST_CASE ( VTableDropColumn_MetadataColumn_VDB_2735, WVDB_Fixture )
         REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx2, ColumnName2 ) );
 
         REQUIRE_RC ( VCursorRelease ( cursor ) );
-        REQUIRE_RC ( VTableRelease ( table ) );
     }
 }
 
@@ -371,31 +338,19 @@ FIXTURE_TEST_CASE ( VCursor_FindNextRowIdDirect, WVDB_Fixture )
 
     MakeDatabase ( schemaText, "root_database" );
     {
-        VTable* table;
-        REQUIRE_RC ( VDatabaseCreateTable ( m_db , & table, TableName, kcmInit + kcmMD5, TableName ) );
+        VCursor* cursor = CreateTable ( TableName );
 
-        VCursor* cursor;
-        REQUIRE_RC ( VTableCreateCursorWrite ( table, & cursor, kcmInsert ) );
         uint32_t column_idx;
         REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, ColumnName ) );
         REQUIRE_RC ( VCursorOpen ( cursor ) );
 
         // insert some rows
-        REQUIRE_RC ( VCursorOpenRow ( cursor ) );
-        REQUIRE_RC ( VCursorWrite ( cursor, column_idx, 8, "blah", 0, 4 ) );
-        REQUIRE_RC ( VCursorCommitRow ( cursor ) );
-        REQUIRE_RC ( VCursorCloseRow ( cursor ) );
-
-        REQUIRE_RC ( VCursorOpenRow ( cursor ) );
-        REQUIRE_RC ( VCursorWrite ( cursor, column_idx, 8, "eeee", 0, 4 ) );
-        REQUIRE_RC ( VCursorCommitRow ( cursor ) );
-        REQUIRE_RC ( VCursorCloseRow ( cursor ) );
+        WriteRow ( cursor, column_idx, "blah" );
+        WriteRow ( cursor, column_idx, "eeee" );
 
         REQUIRE_RC ( VCursorCommit ( cursor ) );
 
         REQUIRE_RC ( VCursorRelease ( cursor ) );
-        REQUIRE_RC ( VTableReindex ( table ) );
-        REQUIRE_RC ( VTableRelease ( table ) );
     }
     REQUIRE_RC ( VDatabaseRelease ( m_db ) );
 
@@ -404,11 +359,7 @@ FIXTURE_TEST_CASE ( VCursor_FindNextRowIdDirect, WVDB_Fixture )
         REQUIRE_RC ( VDBManagerMakeUpdate ( & mgr, NULL ) );
         VDBManagerOpenDBRead ( mgr, (const VDatabase**)& m_db, NULL, m_databaseName . c_str () );
 
-        const VTable* table;
-        REQUIRE_RC ( VDatabaseOpenTableRead ( m_db , & table, TableName ) );
-
-        const VCursor* cursor;
-        REQUIRE_RC ( VTableCreateCursorRead ( table, & cursor ) );
+        const VCursor* cursor = OpenTable ( TableName );
 
         uint32_t column_idx;
         REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, ColumnName ) );
@@ -421,7 +372,8 @@ FIXTURE_TEST_CASE ( VCursor_FindNextRowIdDirect, WVDB_Fixture )
         REQUIRE_EQ ( (int64_t)2, next ) ; // VDB-3075: next == 1
 
         REQUIRE_RC ( VCursorRelease ( cursor ) );
-        REQUIRE_RC ( VTableRelease ( table ) );
+
+        VDBManagerRelease ( mgr );
     }
 
 }

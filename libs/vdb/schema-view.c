@@ -107,9 +107,8 @@ void CC SViewWhack ( void * item, void *ignore )
     SView *self = item;
 
     /* whack components */
-    VectorWhack ( & self -> tables, NULL, NULL );
-    VectorWhack ( & self -> views, NULL, NULL );
-    VectorWhack ( & self -> parents, NULL, NULL );
+    VectorWhack ( & self -> params, NULL, NULL );
+    VectorWhack ( & self -> parents, SViewInstanceWhack, NULL );
 
     VectorWhack ( & self -> col, SColumnWhack, NULL );
     VectorWhack ( & self -> cname, SNameOverloadWhack, NULL );
@@ -313,3 +312,10 @@ view_fix_forward_refs ( const SView * view )
     return rc;
 }
 
+void
+CC SViewInstanceWhack ( void *item, void *ignore )
+{
+    SViewInstance * self = ( SViewInstance * ) item;
+    VectorWhack ( & self -> params, NULL, NULL );
+    free ( self );
+}

@@ -27,6 +27,8 @@
 #ifndef _hpp_ASTBuilder_
 #define _hpp_ASTBuilder_
 
+#include <cstring>
+
 #include <kfc/callconv.h>
 #include <klib/rc.h>
 
@@ -61,7 +63,7 @@ namespace ncbi
 
             void AddIncludePath ( const char * path );
 
-            AST* Build ( const ParseTree& p_root, const char * p_source = "", bool p_debugParse = false );
+            AST* Build ( const ParseTree& p_root, const char * p_sourceFileName = "", bool p_debugParse = false );
 
             const KSymbol* Resolve ( const AST_FQN& p_fqn, bool p_reportUnknown = true );
             KSymbol* Resolve ( const Token :: Location & p_loc, const char* p_ident, bool p_reportUnknown = true );
@@ -116,10 +118,10 @@ namespace ncbi
         public: // schema object construction helpers
             const KSymbol* CreateFqnSymbol ( const AST_FQN& fqn, uint32_t type, const void * obj );
 
-            KSymbol * CreateLocalSymbol ( const AST & p_node, const char* p_name, int p_type, void * p_obj );
-            KSymbol * CreateLocalSymbol ( const AST & p_node, const String & p_name, int p_type, void * p_obj );
+            KSymbol * CreateLocalSymbol ( const AST & p_node, const char* p_name, int p_type, const void * p_obj );
+            KSymbol * CreateLocalSymbol ( const AST & p_node, const String & p_name, int p_type, const void * p_obj );
 
-            KSymbol * CreateConstSymbol ( const char* p_name, int p_type, void * p_obj );
+            KSymbol * CreateConstSymbol ( const char* p_name, int p_type, const void * p_obj );
 
             struct STypeExpr * MakeTypeExpr ( const AST & p_type );
 

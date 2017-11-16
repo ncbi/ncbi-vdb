@@ -303,7 +303,7 @@ DatabaseDeclaration :: HandleMemberTable ( const AST & p_member )
                 String memName;
                 assert ( p_member . GetChild ( 2 ) -> GetChild ( 0 ) != 0 );
                 StringInitCString ( & memName, p_member . GetChild ( 2 ) -> GetChild ( 0 ) -> GetTokenValue () );
-                rc_t rc = KSymTableCreateConstSymbol ( & m_builder . GetSymTab (), & m -> name, & memName, eDBMember, m );
+                rc_t rc = KSymTableCreateConstSymbol ( & m_builder . GetSymTab (), & m -> name, & memName, eTblMember, m );
                 if ( rc == 0 )
                 {
                     m -> tbl = static_cast < const STable * > ( m_builder . SelectVersion ( type, * tblName, STableCmp ) );

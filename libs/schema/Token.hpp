@@ -49,7 +49,7 @@ namespace ncbi
             };
 
         public:
-            Token ( const SchemaToken & );
+            Token ( const SchemaToken & st ); // takes ownership of st.leading_ws
             Token ( TokenType, const char * value = 0 );
             Token ( TokenType, const char * value, const Location & loc );
             Token ( const Token & );

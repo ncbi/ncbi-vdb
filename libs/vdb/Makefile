@@ -123,6 +123,7 @@ VDBCMN_SRC = \
 	delta_average \
 	report-vdb \
 	bytecode \
+	view \
 
 VDB_SRC = \
 	$(VDBCMN_SRC) \

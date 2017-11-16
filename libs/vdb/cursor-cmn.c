@@ -479,7 +479,7 @@ rc_t VCursorSupplementStatic ( const KSymTable *tbl, const VCursor *self )
                             rc = VCursorSupplementName ( tbl, self -> stbl, & td, name );
 
                         rc = 0; /*** don't care if name is not in the schema ***/
-		
+
                     }
 
                     KMDataNodeRelease ( node );
@@ -541,8 +541,8 @@ static rc_t VTableCreateCachedCursorReadImpl ( const VTable *self,
                 curs -> blob_mru_cache = VBlobMRUCacheMake(capacity);
                 curs -> read_only = true;
                 rc = VCursorSupplementSchema ( curs );
-               
-#if 0  
+
+#if 0
                 if ( create_pagemap_thread && capacity > 0 && rc == 0 )
                 {
                     rc = VCursorLaunchPagemapThread ( curs );
@@ -551,7 +551,7 @@ static rc_t VTableCreateCachedCursorReadImpl ( const VTable *self,
                         if ( GetRCState( rc ) == rcNotAvailable )
                             rc = 0;
                     }
-                }   
+                }
 #endif
                 if ( rc == 0 )
                 {
@@ -578,6 +578,33 @@ static rc_t VTableCreateCachedCursorReadImpl ( const VTable *self,
     }
     return rc;
 }
+
+/* ViewCreateCursor
+ *  creates a read cursor object onto view
+ *
+ *  "curs" [ OUT ] - return parameter for newly created cursor
+ *
+ *  "capacity" [ IN ] - the maximum bytes to cache on the cursor before
+ *  dropping least recently used blobs
+ */
+VDB_EXTERN rc_t CC VViewCreateCursor ( struct VView const * p_self, const VCursor ** p_curs, size_t p_capacity )
+{
+    rc_t rc = 0;
+    if ( p_curs == NULL )
+    {
+        rc = RC ( rcVDB, rcTable, rcOpening, rcParam, rcNull );
+    }
+    else
+    {
+        if ( p_self == NULL )
+        {
+            rc = RC ( rcVDB, rcTable, rcOpening, rcSelf, rcNull );
+        }
+        * p_curs = NULL;
+    }
+    return rc;
+}
+
 
 LIB_EXPORT rc_t CC VTableCreateCachedCursorRead ( const VTable *self,
     const VCursor **cursp, size_t capacity )
@@ -634,7 +661,7 @@ LIB_EXPORT rc_t CC VCursorPermitPostOpenAdd ( const VCursor *cself )
 }
 /*  SuspendTriggers
  *  blocks resolution of schema-based triggers
- *  
+ *
  */
 LIB_EXPORT rc_t CC VCursorSuspendTriggers ( const VCursor *cself )
 {
@@ -1345,13 +1372,13 @@ rc_t VCursorOpenRead ( VCursor *self, const KDlset *libs )
             /* in case the column is not defined ( rcColumn, rcUndefined )
                 we want to check if the table is empty, and report that instead
             */
-            if ( GetRCState( rc ) == rcUndefined && 
+            if ( GetRCState( rc ) == rcUndefined &&
                  GetRCObject( rc ) == ( enum RCObject )rcColumn )
             {
                 bool empty;
                 if ( ( VTableIsEmpty ( self -> tbl, &empty ) == 0 ) && empty )
                 {
-                    rc = RC ( rcVDB, rcCursor, rcOpening, rcTable, rcEmpty );        
+                    rc = RC ( rcVDB, rcCursor, rcOpening, rcTable, rcEmpty );
                 }
             }
         }
@@ -1629,7 +1656,7 @@ rc_t VCursorReadColumnDirect ( const VCursor *self, int64_t row_id, uint32_t col
 		case vcRowOpen :  break;
 		default : return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcInvalid );
     }
-	
+
     cache_col_active_save = self->cache_col_active;
     ( ( VCursor* ) self )->cache_col_active = false;
     if ( self->cache_curs != NULL )
@@ -1659,10 +1686,10 @@ rc_t VCursorReadColumnDirect ( const VCursor *self, int64_t row_id, uint32_t col
 						( ( VCursor* )self )->cache_empty_end = row_id + repeat_count - 1;
 					}
 				}
-			}	
+			}
 		}
 	}
-	
+
     {
 		rc_t rc = VCursorReadColumnDirectInt( self, row_id, col_idx, elem_bits, base, boff, row_len, NULL, NULL );
 		( ( VCursor* )self )->cache_col_active = cache_col_active_save;
@@ -2120,7 +2147,7 @@ LIB_EXPORT rc_t CC VCursorDataPrefetch( const VCursor *cself,
 	{
 		return RC ( rcVDB, rcCursor, rcReading, rcColumn, rcInvalid );
 	}
-	
+
 	if ( cself->blob_mru_cache && num_rows > 0 )
 	{
 		int64_t *row_ids_sorted = malloc( num_rows * sizeof( *row_ids_sorted ) );
@@ -2151,7 +2178,7 @@ LIB_EXPORT rc_t CC VCursorDataPrefetch( const VCursor *cself,
 							last_cached_row_id = blob->stop_id;
 						}
 						else
-						{ 
+						{
 							/* prefetch it **/
 							/** ask production for the blob **/
 							VBlobMRUCacheCursorContext cctx;
@@ -2164,7 +2191,7 @@ LIB_EXPORT rc_t CC VCursorDataPrefetch( const VCursor *cself,
 								rc_t rc_cache;
 								/** always cache prefetch requests **/
 								if ( first_time )
-								{ 
+								{
 									VBlobMRUCacheResumeFlush( cself->blob_mru_cache ); /** next call will clean cache if too big **/
 									rc_cache = VBlobMRUCacheSave( cself->blob_mru_cache, col_idx, blob );
 									VBlobMRUCacheSuspendFlush( cself->blob_mru_cache ); /** suspending for the rest **/
@@ -2174,7 +2201,7 @@ LIB_EXPORT rc_t CC VCursorDataPrefetch( const VCursor *cself,
 								{
 									rc_cache = VBlobMRUCacheSave( cself->blob_mru_cache, col_idx, blob );
 								}
-								
+
 								if ( rc_cache == 0 )
 								{
 									VBlobRelease( blob );
@@ -2450,21 +2477,21 @@ LIB_EXPORT rc_t CC VCursorParamsGet( struct VCursorParams const *cself,
     NamedParamNode *node;
     String name;
     VCursor *self = (VCursor *)cself;
-    
+
     if (cself == NULL)
         return RC(rcVDB, rcCursor, rcAccessing, rcSelf, rcNull);
-    
+
     if (Name == NULL)
         return RC(rcVDB, rcCursor, rcAccessing, rcName, rcNull);
-    
+
     if (Name[0] == '\0')
         return RC(rcVDB, rcCursor, rcAccessing, rcName, rcEmpty);
-    
+
     StringInitCString(&name, Name);
     node = (NamedParamNode *)BSTreeFind(&self->named_params, &name, NamedParamComp);
     if (node == NULL)
         return RC(rcVDB, rcCursor, rcAccessing, rcName, rcNotFound);
-        
+
     *value = &node->value;
     return 0;
 }
@@ -2477,20 +2504,20 @@ static rc_t VCursorParamsLookupOrCreate(struct VCursorParams const *cself,
     String name;
     VCursor *self = (VCursor *)cself;
     rc_t rc;
-    
+
     StringInitCString(&name, Name);
     node = (NamedParamNode *)BSTreeFind(&self->named_params, &name, NamedParamComp);
     if (node == NULL) {
         node = malloc(sizeof(*node) + StringSize(&name) + 1);
         if (node == NULL)
             return RC(rcVDB, rcCursor, rcAccessing, rcMemory, rcExhausted);
-        
+
         strcpy((char *)(&node[1]), Name);
         StringInit ( & node -> name, (const char *)(&node[1]), name . size, name . len );
-        
+
         memset ( & node -> value, 0, sizeof node -> value );
         node -> value . elem_bits = 8;
-        
+
         rc = BSTreeInsertUnique(&self->named_params, (BSTNode *)node, NULL, NamedParamNodeComp);
         assert(rc == 0);
     }
@@ -2498,7 +2525,7 @@ static rc_t VCursorParamsLookupOrCreate(struct VCursorParams const *cself,
     return 0;
 }
 
-LIB_EXPORT rc_t CC VCursorParamsVSet(struct VCursorParams const *cself, 
+LIB_EXPORT rc_t CC VCursorParamsVSet(struct VCursorParams const *cself,
     const char *Name, const char *fmt, va_list args )
 {
     KDataBuffer *value;
@@ -2526,7 +2553,7 @@ LIB_EXPORT rc_t CC VCursorParamsVSet(struct VCursorParams const *cself,
         {
             buffer = value -> base;
             bsize = KDataBufferBytes ( value );
-        }        
+        }
 
         /* optimistic printf */
         n = vsnprintf ( buffer, bsize, fmt, copy );
@@ -2553,7 +2580,7 @@ LIB_EXPORT rc_t CC VCursorParamsVSet(struct VCursorParams const *cself,
     return rc;
 }
 
-LIB_EXPORT rc_t CC VCursorParamsSet( struct VCursorParams const *cself, 
+LIB_EXPORT rc_t CC VCursorParamsSet( struct VCursorParams const *cself,
     const char *name, const char *fmt, ... )
 {
     va_list va;
@@ -2637,7 +2664,7 @@ CHECK_AGAIN:
 		assert(0);
 		KLockUnlock(self -> pmpr.lock);
 		return RC(rcVDB, rcPagemap, rcConverting, rcParam, rcInvalid );
-	 
+
 	}
     }
     MTCURSOR_DBG (( "run_pagemap_thread: exit\n" ));
