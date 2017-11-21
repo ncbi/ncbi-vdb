@@ -45,7 +45,7 @@
 #include "schwarzschraube.h"
 #include "teleport.h"
 #include "common.h"
-#include "xgapk.h"
+#include "xgap.h"
 
 #include <sysalloc.h>
 
@@ -411,9 +411,9 @@ _KartFilesDir_list_v1 (
     XFS_CAN ( Node )
     XFS_CAN ( Node -> path )
 
-    RCt = XFSGapKartDepotRefresh ();
+    RCt = XFSGapRefreshKarts ();
     if ( RCt == 0 ) {
-        RCt = XFSGapKartDepotList ( & TempList, 0 );
+        RCt = XFSGapListKartsForProject ( & TempList, 0 );
         if ( RCt == 0 ) {
             * List = TempList;
         }
@@ -439,12 +439,14 @@ _KartFilesDir_find_v1 (
     const struct _KartFilesNode * KartNode;
     struct XFSNode * TempNode;
     const struct XFSGapKart * Kart;
+    const char * Path;
     rc_t RCt;
 
     RCt = 0;
     KartNode = NULL;
     TempNode = NULL;
     Kart = NULL;
+    Path = NULL;
 
     XFS_CSAN ( Node )
     XFS_CAN ( self )
@@ -457,18 +459,21 @@ _KartFilesDir_find_v1 (
     XFS_CAN ( KartNode )
     XFS_CAN ( KartNode -> path )
 
-    RCt = XFSGapKartDepotRefresh ();
+    RCt = XFSGapRefreshKarts ();
     if ( RCt == 0 ) {
-        RCt = XFSGapKartDepotGet ( & Kart, Name );
+        RCt = XFSGapGetKart ( & Kart, Name );
         if ( RCt == 0 ) {
-            RCt = XFSFileNodeMake (
-                                & TempNode,
-                                XFSGapKartPath ( Kart ),
-                                Name,
-                                XFSPermRWDefNodeChar ()
-                                );
+            RCt = XFSGapKartPath ( Kart, & Path );
             if ( RCt == 0 ) {
-                * Node = ( const struct XFSNode * ) TempNode;
+                RCt = XFSFileNodeMake (
+                                    & TempNode,
+                                    Path,
+                                    Name,
+                                    XFSPermRWDefNodeChar ()
+                                    );
+                if ( RCt == 0 ) {
+                    * Node = ( const struct XFSNode * ) TempNode;
+                }
             }
 
             XFSGapKartRelease ( Kart );
@@ -888,20 +893,21 @@ XFSGapKartFilesNodeMake (
 {
     rc_t RCt;
     struct _KartFilesNode * TheNode;
+    const char * Path;
 
     RCt = 0;
     TheNode = NULL;
+    Path = NULL;
 
     XFS_CSAN ( Node )
     XFS_CAN ( Node )
 
-    RCt = _KartFilesNodeMakeEx (
-                                & TheNode,
-                                XFSGapKartDepotPath (),
-                                Perm
-                                );
+    RCt = XFSGapKartfiles ( & Path );
     if ( RCt == 0 ) {
-        * Node = & ( TheNode -> node );
+        RCt = _KartFilesNodeMakeEx ( & TheNode, Path, Perm );
+        if ( RCt == 0 ) {
+            * Node = & ( TheNode -> node );
+        }
     }
 
     return RCt;
@@ -936,16 +942,18 @@ _KartFilesNodeConstructor (
 
     NodePath = XFSModelNodeProperty ( Template, XFS_MODEL_SOURCE );
     if ( NodePath == NULL ) {
-        NodePath = XFSGapKartDepotPath ();
+        RCt = XFSGapKartfiles ( & NodePath );
     }
 
-    RCt = _KartFilesNodeMakeEx (
-                                & TheNode,
-                                NodePath,
-                                XFSModelNodeSecurity ( Template )
-                                );
     if ( RCt == 0 ) {
-        * Node = ( struct XFSNode * ) TheNode;
+        RCt = _KartFilesNodeMakeEx (
+                                    & TheNode,
+                                    NodePath,
+                                    XFSModelNodeSecurity ( Template )
+                                    );
+        if ( RCt == 0 ) {
+            * Node = ( struct XFSNode * ) TheNode;
+        }
     }
 
     if ( RCt != 0 ) {

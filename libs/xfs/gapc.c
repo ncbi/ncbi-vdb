@@ -126,7 +126,7 @@ _GapCacheGetPath ( const char ** CachePath, uint32_t ProjectId )
 {
     rc_t RCt;
     const struct XFSGapProject * Project;
-    char * RepositoryRoot;
+    const char * RepositoryRoot;
 
     RCt = 0;
     Project = NULL;
@@ -135,7 +135,7 @@ _GapCacheGetPath ( const char ** CachePath, uint32_t ProjectId )
     XFS_CSAN ( CachePath )
     XFS_CAN ( CachePath )
 
-    RCt = XFSGapFindOrCreate ( ProjectId, & Project );
+    RCt = XFSGapGetProject ( & Project, ProjectId );
     if ( RCt == 0 ) {
         RCt = XFSGapProjectRepositoryRoot ( Project, & RepositoryRoot );
         if ( RCt == 0 ) {
@@ -909,8 +909,6 @@ XFSGapCacheNodeMake (
 
             * Node = & ( TheNode -> node );
         }
-
-        free ( ( char * ) Path );
     }
 
     if ( RCt != 0 ) {

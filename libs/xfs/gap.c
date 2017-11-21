@@ -169,10 +169,13 @@ _PrepareWorkspace (
     NatDir = NULL;
     PathType = kptNotFound;
 
-    RCt = XFSGapFindOrCreate ( ProjectId, & Project );
+    RCt = XFSGapGetProject ( & Project, ProjectId );
     if ( RCt == 0 ) {
 
-        RCt = XFSGapProjectWorkspace ( Project, & WorkspaceDir );
+        RCt = XFSGapProjectWorkspace (
+                                    Project,
+                                    ( const char ** ) & WorkspaceDir
+                                    );
         if ( RCt == 0 ) {
             RCt = XFSGapProjectPassword (
                                         Project,
@@ -220,7 +223,7 @@ _PrepareWorkspace (
         * Password = NULL;
 
         if ( WorkspaceDir != NULL ) {
-            free ( WorkspaceDir );
+            WorkspaceDir = NULL;
         }
     }
 
@@ -272,7 +275,7 @@ _GapProjectNodeAddChildren ( struct _GapProjectNode * self )
                                     );
         }
 
-        free ( Workspace );
+        Workspace = NULL;
     }
     else {
 /* TODO - use approved output method

@@ -63,8 +63,8 @@ XFS_EXTERN rc_t CC XFS_VfsManagerInit ();
 XFS_EXTERN rc_t CC XFS_VfsManagerDispose ();
 XFS_EXTERN rc_t CC XFS_KnsManagerInit ();
 XFS_EXTERN rc_t CC XFS_KnsManagerDispose ();
-XFS_EXTERN rc_t CC XFSGapKartDepotInit ();
-XFS_EXTERN rc_t CC XFSGapKartDepotDispose ();
+XFS_EXTERN rc_t CC XFSGapInit ();
+XFS_EXTERN rc_t CC XFSGapDispose ();
 
 /*)) Config and all config related
  ((*/
@@ -119,7 +119,7 @@ pLogMsg ( klogInfo, "InitAll [$(path)]", "path=%s", ( ConfigFile == NULL ? "NULL
         }
 
         if ( RCt == 0 ) {
-            XFSGapKartDepotInit ();
+            XFSGapInit ();
         }
     }
 
@@ -132,7 +132,7 @@ XFS_DisposeAll_MHR ()
 {
 pLogMsg ( klogInfo, "DisposeAll [$(path)]", "path=%s", _sConfigPath_MHR );
 
-    XFSGapKartDepotDispose ();
+    XFSGapDispose ();
 
     XFSGapFilesDispose ();
 

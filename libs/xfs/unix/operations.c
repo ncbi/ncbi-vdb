@@ -1561,7 +1561,6 @@ XFS_FUSE_opendir (
         if ( RCt == 0 ) {
             TheFileInfo -> fh = ( uint64_t ) Handle;
         }
-
         XFSNodeRelease ( Node );
     }
 

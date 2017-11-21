@@ -48,7 +48,7 @@
 #include "schwarzschraube.h"
 #include "teleport.h"
 #include "common.h"
-#include "xgapk.h"
+#include "xgap.h"
 
 #include <sysalloc.h>
 

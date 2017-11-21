@@ -1171,3 +1171,194 @@ XFS_CopyKKey_ZHR ( const struct KKey * Src, struct KKey * Dst )
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*))))
+ ((((   This is very stupid and under developed structure, which
+  ))))  is very un-effictive.
+ ((((   Kart could contain items, which belong to different
+  ))))  projects. I need fast way to check if cart contains items
+ ((((   which belong to some particular project.
+  ))))  Good thing, Kart could contain items for not more than two
+ ((((   or three projects so, we could use bubble search.
+  ))))  There is structure XFS_LIdx_ZHR ( Lame Index )
+ ((((*/
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/* XFS_LIdx_ZHR                                                      */
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+struct XFS_LIdx_ZHR {
+    uint32_t q;     /* items qty */
+    uint32_t c;     /* array capasity */
+    uint32_t * a;   /* array */
+};
+
+LIB_EXPORT
+rc_t CC
+XFS_LIdxMake_ZHR ( const struct XFS_LIdx_ZHR ** LIdx )
+{
+    struct XFS_LIdx_ZHR * Ret = NULL;
+
+    XFS_CSAN ( LIdx )
+    XFS_CAN ( LIdx )
+
+    Ret = calloc ( 1, sizeof ( struct XFS_LIdx_ZHR ) );
+    if ( Ret == NULL ) {
+        return XFS_RC ( rcExhausted );
+    }
+
+    * LIdx = Ret;
+
+    return 0;
+}   /* XFS_LIdxMake_ZHR () */
+
+LIB_EXPORT
+rc_t CC
+XFS_LIdxDispose_ZHR ( const struct XFS_LIdx_ZHR * self )
+{
+    struct XFS_LIdx_ZHR * LIdx = ( struct XFS_LIdx_ZHR * ) self;
+
+    if ( LIdx != NULL ) {
+        if ( LIdx -> a != NULL ) {
+            free ( LIdx -> a );
+            LIdx -> a = NULL;
+        }
+
+        LIdx -> q = 0;
+        LIdx -> c = 0;
+
+        free ( LIdx );
+    }
+
+    return 0;
+}   /* XFS_LIdxDispose_ZHR () */
+
+static
+rc_t CC
+_LIdxRealloc_ZHR ( struct XFS_LIdx_ZHR * self, uint32_t Qty )
+{
+    rc_t RCt;
+    uint32_t * NewA;
+    uint32_t NewC;
+
+#define POPOTAN 4
+
+    RCt = 0;
+    NewA = NULL;
+    NewC = 0;
+
+    XFS_CAN ( self )
+
+    if ( Qty < self -> c ) {
+        return 0;
+    }
+
+    NewC = ( Qty / POPOTAN + 1 ) * POPOTAN;
+
+    NewA = malloc ( sizeof ( uint32_t ) * NewC );
+    if ( NewA == NULL ) {
+        return XFS_RC ( rcExhausted );
+    }
+
+    if ( self -> a != NULL ) {
+        if ( self -> q != 0 ) {
+            memmove ( NewA, self -> a, sizeof ( uint32_t ) * self -> q );
+        }
+
+        free ( self -> a );
+    }
+
+    self -> a = NewA;
+    self -> c = NewC;
+
+#undef POPOTAN
+
+    return RCt;
+}   /* _LIdxRealloc_ZHR () */
+
+LIB_EXPORT
+bool CC
+XFS_LIdxHas_ZHR ( const struct XFS_LIdx_ZHR * self, uint32_t Value )
+{
+    uint32_t llp = 0;
+
+    if ( self != NULL ) {
+        for ( llp = 0; llp < self -> q; llp ++ ) {
+            if ( Value == * ( self -> a + llp ) ) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}   /* XFS_LIdxHas_ZHR () */
+
+LIB_EXPORT
+rc_t CC
+XFS_LIdxAdd_ZHR ( const struct XFS_LIdx_ZHR * self, uint32_t Value )
+{
+    rc_t RCt;
+    struct XFS_LIdx_ZHR * LIdx;
+
+    RCt = 0;
+    LIdx = ( struct XFS_LIdx_ZHR * ) self;
+
+    XFS_CAN ( LIdx )
+
+    if ( ! XFS_LIdxHas_ZHR ( LIdx, Value ) ) {
+            
+        RCt = _LIdxRealloc_ZHR ( LIdx, LIdx -> q + 1 );
+        if ( RCt == 0 ) {
+
+            LIdx -> a [ LIdx -> q ] = Value;
+            LIdx -> q ++;
+        }
+    }
+
+    return RCt;
+}   /* XFS_LIdxAdd_ZHR () */
+
+/*))  Unnecessary in real life
+ ((*/
+LIB_EXPORT
+rc_t CC
+XFS_LIdxQty_ZHR ( const struct XFS_LIdx_ZHR * self, uint32_t * Qty )
+{
+    XFS_CSA ( Qty, 0 )
+    XFS_CAN ( self )
+    XFS_CAN ( Qty )
+
+    * Qty = self -> q;
+
+    return 0;
+}   /* XFS_LIdxQty_ZHR () */
+
+/*))  Unnecessary in real life
+ ((*/
+LIB_EXPORT
+rc_t CC
+XFS_LIdxGet_ZHR (
+            const struct XFS_LIdx_ZHR * self,
+            uint32_t Index,
+            uint32_t * Value
+)
+{
+    XFS_CSA ( Value, 0 )
+    XFS_CAN ( self )
+    XFS_CAN ( Value )
+
+    if ( Index < self -> q ) {
+        * Value = self -> a [ Index ];
+        return 0;
+    }
+
+    return XFS_RC ( rcInvalid );
+}   /* XFS_LIdxGet_ZHR () */
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/

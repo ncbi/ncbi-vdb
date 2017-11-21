@@ -49,7 +49,6 @@
 #include "common.h"
 #include "contnode.h"
 #include "xgap.h"
-#include "xgapk.h"
 
 #include <sysalloc.h>
 
@@ -90,38 +89,45 @@ _AddKartItem (
 {
     rc_t RCt;
     struct XFSNode * ItemNode;
-    const struct XFSGapKartItem * KartItem;
+    uint32_t ProjectId;
+    char * AccessionOrId;
 
     RCt = 0;
     ItemNode = NULL;
-    KartItem = NULL;
+    ProjectId = 0;
+    AccessionOrId = NULL;
 
     XFS_CAN ( Node )
     XFS_CAN ( Kart )
     XFS_CAN ( ItemName )
 
-    KartItem = XFSGapKartGet ( Kart, ItemName );
-    if ( KartItem == NULL ) {
-        return XFS_RC ( rcInvalid );
-    }
-
-    RCt = XFSGapFileNodeMake ( 
-                            & ItemNode,
-                            ItemName,
-                            XFSGapKartItemProjectId ( KartItem ),
-                            XFSGapKartItemAccession ( KartItem ),
-                            XFSGapKartItemObjectId ( KartItem )
-                            );
-
+    RCt = XFSGapKartItemAttributes (
+                                        Kart,
+                                        & ProjectId,
+                                        & AccessionOrId,
+                                        ItemName );
     if ( RCt == 0 ) {
-        RCt = XFSContNodeAddChild (
-                                ( struct XFSNode * ) Node,
-                                ItemNode
+        RCt = XFSGapFileNodeMake ( 
+                                & ItemNode,
+                                ItemName,
+                                ProjectId,
+                                AccessionOrId
                                 );
-        if ( GetRCState ( RCt ) == rcExists ) {
-            RCt = 0;
+        if ( RCt == 0 ) {
+            RCt = XFSContNodeAddChild (
+                                    ( struct XFSNode * ) Node,
+                                    ItemNode
+                                    );
+            if ( GetRCState ( RCt ) == rcExists ) {
+                RCt = 0;
+            }
+            /* JOJOBA We do not dispose node here, but on the
+             * caller level
+             */
         }
-        /* We do not dispose node here, but on the caller level */
+
+        free ( AccessionOrId );
+        AccessionOrId = NULL;
     }
 
     if ( RCt != 0 ) {
@@ -130,7 +136,6 @@ _AddKartItem (
             ItemNode = NULL;
         }
     }
-
     return RCt;
 }   /* _AddKartItem () */
 
@@ -185,7 +190,7 @@ _AddSignatureFile ( struct XFSKartNode * Node )
 
 static 
 rc_t CC
-_LoadKart ( struct XFSKartNode * Node )
+_LoadKart ( struct XFSKartNode * Node, struct XFSDoc * Doc )
 {
     rc_t RCt;
     const struct XFSGapKart * Kart;
@@ -203,13 +208,17 @@ _LoadKart ( struct XFSKartNode * Node )
 
     RCt = _AddSignatureFile ( Node );
     if ( RCt == 0 ) {
-        RCt = XFSGapKartDepotGet (
+            /* JOJOBA First blood */
+        RCt = XFSGapGetKart (
                             & Kart,
                             XFSNodeName ( ( struct XFSNode * ) Node )
                             );
         if ( RCt == 0 ) {
 
-            RCt = XFSGapKartList ( Kart, & List, Node -> project_id );
+            RCt = XFSGapKartListForProject (
+                                            Kart,
+                                            & List, Node -> project_id
+                                            );
             if ( RCt == 0 ) {
                 RCt = KNamelistCount ( List, & ListQ );
                 if ( RCt == 0 ) {
@@ -220,7 +229,16 @@ _LoadKart ( struct XFSKartNode * Node )
                         }
                         RCt = _AddKartItem ( Node, Kart, ListN );
                         if ( RCt != 0 ) {
+                            if ( Doc != NULL ) {
+                                XFSTextDocAppend ( Doc, "%s\n", ListN );
+                            }
+                            RCt = 0;
+                            /* Apparently this is not a joke and 
+                             * not an error.
+                             *
                             break;
+                             *
+                             */
                         }
                     }
                 }
@@ -255,6 +273,52 @@ _KartNodeDispose ( struct XFSContNode * self )
     return 0;
 }   /* _KartNodeDispose () */
 
+static
+rc_t CC
+_KartNodeAddStatus (
+                    struct XFSNode * self,
+                    struct XFSDoc * Doc
+)
+{
+/*  JOJOBA:
+ *          That code is adding some unnecessary information to
+ *          viewer, so ... if there are errors - we don't care :LOL:
+ */
+    rc_t RCt;
+    struct XFSNode * Stat; 
+    size_t Size;
+
+    RCt = 0;
+    Stat = NULL;
+    Size = 0;
+
+    XFSDocSize ( Doc, & Size );
+    if ( Size != 0 ) {
+        RCt = XFSDocNodeMakeWithFlavor (
+                                        & Stat,
+                                        Doc,
+                                        ".#invalid-kart-entries#",
+                                        XFSPermRODefNodeChar (),
+                                        _sFlavorOfFoo
+                                        );
+    }
+    else {
+        RCt = XFSDocNodeMakeWithFlavor (
+                                        & Stat,
+                                        Doc,
+                                        ".#healthy#",
+                                        XFSPermRODefNodeChar (),
+                                        _sFlavorOfFoo
+                                        );
+    }
+
+    if ( RCt == 0 ) {
+        XFSContNodeAddChild ( ( struct XFSNode * ) self, Stat );
+    }
+
+    return 0;
+}   /* _KartNodeAddStatus */
+
 LIB_EXPORT
 rc_t CC
 XFSGapKartNodeMake (
@@ -266,9 +330,11 @@ XFSGapKartNodeMake (
 {
     rc_t RCt;
     struct XFSKartNode * KartNode;
+    struct XFSDoc * Doc;
 
     RCt = 0;
     KartNode = NULL;
+    Doc = NULL;
 
 
     XFS_CSAN ( Node )
@@ -288,11 +354,21 @@ XFSGapKartNodeMake (
                             _KartNodeDispose
                             );
         if ( RCt == 0 ) {
-            KartNode -> project_id = ProjectId;
-
-            RCt = _LoadKart ( KartNode );
+            RCt = XFSTextDocMake ( & Doc );
             if ( RCt == 0 ) {
-                * Node = ( struct XFSNode * ) KartNode;
+                KartNode -> project_id = ProjectId;
+
+                RCt = _LoadKart ( KartNode, Doc );
+                if ( RCt == 0 ) {
+                    _KartNodeAddStatus (
+                                        ( struct XFSNode * ) KartNode,
+                                        Doc
+                                        );
+
+                    * Node = ( struct XFSNode * ) KartNode;
+                }
+
+                XFSDocRelease ( Doc );
             }
         }
     }

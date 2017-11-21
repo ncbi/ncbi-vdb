@@ -189,8 +189,7 @@ XFS_EXTERN rc_t CC XFSGapFileNodeMake (
                             struct XFSNode ** Node,
                             const char * Name,
                             uint32_t ProjectId,
-                            const char * Accession,
-                            uint32_t ObjectId
+                            const char * AccessionOrId
                             );
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/

@@ -71,43 +71,25 @@ XFS_EXTERN rc_t CC XFSGapFilesDipose ();
 /*))
  //     Opening only for reading
 ((*/
-XFS_EXTERN rc_t CC XFSGapFilesOpenAccession (
+XFS_EXTERN rc_t CC XFSGapFilesOpen (
                             const struct KFile ** File,
                             uint32_t ProjectId,
-                            const char * Accession
-                            );
-
-XFS_EXTERN rc_t CC XFSGapFilesOpenObjectId (
-                            const struct KFile ** File,
-                            uint32_t ProjectId,
-                            uint32_t ObjectId
+                            const char * AccessionOrId
                             );
 
 /*))
  //     Attributes if possible
 ((*/
-XFS_EXTERN rc_t CC XFSGapFilesAccessionSize (
+XFS_EXTERN rc_t CC XFSGapFilesSize (
                             uint64_t * Size,
                             uint32_t ProjectId,
-                            const char * Accession
+                            const char * AccessionOrId
                             );
 
-XFS_EXTERN rc_t CC XFSGapFilesAccessionDate (
+XFS_EXTERN rc_t CC XFSGapFilesDate (
                             KTime_t * Time,
                             uint32_t ProjectId,
-                            const char * Accession
-                            );
-
-XFS_EXTERN rc_t CC XFSGapFilesObjectIdSize (
-                            uint64_t * Size,
-                            uint32_t ProjectId,
-                            uint32_t ObjectId
-                            );
-
-XFS_EXTERN rc_t CC XFSGapFilesObjectIdDate (
-                            KTime_t * Time,
-                            uint32_t ProjectId,
-                            uint32_t ObjectId
+                            const char * AccessionOrId
                             );
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/

@@ -43,7 +43,7 @@
 #include "ncon.h"
 #include "teleport.h"
 #include "common.h"
-#include "xgapk.h"
+#include "xgap.h"
 
 #include <sysalloc.h>
 
@@ -396,7 +396,8 @@ _GapKartsNodeAttr_date_v1 (
     XFS_CAN ( Time )
     XFS_CAN ( XFSEditorNode ( & ( self -> Papahen ) ) );
 
-    XFSGapKartDepotRefresh ();
+/* JOJOBA - implement */
+    XFSGapRefreshKarts ();
 
     return 0;
 }   /* _GapKartsNodeAttr_date_v1 () */
@@ -411,7 +412,7 @@ _GapKartsNodeAttr_set_date_v1 (
     XFS_CAN ( self )
     XFS_CAN ( XFSEditorNode ( & ( self -> Papahen ) ) );
 
-    XFSGapKartDepotRefresh ();
+    XFSGapRefreshKarts ();
 
     return 0;
 }   /* _GapKartsNodeAttr_set_date_v1 () */
@@ -428,7 +429,7 @@ _GapKartsNodeAttr_type_v1 (
     XFS_CAN ( Type )
     XFS_CAN ( XFSEditorNode ( & ( self -> Papahen ) ) )
 
-    XFSGapKartDepotRefresh ();
+    XFSGapRefreshKarts ();
 
     * Type = kxfsDir;
 
@@ -571,7 +572,7 @@ _LoadKarts ( struct XFSGapKartsNode * Node )
 
     XFS_CAN ( Node )
 
-    RCt = XFSGapKartDepotList ( & KartNames, Node -> project_id );
+    RCt = XFSGapListKartsForProject ( & KartNames, Node -> project_id );
     if ( RCt == 0 ) {
         RCt = KNamelistCount ( KartNames, & qty );
         if ( RCt == 0 ) {
@@ -597,6 +598,8 @@ _LoadKarts ( struct XFSGapKartsNode * Node )
     return RCt;
 }   /* _LoadKarts () */
 
+XFS_EXTERN rc_t CC XFSGapKartDepotVersion ( uint64_t * Version );
+
 rc_t CC
 _UpdateKarts ( struct XFSGapKartsNode * Node )
 {
@@ -608,8 +611,7 @@ _UpdateKarts ( struct XFSGapKartsNode * Node )
 
     XFS_CAN ( Node );
 
-
-    RCt = XFSGapKartDepotRefresh ();
+    RCt = XFSGapRefreshKarts ();
     if ( RCt == 0 ) {
         RCt = XFSGapKartDepotVersion ( & Version );
         if ( RCt == 0 ) {

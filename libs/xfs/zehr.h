@@ -273,6 +273,59 @@ XFS_EXTERN rc_t CC XFS_CopyKKey_ZHR (
                                     struct KKey * Dst
                                     );
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*))))
+ ((((   This is very stupid and under developed structure, which
+  ))))  is very un-effictive.
+ ((((   Kart could contain items, which belong to different
+  ))))  projects. I need fast way to check if cart contains items
+ ((((   which belong to some particular project.
+  ))))  Good thing, Kart could contain items for not more than two
+ ((((   or three projects so, we could use bubble search.
+  ))))  There is structure XFS_LIdx_ZHR ( Lame Index )
+ ((((*/
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/* XFS_LIdx_ZHR                                                      */
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+struct XFS_LIdx_ZHR;
+
+XFS_EXTERN rc_t CC XFS_LIdxMake_ZHR (
+                                    const struct XFS_LIdx_ZHR ** LaIn
+                                    );
+XFS_EXTERN rc_t CC XFS_LIdxDispose_ZHR (
+                                    const struct XFS_LIdx_ZHR * self
+                                    );
+XFS_EXTERN bool CC XFS_LIdxHas_ZHR (
+                                    const struct XFS_LIdx_ZHR * self,
+                                    uint32_t Value
+                                    );
+XFS_EXTERN rc_t CC XFS_LIdxAdd_ZHR (
+                                    const struct XFS_LIdx_ZHR * self,
+                                    uint32_t Value
+                                    );
+
+/*))  Unnecessary in real life
+ ((*/
+XFS_EXTERN rc_t CC XFS_LIdxQty_ZHR (
+                                const struct XFS_LIdx_ZHR * self,
+                                uint32_t * Qty
+                                );
+/*))  Unnecessary in real life
+ ((*/
+XFS_EXTERN rc_t CC XFS_LIdxGet_ZHR (
+                                const struct XFS_LIdx_ZHR * self,
+                                uint32_t Index,
+                                uint32_t * Value
+                                );
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 

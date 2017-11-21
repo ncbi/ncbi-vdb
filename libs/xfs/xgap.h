@@ -41,66 +41,139 @@ extern "C" {
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*
  * LYRICS:
  *
- * That file contains methods which allow to access to dbGaP project
- * data, as for :
+ * That file contains methods which allow to access dbGaP data
  * 
- *      Directories
- *      Files
- *      Passwords
+ * The core of that celebrations stored in hidden structure XFSGap
+ * which is not accessible to user, and may be inied/disposed with
+ * calling appropriate method: XFSGapInit/XFSGapDispose
  *
- * XFSGapProject - dbGap Project defined by unique ProjectId (uint32_t)
- *    1) does not have Make/Dispose methods - should be created by
- *       Gap's FindOrCreate method, and Released after use
- *    2) provides methods: Root directory, Key for ProjectId
- *    3) provides access to Project Data by Accession or ObjectId
- *       ( opens and decrypts files )
- *    3) thread safe
- *    4) struct itself hidden
+ * XFSGap structure has three most important objects, which could be
+ * accessed:
  *
- * XFSGap - retrieves or creates dbGaP Project by ProjectId
- *    1) provides access to dbGaP Project data by ProjectID
- *    3) thread safe.
+ *     Projecs
+ *     Karts
+ *     GapObjects
  *
- * There is special ProjectId = XFS_PUBLIC_PROJECT_ID ( 0 ), which is
- * for 'public' data
+ * Project is represented by XFSGapProject structure, instance of which
+ * could be retrieved by ProjectId ( integer, greater than zero ). User
+ * could refer to PUBLIC data by using ProjectId = XFS_PUBLIC_PROJECT_ID
+ * ( 0 ). Using GapProject.
+ * user could access following information: repository location, name,
+ * description, encryption key and password for project data
+ * There are no Init/Dispose methods for GapProject, so Release object
+ * after using
+ *
+ * Kart are represented by XFSGapCart structure, which contains name,
+ * and path to physical cart location. It also contains set of KartItem
+ * which contains ObjecId ( accessin or object id ) of real item,
+ * project Id, which thatt item belongs to. Cart could be accepted
+ * by name, and list names could be retrieved from XFSGap instance
+ *
+ * GapObjects are represented by XFSGapObject, and it contains: name, 
+ * ObjectId ( string: accession or id ), remote url, cache path,
+ * modified time, size and md5. GapObjecte could be retrieved by name
+ * only. There is no way to receive full list of objects :MWAHAHAH:
+ *
+ * Looks like all those are thread safe, not sure yet :LOL:
  *
  *_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 /*))
- //     Forwards
+ // Defines
 ((*/
-struct XFSGapProject;
-struct KKey;
-struct VPath;
-
-/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
-/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
-/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+#define XFS_PUBLIC_PROJECT_ID   0
 
 /*))
- //     XFSGapInit/XFSGapDispose
- \\     We are keepin' single instance of depot per program. These 
- //     methods should be called at the program begining and end.
+ // Forwards
 ((*/
+struct XFSGapProject;
+struct XFSGapKart;
+struct XFSGapObject;
+struct KKey;
+
+/* JOJOBA? struct KKey;  */
+/* JOJOBA? struct VPath; */
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*)))
+ ///    XFSGap - hidden marvel LOL
+(((*/
+
+/*  You should remember that XFSGap is a singleton, so if You will call
+ *  Init() or Dispose() method twice, You will have some problems :LOL:
+ *  so, be carefoul
+ */
 XFS_EXTERN rc_t CC XFSGapInit ();
 XFS_EXTERN rc_t CC XFSGapDispose ();
 
-    /*  Don't know if we need that method. Added for a sake of sake
-     *  Return true if Project with such ID exists
-     */
-XFS_EXTERN bool CC XFSGapHas ( uint32_t ProjectId );
+/*)))
+ ///    Accessing different data from XFSGap
+(((*/
 
-    /*  Usint method FindOrCreate, to avoid collisions from different
-     *  creative people :lol:
-     */
-XFS_EXTERN rc_t CC XFSGapFindOrCreate (
-                                uint32_t ProjectId,
-                                const struct XFSGapProject ** Project
+/*
+ *  Those methods will initialize pointer to some structures. Please,
+ *  don't free them. Use corresponding Release method ... thanks
+ */
+XFS_EXTERN rc_t CC XFSGapGetProject (
+                                const struct XFSGapProject ** Project,
+                                uint32_t ProjectId
                                 );
 
-    /*  Don't know if we need that method. Added for a sake of sake
+XFS_EXTERN bool CC XFSGapHasProject ( uint32_t ProjectId );
+
+    /* Don't forget to free Kartfiles, cuz it is part of a system
      */
-XFS_EXTERN rc_t CC XFSGapRemove ( uint32_t ProjectId );
+XFS_EXTERN rc_t CC XFSGapKartfiles ( const char ** Kartfiles );
+
+    /* Don't forget to free Publicfiles, cuz it is part of a system
+     */
+XFS_EXTERN rc_t CC XFSGapPublicfiles ( const char ** PublicFiles );
+
+    /*  The Kart parameter could be NULL, in that case kart will be
+     *  loaded, but will not be returned
+     *  Note, path is for loading only, karts are differ by name
+     */
+XFS_EXTERN rc_t CC XFSGapLoadKart (
+                                const struct XFSGapKart ** Kart,
+                                const char * KartDir,
+                                const char * KartName
+                                );
+
+XFS_EXTERN rc_t CC XFSGapGetKart (
+                                const struct XFSGapKart ** Kart,
+                                const char * KartName
+                                );
+
+XFS_EXTERN bool CC XFSGapHasKart ( const char * KartName );
+
+        /*  That one will return list of kart names
+         */
+XFS_EXTERN rc_t CC XFSGapListKarts ( struct KNamelist ** List );
+
+        /*  That one will return list of kart names for ProjectId
+         */
+XFS_EXTERN rc_t CC XFSGapListKartsForProject (
+                                            struct KNamelist ** List,
+                                            uint32_t ProjectId
+                                            );
+
+XFS_EXTERN rc_t CC XFSGapRefreshKarts ();
+
+        /*  GapObjects are distints by AccessionOrId ...
+         */
+XFS_EXTERN rc_t CC XFSGapGetObject (
+                                const struct XFSGapObject ** Object,
+                                const char * AccessionOrId
+                                );
+
+XFS_EXTERN bool CC XFSGapHasObject ( const char * AccessionOrId );
+
+    /*  That method will reload all known resources
+     */
+XFS_EXTERN rc_t CC XFSGapRehash ();
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
@@ -108,8 +181,6 @@ XFS_EXTERN rc_t CC XFSGapRemove ( uint32_t ProjectId );
 /*))
  //     XFSGapProject
 ((*/
-
-#define XFS_PUBLIC_PROJECT_ID   0
 
 XFS_EXTERN rc_t CC XFSGapProjectAddRef (
                             const struct XFSGapProject * self
@@ -127,65 +198,25 @@ XFS_EXTERN rc_t CC XFSGapProjectId (
                             uint32_t * Id
                             );
 
-    /* Both Remote and Cache could be NULL, so no data will be returned
-     * To dispose pahts, You should release them after using
-     */
-XFS_EXTERN rc_t CC XFSGapProjectLocateAccession (
-                            const struct XFSGapProject * self,
-                            const char * Accession,
-                            const struct VPath ** Remote,
-                            const struct VPath ** Cache
-                            );
-
-    /* Both Remote and Cache could be NULL, so no data will be returned
-     * To dispose pahts, You should release them after using
-     */
-XFS_EXTERN rc_t CC XFSGapProjectLocateObject (
-                            const struct XFSGapProject * self,
-                            uint32_t ObjectId,
-                            const struct VPath ** Remote,
-                            const struct VPath ** Cache
-                            );
-
-    /*  Both Remote and Cache could be NULL, and don't forget to free
-     *  them 
-     */
-XFS_EXTERN rc_t CC XFSGapProjectAccessionUrlAndPath (
-                            const struct XFSGapProject * self,
-                            const char * Accession,
-                            const char ** RemoteUrl,
-                            const char ** CachePath
-                            );
-
-    /*  Both Remote and Cache could be NULL, and don't forget to free
-     *  them 
-     */
-XFS_EXTERN rc_t CC XFSGapProjectObjectUrlAndPath (
-                            const struct XFSGapProject * self,
-                            uint32_t ObjectId,
-                            const char ** RemoteUrl,
-                            const char ** CachePath
-                            );
-
-    /* Don't forget to free RepositoryName, cuz it is part of a system
+    /* No need to free RepositoryName, cuz it is part of a system
      */
 XFS_EXTERN rc_t CC XFSGapProjectRepositoryName (
                             const struct XFSGapProject * self,
-                            char ** RepositoryName
+                            const char ** RepositoryName
                             );
 
-    /* Don't forget to free DislplayName, cuz it is part of a system
+    /* No need to free DisplayName, cuz it is part of a system
      */
 XFS_EXTERN rc_t CC XFSGapProjectRepositoryDisplayName (
                             const struct XFSGapProject * self,
-                            char ** DislplayName
+                            const char ** DislplayName
                             );
 
-    /* Don't forget to free RepositoryRoot, cuz it is part of a system
+    /* No need to free RepositoryRoot, cuz it is part of a system
      */
 XFS_EXTERN rc_t CC XFSGapProjectRepositoryRoot (
                             const struct XFSGapProject * self,
-                            char ** RepositoryRoot
+                            const char ** RepositoryRoot
                             );
 
     /* No need to free Key, cuz it is part of a system
@@ -207,18 +238,103 @@ XFS_EXTERN rc_t CC XFSGapProjectPassword (
      */
 XFS_EXTERN rc_t CC XFSGapProjectWorkspace (
                             const struct XFSGapProject * self,
-                            char ** Workspace
+                            const char ** Workspace
                             );
 
-/*)))   Those do not need ProjectId
- (((*/
-    /* Don't forget to free Kartfiles, cuz it is part of a system
-     */
-XFS_EXTERN rc_t CC XFSGapKartfiles ( char ** Kartfiles );
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/*))
+ //     XFSGapKart
+((*/
+XFS_EXTERN rc_t CC XFSGapKartAddRef ( const struct XFSGapKart * self );
 
-    /* Don't forget to free Publicfiles, cuz it is part of a system
+XFS_EXTERN rc_t CC XFSGapKartRelease ( const struct XFSGapKart * self );
+
+XFS_EXTERN rc_t CC XFSGapKartList (
+                                const struct XFSGapKart * self,
+                                struct KNamelist ** List
+                                );
+
+XFS_EXTERN rc_t CC XFSGapKartListForProject (
+                                const struct XFSGapKart * self,
+                                struct KNamelist ** List,
+                                uint32_t ProjectId
+                                );
+
+                /*  Returns the name of directory, where kart file is
+                 */
+XFS_EXTERN rc_t CC XFSGapKartDirectory (
+                                const struct XFSGapKart * self,
+                                const char ** Dir
+                                );
+
+                /*  Returns the name of file, where kart is stored
+                 */
+XFS_EXTERN rc_t CC XFSGapKartName (
+                                const struct XFSGapKart * self,
+                                const char ** Name
+                                );
+
+                /*  Returns the name of file, where kart is stored
+                 */
+XFS_EXTERN rc_t CC XFSGapKartPath (
+                                const struct XFSGapKart * self,
+                                const char ** Path
+                                );
+
+XFS_EXTERN bool CC XFSGapKartHasDataForProject (
+                                const struct XFSGapKart * self,
+                                uint32_t ProjectId
+                                );
+
+    /*  It allocates AccessionOrId, so don't forget to free it
      */
-XFS_EXTERN rc_t CC XFSGapPublicfiles ( char ** PublicFiles );
+XFS_EXTERN rc_t CC XFSGapKartItemAttributes (
+                                const struct XFSGapKart * self,
+                                uint32_t * ProjectId,
+                                char ** AccessionOrId,
+                                const char * ItemName
+                                );
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/*))
+ //     XFSGapObject
+((*/
+XFS_EXTERN rc_t CC XFSGapObjectAddRef (
+                                const struct XFSGapObject * self
+                                );
+
+XFS_EXTERN rc_t CC XFSGapObjectRelease (
+                                const struct XFSGapObject * self
+                                );
+
+XFS_EXTERN rc_t CC XFSGapObjectId (
+                                const struct XFSGapObject * self,
+                                const char ** AccessionOrId
+                                );
+
+XFS_EXTERN rc_t CC XFSGapObjectURL (
+                                const struct XFSGapObject * self,
+                                const char ** Url
+                                );
+
+XFS_EXTERN rc_t CC XFSGapObjectCachePath (
+                                const struct XFSGapObject * self,
+                                const char ** CachePath
+                                );
+
+XFS_EXTERN rc_t CC XFSGapObjectModTime (
+                                const struct XFSGapObject * self,
+                                KTime_t * ModTime
+                                );
+
+XFS_EXTERN rc_t CC XFSGapObjectSize (
+                                const struct XFSGapObject * self,
+                                uint64_t * Size
+                                );
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/

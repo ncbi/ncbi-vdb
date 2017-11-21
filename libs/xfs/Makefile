@@ -123,13 +123,12 @@ XFS_SRC = \
     spen    \
     xgap    \
     xgapf    \
-    xgapk   \
+    gapf    \
     gapk    \
     gapks   \
     gapka   \
     gapc   \
     gap     \
-    gapf    \
     lockdpt \
     lreader \
     access  \
@@ -137,6 +136,8 @@ XFS_SRC = \
     schwarzschraube \
     zehr    \
     mehr
+
+    # xgapk   \
 
 XFS_OBJ = \
 	$(addsuffix .$(LOBX),$(XFS_SRC))

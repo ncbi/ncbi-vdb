@@ -61,8 +61,7 @@ struct _GapNode {
 
     uint32_t project_id;
 
-    const char * accession;
-    uint32_t object_id;
+    const char * aoi;
 };
 
 struct _GapFileEditor {
@@ -128,8 +127,7 @@ XFSGapFileNodeMake (
     struct XFSNode ** Node,
     const char * Name,
     uint32_t ProjectId,
-    const char * Accession,
-    uint32_t ObjectId
+    const char * AccessionOrId
 )
 {
     rc_t RCt;
@@ -142,12 +140,10 @@ XFSGapFileNodeMake (
     XFS_CAN ( Node )
 
     if ( Name == NULL ) {
-        if ( Accession != NULL ) {
-            Name = Accession;
-        }
+        Name = AccessionOrId;
     }
 
-    if ( Accession == NULL && ObjectId == 0 ) {
+    if ( AccessionOrId == NULL ) {
         return XFS_RC ( rcInvalid );
     }
 
@@ -164,14 +160,7 @@ XFSGapFileNodeMake (
     if ( RCt == 0 ) {
         xNode -> project_id = ProjectId;
 
-        if ( Accession != NULL ) {
-            RCt = XFS_StrDup ( Accession, & ( xNode -> accession ) );
-            xNode -> object_id = 0;
-        }
-        else {
-            xNode -> accession = NULL;
-            xNode -> object_id = ObjectId;
-        }
+        RCt = XFS_StrDup ( AccessionOrId, & ( xNode -> aoi ) );
 
         if ( RCt == 0 ) {
             * Node = & ( xNode -> node );
@@ -207,14 +196,13 @@ pLogMsg ( klogDebug, "XFSGapNodeDispose ( $(node) ) TP[$(project_id)]", "node=%p
         return 0;
     }
 
-    if ( Node -> accession != NULL ) {
-        free ( ( char * ) Node -> accession );
+    if ( Node -> aoi != NULL ) {
+        free ( ( char * ) Node -> aoi );
 
-        Node -> accession = NULL;
+        Node -> aoi = NULL;
     }
 
     Node -> project_id = 0;
-    Node -> object_id = 0;
 
     free ( Node );
 
@@ -331,27 +319,15 @@ _GapFile_open_v1 (
                                                 & ( self -> Papahen )
                                                 );
     XFS_CA ( Node, NULL )
-    if ( Node -> accession == NULL && Node -> object_id == 0 ) {
-        return XFS_RC ( rcInvalid );
-    }
+    XFS_CAN ( Node -> aoi )
 
     Editor = ( struct _GapFileEditor * ) self;
     if ( Editor -> file == NULL ) {
-        if ( Node -> accession != NULL ) {
-            RCt = XFSGapFilesOpenAccession (
-                                        & File,
-                                        Node -> project_id,
-                                        Node -> accession
-                                        );
-        }
-        else {
-            RCt = XFSGapFilesOpenObjectId (
-                                        & File,
-                                        Node -> project_id,
-                                        Node -> object_id
-                                        );
-        }
-
+        RCt = XFSGapFilesOpen (
+                                & File,
+                                Node -> project_id,
+                                Node -> aoi
+                                );
         if ( RCt == 0 ) {
             Editor -> file = File;
         }
@@ -431,26 +407,9 @@ _GapFile_size_v1 (
     Node = ( struct _GapNode * ) XFSEditorNode ( & ( self -> Papahen ) );
 
     XFS_CAN ( Node )
+    XFS_CAN ( Node -> aoi )
 
-    if ( Node -> accession == NULL && Node -> object_id == 0 ) {
-        return XFS_RC ( rcInvalid );
-    }
-
-    if ( Node -> accession != NULL ) {
-        RCt = XFSGapFilesAccessionSize (
-                                        Size,
-                                        Node -> project_id,
-                                        Node -> accession
-                                        );
-    }
-    else {
-        RCt = XFSGapFilesObjectIdSize (
-                                        Size,
-                                        Node -> project_id,
-                                        Node -> object_id
-                                        );
-    }
-
+    RCt = XFSGapFilesSize ( Size, Node -> project_id, Node -> aoi );
     if ( RCt != 0 ) {
         * Size = 0;
     }
@@ -540,10 +499,7 @@ _GapAttr_permissions_v1 (
     XFS_CSAN ( Permissions )
     XFS_CAN ( Permissions )
     XFS_CAN ( Node )
-
-    if ( Node -> accession == NULL && Node -> object_id == 0 ) {
-        return XFS_RC ( rcInvalid );
-    }
+    XFS_CAN ( Node -> aoi )
 
     * Permissions = XFSPermRODefNodeChar ();
 
@@ -564,26 +520,9 @@ _GapAttr_date_v1 ( const struct XFSAttrEditor * self, KTime_t * Time )
     XFS_CSA ( Time, 0 )
     XFS_CAN ( Time )
     XFS_CAN ( Node )
+    XFS_CAN ( Node -> aoi )
 
-    if ( Node -> accession == NULL && Node -> object_id == 0 ) {
-        return XFS_RC ( rcInvalid );
-    }
-
-    if ( Node -> accession != NULL ) {
-        RCt = XFSGapFilesAccessionDate (
-                                        Time, 
-                                        Node -> project_id,
-                                        Node -> accession
-                                        );
-    }
-    else {
-        RCt = XFSGapFilesObjectIdDate (
-                                        Time, 
-                                        Node -> project_id,
-                                        Node -> object_id
-                                        );
-    }
-
+    RCt = XFSGapFilesDate ( Time, Node -> project_id, Node -> aoi );
     if ( RCt != 0 ) {
         * Time = 0;
     }
@@ -605,10 +544,7 @@ _GapAttr_type_v1 (
     XFS_CSA ( Type, kxfsNotFound )
     XFS_CAN ( Type )
     XFS_CAN ( Node )
-
-    if ( Node -> accession == NULL && Node -> object_id == 0 ) {
-        return XFS_RC ( rcInvalid );
-    }
+    XFS_CAN ( Node -> aoi )
 
     * Type = kxfsFile ;
 
@@ -747,16 +683,14 @@ _GapFileNodeConstructor (
     struct XFSNode * TheNode;
     const char * NodeName;
     uint32_t ProjectId;
-    uint32_t ObjectId;
-    const char * Accession;
+    const char * AccessionOrId;
     const char * Var;
 
     RCt = 0;
     TheNode = NULL;
     NodeName = NULL;
     ProjectId = 0;
-    ObjectId = 0;
-    Accession = NULL;
+    AccessionOrId = NULL;
     Var = NULL;
 
     if ( Node != NULL ) {
@@ -775,23 +709,27 @@ _GapFileNodeConstructor (
     }
     ProjectId = atol ( Var );
 
-    Accession = XFSModelNodeProperty ( Template, XFS_MODEL_ACCESSION );
-
-    Var = XFSModelNodeProperty ( Template, XFS_MODEL_OBJECTID );
-    if ( Var != NULL ) {
-        ObjectId = atol ( Var );
+        /* We are going to keep both values in config file : Accession
+         * and ObjectID for compatibility
+         */
+    AccessionOrId = XFSModelNodeProperty (
+                                        Template,
+                                        XFS_MODEL_ACCESSION
+                                        );
+    if ( AccessionOrId == NULL ) {
+        AccessionOrId = XFSModelNodeProperty (
+                                            Template,
+                                            XFS_MODEL_OBJECTID
+                                            );
     }
 
-    if ( Accession == NULL && ObjectId == 0 ) {
-        return XFS_RC ( rcInvalid );
-    }
+    XFS_CAN ( AccessionOrId )
 
     RCt = XFSGapFileNodeMake (
                             & TheNode,
                             NodeName,
                             ProjectId,
-                            Accession,
-                            ObjectId
+                            AccessionOrId
                             );
     if ( RCt == 0 ) {
         * Node = ( struct XFSNode * ) TheNode;
