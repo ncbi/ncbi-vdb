@@ -75,7 +75,8 @@ rc_t VSimpleProdSerial2Blob ( VSimpleProd *self, VBlob **rslt, int64_t id, uint3
 #endif
 
             rc = VBlobCreateFromData ( & y, sblob -> start_id, sblob -> stop_id,
-                & buffer, VTypedescSizeof ( & self -> dad . desc ), self->curs->pagemap_thread?&self->curs->pmpr:NULL );
+                & buffer, VTypedescSizeof ( & self -> dad . desc ),
+                VCursorPageMapProcessRequest ( self->curs ) );
             KDataBufferWhack ( & buffer );
 
             /* return on success */

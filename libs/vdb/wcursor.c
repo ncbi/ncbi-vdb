@@ -29,6 +29,7 @@
 #define TRACK_REFERENCES 0
 
 #include "cursor-priv.h"
+#include "cursor-struct.h"
 #include "dbmgr-priv.h"
 #include "linker-priv.h"
 #include "schema-priv.h"
@@ -327,7 +328,7 @@ LIB_EXPORT rc_t CC VCursorOpen ( const VCursor *cself )
 
                     int64_t first;
                     uint64_t count;
-                    
+
                     rc = VCursorIdRange ( self, 0, & first, & count );
                     if ( rc != 0 )
                     {

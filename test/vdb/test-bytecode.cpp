@@ -22,7 +22,7 @@
 //
 // ===========================================================================
 
-#include "wvdb-fixture.hpp"
+#include "WVDB_Fixture.hpp"
 
 #include <sysalloc.h>
 #include <cstdlib>

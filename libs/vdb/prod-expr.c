@@ -196,7 +196,7 @@ rc_t VProdResolveSProduction ( const VProdResolve *self, VProduction **out, cons
         {
             const char *name = sprod -> name -> name . addr;
             assert ( name [ sprod -> name -> name . size ] == 0 );
-            rc = VSimpleProdMake ( out, self -> owned, self -> curs, prodSimpleCast, 
+            rc = VSimpleProdMake ( out, self -> owned, self -> curs, prodSimpleCast,
                 name, & fd, & desc, & sprod -> cid, * out, self -> chain );
             if ( rc == 0 )
             {
@@ -339,7 +339,7 @@ rc_t VProdResolveSPhysMember ( const VProdResolve *self,
     VPhysical *phys;
 
     curs = self -> curs;
-    phys = VCursorCacheGet ( & curs -> phys, & smbr -> cid );
+    phys = VCursorCacheGet ( VCursorPhysicalColumns ( curs ), & smbr -> cid );
     if ( phys != NULL )
     {
         /* this guy should be readable, but it is not guaranteed */
@@ -349,7 +349,7 @@ rc_t VProdResolveSPhysMember ( const VProdResolve *self,
     }
 
     /* pre-fail */
-    rc = VCursorCacheSet ( & curs -> phys, & smbr -> cid, FAILED_PHYSICAL );
+    rc = VCursorCacheSet ( VCursorPhysicalColumns ( curs ), & smbr -> cid, FAILED_PHYSICAL );
     if ( rc == 0 )
     {
         /* create physical object */
@@ -362,7 +362,7 @@ rc_t VProdResolveSPhysMember ( const VProdResolve *self,
             {
                 /* set success */
                 void *ignore;
-                rc = VCursorCacheSwap ( & curs -> phys, & smbr -> cid, phys, & ignore );
+                rc = VCursorCacheSwap ( VCursorPhysicalColumns ( curs ), & smbr -> cid, phys, & ignore );
                 if ( rc == 0 )
                 {
                     * out = phys -> out;
@@ -385,7 +385,7 @@ rc_t VProdResolvePhysExpr ( const VProdResolve *self,
 {
     if ( self -> chain == chainEncoding )
     {
-        assert ( self -> curs -> read_only == false );
+        assert ( ! VCursorIsReadOnly ( self -> curs ) );
         PLOGMSG ( klogWarn, ( klogWarn, "illegal access of physical column '$(name)'"
                    , "name=%.*s"
                    , ( int ) sym -> name . size
@@ -414,7 +414,7 @@ rc_t VProdResolveFwdExpr ( const VProdResolve *self, VProduction **out,
         /* most derived table class */
         const STable *stbl = self -> stbl;
         const KSymbol *sym2 = sym;
-        
+
         sym = STableFindOverride ( stbl, ( const VCtxId* ) & sym -> u . fwd );
         if ( sym == NULL )
         {
@@ -587,7 +587,7 @@ rc_t VProdResolveExpr ( const VProdResolve *self,
         rc = VProdResolveCastExpr ( self, & prod, ( const SBinExpr* ) expr );
     assert (rc != -1);
         break;
-        
+
     case eCondExpr:
         /* run left and right expressions in order until exit condition */
         rc = VProdResolveExpr ( self, out, desc, fd, ( ( const SBinExpr* ) expr ) -> left, casting );
@@ -712,9 +712,9 @@ rc_t VProdResolveColumnRead ( const VProdResolve *self,
                       scol -> name, __func__, rc ) );
         return rc;
     }
-    
+
     /* fetch the column */
-    vcol = VCursorCacheGet ( & curs -> col, & scol -> cid );
+    vcol = VCursorCacheGet ( VCursorColumns ( curs ), & scol -> cid );
     if ( vcol == NULL )
     {
         VDB_DEBUG ( ( "failed to fetch NULL for column '%N'; no output was produced by '%s'\n",
@@ -794,11 +794,11 @@ rc_t VProdResolvePhysicalRead ( const VProdResolve *self, VPhysical *phys )
     const SPhysMember *smbr;
 
     /* a write cursor would have opened this already */
-    if ( curs -> read_only )
+    if ( VCursorIsReadOnly ( curs ) )
     {
         /* open the physical column for read */
         rc = VPhysicalOpenRead ( phys,
-            ( VSchema* ) self -> schema, curs -> tbl );
+            ( VSchema* ) self -> schema, VCursorGetTable ( curs ) );
         if ( rc != 0 )
         {
             /* trying to open a column that doesn't exist

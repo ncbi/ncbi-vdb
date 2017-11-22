@@ -33,6 +33,7 @@
 #define KONST const
 #define SKONST
 #include "cursor-priv.h"
+#include "cursor-struct.h"
 #include "dbmgr-priv.h"
 #include "linker-priv.h"
 #include "table-priv.h"
@@ -2673,32 +2674,37 @@ CHECK_AGAIN:
 
 rc_t VCursorLaunchPagemapThread(VCursor *curs)
 {
-	rc_t rc;
-
+	rc_t rc = 0;
     assert ( curs != NULL );
-	curs -> pagemap_thread = NULL; /** if fails - will not use **/
-
-    if ( s_disable_pagemap_thread )
-        return RC ( rcVDB, rcCursor, rcExecuting, rcThread, rcNotAvailable );
-
-	rc = KLockMake ( & curs -> pmpr.lock );
-	if(rc == 0)
+    if(curs->pagemap_thread == NULL)
     {
-		rc = KConditionMake ( & curs -> pmpr.cond );
-        if(rc == 0)
+        if(--curs->launch_cnt<=0)
         {
-            rc = KThreadMake ( & curs -> pagemap_thread, run_pagemap_thread, curs );
-            if ( rc == 0 )
-                return 0;
+            /* ignoring errors because we operate with or without thread */
+            curs -> pagemap_thread = NULL; /** if fails - will not use **/
 
-            KConditionRelease ( curs -> pmpr . cond );
-            curs -> pmpr . cond = NULL;
+            if ( s_disable_pagemap_thread )
+                return RC ( rcVDB, rcCursor, rcExecuting, rcThread, rcNotAvailable );
+
+            rc = KLockMake ( & curs -> pmpr.lock );
+            if(rc == 0)
+            {
+                rc = KConditionMake ( & curs -> pmpr.cond );
+                if(rc == 0)
+                {
+                    rc = KThreadMake ( & curs -> pagemap_thread, run_pagemap_thread, curs );
+                    if ( rc == 0 )
+                        return 0;
+
+                    KConditionRelease ( curs -> pmpr . cond );
+                    curs -> pmpr . cond = NULL;
+                }
+
+                KLockRelease ( curs -> pmpr . lock );
+                curs -> pmpr . lock = NULL;
+            }
         }
-
-        KLockRelease ( curs -> pmpr . lock );
-        curs -> pmpr . lock = NULL;
     }
-
 	return rc;
 }
 
@@ -2934,4 +2940,71 @@ LIB_EXPORT rc_t CC VCursorFindNextRowIdDirect ( const VCursor *self, uint32_t id
     }
 
     return rc;
+}
+
+const PageMapProcessRequest* VCursorPageMapProcessRequest(const struct VCursor *self)
+{
+    assert ( self != NULL );
+    return self->pagemap_thread ? &self->pmpr : NULL;
+}
+
+const struct VTable * VCursorGetTable ( const struct VCursor * self )
+{
+    assert ( self != NULL );
+    return self -> tbl;
+}
+
+bool VCursorCacheActive ( const struct VCursor * self, int64_t * cache_empty_end )
+{
+    assert ( self != NULL );
+    assert ( cache_empty_end != NULL );
+    if ( self -> cache_curs && self -> cache_col_active )
+    {
+        * cache_empty_end = self -> cache_empty_end;
+        return true;
+    }
+    * cache_empty_end = 0;
+    return false;
+}
+
+VCursorCache * VCursorPhysicalColumns ( struct VCursor * self )
+{
+    assert ( self != NULL );
+    return & self -> phys;
+}
+
+VCursorCache * VCursorColumns ( struct VCursor * self )
+{
+    assert ( self != NULL );
+    return & self -> col;
+}
+
+Vector * VCursorTriggers ( struct VCursor * self )
+{
+    assert ( self != NULL );
+    return & self -> trig;
+}
+
+bool VCursorIsReadOnly ( const struct VCursor * self )
+{
+    assert ( self != NULL );
+    return self -> read_only;
+}
+
+VBlobMRUCache * VCursorGetBlobMruCache ( struct VCursor * self )
+{
+    assert ( self != NULL );
+    return self -> blob_mru_cache;
+}
+
+uint32_t VCursorIncrementPhysicalProductionCount ( struct VCursor * self )
+{
+    assert ( self != NULL );
+    return ++ self -> phys_cnt;
+}
+
+Vector * VCursorGetRow ( struct VCursor * self )
+{
+    assert ( self != NULL );
+    return & self -> row;
 }

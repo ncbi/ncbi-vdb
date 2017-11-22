@@ -38,7 +38,10 @@ TEST_TOOLS = \
 	test-VDB-3060 \
 	test-VDB-3061 \
 	test-bytecode \
-	test-view
+	test-view \
+	test-tablecursor
+
+#	test-VDB-3418
 
 include $(TOP)/build/Makefile.env
 
@@ -288,3 +291,25 @@ $(TEST_BINDIR)/test-view: $(VDB_VIEW_OBJ)
 view: test-view
 	$(TEST_BINDIR)/test-view
 
+VDB-3418: test-VDB-3418
+	$(TEST_BINDIR)/test-VDB-3418
+
+#-------------------------------------------------------------------------------
+# test-tablecursor
+#
+TEST_TABLECURSOR_SRC = \
+	test-tablecursor
+
+TEST_TABLECURSOR_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_TABLECURSOR_SRC))
+
+TEST_TABLECURSOR_LIB = \
+	-skapp \
+	-sktst \
+	-sncbi-wvdb
+
+$(TEST_BINDIR)/test-tablecursor: $(TEST_TABLECURSOR_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_TABLECURSOR_LIB)
+
+tcur: test-tablecursor
+	$(TEST_BINDIR)/$^

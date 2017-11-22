@@ -22,6 +22,7 @@
 //
 // ===========================================================================
 
+
 #include <klib/log.h>
 
 #include <vdb/table.h>
@@ -33,12 +34,12 @@
 #include <kdb/meta.h>
 #include <kdb/table.h>
 
+#include "WVDB_Fixture.hpp"
+
 #include <sysalloc.h>
 
 #include <sstream>
 #include <cstdlib>
-
-#include "wvdb-fixture.hpp"
 
 using namespace std;
 

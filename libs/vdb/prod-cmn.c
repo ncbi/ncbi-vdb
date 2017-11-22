@@ -242,17 +242,11 @@ rc_t VSimpleProdSerial2Blob ( VSimpleProd *self, VBlob **rslt, int64_t id, uint3
             /* create a new, fluffy blob having rowmap and headers */
             VBlob *y;
 #if LAUNCH_PAGEMAP_THREAD
-            if(self->curs->pagemap_thread == NULL){
-                VCursor *curs = (VCursor*) self->curs;
-                if(--curs->launch_cnt<=0){
-                    /* ignoring errors because we operate with or without thread */
-                    VCursorLaunchPagemapThread(curs);
-                }
-            }
+            VCursorLaunchPagemapThread ( (VCursor*) self -> curs );
 #endif
 
             rc = VBlobCreateFromData ( & y, sblob -> start_id, sblob -> stop_id,
-                & buffer, VTypedescSizeof ( & self -> dad . desc ), self->curs->pagemap_thread?&self->curs->pmpr:NULL );
+                & buffer, VTypedescSizeof ( & self -> dad . desc ), VCursorPageMapProcessRequest( self -> curs ) );
             KDataBufferWhack ( & buffer );
 
             /* return on success */
@@ -369,7 +363,7 @@ rc_t VFunctionProdMake ( VFunctionProd **prodp, Vector *owned,
             VectorInit ( & prod -> parms, 0, 4 );
         else
         {
-            SDatatype *dt = VSchemaFindTypeid ( curs -> schema, fd -> td . type_id );
+            SDatatype *dt = VSchemaFindTypeid ( VCursorGetSchema ( curs ), fd -> td . type_id );
             assert ( dt != NULL );
             prod -> u . bswap = dt -> byte_swap;
             VectorInit ( & prod -> parms, 0, 1 );
@@ -632,13 +626,14 @@ rc_t VFunctionProdCallRowFunc1( VFunctionProd *self, VBlob **prslt, int64_t row_
     bool function_failed = false;
     bool window_resized = false;
 
-    if(self->curs->cache_curs && self->curs->cache_col_active){
-        /*** since cache_cursor exist, trying to avoid prefetching data which is in cache cursor ***/
-		row_id_max = self->curs->cache_empty_end;
+    if ( VCursorCacheActive ( self -> curs, & row_id_max ) )
+    {   /*** since cache_cursor exist, trying to avoid prefetching data which is in cache cursor ***/
 		max_blob_regroup=256;
-    } else {
+    } else
+    {
 		max_blob_regroup=1024;
     }
+
 	if(self->dad.sub == vftRowFast)
     {
 		window = max_blob_regroup;
@@ -961,7 +956,7 @@ rc_t VFunctionProdCallPageFunc( VFunctionProd *self, VBlob **rslt, int64_t id,
 
 
         if(b->pm == NULL){
-            rc=PageMapProcessGetPagemap(&self->curs->pmpr,(PageMap**)(&b->pm));
+            rc=PageMapProcessGetPagemap( VCursorPageMapProcessRequest ( self -> curs ) ,(PageMap**)(&b->pm));
             if(rc != 0) return rc;
         }
 
@@ -1349,7 +1344,7 @@ rc_t VFunctionProdCallBlobNFunc( VFunctionProd *self, VBlob **rslt,
 	for(i=0;i<argc;i++){
 		VBlob const *vb=argv[i];
 		if(vb->pm == NULL){
-			rc=PageMapProcessGetPagemap(&self->curs->pmpr,(PageMap**)(&vb->pm));
+			rc=PageMapProcessGetPagemap( VCursorPageMapProcessRequest ( self -> curs ),(PageMap**)(&vb->pm));
 			if(rc != 0) return rc;
 		}
 	}
@@ -1824,7 +1819,7 @@ static rc_t VFunctionProdReadNormal ( VFunctionProd *self, VBlob **vblob, int64_
     info . schema = curs -> schema;
 #endif
 #if VTABLE_PASSED_TO_XFORM
-    info . tbl = curs -> tbl;
+    info . tbl = VCursorGetTable ( curs );
 #endif
 #if VPRODUCTION_PASSED_TO_XFORM
     info . prod = & self -> dad;

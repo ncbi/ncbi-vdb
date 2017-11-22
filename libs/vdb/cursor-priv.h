@@ -85,6 +85,7 @@ struct SColumn;
 struct VColumn;
 struct VPhysical;
 struct VView;
+struct VCursor;
 
 /*--------------------------------------------------------------------------
  * VCursorCache
@@ -146,98 +147,6 @@ enum
     vfBgErr,
     vfExit
 };
-
-
-struct VCursor
-{
-    /* row id */
-    int64_t row_id;
-
-    /* half-closed page range */
-    int64_t start_id, end_id;
-
-    /* starting id for flush */
-    volatile int64_t flush_id;
-
-    /* attached reference to table */
-    struct VTable KONST *tbl;
-
-    /* cursor-specific schema and table */
-    struct VSchema SKONST *schema;
-    struct STable SKONST *stbl;
-
-    /* background flush thread objects */
-    int64_t launch_cnt;
-    struct KThread *flush_thread;
-    struct KLock *flush_lock;
-    struct KCondition *flush_cond;
-
-    /* background pagemap conversion objects */
-    struct KThread *pagemap_thread;
-    PageMapProcessRequest pmpr;
-
-    /* user data */
-    void *user;
-    void ( CC * user_whack ) ( void *data );
-
-    /* external named cursor parameters */
-    BSTree named_params;
-
-    /* linked cursors */
-    BSTree linked_cursors;
-
-    /* read-only blob cache */
-    VBlobMRUCache *blob_mru_cache;
-
-    /* external row of VColumn* by ord ( owned ) */
-    Vector row;
-
-    Vector v_cache_curs;
-    Vector v_cache_cidx;
-    /** trying to prevent forward prefetch on rows which are cached ***/
-    bool    cache_col_active;
-    int64_t cache_empty_start; /** first rowid where cache is detected to be empty **/
-    int64_t cache_empty_end;   /** last  rowid  **/
-
-    /* column objects by cid ( not-owned ) */
-    VCursorCache col;
-
-    /* physical columns by cid ( owned ) */
-    VCursorCache phys;
-    uint32_t phys_cnt;
-
-    /* productions by cid ( not-owned ) */
-    VCursorCache prod;
-
-    /* intermediate productions ( owned ) */
-    Vector owned;
-
-    /* trigger productions ( not-owned ) */
-    Vector trig;
-
-    KRefcount refcount;
-
-    volatile uint32_t flush_cnt;
-
-    /* foreground state */
-    uint8_t state;
-
-    /* flush_state */
-    volatile uint8_t flush_state;
-
-    bool read_only;
-
-    /* support for sradb-v1 API */
-    bool permit_add_column;
-    bool permit_post_open_add;
-    /* support suspension of schema-declared triggers **/
-    bool suspend_triggers;
-    /* cursor used in sub-selects */
-    bool is_sub_cursor;
-    /* cursor for VDB columns located in separate db.tbl ***/
-    const struct VCursor* cache_curs;
-};
-
 
 /* Make
  */
@@ -314,7 +223,23 @@ rc_t VCursorCloseRowRead ( struct VCursor *self );
 /** pagemap supporting thread **/
 rc_t VCursorLaunchPagemapThread(struct VCursor *self);
 rc_t VCursorTerminatePagemapThread(struct VCursor *self);
+const PageMapProcessRequest* VCursorPageMapProcessRequest(const struct VCursor *self);
 
+const struct VTable * VCursorGetTable ( const struct VCursor * self );
+
+bool VCursorCacheActive ( const struct VCursor * self, int64_t * cache_empty_end );
+
+VCursorCache * VCursorPhysicalColumns ( struct VCursor * self );
+VCursorCache * VCursorColumns ( struct VCursor * self );
+Vector * VCursorTriggers ( struct VCursor * self );
+
+bool VCursorIsReadOnly ( const struct VCursor * self );
+
+VBlobMRUCache * VCursorGetBlobMruCache ( struct VCursor * self );
+
+uint32_t VCursorIncrementPhysicalProductionCount ( struct VCursor * curs );
+
+Vector * VCursorGetRow ( struct VCursor * self );
 
 #ifdef __cplusplus
 }

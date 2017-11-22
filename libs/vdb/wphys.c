@@ -95,7 +95,7 @@ void CC VPhysicalWhack ( void *item, void *ignore )
         {
             rc_t rc;
             VCursor *curs = self -> curs;
-            VTable *tbl = curs -> tbl;
+            VTable *tbl = ( VTable * ) VCursorGetTable ( curs );
 
             const String *name = & self -> smbr -> name -> name;
 
@@ -341,7 +341,7 @@ rc_t VPhysicalOpenWrite ( VPhysical *self, VSchema *schema, const VTable *tbl )
     rc_t rc = KTableOpenColumnUpdate ( tbl -> ktbl, & self -> kcol,
         "%.*s", ( int ) name -> name . size - 1, name -> name . addr + 1 );
     if ( rc == 0 )
-    { 
+    {
         /* open its metadata */
         rc = KColumnOpenMetadataUpdate ( self -> kcol, & self -> meta );
         if ( rc == 0 )
@@ -395,7 +395,7 @@ rc_t VPhysicalCreateStatic ( VPhysical *self, const VBlob *vblob )
     const String *name;
 
     VCursor *curs = self -> curs;
-    VTable *tbl = curs -> tbl;
+    const VTable *tbl = VCursorGetTable ( curs );
 
     KMDataNode *col_node = tbl -> col_node;
     assert ( col_node != NULL );
@@ -409,7 +409,7 @@ rc_t VPhysicalCreateStatic ( VPhysical *self, const VBlob *vblob )
         /* type */
         char typedecl [ 256 ];
         rc = VTypedeclToText ( & self -> smbr -> td,
-            curs -> schema, typedecl, sizeof typedecl );
+            VCursorGetSchema ( curs ), typedecl, sizeof typedecl );
         if ( rc == 0 )
             rc = KMDataNodeWriteAttr ( self -> knode, "type", typedecl );
         if ( rc == 0 )
@@ -439,7 +439,7 @@ rc_t VPhysicalCreateStatic ( VPhysical *self, const VBlob *vblob )
                         else
                         {
                             /* find the datatype for static column */
-                            const SDatatype *dt = VSchemaFindTypeid ( curs -> schema,
+                            const SDatatype *dt = VSchemaFindTypeid ( VCursorGetSchema ( curs ),
                                 self -> smbr -> td . type_id );
                             assert ( dt != NULL );
 
@@ -499,7 +499,7 @@ rc_t VPhysicalCreateStatic ( VPhysical *self, const VBlob *vblob )
             self -> fixed_len = PageMapGetIdxRowInfo ( vblob -> pm, 0, NULL, NULL );
         }
     }
-    
+
     return rc;
 }
 
@@ -509,8 +509,9 @@ rc_t VPhysicalCreateKColumn ( VPhysical *self )
     rc_t rc;
     VCursor *curs = self -> curs;
     const SPhysMember *smbr = self -> smbr;
-    VTable *tbl = curs -> tbl;
+    const VTable *tbl = VCursorGetTable ( curs );
     const String *name = & smbr -> name -> name;
+    const VSchema * schema = VCursorGetSchema ( curs );
 
     /* check for static designation */
     if ( smbr -> stat )
@@ -521,7 +522,7 @@ rc_t VPhysicalCreateKColumn ( VPhysical *self )
 
     /* create physical column */
     rc = KTableCreateColumn ( tbl -> ktbl, & self -> kcol,
-        ( KCreateMode ) tbl -> cmode, ( KChecksum ) tbl -> checksum, tbl -> pgsize, 
+        ( KCreateMode ) tbl -> cmode, ( KChecksum ) tbl -> checksum, tbl -> pgsize,
         "%.*s.tmp", ( int ) name -> size - 1, name -> addr + 1 );
     if ( rc == 0 )
     {
@@ -532,7 +533,7 @@ rc_t VPhysicalCreateKColumn ( VPhysical *self )
             /* print typedecl */
             char buffer [ 256 ];
             rc = VTypedeclToText ( & smbr -> td,
-                curs -> schema, buffer, sizeof buffer );
+                schema, buffer, sizeof buffer );
             if ( rc == 0 )
             {
                 /* create schema node */
@@ -556,7 +557,7 @@ rc_t VPhysicalCreateKColumn ( VPhysical *self )
                                 td . dim = 1;
                                 */
                                 rc = VTypedeclToText ( & smbr -> td,
-                                    curs -> schema, buffer, sizeof buffer );
+                                    schema, buffer, sizeof buffer );
                             }
                         }
                         else
@@ -564,7 +565,7 @@ rc_t VPhysicalCreateKColumn ( VPhysical *self )
                             size_t num_writ;
 
                             /* get physical type expression */
-                            rc = VSchemaToText ( curs -> schema,
+                            rc = VSchemaToText ( schema,
                                 buffer, sizeof buffer, & num_writ, "%E", smbr -> type );
                             if ( rc == 0 )
                             {
@@ -573,7 +574,7 @@ rc_t VPhysicalCreateKColumn ( VPhysical *self )
                                 if ( rc == 0 )
                                 {
                                     const SPhysical *sphys = ( ( const SPhysEncExpr* ) smbr -> type ) -> phys;
-                                    rc = VSchemaToText ( curs -> schema,
+                                    rc = VSchemaToText ( schema,
                                         buffer, sizeof buffer, & num_writ, "%N%V",
                                         sphys -> name, sphys -> version );
                                     if ( rc == 0 )
@@ -584,7 +585,7 @@ rc_t VPhysicalCreateKColumn ( VPhysical *self )
                     }
                     if ( rc == 0 )
                     {
-                        rc = VSchemaDump ( curs -> schema, sdmCompact, buffer,
+                        rc = VSchemaDump ( schema, sdmCompact, buffer,
                            ( rc_t ( CC * ) ( void*, const void*, size_t ) ) KMDataNodeAppend, schema_node );
                         if ( rc == 0 )
                         {
@@ -696,7 +697,7 @@ rc_t VPhysicalConvertStatic ( VPhysical *self )
                     TRACK_BLOB ( VBlobRelease, vblob );
                     ( void ) VBlobRelease ( vblob );
                 }
-            
+
                 /* release the blob from static */
                 TRACK_BLOB ( VBlobRelease, self -> in -> cache [ 0 ] );
                 ( void ) VBlobRelease ( self -> in -> cache [ 0 ] );
@@ -710,7 +711,7 @@ rc_t VPhysicalConvertStatic ( VPhysical *self )
         {
             const String *name;
             VCursor *curs = self -> curs;
-            VTable *tbl = curs -> tbl;
+            const VTable *tbl = VCursorGetTable ( curs );
 
             /* tear down static */
             KMDataNodeRelease ( self -> knode );
@@ -732,7 +733,7 @@ static
 rc_t KMDataNodeWriteId ( KMDataNode *self, int64_t id )
 {
     int32_t i32;
-    
+
     if ( id >= -128 && id < 128 )
     {
         int8_t i8 = ( int8_t ) id;
@@ -743,11 +744,11 @@ rc_t KMDataNodeWriteId ( KMDataNode *self, int64_t id )
         int16_t i16 = ( int16_t ) id;
         return KMDataNodeWriteB16 ( self, & i16 );
     }
-    
+
     i32 = ( int32_t ) id;
     if ( ( int64_t ) i32 == id )
         return KMDataNodeWriteB32 ( self, & i32 );
-    
+
     return KMDataNodeWriteB64 ( self, & id );
 }
 

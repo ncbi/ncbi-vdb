@@ -36,7 +36,7 @@
 
 #include <ktst/unit_test.hpp> // TEST_CASE
 
-#include "wvdb-fixture.hpp"
+#include "WVDB_Fixture.hpp"
 
 using namespace std;
 using namespace ncbi :: SchemaParser;
