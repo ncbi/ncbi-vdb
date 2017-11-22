@@ -76,7 +76,7 @@ rc_t VProdResolveColumn ( const VProdResolve *self,
         return RC(rcVDB, rcCursor, rcOpening, rcSchema, rcInvalid);
     }
     /* read-only cursor may add columns from schema */
-    vcol = VCursorCacheGet ( & curs -> col, & scol -> cid );
+    vcol = VCursorCacheGet ( VCursorColumns ( curs ), & scol -> cid );
     if ( vcol == NULL )
     {
         rc = VCursorMakeColumn ( curs, & vcol, scol, self -> cx_bind );
@@ -84,19 +84,19 @@ rc_t VProdResolveColumn ( const VProdResolve *self,
             return rc;
 
 #if OPEN_COLUMN_ALTERS_ROW
-        rc = VectorAppend ( & curs -> row, & vcol -> ord, vcol );
+        rc = VectorAppend ( VCursorGetRow ( curs ), & vcol -> ord, vcol );
         if ( rc != 0 )
         {
             VColumnWhack ( vcol, NULL );
             return rc;
         }
 #endif
-        rc = VCursorCacheSet ( & curs -> col, & scol -> cid, vcol );
+        rc = VCursorCacheSet ( VCursorColumns ( curs ), & scol -> cid, vcol );
         if ( rc != 0 )
         {
 #if OPEN_COLUMN_ALTERS_ROW
             void *ignore;
-            VectorSwap ( & curs -> row, vcol -> ord, NULL, & ignore );
+            VectorSwap ( VCursorGetRow ( curs ), vcol -> ord, NULL, & ignore );
             vcol -> ord = 0;
 #endif
             VColumnWhack ( vcol, NULL );

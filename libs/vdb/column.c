@@ -62,8 +62,8 @@ void CC VColumnWhack ( void *item, void *data )
     /* remove from cursor */
     if ( curs != NULL )
     {
-        VectorSwap ( & curs -> row, self -> ord, NULL, & item );
-        VCursorCacheSwap ( & curs -> col, & self -> scol -> cid, NULL, & item );
+        VectorSwap ( VCursorGetRow ( curs ), self -> ord, NULL, & item );
+        VCursorCacheSwap ( VCursorColumns ( curs ), & self -> scol -> cid, NULL, & item );
     }
 
     VColumnDestroy ( self );
