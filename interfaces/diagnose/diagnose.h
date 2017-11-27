@@ -245,17 +245,19 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseAdvanced ( KDiagnose * self, uint64_t tests );
 
 #define KDIAGN_ACCESS_NCBI_WWW         0x40
 #define KDIAGN_ACCESS_NCBI_FTP         0x80
-#define KDIAGN_CGI                    0x100
+#define KDIAGN_CGI_HTTP               0x100
+#define KDIAGN_CGI_ASCP               0x200
 
-#define KDIAGN_DOWNLOAD               0x200
+#define KDIAGN_DOWNLOAD_HTTP          0x400
+#define KDIAGN_DOWNLOAD_ASCP          0x800
 
-#define KDIAGN_HTTP                   0x400
-#define KDIAGN_ASCP                   0x800
-#define KDIAGN_REQUIRE_HTTP_AND_ASCP 0x1000
+#define KDIAGN_HTTP                  0x1000
+#define KDIAGN_ASCP                  0x2000
+#define KDIAGN_REQUIRE_HTTP_AND_ASCP 0x4000
 
-#define KDIAGN_TRY_TO_WARN           0x2000
+#define KDIAGN_TRY_TO_WARN           0x8000
 
-#define KDIAGN_AS_IS                 0x4000
+#define KDIAGN_AS_IS                0x10000
 
 #define KDIAGN_KFG_NO_GAP ( KDIAGN_REPO_REMOTE | KDIAGN_REPO_SITE | \
                             KDIAGN_REPO_USER  | KDIAGN_KFG_ASCP )
@@ -264,7 +266,8 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseAdvanced ( KDiagnose * self, uint64_t tests );
 
 #define KDIAGN_ACCESS_NCBI ( KDIAGN_ACCESS_NCBI_WWW | KDIAGN_ACCESS_NCBI_FTP )
 
-#define KDIAGN_NETWORK ( KDIAGN_ACCESS_NCBI | KDIAGN_CGI )
+#define KDIAGN_NETWORK ( KDIAGN_ACCESS_NCBI | \
+                         KDIAGN_CGI_HTTP | KDIAGN_CGI_ASCP )
 
 #define KDIAGN_ALL                  ( ~ KDIAGN_FAIL )
 

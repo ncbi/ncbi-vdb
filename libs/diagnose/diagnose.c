@@ -1512,7 +1512,7 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
     return rc;
 }
 
-static rc_t STestCheckHttpUrl ( STest * self, const Data * data,
+static rc_t STestCheckHttpUrl ( STest * self, uint64_t tests, const Data * data,
     const char * cache, uint64_t * cacheSize,
     bool print, const char * exp, size_t esz )
 {
@@ -1580,7 +1580,7 @@ static rc_t STestCheckHttpUrl ( STest * self, const Data * data,
                 STestEnd ( self, eEndFAIL, "%R", rc );
         }
     }
-    if ( rc == 0 ) {
+    if ( rc == 0 && tests & KDIAGN_DOWNLOAD_HTTP ) {
         KStream * stream = NULL;
         rc = KHttpResultGetInputStream ( rslt, & stream );
         if ( rc != 0 )
@@ -1621,7 +1621,9 @@ static bool DataIsAccession ( const Data * self ) {
         return self -> acc -> size != 0;
 }
 
-static rc_t STestCheckVfsUrl ( STest * self, const Data * data, bool warn ) {
+static
+rc_t STestCheckVfsUrl ( STest * self, const Data * data, bool warn )
+{
     rc_t rc = 0;
 
     const KDirectory * d = NULL;
@@ -1655,18 +1657,19 @@ static rc_t STestCheckVfsUrl ( STest * self, const Data * data, bool warn ) {
     return rc;
 }
 
-static rc_t STestCheckUrlImpl ( STest * self, const Data * data,
+static rc_t STestCheckUrlImpl ( STest * self, uint64_t tests, const Data * data,
     const char * cache, uint64_t * cacheSize,
     bool print, const char * exp, size_t esz )
 {
-    rc_t rc = STestCheckHttpUrl ( self, data,
+    rc_t rc = STestCheckHttpUrl ( self, tests, data,
                                   cache, cacheSize, print, exp, esz );
     rc_t r2 = STestCheckVfsUrl  ( self, data, cacheSize == 0 );
     return rc != 0 ? rc : r2;
 }
 
-static rc_t STestCheckUrl ( STest * self, const Data * data, const char * cache,
-    uint64_t * cacheSize, bool print, const char * exp, size_t esz )
+static rc_t STestCheckUrl ( STest * self, uint64_t tests, const Data * data,
+    const char * cache, uint64_t * cacheSize, bool print,
+    const char * exp, size_t esz )
 {
     rc_t rc = 0;
 
@@ -1683,7 +1686,8 @@ static rc_t STestCheckUrl ( STest * self, const Data * data, const char * cache,
     if ( path . size == 0 ) /* does not exist */
         return 0;
 
-    return STestCheckUrlImpl ( self, data, cache, cacheSize, print, exp, esz );
+    return STestCheckUrlImpl ( self,
+                               tests, data, cache, cacheSize, print, exp, esz );
 }
 
 static String * KConfig_Resolver ( const KConfig * self ) {
@@ -2708,7 +2712,7 @@ static rc_t STestCheckNcbiAccess ( STest * self, uint64_t tests ) {
         CONST_STRING ( & www, "www.ncbi.nlm.nih.gov" );
 
         {
-            rc_t r1 = STestKNSManagerInitDNSEndpoint ( self, & www, 80 , false );
+            rc_t r1 = STestKNSManagerInitDNSEndpoint ( self, & www, 80, false );
             if ( rc == 0 && r1 != 0 )
                 rc = r1;
         }
@@ -2732,7 +2736,7 @@ static rc_t STestCheckNcbiAccess ( STest * self, uint64_t tests ) {
                             "/sra/sdk/current/sratoolkit.current.version" );
             if ( r1 == 0 ) {
                 uint64_t s = 0;
-                r1 = STestCheckUrl ( self, & v, "", & s, true, 0, 0 );
+                r1 = STestCheckUrl ( self, tests, & v, "", & s, true, 0, 0 );
             }
             DataFini ( & v );
         }
@@ -2912,12 +2916,72 @@ static rc_t STestCheckHttp ( STest * self, uint64_t tests, const String * acc,
     Abuse test;
     AbuseInit ( & test );
     STestStart ( self, true, "HTTPS access to '%S'", acc );
-    rc = STestCallCgi ( self, acc, response, sizeof response,
-                        & resp_len, & url, & test, true );
+    if ( tests & KDIAGN_CGI_HTTP )
+        rc = STestCallCgi ( self, acc, response, sizeof response,
+                            & resp_len, & url, & test, true );
     AbuseFini ( & test );
-    if ( tests & KDIAGN_DOWNLOAD ) {
+
+    if ( rc == 0 ) {
+        rc = STestCache ( self, acc, downloaded, sDownloaded, "http" );
+        if ( rc != 0 )
+            STestFail ( self, rc, "Cannot find cache location" );
+    }
+    if ( rc == 0 && url != NULL ) {
+        char * p = string_chr ( url, resp_len - ( url - response ), '|' );
+        if ( p == NULL ) {
+            rc = RC ( rcRuntime,
+                        rcString ,rcParsing, rcString, rcIncorrect );
+            STestFail ( self, rc, "UNEXPECTED RESOLVER RESPONSE" );
+            failed = true;
+        }
+        else {
+            Data dt;
+            * p = '\0';
+            rc = DataInit ( & dt, self -> vmgr, url );
+            if ( rc == 0 ) {
+                rc_t r1 = STestCheckUrl ( self, tests, & dt,
+                    downloaded, downloadedSize, print, exp, esz );
+                if ( rc == 0 && r1 != 0 ) {
+                    assert ( downloaded );
+                    * downloaded = '\0';
+                    rc = r1;
+                }
+            }
+            DataFini ( & dt );
+        }
+    }
+
+    if ( ! failed ) {
+        if ( rc == 0 )
+            rc = STestEnd ( self, eOK,  "HTTPS access to '%S'", acc );
+        else if ( _RcCanceled ( rc ) )
+            STestEnd ( self, eCANCELED, "HTTPS access to '%S': CANCELED", acc );
+        else
+            STestEnd ( self, eFAIL,     "HTTPS access to '%S'", acc );
+    }
+    return rc;
+}
+
+static rc_t STestCheckFasp ( STest * self, uint64_t tests, const String * acc,
+    bool print, char * downloaded, size_t sDownloaded,
+    uint64_t * downloadedSize, const char * exp, size_t esz )
+{
+    rc_t rc = 0;
+    char response [ 4096 ] = "";
+    size_t resp_len = 0;
+    const char * url = NULL;
+    bool failed = false;
+    Abuse test;
+    AbuseInit ( & test );
+    STestStart ( self, true, "Aspera access to '%S'", acc );
+    if ( tests & KDIAGN_CGI_ASCP )
+        rc = STestCallCgi ( self, acc, response, sizeof response,
+                            & resp_len, & url, & test, false );
+    AbuseFini ( & test );
+
+    if ( tests & KDIAGN_DOWNLOAD_ASCP ) {
         if ( rc == 0 ) {
-            rc = STestCache ( self, acc, downloaded, sDownloaded, "http" );
+            rc = STestCache ( self, acc, downloaded, sDownloaded, "fasp" );
             if ( rc != 0 )
                 STestFail ( self, rc, "Cannot find cache location" );
         }
@@ -2934,8 +2998,8 @@ static rc_t STestCheckHttp ( STest * self, uint64_t tests, const String * acc,
                 * p = '\0';
                 rc = DataInit ( & dt, self -> vmgr, url );
                 if ( rc == 0 ) {
-                    rc_t r1 = STestCheckUrl ( self, & dt,
-                        downloaded, downloadedSize, print, exp, esz );
+                    rc_t r1 = STestCheckFaspDownload ( self, url, downloaded,
+                                                       downloadedSize );
                     if ( rc == 0 && r1 != 0 ) {
                         assert ( downloaded );
                         * downloaded = '\0';
@@ -2946,60 +3010,7 @@ static rc_t STestCheckHttp ( STest * self, uint64_t tests, const String * acc,
             }
         }
     }
-    if ( ! failed ) {
-        if ( rc == 0 )
-            rc = STestEnd ( self, eOK,  "HTTPS access to '%S'", acc );
-        else if ( _RcCanceled ( rc ) )
-            STestEnd ( self, eCANCELED, "HTTPS access to '%S': CANCELED", acc );
-        else
-            STestEnd ( self, eFAIL,     "HTTPS access to '%S'", acc );
-    }
-    return rc;
-}
 
-static rc_t STestCheckFasp ( STest * self, const String * acc, bool print,
-    char * downloaded, size_t sDownloaded, uint64_t * downloadedSize,
-    const char * exp, size_t esz )
-{
-    rc_t rc = 0;
-    char response [ 4096 ] = "";
-    size_t resp_len = 0;
-    const char * url = NULL;
-    bool failed = false;
-    Abuse test;
-    AbuseInit ( & test );
-    STestStart ( self, true, "Aspera access to '%S'", acc );
-    rc = STestCallCgi ( self, acc, response, sizeof response,
-                        & resp_len, & url, & test, false );
-    AbuseFini ( & test );
-    if ( rc == 0 ) {
-        rc = STestCache ( self, acc, downloaded, sDownloaded, "fasp" );
-        if ( rc != 0 )
-            STestFail ( self, rc, "Cannot find cache location" );
-    }
-    if ( rc == 0 && url != NULL ) {
-        char * p = string_chr ( url, resp_len - ( url - response ), '|' );
-        if ( p == NULL ) {
-            rc = RC ( rcRuntime, rcString ,rcParsing, rcString, rcIncorrect );
-            STestFail ( self, rc, "UNEXPECTED RESOLVER RESPONSE" );
-            failed = true;
-        }
-        else {
-            Data dt;
-            * p = '\0';
-            rc = DataInit ( & dt, self -> vmgr, url );
-            if ( rc == 0 ) {
-                rc_t r1 = STestCheckFaspDownload ( self, url, downloaded,
-                                                   downloadedSize );
-                if ( rc == 0 && r1 != 0 ) {
-                    assert ( downloaded );
-                    * downloaded = '\0';
-                    rc = r1;
-                }
-            }
-            DataFini ( & dt );
-        }
-    }
     if ( ! failed ) {
         if ( rc == 0 )
             rc = STestEnd ( self, eOK,  "Aspera access to '%S'", acc );
@@ -3843,7 +3854,7 @@ static rc_t CC STestRun ( STest * self, uint64_t tests,
             if ( r1 == 0 && r2 != 0 )
                 r1 = r2;
         }
-        if ( tests & KDIAGN_CGI && ! _RcCanceled ( r1 ) ) {
+        if ( tests & KDIAGN_HTTP && ! _RcCanceled ( r1 ) ) {
             rc_t r2 = 0;
             STestStart ( self, true,        "HTTPS download" );
             r2 = STestCheckHttp ( self, tests, & run, false, http, sizeof http,
@@ -3859,12 +3870,12 @@ static rc_t CC STestRun ( STest * self, uint64_t tests,
             if ( r1 == 0 && r2 != 0 )
                 r1 = r2;
         }
-        if ( tests & KDIAGN_ALL/*DIAGNOSE_NETWORK_ASPERA*/ && ! _RcCanceled ( r1 ) ) {
+        if ( tests & KDIAGN_ASCP && ! _RcCanceled ( r1 ) ) {
             rc_t r2 = 0;
             char fasp [ PATH_MAX ] = "";
             uint64_t faspSize = 0;
             STestStart ( self, true,        "Aspera download" );
-            r2 = STestCheckFasp ( self, & run, false, fasp, sizeof fasp,
+            r2 = STestCheckFasp ( self, tests, & run, false, fasp, sizeof fasp,
                                   & faspSize, exp, sizeof exp - 1 );
             if ( r2 == 0 )
                 r2 = STestEnd ( self, eOK,      "Aspera download" );
@@ -3914,112 +3925,10 @@ static rc_t CC STestRun ( STest * self, uint64_t tests,
             rc = r1;
     }
 
-#if 0
-    if ( tests & DIAGNOSE_CONFIG ) {
-        rc_t r1 = 0;
-        STestStart ( & t, true, "Configuration" );
-        STestStart ( & t, false, "node" );
-        STestEndOr ( & t, & r1, eEndOK, "OK" );
-        if ( r1 == 0 )
-            r1 = STestEnd ( & t, eOK, "Configuration" );
-        else {
-            if ( _RcCanceled ( r1 ) )
-                STestEnd ( & t, eCANCELED, "Configuration: CANCELED" );
-            else
-                STestEnd ( & t, eFAIL, "Configuration" );
-        }
-        if ( rc == 0 && r1 != 0 )
-            rc = r1;
-    }
-#endif
-#if 0
-    if ( tests & DIAGNOSE_NETWORK && ! _RcCanceled ( rc ) ) {
-        rc_t r1 = 0;
-        STestStart ( & t, true, "Network" );
-#if 0
-        {
-#undef  HOST
-#define HOST "www.ncbi.nlm.nih.gov"
-            String h;
-            Data d;
-            CONST_STRING ( & h, HOST );
-            r2 = DataInit ( & d, self -> vmgr, "https://" HOST );
-            if ( r2 == 0 )
-                r2 = _STestCheckNetwork ( & t, & d, 0, 0,
-                                         NULL, "Access to '%S'", & h );
-            if ( r1 == 0 )
-                r1 = r2;
-            DataFini ( & d );
-        }
-        {
-#undef  HOST
-#define HOST "sra-download.ncbi.nlm.nih.gov"
-            String h;
-            Data d;
-            CONST_STRING ( & h, HOST );
-            r2 = DataInit ( & d, self -> vmgr,
-                            "https://" HOST "/srapub/SRR029074" );
-            if ( r2 == 0 )
-                r2 = _STestCheckNetwork ( & t, & d, exp, sizeof exp - 1,
-                                         NULL, "Access to '%S'", & h );
-            if ( r1 == 0 )
-                r1 = r2;
-            DataFini ( & d );
-        }
-#endif
-#if 1
-        {
-#undef  HOST
-#define HOST "ftp-trace.ncbi.nlm.nih.gov"
-            String h;
-            Data d;
-            Data v;
-            CONST_STRING ( & h, HOST );
-            r2 = DataInit ( & d, self -> vmgr,
-                            "https://" HOST "/sra/refseq/KC702174.1" );
-            if ( r2 == 0 )
-                r2 = DataInit ( & v, self -> vmgr, "https://" HOST
-                                "/sra/sdk/current/sratoolkit.current.version" );
-            if ( r2 == 0 )
-                r2 = _STestCheckNetwork ( & t, & d, exp, sizeof exp - 1,
-                                         & v, "Access to '%S'", & h );
-            if ( r1 == 0 )
-                r1 = r2;
-            DataFini ( & v );
-            DataFini ( & d );
-        }
-#endif
-#if 0
-        {
-#undef  HOST
-#define HOST "gap-download.ncbi.nlm.nih.gov"
-            String h;
-            Data d;
-            CONST_STRING ( & h, HOST );
-            r2 = DataInit ( & d, self -> vmgr, "https://" HOST );
-            if ( r2 == 0 )
-                r2 = _STestCheckNetwork ( & t, & d, NULL, 0, 
-                                         NULL, "Access to '%S'", & h );
-            if ( r1 == 0 )
-                r1 = r2;
-            DataFini ( & d );
-        }
-#endif
-        if ( r1 == 0)
-            r1 = STestEnd ( & t, eOK, "Network" );
-        else  if ( _RcCanceled ( r1 ) )
-            STestEnd ( & t, eCANCELED, "Network: CANCELED" );
-        else
-            STestEnd ( & t, eFAIL, "Network" );
-        if ( rc == 0 && r1 != 0 )
-            rc = r1;
-    }
-#endif
-
-/*    if ( rc == 0 && tests & KDIAGN_FAIL )
+    if ( rc == 0 && tests & KDIAGN_FAIL )
       rc = 1;
 
-  if ( rc == 0)
+  /*if ( rc == 0)
         STestEnd ( & t, eOK,       "System" );
     else  if ( _RcCanceled ( rc ) )
         STestEnd ( & t, eCANCELED, "System: CANCELED" );
