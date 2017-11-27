@@ -235,30 +235,41 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseTestChild ( const KDiagnoseTest * self,
  */
 DIAGNOSE_EXTERN rc_t CC KDiagnoseAdvanced ( KDiagnose * self, uint64_t tests );
 
-#define KDIAGN_FAIL                   0x1
+#define KDIAGN_FAIL                     0x1
 
-#define KDIAGN_REPO_USER              0x2
-#define KDIAGN_REPO_REMOTE
-#define KDIAGN_REPO_GAP               0x4
-#define KDIAGN_KFG_ASCP
+#define KDIAGN_REPO_REMOTE              0x2
+#define KDIAGN_REPO_SITE                0x4
+#define KDIAGN_REPO_USER                0x8
+#define KDIAGN_REPO_GAP                0x10
+#define KDIAGN_KFG_ASCP                0x20
 
-#define KDIAGN_CGI                    0x8
+#define KDIAGN_ACCESS_NCBI_WWW         0x40
+#define KDIAGN_ACCESS_NCBI_FTP         0x80
+#define KDIAGN_CGI                    0x100
 
-#define KDIAGN_DOWNLOAD              0x10
+#define KDIAGN_DOWNLOAD               0x200
 
-#define KDIAGN_HTTP                  0x20
-#define KDIAGN_ASCP                  0x40
-#define KDIAGN_REQUIRE_HTTP_AND_ASCP 0x80
+#define KDIAGN_HTTP                   0x400
+#define KDIAGN_ASCP                   0x800
+#define KDIAGN_REQUIRE_HTTP_AND_ASCP 0x1000
 
-#define KDIAGN_TRY_TO_WARN          0x100
+#define KDIAGN_TRY_TO_WARN           0x2000
 
-#define KDIAGN_AS_IS                0x200
+#define KDIAGN_AS_IS                 0x4000
 
-#define KDIAGN_ALL                  0x400
+#define KDIAGN_KFG_NO_GAP ( KDIAGN_REPO_REMOTE | KDIAGN_REPO_SITE | \
+                            KDIAGN_REPO_USER  | KDIAGN_KFG_ASCP )
+
+#define KDIAGN_CONFIG ( KDIAGN_KFG_NO_GAP | KDIAGN_REPO_GAP )
+
+#define KDIAGN_ACCESS_NCBI ( KDIAGN_ACCESS_NCBI_WWW | KDIAGN_ACCESS_NCBI_FTP )
+
+#define KDIAGN_NETWORK ( KDIAGN_ACCESS_NCBI | KDIAGN_CGI )
+
+#define KDIAGN_ALL                  ( ~ KDIAGN_FAIL )
 
 /******************************************************************************/
 
-//#define DIAGNOSE_CONFIG ( KDIAGN_REPO_USER | KDIAGN_REPO_GAP )
 /*#define DIAGNOSE_NETWORK_NCBI    8
 #define DIAGNOSE_NETWORK_HTTPS  16
 #define DIAGNOSE_NETWORK_ASPERA 32

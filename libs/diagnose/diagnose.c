@@ -793,6 +793,8 @@ const char*c=self->msg.base;
 #endif
     if ( ok == eWarning )
         rc = string_printf ( b, sizeof b, & num_warn, "WARNING: " );
+    else if ( ok == eEndFAIL )
+        rc = string_printf ( b, sizeof b, & num_warn, "FAILURE: " );
     rc = string_vprintf ( b + num_warn, sizeof b - num_warn,
                           & num_writ, fmt, args );
     num_writ += num_warn;
@@ -1039,7 +1041,7 @@ static rc_t STestFail ( STest * self, rc_t failure,
 
     rc = STestVStart ( self, false, start, args );
 
-    r2 = STestEnd ( self, eEndFAIL, "FAILURE: %R", failure );
+    r2 = STestEnd ( self, eEndFAIL, "%R", failure );
     if ( rc == 0 && r2 != 0 )
         rc = r2;
 
@@ -1117,7 +1119,7 @@ static rc_t STestCheckFile ( STest * self, const String * path,
     rc = KNSManagerMakeReliableHttpFile ( self -> kmgr, & file, NULL,
                                           HTTP_VERSION, "%S", path );
     if ( rc != 0 )
-        STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+        STestEnd ( self, eEndFAIL, "%R", rc );
     else {
         if ( rc == 0 )
             STestEndOr ( self, & rc, eEndOK, "OK" );
@@ -1125,7 +1127,7 @@ static rc_t STestCheckFile ( STest * self, const String * path,
             if ( _RcCanceled ( rc ) )
                 STestEnd ( self, eCANCELED, "CANCELED" );
             else
-                STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+                STestEnd ( self, eEndFAIL, "%R", rc );
         }
         else {
             STestStart ( self, false, "KFileSize(KFile(%S)) =", path );
@@ -1136,7 +1138,7 @@ static rc_t STestCheckFile ( STest * self, const String * path,
                 if ( _RcCanceled ( rc ) )
                     STestEnd ( self, eCANCELED, "CANCELED" );
                 else
-                    STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+                    STestEnd ( self, eEndFAIL, "%R", rc );
             }
         }
     }
@@ -1161,7 +1163,7 @@ static rc_t STestCheckFile ( STest * self, const String * path,
             if ( _RcCanceled ( * rc_read ) )
                 STestEnd ( self, eCANCELED, "CANCELED" );
             else
-                STestEnd ( self, eEndFAIL, "FAILURE: %R", * rc_read );
+                STestEnd ( self, eEndFAIL, "%R", * rc_read );
         }
     }
 
@@ -1229,7 +1231,7 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
             if ( _RcCanceled ( rc ) )
                 STestEnd ( self, eCANCELED, "CANCELED" );
             else
-                STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+                STestEnd ( self, eEndFAIL, "%R", rc );
         }
     }
     if ( rc == 0 ) {
@@ -1253,7 +1255,7 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
             if ( _RcCanceled ( rc ) )
                 STestEnd ( self, eCANCELED, "CANCELED" );
             else
-                STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+                STestEnd ( self, eEndFAIL, "%R", rc );
         }
     }
     if ( rc == 0 ) {
@@ -1270,14 +1272,13 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
                                         ( int ) num_read, buffer );
             }
             else {
-                STestEnd ( self, eEndFAIL, "'%.*s': FAILURE",
-                                        ( int ) num_read, buffer );
+                STestEnd ( self, eEndFAIL, "'%.*s'", ( int ) num_read, buffer );
                 rc = RC ( rcRuntime,
                           rcFile, rcOpening, rcFunction, rcUnsupported );
             }
         }
         else
-            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+            STestEnd ( self, eEndFAIL, "%R", rc );
     }
     KHttpResultRelease ( rslt );
     rslt = NULL;
@@ -1295,7 +1296,7 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
             if ( _RcCanceled ( rc ) )
                 STestEnd ( self, eCANCELED, "CANCELED" );
             else
-                STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+                STestEnd ( self, eEndFAIL, "%R", rc );
         }
     }
     if ( rc == 0 ) {
@@ -1308,7 +1309,7 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
             if ( _RcCanceled ( rc ) )
                 STestEnd ( self, eCANCELED, "CANCELED" );
             else
-                STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+                STestEnd ( self, eEndFAIL, "%R", rc );
         }
     }
     if ( rc == 0 ) {
@@ -1345,7 +1346,7 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
             if ( _RcCanceled ( rc ) )
                 STestEnd ( self, eCANCELED, "CANCELED" );
             else
-                STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+                STestEnd ( self, eEndFAIL, "%R", rc );
         }
     }
     KHttpResultRelease ( rslt );
@@ -1416,7 +1417,7 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
         size_t num_read = 0;
         rc = KStreamRead ( stream, buffer, sizeof buffer, & num_read );
         if ( rc != 0 )
-            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+            STestEnd ( self, eEndFAIL, "%R", rc );
         else if ( num_read != 0 ) {
             if ( rw == 0 && out != NULL ) {
                 size_t num_writ = 0;
@@ -1439,7 +1440,7 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
                     if ( STestCanceled ( self, rc ) )
                         STestEnd ( self, eCANCELED, "CANCELED" );
                     else
-                        STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+                        STestEnd ( self, eEndFAIL, "%R", rc );
                     break;
                 }
                 for ( i = 0; i < s && rc == 0; ++ i ) {
@@ -1457,11 +1458,11 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
                     if ( STestCanceled ( self, rc ) )
                         STestEnd ( self, eCANCELED, "CANCELED" );
                     else
-                        STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+                        STestEnd ( self, eEndFAIL, "%R", rc );
                     break;
                 }
                 if ( string_cmp ( buffer, num_read, exp, esz, esz ) != 0 ) {
-                    STestEnd ( self, eEndFAIL, " FAILURE: bad content" );
+                    STestEnd ( self, eEndFAIL, "bad content" );
                     rc = RC ( rcRuntime,
                               rcFile, rcReading, rcString, rcUnequal );
                 }
@@ -1492,7 +1493,7 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
                     if ( STestCanceled ( self, rc ) )
                         STestEnd ( self, eCANCELED, "CANCELED" );
                     else
-                        STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+                        STestEnd ( self, eEndFAIL, "%R", rc );
                 }
             }
             else
@@ -1542,7 +1543,7 @@ static rc_t STestCheckHttpUrl ( STest * self, const Data * data,
             if ( _RcCanceled ( rc ) )
                 STestEnd ( self, eCANCELED, "CANCELED" );
             else
-                STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+                STestEnd ( self, eEndFAIL, "%R", rc );
         }
     }
     if ( rc == 0 ) {
@@ -1555,7 +1556,7 @@ static rc_t STestCheckHttpUrl ( STest * self, const Data * data,
             if ( _RcCanceled ( rc ) )
                 STestEnd ( self, eCANCELED, "CANCELED" );
             else
-                STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+                STestEnd ( self, eEndFAIL, "%R", rc );
         }
     }
     if ( rc == 0 ) {
@@ -1563,20 +1564,20 @@ static rc_t STestCheckHttpUrl ( STest * self, const Data * data,
         STestStart ( self, false, "KHttpResultStatus(KHttpResult) =" );
         rc = KHttpResultStatus ( rslt, & code, NULL, 0, NULL );
         if ( rc != 0 )
-            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+            STestEnd ( self, eEndFAIL, "%R", rc );
         else {
             rc = STestEnd ( self, eMSG, "%u: ", code );
             if ( rc == 0 )
                 if ( code == 200 )
                     STestEnd ( self, eEndOK, "OK" );
                 else {
-                    STestEnd ( self, eEndFAIL, "FAILURE" );
+                    STestEnd ( self, eEndFAIL, "bad status" );
                     rc = RC ( rcRuntime, rcFile, rcReading, rcFile, rcInvalid );
                 }
             else  if ( STestCanceled ( self, rc ) )
                 STestEnd ( self, eCANCELED, "CANCELED" );
             else
-                STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+                STestEnd ( self, eEndFAIL, "%R", rc );
         }
     }
     if ( rc == 0 ) {
@@ -1620,7 +1621,7 @@ static bool DataIsAccession ( const Data * self ) {
         return self -> acc -> size != 0;
 }
 
-static rc_t STestCheckVfsUrl ( STest * self, const Data * data ) {
+static rc_t STestCheckVfsUrl ( STest * self, const Data * data, bool warn ) {
     rc_t rc = 0;
 
     const KDirectory * d = NULL;
@@ -1646,7 +1647,7 @@ static rc_t STestCheckVfsUrl ( STest * self, const Data * data ) {
         if ( _RcCanceled ( rc ) )
             STestEnd ( self, eCANCELED, "CANCELED" );
         else
-            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+            STestEnd ( self, eEndFAIL, "%R", rc );
     }
 
     RELEASE ( KDirectory, d );
@@ -1660,7 +1661,7 @@ static rc_t STestCheckUrlImpl ( STest * self, const Data * data,
 {
     rc_t rc = STestCheckHttpUrl ( self, data,
                                   cache, cacheSize, print, exp, esz );
-    rc_t r2 = STestCheckVfsUrl  ( self, data );
+    rc_t r2 = STestCheckVfsUrl  ( self, data, cacheSize == 0 );
     return rc != 0 ? rc : r2;
 }
 
@@ -1860,7 +1861,7 @@ static rc_t STestCallCgi ( STest * self, const String * acc, char * response,
         if ( _RcCanceled ( rc ) )
             STestEnd ( self, eCANCELED, "CANCELED" );
         else
-            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+            STestEnd ( self, eEndFAIL, "%R", rc );
     }
     if ( rc == 0 ) {
         const char param [] = "accept-proto";
@@ -1894,7 +1895,7 @@ static rc_t STestCallCgi ( STest * self, const String * acc, char * response,
             if ( _RcCanceled ( rc ) )
                 STestEnd ( self, eCANCELED, "CANCELED" );
             else
-                STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+                STestEnd ( self, eEndFAIL, "%R", rc );
         }
     }
     if ( rc == 0 ) {
@@ -1902,20 +1903,20 @@ static rc_t STestCallCgi ( STest * self, const String * acc, char * response,
         STestStart ( self, false, "KHttpResultStatus(KHttpResult(%S)) =", cgi );
         rc = KHttpResultStatus ( rslt, & code, NULL, 0, NULL );
         if ( rc != 0 )
-            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+            STestEnd ( self, eEndFAIL, "%R", rc );
         else {
             rc = STestEnd ( self, eMSG, "%u: ", code );
             if ( rc == 0 )
                 if ( code == 200 )
                     STestEnd ( self, eEndOK, "OK" );
                 else {
-                    STestEnd ( self, eEndFAIL, "FAILURE" );
+                    STestEnd ( self, eEndFAIL, "bad status" );
                     rs = RC ( rcRuntime, rcFile, rcReading, rcFile, rcInvalid );
                 }
             else  if ( STestCanceled ( self, rc ) )
                 STestEnd ( self, eCANCELED, "CANCELED" );
             else
-                STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+                STestEnd ( self, eEndFAIL, "%R", rc );
         }
     }
     if ( rc == 0 ) {
@@ -1930,10 +1931,10 @@ static rc_t STestCallCgi ( STest * self, const String * acc, char * response,
             if ( r2 == SILENT_RC ( rcNS,rcTree,rcSearching,rcName,rcNotFound ) )
                 rc = STestEnd ( self, eEndOK, ": not found: OK" );
             else
-                STestEnd ( self, eEndFAIL, "FAILURE: %R", r2 );
+                STestEnd ( self, eEndFAIL, "%R", r2 );
         }
         else
-            STestEnd ( self, eEndFAIL, "= '%.*s'", ( int ) num_read, buffer );
+            STestEnd ( self, eEndFAIL, "'%.*s'", ( int ) num_read, buffer );
     }
     if ( rc == 0 ) {
         rc = KHttpResultGetInputStream ( rslt, & stream );
@@ -1945,7 +1946,7 @@ static rc_t STestCallCgi ( STest * self, const String * acc, char * response,
         STestStart ( self, false, "KStreamRead(KHttpResult(%S)) =", cgi );
         rc = KStreamRead ( stream, response, response_sz, resp_read );
         if ( rc != 0 )
-            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+            STestEnd ( self, eEndFAIL, "%R", rc );
         else {
             if ( * resp_read > response_sz - 4 ) {
                 response [ response_sz - 4 ] = '.';
@@ -1961,7 +1962,7 @@ static rc_t STestCallCgi ( STest * self, const String * acc, char * response,
                 {
                     response [ * resp_read ] = '\0';
                 }
-            }
+            }//TODO: hide the download ticket if any
             rc = STestEnd ( self, eEndOK, "'%s': OK", response );
             if ( rs == 0 ) {
                 int i = 0;
@@ -2065,7 +2066,7 @@ static rc_t STestCheckFaspDownload ( STest * self, const char * url,
         if ( _RcCanceled ( rc ) )
             STestEnd ( self, eCANCELED, "CANCELED" );
         else
-            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
+            STestEnd ( self, eEndFAIL, "%R", rc );
     }
 
     return rc;
@@ -2672,7 +2673,7 @@ LIB_EXPORT rc_t CC KDiagnoseCancel ( KDiagnose * self ) {
 }*/
 
 static rc_t STestKNSManagerInitDNSEndpoint ( STest * self, const String * host,
-                                             uint16_t port )
+                                             uint16_t port, bool warn )
 {
     rc_t rc = 0;
 
@@ -2682,7 +2683,7 @@ static rc_t STestKNSManagerInitDNSEndpoint ( STest * self, const String * host,
                               host, port );
     rc = KNSManagerInitDNSEndpoint ( self -> kmgr, & ep, host, port );
     if ( rc != 0 )
-        STestEnd ( self, eEndFAIL, ": FAILURE: %R", rc );
+        STestEnd ( self, warn ? eWarning : eEndFAIL, "%R", rc );
     else {
         char endpoint [ 1024 ] = "";
         rc_t rx = endpoint_to_string ( endpoint, sizeof endpoint, & ep );
@@ -2699,30 +2700,32 @@ static rc_t STestKNSManagerInitDNSEndpoint ( STest * self, const String * host,
     return rc;
 }
 
-static rc_t STestCheckNcbiAccess ( STest * self ) {
+static rc_t STestCheckNcbiAccess ( STest * self, uint64_t tests ) {
     rc_t rc = 0;
 
-    String www;
-    CONST_STRING ( & www, "www.ncbi.nlm.nih.gov" );
+    if ( tests & KDIAGN_ACCESS_NCBI_WWW ) {
+        String www;
+        CONST_STRING ( & www, "www.ncbi.nlm.nih.gov" );
 
-    {
-        rc_t r1 = STestKNSManagerInitDNSEndpoint ( self, & www, 80 );
-        if ( rc == 0 && r1 != 0 )
-            rc = r1;
+        {
+            rc_t r1 = STestKNSManagerInitDNSEndpoint ( self, & www, 80 , false );
+            if ( rc == 0 && r1 != 0 )
+                rc = r1;
+        }
+
+        {
+            rc_t r1 = STestKNSManagerInitDNSEndpoint ( self, & www, 44, false );
+            if ( rc == 0 && r1 != 0 )
+                rc = r1;
+        }
     }
 
-    {
-        rc_t r1 = STestKNSManagerInitDNSEndpoint ( self, & www, 443 );
-        if ( rc == 0 && r1 != 0 )
-            rc = r1;
-    }
-
-    {
+    if ( tests & KDIAGN_ACCESS_NCBI_FTP ) {
         rc_t r1 = 0;
         String ftp;
 #define FTP "ftp-trace.ncbi.nlm.nih.gov"
         CONST_STRING ( & ftp, FTP );
-        r1 = STestKNSManagerInitDNSEndpoint ( self, & ftp, 443 );
+        r1 = STestKNSManagerInitDNSEndpoint ( self, & ftp, 443, true );
         if ( r1 == 0 ) {
             Data v;
             r1 = DataInit ( & v, self -> vmgr, "https://" FTP
@@ -2732,11 +2735,8 @@ static rc_t STestCheckNcbiAccess ( STest * self ) {
                 r1 = STestCheckUrl ( self, & v, "", & s, true, 0, 0 );
             }
             DataFini ( & v );
-            if ( rc == 0 && r1 != 0 )
-                rc = r1;
         }
-        else if ( rc == 0 )
-            rc = r1;
+        /* ignore result: failure to access current.version is not an error */
     }
 
     return rc;
@@ -2900,9 +2900,9 @@ static rc_t STestCache ( const STest * self, const String * acc,
     return rc;
 }
 
-static rc_t STestCheckHttp ( STest * self, const String * acc, bool print,
-    char * downloaded, size_t sDownloaded, uint64_t * downloadedSize,
-    const char * exp, size_t esz )
+static rc_t STestCheckHttp ( STest * self, uint64_t tests, const String * acc,
+    bool print, char * downloaded, size_t sDownloaded,
+    uint64_t * downloadedSize, const char * exp, size_t esz )
 {
     rc_t rc = 0;
     char response [ 4096 ] = "";
@@ -2915,32 +2915,35 @@ static rc_t STestCheckHttp ( STest * self, const String * acc, bool print,
     rc = STestCallCgi ( self, acc, response, sizeof response,
                         & resp_len, & url, & test, true );
     AbuseFini ( & test );
-    if ( rc == 0 ) {
-        rc = STestCache ( self, acc, downloaded, sDownloaded, "http" );
-        if ( rc != 0 )
-            STestFail ( self, rc, "Cannot find cache location" );
-    }
-    if ( rc == 0 && url != NULL ) {
-        char * p = string_chr ( url, resp_len - ( url - response ), '|' );
-        if ( p == NULL ) {
-            rc = RC ( rcRuntime, rcString ,rcParsing, rcString, rcIncorrect );
-            STestFail ( self, rc, "UNEXPECTED RESOLVER RESPONSE" );
-            failed = true;
+    if ( tests & KDIAGN_DOWNLOAD ) {
+        if ( rc == 0 ) {
+            rc = STestCache ( self, acc, downloaded, sDownloaded, "http" );
+            if ( rc != 0 )
+                STestFail ( self, rc, "Cannot find cache location" );
         }
-        else {
-            Data dt;
-            * p = '\0';
-            rc = DataInit ( & dt, self -> vmgr, url );
-            if ( rc == 0 ) {
-                rc_t r1 = STestCheckUrl ( self, & dt,
-                    downloaded, downloadedSize, print, exp, esz );
-                if ( rc == 0 && r1 != 0 ) {
-                    assert ( downloaded );
-                    * downloaded = '\0';
-                    rc = r1;
-                }
+        if ( rc == 0 && url != NULL ) {
+            char * p = string_chr ( url, resp_len - ( url - response ), '|' );
+            if ( p == NULL ) {
+                rc = RC ( rcRuntime,
+                          rcString ,rcParsing, rcString, rcIncorrect );
+                STestFail ( self, rc, "UNEXPECTED RESOLVER RESPONSE" );
+                failed = true;
             }
-            DataFini ( & dt );
+            else {
+                Data dt;
+                * p = '\0';
+                rc = DataInit ( & dt, self -> vmgr, url );
+                if ( rc == 0 ) {
+                    rc_t r1 = STestCheckUrl ( self, & dt,
+                        downloaded, downloadedSize, print, exp, esz );
+                    if ( rc == 0 && r1 != 0 ) {
+                        assert ( downloaded );
+                        * downloaded = '\0';
+                        rc = r1;
+                    }
+                }
+                DataFini ( & dt );
+            }
         }
     }
     if ( ! failed ) {
@@ -3020,7 +3023,7 @@ rc_t STestHttpVsFasp ( STest * self, const char * http, uint64_t httpSize,
     STestStart ( self, false, "HTTP vs ASCP download:" );
     if ( httpSize != faspSize ) {
         rc = RC ( rcRuntime, rcFile, rcComparing, rcSize, rcUnequal );
-        STestEnd ( self, eEndFAIL, "FAILURE: size does not match: "
+        STestEnd ( self, eEndFAIL, "size does not match: "
                    "http(%lu)/ascp(%lu)", httpSize, faspSize );
     }
     else {
@@ -3041,20 +3044,20 @@ rc_t STestHttpVsFasp ( STest * self, const char * http, uint64_t httpSize,
         while ( rc == 0 ) {
             rc = KFileReadAll ( ascpF, pos, bAscp, sizeof bAscp, & ascp_read );
             if ( rc != 0 ) {
-                STestEnd ( self, eEndFAIL, "FAILURE to read '%s': %R",
+                STestEnd ( self, eEndFAIL, "cannot read '%s': %R",
                                           fasp, rc );
                 break;
             }
             rc = KFileReadAll ( httpF, pos, bHttp, sizeof bHttp, & http_read );
             if ( rc != 0 ) {
-                STestEnd ( self, eEndFAIL, "FAILURE to read '%s': %R",
+                STestEnd ( self, eEndFAIL, "cannot read '%s': %R",
                                           http, rc );
                 break;
             }
             else if ( ascp_read != http_read ) {
                 rc = RC ( rcRuntime, rcFile, rcComparing, rcSize, rcUnequal );
                 STestEnd ( self, eEndFAIL,
-                           "FAILURE to read the same amount from files" );
+                           "cannot read the same amount from files" );
                 break;
             }
             else if ( ascp_read == 0 )
@@ -3066,7 +3069,7 @@ rc_t STestHttpVsFasp ( STest * self, const char * http, uint64_t httpSize,
                 {
                     rc = RC ( rcRuntime,
                               rcFile, rcComparing, rcData, rcUnequal );
-                    STestEnd ( self, eEndFAIL, "FAILURE: files are different" );
+                    STestEnd ( self, eEndFAIL, "files are different" );
                     break;
                 }
             }
@@ -3114,7 +3117,7 @@ static rc_t STestCheckNodeExists ( STest * self, const char * path,
 
     if ( rc != 0 ) {
         if ( rc != SILENT_RC ( rcKFG, rcNode, rcOpening, rcPath, rcNotFound ) )
-            STestEnd ( self, eEndFAIL, "Failed to read '%s': %R", path, rc );
+            STestEnd ( self, eEndFAIL, "cannot read '%s': %R", path, rc );
         else {
             STestEnd ( self, eWarning, msg );
             rc = 0;
@@ -3133,15 +3136,13 @@ static rc_t STestCheckNodeExists ( STest * self, const char * path,
     return rc;
 }
 
-static rc_t STestCheckCommonKfg ( STest * self ) {
+static rc_t STestCheckRemoteRepoKfg ( STest * self, bool * exists ) {
     rc_t rc = 0;
     rc_t r1 = 0;
-    bool rRemote = false;
-    bool rSite  = false;
-    bool rUser  = false;
     String * p = NULL;
-    String sTrue;
-    CONST_STRING ( & sTrue, "true" );
+    assert ( exists );
+    * exists = false;
+    STestStart ( self, true, "Remote repository" );
     {
         bool printed = false;
         const char * path = "/repository/remote/disabled";
@@ -3151,14 +3152,15 @@ static rc_t STestCheckCommonKfg ( STest * self ) {
             if ( r1 !=
                  SILENT_RC ( rcKFG, rcNode, rcOpening, rcPath, rcNotFound ) )
             {
-                STestEnd ( self, eEndFAIL, "Failed to read '%s': %R",
-                                           path, r1 );
+                STestEnd ( self, eEndFAIL, "cannot read '%s': %R", path, r1 );
                 printed = true;
                 if ( rc == 0 )
                     rc = r1;
             }
         }
         else {
+            String sTrue;
+            CONST_STRING ( & sTrue, "true" );
             if ( StringEqual ( p, & sTrue ) ) {
                 STestEnd ( self, eWarning, "Remote repository is disabled" );
                 printed = true;
@@ -3177,8 +3179,7 @@ static rc_t STestCheckCommonKfg ( STest * self ) {
             if ( r1 !=
                  SILENT_RC ( rcKFG, rcNode, rcOpening, rcPath, rcNotFound ) )
             {
-                STestEnd ( self, eEndFAIL, "Failed to read '%s': %R",
-                                           path, r1 );
+                STestEnd ( self, eEndFAIL, "cannot read '%s': %R", path, r1 );
                 printed = true;
                 if ( rc == 0 )
                     rc = r1;
@@ -3199,88 +3200,101 @@ static rc_t STestCheckCommonKfg ( STest * self ) {
             }
             RELEASE ( String, p );
 
-            rRemote = true;
+            * exists = true;
         }
         if ( ! printed )
             STestEnd ( self, eEndOK, "OK" );
     }
-    {
-        bool printed = false;
+    r1 = STestEnd ( self, rc == 0 ? eOK : eFAIL, "Remote repository" );
+    if ( rc == 0 && r1 != 0 )
+        rc = r1;
+    return rc;
+}
+
+static rc_t STestCheckSiteRepoKfg ( STest * self, bool * exists ) {
+    bool printed = false;
 #define SITE "/repository/site"
-        const char * path = SITE;
-        const KConfigNode * node = NULL;
-        KNamelist * names = NULL;
-        uint32_t count = 0;
-        rc_t r1 = KConfigOpenNodeRead ( self -> kfg, & node, path );
-        STestStart ( self, false, "Site repository:" );
-        if ( r1 != 0 ) {
-            if ( r1 != SILENT_RC ( rcKFG, rcNode, rcOpening,
-                                   rcPath, rcNotFound ) )
-            {
-                STestEnd ( self, eEndFAIL, "Failed to read '%s': %R",
-                                           path, r1 );
-                printed = true;
-                if ( rc == 0 )
-                    rc = r1;
-            }
-            else {
-                STestEnd ( self, eEndOK, "not found: OK" );
-                printed = true;
-            }
+    const char * path = SITE;
+    const KConfigNode * node = NULL;
+    KNamelist * names = NULL;
+    uint32_t count = 0;
+    String * p = NULL;
+    rc_t rc = KConfigOpenNodeRead ( self -> kfg, & node, path );
+    assert ( exists );
+    * exists = false;
+    STestStart ( self, false, "Site repository:" );
+    if ( rc != 0 ) {
+        if ( rc != SILENT_RC ( rcKFG, rcNode, rcOpening,
+                                rcPath, rcNotFound ) )
+        {
+            STestEnd ( self, eEndFAIL, "cannot read '%s': %R", path, rc );
+            printed = true;
         }
-        if ( r1 == 0 ) {
-            r1 = KConfigNodeListChildren ( node, & names );
-            if ( r1 != 0 ) {
-                STestEnd ( self, eEndFAIL,
-                           "Failed to list children of '%s': %R", path, r1 );
-                printed = true;
-                if ( rc == 0 )
-                    rc = r1;
-            }
+        else {
+            STestEnd ( self, eEndOK, "not found: OK" );
+            printed = true;
         }
-        if ( r1 == 0 ) {
-            r1 = KNamelistCount ( names, & count );
-            if ( r1 != 0 ) {
-                STestEnd ( self, eEndFAIL,
-                           "Failed to count children of '%s': %R", path, r1 );
-                printed = true;
-                if ( rc == 0 )
-                    rc = r1;
-            }
-            else if ( count > 0 )
-                rSite = true;
-        }
-        if ( r1 == 0 ) {
-            const char * path = SITE "/disabled";
-            r1 = KConfigReadString ( self -> kfg, path, & p );
-            if ( r1 != 0 ) {
-                if ( r1 != SILENT_RC ( rcKFG, rcNode, rcOpening,
-                                       rcPath, rcNotFound ) )
-                {
-                    STestEnd ( self, eEndFAIL, "Failed to read '%s': %R",
-                                               path, r1 );
-                    printed = true;
-                    if ( rc == 0 )
-                        rc = r1;
-                }
-            }
-            else {
-                if ( StringEqual ( p, & sTrue ) ) {
-                    rSite = false;
-                    if ( count > 1 ) {
-                        STestEnd ( self, eWarning,
-                                   "Site repository is disabled" );
-                        printed = true;
-                    }
-                }
-                RELEASE ( String, p );
-            }
-        }
-        RELEASE ( KNamelist, names );
-        RELEASE ( KConfigNode, node );
-        if ( ! printed )
-            STestEnd ( self, eEndOK, "OK" );
     }
+    if ( rc == 0 ) {
+        rc = KConfigNodeListChildren ( node, & names );
+        if ( rc != 0 ) {
+            STestEnd ( self, eEndFAIL,
+                        "cannot list children of '%s': %R", path, rc );
+            printed = true;
+        }
+    }
+    if ( rc == 0 ) {
+        rc = KNamelistCount ( names, & count );
+        if ( rc != 0 ) {
+            STestEnd ( self, eEndFAIL,
+                        "cannot count children of '%s': %R", path, rc );
+            printed = true;
+        }
+        else if ( count > 0 )
+            * exists = true;
+    }
+    if ( rc == 0 ) {
+        const char * path = SITE "/disabled";
+        rc = KConfigReadString ( self -> kfg, path, & p );
+        if ( rc != 0 ) {
+            if ( rc != SILENT_RC ( rcKFG, rcNode, rcOpening,
+                                    rcPath, rcNotFound ) )
+            {
+                STestEnd ( self, eEndFAIL, "cannot read '%s': %R",
+                                            path, rc );
+                printed = true;
+            }
+            else
+                rc = 0;
+        }
+        else {
+            String sTrue;
+            CONST_STRING ( & sTrue, "true" );
+            if ( StringEqual ( p, & sTrue ) ) {
+                * exists = false;
+                if ( count > 1 ) {
+                    STestEnd ( self, eWarning,
+                                "Site repository is disabled" );
+                    printed = true;
+                }
+            }
+            RELEASE ( String, p );
+        }
+    }
+    RELEASE ( KNamelist, names );
+    RELEASE ( KConfigNode, node );
+    if ( ! printed )
+        STestEnd ( self, eEndOK, "OK" );
+    return rc;
+}
+
+static rc_t STestCheckUserRepoKfg ( STest * self, bool * exists ) {
+    rc_t rc = 0;
+    rc_t r1 = 0;
+    String * p = NULL;
+    assert ( exists );
+    * exists = false;
+    STestStart ( self, true, "Public user repository" );
     {
         bool printed = false;
         const char * path = "/repository/user/cache-disabled";
@@ -3290,14 +3304,15 @@ static rc_t STestCheckCommonKfg ( STest * self ) {
             if ( r1 !=
                  SILENT_RC ( rcKFG, rcNode, rcOpening, rcPath, rcNotFound ) )
             {
-                STestEnd ( self, eEndFAIL, "Failed to read '%s': %R",
-                                           path, r1 );
+                STestEnd ( self, eEndFAIL, "cannot  read '%s': %R", path, r1 );
                 printed = true;
                 if ( rc == 0 )
                     rc = r1;
             }
         }
         else {
+            String sTrue;
+            CONST_STRING ( & sTrue, "true" );
             if ( StringEqual ( p, & sTrue ) ) {
                 STestEnd ( self, eWarning,
                            "User repository caching is disabled" );
@@ -3313,7 +3328,7 @@ static rc_t STestCheckCommonKfg ( STest * self ) {
         const KConfigNode * node = NULL;
         rc_t r1 = KConfigOpenNodeRead ( self -> kfg, & node, path );
         if ( r1 == 0 )
-            rUser = true;
+            * exists = true;
         else if ( r1 != SILENT_RC
                         ( rcKFG, rcNode, rcOpening, rcPath, rcNotFound ) )
         {
@@ -3351,7 +3366,7 @@ static rc_t STestCheckCommonKfg ( STest * self ) {
                 rc = r1;
         }
         else if ( p == NULL )
-            rUser = false;
+            * exists = false;
         else
             STestEnd ( self, eEndOK, "'%S': OK", p );
         RELEASE ( String, p );
@@ -3365,7 +3380,7 @@ static rc_t STestCheckCommonKfg ( STest * self ) {
                 rc = r1;
         }
         else if ( p == NULL )
-            rUser = false;
+            * exists = false;
         else
             STestEnd ( self, eEndOK, "'%S': OK", p );
         RELEASE ( String, p );
@@ -3411,14 +3426,42 @@ static rc_t STestCheckCommonKfg ( STest * self ) {
             RELEASE ( String, p );
         }
         if ( ! user )
-            rUser  = false;
+            * exists  = false;
     }
-
-    r1 = STestCheckNodeExists ( self,
-        "/tools/ascp/max_rate",
-        "ascp max transfer rate is not set", "ascp transfer rate:", NULL );
-    if ( r1 != 0 && rc == 0 )
+    r1 = STestEnd ( self, rc == 0 ? eOK : eFAIL, "Public user repository" );
+    if ( rc == 0 && r1 != 0 )
         rc = r1;
+    return rc;
+}
+
+static rc_t STestCheckNoGapKfg ( STest * self, uint64_t tests ) {
+    rc_t rc = 0;
+    rc_t r1 = 0;
+    bool rRemote = false;
+    bool rSite  = false;
+    bool rUser  = false;
+    if ( tests & KDIAGN_REPO_REMOTE ) {
+        rc_t r1 = STestCheckRemoteRepoKfg ( self, & rRemote );
+        if ( rc == 0 && r1 != 0 )
+            rc = r1;
+    }
+    if ( tests & KDIAGN_REPO_SITE ) {
+        rc_t r1 = STestCheckSiteRepoKfg ( self, & rSite );
+        if ( rc == 0 && r1 != 0 )
+            rc = r1;
+    }
+    if ( tests & KDIAGN_REPO_USER ) {
+        rc_t r1 = STestCheckUserRepoKfg ( self, & rUser );
+        if ( rc == 0 && r1 != 0 )
+            rc = r1;
+    }
+    if ( tests & KDIAGN_KFG_ASCP ) {
+        r1 = STestCheckNodeExists ( self,
+            "/tools/ascp/max_rate",
+            "ascp max transfer rate is not set", "ascp transfer rate:", NULL );
+        if ( r1 != 0 && rc == 0 )
+            rc = r1;
+    }
 
     if ( ! rRemote && ! rSite && ! rUser ) {
         if ( rc == 0 )
@@ -3429,7 +3472,7 @@ static rc_t STestCheckCommonKfg ( STest * self ) {
     return rc;
 }
 
-static rc_t STestCheckGapKfg ( STest * self, bool failWhenIncorrect ) {
+static rc_t STestCheckGapKfg ( STest * self, uint64_t tests ) {
     rc_t rc = 0;
     String * p = NULL;
     {
@@ -3441,8 +3484,7 @@ static rc_t STestCheckGapKfg ( STest * self, bool failWhenIncorrect ) {
             if ( r1 !=
                  SILENT_RC ( rcKFG, rcNode, rcOpening, rcPath, rcNotFound ) )
             {
-                STestEnd ( self, eEndFAIL, "Failed to read '%s': %R",
-                                           path, r1 );
+                STestEnd ( self, eEndFAIL, "cannot  read '%s': %R", path, r1 );
                 printed = true;
                 if ( rc == 0 )
                     rc = r1;
@@ -3458,7 +3500,7 @@ static rc_t STestCheckGapKfg ( STest * self, bool failWhenIncorrect ) {
                 "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
             if ( ! StringEqual ( p, & v ) ) {
                 STestEnd ( self, eWarning,
-                    "Protected resolver-cgi is not standard: '%S'", p );
+                           "Protected resolver-cgi is not standard: '%S'", p );
                 printed = true;
             }
             RELEASE ( String, p );
@@ -3494,7 +3536,7 @@ static rc_t STestCheckGapKfg ( STest * self, bool failWhenIncorrect ) {
                 r1 = KConfigNodeListChildren ( nProtected, & names );
                 if ( r1 != 0 ) {
                     STestEnd ( self, eEndFAIL,
-                        "Failed to list children of '%s': %R", path, r1 );
+                        "cannot list children of '%s': %R", path, r1 );
                     printed = true;
                 }
             }
@@ -3502,7 +3544,7 @@ static rc_t STestCheckGapKfg ( STest * self, bool failWhenIncorrect ) {
                 r1 = KNamelistCount ( names, & count );
                 if ( r1 != 0 ) {
                     STestEnd ( self, eEndFAIL,
-                        "Failed to count children of '%s': %R", path, r1 );
+                        "cannot count children of '%s': %R", path, r1 );
                     printed = true;
                 }
             }
@@ -3514,7 +3556,7 @@ static rc_t STestCheckGapKfg ( STest * self, bool failWhenIncorrect ) {
                     r1 = KNamelistGet ( names, i, & name );
                     if ( r1 != 0 ) {
                         STestEnd ( self, eEndFAIL,
-                            "Failed to get child of '%s': %R", path, r1 );
+                            "cannot get child of '%s': %R", path, r1 );
                         printed = true;
                         break;
                     }
@@ -3526,12 +3568,13 @@ static rc_t STestCheckGapKfg ( STest * self, bool failWhenIncorrect ) {
                         if ( r2 != 0 ) {
                             if ( r2 != SILENT_RC ( rcKFG, rcNode, rcOpening,
                                                    rcPath, rcNotFound ) )
-                                STestEnd ( self, eEndFAIL, "Failed to read "
+                                STestEnd ( self, eEndFAIL, "cannot read "
                                     "'%s/%s/apps/file/volumes/flat': %R",
                                     path, name, r2 );
                             else
-                                STestEnd ( self, eEndFAIL,
-                                           "FAILURE: not found" );
+                                STestEnd ( self, tests & KDIAGN_TRY_TO_WARN
+                                                    ? eWarning : eEndFAIL,
+                                           "not found" );
                         }
                         else
                             STestEnd ( self, eEndOK, "OK" );
@@ -3546,12 +3589,13 @@ static rc_t STestCheckGapKfg ( STest * self, bool failWhenIncorrect ) {
                         if ( r2 != 0 ) {
                             if ( r2 != SILENT_RC ( rcKFG, rcNode, rcOpening,
                                                    rcPath, rcNotFound ) )
-                                STestEnd ( self, eEndFAIL, "Failed to read "
+                                STestEnd ( self, eEndFAIL, "cannot read "
                                     "'%s/%s/apps/sra/volumes/sraFlat': %R",
                                     path, name, r2 );
                             else
-                                STestEnd ( self, eEndFAIL,
-                                           "FAILURE: not found" );
+                                STestEnd ( self, tests & KDIAGN_TRY_TO_WARN
+                                                    ? eWarning : eEndFAIL,
+                                           "not found" );
                         }
                         else
                             STestEnd ( self, eEndOK, "OK" );
@@ -3566,7 +3610,7 @@ static rc_t STestCheckGapKfg ( STest * self, bool failWhenIncorrect ) {
                         if ( r2 != 0 ) {
                             if ( r2 != SILENT_RC ( rcKFG, rcNode, rcOpening,
                                                    rcPath, rcNotFound ) )
-                                STestEnd ( self, eEndFAIL, "Failed to open "
+                                STestEnd ( self, eEndFAIL, "cannot open "
                                     "'%s/%s/cache-enabled': %R",
                                     path, name, r2 );
                             else {
@@ -3579,7 +3623,7 @@ static rc_t STestCheckGapKfg ( STest * self, bool failWhenIncorrect ) {
                             CONST_STRING ( & sFalse, "false" );
                             r2 = KConfigNodeReadString ( node, & p );
                             if ( r2 != 0 )
-                                STestEnd ( self, eEndFAIL, "Failed to read "
+                                STestEnd ( self, eEndFAIL, "cannot read "
                                     "'%s/%s/cache-enabled': %R",
                                     path, name, r2 );
                             else if ( StringEqual ( p, & sFalse ) )
@@ -3600,12 +3644,13 @@ static rc_t STestCheckGapKfg ( STest * self, bool failWhenIncorrect ) {
                         if ( r2 != 0 ) {
                             if ( r2 != SILENT_RC ( rcKFG, rcNode, rcOpening,
                                                    rcPath, rcNotFound ) )
-                                STestEnd ( self, eEndFAIL, "Failed to read "
+                                STestEnd ( self, eEndFAIL, "cannot read "
                                     "'%s/%s/download-ticket': %R",
                                     path, name, r2 );
                             else
-                                STestEnd ( self, eEndFAIL,
-                                           "FAILURE: not found" );
+                                STestEnd ( self, tests & KDIAGN_TRY_TO_WARN
+                                                    ? eWarning : eEndFAIL,
+                                           "not found" );
                         }
                         else
                             STestEnd ( self, eEndOK, "OK" );
@@ -3620,7 +3665,7 @@ static rc_t STestCheckGapKfg ( STest * self, bool failWhenIncorrect ) {
                         if ( r2 != 0 ) {
                             if ( r2 != SILENT_RC ( rcKFG, rcNode, rcOpening,
                                                    rcPath, rcNotFound ) )
-                                STestEnd ( self, eEndFAIL, "Failed to read "
+                                STestEnd ( self, eEndFAIL, "cannot read "
                                     "'%s/%s/encryption-key': %R",
                                     path, name, r2 );
                             else {
@@ -3631,13 +3676,15 @@ static rc_t STestCheckGapKfg ( STest * self, bool failWhenIncorrect ) {
                                         rcOpening, rcPath, rcNotFound ) )
                                     {
                                         STestEnd ( self, eEndFAIL,
-                                            "Failed to read "
+                                            "cannot read "
                                             "'%s/%s/encryption-key-path': %R",
                                             path, name, r2 );
                                     }
                                     else
-                                        STestEnd ( self, eEndFAIL,
-                                                   "FAILURE: not found" );
+                                        STestEnd ( self,
+                                            tests & KDIAGN_TRY_TO_WARN
+                                                ? eWarning : eEndFAIL,
+                                            "not found" );
                                 }
                             }
                         }
@@ -3654,21 +3701,23 @@ static rc_t STestCheckGapKfg ( STest * self, bool failWhenIncorrect ) {
                         if ( r2 != 0 ) {
                             if ( r2 != SILENT_RC ( rcKFG, rcNode, rcOpening,
                                                    rcPath, rcNotFound ) )
-                                STestEnd ( self, eEndFAIL, "Failed to open "
-                                    "'%s/%s/root': %R",
-                                    path, name, r2 );
-                            else
                                 STestEnd ( self, eEndFAIL,
-                                           "FAILURE: not found" );
+                                           "cannot open '%s/%s/root': %R",
+                                           path, name, r2 );
+                            else
+                                STestEnd ( self, tests & KDIAGN_TRY_TO_WARN
+                                                    ? eWarning : eEndFAIL,
+                                           "not found" );
                         }
                         else {
                             r2 = KConfigNodeReadString ( node, & p );
                             if ( r2 != 0 )
-                                STestEnd ( self, eEndFAIL, "Failed to read "
-                                    "'%s/%s/root': %R",
-                                    path, name, r2 );
+                                STestEnd ( self, eEndFAIL,
+                                           "cannot read '%s/%s/root': %R",
+                                           path, name, r2 );
                             else if ( p -> size == 0 )
-                                STestEnd ( self, eWarning,
+                                STestEnd ( self, tests & KDIAGN_TRY_TO_WARN
+                                                    ? eWarning : eEndFAIL,
                                     "'%s' root path is empty", name );
                             else {
                                 KPathType type = kptFirstDefined;
@@ -3678,7 +3727,10 @@ static rc_t STestCheckGapKfg ( STest * self, bool failWhenIncorrect ) {
                                     STestEnd ( self, eWarning, "'%s' root path "
                                         "does not exist: '%S'", name, p );
                                 else if ( type != kptDir )
-                                    STestEnd ( self, eWarning, "'%s' root path "
+                                    STestEnd ( self,
+                                        tests & KDIAGN_TRY_TO_WARN
+                                            ? eWarning : eEndFAIL,
+                                        "'%s' root path "
                                         "is not a directory: '%S'", name, p );
                                 else
                                     STestEnd ( self, eEndOK, "'%S': OK", p );
@@ -3722,7 +3774,7 @@ static rc_t STestCheckGapKfg ( STest * self, bool failWhenIncorrect ) {
     return rc;
 }
 
-static rc_t CC STestRun ( STest /*KDiagnose*/ * self, uint64_t tests,
+static rc_t CC STestRun ( STest * self, uint64_t tests,
     const KFile * kart, uint32_t numberOfKartItemsToCheck,
     bool checkHttp, bool checkAspera, bool checkDownload, const char * acc,
     uint32_t projectId, va_list args )
@@ -3730,113 +3782,79 @@ static rc_t CC STestRun ( STest /*KDiagnose*/ * self, uint64_t tests,
     rc_t rc = 0;
 
     const char exp [] = "NCBI.sra\210\031\003\005\001\0\0\0";
-    /*STest t;
-
-    if ( self == NULL )
-        rc = KDiagnoseMakeExt ( & self, NULL, NULL, NULL );
-    else
-        rc = KDiagnoseAddRef ( self );
-    if ( rc != 0 )
-        return rc;*/
 
     assert ( self );
 
-    //STestInit ( & t, self );
-
-//    STestStart ( self/*& t*/, true, "System" );
-
-/*  if ( tests & DIAGNOSE_NETWORK_HTTPS  ||
-         tests & DIAGNOSE_NETWORK_ASPERA ||
-         tests & DIAGNOSE_NETWORK_DB_GAP )
-    {   tests |= DIAGNOSE_NETWORK_NCBI; }
-    if ( tests & DIAGNOSE_NETWORK_NCBI )
-        tests |= KDIAGN_REPO_USER;*/
-
-    if ( tests & KDIAGN_ALL ) { // DIAGNOSE_CONFIG ) {
+    if ( tests & KDIAGN_CONFIG ) {
         rc_t r1 = 0;
-        if ( tests & KDIAGN_REPO_GAP )
-            tests |= KDIAGN_REPO_USER;
-        STestStart ( self/*& t*/, true, "Configuration" );
-        if ( tests & KDIAGN_REPO_USER && ! _RcCanceled ( r1 ) ) {
-            rc_t r2 = 0;
-            STestStart ( self/*& t*/, true,        "Common configuration" );
-            r2 = STestCheckCommonKfg ( self/*& t*/ );
-            if ( r2 == 0 )
-                r2 = STestEnd ( self/*& t*/, eOK,  "Common configuration" );
-            else {
-                if ( _RcCanceled ( r2 ) )
-                    STestEnd ( self/*& t*/, eCANCELED,
-                                           "Common configuration: CANCELED" );
-                else
-                    STestEnd ( self/*& t*/, eFAIL, "Common configuration" );
-            }
+        STestStart ( self, true, "Configuration" );
+        if ( tests & KDIAGN_KFG_NO_GAP && ! _RcCanceled ( r1 ) ) {
+            rc_t r2 = STestCheckNoGapKfg ( self, tests );
             if ( r1 == 0 && r2 != 0 )
                 r1 = r2;
         }
         if ( tests & KDIAGN_REPO_GAP && ! _RcCanceled ( r1 ) ) {
             rc_t r2 = 0;
-            STestStart ( self/*& t*/, true,        "DbGaP configuration" );
-            r2 = STestCheckGapKfg ( self/*& t*/, false );
+            STestStart ( self, true,        "DbGaP configuration" );
+            r2 = STestCheckGapKfg ( self, tests );
             if ( r2 == 0 )
-                r2 = STestEnd ( self/*& t*/, eOK,  "DbGaP configuration" );
+                r2 = STestEnd ( self, eOK,  "DbGaP configuration" );
             else {
                 if ( _RcCanceled ( r2 ) )
-                    STestEnd ( self/*& t*/, eCANCELED,
-                                           "DbGaP configuration: CANCELED" );
+                    STestEnd ( self, eCANCELED,
+                                            "DbGaP configuration: CANCELED" );
                 else
-                    STestEnd ( self/*& t*/, eFAIL, "DbGaP configuration" );
+                    STestEnd ( self, eFAIL, "DbGaP configuration" );
             }
             if ( r1 == 0 && r2 != 0 )
                 r1 = r2;
         }
         if ( r1 == 0 )
-            r1 = STestEnd ( self/*& t*/, eOK,      "Configuration" );
+            r1 = STestEnd ( self, eOK,      "Configuration" );
         else {
             if ( _RcCanceled ( r1 ) )
-                STestEnd ( self/*& t*/, eCANCELED, "Configuration: CANCELED" );
+                STestEnd ( self, eCANCELED, "Configuration: CANCELED" );
             else
-                STestEnd ( self/*& t*/, eFAIL,     "Configuration" );
+                STestEnd ( self, eFAIL,     "Configuration" );
         }
         if ( rc == 0 && r1 != 0 )
             rc = r1;
     }
 
-    if ( tests & KDIAGN_ALL/*DIAGNOSE_NETWORK*/ && ! _RcCanceled ( rc ) ) {
+    if ( tests & KDIAGN_NETWORK && ! _RcCanceled ( rc ) ) {
         rc_t r1 = 0;
         String run;
         char http [ PATH_MAX ] = "";
         uint64_t httpSize = 0;
         CONST_STRING ( & run, "SRR029074" );
-        /*if ( tests & DIAGNOSE_NETWORK_HTTPS || tests & DIAGNOSE_NETWORK_ASPERA )
-            tests |= DIAGNOSE_NETWORK_NCBI;*/
-        STestStart ( self/*& t*/, true, "Network" );
-        if ( tests & KDIAGN_ALL/*DIAGNOSE_NETWORK_NCBI*/ && ! _RcCanceled ( r1 ) ) {
+        STestStart ( self, true, "Network" );
+        if ( tests & KDIAGN_ACCESS_NCBI && ! _RcCanceled ( r1 ) ) {
             rc_t r2 = 0;
-            STestStart ( self/*& t*/, true,        "Access to NCBI" );
-            r2 = STestCheckNcbiAccess ( self/*& t*/ );
+            STestStart ( self, true,        "Access to NCBI" );
+            r2 = STestCheckNcbiAccess ( self, tests );
             if ( r2 == 0 )
-                r2 = STestEnd ( self/*& t*/, eOK,      "Access to NCBI" );
+                r2 = STestEnd ( self, eOK,      "Access to NCBI" );
             else {
                 if ( _RcCanceled ( r2 ) )
-                    STestEnd ( self/*& t*/, eCANCELED, "Access to NCBI: CANCELED" );
+                    STestEnd ( self, eCANCELED, "Access to NCBI: CANCELED" );
                 else
-                    STestEnd ( self/*& t*/, eFAIL,     "Access to NCBI" );
+                    STestEnd ( self, eFAIL,     "Access to NCBI" );
             }
             if ( r1 == 0 && r2 != 0 )
                 r1 = r2;
         }
-        if ( tests & KDIAGN_ALL/*DIAGNOSE_NETWORK_HTTPS*/ && ! _RcCanceled ( r1 ) ) {
+        if ( tests & KDIAGN_CGI && ! _RcCanceled ( r1 ) ) {
             rc_t r2 = 0;
-            STestStart ( self/*& t*/, true,        "HTTPS download" );
-            r2 = STestCheckHttp ( self/*& t*/, & run, false, http, sizeof http,
+            STestStart ( self, true,        "HTTPS download" );
+            r2 = STestCheckHttp ( self, tests, & run, false, http, sizeof http,
                                   & httpSize, exp, sizeof exp - 1 );
             if ( r2 == 0 )
-                r2 = STestEnd ( self/*& t*/, eOK,      "HTTPS download" );
+                r2 = STestEnd ( self, eOK,      "HTTPS download" );
             else {
                 if ( _RcCanceled ( r2 ) )
-                    STestEnd ( self/*& t*/, eCANCELED, "HTTPS download: CANCELED" );
+                    STestEnd ( self, eCANCELED, "HTTPS download: CANCELED" );
                 else
-                    STestEnd ( self/*& t*/, eFAIL,     "HTTPS download" );
+                    STestEnd ( self, eFAIL,     "HTTPS download" );
             }
             if ( r1 == 0 && r2 != 0 )
                 r1 = r2;
@@ -3845,28 +3863,28 @@ static rc_t CC STestRun ( STest /*KDiagnose*/ * self, uint64_t tests,
             rc_t r2 = 0;
             char fasp [ PATH_MAX ] = "";
             uint64_t faspSize = 0;
-            STestStart ( self/*& t*/, true,        "Aspera download" );
-            r2 = STestCheckFasp ( self/*& t*/, & run, false, fasp, sizeof fasp,
+            STestStart ( self, true,        "Aspera download" );
+            r2 = STestCheckFasp ( self, & run, false, fasp, sizeof fasp,
                                   & faspSize, exp, sizeof exp - 1 );
             if ( r2 == 0 )
-                r2 = STestEnd ( self/*& t*/, eOK,      "Aspera download" );
+                r2 = STestEnd ( self, eOK,      "Aspera download" );
             else {
                 if ( _RcCanceled ( r2 ) )
-                    STestEnd ( self/*& t*/, eCANCELED, "Aspera download: CANCELED" );
+                    STestEnd ( self, eCANCELED, "Aspera download: CANCELED" );
                 else
-                    STestEnd ( self/*& t*/, eFAIL,     "Aspera download" );
+                    STestEnd ( self, eFAIL,     "Aspera download" );
             }
             if ( r1 == 0 && r2 != 0 )
                 r1 = r2;
             if ( r2 == 0 && httpSize != 0 && faspSize != 0 ) {
-                r2 = STestHttpVsFasp ( self/*& t*/, http, httpSize, fasp, faspSize );
+                r2 = STestHttpVsFasp ( self, http, httpSize, fasp, faspSize );
                 if ( r1 == 0 && r2 != 0 )
                     r1 = r2;
             }
             if ( * fasp != '\0' ) {
                 rc_t r2 = KDirectoryRemove ( self-> dir, false, fasp );
                 if ( r2 != 0 ) {
-                    STestFail ( self/*& t*/, r2, "FAILURE: cannot remove '%s': %R",
+                    STestFail ( self, r2, "FAILURE: cannot remove '%s': %R",
                                           fasp, r2 );
                     if ( r1 == 0 && r2 != 0 )
                         r1 = r2;
@@ -3878,7 +3896,7 @@ static rc_t CC STestRun ( STest /*KDiagnose*/ * self, uint64_t tests,
         if ( * http != '\0' ) {
             rc_t r2 = KDirectoryRemove ( self-> dir, false, http );
             if ( r2 != 0 ) {
-                STestFail ( self/*& t*/, r2, "FAILURE: cannot remove '%s': %R",
+                STestFail ( self, r2, "FAILURE: cannot remove '%s': %R",
                                       http, r2 );
                 if ( r1 == 0 && r2 != 0 )
                     r1 = r2;
@@ -3887,11 +3905,11 @@ static rc_t CC STestRun ( STest /*KDiagnose*/ * self, uint64_t tests,
                 * http = '\0';
         }
         if ( r1 == 0)
-            r1 = STestEnd ( self/*& t*/, eOK,  "Network" );
+            r1 = STestEnd ( self, eOK,  "Network" );
         else  if ( _RcCanceled ( r1 ) )
-            STestEnd ( self/*& t*/, eCANCELED, "Network: CANCELED" );
+            STestEnd ( self, eCANCELED, "Network: CANCELED" );
         else
-            STestEnd ( self/*& t*/, eFAIL,     "Network" );
+            STestEnd ( self, eFAIL,     "Network" );
         if ( rc == 0 && r1 != 0 )
             rc = r1;
     }
@@ -4013,8 +4031,8 @@ static rc_t CC STestRun ( STest /*KDiagnose*/ * self, uint64_t tests,
     return rc;
 }
 
-static rc_t CC KDiagnoseRunImpl ( KDiagnose * self, uint64_t tests,
-    const KFile * kart, uint32_t numberOfKartItemsToCheck,
+static rc_t CC KDiagnoseRunImpl ( KDiagnose * self, const char * name,
+    uint64_t tests, const KFile * kart, uint32_t numberOfKartItemsToCheck,
     bool checkHttp, bool checkAspera, bool checkDownload,
     const char * acc, uint32_t projectId, ... )
 {
@@ -4033,7 +4051,7 @@ static rc_t CC KDiagnoseRunImpl ( KDiagnose * self, uint64_t tests,
 
     STestInit ( & t, self );
 
-    STestStart ( & t, true, "System" );
+    STestStart ( & t, true, name );
 
     rc = STestRun ( & t, tests, kart, numberOfKartItemsToCheck,
         checkHttp, checkAspera, checkDownload, acc, projectId, args );
@@ -4042,11 +4060,11 @@ static rc_t CC KDiagnoseRunImpl ( KDiagnose * self, uint64_t tests,
       rc = 1;
 
     if ( rc == 0)
-        STestEnd ( & t, eOK,       "System" );
+        STestEnd ( & t, eOK,       name );
     else  if ( _RcCanceled ( rc ) )
-        STestEnd ( & t, eCANCELED, "System: CANCELED" );
+        STestEnd ( & t, eCANCELED, "%s: CANCELED", name );
     else
-        STestEnd ( & t, eFAIL,     "System" );
+        STestEnd ( & t, eFAIL,     "%s", name );
 
     STestFini ( & t );
     KDiagnoseRelease ( self );
@@ -4054,23 +4072,22 @@ static rc_t CC KDiagnoseRunImpl ( KDiagnose * self, uint64_t tests,
 }
 
 LIB_EXPORT rc_t CC KDiagnoseAll ( KDiagnose * self, uint64_t tests ) {
-    return KDiagnoseRunImpl ( self, KDIAGN_ALL, NULL, 0,
+    return KDiagnoseRunImpl ( self, "System", KDIAGN_ALL, NULL, 0,
                               true, true, true, NULL, 0 );
 }
 
-/*LIB_EXPORT
+LIB_EXPORT
 rc_t CC KDiagnoseAdvanced ( KDiagnose * self, uint64_t tests )
 {
-    return KDiagnoseRunImpl ( self, tests, NULL, 0,
-        tests & DIAGNOSE_NETWORK_HTTPS,
-        tests & DIAGNOSE_NETWORK_ASPERA, true, NULL, 0 );
-}*/
+    return KDiagnoseRunImpl ( self, "System", tests, NULL, 0,
+                              true, true, true, NULL, 0 );
+}
 
 LIB_EXPORT rc_t CC KDiagnoseAcc ( KDiagnose * self,  const char * acc,
     uint32_t projectId, bool checkHttp, bool checkAspera, bool checkDownload,
     uint64_t tests )
 {
-    return KDiagnoseRunImpl ( self, KDIAGN_ALL, NULL, 0,
+    return KDiagnoseRunImpl ( self, "System", KDIAGN_ALL, NULL, 0,
                               checkHttp, checkAspera, checkDownload, acc, 0 );
 }
 
@@ -4089,6 +4106,6 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseKart ( KDiagnose * self,
     const struct KFile * kart, uint32_t numberOfKartItemsToCheck,
     bool checkHttp, bool checkAspera, uint64_t tests )
 {
-    return KDiagnoseRunImpl ( self, KDIAGN_ALL, kart, numberOfKartItemsToCheck,
-                              checkHttp, checkAspera, true, NULL, 0 );
+    return KDiagnoseRunImpl ( self, "Kart file", KDIAGN_ALL, kart,
+        numberOfKartItemsToCheck, checkHttp, checkAspera, true, NULL, 0 );
 }
