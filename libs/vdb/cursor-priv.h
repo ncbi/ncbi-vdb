@@ -148,11 +148,6 @@ enum
     vfExit
 };
 
-/* Make
- */
-rc_t VCursorMake ( struct VCursor **cursp, struct VTable const *tbl );
-rc_t VCursorMakeFromView ( struct VCursor **cursp, struct VView const * view );
-
 rc_t VTableCreateCursorWriteInt ( struct VTable *self, struct VCursor **cursp, KCreateMode mode, bool create_thread );
 
 /* Whack

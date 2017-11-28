@@ -91,6 +91,160 @@
 */
 static bool s_disable_pagemap_thread;
 
+/* dispatch functions */
+#define DISPATCH(call)  \
+    if ( self != NULL && self -> vt != NULL )   \
+        return self -> vt -> call;              \
+    else                                        \
+        return RC ( rcVDB, rcCursor, rcAccessing, rcSelf, rcNull );
+
+LIB_EXPORT rc_t CC VCursorAddRef ( const VCursor *self )
+{
+    if ( self != NULL && self -> vt != NULL )
+    {
+        return self -> vt -> addRef ( self );
+    }
+    return 0; /* here, NULL is OK */
+}
+
+LIB_EXPORT rc_t CC VCursorRelease ( const VCursor *self )
+{
+    if ( self != NULL && self -> vt != NULL )
+    {
+        return self -> vt -> release ( self );
+    }
+    return 0; /* here, NULL is OK */
+}
+
+LIB_EXPORT rc_t CC VCursorVAddColumn ( const VCursor *self, uint32_t *idx, const char *name, va_list args )
+{
+    DISPATCH ( vAddColumn ( self, idx, name, args ) );
+}
+LIB_EXPORT rc_t CC VCursorVGetColumnIdx ( const VCursor *self, uint32_t *idx, const char *name, va_list args )
+{
+    DISPATCH ( vGetColumnIdx ( self, idx, name, args ) );
+}
+LIB_EXPORT rc_t CC VCursorDatatype ( const VCursor *self, uint32_t idx, struct VTypedecl *type, struct VTypedesc *desc )
+{
+    DISPATCH ( datatype ( self, idx, type, desc ) );
+}
+LIB_EXPORT rc_t CC VCursorOpen ( const VCursor *self )
+{
+    DISPATCH ( open ( self ) );
+}
+LIB_EXPORT rc_t CC VCursorIdRange ( const VCursor *self, uint32_t idx, int64_t *first, uint64_t *count )
+{
+    DISPATCH ( idRange ( self, idx, first, count ) );
+}
+LIB_EXPORT rc_t CC VCursorRowId ( const VCursor *self, int64_t *id )
+{
+    DISPATCH ( rowId ( self, id ) );
+}
+LIB_EXPORT rc_t CC VCursorSetRowId ( const VCursor *self, int64_t row_id )
+{
+    DISPATCH ( setRowId ( self, row_id ) );
+}
+LIB_EXPORT rc_t CC VCursorFindNextRowId ( const VCursor *self, uint32_t idx, int64_t *next )
+{
+    DISPATCH ( findNextRowId ( self, idx, next ) );
+}
+LIB_EXPORT rc_t CC VCursorFindNextRowIdDirect ( const VCursor *self, uint32_t idx, int64_t start_id, int64_t *next )
+{
+    DISPATCH ( findNextRowIdDirect ( self, idx, start_id, next ) );
+}
+LIB_EXPORT rc_t CC VCursorOpenRow ( const VCursor *self )
+{
+    DISPATCH ( openRow ( self ) );
+}
+LIB_EXPORT rc_t CC VCursorWrite ( VCursor *self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t count )
+{
+    DISPATCH ( write ( self, col_idx, elem_bits, buffer, boff, count ) );
+}
+LIB_EXPORT rc_t CC VCursorCommitRow ( VCursor *self )
+{
+    DISPATCH ( commitRow ( self ) );
+}
+LIB_EXPORT rc_t CC VCursorCloseRow ( const VCursor *self )
+{
+    DISPATCH ( closeRow ( self ) );
+}
+LIB_EXPORT rc_t CC VCursorRepeatRow ( VCursor *self, uint64_t count )
+{
+    DISPATCH ( repeatRow ( self, count ) );
+}
+LIB_EXPORT rc_t CC VCursorFlushPage ( VCursor *self )
+{
+    DISPATCH ( flushPage ( self ) );
+}
+LIB_EXPORT rc_t CC VCursorGetBlob ( const VCursor *self, const VBlob **blob, uint32_t col_idx )
+{
+    DISPATCH ( getBlob ( self, blob, col_idx ) );
+}
+LIB_EXPORT rc_t CC VCursorGetBlobDirect ( const VCursor *self,
+    const VBlob **blob, int64_t row_id, uint32_t col_idx )
+{
+    DISPATCH ( getBlob ( self, blob, col_idx ) );
+}
+LIB_EXPORT rc_t CC VCursorRead ( const VCursor *self, uint32_t col_idx, uint32_t elem_bits, void *buffer, uint32_t blen, uint32_t *row_len )
+{
+    DISPATCH ( read ( self, col_idx, elem_bits, buffer, blen, row_len ) );
+}
+LIB_EXPORT rc_t CC VCursorReadDirect ( const VCursor *self, int64_t row_id, uint32_t col_idx,
+    uint32_t elem_bits, void *buffer, uint32_t blen, uint32_t *row_len )
+{
+    DISPATCH ( readDirect ( self, row_id, col_idx, elem_bits, buffer, blen, row_len ) );
+}
+LIB_EXPORT rc_t CC VCursorReadBits ( const VCursor *self, uint32_t col_idx,
+    uint32_t elem_bits, uint32_t start, void *buffer, uint32_t off,
+    uint32_t blen, uint32_t *num_read, uint32_t *remaining )
+{
+    DISPATCH ( readBits ( self, col_idx, elem_bits, start, buffer, off, blen, num_read, remaining ) );
+}
+LIB_EXPORT rc_t CC VCursorReadBitsDirect ( const VCursor *self, int64_t row_id, uint32_t col_idx,
+    uint32_t elem_bits, uint32_t start, void *buffer, uint32_t off,
+    uint32_t blen, uint32_t *num_read, uint32_t *remaining )
+{
+    DISPATCH ( readBitsDirect ( self, row_id, col_idx, elem_bits, start, buffer, off, blen, num_read, remaining ) );
+}
+LIB_EXPORT rc_t CC VCursorCellData ( const VCursor *self, uint32_t col_idx,
+    uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len )
+{
+    DISPATCH ( cellData ( self, col_idx, elem_bits, base, boff, row_len ) );
+}
+LIB_EXPORT rc_t CC VCursorCellDataDirect ( const VCursor *self, int64_t row_id, uint32_t col_idx,
+    uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len )
+{
+    DISPATCH ( cellDataDirect ( self, row_id, col_idx, elem_bits, base, boff, row_len ) );
+}
+LIB_EXPORT rc_t CC VCursorDataPrefetch ( const VCursor *self, const int64_t *row_ids, uint32_t col_idx,uint32_t num_rows, int64_t min_valid_row_id, int64_t max_valid_row_id, bool continue_on_error )
+{
+    DISPATCH ( dataPrefetch ( self, row_ids, col_idx, num_rows, min_valid_row_id, max_valid_row_id, continue_on_error ) );
+}
+LIB_EXPORT rc_t CC VCursorDefault ( VCursor *self, uint32_t col_idx,
+    bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t row_len )
+{
+    DISPATCH ( _default ( self, col_idx, elem_bits, buffer, boff, row_len ) );
+}
+LIB_EXPORT rc_t CC VCursorCommit ( VCursor *self )
+{
+    DISPATCH ( commit ( self ) );
+}
+LIB_EXPORT rc_t CC VCursorOpenParentRead ( const VCursor *self, const VTable **tbl )
+{
+    DISPATCH ( openParentRead ( self, tbl ) );
+}
+LIB_EXPORT rc_t CC VCursorOpenParentUpdate ( VCursor *self, VTable **tbl )
+{
+    DISPATCH ( openParentUpdate ( self, tbl ) );
+}
+LIB_EXPORT rc_t CC VCursorGetUserData ( const VCursor *self, void **data )
+{
+    DISPATCH ( getUserData ( self, data ) );
+}
+LIB_EXPORT rc_t CC VCursorSetUserData ( const VCursor *self, void *data, void ( CC * destroy ) ( void *data ) )
+{
+    DISPATCH ( setUserData ( self, data, destroy ) );
+}
 
 /*--------------------------------------------------------------------------
  * VCursorCache
@@ -287,13 +441,12 @@ rc_t VCursorDestroy ( VCursor *self )
     return 0;
 }
 
-
 /* AddRef
  * Release
  *  all objects are reference counted
  *  NULL references are ignored
  */
-LIB_EXPORT rc_t CC VCursorAddRef ( const VCursor *self )
+rc_t CC VTableCursorAddRef ( const VCursor *self )
 {
     if ( self != NULL )
     {
@@ -306,7 +459,7 @@ LIB_EXPORT rc_t CC VCursorAddRef ( const VCursor *self )
     return 0;
 }
 
-LIB_EXPORT rc_t CC VCursorRelease ( const VCursor *self )
+rc_t CC VTableCursorRelease ( const VCursor *self )
 {
     if ( self != NULL )
     {
@@ -323,7 +476,7 @@ LIB_EXPORT rc_t CC VCursorRelease ( const VCursor *self )
 
 /* Make - PRIVATE
  */
-rc_t VCursorMake ( VCursor **cursp, const VTable *tbl )
+rc_t VTableCursorMake ( VCursor **cursp, const VTable *tbl, VCursor_vt *vt )
 {
     rc_t rc;
     VCursor *curs;
@@ -348,6 +501,7 @@ rc_t VCursorMake ( VCursor **cursp, const VTable *tbl )
             rc = STableCloneExtend ( tbl -> stbl, & curs -> stbl, curs -> schema );
             if ( rc == 0 )
             {
+                curs -> vt = vt;
                 curs -> tbl = VTableAttach ( tbl );
                 VectorInit ( & curs -> row, 1, 16 );
                 VectorInit ( & curs -> v_cache_curs, 1, 16 );
@@ -507,7 +661,6 @@ rc_t VCursorSupplementSchema ( const VCursor *self )
     }
     return rc;
 }
-
 
 /* CreateCachedCursorRead
  *  creates a read cursor object onto table with a cache limit in bytes
@@ -824,7 +977,7 @@ rc_t VCursorAddColspec ( VCursor *self, uint32_t *idx, const char *colspec )
  *    "( type ) name"
  *  the special name "*" may be added to a read cursor.
  */
-LIB_EXPORT rc_t CC VCursorVAddColumn ( const VCursor *cself,
+LIB_EXPORT rc_t CC VTableCursorVAddColumn ( const VCursor *cself,
     uint32_t *idx, const char *name, va_list args )
 {
     rc_t rc;
@@ -970,7 +1123,7 @@ rc_t VCursorGetColspec ( const VCursor *self, uint32_t *idx, const char *colspec
  *
  *  "name" [ IN ] - NUL terminated column name spec.
  */
-LIB_EXPORT rc_t CC VCursorVGetColumnIdx ( const VCursor *self,
+rc_t CC VTableCursorVGetColumnIdx ( const VCursor *self,
     uint32_t *idx, const char *name, va_list args )
 {
     rc_t rc;
@@ -1030,7 +1183,7 @@ LIB_EXPORT rc_t CC VCursorGetColumnIdx ( const VCursor *self, uint32_t *idx, con
  *
  * NB - one of "type" and "def" must be non-NULL
  */
-LIB_EXPORT rc_t CC VCursorDatatype ( const VCursor *self, uint32_t idx,
+rc_t CC VTableCursorDatatype ( const VCursor *self, uint32_t idx,
     struct VTypedecl *type, struct VTypedesc *desc )
 {
     rc_t rc;
@@ -1103,7 +1256,7 @@ bool CC column_id_range ( void *item, void *data )
     return false;
 }
 
-LIB_EXPORT rc_t CC VCursorIdRange ( const VCursor *self, uint32_t idx,
+rc_t CC VTableCursorIdRange ( const VCursor *self, uint32_t idx,
     int64_t *first, uint64_t *count )
 {
     rc_t rc;
@@ -1414,7 +1567,7 @@ rc_t VCursorOpenForListing ( const VCursor *cself )
  *
  *  "id" [ OUT ] - current row id
  */
-LIB_EXPORT rc_t CC VCursorRowId ( const VCursor *self, int64_t *id )
+rc_t VTableCursorRowId ( const VCursor *self, int64_t *id )
 {
     rc_t rc;
     if ( id == NULL )
@@ -1554,7 +1707,7 @@ rc_t VCursorReadColumnDirectInt ( const VCursor *cself, int64_t row_id, uint32_t
  *
  *  "col_idx" [ IN ] - index of column to be read, returned by "AddColumn"
  */
-LIB_EXPORT rc_t CC VCursorGetBlob ( const VCursor *self,
+rc_t VTableCursorGetBlob ( const VCursor *self,
     const VBlob **blob, uint32_t col_idx )
 {
     rc_t rc;
@@ -1599,7 +1752,7 @@ LIB_EXPORT rc_t CC VCursorGetBlob ( const VCursor *self,
     return rc;
 }
 
-LIB_EXPORT rc_t CC VCursorGetBlobDirect ( const VCursor *self,
+rc_t VTableCursorGetBlobDirect ( const VCursor *self,
     const VBlob **blob, int64_t row_id, uint32_t col_idx )
 {
     rc_t rc;
@@ -1768,7 +1921,7 @@ bool bad_elem_bits ( uint32_t elem_size, uint32_t elem_bits )
     return false;
 }
 
-LIB_EXPORT rc_t CC VCursorRead ( const VCursor *self, uint32_t col_idx,
+rc_t VTableCursorRead ( const VCursor *self, uint32_t col_idx,
     uint32_t elem_bits, void *buffer, uint32_t blen, uint32_t *row_len )
 {
     rc_t rc;
@@ -1827,7 +1980,7 @@ LIB_EXPORT rc_t CC VCursorRead ( const VCursor *self, uint32_t col_idx,
     return rc;
 }
 
-LIB_EXPORT rc_t CC VCursorReadDirect ( const VCursor *self, int64_t row_id, uint32_t col_idx,
+rc_t VTableCursorReadDirect ( const VCursor *self, int64_t row_id, uint32_t col_idx,
     uint32_t elem_bits, void *buffer, uint32_t blen, uint32_t *row_len )
 {
     rc_t rc;
@@ -1911,7 +2064,7 @@ LIB_EXPORT rc_t CC VCursorReadDirect ( const VCursor *self, int64_t row_id, uint
  *  "start" + "num_read" + "remaining" == row length, assuming that
  *  "start" <= row length.
  */
-LIB_EXPORT rc_t CC VCursorReadBits ( const VCursor *self, uint32_t col_idx,
+rc_t VTableCursorReadBits ( const VCursor *self, uint32_t col_idx,
     uint32_t elem_bits, uint32_t start, void *buffer, uint32_t off,
     uint32_t blen, uint32_t *num_read, uint32_t *remaining )
 {
@@ -1978,7 +2131,7 @@ LIB_EXPORT rc_t CC VCursorReadBits ( const VCursor *self, uint32_t col_idx,
     return rc;
 }
 
-LIB_EXPORT rc_t CC VCursorReadBitsDirect ( const VCursor *self, int64_t row_id, uint32_t col_idx,
+rc_t VTableCursorReadBitsDirect ( const VCursor *self, int64_t row_id, uint32_t col_idx,
     uint32_t elem_bits, uint32_t start, void *buffer, uint32_t off,
     uint32_t blen, uint32_t *num_read, uint32_t *remaining )
 {
@@ -2060,7 +2213,7 @@ LIB_EXPORT rc_t CC VCursorReadBitsDirect ( const VCursor *self, int64_t row_id, 
  *
  *  "row_len" [ OUT, NULL OKAY ] - the number of elements in row
  */
-LIB_EXPORT rc_t CC VCursorCellData ( const VCursor *self, uint32_t col_idx,
+rc_t VTableCursorCellData ( const VCursor *self, uint32_t col_idx,
     uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len )
 {
     rc_t rc;
@@ -2097,7 +2250,7 @@ LIB_EXPORT rc_t CC VCursorCellData ( const VCursor *self, uint32_t col_idx,
     return rc;
 }
 
-LIB_EXPORT rc_t CC VCursorCellDataDirect ( const VCursor *self, int64_t row_id, uint32_t col_idx,
+rc_t VTableCursorCellDataDirect ( const VCursor *self, int64_t row_id, uint32_t col_idx,
     uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len )
 {
     rc_t rc;
@@ -2134,13 +2287,13 @@ LIB_EXPORT rc_t CC VCursorCellDataDirect ( const VCursor *self, int64_t row_id, 
     return rc;
 }
 
-LIB_EXPORT rc_t CC VCursorDataPrefetch( const VCursor *cself,
-										const int64_t *row_ids,
-										uint32_t col_idx,
-										uint32_t num_rows,
-										int64_t min_valid_row_id,
-										int64_t max_valid_row_id,
-										bool continue_on_error )
+rc_t VTableCursorDataPrefetch ( const VCursor *cself,
+								const int64_t *row_ids,
+								uint32_t col_idx,
+								uint32_t num_rows,
+								int64_t min_valid_row_id,
+								int64_t max_valid_row_id,
+								bool continue_on_error )
 {
 	rc_t rc=0;
 	const VColumn *col = ( const void* ) VectorGet ( & cself -> row, col_idx );
@@ -2233,7 +2386,7 @@ LIB_EXPORT rc_t CC VCursorDataPrefetch( const VCursor *cself,
  *  duplicate reference to parent table
  *  NB - returned reference must be released
  */
-LIB_EXPORT rc_t CC VCursorOpenParentRead ( const VCursor *self, const VTable **tbl )
+rc_t VTableCursorOpenParentRead ( const VCursor *self, const VTable **tbl )
 {
     rc_t rc;
 
@@ -2348,7 +2501,7 @@ rc_t VCursorListReadableColumns ( VCursor *self, BSTree *columns )
  *
  *  "data" [ OUT ] - return parameter for getting data
  */
-LIB_EXPORT rc_t CC VCursorGetUserData ( const VCursor *self, void **data )
+rc_t VTableCursorGetUserData ( const VCursor *self, void **data )
 {
     rc_t rc;
 
@@ -2378,7 +2531,7 @@ LIB_EXPORT rc_t CC VCursorGetUserData ( const VCursor *self, void **data )
  *  "destroy" [ IN, NULL OKAY ] - optional destructor param
  *  invoked from destructor of "self"
  */
-LIB_EXPORT rc_t CC VCursorSetUserData ( const VCursor *cself,
+rc_t VTableCursorSetUserData ( const VCursor *cself,
     void *data, void ( CC * destroy ) ( void *data ) )
 {
     VCursor *self = ( VCursor* ) cself;
@@ -2900,7 +3053,7 @@ rc_t VCursorFindNextRowIdInt ( const VCursor * self, uint32_t idx, int64_t start
     return rc;
 }
 
-LIB_EXPORT rc_t CC VCursorFindNextRowId ( const VCursor *self, uint32_t idx, int64_t *next )
+rc_t VTableCursorFindNextRowId ( const VCursor *self, uint32_t idx, int64_t *next )
 {
     rc_t rc = 0;
 
@@ -2921,7 +3074,7 @@ LIB_EXPORT rc_t CC VCursorFindNextRowId ( const VCursor *self, uint32_t idx, int
     return rc;
 }
 
-LIB_EXPORT rc_t CC VCursorFindNextRowIdDirect ( const VCursor *self, uint32_t idx, int64_t start_id, int64_t *next )
+rc_t VTableCursorFindNextRowIdDirect ( const VCursor *self, uint32_t idx, int64_t start_id, int64_t *next )
 {
     rc_t rc = 0;
 
