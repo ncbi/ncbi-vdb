@@ -219,26 +219,30 @@ run-test-proxy-with-scheme:
                 $(BINDIR)/test-proxy-with-scheme =BAD.proxy.ncbi.nlm.nih.gov
 
 	# good proxy in configuration: success
-	$(BINDIR)/test-proxy-with-scheme =webproxy.ncbi.nlm.nih.gov  SUCCESS
+	ping -c1 webproxy > /dev/null \
+        && $(BINDIR)/test-proxy-with-scheme =webproxy.ncbi.nlm.nih.gov  SUCCESS \
+        || echo skipped
 
 	# bad proxy in environment: fail
 	http_proxy=BAD.proxy.ncbi.nlm.nih.gov $(BINDIR)/test-proxy-with-scheme
 
 	# good proxy in environment: success
-	all_proxy=webproxy.ncbi.nlm.nih.gov \
-		$(BINDIR)/test-proxy-with-scheme                         SUCCESS
+	ping -c1 webproxy > /dev/null && all_proxy=webproxy.ncbi.nlm.nih.gov \
+		$(BINDIR)/test-proxy-with-scheme                       SUCCESS || echo skipped
 
 	# good proxy with schema in environment: success
-	ALL_PROXY=http://webproxy.ncbi.nlm.nih.gov \
-		$(BINDIR)/test-proxy-with-scheme                         SUCCESS
+	ping -c1 webproxy > /dev/null && ALL_PROXY=http://webproxy.ncbi.nlm.nih.gov \
+		$(BINDIR)/test-proxy-with-scheme                       SUCCESS || echo skipped
 
 	# good proxy with schema and port in environment: success
-	http_proxy=http://webproxy.ncbi.nlm.nih.gov:3128 \
-		$(BINDIR)/test-proxy-with-scheme                         SUCCESS
+	ping -c1 webproxy > /dev/null && \
+        http_proxy=http://webproxy.ncbi.nlm.nih.gov:3128 \
+		$(BINDIR)/test-proxy-with-scheme                       SUCCESS || echo skipped
 
 	# good proxy with any schema in environment: success
-	HTTP_PROXY=anySchemaWillBeIgnored://webproxy.ncbi.nlm.nih.gov \
-		$(BINDIR)/test-proxy-with-scheme                         SUCCESS
+	ping -c1 webproxy > /dev/null && \
+        HTTP_PROXY=anySchemaWillBeIgnored://webproxy.ncbi.nlm.nih.gov \
+		$(BINDIR)/test-proxy-with-scheme                       SUCCESS || echo skipped
 
 	# bad proxy port in environment: fail
 	http_proxy=http://webproxy.ncbi.nlm.nih.gov:3 \
@@ -252,5 +256,23 @@ run-test-proxy-with-scheme:
 	http_proxy=h:/w.g:3128  $(BINDIR)/test-proxy-with-scheme
 	http_proxy=http://      $(BINDIR)/test-proxy-with-scheme
 	http_proxy=http://:3128 $(BINDIR)/test-proxy-with-scheme
+
+	# VDB-3329: http_proxy specification with trailing slash
+	ping -c1 webproxy > /dev/null && \
+	http_proxy=http://webproxy.ncbi.nlm.nih.gov:3128/     \
+		$(BINDIR)/test-proxy-with-scheme                       SUCCESS || echo skipped
+	ping -c1 webproxy > /dev/null && \
+	http_proxy=http://webproxy.ncbi.nlm.nih.gov:3128///   \
+		$(BINDIR)/test-proxy-with-scheme                       SUCCESS || echo skipped
+	ping -c1 webproxy > /dev/null && \
+	http_proxy=http://webproxy.ncbi.nlm.nih.gov:3128/:    \
+		$(BINDIR)/test-proxy-with-scheme                       SUCCESS || echo skipped
+	ping -c1 webproxy > /dev/null && \
+	http_proxy=http://webproxy.ncbi.nlm.nih.gov:3128???XY \
+		$(BINDIR)/test-proxy-with-scheme                       SUCCESS || echo skipped
+	http_proxy=http://webproxy.ncbi.nlm.nih.gov/X         \
+		$(BINDIR)/test-proxy-with-scheme
+	http_proxy=http://webproxy.ncbi.nlm.nih.gov?X         \
+		$(BINDIR)/test-proxy-with-scheme
 
 	@ echo ... test-proxy-with-scheme: END

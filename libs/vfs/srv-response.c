@@ -86,6 +86,9 @@ rc_t VPathSetWhack ( VPathSet * self ) {
         RELEASE ( VPath, self -> cacheHttps );
         RELEASE ( VPath, self -> cacheS3 );
 
+        RELEASE ( VPath, self -> local );
+        RELEASE ( VPath, self -> cache );
+
         RELEASE ( KSrvError, self -> error );
 
         free ( self );
