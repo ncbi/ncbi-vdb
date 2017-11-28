@@ -199,6 +199,13 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseTestNumber ( const KDiagnoseTest * self,
 DIAGNOSE_EXTERN rc_t CC KDiagnoseTestName ( const KDiagnoseTest * self,
                                             const char ** name );
 
+/* Code
+ *
+ * Get test's code.
+ */
+DIAGNOSE_EXTERN rc_t CC KDiagnoseTestCode ( const KDiagnoseTest * self,
+                                            uint64_t * code );
+
 /* Message
  *
  * Get test message (is set when test is finished)
@@ -240,7 +247,7 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseAdvanced ( KDiagnose * self, uint64_t tests );
 
 #define KDIAGN_REPO_REMOTE              0x2
 #define KDIAGN_REPO_SITE                0x4
-#define KDIAGN_REPO_USER                0x8
+#define KDIAGN_REPO_USER_PUBLIC         0x8
 #define KDIAGN_REPO_GAP                0x10
 #define KDIAGN_KFG_ASCP                0x20
 
@@ -249,19 +256,21 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseAdvanced ( KDiagnose * self, uint64_t tests );
 #define KDIAGN_CGI_HTTP               0x100
 #define KDIAGN_CGI_ASCP               0x200
 
-#define KDIAGN_DOWNLOAD_HTTP          0x400
-#define KDIAGN_DOWNLOAD_ASCP          0x800
+#define KDIAGN_HTTP                   0x400
+#define KDIAGN_ASCP                   0x800
+#define KDIAGN_HTTP_VS_ASCP          0x1000
 
-#define KDIAGN_HTTP                  0x1000
-#define KDIAGN_ASCP                  0x2000
-#define KDIAGN_REQUIRE_HTTP_AND_ASCP 0x4000
+#define KDIAGN_DOWNLOAD_HTTP         0x2000
+#define KDIAGN_DOWNLOAD_ASCP         0x4000
 
-#define KDIAGN_TRY_TO_WARN           0x8000
+#define KDIAGN_REQUIRE_HTTP_AND_ASCP 0x8000
 
-#define KDIAGN_AS_IS                0x10000
+#define KDIAGN_TRY_TO_WARN          0x10000
 
-#define KDIAGN_KFG_NO_GAP ( KDIAGN_REPO_REMOTE | KDIAGN_REPO_SITE | \
-                            KDIAGN_REPO_USER  | KDIAGN_KFG_ASCP )
+#define KDIAGN_AS_IS                0x20000
+
+#define KDIAGN_KFG_NO_GAP ( KDIAGN_REPO_REMOTE      | KDIAGN_REPO_SITE | \
+                            KDIAGN_REPO_USER_PUBLIC | KDIAGN_KFG_ASCP )
 
 #define KDIAGN_CONFIG ( KDIAGN_KFG_NO_GAP | KDIAGN_REPO_GAP )
 
