@@ -52,6 +52,7 @@ struct VFSManager;
 typedef struct KDiagnose KDiagnose;
 typedef struct KDiagnoseError KDiagnoseError;
 typedef struct KDiagnoseTest KDiagnoseTest;
+typedef struct KDiagnoseTestDesc KDiagnoseTestDesc;
 
 
 /**************************** Make/AddRef/Release *****************************/
@@ -298,7 +299,6 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseDbGap ( KDiagnose * self, uint64_t tests,
 /******************************************************************************/
 
 
-#if 0
 /* GetDesc:
  * Get description of available tests
  * Returned object remains valid while "self" is valid
@@ -351,10 +351,9 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseTestDescChild ( const KDiagnoseTestDesc * self,
 
 /* Depends:
  * the test 'self' cannot be executed if test 'depends' fails
- */
+ *
 DIAGNOSE_EXTERN rc_t CC KDiagnoseTestDescDepends (
-    const KDiagnoseTestDesc * self, const KDiagnoseTestDesc * depends );
-#endif
+    const KDiagnoseTestDesc * self, const KDiagnoseTestDesc * depends );*/
 
 
 #ifdef __cplusplus
