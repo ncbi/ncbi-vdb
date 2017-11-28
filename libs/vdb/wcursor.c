@@ -71,10 +71,66 @@
 
 static bool s_disable_flush_thread = false;
 
+/* VTableCursor vtable, write side */
+
+static rc_t VTableCursorOpen ( const VCursor *cself );
+static rc_t VTableCursorSetRowId ( const VCursor *cself, int64_t row_id );
+static rc_t VTableCursorOpenRow ( const VCursor *cself );
+static rc_t VTableCursorWrite ( VCursor *self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t count );
+static rc_t VTableCursorCommitRow ( VCursor *self );
+static rc_t VTableCursorCloseRow ( const VCursor *cself );
+static rc_t VTableCursorRepeatRow ( VCursor *self, uint64_t count );
+static rc_t VTableCursorFlushPage ( VCursor *self );
+static rc_t VTableCursorDefault ( VCursor *self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t row_len );
+static rc_t VTableCursorCommit ( VCursor *self );
+static rc_t VTableCursorOpenParentUpdate ( VCursor *self, VTable **tbl );
+
+static VCursor_vt VTableCursor_write_vt =
+{
+    VTableCursorAddRef,
+    VTableCursorRelease,
+    VTableCursorVAddColumn,
+    VTableCursorVGetColumnIdx,
+    VTableCursorDatatype,
+    VTableCursorOpen,
+    VTableCursorIdRange,
+    VTableCursorRowId,
+    VTableCursorSetRowId,
+    VTableCursorFindNextRowId,
+    VTableCursorFindNextRowIdDirect,
+    VTableCursorOpenRow,
+    VTableCursorWrite,
+    VTableCursorCommitRow,
+    VTableCursorCloseRow,
+    VTableCursorRepeatRow,
+    VTableCursorFlushPage,
+    VTableCursorGetBlob,
+    VTableCursorGetBlobDirect,
+    VTableCursorRead,
+    VTableCursorReadDirect,
+    VTableCursorReadBits,
+    VTableCursorReadBitsDirect,
+    VTableCursorCellData,
+    VTableCursorCellDataDirect,
+    VTableCursorDataPrefetch,
+    VTableCursorDefault,
+    VTableCursorCommit,
+    VTableCursorOpenParentRead,
+    VTableCursorOpenParentUpdate,
+    VTableCursorGetUserData,
+    VTableCursorSetUserData
+};
+
+
 /*--------------------------------------------------------------------------
  * VCursor
  *  a row cursor onto a VTable
  */
+
+rc_t VCursorMake ( VCursor **cursp, const struct VTable *tbl )
+{
+    return VTableCursorMake ( cursp, tbl, & VTableCursor_write_vt );
+}
 
 LIB_EXPORT rc_t CC VDBManagerDisableFlushThread(VDBManager *self)
 {
@@ -165,7 +221,7 @@ rc_t VTableCreateCursorWriteInt ( VTable *self, VCursor **cursp, KCreateMode mod
             if ( self -> col_node == NULL )
                 KMetadataOpenNodeUpdate ( self -> meta, & self -> col_node, "col" );
 #endif
-            rc = VCursorMake ( & curs, self );
+            rc = VTableCursorMake ( & curs, self,&  VTableCursor_write_vt );
             if ( rc == 0 )
             {
                 rc = VCursorSupplementSchema ( curs );
@@ -279,7 +335,7 @@ rc_t VProdResolveAddTriggers ( const VProdResolve *self, const STable *stbl )
     return VProdResolveAddShallowTriggers ( self, stbl );
 }
 
-LIB_EXPORT rc_t CC VCursorOpen ( const VCursor *cself )
+rc_t VTableCursorOpen ( const VCursor *cself )
 {
     rc_t rc;
     VCursor *self = ( VCursor* ) cself;
@@ -524,7 +580,7 @@ rc_t VCursorListWritableColumns ( VCursor *self, BSTree *columns )
  *
  *  "row_id" [ IN ] - row id to select
  */
-LIB_EXPORT rc_t CC VCursorSetRowId ( const VCursor *cself, int64_t row_id )
+rc_t VTableCursorSetRowId ( const VCursor *cself, int64_t row_id )
 {
     rc_t rc;
     VCursor *self = ( VCursor* ) cself;
@@ -552,7 +608,7 @@ LIB_EXPORT rc_t CC VCursorSetRowId ( const VCursor *cself, int64_t row_id )
 /* OpenRow
  *  open currently closed row indicated by row id
  */
-LIB_EXPORT rc_t CC VCursorOpenRow ( const VCursor *cself )
+rc_t VTableCursorOpenRow ( const VCursor *cself )
 {
     rc_t rc;
     VCursor *self = ( VCursor* ) cself;
@@ -595,7 +651,7 @@ LIB_EXPORT rc_t CC VCursorOpenRow ( const VCursor *cself )
  *  commit row after writing
  *  prevents further writes
  */
-LIB_EXPORT rc_t CC VCursorCommitRow ( VCursor *self )
+rc_t VTableCursorCommitRow ( VCursor *self )
 {
     rc_t rc;
 
@@ -649,7 +705,7 @@ LIB_EXPORT rc_t CC VCursorCommitRow ( VCursor *self )
  *  "count" [ IN ] - the number of times to repeat
  *  the current row.
  */
-LIB_EXPORT rc_t CC VCursorRepeatRow ( VCursor *self, uint64_t count )
+rc_t VTableCursorRepeatRow ( VCursor *self, uint64_t count )
 {
     rc_t rc = 0;
 
@@ -700,7 +756,7 @@ LIB_EXPORT rc_t CC VCursorRepeatRow ( VCursor *self, uint64_t count )
  *  discard all changes. otherwise,
  *  advance to next row
  */
-LIB_EXPORT rc_t CC VCursorCloseRow ( const VCursor *cself )
+rc_t VTableCursorCloseRow ( const VCursor *cself )
 {
     rc_t rc = 0;        /* needed in case FlushPage isn't called */
     VCursor *self = ( VCursor* ) cself;
@@ -758,7 +814,7 @@ LIB_EXPORT rc_t CC VCursorCloseRow ( const VCursor *cself )
  *
  *  "row_len" [ IN ] - the number of elements in default row
  */
-LIB_EXPORT rc_t CC VCursorDefault ( VCursor *self, uint32_t col_idx,
+rc_t VTableCursorDefault ( VCursor *self, uint32_t col_idx,
     bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t row_len )
 {
     rc_t rc;
@@ -797,7 +853,7 @@ LIB_EXPORT rc_t CC VCursorDefault ( VCursor *self, uint32_t col_idx,
  *
  *  "count" [ IN ] - the number of elements to append
  */
-LIB_EXPORT rc_t CC VCursorWrite ( VCursor *self, uint32_t col_idx,
+rc_t VTableCursorWrite ( VCursor *self, uint32_t col_idx,
     bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t count )
 {
     rc_t rc;
@@ -1165,7 +1221,7 @@ rc_t VCursorFlushPageInt ( VCursor *self, bool sync )
         return VCursorFlushPageNoThread(self);
 }
 
-LIB_EXPORT rc_t CC VCursorFlushPage ( VCursor *self )
+rc_t VTableCursorFlushPage ( VCursor *self )
 {
     rc_t rc;
 
@@ -1185,7 +1241,7 @@ LIB_EXPORT rc_t CC VCursorFlushPage ( VCursor *self )
     return rc;
 }
 
-LIB_EXPORT rc_t CC VCursorCommit ( VCursor *self )
+rc_t VTableCursorCommit ( VCursor *self )
 {
     rc_t rc = VCursorFlushPage ( self );
     if ( rc == 0 )
@@ -1210,7 +1266,7 @@ LIB_EXPORT rc_t CC VCursorCommit ( VCursor *self )
  *  duplicate reference to parent table
  *  NB - returned reference must be released
  */
-LIB_EXPORT rc_t CC VCursorOpenParentUpdate ( VCursor *self, VTable **tbl )
+rc_t VTableCursorOpenParentUpdate ( VCursor *self, VTable **tbl )
 {
     rc_t rc;
 
