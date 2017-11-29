@@ -35,10 +35,10 @@
 
 using namespace std;
 
-TEST_SUITE( VdbTableCursorTestSuite_Read )
+TEST_SUITE( VdbTableCursorTestSuite_Write )
 const string ScratchDir = "./db/";
 
-class TableCursorFixture
+class TableCursorFixture : public WVDB_Fixture
 {
 public:
     TableCursorFixture()
@@ -54,49 +54,64 @@ public:
         }
     }
 
-    void MakeReadCursor( const char * p_dbName )
+    void MakeWriteCursor( const char * p_dbName, const char * p_schema )
     {
-        const VDBManager * mgr;
-        THROW_ON_RC ( VDBManagerMakeRead ( & mgr, NULL ) );
-        const VDatabase * db;
-        THROW_ON_RC ( VDBManagerOpenDBRead ( mgr, & db, NULL, "%s", p_dbName ) );
-        const VTable * tbl;
-        THROW_ON_RC ( VDatabaseOpenTableRead ( db, & tbl, "SEQUENCE" ) );
-        THROW_ON_RC ( VTableCreateCursorRead ( tbl, & m_cur ) );
-        THROW_ON_RC ( VTableRelease ( tbl ) );
-        THROW_ON_RC ( VDatabaseRelease ( db ) );
-        THROW_ON_RC ( VDBManagerRelease ( mgr ) );
+        m_databaseName = ScratchDir + p_dbName;
+        const char * schemaSpec = "db";
+        MakeDatabase ( p_schema, schemaSpec );
+
+        VTable* table;
+        THROW_ON_RC ( VDatabaseCreateTable ( m_db, & table, "t", kcmCreate | kcmMD5, "%s", "t" ) );
+        THROW_ON_RC ( VTableCreateCursorWrite ( table, & m_cur, kcmInsert ) );
+        THROW_ON_RC ( VTableRelease ( table ) );
     }
 
-    void MakeReadCursorAddColumn( const char * p_dbName, const char * p_colName )
+    void MakeWriteCursorAddColumn ( const char * p_dbName, const char * p_schema )
     {
-        MakeReadCursor ( p_dbName );
-        THROW_ON_RC ( VCursorAddColumn ( m_cur, & m_columnIdx, "%s", p_colName ) );
+        MakeWriteCursor( p_dbName, p_schema );
+        THROW_ON_RC ( VCursorAddColumn ( m_cur, & m_columnIdx, "%s", "c" ) );
     }
 
-    void MakeReadCursorAddColumnOpen( const char * p_dbName, const char * p_colName )
+    void MakeWriteCursorAddColumnOpen ( const char * p_dbName, const char * p_schema )
     {
-        MakeReadCursor ( p_dbName );
-        THROW_ON_RC ( VCursorAddColumn ( m_cur, & m_columnIdx, "%s", p_colName ) );
+        MakeWriteCursor( p_dbName, p_schema );
+        THROW_ON_RC ( VCursorAddColumn ( m_cur, & m_columnIdx, "%s", "c" ) );
         THROW_ON_RC ( VCursorOpen ( m_cur ) );
     }
 
-    const VCursor * m_cur;
+    void OpenRowWriteCommit ( const string & p_value )
+    {
+        THROW_ON_RC ( VCursorOpenRow ( m_cur ) );
+        THROW_ON_RC ( VCursorWrite ( m_cur, m_columnIdx, 8,
+                                    (const void*)p_value.data(), 0, p_value . length () ) );
+        THROW_ON_RC ( VCursorCommitRow ( m_cur ) );
+    }
+
+    VCursor * m_cur;
     uint32_t  m_columnIdx;
 };
 
-const char * Accession = "SRR600096";
-const char * Column = "SPOT_GROUP";
+static const char * SimpleSchema =
+    "table T#1 { column ascii c; };"
+    "database db #1 { table T#1 t; };"
+;
 
-FIXTURE_TEST_CASE( VTableCursor_MakeRead, TableCursorFixture )
+FIXTURE_TEST_CASE( VTableCursor_MakeWrite, TableCursorFixture )
 {
-    MakeReadCursor ( Accession );
-    REQUIRE_NOT_NULL ( m_cur );
+    m_databaseName = ScratchDir + GetName();
+    MakeDatabase ( SimpleSchema, "db" );
+
+    VTable* table;
+    REQUIRE_RC ( VDatabaseCreateTable ( m_db, & table, "t", kcmCreate | kcmMD5, "%s", "t" ) );
+
+    REQUIRE_RC ( VTableCreateCursorWrite ( table, & m_cur, kcmInsert ) );
+
+    REQUIRE_RC ( VTableRelease ( table ) );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_AddRef, TableCursorFixture )
 {
-    MakeReadCursor ( Accession );
+    MakeWriteCursor ( GetName(), SimpleSchema );
 
     REQUIRE_RC ( VCursorAddRef ( m_cur ) );
     REQUIRE_RC ( VCursorRelease ( m_cur ) ); // use valgrind to find any leaks
@@ -104,23 +119,23 @@ FIXTURE_TEST_CASE( VTableCursor_AddRef, TableCursorFixture )
 
 FIXTURE_TEST_CASE( VTableCursor_AddColumn, TableCursorFixture )
 {
-    MakeReadCursor ( Accession );
+    MakeWriteCursor ( GetName(), SimpleSchema );
 
-    REQUIRE_RC ( VCursorAddColumn ( m_cur, & m_columnIdx, "%s", Column ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cur, & m_columnIdx, "%s", "c" ) );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_GetColumnIdx, TableCursorFixture )
 {
-    MakeReadCursorAddColumn ( Accession, Column );
+    MakeWriteCursorAddColumn ( GetName(), SimpleSchema );
 
     uint32_t idx;
-    REQUIRE_RC ( VCursorGetColumnIdx ( m_cur, & idx, "%s", Column ) );
+    REQUIRE_RC ( VCursorGetColumnIdx ( m_cur, & idx, "%s", "c" ) );
     REQUIRE_EQ ( m_columnIdx, idx );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_Datatype, TableCursorFixture )
 {
-    MakeReadCursorAddColumn ( Accession, Column );
+    MakeWriteCursorAddColumn ( GetName(), SimpleSchema );
 
     struct VTypedecl type;
     struct VTypedesc desc;
@@ -134,25 +149,25 @@ FIXTURE_TEST_CASE( VTableCursor_Datatype, TableCursorFixture )
 
 FIXTURE_TEST_CASE( VTableCursor_Open, TableCursorFixture )
 {
-    MakeReadCursorAddColumn ( Accession, Column );
+    MakeWriteCursorAddColumn ( GetName(), SimpleSchema );
 
     REQUIRE_RC ( VCursorOpen ( m_cur ) );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_IdRange, TableCursorFixture )
 {
-    MakeReadCursorAddColumnOpen ( Accession, Column );
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
 
     int64_t first = 0;
     uint64_t count = 0;
     REQUIRE_RC ( VCursorIdRange ( m_cur, m_columnIdx, & first, & count ) );
     REQUIRE_EQ( 1l, first );
-    REQUIRE_EQ( 16lu, count );
+    REQUIRE_EQ( 0lu, count );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_RowId, TableCursorFixture )
 {
-    MakeReadCursorAddColumnOpen ( Accession, Column );
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
 
     int64_t rowId = 0;
     REQUIRE_RC ( VCursorRowId ( m_cur, & rowId ) );
@@ -161,7 +176,7 @@ FIXTURE_TEST_CASE( VTableCursor_RowId, TableCursorFixture )
 
 FIXTURE_TEST_CASE( VTableCursor_SetRowId, TableCursorFixture )
 {
-    MakeReadCursorAddColumnOpen ( Accession, Column );
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
 
     const int64_t RowId = 22;
     REQUIRE_RC ( VCursorSetRowId ( m_cur, RowId ) );
@@ -170,158 +185,162 @@ FIXTURE_TEST_CASE( VTableCursor_SetRowId, TableCursorFixture )
     REQUIRE_EQ( RowId, rowId );
 }
 
-FIXTURE_TEST_CASE( VTableCursor_FindNextRowId, TableCursorFixture )
+FIXTURE_TEST_CASE( VTableCursor_FindNextRowId_Empty, TableCursorFixture )
 {
-    MakeReadCursorAddColumnOpen ( Accession, Column );
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
 
     int64_t rowId;
-    REQUIRE_RC ( VCursorFindNextRowId ( m_cur, m_columnIdx, & rowId ) );
-    REQUIRE_EQ ( 2l, rowId );
+    rc_t rc = VCursorFindNextRowId ( m_cur, m_columnIdx, & rowId );
+    REQUIRE_EQ ( GetRCState ( rc ), rcNotOpen );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_FindNextRowIdDirect_Empty, TableCursorFixture )
 {
-    MakeReadCursorAddColumnOpen ( Accession, Column );
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
 
     int64_t rowId;
-    REQUIRE_RC ( VCursorFindNextRowIdDirect ( m_cur, m_columnIdx, 10, & rowId ) );
-    REQUIRE_EQ ( 10l, rowId );
+    rc_t rc = VCursorFindNextRowIdDirect ( m_cur, m_columnIdx, 100, & rowId );
+    REQUIRE_EQ ( GetRCState ( rc ), rcNotOpen );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_OpenRow, TableCursorFixture )
 {
-    MakeReadCursorAddColumnOpen ( Accession, Column );
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
 
     REQUIRE_RC ( VCursorOpenRow ( m_cur ) );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_Write, TableCursorFixture )
 {
-    MakeReadCursorAddColumnOpen ( Accession, Column );
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
     REQUIRE_RC ( VCursorOpenRow ( m_cur ) );
 
     const char * buf = "abc";
-    rc_t rc = VCursorWrite ( (VCursor*)m_cur, m_columnIdx, 8, (const void*)buf, 0, sizeof( buf ) );
-    REQUIRE_EQ ( GetRCState ( rc ), rcReadonly );
+    REQUIRE_RC ( VCursorWrite ( m_cur, m_columnIdx, 8, (const void*)buf, 0, sizeof( buf ) ) );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_CommitRow, TableCursorFixture )
 {
-    MakeReadCursorAddColumnOpen ( Accession, Column );
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
     REQUIRE_RC ( VCursorOpenRow ( m_cur ) );
+    const char * buf = "abc";
+    REQUIRE_RC ( VCursorWrite ( m_cur, m_columnIdx, 8, (const void*)buf, 0, sizeof( buf ) ) );
 
-    rc_t rc = VCursorCommitRow ( (VCursor*)m_cur );
-    REQUIRE_EQ ( GetRCState ( rc ), rcReadonly );
+    REQUIRE_RC ( VCursorCommitRow ( m_cur ) );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_CloseRow, TableCursorFixture )
 {
-    MakeReadCursorAddColumnOpen ( Accession, Column );
-    REQUIRE_RC ( VCursorOpenRow ( m_cur ) );
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
+    OpenRowWriteCommit("abc");
 
     REQUIRE_RC ( VCursorCloseRow ( m_cur ) );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_RepeatRow, TableCursorFixture )
 {
-    MakeReadCursorAddColumnOpen ( Accession, Column );
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
+    OpenRowWriteCommit("abc");
 
-    rc_t rc = VCursorRepeatRow ( (VCursor*)m_cur, 3 );
-    REQUIRE_EQ ( GetRCState ( rc ), rcReadonly );
+    REQUIRE_RC ( VCursorRepeatRow ( m_cur, 3 ) );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_FlushPage, TableCursorFixture )
 {
-    MakeReadCursorAddColumnOpen ( Accession, Column );
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
+    OpenRowWriteCommit("abc");
+    REQUIRE_RC ( VCursorCloseRow ( m_cur ) );
 
-    rc_t rc = VCursorFlushPage ( (VCursor*)m_cur );
-    REQUIRE_EQ ( GetRCState ( rc ), rcReadonly );
+    REQUIRE_RC ( VCursorFlushPage ( m_cur ) );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_GetBlob, TableCursorFixture )
 {
-    MakeReadCursorAddColumnOpen ( Accession, Column );
-    REQUIRE_RC ( VCursorOpenRow ( m_cur ) );
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
 
     struct VBlob const * blob;
-    REQUIRE_RC ( VCursorGetBlob ( m_cur, & blob, m_columnIdx ) );
+    rc_t rc = VCursorGetBlob ( m_cur, & blob, m_columnIdx );
+    REQUIRE_EQ ( GetRCState ( rc ), rcWriteonly );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_GetBlobDirect, TableCursorFixture )
 {
-    MakeReadCursorAddColumnOpen ( Accession, Column );
-    REQUIRE_RC ( VCursorOpenRow ( m_cur ) );
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
 
     struct VBlob const * blob;
-    REQUIRE_RC ( VCursorGetBlobDirect ( m_cur, & blob, 1, m_columnIdx ) );
+    rc_t rc = VCursorGetBlobDirect ( m_cur, & blob, 1,m_columnIdx );
+    REQUIRE_EQ ( GetRCState ( rc ), rcWriteonly );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_Read, TableCursorFixture )
 {
-    MakeReadCursorAddColumnOpen ( Accession, Column );
-    REQUIRE_RC ( VCursorOpenRow ( m_cur ) );
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
 
-    char buf[1024];
+    char buf[10];
     uint32_t row_len;
-    REQUIRE_RC ( VCursorRead ( m_cur, m_columnIdx, 8, buf, sizeof ( buf ), & row_len ) );
+    rc_t rc = VCursorRead ( m_cur, m_columnIdx, 8, buf, sizeof ( buf ), & row_len );
+    REQUIRE_EQ ( GetRCState ( rc ), rcWriteonly );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_ReadDirect, TableCursorFixture )
 {
-    MakeReadCursorAddColumnOpen ( Accession, Column );
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
 
-    char buf[1024];
+    char buf[10];
     uint32_t row_len;
-    REQUIRE_RC ( VCursorReadDirect ( m_cur, 1, m_columnIdx, 8, buf, sizeof ( buf ), & row_len ) );
+    rc_t rc = VCursorReadDirect ( m_cur, 1, m_columnIdx, 8, buf, sizeof ( buf ), & row_len );
+    REQUIRE_EQ ( GetRCState ( rc ), rcWriteonly );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_ReadBits, TableCursorFixture )
 {
-    MakeReadCursorAddColumnOpen ( Accession, Column );
-    REQUIRE_RC ( VCursorOpenRow ( m_cur ) );
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
 
-    char buf[1024];
+    char buf[10];
     uint32_t num_read;
     uint32_t remaining;
-    REQUIRE_RC ( VCursorReadBits ( m_cur, m_columnIdx, 8, 0, buf, 0, sizeof ( buf ), & num_read, & remaining ) );
+    rc_t rc = VCursorReadBits ( m_cur, m_columnIdx, 8, 0, buf, 0, sizeof ( buf ), & num_read, & remaining );
+    REQUIRE_EQ ( GetRCState ( rc ), rcWriteonly );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_ReadBitsDirect, TableCursorFixture )
 {
-    MakeReadCursorAddColumnOpen ( Accession, Column );
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
 
-    char buf[1024];
+    char buf[10];
     uint32_t num_read;
     uint32_t remaining;
-    REQUIRE_RC ( VCursorReadBitsDirect ( m_cur, 1, m_columnIdx, 8, 0, buf, 0, sizeof ( buf ), & num_read, & remaining ) );
+    rc_t rc = VCursorReadBitsDirect ( m_cur, 1, m_columnIdx, 8, 0, buf, 0, sizeof ( buf ), & num_read, & remaining );
+    REQUIRE_EQ ( GetRCState ( rc ), rcWriteonly );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_CellData, TableCursorFixture )
 {
-    MakeReadCursorAddColumnOpen ( Accession, Column );
-    REQUIRE_RC ( VCursorOpenRow ( m_cur ) );
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
 
     uint32_t elem_bits;
     const void * base;
     uint32_t boff;
     uint32_t row_len;
-    REQUIRE_RC ( VCursorCellData ( m_cur, m_columnIdx, & elem_bits, & base, & boff, & row_len ) );
+    rc_t rc = VCursorCellData ( m_cur, m_columnIdx, & elem_bits, & base, & boff, & row_len );
+    REQUIRE_EQ ( GetRCState ( rc ), rcWriteonly );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_CellDataDirect, TableCursorFixture )
 {
-    MakeReadCursorAddColumnOpen ( Accession, Column );
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
 
     uint32_t elem_bits;
     const void * base;
     uint32_t boff;
     uint32_t row_len;
-    REQUIRE_RC ( VCursorCellDataDirect ( m_cur, 1, m_columnIdx, & elem_bits, & base, & boff, & row_len ) );
+    rc_t rc = VCursorCellDataDirect ( m_cur, 1, m_columnIdx, & elem_bits, & base, & boff, & row_len );
+    REQUIRE_EQ ( GetRCState ( rc ), rcWriteonly );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_DataPrefetch, TableCursorFixture )
 {
-    MakeReadCursorAddColumnOpen ( Accession, Column );
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
 
     const int64_t row_ids[3] = {1, 2, 3};
     REQUIRE_RC ( VCursorDataPrefetch ( m_cur, row_ids, m_columnIdx, 3, 1, 3, true ) );
@@ -329,24 +348,24 @@ FIXTURE_TEST_CASE( VTableCursor_DataPrefetch, TableCursorFixture )
 
 FIXTURE_TEST_CASE( VTableCursor_Default, TableCursorFixture )
 {
-    MakeReadCursorAddColumnOpen ( Accession, Column );
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
 
     const char buf[4] = "abc";
-    rc_t rc = VCursorDefault ( (VCursor*)m_cur, m_columnIdx, 8, buf, 0, 3 );
-    REQUIRE_EQ ( GetRCState ( rc ), rcReadonly );
+    REQUIRE_RC ( VCursorDefault ( m_cur, m_columnIdx, 8, buf, 0, 3 ) );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_Commit, TableCursorFixture )
 {
-    MakeReadCursorAddColumnOpen ( Accession, Column );
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
+    OpenRowWriteCommit("abc");
+    REQUIRE_RC ( VCursorCloseRow ( m_cur ) );
 
-    rc_t rc = VCursorCommit ( (VCursor*)m_cur );
-    REQUIRE_EQ ( GetRCState ( rc ), rcReadonly );
+    REQUIRE_RC ( VCursorCommit ( m_cur ) );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_OpenParentRead, TableCursorFixture )
 {
-    MakeReadCursorAddColumnOpen ( Accession, Column );
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
 
     struct VTable const * tbl = 0;
     REQUIRE_RC ( VCursorOpenParentRead ( m_cur, & tbl ) );
@@ -355,16 +374,16 @@ FIXTURE_TEST_CASE( VTableCursor_OpenParentRead, TableCursorFixture )
 
 FIXTURE_TEST_CASE( VTableCursor_OpenParentUpdate, TableCursorFixture )
 {
-    MakeReadCursorAddColumnOpen ( Accession, Column );
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
 
     struct VTable * tbl = 0;
-    rc_t rc = VCursorOpenParentUpdate ( (VCursor*)m_cur, & tbl );
-    REQUIRE_EQ ( GetRCState ( rc ), rcReadonly );
+    REQUIRE_RC ( VCursorOpenParentUpdate ( m_cur, & tbl ) );
+    REQUIRE_NOT_NULL ( tbl );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_GetUserData, TableCursorFixture )
 {
-    MakeReadCursorAddColumnOpen ( Accession, Column );
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
 
     void * data;
     REQUIRE_RC ( VCursorGetUserData ( m_cur, & data ) );
@@ -373,7 +392,7 @@ FIXTURE_TEST_CASE( VTableCursor_GetUserData, TableCursorFixture )
 
 FIXTURE_TEST_CASE( VTableCursor_SetUserData, TableCursorFixture )
 {
-    MakeReadCursorAddColumnOpen ( Accession, Column );
+    MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
 
     REQUIRE_RC ( VCursorSetUserData ( m_cur, 0, 0 ) );
 }
@@ -400,12 +419,12 @@ rc_t CC Usage ( const Args * args )
     return 0;
 }
 
-const char UsageDefaultName[] = "test-tablecursor";
+const char UsageDefaultName[] = "test-wtablecursor";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=VdbTableCursorTestSuite_Read(argc, argv);
+    rc_t rc=VdbTableCursorTestSuite_Write(argc, argv);
     return rc;
 }
 
