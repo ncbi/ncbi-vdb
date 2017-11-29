@@ -243,38 +243,46 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseTestChild ( const KDiagnoseTest * self,
  */
 DIAGNOSE_EXTERN rc_t CC KDiagnoseAdvanced ( KDiagnose * self, uint64_t tests );
 
-#define KDIAGN_FAIL                     0x1
+#define KDIAGN_FAIL                      0x1
 
-#define KDIAGN_REPO_REMOTE              0x2
-#define KDIAGN_REPO_SITE                0x4
-#define KDIAGN_REPO_USER_PUBLIC         0x8
-#define KDIAGN_REPO_GAP                0x10
-#define KDIAGN_KFG_ASCP                0x20
+#define KDIAGN_REPO_REMOTE               0x2
+#define KDIAGN_REPO_SITE                 0x4
+#define KDIAGN_REPO_USER_PUBLIC          0x8
+#define KDIAGN_REPO_GAP                 0x10
+#define KDIAGN_KFG_ASCP                 0x20
 
-#define KDIAGN_ACCESS_NCBI_WWW         0x40
-#define KDIAGN_ACCESS_NCBI_FTP         0x80
-#define KDIAGN_CGI_HTTP               0x100
-#define KDIAGN_CGI_ASCP               0x200
+#define KDIAGN_ACCESS_NCBI_HTTP         0x40
+#define KDIAGN_ACCESS_NCBI_HTTPS        0x80
+#define KDIAGN_ACCESS_NCBI_FTP         0x100
+#define KDIAGN_ACCESS_NCBI_VERSION     0x200
 
-#define KDIAGN_HTTP                   0x400
-#define KDIAGN_ASCP                   0x800
-#define KDIAGN_HTTP_VS_ASCP          0x1000
+#define KDIAGN_CGI_HTTP                0x400
+#define KDIAGN_CGI_ASCP                0x800
 
-#define KDIAGN_DOWNLOAD_HTTP         0x2000
-#define KDIAGN_DOWNLOAD_ASCP         0x4000
+#define KDIAGN_HTTP                   0x1000
+#define KDIAGN_HTTP_RUN               0x2000
 
-#define KDIAGN_REQUIRE_HTTP_AND_ASCP 0x8000
+#define KDIAGN_ASCP                   0x4000
+#define KDIAGN_ASCP_RUN               0x8000
 
-#define KDIAGN_TRY_TO_WARN          0x10000
+#define KDIAGN_HTTP_VS_ASCP          0x10000
 
-#define KDIAGN_AS_IS                0x20000
+#define KDIAGN_DOWNLOAD_HTTP         0x20000
+#define KDIAGN_DOWNLOAD_ASCP         0x40000
+
+#define KDIAGN_REQUIRE_HTTP_AND_ASCP 0x80000
+
+#define KDIAGN_TRY_TO_WARN          0x100000
+
+#define KDIAGN_AS_IS                0x200000
 
 #define KDIAGN_KFG_NO_GAP ( KDIAGN_REPO_REMOTE      | KDIAGN_REPO_SITE | \
                             KDIAGN_REPO_USER_PUBLIC | KDIAGN_KFG_ASCP )
 
 #define KDIAGN_CONFIG ( KDIAGN_KFG_NO_GAP | KDIAGN_REPO_GAP )
 
-#define KDIAGN_ACCESS_NCBI ( KDIAGN_ACCESS_NCBI_WWW | KDIAGN_ACCESS_NCBI_FTP )
+#define KDIAGN_ACCESS_NCBI ( KDIAGN_ACCESS_NCBI_HTTP \
+                           | KDIAGN_ACCESS_NCBI_HTTPS | KDIAGN_ACCESS_NCBI_FTP )
 
 #define KDIAGN_NETWORK ( KDIAGN_ACCESS_NCBI | \
                          KDIAGN_CGI_HTTP | KDIAGN_CGI_ASCP )

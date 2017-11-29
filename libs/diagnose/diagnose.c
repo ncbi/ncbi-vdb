@@ -1518,8 +1518,8 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
     return rc;
 }
 
-static rc_t STestCheckHttpUrl ( STest * self, uint64_t tests, const Data * data,
-    const char * cache, uint64_t * cacheSize,
+static rc_t STestCheckHttpUrl ( STest * self, uint64_t tests, uint64_t atest,
+    const Data * data, const char * cache, uint64_t * cacheSize,
     bool print, const char * exp, size_t esz )
 {
     rc_t rc = 0;
@@ -1534,7 +1534,7 @@ static rc_t STestCheckHttpUrl ( STest * self, uint64_t tests, const Data * data,
     if ( rc != 0 )
         STestFail ( self, rc, 0, "VPathMakeString" );
     if ( rc == 0 )
-        STestStart ( self, true, 0, "Access to '%S'", full );
+        STestStart ( self, true, atest, "Access to '%S'", full );
     if ( rc == 0 )
         rc = STestCheckFile ( self, full, & sz, & rc_read );
     r2 = STestCheckRanges ( self, data, sz );
@@ -1664,18 +1664,18 @@ rc_t STestCheckVfsUrl ( STest * self, const Data * data, bool warn )
     return rc;
 }
 
-static rc_t STestCheckUrlImpl ( STest * self, uint64_t tests, const Data * data,
-    const char * cache, uint64_t * cacheSize,
+static rc_t STestCheckUrlImpl ( STest * self, uint64_t tests, uint64_t htest,
+    const Data * data, const char * cache, uint64_t * cacheSize,
     bool print, const char * exp, size_t esz )
 {
-    rc_t rc = STestCheckHttpUrl ( self, tests, data,
+    rc_t rc = STestCheckHttpUrl ( self, tests, htest, data,
                                   cache, cacheSize, print, exp, esz );
     rc_t r2 = STestCheckVfsUrl  ( self, data, cacheSize == 0 );
     return rc != 0 ? rc : r2;
 }
 
-static rc_t STestCheckUrl ( STest * self, uint64_t tests, const Data * data,
-    const char * cache, uint64_t * cacheSize, bool print,
+static rc_t STestCheckUrl ( STest * self, uint64_t tests, uint64_t htest,
+    const Data * data, const char * cache, uint64_t * cacheSize, bool print,
     const char * exp, size_t esz )
 {
     rc_t rc = 0;
@@ -1693,8 +1693,8 @@ static rc_t STestCheckUrl ( STest * self, uint64_t tests, const Data * data,
     if ( path . size == 0 ) /* does not exist */
         return 0;
 
-    return STestCheckUrlImpl ( self,
-                               tests, data, cache, cacheSize, print, exp, esz );
+    return STestCheckUrlImpl ( self, tests, htest, data,
+                               cache, cacheSize, print, exp, esz );
 }
 
 static String * KConfig_Resolver ( const KConfig * self ) {
@@ -2450,9 +2450,18 @@ static rc_t KDiagnoseMakeDesc ( KDiagnose * self ) {
     KDiagnoseTestDesc * kfgAscp = NULL;
     KDiagnoseTestDesc * kfgGap = NULL;
     KDiagnoseTestDesc * net = NULL;
+
     KDiagnoseTestDesc * netNcbi = NULL;
+    KDiagnoseTestDesc * netNcbiHttp = NULL;
+    KDiagnoseTestDesc * netNcbiHttps = NULL;
+    KDiagnoseTestDesc * netNcbiFtp = NULL;
+    KDiagnoseTestDesc * netNcbiVers = NULL;
+
     KDiagnoseTestDesc * netHttp = NULL;
+    KDiagnoseTestDesc * netHttpRun = NULL;
+
     KDiagnoseTestDesc * netAscp = NULL;
+    KDiagnoseTestDesc * netAscpRun = NULL;
     KDiagnoseTestDesc * netHttpVsAscp = NULL;
     assert ( self );
     if ( rc == 0 )
@@ -2498,6 +2507,7 @@ static rc_t KDiagnoseMakeDesc ( KDiagnose * self ) {
         if ( rc == 0 )
             kfg -> next = net;
     }
+
     if ( rc == 0 ) {
         rc = KDiagnoseTestDescMake ( & netNcbi, 2, "Access to NCBI",
                                      KDIAGN_ACCESS_NCBI );
@@ -2507,13 +2517,54 @@ static rc_t KDiagnoseMakeDesc ( KDiagnose * self ) {
         }
     }
     if ( rc == 0 ) {
+        rc = KDiagnoseTestDescMake ( & netNcbiHttp, 3,
+            "KNSManagerInitDNSEndpoint(www.ncbi.nlm.nih.gov:80)",
+            KDIAGN_ACCESS_NCBI_HTTP );
+        if ( rc == 0 ) {
+            netNcbi -> child = netNcbiHttp;
+        }
+    }
+    if ( rc == 0 ) {
+        rc = KDiagnoseTestDescMake ( & netNcbiHttps, 3,
+            "KNSManagerInitDNSEndpoint(www.ncbi.nlm.nih.gov:443)",
+            KDIAGN_ACCESS_NCBI_HTTPS );
+        if ( rc == 0 ) {
+            netNcbiHttp -> next = netNcbiHttps;
+        }
+    }
+#define FTP "ftp-trace.ncbi.nlm.nih.gov"
+    if ( rc == 0 ) {
+        rc = KDiagnoseTestDescMake ( & netNcbiFtp, 3,
+            "KNSManagerInitDNSEndpoint(" FTP ":443)", KDIAGN_ACCESS_NCBI_FTP );
+        if ( rc == 0 ) {
+            netNcbiHttps -> next = netNcbiFtp;
+        }
+    }
+    if ( rc == 0 ) {
+        rc = KDiagnoseTestDescMake ( & netNcbiVers, 3, "Access to "
+            "'https://" FTP "/sra/sdk/current/sratoolkit.current.version'",
+            KDIAGN_ACCESS_NCBI_VERSION );
+        if ( rc == 0 ) {
+            netNcbiFtp -> next = netNcbiVers;
+        }
+    }
+
+    if ( rc == 0 ) {
         rc = KDiagnoseTestDescMake ( & netHttp, 2, "HTTPS download",
                                      KDIAGN_HTTP );
         if ( rc == 0 ) {
             netNcbi -> next = netHttp;
-            netHttp -> depends = netNcbi;
+//            netHttp -> depends = netNcbi;
         }
     }
+    if ( rc == 0 ) {
+        rc = KDiagnoseTestDescMake ( & netHttpRun, 2, "HTTPS access to a run",
+                                     KDIAGN_HTTP_RUN );
+        if ( rc == 0 ) {
+            netHttp -> child = netHttpRun;
+        }
+    }
+
     if ( rc == 0 ) {
         rc = KDiagnoseTestDescMake ( & netAscp, 2, "Aspera download",
                                      KDIAGN_ASCP );
@@ -2522,6 +2573,14 @@ static rc_t KDiagnoseMakeDesc ( KDiagnose * self ) {
 //          netAscp -> depends = netNcbi;
         }
     }
+    if ( rc == 0 ) {
+        rc = KDiagnoseTestDescMake ( & netAscpRun, 2, "Aspera access to a run",
+                                     KDIAGN_ASCP_RUN );
+        if ( rc == 0 ) {
+            netAscp -> child = netAscpRun;
+        }
+    }
+
     if ( rc == 0 ) {
         rc = KDiagnoseTestDescMake ( & netHttpVsAscp, 2,
             "HTTP vs ASCP download", KDIAGN_HTTP_VS_ASCP );
@@ -2705,14 +2764,14 @@ LIB_EXPORT rc_t CC KDiagnoseGetDesc ( const KDiagnose * self,
     return 0;
 }
 
-static rc_t STestKNSManagerInitDNSEndpoint ( STest * self, const String * host,
-                                             uint16_t port, bool warn )
+static rc_t STestKNSManagerInitDNSEndpoint ( STest * self, uint64_t tests,
+    const String * host, uint16_t port, bool warn )
 {
     rc_t rc = 0;
 
     KEndPoint ep;
 
-    STestStart ( self, false, 0, "KNSManagerInitDNSEndpoint(%S:%hu)",
+    STestStart ( self, false, tests, "KNSManagerInitDNSEndpoint(%S:%hu)",
                                                           host, port );
     rc = KNSManagerInitDNSEndpoint ( self -> kmgr, & ep, host, port );
     if ( rc != 0 )
@@ -2736,21 +2795,21 @@ static rc_t STestKNSManagerInitDNSEndpoint ( STest * self, const String * host,
 static rc_t STestCheckNcbiAccess ( STest * self, uint64_t tests ) {
     rc_t rc = 0;
 
-    if ( tests & KDIAGN_ACCESS_NCBI_WWW ) {
-        String www;
-        CONST_STRING ( & www, "www.ncbi.nlm.nih.gov" );
+    String www;
+    CONST_STRING ( & www, "www.ncbi.nlm.nih.gov" );
 
-        {
-            rc_t r1 = STestKNSManagerInitDNSEndpoint ( self, & www, 80, false );
-            if ( rc == 0 && r1 != 0 )
-                rc = r1;
-        }
+    if ( tests & KDIAGN_ACCESS_NCBI_HTTP ) {
+        rc_t r1 = STestKNSManagerInitDNSEndpoint ( self,
+            KDIAGN_ACCESS_NCBI_HTTP, & www, 80, false );
+        if ( rc == 0 && r1 != 0 )
+            rc = r1;
+    }
 
-        {
-            rc_t r1 = STestKNSManagerInitDNSEndpoint ( self, & www, 44, false );
-            if ( rc == 0 && r1 != 0 )
-                rc = r1;
-        }
+    if ( tests & KDIAGN_ACCESS_NCBI_HTTPS ) {
+        rc_t r1 = STestKNSManagerInitDNSEndpoint ( self,
+            KDIAGN_ACCESS_NCBI_HTTPS, & www, 443, false );
+        if ( rc == 0 && r1 != 0 )
+            rc = r1;
     }
 
     if ( tests & KDIAGN_ACCESS_NCBI_FTP ) {
@@ -2758,14 +2817,16 @@ static rc_t STestCheckNcbiAccess ( STest * self, uint64_t tests ) {
         String ftp;
 #define FTP "ftp-trace.ncbi.nlm.nih.gov"
         CONST_STRING ( & ftp, FTP );
-        r1 = STestKNSManagerInitDNSEndpoint ( self, & ftp, 443, true );
+        r1 = STestKNSManagerInitDNSEndpoint ( self,
+            KDIAGN_ACCESS_NCBI_FTP, & ftp, 443, true );
         if ( r1 == 0 ) {
             Data v;
             r1 = DataInit ( & v, self -> vmgr, "https://" FTP
                             "/sra/sdk/current/sratoolkit.current.version" );
             if ( r1 == 0 ) {
                 uint64_t s = 0;
-                r1 = STestCheckUrl ( self, tests, & v, "", & s, true, 0, 0 );
+                r1 = STestCheckUrl ( self, tests, KDIAGN_ACCESS_NCBI_VERSION,
+                                     & v, "", & s, true, 0, 0 );
             }
             DataFini ( & v );
         }
@@ -2942,9 +3003,11 @@ static rc_t STestCheckHttp ( STest * self, uint64_t tests, const String * acc,
     size_t resp_len = 0;
     const char * url = NULL;
     bool failed = false;
+    uint64_t atest = KDIAGN_HTTP_RUN;
     Abuse test;
     AbuseInit ( & test );
-    STestStart ( self, true, 0, "HTTPS access to '%S'", acc );
+    STestStart ( self, true, atest,
+                 "HTTPS access to '%S'", acc );
     if ( tests & KDIAGN_CGI_HTTP )
         rc = STestCallCgi ( self, acc, response, sizeof response,
                             & resp_len, & url, & test, true );
@@ -2968,7 +3031,7 @@ static rc_t STestCheckHttp ( STest * self, uint64_t tests, const String * acc,
             * p = '\0';
             rc = DataInit ( & dt, self -> vmgr, url );
             if ( rc == 0 ) {
-                rc_t r1 = STestCheckUrl ( self, tests, & dt,
+                rc_t r1 = STestCheckUrl ( self, tests, 0, & dt,
                     downloaded, downloadedSize, print, exp, esz );
                 if ( rc == 0 && r1 != 0 ) {
                     assert ( downloaded );
@@ -3000,9 +3063,10 @@ static rc_t STestCheckFasp ( STest * self, uint64_t tests, const String * acc,
     size_t resp_len = 0;
     const char * url = NULL;
     bool failed = false;
+    uint64_t atest = KDIAGN_ASCP_RUN;
     Abuse test;
     AbuseInit ( & test );
-    STestStart ( self, true, 0, "Aspera access to '%S'", acc );
+    STestStart ( self, true, atest, "Aspera access to '%S'", acc );
     if ( tests & KDIAGN_CGI_ASCP )
         rc = STestCallCgi ( self, acc, response, sizeof response,
                             & resp_len, & url, & test, false );
@@ -3889,8 +3953,10 @@ static rc_t CC STestRun ( STest * self, uint64_t tests,
         if ( tests & KDIAGN_HTTP && ! _RcCanceled ( r1 ) ) {
             rc_t r2 = 0;
             STestStart ( self, true, KDIAGN_HTTP, "HTTPS download" );
-            r2 = STestCheckHttp ( self, tests, & run, false, http, sizeof http,
-                                  & httpSize, exp, sizeof exp - 1 );
+            if ( tests & KDIAGN_HTTP_RUN )
+                r2 = STestCheckHttp ( self, tests,
+                    & run, false, http, sizeof http, & httpSize,
+                    exp, sizeof exp - 1 );
             if ( r2 == 0 )
                 r2 = STestEnd ( self, eOK,      "HTTPS download" );
             else {
@@ -3907,8 +3973,10 @@ static rc_t CC STestRun ( STest * self, uint64_t tests,
             char fasp [ PATH_MAX ] = "";
             uint64_t faspSize = 0;
             STestStart ( self, true, KDIAGN_ASCP, "Aspera download" );
-            r2 = STestCheckFasp ( self, tests, & run, false, fasp, sizeof fasp,
-                                  & faspSize, exp, sizeof exp - 1 );
+            if ( tests & KDIAGN_ASCP_RUN )
+                r2 = STestCheckFasp ( self, tests,
+                    & run, false, fasp, sizeof fasp, & faspSize,
+                    exp, sizeof exp - 1 );
             if ( r2 == 0 )
                 r2 = STestEnd ( self, eOK,      "Aspera download" );
             else {
