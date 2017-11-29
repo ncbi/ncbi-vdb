@@ -167,7 +167,7 @@ static rc_t RRCachedRead ( const RRCachedFile *cself, uint64_t pos,
         else
         {
             /* we are able to find a block-page to use for the request... */
-            uint32_t block_idx = ( pos / cself -> block_size );
+            uint64_t block_idx = ( pos / cself -> block_size );
             uint64_t block_pos = ( block_idx * cself -> block_size );
             rc = pool_page_prepare( pp, 1, block_pos );
             if ( rc == 0 )

@@ -252,7 +252,7 @@ static void get_caching_params( caching_params * params )
         uint64_t value;
         rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/CACHETEEVER", &value );
         if ( rc == 0 )
-            params -> version = (uint32_t)( value & 0x1 );
+            params -> version = (uint32_t)( value & 0x3 );
 
         rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/BLOCKSIZE", &value );
         if ( rc == 0 )
@@ -322,13 +322,14 @@ static rc_t wrap_in_cachetee( KDirectory * dir,
 
         if ( cps -> recording > 0 )
         {
+            const char * rec_loc = cps -> use_cwd ? extract_acc_from_url( loc ) : loc;
             rc = MakeLogFile ( dir,
                                &temp_file,
                                ( KFile * )*cfp,
                                true,
                                false,
                                "%s.rec",
-                               loc );
+                               rec_loc );
             if ( rc == 0 )
             {
                 KFileRelease ( * cfp );
@@ -376,8 +377,11 @@ static rc_t wrap_in_rr_cache( KDirectory * dir,
     struct Recorder * rec = NULL;
 
     if ( cps -> recording > 0 )
-        make_a_recorder( dir, &rec, cps -> append > 0, loc );
-
+    {
+        const char * rec_loc = cps -> use_cwd ? extract_acc_from_url( loc ) : loc;
+        make_a_recorder( dir, &rec, cps -> append > 0, rec_loc );
+    }
+    
     rc = MakeRRCached ( &temp_file, *cfp, cps -> blocksize, cps -> pagecount, rec );
     if ( rc == 0 )
     {
@@ -393,13 +397,14 @@ static rc_t wrap_in_logfile( KDirectory * dir,
                              const caching_params * cps )
 {
     const KFile *temp_file;
+    const char * rec_loc = cps -> use_cwd ? extract_acc_from_url( loc ) : loc;
     rc_t rc = MakeLogFile ( dir,
                             &temp_file,
                             ( KFile * )*cfp,
                             cps -> append > 0,
                             cps -> timed > 0,
                             "%s.rec",
-                            loc );
+                            rec_loc );
     if ( rc == 0 )
     {
         KFileRelease ( * cfp );
@@ -426,18 +431,31 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self, const KFile **cfp,
     /* in case we are not able to open the remote-file : return with error-code */
     if ( rc == 0 )
     {
+        /* let's try to get some details about how to do caching from the configuration */    
         caching_params cps;
-        const char * loc = ( cache_location != NULL ) ? cache_location : extract_acc_from_url( url );
-        
-        /* let's try to get some details about how to do caching from the configuration */
         get_caching_params( &cps );
 
-        switch( cps . version )
+        if ( cache_location == NULL )
         {
-            case 0 : rc = wrap_in_cachetee( self -> cwd, cfp, loc, &cps ); break;
-            case 1 : rc = wrap_in_cachetee2( self -> cwd, cfp, loc, &cps ); break;
-            case 2 : rc = wrap_in_rr_cache( self -> cwd, cfp, loc, &cps ); break;
-            case 3 : rc = wrap_in_logfile( self -> cwd, cfp, loc, &cps ); break;
+            /* the user has turned off caching... ( we should not make a cache-tee )*/
+            switch( cps . version )
+            {
+                case 0 : ;
+                case 1 : ;
+                case 2 : rc = wrap_in_rr_cache( self -> cwd, cfp, extract_acc_from_url( url ), &cps ); break;
+                case 3 : rc = wrap_in_logfile( self -> cwd, cfp, extract_acc_from_url( url ), &cps ); break;
+            }
+        }
+        else
+        {
+            /* the user has tunrd on caching... */
+            switch( cps . version )
+            {
+                case 0 : rc = wrap_in_cachetee( self -> cwd, cfp, cache_location, &cps ); break;
+                case 1 : rc = wrap_in_cachetee2( self -> cwd, cfp, cache_location, &cps ); break;
+                case 2 : rc = wrap_in_rr_cache( self -> cwd, cfp, cache_location, &cps ); break;
+                case 3 : rc = wrap_in_logfile( self -> cwd, cfp, cache_location, &cps ); break;
+            }
         }
     }
     return rc;
