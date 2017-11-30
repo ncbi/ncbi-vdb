@@ -25,6 +25,9 @@
 
 #include "poolpages.h"
 #include <kproc/lock.h>
+#include <klib/container.h>
+#include <klib/data-buffer.h>
+#include <klib/vector.h>
 
 typedef struct PoolPage
 {
@@ -38,7 +41,7 @@ typedef struct PoolPage
 typedef struct ThePool
 {
     PoolPage * pages;
-        uint32_t * scratch;
+    uint32_t * scratch;
     KLock * lock;
     uint32_t block_size, page_count, scratch_select;
 } ThePool;
@@ -294,4 +297,293 @@ rc_t pool_page_write_to_recorder( const PoolPage * self, struct Recorder * rec )
 {
     return WriteToRecorder ( rec, "\tram\tat:%lu\tlen:%lu ( idx = %d )\n",
                              self -> pos, self -> data_len, self -> idx );
+}
+
+/* -------------------------------------------------- */
+
+typedef struct lru_entry
+{
+    DLNode node;    /* to make it a valid entry into a DLL */
+    uint64_t pos;
+    uint64_t block_nr;
+    KDataBuffer data;
+} lru_entry;
+
+typedef struct lru_cache
+{
+    DLList lru;
+    KVector * entries;
+    KLock * lock;
+    const KFile * wrapped;
+    struct Recorder * rec;
+    size_t block_size;    
+    uint32_t max_entries;
+    uint32_t num_entries;
+} lru_cache;
+
+static void CC release_lru_entry( DLNode * n, void * data )
+{
+    if ( n != NULL )
+    {
+        lru_entry * entry = ( lru_entry * )n;
+        KDataBufferWhack ( &entry -> data );
+        free( ( void * ) entry );
+    }
+}
+
+void release_lru_cache ( lru_cache * self )
+{
+    if ( self != NULL )
+    {
+        KLockRelease ( self -> lock );
+        if ( self -> entries != NULL )
+            KVectorRelease ( self -> entries );
+        DLListWhack ( &self -> lru, release_lru_entry, NULL );
+        free( ( void * ) self );
+    }
+}
+
+rc_t make_lru_cache ( lru_cache ** cache,
+                      const KFile * wrapped,
+                      size_t block_size,
+                      uint32_t max_entries )
+{
+    rc_t rc;
+    KVector * v;
+    
+    if ( cache == NULL )
+        return RC ( rcFS, rcFile, rcConstructing, rcSelf, rcNull );
+    *cache = NULL;
+    if ( wrapped == NULL )
+        return RC ( rcFS, rcFile, rcConstructing, rcParam, rcNull );
+    if ( block_size == 0 || max_entries == 0  )
+        return RC ( rcFS, rcFile, rcConstructing, rcParam, rcInvalid );
+
+    rc = KVectorMake ( &v );
+    if ( rc == 0 )
+    {
+        lru_cache * p = calloc ( 1, sizeof * p );
+        if ( p == NULL )
+            rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
+        else
+        {
+            rc = KLockMake ( & p -> lock );
+            if ( rc == 0 )
+            {
+                /* the work of DLListInit() aka setting head+tail to NULL
+                   is already done by calloc() */
+                p -> entries = v;
+                p -> block_size = block_size;
+                p -> max_entries = max_entries;
+                p -> wrapped = wrapped;
+                *cache = p;
+            }
+            else
+                free ( ( void * ) p );
+        }
+        if ( rc != 0 )
+            KVectorRelease ( v );
+    }
+    return rc;
+}
+
+void set_recorder_for_lru_cache ( lru_cache * self, struct Recorder * rec )
+{
+    if ( self != NULL )
+        self -> rec = rec;
+}
+
+static bool read_from_data_buffer( KDataBuffer * data, int64_t offset,
+                             uint64_t pos, void * buffer, size_t bsize, size_t * num_read )
+{
+    int64_t available = ( data -> elem_count - offset );
+    bool res = ( available > 0 );
+    if ( res )
+    {
+        uint8_t * src = data -> base;
+        size_t to_move = bsize > available ? available : bsize;
+        src += offset;
+        memmove( buffer, src, to_move );
+        if ( num_read != NULL )
+            *num_read = to_move;
+    }
+    return res;
+}
+
+static bool read_from_entry( lru_entry * entry,
+                             uint64_t pos, void * buffer, size_t bsize, size_t * num_read )
+{
+    int64_t offset = ( pos - entry -> pos );
+    return read_from_data_buffer( &entry -> data, offset, pos, buffer, bsize, num_read );
+}
+
+static rc_t push_to_lru_cache( lru_cache * self, lru_entry * entry )
+{
+    rc_t rc = 0;
+    while ( rc == 0 && ( self -> num_entries >= self -> max_entries ) )
+    {
+        DLNode * node = DLListPopTail ( & self -> lru );
+        if ( self -> num_entries > 0 )
+            self -> num_entries--;
+        if ( node != NULL )
+        {
+            lru_entry * e = ( lru_entry * )node;
+            rc = KVectorUnset ( self -> entries, e -> block_nr );
+            release_lru_entry( node, NULL );
+        }
+    }
+    if ( rc == 0 )
+        rc = KVectorSetPtr ( self -> entries, entry -> block_nr, entry );
+    if ( rc == 0 )
+        DLListPushHead ( & self -> lru, ( DLNode * )entry ); 
+    return rc;
+}
+
+static rc_t new_entry_in_lru_cache ( lru_cache * self,
+                      uint64_t pos, void * buffer, size_t bsize, size_t * num_read )
+{
+    rc_t rc = 0;
+    uint64_t first_block_nr = ( pos / self -> block_size );
+    uint64_t last_block_nr = ( ( pos + bsize ) / self -> block_size );
+    uint64_t block_count = ( ( last_block_nr - first_block_nr ) + 1 );
+    uint64_t blocks = 1; /* we are not testing block #0, this has been tested by the
+                           caller already */
+    bool done = false;
+    /* we are testing how many blocks are not cached... */
+    while ( !done && blocks < block_count )
+    {
+        void * ptr;
+        done = ( 0 == KVectorGetPtr ( self -> entries, first_block_nr + blocks, &ptr ) );
+        if ( !done )
+            blocks++;
+    }
+    
+    if ( blocks > 1 )
+    {
+        /* we have to produce multiple blocks */
+        KDataBuffer data;
+        rc = KDataBufferMakeBytes( &data, self -> block_size * blocks );
+        if ( rc == 0 )
+        {
+            /* read the whole request from the wrapped file */
+            uint64_t first_pos = first_block_nr * self -> block_size; 
+            rc = KFileReadAll ( self -> wrapped,
+                                first_pos,
+                                data . base,
+                                self -> block_size * blocks,
+                                &data . elem_count );
+            if ( rc == 0 )
+            {
+                /* give the buffer to the caller */
+                int64_t offset = ( pos - first_pos );
+                if ( !read_from_data_buffer( &data, offset, pos, buffer, bsize, num_read ) )
+                    rc = RC ( rcFS, rcFile, rcConstructing, rcTransfer, rcInvalid );
+                else
+                {
+                    /* now portion the data-buffer into blocks and insert them... */
+                    uint64_t block = 0;
+                    uint64_t data_offset = first_block_nr * self -> block_size;
+                    while ( rc == 0 && block < blocks )
+                    {
+                        lru_entry * entry = calloc( 1, sizeof * entry );
+                        if ( entry == NULL )
+                            rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
+                        else
+                        {
+                            rc = KDataBufferSub ( &data, &entry -> data, block * self -> block_size, self -> block_size );
+                            if ( rc == 0 )
+                            {
+                                entry -> pos = data_offset;
+                                entry -> block_nr = first_block_nr + block;
+                                rc = push_to_lru_cache( self, entry );
+                            }
+                            if ( rc != 0 )
+                                release_lru_entry( ( DLNode * )entry, NULL );
+                        }
+                        block++;
+                        data_offset += self -> block_size;
+                    }
+                }
+            }
+            /* the sub-buffer's will keep the data alive and ref-counted... */
+            KDataBufferWhack ( &data );
+        }
+    }
+    else
+    {
+        /* we have to produce just one block */
+        lru_entry * entry = calloc( 1, sizeof * entry );
+        if ( entry == NULL )
+            rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
+        else
+        {
+            rc = KDataBufferMakeBytes( & entry -> data, self -> block_size );
+            if ( rc == 0 )
+            {
+                entry -> pos = first_block_nr * self -> block_size;
+                entry -> block_nr = first_block_nr;
+                rc = KFileReadAll ( self -> wrapped,
+                                    entry -> pos,
+                                    entry -> data . base,
+                                    self -> block_size,
+                                    &entry -> data . elem_count );
+                if ( rc == 0 )
+                {
+                    if ( read_from_entry( entry, pos, buffer, bsize, num_read ) )
+                        rc = push_to_lru_cache( self, entry );
+                    else
+                        rc = RC ( rcFS, rcFile, rcConstructing, rcTransfer, rcInvalid );
+                }
+            }
+            if ( rc != 0 )
+                release_lru_entry( ( DLNode * )entry, NULL );
+        }
+    }
+    return rc;
+}
+
+enum lookupres { DONE, RD_WRAPPED, NOT_FOUND };
+
+rc_t read_lru_cache ( lru_cache * self,
+                      uint64_t pos, void * buffer, size_t bsize, size_t * num_read )
+{
+    rc_t rc = 0;
+
+    if ( self == NULL )
+        return RC ( rcFS, rcFile, rcConstructing, rcSelf, rcNull );
+    if ( buffer == NULL )
+        return RC ( rcFS, rcFile, rcConstructing, rcParam, rcNull );
+
+    enum lookupres lr = NOT_FOUND;
+    
+    rc = KLockAcquire ( self -> lock );
+    if ( rc == 0 )
+    {
+        void * ptr;
+        rc = KVectorGetPtr ( self -> entries, pos / self -> block_size, &ptr );
+        if ( rc == 0 )
+        {
+            /* we found the block in the entries! */
+            lr = RD_WRAPPED;
+            if ( ptr != NULL )
+            {
+                lru_entry * entry = ptr;
+                if ( read_from_entry( entry, pos, buffer, bsize, num_read ) )
+                {
+                    /* put this entry at the top of the LRU-list */
+                    DLListUnlink ( & self -> lru, ( DLNode * )entry );
+                    DLListPushHead ( & self -> lru, ( DLNode * )entry );
+                    lr = DONE;
+                }
+            }
+        }
+        switch( lr )
+        {
+            case RD_WRAPPED : rc = KFileReadAll ( self -> wrapped, pos, buffer, bsize, num_read ); break;
+            case NOT_FOUND : rc = new_entry_in_lru_cache( self, pos, buffer, bsize, num_read ); break;
+            case DONE : break;
+        }
+        KLockUnlock ( self -> lock );
+    }
+    return rc;
 }
