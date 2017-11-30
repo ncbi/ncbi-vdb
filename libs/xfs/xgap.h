@@ -321,9 +321,9 @@ XFS_EXTERN rc_t CC XFSGapObjectURL (
                                 const char ** Url
                                 );
 
-XFS_EXTERN rc_t CC XFSGapObjectCachePath (
+XFS_EXTERN rc_t CC XFSGapObjectLocalPath (
                                 const struct XFSGapObject * self,
-                                const char ** CachePath
+                                const char ** LocalPath
                                 );
 
 XFS_EXTERN rc_t CC XFSGapObjectModTime (

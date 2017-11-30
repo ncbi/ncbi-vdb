@@ -1342,6 +1342,7 @@ _GapKartLoad ( struct XFSGapKart * self )
             else {
                 RCt = _DieBananaLock ( self -> items );
                 if ( RCt == 0 ) {
+int cnt = 0;
                     while ( true ) {
                         RCt = KartMakeNextItem (
                                                 TheKart,
@@ -1362,6 +1363,11 @@ _GapKartLoad ( struct XFSGapKart * self )
                         if ( RCt != 0 ) {
                             break;
                         }
+cnt ++;
+if ( cnt == 15 ) {
+// if ( cnt == 4 ) {
+    break;
+}
                     }
                     _DieBananaUnlock ( self -> items );
                 }
@@ -1767,7 +1773,7 @@ struct XFSGapObject {
     const char * accession_or_id;
 
     const char * remote_url;
-    const char * cache_path;
+    const char * local_path;
     KTime_t mod_time;
     uint64_t size;
 };
@@ -1796,9 +1802,9 @@ _GapObjectDispose ( const struct XFSGapObject * self )
             Object -> remote_url = NULL;
         }
 
-        if ( Object -> cache_path != NULL ) {
-            free ( ( char * ) Object -> cache_path );
-            Object -> cache_path = NULL;
+        if ( Object -> local_path != NULL ) {
+            free ( ( char * ) Object -> local_path );
+            Object -> local_path = NULL;
         }
 
         Object -> mod_time = 0;
@@ -1911,7 +1917,7 @@ rc_t CC
 _GapObjectMake (
                 const struct XFSGapObject ** Object,
                 const struct VPath * Path,
-                const struct VPath * Cache
+                const struct VPath * Local
 )
 {
     rc_t RCt;
@@ -1923,7 +1929,7 @@ _GapObjectMake (
     XFS_CSAN ( Object )
     XFS_CAN ( Object )
     XFS_CAN ( Path )
-    XFS_CAN ( Cache )
+    XFS_CAN ( Local )
 
     TheObject = calloc ( 1, sizeof ( struct XFSGapObject ) );
     if ( TheObject == NULL ) {
@@ -1951,8 +1957,8 @@ _GapObjectMake (
                                 );
             if ( RCt == 0 ) {
                 RCt = _ReadValueFromPath (
-                                    & TheObject -> cache_path,
-                                    Cache,
+                                    & TheObject -> local_path,
+                                    Local,
                                     XFS_ReadVUri_ZHR
                                     );
                 if ( RCt == 0 ) {
@@ -2079,19 +2085,19 @@ XFSGapObjectURL (
 
 LIB_EXPORT
 rc_t CC
-XFSGapObjectCachePath (
+XFSGapObjectLocalPath (
                 const struct XFSGapObject * self,
-                const char ** CachePath
+                const char ** LocalPath
 )
 {
-    XFS_CSAN ( CachePath )
+    XFS_CSAN ( LocalPath )
     XFS_CAN ( self )
-    XFS_CAN ( CachePath )
+    XFS_CAN ( LocalPath )
 
-    * CachePath = self -> cache_path;
+    * LocalPath = self -> local_path;
 
     return 0;
-}   /* XFSGapObjectCachePath () */
+}   /* XFSGapObjectLocalPath () */
 
 LIB_EXPORT
 rc_t CC
@@ -2941,6 +2947,7 @@ _GapAddObject ( const struct XFSGapObject * Object )
     RCt = XFSGapObjectId ( Object, & AccOrId );
     if ( RCt == 0 ) {
         if ( XFSGapHasObject ( AccOrId ) ) {
+printf ( "[HAS] [%d] [%s]\n", __LINE__, AccOrId );
             RCt = XFS_RC ( rcExists );
         }
         else {
@@ -3033,8 +3040,10 @@ _GapLoadKartBanana (
     XFS_CAN ( KartName )
 
     RCt = _GapLoadKartFile ( & TheKart, Banana, KartDir, KartName );
+printf ( "[GLKB] [%d] [%d] [%s]\n", __LINE__, RCt, KartName );
     if ( RCt == 0 ) {
         RCt = _ResolveKartItems ( TheKart );
+printf ( "[GLKB] [%d] [%lu] [%s]\n", __LINE__, RCt, KartName );
         if ( RCt != 0 ) {
             /* This is not error, just bad luck */
             RCt = 0;
@@ -3102,6 +3111,7 @@ _AddKartItemsForProject (
     RCt = _GapKartListIds ( Kart, & List, ProjectId );
     if ( RCt == 0 ) {
         RCt = KNamelistCount ( List, & ListCount );
+printf ( "[AKIFP] [%d] QTY[%d]\n", __LINE__, ListCount );
         if ( RCt == 0 ) {
             if ( ListCount != 0 ) {
                 RCt = KServiceAddProject ( Service, ProjectId );
@@ -3124,6 +3134,8 @@ _AddKartItemsForProject (
         }
     }
 
+printf ( "[AKIFP] [%d] RC[%d]\n", __LINE__, RCt );
+
     return RCt;
 }   /* _AddKartItemsForProject () */
 
@@ -3136,6 +3148,7 @@ _ResolveKartItems ( const struct XFSGapKart * Kart )
     uint32_t ProjectCount, ProjectId;
     uint32_t ResponseLen;
     const struct VPath * Path;
+    const struct VPath * Local;
     const struct VPath * Cache;
     const struct KSrvError * Error;
     const struct XFSGapObject * Object;
@@ -3146,6 +3159,7 @@ _ResolveKartItems ( const struct XFSGapKart * Kart )
     ProjectCount = ProjectId = 0;
     ResponseLen = 0;
     Path = NULL;
+    Local = NULL;
     Cache = NULL;
     Error = NULL;
     Object = NULL;
@@ -3183,8 +3197,10 @@ _ResolveKartItems ( const struct XFSGapKart * Kart )
                                     eProtocolHttps,
                                     & Response
                                     );
+printf ( "[RKI] [%d] RC[%lu]\n", __LINE__, RCt );
             if ( RCt == 0 ) {
                 ResponseLen = KSrvResponseLength ( Response );
+printf ( "[RKI] [%d] QTY[%lu]\n", __LINE__, ResponseLen );
                 for ( uint32_t llp = 0; llp < ResponseLen; llp ++ ) {
                     RCt = KSrvResponseGetPath (
                                             Response,
@@ -3194,15 +3210,25 @@ _ResolveKartItems ( const struct XFSGapKart * Kart )
                                             & Cache,
                                             & Error
                                             );
+printf ( "[RKI] [%d] [%lu]\n", __LINE__, RCt );
                     if ( RCt == 0 ) {
                         if ( Error == NULL ) {
-                            RCt = _GapObjectMake (
-                                                & Object,
-                                                Path,
-                                                Cache
-                                                );
+                            RCt = KSrvResponseGetCache (
+                                                        Response,
+                                                        llp,
+                                                        & Local
+                                                        );
+printf ( "[RKI] [%d] [%lu]\n", __LINE__, RCt );
                             if ( RCt == 0 ) {
-                                RCt = _GapAddObject ( Object );
+                                RCt = _GapObjectMake (
+                                                    & Object,
+                                                    Path,
+                                                    Local
+                                                    );
+printf ( "[RKI] [%d] [%lu]\n", __LINE__, RCt );
+                                if ( RCt == 0 ) {
+                                    RCt = _GapAddObject ( Object );
+                                }
                             }
                         }
                         else {
@@ -3212,6 +3238,10 @@ _ResolveKartItems ( const struct XFSGapKart * Kart )
 
                         if ( Path != NULL ) {
                             VPathRelease ( Path );
+                        }
+
+                        if ( Local != NULL ) {
+                            VPathRelease ( Local );
                         }
 
                         if ( Cache != NULL ) {
