@@ -1628,8 +1628,8 @@ static bool DataIsAccession ( const Data * self ) {
         return self -> acc -> size != 0;
 }
 
-static
-rc_t STestCheckVfsUrl ( STest * self, const Data * data, bool warn )
+static rc_t STestCheckVfsUrl ( STest * self, uint64_t atest, const Data * data,
+                               bool warn )
 {
     rc_t rc = 0;
 
@@ -1648,7 +1648,8 @@ rc_t STestCheckVfsUrl ( STest * self, const Data * data, bool warn )
         return rc;
     }
 
-    STestStart ( self, false, 0, "VFSManagerOpenDirectoryRead(%S):", & path );
+    STestStart ( self, false, atest, "VFSManagerOpenDirectoryRead(%S):",
+                                                                  & path );
     rc = VFSManagerOpenDirectoryRead ( self -> vmgr, & d, data -> vpath );
     if ( rc == 0 )
         STestEndOr ( self, & rc, eEndOK, "OK"  );
@@ -1664,19 +1665,23 @@ rc_t STestCheckVfsUrl ( STest * self, const Data * data, bool warn )
     return rc;
 }
 
-static rc_t STestCheckUrlImpl ( STest * self, uint64_t tests, uint64_t htest,
-    const Data * data, const char * cache, uint64_t * cacheSize,
-    bool print, const char * exp, size_t esz )
+static rc_t STestCheckUrlImpl ( STest * self, uint64_t tests, uint64_t htest, 
+    uint64_t vtest,  const Data * data, const char * cache,
+        uint64_t * cacheSize, bool print, const char * exp, size_t esz )
 {
-    rc_t rc = STestCheckHttpUrl ( self, tests, htest, data,
-                                  cache, cacheSize, print, exp, esz );
-    rc_t r2 = STestCheckVfsUrl  ( self, data, cacheSize == 0 );
+    rc_t rc = 0;
+    rc_t r2 = 0;
+    if ( tests & htest )
+        rc = STestCheckHttpUrl ( self, tests, htest, data,
+                                 cache, cacheSize, print, exp, esz );
+    if ( tests & vtest )
+        r2 = STestCheckVfsUrl  ( self, vtest, data, cacheSize == 0 );
     return rc != 0 ? rc : r2;
 }
 
 static rc_t STestCheckUrl ( STest * self, uint64_t tests, uint64_t htest,
-    const Data * data, const char * cache, uint64_t * cacheSize, bool print,
-    const char * exp, size_t esz )
+    uint64_t vtest, const Data * data, const char * cache, uint64_t * cacheSize,
+    bool print, const char * exp, size_t esz )
 {
     rc_t rc = 0;
 
@@ -1693,7 +1698,7 @@ static rc_t STestCheckUrl ( STest * self, uint64_t tests, uint64_t htest,
     if ( path . size == 0 ) /* does not exist */
         return 0;
 
-    return STestCheckUrlImpl ( self, tests, htest, data,
+    return STestCheckUrlImpl ( self, tests, htest, vtest, data,
                                cache, cacheSize, print, exp, esz );
 }
 
@@ -1842,8 +1847,8 @@ static rc_t TestAbuse ( STest * self, Abuse * test,
     return 0;
 }
 
-static rc_t STestCallCgi ( STest * self, const String * acc, char * response,
-    size_t response_sz, size_t * resp_read,
+static rc_t STestCallCgi ( STest * self, uint64_t atest, const String * acc,
+    char * response, size_t response_sz, size_t * resp_read,
     const char ** url, Abuse * test, bool http )
 {
     rc_t rc = 0;
@@ -1856,8 +1861,8 @@ static rc_t STestCallCgi ( STest * self, const String * acc, char * response,
 
     assert ( self && url );
 
-    STestStart ( self, true, 0,
-                 "Resolution of %s path to '%S'", http ? "HTTPS": "FASP", acc );
+    STestStart ( self, true, atest,
+                 "Resolving of %s path to '%S'", http ? "HTTPS": "FASP", acc );
 
     * url = NULL;
 
@@ -2015,13 +2020,13 @@ AbuseAdd(test,"<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n"
 {bool ok, abuse;
 TestAbuse(self,test,&ok,&abuse);}
     if ( rc == 0 )
-        rc = STestEnd ( self, eOK,  "Resolution of %s path to '%S'",
+        rc = STestEnd ( self, eOK,  "Resolving of %s path to '%S'",
                                     http ? "HTTPS": "FASP", acc );
     else if ( _RcCanceled ( rc ) )
-        STestEnd ( self, eCANCELED, "Resolution of %s path to '%S': CANCELED",
+        STestEnd ( self, eCANCELED, "Resolving of %s path to '%S': CANCELED",
                                     http ? "HTTPS": "FASP", acc );
     else
-        STestEnd ( self, eFAIL,     "Resolution of %s path to '%S'",
+        STestEnd ( self, eFAIL,     "Resolving of %s path to '%S'",
                                     http ? "HTTPS": "FASP", acc );
     return rc;
 }
@@ -2050,7 +2055,7 @@ static rc_t STestCheckFaspDownload ( STest * self, const char * url,
     if ( self -> ascp == NULL )
         return rc;
 
-    STestStart ( self, false, 0, "ascp download test:" );
+    STestStart ( self, false, KDIAGN_ASCP_DOWNLOAD, "ascp download test:" );
 
     CONST_STRING ( & fasp, "fasp://" );
 
@@ -2441,31 +2446,28 @@ static rc_t KDiagnoseTestDescMake ( KDiagnoseTestDesc ** self,
 }
 
 static rc_t KDiagnoseMakeDesc ( KDiagnose * self ) {
-    rc_t rc = 0;
-    KDiagnoseTestDesc * root = NULL;
-    KDiagnoseTestDesc * kfg = NULL;
+  rc_t rc = 0;
+
+  KDiagnoseTestDesc * root = NULL;
+  KDiagnoseTestDesc * kfg = NULL;
+
+  KDiagnoseTestDesc * net = NULL;
+  KDiagnoseTestDesc * netNcbi = NULL;
+  KDiagnoseTestDesc * netHttp = NULL;
+  KDiagnoseTestDesc * netAscp = NULL;
+  KDiagnoseTestDesc * netHttpVsAscp = NULL;
+
+  assert ( self );
+
+  if ( rc == 0 )
+    rc = KDiagnoseTestDescMake ( & root, 0, "System", KDIAGN_ALL );
+  {
     KDiagnoseTestDesc * kfgRemote = NULL;
     KDiagnoseTestDesc * kfgSite = NULL;
     KDiagnoseTestDesc * kfgUser = NULL;
     KDiagnoseTestDesc * kfgAscp = NULL;
     KDiagnoseTestDesc * kfgGap = NULL;
-    KDiagnoseTestDesc * net = NULL;
 
-    KDiagnoseTestDesc * netNcbi = NULL;
-    KDiagnoseTestDesc * netNcbiHttp = NULL;
-    KDiagnoseTestDesc * netNcbiHttps = NULL;
-    KDiagnoseTestDesc * netNcbiFtp = NULL;
-    KDiagnoseTestDesc * netNcbiVers = NULL;
-
-    KDiagnoseTestDesc * netHttp = NULL;
-    KDiagnoseTestDesc * netHttpRun = NULL;
-
-    KDiagnoseTestDesc * netAscp = NULL;
-    KDiagnoseTestDesc * netAscpRun = NULL;
-    KDiagnoseTestDesc * netHttpVsAscp = NULL;
-    assert ( self );
-    if ( rc == 0 )
-        rc = KDiagnoseTestDescMake ( & root, 0, "System", KDIAGN_ALL );
     if ( rc == 0 ) {
         rc = KDiagnoseTestDescMake ( & kfg, 1, "Configuration", KDIAGN_CONFIG );
         if ( rc == 0 )
@@ -2501,13 +2503,19 @@ static rc_t KDiagnoseMakeDesc ( KDiagnose * self ) {
         if ( rc == 0 )
             kfgAscp -> next = kfgGap;
     }
+  }
 
-    if ( rc == 0 ) {
-        rc = KDiagnoseTestDescMake ( & net, 1, "Network", KDIAGN_NETWORK );
-        if ( rc == 0 )
-            kfg -> next = net;
-    }
+  if ( rc == 0 ) {
+    rc = KDiagnoseTestDescMake ( & net, 1, "Network", KDIAGN_NETWORK );
+    if ( rc == 0 )
+        kfg -> next = net;
+  }
 
+  {
+    KDiagnoseTestDesc * netNcbiHttp = NULL;
+    KDiagnoseTestDesc * netNcbiHttps = NULL;
+    KDiagnoseTestDesc * netNcbiFtp = NULL;
+    KDiagnoseTestDesc * netNcbiVers = NULL;
     if ( rc == 0 ) {
         rc = KDiagnoseTestDescMake ( & netNcbi, 2, "Access to NCBI",
                                      KDIAGN_ACCESS_NCBI );
@@ -2548,52 +2556,102 @@ static rc_t KDiagnoseMakeDesc ( KDiagnose * self ) {
             netNcbiFtp -> next = netNcbiVers;
         }
     }
+  }
 
-    if ( rc == 0 ) {
-        rc = KDiagnoseTestDescMake ( & netHttp, 2, "HTTPS download",
+  if ( rc == 0 ) {
+    rc = KDiagnoseTestDescMake ( & netHttp, 2, "HTTPS download",
                                      KDIAGN_HTTP );
-        if ( rc == 0 ) {
-            netNcbi -> next = netHttp;
-//            netHttp -> depends = netNcbi;
-        }
-    }
     if ( rc == 0 ) {
-        rc = KDiagnoseTestDescMake ( & netHttpRun, 2, "HTTPS access to a run",
+        netNcbi -> next = netHttp;
+//      netHttp -> depends = netNcbi;
+    }
+  }
+  {
+    KDiagnoseTestDesc * netHttpRun = NULL;
+    KDiagnoseTestDesc * netHttpCgi = NULL;
+    KDiagnoseTestDesc * netHttpSmall = NULL;
+    KDiagnoseTestDesc * netVfsSmall = NULL;
+    if ( rc == 0 ) {
+        rc = KDiagnoseTestDescMake ( & netHttpRun, 3, "HTTPS access to a run",
                                      KDIAGN_HTTP_RUN );
         if ( rc == 0 ) {
             netHttp -> child = netHttpRun;
         }
     }
-
     if ( rc == 0 ) {
-        rc = KDiagnoseTestDescMake ( & netAscp, 2, "Aspera download",
-                                     KDIAGN_ASCP );
+        rc = KDiagnoseTestDescMake ( & netHttpCgi, 4, "Resolving of HTTPS path",
+                                     KDIAGN_HTTP_CGI );
         if ( rc == 0 ) {
-            netHttp -> next = netAscp;
+            netHttpRun -> child = netHttpCgi;
+        }
+    }
+    if ( rc == 0 ) {
+        rc = KDiagnoseTestDescMake ( & netHttpSmall, 4, "Access to a small run",
+                                     KDIAGN_HTTP_SMALL_ACCESS );
+        if ( rc == 0 ) {
+            netHttpCgi -> next = netHttpSmall;
 //          netAscp -> depends = netNcbi;
         }
     }
     if ( rc == 0 ) {
-        rc = KDiagnoseTestDescMake ( & netAscpRun, 2, "Aspera access to a run",
-                                     KDIAGN_ASCP_RUN );
+        rc = KDiagnoseTestDescMake ( & netVfsSmall, 4,
+            "VFSManagerOpenDirectoryRead(a small run)", KDIAGN_HTTP_SMALL_VFS );
         if ( rc == 0 ) {
-            netAscp -> child = netAscpRun;
+            netHttpSmall -> next = netVfsSmall;
+//          netAscp -> depends = netNcbi;
         }
     }
+  }
+  if ( rc == 0 ) {
+    rc = KDiagnoseTestDescMake ( & netAscp, 2, "Aspera download",
+                                     KDIAGN_ASCP );
+    if ( rc == 0 ) {
+        netHttp -> next = netAscp;
+//      netAscp -> depends = netNcbi;
+    }
+  }
+  {
+    KDiagnoseTestDesc * netRun = NULL;
+    KDiagnoseTestDesc * netCgi = NULL;
+    KDiagnoseTestDesc * download = NULL;
 
     if ( rc == 0 ) {
-        rc = KDiagnoseTestDescMake ( & netHttpVsAscp, 2,
-            "HTTP vs ASCP download", KDIAGN_HTTP_VS_ASCP );
+        rc = KDiagnoseTestDescMake ( & netRun, 3, "Aspera access to a run",
+                                     KDIAGN_ASCP_RUN );
         if ( rc == 0 ) {
-            netAscp -> next = netHttpVsAscp;
+            netAscp -> child = netRun;
         }
     }
+    if ( rc == 0 ) {
+        rc = KDiagnoseTestDescMake ( & netCgi, 4, "Resolving of FASP path",
+                                     KDIAGN_ASCP_CGI );
+        if ( rc == 0 ) {
+            netRun -> child = netCgi;
+        }
+    }
+    if ( rc == 0 ) {
+        rc = KDiagnoseTestDescMake ( & download, 4, "ascp download test",
+                                     KDIAGN_ASCP_DOWNLOAD );
+        if ( rc == 0 ) {
+            netCgi -> next = download;
+        }
+    }
+  }
 
-    if ( rc != 0 )
-        KDiagnoseTestDescRelease ( root );
-    else
-        self -> desc = root;
-    return rc;
+  if ( rc == 0 ) {
+    rc = KDiagnoseTestDescMake ( & netHttpVsAscp, 2,
+        "HTTP vs ASCP download", KDIAGN_HTTP_VS_ASCP );
+    if ( rc == 0 ) {
+        netAscp -> next = netHttpVsAscp;
+    }
+  }
+
+  if ( rc != 0 )
+    KDiagnoseTestDescRelease ( root );
+  else
+    self -> desc = root;
+
+  return rc;
 }
 
 static const char DIAGNOSE_CLSNAME [] = "KDiagnose";
@@ -2826,7 +2884,7 @@ static rc_t STestCheckNcbiAccess ( STest * self, uint64_t tests ) {
             if ( r1 == 0 ) {
                 uint64_t s = 0;
                 r1 = STestCheckUrl ( self, tests, KDIAGN_ACCESS_NCBI_VERSION,
-                                     & v, "", & s, true, 0, 0 );
+                                     0, & v, "", & s, true, 0, 0 );
             }
             DataFini ( & v );
         }
@@ -3008,9 +3066,9 @@ static rc_t STestCheckHttp ( STest * self, uint64_t tests, const String * acc,
     AbuseInit ( & test );
     STestStart ( self, true, atest,
                  "HTTPS access to '%S'", acc );
-    if ( tests & KDIAGN_CGI_HTTP )
-        rc = STestCallCgi ( self, acc, response, sizeof response,
-                            & resp_len, & url, & test, true );
+    if ( tests & KDIAGN_HTTP_CGI )
+        rc = STestCallCgi ( self, KDIAGN_HTTP_CGI, acc,
+            response, sizeof response, & resp_len, & url, & test, true );
     AbuseFini ( & test );
 
     if ( rc == 0 ) {
@@ -3031,8 +3089,9 @@ static rc_t STestCheckHttp ( STest * self, uint64_t tests, const String * acc,
             * p = '\0';
             rc = DataInit ( & dt, self -> vmgr, url );
             if ( rc == 0 ) {
-                rc_t r1 = STestCheckUrl ( self, tests, 0, & dt,
-                    downloaded, downloadedSize, print, exp, esz );
+                rc_t r1 = STestCheckUrl ( self,
+                    tests, KDIAGN_HTTP_SMALL_ACCESS, KDIAGN_HTTP_SMALL_VFS,
+                    & dt, downloaded, downloadedSize, print, exp, esz );
                 if ( rc == 0 && r1 != 0 ) {
                     assert ( downloaded );
                     * downloaded = '\0';
@@ -3067,9 +3126,9 @@ static rc_t STestCheckFasp ( STest * self, uint64_t tests, const String * acc,
     Abuse test;
     AbuseInit ( & test );
     STestStart ( self, true, atest, "Aspera access to '%S'", acc );
-    if ( tests & KDIAGN_CGI_ASCP )
-        rc = STestCallCgi ( self, acc, response, sizeof response,
-                            & resp_len, & url, & test, false );
+    if ( tests & KDIAGN_ASCP_CGI )
+        rc = STestCallCgi ( self, KDIAGN_ASCP_CGI, acc,
+            response, sizeof response, & resp_len, & url, & test, false );
     AbuseFini ( & test );
 
     if ( tests & KDIAGN_DOWNLOAD_ASCP ) {
