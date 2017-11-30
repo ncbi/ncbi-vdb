@@ -39,6 +39,7 @@ TEST_TOOLS = \
 	test-time \
 	test-klib \
 	test-vnamelist \
+	test-progressbar \
     test-symtab \
 
 include $(TOP)/build/Makefile.env
@@ -211,6 +212,26 @@ VNAMELIST: test-vnamelist
 	$(TEST_BINDIR)/test-vnamelist
 
 #-------------------------------------------------------------------------------
+# test-progressbar
+#
+TEST_PROGRESSBAR_SRC = \
+	test-progress
+
+TEST_PROGRESSBAR_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_PROGRESSBAR_SRC))
+
+TEST_PROGRESSBAR_LIB = \
+	-skapp \
+	-sncbi-vdb \
+	-sktst \
+
+$(TEST_BINDIR)/test-progressbar: $(TEST_PROGRESSBAR_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_PROGRESSBAR_LIB)
+
+PROGRESSBAR: test-progressbar
+	$(TEST_BINDIR)/test-progressbar
+
+#-------------------------------------------------------------------------------
 # test-symtab
 #
 TEST_SYMTAB_SRC = \
@@ -229,4 +250,3 @@ $(TEST_BINDIR)/test-symtab: $(TEST_SYMTAB_OBJ)
 
 symtab: test-symtab
 	$(TEST_BINDIR)/test-symtab
-
