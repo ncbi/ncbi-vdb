@@ -690,7 +690,7 @@ static rc_t VTableCreateCachedCursorReadImpl ( const VTable *self,
             if ( self -> col_node == NULL )
                 KMetadataOpenNodeRead ( self -> meta, & ( ( VTable* ) self ) -> col_node, "col" );
 #endif
-            rc = VCursorMake ( & curs, self );
+            rc = VCursorMakeFromTable ( & curs, self );
             if ( rc == 0 ) {
                 curs -> blob_mru_cache = VBlobMRUCacheMake(capacity);
                 curs -> read_only = true;
@@ -741,20 +741,20 @@ static rc_t VTableCreateCachedCursorReadImpl ( const VTable *self,
  *  "capacity" [ IN ] - the maximum bytes to cache on the cursor before
  *  dropping least recently used blobs
  */
-VDB_EXTERN rc_t CC VViewCreateCursor ( struct VView const * p_self, const VCursor ** p_curs, size_t p_capacity )
+VDB_EXTERN rc_t CC VViewCreateCursor ( struct VView const * p_self, const VCursor ** p_curs )
 {
     rc_t rc = 0;
     if ( p_curs == NULL )
     {
         rc = RC ( rcVDB, rcTable, rcOpening, rcParam, rcNull );
     }
+    else if ( p_self == NULL )
+    {
+        rc = RC ( rcVDB, rcTable, rcOpening, rcSelf, rcNull );
+    }
     else
     {
-        if ( p_self == NULL )
-        {
-            rc = RC ( rcVDB, rcTable, rcOpening, rcSelf, rcNull );
-        }
-        * p_curs = NULL;
+        rc = VCursorMakeFromView ( p_curs, p_self );
     }
     return rc;
 }

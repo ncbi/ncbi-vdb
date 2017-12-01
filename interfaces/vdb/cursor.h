@@ -108,11 +108,8 @@ VDB_EXTERN rc_t CC VTableCreateCursorWrite ( struct VTable *self, VCursor **curs
  *  creates a read cursor object onto view
  *
  *  "curs" [ OUT ] - return parameter for newly created cursor
- *
- *  "capacity" [ IN ] - the maximum bytes to cache on the cursor before
- *  dropping least recently used blobs
  */
-VDB_EXTERN rc_t CC VViewCreateCursor ( struct VView const *self, const VCursor **curs, size_t capacity );
+VDB_EXTERN rc_t CC VViewCreateCursor ( struct VView const *self, const VCursor **curs );
 
 /* CreateCachedCursorRead
  *  creates a read cursor object onto table with a cache limit in bytes

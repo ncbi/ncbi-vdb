@@ -127,7 +127,7 @@ static VCursor_vt VTableCursor_write_vt =
  *  a row cursor onto a VTable
  */
 
-rc_t VCursorMake ( VCursor **cursp, const struct VTable *tbl )
+rc_t VCursorMakeFromTable ( VCursor **cursp, const struct VTable *tbl )
 {
     return VTableCursorMake ( cursp, tbl, & VTableCursor_write_vt );
 }

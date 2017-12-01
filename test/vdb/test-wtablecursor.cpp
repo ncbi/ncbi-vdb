@@ -109,7 +109,7 @@ FIXTURE_TEST_CASE( VTableCursor_MakeWrite, TableCursorFixture )
     REQUIRE_RC ( VTableRelease ( table ) );
 }
 
-FIXTURE_TEST_CASE( VTableCursor_AddRef, TableCursorFixture )
+FIXTURE_TEST_CASE( VTableCursor_AddRef_Release, TableCursorFixture )
 {
     MakeWriteCursor ( GetName(), SimpleSchema );
 

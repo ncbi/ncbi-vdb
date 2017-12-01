@@ -1461,23 +1461,23 @@ struct SView
 /* Extend
  * records a parent view
  */
-rc_t CC SViewExtend ( struct KSymTable *tbl, SView *self, const SView *dad );
+rc_t SViewExtend ( struct KSymTable *tbl, SView *self, const SView *dad );
 
 /* Whack
  */
-void CC SViewWhack ( void *self, void *ignore );
+void SViewWhack ( void *self, void *ignore );
 
 /* Cmp
  * Sort
  */
-int64_t CC SViewCmp ( const void *item, const void *n );
-int64_t CC SViewSort ( const void *item, const void *n );
+int64_t SViewCmp ( const void *item, const void *n );
+int64_t SViewSort ( const void *item, const void *n );
 
 /* push/pop view scope
  *
  */
-void CC pop_view_scope ( struct KSymTable * tbl, const SView * view );
-rc_t CC push_view_scope ( struct KSymTable * tbl, const SView * view );
+void pop_view_scope ( struct KSymTable * tbl, const SView * view );
+rc_t push_view_scope ( struct KSymTable * tbl, const SView * view );
 
 /* view_fwd_scan
  *  converts unresolved column references to virtual columns
@@ -1489,18 +1489,18 @@ struct SViewScanData
     rc_t rc;
 };
 
-bool CC view_fwd_scan ( BSTNode *n, void *data );
+bool view_fwd_scan ( BSTNode *n, void *data );
 
 /* view_set_context
  * set the view id on all members
  */
-void CC view_set_context ( SView *self );
+void view_set_context ( SView *self );
 
 /* view_fix_forward_refs
  * fix forward references to newly resolved productions
  */
 
-rc_t CC view_fix_forward_refs ( const SView *table );
+rc_t view_fix_forward_refs ( const SView *table );
 
 /* SViewOverrides
 */
@@ -1514,7 +1514,7 @@ struct SViewOverrides
 
 rc_t SViewOverridesMake ( Vector *parents, const SView *dad, const Vector *overrides );
 
-int64_t CC SViewOverridesCmp ( const void *item, const void *n );
+int64_t SViewOverridesCmp ( const void *item, const void *n );
 
 /* SViewInstance
  * A view with specified parameters
@@ -1526,7 +1526,37 @@ struct SViewInstance
     Vector params; /* const KSymbol* */
 };
 
-void CC SViewInstanceWhack ( void *item, void *ignore );
+void SViewInstanceWhack ( void *item, void *ignore );
+
+/* Find
+ *  generic object find within view scope
+ *
+ *  "td" [ OUT, NULL OKAY ] - returns cast type expression
+ *  if given or "any" if not
+ *
+ *  "name" [ OUT ] - returns list of overloaded objects if found
+ *
+ *  "type" [ OUT ] - returns object type id, e.g.:
+ *    eDatatype, eTypeset, eFormat, eFunction, ePhysical, eTable, ...
+ *
+ *  "expr" [ IN ] - NUL terminated name expression identifying object
+ *
+ *  "ctx" [ IN ] - NUL terminated context string for evaluation,
+ *  substitutes for filename in logging reports
+ *
+ *  "dflt" [ IN ] - if true, resolve default value
+ *
+ *  returns principal object identified. if NULL but "name" is not
+ *  NULL, then the object was only partially identified.
+ */
+const void * CC SViewFind ( const SView *           self,
+                            const VSchema *         schema,
+                            VTypedecl *             td,
+                            const SNameOverload **  name,
+                            uint32_t *              type,
+                            const char *            expr,
+                            const char *            ctx,
+                            bool                    dflt );
 
 #ifdef __cplusplus
 }

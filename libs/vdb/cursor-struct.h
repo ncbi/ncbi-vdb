@@ -44,6 +44,7 @@
 #endif
 
 #include <vdb/cursor.h>
+#include "cursor-priv.h"
 
 #ifndef KONST
 #define KONST
@@ -203,11 +204,11 @@ struct VCursor
 
 /* VTableCursor methods */
 
-/* "constructor", provides a concrete VCursor_vt. Defined in cursor.c and wcursor.c */
-rc_t VCursorMake ( VCursor **cursp, const struct VTable *tbl );
+rc_t VCursorMakeFromTable ( VCursor **cursp, const struct VTable *tbl );
+rc_t VCursorMakeFromView  ( const VCursor **cursp, const struct VView * view );
 
+/* "constructor", provides a concrete VCursor_vt. Defined in cursor.c and wcursor.c */
 rc_t VTableCursorMake ( VCursor **cursp, const struct VTable *tbl, VCursor_vt *vt );
-rc_t VCursorMakeFromView ( struct VCursor **cursp, struct VView const * view );
 
 /* methods shared between cursor.c and wcursor.c */
 rc_t VTableCursorAddRef ( const VCursor *self );

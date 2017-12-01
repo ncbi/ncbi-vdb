@@ -36,7 +36,8 @@
 /* Cmp
  * Sort
  */
-int64_t CC SViewOverridesCmp ( const void *item, const void *n )
+int64_t
+SViewOverridesCmp ( const void *item, const void *n )
 {
     const uint32_t *a = item;
     const SViewOverrides *b = n;
@@ -45,7 +46,8 @@ int64_t CC SViewOverridesCmp ( const void *item, const void *n )
 }
 
 static
-int64_t CC SViewOverridesSort ( const void *item, const void *n )
+int64_t
+SViewOverridesSort ( const void *item, const void *n )
 {
     const SViewOverrides *a = item;
     const SViewOverrides *b = n;
@@ -56,7 +58,8 @@ int64_t CC SViewOverridesSort ( const void *item, const void *n )
 /* Whack
  */
 static
-void CC SViewOverridesWhack ( void *item, void *ignore )
+void
+SViewOverridesWhack ( void *item, void *ignore )
 {
     SViewOverrides *self = item;
     VectorWhack ( & self -> by_parent, NULL, NULL );
@@ -102,7 +105,8 @@ rc_t SViewOverridesMake ( Vector *parents, const SView *dad, const Vector *overr
 
 /* SView
 */
-void CC SViewWhack ( void * item, void *ignore )
+void
+SViewWhack ( void * item, void *ignore )
 {
     SView *self = item;
 
@@ -127,7 +131,8 @@ void CC SViewWhack ( void * item, void *ignore )
 /* Cmp
  * Sort
  */
-int64_t CC SViewCmp ( const void *item, const void *n )
+int64_t
+SViewCmp ( const void *item, const void *n )
 {
     const uint32_t *a = item;
     const SView *b = n;
@@ -137,7 +142,8 @@ int64_t CC SViewCmp ( const void *item, const void *n )
     return ( int64_t ) ( * a >> 24 ) - ( int64_t ) ( b -> version >> 24 );
 }
 
-int64_t CC SViewSort ( const void *item, const void *n )
+int64_t
+SViewSort ( const void *item, const void *n )
 {
     const SView *a = item;
     const SView *b = n;
@@ -150,7 +156,6 @@ int64_t CC SViewSort ( const void *item, const void *n )
  * pop-view-scope
  */
 void
-CC
 pop_view_scope ( struct KSymTable * tbl, const SView * view )
 {
     uint32_t i, count = VectorLength ( & view -> overrides );
@@ -159,7 +164,6 @@ pop_view_scope ( struct KSymTable * tbl, const SView * view )
 }
 
 rc_t
-CC
 push_view_scope ( struct KSymTable * tbl, const SView * view )
 {
     rc_t rc;
@@ -187,7 +191,8 @@ push_view_scope ( struct KSymTable * tbl, const SView * view )
     return rc;
 }
 
-bool CC view_fwd_scan ( BSTNode *n, void *data )
+bool
+view_fwd_scan ( BSTNode *n, void *data )
 {
     SViewScanData *pb = data;
     KSymbol *sym = ( KSymbol* ) n;
@@ -222,14 +227,14 @@ bool CC view_fwd_scan ( BSTNode *n, void *data )
 }
 
 static
-void CC column_set_context ( void *item, void *data )
+void column_set_context ( void *item, void *data )
 {
     SColumn *self = item;
     self -> cid . ctx = * ( const uint32_t* ) data;
 }
 
 static
-void CC name_set_context ( void *item, void *data )
+void name_set_context ( void *item, void *data )
 {
     SNameOverload *self = item;
     if ( ( int32_t ) self -> cid . ctx < 0 )
@@ -237,14 +242,14 @@ void CC name_set_context ( void *item, void *data )
 }
 
 static
-void CC production_set_context ( void *item, void *data )
+void production_set_context ( void *item, void *data )
 {
     SProduction *self = item;
     self -> cid . ctx = * ( const uint32_t* ) data;
 }
 
 static
-void CC symbol_set_context ( void *item, void *data )
+void symbol_set_context ( void *item, void *data )
 {
     KSymbol *self = item;
     self -> u . fwd . ctx = * ( const uint32_t* ) data;
@@ -259,7 +264,7 @@ void CC view_set_context ( SView *self )
 }
 
 static
-bool CC view_prod_syntax ( void *item, void *data )
+bool view_prod_syntax ( void *item, void *data )
 {
     rc_t *rc = data;
     const SProduction *prod = ( const SProduction* ) item;
@@ -280,7 +285,7 @@ rc_t view_stmt_syntax ( const SView * view )
 }
 
 static
-bool CC view_typed_column_syntax ( void *item, void *data )
+bool view_typed_column_syntax ( void *item, void *data )
 {
     rc_t *rc = data;
     const SColumn *col = ( const SColumn* ) item;
@@ -318,4 +323,80 @@ CC SViewInstanceWhack ( void *item, void *ignore )
     SViewInstance * self = ( SViewInstance * ) item;
     VectorWhack ( & self -> params, NULL, NULL );
     free ( self );
+}
+
+
+/*
+ * init-tbl-symtab
+ *  initializes "tbl"
+ *  places table in scope
+ *  must be balanced by KSymTableWhack
+ */
+static
+rc_t
+init_view_symtab ( KSymTable * p_tbl, const VSchema * p_schema, const SView * p_view )
+{
+    rc_t rc = init_symtab ( p_tbl, p_schema );
+    if ( rc == 0 )
+    {
+        rc = push_view_scope ( p_tbl, p_view );
+        if ( rc == 0 )
+        {
+            return 0;
+        }
+
+        KSymTableWhack ( p_tbl );
+    }
+
+    return rc;
+}
+
+
+/* Find
+ *  generic object find within view scope
+ *
+ *  "td" [ OUT, NULL OKAY ] - returns cast type expression
+ *  if given or "any" if not
+ *
+ *  "name" [ OUT ] - returns list of overloaded objects if found
+ *
+ *  "type" [ OUT ] - returns object type id, e.g.:
+ *    eDatatype, eTypeset, eFormat, eFunction, ePhysical, eTable, ...
+ *
+ *  "expr" [ IN ] - NUL terminated name expression identifying object
+ *
+ *  "ctx" [ IN ] - NUL terminated context string for evaluation,
+ *  substitutes for filename in logging reports
+ *
+ *  "dflt" [ IN ] - if true, resolve default value
+ *
+ *  returns principal object identified. if NULL but "name" is not
+ *  NULL, then the object was only partially identified.
+ */
+const void * CC SViewFind ( const SView *           p_self,
+                            const VSchema *         p_schema,
+                            VTypedecl *             p_td,
+                            const SNameOverload **  p_name,
+                            uint32_t *              p_type,
+                            const char *            p_expr,
+                            const char *            p_ctx,
+                            bool                    p_dflt )
+{
+    rc_t rc;
+    KSymTable tbl;
+
+    /* initialize to not-found */
+    const void *obj = NULL;
+    * p_name = NULL;
+    * p_type = 0;
+
+    /* build a symbol table for table */
+    rc = init_view_symtab ( & tbl, p_schema, p_self );
+    if ( rc == 0 )
+    {
+        obj = resolve_object ( & tbl, p_schema, p_td, p_name, p_type, p_expr, p_ctx, p_dflt );
+        KSymTableWhack ( & tbl );
+    }
+
+    return obj;
 }
