@@ -30,6 +30,7 @@
 #include <klib/refcount.h>
 #include <klib/printf.h>
 #include <klib/vector.h>
+#include <klib/log.h>
 #include <kproc/lock.h>
 #include <vfs/path.h>
 #include <vfs/manager.h>
@@ -73,6 +74,24 @@ return syscall ( 186 );
 return syscall ( SYS_gettid );
 }
 #endif /* GETTID_NID */
+
+#define SEC_MILLISEC
+#ifdef SEC_MILLISEC
+uint32_t
+_sec_millisec ()
+{
+    struct timeval Tv;
+    uint32_t Ret = 0;
+    uint32_t BUBU = 1000;
+
+    if ( gettimeofday ( & Tv, NULL ) == 0 ) {
+        return ( ( Tv . tv_sec % BUBU ) * BUBU )
+                                        + ( Tv . tv_usec / BUBU );
+    }
+
+    return 0;
+}   /* _sec_millisec () */
+#endif /* SEC_MILLISEC */
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*
  * The main joke, is ... there is no such structure as XFSGap ... :LOL:
@@ -1342,7 +1361,7 @@ _GapKartLoad ( struct XFSGapKart * self )
             else {
                 RCt = _DieBananaLock ( self -> items );
                 if ( RCt == 0 ) {
-int cnt = 0;
+int32_t cnt = 0;
                     while ( true ) {
                         RCt = KartMakeNextItem (
                                                 TheKart,
@@ -1364,9 +1383,12 @@ int cnt = 0;
                             break;
                         }
 cnt ++;
-if ( cnt == 15 ) {
-// if ( cnt == 4 ) {
-    break;
+// if ( cnt == 500 ) {
+// if ( cnt == 200 ) {
+// if ( cnt == 150 ) {
+if ( cnt == 95 ) {
+// if ( cnt == 100 ) {
+break;
 }
                     }
                     _DieBananaUnlock ( self -> items );
@@ -1773,7 +1795,7 @@ struct XFSGapObject {
     const char * accession_or_id;
 
     const char * remote_url;
-    const char * local_path;
+    const char * cache_path;
     KTime_t mod_time;
     uint64_t size;
 };
@@ -1802,9 +1824,9 @@ _GapObjectDispose ( const struct XFSGapObject * self )
             Object -> remote_url = NULL;
         }
 
-        if ( Object -> local_path != NULL ) {
-            free ( ( char * ) Object -> local_path );
-            Object -> local_path = NULL;
+        if ( Object -> cache_path != NULL ) {
+            free ( ( char * ) Object -> cache_path );
+            Object -> cache_path = NULL;
         }
 
         Object -> mod_time = 0;
@@ -1917,7 +1939,7 @@ rc_t CC
 _GapObjectMake (
                 const struct XFSGapObject ** Object,
                 const struct VPath * Path,
-                const struct VPath * Local
+                const struct VPath * Cache
 )
 {
     rc_t RCt;
@@ -1929,7 +1951,7 @@ _GapObjectMake (
     XFS_CSAN ( Object )
     XFS_CAN ( Object )
     XFS_CAN ( Path )
-    XFS_CAN ( Local )
+    XFS_CAN ( Cache )
 
     TheObject = calloc ( 1, sizeof ( struct XFSGapObject ) );
     if ( TheObject == NULL ) {
@@ -1957,14 +1979,13 @@ _GapObjectMake (
                                 );
             if ( RCt == 0 ) {
                 RCt = _ReadValueFromPath (
-                                    & TheObject -> local_path,
-                                    Local,
-                                    XFS_ReadVUri_ZHR
+                                    & TheObject -> cache_path,
+                                    Cache,
+                                    XFS_ReadVPath_ZHR
                                     );
                 if ( RCt == 0 ) {
                     TheObject -> mod_time = VPathGetModDate ( Path );
                     TheObject -> size = VPathGetSize ( Path );
-printf ( "[MKOB] [%d] S[%ul] U[%s]\n", __LINE__, TheObject -> size, TheObject -> remote_url );
 
                     * Object = TheObject;
                 }
@@ -2085,19 +2106,19 @@ XFSGapObjectURL (
 
 LIB_EXPORT
 rc_t CC
-XFSGapObjectLocalPath (
+XFSGapObjectCachePath (
                 const struct XFSGapObject * self,
-                const char ** LocalPath
+                const char ** CachePath
 )
 {
-    XFS_CSAN ( LocalPath )
+    XFS_CSAN ( CachePath )
     XFS_CAN ( self )
-    XFS_CAN ( LocalPath )
+    XFS_CAN ( CachePath )
 
-    * LocalPath = self -> local_path;
+    * CachePath = self -> cache_path;
 
     return 0;
-}   /* XFSGapObjectLocalPath () */
+}   /* XFSGapObjectCachePath () */
 
 LIB_EXPORT
 rc_t CC
@@ -2632,7 +2653,7 @@ _GapLoadKartFile (
                                         ( struct BSTNode * ) Bananable,
                                         _KartAddCallback
                                         );
-printf ( "Kard Added [%d] [%s/%s]\n", RCt, KartDir, KartName );
+pLogMsg ( klogDebug, " <<<[_GapLoadKartFile] RC[$(rc)] NAME[$(name)]", "rc=%u,name=%s", RCt, KartName );
                         if ( RCt == 0 ) {
                             if ( Kart != NULL ) {
                                     /*  We do add reference here
@@ -2871,7 +2892,6 @@ _ObjectFindCallback ( const void * Item, const struct BSTNode * Node )
         ? ""
         : ( ( const struct XFSGapObject * ) Node ) -> accession_or_id
         ;
-printf ( " [FCBA] [%s](%p) [%s](%p)\n", Str1, Str1, Str2, Str2 );
 
     return XFS_StringCompare4BST_ZHR ( Str1, Str2 );
 }   /* _ObjectFindCallback () */
@@ -2905,7 +2925,6 @@ XFSGapGetObject (
                                     ( const void * ) AccessionOrId,
                                     _ObjectFindCallback
                                     );
-printf ( " [UGGO] [%d] [%d] [%s]\n", __LINE__, RCt, AccessionOrId );
         if ( RCt == 0 ) {
             RCt = XFSGapObjectAddRef ( TheObject );
             if ( RCt == 0 ) {
@@ -2947,13 +2966,11 @@ _GapAddObject ( const struct XFSGapObject * Object )
     RCt = XFSGapObjectId ( Object, & AccOrId );
     if ( RCt == 0 ) {
         if ( XFSGapHasObject ( AccOrId ) ) {
-printf ( "[HAS] [%d] [%s]\n", __LINE__, AccOrId );
             RCt = XFS_RC ( rcExists );
         }
         else {
             RCt = _DieBananaLock ( Depot -> objects );
             if ( RCt == 0 ) {
-printf ( "[ADNL] [%d] [%s]\n", __LINE__, AccOrId );
                 RCt = _DieBananaAdd_NoLock (
                                             Depot -> objects,
                                             ( struct BSTNode * ) Object,
@@ -3040,10 +3057,8 @@ _GapLoadKartBanana (
     XFS_CAN ( KartName )
 
     RCt = _GapLoadKartFile ( & TheKart, Banana, KartDir, KartName );
-printf ( "[GLKB] [%d] [%d] [%s]\n", __LINE__, RCt, KartName );
     if ( RCt == 0 ) {
         RCt = _ResolveKartItems ( TheKart );
-printf ( "[GLKB] [%d] [%lu] [%s]\n", __LINE__, RCt, KartName );
         if ( RCt != 0 ) {
             /* This is not error, just bad luck */
             RCt = 0;
@@ -3111,7 +3126,6 @@ _AddKartItemsForProject (
     RCt = _GapKartListIds ( Kart, & List, ProjectId );
     if ( RCt == 0 ) {
         RCt = KNamelistCount ( List, & ListCount );
-printf ( "[AKIFP] [%d] QTY[%d]\n", __LINE__, ListCount );
         if ( RCt == 0 ) {
             if ( ListCount != 0 ) {
                 RCt = KServiceAddProject ( Service, ProjectId );
@@ -3134,8 +3148,6 @@ printf ( "[AKIFP] [%d] QTY[%d]\n", __LINE__, ListCount );
         }
     }
 
-printf ( "[AKIFP] [%d] RC[%d]\n", __LINE__, RCt );
-
     return RCt;
 }   /* _AddKartItemsForProject () */
 
@@ -3148,10 +3160,11 @@ _ResolveKartItems ( const struct XFSGapKart * Kart )
     uint32_t ProjectCount, ProjectId;
     uint32_t ResponseLen;
     const struct VPath * Path;
-    const struct VPath * Local;
     const struct VPath * Cache;
+    const struct VPath * VdbCache;
     const struct KSrvError * Error;
     const struct XFSGapObject * Object;
+    uint32_t TM;
 
     RCt = 0;
     Service = NULL;
@@ -3159,10 +3172,11 @@ _ResolveKartItems ( const struct XFSGapKart * Kart )
     ProjectCount = ProjectId = 0;
     ResponseLen = 0;
     Path = NULL;
-    Local = NULL;
     Cache = NULL;
+    VdbCache = NULL;
     Error = NULL;
     Object = NULL;
+    TM = _sec_millisec ();
 
     XFS_CAN ( Kart )
 
@@ -3197,35 +3211,31 @@ _ResolveKartItems ( const struct XFSGapKart * Kart )
                                     eProtocolHttps,
                                     & Response
                                     );
-printf ( "[RKI] [%d] RC[%lu]\n", __LINE__, RCt );
             if ( RCt == 0 ) {
                 ResponseLen = KSrvResponseLength ( Response );
-printf ( "[RKI] [%d] QTY[%lu]\n", __LINE__, ResponseLen );
+printf ( "[KLN] [%d] [%u] [%s]\n", __LINE__, ResponseLen, Kart -> name );
                 for ( uint32_t llp = 0; llp < ResponseLen; llp ++ ) {
                     RCt = KSrvResponseGetPath (
                                             Response,
                                             llp,
                                             eProtocolHttps,
                                             & Path,
-                                            & Cache,
+                                            & VdbCache,
                                             & Error
                                             );
-printf ( "[RKI] [%d] [%lu]\n", __LINE__, RCt );
                     if ( RCt == 0 ) {
                         if ( Error == NULL ) {
                             RCt = KSrvResponseGetCache (
                                                         Response,
                                                         llp,
-                                                        & Local
+                                                        & Cache
                                                         );
-printf ( "[RKI] [%d] [%lu]\n", __LINE__, RCt );
                             if ( RCt == 0 ) {
                                 RCt = _GapObjectMake (
                                                     & Object,
                                                     Path,
-                                                    Local
+                                                    Cache
                                                     );
-printf ( "[RKI] [%d] [%lu]\n", __LINE__, RCt );
                                 if ( RCt == 0 ) {
                                     RCt = _GapAddObject ( Object );
                                 }
@@ -3240,12 +3250,12 @@ printf ( "[RKI] [%d] [%lu]\n", __LINE__, RCt );
                             VPathRelease ( Path );
                         }
 
-                        if ( Local != NULL ) {
-                            VPathRelease ( Local );
-                        }
-
                         if ( Cache != NULL ) {
                             VPathRelease ( Cache );
+                        }
+
+                        if ( VdbCache != NULL ) {
+                            VPathRelease ( VdbCache );
                         }
                     }
                 }
@@ -3256,6 +3266,8 @@ printf ( "[RKI] [%d] [%lu]\n", __LINE__, RCt );
 
         KServiceRelease ( Service );
     }
+TM = _sec_millisec () - TM;
+printf ( "Were resolved [%d] items in [%u] milliseconds (RC [%u]) (NM [%s])\n", ResponseLen, TM, RCt, Kart -> name );
     return RCt;
 }   /* _ResolveKartItems () */
 

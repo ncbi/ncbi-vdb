@@ -273,7 +273,7 @@ rc_t CC
 _GapFilesFind_NoLock (
                     struct _GapFiles * self,
                     struct _GapFilePeer ** Peer,
-                    const char * LocalPath
+                    const char * CachePath
 )
 {
     rc_t RCt;
@@ -285,11 +285,11 @@ _GapFilesFind_NoLock (
     XFS_CSAN ( Peer )
     XFS_CAN ( self )
     XFS_CAN ( Peer )
-    XFS_CAN ( LocalPath )
+    XFS_CAN ( CachePath )
 
     ThePeer = ( struct _GapFilePeer * ) BSTreeFind ( 
                                         & ( self -> tree ),
-                                        LocalPath,
+                                        CachePath,
                                         _GapFilesFindCallback
                                         );
     if ( ThePeer == NULL ) {
@@ -385,13 +385,13 @@ _GapFilesFindOrCreate (
     struct _GapFiles * Files;
     struct _GapFilePeer * ThePeer;
     const struct XFSGapObject * Object;
-    const char * LocalPath;
+    const char * CachePath;
 
     RCt = 0;
     ThePeer = NULL;
     Files = _FilesGet ();
     Object = NULL;
-    LocalPath = NULL;
+    CachePath = NULL;
 
     XFS_CSAN ( Peer )
     XFS_CAN ( Files )
@@ -400,7 +400,7 @@ _GapFilesFindOrCreate (
 
     RCt = XFSGapGetObject ( & Object, AccessionOrId );
     if ( RCt == 0 ) {
-        XFSGapObjectLocalPath ( Object, & LocalPath );
+        XFSGapObjectCachePath ( Object, & CachePath );
         if ( RCt == 0 ) {
             RCt = KLockAcquire ( Files -> mutabor );
             if ( RCt == 0 ) {
@@ -409,7 +409,7 @@ _GapFilesFindOrCreate (
                 RCt = _GapFilesFind_NoLock (
                                             Files,
                                             & ThePeer,
-                                            LocalPath
+                                            CachePath
                                             );
                 if ( GetRCState ( RCt ) == rcNotFound ) {
                     RCt = _GapFilesAddPeer_NoLock (
@@ -433,8 +433,6 @@ _GapFilesFindOrCreate (
 
         XFSGapObjectRelease ( Object );
     }
-
-printf ( " [UGGO] [%d] [%d] [%s]\n", __LINE__, RCt, AccessionOrId );
 
     return RCt;
 }   /* _GapFilesFindOrCreate () */
@@ -517,10 +515,6 @@ XFSGapFilesSize (
 
         _GapFilePeerRelease ( Peer );
     }
-
-if ( Peer != NULL ) {
-printf ( " [GFFO] [%d] [%d] SZ[%ul]\n", __LINE__, RCt, Peer -> size );
-}
 
     return RCt;
 }   /* XFSGapFilesSize () */
@@ -713,7 +707,7 @@ _GapFilePeerMake (
                                         & ( TheFile -> remote_url )
                                         );
                         if ( RCt == 0 ) {
-                            RCt = XFSGapObjectLocalPath (
+                            RCt = XFSGapObjectCachePath (
                                                         Object,
                                                         & Str
                                                         );
@@ -1260,15 +1254,12 @@ _CheckMakeParentDir ( struct KDirectory * Directory, const char * Path )
     Parent = NULL;
     PathType = kptNotFound;
 
-printf ( "[CMPD] [%d] [%d] [%s]\n", __LINE__, RCt, Path );
     XFS_CAN ( Directory )
     XFS_CAN ( Path )
 
     RCt = XFSPathMake ( & xPath, false, Path );
-printf ( "[CMPD] [%d] [%d] [%s]\n", __LINE__, RCt, Path );
     if ( RCt == 0 ) {
         RCt = XFSPathParent ( xPath, & xParent );
-printf ( "[CMPD] [%d] [%d] [%s]\n", __LINE__, RCt, Path );
         if ( RCt == 0 ) {
             Parent = XFSPathGet ( xParent );
 
@@ -1280,7 +1271,6 @@ printf ( "[CMPD] [%d] [%d] [%s]\n", __LINE__, RCt, Path );
                                         kcmCreate,
                                         Parent
                                         );
-printf ( "[CMPD] [%d] [%d] [%s]\n", __LINE__, RCt, Parent );
             }
             else {
                 if ( PathType != kptDir ) {
@@ -1347,7 +1337,6 @@ _Open_File_1 ( struct _GapFilePeer * self, const struct KFile ** File )
     File_1 = NULL;
     File_2 = NULL;
 
-printf ( "[OF1] [%d] [%d] [%s]\n", __LINE__, RCt, self -> aoi );
     XFS_CSAN ( File )
     XFS_CAN ( self )
     XFS_CAN ( File )
@@ -1370,8 +1359,6 @@ printf ( "[OF1] [%d] [%d] [%s]\n", __LINE__, RCt, self -> aoi );
                      *  it does not exists
                      */
                 RCt = _CheckMakeParentDir ( NatDir, self -> cache_path );
-printf ( "[JIP] [%d] [%s] [%s]\n", __LINE__, self -> cache_path, self -> remote_url );
-printf ( "[OF1] [%d] [%d] [%s]\n", __LINE__, RCt, self -> aoi );
                 if ( RCt == 0 ) {
                     /*  KNS File first
                      */
@@ -1630,7 +1617,6 @@ _GapFilePeerOpen_NoLock (
     XFS_CAN ( self )
     XFS_CAN ( File )
 
-printf ( "[GFON] [%d] [%d] [%s]\n", __LINE__, RCt, self -> aoi );
         /*  The peer is invalid : something went wrong
          */
     if ( ! _GapFilePeerGood ( self ) ) {
@@ -1659,7 +1645,6 @@ printf ( "[GFON] [%d] [%d] [%s]\n", __LINE__, RCt, self -> aoi );
          *
          */
     RCt = _Open_File_1 ( self, & File_1 );
-printf ( "[GFON] [%d] [%d] [%s]\n", __LINE__, RCt, self -> aoi );
     if ( RCt == 0 ) {
             /* Checking Encoding type */
         RCt = _CheckEncType ( self, File_1 );
