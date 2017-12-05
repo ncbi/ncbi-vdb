@@ -47,7 +47,6 @@ extern "C" {
  */
 struct KFile;
 struct KDirectory;
-struct Recorder;
 
 /*--------------------------------------------------------------------------
  * KDirectory
@@ -152,8 +151,6 @@ KFS_EXTERN rc_t CC GetCacheTee2FileTruncatedSize( const struct KFile * self, uin
  *
  */
 KFS_EXTERN bool CC KFileIsKCacheTee2File( const struct KFile * self );
-
-KFS_EXTERN bool CC CacheTee2FileSetRecorder( const struct KFile * self, struct Recorder * r );
 
 #ifdef __cplusplus
 }

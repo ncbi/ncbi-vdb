@@ -35,18 +35,16 @@ struct RRCachedFile;
 #include <klib/printf.h>
 
 #include <kfs/defs.h>
+#include <kfs/rrcachedfile.h>
 
-#include <kfs/recorder.h>
 #include "poolpages.h"
-#include <kproc/queue.h>
 
 #include <sysalloc.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define RR_CACHE_DEFAULT_BLOCKSIZE ( 128 * 1024 )
+#define RR_CACHE_DEFAULT_BLOCKSIZE ( 128 * 1024 * 1024 )
 #define RR_CACHE_MIN_BLOCKSIZE ( 16 * 1024 )
-#define RECORDING 1
 
 static rc_t hand_out_to_wrap_file_as_rr_cached( struct KFile const ** rr_cached, struct KFile const * to_wrap )
 {
@@ -67,156 +65,46 @@ typedef struct RRCachedFile
 {
     KFile dad;
     const KFile * wrapped;                  /* the file we are wrapping */
-    uint64_t wrapped_size;                  /* the size of the wrapped file */
-    uint64_t block_count;                   /* how many blocks do we need to cache the remote file ( last block may be shorter ) */
-    struct ThePool * pool;                  /* have a cache to answer from RAM! */
-    
-#if RECORDING
-    struct Recorder * recorder;             /* optional recorder ( see above ) */
-#endif
-
-    uint32_t block_size;                    /* how big is a block ( aka 1 bit in the bitmap )*/
+    struct lru_cache * cache;               /* the lru-cache */
 } RRCachedFile;
 
 
 static rc_t CC RRCachedDestroy ( RRCachedFile * self )
 {
-    if ( self -> pool != NULL )
-        pool_release ( self -> pool );
-    
+    release_lru_cache ( self -> cache );
     KFileRelease ( self -> wrapped );
-
-#if RECORDING
-    if ( self -> recorder != NULL )
-    {
-        WriteToRecorder ( self -> recorder, "recorder released\n" );
-        ReleaseRecorder ( self -> recorder );
-    }
-#endif
-
-    free ( self );
+    free ( ( void * )self );
     return 0;
 }
 
-static struct KSysFile* RRCachedGetSysFile ( const RRCachedFile *self, uint64_t *offset )
+static struct KSysFile* RRCachedGetSysFile ( const RRCachedFile * self, uint64_t * offset )
 {
     * offset = 0;
     return NULL;
 }
 
 
-static rc_t RRCachedRandomAccess ( const RRCachedFile *self )
+static rc_t RRCachedRandomAccess ( const RRCachedFile * self )
 {
     return 0;
 }
 
 
-static rc_t RRCachedSize ( const RRCachedFile *self, uint64_t *size )
+static rc_t RRCachedSize ( const RRCachedFile * self, uint64_t * size )
 {
-    *size = self->wrapped_size;
-    return 0;
+    return KFileSize ( self -> wrapped, size );
 }
 
 
-static rc_t RRCachedSetSize ( RRCachedFile *self, uint64_t size )
+static rc_t RRCachedSetSize ( RRCachedFile * self, uint64_t size )
 {
     return RC ( rcFS, rcFile, rcUpdating, rcFile, rcReadonly );
 }
 
-static rc_t RRCachedRead ( const RRCachedFile *cself, uint64_t pos,
+static rc_t RRCachedRead ( const RRCachedFile * cself, uint64_t pos,
                            void *buffer, size_t bsize, size_t *num_read )
 {
-    rc_t rc = 0;
-    struct PoolPage * pp = NULL;
-
-#if RECORDING
-    bool in_ram = false;
-    uint64_t rec_block_pos = 0;
-    size_t rec_block_size = 0;
-    uint32_t rec_block_idx = 0;
-    uint32_t rec_block_usage = 0;
-#endif
-
-    if ( pool_page_find ( cself -> pool, &pp, pos ) == 0 && pp != NULL )
-    {
-        /* we found a pool-page that has at least the first portion of the request in it */
-        rc = pool_page_get ( pp, pos, buffer, bsize, num_read );
-        /* we are done - let the caller come back for more if that was not all he asked for */
-        if ( rc == 0 )
-        {
-#if RECORDING
-            in_ram = true;
-            rec_block_idx = pool_page_idx ( pp ) + 1;
-            rec_block_usage = pool_page_usage( pp );
-#endif
-        }
-        else
-        {
-            /* we have not other choice than reading directly from the wrapped file */
-            rc = KFileReadAll( cself -> wrapped, pos, buffer, bsize, num_read );
-        }
-    }
-    else
-    {
-        rc = pool_page_find_new ( cself -> pool, &pp );
-        if ( rc != 0 || pp == NULL )
-        {
-            /* we have not other choice than reading directly from the wrapped file */
-            rc = KFileReadAll( cself -> wrapped, pos, buffer, bsize, num_read );
-        }
-        else
-        {
-            /* we are able to find a block-page to use for the request... */
-            uint64_t block_idx = ( pos / cself -> block_size );
-            uint64_t block_pos = ( block_idx * cself -> block_size );
-            rc = pool_page_prepare( pp, 1, block_pos );
-            if ( rc == 0 )
-            {
-                size_t read;
-                rc = pool_page_read_from_file( pp, cself -> wrapped, &read );
-                if ( rc == 0 )
-                {
-                    rc = pool_page_get ( pp, pos, buffer, bsize, num_read );
-                    if ( rc == 0 )
-                    {
-#if RECORDING
-                        rec_block_pos = block_pos;
-                        rec_block_size = cself -> block_size;
-                        rec_block_idx = pool_page_idx ( pp ) + 1;
-                        rec_block_usage = pool_page_usage( pp );
-#endif
-                    }
-                    else
-                    {
-                        /* we have not other choice than reading directly from the wrapped file */
-                        rc = KFileReadAll( cself -> wrapped, pos, buffer, bsize, num_read );
-                    }
-                }
-                else
-                {
-                    /* we have not other choice than reading directly from the wrapped file */
-                    rc = KFileReadAll( cself -> wrapped, pos, buffer, bsize, num_read );
-                }
-            }
-            else
-            {
-                /* we have not other choice than reading directly from the wrapped file */
-                rc = KFileReadAll( cself -> wrapped, pos, buffer, bsize, num_read );
-            }
-        }
-    }
-
-#if RECORDING
-    if ( cself -> recorder != NULL )
-        WriteToRecorder ( cself -> recorder,
-                          "%lu\t%lu\t%lu\t%s\t%lu\t%lu\t%d.%d\n",
-                          pos, bsize, *num_read, in_ram ? "Y" : "N",
-                          rec_block_pos, rec_block_size, rec_block_idx, rec_block_usage );
-#endif                
-    
-    if ( pp != NULL )
-        pool_page_release ( pp );
-    return rc;
+    return read_lru_cache ( cself -> cache, pos, buffer, bsize, num_read );
 }
 
 static rc_t RRCachedWrite ( RRCachedFile *self, uint64_t pos,
@@ -241,100 +129,84 @@ static KFile_vt_v1 vtRRCached =
     /* end minor version 0 methods */
 };
 
-LIB_EXPORT rc_t CC MakeRRCached ( struct KFile const **rr_cached,
+static rc_t make_rr_cached( struct KFile const **cached,
+                            struct KFile const *to_wrap,
+                            uint32_t page_size,
+                            uint32_t page_count )
+{
+    rc_t rc = KFileAddRef ( to_wrap );
+    if ( rc == 0 )
+    {
+        struct lru_cache * cache;
+        rc = make_lru_cache ( &cache, to_wrap, page_size, page_count );
+        if ( rc == 0 )
+        {
+            RRCachedFile * rrf = malloc ( sizeof * rrf );
+            if ( rrf == NULL )
+                rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
+            else
+            {
+                rrf -> wrapped = to_wrap;
+                rrf -> cache = cache;
+
+                rc = KFileInit ( &rrf -> dad,
+                                 ( const union KFile_vt * ) &vtRRCached,
+                                 "RRCachedFile",
+                                 "rrcached",
+                                 true,
+                                 false );
+                if ( rc == 0 )
+                {
+                    /* the wrapper is ready to use now! */
+                    *cached = ( const KFile * ) &rrf -> dad;
+                }
+            }
+            if ( rc != 0 )
+                RRCachedDestroy ( rrf );
+        }
+    }
+    if ( rc != 0 )
+        rc = hand_out_to_wrap_file_as_rr_cached ( cached, to_wrap );
+    return rc;
+}
+
+LIB_EXPORT rc_t CC MakeRRCached ( struct KFile const **cached,
                                   struct KFile const *to_wrap,
-                                  uint32_t block_size,
-                                  uint32_t page_count,
-                                  struct Recorder * recorder )
+                                  uint32_t page_size,
+                                  uint32_t page_count )
 {
     rc_t rc = 0;
-    size_t to_wrap_size = 0;
-    uint32_t b_size = RR_CACHE_DEFAULT_BLOCKSIZE;
-        
-    if ( rr_cached == NULL )
+    
+    if ( cached == NULL )
         rc = RC ( rcFS, rcFile, rcAllocating, rcParam, rcNull );
     else
     {
-        *rr_cached = NULL;
-        if ( to_wrap == NULL )
+        *cached = NULL;
+        if ( to_wrap == NULL || page_size == 0 || page_count == 0 )
             rc = RC ( rcFS, rcFile, rcAllocating, rcParam, rcNull );
     }
 
     if ( rc == 0 )
-    {
-        rc = KFileSize ( to_wrap, &to_wrap_size );
-        if ( rc != 0 )
-        {
-            LOGERR( klogErr, rc, "cannot detect size of file to be wrapped" );
-        }
-        else if ( to_wrap_size == 0 )
-        {
-            rc = RC ( rcFS, rcFile, rcConstructing, rcParam, rcInvalid );
-            LOGERR( klogErr, rc, "file to be wrapped is empty" );
-        }
-    }
-    
-    if ( rc == 0 )
-    {
-        if ( block_size > 0 ) b_size = block_size;
-        /* let the blocksize be a multiple of 16 */
-        b_size &= 0xFFFFF0;
-        if ( b_size < RR_CACHE_MIN_BLOCKSIZE )
-        {
-            rc = RC ( rcFS, rcFile, rcConstructing, rcParam, rcInsufficient );
-            LOGERR( klogErr, rc, "blocksize too small" );
-        }
-    }
+        rc = make_rr_cached( cached, to_wrap, page_size, page_count );
 
-    if ( rc == 0 )
-    {
-        rc = KFileAddRef ( to_wrap );
-        if ( rc == 0 )
-        {
-            struct ThePool * pool;
-            rc = make_pool ( &pool, b_size, page_count );
-            if ( rc == 0 )
-            {
-                RRCachedFile * rrf = malloc ( sizeof * rrf );
-                if ( rrf == NULL )
-                    rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
-                else
-                {
-                    /* now we can enter everything into the rr - struct */
-                    rrf -> wrapped = to_wrap;
-                    rrf -> wrapped_size = to_wrap_size;
-                    rrf -> block_count = to_wrap_size / b_size;
-                    rrf -> pool = pool;
-                    rrf -> block_size = b_size;
-#if RECORDING
-                    rrf -> recorder = recorder;
-                    if ( recorder != NULL )
-                        WriteToRecorder ( recorder, "\nrecorder set\n" );
-#endif
-                    rc = KFileInit ( &rrf -> dad,
-                                     ( const union KFile_vt * ) &vtRRCached,
-                                     "RRCachedFile",
-                                     "rrcached",
-                                     true,
-                                     false );
-                    if ( rc != 0 )
-                        free( ( void * ) rrf );
-                    else
-                    {
-                        /* the wrapper is ready to use now! */
-                        *rr_cached = ( const KFile * ) &rrf -> dad;
-                    }
+    return rc;
+}
 
-                    if ( rc != 0 )
-                        pool_release ( pool );
-                }
-            }
-            if ( rc != 0 )
-                KFileRelease ( to_wrap );
+LIB_EXPORT rc_t CC SetRRCachedEventHandler( struct KFile const * self,
+                        void * data, on_cache_event handler )
+{
+    rc_t rc = 0;
+    if ( self == NULL || handler == NULL || data == NULL )
+        rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcNull );
+    else
+    {
+        if ( &self -> vt -> v1 != &vtRRCached )
+            rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcInvalid );
+        else
+        {
+            struct RRCachedFile * rrf = ( struct RRCachedFile * )self;
+            rc = set_lru_cache_event_handler( rrf -> cache, data, handler );
         }
     }
-    
-    if ( rc != 0 )
-        rc = hand_out_to_wrap_file_as_rr_cached ( rr_cached, to_wrap );
     return rc;
 }

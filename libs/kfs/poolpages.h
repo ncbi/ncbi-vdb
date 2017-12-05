@@ -26,6 +26,7 @@
 #include <klib/rc.h>
 #include <kfs/file.h>
 #include <kfs/recorder.h>
+#include <kfs/rrcachedfile.h>
 
 struct ThePool;
 struct PoolPage;
@@ -55,3 +56,18 @@ rc_t pool_page_read_from_file( struct PoolPage * self, const struct KFile * f, s
 rc_t pool_page_write_to_file( const struct PoolPage * self, struct KFile * f, size_t to_write, size_t * written );
 
 rc_t pool_page_write_to_recorder( const struct PoolPage * self, struct Recorder * rec );
+
+/* ---------------------------------------------------------------------------------- */
+struct lru_cache;
+
+rc_t make_lru_cache ( struct lru_cache ** cache,
+                      const KFile * wrapped,
+                      size_t page_size,
+                      uint32_t page_count );
+
+void release_lru_cache ( struct lru_cache * self );
+
+rc_t read_lru_cache ( struct lru_cache * self,
+                      uint64_t pos, void * buffer, size_t bsize, size_t * num_read );
+
+rc_t set_lru_cache_event_handler( struct lru_cache * self, void * data, on_cache_event handler );

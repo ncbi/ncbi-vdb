@@ -47,11 +47,18 @@ extern "C" {
 struct KFile;
 struct Recorder;
 
-LIB_EXPORT rc_t CC MakeRRCached ( struct KFile const **rr_cached,
+enum cache_event { CE_REQUEST, CE_FOUND, CE_ENTER, CE_DISCARD, CE_FAILED };
+
+typedef void ( *on_cache_event )( void * data, enum cache_event event,
+                                  uint64_t pos, size_t len, uint32_t block_nr );
+
+KFS_EXTERN rc_t CC MakeRRCached ( struct KFile const **rr_cached,
                                   struct KFile const *to_wrap,
-                                  uint32_t block_size,
                                   uint32_t page_size,
-                                  struct Recorder * recorder );
+                                  uint32_t page_count );
+
+KFS_EXTERN rc_t CC SetRRCachedEventHandler( struct KFile const * self,
+                        void * data, on_cache_event handler );
 
 #ifdef __cplusplus
 }

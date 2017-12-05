@@ -64,7 +64,6 @@ struct KCacheTee2File;
 #define CACHE_TEE_MIN_BLOCKSIZE ( 16 * 1024 )
 #define READ_BLOCK_SIZE_TRYS 3
 #define READ_CONTENT_SIZE_TRYS 3
-#define RECORDING 1
 
 typedef struct KCacheTee2File
 {
@@ -84,9 +83,6 @@ typedef struct KCacheTee2File
     KQueue * scratch_pool;                  /* this is necessary to make KCacheTeeFile thread-safe! */
     struct ThePool * pool;                  /* have a cache to answer from RAM! */
     
-#if RECORDING
-    struct Recorder * recorder;             /* optional recorder ( see above ) */
-#endif
     uint32_t block_size;                    /* how big is a block ( aka 1 bit in the bitmap )*/
 
     bool read_only;
@@ -406,14 +402,6 @@ static rc_t CC KCacheTee2FileDestroy( KCacheTee2File * self )
     if ( already_promoted_by_other_instance )
         KDirectoryRemove ( self -> dir, true, "%s.cache", self -> cache_path );
 
-#if RECORDING
-    if ( self -> recorder != NULL )
-    {
-        WriteToRecorder ( self -> recorder, "recorder released\n" );    
-        ReleaseRecorder ( self -> recorder );
-    }
-#endif
-
     KDirectoryRelease ( self -> dir );
     
     free ( self );
@@ -537,7 +525,7 @@ static void get_read_info ( const KCacheTee2File *cself, uint64_t pos, size_t le
         info -> bytes_to_read = ( ( cself -> wrapped_size + 1 ) - info -> first_block_pos );
     else
         info -> bytes_to_read = ( info -> available . count * cself -> block_size );
-    
+
     info -> pp = NULL;
     if ( info -> in_cache )
     {
@@ -548,7 +536,6 @@ static void get_read_info ( const KCacheTee2File *cself, uint64_t pos, size_t le
         pool_page_find ( cself -> pool, &( info -> pp ), pos );
     }
 }
-
 
 static rc_t KCacheTee2FileRead_from_wrapped_using_page ( const KCacheTee2File *cself, struct PoolPage * pp,
         uint64_t pos, void * buffer, size_t bsize, size_t *num_read, read_info * info )
@@ -619,11 +606,6 @@ static rc_t KCacheTee2FileRead_rw_using_caller_buffer ( const KCacheTee2File *cs
 {
     rc_t rc;
     
-#if RECORDING
-    if ( cself -> recorder != NULL )
-        WriteToRecorder ( cself -> recorder, "\tremote.usr\t%lu\t%lu\n", info -> first_block_pos, info -> bytes_to_read );
-#endif
-
     /* read whole blocks from the wrapped file */
     rc = KFileReadAll ( cself -> wrapped, info -> first_block_pos, buffer, info -> bytes_to_read, num_read );
     if ( rc == 0 )
@@ -677,11 +659,6 @@ static rc_t KCacheTee2FileRead_rw_using_scratch_buffer ( const KCacheTee2File *c
         rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
     else
     {
-#if RECORDING
-        if ( cself -> recorder != NULL )
-            WriteToRecorder ( cself -> recorder, "\tremote.scratch\t%lu\t%lu\n", info -> first_block_pos, info -> bytes_to_read );
-#endif
-    
         /* read one block from the wrapped file */
         rc = KFileReadAll ( cself -> wrapped, info -> first_block_pos, page, cself -> block_size, num_read );
         if ( rc == 0 )
@@ -744,13 +721,7 @@ static rc_t KCacheTee2FileRead_rw ( const KCacheTee2File *cself, uint64_t pos,
     rc_t rc = 0;
     read_info info;
 
-#if RECORDING
-    if ( cself -> recorder != NULL )
-        WriteToRecorder ( cself -> recorder, "\nrw\tat:%lu\tlen:%lu\n", pos, bsize );
-#endif
-
     *num_read = 0;
-
     if ( pos > cself -> wrapped_size )
     {
         /* the caller asked for data beyond the end of the file */
@@ -769,16 +740,6 @@ static rc_t KCacheTee2FileRead_rw ( const KCacheTee2File *cself, uint64_t pos,
     }
     
     get_read_info ( cself, pos, bsize, &info );
-
-#if RECORDING
-    if ( cself -> recorder != NULL )
-    {
-        WriteToRecorder ( cself -> recorder,
-                          "\tavailable: blk #%ld . %d blks ( in_cache=%s )\n",
-                          info . available.first, info . available . count,
-                          info . in_cache ? "yes" : "no" );
-    }
-#endif
 
     if ( info . in_cache )
     {
@@ -801,16 +762,6 @@ static rc_t KCacheTee2FileRead_rw ( const KCacheTee2File *cself, uint64_t pos,
         file:     .................
 
         */
-#if RECORDING
-        if ( cself -> recorder != NULL )
-        {
-            if ( info . pp != NULL )
-                pool_page_write_to_recorder ( info . pp, cself -> recorder );
-            else
-                WriteToRecorder ( cself -> recorder, "\tcache\tat:%lu\tlen:%lu\n", pos, info . bytes_to_read );
-        }
-#endif
-
         if ( info . pp != NULL )
         {
             /* we found it in the memory-cache! ---> GREAT! let's get it from there */
@@ -823,20 +774,11 @@ static rc_t KCacheTee2FileRead_rw ( const KCacheTee2File *cself, uint64_t pos,
             struct PoolPage * pp;
             if ( pool_page_find_new ( cself -> pool, &pp ) == 0 && pp != NULL )
             {
-#if RECORDING
-                if ( cself -> recorder != NULL )
-                    WriteToRecorder ( cself -> recorder, "\twriting to page #%d\n", pool_page_idx( pp ) );
-#endif
                 rc = KCacheTee2FileRead_from_cache_using_page ( cself, pp, pos, buffer, bsize, num_read, &info );
-                
                 pool_page_release ( pp );
             }
             else
             {
-#if RECORDING
-                if ( cself -> recorder != NULL )
-                    WriteToRecorder ( cself -> recorder, "\tno page for write found\n" );
-#endif
                 rc = KFileReadAll( cself -> cache, pos, buffer, info . bytes_to_read, num_read );
             }
         }
@@ -890,10 +832,6 @@ static rc_t KCacheTee2FileRead_rw ( const KCacheTee2File *cself, uint64_t pos,
     if ( info . pp != NULL )
         pool_page_release ( info . pp );
 
-#if RECORDING
-    if ( cself -> recorder != NULL )
-        WriteToRecorder ( cself -> recorder, "\treturned:%lu\n", *num_read );
-#endif
     return rc;
 }
 
@@ -905,11 +843,6 @@ static rc_t KCacheTee2FileRead_ro ( const KCacheTee2File *cself, uint64_t pos,
 {
     rc_t rc = 0;
     read_info info;
-
-#if RECORDING
-    if ( cself -> recorder != NULL )
-        WriteToRecorder ( cself -> recorder, "\nro\tat:%lu\tlen:%lu\n", pos, bsize );
-#endif
 
     *num_read = 0;
     
@@ -925,15 +858,6 @@ static rc_t KCacheTee2FileRead_ro ( const KCacheTee2File *cself, uint64_t pos,
     
     if ( info . in_cache )
     {
-#if RECORDING
-        if ( cself -> recorder != NULL )
-        {
-            if ( info . pp != NULL )
-                pool_page_write_to_recorder ( info . pp, cself -> recorder );
-            else
-                WriteToRecorder ( cself -> recorder, "\tcache\tat>%lu\tlen:%lu\n", pos, info . bytes_to_read );
-        }
-#endif
         if ( info . pp != NULL )
         {
             /* we found it in the memory-cache! ---> GREAT! let's get it from there */
@@ -955,14 +879,7 @@ static rc_t KCacheTee2FileRead_ro ( const KCacheTee2File *cself, uint64_t pos,
         }
     }
     else
-    {
-#if RECORDING
-        if ( cself -> recorder != NULL )
-            WriteToRecorder ( cself -> recorder, "\tremote\tat:%lu\tlen:%lu\n", pos, info . bytes_to_read );
-#endif
-    
         rc = KFileReadAll ( cself -> wrapped, pos, buffer, info . bytes_to_read, num_read );
-    }
 
     if ( info . pp != NULL )
         pool_page_release ( info . pp );
@@ -1123,9 +1040,7 @@ static rc_t finish_tee( struct KFile const **tee,
                         cf -> pool = pool;
                         cf -> block_size = ctp -> block_size;
                         cf -> read_only = ctp -> read_only;
-    #if RECORDING
-                        cf -> recorder = NULL;
-    #endif
+
                         string_copy ( cf -> cache_path,
                                      ctp -> resolved_path_size + 1,
                                      ctp -> resolved_path,
@@ -1801,21 +1716,5 @@ LIB_EXPORT bool CC KFileIsKCacheTee2File( const struct KFile * self )
         res = &self->vt->v1 == &vtKCacheTee2File_rw;
         if ( !res ) res = &self->vt->v1 == &vtKCacheTee2File_ro;
     }
-    return res;
-}
-
-LIB_EXPORT bool CC CacheTee2FileSetRecorder( const struct KFile * self, struct Recorder * r )
-{
-    bool res = false;
-
-    if ( KFileIsKCacheTee2File( self ) )
-    {
-#if RECORDING
-        struct KCacheTee2File * ctf = ( struct KCacheTee2File * )self;
-        ctf -> recorder = r;
-        WriteToRecorder ( r, "recorder set\n" );
-        res = true;
-#endif
-    }   
     return res;
 }

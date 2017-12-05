@@ -290,19 +290,6 @@ static char * extract_acc_from_url( const char * url )
     return NULL;
 }
 
-static rc_t make_a_recorder( KDirectory * dir,
-                             struct Recorder ** rec,
-                             bool append,
-                             const char * loc )
-{
-    *rec = NULL;
-    if ( loc != NULL )
-        return MakeRecorder ( dir, rec, 1024, append, "%s.rec", loc );
-    else
-        return SILENT_RC ( rcVFS, rcFile, rcReading, rcItem, rcNotFound );
-}
-                               
-
 static rc_t wrap_in_cachetee( KDirectory * dir,
                               const KFile **cfp,
                               const char * loc,
@@ -356,13 +343,11 @@ static rc_t wrap_in_cachetee2( KDirectory * dir,
     {
         KFileRelease ( * cfp );
         * cfp = temp_file;
-    
+/*    
         if ( cps -> recording > 0 )
         {
-            struct Recorder * rec = NULL;
-            if ( make_a_recorder( dir, &rec, cps -> append > 0, loc ) == 0 )
-                CacheTee2FileSetRecorder( *cfp, rec );
         }
+*/
     }
     return rc;
 }
@@ -372,17 +357,8 @@ static rc_t wrap_in_rr_cache( KDirectory * dir,
                               const char * loc,
                               const caching_params * cps )
 {
-    rc_t rc;
     const KFile *temp_file;
-    struct Recorder * rec = NULL;
-
-    if ( cps -> recording > 0 )
-    {
-        const char * rec_loc = cps -> use_cwd ? extract_acc_from_url( loc ) : loc;
-        make_a_recorder( dir, &rec, cps -> append > 0, rec_loc );
-    }
-    
-    rc = MakeRRCached ( &temp_file, *cfp, cps -> blocksize, cps -> pagecount, rec );
+    rc_t rc = MakeRRCached ( &temp_file, *cfp, cps -> blocksize, cps -> pagecount );
     if ( rc == 0 )
     {
         KFileRelease ( * cfp );
