@@ -3512,6 +3512,8 @@ LIB_EXPORT rc_t CC KDataBufferVPrintf ( KDataBuffer * buf, const char * fmt, va_
             rc = KDataBufferResize ( buf, bsize );
             if ( rc == 0 )
             {
+                buffer = buf -> base;       /* fix for VDB-3505 */
+
                 /* try again with the newly sized buffer */
                 rc = string_vprintf ( &buffer [ content ], bsize - content, & num_writ, fmt, args_copy );
             }

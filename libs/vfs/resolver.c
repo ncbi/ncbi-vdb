@@ -3120,7 +3120,7 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
                             const VPath * remote2, * remote_mapping = NULL;
                             rc = VResolverRemoteResolve ( self, protocols,
                                 & accession, & remote2, & remote_mapping, NULL,
-                                refseq_ctx, true, NULL );
+                                refseq_ctx, true, version );
                             if ( rc == 0 )
                             {
                                 /* got it. now enter into VFS manager's table */
