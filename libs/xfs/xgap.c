@@ -1361,7 +1361,6 @@ _GapKartLoad ( struct XFSGapKart * self )
             else {
                 RCt = _DieBananaLock ( self -> items );
                 if ( RCt == 0 ) {
-int32_t cnt = 0;
                     while ( true ) {
                         RCt = KartMakeNextItem (
                                                 TheKart,
@@ -1382,14 +1381,6 @@ int32_t cnt = 0;
                         if ( RCt != 0 ) {
                             break;
                         }
-cnt ++;
-// if ( cnt == 500 ) {
-// if ( cnt == 200 ) {
-// if ( cnt == 150 ) {
-if ( cnt == 95 ) {
-// if ( cnt == 100 ) {
-break;
-}
                     }
                     _DieBananaUnlock ( self -> items );
                 }
