@@ -31,6 +31,7 @@ MODULE = test/vfs
 TEST_TOOLS = \
 	redirect-rejected-names-cgi-http-to-https \
 	test-resolver-with-log \
+	test-services \
 	test-caching \
 	test-names-30 \
 	test-path \
@@ -158,10 +159,22 @@ $(TEST_BINDIR)/test-resolver: $(RESOLVERTEST_OBJ)
 #
 
 RESOLVERTESTLOG_SRC = \
-	test-resolver-with-log 
+	test-resolver-with-log
 
 RESOLVERTESTLOG_OBJ = \
 	$(addsuffix .$(OBJX),$(RESOLVERTESTLOG_SRC))
 
 $(TEST_BINDIR)/test-resolver-with-log: $(RESOLVERTESTLOG_OBJ)
+	$(LP) --exe -o $@ $^ $(RESOLVERTEST_LIB)
+
+#----------------------------------------------------------------
+# Test of names service
+#
+SERVICES_SRC = \
+	test-services
+
+SERVICES_OBJ = \
+	$(addsuffix .$(OBJX),$(SERVICES_SRC))
+
+$(TEST_BINDIR)/test-services: $(SERVICES_OBJ)
 	$(LP) --exe -o $@ $^ $(RESOLVERTEST_LIB)
