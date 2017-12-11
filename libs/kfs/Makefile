@@ -126,7 +126,8 @@ KFS_CMN = \
 	logfile \
 	poolpages \
 	from_to_namelist \
-	limitfile
+	limitfile \
+	small-arc-file
 
 KFS_SRC = \
 	mmap \
