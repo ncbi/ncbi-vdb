@@ -54,6 +54,8 @@ static void BSTItemWhack ( BSTNode * n, void * ignore ) {
     VResolverRelease ( i -> resolver );
 
     memset ( i, 0, sizeof * i );
+
+    free ( i );
 }
 
 static int64_t CC BSTItemCmp ( const void * item, const BSTNode * n ) {
@@ -242,20 +244,24 @@ rc_t KServiceNamesQueryExt ( KService * self, VRemoteProtocols protocols,
                 const KSrvError * error = NULL;
                 rc = KSrvResponseGetPath
                     ( response, i, protocols, & path, NULL, & error );
-                if ( error == NULL && rc == 0 ) {
-                    const VResolver * resolver = NULL;
-                    String id;
-                    String ticket;
-                    rc = VPathGetId ( path, & id );
-                    if ( rc == 0 )
-                        rc = VPathGetTicket ( path, & ticket );
-                    if ( rc == 0 )
-                        rc = HResolver ( & h, & ticket, & resolver );
-                    if ( rc == 0 ) {
-                        assert ( resolver );
-                        rc = VResolversQuery ( resolver, h . mgr,
-                                                protocols, & id, & vps );
+                if ( rc == 0 ) {
+                    if ( error == NULL ) {
+                        const VResolver * resolver = NULL;
+                        String id;
+                        String ticket;
+                        rc = VPathGetId ( path, & id );
+                        if ( rc == 0 )
+                            rc = VPathGetTicket ( path, & ticket );
+                        if ( rc == 0 )
+                            rc = HResolver ( & h, & ticket, & resolver );
+                        if ( rc == 0 ) {
+                            assert ( resolver );
+                            rc = VResolversQuery ( resolver, h . mgr,
+                                                   protocols, & id, & vps );
+                        }
                     }
+                    else
+                        RELEASE ( KSrvError, error );
                 }
                 if ( vps != NULL ) {
                     rc = KSrvResponseAddLocalAndCache ( response, i, vps );
