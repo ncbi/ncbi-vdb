@@ -27,6 +27,10 @@
 #include "karc-priv.h"
 #include "toc-priv.h"
 
+#if LEADING_FILE_CACHE
+#include "arc-files.h"
+#endif
+
 #include <kfs/arc.h>
 
 #include <klib/debug.h>
@@ -1151,6 +1155,10 @@ uint32_t KArcDirFullPathType (const KArcDir *self, const char * path)
         case ktocentrytype_dir:
             return tt | kptDir;
 
+#if LEADING_FILE_CACHE
+        case ktocentrytype_leading_file:
+        case ktocentrytype_small_file:
+#endif
         case ktocentrytype_file:
         case ktocentrytype_emptyfile:
             return tt | kptFile;
@@ -1707,26 +1715,34 @@ struct KSysFile *CC KArcFileGetSysFile (const KArcFile *self, uint64_t *offset)
     rc = KTocEntryGetType (self->node, &type);
     if (rc == 0)
     {
-	if (type == ktocentrytype_file)
-	{
-	    /* recur into the KFile to see if it allows this */
-	    fp = KFileGetSysFile (self->archive, &ao);
+        switch ( type )
+        {
+#if LEADING_FILE_CACHE
+        case ktocentrytype_leading_file:
+        case ktocentrytype_small_file:
+#endif
+        case ktocentrytype_file:
+            /* recur into the KFile to see if it allows this */
+            fp = KFileGetSysFile (self->archive, &ao);
 
-	    /* -----
-	     * if all this is true get the offset from the TOC entry and
-	     * return it
-	     */
-	    if (fp != NULL)
-	    {
-		if (KTocEntryGetFileOffset (self->node, &fo) == 0)
-		{
-		    *offset = ao + fo;
-		    return fp;
-		}
-	    }
-	}
+            /* -----
+             * if all this is true get the offset from the TOC entry and
+             * return it
+             */
+            if (fp != NULL)
+            {
+                if (KTocEntryGetFileOffset (self->node, &fo) == 0)
+                {
+                    *offset = ao + fo;
+                    return fp;
+                }
+            }
+            break;
+        default:
+            break;
+        }
     }
-    /* any failure alng the way leads to returning NULL */
+    /* any failure along the way leads to returning NULL */
     *offset = 0;
     return NULL;
 }
@@ -2042,9 +2058,17 @@ rc_t CC KArcFileRead	(const KArcFile *self,
 
     rc = KTocEntryGetType(self->node, &type);
 
-    assert ((type == ktocentrytype_file) || 
-            (type == ktocentrytype_chunked) ||
+#if LEADING_FILE_CACHE
+    assert ((type == ktocentrytype_leading_file) ||
+            (type == ktocentrytype_small_file)   ||
+            (type == ktocentrytype_file)         || 
+            (type == ktocentrytype_chunked)      ||
             (type == ktocentrytype_emptyfile));
+#else
+    assert ((type == ktocentrytype_file)         || 
+            (type == ktocentrytype_chunked)      ||
+            (type == ktocentrytype_emptyfile));
+#endif
 
     if (rc == 0)
     {
@@ -2087,6 +2111,10 @@ rc_t CC KArcFileRead	(const KArcFile *self,
 		     */
 		    rc = RC (rcFS, rcFile, rcReading, rcArc, rcUnexpected);
 		    break;
+#if LEADING_FILE_CACHE
+        case ktocentrytype_leading_file:
+        case ktocentrytype_small_file:
+#endif
 		case ktocentrytype_file:
 		    rc = KArcFileReadContiguous (self, pos, buffer, (size_t)limit, num_read);
 		    break;
@@ -2193,17 +2221,38 @@ rc_t KArcFileMake (KArcFile ** self,
 
     if (rc == 0)
     {
-        /* we need to check chunked files here as well */
-        if (((node->type == ktocentrytype_file) &&
-             (node->u.contiguous_file.file_size > 0) &&
-             (size < (node->u.contiguous_file.file_size +
-                      node->u.contiguous_file.archive_offset))) ||
-            ((node->type == ktocentrytype_chunked) &&
-             (node->u.chunked_file.file_size > 0) &&
-             (size < (node->u.chunked_file.chunks[node->u.chunked_file.num_chunks-1].source_position +
-                      node->u.chunked_file.chunks[node->u.chunked_file.num_chunks-1].size))))
-            rc = RC (rcFS, rcFile, rcConstructing, rcArc, rcIncomplete);
-        else
+        /* detect truncated archive */
+        switch ( node -> type )
+        {
+        case ktocentrytype_file:
+#if LEADING_FILE_CACHE
+        case ktocentrytype_leading_file:
+        case ktocentrytype_small_file:
+#endif
+            if ( node -> u . contiguous_file . file_size != 0 )
+            {
+                if ( size < (node->u.contiguous_file.file_size +
+                             node->u.contiguous_file.archive_offset) )
+                {
+                    rc = RC (rcFS, rcFile, rcConstructing, rcArc, rcIncomplete);
+                }
+            }
+            break;
+        case ktocentrytype_chunked:
+            if ( node->u.chunked_file.file_size != 0 )
+            {
+                if ( size < (node->u.chunked_file.chunks[node->u.chunked_file.num_chunks-1].source_position +
+                             node->u.chunked_file.chunks[node->u.chunked_file.num_chunks-1].size) )
+                {
+                    rc = RC (rcFS, rcFile, rcConstructing, rcArc, rcIncomplete);
+                }
+            }
+            break;
+        default:
+            break;
+        }
+
+        if ( rc == 0 )
         {
             /* get space for the object */
             pF = malloc (sizeof * pF);
@@ -2804,32 +2853,43 @@ rc_t CC KArcDirOpenFileRead	(const KArcDir *self,
 
     if (rc == 0)
     {
-	const KTocEntry * pnode;
-	KTocEntryType     type;
+        KTocEntryType type;
+    	const KTocEntry * pnode;
+        const KToc * toc = self -> toc;
 
-	rc = KArcDirResolvePathNode (self, rcOpening, full_path, true, &pnode, &type);
+        rc = KArcDirResolvePathNode (self, rcOpening, full_path, true, &pnode, &type);
 
-	if (rc == 0)
-	{
+        if (rc == 0)
+        {
 
-	    switch (type)
-	    {
-	    case ktocentrytype_unknown:
-	    case ktocentrytype_dir:
-	    case ktocentrytype_softlink:
-	    case ktocentrytype_hardlink:
-	    default:
-		rc = RC (rcFS, rcDirectory, rcOpening, rcFile, rcInvalid);
-		break;
-	    case ktocentrytype_emptyfile:
-	    case ktocentrytype_file:
-	    case ktocentrytype_chunked:
-		rc = KArcFileMake ((KArcFile**)f, self->archive.v, self->toc, pnode);
-		break;
-	    }
-	}
-	free (full_path);
-    }    
+            switch (type)
+            {
+            case ktocentrytype_unknown:
+            case ktocentrytype_dir:
+            case ktocentrytype_softlink:
+            case ktocentrytype_hardlink:
+            default:
+                rc = RC (rcFS, rcDirectory, rcOpening, rcFile, rcInvalid);
+                break;
+#if LEADING_FILE_CACHE
+            case ktocentrytype_leading_file:
+                rc = KSmallArcFileMake ( f, ( KToc * ) toc, self -> archive . f
+                                         , pnode -> u . contiguous_file . archive_offset
+                                         , pnode -> u . contiguous_file . archive_offset - toc -> leading_file_start
+                                         , pnode -> u . contiguous_file . file_size
+                    );
+                break;
+            case ktocentrytype_small_file:
+#endif
+            case ktocentrytype_emptyfile:
+            case ktocentrytype_file:
+            case ktocentrytype_chunked:
+                rc = KArcFileMake ((KArcFile**)f, self->archive.v, toc, pnode);
+                break;
+            }
+        }
+        free (full_path);
+    }
     return rc;
 }
 
@@ -3294,6 +3354,10 @@ rc_t CC KArcDirFileContiguous		(const KArcDir *self,
                 *contiguous = false;
 		break;
 	    case ktocentrytype_emptyfile:
+#if LEADING_FILE_CACHE
+        case ktocentrytype_leading_file:
+        case ktocentrytype_small_file:
+#endif
 	    case ktocentrytype_file:
                 *contiguous = true;
 		break;

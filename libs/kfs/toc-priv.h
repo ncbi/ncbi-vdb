@@ -43,7 +43,13 @@
 #define TOC_DEBUG(msg)
 #endif
 
+#define LEADING_FILE_CACHE 1
+#define SMALL_FILE_LIMIT ( 32 * 1024 )
 
+#if LEADING_FILE_CACHE
+#include <klib/data-buffer.h>
+struct KLock;
+#endif
 
 /*--------------------------------------------------------------------------
  * KTocEntry
@@ -60,6 +66,10 @@ typedef enum KTocEntryType
     ktocentrytype_hardlink,
     ktocentrytype_emptyfile,
     ktocentrytype_zombiefile /* zombie in the sense that it is somewhere between live and dead */
+#if LEADING_FILE_CACHE
+    , ktocentrytype_leading_file /* a small file at beginning of archive         */
+    , ktocentrytype_small_file   /* a small file not at the beginning of archive */
+#endif
 } KTocEntryType;
 
 /* arbitrary number that was originially set much much higher than expected needs. */
@@ -309,8 +319,20 @@ struct KArcDir;
 
 struct KToc
 {
-    KArcFSType	arctype;
-    KSRAFileAlignment alignment;
+#if LEADING_FILE_CACHE
+    uint64_t leading_file_start;
+    uint64_t leading_file_end;
+    volatile uint64_t small_file_bytes;
+    volatile KDataBuffer small_file_data;
+    struct KLock * small_file_data_lock;
+#if _DEBUGGING
+    uint32_t num_leading_files;
+    uint32_t num_non_leading_small_files;
+    uint32_t max_leading_file_size;
+    uint32_t max_non_leading_small_file_size;
+#endif
+#endif
+
     /* -----
      * File containing the archive: details of its type hidden behind KFile.
      * We should be able to do an archive in an archive by having this KFile
@@ -367,6 +389,8 @@ struct KToc
      */
     String		path;
 
+    KArcFSType	arctype;
+    KSRAFileAlignment alignment;
 };
 
 /* four fields are common to all entries.*/
@@ -836,6 +860,15 @@ rc_t KArcDirPersistHeader	(const KArcDir * self,
 rc_t  KArcDirGetTOC (const struct KArcDir * self, const struct KToc ** toc);
 
 
+#if LEADING_FILE_CACHE
+/* CaptureLeadingFileRange
+ *  examines a previously loaded TOC
+ *  sorts entries by offset (if they are not there already)
+ *  finds the range of leading small files from start of archive
+ *  this will detect any KAR archives built with the latest KAR tool
+ */
+rc_t KTocCaptureLeadingFileRange ( KToc * toc, bool silent );
+#endif
 
 #endif /* #ifndef _h_kfs_toc_priv_h_ */
 /* end of file */

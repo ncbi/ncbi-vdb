@@ -311,15 +311,23 @@ rc_t CC KArcParseSRAInt ( struct KToc * self,
             {
                 LOGERR (klogErr, rc, "File TOC not valid for .sra");
             }
-            /* 	    else */
-            /* 	    { */
-            /* 		rc = KTocParseSraDirectory (self, bst, ""); */
-            /* 		if (rc == 0) */
-            /* 		    return 0; */
-            /* 	    } */
+#if 0
+            else
+            {
+                rc = KTocParseSraDirectory (self, bst, "");
+                if (rc == 0)
+                    return 0;
+            }
+#endif
         }
         break;
     }
+
+#if LEADING_FILE_CACHE
+    if ( rc == 0 )
+        rc = KTocCaptureLeadingFileRange ( self, silent );
+#endif
+    
     return rc;
 }
 

@@ -90,6 +90,10 @@ rc_t KTocEntryDelete ( KTocEntry * self )
     switch (self->type)
     {
     case ktocentrytype_unknown:
+#if LEADING_FILE_CACHE
+    case ktocentrytype_leading_file:
+    case ktocentrytype_small_file:
+#endif
     case ktocentrytype_file:
     case ktocentrytype_chunked:
     case ktocentrytype_softlink:
@@ -580,6 +584,10 @@ rc_t KTocEntryGetFileSize ( const KTocEntry * self, uint64_t * size )
 	case ktocentrytype_dir:
 	    return RC (rcFS, rcFile, rcAccessing, rcFileDesc, rcIncorrect);
 
+#if LEADING_FILE_CACHE
+    case ktocentrytype_leading_file:
+    case ktocentrytype_small_file:
+#endif
 	case ktocentrytype_file:
 	    *size = self->u.contiguous_file.file_size;
 	    return 0;
@@ -635,6 +643,10 @@ rc_t KTocEntryGetFilePhysicalSize ( const KTocEntry * self, uint64_t * size )
 	case ktocentrytype_dir:
 	    return RC (rcFS, rcFile, rcAccessing, rcFileDesc, rcIncorrect);
 
+#if LEADING_FILE_CACHE
+    case ktocentrytype_leading_file:
+    case ktocentrytype_small_file:
+#endif
 	case ktocentrytype_file:
 	    *size = self->u.contiguous_file.file_size;
 	    return 0;
@@ -698,6 +710,10 @@ rc_t KTocEntryGetFileLocator ( const KTocEntry * self, uint64_t * locator )
 	case ktocentrytype_dir:
 	    return RC (rcFS, rcFile, rcAccessing, rcFileDesc, rcIncorrect);
 
+#if LEADING_FILE_CACHE
+    case ktocentrytype_leading_file:
+    case ktocentrytype_small_file:
+#endif
 	case ktocentrytype_file:
 	case ktocentrytype_zombiefile:
 	    *locator = self->u.contiguous_file.archive_offset;
@@ -767,6 +783,10 @@ rc_t KTocEntryGetChunks ( const KTocEntry * self,
 	    return RC (rcFS, rcFile, rcAccessing, rcFile, rcInvalid);
 
 	case ktocentrytype_dir:
+#if LEADING_FILE_CACHE
+    case ktocentrytype_leading_file:
+    case ktocentrytype_small_file:
+#endif
 	case ktocentrytype_file:
 	    return RC (rcFS, rcFile, rcAccessing, rcFileDesc, rcIncorrect);
 
@@ -814,6 +834,10 @@ rc_t KTocEntryGetFileOffset ( const KTocEntry * self, uint64_t * offset )
 	case ktocentrytype_chunked:
 	    return RC (rcFS, rcTocEntry, rcAccessing, rcSelf, rcUnsupported);
 
+#if LEADING_FILE_CACHE
+    case ktocentrytype_leading_file:
+    case ktocentrytype_small_file:
+#endif
 	case ktocentrytype_file:
 	    *offset = self->u.contiguous_file.archive_offset;
 	    return 0;
@@ -924,7 +948,12 @@ const char * KTocEntryTypeGetString(KTocEntryType t)
 	    "ktocentrytype_chunked",
 	    "ktocentrytype_softlink",
 	    "ktocentrytype_hardlink",
-	    "ktocentrytype_emptyfile" 
+	    "ktocentrytype_emptyfile",
+	    "ktocentrytype_zombiefile"
+#if LEADING_FILE_CACHE
+        , "ktocentrytype_leading_file"
+        , "ktocentrytype_small_file"
+#endif
 	};
 
     switch (t)
@@ -936,9 +965,14 @@ const char * KTocEntryTypeGetString(KTocEntryType t)
     case ktocentrytype_softlink:
     case ktocentrytype_hardlink:
     case ktocentrytype_emptyfile:
-	return entryTypeString[t+1];
+    case ktocentrytype_zombiefile:
+#if LEADING_FILE_CACHE
+    case ktocentrytype_leading_file:
+    case ktocentrytype_small_file:
+#endif
+        return entryTypeString[t+1];
     default:
-	return "ktocentrytype_error";
+        return "ktocentrytype_error";
     }
 }
 
@@ -1295,6 +1329,10 @@ LIB_EXPORT rc_t CC KTocEntryPersist ( void *param, const void * node,
 	    rc = KTocEntryPersistNodeDir (param, n, &written, write, write_param);
 	    break;
 
+#if LEADING_FILE_CACHE
+    case ktocentrytype_leading_file:
+    case ktocentrytype_small_file:
+#endif
 	case ktocentrytype_file:
 /* 	    printf("KTocEntryPersist File\n"); */
 	    rc = KTocEntryPersistNodeFile (param, n, &written, write, write_param);
@@ -1693,6 +1731,10 @@ void CC KTocEntryInflate (PBSTNode * n, void * _data)
 	    rc = KTocEntryInflateNodeDir (data->toc, &common, &ptr, data->offset,
                                           data->arcsize, limit, data->rev);
 	    break;
+#if LEADING_FILE_CACHE
+    case ktocentrytype_leading_file:
+    case ktocentrytype_small_file:
+#endif
 	case ktocentrytype_file:
             rc = KTocEntryInflateNodeFile (data->toc, &common, &ptr, data->offset,
                                            data->arcsize, limit, data->rev);

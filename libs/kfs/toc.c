@@ -35,6 +35,7 @@
 #include <kfs/directory.h>
 #include <kfs/file.h>
 #include <klib/log.h>
+#include <klib/status.h>
 #include <klib/debug.h>
 #include <klib/rc.h>
 #include <sysalloc.h>
@@ -49,6 +50,20 @@
 
 #include <os-native.h>
 
+#if LEADING_FILE_CACHE
+#include <kproc/lock.h>
+
+#define LEADING_FILE_LIMIT ( 128 * 1024 )
+#define LEADING_BUFFER_LIMIT ( 2 * 1024 * 1024 )
+#define SMALL_BUFFER_LIMIT ( 128 * 1024 * 1024 )
+#define LEADING_FILE_CACHE_PRINTF 1
+#endif
+
+#if _DEBUGGING && LEADING_FILE_CACHE_PRINTF
+#define LFC_PRINTF( ... ) printf ( __VA_ARGS__ )
+#else
+#define LFC_PRINTF( ... ) ( ( void ) 0 )
+#endif
 
 /* ======================================================================
  * Defines relevant to the whole compilation unit.
@@ -295,6 +310,10 @@ rc_t KTocCreateEntryIndex (KToc * self, const char * path, uint64_t * file_offse
                 case ktocentrytype_hardlink:
                 case ktocentrytype_emptyfile:
                     goto no_entry;
+#if LEADING_FILE_CACHE
+                case ktocentrytype_leading_file:
+                case ktocentrytype_small_file:
+#endif
                 case ktocentrytype_file:
                             offset = add_filler (*file_offset, self->alignment);
                             idx.i->entry->u.contiguous_file.archive_offset = offset;
@@ -421,93 +440,104 @@ static int64_t CC KTocEntryIndexCmpOffset (const void * item /* offset */,
  *  if mode has kcmParents set, fill in missing parents on create.
  */
 
-rc_t KTocInit ( KToc ** self,
+rc_t KTocInit ( KToc ** tocp,
                 const String * path,
                 KArcFSType arctype,
                 const void * archive,
                 KSRAFileAlignment alignment )
 {
-    char * str_data;
     rc_t rc;
-
-    /* -----
-     * expected failure mode is NULL references for needed initializers
-     */
-    if (self == NULL)
+    
+    if ( tocp == NULL )
+        rc = RC (rcFS, rcToc, rcConstructing, rcParam, rcNull);
+    else
     {
-        return RC (rcFS, rcToc, rcConstructing, rcSelf, rcNull);
+        if ( path == NULL || archive == NULL )
+            rc = RC (rcFS, rcToc, rcConstructing, rcParam, rcNull);
+        else
+        {
+            KToc * toc = malloc ( sizeof * toc + path -> size + 1 );
+            if ( toc == NULL )
+                rc = RC (rcFS, rcToc, rcAllocating, rcMemory, rcInsufficient);
+            else
+            {
+                char * str_data = ( char * ) ( toc + 1 );
+
+                toc -> archive . v = archive;
+                toc -> arctype = arctype;
+                switch ( arctype )
+                {
+                case tocKFile:
+                    rc = KFileAddRef ( toc -> archive . v );
+                    break;
+                case tocKDirectory:
+                    rc = KDirectoryAddRef ( toc -> archive . v );
+                    break;
+                default:
+                    rc = RC (rcFS, rcToc, rcConstructing, rcParam, rcInvalid);
+                }
+
+                if ( rc == 0 )
+                {
+                    rc = KTocAlignmentSet ( toc, alignment );
+                    if ( rc == 0 )
+                    {
+                        const char * pchar;
+#if LEADING_FILE_CACHE
+                        rc = KLockMake ( & toc -> small_file_data_lock );
+                        if ( rc == 0 )
+                        {
+                            toc -> leading_file_start = 0;
+                            toc -> leading_file_end = 0;
+                            toc -> small_file_bytes = 0;
+                            memset ( ( void * ) & toc -> small_file_data, 0, sizeof toc -> small_file_data );
+                        
+  #if _DEBUGGING
+                            toc -> num_leading_files = toc -> num_non_leading_small_files = 0;
+                            toc -> max_leading_file_size = toc -> max_non_leading_small_file_size = 0;
+  #endif
+#endif
+                            /* set reference count to 1 */
+                            atomic32_set ( & toc -> refcount, 1 );
+
+                            /* copy in path data - NUL terminated */
+                            string_copy ( str_data, path -> size + 1, path -> addr, path -> size );
+                            StringInit ( & toc -> path, str_data, path -> size, path -> len );
+
+                            /* copy path leaf name */
+                            pchar = string_rchr ( toc -> path . addr, toc -> path . size, '/' );
+                            if ( pchar == NULL )
+                                toc -> entry . name = toc -> path;
+                            else
+                            {
+                                size_t psize = toc -> path . size - ( ++ pchar - toc -> path . addr );
+                                StringInit ( & toc -> entry . name, pchar, psize, string_len ( pchar, psize ) );
+                            }
+
+                            /* initialize remainder of root node */
+                            toc -> entry . type = ktocentrytype_dir;
+                            BSTreeInit ( & toc -> entry . u . dir . tree );
+
+                            /* initialize the offset index */
+                            BSTreeInit ( & toc -> offset_index );
+                            toc -> header = NULL;
+
+                            /* ready to go */
+                            * tocp = toc;
+                            return 0;
+#if LEADING_FILE_CACHE
+                        }
+#endif
+                    }
+                }
+
+                free ( toc );
+            }
+        }
+            
+        * tocp = NULL;
     }
-    if ((path == NULL)||(archive == NULL))
-    {
-        return RC (rcFS, rcToc, rcConstructing, rcParam, rcNull);
-    }
 
-    /* -----
-     * get memory for the TOC and for its path
-     */
-    *self = malloc (sizeof(KToc) + StringSize(path) + 1);
-
-    /* -----
-     * expected failure mode is memory allocation failure
-     */
-    if (*self == NULL)
-    {
-        return RC (rcFS, rcToc, rcAllocating, rcMemory, rcInsufficient);
-    }
-
-    /* -----
-     * point past the KToc structure in the allocated memory for the
-     * string path of this TOC
-     */
-    str_data = (char *)*self + sizeof (KToc);
-
-    /* -----
-     * reference the existing KFile
-     */
-    switch ((*self)->arctype = arctype)
-    {
-    default:
-        free (self);
-        return RC (rcFS, rcToc, rcConstructing, rcParam, rcInvalid);
-    case tocKFile:
-        KFileAddRef ((*self)->archive.v = archive);
-        break;
-    case tocKDirectory:
-        KDirectoryAddRef ((*self)->archive.v = archive);
-        break;
-    }
-
-    /* need to set back pointer karchive */
-
-    /* -----
-     * We added here by default
-     */
-    atomic32_set (&(*self)->refcount, 1);
-
-    /* -----
-     * a tad clunky
-     */
-    string_copy (str_data, 1 + StringSize(path), path->addr, StringSize(path));
-    StringInit (&((*self)->path), str_data, StringSize(path), StringLength(path));
-    rc = (KTocAlignmentSet (*self, alignment));
-    if (rc == 0)
-    /* -----
-     * Build the "root directory" structure for the TOC initialized to empty
-     */
-    {
-        KTocEntry * pentry = &(*self)->entry;
-        const char *  pchar = strrchr ((*self)->path.addr, '/') + 1;
-        size_t	      size = (*self)->path.size - (pchar - (*self)->path.addr);
-
-        if (pchar == NULL)
-            pchar = (*self)->path.addr;
-
-        StringInit ( &pentry->name, pchar, size, (uint32_t)size );
-        pentry->type = ktocentrytype_dir;
-        BSTreeInit(&pentry->u.dir.tree);
-        BSTreeInit(&(*self)->offset_index);
-        (*self)->header = NULL;
-    }
     return rc;
 }
 
@@ -555,13 +585,15 @@ rc_t KTocRelease ( const KToc *self )
             KDirectoryRelease (self->archive.d);
             break;
         }
+
         BSTreeWhack (&mutable_self->entry.u.dir.tree, KTocEntryWhack, &rc);
         BSTreeWhack (&mutable_self->offset_index, KTocEntryIndexWhack, &rc);
+#if LEADING_FILE_CACHE
+        KDataBufferWhack ( ( KDataBuffer * ) & mutable_self -> small_file_data );
+        KLockRelease ( mutable_self -> small_file_data_lock );
+#endif
         free (mutable_self);
     }
-/*     else */
-/*     { */
-/*     } */
     return rc;
 }
 
@@ -828,6 +860,10 @@ static rc_t KTocCreate (KToc *self,
                                     pparams->mtime,
                                     pparams->access);
         break;
+#if LEADING_FILE_CACHE
+    case ktocentrytype_leading_file:
+    case ktocentrytype_small_file:
+#endif
     case ktocentrytype_file:
         rc = KTocEntryNewFile (&pnewentry,
                                ppath,
@@ -1256,6 +1292,10 @@ rc_t KTocVCreateHardLink ( KToc *self,KTime_t mtime, uint32_t access,
             free (npath);
             return rc;
 
+#if LEADING_FILE_CACHE
+        case ktocentrytype_leading_file:
+        case ktocentrytype_small_file:
+#endif
         case ktocentrytype_file:
         case ktocentrytype_zombiefile:
             size = (args == NULL) ?
@@ -1568,6 +1608,10 @@ rc_t KTocResolvePathTocEntry ( const KToc *self,
             return RC (rcFS, rcToc, rcResolving, rcParam, rcInvalid);
 
         case ktocentrytype_emptyfile:
+#if LEADING_FILE_CACHE
+        case ktocentrytype_leading_file:
+        case ktocentrytype_small_file:
+#endif
         case ktocentrytype_file:
         case ktocentrytype_chunked:
         case ktocentrytype_zombiefile:
@@ -1760,5 +1804,264 @@ rc_t KTocPersist ( const KToc * self,
     return rc;
 }
 
+#if LEADING_FILE_CACHE
+typedef struct KOrderedTocEntry KOrderedTocEntry;
+struct KOrderedTocEntry
+{
+    BSTNode n;
+    uint64_t pos;
+    KTocEntry * entry;
+};
 
-/* end of file toc.c */
+static
+void CC KOrderedTocEntryWhack ( BSTNode * n, void * ignore )
+{
+    free ( ( void * ) n );
+}
+
+static
+int64_t CC KOrderedTocEntrySort ( const BSTNode * item, const BSTNode * n )
+{
+    const KOrderedTocEntry * a = ( const KOrderedTocEntry * ) item;
+    const KOrderedTocEntry * b = ( const KOrderedTocEntry * ) n;
+
+    if ( a -> pos < b -> pos )
+        return -1;
+    return ( int64_t ) ( a -> pos - b -> pos );
+}
+
+typedef struct KTocOrdBlock KTocOrdBlock;
+struct KTocOrdBlock
+{
+    BSTree * by_order;
+    rc_t rc;
+    bool silent;
+};
+
+static
+bool CC KTocOBFIHandleTocEntry ( BSTNode * n, void * data )
+{
+    KOrderedTocEntry * ord;
+    KTocEntry * entry = ( KTocEntry * ) n;
+    KTocOrdBlock * pb = ( KTocOrdBlock * ) data;
+    
+    assert ( entry != NULL );
+    
+    switch ( entry -> type )
+    {
+    case ktocentrytype_dir:
+        return BSTreeDoUntil ( & entry -> u . dir . tree, false, KTocOBFIHandleTocEntry, pb );
+    
+    case ktocentrytype_file:
+    case ktocentrytype_chunked:
+    case ktocentrytype_zombiefile:
+#if LEADING_FILE_CACHE
+    case ktocentrytype_leading_file:
+    case ktocentrytype_small_file:
+#endif
+        ord = malloc ( sizeof * ord );
+        if ( ord == NULL )
+        {
+            if ( pb -> silent )
+                pb -> rc = SILENT_RC ( rcFS, rcToc, rcVisiting, rcMemory, rcExhausted );
+            else
+                pb -> rc = RC ( rcFS, rcToc, rcVisiting, rcMemory, rcExhausted );
+            return true;
+        }
+
+        ord -> entry = entry;
+        switch ( entry -> type )
+        {
+        case ktocentrytype_file:
+            ord -> pos = entry -> u . contiguous_file . archive_offset;
+            break;
+        case ktocentrytype_chunked:
+            ord -> pos = entry -> u . chunked_file . archive_offset;
+            break;
+        case ktocentrytype_zombiefile:
+            ord -> pos = entry -> u . zombie_file . archive_offset;
+            break;
+#if LEADING_FILE_CACHE
+        case ktocentrytype_leading_file:
+        case ktocentrytype_small_file:
+            ord -> pos = entry -> u . contiguous_file . archive_offset;
+            break;
+#endif
+        default:
+            break;
+        }
+
+        BSTreeInsert ( pb -> by_order, & ord -> n, KOrderedTocEntrySort );
+        break;
+        
+    default:
+        break;
+    }
+
+    return false;
+}
+
+/* KTocMakeOffsetBasedFileIndex
+ *  walk the TOC from its root node
+ *  capture every file and insert into ordered tree
+ */
+static
+rc_t KTocMakeOffsetBasedFileIndex ( KToc * toc, BSTree * by_order, bool silent )
+{
+    KTocOrdBlock pb;
+    memset ( & pb, 0, sizeof pb );
+    pb . by_order = by_order;
+    pb . silent = silent;
+
+    KTocOBFIHandleTocEntry ( & toc -> entry . node, & pb );
+
+    return pb . rc;
+}
+
+/* KTocOBFIFindSmall
+ *  finds leading and distributed small files
+ *  calculates the buffer size to capture them all
+ */
+static
+bool CC KTocOBFIFindSmall ( BSTNode * n, void * data )
+{
+    const KOrderedTocEntry * ord = ( KOrderedTocEntry * ) n;
+    KToc * toc = ( KToc * ) data;
+    KTocEntry * entry = ord -> entry;
+
+    /* capture starting position */
+    if ( toc -> leading_file_start > ord -> pos )
+        toc -> leading_file_start = ord -> pos;
+
+    /* detect leading-file discovery mode */
+    if ( toc -> leading_file_end < toc -> leading_file_start )
+    {
+        /* detect an end to leading files */
+        if ( entry -> type != ktocentrytype_file ||
+             entry -> u . contiguous_file . file_size > LEADING_FILE_LIMIT )
+        {
+#if _DEBUGGING
+            LFC_PRINTF ( "ending leading file search, start with file '%.*s'\n", ( uint32_t ) entry -> name . size, entry -> name . addr );
+#endif
+            /* capture end of leading file region */
+            toc -> leading_file_end = toc -> leading_file_start + toc -> small_file_bytes;
+        }
+        else
+        {
+#if _DEBUGGING
+            ++ toc -> num_leading_files;
+            if ( toc -> max_leading_file_size < ( uint32_t ) entry -> u . contiguous_file . file_size )
+                toc -> max_leading_file_size = ( uint32_t ) entry -> u . contiguous_file . file_size;
+            LFC_PRINTF ( "adding leading file '%.*s', offset = %llu, size = %llu\n"
+                     , ( uint32_t ) entry -> name . size, entry -> name . addr
+                     , ( unsigned long long ) ord -> pos
+                     , ( unsigned long long ) entry -> u . contiguous_file . file_size
+                );
+#endif
+            /* otherwise, this is a leading file */
+            entry -> type = ktocentrytype_leading_file;
+
+            /* adjust for any padding or offset between files */
+            toc -> small_file_bytes = ord -> pos - toc -> leading_file_start;
+    
+            /* accumulate its size */
+            toc -> small_file_bytes += entry -> u . contiguous_file . file_size;
+
+            /* if its size is now beyond the leading request size */
+            if ( toc -> small_file_bytes > LEADING_BUFFER_LIMIT )
+            {
+                /* end leading-file discovery mode */
+                toc -> leading_file_end = toc -> leading_file_start + toc -> small_file_bytes;
+#if _DEBUGGING
+                LFC_PRINTF ( "ending leading file search, after file '%.*s'\n", ( uint32_t ) entry -> name . size, entry -> name . addr );
+#endif
+            }
+            
+            return false;
+        }
+    }
+
+    /* searching remainder of archive */
+    if ( entry -> type == ktocentrytype_file &&
+         entry -> u . contiguous_file . file_size <= LEADING_FILE_LIMIT )
+    {
+#if _DEBUGGING
+            ++ toc -> num_non_leading_small_files;
+            if ( toc -> max_non_leading_small_file_size < ( uint32_t ) entry -> u . contiguous_file . file_size )
+                toc -> max_non_leading_small_file_size = ( uint32_t ) entry -> u . contiguous_file . file_size;
+            LFC_PRINTF ( "adding small file '%.*s', offset = %llu, size = %llu\n"
+                     , ( uint32_t ) entry -> name . size, entry -> name . addr
+                     , ( unsigned long long ) ord -> pos
+                     , ( unsigned long long ) entry -> u . contiguous_file . file_size
+                );
+#endif
+            /* this is a non-leading small file */
+            entry -> type = ktocentrytype_small_file;
+    
+            /* accumulate its size */
+            toc -> small_file_bytes += entry -> u . contiguous_file . file_size;
+
+            /* if its size is now beyond the leading request size */
+            if ( toc -> small_file_bytes > SMALL_BUFFER_LIMIT )
+                return true;
+    }
+
+    return false;
+}
+
+/* CaptureLeadingFileRange
+ *  examines a previously loaded TOC
+ *  sorts entries by offset (if they are not there already)
+ *  finds the range of leading small files from start of archive
+ *  this will detect any KAR archives built with the latest KAR tool
+ */
+rc_t KTocCaptureLeadingFileRange ( KToc * toc, bool silent )
+{
+    rc_t rc;
+    BSTree by_order;
+
+    assert ( toc != NULL );
+
+    /* want the tree initialized here */
+    BSTreeInit ( & by_order );
+
+    /* create a copy of name-based index
+       could have been more easily done earlier,
+       but this code should be overhauled soon anyway */
+    STATUS ( STAT_GEEK, "creating offset-based file index on TOC" );
+    rc = KTocMakeOffsetBasedFileIndex ( toc, & by_order, silent );
+    if ( rc == 0 )
+    {
+        bool too_many_small_files;
+        
+        /* now determine the offset range of leading files and mark them */
+        STATUS ( STAT_PRG, "locating small files" );
+        toc -> leading_file_start = ~ ( uint64_t ) 0;
+        too_many_small_files = BSTreeDoUntil ( & by_order, false, KTocOBFIFindSmall, toc );
+        ( void ) too_many_small_files;
+
+        /* correct empty leading range */
+        if ( toc -> leading_file_end < toc -> leading_file_start )
+            toc -> leading_file_end = toc -> leading_file_start;
+
+#if _DEBUGGING
+        LFC_PRINTF ( "Toc -> num_leading_files     : %u\n", toc -> num_leading_files );
+        LFC_PRINTF ( "Toc -> leading_file_start    : %llu\n", ( unsigned long long ) toc -> leading_file_start );
+        LFC_PRINTF ( "Toc -> leading_file_end      : %llu\n", ( unsigned long long ) toc -> leading_file_end );
+        LFC_PRINTF ( "Toc -> max_leading_file_size : %u\n", toc -> max_leading_file_size );
+        LFC_PRINTF ( "Toc -> num_small_files       : %u\n", toc -> num_leading_files + toc -> num_non_leading_small_files );
+        LFC_PRINTF ( "Toc -> small_file_bytes      : %llu\n", ( unsigned long long ) toc -> small_file_bytes );
+        LFC_PRINTF ( "Toc -> max_small_file_size   : %u ( non-leading )\n", toc -> max_non_leading_small_file_size );
+        if ( too_many_small_files )
+            LFC_PRINTF ( "  TOO MANY SMALL FILES TO FIT IN BUFFER SIZE %u\n", SMALL_BUFFER_LIMIT );
+        LFC_PRINTF ( "\n" );
+#endif
+        
+        /* destroy tree */
+        STATUS ( STAT_GEEK, "destroying offset-based file index on TOC" );
+        BSTreeWhack ( & by_order, KOrderedTocEntryWhack, NULL );
+    }
+
+    return rc;
+}
+#endif
