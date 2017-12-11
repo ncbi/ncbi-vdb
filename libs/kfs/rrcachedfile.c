@@ -66,6 +66,8 @@ typedef struct RRCachedFile
     KFile dad;
     const KFile * wrapped;                  /* the file we are wrapping */
     struct lru_cache * cache;               /* the lru-cache */
+    uint64_t cached_size;
+    bool size_cached;
 } RRCachedFile;
 
 
@@ -92,7 +94,20 @@ static rc_t RRCachedRandomAccess ( const RRCachedFile * self )
 
 static rc_t RRCachedSize ( const RRCachedFile * self, uint64_t * size )
 {
-    return KFileSize ( self -> wrapped, size );
+    rc_t rc = 0;
+    if ( self -> size_cached )
+        *size = self -> cached_size;
+    else
+    {
+        rc = KFileSize ( self -> wrapped, size );
+        if ( rc == 0 )
+        {
+            RRCachedFile * cf = ( RRCachedFile * )self;
+            cf -> cached_size = *size;
+            cf -> size_cached = true;
+        }
+    }
+    return rc;
 }
 
 
@@ -148,6 +163,8 @@ static rc_t make_rr_cached( struct KFile const **cached,
             {
                 rrf -> wrapped = to_wrap;
                 rrf -> cache = cache;
+                rrf -> cached_size = 0;
+                rrf -> size_cached = false;
 
                 rc = KFileInit ( &rrf -> dad,
                                  ( const union KFile_vt * ) &vtRRCached,

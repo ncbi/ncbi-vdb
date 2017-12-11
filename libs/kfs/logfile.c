@@ -54,7 +54,7 @@ static rc_t CC LogFileDestroy ( LogFile * self )
 {
     KFileRelease ( self -> wrapped );
 
-    WriteToRecorder ( self -> rec, "Destroy" );
+    WriteToRecorder ( self -> rec, "D\n" );
     ReleaseRecorder ( self -> rec );
 
     free ( self );
@@ -66,7 +66,7 @@ static rc_t CC LogFileDestroy ( LogFile * self )
 static struct KSysFile* LogFileGetSysFile ( const LogFile *self, uint64_t *offset )
 {
     * offset = 0;
-    WriteToRecorder ( self -> rec, "GetSysFile\n" );
+    WriteToRecorder ( self -> rec, "Y\n" );
     return NULL;
 }
 
@@ -74,7 +74,7 @@ static struct KSysFile* LogFileGetSysFile ( const LogFile *self, uint64_t *offse
 static rc_t LogFileRandomAccess ( const LogFile *self )
 {
     rc_t rc = KFileRandomAccess_v1 ( self -> wrapped );
-    WriteToRecorder ( self -> rec, "RandomAccess\t%R\n", rc );
+    WriteToRecorder ( self -> rec, "A\t%R\n", rc );
     return rc;
 }
 
@@ -83,7 +83,7 @@ static rc_t LogFileRandomAccess ( const LogFile *self )
 static rc_t LogFileSize ( const LogFile *self, uint64_t *size )
 {
     rc_t rc = KFileSize ( self -> wrapped, size );
-    WriteToRecorder ( self -> rec, "Size\t%lu\n", *size );
+    WriteToRecorder ( self -> rec, "S\t%lu\n", *size );
     return rc;
 }
 
@@ -92,7 +92,7 @@ static rc_t LogFileSize_timed ( const LogFile *self, uint64_t *size )
     KTimeMs_t ms = KTimeMsStamp ();
     rc_t rc = KFileSize ( self -> wrapped, size );
     ms = KTimeMsStamp () - ms;
-    WriteToRecorder ( self -> rec, "Size\t%lu\t%lu\n", *size, ms );
+    WriteToRecorder ( self -> rec, "S\t%lu\t%lu\n", *size, ms );
     return rc;
 }
 
@@ -101,7 +101,7 @@ static rc_t LogFileSize_timed ( const LogFile *self, uint64_t *size )
 static rc_t LogFileSetSize ( LogFile *self, uint64_t size )
 {
     rc_t rc = KFileSetSize ( self -> wrapped, size );
-    WriteToRecorder ( self -> rec, "SetSize\t%lu\n", size );
+    WriteToRecorder ( self -> rec, "T\t%lu\n", size );
     return rc;
 }
 
@@ -110,7 +110,7 @@ static rc_t LogFileSetSize_timed ( LogFile *self, uint64_t size )
     KTimeMs_t ms = KTimeMsStamp ();
     rc_t rc = KFileSetSize ( self -> wrapped, size );
     ms = KTimeMsStamp () - ms;
-    WriteToRecorder ( self -> rec, "SetSize\t%lu\t%lu\n", size, ms );
+    WriteToRecorder ( self -> rec, "T\t%lu\t%lu\n", size, ms );
     return rc;
 }
 
@@ -119,7 +119,7 @@ static rc_t LogFileSetSize_timed ( LogFile *self, uint64_t size )
 static rc_t LogFileRead ( const LogFile *cself, uint64_t pos, void *buffer, size_t bsize, size_t *num_read )
 {
     rc_t rc = KFileRead ( cself -> wrapped, pos,  buffer, bsize, num_read );
-    WriteToRecorder ( cself -> rec, "Read\t%lu\t%lu\t%lu\n", pos, bsize, *num_read );
+    WriteToRecorder ( cself -> rec, "R\t%lu\t%lu\t%lu\n", pos, bsize, *num_read );
     return rc;
 }
 
@@ -128,7 +128,7 @@ static rc_t LogFileRead_timed ( const LogFile *cself, uint64_t pos, void *buffer
     KTimeMs_t ms = KTimeMsStamp ();
     rc_t rc = KFileRead ( cself -> wrapped, pos,  buffer, bsize, num_read );
     ms = KTimeMsStamp () - ms;
-    WriteToRecorder ( cself -> rec, "Read\t%lu\t%lu\t%lu\t%lu\n", pos, bsize, *num_read, ms );
+    WriteToRecorder ( cself -> rec, "R\t%lu\t%lu\t%lu\t%lu\n", pos, bsize, *num_read, ms );
     return rc;
 }
 
@@ -137,7 +137,7 @@ static rc_t LogFileRead_timed ( const LogFile *cself, uint64_t pos, void *buffer
 static rc_t LogFileWrite ( LogFile *self, uint64_t pos, const void *buffer, size_t size, size_t *num_writ )
 {
     rc_t rc = KFileWrite ( self -> wrapped, pos,  buffer, size, num_writ );
-    WriteToRecorder ( self -> rec, "Write\t%lu\t%lu\t%lu\n", pos, size, *num_writ );
+    WriteToRecorder ( self -> rec, "W\t%lu\t%lu\t%lu\n", pos, size, *num_writ );
     return rc;
 }
 
@@ -146,7 +146,7 @@ static rc_t LogFileWrite_timed ( LogFile *self, uint64_t pos, const void *buffer
     KTimeMs_t ms = KTimeMsStamp ();
     rc_t rc = KFileWrite ( self -> wrapped, pos,  buffer, size, num_writ );
     ms = KTimeMsStamp () - ms;
-    WriteToRecorder ( self -> rec, "Write\t%lu\t%lu\t%lu\t%lu\n", pos, size, *num_writ, ms );
+    WriteToRecorder ( self -> rec, "W\t%lu\t%lu\t%lu\t%lu\n", pos, size, *num_writ, ms );
     return rc;
 }
 
