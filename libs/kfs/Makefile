@@ -121,7 +121,8 @@ KFS_CMN = \
 	syslockfile \
 	cacheteefile \
 	from_to_namelist \
-	limitfile
+	limitfile \
+	small-arc-file
 
 KFS_SRC = \
 	mmap \
