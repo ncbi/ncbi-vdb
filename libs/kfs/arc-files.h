@@ -52,8 +52,10 @@ struct KFile_v1;
  *  make a file that presents a window into the KToc small file buffer
  */
 rc_t KSmallArcFileMake ( struct KFile_v1 const ** f, struct KToc * toc,
-    struct KFile_v1 const * archive, uint64_t arc_loc, size_t boff, size_t bytes );
+    struct KFile_v1 const * archive, size_t bytes, uint64_t arc_offset );
 
+rc_t KLeadingArcFileMake ( struct KFile_v1 const ** f, struct KToc * toc,
+    struct KFile_v1 const * archive, size_t bytes, uint64_t arc_offset );
 
 #ifdef __cplusplus
 }

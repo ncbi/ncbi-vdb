@@ -48,10 +48,10 @@ struct KSmallArcFile
 {
     KFile_v1 dad;
 
-    uint64_t offset;
+    uint64_t arc_offset;
     const KFile_v1 * archive;
     KToc * toc;
-    size_t start;
+    volatile size_t buffer_offset;
     size_t bytes;
 };
 
@@ -71,7 +71,7 @@ struct KSysFile_v1 * CC KSmallArcFileGetSysFile ( const KSmallArcFile * self, ui
     if ( sys_file != NULL )
     {
         assert ( offset != NULL );
-        * offset += self -> offset;
+        * offset += self -> arc_offset;
     }
     return sys_file;
 }
@@ -98,12 +98,12 @@ rc_t CC KSmallArcFileSetSize ( KSmallArcFile * self, uint64_t size )
 }
 
 static
-rc_t KSmallArcFileFillTocBuffer ( const KSmallArcFile * self, timeout_t * tm )
+rc_t KSmallArcFileFillLeadingBuffer ( const KSmallArcFile * self, timeout_t * tm, uint64_t * small_file_bytes )
 {
     rc_t rc;
     KToc * toc = self -> toc;
     
-    assert ( toc -> leading_file_end > toc -> leading_file_start );
+    assert ( toc -> leading_file_end >= toc -> leading_file_start );
     assert ( toc -> small_file_bytes >= ( toc -> leading_file_end - toc -> leading_file_start ) );
     assert ( toc -> small_file_data_lock != NULL );
 
@@ -120,33 +120,104 @@ rc_t KSmallArcFileFillTocBuffer ( const KSmallArcFile * self, timeout_t * tm )
             {
                 size_t num_read = 0;
                 size_t leading_bytes = ( size_t ) ( toc -> leading_file_end - toc -> leading_file_start );
-                
-                STATUS ( STAT_PRG, "reading %zu bytes of leading file data into TOC.small_file_data", leading_bytes );
-                if ( self -> archive -> vt -> v1 . min < 2 )
+
+                if ( leading_bytes != 0 )
                 {
-                    rc = KFileReadAll ( self -> archive, toc -> leading_file_start,
-                        toc -> small_file_data . base, leading_bytes, & num_read );
+                    STATUS ( STAT_PRG, "reading %zu bytes of leading file data into TOC.small_file_data", leading_bytes );
+                    if ( self -> archive -> vt -> v1 . min < 2 )
+                    {
+                        rc = KFileReadAll ( self -> archive, toc -> leading_file_start,
+                            toc -> small_file_data . base, leading_bytes, & num_read );
+                    }
+                    else
+                    {
+                        rc = KFileTimedReadAll ( self -> archive, toc -> leading_file_start,
+                            toc -> small_file_data . base, leading_bytes, & num_read, tm );
+                    }
+                    STATUS ( STAT_PRG, "read %zu bytes of leading file data into TOC.small_file_data", num_read );
                 }
-                else
-                {
-                    rc = KFileTimedReadAll ( self -> archive, toc -> leading_file_start,
-                        toc -> small_file_data . base, leading_bytes, & num_read, tm );
-                }
-                STATUS ( STAT_PRG, "read %zu bytes of leading file data into TOC.small_file_data", num_read );
 
                 STATUS ( STAT_GEEK, "setting TOC.small_file_bytes to %zu", num_read );
                 toc -> small_file_bytes = num_read;
             }
         }
 
-        if ( rc == 0 )
-        {
-            if ( toc -> small_file_bytes < ( uint64_t ) ( self -> offset + self -> bytes ) )
-                rc = RC ( rcFS, rcArc, rcReading, rcTransfer, rcIncomplete );
-        }
+        * small_file_bytes = toc -> small_file_bytes;
         
         STATUS ( STAT_PRG, "unlocking TOC.small_file_data_lock" );
         KLockUnlock ( toc -> small_file_data_lock );
+    }
+    return rc;
+}
+
+static
+rc_t KSmallArcFileBufferFile ( const KSmallArcFile * self, timeout_t * tm, uint64_t * small_file_bytes )
+{
+    rc_t rc;
+    KToc * toc = self -> toc;
+    
+    assert ( toc -> leading_file_end >= toc -> leading_file_start );
+    assert ( toc -> small_file_bytes >= ( toc -> leading_file_end - toc -> leading_file_start ) );
+    assert ( toc -> small_file_data . base != NULL );
+    assert ( toc -> small_file_data_lock != NULL );
+
+    STATUS ( STAT_PRG, "acquiring TOC.small_file_data_lock" );
+    rc = KLockAcquire ( toc -> small_file_data_lock );
+    if ( rc == 0 )
+    {
+        STATUS ( STAT_GEEK, "re-testing for invalid self.buffer_offset" );
+        if ( ~ self -> buffer_offset == ( size_t ) 0 )
+        {
+            /* the base of where we put things */
+            uint8_t * dst =  ( uint8_t * ) toc -> small_file_data . base;
+
+            /* going to read into the buffer */
+            assert ( toc -> small_file_bytes + self -> bytes <= KDataBufferBytes ( & toc -> small_file_data ) );
+            
+            STATUS ( STAT_PRG, "reading %zu bytes of small file data into TOC.small_file_data", self -> bytes );
+            if ( self -> archive -> vt -> v1 . min < 2 )
+            {
+                rc = KFileReadExactly ( self -> archive, self -> arc_offset,
+                    & dst [ toc -> small_file_bytes ], self -> bytes );
+            }
+            else
+            {
+                rc = KFileTimedReadExactly ( self -> archive, self -> arc_offset,
+                    & dst [ toc -> small_file_bytes ], self -> bytes, tm );
+            }
+
+            if ( rc != 0 )
+                STATUS ( STAT_PRG, "failed to read %zu bytes of leading file data into TOC.small_file_data", self -> bytes );
+            else
+            {
+                STATUS ( STAT_PRG, "read %zu bytes of leading file data into TOC.small_file_data", self -> bytes );
+                ( ( KSmallArcFile * ) self ) -> buffer_offset = ( size_t ) toc -> small_file_bytes;
+            }
+
+            STATUS ( STAT_GEEK, "advancing TOC.small_file_bytes by %zu", self -> bytes );
+            toc -> small_file_bytes += self -> bytes;
+        }
+
+
+        * small_file_bytes = toc -> small_file_bytes;
+        
+        STATUS ( STAT_PRG, "unlocking TOC.small_file_data_lock" );
+        KLockUnlock ( toc -> small_file_data_lock );
+    }
+    return rc;
+}
+
+static
+rc_t KSmallArcFileFailToArchive ( const KSmallArcFile * self, uint64_t pos,
+    void * buffer, size_t bsize, size_t * num_read, struct timeout_t * tm, rc_t rc )
+{
+    STATUS ( STAT_PRG, "failed to read into small byte buffer" );
+    if ( GetRCObject ( rc ) != ( enum RCObject ) rcTimeout || GetRCState ( rc ) != rcExhausted )
+    {
+        if ( self -> archive -> vt -> v1 . min < 2 )
+            rc = KFileRead ( self -> archive, self -> arc_offset + pos, buffer, bsize, num_read );
+        else
+            rc = KFileTimedRead ( self -> archive, self -> arc_offset + pos, buffer, bsize, num_read, tm );
     }
     return rc;
 }
@@ -163,10 +234,10 @@ rc_t CC KSmallArcFileTimedRead ( const KSmallArcFile * self, uint64_t pos,
     }
     else
     {
+        uint64_t small_file_bytes = 0;
+        
         const char * src;
-        size_t offset = ( size_t ) pos + self -> start;
-
-        size_t to_read = bsize;
+        size_t offset, to_read = bsize;
         if ( ( size_t ) pos + bsize > self -> bytes )
             to_read = self -> bytes - ( size_t ) pos;
 
@@ -175,16 +246,23 @@ rc_t CC KSmallArcFileTimedRead ( const KSmallArcFile * self, uint64_t pos,
         STATUS ( STAT_GEEK, "checking for first read to small file buffer" );
         if ( self -> toc -> small_file_data . elem_count == 0 )
         {
-            rc_t rc = KSmallArcFileFillTocBuffer ( self, tm );
+            rc_t rc = KSmallArcFileFillLeadingBuffer ( self, tm, & small_file_bytes );
             if ( rc != 0 )
-            {
-                STATUS ( STAT_PRG, "failed to read into small byte buffer" );
-                if ( GetRCObject ( rc ) != ( enum RCObject ) rcTimeout || GetRCState ( rc ) != rcExhausted )
-                    rc = KFileTimedRead ( self -> archive, self -> offset + pos, buffer, bsize, num_read, tm );
-                return rc;
-            }
+                return KSmallArcFileFailToArchive ( self, pos, buffer, bsize, num_read, tm, rc );
         }
 
+        /* detect first access to file */
+        if ( ~ self -> buffer_offset == ( size_t ) 0 )
+        {
+            rc_t rc = KSmallArcFileBufferFile ( self, tm, & small_file_bytes );
+            if ( rc != 0 )
+                return KSmallArcFileFailToArchive ( self, pos, buffer, bsize, num_read, tm, rc );
+
+            if ( small_file_bytes < ( uint64_t ) ( self -> buffer_offset + self -> bytes ) )
+                return RC ( rcFS, rcArc, rcReading, rcTransfer, rcIncomplete );
+        }
+        
+        offset = ( size_t ) pos + self -> buffer_offset;
         src = self -> toc -> small_file_data . base;
         
         assert ( ( uint64_t ) ( offset + to_read ) <= self -> toc -> small_file_bytes );
@@ -205,9 +283,66 @@ rc_t CC KSmallArcFileRead ( const KSmallArcFile * self, uint64_t pos,
     void * buffer, size_t bsize, size_t * num_read )
 {
     timeout_t tm;
-    STATUS ( STAT_PRG, "creating 10 second timeout for read" );
+    STATUS ( STAT_PRG, "creating 10 minute timeout for read" );
     TimeoutInit ( & tm, 10 * 60 * 1000 );
     return KSmallArcFileTimedRead ( self, pos, buffer, bsize, num_read, & tm );
+}
+
+static
+rc_t CC KLeadingArcFileTimedRead ( const KSmallArcFile * self, uint64_t pos,
+    void * buffer, size_t bsize, size_t * num_read, struct timeout_t * tm )
+{
+    STATUS ( STAT_PRG, "read request of %zu bytes from small archive file @ %lu", bsize, pos );
+    if ( pos >= ( uint64_t ) self -> bytes )
+    {
+        STATUS ( STAT_PRG, "request was beyond EOF - no bytes read" );
+        * num_read = 0;
+    }
+    else
+    {
+        const char * src;
+        size_t offset, to_read = bsize;
+        if ( ( size_t ) pos + bsize > self -> bytes )
+            to_read = self -> bytes - ( size_t ) pos;
+
+        STATUS ( STAT_PRG, "actual amount to read: %zu", to_read );
+
+        STATUS ( STAT_GEEK, "checking for first read to small file buffer" );
+        if ( self -> toc -> small_file_data . elem_count == 0 )
+        {
+            uint64_t small_file_bytes = 0;
+            rc_t rc = KSmallArcFileFillLeadingBuffer ( self, tm, & small_file_bytes );
+            if ( rc != 0 )
+                return KSmallArcFileFailToArchive ( self, pos, buffer, bsize, num_read, tm, rc );
+
+            if ( small_file_bytes < ( uint64_t ) ( self -> buffer_offset + self -> bytes ) )
+                return RC ( rcFS, rcArc, rcReading, rcTransfer, rcIncomplete );
+        }
+
+        offset = ( size_t ) pos + self -> buffer_offset;
+        src = self -> toc -> small_file_data . base;
+        
+        assert ( ( uint64_t ) ( offset + to_read ) <= self -> toc -> small_file_bytes );
+        assert ( offset + to_read <= KDataBufferBytes ( & self -> toc -> small_file_data ) );
+
+        STATUS ( STAT_GEEK, "copying %zu bytes into caller buffer", to_read );
+        memmove ( buffer, & src [ offset ], to_read );
+
+        STATUS ( STAT_PRG, "read %zu bytes of data from TOC.small_file_data", to_read );
+        * num_read = to_read;
+    }
+
+    return 0;
+}
+
+static
+rc_t CC KLeadingArcFileRead ( const KSmallArcFile * self, uint64_t pos,
+    void * buffer, size_t bsize, size_t * num_read )
+{
+    timeout_t tm;
+    STATUS ( STAT_PRG, "creating 10 minute timeout for read" );
+    TimeoutInit ( & tm, 10 * 60 * 1000 );
+    return KLeadingArcFileTimedRead ( self, pos, buffer, bsize, num_read, & tm );
 }
 
 static
@@ -236,7 +371,7 @@ rc_t CC KSmallArcFileTimedWrite ( KSmallArcFile * self, uint64_t pos,
 }
 
 
-/* Make
+/* Make - KSmallArcFile
  *  make a file that presents a window into the KToc small file buffer
  */
 static KFile_vt_v1 vtKSmallArcFile =
@@ -256,7 +391,7 @@ static KFile_vt_v1 vtKSmallArcFile =
 };
 
 rc_t KSmallArcFileMake ( const KFile_v1 ** fp, KToc * toc,
-    const KFile_v1 * archive, uint64_t arc_loc, size_t boff, size_t bytes )
+    const KFile_v1 * archive, size_t bytes, uint64_t arc_offset )
 {
     rc_t rc = 0;
 
@@ -276,10 +411,82 @@ rc_t KSmallArcFileMake ( const KFile_v1 ** fp, KToc * toc,
                 rc = KFileInit_v1 ( & f -> dad, ( const KFile_vt * ) & vtKSmallArcFile, "KSmallArcFile", "", true, false );
                 if ( rc == 0 )
                 {
-                    f -> offset = arc_loc;
+                    f -> arc_offset = arc_offset;
                     f -> archive = archive;
                     f -> toc = toc;
-                    f -> start = boff;
+                    f -> buffer_offset = ~ ( size_t ) 0;
+                    f -> bytes = bytes;
+
+                    rc = KFileAddRef ( f -> archive );
+                    if ( rc == 0 )
+                    {
+                        rc = KTocAddRef ( f -> toc );
+                        if ( rc == 0 )
+                        {
+                            STATUS ( STAT_PRG, "created a KSmallArcFile @ %p", fp );
+                            * fp = & f -> dad;
+                            return 0;
+                        }
+
+                        KFileRelease ( f -> archive );
+                    }
+                }
+                
+                free ( f );
+            }
+        }
+        
+        * fp = NULL;
+    }
+
+    return rc;
+}
+
+
+static KFile_vt_v1 vtKLeadingArcFile =
+{
+    1, 2,
+
+    KSmallArcFileWhack,
+    KSmallArcFileGetSysFile,
+    KSmallArcFileRandomAccess,
+    KSmallArcFileGetSize,
+    KSmallArcFileSetSize,
+    KLeadingArcFileRead,
+    KSmallArcFileWrite,
+    KSmallArcFileGetType,
+    KLeadingArcFileTimedRead,
+    KSmallArcFileTimedWrite
+};
+
+/* Make - KLeadingArcFile
+ *  make a file that presents a window into the KToc small file buffer
+ */
+rc_t KLeadingArcFileMake ( const KFile_v1 ** fp, KToc * toc,
+    const KFile_v1 * archive, size_t bytes, uint64_t arc_offset )
+{
+    rc_t rc = 0;
+
+    if ( fp == NULL )
+        rc = RC ( rcFS, rcArc, rcAllocating, rcParam, rcNull );
+    else
+    {
+        if ( toc == NULL || archive == NULL )
+            rc = RC ( rcFS, rcArc, rcAllocating, rcParam, rcNull );
+        else
+        {
+            KSmallArcFile * f = malloc ( sizeof * f );
+            if ( f == NULL )
+                rc = RC ( rcFS, rcArc, rcAllocating, rcMemory, rcExhausted );
+            else
+            {
+                rc = KFileInit_v1 ( & f -> dad, ( const KFile_vt * ) & vtKLeadingArcFile, "KLeadingArcFile", "", true, false );
+                if ( rc == 0 )
+                {
+                    f -> arc_offset = arc_offset;
+                    f -> archive = archive;
+                    f -> toc = toc;
+                    f -> buffer_offset = arc_offset - toc -> leading_file_start;
                     f -> bytes = bytes;
 
                     rc = KFileAddRef ( f -> archive );
