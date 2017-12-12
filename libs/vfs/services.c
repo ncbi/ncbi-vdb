@@ -133,7 +133,9 @@ static rc_t HResolver ( H * self, const String * ticket,
         else {
             VResolver * resolver = NULL;
             rc = KServiceGetResolver ( self -> service, ticket, & resolver );
-            if ( rc == 0 ) {
+            if ( rc != 0 )
+                return rc;
+            else {
                 i = calloc ( 1, sizeof * i );
                 if ( i == NULL )
                     return RC (
