@@ -31,8 +31,10 @@ typedef struct KBufReadFile KBufReadFile;
 #include <kfs/file.h>
 #include <kfs/impl.h>
 #include <klib/debug.h>
+#include <klib/status.h>
 #include <klib/log.h>
 #include <klib/rc.h>
+#include <kproc/lock.h>
 #include <sysalloc.h>
 
 #include <assert.h>
@@ -48,23 +50,25 @@ struct KBufReadFile
 {
     KFile dad;
 
-    uint64_t pos;       /* position of buff within the original file */
+    volatile uint64_t pos;       /* position of buff within the original file */
 
-    const KFile *f;           /* original file being buffered */
+    const KFile *f;     /* original file being buffered */
+    KLock * lock;
 
     size_t bsize;       /* size of the buffer */
-    size_t num_valid;   /* how much of the buffer is actually valid */
+    volatile size_t num_valid;   /* how much of the buffer is actually valid */
 
-    uint8_t buff [ 1 ];
+    volatile uint8_t * buff;
 };
 
 static
 rc_t CC KBufReadFileDestroy ( KBufReadFile *self )
 {
-    rc_t rc = KFileRelease ( self -> f );
-    if ( rc == 0 )
-        free ( self );
-    return rc;
+    KFileRelease ( self -> f );
+    KLockRelease ( self -> lock );
+    free ( ( void * ) self -> buff );
+    free ( ( void * ) self );
+    return 0;
 }
 
 static
@@ -94,66 +98,133 @@ rc_t CC KBufReadFileSetSize ( KBufReadFile *self, uint64_t size )
 }
 
 static
-rc_t CC KBufReadFileRead ( const KBufReadFile *cself, uint64_t pos,
-    void *buffer, size_t bsize, size_t *num_read )
+rc_t CC KBufReadFileTimedRead ( const KBufReadFile * cself, uint64_t pos,
+    void * buffer, size_t bsize, size_t * num_read, struct timeout_t * tm )
 {
+#if 0
+    return KFileRead ( cself -> f, pos, buffer, bsize, num_read );
+#else
     rc_t rc = 0;
 
-    assert (cself);
-    assert (buffer);
-    assert (num_read);
+    assert ( cself != NULL );
+    assert ( buffer != NULL );
+    assert ( num_read != NULL );
 
     /* start assuming nothing will be read */
     *num_read = 0;
 
+    STATUS ( STAT_PRG, "request to read %zu bytes from buffered file %p at offset %lu"
+             , bsize
+             , cself
+             , pos
+        );
+
     if (bsize != 0)
     {
-        KBufReadFile * self = (KBufReadFile *)cself;
-        uint64_t new_pos; 
-        size_t new_offset;
 
         /* cast might be a no-op */
-        new_offset = (size_t)(pos % cself->bsize);
-        new_pos = pos - new_offset;
+        KBufReadFile * self = ( KBufReadFile * ) cself;
 
-        /* we need to read if we are on the wrong 'sector page'
-         * or the current 'sector page' isn't long enough.
-         *
-         * If on the wrong page just kill the contents
-         */
-        if (new_pos != cself->pos)
+        rc = KLockAcquire ( self -> lock );
+        if ( rc == 0 )
         {
-            self->num_valid = 0;
-            self->pos = new_pos;
-        }
+            size_t new_offset = (size_t)(pos % cself->bsize);
+            uint64_t new_pos = pos - new_offset;
 
-        /* new we agree on the 'sector page' even if we have nothing
-         * valid in it */
-        if ((self->num_valid == 0) || (self->num_valid <= (size_t)new_offset))
-        {
-            size_t new_num_read;
-            rc = KFileReadAll (self->f, self->pos + self->num_valid,
-                               self->buff + self->num_valid, 
-                               self->bsize - self->num_valid,
-                               &new_num_read);
-            if (rc == 0)
-                self->num_valid += new_num_read;
-        }
+            STATUS ( STAT_PRG, "buffer window starts at %lx, buffer offset is %zu", new_pos, new_offset );
 
-        /* now we have all we're gonna get this time */
-        if (new_offset < self->num_valid)
-        {
-            size_t to_copy;
+            /* we need to read if we are on the wrong 'sector page'
+             * or the current 'sector page' isn't long enough.
+             *
+             * If on the wrong page just kill the contents
+             */
+            if (new_pos != self->pos)
+            {
+                STATUS ( STAT_QA, "buffer window is invalid" );
+                self->num_valid = 0;
+                self->pos = new_pos;
+            }
 
-            to_copy = self->num_valid - new_offset;
-            if (to_copy > bsize)
-                to_copy = bsize;
+            /* now we agree on the 'sector page' even if we have nothing
+             * valid in it */
+            if ((self->num_valid == 0) || (self->num_valid <= (size_t)new_offset))
+            {
+                size_t new_num_read;
+
+                STATUS ( STAT_PRG, "about to request %zu bytes from backing file %p at offset %lu"
+                         , self->bsize - self->num_valid
+                         , self -> f
+                         , self->pos + self->num_valid
+                    );
             
-            memmove (buffer, self->buff + new_offset, to_copy);
-            *num_read = to_copy;
+                if ( self -> f -> vt -> v1 . min < 2 )
+                {
+                    STATUS ( STAT_GEEK, "using v1.0 interface" );
+                    rc = KFileReadAll (self->f, self->pos + self->num_valid,
+                                       ( void * ) ( self->buff + self->num_valid ),
+                                       self->bsize - self->num_valid,
+                                       &new_num_read);
+                }
+                else
+                {
+                    STATUS ( STAT_GEEK, "using v1.2 interface" );
+                    rc = KFileTimedReadAll (self->f, self->pos + self->num_valid,
+                                            ( void * ) ( self->buff + self->num_valid ),
+                                            self->bsize - self->num_valid,
+                                            &new_num_read, tm);
+                }
+                if (rc == 0)
+                {
+                    STATUS ( STAT_PRG, "read %zu bytes from backing", new_num_read );
+                    self->num_valid += new_num_read;
+                }
+            }
+
+            /* now we have all we're gonna get this time */
+            if (new_offset < self->num_valid)
+            {
+                size_t to_copy;
+
+                to_copy = self->num_valid - new_offset;
+                if (to_copy > bsize)
+                    to_copy = bsize;
+                else
+                {
+                    STATUS ( STAT_QA, "limiting read from %zu to %zu bytes available in buffer"
+                             , bsize
+                             , to_copy
+                        );
+                }
+
+                STATUS ( STAT_PRG, "copying %zu bytes to caller buffer from file buffer offset %zu"
+                         , to_copy
+                         , new_offset
+                    );
+            
+                memmove (buffer, ( const void * ) ( self->buff + new_offset ), to_copy);
+                *num_read = to_copy;
+            }
+
+            KLockUnlock ( self -> lock );
         }
     }
+    
     return rc;
+#endif
+}
+
+static
+rc_t CC KBufReadFileRead ( const KBufReadFile * self, uint64_t pos,
+    void * buffer, size_t bsize, size_t * num_read )
+{
+    return KBufReadFileTimedRead ( self, pos, buffer, bsize, num_read, NULL );
+}
+
+static
+rc_t CC KBufReadFileTimedWrite ( KBufReadFile *self, uint64_t pos,
+    const void *buffer, size_t size, size_t *num_writ, struct timeout_t * tm )
+{
+    return RC ( rcFS, rcFile, rcWriting, rcFunction, rcUnsupported );
 }
 
 static
@@ -175,25 +246,39 @@ rc_t KBufReadFileMake ( KBufReadFile ** bp, const KFile *f, size_t bsize,
 {
     rc_t rc;
 
-    KBufReadFile *buf = calloc ( sizeof * buf - 1 + bsize, 1 );
-    if ( buf == NULL )
+    KBufReadFile *bf = calloc ( sizeof * bf, 1 );
+    if ( bf == NULL )
         rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
     else
     {
-        rc = KFileInit ( & buf -> dad, vt, "KBufReadFile", "no-name", read_enabled, write_enabled );
-        if ( rc == 0 )
+        bf -> buff = malloc ( bsize );
+        if ( bf -> buff == NULL )
+            rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
+        else
         {
-            rc = KFileAddRef ( f );
+            rc = KFileInit ( & bf -> dad, vt, "KBufReadFile", "no-name", read_enabled, write_enabled );
             if ( rc == 0 )
             {
-                buf -> f = ( KFile* ) f;
-                buf -> bsize = bsize;
-                * bp = buf;
-                return 0;
+                rc = KLockMake ( & bf -> lock );
+                if ( rc == 0 )
+                {
+                    rc = KFileAddRef ( f );
+                    if ( rc == 0 )
+                    {
+                        bf -> f = ( KFile* ) f;
+                        bf -> bsize = bsize;
+                        * bp = bf;
+                        return 0;
+                    }
+
+                    KLockRelease ( bf -> lock );
+                }
             }
+            
+            free ( ( void * ) bf -> buff );
         }
 
-        free ( buf );
+        free ( ( void * ) bf );
     }
 
     return rc;
@@ -210,10 +295,10 @@ rc_t KBufReadFileMake ( KBufReadFile ** bp, const KFile *f, size_t bsize,
  */
 
 static
-const KFile_vt_v1 vtKBufReadFileRandWR_v1 =
+const KFile_vt_v1 vtKBufReadFileRandR_v1 =
 {
     /* version */
-    1, 1,
+    1, 2,
 
     /* 1.0 */
     KBufReadFileDestroy,
@@ -225,7 +310,11 @@ const KFile_vt_v1 vtKBufReadFileRandWR_v1 =
     KBufReadFileWrite,
 
     /* 1.1 */
-    KBufReadFileType
+    KBufReadFileType,
+
+    /* 1.2 */
+    KBufReadFileTimedRead,
+    KBufReadFileTimedWrite
 };
 
 LIB_EXPORT 
@@ -248,13 +337,22 @@ rc_t CC KBufReadFileMakeRead ( const KFile ** bp, const KFile * original, size_t
         }
         else
         {
-            KBufReadFile *buf;
-            rc = KBufReadFileMake ( & buf, original, bsize,
-                ( const KFile_vt* ) & vtKBufReadFileRandWR_v1, true, false );
+            uint64_t eof;
+            rc = KFileSize ( original, & eof );
             if ( rc == 0 )
             {
-                * bp = & buf -> dad;
-                return 0;
+                KBufReadFile *buf;
+
+                if ( ( uint64_t ) bsize > eof )
+                    bsize = ( size_t ) eof;
+                
+                rc = KBufReadFileMake ( & buf, original, bsize,
+                    ( const KFile_vt* ) & vtKBufReadFileRandR_v1, true, false );
+                if ( rc == 0 )
+                {
+                    * bp = & buf -> dad;
+                    return 0;
+                }
             }
         }
 
