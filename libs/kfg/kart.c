@@ -24,7 +24,10 @@
  *
  */
 
+#include <kfg/config.h> /* KConfigMake */
 #include <kfg/kart-priv.h> /* KartMake2 */
+#include <kfg/keystore.h> /* KKeyStoreRelease */
+#include <kfg/repository.h> /* KRepositoryMgr */
 
 #include <kfs/directory.h> /* KDirectoryOpenFileRead */
 #include <kfs/file.h> /* KFile */
@@ -32,9 +35,10 @@
 #include <kfs/subfile.h> /* KFileMakeSubRead */
 
 #include <klib/data-buffer.h> /* KDataBuffer */
+#include <klib/out.h> /* OUTMSG */
+#include <klib/printf.h> /* string_printf */
 #include <klib/rc.h>
 #include <klib/refcount.h> /* KRefcount */
-#include <klib/out.h> /* OUTMSG */
 #include <klib/vector.h> /* Vector */
 
 #include <strtol.h> /* strtou64 */
@@ -357,6 +361,8 @@ LIB_EXPORT rc_t CC KartItemPrint(const KartItem *self) { /* AA-833 */
 struct Kart {
     KRefcount refcount;
 
+    const KRepositoryMgr *mgr;
+
     Eversion version;
 
     /* version eVersion1 0x01000000 */
@@ -364,6 +370,8 @@ struct Kart {
     const char *text;
     uint64_t len;
     uint16_t itemsProcessed;
+
+    KKeyStore * keystore;
 
     /* version eVersion2 0x02000000 */
     Vector rows;
@@ -381,6 +389,10 @@ static void KartWhack(Kart *self) {
     } else {
         VectorWhack ( & self -> rows, whackKartItem, NULL );
     }
+
+    KKeyStoreRelease ( self -> keystore );
+
+    KRepositoryMgrRelease ( self -> mgr );
 
     memset(self, 0, sizeof *self);
 
@@ -611,13 +623,72 @@ LIB_EXPORT rc_t CC KartPrintNumbered(const Kart *self) {
     return rc;
 }
 
+static rc_t KartRegisterObject ( const Kart * self, const KartItem * item ) {
+    rc_t rc = 0;
+
+    const KRepository * repo = NULL;
+
+    uint64_t itemId = 0;
+    uint64_t projId = 0;
+    const String * acc = NULL;
+    const String * name = NULL;
+
+    char ticket [ 4096 ] = "";
+
+    char b [ 4096 ] = "";
+    String id = { b, 0, 0 }; 
+
+    if ( item == NULL )
+        return 0;
+
+    rc = KartItemItemIdNumber ( item, & itemId );
+    if ( rc == SILENT_RC ( rcKFG, rcFile, rcAccessing, rcItem, rcEmpty ) )
+        return 0;
+
+    assert ( self );
+
+    if ( rc == 0 )
+        rc = KartItemProjIdNumber ( item, & projId );
+
+    if ( rc == 0 )
+        rc = KartItemAccession ( item, & acc );
+
+    if ( rc == 0 )
+        rc = KartItemName ( item, & name );
+
+    if ( rc == 0 )
+        rc = KRepositoryMgrGetProtectedRepository ( self -> mgr, projId,
+                                                    & repo );
+    if ( rc == 0 )
+        rc = KRepositoryDownloadTicket ( repo, ticket, sizeof ticket, NULL );
+    if ( rc == 0 ) {
+        if ( acc != NULL && acc -> size != 0 )
+            rc = string_printf ( b, sizeof b, & id . size,
+                                 "ncbi-acc:%S?tic=%s", acc, ticket );
+        else
+            rc = string_printf ( b, sizeof b, & id . size,
+                                 "ncbi-file:%S?tic=%s", name, ticket );
+        id . len = id . size;
+    }
+
+    if ( rc == 0 )
+        rc = KKeyStoreRegisterObject ( self->keystore, itemId, & id );
+
+    RELEASE ( KRepository, repo );
+    
+    return rc;
+}
+
 LIB_EXPORT
 rc_t CC KartMakeNextItem ( const Kart * cself, const KartItem **item )
 {
+    rc_t rc = 0;
+
     Kart * self = ( Kart * ) cself;
     size_t len = 0;
     const char *line = NULL;
     const char *next = NULL;
+    const KartItem * result = NULL;
 
     if (item == NULL) {
         return RC(rcKFG, rcFile, rcLoading, rcParam, rcNull);
@@ -664,22 +735,25 @@ rc_t CC KartMakeNextItem ( const Kart * cself, const KartItem **item )
             }
         }
 
-        return KartItemInitFromKartRow(self, item, line, len);
-    } else {
-        rc_t rc = 0;
+        rc = KartItemInitFromKartRow(self, & result, line, len);
+    }
+    else {
         uint32_t l = VectorLength ( & self -> rows );
         if ( self -> len < l ) {
-            KartItem * result = VectorGet ( & self -> rows,
+            result = VectorGet ( & self -> rows,
                                             ( uint32_t ) self -> len ++ );
             if ( result != NULL ) {
                 rc = KartItemAddRef ( result );
-                if ( rc == 0 ) {
-                    * item = result;
-                }
             }
         }
-        return rc;
     }
+
+    if ( rc == 0 )
+        rc = KartRegisterObject ( self, result );
+    if ( rc == 0 )
+        * item = result;
+
+    return rc;
 }
 
 static
@@ -924,6 +998,8 @@ LIB_EXPORT rc_t CC KartMake(const KDirectory *dir, const char *path,
     if (rc == 0 && num_read == sizeof hdr &&
         memcmp(hdr, "ncbikart", sizeof hdr) == 0)
     {
+        KConfig * kfg = NULL;
+
         Kart *obj = NULL;
 
         *isKart = true;
@@ -937,6 +1013,15 @@ LIB_EXPORT rc_t CC KartMake(const KDirectory *dir, const char *path,
         if (rc == 0) {
             rc = KartProcessHeader(obj);
         }
+
+        if (rc == 0)
+            rc = KConfigMake ( & kfg , NULL );
+        if ( rc == 0 )
+            rc = KKeyStoreMake ( & obj -> keystore, kfg );
+        if ( rc == 0 )
+            rc = KConfigMakeRepositoryMgrRead ( kfg, & obj -> mgr );
+        RELEASE ( KConfig, kfg );
+
         if (rc == 0) {
             KRefcountInit(&obj->refcount, 1, "Kart", "Make", "kart");
             *kart = obj;
