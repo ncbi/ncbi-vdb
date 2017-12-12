@@ -62,6 +62,11 @@ rc_t KSrvResponseAddLocalAndCache ( struct KSrvResponse * self, uint32_t idx,
                                     const struct VPathSet * localAndCache );
 rc_t KSrvResponseGet ( const struct KSrvResponse * self, uint32_t idx,
                        const struct VPathSet ** set );
+
+/**************************** KService ****************************************/
+/* resolve oid->file mapping inside of VFS */
+rc_t KServiceResolveName ( struct KService * service, bool resolve );
+
 /**************************** KServiceNamesExecute ****************************/
 /* Execute Names Service Call using current default protocol version;
    get KSrvResponse (remote-only resolution) */

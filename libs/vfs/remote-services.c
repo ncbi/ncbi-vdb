@@ -3648,6 +3648,9 @@ rc_t KService1Search ( const KNSManager * mgr, const char * cgi,
     return rc;
 }
 
+/* resolve mapping id -> file nime inside of VFS */
+rc_t KServiceResolveName ( KService * service, bool resolve )
+{   return VResolverResolveName ( 0, resolve ); }
 
 /* TESTS **********************************************************************/
 typedef struct {
