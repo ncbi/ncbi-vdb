@@ -27,6 +27,7 @@
 #include <vdb/extern.h>
 #include "table-priv.h"
 #include "cursor-priv.h"
+#include "cursor-table.h"
 #include "dbmgr-priv.h"
 #include "schema-priv.h"
 #include "schema-parse.h"
@@ -496,7 +497,7 @@ LIB_EXPORT rc_t CC VDBManagerOpenTableUpdate ( VDBManager *self,
 
 LIB_EXPORT rc_t CC VDatabaseVOpenTableUpdate ( VDatabase *self,
     VTable **tblp, const char *name, va_list args )
-{ 
+{
     rc_t rc;
 
     if ( tblp == NULL )
@@ -846,7 +847,7 @@ LIB_EXPORT rc_t CC VTableListWritableDatatypes ( VTable *self,
     const char *col, KNamelist **typedecls )
 {
     rc_t rc;
-    
+
     if ( typedecls == NULL )
         rc = RC ( rcVDB, rcTable, rcListing, rcParam, rcNull );
     else

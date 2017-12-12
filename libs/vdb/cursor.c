@@ -29,7 +29,6 @@
 #define TRACK_REFERENCES 0
 
 #define KONST const
-#include "cursor-priv.h"
 #include "cursor-struct.h"
 #include "dbmgr-priv.h"
 #include "linker-priv.h"
@@ -65,6 +64,7 @@ static rc_t VTableCursorFlushPage ( VCursor *self );
 static rc_t VTableCursorDefault ( VCursor *self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t row_len );
 static rc_t VTableCursorCommit ( VCursor *self );
 static rc_t VTableCursorOpenParentUpdate ( VCursor *self, VTable **tbl );
+static rc_t VTableCursorMakeColumn ( VCursor *self, VColumn **col, const SColumn *scol, Vector *cx_bind );
 
 static VCursor_vt VTableCursor_read_vt =
 {
@@ -99,7 +99,12 @@ static VCursor_vt VTableCursor_read_vt =
     VTableCursorOpenParentRead,
     VTableCursorOpenParentUpdate,
     VTableCursorGetUserData,
-    VTableCursorSetUserData
+    VTableCursorSetUserData,
+    VTableCursorColumns,
+    VTableCursorPhysicalColumns,
+    VTableCursorMakeColumn,
+    VTableCursorGetRow,
+    VTableCursorGetTable
 };
 
 /*--------------------------------------------------------------------------
@@ -114,7 +119,7 @@ rc_t VCursorMakeFromTable ( VCursor **cursp, const struct VTable *tbl )
 
 /* Whack
  */
-rc_t VCursorWhack ( VCursor *self )
+rc_t VCursorWhack ( VTableCursor *self )
 {
     VCursorTerminatePagemapThread(self);
     return VCursorDestroy ( self );
@@ -123,7 +128,7 @@ rc_t VCursorWhack ( VCursor *self )
 
 /* MakeColumn
  */
-rc_t VCursorMakeColumn ( VCursor *self, VColumn **col, const SColumn *scol, Vector *cx_bind )
+rc_t VTableCursorMakeColumn ( VCursor *self, VColumn **col, const SColumn *scol, Vector *cx_bind )
 {
     return VColumnMake ( col, self -> schema, scol );
 }
@@ -131,7 +136,7 @@ rc_t VCursorMakeColumn ( VCursor *self, VColumn **col, const SColumn *scol, Vect
 /* PostOpenAdd
  *  handle opening of a column after the cursor is opened
  */
-rc_t VCursorPostOpenAdd ( VCursor *self, VColumn *col )
+rc_t VCursorPostOpenAdd ( VTableCursor *self, VColumn *col )
 {
     return VCursorPostOpenAddRead ( self, col );
 }

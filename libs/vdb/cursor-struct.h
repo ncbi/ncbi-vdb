@@ -44,7 +44,7 @@
 #endif
 
 #include <vdb/cursor.h>
-#include "cursor-priv.h"
+#include "cursor-table.h"
 
 #ifndef KONST
 #define KONST
@@ -76,6 +76,7 @@ struct VPhysical;
 typedef struct VCursor_vt VCursor_vt;
 struct VCursor_vt
 {
+    /* Public API */
     rc_t ( CC * addRef ) ( const VCursor *self );
     rc_t ( CC * release ) ( const VCursor *self );
     rc_t ( CC * vAddColumn ) ( const VCursor *self, uint32_t *idx, const char *name, va_list args );
@@ -108,6 +109,13 @@ struct VCursor_vt
     rc_t ( CC * openParentUpdate ) ( VCursor *self, struct VTable **tbl );
     rc_t ( CC * getUserData ) ( const VCursor *self, void **data );
     rc_t ( CC * setUserData ) ( const VCursor *self, void *data, void ( CC * destroy ) ( void *data ) );
+
+    /* Private API */
+    VCursorCache * ( CC * columns ) ( VCursor *self );
+    VCursorCache * ( CC * physicalColumns ) ( VCursor * self );
+    rc_t ( CC * makeColumn ) ( VCursor *self, struct VColumn **col, const struct SColumn *scol, Vector *cx_bind );
+    Vector * ( CC * getRow ) ( VCursor * self );
+    const struct VTable * ( CC * getTable ) ( const VCursor * self );
 };
 
 struct VCursor
@@ -208,31 +216,35 @@ rc_t VCursorMakeFromTable ( VCursor **cursp, const struct VTable *tbl );
 rc_t VCursorMakeFromView  ( const VCursor **cursp, const struct VView * view );
 
 /* "constructor", provides a concrete VCursor_vt. Defined in cursor.c and wcursor.c */
-rc_t VTableCursorMake ( VCursor **cursp, const struct VTable *tbl, VCursor_vt *vt );
+rc_t VTableCursorMake ( VTableCursor **cursp, const struct VTable *tbl, VCursor_vt *vt );
 
 /* methods shared between cursor.c and wcursor.c */
-rc_t VTableCursorAddRef ( const VCursor *self );
-rc_t VTableCursorRelease ( const VCursor *self );
-rc_t VTableCursorVAddColumn ( const VCursor *cself, uint32_t *idx, const char *name, va_list args );
-rc_t VTableCursorVGetColumnIdx ( const VCursor *self, uint32_t *idx, const char *name, va_list args );
-rc_t VTableCursorDatatype ( const VCursor *self, uint32_t idx, struct VTypedecl *type, struct VTypedesc *desc );
-rc_t VTableCursorIdRange ( const VCursor *self, uint32_t idx, int64_t *first, uint64_t *count );
-rc_t VTableCursorRowId ( const VCursor *self, int64_t *id );
-rc_t VTableCursorFindNextRowId ( const VCursor *self, uint32_t idx, int64_t *next );
-rc_t VTableCursorFindNextRowIdDirect ( const VCursor *self, uint32_t idx, int64_t start_id, int64_t *next );
-rc_t VTableCursorGetBlob ( const VCursor *self, const VBlob **blob, uint32_t col_idx );
-rc_t VTableCursorGetBlobDirect ( const VCursor *self, const VBlob **blob, int64_t row_id, uint32_t col_idx );
-rc_t VTableCursorRead ( const VCursor *self, uint32_t col_idx, uint32_t elem_bits, void *buffer, uint32_t blen, uint32_t *row_len );
-rc_t VTableCursorReadDirect ( const VCursor *self, int64_t row_id, uint32_t col_idx, uint32_t elem_bits, void *buffer, uint32_t blen, uint32_t *row_len );
-rc_t VTableCursorReadBits ( const VCursor *self, uint32_t col_idx, uint32_t elem_bits, uint32_t start, void *buffer, uint32_t off, uint32_t blen, uint32_t *num_read, uint32_t *remaining );
-rc_t VTableCursorReadBitsDirect ( const VCursor *self, int64_t row_id, uint32_t col_idx, uint32_t elem_bits, uint32_t start, void *buffer, uint32_t off, uint32_t blen, uint32_t *num_read, uint32_t *remaining );
-rc_t VTableCursorCellData ( const VCursor *self, uint32_t col_idx, uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len );
-rc_t VTableCursorCellDataDirect ( const VCursor *self, int64_t row_id, uint32_t col_idx,
+rc_t VTableCursorAddRef ( const VTableCursor *self );
+rc_t VTableCursorRelease ( const VTableCursor *self );
+rc_t VTableCursorVAddColumn ( const VTableCursor *cself, uint32_t *idx, const char *name, va_list args );
+rc_t VTableCursorVGetColumnIdx ( const VTableCursor *self, uint32_t *idx, const char *name, va_list args );
+rc_t VTableCursorDatatype ( const VTableCursor *self, uint32_t idx, struct VTypedecl *type, struct VTypedesc *desc );
+rc_t VTableCursorIdRange ( const VTableCursor *self, uint32_t idx, int64_t *first, uint64_t *count );
+rc_t VTableCursorRowId ( const VTableCursor *self, int64_t *id );
+rc_t VTableCursorFindNextRowId ( const VTableCursor *self, uint32_t idx, int64_t *next );
+rc_t VTableCursorFindNextRowIdDirect ( const VTableCursor *self, uint32_t idx, int64_t start_id, int64_t *next );
+rc_t VTableCursorGetBlob ( const VTableCursor *self, const VBlob **blob, uint32_t col_idx );
+rc_t VTableCursorGetBlobDirect ( const VTableCursor *self, const VBlob **blob, int64_t row_id, uint32_t col_idx );
+rc_t VTableCursorRead ( const VTableCursor *self, uint32_t col_idx, uint32_t elem_bits, void *buffer, uint32_t blen, uint32_t *row_len );
+rc_t VTableCursorReadDirect ( const VTableCursor *self, int64_t row_id, uint32_t col_idx, uint32_t elem_bits, void *buffer, uint32_t blen, uint32_t *row_len );
+rc_t VTableCursorReadBits ( const VTableCursor *self, uint32_t col_idx, uint32_t elem_bits, uint32_t start, void *buffer, uint32_t off, uint32_t blen, uint32_t *num_read, uint32_t *remaining );
+rc_t VTableCursorReadBitsDirect ( const VTableCursor *self, int64_t row_id, uint32_t col_idx, uint32_t elem_bits, uint32_t start, void *buffer, uint32_t off, uint32_t blen, uint32_t *num_read, uint32_t *remaining );
+rc_t VTableCursorCellData ( const VTableCursor *self, uint32_t col_idx, uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len );
+rc_t VTableCursorCellDataDirect ( const VTableCursor *self, int64_t row_id, uint32_t col_idx,
     uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len );
-rc_t VTableCursorDataPrefetch( const VCursor *cself, const int64_t *row_ids, uint32_t col_idx, uint32_t num_rows, int64_t min_valid_row_id, int64_t max_valid_row_id, bool continue_on_error );
-rc_t VTableCursorOpenParentRead ( const VCursor *self, const struct VTable **tbl );
-rc_t VTableCursorGetUserData ( const VCursor *self, void **data );
-rc_t VTableCursorSetUserData ( const VCursor *cself, void *data, void ( CC * destroy ) ( void *data ) );
+rc_t VTableCursorDataPrefetch( const VTableCursor *cself, const int64_t *row_ids, uint32_t col_idx, uint32_t num_rows, int64_t min_valid_row_id, int64_t max_valid_row_id, bool continue_on_error );
+rc_t VTableCursorOpenParentRead ( const VTableCursor *self, const struct VTable **tbl );
+rc_t VTableCursorGetUserData ( const VTableCursor *self, void **data );
+rc_t VTableCursorSetUserData ( const VTableCursor *cself, void *data, void ( CC * destroy ) ( void *data ) );
+
+VCursorCache * VTableCursorColumns ( VCursor * self );
+VCursorCache * VTableCursorPhysicalColumns ( VCursor * self );
+Vector * VTableCursorGetRow ( VCursor * self );
 
 #ifdef __cplusplus
 }

@@ -80,26 +80,26 @@ VDB_EXTERN rc_t CC VDBManagerOpenView (
 /* BindParameterTable
  *  Bind a view's parameter to a table.
  *
- *  "table" [ IN ] - the table to be bound. Has to have the same type as the corresponding
+ *  "param_name" [ IN ] - parameter's name
+ *  "table" [ IN ] - the table to bind the parameter to. Has to have the same type as the corresponding
  *  parameter of the view
- *  "index" [ IN ] - 0-based index of the corresponding parameter in the view's parameter list
  */
 VDB_EXTERN rc_t CC VViewBindParameterTable (
     const VView * self,
-    const struct VTable * table,
-    uint32_t index );
+    const char * param_name,
+    const struct VTable * table );
 
 /* BindParameterView
  *  Bind a view's parameter to a view.
  *
- *  "view" [ IN ] - the view to be bound. Has to have the same type as the corresponding
+ *  "param_name" [ IN ] - parameter's name
+ *  "view" [ IN ] - the view to bind the parameter to. Has to have the same type as the corresponding
  *  parameter of "self"
- *  "index" [ IN ] - 0-based index of the corresponding parameter in "self"'s parameter list
  */
 VDB_EXTERN rc_t CC VViewBindParameterView (
     const VView * self,
-    const struct VView * view,
-    uint32_t index );
+    const char * param_name,
+    const struct VView * view );
 
 #ifdef __cplusplus
 }

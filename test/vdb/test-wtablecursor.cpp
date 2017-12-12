@@ -397,6 +397,12 @@ FIXTURE_TEST_CASE( VTableCursor_SetUserData, TableCursorFixture )
     REQUIRE_RC ( VCursorSetUserData ( m_cur, 0, 0 ) );
 }
 
+//TODO:    VTableCursorColumns,
+//TODO:    VTableCursorPhysicalColumns,
+//TODO:    VTableCursorMakeColumn,
+//TODO:    VTableCursorGetRow
+//TODO:    VTableCursorGetTable
+
 //////////////////////////////////////////// Main
 #include <kfg/config.h>
 

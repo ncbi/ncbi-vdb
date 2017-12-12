@@ -32,7 +32,6 @@
 
 #define KONST const
 #define SKONST
-#include "cursor-priv.h"
 #include "cursor-struct.h"
 #include "dbmgr-priv.h"
 #include "linker-priv.h"
@@ -246,6 +245,42 @@ LIB_EXPORT rc_t CC VCursorSetUserData ( const VCursor *self, void *data, void ( 
     DISPATCH ( setUserData ( self, data, destroy ) );
 }
 
+/* private API dispatch */
+VCursorCache * VCursorColumns ( struct VCursor * self )
+{
+    if ( self != NULL && self -> vt != NULL )
+    {
+        return self -> vt -> columns ( self );
+    }
+    else
+    {
+        return NULL;
+    }
+}
+rc_t VCursorMakeColumn ( struct VCursor *self, struct VColumn **col, struct SColumn const *scol, Vector *cx_bind )
+{
+    DISPATCH ( makeColumn ( self, col, scol, cx_bind ) );
+}
+VCursorCache * VCursorPhysicalColumns ( VCursor * self )
+{
+    DISPATCH ( physicalColumns ( self ) );
+}
+Vector * VCursorGetRow ( struct VCursor * self )
+{
+    DISPATCH ( getRow ( self ) );
+}
+const VTable * VCursorGetTable ( const struct VCursor * self )
+{
+    if ( self != NULL && self -> vt != NULL )
+    {
+        return self -> vt -> getTable ( self );
+    }
+    else
+    {
+        return NULL;
+    }
+}
+
 /*--------------------------------------------------------------------------
  * VCursorCache
  */
@@ -413,7 +448,7 @@ static void CC VCursorVColumnWhack_checked( void *item, void *data )
 
 /* Whack
  */
-rc_t VCursorDestroy ( VCursor *self )
+rc_t VCursorDestroy ( VTableCursor *self )
 {
     KRefcountWhack ( & self -> refcount, "VCursor" );
     if(self->cache_curs) VCursorDestroy((VCursor*)self->cache_curs);
@@ -648,7 +683,7 @@ rc_t VCursorSupplementStatic ( const KSymTable *tbl, const VCursor *self )
     return rc;
 }
 
-rc_t VCursorSupplementSchema ( const VCursor *self )
+rc_t VCursorSupplementSchema ( const VTableCursor *self )
 {
     KSymTable tbl;
     rc_t rc = init_tbl_symtab ( & tbl, self -> schema, self -> stbl );
@@ -673,7 +708,7 @@ rc_t VCursorSupplementSchema ( const VCursor *self )
  *  dropping least recently used blobs
  */
 static rc_t VTableCreateCachedCursorReadImpl ( const VTable *self,
-    const VCursor **cursp, size_t capacity, bool create_pagemap_thread  )
+    const VTableCursor **cursp, size_t capacity, bool create_pagemap_thread  )
 {
     rc_t rc;
 #if DISABLE_READ_CACHE
@@ -716,11 +751,11 @@ static rc_t VTableCreateCachedCursorReadImpl ( const VTable *self,
                     * cursp = curs;
                     if(rc==0 && self->cache_tbl){
 			rc_t rc2;
-			const VCursor * cache_curs;
+			const VTableCursor * cache_curs;
 			rc2 = VTableCreateCachedCursorReadImpl(self->cache_tbl,&cache_curs,64*1024*1024,create_pagemap_thread);
 			DBGMSG(DBG_VDB, DBG_FLAG(DBG_VDB_VDB), ("VTableCreateCachedCursorReadImpl(vdbcache) = %d\n", rc2));
 			if(rc2 == 0){
-				((VCursor*) (*cursp)) -> cache_curs = cache_curs;
+				((VTableCursor*) (*cursp)) -> cache_curs = cache_curs;
 			}
 		    }
                     return 0;
@@ -769,7 +804,7 @@ LIB_EXPORT rc_t CC VTableCreateCachedCursorRead ( const VTable *self,
 /**
 *** VTableCreateCursorReadInternal is only visible in vdb and needed for schema resolutions
 ****/
-rc_t  VTableCreateCursorReadInternal(const VTable *self, const VCursor **cursp)
+rc_t  VTableCreateCursorReadInternal(const VTable *self, const VTableCursor **cursp)
 {
 	return VTableCreateCachedCursorReadImpl(self,cursp,0,false);
 }
@@ -1427,7 +1462,7 @@ bool CC VCursorResolveColumn ( void *item, void *data )
 }
 
 static
-rc_t VCursorOpenColumn ( const VCursor *cself, VColumn *col )
+rc_t VCursorOpenColumn ( const VTableCursor *cself, VColumn *col )
 {
     KDlset *libs;
     VCursor *self = ( VCursor* ) cself;
@@ -1464,7 +1499,7 @@ rc_t VCursorOpenColumn ( const VCursor *cself, VColumn *col )
 /* PostOpenAdd
  *  handle opening of a column after the cursor is opened
  */
-rc_t VCursorPostOpenAddRead ( VCursor *self, VColumn *col )
+rc_t VCursorPostOpenAddRead ( VTableCursor *self, VColumn *col )
 {
     return VCursorOpenColumn ( self, col );
 }
@@ -1594,7 +1629,7 @@ rc_t VTableCursorRowId ( const VCursor *self, int64_t *id )
  *
  *  "row_id" [ IN ] - row id to select
  */
-rc_t VCursorSetRowIdRead ( VCursor *self, int64_t row_id )
+rc_t VCursorSetRowIdRead ( VTableCursor *self, int64_t row_id )
 {
     assert ( self != NULL );
 
@@ -1606,7 +1641,7 @@ rc_t VCursorSetRowIdRead ( VCursor *self, int64_t row_id )
 /* OpenRowRead
  * CloseRowRead
  */
-rc_t VCursorOpenRowRead ( VCursor *self )
+rc_t VCursorOpenRowRead ( VTableCursor *self )
 {
     assert ( self != NULL );
 
@@ -1614,7 +1649,7 @@ rc_t VCursorOpenRowRead ( VCursor *self )
     return 0;
 }
 
-rc_t VCursorCloseRowRead ( VCursor *self )
+rc_t VCursorCloseRowRead ( VTableCursor *self )
 {
     assert ( self != NULL );
 
@@ -2429,7 +2464,7 @@ void CC insert_overloaded_scolumns ( void *item, void *data )
 }
 
 static
-void VCursorListCol_walk_through_columns_and_add_to_cursor ( VCursor *self )
+void VCursorListCol_walk_through_columns_and_add_to_cursor ( VTableCursor *self )
 {
     uint32_t idx = VectorStart ( & self -> stbl -> cname );
     uint32_t end = VectorLength ( & self -> stbl -> cname );
@@ -2452,7 +2487,7 @@ void VCursorListCol_walk_through_columns_and_add_to_cursor ( VCursor *self )
 }
 
 static
-rc_t VCursorListCol_consolidate_and_insert( const VCursor *self, BSTree *columns )
+rc_t VCursorListCol_consolidate_and_insert( const VTableCursor *self, BSTree *columns )
 {
     rc_t rc = VCursorOpenForListing ( self );
     if ( rc == 0 )
@@ -2486,7 +2521,7 @@ rc_t VCursorListCol_consolidate_and_insert( const VCursor *self, BSTree *columns
  *  records all SColumns that successfully resolved
  *  populates BTree with VColumnRef objects
  */
-rc_t VCursorListReadableColumns ( VCursor *self, BSTree *columns )
+rc_t VCursorListReadableColumns ( VTableCursor *self, BSTree *columns )
 {
     /* add '*' to cursor */
     VCursorListCol_walk_through_columns_and_add_to_cursor ( self );
@@ -3101,7 +3136,7 @@ const PageMapProcessRequest* VCursorPageMapProcessRequest(const struct VCursor *
     return self->pagemap_thread ? &self->pmpr : NULL;
 }
 
-const struct VTable * VCursorGetTable ( const struct VCursor * self )
+const struct VTable * VTableCursorGetTable ( const struct VCursor * self )
 {
     assert ( self != NULL );
     return self -> tbl;
@@ -3120,13 +3155,13 @@ bool VCursorCacheActive ( const struct VCursor * self, int64_t * cache_empty_end
     return false;
 }
 
-VCursorCache * VCursorPhysicalColumns ( struct VCursor * self )
+VCursorCache * VTableCursorPhysicalColumns ( struct VCursor * self )
 {
     assert ( self != NULL );
     return & self -> phys;
 }
 
-VCursorCache * VCursorColumns ( struct VCursor * self )
+VCursorCache * VTableCursorColumns ( VCursor * self )
 {
     assert ( self != NULL );
     return & self -> col;
@@ -3156,7 +3191,7 @@ uint32_t VCursorIncrementPhysicalProductionCount ( struct VCursor * self )
     return ++ self -> phys_cnt;
 }
 
-Vector * VCursorGetRow ( struct VCursor * self )
+Vector * VTableCursorGetRow ( struct VCursor * self )
 {
     assert ( self != NULL );
     return & self -> row;

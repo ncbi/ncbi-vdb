@@ -41,7 +41,8 @@ public:
     WVDB_Fixture()
     :   m_mgr ( 0 ),
         m_schema ( 0 ),
-        m_db ( 0 )
+        m_db ( 0 ),
+        m_keepDb ( false )
     {
     }
     ~WVDB_Fixture()
@@ -59,7 +60,10 @@ public:
             VDBManagerRelease ( m_mgr );
         }
 
-        RemoveDatabase();
+        if ( ! m_keepDb )
+        {
+            RemoveDatabase();
+        }
     }
 
     void RemoveDatabase ()
@@ -126,6 +130,7 @@ public:
     VDBManager *    m_mgr;
     VSchema *       m_schema;
     VDatabase *     m_db;
+    bool            m_keepDb;
 };
 
 #endif

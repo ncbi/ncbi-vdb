@@ -443,6 +443,42 @@ rc_t VProdResolveFwdExpr ( const VProdResolve *self, VProduction **out,
     return 0;
 }
 
+static
+rc_t VProdResolveMembExpr ( const VProdResolve *    p_self,
+                            VProduction **          p_out,
+                            VFormatdecl *           p_fd,
+                            const SMembExpr *       p_x,
+                            bool                    p_casting )
+{
+    if ( p_x -> object -> type != eTable )
+    {
+        return RC ( rcVDB, rcProduction, rcResolving, rcMessage, rcUnsupported );
+    }
+    else
+    {   /* locate the expression's table, make a SSymExpr pointing to its
+        column/production, call VProdResolveColExpr/VProdResolveProdExpr*/
+        rc_t rc;
+        VProdResolve pr = * p_self;
+        pr . stbl = (const STable*) p_x -> object -> u . obj; /* used in error reports */
+        if ( p_x -> member -> type == eColumn )
+        {
+            const SExpression * ref;
+            rc = SSymExprMake( & ref, p_x -> member, eColExpr );
+            if ( rc == 0 )
+            {
+                rc = VProdResolveExpr ( & pr, p_out, NULL, p_fd, ref, p_casting );
+                SExpressionWhack ( ref );
+            }
+        }
+        else
+        {
+            rc = RC ( rcVDB, rcProduction, rcResolving, rcMessage, rcUnsupported );
+        }
+        return rc;
+    }
+}
+
+
 /* ResolveExpr
  *  resolves expression and returns resulting production object
  *
@@ -601,6 +637,12 @@ rc_t VProdResolveExpr ( const VProdResolve *self,
         -- indent_level;
 #endif
         return rc;
+
+    case eMembExpr:
+        /* return a column or a production */
+        rc = VProdResolveMembExpr ( self, & prod, fd, ( const SMembExpr* ) expr, casting );
+    assert (rc != -1);
+        break;
 
     default:
         /* report bad expression, but don't die */

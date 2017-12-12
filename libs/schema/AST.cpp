@@ -802,6 +802,24 @@ AST_Expr :: MakeCast ( ASTBuilder & p_builder ) const
     return 0;
 }
 
+static
+SExpression *
+SMembExprMake ( ASTBuilder & p_builder, const KSymbol* p_obj, const KSymbol* p_mem )
+{
+    SMembExpr *x = p_builder . Alloc < SMembExpr > ();
+    if ( x == 0 )
+    {
+        return 0;
+    }
+
+    x -> dad . var = eMembExpr;
+    atomic32_set ( & x -> dad . refcount, 1 );
+    x -> object = p_obj;
+    x -> member = p_mem;
+
+    return & x -> dad;
+}
+
 SExpression *
 AST_Expr :: MakeMember ( ASTBuilder & p_builder ) const
 {
@@ -827,11 +845,11 @@ AST_Expr :: MakeMember ( ASTBuilder & p_builder ) const
                 // find member . GetChild ( 0 ) in t -> scope
                 String memName;
                 StringInitCString ( & memName, member . GetChild ( 0 ) -> GetTokenValue () );
-                const KSymbol * sym = ( const KSymbol* ) BSTreeFind ( & t -> scope, & memName, KSymbolCmp );
-                if ( sym != 0 )
+                const KSymbol * mem = ( const KSymbol* ) BSTreeFind ( & t -> scope, & memName, KSymbolCmp );
+                if ( mem != 0 )
                 {
-                    assert ( sym -> type == eColumn || sym -> type == eProduction );
-                    return SSymExprMake ( p_builder, eColExpr, sym );
+                    assert ( mem -> type == eColumn || mem -> type == eProduction );
+                    return SMembExprMake ( p_builder, sym, mem );
                 }
                 else
                 {
@@ -845,11 +863,11 @@ AST_Expr :: MakeMember ( ASTBuilder & p_builder ) const
                 // find member . GetChild ( 0 ) in v -> scope
                 String memName;
                 StringInitCString ( & memName, member . GetChild ( 0 ) -> GetTokenValue () );
-                const KSymbol * sym = ( const KSymbol* ) BSTreeFind ( & v -> scope, & memName, KSymbolCmp );
-                if ( sym != 0 )
+                const KSymbol * mem = ( const KSymbol* ) BSTreeFind ( & v -> scope, & memName, KSymbolCmp );
+                if ( mem != 0 )
                 {
-                    assert ( sym -> type == eColumn || sym -> type == eProduction );
-                    return SSymExprMake ( p_builder, eColExpr, sym );
+                    assert ( mem -> type == eColumn || mem -> type == eProduction );
+                    return SMembExprMake ( p_builder, sym, mem );
                 }
                 else
                 {

@@ -97,7 +97,10 @@ enum
     eCondExpr,
 
     /* vector expression */
-    eVectorExpr
+    eVectorExpr,
+
+    /* table/view member expression */
+    eMembExpr
 };
 
 typedef struct SExpression SExpression;
@@ -313,7 +316,7 @@ void SFuncExprMark ( const SFuncExpr *self, struct VSchema const *schema );
 
 /*--------------------------------------------------------------------------
  * SPhysEncExpr
- *  
+ *
  */
 typedef struct SPhysEncExpr SPhysEncExpr;
 struct SPhysEncExpr
@@ -387,6 +390,19 @@ struct SVectExpr
 {
     SExpression dad;
     Vector expr;
+};
+
+/*--------------------------------------------------------------------------
+ * SMembExpr
+ *  a member (column or production) a view parameter (a table or a view)
+ *  represents an "object . member" expression
+ */
+typedef struct SMembExpr SMembExpr;
+struct SMembExpr
+{
+    SExpression dad;
+    struct KSymbol const * object;
+    struct KSymbol const * member;
 };
 
 #ifdef __cplusplus

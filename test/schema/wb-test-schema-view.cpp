@@ -422,24 +422,27 @@ FIXTURE_TEST_CASE(View_Column_Reference, AST_View_Fixture)
 }
 
 FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesColumn, AST_View_Fixture)
-{   // introducing member expressions
+{   // introducing member expressions!
     ViewAccess v = ParseView ( "version 2; table T#1 { column U8 c1 = 1; }; view W#1 <T t> { column U8 c2 = t . c1; }", "W" );
     REQUIRE_EQ ( 1u, v . Columns () . Count () );
     const SColumn & c = * v . Columns () . Get ( 0 );
     REQUIRE_NOT_NULL ( c . name );
     REQUIRE_EQ ( string ("c2"), ToCppString ( c . name -> name ) );
     REQUIRE_NOT_NULL ( c . read );
-    REQUIRE_EQ ( ( uint32_t ) eColExpr, c . read -> var );
+    REQUIRE_EQ ( ( uint32_t ) eMembExpr, c . read -> var );
+    const SMembExpr * expr = reinterpret_cast < const SMembExpr * > ( c . read );
+    REQUIRE_EQ ( string("t"), ToCppString ( expr -> object -> name ) );
+    REQUIRE_EQ ( string("c1"), ToCppString ( expr -> member -> name ) );
 }
 FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesColumn_PseudoPhysicalToken, AST_View_Fixture)
 {   // .b looks like a physical identifier
     ViewAccess v = ParseView ( "version 2; table T#1 { column U8 c1 = 1; }; view W#1 <T t> { column U8 c2 = t .c1; }", "W" );
-    REQUIRE_EQ ( ( uint32_t ) eColExpr, v . Columns () . Get ( 0 ) -> read -> var );
+    REQUIRE_EQ ( ( uint32_t ) eMembExpr, v . Columns () . Get ( 0 ) -> read -> var );
 }
 FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesProduction, AST_View_Fixture)
 {
     ViewAccess v = ParseView ( "version 2; table T#1 { U8 c1 = 1; }; view W#1 <T t> { column U8 c2 = t . c1; }", "W" );
-    REQUIRE_EQ ( ( uint32_t ) eColExpr, v . Columns () . Get ( 0 ) -> read -> var );
+    REQUIRE_EQ ( ( uint32_t ) eMembExpr, v . Columns () . Get ( 0 ) -> read -> var );
 }
 
 FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesColumn_Undefined, AST_View_Fixture)
@@ -458,7 +461,7 @@ FIXTURE_TEST_CASE(View_Column_ReferenceToParamViewsColumn, AST_View_Fixture)
     "W", 1 );
     const SColumn & c = * v . Columns () . Get ( 0 );
     REQUIRE_NOT_NULL ( c . read );
-    REQUIRE_EQ ( ( uint32_t ) eColExpr, c . read -> var );
+    REQUIRE_EQ ( ( uint32_t ) eMembExpr, c . read -> var );
 }
 
 FIXTURE_TEST_CASE(View_Column_ReferenceToParamViewsColumn_Undefined, AST_View_Fixture)

@@ -152,6 +152,9 @@ void CC SExpressionMark ( void * item, void * data )
         VectorForEach ( & ( ( const SVectExpr* ) self ) -> expr, false,
                         SExpressionMark, data );
         break;
+    case eMembExpr:
+        assert (false); //TODO SMembExprMark
+        break;
     }
 }
 #endif
@@ -601,7 +604,11 @@ rc_t SExpressionDump ( const SExpression *self, SDumper *b )
         if ( compact )
             return SExpressionBracketListDump ( & x -> expr, b, "[", "]" );
         return SExpressionBracketListDump ( & x -> expr, b, "[ ", " ]" );
-    }}
+    }
+    case eMembExpr:
+        assert (false); //TODO: SMembExprDump
+        break;
+    }
 
     return SDumperPrint ( b, "EXPR-UNKNOWN" );
 

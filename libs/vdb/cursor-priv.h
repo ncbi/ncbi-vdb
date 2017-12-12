@@ -148,84 +148,36 @@ enum
     vfExit
 };
 
-rc_t VTableCreateCursorWriteInt ( struct VTable *self, struct VCursor **cursp, KCreateMode mode, bool create_thread );
-
-/* Whack
- * Destroy
- */
-rc_t VCursorWhack ( struct VCursor *self );
-rc_t VCursorDestroy ( struct VCursor *self );
-
-/* SupplementSchema
- *  scan table for physical column names
- *  create transparent yet incomplete (untyped) columns for unknown names
- *  create incomplete (untyped) physical columns for forwarded names
- *  repeat process on static columns, except create complete (fully typed) objects
- */
-rc_t VCursorSupplementSchema ( struct VCursor const *self );
-
 /* MakeColumn
- */
-rc_t VCursorMakeColumn ( struct VCursor *self,
+*/
+rc_t CC VCursorMakeColumn ( struct VCursor *self,
     struct VColumn **col, struct SColumn const *scol, Vector *cx_bind );
 
-/* SetRowIdRead - PRIVATE
- *  seek to given row id
- *
- *  "row_id" [ IN ] - row id to select
- */
-rc_t VCursorSetRowIdRead ( struct VCursor *self, int64_t row_id );
+/* Columns
+*/
+VCursorCache * VCursorColumns ( struct VCursor * self );
 
-/* Open
- */
-rc_t VCursorOpenRead ( struct VCursor *self, struct KDlset const *libs );
-/**
-*** VTableCreateCursorReadInternal is only visible in vdb and needed for schema resolutions
-****/
-rc_t  VTableCreateCursorReadInternal(const struct VTable *self, const struct VCursor **cursp);
+/* PhysicalColumns
+*/
+VCursorCache * VCursorPhysicalColumns ( struct VCursor * self );
 
+/* GetRow
+*/
+Vector * VCursorGetRow ( struct VCursor * self );
 
-/* ListReadableColumns
- *  performs an insert of '*' to cursor
- *  attempts to resolve all read rules
- *  records all SColumns that successfully resolved
- *  populates BTree with VColumnRef objects
- */
-rc_t VCursorListReadableColumns ( struct VCursor *self, BSTree *columns );
-
-/* ListWritableColumns
- *  walks list of SPhysicals and trigger SProductions
- *  attempts to resolve all write rules
- *  records any SColumn that can be reached
- *  populates BTree with VColumnRef objects
- */
-rc_t VCursorListWritableColumns ( struct VCursor *self, BSTree *columns );
-rc_t VCursorListSeededWritableColumns ( struct VCursor *self, BSTree *columns, struct KNamelist const *seed );
-
-/* PostOpenAdd
- *  handle opening of a column after the cursor is opened
- */
-rc_t VCursorPostOpenAdd ( struct VCursor *self, struct VColumn *col );
-rc_t VCursorPostOpenAddRead ( struct VCursor *self, struct VColumn *col );
-
-/* OpenRowRead
- * CloseRowRead
- */
-rc_t VCursorOpenRowRead ( struct VCursor *self );
-rc_t VCursorCloseRowRead ( struct VCursor *self );
-
+/* GetTable
+* NB. For now, we only support 1-table views, so for a view this will be
+* the table its parameter is bound to.
+*/
+const struct VTable * VCursorGetTable ( const struct VCursor * self );
 
 /** pagemap supporting thread **/
 rc_t VCursorLaunchPagemapThread(struct VCursor *self);
 rc_t VCursorTerminatePagemapThread(struct VCursor *self);
 const PageMapProcessRequest* VCursorPageMapProcessRequest(const struct VCursor *self);
 
-const struct VTable * VCursorGetTable ( const struct VCursor * self );
-
 bool VCursorCacheActive ( const struct VCursor * self, int64_t * cache_empty_end );
 
-VCursorCache * VCursorPhysicalColumns ( struct VCursor * self );
-VCursorCache * VCursorColumns ( struct VCursor * self );
 Vector * VCursorTriggers ( struct VCursor * self );
 
 bool VCursorIsReadOnly ( const struct VCursor * self );
@@ -234,7 +186,6 @@ VBlobMRUCache * VCursorGetBlobMruCache ( struct VCursor * self );
 
 uint32_t VCursorIncrementPhysicalProductionCount ( struct VCursor * curs );
 
-Vector * VCursorGetRow ( struct VCursor * self );
 
 #ifdef __cplusplus
 }

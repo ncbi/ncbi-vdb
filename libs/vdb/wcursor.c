@@ -28,7 +28,6 @@
 
 #define TRACK_REFERENCES 0
 
-#include "cursor-priv.h"
 #include "cursor-struct.h"
 #include "dbmgr-priv.h"
 #include "linker-priv.h"
@@ -84,6 +83,7 @@ static rc_t VTableCursorFlushPage ( VCursor *self );
 static rc_t VTableCursorDefault ( VCursor *self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t row_len );
 static rc_t VTableCursorCommit ( VCursor *self );
 static rc_t VTableCursorOpenParentUpdate ( VCursor *self, VTable **tbl );
+static rc_t VTableCursorMakeColumn ( VCursor *self, VColumn **col, const SColumn *scol, Vector *cx_bind );
 
 static VCursor_vt VTableCursor_write_vt =
 {
@@ -118,7 +118,12 @@ static VCursor_vt VTableCursor_write_vt =
     VTableCursorOpenParentRead,
     VTableCursorOpenParentUpdate,
     VTableCursorGetUserData,
-    VTableCursorSetUserData
+    VTableCursorSetUserData,
+    VTableCursorColumns,
+    VTableCursorPhysicalColumns,
+    VTableCursorMakeColumn,
+    VTableCursorGetRow,
+    VTableCursorGetTable
 };
 
 
@@ -147,7 +152,7 @@ rc_t VCursorFlushPageInt ( VCursor *self, bool sync );
 
 /* Whack
  */
-rc_t VCursorWhack ( VCursor *self )
+rc_t VCursorWhack ( VTableCursor *self )
 {
 #if VCURSOR_FLUSH_THREAD
     if ( self -> flush_thread != NULL )
@@ -195,7 +200,7 @@ rc_t VCursorWhack ( VCursor *self )
 static rc_t CC run_flush_thread ( const KThread *t, void *data );
 #endif
 
-rc_t VTableCreateCursorWriteInt ( VTable *self, VCursor **cursp, KCreateMode mode, bool create_thread )
+rc_t VTableCreateCursorWriteInt ( VTable *self, VTableCursor **cursp, KCreateMode mode, bool create_thread )
 {
     rc_t rc;
 
@@ -215,7 +220,7 @@ rc_t VTableCreateCursorWriteInt ( VTable *self, VCursor **cursp, KCreateMode mod
 #endif
         else
         {
-            VCursor *curs;
+            VTableCursor *curs;
 
 #if LAZY_OPEN_COL_NODE
             if ( self -> col_node == NULL )
@@ -259,7 +264,7 @@ LIB_EXPORT rc_t CC VTableCreateCursorWrite ( VTable *self, VCursor **cursp, KCre
 
 /* MakeColumn
  */
-rc_t VCursorMakeColumn ( VCursor *self, VColumn **col, const SColumn *scol, Vector *cx_bind )
+rc_t VTableCursorMakeColumn ( VCursor *self, VColumn **col, const SColumn *scol, Vector *cx_bind )
 {
     VTable *vtbl;
 
@@ -274,7 +279,7 @@ rc_t VCursorMakeColumn ( VCursor *self, VColumn **col, const SColumn *scol, Vect
 /* PostOpenAdd
  *  handle opening of a column after the cursor is opened
  */
-rc_t VCursorPostOpenAdd ( VCursor *self, VColumn *col )
+rc_t VCursorPostOpenAdd ( VTableCursor *self, VColumn *col )
 {
     rc_t rc = VCursorPostOpenAddRead ( self, col );
 
@@ -505,7 +510,7 @@ void VProdResolveWritableColumns ( struct resolve_phys_data *pb, bool suspend_tr
     }
 }
 
-rc_t VCursorListSeededWritableColumns ( VCursor *self, BSTree *columns, const KNamelist *seed )
+rc_t VCursorListSeededWritableColumns ( VTableCursor *self, BSTree *columns, const KNamelist *seed )
 {
     rc_t rc;
     KDlset *libs;
@@ -570,7 +575,7 @@ rc_t VCursorListSeededWritableColumns ( VCursor *self, BSTree *columns, const KN
     return rc;
 }
 
-rc_t VCursorListWritableColumns ( VCursor *self, BSTree *columns )
+rc_t VCursorListWritableColumns ( VTableCursor *self, BSTree *columns )
 {
     return VCursorListSeededWritableColumns ( self, columns, NULL );
 }

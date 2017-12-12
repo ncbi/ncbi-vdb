@@ -99,14 +99,16 @@ static const char * SchemaText =
     "table T#1 { column ascii c1; };"
     "table P#1 { column ascii c1; };"
     "database DB#1 { table T t; table P p; };"
-    "view V#1 < T t > {};"
-    "view W#1 < V v > {};"
-    "view OneColumn#1 < T t > { column ascii c = t . c1; };"
+    "view V#1 < T tbl > {};"
+    "view W#1 < V vw > {};"
+    "view OneColumn#1 < T tbl > { column ascii c = tbl . c1; };"
     ;
 
 static const char* TableName = "t";
 static const char* TableColumnName = "c1";
 static const char* EmptyViewName = "V";
+static const char* TableParamName = "tbl";
+static const char* ViewParamName = "vw";
 static const char* OneColumnViewName = "OneColumn";
 static const char* ViewColumnName = "c";
 
@@ -156,7 +158,7 @@ public:
         CreateView ( p_testName, p_viewName );
         const VTable * tbl;
         THROW_ON_RC ( VDatabaseOpenTableRead ( m_db, & tbl, TableName ) );
-        THROW_ON_RC ( VViewBindParameterTable ( m_view, tbl, 0 ) );
+        THROW_ON_RC ( VViewBindParameterTable ( m_view, TableParamName, tbl ) );
         THROW_ON_RC ( VTableRelease ( tbl ) );
     }
 
@@ -172,6 +174,21 @@ public:
     {
         CreateCursor ( p_testName, p_viewName );
         THROW_ON_RC ( VCursorAddColumn ( m_cur, & m_colIdx, "%s", p_colName ) );
+    }
+
+    const VTable* CreateTableOpenRead ( const char * p_tableName )
+    {
+        VCursor* cursor = CreateTable ( p_tableName );
+        uint32_t column_idx;
+        THROW_ON_RC ( VCursorAddColumn ( cursor, & column_idx, TableColumnName ) );
+        THROW_ON_RC ( VCursorOpen ( cursor ) );
+        WriteRow ( cursor, column_idx, "blah" );
+        WriteRow ( cursor, column_idx, "eeee" );
+        THROW_ON_RC ( VCursorCommit ( cursor ) );
+        THROW_ON_RC ( VCursorRelease ( cursor ) );
+        const VTable * ret;
+        THROW_ON_RC ( VDatabaseOpenTableRead ( m_db, & ret, p_tableName ) );
+        return ret;
     }
 
     const VView *   m_view;
@@ -241,57 +258,68 @@ FIXTURE_TEST_CASE ( View_BindParameterTable_NullObject, ViewFixture )
     CreateView ( GetName(), EmptyViewName );
     const VTable * tbl;
     REQUIRE_RC ( VDatabaseOpenTableRead ( m_db, & tbl, TableName ) );
-    REQUIRE_RC_FAIL ( VViewBindParameterTable ( 0, tbl, 0 ) );
+    REQUIRE_RC_FAIL ( VViewBindParameterTable ( 0, "", tbl ) );
     REQUIRE_RC ( VTableRelease ( tbl ) );
 }
-
-FIXTURE_TEST_CASE ( View_BindParameterTable_NullParam, ViewFixture )
-{
-    CreateView ( GetName(), EmptyViewName );
-    REQUIRE_RC_FAIL ( VViewBindParameterTable ( m_view, 0, 0 ) );
-}
-
-FIXTURE_TEST_CASE ( View_BindParameterTable_IndexOutOfRange, ViewFixture )
+FIXTURE_TEST_CASE ( View_BindParameterTable_NullName, ViewFixture )
 {
     CreateView ( GetName(), EmptyViewName );
     const VTable * tbl;
     REQUIRE_RC ( VDatabaseOpenTableRead ( m_db, & tbl, TableName ) );
-    REQUIRE_RC_FAIL ( VViewBindParameterTable ( m_view, tbl, 1 ) );
+    REQUIRE_RC_FAIL ( VViewBindParameterTable ( m_view, 0, tbl ) );
     REQUIRE_RC ( VTableRelease ( tbl ) );
 }
-
-FIXTURE_TEST_CASE ( View_BindParameterTable_WrongType, ViewFixture )
+FIXTURE_TEST_CASE ( View_BindParameterTable_NullTable, ViewFixture )
 {
     CreateView ( GetName(), EmptyViewName );
-    VCursor* cursor = CreateTable ( "p" );
-    uint32_t column_idx;
-    REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, TableColumnName ) );
-    REQUIRE_RC ( VCursorOpen ( cursor ) );
-    WriteRow ( cursor, column_idx, "blah" );
-    WriteRow ( cursor, column_idx, "eeee" );
-    REQUIRE_RC ( VCursorCommit ( cursor ) );
-    REQUIRE_RC ( VCursorRelease ( cursor ) );
+    REQUIRE_RC_FAIL ( VViewBindParameterTable ( m_view, "tbl", 0 ) );
+}
+FIXTURE_TEST_CASE ( View_BindParameterTable_WrongName, ViewFixture )
+{
+    CreateView ( GetName(), EmptyViewName );
+    REQUIRE_RC_FAIL ( VViewBindParameterTable ( m_view, "notAtbl", 0 ) );
+}
+FIXTURE_TEST_CASE ( View_BindParameterTable_NotATable, ViewFixture )
+{
+    CreateView ( GetName(), EmptyViewName );
+    REQUIRE_RC_FAIL ( VViewBindParameterTable ( m_view, "notAtbl", 0 ) );
+}
+FIXTURE_TEST_CASE ( View_BindParameterTable_WrongTableType, ViewFixture )
+{
+    CreateView ( GetName(), EmptyViewName );
+    const VTable * tbl = CreateTableOpenRead ( "p" );
 
-    const VTable * tbl;
-    REQUIRE_RC ( VDatabaseOpenTableRead ( m_db, & tbl, "p" ) );
-    REQUIRE_RC_FAIL ( VViewBindParameterTable ( m_view, tbl, 0 ) );
+    REQUIRE_RC_FAIL ( VViewBindParameterTable ( m_view, "tbl", tbl ) );
+
     REQUIRE_RC ( VTableRelease ( tbl ) );
 }
-
 FIXTURE_TEST_CASE ( View_BindParameterTable, ViewFixture )
 {
     CreateView ( GetName(), EmptyViewName );
     const VTable * tbl;
     REQUIRE_RC ( VDatabaseOpenTableRead ( m_db, & tbl, TableName ) );
-    REQUIRE_RC ( VViewBindParameterTable ( m_view, tbl, 0 ) ); // V<t>
+    REQUIRE_RC ( VViewBindParameterTable ( m_view, "tbl", tbl ) ); // V<T tbl>
+    REQUIRE_RC ( VTableRelease ( tbl ) );
+}
+FIXTURE_TEST_CASE ( View_BindParameterTable_TooManyParams, ViewFixture )
+{
+    CreateView ( GetName(), EmptyViewName );
+    const VTable * tbl;
+    REQUIRE_RC ( VDatabaseOpenTableRead ( m_db, & tbl, TableName ) );
+    REQUIRE_RC ( VViewBindParameterTable ( m_view, "tbl", tbl ) ); // V<T tbl>
+//    REQUIRE_RC_FAIL ( VViewBindParameterTable ( m_view, "tbl", tbl ) );
     REQUIRE_RC ( VTableRelease ( tbl ) );
 }
 
+// BindParameterView
 FIXTURE_TEST_CASE ( View_BindParameterView_NullParam, ViewFixture )
 {
     CreateView ( GetName(), EmptyViewName );
     REQUIRE_RC_FAIL ( VViewBindParameterView ( m_view, 0, 0 ) );
 }
+//TODO: BindParameterView_TooManyParameters
+//TODO: BindParameterView_NotAViewAtTheIndex
+#if 0
 FIXTURE_TEST_CASE ( View_BindParameterView, ViewFixture )
 {
     CreateView ( GetName(), EmptyViewName );
@@ -300,9 +328,9 @@ FIXTURE_TEST_CASE ( View_BindParameterView, ViewFixture )
     REQUIRE_RC ( VViewBindParameterView ( w, m_view, 0 ) ); // W<v>
     REQUIRE_RC ( VViewRelease ( w ) );
 }
+#endif
 
 // VViewCreateCursor
-
 FIXTURE_TEST_CASE ( View_CreateCursor_SelfNull, ViewFixture )
 {
     CreateAndBindView ( GetName(), EmptyViewName );
@@ -451,11 +479,38 @@ FIXTURE_TEST_CASE ( ViewCursor_Open, ViewFixture )
     CreateCursorAddColumn ( GetName(), OneColumnViewName, ViewColumnName );
     REQUIRE_RC ( VCursorOpen ( m_cur ) );
 }
-
+#if 0
+// VCursorIdRange
+FIXTURE_TEST_CASE ( ViewCursor_IdRange_NullParams, ViewFixture )
+{
+    CreateCursorAddColumn ( GetName(), OneColumnViewName, ViewColumnName );
+    REQUIRE_RC_FAIL ( VCursorIdRange ( m_cur, m_colIdx, 0, 0 ) );
+}
+FIXTURE_TEST_CASE ( ViewCursor_IdRange_NotOpen, ViewFixture )
+{
+    CreateCursorAddColumn ( GetName(), OneColumnViewName, ViewColumnName );
+    int64_t first;
+    uint64_t count;
+    REQUIRE_RC_FAIL ( VCursorIdRange ( m_cur, m_colIdx, & first, & count ) );
+}
+FIXTURE_TEST_CASE ( ViewCursor_IdRange, ViewFixture )
+{
+    CreateCursorAddColumn ( GetName(), OneColumnViewName, ViewColumnName );
+    REQUIRE_RC ( VCursorOpen ( m_cur ) );
+    int64_t first;
+    uint64_t count;
+    REQUIRE_RC ( VCursorIdRange ( m_cur, m_colIdx, & first, & count ) );
+    REQUIRE_EQ ( 1l, first );
+    REQUIRE_EQ ( 2lu, count );
+}
 //TODO: VTableMakeDefaultView
 
 //TODO: VViewCreateCursor with multiple table/view parameters
+//TODO: external function call in view's productions
+//TODO: external function call in a view parameter's productions
+//TODO: accessing a parameter view's columns
 
+#endif
 //////////////////////////////////////////// Main
 extern "C"
 {
