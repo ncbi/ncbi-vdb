@@ -71,6 +71,12 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
+#define KARCFILE_BUFFERSIZE ( 32 * 1024 )
+
+#if KARCFILE_BUFFERSIZE != 0
+#include <kfs/buffile.h>
+#endif
+
 const char * get_mode_string (KCreateMode mode);
 /* defined in dir_test.c */
 
@@ -2889,6 +2895,27 @@ rc_t CC KArcDirOpenFileRead	(const KArcDir *self,
             case ktocentrytype_file:
             case ktocentrytype_chunked:
                 rc = KArcFileMake ((KArcFile**)f, self->archive.v, toc, pnode);
+#if KARCFILE_BUFFERSIZE != 0 && 1
+                if ( rc == 0 )
+                {
+                    const KFile * orig = * f;
+                    assert ( orig != NULL );
+
+                    /* this is temporary
+                       it's not the correct type of buffer,
+                       but it will work well enough for today */
+                    rc = KBufReadFileMakeRead ( f, orig, KARCFILE_BUFFERSIZE );
+                    if ( rc != 0 )
+                    {
+                        * f = orig;
+                        rc = 0;
+                    }
+                    else
+                    {
+                        KFileRelease ( orig );
+                    }
+                }
+#endif
                 break;
             }
         }
