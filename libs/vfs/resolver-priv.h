@@ -233,6 +233,11 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
     const struct VPath ** path, const struct VPath **mapping,
     const struct KFile ** opt_file_rtn, bool refseq_ctx, bool is_oid, const char * version );
 
+/* version of name service protocol */
+void VResolverSetVersion ( VResolver *self, const char * version );
+
+/* resolve oid->file mapping inside of VFS */
+rc_t VResolverResolveName ( VResolver *self, bool resolve );
 
 void KConfigReadRemoteProtocols ( struct KConfig const * self, VRemoteProtocols * remote_protos );
 
