@@ -1962,6 +1962,8 @@ struct VResolver
     /** projectId of protected user repository;
         0 when repository is not user protected */
     uint32_t projectId;
+
+    char *version;
 };
 
 
@@ -1976,6 +1978,10 @@ static atomic32_t enable_local, enable_remote, enable_cache;
 static
 rc_t VResolverWhack ( VResolver *self )
 {
+    assert ( self );
+
+    free ( self -> version );
+
     KRefcountWhack ( & self -> refcount, "VResolver" );
 
     /* drop all remote volume sets */
@@ -1998,6 +2004,7 @@ rc_t VResolverWhack ( VResolver *self )
     /* release directory onto local file system */
     KDirectoryRelease ( self -> wd );
 
+    memset ( self, 0, sizeof * self );
     free ( self );
     return 0;
 }
@@ -2652,6 +2659,11 @@ VResolverEnableState CC VResolverCacheEnable ( const VResolver * self, VResolver
     return prior;
 }
 
+static bool resolveName = true;
+rc_t VResolverResolveName ( VResolver *self, bool resolve ) {
+    resolveName = resolve;
+    return 0;
+}
 
 /* RemoteResolve
  *  resolve an accession into a remote VPath or not found
@@ -3092,25 +3104,36 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
             /* not expected to ever be true */
             bool refseq_ctx = VPathHasRefseqContext ( query );
 
-            /* PREFACE - having an oid, we will need to map it to either
-               an accession or simple filename before resolving to a
-               local or cache path. there are two ways of getting this
-               mapping: either through the VFS manager, or by asking the
-               remote resolver CGI.
+/* OLD =====================================================
+   PREFACE - having an oid, we will need to map it to either
+   an accession or simple filename before resolving to a
+   local or cache path. there are two ways of getting this
+   mapping: either through the VFS manager, or by asking the
+   remote resolver CGI.
 
-               ASSUMPTION - if the file exists locally or is cached,
-               there should be a mapping available to VFS manager. this
-               assumption can fail if the mapping database has been lost
-               or damaged.
-            */
+   ASSUMPTION - if the file exists locally or is cached,
+   there should be a mapping available to VFS manager. this
+   assumption can fail if the mapping database has been lost
+   or damaged.
+   ==========================================================
+   NEW ======================================================
+   Remote resolver CGI does not return file name since version 3.
+   File name, aling with oid comes from kart file.
+   Mapping database is updated while kart is read.
+ */
 
             /* MAP OID TO ACCESSION */
             if ( local != NULL || cache != NULL )
             {
                 /* we want a mapping. ask VFS manager for one */
                 rc = VFSManagerGetObject ( vfs, query -> obj_id, & mapped_query );
-                if ( GetRCState ( rc ) == rcNotFound )
+                if ( GetRCState ( rc ) == rcNotFound && resolveName )
                 {
+/* NEW: should never got here, mapping should be registered when reading kart 
+   file in the same application.
+   'bool resolveName' is used for testing
+   or not to fail when sometihing unexpected happens
+ */
                     /* no mapping could be found. another possibility is to resolve remotely */
                     if ( remote != NULL || atomic32_read ( & enable_remote ) != vrAlwaysDisable )
                     {
@@ -3118,9 +3141,10 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
                         if ( rc == 0 )
                         {
                             const VPath * remote2, * remote_mapping = NULL;
+/* call CGI with version 1.2 */
                             rc = VResolverRemoteResolve ( self, protocols,
                                 & accession, & remote2, & remote_mapping, NULL,
-                                refseq_ctx, true, version );
+                                refseq_ctx, true, "#1.2" );
                             if ( rc == 0 )
                             {
                                 /* got it. now enter into VFS manager's table */
@@ -3181,6 +3205,7 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
                 }
             }
 
+/* NEW: not sure why this code is here, so do not touch it, call resolver-1.2 */
             if ( local == NULL || * local == NULL )
             {
                 bool has_fragment = false;
@@ -3192,10 +3217,11 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
                     if ( rc == 0 )
                     {
                         const VPath * remote_mapping = NULL;
+/* call CGI with version 1.2 */
                         rc = VResolverRemoteResolve ( self, protocols,
             & accession, remote,
             ( mapped_query == NULL && cache != NULL ) ? & remote_mapping : NULL,
-            NULL, refseq_ctx, true, version );
+            NULL, refseq_ctx, true, "#1.2" );
 
                         if ( rc == 0 && mapped_query == NULL && cache != NULL && remote_mapping == NULL )
                         {
@@ -3664,7 +3690,7 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
 {
     rc_t rcs = -1;
     rc_t rc = rcs = VResolverQueryInt
-        ( self, protocols, query, local, remote, cache, "#3.0" );
+        ( self, protocols, query, local, remote, cache, self -> version );
     if ( rc == 0 )
     {
         /* the paths returned from resolver are highly reliable */
@@ -5008,6 +5034,10 @@ rc_t VResolverMake ( VResolver ** objp, const KDirectory *wd,
 
         KRepositoryProjectId ( protected, & obj -> projectId );
 
+        obj -> version = string_dup_measure ( "#3.0", NULL );
+        if ( obj -> version == NULL )
+            rc = RC ( rcVFS, rcMgr, rcCreating, rcMemory, rcExhausted );
+
         if ( rc == 0 )
         {
             * objp = obj;
@@ -5018,6 +5048,13 @@ rc_t VResolverMake ( VResolver ** objp, const KDirectory *wd,
     }
 
     return rc;
+}
+
+void VResolverSetVersion ( VResolver *self, const char * version ) {
+    if ( self == NULL || version == NULL )
+        return;
+    free ( self -> version );
+    self -> version = string_dup_measure ( version, NULL );
 }
 
 /* Make
