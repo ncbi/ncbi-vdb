@@ -2873,12 +2873,14 @@ rc_t CC KArcDirOpenFileRead	(const KArcDir *self,
                 break;
 #if LEADING_FILE_CACHE
             case ktocentrytype_leading_file:
+            #if 1
                 rc = KSmallArcFileMake ( f, ( KToc * ) toc, self -> archive . f
                                          , pnode -> u . contiguous_file . archive_offset
                                          , pnode -> u . contiguous_file . archive_offset - toc -> leading_file_start
                                          , pnode -> u . contiguous_file . file_size
                     );
                 break;
+                #endif
             case ktocentrytype_small_file:
 #endif
             case ktocentrytype_emptyfile:

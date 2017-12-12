@@ -122,7 +122,7 @@ rc_t KSmallArcFileFillTocBuffer ( const KSmallArcFile * self, timeout_t * tm )
                 size_t leading_bytes = ( size_t ) ( toc -> leading_file_end - toc -> leading_file_start );
                 
                 STATUS ( STAT_PRG, "reading %zu bytes of leading file data into TOC.small_file_data", leading_bytes );
-                if ( self -> archive -> vt -> v1 . min < 2 )
+                if ( true || self -> archive -> vt -> v1 . min < 2 )
                 {
                     rc = KFileReadAll ( self -> archive, toc -> leading_file_start,
                         toc -> small_file_data . base, leading_bytes, & num_read );
@@ -141,7 +141,7 @@ rc_t KSmallArcFileFillTocBuffer ( const KSmallArcFile * self, timeout_t * tm )
 
         if ( rc == 0 )
         {
-            if ( toc -> small_file_bytes < ( uint64_t ) ( self -> offset + self -> bytes ) )
+            if ( toc -> small_file_bytes < ( uint64_t ) ( self -> start + self -> bytes ) )
                 rc = RC ( rcFS, rcArc, rcReading, rcTransfer, rcIncomplete );
         }
         
