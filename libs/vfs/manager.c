@@ -3257,6 +3257,19 @@ LIB_EXPORT rc_t CC VFSManagerRegisterObject(struct VFSManager* self, uint32_t oi
         rc = RC ( rcVFS, rcMgr, rcRegistering, rcSelf, rcNull );
     else if ( obj == NULL )
         rc = RC ( rcVFS, rcMgr, rcRegistering, rcParam, rcNull );
+
+/* VDB-3503: VFSManagerRegisterObject is used just to register oid<->filename
+             mapping when working with kart files.
+             The following tests were added to make sure 'obj' is correct to
+             generate cache location of protected files */
+    else if ( obj -> path_type == vpNameOrOID )
+        rc = RC ( rcVFS, rcMgr, rcRegistering, rcPath, rcWrongType );
+    else if ( obj -> scheme_type != vpuri_ncbi_acc && 
+              obj -> scheme_type != vpuri_ncbi_file )
+        rc = RC ( rcVFS, rcMgr, rcRegistering, rcPath, rcWrongType );
+    else if ( obj -> query . size == 0 )
+        rc = RC ( rcVFS, rcMgr, rcRegistering, rcQuery, rcEmpty );
+
     else
     {
         const String* newName;
