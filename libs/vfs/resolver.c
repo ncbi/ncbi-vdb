@@ -3205,13 +3205,14 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
                 }
             }
 
-/* NEW: not sure why this code is here, so do not touch it, call resolver-1.2 */
+/* NEW: not sure why this code is here, so do not touch it,
+        call resolver-1.2 when 'resolveName' is set */
             if ( local == NULL || * local == NULL )
             {
                 bool has_fragment = false;
 
                 /* RESOLVE FOR REMOTE */
-                if ( remote != NULL && * remote == NULL )
+                if ( remote != NULL && * remote == NULL && resolveName )
                 {
                     rc = get_query_accession ( query, & accession, oid_str, sizeof oid_str );
                     if ( rc == 0 )
