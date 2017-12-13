@@ -152,7 +152,7 @@ rc_t KColumnDataRead ( const KColumnData *self, const KColumnPageMap *pm,
     }
 
     pos = pm -> pg * self -> pgsize;
-    return KFileRead ( self -> f, pos + offset, buffer, bsize, num_read );
+    return KFileReadAll ( self -> f, pos + offset, buffer, bsize, num_read );
 }
 
 /* Write
