@@ -98,6 +98,20 @@ rc_t CC KBufReadFileSetSize ( KBufReadFile *self, uint64_t size )
 }
 
 static
+rc_t KBufReadFileReadBacking ( const KFile * backing, uint64_t pos,
+    void * buffer, size_t bsize, size_t * num_read, struct timeout_t * tm )
+{
+    if ( backing -> vt -> v1 . min < 2 )
+    {
+        STATUS ( STAT_GEEK, "using v1.0 interface" );
+        return KFileReadAll ( backing, pos, buffer, bsize, num_read );
+    }
+
+    STATUS ( STAT_GEEK, "using v1.2 interface" );
+    return KFileTimedReadAll ( backing, pos, buffer, bsize, num_read, tm );
+ }
+
+static
 rc_t CC KBufReadFileTimedRead ( const KBufReadFile * cself, uint64_t pos,
     void * buffer, size_t bsize, size_t * num_read, struct timeout_t * tm )
 {
@@ -125,10 +139,11 @@ rc_t CC KBufReadFileTimedRead ( const KBufReadFile * cself, uint64_t pos,
         /* cast might be a no-op */
         KBufReadFile * self = ( KBufReadFile * ) cself;
 
+        STATUS ( STAT_PRG, "acquiring lock on KBufReadFile" );
         rc = KLockAcquire ( self -> lock );
         if ( rc == 0 )
         {
-            size_t new_offset = (size_t)(pos % cself->bsize);
+            size_t new_offset = (size_t)(pos % self->bsize);
             uint64_t new_pos = pos - new_offset;
 
             STATUS ( STAT_PRG, "buffer window starts at %lx, buffer offset is %zu", new_pos, new_offset );
@@ -140,6 +155,14 @@ rc_t CC KBufReadFileTimedRead ( const KBufReadFile * cself, uint64_t pos,
              */
             if (new_pos != self->pos)
             {
+                if ( bsize >= self -> bsize )
+                {
+                    /* leave current buffer alone, just read from backing */
+                    STATUS ( STAT_PRG, "no buffer intersection - leaving buffer as-is, reading directly from backing store" );
+                    rc = KBufReadFileReadBacking ( self -> f, pos, buffer, bsize, num_read, tm );
+                    goto bypass_buffer;
+                }
+                
                 STATUS ( STAT_QA, "buffer window is invalid" );
                 self->num_valid = 0;
                 self->pos = new_pos;
@@ -147,32 +170,28 @@ rc_t CC KBufReadFileTimedRead ( const KBufReadFile * cself, uint64_t pos,
 
             /* now we agree on the 'sector page' even if we have nothing
              * valid in it */
-            if ((self->num_valid == 0) || (self->num_valid <= (size_t)new_offset))
+            if ( self -> num_valid <= new_offset )
             {
                 size_t new_num_read;
+
+                if ( bsize >= self -> bsize )
+                {
+                    /* request must be beyond what's available in buffer */
+                    STATUS ( STAT_PRG, "request beyond end of buffer - leaving buffer as-is, reading directly from backing store" );
+                    rc = KBufReadFileReadBacking ( self -> f, pos, buffer, bsize, num_read, tm );
+                    goto bypass_buffer;
+                }
 
                 STATUS ( STAT_PRG, "about to request %zu bytes from backing file %p at offset %lu"
                          , self->bsize - self->num_valid
                          , self -> f
                          , self->pos + self->num_valid
                     );
-            
-                if ( self -> f -> vt -> v1 . min < 2 )
-                {
-                    STATUS ( STAT_GEEK, "using v1.0 interface" );
-                    rc = KFileReadAll (self->f, self->pos + self->num_valid,
-                                       ( void * ) ( self->buff + self->num_valid ),
-                                       self->bsize - self->num_valid,
-                                       &new_num_read);
-                }
-                else
-                {
-                    STATUS ( STAT_GEEK, "using v1.2 interface" );
-                    rc = KFileTimedReadAll (self->f, self->pos + self->num_valid,
-                                            ( void * ) ( self->buff + self->num_valid ),
-                                            self->bsize - self->num_valid,
-                                            &new_num_read, tm);
-                }
+
+                rc = KBufReadFileReadBacking ( self -> f, self -> pos + self -> num_valid,
+                    ( void * ) & self -> buff [ self -> num_valid ],
+                    self -> bsize - self -> num_valid, & new_num_read, tm );
+                
                 if (rc == 0)
                 {
                     STATUS ( STAT_PRG, "read %zu bytes from backing", new_num_read );
@@ -205,6 +224,8 @@ rc_t CC KBufReadFileTimedRead ( const KBufReadFile * cself, uint64_t pos,
                 *num_read = to_copy;
             }
 
+        bypass_buffer:
+            STATUS ( STAT_PRG, "releasing lock on KBufReadFile" );
             KLockUnlock ( self -> lock );
         }
     }
