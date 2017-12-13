@@ -44,7 +44,6 @@
 #endif
 
 #define LEADING_FILE_CACHE 1
-#define SMALL_FILE_LIMIT ( 32 * 1024 )
 
 #if LEADING_FILE_CACHE
 #include <klib/data-buffer.h>

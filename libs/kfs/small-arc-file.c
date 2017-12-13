@@ -39,6 +39,8 @@ typedef struct KSmallArcFile KSmallArcFile;
 #include <kproc/lock.h>
 #include <os-native.h>
 
+#if LEADING_FILE_CACHE
+
 /*--------------------------------------------------------------------------
  * KSmallArcFile
  *  a small file from an archive
@@ -513,3 +515,5 @@ rc_t KLeadingArcFileMake ( const KFile_v1 ** fp, KToc * toc,
 
     return rc;
 }
+
+#endif /* LEADING_FILE_CACHE */
