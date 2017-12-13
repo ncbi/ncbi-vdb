@@ -42,6 +42,7 @@ typedef struct KBufReadFile KBufReadFile;
 #include <string.h>
 
 
+#define USE_MUTEX 0
 
 /*-----------------------------------------------------------------------
  * KBufReadFile
@@ -53,7 +54,9 @@ struct KBufReadFile
     volatile uint64_t pos;       /* position of buff within the original file */
 
     const KFile *f;     /* original file being buffered */
+#if USE_MUTEX
     KLock * lock;
+#endif
 
     size_t bsize;       /* size of the buffer */
     volatile size_t num_valid;   /* how much of the buffer is actually valid */
@@ -65,7 +68,9 @@ static
 rc_t CC KBufReadFileDestroy ( KBufReadFile *self )
 {
     KFileRelease ( self -> f );
+#if USE_MUTEX
     KLockRelease ( self -> lock );
+#endif
     free ( ( void * ) self -> buff );
     free ( ( void * ) self );
     return 0;
@@ -139,9 +144,11 @@ rc_t CC KBufReadFileTimedRead ( const KBufReadFile * cself, uint64_t pos,
         /* cast might be a no-op */
         KBufReadFile * self = ( KBufReadFile * ) cself;
 
+#if USE_MUTEX
         STATUS ( STAT_PRG, "acquiring lock on KBufReadFile" );
         rc = KLockAcquire ( self -> lock );
         if ( rc == 0 )
+#endif
         {
             size_t new_offset = (size_t)(pos % self->bsize);
             uint64_t new_pos = pos - new_offset;
@@ -225,8 +232,12 @@ rc_t CC KBufReadFileTimedRead ( const KBufReadFile * cself, uint64_t pos,
             }
 
         bypass_buffer:
+#if USE_MUTEX
             STATUS ( STAT_PRG, "releasing lock on KBufReadFile" );
             KLockUnlock ( self -> lock );
+#else
+            ( void ) 0;
+#endif
         }
     }
     
@@ -280,8 +291,10 @@ rc_t KBufReadFileMake ( KBufReadFile ** bp, const KFile *f, size_t bsize,
             rc = KFileInit ( & bf -> dad, vt, "KBufReadFile", "no-name", read_enabled, write_enabled );
             if ( rc == 0 )
             {
+#if USE_MUTEX
                 rc = KLockMake ( & bf -> lock );
                 if ( rc == 0 )
+#endif
                 {
                     rc = KFileAddRef ( f );
                     if ( rc == 0 )
@@ -291,8 +304,9 @@ rc_t KBufReadFileMake ( KBufReadFile ** bp, const KFile *f, size_t bsize,
                         * bp = bf;
                         return 0;
                     }
-
+#if USE_MUTEX
                     KLockRelease ( bf -> lock );
+#endif
                 }
             }
             
