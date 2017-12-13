@@ -25,6 +25,7 @@
 */
 
 
+#include "resolver-priv.h" /* VResolverResolveName */
 #include "path-priv.h" /* EVPathInitError */
 #include "services-priv.h" /* KServiceGetResolver */
 #include <kfg/config.h> /* KConfigRelease */
@@ -42,7 +43,7 @@
 typedef struct {
     BSTNode n;
     const String * ticket;
-    const VResolver * resolver;
+    VResolver * resolver;
 } BSTItem;
 
 static void BSTItemWhack ( BSTNode * n, void * ignore ) {
@@ -118,7 +119,7 @@ static rc_t HFini ( H * self ) {
 }
 
 static rc_t HResolver ( H * self, const String * ticket,
-                        const VResolver ** resolver )
+                        VResolver ** resolver )
 {
     rc_t rc = 0;
 
@@ -248,7 +249,7 @@ rc_t KServiceNamesQueryExt ( KService * self, VRemoteProtocols protocols,
                     ( response, i, protocols, & path, NULL, & error );
                 if ( rc == 0 ) {
                     if ( error == NULL ) {
-                        const VResolver * resolver = NULL;
+                        VResolver * resolver = NULL;
                         String id;
                         String ticket;
                         rc = VPathGetId ( path, & id );
@@ -258,6 +259,8 @@ rc_t KServiceNamesQueryExt ( KService * self, VRemoteProtocols protocols,
                             rc = HResolver ( & h, & ticket, & resolver );
                         if ( rc == 0 ) {
                             assert ( resolver );
+                            VResolverResolveName ( resolver,
+                                           KServiceGetResolveName ( self ) );
                             rc = VResolversQuery ( resolver, h . mgr,
                                                    protocols, & id, & vps );
                         }

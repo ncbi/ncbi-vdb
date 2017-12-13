@@ -1964,6 +1964,7 @@ struct VResolver
     uint32_t projectId;
 
     char *version;
+    bool resoveOidName;
 };
 
 
@@ -2659,9 +2660,15 @@ VResolverEnableState CC VResolverCacheEnable ( const VResolver * self, VResolver
     return prior;
 }
 
-static bool resolveName = true;
-rc_t VResolverResolveName ( VResolver *self, bool resolve ) {
-    resolveName = resolve;
+rc_t VResolverResolveName ( VResolver * self, int resolve ) {
+    if ( self == NULL )
+        return RC ( rcVFS, rcResolver, rcUpdating, rcSelf, rcNull );
+
+    switch ( resolve ) {
+        case 0 : self -> resoveOidName = DEFAULT_RESOVE_OID_NAME; break; 
+        case 1 : self -> resoveOidName = true                   ; break; 
+        default: self -> resoveOidName = false                  ; break; 
+    }
     return 0;
 }
 
@@ -3127,11 +3134,11 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
             {
                 /* we want a mapping. ask VFS manager for one */
                 rc = VFSManagerGetObject ( vfs, query -> obj_id, & mapped_query );
-                if ( GetRCState ( rc ) == rcNotFound && resolveName )
+                if ( GetRCState ( rc ) == rcNotFound && self -> resoveOidName )
                 {
 /* NEW: should never got here, mapping should be registered when reading kart 
    file in the same application.
-   'bool resolveName' is used for testing
+   'bool resoveOidName' is used for testing
    or not to fail when sometihing unexpected happens
  */
                     /* no mapping could be found. another possibility is to resolve remotely */
@@ -3206,13 +3213,14 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
             }
 
 /* NEW: not sure why this code is here, so do not touch it,
-        call resolver-1.2 when 'resolveName' is set */
+        call resolver-1.2 when 'resoveOidName' is set */
             if ( local == NULL || * local == NULL )
             {
                 bool has_fragment = false;
 
                 /* RESOLVE FOR REMOTE */
-                if ( remote != NULL && * remote == NULL && resolveName )
+                if ( remote != NULL && * remote == NULL
+                                    && self -> resoveOidName )
                 {
                     rc = get_query_accession ( query, & accession, oid_str, sizeof oid_str );
                     if ( rc == 0 )
@@ -4987,7 +4995,6 @@ rc_t VResolverGetProjectId ( const VResolver * self, uint32_t * projectId )
     }
 }
 
-
 /* Make
  *  internal factory function
  */
@@ -5039,6 +5046,8 @@ rc_t VResolverMake ( VResolver ** objp, const KDirectory *wd,
         if ( obj -> version == NULL )
             rc = RC ( rcVFS, rcMgr, rcCreating, rcMemory, rcExhausted );
 
+        obj -> resoveOidName = DEFAULT_RESOVE_OID_NAME; /* just in case */
+
         if ( rc == 0 )
         {
             * objp = obj;
@@ -5051,11 +5060,15 @@ rc_t VResolverMake ( VResolver ** objp, const KDirectory *wd,
     return rc;
 }
 
-void VResolverSetVersion ( VResolver *self, const char * version ) {
+rc_t VResolverSetVersion ( VResolver *self, const char * version ) {
+    if ( self == NULL )
+        return RC ( rcVFS, rcResolver, rcUpdating, rcSelf, rcNull );
     if ( self == NULL || version == NULL )
-        return;
+        return RC ( rcVFS, rcResolver, rcUpdating, rcParam, rcNull );
+
     free ( self -> version );
     self -> version = string_dup_measure ( version, NULL );
+    return 0;
 }
 
 /* Make
