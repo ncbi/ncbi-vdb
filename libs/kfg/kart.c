@@ -551,7 +551,7 @@ LIB_EXPORT rc_t CC KartPrintNumbered(const Kart *self) {
     bool done = false;
 
     if (self == NULL) {
-        return RC(rcKFG, rcFile, rcLoading, rcSelf, rcNull);
+        return RC(rcKFG, rcFile, rcAccessing, rcSelf, rcNull);
     }
 
     if ( self -> version > eVersion1 )
@@ -564,7 +564,7 @@ LIB_EXPORT rc_t CC KartPrintNumbered(const Kart *self) {
         const char version[] = "version ";
         size_t l = sizeof version - 1;
         if (string_cmp(version, l, start, remaining, (uint32_t)l) != 0) {
-            return RC(rcKFG, rcMgr, rcAccessing, rcFormat, rcUnrecognized);
+            return RC(rcKFG, rcFile, rcAccessing, rcFormat, rcUnrecognized);
         }
     }
 
@@ -593,7 +593,7 @@ LIB_EXPORT rc_t CC KartPrintNumbered(const Kart *self) {
             const char end[] = "$end";
             size_t l = sizeof end - 1;
             if (string_cmp(end, l, start, remaining, (uint32_t)l) != 0) {
-                return RC(rcKFG, rcMgr, rcAccessing, rcFormat, rcUnrecognized);
+                return RC(rcKFG, rcFile, rcAccessing, rcFormat, rcUnrecognized);
             }
             else {
                 done = true;
@@ -656,11 +656,17 @@ static rc_t KartRegisterObject ( const Kart * self, const KartItem * item ) {
     if ( rc == 0 )
         rc = KartItemName ( item, & name );
 
-    if ( rc == 0 )
+    if ( rc == 0 ) {
         rc = KRepositoryMgrGetProtectedRepository ( self -> mgr, projId,
                                                     & repo );
-    if ( rc == 0 )
+        if ( GetRCModule ( rc ) == rcKFG && GetRCState ( rc ) == rcNotFound )
+            rc = RC ( rcKFG, rcNode, rcAccessing, rcNode, rcNotFound );
+    }
+    if ( rc == 0 ) {
         rc = KRepositoryDownloadTicket ( repo, ticket, sizeof ticket, NULL );
+        if ( GetRCState ( rc ) == rcNotFound )
+            rc = RC ( rcKFG, rcNode, rcAccessing, rcNode, rcNotFound );
+    }
     if ( rc == 0 ) {
         if ( acc != NULL && acc -> size != 0 )
             rc = string_printf ( b, sizeof b, & id . size,
@@ -750,8 +756,11 @@ rc_t CC KartMakeNextItem ( const Kart * cself, const KartItem **item )
 
     if ( rc == 0 )
         rc = KartRegisterObject ( self, result );
+
     if ( rc == 0 )
         * item = result;
+    else
+        KartItemRelease ( result );
 
     return rc;
 }
@@ -830,7 +839,7 @@ static rc_t KartProcessHeader(Kart *self) {
         if (string_cmp(version, l,
                        self->text, ( size_t ) self->len, (uint32_t)l) != 0)
         {
-            return RC(rcKFG, rcMgr, rcUpdating, rcFormat, rcUnrecognized);
+            return RC(rcKFG, rcFile, rcAccessing, rcFormat, rcUnrecognized);
         }
 
         self->text += l;
@@ -841,7 +850,7 @@ static rc_t KartProcessHeader(Kart *self) {
         const char version[] = "1.0";
         size_t l = sizeof version - 1;
         if (string_cmp(version, l, self->text, l, (uint32_t)l) != 0) {
-            return RC(rcKFG, rcMgr, rcUpdating, rcFormat, rcUnsupported);
+            return RC(rcKFG, rcFile, rcAccessing, rcFormat, rcUnsupported);
         }
 
         self->text += l;
