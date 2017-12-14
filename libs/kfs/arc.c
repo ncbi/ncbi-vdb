@@ -2885,17 +2885,19 @@ rc_t CC KArcDirOpenFileRead	(const KArcDir *self,
                     );
                 break;
             case ktocentrytype_small_file:
+  #if 1
                 rc = KSmallArcFileMake ( f, ( KToc * ) toc, self -> archive . f
                                          , pnode -> u . contiguous_file . file_size
                                          , pnode -> u . contiguous_file . archive_offset
                     );
                 break;
+  #endif
 #endif
             case ktocentrytype_emptyfile:
             case ktocentrytype_file:
             case ktocentrytype_chunked:
                 rc = KArcFileMake ((KArcFile**)f, self->archive.v, toc, pnode);
-#if KARCFILE_BUFFERSIZE != 0 && 1
+#if KARCFILE_BUFFERSIZE != 0
                 if ( rc == 0 )
                 {
                     const KFile * orig = * f;
