@@ -3724,6 +3724,59 @@ rc_t KServiceRequestTestNames1 ( const KNSManager * mgr,
     return rc;
 }
 
+rc_t KServiceNamesRequestTest ( const KNSManager * mgr, const char * b,
+    const char * cgi, VRemoteProtocols protocols,
+    const SServiceRequestTestData * d, ... )
+{
+    va_list args;
+    KService * service = NULL;
+    KStream * stream = NULL;
+    rc_t rc = KServiceMakeWithMgr ( & service, mgr);
+    va_start ( args, d );
+    while ( rc == 0 && d != NULL ) {
+        if ( d -> id != NULL ) {
+            rc = KServiceAddObject ( service, d -> id, 0, d -> type );
+        }
+        if ( rc == 0 && d -> ticket != NULL ) {
+            rc = KServiceAddTicket ( service, d -> ticket );
+        }
+        d = va_arg ( args, const SServiceRequestTestData * );
+    }
+    if ( rc == 0 ) {
+        rc = KServiceInitNamesRequest ( service, protocols, cgi );
+    }
+    if ( rc == 0 ) {
+        SKVCheck c;
+    /*SKVCheckInit ( & c, acc, service -> req . version .raw . s, protocols );*/
+        VectorForEach (
+            & service -> req . cgiReq . params, false, SCgiRequestCheck, & c );
+        rc = c . passed;
+    }
+    if ( rc == 0 ) {
+        rc = KStreamMakeFromBuffer ( & stream, b, string_size ( b ) );
+    }
+    if ( rc == 0 ) {
+        rc = KServiceProcessStream ( service, stream );
+    }
+    if ( rc == 0 ) {
+        const KSrvResponse * l = NULL;
+        rc = KServiceGetResponse ( service, & l );
+        if ( rc == 0 ) {
+            uint32_t i = 0;
+            uint32_t n = KSrvResponseLength ( l );
+            for ( i = 0; rc == 0 && i < n; ++i ) {
+                const VPathSet * s = NULL;
+                rc = KSrvResponseGet ( l, i, & s );
+                RELEASE ( VPathSet, s );
+            }
+        }
+        RELEASE ( KSrvResponse, l );
+    }
+    RELEASE ( KStream, stream );
+    RELEASE ( KService, service );
+    return rc;
+}
+
 rc_t KServiceFuserTest ( const KNSManager * mgr,  const char * ticket,
     const char * acc, ... )
 {
@@ -3973,72 +4026,6 @@ printf("KServiceSearchTest1: ...KServiceFini\n" );
     }
 printf("KServiceSearchTest1: RELEASE Kart...\n" );
     RELEASE ( Kart, result );
-printf("KServiceSearchTest1: returning\n" );
-    return rc;
-}
-
-rc_t KServiceNamesRequestTest ( const KNSManager * mgr, const char * b,
-    const char * cgi, VRemoteProtocols protocols,
-    const SServiceRequestTestData * d, ... )
-{
-    va_list args;
-    KService * service = NULL;
-    KStream * stream = NULL;
-    rc_t rc = KServiceMakeWithMgr ( & service, mgr);
-    va_start ( args, d );
-printf("KServiceNamesRequestTest: KServiceAdd...\n" );
-    while ( rc == 0 && d != NULL ) {
-        if ( d -> id != NULL ) {
-            rc = KServiceAddObject ( service, d -> id, 0, d -> type );
-        }
-        if ( rc == 0 && d -> ticket != NULL ) {
-            rc = KServiceAddTicket ( service, d -> ticket );
-        }
-        d = va_arg ( args, const SServiceRequestTestData * );
-    }
-printf("KServiceNamesRequestTest: KServiceInitNamesRequest...\n" );
-    if ( rc == 0 ) {
-        rc = KServiceInitNamesRequest ( service, protocols, cgi );
-    }
-printf("KServiceNamesRequestTest: SCgiRequestCheck...\n" );
-    if ( rc == 0 ) {
-        SKVCheck c;
-    /*SKVCheckInit ( & c, acc, service -> req . version .raw . s, protocols );*/
-        VectorForEach (
-            & service -> req . cgiReq . params, false, SCgiRequestCheck, & c );
-        rc = c . passed;
-    }
-printf("KServiceNamesRequestTest: KStreamMakeFromBuffer...\n" );
-    if ( rc == 0 ) {
-        rc = KStreamMakeFromBuffer ( & stream, b, string_size ( b ) );
-    }
-printf("KServiceNamesRequestTest: KServiceProcessStream...\n" );
-    if ( rc == 0 ) {
-        rc = KServiceProcessStream ( service, stream );
-    }
-    if ( rc == 0 ) {
-        const KSrvResponse * l = NULL;
-printf("KServiceNamesRequestTest: KServiceGetResponse...\n" );
-        rc = KServiceGetResponse ( service, & l );
-        if ( rc == 0 ) {
-            uint32_t i = 0;
-printf("KServiceNamesRequestTest: KSrvResponseLength...\n" );
-            uint32_t n = KSrvResponseLength ( l );
-            for ( i = 0; rc == 0 && i < n; ++i ) {
-                const VPathSet * s = NULL;
-printf("KServiceNamesRequestTest: KSrvResponseGet...\n" );
-                rc = KSrvResponseGet ( l, i, & s );
-printf("KServiceNamesRequestTest: RELEASE ( VPathSet...\n" );
-                RELEASE ( VPathSet, s );
-            }
-        }
-printf("KServiceNamesRequestTest: RELEASE ( KSrvResponse...\n" );
-        RELEASE ( KSrvResponse, l );
-    }
-printf("KServiceNamesRequestTest: RELEASE ( KStream...\n" );
-    RELEASE ( KStream, stream );
-printf("KServiceNamesRequestTest: RELEASE ( KService...\n" );
-    RELEASE ( KService, service );
-printf("KServiceNamesRequestTest: returning\n" );
+printf("KServiceSearchTest1: ...RELEASE Kart\n" );
     return rc;
 }
