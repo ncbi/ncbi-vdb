@@ -3963,6 +3963,27 @@ rc_t KServiceCgiTest1 ( const KNSManager * mgr, const char * cgi,
     return rc;
 }
 
+rc_t KServiceSearchTest1
+    ( const KNSManager * mgr, const char * cgi, const char * acc )
+{
+    rc_t rc = 0;
+    KService service;
+    const Kart * result = NULL;
+    rc = KServiceInit ( & service, mgr );
+    if ( rc == 0 ) {
+        rc = KServiceAddId ( & service, acc );
+    }
+    if ( rc == 0 )
+        rc = KServiceSearchExecute ( & service, & result );
+    {
+        rc_t r2 = KServiceFini ( & service );
+        if ( rc == 0 )
+            rc = r2;
+    }
+    RELEASE ( Kart, result );
+    return rc;
+}
+
 rc_t KServiceSearchTest (
     const KNSManager * mgr, const char * cgi, const char * acc, ... )
 {
@@ -3995,36 +4016,4 @@ rc_t KServiceSearchTest (
     RELEASE ( KStream, stream );
     return rc;
 }
-
 /******************************************************************************/
-
-#include <stdio.h> /* printf */
-rc_t KServiceSearchTest1
-    ( const KNSManager * mgr, const char * cgi, const char * acc )
-{
-    rc_t rc = 0;
-    KService service;
-    const Kart * result = NULL;
-printf("KServiceSearchTest1: KServiceInit...\n" );
-    rc = KServiceInit ( & service, mgr );
-printf("KServiceSearchTest1: ...KServiceInit\n" );
-    if ( rc == 0 ) {
-printf("KServiceSearchTest1: KServiceAddId...\n" );
-        rc = KServiceAddId ( & service, acc );
-    }
-    if ( rc == 0 )
-printf("KServiceSearchTest1: KServiceSearchExecute...\n" );
-        rc = KServiceSearchExecute ( & service, & result );
-printf("KServiceSearchTest1: ...KServiceSearchExecute\n" );
-    {
-printf("KServiceSearchTest1: KServiceFini...\n" );
-        rc_t r2 = KServiceFini ( & service );
-printf("KServiceSearchTest1: ...KServiceFini\n" );
-        if ( rc == 0 )
-            rc = r2;
-    }
-printf("KServiceSearchTest1: RELEASE Kart...\n" );
-    RELEASE ( Kart, result );
-printf("KServiceSearchTest1: ...RELEASE Kart\n" );
-    return rc;
-}
