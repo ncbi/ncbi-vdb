@@ -3989,18 +3989,12 @@ rc_t KServiceNamesRequestTest ( const KNSManager * mgr, const char * b,
 printf("KServiceNamesRequestTest: KServiceAdd...\n" );
     while ( rc == 0 && d != NULL ) {
         if ( d -> id != NULL ) {
-printf("KServiceNamesRequestTest: KServiceAddObject(%s)...\n", d -> id );
             rc = KServiceAddObject ( service, d -> id, 0, d -> type );
-printf("KServiceNamesRequestTest: ...KServiceAddObject(%s)\n", d -> id );
         }
         if ( rc == 0 && d -> ticket != NULL ) {
-printf("KServiceNamesRequestTest: KServiceAddTicket(%s)...\n", d -> id );
             rc = KServiceAddTicket ( service, d -> ticket );
-printf("KServiceNamesRequestTest: ...KServiceAddTicket(%s)\n", d -> id );
         }
-printf("KServiceNamesRequestTest: va_arg...\n" );
         d = va_arg ( args, const SServiceRequestTestData * );
-printf("KServiceNamesRequestTest: ...va_arg\n" );
     }
 printf("KServiceNamesRequestTest: KServiceInitNamesRequest...\n" );
     if ( rc == 0 ) {
