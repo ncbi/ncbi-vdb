@@ -62,6 +62,15 @@ rc_t KSrvResponseAddLocalAndCache ( struct KSrvResponse * self, uint32_t idx,
                                     const struct VPathSet * localAndCache );
 rc_t KSrvResponseGet ( const struct KSrvResponse * self, uint32_t idx,
                        const struct VPathSet ** set );
+
+/**************************** KService ****************************************/
+/* resolve oid->file mapping inside of VFS:
+  resolve (resolve oid<->name mapping in resolver):
+   0: default VResolver's behavior
+   1: resolve
+   2: don't resolve */
+rc_t KServiceResolveName ( struct KService * service, int resolve );
+
 /**************************** KServiceNamesExecute ****************************/
 /* Execute Names Service Call using current default protocol version;
    get KSrvResponse (remote-only resolution) */
@@ -71,6 +80,7 @@ rc_t KServiceNamesExecute ( struct KService * self, VRemoteProtocols protocols,
 rc_t KServiceGetConfig ( struct KService * self, const struct KConfig ** kfg);
 rc_t KServiceGetResolver ( struct KService * self, const String * ticket,
                            VResolver ** resolver );
+int KServiceGetResolveName ( const struct KService * self );
 /******************************** TESTS ********************************/
 typedef struct {
     const char * id;
