@@ -557,14 +557,13 @@ rc_t read_lru_cache ( lru_cache * self,
                       uint64_t pos, void * buffer, size_t bsize, size_t * num_read )
 {
     rc_t rc = 0;
-
+    enum lookupres lr = NOT_FOUND;
+    
     if ( self == NULL )
         return RC ( rcFS, rcFile, rcConstructing, rcSelf, rcNull );
     if ( buffer == NULL )
         return RC ( rcFS, rcFile, rcConstructing, rcParam, rcNull );
 
-    enum lookupres lr = NOT_FOUND;
-    
     rc = KLockAcquire ( self -> lock );
     if ( rc == 0 )
     {
