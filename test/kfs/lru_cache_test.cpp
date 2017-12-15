@@ -304,7 +304,6 @@ TEST_CASE( LRU_Cache_Test_Random_Reading )
     REQUIRE( events . requests >= 200 );
     REQUIRE( events . found < 200 && events . found > 0 );
     REQUIRE( events . enter < 200 && events . enter > 0 );    
-    REQUIRE( events . failed == 0 );
 
     KFileRelease( cache );
     KFileRelease( org );
