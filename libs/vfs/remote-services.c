@@ -4027,8 +4027,8 @@ printf("KServiceNamesRequestTest: KServiceProcessStream...\n" );
 printf("KServiceNamesRequestTest: KServiceGetResponse...\n" );
         rc = KServiceGetResponse ( service, & l );
         if ( rc == 0 ) {
-printf("KServiceNamesRequestTest: KSrvResponseLength...\n" );
             uint32_t i = 0;
+printf("KServiceNamesRequestTest: KSrvResponseLength...\n" );
             uint32_t n = KSrvResponseLength ( l );
             for ( i = 0; rc == 0 && i < n; ++i ) {
                 const VPathSet * s = NULL;
