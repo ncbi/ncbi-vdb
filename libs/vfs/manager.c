@@ -58,7 +58,11 @@
 #include <kfs/buffile.h>
 #include <kfs/quickmount.h>
 #include <kfs/cacheteefile.h>
+#include <kfs/cachetee2file.h>
+#include <kfs/rrcachedfile.h>
+#include <kfs/recorder.h>
 #include <kfs/lockfile.h>
+#include <kfs/logfile.h>
 #include <kfs/defs.h>
 
 #include <kns/http.h>
@@ -91,9 +95,6 @@
 #else
 #define MGR_DEBUG(msg)
 #endif
-
-
-#define DEFAULT_CACHE_BLOCKSIZE ( 32768 * 4 )
 
 #define VFS_KRYPTO_PASSWORD_MAX_SIZE 4096
 
@@ -213,6 +214,191 @@ LIB_EXPORT rc_t CC VFSManagerRelease ( const VFSManager *self )
 }
 
 
+typedef struct caching_params
+{
+    uint32_t version;     /* 0 ... use cachetee ( older )
+                             1 ... use cachetee2 ( newer )
+                             2 ... use rrcache ( ram-only )
+                             3 ... use logfile ( just logging )
+                             */
+    size_t cache_page_size;
+    uint32_t cache_page_count;
+    uint32_t use_cwd;       /* use the current working directory if not cach-location is given */
+    uint32_t append;        /* append to existing recording 0...no - 1...yes */
+    uint32_t timed;         /* record timing 0...no - 1...yes */
+    uint32_t record_inner;  /* record the request made before the cache */    
+    uint32_t record_outer;  /* record the request made after the cache */
+} caching_params;
+
+#define DEFAULT_CACHE_PAGE_SIZE ( 32 * 1024 )
+#define DEFAULT_CACHE_PAGE_COUNT ( 10 * 1024 )
+
+static void get_caching_params( caching_params * params )
+{
+    KConfig * cfg;
+    rc_t rc = KConfigMake ( &cfg, NULL );
+
+    /* set some default values... */
+    params -> version = 0;
+    params -> cache_page_size = DEFAULT_CACHE_PAGE_SIZE;
+    params -> cache_page_count = DEFAULT_CACHE_PAGE_COUNT;
+    params -> use_cwd = 0;
+    params -> append = 0;
+    params -> timed = 0;
+    params -> record_inner = 0;    
+    params -> record_outer = 0;
+
+    if ( rc == 0 )
+    {
+        uint64_t value;
+        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/CACHETEEVER", &value );
+        if ( rc == 0 )
+            params -> version = (uint32_t)( value & 0x3 );
+
+        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/BLOCKSIZE", &value );
+        if ( rc == 0 )
+            params -> cache_page_size = (size_t)( value & 0xFFFFFFFF );
+
+        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/PAGECOUNT", &value );
+        if ( rc == 0 )
+            params -> cache_page_count = (uint32_t)( value & 0xFFFFFFFF );
+
+        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/USE_CWD", &value );
+        if ( rc == 0 )
+            params -> use_cwd = (uint32_t)( value & 0x1 );
+
+        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/APPEND", &value );
+        if ( rc == 0 )
+            params -> append = (uint32_t)( value & 0x1 );
+
+        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/TIMED", &value );
+        if ( rc == 0 )
+            params -> timed = (uint32_t)( value & 0x1 );
+
+        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/OUTER", &value );
+        if ( rc == 0 )
+            params -> record_outer = (uint32_t)( value & 0x1 );
+
+        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/INNER", &value );
+        if ( rc == 0 )
+            params -> record_inner = (uint32_t)( value & 0x1 );
+
+        KConfigRelease ( cfg );
+    }
+}
+
+static const char * extract_acc_from_url( const char * url )
+{
+    char * res = string_rchr ( url, string_size( url ), '/' );
+    if ( res != NULL )
+        return ++res;
+    return url;
+}
+
+static rc_t wrap_in_logfile( KDirectory * dir,
+                             const KFile **cfp,
+                             const char * loc,
+                             const char * fmt,
+                             const caching_params * cps )
+{
+    const KFile * temp_file;
+    const char * rec_loc = cps -> use_cwd ? extract_acc_from_url( loc ) : loc;
+    rc_t rc = MakeLogFile ( dir,
+                            &temp_file,
+                            ( KFile * )*cfp,
+                            cps -> append > 0,
+                            cps -> timed > 0,
+                            fmt,
+                            rec_loc );
+    if ( rc == 0 )
+    {
+        KFileRelease ( * cfp );
+        * cfp = temp_file;
+    }
+    return rc;
+}
+
+static rc_t wrap_in_cachetee( KDirectory * dir,
+                              const KFile **cfp,
+                              const char * loc,
+                              const caching_params * cps )
+{
+    rc_t rc = 0;
+    if ( cps -> record_outer )
+        rc = wrap_in_logfile( dir, cfp, loc, "%s.outer.rec", cps );
+    if ( rc == 0 )
+    {
+        const KFile * temp_file;
+        rc = KDirectoryMakeCacheTee ( dir,
+                                      &temp_file,
+                                      *cfp,
+                                      cps -> cache_page_size,
+                                      "%s",
+                                      loc );
+        if ( rc == 0 )
+        {
+            KFileRelease ( * cfp );
+            * cfp = temp_file;
+
+            if ( cps -> record_inner )
+                rc = wrap_in_logfile( dir, cfp, loc, "%s.inner.rec", cps );
+        }
+    }
+    return rc;
+}
+
+static rc_t wrap_in_cachetee2( KDirectory * dir,
+                               const KFile **cfp,
+                               const char * loc,
+                               const caching_params * cps )
+{
+    rc_t rc = 0;
+    if ( cps -> record_outer )
+        rc = wrap_in_logfile( dir, cfp, loc, "%s.outer.rec", cps );
+    if ( rc == 0 )
+    {
+        const KFile * temp_file;
+        rc_t rc = KDirectoryMakeCacheTee2 ( dir,
+                                            &temp_file,
+                                            *cfp,
+                                            cps -> cache_page_size,
+                                            "%s",
+                                            loc );
+        if ( rc == 0 )
+        {
+            KFileRelease ( * cfp );
+            * cfp = temp_file;
+            
+            if ( cps -> record_inner )
+                rc = wrap_in_logfile( dir, cfp, loc, "%s.inner.rec", cps );
+        }
+    }
+    return rc;
+}
+
+static rc_t wrap_in_rr_cache( KDirectory * dir,
+                              const KFile **cfp,
+                              const char * loc,
+                              const caching_params * cps )
+{
+    rc_t rc = 0;
+    if ( cps -> record_outer )
+        rc = wrap_in_logfile( dir, cfp, loc, "%s.outer.rec", cps );
+    if ( rc == 0 )
+    {
+        const KFile * temp_file;
+        rc_t rc = MakeRRCached ( &temp_file, *cfp, cps -> cache_page_size, cps -> cache_page_count );
+        if ( rc == 0 )
+        {
+            KFileRelease ( * cfp );
+            * cfp = temp_file;
+
+            if ( cps -> record_inner )
+                rc = wrap_in_logfile( dir, cfp, loc, "%s.inner.rec", cps );
+        }
+    }
+    return rc;
+}
 
 /*--------------------------------------------------------------------------
  * VFSManagerMakeHTTPFile
@@ -223,23 +409,40 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self, const KFile **cfp,
                              bool high_reliability )
 {
     rc_t rc;
-
+    
     if ( high_reliability )
         rc = KNSManagerMakeReliableHttpFile ( self -> kns, cfp, NULL, 0x01010000, url );
     else
         rc = KNSManagerMakeHttpFile ( self -> kns, cfp, NULL, 0x01010000, url );
 
-    if ( rc == 0 && cache_location != NULL )
+    /* in case we are not able to open the remote-file : return with error-code */
+    if ( rc == 0 )
     {
-		const KFile *temp_file;
-		/* we do have a cache_location! wrap the remote file in a cacheteefile */
-		rc_t rc2 = KDirectoryMakeCacheTee ( self->cwd, &temp_file, *cfp,
-											DEFAULT_CACHE_BLOCKSIZE, "%s", cache_location );
-												
-        if ( rc2 == 0 )
+        /* let's try to get some details about how to do caching from the configuration */    
+        caching_params cps;
+        get_caching_params( &cps );
+
+        if ( cache_location == NULL )
         {
-            KFileRelease ( * cfp );
-            * cfp = temp_file;
+            /* the user has turned off caching... ( we should not make a cache-tee )*/
+            switch( cps . version )
+            {
+                case 0 : ;  /* fall-through into rr-cache !!! */
+                case 1 : ;  /* fall-through into rr-cache !!! */
+                case 2 : rc = wrap_in_rr_cache( self -> cwd, cfp, extract_acc_from_url( url ), &cps ); break;
+                case 3 : rc = wrap_in_logfile( self -> cwd, cfp, extract_acc_from_url( url ), "%s.rec", &cps ); break;
+            }
+        }
+        else
+        {
+            /* the user has tunrd on caching... */
+            switch( cps . version )
+            {
+                case 0 : rc = wrap_in_cachetee( self -> cwd, cfp, cache_location, &cps ); break;
+                case 1 : rc = wrap_in_cachetee2( self -> cwd, cfp, cache_location, &cps ); break;
+                case 2 : rc = wrap_in_rr_cache( self -> cwd, cfp, cache_location, &cps ); break;
+                case 3 : rc = wrap_in_logfile( self -> cwd, cfp, cache_location, "%s.rec", &cps ); break;
+            }
         }
     }
     return rc;
@@ -1140,6 +1343,7 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
         }
         else
         {
+            /* no resolver has been found ---> we cannot do caching! */
             rc = VFSManagerMakeHTTPFile( self, f, uri->addr, NULL, high_reliability );
         }
         free( ( void * )uri );
