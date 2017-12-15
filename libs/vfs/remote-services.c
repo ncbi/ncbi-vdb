@@ -3986,7 +3986,7 @@ rc_t KServiceNamesRequestTest ( const KNSManager * mgr, const char * b,
     KStream * stream = NULL;
     rc_t rc = KServiceMakeWithMgr ( & service, mgr);
     va_start ( args, d );
-printf("KServiceNamesRequestTest: KServiceAdd, 'd!=NULL'=%d...\n", d != NULL );
+printf("KServiceNamesRequestTest: KServiceAdd...\n" );
     while ( rc == 0 && d != NULL ) {
         if ( d -> id != NULL ) {
 printf("KServiceNamesRequestTest: KServiceAddObject(%s)...\n", d -> id );
