@@ -4017,9 +4017,8 @@ printf("KServiceSearchTest1: KServiceSearchExecute...\n" );
         rc = KServiceSearchExecute ( & service, & result );
 printf("KServiceSearchTest1: ...KServiceSearchExecute\n" );
     {
-        rc_t r2 = 0;
 printf("KServiceSearchTest1: KServiceFini...\n" );
-        r2 = KServiceFini ( & service );
+        rc_t r2 = KServiceFini ( & service );
 printf("KServiceSearchTest1: ...KServiceFini\n" );
         if ( rc == 0 )
             rc = r2;
