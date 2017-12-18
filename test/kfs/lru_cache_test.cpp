@@ -37,7 +37,7 @@
 #include <kfs/file.h>
 #include <kfs/rrcachedfile.h>
 
-static uint32_t rand_32( uint32_t min, uint32_t max )
+static size_t rand_32( size_t min, size_t max )
 {
        double scaled = ( ( double )rand() / RAND_MAX );
        return ( ( max - min + 1 ) * scaled ) + min;
@@ -128,7 +128,6 @@ TEST_SUITE( LRU_Cache_Test );
 
 #define PAGE_SIZE 128 * 1024
 #define PAGE_COUNT 1024 
-#define DATAFILE "data.txt"
 
 TEST_CASE( LRU_Cache_Test_Basic )
 {
@@ -139,17 +138,18 @@ TEST_CASE( LRU_Cache_Test_Basic )
     REQUIRE_RC_FAIL( MakeRRCached ( NULL, NULL, 0, PAGE_COUNT ) );
     REQUIRE_RC_FAIL( MakeRRCached ( NULL, NULL, PAGE_SIZE, 0 ) );
     
-	KDirectory * dir;
-	REQUIRE_RC( KDirectoryNativeDir( &dir ) );
-    
+    KDirectory * dir;
+    REQUIRE_RC( KDirectoryNativeDir( &dir ) );
+
+    const char * filename = "./LRU_Cache_Test_Basic.txt";
     KFile * file;
 
-    REQUIRE_RC( KDirectoryCreateFile ( dir, &file, false, 0664, kcmInit, DATAFILE ) );
+    REQUIRE_RC( KDirectoryCreateFile ( dir, &file, false, 0664, kcmInit, filename ) );
     REQUIRE_RC( fill_file_with_random_data( file, PAGE_SIZE * 2 ) );
     KFileRelease( file );
 
     const KFile * org;
-    REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE ) );
+    REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", filename ) );
     
     REQUIRE_RC_FAIL( MakeRRCached ( NULL, org, 0, 0L ) );
     REQUIRE_RC_FAIL( MakeRRCached ( NULL, org, PAGE_SIZE, PAGE_COUNT ) );
@@ -164,9 +164,9 @@ TEST_CASE( LRU_Cache_Test_Basic )
     REQUIRE_RC( MakeRRCached ( &cache, org, PAGE_SIZE, PAGE_COUNT ) );
     
     KFileRelease( cache );
-    KDirectoryRemove ( dir, true, "%s", DATAFILE );
+    KDirectoryRemove ( dir, true, "%s", filename );
     
-	REQUIRE_RC( KDirectoryRelease( dir ) );
+    REQUIRE_RC( KDirectoryRelease( dir ) );
 }
 
 typedef struct events
@@ -218,14 +218,15 @@ TEST_CASE( LRU_Cache_Test_Linear_Reading )
 	KDirectory * dir;
 	REQUIRE_RC( KDirectoryNativeDir( &dir ) );
 
+    const char * filename = "./LRU_Cache_Test_Linear_Reading.txt";
     KFile * file;
 
-    REQUIRE_RC( KDirectoryCreateFile ( dir, &file, false, 0664, kcmInit, DATAFILE ) );
+    REQUIRE_RC( KDirectoryCreateFile ( dir, &file, false, 0664, kcmInit, filename ) );
     REQUIRE_RC( fill_file_with_random_data( file, PAGE_SIZE * 10 ) );
-    KFileRelease( file );
+    REQUIRE_RC( KFileRelease( file ) );
 
     const KFile * org;
-    REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE ) );
+    REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", filename ) );
 
     const KFile * cache;
     REQUIRE_RC( MakeRRCached ( &cache, org, 64 * 1024, 22 ) );
@@ -241,15 +242,16 @@ TEST_CASE( LRU_Cache_Test_Linear_Reading )
     REQUIRE_RC( compare_file_content( org, cache, 0, file_size ) );
     REQUIRE_RC( compare_file_content( org, cache, 0, file_size ) );
 
+    REQUIRE_RC( KFileRelease( cache ) );
+    REQUIRE_RC( KFileRelease( org ) );
+    
     REQUIRE( events . requests == 21 );
     REQUIRE( events . found == 20 );
     REQUIRE( events . enter == 21 );    
     REQUIRE( events . discard == 0 );
     REQUIRE( events . failed == 0 );
     
-    KFileRelease( cache );
-
-    REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE ) );    
+    REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", filename ) );    
     REQUIRE_RC( MakeRRCached ( &cache, org, 64 * 1024, 20 ) );
     memset( &events, 0, sizeof events );
     REQUIRE_RC( SetRRCachedEventHandler( cache, &events, on_event ) );
@@ -263,9 +265,9 @@ TEST_CASE( LRU_Cache_Test_Linear_Reading )
     REQUIRE( events . discard == 21 );
     REQUIRE( events . failed == 0 );
 
-    KFileRelease( cache );
-    KFileRelease( org );    
-    KDirectoryRemove ( dir, true, "%s", DATAFILE );
+    REQUIRE_RC( KFileRelease( cache ) );
+    REQUIRE_RC( KFileRelease( org ) );
+    REQUIRE_RC( KDirectoryRemove ( dir, true, "%s", filename ) );
 	REQUIRE_RC( KDirectoryRelease( dir ) );
 }
 
@@ -276,15 +278,16 @@ TEST_CASE( LRU_Cache_Test_Random_Reading )
 	KDirectory * dir;
 	REQUIRE_RC( KDirectoryNativeDir( &dir ) );
 
+    const char * filename = "./LRU_Cache_Test_Random_Reading.txt";    
     KFile * file;
 
     size_t file_size = PAGE_SIZE * 10;
-    REQUIRE_RC( KDirectoryCreateFile ( dir, &file, false, 0664, kcmInit, DATAFILE ) );
+    REQUIRE_RC( KDirectoryCreateFile ( dir, &file, false, 0664, kcmInit, filename ) );
     REQUIRE_RC( fill_file_with_random_data( file, file_size ) );
-    KFileRelease( file );
+    REQUIRE_RC( KFileRelease( file ) );
 
     const KFile * org;
-    REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE ) );
+    REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", filename ) );
 
     const KFile * cache;
     REQUIRE_RC( MakeRRCached ( &cache, org, 64 * 1024, 20 ) );
@@ -297,17 +300,18 @@ TEST_CASE( LRU_Cache_Test_Random_Reading )
     for ( int i = 0; i < 200; ++i )
     {
         size_t bsize = rand_32( 100, 5000 );
-        uint64_t pos = rand_32( 0, file_size - 1000 );
+        uint64_t pos = rand_32( 0, file_size - bsize );
         REQUIRE_RC( compare_file_content( org, cache, pos, bsize ) );
     }
 
     REQUIRE( events . requests >= 200 );
     REQUIRE( events . found < 200 && events . found > 0 );
     REQUIRE( events . enter < 200 && events . enter > 0 );    
-
-    KFileRelease( cache );
-    KFileRelease( org );
-    KDirectoryRemove ( dir, true, "%s", DATAFILE );
+    REQUIRE( events . failed == 0 );
+    
+    REQUIRE_RC( KFileRelease( cache ) );
+    REQUIRE_RC( KFileRelease( org ) );
+    REQUIRE_RC( KDirectoryRemove ( dir, true, "%s", filename ) );
 	REQUIRE_RC( KDirectoryRelease( dir ) );
 }
 
