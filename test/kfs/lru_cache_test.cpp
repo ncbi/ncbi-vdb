@@ -244,13 +244,15 @@ TEST_CASE( LRU_Cache_Test_Linear_Reading )
 
     REQUIRE_RC( KFileRelease( cache ) );
     REQUIRE_RC( KFileRelease( org ) );
-    
+
+#if _DEBUGGING
     REQUIRE( events . requests == 21 );
     REQUIRE( events . found == 20 );
     REQUIRE( events . enter == 21 );    
     REQUIRE( events . discard == 0 );
     REQUIRE( events . failed == 0 );
-    
+#endif
+
     REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", filename ) );    
     REQUIRE_RC( MakeRRCached ( &cache, org, 64 * 1024, 20 ) );
     memset( &events, 0, sizeof events );
@@ -259,11 +261,13 @@ TEST_CASE( LRU_Cache_Test_Linear_Reading )
     REQUIRE_RC( compare_file_content( org, cache, 0, file_size ) );
     REQUIRE_RC( compare_file_content( org, cache, 0, file_size ) );
 
+#if _DEBUGGING
     REQUIRE( events . requests == 21 );
     REQUIRE( events . found == 0 );
     REQUIRE( events . enter == 41 );    
     REQUIRE( events . discard == 21 );
     REQUIRE( events . failed == 0 );
+#endif
 
     REQUIRE_RC( KFileRelease( cache ) );
     REQUIRE_RC( KFileRelease( org ) );
@@ -304,11 +308,13 @@ TEST_CASE( LRU_Cache_Test_Random_Reading )
         REQUIRE_RC( compare_file_content( org, cache, pos, bsize ) );
     }
 
+#if _DEBUGGING
     REQUIRE( events . requests >= 200 );
     REQUIRE( events . found < 200 && events . found > 0 );
     REQUIRE( events . enter < 200 && events . enter > 0 );    
     REQUIRE( events . failed == 0 );
-    
+#endif
+
     REQUIRE_RC( KFileRelease( cache ) );
     REQUIRE_RC( KFileRelease( org ) );
     REQUIRE_RC( KDirectoryRemove ( dir, true, "%s", filename ) );
