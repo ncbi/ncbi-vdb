@@ -25,6 +25,7 @@
 */
 
 
+#include "resolver-priv.h" /* VResolverResolveName */
 #include "path-priv.h" /* EVPathInitError */
 #include "services-priv.h" /* KServiceGetResolver */
 #include <kfg/config.h> /* KConfigRelease */
@@ -42,7 +43,7 @@
 typedef struct {
     BSTNode n;
     const String * ticket;
-    const VResolver * resolver;
+    VResolver * resolver;
 } BSTItem;
 
 static void BSTItemWhack ( BSTNode * n, void * ignore ) {
@@ -54,6 +55,8 @@ static void BSTItemWhack ( BSTNode * n, void * ignore ) {
     VResolverRelease ( i -> resolver );
 
     memset ( i, 0, sizeof * i );
+
+    free ( i );
 }
 
 static int64_t CC BSTItemCmp ( const void * item, const BSTNode * n ) {
@@ -116,7 +119,7 @@ static rc_t HFini ( H * self ) {
 }
 
 static rc_t HResolver ( H * self, const String * ticket,
-                        const VResolver ** resolver )
+                        VResolver ** resolver )
 {
     rc_t rc = 0;
 
@@ -131,7 +134,9 @@ static rc_t HResolver ( H * self, const String * ticket,
         else {
             VResolver * resolver = NULL;
             rc = KServiceGetResolver ( self -> service, ticket, & resolver );
-            if ( rc == 0 ) {
+            if ( rc != 0 )
+                return rc;
+            else {
                 i = calloc ( 1, sizeof * i );
                 if ( i == NULL )
                     return RC (
@@ -242,20 +247,26 @@ rc_t KServiceNamesQueryExt ( KService * self, VRemoteProtocols protocols,
                 const KSrvError * error = NULL;
                 rc = KSrvResponseGetPath
                     ( response, i, protocols, & path, NULL, & error );
-                if ( error == NULL && rc == 0 ) {
-                    const VResolver * resolver = NULL;
-                    String id;
-                    String ticket;
-                    rc = VPathGetId ( path, & id );
-                    if ( rc == 0 )
-                        rc = VPathGetTicket ( path, & ticket );
-                    if ( rc == 0 )
-                        rc = HResolver ( & h, & ticket, & resolver );
-                    if ( rc == 0 ) {
-                        assert ( resolver );
-                        rc = VResolversQuery ( resolver, h . mgr,
-                                                protocols, & id, & vps );
+                if ( rc == 0 ) {
+                    if ( error == NULL ) {
+                        VResolver * resolver = NULL;
+                        String id;
+                        String ticket;
+                        rc = VPathGetId ( path, & id );
+                        if ( rc == 0 )
+                            rc = VPathGetTicket ( path, & ticket );
+                        if ( rc == 0 )
+                            rc = HResolver ( & h, & ticket, & resolver );
+                        if ( rc == 0 ) {
+                            assert ( resolver );
+                            VResolverResolveName ( resolver,
+                                           KServiceGetResolveName ( self ) );
+                            rc = VResolversQuery ( resolver, h . mgr,
+                                                   protocols, & id, & vps );
+                        }
                     }
+                    else
+                        RELEASE ( KSrvError, error );
                 }
                 if ( vps != NULL ) {
                     rc = KSrvResponseAddLocalAndCache ( response, i, vps );

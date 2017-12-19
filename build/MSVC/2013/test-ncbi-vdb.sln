@@ -99,6 +99,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-kfs_ramfile", "test-kf
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-kfs_resolve", "test-kfs_resolve.vcxproj", "{9C8F1BFC-2830-55D5-A722-1551B4208999}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-kfs_cache2", "test-kfs_cache2.vcxproj", "{9C8F1BFC-2830-55D5-A722-1551B4208999}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-kfs_lru", "test-kfs_lru.vcxproj", "{9C8F1BFC-2830-55D5-A722-1551B4208999}"
+EndProject
+
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
