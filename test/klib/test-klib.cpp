@@ -45,6 +45,7 @@
 #include <set>
 #include <stdexcept>
 #include <stdint.h>
+#include <stdio.h>
 #include <sys/time.h>
 #include <unistd.h>
 #include <unordered_map>
@@ -53,7 +54,7 @@
 
 using namespace std;
 
-//#define BENCHMARK
+#define BENCHMARK
 
 TEST_SUITE(KlibTestSuite);
 
@@ -384,18 +385,30 @@ static unsigned long stopwatch(void)
     return elapsed;
 }
 
+static uint64_t* benchkeys = NULL;
+static const size_t numbenchkeys = 1 << 26;
+
+static void make_benchkeys(void)
+{
+    if (benchkeys == NULL) {
+        benchkeys = (uint64_t*)calloc(8, numbenchkeys);
+
+        for (size_t i = 0; i != numbenchkeys; ++i)
+            benchkeys[i] = random() * random() + random();
+    }
+}
+
 TEST_CASE(Klib_stdunorderedSetBench)
 {
+    make_benchkeys();
     std::unordered_set<uint64_t> hset;
 
     for (unsigned long numelem = 4; numelem < (1ULL << 26); numelem *= 2) {
         hset.clear();
 
         stopwatch();
-        uint64_t val = 0;
         for (size_t i = 0; i != numelem; i++) {
-            hset.insert(val);
-            val += 1;
+            hset.insert(benchkeys[i]);
         }
         size_t sz = hset.size();
         REQUIRE_EQ(sz, (size_t)numelem);
@@ -405,33 +418,30 @@ TEST_CASE(Klib_stdunorderedSetBench)
 
         stopwatch();
         long loops = 1000000;
-        val = 0;
         uint64_t c = 0;
         for (long loop = 0; loop != loops; loop++) {
-            c += hset.count(val);
-            val += 1;
+            c += hset.count(loop);
         }
         unsigned long us = stopwatch();
 
         printf("Found %lu,", c);
-        uint64_t lps = 1000000 * loops / us;
-        printf("numelem=%lu\t%lu lookups/sec, ", numelem, lps);
+        double lps = (double)loops / us;
+        printf("numelem=%lu\t%.1f Mlookups/sec, ", numelem, lps);
         printf("load factor %f,", hset.load_factor());
-        printf("buckets %d,", hset.bucket_count());
+        printf("buckets %ld,", hset.bucket_count());
 
         stopwatch();
         c = 0;
         for (long loop = 0; loop != loops; loop++) {
-            c += hset.count(val);
-            val = random();
+            c += hset.count(benchkeys[loop]);
         }
         us = stopwatch();
 
         printf("Random found %lu,", c);
-        lps = 1000000 * loops / us;
-        printf("numelem=%lu\t%lu lookups/sec, ", numelem, lps);
+        lps = (double)loops / us;
+        printf("\t%.1f Mlookups/sec, ", lps);
         printf("load factor %f,", hset.load_factor());
-        printf("buckets %d,", hset.bucket_count());
+        printf("buckets %ld,", hset.bucket_count());
         printf("\n");
     }
     printf("\n");
@@ -439,49 +449,53 @@ TEST_CASE(Klib_stdunorderedSetBench)
 
 TEST_CASE(Klib_JudyBench)
 {
+    make_benchkeys();
     KVector* kv;
     for (unsigned long numelem = 4; numelem != (1ULL << 26); numelem *= 2) {
         KVectorMake(&kv);
 
         stopwatch();
-        uint64_t val = 12312431241;
         for (size_t i = 0; i != numelem; i++) {
-            val += 3;
-            KVectorSetU64(kv, i, val);
+            uint64_t key = benchkeys[i];
+            uint64_t val = i + 1;
+            KVectorSetU64(kv, key, val);
         }
+        printf("Judy ");
+        printf("required %lu ms to insert %lu\n", stopwatch() / 1000,
+               numelem);
 
         stopwatch();
         unsigned long loops = 1000000;
-        val = 12312431241;
         unsigned long c = 0;
-        for (long loop = 0; loop != loops; loop++) {
-            val += 3;
-            size_t found=0;
-            KVectorGetU64(kv, loop, &found);
-            if (found && found != val) fprintf(stderr, "miss %ld %ld\n", val, found);
+        for (unsigned long loop = 0; loop != loops; loop++) {
+            uint64_t key = loop;
+            uint64_t val = loop + 1;
+            size_t found = 0;
+            rc_t rc = KVectorGetU64(kv, key, &found);
+            if (found && found != val)
+                fprintf(stderr, "miss %ld %ld\n", val, found);
 
-            c += (found==val);
+            c += (rc == 0);
         }
         unsigned long us = stopwatch();
 
         printf("Judy Found %lu,", c);
-        uint64_t lps = 1000000 * loops / us;
-        printf("numelem=%lu\t%lu lookups/sec, ", numelem, lps);
+        double lps = (double)loops / us;
+        printf("numelem=%lu\t %.1f Mlookups/sec, ", numelem, lps);
 
         stopwatch();
         c = 0;
-        val=0;
-        for (long loop = 0; loop != loops; loop++) {
-            val=random();
-            size_t found=0;
-            KVectorGetU64(kv, val, &found);
-            if (found) fprintf(stderr,"hit %ld %ld\n", val, found);
+        for (unsigned long loop = 0; loop != loops; loop++) {
+            uint64_t key = benchkeys[loop];
+            size_t found = 0;
+            KVectorGetU64(kv, key, &found);
+            c += (found != 0);
         }
         us = stopwatch();
 
         printf("Random %lu,", c);
-        lps = 1000000 * loops / us;
-        printf("numelem=%lu\t%lu lookups/sec, ", numelem, lps);
+        lps = (double)loops / us;
+        printf("\t%.1f Mlookups/sec, ", lps);
         printf("\n");
 
         KVectorRelease(kv);
@@ -491,25 +505,26 @@ TEST_CASE(Klib_JudyBench)
 
 TEST_CASE(Klib_HashMapBench)
 {
-    KHashTable hset;
+    make_benchkeys();
+    KHashTable hmap;
 
     for (unsigned long numelem = 4; numelem != (1ULL << 26); numelem *= 2) {
-        rc_t rc = KHashTableInit(&hset, 8, 0, 0, 0.0, false);
+        rc_t rc = KHashTableInit(&hmap, 8, 8, 0, 0.0, false);
         REQUIRE_RC(rc);
 
-        size_t sz = KHashTableCount(&hset);
+        size_t sz = KHashTableCount(&hmap);
         REQUIRE_EQ(sz, (size_t)0);
 
         stopwatch();
-        uint64_t val = 0;
         for (size_t i = 0; i != numelem; i++) {
-            uint64_t hash = KHash((char*)&val, 8);
-            rc = KHashTableAdd(&hset, &val, hash, (void*)NULL);
+            uint64_t key = benchkeys[i];
+            uint64_t hash = KHash((char*)&key, 8);
+            uint64_t val = i;
+            rc = KHashTableAdd(&hmap, &key, hash, (void*)&val);
             // Don't invoke REQUIRE_RC, affects benchmark
             //            REQUIRE_RC(rc);
-            val += 1;
         }
-        sz = KHashTableCount(&hset);
+        sz = KHashTableCount(&hmap);
         REQUIRE_EQ(sz, (size_t)numelem);
         printf("KHashTable ");
         printf("required %lu ms to insert %lu\n", stopwatch() / 1000,
@@ -517,44 +532,42 @@ TEST_CASE(Klib_HashMapBench)
 
         stopwatch();
         unsigned long loops = 1000000;
-        val = 0;
         unsigned long c = 0;
-        for (long loop = 0; loop != loops; loop++) {
-            uint64_t hash = KHash((char*)&val, 8);
-            bool found = KHashTableFind(&hset, &val, hash, NULL);
+        for (unsigned long loop = 0; loop != loops; loop++) {
+            uint64_t key = loop;
+            uint64_t hash = KHash((char*)&key, 8);
+            uint64_t val;
+            bool found = KHashTableFind(&hmap, &key, hash, &val);
             c += found;
-            val += 1;
         }
         unsigned long us = stopwatch();
 
         printf("Found %lu,", c);
-        uint64_t lps = 1000000 * loops / us;
-        printf("numelem=%lu\t%lu lookups/sec, ", numelem, lps);
-        double lf = KHashTableGetLoadFactor(&hset);
-        printf("load factor %f,", lf);
+        double lps = (double)loops / us;
+        printf("numelem=%lu\t %.1f Mlookups/sec, ", numelem, lps);
+
+        stopwatch();
+        c = 0;
+        for (unsigned long loop = 0; loop != loops; loop++) {
+            uint64_t key = benchkeys[loop];
+            uint64_t hash = KHash((char*)&key, 8);
+            uint64_t val;
+            bool found = KHashTableFind(&hmap, &key, hash, &val);
+            c += found;
+        }
+        us = stopwatch();
 
         if (numelem <= loops)
             REQUIRE_EQ(c, numelem);
         else
             REQUIRE_EQ(c, loops);
 
-        stopwatch();
-        c = 0;
-        for (long loop = 0; loop != loops; loop++) {
-            uint64_t hash = KHash((char*)&val, 8);
-            bool found = KHashTableFind(&hset, &val, hash, NULL);
-            val = random();
-        }
-        us = stopwatch();
-
         printf("Random %lu,", c);
-        lps = 1000000 * loops / us;
-        printf("numelem=%lu\t%lu lookups/sec, ", numelem, lps);
-        lf = KHashTableGetLoadFactor(&hset);
-        printf("load factor %f,", lf);
+        lps = (double)loops / us;
+        printf("\t%.1f Mlookups/sec, ", lps);
         printf("\n");
 
-        KHashTableWhack(&hset, NULL, NULL, NULL);
+        KHashTableWhack(&hmap, NULL, NULL, NULL);
     }
     printf("\n");
 }
@@ -562,14 +575,14 @@ TEST_CASE(Klib_HashMapBench)
 TEST_CASE(Klib_KHash_Speed)
 {
     char key[8192];
-    long loops = 1000000;
+    unsigned long loops = 1000000;
 
     for (uint64_t i = 0; i != sizeof(key); i++) key[i] = random();
 
     long len = 4;
     while (len < 10000) {
         stopwatch();
-        for (uint64_t i = 0; i != loops; i++) KHash(key, len);
+        for (unsigned long i = 0; i != loops; i++) KHash(key, len);
 
         unsigned long us = stopwatch();
         unsigned long hps = 1000000 * loops / us;
@@ -584,7 +597,7 @@ TEST_CASE(Klib_KHash_Speed)
 TEST_CASE(Klib_string_hash_Speed)
 {
     char key[8192];
-    long loops = 1000000;
+    unsigned long loops = 1000000;
 
     for (uint64_t i = 0; i != sizeof(key); i++) key[i] = random();
 
@@ -606,7 +619,7 @@ TEST_CASE(Klib_string_hash_Speed)
 
 TEST_CASE(Klib_std_hash_Speed)
 {
-    long loops = 1000000;
+    unsigned long loops = 1000000;
     string str = "1234";
 
     std::size_t hash = 0;

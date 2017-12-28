@@ -42,10 +42,11 @@ extern "C" {
 typedef struct KHashTable
 {
     void* buckets;
-    uint64_t mask;        // precomputed (1 << lg2(num_buckets+1))-1, to avoid
-                          // ffsll(num_buckets)
+    uint64_t mask; // precomputed (1 << lg2(num_buckets+1))-1, to avoid
+                   // ffsll(num_buckets)
     size_t key_size;
     size_t value_size;
+    size_t bucket_size;
     size_t num_buckets; // Always a power of 2
     size_t count;
     double max_load_factor;

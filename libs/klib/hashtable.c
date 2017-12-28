@@ -77,10 +77,13 @@ LIB_EXPORT rc_t CC KHashTableInit(KHashTable* self, size_t key_size,
     self->count = 0;
     self->key_cstr = key_cstr;
 
-    size_t bucket_size = 8 + self->key_size + self->value_size;
+    self->bucket_size = 8 + self->key_size + self->value_size;
     // keyhash (u64) + key + value, MSB of byckethash initially set to 0 for
     // invalid
-    self->buckets = calloc(1, self->num_buckets * bucket_size);
+
+    // Round up for alignment. Benchmarks say not worthwhile: 5% slower
+    // self->bucket_size = (self->bucket_size + 7) & ~7ULL;
+    self->buckets = calloc(1, self->num_buckets * self->bucket_size);
     if (!self->buckets)
         return RC(rcCont, rcHashtable, rcConstructing, rcMemory, rcExhausted);
 
@@ -101,6 +104,7 @@ KHashTableWhack(KHashTable* self, void(CC* keywhack)(void* item, void* data),
     self->key_size = 0;
     self->value_size = 0;
     self->num_buckets = 0;
+    self->bucket_size = 0;
     self->count = 0;
     self->mask = 0;
     free(self->buckets);
@@ -123,7 +127,7 @@ static rc_t resize(KHashTable* self)
     void* old_buckets = self->buckets;
     size_t old_num_buckets = self->num_buckets;
     self->num_buckets *= 2;
-    size_t bucket_size = 8 + self->key_size + self->value_size;
+    size_t bucket_size = self->bucket_size;
     void* new_buckets = calloc(1, self->num_buckets * bucket_size);
     if (!new_buckets)
         return RC(rcCont, rcHashtable, rcInserting, rcMemory, rcExhausted);
@@ -168,7 +172,7 @@ LIB_EXPORT bool CC KHashTableFind(const KHashTable* self, const void* key,
     uint64_t bucket = keyhash;
     const uint64_t mask = self->mask;
     const char* buckets = (const char*)self->buckets;
-    const size_t bucket_size = 8 + self->key_size + self->value_size;
+    const size_t bucket_size = self->bucket_size;
     const bool key_cstr = self->key_cstr;
     const size_t key_size = self->key_size;
     const size_t value_size = self->value_size;
@@ -232,7 +236,7 @@ LIB_EXPORT rc_t CC KHashTableAdd(KHashTable* self, const void* key,
     uint64_t bucket = keyhash;
     const uint64_t mask = self->mask;
     char* buckets = (char*)self->buckets;
-    const size_t bucket_size = 8 + self->key_size + self->value_size;
+    const size_t bucket_size = self->bucket_size;
     const bool key_cstr = self->key_cstr;
     const size_t key_size = self->key_size;
     const size_t value_size = self->value_size;
