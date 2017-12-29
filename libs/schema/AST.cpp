@@ -814,7 +814,21 @@ SMembExprMake ( ASTBuilder & p_builder, const KSymbol* p_obj, const KSymbol* p_m
 
     x -> dad . var = eMembExpr;
     atomic32_set ( & x -> dad . refcount, 1 );
-    x -> object = p_obj;
+
+    x -> view = p_builder . GetView ();
+
+    // link to the corresponding parameter of the current view
+    uint32_t start = VectorStart ( & x -> view -> params );
+    uint32_t count = VectorLength ( & x -> view -> params );
+    for ( uint32_t i = 0; i < count; ++i )
+    {
+        if ( VectorGet ( & x -> view -> params, start + i ) == p_obj )
+        {
+            x -> paramId = start + i;
+            break;
+        }
+    }
+
     x -> member = p_mem;
 
     return & x -> dad;

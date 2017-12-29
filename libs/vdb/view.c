@@ -24,176 +24,77 @@
 *
 */
 
-#include <vdb/view.h>
+#include "view-priv.h"
 
 #include <klib/refcount.h>
 #include <klib/symbol.h>
-#include <vdb/table.h>
 
 #include "table-priv.h"
 #include "column-priv.h"
 #include "schema-parse.h"
-#include "cursor-struct.h"
 #include "prod-expr.h"
 #include "phys-priv.h"
 
 #include <sysalloc.h>
 #include <stdio.h>
 
-struct VView
+/* ViewCreateCursor
+ *  creates a read cursor object onto view
+ *
+ *  "curs" [ OUT ] - return parameter for newly created cursor
+ *
+ *  "capacity" [ IN ] - the maximum bytes to cache on the cursor before
+ *  dropping least recently used blobs
+ */
+LIB_EXPORT
+rc_t CC
+VViewCreateCursor ( struct VView const * p_self, const struct VViewCursor ** p_curs )
 {
-    /* open references */
-    KRefcount refcount;
-
-    /* schema and view description */
-    const SView *           sview;
-    const struct VSchema  * schema;
-
-    /* parameter bindings */
-    Vector bindings; /* for now, only support a single VTable* element */
-};
-
-typedef struct VViewCursor VViewCursor;
-struct VViewCursor
-{
-    VCursor_vt * vt;
-
-    /* row id */
-    int64_t row_id;
-
-    /* half-closed page range */
-    int64_t start_id;
-    int64_t end_id;
-
-    /* attached reference to view */
-    const VView * view;
-
-    /* external row of VColumn* by ord ( owned ) */
-    Vector row;
-
-    /* column objects by cid ( not-owned ) */
-    VCursorCache col;
-
-    /* physical columns by cid ( owned ) */
-    VCursorCache phys;
-
-    /* productions by cid ( not-owned ) */
-    VCursorCache prod;
-
-    /* intermediate productions ( owned ) */
-    Vector owned;
-
-    KRefcount refcount;
-
-    /* foreground state */
-    uint8_t state;
-};
-
-static rc_t VViewCursorAddRef ( const VCursor *self );
-static rc_t VViewCursorRelease ( const VCursor *self );
-static rc_t VViewCursorVAddColumn ( const VCursor *cself, uint32_t *idx, const char *name, va_list args );
-static rc_t VViewCursorVGetColumnIdx ( const VCursor *self, uint32_t *idx, const char *name, va_list args );
-static rc_t VViewCursorDatatype ( const VCursor * p_self, uint32_t p_idx, struct VTypedecl * p_type, struct VTypedesc * p_desc );
-static rc_t VViewCursorOpen ( const VCursor * p_self );
-static rc_t VViewCursorIdRange ( const VCursor *self, uint32_t idx, int64_t *first, uint64_t *count );
-
-static VCursorCache * VViewCursorColumns ( VCursor * self );
-static VCursorCache * VViewCursorPhysicalColumns ( VCursor * self );
-static rc_t VViewCursorMakeColumn ( VCursor *self, VColumn **col, const SColumn *scol, Vector *cx_bind );
-static Vector * VViewCursorGetRow ( struct VCursor * p_self );
-const struct VTable * VViewCursorGetTable ( const struct VCursor * self );
-
-static VCursor_vt VViewCursor_vt =
-{
-    VViewCursorAddRef,
-    VViewCursorRelease,
-    VViewCursorVAddColumn,
-    VViewCursorVGetColumnIdx,
-    VViewCursorDatatype,
-    VViewCursorOpen,
-    VViewCursorIdRange,
-    NULL, // VViewCursorRowId,
-    NULL, // VViewCursorSetRowId,
-    NULL, // VViewCursorFindNextRowId,
-    NULL, // VViewCursorFindNextRowIdDirect,
-    NULL, // VViewCursorOpenRow,
-    NULL, // VViewCursorWrite,
-    NULL, // VViewCursorCommitRow,
-    NULL, // VViewCursorCloseRow,
-    NULL, // VViewCursorRepeatRow,
-    NULL, // VViewCursorFlushPage,
-    NULL, // VViewCursorGetBlob,
-    NULL, // VViewCursorGetBlobDirect,
-    NULL, // VViewCursorRead,
-    NULL, // VViewCursorReadDirect,
-    NULL, // VViewCursorReadBits,
-    NULL, // VViewCursorReadBitsDirect,
-    NULL, // VViewCursorCellData,
-    NULL, // VViewCursorCellDataDirect,
-    NULL, // VViewCursorDataPrefetch,
-    NULL, // VViewCursorDefault,
-    NULL, // VViewCursorCommit,
-    NULL, // VViewCursorOpenParentRead,
-    NULL, // VViewCursorOpenParentUpdate,
-    NULL, // VViewCursorGetUserData,
-    NULL, // VViewCursorSetUserData,
-    VViewCursorColumns,
-    VViewCursorPhysicalColumns,
-    VViewCursorMakeColumn,
-    VViewCursorGetRow,
-    VViewCursorGetTable
-};
-
-rc_t
-VCursorMakeFromView  ( const VCursor ** p_cursp, const struct VView * p_view )
-{
-    rc_t rc;
-    VViewCursor *curs;
-
-    /* must have return param */
-    assert ( p_cursp != NULL );
-
-    /* must have parent tbl */
-    assert ( p_view != NULL );
-
-    /* create a structure */
-    curs = calloc ( 1, sizeof * curs );
-    if ( curs == NULL )
+    rc_t rc = 0;
+    if ( p_curs == NULL )
     {
-        rc = RC ( rcVDB, rcCursor, rcConstructing, rcMemory, rcExhausted );
+        rc = RC ( rcVDB, rcTable, rcOpening, rcParam, rcNull );
+    }
+    else if ( p_self == NULL )
+    {
+        rc = RC ( rcVDB, rcTable, rcOpening, rcSelf, rcNull );
     }
     else
     {
-        rc = VViewAddRef ( p_view );
-        if ( rc == 0 )
-        {
-            curs -> vt = & VViewCursor_vt;
-            curs -> view = p_view;
-            VectorInit ( & curs -> row, 1, 16 );
-            VCursorCacheInit ( & curs -> col, 0, 16 );
-            VCursorCacheInit ( & curs -> phys, 0, 16 );
-            VCursorCacheInit ( & curs -> prod, 0, 16 );
-            VectorInit ( & curs -> owned, 0, 64 );
-            KRefcountInit ( & curs -> refcount, 1, "VCursor", "make", "vcurs" );
-            curs -> state = vcConstruct;
+        rc = VViewCursorMake ( p_self, (struct VViewCursor **) p_curs );
+    }
+    return rc;
+}
 
-            * p_cursp = ( const VCursor * ) curs;
-            return 0;
+/* Whack
+ */
+
+static
+rc_t
+VViewWhack ( VView * p_self )
+{
+    KRefcountWhack ( & p_self -> refcount, "VView" );
+
+    uint32_t start = VectorStart ( & p_self -> sview -> params );
+    uint32_t count = VectorLength ( & p_self -> sview -> params );
+    for ( uint32_t i = 0 ; i < count; ++ i)
+    {
+        const KSymbol * param = VectorGet ( & p_self -> sview -> params, start + i );
+        void * obj = VectorGet ( & p_self -> bindings, i );
+        if ( obj != NULL )
+        {
+            if ( param -> type == eView )
+            {
+                VViewRelease ( obj );
+            }
+            else
+            {
+                VTableRelease ( obj );
+            }
         }
     }
 
-    * p_cursp = NULL;
-
-    return rc;
-}
-/* Whack
- */
-static
-rc_t
-VViewWhack ( VView *self )
-{
-    KRefcountWhack ( & self -> refcount, "VView" );
-    VectorWhack ( & self -> bindings, 0, 0 );
+    VectorWhack ( & p_self -> bindings, 0, 0 );
 
 #if 0
     BSTreeWhack ( & self -> read_col_cache, VColumnRefWhack, NULL );
@@ -209,16 +110,16 @@ VViewWhack ( VView *self )
     VDBManagerSever ( self -> mgr );
 #endif
 
-    free ( self );
+    free ( p_self );
     return 0;
 }
 
 rc_t
-VViewAddRef ( const VView *self )
+VViewAddRef ( const VView * p_self )
 {
-    if ( self != NULL )
+    if ( p_self != NULL )
     {
-        switch ( KRefcountAdd ( & self -> refcount, "VView" ) )
+        switch ( KRefcountAdd ( & p_self -> refcount, "VView" ) )
         {
         case krefLimit:
             return RC ( rcVDB, rcTable, rcAttaching, rcRange, rcExcessive );
@@ -228,14 +129,14 @@ VViewAddRef ( const VView *self )
 }
 
 rc_t
-VViewRelease ( const VView *self )
+VViewRelease ( const VView * p_self )
 {
-    if ( self != NULL )
+    if ( p_self != NULL )
     {
-        switch ( KRefcountDrop ( & self -> refcount, "VView" ) )
+        switch ( KRefcountDrop ( & p_self -> refcount, "VView" ) )
         {
         case krefWhack:
-            return VViewWhack ( ( VView* ) self );
+            return VViewWhack ( ( VView* ) p_self );
         case krefNegative:
             return RC ( rcVDB, rcTable, rcReleasing, rcRange, rcExcessive );
         }
@@ -309,6 +210,23 @@ VDBManagerOpenView ( struct VDBManager const *   p_mgr,
     return rc;
 }
 
+static
+int32_t
+BindingIdxByName ( const SView * p_self, const String * p_name )
+{
+    uint32_t start = VectorStart ( & p_self -> params );
+    uint32_t count = VectorLength ( & p_self -> params );
+    for ( uint32_t i = 0 ; i < count; ++ i )
+    {
+        const KSymbol * p = VectorGet ( & p_self -> params, start + i );
+        if ( StringEqual ( & p -> name, p_name ) )
+        {
+            return start + i;
+        }
+    }
+    return -1;
+}
+
 /* BindParameterTable
  *  Bind a view's parameter to a table.
  *
@@ -334,28 +252,31 @@ VViewBindParameterTable ( const VView *     p_self,
     {   /* locate the view's parameter, make sure it is a table, bind to the given table */
         String name;
         StringInitCString( & name, p_param_name );
-        uint32_t start = VectorStart ( & p_self -> sview -> params );
-        uint32_t count = VectorLength ( & p_self -> sview -> params );
-        for ( uint32_t i = 0 ; i < count; ++ i)
-        {
-            const KSymbol * param = VectorGet ( & p_self -> sview -> params, start + i );
+        int32_t idx = BindingIdxByName ( p_self -> sview, & name );
+        if ( idx >= 0 )
+        {   /* self->bindings is parallel to self->sview->params */
+            const KSymbol * param = VectorGet ( & p_self -> sview -> params, idx );
             if ( StringEqual ( & param -> name, & name ) )
             {
                 if ( param -> type != eTable || param -> u . obj != p_table -> stbl )
                 {
                     return RC ( rcVDB, rcTable, rcOpening, rcParam, rcWrongType );
                 }
-
-                /* temporarily only allow 1 parameter per view */
-                if ( VectorLength ( & p_self -> bindings ) > 0 )
+                if ( VectorGet ( & p_self -> bindings, idx ) != NULL )
                 {
-                    return RC ( rcVDB, rcTable, rcOpening, rcParam, rcExcessive );
+                    return RC ( rcVDB, rcTable, rcOpening, rcTable, rcExists );
                 }
 
                 VView * self = (VView*) p_self;
-                return VectorAppend( & self -> bindings, 0, p_table );
+                rc_t rc = VTableAddRef ( p_table );
+                if ( rc == 0 )
+                {
+                    return VectorSet( & self -> bindings, idx, p_table );
+                }
+                return rc;
             }
         }
+
         return RC ( rcVDB, rcTable, rcOpening, rcParam, rcNotFound );
     }
 }
@@ -373,676 +294,120 @@ VViewBindParameterView ( const VView *          p_self,
                          const char *           p_param_name,
                          const struct VView *   p_view )
 {
+    if ( p_self == NULL )
+    {
+        return RC ( rcVDB, rcTable, rcOpening, rcSelf, rcNull );
+    }
     if ( p_view == NULL )
     {
         return RC ( rcVDB, rcTable, rcOpening, rcParam, rcNull );
     }
-    return RC ( rcVDB, rcTable, rcOpening, rcMessage, rcUnsupported );
-    //return VViewBindParameter ( p_self, p_view, p_index, p_view -> sview );
-}
-
-// VViewCursor
-
-rc_t
-VViewCursorAddRef ( const VCursor * p_self )
-{
-    const VViewCursor * self = ( const VViewCursor * ) p_self;
-
-    if ( self != NULL )
-    {
-        switch ( KRefcountAdd ( & self -> refcount, "VCursor" ) )
-        {
-        case krefLimit:
-            return RC ( rcVDB, rcCursor, rcAttaching, rcRange, rcExcessive );
-        }
-    }
-    return 0;
-}
-
-static
-void CC
-VViewCursorVColumnWhack_checked( void *item, void *data )
-{
-    if ( item != NULL )
-    {
-        VColumnWhack( item, data );
-    }
-}
-
-rc_t
-VViewCursorWhack ( VViewCursor * p_self )
-{
-    VViewRelease ( p_self -> view );
-
-    VectorWhack ( & p_self -> row, VViewCursorVColumnWhack_checked, NULL );
-    VCursorCacheWhack ( & p_self -> col, NULL, NULL );
-    VCursorCacheWhack ( & p_self -> col, NULL, NULL );
-    VCursorCacheWhack ( & p_self -> phys, VPhysicalWhack, NULL );
-    VCursorCacheWhack ( & p_self -> prod, NULL, NULL );
-    VectorWhack ( & p_self -> owned, VProductionWhack, NULL );
-
-    KRefcountWhack ( & p_self -> refcount, "VViewCursor" );
-
-    free ( p_self );
-    return 0;
-}
-
-rc_t
-VViewCursorRelease ( const VCursor * p_self )
-{
-    const VViewCursor * self = ( const VViewCursor * ) p_self;
-
-    if ( self != NULL )
-    {
-        switch ( KRefcountDrop ( & self -> refcount, "VCursor" ) )
-        {
-        case krefWhack:
-            return VViewCursorWhack ( ( VViewCursor* ) self );
-        case krefNegative:
-            return RC ( rcVDB, rcCursor, rcReleasing, rcRange, rcExcessive );
-        }
-    }
-    return 0;
-}
-
-/* AddSColumn
- */
-static
-rc_t VViewCursorAddSColumn ( VViewCursor *      p_self,
-                             uint32_t *         p_idx,
-                             const SColumn *    p_scol,
-                             const VTypedecl *  p_cast,
-                             Vector *           p_cx_bind )
-{
-    rc_t rc = 0;
-    VColumn *col;
-
-    /* must be readable */
-    if ( p_scol -> read == NULL )
-    {
-        return RC ( rcVDB, rcCursor, rcUpdating, rcColumn, rcWriteonly );
-    }
-
-    /* must not already be there - benign error */
-    col = VCursorCacheGet ( & p_self -> col, & p_scol -> cid );
-    if ( col != NULL )
-    {
-        * p_idx = col -> ord;
-        rc = RC ( rcVDB, rcCursor, rcUpdating, rcColumn, rcExists );
-    }
     else
-    {
-        /* make object */
-        rc = VColumnMake ( & col, p_self -> view -> schema, p_scol );
-        if ( rc == 0 )
-        {
-#if 0
-            /* open column if cursor open or type unknown */
-            if ( self -> state >= vcReady || scol -> td . type_id == 0 )
+    {   /* locate the view's parameter, make sure it is a view, bind to the given view */
+        String name;
+        StringInitCString( & name, p_param_name );
+        int32_t idx = BindingIdxByName ( p_self -> sview, & name );
+        if ( idx >= 0 )
+        {   /* self->bindings is parallel to self->sview->params */
+            const KSymbol * param = VectorGet ( & p_self -> sview -> params, idx );
+            if ( StringEqual ( & param -> name, & name ) )
             {
-                rc = RC ( rcVDB, rcCursor, rcUpdating, rcColumn, ?? );
-            }
-            else
-            {   /* check cast of SColumn against requested type
-                this is to handle the case where the column
-                was created incomplete, i.e. with unknown type */
-                if ( cast != NULL && | VTypedeclToTypedecl ( & scol -> td,
-                        self -> schema, cast, & col -> td, NULL ) )
+                if ( param -> type != eView || param -> u . obj != p_view -> sview )
                 {
-                    rc = RC ( rcVDB, rcCursor, rcUpdating, rcColumn, ?? );
+                    return RC ( rcVDB, rcTable, rcOpening, rcParam, rcWrongType );
                 }
-            }
-#endif
+                if ( VectorGet ( & p_self -> bindings, idx ) != NULL )
+                {
+                    return RC ( rcVDB, rcTable, rcOpening, rcTable, rcExists );
+                }
 
-            if ( rc == 0 )
-            {
-                /* insert it into vectors */
-                rc = VectorAppend ( & p_self -> row, & col -> ord, col );
+                VView * self = (VView*) p_self;
+                rc_t rc = VViewAddRef ( p_view );
                 if ( rc == 0 )
-                {
-                    void * ignore;
-                    rc = VCursorCacheSet ( & p_self -> col, & p_scol -> cid, col );
-                    if ( rc == 0 )
-                    {
-                        * p_idx = col -> ord;
-                        return 0;
-                    }
-                    VectorSwap ( & p_self -> row, col -> ord, NULL, & ignore );
+                {   /* self->bindings is parallel to self->sview->params */
+                    return VectorSet( & self -> bindings, idx, p_view );
                 }
-            }
-            VColumnWhack ( col, NULL );
-        }
-    }
-
-    return rc;
-}
-
-/* AddColspec
- *  a "colspec" is either a simple column name or a typed name expression
- *  uses STable to evaluate colspec and find an SColumn
- */
-static
-rc_t
-VViewCursorAddColspec ( VViewCursor * p_self, uint32_t * p_idx, const char * p_colspec )
-{
-    rc_t rc = 0;
-
-    /* find an appropriate column in schema */
-    uint32_t type;
-    VTypedecl cast;
-    const SNameOverload *name;
-    const SColumn *scol = SViewFind ( p_self -> view -> sview,
-                                      p_self -> view -> schema,
-                                      & cast,
-                                      & name,
-                                      & type,
-                                      p_colspec,
-                                      "VViewCursorAddColspec",
-                                      true );
-    if ( scol == NULL || type != eColumn )
-    {
-        rc = SILENT_RC ( rcVDB, rcCursor, rcUpdating, rcColumn, rcNotFound );
-    }
-    else
-    {
-        Vector cx_bind;
-        VectorInit ( & cx_bind, 1, p_self -> view -> schema -> num_indirect );
-        rc = VViewCursorAddSColumn ( p_self, p_idx, scol, & cast, & cx_bind );
-        VectorWhack ( & cx_bind, NULL, NULL );
-    }
-
-    return rc;
-}
-
-rc_t
-VViewCursorVAddColumn ( const VCursor *    p_self,
-                        uint32_t *         p_idx,
-                        const char *       p_name,
-                        va_list            p_args )
-{
-    VViewCursor * self = ( VViewCursor * ) p_self;
-
-    rc_t rc = 0;
-    if ( p_idx == NULL )
-    {
-        rc = RC ( rcVDB, rcCursor, rcUpdating, rcParam, rcNull );
-    }
-    else if ( p_name == NULL )
-    {
-        rc = RC ( rcVDB, rcCursor, rcUpdating, rcName, rcNull );
-    }
-    else if ( p_name [ 0 ] == 0 )
-    {
-        rc = RC ( rcVDB, rcCursor, rcUpdating, rcName, rcEmpty );
-    }
-    else
-    {
-        char colspec [ 1024 ];
-        int len = vsnprintf ( colspec, sizeof colspec, p_name, p_args );
-        if ( len < 0 || len >= sizeof colspec )
-        {
-            rc = RC ( rcVDB, rcCursor, rcUpdating, rcName, rcExcessive );
-        }
-        else
-        {
-            * p_idx = 0;
-            rc = VViewCursorAddColspec ( self, p_idx, colspec );
-        }
-    }
-    return rc;
-}
-
-static
-rc_t
-VViewCursorGetColspec ( const VViewCursor * p_self, uint32_t * p_idx, const char * p_colspec )
-{
-    rc_t rc;
-
-    /* find an appropriate column in schema */
-    uint32_t type;
-    VTypedecl cast;
-    const SNameOverload *name;
-    const SColumn *scol = SViewFind ( p_self -> view -> sview,
-                                      p_self -> view -> schema,
-                                      & cast,
-                                      & name,
-                                      & type,
-                                      p_colspec,
-                                      "VViewCursorGetColspec",
-                                      true );
-    if ( scol == NULL || type != eColumn )
-    {
-        rc = RC ( rcVDB, rcCursor, rcAccessing, rcColumn, rcNotFound );
-    }
-    else
-    {
-        /* if the column-spec gave us the exact column, return it */
-        VColumn *col = VCursorCacheGet ( & p_self -> col, & scol -> cid );
-        if ( col != NULL )
-        {
-            * p_idx = col -> ord;
-            return 0;
-        }
-
-        /* prepare for failure */
-        rc = RC ( rcVDB, rcCursor, rcAccessing, rcColumn, rcNotFound );
-
-        /* there should be a name overload object */
-        if ( name != NULL )
-        {
-            uint32_t count, i = VectorStart ( & name -> items );
-            uint32_t end = VectorLength ( & name -> items );
-            for ( end += i, count = 0; i < end; ++ i )
-            {
-                scol = ( const void* ) VectorGet ( & name -> items, i );
-                if ( scol != NULL )
-                {
-                    col = VCursorCacheGet ( & p_self -> col, & scol -> cid );
-                    if ( col != NULL )
-                    {
-                        * p_idx = col -> ord;
-                        ++ count;
-                    }
-                }
-            }
-
-            if ( count == 1 )
-            {
-                return 0;
-            }
-            if ( count != 0 )
-            {
-                return RC ( rcVDB, rcCursor, rcAccessing, rcColumn, rcAmbiguous );
-            }
-        }
-    }
-
-    return rc;
-}
-
-/* GetColumnIdx
- *  retrieve column index by name spec
- *
- *  "idx" [ OUT ] - return parameter for column index
- *
- *  "name" [ IN ] - NUL terminated column name spec.
- */
-rc_t
-VViewCursorVGetColumnIdx ( const VCursor * p_self, uint32_t * p_idx, const char * p_name, va_list args )
-{
-    const VViewCursor * self = ( const VViewCursor * ) p_self;
-    rc_t rc;
-
-    if ( p_idx == NULL )
-    {
-        rc = RC ( rcVDB, rcCursor, rcAccessing, rcParam, rcNull );
-    }
-    else
-    {
-        * p_idx = 0;
-
-        if ( p_name == NULL )
-        {
-            rc = RC ( rcVDB, rcCursor, rcAccessing, rcName, rcNull );
-        }
-        else if ( p_name [ 0 ] == 0 )
-        {
-            rc = RC ( rcVDB, rcCursor, rcAccessing, rcName, rcEmpty );
-        }
-#if 0
-        else if ( self -> state == vcFailed )
-        {
-            rc = RC ( rcVDB, rcCursor, rcAccessing, rcCursor, rcInvalid );
-        }
-#endif
-        else
-        {
-            char colspec [ 1024 ];
-            int len = vsnprintf ( colspec, sizeof colspec, p_name, args );
-            if ( len < 0 || len >= sizeof colspec )
-            {
-                rc = RC ( rcVDB, rcCursor, rcAccessing, rcName, rcExcessive );
-            }
-            else
-            {
-                rc = VViewCursorGetColspec ( self, p_idx, colspec );
-            }
-        }
-    }
-
-    return rc;
-}
-
-/* Datatype
- *  returns typedecl and/or typedef for column data
- *
- *  "idx" [ IN ] - column index
- *
- *  "type" [ OUT, NULL OKAY ] - returns the column type declaration
- *
- *  "def" [ OUT, NULL OKAY ] - returns the definition of the type
- *  returned in "type_decl"
- *
- * NB - one of "type" and "def" must be non-NULL
- */
-rc_t
-VViewCursorDatatype ( const VCursor *       p_self,
-                      uint32_t              p_idx,
-                      struct VTypedecl *    p_type,
-                      struct VTypedesc *    p_desc )
-{
-    const VViewCursor * self = ( const VViewCursor * ) p_self;
-    rc_t rc;
-
-    if ( p_type == NULL && p_desc == NULL )
-    {
-        rc = RC ( rcVDB, rcCursor, rcAccessing, rcParam, rcNull );
-    }
-    else
-    {
-        const VColumn * vcol = ( const VColumn* ) VectorGet ( & self -> row, p_idx );
-        if ( vcol != NULL )
-        {
-            return VColumnDatatype ( vcol, p_type, p_desc );
-        }
-        else
-        {
-            rc = RC ( rcVDB, rcCursor, rcAccessing, rcColumn, rcNotFound );
-            if ( p_type != NULL )
-            {
-                memset ( p_type, 0, sizeof * p_type );
-            }
-            if ( p_desc != NULL )
-            {
-                memset ( p_desc, 0, sizeof * p_desc );
-            }
-        }
-    }
-
-    return rc;
-}
-
-typedef struct VProdResolveData VProdResolveData;
-struct VProdResolveData
-{
-    VProdResolve pr;
-    rc_t rc;
-};
-
-static
-bool CC VViewCursorResolveColumn ( void *item, void *data )
-{
-    if ( item != NULL )
-    {
-        void *ignore;
-        VViewCursor *self;
-
-        VColumn *col = item;
-        VProdResolveData *pb = data;
-        SColumn *scol = ( SColumn* ) col -> scol;
-
-        VProduction *src = NULL;
-        pb -> rc = VProdResolveColumnRoot ( & pb -> pr, & src, scol );
-        if ( pb -> rc == 0 )
-        {
-            if ( src > FAILED_PRODUCTION )
-            {
-                /* repair for incomplete implicit column decl */
-                if ( scol -> td . type_id == 0 )
-                    scol -> td = src -> fd . td;
-
-                return false;
-            }
-
-            pb -> rc = RC ( rcVDB, rcCursor, rcOpening, rcColumn, rcUndefined );
-        }
-
-        /* check for tolerance */
-        self = (VViewCursor *) pb -> pr . curs;
-        if ( ! pb -> pr . ignore_column_errors )
-        {
-            PLOGERR ( klogErr, ( klogErr, pb -> rc, "failed to resolve column '$(name)' idx '$(idx)'",
-                                    "name=%.*s,idx=%u"
-                                    , ( int ) scol -> name -> name . size
-                                    , scol -> name -> name . addr
-                                    , col -> ord ));
-            return true;
-        }
-
-        /* remove from row and cache */
-        VectorSwap ( & self -> row, col -> ord, NULL, & ignore );
-        VCursorCacheSwap ( & self -> col, & scol -> cid, NULL, & ignore );
-
-        /* dump the VColumn */
-        VColumnWhack ( col, NULL );
-
-        /* return no-error */
-        pb -> rc = 0;
-    }
-
-    return false;
-}
-
-static
-rc_t
-VViewCursorResolveColumnProductions ( VViewCursor * p_self, const struct KDlset * p_libs )
-{
-    Vector cx_bind;
-    VProdResolveData pb;
-    VCursor * self = ( VCursor * ) p_self;
-    const VTable * tbl = VViewCursorGetTable ( self );
-
-    pb . pr . schema    = p_self -> view -> schema;
-    pb . pr . ld        = tbl -> linker;
-    pb . pr . libs      = p_libs;
-    pb . pr . stbl      = tbl -> stbl;
-    pb . pr . curs      = self;
-    pb . pr . cache     = & p_self -> prod;
-    pb . pr . owned     = & p_self -> owned;
-    pb . pr . cx_bind   = & cx_bind;
-
-    pb . pr . chain     = chainDecoding;
-    pb . pr . blobbing  = false;
-    pb . pr . ignore_column_errors = false;
-    pb . pr . discover_writable_columns = false;
-    pb . rc = 0;
-
-    VectorInit ( & cx_bind, 1, p_self -> view -> schema -> num_indirect );
-
-    if ( ! VectorDoUntil ( & p_self -> row, false, VViewCursorResolveColumn, & pb ) )
-    {
-        pb . rc = 0;
-    }
-
-    VectorWhack ( & cx_bind, NULL, NULL );
-
-    return pb . rc;
-}
-
-static
-rc_t
-VViewCursorOpenRead ( VViewCursor * p_self, const struct KDlset * p_libs )
-{
-    rc_t rc;
-
-    if ( p_self -> state >= vcReady )
-    {
-        rc = 0;
-    }
-    else if ( p_self -> state == vcFailed )
-    {
-        rc = RC ( rcVDB, rcCursor, rcOpening, rcCursor, rcInvalid );
-    }
-    else
-    {
-        rc = VViewCursorResolveColumnProductions ( p_self, p_libs );
-        if ( rc == 0 )
-        {
-            p_self -> row_id = p_self -> start_id = p_self -> end_id = 1;
-            p_self -> state = vcReady;
-            return rc;
-        }
-        p_self -> state = vcFailed;
-    }
-
-    return rc;
-}
-
-
-/* Open
- *  open cursor, resolving schema
- *  for the set of opened columns
- *
- *  NB - there is no corresponding "Close"
- *  use "Release" instead.
- */
-rc_t
-VViewCursorOpen ( const VCursor * p_self )
-{
-    rc_t rc = 0;
-    VViewCursor * self = ( VViewCursor * ) p_self;
-    struct KDlset *libs = 0;
-#if 0
-    VLinker *ld = self -> tbl -> linker;
-
-    rc_t rc = VLinkerOpen ( ld, & libs );
-    if ( rc == 0 )
-    {
-#endif
-        rc = VViewCursorOpenRead ( self, libs );
-        if ( rc == 0 )
-        {
-            int64_t first;
-            uint64_t count;
-
-            rc = VViewCursorIdRange ( p_self, 0, & first, & count );
-            if ( rc == 0 )
-            {
-                if ( count != 0 )
-                {
-                    /* set initial row id to starting row */
-                    self -> start_id = self -> end_id = self -> row_id = first;
-                }
-            }
-            else
-            {
-                self -> state = vcFailed;
-            }
-        }
-#if 0
-        KDlsetRelease ( libs );
-    }
-#endif
-
-    return rc;
-}
-
-rc_t CC VViewCursorIdRange ( const VCursor *    p_self,
-                             uint32_t           p_idx,
-                             int64_t *          p_first,
-                             uint64_t *         p_count )
-{
-    rc_t rc;
-
-    if ( p_first == NULL && p_count == NULL )
-    {
-        rc = RC ( rcVDB, rcCursor, rcAccessing, rcParam, rcNull );
-    }
-    else
-    {
-        int64_t dummy;
-        uint64_t dummy_count;
-
-        if ( p_first == NULL )
-        {
-            p_first = & dummy;
-        }
-        else if ( p_count == NULL )
-        {
-            p_count = & dummy_count;
-        }
-        if ( p_self -> state < vcReady )
-        {
-#if 0
-            if ( self -> state == vcFailed )
-                rc = RC ( rcVDB, rcCursor, rcAccessing, rcCursor, rcInvalid );
-            else
-#endif
-                rc = RC ( rcVDB, rcCursor, rcAccessing, rcCursor, rcNotOpen );
-        }
-#if 0
-        else if ( idx == 0 )
-        {
-            VCursorIdRangeData pb;
-
-            pb . first = INT64_MAX;
-            pb . last = INT64_MIN;
-            pb . rc = SILENT_RC ( rcVDB, rcCursor, rcAccessing, rcRange, rcEmpty );
-
-            if ( ! VectorDoUntil ( & self -> row, false, column_id_range, & pb ) )
-            {
-                * first = pb . first;
-                * count = pb . last >= pb . first ? pb . last + 1 - pb . first : 0;
-                return pb . rc;
-            }
-
-            rc = pb . rc;
-        }
-        else
-        {
-            const VColumn *vcol = ( const VColumn* ) VectorGet ( & self -> row, idx );
-            if ( vcol == NULL )
-                rc = RC ( rcVDB, rcCursor, rcAccessing, rcColumn, rcNotFound );
-            else {
-                int64_t last;
-
-                rc = VColumnIdRange ( vcol, first, &last );
-                if (rc == 0)
-                    *count = last + 1 - *first;
                 return rc;
             }
         }
-#endif
-        * p_first = 0;
-        * p_count = 0;
+        return RC ( rcVDB, rcTable, rcOpening, rcParam, rcNotFound );
     }
-
-    return rc;
-}
-
-VCursorCache *
-VViewCursorColumns ( VCursor * p_self )
-{
-    VViewCursor * self = ( VViewCursor * ) p_self;
-    return & self -> col;
-}
-
-VCursorCache *
-VViewCursorPhysicalColumns ( VCursor * p_self )
-{
-    VViewCursor * self = ( VViewCursor * ) p_self;
-    return & self -> phys;
-}
-
-rc_t
-VViewCursorMakeColumn ( VCursor * p_self, VColumn ** p_col, const SColumn * p_scol, Vector * p_cx_bind )
-{
-    VViewCursor * self = ( VViewCursor * ) p_self;
-    return VColumnMake ( p_col, self -> view -> schema, p_scol );
-}
-
-Vector *
-VViewCursorGetRow ( VCursor * p_self )
-{
-    VViewCursor * self = ( VViewCursor * ) p_self;
-    return & self -> row;
 }
 
 const VTable *
-VViewCursorGetTable ( const VCursor * p_self )
+VViewPrimaryTable( const VView * p_self )
 {
-    /* for now, only support 1-table view */
-    VViewCursor * self = ( VViewCursor * ) p_self;
-    const Vector * b = & self -> view -> bindings;
-    return (const VTable*) VectorGet ( b, VectorStart ( b ) );
+    /* return the table bound to the first parameter
+    (may descend through one or more views if the first parameter is a view) */
+    uint32_t start = VectorStart ( & p_self -> sview -> params );
+    const KSymbol * param = VectorGet ( & p_self -> sview -> params, start );
+    if ( param == NULL )
+    {
+        return NULL; /* not bound */
+    }
+    const Vector * b = & p_self -> bindings;
+    const void * obj = VectorGet ( b, VectorStart ( b ) );
+    if ( param -> type == eTable )
+    {
+        return ( const VTable * ) obj;
+    }
+    else /* view */
+    {
+        return VViewPrimaryTable ( ( const VView *) obj );
+    }
+}
+
+/* Follow the chain of view inheritance to find out which parameter of p_child
+   corresponds to p_ancestor's parameter # p_paramId.
+   Returns paramId of the child's parameter or -1 if p_ancestor is not found
+*/
+static
+int32_t
+SViewAncestorParameterBoundTo ( const SView * p_child, const SView * p_ancestor, uint32_t p_paramId )
+{
+    uint32_t start = VectorStart ( & p_child -> parents );
+    uint32_t count = VectorLength ( & p_child -> parents );
+    for ( uint32_t i = 0 ; i < count; ++ i)
+    {
+        const SViewInstance * dadInst = VectorGet ( & p_child -> parents, start + i );
+        assert ( dadInst != NULL );
+        if ( dadInst -> dad == p_ancestor )
+        {
+            const KSymbol * arg = VectorGet ( & dadInst -> params, p_paramId );
+            /* arg is the name of the p_child's parameter used to instantiate this parent */
+            assert ( arg != NULL );
+            return BindingIdxByName ( p_child, & arg -> name );
+        }
+        else
+        {   /* go through this parent's ancestry */
+            int32_t idx = SViewAncestorParameterBoundTo ( dadInst -> dad, p_ancestor, p_paramId );
+            if ( idx != -1 ) /* found */
+            {   /* idx is the paramId of the parent's parameter; translate it into the child's paramId */
+                const KSymbol * arg = VectorGet ( & dadInst -> params, idx );
+                /* arg is the name of the child's parameter used to instantiate this parent */
+                assert ( arg != NULL );
+                return BindingIdxByName ( p_child, & arg -> name );
+            }
+            /* keep looking */
+        }
+    }
+    return -1;
+}
+
+const void *
+VViewGetBoundObject( const VView * p_self, const SView * p_sview, uint32_t p_paramId )
+{
+    if ( p_self -> sview == p_sview )
+    {
+        return VectorGet ( & p_self -> bindings, p_paramId );
+    }
+    else
+    {   /* look up the inheritance hierarchy */
+        uint32_t idx = SViewAncestorParameterBoundTo ( p_self -> sview, p_sview, p_paramId );
+        if ( idx != -1 )
+        {
+            return VectorGet ( & p_self -> bindings, idx );
+        }
+    }
+    return NULL;
 }

@@ -37,6 +37,7 @@
 #include "prod-priv.h"
 #include "prod-expr.h"
 #include "phys-priv.h"
+#include "view-priv.h"
 #undef KONST
 
 #include <vdb/schema.h>
@@ -280,7 +281,6 @@ rc_t VProdResolveColExpr ( const VProdResolve *self, VProduction **out,
     BSTree ordered;
     uint32_t i, count;
     SColumnBestFit buff [ 16 ], * nodes = buff;
-
     /* fail if "fd" has a format */
     if ( fd -> fmt != 0 )
     {
@@ -411,11 +411,9 @@ rc_t VProdResolveFwdExpr ( const VProdResolve *self, VProduction **out,
     const KSymbol *sym = x -> _sym;
     if ( sym -> type == eVirtual )
     {
-        /* most derived table class */
-        const STable *stbl = self -> stbl;
+        /* most derived table/view class */
         const KSymbol *sym2 = sym;
-
-        sym = STableFindOverride ( stbl, ( const VCtxId* ) & sym -> u . fwd );
+        sym = VCursorFindOverride ( self -> curs, ( const VCtxId* ) & sym -> u . fwd );
         if ( sym == NULL )
         {
             PLOGMSG ( klogWarn, ( klogWarn, "virtual reference '$(fwd)' not found in overrides table"
@@ -450,32 +448,75 @@ rc_t VProdResolveMembExpr ( const VProdResolve *    p_self,
                             const SMembExpr *       p_x,
                             bool                    p_casting )
 {
-    if ( p_x -> object -> type != eTable )
+    /* we know we are in a view */
+    const KSymbol * object = VectorGet ( & p_x -> view -> params, p_x -> paramId );
+    assert ( p_self -> view );
+    assert ( object != NULL );
+    switch ( object -> type )
     {
-        return RC ( rcVDB, rcProduction, rcResolving, rcMessage, rcUnsupported );
-    }
-    else
-    {   /* locate the expression's table, make a SSymExpr pointing to its
-        column/production, call VProdResolveColExpr/VProdResolveProdExpr*/
-        rc_t rc;
-        VProdResolve pr = * p_self;
-        pr . stbl = (const STable*) p_x -> object -> u . obj; /* used in error reports */
-        if ( p_x -> member -> type == eColumn )
-        {
-            const SExpression * ref;
-            rc = SSymExprMake( & ref, p_x -> member, eColExpr );
-            if ( rc == 0 )
+    case eTable:
+        {   /* p_x -> object is a table parameter of the view the member-expresison is in.
+                Locate the VTable bound to the corresponding parameter of the view,
+                make a SSymExpr pointing to p_x -> member, call ProdResolveColExpr/VProdResolveProdExpr in the context of the VTable */
+            rc_t rc;
+            VProdResolve pr = * p_self;
+            pr . name = & object -> name;
+            if ( p_x -> member -> type == eColumn )
             {
-                rc = VProdResolveExpr ( & pr, p_out, NULL, p_fd, ref, p_casting );
-                SExpressionWhack ( ref );
+                const SExpression * ref;
+                rc = SSymExprMake( & ref, p_x -> member, eColExpr );
+                if ( rc == 0 )
+                {
+                    pr . primary_table = VViewGetBoundObject ( pr . view, p_x -> view, p_x -> paramId );
+                    if ( pr . primary_table != NULL )
+                    {
+                        pr . view = NULL;
+                        rc = VProdResolveExpr ( & pr, p_out, NULL, p_fd, ref, p_casting );
+                    }
+                    else
+                    {
+                        rc = RC ( rcVDB, rcProduction, rcResolving, rcParam, rcNotFound );
+                    }
+                    SExpressionWhack ( ref );
+                }
+                return rc;
             }
+            /* TODO: support productions */
+            break;
         }
-        else
-        {
-            rc = RC ( rcVDB, rcProduction, rcResolving, rcMessage, rcUnsupported );
+    case eView:
+        {   /* p_x -> object is a view parameter of the view the member-expresison is in.
+                Locate the VView bound to the corresponding parameter of the view,
+                make a SSymExpr pointing to p_x -> member, call ProdResolveColExpr/VProdResolveProdExpr in the context of the new view */
+            rc_t rc;
+            VProdResolve pr = * p_self;
+            pr . name = & object -> name;
+            if ( p_x -> member -> type == eColumn )
+            {
+                const SExpression * ref;
+                rc = SSymExprMake( & ref, p_x -> member, eColExpr );
+                if ( rc == 0 )
+                {
+                    pr . view = VViewGetBoundObject( pr . view, p_x -> view, p_x -> paramId );
+                    if ( pr . view != NULL )
+                    {
+                        rc = VProdResolveExpr ( & pr, p_out, NULL, p_fd, ref, p_casting );
+                    }
+                    else
+                    {
+                        rc = RC ( rcVDB, rcProduction, rcResolving, rcParam, rcNotFound );
+                    }
+                    SExpressionWhack ( ref );
+                }
+                return rc;
+            }
+            /* TODO: support productions */
+            break;
         }
-        return rc;
+    default:
+        break;
     }
+    return RC ( rcVDB, rcProduction, rcResolving, rcMessage, rcUnsupported );
 }
 
 
@@ -560,8 +601,8 @@ rc_t VProdResolveExpr ( const VProdResolve *self,
         /* report NULL expression, but don't die */
         PLOGMSG ( klogWarn, ( klogWarn, "NULL expression in '$(tbl)' table schema"
                    , "tbl=%.*s"
-                   , ( int ) self -> stbl -> name -> name . size
-                   , self -> stbl -> name -> name . addr ));
+                   , ( int ) self -> name -> size
+                   , self -> name -> addr ));
         return 0;
     }
 
@@ -648,8 +689,8 @@ rc_t VProdResolveExpr ( const VProdResolve *self,
         /* report bad expression, but don't die */
         PLOGMSG ( klogWarn, ( klogWarn, "unrecognized expression in '$(tbl)' table schema"
                    , "tbl=%.*s"
-                   , ( int ) self -> stbl -> name -> name . size
-                   , self -> stbl -> name -> name . addr ));
+                   , ( int ) self -> name -> size
+                   , self -> name -> addr ));
 #if _DEBUGGING
         -- indent_level;
 #endif
@@ -839,8 +880,7 @@ rc_t VProdResolvePhysicalRead ( const VProdResolve *self, VPhysical *phys )
     if ( VCursorIsReadOnly ( curs ) )
     {
         /* open the physical column for read */
-        rc = VPhysicalOpenRead ( phys,
-            ( VSchema* ) self -> schema, VCursorGetTable ( curs ) );
+        rc = VPhysicalOpenRead ( phys, ( VSchema* ) self -> schema, self -> primary_table );
         if ( rc != 0 )
         {
             /* trying to open a column that doesn't exist

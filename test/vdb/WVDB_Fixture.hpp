@@ -33,6 +33,9 @@
 #include <vdb/cursor.h>
 #include <vdb/table.h>
 
+#include "../libs/schema/SchemaParser.hpp"
+#include "../libs/schema/ASTBuilder.hpp"
+
 #include <ktst/unit_test.hpp> // THROW_ON_RC
 
 class WVDB_Fixture
@@ -126,11 +129,58 @@ public:
         THROW_ON_RC ( VCursorCloseRow ( p_cursor ) );
     }
 
+    static std :: string ToCppString ( const String & p_str)
+    {
+        return std :: string ( p_str . addr, p_str . len );
+    }
+
     std :: string   m_databaseName;
     VDBManager *    m_mgr;
     VSchema *       m_schema;
     VDatabase *     m_db;
     bool            m_keepDb;
+};
+
+// WVDB_Fixture modified to use the v2 schema parser
+class WVDB_v2_Fixture : public WVDB_Fixture
+{
+public:
+    virtual void ParseSchema ( VSchema * p_schema, const std :: string & p_schemaText )
+    {
+        ncbi :: SchemaParser :: SchemaParser parser;
+        if ( ! parser . ParseString ( p_schemaText . c_str () ) )
+        {
+            throw std :: logic_error ( std :: string ( "WVDB_Fixture::MakeDatabase : ParseString() failed: " ) + FormatErrorMessage ( * parser . GetErrors () . GetError ( 0 ) ) );
+        }
+        ncbi :: SchemaParser :: ParseTree * parseTree = parser . MoveParseTree ();
+        if ( parseTree == 0 )
+        {
+            throw std :: logic_error ( "WVDB_Fixture::MakeDatabase : MoveParseTree() returned 0" );
+        }
+        ncbi :: SchemaParser :: ASTBuilder builder ( p_schema );
+        ncbi :: SchemaParser :: AST * ast = builder . Build ( * parseTree, "", false );
+        if ( builder . GetErrorCount() != 0)
+        {
+            throw std :: logic_error ( std :: string ( "AST_Fixture::MakeAst : ASTBuilder::Build() failed: " ) + FormatErrorMessage ( * builder . GetErrors () . GetError ( 0 ) ) );
+        }
+        else if ( ast == 0 )
+        {
+            throw std :: logic_error ( "AST_Fixture::MakeAst : ASTBuilder::Build() failed, no message!" );
+        }
+        delete ast;
+        delete parseTree;
+    }
+
+    static std :: string FormatErrorMessage( const ncbi :: SchemaParser :: ErrorReport :: Error & p_err )
+    {
+        char buf [1024];
+        if ( p_err . Format ( buf, sizeof ( buf ) ) )
+        {
+            return std :: string ( buf );
+        }
+        return "buffer to short for an error message";
+    }
+
 };
 
 #endif

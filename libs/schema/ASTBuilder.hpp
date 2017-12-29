@@ -50,6 +50,7 @@ struct VTypedecl;
 struct SNameOverload;
 struct KFile;
 struct SPhysMember;
+struct SView;
 
 namespace ncbi
 {
@@ -91,6 +92,9 @@ namespace ncbi
 
             const KSymTable & GetSymTab () const { return m_symtab; }
             KSymTable & GetSymTab () { return m_symtab; }
+
+            // used to make sure view and table elements do not clash on their context Ids
+            uint32_t NextContextId() { return m_nextContextId++; }
 
         public:
             // AST node creation methods for use from bison
@@ -170,6 +174,8 @@ namespace ncbi
             bool CheckForColumnCollision ( const KSymbol *sym );
             bool ScanVirtuals ( const Token :: Location & p_loc, Vector & p_byParent );
 
+            const struct SView * GetView () const { return m_view; }
+
         private:
             bool Init();
 
@@ -191,6 +197,9 @@ namespace ncbi
             KSymTable   m_symtab;
 
             ErrorReport m_errors;
+            uint32_t    m_nextContextId;
+
+            const SView * m_view; // 0 if not inside a view declaration
         };
 
 

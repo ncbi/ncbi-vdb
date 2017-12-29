@@ -29,7 +29,7 @@
 #define TRACK_REFERENCES 0
 
 #define KONST const
-#include "cursor-struct.h"
+#include "cursor-table.h"
 #include "dbmgr-priv.h"
 #include "linker-priv.h"
 #include "schema-priv.h"
@@ -53,18 +53,18 @@
 
 /* VTableCursor vtable, read side */
 
-static rc_t VTableCursorOpen ( const VCursor *cself );
-static rc_t VTableCursorSetRowId ( const VCursor *cself, int64_t row_id );
-static rc_t VTableCursorOpenRow ( const VCursor *cself );
-static rc_t VTableCursorWrite ( VCursor *self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t count );
-static rc_t VTableCursorCommitRow ( VCursor *self );
-static rc_t VTableCursorCloseRow ( const VCursor *cself );
-static rc_t VTableCursorRepeatRow ( VCursor *self, uint64_t count );
-static rc_t VTableCursorFlushPage ( VCursor *self );
-static rc_t VTableCursorDefault ( VCursor *self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t row_len );
-static rc_t VTableCursorCommit ( VCursor *self );
-static rc_t VTableCursorOpenParentUpdate ( VCursor *self, VTable **tbl );
-static rc_t VTableCursorMakeColumn ( VCursor *self, VColumn **col, const SColumn *scol, Vector *cx_bind );
+static rc_t VTableCursorOpen ( const VCURSOR_IMPL *cself );
+static rc_t VTableCursorSetRowId ( const VCURSOR_IMPL *cself, int64_t row_id );
+static rc_t VTableCursorOpenRow ( const VCURSOR_IMPL *cself );
+static rc_t VTableCursorWrite ( VCURSOR_IMPL *self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t count );
+static rc_t VTableCursorCommitRow ( VCURSOR_IMPL *self );
+static rc_t VTableCursorCloseRow ( const VCURSOR_IMPL *cself );
+static rc_t VTableCursorRepeatRow ( VCURSOR_IMPL *self, uint64_t count );
+static rc_t VTableCursorFlushPage ( VCURSOR_IMPL *self );
+static rc_t VTableCursorDefault ( VCURSOR_IMPL *self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t row_len );
+static rc_t VTableCursorCommit ( VCURSOR_IMPL *self );
+static rc_t VTableCursorOpenParentUpdate ( VCURSOR_IMPL *self, VTable **tbl );
+static rc_t VTableCursorMakeColumn ( VCURSOR_IMPL *self, VColumn **col, const SColumn *scol, Vector *cx_bind );
 
 static VCursor_vt VTableCursor_read_vt =
 {
@@ -104,15 +104,20 @@ static VCursor_vt VTableCursor_read_vt =
     VTableCursorPhysicalColumns,
     VTableCursorMakeColumn,
     VTableCursorGetRow,
-    VTableCursorGetTable
+    VTableCursorGetTable,
+    VTableCursorIsReadOnly,
+    VTableCursorGetSchema,
+    VTableCursorGetBlobMruCache,
+    VTableCursorIncrementPhysicalProductionCount,
+    VTableCursorFindOverride
 };
 
 /*--------------------------------------------------------------------------
- * VCursor
+ * VTableCursor
  *  a row cursor onto a VTable
  */
 
-rc_t VCursorMakeFromTable ( VCursor **cursp, const struct VTable *tbl )
+rc_t VCursorMakeFromTable ( VTableCursor **cursp, const struct VTable *tbl )
 {
     return VTableCursorMake ( cursp, tbl, & VTableCursor_read_vt );
 }
@@ -128,7 +133,7 @@ rc_t VCursorWhack ( VTableCursor *self )
 
 /* MakeColumn
  */
-rc_t VTableCursorMakeColumn ( VCursor *self, VColumn **col, const SColumn *scol, Vector *cx_bind )
+rc_t VTableCursorMakeColumn ( VCURSOR_IMPL *self, VColumn **col, const SColumn *scol, Vector *cx_bind )
 {
     return VColumnMake ( col, self -> schema, scol );
 }
@@ -148,10 +153,10 @@ rc_t VCursorPostOpenAdd ( VTableCursor *self, VColumn *col )
  *  NB - there is no corresponding "Close"
  *  use "Release" instead.
  */
-rc_t VTableCursorOpen ( const VCursor *cself )
+rc_t VTableCursorOpen ( const VCURSOR_IMPL *cself )
 {
     rc_t rc;
-    VCursor *self = ( VCursor* ) cself;
+    VCURSOR_IMPL *self = ( VCURSOR_IMPL* ) cself;
 
     if ( self == NULL )
         rc = RC ( rcVDB, rcCursor, rcOpening, rcSelf, rcNull );
@@ -202,10 +207,10 @@ rc_t VTableCursorOpen ( const VCursor *cself )
  *
  *  "row_id" [ IN ] - row id to select
  */
-rc_t VTableCursorSetRowId ( const VCursor *cself, int64_t row_id )
+rc_t VTableCursorSetRowId ( const VCURSOR_IMPL *cself, int64_t row_id )
 {
     rc_t rc;
-    VCursor *self = ( VCursor* ) cself;
+    VCURSOR_IMPL *self = ( VCURSOR_IMPL* ) cself;
 
     if ( self == NULL )
         rc = RC ( rcVDB, rcCursor, rcPositioning, rcSelf, rcNull );
@@ -221,10 +226,10 @@ rc_t VTableCursorSetRowId ( const VCursor *cself, int64_t row_id )
 /* OpenRow
  *  open currently closed row indicated by row id
  */
-rc_t VTableCursorOpenRow ( const VCursor *cself )
+rc_t VTableCursorOpenRow ( const VCURSOR_IMPL *cself )
 {
     rc_t rc;
-    VCursor *self = ( VCursor* ) cself;
+    VCURSOR_IMPL *self = ( VCURSOR_IMPL* ) cself;
 
     if ( self == NULL )
         rc = RC ( rcVDB, rcCursor, rcOpening, rcSelf, rcNull );
@@ -244,10 +249,10 @@ rc_t VTableCursorOpenRow ( const VCursor *cself )
  *  discard all changes. otherwise,
  *  advance to next row
  */
-rc_t VTableCursorCloseRow ( const VCursor *cself )
+rc_t VTableCursorCloseRow ( const VCURSOR_IMPL *cself )
 {
     rc_t rc;
-    VCursor *self = ( VCursor* ) cself;
+    VCURSOR_IMPL *self = ( VCURSOR_IMPL* ) cself;
 
     if ( self == NULL )
         rc = RC ( rcVDB, rcCursor, rcClosing, rcSelf, rcNull );
@@ -261,31 +266,31 @@ rc_t VTableCursorCloseRow ( const VCursor *cself )
 
 /* not implemented for the read side: */
 
-rc_t VTableCursorWrite ( VCursor *self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t count )
+rc_t VTableCursorWrite ( VCURSOR_IMPL *self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t count )
 {
     return RC ( rcVDB, rcCursor, rcWriting, rcCursor, rcReadonly );
 }
-rc_t VTableCursorCommitRow ( VCursor *self )
+rc_t VTableCursorCommitRow ( VCURSOR_IMPL *self )
 {
     return RC ( rcVDB, rcCursor, rcWriting, rcCursor, rcReadonly );
 }
-rc_t VTableCursorRepeatRow ( VCursor *self, uint64_t count )
+rc_t VTableCursorRepeatRow ( VCURSOR_IMPL *self, uint64_t count )
 {
     return RC ( rcVDB, rcCursor, rcWriting, rcCursor, rcReadonly );
 }
-rc_t VTableCursorFlushPage ( VCursor *self )
+rc_t VTableCursorFlushPage ( VCURSOR_IMPL *self )
 {
     return RC ( rcVDB, rcCursor, rcWriting, rcCursor, rcReadonly );
 }
-rc_t VTableCursorDefault ( VCursor *self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t row_len )
+rc_t VTableCursorDefault ( VCURSOR_IMPL *self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t row_len )
 {
     return RC ( rcVDB, rcCursor, rcWriting, rcCursor, rcReadonly );
 }
-rc_t VTableCursorCommit ( VCursor *self )
+rc_t VTableCursorCommit ( VCURSOR_IMPL *self )
 {
     return RC ( rcVDB, rcCursor, rcWriting, rcCursor, rcReadonly );
 }
-rc_t VTableCursorOpenParentUpdate ( VCursor *self, VTable **tbl )
+rc_t VTableCursorOpenParentUpdate ( VCURSOR_IMPL *self, VTable **tbl )
 {
     return RC ( rcVDB, rcCursor, rcWriting, rcCursor, rcReadonly );
 }

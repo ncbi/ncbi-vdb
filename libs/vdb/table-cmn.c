@@ -30,7 +30,7 @@
 
 #define KONST const
 #include "table-priv.h"
-#include "cursor-priv.h"
+#include "cursor-table.h"
 #include "database-priv.h"
 #include "dbmgr-priv.h"
 #undef KONST
@@ -347,7 +347,7 @@ LIB_EXPORT rc_t CC VDatabaseOpenTableRead ( const VDatabase *self,
     va_start ( args, path );
     rc = VDatabaseVOpenTableRead ( self, tbl, path, args );
     va_end ( args );
-    
+
     if ( rc == 0 && self->cache_db != NULL )
     {
         rc_t rc2;
@@ -356,7 +356,7 @@ LIB_EXPORT rc_t CC VDatabaseOpenTableRead ( const VDatabase *self,
         va_start ( args, path );
         rc2 = VDatabaseVOpenTableRead ( self->cache_db, &ctbl, path, args );
         va_end ( args );
-        
+
         DBGMSG( DBG_VDB, DBG_FLAG( DBG_VDB_VDB ), ( "VDatabaseOpenTableRead(vdbcache) = %d\n", rc2 ) );
         if ( rc2 == 0 )
         {
@@ -1186,22 +1186,22 @@ rc_t create_cursor_all_readable_columns(const VTable *self,
 {
     KNamelist *list;
     rc_t rc = VTableListReadableColumns(self, &list);
-    
+
     if (rc == 0) {
         rc = VTableCreateCursorReadInternal(self, curs);
         if (rc == 0) {
             uint32_t n;
-            
+
             rc = KNamelistCount(list, ncol);
             if (rc == 0) {
                 n = *ncol;
                 *idx = malloc(n * sizeof(**idx));
                 if (idx) {
                     unsigned i;
-                    
+
                     for (i = 0; i != (unsigned)n; ++i) {
                         const char *name;
-                        
+
                         rc = KNamelistGet(list, i, &name);
                         if (rc)
                             break;
@@ -1236,11 +1236,11 @@ rc_t fetch_all_rows(const VCursor *curs, unsigned ncol, const uint32_t cid[/* nc
     int64_t row;
     unsigned i;
     rc_t rc;
-    
+
     for (i = 0; i != ncol; ++i) {
         int64_t cstart;
         uint64_t ccount;
-        
+
         rc = VCursorIdRange(curs, cid[i], &cstart, &ccount);
         if (rc)
             return rc;
@@ -1261,7 +1261,7 @@ rc_t fetch_all_rows(const VCursor *curs, unsigned ncol, const uint32_t cid[/* nc
             const void *base;
             uint32_t offset;
             uint32_t length;
-            
+
             rc = VCursorCellDataDirect(curs, row, cid[i], &elem_bits,
                                        &base, &offset, &length);
             if (rc)
@@ -1278,7 +1278,7 @@ rc_t CC VTableConsistencyCheck(const VTable *self, int level)
     unsigned ncol;
     const VCursor *curs;
     rc_t rc = create_cursor_all_readable_columns(self, &ncol, &cid, &curs);
-    
+
     if (rc)
         return rc;
     rc = fetch_all_rows(curs, ncol, cid);
@@ -1322,7 +1322,7 @@ static bool VTableStaticEmpty( const struct VTable *self )
 						{
 							rc = 0;
 						}
-                        KMDataNodeRelease ( this_col );                    
+                        KMDataNodeRelease ( this_col );
                     }
                 }
             }
@@ -1381,7 +1381,7 @@ static bool VTablePhysicalEmpty( const struct VTable *self )
 LIB_EXPORT rc_t CC VTableIsEmpty ( const struct VTable *self, bool * empty )
 {
     rc_t rc;
-    
+
     if ( empty == NULL )
         rc = RC ( rcVDB, rcTable, rcListing, rcParam, rcNull );
     else

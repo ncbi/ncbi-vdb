@@ -68,7 +68,8 @@ SViewOverridesWhack ( void *item, void *ignore )
 
 /* Make
  */
-rc_t SViewOverridesMake ( Vector *parents, const SView *dad, const Vector *overrides )
+rc_t
+SViewOverridesMake ( Vector *parents, const SView *dad, const Vector *overrides )
 {
     rc_t rc;
     SViewOverrides *to;
@@ -255,12 +256,12 @@ void symbol_set_context ( void *item, void *data )
     self -> u . fwd . ctx = * ( const uint32_t* ) data;
 }
 
-void CC view_set_context ( SView *self )
+void CC view_set_context ( SView *self, uint32_t p_ctxId )
 {
-    VectorForEach ( & self -> col, false, column_set_context, & self -> id );
-    VectorForEach ( & self -> cname, false, name_set_context, & self -> id );
-    VectorForEach ( & self -> prod, false, production_set_context, & self -> id );
-    VectorForEach ( & self -> vprods, false, symbol_set_context, & self -> id );
+    VectorForEach ( & self -> col, false, column_set_context, & p_ctxId );
+    VectorForEach ( & self -> cname, false, name_set_context, & p_ctxId );
+    VectorForEach ( & self -> prod, false, production_set_context, & p_ctxId );
+    VectorForEach ( & self -> vprods, false, symbol_set_context, & p_ctxId );
 }
 
 static
@@ -373,14 +374,15 @@ init_view_symtab ( KSymTable * p_tbl, const VSchema * p_schema, const SView * p_
  *  returns principal object identified. if NULL but "name" is not
  *  NULL, then the object was only partially identified.
  */
-const void * CC SViewFind ( const SView *           p_self,
-                            const VSchema *         p_schema,
-                            VTypedecl *             p_td,
-                            const SNameOverload **  p_name,
-                            uint32_t *              p_type,
-                            const char *            p_expr,
-                            const char *            p_ctx,
-                            bool                    p_dflt )
+const void *
+SViewFind ( const SView *           p_self,
+            const VSchema *         p_schema,
+            VTypedecl *             p_td,
+            const SNameOverload **  p_name,
+            uint32_t *              p_type,
+            const char *            p_expr,
+            const char *            p_ctx,
+            bool                    p_dflt )
 {
     rc_t rc;
     KSymTable tbl;
@@ -390,7 +392,7 @@ const void * CC SViewFind ( const SView *           p_self,
     * p_name = NULL;
     * p_type = 0;
 
-    /* build a symbol table for table */
+    /* build a symbol table for view */
     rc = init_view_symtab ( & tbl, p_schema, p_self );
     if ( rc == 0 )
     {
@@ -399,4 +401,27 @@ const void * CC SViewFind ( const SView *           p_self,
     }
 
     return obj;
+}
+
+/* FindOverride
+ *  finds an inherited or introduced overridden symbol
+ */
+const struct KSymbol *
+SViewFindOverride ( const SView * p_self, const VCtxId * p_cid )
+{
+    const SViewOverrides *to;
+
+    /* it may be on the existing view */
+    if ( p_cid -> ctx == p_self -> id )
+    {
+        return VectorGet ( & p_self -> vprods, p_cid -> id );
+    }
+
+    to = ( const void* ) VectorFind ( & p_self -> overrides, & p_cid -> ctx, NULL, SViewOverridesCmp );
+    if ( to == NULL )
+    {
+        return NULL;
+    }
+
+    return VectorGet ( & to -> by_parent, p_cid -> id );
 }

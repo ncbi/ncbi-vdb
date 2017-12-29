@@ -395,14 +395,16 @@ struct SVectExpr
 /*--------------------------------------------------------------------------
  * SMembExpr
  *  a member (column or production) a view parameter (a table or a view)
- *  represents an "object . member" expression
+ *  represents an "object . member" expression, where "object" is a parameter
+ *  of a directly enclosing view
  */
 typedef struct SMembExpr SMembExpr;
 struct SMembExpr
 {
     SExpression dad;
-    struct KSymbol const * object;
-    struct KSymbol const * member;
+    const struct SView * view;
+    uint32_t paramId;
+    const struct KSymbol * member;
 };
 
 #ifdef __cplusplus

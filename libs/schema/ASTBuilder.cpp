@@ -38,7 +38,9 @@ using namespace ncbi::SchemaParser;
 using namespace std;
 
 ASTBuilder :: ASTBuilder ( VSchema * p_schema )
-:    m_schema ( p_schema )
+:   m_schema ( p_schema ),
+    m_nextContextId ( 0 ),
+    m_view ( 0 )
 {
     assert ( m_schema != 0 );
     VSchemaAddRef ( m_schema );

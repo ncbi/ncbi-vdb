@@ -43,6 +43,8 @@ public:
     ViewDeclaration ( ASTBuilder & p_builder );
     ~ViewDeclaration ();
 
+    const SView * GetSelf () const { return m_self; }
+
     bool SetName ( const AST_FQN &  p_fqn );
     void HandleParameters ( const AST & p_params );
     void HandleParents ( const AST & p_parents );
@@ -283,11 +285,16 @@ ViewDeclaration :: CopyColumnNames ( const SNameOverload *orig )
 }
 
 bool
-ViewDeclaration :: InitParentInstance( SViewInstance * p_self, const SView * p_dad, const AST & p_params )
+ViewDeclaration :: InitParentInstance( SViewInstance * p_inst, const SView * p_parent, const AST & p_params )
 {
-    p_self -> dad = p_dad;
+    p_inst -> dad = p_parent;
     uint32_t count = p_params . ChildrenCount ();
-    VectorInit ( & p_self -> params, 0, count );
+    VectorInit ( & p_inst -> params, 0, count );
+    if ( count != VectorLength ( & p_parent -> params ) )
+    {
+        m_builder . ReportError ( p_params . GetLocation(), "Wrong number of parameters for a view instantiation" );
+        return false;
+    }
     for ( uint32_t i = 0; i < count; ++i )
     {
         const AST_FQN & ident = * ToFQN ( p_params . GetChild ( i ) );
@@ -298,9 +305,17 @@ ViewDeclaration :: InitParentInstance( SViewInstance * p_self, const SView * p_d
             {
             case eTable:
             case eView:
-                if ( ! m_builder . VectorAppend ( p_self -> params, 0, sym ) )
-                {
-                    return false;
+                {   /* verify type */
+                    const KSymbol * parentsParam = static_cast < const KSymbol * > ( VectorGet ( & p_parent -> params, i ) );
+                    if ( parentsParam -> u . obj != sym -> u . obj )
+                    {
+                        m_builder . ReportError ( "Wrong type of a view's parameter", ident );
+                        return false;
+                    }
+                    if ( ! m_builder . VectorAppend ( p_inst -> params, 0, sym ) )
+                    {
+                        return false;
+                    }
                 }
                 break;
             default:
@@ -639,7 +654,7 @@ ViewDeclaration :: HandleBody ( const AST & p_body )
             }
         }
 
-        view_set_context ( m_self );
+        view_set_context ( m_self, m_builder . NextContextId () );
     }
     else
     {
@@ -664,7 +679,9 @@ ASTBuilder :: ViewDef ( const Token * p_token, AST_FQN * p_name, AST * p_params,
             assert ( p_parents != 0 );
             view. HandleParents ( * p_parents );
             assert ( p_body != 0 );
+            m_view = view . GetSelf ();
             view. HandleBody ( * p_body );
+            m_view = 0;
 
             KSymTablePopScope ( & m_symtab );
         }

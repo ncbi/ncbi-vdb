@@ -41,6 +41,7 @@ TEST_TOOLS = \
 	test-view \
 	test-tablecursor \
 	test-wtablecursor \
+	test-view-cursor \
 
 #	test-VDB-3418
 
@@ -299,4 +300,19 @@ $(TEST_BINDIR)/test-wtablecursor: $(TEST_WTABLECURSOR_OBJ)
 	$(LP) --exe -o $@ $^ $(WRITE_LIBS)
 
 twcur: test-wtablecursor
+	$(TEST_BINDIR)/$^
+
+#-------------------------------------------------------------------------------
+# test-view-cursor
+#
+TEST_VIEW_CURSOR_SRC = \
+	test-view-cursor
+
+TEST_VIEW_CURSOR_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_VIEW_CURSOR_SRC))
+
+$(TEST_BINDIR)/test-view-cursor: $(TEST_VIEW_CURSOR_OBJ)
+	$(LP) --exe -o $@ $^ $(VDB_VIEW_LIB)
+
+vcur: test-view-cursor
 	$(TEST_BINDIR)/$^

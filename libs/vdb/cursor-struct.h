@@ -44,7 +44,7 @@
 #endif
 
 #include <vdb/cursor.h>
-#include "cursor-table.h"
+#include "cursor-priv.h"
 
 #ifndef KONST
 #define KONST
@@ -64,58 +64,65 @@ extern "C" {
 struct KLock;
 struct KCondition;
 struct KThread;
-struct KNamelist;
-struct KDlset;
+struct KSymbol;
+struct SColumn;
 struct VTable;
 struct VCtxId;
 struct VSchema;
-struct SColumn;
 struct VColumn;
-struct VPhysical;
+
+#ifndef VCURSOR_IMPL
+#define VCURSOR_IMPL VCursor
+#endif
 
 typedef struct VCursor_vt VCursor_vt;
 struct VCursor_vt
 {
     /* Public API */
-    rc_t ( CC * addRef ) ( const VCursor *self );
-    rc_t ( CC * release ) ( const VCursor *self );
-    rc_t ( CC * vAddColumn ) ( const VCursor *self, uint32_t *idx, const char *name, va_list args );
-    rc_t ( CC * vGetColumnIdx ) ( const VCursor *self, uint32_t *idx, const char *name, va_list args );
-    rc_t ( CC * datatype ) ( const VCursor *self, uint32_t idx, struct VTypedecl *type, struct VTypedesc *desc );
-    rc_t ( CC * open ) ( const VCursor *self );
-    rc_t ( CC * idRange ) ( const VCursor *self, uint32_t idx, int64_t *first, uint64_t *count );
-    rc_t ( CC * rowId ) ( const VCursor *self, int64_t *row_id );
-    rc_t ( CC * setRowId ) ( const VCursor *self, int64_t row_id );
-    rc_t ( CC * findNextRowId ) ( const VCursor *self, uint32_t idx, int64_t * next );
-    rc_t ( CC * findNextRowIdDirect ) ( const VCursor *self, uint32_t idx, int64_t start_id, int64_t * next );
-    rc_t ( CC * openRow ) ( const VCursor *self );
-    rc_t ( CC * write ) ( VCursor *self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t count );
-    rc_t ( CC * commitRow ) ( VCursor *self );
-    rc_t ( CC * closeRow ) ( const VCursor *self );
-    rc_t ( CC * repeatRow ) ( VCursor *self, uint64_t count );
-    rc_t ( CC * flushPage ) ( VCursor *self );
-    rc_t ( CC * getBlob ) ( const VCursor *self, struct VBlob const **blob, uint32_t col_idx );
-    rc_t ( CC * getBlobDirect ) ( const VCursor *self, struct VBlob const **blob, int64_t row_id, uint32_t col_idx );
-    rc_t ( CC * read ) ( const VCursor *self, uint32_t col_idx, uint32_t elem_bits, void *buffer, uint32_t blen, uint32_t *row_len );
-    rc_t ( CC * readDirect ) ( const VCursor *self, int64_t row_id, uint32_t col_idx, uint32_t elem_bits, void *buffer, uint32_t blen, uint32_t *row_len );
-    rc_t ( CC * readBits ) ( const VCursor *self, uint32_t col_idx, uint32_t elem_bits, uint32_t start, void *buffer, uint32_t boff, uint32_t blen, uint32_t *num_read, uint32_t *remaining );
-    rc_t ( CC * readBitsDirect ) ( const VCursor *self, int64_t row_id, uint32_t col_idx, uint32_t elem_bits, uint32_t start, void *buffer, uint32_t boff, uint32_t blen, uint32_t *num_read, uint32_t *remaining );
-    rc_t ( CC * cellData ) ( const VCursor *self, uint32_t col_idx, uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len );
-    rc_t ( CC * cellDataDirect ) ( const VCursor *self, int64_t row_id, uint32_t col_idx, uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len );
-    rc_t ( CC * dataPrefetch ) ( const VCursor * self, const int64_t * row_ids, uint32_t col_idx, uint32_t num_rows, int64_t min_valid_row_id, int64_t max_valid_row_id, bool );
-    rc_t ( CC * _default ) ( VCursor *self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t row_len );
-    rc_t ( CC * commit ) ( VCursor *self );
-    rc_t ( CC * openParentRead ) ( const VCursor *self, struct VTable const **tbl );
-    rc_t ( CC * openParentUpdate ) ( VCursor *self, struct VTable **tbl );
-    rc_t ( CC * getUserData ) ( const VCursor *self, void **data );
-    rc_t ( CC * setUserData ) ( const VCursor *self, void *data, void ( CC * destroy ) ( void *data ) );
+    rc_t ( CC * addRef ) ( const VCURSOR_IMPL *self );
+    rc_t ( CC * release ) ( const VCURSOR_IMPL *self );
+    rc_t ( CC * vAddColumn ) ( const VCURSOR_IMPL *self, uint32_t *idx, const char *name, va_list args );
+    rc_t ( CC * vGetColumnIdx ) ( const VCURSOR_IMPL *self, uint32_t *idx, const char *name, va_list args );
+    rc_t ( CC * datatype ) ( const VCURSOR_IMPL *self, uint32_t idx, struct VTypedecl *type, struct VTypedesc *desc );
+    rc_t ( CC * open ) ( const VCURSOR_IMPL *self );
+    rc_t ( CC * idRange ) ( const VCURSOR_IMPL *self, uint32_t idx, int64_t *first, uint64_t *count );
+    rc_t ( CC * rowId ) ( const VCURSOR_IMPL *self, int64_t *row_id );
+    rc_t ( CC * setRowId ) ( const VCURSOR_IMPL *self, int64_t row_id );
+    rc_t ( CC * findNextRowId ) ( const VCURSOR_IMPL *self, uint32_t idx, int64_t * next );
+    rc_t ( CC * findNextRowIdDirect ) ( const VCURSOR_IMPL *self, uint32_t idx, int64_t start_id, int64_t * next );
+    rc_t ( CC * openRow ) ( const VCURSOR_IMPL *self );
+    rc_t ( CC * write ) ( VCURSOR_IMPL *self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t count );
+    rc_t ( CC * commitRow ) ( VCURSOR_IMPL *self );
+    rc_t ( CC * closeRow ) ( const VCURSOR_IMPL *self );
+    rc_t ( CC * repeatRow ) ( VCURSOR_IMPL *self, uint64_t count );
+    rc_t ( CC * flushPage ) ( VCURSOR_IMPL *self );
+    rc_t ( CC * getBlob ) ( const VCURSOR_IMPL *self, struct VBlob const **blob, uint32_t col_idx );
+    rc_t ( CC * getBlobDirect ) ( const VCURSOR_IMPL *self, struct VBlob const **blob, int64_t row_id, uint32_t col_idx );
+    rc_t ( CC * read ) ( const VCURSOR_IMPL *self, uint32_t col_idx, uint32_t elem_bits, void *buffer, uint32_t blen, uint32_t *row_len );
+    rc_t ( CC * readDirect ) ( const VCURSOR_IMPL *self, int64_t row_id, uint32_t col_idx, uint32_t elem_bits, void *buffer, uint32_t blen, uint32_t *row_len );
+    rc_t ( CC * readBits ) ( const VCURSOR_IMPL *self, uint32_t col_idx, uint32_t elem_bits, uint32_t start, void *buffer, uint32_t boff, uint32_t blen, uint32_t *num_read, uint32_t *remaining );
+    rc_t ( CC * readBitsDirect ) ( const VCURSOR_IMPL *self, int64_t row_id, uint32_t col_idx, uint32_t elem_bits, uint32_t start, void *buffer, uint32_t boff, uint32_t blen, uint32_t *num_read, uint32_t *remaining );
+    rc_t ( CC * cellData ) ( const VCURSOR_IMPL *self, uint32_t col_idx, uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len );
+    rc_t ( CC * cellDataDirect ) ( const VCURSOR_IMPL *self, int64_t row_id, uint32_t col_idx, uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len );
+    rc_t ( CC * dataPrefetch ) ( const VCURSOR_IMPL * self, const int64_t * row_ids, uint32_t col_idx, uint32_t num_rows, int64_t min_valid_row_id, int64_t max_valid_row_id, bool );
+    rc_t ( CC * _default ) ( VCURSOR_IMPL *self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t row_len );
+    rc_t ( CC * commit ) ( VCURSOR_IMPL *self );
+    rc_t ( CC * openParentRead ) ( const VCURSOR_IMPL *self, struct VTable const **tbl );
+    rc_t ( CC * openParentUpdate ) ( VCURSOR_IMPL *self, struct VTable **tbl );
+    rc_t ( CC * getUserData ) ( const VCURSOR_IMPL *self, void **data );
+    rc_t ( CC * setUserData ) ( const VCURSOR_IMPL *self, void *data, void ( CC * destroy ) ( void *data ) );
 
     /* Private API */
-    VCursorCache * ( CC * columns ) ( VCursor *self );
-    VCursorCache * ( CC * physicalColumns ) ( VCursor * self );
-    rc_t ( CC * makeColumn ) ( VCursor *self, struct VColumn **col, const struct SColumn *scol, Vector *cx_bind );
-    Vector * ( CC * getRow ) ( VCursor * self );
-    const struct VTable * ( CC * getTable ) ( const VCursor * self );
+    VCursorCache * ( * columns ) ( VCURSOR_IMPL *self );
+    VCursorCache * ( * physicalColumns ) ( VCURSOR_IMPL * self );
+    rc_t ( * makeColumn ) ( VCURSOR_IMPL *self, struct VColumn **col, const struct SColumn *scol, Vector *cx_bind );
+    Vector * ( * getRow ) ( VCURSOR_IMPL * self );
+    const struct VTable * ( * getTable ) ( const VCURSOR_IMPL * self );
+    bool ( * isReadOnly ) ( const VCURSOR_IMPL * self );
+    struct VSchema const * ( * getSchema ) ( const VCURSOR_IMPL * self);
+    VBlobMRUCache * ( * getBlobMruCache ) ( VCURSOR_IMPL * self );
+    uint32_t ( * incrementPhysicalProductionCount ) ( VCURSOR_IMPL * self );
+    const struct KSymbol * ( * findOverride ) ( const VCURSOR_IMPL *self, const struct VCtxId *cid );
 };
 
 struct VCursor
@@ -209,42 +216,6 @@ struct VCursor
     /* cursor for VDB columns located in separate db.tbl ***/
     const struct VCursor* cache_curs;
 };
-
-/* VTableCursor methods */
-
-rc_t VCursorMakeFromTable ( VCursor **cursp, const struct VTable *tbl );
-rc_t VCursorMakeFromView  ( const VCursor **cursp, const struct VView * view );
-
-/* "constructor", provides a concrete VCursor_vt. Defined in cursor.c and wcursor.c */
-rc_t VTableCursorMake ( VTableCursor **cursp, const struct VTable *tbl, VCursor_vt *vt );
-
-/* methods shared between cursor.c and wcursor.c */
-rc_t VTableCursorAddRef ( const VTableCursor *self );
-rc_t VTableCursorRelease ( const VTableCursor *self );
-rc_t VTableCursorVAddColumn ( const VTableCursor *cself, uint32_t *idx, const char *name, va_list args );
-rc_t VTableCursorVGetColumnIdx ( const VTableCursor *self, uint32_t *idx, const char *name, va_list args );
-rc_t VTableCursorDatatype ( const VTableCursor *self, uint32_t idx, struct VTypedecl *type, struct VTypedesc *desc );
-rc_t VTableCursorIdRange ( const VTableCursor *self, uint32_t idx, int64_t *first, uint64_t *count );
-rc_t VTableCursorRowId ( const VTableCursor *self, int64_t *id );
-rc_t VTableCursorFindNextRowId ( const VTableCursor *self, uint32_t idx, int64_t *next );
-rc_t VTableCursorFindNextRowIdDirect ( const VTableCursor *self, uint32_t idx, int64_t start_id, int64_t *next );
-rc_t VTableCursorGetBlob ( const VTableCursor *self, const VBlob **blob, uint32_t col_idx );
-rc_t VTableCursorGetBlobDirect ( const VTableCursor *self, const VBlob **blob, int64_t row_id, uint32_t col_idx );
-rc_t VTableCursorRead ( const VTableCursor *self, uint32_t col_idx, uint32_t elem_bits, void *buffer, uint32_t blen, uint32_t *row_len );
-rc_t VTableCursorReadDirect ( const VTableCursor *self, int64_t row_id, uint32_t col_idx, uint32_t elem_bits, void *buffer, uint32_t blen, uint32_t *row_len );
-rc_t VTableCursorReadBits ( const VTableCursor *self, uint32_t col_idx, uint32_t elem_bits, uint32_t start, void *buffer, uint32_t off, uint32_t blen, uint32_t *num_read, uint32_t *remaining );
-rc_t VTableCursorReadBitsDirect ( const VTableCursor *self, int64_t row_id, uint32_t col_idx, uint32_t elem_bits, uint32_t start, void *buffer, uint32_t off, uint32_t blen, uint32_t *num_read, uint32_t *remaining );
-rc_t VTableCursorCellData ( const VTableCursor *self, uint32_t col_idx, uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len );
-rc_t VTableCursorCellDataDirect ( const VTableCursor *self, int64_t row_id, uint32_t col_idx,
-    uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len );
-rc_t VTableCursorDataPrefetch( const VTableCursor *cself, const int64_t *row_ids, uint32_t col_idx, uint32_t num_rows, int64_t min_valid_row_id, int64_t max_valid_row_id, bool continue_on_error );
-rc_t VTableCursorOpenParentRead ( const VTableCursor *self, const struct VTable **tbl );
-rc_t VTableCursorGetUserData ( const VTableCursor *self, void **data );
-rc_t VTableCursorSetUserData ( const VTableCursor *cself, void *data, void ( CC * destroy ) ( void *data ) );
-
-VCursorCache * VTableCursorColumns ( VCursor * self );
-VCursorCache * VTableCursorPhysicalColumns ( VCursor * self );
-Vector * VTableCursorGetRow ( VCursor * self );
 
 #ifdef __cplusplus
 }

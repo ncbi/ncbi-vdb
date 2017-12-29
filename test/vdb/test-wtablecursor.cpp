@@ -27,9 +27,13 @@
 #include <sstream>
 
 #include <klib/rc.h>
+#include <klib/symbol.h>
+
 #include <vdb/table.h>
 
 #include <../libs/vdb/schema-priv.h>
+#include <../libs/vdb/table-priv.h>
+#include <../libs/vdb/cursor-priv.h>
 
 #include "WVDB_Fixture.hpp"
 
@@ -367,18 +371,20 @@ FIXTURE_TEST_CASE( VTableCursor_OpenParentRead, TableCursorFixture )
 {
     MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
 
-    struct VTable const * tbl = 0;
+    const VTable * tbl = 0;
     REQUIRE_RC ( VCursorOpenParentRead ( m_cur, & tbl ) );
     REQUIRE_NOT_NULL ( tbl );
+    REQUIRE_RC ( VTableRelease ( (VTable*)tbl ) );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_OpenParentUpdate, TableCursorFixture )
 {
     MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
 
-    struct VTable * tbl = 0;
+    VTable * tbl = 0;
     REQUIRE_RC ( VCursorOpenParentUpdate ( m_cur, & tbl ) );
     REQUIRE_NOT_NULL ( tbl );
+    REQUIRE_RC ( VTableRelease ( tbl ) );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_GetUserData, TableCursorFixture )
@@ -397,11 +403,37 @@ FIXTURE_TEST_CASE( VTableCursor_SetUserData, TableCursorFixture )
     REQUIRE_RC ( VCursorSetUserData ( m_cur, 0, 0 ) );
 }
 
+FIXTURE_TEST_CASE( VTableCursor_GetTable, TableCursorFixture )
+{
+    MakeWriteCursor ( GetName(), SimpleSchema );
+
+    const VTable * tbl = VCursorGetTable ( m_cur );
+    REQUIRE_NOT_NULL ( tbl );
+    // Oddly, there is no easy way to get the database members's name (t)
+    // through the VTable's API. Easier to get to it's schema type name (T),
+    // which suffices here:
+    REQUIRE_EQ ( string ( "T" ), ToCppString ( tbl -> stbl -> name -> name ) );
+}
+
+FIXTURE_TEST_CASE( VTableCursor_FindOverride, TableCursorFixture )
+{
+    const char * SchemaWithOverrides =
+    "table T0#1 { column ascii c=x; };"
+    "table T#1 = T0 { column U8 c=2; ascii x=\"a\"; };"
+    "database db #1 { table T#1 t; };"
+    ;
+
+    MakeWriteCursor ( GetName(), SchemaWithOverrides );
+    VCtxId id = {0, 1}; // 0 is the id of T0 which first introduced x, 1 is its column id in T
+    const KSymbol * sym = VCursorFindOverride ( m_cur, & id );
+    REQUIRE_NOT_NULL ( sym );
+    REQUIRE_EQ ( string ("x"), ToCppString ( sym -> name ) );
+}
+
 //TODO:    VTableCursorColumns,
 //TODO:    VTableCursorPhysicalColumns,
 //TODO:    VTableCursorMakeColumn,
 //TODO:    VTableCursorGetRow
-//TODO:    VTableCursorGetTable
 
 //////////////////////////////////////////// Main
 #include <kfg/config.h>

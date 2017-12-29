@@ -124,6 +124,7 @@ VDBCMN_SRC = \
 	report-vdb \
 	bytecode \
 	view \
+	cursor-view \
 
 VDB_SRC = \
 	$(VDBCMN_SRC) \

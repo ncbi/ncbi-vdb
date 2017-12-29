@@ -52,7 +52,7 @@
 
 #include <sysalloc.h>
 
-#include "cursor-priv.h"
+#include "cursor-table.h"
 
 /* missing macros/function from klib/rc.h
  */

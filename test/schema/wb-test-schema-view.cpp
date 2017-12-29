@@ -375,7 +375,7 @@ FIXTURE_TEST_CASE(View_Column, AST_View_Fixture)
     REQUIRE_NULL ( c . ptype );
     REQUIRE_EQ ( U8_id, c . td . type_id );
     REQUIRE_EQ ( 1u, c . td . dim);
-    REQUIRE_EQ ( 0u, c . cid . ctx );
+    REQUIRE_EQ ( 1u, c . cid . ctx ); // T;s contextId is 0, W's is 1
     REQUIRE_EQ ( 0u, c . cid . id );
     REQUIRE ( ! c . dflt );
     REQUIRE ( c . read_only );
@@ -402,7 +402,7 @@ FIXTURE_TEST_CASE(View_Column_Overloaded, AST_View_Fixture)
     const SNameOverload * ovl = v . ColumnNames () . Get ( 0 );
     REQUIRE_NOT_NULL ( ovl );
     REQUIRE_EQ ( string ("c"), ToCppString ( ovl -> name -> name ) );
-    REQUIRE_EQ ( 0u, ovl -> cid . ctx );
+    REQUIRE_EQ ( 1u, ovl -> cid . ctx );
     REQUIRE_EQ ( 0u, ovl -> cid . id );
     VdbVector < SColumn > names ( ovl -> items );
     REQUIRE_EQ ( 2u, names . Count () );
@@ -423,7 +423,7 @@ FIXTURE_TEST_CASE(View_Column_Reference, AST_View_Fixture)
 
 FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesColumn, AST_View_Fixture)
 {   // introducing member expressions!
-    ViewAccess v = ParseView ( "version 2; table T#1 { column U8 c1 = 1; }; view W#1 <T t> { column U8 c2 = t . c1; }", "W" );
+    ViewAccess v = ParseView ( "version 2; table T#1 { column U8 c1 = 1; }; view W#1 <T t0, T t1> { column U8 c2 = t1 . c1; }", "W" );
     REQUIRE_EQ ( 1u, v . Columns () . Count () );
     const SColumn & c = * v . Columns () . Get ( 0 );
     REQUIRE_NOT_NULL ( c . name );
@@ -431,7 +431,8 @@ FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesColumn, AST_View_Fixture)
     REQUIRE_NOT_NULL ( c . read );
     REQUIRE_EQ ( ( uint32_t ) eMembExpr, c . read -> var );
     const SMembExpr * expr = reinterpret_cast < const SMembExpr * > ( c . read );
-    REQUIRE_EQ ( string("t"), ToCppString ( expr -> object -> name ) );
+    REQUIRE_EQ ( v .m_self, expr -> view );
+    REQUIRE_EQ ( 1u, expr -> paramId );
     REQUIRE_EQ ( string("c1"), ToCppString ( expr -> member -> name ) );
 }
 FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesColumn_PseudoPhysicalToken, AST_View_Fixture)
@@ -482,11 +483,11 @@ FIXTURE_TEST_CASE(View_Column_Context, AST_View_Fixture)
     "W", 1 );
     const SNameOverload * ovl = v . ColumnNames () . Get ( 0 );
     REQUIRE_NOT_NULL ( ovl );
-    REQUIRE_EQ ( 1u, ovl -> cid . ctx );
+    REQUIRE_EQ ( 2u, ovl -> cid . ctx ); // W'1 contextId is 2
     REQUIRE_EQ ( 0u, ovl -> cid . id );
     ovl = v . ColumnNames () . Get ( 1 );
     REQUIRE_NOT_NULL ( ovl );
-    REQUIRE_EQ ( 1u, ovl -> cid . ctx );
+    REQUIRE_EQ ( 2u, ovl -> cid . ctx );
     REQUIRE_EQ ( 1u, ovl -> cid . id );
 }
 
@@ -551,6 +552,26 @@ FIXTURE_TEST_CASE(View_Production_ForwardReference_DefinedAsProduction, AST_View
 }
 
 // Inheritance
+
+FIXTURE_TEST_CASE(View_Parents_WrongNumberOfParams, AST_View_Fixture)
+{
+    VerifyErrorMessage (
+        "version 2; table T#1 {}; "
+        "view V#1 <T t> { column U8  v = 1; }; "
+        "view W#1 <T t> { column U16 w = 1; }; "
+        "view X#1 <T t> = V<t>, W<t, V> {}",
+        "Wrong number of parameters for a view instantiation");
+}
+
+FIXTURE_TEST_CASE(View_Parents_WrongParamType, AST_View_Fixture)
+{
+    VerifyErrorMessage (
+        "version 2; table T#1 {}; "
+        "view V#1 <T t> { column U8  v = 1; }; "
+        "view W#1 <T t> { column U16 w = 1; }; "
+        "view X#1 <T t, W w> = V < w > {}",
+        "Wrong type of a view's parameter: 'w'");
+}
 
 FIXTURE_TEST_CASE(View_Parents_ColumnsInherited, AST_View_Fixture)
 {
@@ -693,7 +714,7 @@ FIXTURE_TEST_CASE(View_Parents_OverloadingParentsColumn, AST_View_Fixture)
     const SNameOverload * ovl = v . ColumnNames () . Get ( 0 );
     REQUIRE_NOT_NULL ( ovl );
     REQUIRE_EQ ( string ("c"), ToCppString ( ovl -> name -> name ) );
-    REQUIRE_EQ ( 0u, ovl -> cid . ctx );
+    REQUIRE_EQ ( 1u, ovl -> cid . ctx ); // inherited from W whose contexId is 1
     REQUIRE_EQ ( 0u, ovl -> cid . id );
 
     VdbVector < SColumn > names ( ovl -> items );

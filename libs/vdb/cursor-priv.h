@@ -166,10 +166,21 @@ VCursorCache * VCursorPhysicalColumns ( struct VCursor * self );
 Vector * VCursorGetRow ( struct VCursor * self );
 
 /* GetTable
-* NB. For now, we only support 1-table views, so for a view this will be
-* the table its parameter is bound to.
+* If cursor is on a table, returns the table itself.
+* If cursor is on a view, returns the view's primary table:
+*   If the view's first parameter is a table, return the table bound to the parameter.
+*   If the view's first parameter is itself a view, return the primary table of the view bound to the parameter.
 */
 const struct VTable * VCursorGetTable ( const struct VCursor * self );
+
+/* IsReadOnly
+*/
+bool VCursorIsReadOnly ( const struct VCursor * self );
+
+VBlobMRUCache * VCursorGetBlobMruCache ( struct VCursor * self );
+uint32_t VCursorIncrementPhysicalProductionCount ( struct VCursor * curs );
+
+/* the functions below are not virtual, currently only work with VTableCursor */
 
 /** pagemap supporting thread **/
 rc_t VCursorLaunchPagemapThread(struct VCursor *self);
@@ -180,12 +191,10 @@ bool VCursorCacheActive ( const struct VCursor * self, int64_t * cache_empty_end
 
 Vector * VCursorTriggers ( struct VCursor * self );
 
-bool VCursorIsReadOnly ( const struct VCursor * self );
+const struct KSymbol * VCursorFindOverride ( const struct VCursor *self, const struct VCtxId *cid );
 
-VBlobMRUCache * VCursorGetBlobMruCache ( struct VCursor * self );
-
-uint32_t VCursorIncrementPhysicalProductionCount ( struct VCursor * curs );
-
+/* shared between all cursors */
+rc_t VCursorRowFindNextRowId ( const Vector * self, uint32_t idx, int64_t start_id, int64_t * next );
 
 #ifdef __cplusplus
 }

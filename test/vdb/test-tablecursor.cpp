@@ -27,15 +27,21 @@
 #include <sstream>
 
 #include <klib/rc.h>
+#include <klib/symbol.h>
+
 #include <vdb/table.h>
+#include <vdb/manager.h>
+#include <vdb/database.h>
 
 #include <../libs/vdb/schema-priv.h>
+#include <../libs/vdb/table-priv.h>
+#include <../libs/vdb/cursor-priv.h>
 
-#include "WVDB_Fixture.hpp"
+#include <ktst/unit_test.hpp>
 
 using namespace std;
 
-TEST_SUITE( VdbTableCursorTestSuite_Read )
+TEST_SUITE( VdbTableCursorTestSuite_Read );
 const string ScratchDir = "./db/";
 
 class TableCursorFixture
@@ -79,6 +85,11 @@ public:
         MakeReadCursor ( p_dbName );
         THROW_ON_RC ( VCursorAddColumn ( m_cur, & m_columnIdx, "%s", p_colName ) );
         THROW_ON_RC ( VCursorOpen ( m_cur ) );
+    }
+
+    static std :: string ToCppString ( const String & p_str)
+    {
+        return std :: string ( p_str . addr, p_str . len );
     }
 
     const VCursor * m_cur;
@@ -243,8 +254,9 @@ FIXTURE_TEST_CASE( VTableCursor_GetBlob, TableCursorFixture )
     MakeReadCursorAddColumnOpen ( Accession, Column );
     REQUIRE_RC ( VCursorOpenRow ( m_cur ) );
 
-    struct VBlob const * blob;
+    const VBlob * blob;
     REQUIRE_RC ( VCursorGetBlob ( m_cur, & blob, m_columnIdx ) );
+    REQUIRE_RC ( VBlobRelease ( (VBlob *) blob ) );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_GetBlobDirect, TableCursorFixture )
@@ -252,8 +264,9 @@ FIXTURE_TEST_CASE( VTableCursor_GetBlobDirect, TableCursorFixture )
     MakeReadCursorAddColumnOpen ( Accession, Column );
     REQUIRE_RC ( VCursorOpenRow ( m_cur ) );
 
-    struct VBlob const * blob;
+    const VBlob * blob;
     REQUIRE_RC ( VCursorGetBlobDirect ( m_cur, & blob, 1, m_columnIdx ) );
+    REQUIRE_RC ( VBlobRelease ( (VBlob *) blob ) );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_Read, TableCursorFixture )
@@ -348,18 +361,20 @@ FIXTURE_TEST_CASE( VTableCursor_OpenParentRead, TableCursorFixture )
 {
     MakeReadCursorAddColumnOpen ( Accession, Column );
 
-    struct VTable const * tbl = 0;
+    const VTable * tbl = 0;
     REQUIRE_RC ( VCursorOpenParentRead ( m_cur, & tbl ) );
     REQUIRE_NOT_NULL ( tbl );
+    REQUIRE_RC ( VTableRelease ( (VTable*) tbl ) );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_OpenParentUpdate, TableCursorFixture )
 {
     MakeReadCursorAddColumnOpen ( Accession, Column );
 
-    struct VTable * tbl = 0;
+    VTable * tbl = 0;
     rc_t rc = VCursorOpenParentUpdate ( (VCursor*)m_cur, & tbl );
     REQUIRE_EQ ( GetRCState ( rc ), rcReadonly );
+    REQUIRE_RC ( VTableRelease ( tbl ) );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_GetUserData, TableCursorFixture )
@@ -378,11 +393,31 @@ FIXTURE_TEST_CASE( VTableCursor_SetUserData, TableCursorFixture )
     REQUIRE_RC ( VCursorSetUserData ( m_cur, 0, 0 ) );
 }
 
+FIXTURE_TEST_CASE( VTableCursor_GetTable, TableCursorFixture )
+{
+    MakeReadCursor ( Accession );
+
+    const VTable * tbl = VCursorGetTable ( m_cur );
+    REQUIRE_NOT_NULL ( tbl );
+    // Oddly, there is no easy way to get the database members's name (SEQUENCE)
+    // through the VTable's API. Easier to get to it's schema type name (seq),
+    // which suffices here:
+    REQUIRE_EQ ( string ( "seq" ), ToCppString ( tbl -> stbl -> name -> name ) );
+}
+
+FIXTURE_TEST_CASE( VTableCursor_FindOverride, TableCursorFixture )
+{
+    MakeReadCursor ( Accession );
+    VCtxId id = {5, 3};
+    const KSymbol * sym = VCursorFindOverride ( m_cur, & id );
+    REQUIRE_NOT_NULL ( sym );
+    REQUIRE_EQ ( string ("out_spot_group"), ToCppString ( sym -> name ) );
+}
+
 //TODO:    VTableCursorColumns,
 //TODO:    VTableCursorPhysicalColumns,
 //TODO:    VTableCursorMakeColumn,
 //TODO:    VTableCursorGetRow
-//TODO:    VTableCursorGetTable
 
 //////////////////////////////////////////// Main
 #include <kfg/config.h>

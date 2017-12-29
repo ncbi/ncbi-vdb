@@ -2671,13 +2671,13 @@ void CC symbol_set_context ( void *item, void *data )
     self -> u . fwd . ctx = * ( const uint32_t* ) data;
 }
 
-void CC table_set_context ( STable *self )
+void CC table_set_context ( STable *self, uint32_t p_ctxId )
 {
-    VectorForEach ( & self -> col, false, column_set_context, & self -> id );
-    VectorForEach ( & self -> cname, false, name_set_context, & self -> id );
-    VectorForEach ( & self -> phys, false, physical_set_context, & self -> id );
-    VectorForEach ( & self -> prod, false, production_set_context, & self -> id );
-    VectorForEach ( & self -> vprods, false, symbol_set_context, & self -> id );
+    VectorForEach ( & self -> col, false, column_set_context, & p_ctxId );
+    VectorForEach ( & self -> cname, false, name_set_context, & p_ctxId );
+    VectorForEach ( & self -> phys, false, physical_set_context, & p_ctxId );
+    VectorForEach ( & self -> prod, false, production_set_context, & p_ctxId );
+    VectorForEach ( & self -> vprods, false, symbol_set_context, & p_ctxId );
 }
 
 #if NO_UPDATE_TBL_REF || 0
@@ -2886,8 +2886,8 @@ rc_t table_declaration ( KSymTable *tbl, KTokenSource *src, KToken *t,
             {
                 uint32_t idx;
 
-                /* set the table id on all members */
-                table_set_context ( table );
+                /* set the table context id on all members */
+                table_set_context ( table, table -> id );
 
                 /* add to named table overrides */
                 rc = VectorInsertUnique ( & name -> items, table, & idx, STableSort );

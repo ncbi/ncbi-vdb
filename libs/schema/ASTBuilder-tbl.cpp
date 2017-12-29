@@ -500,7 +500,7 @@ TableDeclaration :: HandleBody ( const AST & p_body )
             }
         }
 
-        table_set_context ( m_self );
+        table_set_context ( m_self, m_builder . NextContextId() );
     }
     else
     {

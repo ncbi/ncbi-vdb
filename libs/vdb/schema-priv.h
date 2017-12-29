@@ -1072,9 +1072,9 @@ struct STableScanData
 bool CC table_fwd_scan ( BSTNode *n, void *data );
 
 /* table_set_context
- * set the table id on all members
+ * set context id on all table members
  */
-void CC table_set_context ( STable *self );
+void CC table_set_context ( STable *self, uint32_t p_ctxId );
 
 /* ScanVirtuals
  * scan override tables for virtual symbols
@@ -1492,9 +1492,9 @@ struct SViewScanData
 bool view_fwd_scan ( BSTNode *n, void *data );
 
 /* view_set_context
- * set the view id on all members
+ * set context id on all view members
  */
-void view_set_context ( SView *self );
+void view_set_context ( SView *self, uint32_t p_ctxId );
 
 /* view_fix_forward_refs
  * fix forward references to newly resolved productions
@@ -1549,14 +1549,19 @@ void SViewInstanceWhack ( void *item, void *ignore );
  *  returns principal object identified. if NULL but "name" is not
  *  NULL, then the object was only partially identified.
  */
-const void * CC SViewFind ( const SView *           self,
-                            const VSchema *         schema,
-                            VTypedecl *             td,
-                            const SNameOverload **  name,
-                            uint32_t *              type,
-                            const char *            expr,
-                            const char *            ctx,
-                            bool                    dflt );
+const void * SViewFind ( const SView *           self,
+                         const VSchema *         schema,
+                         VTypedecl *             td,
+                         const SNameOverload **  name,
+                         uint32_t *              type,
+                         const char *            expr,
+                         const char *            ctx,
+                         bool                    dflt );
+
+/* FindOverride
+ *  finds an inherited or introduced overridden symbol
+ */
+const struct KSymbol * SViewFindOverride ( const SView * self, const VCtxId * cid );
 
 #ifdef __cplusplus
 }
