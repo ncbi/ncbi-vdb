@@ -398,7 +398,7 @@ TEST_CASE(Klib_HashMapDeletes)
         uint32_t key = random() % loops;
 
         map.erase(key);
-        rc = KHashTableDelete(&hmap, (void*)&key, hash);
+        KHashTableDelete(&hmap, (void*)&key, hash);
     }
 
     size_t mapcount = map.size();
@@ -419,6 +419,68 @@ TEST_CASE(Klib_HashMapDeletes)
             REQUIRE_EQ(hvalue, mvalue);
         }
     }
+    KHashTableWhack(&hmap, NULL, NULL, NULL);
+}
+
+TEST_CASE(Klib_HashMapIterator)
+{
+    rc_t rc;
+
+    KHashTable hmap;
+    rc = KHashTableInit(&hmap, 4, 4, 0, 0.0, false);
+    REQUIRE_RC(rc);
+    uint32_t key;
+    uint32_t value;
+
+    std::unordered_map<uint32_t, uint32_t> map;
+
+    const int loops = 10000;
+    for (int i = 0; i != loops; ++i) {
+        key = random() % loops;
+        value = i;
+        uint64_t hash = KHash((char*)&key, 8);
+
+        auto pair = std::make_pair(key, value);
+        map.erase(key);
+        map.insert(pair);
+        rc = KHashTableAdd(&hmap, (void*)&key, hash, (void*)&value);
+    }
+
+    for (int i = 0; i != loops; ++i) {
+        key = random() % loops;
+        uint64_t hash = KHash((char*)&key, 8);
+
+        map.erase(key);
+        KHashTableDelete(&hmap, (void*)&key, hash);
+    }
+
+    size_t mapcount = map.size();
+    size_t hmapcount = KHashTableCount(&hmap);
+    REQUIRE_EQ(mapcount, hmapcount);
+
+    size_t founds = 0;
+    key = loops + 1;
+    KHashTableIteratorMake(&hmap);
+    while (KHashTableIteratorNext(&hmap, &key, &value)) {
+        auto mapfound = map.find(key);
+        if (mapfound == map.end()) {
+            fprintf(stderr, "no key=%d\n", key);
+            REQUIRE_EQ(true, false);
+        } else {
+            uint32_t mvalue = mapfound->second;
+            REQUIRE_EQ(value, mvalue);
+            ++founds;
+        }
+    }
+    REQUIRE_EQ(founds, hmapcount);
+
+    KHashTableIteratorMake(&hmap);
+    while (KHashTableIteratorNext(&hmap, &key, NULL)) {
+        map.erase(key);
+    }
+    mapcount = map.size();
+    REQUIRE_EQ(mapcount, (size_t)0);
+
     KHashTableWhack(&hmap, NULL, NULL, NULL);
 }
 

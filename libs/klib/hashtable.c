@@ -76,6 +76,7 @@ LIB_EXPORT rc_t CC KHashTableInit(KHashTable* self, size_t key_size,
     self->num_buckets = capacity;
     self->mask = capacity - 1;
     self->count = 0;
+    self->iterator = -1; // Iterator not valid
     self->key_cstr = key_cstr;
 
     self->bucket_size = 8 + self->key_size + self->value_size;
@@ -107,6 +108,7 @@ KHashTableWhack(KHashTable* self, void(CC* keywhack)(void* item, void* data),
     self->bucket_size = 0;
     self->count = 0;
     self->mask = 0;
+    self->iterator = -1;
     free(self->buckets);
     self->buckets = NULL;
     memset(self, 0, sizeof(KHashTable));
@@ -123,6 +125,8 @@ LIB_EXPORT size_t CC KHashTableCount(const KHashTable* self)
 static rc_t resize(KHashTable* self)
 {
     assert(self != NULL);
+
+    self->iterator = -1; // Invalidate any current iterators
 
     void* old_buckets = self->buckets;
     size_t old_num_buckets = self->num_buckets;
@@ -143,7 +147,7 @@ static rc_t resize(KHashTable* self)
         const char* valueptr = bucketptr + 8 + self->key_size;
         uint64_t buckethash;
         memcpy(&buckethash, hashptr, 8);
-        if (buckethash & (BUCKET_VALID | BUCKET_VISIBLE)) {
+        if ((buckethash & BUCKET_VALID) && (buckethash & BUCKET_VISIBLE)) {
             KHashTableAdd(self, keyptr, buckethash, valueptr);
         }
     }
@@ -319,7 +323,7 @@ LIB_EXPORT bool CC KHashTableDelete(KHashTable* self, const void* key,
     keyhash |= (BUCKET_VALID | BUCKET_VISIBLE);
     uint64_t bucket = keyhash;
     const uint64_t mask = self->mask;
-    const char* buckets = (const char*)self->buckets;
+    char* buckets = (const char*)self->buckets;
     const size_t bucket_size = self->bucket_size;
     const bool key_cstr = self->key_cstr;
     const size_t key_size = self->key_size;
@@ -377,7 +381,45 @@ LIB_EXPORT double CC KHashTableGetLoadFactor(const KHashTable* self)
     return load_factor;
 }
 
-// TODO: Iterator, can become invalid after any insert
+LIB_EXPORT void CC KHashTableIteratorMake(KHashTable* self)
+{
+    if (self != NULL) self->iterator = 0;
+}
+
+LIB_EXPORT bool KHashTableIteratorNext(KHashTable* self, void* key,
+                                       void* value)
+{
+    if (self == NULL || self->iterator == -1) return false;
+
+    char* buckets = (char*)self->buckets;
+    const size_t bucket_size = self->bucket_size;
+
+    const bool key_cstr = self->key_cstr;
+    const size_t key_size = self->key_size;
+    const size_t value_size = self->value_size;
+
+    while (1) {
+        if (self->iterator >= self->num_buckets) {
+            self->iterator = -1;
+            return false;
+        }
+
+        char* bucketptr = buckets + (self->iterator * bucket_size);
+        char* hashptr = bucketptr;
+        const char* keyptr = bucketptr + 8;
+        const char* valueptr = bucketptr + 8 + self->key_size;
+        uint64_t buckethash;
+        memcpy(&buckethash, hashptr, 8);
+
+        ++self->iterator;
+
+        if ((buckethash & BUCKET_VALID) && (buckethash & BUCKET_VISIBLE)) {
+            memcpy(key, keyptr, key_size);
+            if (value && value_size) memcpy(value, valueptr, value_size);
+            return true;
+        }
+    }
+}
 
 // Fast Hash function
 // Inner core from Google's FarmHash.

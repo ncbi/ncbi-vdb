@@ -50,6 +50,7 @@ typedef struct KHashTable
     size_t num_buckets; // Always a power of 2
     size_t count;
     double max_load_factor;
+    ssize_t iterator;
     bool key_cstr;
 } KHashTable;
 
@@ -72,6 +73,7 @@ KLIB_EXTERN rc_t CC KHashTableInit(KHashTable* self, size_t key_size,
 // If keywhack/valuewhack !=NULL invoke for each element in table.
 // "keywhack" [ IN ] - If not NULL, call to destroy each key.
 // "valuewhack" [ IN ] - "" value. Ignored if value_size==0 (set).
+// TODO: keywhack and valuewhack not implemented
 KLIB_EXTERN void CC
 KHashTableWhack(KHashTable* self, void(CC* keywhack)(void* item, void* data),
                 void(CC* valuewhack)(void* item, void* data), void* data);
@@ -86,8 +88,7 @@ KLIB_EXTERN size_t CC KHashTableCount(const KHashTable* self);
 // "key" [ IN ] - Key to lookup.
 // "keyhash" [ IN ] - Hash of key.
 // "value" [ IN/OUT ] - Pointer to where value_bytes of value will be copied
-// if
-// found. Can be NULL if only existence check needed.
+// if found. Can be NULL if only existence check needed.
 // Returns true if key found.
 KLIB_EXTERN bool CC KHashTableFind(const KHashTable* self, const void* key,
                                    uint64_t keyhash, void* value);
@@ -106,10 +107,20 @@ KLIB_EXTERN rc_t CC KHashTableAdd(KHashTable* self, const void* key,
 KLIB_EXTERN bool CC KHashTableDelete(KHashTable* self, const void* key,
                                      uint64_t keyhash);
 
+// Make Iterator.
+// Will become invalid after any insertions. Only one valid iterator per
+// KHashTable at a time.
+KLIB_EXTERN void CC KHashTableIteratorMake(KHashTable* self);
+
+// Next key/value
+// "key" [ OUT ] - Next key
+// "value" [ OUT ] - Next value. Ignored if value_size==0 or NULL.
+// Returns true if additional keys available
+KLIB_EXTERN bool CC KHashTableIteratorNext(KHashTable* self, void* key,
+                                           void* value);
+
 // Get current load factor (# buckets / # items)
 KLIB_EXTERN double CC KHashTableGetLoadFactor(const KHashTable* self);
-
-// TODO: Iterator, can become invalid after any insert
 
 // Hash function
 KLIB_EXTERN uint64_t CC KHash(const char* s, size_t len);
