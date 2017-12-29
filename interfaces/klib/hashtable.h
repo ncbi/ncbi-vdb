@@ -99,6 +99,13 @@ KLIB_EXTERN bool CC KHashTableFind(const KHashTable* self, const void* key,
 KLIB_EXTERN rc_t CC KHashTableAdd(KHashTable* self, const void* key,
                                   uint64_t keyhash, const void* value);
 
+// Delete key/value pair
+// "key" [ IN ] - Key to delete.
+// "keyhash" [ IN ] - Hash of key to delete.
+// Returns true if key was present.
+KLIB_EXTERN bool CC KHashTableDelete(KHashTable* self, const void* key,
+                                     uint64_t keyhash);
+
 // Get current load factor (# buckets / # items)
 KLIB_EXTERN double CC KHashTableGetLoadFactor(const KHashTable* self);
 

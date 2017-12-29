@@ -41,6 +41,7 @@ extern "C" {
 #endif
 
 static const uint64_t BUCKET_VALID = (uint64_t)1ULL << 63;
+static const uint64_t BUCKET_VISIBLE = (uint64_t)1ULL << 62;
 
 LIB_EXPORT rc_t CC KHashTableInit(KHashTable* self, size_t key_size,
                                   size_t value_size, size_t capacity,
@@ -78,8 +79,7 @@ LIB_EXPORT rc_t CC KHashTableInit(KHashTable* self, size_t key_size,
     self->key_cstr = key_cstr;
 
     self->bucket_size = 8 + self->key_size + self->value_size;
-    // keyhash (u64) + key + value, MSB of byckethash initially set to 0 for
-    // invalid
+    // keyhash (u64) + key + value
 
     // Round up for alignment. Benchmarks say not worthwhile: 5% slower
     // self->bucket_size = (self->bucket_size + 7) & ~7ULL;
@@ -143,7 +143,7 @@ static rc_t resize(KHashTable* self)
         const char* valueptr = bucketptr + 8 + self->key_size;
         uint64_t buckethash;
         memcpy(&buckethash, hashptr, 8);
-        if (buckethash & BUCKET_VALID) {
+        if (buckethash & (BUCKET_VALID | BUCKET_VISIBLE)) {
             KHashTableAdd(self, keyptr, buckethash, valueptr);
         }
     }
@@ -156,7 +156,8 @@ static rc_t resize(KHashTable* self)
 /*
 Since no C++ templates, buckets is going to be variable sized struct:
 {
-    u64 keyhash; // we use MSB=1 to indicate validity
+    u64 keyhash; // we use bit 63 to indicate validity, bit 62 for active (not
+deleted)
     u8[key_size] key;
     u8[value_size] value; // Will not be present for sets
 }
@@ -168,7 +169,7 @@ LIB_EXPORT bool CC KHashTableFind(const KHashTable* self, const void* key,
 {
     if (self == NULL || self->buckets == NULL) return false;
 
-    keyhash |= BUCKET_VALID;
+    keyhash |= (BUCKET_VALID | BUCKET_VISIBLE);
     uint64_t bucket = keyhash;
     const uint64_t mask = self->mask;
     const char* buckets = (const char*)self->buckets;
@@ -188,7 +189,7 @@ LIB_EXPORT bool CC KHashTableFind(const KHashTable* self, const void* key,
             return false;
 
         if (buckethash == keyhash)
-        // hash hit, probability very low (2^-63) that this is an actual miss,
+        // hash hit, probability very low (2^-62) that this is an actual miss,
         // but we have to check.
         {
             bool found;
@@ -232,7 +233,7 @@ LIB_EXPORT rc_t CC KHashTableAdd(KHashTable* self, const void* key,
     if (self == NULL || self->buckets == NULL)
         return RC(rcCont, rcHashtable, rcInserting, rcParam, rcInvalid);
 
-    keyhash |= BUCKET_VALID;
+    keyhash |= (BUCKET_VALID | BUCKET_VISIBLE);
     uint64_t bucket = keyhash;
     const uint64_t mask = self->mask;
     char* buckets = (char*)self->buckets;
@@ -250,7 +251,9 @@ LIB_EXPORT rc_t CC KHashTableAdd(KHashTable* self, const void* key,
         uint64_t buckethash;
         memcpy(&buckethash, bucketptr, 8);
 
-        if (!(buckethash & BUCKET_VALID)) // reached invalid bucket
+        if (!(buckethash
+              & (BUCKET_VALID
+                 | BUCKET_VISIBLE))) // reached invalid or deleted bucket
         {
             memcpy(hashptr, &keyhash, 8);
 
@@ -301,6 +304,62 @@ LIB_EXPORT rc_t CC KHashTableAdd(KHashTable* self, const void* key,
                 // replacement
                 if (value_size) memcpy(valueptr, value, value_size);
                 return 0;
+            }
+        }
+
+        bucket++;
+    }
+}
+
+LIB_EXPORT bool CC KHashTableDelete(KHashTable* self, const void* key,
+                                    uint64_t keyhash)
+{
+    if (self == NULL || self->buckets == NULL) return false;
+
+    keyhash |= (BUCKET_VALID | BUCKET_VISIBLE);
+    uint64_t bucket = keyhash;
+    const uint64_t mask = self->mask;
+    const char* buckets = (const char*)self->buckets;
+    const size_t bucket_size = self->bucket_size;
+    const bool key_cstr = self->key_cstr;
+    const size_t key_size = self->key_size;
+
+    while (1) {
+        bucket &= mask;
+        char* bucketptr = buckets + (bucket * bucket_size);
+        char* hashptr = bucketptr;
+        uint64_t buckethash;
+        memcpy(&buckethash, hashptr, 8);
+
+        if (!(buckethash & BUCKET_VALID)) // reached invalid bucket
+            return false;
+
+        if (buckethash == keyhash)
+        // hash hit, probability very low (2^-62) that this is an actual miss,
+        // but we have to check.
+        {
+            bool found;
+            const char* keyptr = bucketptr + 8;
+
+            if (key_cstr) {
+                char* p;
+                memcpy(&p, keyptr, 8);
+                found = (strcmp(p, key) == 0);
+            } else {
+                if (key_size == 8)
+                    found = (memcmp(keyptr, key, 8) == 0);
+                else if (key_size == 4)
+                    found = (memcmp(keyptr, key, 4) == 0);
+                else
+                    found = (memcmp(keyptr, key, key_size) == 0);
+            }
+
+            if (found) {
+                buckethash = BUCKET_VALID;
+                memcpy(hashptr, &buckethash, 8);
+
+                self->count--;
+                return true;
             }
         }
 
