@@ -414,7 +414,6 @@ TEST_CASE(Klib_HashMapDeletes)
         if (mapfound == map.end()) {
             REQUIRE_EQ(hfound, false);
         } else {
-            ++hits;
             REQUIRE_EQ(hfound, true);
             uint32_t mvalue = mapfound->second;
             REQUIRE_EQ(hvalue, mvalue);
