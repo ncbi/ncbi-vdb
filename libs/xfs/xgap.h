@@ -91,9 +91,6 @@ struct XFSGapKart;
 struct XFSGapObject;
 struct KKey;
 
-/* JOJOBA? struct KKey;  */
-/* JOJOBA? struct VPath; */
-
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
@@ -162,17 +159,6 @@ XFS_EXTERN rc_t CC XFSGapListKartsForProject (
 
 XFS_EXTERN rc_t CC XFSGapRefreshKarts ();
 
-        /*  GapObjects are distints by AccessionOrId ...
-         */
-XFS_EXTERN rc_t CC XFSGapGetObject (
-                                const struct XFSGapObject ** Object,
-                                const char * AccessionOrId
-                                );
-
-XFS_EXTERN bool CC XFSGapHasObject ( const char * AccessionOrId );
-
-    /*  That method will reload all known resources
-     */
 XFS_EXTERN rc_t CC XFSGapRehash ();
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
@@ -295,45 +281,6 @@ XFS_EXTERN rc_t CC XFSGapKartItemAttributes (
                                 uint32_t * ProjectId,
                                 char ** AccessionOrId,
                                 const char * ItemName
-                                );
-
-/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
-/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
-/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
-/*))
- //     XFSGapObject
-((*/
-XFS_EXTERN rc_t CC XFSGapObjectAddRef (
-                                const struct XFSGapObject * self
-                                );
-
-XFS_EXTERN rc_t CC XFSGapObjectRelease (
-                                const struct XFSGapObject * self
-                                );
-
-XFS_EXTERN rc_t CC XFSGapObjectId (
-                                const struct XFSGapObject * self,
-                                const char ** AccessionOrId
-                                );
-
-XFS_EXTERN rc_t CC XFSGapObjectURL (
-                                const struct XFSGapObject * self,
-                                const char ** Url
-                                );
-
-XFS_EXTERN rc_t CC XFSGapObjectCachePath (
-                                const struct XFSGapObject * self,
-                                const char ** CachePath
-                                );
-
-XFS_EXTERN rc_t CC XFSGapObjectModTime (
-                                const struct XFSGapObject * self,
-                                KTime_t * ModTime
-                                );
-
-XFS_EXTERN rc_t CC XFSGapObjectSize (
-                                const struct XFSGapObject * self,
-                                uint64_t * Size
                                 );
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/

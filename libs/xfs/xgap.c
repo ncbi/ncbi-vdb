@@ -53,6 +53,7 @@
 #include "zehr.h"
 #include "mehr.h"
 #include "xgap.h"
+#include "orz.h"
 #include <xfs/path.h>
 
 
@@ -81,7 +82,6 @@ uint32_t
 _sec_millisec ()
 {
     struct timeval Tv;
-    uint32_t Ret = 0;
     uint32_t BUBU = 1000;
 
     if ( gettimeofday ( & Tv, NULL ) == 0 ) {
@@ -281,7 +281,7 @@ _DieBananaFind_NoLock (
     XFS_CSAN ( Item )
     XFS_CAN ( self )
     XFS_CAN ( Item )
-    XFS_CAN ( Item )
+    XFS_CAN ( Key )
     XFS_CAN ( BananaFinder )
 
     BananaFound = ( const void * ) BSTreeFind (
@@ -1777,373 +1777,6 @@ XFSGapKartItemAttributes (
 }   /* XFSGapKartItemAttributes () */
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
-/* XFSGapObject                                                      */
-/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
-struct XFSGapObject {
-    struct BSTNode node;
-    KRefcount refcount;
-
-    const char * accession_or_id;
-
-    const char * remote_url;
-    const char * cache_path;
-    KTime_t mod_time;
-    uint64_t size;
-};
-
-static const char * _sGapObject_classname = "GapObject";
-
-static
-rc_t CC
-_GapObjectDispose ( const struct XFSGapObject * self )
-{
-    struct XFSGapObject * Object = ( struct XFSGapObject * ) self;
-
-    if ( Object != NULL ) {
-        KRefcountWhack (
-                        & ( Object -> refcount ),
-                        _sGapObject_classname
-                        );
-
-        if ( Object -> accession_or_id != NULL ) {
-            free ( ( char * ) Object -> accession_or_id );
-            Object -> accession_or_id = NULL;
-        }
-
-        if ( Object -> remote_url != NULL ) {
-            free ( ( char * ) Object -> remote_url );
-            Object -> remote_url = NULL;
-        }
-
-        if ( Object -> cache_path != NULL ) {
-            free ( ( char * ) Object -> cache_path );
-            Object -> cache_path = NULL;
-        }
-
-        Object -> mod_time = 0;
-        Object -> size = 0;
-
-        free ( Object );
-    }
-
-    return 0;
-}   /* _GapObjectDispose () */
-
-static
-rc_t CC
-_GetValueFromPath (
-                    const char ** Value,
-                    const struct VPath * Path,
-                    rc_t ( CC * GetterFunk ) (
-                                            const struct VPath * self,
-                                            struct String * str
-                                            )
-)
-{
-    rc_t RCt;
-    struct String TheString;
-    const char * RetVal;
-
-    RCt = 0;
-    memset ( & TheString, 0, sizeof ( TheString ) );
-    RetVal = NULL;
-
-    XFS_CSAN ( Value )
-    XFS_CAN ( Path )
-    XFS_CAN ( Value )
-    XFS_CAN ( GetterFunk )
-
-    RCt = GetterFunk ( Path, & TheString );
-    if ( RCt == 0 ) {
-        if ( TheString . len != 0 ) {
-            RCt = XFS_SStrDup (
-                            ( const struct String * ) & TheString,
-                            & RetVal
-                            );
-            if ( RCt == 0 ) {
-                * Value = RetVal;
-            }
-        }
-        else {
-            RCt = XFS_RC ( rcEmpty );
-        }
-    }
-
-    if ( RCt != 0 ) {
-        * Value = NULL;
-        if ( RetVal != NULL ) {
-            free ( ( char * ) RetVal );
-            RetVal = NULL;
-        }
-    }
-
-    return RCt;
-}   /* _GetValueFromPath () */
-
-static
-rc_t CC
-_ReadValueFromPath (
-                    const char ** Value,
-                    const struct VPath * Path,
-                    rc_t ( CC * ReaderFunk ) (
-                                            const struct VPath * self,
-                                            char * Buffer,
-                                            size_t BufferSize,
-                                            const char * Filler
-                                            )
-)
-{
-    rc_t RCt;
-    char Buf [ XFS_SIZE_4096 ];
-    const char * RetVal;
-
-    RCt = 0;
-    * Buf = 0;
-    RetVal = NULL;
-
-    XFS_CSAN ( Value )
-    XFS_CAN ( Path )
-    XFS_CAN ( Value )
-    XFS_CAN ( ReaderFunk )
-
-    RCt = ReaderFunk ( Path, Buf, sizeof ( Buf ), "" );
-    if ( RCt == 0 ) {
-        RCt = XFS_StrDup ( Buf, & RetVal );
-        if ( RCt == 0 ) {
-            * Value = RetVal;
-        }
-    }
-
-    if ( RCt != 0 ) {
-        * Value = NULL;
-        if ( RetVal != NULL ) {
-            free ( ( char * ) RetVal );
-            RetVal = NULL;
-        }
-    }
-
-    return RCt;
-}   /* _ReadValueFromPath () */
-
-static
-rc_t CC
-_GapObjectMake (
-                const struct XFSGapObject ** Object,
-                const struct VPath * Path,
-                const struct VPath * Cache
-)
-{
-    rc_t RCt;
-    struct XFSGapObject * TheObject;
-
-    RCt = 0;
-    TheObject = NULL;
-
-    XFS_CSAN ( Object )
-    XFS_CAN ( Object )
-    XFS_CAN ( Path )
-    XFS_CAN ( Cache )
-
-    TheObject = calloc ( 1, sizeof ( struct XFSGapObject ) );
-    if ( TheObject == NULL ) {
-        RCt = XFS_RC ( rcExhausted );
-    }
-    else {
-        KRefcountInit (
-                        & ( TheObject -> refcount ),
-                        1,
-                        _sGapObject_classname,
-                        "GapObjectMake",
-                        "GapObject"
-                        );
-
-        RCt = _GetValueFromPath (
-                            & TheObject -> accession_or_id,
-                            Path,
-                            VPathGetId
-                            );
-        if ( RCt == 0 ) {
-            RCt = _ReadValueFromPath (
-                                & TheObject -> remote_url,
-                                Path,
-                                XFS_ReadVUri_ZHR
-                                );
-            if ( RCt == 0 ) {
-                RCt = _ReadValueFromPath (
-                                    & TheObject -> cache_path,
-                                    Cache,
-                                    XFS_ReadVPath_ZHR
-                                    );
-                if ( RCt == 0 ) {
-                    TheObject -> mod_time = VPathGetModDate ( Path );
-                    TheObject -> size = VPathGetSize ( Path );
-
-                    * Object = TheObject;
-                }
-            }
-        }
-    }
-
-    if ( RCt != 0 ) {
-        * Object = NULL;
-
-        if ( TheObject != NULL ) {
-            _GapObjectDispose ( TheObject );
-        }
-    }
-
-    return RCt;
-}   /* _GapObjectMake () */
-
-LIB_EXPORT
-rc_t CC
-XFSGapObjectAddRef ( const struct XFSGapObject * self )
-{
-    rc_t RCt;
-    int RefC;
-
-    RCt = 0;
-    RefC = 0;
-
-    XFS_CAN ( self );
-
-    RefC = KRefcountAdd (
-                        & ( self -> refcount ),
-                        _sGapObject_classname
-                        );
-    switch ( RefC ) {
-        case krefOkay :
-            RCt = 0;
-            break;
-        case krefZero :
-        case krefLimit :
-        case krefNegative :
-            RCt = XFS_RC ( rcInvalid );
-            break;
-        default :
-            RCt = XFS_RC ( rcUnknown );
-            break;
-    }
-
-    return RCt;
-}   /* XFSGapObjectAddRef () */
-
-LIB_EXPORT
-rc_t CC
-XFSGapObjectRelease ( const struct XFSGapObject * self )
-{
-    rc_t RCt;
-    int RefC;
-
-    RCt = 0;
-    RefC = 0;
-
-    XFS_CAN ( self );
-
-    RefC = KRefcountDrop (
-                        & ( self -> refcount ),
-                        _sGapObject_classname
-                        );
-    switch ( RefC ) {
-        case krefOkay :
-        case krefZero :
-                RCt = 0;
-                break;
-        case krefWhack :
-                RCt = _GapObjectDispose ( self );
-                break;
-        case krefNegative :
-                RCt = XFS_RC ( rcInvalid );
-                break;
-        default :
-                RCt = XFS_RC ( rcUnknown );
-                break;
-    }
-
-    return RCt;
-}   /* XFSGapObjectRelease () */
-
-LIB_EXPORT
-rc_t CC
-XFSGapObjectId (
-                const struct XFSGapObject * self,
-                const char ** AccessionOrId
-)
-{
-    XFS_CSAN ( AccessionOrId )
-    XFS_CAN ( self )
-    XFS_CAN ( AccessionOrId )
-
-    * AccessionOrId = self -> accession_or_id;
-
-    return 0;
-}   /* XFSGapObjectId () */
-
-LIB_EXPORT
-rc_t CC
-XFSGapObjectURL (
-                const struct XFSGapObject * self,
-                const char ** Url
-)
-{
-    XFS_CSAN ( Url )
-    XFS_CAN ( self )
-    XFS_CAN ( Url )
-
-    * Url = self -> remote_url;
-
-    return 0;
-}   /* XFSGapObjectUrl () */
-
-LIB_EXPORT
-rc_t CC
-XFSGapObjectCachePath (
-                const struct XFSGapObject * self,
-                const char ** CachePath
-)
-{
-    XFS_CSAN ( CachePath )
-    XFS_CAN ( self )
-    XFS_CAN ( CachePath )
-
-    * CachePath = self -> cache_path;
-
-    return 0;
-}   /* XFSGapObjectCachePath () */
-
-LIB_EXPORT
-rc_t CC
-XFSGapObjectModTime (
-                const struct XFSGapObject * self,
-                KTime_t * ModTime
-)
-{
-    XFS_CSA ( ModTime, 0 )
-    XFS_CAN ( self )
-    XFS_CAN ( ModTime )
-
-    * ModTime = self -> mod_time;
-
-    return 0;
-}   /* XFSGapObjectModTime () */
-
-LIB_EXPORT
-rc_t CC
-XFSGapObjectSize (
-                const struct XFSGapObject * self,
-                uint64_t * Size
-)
-{
-    XFS_CSA ( Size, 0 )
-    XFS_CAN ( self )
-    XFS_CAN ( Size )
-
-    * Size = self -> size;
-
-    return 0;
-}   /* XFSGapObjectSize () */
-
-/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
@@ -2159,7 +1792,6 @@ struct _GapDepot {
          */
     const struct _DieBanana * projects;
     const struct _DieBanana * karts;
-    const struct _DieBanana * objects;
 
     const char * public_files;
     const char * kart_files;
@@ -2203,21 +1835,17 @@ _DepotKartWhackCallback ( struct BSTNode * Node, void * unused )
 }   /* _DepotKartWhackCallback () */
 
 static
-void CC
-_DepotObjectWhackCallback ( struct BSTNode * Node, void * unused )
-{
-    if ( Node != NULL ) {
-        XFSGapObjectRelease ( ( const struct XFSGapObject * ) Node );
-    }
-}   /* _DepotObjectWhackCallback () */
-
-static
 rc_t CC
 _GapDepotDispose ( struct _GapDepot * self )
 {
     if ( self == NULL ) {
         return 0;
     }
+
+        /*)     We are stopping resolver
+         (*/
+    XFSGapResolverStop ();
+    XFSGapResolverDispose ();
 
         /*  GapProject disposing
          */
@@ -2231,12 +1859,6 @@ _GapDepotDispose ( struct _GapDepot * self )
         _DieBananaDispose ( self -> karts );
         free ( ( struct _DieBanana * ) self -> karts );
         self -> karts = NULL;
-    }
-
-    if ( self -> objects != NULL ) {
-        _DieBananaDispose ( self -> objects );
-        free ( ( struct _DieBanana * ) self -> objects );
-        self -> objects = NULL;
     }
 
     if ( self -> public_files != NULL ) {
@@ -2366,14 +1988,18 @@ _GapDepotMake ( struct _GapDepot ** Depot )
                                     _DepotKartWhackCallback
                                     );
                 if ( RCt == 0 ) {
-                    RCt = _DieBananaMake (
-                                        & ( TheDepot -> objects ),
-                                        _DepotObjectWhackCallback
-                                        );
+                    RCt = _GapDepotMakePaths ( TheDepot );
                     if ( RCt == 0 ) {
-                        RCt = _GapDepotMakePaths ( TheDepot );
                         if ( RCt == 0 ) {
-                            * Depot = TheDepot;
+                                /*) Initializing and starting Resolver
+                                 (*/
+                            RCt = XFSGapResolverInit ();
+                            if ( RCt == 0 ) {
+                                RCt = XFSGapResolverStart ();
+                                if ( RCt == 0 ) {
+                                    * Depot = TheDepot;
+                                }
+                            }
                         }
                     }
                 }
@@ -2872,140 +2498,6 @@ XFSGapListKartsForProject (
     return _GapListKarts ( List, ProjectId, true );
 }   /* XFSGapListKartsForProject () */
 
-static
-int64_t CC
-_ObjectFindCallback ( const void * Item, const struct BSTNode * Node )
-{
-    const char * Str1, * Str2;
-
-    Str1 = ( const char * ) Item;
-    Str2 = Node == NULL
-        ? ""
-        : ( ( const struct XFSGapObject * ) Node ) -> accession_or_id
-        ;
-
-    return XFS_StringCompare4BST_ZHR ( Str1, Str2 );
-}   /* _ObjectFindCallback () */
-
-LIB_EXPORT
-rc_t CC
-XFSGapGetObject (
-                const struct XFSGapObject ** Object,
-                const char * AccessionOrId
-)
-{
-    rc_t RCt;
-    struct _GapDepot * Depot;
-    const struct XFSGapObject * TheObject;
-
-    RCt = 0;
-    TheObject = NULL;
-    Depot = _DepotGet ();
-
-    XFS_CSAN ( Object )
-    XFS_CAN ( Depot )
-    XFS_CAN ( Object )
-    XFS_CAN ( AccessionOrId )
-
-    RCt = _DieBananaLock ( Depot -> objects );
-    if ( RCt == 0 ) {
-
-        RCt = _DieBananaFind_NoLock (
-                                    Depot -> objects,
-                                    ( const void ** ) & TheObject,
-                                    ( const void * ) AccessionOrId,
-                                    _ObjectFindCallback
-                                    );
-        if ( RCt == 0 ) {
-            RCt = XFSGapObjectAddRef ( TheObject );
-            if ( RCt == 0 ) {
-                * Object = TheObject;
-            }
-        }
-
-        _DieBananaUnlock ( Depot -> objects );
-    }
-
-    return RCt;
-}   /* XFSGapGetObject () */
-
-static
-int64_t CC
-_ObjectAddCallback ( const BSTNode * N1, const BSTNode * N2 )
-{
-    return XFS_StringCompare4BST_ZHR (
-            ( ( struct XFSGapObject * ) N1 ) -> accession_or_id,
-            ( ( struct XFSGapObject * ) N2 ) -> accession_or_id
-            );
-}   /* _KartObjectallback () */
-
-static
-rc_t CC
-_GapAddObject ( const struct XFSGapObject * Object )
-{
-    rc_t RCt;
-    struct _GapDepot * Depot;
-    const char * AccOrId;
-
-    RCt = 0;
-    Depot = _DepotGet ();
-    AccOrId = NULL;
-
-    XFS_CAN ( Depot )
-    XFS_CAN ( Object )
-
-    RCt = XFSGapObjectId ( Object, & AccOrId );
-    if ( RCt == 0 ) {
-        if ( XFSGapHasObject ( AccOrId ) ) {
-            RCt = XFS_RC ( rcExists );
-        }
-        else {
-            RCt = _DieBananaLock ( Depot -> objects );
-            if ( RCt == 0 ) {
-                RCt = _DieBananaAdd_NoLock (
-                                            Depot -> objects,
-                                            ( struct BSTNode * ) Object,
-                                            _ObjectAddCallback
-                                            );
-                _DieBananaUnlock ( Depot -> objects );
-            }
-        }
-    }
-
-    return RCt;
-}   /* _GapAddObject () */
-
-LIB_EXPORT
-bool CC
-XFSGapHasObject ( const char * AccessionOrId )
-{
-    rc_t RCt;
-    struct _GapDepot * Depot;
-    const struct XFSGapObject * Object;
-
-    RCt = 0;
-    Object = NULL;
-    Depot = _DepotGet ();
-
-    XFS_CAN ( Depot )
-    XFS_CAN ( AccessionOrId )
-
-    RCt = _DieBananaLock ( Depot -> objects );
-    if ( RCt == 0 ) {
-
-        RCt = _DieBananaFind_NoLock (
-                                    Depot -> objects,
-                                    ( const void ** ) & Object,
-                                    ( const void * ) AccessionOrId,
-                                    _ObjectFindCallback
-                                    );
-
-        _DieBananaUnlock ( Depot -> objects );
-    }
-
-    return RCt == 0;
-}   /* XFSGapHasObject () */
-
 LIB_EXPORT
 rc_t CC
 XFSGapRehash ()
@@ -3095,7 +2587,6 @@ XFSGapLoadKart (
 static
 rc_t CC
 _AddKartItemsForProject (
-                    struct KService * Service,
                     const struct XFSGapKart * Kart,
                     uint32_t ProjectId
 
@@ -3111,7 +2602,6 @@ _AddKartItemsForProject (
     ListCount = 0;
     ListId = NULL;
 
-    XFS_CAN ( Service )
     XFS_CAN ( Kart )
 
     RCt = _GapKartListIds ( Kart, & List, ProjectId );
@@ -3119,18 +2609,19 @@ _AddKartItemsForProject (
         RCt = KNamelistCount ( List, & ListCount );
         if ( RCt == 0 ) {
             if ( ListCount != 0 ) {
-                RCt = KServiceAddProject ( Service, ProjectId );
-                if ( RCt == 0 ) {
-                    for ( uint32_t llp = 0; llp < ListCount; llp ++ ) {
-                        RCt = KNamelistGet ( List, llp, & ListId );
-                        if ( RCt == 0 ) {
-                            if ( ! XFSGapHasObject ( ListId ) ) {
-                                RCt = KServiceAddId ( Service, ListId );
-                            }
-                        }
-                        if ( RCt != 0 ) {
-                            break;
-                        }
+                for ( uint32_t llp = 0; llp < ListCount; llp ++ ) {
+                    RCt = KNamelistGet ( List, llp, & ListId );
+                    if ( RCt == 0 ) {
+                        RCt = XFSGapResolverAddToResolve (
+                                                        ProjectId,
+                                                        ListId
+                                                        );
+                    }
+                    if ( RCt != 0 ) {
+                        RCt = 0;
+/* JOJOBA: brag about error and continue
+                        break;
+*/
                     }
                 }
             }
@@ -3146,119 +2637,24 @@ rc_t CC
 _ResolveKartItems ( const struct XFSGapKart * Kart )
 {
     rc_t RCt;
-    struct KService * Service;
-    const struct KSrvResponse * Response;
     uint32_t ProjectCount, ProjectId;
-    uint32_t ResponseLen;
-    const struct VPath * Path;
-    const struct VPath * Cache;
-    const struct VPath * VdbCache;
-    const struct KSrvError * Error;
-    const struct XFSGapObject * Object;
-    uint32_t TM;
 
     RCt = 0;
-    Service = NULL;
-    Response = NULL;
     ProjectCount = ProjectId = 0;
-    ResponseLen = 0;
-    Path = NULL;
-    Cache = NULL;
-    VdbCache = NULL;
-    Error = NULL;
-    Object = NULL;
-    TM = _sec_millisec ();
 
     XFS_CAN ( Kart )
 
-    RCt = KServiceMake ( & Service );
-    if ( RCt == 0 ) {
-            /*)) First we are creating request
-             ((*/
-        RCt = XFS_LIdxQty_ZHR ( Kart -> projects_idx, & ProjectCount );
-        for ( uint32_t llp = 0; llp < ProjectCount; llp ++ ) {
-            RCt = XFS_LIdxGet_ZHR (
-                                Kart -> projects_idx,
-                                llp,
-                                & ProjectId
-                                );
-            if ( RCt == 0 ) {
-                RCt = _AddKartItemsForProject (
-                                            Service,
-                                            Kart,
-                                            ProjectId
-                                            );
-            }
-            if ( RCt != 0 ) {
-                break;
-            }
-        }
-
-            /*)) Second, we receiving responce and parsing result
-             ((*/
+    RCt = XFS_LIdxQty_ZHR ( Kart -> projects_idx, & ProjectCount );
+    for ( uint32_t llp = 0; llp < ProjectCount; llp ++ ) {
+        RCt = XFS_LIdxGet_ZHR ( Kart -> projects_idx, llp, & ProjectId );
         if ( RCt == 0 ) {
-            RCt = KServiceNamesQuery (
-                                    Service,
-                                    eProtocolHttps,
-                                    & Response
-                                    );
-            if ( RCt == 0 ) {
-                ResponseLen = KSrvResponseLength ( Response );
-printf ( "[KLN] [%d] [%u] [%s]\n", __LINE__, ResponseLen, Kart -> name );
-                for ( uint32_t llp = 0; llp < ResponseLen; llp ++ ) {
-                    RCt = KSrvResponseGetPath (
-                                            Response,
-                                            llp,
-                                            eProtocolHttps,
-                                            & Path,
-                                            & VdbCache,
-                                            & Error
-                                            );
-                    if ( RCt == 0 ) {
-                        if ( Error == NULL ) {
-                            RCt = KSrvResponseGetCache (
-                                                        Response,
-                                                        llp,
-                                                        & Cache
-                                                        );
-                            if ( RCt == 0 ) {
-                                RCt = _GapObjectMake (
-                                                    & Object,
-                                                    Path,
-                                                    Cache
-                                                    );
-                                if ( RCt == 0 ) {
-                                    RCt = _GapAddObject ( Object );
-                                }
-                            }
-                        }
-                        else {
-                                /* JOJOBA should think about that */
-                            KSrvErrorRelease ( Error );
-                        }
-
-                        if ( Path != NULL ) {
-                            VPathRelease ( Path );
-                        }
-
-                        if ( Cache != NULL ) {
-                            VPathRelease ( Cache );
-                        }
-
-                        if ( VdbCache != NULL ) {
-                            VPathRelease ( VdbCache );
-                        }
-                    }
-                }
-
-                KSrvResponseRelease ( Response );
-            }
+            RCt = _AddKartItemsForProject ( Kart, ProjectId );
         }
-
-        KServiceRelease ( Service );
+        if ( RCt != 0 ) {
+            break;
+        }
     }
-TM = _sec_millisec () - TM;
-printf ( "Were resolved [%d] items in [%u] milliseconds (RC [%u]) (NM [%s])\n", ResponseLen, TM, RCt, Kart -> name );
+
     return RCt;
 }   /* _ResolveKartItems () */
 
@@ -3438,6 +2834,7 @@ _GapKartDepotRefresh ( struct _GapDepot * Depot )
                                 Depot -> karts = Banana;
 
                                 _DieBananaDispose ( TempBanana );
+                                free ( ( struct _DieBanana * ) TempBanana );
 
                                 KLockUnlock ( Depot -> mutabor );
                             }

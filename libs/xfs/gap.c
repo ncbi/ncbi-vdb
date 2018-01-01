@@ -250,6 +250,7 @@ _GapProjectNodeAddChildren ( struct _GapProjectNode * self )
            and may be Bublic cache too.
          */
 
+#ifdef WE_NOT_NEED_WORKSPACE
         /* Workspace is here
          * TODO: password, location, etc ...
          */
@@ -289,6 +290,7 @@ pLogErr ( klogErr, RCt, "ERROR: Can not find definition of Project $(project_id)
         }
         return RCt;
     }
+#endif /* WE_NOT_NEED_WORKSPACE */
 
         /* Here is cache related to project
          */

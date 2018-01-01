@@ -50,6 +50,7 @@
 #include <xfs/perm.h>
 #include "schwarzschraube.h"
 #include "xgap.h"
+#include "orz.h"
 #include "xgapf.h"
 #include "spen.h"
 #include "zehr.h"
@@ -211,19 +212,12 @@ _GapFilesMake ( struct _GapFiles ** Files )
     }
 
     return RCt;
-}   /* _GapFilesDispose () */
+}   /* _GapFilesMake () */
 
 LIB_EXPORT
 rc_t CC
 XFSGapFilesInit ()
 {
-    rc_t RCt = 0;
-
-    RCt = XFSGapInit ();
-    if ( RCt != 0 ) {
-        return RCt;
-    }
-
     if ( _sFiles == NULL ) {
         return _GapFilesMake ( & _sFiles );
     }
@@ -246,8 +240,6 @@ XFSGapFilesDispose ()
 
         RCt = _GapFilesDispose ( Files );
     }
-
-    XFSGapDispose ();
 
     return RCt;
 }   /* XFSGapFilesDispose () */
@@ -398,7 +390,7 @@ _GapFilesFindOrCreate (
     XFS_CAN ( Peer )
     XFS_CAN ( AccessionOrId )
 
-    RCt = XFSGapGetObject ( & Object, AccessionOrId );
+    RCt = XFSGapResolverGetObject ( & Object, AccessionOrId );
     if ( RCt == 0 ) {
         XFSGapObjectCachePath ( Object, & CachePath );
         if ( RCt == 0 ) {
@@ -695,7 +687,7 @@ _GapFilePeerMake (
         RCt = XFS_StrDup ( AccessionOrId, & ( TheFile -> aoi ) );
         if ( RCt == 0 ) {
 
-            RCt = XFSGapGetObject ( & Object, AccessionOrId );
+            RCt = XFSGapResolverGetObject ( & Object, AccessionOrId );
             if ( RCt == 0 ) {
                 RCt = KLockMake ( & ( TheFile -> mutabor ) );
                 if ( RCt == 0 ) {

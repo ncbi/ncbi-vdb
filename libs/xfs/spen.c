@@ -803,7 +803,7 @@ XFSPenMake ( const struct XFSPen ** Pen, size_t Capacity )
         }
     }
 
-    return 0;
+    return RCt;
 }   /* XFSPenMake () */
 
 static
