@@ -93,8 +93,6 @@ struct XFSGapObject;
  ///    will stop thread.
 (((*/
 XFS_EXTERN rc_t CC XFSGapResolverInit ();
-XFS_EXTERN rc_t CC XFSGapResolverStart ();
-XFS_EXTERN rc_t CC XFSGapResolverStop ();
 XFS_EXTERN rc_t CC XFSGapResolverDispose ();
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/

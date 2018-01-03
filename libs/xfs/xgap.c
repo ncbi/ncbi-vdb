@@ -76,7 +76,9 @@ return syscall ( SYS_gettid );
 }
 #endif /* GETTID_NID */
 
+/*
 #define SEC_MILLISEC
+*/
 #ifdef SEC_MILLISEC
 uint32_t
 _sec_millisec ()
@@ -1844,7 +1846,6 @@ _GapDepotDispose ( struct _GapDepot * self )
 
         /*)     We are stopping resolver
          (*/
-    XFSGapResolverStop ();
     XFSGapResolverDispose ();
 
         /*  GapProject disposing
@@ -1995,10 +1996,7 @@ _GapDepotMake ( struct _GapDepot ** Depot )
                                  (*/
                             RCt = XFSGapResolverInit ();
                             if ( RCt == 0 ) {
-                                RCt = XFSGapResolverStart ();
-                                if ( RCt == 0 ) {
-                                    * Depot = TheDepot;
-                                }
+                                * Depot = TheDepot;
                             }
                         }
                     }
@@ -2287,15 +2285,11 @@ pLogMsg ( klogDebug, " <<<[_GapLoadKartFile] RC[$(rc)] NAME[$(name)]", "rc=%u,na
                 _DieBananaUnlock ( Banana );
             }
 
-            /* JOJOBA */
             XFSGapKartRelease ( TheKart );
         }
     }
     else {
-        /* JOJOBA ... that is not error, so here should be
-         *            some warning printed
-        RCt = XFS_RC ( rcExists );
-         */
+        pLogMsg ( klogDebug, "GAP KART: Kart with name [$(name)] is already loaded", "name=%s", KartName );
     }
 
     return RCt;
@@ -2619,9 +2613,7 @@ _AddKartItemsForProject (
                     }
                     if ( RCt != 0 ) {
                         RCt = 0;
-/* JOJOBA: brag about error and continue
-                        break;
-*/
+                        pLogMsg ( klogDebug, "GAP KART: can not add to resolve object [$(name)] for project [$(proj)], RC code [$(rc)]", "name=%s,proj=%d,rc=%d", ListId, ProjectId, RCt );
                     }
                 }
             }

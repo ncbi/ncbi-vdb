@@ -44,6 +44,7 @@
 #include "mehr.h"
 #include "schwarzschraube.h"
 #include "zehr.h"
+#include "proc-on.h"
 
 #include <sysalloc.h>
 
@@ -84,42 +85,50 @@ XFS_InitAll_MHR ( const char * ConfigFile )
 
 pLogMsg ( klogInfo, "InitAll [$(path)]", "path=%s", ( ConfigFile == NULL ? "NULL" : ConfigFile ) );
 
-        /* First we do inti config :lol: */
-    RCt = XFS_LoadConfig_ZHR ( ConfigFile, & Config );
+        /* #0 we are initalizing ProcOn mechanism
+         */
+    RCt = XFSProcOnInit ();
     if ( RCt == 0 ) {
-        _sConfig_MHR = Config;
-        if ( ConfigFile != NULL ) {
-            _sConfigPath_MHR = string_dup_measure ( ConfigFile, NULL );
-        }
-
-        RCt = XFS_VfsManagerInit ();
-
+            /* First we do inti config :lol: */
+        RCt = XFS_LoadConfig_ZHR ( ConfigFile, & Config );
         if ( RCt == 0 ) {
-            XFS_KnsManagerInit ();
-        }
+            _sConfig_MHR = Config;
+            if ( ConfigFile != NULL ) {
+                _sConfigPath_MHR = string_dup_measure (
+                                                        ConfigFile,
+                                                        NULL
+                                                        );
+            }
 
-        if ( RCt == 0 ) {
-            RCt = XFSTeleportInit ();
-        }
+            RCt = XFS_VfsManagerInit ();
 
-        if ( RCt == 0 ) {
-            RCt = XFSTarDepotInit ();
-        }
+            if ( RCt == 0 ) {
+                XFS_KnsManagerInit ();
+            }
 
-        if ( RCt == 0 ) {
-            RCt = XFSEncDepotInit ();
-        }
+            if ( RCt == 0 ) {
+                RCt = XFSTeleportInit ();
+            }
 
-        if ( RCt == 0 ) {
-            RCt = XFSEncDirectoryDepotInit ();
-        }
+            if ( RCt == 0 ) {
+                RCt = XFSTarDepotInit ();
+            }
 
-        if ( RCt == 0 ) {
-            XFSGapFilesInit ();
-        }
+            if ( RCt == 0 ) {
+                RCt = XFSEncDepotInit ();
+            }
 
-        if ( RCt == 0 ) {
-            XFSGapInit ();
+            if ( RCt == 0 ) {
+                RCt = XFSEncDirectoryDepotInit ();
+            }
+
+            if ( RCt == 0 ) {
+                XFSGapFilesInit ();
+            }
+
+            if ( RCt == 0 ) {
+                XFSGapInit ();
+            }
         }
     }
 
@@ -131,6 +140,10 @@ rc_t CC
 XFS_DisposeAll_MHR ()
 {
 pLogMsg ( klogInfo, "DisposeAll [$(path)]", "path=%s", _sConfigPath_MHR );
+
+        /* #0 we are initalizing ProcOn mechanism
+         */
+    XFSProcOnDispose();
 
     XFSGapDispose ();
 

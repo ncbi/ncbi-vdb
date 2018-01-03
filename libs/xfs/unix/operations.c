@@ -60,6 +60,7 @@
 
 #include "xfs-priv.h"
 #include "schwarzschraube.h"
+#include "proc-on.h"
 
 #include <sysalloc.h>
 #include <string.h> /* we are using memset() */
@@ -75,6 +76,10 @@
 
 #include "operations.h"
 
+/*))    Some useful prototypes
+ ((*/
+XFS_EXTERN void CC XFSProcOnRunOnStart ();
+XFS_EXTERN void CC XFSProcOnRunOnFinish ();
 
 /****************************************************************
  * Something weird, but it could simplify somebody's life
@@ -1779,6 +1784,10 @@ XFS_FUSE_init ( struct fuse_conn_info * TheConnInfo )
 
     pLogMsg ( klogDebug, "INIT(): TheConnInfo [$(conn)] TreeDepot [$(depot)]\n", "conn=%p,depot=%p", TheConnInfo, Depot );
 
+        /*) Someting to run on start
+         (*/
+    XFSProcOnRunOnStart ();
+
     return RCt != 0 ? NULL : ( void * ) Depot;
 }   /* XFS_FUSE_init() */
 
@@ -1791,6 +1800,10 @@ static
 void
 XFS_FUSE_destroy ( void * OnoSamoe )
 {
+        /*) Someting to run on finish
+         (*/
+    XFSProcOnRunOnFinish ();
+
     pLogMsg ( klogDebug, "DESTROY(Dummy): OnoSamoe [$(samoe)]", "samoe=%p", OnoSamoe );
 
 }   /* XFS_FUSE_destroy() */

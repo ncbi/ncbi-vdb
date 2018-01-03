@@ -46,6 +46,7 @@
 #include "zehr.h"
 #include "mehr.h"
 #include "orz.h"
+#include "proc-on.h"
 #include "xgap.h" /* XFSGapRefreshKarts() */
 
 
@@ -1152,8 +1153,7 @@ _GRQueRecycleClip (
         if ( _GRCacheHasToBeResolved ( Cache, ClipObj -> aooi ) ) {
             RCt = _GRQuePush ( self, ClipObj );
             if ( RCt != 0 ) {
-/*  JOJOBA : Das is bad
- */
+                pLogMsg ( klogDebug, "RESOLVER: really something bad happens while recycling que [$(rc)]", "rc=%d", RCt );
                 break;
             }
         }
@@ -1508,8 +1508,6 @@ _GRCacheAddObject_NoLock (
     XFS_CAN ( self )
     XFS_CAN ( Object )
 
-/* JOJOBA : Think 
- */
     RCt = _GRCacheFind_NoLock (
                             self,
                             & CO,
@@ -1953,9 +1951,8 @@ _GRProcProcess (
         for ( llp = 0; llp < ResponseLen; llp ++ ) {
             RCt = _GRProcMakeEditObject ( Response, llp, Output );
             if ( RCt != 0 ) {
-/* JOJOBA : Brag that bad object
-                break;
-*/
+                pLogMsg ( klogDebug, "RESOLVER: really something bad happens while editing object [$(rc)]", "rc=%d", RCt );
+                continue; /* JOJOBA: break; ??? */
             }
         }
 
@@ -2010,8 +2007,7 @@ _GResolverDispose ( const struct _GResolver * self )
         if ( Resolver -> thread != NULL ) {
             KThreadWait ( Resolver -> thread, & RCt );
 
-                /* JOJOBA : brag about thread status here
-                 */
+            pLogMsg ( klogDebug, "RESOLVER: while disposing resolver thread status is [$(rc)]", "rc=%d", RCt );
             KThreadRelease ( Resolver -> thread );
             Resolver -> thread = NULL;
         }
@@ -2189,7 +2185,7 @@ _GResolverRun ( const struct KThread * self, void * Data )
             break;
         }
 
-            /* JOJOBA: very bad solution :( */
+            /* JOJOBA: not really elegant solution :LOL: */
         llp ++;
         if ( llp % 4 == 0 ) {
             XFSGapRefreshKarts ();
@@ -2207,6 +2203,72 @@ _GResolverRun ( const struct KThread * self, void * Data )
 
 /*) Thread unsafe ... so think
  (*/
+static
+rc_t CC
+_GapResolverStart ( const void * Data )
+{
+    rc_t RCt;
+    struct KThread * Thread;
+    struct _GResolver * Rsl;
+
+    RCt = 0;
+    Thread = NULL;
+    Rsl = ( struct _GResolver * ) Data;
+
+    XFS_CAN ( Rsl )
+
+    if ( Rsl -> thread == 0 ) {
+        RCt = KThreadMake ( & Thread, _GResolverRun, Rsl );
+        if ( RCt == 0 ) {
+            Rsl -> thread = Thread;
+        }
+        else {
+            pLogMsg ( klogDebug, "RESOLVER: while starting resolver was not able to start thread: RC is [$(rc)]", "rc=%d", RCt );
+        }
+    }
+
+    return RCt;
+}   /* _GapResolverStart () */
+
+LIB_EXPORT
+rc_t CC
+_GapResolverStop ( const void * Data )
+{
+    rc_t RCt;
+    rc_t RCt2;
+    struct _GResolver * Rsl;
+
+    RCt = 0;
+    RCt2 = 0;
+    Rsl = ( struct _GResolver * ) Data;
+
+    XFS_CAN ( Rsl )
+
+        /*  Simple : set flag and wait
+         */
+    if ( Rsl -> thread != NULL ) {
+        RCt = _GapResolverSetStopRequested ( Rsl, true );
+        if ( RCt == 0 ) {
+
+            RCt = KThreadWait ( Rsl -> thread, & RCt2 );
+            if ( RCt != 0 ) {
+                KThreadCancel ( Rsl -> thread );
+            }
+        }
+        if ( RCt != 0 ) {
+            KThreadCancel ( Rsl -> thread );
+        }
+
+        KThreadRelease ( Rsl -> thread );
+
+        Rsl -> thread = NULL;
+    }
+
+    return RCt;
+}   /* _GapResolverStop () */
+
+/*) Thread unsafe ... so think
+ (*/
 LIB_EXPORT
 rc_t CC
 XFSGapResolverInit ()
@@ -2220,98 +2282,28 @@ XFSGapResolverInit ()
     if ( Rsl == NULL ) {
         RCt = _GResolverMake ( & Rsl );
         _sGResolver = Rsl;
+
+        if ( Rsl != NULL ) {
+            XFSProcOnAddStart (
+                            "Resolver Thread",
+                            _GapResolverStart,
+                            Rsl,
+                            false
+                            );
+            XFSProcOnAddFinish (
+                            "Resolver Thread",
+                            _GapResolverStop,
+                            Rsl,
+                            false
+                            );
+        }
     }
     else {
-        /* JOJOBA : brag that alsready inited */
+        pLogMsg ( klogDebug, "RESOLVER: can not init resolver, it is already inited", "" );
     }
 
     return RCt;
 }   /* XFSGapResolverInit () */
-
-/*) Thread unsafe ... so think
- (*/
-LIB_EXPORT
-rc_t CC
-XFSGapResolverStart ()
-{
-    rc_t RCt;
-    struct KThread * Thread;
-    struct _GResolver * Rsl;
-
-    RCt = 0;
-    Thread = NULL;
-
-    Rsl = _Rsl ();
-
-    if ( Rsl == NULL ) {
-        RCt = XFSGapResolverInit ();
-        if ( RCt != 0 ) {
-/* JOJOBA : brag about unability allocate */
-        }
-    }
-
-    Rsl = _Rsl ();
-    if ( Rsl == NULL ) {
-/* JOJOBA : brag about unability allocate */
-        RCt = XFS_RC ( rcInvalid );
-    }
-
-    if ( RCt == 0 ) {
-        if ( Rsl -> thread == 0 ) {
-            RCt = KThreadMake ( & Thread, _GResolverRun, Rsl );
-            if ( RCt == 0 ) {
-                Rsl -> thread = Thread;
-            }
-            else {
-/* JOJOBA : brag about unability allocate */
-            }
-        }
-    }
-
-    return RCt;
-}   /* XFSGapResolverStart () */
-
-LIB_EXPORT
-rc_t CC
-XFSGapResolverStop ()
-{
-    rc_t RCt;
-    rc_t RCt2;
-    struct _GResolver * Rsl;
-
-    RCt = 0;
-    RCt2 = 0;
-
-    Rsl = _Rsl ();
-
-    if ( Rsl != NULL ) {
-            /*  Simple : set flag and wait
-             */
-        if ( Rsl -> thread != NULL ) {
-            RCt = _GapResolverSetStopRequested ( Rsl, true );
-            if ( RCt == 0 ) {
-
-                RCt = KThreadWait ( Rsl -> thread, & RCt2 );
-                if ( RCt != 0 ) {
-                        /* JOJOBA : I do that because have no idea :lol:
-                         */
-                    KThreadCancel ( Rsl -> thread );
-                }
-            }
-            if ( RCt != 0 ) {
-                    /* JOJOBA : I do that because have no idea :lol:
-                     */
-                KThreadCancel ( Rsl -> thread );
-            }
-
-            KThreadRelease ( Rsl -> thread );
-
-            Rsl -> thread = NULL;
-        }
-    }
-
-    return RCt;
-}   /* XFSGapResolverStop () */
 
 LIB_EXPORT
 rc_t CC
@@ -2327,12 +2319,12 @@ XFSGapResolverDispose ()
     _sGResolver = NULL;
 
     if ( Rsl == NULL ) {
-/* JOJOBA : brag that already deinited */
+        pLogMsg ( klogDebug, "RESOLVER: can not dispose resolver, it is already disposed", "" );
     }
     else {
             /*)     Nothing wrong to call it twice :LOLL:
              (*/
-        XFSGapResolverStop ();
+        _GapResolverStop ( Rsl );
         _GResolverDispose ( Rsl );
     }
 

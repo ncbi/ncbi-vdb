@@ -91,6 +91,7 @@ XFS_SRC = \
     xfs \
     xlog    \
     platform \
+    proc-on \
     operations  \
     security    \
     model    \
