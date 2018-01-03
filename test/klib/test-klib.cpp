@@ -42,7 +42,6 @@
 
 #include <cstdlib>
 #include <cstring>
-#include <set>
 #include <stdexcept>
 #include <stdint.h>
 #include <stdio.h>
@@ -120,7 +119,7 @@ TEST_CASE(Klib_KHash_Collide)
     char buf[37];
     for (size_t l = 0; l != sizeof(buf); l++) buf[l] = (char)random();
 
-    std::set<uint64_t> set;
+    std::unordered_set<uint64_t> set;
 
     size_t inserts = 0;
     size_t collisions = 0;
@@ -140,11 +139,10 @@ TEST_CASE(Klib_KHash_Collide)
                 set.insert(hash);
                 inserts++;
             }
-    printf("  Hashed %lu strings, %lu collisions\n", set.size(), collisions);
     REQUIRE_EQ(inserts, set.size());
 }
 
-TEST_CASE(Klib_KHashSet)
+TEST_CASE(Klib_KHashTableSet)
 {
     const char* str1 = "Tu estas probando este hoy, no manana";
     const char* str2 = "Tu estas probando este hoy, no mananX";
@@ -163,6 +161,8 @@ TEST_CASE(Klib_KHashSet)
     uint64_t hash = KHash(str1, size);
     rc = KHashTableAdd(&hset, str1, hash, NULL);
     REQUIRE_RC(rc);
+    rc = KHashTableAdd(&hset, str1, hash, NULL);
+    REQUIRE_RC(rc);
 
     sz = KHashTableCount(&hset);
     REQUIRE_EQ(sz, (size_t)1);
@@ -177,7 +177,7 @@ TEST_CASE(Klib_KHashSet)
     KHashTableWhack(&hset, NULL, NULL, NULL);
 }
 
-TEST_CASE(Klib_HashMap)
+TEST_CASE(Klib_HashTableMap)
 {
     const char* str1 = "Tu estas probando este hoy, no manana";
     const char* str2 = "Tu estas probando este hoy, no mananX";
@@ -237,7 +237,7 @@ TEST_CASE(Klib_HashMap)
     KHashTableWhack(&hmap, NULL, NULL, NULL);
 }
 
-TEST_CASE(Klib_HashMapInts)
+TEST_CASE(Klib_HashTableMapInts)
 {
     rc_t rc;
 
@@ -248,6 +248,14 @@ TEST_CASE(Klib_HashMapInts)
     // Test probing, constant hash value
     uint64_t hash = random();
     hash = random() % 5;
+
+    for (uint64_t i = 0; i != 100; i++) {
+        bool found;
+        uint64_t val;
+        found = KHashTableFind(&hmap, (void*)&i, hash, &val);
+        REQUIRE_EQ(found, false);
+    }
+
     size_t count = 0;
     for (uint64_t i = 0; i != 100; i++) {
         uint64_t j = i * 3;
@@ -277,7 +285,7 @@ TEST_CASE(Klib_HashMapInts)
     KHashTableWhack(&hmap, NULL, NULL, NULL);
 }
 
-TEST_CASE(Klib_HashMapStrings)
+TEST_CASE(Klib_HashTableMapStrings)
 {
     rc_t rc;
 
@@ -289,7 +297,7 @@ TEST_CASE(Klib_HashMapStrings)
     KHashTableWhack(&hmap, NULL, NULL, NULL);
 }
 
-TEST_CASE(Klib_HashMapInts2)
+TEST_CASE(Klib_HashTableMapInts2)
 {
     rc_t rc;
 
@@ -328,7 +336,7 @@ TEST_CASE(Klib_HashMapInts2)
     KHashTableWhack(&hmap, NULL, NULL, NULL);
 }
 
-TEST_CASE(Klib_HashMapValid)
+TEST_CASE(Klib_HashTableMapValid)
 {
     rc_t rc;
 
@@ -338,7 +346,7 @@ TEST_CASE(Klib_HashMapValid)
 
     std::unordered_map<uint32_t, uint32_t> map;
 
-    uint64_t hash = random(); // Test probing
+    uint64_t hash = (uint64_t)random(); // Test probing
     const int loops = 10000;
     for (int i = 0; i != loops; ++i) {
         uint32_t key = random() % loops;
@@ -371,7 +379,7 @@ TEST_CASE(Klib_HashMapValid)
     KHashTableWhack(&hmap, NULL, NULL, NULL);
 }
 
-TEST_CASE(Klib_HashMapDeletes)
+TEST_CASE(Klib_HashTableMapDeletes)
 {
     rc_t rc;
 
@@ -381,106 +389,134 @@ TEST_CASE(Klib_HashMapDeletes)
 
     std::unordered_map<uint32_t, uint32_t> map;
 
+    const int loops = 10000;
     // Test probing, constant hash value
     uint64_t hash = random();
-    const int loops = 10000;
-    for (int i = 0; i != loops; ++i) {
-        uint32_t key = random() % loops;
-        uint32_t value = i;
+    long int threshold = random(); // Delete some fraction of keys
 
-        auto pair = std::make_pair(key, value);
-        map.erase(key);
-        map.insert(pair);
-        rc = KHashTableAdd(&hmap, (void*)&key, hash, (void*)&value);
-    }
+    for (int iter = 0; iter != 2; ++iter) {
+        for (int i = 0; i != loops; ++i) {
+            uint32_t key = random() % loops;
+            uint32_t value = i;
 
-    for (int i = 0; i != loops; ++i) {
-        uint32_t key = random() % loops;
+            auto pair = std::make_pair(key, value);
+            map.erase(key);
+            map.insert(pair);
 
-        map.erase(key);
-        KHashTableDelete(&hmap, (void*)&key, hash);
-    }
+            rc = KHashTableAdd(&hmap, (void*)&key, hash, (void*)&value);
 
-    size_t mapcount = map.size();
-    size_t hmapcount = KHashTableCount(&hmap);
-    REQUIRE_EQ(mapcount, hmapcount);
+            if (random() > threshold) {
+                map.erase(key);
+                KHashTableDelete(&hmap, (void*)&key, hash);
+            }
 
-    for (int i = 0; i != loops; ++i) {
-        uint32_t key = random() % loops;
-        uint32_t hvalue = 0;
-        bool hfound = KHashTableFind(&hmap, (void*)&key, hash, &hvalue);
+            size_t mapcount = map.size();
+            size_t hmapcount = KHashTableCount(&hmap);
+            REQUIRE_EQ(mapcount, hmapcount);
+        }
 
-        auto mapfound = map.find(key);
-        if (mapfound == map.end()) {
-            REQUIRE_EQ(hfound, false);
-        } else {
-            REQUIRE_EQ(hfound, true);
-            uint32_t mvalue = mapfound->second;
-            REQUIRE_EQ(hvalue, mvalue);
+        for (int i = 0; i != loops; ++i) {
+            uint32_t key = random() % loops;
+            uint32_t hvalue = 0;
+            bool hfound = KHashTableFind(&hmap, (void*)&key, hash, &hvalue);
+
+            auto mapfound = map.find(key);
+            if (mapfound == map.end()) {
+                REQUIRE_EQ(hfound, false);
+            } else {
+                REQUIRE_EQ(hfound, true);
+                uint32_t mvalue = mapfound->second;
+                REQUIRE_EQ(hvalue, mvalue);
+            }
         }
     }
     KHashTableWhack(&hmap, NULL, NULL, NULL);
 }
 
-TEST_CASE(Klib_HashMapIterator)
+TEST_CASE(Klib_HashTableMapIterator)
 {
+    const int loops = 10000;
     rc_t rc;
 
     KHashTable hmap;
-    rc = KHashTableInit(&hmap, 4, 4, 0, 0.0, false);
+    rc = KHashTableInit(&hmap, 4, 4, loops, 0.0, false);
     REQUIRE_RC(rc);
     uint32_t key;
     uint32_t value;
 
     std::unordered_map<uint32_t, uint32_t> map;
+    for (int iter = 0; iter != 2; ++iter) {
+        for (int i = 0; i != loops; ++i) {
+            key = random() % loops;
+            value = i;
+            uint64_t hash = KHash((char*)&key, 8);
 
-    const int loops = 10000;
-    for (int i = 0; i != loops; ++i) {
-        key = random() % loops;
-        value = i;
-        uint64_t hash = KHash((char*)&key, 8);
+            auto pair = std::make_pair(key, value);
+            map.erase(key);
+            map.insert(pair);
+            rc = KHashTableAdd(&hmap, (void*)&key, hash, (void*)&value);
 
-        auto pair = std::make_pair(key, value);
-        map.erase(key);
-        map.insert(pair);
-        rc = KHashTableAdd(&hmap, (void*)&key, hash, (void*)&value);
-    }
-
-    for (int i = 0; i != loops; ++i) {
-        key = random() % loops;
-        uint64_t hash = KHash((char*)&key, 8);
-
-        map.erase(key);
-        KHashTableDelete(&hmap, (void*)&key, hash);
-    }
-
-    size_t mapcount = map.size();
-    size_t hmapcount = KHashTableCount(&hmap);
-    REQUIRE_EQ(mapcount, hmapcount);
-
-    size_t founds = 0;
-    key = loops + 1;
-    KHashTableIteratorMake(&hmap);
-    while (KHashTableIteratorNext(&hmap, &key, &value)) {
-        auto mapfound = map.find(key);
-        if (mapfound == map.end()) {
-            fprintf(stderr, "no key=%d\n", key);
-            REQUIRE_EQ(true, false);
-        } else {
-            uint32_t mvalue = mapfound->second;
-            REQUIRE_EQ(value, mvalue);
-            ++founds;
+            size_t mapcount = map.size();
+            size_t hmapcount = KHashTableCount(&hmap);
+            REQUIRE_EQ(mapcount, hmapcount);
         }
-    }
-    REQUIRE_EQ(founds, hmapcount);
+        for (int i = 0; i != loops; ++i) {
+            key = random() % loops;
+            uint64_t hash = KHash((char*)&key, 8);
 
-    KHashTableIteratorMake(&hmap);
-    while (KHashTableIteratorNext(&hmap, &key, NULL)) {
-        map.erase(key);
-    }
-    mapcount = map.size();
-    REQUIRE_EQ(mapcount, (size_t)0);
+            map.erase(key);
+            KHashTableDelete(&hmap, (void*)&key, hash);
+            bool found = KHashTableFind(&hmap, (void*)&key, hash, NULL);
+            REQUIRE_EQ(found, false);
 
+            size_t mapcount = map.size();
+            size_t hmapcount = KHashTableCount(&hmap);
+            REQUIRE_EQ(mapcount, hmapcount);
+        }
+        for (int i = 0; i != loops; ++i) {
+            key = random() % loops;
+            value = i;
+            uint64_t hash = KHash((char*)&key, 8);
+
+            auto pair = std::make_pair(key, value);
+            map.erase(key);
+            map.insert(pair);
+            rc = KHashTableAdd(&hmap, (void*)&key, hash, (void*)&value);
+
+            size_t mapcount = map.size();
+            size_t hmapcount = KHashTableCount(&hmap);
+            REQUIRE_EQ(mapcount, hmapcount);
+        }
+
+        size_t founds = 0;
+        key = loops + 1;
+        KHashTableIteratorMake(&hmap);
+        while (KHashTableIteratorNext(&hmap, &key, &value)) {
+            auto mapfound = map.find(key);
+            if (mapfound == map.end()) {
+                fprintf(stderr, "no key=%d\n", key);
+                REQUIRE_EQ(true, false);
+            } else {
+                uint32_t mvalue = mapfound->second;
+                REQUIRE_EQ(value, mvalue);
+                ++founds;
+            }
+        }
+        size_t mapcount = map.size();
+        size_t hmapcount = KHashTableCount(&hmap);
+        REQUIRE_EQ(founds, hmapcount);
+
+        KHashTableIteratorMake(&hmap);
+        while (KHashTableIteratorNext(&hmap, &key, NULL)) {
+            map.erase(key);
+            uint64_t hash = KHash((char*)&key, 8);
+            KHashTableDelete(&hmap, (void*)&key, hash);
+        }
+        mapcount = map.size();
+        hmapcount = KHashTableCount(&hmap);
+        REQUIRE_EQ(mapcount, hmapcount);
+        REQUIRE_EQ(mapcount, (size_t)0);
+    }
     KHashTableWhack(&hmap, NULL, NULL, NULL);
 }
 

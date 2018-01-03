@@ -49,6 +49,7 @@ typedef struct KHashTable
     size_t bucket_size;
     size_t num_buckets; // Always a power of 2
     size_t count;
+    size_t load; // Included invisible buckets
     double max_load_factor;
     ssize_t iterator;
     bool key_cstr;
