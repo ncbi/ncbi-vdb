@@ -193,7 +193,7 @@ LIB_EXPORT rc_t CC KDiagnoseTestChild ( const KDiagnoseTest * self,
                           uint32_t idx, const KDiagnoseTest ** test )
 {
     const KDiagnoseTest * t = NULL; 
-    uint32_t i = 0;
+    uint32_t i;
     
     if ( test == NULL )
         return RC ( rcRuntime, rcData, rcAccessing, rcParam, rcNull );
@@ -203,7 +203,7 @@ LIB_EXPORT rc_t CC KDiagnoseTestChild ( const KDiagnoseTest * self,
     if ( self == NULL )
         return RC ( rcRuntime, rcData, rcAccessing, rcSelf, rcNull );
 
-    for ( i = i, t = self -> firstChild; i < idx && t != NULL;
+    for ( i = 0, t = self -> firstChild; i < idx && t != NULL;
           ++ i, t = t->nextChild );
 
     * test = t;
