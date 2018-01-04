@@ -384,7 +384,7 @@ TEST_CASE(Klib_HashTableMapDeletes)
     rc_t rc;
 
     KHashTable hmap;
-    rc = KHashTableInit(&hmap, 4, 4, 0, 0.0, false);
+    rc = KHashTableInit(&hmap, 4, 4, 0, 0.95, false);
     REQUIRE_RC(rc);
 
     std::unordered_map<uint32_t, uint32_t> map;
@@ -449,7 +449,7 @@ TEST_CASE(Klib_HashTableMapIterator)
         for (int i = 0; i != loops; ++i) {
             key = random() % loops;
             value = i;
-            uint64_t hash = KHash((char*)&key, 8);
+            uint64_t hash = KHash((char*)&key, 4);
 
             auto pair = std::make_pair(key, value);
             map.erase(key);
@@ -462,7 +462,7 @@ TEST_CASE(Klib_HashTableMapIterator)
         }
         for (int i = 0; i != loops; ++i) {
             key = random() % loops;
-            uint64_t hash = KHash((char*)&key, 8);
+            uint64_t hash = KHash((char*)&key, 4);
 
             map.erase(key);
             KHashTableDelete(&hmap, (void*)&key, hash);
@@ -475,8 +475,8 @@ TEST_CASE(Klib_HashTableMapIterator)
         }
         for (int i = 0; i != loops; ++i) {
             key = random() % loops;
-            value = i;
-            uint64_t hash = KHash((char*)&key, 8);
+            value = random();
+            uint64_t hash = KHash((char*)&key, 4);
 
             auto pair = std::make_pair(key, value);
             map.erase(key);
@@ -509,7 +509,7 @@ TEST_CASE(Klib_HashTableMapIterator)
         KHashTableIteratorMake(&hmap);
         while (KHashTableIteratorNext(&hmap, &key, NULL)) {
             map.erase(key);
-            uint64_t hash = KHash((char*)&key, 8);
+            uint64_t hash = KHash((char*)&key, 4);
             KHashTableDelete(&hmap, (void*)&key, hash);
         }
         mapcount = map.size();
