@@ -208,6 +208,8 @@ _LWrWriter ( void * self, const char * Bf, size_t BfS, size_t * NWr )
     Writer = ( struct _LWr * ) self;
 
     XFS_CSA ( NWr, 0 )
+    XFS_CAN ( Writer )
+    XFS_CAN ( Writer -> file )
     XFS_CAN ( Bf )
     XFS_CAN ( NWr )
 
@@ -276,7 +278,9 @@ XFSLogInit ( const char * LogFile )
     }
 
     return 0;
+/* Ho-ho-ho
     return RCt;
+ */
 }   /* XFSLogInit () */
 
 LIB_EXPORT
