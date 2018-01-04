@@ -84,6 +84,7 @@ static rc_t VTableCursorDefault ( VCURSOR_IMPL *self, uint32_t col_idx, bitsz_t 
 static rc_t VTableCursorCommit ( VCURSOR_IMPL *self );
 static rc_t VTableCursorOpenParentUpdate ( VCURSOR_IMPL *self, VTable **tbl );
 static rc_t VTableCursorMakeColumn ( VCURSOR_IMPL *self, VColumn **col, const SColumn *scol, Vector *cx_bind );
+static rc_t VTableCursorInstallTrigger ( struct VCURSOR_IMPL * self, struct VProduction * prod );
 
 static VCursor_vt VTableCursor_write_vt =
 {
@@ -119,18 +120,32 @@ static VCursor_vt VTableCursor_write_vt =
     VTableCursorOpenParentUpdate,
     VTableCursorGetUserData,
     VTableCursorSetUserData,
+    VTableCursorPermitPostOpenAdd,
+    VTableCursorSuspendTriggers,
+    VTableCursorGetSchema,
+    VTableCursorPageIdRange,
+    VTableCursorIsStaticColumn,
+    VTableCursorLinkedCursorGet,
+    VTableCursorLinkedCursorSet,
+    VTableCursorSetCacheCapacity,
+    VTableCursorGetCacheCapacity,
     VTableCursorColumns,
     VTableCursorPhysicalColumns,
     VTableCursorMakeColumn,
     VTableCursorGetRow,
     VTableCursorGetTable,
     VTableCursorIsReadOnly,
-    VTableCursorGetSchema,
     VTableCursorGetBlobMruCache,
     VTableCursorIncrementPhysicalProductionCount,
-    VTableCursorFindOverride
+    VTableCursorFindOverride,
+    VTableCursorLaunchPagemapThread,
+    VTableCursorPageMapProcessRequest,
+    VTableCursorCacheActive,
+    VTableCursorInstallTrigger
 };
 
+#define ToVCursor(self)         ((VCursor*)(self))
+#define ToConstVCursor(self)    ((const VCursor*)(self))
 
 /*--------------------------------------------------------------------------
  * VTableCursor
@@ -184,7 +199,7 @@ rc_t VCursorWhack ( VTableCursor *self )
     KConditionRelease ( self -> flush_cond );
     KLockRelease ( self -> flush_lock );
 #endif
-    VCursorTerminatePagemapThread(self);
+    VTableCursorTerminatePagemapThread ( self );
     return VCursorDestroy ( self );
 }
 
@@ -251,7 +266,7 @@ rc_t VTableCreateCursorWriteInt ( VTable *self, VTableCursor **cursp, KCreateMod
                     return 0;
                 }
 
-                VCursorRelease ( curs );
+                VCursorRelease ( ToConstVCursor ( curs ) );
             }
         }
 
@@ -261,9 +276,9 @@ rc_t VTableCreateCursorWriteInt ( VTable *self, VTableCursor **cursp, KCreateMod
     return rc;
 }
 
-LIB_EXPORT rc_t CC VTableCreateCursorWrite ( VTable *self, VCURSOR_IMPL **cursp, KCreateMode mode )
+LIB_EXPORT rc_t CC VTableCreateCursorWrite ( VTable *self, VCursor **cursp, KCreateMode mode )
 {
-    return VTableCreateCursorWriteInt ( self, cursp, mode, !s_disable_flush_thread );
+    return VTableCreateCursorWriteInt ( self, (VTableCursor**)cursp, mode, !s_disable_flush_thread );
 }
 
 
@@ -308,11 +323,11 @@ static
 rc_t VProdResolveAddShallowTriggers ( const VProdResolve *self, const STable *stbl )
 {
     rc_t rc;
-    VCURSOR_IMPL *curs;
+    VTableCursor *curs;
     uint32_t i = VectorStart ( & stbl -> prod );
     uint32_t end = i + VectorLength ( & stbl -> prod );
 
-    for ( rc = 0, curs = self -> curs; ( rc == 0 || self -> ignore_column_errors ) && i < end; ++ i )
+    for ( rc = 0, curs = ( VTableCursor *) ( self -> curs ); ( rc == 0 || self -> ignore_column_errors ) && i < end; ++ i )
     {
         SProduction *sprod = VectorGet ( & stbl -> prod, i );
         if ( sprod != NULL && sprod -> trigger )
@@ -371,7 +386,7 @@ rc_t VTableCursorOpen ( const VCURSOR_IMPL *cself )
                     pr . ld = ld;
                     pr . libs = libs;
                     pr . name = & self -> stbl -> name -> name;
-                    pr . curs = self;
+                    pr . curs = ToVCursor ( self );
                     pr . cache = & self -> prod;
                     pr . owned = & self -> owned;
                     pr . cx_bind = & cx_bind;
@@ -395,7 +410,7 @@ rc_t VTableCursorOpen ( const VCURSOR_IMPL *cself )
                     int64_t first;
                     uint64_t count;
 
-                    rc = VCursorIdRange ( self, 0, & first, & count );
+                    rc = VCursorIdRange ( ToConstVCursor ( self ), 0, & first, & count );
                     if ( rc != 0 )
                     {
                         if ( GetRCState ( rc ) == rcEmpty )
@@ -494,7 +509,7 @@ static
 void VProdResolveWritableColumns ( struct resolve_phys_data *pb, bool suspend_triggers )
 {
     const STable *dad;
-    const STable *stbl = pb -> pr . curs -> stbl;
+    const STable *stbl = ( ( const VTableCursor * ) ( pb -> pr . curs ) )-> stbl;
 
     /* walk table schema looking for parents */
     uint32_t i = VectorStart ( & stbl -> overrides );
@@ -526,7 +541,7 @@ rc_t VCursorListSeededWritableColumns ( VTableCursor *self, BSTree *columns, con
     pb . pr . schema = self -> schema;
     pb . pr . ld = self -> tbl -> linker;
     pb . pr . name = & self -> stbl -> name -> name;
-    pb . pr . curs = self;
+    pb . pr . curs = ToVCursor ( self );
     pb . pr . cache = & self -> prod;
     pb . pr . owned = & self -> owned;
     pb . pr . cx_bind = & cx_bind;
@@ -1254,7 +1269,7 @@ rc_t VTableCursorFlushPage ( VCURSOR_IMPL *self )
 
 rc_t VTableCursorCommit ( VCURSOR_IMPL *self )
 {
-    rc_t rc = VCursorFlushPage ( self );
+    rc_t rc = VCursorFlushPage ( (VCursor*)self );
     if ( rc == 0 )
     {
         VTable *tbl = self -> tbl;
@@ -1303,4 +1318,9 @@ rc_t VTableCursorOpenParentUpdate ( VCURSOR_IMPL *self, VTable **tbl )
     }
 
     return rc;
+}
+
+rc_t VTableCursorInstallTrigger ( struct VCURSOR_IMPL * self, struct VProduction * prod )
+{
+    return VectorAppend ( & self -> trig, NULL, prod );
 }

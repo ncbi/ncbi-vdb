@@ -180,20 +180,15 @@ bool VCursorIsReadOnly ( const struct VCursor * self );
 VBlobMRUCache * VCursorGetBlobMruCache ( struct VCursor * self );
 uint32_t VCursorIncrementPhysicalProductionCount ( struct VCursor * curs );
 
-/* the functions below are not virtual, currently only work with VTableCursor */
+const struct KSymbol * VCursorFindOverride ( const struct VCursor *self, const struct VCtxId *cid );
 
-/** pagemap supporting thread **/
-rc_t VCursorLaunchPagemapThread(struct VCursor *self);
-rc_t VCursorTerminatePagemapThread(struct VCursor *self);
-const PageMapProcessRequest* VCursorPageMapProcessRequest(const struct VCursor *self);
+rc_t VCursorLaunchPagemapThread ( struct VCursor *self );
+const PageMapProcessRequest* VCursorPageMapProcessRequest ( const struct VCursor *self );
 
 bool VCursorCacheActive ( const struct VCursor * self, int64_t * cache_empty_end );
 
-Vector * VCursorTriggers ( struct VCursor * self );
+rc_t VCursorInstallTrigger ( struct VCursor * self, struct VProduction * prod );
 
-const struct KSymbol * VCursorFindOverride ( const struct VCursor *self, const struct VCtxId *cid );
-
-/* shared between all cursors */
 rc_t VCursorRowFindNextRowId ( const Vector * self, uint32_t idx, int64_t start_id, int64_t * next );
 
 #ifdef __cplusplus

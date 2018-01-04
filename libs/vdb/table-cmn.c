@@ -536,13 +536,13 @@ rc_t list_readable_columns ( const VTable *cself )
 {
     VTable *self = ( VTable* ) cself;
 
-    VCursor *curs;
-    rc_t rc = VTableCreateCursorReadInternal ( self, ( const VCursor** ) & curs );
+    VTableCursor *curs;
+    rc_t rc = VTableCreateCursorReadInternal ( self, (const VTableCursor **) & curs );
     if (  rc == 0 )
     {
         /* let this private VCursor-function list the columns */
         rc = VCursorListReadableColumns ( curs, & self -> read_col_cache );
-        VCursorRelease ( curs );
+        VCursorRelease ( ( VCursor * ) curs );
         if ( rc == 0 )
             self -> read_col_cache_valid = true;
     }

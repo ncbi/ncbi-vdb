@@ -129,7 +129,22 @@ static rc_t VViewCursorDataPrefetch ( const VCURSOR_IMPL *cself, const int64_t *
 static rc_t VViewCursorOpenParentRead ( const VCURSOR_IMPL * p_self, const VTable ** p_tbl );
 static rc_t VViewCursorGetUserData ( const VCURSOR_IMPL * p_self, void ** p_data );
 static rc_t VViewCursorSetUserData ( const VCURSOR_IMPL * p_self, void * p_data, void ( CC * p_destroy ) ( void *data ) );
+
+static rc_t VViewCursorPermitPostOpenAdd ( const VCURSOR_IMPL * self );
+static rc_t VViewCursorSuspendTriggers ( const VCURSOR_IMPL * self );
+static rc_t VViewCursorPageIdRange ( const VCURSOR_IMPL *self, uint32_t idx, int64_t id, int64_t *first, int64_t *last );
+static rc_t VViewCursorIsStaticColumn ( const VCURSOR_IMPL *self, uint32_t col_idx, bool *is_static );
+static rc_t VViewCursorLinkedCursorGet ( const VCURSOR_IMPL *cself,const char *tbl, struct VCursor const **curs);
+static rc_t VViewCursorLinkedCursorSet ( const VCURSOR_IMPL *cself,const char *tbl, struct VCursor const *curs);
+static uint64_t VViewCursorSetCacheCapacity ( VCURSOR_IMPL *self,uint64_t capacity);
+static uint64_t VViewCursorGetCacheCapacity ( const VCURSOR_IMPL *self);
+
 static const KSymbol * VViewCursorFindOverride ( const VCURSOR_IMPL * p_self, const struct VCtxId * p_cid );
+
+static rc_t VViewCursorLaunchPagemapThread ( struct VCURSOR_IMPL *self );
+static const PageMapProcessRequest* VViewCursorPageMapProcessRequest ( const struct VCURSOR_IMPL *self );
+static bool VViewCursorCacheActive ( const struct VCURSOR_IMPL * self, int64_t * cache_empty_end );
+static rc_t VViewCursorInstallTrigger ( struct VCURSOR_IMPL * self, struct VProduction * prod );
 
 static VCursor_vt VViewCursor_vt =
 {
@@ -165,16 +180,32 @@ static VCursor_vt VViewCursor_vt =
     VViewCursorOpenParentUpdate,
     VViewCursorGetUserData,
     VViewCursorSetUserData,
+
+    VViewCursorPermitPostOpenAdd,
+    VViewCursorSuspendTriggers,
+
+    VViewCursorGetSchema,
+
+    VViewCursorPageIdRange,
+    VViewCursorIsStaticColumn,
+    VViewCursorLinkedCursorGet,
+    VViewCursorLinkedCursorSet,
+    VViewCursorSetCacheCapacity,
+    VViewCursorGetCacheCapacity,
+
     VViewCursorColumns,
     VViewCursorPhysicalColumns,
     VViewCursorMakeColumn,
     VViewCursorGetRow,
     VViewCursorGetTable,
     VViewCursorIsReadOnly,
-    VViewCursorGetSchema,
     VViewCursorGetBlobMruCache,
     VViewCursorIncrementPhysicalProductionCount,
-    VViewCursorFindOverride
+    VViewCursorFindOverride,
+    VViewCursorLaunchPagemapThread,
+    VViewCursorPageMapProcessRequest,
+    VViewCursorCacheActive,
+    VViewCursorInstallTrigger
 };
 
 // VViewCursor
@@ -1634,6 +1665,107 @@ const KSymbol * VViewCursorFindOverride ( const VCURSOR_IMPL * p_self, const str
     return SViewFindOverride ( p_self -> view -> sview, p_cid );
 }
 
+rc_t VViewCursorPermitPostOpenAdd ( const VCURSOR_IMPL * self )
+{
+    return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcUnsupported );
+}
+
+rc_t VViewCursorPageIdRange ( const VCURSOR_IMPL *self, uint32_t idx, int64_t id, int64_t *first, int64_t *last )
+{   /*TODO: body identical to VTableCursorPageIdRange, reuse */
+    rc_t rc;
+
+    if ( first == NULL && last == NULL )
+        rc = RC ( rcVDB, rcCursor, rcAccessing, rcParam, rcNull );
+    else
+    {
+        int64_t dummy;
+        if ( first == NULL )
+            first = & dummy;
+        else if ( last == NULL )
+            last = & dummy;
+
+        if ( self == NULL )
+            rc = RC ( rcVDB, rcCursor, rcAccessing, rcSelf, rcNull );
+        else
+        {
+            const VColumn *vcol = ( const VColumn* ) VectorGet ( & self -> row, idx );
+            if ( vcol == NULL )
+                rc = RC ( rcVDB, rcCursor, rcAccessing, rcColumn, rcNotFound );
+            else
+                return VColumnPageIdRange ( vcol, id, first, last );
+        }
+
+        * first = * last = 0;
+    }
+
+    return rc;
+}
+
+rc_t VViewCursorIsStaticColumn ( const VCURSOR_IMPL *self, uint32_t col_idx, bool *is_static )
+{   /*TODO: body identical to VTableCursorIsStaticColumn, reuse */
+    rc_t rc;
+
+    if ( is_static == NULL )
+        rc = RC ( rcVDB, rcCursor, rcAccessing, rcParam, rcNull );
+    else
+    {
+        if ( self == NULL )
+            rc = RC ( rcVDB, rcCursor, rcAccessing, rcSelf, rcNull );
+        else
+        {
+            uint32_t start = VectorStart ( & self -> row );
+            uint32_t end = start + VectorLength ( & self -> row );
+            if ( col_idx < start || col_idx >= end )
+                rc = RC ( rcVDB, rcCursor, rcSelecting, rcId, rcInvalid );
+            else
+            {
+                VColumn *col = VectorGet ( & self -> row, col_idx );
+                return VColumnIsStatic ( col, is_static );
+            }
+        }
+
+        * is_static = false;
+    }
+
+    return rc;
+}
+
+rc_t VViewCursorLinkedCursorGet ( const VCURSOR_IMPL *cself,const char *tbl, struct VCursor const **curs)
+{
+    return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcUnsupported );
+}
+rc_t VViewCursorLinkedCursorSet ( const VCURSOR_IMPL *cself,const char *tbl, struct VCursor const *curs)
+{
+    return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcUnsupported );
+}
+
+uint64_t VViewCursorSetCacheCapacity ( VCURSOR_IMPL *self,uint64_t capacity)
+{
+    return 0;
+}
+uint64_t VViewCursorGetCacheCapacity ( const VCURSOR_IMPL *self)
+{
+    return 0;
+}
+
+rc_t VViewCursorLaunchPagemapThread ( struct VCURSOR_IMPL *self )
+{
+    return 0;
+}
+const PageMapProcessRequest* VViewCursorPageMapProcessRequest ( const struct VCURSOR_IMPL *self )
+{
+    return NULL;
+}
+
+bool VViewCursorCacheActive ( const struct VCURSOR_IMPL * self, int64_t * cache_empty_end )
+{
+    if ( cache_empty_end != NULL )
+    {
+        * cache_empty_end = 0;
+    }
+    return false;
+}
+
 // not implemented for views (read-only)
 rc_t VViewCursorWrite ( VCURSOR_IMPL * p_self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t count )
 {
@@ -1660,6 +1792,14 @@ rc_t VViewCursorCommit ( VCURSOR_IMPL * p_self )
     return RC ( rcVDB, rcCursor, rcWriting, rcCursor, rcReadonly );
 }
 rc_t VViewCursorOpenParentUpdate ( VCURSOR_IMPL * p_self, VTable **tbl )
+{
+    return RC ( rcVDB, rcCursor, rcWriting, rcCursor, rcReadonly );
+}
+rc_t VViewCursorInstallTrigger ( struct VCURSOR_IMPL * self, struct VProduction * prod )
+{
+    return RC ( rcVDB, rcCursor, rcWriting, rcCursor, rcReadonly );
+}
+rc_t VViewCursorSuspendTriggers ( const VCURSOR_IMPL * self )
 {
     return RC ( rcVDB, rcCursor, rcWriting, rcCursor, rcReadonly );
 }

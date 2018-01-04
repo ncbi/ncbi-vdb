@@ -125,6 +125,7 @@ VDBCMN_SRC = \
 	bytecode \
 	view \
 	cursor-view \
+	cursor-table \
 
 VDB_SRC = \
 	$(VDBCMN_SRC) \

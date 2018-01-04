@@ -65,6 +65,7 @@ static rc_t VTableCursorDefault ( VCURSOR_IMPL *self, uint32_t col_idx, bitsz_t 
 static rc_t VTableCursorCommit ( VCURSOR_IMPL *self );
 static rc_t VTableCursorOpenParentUpdate ( VCURSOR_IMPL *self, VTable **tbl );
 static rc_t VTableCursorMakeColumn ( VCURSOR_IMPL *self, VColumn **col, const SColumn *scol, Vector *cx_bind );
+static rc_t VTableCursorInstallTrigger ( struct VCURSOR_IMPL * self, struct VProduction * prod );
 
 static VCursor_vt VTableCursor_read_vt =
 {
@@ -100,17 +101,32 @@ static VCursor_vt VTableCursor_read_vt =
     VTableCursorOpenParentUpdate,
     VTableCursorGetUserData,
     VTableCursorSetUserData,
+    VTableCursorPermitPostOpenAdd,
+    VTableCursorSuspendTriggers,
+    VTableCursorGetSchema,
+    VTableCursorPageIdRange,
+    VTableCursorIsStaticColumn,
+    VTableCursorLinkedCursorGet,
+    VTableCursorLinkedCursorSet,
+    VTableCursorSetCacheCapacity,
+    VTableCursorGetCacheCapacity,
     VTableCursorColumns,
     VTableCursorPhysicalColumns,
     VTableCursorMakeColumn,
     VTableCursorGetRow,
     VTableCursorGetTable,
     VTableCursorIsReadOnly,
-    VTableCursorGetSchema,
     VTableCursorGetBlobMruCache,
     VTableCursorIncrementPhysicalProductionCount,
-    VTableCursorFindOverride
+    VTableCursorFindOverride,
+    VTableCursorLaunchPagemapThread,
+    VTableCursorPageMapProcessRequest,
+    VTableCursorCacheActive,
+    VTableCursorInstallTrigger
 };
+
+#define ToVCursor(self)         ((VCursor*)(self))
+#define ToConstVCursor(self)    ((const VCursor*)(self))
 
 /*--------------------------------------------------------------------------
  * VTableCursor
@@ -126,7 +142,7 @@ rc_t VCursorMakeFromTable ( VTableCursor **cursp, const struct VTable *tbl )
  */
 rc_t VCursorWhack ( VTableCursor *self )
 {
-    VCursorTerminatePagemapThread(self);
+    VTableCursorTerminatePagemapThread( self );
     return VCursorDestroy ( self );
 }
 
@@ -174,7 +190,7 @@ rc_t VTableCursorOpen ( const VCURSOR_IMPL *cself )
                 int64_t first;
                 uint64_t count;
 
-                rc = VCursorIdRange ( self, 0, & first, & count );
+                rc = VCursorIdRange ( ToConstVCursor ( self ), 0, & first, & count );
                 if ( rc != 0 )
                 {
                     /* permit empty open when run from sradb */
@@ -294,4 +310,7 @@ rc_t VTableCursorOpenParentUpdate ( VCURSOR_IMPL *self, VTable **tbl )
 {
     return RC ( rcVDB, rcCursor, rcWriting, rcCursor, rcReadonly );
 }
-
+rc_t VTableCursorInstallTrigger ( struct VCURSOR_IMPL * self, struct VProduction * prod )
+{
+    return RC ( rcVDB, rcCursor, rcWriting, rcCursor, rcReadonly );
+}

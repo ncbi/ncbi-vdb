@@ -57,9 +57,12 @@ struct VView
 
 rc_t VViewCursorMake ( const VView * p_view, struct VViewCursor ** p_curs );
 
+/* PrimaryTable
+    return VTable representing the view's rowId space */
 const struct VTable * VViewPrimaryTable( const VView * p_self );
 
-/* VTable or VView bound to the specified parameter of the given SView, which can be VView itself or one of its parents.
+/* GetBoundObject
+*  returns VTable or VView bound to the specified parameter of the given SView, which corresponds to p_self or one of its parents.
 *  NULL if not found.
 */
 const void * VViewGetBoundObject( const VView * p_self, const struct SView * p_sview, uint32_t p_paramId );
