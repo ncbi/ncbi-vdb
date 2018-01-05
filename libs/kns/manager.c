@@ -34,6 +34,7 @@
 
 #include <kfg/config.h>
 
+#include <klib/debug.h> /* DBGMSG */
 #include <klib/printf.h>
 #include <klib/refcount.h>
 #include <klib/rc.h>
@@ -181,6 +182,8 @@ rc_t HttpProxyAddHttpProxyPath ( HttpProxy * self,
     self -> http_proxy = proxy;
     self -> http_proxy_port = proxy_port;
 
+    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ),
+        ( "Added proxy '%S:%d'\n", proxy, proxy_port ) );
     if ( ! mgr -> http_proxy_enabled ) {
         mgr -> http_proxy_enabled = ( proxy != NULL );
     }
@@ -684,19 +687,43 @@ static rc_t CC KNSManagerVSetHTTPProxyPathImpl
                     break;
 #endif
                 }
-                colon = string_rchr ( p, s, ':' );
-                if ( colon != NULL )
-                {
-                    char * end;
-                    const char * port_spec = colon + 1;
-                    /* it is true that some day we might read symbolic port names... */
-                    long port_num = strtol ( port_spec, & end, 10 );
-                    if ( port_num <= 0 || port_num >= 0x10000 ||
-                         ( end [ 0 ] != 0 && comma == NULL ) )
+
+                colon = string_chr ( p, s, ':' );
+                if ( colon != NULL ) {
+                    char * end = NULL;
+                    const char * port_spec = NULL;
+                    long port_num = 0;
+
+                    int have = colon - p;
+                    int remains = s - have;
+                    if ( remains > 2 ) {
+                        assert ( colon [ 0 ] == ':' );
+                        if ( colon [ 1 ] == '/' && colon [ 2 ] == '/' ) {
+          /* strip off the scheme from proxy specification: it is ignored now */
+                            psize -= have + 3;
+                            p = colon + 3;
+                            if ( psize == 0 )
+                                return RC ( rcNS, rcMgr, rcUpdating,
+                                            rcPath, rcInvalid );
+                            continue;
+                        }
+                    }
+
+                    port_spec = colon + 1;
+             /* it is true that some day we might read symbolic port names... */
+                    port_num = strtol ( port_spec, & end, 10 );
+                    if ( port_num <= 0 || port_num >= 0x10000)
                         rc = RC ( rcNS, rcMgr, rcUpdating, rcPath, rcInvalid );
-                    else
+                    else if ( end [ 0 ] != 0 && comma == NULL ) {
+                        if ( * end != '/' && * end != '?' ) {
+                            /* skip everyting after '/' or '?' */
+                            rc = RC ( rcNS, rcMgr, rcUpdating,
+                                        rcPath, rcInvalid );
+                        }
+                    }
+                    if ( rc == 0 )
                     {
-                        proxy_port = ( uint64_t ) port_num;
+                        proxy_port = ( uint16_t ) port_num;
                         s = colon - p;
                     }
                 }
@@ -938,6 +965,43 @@ LIB_EXPORT bool CC KNSManagerSetHTTPProxyEnabled ( KNSManager * self, bool enabl
 }
 
 
+static void KNSManagerSetNCBI_VDB_NET ( KNSManager * self, const KConfig * kfg )
+{
+    rc_t rc = 0;
+
+    const KConfigNode * node = NULL;
+
+    if ( self == NULL || kfg == NULL )
+        return;
+
+    rc = KConfigOpenNodeRead ( kfg, & node, "/libs/kns/NCBI_VDB_NET" );
+    if ( rc != 0 ) {
+        self -> NCBI_VDB_NETkfgValueSet = self -> NCBI_VDB_NETkfgValue = false;
+        return;
+    }
+    else {
+        char buffer [ 1 ] = "";
+        size_t num_read = 0;
+        self -> NCBI_VDB_NETkfgValueSet = true;
+        rc = KConfigNodeRead ( node, 0, buffer, sizeof buffer, & num_read, 0 );
+        if ( num_read == 0 )
+            self -> NCBI_VDB_NETkfgValue = false;
+        else switch ( buffer [ 0 ] ) {
+            case '0':
+            case 'f': /* false */
+                self -> NCBI_VDB_NETkfgValue = false;
+                break;
+            default:
+                self -> NCBI_VDB_NETkfgValue = true;
+                break;
+        }
+    }
+
+    KConfigNodeRelease ( node );
+    node = NULL;
+} 
+
+
 LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
 {
     rc_t rc;
@@ -979,7 +1043,10 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
                     {
                         KNSManagerLoadAWS ( mgr, kfg );
                         KNSManagerHttpProxyInit ( mgr, kfg );
+                        KNSManagerSetNCBI_VDB_NET ( mgr, kfg );
+
                         * mgrp = mgr;
+
                         return 0;
                     }
                 }
@@ -1030,4 +1097,39 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char ** user_agent )
         ( *user_agent ) = kns_manager_user_agent;
     }
     return rc;
+}
+
+/******************************************************************************/
+
+#define NCBI_VDB_NET 1 /* VDB-3399 : temporarily enable for internal testing */
+
+bool KNSManagerLogNcbiVdbNetError ( const KNSManager * self ) {
+    if ( self == NULL )
+#ifdef NCBI_VDB_NET
+    return true;
+#else
+    return false;
+#endif
+    else {
+        const char * e = getenv ( "NCBI_VDB_NET" );
+        if ( e != NULL ) {
+            if ( e [ 0 ] == '0' ||
+                 e [ 0 ] == 'f' ) /* false */
+            {
+                return false;
+            }
+            else
+                return true;
+        }
+        else {
+            if ( self -> NCBI_VDB_NETkfgValueSet )
+                return self -> NCBI_VDB_NETkfgValue;
+        }
+
+#ifdef NCBI_VDB_NET
+        return true;
+#else
+        return false;
+#endif
+    }
 }

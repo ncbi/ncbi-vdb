@@ -132,7 +132,7 @@ public:
         THROW_ON_TRUE ( p_objType != sym -> _sym -> type );
     }
 
-    void VerifyImplicitPhysicalColumn ( const SColumn & p_col, const string & p_ident )
+    void VerifyImplicitPhysicalColumn ( const SColumn & p_col )
     {
         // a physical column is attached to p_col
         VerifySymExpr ( p_col . read, ePhysExpr, p_ident, ePhysMember);

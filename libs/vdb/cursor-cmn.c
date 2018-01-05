@@ -353,7 +353,3 @@ rc_t VCursorCacheSwap ( VCursorCache *self, const VCtxId *cid, const void *item,
     }
     return VectorSwap ( ctx, cid -> id, item, prior );
 }
-
-
-
-

@@ -148,7 +148,7 @@ rc_t CC refseq_meta_stats( void *self, const VXformInfo *info, int64_t row_id,
             uint8_t digest[ 16 ];
             MD5State md5;
             MD5StateAppend( &data->md5, data->buf, ( size_t )read_len );
-            memcpy( &md5, &data->md5, sizeof( md5 ) );
+            memmove( &md5, &data->md5, sizeof( md5 ) );
             MD5StateFinish( &md5, digest );
             rc = KMDataNodeWrite( node, digest, sizeof( digest ) );
             KMDataNodeRelease( node );

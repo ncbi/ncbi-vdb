@@ -153,7 +153,7 @@ LIB_EXPORT rc_t CC AlignIteratorRecordPopulate ( void *obj,
     if ( rc == 0 )
     {
         /* copy HAS_MISMATCH into place, point the header-value to it, advance */
-        memcpy( ptr, base, data_len );
+        memmove( ptr, base, data_len );
         iter->has_mismatch = (bool *)ptr;
         ptr += data_len;
     }
@@ -164,7 +164,7 @@ LIB_EXPORT rc_t CC AlignIteratorRecordPopulate ( void *obj,
         /* copy READ into place, point the header-value to it, advance */
         if ( rc == 0 )
         {
-            memcpy( ptr, base, data_len );
+            memmove( ptr, base, data_len );
             iter->read = ( INSDC_4na_bin * )ptr;
             iter->read_len = data_len;
             iter->abs_ref_start = placement->pos;
@@ -279,12 +279,12 @@ LIB_EXPORT rc_t CC AlignMgrMakeAlignmentIterator ( struct AlignMgr const *self,
                 KRefcountInit( &ali->refcount, 1, "AlignmentIterator", "Make", "align" );
 
                 /* copy HAS_MISMATCH into place, point the header-value to it, advance */
-                memcpy( ptr, has_mismatch, read_len );
+                memmove( ptr, has_mismatch, read_len );
                 ali->has_mismatch = (bool *)ptr;
                 ptr += read_len;
 
                 /* copy READ into place, point the header-value to it, advance */
-                memcpy( ptr, read, read_len );
+                memmove( ptr, read, read_len );
                 ali->read = ( INSDC_4na_bin * )ptr;
                 ptr += read_len;
 

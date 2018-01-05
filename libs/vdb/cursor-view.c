@@ -1201,7 +1201,7 @@ CopyRow ( uint32_t      p_elem_size,
 
             /* copy out data up to limit */
             assert ( p_src_off == 0 );
-            memcpy ( p_dest, p_src, ( size_t ) ( to_read >> 3 ) );
+            memmove ( p_dest, p_src, ( size_t ) ( to_read >> 3 ) );
         }
     }
     return rc;

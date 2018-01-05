@@ -995,7 +995,7 @@ rc_t CC flush_tbl_typespec ( void *data, const void *buffer, size_t size )
     flush_tblspec_pb *pb = data;
     if ( pb -> bytes + size >= pb -> size )
         return RC ( rcVDB, rcTable, rcAccessing, rcBuffer, rcInsufficient );
-    memcpy ( & pb -> buff [ pb -> bytes ], buffer, size );
+    memmove ( & pb -> buff [ pb -> bytes ], buffer, size );
     pb -> bytes += size;
     pb -> buff [ pb -> bytes ] = 0;
     return 0;

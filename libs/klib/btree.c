@@ -158,7 +158,7 @@ static rc_t leaf_find(Pager *const pager, Pager_vt const *const vt, void const *
         int const diff = compare_keys ( qsize_8, query_8, cnode -> ord [ slot ] . ksize, key );
         if ( diff == 0 )
         {
-            memcpy(id, key + cnode->ord[slot].ksize, 4);
+            memmove(id, key + cnode->ord[slot].ksize, 4);
             return 0;
         }
         if ( diff < 0 )
@@ -203,7 +203,7 @@ static rc_t branch_find(Pager *const pager, Pager_vt const *const vt, void const
             int const diff = compare_keys ( qsize_8, query_8, cnode -> ord [ slot ] . ksize, key );
             if ( diff == 0 )
             {
-                memcpy(id, key + cnode->ord[slot].ksize, 4);
+                memmove(id, key + cnode->ord[slot].ksize, 4);
                 return 0;
             }
             if ( diff < 0 )
@@ -332,10 +332,10 @@ rc_t make_entry ( EntryData *pb, void *hdrp, void *ordp )
         ord -> ksize = ( uint16_t ) key_size;
         
         /* insert key */
-        memcpy ( page + ord -> key, key,  key_size );
+        memmove ( page + ord -> key, key,  key_size );
         
         /* record value id */
-        memcpy ( & page [ ord -> key + key_size ], pb -> id, sizeof * pb -> id );
+        memmove ( & page [ ord -> key + key_size ], pb -> id, sizeof * pb -> id );
         
         /* mark inserted */
         pb -> was_inserted = true;
@@ -471,10 +471,10 @@ rc_t split_leaf ( EntryData *pb,
     if ( hoist_existing ){
         split -> ksize = 0;
         if(left -> key_prefix_len > 0){
-            memcpy ( ((uint8_t*)split -> key) + split -> ksize, lpage + left -> key_prefix, left -> key_prefix_len );
+            memmove ( ((uint8_t*)split -> key) + split -> ksize, lpage + left -> key_prefix, left -> key_prefix_len );
             split -> ksize +=left -> key_prefix_len;
         }
-        memcpy(((uint8_t*)split -> key) + split -> ksize, lpage + left -> ord [ median ] . key , left -> ord [ median ] . ksize + sizeof ( uint32_t ) );
+        memmove(((uint8_t*)split -> key) + split -> ksize, lpage + left -> ord [ median ] . key , left -> ord [ median ] . ksize + sizeof ( uint32_t ) );
         split -> ksize += left -> ord [ median ] . ksize;
     }
     
@@ -488,12 +488,12 @@ rc_t split_leaf ( EntryData *pb,
         right -> ord [ i ] . ksize = left -> ord [ j ] . ksize;
         right -> key_bytes += (uint16_t) ksize;
         right -> ord [ i ] . key = ( uint16_t ) ( PGSIZE - right -> key_bytes );
-        memcpy (rpage + right -> ord [ i ] . key, lpage + left -> ord [ j ] . key, ksize );
+        memmove (rpage + right -> ord [ i ] . key, lpage + left -> ord [ j ] . key, ksize );
         if(i == 0 && left->key_prefix_len > 0){
             right -> key_prefix_len = left -> key_prefix_len;
             right -> key_bytes     += left -> key_prefix_len;
             right -> key_prefix     = PGSIZE - right -> key_bytes;
-            memcpy ( rpage + right -> key_prefix, lpage + left->key_prefix, left -> key_prefix_len );
+            memmove ( rpage + right -> key_prefix, lpage + left->key_prefix, left -> key_prefix_len );
         }
     }
     
@@ -516,7 +516,7 @@ rc_t split_leaf ( EntryData *pb,
         if(i == 0 && left->key_prefix_len > 0){ /** need to restore prefix from the right ***/
             left -> key_bytes += left -> key_prefix_len;
             left -> key_prefix = PGSIZE - left -> key_bytes;
-            memcpy ( lpage + left -> key_prefix, rpage + right -> key_prefix, left -> key_prefix_len );
+            memmove ( lpage + left -> key_prefix, rpage + right -> key_prefix, left -> key_prefix_len );
         }
     }
     /*** maintain search windows ****/
@@ -561,8 +561,8 @@ rc_t split_leaf ( EntryData *pb,
     /* if insert would be hoisted, do it directly */
     if ( ! hoist_existing )
     {
-        memcpy ( split -> key, pb -> key , pb -> key_size );
-        memcpy ( & ( ( uint8_t* ) split -> key ) [ pb -> key_size ], pb -> id, sizeof * pb -> id );
+        memmove ( split -> key, pb -> key , pb -> key_size );
+        memmove ( & ( ( uint8_t* ) split -> key ) [ pb -> key_size ], pb -> id, sizeof * pb -> id );
         split -> ksize =  (uint16_t) pb -> key_size;
         return 0;
     }
@@ -642,7 +642,7 @@ rc_t leaf_entry ( EntryData *pb, void const *page, Split *split)
         if ( diff == 0 )
         {
             uint32_t val_id;
-            memcpy ( & val_id, & key [ cnode -> ord [ slot ] . ksize ], sizeof val_id );
+            memmove ( & val_id, & key [ cnode -> ord [ slot ] . ksize ], sizeof val_id );
             * pb -> id = val_id;
             return 0;
         }
@@ -734,7 +734,7 @@ rc_t branch_insert ( BranchNode *node, const Split *split, uint32_t slot )
     node -> key_bytes += ksize + sizeof ( uint32_t );
     node -> ord [ slot ] . ksize = ksize;
     node -> ord [ slot ] . key = ( uint16_t ) ( PGSIZE - node -> key_bytes );
-    memcpy ( & ( ( uint8_t* ) node ) [ PGSIZE - node -> key_bytes ], key, ksize + sizeof ( uint32_t ) );
+    memmove ( & ( ( uint8_t* ) node ) [ PGSIZE - node -> key_bytes ], key, ksize + sizeof ( uint32_t ) );
     
     /* enter the new transitions */
     assert ( node -> ord [ ( int ) slot - 1 ] . trans == split -> left );
@@ -794,10 +794,10 @@ static rc_t split_branch ( BranchNode *left, BranchNode *right, const Split *val
     if ( hoist_existing ){
         split -> ksize = 0;
         if(left -> key_prefix_len > 0){
-            memcpy ( ((uint8_t*)split -> key) + split -> ksize, lpage + left -> key_prefix, left -> key_prefix_len );
+            memmove ( ((uint8_t*)split -> key) + split -> ksize, lpage + left -> key_prefix, left -> key_prefix_len );
             split -> ksize +=left -> key_prefix_len;
         }
-        memcpy(((uint8_t*)split -> key) + split -> ksize, lpage + left -> ord [ median ] . key , left -> ord [ median ] . ksize + sizeof ( uint32_t ) );
+        memmove(((uint8_t*)split -> key) + split -> ksize, lpage + left -> ord [ median ] . key , left -> ord [ median ] . ksize + sizeof ( uint32_t ) );
         split -> ksize +=  left -> ord [ median ] . ksize;
     }
     
@@ -812,11 +812,11 @@ static rc_t split_branch ( BranchNode *left, BranchNode *right, const Split *val
         right -> ord [ i ] . ksize = left -> ord [ j ] . ksize;
         right -> key_bytes += (uint16_t) ksize;
         right -> ord [ i ] . key = ( uint16_t ) ( PGSIZE - right -> key_bytes );
-        memcpy ( & rpage [ PGSIZE - right -> key_bytes ], & lpage [ left -> ord [ j ] . key ], ksize );
+        memmove ( & rpage [ PGSIZE - right -> key_bytes ], & lpage [ left -> ord [ j ] . key ], ksize );
         right -> ord [ i - 1 ] . trans = left -> ord [ j - 1 ] . trans;
         if(i == 0 && left->key_prefix_len > 0){
             off = PGSIZE - right -> key_bytes - left -> key_prefix_len;
-            memcpy ( & rpage [ off ], lpage + left -> key_prefix, left -> key_prefix_len );
+            memmove ( & rpage [ off ], lpage + left -> key_prefix, left -> key_prefix_len );
             right -> key_bytes += left -> key_prefix_len;
             right -> key_prefix_len = left -> key_prefix_len;
             right -> key_prefix = (uint16_t) off;
@@ -844,7 +844,7 @@ static rc_t split_branch ( BranchNode *left, BranchNode *right, const Split *val
         }
         if(i == 0 && left->key_prefix_len > 0){ /** need to restore prefix from the right ***/
             off = PGSIZE - left -> key_bytes - left -> key_prefix_len;
-            memcpy ( & lpage [ off ], rpage + right -> key_prefix, left -> key_prefix_len );
+            memmove ( & lpage [ off ], rpage + right -> key_prefix, left -> key_prefix_len );
             left -> key_bytes += left -> key_prefix_len;
             left -> key_prefix = (uint16_t) off;
         }
@@ -892,7 +892,7 @@ static rc_t split_branch ( BranchNode *left, BranchNode *right, const Split *val
     if ( ! hoist_existing )
     {
         /* copy key and value */
-        memcpy ( split -> key, val -> key, val -> ksize + sizeof ( uint32_t ) );
+        memmove ( split -> key, val -> key, val -> ksize + sizeof ( uint32_t ) );
         split ->  ksize = val -> ksize;
         
         /* set left and right transitions */
@@ -1119,7 +1119,7 @@ rc_t branch_entry ( EntryData *pb, void const *page, Split *rsplit)
         int diff = compare_keys(qsize, query, cnode -> ord [ slot ] . ksize, key);
         if ( diff == 0 )
         {
-            memcpy(pb->id, &key[cnode->ord[slot].ksize], 4);
+            memmove(pb->id, &key[cnode->ord[slot].ksize], 4);
             return 0;
         }
         if ( diff < 0 )
@@ -1257,7 +1257,7 @@ static rc_t tree_entry(EntryData *pb)
                 node -> key_prefix = 0;
                 node -> ord [ 0 ] . ksize = split . ksize;
                 node -> ord [ 0 ] . key = ( uint16_t ) ( PGSIZE - node -> key_bytes );
-                memcpy ( & ( ( uint8_t* ) node ) [ PGSIZE - node -> key_bytes ], split . key, node -> key_bytes );
+                memmove ( & ( ( uint8_t* ) node ) [ PGSIZE - node -> key_bytes ], split . key, node -> key_bytes );
                 node -> ltrans = split . left;
                 node -> ord [ 0 ] . trans = split . right;
                 node -> count = 1;
@@ -1332,7 +1332,7 @@ static void invoke_foreach_func ( void const *const cnode, void const *const ord
     size_t const key_size = ord->ksize;
     uint32_t val_id;
     
-    memcpy(&val_id, &key[key_size], 4);
+    memmove(&val_id, &key[key_size], 4);
     f(key, key_size, val_id, data);
 }
 

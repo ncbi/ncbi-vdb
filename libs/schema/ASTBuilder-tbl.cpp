@@ -874,7 +874,7 @@ TableDeclaration :: HandleTypedColumn ( SColumn & p_col, const AST & p_typedCol 
             char physnamebuff [ 256 ];
             /* tack a dot onto the beginning and look up the symbol */
             physnamebuff [ 0 ] = '.';
-            memcpy ( & physnamebuff [ 1 ], p_col . name -> name . addr, p_col . name -> name . size );
+            memmove ( & physnamebuff [ 1 ], p_col . name -> name . addr, p_col . name -> name . size );
             StringInit ( & physname, physnamebuff, p_col . name -> name . size + 1, p_col . name -> name . len + 1 );
             KSymbol * sym = KSymTableFind ( & m_builder . GetSymTab (), & physname );
             /* if the symbol exists, then this CANNOT be a simple column */

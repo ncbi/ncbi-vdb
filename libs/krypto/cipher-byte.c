@@ -122,7 +122,7 @@ static rc_t MEMBER(SetEncryptIvec)(KCipherByte * self,
     assert (self);
     assert (ivec);
 
-    memcpy (self->dad.encrypt_ivec, ivec, self->dad.block_size);
+    memmove (self->dad.encrypt_ivec, ivec, self->dad.block_size);
 
     return 0;
 }
@@ -134,7 +134,7 @@ static rc_t MEMBER(SetDecryptIvec)(KCipherByte * self,
     assert (self);
     assert (ivec);
 
-    memcpy (self->dad.decrypt_ivec, ivec, self->dad.block_size);
+    memmove (self->dad.decrypt_ivec, ivec, self->dad.block_size);
 
     return 0;
 }
@@ -278,7 +278,7 @@ static rc_t MEMBER(EncryptCbc)(KCipherByte * self,
             CipherBlock block;
             unsigned ix;
 
-            memcpy (block, self->dad.encrypt_ivec, self->dad.block_size);
+            memmove (block, self->dad.encrypt_ivec, self->dad.block_size);
 
             do
             {
@@ -288,14 +288,14 @@ static rc_t MEMBER(EncryptCbc)(KCipherByte * self,
                 self->block_cipher->v1.encrypt (block, block,
                                                 self->dad.encrypt_key);
 
-                memcpy (pout, block, self->dad.block_size);
+                memmove (pout, block, self->dad.block_size);
 
                 pin += self->dad.block_size;
                 pout += self->dad.block_size;
 
             } while (--block_count);
 
-            memcpy (self->dad.encrypt_ivec, block, self->dad.block_size);
+            memmove (self->dad.encrypt_ivec, block, self->dad.block_size);
         }
         break;
     }
@@ -324,7 +324,7 @@ static rc_t MEMBER(DecryptCbc)(KCipherByte * self,
             CipherBlock block;
             unsigned ix;
 
-            memcpy (ivec, self->dad.decrypt_ivec, self->dad.block_size);
+            memmove (ivec, self->dad.decrypt_ivec, self->dad.block_size);
 
             do
             {
@@ -334,14 +334,14 @@ static rc_t MEMBER(DecryptCbc)(KCipherByte * self,
                 for (ix = 0; ix < self->dad.block_size; ++ix)
                     pout[ix] = block[ix] ^ ivec[ix];
 
-                memcpy (ivec, pin, self->dad.block_size); 
+                memmove (ivec, pin, self->dad.block_size); 
 
                 pin += self->dad.block_size;
                 pout += self->dad.block_size;
 
             } while (--block_count);
 
-            memcpy (self->dad.decrypt_ivec, ivec, self->dad.block_size);
+            memmove (self->dad.decrypt_ivec, ivec, self->dad.block_size);
         }
         break;
     }

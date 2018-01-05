@@ -473,7 +473,7 @@ rc_t VPhysicalReadKColumn ( VPhysical *self, VBlob **vblob, int64_t id, uint32_t
                     if ( validate_this_blob )
                     {
                         if ( self -> no_hdr )
-                            memcpy ( & p [ num_read ], whole_blob . base, remaining );
+                            memmove ( & p [ num_read ], whole_blob . base, remaining );
                     }
                     else
 #endif
@@ -582,7 +582,7 @@ rc_t VPhysicalReadStatic ( VPhysical *self, VBlob **vblob, int64_t id, uint32_t 
                         int64_t sstop_id = self -> sstop_id;
 
                         /* copy out single row */
-                        memcpy ( buffer . base, base, bytes );
+                        memmove ( buffer . base, base, bytes );
                         self->fixed_len = buffer.elem_count;
 
                         /* limit row range */

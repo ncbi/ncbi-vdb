@@ -22,9 +22,6 @@
 *
 * ===========================================================================
 *
-*/
-
-/**
 * Unit tests for HTTP interfaces
 */
 
@@ -32,10 +29,12 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <klib/debug.h> /* KDbgSetString */
 #include <klib/log.h>
 #include <klib/rc.h>
 #include <kfg/config.h>
 
+#include <kns/adapt.h> /* KStreamFromKFilePair */
 #include <kns/manager.h>
 #include <kns/kns-mgr-priv.h>
 #include <kns/http.h>
@@ -55,6 +54,8 @@
 #include <list>
 #include <sstream>
 
+#define ALL
+
 static rc_t argsHandler ( int argc, char * argv [] );
 TEST_SUITE_WITH_ARGS_HANDLER ( HttpTestSuite, argsHandler );
 
@@ -68,7 +69,6 @@ class TestStream;
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
 
-#define ALL
 
 class TestStream
 {
@@ -109,13 +109,13 @@ public:
         
         if ( response.size() >= bsize )
         {
-            memcpy(buffer, response.c_str(), bsize);
+            memmove(buffer, response.c_str(), bsize);
             * num_read = bsize; 
             response = response.substr(bsize);
         }
         else
         {
-            memcpy(buffer, response.c_str(), response.size());
+            memmove(buffer, response.c_str(), response.size());
             * num_read = response.size();
             response.clear();
         }
@@ -780,6 +780,7 @@ FIXTURE_TEST_CASE(HttpReliableRequest_POST_5xx_retry, HttpFixture)
 
 #endif
 
+#ifdef ALL
 /* VDB-3059: KHttpRequestPOST generates incorrect Content-Length after retry :
  it makes web server to return 400 Bad Request */
 TEST_CASE(ContentLength) {
@@ -796,7 +797,8 @@ TEST_CASE(ContentLength) {
     REQUIRE_RC ( KNSManagerMakeReliableClientRequest ( kns, & req, 0x01000000,
         NULL, "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" ) ); 
     REQUIRE_RC ( KHttpRequestAddPostParam ( req, "acc=AAAB01" ) );
-    REQUIRE_RC ( KHttpRequestAddPostParam ( req, "accept-proto=http" ) );
+    REQUIRE_RC ( KHttpRequestAddPostParam ( req, "accept-proto=https" ) );
+    REQUIRE_RC ( KHttpRequestAddPostParam ( req, "version=1.2" ) );
     REQUIRE_RC ( KHttpRequestPOST ( req, & rslt ) );
     REQUIRE_RC ( KClientHttpResultStatus ( rslt, & code, NULL, 0, NULL ) );
     REQUIRE_EQ ( code, 200u );
@@ -822,6 +824,138 @@ TEST_CASE(ContentLength) {
     RELEASE ( KHttpRequest, req );
 
     RELEASE ( KNSManager, kns );
+    REQUIRE_RC ( rc );
+}
+#endif
+
+struct NV {
+    String AcceptRanges;
+    const string bytes;
+
+    String host;
+
+    NV ( void ) : bytes ( "bytes"  ) {
+        CONST_STRING ( & AcceptRanges, "Accept-Ranges" );
+
+#define HOST "www.ncbi.nlm.nih.gov"
+        CONST_STRING ( & host, HOST );
+    }
+};
+static const NV s_v;
+
+TEST_CASE ( RepeatedHeader ) {
+    rc_t rc = 0;
+    KDirectory * dir = NULL;
+    REQUIRE_RC ( KDirectoryNativeDir ( & dir ) );
+
+    const KFile * f = NULL;
+    REQUIRE_RC ( KDirectoryOpenFileRead ( dir, & f, "double_header.txt" ) );
+
+    KNSManager * mgr = NULL;
+    REQUIRE_RC ( KNSManagerMake ( & mgr ) );
+    KStream * sock = NULL;
+    REQUIRE_RC ( KStreamFromKFilePair ( & sock, f, NULL ) );
+
+    KClientHttp * http = NULL;
+    REQUIRE_RC ( KNSManagerMakeHttp
+                 ( mgr, & http, sock, 0x01010000, & s_v . host, 80 ) );
+
+    String msg;
+    uint32_t status = 0;
+    ver_t version = 0;;
+    REQUIRE_RC ( KClientHttpGetStatusLine
+                 ( http, NULL, & msg, & status, & version ) );
+
+    BSTree hdrs;
+    BSTreeInit ( & hdrs );
+    for ( bool blank = false, close_connection = false, len_zero = false;
+         ! blank; )
+    {
+        REQUIRE_RC ( KClientHttpGetHeaderLine
+            ( http, NULL, & hdrs, & blank, & len_zero, & close_connection ) );
+    }
+
+    bool doubleChecked   = false;
+    bool repeatedChecked = false;
+    bool singleChecked   = false;
+
+    String Server;
+    CONST_STRING ( & Server, "Server" );
+    string Apache ( "Apache" );
+
+    String Via;
+    CONST_STRING ( & Via, "Via" );
+    string via ( "1.0 fred,1.1 example.com (Apache/1.1)" );
+
+    for ( const KHttpHeader * hdr = reinterpret_cast
+                < const KHttpHeader * > ( BSTreeFirst ( & hdrs ) ); 
+          hdr != NULL;
+          hdr = reinterpret_cast
+                < const KHttpHeader * > ( BSTNodeNext ( & hdr -> dad ) )
+        )
+    {
+        if ( StringEqual ( & hdr -> name, & s_v . AcceptRanges ) )  {
+            REQUIRE_EQ ( string ( hdr -> value . addr, hdr -> value . size ),
+                         s_v . bytes );
+            repeatedChecked = true;
+        }
+        else if ( StringEqual ( & hdr -> name, & Server ) )  {
+            REQUIRE_EQ ( string ( hdr -> value . addr, hdr -> value . size ),
+                         Apache );
+            singleChecked = true;
+        }
+        else if ( StringEqual ( & hdr -> name, & Via ) ) {
+            REQUIRE_EQ ( string ( hdr -> value . addr, hdr -> value . size ),
+                         via );
+            doubleChecked = true;
+        }
+    }
+
+    REQUIRE ( doubleChecked && repeatedChecked && singleChecked );
+
+    BSTreeWhack ( & hdrs, KHttpHeaderWhack, NULL );
+
+    RELEASE ( KClientHttp, http );
+    RELEASE ( KStream, sock );
+    RELEASE ( KNSManager, mgr );
+
+    RELEASE ( KFile, f );
+
+    RELEASE ( KDirectory, dir );
+    REQUIRE_RC ( rc );
+}
+
+// this test relies on real server responses
+TEST_CASE ( TestKClientHttpResultTestHeaderValue ) {
+    rc_t rc = 0;
+
+    KNSManager * mgr = NULL;
+    REQUIRE_RC ( KNSManagerMake ( & mgr ) );
+
+    KClientHttp * http = NULL;
+    REQUIRE_RC ( KNSManagerMakeHttp
+                 ( mgr, & http, NULL, 0x01010000, & s_v . host, 80 ) );
+
+    string url ( "http://" HOST );
+    KClientHttpRequest * req = NULL;
+    REQUIRE_RC ( KClientHttpMakeRequest ( http, & req, url . c_str () ) );
+
+    KClientHttpResult * rslt = NULL;
+    REQUIRE_RC ( KClientHttpRequestHEAD ( req, & rslt ) );
+
+    REQUIRE ( KClientHttpResultTestHeaderValue ( rslt,
+                s_v . AcceptRanges . addr, s_v . bytes . c_str () ) );
+
+    REQUIRE ( ! KClientHttpResultTestHeaderValue ( rslt, "foo", "bar" ) );
+
+    RELEASE ( KClientHttpResult, rslt );
+
+    RELEASE ( KClientHttpRequest, req );
+
+    RELEASE ( KClientHttp, http );
+
+    RELEASE ( KNSManager, mgr );
+
     REQUIRE_RC ( rc );
 }
 
@@ -858,6 +992,9 @@ const char UsageDefaultName[] = "test-http";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    if ( 0 ) assert ( ! KDbgSetString ( "KNS" ) );
+    if ( 0 ) assert ( ! KDbgSetString ( "VFS" ) );
+
     KConfigDisableUserSettings();
 
 	// this makes messages from the test code appear

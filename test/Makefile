@@ -35,6 +35,7 @@ include $(TOP)/build/Makefile.config
 # default
 #
 SUBDIRS =       \
+    ngs         \
     ktst        \
     cc          \
     ext         \
@@ -44,21 +45,21 @@ SUBDIRS =       \
     klib        \
     kfg         \
     kapp        \
+    vfs         \
     kns         \
     kdb         \
     kproc       \
     vdb         \
-    ngs         \
     ngs-c++     \
     ngs-java    \
     ngs-python  \
     search      \
-    vfs         \
     sraxf       \
     vxf         \
     loader      \
     krypto      \
     cipher      \
+    install     \
 
 # common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
 include $(TOP)/build/Makefile.targets

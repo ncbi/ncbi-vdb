@@ -142,7 +142,7 @@ rc_t CC REFERENCE_TABLE_sub_select( RefTableSubSelect* self, int64_t ref_row_id,
                         uint32_t cmp_read_len = 0;
                         int64_t row;
                         
-                        memcpy( self->u.ref.name, n, n_len );
+                        memmove( self->u.ref.name, n, n_len );
                         self->u.ref.name_len = n_len;
                         self->u.ref.start_id = out->start_id;
                         self->u.ref.stop_id = out->stop_id;
@@ -259,7 +259,7 @@ rc_t CC ALIGN_CMN_TABLE_sub_select(RefTableSubSelect* self, int64_t ref_row_id,
             rc = VCursorCellDataDirect( self->curs, ref_row_id, self->u.mod.ref_start_idx, NULL, (void const **)&al_ref_start, NULL, NULL);
             if ( rc == 0 )
             {
-                memcpy ( &al_ref_id_value, al_ref_id, sizeof *al_ref_id );
+                memmove ( &al_ref_id_value, al_ref_id, sizeof *al_ref_id );
                 if ( -offset > (INSDC_coord_zero)ref_len )
                 {
                     /* requested chunk is to the left and is not using allele data */
@@ -334,7 +334,7 @@ rc_t CC ALIGN_CMN_TABLE_sub_select(RefTableSubSelect* self, int64_t ref_row_id,
         if ( rc == 0 )
             rc = VCursorCellDataDirect( self->curs, ref_row_id, self->u.mod.ref_len_idx, NULL, (void const **)&al_ref_len, NULL, NULL );
 
-        memcpy ( & al_ref_id_value, al_ref_id, sizeof *al_ref_id );
+        memmove ( & al_ref_id_value, al_ref_id, sizeof *al_ref_id );
         if ( rc == 0 )
             rc = self->u.mod.parent->func( self->u.mod.parent, al_ref_id_value, al_ref_start[0] + al_ref_len[0],
                                             ref_len - num_read, ref_ploidy, rslt );
@@ -492,7 +492,7 @@ rc_t CC reftbl_sub_select ( void *data, const VXformInfo *info,
         if ( ref_len[ 0 ] > 0 )
         {
             int64_t ref_id_val;
-            memcpy( &ref_id_val, ref_id, sizeof ref_id_val );
+            memmove( &ref_id_val, ref_id, sizeof ref_id_val );
             rc = self->func( self, ref_id_val, ref_start[ 0 ], ref_len[ 0 ], ref_ploidy ? ref_ploidy[ 0 ] : 0, rslt );
         }
     }

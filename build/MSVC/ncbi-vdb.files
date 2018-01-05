@@ -85,6 +85,12 @@
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)align-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)align-%(Filename).obj</ObjectFileName>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\align\unsupported_pileup_estimator.c">
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)align-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)align-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)align-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)align-%(Filename).obj</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\ascp\ascp.c">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)ascp-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)ascp-%(Filename).obj</ObjectFileName>
@@ -858,6 +864,7 @@
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)../../../libs/kfs/win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)../../../libs/kfs/win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
+
     <ClCompile Include="..\..\..\libs\kfs\cacheteefile.c">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)kfs-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)kfs-%(Filename).obj</ObjectFileName>
@@ -868,6 +875,62 @@
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)../../../libs/kfs/win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)../../../libs/kfs/win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
+
+    <ClCompile Include="..\..\..\libs\kfs\cacheteefile2.c">
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)kfs-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)kfs-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)kfs-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)kfs-%(Filename).obj</ObjectFileName>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)../../../libs/kfs/win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)../../../libs/kfs/win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)../../../libs/kfs/win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)../../../libs/kfs/win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+
+    <ClCompile Include="..\..\..\libs\kfs\recorder.c">
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)kfs-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)kfs-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)kfs-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)kfs-%(Filename).obj</ObjectFileName>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)../../../libs/kfs/win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)../../../libs/kfs/win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)../../../libs/kfs/win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)../../../libs/kfs/win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+
+    <ClCompile Include="..\..\..\libs\kfs\poolpages.c">
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)kfs-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)kfs-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)kfs-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)kfs-%(Filename).obj</ObjectFileName>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)../../../libs/kfs/win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)../../../libs/kfs/win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)../../../libs/kfs/win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)../../../libs/kfs/win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+
+    <ClCompile Include="..\..\..\libs\kfs\rrcachedfile.c">
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)kfs-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)kfs-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)kfs-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)kfs-%(Filename).obj</ObjectFileName>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)../../../libs/kfs/win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)../../../libs/kfs/win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)../../../libs/kfs/win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)../../../libs/kfs/win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+
+    <ClCompile Include="..\..\..\libs\kfs\logfile.c">
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)kfs-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)kfs-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)kfs-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)kfs-%(Filename).obj</ObjectFileName>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)../../../libs/kfs/win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)../../../libs/kfs/win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)../../../libs/kfs/win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)../../../libs/kfs/win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+
     <ClCompile Include="..\..\..\libs\kfs\countfile.c">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)kfs-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)kfs-%(Filename).obj</ObjectFileName>
@@ -1564,7 +1627,7 @@
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)../../../libs/klib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)../../../libs/klib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
-    <ClCompile Include="..\..\..\libs\klib\ncbi-vdb-version.c" />
+    <ClCompile Include="..\..\..\libs\klib\all-vdb-version.c" />
     <ClCompile Include="..\..\..\libs\klib\num-gen.c" />
     <ClCompile Include="..\..\..\libs\klib\out.c">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)klib-%(Filename).obj</ObjectFileName>
@@ -2033,6 +2096,16 @@
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)../../../libs/kns;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\kns\stream.c">
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)kns-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)kns-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)kns-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)kns-%(Filename).obj</ObjectFileName>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)../../../libs/kns;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)../../../libs/kns;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)../../../libs/kns;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)../../../libs/kns;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kns\stream-from-buffer.c">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)kns-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)kns-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)kns-%(Filename).obj</ObjectFileName>
@@ -2558,6 +2631,26 @@
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_ReferenceBlob.c">
+        <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+        <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+        <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+        <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_ReferenceBlobIterator.c">
+        <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)ngs-%(Filename).obj</ObjectFileName>
+        <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+        <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+        <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+        <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\ngs\SRA_DB_ReadCollection.c">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)ngs-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)ngs-%(Filename).obj</ObjectFileName>
@@ -2638,7 +2731,7 @@
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
-    <ClCompile Include="..\..\..\libs\search\agrep-dp.c">
+      <ClCompile Include="..\..\..\libs\search\agrep-dp.c">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)ksrch-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)ksrch-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)ksrch-%(Filename).obj</ObjectFileName>
@@ -3357,6 +3450,24 @@
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vfs\services.c">
+          <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>
+          <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>
+          <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>
+          <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vfs\remote-services.c">
+          <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>
+          <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>
+          <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>
+          <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vfs\srv-response.c">
+          <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>
+          <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>
+          <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>
+          <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\vfs\win\syspath.c">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>

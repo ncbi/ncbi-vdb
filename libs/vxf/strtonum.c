@@ -215,7 +215,7 @@ rc_t CC strtoflt_8 ( void *data, const VXformInfo *info, int64_t row_id,
     if ( count >= sizeof buffer )
         return RC ( rcXF, rcFunction, rcExecuting, rcParam, rcExcessive );
 
-    memcpy ( buffer, str, count );
+    memmove ( buffer, str, count );
 
     return strtoflt ( data, info, rslt, buffer, count );
 }

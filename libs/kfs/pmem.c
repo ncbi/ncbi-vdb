@@ -560,7 +560,7 @@ LIB_EXPORT rc_t CC KMemBankRead ( const KMemBank *self, uint64_t id,
 
             if (endp > in) {
                 size_t const n = (endp - in) < bsize ? (endp - in) : bsize;
-                memcpy(buffer, in, n);
+                memmove(buffer, in, n);
                 *num_read = n;
             }
             return 0;
@@ -622,7 +622,7 @@ LIB_EXPORT rc_t CC KMemBankWrite ( KMemBank *self, uint64_t id,
                 else
                     return RC(rcFS, rcMemory, rcResizing, rcMemory, rcExhausted);
             }
-            memcpy(((char *)h->inuse.storage) + pos, buffer, size);
+            memmove(((char *)h->inuse.storage) + pos, buffer, size);
             *num_writ = size;
             return 0;
         }

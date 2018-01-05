@@ -659,7 +659,7 @@ rc_t VPhysicalConvertStatic ( VPhysical *self )
         /* save incoming blob cache on stack */
         VBlob *cache [ PROD_CACHE ];
         assert ( sizeof cache == sizeof self -> in -> cache );
-        memcpy ( cache, self -> in -> cache, sizeof cache );
+        memmove ( cache, self -> in -> cache, sizeof cache );
 
         /* set incoming blob cache to empty */
         memset ( self -> in -> cache, 0, sizeof self -> in -> cache );
@@ -705,7 +705,7 @@ rc_t VPhysicalConvertStatic ( VPhysical *self )
         }
 
         /* restore cache from stack */
-        memcpy ( self -> in -> cache, cache, sizeof self -> in -> cache );
+        memmove ( self -> in -> cache, cache, sizeof self -> in -> cache );
 
         if ( rc == 0 )
         {

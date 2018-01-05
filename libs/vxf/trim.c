@@ -83,7 +83,7 @@ static rc_t CC TRIM_NAME ( T ) ( void *data,                            \
     if (rslt->elem_count > 0) {                                         \
         rc = KDataBufferResize(rslt->data, rslt->elem_count);           \
         if (rc == 0)                                                    \
-            memcpy(rslt->data->base, a + start, rslt->elem_count);      \
+            memmove(rslt->data->base, a + start, rslt->elem_count);      \
     }                                                                   \
     return rc;                                                          \
 }
@@ -115,7 +115,7 @@ rc_t CC trim_uint8_t ( void *data,
     if (rslt->elem_count > 0) {
         rc = KDataBufferResize(rslt->data, rslt->elem_count);
         if (rc == 0)
-            memcpy(rslt->data->base, a + start, rslt->elem_count);
+            memmove(rslt->data->base, a + start, rslt->elem_count);
     }
     return rc;
 }
@@ -220,7 +220,7 @@ VTRANSFACT_IMPL ( vdb_trim, 1, 0, 0 ) ( const void *Self, const VXfactInfo *info
     default: return RC ( rcXF, rcFunction, rcConstructing, rcType, rcIncorrect );
     }
     rslt -> self = malloc ( sizeof self );
-    memcpy(rslt -> self,&self,sizeof(self));
+    memmove(rslt -> self,&self,sizeof(self));
     rslt -> whack = self_whack;
     rslt -> u . rf = trim_func_set [ ( dp -> argv [ 0 ] . desc . domain - vtdUint ) * 4 + size_idx ];
     rslt -> variant = vftRow;
