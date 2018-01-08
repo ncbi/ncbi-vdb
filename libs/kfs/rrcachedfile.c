@@ -38,6 +38,7 @@ struct RRCachedFile;
 #include <kfs/rrcachedfile.h>
 
 #include "poolpages.h"
+#include "lru_cache.h"
 
 #include <sysalloc.h>
 #include <stdlib.h>
