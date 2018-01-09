@@ -799,6 +799,129 @@ LIB_EXPORT rc_t CC KFileTimedWriteAll_v1 ( KFile_v1 *self, uint64_t pos,
     return rc;
 }
 
+/* WriteExactly
+ *  write from file until "size" bytes have been transferred
+ *
+ *  "pos" [ IN ] - starting position within file
+ *
+ *  "buffer" [ IN ] and "size" [ IN ] - data to be written
+ */
+LIB_EXPORT rc_t CC KFileWriteExactly_v1 ( KFile_v1 *self, uint64_t pos,
+    const void *buffer, size_t size )
+{
+    rc_t rc;
+    const uint8_t *b;
+    size_t total, count;
+
+    if ( self == NULL )
+        return RC ( rcFS, rcFile, rcWriting, rcSelf, rcNull );
+
+    if ( ! self -> write_enabled )
+        return RC ( rcFS, rcFile, rcWriting, rcFile, rcNoPerm );
+
+    if ( size == 0 )
+        return 0;
+    if ( buffer == NULL )
+        return RC ( rcFS, rcFile, rcWriting, rcBuffer, rcNull );
+
+    switch ( self -> vt -> v1 . maj )
+    {
+    case 1:
+        for ( b = buffer, total = 0; total < size; total += count )
+        {
+            count = 0;
+            rc = ( * self -> vt -> v1 . write ) ( self, pos + total, b + total, size - total, & count );
+            if ( rc != 0 )
+            {
+                if ( GetRCObject ( rc ) != ( enum RCObject ) rcTimeout || GetRCState ( rc ) != rcExhausted )
+                    break;
+            }
+            else if ( count == 0 )
+            {
+                rc = RC ( rcFS, rcFile, rcWriting, rcTransfer, rcIncomplete );
+                break;
+            }
+        }
+        break;
+    default:
+        rc = RC ( rcFS, rcFile, rcWriting, rcInterface, rcBadVersion );
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KFileTimedWriteExactly_v1 ( KFile_v1 *self, uint64_t pos,
+    const void *buffer, size_t size, struct timeout_t *tm )
+{
+    rc_t rc;
+    const uint8_t *b;
+    size_t total, count;
+
+    if ( self == NULL )
+        return RC ( rcFS, rcFile, rcWriting, rcSelf, rcNull );
+
+    if ( ! self -> write_enabled )
+        return RC ( rcFS, rcFile, rcWriting, rcFile, rcNoPerm );
+
+    if ( size == 0 )
+        return 0;
+    if ( buffer == NULL )
+        return RC ( rcFS, rcFile, rcWriting, rcBuffer, rcNull );
+
+    switch ( self -> vt -> v1 . maj )
+    {
+    case 1:
+        if ( self -> vt -> v1 . min >= 2 )
+        {
+            for ( b = buffer, total = 0; total < size; total += count )
+            {
+                count = 0;
+                rc = ( * self -> vt -> v1 . timed_write ) ( self, pos + total, b + total, size - total, & count, tm );
+                if ( rc != 0 )
+                {
+                    if ( tm != NULL )
+                        break;
+                    if ( GetRCObject ( rc ) != ( enum RCObject ) rcTimeout || GetRCState ( rc ) != rcExhausted )
+                        break;
+                }
+                else if ( count == 0 )
+                {
+                    rc = RC ( rcFS, rcFile, rcWriting, rcTransfer, rcIncomplete );
+                    break;
+                }
+            }
+            break;
+        }
+
+        if ( tm == NULL )
+        {
+            for ( b = buffer, total = 0; total < size; total += count )
+            {
+                count = 0;
+                rc = ( * self -> vt -> v1 . write ) ( self, pos + total, b + total, size - total, & count );
+                if ( rc != 0 )
+                {
+                    if ( GetRCObject ( rc ) != ( enum RCObject ) rcTimeout || GetRCState ( rc ) != rcExhausted )
+                        break;
+                }
+                else if ( count == 0 )
+                {
+                    rc = RC ( rcFS, rcFile, rcWriting, rcTransfer, rcIncomplete );
+                    break;
+                }
+            }
+            break;
+        }
+
+        /* no break */
+
+    default:
+        rc = RC ( rcFS, rcFile, rcWriting, rcInterface, rcBadVersion );
+    }
+
+    return rc;
+}
+
 /* Init
  *  initialize a newly allocated file object
  */
