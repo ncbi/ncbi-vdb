@@ -49,7 +49,7 @@ typedef struct lru_cache
 #endif
     size_t page_size;
     uint32_t max_pages;
-    uint32_t num_pages;
+    volatile uint32_t num_pages;
 } lru_cache;
 
 static void CC release_lru_page( DLNode * n, void * data )
@@ -124,14 +124,13 @@ static bool read_from_data_buffer( KDataBuffer * data,      /* the data-buffer t
                                    size_t bsize,            /* how many bytes to read */
                                    size_t * num_read )      /* how many bytes have been read */
 {
-    int64_t available = ( data -> elem_count - offset );
+    int64_t available = ( ( int64_t ) data -> elem_count - offset );
     bool res = ( available > 0 );
     if ( res )
     {
         uint8_t * src = data -> base;
         size_t to_move = bsize > available ? available : bsize;
-        src += offset;
-        memmove( buffer, src, to_move );
+        memmove( buffer, src + offset, to_move );
         if ( num_read != NULL )
             *num_read = to_move;
     }
@@ -145,7 +144,9 @@ static bool read_from_page( lru_page * page,
                              size_t * num_read )
 {
     int64_t offset = ( pos - page -> pos );
-    return read_from_data_buffer( &page -> data, offset, buffer, bsize, num_read );
+    if ( offset >= 0 )
+        return read_from_data_buffer( &page -> data, offset, buffer, bsize, num_read );
+    return false;
 }
 
 static lru_page * get_tail_page( lru_cache * self )
@@ -210,9 +211,10 @@ static rc_t push_to_lru_cache( lru_cache * self, lru_page * page )
 {
     rc_t rc = KVectorSetPtr ( self -> page_lookup, page -> block_nr, page );
     if ( rc == 0 )
-        DLListPushHead ( & self -> lru, ( DLNode * )page );
-    if ( rc == 0 )
+    {
+        DLListPushHead ( & self -> lru, & page -> node );
         self -> num_pages++;
+    }
 
 #if _DEBUGGING
     if ( rc == 0 && self -> handler != NULL )
@@ -225,7 +227,8 @@ static rc_t new_entry_in_lru_cache ( lru_cache * self,
                                      uint64_t pos,
                                      void * buffer,
                                      size_t bsize,
-                                     size_t * num_read )
+                                     size_t * num_read,
+                                     struct timeout_t *tm )
 {
     rc_t rc = 0;
     uint64_t first_block_nr = ( pos / self -> page_size );
@@ -253,11 +256,12 @@ static rc_t new_entry_in_lru_cache ( lru_cache * self,
         {
             /* read the whole request from the wrapped file */
             uint64_t first_pos = first_block_nr * self -> page_size; 
-            rc = KFileReadAll ( self -> wrapped,
+            rc = KFileTimedReadAll ( self -> wrapped,
                                 first_pos,
                                 data . base,
                                 self -> page_size * blocks,
-                                &data . elem_count );
+                                &data . elem_count,
+                                tm );
             if ( rc == 0 )
             {
                 /* give the buffer to the caller */
@@ -313,11 +317,12 @@ static rc_t new_entry_in_lru_cache ( lru_cache * self,
         {
             page -> pos = first_block_nr * self -> page_size;
             page -> block_nr = first_block_nr;
-            rc = KFileReadAll ( self -> wrapped,
-                                page -> pos,
-                                page -> data . base,
-                                self -> page_size,
-                                &page -> data . elem_count );
+            rc = KFileTimedReadAll ( self -> wrapped,
+                                     page -> pos,
+                                     page -> data . base,
+                                     self -> page_size,
+                                     &page -> data . elem_count,
+                                     tm );
             if ( rc == 0 )
             {
                 if ( read_from_page( page, pos, buffer, bsize, num_read ) )
@@ -338,7 +343,8 @@ rc_t read_lru_cache ( lru_cache * self,
                       uint64_t pos,
                       void * buffer,
                       size_t bsize,
-                      size_t * num_read )
+                      size_t * num_read,
+                      struct timeout_t * tm )
 {
     rc_t rc = 0;
     enum lookupres lr = NOT_FOUND;
@@ -383,14 +389,14 @@ rc_t read_lru_cache ( lru_cache * self,
 
         switch( lr )
         {
-            case RD_WRAPPED :   rc = KFileReadAll ( self -> wrapped, pos, buffer, bsize, num_read );
+        case RD_WRAPPED :   rc = KFileTimedReadAll ( self -> wrapped, pos, buffer, bsize, num_read, tm );
 #if _DEBUGGING
                                 if ( self -> handler != NULL )
                                     self -> handler( self -> handler_data, CE_FAILED, pos, *num_read, 0 );
 #endif
                                 break;
 
-            case NOT_FOUND  :   rc = new_entry_in_lru_cache( self, pos, buffer, bsize, num_read );
+        case NOT_FOUND  :   rc = new_entry_in_lru_cache( self, pos, buffer, bsize, num_read, tm );
                                 break;
 
             case DONE : break;
