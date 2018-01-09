@@ -246,9 +246,10 @@ TEST_CASE( LRU_Cache_Test_Linear_Reading )
     REQUIRE_RC( KFileRelease( org ) );
 
 #if _DEBUGGING
+    // print_events( &events );
     REQUIRE( events . requests == 21 );
     REQUIRE( events . found == 20 );
-    REQUIRE( events . enter == 21 );    
+    REQUIRE( events . enter == 20 );    
     REQUIRE( events . discard == 0 );
     REQUIRE( events . failed == 0 );
 #endif
@@ -262,10 +263,11 @@ TEST_CASE( LRU_Cache_Test_Linear_Reading )
     REQUIRE_RC( compare_file_content( org, cache, 0, file_size ) );
 
 #if _DEBUGGING
+    //print_events( &events );
     REQUIRE( events . requests == 21 );
-    REQUIRE( events . found == 0 );
-    REQUIRE( events . enter == 41 );    
-    REQUIRE( events . discard == 21 );
+    REQUIRE( events . found == 20 );
+    REQUIRE( events . enter == 20 );    
+    REQUIRE( events . discard == 0 );
     REQUIRE( events . failed == 0 );
 #endif
 
