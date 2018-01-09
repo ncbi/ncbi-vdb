@@ -120,7 +120,7 @@ static rc_t RRCachedSetSize ( RRCachedFile * self, uint64_t size )
 static rc_t RRCachedRead ( const RRCachedFile * cself, uint64_t pos,
                            void *buffer, size_t bsize, size_t *num_read )
 {
-    return read_lru_cache ( cself -> cache, pos, buffer, bsize, num_read );
+    return read_lru_cache ( cself -> cache, pos, buffer, bsize, num_read, NULL );
 }
 
 static rc_t RRCachedWrite ( RRCachedFile *self, uint64_t pos,
@@ -129,10 +129,27 @@ static rc_t RRCachedWrite ( RRCachedFile *self, uint64_t pos,
     return RC ( rcFS, rcFile, rcUpdating, rcInterface, rcUnsupported );
 }
 
+static uint32_t RRCachedGetType ( const RRCachedFile *self )
+{
+    return KFileType ( self -> wrapped );
+}
+
+static rc_t RRCachedTimedRead ( const RRCachedFile * cself, uint64_t pos,
+                                void *buffer, size_t bsize, size_t *num_read, struct timeout_t *tm )
+{
+    return read_lru_cache ( cself -> cache, pos, buffer, bsize, num_read, tm );
+}
+
+static rc_t RRCachedTimedWrite ( RRCachedFile *self, uint64_t pos,
+                                 const void *buffer, size_t size, size_t *num_writ, struct timeout_t *tm )
+{
+    return RC ( rcFS, rcFile, rcUpdating, rcInterface, rcUnsupported );
+}
+
 static KFile_vt_v1 vtRRCached =
 {
-    /* version 1.0 */
-    1, 0,
+    /* version 1.2 */
+    1, 2,
 
     /* start minor version 0 methods */
     RRCachedDestroy,
@@ -141,8 +158,17 @@ static KFile_vt_v1 vtRRCached =
     RRCachedSize,
     RRCachedSetSize,
     RRCachedRead,
-    RRCachedWrite
+    RRCachedWrite,
     /* end minor version 0 methods */
+
+    /* start minor version 1 method */
+    RRCachedGetType,
+    /* end minor version 1 method */
+
+    /* start minor version 2 methods */
+    RRCachedTimedRead,
+    RRCachedTimedWrite
+    /* end minor version 2 methods */
 };
 
 static rc_t make_rr_cached( struct KFile const **cached,
