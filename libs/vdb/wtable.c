@@ -755,6 +755,7 @@ rc_t list_writable_columns ( VTable *self )
         /* let this private VCursor-function list the columns */
         rc = VCursorListWritableColumns ( curs, & self -> write_col_cache );
         VTableCursorRelease ( curs );
+
         if ( rc == 0 )
             self -> write_col_cache_valid = true;
     }

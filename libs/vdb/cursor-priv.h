@@ -86,6 +86,7 @@ struct VColumn;
 struct VPhysical;
 struct VView;
 struct VCursor;
+struct SNameOverload;
 
 /*--------------------------------------------------------------------------
  * VCursorCache
@@ -153,6 +154,10 @@ enum
 rc_t CC VCursorMakeColumn ( struct VCursor *self,
     struct VColumn **col, struct SColumn const *scol, Vector *cx_bind );
 
+/* Whack - Private
+*/
+rc_t VCursorWhackInt ( const struct VCursor * p_self );
+
 /* Columns
 */
 VCursorCache * VCursorColumns ( struct VCursor * self );
@@ -190,6 +195,32 @@ bool VCursorCacheActive ( const struct VCursor * self, int64_t * cache_empty_end
 rc_t VCursorInstallTrigger ( struct VCursor * self, struct VProduction * prod );
 
 rc_t VCursorRowFindNextRowId ( const Vector * self, uint32_t idx, int64_t start_id, int64_t * next );
+
+
+/* GetColspec
+ *  a "colspec" is either a simple column name or a typed name expression
+ *  evaluates colspec and find an SColumn
+ *
+ *  "idx" [ OUT ] - return parameter for column index
+*/
+rc_t VCursorGetColidx ( const struct VCursor *       p_self,
+                        const struct SColumn *       p_scol,
+                        const struct SNameOverload * p_name,
+                        uint32_t                     p_type,
+                        uint32_t *                   p_idx );
+
+/* SetRowIdRead - PRIVATE
+ *  seek to given row id
+ *
+ *  "row_id" [ IN ] - row id to select
+ */
+rc_t VCursorSetRowIdRead ( struct VCursor *self, int64_t row_id );
+
+/* OpenRowRead
+ * CloseRowRead
+ */
+rc_t VCursorOpenRowRead ( struct VCursor *self );
+rc_t VCursorCloseRowRead ( struct VCursor *self );
 
 #ifdef __cplusplus
 }

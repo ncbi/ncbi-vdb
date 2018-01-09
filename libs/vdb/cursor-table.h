@@ -39,13 +39,7 @@ typedef struct VTableCursor VTableCursor;
 
 struct VTableCursor
 {
-    struct VCursor_vt * vt;
-
-    /* row id */
-    int64_t row_id;
-
-    /* half-closed page range */
-    int64_t start_id, end_id;
+    VCursor dad;
 
     /* starting id for flush */
     volatile int64_t flush_id;
@@ -67,10 +61,6 @@ struct VTableCursor
     struct KThread *pagemap_thread;
     PageMapProcessRequest pmpr;
 
-    /* user data */
-    void *user;
-    void ( CC * user_whack ) ( void *data );
-
     /* external named cursor parameters */
     BSTree named_params;
 
@@ -80,9 +70,6 @@ struct VTableCursor
     /* read-only blob cache */
     VBlobMRUCache *blob_mru_cache;
 
-    /* external row of VColumn* by ord ( owned ) */
-    Vector row;
-
     Vector v_cache_curs;
     Vector v_cache_cidx;
     /** trying to prevent forward prefetch on rows which are cached ***/
@@ -90,28 +77,13 @@ struct VTableCursor
     int64_t cache_empty_start; /** first rowid where cache is detected to be empty **/
     int64_t cache_empty_end;   /** last  rowid  **/
 
-    /* column objects by cid ( not-owned ) */
-    VCursorCache col;
-
-    /* physical columns by cid ( owned ) */
-    VCursorCache phys;
+    /* count of physical columns by cid */
     uint32_t phys_cnt;
-
-    /* productions by cid ( not-owned ) */
-    VCursorCache prod;
-
-    /* intermediate productions ( owned ) */
-    Vector owned;
 
     /* trigger productions ( not-owned ) */
     Vector trig;
 
-    KRefcount refcount;
-
     volatile uint32_t flush_cnt;
-
-    /* foreground state */
-    uint8_t state;
 
     /* flush_state */
     volatile uint8_t flush_state;
@@ -138,15 +110,14 @@ rc_t VCursorMakeFromTable ( VCURSOR_IMPL **cursp, const struct VTable *tbl );
 /* "constructor", provides a concrete VCursor_vt. Defined in cursor.c and wcursor.c */
 rc_t VTableCursorMake ( VCURSOR_IMPL **cursp, const struct VTable *tbl, VCursor_vt *vt );
 
+#define VTableCursorAddRef(cur) VCursorAddRef((const VCursor*)(cur))
+#define VTableCursorRelease(cur) VCursorRelease((const VCursor*)(cur))
+
 /* implementations of methods in VCursor_vt shared between cursor.c and wcursor.c */
 
-rc_t VTableCursorAddRef ( const VCURSOR_IMPL *self );
-rc_t VTableCursorRelease ( const VCURSOR_IMPL *self );
 rc_t VTableCursorVAddColumn ( const VCURSOR_IMPL *cself, uint32_t *idx, const char *name, va_list args );
 rc_t VTableCursorVGetColumnIdx ( const VCURSOR_IMPL *self, uint32_t *idx, const char *name, va_list args );
-rc_t VTableCursorDatatype ( const VCURSOR_IMPL *self, uint32_t idx, struct VTypedecl *type, struct VTypedesc *desc );
 rc_t VTableCursorIdRange ( const VCURSOR_IMPL *self, uint32_t idx, int64_t *first, uint64_t *count );
-rc_t VTableCursorRowId ( const VCURSOR_IMPL *self, int64_t *id );
 rc_t VTableCursorFindNextRowId ( const VCURSOR_IMPL *self, uint32_t idx, int64_t *next );
 rc_t VTableCursorFindNextRowIdDirect ( const VCURSOR_IMPL *self, uint32_t idx, int64_t start_id, int64_t *next );
 rc_t VTableCursorGetBlob ( const VCURSOR_IMPL *self, const VBlob **blob, uint32_t col_idx );
@@ -163,10 +134,6 @@ rc_t VTableCursorOpenParentRead ( const VCURSOR_IMPL *self, const struct VTable 
 rc_t VTableCursorGetUserData ( const VCURSOR_IMPL *self, void **data );
 rc_t VTableCursorSetUserData ( const VCURSOR_IMPL *cself, void *data, void ( CC * destroy ) ( void *data ) );
 
-VCursorCache * VTableCursorColumns ( VCURSOR_IMPL * self );
-VCursorCache * VTableCursorPhysicalColumns ( VCURSOR_IMPL * self );
-Vector * VTableCursorGetRow ( VCURSOR_IMPL * self );
-
 /* functions shared between cursor.c and wcursor.c */
 
 rc_t VTableCreateCursorWriteInt ( struct VTable *self, VCURSOR_IMPL **cursp, KCreateMode mode, bool create_thread );
@@ -174,8 +141,7 @@ rc_t VTableCreateCursorWriteInt ( struct VTable *self, VCURSOR_IMPL **cursp, KCr
 /* Whack
  * Destroy
  */
-rc_t VCursorWhack ( VCURSOR_IMPL *self );
-rc_t VCursorDestroy ( VCURSOR_IMPL *self );
+rc_t VTableCursorWhack ( const VCURSOR_IMPL *self );
 
 /* SupplementSchema
  *  scan table for physical column names
@@ -184,13 +150,6 @@ rc_t VCursorDestroy ( VCURSOR_IMPL *self );
  *  repeat process on static columns, except create complete (fully typed) objects
  */
 rc_t VCursorSupplementSchema ( VCURSOR_IMPL const *self );
-
-/* SetRowIdRead - PRIVATE
- *  seek to given row id
- *
- *  "row_id" [ IN ] - row id to select
- */
-rc_t VCursorSetRowIdRead ( VCURSOR_IMPL *self, int64_t row_id );
 
 /**
 *** VTableCreateCursorReadInternal is only visible in vdb and needed for schema resolutions
@@ -221,12 +180,6 @@ rc_t VCursorListSeededWritableColumns ( VCURSOR_IMPL *self, BSTree *columns, str
 rc_t VCursorPostOpenAdd ( VCURSOR_IMPL *self, struct VColumn *col );
 rc_t VCursorPostOpenAddRead ( VCURSOR_IMPL *self, struct VColumn *col );
 
-/* OpenRowRead
- * CloseRowRead
- */
-rc_t VCursorOpenRowRead ( VCURSOR_IMPL *self );
-rc_t VCursorCloseRowRead ( VCURSOR_IMPL *self );
-
 /* Open
  */
 rc_t VCursorOpenRead ( VCURSOR_IMPL *self, struct KDlset const *libs );
@@ -248,12 +201,6 @@ rc_t CC VTableCursorPermitPostOpenAdd ( struct VCURSOR_IMPL const *self );
 rc_t CC VTableCursorSuspendTriggers ( struct VCURSOR_IMPL const *self );
 
 struct VSchema const* CC VTableCursorGetSchema ( struct VCURSOR_IMPL const *self);
-
-rc_t CC VTableCursorPageIdRange ( struct VCURSOR_IMPL const *self,
-    uint32_t idx, int64_t id, int64_t *first, int64_t *last );
-
-rc_t CC VTableCursorIsStaticColumn ( struct VCURSOR_IMPL const *self,
-    uint32_t col_idx, bool *is_static );
 
 rc_t CC VTableCursorLinkedCursorGet(const struct VCURSOR_IMPL *cself,const char *tbl, struct VCursor const **curs);
 rc_t CC VTableCursorLinkedCursorSet(const struct VCURSOR_IMPL *cself,const char *tbl, struct VCursor const *curs);

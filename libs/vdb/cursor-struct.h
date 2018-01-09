@@ -79,17 +79,11 @@ typedef struct VCursor_vt VCursor_vt;
 struct VCursor_vt
 {
     /* Public API */
-    rc_t ( CC * addRef ) ( const VCURSOR_IMPL *self );
-    rc_t ( CC * release ) ( const VCURSOR_IMPL *self );
+    rc_t ( CC * whack ) ( const VCURSOR_IMPL *self );
     rc_t ( CC * vAddColumn ) ( const VCURSOR_IMPL *self, uint32_t *idx, const char *name, va_list args );
     rc_t ( CC * vGetColumnIdx ) ( const VCURSOR_IMPL *self, uint32_t *idx, const char *name, va_list args );
-    rc_t ( CC * datatype ) ( const VCURSOR_IMPL *self, uint32_t idx, struct VTypedecl *type, struct VTypedesc *desc );
     rc_t ( CC * open ) ( const VCURSOR_IMPL *self );
-    rc_t ( CC * idRange ) ( const VCURSOR_IMPL *self, uint32_t idx, int64_t *first, uint64_t *count );
-    rc_t ( CC * rowId ) ( const VCURSOR_IMPL *self, int64_t *row_id );
     rc_t ( CC * setRowId ) ( const VCURSOR_IMPL *self, int64_t row_id );
-    rc_t ( CC * findNextRowId ) ( const VCURSOR_IMPL *self, uint32_t idx, int64_t * next );
-    rc_t ( CC * findNextRowIdDirect ) ( const VCURSOR_IMPL *self, uint32_t idx, int64_t start_id, int64_t * next );
     rc_t ( CC * openRow ) ( const VCURSOR_IMPL *self );
     rc_t ( CC * write ) ( VCURSOR_IMPL *self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t count );
     rc_t ( CC * commitRow ) ( VCURSOR_IMPL *self );
@@ -109,25 +103,18 @@ struct VCursor_vt
     rc_t ( CC * commit ) ( VCURSOR_IMPL *self );
     rc_t ( CC * openParentRead ) ( const VCURSOR_IMPL *self, struct VTable const **tbl );
     rc_t ( CC * openParentUpdate ) ( VCURSOR_IMPL *self, struct VTable **tbl );
-    rc_t ( CC * getUserData ) ( const VCURSOR_IMPL *self, void **data );
-    rc_t ( CC * setUserData ) ( const VCURSOR_IMPL *self, void *data, void ( CC * destroy ) ( void *data ) );
 
     /* Private API, deined in interfaces/vdb/vdb-priv.h */
     rc_t ( CC * permitPostOpenAdd ) ( const VCURSOR_IMPL * self );
     rc_t ( CC * suspendTriggers ) ( const VCURSOR_IMPL * self );
     struct VSchema const * ( * getSchema ) ( const VCURSOR_IMPL * self);
-    rc_t ( CC * pageIdRange ) ( const VCURSOR_IMPL *self, uint32_t idx, int64_t id, int64_t *first, int64_t *last );
-    rc_t ( CC * isStaticColumn ) ( const VCURSOR_IMPL *self, uint32_t col_idx, bool *is_static );
     rc_t ( CC * linkedCursorGet ) ( const VCURSOR_IMPL *cself,const char *tbl, struct VCursor const **curs);
     rc_t ( CC * linkedCursorSet ) ( const VCURSOR_IMPL *cself,const char *tbl, struct VCursor const *curs);
     uint64_t ( CC * setCacheCapacity ) ( VCURSOR_IMPL *self,uint64_t capacity);
     uint64_t ( CC * getCacheCapacity ) ( const VCURSOR_IMPL *self);
 
     /* libvdb-internal API, deined in cursor-priv.h */
-    VCursorCache * ( * columns ) ( VCURSOR_IMPL *self );
-    VCursorCache * ( * physicalColumns ) ( VCURSOR_IMPL * self );
     rc_t ( * makeColumn ) ( VCURSOR_IMPL *self, struct VColumn **col, const struct SColumn *scol, Vector *cx_bind );
-    Vector * ( * getRow ) ( VCURSOR_IMPL * self );
     const struct VTable * ( * getTable ) ( const VCURSOR_IMPL * self );
     bool ( * isReadOnly ) ( const VCURSOR_IMPL * self );
     VBlobMRUCache * ( * getBlobMruCache ) ( VCURSOR_IMPL * self );
@@ -142,6 +129,37 @@ struct VCursor_vt
 struct VCursor
 {
     VCursor_vt * vt;
+
+    /* row id */
+    int64_t row_id;
+
+    /* half-closed page range */
+    int64_t start_id;
+    int64_t end_id;
+
+    /* user data */
+    void *user;
+    void ( CC * user_whack ) ( void *data );
+
+    /* external row of VColumn* by ord ( owned ) */
+    Vector row;
+
+    /* column objects by cid ( not-owned ) */
+    VCursorCache col;
+
+    /* physical columns by cid ( owned ) */
+    VCursorCache phys;
+
+    /* productions by cid ( not-owned ) */
+    VCursorCache prod;
+
+    /* intermediate productions ( owned ) */
+    Vector owned;
+
+    KRefcount refcount;
+
+    /* foreground state */
+    uint8_t state;
 };
 
 #ifdef __cplusplus

@@ -46,119 +46,69 @@ typedef struct VViewCursor VViewCursor;
 
 struct VViewCursor
 {
-    struct VCursor_vt * vt;
-
-    /* row id */
-    int64_t row_id;
-
-    /* half-closed page range */
-    int64_t start_id;
-    int64_t end_id;
+    VCursor dad;
 
     /* attached reference to view */
     const VView * view;
-
-    /* user data */
-    void *user;
-    void ( CC * user_whack ) ( void *data );
-
-    /* external row of VColumn* by ord ( owned ) */
-    Vector row;
-
-    /* column objects by cid ( not-owned ) */
-    VCursorCache col;
-
-    /* physical columns by cid ( owned ) */
-    VCursorCache phys;
-
-    /* productions by cid ( not-owned ) */
-    VCursorCache prod;
-
-    /* intermediate productions ( owned ) */
-    Vector owned;
-
-    KRefcount refcount;
-
-    /* foreground state */
-    uint8_t state;
 };
 
-static rc_t VViewCursorAddRef ( const VCURSOR_IMPL *self );
-static rc_t VViewCursorRelease ( const VCURSOR_IMPL *self );
-static rc_t VViewCursorVAddColumn ( const VCURSOR_IMPL *cself, uint32_t *idx, const char *name, va_list args );
-static rc_t VViewCursorVGetColumnIdx ( const VCURSOR_IMPL *self, uint32_t *idx, const char *name, va_list args );
-static rc_t VViewCursorDatatype ( const VCURSOR_IMPL * p_self, uint32_t p_idx, struct VTypedecl * p_type, struct VTypedesc * p_desc );
-static rc_t VViewCursorOpen ( const VCURSOR_IMPL * p_self );
-static rc_t VViewCursorIdRange ( const VCURSOR_IMPL *self, uint32_t idx, int64_t *first, uint64_t *count );
+static rc_t VViewCursorWhack ( const VViewCursor * p_self );
+static rc_t VViewCursorVAddColumn ( const VViewCursor *cself, uint32_t *idx, const char *name, va_list args );
+static rc_t VViewCursorVGetColumnIdx ( const VViewCursor *self, uint32_t *idx, const char *name, va_list args );
+static rc_t VViewCursorOpen ( const VViewCursor * p_self );
 
-static VCursorCache * VViewCursorColumns ( VCURSOR_IMPL * self );
-static VCursorCache * VViewCursorPhysicalColumns ( VCURSOR_IMPL * self );
-static rc_t VViewCursorMakeColumn ( VCURSOR_IMPL *self, VColumn **col, const SColumn *scol, Vector *cx_bind );
-static Vector * VViewCursorGetRow ( struct VCURSOR_IMPL * p_self );
-static const struct VTable * VViewCursorGetTable ( const VCURSOR_IMPL * self );
-static bool VViewCursorIsReadOnly ( const VCURSOR_IMPL * self );
-static const struct VSchema * VViewCursorGetSchema ( const VCURSOR_IMPL * p_self );
-static VBlobMRUCache * VViewCursorGetBlobMruCache ( struct VCURSOR_IMPL * p_self );
-static uint32_t VViewCursorIncrementPhysicalProductionCount ( struct VCURSOR_IMPL * p_self );
-static rc_t VViewCursorRowId ( const VCURSOR_IMPL *self, int64_t *id );
-static rc_t VViewCursorSetRowId ( const VCURSOR_IMPL * p_self, int64_t p_id );
-static rc_t VViewCursorFindNextRowId ( const VCURSOR_IMPL *self, uint32_t idx, int64_t *next );
-static rc_t VViewCursorFindNextRowIdDirect ( const VCURSOR_IMPL *self, uint32_t idx, int64_t start_id, int64_t *next );
-static rc_t VViewCursorOpenRow ( const VCURSOR_IMPL *cself );
+static rc_t VViewCursorMakeColumn ( VViewCursor *self, VColumn **col, const SColumn *scol, Vector *cx_bind );
+static const struct VTable * VViewCursorGetTable ( const VViewCursor * self );
+static bool VViewCursorIsReadOnly ( const VViewCursor * self );
+static const struct VSchema * VViewCursorGetSchema ( const VViewCursor * p_self );
+static VBlobMRUCache * VViewCursorGetBlobMruCache ( struct VViewCursor * p_self );
+static uint32_t VViewCursorIncrementPhysicalProductionCount ( struct VViewCursor * p_self );
+static rc_t VViewCursorSetRowId ( const VViewCursor * p_self, int64_t p_id );
+static rc_t VViewCursorOpenRow ( const VViewCursor *cself );
 
-static rc_t VViewCursorWrite ( VCURSOR_IMPL *self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t count );
-static rc_t VViewCursorCommitRow ( VCURSOR_IMPL *self );
-static rc_t VViewCursorRepeatRow ( VCURSOR_IMPL *self, uint64_t count );
-static rc_t VViewCursorFlushPage ( VCURSOR_IMPL *self );
-static rc_t VViewCursorDefault ( VCURSOR_IMPL *self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t row_len );
-static rc_t VViewCursorCommit ( VCURSOR_IMPL *self );
-static rc_t VViewCursorOpenParentUpdate ( VCURSOR_IMPL *self, VTable **tbl );
-static rc_t VViewCursorCloseRow ( const VCURSOR_IMPL *cself );
-static rc_t VViewCursorGetBlob ( const VCURSOR_IMPL * p_self, const VBlob ** p_blob, uint32_t p_col_idx );
-static rc_t VViewCursorGetBlobDirect ( const VCURSOR_IMPL *self, const VBlob **blob, int64_t row_id, uint32_t col_idx );
-static rc_t VViewCursorRead ( const VCURSOR_IMPL *self, uint32_t col_idx,
+static rc_t VViewCursorWrite ( VViewCursor *self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t count );
+static rc_t VViewCursorCommitRow ( VViewCursor *self );
+static rc_t VViewCursorRepeatRow ( VViewCursor *self, uint64_t count );
+static rc_t VViewCursorFlushPage ( VViewCursor *self );
+static rc_t VViewCursorDefault ( VViewCursor *self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t row_len );
+static rc_t VViewCursorCommit ( VViewCursor *self );
+static rc_t VViewCursorOpenParentUpdate ( VViewCursor *self, VTable **tbl );
+static rc_t VViewCursorCloseRow ( const VViewCursor *cself );
+static rc_t VViewCursorGetBlob ( const VViewCursor * p_self, const VBlob ** p_blob, uint32_t p_col_idx );
+static rc_t VViewCursorGetBlobDirect ( const VViewCursor *self, const VBlob **blob, int64_t row_id, uint32_t col_idx );
+static rc_t VViewCursorRead ( const VViewCursor *self, uint32_t col_idx,
     uint32_t elem_bits, void *buffer, uint32_t blen, uint32_t *row_len );
-static rc_t VViewCursorReadDirect ( const VCURSOR_IMPL *self, int64_t row_id, uint32_t col_idx,
+static rc_t VViewCursorReadDirect ( const VViewCursor *self, int64_t row_id, uint32_t col_idx,
     uint32_t elem_bits, void *buffer, uint32_t blen, uint32_t *row_len );
-static rc_t VViewCursorReadBits ( const VCURSOR_IMPL * p_self, uint32_t p_col_idx, uint32_t p_elem_bits, uint32_t p_start, void * p_buffer, uint32_t p_off, uint32_t p_blen, uint32_t * p_num_read, uint32_t * p_remaining );
-static rc_t VViewCursorReadBitsDirect ( const VCURSOR_IMPL * p_self, int64_t p_row_id, uint32_t p_col_idx, uint32_t p_elem_bits, uint32_t p_start, void * p_buffer, uint32_t p_off, uint32_t p_blen, uint32_t * p_num_read, uint32_t * p_remaining );
-static rc_t VViewCursorCellData ( const VCURSOR_IMPL *self, uint32_t col_idx, uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len );
-static rc_t VViewCursorCellDataDirect ( const VCURSOR_IMPL *self, int64_t row_id, uint32_t col_idx,
+static rc_t VViewCursorReadBits ( const VViewCursor * p_self, uint32_t p_col_idx, uint32_t p_elem_bits, uint32_t p_start, void * p_buffer, uint32_t p_off, uint32_t p_blen, uint32_t * p_num_read, uint32_t * p_remaining );
+static rc_t VViewCursorReadBitsDirect ( const VViewCursor * p_self, int64_t p_row_id, uint32_t p_col_idx, uint32_t p_elem_bits, uint32_t p_start, void * p_buffer, uint32_t p_off, uint32_t p_blen, uint32_t * p_num_read, uint32_t * p_remaining );
+static rc_t VViewCursorCellData ( const VViewCursor *self, uint32_t col_idx, uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len );
+static rc_t VViewCursorCellDataDirect ( const VViewCursor *self, int64_t row_id, uint32_t col_idx,
     uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len );
-static rc_t VViewCursorDataPrefetch ( const VCURSOR_IMPL *cself, const int64_t *row_ids, uint32_t col_idx, uint32_t num_rows, int64_t min_valid_row_id, int64_t max_valid_row_id, bool continue_on_error );
-static rc_t VViewCursorOpenParentRead ( const VCURSOR_IMPL * p_self, const VTable ** p_tbl );
-static rc_t VViewCursorGetUserData ( const VCURSOR_IMPL * p_self, void ** p_data );
-static rc_t VViewCursorSetUserData ( const VCURSOR_IMPL * p_self, void * p_data, void ( CC * p_destroy ) ( void *data ) );
+static rc_t VViewCursorDataPrefetch ( const VViewCursor *cself, const int64_t *row_ids, uint32_t col_idx, uint32_t num_rows, int64_t min_valid_row_id, int64_t max_valid_row_id, bool continue_on_error );
+static rc_t VViewCursorOpenParentRead ( const VViewCursor * p_self, const VTable ** p_tbl );
 
-static rc_t VViewCursorPermitPostOpenAdd ( const VCURSOR_IMPL * self );
-static rc_t VViewCursorSuspendTriggers ( const VCURSOR_IMPL * self );
-static rc_t VViewCursorPageIdRange ( const VCURSOR_IMPL *self, uint32_t idx, int64_t id, int64_t *first, int64_t *last );
-static rc_t VViewCursorIsStaticColumn ( const VCURSOR_IMPL *self, uint32_t col_idx, bool *is_static );
-static rc_t VViewCursorLinkedCursorGet ( const VCURSOR_IMPL *cself,const char *tbl, struct VCursor const **curs);
-static rc_t VViewCursorLinkedCursorSet ( const VCURSOR_IMPL *cself,const char *tbl, struct VCursor const *curs);
-static uint64_t VViewCursorSetCacheCapacity ( VCURSOR_IMPL *self,uint64_t capacity);
-static uint64_t VViewCursorGetCacheCapacity ( const VCURSOR_IMPL *self);
+static rc_t VViewCursorPermitPostOpenAdd ( const VViewCursor * self );
+static rc_t VViewCursorSuspendTriggers ( const VViewCursor * self );
+static rc_t VViewCursorLinkedCursorGet ( const VViewCursor *cself,const char *tbl, struct VCursor const **curs);
+static rc_t VViewCursorLinkedCursorSet ( const VViewCursor *cself,const char *tbl, struct VCursor const *curs);
+static uint64_t VViewCursorSetCacheCapacity ( VViewCursor *self,uint64_t capacity);
+static uint64_t VViewCursorGetCacheCapacity ( const VViewCursor *self);
 
-static const KSymbol * VViewCursorFindOverride ( const VCURSOR_IMPL * p_self, const struct VCtxId * p_cid );
+static const KSymbol * VViewCursorFindOverride ( const VViewCursor * p_self, const struct VCtxId * p_cid );
 
-static rc_t VViewCursorLaunchPagemapThread ( struct VCURSOR_IMPL *self );
-static const PageMapProcessRequest* VViewCursorPageMapProcessRequest ( const struct VCURSOR_IMPL *self );
-static bool VViewCursorCacheActive ( const struct VCURSOR_IMPL * self, int64_t * cache_empty_end );
-static rc_t VViewCursorInstallTrigger ( struct VCURSOR_IMPL * self, struct VProduction * prod );
+static rc_t VViewCursorLaunchPagemapThread ( struct VViewCursor *self );
+static const PageMapProcessRequest* VViewCursorPageMapProcessRequest ( const struct VViewCursor *self );
+static bool VViewCursorCacheActive ( const struct VViewCursor * self, int64_t * cache_empty_end );
+static rc_t VViewCursorInstallTrigger ( struct VViewCursor * self, struct VProduction * prod );
 
 static VCursor_vt VViewCursor_vt =
 {
-    VViewCursorAddRef,
-    VViewCursorRelease,
+    VViewCursorWhack,
     VViewCursorVAddColumn,
     VViewCursorVGetColumnIdx,
-    VViewCursorDatatype,
     VViewCursorOpen,
-    VViewCursorIdRange,
-    VViewCursorRowId,
     VViewCursorSetRowId,
-    VViewCursorFindNextRowId,
-    VViewCursorFindNextRowIdDirect,
     VViewCursorOpenRow,
     VViewCursorWrite,
     VViewCursorCommitRow,
@@ -178,25 +128,14 @@ static VCursor_vt VViewCursor_vt =
     VViewCursorCommit,
     VViewCursorOpenParentRead,
     VViewCursorOpenParentUpdate,
-    VViewCursorGetUserData,
-    VViewCursorSetUserData,
-
     VViewCursorPermitPostOpenAdd,
     VViewCursorSuspendTriggers,
-
     VViewCursorGetSchema,
-
-    VViewCursorPageIdRange,
-    VViewCursorIsStaticColumn,
     VViewCursorLinkedCursorGet,
     VViewCursorLinkedCursorSet,
     VViewCursorSetCacheCapacity,
     VViewCursorGetCacheCapacity,
-
-    VViewCursorColumns,
-    VViewCursorPhysicalColumns,
     VViewCursorMakeColumn,
-    VViewCursorGetRow,
     VViewCursorGetTable,
     VViewCursorIsReadOnly,
     VViewCursorGetBlobMruCache,
@@ -224,15 +163,15 @@ VViewCursorMake ( const VView * p_view, VViewCursor ** p_curs )
         rc = VViewAddRef ( p_view );
         if ( rc == 0 )
         {
-            curs -> vt = & VViewCursor_vt;
+            curs -> dad . vt = & VViewCursor_vt;
             curs -> view = p_view;
-            VectorInit ( & curs -> row, 1, 16 );
-            VCursorCacheInit ( & curs -> col, 0, 16 );
-            VCursorCacheInit ( & curs -> phys, 0, 16 );
-            VCursorCacheInit ( & curs -> prod, 0, 16 );
-            VectorInit ( & curs -> owned, 0, 64 );
-            KRefcountInit ( & curs -> refcount, 1, "VViewCursor", "make", "vcurs" );
-            curs -> state = vcConstruct;
+            VectorInit ( & curs -> dad . row, 1, 16 );
+            VCursorCacheInit ( & curs -> dad . col, 0, 16 );
+            VCursorCacheInit ( & curs -> dad . phys, 0, 16 );
+            VCursorCacheInit ( & curs -> dad . prod, 0, 16 );
+            VectorInit ( & curs -> dad . owned, 0, 64 );
+            KRefcountInit ( & curs -> dad . refcount, 1, "VViewCursor", "make", "vcurs" );
+            curs -> dad . state = vcConstruct;
             * p_curs = curs;
             return 0;
         }
@@ -242,66 +181,11 @@ VViewCursorMake ( const VView * p_view, VViewCursor ** p_curs )
 }
 
 rc_t
-VViewCursorAddRef ( const VCURSOR_IMPL * p_self )
+VViewCursorWhack ( const VViewCursor * p_self )
 {
-    if ( p_self != NULL )
-    {
-        switch ( KRefcountAdd ( & p_self -> refcount, "VViewCursor" ) )
-        {
-        case krefLimit:
-            return RC ( rcVDB, rcCursor, rcAttaching, rcRange, rcExcessive );
-        }
-    }
-    return 0;
-}
-
-static
-void CC
-VViewCursorVColumnWhack_checked( void *item, void *data )
-{
-    if ( item != NULL )
-    {
-        VColumnWhack( item, data );
-    }
-}
-
-rc_t
-VViewCursorWhack ( VViewCursor * p_self )
-{
-    VViewRelease ( p_self -> view );
-
-    if ( p_self -> user_whack != NULL )
-    {
-        ( * p_self -> user_whack ) ( p_self -> user );
-    }
-
-    VectorWhack ( & p_self -> row, VViewCursorVColumnWhack_checked, NULL );
-    VCursorCacheWhack ( & p_self -> col, NULL, NULL );
-    VCursorCacheWhack ( & p_self -> col, NULL, NULL );
-    VCursorCacheWhack ( & p_self -> phys, VPhysicalWhack, NULL );
-    VCursorCacheWhack ( & p_self -> prod, NULL, NULL );
-    VectorWhack ( & p_self -> owned, VProductionWhack, NULL );
-
-    KRefcountWhack ( & p_self -> refcount, "VViewCursor" );
-
-    free ( p_self );
-    return 0;
-}
-
-rc_t
-VViewCursorRelease ( const VCURSOR_IMPL * p_self )
-{
-    if ( p_self != NULL )
-    {
-        switch ( KRefcountDrop ( & p_self -> refcount, "VViewCursor" ) )
-        {
-        case krefWhack:
-            return VViewCursorWhack ( ( VCURSOR_IMPL* ) p_self );
-        case krefNegative:
-            return RC ( rcVDB, rcCursor, rcReleasing, rcRange, rcExcessive );
-        }
-    }
-    return 0;
+    VViewCursor * self = ( VViewCursor * ) p_self;
+    VViewRelease ( self -> view );
+    return VCursorWhackInt ( & self -> dad );
 }
 
 /* AddSColumn
@@ -324,7 +208,7 @@ VViewCursorAddSColumn ( VViewCursor *      p_self,
     }
 
     /* must not already be there - benign error */
-    col = VCursorCacheGet ( & p_self -> col, & p_scol -> cid );
+    col = VCursorCacheGet ( & p_self -> dad . col, & p_scol -> cid );
     if ( col != NULL )
     {
         * p_idx = col -> ord;
@@ -338,7 +222,7 @@ VViewCursorAddSColumn ( VViewCursor *      p_self,
         {
 #if 0
             /* open column if cursor open or type unknown */
-            if ( self -> state >= vcReady || scol -> td . type_id == 0 )
+            if ( self -> dad . state >= vcReady || scol -> td . type_id == 0 )
             {
                 rc = RC ( rcVDB, rcCursor, rcUpdating, rcColumn, ?? );
             }
@@ -357,17 +241,17 @@ VViewCursorAddSColumn ( VViewCursor *      p_self,
             if ( rc == 0 )
             {
                 /* insert it into vectors */
-                rc = VectorAppend ( & p_self -> row, & col -> ord, col );
+                rc = VectorAppend ( & p_self -> dad . row, & col -> ord, col );
                 if ( rc == 0 )
                 {
                     void * ignore;
-                    rc = VCursorCacheSet ( & p_self -> col, & p_scol -> cid, col );
+                    rc = VCursorCacheSet ( & p_self -> dad . col, & p_scol -> cid, col );
                     if ( rc == 0 )
                     {
                         * p_idx = col -> ord;
                         return 0;
                     }
-                    VectorSwap ( & p_self -> row, col -> ord, NULL, & ignore );
+                    VectorSwap ( & p_self -> dad . row, col -> ord, NULL, & ignore );
                 }
             }
             VColumnWhack ( col, NULL );
@@ -415,7 +299,7 @@ VViewCursorAddColspec ( VViewCursor * p_self, uint32_t * p_idx, const char * p_c
 }
 
 rc_t
-VViewCursorVAddColumn ( const VCURSOR_IMPL *    p_self,
+VViewCursorVAddColumn ( const VViewCursor *    p_self,
                         uint32_t *              p_idx,
                         const char *            p_name,
                         va_list                 p_args )
@@ -444,77 +328,9 @@ VViewCursorVAddColumn ( const VCURSOR_IMPL *    p_self,
         else
         {
             * p_idx = 0;
-            rc = VViewCursorAddColspec ( ( VCURSOR_IMPL * ) p_self, p_idx, colspec );
+            rc = VViewCursorAddColspec ( ( VViewCursor * ) p_self, p_idx, colspec );
         }
     }
-    return rc;
-}
-
-static
-rc_t
-VViewCursorGetColspec ( const VViewCursor * p_self, uint32_t * p_idx, const char * p_colspec )
-{
-    rc_t rc;
-
-    /* find an appropriate column in schema */
-    uint32_t type;
-    VTypedecl cast;
-    const SNameOverload *name;
-    const SColumn *scol = SViewFind ( p_self -> view -> sview,
-                                      p_self -> view -> schema,
-                                      & cast,
-                                      & name,
-                                      & type,
-                                      p_colspec,
-                                      "VViewCursorGetColspec",
-                                      true );
-    if ( scol == NULL || type != eColumn )
-    {
-        rc = RC ( rcVDB, rcCursor, rcAccessing, rcColumn, rcNotFound );
-    }
-    else
-    {
-        /* if the column-spec gave us the exact column, return it */
-        VColumn *col = VCursorCacheGet ( & p_self -> col, & scol -> cid );
-        if ( col != NULL )
-        {
-            * p_idx = col -> ord;
-            return 0;
-        }
-
-        /* prepare for failure */
-        rc = RC ( rcVDB, rcCursor, rcAccessing, rcColumn, rcNotFound );
-
-        /* there should be a name overload object */
-        if ( name != NULL )
-        {
-            uint32_t count, i = VectorStart ( & name -> items );
-            uint32_t end = VectorLength ( & name -> items );
-            for ( end += i, count = 0; i < end; ++ i )
-            {
-                scol = ( const void* ) VectorGet ( & name -> items, i );
-                if ( scol != NULL )
-                {
-                    col = VCursorCacheGet ( & p_self -> col, & scol -> cid );
-                    if ( col != NULL )
-                    {
-                        * p_idx = col -> ord;
-                        ++ count;
-                    }
-                }
-            }
-
-            if ( count == 1 )
-            {
-                return 0;
-            }
-            if ( count != 0 )
-            {
-                return RC ( rcVDB, rcCursor, rcAccessing, rcColumn, rcAmbiguous );
-            }
-        }
-    }
-
     return rc;
 }
 
@@ -526,7 +342,7 @@ VViewCursorGetColspec ( const VViewCursor * p_self, uint32_t * p_idx, const char
  *  "name" [ IN ] - NUL terminated column name spec.
  */
 rc_t
-VViewCursorVGetColumnIdx ( const VCURSOR_IMPL * p_self,
+VViewCursorVGetColumnIdx ( const VViewCursor * p_self,
                            uint32_t *           p_idx,
                            const char *         p_name,
                            va_list args )
@@ -549,7 +365,7 @@ VViewCursorVGetColumnIdx ( const VCURSOR_IMPL * p_self,
         {
             rc = RC ( rcVDB, rcCursor, rcAccessing, rcName, rcEmpty );
         }
-        else if ( p_self -> state == vcFailed )
+        else if ( p_self -> dad . state == vcFailed )
         {
             rc = RC ( rcVDB, rcCursor, rcAccessing, rcCursor, rcInvalid );
         }
@@ -563,55 +379,19 @@ VViewCursorVGetColumnIdx ( const VCURSOR_IMPL * p_self,
             }
             else
             {
-                rc = VViewCursorGetColspec ( p_self, p_idx, colspec );
-            }
-        }
-    }
-
-    return rc;
-}
-
-/* Datatype
- *  returns typedecl and/or typedef for column data
- *
- *  "idx" [ IN ] - column index
- *
- *  "type" [ OUT, NULL OKAY ] - returns the column type declaration
- *
- *  "def" [ OUT, NULL OKAY ] - returns the definition of the type
- *  returned in "type_decl"
- *
- * NB - one of "type" and "def" must be non-NULL
- */
-rc_t
-VViewCursorDatatype ( const VCURSOR_IMPL *  p_self,
-                      uint32_t              p_idx,
-                      struct VTypedecl *    p_type,
-                      struct VTypedesc *    p_desc )
-{
-    rc_t rc;
-
-    if ( p_type == NULL && p_desc == NULL )
-    {
-        rc = RC ( rcVDB, rcCursor, rcAccessing, rcParam, rcNull );
-    }
-    else
-    {
-        const VColumn * vcol = ( const VColumn* ) VectorGet ( & p_self -> row, p_idx );
-        if ( vcol != NULL )
-        {
-            return VColumnDatatype ( vcol, p_type, p_desc );
-        }
-        else
-        {
-            rc = RC ( rcVDB, rcCursor, rcAccessing, rcColumn, rcNotFound );
-            if ( p_type != NULL )
-            {
-                memset ( p_type, 0, sizeof * p_type );
-            }
-            if ( p_desc != NULL )
-            {
-                memset ( p_desc, 0, sizeof * p_desc );
+                /* find an appropriate column in schema */
+                uint32_t type;
+                VTypedecl cast;
+                const SNameOverload *name;
+                const SColumn *scol = SViewFind ( p_self -> view -> sview,
+                                                p_self -> view -> schema,
+                                                & cast,
+                                                & name,
+                                                & type,
+                                                colspec,
+                                                "VViewCursorVGetColumnIdx",
+                                                true );
+                rc = VCursorGetColidx ( & p_self -> dad, scol, name, type, p_idx );
             }
         }
     }
@@ -667,8 +447,8 @@ VViewCursorResolveColumn ( void *item, void *data )
         }
 
         /* remove from row and cache */
-        VectorSwap ( & self -> row, col -> ord, NULL, & ignore );
-        VCursorCacheSwap ( & self -> col, & scol -> cid, NULL, & ignore );
+        VectorSwap ( & self -> dad . row, col -> ord, NULL, & ignore );
+        VCursorCacheSwap ( & self -> dad . col, & scol -> cid, NULL, & ignore );
 
         /* dump the VColumn */
         VColumnWhack ( col, NULL );
@@ -682,7 +462,7 @@ VViewCursorResolveColumn ( void *item, void *data )
 
 static
 rc_t
-VViewCursorResolveColumnProductions ( VCURSOR_IMPL * p_self, const struct KDlset * p_libs )
+VViewCursorResolveColumnProductions ( VViewCursor * p_self, const struct KDlset * p_libs )
 {
     Vector cx_bind;
     VProdResolveData pb;
@@ -695,8 +475,8 @@ VViewCursorResolveColumnProductions ( VCURSOR_IMPL * p_self, const struct KDlset
     pb . pr . primary_table = tbl;
     pb . pr . view      = p_self -> view;
     pb . pr . curs      = ( VCursor * ) p_self;
-    pb . pr . cache     = & p_self -> prod;
-    pb . pr . owned     = & p_self -> owned;
+    pb . pr . cache     = & p_self -> dad . prod;
+    pb . pr . owned     = & p_self -> dad . owned;
     pb . pr . cx_bind   = & cx_bind;
 
     pb . pr . chain     = chainDecoding;
@@ -707,7 +487,7 @@ VViewCursorResolveColumnProductions ( VCURSOR_IMPL * p_self, const struct KDlset
 
     VectorInit ( & cx_bind, 1, p_self -> view -> schema -> num_indirect );
 
-    if ( ! VectorDoUntil ( & p_self -> row, false, VViewCursorResolveColumn, & pb ) )
+    if ( ! VectorDoUntil ( & p_self -> dad . row, false, VViewCursorResolveColumn, & pb ) )
     {
         pb . rc = 0;
     }
@@ -723,11 +503,11 @@ VViewCursorOpenRead ( VViewCursor * p_self, const struct KDlset * p_libs )
 {
     rc_t rc;
 
-    if ( p_self -> state >= vcReady )
+    if ( p_self -> dad . state >= vcReady )
     {
         rc = 0;
     }
-    else if ( p_self -> state == vcFailed )
+    else if ( p_self -> dad . state == vcFailed )
     {
         rc = RC ( rcVDB, rcCursor, rcOpening, rcCursor, rcInvalid );
     }
@@ -736,11 +516,11 @@ VViewCursorOpenRead ( VViewCursor * p_self, const struct KDlset * p_libs )
         rc = VViewCursorResolveColumnProductions ( p_self, p_libs );
         if ( rc == 0 )
         {
-            p_self -> row_id = p_self -> start_id = p_self -> end_id = 1;
-            p_self -> state = vcReady;
+            p_self -> dad . row_id = p_self -> dad . start_id = p_self -> dad . end_id = 1;
+            p_self -> dad . state = vcReady;
             return rc;
         }
-        p_self -> state = vcFailed;
+        p_self -> dad . state = vcFailed;
     }
 
     return rc;
@@ -754,10 +534,10 @@ VViewCursorOpenRead ( VViewCursor * p_self, const struct KDlset * p_libs )
  *  use "Release" instead.
  */
 rc_t
-VViewCursorOpen ( const VCURSOR_IMPL * p_self )
+VViewCursorOpen ( const VViewCursor * p_self )
 {
     rc_t rc = 0;
-    VViewCursor * self = ( VCURSOR_IMPL * ) p_self;
+    VViewCursor * self = ( VViewCursor * ) p_self;
     struct KDlset *libs = 0;
 #if 0
 TODO: enable
@@ -773,18 +553,20 @@ TODO: enable
             int64_t first;
             uint64_t count;
 
-            rc = VViewCursorIdRange ( p_self, 0, & first, & count );
+            rc = VCursorIdRange ( & p_self -> dad, 0, & first, & count );
             if ( rc == 0 )
             {
                 if ( count != 0 )
                 {
                     /* set initial row id to starting row */
-                    self -> start_id = self -> end_id = self -> row_id = first;
+                    self -> dad . start_id =
+                    self -> dad . end_id =
+                    self -> dad . row_id = first;
                 }
             }
             else
             {
-                self -> state = vcFailed;
+                self -> dad . state = vcFailed;
             }
         }
 #if 0
@@ -795,257 +577,79 @@ TODO: enable
     return rc;
 }
 
-typedef struct VCursorIdRangeData VCursorIdRangeData;
-struct VCursorIdRangeData
-{
-    int64_t first, last;
-    rc_t rc;
-};
-
-static
-bool CC
-column_id_range ( void *item, void *data )
-{
-    if ( ( size_t ) item > 8 )
-    {
-        int64_t first, last;
-        VCursorIdRangeData *pb = data;
-
-        rc_t rc = VColumnIdRange ( ( const void* ) item, & first, & last );
-
-        if ( GetRCState ( rc ) == rcEmpty )
-            return false;
-
-        if ( ( pb -> rc = rc ) != 0 )
-            return true;
-
-        if ( first < pb -> first )
-            pb -> first = first;
-        if ( last > pb -> last )
-            pb -> last = last;
-    }
-
-    return false;
-}
-
-rc_t CC
-VViewCursorIdRange ( const VCURSOR_IMPL *   p_self,
-                     uint32_t               p_idx,
-                     int64_t *              p_first,
-                     uint64_t *             p_count )
-{
-    rc_t rc;
-    VViewCursor * self = ( VCURSOR_IMPL * ) p_self;
-
-    if ( p_first == NULL && p_count == NULL )
-    {
-        rc = RC ( rcVDB, rcCursor, rcAccessing, rcParam, rcNull );
-    }
-    else
-    {
-        int64_t dummy;
-        uint64_t dummy_count;
-
-        if ( p_first == NULL )
-        {
-            p_first = & dummy;
-        }
-        else if ( p_count == NULL )
-        {
-            p_count = & dummy_count;
-        }
-        if ( self -> state < vcReady )
-        {
-            if ( self -> state == vcFailed )
-            {
-                rc = RC ( rcVDB, rcCursor, rcAccessing, rcCursor, rcInvalid );
-            }
-            else
-            {
-                rc = RC ( rcVDB, rcCursor, rcAccessing, rcCursor, rcNotOpen );
-            }
-        }
-        else if ( p_idx == 0 )
-        {
-            VCursorIdRangeData pb;
-
-            pb . first = INT64_MAX;
-            pb . last = INT64_MIN;
-            pb . rc = SILENT_RC ( rcVDB, rcCursor, rcAccessing, rcRange, rcEmpty );
-
-            if ( ! VectorDoUntil ( & self -> row, false, column_id_range, & pb ) )
-            {
-                * p_first = pb . first;
-                * p_count = pb . last >= pb . first ? pb . last + 1 - pb . first : 0;
-                return pb . rc;
-            }
-
-            rc = pb . rc;
-        }
-        else
-        {
-            const VColumn *vcol = ( const VColumn* ) VectorGet ( & self -> row, p_idx );
-            if ( vcol == NULL )
-            {
-                rc = RC ( rcVDB, rcCursor, rcAccessing, rcColumn, rcNotFound );
-            }
-            else
-            {
-                int64_t last;
-
-                rc = VColumnIdRange ( vcol, p_first, & last );
-                if  (rc == 0 )
-                {
-                    * p_count = last + 1 - * p_first;
-                }
-                return rc;
-            }
-        }
-
-        * p_first = 0;
-        * p_count = 0;
-    }
-
-    return rc;
-}
-
-VCursorCache *
-VViewCursorColumns ( VCURSOR_IMPL * p_self )
-{
-    return & p_self -> col;
-}
-
-VCursorCache *
-VViewCursorPhysicalColumns ( VCURSOR_IMPL * p_self )
-{
-    return & p_self -> phys;
-}
-
 rc_t
-VViewCursorMakeColumn ( VCURSOR_IMPL * p_self, VColumn ** p_col, const SColumn * p_scol, Vector * p_cx_bind )
+VViewCursorMakeColumn ( VViewCursor * p_self, VColumn ** p_col, const SColumn * p_scol, Vector * p_cx_bind )
 {
     return VColumnMake ( p_col, p_self -> view -> schema, p_scol );
 }
 
-Vector *
-VViewCursorGetRow ( VCURSOR_IMPL * p_self )
-{
-    return & p_self -> row;
-}
-
 const VTable *
-VViewCursorGetTable ( const VCURSOR_IMPL * p_self )
+VViewCursorGetTable ( const VViewCursor * p_self )
 {
     return VViewPrimaryTable ( p_self -> view );
 }
 
 bool
-VViewCursorIsReadOnly ( const VCURSOR_IMPL * p_self )
+VViewCursorIsReadOnly ( const VViewCursor * p_self )
 {
     return true;
 }
 
 const struct VSchema *
-VViewCursorGetSchema ( const VCURSOR_IMPL * p_self )
+VViewCursorGetSchema ( const VViewCursor * p_self )
 {
     return p_self -> view -> schema;
 }
 
 VBlobMRUCache *
-VViewCursorGetBlobMruCache ( struct VCURSOR_IMPL * p_self )
+VViewCursorGetBlobMruCache ( struct VViewCursor * p_self )
 {   /* no blob cache for views, yet */
     return NULL;
 }
 
 uint32_t
-VViewCursorIncrementPhysicalProductionCount ( struct VCURSOR_IMPL * p_self )
+VViewCursorIncrementPhysicalProductionCount ( struct VViewCursor * p_self )
 {
     return 0;
 }
 
 rc_t
-VViewCursorRowId ( const VCURSOR_IMPL * p_self, int64_t * p_id )
+VViewCursorSetRowId ( const VViewCursor * p_self, int64_t p_id )
 {
-    if ( p_id == NULL )
-    {
-        return RC ( rcVDB, rcCursor, rcAccessing, rcParam, rcNull );
-    }
-    else
-    {
-        * p_id = p_self -> row_id;
-        return 0;
-    }
+    VViewCursor * self = ( VViewCursor * ) p_self;
+    return VCursorSetRowIdRead ( & self -> dad, p_id );
 }
 
 rc_t
-VViewCursorSetRowId ( const VCURSOR_IMPL * p_self, int64_t p_id )
-{
-    VViewCursor * self = ( VCURSOR_IMPL * ) p_self;
-    self -> row_id = p_id;
-    return 0;
-}
-
-rc_t
-VViewCursorFindNextRowId ( const VCURSOR_IMPL * p_self, uint32_t p_idx, int64_t * p_next )
-{
-    if ( p_next == NULL )
-    {
-        return RC ( rcVDB, rcCursor, rcAccessing, rcParam, rcNull );
-    }
-    else
-    {
-        return VCursorRowFindNextRowId ( & p_self -> row, p_idx, p_self -> row_id + 1, p_next );
-    }
-}
-
-rc_t
-VViewCursorFindNextRowIdDirect ( const VCURSOR_IMPL *  p_self,
-                                 uint32_t              p_idx,
-                                 int64_t               p_start_id,
-                                 int64_t *             p_next )
-{
-    if ( p_next == NULL )
-    {
-        return RC ( rcVDB, rcCursor, rcAccessing, rcParam, rcNull );
-    }
-    else
-    {
-        return VCursorRowFindNextRowId ( & p_self -> row, p_idx, p_start_id, p_next );
-    }
-}
-
-rc_t
-VViewCursorOpenRow ( const VCURSOR_IMPL * p_self )
+VViewCursorOpenRow ( const VViewCursor * p_self )
 {
     rc_t rc;
-    VViewCursor * self = ( VCURSOR_IMPL * ) p_self;
+    VViewCursor * self = ( VViewCursor * ) p_self;
 
-    if ( self -> state < vcReady )
+    if ( self -> dad . state < vcReady )
     {
         rc = RC ( rcVDB, rcCursor, rcOpening, rcRow, rcIncomplete );
     }
-    else if ( self -> state > vcReady )
+    else if ( self -> dad . state > vcReady )
     {   /* ignore */
         rc = 0;
     }
     else
     {
-        self -> state = vcRowOpen;
-        rc = 0;
+        rc = VCursorOpenRowRead ( & self -> dad );
     }
 
     return rc;
 }
 
 rc_t
-VViewCursorCloseRow ( const VCURSOR_IMPL * p_self )
+VViewCursorCloseRow ( const VViewCursor * p_self )
 {
-    VViewCursor * self = ( VCURSOR_IMPL * ) p_self;
+    VViewCursor * self = ( VViewCursor * ) p_self;
 
-    if ( self -> state == vcRowOpen )
+    if ( self -> dad . state == vcRowOpen )
     {
-        ++ self -> row_id;
-        self -> state = vcReady;
+        return VCursorCloseRowRead ( & self -> dad );
     }
 
     return 0;
@@ -1058,7 +662,7 @@ VViewCursorGetBlobDirectInt ( const VViewCursor *   p_self,
                               int64_t               p_row_id,
                               uint32_t              p_col_idx )
 {
-    const VColumn *col = ( const VColumn* ) VectorGet ( & p_self -> row, p_col_idx );
+    const VColumn *col = ( const VColumn* ) VectorGet ( & p_self -> dad . row, p_col_idx );
     if ( col == NULL )
     {
         return RC ( rcVDB, rcCursor, rcReading, rcColumn, rcInvalid );
@@ -1068,7 +672,7 @@ VViewCursorGetBlobDirectInt ( const VViewCursor *   p_self,
         const void * base;
         uint32_t elem_bits, boff, row_len;
         VBlob * blob;
-        rc_t rc = VColumnRead ( col, p_self -> row_id, & elem_bits, & base, & boff, & row_len, & blob );
+        rc_t rc = VColumnRead ( col, p_self -> dad . row_id, & elem_bits, & base, & boff, & row_len, & blob );
         if ( rc == 0 )
         {
             rc = VBlobAddRef ( blob );
@@ -1083,7 +687,7 @@ VViewCursorGetBlobDirectInt ( const VViewCursor *   p_self,
 }
 
 rc_t
-VViewCursorGetBlob ( const VCURSOR_IMPL * p_self, const VBlob ** p_blob, uint32_t p_col_idx )
+VViewCursorGetBlob ( const VViewCursor * p_self, const VBlob ** p_blob, uint32_t p_col_idx )
 {
     rc_t rc;
 
@@ -1093,7 +697,7 @@ VViewCursorGetBlob ( const VCURSOR_IMPL * p_self, const VBlob ** p_blob, uint32_
     }
     else
     {
-        switch ( p_self -> state )
+        switch ( p_self -> dad . state )
         {
         case vcConstruct:
             rc = RC ( rcVDB, rcCursor, rcReading, rcCursor, rcNotOpen );
@@ -1102,7 +706,7 @@ VViewCursorGetBlob ( const VCURSOR_IMPL * p_self, const VBlob ** p_blob, uint32_
             rc = RC ( rcVDB, rcCursor, rcReading, rcRow, rcNotOpen );
             break;
         case vcRowOpen:
-            return VViewCursorGetBlobDirectInt ( p_self, p_blob, p_self -> row_id, p_col_idx );
+            return VViewCursorGetBlobDirectInt ( p_self, p_blob, p_self -> dad . row_id, p_col_idx );
         default:
             rc = RC ( rcVDB, rcCursor, rcReading, rcCursor, rcInvalid );
             break;
@@ -1114,7 +718,7 @@ VViewCursorGetBlob ( const VCURSOR_IMPL * p_self, const VBlob ** p_blob, uint32_
 }
 
 rc_t
-VViewCursorGetBlobDirect ( const VCURSOR_IMPL * p_self,
+VViewCursorGetBlobDirect ( const VViewCursor * p_self,
                            const VBlob **  p_blob,
                            int64_t         p_row_id,
                            uint32_t        p_col_idx )
@@ -1127,7 +731,7 @@ VViewCursorGetBlobDirect ( const VCURSOR_IMPL * p_self,
     }
     else
     {
-        switch ( p_self -> state )
+        switch ( p_self -> dad . state )
         {
         case vcConstruct:
             rc = RC ( rcVDB, rcCursor, rcReading, rcCursor, rcNotOpen );
@@ -1209,7 +813,7 @@ CopyRow ( uint32_t      p_elem_size,
 
 static
 rc_t
-VViewCursorReadInt ( const VCURSOR_IMPL * p_self,
+VViewCursorReadInt ( const VViewCursor * p_self,
                      int64_t              p_row_id,
                      uint32_t             p_col_idx,
                      uint32_t             p_elem_bits,
@@ -1231,7 +835,7 @@ VViewCursorReadInt ( const VCURSOR_IMPL * p_self,
         }
         else
         {
-            const VColumn * col = ( const VColumn * ) VectorGet ( & p_self -> row, p_col_idx );
+            const VColumn * col = ( const VColumn * ) VectorGet ( & p_self -> dad . row, p_col_idx );
             if ( col != NULL )
             {
                 uint32_t elem_size;
@@ -1253,7 +857,7 @@ VViewCursorReadInt ( const VCURSOR_IMPL * p_self,
 }
 
 rc_t
-VViewCursorRead ( const VCURSOR_IMPL * p_self,
+VViewCursorRead ( const VViewCursor * p_self,
                   uint32_t             p_col_idx,
                   uint32_t             p_elem_bits,
                   void *               p_buffer,
@@ -1267,21 +871,21 @@ VViewCursorRead ( const VCURSOR_IMPL * p_self,
     else
     {
         * p_row_len = 0;
-        switch ( p_self -> state )
+        switch ( p_self -> dad . state )
         {
         case vcConstruct:
             return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcNotOpen );
         case vcReady:
             return RC ( rcVDB, rcCursor, rcReading, rcRow, rcNotOpen );
         case vcRowOpen:
-            return VViewCursorReadInt ( p_self, p_self -> row_id, p_col_idx, p_elem_bits, p_buffer, p_blen, p_row_len);
+            return VViewCursorReadInt ( p_self, p_self -> dad . row_id, p_col_idx, p_elem_bits, p_buffer, p_blen, p_row_len);
         default:
             return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcInvalid );
         }
     }
 }
 
-static rc_t VViewCursorReadDirect ( const VCURSOR_IMPL *    p_self,
+static rc_t VViewCursorReadDirect ( const VViewCursor *    p_self,
                                     int64_t                 p_row_id,
                                     uint32_t                p_col_idx,
                                     uint32_t                p_elem_bits,
@@ -1296,7 +900,7 @@ static rc_t VViewCursorReadDirect ( const VCURSOR_IMPL *    p_self,
     else
     {
         * p_row_len = 0;
-        switch ( p_self -> state )
+        switch ( p_self -> dad . state )
         {
         case vcConstruct:
             return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcNotOpen );
@@ -1365,7 +969,7 @@ CopyRowBits ( uint32_t      p_elem_size,
 
 static
 rc_t
-VViewCursorReadBitsInt ( const VCURSOR_IMPL *  p_self,
+VViewCursorReadBitsInt ( const VViewCursor *  p_self,
                          uint32_t              p_row_id,
                          uint32_t              p_col_idx,
                          uint32_t              p_elem_bits,
@@ -1386,7 +990,7 @@ VViewCursorReadBitsInt ( const VCURSOR_IMPL *  p_self,
     {
         const VColumn * col;
 
-        col = ( const VColumn * ) VectorGet ( & p_self -> row, p_col_idx );
+        col = ( const VColumn * ) VectorGet ( & p_self -> dad . row, p_col_idx );
         if ( col != NULL )
         {
             uint32_t elem_size;
@@ -1407,7 +1011,7 @@ VViewCursorReadBitsInt ( const VCURSOR_IMPL *  p_self,
 }
 
 rc_t
-VViewCursorReadBits ( const VCURSOR_IMPL *    p_self,
+VViewCursorReadBits ( const VViewCursor *    p_self,
                       uint32_t                p_col_idx,
                       uint32_t                p_elem_bits,
                       uint32_t                p_start,
@@ -1431,14 +1035,14 @@ VViewCursorReadBits ( const VCURSOR_IMPL *    p_self,
         * p_num_read = 0;
         * p_remaining = 0;
 
-        switch ( p_self -> state )
+        switch ( p_self -> dad . state )
         {
         case vcConstruct:
             return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcNotOpen );
         case vcReady:
             return RC ( rcVDB, rcCursor, rcReading, rcRow, rcNotOpen );
         case vcRowOpen:
-            return VViewCursorReadBitsInt ( p_self, p_self -> row_id, p_col_idx, p_elem_bits, p_start, p_buffer, p_off, p_blen, p_num_read, p_remaining);
+            return VViewCursorReadBitsInt ( p_self, p_self -> dad . row_id, p_col_idx, p_elem_bits, p_start, p_buffer, p_off, p_blen, p_num_read, p_remaining);
         default:
             return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcInvalid );
         }
@@ -1446,7 +1050,7 @@ VViewCursorReadBits ( const VCURSOR_IMPL *    p_self,
 }
 
 rc_t
-VViewCursorReadBitsDirect ( const VCURSOR_IMPL *    p_self,
+VViewCursorReadBitsDirect ( const VViewCursor *    p_self,
                             int64_t                 p_row_id,
                             uint32_t                p_col_idx,
                             uint32_t                p_elem_bits,
@@ -1471,7 +1075,7 @@ VViewCursorReadBitsDirect ( const VCURSOR_IMPL *    p_self,
         * p_num_read = 0;
         * p_remaining = 0;
 
-        switch ( p_self -> state )
+        switch ( p_self -> dad . state )
         {
         case vcConstruct:
             return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcNotOpen );
@@ -1486,7 +1090,7 @@ VViewCursorReadBitsDirect ( const VCURSOR_IMPL *    p_self,
 
 static
 rc_t
-VViewCursorCellDataInt ( const VCURSOR_IMPL *  p_self,
+VViewCursorCellDataInt ( const VViewCursor *  p_self,
                          int64_t               p_row_id,
                          uint32_t              p_col_idx,
                          uint32_t *            p_elem_bits,
@@ -1511,7 +1115,7 @@ VViewCursorCellDataInt ( const VCURSOR_IMPL *  p_self,
         p_elem_bits = & dummy [ 2 ];
     }
 
-    col = ( const VColumn * ) VectorGet ( & p_self -> row, p_col_idx );
+    col = ( const VColumn * ) VectorGet ( & p_self -> dad . row, p_col_idx );
     if ( col != NULL )
     {
         rc = VColumnRead ( col, p_row_id, p_elem_bits, p_base, p_boff, p_row_len, NULL );
@@ -1533,7 +1137,7 @@ VViewCursorCellDataInt ( const VCURSOR_IMPL *  p_self,
 }
 
 rc_t
-VViewCursorCellData ( const VCURSOR_IMPL *  p_self,
+VViewCursorCellData ( const VViewCursor *  p_self,
                       uint32_t              p_col_idx,
                       uint32_t *            p_elem_bits,
                       const void **         p_base,
@@ -1548,14 +1152,14 @@ VViewCursorCellData ( const VCURSOR_IMPL *  p_self,
     {
         * p_base = NULL;
 
-        switch ( p_self -> state )
+        switch ( p_self -> dad . state )
         {
         case vcConstruct:
             return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcNotOpen );
         case vcReady:
             return RC ( rcVDB, rcCursor, rcReading, rcRow, rcNotOpen );
         case vcRowOpen:
-            return VViewCursorCellDataInt ( p_self, p_self -> row_id, p_col_idx, p_elem_bits, p_base, p_boff, p_row_len);
+            return VViewCursorCellDataInt ( p_self, p_self -> dad . row_id, p_col_idx, p_elem_bits, p_base, p_boff, p_row_len);
         default:
             return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcInvalid );
         }
@@ -1563,7 +1167,7 @@ VViewCursorCellData ( const VCURSOR_IMPL *  p_self,
 }
 
 rc_t
-VViewCursorCellDataDirect ( const VCURSOR_IMPL *    p_self,
+VViewCursorCellDataDirect ( const VViewCursor *    p_self,
                             int64_t                 p_row_id,
                             uint32_t                p_col_idx,
                             uint32_t *              p_elem_bits,
@@ -1579,7 +1183,7 @@ VViewCursorCellDataDirect ( const VCURSOR_IMPL *    p_self,
     {
         * p_base = NULL;
 
-        switch ( p_self -> state )
+        switch ( p_self -> dad . state )
         {
         case vcConstruct:
             return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcNotOpen );
@@ -1593,7 +1197,7 @@ VViewCursorCellDataDirect ( const VCURSOR_IMPL *    p_self,
 }
 
 rc_t
-VViewCursorDataPrefetch ( const VCURSOR_IMPL *  p_cself,
+VViewCursorDataPrefetch ( const VViewCursor *  p_cself,
                           const int64_t *       p_row_ids,
                           uint32_t              p_col_idx,
                           uint32_t              p_num_rows,
@@ -1605,7 +1209,7 @@ VViewCursorDataPrefetch ( const VCURSOR_IMPL *  p_cself,
 }
 
 rc_t
-VViewCursorOpenParentRead ( const VCURSOR_IMPL * p_self, const VTable ** p_tbl )
+VViewCursorOpenParentRead ( const VViewCursor * p_self, const VTable ** p_tbl )
 {
     rc_t rc;
 
@@ -1629,135 +1233,44 @@ VViewCursorOpenParentRead ( const VCURSOR_IMPL * p_self, const VTable ** p_tbl )
     return rc;
 }
 
-rc_t
-VViewCursorGetUserData ( const VCURSOR_IMPL * p_self, void ** p_data )
-{
-    rc_t rc;
-
-    if ( p_data == NULL )
-    {
-        rc = RC ( rcVDB, rcCursor, rcAccessing, rcParam, rcNull );
-    }
-    else
-    {
-        * p_data = p_self -> user;
-        return 0;
-    }
-
-    return rc;
-}
-
-rc_t
-VViewCursorSetUserData ( const VCURSOR_IMPL *   p_self,
-                         void *                 p_data,
-                         void ( CC * p_destroy ) ( void *data ) )
-{
-    VCURSOR_IMPL * self = ( VCURSOR_IMPL* ) p_self;
-
-    self -> user = p_data;
-    self -> user_whack = p_destroy;
-
-    return 0;
-}
-
-const KSymbol * VViewCursorFindOverride ( const VCURSOR_IMPL * p_self, const struct VCtxId * p_cid )
+const KSymbol * VViewCursorFindOverride ( const VViewCursor * p_self, const struct VCtxId * p_cid )
 {
     return SViewFindOverride ( p_self -> view -> sview, p_cid );
 }
 
-rc_t VViewCursorPermitPostOpenAdd ( const VCURSOR_IMPL * self )
+rc_t VViewCursorPermitPostOpenAdd ( const VViewCursor * self )
 {
     return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcUnsupported );
 }
 
-rc_t VViewCursorPageIdRange ( const VCURSOR_IMPL *self, uint32_t idx, int64_t id, int64_t *first, int64_t *last )
-{   /*TODO: body identical to VTableCursorPageIdRange, reuse */
-    rc_t rc;
-
-    if ( first == NULL && last == NULL )
-        rc = RC ( rcVDB, rcCursor, rcAccessing, rcParam, rcNull );
-    else
-    {
-        int64_t dummy;
-        if ( first == NULL )
-            first = & dummy;
-        else if ( last == NULL )
-            last = & dummy;
-
-        if ( self == NULL )
-            rc = RC ( rcVDB, rcCursor, rcAccessing, rcSelf, rcNull );
-        else
-        {
-            const VColumn *vcol = ( const VColumn* ) VectorGet ( & self -> row, idx );
-            if ( vcol == NULL )
-                rc = RC ( rcVDB, rcCursor, rcAccessing, rcColumn, rcNotFound );
-            else
-                return VColumnPageIdRange ( vcol, id, first, last );
-        }
-
-        * first = * last = 0;
-    }
-
-    return rc;
-}
-
-rc_t VViewCursorIsStaticColumn ( const VCURSOR_IMPL *self, uint32_t col_idx, bool *is_static )
-{   /*TODO: body identical to VTableCursorIsStaticColumn, reuse */
-    rc_t rc;
-
-    if ( is_static == NULL )
-        rc = RC ( rcVDB, rcCursor, rcAccessing, rcParam, rcNull );
-    else
-    {
-        if ( self == NULL )
-            rc = RC ( rcVDB, rcCursor, rcAccessing, rcSelf, rcNull );
-        else
-        {
-            uint32_t start = VectorStart ( & self -> row );
-            uint32_t end = start + VectorLength ( & self -> row );
-            if ( col_idx < start || col_idx >= end )
-                rc = RC ( rcVDB, rcCursor, rcSelecting, rcId, rcInvalid );
-            else
-            {
-                VColumn *col = VectorGet ( & self -> row, col_idx );
-                return VColumnIsStatic ( col, is_static );
-            }
-        }
-
-        * is_static = false;
-    }
-
-    return rc;
-}
-
-rc_t VViewCursorLinkedCursorGet ( const VCURSOR_IMPL *cself,const char *tbl, struct VCursor const **curs)
+rc_t VViewCursorLinkedCursorGet ( const VViewCursor *cself,const char *tbl, struct VCursor const **curs)
 {
     return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcUnsupported );
 }
-rc_t VViewCursorLinkedCursorSet ( const VCURSOR_IMPL *cself,const char *tbl, struct VCursor const *curs)
+rc_t VViewCursorLinkedCursorSet ( const VViewCursor *cself,const char *tbl, struct VCursor const *curs)
 {
     return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcUnsupported );
 }
 
-uint64_t VViewCursorSetCacheCapacity ( VCURSOR_IMPL *self,uint64_t capacity)
+uint64_t VViewCursorSetCacheCapacity ( VViewCursor *self,uint64_t capacity)
 {
     return 0;
 }
-uint64_t VViewCursorGetCacheCapacity ( const VCURSOR_IMPL *self)
+uint64_t VViewCursorGetCacheCapacity ( const VViewCursor *self)
 {
     return 0;
 }
 
-rc_t VViewCursorLaunchPagemapThread ( struct VCURSOR_IMPL *self )
+rc_t VViewCursorLaunchPagemapThread ( struct VViewCursor *self )
 {
     return 0;
 }
-const PageMapProcessRequest* VViewCursorPageMapProcessRequest ( const struct VCURSOR_IMPL *self )
+const PageMapProcessRequest* VViewCursorPageMapProcessRequest ( const struct VViewCursor *self )
 {
     return NULL;
 }
 
-bool VViewCursorCacheActive ( const struct VCURSOR_IMPL * self, int64_t * cache_empty_end )
+bool VViewCursorCacheActive ( const struct VViewCursor * self, int64_t * cache_empty_end )
 {
     if ( cache_empty_end != NULL )
     {
@@ -1767,39 +1280,39 @@ bool VViewCursorCacheActive ( const struct VCURSOR_IMPL * self, int64_t * cache_
 }
 
 // not implemented for views (read-only)
-rc_t VViewCursorWrite ( VCURSOR_IMPL * p_self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t count )
+rc_t VViewCursorWrite ( VViewCursor * p_self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t count )
 {
     return RC ( rcVDB, rcCursor, rcWriting, rcCursor, rcReadonly );
 }
-rc_t VViewCursorCommitRow ( VCURSOR_IMPL * p_self )
+rc_t VViewCursorCommitRow ( VViewCursor * p_self )
 {
     return RC ( rcVDB, rcCursor, rcWriting, rcCursor, rcReadonly );
 }
-rc_t VViewCursorRepeatRow ( VCURSOR_IMPL * p_self, uint64_t count )
+rc_t VViewCursorRepeatRow ( VViewCursor * p_self, uint64_t count )
 {
     return RC ( rcVDB, rcCursor, rcWriting, rcCursor, rcReadonly );
 }
-rc_t VViewCursorFlushPage ( VCURSOR_IMPL * p_self )
+rc_t VViewCursorFlushPage ( VViewCursor * p_self )
 {
     return RC ( rcVDB, rcCursor, rcWriting, rcCursor, rcReadonly );
 }
-rc_t VViewCursorDefault ( VCURSOR_IMPL * p_self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t row_len )
+rc_t VViewCursorDefault ( VViewCursor * p_self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t row_len )
 {
     return RC ( rcVDB, rcCursor, rcWriting, rcCursor, rcReadonly );
 }
-rc_t VViewCursorCommit ( VCURSOR_IMPL * p_self )
+rc_t VViewCursorCommit ( VViewCursor * p_self )
 {
     return RC ( rcVDB, rcCursor, rcWriting, rcCursor, rcReadonly );
 }
-rc_t VViewCursorOpenParentUpdate ( VCURSOR_IMPL * p_self, VTable **tbl )
+rc_t VViewCursorOpenParentUpdate ( VViewCursor * p_self, VTable **tbl )
 {
     return RC ( rcVDB, rcCursor, rcWriting, rcCursor, rcReadonly );
 }
-rc_t VViewCursorInstallTrigger ( struct VCURSOR_IMPL * self, struct VProduction * prod )
+rc_t VViewCursorInstallTrigger ( struct VViewCursor * self, struct VProduction * prod )
 {
     return RC ( rcVDB, rcCursor, rcWriting, rcCursor, rcReadonly );
 }
-rc_t VViewCursorSuspendTriggers ( const VCURSOR_IMPL * self )
+rc_t VViewCursorSuspendTriggers ( const VViewCursor * self )
 {
     return RC ( rcVDB, rcCursor, rcWriting, rcCursor, rcReadonly );
 }

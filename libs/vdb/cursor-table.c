@@ -39,8 +39,6 @@
 #include "schema-priv.h"
 #include "schema-parse.h"
 #include "column-priv.h"
-#include "phys-priv.h"
-#include "prod-priv.h"
 #include "prod-expr.h"
 #undef KONST
 #undef SKONST
@@ -77,7 +75,6 @@
 #include <ctype.h>
 #include <assert.h>
 
-#define ToVCursor(self)         ((VCursor*)(self))
 #define ToConstVCursor(self)    ((const VCursor*)(self))
 
 #define PERMIT_POST_OPEN_ADD 1
@@ -174,75 +171,30 @@ int64_t CC LinkedCursorNodeComp ( const BSTNode *A, const BSTNode *B )
  *  a row cursor onto a VTable
  */
 
-static void CC VCursorVColumnWhack_checked( void *item, void *data )
-{
-    if ( item != NULL )
-        VColumnWhack( item, data );
-}
-
 /* Whack
  */
-rc_t VCursorDestroy ( VCURSOR_IMPL *self )
+rc_t VTableCursorWhack ( const VCURSOR_IMPL * p_self )
 {
-    KRefcountWhack ( & self -> refcount, "VCursor" );
+    VCURSOR_IMPL * self = ( VCURSOR_IMPL * ) p_self;
     if ( self -> cache_curs )
     {
-        VCursorDestroy ( ( VTableCursor * ) ( self -> cache_curs ) );
+        VTableCursorWhack ( ( VTableCursor * ) ( self -> cache_curs ) );
     }
     VBlobMRUCacheDestroy ( self->blob_mru_cache);
 
-    if ( self -> user_whack != NULL )
-        ( * self -> user_whack ) ( self -> user );
     BSTreeWhack ( & self -> named_params, NamedParamNodeWhack, NULL );
     BSTreeWhack ( & self -> linked_cursors, LinkedCursorNodeWhack, NULL );
-    VCursorCacheWhack ( & self -> col, NULL, NULL );
-    VCursorCacheWhack ( & self -> phys, VPhysicalWhack, NULL );
-    VCursorCacheWhack ( & self -> prod, NULL, NULL );
-    VectorWhack ( & self -> owned, VProductionWhack, NULL );
     VectorWhack ( & self -> trig, NULL, NULL );
-    VectorWhack ( & self -> row, VCursorVColumnWhack_checked, NULL );
     VectorWhack ( & self -> v_cache_curs, NULL, NULL );
     VectorWhack ( & self -> v_cache_cidx, NULL, NULL );
 
     VSchemaRelease ( self -> schema );
 
-    VTableSever ( self -> tbl );
+    /* some references from the base class may dangle if we Sever() before VCursorWhackInt() is done */
+    VTable * tbl = self -> tbl;
+    VCursorWhackInt ( & self -> dad );
+    VTableSever ( tbl );
 
-    free ( self );
-
-    return 0;
-}
-
-/* AddRef
- * Release
- *  all objects are reference counted
- *  NULL references are ignored
- */
-rc_t CC VTableCursorAddRef ( const VCURSOR_IMPL *self )
-{
-    if ( self != NULL )
-    {
-        switch ( KRefcountAdd ( & self -> refcount, "VCursor" ) )
-        {
-        case krefLimit:
-            return RC ( rcVDB, rcCursor, rcAttaching, rcRange, rcExcessive );
-        }
-    }
-    return 0;
-}
-
-rc_t CC VTableCursorRelease ( const VCURSOR_IMPL *self )
-{
-    if ( self != NULL )
-    {
-        switch ( KRefcountDrop ( & self -> refcount, "VCursor" ) )
-        {
-        case krefWhack:
-            return VCursorWhack ( (VTableCursor*) self );
-        case krefNegative:
-            return RC ( rcVDB, rcCursor, rcReleasing, rcRange, rcExcessive );
-        }
-    }
     return 0;
 }
 
@@ -273,18 +225,18 @@ rc_t VTableCursorMake ( VCURSOR_IMPL **cursp, const VTable *tbl, VCursor_vt *vt 
             rc = STableCloneExtend ( tbl -> stbl, & curs -> stbl, curs -> schema );
             if ( rc == 0 )
             {
-                curs -> vt = vt;
+                curs -> dad . vt = vt;
                 curs -> tbl = VTableAttach ( tbl );
-                VectorInit ( & curs -> row, 1, 16 );
+                VectorInit ( & curs -> dad . row, 1, 16 );
                 VectorInit ( & curs -> v_cache_curs, 1, 16 );
                 VectorInit ( & curs -> v_cache_cidx, 1, 16 );
-                VCursorCacheInit ( & curs -> col, 0, 16 );
-                VCursorCacheInit ( & curs -> phys, 0, 16 );
-                VCursorCacheInit ( & curs -> prod, 0, 16 );
-                VectorInit ( & curs -> owned, 0, 64 );
+                VCursorCacheInit ( & curs -> dad . col, 0, 16 );
+                VCursorCacheInit ( & curs -> dad . phys, 0, 16 );
+                VCursorCacheInit ( & curs -> dad . prod, 0, 16 );
+                VectorInit ( & curs -> dad . owned, 0, 64 );
                 VectorInit ( & curs -> trig, 0, 64 );
-                KRefcountInit ( & curs -> refcount, 1, "VCursor", "make", "vcurs" );
-                curs -> state = vcConstruct;
+                KRefcountInit ( & curs -> dad . refcount, 1, "VCursor", "make", "vcurs" );
+                curs -> dad . state = vcConstruct;
                 curs -> permit_add_column = true;
                 curs -> suspend_triggers  = false;
                 * cursp = curs;
@@ -491,12 +443,12 @@ static rc_t VTableCreateCachedCursorReadImpl ( const VTable *self,
                     DBGMSG(DBG_VDB, DBG_FLAG(DBG_VDB_VDB), ("VTableCreateCachedCursorReadImpl(vdbcache) = %d\n", rc2));
                     if(rc2 == 0)
                     {
-                        ((VTableCursor*)(*cursp)) -> cache_curs = ToVCursor ( cache_curs );
+                        ((VTableCursor*)(*cursp)) -> cache_curs = & cache_curs -> dad;
                     }
                 }
                 return 0;
             }
-            VCursorRelease ( ToVCursor ( curs ) );
+            VCursorRelease ( & curs -> dad );
         }
         * cursp = NULL;
     }
@@ -541,9 +493,9 @@ rc_t CC VTableCursorPermitPostOpenAdd ( const VCURSOR_IMPL *cself )
 
     if ( self == NULL )
         rc = RC ( rcVDB, rcCursor, rcUpdating, rcSelf, rcNull );
-    else if ( self -> state == vcFailed )
+    else if ( self -> dad . state == vcFailed )
         rc = RC ( rcVDB, rcCursor, rcUpdating, rcCursor, rcInvalid );
-    else if ( self -> state != vcConstruct )
+    else if ( self -> dad . state != vcConstruct )
         rc = RC ( rcVDB, rcCursor, rcUpdating, rcCursor, rcOpen );
     else
     {
@@ -580,7 +532,7 @@ rc_t CC VTableCursorSuspendTriggers ( const VCURSOR_IMPL *cself )
 /* AddSColumn
  */
 static
-rc_t VCursorAddSColumn ( VCURSOR_IMPL *self, uint32_t *idx,
+rc_t VTableCursorAddSColumn ( VCURSOR_IMPL *self, uint32_t *idx,
     const SColumn *scol, const VTypedecl *cast, Vector *cx_bind )
 {
     rc_t rc;
@@ -600,7 +552,7 @@ rc_t VCursorAddSColumn ( VCURSOR_IMPL *self, uint32_t *idx,
     }
 
     /* must not already be there - benign error */
-    col = VCursorCacheGet ( & self -> col, & scol -> cid );
+    col = VCursorCacheGet ( & self -> dad . col, & scol -> cid );
     if ( col != NULL )
     {
         * idx = col -> ord;
@@ -608,19 +560,19 @@ rc_t VCursorAddSColumn ( VCURSOR_IMPL *self, uint32_t *idx,
     }
 
     /* make object */
-    rc = VCursorMakeColumn ( ToVCursor ( self ), & col, scol, cx_bind );
+    rc = VCursorMakeColumn ( & self -> dad, & col, scol, cx_bind );
     if ( rc == 0 )
     {
         /* insert it into vectors */
-        rc = VectorAppend ( & self -> row, & col -> ord, col );
+        rc = VectorAppend ( & self -> dad . row, & col -> ord, col );
         if ( rc == 0 )
         {
             void *ignore;
-            rc = VCursorCacheSet ( & self -> col, & scol -> cid, col );
+            rc = VCursorCacheSet ( & self -> dad . col, & scol -> cid, col );
             if ( rc == 0 )
             {
                 /* open column if cursor open or type unknown */
-                if ( self -> state >= vcReady || scol -> td . type_id == 0 )
+                if ( self -> dad . state >= vcReady || scol -> td . type_id == 0 )
                 {
                     rc = VCursorPostOpenAdd ( self, col );
                     assert ( rc != 0 || scol -> td . type_id != 0 );
@@ -640,10 +592,10 @@ rc_t VCursorAddSColumn ( VCURSOR_IMPL *self, uint32_t *idx,
                 }
 
                 /* bail out */
-                VCursorCacheSwap ( & self -> col, & scol -> cid, NULL, & ignore );
+                VCursorCacheSwap ( & self -> dad . col, & scol -> cid, NULL, & ignore );
             }
 
-            VectorSwap ( & self -> row, col -> ord, NULL, & ignore );
+            VectorSwap ( & self -> dad . row, col -> ord, NULL, & ignore );
         }
 
         VColumnWhack ( col, NULL );
@@ -674,7 +626,7 @@ rc_t VCursorAddColspec ( VCURSOR_IMPL *self, uint32_t *idx, const char *colspec 
     {
         Vector cx_bind;
         VectorInit ( & cx_bind, 1, self -> schema -> num_indirect );
-        rc = VCursorAddSColumn ( self, idx, scol, & cast, & cx_bind );
+        rc = VTableCursorAddSColumn ( self, idx, scol, & cast, & cx_bind );
         VectorWhack ( & cx_bind, NULL, NULL );
         if(rc == 0)
         {
@@ -725,7 +677,7 @@ rc_t VCursorAddColspec ( VCURSOR_IMPL *self, uint32_t *idx, const char *colspec 
  *    "( type ) name"
  *  the special name "*" may be added to a read cursor.
  */
-LIB_EXPORT rc_t CC VTableCursorVAddColumn ( const VCURSOR_IMPL *cself,
+rc_t VTableCursorVAddColumn ( const VCURSOR_IMPL *cself,
     uint32_t *idx, const char *name, va_list args )
 {
     rc_t rc;
@@ -743,9 +695,9 @@ LIB_EXPORT rc_t CC VTableCursorVAddColumn ( const VCURSOR_IMPL *cself,
             rc = RC ( rcVDB, rcCursor, rcUpdating, rcName, rcNull );
         else if ( name [ 0 ] == 0 )
             rc = RC ( rcVDB, rcCursor, rcUpdating, rcName, rcEmpty );
-        else if ( self -> state == vcFailed )
+        else if ( self -> dad . state == vcFailed )
             rc = RC ( rcVDB, rcCursor, rcUpdating, rcCursor, rcInvalid );
-        else if ( self -> state != vcConstruct && ! self -> permit_add_column )
+        else if ( self -> dad . state != vcConstruct && ! self -> permit_add_column )
             rc = RC ( rcVDB, rcCursor, rcUpdating, rcCursor, rcLocked );
         else
         {
@@ -775,95 +727,6 @@ LIB_EXPORT rc_t CC VTableCursorVAddColumn ( const VCURSOR_IMPL *cself,
     return rc;
 }
 
-
-/* AddColumn
- *  add a column to an unopened cursor
- *
- *  "idx" [ OUT ] - return parameter for column index
- *
- *  "name" [ IN ] - NUL terminated column name spec.
- *  to identify a column by name, provide the column name
- *  by itself. if there are multiple types available under
- *  that name, the default type for that column will be
- *  selected. to select a specific type, the name may
- *  be cast to that type using a cast expression, e.g.
- *    "( type ) name"
- *  the special name "*" may be added to a read cursor.
- */
-LIB_EXPORT rc_t CC VCursorAddColumn ( const VCursor *self,
-    uint32_t *idx, const char *name, ... )
-{
-    rc_t rc;
-    va_list args;
-
-    va_start ( args, name );
-    rc = VCursorVAddColumn ( self, idx, name, args );
-    va_end ( args );
-
-    return rc;
-}
-
-
-/* GetColspec
- *  a "colspec" is either a simple column name or a typed name expression
- *  uses STable to evaluate colspec and find an SColumn
- */
-static
-rc_t VCursorGetColspec ( const VCURSOR_IMPL *self, uint32_t *idx, const char *colspec )
-{
-    rc_t rc;
-
-    /* find an appropriate column in schema */
-    uint32_t type;
-    VTypedecl cast;
-    const SNameOverload *name;
-    const SColumn *scol = STableFind ( self -> tbl -> stbl, self -> schema,
-        & cast, & name, & type, colspec, "VCursorGetColspec", true );
-    if ( scol == NULL || type != eColumn )
-        rc = RC ( rcVDB, rcCursor, rcAccessing, rcColumn, rcNotFound );
-    else
-    {
-        /* if the column-spec gave us the exact column, return it */
-        VColumn *col = VCursorCacheGet ( & self -> col, & scol -> cid );
-        if ( col != NULL )
-        {
-            * idx = col -> ord;
-            return 0;
-        }
-
-        /* prepare for failure */
-        rc = RC ( rcVDB, rcCursor, rcAccessing, rcColumn, rcNotFound );
-
-        /* there should be a name overload object */
-        if ( name != NULL )
-        {
-            uint32_t count, i = VectorStart ( & name -> items );
-            uint32_t end = VectorLength ( & name -> items );
-            for ( end += i, count = 0; i < end; ++ i )
-            {
-                scol = ( const void* ) VectorGet ( & name -> items, i );
-                if ( scol != NULL )
-                {
-                    col = VCursorCacheGet ( & self -> col, & scol -> cid );
-                    if ( col != NULL )
-                    {
-                        * idx = col -> ord;
-                        ++ count;
-                    }
-                }
-            }
-
-            if ( count == 1 )
-                return 0;
-            if ( count != 0 )
-                return RC ( rcVDB, rcCursor, rcAccessing, rcColumn, rcAmbiguous );
-        }
-    }
-
-    return rc;
-}
-
-
 /* GetColumnIdx
  *  retrieve column index by name spec
  *
@@ -886,7 +749,7 @@ rc_t CC VTableCursorVGetColumnIdx ( const VCURSOR_IMPL *self,
             rc = RC ( rcVDB, rcCursor, rcAccessing, rcName, rcNull );
         else if ( name [ 0 ] == 0 )
             rc = RC ( rcVDB, rcCursor, rcAccessing, rcName, rcEmpty );
-        else if ( self -> state == vcFailed )
+        else if ( self -> dad . state == vcFailed )
             rc = RC ( rcVDB, rcCursor, rcAccessing, rcCursor, rcInvalid );
         else
         {
@@ -896,201 +759,25 @@ rc_t CC VTableCursorVGetColumnIdx ( const VCURSOR_IMPL *self,
                 rc = RC ( rcVDB, rcCursor, rcAccessing, rcName, rcExcessive );
             else
             {
-                rc = VCursorGetColspec ( self, idx, colspec );
+                /* find an appropriate column in schema */
+                uint32_t type;
+                VTypedecl cast;
+                const SNameOverload *name;
+                const SColumn *scol = STableFind ( self -> tbl -> stbl,
+                                                   self -> schema,
+                                                   & cast,
+                                                   & name,
+                                                   & type,
+                                                   colspec,
+                                                   "VTableCursorVGetColumnIdx",
+                                                   true );
+            rc = VCursorGetColidx ( & self -> dad, scol, name, type, idx );
             }
         }
     }
 
     return rc;
 }
-
-LIB_EXPORT rc_t CC VCursorGetColumnIdx ( const VCursor *self, uint32_t *idx, const char *name, ... )
-{
-    rc_t rc;
-    va_list args;
-
-    va_start ( args, name );
-    rc = VCursorVGetColumnIdx ( self, idx, name, args );
-    va_end ( args );
-
-    return rc;
-}
-
-
-/* Datatype
- *  returns typedecl and/or typedef for column data
- *
- *  "idx" [ IN ] - column index
- *
- *  "type" [ OUT, NULL OKAY ] - returns the column type declaration
- *
- *  "def" [ OUT, NULL OKAY ] - returns the definition of the type
- *  returned in "type_decl"
- *
- * NB - one of "type" and "def" must be non-NULL
- */
-rc_t CC VTableCursorDatatype ( const VCURSOR_IMPL *self, uint32_t idx,
-    struct VTypedecl *type, struct VTypedesc *desc )
-{
-    rc_t rc;
-
-    if ( type == NULL && desc == NULL )
-        rc = RC ( rcVDB, rcCursor, rcAccessing, rcParam, rcNull );
-    else
-    {
-        const VColumn *vcol = ( const VColumn* ) VectorGet ( & self -> row, idx );
-        if ( vcol == NULL )
-            rc = RC ( rcVDB, rcCursor, rcAccessing, rcColumn, rcNotFound );
-        else
-            return VColumnDatatype ( vcol, type, desc );
-
-        if ( type != NULL )
-            memset ( type, 0, sizeof * type );
-        if ( desc != NULL )
-            memset ( desc, 0, sizeof * desc );
-    }
-
-    return rc;
-}
-
-
-/* IdRange
- *  returns id range for column
- *
- *  "idx" [ IN ] - column index
- *
- *  "id" [ IN ] - page containing this row id is target
- *
- *  "first" [ OUT, NULL OKAY ] and "last" [ OUT, NULL OKAY ] -
- *  id range is returned in these output parameters, where
- *  at least ONE must be NOT-NULL
- */
-typedef struct VCursorIdRangeData VCursorIdRangeData;
-struct VCursorIdRangeData
-{
-    int64_t first, last;
-    rc_t rc;
-};
-
-static
-bool CC column_id_range ( void *item, void *data )
-{
-    if ( ( size_t ) item > 8 )
-    {
-        int64_t first, last;
-        VCursorIdRangeData *pb = data;
-
-        rc_t rc = VColumnIdRange ( ( const void* ) item, & first, & last );
-
-        if ( GetRCState ( rc ) == rcEmpty )
-            return false;
-
-        if ( ( pb -> rc = rc ) != 0 )
-            return true;
-
-        if ( first < pb -> first )
-            pb -> first = first;
-        if ( last > pb -> last )
-            pb -> last = last;
-    }
-
-    return false;
-}
-
-rc_t CC VTableCursorIdRange ( const VCURSOR_IMPL *self, uint32_t idx,
-    int64_t *first, uint64_t *count )
-{
-    rc_t rc;
-
-    if ( first == NULL && count == NULL )
-        rc = RC ( rcVDB, rcCursor, rcAccessing, rcParam, rcNull );
-    else
-    {
-        int64_t dummy;
-        uint64_t dummy_count;
-
-        if ( first == NULL )
-            first = & dummy;
-        else if ( count == NULL )
-            count = & dummy_count;
-
-        if ( self -> state < vcReady )
-        {
-            if ( self -> state == vcFailed )
-                rc = RC ( rcVDB, rcCursor, rcAccessing, rcCursor, rcInvalid );
-            else
-                rc = RC ( rcVDB, rcCursor, rcAccessing, rcCursor, rcNotOpen );
-        }
-        else if ( idx == 0 )
-        {
-            VCursorIdRangeData pb;
-
-            pb . first = INT64_MAX;
-            pb . last = INT64_MIN;
-            pb . rc = SILENT_RC ( rcVDB, rcCursor, rcAccessing, rcRange, rcEmpty );
-
-            if ( ! VectorDoUntil ( & self -> row, false, column_id_range, & pb ) )
-            {
-                * first = pb . first;
-                * count = pb . last >= pb . first ? pb . last + 1 - pb . first : 0;
-                return pb . rc;
-            }
-
-            rc = pb . rc;
-        }
-        else
-        {
-            const VColumn *vcol = ( const VColumn* ) VectorGet ( & self -> row, idx );
-            if ( vcol == NULL )
-                rc = RC ( rcVDB, rcCursor, rcAccessing, rcColumn, rcNotFound );
-            else {
-                int64_t last;
-
-                rc = VColumnIdRange ( vcol, first, &last );
-                if (rc == 0)
-                    *count = last + 1 - *first;
-                return rc;
-            }
-        }
-
-        * first = * count = 0;
-    }
-
-    return rc;
-}
-
-rc_t VTableCursorPageIdRange ( struct VCURSOR_IMPL const *self,
-    uint32_t idx, int64_t id, int64_t *first, int64_t *last )
-{
-    rc_t rc;
-
-    if ( first == NULL && last == NULL )
-        rc = RC ( rcVDB, rcCursor, rcAccessing, rcParam, rcNull );
-    else
-    {
-        int64_t dummy;
-        if ( first == NULL )
-            first = & dummy;
-        else if ( last == NULL )
-            last = & dummy;
-
-        if ( self == NULL )
-            rc = RC ( rcVDB, rcCursor, rcAccessing, rcSelf, rcNull );
-        else
-        {
-            const VColumn *vcol = ( const VColumn* ) VectorGet ( & self -> row, idx );
-            if ( vcol == NULL )
-                rc = RC ( rcVDB, rcCursor, rcAccessing, rcColumn, rcNotFound );
-            else
-                return VColumnPageIdRange ( vcol, id, first, last );
-        }
-
-        * first = * last = 0;
-    }
-
-    return rc;
-}
-
 
 /* Open
  *  open cursor, resolving schema
@@ -1152,8 +839,8 @@ bool CC VCursorResolveColumn ( void *item, void *data )
         }
 
         /* remove from row and cache */
-        VectorSwap ( & self -> row, col -> ord, NULL, & ignore );
-        VCursorCacheSwap ( & self -> col, & scol -> cid, NULL, & ignore );
+        VectorSwap ( & self -> dad . row, col -> ord, NULL, & ignore );
+        VCursorCacheSwap ( & self -> dad . col, & scol -> cid, NULL, & ignore );
 
         /* dump the VColumn */
         VColumnWhack ( col, NULL );
@@ -1176,10 +863,10 @@ rc_t VCursorOpenColumn ( const VTableCursor *cself, VColumn *col )
     pb . pr . schema = self -> schema;
     pb . pr . ld = self -> tbl -> linker;
     pb . pr . name = & self -> stbl -> name -> name;
-    pb . pr . primary_table = VCursorGetTable ( ToVCursor ( self ) );
-    pb . pr . curs = ToVCursor ( self );
-    pb . pr . cache = & self -> prod;
-    pb . pr . owned = & self -> owned;
+    pb . pr . primary_table = VCursorGetTable ( & self -> dad );
+    pb . pr . curs = & self -> dad;
+    pb . pr . cache = & self -> dad . prod;
+    pb . pr . owned = & self -> dad . owned;
     pb . pr . cx_bind = & cx_bind;
     pb . pr . chain = chainDecoding;
     pb . pr . blobbing = false;
@@ -1220,10 +907,10 @@ rc_t VCursorResolveColumnProductions ( VTableCursor *self,
     pb . pr . ld = self -> tbl -> linker;
     pb . pr . libs = libs;
     pb . pr . name = & self -> stbl -> name -> name;
-    pb . pr . primary_table = VCursorGetTable ( ToVCursor ( self ) ) ;
-    pb . pr . curs = ToVCursor ( self );
-    pb . pr . cache = & self -> prod;
-    pb . pr . owned = & self -> owned;
+    pb . pr . primary_table = VCursorGetTable ( & self -> dad ) ;
+    pb . pr . curs = & self -> dad ;
+    pb . pr . cache = & self -> dad . prod;
+    pb . pr . owned = & self -> dad . owned;
     pb . pr . cx_bind = & cx_bind;
     pb . pr . chain = chainDecoding;
     pb . pr . blobbing = false;
@@ -1233,7 +920,7 @@ rc_t VCursorResolveColumnProductions ( VTableCursor *self,
 
     VectorInit ( & cx_bind, 1, self -> schema -> num_indirect );
 
-    if ( ! VectorDoUntil ( & self -> row, false, VCursorResolveColumn, & pb ) )
+    if ( ! VectorDoUntil ( & self -> dad . row, false, VCursorResolveColumn, & pb ) )
         pb . rc = 0;
 
     VectorWhack ( & cx_bind, NULL, NULL );
@@ -1245,17 +932,19 @@ rc_t VCursorOpenRead ( VCURSOR_IMPL *self, const KDlset *libs )
 {
     rc_t rc;
 
-    if ( self -> state >= vcReady )
+    if ( self -> dad . state >= vcReady )
         rc = 0;
-    else if ( self -> state == vcFailed )
+    else if ( self -> dad . state == vcFailed )
         rc = RC ( rcVDB, rcCursor, rcOpening, rcCursor, rcInvalid );
     else
     {
         rc = VCursorResolveColumnProductions ( self, libs, false );
         if ( rc == 0 )
         {
-            self -> row_id = self -> start_id = self -> end_id = 1;
-            self -> state = vcReady;
+            self -> dad . row_id =
+            self -> dad . start_id =
+            self -> dad . end_id = 1;
+            self -> dad . state = vcReady;
             if( self -> cache_curs )
             {
                 VCursorOpenRead ( ( VTableCursor * ) self -> cache_curs, libs );
@@ -1277,7 +966,7 @@ rc_t VCursorOpenRead ( VCURSOR_IMPL *self, const KDlset *libs )
                 }
             }
         }
-        self -> state = vcFailed;
+        self -> dad . state = vcFailed;
     }
 
     return rc;
@@ -1300,63 +989,6 @@ rc_t VCursorOpenForListing ( const VCursor *cself )
     }
     return rc;
 }
-
-
-
-/* RowId
- *  return id from row cursor within open blob
- *
- *  "id" [ OUT ] - current row id
- */
-rc_t VTableCursorRowId ( const VCURSOR_IMPL *self, int64_t *id )
-{
-    rc_t rc;
-    if ( id == NULL )
-        rc = RC ( rcVDB, rcCursor, rcAccessing, rcParam, rcNull );
-    else
-    {
-        * id = self -> row_id;
-        return 0;
-    }
-
-    return rc;
-}
-
-
-/* SetRowIdRead - PRIVATE
- *  seek to given row id
- *
- *  "row_id" [ IN ] - row id to select
- */
-rc_t VCursorSetRowIdRead ( VCURSOR_IMPL *self, int64_t row_id )
-{
-    assert ( self != NULL );
-
-    self -> row_id = row_id;
-    return 0;
-}
-
-
-/* OpenRowRead
- * CloseRowRead
- */
-rc_t VCursorOpenRowRead ( VCURSOR_IMPL *self )
-{
-    assert ( self != NULL );
-
-    self -> state = vcRowOpen;
-    return 0;
-}
-
-rc_t VCursorCloseRowRead ( VCURSOR_IMPL *self )
-{
-    assert ( self != NULL );
-
-    ++ self -> row_id;
-    self -> state = vcReady;
-    return 0;
-}
-
 
 /* Read
  *  read entire single row of byte-aligned data into a buffer
@@ -1387,7 +1019,7 @@ rc_t VCursorReadColumnDirectInt ( const VCURSOR_IMPL *cself, int64_t row_id, uin
     const VColumn *col;
     const VBlob *blob;
 
-    col = ( const void* ) VectorGet ( & cself -> row, col_idx );
+    col = ( const void* ) VectorGet ( & cself -> dad . row, col_idx );
     if ( col == NULL )
         return RC ( rcVDB, rcCursor, rcReading, rcColumn, rcInvalid );
 
@@ -1457,7 +1089,7 @@ rc_t VTableCursorGetBlob ( const VCURSOR_IMPL *self,
             const void *base;
             uint32_t elem_bits, boff, row_len;
 
-            switch ( self -> state )
+            switch ( self -> dad . state )
             {
             case vcConstruct:
                 rc = RC ( rcVDB, rcCursor, rcReading, rcCursor, rcNotOpen );
@@ -1466,7 +1098,7 @@ rc_t VTableCursorGetBlob ( const VCURSOR_IMPL *self,
                 rc = RC ( rcVDB, rcCursor, rcReading, rcRow, rcNotOpen );
                 break;
             case vcRowOpen:
-                rc = VCursorReadColumnDirectInt( self, self -> row_id, col_idx, &elem_bits, &base, &boff, &row_len, NULL, blob );
+                rc = VCursorReadColumnDirectInt( self, self -> dad . row_id, col_idx, &elem_bits, &base, &boff, &row_len, NULL, blob );
                 if ( rc == 0 )
                 {
                     rc = VBlobAddRef ( ( VBlob* ) *blob );
@@ -1500,7 +1132,7 @@ rc_t VTableCursorGetBlobDirect ( const VCURSOR_IMPL *self,
             const void *base;
             uint32_t elem_bits, boff, row_len;
 
-            switch ( self -> state )
+            switch ( self -> dad . state )
             {
             case vcConstruct:
                 rc = RC ( rcVDB, rcCursor, rcReading, rcCursor, rcNotOpen );
@@ -1533,7 +1165,7 @@ rc_t VCursorReadColumnDirect ( const VTableCursor *self, int64_t row_id, uint32_
     if ( ! self -> read_only )
         return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcWriteonly );
 
-    switch ( self -> state )
+    switch ( self -> dad . state )
     {
 		case vcConstruct : return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcNotOpen );
 		case vcReady :
@@ -1587,12 +1219,12 @@ rc_t VCursorReadColumn ( const VTableCursor *self, uint32_t col_idx,
     uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len )
 {
     rc_t rc = 0;
-    int64_t row_id = self->row_id;
+    int64_t row_id = self -> dad . row_id;
     bool cache_col_active_save;
     if ( ! self -> read_only )
         return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcWriteonly );
 
-    switch ( self -> state )
+    switch ( self -> dad . state )
     {
     case vcConstruct:
         return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcNotOpen );
@@ -2008,7 +1640,7 @@ rc_t VTableCursorDataPrefetch ( const VCURSOR_IMPL *cself,
 								bool continue_on_error )
 {
 	rc_t rc=0;
-	const VColumn *col = ( const void* ) VectorGet ( & cself -> row, col_idx );
+	const VColumn *col = ( const void* ) VectorGet ( & cself -> dad . row, col_idx );
 	if ( col == NULL )
 	{
 		return RC ( rcVDB, rcCursor, rcReading, rcColumn, rcInvalid );
@@ -2132,7 +1764,7 @@ void CC insert_overloaded_scolumns ( void *item, void *data )
     const SColumn *scol = ( const void* ) item;
 
     uint32_t ignore;
-    VCursorAddSColumn ( ( VTableCursor * ) pb -> curs, & ignore, scol, NULL, pb -> cx_bind );
+    VTableCursorAddSColumn ( ( VTableCursor * ) pb -> curs, & ignore, scol, NULL, pb -> cx_bind );
 }
 
 static
@@ -2143,7 +1775,7 @@ void VCursorListCol_walk_through_columns_and_add_to_cursor ( VTableCursor *self 
 
     Vector cx_bind;
     struct insert_overloaded_pb pb;
-    pb . curs = ToVCursor ( self );
+    pb . curs = & self -> dad;
     pb . cx_bind = & cx_bind;
     VectorInit ( & cx_bind, 1, self -> schema -> num_indirect );
 
@@ -2164,12 +1796,12 @@ rc_t VCursorListCol_consolidate_and_insert( const VTableCursor *self, BSTree *co
     rc_t rc = VCursorOpenForListing ( ToConstVCursor ( self ) );
     if ( rc == 0 )
     {
-        uint32_t idx = VectorStart ( & self -> row );
-        uint32_t end = VectorLength ( & self -> row );
+        uint32_t idx = VectorStart ( & self -> dad . row );
+        uint32_t end = VectorLength ( & self -> dad . row );
 
         for ( end += idx; idx < end; ++idx )
         {
-            const VColumn* vcol = ( const VColumn* ) VectorGet ( & self -> row, idx );
+            const VColumn* vcol = ( const VColumn* ) VectorGet ( & self -> dad . row, idx );
             if ( vcol != NULL )
             {
                 VColumnRef *cref;
@@ -2200,46 +1832,6 @@ rc_t VCursorListReadableColumns ( VCURSOR_IMPL *self, BSTree *columns )
 
     /* insert all columns into tree */
     return VCursorListCol_consolidate_and_insert ( self, columns );
-}
-
-
-/* GetUserData
- *  store/retrieve an opaque pointer to user data
- *
- *  "data" [ OUT ] - return parameter for getting data
- */
-rc_t VTableCursorGetUserData ( const VCURSOR_IMPL *self, void **data )
-{
-    rc_t rc;
-
-    if ( data == NULL )
-        rc = RC ( rcVDB, rcCursor, rcAccessing, rcParam, rcNull );
-    else
-    {
-        * data = self -> user;
-        return 0;
-    }
-
-    return rc;
-}
-
-/* SetUserData
- *  store/retrieve an opaque pointer to user data
- *
- *  "data" [ IN ] - parameter for setting data
- *
- *  "destroy" [ IN, NULL OKAY ] - optional destructor param
- *  invoked from destructor of "self"
- */
-rc_t VTableCursorSetUserData ( const VCURSOR_IMPL *cself,
-    void *data, void ( CC * destroy ) ( void *data ) )
-{
-    VTableCursor *self = ( VTableCursor* ) cself;
-
-    self -> user = data;
-    self -> user_whack = destroy;
-
-    return 0;
 }
 
 rc_t VTableCursorLinkedCursorGet(const VCURSOR_IMPL * cself,const char *tbl,VCursor const **curs)
@@ -2594,39 +2186,6 @@ LIB_EXPORT rc_t CC VDBManagerDisablePagemapThread ( struct VDBManager const *sel
     return 0;
 }
 
-
-/* IsStaticColumn
- *  answers question: "does this column have the same value for every cell?"
- */
-rc_t CC VTableCursorIsStaticColumn ( const VCURSOR_IMPL *self, uint32_t col_idx, bool *is_static )
-{
-    rc_t rc;
-
-    if ( is_static == NULL )
-        rc = RC ( rcVDB, rcCursor, rcAccessing, rcParam, rcNull );
-    else
-    {
-        if ( self == NULL )
-            rc = RC ( rcVDB, rcCursor, rcAccessing, rcSelf, rcNull );
-        else
-        {
-            uint32_t start = VectorStart ( & self -> row );
-            uint32_t end = start + VectorLength ( & self -> row );
-            if ( col_idx < start || col_idx >= end )
-                rc = RC ( rcVDB, rcCursor, rcSelecting, rcId, rcInvalid );
-            else
-            {
-                VColumn *col = VectorGet ( & self -> row, col_idx );
-                return VColumnIsStatic ( col, is_static );
-            }
-        }
-
-        * is_static = false;
-    }
-
-    return rc;
-}
-
 uint64_t CC VTableCursorSetCacheCapacity(VCURSOR_IMPL *self,uint64_t capacity)
 {
 	if(self) return VBlobMRUCacheSetCapacity(self->blob_mru_cache,capacity);
@@ -2636,140 +2195,6 @@ uint64_t CC VTableCursorGetCacheCapacity(const VCURSOR_IMPL *self)
 {
 	if(self) return VBlobMRUCacheGetCapacity(self->blob_mru_cache);
 	return 0;
-}
-
-
-/* FindNextRowId
- *  finds the id of the next row having valid ( non-null ) cell data
- *  "*next" may contain any row id > "VCursorRowId()".
- *  returns rcNotFound if none can be located.
- *
- *  "idx" [ IN, DEFAULT ZERO ] - single column index or
- *  zero to indicate the range for all columns in cursor.
- *  in the latter case ( idx == 0 ), we find the first row having
- *  ANY valid cell data.
- *
- *  "next" [ OUT ] - return parameter for next valid row id
- *
- * FindNextRowIdDirect
- *  "start_id" [ IN ] - starting id for search, such that "*next"
- *  could contain any id >= start_id upon successful return
- */
-rc_t VCursorRowFindNextRowId ( const Vector * self, uint32_t idx, int64_t start_id, int64_t * next )
-{
-    uint32_t i;
-    int64_t best = INT64_MAX;
-    rc_t rc = SILENT_RC ( rcVDB, rcCursor, rcSelecting, rcCursor, rcEmpty );
-
-    uint32_t start, end;
-
-    /* for walking across the open columns */
-    assert ( self != NULL );
-    start = VectorStart ( self );
-    end = start + VectorLength ( self );
-
-    /* if using a specific column, ensure the index is proper */
-    if ( idx != 0 )
-    {
-        if ( idx < start || idx >= end )
-            return RC ( rcVDB, rcCursor, rcSelecting, rcId, rcInvalid );
-
-        /* set the range to be just this column */
-        start = idx;
-        end = idx + 1;
-    }
-
-    /* walk across all columns */
-    for ( i = start; i < end; ++ i )
-    {
-        /* retrieve the column */
-        const VColumn * vcol = ( const VColumn * ) VectorGet ( self, i );
-
-        /* could assert that vcol != NULL, because it should never be so.
-           but the purpose of this function is not so much to insist on
-           this property but to discover the next row id */
-        if ( vcol != NULL )
-        {
-            /* assume the column is physical */
-            bool is_static = false;
-            KColumn * kcol = NULL;
-            rc = VColumnGetKColumn ( vcol, & kcol, & is_static );
-            if ( kcol != NULL && rc == 0 )
-            {
-                /* we have a physical column - ask kdb what the next id is */
-                rc = KColumnFindFirstRowId ( kcol, next, start_id );
-                KColumnRelease ( kcol );
-                if ( rc == 0 )
-                {
-                    /* there can be no better than the supplied id */
-                    if ( * next == start_id )
-                        break;
-
-                    /* record the best of all columns */
-                    if ( * next < best )
-                        best = * next;
-                }
-
-                /* if this column has no more ids, try next column */
-                else if ( GetRCState ( rc ) != rcNotFound )
-                    break;
-            }
-            else if ( is_static )
-            {
-                /* we have a static column, meaning a contiguous range of row ids */
-                int64_t sfirst, slast;
-                rc = VColumnIdRange ( vcol, & sfirst, & slast );
-                if ( rc != 0 )
-                    break;
-                if ( sfirst >= slast || start_id > slast )
-                {
-                    rc = RC ( rcVDB, rcCursor, rcSelecting, rcRow, rcNotFound );
-                    break;
-                }
-                if ( start_id >= sfirst )
-                {
-                    * next = start_id;
-                    rc = 0;
-                    break;
-                }
-                if ( sfirst < best )
-                    best = sfirst;
-
-            }
-
-            * next = best;
-        }
-    }
-
-    return rc;
-}
-
-rc_t VTableCursorFindNextRowId ( const VCURSOR_IMPL *self, uint32_t idx, int64_t *next )
-{
-    rc_t rc = 0;
-
-    if ( next == NULL )
-        rc = RC ( rcVDB, rcCursor, rcAccessing, rcParam, rcNull );
-    else
-    {
-        return VCursorRowFindNextRowId ( & self -> row, idx, self -> row_id + 1, next );
-    }
-
-    return rc;
-}
-
-rc_t VTableCursorFindNextRowIdDirect ( const VCURSOR_IMPL *self, uint32_t idx, int64_t start_id, int64_t *next )
-{
-    rc_t rc = 0;
-
-    if ( next == NULL )
-        rc = RC ( rcVDB, rcCursor, rcAccessing, rcParam, rcNull );
-    else
-    {
-        return VCursorRowFindNextRowId ( & self -> row, idx, start_id, next );
-    }
-
-    return rc;
 }
 
 const PageMapProcessRequest* VTableCursorPageMapProcessRequest(const struct VCURSOR_IMPL *self)
@@ -2797,18 +2222,6 @@ bool VTableCursorCacheActive ( const struct VCURSOR_IMPL * self, int64_t * cache
     return false;
 }
 
-VCursorCache * VTableCursorPhysicalColumns ( struct VCURSOR_IMPL * self )
-{
-    assert ( self != NULL );
-    return & self -> phys;
-}
-
-VCursorCache * VTableCursorColumns ( VCURSOR_IMPL * self )
-{
-    assert ( self != NULL );
-    return & self -> col;
-}
-
 bool VTableCursorIsReadOnly ( const struct VCURSOR_IMPL * self )
 {
     return self -> read_only;
@@ -2824,12 +2237,6 @@ uint32_t VTableCursorIncrementPhysicalProductionCount ( struct VCURSOR_IMPL * se
 {
     assert ( self != NULL );
     return ++ self -> phys_cnt;
-}
-
-Vector * VTableCursorGetRow ( struct VCURSOR_IMPL * self )
-{
-    assert ( self != NULL );
-    return & self -> row;
 }
 
 const struct KSymbol * VTableCursorFindOverride ( const VCURSOR_IMPL * self, const struct VCtxId * cid )
