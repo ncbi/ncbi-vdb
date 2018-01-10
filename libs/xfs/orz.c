@@ -165,7 +165,7 @@ struct XFSGapObject {
     KTime_t mod_time;
     uint64_t size;
 
-    XFSGOSts state;
+    XFSGOSte state;
         /*  We store here attempt number ... will stop attempte after
          *  third one
          */
@@ -722,15 +722,24 @@ LIB_EXPORT
 bool CC
 XFSGapObjectGood ( const struct XFSGapObject * self )
 {
-    return self == NULL ? kgosInvalid : ( self -> state == kgosGood );
+    return self == NULL ? false : ( self -> state == kgosGood );
 }   /* XFSGapObjectGood () */
 
+LIB_EXPORT
+bool CC
+XFSGapObjectCompleted ( const struct XFSGapObject * self )
+{
+    return self == NULL
+        ? false
+        : ( self -> state == kgosGood || self -> state == kgosBroken )
+        ;
+}   /* XFSGapObjectCompleted () */
 
 LIB_EXPORT
 rc_t CC
-XFSGapObjectStatus (
+XFSGapObjectState (
                     const struct XFSGapObject * self,
-                    XFSGOSts * Status
+                    XFSGOSte * Status
 )
 {
     XFS_CSA ( Status, kgosInvalid )
@@ -740,7 +749,7 @@ XFSGapObjectStatus (
     * Status = self -> state;
 
     return 0;
-}   /* XFSGapObjectStatus () */
+}   /* XFSGapObjectState () */
 
 LIB_EXPORT
 rc_t CC

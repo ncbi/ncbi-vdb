@@ -69,12 +69,12 @@
 /*))    XFSGapFiles are living here
  ((*/
 
-struct _GapFiles {
-    BSTree tree;
+struct _GapFile {
+    struct KFile file;
 
-    KLock * mutabor;
+    const struct KFile * looney_bin;
 
-    const struct XFSPen * pen;
+    struct _GapFilePeer * peer;
 };
 
 typedef enum _EncType {
@@ -96,30 +96,35 @@ struct _GapFilePeer {
     uint32_t project_id;
     const char * aoi;
 
-    const char * remote_url;
-    const char * cache_path;
+    const char * object_remote_url;
+    const char * object_cache_path;
+
+    uint64_t object_size;
+    uint64_t object_mod_time;
+
+    uint64_t correct_size;
+
+    rc_t object_rc_code;
+    const char * object_err_msg;
 
     XFSStatus status;
     _EncType enc_type;
-
-    uint64_t size;
-    KTime_t mod_time;
+    bool downloaded;
 
     const struct KFile * file;
 };
 
-struct _GapFile {
-    struct KFile file;
-
-    const struct KFile * looney_bin;
-
-    struct _GapFilePeer * peer;
-};
-
-
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /* _GapFiles ...                                                     */
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+struct _GapFiles {
+    BSTree tree;
+
+    KLock * mutabor;
+
+    const struct XFSPen * pen;
+};
+
 static struct _GapFiles * _sFiles = NULL;
 
 static
@@ -129,479 +134,171 @@ _FilesGet ()
     return _sFiles;
 }   /* _FilesGet () */
 
-static rc_t CC _GapFilePeerAddRef ( struct _GapFilePeer * self );
-static rc_t CC _GapFilePeerRelease ( struct _GapFilePeer * Peer );
-static rc_t CC _GapFilePeerMake (
-                                struct _GapFilePeer ** File,
-                                uint32_t ProjectId,
-                                const char * AccessionOrId
-                                );
-static rc_t CC _GapFilePeerDispose ( struct _GapFilePeer * self );
-
-static
-void CC
-_GapFilesWhackCallback ( BSTNode * Node, void * unused )
-{
-    if ( Node != NULL ) {
-        _GapFilePeerRelease ( ( struct _GapFilePeer* ) Node );
-    }
-}   /* _GapFilesWhackCallback () */
-
-static
-rc_t CC
-_GapFilesDispose ( struct _GapFiles * self )
-{
-    if ( self != NULL ) {
-        BSTreeWhack (
-                    & ( self -> tree ),
-                    _GapFilesWhackCallback,
-                    NULL
-                    );
-
-        if ( self -> pen != NULL ) {
-            XFSPenDispose ( self -> pen );
-            self -> pen = NULL;
-        }
-
-        if ( self -> mutabor != NULL ) {
-            KLockRelease ( self -> mutabor );
-            self -> mutabor = NULL;
-        }
-
-        free ( self );
-    }
-
-    return 0;
-}   /* _GapFilesDispose () */
-
-static
-rc_t CC
-_GapFilesMake ( struct _GapFiles ** Files )
-{
-    rc_t RCt;
-    struct _GapFiles * TheFiles;
-
-    RCt = 0;
-    TheFiles = NULL;
-
-    XFS_CSAN ( Files )
-    XFS_CAN ( Files )
-
-    TheFiles = calloc ( 1, sizeof ( struct _GapFiles ) );
-    if ( TheFiles == NULL ) {
-        RCt = XFS_RC ( rcExhausted );
-    }
-    else {
-        RCt = XFSPenMake ( & ( TheFiles -> pen ), 65 );
-        if ( RCt == 0 ) {
-            RCt = KLockMake ( & ( TheFiles -> mutabor ) );
-            if ( RCt == 0 ) {
-                BSTreeInit ( & ( TheFiles -> tree ) );
-
-                * Files = TheFiles;
-            }
-        }
-    }
-
-    if ( RCt != 0 ) {
-        * Files = NULL;
-
-        if ( TheFiles != NULL ) {
-            _GapFilesDispose ( TheFiles );
-        }
-    }
-
-    return RCt;
-}   /* _GapFilesMake () */
-
-LIB_EXPORT
-rc_t CC
-XFSGapFilesInit ()
-{
-    if ( _sFiles == NULL ) {
-        return _GapFilesMake ( & _sFiles );
-    }
-
-    return 0;
-}   /* XFSGapFilesInit () */
-
-LIB_EXPORT
-rc_t CC
-XFSGapFilesDispose ()
-{
-    rc_t RCt;
-    struct _GapFiles * Files;
-
-    RCt = 0;
-    Files = _sFiles;
-
-    if ( Files != NULL ) {
-        _sFiles = NULL;
-
-        RCt = _GapFilesDispose ( Files );
-    }
-
-    return RCt;
-}   /* XFSGapFilesDispose () */
-
-static
-int64_t CC
-_GapFilesFindCallback ( const void * Item, const BSTNode * Node )
-{
-    const char * Str1, * Str2;
-
-    Str1 = ( ( char * ) Item );
-    Str2 = Node == NULL
-                    ? NULL
-                    : ( ( struct _GapFilePeer * ) Node ) -> cache_path
-                    ;
-
-
-    return XFS_StringCompare4BST_ZHR ( Str1, Str2 );
-}   /* _GapFilesFindCallback () */
-
-static
-rc_t CC
-_GapFilesFind_NoLock (
-                    struct _GapFiles * self,
-                    struct _GapFilePeer ** Peer,
-                    const char * CachePath
-)
-{
-    rc_t RCt;
-    struct _GapFilePeer * ThePeer;
-
-    RCt = 0;
-    ThePeer = NULL;
-
-    XFS_CSAN ( Peer )
-    XFS_CAN ( self )
-    XFS_CAN ( Peer )
-    XFS_CAN ( CachePath )
-
-    ThePeer = ( struct _GapFilePeer * ) BSTreeFind ( 
-                                        & ( self -> tree ),
-                                        CachePath,
-                                        _GapFilesFindCallback
-                                        );
-    if ( ThePeer == NULL ) {
-
-        RCt = XFS_RC ( rcNotFound );
-    }
-    else {
-
-        * Peer = ThePeer;
-        RCt = 0;
-    }
-
-    return RCt;
-}   /* _GapFilesFind_NoLock () */
-
-static
-int64_t CC
-_GapFilesAddCallback (
-                    const struct BSTNode * N1,
-                    const struct BSTNode * N2
-)
-{
-    const char * Str1, * Str2;
-
-
-    Str1 = N1 == NULL
-                    ? NULL
-                    : ( ( ( struct _GapFilePeer * ) N1 ) -> cache_path )
-                    ;
-    Str2 = N2 == NULL
-                    ? NULL
-                    : ( ( ( struct _GapFilePeer * ) N2 ) -> cache_path )
-                    ;
-
-    return XFS_StringCompare4BST_ZHR ( Str1, Str2 );
-}   /* _GapFilesAddCallback () */
-
-static
-rc_t CC
-_GapFilesAddPeer_NoLock (
-                    struct _GapFiles * self,
-                    struct _GapFilePeer ** Peer,
-                    uint32_t ProjectId,
-                    const char * AccessionOrId
-)
-{
-    rc_t RCt;
-    struct _GapFilePeer * ThePeer;
-
-    RCt = 0;
-    ThePeer = NULL;
-
-    XFS_CSAN ( Peer )
-    XFS_CAN ( self )
-    XFS_CAN ( Peer )
-
-    RCt = _GapFilePeerMake (
-                        & ThePeer,
-                        ProjectId,
-                        AccessionOrId
-                        );
-    if ( RCt == 0 ) {
-        RCt = BSTreeInsert (
-                        & ( self -> tree ),
-                        ( struct BSTNode * ) ThePeer,
-                        _GapFilesAddCallback
-                        );
-        if ( RCt == 0 ) {
-            * Peer = ThePeer;
-        }
-    }
-
-    if ( RCt != 0 ) {
-        * Peer = NULL;
-
-        if ( ThePeer != NULL ) {
-            _GapFilePeerDispose ( ThePeer );
-        }
-    }
-
-    return RCt;
-}   /* _GapFilesAddPeer_NoLock () */
-
-static
-rc_t CC
-_GapFilesFindOrCreate (
-                    struct _GapFilePeer ** Peer,
-                    uint32_t ProjectId,
-                    const char * AccessionOrId
-)
-{
-    rc_t RCt;
-    struct _GapFiles * Files;
-    struct _GapFilePeer * ThePeer;
-    const struct XFSGapObject * Object;
-    const char * CachePath;
-
-    RCt = 0;
-    ThePeer = NULL;
-    Files = _FilesGet ();
-    Object = NULL;
-    CachePath = NULL;
-
-    XFS_CSAN ( Peer )
-    XFS_CAN ( Files )
-    XFS_CAN ( Peer )
-    XFS_CAN ( AccessionOrId )
-
-    RCt = XFSGapResolverGetObject ( & Object, AccessionOrId );
-    if ( RCt == 0 ) {
-        XFSGapObjectCachePath ( Object, & CachePath );
-        if ( RCt == 0 ) {
-            RCt = KLockAcquire ( Files -> mutabor );
-            if ( RCt == 0 ) {
-                    /* First we trying to locate already ready peer
-                     */
-                RCt = _GapFilesFind_NoLock (
-                                            Files,
-                                            & ThePeer,
-                                            CachePath
-                                            );
-                if ( GetRCState ( RCt ) == rcNotFound ) {
-                    RCt = _GapFilesAddPeer_NoLock (
-                                                Files,
-                                                & ThePeer,
-                                                ProjectId,
-                                                AccessionOrId
-                                                );
-                }
-
-                if ( RCt == 0 ) {
-                    RCt = _GapFilePeerAddRef ( ThePeer );
-                    if ( RCt == 0 ) {
-                        * Peer = ThePeer;
-                    }
-                }
-
-                KLockUnlock ( Files -> mutabor );
-            }
-        }
-
-        XFSGapObjectRelease ( Object );
-    }
-
-    return RCt;
-}   /* _GapFilesFindOrCreate () */
-
-static rc_t CC _GapFilePeerOpen (
-                            struct _GapFilePeer * self,
-                            const struct KFile ** File
-                            );
-LIB_EXPORT
-rc_t CC
-XFSGapFilesOpen (
-                const struct KFile ** File,
-                uint32_t ProjectId,
-                const char * AccessionOrId
-)
-{
-    rc_t RCt;
-    struct _GapFilePeer * Peer;
-    const struct KFile * TheFile;
-
-    RCt = 0;
-    Peer = NULL;
-    TheFile = NULL;
-
-    XFS_CSAN ( File )
-    XFS_CAN ( File )
-
-    RCt = _GapFilesFindOrCreate (
-                                & Peer,
-                                ProjectId,
-                                AccessionOrId
-                                );
-    if ( RCt == 0 ) {
-        RCt = _GapFilePeerOpen ( Peer, & TheFile );
-        if ( RCt == 0 ) {
-            * File = TheFile;
-        }
-
-        _GapFilePeerRelease ( Peer );
-    }
-
-    return RCt;
-}   /* XFSGapFilesOpen () */
-
-LIB_EXPORT
-rc_t CC
-XFSGapFilesSize (
-                uint64_t * Size,
-                uint32_t ProjectId,
-                const char * AccessionOrId
-)
-{
-    rc_t RCt;
-    struct _GapFilePeer * Peer;
-    const struct KFile * TheFile;
-
-    RCt = 0;
-    Peer = NULL;
-    TheFile = NULL;
-
-    XFS_CSA ( Size, 0 )
-    XFS_CAN ( Size )
-
-    RCt = _GapFilesFindOrCreate (
-                                & Peer,
-                                ProjectId,
-                                AccessionOrId
-                                );
-    if ( RCt == 0 ) {
-        if ( Peer -> size == 0 ) {
-            RCt = _GapFilePeerOpen ( Peer, & TheFile );
-            if ( RCt == 0 ) {
-                KFileRelease ( TheFile );
-            }
-        }
-
-        if ( RCt == 0 ) {
-            * Size = Peer -> size;
-        }
-
-        _GapFilePeerRelease ( Peer );
-    }
-
-    return RCt;
-}   /* XFSGapFilesSize () */
-
-static
-rc_t CC
-_GapFilesPathDate (
-                KTime_t * Time,
-                const char * Path,
-                bool Completed
-)
-{
-    rc_t RCt;
-    struct KDirectory * NatDir;
-
-    RCt = 0;
-    NatDir = NULL;
-
-    XFS_CSA ( Time, 0 )
-    XFS_CAN ( Time )
-    XFS_CAN ( Path )
-
-    RCt = KDirectoryNativeDir ( & NatDir );
-    if ( RCt == 0 ) {
-        if ( Completed ) {
-            RCt = KDirectoryDate ( NatDir, Time, Path );
-        }
-        else {
-            RCt = KDirectoryDate ( NatDir, Time, "%s.cache", Path );
-        }
-
-        KDirectoryRelease ( NatDir );
-    }
-
-    return RCt;
-}   /* _GapFilesPathDate () */
-
-LIB_EXPORT
-rc_t CC
-XFSGapFilesDate (
-                KTime_t * Time,
-                uint32_t ProjectId,
-                const char * AccessionOrId
-)
-{
-    rc_t RCt;
-    struct _GapFilePeer * Peer;
-    const struct KFile * TheFile;
-
-    RCt = 0;
-    Peer = NULL;
-    TheFile = NULL;
-
-    XFS_CSA ( Time, 0 )
-    XFS_CAN ( Time )
-
-    RCt = _GapFilesFindOrCreate (
-                                & Peer,
-                                ProjectId,
-                                AccessionOrId
-                                );
-    if ( RCt == 0 ) {
-            /*  It may be file does not exists
-             */
-        if ( Peer -> size == 0 ) {
-            RCt = _GapFilePeerOpen ( Peer, & TheFile );
-            if ( RCt == 0 ) {
-                KFileRelease ( TheFile );
-            }
-        }
-
-        if ( RCt == 0 ) {
-            RCt = _GapFilesPathDate (
-                                    Time,
-                                    Peer -> cache_path,
-                                    Peer -> status == kxfsComplete
-                                    );
-        }
-
-        _GapFilePeerRelease ( Peer );
-    }
-
-    return RCt;
-}   /* XFSGapFilesDate () */
-
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /* _GapFilesPeer                                                     */
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
-
 static const char * _sGapFilePeer_classname = "GapFilePeer";
+
+static
+rc_t CC
+_GapFilePeerInitFromGoodObject (
+                                struct _GapFilePeer * self,
+                                const struct XFSGapObject * Object
+)
+{
+    rc_t RCt;
+    const char * Ch;
+
+    RCt = 0;
+    Ch = NULL;
+
+    XFS_CAN ( self )
+    XFS_CAN ( Object )
+
+    if ( ! XFSGapObjectGood ( Object ) ) {
+        return XFS_RC ( rcInvalid );
+    }
+
+    RCt = XFSGapObjectURL ( Object, & Ch );
+    if ( RCt == 0 ) {
+        RCt = XFS_StrDup ( Ch, & ( self -> object_remote_url ) );
+    }
+
+    if ( RCt == 0 ) {
+        RCt = XFSGapObjectCachePath ( Object, & Ch );
+        if ( RCt == 0 ) {
+            RCt = XFS_StrDup ( Ch, & ( self -> object_cache_path ) );
+        }
+    }
+
+    if ( RCt == 0 ) {
+        RCt = XFSGapObjectSize ( Object, & ( self -> object_size ) );
+    }
+
+    if ( RCt == 0 ) {
+        RCt = XFSGapObjectModTime (
+                            Object,
+                            ( KTime_t * ) & ( self -> object_mod_time )
+                            );
+    }
+
+    if ( RCt == 0 ) {
+        self -> status = kxfsComplete;
+    }
+    else {
+        self -> status = kxfsBroken;
+        self -> enc_type = kxfsEncBroken;
+    }
+
+    return RCt;
+}   /* _GapFilePeerInitFromGoodObject () */
+
+static
+rc_t CC
+_GapFilePeerInitFromBaadObject (
+                                struct _GapFilePeer * self,
+                                const struct XFSGapObject * Object
+)
+{
+    rc_t RCt;
+    const char * Ch;
+
+    RCt = 0;
+    Ch = NULL;
+
+    XFS_CAN ( self )
+    XFS_CAN ( Object )
+
+    RCt = XFSGapObjectRcAndMsg ( Object, & ( self -> object_rc_code ) , & Ch );
+    if ( RCt == 0 ) {
+        RCt = XFS_StrDup ( Ch, & ( self -> object_err_msg ) );
+    }
+
+    self -> status = kxfsBroken;
+    self -> enc_type = kxfsEncBroken;
+
+    return RCt;
+}   /* _GapFilePeerInitFromBaadObject () */
+
+/*))    That method will retrieve an object and set/initialize
+ //     some necessary fields. It will almost always return no error
+((*/
+static
+rc_t CC
+_GapFilePeerCheckResolvedObject ( struct _GapFilePeer * self )
+{
+    rc_t RCt;
+    const struct XFSGapObject * Object;
+    enum XFSGOSte State;
+
+    RCt = 0;
+    Object = NULL;
+    State = kgosInvalid;
+
+    XFS_CAN ( self )
+    XFS_CAN ( self -> aoi )
+
+        /* First, if there necessety to read object state.
+         * of was state changed from finite one. In other words,
+         * if object is good or broken already ...
+         */
+    if ((  self -> status == kxfsComplete
+       ||  self -> status == kxfsBroken
+       ||  self -> status == kxfsInvalid
+       )) {
+        return 0;
+    }
+
+        /* From that moment, we think that object state was changed
+         * and we should perform post-initialisation of peer.
+         */
+    RCt = XFSGapResolverGetObject ( & Object, self -> aoi );
+    if ( RCt == 0 ) {
+
+            /* First we should check object state to define if
+             * it is good for rippin' off :LOLOLO:
+             */
+        RCt = XFSGapObjectState ( Object, & State );
+        if ( RCt == 0 ) {
+                /* So, if state is broken ... we are going
+                 * to copy error code, etc
+                 */
+             switch ( State ) {
+                case kgosGood :
+                    RCt = _GapFilePeerInitFromGoodObject ( self, Object );
+                    break;
+                case kgosBroken :
+                    RCt = _GapFilePeerInitFromBaadObject ( self, Object );
+                    break;
+                case kgosReady :
+                        /*)     Nothing to do 
+                         (*/
+                    self -> status = kxfsReady;
+                    self -> enc_type = kxfsEncReady;
+                    break;
+                default:
+                    RCt = XFS_RC ( rcInvalid );
+                    break;
+             }
+        }
+    
+        XFSGapObjectRelease ( Object );
+    }
+
+
+    if ( RCt != 0 ) {
+            /* JOJOBA : We do not want to think ... we moving out :LOL:
+             */
+    }
+
+    return RCt;
+}   /* _GapFilePeerCheckResolvedObject () */
 
 rc_t CC
 _GapFilePeerDispose ( struct _GapFilePeer * self )
 {
     if ( self != NULL ) {
+
         if ( self -> mutabor != NULL ) {
             KLockRelease ( self -> mutabor );
             self -> mutabor = NULL;
@@ -619,25 +316,34 @@ _GapFilePeerDispose ( struct _GapFilePeer * self )
             self -> aoi = NULL;
         }
 
-        if ( self -> remote_url != NULL ) {
-            free ( ( char * ) self -> remote_url );
-            self -> remote_url = NULL;
+        if ( self -> object_remote_url != NULL ) {
+            free ( ( char * ) self -> object_remote_url );
+            self -> object_remote_url = NULL;
         }
 
-        if ( self -> cache_path != NULL ) {
-            free ( ( char * ) self -> cache_path );
-            self -> cache_path = NULL;
+        if ( self -> object_cache_path != NULL ) {
+            free ( ( char * ) self -> object_cache_path );
+            self -> object_cache_path = NULL;
         }
 
-        self -> status = kxfsReady;
-        self -> enc_type = kxfsEncReady;
-        self -> size = 0;
+        if ( self -> object_err_msg != NULL ) {
+            free ( ( char * ) self -> object_err_msg );
+            self -> object_err_msg = NULL;
+        }
 
         if ( self -> file != NULL ) {
             ( ( struct _GapFile * ) self -> file ) -> peer = NULL;
             KFileRelease ( self -> file );
             self -> file = NULL;
         }
+
+        self -> object_rc_code = 0;
+        self -> object_size = 0;
+        self -> object_mod_time = 0;
+        self -> correct_size = 0;
+        self -> enc_type = kxfsEncReady;
+        self -> status = kxfsReady;
+        self -> downloaded = false;
 
         free ( self );
     }
@@ -653,13 +359,9 @@ _GapFilePeerMake (
 )
 {
     rc_t RCt;
-    const struct XFSGapObject * Object;
-    const char * Str;
     struct _GapFilePeer * TheFile;
 
     RCt = 0;
-    Object = NULL;
-    Str = NULL;
     TheFile = NULL;
 
     XFS_CSAN ( File )
@@ -678,59 +380,16 @@ _GapFilePeerMake (
                     "GapFilePeerMake",
                     "GapFilePeer"
                     );
-        TheFile -> project_id = ProjectId;
-        TheFile -> enc_type = kxfsEncInvalid;
-
-        TheFile -> status = RCt == 0 ? kxfsInvalid : kxfsBroken;
-        TheFile -> size = 0;
-
-        RCt = XFS_StrDup ( AccessionOrId, & ( TheFile -> aoi ) );
+        RCt = KLockMake ( & ( TheFile -> mutabor ) );
         if ( RCt == 0 ) {
-
-            RCt = XFSGapResolverGetObject ( & Object, AccessionOrId );
+            RCt = XFS_StrDup ( AccessionOrId, & ( TheFile -> aoi ) );
             if ( RCt == 0 ) {
-                RCt = KLockMake ( & ( TheFile -> mutabor ) );
-                if ( RCt == 0 ) {
+                TheFile -> project_id = ProjectId;
+                TheFile -> status = kxfsReady;
+                TheFile -> enc_type = kxfsEncReady;
+                TheFile -> downloaded = false;
 
-                    RCt = XFSGapObjectURL ( Object, & Str );
-                    if ( RCt == 0 ) {
-                        RCt = XFS_StrDup (
-                                        Str,
-                                        & ( TheFile -> remote_url )
-                                        );
-                        if ( RCt == 0 ) {
-                            RCt = XFSGapObjectCachePath (
-                                                        Object,
-                                                        & Str
-                                                        );
-                            if ( RCt == 0 ) {
-                                RCt = XFS_StrDup (
-                                            Str,
-                                            & ( TheFile -> cache_path )
-                                            );
-                                if ( RCt == 0 ) {
-                                    RCt = XFSGapObjectSize (
-                                                Object,
-                                                & ( TheFile -> size )
-                                                );
-                                    if ( RCt == 0 ) {
-                                        RCt = XFSGapObjectModTime (
-                                            Object,
-                                            & ( TheFile -> mod_time )
-                                            );
-                                        if ( RCt == 0 ) {
-                                            TheFile -> status =
-                                                        kxfsReady;
-                                            TheFile -> enc_type =
-                                                        kxfsEncReady;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                XFSGapObjectRelease ( Object );
+                RCt = _GapFilePeerCheckResolvedObject ( TheFile );
             }
         }
     }
@@ -739,16 +398,17 @@ _GapFilePeerMake (
         if ( TheFile != NULL ) {
             TheFile -> status = kxfsBroken;
             TheFile -> enc_type = kxfsEncBroken;
-            TheFile -> size = 0;
+            TheFile -> object_size = 0;
+            TheFile -> correct_size = 0;
+            TheFile -> object_mod_time = 0;
+            TheFile -> downloaded = false;
         }
     }
 
         /*  We have to return bad files too, to avoid multiply attempt
          *  of initialization of the same files
          */
-    if ( TheFile != NULL ) {
-        * File = TheFile;
-    }
+    * File = TheFile;
 
     return RCt;
 }   /* _GapFilePeerMake () */
@@ -824,7 +484,7 @@ bool CC
 _GapFilePeerGood ( struct _GapFilePeer * self )
 {
     if ( self != NULL ) {
-        return self -> status == kxfsReady || self -> status == kxfsGood;
+        return self -> status == kxfsGood;
     }
     return false;
 }   /* _GapFilePeerGood () */
@@ -836,7 +496,6 @@ _GapFilePeerGood ( struct _GapFilePeer * self )
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /* _GapFile ...                                                      */
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
-
 static
 rc_t CC
 _GapFileLockPeer ( const struct _GapFile * File )
@@ -1339,35 +998,52 @@ _Open_File_1 ( struct _GapFilePeer * self, const struct KFile ** File )
 
     RCt = KDirectoryNativeDir ( & NatDir );
     if ( RCt == 0 ) {
-            /*  First we should check if file is complete
+
+            /*  If file is downloaded already, we open and return it 
              */
-        if ( self -> status == kxfsReady ) {
-                /*  First we should check if cached file exists
-                 *  Open and return it
-                 */
-            PathType = KDirectoryPathType ( NatDir, self -> cache_path );
+        if ( ! self -> downloaded ) {
+            PathType = KDirectoryPathType (
+                                            NatDir,
+                                            self -> object_cache_path
+                                            );
+            if ( PathType == kptFile ) {
+                self -> downloaded = true;
+            }
+        }
+
+        if ( self -> downloaded ) {
+            RCt = KDirectoryOpenFileRead (
+                                        NatDir,
+                                        & File_2,
+                                        self -> object_cache_path
+                                        );
+        }
+        else {
             if ( PathType == kptNotFound ) {
                     /*  Second, we should create parent directory if
                      *  it does not exists
                      */
-                RCt = _CheckMakeParentDir ( NatDir, self -> cache_path );
+                RCt = _CheckMakeParentDir (
+                                        NatDir,
+                                        self -> object_cache_path
+                                        );
                 if ( RCt == 0 ) {
                     /*  KNS File first
                      */
 #ifdef _USE_CACHED_CONN_
                     RCt = _Take_Burro_From_Pen (
-                                                & File_1,
-                                                self -> remote_url,
-                                                true
-                                                );
+                                            & File_1,
+                                            self -> object_remote_url,
+                                            true
+                                            );
 #else /* _USE_CACHED_CONN_ */
                     RCt = KNSManagerMakeHttpFile (
-                                                XFS_KnsManager (),
-                                                & File_1,
-                                                NULL,
-                                                0x01010000,
-                                                self -> remote_url
-                                                );
+                                            XFS_KnsManager (),
+                                            & File_1,
+                                            NULL,
+                                            0x01010000,
+                                            self -> object_remote_url
+                                            );
 #endif /* _USE_CACHED_CONN_ */
 
                     if ( RCt == 0 ) {
@@ -1376,29 +1052,16 @@ _Open_File_1 ( struct _GapFilePeer * self, const struct KFile ** File )
                                             & File_2,
                                             File_1,
                                             32768 * 4, /* Buffer size */
-                                            self -> cache_path
+                                            self -> object_cache_path
                                             );
                         KFileRelease ( File_1 );
                     }
                 }
             }
             else {
-                if ( PathType == kptFile ) {
-                    self -> status = kxfsComplete;
-                }
-                else {
-                    RCt = XFS_RC ( rcInvalid );
-                }
+                RCt = XFS_RC ( rcInvalid );
             }
 
-        }
-
-        if ( self -> status == kxfsComplete ) {
-            RCt = KDirectoryOpenFileRead (
-                                        NatDir,
-                                        & File_2,
-                                        self -> cache_path
-                                        );
         }
 
         KDirectoryRelease ( NatDir );
@@ -1408,8 +1071,8 @@ _Open_File_1 ( struct _GapFilePeer * self, const struct KFile ** File )
             /* We suppose that all files from dbGaP has non ZERO size
              * and that size does not change with time
              */
-        if ( self -> size == 0 ) { 
-            RCt = KFileSize ( File_2, & ( self -> size ) );
+        if ( self -> correct_size == 0 ) { 
+            RCt = KFileSize ( File_2, & ( self -> correct_size ) );
         }
         if ( RCt == 0 ) {
             * File = File_2;
@@ -1421,7 +1084,7 @@ _Open_File_1 ( struct _GapFilePeer * self, const struct KFile ** File )
 
         self -> status = kxfsBroken;
         self -> enc_type = kxfsEncBroken;
-        self -> size = 0;
+        self -> correct_size = 0;
     }
 
     return RCt;
@@ -1647,7 +1310,7 @@ _GapFilePeerOpen_NoLock (
                      * encoded, we may just return file withou
                      * modifying the peer
                      */
-                if ( self -> status == kxfsComplete
+                if ( self -> downloaded
                     && self -> enc_type == kxfsEncNone
                 ) {
                     * File = File_2;
@@ -1715,3 +1378,465 @@ _GapFilePeerOpen (
 
     return RCt;
 }   /* _GapFilePeerOpen () */
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/* _GapFiles ...                                                     */
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*
+static rc_t CC _GapFilePeerAddRef ( struct _GapFilePeer * self );
+static rc_t CC _GapFilePeerRelease ( struct _GapFilePeer * Peer );
+static rc_t CC _GapFilePeerMake (
+                                struct _GapFilePeer ** File,
+                                uint32_t ProjectId,
+                                const char * AccessionOrId
+                                );
+static rc_t CC _GapFilePeerDispose ( struct _GapFilePeer * self );
+*/
+
+static
+void CC
+_GapFilesWhackCallback ( BSTNode * Node, void * unused )
+{
+    if ( Node != NULL ) {
+        _GapFilePeerRelease ( ( struct _GapFilePeer* ) Node );
+    }
+}   /* _GapFilesWhackCallback () */
+
+static
+rc_t CC
+_GapFilesDispose ( struct _GapFiles * self )
+{
+    if ( self != NULL ) {
+        BSTreeWhack (
+                    & ( self -> tree ),
+                    _GapFilesWhackCallback,
+                    NULL
+                    );
+
+        if ( self -> pen != NULL ) {
+            XFSPenDispose ( self -> pen );
+            self -> pen = NULL;
+        }
+
+        if ( self -> mutabor != NULL ) {
+            KLockRelease ( self -> mutabor );
+            self -> mutabor = NULL;
+        }
+
+        free ( self );
+    }
+
+    return 0;
+}   /* _GapFilesDispose () */
+
+static
+rc_t CC
+_GapFilesMake ( struct _GapFiles ** Files )
+{
+    rc_t RCt;
+    struct _GapFiles * TheFiles;
+
+    RCt = 0;
+    TheFiles = NULL;
+
+    XFS_CSAN ( Files )
+    XFS_CAN ( Files )
+
+    TheFiles = calloc ( 1, sizeof ( struct _GapFiles ) );
+    if ( TheFiles == NULL ) {
+        RCt = XFS_RC ( rcExhausted );
+    }
+    else {
+        RCt = XFSPenMake ( & ( TheFiles -> pen ), 65 );
+        if ( RCt == 0 ) {
+            RCt = KLockMake ( & ( TheFiles -> mutabor ) );
+            if ( RCt == 0 ) {
+                BSTreeInit ( & ( TheFiles -> tree ) );
+
+                * Files = TheFiles;
+            }
+        }
+    }
+
+    if ( RCt != 0 ) {
+        * Files = NULL;
+
+        if ( TheFiles != NULL ) {
+            _GapFilesDispose ( TheFiles );
+        }
+    }
+
+    return RCt;
+}   /* _GapFilesMake () */
+
+LIB_EXPORT
+rc_t CC
+XFSGapFilesInit ()
+{
+    if ( _sFiles == NULL ) {
+        return _GapFilesMake ( & _sFiles );
+    }
+
+    return 0;
+}   /* XFSGapFilesInit () */
+
+LIB_EXPORT
+rc_t CC
+XFSGapFilesDispose ()
+{
+    rc_t RCt;
+    struct _GapFiles * Files;
+
+    RCt = 0;
+    Files = _sFiles;
+
+    if ( Files != NULL ) {
+        _sFiles = NULL;
+
+        RCt = _GapFilesDispose ( Files );
+    }
+
+    return RCt;
+}   /* XFSGapFilesDispose () */
+
+static
+int64_t CC
+_GapFilesFindCallback ( const void * Item, const BSTNode * Node )
+{
+    const char * Str1, * Str2;
+
+    Str1 = ( ( char * ) Item );
+    Str2 = Node == NULL
+            ? NULL
+            : ( ( struct _GapFilePeer * ) Node ) -> object_cache_path
+            ;
+
+
+    return XFS_StringCompare4BST_ZHR ( Str1, Str2 );
+}   /* _GapFilesFindCallback () */
+
+static
+rc_t CC
+_GapFilesFind_NoLock (
+                    struct _GapFiles * self,
+                    struct _GapFilePeer ** Peer,
+                    const char * CachePath
+)
+{
+    rc_t RCt;
+    struct _GapFilePeer * ThePeer;
+
+    RCt = 0;
+    ThePeer = NULL;
+
+    XFS_CSAN ( Peer )
+    XFS_CAN ( self )
+    XFS_CAN ( Peer )
+    XFS_CAN ( CachePath )
+
+    ThePeer = ( struct _GapFilePeer * ) BSTreeFind ( 
+                                        & ( self -> tree ),
+                                        CachePath,
+                                        _GapFilesFindCallback
+                                        );
+    if ( ThePeer == NULL ) {
+
+        RCt = XFS_RC ( rcNotFound );
+    }
+    else {
+
+        * Peer = ThePeer;
+        RCt = 0;
+    }
+
+    return RCt;
+}   /* _GapFilesFind_NoLock () */
+
+static
+int64_t CC
+_GapFilesAddCallback (
+                    const struct BSTNode * N1,
+                    const struct BSTNode * N2
+)
+{
+    const char * Str1, * Str2;
+
+
+    Str1 = N1 == NULL
+            ? NULL
+            : ( ( ( struct _GapFilePeer * ) N1 ) -> object_cache_path )
+            ;
+    Str2 = N2 == NULL
+            ? NULL
+            : ( ( ( struct _GapFilePeer * ) N2 ) -> object_cache_path )
+            ;
+
+    return XFS_StringCompare4BST_ZHR ( Str1, Str2 );
+}   /* _GapFilesAddCallback () */
+
+static
+rc_t CC
+_GapFilesAddPeer_NoLock (
+                    struct _GapFiles * self,
+                    struct _GapFilePeer ** Peer,
+                    uint32_t ProjectId,
+                    const char * AccessionOrId
+)
+{
+    rc_t RCt;
+    struct _GapFilePeer * ThePeer;
+
+    RCt = 0;
+    ThePeer = NULL;
+
+    XFS_CSAN ( Peer )
+    XFS_CAN ( self )
+    XFS_CAN ( Peer )
+
+    RCt = _GapFilePeerMake (
+                        & ThePeer,
+                        ProjectId,
+                        AccessionOrId
+                        );
+    if ( RCt == 0 ) {
+        RCt = BSTreeInsert (
+                        & ( self -> tree ),
+                        ( struct BSTNode * ) ThePeer,
+                        _GapFilesAddCallback
+                        );
+        if ( RCt == 0 ) {
+            * Peer = ThePeer;
+        }
+    }
+
+    if ( RCt != 0 ) {
+        * Peer = NULL;
+
+        if ( ThePeer != NULL ) {
+            _GapFilePeerDispose ( ThePeer );
+        }
+    }
+
+    return RCt;
+}   /* _GapFilesAddPeer_NoLock () */
+
+static
+rc_t CC
+_GapFilesFindOrCreate (
+                    struct _GapFilePeer ** Peer,
+                    uint32_t ProjectId,
+                    const char * AccessionOrId
+)
+{
+    rc_t RCt;
+    struct _GapFiles * Files;
+    struct _GapFilePeer * ThePeer;
+    const struct XFSGapObject * Object;
+    const char * CachePath;
+
+    RCt = 0;
+    ThePeer = NULL;
+    Files = _FilesGet ();
+    Object = NULL;
+    CachePath = NULL;
+
+    XFS_CSAN ( Peer )
+    XFS_CAN ( Files )
+    XFS_CAN ( Peer )
+    XFS_CAN ( AccessionOrId )
+
+    RCt = XFSGapResolverGetObject ( & Object, AccessionOrId );
+    if ( RCt == 0 ) {
+        XFSGapObjectCachePath ( Object, & CachePath );
+        if ( RCt == 0 ) {
+            RCt = KLockAcquire ( Files -> mutabor );
+            if ( RCt == 0 ) {
+                    /* First we trying to locate already ready peer
+                     */
+                RCt = _GapFilesFind_NoLock (
+                                            Files,
+                                            & ThePeer,
+                                            CachePath
+                                            );
+                if ( GetRCState ( RCt ) == rcNotFound ) {
+                    RCt = _GapFilesAddPeer_NoLock (
+                                                Files,
+                                                & ThePeer,
+                                                ProjectId,
+                                                AccessionOrId
+                                                );
+                }
+
+                if ( RCt == 0 ) {
+                    RCt = _GapFilePeerAddRef ( ThePeer );
+                    if ( RCt == 0 ) {
+                        * Peer = ThePeer;
+                    }
+                }
+
+                KLockUnlock ( Files -> mutabor );
+            }
+        }
+
+        XFSGapObjectRelease ( Object );
+    }
+
+    return RCt;
+}   /* _GapFilesFindOrCreate () */
+
+LIB_EXPORT
+rc_t CC
+XFSGapFilesOpen (
+                const struct KFile ** File,
+                uint32_t ProjectId,
+                const char * AccessionOrId
+)
+{
+    rc_t RCt;
+    struct _GapFilePeer * Peer;
+    const struct KFile * TheFile;
+
+    RCt = 0;
+    Peer = NULL;
+    TheFile = NULL;
+
+    XFS_CSAN ( File )
+    XFS_CAN ( File )
+
+    RCt = _GapFilesFindOrCreate (
+                                & Peer,
+                                ProjectId,
+                                AccessionOrId
+                                );
+    if ( RCt == 0 ) {
+        RCt = _GapFilePeerOpen ( Peer, & TheFile );
+        if ( RCt == 0 ) {
+            * File = TheFile;
+        }
+
+        _GapFilePeerRelease ( Peer );
+    }
+
+    return RCt;
+}   /* XFSGapFilesOpen () */
+
+LIB_EXPORT
+rc_t CC
+XFSGapFilesSize (
+                uint64_t * Size,
+                uint32_t ProjectId,
+                const char * AccessionOrId
+)
+{
+    rc_t RCt;
+    struct _GapFilePeer * Peer;
+
+    RCt = 0;
+    Peer = NULL;
+
+    XFS_CSA ( Size, 0 )
+    XFS_CAN ( Size )
+
+    RCt = _GapFilesFindOrCreate (
+                                & Peer,
+                                ProjectId,
+                                AccessionOrId
+                                );
+    if ( RCt == 0 ) {
+        KLockAcquire ( Peer -> mutabor );
+        if ( RCt == 0 ) {
+            RCt = _GapFilePeerCheckResolvedObject ( Peer );
+            if ( RCt == 0 ) {
+                * Size = Peer -> correct_size == 0
+                                                ? Peer -> object_size
+                                                : Peer -> correct_size
+                                                ;
+            }
+            KLockUnlock ( Peer -> mutabor );
+        }
+        _GapFilePeerRelease ( Peer );
+    }
+
+    return RCt;
+}   /* XFSGapFilesSize () */
+
+static
+rc_t CC
+_GapFilesPathDate (
+                KTime_t * Time,
+                const char * Path,
+                bool Completed
+)
+{
+    rc_t RCt;
+    struct KDirectory * NatDir;
+
+    RCt = 0;
+    NatDir = NULL;
+
+    XFS_CSA ( Time, 0 )
+    XFS_CAN ( Time )
+    XFS_CAN ( Path )
+
+    RCt = KDirectoryNativeDir ( & NatDir );
+    if ( RCt == 0 ) {
+        if ( Completed ) {
+            RCt = KDirectoryDate ( NatDir, Time, Path );
+        }
+        else {
+            RCt = KDirectoryDate ( NatDir, Time, "%s.cache", Path );
+        }
+
+        KDirectoryRelease ( NatDir );
+    }
+
+    return RCt;
+}   /* _GapFilesPathDate () */
+
+LIB_EXPORT
+rc_t CC
+XFSGapFilesDate (
+                KTime_t * Time,
+                uint32_t ProjectId,
+                const char * AccessionOrId
+)
+{
+    rc_t RCt;
+    struct _GapFilePeer * Peer;
+
+    RCt = 0;
+    Peer = NULL;
+
+    XFS_CSA ( Time, 0 )
+    XFS_CAN ( Time )
+
+    RCt = _GapFilesFindOrCreate (
+                                & Peer,
+                                ProjectId,
+                                AccessionOrId
+                                );
+    if ( RCt == 0 ) {
+        KLockAcquire ( Peer -> mutabor );
+        if ( RCt == 0 ) {
+            RCt = _GapFilePeerCheckResolvedObject ( Peer );
+            if ( RCt == 0 ) {
+                if  ( Peer -> object_mod_time == 0 ) {
+                    RCt = _GapFilesPathDate (
+                                            Time,
+                                            Peer -> object_cache_path,
+                                            Peer -> downloaded
+                                            );
+                }
+                else {
+                    * Time = Peer -> object_mod_time;
+                }
+            }
+            KLockUnlock ( Peer -> mutabor );
+        }
+
+        _GapFilePeerRelease ( Peer );
+    }
+
+    return RCt;
+}   /* XFSGapFilesDate () */

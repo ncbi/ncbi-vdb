@@ -125,15 +125,15 @@ XFS_EXTERN rc_t CC XFSGapResolverAddToResolve (
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /*))
- //     XFSGOSts ( XFSGapObject Status )
+ //     XFSGOSte ( XFSGapObject State )
 ((*/
-typedef enum XFSGOSts {
+typedef enum XFSGOSte {
     kgosInvalid = 0,
     kgosReady,
     kgosResolved,
     kgosGood = kgosResolved,
     kgosBroken
-}   XFSGOSts;
+}   XFSGOSte;
 
 /*))
  //     XFSGapObject
@@ -175,9 +175,16 @@ XFS_EXTERN bool CC XFSGapObjectGood (
                                 const struct XFSGapObject * self
                                 );
 
-XFS_EXTERN rc_t CC XFSGapObjectStatus (
+    /*))    This method return true only if that object is not going
+     //     to be modified in future, or it state is Good or Broken
+    ((*/
+XFS_EXTERN bool CC XFSGapObjectCompleted (
+                                const struct XFSGapObject * self
+                                );
+
+XFS_EXTERN rc_t CC XFSGapObjectState (
                                 const struct XFSGapObject * self,
-                                enum XFSGOSts * Status
+                                enum XFSGOSte * State
                                 );
 
 XFS_EXTERN rc_t CC XFSGapObjectRcAndMsg (
