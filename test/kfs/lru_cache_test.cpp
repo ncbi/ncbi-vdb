@@ -105,7 +105,10 @@ static rc_t compare_file_content( const KFile * file1, const KFile * file2, uint
                 if ( rc == 0 )
                 {
                     if ( num_read1 != num_read2 )
+                    {
                         rc = RC ( rcRuntime, rcBuffer, rcReading, rcMemory, rcInvalid );
+                        KOutMsg( "compare_file_content() requested:%lu, read 1:%lu, 2:%lu", bytes, num_read1, num_read2 );
+                    }
                     else
                     {
                         int diff = memcmp( buffer1, buffer2, num_read1 );
@@ -307,7 +310,10 @@ TEST_CASE( LRU_Cache_Test_Random_Reading )
     {
         size_t bsize = rand_32( 100, 5000 );
         uint64_t pos = rand_32( 0, file_size - bsize );
-        REQUIRE_RC( compare_file_content( org, cache, pos, bsize ) );
+        rc_t rc = compare_file_content( org, cache, pos, bsize );
+        if ( rc != 0 )
+            KOutMsg( "Test: LRU-Cache-Test-Random-Reading in loop #%u : %lu.%lu = %R\n", i, pos, bsize, rc );
+        REQUIRE_RC( rc );
     }
 
 #if _DEBUGGING
