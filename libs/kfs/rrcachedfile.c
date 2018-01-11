@@ -146,7 +146,23 @@ static rc_t RRCachedTimedWrite ( RRCachedFile *self, uint64_t pos,
     return RC ( rcFS, rcFile, rcUpdating, rcInterface, rcUnsupported );
 }
 
-static KFile_vt_v1 vtRRCached =
+static KFile_vt_v1 vtRRCached_v1_0 =
+{
+    /* version 1.0 */
+    1, 0,
+
+    /* start minor version 0 methods */
+    RRCachedDestroy,
+    RRCachedGetSysFile,
+    RRCachedRandomAccess,
+    RRCachedSize,
+    RRCachedSetSize,
+    RRCachedRead,
+    RRCachedWrite,
+    /* end minor version 0 methods */
+};
+
+static KFile_vt_v1 vtRRCached_v1_2 =
 {
     /* version 1.2 */
     1, 2,
@@ -188,13 +204,18 @@ static rc_t make_rr_cached( struct KFile const **cached,
                 rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
             else
             {
+                const KFile_vt_v1 * vt;
+                
                 rrf -> wrapped = to_wrap;
                 rrf -> cache = cache;
                 rrf -> cached_size = 0;
                 rrf -> size_cached = false;
 
+                /* don't appear to be more modern than wrapped file */
+                vt = ( to_wrap -> vt -> v1 . min >= 2 ) ? & vtRRCached_v1_2 : & vtRRCached_v1_0;
+
                 rc = KFileInit ( &rrf -> dad,
-                                 ( const union KFile_vt * ) &vtRRCached,
+                                 ( const union KFile_vt * ) vt,
                                  "RRCachedFile",
                                  "rrcached",
                                  true,
@@ -244,7 +265,7 @@ LIB_EXPORT rc_t CC SetRRCachedEventHandler( struct KFile const * self,
         rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcNull );
     else
     {
-        if ( &self -> vt -> v1 != &vtRRCached )
+        if ( &self -> vt -> v1 != &vtRRCached_v1_0 && &self -> vt -> v1 != &vtRRCached_v1_2 )
             rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcInvalid );
         else
         {
