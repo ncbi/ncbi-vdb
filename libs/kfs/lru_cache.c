@@ -339,7 +339,7 @@ static rc_t new_entry_in_lru_cache ( lru_cache * self,
 
 enum lookupres { DONE, RD_WRAPPED, NOT_FOUND };
 
-static rc_t read_lru_cache_short ( lru_cache * self,
+rc_t read_lru_cache ( lru_cache * self,
                       uint64_t pos,
                       void * buffer,
                       size_t bsize,
@@ -403,36 +403,6 @@ static rc_t read_lru_cache_short ( lru_cache * self,
         }
         KLockUnlock ( self -> lock );
     }
-    return rc;
-}
-
-rc_t read_lru_cache ( lru_cache * self,
-                      uint64_t pos,
-                      void * buffer,
-                      size_t bsize,
-                      size_t * num_read,
-                      struct timeout_t * tm )
-{
-    rc_t rc = 0;
-    bool loop = true;
-    uint8_t * dst = buffer;
-    size_t read_so_far = 0;
-    while ( rc == 0 && loop )
-    {
-        size_t loop_num_read;
-        rc = read_lru_cache_short ( self, pos, dst, bsize - read_so_far, &loop_num_read, tm );
-        if ( rc == 0 )
-        {
-            read_so_far += loop_num_read;
-            loop = ( read_so_far < bsize );
-            if ( loop )
-            {
-                dst += loop_num_read;
-                pos += loop_num_read;
-            }
-        }
-    }
-    *num_read = read_so_far;
     return rc;
 }
 
