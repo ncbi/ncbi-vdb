@@ -228,12 +228,13 @@ typedef struct caching_params
     uint32_t timed;         /* record timing 0...no - 1...yes */
     uint32_t record_inner;  /* record the request made before the cache */    
     uint32_t record_outer;  /* record the request made after the cache */
+    bool is_refseq;         /* when used for external reference sequences, decrease cache size */
 } caching_params;
 
 #define DEFAULT_CACHE_PAGE_SIZE ( 32 * 1024 )
 #define DEFAULT_CACHE_PAGE_COUNT ( 10 * 1024 )
 
-static void get_caching_params( caching_params * params )
+static void get_caching_params( caching_params * params, bool is_refseq )
 {
     KConfig * cfg;
     rc_t rc = KConfigMake ( &cfg, NULL );
@@ -247,6 +248,7 @@ static void get_caching_params( caching_params * params )
     params -> timed = 0;
     params -> record_inner = 0;    
     params -> record_outer = 0;
+    params -> is_refseq = is_refseq;
 
     if ( rc == 0 )
     {
@@ -406,7 +408,7 @@ static rc_t wrap_in_rr_cache( KDirectory * dir,
 static
 rc_t VFSManagerMakeHTTPFile( const VFSManager * self, const KFile **cfp,
                              const char * url, const char * cache_location,
-                             bool high_reliability )
+                             bool high_reliability, bool is_refseq )
 {
     rc_t rc;
     
@@ -420,7 +422,7 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self, const KFile **cfp,
     {
         /* let's try to get some details about how to do caching from the configuration */    
         caching_params cps;
-        get_caching_params( &cps );
+        get_caching_params( &cps, is_refseq );
 
         if ( cache_location == NULL )
         {
@@ -1319,6 +1321,7 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
     if ( rc == 0 )
     {
         bool high_reliability = VPathIsHighlyReliable ( path );
+        bool is_refseq = VPathHasRefseqContext ( path );
         if ( self->resolver != NULL )
         {
             const VPath * local_cache;
@@ -1328,7 +1331,7 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
             if ( rc == 0 )
             {
                 /* we did find a place for local cache --> use it! */
-                rc = VFSManagerMakeHTTPFile( self, f, uri->addr, local_cache->path.addr, high_reliability );
+                rc = VFSManagerMakeHTTPFile( self, f, uri->addr, local_cache->path.addr, high_reliability, is_refseq );
                 {
                     rc_t rc2 = VPathRelease ( local_cache );
                     if ( rc == 0 )
@@ -1339,12 +1342,12 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
             }
             else
                 /* we did NOT find a place for local cache --> we are not caching! */
-                rc = VFSManagerMakeHTTPFile( self, f, uri->addr, NULL, high_reliability );
+                rc = VFSManagerMakeHTTPFile( self, f, uri->addr, NULL, high_reliability, is_refseq );
         }
         else
         {
             /* no resolver has been found ---> we cannot do caching! */
-            rc = VFSManagerMakeHTTPFile( self, f, uri->addr, NULL, high_reliability );
+            rc = VFSManagerMakeHTTPFile( self, f, uri->addr, NULL, high_reliability, is_refseq );
         }
         free( ( void * )uri );
     }
@@ -1720,9 +1723,10 @@ rc_t VFSManagerOpenDirectoryReadHttpResolved (const VFSManager *self,
     {
         /* check how the path has been marked */
         bool high_reliability = VPathIsHighlyReliable ( path );
+        bool is_refseq = VPathHasRefseqContext ( path );
 
         const KFile * file = NULL;
-        rc = VFSManagerMakeHTTPFile( self, &file, uri->addr, cache == NULL ? NULL : cache->path.addr, high_reliability );
+        rc = VFSManagerMakeHTTPFile( self, &file, uri->addr, cache == NULL ? NULL : cache->path.addr, high_reliability, is_refseq );
         if ( rc != 0 )
         {
             if ( high_reliability )
