@@ -120,6 +120,11 @@ KFS_CMN = \
 	lockfile \
 	syslockfile \
 	cacheteefile \
+	cacheteefile2 \
+	rrcachedfile \
+	recorder \
+	logfile \
+	poolpages \
 	from_to_namelist \
 	limitfile
 

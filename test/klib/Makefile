@@ -186,6 +186,7 @@ TEST_KLIB_LIB = \
 	-skapp \
 	-sncbi-vdb \
 	-sktst \
+	-sklib
 
 $(TEST_BINDIR)/test-klib: $(TEST_KLIB_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)

@@ -24,24 +24,47 @@
 *
 */
 
-#include <kproc/extern.h>
-#include <kproc/procmgr.h>
+#ifndef _h_kfs_recorder_
+#define _h_kfs_recorder_
 
-/* OnMainThread
- *  returns true if running on main thread
+#ifndef _h_kfs_extern_
+#include <kfs/extern.h>
+#endif
+
+#include <stdarg.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+/*--------------------------------------------------------------------------
+ * forwards
  */
-LIB_EXPORT bool CC KProcMgrOnMainThread ( void )
-{
-    /* don't know how to do this on Winders */
-    return false;
-}
+struct KDirectory;
+struct Recorder;
 
-uint32_t sys_GetPID ( void )
-{
-    return ( uint32_t) GetCurrentProcessId();
-}
+KFS_EXTERN rc_t CC MakeVRecorder ( struct KDirectory * self,
+                                   struct Recorder ** recorder,
+                                   size_t buflen,
+                                   bool append,
+                                   const char * path,
+                                   va_list args );
 
-int sys_GetHostName ( char * buffer, size_t buffer_size )
-{
-    return gethostname( buffer, buffer_size );
+KFS_EXTERN rc_t CC MakeRecorder ( struct KDirectory * self,
+                                  struct Recorder ** recorder,
+                                  size_t buflen,
+                                  bool append,
+                                  const char * path,
+                                  ... );
+
+KFS_EXTERN rc_t CC ReleaseRecorder ( struct Recorder * self );
+
+KFS_EXTERN rc_t CC WriteToVRecorder ( struct Recorder * self, const char * fmt, va_list args );
+KFS_EXTERN rc_t CC WriteToRecorder ( struct Recorder * self, const char * fmt, ... );
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* _h_kfs_recorder_ */

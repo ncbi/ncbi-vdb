@@ -24,24 +24,47 @@
 *
 */
 
-#include <kproc/extern.h>
-#include <kproc/procmgr.h>
+#ifndef _h_kfs_logfile_
+#define _h_kfs_logfile_
 
-/* OnMainThread
- *  returns true if running on main thread
+#ifndef _h_kfs_extern_
+#include <kfs/extern.h>
+#endif
+
+#ifndef _h_klib_defs_
+#include <klib/defs.h>
+#endif
+
+#include <stdarg.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+/*--------------------------------------------------------------------------
+ * forwards
  */
-LIB_EXPORT bool CC KProcMgrOnMainThread ( void )
-{
-    /* don't know how to do this on Winders */
-    return false;
-}
+struct KFile;
+struct KDirectory;
 
-uint32_t sys_GetPID ( void )
-{
-    return ( uint32_t) GetCurrentProcessId();
-}
+KFS_EXTERN rc_t CC MakeLogFileV ( struct KDirectory * self,
+                                  struct KFile const **log_file,
+                                  struct KFile *to_wrap,
+                                  bool append,
+                                  bool timed,
+                                  const char * path,
+                                  va_list args );
 
-int sys_GetHostName ( char * buffer, size_t buffer_size )
-{
-    return gethostname( buffer, buffer_size );
+KFS_EXTERN rc_t CC MakeLogFile ( struct KDirectory * self,
+                                 struct KFile const **log_file,
+                                 struct KFile *to_wrap,
+                                 bool append,
+                                 bool timed,
+                                 const char *path, ... );
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* _h_kfs_logfile_ */

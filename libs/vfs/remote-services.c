@@ -357,6 +357,8 @@ struct KService {
     SHelper helper;
     SRequest req;
     SResponse resp;
+
+    bool resoveOidName;
 };
 
 
@@ -2969,6 +2971,8 @@ static rc_t KServiceInit ( KService * self, const KNSManager * mgr ) {
     if ( rc == 0 )
         rc = SRequestInit ( & self -> req );
 
+    self -> resoveOidName = DEFAULT_RESOVE_OID_NAME;
+
     return rc;
 }
 
@@ -3648,6 +3652,27 @@ rc_t KService1Search ( const KNSManager * mgr, const char * cgi,
     return rc;
 }
 
+/* resolve mapping id -> file nime inside of VFS */
+rc_t KServiceResolveName ( KService * self, int resolve ) {
+    if ( self == NULL )
+        return RC ( rcVFS, rcResolver, rcUpdating, rcSelf, rcNull );
+
+    switch ( resolve ) {
+        case 0 : self -> resoveOidName = DEFAULT_RESOVE_OID_NAME; break; 
+        case 1 : self -> resoveOidName = true                   ; break; 
+        default: self -> resoveOidName = false                  ; break; 
+    }
+    return 0;
+}
+
+int KServiceGetResolveName ( const KService * self ) {
+    if ( self == NULL )
+        return DEFAULT_RESOVE_OID_NAME;
+    if ( self -> resoveOidName )
+        return 1;
+    else
+        return 2;
+}
 
 /* TESTS **********************************************************************/
 typedef struct {
