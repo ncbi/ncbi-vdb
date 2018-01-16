@@ -103,6 +103,7 @@ XFS_SRC = \
     editors \
     handle  \
     teleport    \
+    hdict \
     foo \
     ncon  \
     contnode    \
