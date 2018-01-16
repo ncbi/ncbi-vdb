@@ -134,6 +134,13 @@ int32_t uint32_msbit ( uint32_t self )
     return rtn;
 }
 
+static __inline__
+int32_t uint64_msbit ( uint64_t self )
+{
+    if (self==0) return -1;
+    return 63 - __builtin_clzll ( self );
+}
+
 typedef struct int128_t int128_t;
 struct int128_t
 {
@@ -451,6 +458,7 @@ uint64_t uint64_ror ( uint64_t val, uint8_t bits )
     );
     return rtn;
 }
+
 
 #ifdef __cplusplus
 }

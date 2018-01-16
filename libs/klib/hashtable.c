@@ -24,6 +24,7 @@
 *
 */
 
+#include <arch-impl.h>
 #include <assert.h>
 #include <klib/extern.h>
 #include <klib/hashtable.h>
@@ -58,7 +59,7 @@ LIB_EXPORT rc_t CC KHashTableInit(KHashTable* self, size_t key_size,
     else
         self->max_load_factor = max_load_factor;
 
-    if (key_size <= 3) // Use an array you bum
+    if (key_size == 0)
         return RC(rcCont, rcHashtable, rcConstructing, rcParam, rcInvalid);
 
     if (key_cstr && key_size != 8)
@@ -67,24 +68,23 @@ LIB_EXPORT rc_t CC KHashTableInit(KHashTable* self, size_t key_size,
     if (capacity == 0) {
         capacity = 16;
     } else {
-        uint32_t lg2 = (64 - __builtin_clzll(capacity | 1));
+        uint32_t lg2 = uint64_msbit(capacity | 1) + 1;
         capacity = 1ULL << lg2;
     }
-
     self->key_size = key_size;
     self->value_size = value_size;
     self->num_buckets = capacity;
     self->mask = capacity - 1;
     self->count = 0;
     self->load = 0;
-    self->iterator = -1; // Iterator not valid
+    self->iterator = -1; /* Iterator not valid */
     self->key_cstr = key_cstr;
 
     self->bucket_size = 8 + self->key_size + self->value_size;
-    // keyhash (u64) + key + value
+    /* keyhash (u64) + key + value */
 
-    // Round up for alignment. Benchmarks say not worthwhile: 5% slower
-    // self->bucket_size = (self->bucket_size + 7) & ~7ULL;
+    /* Round up for alignment. Benchmarks say not worthwhile: 5% slower
+     * self->bucket_size = (self->bucket_size + 7) & ~7ULL; */
     self->buckets = calloc(1, self->num_buckets * self->bucket_size);
     if (!self->buckets)
         return RC(rcCont, rcHashtable, rcConstructing, rcMemory, rcExhausted);
@@ -98,7 +98,7 @@ KHashTableWhack(KHashTable* self, void(CC* keywhack)(void* item, void* data),
 {
     if (self == NULL) return;
 
-    // TODO: for ...
+    /* TODO: for ... */
     if (keywhack != NULL) {
     }
     if (valuewhack != NULL) {
@@ -128,24 +128,24 @@ static inline rc_t rehash(KHashTable* self)
 {
     assert(self != NULL);
 
-    self->iterator = -1; // Invalidate any current iterators
+    self->iterator = -1; /* Invalidate any current iterators */
 
     size_t bucket_size = self->bucket_size;
     void* old_buckets = self->buckets;
     size_t old_num_buckets = self->num_buckets;
     if ((double)self->count / (double)self->load > 0.5) {
-        // Deletes < 50%, double table size
+        /* Deletes < 50%, double table size */
         self->num_buckets *= 2;
         self->mask = (self->mask << 1) | 1;
     } else {
-        // lots of deletes, just rehash table at existing size
+        /* lots of deletes, just rehash table at existing size */
     }
 
-    // Note that because we reserve two highest bits of hash, table will not
-    // benefit from being expanded beyond 2**62 entries (~4 exabytes).
-    // But since linux kernels circa 2018 can't support more than 4PB
-    // physical/128PB virtual memory (52/57 bits), this isn't a concern,
-    // calloc will fail long before this point.
+    /* Note that because we reserve two highest bits of hash, table will not
+     * benefit from being expanded beyond 2**62 entries (~4 exabytes).
+     * But since linux kernels circa 2018 can't support more than 4PB
+     * physical/128PB virtual memory (52/57 bits), this isn't a concern,
+     * calloc will fail long before this point. */
     void* new_buckets = calloc(1, self->num_buckets * bucket_size);
     if (!new_buckets)
         return RC(rcCont, rcHashtable, rcInserting, rcMemory, rcExhausted);
@@ -181,6 +181,7 @@ deleted)
 }
 */
 
+#if 0
 static void dump(const KHashTable* self)
 {
     assert(self != NULL);
@@ -192,7 +193,6 @@ static void dump(const KHashTable* self)
         const char* bucketptr = (char*)self->buckets + (bucket * bucket_size);
         const char* hashptr = bucketptr;
         const char* keyptr = bucketptr + 8;
-        const char* valueptr = bucketptr + 8 + self->key_size;
         uint64_t buckethash;
         memcpy(&buckethash, hashptr, 8);
         fprintf(stderr, "   bucket %03ld hash %lx", bucket, buckethash);
@@ -200,10 +200,12 @@ static void dump(const KHashTable* self)
         memcpy(&key, keyptr, self->key_size);
         if (buckethash & BUCKET_VALID) fprintf(stderr, " val");
         if (buckethash & BUCKET_VISIBLE) fprintf(stderr, " vis");
-        fprintf(stderr, " key=%d", key);
+        fprintf(stderr, " key=%ld", key);
         fprintf(stderr, "\n");
     }
 }
+#endif
+
 LIB_EXPORT bool CC KHashTableFind(const KHashTable* self, const void* key,
                                   uint64_t keyhash, void* value)
 
@@ -218,6 +220,7 @@ LIB_EXPORT bool CC KHashTableFind(const KHashTable* self, const void* key,
     const bool key_cstr = self->key_cstr;
     const size_t key_size = self->key_size;
     const size_t value_size = self->value_size;
+    size_t triangle = 0;
 
     while (1) {
         bucket &= mask;
@@ -226,12 +229,12 @@ LIB_EXPORT bool CC KHashTableFind(const KHashTable* self, const void* key,
         uint64_t buckethash;
         memcpy(&buckethash, hashptr, 8);
 
-        if (!(buckethash & BUCKET_VALID)) // reached invalid bucket
+        if (!(buckethash & BUCKET_VALID)) /* reached invalid bucket */
             return false;
 
         if (buckethash == keyhash)
-        // hash hit, probability very low (2^-62) that this is an actual miss,
-        // but we have to check.
+        /* hash hit, probability very low (2^-62) that this is an actual miss,
+         * but we have to check. */
         {
             bool found;
             const char* keyptr = bucketptr + 8;
@@ -264,7 +267,12 @@ LIB_EXPORT bool CC KHashTableFind(const KHashTable* self, const void* key,
             }
         }
 
-        bucket++;
+        /* To improve lookups when hash function has poor distribution, we use
+         * quadratic probing with a triangle sequence: 0,1,3,6,10...
+         * Supposedly this will allow complete coverage on a % 2^N hash table.
+         */
+        ++triangle;
+        bucket += (triangle * (triangle + 1) / 2);
     }
 }
 
@@ -282,6 +290,7 @@ LIB_EXPORT rc_t CC KHashTableAdd(KHashTable* self, const void* key,
     const bool key_cstr = self->key_cstr;
     const size_t key_size = self->key_size;
     const size_t value_size = self->value_size;
+    size_t triangle = 0;
 
     while (1) {
         bucket &= mask;
@@ -292,10 +301,7 @@ LIB_EXPORT rc_t CC KHashTableAdd(KHashTable* self, const void* key,
         uint64_t buckethash;
         memcpy(&buckethash, bucketptr, 8);
 
-        //        if ( (buckethash & (BUCKET_VALID | BUCKET_VISIBLE)) !=
-        //        (BUCKET_VALID | BUCKET_VISIBLE) ) // reached invalid or
-        //        deleted bucket
-        if (!(buckethash & BUCKET_VALID)) // reached invalid bucket
+        if (!(buckethash & BUCKET_VALID)) /* reached invalid bucket */
         {
             memcpy(hashptr, &keyhash, 8);
 
@@ -327,7 +333,7 @@ LIB_EXPORT rc_t CC KHashTableAdd(KHashTable* self, const void* key,
             return 0;
         }
 
-        if (buckethash == keyhash) // hash hit
+        if (buckethash == keyhash) /* hash hit */
         {
             bool found;
             if (key_cstr) {
@@ -344,13 +350,14 @@ LIB_EXPORT rc_t CC KHashTableAdd(KHashTable* self, const void* key,
             }
 
             if (found) {
-                // replacement
+                /* replacement */
                 if (value_size) memcpy(valueptr, value, value_size);
                 return 0;
             }
         }
 
-        bucket++;
+        ++triangle;
+        bucket += (triangle * (triangle + 1) / 2);
     }
 }
 
@@ -362,10 +369,11 @@ LIB_EXPORT bool CC KHashTableDelete(KHashTable* self, const void* key,
     keyhash |= (BUCKET_VALID | BUCKET_VISIBLE);
     uint64_t bucket = keyhash;
     const uint64_t mask = self->mask;
-    char* buckets = (const char*)self->buckets;
+    char* buckets = (char*)self->buckets;
     const size_t bucket_size = self->bucket_size;
     const bool key_cstr = self->key_cstr;
     const size_t key_size = self->key_size;
+    size_t triangle = 0;
 
     while (1) {
         bucket &= mask;
@@ -374,12 +382,12 @@ LIB_EXPORT bool CC KHashTableDelete(KHashTable* self, const void* key,
         uint64_t buckethash;
         memcpy(&buckethash, hashptr, 8);
 
-        if (!(buckethash & BUCKET_VALID)) // reached invalid bucket
+        if (!(buckethash & BUCKET_VALID)) /* reached invalid bucket */
             return false;
 
         if (buckethash == keyhash)
-        // hash hit, probability very low (2^-62) that this is an actual miss,
-        // but we have to check.
+        /* hash hit, probability very low (2^-62) that this is an actual miss,
+         * but we have to check. */
         {
             bool found;
             const char* keyptr = bucketptr + 8;
@@ -406,11 +414,16 @@ LIB_EXPORT bool CC KHashTableDelete(KHashTable* self, const void* key,
             }
         }
 
-        bucket++;
+        ++triangle;
+        bucket += (triangle * (triangle + 1) / 2);
     }
 }
 
-// Return current load factor (# buckets / # items)
+LIB_EXPORT rc_t CC KHashTableReserve(KHashTable* self, size_t capacity)
+{
+    return 0;
+}
+
 LIB_EXPORT double CC KHashTableGetLoadFactor(const KHashTable* self)
 {
     if (self == NULL) return 0.0;
@@ -433,7 +446,6 @@ LIB_EXPORT bool KHashTableIteratorNext(KHashTable* self, void* key,
     char* buckets = (char*)self->buckets;
     const size_t bucket_size = self->bucket_size;
 
-    const bool key_cstr = self->key_cstr;
     const size_t key_size = self->key_size;
     const size_t value_size = self->value_size;
 
@@ -460,15 +472,16 @@ LIB_EXPORT bool KHashTableIteratorNext(KHashTable* self, void* key,
     }
 }
 
-// Fast Hash function
-// Inner core from Google's FarmHash.
-// Removed
-//  * 32-bit support
-//  * SSE4.1/AVX requirement
-//  * big-endian
-//  * long string optimizations
-//  * STL
-//  * Seeding
+/* Fast Hash function
+ * Inner core from Google's FarmHash.
+ * Removed
+ *  * 32-bit support
+ *  * SSE4.1/AVX requirement
+ *  * big-endian
+ *  * long string optimizations
+ *  * STL
+ *  * Seeding
+ */
 
 static inline uint64_t Fetch64(const char* p)
 {
@@ -484,9 +497,9 @@ static inline uint32_t Fetch32(const char* p)
     return result;
 }
 
-#define Rotate(x, n) (((x) << (n)) | ((x) >> (64 - (n))))
+/*#define Rotate(x, n) (((x) << (n)) | ((x) >> (64 - (n)))) */
 
-// Some primes between 2^63 and 2^64 for various uses.
+/* Some primes between 2^63 and 2^64 for various uses. */
 static const uint64_t k0 = 0xc3a5c85c97cb3127ULL;
 static const uint64_t k1 = 0xb492b66fbe98f273ULL;
 static const uint64_t k2 = 0x9ae16a3b2f90404fULL;
@@ -495,7 +508,7 @@ static inline uint64_t ShiftMix(uint64_t val) { return val ^ (val >> 47); }
 
 static inline uint64_t HashLen16(uint64_t u, uint64_t v, uint64_t mul)
 {
-    // Murmur-inspired hashing.
+    /* Murmur-inspired hashing. */
     uint64_t a = (u ^ v) * mul;
     a ^= (a >> 47);
     uint64_t b = (v ^ a) * mul;
@@ -510,8 +523,8 @@ static inline uint64_t HashLen0to16(const char* s, size_t len)
         uint64_t mul = k2 + len * 2;
         uint64_t a = Fetch64(s) + k2;
         uint64_t b = Fetch64(s + len - 8);
-        uint64_t c = Rotate(b, 37) * mul + a;
-        uint64_t d = (Rotate(a, 25) + b) * mul;
+        uint64_t c = uint64_ror(b, 37) * mul + a;
+        uint64_t d = (uint64_ror(a, 25) + b) * mul;
         return HashLen16(c, d, mul);
     }
     if (len >= 4) {
@@ -537,8 +550,8 @@ static inline uint64_t HashLen17to32(const char* s, size_t len)
     uint64_t b = Fetch64(s + 8);
     uint64_t c = Fetch64(s + len - 8) * mul;
     uint64_t d = Fetch64(s + len - 16) * k2;
-    return HashLen16(Rotate(a + b, 43) + Rotate(c, 30) + d,
-                     a + Rotate(b + k2, 18) + c, mul);
+    return HashLen16(uint64_ror(a + b, 43) + uint64_ror(c, 30) + d,
+                     a + uint64_ror(b + k2, 18) + c, mul);
 }
 
 static inline uint64_t HashLen33to64(const char* s, size_t len)
@@ -548,14 +561,14 @@ static inline uint64_t HashLen33to64(const char* s, size_t len)
     uint64_t b = Fetch64(s + 8);
     uint64_t c = Fetch64(s + len - 8) * mul;
     uint64_t d = Fetch64(s + len - 16) * k2;
-    uint64_t y = Rotate(a + b, 43) + Rotate(c, 30) + d;
-    uint64_t z = HashLen16(y, a + Rotate(b + k2, 18) + c, mul);
+    uint64_t y = uint64_ror(a + b, 43) + uint64_ror(c, 30) + d;
+    uint64_t z = HashLen16(y, a + uint64_ror(b + k2, 18) + c, mul);
     uint64_t e = Fetch64(s + 16) * mul;
     uint64_t f = Fetch64(s + 24);
     uint64_t g = (y + Fetch64(s + len - 32)) * mul;
     uint64_t h = (z + Fetch64(s + len - 24)) * mul;
-    return HashLen16(Rotate(e + f, 43) + Rotate(g, 30) + h,
-                     e + Rotate(f + a, 18) + g, mul);
+    return HashLen16(uint64_ror(e + f, 43) + uint64_ror(g, 30) + h,
+                     e + uint64_ror(f + a, 18) + g, mul);
 }
 
 static inline uint64_t HashLen64(const char* s, size_t len)
@@ -587,7 +600,7 @@ static inline uint64_t HashLen64(const char* s, size_t len)
     while (len >= 8) {
         a0 += Fetch64(s + 0);
         a0 *= k1;
-        a0 = Rotate(a0, 30);
+        a0 = uint64_ror(a0, 30);
         s += 8;
         len -= 8;
     }
@@ -595,7 +608,7 @@ static inline uint64_t HashLen64(const char* s, size_t len)
     while (len) {
         a0 += s[0];
         a0 *= k2;
-        a0 = Rotate(a0, 50);
+        a0 = uint64_ror(a0, 50);
         s += 1;
         len -= 1;
     }
@@ -608,17 +621,17 @@ static inline uint64_t HashLen64(const char* s, size_t len)
     a5 *= k2;
     a6 *= k0;
     a7 *= k1;
-    a0 = Rotate(a0, 47);
-    a1 = Rotate(a1, 47);
-    a2 = Rotate(a2, 47);
-    a3 = Rotate(a3, 47);
-    a4 = Rotate(a4, 47);
-    a5 = Rotate(a5, 47);
-    a6 = Rotate(a6, 47);
-    a7 = Rotate(a7, 47);
+    a0 = uint64_ror(a0, 47);
+    a1 = uint64_ror(a1, 47);
+    a2 = uint64_ror(a2, 47);
+    a3 = uint64_ror(a3, 47);
+    a4 = uint64_ror(a4, 47);
+    a5 = uint64_ror(a5, 47);
+    a6 = uint64_ror(a6, 47);
+    a7 = uint64_ror(a7, 47);
     uint64_t hash = a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7;
     hash *= k2;
-    hash = Rotate(hash, 47);
+    hash = uint64_ror(hash, 47);
     return hash;
 }
 
@@ -626,8 +639,8 @@ LIB_EXPORT uint64_t CC KHash(const char* s, size_t len)
 {
     uint64_t hash;
 
-    // Special handling of 8 byte keys. We're not sure if they're strings
-    // or little-endian integers.
+    /* Special handling of 8 byte keys. We're not sure if they're strings
+     * or little-endian integers. */
     if (len == 8) {
         uint64_t a = Fetch64(s);
         return (a << 1) + (a >> 55);
@@ -637,8 +650,8 @@ LIB_EXPORT uint64_t CC KHash(const char* s, size_t len)
 
     len -= 1;
 
-    // Attempt to keep final byte of key near, but not adjacent to,
-    // each other for cache locality.
+    /* Attempt to keep final byte of key near, but not adjacent to,
+     * each other for cache locality. */
     if (len <= 32) {
         if (len <= 16) {
             hash = HashLen0to16(s, len);
