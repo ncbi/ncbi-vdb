@@ -145,8 +145,18 @@ public:
 class WVDB_v2_Fixture : public WVDB_Fixture
 {
 public:
+    WVDB_v2_Fixture()
+    : m_newParse ( true )
+    {
+    }
+
     virtual void ParseSchema ( VSchema * p_schema, const std :: string & p_schemaText )
     {
+        if ( ! m_newParse )
+        {
+            return WVDB_Fixture :: ParseSchema ( p_schema, p_schemaText );
+        }
+
         ncbi :: SchemaParser :: SchemaParser parser;
         if ( ! parser . ParseString ( p_schemaText . c_str () ) )
         {
@@ -181,6 +191,7 @@ public:
         return "buffer to short for an error message";
     }
 
+    bool m_newParse;
 };
 
 #endif

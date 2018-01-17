@@ -27,6 +27,7 @@
 #include "view-priv.h"
 
 #include <klib/symbol.h>
+#include <kfs/dyload.h>
 #include <bitstr.h>
 
 typedef struct VViewCursor VViewCursor;
@@ -38,6 +39,7 @@ typedef struct VViewCursor VViewCursor;
 #include "table-priv.h"
 #include "phys-priv.h"
 #include "prod-priv.h"
+#include "linker-priv.h"
 #include "schema-parse.h"
 #include "prod-expr.h"
 
@@ -536,17 +538,12 @@ VViewCursorOpenRead ( VViewCursor * p_self, const struct KDlset * p_libs )
 rc_t
 VViewCursorOpen ( const VViewCursor * p_self )
 {
-    rc_t rc = 0;
     VViewCursor * self = ( VViewCursor * ) p_self;
     struct KDlset *libs = 0;
-#if 0
-TODO: enable
-    VLinker *ld = self -> tbl -> linker;
 
-    rc_t rc = VLinkerOpen ( ld, & libs );
+    rc_t rc = VLinkerOpen ( self -> view -> linker, & libs );
     if ( rc == 0 )
     {
-#endif
         rc = VViewCursorOpenRead ( self, libs );
         if ( rc == 0 )
         {
@@ -569,10 +566,8 @@ TODO: enable
                 self -> dad . state = vcFailed;
             }
         }
-#if 0
         KDlsetRelease ( libs );
     }
-#endif
 
     return rc;
 }
@@ -749,7 +744,6 @@ VViewCursorGetBlobDirect ( const VViewCursor * p_self,
     return rc;
 }
 
-/*TODO: there is a copy of this in column-cmn.c, share */
 static __inline__
 bool
 bad_elem_bits ( uint32_t elem_size, uint32_t elem_bits )

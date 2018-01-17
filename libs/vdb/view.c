@@ -34,6 +34,8 @@
 #include "schema-parse.h"
 #include "prod-expr.h"
 #include "phys-priv.h"
+#include "linker-priv.h"
+#include "dbmgr-priv.h"
 
 #include <sysalloc.h>
 #include <stdio.h>
@@ -95,20 +97,7 @@ VViewWhack ( VView * p_self )
     }
 
     VectorWhack ( & p_self -> bindings, 0, 0 );
-
-#if 0
-    BSTreeWhack ( & self -> read_col_cache, VColumnRefWhack, NULL );
-    BSTreeWhack ( & self -> write_col_cache, VColumnRefWhack, NULL );
-    VTableRelease(self -> cache_tbl);
-
-    KMDataNodeRelease ( self -> col_node );
-    KMetadataRelease ( self -> meta );
-    KTableRelease ( self -> ktbl );
-    VSchemaRelease ( self -> schema );
-    VLinkerRelease ( self -> linker );
-    VDatabaseSever ( self -> db );
-    VDBManagerSever ( self -> mgr );
-#endif
+    VLinkerRelease ( p_self -> linker );
 
     free ( p_self );
     return 0;
@@ -192,12 +181,16 @@ VDBManagerOpenView ( struct VDBManager const *   p_mgr,
                 /*TODO: pick the best version */
                 if ( StringCompare ( & v -> name -> name, & name ) == 0 )
                 {
-                    KRefcountInit ( & view -> refcount, 1, "VView", "make", "vtbl" );
-                    view -> sview = v;
-                    view -> schema = p_schema;
-                    VectorInit ( & view -> bindings, 0, 8 );
-                    * p_view = view;
-                    return 0;
+                    rc = VLinkerMake ( & view -> linker, p_mgr -> linker, p_mgr -> linker -> dl );
+                    if ( rc == 0 )
+                    {
+                        KRefcountInit ( & view -> refcount, 1, "VView", "make", "vtbl" );
+                        view -> sview = v;
+                        view -> schema = p_schema;
+                        VectorInit ( & view -> bindings, 0, 8 );
+                        * p_view = view;
+                        return 0;
+                    }
                 }
             }
             rc = RC ( rcVDB, rcTable, rcConstructing, rcTable, rcUnknown );

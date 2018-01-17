@@ -362,7 +362,7 @@ ASTBuilder :: FillArguments ( const AST & p_parms, Vector & p_v )
     for ( uint32_t i = 0; i < count; ++ i )
     {
         const AST_Expr * parm = ToExpr ( p_parms . GetChild ( i ) );
-        // allowed tags: PT_AT, PHYSICAL_IDENTIFIER_1_0, PT_CAST, PT_IDENT
+        // allowed tags: PT_AT, PHYSICAL_IDENTIFIER_1_0, PT_CAST, PT_IDENT, PT_MEMBEREXPR
         // for PT_IDENT, allowed object types: eFuncParam, eProduction, eIdent, eForward, eVirtual, eColumn, ePhysMember
         SExpression * expr = 0;
         switch ( parm -> GetTokenType () )
@@ -370,6 +370,7 @@ ASTBuilder :: FillArguments ( const AST & p_parms, Vector & p_v )
         case '@':
         case PT_IDENT:
         case PHYSICAL_IDENTIFIER_1_0:
+        case PT_MEMBEREXPR:
             expr = parm -> MakeExpression ( * this );
             break;
         default:

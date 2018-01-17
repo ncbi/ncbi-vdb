@@ -312,7 +312,7 @@ TEST_VIEW_CURSOR_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_VIEW_CURSOR_SRC))
 
 $(TEST_BINDIR)/test-view-cursor: $(TEST_VIEW_CURSOR_OBJ)
-	$(LP) --exe -o $@ $^ $(VDB_VIEW_LIB)
+	$(LP) --exe -o $@ $^ $(VDB_VIEW_LIB) -ssraxf
 
 vcur: test-view-cursor
 	$(TEST_BINDIR)/$^

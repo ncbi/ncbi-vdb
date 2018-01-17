@@ -778,7 +778,7 @@ TableDeclaration :: AddNewColumn ( SColumn & p_col, String & p_name )
                                        SColumnSort,
                                        m_self -> col,
                                        m_self -> cname,
-                                       0 );
+                                       & p_col . cid . id );
 }
 
 bool

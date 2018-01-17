@@ -960,6 +960,11 @@ FIXTURE_TEST_CASE(FuncCall_Param_Physical, AST_Fixture)
     REQUIRE_EQ ( string ( ".a" ), ToCppString ( sym -> _sym -> name ) );
 }
 
+FIXTURE_TEST_CASE(FuncCall_Param_Member, AST_Fixture)
+{
+    MakeAst  ( "version 2; function U8 f (U8 i); table t#1 { column U8 a; } view v#1 < t p_t> { column U8 c = f(p_t.a); }" );
+}
+
 FIXTURE_TEST_CASE(FuncCall_OptionalParams, AST_Fixture)
 {
     MakeAst  ( "function U8 f (U16 i, * U8 j); table t#1 { column U8 a; column U8 b; column U8 c = f (a); } " );

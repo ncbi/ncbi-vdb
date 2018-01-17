@@ -36,6 +36,7 @@
 #include "../libs/vdb/table-priv.h"
 #include "../libs/vdb/cursor-priv.h"
 #include "../libs/vdb/prod-priv.h"
+#include "../libs/vdb/column-priv.h"
 
 #include "../libs/schema/SchemaParser.hpp"
 #include "../libs/schema/ASTBuilder.hpp"
@@ -58,7 +59,11 @@ static const char * SchemaText =
     "table T#1 { column ascii c1; };"
     "database DB#1 { table T t; };"
 
-    "view ViewOnTable#1 < T p_tbl > { column ascii c = p_tbl . c1; };"
+    "view ViewOnTable#1 < T p_tbl > "
+    "{ "
+    "   column ascii c = p_tbl . c1; "
+    "   column ascii cc = \"\"; "
+    "};"
 
     "view ViewOnView#1 < ViewOnTable p_v > { column ascii c = p_v . c; };"
     ;
@@ -227,13 +232,40 @@ FIXTURE_TEST_CASE ( ViewCursor_AddColumn, ViewOnTableFixture )
     CreateCursor ( GetName(), ViewOnTableName );
     REQUIRE_RC ( VCursorAddColumn ( m_cur, & m_columnIdx, "%s", ViewColumnName ) );
     REQUIRE_EQ ( 1u, m_columnIdx );
-    //TODO: verify insertion into m_cur->row(at idx 1) and m_cur->col(at idx 0)
+
+    const VColumn * vcol = 0;
+    {   // verify insertion into m_cur->row at idx 1
+        Vector * row = VCursorGetRow ( ( VCursor * ) m_cur );
+        REQUIRE_NOT_NULL ( row );
+        REQUIRE_EQ ( 1u, VectorLength ( row ) );
+        vcol = ( const VColumn * )VectorGet ( row, 1 );
+        REQUIRE_NOT_NULL ( vcol );
+        REQUIRE_EQ ( string ( ViewColumnName ), ToCppString ( vcol -> scol -> name -> name ) );
+    }
+
+    {   // verify insertion into m_cur->col at idx [ 1, 0 ]
+        VCursorCache * cols = VCursorColumns ( ( VCursor * ) m_cur );
+        REQUIRE_NOT_NULL ( cols );
+        VCtxId id = { 1, 0 };
+        REQUIRE_EQ ( (void*)vcol, VCursorCacheGet ( cols, & id ) );
+    }
 }
 
 //TODO: ViewCursor_AddColumn_IncompleteType (is that possible?)
 //TODO: ViewCursor_AddColumn_IncompatibleType (is that possible?)
-//TODO: ViewCursor_AddColumn_PostOpen (error)
-//TODO: ViewCursor_AddColumn_AlreadyAdded (error)
+
+FIXTURE_TEST_CASE ( ViewCursor_AddColumn_PostOpen, ViewOnTableFixture )
+{
+    CreateCursorOpen ( GetName(), ViewOnTableName, ViewColumnName );
+    REQUIRE_RC ( VCursorOpen ( m_cur ) );
+    REQUIRE_RC_FAIL ( VCursorAddColumn ( m_cur, & m_columnIdx, "%s", "cc" ) );
+}
+
+FIXTURE_TEST_CASE ( ViewCursor_AddColumn_AlreadyAdded, ViewOnTableFixture )
+{
+    CreateCursorOpen ( GetName(), ViewOnTableName, ViewColumnName );
+    REQUIRE_RC_FAIL ( VCursorAddColumn ( m_cur, & m_columnIdx, "%s", ViewColumnName ) );
+}
 
 // VCursorGetColumnIdx
 
@@ -1048,6 +1080,114 @@ FIXTURE_TEST_CASE( ViewCursor_InstallTrigger, ViewOnTableFixture )
     REQUIRE_RC_FAIL ( VCursorInstallTrigger ( (VCursor*)m_cur, & prod ) );
 }
 
+FIXTURE_TEST_CASE ( ViewCursor_FunctionCall, ViewOnTableFixture )
+{
+    m_schemaText =
+    "version 2.0;"
+    "table T#1 { column ascii c1; };"
+    "database DB#1 { table T t; };"
+    "function ascii f(ascii v) { return v; }"
+    "view V1#1 < T p_tbl > { column ascii c1 = f(p_tbl.c1); };"
+    ;
+
+    CreateCursorOpenRow ( GetName(), "V1", "c1" );
+    REQUIRE_RC ( VCursorRead ( m_cur, m_columnIdx, 8, m_buf, sizeof ( m_buf ), & m_rowLen ) );
+    REQUIRE_EQ ( string ("blah"), string ( m_buf, m_rowLen ) ); //TODO: modify the value inside f()
+    REQUIRE_RC ( VCursorCloseRow ( m_cur ) );
+    REQUIRE_RC ( VCursorOpenRow ( m_cur ) );
+    REQUIRE_RC ( VCursorRead ( m_cur, m_columnIdx, 8, m_buf, sizeof ( m_buf ), & m_rowLen ) );
+    REQUIRE_EQ ( string ("eeee"), string ( m_buf, m_rowLen ) );
+}
+
+FIXTURE_TEST_CASE ( ViewCursor_FunctionCall_Builtin, ViewOnTableFixture )
+{
+    m_schemaText =
+    "version 2.0;"
+    "table T#1 { column ascii c1; };"
+    "database DB#1 { table T t; };"
+    "function < type T > T echo #1.0 < T val > ( * any row_len ) = vdb:echo;"
+    "view V1#1 < T p_tbl > { column ascii c1 = <ascii>echo<\"qq\">(); };"
+    ;
+
+    CreateCursorOpenRow ( GetName(), "V1", "c1" );
+    REQUIRE_RC ( VCursorRead ( m_cur, m_columnIdx, 8, m_buf, sizeof ( m_buf ), & m_rowLen ) );
+    REQUIRE_EQ ( string ("qq"), string ( m_buf, m_rowLen ) );
+    REQUIRE_RC ( VCursorCloseRow ( m_cur ) );
+    REQUIRE_RC ( VCursorOpenRow ( m_cur ) );
+    REQUIRE_RC ( VCursorRead ( m_cur, m_columnIdx, 8, m_buf, sizeof ( m_buf ), & m_rowLen ) );
+    REQUIRE_EQ ( string ("qq"), string ( m_buf, m_rowLen ) );
+}
+
+FIXTURE_TEST_CASE ( ViewCursor_FunctionCall_External, ViewOnTableFixture )
+{
+    m_keepDb = true;
+    m_schemaText =
+    "version 2.0;"
+    "table T#1 { column U8[4] c1; column U8 one; };"
+    "database DB#1 { table T t; };"
+    "extern function < type T > T NCBI:SRA:swap #1 ( T in, U8 called );"
+    "view V1#1 < T p_tbl > {"
+    "   column U8[4] c1 = < U8 [ 4 ] > NCBI:SRA:swap ( p_tbl . c1, p_tbl . one );"
+    "};"
+    ;
+    m_databaseName = ScratchDir + GetName();
+
+    {
+        MakeDatabase ( m_schemaText, "DB" );
+        VCursor * cursor = CreateTable ( TableName );
+        REQUIRE_RC ( VCursorAddColumn ( cursor, & m_columnIdx, "c1" ) );
+        uint32_t oneIdx;
+        REQUIRE_RC ( VCursorAddColumn ( cursor, & oneIdx, "one" ) );
+        REQUIRE_RC ( VCursorOpen ( cursor ) );
+
+       // insert some rows
+        const uint8_t c1_1[4] = {1, 2, 3, 4};
+        const uint8_t c1_2[4] = {11, 22, 33, 44};
+        const uint8_t One = 1;
+
+        REQUIRE_RC ( VCursorOpenRow ( cursor ) );
+        REQUIRE_RC ( VCursorWrite ( cursor, m_columnIdx, 8, &c1_1, 0, 4 ) );
+        REQUIRE_RC ( VCursorWrite ( cursor, oneIdx, 8, &One, 0, 1 ) );
+        REQUIRE_RC ( VCursorCommitRow ( cursor ) );
+        REQUIRE_RC ( VCursorCloseRow ( cursor ) );
+
+        REQUIRE_RC ( VCursorOpenRow ( cursor ) );
+        REQUIRE_RC ( VCursorWrite ( cursor, m_columnIdx, 8, &c1_2, 0, 4 ) );
+        REQUIRE_RC ( VCursorWrite ( cursor, oneIdx, 8, &One, 0, 1 ) );
+        REQUIRE_RC ( VCursorCommitRow ( cursor ) );
+        REQUIRE_RC ( VCursorCloseRow ( cursor ) );
+
+        REQUIRE_RC ( VCursorCommit ( cursor ) );
+        REQUIRE_RC ( VCursorRelease ( cursor ) );
+    }
+
+    {   // read and verify: swap(U8[2], 1) swaps the first 2 elements
+        REQUIRE_RC ( VDBManagerOpenView ( m_mgr, & m_view, m_schema, "V1" ) );
+        REQUIRE_RC ( VDatabaseOpenTableRead ( m_db, & m_table, TableName ) );
+        REQUIRE_RC ( VViewBindParameterTable ( m_view, TableParamName, m_table ) );
+        REQUIRE_RC ( VViewCreateCursor ( m_view, & m_cur ) );
+        REQUIRE_RC ( VCursorAddColumn ( m_cur, & m_columnIdx, "%s", "c1" ) );
+        REQUIRE_RC ( VCursorOpen ( m_cur ) );
+
+        uint8_t val[4] = {0, 0, 0, 0};
+        REQUIRE_RC ( VCursorOpenRow ( m_cur ) );
+        REQUIRE_RC ( VCursorRead ( m_cur, m_columnIdx, 8, &val, 4, & m_rowLen ) );
+        REQUIRE_EQ ( 2u, (uint32_t)val[0] ); // array elements 0 and 1 swapped
+        REQUIRE_EQ ( 1u, (uint32_t)val[1] );
+        REQUIRE_EQ ( 3u, (uint32_t)val[2] );
+        REQUIRE_EQ ( 4u, (uint32_t)val[3] );
+        REQUIRE_RC ( VCursorCloseRow ( m_cur ) );
+
+        REQUIRE_RC ( VCursorOpenRow ( m_cur ) );
+        REQUIRE_RC ( VCursorRead ( m_cur, m_columnIdx, 8, &val, 4, & m_rowLen ) );
+        REQUIRE_EQ ( 22u, (uint32_t)val[0] ); // array elements 0 and swapped
+        REQUIRE_EQ ( 11u, (uint32_t)val[1] );
+        REQUIRE_EQ ( 33u, (uint32_t)val[2] );
+        REQUIRE_EQ ( 44u, (uint32_t)val[3] );
+    }
+}
+
+//TODO: external function call in a view parameter's productions
 
 // View on a View
 class ViewOnViewFixture : public ViewFixture
@@ -1097,9 +1237,6 @@ FIXTURE_TEST_CASE ( ViewCursor_OnView_Read, ViewOnViewFixture )
 }
 
 //TODO: VViewCreateCursor with multiple table/view parameters
-
-//TODO: external function call in view's productions
-//TODO: external function call in a view parameter's productions
 
 //////////////////////////////////////////// Main
 extern "C"

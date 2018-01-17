@@ -404,10 +404,20 @@ FIXTURE_TEST_CASE(View_Column_Overloaded, AST_View_Fixture)
     REQUIRE_EQ ( string ("c"), ToCppString ( ovl -> name -> name ) );
     REQUIRE_EQ ( 1u, ovl -> cid . ctx );
     REQUIRE_EQ ( 0u, ovl -> cid . id );
+    const SColumn * col = v . Columns () . Get ( 0 );
+    REQUIRE_NOT_NULL ( col );
+    REQUIRE_EQ ( ovl -> cid . ctx, col -> cid . ctx );
+    REQUIRE_EQ ( ovl -> cid . id, col -> cid . id );
+
     VdbVector < SColumn > names ( ovl -> items );
     REQUIRE_EQ ( 2u, names . Count () );
     REQUIRE_EQ ( v . Columns () . Get ( 0 ), names . Get ( 0 ) );
     REQUIRE_EQ ( v . Columns () . Get ( 1 ), names . Get ( 1 ) );
+
+    col = v . Columns () . Get ( 1 );
+    REQUIRE_NOT_NULL ( col );
+    REQUIRE_EQ ( ovl -> cid . ctx, col -> cid . ctx );
+    REQUIRE_EQ ( ovl -> cid . id, col -> cid . id );
 }
 
 FIXTURE_TEST_CASE(View_Column_Reference, AST_View_Fixture)
@@ -485,10 +495,19 @@ FIXTURE_TEST_CASE(View_Column_Context, AST_View_Fixture)
     REQUIRE_NOT_NULL ( ovl );
     REQUIRE_EQ ( 2u, ovl -> cid . ctx ); // W'1 contextId is 2
     REQUIRE_EQ ( 0u, ovl -> cid . id );
+    const SColumn * col = v . Columns () . Get ( 0 );
+    REQUIRE_NOT_NULL ( col );
+    REQUIRE_EQ ( ovl -> cid . ctx, col -> cid . ctx );
+    REQUIRE_EQ ( ovl -> cid . id, col -> cid . id );
+
     ovl = v . ColumnNames () . Get ( 1 );
     REQUIRE_NOT_NULL ( ovl );
     REQUIRE_EQ ( 2u, ovl -> cid . ctx );
     REQUIRE_EQ ( 1u, ovl -> cid . id );
+    col = v . Columns () . Get ( 1 );
+    REQUIRE_NOT_NULL ( col );
+    REQUIRE_EQ ( ovl -> cid . ctx, col -> cid . ctx );
+    REQUIRE_EQ ( ovl -> cid . id, col -> cid . id );
 }
 
 FIXTURE_TEST_CASE(View_ForwardReference, AST_View_Fixture)

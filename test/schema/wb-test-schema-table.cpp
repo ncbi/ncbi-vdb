@@ -132,7 +132,7 @@ public:
         THROW_ON_TRUE ( p_objType != sym -> _sym -> type );
     }
 
-    void VerifyImplicitPhysicalColumn ( const SColumn & p_col )
+    void VerifyImplicitPhysicalColumn ( const SColumn & p_col, const string & p_ident )
     {
         // a physical column is attached to p_col
         VerifySymExpr ( p_col . read, ePhysExpr, p_ident, ePhysMember);
@@ -479,10 +479,19 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_Context, AST_Table_Fixture)
     REQUIRE_NOT_NULL ( ovl );
     REQUIRE_EQ ( 1u, ovl -> cid . ctx );
     REQUIRE_EQ ( 0u, ovl -> cid . id );
+    const SColumn * col = v . Columns () . Get ( 0 );
+    REQUIRE_NOT_NULL ( col );
+    REQUIRE_EQ ( ovl -> cid . ctx, col -> cid . ctx );
+    REQUIRE_EQ ( ovl -> cid . id, col -> cid . id );
+
     ovl = v . ColumnNames () . Get ( 1 );
     REQUIRE_NOT_NULL ( ovl );
     REQUIRE_EQ ( 1u, ovl -> cid . ctx );
     REQUIRE_EQ ( 1u, ovl -> cid . id );
+    col = v . Columns () . Get ( 1 );
+    REQUIRE_NOT_NULL ( col );
+    REQUIRE_EQ ( ovl -> cid . ctx, col -> cid . ctx );
+    REQUIRE_EQ ( ovl -> cid . id, col -> cid . id );
 }
 
 FIXTURE_TEST_CASE(Table_ColumnDecl_SimpleColumn_Typeset, AST_Table_Fixture)

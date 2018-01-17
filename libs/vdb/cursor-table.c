@@ -191,7 +191,7 @@ rc_t VTableCursorWhack ( const VCURSOR_IMPL * p_self )
     VSchemaRelease ( self -> schema );
 
     /* some references from the base class may dangle if we Sever() before VCursorWhackInt() is done */
-    VTable * tbl = self -> tbl;
+    const VTable * tbl = self -> tbl;
     VCursorWhackInt ( & self -> dad );
     VTableSever ( tbl );
 

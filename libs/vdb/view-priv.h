@@ -41,6 +41,7 @@ struct VCursor_vt;
 struct VViewCursor;
 struct VTable;
 struct String;
+struct VLinker;
 
 struct VView
 {
@@ -53,6 +54,9 @@ struct VView
 
     /* parameter bindings */
     Vector bindings;
+
+    /* intrinsic functions */
+    struct VLinker * linker;
 };
 
 rc_t VViewCursorMake ( const VView * p_view, struct VViewCursor ** p_curs );
