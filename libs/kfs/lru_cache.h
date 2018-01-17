@@ -28,6 +28,7 @@
 #include <kfs/rrcachedfile.h>
 
 struct lru_cache;
+struct timeout_t;
 
 rc_t make_lru_cache ( struct lru_cache ** cache,
                       const KFile * wrapped,
@@ -37,6 +38,6 @@ rc_t make_lru_cache ( struct lru_cache ** cache,
 void release_lru_cache ( struct lru_cache * self );
 
 rc_t read_lru_cache ( struct lru_cache * self,
-                      uint64_t pos, void * buffer, size_t bsize, size_t * num_read );
+                      uint64_t pos, void * buffer, size_t bsize, size_t * num_read, struct timeout_t *tm );
 
 rc_t set_lru_cache_event_handler( struct lru_cache * self, void * data, on_cache_event handler );
