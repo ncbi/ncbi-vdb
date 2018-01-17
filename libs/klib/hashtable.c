@@ -68,7 +68,7 @@ LIB_EXPORT rc_t CC KHashTableInit(KHashTable* self, size_t key_size,
     if (capacity == 0) {
         capacity = 16;
     } else {
-        uint32_t lg2 = uint64_msbit(capacity | 1) + 1;
+        uint64_t lg2 = uint64_msbit(capacity | 1) + 1;
         capacity = 1ULL << lg2;
     }
     self->key_size = key_size;
@@ -124,7 +124,7 @@ LIB_EXPORT size_t CC KHashTableCount(const KHashTable* self)
         return 0;
 }
 
-static inline rc_t rehash(KHashTable* self)
+static rc_t rehash(KHashTable* self)
 {
     assert(self != NULL);
 
@@ -450,7 +450,7 @@ LIB_EXPORT bool KHashTableIteratorNext(KHashTable* self, void* key,
     const size_t value_size = self->value_size;
 
     while (1) {
-        if (self->iterator >= self->num_buckets) {
+        if ((size_t)self->iterator >= self->num_buckets) {
             self->iterator = -1;
             return false;
         }
@@ -483,14 +483,14 @@ LIB_EXPORT bool KHashTableIteratorNext(KHashTable* self, void* key,
  *  * Seeding
  */
 
-static inline uint64_t Fetch64(const char* p)
+static uint64_t Fetch64(const char* p)
 {
     uint64_t result;
     memcpy(&result, p, sizeof(result));
     return result;
 }
 
-static inline uint32_t Fetch32(const char* p)
+static uint32_t Fetch32(const char* p)
 {
     uint32_t result;
     memcpy(&result, p, sizeof(result));
@@ -504,9 +504,9 @@ static const uint64_t k0 = 0xc3a5c85c97cb3127ULL;
 static const uint64_t k1 = 0xb492b66fbe98f273ULL;
 static const uint64_t k2 = 0x9ae16a3b2f90404fULL;
 
-static inline uint64_t ShiftMix(uint64_t val) { return val ^ (val >> 47); }
+static uint64_t ShiftMix(uint64_t val) { return val ^ (val >> 47); }
 
-static inline uint64_t HashLen16(uint64_t u, uint64_t v, uint64_t mul)
+static uint64_t HashLen16(uint64_t u, uint64_t v, uint64_t mul)
 {
     /* Murmur-inspired hashing. */
     uint64_t a = (u ^ v) * mul;
@@ -517,7 +517,7 @@ static inline uint64_t HashLen16(uint64_t u, uint64_t v, uint64_t mul)
     return b;
 }
 
-static inline uint64_t HashLen0to16(const char* s, size_t len)
+static uint64_t HashLen0to16(const char* s, size_t len)
 {
     if (len >= 8) {
         uint64_t mul = k2 + len * 2;
@@ -536,14 +536,14 @@ static inline uint64_t HashLen0to16(const char* s, size_t len)
         uint8_t a = s[0];
         uint8_t b = s[len >> 1];
         uint8_t c = s[len - 1];
-        uint32_t y = (uint32_t)(a) + ((uint32_t)(b) << 8);
-        uint32_t z = len + ((uint32_t)(c) << 2);
+        uint64_t y = (uint32_t)(a) + ((uint32_t)(b) << 8);
+        uint64_t z = len + ((uint32_t)(c) << 2);
         return ShiftMix(y * k2 ^ z * k0) * k2;
     }
     return k2;
 }
 
-static inline uint64_t HashLen17to32(const char* s, size_t len)
+static uint64_t HashLen17to32(const char* s, size_t len)
 {
     uint64_t mul = k2 + len * 2;
     uint64_t a = Fetch64(s) * k1;
@@ -554,7 +554,7 @@ static inline uint64_t HashLen17to32(const char* s, size_t len)
                      a + uint64_ror(b + k2, 18) + c, mul);
 }
 
-static inline uint64_t HashLen33to64(const char* s, size_t len)
+static uint64_t HashLen33to64(const char* s, size_t len)
 {
     uint64_t mul = k2 + len * 2;
     uint64_t a = Fetch64(s) * k2;
@@ -571,7 +571,7 @@ static inline uint64_t HashLen33to64(const char* s, size_t len)
                      e + uint64_ror(f + a, 18) + g, mul);
 }
 
-static inline uint64_t HashLen64(const char* s, size_t len)
+static uint64_t HashLen64(const char* s, size_t len)
 {
     assert(len >= 64);
 
