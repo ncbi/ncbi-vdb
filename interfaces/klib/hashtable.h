@@ -39,23 +39,9 @@
 extern "C" {
 #endif
 
-typedef struct KHashTable
-{
-    void* buckets;
-    uint64_t mask; /* precomputed (1 << lg2(num_buckets+1))-1, to avoid
-                    * ffsll(num_buckets)
-                    */
-    size_t key_size;
-    size_t value_size;
-    size_t bucket_size;
-    size_t num_buckets; /* Always a power of 2 */
-    size_t count;
-    size_t load; /* Included invisible buckets */
-    double max_load_factor;
-    int64_t iterator;
-    bool key_cstr;
-} KHashTable;
+typedef struct KHashTable KHashTable;
 
+typedef enum hashkey_type { raw, cstr } hashkey_type;
 /* NB: Not thread safe */
 
 /* Create a new KHashTable.
@@ -63,14 +49,19 @@ typedef struct KHashTable
  * "self" [ OUT ] - Self
  * "key_size" [ IN ] - Number of bytes keys require
  * "value_size" [ IN ] - Can be 0 (set). Number of bytes values require.
- * "capacity" [ IN ] - Hint about initial capacity. 0=default
- * "max_load_factor" [ IN ] - When hash table exceeds this, grow. 0=0.6
- * "key_cstr" [ IN ] - If strcmp(*key) should be used on keys rather than
- *                     memcmp. Caller still owns key's memory.
+ * "capacity" [ IN ] - Hint about initial capacity.
+ *                            If 0, use 16 as default
+ * "max_load_factor" [ IN ] - When hash table exceeds this, grow.
+ *                            If 0, use 0.6 as default
+ * "key_type" [ IN ] - If raw, use memcmp and memcpy to compare/copy keys.
+ *                     If cstr, strcmp(*key) will be used to compare keys and
+ *                     only pointer to key will be placed in container.
+ *                     Caller still responsible for key's memory allocation.
  */
-KLIB_EXTERN rc_t CC KHashTableInit(KHashTable* self, size_t key_size,
-                                   size_t value_size, size_t capacity,
-                                   double max_load_factor, bool key_cstr);
+KLIB_EXTERN rc_t KHashTableInit(KHashTable** self, size_t key_size,
+                                size_t value_size, size_t capacity,
+                                double max_load_factor,
+                                hashkey_type key_type);
 
 /* Destroy hash table and optionally elements.
  * If keywhack/valuewhack !=NULL invoke for each element in table.
@@ -78,12 +69,13 @@ KLIB_EXTERN rc_t CC KHashTableInit(KHashTable* self, size_t key_size,
  * "valuewhack" [ IN ] - "" value. Ignored if value_size==0 (set).
  * TODO: keywhack and valuewhack not implemented
  */
-KLIB_EXTERN void CC
-KHashTableWhack(KHashTable* self, void(CC* keywhack)(void* item, void* data),
-                void(CC* valuewhack)(void* item, void* data), void* data);
+KLIB_EXTERN void KHashTableWhack(KHashTable* self,
+                                 void (*keywhack)(void* item, void* data),
+                                 void (*valuewhack)(void* item, void* data),
+                                 void* data);
 
 /* Return number of items in hash table. */
-KLIB_EXTERN size_t CC KHashTableCount(const KHashTable* self);
+KLIB_EXTERN size_t KHashTableCount(const KHashTable* self);
 
 /* Lookup key in hash table, return pointer to value if found or NULL if key
  * doesn't exist.
@@ -95,47 +87,47 @@ KLIB_EXTERN size_t CC KHashTableCount(const KHashTable* self);
  * if found. Can be NULL if only existence check needed.
  * Returns true if key found.
  */
-KLIB_EXTERN bool CC KHashTableFind(const KHashTable* self, const void* key,
-                                   uint64_t keyhash, void* value);
+KLIB_EXTERN bool KHashTableFind(const KHashTable* self, const void* key,
+                                uint64_t keyhash, void* value);
 
 /* Add or replace key/value pair
  * "key" [ IN ] - Key to insert.
  * "keyhash" [ IN ] - Hash of key to insert.
  * "value" [ IN ] - Value to insert. Ignored if value_size==0 (set)
  */
-KLIB_EXTERN rc_t CC KHashTableAdd(KHashTable* self, const void* key,
-                                  uint64_t keyhash, const void* value);
+KLIB_EXTERN rc_t KHashTableAdd(KHashTable* self, const void* key,
+                               uint64_t keyhash, const void* value);
 
 /* Delete key/value pair
  * "key" [ IN ] - Key to delete.
  * "keyhash" [ IN ] - Hash of key to delete.
  * Returns true if key was present.
  */
-KLIB_EXTERN bool CC KHashTableDelete(KHashTable* self, const void* key,
-                                     uint64_t keyhash);
+KLIB_EXTERN bool KHashTableDelete(KHashTable* self, const void* key,
+                                  uint64_t keyhash);
 
 /* Make Iterator.
  * Will become invalid after any insertions. Only one valid iterator per
  * KHashTable at a time.
  */
-KLIB_EXTERN void CC KHashTableIteratorMake(KHashTable* self);
+KLIB_EXTERN void KHashTableIteratorMake(KHashTable* self);
 
 /* Next key/value
  * "key" [ OUT ] - Next key
  * "value" [ OUT ] - Next value. Ignored if value_size==0 or NULL.
  * Returns true if additional keys available
  */
-KLIB_EXTERN bool CC KHashTableIteratorNext(KHashTable* self, void* key,
-                                           void* value);
+KLIB_EXTERN bool KHashTableIteratorNext(KHashTable* self, void* key,
+                                        void* value);
 
 /* Returns current load factor (# buckets / # items) */
-KLIB_EXTERN double CC KHashTableGetLoadFactor(const KHashTable* self);
+/* KLIB_EXTERN double KHashTableGetLoadFactor(const KHashTable* self); */
 
 /* Reserve space for capacity elements */
-KLIB_EXTERN rc_t CC KHashTableReserve(KHashTable* self, size_t capacity);
+KLIB_EXTERN rc_t KHashTableReserve(KHashTable* self, size_t capacity);
 
 /* Hash function */
-KLIB_EXTERN uint64_t CC KHash(const char* s, size_t len);
+KLIB_EXTERN uint64_t KHash(const char* s, size_t len);
 
 #ifdef __cplusplus
 }

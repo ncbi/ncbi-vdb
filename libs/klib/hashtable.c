@@ -41,60 +41,138 @@
 extern "C" {
 #endif
 
+struct KHashTable
+{
+    void* buckets;
+    uint64_t mask;
+    size_t key_size;
+    size_t value_size;
+    size_t bucket_size;
+    size_t num_buckets; /* Always a power of 2 */
+    size_t count;
+    size_t load; /* Included invisible buckets */
+    double max_load_factor;
+    int64_t iterator;
+    hashkey_type key_type;
+};
+
 static const uint64_t BUCKET_VALID = (uint64_t)1ULL << 63;
 static const uint64_t BUCKET_VISIBLE = (uint64_t)1ULL << 62;
 
-LIB_EXPORT rc_t CC KHashTableInit(KHashTable* self, size_t key_size,
-                                  size_t value_size, size_t capacity,
-                                  double max_load_factor, bool key_cstr)
+/*
+static double getloadfactor(const KHashTable* self)
 {
-    if (self == NULL)
-        return RC(rcCont, rcHashtable, rcConstructing, rcParam, rcInvalid);
+    if (self == NULL) return 0.0;
+    if (self->num_buckets == 0) return 0.0;
 
-    if (max_load_factor < 0)
-        return RC(rcCont, rcHashtable, rcConstructing, rcParam, rcInvalid);
+    double load_factor = (double)self->load / (double)self->num_buckets;
+    return load_factor;
+}
+*/
 
-    if (max_load_factor == 0.0)
-        self->max_load_factor = 0.6;
-    else
-        self->max_load_factor = max_load_factor;
+static rc_t rehash(KHashTable* self, size_t capacity)
+{
+    assert(self != NULL);
 
-    if (key_size == 0)
-        return RC(rcCont, rcHashtable, rcConstructing, rcParam, rcInvalid);
+    self->iterator = -1; /* Invalidate any current iterators */
 
-    if (key_cstr && key_size != 8)
-        return RC(rcCont, rcHashtable, rcConstructing, rcParam, rcInvalid);
+    if (capacity < self->count) capacity = self->count;
 
-    if (capacity == 0) {
-        capacity = 16;
-    } else {
-        uint64_t lg2 = uint64_msbit(capacity | 1) + 1;
-        capacity = 1ULL << lg2;
+    uint64_t lg2 = (uint64_t)uint64_msbit(capacity | 1);
+    capacity = 1ULL << lg2;
+
+    void* old_buckets = self->buckets;
+    size_t old_num_buckets = self->num_buckets;
+
+    /* Note that because we reserve two highest bits of hash, table will not
+     * benefit from being expanded beyond 2**62 entries (~4 exabytes).
+     * But since linux kernels circa 2018 can't support more than 4PB
+     * physical/128PB virtual memory (52/57 bits), this isn't a concern,
+     * calloc will fail long before this point.
+     * Note: Benchmarks show 5% slower if we attempt to round up bucket sizes
+     * for better alignment. */
+    size_t bucket_size = self->bucket_size;
+    void* new_buckets = calloc(1, capacity * bucket_size);
+    if (!new_buckets) {
+        return RC(rcCont, rcHashtable, rcInserting, rcMemory, rcExhausted);
     }
-    self->key_size = key_size;
-    self->value_size = value_size;
+
     self->num_buckets = capacity;
+    self->buckets = new_buckets;
     self->mask = capacity - 1;
     self->count = 0;
     self->load = 0;
-    self->iterator = -1; /* Iterator not valid */
-    self->key_cstr = key_cstr;
 
-    self->bucket_size = 8 + self->key_size + self->value_size;
-    /* keyhash (u64) + key + value */
-
-    /* Round up for alignment. Benchmarks say not worthwhile: 5% slower
-     * self->bucket_size = (self->bucket_size + 7) & ~7ULL; */
-    self->buckets = calloc(1, self->num_buckets * self->bucket_size);
-    if (!self->buckets)
-        return RC(rcCont, rcHashtable, rcConstructing, rcMemory, rcExhausted);
+    if (old_buckets) {
+        for (size_t bucket = 0; bucket != old_num_buckets; bucket++) {
+            const char* bucketptr
+                = (char*)old_buckets + (bucket * bucket_size);
+            const char* hashptr = bucketptr;
+            const char* keyptr = bucketptr + 8;
+            const char* valueptr = bucketptr + 8 + self->key_size;
+            uint64_t buckethash;
+            memcpy(&buckethash, hashptr, 8);
+            if ((buckethash & BUCKET_VALID)
+                && (buckethash & BUCKET_VISIBLE)) {
+                KHashTableAdd(self, keyptr, buckethash, valueptr);
+            }
+        }
+        free(old_buckets);
+    }
 
     return 0;
 }
 
-LIB_EXPORT void CC
-KHashTableWhack(KHashTable* self, void(CC* keywhack)(void* item, void* data),
-                void(CC* valuewhack)(void* item, void* data), void* data)
+LIB_EXPORT rc_t KHashTableInit(KHashTable** self, size_t key_size,
+                               size_t value_size, size_t capacity,
+                               double max_load_factor, hashkey_type key_type)
+{
+    if (self == NULL)
+        return RC(rcCont, rcHashtable, rcConstructing, rcParam, rcInvalid);
+
+    *self = NULL;
+
+    if (max_load_factor < 0 || max_load_factor >= 1.0)
+        return RC(rcCont, rcHashtable, rcConstructing, rcParam, rcInvalid);
+
+    if (key_size == 0)
+        return RC(rcCont, rcHashtable, rcConstructing, rcParam, rcInvalid);
+
+    if (key_type == cstr && key_size != sizeof(char*))
+        return RC(rcCont, rcHashtable, rcConstructing, rcParam, rcInvalid);
+
+    if (capacity <= 16) capacity = 16;
+
+    KHashTable* kht = (KHashTable*)malloc(sizeof(KHashTable));
+    if (kht == NULL)
+        return RC(rcCont, rcHashtable, rcConstructing, rcMemory, rcExhausted);
+    kht->key_size = key_size;
+    kht->value_size = value_size;
+    kht->key_type = key_type;
+    if (max_load_factor == 0.0)
+        kht->max_load_factor = 0.6;
+    else
+        kht->max_load_factor = max_load_factor;
+    kht->bucket_size = 8 + kht->key_size + kht->value_size;
+    kht->buckets = NULL;
+    kht->count = 0;
+
+    rc_t rc = rehash(kht, capacity);
+
+    if (rc) {
+        free(kht);
+        return rc;
+    }
+
+    *self = kht;
+
+    return 0;
+}
+
+LIB_EXPORT void KHashTableWhack(KHashTable* self,
+                                void (*keywhack)(void* item, void* data),
+                                void (*valuewhack)(void* item, void* data),
+                                void* data)
 {
     if (self == NULL) return;
 
@@ -103,72 +181,18 @@ KHashTableWhack(KHashTable* self, void(CC* keywhack)(void* item, void* data),
     }
     if (valuewhack != NULL) {
     }
-    self->key_size = 0;
-    self->value_size = 0;
-    self->num_buckets = 0;
-    self->bucket_size = 0;
-    self->count = 0;
-    self->load = 0;
-    self->mask = 0;
-    self->iterator = -1;
     free(self->buckets);
-    self->buckets = NULL;
     memset(self, 0, sizeof(KHashTable));
+    self->iterator = -1;
+    free(self);
 }
 
-LIB_EXPORT size_t CC KHashTableCount(const KHashTable* self)
+LIB_EXPORT size_t KHashTableCount(const KHashTable* self)
 {
     if (self != NULL)
         return self->count;
     else
         return 0;
-}
-
-static rc_t rehash(KHashTable* self)
-{
-    assert(self != NULL);
-
-    self->iterator = -1; /* Invalidate any current iterators */
-
-    size_t bucket_size = self->bucket_size;
-    void* old_buckets = self->buckets;
-    size_t old_num_buckets = self->num_buckets;
-    if ((double)self->count / (double)self->load > 0.5) {
-        /* Deletes < 50%, double table size */
-        self->num_buckets *= 2;
-        self->mask = (self->mask << 1) | 1;
-    } else {
-        /* lots of deletes, just rehash table at existing size */
-    }
-
-    /* Note that because we reserve two highest bits of hash, table will not
-     * benefit from being expanded beyond 2**62 entries (~4 exabytes).
-     * But since linux kernels circa 2018 can't support more than 4PB
-     * physical/128PB virtual memory (52/57 bits), this isn't a concern,
-     * calloc will fail long before this point. */
-    void* new_buckets = calloc(1, self->num_buckets * bucket_size);
-    if (!new_buckets)
-        return RC(rcCont, rcHashtable, rcInserting, rcMemory, rcExhausted);
-
-    self->buckets = new_buckets;
-    self->count = 0;
-    self->load = 0;
-
-    for (size_t bucket = 0; bucket != old_num_buckets; bucket++) {
-        const char* bucketptr = (char*)old_buckets + (bucket * bucket_size);
-        const char* hashptr = bucketptr;
-        const char* keyptr = bucketptr + 8;
-        const char* valueptr = bucketptr + 8 + self->key_size;
-        uint64_t buckethash;
-        memcpy(&buckethash, hashptr, 8);
-        if ((buckethash & BUCKET_VALID) && (buckethash & BUCKET_VISIBLE)) {
-            KHashTableAdd(self, keyptr, buckethash, valueptr);
-        }
-    }
-
-    free(old_buckets);
-
-    return 0;
 }
 
 /*
@@ -182,7 +206,7 @@ deleted)
 */
 
 #if 0
-static void dump(const KHashTable* self)
+static void dump(const KHashTable * self)
 {
     assert(self != NULL);
     size_t bucket_size = self->bucket_size;
@@ -206,8 +230,8 @@ static void dump(const KHashTable* self)
 }
 #endif
 
-LIB_EXPORT bool CC KHashTableFind(const KHashTable* self, const void* key,
-                                  uint64_t keyhash, void* value)
+LIB_EXPORT bool KHashTableFind(const KHashTable* self, const void* key,
+                               uint64_t keyhash, void* value)
 
 {
     if (self == NULL || self->buckets == NULL) return false;
@@ -217,11 +241,13 @@ LIB_EXPORT bool CC KHashTableFind(const KHashTable* self, const void* key,
     const uint64_t mask = self->mask;
     const char* buckets = (const char*)self->buckets;
     const size_t bucket_size = self->bucket_size;
-    const bool key_cstr = self->key_cstr;
+    const hashkey_type key_type = self->key_type;
     const size_t key_size = self->key_size;
     const size_t value_size = self->value_size;
     size_t triangle = 0;
-
+#ifdef DEBUG
+    const size_t init_bucket = bucket & mask;
+#endif
     while (1) {
         bucket &= mask;
         const char* bucketptr = buckets + (bucket * bucket_size);
@@ -239,9 +265,9 @@ LIB_EXPORT bool CC KHashTableFind(const KHashTable* self, const void* key,
             bool found;
             const char* keyptr = bucketptr + 8;
 
-            if (key_cstr) {
+            if (key_type == cstr) {
                 char* p;
-                memcpy(&p, keyptr, 8);
+                memcpy(&p, keyptr, sizeof(char*));
                 found = (strcmp(p, key) == 0);
             } else {
                 if (key_size == 8)
@@ -273,11 +299,14 @@ LIB_EXPORT bool CC KHashTableFind(const KHashTable* self, const void* key,
          */
         ++triangle;
         bucket += (triangle * (triangle + 1) / 2);
+#ifdef DEBUG
+        assert((bucket & mask) != init_bucket);
+#endif
     }
 }
 
-LIB_EXPORT rc_t CC KHashTableAdd(KHashTable* self, const void* key,
-                                 uint64_t keyhash, const void* value)
+LIB_EXPORT rc_t KHashTableAdd(KHashTable* self, const void* key,
+                              uint64_t keyhash, const void* value)
 {
     if (self == NULL || self->buckets == NULL)
         return RC(rcCont, rcHashtable, rcInserting, rcParam, rcInvalid);
@@ -287,7 +316,7 @@ LIB_EXPORT rc_t CC KHashTableAdd(KHashTable* self, const void* key,
     const uint64_t mask = self->mask;
     char* buckets = (char*)self->buckets;
     const size_t bucket_size = self->bucket_size;
-    const bool key_cstr = self->key_cstr;
+    const hashkey_type key_type = self->key_type;
     const size_t key_size = self->key_size;
     const size_t value_size = self->value_size;
     size_t triangle = 0;
@@ -305,8 +334,8 @@ LIB_EXPORT rc_t CC KHashTableAdd(KHashTable* self, const void* key,
         {
             memcpy(hashptr, &keyhash, 8);
 
-            if (key_cstr)
-                memcpy(keyptr, &key, 8);
+            if (key_type == cstr)
+                memcpy(keyptr, &key, sizeof(&keyptr));
             else {
                 if (key_size == 8)
                     memcpy(keyptr, key, 8);
@@ -328,17 +357,25 @@ LIB_EXPORT rc_t CC KHashTableAdd(KHashTable* self, const void* key,
             self->count++;
             self->load++;
 
-            if (KHashTableGetLoadFactor(self) > self->max_load_factor)
-                return rehash(self);
+            double load_factor
+                = (double)self->load / (double)self->num_buckets;
+            if (load_factor > self->max_load_factor) {
+                if ((double)self->count / (double)self->load > 0.5)
+                    return rehash(self, self->num_buckets * 2);
+                else
+                    /* lots of deletes, just rehash table at existing size */
+                    return rehash(self, self->num_buckets);
+            }
+
             return 0;
         }
 
         if (buckethash == keyhash) /* hash hit */
         {
             bool found;
-            if (key_cstr) {
+            if (key_type == cstr) {
                 char* p;
-                memcpy(&p, keyptr, 8);
+                memcpy(&p, keyptr, sizeof(char*));
                 found = (strcmp(p, key) == 0);
             } else {
                 if (key_size == 8)
@@ -361,8 +398,8 @@ LIB_EXPORT rc_t CC KHashTableAdd(KHashTable* self, const void* key,
     }
 }
 
-LIB_EXPORT bool CC KHashTableDelete(KHashTable* self, const void* key,
-                                    uint64_t keyhash)
+LIB_EXPORT bool KHashTableDelete(KHashTable* self, const void* key,
+                                 uint64_t keyhash)
 {
     if (self == NULL || self->buckets == NULL) return false;
 
@@ -371,7 +408,7 @@ LIB_EXPORT bool CC KHashTableDelete(KHashTable* self, const void* key,
     const uint64_t mask = self->mask;
     char* buckets = (char*)self->buckets;
     const size_t bucket_size = self->bucket_size;
-    const bool key_cstr = self->key_cstr;
+    const hashkey_type key_type = self->key_type;
     const size_t key_size = self->key_size;
     size_t triangle = 0;
 
@@ -392,9 +429,9 @@ LIB_EXPORT bool CC KHashTableDelete(KHashTable* self, const void* key,
             bool found;
             const char* keyptr = bucketptr + 8;
 
-            if (key_cstr) {
+            if (key_type == cstr) {
                 char* p;
-                memcpy(&p, keyptr, 8);
+                memcpy(&p, keyptr, sizeof(char*));
                 found = (strcmp(p, key) == 0);
             } else {
                 if (key_size == 8)
@@ -419,21 +456,12 @@ LIB_EXPORT bool CC KHashTableDelete(KHashTable* self, const void* key,
     }
 }
 
-LIB_EXPORT rc_t CC KHashTableReserve(KHashTable* self, size_t capacity)
+LIB_EXPORT rc_t KHashTableReserve(KHashTable* self, size_t capacity)
 {
-    return 0;
+    return rehash(self, capacity);
 }
 
-LIB_EXPORT double CC KHashTableGetLoadFactor(const KHashTable* self)
-{
-    if (self == NULL) return 0.0;
-    if (self->num_buckets == 0) return 0.0;
-
-    double load_factor = (double)self->load / (double)self->num_buckets;
-    return load_factor;
-}
-
-LIB_EXPORT void CC KHashTableIteratorMake(KHashTable* self)
+LIB_EXPORT void KHashTableIteratorMake(KHashTable* self)
 {
     if (self != NULL) self->iterator = 0;
 }
@@ -635,7 +663,7 @@ static uint64_t HashLen64(const char* s, size_t len)
     return hash;
 }
 
-LIB_EXPORT uint64_t CC KHash(const char* s, size_t len)
+LIB_EXPORT uint64_t KHash(const char* s, size_t len)
 {
     uint64_t hash;
 
