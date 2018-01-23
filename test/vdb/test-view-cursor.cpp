@@ -117,6 +117,13 @@ public:
         THROW_ON_RC ( VCursorRelease ( cursor ) );
     }
 
+    uint32_t AddColumn ( const char * p_colName )
+    {
+        uint32_t ret;
+        THROW_ON_RC ( VCursorAddColumn ( m_cur, & ret, "%s", p_colName ) );
+        return ret;
+    }
+
     string ReadAscii ( int64_t p_row, uint32_t p_colIdx )
     {
         THROW_ON_RC ( VCursorReadDirect ( m_cur, p_row, p_colIdx, 8, m_buf, sizeof ( m_buf ), & m_rowLen ) );
@@ -156,7 +163,7 @@ public:
                                  const char *   p_colName )
     {
         CreateCursor ( p_testName, p_viewName );
-        THROW_ON_RC ( VCursorAddColumn ( m_cur, & m_columnIdx, "%s", p_colName ) );
+        m_columnIdx = AddColumn ( p_colName );
     }
 
     void CreateCursorOpen ( const string & p_testName,
@@ -994,10 +1001,8 @@ FIXTURE_TEST_CASE( ViewCursor_MultipleInheritance, ViewOnTableCursorFixture )
     OpenTableBind ( "t2", "p_t2" );
 
     // read c1 and c2 joined on rowId
-    uint32_t colIdx1;
-    REQUIRE_RC ( VCursorAddColumn ( m_cur, & colIdx1, "%s", "c1" ) );
-    uint32_t colIdx2;
-    REQUIRE_RC ( VCursorAddColumn ( m_cur, & colIdx2, "%s", "c2" ) );
+    uint32_t colIdx1 = AddColumn ( "c1" );
+    uint32_t colIdx2 = AddColumn ( "c2" );
     REQUIRE_RC ( VCursorOpen ( m_cur ) );
 
     REQUIRE_EQ ( string ("t1_c_r1"), ReadAscii ( 1, colIdx1 ) );
@@ -1054,10 +1059,10 @@ FIXTURE_TEST_CASE ( ViewCursor_FunctionCall_External, ViewOnTableCursorFixture )
 
     {
         MakeDatabase ( m_schemaText, "DB" );
-        VCursor * cursor = CreateTable ( TableName );
-        REQUIRE_RC ( VCursorAddColumn ( cursor, & m_columnIdx, "c1" ) );
-        uint32_t oneIdx;
-        REQUIRE_RC ( VCursorAddColumn ( cursor, & oneIdx, "one" ) );
+        m_cur = CreateTable ( TableName );
+        uint32_t colIdx1 = AddColumn ( "c1" );
+        uint32_t colIdx2 = AddColumn ( "one" );
+        VCursor * cursor = (VCursor*) m_cur;
         REQUIRE_RC ( VCursorOpen ( cursor ) );
 
        // insert some rows
@@ -1066,26 +1071,27 @@ FIXTURE_TEST_CASE ( ViewCursor_FunctionCall_External, ViewOnTableCursorFixture )
         const uint8_t One = 1;
 
         REQUIRE_RC ( VCursorOpenRow ( cursor ) );
-        REQUIRE_RC ( VCursorWrite ( cursor, m_columnIdx, 8, &c1_1, 0, 4 ) );
-        REQUIRE_RC ( VCursorWrite ( cursor, oneIdx, 8, &One, 0, 1 ) );
+        REQUIRE_RC ( VCursorWrite ( cursor, colIdx1, 8, &c1_1, 0, 4 ) );
+        REQUIRE_RC ( VCursorWrite ( cursor, colIdx2, 8, &One, 0, 1 ) );
         REQUIRE_RC ( VCursorCommitRow ( cursor ) );
         REQUIRE_RC ( VCursorCloseRow ( cursor ) );
 
         REQUIRE_RC ( VCursorOpenRow ( cursor ) );
-        REQUIRE_RC ( VCursorWrite ( cursor, m_columnIdx, 8, &c1_2, 0, 4 ) );
-        REQUIRE_RC ( VCursorWrite ( cursor, oneIdx, 8, &One, 0, 1 ) );
+        REQUIRE_RC ( VCursorWrite ( cursor, colIdx1, 8, &c1_2, 0, 4 ) );
+        REQUIRE_RC ( VCursorWrite ( cursor, colIdx2, 8, &One, 0, 1 ) );
         REQUIRE_RC ( VCursorCommitRow ( cursor ) );
         REQUIRE_RC ( VCursorCloseRow ( cursor ) );
 
         REQUIRE_RC ( VCursorCommit ( cursor ) );
         REQUIRE_RC ( VCursorRelease ( cursor ) );
+        m_cur = 0;
     }
 
     {   // read and verify: swap(U8[2], 1) swaps the first 2 elements
         REQUIRE_RC ( VDBManagerOpenView ( m_mgr, & m_view, m_schema, "V1" ) );
         OpenTableBind ( TableName, TableParamName );
         REQUIRE_RC ( VViewCreateCursor ( m_view, & m_cur ) );
-        REQUIRE_RC ( VCursorAddColumn ( m_cur, & m_columnIdx, "%s", "c1" ) );
+        m_columnIdx = AddColumn ( "c1" );
         REQUIRE_RC ( VCursorOpen ( m_cur ) );
 
         uint8_t val[4] = {0, 0, 0, 0};
@@ -1105,7 +1111,6 @@ FIXTURE_TEST_CASE ( ViewCursor_FunctionCall_External, ViewOnTableCursorFixture )
 
 FIXTURE_TEST_CASE( ViewCursor_Join_Shorthand, ViewOnTableCursorFixture )
 {
-    m_keepDb = true;
     m_schemaText =
     "version 2.0;"
     "table T1#1 { column I64 c01; };"
@@ -1125,15 +1130,43 @@ FIXTURE_TEST_CASE( ViewCursor_Join_Shorthand, ViewOnTableCursorFixture )
     OpenTableBind ( "t1", "p_t1" );
     OpenTableBind ( "t2", "p_t2" );
     REQUIRE_RC ( VViewCreateCursor ( m_view, & m_cur ) );
-    REQUIRE_RC ( VCursorAddColumn ( m_cur, & m_columnIdx, "%s", "c1" ) );
+    m_columnIdx = AddColumn ( "c1" );
     REQUIRE_RC ( VCursorOpen ( m_cur ) );
     // T2 rows seen through V in reverse order
     REQUIRE_EQ ( string ("t2_c_r2"), ReadAscii ( 1, m_columnIdx ) );
     REQUIRE_EQ ( string ("t2_c_r1"), ReadAscii ( 2, m_columnIdx ) );
 }
-//TODO: access production through a join
-//TODO: join with a non-int key
-//TODO: join with a non-I64 integer key
+
+FIXTURE_TEST_CASE( ViewCursor_Join_Shorthand_Production, ViewOnTableCursorFixture )
+{
+    m_schemaText =
+    "version 2.0;"
+    "table T1#1 { column I64 c01; };"
+    "table T2#1 { column ascii c02; ascii p = c02; };"
+    "database DB#1 { table T1 t1; table T2 t2; };"
+    "view V#1 < T1 p_t1, T2 p_t2 > { column ascii c1 = p_t2 [ p_t1 . c01 ] . p; };"
+    ;
+
+    {
+        // create DB
+        m_databaseName = ScratchDir + GetName();
+        MakeDatabase ( m_schemaText, "DB" );
+        CreateTablePopulate( "t1", "c01", 2, 1 );
+        CreateTablePopulate( "t2", "c02", "t2_c_r1", "t2_c_r2" );
+    }
+    REQUIRE_RC ( VDBManagerOpenView ( m_mgr, & m_view, m_schema, "V" ) );
+    OpenTableBind ( "t1", "p_t1" );
+    OpenTableBind ( "t2", "p_t2" );
+    REQUIRE_RC ( VViewCreateCursor ( m_view, & m_cur ) );
+    m_columnIdx = AddColumn ( "c1" );
+    REQUIRE_RC ( VCursorOpen ( m_cur ) );
+    // T2 rows seen through V in reverse order
+    REQUIRE_EQ ( string ("t2_c_r2"), ReadAscii ( 1, m_columnIdx ) );
+    REQUIRE_EQ ( string ("t2_c_r1"), ReadAscii ( 2, m_columnIdx ) );
+}
+
+//TODO: join with a non-int key (error)
+//TODO: join with a non-I64 integer key (cast required?)
 
 //TODO: external function call in a view parameter's productions
 
@@ -1170,9 +1203,9 @@ FIXTURE_TEST_CASE ( ViewCursor_GetTable_OnView, ViewOnViewCursorFixture )
 FIXTURE_TEST_CASE ( ViewCursor_OnView_Read, ViewOnViewCursorFixture )
 {
     CreateCursor ( GetName () );
-
-    REQUIRE_RC ( VCursorAddColumn ( m_cur, & m_columnIdx, "%s", ViewColumnName ) );
+    m_columnIdx = AddColumn ( ViewColumnName );
     REQUIRE_RC ( VCursorOpen ( m_cur ) );
+
     REQUIRE_EQ ( string ("blah"), ReadAscii ( 1, m_columnIdx ) );
     REQUIRE_EQ ( string ("eeee"), ReadAscii ( 2, m_columnIdx ) );
 }

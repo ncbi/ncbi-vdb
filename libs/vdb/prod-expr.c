@@ -457,7 +457,7 @@ rc_t VProdResolveMembExpr ( const VProdResolve *    p_self,
         Locate the VTable/VView bound to the corresponding parameter of the view,
         make a SSymExpr pointing to p_x -> member, call ProdResolveColExpr/VProdResolveProdExpr in the context of the VTable/VView */
 
-    if ( p_x -> member -> type == eColumn /*|| p_x -> member -> type == eProduction*/ )
+    if ( p_x -> member -> type == eColumn || p_x -> member -> type == eProduction )
     {
         VProdResolve pr = * p_self;
         pr . name = & object -> name;
@@ -480,7 +480,9 @@ rc_t VProdResolveMembExpr ( const VProdResolve *    p_self,
 
             {
                 const SExpression * ref;
-                rc_t rc = SSymExprMake( & ref, p_x -> member, eColExpr );
+                rc_t rc = SSymExprMake( & ref,
+                                        p_x -> member,
+                                        p_x -> member -> type == eColumn ? eColExpr : eProdExpr );
                 if ( rc == 0 )
                 {
                     VProduction * vmember;
