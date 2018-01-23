@@ -128,6 +128,13 @@ public:
         THROW_ON_RC ( VCursorCommitRow ( p_cursor ) );
         THROW_ON_RC ( VCursorCloseRow ( p_cursor ) );
     }
+    void WriteRow ( VCursor * p_cursor, uint32_t p_colIdx, int64_t p_value )
+    {
+        THROW_ON_RC ( VCursorOpenRow ( p_cursor ) );
+        THROW_ON_RC ( VCursorWrite ( p_cursor, p_colIdx, sizeof(p_value)*8, & p_value, 0, 1 ) );
+        THROW_ON_RC ( VCursorCommitRow ( p_cursor ) );
+        THROW_ON_RC ( VCursorCloseRow ( p_cursor ) );
+    }
 
     static std :: string ToCppString ( const String & p_str)
     {

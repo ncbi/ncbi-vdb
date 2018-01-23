@@ -134,3 +134,4 @@ rc_t VColumnProdRead ( VColumnProd *self, struct VBlob **vblob, int64_t id )
 {
     return RC ( rcVDB, rcColumn, rcReading, rcSchema, rcInvalid );
 }
+

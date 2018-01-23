@@ -396,7 +396,7 @@ struct SVectExpr
  * SMembExpr
  *  a member (column or production) a view parameter (a table or a view)
  *  represents an "object . member" expression, where "object" is a parameter
- *  of a directly enclosing view
+ *  of a directly enclosing view, wich an optional pivot into the object's row-id space.
  */
 typedef struct SMembExpr SMembExpr;
 struct SMembExpr
@@ -405,6 +405,8 @@ struct SMembExpr
     const struct SView * view;
     uint32_t paramId;
     const struct KSymbol * member;
+
+    const SExpression * rowId; /* optional row-id in param's row-id space */
 };
 
 #ifdef __cplusplus

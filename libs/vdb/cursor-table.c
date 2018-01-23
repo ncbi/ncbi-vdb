@@ -1683,7 +1683,7 @@ rc_t VTableCursorDataPrefetch ( const VCURSOR_IMPL *cself,
 
 							cctx.cache = cself -> blob_mru_cache;
 							cctx.col_idx = col_idx;
-							rc = VProductionReadBlob ( col->in, & blob, row_id, 1, &cctx );
+							rc = VProductionReadBlob ( col->in, & blob, & row_id, 1, &cctx );
 							if ( rc == 0 )
 							{
 								rc_t rc_cache;

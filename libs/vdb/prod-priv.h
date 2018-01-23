@@ -109,7 +109,10 @@ enum
     prodPhysical,
 
     /* an adapter production referencing a VColumn */
-    prodColumn
+    prodColumn,
+
+    /* pivot into another table's row-id space */
+    prodPivot
 };
 
 /* read/write chain */
@@ -231,7 +234,7 @@ uint32_t VProductionFixedRowLength ( const VProduction *self, int64_t row_id, bo
  *  fetch a blob containing at least the requested row
  *  returns a new reference
  */
-rc_t VProductionReadBlob ( const VProduction *self, struct VBlob **vblob, int64_t id , uint32_t cnt, struct VBlobMRUCacheCursorContext* cctx);
+rc_t VProductionReadBlob ( const VProduction *self, struct VBlob **vblob, int64_t * id , uint32_t cnt, struct VBlobMRUCacheCursorContext* cctx);
 
 /* IsStatic
  *  trace all the way to a physical production
@@ -281,7 +284,7 @@ rc_t VSimpleProdMake ( VProduction **prod, Vector *owned,
 /* Read
  *  return a blob containing row id
  */
-rc_t VSimpleProdRead ( VSimpleProd *self, struct VBlob **vblob, int64_t id, uint32_t cnt, struct VBlobMRUCacheCursorContext *cctx );
+rc_t VSimpleProdRead ( VSimpleProd *self, struct VBlob **vblob, int64_t * id, uint32_t cnt, struct VBlobMRUCacheCursorContext *cctx );
 
 
 /*--------------------------------------------------------------------------
@@ -323,7 +326,7 @@ struct VFunctionProd
 
         /* merge type */
         VBlobFuncN bfN;
-        
+
         /* compare type */
         VBlobCompareFunc cf;
 
@@ -454,6 +457,31 @@ void VColumnProdDestroy ( VColumnProd *self );
 rc_t VColumnProdRead ( VColumnProd *self,
     struct VBlob **vblob, int64_t id );
 
+/*--------------------------------------------------------------------------
+ * VPivotProd
+ *  Pivots to a new row-id space
+ *  Read side ony
+ */
+typedef struct VPivotProd VPivotProd;
+struct VPivotProd
+{
+    VProduction   dad;
+    VProduction * member; /* column or production */
+    VProduction * row_id; /* in the row-id space of col's table */
+};
+
+rc_t VPivotProdMake ( VPivotProd ** prodp,
+                      Vector *      owned,
+                      VProduction * member,
+                      VProduction * row_id,
+                      const char *  name,
+                      int           chain );
+
+void VPivotProdDestroy ( VPivotProd *self );
+
+/* Read
+ */
+rc_t VPivotProdRead ( VPivotProd *self, struct VBlob **vblob, int64_t * id, uint32_t cnt );
 
 #ifdef __cplusplus
 }

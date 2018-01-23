@@ -931,7 +931,8 @@ bool CC run_trigger_prods ( void *item, void *data )
     VProduction *prod = item;
 
     VBlob *blob;
-    pb -> rc = VProductionReadBlob ( prod, & blob, pb -> id , pb -> cnt, NULL);
+    int64_t rowId = pb -> id;
+    pb -> rc = VProductionReadBlob ( prod, & blob, & rowId, pb -> cnt, NULL);
     if ( pb -> rc != 0 )
         return true;
     if ( blob != NULL )

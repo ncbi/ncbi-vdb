@@ -285,6 +285,7 @@
 %token PT_VIEWPARENTS
 %token PT_VIEWPARENT
 %token PT_MEMBEREXPR
+%token PT_JOINEXPR
 
  /* !!! Keep token declarations above in synch with schema-ast.y */
 
@@ -813,6 +814,7 @@ primary_expr_1_0
     | '-' expression_1_0        { $$ . subtree = MakeTree ( PT_NEGATE, T ( $1 ), P ( $2 ) ); }
     | '+' expression_1_0        { $$ . subtree = MakeTree ( PT_UNARYPLUS, T ( $1 ), P ( $2 ) ); }
     | member_expr_2_0           { $$ = $1; }
+    | join_expr_2_0             { $$ = $1; }
     ;
 
 func_expr_1_0
@@ -909,6 +911,11 @@ type_expr_1_0
 member_expr_2_0
     : ident_1_0 '.' ident_1_0           { $$ . subtree = MakeTree ( PT_MEMBEREXPR, P ( $1 ), T ( $2 ), P ( $3 ) ); }
     | ident_1_0 PHYSICAL_IDENTIFIER_1_0 { $$ . subtree = MakeTree ( PT_MEMBEREXPR, P ( $1 ), T ( $2 ) ); }
+    ;
+
+join_expr_2_0
+    : ident_1_0 '[' cond_expr_1_0 ']' '.' ident_1_0
+        { $$ . subtree = MakeTree ( PT_JOINEXPR, P ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ), T ( $5 ), P ($6 ) ); }
     ;
 
  /* database */

@@ -804,7 +804,7 @@ AST_Expr :: MakeCast ( ASTBuilder & p_builder ) const
 
 static
 SExpression *
-SMembExprMake ( ASTBuilder & p_builder, const KSymbol* p_obj, const KSymbol* p_mem )
+SMembExprMake ( ASTBuilder & p_builder, const KSymbol* p_obj, const KSymbol* p_mem, const SExpression * p_rowId )
 {
     SMembExpr *x = p_builder . Alloc < SMembExpr > ();
     if ( x == 0 )
@@ -830,27 +830,35 @@ SMembExprMake ( ASTBuilder & p_builder, const KSymbol* p_obj, const KSymbol* p_m
     }
 
     x -> member = p_mem;
+    x -> rowId = p_rowId;
 
     return & x -> dad;
 }
 
+static
 SExpression *
-AST_Expr :: MakeMember ( ASTBuilder & p_builder ) const
+MakeSMembExpr ( ASTBuilder & p_builder, const AST & p_struc, const AST & p_member, const AST_Expr * p_rowId = 0 )
 {
-    assert ( GetTokenType () == PT_MEMBEREXPR );
-    assert ( ChildrenCount () == 2 );
-    const AST & struc = * GetChild ( 0 );
-    assert ( struc . GetTokenType () == PT_IDENT );
-    assert ( struc . ChildrenCount () == 1 );
-    const AST & member = * GetChild ( 1 );
-    assert ( member . GetTokenType () == PT_IDENT );
-    assert ( member . ChildrenCount () == 1 );
+    assert ( p_struc . GetTokenType () == PT_IDENT );
+    assert ( p_struc . ChildrenCount () == 1 );
+    assert ( p_member . GetTokenType () == PT_IDENT );
+    assert ( p_member . ChildrenCount () == 1 );
 
-    const KSymbol * sym = p_builder . Resolve ( struc . GetChild ( 0 ) -> GetLocation (),
-                                                struc . GetChild ( 0 ) -> GetTokenValue (),
+    const KSymbol * sym = p_builder . Resolve ( p_struc . GetChild ( 0 ) -> GetLocation (),
+                                                p_struc . GetChild ( 0 ) -> GetTokenValue (),
                                                 true );
     if ( sym != 0 )
     {
+        const SExpression * rowId = 0;
+        if ( p_rowId != 0 )
+        {
+            rowId = p_rowId -> MakeExpression ( p_builder );
+            if ( rowId == 0 )
+            {
+                return 0;
+            }
+        }
+
         switch ( sym -> type )
         {
         case eTable:
@@ -858,16 +866,16 @@ AST_Expr :: MakeMember ( ASTBuilder & p_builder ) const
                 const STable * t = static_cast < const STable * > ( sym -> u . obj );
                 // find member . GetChild ( 0 ) in t -> scope
                 String memName;
-                StringInitCString ( & memName, member . GetChild ( 0 ) -> GetTokenValue () );
+                StringInitCString ( & memName, p_member . GetChild ( 0 ) -> GetTokenValue () );
                 const KSymbol * mem = ( const KSymbol* ) BSTreeFind ( & t -> scope, & memName, KSymbolCmp );
                 if ( mem != 0 )
                 {
                     assert ( mem -> type == eColumn || mem -> type == eProduction );
-                    return SMembExprMake ( p_builder, sym, mem );
+                    return SMembExprMake ( p_builder, sym, mem, rowId );
                 }
                 else
                 {
-                    p_builder . ReportError ( GetLocation (), "Column/production not found", memName );
+                    p_builder . ReportError ( p_member . GetLocation (), "Column/production not found", memName );
                 }
             }
             break;
@@ -876,16 +884,16 @@ AST_Expr :: MakeMember ( ASTBuilder & p_builder ) const
                 const SView * v = static_cast < const SView * > ( sym -> u . obj );
                 // find member . GetChild ( 0 ) in v -> scope
                 String memName;
-                StringInitCString ( & memName, member . GetChild ( 0 ) -> GetTokenValue () );
+                StringInitCString ( & memName, p_member . GetChild ( 0 ) -> GetTokenValue () );
                 const KSymbol * mem = ( const KSymbol* ) BSTreeFind ( & v -> scope, & memName, KSymbolCmp );
                 if ( mem != 0 )
                 {
                     assert ( mem -> type == eColumn || mem -> type == eProduction );
-                    return SMembExprMake ( p_builder, sym, mem );
+                    return SMembExprMake ( p_builder, sym, mem, rowId );
                 }
                 else
                 {
-                    p_builder . ReportError ( GetLocation (), "Column/production not found", memName );
+                    p_builder . ReportError ( p_member . GetLocation (), "Column/production not found", memName );
                 }
             }
             break;
@@ -896,6 +904,25 @@ AST_Expr :: MakeMember ( ASTBuilder & p_builder ) const
     }
 
     return 0;
+}
+
+SExpression *
+AST_Expr :: MakeMember ( ASTBuilder & p_builder ) const
+{
+    assert ( GetTokenType () == PT_MEMBEREXPR );
+    assert ( ChildrenCount () == 2 ); // ident, ident
+    return MakeSMembExpr ( p_builder, * GetChild ( 0 ), * GetChild ( 1 ) );
+}
+
+SExpression *
+AST_Expr :: MakeJoin ( ASTBuilder & p_builder ) const
+{
+    assert ( GetTokenType () == PT_JOINEXPR );
+    assert ( ChildrenCount () == 3 ); // ident, rowid-expr, ident
+    return MakeSMembExpr ( p_builder,
+                           * GetChild ( 0 ),
+                           * GetChild ( 2 ),
+                           ToExpr ( GetChild ( 1 ) ) );
 }
 
 SExpression *
@@ -1064,6 +1091,9 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
 
     case PT_MEMBEREXPR:
         return MakeMember ( p_builder );
+
+    case PT_JOINEXPR:
+        return MakeJoin ( p_builder );
 
     default:
         p_builder . ReportError ( GetLocation (), "Not yet implemented" );

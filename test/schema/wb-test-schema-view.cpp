@@ -456,6 +456,34 @@ FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesProduction, AST_View_Fixture
     REQUIRE_EQ ( ( uint32_t ) eMembExpr, v . Columns () . Get ( 0 ) -> read -> var );
 }
 
+FIXTURE_TEST_CASE(View_Join_Shorthand, AST_View_Fixture)
+{
+    ViewAccess v = ParseView (
+        "version 2;"
+        "table T1#1 { column I64 c1; };"
+        "table T2#1 { column U8 c2; };"
+        "view X#1 <T1 t1, T2 t2> { column U8 c3 = t2 [ t1 . c1 ] . c2; }; ",
+        "X" );
+
+    REQUIRE_EQ ( 1u, v . Columns () . Count () );
+    const SColumn & c = * v . Columns () . Get ( 0 );
+    REQUIRE_NOT_NULL ( c . name );
+    REQUIRE_EQ ( string ("c3"), ToCppString ( c . name -> name ) );
+    REQUIRE_NOT_NULL ( c . read );
+    REQUIRE_EQ ( ( uint32_t ) eMembExpr, c . read -> var );
+    const SMembExpr * expr = reinterpret_cast < const SMembExpr * > ( c . read );
+    REQUIRE_EQ ( v . m_self, expr -> view );
+    REQUIRE_EQ ( 1u, expr -> paramId ); // t2
+    REQUIRE_EQ ( string("c2"), ToCppString ( expr -> member -> name ) );
+
+    REQUIRE_NOT_NULL ( expr -> rowId );
+    const SMembExpr * rowId = reinterpret_cast < const SMembExpr * > ( expr ->  rowId );
+    REQUIRE_EQ ( v . m_self, rowId -> view );
+    REQUIRE_EQ ( 0u, rowId -> paramId ); // t1
+    REQUIRE_EQ ( string("c1"), ToCppString ( rowId -> member -> name ) );
+    REQUIRE_NULL ( rowId -> rowId );
+}
+
 FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesColumn_Undefined, AST_View_Fixture)
 {
     VerifyErrorMessage (

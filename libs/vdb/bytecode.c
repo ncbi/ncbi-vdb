@@ -46,7 +46,7 @@ void CC vblob_release ( void *item, void *ignore )
 static
 rc_t VSimpleProdPage2Blob ( VSimpleProd *self, VBlob **rslt, int64_t id ,uint32_t cnt)
 {
-    return VProductionReadBlob(self->in, rslt, id, cnt, NULL);
+    return VProductionReadBlob(self->in, rslt, & id, cnt, NULL);
 }
 
 static
@@ -54,7 +54,7 @@ rc_t VSimpleProdSerial2Blob ( VSimpleProd *self, VBlob **rslt, int64_t id, uint3
 {
     /* read serialized blob */
     VBlob *sblob;
-    rc_t rc = VProductionReadBlob ( self -> in, &sblob, id, cnt, NULL );
+    rc_t rc = VProductionReadBlob ( self -> in, &sblob, &id, cnt, NULL );
     if ( rc == 0 )
     {
         /* recast data to 8 bit */
@@ -97,7 +97,7 @@ rc_t VSimpleProdBlob2Serial( VSimpleProd *self, VBlob **rslt, int64_t id, uint32
     rc_t rc;
     VBlob *sblob;
 
-    rc = VProductionReadBlob(self->in, &sblob, id, cnt, NULL);
+    rc = VProductionReadBlob(self->in, &sblob, &id, cnt, NULL);
     if (rc == 0) {
         VBlob *y;
 
@@ -138,19 +138,28 @@ rc_t ByteCode_ProductionReadBlob ( struct VProduction * self, struct ByteCodeCon
         switch ( self -> var )
         {
         case prodSimple:
-            ctx -> rc = ExecuteByteCode ( bcSimpleProdRead,    self, ctx ); break;
+            ctx -> rc = ExecuteByteCode ( bcSimpleProdRead, self, ctx );
+            break;
         case prodFunc:
-            ctx ->rc = VFunctionProdRead ( ( VFunctionProd* ) self, & ctx -> result, ctx -> id , ctx -> cnt); break;
+            ctx ->rc = VFunctionProdRead ( ( VFunctionProd* ) self, & ctx -> result, ctx -> id , ctx -> cnt);
+            break;
             /*ctx -> rc = ExecuteByteCode ( bcFunctionProdRead,  self, ctx ); break;*/
         case prodScript:
-            ctx ->rc = VScriptProdRead ( ( VScriptProd* ) self, & ctx -> result, ctx -> id , ctx -> cnt); break;
+            ctx ->rc = VScriptProdRead ( ( VScriptProd* ) self, & ctx -> result, ctx -> id , ctx -> cnt);
+            break;
             /*ctx -> rc = ExecuteByteCode ( bcScriptProdRead,    self, ctx ); break;*/
         case prodPhysical:
-            ctx ->rc = VPhysicalProdRead ( ( VPhysicalProd* ) self, & ctx -> result, ctx -> id, ctx -> cnt ); break;
+            ctx ->rc = VPhysicalProdRead ( ( VPhysicalProd* ) self, & ctx -> result, ctx -> id, ctx -> cnt );
+            break;
             /*ctx -> rc = ExecuteByteCode ( bcPhysicalProdRead,  self, ctx ); break;*/
         case prodColumn:
-            ctx ->rc = VColumnProdRead ( ( VColumnProd* ) self, & ctx -> result, ctx -> id ); break;
+            ctx ->rc = VColumnProdRead ( ( VColumnProd* ) self, & ctx -> result, ctx -> id );
+            break;
             /*ctx -> rc = ExecuteByteCode ( bcColumnProdRead,    self, ctx ); break;*/
+        case prodPivot:
+            ctx ->rc = VPivotProdRead ( ( VPivotProd* ) self, & ctx -> result, & ctx -> id, ctx -> cnt );
+            /*ctx -> rc = ExecuteByteCode ( bcPivotProdRead, (VPivotProd*)self, & ctx );*/
+            break;
         default:
             ctx -> rc = RC ( rcVDB, rcProduction, rcReading, rcType, rcUnknown );
         }

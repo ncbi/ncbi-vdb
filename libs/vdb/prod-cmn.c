@@ -23,7 +23,7 @@
 * ===========================================================================
 *
 */
-#define BYTECODE 1
+#define BYTECODE 0
 
 #define USE_EUGENE 1
 
@@ -223,7 +223,7 @@ rc_t VSimpleProdMake ( VProduction **prodp, Vector *owned, struct VCursor const 
 static
 rc_t VSimpleProdPage2Blob ( VSimpleProd *self, VBlob **rslt, int64_t id ,uint32_t cnt)
 {
-    return VProductionReadBlob(self->in, rslt, id, cnt, NULL);
+    return VProductionReadBlob(self->in, rslt, & id, cnt, NULL);
 }
 
 static
@@ -231,7 +231,7 @@ rc_t VSimpleProdSerial2Blob ( VSimpleProd *self, VBlob **rslt, int64_t id, uint3
 {
     /* read serialized blob */
     VBlob *sblob;
-    rc_t rc = VProductionReadBlob ( self -> in, &sblob, id, cnt, NULL );
+    rc_t rc = VProductionReadBlob ( self -> in, &sblob, & id, cnt, NULL );
     if ( rc == 0 )
     {
         /* recast data to 8 bit */
@@ -267,7 +267,7 @@ rc_t VSimpleProdBlob2Serial( VSimpleProd *self, VBlob **rslt, int64_t id, uint32
     rc_t rc;
     VBlob *sblob;
 
-    rc = VProductionReadBlob(self->in, &sblob, id, cnt, NULL);
+    rc = VProductionReadBlob(self->in, &sblob, & id, cnt, NULL);
     if (rc == 0) {
         VBlob *y;
 
@@ -296,21 +296,21 @@ rc_t VSimpleProdBlob2Serial( VSimpleProd *self, VBlob **rslt, int64_t id, uint32
 /* Read
  *  return a blob containing row id
  */
-rc_t VSimpleProdRead ( VSimpleProd *self, VBlob **vblob, int64_t id, uint32_t cnt, VBlobMRUCacheCursorContext *cctx)
+rc_t VSimpleProdRead ( VSimpleProd *self, VBlob **vblob, int64_t * id, uint32_t cnt, VBlobMRUCacheCursorContext *cctx)
 {
     rc_t rc;
 
     switch ( self -> dad . sub )
     {
     case prodSimpleCast:
-        rc = VProductionReadBlob ( self -> in, vblob, id , cnt, cctx );
+        rc = VProductionReadBlob ( self -> in, vblob, id, cnt, cctx ); /* *id may change here */
         break;
     case prodSimplePage2Blob:
-        return VSimpleProdPage2Blob(self, vblob, id, cnt);
+        return VSimpleProdPage2Blob(self, vblob, * id, cnt);
     case prodSimpleSerial2Blob:
-        return VSimpleProdSerial2Blob(self, vblob, id, cnt);
+        return VSimpleProdSerial2Blob(self, vblob, * id, cnt);
     case prodSimpleBlob2Serial:
-        return VSimpleProdBlob2Serial(self, vblob, id, cnt);
+        return VSimpleProdBlob2Serial(self, vblob, * id, cnt);
     default:
         * vblob = NULL;
         return RC ( rcVDB, rcProduction, rcReading, rcProduction, rcCorrupt );
@@ -1494,7 +1494,7 @@ rc_t VFunctionProdCallCompare1(VFunctionProd *self, VBlob **vblob, int64_t id, u
 
     *vblob = NULL;
     assert(VectorLength(&self->parms) == 2);
-    rc = VProductionReadBlob((const VProduction *)VectorGet(&self->parms, 0), &orig, id, cnt, NULL);
+    rc = VProductionReadBlob((const VProduction *)VectorGet(&self->parms, 0), &orig, &id, cnt, NULL);
     if (rc == 0) {
         int64_t i;
         PageMapIterator oi;
@@ -1513,7 +1513,7 @@ rc_t VFunctionProdCallCompare1(VFunctionProd *self, VBlob **vblob, int64_t id, u
 
             j = PageMapIteratorDataLength(&oi);
 
-            rc = VProductionReadBlob(test_prod, &test, i, 1, NULL);
+            rc = VProductionReadBlob(test_prod, &test, &i, 1, NULL);
             if (rc == 0) {
                 if (orig->data.elem_bits != test->data.elem_bits || orig->byte_order != test->byte_order)
                     rc = RC(rcVDB, rcBlob, rcValidating, rcBlob, rcCorrupt);
@@ -1606,12 +1606,12 @@ rc_t VFunctionProdCallCompare( VFunctionProd *self, VBlob **vblob, int64_t id, u
     *vblob = NULL;
     assert(VectorLength(&self->parms) == 2);
     orig_prod = (const VProduction *)VectorGet(&self->parms, 0);
-    rc = VProductionReadBlob(orig_prod, &orig, id, cnt, NULL);
+    rc = VProductionReadBlob(orig_prod, &orig, &id, cnt, NULL);
     if (rc == 0) {
         VBlob *test;
         const VProduction *test_prod = VectorGet(&self->parms, 1);
 
-        rc = VProductionReadBlob(test_prod, &test, id, cnt, NULL);
+        rc = VProductionReadBlob(test_prod, &test, &id, cnt, NULL);
         if (rc == 0) {
             if (orig->data.elem_bits != test->data.elem_bits || orig->byte_order != test->byte_order){
                 rc = RC(rcVDB, rcBlob, rcValidating, rcBlob, rcCorrupt);
@@ -1703,17 +1703,17 @@ rc_t VFunctionProdCallCompare( VFunctionProd *self, VBlob **vblob, int64_t id, u
                      * and if so, fetch next blob */
                     if (!PageMapIteratorAdvance(&ti, 0)) {
                         VBlob *temp;
-
-                        rc = VProductionReadBlob(test_prod, &temp, i, orig->stop_id - i, NULL);
+                        int64_t row = i;
+                        rc = VProductionReadBlob(test_prod, &temp, &row, orig->stop_id - row, NULL);
                         if (rc == 0) {
                             vblob_release(test, NULL);
                             test = temp;
                             test_data.u.data.base = test->data.base;
                             PageMapNewIterator(test->pm, &ti, 0, -1);
-                            if ( test->start_id < (int64_t)i ) {
-                                if ( !PageMapIteratorAdvance( &ti, (uint32_t)( i - test->start_id ) ) ) {
+                            if ( test->start_id < row ) {
+                                if ( !PageMapIteratorAdvance( &ti, (uint32_t)( row - test->start_id ) ) ) {
                                     rc = RC(rcVDB, rcBlob, rcValidating, rcBlob, rcCorrupt);
-                                    DBGMSG(DBG_VDB, DBG_VDB_COMPARE, ("%s: page map mismatch at row %li\n", self->dad.name, i));
+                                    DBGMSG(DBG_VDB, DBG_VDB_COMPARE, ("%s: page map mismatch at row %li\n", self->dad.name, row));
                                 }
                             }
                         }
@@ -1757,7 +1757,7 @@ bool CC fetch_param_blob ( void *item, void *data )
     fetch_param_blob_data *pb = data;
     VBlob *blob;
 
-    pb -> rc = VProductionReadBlob ( item, & blob, pb -> id , pb -> cnt, NULL);
+    pb -> rc = VProductionReadBlob ( item, & blob, & pb -> id , pb -> cnt, NULL);
     if ( pb -> rc == 0 )
     {
         pb -> rc = VectorAppend ( pb -> inputs, NULL, blob );
@@ -1778,7 +1778,7 @@ bool CC fetch_first_param_blob ( void *item, void *data )
 {
     fetch_param_blob_data *pb = data;
 
-    pb -> rc = VProductionReadBlob ( item, &pb->vblob, pb -> id , pb -> cnt, NULL);
+    pb -> rc = VProductionReadBlob ( item, &pb->vblob, &pb -> id , pb -> cnt, NULL);
     if (GetRCState(pb->rc) == rcNotFound)
         return false;
     if ( pb -> vblob -> data.elem_count == 0 )
@@ -2069,7 +2069,7 @@ void VScriptProdDestroy ( VScriptProd *self )
  */
 rc_t VScriptProdRead ( VScriptProd *self, VBlob **vblob, int64_t id,uint32_t cnt )
 {
-    return VProductionReadBlob ( self -> rtn, vblob, id , cnt, NULL);
+    return VProductionReadBlob ( self -> rtn, vblob, &id , cnt, NULL);
 }
 
 static rc_t VScriptProdColumnIdRange ( const VScriptProd *self, int64_t *first, int64_t *last )
@@ -2082,6 +2082,65 @@ static uint32_t VScriptProdFixedRowLength ( const VScriptProd *self, int64_t row
     return VProductionFixedRowLength(self->rtn, row_id, false);
 }
 
+/*--------------------------------------------------------------------------
+ * VPivotProd
+ *  potentially pivots to a new row-id space
+ */
+
+rc_t VPivotProdMake ( VPivotProd ** p_prodp,
+                      Vector *      p_owned,
+                      VProduction * p_member,
+                      VProduction * p_row_id,
+                      const char *  p_name,
+                      int           p_chain )
+{
+    VPivotProd * prod;
+    VFormatdecl fd = { { 0, 0 }, 0 };
+    VTypedesc desc = { 64, 1, vtdInt };
+    rc_t rc = VProductionMake ( ( VProduction** ) p_prodp, p_owned, sizeof * prod,
+        prodPivot, 0, p_name, & fd, & desc, NULL, p_chain );
+    if ( rc == 0 )
+    {
+        prod = * p_prodp;
+        prod -> member = p_member;
+        prod -> row_id = p_row_id;
+    }
+    return rc;
+}
+
+void VPivotProdDestroy ( VPivotProd * p_self )
+{
+}
+
+/* Read
+ */
+rc_t VPivotProdRead ( VPivotProd * p_self, struct VBlob ** p_vblob, int64_t * p_id, uint32_t p_cnt )
+{
+    struct VBlob * rowIdBlob;
+    rc_t rc;
+    assert ( p_id != NULL );
+    rc = VProductionReadBlob ( p_self -> row_id, & rowIdBlob, p_id , p_cnt, NULL);
+    if ( rc == 0 )
+    {
+        uint32_t elemNum;
+        uint32_t repeat_count;
+        uint32_t rowLen = PageMapGetIdxRowInfo ( rowIdBlob -> pm, ( uint32_t ) ( * p_id - rowIdBlob -> start_id ), & elemNum, & repeat_count );
+        assert ( rowLen == 1);
+        assert ( repeat_count == 1);
+        /* assume elem size is 64 */
+        int64_t newRowId = * ( ( int64_t* ) rowIdBlob -> data . base + elemNum );
+       	vblob_release ( rowIdBlob, NULL );
+
+        rc = VProductionReadBlob ( p_self -> member, p_vblob, & newRowId, p_cnt, NULL);
+        if ( rc == 0 )
+        {
+            /* the cache mechanism will get confused by our overwriting p_id, so turn it off */
+            ( * p_vblob ) -> no_cache = true;
+            * p_id = newRowId;
+        }
+    }
+    return rc;
+}
 
 /*--------------------------------------------------------------------------
  * VProduction
@@ -2111,7 +2170,6 @@ void VProductionInit ( VProduction *self, int var, int sub, const char *name,
     self -> chain = chain;
 }
 #endif
-
 
 void CC VProductionWhack ( void *item, void *owned )
 {
@@ -2166,6 +2224,13 @@ void CC VProductionWhack ( void *item, void *owned )
 #endif
             VColumnProdDestroy ( ( VColumnProd* ) self );
             break;
+
+        case prodPivot:
+#if TRACKING_BLOBS
+            fprintf( stderr, "VPivotProd %p being whacked *** %s\n", self, self->name );
+#endif
+            VPivotProdDestroy ( ( VPivotProd* ) self );
+            break;
         }
 
         free ( self );
@@ -2214,6 +2279,8 @@ rc_t VProductionColumnIdRange ( const VProduction *self,
         return VScriptProdColumnIdRange((const VScriptProd *)self, first, last);
     case prodPhysical:
         return VPhysicalProdColumnIdRange((const VPhysicalProd *)self, first, last);
+    case prodPivot:
+        return VProductionColumnIdRange( ( (const VPivotProd *)self ) -> member, first, last);
     case prodColumn:
         return RC ( rcVDB, rcColumn, rcAccessing, rcRange, rcEmpty );
     }
@@ -2225,7 +2292,7 @@ rc_t VProductionPageIdRange ( VProduction *self,
     int64_t id, int64_t *first, int64_t *last )
 {
     VBlob *blob;
-    rc_t rc = VProductionReadBlob ( self, & blob, id , 1, NULL);
+    rc_t rc = VProductionReadBlob ( self, & blob, & id , 1, NULL);
     if ( rc == 0 )
     {
         * first = blob -> start_id;
@@ -2244,7 +2311,7 @@ uint32_t VProductionRowLength ( const VProduction *self, int64_t row_id )
     uint32_t row_len;
 
     VBlob *blob;
-    rc_t rc = VProductionReadBlob ( self, & blob, row_id, 1, NULL );
+    rc_t rc = VProductionReadBlob ( self, & blob, & row_id, 1, NULL );
     if ( rc != 0 )
         return 0;
 
@@ -2271,6 +2338,8 @@ uint32_t VProductionFixedRowLength ( const VProduction *self, int64_t row_id,boo
         return VScriptProdFixedRowLength((const VScriptProd *)self, row_id);
     case prodPhysical:
         return VPhysicalProdFixedRowLength((const VPhysicalProd *)self, row_id);
+    case prodPivot:
+        assert(false); /*TODO*/
     }
 
     return RC ( rcVDB, rcColumn, rcAccessing, rcType, rcUnknown );
@@ -2278,7 +2347,7 @@ uint32_t VProductionFixedRowLength ( const VProduction *self, int64_t row_id,boo
 
 /* ReadBlob
  */
-rc_t VProductionReadBlob ( const VProduction *cself, VBlob **vblob, int64_t id, uint32_t cnt, VBlobMRUCacheCursorContext *cctx )
+rc_t VProductionReadBlob ( const VProduction *cself, VBlob **vblob, int64_t * p_id, uint32_t cnt, VBlobMRUCacheCursorContext *cctx )
 {
 #if BYTECODE
 
@@ -2288,12 +2357,16 @@ rc_t VProductionReadBlob ( const VProduction *cself, VBlob **vblob, int64_t id, 
         return RC ( rcVDB, rcProduction, rcReading, rcSelf, rcNull );
 
     struct ByteCodeContext ctx;
-    ctx . id = id;
+    ctx . id = * p_id;
     ctx . cnt = cnt;
     ctx . cctx = cctx;
     ctx . result = NULL;
     rc = ExecuteByteCode ( bcProductionReadBlob, self, & ctx );
     * vblob = ctx . result;
+    if ( rc == 0 )
+    {
+        * p_id = ctx . id;
+    }
     return rc;
 
 #else
@@ -2319,7 +2392,7 @@ rc_t VProductionReadBlob ( const VProduction *cself, VBlob **vblob, int64_t id, 
     } else if(self->cctx.cache != NULL){
 	/** somewhere else this production is connected to a cursor **/
 	/** lets try to get answers from the cursor **/
-	blob=(VBlob*) VBlobMRUCacheFind(self->cctx.cache,self->cctx.col_idx,id);
+	blob=(VBlob*) VBlobMRUCacheFind(self->cctx.cache,self->cctx.col_idx,*p_id);
 	if(blob){
 		rc = VBlobAddRef ( blob );
                 if ( rc != 0 ) return rc;
@@ -2343,8 +2416,8 @@ rc_t VProductionReadBlob ( const VProduction *cself, VBlob **vblob, int64_t id, 
                    but never allow a cache hit on retrieval */
                 ! blob -> no_cache &&
 #endif
-                id >= blob -> start_id &&
-                id <= blob -> stop_id )
+                * p_id >= blob -> start_id &&
+                * p_id <= blob -> stop_id )
             {
                 rc = VBlobAddRef ( blob );
                 if ( rc != 0 )
@@ -2384,23 +2457,26 @@ rc_t VProductionReadBlob ( const VProduction *cself, VBlob **vblob, int64_t id, 
     switch ( self -> var )
     {
     case prodSimple:
-        rc = VSimpleProdRead ( ( VSimpleProd* ) self, vblob, id, cnt,cctx );
+        rc = VSimpleProdRead ( ( VSimpleProd* ) self, vblob, p_id, cnt,cctx );
         break;
     case prodFunc:
-        rc = VFunctionProdRead ( ( VFunctionProd* ) self, vblob, id , cnt);
+        rc = VFunctionProdRead ( ( VFunctionProd* ) self, vblob, * p_id , cnt);
 #if _DEBUGGING && PROD_NAME
         if ( rc != 0 )
             DBGMSG ( DBG_VDB, DBG_VDB_FUNCTION, ( "%s: %R\n", self -> name, rc ) );
 #endif
         break;
     case prodScript:
-        rc = VScriptProdRead ( ( VScriptProd* ) self, vblob, id , cnt);
+        rc = VScriptProdRead ( ( VScriptProd* ) self, vblob, * p_id , cnt);
         break;
     case prodPhysical:
-        rc = VPhysicalProdRead ( ( VPhysicalProd* ) self, vblob, id, cnt );
+        rc = VPhysicalProdRead ( ( VPhysicalProd* ) self, vblob, * p_id, cnt );
         break;
     case prodColumn:
-        rc = VColumnProdRead ( ( VColumnProd* ) self, vblob, id );
+        rc = VColumnProdRead ( ( VColumnProd* ) self, vblob, * p_id );
+        break;
+    case prodPivot:
+        rc = VPivotProdRead ( ( VPivotProd* ) self, vblob, p_id, cnt );
         break;
     default:
         return RC ( rcVDB, rcProduction, rcReading, rcType, rcUnknown );
@@ -2433,6 +2509,7 @@ rc_t VProductionReadBlob ( const VProduction *cself, VBlob **vblob, int64_t id, 
     if ( rc == 0 )
     {
         VBlobCheckIntegrity ( blob );
+#if PROD_CACHE
 	if(self -> cache_cnt < PROD_CACHE){
 #if PROD_CACHE > 1
 		if(self -> cache_cnt > 0 ){
@@ -2458,6 +2535,7 @@ rc_t VProductionReadBlob ( const VProduction *cself, VBlob **vblob, int64_t id, 
         }
         /* insert a head of list */
         self -> cache [ 0 ] = blob;
+#endif
 
 #if TRACKING_BLOBS
         fprintf( stderr, "%p->%p(%d) cached *** %s\n"
@@ -2523,6 +2601,9 @@ rc_t VProductionIsStatic ( const VProduction *self, bool *is_static )
             case prodColumn:
                 self = NULL;
                 break;
+            case prodPivot:
+                assert(false); /* TODO */
+                break;
             default:
                 return RC ( rcVDB, rcProduction, rcReading, rcType, rcUnknown );
             }
@@ -2573,6 +2654,9 @@ rc_t VProductionGetKColumn ( const VProduction * self, struct KColumn ** kcol, b
                 return VPhysicalGetKColumn ( ( ( const VPhysicalProd* ) self ) -> phys, kcol, is_static );
             case prodColumn:
                 self = NULL;
+                break;
+            case prodPivot:
+                assert(false); /* TODO */
                 break;
             default:
                 return RC ( rcVDB, rcProduction, rcReading, rcType, rcUnknown );

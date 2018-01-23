@@ -452,69 +452,70 @@ rc_t VProdResolveMembExpr ( const VProdResolve *    p_self,
     const KSymbol * object = VectorGet ( & p_x -> view -> params, p_x -> paramId );
     assert ( p_self -> view );
     assert ( object != NULL );
-    switch ( object -> type )
+
+    /* p_x -> object is a table/view parameter of the view the member-expresison is in.
+        Locate the VTable/VView bound to the corresponding parameter of the view,
+        make a SSymExpr pointing to p_x -> member, call ProdResolveColExpr/VProdResolveProdExpr in the context of the VTable/VView */
+
+    if ( p_x -> member -> type == eColumn /*|| p_x -> member -> type == eProduction*/ )
     {
-    case eTable:
-        {   /* p_x -> object is a table parameter of the view the member-expresison is in.
-                Locate the VTable bound to the corresponding parameter of the view,
-                make a SSymExpr pointing to p_x -> member, call ProdResolveColExpr/VProdResolveProdExpr in the context of the VTable */
-            rc_t rc;
-            VProdResolve pr = * p_self;
-            pr . name = & object -> name;
-            if ( p_x -> member -> type == eColumn )
+        VProdResolve pr = * p_self;
+        pr . name = & object -> name;
+        const void * boundObj = VViewGetBoundObject ( pr . view, p_x -> view, p_x -> paramId );
+        if ( boundObj != 0 )
+        {
+            switch ( object -> type )
+            {
+            case eTable:
+                pr . primary_table = boundObj;
+                pr . view = NULL;
+                break;
+            case eView:
+                /*TODO: should we update pr . primary_table ? */
+                pr . view = boundObj;
+                break;
+            default:
+                return RC ( rcVDB, rcProduction, rcResolving, rcMessage, rcUnsupported );
+            }
+
             {
                 const SExpression * ref;
-                rc = SSymExprMake( & ref, p_x -> member, eColExpr );
+                rc_t rc = SSymExprMake( & ref, p_x -> member, eColExpr );
                 if ( rc == 0 )
                 {
-                    pr . primary_table = VViewGetBoundObject ( pr . view, p_x -> view, p_x -> paramId );
-                    if ( pr . primary_table != NULL )
-                    {
-                        pr . view = NULL;
-                        rc = VProdResolveExpr ( & pr, p_out, NULL, p_fd, ref, p_casting );
-                    }
-                    else
-                    {
-                        rc = RC ( rcVDB, rcProduction, rcResolving, rcParam, rcNotFound );
-                    }
+                    VProduction * vmember;
+                    rc = VProdResolveExpr ( & pr, & vmember, NULL, p_fd, ref, p_casting );
                     SExpressionWhack ( ref );
+                    if ( rc == 0 )
+                    {
+                        if ( p_x -> rowId == NULL )
+                        {   /* simple member: tbl . col */
+                            * p_out = vmember;
+                            return 0;
+                        }
+                        else
+                        {   /* member with a pivot: tbl [ expr ] . col */
+                            VProduction * rowId;
+                            VFormatdecl fd = { { 0, 0 }, 0 };
+                            rc = VProdResolveExpr ( p_self, & rowId, NULL, & fd, p_x -> rowId, p_casting );
+                            if ( rc == 0 )
+                            {
+                                VPivotProd * ret;
+                                rc = VPivotProdMake ( & ret, p_self -> owned, vmember, rowId, p_x -> member -> name . addr, p_self -> chain );
+                                if ( rc == 0 )
+                                {
+                                    * p_out = & ret -> dad;
+                                    return 0;
+                                }
+                                VProductionWhack ( rowId, p_self -> owned );
+                            }
+                            VProductionWhack ( vmember, p_self -> owned );
+                        }
+                    }
                 }
                 return rc;
             }
-            /* TODO: support productions */
-            break;
         }
-    case eView:
-        {   /* p_x -> object is a view parameter of the view the member-expresison is in.
-                Locate the VView bound to the corresponding parameter of the view,
-                make a SSymExpr pointing to p_x -> member, call ProdResolveColExpr/VProdResolveProdExpr in the context of the new view */
-            rc_t rc;
-            VProdResolve pr = * p_self;
-            pr . name = & object -> name;
-            if ( p_x -> member -> type == eColumn )
-            {
-                const SExpression * ref;
-                rc = SSymExprMake( & ref, p_x -> member, eColExpr );
-                if ( rc == 0 )
-                {
-                    pr . view = VViewGetBoundObject( pr . view, p_x -> view, p_x -> paramId );
-                    if ( pr . view != NULL )
-                    {
-                        rc = VProdResolveExpr ( & pr, p_out, NULL, p_fd, ref, p_casting );
-                    }
-                    else
-                    {
-                        rc = RC ( rcVDB, rcProduction, rcResolving, rcParam, rcNotFound );
-                    }
-                    SExpressionWhack ( ref );
-                }
-                return rc;
-            }
-            /* TODO: support productions */
-            break;
-        }
-    default:
-        break;
     }
     return RC ( rcVDB, rcProduction, rcResolving, rcMessage, rcUnsupported );
 }

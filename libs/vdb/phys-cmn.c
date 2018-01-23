@@ -619,7 +619,7 @@ rc_t VPhysicalReadBlob ( VPhysical *self, VBlob **vblob, int64_t id, uint32_t el
     }
 
     /* need to read from kcolumn path */
-    rc = VProductionReadBlob ( self -> b2p, vblob, id , 1, NULL);
+    rc = VProductionReadBlob ( self -> b2p, vblob, & id , 1, NULL);
 	if ( rc == 0 )
     {
 	    if((*vblob)->pm==NULL)

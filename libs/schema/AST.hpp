@@ -115,6 +115,7 @@ namespace ncbi
             SExpression * MakeNegate ( ASTBuilder & ) const;
             SExpression * MakeCast ( ASTBuilder & p_builder ) const;
             SExpression * MakeMember ( ASTBuilder & p_builder ) const;
+            SExpression * MakeJoin ( ASTBuilder & p_builder ) const;
         };
 
         // these conversion function will assert if the argument is NULL or not an AST_Expr,

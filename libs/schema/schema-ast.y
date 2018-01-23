@@ -211,6 +211,7 @@
 %token PT_VIEWPARENTS
 %token PT_VIEWPARENT
 %token PT_MEMBEREXPR
+%token PT_JOINEXPR
 
  /* !!! Keep token declarations above in synch with schema-grammar.y */
 
@@ -237,7 +238,7 @@
 %type <fqn> fqn qualnames fqn_opt_vers ident fqn_vers
 
 %type <expr> expr cond_expr cond_chain uint_expr func_expr float_expr string_expr const_vect_expr
-%type <expr> bool_expr negate_expr cast_expr member_expr
+%type <expr> bool_expr negate_expr cast_expr member_expr join_expr
 
 %type <tok> END_SOURCE version_1 PT_VERSION_1_0 PT_VERSION_2 PT_SCHEMA_1_0 FLOAT_ version_2
 %type <tok> PT_TYPEDEF PT_IDENT IDENTIFIER_1_0 DECIMAL PT_ASTLIST PT_ARRAY PT_TYPESET
@@ -252,7 +253,7 @@
 %type <tok> PT_FUNCEXPR PT_COLSCHEMAPARMS KW_static PT_PHYSMBR PT_PHYSCOLDEF PT_COLSCHEMAPARAM
 %type <tok> KW_physical PT_COLUNTYPED EXP_FLOAT ESCAPED_STRING PT_CONSTVECT KW_true KW_false
 %type <tok> PT_NEGATE PT_CASTEXPR '@' KW_control PT_SCHEMA_2_0
-%type <tok> PT_VIEW PT_VIEWPARAM PT_VIEWPARENTS PT_MEMBEREXPR PT_VIEWPARENT
+%type <tok> PT_VIEW PT_VIEWPARAM PT_VIEWPARENTS PT_MEMBEREXPR PT_VIEWPARENT PT_JOINEXPR
 
 %%
 
@@ -700,6 +701,7 @@ expr
     | PT_UNARYPLUS '(' '+' expr ')' { $$ = $4; }
     | cast_expr                     { $$ = $1; }
     | member_expr                   { $$ = $1; }
+    | join_expr                     { $$ = $1; }
     ;
 
 func_expr
@@ -794,6 +796,11 @@ member_expr
             ident -> AddNode ( & t );
             $$ -> AddNode ( ident );
         }
+    ;
+
+join_expr
+    : PT_JOINEXPR '(' ident '[' cond_expr ']' '.' ident ')'
+        { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $3 ); $$ -> AddNode ( $5 ); $$ -> AddNode ( $8 ); }
     ;
 
 /* commonly used productions */

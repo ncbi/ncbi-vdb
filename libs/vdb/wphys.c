@@ -687,7 +687,8 @@ rc_t VPhysicalConvertStatic ( VPhysical *self )
             {
                 /* get an encoded version of static blob */
                 VBlob *vblob;
-                rc = VProductionReadBlob ( self -> b2s, & vblob, sstart_id, 1,NULL );
+                int64_t rowId = sstart_id;
+                rc = VProductionReadBlob ( self -> b2s, & vblob, & rowId, 1,NULL );
                 if ( rc == 0 )
                 {
                     /* write encoded blob to physical */
@@ -801,7 +802,7 @@ rc_t VPhysicalWrite ( VPhysical *self, int64_t id, uint32_t cnt )
 {
     /* read from page space */
     VBlob *vblob;
-    rc_t rc = VProductionReadBlob ( self -> in, & vblob, id , cnt,NULL);
+    rc_t rc = VProductionReadBlob ( self -> in, & vblob, & id , cnt,NULL);
     if ( rc == 0 )
     {
         /* test for single row in blob */
@@ -876,7 +877,7 @@ rc_t VPhysicalWrite ( VPhysical *self, int64_t id, uint32_t cnt )
             {
                 TRACK_BLOB ( VBlobRelease, vblob );
                 ( void ) VBlobRelease ( vblob );
-                rc = VProductionReadBlob ( self -> b2s, & vblob, id, cnt,NULL );
+                rc = VProductionReadBlob ( self -> b2s, & vblob, & id, cnt,NULL );
                 if ( rc == 0 )
                 {
                     /* write encoded blob to physical */

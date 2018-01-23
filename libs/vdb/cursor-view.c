@@ -301,10 +301,10 @@ VViewCursorAddColspec ( VViewCursor * p_self, uint32_t * p_idx, const char * p_c
 }
 
 rc_t
-VViewCursorVAddColumn ( const VViewCursor *    p_self,
-                        uint32_t *              p_idx,
-                        const char *            p_name,
-                        va_list                 p_args )
+VViewCursorVAddColumn ( const VViewCursor * p_self,
+                        uint32_t *          p_idx,
+                        const char *        p_name,
+                        va_list             p_args )
 {
     rc_t rc = 0;
     if ( p_idx == NULL )
@@ -318,6 +318,10 @@ VViewCursorVAddColumn ( const VViewCursor *    p_self,
     else if ( p_name [ 0 ] == 0 )
     {
         rc = RC ( rcVDB, rcCursor, rcUpdating, rcName, rcEmpty );
+    }
+    else if ( p_self -> dad . state != vcConstruct )
+    {
+        rc = RC ( rcVDB, rcCursor, rcUpdating, rcCursor, rcLocked );
     }
     else
     {
@@ -759,13 +763,13 @@ bad_elem_bits ( uint32_t elem_size, uint32_t elem_bits )
 
 static
 rc_t
-CopyRow ( uint32_t      p_elem_size,
-          uint32_t      p_elem_bits,
-          const void *  p_src,
-          uint32_t      p_src_off,
-          void *        p_dest,
-          uint32_t      p_dest_len,
-          uint32_t *    p_row_len )
+CopyCell ( uint32_t     p_elem_size,
+           uint32_t     p_elem_bits,
+           const void * p_src,
+           uint32_t     p_src_off,
+           void *       p_dest,
+           uint32_t     p_dest_len,
+           uint32_t *   p_row_len )
 {
     rc_t rc = 0;
     if ( bad_elem_bits ( p_elem_size, p_elem_bits ) )
@@ -807,7 +811,7 @@ CopyRow ( uint32_t      p_elem_size,
 
 static
 rc_t
-VViewCursorReadInt ( const VViewCursor * p_self,
+VViewCursorReadInt ( const VViewCursor *  p_self,
                      int64_t              p_row_id,
                      uint32_t             p_col_idx,
                      uint32_t             p_elem_bits,
@@ -838,7 +842,7 @@ VViewCursorReadInt ( const VViewCursor * p_self,
                 rc = VColumnRead ( col, p_row_id, & elem_size, & base, & boff, p_row_len, NULL );
                 if ( rc == 0 )
                 {
-                    return CopyRow ( elem_size, p_elem_bits, base, boff, p_buffer, p_blen, p_row_len );
+                    return CopyCell ( elem_size, p_elem_bits, base, boff, p_buffer, p_blen, p_row_len );
                 }
             }
             else
