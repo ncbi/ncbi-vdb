@@ -46,6 +46,7 @@
 #include "zehr.h"
 #include "mehr.h"
 #include "orz.h"
+#include "hdict.h"
 #include "proc-on.h"
 #include "xgap.h" /* XFSGapRefreshKarts() */
 
@@ -1184,8 +1185,6 @@ _GRQueRecycleClip (
  * Placeholder for XFSGapObject 
  *_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 struct _GRCacheO {
-    struct BSTNode node;
-
     atomic_ptr_t holder;
 };
 
@@ -1302,19 +1301,10 @@ _GRCacheOSet (
  * There where resolved data stored
  *_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 struct _GRCache {
-    struct BSTree tree;
+    const struct XFSHashDict * hash_dict; /* lol */
 
     struct KLock * mutabor;
 };
-
-static
-void CC
-_GRCacheWhackCallback ( struct BSTNode * Node, void * unused )
-{
-    if ( Node != NULL ) {
-        _GRCacheODispose ( ( struct _GRCacheO * ) Node );
-    }
-}   /* _GRCacheWhackCallback () */
 
 static
 rc_t CC
@@ -1323,7 +1313,7 @@ _GRCacheDispose ( const struct _GRCache * self )
     struct _GRCache * C = ( struct _GRCache * ) self;
 
     if ( C != NULL ) {
-        BSTreeWhack ( & ( C -> tree ), _GRCacheWhackCallback, NULL );
+        XFSHashDictDispose ( C -> hash_dict );
 
         if ( C -> mutabor != NULL ) {
             KLockRelease ( C -> mutabor );
@@ -1356,9 +1346,13 @@ _GRCacheMake ( const struct _GRCache ** Cont )
     else {
         RCt = KLockMake ( & ( C -> mutabor ) );
         if ( RCt == 0 ) {
-            BSTreeInit ( & ( C -> tree ) );
-
-            * Cont = C;
+            RCt = XFSHashDictMake (
+                                & ( C -> hash_dict ),
+                                ( XFSHashDictBanana ) _GRCacheODispose
+                                );
+            if ( RCt == 0 ) {
+                * Cont = C;
+            }
         }
     }
 
@@ -1392,64 +1386,6 @@ _GRCacheUnlock ( const struct _GRCache * self )
 }   /* _GRCacheUnLock () */
 
 static
-int64_t CC
-_GRCacheFindCallback ( const void * Item, const struct BSTNode * Node )
-{
-    const char * Str1;
-    const struct XFSGapObject * Object;
-    const char * Str2;
-
-
-
-    Str1 = ( const char * ) Item;
-    Object = Node == NULL
-                    ? NULL
-                    :
-                    ( ( ( struct _GRCacheO * ) Node ) -> holder ) . ptr
-                    ;
-    Str2 = Object == NULL ? "" : Object -> accession_or_id;
-
-    return XFS_StringCompare4BST_ZHR ( Str1, Str2 );
-}   /* _GRCacheFindCallback () */
-
-/*))    NOTE : release Object after use
- ((*/
-static
-rc_t CC
-_GRCacheFind_NoLock (
-                    const struct _GRCache * self,
-                    const struct _GRCacheO ** Object,
-                    const char * AccessionOrId
-)
-{
-    rc_t RCt;
-    const struct _GRCacheO * COFound;
-
-    RCt = 0;
-    COFound = NULL;
-
-    XFS_CSAN ( Object )
-    XFS_CAN ( self )
-    XFS_CAN ( Object )
-    XFS_CAN ( AccessionOrId )
-
-    COFound = ( const struct _GRCacheO * ) BSTreeFind (
-                                                    & ( self -> tree ),
-                                                    AccessionOrId,
-                                                    _GRCacheFindCallback
-                                                    );
-
-    if ( COFound == NULL ) {
-        RCt = XFS_RC ( rcNotFound );
-    }
-    else {
-        * Object = COFound;
-    }
-
-    return RCt;
-}   /* _GRCacheFind_NoLock () */
-
-static
 rc_t CC
 _GRCacheFind (
             const struct _GRCache * self,
@@ -1465,7 +1401,11 @@ _GRCacheFind (
 
     RCt = _GRCacheLock ( self );
     if ( RCt == 0 ) {
-        RCt = _GRCacheFind_NoLock ( self, & Holder, AccessionOrId );
+        RCt = XFSHashDictGet (
+                            self -> hash_dict,
+                            ( const void ** ) & Holder,
+                            AccessionOrId
+                            );
         if ( RCt == 0 ) {
             * Object = _GRCacheOGet ( Holder );
         }
@@ -1480,26 +1420,8 @@ static
 bool CC
 _GRCacheHas ( const struct _GRCache * self, const char * AccessionOrId )
 {
-    const struct _GRCacheO * Holder;
-
-    return _GRCacheFind_NoLock ( self, & Holder, AccessionOrId );
+    return XFSHashDictHas ( self -> hash_dict, AccessionOrId );
 }   /* _GRCacheHas () */
-
-static
-int64_t CC
-_GRCacheAddObjectCallback ( const BSTNode * N1, const BSTNode * N2 )
-{
-    const struct XFSGapObject * O1, * O2;
-
-    O1 = N1 == NULL
-                ? NULL : ( ( struct _GRCacheO * ) N1 ) -> holder . ptr;
-    O2 = N2 == NULL
-                ? NULL : ( ( struct _GRCacheO * ) N2 ) -> holder . ptr;
-    return XFS_StringCompare4BST_ZHR (
-            ( O1 == NULL ? "" : O1 -> accession_or_id ),
-            ( O2 == NULL ? "" : O2 -> accession_or_id )
-            );
-}   /* _GRCacheAddObjectCallback () */
 
 static
 rc_t CC
@@ -1517,22 +1439,20 @@ _GRCacheAddObject_NoLock (
     XFS_CAN ( self )
     XFS_CAN ( Object )
 
-    RCt = _GRCacheFind_NoLock (
-                            self,
-                            & CO,
-                            Object -> accession_or_id
-                            );
-    if ( RCt == 0 ) {
-        XFSGapObjectRelease ( Object );
+    if ( XFSHashDictHas (
+                        self -> hash_dict,
+                        Object -> accession_or_id
+                        ) 
+    ) {
         RCt = XFS_RC ( rcExists );
     }
     else {
         RCt = _GRCacheOMake ( & CO, Object );
         if ( RCt == 0 ) {
-            RCt = BSTreeInsert (
-                                ( BSTree * ) & ( self -> tree ),
-                                ( struct BSTNode * ) CO,
-                                _GRCacheAddObjectCallback
+            RCt = XFSHashDictAdd ( 
+                                self -> hash_dict,
+                                CO,
+                                Object -> accession_or_id
                                 );
         }
     }
@@ -1579,7 +1499,11 @@ _GRCacheFindOrCreate (
 
     RCt = _GRCacheLock ( self );
     if ( RCt == 0 ) {
-        RCt = _GRCacheFind_NoLock ( self, & Holder, AccessionOrId );
+        RCt = XFSHashDictGet (
+                            self -> hash_dict,
+                            ( const void ** ) & Holder,
+                            AccessionOrId
+                            );
         if ( RCt == 0 ) {
             TheObject = _GRCacheOGet ( Holder );
         }
@@ -1643,19 +1567,19 @@ _GRCacheSetObject (
 
     RCt = _GRCacheLock ( self );
     if ( RCt == 0 ) {
-        RCt = _GRCacheFind_NoLock (
-                                self,
-                                & CO,
-                                Object -> accession_or_id
-                                );
+        RCt = XFSHashDictGet (
+                            self -> hash_dict,
+                            ( const void ** ) & CO,
+                            Object -> accession_or_id
+                            );
         if ( RCt == 0 ) {
             RCt = _GRCacheOSet ( CO, Object );
         }
         else {
-            RCt = BSTreeInsert (
-                                ( BSTree * ) & ( self -> tree ),
-                                ( struct BSTNode * ) CO,
-                                _GRCacheAddObjectCallback
+            RCt = XFSHashDictAdd (
+                                self -> hash_dict,
+                                CO,
+                                Object -> accession_or_id
                                 );
         }
 
@@ -1885,7 +1809,6 @@ _GRProcMakeEditObject (
                                             );
                 if ( RCt == 0 ) {
                     RCt = _GapObjectSetPaths ( Object, Path, Cache );
-// printf ( "[MEO] [%d] [GOOD] [%s]\n", __LINE__, Aooi );
                 }
             }
         }
@@ -2193,7 +2116,6 @@ _GResolverRun ( const struct KThread * self, void * Data )
         if ( _GapResolverStopRequested ( Res ) ) {
             break;
         }
-
             /* JOJOBA: not really elegant solution :LOL: */
         llp ++;
         if ( llp % 4 == 0 ) {
