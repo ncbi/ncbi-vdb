@@ -2484,8 +2484,8 @@ rc_t VResolverLocalFile ( const VResolver *self, const VPath * query, const VPat
     return RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
 }
 
-static
-bool VPathHasRefseqContext ( const VPath * accession )
+LIB_EXPORT
+bool CC VPathHasRefseqContext ( const VPath * accession )
 {
     size_t num_read;
     char option [ 64 ];

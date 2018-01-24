@@ -28,6 +28,7 @@
 #include <kfs/impl.h>
 #include <klib/rc.h>
 #include <kproc/timeout.h>
+#include <klib/status.h>
 #include <os-native.h>
 #include <sysalloc.h>
 
@@ -314,12 +315,16 @@ LIB_EXPORT rc_t CC KFileReadAll_v1 ( const KFile_v1 *self, uint64_t pos,
     if ( bsize == 0 )
         return RC ( rcFS, rcFile, rcReading, rcBuffer, rcInsufficient );
 
+    STATUS ( STAT_GEEK, "%s ( %p, %lu, %p, %zu )\n", __func__, self, pos, buffer, bsize );
+
     switch ( self -> vt -> v1 . maj )
     {
     case 1:
         count = 0;
         rc = ( * self -> vt -> v1 . read ) ( self, pos, buffer, bsize, & count );
         total = count;
+
+        STATUS ( STAT_GEEK, "%s initial read rc = %R, count = %zu\n", __func__, rc, count );
 
         if ( rc == 0 && count != 0 && count < bsize )
         {
@@ -328,26 +333,44 @@ LIB_EXPORT rc_t CC KFileReadAll_v1 ( const KFile_v1 *self, uint64_t pos,
                 timeout_t no_block;
                 TimeoutInit ( & no_block, 0 );
 
+                STATUS ( STAT_GEEK, "%s using non-blocking read-all\n", __func__ );
+
                 for ( b = buffer; total < bsize; total += count )
                 {
                     count = 0;
                     rc = ( * self -> vt -> v1 . timed_read ) ( self, pos + total, b + total, bsize - total, & count, & no_block );
+                    STATUS ( STAT_GEEK, "%s ( %p, %lu, %p, %zu, [ %zu ] )\n", __func__, self, pos + total, b + total, bsize - total, count );
                     if ( rc != 0 )
+                    {
+                        STATUS ( STAT_GEEK, "%s - breaking loop with rc = %R\n", __func__, rc );
                         break;
+                    }
                     if ( count == 0 )
+                    {
+                        STATUS ( STAT_GEEK, "%s - breaking loop with count == 0\n", __func__ );
                         break;
+                    }
                 }
             }
             else
             {
+                STATUS ( STAT_GEEK, "%s using blocking read-all\n", __func__ );
+                
                 for ( b = buffer; total < bsize; total += count )
                 {
                     count = 0;
                     rc = ( * self -> vt -> v1 . read ) ( self, pos + total, b + total, bsize - total, & count );
+                    STATUS ( STAT_GEEK, "%s ( %p, %lu, %p, %zu, [ %zu ] )\n", __func__, self, pos + total, b + total, bsize - total, count );
                     if ( rc != 0 )
+                    {
+                        STATUS ( STAT_GEEK, "%s - breaking loop with rc = %R\n", __func__, rc );
                         break;
+                    }
                     if ( count == 0 )
+                    {
+                        STATUS ( STAT_GEEK, "%s - breaking loop with count == 0\n", __func__ );
                         break;
+                    }
                 }
             }
         }
@@ -415,8 +438,10 @@ LIB_EXPORT rc_t CC KFileTimedReadAll_v1 ( const KFile_v1 *self, uint64_t pos,
             break;
         }
 
+        STATUS ( STAT_GEEK, "%s - target %p is not capable of receiving timed read message\n", __func__, self );
         if ( tm == NULL )
         {
+            STATUS ( STAT_GEEK, "%s - no timeout specified - call will succeed\n", __func__ );
             for ( rc = 0, b = buffer, total = 0; total < bsize; total += count )
             {
                 count = 0;
@@ -428,6 +453,8 @@ LIB_EXPORT rc_t CC KFileTimedReadAll_v1 ( const KFile_v1 *self, uint64_t pos,
             }
             break;
         }
+
+        STATUS ( STAT_GEEK, "%s - timeout specified - call will fail\n", __func__ );
 
         /* no break */
     default:

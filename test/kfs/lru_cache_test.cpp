@@ -105,7 +105,10 @@ static rc_t compare_file_content( const KFile * file1, const KFile * file2, uint
                 if ( rc == 0 )
                 {
                     if ( num_read1 != num_read2 )
+                    {
                         rc = RC ( rcRuntime, rcBuffer, rcReading, rcMemory, rcInvalid );
+                        KOutMsg( "compare_file_content() requested:%lu, read 1:%lu, 2:%lu", bytes, num_read1, num_read2 );
+                    }
                     else
                     {
                         int diff = memcmp( buffer1, buffer2, num_read1 );
@@ -295,25 +298,32 @@ TEST_CASE( LRU_Cache_Test_Random_Reading )
     const KFile * org;
     REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", filename ) );
 
+    uint32_t page_count = 20;
     const KFile * cache;
-    REQUIRE_RC( MakeRRCached ( &cache, org, 64 * 1024, 20 ) );
+    REQUIRE_RC( MakeRRCached ( &cache, org, 64 * 1024, page_count ) );
 
     events events;
     memset( &events, 0, sizeof events );
     REQUIRE_RC( SetRRCachedEventHandler( cache, &events, on_event ) );
 
     srand( time( NULL ) );
-    for ( int i = 0; i < 200; ++i )
+    uint32_t loops = 100000;
+    KOutMsg( "---testing %u loops\n", loops );
+    for ( uint32_t i = 0; i < loops; ++i )
     {
-        size_t bsize = rand_32( 100, 5000 );
-        uint64_t pos = rand_32( 0, file_size - bsize );
-        REQUIRE_RC( compare_file_content( org, cache, pos, bsize ) );
+        size_t bsize = rand_32( 10, 50000 );
+        uint64_t pos = rand_32( 0, file_size - ( bsize + 1 ) );
+        rc_t rc = compare_file_content( org, cache, pos, bsize );
+        if ( rc != 0 )
+            KOutMsg( "Test: LRU-Cache-Test-Random-Reading in loop #%u : %lu.%lu = %R\n", i, pos, bsize, rc );
+        REQUIRE_RC( rc );
     }
 
 #if _DEBUGGING
-    REQUIRE( events . requests >= 200 );
-    REQUIRE( events . found < 200 && events . found > 0 );
-    REQUIRE( events . enter < 200 && events . enter > 0 );    
+    //print_events( &events );
+    REQUIRE( events . requests >= loops );
+    REQUIRE( events . found >= loops );
+    REQUIRE( events . enter = page_count );    
     REQUIRE( events . failed == 0 );
 #endif
 
