@@ -23,15 +23,14 @@
 * ===========================================================================
 *
 */
-
 /**
-* Unit tests for hash and hashtables
+* Unit tests for hash files
 */
 
 #include <ktst/unit_test.hpp>
 
 #include <klib/data-buffer.h>
-#include <klib/hashtable.h>
+//#include <klib/hashfile.h>
 #include <klib/log.h>
 #include <klib/misc.h> /* is_user_admin() */
 #include <klib/num-gen.h>
@@ -55,93 +54,10 @@ using namespace std;
 
 /* #define BENCHMARK */
 
-TEST_SUITE(KHashTableTestSuite);
+TEST_SUITE(KHashFileTestSuite);
+#if 0 // TODO
 
-TEST_CASE(Klib_KHash)
-{
-    const char* str = "Tu estas probando este hoy, no manana";
-    size_t size = strlen(str);
-
-    uint64_t hash = KHash(str, size);
-    REQUIRE_NE(hash, (uint64_t)0);
-
-    uint64_t hash2 = KHash(str, size);
-    REQUIRE_EQ(hash, hash2);
-}
-
-TEST_CASE(Klib_KHash_unique)
-{
-    const char* str = "Tu estas probando este hoy, no manana";
-    size_t size = strlen(str);
-
-    uint64_t hash1 = KHash(str, size);
-    uint64_t hash2 = KHash(str, size - 1);
-    REQUIRE_NE(hash1, hash2);
-}
-
-TEST_CASE(Klib_KHash_Adjacent)
-{
-    uint64_t hash1, hash2, diff;
-
-    uint64_t val = 0x1234567890ABCDE0;
-
-    hash1 = KHash((char*)&val, 8);
-    ++val;
-    hash2 = KHash((char*)&val, 8);
-    diff = labs(hash2 - hash1);
-    REQUIRE_LE(diff, (uint64_t)7);
-
-    const char* str1 = "string01";
-    const char* str2 = "string02";
-    size_t size = strlen(str1);
-    hash1 = KHash(str1, size);
-    hash2 = KHash(str2, size);
-    diff = labs(hash2 - hash1) & 0xfffff;
-    if (diff > 7) {
-        fprintf(stderr, "%lx %lx\n", hash1, hash2);
-        REQUIRE_LE(diff, (uint64_t)7);
-    }
-
-    str1 = "str01";
-    str2 = "str02";
-    size = strlen(str1);
-    hash1 = KHash(str1, size);
-    hash2 = KHash(str2, size);
-    diff = labs(hash2 - hash1);
-    REQUIRE_LE(diff, (uint64_t)7);
-}
-
-TEST_CASE(Klib_KHash_Collide)
-{
-    // We fill a buffer with random bytes, and then increment each byte once
-    // and verify no collisions occur for all lengths.
-    char buf[37];
-    for (size_t l = 0; l != sizeof(buf); l++) buf[l] = (char)random();
-
-    std::unordered_set<uint64_t> set;
-
-    size_t inserts = 0;
-    size_t collisions = 0;
-    for (size_t l = 0; l != sizeof(buf); l++)
-        for (size_t j = 0; j != l; j++)
-            for (size_t k = 0; k != 255; k++) {
-                buf[j] += 1;
-                uint64_t hash = KHash(buf, l);
-                size_t count = set.count(hash);
-                if (count) {
-                    collisions++;
-                    fprintf(stderr,
-                            "Collision at %lu on hash of len %lu is %lx: "
-                            "%lu elements %lx\n",
-                            j, l, hash, set.size(), *(uint64_t*)buf);
-                }
-                set.insert(hash);
-                inserts++;
-            }
-    REQUIRE_EQ(inserts, set.size());
-}
-
-TEST_CASE(Klib_KHashTableSet)
+TEST_CASE(Klib_KHashFileSet)
 {
     rc_t rc;
     const char* str1 = "Tu estas probando este hoy, no manana";
@@ -301,40 +217,8 @@ TEST_CASE(Klib_HashTableMapStrings)
     rc_t rc;
 
     KHashTable* hmap;
-    rc = KHashTableInit(&hmap, sizeof(char *), sizeof(char *), 0, 0.0, cstr);
+    rc = KHashTableInit(&hmap, 8, 8, 0, 0.0, cstr);
     REQUIRE_RC(rc);
-    const char * JOJOA [] = {
-        "JOJO01"
-    ,   "JOJO02"
-    ,   "JOJO03"
-    ,   "JOJO04"
-    ,   "JOJO05"
-    ,   "JOJO06"
-    ,   "JOJO07"
-    ,   "JOJO08"
-    ,   "JOJO09"
-    ,   "JOJO10"
-    ,   "JOJO11"
-    ,   "JOJO12"
-};
-
-    static const int JOJOAQ = sizeof ( JOJOA ) / sizeof ( char * );
-    for (int llp=0; llp < JOJOAQ; llp++)
-    {
-        const char * Key=JOJOA[llp];
-        char * Val=NULL;
-        uint64_t Hash=0;
-        Hash=KHash(Key, strlen(Key));
-        bool found;
-        found=KHashTableFind(hmap,Key,Hash, &Val);
-        REQUIRE_EQ(found,false);
-        Hash=KHash(Key, strlen(Key));
-        rc_t rc=KHashTableAdd(hmap,Key,Hash,&Key);
-        REQUIRE_RC(rc);
-        Hash=KHash(Key, strlen(Key));
-        found=KHashTableFind(hmap,Key,Hash, &Val);
-        REQUIRE_EQ(found,true);
-    }
 
     // TODO: Whack with destructors
     KHashTableWhack(hmap, NULL, NULL, NULL);
@@ -399,8 +283,6 @@ TEST_CASE(Klib_HashTableMapValid)
         map.erase(key);
         map.insert(pair);
         rc = KHashTableAdd(hmap, (void*)&key, hash, (void*)&value);
-        bool hfound = KHashTableFind(hmap, (void*)&key, hash, (void*)&value);
-        REQUIRE_EQ(hfound,true);
     }
 
     size_t mapcount = map.size();
@@ -451,8 +333,6 @@ TEST_CASE(Klib_HashTableMapDeletes)
                 map.insert(pair);
 
                 rc = KHashTableAdd(hmap, (void*)&key, hash, (void*)&value);
-                bool hfound = KHashTableFind(hmap, (void*)&key, hash, NULL);
-                REQUIRE_EQ(hfound,true);
             }
 
             if (random() > threshold) {
@@ -987,6 +867,7 @@ TEST_CASE(Klib_hash_hamming)
 }
 
 #endif // BENCHMARK
+#endif
 
 extern "C" {
 
@@ -998,13 +879,13 @@ rc_t CC UsageSummary(const char* progname) { return 0; }
 
 rc_t CC Usage(const Args* args) { return 0; }
 
-const char UsageDefaultName[] = "test-hashtable";
+const char UsageDefaultName[] = "test-hashfile";
 
 rc_t CC KMain(int argc, char* argv[])
 {
     srandom(time(NULL));
     KConfigDisableUserSettings();
-    rc_t rc = KHashTableTestSuite(argc, argv);
+    rc_t rc = KHashFileTestSuite(argc, argv);
     return rc;
 }
 }
