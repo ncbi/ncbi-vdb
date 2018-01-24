@@ -453,6 +453,9 @@
     <ClCompile Include="..\..\..\libs\klib\container.c">
       <Filter>klib</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\hashtable.c">
+      <Filter>klib</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\klib\cp1252.c">
       <Filter>klib</Filter>
     </ClCompile>

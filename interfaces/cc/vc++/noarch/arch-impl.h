@@ -149,6 +149,14 @@ int32_t uint32_msbit ( uint32_t self )
     return uint16_msbit ( ( uint16_t ) self );
 }
 
+static __inline__
+uint64_t uint64_msbit( uint64_t self )
+{
+    unsigned long idx;
+    _BitScanForward64(&idx, self);
+    return idx;
+}
+
 typedef struct int128_t int128_t;
 struct int128_t
 {
