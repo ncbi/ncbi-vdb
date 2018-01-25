@@ -143,7 +143,7 @@ VViewRelease ( const VView * p_self )
  *  View's parameters will have to be bound using VViewBindParameterXXX() before View can be used
  */
 LIB_EXPORT
-rc_t
+rc_t CC
 VDBManagerOpenView ( struct VDBManager const *   p_mgr,
                      const VView **              p_view,
                      const struct VSchema *      p_schema,
@@ -227,7 +227,7 @@ BindingIdxByName ( const SView * p_self, const String * p_name )
  *  parameter of the view
  *  "index" [ IN ] - 0-based index of the corresponding parameter in the view's parameter list
  */
-VDB_EXTERN
+LIB_EXPORT
 rc_t
 VViewBindParameterTable ( const VView *     p_self,
                           const char *      p_param_name,
@@ -281,7 +281,7 @@ VViewBindParameterTable ( const VView *     p_self,
  *  parameter of "self"
  *  "index" [ IN ] - 0-based index of the corresponding parameter in "self"'s parameter list
  */
-VDB_EXTERN
+LIB_EXPORT
 rc_t
 VViewBindParameterView ( const VView *          p_self,
                          const char *           p_param_name,

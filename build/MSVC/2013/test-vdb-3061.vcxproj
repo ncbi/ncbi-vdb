@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -18,18 +18,14 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-
-    <PropertyGroup>
-        <WorkingDirectory>vdb</WorkingDirectory>
-    </PropertyGroup>
-
-    <Import Project=".\test-project.props" />
-
-    <ItemDefinitionGroup>
-        <Link>
-            <AdditionalDependencies>$(VDB_TARGET)bin\ncbi-wvdb.lib;%(AdditionalDependencies)</AdditionalDependencies>
-        </Link>
-    </ItemDefinitionGroup>
-
-  <Import Project="..\test-wvdb.files" />
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{C497B2AF-8FFC-4DA7-8831-4E8AFA280B06}</ProjectGuid>
+  </PropertyGroup>
+  <Import Project=".\test-project.props" />
+  <ItemDefinitionGroup>
+    <Link>
+      <AdditionalDependencies>$(VDB_TARGET)lib\ncbi-vdb.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="..\test-vdb-3061.files" />
 </Project>

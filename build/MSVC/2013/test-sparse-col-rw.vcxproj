@@ -19,21 +19,17 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{CC5555CB-3424-441A-8656-A5961B7EECAF}</ProjectGuid>
-  </PropertyGroup>
-  <PropertyGroup>
-    <WorkingDirectory>schema</WorkingDirectory>
+    <ProjectGuid>{5F92A8D9-80EF-4316-AE0F-6281215CD951}</ProjectGuid>
   </PropertyGroup>
   <Import Project=".\test-project.props" />
   <ItemDefinitionGroup>
     <Link>
-      <AdditionalDependencies>$(VDB_TARGET)lib\ncbi-vdb.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(VDB_TARGET)lib\ncbi-wvdb.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
-  <Import Project="..\wb-test-schema-ast.files" />
+  <Import Project="..\test-sparse-col.files" />
   <Target Name="AfterBuild" Condition="'$(Autorun)'=='true'">
-    <MakeDir Directories="$(WorkingDirectory)\actual" />
-    <MakeDir Directories="$(WorkingDirectory)\actual\inc" />
+    <MakeDir Directories="$(WorkingDirectory)\db" />
     <Exec Command="$(OutDir)$(TargetName)$(TargetExt)" WorkingDirectory="$(WorkingDirectory)\" />
   </Target>
 </Project>

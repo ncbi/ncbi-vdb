@@ -19,10 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{CC5555CB-3424-441A-8656-A5961B7EECAF}</ProjectGuid>
-  </PropertyGroup>
-  <PropertyGroup>
-    <WorkingDirectory>schema</WorkingDirectory>
+    <ProjectGuid>{72D21F58-1C22-40C6-9D3D-0EF6F9014897}</ProjectGuid>
   </PropertyGroup>
   <Import Project=".\test-project.props" />
   <ItemDefinitionGroup>
@@ -30,10 +27,9 @@
       <AdditionalDependencies>$(VDB_TARGET)lib\ncbi-vdb.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
-  <Import Project="..\wb-test-schema-ast.files" />
+  <Import Project="..\test-tablecursor.files" />
   <Target Name="AfterBuild" Condition="'$(Autorun)'=='true'">
-    <MakeDir Directories="$(WorkingDirectory)\actual" />
-    <MakeDir Directories="$(WorkingDirectory)\actual\inc" />
+    <MakeDir Directories="$(WorkingDirectory)\db" />
     <Exec Command="$(OutDir)$(TargetName)$(TargetExt)" WorkingDirectory="$(WorkingDirectory)\" />
   </Target>
 </Project>

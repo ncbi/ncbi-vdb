@@ -171,8 +171,8 @@ FIXTURE_TEST_CASE( VTableCursor_IdRange, TableCursorFixture )
     int64_t first = 0;
     uint64_t count = 0;
     REQUIRE_RC ( VCursorIdRange ( m_cur, m_columnIdx, & first, & count ) );
-    REQUIRE_EQ( 1l, first );
-    REQUIRE_EQ( 0lu, count );
+    REQUIRE_EQ((int64_t)1, first);
+    REQUIRE_EQ((uint64_t)0, count);
 }
 
 FIXTURE_TEST_CASE( VTableCursor_RowId, TableCursorFixture )
@@ -181,7 +181,7 @@ FIXTURE_TEST_CASE( VTableCursor_RowId, TableCursorFixture )
 
     int64_t rowId = 0;
     REQUIRE_RC ( VCursorRowId ( m_cur, & rowId ) );
-    REQUIRE_EQ( 1l, rowId );
+    REQUIRE_EQ((int64_t)1, rowId);
 }
 
 FIXTURE_TEST_CASE( VTableCursor_SetRowId, TableCursorFixture )
@@ -437,8 +437,8 @@ FIXTURE_TEST_CASE( VTableCursor_PageIdRange, TableCursorFixture )
     int64_t first=-1;
     int64_t last=-1;
     REQUIRE_RC ( VCursorPageIdRange ( m_cur, m_columnIdx, 1, & first, & last ) );
-    REQUIRE_EQ ( 1l, first );
-    REQUIRE_EQ ( 2l, last );
+    REQUIRE_EQ((int64_t)1, first);
+    REQUIRE_EQ((int64_t)2, last);
 }
 
 FIXTURE_TEST_CASE( VTableCursor_IsStaticColumn, TableCursorFixture )
@@ -480,7 +480,7 @@ FIXTURE_TEST_CASE( VTableCursor_LinkedCursorSet, TableCursorFixture )
 FIXTURE_TEST_CASE( VTableCursor_GetCacheCapacity, TableCursorFixture )
 {
     MakeWriteCursor ( GetName(), SimpleSchema );
-    REQUIRE_EQUAL ( 0ul, VCursorGetCacheCapacity ( m_cur ) );
+    REQUIRE_EQUAL((uint64_t)0, VCursorGetCacheCapacity(m_cur));
 }
 
 FIXTURE_TEST_CASE( VTableCursor_SetCacheCapacity, TableCursorFixture )
@@ -488,8 +488,8 @@ FIXTURE_TEST_CASE( VTableCursor_SetCacheCapacity, TableCursorFixture )
     MakeWriteCursor ( GetName(), SimpleSchema );
 
     // this cursor is not cached, so SetCapacity has no effect
-    REQUIRE_EQUAL ( 0ul, VCursorSetCacheCapacity ( (VCursor*)m_cur, 100 ) );
-    REQUIRE_EQUAL ( 0ul, VCursorGetCacheCapacity ( m_cur ) );
+    REQUIRE_EQUAL((uint64_t)0, VCursorSetCacheCapacity((VCursor*)m_cur, 100));
+    REQUIRE_EQUAL((uint64_t)0, VCursorGetCacheCapacity(m_cur));
 }
 
 FIXTURE_TEST_CASE( VTableCursor_Columns, TableCursorFixture )
@@ -582,7 +582,7 @@ FIXTURE_TEST_CASE( VTableCursor_CacheActive, TableCursorFixture )
     MakeWriteCursorAddColumnOpen ( GetName(), SimpleSchema );
     int64_t end;
     REQUIRE ( ! VCursorCacheActive ( m_cur, & end ) );
-    REQUIRE_EQ ( 0l, end );
+    REQUIRE_EQ((int64_t)0, end);
 }
 
 FIXTURE_TEST_CASE( VTableCursor_InstallTrigger, TableCursorFixture )

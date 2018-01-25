@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{CC5555CB-3424-441A-8656-A5961B7EECAF}</ProjectGuid>
+    <ProjectGuid>{BA6CC70B-8D77-4F51-AC94-8C35841DF21C}</ProjectGuid>
   </PropertyGroup>
   <PropertyGroup>
     <WorkingDirectory>schema</WorkingDirectory>
@@ -30,10 +30,9 @@
       <AdditionalDependencies>$(VDB_TARGET)lib\ncbi-vdb.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
-  <Import Project="..\wb-test-schema-ast.files" />
+  <Import Project="..\wb-test-schema-lex.files" />
   <Target Name="AfterBuild" Condition="'$(Autorun)'=='true'">
     <MakeDir Directories="$(WorkingDirectory)\actual" />
-    <MakeDir Directories="$(WorkingDirectory)\actual\inc" />
     <Exec Command="$(OutDir)$(TargetName)$(TargetExt)" WorkingDirectory="$(WorkingDirectory)\" />
   </Target>
 </Project>

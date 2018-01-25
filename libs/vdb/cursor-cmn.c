@@ -908,6 +908,7 @@ VCursorPageIdRange ( struct VCursor const *self, uint32_t idx, int64_t id, int64
 /* IsStaticColumn
  *  answers question: "does this column have the same value for every cell?"
  */
+LIB_EXPORT
 rc_t CC
 VCursorIsStaticColumn ( const VCursor *self, uint32_t col_idx, bool *is_static )
 {

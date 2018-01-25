@@ -27,10 +27,10 @@
 #ifndef _h_view_priv_
 #define _h_view_priv_
 
+#include <vdb/view.h>
+
 #include <klib/refcount.h>
 #include <klib/vector.h>
-
-#include <vdb/view.h>
 
 #ifdef __cplusplus
 extern "C" {

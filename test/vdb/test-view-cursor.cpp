@@ -22,7 +22,7 @@
 //
 // ===========================================================================
 
-#include <sysalloc.h>
+#include <ktst/unit_test.hpp> // TEST_CASE
 
 #include <klib/symbol.h>
 #include <vdb/table.h>
@@ -40,8 +40,6 @@
 
 #include "../libs/schema/SchemaParser.hpp"
 #include "../libs/schema/ASTBuilder.hpp"
-
-#include <ktst/unit_test.hpp> // TEST_CASE
 
 #include "WVDB_Fixture.hpp"
 
@@ -400,8 +398,8 @@ FIXTURE_TEST_CASE ( ViewCursor_IdRange, ViewOnTableCursorFixture )
     int64_t first;
     uint64_t count;
     REQUIRE_RC ( VCursorIdRange ( m_cur, m_columnIdx, & first, & count ) );
-    REQUIRE_EQ ( 1l, first );
-    REQUIRE_EQ ( 2lu, count );
+    REQUIRE_EQ((int64_t)1, first);
+    REQUIRE_EQ((uint64_t)2, count);
 }
 
 // VViewCursorRowId
@@ -415,14 +413,14 @@ FIXTURE_TEST_CASE ( ViewCursor_RowId_NotOpen, ViewOnTableCursorFixture )
     CreateCursorAddColumn ( GetName(), ViewOnTableName, ViewColumnName );
     int64_t id = -1;
     REQUIRE_RC ( VCursorRowId ( m_cur, & id ) );
-    REQUIRE_EQ ( 0l, id );
+    REQUIRE_EQ((int64_t)0, id);
 }
 FIXTURE_TEST_CASE ( ViewCursor_RowId_Open, ViewOnTableCursorFixture )
 {
     CreateCursorOpen ( GetName(), ViewOnTableName, ViewColumnName );
     int64_t id = -1;
     REQUIRE_RC ( VCursorRowId ( m_cur, & id ) );
-    REQUIRE_EQ ( 1l, id );
+    REQUIRE_EQ((int64_t)1, id);
 }
 
 // VCursorSetRowId
@@ -434,7 +432,7 @@ FIXTURE_TEST_CASE ( ViewCursor_SetRowId, ViewOnTableCursorFixture )
 
     int64_t id = -1;
     REQUIRE_RC ( VCursorRowId ( m_cur, & id ) );
-    REQUIRE_EQ ( 100l, id );
+    REQUIRE_EQ((int64_t)100, id);
 }
 
 // VCursorFindNextRowId
@@ -448,7 +446,7 @@ FIXTURE_TEST_CASE ( ViewCursor_FindNextRowId, ViewOnTableCursorFixture )
     CreateCursorOpen ( GetName(), ViewOnTableName, ViewColumnName );
     int64_t id = -1;
     REQUIRE_RC ( VCursorFindNextRowId ( m_cur, m_columnIdx, & id ) );
-    REQUIRE_EQ ( 2l, id );
+    REQUIRE_EQ((int64_t)2, id);
 }
 
 // VCursorFindNextRowIdDirect
@@ -462,7 +460,7 @@ FIXTURE_TEST_CASE ( ViewCursor_FindNextRowIdDirect, ViewOnTableCursorFixture )
     CreateCursorOpen ( GetName(), ViewOnTableName, ViewColumnName );
     int64_t id = -1;
     REQUIRE_RC ( VCursorFindNextRowIdDirect ( m_cur, m_columnIdx, 2, & id ) );
-    REQUIRE_EQ ( 2l, id );
+    REQUIRE_EQ((int64_t)2, id);
 }
 FIXTURE_TEST_CASE ( ViewCursor_FindNextRowIdDirect_NoMore, ViewOnTableCursorFixture )
 {
@@ -495,7 +493,7 @@ FIXTURE_TEST_CASE ( ViewCursor_CloseRow_RowNotOpen, ViewOnTableCursorFixture )
     REQUIRE_RC ( VCursorCloseRow ( m_cur ) ); // ignored
     int64_t id = -1;
     REQUIRE_RC ( VCursorRowId ( m_cur, & id ) );
-    REQUIRE_EQ ( 1l, id ); // row id not incremented
+    REQUIRE_EQ((int64_t)1, id); // row id not incremented
 }
 FIXTURE_TEST_CASE ( ViewCursor_CloseRow, ViewOnTableCursorFixture )
 {
@@ -503,7 +501,7 @@ FIXTURE_TEST_CASE ( ViewCursor_CloseRow, ViewOnTableCursorFixture )
     REQUIRE_RC ( VCursorCloseRow ( m_cur ) );
     int64_t id = -1;
     REQUIRE_RC ( VCursorRowId ( m_cur, & id ) );
-    REQUIRE_EQ ( 2l, id ); // row id incremented
+    REQUIRE_EQ((int64_t)2, id); // row id incremented
 }
 FIXTURE_TEST_CASE ( ViewCursor_CloseRow_Twice, ViewOnTableCursorFixture )
 {
@@ -824,8 +822,8 @@ FIXTURE_TEST_CASE( ViewCursor_PageIdRange, ViewOnTableCursorFixture )
     int64_t first=-1;
     int64_t last=-1;
     REQUIRE_RC ( VCursorPageIdRange ( m_cur, m_columnIdx, 1, & first, & last ) );
-    REQUIRE_EQ ( 1l, first );
-    REQUIRE_EQ ( 2l, last );
+    REQUIRE_EQ((int64_t)1, first);
+    REQUIRE_EQ((int64_t)2, last);
 }
 
 FIXTURE_TEST_CASE( ViewCursor_IsStaticColumn, ViewOnTableCursorFixture )
@@ -852,7 +850,7 @@ FIXTURE_TEST_CASE( ViewCursor_LinkedCursorSet, ViewOnTableCursorFixture )
 FIXTURE_TEST_CASE( ViewCursor_GetCacheCapacity, ViewOnTableCursorFixture )
 {
     CreateCursor ( GetName(), ViewOnTableName );
-    REQUIRE_EQUAL ( 0ul, VCursorGetCacheCapacity ( m_cur ) );
+    REQUIRE_EQUAL((uint64_t)0, VCursorGetCacheCapacity(m_cur));
 }
 
 FIXTURE_TEST_CASE( ViewCursor_SetCacheCapacity, ViewOnTableCursorFixture )
@@ -860,8 +858,8 @@ FIXTURE_TEST_CASE( ViewCursor_SetCacheCapacity, ViewOnTableCursorFixture )
     CreateCursor ( GetName(), ViewOnTableName );
 
     // this cursor is not cached, so SetCapacity has no effect
-    REQUIRE_EQUAL ( 0ul, VCursorSetCacheCapacity ( (VCursor*)m_cur, 100 ) );
-    REQUIRE_EQUAL ( 0ul, VCursorGetCacheCapacity ( m_cur ) );
+    REQUIRE_EQUAL((uint64_t)0, VCursorSetCacheCapacity((VCursor*)m_cur, 100));
+    REQUIRE_EQUAL((uint64_t)0, VCursorGetCacheCapacity(m_cur));
 }
 
 FIXTURE_TEST_CASE( ViewCursor_Columns, ViewOnTableCursorFixture )
@@ -948,7 +946,7 @@ FIXTURE_TEST_CASE( ViewCursor_CacheActive, ViewOnTableCursorFixture )
     CreateCursorOpen ( GetName(), ViewOnTableName, ViewColumnName );
     int64_t end;
     REQUIRE ( ! VCursorCacheActive ( m_cur, & end ) );
-    REQUIRE_EQ ( 0l, end );
+    REQUIRE_EQ((int64_t)0, end);
 }
 
 // View inheritance
