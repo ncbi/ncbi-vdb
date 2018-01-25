@@ -126,6 +126,7 @@ struct XFSHashDict {
     XFSHashDictBanana banana;
 
     struct SLList keys;
+    size_t keys_qty;
 };
 
 XFS_EXTERN
@@ -149,25 +150,20 @@ XFSHashDictMake (
         RCt = XFS_RC ( rcExhausted );
     }
     else {
-        Ret -> hash_table = calloc ( 1, sizeof ( struct KHashTable ) );
-        if ( Ret -> hash_table == NULL ) {
-            RCt = XFS_RC ( rcExhausted );
-        }
-        else {
-            RCt = KHashTableInit (
-                                Ret -> hash_table,
-                                sizeof ( char * ), /* key_size ??? */
-                                sizeof ( void * ), /* value_size */
-                                0,      /* capacity, def value */
-                                0,      /* max_load_factor, def value */
-                                true    /* key_cstr */
-                                );
-            if ( RCt == 0 ) {
-                SLListInit ( & ( Ret -> keys ) );
-                Ret -> banana = Banana;
+        RCt = KHashTableInit (
+                            & ( Ret -> hash_table ),
+                            sizeof ( char * ), /* key_size ??? */
+                            sizeof ( void * ), /* value_size */
+                            0,      /* capacity, def value */
+                            0,      /* max_load_factor, def value */
+                            cstr    /* key_cstr */
+                            );
+        if ( RCt == 0 ) {
+            SLListInit ( & ( Ret -> keys ) );
+            Ret -> banana = Banana;
+            Ret -> keys_qty = 0;
 
-                * Dict = Ret;
-            }
+            * Dict = Ret;
         }
     }
 
@@ -219,8 +215,11 @@ XFSHashDictDispose ( const struct XFSHashDict * self )
         }
 
         SLListWhack ( & ( Dict -> keys ), HashDictKeysWhackCallback, NULL ) ;
+        Dict -> keys_qty = 0;
 
         Dict -> banana = NULL;
+
+        KHashTableWhack ( Dict -> hash_table, NULL, NULL, NULL );
 
         free ( Dict );
     }
@@ -356,13 +355,14 @@ printf ( " [HDAD] [%d] [%p] [%s] [%p]\n", __LINE__, Key, Key, Value );
                     ( struct SLList * ) & ( self -> keys ),
                     ( struct SLNode * ) DictKey
                     );
+        ( ( struct XFSHashDict * ) self ) -> keys_qty ++;
 
             /*) Third, here we actually adding
              (*/
         KeyHash = _HashDictKeyHashOfNullTerminatedStringLol (
                                                         DictKey -> key
                                                         );
-printf ( " [HDAD-II] [%d] [%p] [%s] [%p]\n", __LINE__, Key, Key, Value );
+printf ( " [HDAD-II] [%d] [%p] [%s] [%p] TC[%d] KK[%d]\n", __LINE__, Key, Key, Value, KHashTableCount ( self -> hash_table ), self -> keys_qty );
         RCt = KHashTableAdd (
                             self -> hash_table,
                             DictKey -> key,
