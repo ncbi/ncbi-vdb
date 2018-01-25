@@ -457,7 +457,9 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
     assert ( self );
     rc = SHelperInitKfg ( self );
     if ( rc == 0 ) {
-        rc = KConfigRead ( self -> kfg, path, 0, buffer, bsize, NULL, NULL );
+        size_t num_read = 0;
+        rc = KConfigRead ( self -> kfg, path, 0, buffer, bsize,
+                           & num_read, NULL );
         if ( rc != 0 ) {
             if ( buffer == NULL )
                 return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
