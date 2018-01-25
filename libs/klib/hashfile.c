@@ -23,13 +23,12 @@
 * ===========================================================================
 *
 */
-
+#if 0 // TODO
 #include <arch-impl.h>
 #include <assert.h>
 #include <klib/extern.h>
-#include <klib/hashtable.h>
+#include <klib/hashfile.h>
 #include <klib/rc.h>
-#include <klib/sort.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,17 +42,12 @@ extern "C" {
 
 struct KHashTable
 {
+    KFile * file;
     void* buckets;
-    uint64_t mask;
-    size_t key_size;
-    size_t value_size;
-    size_t bucket_size;
     size_t num_buckets; /* Always a power of 2 */
     size_t count;
     size_t load; /* Included invisible buckets */
-    double max_load_factor;
     int64_t iterator;
-    hashkey_type key_type;
 };
 
 static const uint64_t BUCKET_VALID = (uint64_t)1ULL << 63;
@@ -69,32 +63,6 @@ static double getloadfactor(const KHashTable* self)
     return load_factor;
 }
 */
-
-static void dump(const KHashTable* self)
-{
-    assert(self != NULL);
-    size_t bucket_size = self->bucket_size;
-
-    if (self->num_buckets > 64) return;
-    fprintf(stderr, "-- table has %ld/%ld %ld\n", self->count, self->load,
-            self->num_buckets);
-    fprintf(stderr, "bucket_size=%ld\n", bucket_size);
-    fprintf(stderr, "key_size=%ld\n", self->key_size);
-    for (size_t bucket = 0; bucket != self->num_buckets; bucket++) {
-        const char* bucketptr = (char*)self->buckets + (bucket * bucket_size);
-        const char* hashptr = bucketptr;
-        const char* keyptr = bucketptr + 8;
-        uint64_t buckethash;
-        memcpy(&buckethash, hashptr, 8);
-        fprintf(stderr, "   bucket %03ld hash %lx", bucket, buckethash);
-        if (buckethash & BUCKET_VALID) fprintf(stderr, " val");
-        if (buckethash & BUCKET_VISIBLE) fprintf(stderr, " vis");
-        uint64_t key = 0;
-        memcpy(&key, keyptr, self->key_size);
-        fprintf(stderr, " key=%lx", key);
-        fprintf(stderr, "\n");
-    }
-}
 
 static rc_t rehash(KHashTable* self, size_t capacity)
 {
@@ -130,9 +98,6 @@ static rc_t rehash(KHashTable* self, size_t capacity)
     self->load = 0;
 
     if (old_buckets) {
-        hashkey_type old_key_type = self->key_type;
-        self->key_type = raw;
-
         for (size_t bucket = 0; bucket != old_num_buckets; bucket++) {
             const char* bucketptr
                 = (char*)old_buckets + (bucket * bucket_size);
@@ -147,7 +112,6 @@ static rc_t rehash(KHashTable* self, size_t capacity)
             }
         }
         free(old_buckets);
-        self->key_type = old_key_type;
     }
 
     return 0;
@@ -234,6 +198,31 @@ deleted)
     u8[value_size] value; // Will not be present for sets
 }
 */
+
+#if 0
+static void dump(const KHashTable * self)
+{
+    assert(self != NULL);
+    size_t bucket_size = self->bucket_size;
+
+    if (self->num_buckets > 40) return;
+    fprintf(stderr, "-- table has %ld/%ld\n", self->count, self->load);
+    for (size_t bucket = 0; bucket != self->num_buckets; bucket++) {
+        const char* bucketptr = (char*)self->buckets + (bucket * bucket_size);
+        const char* hashptr = bucketptr;
+        const char* keyptr = bucketptr + 8;
+        uint64_t buckethash;
+        memcpy(&buckethash, hashptr, 8);
+        fprintf(stderr, "   bucket %03ld hash %lx", bucket, buckethash);
+        uint64_t key = 0;
+        memcpy(&key, keyptr, self->key_size);
+        if (buckethash & BUCKET_VALID) fprintf(stderr, " val");
+        if (buckethash & BUCKET_VISIBLE) fprintf(stderr, " vis");
+        fprintf(stderr, " key=%ld", key);
+        fprintf(stderr, "\n");
+    }
+}
+#endif
 
 LIB_EXPORT bool KHashTableFind(const KHashTable* self, const void* key,
                                uint64_t keyhash, void* value)
@@ -364,7 +353,6 @@ LIB_EXPORT rc_t KHashTableAdd(KHashTable* self, const void* key,
 
             double load_factor
                 = (double)self->load / (double)self->num_buckets;
-
             if (load_factor > self->max_load_factor) {
                 if ((double)self->count / (double)self->load > 0.5)
                     return rehash(self, self->num_buckets * 2);
@@ -704,3 +692,6 @@ LIB_EXPORT uint64_t KHash(const char* s, size_t len)
 #ifdef __cplusplus
 }
 #endif
+
+#endif
+

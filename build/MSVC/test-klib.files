@@ -2,6 +2,8 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="..\..\..\test\klib\test-klib.cpp" />
+    <ClCompile Include="..\..\..\test\klib\test-hashfile.cpp" />
+    <ClCompile Include="..\..\..\test\klib\test-hashtable.cpp" />
   </ItemGroup>
   
 </Project>

@@ -129,6 +129,7 @@ KLIB_SRC = \
 	num-gen \
 	progressbar \
 	sra-release-version \
+	hashfile \
 	hashtable \
 	btree
 #	path
