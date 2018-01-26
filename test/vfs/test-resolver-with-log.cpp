@@ -34,6 +34,8 @@
 #include <vfs/path.h> /* VPathRelease */
 #include <vfs/resolver.h> /* VResolverRelease */
 
+#include "resolver-cgi.h" /* RESOLVER_CGI */
+
 TEST_SUITE ( VResolverWithLogTestSuite );
 
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
@@ -105,8 +107,7 @@ extern "C" {
         rc_t rc = KConfigMake ( & KFG, NULL );
         if ( rc == 0 )
             rc = KConfigWriteString ( KFG,
-                "repository/remote/main/CGI/resolver-cgi",
-                "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
+                "repository/remote/main/CGI/resolver-cgi", RESOLVER_CGI );
 
         std::cerr << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n"; 
 
