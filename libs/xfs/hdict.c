@@ -52,66 +52,104 @@
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*
  * JIPPOTAM
  *_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+static
+uint64_t CC
+_HashOfNullTerminatedStringLol ( const char * Key )
+{
+        /*))    We all know that Key is null terminated, right?
+         ((*/
+    if ( Key != NULL ) {
+        return KHash ( Key, strlen ( Key ) );
+    }
+    return 0;
+}   /* _HashOfNullTerminatedStringLol () */
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*
- *
+ * _HashKeyVault - we need storage for keys, to kill them at once
+ * So, that is ugly, but will work till Mike will implement good
+ * ways to delete keys and values ...
+ * So sorry for that :D
  *_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
-struct _HashDictKey {
-    SLNode node;
-    const char * key;
-};
+static
+rc_t CC
+_HashKeyVaultMake ( struct KHashTable ** Vault )
+{
+    return KHashTableInit (
+                        Vault,
+                        sizeof ( char * ), /* key_size ??? */
+                        sizeof ( char * ), /* the stored key */
+                        0,      /* capacity, def value */
+                        0,      /* max_load_factor, def value */
+                        cstr    /* key_cstr */
+                        );
+}   /* _HashKeyVaultMake () */
 
 static
 rc_t CC
-_HashDictKeyDispose ( const struct _HashDictKey * self )
+_HashKeyVaultDispose ( struct KHashTable * self )
 {
-    struct _HashDictKey * Key = ( struct _HashDictKey * ) self;
+    char * Key, * Val;
 
-    if ( Key != NULL ) {
-        if ( Key -> key != NULL ) {
-            free ( ( char * ) Key -> key );
-            Key -> key = NULL;
+    if ( self != NULL ) {
+        KHashTableIteratorMake ( self );
+        while ( KHashTableIteratorNext ( self, & Key, & Val ) ) {
+            free ( Val );
         }
+
+        KHashTableWhack ( self, NULL, NULL, NULL );
     }
 
     return 0;
-}   /* _HashDictKeyDispose () */
+}   /* _HashKeyVaultDispose () */
 
 static
 rc_t CC
-_HashDictKeyMake ( const struct _HashDictKey ** HKey, const char * Key )
+_HashKeyVaultGetKey (
+                    struct KHashTable * self,
+                    const char ** FoundKey,
+                    uint64_t * KeyHash,
+                    const char * Key
+)
 {
     rc_t RCt;
-    struct _HashDictKey * Ret;
+    char * KeyDuplicate;
 
     RCt = 0;
-    Ret = NULL;
+    KeyDuplicate = NULL;
 
-    XFS_CSAN ( HKey )
-    XFS_CAN ( HKey )
+    XFS_CSAN ( FoundKey )
+    XFS_CSA ( KeyHash, 0 )
+    XFS_CAN ( self )
     XFS_CAN ( Key )
+    XFS_CAN ( KeyHash )
+    XFS_CAN ( FoundKey )
 
-    Ret = calloc ( 1, sizeof ( struct _HashDictKey ) );
-    if ( Ret == NULL ) {
-        RCt = XFS_RC ( rcExhausted );
+    * KeyHash = _HashOfNullTerminatedStringLol ( Key );
+
+    if ( KHashTableFind ( self , Key, * KeyHash, & KeyDuplicate ) ) {
+        * FoundKey = KeyDuplicate;
     }
     else {
-        RCt = XFS_StrDup ( Key, & ( Ret -> key ) );
+        RCt = XFS_StrDup ( Key, ( const char ** ) & ( KeyDuplicate ) );
         if ( RCt == 0 ) {
-            * HKey = Ret;
-        }
-    }
-
-    if ( RCt != 0 ) {
-        * HKey = NULL;
-
-        if ( Ret != NULL ) {
-            _HashDictKeyDispose ( Ret );
+            RCt = KHashTableAdd (
+                                self,
+                                Key,
+                                * KeyHash,
+                                & KeyDuplicate
+                                );
+            if ( RCt == 0 ) {
+                * FoundKey = KeyDuplicate;
+            }
+            else {
+                * FoundKey = NULL;
+                free ( KeyDuplicate );
+            }
         }
     }
 
     return RCt;
-}   /* _HashDictKeyMake () */
+}   /* _HashKeyVaultGetKey () */
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*
  * XFSHashDict
@@ -122,11 +160,9 @@ _HashDictKeyMake ( const struct _HashDictKey ** HKey, const char * Key )
 
 struct XFSHashDict {
     struct KHashTable * hash_table;
+    struct KHashTable * keys;
 
     XFSHashDictBanana banana;
-
-    struct SLList keys;
-    size_t keys_qty;
 };
 
 XFS_EXTERN
@@ -159,11 +195,11 @@ XFSHashDictMake (
                             cstr    /* key_cstr */
                             );
         if ( RCt == 0 ) {
-            SLListInit ( & ( Ret -> keys ) );
-            Ret -> banana = Banana;
-            Ret -> keys_qty = 0;
-
-            * Dict = Ret;
+            RCt = _HashKeyVaultMake ( & ( Ret -> keys ) );
+            if ( RCt == 0 ) {
+                Ret -> banana = Banana;
+                * Dict = Ret;
+            }
         }
     }
 
@@ -177,14 +213,6 @@ XFSHashDictMake (
 
     return RCt;
 }   /* XFSHashDictMake () */
-
-void
-HashDictKeysWhackCallback ( struct SLNode * Node, void * Data )
-{
-    if ( Node != NULL ) {
-        _HashDictKeyDispose ( ( struct _HashDictKey * ) Node );
-    }
-}   /* HashDictKeysWhackCallback () */
 
 XFS_EXTERN
 rc_t CC
@@ -214,8 +242,7 @@ XFSHashDictDispose ( const struct XFSHashDict * self )
             }
         }
 
-        SLListWhack ( & ( Dict -> keys ), HashDictKeysWhackCallback, NULL ) ;
-        Dict -> keys_qty = 0;
+        _HashKeyVaultDispose ( Dict -> keys );
 
         Dict -> banana = NULL;
 
@@ -227,25 +254,13 @@ XFSHashDictDispose ( const struct XFSHashDict * self )
     return 0;
 }   /* XFSHashDictDispose () */
 
-static
-uint64_t CC
-_HashDictKeyHashOfNullTerminatedStringLol ( const char * Key )
-{
-        /*))    We all know that Key is null terminated, right?
-         ((*/
-    if ( Key != NULL ) {
-        return KHash ( Key, strlen ( Key ) );
-    }
-    return 0;
-}   /* _HashDictKeyHashOfNullTerminatedStringLol () */
-
 XFS_EXTERN
 bool CC
 XFSHashDictHas ( const struct XFSHashDict * self, const char * Key )
 {
-    void * Value = NULL;
+    const void * Value = NULL;
 
-    return XFSHashDictGet ( self, Value, Key ) == 0;
+    return XFSHashDictGet ( self, & Value, Key ) == 0;
 }   /* XFSHashDictHas () */
 
 XFS_EXTERN
@@ -269,7 +284,7 @@ XFSHashDictGet (
     XFS_CAN ( Value )
     XFS_CAN ( Key )
 
-    KeyHash = _HashDictKeyHashOfNullTerminatedStringLol ( Key );
+    KeyHash = _HashOfNullTerminatedStringLol ( Key );
 
     if ( KHashTableFind ( self -> hash_table, Key, KeyHash, & Ret ) ) {
         * Value = Ret;
@@ -296,17 +311,17 @@ XFSHashDictDel ( const struct XFSHashDict * self, const char * Key )
     XFS_CAN ( self )
     XFS_CAN ( Key )
 
-    KeyHash = _HashDictKeyHashOfNullTerminatedStringLol ( Key );
+    KeyHash = _HashOfNullTerminatedStringLol ( Key );
 
         /*)) First we should retrieve value for key and free it if
          //  banana for dictionary is set
         ((*/
     if ( self -> banana != NULL ) {
         if ( KHashTableFind (
-                        self -> hash_table,
-                        Key,
-                        KeyHash,
-                        & KeyVal )
+                            self -> hash_table,
+                            Key,
+                            KeyHash,
+                            & KeyVal )
         ) {
             self -> banana ( KeyVal );
         }
@@ -330,12 +345,12 @@ XFSHashDictAdd (
 )
 {
     rc_t RCt;
-    const struct _HashDictKey * DictKey;
     uint64_t KeyHash;
+    const char * KeyToUse;
 
     RCt = 0;
-    DictKey = NULL;
     KeyHash = 0;
+    KeyToUse = NULL;
 
     XFS_CAN ( self )
     XFS_CAN ( Value )
@@ -346,26 +361,19 @@ XFSHashDictAdd (
         (*/
     XFSHashDictDel ( self, Key );
 
-printf ( " [HDAD] [%d] [%p] [%s] [%p]\n", __LINE__, Key, Key, Value );
-        /*) Second, we do create keykey and adding new value
+        /*) Second, storeing reusable key to vault
          (*/
-    RCt = _HashDictKeyMake ( & DictKey, Key );
-    if ( RCt == 0 ) {
-        SLListPushHead (
-                    ( struct SLList * ) & ( self -> keys ),
-                    ( struct SLNode * ) DictKey
-                    );
-        ( ( struct XFSHashDict * ) self ) -> keys_qty ++;
+    RCt = _HashKeyVaultGetKey (
+                            self -> keys,
+                            & KeyToUse,
+                            & KeyHash,
+                            Key
+                            );
 
-            /*) Third, here we actually adding
-             (*/
-        KeyHash = _HashDictKeyHashOfNullTerminatedStringLol (
-                                                        DictKey -> key
-                                                        );
-printf ( " [HDAD-II] [%d] [%p] [%s] [%p] TC[%d] KK[%d]\n", __LINE__, Key, Key, Value, KHashTableCount ( self -> hash_table ), self -> keys_qty );
+    if ( RCt == 0 ) {
         RCt = KHashTableAdd (
                             self -> hash_table,
-                            DictKey -> key,
+                            KeyToUse,
                             KeyHash,
                             & Value
                             );

@@ -106,7 +106,6 @@ _AddKartItem (
                                         & ProjectId,
                                         & AccessionOrId,
                                         ItemName );
-printf ( "[_AKAI] [%d] [%p] [%s]\n", __LINE__, AccessionOrId, AccessionOrId );
     if ( RCt == 0 ) {
         RCt = XFSGapFileNodeMake ( 
                                 & ItemNode,
@@ -127,7 +126,6 @@ printf ( "[_AKAI] [%d] [%p] [%s]\n", __LINE__, AccessionOrId, AccessionOrId );
              */
         }
 
-printf ( "[_AKAI] [%d] [%p] [%s]\n", __LINE__, AccessionOrId, AccessionOrId );
         free ( AccessionOrId );
         AccessionOrId = NULL;
     }
@@ -229,7 +227,6 @@ _LoadKart ( struct XFSKartNode * Node, struct XFSDoc * Doc )
                         if ( RCt != 0 ) {
                             break;
                         }
-if ( ListI == 34 ) break;
                         RCt = _AddKartItem ( Node, Kart, ListN );
                         if ( RCt != 0 ) {
                             if ( Doc != NULL ) {
