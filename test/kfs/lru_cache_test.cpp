@@ -173,6 +173,7 @@ TEST_CASE( LRU_Cache_Test_Basic )
 
     REQUIRE_RC( MakeRRCached ( &cache, org, PAGE_SIZE, PAGE_COUNT ) );
     
+    KFileRelease( org );
     KFileRelease( cache );
     KDirectoryRemove ( dir, true, "%s", filename );
     
