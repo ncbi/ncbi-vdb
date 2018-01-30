@@ -351,6 +351,22 @@ KFS_EXTERN rc_t CC KDirectoryOpenFileWrite_v1 ( KDirectory_v1 *self,
 KFS_EXTERN rc_t CC KDirectoryVOpenFileWrite ( KDirectory_v1 *self,
     struct KFile **f, bool update, const char *path, va_list args );
 
+/* OpenFileSharedWrite ( v1.4 )
+ *  opens an existing file with shared write access
+ *
+ *  "f" [ OUT ] - return parameter for newly opened file
+ *
+ *  "update" [ IN ] - if true, open in read/write mode
+ *  otherwise, open in write-only mode
+ *
+ *  "path" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting target file
+ */
+KFS_EXTERN rc_t CC KDirectoryOpenFileSharedWrite_v1 ( KDirectory_v1 *self,
+    struct KFile **f, bool update, const char *path, ... );
+KFS_EXTERN rc_t CC KDirectoryVOpenFileSharedWrite ( KDirectory_v1 *self,
+    struct KFile **f, bool update, const char *path, va_list args );
+
 /* CreateFile
  *  opens a file with write access
  *
@@ -527,6 +543,9 @@ KFS_EXTERN rc_t CC KDirectoryCopyPaths_v1 ( const KDirectory_v1 * src_dir,
 KFS_EXTERN rc_t CC KDirectoryCopy_v1 ( const KDirectory_v1 *src_dir,
     KDirectory_v1 *dst_dir, bool recursive, const char *src, const char *dst );
 
+KFS_EXTERN rc_t CC KDirectoryGetDiskFreeSpace_v1 ( const KDirectory * self,
+    uint64_t * free_bytes_available, uint64_t * total_number_of_bytes );
+
 /* NativeDir
  *  returns a native file-system directory node reference
  *  the directory root will be "/" and set to the native
@@ -569,6 +588,7 @@ typedef struct NAME_VERS ( KDirectory, KDIRECTORY_VERS ) KDirectory;
 #define KDirectoryCreateAlias NAME_VERS ( KDirectoryCreateAlias , KDIRECTORY_VERS )
 #define KDirectoryOpenFileRead NAME_VERS ( KDirectoryOpenFileRead , KDIRECTORY_VERS )
 #define KDirectoryOpenFileWrite NAME_VERS ( KDirectoryOpenFileWrite , KDIRECTORY_VERS ) 
+#define KDirectoryOpenFileSharedWrite NAME_VERS ( KDirectoryOpenFileSharedWrite , KDIRECTORY_VERS ) 
 #define KDirectoryCreateFile NAME_VERS ( KDirectoryCreateFile , KDIRECTORY_VERS )
 #define KDirectoryFileSize NAME_VERS ( KDirectoryFileSize , KDIRECTORY_VERS ) 
 #define KDirectoryFilePhysicalSize NAME_VERS ( KDirectoryFilePhysicalSize , KDIRECTORY_VERS ) 
@@ -581,6 +601,10 @@ typedef struct NAME_VERS ( KDirectory, KDIRECTORY_VERS ) KDirectory;
 #define KDirectoryCopyPath NAME_VERS ( KDirectoryCopyPath , KDIRECTORY_VERS )
 #define KDirectoryCopyPaths NAME_VERS ( KDirectoryCopyPaths , KDIRECTORY_VERS )
 #define KDirectoryCopy NAME_VERS ( KDirectoryCopy , KDIRECTORY_VERS )
+
+#define KDirectoryGetDiskFreeSpace NAME_VERS \
+      ( KDirectoryGetDiskFreeSpace , KDIRECTORY_VERS )
+
 #define KDirectoryNativeDir NAME_VERS ( KDirectoryNativeDir , KDIRECTORY_VERS )
 
 

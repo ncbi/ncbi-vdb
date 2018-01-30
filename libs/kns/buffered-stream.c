@@ -118,7 +118,7 @@ rc_t CC KBufferedStreamRead ( const KBufferedStream *cself,
     if ( bsize > avail )
         bsize = avail;
 
-    memcpy ( buffer, & self -> in_buffer [ self -> in_marker ], bsize );
+    memmove ( buffer, & self -> in_buffer [ self -> in_marker ], bsize );
     self -> in_marker += bsize;
 
     * num_read = bsize;
@@ -157,7 +157,7 @@ rc_t CC KBufferedStreamWrite ( KBufferedStream * self,
         if ( num_writ > avail )
             num_writ = avail;
 
-        memcpy ( & self -> out_buffer [ self -> out_marker ], & p [ total ], num_writ );
+        memmove ( & self -> out_buffer [ self -> out_marker ], & p [ total ], num_writ );
         self -> out_marker += num_writ;
     }
 

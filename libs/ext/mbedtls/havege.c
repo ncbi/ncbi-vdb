@@ -81,7 +81,7 @@ static void mbedtls_zeroize( void *v, size_t n ) {
     PTX = (PT1 >> 18) & 7;                              \
     PT1 &= 0x1FFF;                                      \
     PT2 &= 0x1FFF;                                      \
-    CLK = (int) mbedtls_timing_hardclock();                            \
+    CLK = (int) vdb_mbedtls_timing_hardclock();                            \
                                                         \
     i = 0;                                              \
     A = &WALK[PT1    ]; RES[i++] ^= *A;                 \
@@ -104,7 +104,7 @@ static void mbedtls_zeroize( void *v, size_t n ) {
                                                         \
     IN = (*A >> (5)) ^ (*A << (27)) ^ CLK;              \
     *A = (*B >> (6)) ^ (*B << (26)) ^ CLK;              \
-    *B = IN; CLK = (int) mbedtls_timing_hardclock();                   \
+    *B = IN; CLK = (int) vdb_mbedtls_timing_hardclock();                   \
     *C = (*C >> (7)) ^ (*C << (25)) ^ CLK;              \
     *D = (*D >> (8)) ^ (*D << (24)) ^ CLK;              \
                                                         \
@@ -196,14 +196,14 @@ static void havege_fill( mbedtls_havege_state *hs )
 /*
  * HAVEGE initialization
  */
-void mbedtls_havege_init( mbedtls_havege_state *hs )
+void vdb_mbedtls_havege_init( mbedtls_havege_state *hs )
 {
     memset( hs, 0, sizeof( mbedtls_havege_state ) );
 
     havege_fill( hs );
 }
 
-void mbedtls_havege_free( mbedtls_havege_state *hs )
+void vdb_mbedtls_havege_free( mbedtls_havege_state *hs )
 {
     if( hs == NULL )
         return;
@@ -214,7 +214,7 @@ void mbedtls_havege_free( mbedtls_havege_state *hs )
 /*
  * HAVEGE rand function
  */
-int mbedtls_havege_random( void *p_rng, unsigned char *buf, size_t len )
+int vdb_mbedtls_havege_random( void *p_rng, unsigned char *buf, size_t len )
 {
     int val;
     size_t use_len;

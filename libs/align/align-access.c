@@ -257,7 +257,7 @@ LIB_EXPORT rc_t CC AlignAccessRefSeqEnumeratorGetID(const AlignAccessRefSeqEnume
         *id_size = id_act_size;
     if (id_buffer != NULL) {
         if (buffer_size >= id_act_size)
-            memcpy(id_buffer, cur->name, id_act_size);
+            memmove(id_buffer, cur->name, id_act_size);
         else
             rc = RC(rcAlign, rcTable, rcAccessing, rcBuffer, rcInsufficient);
     }
@@ -300,9 +300,9 @@ LIB_EXPORT rc_t CC AlignAccessRefSeqEnumeratorNext(const AlignAccessRefSeqEnumer
 struct AlignAccessAlignmentEnumerator {
     const AlignAccessDB *parent;
     const BAMAlignment *innerSelf;
+    BAMFileSlice *slice;
     uint64_t endpos;
     uint64_t startpos;
-    BAMFilePosition pos;
     atomic32_t refcount;
     int atend;
     int refSeqID;
@@ -341,16 +341,18 @@ LIB_EXPORT rc_t CC AlignAccessDBEnumerateAlignments(const AlignAccessDB *self, A
     return AlignAccessAlignmentEnumeratorNext(*align_enum);
 }
 
-LIB_EXPORT rc_t CC AlignAccessDBWindowedAlignments(
-                                     const AlignAccessDB *self,
-                                     AlignAccessAlignmentEnumerator **align_enum,
-                                     const char *refSeqName, uint64_t pos, uint64_t wsize
-) {
+LIB_EXPORT
+rc_t CC AlignAccessDBWindowedAlignments(const AlignAccessDB *self,
+                                        AlignAccessAlignmentEnumerator **align_enum,
+                                        const char *refSeqName, uint64_t pos, uint64_t wsize
+                                        )
+{
     AlignAccessAlignmentEnumerator *lhs;
     unsigned i, n;
     const BAMRefSeq *rs;
     uint64_t endpos = pos + wsize;
     rc_t rc;
+    BAMFileSlice *slice;
     
     *align_enum = NULL;
 
@@ -364,10 +366,12 @@ LIB_EXPORT rc_t CC AlignAccessDBWindowedAlignments(
         return RC(rcAlign, rcTable, rcConstructing, rcParam, rcInvalid);
     }
 
-    if (wsize == 0 || endpos > rs->length)
+    if (endpos > rs->length || wsize == 0)
         endpos = rs->length;
 
-    rc = BAMFileSeek(self->innerSelf, i, pos, endpos);
+    rc = BAMFileMakeSlice(self->innerSelf, &slice, i, pos, endpos);
+    if (rc == 0 && slice == NULL)
+        return RC(rcAlign, rcTable, rcConstructing, rcMemory, rcExhausted);
     if ( rc != 0 )
     {
         if ( GetRCState( rc ) == rcNotFound && GetRCObject( rc ) == (enum RCObject)rcData )
@@ -381,6 +385,7 @@ LIB_EXPORT rc_t CC AlignAccessDBWindowedAlignments(
     lhs->refSeqID = i;
     lhs->endpos = endpos;
     lhs->startpos = pos;
+    lhs->slice = slice;
 
     *align_enum = lhs;
     return AlignAccessAlignmentEnumeratorNext(*align_enum);
@@ -399,8 +404,17 @@ AGAIN:
     if (self->atend != 0)
         return AlignAccessAlignmentEnumeratorEOFCode;
     
-    BAMFileGetPosition(self->parent->innerSelf, &self->pos);
-    rc = BAMFileRead2(self->parent->innerSelf, &self->innerSelf);
+    if (self->slice == NULL) {
+        rc = BAMFileRead2(self->parent->innerSelf, &self->innerSelf);
+        if (rc) {
+            if (GetRCState(rc) == rcNotFound && GetRCObject(rc) == rcRow) {
+                self->atend = 1;
+                rc = AlignAccessAlignmentEnumeratorEOFCode;
+            }
+        }
+        return rc;
+    }
+    rc = BAMFileReadSlice(self->parent->innerSelf, &self->innerSelf, self->slice);
     if (rc) {
         if (GetRCState(rc) == rcNotFound && GetRCObject(rc) == rcRow) {
             self->atend = 1;
@@ -408,9 +422,9 @@ AGAIN:
         }
         return rc;
     }
-    if (self->refSeqID == -1)
-        return 0;
-    
+    if (!BAMAlignmentIsMapped(self->innerSelf))
+        goto AGAIN;
+
     BAMAlignmentGetRefSeqId(self->innerSelf, &refSeqID);
     if (self->refSeqID != refSeqID) {
         self->atend = 1;
@@ -419,15 +433,14 @@ AGAIN:
     else if (self->endpos != 0) {
         int64_t pos;
         uint32_t length;
-        uint64_t endpos;
-        
+
         BAMAlignmentGetPosition2(self->innerSelf, &pos, &length);
-        if (pos < 0 || pos >= (int64_t)self->endpos) {
+        if (pos >= (int64_t)self->endpos) {
             self->atend = 1;
             rc = AlignAccessAlignmentEnumeratorEOFCode;
         }
         else {
-            endpos = (uint64_t)pos + length;
+            int64_t const endpos = pos + length;
             if (endpos <= self->startpos)
                 goto AGAIN;
         }
@@ -443,6 +456,7 @@ LIB_EXPORT rc_t CC AlignAccessAlignmentEnumeratorAddRef ( const AlignAccessAlign
 
 static
 rc_t CC AlignAccessAlignmentEnumeratorWhack(AlignAccessAlignmentEnumerator *self) {
+    free(self->slice);
     if (self->innerSelf)
         BAMAlignmentRelease(self->innerSelf);
     AlignAccessDBRelease(self->parent);
@@ -491,7 +505,7 @@ LIB_EXPORT rc_t CC AlignAccessAlignmentEnumeratorGetRefSeqID(
         *id_size = id_act_size;
     if (id_buffer != NULL) {
         if (buffer_size >= id_act_size)
-            memcpy(id_buffer, cur->name, id_act_size);
+            memmove(id_buffer, cur->name, id_act_size);
         else
             rc = RC(rcAlign, rcTable, rcAccessing, rcBuffer, rcInsufficient);
     }
@@ -577,7 +591,7 @@ LIB_EXPORT rc_t CC AlignAccessAlignmentEnumeratorGetShortSeqAccessionID(
             *id_size = id_act_size;
         if (id_buffer != NULL) {
             if (buffer_size >= id_act_size)
-                memcpy(id_buffer, readGroupName, id_act_size);
+                memmove(id_buffer, readGroupName, id_act_size);
             else
                 rc = RC(rcAlign, rcTable, rcAccessing, rcBuffer, rcInsufficient);
         }
@@ -607,7 +621,7 @@ LIB_EXPORT rc_t CC AlignAccessAlignmentEnumeratorGetShortSeqID(
         *id_size = id_act_size;
     if (id_buffer != NULL) {
         if (buffer_size >= id_act_size)
-            memcpy(id_buffer, readName, id_act_size);
+            memmove(id_buffer, readName, id_act_size);
         else
             rc = RC(rcAlign, rcTable, rcAccessing, rcBuffer, rcInsufficient);
     }
@@ -660,7 +674,7 @@ LIB_EXPORT rc_t CC AlignAccessAlignmentEnumeratorGetCIGAR(
         cig1len = sprintf(cig1, "%c%u", op, len);
         if (cigbuf + cig1len < endp) {
             if (cigar_buffer != NULL) {
-                memcpy(cigbuf, cig1, cig1len);
+                memmove(cigbuf, cig1, cig1len);
                 cigbuf[cig1len] = 0;
             }
         }
@@ -801,7 +815,7 @@ LIB_EXPORT rc_t CC AlignAccessAlignmentEnumeratorGetRecordID(const AlignAccessAl
     if (self == NULL)
         return 0;
     
-    *(BAMFilePosition *)result = self->pos;
+    *(BAMFilePosition *)result = BAMAlignmentGetFilePos(self->innerSelf);
     return 0;
 }
 
@@ -809,4 +823,9 @@ LIB_EXPORT rc_t CC AlignAccessAlignmentEnumeratorGetBAMAlignment(const AlignAcce
 {
     *result = self->innerSelf;
     return BAMAlignmentAddRef(self->innerSelf);
+}
+
+LIB_EXPORT rc_t CC AlignAccessAlignmentEnumeratorGetSAM(const AlignAccessAlignmentEnumerator *self, size_t *const actSize, size_t const maxsize, char *const buffer)
+{
+    return BAMAlignmentFormatSAM(self->innerSelf, actSize, maxsize, buffer);
 }

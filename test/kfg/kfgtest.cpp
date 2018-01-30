@@ -131,8 +131,9 @@ public:
         file=0;
     }
 
-    void CreateAndLoad(const char* name, const char* contents)
+    void CreateAndLoad(const string & sname, const char* contents)
     {
+        const char * name = sname . c_str ();
 #ifdef DBG_KFG
         cout << "26 CreateAndLoad(" << name << ")\n";
 #endif
@@ -251,6 +252,11 @@ public:
     static string apppath; // only gets set for the 1st instance of KConfig; save it here for the corresponding test case
 };
 string KfgFixture::apppath; 
+
+FIXTURE_TEST_CASE(testKConfigPrint, KfgFixture)
+{
+	REQUIRE_RC(KConfigPrint(kfg, 0));
+}
 
 ///////////////////////////////////////////////// KFG parser test cases
 

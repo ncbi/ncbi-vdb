@@ -1952,7 +1952,7 @@ rc_t typed_column_decl ( KSymTable *tbl, KTokenSource *src, KToken *t,
 
             /* tack a dot onto the beginning and look up the symbol */
             physnamebuff [ 0 ] = '.';
-            memcpy ( & physnamebuff [ 1 ], c -> name -> name . addr, c -> name -> name . size );
+            memmove ( & physnamebuff [ 1 ], c -> name -> name . addr, c -> name -> name . size );
             StringInit ( & physname, physnamebuff, c -> name -> name . size + 1, c -> name -> name . len + 1 );
             sym = KSymTableFind ( tbl, & physname );
 

@@ -1785,7 +1785,7 @@ LIB_EXPORT rc_t CC VCursorRead ( const VCursor *self, uint32_t col_idx,
 
                         /* copy out data up to limit */
                         assert ( boff == 0 );
-                        memcpy ( buffer, base, ( size_t ) ( to_read >> 3 ) );
+                        memmove ( buffer, base, ( size_t ) ( to_read >> 3 ) );
 
                         return rc;
                     }
@@ -1844,7 +1844,7 @@ LIB_EXPORT rc_t CC VCursorReadDirect ( const VCursor *self, int64_t row_id, uint
 
                         /* copy out data up to limit */
                         assert ( boff == 0 );
-                        memcpy ( buffer, base, ( size_t ) ( to_read >> 3 ) );
+                        memmove ( buffer, base, ( size_t ) ( to_read >> 3 ) );
 
                         return rc;
                     }
@@ -2816,7 +2816,7 @@ rc_t VCursorFindNextRowIdInt ( const VCursor * self, uint32_t idx, int64_t start
             bool is_static = false;
             KColumn * kcol = NULL;
             rc = VColumnGetKColumn ( vcol, & kcol, & is_static );
-            if ( rc == 0 )
+            if ( kcol != NULL && rc == 0 )
             {
                 /* we have a physical column - ask kdb what the next id is */
                 assert ( kcol != NULL );

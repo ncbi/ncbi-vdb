@@ -2213,7 +2213,6 @@ LIB_EXPORT rc_t CC KColumnBlobRead ( const KColumnBlob *self,
     size_t *num_read, size_t *remaining )
 {
     rc_t rc;
-    const KColumnPageMap *pm;
 
     size_t ignore;
     if ( remaining == NULL )
@@ -2230,13 +2229,8 @@ LIB_EXPORT rc_t CC KColumnBlobRead ( const KColumnBlob *self,
             size_t size = self -> num_writ;
             const KColumn *col = self -> col;
 
-            if ( size != 0 )
-                pm = & self -> pmnew;
-            else
-            {
-                pm = & self -> pmorig;
+            if ( size == 0 )
                 size = self -> loc . u . blob . size;
-            }
 
             if ( offset > size )
                 offset = size;
@@ -2252,15 +2246,20 @@ LIB_EXPORT rc_t CC KColumnBlobRead ( const KColumnBlob *self,
                     to_read = bsize;
 
                 *num_read = 0;
-                while (*num_read < to_read) {
+                while (*num_read < to_read)
+		{
                     size_t nread = 0;
 
-                    rc = KColumnDataRead ( & col -> df, pm, offset - *num_read, (void *)((char *)buffer + *num_read), to_read - *num_read, &nread );
-                    if (rc) break;
-                    if (nread == 0) {
+                    rc = KColumnDataRead ( & col -> df, & self -> pmorig, offset + *num_read,
+                        & ( ( char * ) buffer ) [ * num_read ], to_read - * num_read, & nread );
+                    if ( rc != 0 )
+                        break;
+                    if (nread == 0)
+                    {
                         rc = RC ( rcDB, rcBlob, rcReading, rcFile, rcInsufficient );
                         break;
                     }
+
                     *num_read += nread;
                 }
 

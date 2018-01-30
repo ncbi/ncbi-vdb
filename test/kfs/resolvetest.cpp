@@ -142,18 +142,18 @@ FIXTURE_TEST_CASE( ResolveTest_DoubleDotsAgogo, ResolveFixture )
 FIXTURE_TEST_CASE( ResolveTest_LeadingDoubleSlash, ResolveFixture )
 {
 #ifdef WINDOWS    
-    REQUIRE_RESOLVE( "//panfs/pan1", "//panfs/pan1" );
+    REQUIRE_RESOLVE( "//pqrst/pon1", "//pqrst/pon1" );
 #else
-    REQUIRE_RESOLVE( "//panfs/pan1", "/panfs/pan1" );
+    REQUIRE_RESOLVE( "//pqrst/pon1", "/pqrst/pon1" );
 #endif    
 }
 
 FIXTURE_TEST_CASE( ResolveTest_LeadingTripleSlash, ResolveFixture )
 {
 #ifdef WINDOWS    
-    REQUIRE_RESOLVE( "///panfs/pan1", "//panfs/pan1" );
+    REQUIRE_RESOLVE( "///pqrst/pon1", "//pqrst/pon1" );
 #else
-    REQUIRE_RESOLVE( "///panfs/pan1", "/panfs/pan1" );
+    REQUIRE_RESOLVE( "///pqrst/pon1", "/pqrst/pon1" );
 #endif    
 }
 

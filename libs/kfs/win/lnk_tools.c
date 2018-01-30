@@ -170,14 +170,14 @@ static unsigned char * lnk_file_read( HANDLE hfile, const size_t n_bytes, DWORD 
 static DWORD lnk_file_get_DWORD( const unsigned char * buffer, const int idx )
 {
     DWORD res = 0;
-    memcpy( &res, &(buffer[ idx ]), sizeof( res ) );
+    memmove( &res, &(buffer[ idx ]), sizeof( res ) );
     return res;
 }
 
 static WORD lnk_file_get_WORD( const unsigned char * buffer, const int idx )
 {
     WORD res = 0;
-    memcpy( &res, &(buffer[ idx ]), sizeof( res ) );
+    memmove( &res, &(buffer[ idx ]), sizeof( res ) );
     return res;
 }
 

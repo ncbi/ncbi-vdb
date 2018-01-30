@@ -180,6 +180,11 @@ struct KDirectory_vt_v1
         bool *contiguous, const char *path, va_list args );
     /* end minor version == 3 */
 
+    /* start minor version == 4 */
+    rc_t ( CC * open_file_shared_write ) ( KDIR_IMPL *self,
+        KFile **f, bool update, const char *path, va_list args );
+    /* end minor version == 4 */
+
     /* ANY NEW ENTRIES MUST BE REFLECTED IN libs/kfs/directory.c
        BY BOTH THE CORRESPONDING MESSAGE DISPATCH FUNCTION(s) AND
        VTABLE VALIDITY CHECKS IN KDirectoryInit */

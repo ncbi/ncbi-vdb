@@ -373,6 +373,15 @@ KNS_EXTERN rc_t CC KClientHttpResultGetHeader ( const KClientHttpResult *self, c
     char *buffer, size_t bsize, size_t *num_read );
 
 
+/* TestHeaderValue
+ *  test for existence of header and a particular value
+ *  if the header exists and has a comma-separated list of values,
+ *  test each value individually, i.e. splits on comma before comparison
+ */
+KNS_EXTERN bool CC KClientHttpResultTestHeaderValue ( const KClientHttpResult *self,
+    const char *name, const char *value );
+
+
 /* GetInputStream
  *  access the body of response as a stream
  *  only reads are supported

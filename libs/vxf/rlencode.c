@@ -104,7 +104,7 @@ static __inline__ int rle_write(uint8_t *dst, const uint8_t *dend, const uint8_t
 			return 0;
 
 		*dst++ = SPECIAL;
-		memcpy(dst, src, len);
+		memmove(dst, src, len);
 		return (int)len + 1;
 	}
     if (len >= MAX_RUN_LEN) {
@@ -127,15 +127,15 @@ static __inline__ int rle_write(uint8_t *dst, const uint8_t *dend, const uint8_t
         head[i - 1] = *src;
     case zero_run:
     case one_run:
-        memcpy(dst, head, i);
+        memmove(dst, head, i);
         return i;
     default:
         break;
 	}
 	if (dst + i + len > dend)
 		return 0;
-	memcpy(dst, head, i);
-	memcpy(dst + i, src, len);
+	memmove(dst, head, i);
+	memmove(dst + i, src, len);
 	return i + (int)len;
 }
 

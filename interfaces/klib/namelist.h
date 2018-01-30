@@ -195,7 +195,14 @@ KLIB_EXTERN rc_t CC VNamelistSplitString ( VNamelist * list,
 KLIB_EXTERN rc_t CC VNamelistSplitStr ( VNamelist * list,
         const char * str, const uint32_t delim );
 
+/* creates a VNamelist from a KNamelist
+ */
+KLIB_EXTERN rc_t CC VNamelistFromKNamelist ( VNamelist ** list, const KNamelist * src );
 
+/* creates a copy of a VNamelist
+ */
+KLIB_EXTERN rc_t CC CopyVNamelist ( VNamelist ** list, const VNamelist * src );
+ 
 /* VNamelistFromString, VNamelistFromStr
  *  splits a String or char-ptr and creates VNamelist from parts
  */
