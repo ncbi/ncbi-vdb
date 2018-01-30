@@ -36,7 +36,7 @@
 
 #include <va_copy.h>
 
-#include <string.h>    /* memcpy() */
+#include <string.h>    /* memmove() */
 
 #include <sysalloc.h>
 
@@ -392,7 +392,7 @@ XFSDocFile_read_v1 (
 
         RCt = XFSDocGet ( DocFile -> Doc, & DocB );
         if ( RCt == 0 ) {
-            memcpy ( buffer, DocB + pos, Siz2R );
+            memmove ( buffer, DocB + pos, Siz2R );
             * num_read = Siz2R;
         }
     }
@@ -652,7 +652,7 @@ __TextDocRealloc ( struct XFSDoc * self, size_t Len )
 
         if ( Doc -> buffer != NULL ) {
             if ( Doc -> size != 0 ) {
-                memcpy (
+                memmove (
                         NewBuf,
                         Doc -> buffer,
                         Doc -> size * sizeof ( char )
@@ -689,7 +689,7 @@ __TextDocAppend ( struct XFSDoc * self, const char * Line, size_t Len )
 
     RCt = __TextDocRealloc ( self, Len );
     if ( RCt ==  0 ) {
-        memcpy ( Doc -> buffer + Doc -> size, Line, Len );
+        memmove ( Doc -> buffer + Doc -> size, Line, Len );
 
         Doc -> size += Len;
     }

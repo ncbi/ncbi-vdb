@@ -428,7 +428,7 @@ LIB_EXPORT rc_t CC WriteNameListToKFile( struct KFile * self, const VNamelist * 
 
 
 LIB_EXPORT rc_t CC WriteNamelistToFileByName( const VNamelist * namelist, const char * filename,
-                                                 const char * delim )
+                                              const char * delim )
 {
     rc_t rc;
     if ( namelist == NULL || filename == NULL || delim == NULL )
@@ -448,6 +448,59 @@ LIB_EXPORT rc_t CC WriteNamelistToFileByName( const VNamelist * namelist, const 
                 KFileRelease ( f );
             }
             KDirectoryRelease ( dir );
+        }
+    }
+    return rc;
+}
+
+
+typedef struct dir_entry_ctx
+{
+    VNamelist * namelist;
+    bool add_files;
+    bool add_dirs;
+} dir_entry_ctx;
+
+
+static rc_t CC on_dir_entry( const KDirectory * dir, uint32_t type, const char * name, void * data )
+{
+    rc_t rc = 0;
+    if ( name != NULL && data != NULL && name[ 0 ] != 0 && name[ 0 ] != '.' )
+    {
+        dir_entry_ctx * dec = data;
+        bool is_dir = ( ( type & ~kptAlias ) == kptDir );
+        bool is_file = ( ( type & ~kptAlias ) == kptFile );
+        if ( ( dec->add_dirs && is_dir ) || ( dec->add_files && is_file ) )
+            rc = VNamelistAppend( dec->namelist, name );
+    }
+    return rc;
+}
+
+LIB_EXPORT rc_t CC ReadDirEntriesIntoToNamelist( VNamelist ** namelist, const KDirectory * dir,
+    bool perform_sort, bool add_files, bool add_dirs, const char * path )
+{
+    rc_t rc;
+    if ( namelist == NULL || dir == NULL )
+        rc = RC( rcFS, rcFile, rcValidating, rcParam, rcNull );
+    else
+    {
+        dir_entry_ctx dec;
+        
+        *namelist = NULL;
+        rc = VNamelistMake( &dec.namelist, 25 );
+        if ( rc == 0 )
+        {
+            dec.add_files = add_files;
+            dec.add_dirs = add_dirs;
+
+            rc = KDirectoryVisit( dir, false, on_dir_entry, &dec, "%s", path );
+            if ( rc == 0 && perform_sort )
+                VNamelistReorder( dec.namelist, false );
+                
+            if ( rc == 0 )
+                *namelist = dec.namelist;
+            else
+                VNamelistRelease( dec.namelist );
         }
     }
     return rc;

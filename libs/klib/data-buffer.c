@@ -182,7 +182,7 @@ static rc_t reallocate(buffer_impl_t **target, size_t capacity) {
         temp = malloc(capacity + sizeof(*temp));
         if (temp == NULL)
             return RC(rcRuntime, rcBuffer, rcResizing, rcMemory, rcExhausted);
-        memcpy(temp, self, self->allocated + sizeof(*temp));
+        memmove(temp, self, self->allocated + sizeof(*temp));
         release(self);
     }
     self = temp;
@@ -219,7 +219,7 @@ static buffer_impl_t* make_copy(buffer_impl_t *self) {
     else {
         buffer_impl_t *copy = malloc(self->allocated + sizeof(*self));
         if (copy) {
-            memcpy(copy, self, self->allocated + sizeof(*copy));
+            memmove(copy, self, self->allocated + sizeof(*copy));
             atomic32_set(&copy->refcount, 1);
         }
         return copy;
@@ -352,7 +352,7 @@ static rc_t KDataBufferResizeInt(KDataBuffer *self, uint64_t new_count) {
     /* is sub-buffer but is sole reference */
     rc = allocate(&new_imp, roundup(new_size, 12));
     if (rc == 0) {
-        memcpy((void *)get_data(new_imp), self->base, new_size);
+        memmove((void *)get_data(new_imp), self->base, new_size);
         release(imp);
         self->base = (void *)get_data(new_imp);
         self->ignore = new_imp;
@@ -476,7 +476,7 @@ rc_t KDataBufferCastInt(const KDataBuffer *self, KDataBuffer *target, uint64_t n
                 fprintf ( stderr, "reallocating and copying buffer\n" );
 #endif
                 /* copy */
-                memcpy ( tmp . base, self -> base, total_bytes );
+                memmove ( tmp . base, self -> base, total_bytes );
 
                 /* if assigning target would overwrite self, whack original */
                 if ( ( const KDataBuffer * ) target == self )
@@ -557,7 +557,7 @@ static rc_t KDataBufferMakeWritableInt (const KDataBuffer *cself, KDataBuffer *t
             rc = allocate(&copy, roundup(KDataBufferBytes(cself), 12));
             if (rc == 0) {
                 if (cself->bit_offset == 0)
-                    memcpy((void *)get_data(copy), cself->base, KDataBufferBytes(cself));
+                    memmove((void *)get_data(copy), cself->base, KDataBufferBytes(cself));
                 else
                     bitcpy((void *)get_data(copy), 0, cself->base, cself->bit_offset, KDataBufferBits(cself));
 

@@ -28,7 +28,7 @@
 		return 0;
 
 	u.l = 1;
-	(void)memcpy(&elfhdr, buf, sizeof elfhdr);
+	(void)memmove(&elfhdr, buf, sizeof elfhdr);
 	swap = (u.c[sizeof(int32_t) - 1] + 1) != elfhdr.e_ident[EI_DATA];
 
 	type = elf_getu16(swap, elfhdr.e_type);

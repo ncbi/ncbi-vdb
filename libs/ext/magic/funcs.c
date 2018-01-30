@@ -375,7 +375,7 @@ file_getbuffer(struct magic_set *ms)
 			}
 
 			if (iswprint(nextchar)) {
-				(void)memcpy(np, op, bytesconsumed);
+				(void)memmove(np, op, bytesconsumed);
 				op += bytesconsumed;
 				np += bytesconsumed;
 			} else {

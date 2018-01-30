@@ -58,7 +58,7 @@ char *strndup ( const char *str, size_t n )
     dupstr = (char*)malloc ( n + 1 );
     if ( dupstr != NULL )
     {
-        memcpy ( dupstr, str, n );
+        memmove ( dupstr, str, n );
         dupstr [ n ] = 0;
     }
 

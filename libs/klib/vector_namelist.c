@@ -444,6 +444,65 @@ LIB_EXPORT rc_t CC VNamelistSplitStr ( VNamelist * list, const char * str, const
 }
 
 
+LIB_EXPORT rc_t CC VNamelistFromKNamelist ( VNamelist ** list, const KNamelist * src )
+{
+    rc_t rc = 0;
+    if ( list == NULL )
+        rc = RC ( rcCont, rcNamelist, rcParsing, rcSelf, rcNull );
+    else
+    {
+        *list = NULL;
+        if ( src == NULL )
+            rc = RC ( rcCont, rcNamelist, rcParsing, rcParam, rcNull );
+        else
+        {
+            uint32_t count;
+            rc = KNamelistCount ( src, &count );
+            if ( rc == 0 )
+            {
+                if ( count == 0 )
+                    rc = RC ( rcCont, rcNamelist, rcParsing, rcParam, rcEmpty );    
+                else
+                {
+                    rc = VNamelistMake( list, count );
+                    if ( rc == 0 )
+                    {
+                        uint32_t idx;
+                        for ( idx = 0; rc == 0 && idx < count; ++idx )
+                        {
+                            const char * s = NULL;
+                            rc = KNamelistGet ( src, idx, &s );
+                            if ( rc == 0 && s != NULL )
+                            {
+                                rc = VNamelistAppend ( *list, s );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC CopyVNamelist ( VNamelist ** list, const VNamelist * src )
+{
+    rc_t rc = 0;
+    if ( list == NULL )
+        rc = RC ( rcCont, rcNamelist, rcParsing, rcSelf, rcNull );
+    else
+    {
+        const KNamelist * casted;
+        *list = NULL;
+        rc = VNamelistToConstNamelist ( src, &casted );
+        if ( rc == 0 )
+            rc = VNamelistFromKNamelist ( list, casted );
+    }
+    return rc;
+}
+
+
 LIB_EXPORT rc_t CC VNamelistFromString ( VNamelist ** list, const String * str, const uint32_t delim )
 {
     rc_t rc = VNamelistMake( list, 10 );

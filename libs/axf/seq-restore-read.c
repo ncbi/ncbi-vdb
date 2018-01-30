@@ -135,7 +135,7 @@ static bool rr_entry_make ( rr_entry ** entry, const INSDC_4na_bin * read, uint3
         if ( res )
         {
             obj -> read_len = read_len;
-            memcpy( &( obj -> read[ 0 ] ), read, read_len );
+            memmove( &( obj -> read[ 0 ] ), read, read_len );
             *entry = obj;
         }
     }
@@ -305,17 +305,19 @@ rc_t open_RR_cursor( Read_Restorer * obj, const VTable *tbl, const VCursor* nati
                 /* rc = VTableCreateCursorRead( patbl, &obj->curs ); */
                 VTableRelease ( patbl );
                 if ( rc == 0 )
-                {
-                    /* add columns to cursor */
-                    rc = VCursorAddColumn ( obj -> curs, & obj -> read_idx, "( INSDC:4na:bin ) READ" );
-                    if ( rc == 0 )
-                    {
-                        rc = VCursorOpen ( obj -> curs );
-                        if ( rc == 0 )
-                            rc = VCursorLinkedCursorSet( native_curs, tablename, obj->curs );
-                    }
-                }
+                    rc = VCursorLinkedCursorSet( native_curs, tablename, obj->curs );
             }
+        }
+    }
+    if ( rc == 0 )
+    {
+        /* add columns to cursor */
+        rc = VCursorAddColumn ( obj -> curs, & obj -> read_idx, "( INSDC:4na:bin ) READ" );
+        if ( GetRCState(rc) == rcExists )
+            rc = 0;
+        if ( rc == 0 )
+        {
+            rc = VCursorOpen ( obj -> curs );
         }
     }
     return rc;
@@ -493,7 +495,7 @@ static rc_t CC seq_restore_read_impl2 ( void *data, const VXformInfo *info, int6
     if ( rc == 0 && len > 0 )
     {
         if ( len == src_len ) /*** shortcut - all data is local ***/
-            memcpy( dst, src, len );
+            memmove( dst, src, len );
         else
         {
             rr_entry * ep;
@@ -528,7 +530,7 @@ static rc_t CC seq_restore_read_impl2 ( void *data, const VXformInfo *info, int6
                         {
                             if ( read_type[ i ] & SRA_READ_TYPE_FORWARD )
                             {
-                                memcpy( dst, rd, read_len[ i ] );
+                                memmove( dst, rd, read_len[ i ] );
                             }
                             else if ( read_type[ i ] & SRA_READ_TYPE_REVERSE )
                             {
@@ -554,7 +556,7 @@ static rc_t CC seq_restore_read_impl2 ( void *data, const VXformInfo *info, int6
                 {
                     if ( src_len >= read_len[ i ] )
                     {
-                        memcpy( dst, src, read_len[ i ] );
+                        memmove( dst, src, read_len[ i ] );
                         src_len -= read_len[ i ];
                         src     += read_len[ i ];
                     }
@@ -630,7 +632,7 @@ rc_t CC seq_restore_read_impl1 ( void *data, const VXformInfo *info, int64_t row
     {
         if ( len == src_len ) /*** shortcut - all data is local ***/
         {
-            memcpy( dst, src, len );
+            memmove( dst, src, len );
         }
         else
         {
@@ -677,7 +679,7 @@ rc_t CC seq_restore_read_impl1 ( void *data, const VXformInfo *info, int64_t row
                         {
                             if ( read_type[ i ] & SRA_READ_TYPE_FORWARD )
                             {
-                                memcpy( dst, r_src, read_len[ i ] );
+                                memmove( dst, r_src, read_len[ i ] );
                             }
                             else if ( read_type[ i ] & SRA_READ_TYPE_REVERSE )
                             {
@@ -702,7 +704,7 @@ rc_t CC seq_restore_read_impl1 ( void *data, const VXformInfo *info, int64_t row
                 {
                     if ( src_len >= read_len[ i ] )
                     {
-                        memcpy( dst, src, read_len[ i ] );
+                        memmove( dst, src, read_len[ i ] );
                         src_len -= read_len[ i ];
                         src     += read_len[ i ];
                     }

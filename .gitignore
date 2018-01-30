@@ -32,9 +32,6 @@ user.status
 .\#*
 core
 *.pyc
+.gdb_history
 .vscode
 .gdb_history
-<<<<<<< HEAD
-
-=======
->>>>>>> VDB-3281-AST-tables

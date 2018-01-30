@@ -43,6 +43,7 @@ public:
         , _dad ( dad )
     {
         ostringstream cmd;
+        cmd << "unset http_proxy ;";
 
         ostringstream s;
         s << "test-proxy/" << testcase << "/environment";
@@ -251,6 +252,26 @@ TEST_CASE ( TEST_PROXY_ENV_commaErr ) {
     TestRunner ( this, "comma-error" );
 }
 #endif
+
+TEST_CASE ( TEST_PROXY_ENV_envWithSchema ) {
+    TestRunner ( this, "env-with-schema" );
+}
+
+TEST_CASE ( TEST_PROXY_ENV_envWithSchemaAndPort ) {
+    TestRunner ( this, "env-with-schema-and-port" );
+}
+
+TEST_CASE ( TEST_PROXY_ENV_kfgWithSchema ) {
+    TestRunner ( this, "kfg-with-schema" );
+}
+
+TEST_CASE ( TEST_PROXY_ENV_kfgWithSchemaAndPort ) {
+    TestRunner ( this, "kfg-with-schema-and-port" );
+}
+
+TEST_CASE ( TEST_PROXY_ENV_withTrailingSlash ) { // VDB-3329
+    TestRunner ( this, "env-with-trailing-slash" );
+}
 
 extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }

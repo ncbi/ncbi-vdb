@@ -280,6 +280,7 @@ FIXTURE_TEST_CASE(KDBManagerVPathOpenDB_Remote_BadPath, RemoteDBFixture)
     REQUIRE_RC(KDBManagerRelease(mgr));
 }
 
+#if 0
 FIXTURE_TEST_CASE(KDBManagerVPathOpenDB_Remote_BadCache, RemoteDBFixture)
 {
     Configure(GetName());
@@ -302,3 +303,4 @@ FIXTURE_TEST_CASE(KDBManagerVPathOpenDB_Remote_BadCache, RemoteDBFixture)
     REQUIRE_RC(KDatabaseRelease(db));
     REQUIRE_RC(KDBManagerRelease(mgr));
 }
+#endif

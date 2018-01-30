@@ -68,7 +68,7 @@ mbedtls_ecdh_context;
  * \return          0 if successful,
  *                  or a MBEDTLS_ERR_ECP_XXX or MBEDTLS_MPI_XXX error code
  */
-int mbedtls_ecdh_gen_public( mbedtls_ecp_group *grp, mbedtls_mpi *d, mbedtls_ecp_point *Q,
+int vdb_mbedtls_ecdh_gen_public( mbedtls_ecp_group *grp, mbedtls_mpi *d, mbedtls_ecp_point *Q,
                      int (*f_rng)(void *, unsigned char *, size_t),
                      void *p_rng );
 
@@ -88,9 +88,9 @@ int mbedtls_ecdh_gen_public( mbedtls_ecp_group *grp, mbedtls_mpi *d, mbedtls_ecp
  *
  * \note            If f_rng is not NULL, it is used to implement
  *                  countermeasures against potential elaborate timing
- *                  attacks, see \c mbedtls_ecp_mul() for details.
+ *                  attacks, see \c vdb_mbedtls_ecp_mul() for details.
  */
-int mbedtls_ecdh_compute_shared( mbedtls_ecp_group *grp, mbedtls_mpi *z,
+int vdb_mbedtls_ecdh_compute_shared( mbedtls_ecp_group *grp, mbedtls_mpi *z,
                          const mbedtls_ecp_point *Q, const mbedtls_mpi *d,
                          int (*f_rng)(void *, unsigned char *, size_t),
                          void *p_rng );
@@ -100,14 +100,14 @@ int mbedtls_ecdh_compute_shared( mbedtls_ecp_group *grp, mbedtls_mpi *z,
  *
  * \param ctx       Context to initialize
  */
-void mbedtls_ecdh_init( mbedtls_ecdh_context *ctx );
+void vdb_mbedtls_ecdh_init( mbedtls_ecdh_context *ctx );
 
 /**
  * \brief           Free context
  *
  * \param ctx       Context to free
  */
-void mbedtls_ecdh_free( mbedtls_ecdh_context *ctx );
+void vdb_mbedtls_ecdh_free( mbedtls_ecdh_context *ctx );
 
 /**
  * \brief           Generate a public key and a TLS ServerKeyExchange payload.
@@ -125,7 +125,7 @@ void mbedtls_ecdh_free( mbedtls_ecdh_context *ctx );
  *
  * \return          0 if successful, or an MBEDTLS_ERR_ECP_XXX error code
  */
-int mbedtls_ecdh_make_params( mbedtls_ecdh_context *ctx, size_t *olen,
+int vdb_mbedtls_ecdh_make_params( mbedtls_ecdh_context *ctx, size_t *olen,
                       unsigned char *buf, size_t blen,
                       int (*f_rng)(void *, unsigned char *, size_t),
                       void *p_rng );
@@ -140,7 +140,7 @@ int mbedtls_ecdh_make_params( mbedtls_ecdh_context *ctx, size_t *olen,
  *
  * \return          0 if successful, or an MBEDTLS_ERR_ECP_XXX error code
  */
-int mbedtls_ecdh_read_params( mbedtls_ecdh_context *ctx,
+int vdb_mbedtls_ecdh_read_params( mbedtls_ecdh_context *ctx,
                       const unsigned char **buf, const unsigned char *end );
 
 /**
@@ -155,7 +155,7 @@ int mbedtls_ecdh_read_params( mbedtls_ecdh_context *ctx,
  *
  * \return          0 if successful, or an MBEDTLS_ERR_ECP_XXX error code
  */
-int mbedtls_ecdh_get_params( mbedtls_ecdh_context *ctx, const mbedtls_ecp_keypair *key,
+int vdb_mbedtls_ecdh_get_params( mbedtls_ecdh_context *ctx, const mbedtls_ecp_keypair *key,
                      mbedtls_ecdh_side side );
 
 /**
@@ -171,7 +171,7 @@ int mbedtls_ecdh_get_params( mbedtls_ecdh_context *ctx, const mbedtls_ecp_keypai
  *
  * \return          0 if successful, or an MBEDTLS_ERR_ECP_XXX error code
  */
-int mbedtls_ecdh_make_public( mbedtls_ecdh_context *ctx, size_t *olen,
+int vdb_mbedtls_ecdh_make_public( mbedtls_ecdh_context *ctx, size_t *olen,
                       unsigned char *buf, size_t blen,
                       int (*f_rng)(void *, unsigned char *, size_t),
                       void *p_rng );
@@ -186,7 +186,7 @@ int mbedtls_ecdh_make_public( mbedtls_ecdh_context *ctx, size_t *olen,
  *
  * \return          0 if successful, or an MBEDTLS_ERR_ECP_XXX error code
  */
-int mbedtls_ecdh_read_public( mbedtls_ecdh_context *ctx,
+int vdb_mbedtls_ecdh_read_public( mbedtls_ecdh_context *ctx,
                       const unsigned char *buf, size_t blen );
 
 /**
@@ -197,12 +197,12 @@ int mbedtls_ecdh_read_public( mbedtls_ecdh_context *ctx,
  * \param olen      number of bytes written
  * \param buf       destination buffer
  * \param blen      buffer length
- * \param f_rng     RNG function, see notes for \c mbedtls_ecdh_compute_shared()
+ * \param f_rng     RNG function, see notes for \c vdb_mbedtls_ecdh_compute_shared()
  * \param p_rng     RNG parameter
  *
  * \return          0 if successful, or an MBEDTLS_ERR_ECP_XXX error code
  */
-int mbedtls_ecdh_calc_secret( mbedtls_ecdh_context *ctx, size_t *olen,
+int vdb_mbedtls_ecdh_calc_secret( mbedtls_ecdh_context *ctx, size_t *olen,
                       unsigned char *buf, size_t blen,
                       int (*f_rng)(void *, unsigned char *, size_t),
                       void *p_rng );
