@@ -316,7 +316,8 @@ typedef struct {
 
 /* service request data ( objects to query ) */
 typedef struct {
-    SObject object [ 256 ];
+    SObject * object;
+    size_t allocated;
     uint32_t objects;
     bool refseq_ctx;
 } SRequestData;
@@ -356,6 +357,8 @@ struct KService {
     SHelper helper;
     SRequest req;
     SResponse resp;
+
+    bool resoveOidName;
 };
 
 
@@ -454,7 +457,9 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
     assert ( self );
     rc = SHelperInitKfg ( self );
     if ( rc == 0 ) {
-        rc = KConfigRead ( self -> kfg, path, 0, buffer, bsize, NULL, NULL );
+        size_t num_read = 0;
+        rc = KConfigRead ( self -> kfg, path, 0, buffer, bsize,
+                           & num_read, NULL );
         if ( rc != 0 ) {
             if ( buffer == NULL )
                 return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
@@ -2263,27 +2268,30 @@ static void SObjectFini ( SObject * self ) {
 
 
 /* SRequestData ***************************************************************/
-/*static
-rc_t SRequestDataInit ( SRequestData * self, const char * acc, size_t acc_sz,
-    EObjectType objectType )
-{
-    rc_t rc = 0;
+static rc_t SRequestDataInit ( SRequestData * self ) {
     assert ( self );
     memset ( self, 0, sizeof * self );
-    if ( acc != NULL && acc_sz != 0 ) {
-        self -> objects = 1;
-        rc = SObjectInit ( & self -> object [ 0 ], acc, acc_sz, objectType );
-    }
-    return rc;
-}*/
+
+    self -> allocated = 512;
+
+    self -> object = calloc ( self -> allocated, sizeof * self -> object );
+    if ( self -> object == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
+
+    return 0;
+}
 
 
 static void SRequestDataFini ( SRequestData * self ) {
     uint32_t i = 0;
+
     assert ( self );
-    for ( i = 0; i < self -> objects; ++i ) {
+
+    for ( i = 0; i < self -> objects; ++i )
         SObjectFini ( & self -> object [ i ] );
-    }
+
+    free ( self -> object );
+
     memset ( self, 0, sizeof * self );
 }
 
@@ -2293,23 +2301,39 @@ rc_t SRequestDataAppendObject ( SRequestData * self, const char * id,
     size_t id_sz, EObjectType objectType )
 {
     rc_t rc = 0;
+
     assert ( self );
-    if ( self -> objects > sizeof self -> object / sizeof self -> object [ 0 ] )
-    {
-        return RC ( rcVFS, rcQuery, rcExecuting, rcItem, rcExcessive );
+
+    if ( self -> objects > self -> allocated - 1 ) {
+        size_t n = self -> allocated * 2;
+        void * t = realloc ( self -> object, n * sizeof * self -> object );
+        if ( t == NULL )
+            return RC ( rcVFS, rcQuery, rcExecuting, rcItem, rcExcessive );
+        else {
+            self -> object = t;
+            self -> allocated = n;
+        }
     }
+
+    if ( id == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
+    if ( id [ 0 ] == '\0' )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcEmpty );
+
     if ( id_sz == 0 )
         id_sz = string_measure ( id, NULL );
-    rc = SObjectInit ( & self -> object [ self -> objects ], id, id_sz,
-        objectType );
-    if ( rc == 0 ) {
+
+    rc = SObjectInit ( & self -> object [ self -> objects ],
+                       id, id_sz, objectType );
+
+    if ( rc == 0 )
         ++ self -> objects;
-    }
+
     return rc;
 }
 
 
-/* BSTItem *******************************************************************/
+/* BSTItem ********************************************************************/
 static int64_t CC BSTItemCmp ( const void * item, const BSTNode * n ) {
     const String * s = item;
     const BSTItem * i = ( BSTItem * ) n;
@@ -2320,7 +2344,9 @@ static int64_t CC BSTItemCmp ( const void * item, const BSTNode * n ) {
         i -> ticket, string_measure ( i -> ticket, NULL ), s -> size );
 }
 
-static int64_t CC BSTreeSort ( const BSTNode * item, const BSTNode * n ) {
+static
+int64_t CC BSTreeSort ( const BSTNode * item, const BSTNode * n )
+{
     const BSTItem * i = ( BSTItem * ) item;
     String str;
     size_t size = 0;
@@ -2499,11 +2525,18 @@ static void TicketsAppendTicket ( void * item, void * data ) {
 
 /* SRequest *******************************************************************/
 static rc_t SRequestInit ( SRequest * self ) {
+    rc_t rc = 0;
+
     assert ( self );
 
     memset ( self, 0, sizeof * self );
 
-    return STicketsInit ( & self -> tickets );
+    rc = STicketsInit ( & self -> tickets );
+
+    if ( rc == 0 )
+        rc = SRequestDataInit ( & self -> request );
+
+    return rc;
 }
 
 
@@ -2939,6 +2972,8 @@ static rc_t KServiceInit ( KService * self, const KNSManager * mgr ) {
 
     if ( rc == 0 )
         rc = SRequestInit ( & self -> req );
+
+    self -> resoveOidName = DEFAULT_RESOVE_OID_NAME;
 
     return rc;
 }
@@ -3619,6 +3654,27 @@ rc_t KService1Search ( const KNSManager * mgr, const char * cgi,
     return rc;
 }
 
+/* resolve mapping id -> file nime inside of VFS */
+rc_t KServiceResolveName ( KService * self, int resolve ) {
+    if ( self == NULL )
+        return RC ( rcVFS, rcResolver, rcUpdating, rcSelf, rcNull );
+
+    switch ( resolve ) {
+        case 0 : self -> resoveOidName = DEFAULT_RESOVE_OID_NAME; break; 
+        case 1 : self -> resoveOidName = true                   ; break; 
+        default: self -> resoveOidName = false                  ; break; 
+    }
+    return 0;
+}
+
+int KServiceGetResolveName ( const KService * self ) {
+    if ( self == NULL )
+        return DEFAULT_RESOVE_OID_NAME;
+    if ( self -> resoveOidName )
+        return 1;
+    else
+        return 2;
+}
 
 /* TESTS **********************************************************************/
 typedef struct {

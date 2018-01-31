@@ -30,7 +30,10 @@
 
 #include "schema-lex.h"
 
-typedef struct ParseTree ParseTree; /* a fake declaration to make the scanner compile */
+/* fake declarations to make the schema-tokens.h compile */
+typedef struct ParseTree ParseTree;
+typedef struct ErrorReport ErrorReport;
+
 #include "schema-tokens.h"
 
 #define YY_USER_ACTION \
@@ -107,24 +110,24 @@ alphanum    [a-zA-Z_0-9]
 "..." { return ELLIPSIS; }
 
 [1-9][0-9]*                 { return DECIMAL; }
-0[0-9]*                     { return OCTAL; }
-0[xX][0-9a-fA-F]+        { return HEX; }
-[0-9]+\.[0-9]*[eE][0-9]+   { return EXP_FLOAT; }
-\.[0-9]+[eE][0-9]+         { return EXP_FLOAT; }
+0[0-7]*                     { return OCTAL; }
+0[xX][0-9a-fA-F]+           { return HEX; }
+[0-9]+\.[0-9]*[eE][0-9]+    { return EXP_FLOAT; }
+\.[0-9]+[eE][0-9]+          { return EXP_FLOAT; }
 [0-9]+\.[0-9]*              { return FLOAT; }
 \.[0-9]+                    { return FLOAT; }
 
  /* single quoted strings */
 '{sstr_char}*'              { return STRING; }
-'{sstr_char}*               { return STRING; } /*TODO: handle unterminated */
+'{sstr_char}*               { return UNTERM_STRING; }
 '(\\.|{sstr_char})+'        { return ESCAPED_STRING; }
-'(\\.|{sstr_char})+         { return ESCAPED_STRING; }  /*TODO: handle unterminated */
+'(\\.|{sstr_char})+         { return UNTERM_ESCAPED_STRING; }
 
  /* double quoted strings */
 \"{dstr_char}*\"            { return STRING; }
-\"{dstr_char}*              { return STRING; } /*TODO: handle unterminated */
+\"{dstr_char}*              { return UNTERM_STRING; }
 \"(\\.|{dstr_char})+\"      { return ESCAPED_STRING; }
-\"(\\.|{dstr_char})+        { return ESCAPED_STRING; }  /*TODO: handle unterminated */
+\"(\\.|{dstr_char})+        { return UNTERM_ESCAPED_STRING; }
 
  /* keywords */
 "__no_header"     { return KW___no_header; }
@@ -171,12 +174,12 @@ alphanum    [a-zA-Z_0-9]
 "write"           { return KW_write; }
 
 {alpha}{alphanum}*         { return IDENTIFIER_1_0; }
-[0-9]{alpha}{alphanum}+    { return IDENTIFIER_1_0; } /* for things like 4na */
+[0-9]{alpha}{alphanum}+   { return IDENTIFIER_1_0; } /* for things like 4na */
 \.{alpha}{alphanum}*       { return PHYSICAL_IDENTIFIER_1_0; }
 
-#[0-9]+\.[0-9]+\.[0-9]+     { return VERSION; }
-#[0-9]+\.[0-9]+             { return VERSION; }
-#[0-9]+                     { return VERSION; }
+#\ *[0-9]+\.[0-9]+\.[0-9]+     { return VERSION; }
+#\ *[0-9]+\.[0-9]+             { return VERSION; }
+#\ *[0-9]+                     { return VERSION; }
 
  /* multi-line comments */
 <*>\/\*                                         { yy_push_state ( CMT_SLASH_STAR, yyscanner ); AddWs(); }
@@ -235,7 +238,10 @@ SchemaScan_yylex ( YYSTYPE *lvalp, YYLTYPE *llocp, SchemaScanBlock* sb )
     lvalp -> value      = ( ( struct yyguts_t * ) sb -> scanner ) -> yytext_r;
     lvalp -> value_len  = ( ( struct yyguts_t * ) sb -> scanner ) -> yyleng_r;
     lvalp -> leading_ws = sb -> whitespace; /* will be freed by the new owner */
-    lvalp -> subtree = NULL;
+    lvalp -> file       = sb -> file_name;
+    lvalp -> line       = llocp -> first_line;
+    lvalp -> column     = llocp -> first_column;
+    lvalp -> subtree    = NULL;
 
     sb -> whitespace = NULL;
 

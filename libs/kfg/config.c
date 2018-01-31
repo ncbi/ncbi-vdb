@@ -2581,7 +2581,7 @@ bool load_from_std_location ( KConfig *self, const KDirectory *dir )
 }
 
 static
-bool load_from_fs_location ( KConfig *self )
+bool load_from_fs_location ( KConfig *self, const char *confdir )
 {
     bool loaded = false;
     KDyld *dyld;
@@ -2593,16 +2593,20 @@ bool load_from_fs_location ( KConfig *self )
         if ( rc == 0 )
         {
             char resolved[PATH_MAX + 1];
-            DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG), ( "KFG: try to load from dyn. loader\n" ) );
+            assert ( confdir );
+            DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG),
+                ( "KFG: try to load from dyn. loader %s\n", confdir ) );
 
 /* N.B. Duplication of ResolvePath here and in load_from_dir_path ? */
             if (KDirectoryResolvePath
-                    (dir, true, resolved, sizeof resolved, "ncbi") == 0)
+                    (dir, true, resolved, sizeof resolved, confdir) == 0)
             {
                 rc = KConfigAppendToLoadPath(self, resolved);
             }
-            if ((loaded = load_from_dir_path(self, dir, "ncbi", 4)))
-                DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG), ( "KFG: found from dyn. loader\n" ) );
+            if ((loaded = load_from_dir_path(self, dir, confdir,
+                                       string_measure ( confdir, NULL ))))
+                DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG),
+                    ( "KFG: found from dyn. loader %s\n", confdir ) );
             KDirectoryRelease ( dir );
         }
         KDyldRelease ( dyld );
@@ -2738,7 +2742,9 @@ rc_t load_config_files ( KConfig * self,
     /* check for config as the result of a user install
        i.e. not an admin installation */
     if ( ! loaded )
-        loaded = load_from_fs_location ( self );
+        loaded = load_from_fs_location ( self, "../etc/ncbi" );
+    if ( ! loaded )
+        loaded = load_from_fs_location ( self, "ncbi" );
 
     if ( ! loaded )
         loaded = load_from_default_string ( self );

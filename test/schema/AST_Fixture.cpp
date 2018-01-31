@@ -29,6 +29,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
 #include <klib/symbol.h>
 
@@ -73,7 +74,7 @@ AST_Fixture :: PrintTree ( const ParseTree& p_tree )
 {
     ParseTreeScanner sc ( p_tree );
     const Token* tok;
-    SchemaScanner :: TokenType tt;
+    Token :: TokenType tt;
     unsigned int indent = 0;
     do
     {
@@ -116,12 +117,12 @@ AST_Fixture :: PrintTree ( const ParseTree& p_tree )
             case_ ( PT_TYPEDCOL );
             case_ ( PT_COLUMN );
             case_ ( PT_COLDECL );
-            case_ ( PT_PHYSENCEXPR );
             case_ ( PT_FACTPARMS );
             case_ ( PT_PHYSENCREF );
             case_ ( PT_COLSTMT );
             case_ ( PT_DBBODY );
             case_ ( PT_DBMEMBER );
+            case_ ( PT_FUNCEXPR );
             case_ ( PT_PHYSMBR );
             case_ ( PT_PHYSCOL );
             case_ ( PT_PHYSCOLDEF );
@@ -151,8 +152,7 @@ AST_Fixture :: PrintTree ( const ParseTree& p_tree )
 AST_FQN *
 AST_Fixture :: MakeFqn ( const char* p_text ) // p_text = (ident:)+ident
 {
-    SchemaToken id = { PT_IDENT, 0, 0, 0, 0 };
-    Token ident ( id );
+    Token ident ( PT_IDENT );
     AST_FQN * ret = new AST_FQN ( & ident );
 
     std::string s ( p_text );
@@ -171,8 +171,7 @@ AST_Fixture :: MakeFqn ( const char* p_text ) // p_text = (ident:)+ident
             token = s;
             s . clear ();
         }
-        SchemaToken name = { IDENTIFIER_1_0, token . c_str () , token . length (), 0, 0 };
-        Token tname ( name );
+        Token tname ( IDENTIFIER_1_0, token . c_str () );
         ret -> AddNode ( & tname );
     }
 
@@ -205,7 +204,7 @@ AST_Fixture :: MakeAst ( const char* p_source )
         {
             delete m_ast;
         }
-        m_ast = m_builder -> Build ( * m_parseTree, m_debugAst );
+        m_ast = m_builder -> Build ( * m_parseTree, "", m_debugAst );
         if ( m_builder -> GetErrorCount() != 0)
         {
             throw std :: logic_error ( string ( "AST_Fixture::MakeAst : ASTBuilder::Build() failed: " ) + string ( m_builder -> GetErrorMessage ( 0 ) ) );
@@ -224,7 +223,7 @@ AST_Fixture :: MakeAst ( const char* p_source )
 }
 
 void
-AST_Fixture :: VerifyErrorMessage ( const char* p_source, const char* p_expectedError )
+AST_Fixture :: VerifyErrorMessage ( const char* p_source, const char* p_expectedError, uint32_t p_line, uint32_t p_column )
 {
     if ( m_newParse )
     {
@@ -242,10 +241,23 @@ AST_Fixture :: VerifyErrorMessage ( const char* p_source, const char* p_expected
         {
             throw std :: logic_error ( "AST_Fixture::VerifyErrorMessage : no error" );
         }
-        if ( string ( m_builder -> GetErrorMessage ( 0 ) ) != string ( p_expectedError ) )
+        const ErrorReport :: Error * err = m_builder -> GetErrors () . GetError ( 0 );
+        if ( string ( err -> m_message ) != string ( p_expectedError ) )
         {
             throw std :: logic_error ( "AST_Fixture::VerifyErrorMessage : expected '" + string ( p_expectedError ) +
                                                                         "', received '" + string ( m_builder -> GetErrorMessage ( 0 ) ) + "'" );
+        }
+        if ( p_line != 0 && p_line != err -> m_line )
+        {
+            ostringstream out;
+            out << "AST_Fixture::VerifyErrorMessage : expected line " << p_line << ", received " << err -> m_line;
+            throw std :: logic_error ( out . str () );
+        }
+        if ( p_column != 0 && p_column != err -> m_column )
+        {
+            ostringstream out;
+            out << "AST_Fixture::VerifyErrorMessage : expected column " << p_column << ", received " << err -> m_column;
+            throw std :: logic_error ( out . str () );
         }
     }
     else if ( OldParse ( p_source ) )
@@ -257,27 +269,33 @@ AST_Fixture :: VerifyErrorMessage ( const char* p_source, const char* p_expected
 const KSymbol*
 AST_Fixture :: VerifySymbol ( const char* p_name, uint32_t p_type )
 {
-    AST_FQN * ast = MakeFqn ( p_name );
-    const KSymbol* sym = m_builder -> Resolve ( * ast );
+    const KSymbol* sym = 0;
+    if ( m_newParse )
+    {
+        AST_FQN * ast = MakeFqn ( p_name );
+        sym = m_builder -> Resolve ( * ast );
+        if ( sym != 0 && ToCppString ( sym -> name ) !=
+                ast -> GetChild ( ast -> ChildrenCount() - 1 ) -> GetTokenValue () )
+        {
+            throw std :: logic_error ( "AST_Fixture::VerifySymbol : object name mismatch" );
+        }
+        delete ast;
+    }
+    else // old parser
+    {
+        String name;
+        StringInitCString ( & name, p_name );
+        sym = ( const KSymbol* ) BSTreeFind ( & m_schema -> scope, & name, KSymbolCmp );
+    }
 
     if ( sym == 0 )
     {
         throw std :: logic_error ( "AST_Fixture::VerifySymbol : symbol not found" );
     }
-    else
+    else if ( sym -> type != p_type )
     {
-        if ( ToCppString ( sym -> name ) !=
-                ast -> GetChild ( ast -> ChildrenCount() - 1 ) -> GetTokenValue () )
-        {
-            throw std :: logic_error ( "AST_Fixture::VerifySymbol : object name mismatch" );
-        }
-        else if ( sym -> type != p_type )
-        {
-            throw std :: logic_error ( "AST_Fixture::VerifySymbol : wrong object type" );
-        }
+        throw std :: logic_error ( "AST_Fixture::VerifySymbol : wrong object type" );
     }
-
-    delete ast;
 
     return sym;
 }

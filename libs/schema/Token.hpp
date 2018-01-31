@@ -27,7 +27,7 @@
 #ifndef _hpp_Token_
 #define _hpp_Token_
 
-#include "SchemaScanner.hpp"
+#include "schema-lex.h"
 
 namespace ncbi
 {
@@ -36,24 +36,36 @@ namespace ncbi
         class Token
         {
         public:
-            typedef SchemaScanner :: TokenType TokenType;
+            typedef int TokenType;
+            static const TokenType EndSource = 0; // bison convention
+
+            struct Location
+            {
+                const char *    m_file; // empty string if not known
+                uint32_t        m_line; // 1 - based
+                uint32_t        m_column; // 1 - based
+
+                Location ( const char * p_file, uint32_t p_line, uint32_t p_column );
+            };
 
         public:
-            Token ( const SchemaToken& );
-            Token ( TokenType );
-            Token ( const Token& );
+            Token ( const SchemaToken & );
+            Token ( TokenType, const char * value = 0 );
+            Token ( const Token & );
             ~Token ();
 
-            TokenType GetType () const { return m_type; }
-            const char* GetValue () const               { return m_value == 0 ? "" : m_value; }
-            const char* GetLeadingWhitespace () const   { return m_ws == 0 ? "" : m_ws; }
+            TokenType           GetType () const                { return m_type; }
+            const char *        GetValue () const               { return m_value == 0 ? "" : m_value; }
+            const Location &    GetLocation () const            { return m_location; }
+            const char *        GetLeadingWhitespace () const   { return m_ws == 0 ? "" : m_ws; }
 
             bool IsFake() const { return m_value == 0; }
 
         private:
-            TokenType m_type;
-            char* m_value;
-            char* m_ws;
+            TokenType   m_type;
+            char *      m_value;
+            Location    m_location;
+            char *      m_ws;
         };
     }
 }

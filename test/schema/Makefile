@@ -37,6 +37,7 @@ TEST_TOOLS = \
 INT_TOOLS = \
     test-schema-scan \
     test-schema-parse \
+    test-schema-diff \
 
 ALL_TOOLS = $(TEST_TOOLS) $(INT_TOOLS)
 
@@ -56,7 +57,7 @@ TEST_LIB = \
     -sschema \
 
 #-------------------------------------------------------------------------------
-# lexer test
+# white box lexer test
 #
 TESTLEX_SRC = \
 	wb-test-schema-lex
@@ -68,7 +69,7 @@ $(TEST_BINDIR)/wb-test-schema-lex: $(TESTLEX_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_LIB)
 
 #-------------------------------------------------------------------------------
-# command line scanner test
+# black box scanner test
 #
 TESTSCAN_SRC = \
 	test-schema-scan
@@ -80,7 +81,7 @@ $(TEST_BINDIR)/test-schema-scan: $(TESTSCAN_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_LIB)
 
 #-------------------------------------------------------------------------------
-# parser test
+# white box parser test
 #
 TESTGRAM_SRC = \
 	wb-test-schema-parser
@@ -92,7 +93,7 @@ $(TEST_BINDIR)/wb-test-schema-parser: $(TESTGRAM_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_LIB)
 
 #-------------------------------------------------------------------------------
-# command line parser test
+# black box parser test
 #
 TESTPARSE_SRC = \
 	test-schema-parse
@@ -101,6 +102,18 @@ TESTPARSE_OBJ = \
 	$(addsuffix .$(OBJX),$(TESTPARSE_SRC))
 
 $(TEST_BINDIR)/test-schema-parse: $(TESTPARSE_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_LIB)
+
+#-------------------------------------------------------------------------------
+# old vs new schema matching
+#
+TESTDIFF_SRC = \
+	test-schema-diff
+
+TESTDIFF_OBJ = \
+	$(addsuffix .$(OBJX),$(TESTDIFF_SRC))
+
+$(TEST_BINDIR)/test-schema-diff: $(TESTDIFF_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_LIB)
 
 #-------------------------------------------------------------------------------
@@ -119,7 +132,7 @@ $(TEST_BINDIR)/wb-test-schema-ast: $(TESTAST_OBJ)
 #-------------------------------------------------------------------------------
 # runtests
 #
-runtests: scantest parsetest
+runtests: scantest parsetest difftest
 
 SCHEMATA := $(shell find $(TOP) -name "*.vschema")
 
@@ -130,5 +143,49 @@ scantest: test-schema-scan
 
 parsetest: test-schema-parse
 	-$(TEST_BINDIR)/test-schema-parse $(SCHEMATA)
+	@echo "Schema parser test complete"
 
-.PHONY: scantest parsetest
+difftest: test-schema-diff
+	mkdir -p $(OBJDIR)/data
+	-$(TEST_BINDIR)/test-schema-diff -I$(TOP)/interfaces -o$(OBJDIR)/data \
+	$(addprefix	$(TOP)/interfaces/, \
+		insdc/insdc.vschema \
+		insdc/seq.vschema \
+		insdc/sra.vschema \
+		ncbi/ncbi.vschema \
+		ncbi/seq.vschema \
+		ncbi/spotname.vschema \
+		ncbi/sra.vschema \
+		ncbi/stats.vschema \
+		ncbi/seq-graph.vschema \
+		ncbi/wgs-contig.vschema \
+		ncbi/clip.vschema \
+		ncbi/varloc.vschema \
+		ncbi/pnbrdb.vschema \
+		vdb/built-in.vschema \
+		vdb/vdb.vschema \
+		align/mate-cache.vschema \
+		align/refseq.vschema \
+		align/seq.vschema \
+		align/qstat.vschema \
+		align/align.vschema \
+		align/pileup-stats.vschema \
+		sra/454.vschema \
+		sra/ion-torrent.vschema \
+		sra/illumina.vschema \
+		sra/abi.vschema \
+		sra/helicos.vschema \
+		sra/nanopore.vschema \
+		sra/generic-fastq.vschema \
+		sra/pacbio.vschema \
+		csra2/stats.vschema \
+		csra2/read.vschema \
+		csra2/reference.vschema \
+		csra2/csra2.vschema \
+	) \
+	$(TOP)/libs/sra/built-in.vschema
+#	$(TOP)/test/loader/sequencewriter.vschema
+#	$(TOP)/interfaces/sra/pevents.vschema
+	@echo "Schema diff test complete"
+
+.PHONY: scantest parsetest difftestdiff

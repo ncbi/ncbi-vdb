@@ -169,10 +169,8 @@ extern int AST_debug;
     PT_UNARYPLUS = 378,
     PT_VERSNAME = 379,
     PT_ARRAY = 380,
-    PT_AT = 381,
-    PT_PHYSENCEXPR = 382,
-    PT_PHYSENCREF = 383,
-    PT_TYPEDCOLEXPR = 384
+    PT_PHYSENCREF = 381,
+    PT_TYPEDCOLEXPR = 382
   };
 #endif
 
@@ -181,7 +179,7 @@ extern int AST_debug;
 
 union YYSTYPE
 {
-#line 58 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1909  */
+#line 57 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1909  */
 
   const Token*  tok;
   AST*          node;
@@ -190,7 +188,7 @@ union YYSTYPE
   AST_ParamSig* paramSig;
   bool          boolean;
 
-#line 194 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast-tokens.h" /* yacc.c:1909  */
+#line 192 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast-tokens.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

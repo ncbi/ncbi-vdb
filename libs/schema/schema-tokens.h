@@ -169,10 +169,8 @@ extern int Schema_debug;
     PT_UNARYPLUS = 378,
     PT_VERSNAME = 379,
     PT_ARRAY = 380,
-    PT_AT = 381,
-    PT_PHYSENCEXPR = 382,
-    PT_PHYSENCREF = 383,
-    PT_TYPEDCOLEXPR = 384
+    PT_PHYSENCREF = 381,
+    PT_TYPEDCOLEXPR = 382
   };
 #endif
 
@@ -199,6 +197,6 @@ struct YYLTYPE
 
 
 
-int Schema_parse (ParseTree** root, struct SchemaScanBlock* sb);
+int Schema_parse (ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb);
 
 #endif /* !YY_SCHEMA_HOME_BOSHKINS_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_TOKENS_H_INCLUDED  */
