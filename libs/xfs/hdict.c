@@ -165,7 +165,7 @@ struct XFSHashDict {
     XFSHashDictBanana banana;
 };
 
-XFS_EXTERN
+LIB_EXPORT
 rc_t CC
 XFSHashDictMake (
                 const struct XFSHashDict ** Dict,
@@ -214,7 +214,7 @@ XFSHashDictMake (
     return RCt;
 }   /* XFSHashDictMake () */
 
-XFS_EXTERN
+LIB_EXPORT
 rc_t CC
 XFSHashDictDispose ( const struct XFSHashDict * self )
 {
@@ -254,7 +254,7 @@ XFSHashDictDispose ( const struct XFSHashDict * self )
     return 0;
 }   /* XFSHashDictDispose () */
 
-XFS_EXTERN
+LIB_EXPORT
 bool CC
 XFSHashDictHas ( const struct XFSHashDict * self, const char * Key )
 {
@@ -263,7 +263,7 @@ XFSHashDictHas ( const struct XFSHashDict * self, const char * Key )
     return XFSHashDictGet ( self, & Value, Key ) == 0;
 }   /* XFSHashDictHas () */
 
-XFS_EXTERN
+LIB_EXPORT
 rc_t CC
 XFSHashDictGet (
                 const struct XFSHashDict * self,
@@ -296,7 +296,7 @@ XFSHashDictGet (
     return RCt;
 }   /* XFSHashDictGet () */
 
-XFS_EXTERN
+LIB_EXPORT
 rc_t CC
 XFSHashDictDel ( const struct XFSHashDict * self, const char * Key )
 {
@@ -336,7 +336,7 @@ XFSHashDictDel ( const struct XFSHashDict * self, const char * Key )
     return RCt;
 }   /* XFSHashDictDel () */
 
-XFS_EXTERN
+LIB_EXPORT
 rc_t CC
 XFSHashDictAdd (
                 const struct XFSHashDict * self,
@@ -382,16 +382,307 @@ XFSHashDictAdd (
     return RCt;
 }   /* XFSHashDictAdd () */
 
-XFS_EXTERN
+LIB_EXPORT
 rc_t CC
 XFSHashDictReserve ( const struct XFSHashDict * self, size_t NewSize )
 {
-    rc_t RCt;
+    rc_t RCt = 0;
 
-    RCt = 0;
+    XFS_CAN ( self )
+    XFS_CAN ( self -> hash_table )
 
-    // JOJOBA TO DO
+    if ( 0 < NewSize ) {
+        RCt = KHashTableReserve ( self -> hash_table, NewSize );
+    }
 
     return RCt;
 }   /* XFSHashDictReserve () */
+
+LIB_EXPORT
+rc_t CC
+XFSHashDictForEach (
+                    const struct XFSHashDict * self,
+                    XFSHashDictEacher Eacher,
+                    const void * Data
+)
+{
+    void * Key, * Val;
+
+    Key = Val = NULL;
+
+    XFS_CAN ( self )
+    XFS_CAN ( Eacher )
+    XFS_CAN ( Data )
+    XFS_CAN ( self -> hash_table )
+
+    KHashTableIteratorMake ( self -> hash_table );
+    while (
+        KHashTableIteratorNext ( self -> hash_table, & Key, & Val )
+    ) {
+        Eacher ( Key, Val, Data );
+    }
+
+    return 0;
+}   /* XFSHashDictForEach () */
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*
+ * place, where receptacleH is living. No loitering :Lol:
+ *
+ *_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+    /**** Really, I coud use XFSHashDict here, but copy/paste ****/
+struct XFSIHashDict {
+    struct KHashTable * hash_table;
+
+    XFSHashDictBanana banana;
+};
+
+LIB_EXPORT
+rc_t CC
+XFSIHashDictMake (
+                const struct XFSIHashDict ** IDict,
+                XFSHashDictBanana Banana
+)
+{
+    rc_t RCt;
+    struct XFSIHashDict * Ret;
+
+    RCt = 0;
+    Ret = NULL;
+
+    XFS_CSAN ( IDict )
+    XFS_CAN ( IDict )
+
+    Ret = calloc ( 1, sizeof ( struct XFSIHashDict ) );
+    if ( Ret == NULL ) {
+        RCt = XFS_RC ( rcExhausted );
+    }
+    else {
+        RCt = KHashTableInit (
+                            & ( Ret -> hash_table ),
+                            sizeof ( ihashD_t ), /* key_size ??? */
+                            sizeof ( void * ), /* value_size */
+                            0,      /* capacity, def value */
+                            0,      /* max_load_factor, def value */
+                            cstr    /* key_cstr */
+                            );
+        if ( RCt == 0 ) {
+            Ret -> banana = Banana;
+            * IDict = Ret;
+        }
+    }
+
+    if ( RCt != 0 ) {
+        * IDict = NULL;
+
+        if ( Ret != NULL ) {
+            XFSIHashDictDispose ( Ret );
+        }
+    }
+
+    return RCt;
+}   /* XFSIHashDictMake () */
+
+LIB_EXPORT
+rc_t CC
+XFSIHashDictDispose ( const struct XFSIHashDict * self )
+{
+    void * Key, * Val;
+    struct XFSIHashDict * Dict;
+
+    Key = NULL;
+    Val = NULL;
+    Dict = ( struct XFSIHashDict * ) self;
+
+        /*))    I do believe that will happen on the end of the days,
+         //     so no any kind of locking.
+        ((*/
+    if ( Dict != NULL ) {
+        if ( Dict -> banana != NULL ) {
+            KHashTableIteratorMake ( Dict -> hash_table );
+            while (
+                KHashTableIteratorNext (
+                                        Dict -> hash_table,
+                                        & Key,
+                                        & Val
+                                        )
+            ) {
+                Dict -> banana ( Val );
+            }
+        }
+
+        Dict -> banana = NULL;
+
+        KHashTableWhack ( Dict -> hash_table, NULL, NULL, NULL );
+
+        free ( Dict );
+    }
+
+    return 0;
+}   /* XFSIHashDictDispose () */
+
+LIB_EXPORT
+bool CC
+XFSIHashDictHas ( const struct XFSIHashDict * self, ihashD_t Key )
+{
+    const void * Value = NULL;
+
+    return XFSIHashDictGet ( self, & Value, Key ) == 0;
+}   /* XFSIHashDictHas () */
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*
+ * JIPPOTAM
+ *_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+static
+uint64_t CC
+_HashOfUint64TLol ( ihashD_t Key )
+{
+        /*))    We all know that Key is null terminated, right?
+         ((*/
+    return KHash ( ( void * ) & Key, sizeof ( ihashD_t ) );
+}   /* _HashOfUint64TLol () */
+
+LIB_EXPORT
+rc_t CC
+XFSIHashDictGet (
+                const struct XFSIHashDict * self,
+                const void ** Value,
+                ihashD_t Key
+)
+{
+    rc_t RCt;
+    void * Ret;
+    uint64_t KeyHash;
+
+    RCt = 0;
+    Ret = NULL;
+    KeyHash = 0;
+
+    XFS_CSAN ( Value )
+    XFS_CAN ( self )
+    XFS_CAN ( Value )
+
+    KeyHash = _HashOfUint64TLol ( Key );
+
+    if ( KHashTableFind ( self -> hash_table, & Key, KeyHash, & Ret ) ) {
+        * Value = Ret;
+    }
+    else {
+        RCt = XFS_RC ( rcNotFound );
+    }
+
+    return RCt;
+}   /* XFSIHashDictGet () */
+
+LIB_EXPORT
+rc_t CC
+XFSIHashDictDel ( const struct XFSIHashDict * self, ihashD_t Key )
+{
+    rc_t RCt;
+    uint64_t KeyHash;
+    void * KeyVal;
+
+    RCt = 0;
+    KeyHash = 0;
+    KeyVal = NULL;
+
+    XFS_CAN ( self )
+
+    KeyHash = _HashOfUint64TLol ( Key );
+
+        /*)) First we should retrieve value for key and free it if
+         //  banana for dictionary is set
+        ((*/
+    if ( self -> banana != NULL ) {
+        if ( KHashTableFind (
+                            self -> hash_table,
+                            & Key,
+                            KeyHash,
+                            & KeyVal )
+        ) {
+            self -> banana ( KeyVal );
+        }
+    }
+
+        /*)) Second, we call secret procedure
+         ((*/
+    if ( ! KHashTableDelete ( self -> hash_table, & Key, KeyHash ) ) {
+        RCt = XFS_RC ( rcNotFound );
+    }
+
+    return RCt;
+}   /* XFSIHashDictDel () */
+
+LIB_EXPORT
+rc_t CC
+XFSIHashDictAdd (
+                const struct XFSIHashDict * self,
+                const void * Value,
+                ihashD_t Key
+)
+{
+    XFS_CAN ( self )
+    XFS_CAN ( Value )
+
+        /*) First we should delete previous value if it exists
+         /  we don't care about RC code here :LOL:
+        (*/
+    XFSIHashDictDel ( self, Key );
+
+    return KHashTableAdd (
+                        self -> hash_table,
+                        & Key,
+                        _HashOfUint64TLol ( Key ),
+                        & Value
+                        );
+}   /* XFSIHashDictAdd () */
+
+LIB_EXPORT
+rc_t CC
+XFSIHashDictReserve ( const struct XFSIHashDict * self, size_t NewSize )
+{
+    rc_t RCt = 0;
+
+    XFS_CAN ( self )
+    XFS_CAN ( self -> hash_table )
+
+    if ( 0 < NewSize ) {
+        RCt = KHashTableReserve ( self -> hash_table, NewSize );
+    }
+
+    return RCt;
+}   /* XFSIHashDictReserve () */
+
+LIB_EXPORT
+rc_t CC
+XFSIHashDictForEach (
+                    const struct XFSIHashDict * self,
+                    XFSIHashDictEacher Eacher,
+                    const void * Data
+)
+{
+    ihashD_t Key;
+    void * Val;
+
+    Key = 0;
+    Val = NULL;
+
+    XFS_CAN ( self )
+    XFS_CAN ( Eacher )
+    XFS_CAN ( Data )
+    XFS_CAN ( self -> hash_table )
+
+    KHashTableIteratorMake ( self -> hash_table );
+    while (
+        KHashTableIteratorNext ( self -> hash_table, & Key, & Val )
+    ) {
+        Eacher ( Key, Val, Data );
+    }
+
+    return 0;
+}   /* XFSIHashDictForEach () */
 

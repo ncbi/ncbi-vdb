@@ -43,7 +43,7 @@ extern "C" {
  *
  * XFSHashDict - wrapper written over hash table.
  *
- * Okay, I am using BSTree as a container for fast access to data
+ * Okay, I am using B_STree as a container for fast access to data
  * I am using it almost 14 times and every time it is indexed by
  * string ( char * ). So, there is simpele-impele menetation of 
  * look up dictionary with hash table written by Mike
@@ -54,7 +54,12 @@ extern "C" {
  // Defines
 ((*/
 
-typedef void ( CC * XFSHashDictBanana ) ( const void * data );
+typedef void ( CC * XFSHashDictBanana ) ( const void * Value );
+typedef void ( CC * XFSHashDictEacher ) (
+                                    const char * Key,
+                                    const void * Value,
+                                    const void * Data
+                                    );
 
 /*))
  // Forwards
@@ -103,9 +108,68 @@ XFS_EXTERN rc_t CC XFSHashDictReserve (
                             size_t NewSize
                             );
 
+XFS_EXTERN rc_t CC XFSHashDictForEach (
+                            const struct XFSHashDict * self,
+                            XFSHashDictEacher,
+                            const void * Data
+                            );
+
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+struct XFSIHashDict;
+
+typedef uint64_t ihashD_t;
+
+typedef void ( CC * XFSIHashDictBanana ) ( const void * Value );
+typedef void ( CC * XFSIHashDictEacher ) (
+                                    ihashD_t Key,
+                                    const void * Value,
+                                    const void * Data
+                                    );
+
+XFS_EXTERN rc_t CC XFSIHashDictMake (
+                            const struct XFSIHashDict ** Table,
+                            XFSIHashDictBanana Banana
+                            );
+
+XFS_EXTERN rc_t CC XFSIHashDictDispose (
+                            const struct XFSIHashDict * self
+                            );
+
+XFS_EXTERN bool CC XFSIHashDictHas (
+                            const struct XFSIHashDict * self,
+                            ihashD_t Key
+                            );
+
+XFS_EXTERN rc_t CC XFSIHashDictGet (
+                            const struct XFSIHashDict * self,
+                            const void ** Value,
+                            ihashD_t Key
+                            );
+
+XFS_EXTERN rc_t CC XFSIHashDictAdd (
+                            const struct XFSIHashDict * self,
+                            const void * Value,
+                            ihashD_t Key
+                            );
+
+XFS_EXTERN rc_t CC XFSIHashDictDel (
+                            const struct XFSIHashDict * self,
+                            ihashD_t Key
+                            );
+
+XFS_EXTERN rc_t CC XFSIHashDictReserve (
+                            const struct XFSIHashDict * self,
+                            size_t NewSize
+                            );
+
+XFS_EXTERN rc_t CC XFSIHashDictForEach (
+                            const struct XFSIHashDict * self,
+                            XFSIHashDictEacher Eacher,
+                            const void * Data
+                            );
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/

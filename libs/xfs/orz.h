@@ -52,7 +52,7 @@ extern "C" {
  * decided to do asynchronous object resolving. There will be a FIFO
  * where object IDs will be put. There will be thread started, which
  * will resolve information for object IDs by small portions ( N = 50 ).
- * There will be BSTree with resolved information. Prolly that amount
+ * There will be HashTabl with resolved information. Prolly that amount
  * will be adaptive ...
  *
  * GapObjects are represented by XFSGapObject, and it contains: name, 

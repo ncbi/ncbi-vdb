@@ -26,7 +26,6 @@
 #include <klib/rc.h>
 #include <klib/out.h>
 #include <klib/text.h>
-#include <klib/container.h>
 #include <klib/refcount.h>
 #include <klib/namelist.h>
 #include <klib/log.h>
@@ -39,6 +38,7 @@
 #include "mehr.h"
 #include "zehr.h"
 #include "ncon.h"
+#include "hdict.h"
 
 #include <sysalloc.h>
 
@@ -56,90 +56,28 @@
 static const char * _sXFSNodeContainer_classname = "XFSNodeContainer";
 
 struct XFSNodeContainer {
-    BSTree tree;
+    const struct XFSHashDict * nodes;
 
     KRefcount refcount;
 
     struct KLock * mutabor;
 };
 
-struct XFSNodeContainerNode {
-    BSTNode node;
-
-    const struct XFSNode * xfs_node;
-};
-
-
-/*))))   Here we are
- ((((*/
-static
-rc_t CC
-_NodeContainerNodeDispose ( const struct XFSNodeContainerNode * self )
-{
-    struct XFSNodeContainerNode * Node =
-                                ( struct XFSNodeContainerNode * ) self;
-
-/*
-pLogMsg ( klogDebug, "_NodeContainerNodeDispose ( $(node) )\n", "node=%p", ( void * ) self );
-*/
-
-    if ( Node != NULL ) {
-        if ( Node -> xfs_node != NULL ) {
-            XFSNodeRelease ( Node -> xfs_node );
-            Node -> xfs_node = NULL;
-        }
-
-        free ( Node );
-    }
-
-    return 0;
-}   /* _NodeContainerNodeDispose () */
-
-static
-rc_t CC
-_NodeContainerNodeMake (
-                    const struct XFSNode * Node, 
-                    const struct XFSNodeContainerNode ** RetNode
-)
-{
-    rc_t RCt;
-    struct XFSNodeContainerNode * TheNode;
-
-    RCt = 0;
-
-    XFS_CSAN ( RetNode )
-    XFS_CAN ( Node )
-    XFS_CAN ( RetNode )
-
-    TheNode = calloc ( 1, sizeof ( struct XFSNodeContainerNode ) );
-    if ( TheNode == NULL ) {
-        RCt = XFS_RC ( rcExhausted );
-    }
-    else {
-        TheNode -> xfs_node = Node;
-
-        * RetNode = TheNode;
-    }
-
-    if ( RCt != 0 ) {
-        _NodeContainerNodeDispose ( TheNode );
-        * RetNode = NULL;   /* for any case :lol: */
-    }
-/*
-pLogMsg ( klogDebug, "_NodeContainerNodeMake ( $(node) )\n", "node=%p", ( void * ) RetNode );
-*/
-
-    return RCt;
-}   /* _NodeContainerNodeMake () */
-
 /*))))   Here we are. Part II
  ((((*/
 
+static
+void CC
+_NodeContainerWhacker ( const void * Value )
+{
+    if ( Value != NULL ) {
+        XFSNodeRelease ( ( const struct XFSNode * ) Value );
+    }
+}   /* _NodeContainerWhacker () */
+
 LIB_EXPORT
 rc_t CC
-XFSNodeContainerMake (
-            const struct XFSNodeContainer ** Container
-)
+XFSNodeContainerMake ( const struct XFSNodeContainer ** Container )
 {
     rc_t RCt;
     struct XFSNodeContainer * NewCont;
@@ -155,19 +93,23 @@ XFSNodeContainerMake (
         RCt = XFS_RC ( rcExhausted );
     }
     else {
-        BSTreeInit ( & ( NewCont -> tree ) );
-
-        KRefcountInit (
-                    & ( NewCont -> refcount ),
-                    1,
-                    _sXFSNodeContainer_classname,
-                    "XFSNodeContainerMake",
-                    "XFSNodeContainer"
-                    );
-
-        RCt = KLockMake ( & ( NewCont -> mutabor ) );
+        RCt = XFSHashDictMake (
+                        & ( NewCont -> nodes ),
+                        _NodeContainerWhacker
+                        );
         if ( RCt == 0 ) {
-            * Container = NewCont;
+            KRefcountInit (
+                        & ( NewCont -> refcount ),
+                        1,
+                        _sXFSNodeContainer_classname,
+                        "XFSNodeContainerMake",
+                        "XFSNodeContainer"
+                        );
+
+            RCt = KLockMake ( & ( NewCont -> mutabor ) );
+            if ( RCt == 0 ) {
+                * Container = NewCont;
+            }
         }
     }
 
@@ -186,17 +128,6 @@ pLogMsg ( klogDebug, "XFSNodeContainerMake ( $(node) )\n", "node=%p", ( void * )
     return RCt;
 }   /* XFSNodeContainerMake () */
 
-static
-void CC
-_TreeWhackCallback ( BSTNode * Node, void * Data )
-{
-    if ( Node != NULL ) {
-        _NodeContainerNodeDispose (
-                                ( struct XFSNodeContainerNode * ) Node
-                                );
-    }
-}   /* _TreeWhackCallback () */
-
 LIB_EXPORT
 rc_t CC
 XFSNodeContainerDispose ( const struct XFSNodeContainer * self )
@@ -206,11 +137,7 @@ pLogMsg ( klogDebug, "XFSNodeContainerDispose ( $(node) )\n", "node=%p", ( void 
 */
 
     if ( self != NULL ) {
-        BSTreeWhack (
-                    ( BSTree * ) & ( self -> tree ),
-                    _TreeWhackCallback,
-                    NULL
-                    );
+        XFSHashDictDispose ( self -> nodes );
 
         KRefcountWhack (
                     ( KRefcount * ) & ( self -> refcount ),
@@ -233,20 +160,24 @@ LIB_EXPORT
 rc_t CC
 XFSNodeContainerClear ( const struct XFSNodeContainer * self )
 {
-    rc_t RCt = 0;
+    rc_t RCt;
+    struct XFSNodeContainer * Container;
 
-    if ( self != NULL ) {
-        RCt = KLockAcquire ( self -> mutabor );
+    RCt = 0;
+    Container = ( struct XFSNodeContainer * ) self;
+
+    if ( Container != NULL ) {
+        RCt = KLockAcquire ( Container -> mutabor );
         if ( RCt == 0 ) {
-            BSTreeWhack (
-                        ( BSTree * ) & ( self -> tree ),
-                        _TreeWhackCallback,
-                        NULL
-                        );
+            RCt = XFSHashDictDispose ( Container -> nodes );
+            if ( RCt == 0 ) {
+                RCt = XFSHashDictMake (
+                                    & ( Container -> nodes ),
+                                    _NodeContainerWhacker
+                                    );
+            }
 
-            BSTreeInit ( ( BSTree * ) & ( self -> tree ) );
-
-            KLockUnlock ( self -> mutabor );
+            KLockUnlock ( Container -> mutabor );
         }
     }
 
@@ -312,45 +243,21 @@ XFSNodeContainerHas (
                     const char * Name
 )
 {
-    const struct XFSNode * Node = NULL;
-
-    if ( XFSNodeContainerGet ( self, Name, & Node ) == 0 ) {
-        return ( Node != NULL );
-    }
-
-    return false;
+    return XFSHashDictHas ( self -> nodes, Name );
 }   /* XFSNodeContainerHas () */
-
-static
-int64_t CC
-_NodeContainerCompare ( const void * Item, const BSTNode * Node )
-{
-    return XFS_StringCompare4BST_ZHR (
-        ( const char * ) Item,
-        ( ( const struct XFSNodeContainerNode * ) Node ) -> xfs_node -> Name
-        );
-}   /* _NodeContainerCompare () */
 
 static
 rc_t CC
 _NodeContainerNodeGet_NoLock (
                     const struct XFSNodeContainer * self,
                     const char * Name,
-                    const struct XFSNodeContainerNode ** Node
+                    const struct XFSNode ** Node
 )
 {
-    XFS_CSAN ( Node )
     XFS_CAN ( self )
-    XFS_CAN ( Name )
-    XFS_CAN ( Node )
+    XFS_CAN ( self -> nodes )
 
-    * Node = ( struct XFSNodeContainerNode * ) BSTreeFind (
-                                            & ( self -> tree ),
-                                            Name,
-                                            _NodeContainerCompare
-                                            );
-
-    return * Node == NULL ? XFS_RC ( rcNotFound ) : 0;
+    return XFSHashDictGet ( self -> nodes, ( const void ** ) Node, Name );
 }   /* _NodeContainerNodeGet () */
 
 LIB_EXPORT
@@ -362,17 +269,17 @@ XFSNodeContainerGet (
 )
 {
     rc_t RCt;
-    const struct XFSNodeContainerNode * TheNode;
+    const struct XFSNode * TheNode;
 
     RCt = 0;
+    TheNode = NULL;
 
     RCt = KLockAcquire ( self -> mutabor );
     if ( RCt == 0 ) {
 
         RCt = _NodeContainerNodeGet_NoLock ( self, Name, & TheNode );
         if ( RCt == 0 ) {
-            * Node = TheNode -> xfs_node;
-
+            * Node = TheNode;
             if ( * Node == NULL ) {
                 RCt = XFS_RC ( rcInvalid );
             }
@@ -384,16 +291,6 @@ XFSNodeContainerGet (
     return RCt;
 }   /* XFSNodeContainerGet () */
 
-static
-int64_t CC
-_NodeContainerInsert ( const BSTNode * N1, const BSTNode * N2 )
-{
-    return XFS_StringCompare4BST_ZHR (
-           ( ( struct XFSNodeContainerNode * ) N1 ) -> xfs_node -> Name,
-           ( ( struct XFSNodeContainerNode * ) N2 ) -> xfs_node -> Name
-           );
-}   /* _NodeContainerInsert () */
-
 LIB_EXPORT
 rc_t CC
 XFSNodeContainerAdd (
@@ -403,10 +300,8 @@ XFSNodeContainerAdd (
 {
     rc_t RCt;
     struct XFSNodeContainer * Container;
-    struct XFSNodeContainerNode * TheNode;
 
     RCt = 0;
-    TheNode = NULL;
     Container = ( struct XFSNodeContainer * ) self;
 
     XFS_CAN ( Container )
@@ -418,17 +313,8 @@ XFSNodeContainerAdd (
 
     RCt = KLockAcquire ( Container -> mutabor );
     if ( RCt == 0 ) {
-        RCt = _NodeContainerNodeMake (
-                    Node,
-                    ( const struct XFSNodeContainerNode ** ) & TheNode
-                    );
-        if ( RCt == 0 ) {
-            RCt = BSTreeInsert (
-                            & ( Container -> tree ),
-                            & ( TheNode -> node ),
-                            _NodeContainerInsert
-                            );
-        }
+        RCt = XFSHashDictAdd ( Container -> nodes, Node, Node -> Name );
+
         KLockUnlock ( Container -> mutabor );
     }
 
@@ -439,32 +325,21 @@ LIB_EXPORT
 rc_t CC
 XFSNodeContainerDel (
                 const struct XFSNodeContainer * self,
-                const char * NodeName
+                const char * Name
 )
 {
     rc_t RCt;
     struct XFSNodeContainer * Container;
-    struct XFSNodeContainerNode * Node;
 
     RCt = 0;
     Container = ( struct XFSNodeContainer * ) self;
 
+    XFS_CAN ( Container )
+
     RCt = KLockAcquire ( Container -> mutabor );
     if ( RCt == 0 ) {
-        RCt = _NodeContainerNodeGet_NoLock (
-                        Container,
-                        NodeName,
-                        ( const struct XFSNodeContainerNode ** ) & Node
-                        );
-        if ( RCt == 0 ) {
-            RCt = BSTreeUnlink (
-                            & ( Container -> tree ),
-                            & ( Node -> node )
-                            );
-            if ( RCt == 0 ) {
-                RCt = _NodeContainerNodeDispose ( Node );
-            }
-        }
+        RCt = XFSHashDictDel ( Container -> nodes, Name );
+
         KLockUnlock ( Container -> mutabor );
     }
 
@@ -473,18 +348,22 @@ XFSNodeContainerDel (
 
 static
 void CC
-_NodeContainerList ( BSTNode * Node, void * Data )
+_NodeContainerListEacher (
+                        const char * Key,
+                        const void * Value,
+                        const void * Data
+)
 {
-    struct XFSNodeContainerNode * TheNode;
-    struct VNamelist * TheList;
+    struct XFSNode * Node;
+    struct VNamelist * List;
 
-    if ( Node != NULL && Data != NULL ) {
-        TheNode = ( struct XFSNodeContainerNode * ) Node;
-        TheList = ( struct VNamelist * ) Data;
+    Node = ( struct XFSNode * ) Value;
+    List = ( struct VNamelist * ) Data;
 
-        VNamelistAppend ( TheList, TheNode -> xfs_node -> Name );
+    if ( Node != NULL && List != NULL ) {
+        VNamelistAppend ( List, Node -> Name );
     }
-}   /* _NodeContainerList () */
+}   /* _NodeContainerListEacher () */
 
 LIB_EXPORT
 rc_t CC
@@ -507,14 +386,16 @@ XFSNodeContainerList (
     if ( RCt == 0 ) {
         RCt = KLockAcquire ( self -> mutabor );
         if ( RCt == 0 ) {
-            BSTreeForEach ( 
-                        & ( self -> tree ),
-                        false,
-                        _NodeContainerList,
-                        TheList
-                        );
+            RCt = XFSHashDictForEach ( 
+                                    self -> nodes,
+                                    _NodeContainerListEacher,
+                                    TheList
+                                    );
 
-            RCt = VNamelistToConstNamelist ( TheList, List );
+            if ( RCt == 0 ) {
+                RCt = VNamelistToConstNamelist ( TheList, List );
+            }
+
             KLockUnlock ( self -> mutabor );
         }
 

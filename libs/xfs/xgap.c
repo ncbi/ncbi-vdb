@@ -52,6 +52,7 @@
 #include "schwarzschraube.h"
 #include "zehr.h"
 #include "mehr.h"
+#include "hdict.h"
 #include "xgap.h"
 #include "orz.h"
 #include <xfs/path.h>
@@ -114,86 +115,17 @@ struct LI_Stru {
 
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*
- * DieBananable
- *_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
-struct _DieBananable {
-    struct BSTNode node;
-
-    void * data;
-};
-
-static
-rc_t CC
-_DieBananableMake ( struct _DieBananable ** Bananable, void * Data )
-{
-    struct _DieBananable * Bable = NULL;
-
-        /*  There is no check for Data != NULL, cuz it could
-         */
-    XFS_CSAN ( Bananable )
-    XFS_CAN ( Bananable )
-
-    Bable = calloc ( 1, sizeof ( struct _DieBananable ) );
-    if ( Bable == NULL ) {
-        return XFS_RC ( rcExhausted );
-    }
-
-    Bable -> data = Data;
-
-    * Bananable = Bable;
-
-    return 0;
-}   /* _DieBananableMake () */
-
-static
-rc_t CC
-_DieBananableDispose ( const struct _DieBananable * self )
-{
-    struct _DieBananable * Bananable = ( struct _DieBananable * ) self;
-
-    if ( Bananable != NULL ) {
-        memset ( Bananable, 0, sizeof ( struct _DieBananable ) );
-
-        free ( Bananable );
-    }
-
-    return 0;
-}   /* _DieBananableDispose () */
-
-static
-rc_t CC
-_DieBananableGet ( const struct _DieBananable * self, void ** Data )
-{
-    XFS_CSAN ( Data )
-    XFS_CAN ( self )
-    XFS_CAN ( Data )
-
-    * Data = self -> data;
-
-    return 0;
-}   /* _DieBananableGet () */
-
-
-/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*
  * DieBanana
  *_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
-typedef void ( CC * _DieBananaWhacker )
-                            ( struct BSTNode *n, void *data );
-typedef int64_t ( CC * _DieBananaFinder )
-                            ( const void *item, const struct BSTNode *n );
-typedef int64_t ( CC * _DieBananaAdder )
-                            ( const struct BSTNode *item, const struct BSTNode *n );
+typedef void ( CC * _DieBananaWhacker ) ( void * Data );
 typedef void ( CC * _DieBananaEacher )
-                            ( struct BSTNode *n, void *data );
+                ( const char * Key, const void * Value, void * Data );
 
 struct _DieBanana {
-    struct BSTree banana;
+    const struct XFSHashDict * banana;
 
     struct KLock * mutabor;
-
-
-    _DieBananaWhacker whacker;
 };
 
 static
@@ -203,13 +135,9 @@ _DieBananaDispose ( const struct _DieBanana * self )
     struct _DieBanana * Banana = ( struct _DieBanana * ) self;
 
     if ( Banana != NULL ) {
-        if ( Banana -> whacker != NULL ) {
-            BSTreeWhack (
-                        & ( Banana -> banana ),
-                        Banana -> whacker,
-                        Banana
-                        );
-            BSTreeInit ( & ( Banana -> banana ) );
+        if ( Banana -> banana != NULL ) {
+            XFSHashDictDispose ( Banana -> banana );
+            Banana -> banana = NULL;
         }
 
         if ( Banana -> mutabor != NULL ) {
@@ -243,13 +171,15 @@ _DieBananaMake (
         RCt = XFS_RC ( rcExhausted );
     }
     else {
-        DieBanana -> whacker = Whacker;
-
         RCt = KLockMake ( & ( DieBanana -> mutabor ) );
         if ( RCt == 0 ) {
-            BSTreeInit ( & ( DieBanana -> banana ) );
-
-            * Banana = DieBanana;
+            RCt = XFSHashDictMake (
+                                & ( DieBanana -> banana ),
+                                ( XFSHashDictBanana ) Whacker
+                                );
+            if ( RCt == 0 ) {
+                * Banana = DieBanana;
+            }
         }
     }
 
@@ -270,67 +200,39 @@ rc_t CC
 _DieBananaFind_NoLock (
                     const struct _DieBanana * self,
                     const void ** Item,
-                    const void * Key,
-                    _DieBananaFinder BananaFinder
+                    const char * Key
 )
 {
-    rc_t RCt;
-    const void * BananaFound;
-
-    RCt = 0;
-    BananaFound = NULL;
-
-    XFS_CSAN ( Item )
-    XFS_CAN ( self )
-    XFS_CAN ( Item )
-    XFS_CAN ( Key )
-    XFS_CAN ( BananaFinder )
-
-    BananaFound = ( const void * ) BSTreeFind (
-                                            & ( self -> banana ),
-                                            Key,
-                                            BananaFinder
-                                            );
-
-    if ( BananaFound == NULL ) {
-        RCt = XFS_RC ( rcNotFound );
-    }
-    else {
-        * Item = BananaFound;
-    }
-
-    return RCt;
+    return XFSHashDictGet ( self -> banana, Item, Key );
 }   /* _DieBananaFind_NoLock () */
 
 static
 rc_t CC
 _DieBananaAdd_NoLock ( 
                     const struct _DieBanana * self,
-                    struct BSTNode * Item,
-                    _DieBananaAdder BananaAdder
+                    const void * Item,
+                    const char * Key
 )
 {
-    XFS_CAN ( self )
-    XFS_CAN ( Item )
-    XFS_CAN ( BananaAdder )
-
-    return BSTreeInsert ( ( BSTree * ) & ( self -> banana ), Item, BananaAdder );
+    return XFSHashDictAdd ( self -> banana, Item, Key );
 }   /* _DieBananaAdd_NoLock () */
 
 static
 rc_t CC
 _DieBananaForEach_NoLock ( 
                     const struct _DieBanana * self,
-                    void * Data,
-                    _DieBananaEacher BananaEacher
+                    _DieBananaEacher Eacher,
+                    void * Data
 )
 {
     XFS_CAN ( self )
-    XFS_CAN ( BananaEacher )
+    XFS_CAN ( Eacher )
 
-    BSTreeForEach ( ( BSTree * ) & ( self -> banana ), false, BananaEacher, Data );
-
-    return 0;
+    return XFSHashDictForEach (
+                            self -> banana,
+                            ( XFSHashDictEacher ) Eacher,
+                            Data
+                            );
 }   /* _DieBananaForEach_NoLock () */
 
 static
@@ -352,13 +254,152 @@ _DieBananaUnlock ( const struct _DieBanana * self )
 }   /* _DieBananaUnlock () */
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/* _DieAnanas                                                        */
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+typedef void ( CC * _DieAnanasWhacker ) ( void * Data );
+typedef void ( CC * _DieAnanasEacher )
+                ( const char * Key, const void * Value, void * Data );
+
+struct _DieAnanas {
+    const struct XFSIHashDict * ananas;
+
+    struct KLock * mutabor;
+};
+
+static
+rc_t
+_DieAnanasDispose ( const struct _DieAnanas * self )
+{
+    struct _DieAnanas * Ananas = ( struct _DieAnanas * ) self;
+
+    if ( Ananas != NULL ) {
+        if ( Ananas -> ananas != NULL ) {
+            XFSIHashDictDispose ( Ananas -> ananas );
+            Ananas -> ananas = NULL;
+        }
+
+        if ( Ananas -> mutabor != NULL ) {
+            KLockRelease ( Ananas -> mutabor );
+            Ananas -> mutabor = NULL;
+        }
+
+        /*****
+         * We do not free ananas here ... do it outside
+         *****/
+    }
+
+    return 0;
+}   /* _DieAnanasDispose () */
+
+static
+rc_t
+_DieAnanasMake (
+                const struct _DieAnanas ** Ananas,
+                _DieAnanasWhacker Whacker
+)
+{
+    rc_t RCt;
+    struct _DieAnanas * DieAnanas;
+
+    RCt = 0;
+    DieAnanas = NULL;
+
+    DieAnanas = calloc ( 1, sizeof ( struct _DieAnanas ) );
+    if ( DieAnanas == NULL ) {
+        RCt = XFS_RC ( rcExhausted );
+    }
+    else {
+        RCt = KLockMake ( & ( DieAnanas -> mutabor ) );
+        if ( RCt == 0 ) {
+            RCt = XFSIHashDictMake (
+                                & ( DieAnanas -> ananas ),
+                                ( XFSIHashDictBanana ) Whacker
+                                );
+            if ( RCt == 0 ) {
+                * Ananas = DieAnanas;
+            }
+        }
+    }
+
+    if ( RCt != 0 ) {
+        * Ananas = NULL;
+
+        _DieAnanasDispose ( DieAnanas );
+    }
+
+    return RCt;
+}   /* _DieAnanasMake () */
+
+/*))
+ // NOTE: those general Ananas methods aren't locking ...
+((*/
+static
+rc_t CC
+_DieAnanasFind_NoLock (
+                    const struct _DieAnanas * self,
+                    const void ** Item,
+                    ihashD_t Key
+)
+{
+    return XFSIHashDictGet ( self -> ananas, Item, Key );
+}   /* _DieAnanasFind_NoLock () */
+
+static
+rc_t CC
+_DieAnanasAdd_NoLock ( 
+                    const struct _DieAnanas * self,
+                    const void * Item,
+                    ihashD_t Key
+)
+{
+    return XFSIHashDictAdd ( self -> ananas, Item, Key );
+}   /* _DieAnanasAdd_NoLock () */
+
+#ifdef NONEEDED
+static
+rc_t CC
+_DieAnanasForEach_NoLock ( 
+                    const struct _DieAnanas * self,
+                    _DieAnanasEacher Eacher,
+                    void * Data
+)
+{
+    XFS_CAN ( self )
+    XFS_CAN ( Eacher )
+
+    return XFSIHashDictForEach (
+                            self -> ananas,
+                            ( XFSIHashDictEacher ) Eacher,
+                            Data
+                            );
+}   /* _DieAnanasForEach_NoLock () */
+#endif /* NONEEDED */
+
+static
+rc_t CC
+_DieAnanasLock ( const struct _DieAnanas * self )
+{
+    struct _DieAnanas * Ananas = ( struct _DieAnanas * ) self;
+
+    return KLockAcquire ( Ananas -> mutabor );
+}   /* _DieAnanasLock () */
+
+static
+rc_t CC
+_DieAnanasUnlock ( const struct _DieAnanas * self )
+{
+    struct _DieAnanas * Ananas = ( struct _DieAnanas * ) self;
+
+    return KLockUnlock ( Ananas -> mutabor );
+}   /* _DieAnanasUnlock () */
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /* XFSGapProject                                                     */
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 static const char * _sGapProject_classname = "GapProject";
 
 struct XFSGapProject {
-    struct BSTNode node;
     KRefcount refcount;
 
     bool good;
@@ -977,8 +1018,6 @@ _ReadProjectPassAndKey (
      //     or ... may be we already ready for that :D
     ((*/
 struct _GapKartItem {
-    struct BSTNode node;
-
     uint32_t project;
 
     const char * aooi; /* Accession Or Object Id */
@@ -1142,10 +1181,10 @@ _GapKartDispose ( const struct XFSGapKart * self )
 
 static
 void CC
-_KartItemWhackCallback ( struct BSTNode * Node, void * unused )
+_KartItemWhackCallback ( void * Data )
 {
-    if ( Node != NULL ) {
-        _GapKartItemDispose ( ( struct _GapKartItem * ) Node );
+    if ( Data != NULL ) {
+        _GapKartItemDispose ( ( struct _GapKartItem * ) Data );
     }
 }   /* _KartItemWhackCallback () */
 
@@ -1243,16 +1282,6 @@ _GapKartMake (
 }   /* _GapKartMake () */
 
 static
-int64_t CC
-_KartItemAddCallback ( const BSTNode * N1, const BSTNode * N2 )
-{
-    return XFS_StringCompare4BST_ZHR (
-            ( ( struct _GapKartItem * ) N1 ) -> name,
-            ( ( struct _GapKartItem * ) N2 ) -> name
-            );
-}   /* _KartItemAddCallback () */
-
-static
 rc_t CC
 _AddKartItem (
             struct XFSGapKart * self,
@@ -1318,11 +1347,10 @@ _AddKartItem (
             RCt = XFS_LIdxAdd_ZHR ( self -> projects_idx,  ProjectId );
             if ( RCt == 0 ) {
                 RCt = _DieBananaAdd_NoLock (
-                                        self -> items,
-                                        ( struct BSTNode * ) KItem,
-                                        _KartItemAddCallback
-                                        );
-
+                                            self -> items,
+                                            KItem,
+                                            KItem -> name
+                                            );
             }
         }
     }
@@ -1331,7 +1359,6 @@ _AddKartItem (
         free ( ( char * ) AccessionOrObject );
         AccessionOrObject = NULL;
     }
-
 
     return RCt;
 }   /* _AddKartItem () */
@@ -1469,21 +1496,25 @@ XFSGapKartRelease ( const struct XFSGapKart * self )
 
 static
 void
-_KartItemListAllCallback ( BSTNode * Node, void * Data )
+_KartItemListAllEacher (
+                        const char * Key,
+                        const void * Value,
+                        void * Data
+)
 {
     struct VNamelist * List;
     struct _GapKartItem * Item;
     const char * Name;
 
     List = ( struct VNamelist * ) Data;
-    Item = ( struct _GapKartItem * ) Node;
+    Item = ( struct _GapKartItem * ) Value;
 
     if ( List != NULL && Item != NULL ) {
         if ( _GapKartItemName ( Item, & Name ) == 0 ) {
             VNamelistAppend ( List, Name );
         }
     }
-}   /* _KartItemListAllCallback () */
+}   /* _KartItemListAllEacher () */
 
 LIB_EXPORT
 rc_t CC
@@ -1508,8 +1539,8 @@ XFSGapKartList (
         if ( RCt == 0 ) {
             _DieBananaForEach_NoLock (
                                     self -> items,
-                                    ( void * ) xList,
-                                    _KartItemListAllCallback
+                                    _KartItemListAllEacher,
+                                    ( void * ) xList
                                     );
 
             RCt = VNamelistToNamelist ( xList, List );
@@ -1525,14 +1556,18 @@ XFSGapKartList (
 
 static
 void
-_KartItemListCallback ( BSTNode * Node, void * Data )
+_KartItemListEacher (
+                    const char * Key,
+                    const void * Value,
+                    void * Data
+)
 {
     struct _GapKartItem * Item;
     struct LI_Stru * Stru;
     const char * Name;
 
     Stru = ( struct LI_Stru * ) Data;
-    Item = ( struct _GapKartItem * ) Node;
+    Item = ( struct _GapKartItem * ) Value;
 
     if ( Item != NULL && Stru != NULL ) {
         if ( Stru -> project_id == 0
@@ -1547,7 +1582,7 @@ _KartItemListCallback ( BSTNode * Node, void * Data )
             }
         }
     }
-}   /* _KartItemListCallback () */
+}   /* _KartItemListEacher () */
 
 LIB_EXPORT
 rc_t CC
@@ -1580,8 +1615,8 @@ _GapKartList (
         if ( RCt == 0 ) {
             _DieBananaForEach_NoLock (
                                     self -> items,
-                                    ( void * ) & Stru,
-                                    _KartItemListCallback
+                                    _KartItemListEacher,
+                                    ( void * ) & Stru
                                     );
 
             RCt = VNamelistToNamelist ( xList, List );
@@ -1687,21 +1722,6 @@ XFSGapKartHasDataForProject (
     return false;
 }   /* XFSGapKartHasDataForProject () */
 
-static
-int64_t CC
-_ItemFindCallback ( const void * Item, const struct BSTNode * Node )
-{
-    const char * Str1, * Str2;
-
-    Str1 = ( const char * ) Item;
-    Str2 = Node == NULL
-                    ? ""
-                    : ( ( const struct _GapKartItem * ) Node ) -> name
-                    ;
-
-    return XFS_StringCompare4BST_ZHR ( Str1, Str2 );
-}   /* _ItemFindCallback () */
-
     /* IMPORTANT : JOJOBA - thread unsafe ... cuz KartItem is thread
      *             unsafe construct
      */
@@ -1729,8 +1749,7 @@ _KartFindItem (
         RCt = _DieBananaFind_NoLock (
                                     self -> items,
                                     ( const void ** ) & TheItem,
-                                    ( const void * ) ItemName,
-                                    _ItemFindCallback
+                                    ( const void * ) ItemName
                                     );
         if ( RCt == 0 ) {
             * Item = TheItem;
@@ -1792,7 +1811,7 @@ struct _GapDepot {
 
         /*  As doctor prescribed : Projects, Kards, and Objects
          */
-    const struct _DieBanana * projects;
+    const struct _DieAnanas * projects;
     const struct _DieBanana * karts;
 
     const char * public_files;
@@ -1812,27 +1831,20 @@ _DepotGet ()
 
 static
 void CC
-_DepotProjectWhackCallback ( struct BSTNode * Node, void * unused )
+_DepotProjectWhackCallback ( const void * Data )
 {
-    if ( Node != NULL ) {
-        XFSGapProjectRelease ( ( const struct XFSGapProject * ) Node );
+    if ( Data != NULL ) {
+        XFSGapProjectRelease ( ( const struct XFSGapProject * ) Data );
     }
 }   /* _DepotProjectWhackCallback () */
 
 static
 void CC
-_DepotKartWhackCallback ( struct BSTNode * Node, void * unused )
+_DepotKartWhackCallback ( void * Data )
 {
-    struct _DieBananable * Bananable;
-    const struct XFSGapKart * Kart;
-
-    Bananable = ( struct _DieBananable * ) Node;
-    Kart = NULL;
-
-    if ( Bananable != NULL ) {
-        _DieBananableGet ( Bananable, ( void ** ) & Kart );
+    const struct XFSGapKart * Kart = ( const struct XFSGapKart * ) Data;
+    if ( Kart != NULL ) {
         XFSGapKartRelease ( Kart );
-        _DieBananableDispose ( Bananable );
     }
 }   /* _DepotKartWhackCallback () */
 
@@ -1851,8 +1863,8 @@ _GapDepotDispose ( struct _GapDepot * self )
         /*  GapProject disposing
          */
     if ( self -> projects != NULL ) {
-        _DieBananaDispose ( self -> projects );
-        free ( ( struct _DieBanana * ) self -> projects );
+        _DieAnanasDispose ( self -> projects );
+        free ( ( struct _DieAnanas * ) self -> projects );
         self -> projects = NULL;
     }
 
@@ -1979,9 +1991,9 @@ _GapDepotMake ( struct _GapDepot ** Depot )
         if ( RCt == 0 ) {
                 /*  GapProjects initialisation
                  */
-            RCt = _DieBananaMake (
-                                & ( TheDepot -> projects ),
-                                _DepotProjectWhackCallback
+            RCt = _DieAnanasMake (
+                ( const struct _DieAnanas ** ) & ( TheDepot -> projects ),
+                ( _DieAnanasWhacker ) _DepotProjectWhackCallback
                                 );
             if ( RCt == 0 ) {
                 RCt = _DieBananaMake (
@@ -2052,34 +2064,6 @@ XFSGapDispose ()
 }   /* XFSGapDelete () */
 
 static
-int64_t CC
-_ProjectAddCallback (
-                const struct BSTNode * N1,
-                const struct BSTNode * N2
-)
-{
-    struct XFSGapProject * P1 = ( struct XFSGapProject * ) N1;
-    struct XFSGapProject * P2 = ( struct XFSGapProject * ) N2;
-    return  P1 -> project_id - P2 -> project_id;
-}   /* _ProjectAddCallback () */
-
-static
-int64_t CC
-_ProjectFindCallback ( const void * Item, const struct BSTNode * Node )
-{
-    uint32_t ItemId, NodeId;
-
-    ItemId = * ( ( uint32_t * ) Item );
-    NodeId = Node == NULL
-                    ? 0
-                    : ( ( struct XFSGapProject * ) Node ) -> project_id
-                    ;
-
-
-    return ItemId - NodeId;
-}   /* _ProjectFindCallback () */
-
-static
 rc_t CC
 _GapGetProject (
                 struct _GapDepot * Depot,
@@ -2097,22 +2081,21 @@ _GapGetProject (
     XFS_CAN ( Depot )
     XFS_CAN ( Project )
 
-    RCt = _DieBananaLock ( Depot -> projects );
+    RCt = _DieAnanasLock ( Depot -> projects );
     if ( RCt == 0 ) {
 
-        RCt = _DieBananaFind_NoLock (
+        RCt = _DieAnanasFind_NoLock (
                                     Depot -> projects,
                                     ( const void ** ) & TheProject,
-                                    ( const void * ) & ProjectId,
-                                    _ProjectFindCallback
+                                    ProjectId
                                     );
         if ( GetRCState ( RCt ) == rcNotFound ) {
             RCt = _GapProjectMake ( & TheProject, ProjectId );
             if ( RCt == 0 ) {
-                RCt = _DieBananaAdd_NoLock (
+                RCt = _DieAnanasAdd_NoLock (
                                         Depot -> projects,
-                                        ( struct BSTNode * ) TheProject,
-                                        _ProjectAddCallback
+                                        TheProject,
+                                        TheProject -> project_id
                                         );
                 if ( RCt != 0 ) {
                     _GapProjectDispose ( * Project );
@@ -2129,7 +2112,7 @@ _GapGetProject (
             }
         }
 
-        _DieBananaUnlock ( Depot -> projects );
+        _DieAnanasUnlock ( Depot -> projects );
     }
 
     return RCt;
@@ -2159,17 +2142,16 @@ XFSGapHas ( uint32_t ProjectId )
 
     XFS_CAN ( Depot )
 
-    RCt = _DieBananaLock ( Depot -> projects );
+    RCt = _DieAnanasLock ( Depot -> projects );
     if ( RCt == 0 ) {
 
-        RCt = _DieBananaFind_NoLock (
+        RCt = _DieAnanasFind_NoLock (
                                     Depot -> projects,
                                     ( const void ** ) & Project,
-                                    ( const void * ) & ProjectId,
-                                    _ProjectFindCallback
+                                    ProjectId
                                     );
 
-        _DieBananaUnlock ( Depot -> projects );
+        _DieAnanasUnlock ( Depot -> projects );
     }
 
     return RCt == 0;
@@ -2200,30 +2182,6 @@ XFSGapKartfiles ( const char ** Kartfiles )
     return 0;
 }   /* XFSGapKartfiles () */
 
-static
-int64_t CC
-_KartAddCallback ( const BSTNode * N1, const BSTNode * N2 )
-{
-    const struct _DieBananable * Ban1, * Ban2;
-    const struct XFSGapKart * Kar1, * Kar2;
-    const char * Str1, * Str2;
-
-    Ban1 = ( const struct _DieBananable * ) N1;
-    Ban2 = ( const struct _DieBananable * ) N2;
-    Kar1 = Kar2 = NULL;
-    Str1 = Str2 = NULL;
-
-    if ( _DieBananableGet ( Ban1, ( void ** ) & Kar1 ) == 0 ) {
-        Str1 = Kar1 == NULL ? NULL : ( Kar1 -> name );
-    }
-
-    if ( _DieBananableGet ( Ban2, ( void ** ) & Kar2 ) == 0 ) {
-        Str2 = Kar2 == NULL ? NULL : ( Kar2 -> name );
-    }
-
-    return XFS_StringCompare4BST_ZHR ( Str1, Str2 );
-}   /* _KartAddCallback () */
-
 /*  The 'Kart' parameter could be NULL, in that case nothing will
  *  return. If it is not NULL, the reference counter for Kart will
  *  be incremented and Kart instance will be returned
@@ -2238,11 +2196,9 @@ _GapLoadKartFile (
 )
 {
     rc_t RCt;
-    struct _DieBananable * Bananable;
     const struct XFSGapKart * TheKart;
 
     RCt = 0;
-    Bananable = NULL;
     TheKart = NULL;
 
     if ( Kart != NULL ) {
@@ -2258,16 +2214,11 @@ _GapLoadKartFile (
             if ( RCt == 0 ) {
                 RCt = XFSGapKartAddRef ( TheKart );
                 if ( RCt == 0 ) {
-                    RCt = _DieBananableMake (
-                                            & Bananable,
-                                            ( void * ) TheKart
-                                            );
-                    if ( RCt == 0 ) {
-                        RCt = _DieBananaAdd_NoLock (
-                                        Banana,
-                                        ( struct BSTNode * ) Bananable,
-                                        _KartAddCallback
-                                        );
+                    RCt = _DieBananaAdd_NoLock (
+                                                Banana,
+                                                TheKart,
+                                                TheKart -> name
+                                                );
 pLogMsg ( klogDebug, " <<<[_GapLoadKartFile] RC[$(rc)] NAME[$(name)]", "rc=%u,name=%s", RCt, KartName );
                         if ( RCt == 0 ) {
                             if ( Kart != NULL ) {
@@ -2279,7 +2230,6 @@ pLogMsg ( klogDebug, " <<<[_GapLoadKartFile] RC[$(rc)] NAME[$(name)]", "rc=%u,na
                                 }
                             }
                         }
-                    }
                 }
 
                 _DieBananaUnlock ( Banana );
@@ -2296,23 +2246,6 @@ pLogMsg ( klogDebug, " <<<[_GapLoadKartFile] RC[$(rc)] NAME[$(name)]", "rc=%u,na
 }   /* _GapLoadKartFile () */
 
 static
-int64_t CC
-_KartFindCallback ( const void * Item, const struct BSTNode * Node )
-{
-    const char * Str1, * Str2;
-    const struct _DieBananable * Bananable;
-    const struct XFSGapKart * Kart;
-
-    Str1 = ( const char * ) Item;
-    Bananable = ( const struct _DieBananable * ) Node;
-
-    _DieBananableGet ( Bananable, ( void ** ) & Kart );
-    Str2 = Kart == NULL ? NULL : ( Kart -> name );
-
-    return XFS_StringCompare4BST_ZHR ( Str1, Str2 );
-}   /* _KartFindCallback () */
-
-static
 rc_t CC
 _GapGetKart (
             struct _GapDepot * Depot,
@@ -2321,11 +2254,9 @@ _GapGetKart (
 )
 {
     rc_t RCt;
-    const struct _DieBananable * Bananable;
     const struct XFSGapKart * TheKart;
 
     RCt = 0;
-    Bananable = NULL;
     TheKart = NULL;
 
     XFS_CSAN ( Kart )
@@ -2338,20 +2269,13 @@ _GapGetKart (
     if ( RCt == 0 ) {
         RCt = _DieBananaFind_NoLock (
                                     Depot -> karts,
-                                    ( const void ** ) & Bananable,
-                                    ( const void * ) KartName,
-                                    _KartFindCallback
+                                    ( const void ** ) & TheKart,
+                                    ( const void * ) KartName
                                     );
         if ( RCt == 0 ) {
-            RCt = _DieBananableGet (
-                                    Bananable,
-                                    ( void ** ) & TheKart
-                                    );
+            RCt = XFSGapKartAddRef ( TheKart );
             if ( RCt == 0 ) {
-                RCt = XFSGapKartAddRef ( TheKart );
-                if ( RCt == 0 ) {
-                    * Kart = TheKart;
-                }
+                * Kart = TheKart;
             }
         }
 
@@ -2373,11 +2297,11 @@ bool CC
 XFSGapHasKart ( const char * KartName )
 {
     rc_t RCt;
-    const struct _DieBananable * Bananable;
+    const void * Value;
     struct _GapDepot * Depot;
 
     RCt = 0;
-    Bananable = NULL;
+    Value = NULL;
     Depot = _DepotGet ();
 
     XFS_CAN ( Depot )
@@ -2387,9 +2311,8 @@ XFSGapHasKart ( const char * KartName )
     if ( RCt == 0 ) {
         RCt = _DieBananaFind_NoLock (
                                     Depot -> karts,
-                                    ( const void ** ) & Bananable,
-                                    ( const void * ) KartName,
-                                    _KartFindCallback
+                                    & Value,
+                                    ( const void * ) KartName
                                     );
 
         _DieBananaUnlock ( Depot -> karts );
@@ -2400,33 +2323,31 @@ XFSGapHasKart ( const char * KartName )
 
 static
 void
-_KartListCallback ( BSTNode * Node, void * Data )
+_KartListEacher ( const char * Key, const void * Value, void * Data )
 {
     struct LI_Stru * Stru;
-    const struct _DieBananable * Bananable;
     struct XFSGapKart * Kart;
 
     Stru = ( struct LI_Stru * ) Data;
-    Bananable = ( const struct _DieBananable * ) Node;
+    Kart = ( struct XFSGapKart * ) Value;
 
-    if ( _DieBananableGet ( Bananable, ( void ** ) & Kart ) == 0 ) {
-        if ( Stru -> list != NULL && Kart != NULL ) {
-            if ( Stru -> flag ) {
-                if ( Stru -> project_id == 0
-                    || XFSGapKartHasDataForProject (
-                                                Kart,
-                                                Stru -> project_id
-                                                )
-                ) {
-                    VNamelistAppend ( Stru -> list, Kart -> name );
-                }
-            }
-            else {
+    if ( Stru -> list != NULL && Kart != NULL ) {
+        if ( Stru -> flag ) {
+            if ( Stru -> project_id == 0
+                || XFSGapKartHasDataForProject (
+                                            Kart,
+                                            Stru -> project_id
+                                            )
+            ) {
                 VNamelistAppend ( Stru -> list, Kart -> name );
             }
         }
+        else {
+            VNamelistAppend ( Stru -> list, Kart -> name );
+        }
     }
-}   /* _KartListCallback () */
+
+}   /* _KartListEacher () */
 
 static
 rc_t CC
@@ -2460,8 +2381,8 @@ _GapListKarts (
         if ( RCt == 0 ) {
             _DieBananaForEach_NoLock (
                                     Depot -> karts,
-                                    ( void * ) & Stru,
-                                    _KartListCallback
+                                    _KartListEacher,
+                                    ( void * ) & Stru
                                     );
 
             RCt = VNamelistToNamelist ( xList, List );
@@ -2754,7 +2675,6 @@ _GapKartDepotRefresh ( struct _GapDepot * Depot )
     const char * Name;
     const struct XFSGapKart * Kart;
     const struct _DieBanana * Banana, * TempBanana;
-    struct _DieBananable * Bananable;
 
     RCt = 0;
     Version = 0;
@@ -2764,7 +2684,6 @@ _GapKartDepotRefresh ( struct _GapDepot * Depot )
     Kart = NULL;
     Banana = NULL;
     TempBanana = NULL;
-    Bananable = NULL;
 
     XFS_CAN ( Depot )
     XFS_CAN ( Depot -> kart_files )
@@ -2786,17 +2705,11 @@ _GapKartDepotRefresh ( struct _GapDepot * Depot )
 
                             RCt = _GapGetKart ( Depot, & Kart, Name );
                             if ( RCt == 0 ) {
-                                RCt = _DieBananableMake (
-                                                        & Bananable,
-                                                        ( void * ) Kart
-                                                        );
-                                if ( RCt == 0 ) {
-                                    RCt = _DieBananaAdd_NoLock (
-                                    Banana,
-                                    ( struct BSTNode * ) Bananable,
-                                    _KartAddCallback
-                                    );
-                                }
+                                RCt = _DieBananaAdd_NoLock (
+                                                            Banana,
+                                                            Kart,
+                                                            Kart -> name
+                                                            );
                             }
                             else {
                                 RCt = _GapLoadKartBanana (
