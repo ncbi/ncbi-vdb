@@ -686,9 +686,9 @@ ASTBuilder :: HandleTableBody ( STable & p_table, const AST & p_body )
                 case PT_PRODSTMT:
                 case PT_PRODTRIGGER:
                     {
-                        const AST * datatype;
-                        const AST * ident;
-                        const AST * expr;
+                        const AST * datatype = 0;
+                        const AST * ident = 0;
+                        const AST * expr = 0;
                         switch ( stmt . ChildrenCount () )
                         {
                         case 2: // trigger
