@@ -36,10 +36,14 @@
 
 #include "resolver-cgi.h" /* RESOLVER_CGI */
 
+#include "../../../ncbi-vdb/libs/vfs/resolver-priv.h" /* VResolverSetVersion */
+
 TEST_SUITE ( VResolverWithLogTestSuite );
 
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
+
+using std::string;
 
 static KConfig * KFG = NULL;
 
@@ -94,6 +98,18 @@ FIXTURE_TEST_CASE ( AAAB01008846, Fixture ) {
     REQUIRE_RC ( VFSManagerMakePath ( _mgr, & _query, "AAAB01008846.1" ) );
     REQUIRE_RC ( VResolverQuery
         ( _resolver, eProtocolHttpHttps, _query, NULL, & _remote, NULL ) );
+}
+
+FIXTURE_TEST_CASE ( SRR1008846, Fixture ) {
+    REQUIRE_RC ( VResolverSetVersion ( _resolver, "1.2" ));
+
+    REQUIRE_RC ( VFSManagerMakePath ( _mgr, & _query, "SRR1008846" ) );
+    REQUIRE_RC ( VResolverQuery
+        ( _resolver, eProtocolFaspHttps, _query, NULL, & _remote, NULL ) );
+
+    char buffer [ 9 ];
+    REQUIRE_RC ( VPathReadScheme ( _remote, buffer, sizeof buffer, NULL ) );
+    REQUIRE_EQ ( string ( buffer ), string ( "fasp" ) );
 }
 
 extern "C" {
