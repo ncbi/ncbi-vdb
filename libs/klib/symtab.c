@@ -745,8 +745,9 @@ void DumpSymbol ( BSTNode *n, void *data )
 
 LIB_EXPORT void CC KSymTableDump ( const KSymTable *self )
 {
+    uint32_t i = 0 ;
     uint32_t count = VectorLength ( & self -> stack );
-    for ( uint32_t i = 0 ; i < count; ++ i )
+    for ( i = 0 ; i < count; ++ i )
     {
         printf("Scope %d\n", i);
         BSTree *scope = VectorGet ( & self -> stack, i );
