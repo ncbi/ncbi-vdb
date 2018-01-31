@@ -3376,11 +3376,10 @@ static rc_t STestCheckRemoteRepoKfg ( STest * self, bool * exists ) {
 
 static rc_t STestCheckSiteRepoKfg ( STest * self, bool * exists ) {
     bool printed = false;
+    bool hasNode = true;
 #define SITE "/repository/site"
     const char * path = SITE;
     const KConfigNode * node = NULL;
-    KNamelist * names = NULL;
-    uint32_t count = 0;
     String * p = NULL;
     rc_t rc = KConfigOpenNodeRead ( self -> kfg, & node, path );
     assert ( exists );
@@ -3394,57 +3393,63 @@ static rc_t STestCheckSiteRepoKfg ( STest * self, bool * exists ) {
             printed = true;
         }
         else {
+            hasNode = false;
+            rc = 0;
             STestEnd ( self, eEndOK, "not found: OK" );
             printed = true;
         }
     }
-    if ( rc == 0 ) {
-        rc = KConfigNodeListChildren ( node, & names );
-        if ( rc != 0 ) {
-            STestEnd ( self, eEndFAIL,
-                        "cannot list children of '%s': %R", path, rc );
-            printed = true;
-        }
-    }
-    if ( rc == 0 ) {
-        rc = KNamelistCount ( names, & count );
-        if ( rc != 0 ) {
-            STestEnd ( self, eEndFAIL,
-                        "cannot count children of '%s': %R", path, rc );
-            printed = true;
-        }
-        else if ( count > 0 )
-            * exists = true;
-    }
-    if ( rc == 0 ) {
-        const char * path = SITE "/disabled";
-        rc = KConfigReadString ( self -> kfg, path, & p );
-        if ( rc != 0 ) {
-            if ( rc != SILENT_RC ( rcKFG, rcNode, rcOpening,
-                                    rcPath, rcNotFound ) )
-            {
-                STestEnd ( self, eEndFAIL, "cannot read '%s': %R",
-                                            path, rc );
+    if ( hasNode ) {
+        KNamelist * names = NULL;
+        uint32_t count = 0;
+        if ( rc == 0 ) {
+            rc = KConfigNodeListChildren ( node, & names );
+            if ( rc != 0 ) {
+                STestEnd ( self, eEndFAIL,
+                           "cannot list children of '%s': %R", path, rc );
                 printed = true;
             }
-            else
-                rc = 0;
         }
-        else {
-            String sTrue;
-            CONST_STRING ( & sTrue, "true" );
-            if ( StringEqual ( p, & sTrue ) ) {
-                * exists = false;
-                if ( count > 1 ) {
-                    STestEnd ( self, eWarning,
-                                "Site repository is disabled" );
+        if ( rc == 0 ) {
+            rc = KNamelistCount ( names, & count );
+            if ( rc != 0 ) {
+                STestEnd ( self, eEndFAIL,
+                           "cannot count children of '%s': %R", path, rc );
+                printed = true;
+            }
+            else if ( count > 0 )
+                * exists = true;
+        }
+        if ( rc == 0 ) {
+            const char * path = SITE "/disabled";
+            rc = KConfigReadString ( self -> kfg, path, & p );
+            if ( rc != 0 ) {
+                if ( rc != SILENT_RC ( rcKFG, rcNode, rcOpening,
+                                       rcPath, rcNotFound ) )
+                {
+                    STestEnd ( self, eEndFAIL, "cannot read '%s': %R",
+                                                            path, rc );
                     printed = true;
                 }
+                else
+                    rc = 0;
             }
-            RELEASE ( String, p );
+            else {
+                String sTrue;
+                CONST_STRING ( & sTrue, "true" );
+                if ( StringEqual ( p, & sTrue ) ) {
+                    * exists = false;
+                    if ( count > 1 ) {
+                        STestEnd ( self, eWarning,
+                                   "Site repository is disabled" );
+                        printed = true;
+                    }
+                }
+                RELEASE ( String, p );
+            }
         }
+        RELEASE ( KNamelist, names );
     }
-    RELEASE ( KNamelist, names );
     RELEASE ( KConfigNode, node );
     if ( ! printed )
         STestEnd ( self, eEndOK, "OK" );
