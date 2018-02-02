@@ -1313,7 +1313,10 @@ _GRCacheDispose ( const struct _GRCache * self )
     struct _GRCache * C = ( struct _GRCache * ) self;
 
     if ( C != NULL ) {
-        XFSHashDictDispose ( C -> hash_dict );
+        if ( C -> hash_dict != NULL ) {
+            XFSHashDictDispose ( C -> hash_dict );
+            C -> hash_dict = NULL;
+        }
 
         if ( C -> mutabor != NULL ) {
             KLockRelease ( C -> mutabor );
@@ -1399,6 +1402,9 @@ _GRCacheFind (
     RCt = 0;
     Holder = NULL;
 
+    XFS_CAN ( self )
+    XFS_CAN ( self -> hash_dict )
+
     RCt = _GRCacheLock ( self );
     if ( RCt == 0 ) {
         RCt = XFSHashDictGet (
@@ -1420,6 +1426,9 @@ static
 bool CC
 _GRCacheHas ( const struct _GRCache * self, const char * AccessionOrId )
 {
+    XFS_CAN ( self )
+    XFS_CAN ( self -> hash_dict )
+
     return XFSHashDictHas ( self -> hash_dict, AccessionOrId );
 }   /* _GRCacheHas () */
 
@@ -1438,6 +1447,8 @@ _GRCacheAddObject_NoLock (
 
     XFS_CAN ( self )
     XFS_CAN ( Object )
+    XFS_CAN ( self -> hash_dict )
+
 
     if ( XFSHashDictHas (
                         self -> hash_dict,
@@ -1496,6 +1507,9 @@ _GRCacheFindOrCreate (
     RCt = 0;
     Holder = NULL;
     TheObject = NULL;
+
+    XFS_CAN ( self )
+    XFS_CAN ( self -> hash_dict )
 
     RCt = _GRCacheLock ( self );
     if ( RCt == 0 ) {
@@ -1564,6 +1578,7 @@ _GRCacheSetObject (
 
     XFS_CAN ( self )
     XFS_CAN ( Object )
+    XFS_CAN ( self -> hash_dict )
 
     RCt = _GRCacheLock ( self );
     if ( RCt == 0 ) {

@@ -29,10 +29,10 @@
 #include <klib/namelist.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
-#include <klib/container.h>
 
 #include <kfg/config.h>
 
+#include "hdict.h"
 #include "owp.h"
 #include "schwarzschraube.h"
 
@@ -47,15 +47,98 @@
 /*))
  //   it is a struct, don't know why ... prolly will add refcount later
 ((*/
-struct XFSOwp {
-    BSTree tree;
+struct XFSOwpEntry {
+    const char * Key;
+    const char * Property;
 };
 
-struct XFSOwpEntry {
-    struct BSTNode node;
-    char * Key;
-    char * Property;
+static
+rc_t CC
+_OWPEntryDispose ( const struct XFSOwpEntry * self )
+{
+    struct XFSOwpEntry * Entry = ( struct XFSOwpEntry * ) self;
+
+    if ( Entry != NULL ) {
+        if ( Entry -> Key != NULL ) {
+            free ( ( char * ) Entry -> Key );
+            Entry -> Key = NULL;
+        }
+
+        if ( Entry -> Property != NULL ) {
+            free ( ( char * ) Entry -> Property );
+            Entry -> Property = NULL;
+        }
+
+        free ( Entry );
+    }
+
+    return 0;
+}   /* _OWPEntryDispose () */
+
+static
+rc_t CC
+_OWPEntryMake (
+                const struct XFSOwpEntry ** Entry,
+                const char * Key,
+                const char * Property
+)
+{
+    rc_t RCt;
+    struct XFSOwpEntry * TheEntry;
+
+    RCt = 0;
+    TheEntry = NULL;
+
+    XFS_CSAN ( Entry )
+    XFS_CAN ( Entry )
+    XFS_CAN ( Key )
+    XFS_CAN ( Property )
+
+    TheEntry = calloc ( 1, sizeof ( struct XFSOwpEntry ) );
+    if ( TheEntry == NULL ) {
+        RCt = XFS_RC ( rcExhausted );
+    }
+    else {
+        RCt = XFS_StrDup ( Key, & ( TheEntry -> Key ) );
+        if ( RCt == 0 ) {
+
+            if ( Property != NULL ) {
+                RCt = XFS_StrDup ( Property, & ( TheEntry -> Property ) );
+            }
+
+            if ( RCt == 0 ) {
+                * Entry = TheEntry;
+            }
+        }
+    }
+
+    if ( RCt != 0 ) {
+        * Entry = NULL;
+
+        if ( TheEntry != NULL ) {
+            _OWPEntryDispose ( TheEntry );
+        }
+    }
+
+    return RCt;
+}   /* _OWPEntryMake () */
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+struct XFSOwp {
+    const struct XFSHashDict * hash_dict;
 };
+
+static
+void CC
+_OwpEntryWhacker ( const void * Data )
+{
+    if ( Data != NULL ) {
+        _OWPEntryDispose ( ( struct XFSOwpEntry * ) Data );
+    }
+}   /* _OwpEntryWhacker () */
 
 LIB_EXPORT
 rc_t CC
@@ -67,23 +150,26 @@ XFSOwpMake ( struct XFSOwp ** Owp )
     RCt = 0;
     tmpOwp = NULL;
 
-    if ( Owp == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-    * Owp = NULL;
+    XFS_CSAN ( Owp )
+    XFS_CAN ( Owp )
 
     tmpOwp = calloc ( 1, sizeof ( struct XFSOwp ) );
     if ( tmpOwp == NULL ) {
-        return XFS_RC ( rcExhausted );
-    }
-
-    RCt = XFSOwpInit ( tmpOwp );
-    if ( RCt == 0 ) {
-        * Owp = tmpOwp;
+        RCt = XFS_RC ( rcExhausted );
     }
     else {
+        RCt = XFSOwpInit ( tmpOwp );
+        if ( RCt == 0 ) {
+            * Owp = tmpOwp;
+        }
+    }
+
+    if ( RCt != 0 ) {
         * Owp = NULL; /* I know it was initialized in that way, but */
-        free ( tmpOwp );
+
+        if ( tmpOwp != NULL ) {
+            XFSOwpDispose ( tmpOwp );
+        }
     }
 
     return RCt;
@@ -93,70 +179,31 @@ LIB_EXPORT
 rc_t CC
 XFSOwpInit ( struct XFSOwp * self )
 {
-    if ( self == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( self )
 
-    BSTreeInit ( ( BSTree * ) self );
-
-    return 0;
+    return XFSHashDictMake ( & self -> hash_dict, _OwpEntryWhacker );
 }   /* XFSOwpInit () */
-
-static
-void CC
-_OWPEntryWhack ( BSTNode * Node, void * UsuallyNullParam )
-{
-    struct XFSOwpEntry * Entry;
-
-    Entry = ( struct XFSOwpEntry * ) Node;
-
-    if ( Entry != NULL ) {
-        if ( Entry -> Key != NULL ) {
-            free ( Entry -> Key );
-            Entry -> Key = NULL;
-        }
-
-        if ( Entry -> Property != NULL ) {
-            free ( Entry -> Property );
-            Entry -> Property = NULL;
-        }
-
-        free ( Entry );
-        Entry = NULL; /* :lol: */
-    }
-}   /* _OWPEntryWhack () */
 
 LIB_EXPORT
 rc_t CC
 XFSOwpWhack ( struct XFSOwp * self )
 {
-    if ( self == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( self )
 
-    BSTreeWhack ( ( BSTree * ) self, _OWPEntryWhack, NULL );
-
-    return 0;
+    return XFSHashDictDispose ( self -> hash_dict );
 }   /* XFSOwpWhack () */
 
 LIB_EXPORT
 rc_t CC
 XFSOwpDispose ( struct XFSOwp * self )
 {
-    rc_t RCt;
+    if ( self != NULL ) {
+        XFSOwpWhack ( self );
 
-    RCt = 0;
-
-    if ( self == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    RCt = XFSOwpWhack ( self );
-    if ( RCt == 0 ) {
         free ( self );
     }
 
-    return RCt;
+    return 0;
 }   /* XFSOwpDispose () */
 
 LIB_EXPORT
@@ -164,57 +211,22 @@ rc_t CC
 XFSOwpClear ( struct XFSOwp * self )
 {
     XFSOwpWhack ( self );
-    XFSOwpInit ( self );
 
-    return 0;
+    return XFSOwpInit ( self );
 }   /* XFSOwpClear () */
-
-static
-int CC
-_OWPStringCmp ( const char * Str1, const char * Str2 )
-{
-    if ( Str1 == NULL || Str2 == NULL ) {
-        if ( Str1 != NULL ) {
-            return 4096;
-        }
-
-        if ( Str2 != NULL ) {
-            return - 4096;
-        }
-
-        return 0;
-    }
-
-    return strcmp ( Str1, Str2 );
-}   /* _OWPStringCmp () */
-
-static
-int64_t CC
-_OWPEntryCmp ( const void * Item, const BSTNode * Node )
-{
-    return _OWPStringCmp (
-                ( const char * ) Item,
-                ( ( Node == NULL )
-                    ? NULL
-                    : ( ( struct XFSOwpEntry * ) Node ) -> Key
-                )
-                );
-}   /* _OWPEntryCmp () */
 
 static
 const struct XFSOwpEntry * CC
 _OWPEntryFind ( const struct XFSOwp * self, const char * Key )
 {
-    struct XFSOwpEntry * Entry;
-
-    Entry = NULL;
+    struct XFSOwpEntry * Entry = NULL;
 
     if ( self != NULL && Key != NULL ) {
-        Entry = ( struct XFSOwpEntry * ) BSTreeFind (
-                                                    ( BSTree * )self,
-                                                    Key,
-                                                    _OWPEntryCmp
-                                                    );
+        XFSHashDictGet (
+                        self -> hash_dict,
+                        ( const void ** ) & Entry,
+                        Key
+                        );
     }
 
     return Entry;
@@ -238,45 +250,6 @@ XFSOwpGet ( const struct XFSOwp * self, const char * Key )
     return Entry == NULL ? NULL : Entry -> Property;
 }   /* XFSOwpGet () */
 
-static
-struct XFSOwpEntry * CC
-_OWPEntryMake ( const char * Key, const char * Property )
-{
-    struct XFSOwpEntry * Entry;
-
-    Entry = calloc ( 1, sizeof ( struct XFSOwpEntry ) );
-    if ( Entry != NULL ) {
-        if ( XFS_StrDup ( Key, ( const char ** ) & ( Entry -> Key ) ) == 0 ) {
-
-            if ( Property == NULL ) {
-                return Entry;
-            }
-            else {
-                if ( XFS_StrDup ( Property, ( const char ** ) & ( Entry -> Property ) ) == 0 ) {
-                    return Entry;
-                }
-            }
-
-            free ( Entry -> Key );
-        }
-
-        free ( Entry );
-    }
-
-    return NULL;
-}   /* _OWPEntryMake () */
-
-static
-int64_t CC
-_OWPNodeCmp ( const BSTNode * Node1, const BSTNode * Node2 )
-{
-    return _OWPStringCmp (
-                        ( ( struct XFSOwpEntry * ) Node1 ) -> Key,
-                        ( ( struct XFSOwpEntry * ) Node2 ) -> Key
-                        );
-
-}   /* _OWPNodeCmp () */
-
 LIB_EXPORT
 rc_t CC
 XFSOwpSet (
@@ -286,31 +259,24 @@ XFSOwpSet (
 )
 {
     rc_t RCt;
-    struct XFSOwpEntry * Entry;
+    const struct XFSOwpEntry * Entry;
 
     RCt = 0;
     Entry = NULL;
 
-        /* I suppose, that Property could be NULL value */
-    if ( self == NULL || Key == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+        /*  I suppose, that Property could be NULL value
+         */
+    XFS_CAN ( self );
+    XFS_CAN ( Key );
 
         /* All property values are unique */
     if ( XFSOwpHas ( self, Key ) == true ) {
         return XFS_RC ( rcInvalid );
     }
 
-    Entry = _OWPEntryMake ( Key, Property );
-    if ( Entry == NULL ) {
-        RCt = XFS_RC ( rcExhausted );
-    }
-    else {
-        RCt = BSTreeInsert (
-                        ( BSTree * ) self,
-                        ( BSTNode * ) Entry,
-                        _OWPNodeCmp
-                        );
+    RCt = _OWPEntryMake ( & Entry, Key, Property );
+    if ( RCt == 0 ) {
+        RCt = XFSHashDictAdd ( self -> hash_dict, Entry, Key );
     }
 
     return RCt;
@@ -318,22 +284,22 @@ XFSOwpSet (
 
 static
 void
-_ListKeysCallback ( BSTNode * Node, void * Data )
+_ListKeysEacher (
+                const char * Key,
+                const void * Value,
+                const void * Data
+)
 {
     struct VNamelist * List;
-    struct XFSOwpEntry * TheNode;
+    struct XFSOwpEntry * TheEntry;
 
-    List = NULL;
-    TheNode = NULL;
+    List = ( struct VNamelist * ) Data;
+    TheEntry = ( struct XFSOwpEntry * ) Value;
 
-    if ( Node != NULL && Data != NULL ) {
-        List = ( struct VNamelist * ) Data;
-        TheNode = ( struct XFSOwpEntry * ) Node;
-
-        VNamelistAppend ( List, TheNode -> Key );
-
+    if ( List != NULL && TheEntry != NULL ) {
+        VNamelistAppend ( List, TheEntry -> Key );
     }
-}   /* _ListKeysCallback () */
+}   /* _ListKeysEacher () */
 
 LIB_EXPORT
 rc_t CC
@@ -346,23 +312,22 @@ XFSOwpListKeys (
     struct VNamelist * List;
 
     RCt = 0;
+    List = NULL;
 
-    if ( self == NULL || Keys == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    * Keys = NULL;
+    XFS_CSAN ( Keys )
+    XFS_CAN ( self )
+    XFS_CAN ( Keys )
 
     RCt = VNamelistMake ( & List, 16 /* ?? */ );
     if ( RCt == 0 ) {
-        BSTreeForEach (
-                    ( BSTree * ) self,
-                    false,
-                    _ListKeysCallback,
-                    List
-                    );
-
-        RCt = VNamelistToConstNamelist ( List, Keys );
+        RCt = XFSHashDictForEach (
+                                self -> hash_dict,
+                                _ListKeysEacher,
+                                List
+                                );
+        if ( RCt == 0 ) {
+            RCt = VNamelistToConstNamelist ( List, Keys );
+        }
 
         VNamelistRelease ( List );
     }

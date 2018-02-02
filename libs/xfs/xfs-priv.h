@@ -75,7 +75,7 @@ struct XFSControl {
         /*  That is for storeing of arguments to run fuse
             I am not sure if we need it, but arguments for initializing
             fuse and docan are passing in difeerent way.
-            BTW, prolly I need to use BSTree here, not sure.
+            BTW, prolly I need to use HashDict here, not sure.
          */
     struct XFSOwp * Arguments;
 

@@ -26,7 +26,6 @@
 
 #include <klib/rc.h>
 #include <klib/out.h>
-#include <klib/container.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
 #include <klib/vector.h>
@@ -54,6 +53,7 @@
 #include "xgapf.h"
 #include "spen.h"
 #include "zehr.h"
+#include "hdict.h"
 
 #include <sysalloc.h>
 
@@ -88,8 +88,6 @@ typedef enum _EncType {
                     } _EncType;
 
 struct _GapFilePeer {
-    BSTNode node;
-
     KLock * mutabor;
     KRefcount refcount;
 
@@ -118,7 +116,7 @@ struct _GapFilePeer {
 /* _GapFiles ...                                                     */
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 struct _GapFiles {
-    BSTree tree;
+    const struct XFSHashDict * hash_dict;
 
     KLock * mutabor;
 
@@ -1383,36 +1381,24 @@ _GapFilePeerOpen (
 /* _GapFiles ...                                                     */
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
-/*
-static rc_t CC _GapFilePeerAddRef ( struct _GapFilePeer * self );
-static rc_t CC _GapFilePeerRelease ( struct _GapFilePeer * Peer );
-static rc_t CC _GapFilePeerMake (
-                                struct _GapFilePeer ** File,
-                                uint32_t ProjectId,
-                                const char * AccessionOrId
-                                );
-static rc_t CC _GapFilePeerDispose ( struct _GapFilePeer * self );
-*/
-
 static
 void CC
-_GapFilesWhackCallback ( BSTNode * Node, void * unused )
+_GapFilesWhackBanana ( const void * Data )
 {
-    if ( Node != NULL ) {
-        _GapFilePeerRelease ( ( struct _GapFilePeer* ) Node );
+    if ( Data != NULL ) {
+        _GapFilePeerRelease ( ( struct _GapFilePeer * ) Data );
     }
-}   /* _GapFilesWhackCallback () */
+}   /* _GapFilesWhackBanana () */
 
 static
 rc_t CC
 _GapFilesDispose ( struct _GapFiles * self )
 {
     if ( self != NULL ) {
-        BSTreeWhack (
-                    & ( self -> tree ),
-                    _GapFilesWhackCallback,
-                    NULL
-                    );
+        if ( self -> hash_dict != NULL ) {
+            XFSHashDictDispose ( self -> hash_dict );
+            self -> hash_dict = NULL;
+        }
 
         if ( self -> pen != NULL ) {
             XFSPenDispose ( self -> pen );
@@ -1452,9 +1438,14 @@ _GapFilesMake ( struct _GapFiles ** Files )
         if ( RCt == 0 ) {
             RCt = KLockMake ( & ( TheFiles -> mutabor ) );
             if ( RCt == 0 ) {
-                BSTreeInit ( & ( TheFiles -> tree ) );
+                RCt = XFSHashDictMake ( 
+                                    & ( TheFiles -> hash_dict ),
+                                    _GapFilesWhackBanana
+                                    );
 
-                * Files = TheFiles;
+                if ( RCt == 0 ) {
+                    * Files = TheFiles;
+                }
             }
         }
     }
@@ -1501,22 +1492,6 @@ XFSGapFilesDispose ()
 }   /* XFSGapFilesDispose () */
 
 static
-int64_t CC
-_GapFilesFindCallback ( const void * Item, const BSTNode * Node )
-{
-    const char * Str1, * Str2;
-
-    Str1 = ( ( char * ) Item );
-    Str2 = Node == NULL
-            ? NULL
-            : ( ( struct _GapFilePeer * ) Node ) -> object_cache_path
-            ;
-
-
-    return XFS_StringCompare4BST_ZHR ( Str1, Str2 );
-}   /* _GapFilesFindCallback () */
-
-static
 rc_t CC
 _GapFilesFind_NoLock (
                     struct _GapFiles * self,
@@ -1524,56 +1499,18 @@ _GapFilesFind_NoLock (
                     const char * CachePath
 )
 {
-    rc_t RCt;
-    struct _GapFilePeer * ThePeer;
-
-    RCt = 0;
-    ThePeer = NULL;
-
     XFS_CSAN ( Peer )
     XFS_CAN ( self )
     XFS_CAN ( Peer )
     XFS_CAN ( CachePath )
+    XFS_CAN ( self -> hash_dict )
 
-    ThePeer = ( struct _GapFilePeer * ) BSTreeFind ( 
-                                        & ( self -> tree ),
-                                        CachePath,
-                                        _GapFilesFindCallback
-                                        );
-    if ( ThePeer == NULL ) {
-
-        RCt = XFS_RC ( rcNotFound );
-    }
-    else {
-
-        * Peer = ThePeer;
-        RCt = 0;
-    }
-
-    return RCt;
+    return XFSHashDictGet (
+                            self -> hash_dict,
+                            ( const void ** ) Peer,
+                            CachePath
+                            );
 }   /* _GapFilesFind_NoLock () */
-
-static
-int64_t CC
-_GapFilesAddCallback (
-                    const struct BSTNode * N1,
-                    const struct BSTNode * N2
-)
-{
-    const char * Str1, * Str2;
-
-
-    Str1 = N1 == NULL
-            ? NULL
-            : ( ( ( struct _GapFilePeer * ) N1 ) -> object_cache_path )
-            ;
-    Str2 = N2 == NULL
-            ? NULL
-            : ( ( ( struct _GapFilePeer * ) N2 ) -> object_cache_path )
-            ;
-
-    return XFS_StringCompare4BST_ZHR ( Str1, Str2 );
-}   /* _GapFilesAddCallback () */
 
 static
 rc_t CC
@@ -1593,18 +1530,15 @@ _GapFilesAddPeer_NoLock (
     XFS_CSAN ( Peer )
     XFS_CAN ( self )
     XFS_CAN ( Peer )
+    XFS_CAN ( self -> hash_dict )
 
-    RCt = _GapFilePeerMake (
-                        & ThePeer,
-                        ProjectId,
-                        AccessionOrId
-                        );
+    RCt = _GapFilePeerMake ( & ThePeer, ProjectId, AccessionOrId );
     if ( RCt == 0 ) {
-        RCt = BSTreeInsert (
-                        & ( self -> tree ),
-                        ( struct BSTNode * ) ThePeer,
-                        _GapFilesAddCallback
-                        );
+        RCt = XFSHashDictAdd (
+                            self -> hash_dict,
+                            ThePeer,
+                            ThePeer -> object_cache_path
+                            );
         if ( RCt == 0 ) {
             * Peer = ThePeer;
         }

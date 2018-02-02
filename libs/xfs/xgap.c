@@ -203,6 +203,8 @@ _DieBananaFind_NoLock (
                     const char * Key
 )
 {
+    XFS_CAN ( self )
+    XFS_CAN ( self -> banana )
     return XFSHashDictGet ( self -> banana, Item, Key );
 }   /* _DieBananaFind_NoLock () */
 
@@ -214,6 +216,8 @@ _DieBananaAdd_NoLock (
                     const char * Key
 )
 {
+    XFS_CAN ( self )
+    XFS_CAN ( self -> banana )
     return XFSHashDictAdd ( self -> banana, Item, Key );
 }   /* _DieBananaAdd_NoLock () */
 
@@ -226,6 +230,7 @@ _DieBananaForEach_NoLock (
 )
 {
     XFS_CAN ( self )
+    XFS_CAN ( self -> banana)
     XFS_CAN ( Eacher )
 
     return XFSHashDictForEach (
@@ -341,6 +346,8 @@ _DieAnanasFind_NoLock (
                     ihashD_t Key
 )
 {
+    XFS_CAN ( self )
+    XFS_CAN ( self -> ananas)
     return XFSIHashDictGet ( self -> ananas, Item, Key );
 }   /* _DieAnanasFind_NoLock () */
 
@@ -352,6 +359,8 @@ _DieAnanasAdd_NoLock (
                     ihashD_t Key
 )
 {
+    XFS_CAN ( self )
+    XFS_CAN ( self -> ananas)
     return XFSIHashDictAdd ( self -> ananas, Item, Key );
 }   /* _DieAnanasAdd_NoLock () */
 
@@ -365,6 +374,7 @@ _DieAnanasForEach_NoLock (
 )
 {
     XFS_CAN ( self )
+    XFS_CAN ( self -> ananas)
     XFS_CAN ( Eacher )
 
     return XFSIHashDictForEach (

@@ -137,7 +137,10 @@ pLogMsg ( klogDebug, "XFSNodeContainerDispose ( $(node) )\n", "node=%p", ( void 
 */
 
     if ( self != NULL ) {
-        XFSHashDictDispose ( self -> nodes );
+        if ( self -> nodes != NULL ) {
+            XFSHashDictDispose ( self -> nodes );
+            ( ( struct XFSNodeContainer * ) self ) -> nodes = NULL;
+        }
 
         KRefcountWhack (
                     ( KRefcount * ) & ( self -> refcount ),
@@ -169,7 +172,9 @@ XFSNodeContainerClear ( const struct XFSNodeContainer * self )
     if ( Container != NULL ) {
         RCt = KLockAcquire ( Container -> mutabor );
         if ( RCt == 0 ) {
-            RCt = XFSHashDictDispose ( Container -> nodes );
+            if ( Container -> nodes != NULL ) {
+                RCt = XFSHashDictDispose ( Container -> nodes );
+            }
             if ( RCt == 0 ) {
                 RCt = XFSHashDictMake (
                                     & ( Container -> nodes ),
@@ -243,6 +248,9 @@ XFSNodeContainerHas (
                     const char * Name
 )
 {
+    XFS_CAN ( self )
+    XFS_CAN ( self -> nodes )
+
     return XFSHashDictHas ( self -> nodes, Name );
 }   /* XFSNodeContainerHas () */
 
@@ -305,6 +313,7 @@ XFSNodeContainerAdd (
     Container = ( struct XFSNodeContainer * ) self;
 
     XFS_CAN ( Container )
+    XFS_CAN ( Container -> nodes )
     XFS_CAN ( Node )
 
     if ( XFSNodeContainerHas ( Container, Node -> Name ) ) {
@@ -335,6 +344,7 @@ XFSNodeContainerDel (
     Container = ( struct XFSNodeContainer * ) self;
 
     XFS_CAN ( Container )
+    XFS_CAN ( Container -> nodes )
 
     RCt = KLockAcquire ( Container -> mutabor );
     if ( RCt == 0 ) {
@@ -381,6 +391,7 @@ XFSNodeContainerList (
     XFS_CSAN ( List )
     XFS_CAN ( self )
     XFS_CAN ( List )
+    XFS_CAN ( self -> nodes )
 
     RCt = VNamelistMake ( & TheList, 32 );
     if ( RCt == 0 ) {

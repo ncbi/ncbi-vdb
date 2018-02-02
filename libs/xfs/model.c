@@ -26,7 +26,6 @@
 #include <klib/rc.h>
 #include <klib/out.h>
 #include <klib/text.h>
-#include <klib/container.h>
 #include <klib/refcount.h>
 #include <klib/namelist.h>
 #include <klib/log.h>
@@ -38,6 +37,7 @@
 #include "owp.h"
 #include "mehr.h"
 #include "zehr.h"
+#include "hdict.h"
 #include "schwarzschraube.h"
 
 #include <sysalloc.h>
@@ -61,16 +61,15 @@ static const char * _sXFSModel_classname = "XFSModel";
  |||
 (((*/
 struct XFSModel {
-    BSTree tree;
     KRefcount refcount;
+
+    const struct XFSHashDict * hash_dict;
 
     const char * Resource;
     const char * Version;
 };
 
 struct XFSModelNode {
-    BSTNode node;
-
         /*)   the only property, which could not be overriden
          (*/
     const char * Name;
@@ -264,11 +263,9 @@ _XFSModelNodeMake ( const char * Name, struct XFSModelNode ** Node )
 
     RCt = 0;
 
-    if ( Name == NULL || Node == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    * Node = NULL;
+    XFS_CSAN ( Node )
+    XFS_CAN ( Name )
+    XFS_CAN ( Node )
 
     Knoten = calloc ( 1, sizeof ( struct XFSModelNode ) );
     if ( Knoten == NULL ) {
@@ -327,11 +324,8 @@ _GetDefaultModelSource ( const char ** Source )
     KonfigNode = NULL;
     Readed = 0;
 
-    if ( Source == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    * Source = NULL;
+    XFS_CSAN ( Source )
+    XFS_CAN ( Source )
 
     Konfig = XFS_Config_MHR ();
     if ( Konfig != NULL ) {
@@ -366,6 +360,18 @@ _GetDefaultModelSource ( const char ** Source )
 }   /* _GetDefaultModelSource () */
 
 /*))
+ //     Banana for Model creator ... intelligent creation
+((*/
+static
+void CC
+_ModelBanana ( const void * Value )
+{
+    if ( Value != NULL ) {
+        _XFSModelNodeDispose ( ( struct XFSModelNode * ) Value );
+    }
+}   /* _ModelBanana () */
+
+/*))
  //   That method will create and initialize model from scratch
 ((*/
 static
@@ -376,43 +382,49 @@ _ErstellenUndInitialisierenModel (
                     const struct XFSModel  ** Model
 )
 {
+    rc_t RCt;
     struct XFSModel * Modell;
 
+    RCt = 0;
     Modell = NULL;
 
-    if ( Resource == NULL || Model == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    * Model = NULL;
+    XFS_CSAN ( Model )
+    XFS_CAN ( Resource )
+    XFS_CAN ( Model )
 
     Modell = calloc ( 1, sizeof ( struct XFSModel ) );
     if ( Modell == NULL ) {
         return XFS_RC ( rcExhausted );
     }
 
-    BSTreeInit ( & ( Modell -> tree ) );
-    KRefcountInit (
-                    & ( Modell -> refcount ),
-                    1,
-                    _sXFSModel_classname,
-                    "XFSModelMake",
-                    "Model"
-                    );
-    if ( Version != NULL ) {
-        XFS_StrDup ( Version, & ( Modell -> Version ) );
+    RCt = XFSHashDictMake ( & ( Modell -> hash_dict ), _ModelBanana );
+    if ( RCt == 0 ) {
+        KRefcountInit (
+                        & ( Modell -> refcount ),
+                        1,
+                        _sXFSModel_classname,
+                        "XFSModelMake",
+                        "Model"
+                        );
+        if ( Version != NULL ) {
+            RCt = XFS_StrDup ( Version, & ( Modell -> Version ) );
+        }
+
+        if ( RCt == 0 ) {
+            RCt = XFS_StrDup ( Resource, & ( Modell -> Resource ) );
+            if ( RCt == 0 ) {
+                * Model = Modell;
+            }
+        }
     }
 
-    if ( XFS_StrDup ( Resource, & ( Modell -> Resource ) ) != 0 ) {
-            /* We should do it ... */
-        XFSModelDispose ( Modell );
+    if  ( RCt != 0 ) {
+        * Model = NULL;
 
-        * Model = NULL;     /* just for case */
-
-        return XFS_RC ( rcInvalid );
+        if ( Modell != NULL ) {
+            XFSModelDispose ( Modell );
+        }
     }
-
-    * Model = Modell;
 
     return 0;
 }   /* _ErstellenUndInitialisierenModel () */
@@ -549,16 +561,6 @@ _SetModelNodeProperty (
     return RCt;
 }   /* _SetModelNodeProperty () */
 
-static
-int64_t CC
-_LoadNodeCallback ( const BSTNode * N1, const BSTNode * N2 )
-{
-    return XFS_StringCompare4BST_ZHR (
-                            ( ( struct XFSModelNode * ) N1 ) -> Name,
-                            ( ( struct XFSModelNode * ) N2 ) -> Name
-                            );
-}   /* _LoadNodeCallback () */
-
 /*))
  //   That method will load node for moded by name
 ((*/
@@ -627,11 +629,7 @@ _LoadModelNode (
     }
 
     if ( RCt == 0 ) {
-        RCt = BSTreeInsert (
-                        & ( Model -> tree ),
-                        ( BSTNode * ) Mode,
-                        _LoadNodeCallback
-                        );
+        RCt = XFSHashDictAdd ( Model -> hash_dict, Mode, Name );
         if ( RCt == 0 ) {
             RCt = XFSModelNodeChildrenNames (
                                     Mode,
@@ -755,15 +753,6 @@ pLogMsg ( klogDebug, "XFSModelMake ( $(model) )", "model=%p", ( void * ) * Model
     return RCt;
 }   /* XFSModelMake () */
 
-static
-void CC
-_ModelWhackCallback ( BSTNode * Node, void * Unused )
-{
-    if ( Node != NULL ) {
-        _XFSModelNodeDispose ( ( struct XFSModelNode * ) Node );
-    }
-}   /* _ModelWhackCallback () */
-
 LIB_EXPORT
 rc_t CC
 XFSModelDispose ( struct XFSModel * self )
@@ -787,9 +776,10 @@ pLogMsg ( klogDebug, "_XFSModelDispose ( $(model) )", "model=%p", ( void * ) sel
         self -> Resource = NULL;
     }
 
-        /*) by BSTree code: it is safe not to check tree->root == NULL
-         (*/
-    BSTreeWhack ( ( BSTree * ) self, _ModelWhackCallback, NULL );
+    if ( self -> hash_dict != NULL ) {
+        XFSHashDictDispose ( self -> hash_dict );
+        self -> hash_dict = NULL;
+    }
 
     KRefcountWhack ( & ( self -> refcount ), _sXFSModel_classname );
 
@@ -872,29 +862,23 @@ XFSModelRootNode ( const struct XFSModel * self )
     return XFSModelLookupNode ( self, XFS_MODEL_ROOT );
 }   /* XFSModelRootNode () */
 
-static
-int64_t CC
-_LookupNodeCallback ( const void * Item, const BSTNode * Node )
-{
-    return XFS_StringCompare4BST_ZHR (
-                        ( const char * ) Item,
-                        ( ( struct XFSModelNode * ) Node ) -> Name
-                        );
-}   /* _LookupNodeCallback () */
-
 LIB_EXPORT
 const struct XFSModelNode * CC
 XFSModelLookupNode ( const struct XFSModel * self, const char * Name )
 {
-    if ( self == NULL || Name == NULL ) {
-        return NULL;
+    const struct XFSModelNode * Node = NULL;
+
+    if ( self != NULL && Name != NULL ) {
+        if ( XFSHashDictGet (
+                            self -> hash_dict,
+                            ( const void ** ) & Node,
+                            Name
+        ) != 0 ) {
+            Node = NULL;
+        }
     }
 
-    return ( const struct XFSModelNode * ) BSTreeFind (
-                                                & ( self -> tree ),
-                                                Name,
-                                                _LookupNodeCallback
-                                                );
+    return Node;
 }   /* XFSModelLookupNode () */
 
 LIB_EXPORT
@@ -950,11 +934,7 @@ XFSModelAddNode (
     if ( RCt == 0 ) {
         RCt = XFSModelNodeSetProperty ( Mode, XFS_MODEL_TYPE, Type );
         if ( RCt == 0 ) {
-            RCt = BSTreeInsert (
-                            & ( self -> tree ),
-                            ( BSTNode * ) Mode,
-                            _LoadNodeCallback
-                            );
+            RCt = XFSHashDictAdd ( self -> hash_dict, Mode, NodeName );
         }
     }
 
@@ -1129,10 +1109,14 @@ XFSModelNodeDDump ( const struct XFSModelNode * self )
 
 static
 void CC
-_ModelDDumpCallback ( BSTNode * Node, void * Data )
+_ModelDDumpEacher (
+                    const char * Key,
+                    const void * Value,
+                    const void * Data
+)
 {
-    XFSModelNodeDDump ( ( const struct XFSModelNode * ) Node );
-}   /* _ModelDDumpCallback () */
+    XFSModelNodeDDump ( ( const struct XFSModelNode * ) Value );
+}   /* _ModelDDumpEacher () */
 
 LIB_EXPORT
 void CC
@@ -1148,10 +1132,5 @@ XFSModelDDump ( const struct XFSModel * self )
                      self -> Version == NULL ? "null": self -> Version
                      );
 
-    BSTreeForEach (
-                & ( self -> tree ),
-                false,
-                _ModelDDumpCallback,
-                NULL
-                );
+    XFSHashDictForEach ( self -> hash_dict, _ModelDDumpEacher, NULL );
 }   /* XFSModelDDump () */

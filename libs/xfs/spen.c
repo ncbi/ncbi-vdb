@@ -26,7 +26,6 @@
 
 #include <klib/rc.h>
 #include <klib/out.h>
-#include <klib/container.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
 #include <kproc/lock.h>
@@ -43,6 +42,7 @@
 #include "zehr.h"
 #include "mehr.h"
 #include "spen.h"
+#include "hdict.h"
 #include <xfs/path.h>
 
 #include <sysalloc.h>
@@ -79,7 +79,7 @@ struct _sP {
 ((*/
 
 struct XFSPen {
-    struct BSTree tree;
+    const struct XFSHashDict * hash_dict;
 
     struct _sP * pen;
 
@@ -87,8 +87,6 @@ struct XFSPen {
 };
 
 struct XFSBurro {
-    struct BSTNode node;
-
     struct KLock * mutabor;
     KRefcount refcount;
 
@@ -768,6 +766,15 @@ XFSBurroRecachedFile (
 /* XFSPen                                                            */
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
+static
+void CC
+_PenWhackEacher ( const void * Data )
+{
+    if ( Data != NULL ) {
+        XFSBurroRelease ( ( const struct XFSBurro * ) Data );
+    }
+}   /* _PenWhackEacher () */
+
 rc_t CC
 XFSPenMake ( const struct XFSPen ** Pen, size_t Capacity )
 {
@@ -785,13 +792,17 @@ XFSPenMake ( const struct XFSPen ** Pen, size_t Capacity )
         return XFS_RC ( rcExhausted );
     }
 
-    BSTreeInit ( & ( ThePen -> tree ) );
-
-    RCt = KLockMake ( & ( ThePen -> mutabor ) );
+    RCt = XFSHashDictMake (
+                        & ( ThePen -> hash_dict ),
+                        _PenWhackEacher
+                        );
     if ( RCt == 0 ) {
-        RCt = _sPMake ( & ( ThePen -> pen ), Capacity );
+        RCt = KLockMake ( & ( ThePen -> mutabor ) );
         if ( RCt == 0 ) {
-            * Pen = ThePen;
+            RCt = _sPMake ( & ( ThePen -> pen ), Capacity );
+            if ( RCt == 0 ) {
+                * Pen = ThePen;
+            }
         }
     }
 
@@ -805,15 +816,6 @@ XFSPenMake ( const struct XFSPen ** Pen, size_t Capacity )
 
     return RCt;
 }   /* XFSPenMake () */
-
-static
-void CC
-_PenTreeWhackCallback ( BSTNode * Node, void * unused )
-{
-    if ( Node != NULL ) {
-        XFSBurroRelease ( ( const struct XFSBurro * ) Node );
-    }
-}   /* _PenTreeWhackCallback () */
 
 rc_t CC
 XFSPenDispose ( const struct XFSPen * self )
@@ -831,25 +833,16 @@ XFSPenDispose ( const struct XFSPen * self )
             Pen -> pen = NULL;
         }
 
-        BSTreeWhack ( & ( Pen -> tree ), _PenTreeWhackCallback, NULL );
+        if ( Pen -> hash_dict != NULL ) {
+            XFSHashDictDispose ( Pen -> hash_dict );
+            Pen -> hash_dict = NULL;
+        }
 
         free ( Pen );
     }
 
     return 0;
 }   /* XFSPenDispose () */
-
-static
-int64_t CC
-_PenFindCallback ( const void * Item, const struct BSTNode * Node )
-{
-    const char * ItemUrl, * NodeUrl;
-
-    ItemUrl = ( const char * ) Item;
-    NodeUrl = Node == NULL ? 0 : ( ( struct XFSBurro * ) Node ) -> url;
-
-    return XFS_StringCompare4BST_ZHR ( ItemUrl, NodeUrl );
-}   /* _PenFindCallback () */
 
 static
 rc_t CC
@@ -859,44 +852,15 @@ _PenFind_NoLock (
             const char * Url
 )
 {
-    rc_t RCt;
-    const struct XFSBurro * TheBurro;
-
-    RCt = 0;
-    TheBurro = NULL;
-
-    XFS_CSAN ( Burro )
     XFS_CAN ( self )
-    XFS_CAN ( Burro )
-    XFS_CAN ( Url )
+    XFS_CAN ( self -> hash_dict )
 
-    TheBurro = ( struct XFSBurro * ) BSTreeFind ( 
-                                            & ( self -> tree ),
-                                            Url,
-                                            _PenFindCallback
-                                            );
-    if ( TheBurro == NULL ) {
-        RCt = XFS_RC ( rcNotFound );
-    }
-    else {
-        * Burro = TheBurro;
-    }
-
-    return RCt;
+    return XFSHashDictGet (
+                            self -> hash_dict,
+                            ( const void ** ) Burro,
+                            Url
+                            );
 }   /* _PenFind_NoLock () */
-
-static
-int64_t CC
-_BurroAddCallback (
-const struct BSTNode * N1,
-const struct BSTNode * N2
-)
-{
-    return XFS_StringCompare4BST_ZHR (
-                                    ( ( struct XFSBurro * ) N1 ) -> url,
-                                    ( ( struct XFSBurro * ) N2 ) -> url
-                                    );
-}   /* _BurroAddCallback () */
 
 rc_t CC
 _PenAdd_NoLock (
@@ -906,12 +870,9 @@ _PenAdd_NoLock (
 {
     XFS_CAN ( self )
     XFS_CAN ( Burro )
+    XFS_CAN ( self -> hash_dict )
 
-    return BSTreeInsert (
-                        & ( ( ( struct XFSPen * ) self ) -> tree ),
-                        ( struct BSTNode * ) Burro,
-                        _BurroAddCallback
-                        );
+    return XFSHashDictAdd ( self -> hash_dict, Burro, Burro -> url );
 }   /* _PenAdd_NoLock () */
 
 rc_t CC

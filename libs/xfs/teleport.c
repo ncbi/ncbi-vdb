@@ -28,11 +28,11 @@
 #include <klib/out.h>
 #include <klib/namelist.h>
 #include <klib/printf.h>
-#include <klib/container.h>
 
 #include "teleport.h"
 #include "zehr.h"
 #include "schwarzschraube.h"
+#include "hdict.h"
 
 #include <sysalloc.h>
 
@@ -40,48 +40,115 @@
 
 /*)))
  (((    Place of teleport alive :lol:
-  )))   I will use BSTree to store all teleports, and I will inhitialize
+  )))   HashDict is used to store all teleports, and I will inhitialize
  (((    that tree ond allocate all related structures nce on a programs
   )))   start, and ... sorry guys, but I am going simple drop that 
  (((    on program exit without deallocation, cuz don't know when and
   )))   how we should dispose it, but here will be method for it
  (((*/
 
-static BSTree _sTeleport;
-static bool _sTeleportInited = false;
+static const struct XFSHashDict * _sTeleport = NULL;
 
-struct _TNode {
-    BSTNode node;
+struct _TEntry {
+    const struct XFSTeleport * Teleport;
 
     const char * Type;
-    const struct XFSTeleport * Teleport;
 };
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 static
-int64_t
-_TeleportLookupCallback ( const void * Item, const BSTNode * Node )
+rc_t CC
+_TEntryDispose ( struct _TEntry * self )
 {
-    return XFS_StringCompare4BST_ZHR (
-                                ( const char * ) Item,
-                                ( ( struct _TNode * ) Node ) -> Type
-                                );
-}   /* _TeleportLookupCallback () */
+    if ( self != NULL ) {
+        if ( self -> Type != NULL ) {
+            free ( ( char * ) self -> Type );
 
-static
-const struct _TNode * CC
-_TeleportLookup ( const char * Type )
-{
-    if ( _sTeleportInited == true ) {
-        return ( const struct _TNode * ) BSTreeFind (
-                                        ( struct BSTree * ) & _sTeleport,
-                                        Type,
-                                        _TeleportLookupCallback
-                                        );
+            self -> Type = NULL;
+        }
+
+        if ( self -> Teleport != NULL ) {
+            if ( self -> Teleport -> DeleteOnWhack ) {
+                free ( ( struct XFSTeleport * ) self -> Teleport );
+
+            }
+            self -> Teleport = NULL;
+        }
+
+        free ( self );
     }
 
-    return NULL;
+    return 0;
+}   /* _TEntryDispose () */
+
+static
+rc_t CC
+_TEntryMake (
+            struct _TEntry ** Entry,
+            const char * Type,
+            XFSTeleportProvider_t Provider
+)
+{
+    rc_t RCt;
+    struct _TEntry * TheEntry;
+
+    RCt = 0;
+    TheEntry = NULL;
+
+    XFS_CSAN ( Entry )
+    XFS_CAN ( Entry )
+
+    TheEntry = calloc ( 1, sizeof ( struct _TEntry ) );
+    if ( TheEntry == NULL ) {
+        RCt = XFS_RC ( rcExhausted );
+    }
+    else {
+        RCt = XFS_StrDup ( Type, & ( TheEntry -> Type ) );
+        if ( RCt == 0 ) {
+            RCt = Provider ( & ( TheEntry -> Teleport ) );
+            if ( RCt == 0 ) {
+                if ( TheEntry -> Teleport != NULL ) {
+                    * Entry = TheEntry;
+                }
+                else {
+                    RCt = XFS_RC ( rcInvalid );
+                }
+            }
+        }
+    }
+
+    if ( RCt != 0 ) {
+        * Entry = NULL;
+
+        if ( TheEntry != NULL ) {
+            _TEntryDispose ( TheEntry );
+        }
+    }
+
+    return RCt;
+}   /* _TEntryMake () */
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+static
+const struct _TEntry * CC
+_TeleportLookup ( const char * Type )
+{
+    const struct _TEntry * Entry = NULL;
+
+    if ( _sTeleport != NULL ) {
+        if ( XFSHashDictGet (
+                            _sTeleport,
+                            ( const void ** ) & Entry,
+                            Type
+                            ) != 0
+        ) {
+            Entry = NULL;
+        }
+    }
+
+    return Entry;
 }   /* _TeleportLookup () */
 
 static
@@ -92,57 +159,38 @@ _TeleportHas ( const char * Type )
 }   /* _TeleportHas () */
 
 static
-int64_t
-_TeleportAddCallback ( const BSTNode * Item, const BSTNode * Node )
-{
-    return XFS_StringCompare4BST_ZHR (
-                                ( ( struct _TNode * ) Item ) -> Type,
-                                ( ( struct _TNode * ) Node ) -> Type
-                                );
-}   /* _TeleportAddCallback () */
-
-static
 rc_t CC
-_TeleportAdd ( const char * Name, XFSTeleportProvider_t Provider )
+_TeleportAdd ( const char * Type, XFSTeleportProvider_t Provider )
 {
     rc_t RCt;
-    struct _TNode * Tde;
+    struct _TEntry * Ten;
 
     RCt = 0; 
+    Ten = NULL;
 
-    if ( Name == NULL || Provider == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( Type )
+    XFS_CAN ( Provider )
 
-    if ( _TeleportHas ( Name ) == true ) {
+    if ( _TeleportHas ( Type ) == true ) {
         return XFS_RC ( rcInvalid );
     }
 
-    Tde = calloc ( 1, sizeof ( struct _TNode ) );
-    if ( Tde == NULL ) {
-        return XFS_RC ( rcExhausted );
+    RCt = _TEntryMake ( & Ten, Type, Provider );
+    if ( RCt == 0 ) {
+        RCt = XFSHashDictAdd (
+                            _sTeleport,
+                            ( const void * ) Ten,
+                            Ten -> Type
+                            );
     }
 
-    if ( XFS_StrDup ( Name, & ( Tde -> Type ) ) != 0 ) {
-        free ( Tde );
+    if ( RCt != 0 ) {
+        if ( Ten != NULL ) {
+            _TEntryDispose ( Ten );
 
-        return XFS_RC ( rcExhausted );
+            Ten = NULL;
+        }
     }
-
-    RCt = Provider ( & Tde -> Teleport );
-
-    if ( RCt != 0 || Tde -> Teleport == NULL ) {
-        free ( ( char * ) Tde -> Type );
-        free ( Tde );
-
-        return XFS_RC ( rcInvalid );
-    }
-
-    BSTreeInsert (
-                ( struct BSTree * ) & _sTeleport,
-                ( struct BSTNode * ) Tde,
-                _TeleportAddCallback
-                );
 
     return RCt;
 }   /* _TeleportAdd () */
@@ -240,6 +288,15 @@ XFS_EXTERN rc_t CC XFSAccessPanelProvider (
                                 );
 
 static
+void CC
+_TeleportWhacker ( const void * Data )
+{
+    if ( Data != NULL ) {
+        _TEntryDispose ( ( struct _TEntry * ) Data );
+    }
+}   /* _TeleportWhacker () */
+
+static
 rc_t CC
 _TeleportInit ()
 {
@@ -247,173 +304,143 @@ _TeleportInit ()
 
     RCt = 0;
 
-    if ( _sTeleportInited == true ) {
+    if ( _sTeleport != NULL ) {
         return 0;
     }
 
-    BSTreeInit ( & _sTeleport );
-    _sTeleportInited = true;
+    RCt = XFSHashDictMake ( & _sTeleport, _TeleportWhacker );
+    if ( RCt == 0 ) {
+            /* Here we are adding Teleports */
+        do {
+            RCt = _TeleportAdd ( CACHE_NAME, XFSGapCacheProvider );
+            if ( RCt != 0 ) { 
+                break;
+            }
 
-        /* Here we are adding Teleports */
-    do {
-        RCt = _TeleportAdd ( CACHE_NAME, XFSGapCacheProvider );
-        if ( RCt != 0 ) { 
-            break;
-        }
+            RCt = _TeleportAdd ( FILE_NAME, XFSFileProvider );
+            if ( RCt != 0 ) { 
+                break;
+            }
 
-        RCt = _TeleportAdd ( FILE_NAME, XFSFileProvider );
-        if ( RCt != 0 ) { 
-            break;
-        }
+            RCt = _TeleportAdd (
+                            ENCRYPTED_FILE_NAME,
+                            XFSEncryptedFileProvider
+                            );
+            if ( RCt != 0 ) { 
+                break;
+            }
 
-        RCt = _TeleportAdd (
-                        ENCRYPTED_FILE_NAME,
-                        XFSEncryptedFileProvider
-                        );
-        if ( RCt != 0 ) { 
-            break;
-        }
+            RCt = _TeleportAdd ( DIRECTORY_NAME, XFSDirectoryProvider );
+            if ( RCt != 0 ) { 
+                break;
+            }
 
-        RCt = _TeleportAdd ( DIRECTORY_NAME, XFSDirectoryProvider );
-        if ( RCt != 0 ) { 
-            break;
-        }
+            RCt = _TeleportAdd ( README_NAME, XFSReadMeProvider );
+            if ( RCt != 0 ) { 
+                break;
+            }
 
-        RCt = _TeleportAdd ( README_NAME, XFSReadMeProvider );
-        if ( RCt != 0 ) { 
-            break;
-        }
+            RCt = _TeleportAdd ( KART_KARTS_NAME, XFSGapKartsProvider );
+            if ( RCt != 0 ) { 
+                break;
+            }
 
-        RCt = _TeleportAdd ( KART_KARTS_NAME, XFSGapKartsProvider );
-        if ( RCt != 0 ) { 
-            break;
-        }
+            RCt = _TeleportAdd ( KART_NAME, XFSGapKartProvider );
+            if ( RCt != 0 ) { 
+                break;
+            }
 
-        RCt = _TeleportAdd ( KART_NAME, XFSGapKartProvider );
-        if ( RCt != 0 ) { 
-            break;
-        }
+            RCt = _TeleportAdd (
+                            KART_FILES_NAME,
+                            XFSGapKartFilesProvider
+                            );
+            if ( RCt != 0 ) { 
+                break;
+            }
 
-        RCt = _TeleportAdd ( KART_FILES_NAME, XFSGapKartFilesProvider );
-        if ( RCt != 0 ) { 
-            break;
-        }
+            RCt = _TeleportAdd ( LINK_NAME, XFSLinkProvider );
+            if ( RCt != 0 ) { 
+                break;
+            }
 
-        RCt = _TeleportAdd ( LINK_NAME, XFSLinkProvider );
-        if ( RCt != 0 ) { 
-            break;
-        }
+            RCt = _TeleportAdd (
+                            LOCAL_REPOSITORY_NAME,
+                            XFSLocalRepositoryProvider
+                            );
+            if ( RCt != 0 ) { 
+                break;
+            }
 
-        RCt = _TeleportAdd (
-                        LOCAL_REPOSITORY_NAME,
-                        XFSLocalRepositoryProvider
-                        );
-        if ( RCt != 0 ) { 
-            break;
-        }
+            RCt = _TeleportAdd (
+                            REMOTE_REPOSITORY_NAME,
+                            XFSRemoteRepositoryProvider
+                            );
+            if ( RCt != 0 ) { 
+                break;
+            }
 
-        RCt = _TeleportAdd (
-                        REMOTE_REPOSITORY_NAME,
-                        XFSRemoteRepositoryProvider
-                        );
-        if ( RCt != 0 ) { 
-            break;
-        }
+            RCt = _TeleportAdd ( WORKSPACE_NAME, XFSWorkspaceProvider );
+            if ( RCt != 0 ) { 
+                break;
+            }
 
-        RCt = _TeleportAdd ( WORKSPACE_NAME, XFSWorkspaceProvider );
-        if ( RCt != 0 ) { 
-            break;
-        }
+            RCt = _TeleportAdd (
+                            SIMPLE_CONTAINER_NAME,
+                            XFSSimpleContainerProvider
+                            );
+            if ( RCt != 0 ) { 
+                break;
+            }
 
-        RCt = _TeleportAdd (
-                        SIMPLE_CONTAINER_NAME,
-                        XFSSimpleContainerProvider
-                        );
-        if ( RCt != 0 ) { 
-            break;
-        }
+            RCt = _TeleportAdd (
+                            TAR_ARCHIVE_NAME,
+                            XFSTarArchiveProvider
+                            );
+            if ( RCt != 0 ) { 
+                break;
+            }
 
-        RCt = _TeleportAdd (
-                        TAR_ARCHIVE_NAME,
-                        XFSTarArchiveProvider
-                        );
-        if ( RCt != 0 ) { 
-            break;
-        }
+            RCt = _TeleportAdd (
+                            GAP_PROJECT_NAME,
+                            XFSGapProjectProvider
+                            );
+            if ( RCt != 0 ) { 
+                break;
+            }
 
-        RCt = _TeleportAdd (
-                        GAP_PROJECT_NAME,
-                        XFSGapProjectProvider
-                        );
-        if ( RCt != 0 ) { 
-            break;
-        }
+            RCt = _TeleportAdd (
+                            GAP_FILE_NAME,
+                            XFSGapFileProvider
+                            );
+            if ( RCt != 0 ) { 
+                break;
+            }
 
-        RCt = _TeleportAdd (
-                        GAP_FILE_NAME,
-                        XFSGapFileProvider
-                        );
-        if ( RCt != 0 ) { 
-            break;
-        }
+            RCt = _TeleportAdd (
+                            ACCESS_PANEL_NAME,
+                            XFSAccessPanelProvider
+                            );
+            if ( RCt != 0 ) { 
+                break;
+            }
 
-        RCt = _TeleportAdd (
-                        ACCESS_PANEL_NAME,
-                        XFSAccessPanelProvider
-                        );
-        if ( RCt != 0 ) { 
-            break;
-        }
-
-    } while ( false );
+        } while ( false );
+    }
 
     return RCt;
 }   /* _TeleportInit () */
 
 static
-void CC
-_TeleportWhacker ( BSTNode * Node, void * Unused )
-{
-    struct _TNode * Tode;
-
-    Tode = ( struct _TNode * ) Node;
-
-    if ( Tode != NULL ) {
-        if ( Tode -> Type != NULL ) {
-            free ( ( char * ) Tode -> Type );
-
-            Tode -> Type = NULL;
-        }
-
-        if ( Tode -> Teleport != NULL ) {
-            if ( Tode -> Teleport -> DeleteOnWhack ) {
-                free ( ( struct XFSTeleport * ) Tode -> Teleport );
-
-            }
-            Tode -> Teleport = NULL;
-        }
-
-        free ( Tode );
-    }
-}   /* _TeleportWhacker () */
-
-static
 rc_t CC
 _TeleportWhack ()
 {
-    rc_t RCt;
+    if ( _sTeleport != NULL ) {
+        XFSHashDictDispose ( _sTeleport );
 
-    RCt = 0;
-
-    if ( _sTeleportInited != true ) {
-        return XFS_RC ( rcInvalid );
+        _sTeleport = NULL;
     }
 
-    BSTreeWhack ( & _sTeleport, _TeleportWhacker, NULL );
-
-    _sTeleportInited = false;
-
-    return RCt;
+    return 0;
 }   /* _TeleportWhack () */
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
@@ -422,40 +449,21 @@ _TeleportWhack ()
 LIB_EXPORT
 rc_t CC
 XFSTeleportLookup (
-            const char * NodeType,
+            const char * Type,
             const struct XFSTeleport ** Teleport
 )
 {
-    rc_t RCt;
-    const struct _TNode * tNode;
+    const struct _TEntry * Entry = NULL;
 
-    RCt = 0;
-    tNode = NULL;
+    XFS_CSAN ( Teleport )
+    XFS_CAN ( Type )
+    XFS_CAN ( Teleport )
 
-    if ( NodeType == NULL || Teleport == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    Entry = _TeleportLookup ( Type );
 
-    * Teleport = NULL;
+    * Teleport = Entry == NULL ? NULL : ( Entry -> Teleport );
 
-    if ( _sTeleportInited == false ) {
-        /* HOHOA, will init it somewhere else
-            RCt = _TeleportInit ();
-         */
-        return XFS_RC ( rcInvalid );
-    }
-
-    if ( RCt == 0 ) {
-        tNode = _TeleportLookup ( NodeType );
-        if ( tNode == NULL ) {
-            RCt = XFS_RC ( rcNotFound );
-        }
-        else {
-            * Teleport = tNode -> Teleport;
-        }
-    }
-
-    return RCt;
+    return Teleport == NULL ? XFS_RC ( rcNotFound ) : 0;
 }   /* XFSTeleportLookup () */
 
 LIB_EXPORT
