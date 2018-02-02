@@ -125,7 +125,7 @@ extern "C" {
             rc = KConfigWriteString ( KFG,
                 "repository/remote/main/CGI/resolver-cgi", RESOLVER_CGI );
 
-        std::cerr << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n"; 
+        std::cerr << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n";
 
         if ( rc == 0 )
             rc = VResolverWithLogTestSuite ( argc, argv );
