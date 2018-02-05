@@ -26,7 +26,6 @@
 
 #include <klib/rc.h>
 #include <klib/out.h>
-#include <klib/container.h>
 #include <klib/namelist.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
@@ -48,6 +47,7 @@
 #include "xencws.h"
 #include "zehr.h"
 #include "lreader.h"
+#include "hdict.h"
 #include <xfs/path.h>
 
 #include <sysalloc.h>
@@ -134,8 +134,6 @@ static const char * _sFolderTag          = "folder";
 struct _DirC;
 
 struct _DirE {
-    BSTNode node;
-
     KLock * mutabor;
     KRefcount refcount;
 
@@ -147,7 +145,7 @@ struct _DirE {
 };
 
 struct _DirC {
-    BSTree tree;
+    const struct XFSHashDict * hash_dict;
 
     struct KKey key;
 
@@ -696,12 +694,16 @@ _DirCNewName (
 
 static
 void CC
-_MakeContentDocumentCallback ( BSTNode * Node, void * Data )
+_MakeContentDocumentEacher (
+                            const char * Key,
+                            const void * Value,
+                            const void * Data
+)
 {
     struct _DirE * Entry;
     struct XFSDoc * Doc;
 
-    Entry = ( struct _DirE * ) Node;
+    Entry = ( struct _DirE * ) Value;
     Doc = ( struct XFSDoc * ) Data;
 
     if ( Entry != NULL && Doc != NULL ) {
@@ -713,7 +715,7 @@ _MakeContentDocumentCallback ( BSTNode * Node, void * Data )
                     Entry -> name
                     );
     }
-}   /* _MakeContentDocumentCallback () */
+}   /* _MakeContentDocumentEacher () */
 
 static
 rc_t CC
@@ -735,10 +737,9 @@ _MakeContentDocument (
 
     RCt = XFSTextDocMake ( & RetVal );
     if ( RCt == 0 ) {
-        BSTreeForEach ( 
-                    & ( self -> content -> tree ),
-                    false,
-                    _MakeContentDocumentCallback,
+        XFSHashDictForEach ( 
+                    self -> content -> hash_dict,
+                    _MakeContentDocumentEacher,
                     RetVal
                     );
 
@@ -875,15 +876,6 @@ _SyncronizeDirectoryContentNoLock ( const struct _DirE * self )
 }   /* _SynchronizeDirectoryContentNoLock () */
 
 static
-void CC
-_DirCWhackCallback ( BSTNode * Node, void * unused )
-{
-    if ( Node != NULL ) {
-        _DirERelease ( ( const struct _DirE * ) Node );
-    }
-}   /* _DirCWhackCallback () */
-
-static
 rc_t CC
 _DirEDisposeContent ( const struct _DirE * self )
 {
@@ -893,11 +885,10 @@ _DirEDisposeContent ( const struct _DirE * self )
 
         Content = ( struct _DirC * ) self -> content;
         if ( Content != NULL ) {
-            BSTreeWhack (
-                        & ( Content -> tree ),
-                        _DirCWhackCallback,
-                        NULL
-                        );
+            if ( Content -> hash_dict != NULL ) {
+                XFSHashDictDispose ( Content -> hash_dict );
+                Content -> hash_dict = NULL;
+            }
 
             if ( Content -> path != NULL ) {
                 free ( ( char * ) Content -> path );
@@ -915,6 +906,15 @@ _DirEDisposeContent ( const struct _DirE * self )
 
     return 0;
 }   /* _DirEDisposeContent () */
+
+static
+void CC
+_DirCWhackBanana ( const void * Value )
+{
+    if ( Value != NULL ) {
+        _DirERelease ( ( const struct _DirE * ) Value );
+    }
+}   /* _DirCWhackBanana () */
 
 static
 rc_t CC
@@ -964,11 +964,16 @@ _DirEVMakeContent (
 
     RCt = XFS_StrDup ( XFSPathGet ( Path ), & ( Cont -> path ) );
     if ( RCt == 0 ) {
-        BSTreeInit ( & ( Cont -> tree ) );
+        RCt = XFSHashDictMake (
+                            & ( Cont -> hash_dict ),
+                            _DirCWhackBanana
+                            );
 
-        memmove ( & ( Cont -> key ), Key, sizeof ( struct KKey ) );
+        if ( RCt == 0 ) {
+            memmove ( & ( Cont -> key ), Key, sizeof ( struct KKey ) );
 
-        RCt = _DirEReadContent ( self );
+            RCt = _DirEReadContent ( self );
+        }
     }
 
     XFSPathRelease ( Path );
@@ -1018,22 +1023,6 @@ _DirEMakeContent (
 ((*/
 
 static
-int64_t CC
-_DirFindCallback ( const void * Item, const BSTNode * Node )
-{
-    const char * Str1, * Str2;
-
-    Str1 = ( const char * ) Item;
-
-    Str2 = Node == NULL
-                    ? NULL
-                    : ( ( struct _DirE * ) Node ) -> name
-                    ;
-
-    return XFS_StringCompare4BST_ZHR ( Str1, Str2 );
-}   /* _DirFindCallback () */
-
-static
 rc_t CC
 _DirEGetEntryNoLock (
                 const struct _DirE * self,
@@ -1041,7 +1030,11 @@ _DirEGetEntryNoLock (
                 const struct _DirE ** Entry
 )
 {
-    const struct _DirE * RetVal = NULL;
+    rc_t RCt;
+    const struct _DirE * RetVal;
+
+    RCt = 0;
+    RetVal = NULL;
 
     XFS_CSAN ( Entry )
     XFS_CAN ( self )
@@ -1053,21 +1046,18 @@ _DirEGetEntryNoLock (
         return XFS_RC ( rcInvalid );
     }
 
-    RetVal = ( const struct _DirE * ) BSTreeFind (
-                                        & ( self -> content -> tree ),
-                                        Name,
-                                        _DirFindCallback
-                                        );
-    if ( RetVal != NULL ) {
+    RCt = XFSHashDictGet (
+                        self -> content -> hash_dict,
+                        ( const void ** ) & RetVal,
+                        Name
+                        );
+    if ( RCt == 0 ) {
         if ( _DirEAddRef ( RetVal ) == 0 ) {
             * Entry = RetVal;
         }
-        else {
-            RetVal = NULL;
-        }
     }
 
-    return RetVal == NULL ? XFS_RC ( rcNotFound ) : 0;
+    return RCt;
 }   /* _DirEGetEntryNoLock () */
 
 static
@@ -1150,16 +1140,6 @@ _DirCModifyLast ( const struct _DirC * self, const char * Name )
 }   /* _DirCModifyLast () */
 
 static
-int64_t CC
-_DirEAddCallback ( const BSTNode * N1, const BSTNode * N2 )
-{
-    return XFS_StringCompare4BST_ZHR (
-                                    ( ( struct _DirE * ) N1 ) -> name,
-                                    ( ( struct _DirE * ) N2 ) -> name
-                                    );
-}   /* _DirEAddCallback () */
-
-static
 rc_t CC
 _DirEAddEntryNoLock (
                     const struct _DirE * self,
@@ -1178,11 +1158,11 @@ _DirEAddEntryNoLock (
         return XFS_RC ( rcInvalid );
     }
 
-    RCt = BSTreeInsert (
-                    ( struct BSTree * ) & ( self -> content -> tree ),
-                    ( struct BSTNode * ) & ( Entry -> node ),
-                    _DirEAddCallback
-                    );
+    RCt = XFSHashDictAdd (
+                        self -> content -> hash_dict,
+                        ( const void * ) Entry,
+                        Entry -> name
+                        );
     if ( RCt == 0 ) {
         _DirCModifyLast ( self -> content, Entry -> eff_name );
     }
@@ -1205,12 +1185,10 @@ _DirEDelEntryNoLock (
         return XFS_RC ( rcInvalid );
     }
 
-    BSTreeUnlink (
-                ( struct BSTree * ) & ( self -> content -> tree ),
-                ( struct BSTNode * ) & ( Entry -> node )
-                );
-
-    return _DirERelease ( Entry );
+    return XFSHashDictDel (
+                        self -> content -> hash_dict,
+                        Entry -> name
+                        );
 }   /* _DirEDelEntryNoLock () */
 
 static
@@ -1519,50 +1497,23 @@ _DirECreateEntryNoLock (
 }   /* _DirECreateEntryNoLock () */
 
 static
-bool CC 
-_DirEHasEntriesCallback ( BSTNode *n, void *data )
-{
-    return true;
-}   /* _DirEHasEntriesCallback () */
-
-static
-bool CC
-_DirEHasEntries ( const struct _DirE * self )
-{
-    if ( self == NULL ) {
-        return false;
-    }
-
-    if ( ! self -> is_folder ) {
-        return false;
-    }
-
-    if ( self -> content == NULL ) {
-        return false;
-    }
-
-    return  BSTreeDoUntil (
-                        & ( self -> content -> tree ),
-                        false,
-                        _DirEHasEntriesCallback,
-                        NULL
-                        );
-}   /* _DirEHasEntries () */
-
-static
 void
-_DirEListCalback ( BSTNode * Node, void * Data )
+_DirEListEacher (
+                const char * Key,
+                const void * Value,
+                const void * Data
+)
 {
     struct VNamelist * List;
     struct _DirE * Entry;
 
     List = ( struct VNamelist * ) Data;
-    Entry = ( struct _DirE * ) Node;
+    Entry = ( struct _DirE * ) Value;
 
     if ( List != NULL && Entry != NULL ) {
         VNamelistAppend ( List, Entry -> name );
     }
-}   /* _DirEListCalback () */
+}   /* _DirEListEacher () */
 
 static
 rc_t CC
@@ -1588,14 +1539,14 @@ _DirEListEntriesNoLock (
 
     RCt = VNamelistMake ( & xList, 16 );
     if ( RCt == 0 ) {
-        BSTreeForEach (
-                    & ( self -> content -> tree ),
-                    false,
-                    _DirEListCalback,
-                    xList
-                    );
-
-        RCt = VNamelistToNamelist ( xList, List );
+        RCt = XFSHashDictForEach (
+                                self -> content -> hash_dict,
+                                _DirEListEacher,
+                                xList
+                                );
+        if ( RCt == 0 ) {
+            RCt = VNamelistToNamelist ( xList, List );
+        }
 
         VNamelistRelease ( xList );
     }
@@ -3273,7 +3224,9 @@ pLogMsg ( klogDebug, " <<<[XFSWsDirRemove] [$(dir)]", "dir=%p", ( void * ) self 
         if ( RCt == 0 ) {
             RCt = _GetContentEntryAndLock ( Parent, & Entry, EntryName );
             if ( RCt == 0 ) {
-                HasEntries = _DirEHasEntries ( Entry );
+                HasEntries = XFSHashDictCount (
+                                        Entry -> content -> hash_dict
+                                        ) != 0;
 
                 if ( ( ! HasEntries ) || ( HasEntries && Force ) ) {
                     if ( RCt == 0 ) {
@@ -4510,8 +4463,6 @@ static struct KDirectory_vt_v1 vtXFSWsDir =
  * DEPOT <<
  */
 struct _WsDptE {
-    BSTNode node;
-
     struct KDirectory * dir;
     const char * path;
 };
@@ -4583,7 +4534,7 @@ _WsDptEMake (
 }   /* _WsDptEMake () */
 
 struct _WsDpt {
-    BSTree tree;
+    const struct XFSHashDict * hash_dict;
 
     struct KLock * mutabor;
 };
@@ -4598,20 +4549,14 @@ _Dpt ()
 }   /* _Dpt () */
 
 static
-void CC
-_WsDptWhackCallback ( BSTNode * Node, void * unused )
-{
-    if ( Node != NULL ) {
-        _WsDptEDispose ( ( struct _WsDptE * ) Node );
-    }
-}   /* _WsDptWhackCallback () */
-
-static
 rc_t CC
 _WsDptDisposeImpl ( struct _WsDpt * self )
 {
     if ( self != NULL ) {
-        BSTreeWhack ( & ( self -> tree ) , _WsDptWhackCallback, NULL );
+        if ( self -> hash_dict != NULL ) {
+            XFSHashDictDispose ( self -> hash_dict );
+            self -> hash_dict = NULL;
+        }
 
         if ( self -> mutabor != NULL ) {
             KLockRelease ( self -> mutabor );
@@ -4624,6 +4569,15 @@ _WsDptDisposeImpl ( struct _WsDpt * self )
 
     return 0;
 }   /* _WsDptDipsoseImpl () */
+
+static
+void CC
+_WsDptWhackBanana ( const void * Data )
+{
+    if ( Data != NULL ) {
+        _WsDptEDispose ( ( struct _WsDptE * ) Data );
+    }
+}   /* _WsDptWhackBanana () */
 
 static
 rc_t CC
@@ -4643,9 +4597,13 @@ _WsDptMakeImpl ( struct _WsDpt ** Depot )
         RCt = KLockMake ( & ( TheDepot -> mutabor ) );
 
         if ( RCt == 0 ) {
-            BSTreeInit ( & ( TheDepot -> tree ) );
-
-            * Depot = TheDepot;
+            RCt = XFSHashDictMake ( 
+                                & ( TheDepot -> hash_dict ),
+                                _WsDptWhackBanana
+                                );
+            if ( RCt == 0 ) {
+                * Depot = TheDepot;
+            }
         }
     }
     else {
@@ -4703,22 +4661,6 @@ XFSEncDirectoryDepotDispose ()
 }   /* XFSEncDirectoryDepotDispose () */
 
 static
-int64_t CC
-_WsDptCmpCallback (const void * Item, const BSTNode * Node )
-{
-    const char * Str1, * Str2;
-
-    Str1 = ( const char * ) Item;
-
-    Str2 = Node == NULL
-                    ? NULL
-                    : ( ( struct _WsDptE * ) Node ) -> path
-                    ;
-
-    return XFS_StringCompare4BST_ZHR ( Str1, Str2 );
-}   /* _WsDptCmpCallback () */
-
-static
 rc_t CC
 _WsDptGetNoLock (
                 struct _WsDpt * self,
@@ -4726,34 +4668,28 @@ _WsDptGetNoLock (
                 struct KDirectory ** Dir
 )
 {
-    struct _WsDptE * Entry = NULL;
+    rc_t RCt;
+    struct _WsDptE * Entry;
+
+    RCt = 0;
+    Entry = NULL;
 
     XFS_CSAN ( Dir )
     XFS_CAN ( self )
     XFS_CAN ( Path )
     XFS_CAN ( Dir )
 
-    Entry = ( struct _WsDptE * ) BSTreeFind (
-                                            & ( self -> tree ),
-                                            Path,
-                                            _WsDptCmpCallback
-                                            );
-    if ( Entry != NULL ) {
+    RCt = XFSHashDictGet (
+                        self -> hash_dict,
+                        ( const void ** ) & Entry,
+                        Path
+                        );
+    if ( RCt == 0 ) {
         * Dir = Entry -> dir;
     }
 
-    return Entry == NULL ? XFS_RC ( rcNotFound ) : 0;
+    return RCt;
 }   /* _WsDptGetNoLock () */
-
-static
-int64_t CC
-_WsDptAddCallback ( const BSTNode * N1, const BSTNode * N2 )
-{
-    return XFS_StringCompare4BST_ZHR (
-                                ( ( struct _WsDptE * ) N1 ) -> path,
-                                ( ( struct _WsDptE * ) N2 ) -> path
-                                );
-}   /* _WsDptAddCallback () */
 
 static
 rc_t CC
@@ -4767,6 +4703,7 @@ _WsDptAddNoLock (
     struct _WsDptE * Entry;
 
     RCt = 0;
+    Entry = NULL;
 
     XFS_CAN ( self )
     XFS_CAN ( Path )
@@ -4774,10 +4711,10 @@ _WsDptAddNoLock (
 
     RCt = _WsDptEMake ( Path, Dir, & Entry );
     if ( RCt == 0 ) {
-        RCt = BSTreeInsert (
-                            & ( self -> tree ),
-                            ( struct BSTNode * ) & ( Entry -> node ),
-                            _WsDptAddCallback
+        RCt = XFSHashDictAdd (
+                            self -> hash_dict,
+                            ( const void * ) Entry,
+                            Entry -> path
                             );
     }
 
@@ -4790,10 +4727,12 @@ _WsDptClearNoLock ( struct _WsDpt * self )
 {
     XFS_CAN ( self )
 
-    BSTreeWhack ( & ( self -> tree ), _WsDptWhackCallback, NULL );
-    BSTreeInit ( & ( self -> tree ) );
-
-    return 0;
+    XFSHashDictDispose ( self -> hash_dict );
+    self -> hash_dict = NULL;
+    return XFSHashDictMake (
+                            & ( self -> hash_dict ),
+                            _WsDptWhackBanana
+                            );
 }   /* _WsDptClearNoLock () */
 
 LIB_EXPORT

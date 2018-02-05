@@ -26,7 +26,6 @@
 
 #include <klib/rc.h>
 #include <klib/out.h>
-#include <klib/container.h>
 #include <klib/namelist.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
@@ -42,6 +41,7 @@
 #include "xtar.h"
 #include "zehr.h"
 #include "lockdpt.h"
+#include "hdict.h"
 
 #include <sysalloc.h>
 
@@ -66,7 +66,7 @@
  //  EntryDepot this is responsible for sharing Tar resources
 ((*/
 struct _TarDpt {
-    BSTree tree;
+    const struct XFSHashDict * hash_dict;
 
     KLock * mutabor;
 };
@@ -75,8 +75,6 @@ struct _TarDpt {
  //  Path to a file and related KDirectory
 ((*/
 struct XFSTar {
-    BSTNode node;
-
     KRefcount refcount;
     KLock * mutabor;
 
@@ -123,15 +121,6 @@ _Dpt ()
 }   /* _Dpt () */
 
 static
-void CC
-_TarDptWhackCallback ( BSTNode * Node, void * unused )
-{
-    if ( Node != NULL ) {
-        XFSTarDispose ( ( struct XFSTar * ) Node );
-    }
-}   /* _TarDptWhackCallback () */
-
-static
 rc_t CC
 _TarDptDisposeImpl ( struct _TarDpt * self )
 {
@@ -140,11 +129,10 @@ _TarDptDisposeImpl ( struct _TarDpt * self )
     RCt = 0;
 
     if ( self != NULL ) { 
-        BSTreeWhack (
-                    & ( self -> tree ),
-                    _TarDptWhackCallback,
-                    NULL
-                    );
+        if ( self -> hash_dict != NULL ) {
+            XFSHashDictDispose ( self -> hash_dict );
+            self -> hash_dict = NULL;
+        }
 
         if ( self -> mutabor != NULL ) {
             KLockRelease ( self -> mutabor );
@@ -174,6 +162,15 @@ XFSTarDepotDispose ()
 }   /* XFSTarDepotDispose () */
 
 static
+void CC
+_TarDptWhackBanana ( const void * Data )
+{
+    if ( Data != NULL ) {
+        XFSTarDispose ( ( struct XFSTar * ) Data );
+    }
+}   /* _TarDptWhackBanana () */
+
+static
 rc_t CC
 _TarDptMakeImpl ( struct _TarDpt ** TarDpt )
 {
@@ -183,13 +180,8 @@ _TarDptMakeImpl ( struct _TarDpt ** TarDpt )
     RCt = 0;
     TheD = NULL;
 
-    if ( TarDpt != NULL ) {
-        * TarDpt = NULL;
-    }
-
-    if ( TarDpt == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( TarDpt )
+    XFS_CAN ( TarDpt )
 
     TheD = calloc ( 1, sizeof ( struct _TarDpt ) );
     if ( TheD == NULL ) {
@@ -198,9 +190,13 @@ _TarDptMakeImpl ( struct _TarDpt ** TarDpt )
 
     RCt = KLockMake ( & ( TheD -> mutabor ) );
     if ( RCt == 0 ) {
-        BSTreeInit ( & ( TheD -> tree ) );
-
-        * TarDpt = TheD;
+        RCt = XFSHashDictMake (
+                            & ( TheD -> hash_dict ),
+                            _TarDptWhackBanana
+                            );
+        if ( RCt == 0 ) {
+            * TarDpt = TheD;
+        }
     }
 
     if ( RCt != 0 ) {
@@ -238,21 +234,6 @@ XFSTarDepotInit ()
 }   /* XFSTarDepotInit () */
 
 static
-int64_t CC
-_TarCmpCallback ( const void * Item, const BSTNode * Node )
-{
-    const char * Str1, * Str2;
-
-    Str1 = ( const char * ) Item;
-
-    Str2 = Node == NULL
-                ? NULL
-                : ( ( struct XFSTar * ) Node ) -> source
-                ;
-    return XFS_StringCompare4BST_ZHR ( Str1, Str2 );
-}   /* _TarCmpCallback () */
-
-static
 rc_t CC
 _TarDptGetNoLock (
                 struct _TarDpt * self,
@@ -260,37 +241,17 @@ _TarDptGetNoLock (
                 const struct XFSTar ** Tar
 )
 {
-    const struct XFSTar * RetVal = NULL;
+    XFS_CSAN ( Tar )
+    XFS_CAN ( self )
+    XFS_CAN ( Source )
+    XFS_CAN ( Tar )
 
-    if ( Tar != NULL ) {
-        * Tar = NULL;
-    }
-
-    if ( self == NULL || Source == NULL || Tar == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    RetVal = ( const struct XFSTar * ) BSTreeFind (
-                                                & ( self -> tree ),
-                                                Source,
-                                                _TarCmpCallback
-                                                );
-
-
-    * Tar = RetVal;
-
-    return 0;
+    return XFSHashDictGet (
+                            self -> hash_dict,
+                            ( const void ** ) Tar,
+                            Source
+                            );
 }   /* _TarDptGetNoLock () */
-
-static
-int64_t CC
-_TarAddCallback ( const BSTNode * N1, const BSTNode * N2 )
-{
-    return XFS_StringCompare4BST_ZHR (
-            ( ( struct XFSTar * ) N1 ) -> source,
-            ( ( struct XFSTar * ) N2 ) -> source
-            );
-}   /* _TarAddCallback () */
 
 static
 rc_t CC
@@ -304,20 +265,19 @@ _TarDptAddNoLock ( struct _TarDpt * self, const struct XFSTar * Tar )
     TheTar = NULL;
     Source = NULL;
 
-    if ( self == NULL || Tar == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( self )
+    XFS_CAN ( Tar )
 
     Source = Tar -> source;
 
     RCt = _TarDptGetNoLock ( self, Source, & TheTar );
     if ( RCt == 0 ) {
         if ( TheTar == NULL ) {
-            RCt = BSTreeInsert (
-                        & ( self -> tree ),
-                        ( struct BSTNode * ) & ( Tar -> node ),
-                        _TarAddCallback
-                        );
+            RCt = XFSHashDictAdd (
+                                    self -> hash_dict,
+                                    ( const void * ) Tar,
+                                    Tar -> source
+                                    );
             if ( RCt != 0 ) {
                 XFSTarRelease ( Tar );
             }
@@ -331,28 +291,25 @@ static
 rc_t CC
 _TarDptDelNoLock ( struct _TarDpt * self, const struct XFSTar * Tar )
 {
-    if ( self == NULL || Tar == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( self )
+    XFS_CAN ( Tar )
 
-    BSTreeUnlink ( & ( self -> tree ), ( struct BSTNode * ) & ( Tar -> node ) );
-    XFSTarDispose ( Tar );
-
-    return 0;
+    return XFSHashDictDel ( self -> hash_dict, Tar -> source );
 }   /* _TarDptDelNoLock () */
 
 static
 rc_t CC
 _TarDptClearNoLock ( struct _TarDpt * self )
 {
-    if ( self == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( self )
 
-    BSTreeWhack ( & ( self -> tree ), _TarDptWhackCallback, NULL );
-    BSTreeInit ( & ( self -> tree ) );
+    XFSHashDictDispose ( self -> hash_dict );
+    self -> hash_dict = NULL;
 
-    return 0;
+    return XFSHashDictMake (
+                            & ( self -> hash_dict ),
+                            _TarDptWhackBanana
+                            );
 }   /* _TarDptClearNoLock () */
 
 LIB_EXPORT
@@ -395,9 +352,7 @@ _TarOpen ( const struct XFSTar * self )
     Dir = NativeDir = NULL;
     Tar = ( struct XFSTar * ) self;
 
-    if ( Tar == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( Tar )
 
     RCt = KLockAcquire ( Tar -> mutabor );
     if ( RCt == 0 ) { 
@@ -443,9 +398,7 @@ _TarClose ( const struct XFSTar * self )
     RCt = 0;
     Tar = ( struct XFSTar * ) self;
 
-    if ( Tar == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( Tar )
 
     RCt = KLockAcquire ( Tar -> mutabor );
     if ( RCt == 0 ) {
@@ -514,9 +467,7 @@ _TarAddRef ( const struct XFSTar * self )
     RCt = 0;
     Tar = ( struct XFSTar * ) self;
 
-    if ( Tar == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( Tar )
 
     switch ( KRefcountAdd ( & ( Tar -> refcount ), _sXFSTar_classname ) ) {
         case krefOkay :
@@ -545,9 +496,7 @@ XFSTarRelease ( const struct XFSTar * self )
     RCt = 0;
     Tar = ( struct XFSTar * ) self;
 
-    if ( Tar == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( Tar )
 
     switch ( KRefcountDrop ( & ( Tar -> refcount ), _sXFSTar_classname ) ) {
 
@@ -579,13 +528,9 @@ _TarMake ( const char * Resource, const struct XFSTar ** Tar )
     RCt = 0;
     RetTar = NULL;
 
-    if ( Tar != NULL ) {
-        * Tar = NULL;
-    }
-
-    if ( Tar == NULL || Resource == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( Tar )
+    XFS_CAN ( Resource )
+    XFS_CAN ( Tar )
 
     RetTar = calloc ( 1, sizeof ( struct XFSTar ) );
     if ( RetTar == NULL ) {
@@ -635,13 +580,10 @@ _TarDptFindOrCreateNoLock (
     RCt = 0;
     TheTar = NULL;
 
-    if ( Tar != NULL ) {
-        * Tar = NULL;
-    }
-
-    if ( self == NULL || Resource == NULL || Tar == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( Tar )
+    XFS_CAN ( self )
+    XFS_CAN ( Resource )
+    XFS_CAN ( Tar )
 
     RCt = _TarDptGetNoLock ( self, Resource, & TheTar );
     if ( RCt == 0 ) {
@@ -684,17 +626,10 @@ XFSTarFindOrCreate ( const char * Resource, const struct XFSTar ** Tar )
     TheTar = NULL;
     Dpt = _Dpt ();
 
-    if ( Tar != NULL ) {
-        * Tar = NULL;
-    }
-
-    if ( Dpt == NULL ) {
-        return XFS_RC ( rcInvalid );
-    }
-
-    if ( Resource == NULL || Tar == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( Tar )
+    XFS_CAN ( Dpt )
+    XFS_CAN ( Resource )
+    XFS_CAN ( Tar )
 
     RCt = KLockAcquire ( Dpt -> mutabor );
     if ( RCt == 0 ) {
@@ -780,13 +715,10 @@ _TarCreateEntry (
     PathSize = 0;
     PathType = kptNotFound;
 
-    if ( Entry != NULL ) {
-        * Entry = NULL;
-    }
-
-    if ( self == NULL || Path == NULL || Entry == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( Entry )
+    XFS_CAN ( self )
+    XFS_CAN ( Path )
+    XFS_CAN ( Entry )
 
     PathSize = string_size ( Path );
     if ( PathSize == 0 ) {
@@ -858,9 +790,7 @@ XFSTarEntryAddRef ( const struct XFSTarEntry * self )
 
     RCt = 0;
 
-    if ( self == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( self )
 
     switch ( KRefcountAdd ( & ( self -> refcount ), _sXFSTarEntry_classname ) ) {
         case krefOkay :
@@ -887,9 +817,7 @@ XFSTarEntryRelease ( const struct XFSTarEntry * self )
 
     RCt = 0;
 
-    if ( self == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( self )
 
     switch ( KRefcountDrop ( & ( self -> refcount ), _sXFSTarEntry_classname ) ) {
 
@@ -972,13 +900,9 @@ XFSTarEntryList (
 
     RCt = 0;
 
-    if ( List != NULL ) {
-        * List = NULL;
-    }
-
-    if ( self == NULL || List == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( List )
+    XFS_CAN ( self )
+    XFS_CAN ( List )
 
     if ( ! self -> is_folder || ! ( self -> status == kxfsGood ) ) {
         return XFS_RC ( rcInvalid );
@@ -1006,13 +930,9 @@ XFSTarEntrySize ( const struct XFSTarEntry * self, uint64_t * Size )
 {
     rc_t RCt = 0;
 
-    if ( Size != NULL ) {
-        * Size = 0;
-    }
-
-    if ( self == NULL || Size == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSA ( Size, 0 )
+    XFS_CAN ( self )
+    XFS_CAN ( Size )
 
     if ( self -> status != kxfsGood ) {
         return XFS_RC ( rcInvalid );
@@ -1041,13 +961,9 @@ XFSTarEntryTime ( const struct XFSTarEntry * self, KTime_t * Time )
 {
     rc_t RCt = 0;
 
-    if ( Time != NULL ) {
-        * Time = 0;
-    }
-
-    if ( self == NULL || Time == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSA ( Time, 0 )
+    XFS_CAN ( self )
+    XFS_CAN ( Time )
 
     if ( self -> status != kxfsGood ) {
         return XFS_RC ( rcInvalid );
@@ -1099,13 +1015,10 @@ XFSTarEntryGetChild (
     * BF = 0;
     NumW = 0;
 
-    if ( Child != NULL ) {
-        * Child = NULL;
-    }
-
-    if ( self == NULL || ChildName == NULL || Child == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( Child )
+    XFS_CAN ( self )
+    XFS_CAN ( ChildName )
+    XFS_CAN ( Child )
 
     RCt = string_printf (
                         BF,
@@ -1148,9 +1061,7 @@ XFSTarEntryOpen ( const struct XFSTarEntry * self )
     RCt = 0;
     Entry = ( struct XFSTarEntry * ) self;
 
-    if ( Entry == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( Entry )
 
     if ( Entry -> status != kxfsGood || Entry -> is_folder == true ) {
         RCt = XFS_RC ( rcInvalid );
@@ -1186,17 +1097,12 @@ XFSTarEntryRead (
 {
     rc_t RCt = 0;
 
-    if ( self == NULL || Buffer == NULL || NumRead == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    if ( self -> file == NULL ) {
-        return XFS_RC ( rcInvalid );
-    }
-
-    if ( BufferSize == 0 ) {
-        return XFS_RC ( rcInvalid );
-    }
+    XFS_CSA ( NumRead, 0 ) 
+    XFS_CAN ( self ) 
+    XFS_CAN ( self -> file ) 
+    XFS_CAN ( Buffer ) 
+    XFS_CAN ( NumRead ) 
+    XFS_CA ( BufferSize, 0 ) 
 
     RCt = KLockAcquire ( self -> tar -> mutabor );
     if ( RCt == 0 ) {
@@ -1223,13 +1129,8 @@ XFSTarEntryClose ( const struct XFSTarEntry * self )
     RCt = 0;
     Entry = ( struct XFSTarEntry * ) self;
 
-    if ( Entry == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    if ( Entry -> file == NULL ) {
-        return XFS_RC ( rcInvalid );
-    }
+    XFS_CAN ( Entry )
+    XFS_CAN ( Entry -> file )
 
     RCt = KLockAcquire ( Entry -> tar -> mutabor );
     if ( RCt == 0 ) {

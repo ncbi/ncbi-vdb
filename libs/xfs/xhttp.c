@@ -26,7 +26,6 @@
 
 #include <klib/rc.h>
 #include <klib/out.h>
-#include <klib/container.h>
 #include <klib/namelist.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
@@ -44,6 +43,7 @@
 #include "xhttp.h"
 #include "zehr.h"
 #include "lockdpt.h"
+#include "hdict.h"
 
 #include <sysalloc.h>
 
@@ -86,9 +86,10 @@ struct _HttpHs;
  //  EntryDepot this is responsible for sharing HTTP resources
 ((*/
 struct _HttpED {
-    BSTree tree;
     KRefcount refcount;
     KLock * mutabor;
+
+    const struct XFSHashDict * hash_dict;
 
     struct XFSLockDepot * mutabors;
     struct _HttpHs * http_hs;
@@ -107,7 +108,6 @@ struct XFSHttp {
  //  Just a URL base to access entry by relative path.
 ((*/
 struct XFSHttpEntry {
-    BSTNode node;
     KRefcount refcount;
 
     const char * name;
@@ -166,13 +166,9 @@ _HttpHsEnMake ( struct XFSHttpEntry * Entry, struct _HttpHsEn ** HsEn )
 {
     struct _HttpHsEn * TheSi = NULL;
 
-    if ( HsEn != NULL ) {
-        * HsEn = NULL;
-    }
-
-    if ( Entry == NULL || HsEn == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( HsEn )
+    XFS_CAN ( Entry )
+    XFS_CAN ( HsEn )
 
     TheSi = calloc ( 1, sizeof ( struct _HttpHsEn ) );
     if ( TheSi == NULL ) {
@@ -220,17 +216,9 @@ _HttpHsEnConnect ( struct _HttpHsEn * self )
     Manager = NULL;
     File = NULL;
 
-    if ( self == NULL ) {
-        return XFS_RC ( rcNull ) ;
-    }
-
-    if ( self -> entry == NULL ) {
-        return XFS_RC ( rcInvalid );
-    }
-
-    if ( self -> entry -> url == NULL ) {
-        return XFS_RC ( rcInvalid );
-    }
+    XFS_CAN ( self )
+    XFS_CAN ( self -> entry )
+    XFS_CAN ( self -> entry -> url )
 
     if ( self -> entry -> is_folder ) {
         return XFS_RC ( rcInvalid );
@@ -381,10 +369,8 @@ _HttpHsMake ( uint32_t Size, struct _HttpHs ** Hs )
     RCt = 0;
     TheHs = NULL;
 
-    if ( Hs == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-    * Hs = NULL;
+    XFS_CSAN ( Hs )
+    XFS_CAN ( Hs )
 
     TheHs = calloc ( 1, sizeof ( struct _HttpHs ) );
     if ( TheHs == NULL ) {
@@ -458,13 +444,10 @@ _HttpHsFindOrCreate (
     RCt = 0;
     TheSi = NULL;
 
-    if ( HsEn != NULL ) {
-        * HsEn = NULL;
-    }
-
-    if ( self == NULL || Entry == NULL || HsEn == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( HsEn )
+    XFS_CAN ( self )
+    XFS_CAN ( Entry )
+    XFS_CAN ( HsEn )
 
     RCt = KLockAcquire ( self -> mutabor );
     if ( RCt == 0 ) {
@@ -517,9 +500,8 @@ _HttpHsDelete (
     RCt = 0;
     HsEn = NULL;
 
-    if ( self == NULL || Entry == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( self )
+    XFS_CAN ( Entry )
 
     RCt = KLockAcquire ( self -> mutabor );
     if ( RCt == 0 ) {
@@ -574,15 +556,6 @@ _ED ()
 }   /* _ED () */
 
 static
-void CC
-_HttpEDWhackCallback ( BSTNode * Node, void * unused )
-{
-    if ( Node != NULL ) {
-        XFSHttpEntryRelease ( ( struct XFSHttpEntry * ) Node );
-    }
-}   /* _HttpEDWhackCallback () */
-
-static
 rc_t CC
 _HttpEDDisposeImpl ( struct _HttpED * self )
 {
@@ -591,11 +564,11 @@ _HttpEDDisposeImpl ( struct _HttpED * self )
     RCt = 0;
 
     if ( self != NULL ) { 
-        BSTreeWhack (
-                    & ( self -> tree ),
-                    _HttpEDWhackCallback,
-                    NULL
-                    );
+        if ( self -> hash_dict != NULL ) {
+            XFSHashDictDispose ( self -> hash_dict );
+
+            self -> hash_dict = NULL;
+        }
 
         KRefcountWhack (
                     & ( self -> refcount ),
@@ -617,6 +590,15 @@ _HttpEDDisposeImpl ( struct _HttpED * self )
 }   /* _HttpEDDisposeImpl () */
 
 static
+void CC
+_HttpEDBanana ( const void * Value )
+{
+    if ( Value != NULL ) {
+        XFSHttpEntryRelease ( ( struct XFSHttpEntry * ) Value );
+    }
+}   /* _HttpEDBanana () */
+
+static
 rc_t CC
 _HttpEDMakeImpl ( struct _HttpED ** HttpED )
 {
@@ -626,13 +608,8 @@ _HttpEDMakeImpl ( struct _HttpED ** HttpED )
     RCt = 0;
     TheED = NULL;
 
-    if ( HttpED != NULL ) {
-        * HttpED = NULL;
-    }
-
-    if ( HttpED == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( HttpED )
+    XFS_CAN ( HttpED )
 
     TheED = calloc ( 1, sizeof ( struct _HttpED ) );
     if ( TheED == NULL ) {
@@ -647,17 +624,21 @@ _HttpEDMakeImpl ( struct _HttpED ** HttpED )
 
             RCt = KLockMake ( & ( TheED -> mutabor ) );
             if ( RCt == 0 ) {
-                BSTreeInit ( & ( TheED -> tree ) );
+                RCt = XFSHashDictMake (
+                                        & ( TheED -> hash_dict ),
+                                        _HttpEDBanana
+                                        );
+                if ( RCt == 0 ) {
+                    KRefcountInit (
+                                & ( TheED -> refcount ),
+                                1,
+                                _sXFSHttpED_classname,
+                                "_HttpEDMake",
+                                "HttpED"
+                                );
 
-                KRefcountInit (
-                            & ( TheED -> refcount ),
-                            1,
-                            _sXFSHttpED_classname,
-                            "_HttpEDMake",
-                            "HttpED"
-                            );
-
-                * HttpED = TheED;
+                    * HttpED = TheED;
+                }
             }
         }
     }
@@ -734,22 +715,18 @@ _HttpEDAddRef ()
         }
     }
     else {
-        RCt = KLockAcquire ( HttpED -> mutabor );
-        if ( RCt == 0 ) {
             switch ( KRefcountAdd ( & ( HttpED -> refcount ), _sXFSHttpED_classname ) ) {
-                case krefOkay :
-                            RCt = 0;
-                            break;
-                case krefZero :
-                case krefLimit :
-                case krefNegative :
-                            RCt = XFS_RC ( rcInvalid );
-                            break;
-                default :
-                            RCt = XFS_RC ( rcUnknown );
-                            break;
-            }
-            KLockUnlock ( HttpED -> mutabor );
+            case krefOkay :
+                        RCt = 0;
+                        break;
+            case krefZero :
+            case krefLimit :
+            case krefNegative :
+                        RCt = XFS_RC ( rcInvalid );
+                        break;
+            default :
+                        RCt = XFS_RC ( rcUnknown );
+                        break;
         }
     }
 
@@ -769,26 +746,21 @@ _HttpEDRelease ()
     DisposeED = false;
 
     if ( HttpED != NULL ) {
-        RCt = KLockAcquire ( HttpED -> mutabor );
-        if ( RCt == 0 ) {
-            switch ( KRefcountDrop ( & ( HttpED -> refcount ), _sXFSHttpED_classname ) ) {
-                case krefOkay :
-                case krefZero :
-                            RCt = 0;
-                            break;
-                case krefWhack :
-                            RCt = 0;
-                            DisposeED = true;
-                            break;
-                case krefNegative :
-                            RCt = XFS_RC ( rcInvalid );
-                            break;
-                default :
-                            RCt = XFS_RC ( rcUnknown );
-                            break;
-            }
-
-            KLockUnlock ( HttpED -> mutabor );
+        switch ( KRefcountDrop ( & ( HttpED -> refcount ), _sXFSHttpED_classname ) ) {
+            case krefOkay :
+            case krefZero :
+                        RCt = 0;
+                        break;
+            case krefWhack :
+                        RCt = 0;
+                        DisposeED = true;
+                        break;
+            case krefNegative :
+                        RCt = XFS_RC ( rcInvalid );
+                        break;
+            default :
+                        RCt = XFS_RC ( rcUnknown );
+                        break;
         }
         if ( DisposeED ) {
             _HttpEDDispose ();
@@ -799,21 +771,6 @@ _HttpEDRelease ()
 }   /* _HttpEDRelease () */
 
 static
-int64_t CC
-_HttpEntryCmpCallback ( const void * Item, const BSTNode * Node )
-{
-    const char * Str1, * Str2;
-
-    Str1 = ( const char * ) Item;
-
-    Str2 = Node == NULL
-                ? NULL
-                : ( ( struct XFSHttpEntry * ) Node ) -> url
-                ;
-    return XFS_StringCompare4BST_ZHR ( Str1, Str2 );
-}   /* _HttpEntryCmpCallback () */
-
-static
 rc_t CC
 _HttpEDGetNoLock (
                 struct _HttpED * self,
@@ -821,24 +778,12 @@ _HttpEDGetNoLock (
                 const struct XFSHttpEntry ** Entry
 )
 {
-    const struct XFSHttpEntry * RetVal = NULL;
+    XFS_CSAN ( Entry )
+    XFS_CAN ( self )
+    XFS_CAN ( Url )
+    XFS_CAN ( Entry )
 
-    if ( Entry != NULL ) {
-        * Entry = NULL;
-    }
-
-    if ( self == NULL || Url == NULL || Entry == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    RetVal = ( const struct XFSHttpEntry * ) BSTreeFind (
-                                                & ( self -> tree ),
-                                                Url,
-                                                _HttpEntryCmpCallback
-                                                );
-
-
-    * Entry = RetVal;
+    XFSHashDictGet ( self -> hash_dict, ( const void ** ) Entry, Url );
 
     return 0;
 }   /* _HttpEDGetNoLock () */
@@ -853,9 +798,7 @@ _HttpEDGet ( const char * Url, const struct XFSHttpEntry ** Entry )
     RCt = 0;
     ED = _ED ();
 
-    if ( ED == NULL ) {
-        return XFS_RC ( rcInvalid );
-    }
+    XFS_CAN ( ED )
 
     RCt = KLockAcquire ( ED -> mutabor );
     if ( RCt == 0 ) {
@@ -866,16 +809,6 @@ _HttpEDGet ( const char * Url, const struct XFSHttpEntry ** Entry )
 
     return RCt;
 }   /* _HttpEDGet () */
-
-static
-int64_t CC
-_HttpEntryAddCallback ( const BSTNode * N1, const BSTNode * N2 )
-{
-    return XFS_StringCompare4BST_ZHR (
-            ( ( struct XFSHttpEntry * ) N1 ) -> url,
-            ( ( struct XFSHttpEntry * ) N2 ) -> url
-            );
-}   /* _HttpEntryAddCallback () */
 
 static
 rc_t CC
@@ -891,19 +824,19 @@ _HttpEDAddNoLock (
     RCt = 0;
     TheEntry = NULL;
 
-    if ( self == NULL || Url == NULL || Entry == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( self )
+    XFS_CAN ( Url )
+    XFS_CAN ( Entry )
 
     RCt = _HttpEDGetNoLock ( self, Url, & TheEntry );
     if ( RCt == 0 ) {
         if ( TheEntry == NULL ) {
             RCt = XFSHttpEntryAddRef ( Entry );
             if ( RCt == 0 ) {
-                RCt = BSTreeInsert (
-                            & ( self -> tree ),
-                            ( struct BSTNode * ) & ( Entry -> node ),
-                            _HttpEntryAddCallback
+                RCt = XFSHashDictAdd (
+                            self -> hash_dict,
+                            ( const void * ) & Entry,
+                            Url
                             );
                 if ( RCt != 0 ) {
                     XFSHttpEntryRelease ( Entry );
@@ -925,9 +858,7 @@ _HttpEDAdd ( const struct XFSHttpEntry * Entry )
     RCt = 0;
     ED = _ED ();
 
-    if ( ED == NULL ) {
-        return XFS_RC ( rcInvalid );
-    }
+    XFS_CAN ( ED )
 
     RCt = KLockAcquire ( ED -> mutabor );
     if ( RCt == 0 ) {
@@ -938,77 +869,15 @@ _HttpEDAdd ( const struct XFSHttpEntry * Entry )
     return RCt;
 }   /* _HttpEDAdd () */
 
-#ifdef NOT_NEED_YET
-static
-rc_t CC
-_HttpEDDelNoLock ( struct _HttpED * self, const char * Url )
-{
-    rc_t RCt;
-    const struct XFSHttpEntry * Entry;
-    bool DelSucc;
-
-    RCt = 0;
-    Entry = NULL;
-    DelSucc = false;
-
-    if ( self == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    RCt = _HttpEDGetNoLock ( self, Url, & Entry );
-    if ( RCt == 0 ) {
-        if ( Entry != NULL ) {
-            DelSucc = BSTreeUnlink (
-                                & ( self -> tree ),
-                                ( struct BSTNode * ) & ( Entry -> node )
-                                ); 
-            if ( DelSucc ) {
-                _HttpHsDelete ( self -> http_hs, Entry );
-                XFSHttpEntryRelease ( Entry );
-            }
-        }
-    }
-
-    return RCt;
-}   /* _HttpEDDelNoLock () */
-
-static
-rc_t CC
-_HttpEDDel ( const char * Url )
-{
-    rc_t RCt;
-    struct _HttpED * ED;
-
-    RCt = 0;
-    ED = _ED ();
-
-    if ( ED == NULL ) {
-        return XFS_RC ( rcInvalid );
-    }
-
-    RCt = KLockAcquire ( ED -> mutabor );
-    if ( RCt == 0 ) {
-        RCt = _HttpEDDelNoLock ( ED, Url );
-
-        KLockUnlock ( ED -> mutabor );
-    }
-
-    return RCt;
-}   /* _HttpEDGet () */
-#endif /* NOT_NEED_YET */
-
 static
 rc_t CC
 _HttpEDClearNoLock ( struct _HttpED * self )
 {
-    if ( self == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( self )
 
-    BSTreeWhack ( & ( self -> tree ), _HttpEDWhackCallback, NULL );
-    BSTreeInit ( & ( self -> tree ) );
-
-    return 0;
+    XFSHashDictDispose ( self -> hash_dict );
+    self -> hash_dict = NULL;
+    return XFSHashDictMake ( & ( self -> hash_dict ), _HttpEDBanana );
 }   /* _HttpEDClearNoLock () */
 
 static
@@ -1021,9 +890,7 @@ _HttpEDClear ()
     RCt = 0;
     ED = _ED ();
 
-    if ( ED == NULL ) {
-        return XFS_RC ( rcInvalid );
-    }
+    XFS_CAN ( ED )
 
     RCt = KLockAcquire ( ED -> mutabor );
     if ( RCt == 0 ) {
@@ -1041,13 +908,8 @@ _HttpEDLock ( uint32_t HashValue )
 {
     struct _HttpED * ED = _ED ();
 
-    if ( ED == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    if ( ED -> mutabors == NULL ) {
-        return XFS_RC ( rcInvalid );
-    }
+    XFS_CAN ( ED )
+    XFS_CAN ( ED -> mutabor )
 
     return XFSLockDepotAcquire ( ED -> mutabors, HashValue );
 }   /* _HttpEDLock () */
@@ -1058,13 +920,8 @@ _HttpEDUnlock ( uint32_t HashValue )
 {
     struct _HttpED * ED = _ED ();
 
-    if ( ED == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    if ( ED -> mutabors == NULL ) {
-        return XFS_RC ( rcInvalid );
-    }
+    XFS_CAN ( ED )
+    XFS_CAN ( ED -> mutabor )
 
     return XFSLockDepotUnlock ( ED -> mutabors, HashValue );
 }   /* _HttpEDUnlock () */
@@ -1078,21 +935,11 @@ _HttpEDGetFileForEntry (
 {
     struct _HttpED * ED = _ED ();
 
-    if ( File != NULL ) {
-        * File = NULL;
-    }
-
-    if ( ED == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    if ( ED -> http_hs == NULL ) {
-        return XFS_RC ( rcInvalid );
-    }
-
-    if ( Entry == NULL || File == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( File )
+    XFS_CAN ( ED )
+    XFS_CAN ( ED -> http_hs )
+    XFS_CAN ( Entry )
+    XFS_CAN ( File )
 
     return _HttpHsGetKFile ( ED -> http_hs, Entry, File );
 }   /* _HttpEDHttpHs () */
@@ -1117,13 +964,10 @@ _HttpMakeUrlFromPath (
     PathSize = BaseSize = RetSize = 0;
     RetUrl = NULL;
 
-    if ( Url != NULL ) {
-        * Url = NULL;
-    }
-
-    if ( BaseUrl == NULL || Path == NULL || Url == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( Url )
+    XFS_CAN ( BaseUrl )
+    XFS_CAN ( Path )
+    XFS_CAN ( Url )
 
     PathSize = string_size ( Path );
     BaseSize = string_size ( BaseUrl );
@@ -1190,13 +1034,11 @@ _HttpCreateEntry (
     RetEntry = NULL;
     PathSize = 0;
 
-    if ( Entry != NULL ) {
-        * Entry = NULL;
-    }
+    XFS_CSAN ( Entry )
+    XFS_CAN ( BaseUrl )
+    XFS_CAN ( Path )
+    XFS_CAN ( Entry )
 
-    if ( BaseUrl == NULL || Path == NULL || Entry == NULL ) {
-        return XFS_RC ( rcNull );
-    }
     PathSize = string_size ( Path );
     if ( PathSize == 0 ) {
         return XFS_RC ( rcInvalid );
@@ -1263,13 +1105,9 @@ XFSHttpMake ( const char * BaseUrl, const struct XFSHttp ** TheHttp )
     RCt = 0;
     RetHttp = NULL;
 
-    if ( TheHttp != NULL ) {
-        * TheHttp = NULL;
-    }
-
-    if ( TheHttp == NULL || BaseUrl == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( TheHttp )
+    XFS_CAN ( BaseUrl )
+    XFS_CAN ( TheHttp )
 
         /* First we should be sure that HttpED is good and trusty
          */
@@ -1370,9 +1208,7 @@ XFSHttpAddRef ( const struct XFSHttp * self )
     RCt = 0;
     Http = ( struct XFSHttp * ) self;
 
-    if ( Http == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( Http )
 
     switch ( KRefcountAdd ( & ( Http -> refcount ), _sXFSHttp_classname ) ) {
         case krefOkay :
@@ -1401,9 +1237,7 @@ XFSHttpRelease ( const struct XFSHttp * self )
     RCt = 0;
     Http = ( struct XFSHttp * ) self;
 
-    if ( Http == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( Http )
 
     switch ( KRefcountDrop ( & ( Http -> refcount ), _sXFSHttp_classname ) ) {
 
@@ -1429,10 +1263,7 @@ LIB_EXPORT
 const char * CC 
 XFSHttpBaseUrl ( const struct XFSHttp * self )
 {
-    if ( self != NULL ) {
-        return self -> base_url;
-    }
-    return NULL;
+    return self != NULL ? ( self -> base_url ) : NULL;
 }   /* XFSHttpBaseUrl () */
 
 LIB_EXPORT
@@ -1487,17 +1318,12 @@ _MakeValidPath (
     * BF = 0;
     P = NULL;
 
-    if ( xPath != NULL ) {
-        * xPath = NULL;
-    }
+    XFS_CSAN ( xPath )
+    XFS_CSA ( xPathQty, 0 )
+    XFS_CAN ( xPath )
+    XFS_CAN ( Path )
+    XFS_CAN ( xPathQty )
 
-    if ( xPathQty != NULL ) {
-        * xPathQty = 0;
-    }
-
-    if ( xPath == NULL || Path == NULL || xPathQty == NULL ) {
-        return XFS_RC ( rcNull );
-    }
 
     if ( * Path == '/' ) {
         P = Path;
@@ -1539,13 +1365,10 @@ _HttpOrCreateEntry (
     Parent = NULL;
     xParent = NULL;
 
-    if ( Entry != NULL ) {
-        * Entry = NULL;
-    }
-
-    if ( self == NULL || Path == NULL || Entry == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( Entry )
+    XFS_CAN ( self )
+    XFS_CAN ( Path )
+    XFS_CAN ( Entry )
 
     RCt = _MakeValidPath ( Path, & xPath, & xQty );
     if ( RCt == 0 ) { 
@@ -1618,13 +1441,10 @@ XFSHttpGetOrCreateEntry (
     RCt = 0;
     TheEntry = NULL;
 
-    if ( Entry != NULL ) {
-        * Entry = NULL;
-    }
-
-    if ( self == NULL || Entry == NULL || Path == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( Entry )
+    XFS_CAN ( self )
+    XFS_CAN ( Path )
+    XFS_CAN ( Entry )
 
     TheEntry = XFSHttpGetEntry ( self, Path );
     if ( TheEntry != NULL ) {
@@ -1691,9 +1511,7 @@ XFSHttpEntryAddRef ( const struct XFSHttpEntry * self )
 
     RCt = 0;
 
-    if ( self == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( self )
 
     switch ( KRefcountAdd ( & ( self -> refcount ), _sXFSHttpEntry_classname ) ) {
         case krefOkay :
@@ -1720,9 +1538,7 @@ XFSHttpEntryRelease ( const struct XFSHttpEntry * self )
 
     RCt = 0;
 
-    if ( self == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( self )
 
     switch ( KRefcountDrop ( & ( self -> refcount ), _sXFSHttpEntry_classname ) ) {
 
@@ -1782,9 +1598,7 @@ _HttpCheckLoadList ( const struct XFSHttpEntry * self )
     RCt = 0;
     Entry = ( struct XFSHttpEntry * ) self;
 
-    if ( self == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( self )
 
     if ( self -> is_folder ) {
         if ( self -> status == kxfsReady ) {
@@ -1813,13 +1627,9 @@ XFSHttpEntryList (
 
     RCt = 0;
 
-    if ( List != NULL ) {
-        * List = NULL;
-    }
-
-    if ( self == NULL || List == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( List )
+    XFS_CAN ( self )
+    XFS_CAN ( List )
 
     if ( ! self -> is_folder ) {
         return XFS_RC ( rcInvalid );
@@ -1839,13 +1649,9 @@ LIB_EXPORT
 rc_t CC
 XFSHttpEntrySize ( const struct XFSHttpEntry * self, uint64_t * Size )
 {
-    if ( Size != NULL ) {
-        * Size = 0;
-    }
-
-    if ( self == NULL || Size == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSA ( Size, 0 )
+    XFS_CAN ( self )
+    XFS_CAN ( Size )
 
     * Size = self -> size;
 
@@ -1856,13 +1662,9 @@ LIB_EXPORT
 rc_t CC
 XFSHttpEntryTime ( const struct XFSHttpEntry * self, KTime_t * Time )
 {
-    if ( Time != NULL ) {
-        * Time = 0;
-    }
-
-    if ( self == NULL || Time == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSA ( Time, 0 )
+    XFS_CAN ( self )
+    XFS_CAN ( Time )
 
     * Time = self -> time;
 
@@ -1935,13 +1737,10 @@ XFSHttpEntryGet (
     RCt = 0;
     ChildPath = NULL;
 
-    if ( Child != NULL ) {
-        * Child = NULL;
-    }
-
-    if ( self == NULL || ChildName == NULL || Child == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( Child )
+    XFS_CAN ( self )
+    XFS_CAN ( ChildName )
+    XFS_CAN ( Child )
 
     RCt = _HttpMakeUrlFromPath ( self -> url, ChildName, & ChildPath );
     if ( RCt == 0 ) {
@@ -1984,13 +1783,9 @@ XFSHttpReaderMake (
     RCt = 0;
     RetReader = NULL;
 
-    if ( Reader != NULL ) {
-        * Reader = NULL;
-    }
-
-    if ( Entry == NULL || Reader == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( Reader )
+    XFS_CAN ( Entry )
+    XFS_CAN ( Reader )
 
     RetReader = calloc ( 1, sizeof ( struct XFSHttpReader ) );
     if ( RetReader == NULL ) {
@@ -2030,13 +1825,8 @@ XFSHttpReaderAddRef ( const struct XFSHttpReader * self )
     Reader = ( struct XFSHttpReader * ) self;
     hash = 0;
 
-    if ( Reader == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    if ( Reader -> entry == NULL ) {
-        return XFS_RC ( rcInvalid );
-    }
+    XFS_CAN ( Reader )
+    XFS_CAN ( Reader -> entry )
 
     hash = Reader -> entry -> url_hash;
     RCt = _HttpEDLock ( hash );
@@ -2106,13 +1896,8 @@ XFSHttpReaderRelease ( const struct XFSHttpReader * self )
     Reader = ( struct XFSHttpReader * ) self;
     hash = 0;
 
-    if ( Reader == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    if ( Reader -> entry == NULL ) {
-        return XFS_RC ( rcInvalid );
-    }
+    XFS_CAN ( Reader )
+    XFS_CAN ( Reader -> entry )
 
     hash = Reader -> entry -> url_hash;
     RCt = _HttpEDLock ( hash );
@@ -2157,13 +1942,9 @@ _CheckResoveOpen (
     TheFile = NULL;
     Size = 0;
 
-    if ( File != NULL ) {
-        * File = NULL;
-    }
-
-    if ( File == NULL || self == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( File )
+    XFS_CAN ( self )
+    XFS_CAN ( File )
 
     if ( self -> status == kxfsInvalid
         || self -> status == kxfsBroken ) {
@@ -2213,9 +1994,10 @@ XFSHttpReaderRead (
     RCt = 0;
     File = NULL;
 
-    if ( self == NULL || Buffer == NULL || NumRead == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSA ( NumRead, 0 )
+    XFS_CAN ( self )
+    XFS_CAN ( Buffer )
+    XFS_CAN ( NumRead )
 
     if ( BufferSize == 0 ) {
         return XFS_RC ( rcInvalid );
@@ -2249,10 +2031,8 @@ _HttpMakeBuffer ( uint64_t Size, void ** Buffer )
 
     BF = NULL;
 
-    if ( Buffer == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-    * Buffer = NULL;
+    XFS_CSAN ( Buffer )
+    XFS_CAN ( Buffer )
 
     if ( Size == 0 ) {
         return XFS_RC ( rcInvalid );
@@ -2291,17 +2071,11 @@ _xStreamReadAll ( const char * Url, void ** Buffer, size_t * NumRead )
     Off = 0;
     NumR = 0;
 
-    if ( Buffer != NULL ) {
-        * Buffer = NULL;
-    }
-
-    if ( NumRead != NULL ) {
-        * NumRead = 0;
-    }
-
-    if ( Url == NULL || Buffer == NULL || NumRead == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( Buffer )
+    XFS_CSA ( NumRead, 0 )
+    XFS_CAN ( Url )
+    XFS_CAN ( Buffer )
+    XFS_CAN ( NumRead )
 
     RCt = XFS_HttpStreamMake_ZHR ( Url, & Stream );
     if ( RCt == 0 ) {
@@ -2366,9 +2140,7 @@ _BufferLRInit (
             size_t Length
 )
 {
-    if ( self == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( self )
 
     self -> buffer = Buffer;
     self -> length = Length;
@@ -2405,17 +2177,11 @@ _BufferLRNext (
 
     start = end = kirdyk = NULL;
 
-    if ( NextLine != NULL ) {
-        * NextLine = NULL;
-    }
-
-    if ( Length != NULL ) {
-        * Length = 0;
-    }
-
-    if ( self == NULL || NextLine == NULL || Length == NULL ) {
-        return false;
-    }
+    XFS_CSAN ( NextLine )
+    XFS_CSA ( Length, 0 )
+    XFS_CAN ( self )
+    XFS_CAN ( NextLine )
+    XFS_CAN ( Length )
 
         /* Line number, just for case */
     self -> line_no ++;
@@ -2593,21 +2359,14 @@ _GetNameFrom (
     TheName = NULL;
     aS = aE = NULL;
 
-    if ( Name != NULL ) {
-        * Name = NULL;
-    }
-
-    if ( Next != NULL ) {
-        * Next = NULL;
-    }
-
-    if ( IsDir != NULL ) {
-        * IsDir = false;
-    }
-
-    if ( Start == NULL || End == NULL || Name == NULL || Next == NULL || IsDir == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( Name )
+    XFS_CSAN ( Next )
+    XFS_CSA ( IsDir, false )
+    XFS_CAN ( Start )
+    XFS_CAN ( End )
+    XFS_CAN ( Name )
+    XFS_CAN ( Next )
+    XFS_CAN ( IsDir )
 
     if ( ! _GetAnchor ( Start, End, & aS, & aE ) ) {
         return XFS_RC ( rcInvalid );
@@ -2646,16 +2405,12 @@ _GetTimeFrom (
     * Month = 0;
     memset ( & Tm, 0, sizeof ( struct tm ) );
 
-    if ( Time != NULL ) {
-        * Time = 0;
-    }
-    if ( Next != NULL ) {
-        * Next = NULL;
-    }
-
-    if ( Start == NULL || End == NULL || Time == NULL || Next == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSA ( Time, 0 )
+    XFS_CSAN ( Next )
+    XFS_CAN ( Start )
+    XFS_CAN ( End )
+    XFS_CAN ( Time )
+    XFS_CAN ( Next )
 
         /* We are parsing format "dd-mmm-YYYY HH:MM"
          */
@@ -2721,17 +2476,12 @@ _GetSizeFrom (
     PP = 0;
     Ret = 0;
 
-    if ( Size != NULL ) {
-        * Size = 0;
-    }
-
-    if ( Next != NULL ) {
-        * Next = NULL;
-    }
-
-    if ( Start == NULL || End == NULL || Size == NULL || Next == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSA ( Size, 0 )
+    XFS_CSAN ( Next )
+    XFS_CAN ( Start )
+    XFS_CAN ( End )
+    XFS_CAN ( Size )
+    XFS_CAN ( Next )
 
     Start = XFS_SkipSpaces_ZHR ( Start, End );
     if ( Start == NULL ) {
@@ -2796,25 +2546,16 @@ _HttpParseLine (
     TheName = NULL;
     TheIsDir = false;
 
-    if ( Name != NULL ) {
-        * Name = NULL;
-    }
-
-    if ( Size != NULL ) {
-        * Size = 0;
-    }
-
-    if ( Time != NULL ) {
-        * Time = 0;
-    }
-
-    if ( IsDir != NULL ) {
-        * IsDir = false;
-    }
-
-    if ( Line == NULL || Length == 0 || Name == NULL || Size == NULL || Time == NULL || IsDir == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( Name )
+    XFS_CSA ( Size, 0 )
+    XFS_CSA ( Time, 0 )
+    XFS_CSA ( IsDir, false )
+    XFS_CAN ( Line )
+    XFS_CA ( Length, 0 )
+    XFS_CAN ( Name )
+    XFS_CAN ( Size )
+    XFS_CAN ( Time )
+    XFS_CAN ( IsDir )
 
         /* first we are extracting Name of entry */
     start = Line;
@@ -2865,13 +2606,9 @@ _HttpParseEntry (
     Time = 0;
     IsDir = false;
 
-    if ( self == NULL || Line == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    if ( Length == 0 ) {
-        return XFS_RC ( rcInvalid );
-    } 
+    XFS_CAN ( self )
+    XFS_CAN ( Line )
+    XFS_CA ( Length, 0 )
 
     RCt = _HttpParseLine (
                         Line,
@@ -2956,9 +2693,7 @@ _HttpLoadDirEntry ( const struct XFSHttpEntry * self )
     Buffer = NULL;
     NumRead = 0;
 
-    if ( self == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( self )
 
     RCt = _xStreamReadAll (
                         self -> url,

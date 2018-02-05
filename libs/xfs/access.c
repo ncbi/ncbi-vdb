@@ -28,7 +28,6 @@
 #include <klib/out.h>
 #include <klib/namelist.h>
 #include <klib/printf.h>
-#include <klib/container.h>
 #include <klib/refcount.h>
 #include <kfs/directory.h>
 #include <kfs/file.h>
@@ -40,6 +39,7 @@
 #include "zehr.h"
 #include "schwarzschraube.h"
 #include "lreader.h"
+#include "hdict.h"
 
 #include <sysalloc.h>
 
@@ -60,8 +60,6 @@
 /*  Right now it is only name. Later I will add refcount and policies
  */
 struct XFSAccessAgent {
-    BSTNode node;
-
     const char * Name;
 };
 
@@ -138,14 +136,14 @@ struct _Access {
     struct KLock * mutabor;
     KRefcount refcount;
 
+    const struct XFSHashDict * Agents;
+
     const char * Path;
 
     const char * User;
     const char * Group;
 
     uint64_t Version;
-
-    struct BSTree Agents;
 };
 
 /***************
@@ -211,29 +209,28 @@ _AccessReadVersion ( const struct _Access * self )
 
 static
 void CC
-_AccessWhackCallback ( BSTNode * Node, void * unused )
+_AccessBanana ( const void * Data )
 {
-    if ( Node != NULL ) {
-            /*  JOJOBA
-             *  will be Release later
-             */
-        _AccessAgentDispose ( ( struct XFSAccessAgent * ) Node );
+    if ( Data != NULL ) {
+        _AccessAgentDispose ( ( struct XFSAccessAgent * ) Data );
     }
-}   /* _AccessWhackCallback () */
+}   /* _AccessBanana () */
 
 static
 rc_t
 _AccessRemoveAgents_noLock ( const struct _Access * self )
 {
+    rc_t RCt = 0;
+
     if ( self != NULL ) {
-        BSTreeWhack (
-                    & ( ( ( struct _Access * ) self ) -> Agents ),
-                    _AccessWhackCallback,
-                    NULL
-                    );
+        XFSHashDictDispose ( self -> Agents );
+        RCt = XFSHashDictMake (
+                        & ( ( ( struct _Access * ) self ) -> Agents ),
+                        _AccessBanana
+                        );
     }
 
-    return 0;
+    return RCt;
 }   /* _AccessRemoveAgents_noLock () */
 
 static
@@ -390,23 +387,25 @@ _AccessMake ( const struct _Access ** Acc, const char * Path )
 
     RCt = KLockMake ( & ( xAcc -> mutabor ) );
     if ( RCt == 0 ) {
-        BSTreeInit ( & ( xAcc -> Agents ) );
-        KRefcountInit (
-                    & ( xAcc -> refcount ),
-                    1,
-                    _sAccess_classname,
-                    "_AccessMake",
-                    "_Access"
-                    );
-
-        RCt = XFSOwnerUserName ( & ( xAcc -> User ) );
+        RCt = XFSHashDictMake ( & ( xAcc -> Agents ), _AccessBanana );
         if ( RCt == 0 ) {
-            RCt = XFSOwnerGroupName ( & ( xAcc -> Group ) );
+            KRefcountInit (
+                        & ( xAcc -> refcount ),
+                        1,
+                        _sAccess_classname,
+                        "_AccessMake",
+                        "_Access"
+                        );
 
+            RCt = XFSOwnerUserName ( & ( xAcc -> User ) );
             if ( RCt == 0 ) {
-                RCt = _AccessLoad ( xAcc, Path );
+                RCt = XFSOwnerGroupName ( & ( xAcc -> Group ) );
+
                 if ( RCt == 0 ) {
-                    xAcc -> Version = _AccessReadVersion ( xAcc );
+                    RCt = _AccessLoad ( xAcc, Path );
+                    if ( RCt == 0 ) {
+                        xAcc -> Version = _AccessReadVersion ( xAcc );
+                    }
                 }
             }
         }
@@ -688,22 +687,24 @@ _AccessApprove (
 
 static
 void
-_ListAccessAgentCallback ( BSTNode * Node, void * Data )
+_ListAccessAgentEacher (
+                        const char * Key,
+                        const void * Value,
+                        const void * Data
+)
 {
     struct VNamelist * List;
     struct XFSAccessAgent * xAgent;
 
     List = ( struct VNamelist * ) Data;
-    xAgent = ( struct XFSAccessAgent * ) Node;
+    xAgent = ( struct XFSAccessAgent * ) Value;
 
-    if ( List == NULL || xAgent == NULL ) {
-        return;
+    if ( List != NULL && xAgent != NULL ) {
+        if ( xAgent -> Name != NULL ) {
+            VNamelistAppend ( List, xAgent -> Name );
+        }
     }
-
-    if ( xAgent -> Name != NULL ) {
-        VNamelistAppend ( List, xAgent -> Name );
-    }
-}   /* _ListAccessAgentCallback () */
+}   /* _ListAccessAgentEacher () */
 
 static
 rc_t CC
@@ -724,13 +725,16 @@ _AccessList_noLock (
 
     RCt = VNamelistMake ( & xList, 32 );
     if ( RCt == 0 ) {
-        BSTreeForEach (
-                    & ( self -> Agents ),
-                    false,
-                    _ListAccessAgentCallback,
-                    xList
-                    );
-        RCt = VNamelistToNamelist ( xList, List );
+        RCt = XFSHashDictForEach (
+                                self -> Agents,
+                                _ListAccessAgentEacher,
+                                xList
+                                );
+        if ( RCt == 0 ) {
+            RCt = VNamelistToNamelist ( xList, List );
+        }
+
+        VNamelistRelease ( xList );
     }
 
     return RCt;
@@ -777,22 +781,6 @@ _AccessHas (
     return xAgent != NULL;
 }   /* _AccessHas () */
 
-static
-int64_t CC
-_GetAccessAgentCallback (  const void * Item, const BSTNode * Node )
-{
-    const char * Str1, * Str2;
-
-    Str1 = ( ( char * ) Item );
-    Str2 = Node == NULL
-                        ? NULL
-                        : ( ( struct XFSAccessAgent * ) Node ) -> Name
-                        ;
-
-
-    return XFS_StringCompare4BST_ZHR ( Str1, Str2 );
-}   /* _GetAssAgentCallback () */
-
 rc_t CC
 _AccessGet_noLock (
                 const struct _Access * self,
@@ -800,33 +788,16 @@ _AccessGet_noLock (
                 const struct XFSAccessAgent ** Agent
 )
 {
-    rc_t RCt;
-    const struct XFSAccessAgent * xAgent;
-
-    RCt = 0;
-    xAgent = NULL;
-
     XFS_CSAN ( Agent );
     XFS_CAN ( self )
     XFS_CAN ( Agent )
     XFS_CAN ( AgentName )
 
-    xAgent = ( const struct XFSAccessAgent * ) BSTreeFind (
-                                            & ( self -> Agents ),
-                                            AgentName,
-                                            _GetAccessAgentCallback
-                                            );
-    if ( xAgent != NULL ) {
-            /*  JOJOBA
-             *  Here we should add RefCount ... will do later 
-             */
-        * Agent = xAgent;
-    }
-    else {
-        RCt = XFS_RC ( rcNotFound );
-    }
-
-    return RCt;
+    return XFSHashDictGet (
+                            self -> Agents,
+                            ( const void ** ) & Agent,
+                            AgentName
+                            );
 }   /* _AccessGet_noLock () */
 
 rc_t CC
@@ -855,17 +826,6 @@ _AccessGet (
     return RCt;
 }   /* _AccessGet () */
 
-
-static
-int64_t CC
-_AddAccessAgentCallback ( const BSTNode * N1, const BSTNode * N2 )
-{
-    return XFS_StringCompare4BST_ZHR (
-        ( ( struct XFSAccessAgent * ) N1 ) -> Name,
-        ( ( struct XFSAccessAgent * ) N2 ) -> Name
-        );
-}   /* _AccessAgentCallback () */
-
 rc_t CC
 _AccessAdd_noLock (
                 const struct _Access * self,
@@ -887,11 +847,11 @@ _AccessAdd_noLock (
 
     RCt = _AccessAgentMake ( & xAgent, AgentName );
     if ( RCt == 0 ) {
-        RCt = BSTreeInsert (
-                        & ( xAcc -> Agents ),
-                        & ( xAgent -> node ),
-                        _AddAccessAgentCallback
-                        );
+        RCt = XFSHashDictAdd (
+                            xAcc -> Agents,
+                            xAgent,
+                            AgentName
+                            );
     }
 
     if ( RCt == 0 ) {
@@ -956,31 +916,21 @@ _AccessDel_noLock (
 )
 {
     rc_t RCt;
-    const struct XFSAccessAgent * xAgent;
     struct _Access * xAcc;
 
     RCt = 0;
-    xAgent = NULL;
     xAcc = ( struct _Access * ) self;
 
     XFS_CAN ( xAcc )
     XFS_CAN ( AgentName )
 
+    RCt = XFSHashDictDel ( xAcc -> Agents, AgentName );
 
-    RCt = _AccessGet ( xAcc, AgentName, & xAgent );
-    if ( xAgent != NULL ) {
-        BSTreeUnlink ( & ( xAcc -> Agents ), ( struct BSTNode * ) & ( xAgent -> node ) );
-
-        if ( _AccessStore ( self ) != 0 ) {
-            /* JOJOBA */
-            /*  we don't care if it is failed, but
-             *  need to complain
-             */
-        }
-
-            /*  Should it be here?
-             */
-        _AccessAgentDispose ( ( struct XFSAccessAgent * ) xAgent );
+    if ( _AccessStore ( self ) != 0 ) {
+        /* JOJOBA */
+        /*  we don't care if it is failed, but
+         *  need to complain
+         */
     }
 
     return RCt;

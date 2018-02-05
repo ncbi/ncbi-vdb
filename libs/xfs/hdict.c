@@ -686,3 +686,9 @@ XFSIHashDictForEach (
     return 0;
 }   /* XFSIHashDictForEach () */
 
+LIB_EXPORT
+size_t CC
+XFSHashDictCount ( const struct XFSHashDict * self )
+{
+    return self == NULL ? 0 : KHashTableCount ( self -> hash_table );
+}   /* XFSHashDictCount () */

@@ -26,7 +26,6 @@
 
 #include <klib/rc.h>
 #include <klib/out.h>
-#include <klib/container.h>
 #include <klib/namelist.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
@@ -44,6 +43,7 @@
 #include "xencro.h"
 #include "zehr.h"
 #include "lockdpt.h"
+#include "hdict.h"
 
 #include <sysalloc.h>
 
@@ -69,7 +69,7 @@
  //
 ((*/
 struct _EncDpt {
-    BSTree tree;
+    const struct XFSHashDict * hash_dict;
 
     KLock * mutabor;
 };
@@ -78,8 +78,6 @@ struct _EncDpt {
  //  Just a path to file
 ((*/
 struct XFSEncEntry {
-    BSTNode node;
-
     KRefcount refcount;
     KLock * mutabor;
 
@@ -112,12 +110,12 @@ _Dpt ()
 
 static
 void CC
-_EncDptWhackCallback ( BSTNode * Node, void * unused )
+_EncDptBanana ( const void * Value )
 {
-    if ( Node != NULL ) {
-        XFSEncEntryDispose ( ( const struct XFSEncEntry * ) Node );
+    if ( Value != NULL ) {
+        XFSEncEntryDispose ( ( const struct XFSEncEntry * ) Value );
     }
-}   /* _EncDptWhackCallback () */
+}   /* _EncDptBanana () */
 
 static
 rc_t CC
@@ -128,11 +126,10 @@ _EncDptDisposeImpl ( struct _EncDpt * self )
     RCt = 0;
 
     if ( self != NULL ) { 
-        BSTreeWhack (
-                    & ( self -> tree ),
-                    _EncDptWhackCallback,
-                    NULL
-                    );
+        if ( self -> hash_dict != NULL ) {
+            XFSHashDictDispose ( self -> hash_dict );
+            self -> hash_dict = NULL;
+        }
 
         if ( self -> mutabor != NULL ) {
             KLockRelease ( self -> mutabor );
@@ -171,24 +168,21 @@ _EncDptMakeImpl ( struct _EncDpt ** EncDpt )
     RCt = 0;
     TheD = NULL;
 
-    if ( EncDpt != NULL ) {
-        * EncDpt = NULL;
-    }
-
-    if ( EncDpt == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( EncDpt )
+    XFS_CAN ( EncDpt )
 
     TheD = calloc ( 1, sizeof ( struct _EncDpt ) );
     if ( TheD == NULL ) {
         return XFS_RC ( rcExhausted );
     }
 
-    RCt = KLockMake ( & ( TheD -> mutabor ) );
+    RCt = XFSHashDictMake ( & ( TheD -> hash_dict ), _EncDptBanana );
     if ( RCt == 0 ) {
-        BSTreeInit ( & ( TheD -> tree ) );
+        RCt = KLockMake ( & ( TheD -> mutabor ) );
+        if ( RCt == 0 ) {
 
-        * EncDpt = TheD;
+            * EncDpt = TheD;
+        }
     }
 
     if ( RCt != 0 ) {
@@ -226,21 +220,6 @@ XFSEncDepotInit ()
 }   /* XFSEncDepotInit () */
 
 static
-int64_t CC
-_EncCmpCallback ( const void * Item, const BSTNode * Node )
-{
-    const char * Str1, * Str2;
-
-    Str1 = ( const char * ) Item;
-
-    Str2 = Node == NULL
-                ? NULL
-                : ( ( struct XFSEncEntry * ) Node ) -> path
-                ;
-    return XFS_StringCompare4BST_ZHR ( Str1, Str2 );
-}   /* _EncCmpCallback () */
-
-static
 rc_t CC
 _EncDptGetNoLock (
                 struct _EncDpt * self,
@@ -248,37 +227,17 @@ _EncDptGetNoLock (
                 const struct XFSEncEntry ** EncEntry
 )
 {
-    const struct XFSEncEntry * RetVal = NULL;
+    XFS_CSAN ( EncEntry )
+    XFS_CAN ( self )
+    XFS_CAN ( Path )
+    XFS_CAN ( EncEntry )
 
-    if ( EncEntry != NULL ) {
-        * EncEntry = NULL;
-    }
-
-    if ( self == NULL || Path == NULL || EncEntry == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    RetVal = ( const struct XFSEncEntry * ) BSTreeFind (
-                                                & ( self -> tree ),
-                                                Path,
-                                                _EncCmpCallback
-                                                );
-
-
-    * EncEntry = RetVal;
-
-    return RetVal == NULL ? XFS_RC ( rcNotFound ) : 0;
+    return XFSHashDictGet (
+                        self -> hash_dict,
+                        ( const void ** ) EncEntry,
+                        Path
+                        );
 }   /* _EncDptGetNoLock () */
-
-static
-int64_t CC
-_EncAddCallback ( const BSTNode * N1, const BSTNode * N2 )
-{
-    return XFS_StringCompare4BST_ZHR (
-            ( ( struct XFSEncEntry * ) N1 ) -> path,
-            ( ( struct XFSEncEntry * ) N2 ) -> path
-            );
-}   /* _EncAddCallback () */
 
 static
 rc_t CC
@@ -287,19 +246,14 @@ _EncDptAddNoLock (
                 const struct XFSEncEntry * EncEntry
 )
 {
-    rc_t RCt = 0;
+    XFS_CAN ( self )
+    XFS_CAN ( EncEntry )
 
-    if ( self == NULL || EncEntry == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    RCt = BSTreeInsert (
-                    & ( self -> tree ),
-                    ( struct BSTNode * ) & ( EncEntry -> node ),
-                    _EncAddCallback
-                    );
-
-    return RCt;
+    return XFSHashDictAdd (
+                            self -> hash_dict,
+                            EncEntry,
+                            EncEntry -> path
+                            );
 }   /* _EncDptAddNoLock () */
 
 static
@@ -309,31 +263,21 @@ _EncDptDelNoLock (
             const struct XFSEncEntry * EncEntry
 )
 {
-    if ( self == NULL || EncEntry == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( self )
+    XFS_CAN ( EncEntry )
 
-    BSTreeUnlink (
-                & ( self -> tree ),
-                ( struct BSTNode * ) & ( EncEntry -> node )
-                );
-    XFSEncEntryDispose ( EncEntry );
-
-    return 0;
+    return XFSHashDictDel ( self -> hash_dict, EncEntry -> path );
 }   /* _EncDptDelNoLock () */
 
 static
 rc_t CC
 _EncDptClearNoLock ( struct _EncDpt * self )
 {
-    if ( self == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( self )
 
-    BSTreeWhack ( & ( self -> tree ), _EncDptWhackCallback, NULL );
-    BSTreeInit ( & ( self -> tree ) );
+    XFSHashDictDispose ( self -> hash_dict );
 
-    return 0;
+    return XFSHashDictMake ( & ( self -> hash_dict ), _EncDptBanana );
 }   /* _EncDptClearNoLock () */
 
 LIB_EXPORT
