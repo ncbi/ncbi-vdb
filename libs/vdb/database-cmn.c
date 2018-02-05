@@ -386,6 +386,14 @@ LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
                                 if ( rc == 0 )
                                 {
                                     plocal = orig;
+#define VDB_3531_FIX 1
+#if VDB_3531_FIX
+                                    if ( pcache != NULL )
+                                    {
+                                        VPathRelease(pcache);
+                                        pcache = NULL;
+                                    }
+#endif
                                     rc = VDBManagerVPathOpenLocalDBRead ( self, dbp, schema, plocal );
                                 }
                             }
