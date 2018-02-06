@@ -80,6 +80,7 @@ SCHEMA_SRC = \
     ASTBuilder-func \
     ASTBuilder-tbl \
     ASTBuilder-db \
+	ErrorReport \
 
 schema-grammar.$(LOBX): $(SRCDIR)/schema-grammar.cpp
 	$(CP) -o $@ -fPIC $(OPT) -D_LIBRARY $< $(LOC_INFO) -D__file_ext__=cpp
@@ -115,7 +116,7 @@ endif
 schema-lex.$(LOBX): $(SRCDIR)/schema-lex.c
 	$(CC)  -Wno-unused-function -o $@ -fPIC $(OPT) -D_LIBRARY $< $(LOC_INFO) -D__file_ext__=c
 
-flex $(SRCDIR)/schema-lex.c: $(SRCDIR)/schema-lex.l $(SRCDIR)/schema-grammar.c
+flex $(SRCDIR)/schema-lex.c: $(SRCDIR)/schema-lex.l $(SRCDIR)/schema-grammar.cpp
 	flex -d -t $(SRCDIR)/schema-lex.l > $(SRCDIR)/schema-lex.c
 
 SCHEMA_OBJ = \

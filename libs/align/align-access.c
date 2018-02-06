@@ -283,6 +283,7 @@ LIB_EXPORT rc_t CC AlignAccessRefSeqEnumeratorGetLength ( const AlignAccessRefSe
     return 0;
 }
 
+#define ENUMERATOR_IS_NOT_FILTERED_BY_INDEX 1
 LIB_EXPORT rc_t CC AlignAccessRefSeqEnumeratorNext(const AlignAccessRefSeqEnumerator *cself) {
     AlignAccessRefSeqEnumerator *self = (AlignAccessRefSeqEnumerator *)cself;
     
@@ -290,11 +291,15 @@ LIB_EXPORT rc_t CC AlignAccessRefSeqEnumeratorNext(const AlignAccessRefSeqEnumer
         return AlignAccessRefSeqEnumeratorEOFCode;
     
     ++self->cur;
+#if ENUMERATOR_IS_NOT_FILTERED_BY_INDEX
+    return 0;
+#else
     if (!BAMFileIsIndexed(cself->parent->innerSelf))
     	return 0;
 	if (BAMFileIndexHasRefSeqId(cself->parent->innerSelf, cself->cur))
 		return 0;
 	return AlignAccessRefSeqEnumeratorNext(cself);
+#endif
 }
 
 struct AlignAccessAlignmentEnumerator {

@@ -125,6 +125,7 @@ KFS_CMN = \
 	recorder \
 	logfile \
 	poolpages \
+	lru_cache \
 	from_to_namelist \
 	limitfile
 

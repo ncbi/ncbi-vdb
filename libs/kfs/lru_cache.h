@@ -21,43 +21,23 @@
  *  Please cite the author in any work or product based on this material.
  *
  * ===========================================================================
- *
  */
 
-#ifndef _hpp_SchemaParser_
-#define _hpp_SchemaParser_
-
+#include <klib/rc.h>
 #include <kfs/file.h>
+#include <kfs/rrcachedfile.h>
 
-#include "ErrorReport.hpp"
+struct lru_cache;
+struct timeout_t;
 
-namespace ncbi
-{
-    namespace SchemaParser
-    {
-        class ParseTree;
+rc_t make_lru_cache ( struct lru_cache ** cache,
+                      const KFile * wrapped,
+                      size_t page_size,
+                      uint32_t page_count );
 
-        class SchemaParser
-        {
-        public:
-            SchemaParser ();
-            ~SchemaParser ();
+void release_lru_cache ( struct lru_cache * self );
 
-            bool ParseString ( const char * input, bool debug = false );
-            bool ParseFile ( const struct KFile * file, const char * fileName = 0 );
+rc_t read_lru_cache ( struct lru_cache * self,
+                      uint64_t pos, void * buffer, size_t bsize, size_t * num_read, struct timeout_t *tm );
 
-            const ParseTree* GetParseTree () const { return m_root; }
-                  ParseTree* MoveParseTree (); // Transfer ownership to caller; destroy with delete
-
-            const ErrorReport & GetErrors () const { return m_errors; }
-
-        private:
-            bool m_debug;
-            ParseTree* m_root;
-
-            ErrorReport m_errors;
-        };
-    }
-}
-
-#endif
+rc_t set_lru_cache_event_handler( struct lru_cache * self, void * data, on_cache_event handler );

@@ -101,6 +101,11 @@ namespace ncbi
             uint32_t m_version;
         };
 
+        // these conversion function will assert if the argument is NULL or not an AST_FQN,
+        // otherwise guarantee to return a non-NULL AST_FQN*
+        extern AST_FQN * ToFQN ( AST * p_ast);
+        extern const AST_FQN * ToFQN ( const AST * p_ast);
+
         class AST_Expr : public AST
         {
         public:
@@ -113,7 +118,23 @@ namespace ncbi
             SExpression * EvaluateConst ( ASTBuilder & ) const;
             SExpression * MakeExpression ( ASTBuilder & ) const;
             SExpression * MakeSymExpr ( ASTBuilder & , const KSymbol * p_sym ) const;
+            SExpression * MakeUnsigned ( ASTBuilder & ) const;
+
+        private:
+            SExpression * MakeFloat ( ASTBuilder & ) const;
+            SExpression * MakeString ( ASTBuilder & p_builder ) const;
+            SExpression * MakeEscapedString ( ASTBuilder & p_builder ) const;
+            SExpression * MakeVectorConstant ( ASTBuilder & p_builder ) const;
+            SExpression * MakeBool ( ASTBuilder & ) const;
+            SExpression * MakeNegate ( ASTBuilder & ) const;
+            SExpression * MakeCast ( ASTBuilder & p_builder ) const;
         };
+
+        // these conversion function will assert if the argument is NULL or not an AST_Expr,
+        // otherwise guarantee to return a non-NULL AST_FQN*
+        extern AST_Expr * ToExpr ( AST * p_ast);
+        extern const AST_Expr * ToExpr ( const AST * p_ast);
+
 
         class AST_ParamSig : public AST
         {
