@@ -156,7 +156,7 @@ VFS_EXTERN rc_t CC VFSManagerDeleteCacheOlderThan ( const struct VFSManager * se
 
 /** Unreliable object: do not report occured erros */
 VFS_EXTERN rc_t CC VFSManagerOpenDirectoryReadDecryptUnreliable (
-    const VFSManager *self, struct KDirectory const **d,
+    const struct VFSManager *self, struct KDirectory const **d,
     const struct VPath * object );
 
 /* CacheForUrl:
