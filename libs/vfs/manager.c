@@ -1628,7 +1628,8 @@ rc_t VFSManagerOpenDirectoryReadHttp (const VFSManager *self,
                                       const KDirectory * dir,
                                       KDirectory const **d,
                                       const VPath * path,
-                                      bool force_decrypt)
+                                      bool force_decrypt,
+                                      bool reliable)
 {
     rc_t rc;
     const KFile * file = NULL;
@@ -1636,6 +1637,7 @@ rc_t VFSManagerOpenDirectoryReadHttp (const VFSManager *self,
     rc = VFSManagerOpenCurlFile ( self, &file, path );
     if ( rc != 0 )
     {
+        bool toLog = false;
         const char extension[] = ".vdbcache";
         const String * s = & path -> path;
         assert ( s );
@@ -1646,6 +1648,9 @@ rc_t VFSManagerOpenDirectoryReadHttp (const VFSManager *self,
                 sizeof extension - 1,
                 extension, sizeof extension - 1, sizeof extension - 1 ) != 0 )
         {
+            toLog = reliable;
+        }
+        if ( toLog ) {
           const String * p = NULL;
           rc_t rc2 = VPathMakeString ( path, & p );
           if ( rc2 == 0 ) {
@@ -1971,7 +1976,8 @@ rc_t VFSManagerOpenDirectoryReadDirectoryRelativeInt (const VFSManager *self,
                                                       const KDirectory * dir,
                                                       KDirectory const **d,
                                                       const VPath * path_,
-                                                      bool force_decrypt)
+                                                      bool force_decrypt,
+                                                      bool reliable)
 {
     rc_t rc;
     do 
@@ -2047,7 +2053,8 @@ rc_t VFSManagerOpenDirectoryReadDirectoryRelativeInt (const VFSManager *self,
             case vpuri_http:
             case vpuri_https:
             case vpuri_ftp:
-                rc = VFSManagerOpenDirectoryReadHttp ( self, dir, d, path, force_decrypt );
+                rc = VFSManagerOpenDirectoryReadHttp ( self, dir, d, path,
+                                                      force_decrypt, reliable );
                 break;
             }
             VPathRelease ( path ); /* same as path_ if not uri */
@@ -2063,7 +2070,8 @@ rc_t CC VFSManagerOpenDirectoryReadDirectoryRelative (const VFSManager *self,
                                                       KDirectory const **d,
                                                       const VPath * path)
 {
-    return VFSManagerOpenDirectoryReadDirectoryRelativeInt (self, dir, d, path, false);
+    return VFSManagerOpenDirectoryReadDirectoryRelativeInt (self, dir, d, path,
+        false, true);
 }
 
 
@@ -2073,7 +2081,8 @@ rc_t CC VFSManagerOpenDirectoryReadDirectoryRelativeDecrypt (const VFSManager *s
                                                              KDirectory const **d,
                                                              const VPath * path)
 {
-    return VFSManagerOpenDirectoryReadDirectoryRelativeInt (self, dir, d, path, true);
+    return VFSManagerOpenDirectoryReadDirectoryRelativeInt (self, dir, d, path,
+        true, true);
 }
 
 
@@ -2081,7 +2090,17 @@ LIB_EXPORT rc_t CC VFSManagerOpenDirectoryReadDecrypt (const VFSManager *self,
                                                        KDirectory const **d,
                                                        const VPath * path)
 {
-    return VFSManagerOpenDirectoryReadDirectoryRelativeInt (self, self->cwd, d, path, true);
+    return VFSManagerOpenDirectoryReadDirectoryRelativeInt (self, self->cwd, d,
+        path, true, true);
+}
+
+LIB_EXPORT rc_t CC VFSManagerOpenDirectoryReadDecryptUnreliable (
+                                                       const VFSManager *self,
+                                                       KDirectory const **d,
+                                                       const VPath * path)
+{
+    return VFSManagerOpenDirectoryReadDirectoryRelativeInt (self, self->cwd, d,
+        path, true, false);
 }
 
 
@@ -2091,7 +2110,8 @@ LIB_EXPORT rc_t CC VFSManagerOpenDirectoryRead (const VFSManager *self,
 {
     if ( self == NULL )
         return RC (rcVFS, rcDirectory, rcOpening, rcSelf, rcNull);
-    return VFSManagerOpenDirectoryReadDirectoryRelativeInt (self, self->cwd, d, path, false);
+    return VFSManagerOpenDirectoryReadDirectoryRelativeInt (self, self->cwd, d,
+        path, false, true);
 }
 
 LIB_EXPORT 

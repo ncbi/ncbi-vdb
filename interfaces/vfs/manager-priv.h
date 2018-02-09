@@ -154,6 +154,11 @@ VFS_EXTERN rc_t CC VFSManagerDeleteCacheOlderThan ( const struct VFSManager * se
     uint32_t days );
 
 
+/** Unreliable object: do not report occured erros */
+VFS_EXTERN rc_t CC VFSManagerOpenDirectoryReadDecryptUnreliable (
+    const VFSManager *self, struct KDirectory const **d,
+    const struct VPath * object );
+
 /* CacheForUrl:
  * get cache location when URL is requested: use FILE app rather than REFSEQ */
 VFS_EXTERN rc_t CC VResolverCacheForUrl ( const struct VResolver * self,
