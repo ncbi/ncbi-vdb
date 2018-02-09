@@ -36,6 +36,7 @@
 #include <kfg/kfg-priv.h>
 #include <kfg/extern.h>
 #include <kfg/repository.h> /* KConfigImportNgc */
+#include <kfg/properties.h>
 
 #include <os-native.h>
 
@@ -180,7 +181,7 @@ public:
             }
             return ret;
         }
-        return false;
+        return value == 0;
     }
     void UpdateNode(const char* key, const char* value)
     {
@@ -888,6 +889,55 @@ FIXTURE_TEST_CASE(ConfigNodeAccessString, KfgFixture)
 }
 #endif
 
+////////////////////////////////////////////  Schema parser version
+
+FIXTURE_TEST_CASE(predef_SCHEMA_VERSION_default, KfgFixture)
+{
+    const char * env = getenv("VDB_SCHEMA");
+    if ( env == 0 )
+    {
+        REQUIRE(ValueMatches("vdb/schema/version", "2", true));
+    }
+}
+FIXTURE_TEST_CASE(predef_SCHEMA_VERSION_1, KfgFixture)
+{
+    CreateAndLoad(GetName(), "vdb/schema/version=\"1\"\n");
+    REQUIRE(ValueMatches("vdb/schema/version", "1", true));
+    uint8_t version = 0;
+    REQUIRE_RC ( KConfigGetSchemaParserVersion( kfg, & version ) );
+    REQUIRE_EQ ( (uint8_t)1, version );
+}
+FIXTURE_TEST_CASE(predef_SCHEMA_VERSION_2, KfgFixture)
+{
+    CreateAndLoad(GetName(), "vdb/schema/version=\"2\"\n");
+    REQUIRE(ValueMatches("vdb/schema/version", "2", true));
+    uint8_t version = 0;
+    REQUIRE_RC ( KConfigGetSchemaParserVersion( kfg, & version ) );
+    REQUIRE_EQ ( (uint8_t)2, version );
+}
+
+// keep the following 2 test cases together
+FIXTURE_TEST_CASE(predef_SCHEMA_VERSION_from_env_setup, KfgFixture)
+{   // set up environment to take effect at the next cases's construction time
+    setenv("VDB_SCHEMA", "1", 1);
+}
+FIXTURE_TEST_CASE(predef_SCHEMA_VERSION_from_env, KfgFixture)
+{
+    REQUIRE(ValueMatches("vdb/schema/version", "1", true));
+    unsetenv("VDB_SCHEMA");
+}
+
+// keep the following 2 test cases together
+FIXTURE_TEST_CASE(predef_SCHEMA_VERSION_from_env_bad_setup, KfgFixture)
+{   // set up environment to take effect at the next cases's construction time
+    setenv("VDB_SCHEMA", "1abc", 1);
+}
+FIXTURE_TEST_CASE(predef_SCHEMA_VERSION_from_env_bad, KfgFixture)
+{
+    REQUIRE(ValueMatches("vdb/schema/version", "2", false));
+    unsetenv("VDB_SCHEMA");
+}
+
 //////////////////////////////////////////// Importing external objects
 
 namespace {
@@ -933,7 +983,7 @@ public:
 FIXTURE_TEST_CASE(KConfigImportNgc_Basic, KfgFixture)
 {
     string s(GetName());
-    cout << "FIXTURE_TEST_CASE(KConfigImportNgc_Basic) " << s << "\n";
+//    cout << "FIXTURE_TEST_CASE(KConfigImportNgc_Basic) " << s << "\n";
     TEST_MESSAGE(s);
     CreateAndLoad(s.c_str(), "\n");
     TEST_MESSAGE("CreateAndLoad" << " " << s);

@@ -63,14 +63,14 @@ TEST_LIB = \
 	-sncbi-vdb \
 
 $(TEST_BINDIR)/test-path-c: $(TEST_OBJ)
-	$(LD) --exe -o $@ $^ $(TEST_LIB)
+	$(LD) --exe -o $@ $^ $(TEST_LIB) -sstdc++
 
 #----------------------------------------------------------------
 # C++ test on VPath
 #
 
 PATHTEST_SRC = \
-	pathtest 
+	pathtest
 
 PATHTEST_OBJ = \
 	$(addsuffix .$(OBJX),$(PATHTEST_SRC))
@@ -122,7 +122,7 @@ $(TEST_BINDIR)/test-names-30: $(N30_OBJ)
 #
 
 MANAGERTEST_SRC = \
-	managertest 
+	managertest
 
 MANAGERTEST_OBJ = \
 	$(addsuffix .$(OBJX),$(MANAGERTEST_SRC))
@@ -141,7 +141,7 @@ $(TEST_BINDIR)/test-vfsmanager: $(MANAGERTEST_OBJ)
 #
 
 RESOLVERTEST_SRC = \
-	resolvertest 
+	resolvertest
 
 RESOLVERTEST_OBJ = \
 	$(addsuffix .$(OBJX),$(RESOLVERTEST_SRC))

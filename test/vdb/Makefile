@@ -108,6 +108,9 @@ TEST_DEPS_OBJ = \
 $(TEST_BINDIR)/test-dependencies: $(TEST_DEPS_OBJ)
 	$(LP) --exe -o $@ $^ $(READ_LIBS)
 
+deps: test-dependencies
+	$(TEST_BINDIR)/test-dependencies
+
 valgrind_deps: std
 	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-dependencies
 
@@ -264,7 +267,6 @@ VDB_VIEW_LIB = \
 	-skapp \
 	-sktst \
 	-sncbi-wvdb \
-	-sschema
 
 $(TEST_BINDIR)/test-view: $(VDB_VIEW_OBJ)
 	$(LP) --exe -o $@ $^ $(VDB_VIEW_LIB)

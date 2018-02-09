@@ -409,9 +409,15 @@ FIXTURE_TEST_CASE(Table_Parent_VirtualProductionUndefined, AST_Table_Fixture)
 
 FIXTURE_TEST_CASE(Table_Production, AST_Table_Fixture)
 {
-    TableAccess t = ParseTable ( "table t#1 { U8 i = 1; }", "t" );
+    TableAccess t = ParseTable ( "table t0#1 { U8 i = 1; } table t#1 { U8 i = 1; }", "t", 1 );
     REQUIRE_EQ ( 1u, t . Productions () . Count () );
-    REQUIRE ( ! t . Productions () . Get ( 0 ) -> trigger );
+    const SProduction & prod = * t . Productions () . Get ( 0 );
+    REQUIRE ( ! prod . trigger );
+    REQUIRE_EQ ( (uint32_t)eProduction, prod . name -> type );
+    REQUIRE_EQ ( & prod, (const SProduction*) prod . name -> u . obj );
+    REQUIRE_NOT_NULL ( prod . expr );
+    REQUIRE_EQ ( 1u, prod . cid . ctx );
+    REQUIRE_EQ ( 0u, prod . cid . id );
 }
 
 FIXTURE_TEST_CASE(Table_Production_ForwardReference, AST_Table_Fixture)
@@ -492,6 +498,38 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_Context, AST_Table_Fixture)
     REQUIRE_NOT_NULL ( col );
     REQUIRE_EQ ( ovl -> cid . ctx, col -> cid . ctx );
     REQUIRE_EQ ( ovl -> cid . id, col -> cid . id );
+}
+
+FIXTURE_TEST_CASE(Table_ColumnDecl_Context_Inherited, AST_Table_Fixture)
+{
+    TableAccess v = ParseTable (
+        "table T0#1 {};"
+        "table T#1 {"
+        	"column U32 READ_LEN = 1;"
+	        "column U16 READ_LEN = 2;"
+        "};"
+        "table W#1 = T { U32 c = READ_LEN; }",
+    "W", 2 );
+    REQUIRE_EQ ( 0u, v . Columns () . Count () );
+    REQUIRE_EQ ( 1u, v . ColumnNames () . Count () );
+
+    const SNameOverload * ovl = v . ColumnNames () . Get ( 0 );
+    REQUIRE_NOT_NULL ( ovl );
+    REQUIRE_EQ ( 1u, ovl -> cid . ctx );
+    REQUIRE_EQ ( 0u, ovl -> cid . id );
+    REQUIRE_EQ ( 2u, VectorLength ( & ovl -> items ) );
+    {
+        const SColumn * col = ( const SColumn * ) VectorGet( & ovl -> items, 0 );
+        REQUIRE_NOT_NULL ( col );
+        REQUIRE_EQ ( 1u, col -> cid . ctx );
+        REQUIRE_EQ ( 1u, col -> cid . id );
+    }
+    {
+        const SColumn * col = ( const SColumn * ) VectorGet( & ovl -> items, 1 );
+        REQUIRE_NOT_NULL ( col );
+        REQUIRE_EQ ( 1u, col -> cid . ctx );
+        REQUIRE_EQ ( 0u, col -> cid . id );
+    }
 }
 
 FIXTURE_TEST_CASE(Table_ColumnDecl_SimpleColumn_Typeset, AST_Table_Fixture)

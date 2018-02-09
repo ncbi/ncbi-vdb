@@ -34,6 +34,8 @@
 #include <kdb/meta.h>
 #include <kdb/table.h>
 
+#include <kfg/config.h>
+
 #include "WVDB_Fixture.hpp"
 
 #include <sysalloc.h>
@@ -379,6 +381,39 @@ FIXTURE_TEST_CASE ( VCursor_FindNextRowIdDirect, WVDB_Fixture )
 
 }
 
+FIXTURE_TEST_CASE ( VSchema_Version2, WVDB_Fixture )
+{   // parses as v2 by default
+    m_databaseName = ScratchDir + GetName();
+    string schemaText = "version 2; table table1 #1.0.0 { column ascii column1; };"
+                        "database root_database #1 { table table1 #1 TABLE1; } ; "
+                        "view V#1 < table1 t > {};";
+    MakeDatabase ( schemaText, "root_database" );
+}
+
+FIXTURE_TEST_CASE ( VSchema_Version2_Fail, WVDB_Fixture )
+{   // tries to parse as v1
+    KConfig * kfg;
+    REQUIRE_RC ( KConfigMake ( & kfg, NULL ) );
+
+    String * saved;
+    const char * versionPath = "vdb/schema/version";
+    REQUIRE_RC ( KConfigReadString ( kfg, versionPath, & saved ) );
+    REQUIRE_RC ( KConfigWriteString( kfg, versionPath, "1" ) );
+
+    m_databaseName = ScratchDir + GetName();
+    string schemaText = "version 2; table table1 #1.0.0 { column ascii column1; };"
+                        "database root_database #1 { table table1 #1 TABLE1; } ; "
+                        "view V#1 < table1 t > {};";
+    REQUIRE_RC ( VDBManagerMakeUpdate ( & m_mgr, NULL ) );
+    REQUIRE_RC ( VDBManagerMakeSchema ( m_mgr, & m_schema ) );
+
+    // this is expected to log "expected 'include, typedef, typeset, fmtdef, function, schema, database or table' but found 'view'"
+    REQUIRE_RC_FAIL ( VSchemaParseText ( m_schema, NULL, schemaText . c_str(), schemaText . size () ) );
+
+    // restore version setting
+    KConfigWriteSString( kfg, versionPath, saved );
+    free ( saved );
+}
 
 //////////////////////////////////////////// Main
 extern "C"

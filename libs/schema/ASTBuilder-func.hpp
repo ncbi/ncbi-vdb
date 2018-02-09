@@ -73,6 +73,7 @@ namespace ncbi
         private:
             ASTBuilder &    m_builder;
             SFunction *     m_self;
+            bool            m_hasReturn;
             bool            m_destroy;
         };
 

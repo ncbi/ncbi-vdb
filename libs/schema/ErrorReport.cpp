@@ -26,8 +26,6 @@
 
 #include "ErrorReport.hpp"
 
-#include <stdexcept>
-
 #include <klib/symbol.h>
 #include <klib/printf.h>
 
@@ -36,6 +34,24 @@
 
 using namespace ncbi::SchemaParser;
 using namespace std;
+
+///////////////////////////////////////// InternalError exception
+
+InternalError :: InternalError(const char * p_text)
+: m_text ( string_dup( p_text, string_size ( p_text ) ) )
+{
+}
+
+InternalError :: ~InternalError() throw()
+{
+    free ( m_text );
+}
+
+const char*
+InternalError :: what() const throw()
+{
+    return m_text;
+}
 
 ///////////////////////////////////////// Error Report :: Error
 
@@ -105,7 +121,7 @@ ErrorReport :: ReportError ( const Location & p_location, const char* p_fmt, ...
     rc_t rc = :: VectorAppend ( & m_errors, 0, new Error ( buf, p_location ) );
     if ( rc != 0 )
     {
-        throw logic_error ( "ReportError() : VectorAppend() failed" );
+        throw InternalError ( "ReportError() : VectorAppend() failed" );
     }
 }
 
@@ -124,7 +140,7 @@ ErrorReport :: ReportInternalError ( const char * p_source, const char* p_fmt, .
     rc_t rc = :: VectorAppend ( & m_errors, 0, new Error ( buf, loc ) );
     if ( rc != 0 )
     {
-        throw logic_error ( "ReportError() : VectorAppend() failed" );
+        throw InternalError ( "ReportError() : VectorAppend() failed" );
     }
 }
 
