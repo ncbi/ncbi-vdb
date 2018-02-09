@@ -1563,6 +1563,12 @@ const void * SViewFind ( const SView *           self,
  */
 const struct KSymbol * SViewFindOverride ( const SView * self, const VCtxId * cid );
 
+/* Parse_v2
+ * Parse the text using bison-based front end and grammar version 2
+ * Log all errors
+ */
+bool VSchemaParse_v2 ( VSchema *self, const char *text );
+
 #ifdef __cplusplus
 }
 #endif

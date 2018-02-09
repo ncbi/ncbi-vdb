@@ -404,10 +404,11 @@ FIXTURE_TEST_CASE(View_Column_Overloaded, AST_View_Fixture)
     REQUIRE_EQ ( string ("c"), ToCppString ( ovl -> name -> name ) );
     REQUIRE_EQ ( 1u, ovl -> cid . ctx );
     REQUIRE_EQ ( 0u, ovl -> cid . id );
+
     const SColumn * col = v . Columns () . Get ( 0 );
     REQUIRE_NOT_NULL ( col );
     REQUIRE_EQ ( ovl -> cid . ctx, col -> cid . ctx );
-    REQUIRE_EQ ( ovl -> cid . id, col -> cid . id );
+    REQUIRE_EQ ( 0u, col -> cid . id );
 
     VdbVector < SColumn > names ( ovl -> items );
     REQUIRE_EQ ( 2u, names . Count () );
@@ -417,7 +418,7 @@ FIXTURE_TEST_CASE(View_Column_Overloaded, AST_View_Fixture)
     col = v . Columns () . Get ( 1 );
     REQUIRE_NOT_NULL ( col );
     REQUIRE_EQ ( ovl -> cid . ctx, col -> cid . ctx );
-    REQUIRE_EQ ( ovl -> cid . id, col -> cid . id );
+    REQUIRE_EQ ( 1u, col -> cid . id );
 }
 
 FIXTURE_TEST_CASE(View_Column_Reference, AST_View_Fixture)
@@ -768,5 +769,37 @@ FIXTURE_TEST_CASE(View_Parents_OverloadingParentsColumn, AST_View_Fixture)
     REQUIRE_EQ ( 2u, names . Count () );
     REQUIRE_EQ ( dad . Columns () . Get ( 0 ), names . Get ( 0 ) );
     REQUIRE_EQ ( v . Columns () . Get ( 0 ), names . Get ( 1 ) );
+}
+
+FIXTURE_TEST_CASE(View_ColumnDecl_Context_Inherited, AST_View_Fixture)
+{
+    ViewAccess v = ParseView (
+        "version 2; table T#1 {};"
+        "view V#1<T tbl> {"
+        	"column U32 READ_LEN = 1;"
+	        "column U16 READ_LEN = 2;"
+        "};"
+        "view W#1<T tbl> = V<tbl> { U32 c = READ_LEN; }",
+    "W", 1 );
+    REQUIRE_EQ ( 0u, v . Columns () . Count () );
+    REQUIRE_EQ ( 1u, v . ColumnNames () . Count () );
+
+    const SNameOverload * ovl = v . ColumnNames () . Get ( 0 );
+    REQUIRE_NOT_NULL ( ovl );
+    REQUIRE_EQ ( 1u, ovl -> cid . ctx );
+    REQUIRE_EQ ( 0u, ovl -> cid . id );
+    REQUIRE_EQ ( 2u, VectorLength ( & ovl -> items ) );
+    {
+        const SColumn * col = ( const SColumn * ) VectorGet( & ovl -> items, 0 );
+        REQUIRE_NOT_NULL ( col );
+        REQUIRE_EQ ( 1u, col -> cid . ctx );
+        REQUIRE_EQ ( 1u, col -> cid . id );
+    }
+    {
+        const SColumn * col = ( const SColumn * ) VectorGet( & ovl -> items, 1 );
+        REQUIRE_NOT_NULL ( col );
+        REQUIRE_EQ ( 1u, col -> cid . ctx );
+        REQUIRE_EQ ( 0u, col -> cid . id );
+    }
 }
 

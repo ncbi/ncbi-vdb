@@ -151,18 +151,16 @@ PhysicalDeclaration :: SetName ( const AST_FQN &  p_name )
     if ( priorDecl == 0 )
     {
         m_self -> name = m_builder . CreateFqnSymbol ( p_name, ePhysical, m_self );
-        if ( m_self -> name != 0 )
+        if ( m_self -> name == 0 ||
+             ! m_builder . CreateOverload ( m_self -> name,
+                                            m_self,
+                                            SPhysicalSort,
+                                            m_builder . GetSchema () -> phys,
+                                            m_builder . GetSchema () -> pname,
+                                            & m_self -> id ) )
         {
-            if ( ! m_builder . CreateOverload ( m_self -> name,
-                                                m_self,
-                                                SPhysicalSort,
-                                                m_builder . GetSchema () -> phys,
-                                                m_builder . GetSchema () -> pname,
-                                                & m_self -> id ) )
-            {
-                m_delete = true;
-                return false;
-            }
+            m_delete = true;
+            return false;
         }
     }
     else

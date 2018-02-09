@@ -26,16 +26,32 @@
 
 #include "ParseTree.hpp"
 
-#include <stdexcept>
-#include <iostream>
-
 #include <klib/text.h>
 #include <klib/printf.h>
+
+#include "ErrorReport.hpp"
 
 using namespace std;
 using namespace ncbi::SchemaParser;
 
 static const uint32_t ChildrenBlockSize = 1024; //TODO: pick a good initial size
+
+// void *
+// operator new ( unsigned long p_size )
+// {
+//     void * ret = malloc ( p_size );
+//     if ( ret == 0 )
+//     {
+//         throw InternalError ( "malloc() failed" ); // hoping there will be memory for strdup()
+//     }
+//     return ret;
+// }
+
+// void
+// operator delete ( void * p_mem)
+// {
+//     free ( p_mem );
+// }
 
 static
 void
@@ -43,8 +59,7 @@ ThrowRc ( const char* p_msg, rc_t p_rc )
 {
     char msg[1024];
     string_printf ( msg, sizeof msg, NULL, "%s, rc = %R", p_msg, p_rc );
-    //INTERNAL_ERROR ( xcUnexpected, "VectorRemove: rc = %R", rc );
-    throw logic_error ( msg );
+    throw InternalError ( msg );
 }
 
 // ParseTree

@@ -160,7 +160,7 @@ TEST_CASE( VdbMgr ) {
     mgr = NULL;
 
 }
-#if 0
+
 //#if _ARCH_BITS != 32
 TEST_CASE(SimultaneousCursors)
 {   // SRA-1669 WGS ALWZ01 cannot open multiple cursors with SEQUENCE.CONTIG_NAME column simultaneously (Win32)
@@ -191,7 +191,6 @@ TEST_CASE(SimultaneousCursors)
         REQUIRE_RC(VDBManagerRelease(mgr));
     }
 }
-#endif
 
 class VdbFixture
 {
@@ -609,6 +608,23 @@ FIXTURE_TEST_CASE ( VCursor_FindNextRowIdDirect, VdbFixture )
     REQUIRE_RC ( VCursorFindNextRowIdDirect ( curs, 0, 2, & next ) );
     REQUIRE_EQ ( (int64_t)2, next ) ; // VDB-3075: next == 1
 }
+
+FIXTURE_TEST_CASE ( V2ParserError, VdbFixture )
+{   // This exercises an "extended schema" scenario, when a schema embedded
+    // in a table gets tacked onto the exsiting schema, possibly creating namespaces
+    // that opaque the parent schema (see callers of VSchemaParseTextCallback)
+    const VTable *tbl = NULL;
+    VSchema *schema = NULL;
+    REQUIRE_RC ( VDBManagerMakeSRASchema(mgr, &schema) );
+    REQUIRE_RC ( VDBManagerOpenTableRead ( mgr, &tbl, schema, "SRR053325" ) );
+    REQUIRE_RC ( VTableCreateCursorRead(tbl, &curs) );
+    uint32_t colIdx;
+    REQUIRE_RC ( VCursorAddColumn ( curs, & colIdx, "READ" ) );
+    REQUIRE_RC ( VCursorOpen (curs ) );
+    REQUIRE_RC ( VSchemaRelease ( schema ) );
+    REQUIRE_RC ( VTableRelease ( tbl ) );
+}
+
 
 //////////////////////////////////////////// Main
 extern "C"

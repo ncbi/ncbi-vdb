@@ -49,6 +49,7 @@
 #include <klib/printf.h>
 #include <klib/out.h>
 #include <klib/rc.h>
+#include <kfg/properties.h>
 #include <sysalloc.h>
 
 #include <stdlib.h>
@@ -286,7 +287,6 @@ rc_t CC KMDataNodeFillSchema ( void *data, KTokenText *tt, size_t save )
         tt -> str . len = string_len ( pb -> buff, save + num_read );
         pb -> pos += num_read;
     }
-
     return rc;
 }
 
@@ -731,7 +731,7 @@ LIB_EXPORT rc_t CC VSchemaAddIncludePath ( VSchema *self, const char *path, ... 
 }
 
 
-/* ParseText
+/* ParseText_v1
  *  parse schema text
  *  add productions to existing schema
  *
@@ -741,8 +741,8 @@ LIB_EXPORT rc_t CC VSchemaAddIncludePath ( VSchema *self, const char *path, ... 
  *  "text" [ IN ] and "bytes" [ IN ] - input buffer of text
  */
 static
-rc_t CC VSchemaParseTextInt ( VSchema *self,
-    const char *name, const char *text, size_t bytes )
+rc_t
+VSchemaParseTextInt_v1 ( VSchema *self, const char *name, const char *text, size_t bytes )
 {
     KTokenText tt;
     KTokenSource src;
@@ -768,6 +768,50 @@ rc_t CC VSchemaParseTextInt ( VSchema *self,
     return rc;
 }
 
+/*TODO: move to a header */
+extern bool VSchemaParse_v2 ( VSchema *self, const char *text );
+
+static
+rc_t
+VSchemaParseTextInt_v2 ( VSchema *self, const char *name, const char *text, size_t bytes )
+{
+    if ( ! VSchemaParse_v2 ( self, text) )
+    {
+        return RC ( rcVDB, rcSchema, rcOpening, rcSchema, rcFailed );
+    }
+    return 0;
+}
+
+static
+rc_t
+VSchemaParseTextInt ( VSchema *self, const char *name, const char *text, size_t bytes )
+{
+    KConfig * kfg;
+    rc_t rc = KConfigMake ( & kfg, NULL );
+    if ( rc == 0 )
+    {
+        uint8_t version;
+        rc = KConfigGetSchemaParserVersion( kfg , & version );
+        if ( rc == 0 )
+        {
+            switch (version)
+            {
+            case 1:
+                rc = VSchemaParseTextInt_v1 ( self, name, text, bytes );
+                break;
+            case 2:
+                rc = VSchemaParseTextInt_v2 ( self, name, text, bytes );
+                break;
+            default:
+                rc = RC ( rcVDB, rcSchema, rcParsing, rcFileFormat, rcUnsupported );
+                break;
+            }
+        }
+    }
+    KConfigRelease ( kfg );
+    return rc;
+}
+
 LIB_EXPORT rc_t CC VSchemaParseText ( VSchema *self, const char *name,
     const char *text, size_t bytes )
 {
@@ -780,7 +824,9 @@ LIB_EXPORT rc_t CC VSchemaParseText ( VSchema *self, const char *name,
     else if ( text == NULL )
         rc = RC ( rcVDB, rcSchema, rcParsing, rcParam, rcNull );
     else
-        rc = VSchemaParseTextInt ( self, name, text, bytes );
+    {
+        rc = VSchemaParseTextInt ( self, name, text, bytes);
+    }
 
     return rc;
 }
@@ -806,7 +852,9 @@ rc_t VSchemaParseTextCallback ( VSchema *self, const char *name,
     tt . data = data;
 
     KTokenSourceInit ( & src, & tt );
-
+    /*NB: this invokes v1 parser, even though the parent schema may have been
+          processed by v2 parser. The reason is the possibility of v0 constructs
+          coming from older objects */
     return schema ( & src, self );
 }
 

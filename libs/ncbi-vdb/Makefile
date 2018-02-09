@@ -105,7 +105,8 @@ VDB_LIB_CMN =    \
 	$(LIBKQ)     \
 	kfc          \
 	bz2          \
-	z
+	z \
+	schema
 
 VDB_LIB_RD =              \
 	align-reader          \
@@ -129,7 +130,7 @@ VDB_LIB = \
 
 $(LIBDIR)/libncbi-vdb.$(SHLX): $(VDB_OBJ)
 	echo $(SRCDIR)
-	$(LD) --dlib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(VDB_LIB)
+	$(LD) --dlib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(VDB_LIB) -sstdc++
 
 $(LIBDIR)/libncbi-vdb.$(LIBX): $(VDB_OBJ)
 	$(LD) --slib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(VDB_LIB)
@@ -154,7 +155,7 @@ WVDB_LIB = \
 	$(addprefix -s,$(VDB_LIB_RDWR))
 
 $(LIBDIR)/libncbi-wvdb.$(SHLX): $(WVDB_OBJ)
-	$(LD) --dlib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(WVDB_LIB)
+	$(LD) --dlib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(WVDB_LIB) -sstdc++
 
 $(LIBDIR)/libncbi-wvdb.$(LIBX): $(WVDB_OBJ)
 	$(LD) --slib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(WVDB_LIB)

@@ -136,6 +136,9 @@ KFG_EXTERN rc_t CC KConfigSetProtectedRepositoryEnabledById( KConfig *self, uint
 KFG_EXTERN rc_t CC KConfigGetProtectedRepositoryCachedById( const KConfig *self, uint32_t id, bool * enabled );
 KFG_EXTERN rc_t CC KConfigSetProtectedRepositoryCachedById( KConfig *self, uint32_t id, bool enabled );
 
+/* Version of the schema parser to use */
+KFG_EXTERN rc_t CC KConfigGetSchemaParserVersion( const KConfig *self, uint8_t * version );
+
 #ifdef __cplusplus
 }
 #endif

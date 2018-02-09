@@ -773,12 +773,12 @@ TableDeclaration :: AddNewColumn ( SColumn & p_col, String & p_name )
         m_builder . ReportRc ( "KSymTableCreateConstSymbol", rc );
         return false;
     }
-    return m_builder .CreateOverload ( p_col . name,
-                                       & p_col,
-                                       SColumnSort,
-                                       m_self -> col,
-                                       m_self -> cname,
-                                       & p_col . cid . id );
+    return m_builder . CreateOverload ( p_col . name,
+                                        & p_col,
+                                        SColumnSort,
+                                        m_self -> col,
+                                        m_self -> cname,
+                                        & p_col . cid . id );
 }
 
 bool
@@ -807,12 +807,12 @@ TableDeclaration :: HandleTypedColumn ( SColumn & p_col, const AST & p_typedCol 
                 /* if column was forwarded, give it a type */
                 p_col . name = priorDecl;
                 priorDecl -> type = eColumn;
-                if ( ! m_builder .CreateOverload ( p_col . name,
-                                                & p_col,
-                                                SColumnSort,
-                                                m_self -> col,
-                                                m_self -> cname,
-                                                0 ) )
+                if ( ! m_builder . CreateOverload ( p_col . name,
+                                                    & p_col,
+                                                    SColumnSort,
+                                                    m_self -> col,
+                                                    m_self -> cname,
+                                                    0 ) )
                 {
                     return false;
                 }
@@ -828,12 +828,13 @@ TableDeclaration :: HandleTypedColumn ( SColumn & p_col, const AST & p_typedCol 
                 }
                 p_col . name = priorDecl;
                 // add column to m_self -> col
-                if ( ! m_builder . VectorAppend ( m_self -> col, 0, & p_col ) )
+                if ( ! m_builder . VectorAppend ( m_self -> col, & p_col . cid . id, & p_col ) )
                 {
                     return false;
                 }
                 // add a column overload
-                rc_t rc = VectorInsertUnique ( & name -> items, & p_col, NULL, SColumnSort );
+                uint32_t idx;
+                rc_t rc = VectorInsertUnique ( & name -> items, & p_col, &idx, SColumnSort );
                 if ( rc != 0 )
                 {
                     m_builder . ReportRc ( "VectorInsertUnique", rc );

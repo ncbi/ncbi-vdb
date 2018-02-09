@@ -2909,6 +2909,25 @@ void add_predefined_nodes ( KConfig * self, const char * appname )
     DEFINE_ENV("VDB_CONFIG");
 #undef DEFINE_ENV
 
+    value = getenv ( "VDB_SCHEMA" );
+    if ( value != NULL )
+    {
+        if ( string_size ( value ) != 1 || ( value[0] != '1' && value[0] != '2' ) )
+        {
+            PLOGMSG (klogWarn, (klogWarn, "Invalid value for VDB_SCHEMA: '$(s)', ignoring", "s=%s", value) );
+            value = NULL;
+        }
+        else
+        {
+            update_node(self, "vdb/schema/version", value, false );
+        }
+    }
+
+    if ( value == NULL )
+    {   /* set to default if not specified */
+        update_node(self, "vdb/schema/version", "2", false );
+    }
+
     KDirectoryRelease ( cwd );
 }
 
@@ -3140,7 +3159,7 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
         KConfig * mgr = NULL;
 
         if ( cfgdir != NULL ) {
-            /* local = true; 
+            /* local = true;
             ALWAYS create and/or return a singleton object. */
         }
 

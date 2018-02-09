@@ -195,7 +195,7 @@ public:
         {
             return std :: string ( buf );
         }
-        return "buffer to short for an error message";
+        return "buffer too short for an error message";
     }
 
     bool m_newParse;

@@ -107,7 +107,7 @@ TEST_MODES_LIB = \
     -sncbi-vdb
 
 $(TEST_BINDIR)/test-modes: $(TEST_MODES_OBJ)
-	$(LD) --exe -o $@ $^ $(TEST_MODES_LIB)
+	$(LD) --exe -o $@ $^ $(TEST_MODES_LIB) -sstdc++
 
 #-------------------------------------------------------------------------------
 # test AES encryption ciphers

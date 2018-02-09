@@ -37,7 +37,7 @@ ALL_TOOLS = \
 	env-test-tool \
 	sig-core \
 	report-kns-agent
-    
+
 include $(TOP)/build/Makefile.env
 
 $(TEST_TOOLS): makedirs
@@ -86,7 +86,7 @@ QFILETEST_LIB = \
 
 
 $(TEST_BINDIR)/test-qfile: $(QFILETEST_OBJ)
-	$(LD) --exe $(SRCDIR) -o $@ $^ $(QFILETEST_LIB)
+	$(LD) --exe $(SRCDIR) -o $@ $^ $(QFILETEST_LIB) -sstdc++
 
 #-------------------------------------------------------------------------------
 # env-test-tool
@@ -104,7 +104,7 @@ ENV_TEST_LIB = \
 	-lm
 
 $(TEST_BINDIR)/env-test-tool: $(ENV_TEST_OBJ)
-	$(LD) --exe -o $@ $^ $(ENV_TEST_LIB)
+	$(LD) --exe -o $@ $^ $(ENV_TEST_LIB) -sstdc++
 
 #-------------------------------------------------------------------------------
 # sig-core
@@ -122,8 +122,8 @@ SIG_CORE_TEST_LIB = \
 	-lm
 
 $(TEST_BINDIR)/sig-core: $(SIG_CORE_TEST_OBJ)
-	$(LD) --exe -o $@ $^ $(SIG_CORE_TEST_LIB)
-	
+	$(LD) --exe -o $@ $^ $(SIG_CORE_TEST_LIB) -sstdc++
+
 #-------------------------------------------------------------------------------
 # report-kns-agent
 #
@@ -138,7 +138,7 @@ REPORT_KNS_AGENT_TEST_LIB = \
 	-sncbi-vdb
 
 $(TEST_BINDIR)/report-kns-agent: $(REPORT_KNS_AGENT_TEST_OBJ)
-	$(LD) --exe -o $@ $^ $(REPORT_KNS_AGENT_TEST_LIB)
+	$(LD) --exe -o $@ $^ $(REPORT_KNS_AGENT_TEST_LIB) -sstdc++
 
 #-------------------------------------------------------------------------------
 # scripted tests
@@ -149,7 +149,7 @@ sig-core-tests: sig-core
 	@ echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 	@ echo "Running $(SRCDIR)/run-sig-core.sh $(TEST_BINDIR)/sig-core"
 	@ $(SRCDIR)/run-sig-core.sh $(TEST_BINDIR)/sig-core $(HOST_OS) $(BUILD)
-	
+
 kns-agent-tests: report-kns-agent
 	@ echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 	@ echo "Running kns-agent tests"
@@ -166,4 +166,4 @@ kns-agent-tests: report-kns-agent
 	@ $(SRCDIR)/run-kns-agent.sh $(TEST_BINDIR)/report-kns-agent ./tmp/abcdefghi abcdefghi.1.2.3
 	@ $(SRCDIR)/run-kns-agent.sh $(TEST_BINDIR)/report-kns-agent ./tmp/abcdefghi.55.111 abcdefghi.1.2.3
 	@ rm -rf ./tmp/
-	
+

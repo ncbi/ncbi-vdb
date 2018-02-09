@@ -51,8 +51,8 @@ JUDYTEST_OBJ = \
 
 JUDYTEST_LIB = \
 	-skapp \
-	-sncbi-vdb 
+	-sncbi-vdb
 
 $(TEST_BINDIR)/test-judy: $(JUDYTEST_OBJ)
-	$(LD) --exe $(SRCDIR) -o $@ $^ $(JUDYTEST_LIB)
+	$(LD) --exe $(SRCDIR) -o $@ $^ $(JUDYTEST_LIB) -sstdc++
 

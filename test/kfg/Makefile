@@ -55,7 +55,7 @@ ENV_OBJ = \
 	$(addsuffix .$(OBJX),$(ENV_SRC))
 
 $(TEST_BINDIR)/ncbi-home-from-env: $(ENV_OBJ)
-	$(LP) --exe -o $@ $^ $(ENV_LIB) 
+	$(LP) --exe -o $@ $^ $(ENV_LIB)
 
 #-------------------------------------------------------------------------------
 # white-box test
@@ -90,7 +90,7 @@ $(TEST_BINDIR)/flat-sra-kfg: $(FLAT_OBJ)
 # test-kfg
 #
 TEST_KFG_SRC = \
-	kfgtest 
+	kfgtest
 
 TEST_KFG_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_KFG_SRC))
@@ -103,11 +103,14 @@ TEST_KFG_LIB = \
 $(TEST_BINDIR)/test-kfg: $(TEST_KFG_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_KFG_LIB)
 
+kfg: test-kfg
+	$(TEST_BINDIR)/$^
+
 #-------------------------------------------------------------------------------
 # test-repository
 #
 TEST_REPOSITORY_SRC = \
-	repositorytest 
+	repositorytest
 
 TEST_REPOSITORY_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_REPOSITORY_SRC))
@@ -124,7 +127,7 @@ $(TEST_BINDIR)/test-repository: $(TEST_REPOSITORY_OBJ)
 # test-keystore
 #
 TEST_KEYSTORE_SRC = \
-	keystoretest 
+	keystoretest
 
 TEST_KEYSTORE_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_KEYSTORE_SRC))

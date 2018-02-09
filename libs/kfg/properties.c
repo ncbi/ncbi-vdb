@@ -766,3 +766,14 @@ LIB_EXPORT rc_t CC KConfigSetProtectedRepositoryCachedById( KConfig *self, uint3
         rc = KConfig_Set_Repository_State( self, enabled, false, "/repository/user/protected/%s/cache-enabled", repo_name );
     return rc;
 }
+
+LIB_EXPORT rc_t CC KConfigGetSchemaParserVersion( const KConfig *self, uint8_t * version )
+{
+    uint64_t result = 0;
+    rc_t rc = KConfigReadU64 ( self, "vdb/schema/version", & result );
+    if ( rc == 0 )
+    {
+        * version = result;
+    }
+    return rc;
+}
