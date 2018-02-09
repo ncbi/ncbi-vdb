@@ -1693,7 +1693,7 @@ rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
     const VPath ** path, const VPath ** mapping, const KFile ** opt_file_rtn, bool legacy_wgs_refseq,
     const char * version )
 {
-    rc_t rc;
+    rc_t rc = 0;
     uint32_t i, count;
 
     /* expanded accession */
@@ -2261,7 +2261,7 @@ uint32_t get_accession_code ( const String * accession, VResolverAccToken *tok )
  */
 static
 VResolverAppID get_accession_app ( const String * accession, bool refseq_ctx,
-    VResolverAccToken *tok, bool *legacy_wgs_refseq )
+    VResolverAccToken *tok, bool *legacy_wgs_refseq, bool forUrl )
 {
     VResolverAppID app;
     uint32_t code = get_accession_code ( accession, tok );
@@ -2353,7 +2353,10 @@ VResolverAppID get_accession_app ( const String * accession, bool refseq_ctx,
         /* TBD - people appear to be able to throw anything into refseq,
            so anything unrecognized we may as well test out there...
            but this should not stay the case */
-        app = appREFSEQ;
+        if ( forUrl )
+            app = appFILE;
+        else
+            app = appREFSEQ;
     }
 
     if ( app == appWGS )
@@ -2439,7 +2442,8 @@ rc_t VResolverLocalResolve ( const VResolver *self,
         return 0;
     }
 
-    app = get_accession_app ( accession, refseq_ctx, & tok, & legacy_wgs_refseq );
+    app = get_accession_app ( accession, refseq_ctx, & tok,
+                              & legacy_wgs_refseq, false );
 
     /* search all local volumes by app and accession algorithm expansion */
 
@@ -2697,7 +2701,8 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
 
     /* subject the accession to pattern recognition */
     if ( ! is_oid )
-        app = get_accession_app ( accession, refseq_ctx, & tok, & legacy_wgs_refseq );
+        app = get_accession_app ( accession, refseq_ctx, & tok,
+                                  & legacy_wgs_refseq, false );
     else
     {
         app = appAny;
@@ -2794,7 +2799,7 @@ static
 VResolverAppID VResolverExtractAccessionApp ( const VResolver *self,
     const VPath * query, bool has_fragment,
     String * accession, VResolverAccToken * tok,
-    bool *legacy_wgs_refseq )
+    bool *legacy_wgs_refseq, bool forUrl )
 {
     bool refseq_ctx = has_fragment;
 
@@ -2805,7 +2810,8 @@ VResolverAppID VResolverExtractAccessionApp ( const VResolver *self,
 
     /* should have something looking like an accession.
        determine its app to see if we were successful */
-    return get_accession_app ( accession, refseq_ctx, tok, legacy_wgs_refseq );
+    return get_accession_app ( accession, refseq_ctx, tok,
+                               legacy_wgs_refseq, forUrl );
 }
 
 static
@@ -2875,7 +2881,7 @@ rc_t VPathExtractAcc ( const VPath * url, VPath ** acc )
 static
 rc_t VResolverCacheResolve ( const VResolver *self,
     const VPath * query, bool has_fragment,
-    const VPath ** cache, bool refseq_ctx )
+    const VPath ** cache, bool refseq_ctx, bool forUrl )
 {
     rc_t rc = 0;
 
@@ -2883,7 +2889,7 @@ rc_t VResolverCacheResolve ( const VResolver *self,
     VResolverAccToken tok;
     bool legacy_wgs_refseq = false;
     VResolverAppID app = VResolverExtractAccessionApp ( self,
-        query, has_fragment, & accession, & tok, & legacy_wgs_refseq );
+        query, has_fragment, & accession, & tok, & legacy_wgs_refseq, forUrl );
 
     /* going to walk the local volumes, and remember
        which one was best. actually, we have no algorithm
@@ -3273,7 +3279,8 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
                     else
                     {
                         /* resolve from accession to cache path */
-                        rc = VResolverCacheResolve ( self, mapped_query, has_fragment, cache, refseq_ctx );
+                        rc = VResolverCacheResolve ( self, mapped_query,
+                            has_fragment, cache, refseq_ctx, false );
                     }
                     if ( rc != 0 && remote != NULL )
                     {
@@ -3297,7 +3304,8 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
  */
 static
 rc_t VResolverQueryAcc ( const VResolver * self, VRemoteProtocols protocols,
-    const VPath * query, const VPath ** local, const VPath ** remote, const VPath ** cache, const char * version )
+    const VPath * query, const VPath ** local, const VPath ** remote,
+    const VPath ** cache, const char * version, bool forUrl )
 {
     rc_t rc = 0;
 
@@ -3347,14 +3355,16 @@ rc_t VResolverQueryAcc ( const VResolver * self, VRemoteProtocols protocols,
         if ( ( remote == NULL || * remote != NULL ) && cache != NULL )
         {
             if ( mapped_query != NULL )
-                rc = VResolverCacheResolve ( self, mapped_query, has_fragment, cache, refseq_ctx );
+                rc = VResolverCacheResolve ( self, mapped_query, has_fragment,
+                                             cache, refseq_ctx, forUrl );
 #if 0
             /* the bad assumption that every remotely retrieved accession MUST be mapped */
             else if ( self -> ticket != NULL )
                 rc = RC ( rcVFS, rcResolver, rcResolving, rcPath, rcNotFound );
 #endif
             else
-                rc = VResolverCacheResolve ( self, query, has_fragment, cache, refseq_ctx );
+                rc = VResolverCacheResolve ( self, query, has_fragment,
+                                             cache, refseq_ctx, forUrl );
 
             if ( rc != 0 && remote != NULL )
             {
@@ -3463,7 +3473,8 @@ rc_t VResolverQueryURL ( const VResolver * self, VRemoteProtocols protocols,
         if ( rc == 0 )
         {
             /* now map to cache location */
-            rc = VResolverCacheResolve ( self, mapping, false, cache, refseq_ctx );
+            rc = VResolverCacheResolve ( self, mapping, false,
+                                         cache, refseq_ctx, false );
             VPathRelease ( mapping );
             if ( GetRCState ( rc ) == rcNotFound && remote != NULL )
                 rc = 0;
@@ -3523,7 +3534,8 @@ rc_t VResolverQueryURL ( const VResolver * self, VRemoteProtocols protocols,
  */
 static
 rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
-    const VPath * query, const VPath ** local, const VPath ** remote, const VPath ** cache, const char * version )
+    const VPath * query, const VPath ** local, const VPath ** remote,
+    const VPath ** cache, const char * version, bool forUrl )
 {
     rc_t rc;
 
@@ -3627,7 +3639,8 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
                 break;
 
             case vpAccession:
-                rc = VResolverQueryAcc ( self, protocols, query, local, remote, cache, version );
+                rc = VResolverQueryAcc ( self, protocols, query, local,
+                                         remote, cache, version, forUrl );
                 break;
 
             case vpNameOrOID:
@@ -3637,7 +3650,8 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
                 break;
 
             case vpNameOrAccession:
-                rc = VResolverQueryAcc ( self, protocols, query, local, remote, cache, version );
+                rc = VResolverQueryAcc ( self, protocols, query, local,
+                                         remote, cache, version, forUrl );
                 if ( rc != 0 )
                     goto try_name;
                 break;
@@ -3648,7 +3662,8 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
                 {
                     if ( VPathHasRefseqContext ( query ) )
                     {
-                        rc = VResolverQueryAcc ( self, protocols, query, local, remote, cache, version );
+                        rc = VResolverQueryAcc ( self, protocols, query, local,
+                                               remote, cache, version, forUrl );
                         if ( rc == 0 )
                             break;
                     }
@@ -3678,7 +3693,7 @@ rc_t CC oldVResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
     const VPath * query, const VPath ** local, const VPath ** remote, const VPath ** cache )
 {
     rc_t rc = VResolverQueryInt ( self, protocols, query, local, remote, cache,
-        NULL );
+        NULL, false );
     if ( rc == 0 )
     {
         /* the paths returned from resolver are highly reliable */
@@ -3693,13 +3708,14 @@ rc_t CC oldVResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
 }
 #endif
 
-LIB_EXPORT
-rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
-    const VPath * query, const VPath ** local, const VPath ** remote, const VPath ** cache )
+static
+rc_t CC VResolverQueryImpl ( const VResolver * self, VRemoteProtocols protocols,
+    const VPath * query, const VPath ** local, const VPath ** remote,
+    const VPath ** cache, bool forUrl )
 {
     rc_t rcs = -1;
-    rc_t rc = rcs = VResolverQueryInt
-        ( self, protocols, query, local, remote, cache, self -> version );
+    rc_t rc = rcs = VResolverQueryInt (
+        self, protocols, query, local, remote, cache, self -> version, forUrl );
     if ( rc == 0 )
     {
         /* the paths returned from resolver are highly reliable */
@@ -3781,7 +3797,7 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
 #if _DEBUGGING
         rc_t ro =
 #endif
-            VResolverQueryInt ( self, protocols, query, l, p, c, "#1.2" );
+           VResolverQueryInt ( self, protocols, query, l, p, c, "#1.2", false );
         assert ( rcs == ro );
         if ( remote == NULL )
             assert ( p == NULL );
@@ -3826,6 +3842,22 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
 #endif
 
     return rc;
+}
+
+LIB_EXPORT
+rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
+    const VPath * query, const VPath ** local, const VPath ** remote,
+    const VPath ** cache )
+{
+    return VResolverQueryImpl ( self, protocols, query, local, remote, cache,
+                                false );
+}
+
+LIB_EXPORT
+rc_t CC VResolverCacheForUrl ( const VResolver * self, const VPath * query,
+    const VPath ** cache)
+{
+    return VResolverQueryImpl ( self, 0, query, NULL, NULL, cache, true );
 }
 
 /* LoadVolume

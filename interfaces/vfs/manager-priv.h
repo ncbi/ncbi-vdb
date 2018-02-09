@@ -154,6 +154,12 @@ VFS_EXTERN rc_t CC VFSManagerDeleteCacheOlderThan ( const struct VFSManager * se
     uint32_t days );
 
 
+/* CacheForUrl:
+ * get cache location when URL is requested: use FILE app rather than REFSEQ */
+VFS_EXTERN rc_t CC VResolverCacheForUrl ( const struct VResolver * self,
+    const struct VPath * query, const struct VPath ** cache);
+
+
 #ifdef __cplusplus
 }
 #endif
