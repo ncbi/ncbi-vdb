@@ -70,6 +70,11 @@
 #include <os-native.h>
 #include <assert.h>
 
+#include <limits.h> /* PATH_MAX */
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
 
@@ -1820,6 +1825,40 @@ rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
     return RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
 }
 
+/* CacheResolve
+ *  resolve accession to the current directory
+ */
+static rc_t VResolverAlgCacheResolveCwd ( const VResolverAlg *self,
+    const KDirectory *wd, const VResolverAccToken *tok,
+    const VPath ** path, bool legacy_wgs_refseq )
+{
+    /* expanded accession */
+    String exp;
+    size_t size = 0;
+    char expanded [ 256 ] = "";
+    char resolved [ PATH_MAX ] = "";
+
+    /* expand the accession */
+    rc_t rc = expand_algorithm ( self, tok, expanded, sizeof expanded,
+                                 & size, legacy_wgs_refseq );
+
+    /* should never have a problem here... */
+    if ( rc != 0 )
+        return rc;
+
+    /* turn the expanded portion into a String
+       we know that size is also length due to
+       accession content rules */
+    StringInit ( & exp, expanded, size, ( uint32_t ) size );
+
+    rc = KDirectoryResolvePath ( wd, true, resolved, sizeof resolved,
+                                 "./%s", expanded );
+
+    if ( rc == 0 )
+        rc = VPathMakeFmt ( ( VPath ** ) path, "%s", resolved );
+
+    return rc;
+}
 
 /* CacheResolve
  *  try to resolve accession for currently cached file
@@ -2910,6 +2949,11 @@ rc_t VResolverCacheResolve ( const VResolver *self,
         for ( i = 0; i < count; ++ i )
         {
             alg = VectorGet ( & self -> local, i );
+
+            if ( forUrl && app == appFILE )
+                return VResolverAlgCacheResolveCwd ( alg, self -> wd, & tok,
+                    cache, legacy_wgs_refseq );
+
             if ( alg -> cache_capable && alg -> protected == protected &&
                  ( alg -> app_id == app || alg -> app_id == appAny ) )
             {
@@ -2937,6 +2981,11 @@ rc_t VResolverCacheResolve ( const VResolver *self,
         for ( i = 0; i < count; ++ i )
         {
             alg = VectorGet ( & self -> local, i );
+
+            if ( forUrl && app == appFILE )
+                return VResolverAlgCacheResolveCwd ( alg, self -> wd, & tok,
+                    cache, legacy_wgs_refseq );
+
             if ( alg -> cache_enabled && alg -> protected == protected &&
                  ( alg -> app_id == app || alg -> app_id == appAny ) )
             {
@@ -3854,10 +3903,10 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
 }
 
 LIB_EXPORT
-rc_t CC VResolverCacheForUrl ( const VResolver * self, const VPath * query,
-    const VPath ** cache)
+rc_t CC VResolverQueryForUrl ( const VResolver * self, const VPath * query,
+    const VPath ** local, const VPath ** cache)
 {
-    return VResolverQueryImpl ( self, 0, query, NULL, NULL, cache, true );
+    return VResolverQueryImpl ( self, 0, query, local, NULL, cache, true );
 }
 
 /* LoadVolume
