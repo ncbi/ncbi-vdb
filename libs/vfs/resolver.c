@@ -3717,6 +3717,12 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
                             break;
                     }
                 }
+                else if ( forUrl ) {
+                    rc = VResolverQueryAcc ( self, protocols, query, local,
+                                               remote, cache, version, forUrl );
+                    if ( rc == 0 )
+                        break;
+                }
             try_name:
                 rc = VResolverQueryName ( self, protocols, query, local, remote, cache );
                 break;
