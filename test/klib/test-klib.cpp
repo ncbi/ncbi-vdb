@@ -775,8 +775,10 @@ TEST_CASE(IsUserAnAdminTest)
         REQUIRE ( !is_iser_an_admin() );
     }
 #else
-    // Linux or not under TeamCity
+#if !defined (MAC)
+    // Linux
     REQUIRE ( !is_iser_an_admin() );
+#endif
 #endif
 }
 

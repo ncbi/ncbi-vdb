@@ -102,7 +102,7 @@ struct VPath
     String     id;           /* object-id */
 
     String     tick;         /* dbGaP download ticket */
-    size_t     size;         /* object's un-encrypted size in byte */
+    uint64_t   osize;        /* object's un-encrypted size in bytes */
     KTime_t    modification; /* object's modification date. 0 if unknown */
     KTime_t    expiration;   /* expiration date of this VPath object.
                                 0 if infinite */
@@ -169,8 +169,8 @@ VPUri_t VPathGetUri_t (const VPath * self);
 
 
 rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
-    const String * tick, bool ext, const String * id, size_t size, KTime_t date,
-    const uint8_t md5 [ 16 ], KTime_t exp_date );
+    const String * tick, bool ext, const String * id, uint64_t osize,
+    KTime_t date, const uint8_t md5 [ 16 ], KTime_t exp_date );
 
 /* Equal
  *  compares two VPath-s

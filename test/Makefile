@@ -35,6 +35,7 @@ include $(TOP)/build/Makefile.config
 # default
 #
 SUBDIRS =       \
+    ngs         \
     ktst        \
     cc          \
     ext         \
@@ -44,16 +45,15 @@ SUBDIRS =       \
     klib        \
     kfg         \
     kapp        \
+    vfs         \
     kns         \
     kdb         \
     kproc       \
     vdb         \
-    ngs         \
     ngs-c++     \
     ngs-java    \
     ngs-python  \
     search      \
-    vfs         \
     sraxf       \
     vxf         \
     loader      \
