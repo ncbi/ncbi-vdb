@@ -113,7 +113,7 @@ FIXTURE_TEST_CASE(F_asp, PathFixture)
 
 FIXTURE_TEST_CASE(Fasp1G, PathFixture)
 {
-    REQUIRE_RC(VFSManagerMakePath ( vfs, &path, "fasp://u@ftp.gov:1G"));
+    VFSManagerMakePath ( vfs, &path, "fasp://u@ftp.gov:1G");
 }
 
 FIXTURE_TEST_CASE(Http, PathFixture)
