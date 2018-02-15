@@ -19,3 +19,26 @@
    ...
    fun:_ZN16ChildProcessFail8Instance11test_methodEv
 }
+{
+   ktst_exception_in_child_process
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:malloc
+   fun:__cxa_allocate_exception
+   ...
+   fun:_ZN16ChildProcessFail8Instance11test_methodEv
+}
+
+{
+   bison_error_recovery_leaks_whitespace_in_AST_parser
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:realloc
+   fun:AddWhitespace
+   fun:schema_yylex
+   fun:SchemaScan_yylex
+   fun:_Z12Schema_parsePPN4ncbi12SchemaParser9ParseTreeEPNS0_11ErrorReportEP15SchemaScanBlock
+   fun:_ZN4ncbi12SchemaParser12SchemaParser11ParseStringEPKcb
+   fun:_ZN11AST_Fixture7MakeAstEPKc
+   fun:_ZN24Const_UnterminatedString8Instance11test_methodEv
+}

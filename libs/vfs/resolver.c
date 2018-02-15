@@ -91,10 +91,13 @@
 #define NAME_SERVICE_MAJ_VERS_ 1
 #define NAME_SERVICE_MIN_VERS_ 2
 #define ONE_DOT_ONE 0x01010000
-static uint32_t NAME_SERVICE_MAJ_VERS = NAME_SERVICE_MAJ_VERS_;
-static uint32_t NAME_SERVICE_MIN_VERS = NAME_SERVICE_MIN_VERS_;
-static uint32_t NAME_SERVICE_VERS
-    = NAME_SERVICE_MAJ_VERS_ << 24 | NAME_SERVICE_MIN_VERS_ << 16;
+
+#ifdef TESTING_SERVICES_VS_OLD_RESOLVING
+    static uint32_t NAME_SERVICE_MAJ_VERS = NAME_SERVICE_MAJ_VERS_;
+    static uint32_t NAME_SERVICE_MIN_VERS = NAME_SERVICE_MIN_VERS_;
+    static uint32_t NAME_SERVICE_VERS
+        = NAME_SERVICE_MAJ_VERS_ << 24 | NAME_SERVICE_MIN_VERS_ << 16;
+#endif
 
 
 /*--------------------------------------------------------------------------
@@ -1089,12 +1092,12 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
             uint8_t ud5 [ 16 ];
             bool has_md5 = false;
             KTime_t date = 0;
-            size_t size = 0;
+            uint64_t osize = 0;
             if ( size_str . size != 0  && size_str . len != 0 ) {
                 rc_t r2 = 0;
-                size = StringToU64 ( & size_str, & r2 );
+                osize = StringToU64 ( & size_str, & r2 );
                 if ( r2 != 0 )
-                    size = 0;
+                    osize = 0;
             }
             if ( mod_date . addr != NULL && mod_date . size > 0 ) {
                 KTime kt;
@@ -1106,7 +1109,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
             if ( md5 . addr != NULL && md5 . size == 32 ) {
                 int i = 0;
                 for ( i = 0; i < 16 && rc == 0; ++ i ) {
-                    ud5 [ i ]  = getDigit ( md5 . addr [ 2 * i     ], & rc ) * 16;
+                    ud5 [ i ]  = getDigit ( md5 . addr [ 2 * i ], & rc ) * 16;
                     ud5 [ i ] += getDigit ( md5 . addr [ 2 * i + 1 ], & rc );
                 }
                 has_md5 = rc == 0;
@@ -1116,13 +1119,16 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
 #if DO_NOT_USE_TIC_HACK
                  || mapping != NULL
 #endif
-                )
-            {*/
+                )*/
+            {
+                const String * id = & accession;
+                if ( id -> size == 0 )
+                    id = & obj_id;
                 rc = VPathMakeFromUrl ( ( VPath** ) path, & url,
-                    & download_ticket, true, & accession, size, date,
+                    & download_ticket, true, id, osize, date,
                     has_md5 ? ud5 : NULL, 0 );
-            /*}
-            else
+            }
+            /*else
             {
                 * protected response *
                 rc = VPath MakeFmtExt ( ( VPath** ) path, true, & accession,
@@ -1956,6 +1962,9 @@ struct VResolver
     /** projectId of protected user repository;
         0 when repository is not user protected */
     uint32_t projectId;
+
+    char *version;
+    bool resoveOidName;
 };
 
 
@@ -1970,6 +1979,10 @@ static atomic32_t enable_local, enable_remote, enable_cache;
 static
 rc_t VResolverWhack ( VResolver *self )
 {
+    assert ( self );
+
+    free ( self -> version );
+
     KRefcountWhack ( & self -> refcount, "VResolver" );
 
     /* drop all remote volume sets */
@@ -1992,6 +2005,7 @@ rc_t VResolverWhack ( VResolver *self )
     /* release directory onto local file system */
     KDirectoryRelease ( self -> wd );
 
+    memset ( self, 0, sizeof * self );
     free ( self );
     return 0;
 }
@@ -2470,8 +2484,8 @@ rc_t VResolverLocalFile ( const VResolver *self, const VPath * query, const VPat
     return RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
 }
 
-static
-bool VPathHasRefseqContext ( const VPath * accession )
+LIB_EXPORT
+bool CC VPathHasRefseqContext ( const VPath * accession )
 {
     size_t num_read;
     char option [ 64 ];
@@ -2646,6 +2660,17 @@ VResolverEnableState CC VResolverCacheEnable ( const VResolver * self, VResolver
     return prior;
 }
 
+rc_t VResolverResolveName ( VResolver * self, int resolve ) {
+    if ( self == NULL )
+        return RC ( rcVFS, rcResolver, rcUpdating, rcSelf, rcNull );
+
+    switch ( resolve ) {
+        case 0 : self -> resoveOidName = DEFAULT_RESOVE_OID_NAME; break; 
+        case 1 : self -> resoveOidName = true                   ; break; 
+        default: self -> resoveOidName = false                  ; break; 
+    }
+    return 0;
+}
 
 /* RemoteResolve
  *  resolve an accession into a remote VPath or not found
@@ -3063,7 +3088,7 @@ rc_t get_query_accession ( const VPath * query, String * accession, char * oid_s
 
 static
 rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
-    const VPath * query, const VPath ** local, const VPath ** remote, const VPath ** cache )
+    const VPath * query, const VPath ** local, const VPath ** remote, const VPath ** cache, const char * version )
 {
     rc_t rc;
 
@@ -3086,25 +3111,36 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
             /* not expected to ever be true */
             bool refseq_ctx = VPathHasRefseqContext ( query );
 
-            /* PREFACE - having an oid, we will need to map it to either
-               an accession or simple filename before resolving to a
-               local or cache path. there are two ways of getting this
-               mapping: either through the VFS manager, or by asking the
-               remote resolver CGI.
+/* OLD =====================================================
+   PREFACE - having an oid, we will need to map it to either
+   an accession or simple filename before resolving to a
+   local or cache path. there are two ways of getting this
+   mapping: either through the VFS manager, or by asking the
+   remote resolver CGI.
 
-               ASSUMPTION - if the file exists locally or is cached,
-               there should be a mapping available to VFS manager. this
-               assumption can fail if the mapping database has been lost
-               or damaged.
-            */
+   ASSUMPTION - if the file exists locally or is cached,
+   there should be a mapping available to VFS manager. this
+   assumption can fail if the mapping database has been lost
+   or damaged.
+   ==========================================================
+   NEW ======================================================
+   Remote resolver CGI does not return file name since version 3.
+   File name, aling with oid comes from kart file.
+   Mapping database is updated while kart is read.
+ */
 
             /* MAP OID TO ACCESSION */
             if ( local != NULL || cache != NULL )
             {
                 /* we want a mapping. ask VFS manager for one */
                 rc = VFSManagerGetObject ( vfs, query -> obj_id, & mapped_query );
-                if ( GetRCState ( rc ) == rcNotFound )
+                if ( GetRCState ( rc ) == rcNotFound && self -> resoveOidName )
                 {
+/* NEW: should never got here, mapping should be registered when reading kart 
+   file in the same application.
+   'bool resoveOidName' is used for testing
+   or not to fail when sometihing unexpected happens
+ */
                     /* no mapping could be found. another possibility is to resolve remotely */
                     if ( remote != NULL || atomic32_read ( & enable_remote ) != vrAlwaysDisable )
                     {
@@ -3112,9 +3148,10 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
                         if ( rc == 0 )
                         {
                             const VPath * remote2, * remote_mapping = NULL;
+/* call CGI with version 1.2 */
                             rc = VResolverRemoteResolve ( self, protocols,
                                 & accession, & remote2, & remote_mapping, NULL,
-                                refseq_ctx, true, NULL );
+                                refseq_ctx, true, "#1.2" );
                             if ( rc == 0 )
                             {
                                 /* got it. now enter into VFS manager's table */
@@ -3175,21 +3212,25 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
                 }
             }
 
+/* NEW: not sure why this code is here, so do not touch it,
+        call resolver-1.2 when 'resoveOidName' is set */
             if ( local == NULL || * local == NULL )
             {
                 bool has_fragment = false;
 
                 /* RESOLVE FOR REMOTE */
-                if ( remote != NULL && * remote == NULL )
+                if ( remote != NULL && * remote == NULL
+                                    && self -> resoveOidName )
                 {
                     rc = get_query_accession ( query, & accession, oid_str, sizeof oid_str );
                     if ( rc == 0 )
                     {
                         const VPath * remote_mapping = NULL;
+/* call CGI with version 1.2 */
                         rc = VResolverRemoteResolve ( self, protocols,
             & accession, remote,
             ( mapped_query == NULL && cache != NULL ) ? & remote_mapping : NULL,
-            NULL, refseq_ctx, true, NULL );
+            NULL, refseq_ctx, true, "#1.2" );
 
                         if ( rc == 0 && mapped_query == NULL && cache != NULL && remote_mapping == NULL )
                         {
@@ -3582,7 +3623,7 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
                 break;
 
             case vpOID:
-                rc = VResolverQueryOID ( self, protocols, query, local, remote, cache );
+                rc = VResolverQueryOID ( self, protocols, query, local, remote, cache, version );
                 break;
 
             case vpAccession:
@@ -3590,7 +3631,7 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
                 break;
 
             case vpNameOrOID:
-                rc = VResolverQueryOID ( self, protocols, query, local, remote, cache );
+                rc = VResolverQueryOID ( self, protocols, query, local, remote, cache, version );
                 if ( rc != 0 )
                     goto try_name;
                 break;
@@ -3658,7 +3699,7 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
 {
     rc_t rcs = -1;
     rc_t rc = rcs = VResolverQueryInt
-        ( self, protocols, query, local, remote, cache, "#3.0" );
+        ( self, protocols, query, local, remote, cache, self -> version );
     if ( rc == 0 )
     {
         /* the paths returned from resolver are highly reliable */
@@ -3748,6 +3789,7 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
             assert ( p && * p == NULL && oath == NULL );
         else {
             int notequal = ~ 0;
+            VPathMarkHighReliability ( ( VPath * ) oath, true );
             assert ( ! VPathEqual ( * remote, oath, & notequal ) );
             if ( notequal )
                 assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
@@ -4953,7 +4995,6 @@ rc_t VResolverGetProjectId ( const VResolver * self, uint32_t * projectId )
     }
 }
 
-
 /* Make
  *  internal factory function
  */
@@ -5001,6 +5042,12 @@ rc_t VResolverMake ( VResolver ** objp, const KDirectory *wd,
 
         KRepositoryProjectId ( protected, & obj -> projectId );
 
+        obj -> version = string_dup_measure ( "#3.0", NULL );
+        if ( obj -> version == NULL )
+            rc = RC ( rcVFS, rcMgr, rcCreating, rcMemory, rcExhausted );
+
+        obj -> resoveOidName = DEFAULT_RESOVE_OID_NAME; /* just in case */
+
         if ( rc == 0 )
         {
             * objp = obj;
@@ -5011,6 +5058,17 @@ rc_t VResolverMake ( VResolver ** objp, const KDirectory *wd,
     }
 
     return rc;
+}
+
+rc_t VResolverSetVersion ( VResolver *self, const char * version ) {
+    if ( self == NULL )
+        return RC ( rcVFS, rcResolver, rcUpdating, rcSelf, rcNull );
+    if ( self == NULL || version == NULL )
+        return RC ( rcVFS, rcResolver, rcUpdating, rcParam, rcNull );
+
+    free ( self -> version );
+    self -> version = string_dup_measure ( version, NULL );
+    return 0;
 }
 
 /* Make

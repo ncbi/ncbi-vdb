@@ -195,7 +195,7 @@ rc_t KHttpFileTimedReadInt ( const KHttpFile *cself,
         /* limit request to file size */
         if ( pos + bsize > self -> file_size )
         {
-            bsize = self -> file_size - pos;
+            bsize = ( size_t ) ( self -> file_size - pos );
             if (bsize < sizeof buf)
             {
                 size_t d = sizeof buf - bsize;
@@ -207,7 +207,7 @@ rc_t KHttpFileTimedReadInt ( const KHttpFile *cself,
                 else { /* TODO: Downloading file with size < 256:
 need to reopen the connection now;
 otherwise we are going to hit "Apache return HTTP headers twice" bug */
-                    bsize += pos;
+                    bsize += ( size_t ) pos;
                     pos = 0;
                 }
             }
@@ -296,7 +296,7 @@ otherwise we are going to hit "Apache return HTTP headers twice" bug */
                                         if (pos != aPos)
                                         {
                                             assert(pos < aPos);
-                                            skip = aPos - pos;
+                                            skip = ( size_t ) ( aPos - pos );
                                             assert(result_size >= skip);
                                             result_size -= skip;
                                         }
@@ -434,11 +434,15 @@ rc_t CC KHttpFileRead ( const KHttpFile *self, uint64_t pos,
     TimeoutInit ( & tm, self -> kns -> http_read_timeout );
     rc = KHttpFileTimedRead ( self, pos, buffer, bsize, num_read, & tm );
     if ( rc != 0 && KNSManagerLogNcbiVdbNetError ( self -> kns ) ) {
-        KEndPoint ep;
-        KClientHttpGetEndpoint ( self -> http, & ep );
+        KEndPoint ep, local_ep;
+        KClientHttpGetLocalEndpoint  ( self -> http, & local_ep );
+        KClientHttpGetRemoteEndpoint ( self -> http, & ep );
         PLOGERR ( klogErr, ( klogErr, rc,
-            "Failed to KHttpFileRead('$(path)' ($(ip)))", "path=%s,ip=%s",
-            self -> url_buffer . base, ep . ip_address ) );
+            "Failed to KHttpFileRead("
+            "'$(path)' ($(ip)), $(bytes)) from '$(local)'",
+               "path=%s,ip=%s,bytes=%zu,local=%s",
+            self -> url_buffer . base,
+            ep . ip_address, bsize, local_ep . ip_address ) );
     }
     return rc;
 }
@@ -540,25 +544,30 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                         rc = KClientHttpRequestHEAD ( req, & rslt );
                                         KClientHttpRequestRelease ( req );
 
-                                        if ( rc == 0 )
+                                        if ( rc != 0 ) {
+                                            if ( KNSManagerLogNcbiVdbNetError ( self ) )
+                                            {
+                                                KEndPoint ep, local_ep;
+                                                KClientHttpGetLocalEndpoint  ( http, & local_ep );
+                                                KClientHttpGetRemoteEndpoint ( http, & ep );
+                                                PLOGERR ( klogErr, ( klogErr, rc,
+                                                    "Failed to KClientHttpRequestHEAD("
+                                                    "'$(path)' ($(ip))) from '$(local)'",
+                                                    "path=%.*s,ip=%s,local=%s",
+                                                    buf -> elem_count - 1, buf -> base,
+                                                    ep . ip_address, local_ep . ip_address ) );
+                                            }
+                                        }
+                                        else
                                         {
                                             uint64_t size;
                                             uint32_t status;
-
-                                            size_t num_read;
-                                            char buffer [ 64 ];
 
                                             /* get the file size from HEAD query */
                                             bool have_size = KClientHttpResultSize ( rslt, & size );
 
                                             /* see if the server accepts partial content range requests */
-                                            bool accept_ranges = false;
-                                            rc = KClientHttpResultGetHeader ( rslt, "Accept-Ranges", buffer, sizeof buffer, & num_read );
-                                            if ( rc == 0 && num_read == sizeof "bytes" - 1 &&
-                                                 strcase_cmp ( buffer, num_read, "bytes", sizeof "bytes" - 1, -1 ) == 0 )
-                                            {
-                                                accept_ranges = true;
-                                            }
+                                            bool accept_ranges = KClientHttpResultTestHeaderValue ( rslt, "Accept-Ranges", "bytes" );
 
                                             /* check the result status */
                                             rc = KClientHttpResultStatus ( rslt, & status, NULL, 0, NULL );
@@ -602,16 +611,34 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                                     }
                                                 }
                                                 else {
-                                                    KEndPoint ep;
-                                                    KClientHttpGetEndpoint ( http, & ep );
+                                                    KEndPoint ep, local_ep;
+                                                    KClientHttpGetLocalEndpoint  ( http, & local_ep );
+                                                    KClientHttpGetRemoteEndpoint ( http, & ep );
                                                     if ( KNSManagerLogNcbiVdbNetError ( self ) ) {
-                                                        assert ( buf );
-                                                        PLOGERR ( klogErr,
+                                                        bool print = true;
+                                                        String vdbcache;
+                                                        CONST_STRING ( & vdbcache, ".vdbcache" );
+                                                        if ( buf -> elem_count > vdbcache . size ) {
+                                                            String ext;
+                                                            StringInit ( & ext, ( char * ) buf -> base
+                                                                            + buf -> elem_count - vdbcache . size - 1,
+                                                                vdbcache . size, vdbcache . size );
+                                                            if ( ext . addr [ ext . size ] == '\0' &&
+                                                                 StringEqual ( & vdbcache, & ext ) )
+                                                            {
+                                                                print = false;
+                                                            }
+                                                        }
+                                                        if ( print ) {
+                                                          assert ( buf );
+                                                          PLOGERR ( klogErr,
                                                             ( klogErr, rc,
-                                                            "Failed to KNSManagerVMakeHttpFileInt('$(path)' ($(ip)))",
-                                                            "path=%.*s,ip=%s",
-                                                            ( int ) buf -> elem_count, buf -> base, ep . ip_address
-                                                        ) );
+                                                             "Failed to KNSManagerVMakeHttpFileInt('$(path)' ($(ip)))"
+                                                             " from '$(local)'", "path=%.*s,ip=%s,local=%s",
+                                                             ( int ) buf -> elem_count, buf -> base,
+                                                             ep . ip_address, local_ep . ip_address
+                                                            ) );
+                                                        }
                                                     }
                                                     else
                                                         DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),

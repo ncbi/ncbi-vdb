@@ -24,7 +24,6 @@
  */
 
 #include <kfs/extern.h>
-#include <stdio.h>
 
 struct KCacheTeeFile;
 #define KFILE_IMPL struct KCacheTeeFile
@@ -1540,7 +1539,7 @@ rc_t KDirectoryVMakeCacheTeeInt ( struct KDirectory *self,
                 {
                     /* it was possible to aquire the lock on the cache-file */
                     struct KFile * local;
-                    rc = KDirectoryOpenFileWrite( self, &local, true, "%s.cache", full );
+                    rc = KDirectoryOpenFileSharedWrite( self, &local, true, "%s.cache", full );
                     if ( rc == 0 )
                     {
                         /* we have the exclusive rd/wr access to the cache file !*/

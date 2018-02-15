@@ -36,6 +36,8 @@
 
 #include <kdb/manager.h>
 
+#include <kfg/config.h> /* KConfigDisableUserSettings */
+
 #include <vdb/manager.h>
 #include <vdb/vdb-priv.h>
 
@@ -856,6 +858,7 @@ const char UsageDefaultName[] = "test-ngs_csra1";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    KConfigDisableUserSettings();
     return NgsCsra1TestSuite(argc, argv);
 }
 

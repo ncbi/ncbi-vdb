@@ -29,11 +29,20 @@
 #include <os-native.h>
 #include <kproc/timeout.h>
 #include <kproc/lock.h>
+#include <klib/out.h>
 #include <klib/rc.h>
 #include <sysalloc.h>
 
 #include <stdlib.h>
 #include <errno.h>
+
+#if _DEBUGGING && 0
+#define LMSG( msg, ... ) \
+    KOutMsg ( msg, __VA_ARGS__ )
+#else
+#define LMSG( msg, ... )                        \
+    ( void ) 0
+#endif
 
 /*--------------------------------------------------------------------------
  * KLock
@@ -46,6 +55,7 @@ static
 rc_t KLockWhack ( KLock *self )
 {
     int status = pthread_mutex_destroy ( & self -> mutex );
+    LMSG ( "%s[%lu:%p]: 'pthread_mutex_destroy ( mutex = %p )' returned %d\n", __func__, ( uint64_t ) pthread_self (), self, & self -> mutex, status );
     switch ( status )
     {
     case 0:
@@ -78,6 +88,7 @@ LIB_EXPORT rc_t CC KLockMake ( KLock **lockp )
         else
         {
             int status = pthread_mutex_init ( & lock -> mutex, NULL );
+            LMSG ( "%s[%lu:%p]: 'pthread_mutex_init ( mutex = %p )' returned %d\n", __func__, ( uint64_t ) pthread_self (), lock, & lock -> mutex, status );
             if ( status == 0 )
             {
                 atomic32_set ( & lock -> refcount, 1 );
@@ -132,7 +143,9 @@ LIB_EXPORT rc_t CC KLockAcquire ( KLock *self )
     if ( self == NULL )
         return RC ( rcPS, rcLock, rcLocking, rcSelf, rcNull );
 
+    LMSG ( "%s[%lu:%p]: calling 'pthread_mutex_lock ( mutex = %p )'\n", __func__, ( uint64_t ) pthread_self (), self, & self -> mutex );
     status = pthread_mutex_lock ( & self -> mutex );
+    LMSG ( "%s[%lu:%p]: 'pthread_mutex_lock ( mutex = %p )' returned %d\n", __func__, ( uint64_t ) pthread_self (), self, & self -> mutex, status );
     switch ( status )
     {
     case 0:
@@ -158,7 +171,9 @@ LIB_EXPORT rc_t CC KLockUnlock ( KLock *self )
     if ( self == NULL )
         return RC ( rcPS, rcLock, rcUnlocking, rcSelf, rcNull );
 
+    LMSG ( "%s[%lu:%p]: calling 'pthread_mutex_unlock ( mutex = %p )'\n", __func__, ( uint64_t ) pthread_self (), self, & self -> mutex );
     status = pthread_mutex_unlock ( & self -> mutex );
+    LMSG ( "%s[%lu:%p]: 'pthread_mutex_unlock ( mutex = %p )' returned %d\n", __func__, ( uint64_t ) pthread_self (), self, & self -> mutex, status );
     switch ( status )
     {
     case 0:
@@ -185,6 +200,7 @@ static
 rc_t KTimedLockWhack ( KTimedLock *self )
 {
     int status = pthread_mutex_destroy ( & self -> mutex );
+    LMSG ( "%s[%lu:%p]: 'pthread_mutex_destroy ( mutex = %p )' returned %d\n", __func__, ( uint64_t ) pthread_self (), self, & self -> mutex, status );
     switch ( status )
     {
     case 0:
@@ -217,6 +233,7 @@ LIB_EXPORT rc_t CC KTimedLockMake ( KTimedLock **lockp )
         else
         {
             int status = pthread_mutex_init ( & lock -> mutex, NULL );
+            LMSG ( "%s[%lu:%p]: 'pthread_mutex_init ( mutex = %p )' returned %d\n", __func__, ( uint64_t ) pthread_self (), lock, & lock -> mutex, status );
             if ( status == 0 )
             {
                 atomic32_set ( & lock -> refcount, 1 );
@@ -271,7 +288,9 @@ LIB_EXPORT rc_t CC KTimedLockAcquire ( KTimedLock *self, timeout_t *tm )
     if ( self == NULL )
         return RC ( rcPS, rcLock, rcLocking, rcSelf, rcNull );
 
+    LMSG ( "%s[%lu:%p]: calling 'pthread_mutex_trylock ( mutex = %p )'\n", __func__, ( uint64_t ) pthread_self (), self, & self -> mutex );
     status = pthread_mutex_trylock ( & self -> mutex );
+    LMSG ( "%s[%lu:%p]: 'pthread_mutex_trylock ( mutex = %p )' returned %d\n", __func__, ( uint64_t ) pthread_self (), self, & self -> mutex, status );
     switch ( status )
     {
     case 0:
@@ -287,9 +306,14 @@ LIB_EXPORT rc_t CC KTimedLockAcquire ( KTimedLock *self, timeout_t *tm )
     }
 
     if ( ! tm -> prepared )
+    {
+        LMSG ( "%s[%lu:%p]: preparing timeout'\n", __func__, ( uint64_t ) pthread_self (), self );
         TimeoutPrepare ( tm );
+    }
 
+    LMSG ( "%s[%lu:%p]: calling 'pthread_mutex_timedlock ( mutex = %p, timeout = %u )'\n", __func__, ( uint64_t ) pthread_self (), self, & self -> mutex, tm -> mS );
     status = pthread_mutex_timedlock ( & self -> mutex, & tm -> ts );
+    LMSG ( "%s[%lu:%p]: 'pthread_mutex_timedlock ( mutex = %p )' returned %d\n", __func__, ( uint64_t ) pthread_self (), self, & self -> mutex, status );
     switch ( status )
     {
     case 0:
@@ -315,7 +339,9 @@ LIB_EXPORT rc_t CC KTimedLockUnlock ( KTimedLock *self )
     if ( self == NULL )
         return RC ( rcPS, rcLock, rcUnlocking, rcSelf, rcNull );
 
+    LMSG ( "%s[%lu:%p]: calling 'pthread_mutex_unlock ( mutex = %p )'\n", __func__, ( uint64_t ) pthread_self (), self, & self -> mutex );
     status = pthread_mutex_unlock ( & self -> mutex );
+    LMSG ( "%s[%lu:%p]: 'pthread_mutex_unlock ( mutex = %p )' returned %d\n", __func__, ( uint64_t ) pthread_self (), self, & self -> mutex, status );
     switch ( status )
     {
     case 0:

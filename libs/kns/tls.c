@@ -470,9 +470,9 @@ static int set_threshold ( const KConfig * kfg ) {
     }
 
     if ( set )
-        vdb_mbedtls_debug_set_threshold ( threshold );
+        vdb_mbedtls_debug_set_threshold ( ( int ) threshold );
 
-    return threshold;
+    return ( int ) threshold;
 }
 
 /* Init
@@ -1057,18 +1057,37 @@ LIB_EXPORT rc_t CC KNSManagerMakeTLSStream ( const KNSManager * self,
                     }
                     else {
                         if ( KNSManagerLogNcbiVdbNetError ( self ) ) {
-                            KEndPoint ep;
-                            rc_t r2 = KSocketGetRemoteEndpoint ( ciphertext,
+                            KEndPoint ep, local_ep;
+                            rc_t rr = KSocketGetRemoteEndpoint ( ciphertext,
                                                                  & ep );
-                            if ( r2 != 0 )
-                                LOGERR ( klogInt, r2
+                            rc_t rl = KSocketGetLocalEndpoint ( ciphertext,
+                                                                 & local_ep );
+                            if ( rr != 0 )
+                                LOGERR ( klogInt, rr
                                     , "cannot KSocketGetRemoteEndpoint"
                                 );
-                            else
-                                PLOGERR ( klogSys, ( klogSys, rc,
-                                 "ktls_handshake failed while accessing '$(ip)'"
-                                 , "ip=%s", ep . ip_address
-                                ) );
+                            if ( rl != 0 )
+                                LOGERR ( klogInt, rl
+                                    , "cannot KSocketGetLocalEndpoint"
+                                );
+                            if ( rr == 0 || rl == 0 ) {
+                                if ( rr == 0 )
+                                    if ( rl == 0 )
+                                        PLOGERR ( klogSys, ( klogSys, rc,
+                                            "ktls_handshake failed while accessing '$(ip)' from '$(local)'"
+                                            , "ip=%s,local=%s", ep . ip_address, local_ep . ip_address
+                                        ) );
+                                    else
+                                        PLOGERR ( klogSys, ( klogSys, rc,
+                                            "ktls_handshake failed while accessing '$(ip)'"
+                                            , "ip=%s", ep . ip_address
+                                        ) );
+                                else
+                                    PLOGERR ( klogSys, ( klogSys, rc,
+                                        "ktls_handshake failed while accessing unknown IP from '$(local)'"
+                                        , "local=%s", local_ep . ip_address
+                                    ) );
+                            }
                         }
                     }
                 }

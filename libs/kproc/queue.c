@@ -64,8 +64,8 @@ struct KQueue
     uint32_t bmask, imask;
     volatile uint32_t read, write;
     atomic32_t refcount;
-    volatile bool sealed;
-    uint8_t align [ 7 ];
+    atomic32_t sealed;
+    uint8_t align [ 4 ];
     void *buffer [ 16 ];
 };
 
@@ -76,18 +76,18 @@ static
 rc_t KQueueWhack ( KQueue *self )
 {
     rc_t rc;
-    QMSG ( "%s: releasing write semaphore\n", __func__ );
+    QMSG ( "%s[%p]: releasing write semaphore\n", __func__, self );
     rc = KSemaphoreRelease ( self -> wc );
     if ( rc == 0 )
     {
-        QMSG ( "%s: releasing read semaphore\n", __func__ );
+        QMSG ( "%s[%p]: releasing read semaphore\n", __func__, self );
         KSemaphoreRelease ( self -> rc );
-        QMSG ( "%s: releasing write lock\n", __func__ );
+        QMSG ( "%s[%p]: releasing write lock\n", __func__, self );
         KLockRelease ( self -> wl );
-        QMSG ( "%s: releasing read lock\n", __func__ );
+        QMSG ( "%s[%p]: releasing read lock\n", __func__, self );
         KLockRelease ( self -> rl );
         free ( self );
-        QMSG ( "%s: done\n", __func__ );
+        QMSG ( "%s[%p]: done\n", __func__, self );
     }
     return rc;
 }
@@ -156,11 +156,11 @@ LIB_EXPORT rc_t CC KQueueMake ( KQueue **qp, uint32_t capacity )
                             q -> imask = ( cap + cap ) - 1;
                             q -> read = q -> write = 0;
                             atomic32_set ( & q -> refcount, 1 );
-                            q -> sealed = false;
+                            atomic32_set ( & q -> sealed, 0 );
 
-                            QMSG ( "%s: created queue with capacity %u, "
+                            QMSG ( "%s[%p]: created queue with capacity %u, "
                                    "bmask %#032b, imask %#032b.\n"
-                                   , __func__, q -> capacity, q -> bmask, q -> imask
+                                   , __func__, q, q -> capacity, q -> bmask, q -> imask
                                 );
 
                             * qp = q;
@@ -199,75 +199,75 @@ LIB_EXPORT rc_t CC KQueuePush ( KQueue *self, const void *item, timeout_t *tm )
 
     if ( self == NULL )
         return RC ( rcCont, rcQueue, rcInserting, rcSelf, rcNull );
-    if ( self -> sealed )
+    if ( atomic32_read ( & self -> sealed ) != 0 )
     {
-        QMSG ( "%s: failed to insert into queue due to seal\n", __func__ );
+        QMSG ( "%s[%p]: failed to insert into queue due to seal\n", __func__, self );
         return RC ( rcCont, rcQueue, rcInserting, rcQueue, rcReadonly );
     }
     if ( item == NULL )
         return RC ( rcCont, rcQueue, rcInserting, rcParam, rcNull );
 
-    QMSG ( "%s: acquiring write lock ( %p )...\n", __func__, self -> wl );
+    QMSG ( "%s[%p]: acquiring write lock ( %p )...\n", __func__, self, self -> wl );
     rc = KLockAcquire ( self -> wl );
-    QMSG ( "%s: ...done, rc = %R\n", __func__, rc );
+    QMSG ( "%s[%p]: ...done, rc = %R\n", __func__, self, rc );
     if ( rc == 0 )
     {
-        QMSG ( "%s: waiting on write semaphore...\n", __func__ );
+        QMSG ( "%s[%p]: waiting on write semaphore...\n", __func__, self );
         rc = KSemaphoreTimedWait ( self -> wc, self -> wl, tm );
-        QMSG ( "%s: ...done, rc = %R.\n", __func__, rc );
+        QMSG ( "%s[%p]: ...done, rc = %R.\n", __func__, self, rc );
 
         if ( rc == 0 )
         {
             uint32_t w;
 
             /* re-check the seal */
-            if ( self -> sealed )
+            if ( atomic32_read ( & self -> sealed ) != 0 )
             {
-                QMSG ( "%s: queue has been sealed\n", __func__ );
+                QMSG ( "%s[%p]: queue has been sealed\n", __func__, self );
 
                 /* not a disaster if semaphore not signaled */
-                QMSG ( "%s: signaling write semaphore\n", __func__ );
+                QMSG ( "%s[%p]: signaling write semaphore\n", __func__, self );
                 KSemaphoreSignal ( self -> wc );
-                QMSG ( "%s: unlocking write lock\n", __func__ );
+                QMSG ( "%s[%p]: unlocking write lock\n", __func__, self );
                 KLockUnlock ( self -> wl );
 
-                QMSG ( "%s: failed to insert into queue due to seal\n", __func__ );
+                QMSG ( "%s[%p]: failed to insert into queue due to seal\n", __func__, self );
                 return RC ( rcCont, rcQueue, rcInserting, rcQueue, rcReadonly );
             }
 
             /* insert item */
             w = self -> write & self -> imask;
-            QMSG ( "%s: write index is %u, masked against 0x%x\n", __func__, w, self -> imask );
+            QMSG ( "%s[%p]: write index is %u, masked against 0x%x\n", __func__, self, w, self -> imask );
             self -> buffer [ w & self -> bmask ] = ( void* ) item;
-            QMSG ( "%s: inserted item into buffer [ %u ], using mask 0x%x\n", __func__, w & self -> bmask, self -> bmask );
+            QMSG ( "%s[%p]: inserted item into buffer [ %u ], using mask 0x%x\n", __func__, self, w & self -> bmask, self -> bmask );
             self -> write = w + 1;
 
-            QMSG ( "%s: unlocking write lock ( %p ).\n", __func__, self -> wl );
+            QMSG ( "%s[%p]: unlocking write lock ( %p ).\n", __func__, self, self -> wl );
             KLockUnlock ( self -> wl );
 
             /* let listeners know about item */
-            QMSG ( "%s: acquiring read lock ( %p )\n", __func__, self -> rl );
+            QMSG ( "%s[%p]: acquiring read lock ( %p )\n", __func__, self, self -> rl );
             if ( KLockAcquire ( self -> rl ) == 0 )
             {
-                QMSG ( "%s: signaling read semaphore\n", __func__ );
+                QMSG ( "%s[%p]: signaling read semaphore\n", __func__, self );
                 KSemaphoreSignal ( self -> rc );
-                QMSG ( "%s: unlocking read lock ( %p )\n", __func__, self -> rl );
+                QMSG ( "%s[%p]: unlocking read lock ( %p )\n", __func__, self, self -> rl );
                 KLockUnlock ( self -> rl );
             }
         }
         else
         {
-            QMSG ( "%s: unlocking write lock ( %p ).\n", __func__, self -> wl );
+            QMSG ( "%s[%p]: unlocking write lock ( %p ).\n", __func__, self, self -> wl );
             KLockUnlock ( self -> wl );
 
-            if ( self -> sealed )
+            if ( atomic32_read ( & self -> sealed ) != 0 )
             {
                 switch ( ( int ) GetRCObject ( rc ) )
                 {
                 case ( int ) rcTimeout:
                 case ( int ) rcSemaphore:
                     rc = RC ( rcCont, rcQueue, rcInserting, rcQueue, rcReadonly );
-                    QMSG ( "%s: resetting rc to %R\n", __func__, rc );
+                    QMSG ( "%s[%p]: resetting rc to %R\n", __func__, self, rc );
                     break;
                 }
             }
@@ -302,59 +302,59 @@ LIB_EXPORT rc_t CC KQueuePop ( KQueue *self, void **item, timeout_t *tm )
             rc = RC ( rcCont, rcQueue, rcRemoving, rcSelf, rcNull );
         else
         {
-            QMSG ( "%s: acquiring read lock ( %p )\n", __func__, self -> rl );
+            QMSG ( "%s[%p]: acquiring read lock ( %p )\n", __func__, self, self -> rl );
             rc = KLockAcquire ( self -> rl );
             if ( rc == 0 )
             {
-                QMSG ( "%s: waiting on read semaphore...\n", __func__ );
-                rc = KSemaphoreTimedWait ( self -> rc, self -> rl, self -> sealed ? NULL : tm );
-                QMSG ( "%s: ...done, rc = %R.\n", __func__, rc );
+                QMSG ( "%s[%p]: waiting on read semaphore...\n", __func__, self );
+                rc = KSemaphoreTimedWait ( self -> rc, self -> rl, ( atomic32_read ( & self -> sealed ) != 0 ) ? NULL : tm );
+                QMSG ( "%s[%p]: ...done, rc = %R.\n", __func__, self, rc );
 
                 if ( rc == 0 )
                 {
                     uint32_t r, idx;
 
                     /* got an element */
-                    QMSG ( "%s: asserting  self -> read ( %u ) != self -> write ( %u )\n",
+                    QMSG ( "%s[%p]: asserting  self -> read ( %u ) != self -> write ( %u )\n",
                            __func__, self -> read, self -> write
                         );
                     assert ( self -> read != self -> write );
 
                     /* read element */
                     r = self -> read & self -> imask;
-                    QMSG ( "%s: read index is %u, masked against 0x%x\n", __func__, r, self -> imask );
+                    QMSG ( "%s[%p]: read index is %u, masked against 0x%x\n", __func__, self, r, self -> imask );
                     idx = r & self -> bmask;
                     * item = self -> buffer [ idx ];
-                    QMSG ( "%s: read item from buffer [ %u ], using mask 0x%x\n", __func__, idx, self -> bmask );
+                    QMSG ( "%s[%p]: read item from buffer [ %u ], using mask 0x%x\n", __func__, self, idx, self -> bmask );
                     self -> buffer [ idx ] = NULL;
                     self -> read = r + 1;
 
-                    QMSG ( "%s: unlocking read lock. ( %p )\n", __func__, self -> rl );
+                    QMSG ( "%s[%p]: unlocking read lock. ( %p )\n", __func__, self, self -> rl );
                     KLockUnlock ( self -> rl );
 
                     /* let write know there's a free slot available */
-                    QMSG ( "%s: acquiring write lock ( %p )\n", __func__, self -> wl );
+                    QMSG ( "%s[%p]: acquiring write lock ( %p )\n", __func__, self, self -> wl );
                     if ( KLockAcquire ( self -> wl ) == 0 )
                     {
-                        QMSG ( "%s: signaling write semaphore\n", __func__ );
+                        QMSG ( "%s[%p]: signaling write semaphore\n", __func__, self );
                         KSemaphoreSignal ( self -> wc );
-                        QMSG ( "%s: unlocking write lock ( %p )\n", __func__, self -> wl );
+                        QMSG ( "%s[%p]: unlocking write lock ( %p )\n", __func__, self, self -> wl );
                         KLockUnlock ( self -> wl );
                     }
                 }
                 else
                 {
-                    QMSG ( "%s: unlocking read lock. ( %p )\n", __func__, self -> rl );
+                    QMSG ( "%s[%p]: unlocking read lock. ( %p )\n", __func__, self, self -> rl );
                     KLockUnlock ( self -> rl );
 
-                    if ( self -> sealed )
+                    if ( atomic32_read ( & self -> sealed ) != 0 )
                     {
                         switch ( ( int ) GetRCObject ( rc ) )
                         {
                         case ( int ) rcTimeout:
                         case ( int ) rcSemaphore:
                             rc = RC ( rcCont, rcQueue, rcRemoving, rcData, rcDone );
-                            QMSG ( "%s: resetting rc to %R\n", __func__, rc );
+                            QMSG ( "%s[%p]: resetting rc to %R\n", __func__, self, rc );
                             break;
                         }
                     }
@@ -375,9 +375,9 @@ LIB_EXPORT rc_t CC KQueuePop ( KQueue *self, void **item, timeout_t *tm )
  */
 LIB_EXPORT bool CC KQueueSealed ( const KQueue *self )
 {
-    QMSG ( "%s called\n", __func__ );
+    QMSG ( "%s[%p] called\n", __func__, self );
     if ( self != NULL )
-        return self -> sealed;
+        return atomic32_read ( & self -> sealed ) != 0;
     return false;
 }
 
@@ -392,37 +392,38 @@ LIB_EXPORT rc_t CC KQueueSeal ( KQueue *self )
 {
     rc_t rc = 0;
 
-    QMSG ( "%s called\n", __func__ );
+    QMSG ( "%s[%p] called\n", __func__, self );
 
     if ( self == NULL )
         return RC ( rcCont, rcQueue, rcFreezing, rcSelf, rcNull );
 
-    self -> sealed = true;
-
-#if 1
-    QMSG ( "%s: acquiring write lock ( %p )\n", __func__, self -> wl );
-    rc = KLockAcquire ( self -> wl );
-    if ( rc == 0 )
+    if ( atomic32_test_and_set ( & self -> sealed, 1, 0 ) == 0 )
     {
-        QMSG ( "%s: canceling write semaphore...\n", __func__ );
-        rc = KSemaphoreCancel ( self -> wc );
-        QMSG ( "%s: ...done, rc = %R.\n", __func__, rc );
-        KLockUnlock ( self -> wl );
-
+#if 1
+        QMSG ( "%s[%p]: acquiring write lock ( %p )\n", __func__, self, self -> wl );
+        rc = KLockAcquire ( self -> wl );
         if ( rc == 0 )
         {
-            QMSG ( "%s: acquiring read lock ( %p )\n", __func__, self -> rl );
-            rc = KLockAcquire ( self -> rl );
+            QMSG ( "%s[%p]: canceling write semaphore...\n", __func__, self );
+            rc = KSemaphoreCancel ( self -> wc );
+            QMSG ( "%s[%p]: ...done, rc = %R.\n", __func__, self, rc );
+            KLockUnlock ( self -> wl );
+
             if ( rc == 0 )
             {
-                QMSG ( "%s: canceling read semaphore...\n", __func__ );
-                rc = KSemaphoreCancel ( self -> rc );
-                QMSG ( "%s: ...done, rc = %R.\n", __func__, rc );
-                KLockUnlock ( self -> rl );
+                QMSG ( "%s[%p]: acquiring read lock ( %p )\n", __func__, self, self -> rl );
+                rc = KLockAcquire ( self -> rl );
+                if ( rc == 0 )
+                {
+                    QMSG ( "%s[%p]: canceling read semaphore...\n", __func__, self );
+                    rc = KSemaphoreCancel ( self -> rc );
+                    QMSG ( "%s[%p]: ...done, rc = %R.\n", __func__, self, rc );
+                    KLockUnlock ( self -> rl );
+                }
             }
         }
-    }
 #endif
+    }
 
     return rc;
 }
