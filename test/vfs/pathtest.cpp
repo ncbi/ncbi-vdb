@@ -101,6 +101,21 @@ public:
     size_t num_read;
 };
 
+FIXTURE_TEST_CASE(Fasp, PathFixture)
+{
+    REQUIRE_RC(VFSManagerMakePath ( vfs, &path, "fasp://u@hst.com:dir/file"));
+}
+
+FIXTURE_TEST_CASE(F_asp, PathFixture)
+{
+    VFSManagerMakePath ( vfs, &path, "fasp://u@hst.com:a-dir/file");
+}
+
+FIXTURE_TEST_CASE(Http, PathFixture)
+{
+    REQUIRE_RC(VFSManagerMakePath ( vfs, &path, "http://u@h.d:9/d/f"));
+}
+
 FIXTURE_TEST_CASE(ReadPath, PathFixture)
 {
     REQUIRE_RC(VFSManagerMakePath ( vfs, &path, "ncbi-file:qq?enc"));
