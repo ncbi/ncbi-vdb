@@ -1495,7 +1495,7 @@ rc_t CC KClientHttpStreamTimedRead ( const KClientHttpStream *cself,
 
             /* if the size was known, it is an incomplete transfer */
             if ( ! self -> size_unknown )
-                rc = RC ( rcNS, rcNoTarg, rcTransfer, rcNoObj, rcIncomplete);
+                rc = RC ( rcNS, rcStream, rcReading, rcTransfer, rcIncomplete);
         }
     }
     else
@@ -1623,7 +1623,7 @@ rc_t CC KClientHttpStreamTimedReadChunked ( const KClientHttpStream *cself,
         else if ( * num_read == 0 )
         {
             KClientHttpClose ( http );
-            rc = RC ( rcNS, rcNoTarg, rcTransfer, rcNoObj, rcIncomplete);
+            rc = RC ( rcNS, rcStream, rcReading, rcTransfer, rcIncomplete);
             self -> state = error_state;
         }
         /* check for end of chunk */

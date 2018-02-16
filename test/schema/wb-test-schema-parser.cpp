@@ -50,7 +50,7 @@ const string DataDir = "./actual";
 
 TEST_SUITE ( SchemaParserTestSuite );
 
-#define KW_TOKEN(v,k) SchemaToken v = { KW_##k, #k, strlen(#k), 0, 0 }
+#define KW_TOKEN(v,k) Token v ( KW_##k, #k)
 
 KW_TOKEN( st  ,virtual );
 KW_TOKEN( st0 ,void );
@@ -61,16 +61,14 @@ KW_TOKEN( st3 ,include );
 // Token
 TEST_CASE(Token_Construct)
 {
-    Token t ( st );
-    REQUIRE_EQ ( ( int ) KW_virtual, t . GetType() );
-    REQUIRE_EQ ( string ( "virtual" ), string ( t . GetValue() ) );
-    REQUIRE ( ! t . IsFake () );
+    REQUIRE_EQ ( ( int ) KW_virtual, st . GetType() );
+    REQUIRE_EQ ( string ( "virtual" ), string ( st . GetValue() ) );
+    REQUIRE ( ! st . IsFake () );
 }
 
 TEST_CASE(Token_Construct_Fake)
 {
-    SchemaToken st = { 42, NULL, 0, 0, 0 };
-    Token t ( st );
+    Token t ( 42 );
     REQUIRE ( t . IsFake () );
 }
 
@@ -89,8 +87,7 @@ TEST_CASE(ParseTree_Construct)
 
 TEST_CASE(ParseTree_AddChild)
 {
-    SchemaToken st = { PT_PARSE, "" };
-    ParseTree t ( st );
+    ParseTree t = Token ( PT_PARSE );
     t. AddChild ( new ParseTree ( st0 ) );
     t. AddChild ( new ParseTree ( st1 ) );
 
@@ -99,8 +96,7 @@ TEST_CASE(ParseTree_AddChild)
 }
 TEST_CASE(ParseTree_ChildrenCount)
 {
-    SchemaToken st = { PT_PARSE, "" };
-    ParseTree t ( st );
+    ParseTree t = Token ( PT_PARSE );
     t. AddChild ( new ParseTree ( st0 ) );
     t. AddChild ( new ParseTree ( st1 ) );
 
@@ -109,9 +105,7 @@ TEST_CASE(ParseTree_ChildrenCount)
 
 TEST_CASE(ParseTree_MoveChildren)
 {
-
-    SchemaToken st = { PT_PARSE, "" };
-    ParseTree source ( st );
+    ParseTree source = Token ( PT_PARSE );
     source. AddChild ( new ParseTree ( st0 ) );
     source. AddChild ( new ParseTree ( st1 ) );
 
@@ -119,7 +113,7 @@ TEST_CASE(ParseTree_MoveChildren)
     {
     public:
         using ParseTree :: MoveChildren;
-        TestTree(const SchemaToken & p_st) : ParseTree( p_st ) {};
+        TestTree(const Token & p_t) : ParseTree( p_t ) {};
     } target ( st );
 
     target . MoveChildren ( source );
@@ -129,6 +123,28 @@ TEST_CASE(ParseTree_MoveChildren)
     REQUIRE_EQ ( 2u, target . ChildrenCount () );
     REQUIRE ( target . GetChild ( 0 ) -> GetToken () == Token ( st0 ) );
     REQUIRE ( target . GetChild ( 1 ) -> GetToken () == Token ( st1 ) );
+}
+
+TEST_CASE(ParseTree_Location)
+{
+    // start with a fake token, its empty location is used as the tree's location
+    ParseTree source = Token ( PT_PARSE );
+    REQUIRE_EQ ( string (), string ( source . GetLocation() . m_file ) );
+    REQUIRE_EQ ( 0u, source . GetLocation() . m_line );
+    REQUIRE_EQ ( 0u, source . GetLocation() . m_column );
+
+    // add a real token, make sure its location is used as the tree's location
+    SchemaToken st1 = { KW_view, "view", 4, 0, 0, "file", 1, 2 };
+    source . AddChild ( new ParseTree ( st1 ) );
+    REQUIRE_EQ ( string ( "file" ), string ( source . GetLocation() . m_file ) ); // first real token
+    REQUIRE_EQ ( 1u, source . GetLocation() . m_line );
+    REQUIRE_EQ ( 2u, source . GetLocation() . m_column );
+
+    // add more real tokens, make sure the location does not change
+    SchemaToken st2 = { KW_view, "view", 4, 0, 0, "file", 2, 3 };
+    source . AddChild ( new ParseTree ( st2 ) );
+    REQUIRE_EQ ( 1u, source . GetLocation() . m_line );
+    REQUIRE_EQ ( 2u, source . GetLocation() . m_column );
 }
 
 // SchemaParser
@@ -157,6 +173,7 @@ TEST_CASE(SchemaParser_ParseFile)
     SchemaParser p;
     REQUIRE ( p . ParseFile ( f ) );
     REQUIRE_NOT_NULL ( p . GetParseTree () );
+    KFileRelease ( f );
 }
 
 TEST_CASE(SchemaParser_MoveParseTree)

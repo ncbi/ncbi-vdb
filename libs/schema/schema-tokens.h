@@ -30,8 +30,8 @@
    This special exception was added by the Free Software Foundation in
    version 2.2 of Bison.  */
 
-#ifndef YY_SCHEMA_HOME_RODARMER_DEVEL_NCBI_NCBI_VDB_LIBS_SCHEMA_SCHEMA_TOKENS_H_INCLUDED
-# define YY_SCHEMA_HOME_RODARMER_DEVEL_NCBI_NCBI_VDB_LIBS_SCHEMA_SCHEMA_TOKENS_H_INCLUDED
+#ifndef YY_SCHEMA_HOME_BOSHKINS_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_TOKENS_H_INCLUDED
+# define YY_SCHEMA_HOME_BOSHKINS_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_TOKENS_H_INCLUDED
 /* Debug traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
@@ -169,10 +169,8 @@ extern int Schema_debug;
     PT_UNARYPLUS = 378,
     PT_VERSNAME = 379,
     PT_ARRAY = 380,
-    PT_AT = 381,
-    PT_PHYSENCEXPR = 382,
-    PT_PHYSENCREF = 383,
-    PT_TYPEDCOLEXPR = 384
+    PT_PHYSENCREF = 381,
+    PT_TYPEDCOLEXPR = 382
   };
 #endif
 
@@ -199,6 +197,6 @@ struct YYLTYPE
 
 
 
-int Schema_parse (ParseTree** root, struct SchemaScanBlock* sb);
+int Schema_parse (ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb);
 
-#endif /* !YY_SCHEMA_HOME_RODARMER_DEVEL_NCBI_NCBI_VDB_LIBS_SCHEMA_SCHEMA_TOKENS_H_INCLUDED  */
+#endif /* !YY_SCHEMA_HOME_BOSHKINS_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_TOKENS_H_INCLUDED  */

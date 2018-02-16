@@ -141,11 +141,14 @@ FIXTURE_TEST_CASE(DB_DbMember, AST_Db_Fixture)
     REQUIRE_EQ ( 0u, m -> db -> id );
 }
 
-FIXTURE_TEST_CASE(DB_MemberDeclaredTwice, AST_Table_Fixture)
+FIXTURE_TEST_CASE(DB_DbMemberDeclaredTwice, AST_Table_Fixture)
 {
     VerifyErrorMessage ( "database p#1 {}; database d#1 { database p m_p; database p m_p; };",
-                         "Member already exists: 'm_p'" );
+                         "Member already exists: 'm_p'",
+                         1, 60 );
 }
+
+//TODO: table member declared twice
 
 FIXTURE_TEST_CASE(DB_ItselfAsMember, AST_Table_Fixture)
 {

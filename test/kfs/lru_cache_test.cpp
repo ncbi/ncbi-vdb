@@ -32,6 +32,7 @@
 
 #include <klib/out.h>
 #include <klib/rc.h>
+#include <klib/time.h>
 
 #include <kfs/directory.h>
 #include <kfs/file.h>
@@ -127,6 +128,12 @@ static rc_t compare_file_content( const KFile * file1, const KFile * file2, uint
     return rc;
 }
 
+void seed_random_number_generator( void )
+{
+    KTime_t t = KTimeStamp ();  /* klib/time.h */
+    srand( t );
+}
+
 TEST_SUITE( LRU_Cache_Test );
 
 #define PAGE_SIZE 128 * 1024
@@ -166,6 +173,7 @@ TEST_CASE( LRU_Cache_Test_Basic )
 
     REQUIRE_RC( MakeRRCached ( &cache, org, PAGE_SIZE, PAGE_COUNT ) );
     
+    KFileRelease( org );
     KFileRelease( cache );
     KDirectoryRemove ( dir, true, "%s", filename );
     
@@ -306,7 +314,6 @@ TEST_CASE( LRU_Cache_Test_Random_Reading )
     memset( &events, 0, sizeof events );
     REQUIRE_RC( SetRRCachedEventHandler( cache, &events, on_event ) );
 
-    srand( time( NULL ) );
     uint32_t loops = 100000;
     KOutMsg( "---testing %u loops\n", loops );
     for ( uint32_t i = 0; i < loops; ++i )
@@ -359,7 +366,9 @@ const char UsageDefaultName[] = "lru-cache-test";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
-    rc_t rc = LRU_Cache_Test( argc, argv );
+    rc_t rc;
+    seed_random_number_generator();
+    rc = LRU_Cache_Test( argc, argv );
     KOutMsg( "lru-cache-test : %R\n", rc );
     return rc;
 }

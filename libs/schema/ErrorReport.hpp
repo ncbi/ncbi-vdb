@@ -24,38 +24,49 @@
  *
  */
 
-#ifndef _hpp_SchemaParser_
-#define _hpp_SchemaParser_
+#ifndef _hpp_ErrorReport_
+#define _hpp_ErrorReport_
 
-#include <kfs/file.h>
+#include <klib/vector.h>
 
-#include "ErrorReport.hpp"
+#include "Token.hpp"
 
 namespace ncbi
 {
     namespace SchemaParser
     {
-        class ParseTree;
-
-        class SchemaParser
+        class ErrorReport
         {
         public:
-            SchemaParser ();
-            ~SchemaParser ();
+            typedef Token :: Location Location;
 
-            bool ParseString ( const char * input, bool debug = false );
-            bool ParseFile ( const struct KFile * file, const char * fileName = 0 );
+            struct Error
+            {
+                char *    m_message;
+                char *    m_file;
+                uint32_t  m_line;
+                uint32_t  m_column;
 
-            const ParseTree* GetParseTree () const { return m_root; }
-                  ParseTree* MoveParseTree (); // Transfer ownership to caller; destroy with delete
+                Error( const char * p_message, const ErrorReport :: Location & p_location );
+                ~Error();
+            };
 
-            const ErrorReport & GetErrors () const { return m_errors; }
+        public:
+            ErrorReport ();
+            ~ErrorReport ();
+
+            void ReportError ( const Location & p_loc, const char* p_fmt, ... );
+            void ReportInternalError ( const char * p_source, const char* p_fmt, ... );
+
+            uint32_t GetCount() const { return VectorLength ( & m_errors ); }
+
+            const Error * GetError ( uint32_t p_idx ) const;
+            const char *  GetMessage ( uint32_t p_idx ) const; // if not interested in location
+
+            void Clear ();
 
         private:
-            bool m_debug;
-            ParseTree* m_root;
-
-            ErrorReport m_errors;
+            Vector      m_errors;
         };
     }
 }
