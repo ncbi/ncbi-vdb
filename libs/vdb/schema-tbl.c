@@ -750,7 +750,6 @@ bool CC STableCopyColumnNames ( void *item, void *data )
     return ( rc != 0 ) ? true : false;
 }
 
-static
 bool CC STableScanVirtuals ( void *item, void *data )
 {
     KSymTable *tbl = data;
@@ -2439,6 +2438,20 @@ rc_t table_physical_syntax ( const STable *table )
 }
 #endif
 
+rc_t
+table_fix_forward_refs ( const STable *table )
+{
+    rc_t rc = table_stmt_syntax ( table );
+#if SLVL >= 8
+    if ( rc == 0 )
+        rc = table_column_syntax ( table );
+#endif
+#if SLVL >= 7
+    if ( rc == 0 )
+        rc = table_physical_syntax ( table );
+#endif
+    return rc;
+}
 
 /*
  * push-tbl-scope
@@ -2610,15 +2623,7 @@ rc_t table_decl ( KSymTable *tbl, KTokenSource *src, KToken *t,
     /* fix forward references */
     if ( rc == 0 )
     {
-        rc = table_stmt_syntax ( table );
-#if SLVL >= 8
-        if ( rc == 0 )
-            rc = table_column_syntax ( table );
-#endif
-#if SLVL >= 7
-        if ( rc == 0 )
-            rc = table_physical_syntax ( table );
-#endif
+        rc = table_fix_forward_refs ( table );
     }
 
     return rc;
@@ -2660,8 +2665,7 @@ void CC symbol_set_context ( void *item, void *data )
     self -> u . fwd . ctx = * ( const uint32_t* ) data;
 }
 
-static
-void table_set_context ( STable *self )
+void CC table_set_context ( STable *self )
 {
     VectorForEach ( & self -> col, false, column_set_context, & self -> id );
     VectorForEach ( & self -> cname, false, name_set_context, & self -> id );

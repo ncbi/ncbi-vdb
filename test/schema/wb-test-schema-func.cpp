@@ -298,7 +298,7 @@ FIXTURE_TEST_CASE(Func_BadParamType, AST_Function_Fixture)
 }
 FIXTURE_TEST_CASE(Func_BadParamName, AST_Function_Fixture)
 {
-    VerifyErrorMessage ( "function U8 f(U8 U16);", "Name already in use: 'U16'" );
+    VerifyErrorMessage ( "function U8 f(U8 U16);", "Name already in use: 'U16'", 1, 18 );
 }
 
 FIXTURE_TEST_CASE(Func_OneParamScalar, AST_Function_Fixture)
@@ -391,12 +391,18 @@ FIXTURE_TEST_CASE(Func_MandatoryOprionalAndVarargs, AST_Function_Fixture)
 }
 FIXTURE_TEST_CASE(Func_FactoryVarargsWithBody, AST_Function_Fixture)
 {
-    VerifyErrorMessage ( "function U8 f<U8 p, ...>() { return 1; }", "Function with factory varargs cannot have a body: 'f'" );
+    VerifyErrorMessage ( "function U8 f<U8 p, ...>() { return 1; }",
+                         "Function with factory varargs cannot have a body: 'f'",
+                         1, 30 );
 }
 
 FIXTURE_TEST_CASE(Func_Body_NonScript, AST_Function_Fixture)
 {
-    VerifyErrorMessage  ( "function U8 f#1(); function U8 f#2() { return 1; };", "Overload canot have a body: 'f'" );
+    VerifyErrorMessage  ( "function U8 f#1(); function U8 f#2() { return 1; };", "Overload cannot have a body: 'f'" );
+}
+FIXTURE_TEST_CASE(Func_Overload_NonScript, AST_Function_Fixture)
+{
+    VerifyErrorMessage  ( "function U8 f#1() { return 1; } function U8 f#2();", "Overload has to have a body: 'f'", 1, 45 );
 }
 
 // schema signature
@@ -435,7 +441,7 @@ FIXTURE_TEST_CASE(Func_SchemaParam_NotType, AST_Function_Fixture)
 }
 FIXTURE_TEST_CASE(Func_SchemaParam_NotInt, AST_Function_Fixture)
 {
-    VerifyErrorMessage ( "function < ascii X > U8 f ();", "Not a scalar unsigned integer: 'X'" );
+    VerifyErrorMessage ( "function < ascii X > U8 f ();", "Not a scalar unsigned integer: 'X'", 1, 18 );
 }
 FIXTURE_TEST_CASE(Func_SchemaParam_IntArray, AST_Function_Fixture)
 {
@@ -575,9 +581,15 @@ FIXTURE_TEST_CASE(Func_Script, AST_Function_Fixture)
     REQUIRE_EQ ( (uint64_t)1, reinterpret_cast < const SConstExpr * > ( ret ) -> u . u64 [ 0 ] );
 }
 
+FIXTURE_TEST_CASE(Func_ScriptWithouSchema, AST_Function_Fixture)
+{
+    FunctionAccess fn = ParseFunction  ( "function U8 f() { return 1; };", "f", 0 , eScriptFunc );
+    REQUIRE ( fn . IsScript () );
+}
+
 FIXTURE_TEST_CASE(Func_ExternRedeclaredAsScript, AST_Function_Fixture)
 {
-    VerifyErrorMessage  ( "function U8 f(); schema function U8 f() { return 1; };", "Declared earlier and cannot be overloaded: 'f'" );
+    VerifyErrorMessage  ( "function U8 f(); schema function U8 f() { return 1; };", "Overload cannot have a body: 'f'", 1, 37 );
 }
 
 FIXTURE_TEST_CASE(Func_Script_FullVersion, AST_Function_Fixture)
@@ -588,7 +600,7 @@ FIXTURE_TEST_CASE(Func_Script_FullVersion, AST_Function_Fixture)
 
 FIXTURE_TEST_CASE(Func_Script_MultipleReturns, AST_Function_Fixture)
 {
-    VerifyErrorMessage ( "schema function U8 f() { return 1; return 2; };", "Multiple return statements in a function: 'f'" );
+    VerifyErrorMessage ( "schema function U8 f() { return 1; return 2; };", "Multiple return statements in a function: 'f'", 1, 36 );
 }
 
 FIXTURE_TEST_CASE(Func_Script_SimpleProduction, AST_Function_Fixture)
@@ -614,7 +626,9 @@ FIXTURE_TEST_CASE(Func_Script_SimpleProduction, AST_Function_Fixture)
 
 FIXTURE_TEST_CASE(Func_Script_NoReturn, AST_Function_Fixture)
 {
-    VerifyErrorMessage  ( "schema function U8 f() { U8 v = 1; };", "Schema function does not contain a return statement: 'f'" );
+    VerifyErrorMessage  ( "schema function U8 f() { U8 v = 1; };",
+                          "Schema function does not contain a return statement: 'f'",
+                          1, 26 );
 }
 
 FIXTURE_TEST_CASE(Func_Script_FormattedType, AST_Function_Fixture)
@@ -632,6 +646,55 @@ FIXTURE_TEST_CASE(Func_Script_FormattedType, AST_Function_Fixture)
 FIXTURE_TEST_CASE(Func_Script_FormattedType_NotFormat, AST_Function_Fixture)
 {
     VerifyErrorMessage ( "typedef U16 t; schema function U8 f() { t / U8 v = 1; return v; };", "Not a format: 't'" );
+}
+
+// Expressions
+// these test cases use script bodies for context
+
+FIXTURE_TEST_CASE(Negate_IndirectSymExpr, AST_Function_Fixture)
+{
+    FunctionAccess fn = ParseFunction  ( "function I8 f <I8 i> () { return -i; }", "f", 0 , eScriptFunc );
+    REQUIRE_EQ ( ( uint32_t ) eNegateExpr, fn . ReturnExpr () -> var );
+    const SUnaryExpr * e = reinterpret_cast < const SUnaryExpr * > ( fn . ReturnExpr () );
+    REQUIRE_NOT_NULL ( e -> expr );
+    REQUIRE_EQ ( ( uint32_t ) eIndirectExpr, e -> expr -> var );
+}
+FIXTURE_TEST_CASE(Negate_Unsigned, AST_Function_Fixture)
+{
+    VerifyErrorMessage  ( "function U8 f <U8 i> () { return -i; }", "Negation applied to an unsigned integer", 1, 35 );
+}
+FIXTURE_TEST_CASE(Negate_Double, AST_Function_Fixture)
+{
+    VerifyErrorMessage  ( "table t#1 { column U8 a; column U8 b = - - a; } ", "Negation applied to a non-const operand", 1, 44 );
+}
+
+FIXTURE_TEST_CASE(UnaryPlus, AST_Function_Fixture)
+{
+    FunctionAccess fn = ParseFunction  ( "function I8 f <I8 i> () { return + i; }", "f", 0 , eScriptFunc );
+    REQUIRE_EQ ( ( uint32_t ) eIndirectExpr, fn . ReturnExpr () -> var );
+}
+
+FIXTURE_TEST_CASE(Cast, AST_Function_Fixture)
+{
+    FunctionAccess fn = ParseFunction  ( "function I8 f <U8 i> () { return ( I8 ) i; }", "f", 0 , eScriptFunc );
+    REQUIRE_EQ ( ( uint32_t ) eCastExpr, fn . ReturnExpr () -> var );
+    const SBinExpr * e = reinterpret_cast < const SBinExpr * > ( fn . ReturnExpr () );
+    REQUIRE_NOT_NULL ( e -> left );
+    REQUIRE_EQ ( ( uint32_t ) eTypeExpr, e -> left -> var);
+    {
+        const STypeExpr * te =  reinterpret_cast < const STypeExpr * > ( e -> left );
+        REQUIRE_NOT_NULL ( te );
+        REQUIRE_NOT_NULL ( te -> dt );
+        REQUIRE_EQ ( string ( "I8" ), ToCppString ( te -> dt -> name -> name ) );
+    }
+
+    REQUIRE_NOT_NULL ( e -> right );
+    REQUIRE_EQ ( ( uint32_t ) eIndirectExpr, e -> right -> var );
+    {
+        const SSymExpr * se =  reinterpret_cast < const SSymExpr * > ( e -> right );
+        REQUIRE_NOT_NULL ( se );
+        REQUIRE_EQ ( string ( "i" ), ToCppString ( se -> _sym -> name ) );
+    }
 }
 
 // Validate functions
@@ -712,9 +775,9 @@ AST_Function_Fixture :: ParsePhysical ( const char * p_source, const char * p_na
 
         // for physical functions, sym points to an entry in the overloads table (schema->pname)
         const SNameOverload* name = static_cast < const SNameOverload* > ( sym -> u . obj );
-        if ( 1u != VectorLength ( & name -> items ) )
+        if ( 0 == VectorLength ( & name -> items ) )
         {
-            throw std :: logic_error ( "AST_Function_Fixture::ParsePhysical : too many overloads" );
+            throw std :: logic_error ( "AST_Function_Fixture::ParsePhysical : no overloads" );
         }
         ret = static_cast < const SPhysical* > ( VectorGet ( & name -> items, 0 ) );
         if ( string ( p_name ) != ToCppString ( ret -> name -> name ) )
@@ -757,15 +820,25 @@ FIXTURE_TEST_CASE(Func_Physical_Redeclared, AST_Function_Fixture)
 FIXTURE_TEST_CASE(Func_Physical_OverloadSameVersion, AST_Function_Fixture)
 {
     PhysicalAccess fn = ParsePhysical  ( "physical U8 f#1.2 = { return 1; } physical U16 f#1.2 = { return 2; }", "f" );
+    REQUIRE_EQ ( 1u, VectorLength ( & m_schema -> phys ) );
     REQUIRE_NOT_NULL ( fn . ReturnType () );
     REQUIRE_EQ ( U8_id, fn . ReturnType () -> fd . td . type_id ); // 2nd version ignored
 }
 FIXTURE_TEST_CASE(Func_Physical_OverloadOlderVersion, AST_Function_Fixture)
 {
     PhysicalAccess fn = ParsePhysical  ( "physical U8 f#1.2 = { return 1; } physical U16 f#1.1 = { return 2; }", "f" );
+    REQUIRE_EQ ( 1u, VectorLength ( & m_schema -> phys ) );
+
     REQUIRE_NOT_NULL ( fn . ReturnType () );
-    REQUIRE_EQ ( U8_id, fn . ReturnType () -> fd . td . type_id ); // 2nd version ignored
+    REQUIRE_EQ ( U8_id, fn . ReturnType () -> fd . td . type_id ); // 2nd version ignored (lower minor)
 }
+
+FIXTURE_TEST_CASE(Func_Physical_OverloadOlderMajorVersion, AST_Function_Fixture)
+{
+    ParsePhysical  ("physical U8  f#2 = { return 1; } physical U16 f#1 = { return 2; }\n", "f" );
+    REQUIRE_EQ ( 2u, VectorLength ( & m_schema -> phys ) ); // both major versions present
+}
+
 FIXTURE_TEST_CASE(Func_Physical_OverloadNewerVersion, AST_Function_Fixture)
 {
     if ( m_newParse ) // the old parser fails here!
@@ -808,7 +881,9 @@ FIXTURE_TEST_CASE(Func_Physical_DecodeRowLen, AST_Function_Fixture)
 
 FIXTURE_TEST_CASE(Func_Physical_NotARowlen, AST_Function_Fixture)
 {
-    VerifyErrorMessage  ( "function U8 rl(); physical __no_header U8 f#1 { decode { return 1; } __row_length = rl() }", "Not a row_length function: 'rl'" );
+    VerifyErrorMessage  ( "function U8 rl(); physical __no_header U8 f#1 { decode { return 1; } __row_length = rl() }",
+                          "Not a row_length function: 'rl'",
+                          1, 85 );
 }
 
 FIXTURE_TEST_CASE(Func_Physical_EncodeNoDecode, AST_Function_Fixture)
@@ -838,13 +913,16 @@ FIXTURE_TEST_CASE(Func_Physical_NoHeaderWithEncode, AST_Function_Fixture)
 
 FIXTURE_TEST_CASE(Func_Physical_At, AST_Function_Fixture)
 {
-    /*PhysicalAccess fn = */ParsePhysical  ( "physical U8 f#1.2 { decode { return @; } }", "f" );
-    //TODO:verify access to @
+    PhysicalAccess fn = ParsePhysical  ( "physical U8 f#1.2 { decode { return @; } }", "f" );
+    const SExpression * expr = fn . Decode () . ReturnExpr ();
+    REQUIRE_NOT_NULL ( expr );
+    REQUIRE_EQ ( (uint32_t) eParamExpr, expr -> var );
+    const SSymExpr * sym = reinterpret_cast < const SSymExpr * > ( expr );
+    REQUIRE_EQ ( string ( "@" ), ToCppString ( sym -> _sym -> name ) );
 }
 
 FIXTURE_TEST_CASE(Func_Physical_SchemaParams, AST_Function_Fixture)
 {
-    //m_newParse = false;
     PhysicalAccess fn = ParsePhysical  ( "physical <type T> T f#1.2 { decode { return 1; } }", "f" );
     REQUIRE_EQ ( 1u, fn . Decode () . SchemaTypeParamCount () );
 }

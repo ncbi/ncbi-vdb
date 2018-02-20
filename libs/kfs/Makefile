@@ -120,6 +120,12 @@ KFS_CMN = \
 	lockfile \
 	syslockfile \
 	cacheteefile \
+	cacheteefile2 \
+	rrcachedfile \
+	recorder \
+	logfile \
+	poolpages \
+	lru_cache \
 	from_to_namelist \
 	limitfile \
 	small-arc-file

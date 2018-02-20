@@ -38,7 +38,6 @@ namespace ncbi
         class ParseTree
         {
         public:
-            ParseTree ( const SchemaToken& token );
             ParseTree ( const Token& token );
             virtual ~ParseTree ();
 
@@ -51,29 +50,35 @@ namespace ncbi
             const ParseTree* GetChild ( uint32_t idx ) const;
                   ParseTree* GetChild ( uint32_t idx );
 
+            const Token :: Location & GetLocation () const { return * m_location; } // location of the leading real token
+
         protected:
             void MoveChildren ( ParseTree& );
             void SetToken ( const Token & p_token ) {  m_token = p_token; }
 
         private:
-            Token   m_token;
-            Vector  m_children;
+            Token                       m_token;
+            Vector                      m_children;
+            const Token :: Location *   m_location;
         };
 
         class ParseTreeScanner
         {
         public:
-            ParseTreeScanner ( const ParseTree& p_root );
+            ParseTreeScanner ( const ParseTree& p_root, const char * p_source = "" );
             ~ParseTreeScanner ();
 
             // returns token type, SchemaScanner::EndSource at the end of the walk; the token itself is in p_token
             // for container nodes, this will create a bracketed TAG '(' contents ')' sequence.
-            SchemaScanner :: TokenType NextToken ( const Token*& p_token );
+            Token :: TokenType NextToken ( const Token*& p_token );
+
+            const char * GetSource () const { return m_source; }
 
         private:
             void PushNode ( const ParseTree* );
 
         private:
+            char *  m_source;
             Vector  m_stack;
         };
     }

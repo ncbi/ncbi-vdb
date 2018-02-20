@@ -29,6 +29,8 @@
 
 #include <kfs/file.h>
 
+#include "ErrorReport.hpp"
+
 namespace ncbi
 {
     namespace SchemaParser
@@ -42,14 +44,18 @@ namespace ncbi
             ~SchemaParser ();
 
             bool ParseString ( const char * input, bool debug = false );
-            bool ParseFile ( const struct KFile * file );
+            bool ParseFile ( const struct KFile * file, const char * fileName = 0 );
 
             const ParseTree* GetParseTree () const { return m_root; }
                   ParseTree* MoveParseTree (); // Transfer ownership to caller; destroy with delete
 
+            const ErrorReport & GetErrors () const { return m_errors; }
+
         private:
             bool m_debug;
             ParseTree* m_root;
+
+            ErrorReport m_errors;
         };
     }
 }

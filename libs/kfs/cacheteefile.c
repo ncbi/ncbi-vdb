@@ -24,7 +24,6 @@
  */
 
 #include <kfs/extern.h>
-#include <stdio.h>
 
 struct KCacheTeeFile;
 #define KFILE_IMPL struct KCacheTeeFile
@@ -209,6 +208,7 @@ typedef struct KCacheTeeFile
 #endif
 
     bool local_read_only;
+    bool promote;
     char local_path [ 1 ];                    /* stores the path to the local cache, for eventual promoting at close */
 } KCacheTeeFile;
 
@@ -224,7 +224,7 @@ typedef struct KCacheTeeFile
     (((val)>>8)&0xff00) | /* move byte 2 to byte 1 */ \
     (((val)<<24)&0xff000000) /* byte 0 to byte 3 */
 #endif
-#define GEN_BIT_NR_MASK_ROW(i) SWAP_FN( 1 << ( (i) * 4 ) ), SWAP_FN( 1 << ( (i) * 4 + 1 ) ), SWAP_FN( 1 << ( (i) * 4 + 2 ) ), SWAP_FN( 1 << ( (i) * 4 + 3 ) )
+#define GEN_BIT_NR_MASK_ROW(i) SWAP_FN( 1U << ( (i) * 4 ) ), SWAP_FN( 1U << ( (i) * 4 + 1 ) ), SWAP_FN( 1U << ( (i) * 4 + 2 ) ), SWAP_FN( 1U << ( (i) * 4 + 3 ) )
 
 const uint32_t BitNr2Mask[ 32 ] =
 {
@@ -778,7 +778,7 @@ static rc_t CC KCacheTeeFileDestroy( KCacheTeeFile * self )
     {
         bool fully_in_cache;
         rc_t rc = IsCacheFileComplete ( self -> local, &fully_in_cache );
-        if ( rc == 0 && fully_in_cache )
+        if ( rc == 0 && fully_in_cache && self -> promote )
         {
             promote_cache( self );
         }
@@ -1354,7 +1354,7 @@ static rc_t hand_out_remote_file_as_tee_file( struct KFile const **tee, struct K
 }
 
 static rc_t make_cache_tee( struct KDirectory *self, struct KFile const **tee,
-    struct KFile const *remote, struct KFile *local, uint32_t blocksize, bool read_only, const char *path )
+    struct KFile const *remote, struct KFile *local, uint32_t blocksize, bool read_only, bool promote, const char *path )
 {
     rc_t rc;
     size_t path_size = string_size ( path );
@@ -1376,6 +1376,7 @@ static rc_t make_cache_tee( struct KDirectory *self, struct KFile const **tee,
         cf -> valid_scratch_bytes = 0;
 #endif
         cf -> local_read_only = read_only;
+        cf -> promote = promote;
 
 #if( CACHE_STAT > 0 )
         init_cache_stat( & cf -> stat );
@@ -1426,7 +1427,7 @@ static rc_t make_cache_tee( struct KDirectory *self, struct KFile const **tee,
                     rc = verify_existing_local_file( cf, &fully_in_cache );
             }
 
-            if ( rc == 0 && fully_in_cache && ! cf -> local_read_only )
+            if ( rc == 0 && fully_in_cache && ! cf -> local_read_only && cf -> promote )
             {
                 /* here is the up-front-test: the cache is complete and we have write access! */
                 rc = promote_cache( cf );
@@ -1501,14 +1502,15 @@ static rc_t make_read_only_cache_tee( struct KDirectory *self,
     const struct KFile * local;
     rc_t rc = KDirectoryOpenFileRead( self, &local, "%s.cache", path );
     if ( rc == 0 )
-        rc = make_cache_tee( self, tee, remote, ( struct KFile * )local, blocksize, true, path );
+        rc = make_cache_tee( self, tee, remote, ( struct KFile * )local, blocksize, true, false, path );
     return rc;
 }
 
 
-LIB_EXPORT rc_t CC KDirectoryVMakeCacheTee ( struct KDirectory *self,
+static
+rc_t KDirectoryVMakeCacheTeeInt ( struct KDirectory *self,
     struct KFile const **tee, struct KFile const *remote,
-    uint32_t blocksize, const char *path, va_list args )
+    uint32_t blocksize, const char *path, va_list args, bool promote )
 {
     rc_t rc;
     if ( tee == NULL || remote == NULL )
@@ -1537,11 +1539,11 @@ LIB_EXPORT rc_t CC KDirectoryVMakeCacheTee ( struct KDirectory *self,
                 {
                     /* it was possible to aquire the lock on the cache-file */
                     struct KFile * local;
-                    rc = KDirectoryOpenFileWrite( self, &local, true, "%s.cache", full );
+                    rc = KDirectoryOpenFileSharedWrite( self, &local, true, "%s.cache", full );
                     if ( rc == 0 )
                     {
                         /* we have the exclusive rd/wr access to the cache file !*/
-                        rc = make_cache_tee( self, tee, remote, local, blocksize, false, full );
+                        rc = make_cache_tee( self, tee, remote, local, blocksize, false, promote, full );
                     }
                     else if ( GetRCState( rc ) == rcNotFound )
                     {
@@ -1550,7 +1552,7 @@ LIB_EXPORT rc_t CC KDirectoryVMakeCacheTee ( struct KDirectory *self,
                         if ( rc == 0 )
                         {
                             /* we have the exclusive rd/wr access to the cache file !*/
-                            rc = make_cache_tee( self, tee, remote, local, blocksize, false, full );
+                            rc = make_cache_tee( self, tee, remote, local, blocksize, false, promote, full );
                         }
                     }
                     else
@@ -1576,6 +1578,14 @@ LIB_EXPORT rc_t CC KDirectoryVMakeCacheTee ( struct KDirectory *self,
 }
 
 
+LIB_EXPORT rc_t CC KDirectoryVMakeCacheTee ( struct KDirectory *self,
+    struct KFile const **tee, struct KFile const *remote,
+    uint32_t blocksize, const char *path, va_list args )
+{
+    return KDirectoryVMakeCacheTeeInt ( self, tee, remote, blocksize, path, args, false );
+}
+
+
 LIB_EXPORT rc_t CC KDirectoryMakeCacheTee ( struct KDirectory *self,
     struct KFile const **tee, struct KFile const *remote,
     uint32_t blocksize, const char *path, ... )
@@ -1585,6 +1595,30 @@ LIB_EXPORT rc_t CC KDirectoryMakeCacheTee ( struct KDirectory *self,
     va_start ( args, path );
 
     rc = KDirectoryVMakeCacheTee ( self, tee, remote, blocksize, path, args );
+
+    va_end ( args );
+
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC KDirectoryVMakeCacheTeePromote ( struct KDirectory *self,
+    struct KFile const **tee, struct KFile const *remote,
+    uint32_t blocksize, const char *path, va_list args )
+{
+    return KDirectoryVMakeCacheTeeInt ( self, tee, remote, blocksize, path, args, true );
+}
+
+
+LIB_EXPORT rc_t CC KDirectoryMakeCacheTeePromote ( struct KDirectory *self,
+    struct KFile const **tee, struct KFile const *remote,
+    uint32_t blocksize, const char *path, ... )
+{
+    rc_t rc;
+    va_list args;
+    va_start ( args, path );
+
+    rc = KDirectoryVMakeCacheTeePromote ( self, tee, remote, blocksize, path, args );
 
     va_end ( args );
 

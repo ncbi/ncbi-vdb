@@ -49,16 +49,11 @@ ThrowRc ( const char* p_msg, rc_t p_rc )
 
 // ParseTree
 
-ParseTree :: ParseTree ( const SchemaToken& p_token )
-: m_token ( p_token )
-{
-    VectorInit ( & m_children, 0,   ChildrenBlockSize );
-}
-
 ParseTree :: ParseTree ( const Token& p_token )
-: m_token ( p_token )
+:   m_token ( p_token ),
+    m_location ( & m_token . GetLocation () )
 {
-    VectorInit ( & m_children, 0,   ChildrenBlockSize );
+    VectorInit ( & m_children, 0, ChildrenBlockSize );
 }
 
 void DestroyChild ( void * item, void * )
@@ -74,6 +69,12 @@ ParseTree :: ~ParseTree ()
 void
 ParseTree :: AddChild ( ParseTree * p_node )
 {
+    assert ( m_location != 0 );
+    assert ( p_node != 0 );
+    if ( m_location -> m_line == 0 )
+    {   // assume p_node's location will not change in the future
+        m_location = & p_node -> GetLocation ();
+    }
     VectorSet ( & m_children, VectorLength ( & m_children ), p_node );
 }
 
@@ -107,7 +108,8 @@ ParseTree :: MoveChildren ( ParseTree& p_source )
 
 static const uint32_t StackBlockSize    = 1024; //TODO: pick a good initial size
 
-ParseTreeScanner :: ParseTreeScanner ( const ParseTree& p_root )
+ParseTreeScanner :: ParseTreeScanner ( const ParseTree& p_root, const char * p_source )
+: m_source ( string_dup ( p_source, string_size (p_source ) ) )
 {
     VectorInit ( & m_stack, 0, StackBlockSize );
     PushNode ( & p_root );
@@ -115,14 +117,12 @@ ParseTreeScanner :: ParseTreeScanner ( const ParseTree& p_root )
 
 ParseTreeScanner :: ~ParseTreeScanner ()
 {
+    free ( m_source );
     VectorWhack ( & m_stack, NULL, NULL );
 }
 
-static const SchemaToken OpenParToken  = { '(', NULL, 0, NULL, NULL };
-static const ParseTree ChildrenOpen  ( OpenParToken );
-
-static const SchemaToken CloseParToken = { ')', NULL, 0, NULL, NULL };
-static const ParseTree ChildrenClose ( CloseParToken );
+static const ParseTree ChildrenOpen  ( Token ( '(' ) );
+static const ParseTree ChildrenClose ( Token ( ')' ) );
 
 void
 ParseTreeScanner :: PushNode ( const ParseTree* p_node )
@@ -131,8 +131,7 @@ ParseTreeScanner :: PushNode ( const ParseTree* p_node )
     VectorAppend ( & m_stack, NULL, p_node );
 }
 
-
-SchemaScanner :: TokenType
+Token :: TokenType
 ParseTreeScanner :: NextToken ( const Token*& p_token )
 {
     while ( VectorLength ( & m_stack ) != 0 )
@@ -163,5 +162,5 @@ ParseTreeScanner :: NextToken ( const Token*& p_token )
         p_token = & node -> GetToken ();
         return p_token -> GetType ();
     }
-    return SchemaScanner::EndSource;
+    return Token :: EndSource;
 }
