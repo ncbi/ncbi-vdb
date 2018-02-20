@@ -85,7 +85,9 @@ VFS_EXTERN rc_t CC VFSManagerOpenFileRead ( const VFSManager *self,
 
 VFS_EXTERN rc_t CC VFSManagerOpenFileReadWithBlocksize ( const VFSManager *self, 
                                            struct KFile const **f,
-                                           const struct VPath * path, uint32_t blocksize );
+                                           const struct VPath * path,
+                                           uint32_t blocksize,
+                                           bool promote );
 
 VFS_EXTERN rc_t CC VFSManagerOpenDirectoryRead ( const VFSManager *self,
     struct KDirectory const **d, const struct VPath * path );
