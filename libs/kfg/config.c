@@ -93,7 +93,7 @@ static const char default_kfg[] = {
                       "\"https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi\"\n"
 "/repository/remote/protected/CGI/resolver-cgi = "
                       "\"https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi\"\n"
-"/tools/ascp/max_rate = \"1000m\"\n"
+"/tools/ascp/max_rate = \"450m\"\n"
 };
 /*----------------------------------------------------------------------------*/
 
@@ -3080,6 +3080,48 @@ static rc_t _KConfigFixRepeatedDrives(KConfig *self,
 
 #endif
 
+static rc_t _KConfigLowerAscpRate ( KConfig * self, bool * updated ) {
+    rc_t rc = 0;
+
+    const char MAX_RATE     [] = "/tools/ascp/max_rate";
+    const char RATE_UPDATED [] = "/tools/ascp/max_rate/450m";
+
+    String * result = NULL;
+
+    String g;
+    CONST_STRING ( & g, "1000m" );
+
+    assert ( updated );
+    * updated = false;
+
+    rc = KConfigReadString ( self, RATE_UPDATED, & result );
+    if ( rc == 0 ) { /* was updated already */
+        free ( result );
+        return rc;
+    }
+
+    rc = KConfigReadString ( self, MAX_RATE, & result );
+    if ( rc == 0 ) { /* when found: update just rate=1000m (old value) */
+        if ( StringEqual ( & g, result ) )
+            * updated = true;
+        free ( result );
+        result = NULL;
+    }
+    else { /* update when max-rate was not set */
+        * updated = true;
+        rc = 0;
+    }
+
+    if ( * updated ) {
+        assert ( rc == 0 );
+        rc = KConfigWriteString ( self, MAX_RATE, "450m" );
+        if ( rc == 0 )
+            rc = KConfigWriteString ( self, RATE_UPDATED, "true" );
+    }
+
+    return rc;
+}
+
 static
 rc_t KConfigFill ( KConfig * self, const KDirectory * cfgdir,
     const char * appname, bool local )
@@ -3171,15 +3213,21 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
             mgr -> initialized = true;
 
 
-#if WINDOWS /* VDB-1554: fix incorrect posix paths in configuration nodes */
             if ( rc == 0 ) {
                 bool updated = false;
-                rc_t rc = _KConfigFixRepeatedDrives ( mgr, cfgdir, & updated );
+
+                rc_t rc = _KConfigLowerAscpRate ( mgr,  & updated );
                 if ( rc == 0 && updated ) {
                     rc = KConfigCommit ( mgr );
+                    updated = false;
                 }
-            }
+
+#if WINDOWS /* VDB-1554: fix incorrect posix paths in configuration nodes */
+                rc = _KConfigFixRepeatedDrives ( mgr, cfgdir, & updated );
+                if ( rc == 0 && updated )
+                    rc = KConfigCommit ( mgr );
 #endif
+            }
 
             DBGMSG ( DBG_KFG, DBG_FLAG ( DBG_KFG ), ( "\n" ) );
 
