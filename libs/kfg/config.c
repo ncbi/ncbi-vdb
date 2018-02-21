@@ -3214,12 +3214,16 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
 
 
             if ( rc == 0 ) {
+                rc_t rc = 0;
+
                 bool updated = false;
 
-                rc_t rc = _KConfigLowerAscpRate ( mgr,  & updated );
-                if ( rc == 0 && updated ) {
-                    rc = KConfigCommit ( mgr );
-                    updated = false;
+                if ( ! s_disable_user_settings ) {
+                    rc = _KConfigLowerAscpRate ( mgr,  & updated );
+                    if ( rc == 0 && updated ) {
+                        rc = KConfigCommit ( mgr );
+                        updated = false;
+                    }
                 }
 
 #if WINDOWS /* VDB-1554: fix incorrect posix paths in configuration nodes */
