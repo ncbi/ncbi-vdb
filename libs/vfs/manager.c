@@ -213,7 +213,6 @@ LIB_EXPORT rc_t CC VFSManagerRelease ( const VFSManager *self )
     return rc;
 }
 
-
 typedef struct caching_params
 {
     uint32_t version;     /* 0 ... use cachetee ( older )
@@ -229,19 +228,23 @@ typedef struct caching_params
     uint32_t record_inner;  /* record the request made before the cache */    
     uint32_t record_outer;  /* record the request made after the cache */
     bool is_refseq;         /* when used for external reference sequences, decrease cache size */
+    bool promote;           /* do we want a promoting cache-tee-file ? */
 } caching_params;
 
 #define DEFAULT_CACHE_PAGE_SIZE ( 32 * 1024 )
 #define DEFAULT_CACHE_PAGE_COUNT ( 10 * 1024 )
 
-static void get_caching_params( caching_params * params, bool is_refseq )
+static void get_caching_params( caching_params * params,
+                uint32_t dflt_block_size,
+                bool is_refseq,
+                bool promote )
 {
     KConfig * cfg;
     rc_t rc = KConfigMake ( &cfg, NULL );
 
     /* set some default values... */
     params -> version = 0;
-    params -> cache_page_size = DEFAULT_CACHE_PAGE_SIZE;
+    params -> cache_page_size = dflt_block_size;
     params -> cache_page_count = DEFAULT_CACHE_PAGE_COUNT;
     params -> use_cwd = 0;
     params -> append = 0;
@@ -249,7 +252,8 @@ static void get_caching_params( caching_params * params, bool is_refseq )
     params -> record_inner = 0;    
     params -> record_outer = 0;
     params -> is_refseq = is_refseq;
-
+    params -> promote = promote;
+    
     if ( rc == 0 )
     {
         uint64_t value;
@@ -331,12 +335,25 @@ static rc_t wrap_in_cachetee( KDirectory * dir,
     if ( rc == 0 )
     {
         const KFile * temp_file;
-        rc = KDirectoryMakeCacheTee ( dir,
-                                      &temp_file,
-                                      *cfp,
-                                      cps -> cache_page_size,
-                                      "%s",
-                                      loc );
+        if ( cps -> promote )
+        {
+            rc = KDirectoryMakeCacheTeePromote ( dir,
+                                                 &temp_file,
+                                                 *cfp,
+                                                 cps -> cache_page_size, 
+                                                 "%s",
+                                                 loc );
+        
+        }
+        else
+        {
+            rc = KDirectoryMakeCacheTee ( dir,
+                                          &temp_file,
+                                          *cfp,
+                                          cps -> cache_page_size,
+                                          "%s",
+                                          loc );
+        }
         if ( rc == 0 )
         {
             KFileRelease ( * cfp );
@@ -406,9 +423,14 @@ static rc_t wrap_in_rr_cache( KDirectory * dir,
  * VFSManagerMakeHTTPFile
  */
 static
-rc_t VFSManagerMakeHTTPFile( const VFSManager * self, const KFile **cfp,
-                             const char * url, const char * cache_location,
-                             bool high_reliability, bool is_refseq )
+rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
+                             const KFile **cfp,
+                             const char * url,
+                             const char * cache_location,
+                             uint32_t blocksize,
+                             bool high_reliability,
+                             bool is_refseq,
+                             bool promote )
 {
     rc_t rc;
     
@@ -422,8 +444,7 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self, const KFile **cfp,
     {
         /* let's try to get some details about how to do caching from the configuration */    
         caching_params cps;
-        get_caching_params( &cps, is_refseq );
-
+        get_caching_params( &cps, blocksize, is_refseq, promote );
         if ( cache_location == NULL )
         {
             /* the user has turned off caching... ( we should not make a cache-tee )*/
@@ -1302,10 +1323,11 @@ rc_t VFSManagerOpenFileReadDirectoryRelativeInt (const VFSManager *self,
 /* we will create a KFile from a http or ftp url... */
 static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
                                      KFile const **f,
-                                     const VPath * path )
+                                     const VPath * path,
+                                     uint32_t blocksize,
+                                     bool promote )
 {
     rc_t rc;
-/*    const char * url; */
     const String * uri = NULL;
 
     if ( f == NULL )
@@ -1316,7 +1338,6 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
     if ( path == NULL )
         return RC( rcVFS, rcMgr, rcOpening, rcParam, rcNull );
 
-/*    url = path->path.addr; */
     rc = VPathMakeString ( path, &uri );
     if ( rc == 0 )
     {
@@ -1331,7 +1352,14 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
             if ( rc == 0 )
             {
                 /* we did find a place for local cache --> use it! */
-                rc = VFSManagerMakeHTTPFile( self, f, uri->addr, local_cache->path.addr, high_reliability, is_refseq );
+                rc = VFSManagerMakeHTTPFile( self,
+                                             f,
+                                             uri -> addr,
+                                             local_cache -> path.addr,
+                                             blocksize,
+                                             high_reliability,
+                                             is_refseq,
+                                             promote );
                 {
                     rc_t rc2 = VPathRelease ( local_cache );
                     if ( rc == 0 )
@@ -1341,13 +1369,29 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
                 }
             }
             else
+            {
                 /* we did NOT find a place for local cache --> we are not caching! */
-                rc = VFSManagerMakeHTTPFile( self, f, uri->addr, NULL, high_reliability, is_refseq );
+                rc = VFSManagerMakeHTTPFile( self,
+                                             f,
+                                             uri -> addr,
+                                             NULL,
+                                             blocksize,
+                                             high_reliability,
+                                             is_refseq,
+                                             promote );
+            }
         }
         else
         {
             /* no resolver has been found ---> we cannot do caching! */
-            rc = VFSManagerMakeHTTPFile( self, f, uri->addr, NULL, high_reliability, is_refseq );
+            rc = VFSManagerMakeHTTPFile( self,
+                                         f,
+                                         uri -> addr,
+                                         NULL,
+                                         blocksize,
+                                         high_reliability,
+                                         is_refseq,
+                                         promote );
         }
         free( ( void * )uri );
     }
@@ -1399,10 +1443,11 @@ static rc_t ResolveVPathBySRAPath( const VPath ** path )
     return RC ( rcVFS, rcFile, rcOpening, rcSRA, rcUnsupported );
 }
 
-
-LIB_EXPORT rc_t CC VFSManagerOpenFileRead ( const VFSManager *self,
+LIB_EXPORT rc_t CC VFSManagerOpenFileReadWithBlocksize ( const VFSManager *self,
                                             KFile const **f,
-                                            const VPath * path_ )
+                                            const VPath * path_,
+                                            uint32_t blocksize,
+                                            bool promote )
 {
     rc_t rc;
 
@@ -1459,7 +1504,7 @@ LIB_EXPORT rc_t CC VFSManagerOpenFileRead ( const VFSManager *self,
                 case vpuri_http:
                 case vpuri_https:
                 case vpuri_ftp:
-                    rc = VFSManagerOpenCurlFile ( self, f, path );
+                    rc = VFSManagerOpenCurlFile ( self, f, path, blocksize, promote );
                     break;
                 }
                 VPathRelease (path);
@@ -1469,6 +1514,19 @@ LIB_EXPORT rc_t CC VFSManagerOpenFileRead ( const VFSManager *self,
     return rc;
 }
 
+LIB_EXPORT rc_t CC VFSManagerOpenFileRead ( const VFSManager *self,
+                                            KFile const **f,
+                                            const VPath * path )
+{
+    return VFSManagerOpenFileReadWithBlocksize ( self, f, path, DEFAULT_CACHE_PAGE_SIZE, false );
+}
+
+LIB_EXPORT rc_t CC VFSManagerOpenFileReadPromote ( const VFSManager *self,
+                                            KFile const **f,
+                                            const VPath * path )
+{
+    return VFSManagerOpenFileReadWithBlocksize ( self, f, path, DEFAULT_CACHE_PAGE_SIZE, true );
+}
 
 LIB_EXPORT rc_t CC VFSManagerOpenFileReadDecrypt (const VFSManager *self,
                                                   KFile const **f,
@@ -1629,12 +1687,11 @@ rc_t VFSManagerOpenDirectoryReadHttp (const VFSManager *self,
                                       KDirectory const **d,
                                       const VPath * path,
                                       bool force_decrypt,
-                                      bool reliable)
+                                      bool reliable,
+                                      bool promote )
 {
-    rc_t rc;
     const KFile * file = NULL;
-
-    rc = VFSManagerOpenCurlFile ( self, &file, path );
+    rc_t rc = VFSManagerOpenCurlFile ( self, &file, path, DEFAULT_CACHE_PAGE_SIZE, promote );
     if ( rc != 0 )
     {
         bool toLog = false;
@@ -1720,7 +1777,8 @@ rc_t VFSManagerOpenDirectoryReadHttpResolved (const VFSManager *self,
                                               KDirectory const **d,
                                               const VPath * path,
                                               const VPath * cache,
-                                              bool force_decrypt)
+                                              bool force_decrypt,
+                                              bool promote)
 {
     const String * uri = NULL;
     rc_t rc = VPathMakeString ( path, &uri );
@@ -1731,7 +1789,14 @@ rc_t VFSManagerOpenDirectoryReadHttpResolved (const VFSManager *self,
         bool is_refseq = VPathHasRefseqContext ( path );
 
         const KFile * file = NULL;
-        rc = VFSManagerMakeHTTPFile( self, &file, uri->addr, cache == NULL ? NULL : cache->path.addr, high_reliability, is_refseq );
+        rc = VFSManagerMakeHTTPFile( self,
+                                     &file,
+                                     uri -> addr,
+                                     cache == NULL ? NULL : cache -> path . addr,
+                                     DEFAULT_CACHE_PAGE_SIZE,
+                                     high_reliability,
+                                     is_refseq,
+                                     promote );
         if ( rc != 0 )
         {
             if ( high_reliability )
@@ -1763,14 +1828,14 @@ rc_t VFSManagerOpenDirectoryReadHttpResolved (const VFSManager *self,
                                                        file, path,
                                                        force_decrypt,
                                                        &was_encrypted);
-                if (rc == 0)
+                if ( rc == 0 )
                 {
                         
-                    rc = TransformFileToDirectory (mountpoint, f, d, 
-                                                   path->path.addr,
-                                                   was_encrypted);
+                    rc = TransformFileToDirectory ( mountpoint, f, d, 
+                                                    path -> path . addr,
+                                                    was_encrypted);
                     /* hacking in the fragment bit */
-                    if ((rc == 0) && (path->fragment . size > 1 ) )
+                    if ( ( rc == 0 ) && ( path -> fragment . size > 1 ) )
                     {
                         const KDirectory * tempd = * d;
                         const char * fragment = path -> fragment . addr + 1;
@@ -1977,7 +2042,8 @@ rc_t VFSManagerOpenDirectoryReadDirectoryRelativeInt (const VFSManager *self,
                                                       KDirectory const **d,
                                                       const VPath * path_,
                                                       bool force_decrypt,
-                                                      bool reliable)
+                                                      bool reliable,
+                                                      bool promote)
 {
     rc_t rc;
     do 
@@ -2054,7 +2120,7 @@ rc_t VFSManagerOpenDirectoryReadDirectoryRelativeInt (const VFSManager *self,
             case vpuri_https:
             case vpuri_ftp:
                 rc = VFSManagerOpenDirectoryReadHttp ( self, dir, d, path,
-                                                      force_decrypt, reliable );
+                                                      force_decrypt, reliable, promote );
                 break;
             }
             VPathRelease ( path ); /* same as path_ if not uri */
@@ -2070,8 +2136,11 @@ rc_t CC VFSManagerOpenDirectoryReadDirectoryRelative (const VFSManager *self,
                                                       KDirectory const **d,
                                                       const VPath * path)
 {
+    /* HACK - this function should not be exported.
+       in order to not change the signature, we are synthesizing
+       a "promote" parameter as "true" to mimic old behavior */
     return VFSManagerOpenDirectoryReadDirectoryRelativeInt (self, dir, d, path,
-        false, true);
+        false, true, true);
 }
 
 
@@ -2081,8 +2150,11 @@ rc_t CC VFSManagerOpenDirectoryReadDirectoryRelativeDecrypt (const VFSManager *s
                                                              KDirectory const **d,
                                                              const VPath * path)
 {
+    /* HACK - this function should not be exported.
+       in order to not change the signature, we are synthesizing
+       a "promote" parameter as "true" to mimic old behavior */
     return VFSManagerOpenDirectoryReadDirectoryRelativeInt (self, dir, d, path,
-        true, true);
+        true, true, true);
 }
 
 
@@ -2090,8 +2162,11 @@ LIB_EXPORT rc_t CC VFSManagerOpenDirectoryReadDecrypt (const VFSManager *self,
                                                        KDirectory const **d,
                                                        const VPath * path)
 {
+    /* HACK - this function should not be exported.
+       in order to not change the signature, we are synthesizing
+       a "promote" parameter as "true" to mimic old behavior */
     return VFSManagerOpenDirectoryReadDirectoryRelativeInt (self, self->cwd, d,
-        path, true, true);
+        path, true, true, true);
 }
 
 LIB_EXPORT rc_t CC VFSManagerOpenDirectoryReadDecryptUnreliable (
@@ -2100,7 +2175,7 @@ LIB_EXPORT rc_t CC VFSManagerOpenDirectoryReadDecryptUnreliable (
                                                        const VPath * path)
 {
     return VFSManagerOpenDirectoryReadDirectoryRelativeInt (self, self->cwd, d,
-        path, true, false);
+        path, true, false, true);
 }
 
 
@@ -2110,8 +2185,11 @@ LIB_EXPORT rc_t CC VFSManagerOpenDirectoryRead (const VFSManager *self,
 {
     if ( self == NULL )
         return RC (rcVFS, rcDirectory, rcOpening, rcSelf, rcNull);
+    /* HACK - this function should not be exported.
+       in order to not change the signature, we are synthesizing
+       a "promote" parameter as "true" to mimic old behavior */
     return VFSManagerOpenDirectoryReadDirectoryRelativeInt (self, self->cwd, d,
-        path, false, true);
+        path, false, true, true);
 }
 
 LIB_EXPORT 
@@ -2135,7 +2213,10 @@ rc_t CC VFSManagerOpenDirectoryReadDecryptRemote (const VFSManager *self,
     case vpuri_http:
     case vpuri_https:
     case vpuri_ftp:
-        rc = VFSManagerOpenDirectoryReadHttpResolved ( self, d, path, cache, true );
+        /* HACK - this function should not be exported.
+           in order to not change the signature, we are synthesizing
+           a "promote" parameter as "true" to mimic old behavior */
+        rc = VFSManagerOpenDirectoryReadHttpResolved ( self, d, path, cache, true, true );
         break;
         
     default:
@@ -2652,7 +2733,7 @@ LIB_EXPORT rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
                             }
 
                             *pmanager = singleton = obj;
-                            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_MGR),  ("%s(%p)\n", __FUNCTION__, cfg));
+                            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_MGR),  ("%s(%p)\n", __func__, cfg));
                             return 0;
                         }
                     }
@@ -2722,8 +2803,7 @@ LIB_EXPORT rc_t CC VFSManagerGetResolver ( const VFSManager * self, struct VReso
 }
 
 
-LIB_EXPORT rc_t CC VFSManagerSetResolver
-    ( VFSManager * self, VResolver * resolver )
+LIB_EXPORT rc_t CC VFSManagerSetResolver ( VFSManager * self, VResolver * resolver )
 {
     rc_t rc = 0;
 
@@ -2740,7 +2820,6 @@ LIB_EXPORT rc_t CC VFSManagerSetResolver
                 return 0;
             }
         }
-
         VResolverRelease ( resolver );
     }
 
@@ -2965,7 +3044,7 @@ LIB_EXPORT rc_t CC VFSManagerUpdateKryptoPassword (const VFSManager * self,
 
                         if (old_exists)
                         {
-                            rc = VFSManagerOpenFileRead (self, &fold, vold);
+                            rc = VFSManagerOpenFileRead ( self, &fold, vold );
 
                             if (rc)
                                 PLOGERR (klogErr,
