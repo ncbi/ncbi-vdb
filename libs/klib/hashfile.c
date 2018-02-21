@@ -674,8 +674,8 @@ LIB_EXPORT rc_t KHashFileAdd(KHashFile* self, const void* key,
 
                     COMPILER_BARRIER;
                     table[bucket] = buf;
-                    KLockUnlock(seg->seglock);
                 }
+                KLockUnlock(seg->seglock);
                 return 0;
             }
         }
