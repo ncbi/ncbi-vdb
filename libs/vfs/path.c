@@ -1712,7 +1712,11 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
 
             VPathParseResetAnchor ( i );
 
-            if ( isalpha ( ch ) )
+            if ( self -> scheme_type == vpuri_fasp ) {
+                self -> missing_port = true;
+                state = vppFullPath;
+            }
+            else if ( isalpha ( ch ) )
                 state = vppPortName;
             else if ( isdigit ( ch ) )
             {
@@ -2361,7 +2365,6 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
                 case 4:
                     if ( strcase_cmp ( ".sra", 4, sep, 4, 4 ) == 0 ||
                          strcase_cmp ( ".wgs", 4, sep, 4, 4 ) == 0 )
-                        end = sep;
                     {
                         end = sep;
                         continue;
@@ -2746,7 +2749,11 @@ rc_t VPathReadUriInt ( const VPath * self,
 
     /* sanity check */
     assert ( ! has_auth || has_host );
-    assert ( self -> path . size == 0 || self -> path . addr [ 0 ] == '/' || ! has_host );
+
+    assert ( self -> path . size == 0  || ! has_host ||
+       ( self -> path . addr [ 0 ] == '/' || self -> scheme_type == vpuri_fasp )
+      );
+
     assert ( self -> query . size == 0 || self -> query . addr [ 0 ] == '?' );
     assert ( self -> fragment . size == 0 || self -> fragment . addr [ 0 ] == '#' );
 
