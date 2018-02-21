@@ -3116,7 +3116,7 @@ static rc_t _KConfigLowerAscpRate ( KConfig * self, bool * updated ) {
         assert ( rc == 0 );
         rc = KConfigWriteString ( self, MAX_RATE, "450m" );
         if ( rc == 0 )
-            rc = KConfigWriteString ( self, RATE_UPDATED, "true" );
+            rc = KConfigWriteString ( self, RATE_UPDATED, "updated" );
     }
 
     return rc;
