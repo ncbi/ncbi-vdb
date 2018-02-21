@@ -89,7 +89,6 @@ KLIB_SRC = \
 	container \
 	vector \
 	namelist \
-	ncbi-vdb-version \
 	vector_namelist \
 	trie \
 	pbstree \
@@ -129,6 +128,8 @@ KLIB_SRC = \
 	num-gen \
 	progressbar \
 	sra-release-version \
+	hashfile \
+	hashtable \
 	btree
 #	path
 

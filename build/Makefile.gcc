@@ -46,7 +46,7 @@ LP = @ $(TOP)/build/ld.sh $(OS) $(ARCH) g++ \
 	-MD --srcdir $(SRCDIR) --bindir $(BINDIR) -L$(LIBDIR):$(ILIBDIR)
 
 # tool options
-WARN = -Wall -Wno-long-long 
+WARN = -Wall -Wno-long-long
 ifneq (sun,$(OS))
     WARN += -Wno-variadic-macros
 endif
@@ -72,7 +72,7 @@ ifeq (dbg, $(BUILD))
 	# GCC seems unable to use c99 without ansi, which
 	# basically clobbers features back to c89. the options
 	# must be specified in the order shown.
-	PED = -std=gnu99 -pedantic # -fdiagnostics-show-option
+	PED = -std=gnu11 -pedantic # -fdiagnostics-show-option
 else
 
 OPT = -O3 -Wno-variadic-macros -fno-strict-aliasing -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1
