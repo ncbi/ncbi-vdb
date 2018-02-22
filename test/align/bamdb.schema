@@ -11,7 +11,7 @@ table NCBI:align:tbl:ir #1.0.0
     column INSDC:dna:text READ;          // the actual bases. See note[1] below.
     column ascii REFSEQ_ID_CMN;          // chr1 - this should be a dictionary column
     column INSDC:coord:zero REF_START;     // see note[2] below
-    column U64 PROJECTED_LEN;            // maybe not from your standpoint
+    column I64 PROJECTED_LEN;            // maybe not from your standpoint
     column ascii CIGAR;                  // you may not be the only producer of CIGAR
     column bool PCR_DUPLICATE;           // extracted from sam flags. See note[3] below
     column bool BAD;                     //   ""
