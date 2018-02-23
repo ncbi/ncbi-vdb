@@ -372,6 +372,7 @@ class Dlg
         bool IsChanged( void ) { return KTUIDlgGetChanged ( dlg_ ); };
 
         bool GetRect( Tui_Rect &r ) { return ( KTUIDlgGetRect ( dlg_, &( r.r_ ) ) == 0 ); };
+        Tui_Rect GetRect( void ) { Tui_Rect r; GetRect( r ); return r; }        
         bool SetRect( Tui_Rect const &r, bool redraw ) { return ( KTUIDlgSetRect ( dlg_, &( r.r_ ), redraw ) == 0 ); };
         virtual bool Resize( Tui_Rect const &r );
 

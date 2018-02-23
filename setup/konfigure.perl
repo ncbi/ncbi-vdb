@@ -24,6 +24,10 @@
 
 use strict;
 
+use Cwd 'abs_path';
+use File::Basename 'dirname';
+use lib dirname( abs_path $0 );
+
 sub println  { print @_; print "\n" }
 
 my ($filename, $directories, $suffix) = fileparse($0);
@@ -431,6 +435,15 @@ if ($TOOLS =~ /gcc$/ && check_no_array_bounds()) {
 my $STATIC_LIBSTDCPP = '';
 if ($TOOLS =~ /gcc$/) {
     $STATIC_LIBSTDCPP = check_static_libstdcpp();
+}
+
+if ( $PKG{REQ} ) {
+    foreach ( @{ $PKG{REQ} } ) {
+        unless (check_tool__h($_)) {
+            println "configure: error: '$_' cannot be found";
+            exit 1;
+        }
+    }
 }
 
 my @dependencies;
@@ -1509,7 +1522,7 @@ sub check_compiler {
             $flags = $n;
             $log = '                      int main() {                     }\n'
         } elsif ($n eq 'hdf5') {
-            $library = '-lhdf5';
+            $library = '-Wl,-Bstatic -lhdf5 -Wl,-Bdynamic -ldl -lm -lz';
             $log = '#include <hdf5.h>  \n int main() { H5close         (); }\n'
         } elsif ($n eq 'fuse') {
             $flags = '-D_FILE_OFFSET_BITS=64';
@@ -1552,7 +1565,14 @@ sub check_compiler {
         push ( @l, '' ) unless ( @l );
         for my $i ( 0 .. $#l ) {
             my $l = $l [ $i ];
-            next if ( $l && ! -d $l );
+            if ( $l && ! -d $l ) {
+                if ( $i == $#l ) {
+                    println 'no';
+                    return;
+                } else {
+                    next;
+                }
+            }
             my $gcc = "| $tool -xc $flags " . ($I ? "-I$I " : ' ')
                                       . ($l ? "-L$l " : ' ') . "- $library";
             $gcc .= ' 2> /dev/null' unless ($OPT{'debug'});
@@ -1731,9 +1751,12 @@ EndText
         foreach my $href (@REQ) {
             next unless (optional($href->{type}));
             my %a = %$href;
-            if ($a{option} =~ /-sources$/) {
+            if ($a{option} && $a{option} =~ /-sources$/) {
                 println "  --$a{option}=DIR    search for $a{name} package";
                 println "                                source files in DIR";
+            } elsif ($a{boption} && $a{boption} =~ /-build$/) {
+                println "  --$a{boption}=DIR     search for $a{name} package";
+                println "                                 build output in DIR";
             } else {
                 println "  --$a{option}=DIR    search for $a{name} files in DIR"
             }

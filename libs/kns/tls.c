@@ -28,6 +28,7 @@ struct KTLSStream;
 #define KSTREAM_IMPL struct KTLSStream
 
 #include <kns/extern.h>
+#include <kns/endpoint.h> /* KEndPoint */
 #include <kns/manager.h>
 #include <kns/tls.h>
 #include <kns/impl.h>
@@ -134,6 +135,39 @@ const char * mbedtls_strerror2 ( int err )
 /*--------------------------------------------------------------------------
  * KTLSGlobals
  */
+
+static
+void ktls_ssl_dbg_print ( void * obj, int level, const char * file, int line, const char * msg )
+{
+    KLogLevel l = klogDebug;
+    switch ( level ) {
+        case 0: /* No debug */
+            l = klogFatal;
+            break;
+        case 1: /* Error */
+            l = klogErr;
+            break;
+        case 2: /* State change */
+            l = klogWarn;
+            break;
+        case 3: /* Informational */
+            l = klogInfo;
+            break;
+        case 4: /* Verbose */
+        default:
+            l = klogDebug;
+            break;
+    }
+
+    if ( file == NULL )
+        file = "mbedtls-file-unknown";
+    if ( msg == NULL )
+        msg = "<missing message>";
+
+    PLOGMSG ( l, ( l, "[$(level)]:$(file):$(line) - $(msg)",
+                         "level=%d,file=%s,line=%d,msg=%s",
+                          level, file, line, msg ) );
+}
 
 static
 rc_t tlsg_seed_rng ( KTLSGlobals *self )
@@ -406,6 +440,41 @@ rc_t tlsg_setup ( KTLSGlobals * self )
     return 0;
 }
 
+static int set_threshold ( const KConfig * kfg ) {
+    bool set = false;
+
+    int64_t threshold = 0;
+    
+    const char * env = NULL;
+
+    rc_t rc = KConfigReadI64 ( kfg, "/tls/NCBI_VDB_TLS", & threshold );
+    if ( rc == 0 )
+        set = true;
+
+    env = getenv ( "NCBI_VDB_TLS" );
+
+    if ( env != NULL ) {
+        int NCBI_VDB_TLS = 0;
+
+        for  ( ; * env != '\0'; ++ env ) {
+            char c = * env;
+            if ( c < '0' || c > '9' )
+                break;
+
+            NCBI_VDB_TLS = NCBI_VDB_TLS * 10 + c - '0';
+            set = true;
+        }
+
+        if ( NCBI_VDB_TLS > threshold )
+            threshold = NCBI_VDB_TLS;
+    }
+
+    if ( set )
+        vdb_mbedtls_debug_set_threshold ( ( int ) threshold );
+
+    return ( int ) threshold;
+}
+
 /* Init
  */
 rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg, const KConfig * kfg )
@@ -416,6 +485,9 @@ rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg, const KConfig * kfg )
     vdb_mbedtls_ctr_drbg_init ( &tlsg -> ctr_drbg );
     vdb_mbedtls_entropy_init ( &tlsg -> entropy );
     vdb_mbedtls_ssl_config_init ( &tlsg -> config );
+
+    if ( set_threshold ( kfg ) > 0 )
+        vdb_mbedtls_ssl_conf_dbg ( &tlsg -> config, ktls_ssl_dbg_print, tlsg );
 
     rc = tlsg_seed_rng ( tlsg );
     if ( rc == 0 )
@@ -982,6 +1054,41 @@ LIB_EXPORT rc_t CC KNSManagerMakeTLSStream ( const KNSManager * self,
                         ktls -> mgr = self;
                         *plaintext = ktls;
                         return 0;
+                    }
+                    else {
+                        if ( KNSManagerLogNcbiVdbNetError ( self ) ) {
+                            KEndPoint ep, local_ep;
+                            rc_t rr = KSocketGetRemoteEndpoint ( ciphertext,
+                                                                 & ep );
+                            rc_t rl = KSocketGetLocalEndpoint ( ciphertext,
+                                                                 & local_ep );
+                            if ( rr != 0 )
+                                LOGERR ( klogInt, rr
+                                    , "cannot KSocketGetRemoteEndpoint"
+                                );
+                            if ( rl != 0 )
+                                LOGERR ( klogInt, rl
+                                    , "cannot KSocketGetLocalEndpoint"
+                                );
+                            if ( rr == 0 || rl == 0 ) {
+                                if ( rr == 0 )
+                                    if ( rl == 0 )
+                                        PLOGERR ( klogSys, ( klogSys, rc,
+                                            "ktls_handshake failed while accessing '$(ip)' from '$(local)'"
+                                            , "ip=%s,local=%s", ep . ip_address, local_ep . ip_address
+                                        ) );
+                                    else
+                                        PLOGERR ( klogSys, ( klogSys, rc,
+                                            "ktls_handshake failed while accessing '$(ip)'"
+                                            , "ip=%s", ep . ip_address
+                                        ) );
+                                else
+                                    PLOGERR ( klogSys, ( klogSys, rc,
+                                        "ktls_handshake failed while accessing unknown IP from '$(local)'"
+                                        , "local=%s", local_ep . ip_address
+                                    ) );
+                            }
+                        }
                     }
                 }
 

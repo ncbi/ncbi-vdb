@@ -30,6 +30,7 @@
 
 #include <unistd.h>
 #include <stdlib.h>
+#include <string.h> /* memset */
 #include <stdio.h>
 #include <assert.h>
 #include <time.h>
@@ -53,9 +54,9 @@ LIB_EXPORT KTime_t CC KTimeStamp ( void )
 
 LIB_EXPORT KTimeMs_t CC KTimeMsStamp ( void )
 {
-	struct timeval tm;
+    struct timeval tm;
     gettimeofday( &tm, NULL );
-	return ( ( tm.tv_sec * 1000 ) + ( tm.tv_usec / 1000 ) );
+    return ( ( tm.tv_sec * 1000 ) + ( tm.tv_usec / 1000 ) );
 }
 
 /*--------------------------------------------------------------------------
@@ -127,7 +128,7 @@ LIB_EXPORT KTime_t CC KTimeMakeTime ( const KTime *self )
     {
         struct tm t;
 
-        assert ( self -> year >= 1900 );
+        assert ( self -> year >= 1900 ); // TODO
         t . tm_year = self -> year - 1900;
         t . tm_mon = self -> month;
         t . tm_mday = self -> day + 1;
@@ -141,9 +142,62 @@ LIB_EXPORT KTime_t CC KTimeMakeTime ( const KTime *self )
         t . tm_isdst = self -> dst;
 
         ts = mktime ( &t );
+        ts -= timezone;
     }
 
     return ts;
+}
+
+
+LIB_EXPORT const KTime* CC KTimeFromIso8601 ( KTime *kt, const char * s,
+    size_t size )
+{
+    struct tm t;
+
+    const char * c = NULL;
+
+    if ( kt == NULL || s == NULL )
+        return NULL;
+
+    memset ( & t, 0, sizeof t );
+
+    if ( size == 19 )
+        c = strptime ( s, "%Y-%m-%dT%H:%M:%S", & t );
+    else if ( size == 20 )
+        c = strptime ( s, "%Y-%m-%dT%H:%M:%S%z", & t );
+    else
+        return NULL;
+
+    if ( c != NULL && c - s != size )
+        return NULL;
+
+    memset ( kt, 0, sizeof * kt );
+    KTimeMake ( kt, & t );
+
+    return kt;
+}
+
+
+/* Iso8601
+ *  populate "s" from "ks" according to ISO-8601:
+ *         YYYY-MM-DDThh:mm:ssTZD
+ */
+KLIB_EXTERN size_t CC KTimeIso8601 ( KTime_t ts, char * s, size_t size ) {
+    const KTime * r = NULL;
+    KTime now;
+
+    time_t unix_time = ( time_t ) ts;
+    struct tm t;
+
+    if ( ts == 0 || s == NULL || size == 0 )
+        return 0;
+
+    r = KTimeGlobal ( & now, ts );
+    if ( r == NULL )
+        return 0;
+
+    gmtime_r ( & unix_time, & t );
+    return strftime ( s, size, "%FT%TZ", & t );
 }
 
 
@@ -153,10 +207,8 @@ LIB_EXPORT rc_t CC KSleepMs(uint32_t milliseconds) {
     time.tv_sec = (milliseconds / 1000);
     time.tv_nsec = (milliseconds % 1000) * 1000 * 1000;
 
-    if (nanosleep(&time, NULL)) {
+    if (nanosleep(&time, NULL))
         return 0;
-    }
-    else {
+    else
         return RC(rcRuntime, rcTimeout, rcWaiting, rcTimeout, rcInterrupted);
-    }
 }

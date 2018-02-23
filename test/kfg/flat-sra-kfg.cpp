@@ -127,9 +127,9 @@ static const char badCgi[]
 #ifdef ALL
 TEST_CASE(test_sra) {
     const string newShort
-        ("https://sra-download.ncbi.nlm.nih.gov/srapub/SRR000001");
+     ("https://sra-download.ncbi.nlm.nih.gov/traces/sra27/SRR/000000/SRR000001");
     const string newLong
-        ("https://sra-download.ncbi.nlm.nih.gov/srapub/SRR1000254");
+    ("https://sra-download.ncbi.nlm.nih.gov/traces/sra14/SRR/000976/SRR1000254");
     const string oldShort("https://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/"
                 "reads/ByRun/sra/SRR/SRR000/SRR000001/SRR000001.sra");
 
@@ -417,7 +417,9 @@ rc_t CC UsageSummary ( const char * prog_name ) { return 0; }
 extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
     rc_t CC KMain ( int argc, char *argv [] ) {
-if ( 0 ) assert ( ! KDbgSetString ( "VFS" ) );
+const char * p = getenv("http_proxy");
+//cerr << "http_proxy = '" << ( p == NULL ? "NULL" : p ) << "'\n";
+if ( 1 ) assert ( ! KDbgSetString ( "VFS" ) );
         KConfigDisableUserSettings();
         rc_t rc = KNSManagerMake(&kns);
         if (rc == 0) {

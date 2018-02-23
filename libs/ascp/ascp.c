@@ -263,7 +263,7 @@ rc_t ascpParse(const char *buf, size_t len, const char *filename,
 {
     bool failure = false;
     const char *p = buf;
-    int64_t l = len;
+    size_t l = len;
     assert(buf && len && filename && state && line);
     StringInit(line, NULL, 0, 0);
     while (true) {

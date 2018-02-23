@@ -35,6 +35,8 @@ TEST_TOOLS = \
 	test-ramfile \
 	test-resolve \
 	test-cachetee \
+	test-cachetee2 \
+	test-lru-cache \
 	test-kfs-md5
 
 include $(TOP)/build/Makefile.env
@@ -151,6 +153,51 @@ TEST_CACHETEE_LIB = \
 $(TEST_BINDIR)/test-cachetee: $(TEST_CACHETEE_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_CACHETEE_LIB)
 	rm *.o *.d
+
+cachetee: $(TEST_BINDIR)/test-cachetee
+	$(TEST_BINDIR)/test-cachetee
+
+#-------------------------------------------------------------------------------
+# test-cachetee2
+#
+TEST_CACHETEE2_SRC = \
+	cachetee2test
+
+TEST_CACHETEE2_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_CACHETEE2_SRC))
+
+TEST_CACHETEE2_LIB = \
+	-lkapp \
+    -sncbi-vdb \
+	-lktst
+
+$(TEST_BINDIR)/test-cachetee2: $(TEST_CACHETEE2_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_CACHETEE2_LIB)
+	rm *.o *.d
+
+cachetee2: $(TEST_BINDIR)/test-cachetee2
+	$(TEST_BINDIR)/test-cachetee2
+
+#-------------------------------------------------------------------------------
+# test-lru-cache
+#
+TEST_LRU_CACHE_SRC = \
+	lru_cache_test
+
+TEST_LRU_CACHE_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_LRU_CACHE_SRC))
+
+TEST_LRU_CACHE_LIB = \
+	-lkapp \
+    -sncbi-vdb \
+	-lktst
+
+$(TEST_BINDIR)/test-lru-cache: $(TEST_LRU_CACHE_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_LRU_CACHE_LIB)
+	rm *.o *.d
+
+testlrucache: $(TEST_BINDIR)/test-lru-cache
+	$(TEST_BINDIR)/test-lru-cache
 
 #-------------------------------------------------------------------------------
 # fuse-proxy ( needed for the cachetee_out_of_space - test

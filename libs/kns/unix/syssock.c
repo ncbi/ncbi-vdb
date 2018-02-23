@@ -106,6 +106,8 @@ struct KSocket
         struct sockaddr_in6 v6;     /* for ipv6 */
     } remote_addr;
     bool remote_addr_valid;
+
+    char ip_address [ 256 ];
 };
 
 LIB_EXPORT rc_t CC KSocketAddRef( const KSocket *self )
@@ -397,6 +399,8 @@ static rc_t KSocketGetEndpointV4 ( const KSocket * self, KEndPoint * ep, bool re
         ep->u.ipv4.addr = ntohl( addr.sin_addr.s_addr );
         ep->u.ipv4.port = ntohs( addr.sin_port );
         ep->type = epIPV4;
+        string_copy_measure ( ep -> ip_address, sizeof ep -> ip_address,
+                              inet_ntoa ( addr . sin_addr ) );
         return 0;
     }
 
@@ -415,6 +419,8 @@ static rc_t KSocketGetEndpoint ( const KSocket * self, KEndPoint * ep, bool remo
         rc = RC ( rcNS, rcSocket, rcEvaluating, rcParam, rcNull );
     else
     {
+        memset ( ep, 0, sizeof * ep );
+
         ep -> type = epInvalid;
 
         if ( self == NULL )
@@ -871,6 +877,10 @@ rc_t KSocketConnectIPv4 ( KSocket *self, const KEndPoint *from, const KEndPoint 
                 /* set non-blocking mode */
                 flag = fcntl ( self -> fd, F_GETFL );
                 fcntl ( self -> fd, F_SETFL, flag | O_NONBLOCK );
+
+                string_copy_measure ( self -> ip_address,
+                    sizeof self -> ip_address, to -> ip_address );
+
                 return 0;
             }
         }

@@ -275,6 +275,7 @@ const char UsageDefaultName[] = "test-VDB-3060";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    KConfigDisableUserSettings();
     const char HomeSub[] = "test_root_history";
     KConfig *cfg;
     rc_t rc = prepare_test( &cfg, HomeSub );

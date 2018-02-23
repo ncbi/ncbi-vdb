@@ -93,7 +93,7 @@ static const char default_kfg[] = {
                       "\"https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi\"\n"
 "/repository/remote/protected/CGI/resolver-cgi = "
                       "\"https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi\"\n"
-"/tools/ascp/max_rate = \"1000m\"\n"
+"/tools/ascp/max_rate = \"450m\"\n"
 };
 /*----------------------------------------------------------------------------*/
 
@@ -2224,7 +2224,7 @@ rc_t path_to_magic_file ( const KConfig *self, char *path, size_t buffer_size, s
 LIB_EXPORT rc_t CC KConfigCommit ( KConfig *self )
 {
     rc_t rc;
-    size_t path_size;
+    size_t path_size = 0;
     char magic_file_path [ 4096 ];
 
     if ( self == NULL )
@@ -2581,7 +2581,7 @@ bool load_from_std_location ( KConfig *self, const KDirectory *dir )
 }
 
 static
-bool load_from_fs_location ( KConfig *self )
+bool load_from_fs_location ( KConfig *self, const char *confdir )
 {
     bool loaded = false;
     KDyld *dyld;
@@ -2593,16 +2593,20 @@ bool load_from_fs_location ( KConfig *self )
         if ( rc == 0 )
         {
             char resolved[PATH_MAX + 1];
-            DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG), ( "KFG: try to load from dyn. loader\n" ) );
+            assert ( confdir );
+            DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG),
+                ( "KFG: try to load from dyn. loader %s\n", confdir ) );
 
 /* N.B. Duplication of ResolvePath here and in load_from_dir_path ? */
             if (KDirectoryResolvePath
-                    (dir, true, resolved, sizeof resolved, "ncbi") == 0)
+                    (dir, true, resolved, sizeof resolved, confdir) == 0)
             {
                 rc = KConfigAppendToLoadPath(self, resolved);
             }
-            if ((loaded = load_from_dir_path(self, dir, "ncbi", 4)))
-                DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG), ( "KFG: found from dyn. loader\n" ) );
+            if ((loaded = load_from_dir_path(self, dir, confdir,
+                                       string_measure ( confdir, NULL ))))
+                DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG),
+                    ( "KFG: found from dyn. loader %s\n", confdir ) );
             KDirectoryRelease ( dir );
         }
         KDyldRelease ( dyld );
@@ -2738,7 +2742,9 @@ rc_t load_config_files ( KConfig * self,
     /* check for config as the result of a user install
        i.e. not an admin installation */
     if ( ! loaded )
-        loaded = load_from_fs_location ( self );
+        loaded = load_from_fs_location ( self, "../etc/ncbi" );
+    if ( ! loaded )
+        loaded = load_from_fs_location ( self, "ncbi" );
 
     if ( ! loaded )
         loaded = load_from_default_string ( self );
@@ -3019,7 +3025,7 @@ static rc_t _KConfigFixRepeatedDrives(KConfig *self,
     const KDirectory *pdir, bool *updated)
 {
     rc_t rc = 0;
-    const KDirectory *dir = pdir;
+    KDirectory * dir = ( KDirectory * ) pdir;
     KConfigNode *user = NULL;
     if (dir == NULL) {
         rc = KDirectoryNativeDir(&dir);
@@ -3073,6 +3079,48 @@ static rc_t _KConfigFixRepeatedDrives(KConfig *self,
 }
 
 #endif
+
+static rc_t _KConfigLowerAscpRate ( KConfig * self, bool * updated ) {
+    rc_t rc = 0;
+
+    const char MAX_RATE     [] = "/tools/ascp/max_rate";
+    const char RATE_UPDATED [] = "/tools/ascp/max_rate/450m";
+
+    String * result = NULL;
+
+    String g;
+    CONST_STRING ( & g, "1000m" );
+
+    assert ( updated );
+    * updated = false;
+
+    rc = KConfigReadString ( self, RATE_UPDATED, & result );
+    if ( rc == 0 ) { /* was updated already */
+        free ( result );
+        return rc;
+    }
+
+    rc = KConfigReadString ( self, MAX_RATE, & result );
+    if ( rc == 0 ) { /* when found: update just rate=1000m (old value) */
+        if ( StringEqual ( & g, result ) )
+            * updated = true;
+        free ( result );
+        result = NULL;
+    }
+    else { /* update when max-rate was not set */
+        * updated = true;
+        rc = 0;
+    }
+
+    if ( * updated ) {
+        assert ( rc == 0 );
+        rc = KConfigWriteString ( self, MAX_RATE, "450m" );
+        if ( rc == 0 )
+            rc = KConfigWriteString ( self, RATE_UPDATED, "updated" );
+    }
+
+    return rc;
+}
 
 static
 rc_t KConfigFill ( KConfig * self, const KDirectory * cfgdir,
@@ -3165,15 +3213,25 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
             mgr -> initialized = true;
 
 
-#if WINDOWS /* VDB-1554: fix incorrect posix paths in configuration nodes */
             if ( rc == 0 ) {
+                rc_t rc = 0;
+
                 bool updated = false;
-                rc_t rc = _KConfigFixRepeatedDrives ( mgr, cfgdir, & updated );
-                if ( rc == 0 && updated ) {
-                    rc = KConfigCommit ( mgr );
+
+                if ( ! s_disable_user_settings ) {
+                    rc = _KConfigLowerAscpRate ( mgr,  & updated );
+                    if ( rc == 0 && updated ) {
+                        rc = KConfigCommit ( mgr );
+                        updated = false;
+                    }
                 }
-            }
+
+#if WINDOWS /* VDB-1554: fix incorrect posix paths in configuration nodes */
+                rc = _KConfigFixRepeatedDrives ( mgr, cfgdir, & updated );
+                if ( rc == 0 && updated )
+                    rc = KConfigCommit ( mgr );
 #endif
+            }
 
             DBGMSG ( DBG_KFG, DBG_FLAG ( DBG_KFG ), ( "\n" ) );
 

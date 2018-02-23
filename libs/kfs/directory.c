@@ -828,6 +828,64 @@ LIB_EXPORT rc_t CC KDirectoryVOpenFileWrite ( KDirectory_v1 *self,
     return RC ( rcFS, rcDirectory, rcOpening, rcInterface, rcBadVersion );
 }
 
+/* OpenFileSharedWrite ( v1.4 )
+ *  opens an existing file with shared write access
+ *
+ *  "f" [ OUT ] - return parameter for newly opened file
+ *
+ *  "update" [ IN ] - if true, open in read/write mode
+ *  otherwise, open in write-only mode
+ *
+ *  "path" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting target file
+ */
+LIB_EXPORT rc_t CC KDirectoryOpenFileSharedWrite_v1 ( KDirectory_v1 *self,
+    struct KFile **f, bool update, const char *path, ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, path );
+    rc = KDirectoryVOpenFileSharedWrite ( self, f, update, path, args );
+    va_end ( args );
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KDirectoryVOpenFileSharedWrite ( KDirectory_v1 *self,
+    struct KFile **f, bool update, const char *path, va_list args )
+{
+    if ( f == NULL )
+        return RC ( rcFS, rcDirectory, rcOpening, rcFile, rcNull );
+
+    * f = NULL;
+
+    if ( self == NULL )
+        return RC ( rcFS, rcDirectory, rcOpening, rcSelf, rcNull );
+
+    if ( path == NULL )
+        return RC ( rcFS, rcDirectory, rcOpening, rcPath, rcNull );
+    if ( path [ 0 ] == 0 )
+        return RC ( rcFS, rcDirectory, rcOpening, rcPath, rcInvalid );
+
+
+    if ( self -> read_only )
+        return RC ( rcFS, rcDirectory, rcOpening, rcDirectory, rcReadonly );
+
+    switch ( self -> vt -> v1 . maj )
+    {
+    case 1:
+        if ( self -> vt -> v1 . min >= 4 )
+        {
+            return ( * self -> vt -> v1 . open_file_shared_write )
+                ( self, f, update, path, args );
+        }
+        break;
+    }
+
+    return RC ( rcFS, rcDirectory, rcOpening, rcInterface, rcBadVersion );
+}
+
 /* CreateFile
  *  opens a file with write access
  *
@@ -1272,9 +1330,16 @@ LIB_EXPORT rc_t CC KDirectoryInit_v1 ( KDirectory_v1 *self, const KDirectory_vt 
         switch ( vt -> v1 . min )
         {
             /* ADD NEW MINOR VERSION CASES HERE */
+        case 4:
+#if _DEBUGGING
+            if ( vt -> v1 . open_file_shared_write == NULL )
+                return RC ( rcFS, rcFile, rcConstructing, rcInterface, rcNull );
+#endif
+            /* no break */
         case 3:
 #if _DEBUGGING
-            if ( vt -> v1 . file_phys_size == NULL )
+            if ( vt -> v1 . file_phys_size == NULL  ||
+                 vt -> v1 . file_contiguous == NULL )
                 return RC ( rcFS, rcFile, rcConstructing, rcInterface, rcNull );
 #endif
             /* no break */

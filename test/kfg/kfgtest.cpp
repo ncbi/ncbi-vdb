@@ -253,6 +253,11 @@ public:
 };
 string KfgFixture::apppath; 
 
+FIXTURE_TEST_CASE(testKConfigPrint, KfgFixture)
+{
+	REQUIRE_RC(KConfigPrint(kfg, 0));
+}
+
 ///////////////////////////////////////////////// KFG parser test cases
 
 #ifdef ALL

@@ -39,7 +39,6 @@
 #undef ERR
 #endif
 
-#include <klib/debug.h> /* DBGMSG */
 #include <klib/text.h>
 #include <klib/container.h>
 #include <klib/out.h>

@@ -699,7 +699,7 @@ static rc_t _ReportFinalize
 "=============================================================\n"
 "An error occurred during processing.\n"
 "If the problem persists, you may consider sending the following XML document\n"
-"to 'sra@ncbi.nlm.nih.gov' for assistance.\n"
+"to 'sra-tools@ncbi.nlm.nih.gov' for assistance.\n"
 "=============================================================\n\n"));
                 }
 

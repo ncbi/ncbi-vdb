@@ -161,3 +161,14 @@ void print_char_fixup ( char * fmt, size_t * len, size_t max )
      */
     return;
 }
+
+size_t CC sys_simple_write( int fd, const void * buf, size_t count )
+{
+    /* from <unistd.h> */
+    return write( fd, buf, count );
+}
+
+int CC sys_is_a_tty( int fd )
+{
+    return isatty( fd );
+}

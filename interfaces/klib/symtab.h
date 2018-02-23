@@ -217,6 +217,7 @@ KLIB_EXTERN struct KSymbol* CC KSymTableFindShallow ( const KSymTable *self,
 KLIB_EXTERN struct KSymbol* CC KSymTableFindNext ( const KSymTable *self,
     struct KSymbol const *sym, uint32_t *scope );
 
+KLIB_EXTERN void KSymTableDump ( const KSymTable *self );
 
 #ifdef __cplusplus
 }

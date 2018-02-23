@@ -750,7 +750,6 @@ bool CC STableCopyColumnNames ( void *item, void *data )
     return ( rc != 0 ) ? true : false;
 }
 
-static
 bool CC STableScanVirtuals ( void *item, void *data )
 {
     KSymTable *tbl = data;
@@ -787,7 +786,6 @@ bool CC STableScanVirtuals ( void *item, void *data )
     return false;
 }
 
-static
 rc_t STableExtend ( KSymTable *tbl, STable *self, const STable *dad )
 {
     rc_t rc;
@@ -1142,7 +1140,6 @@ enum
     stbl_cmp_older     = 1 << 4
 };
 
-static
 rc_t STableCompare ( const STable *a, const STable *b, const STable **newer, bool exhaustive )
 {
     rc_t stage_rc, cmp_rc = 0;
@@ -1589,7 +1586,7 @@ rc_t physical_mbr ( KSymTable *tbl, KTokenSource *src, KToken *t,
         {
             /* column is probably based upon a physical structure */
             if ( t -> id == ePhysical )
-                rc = phys_encoding_expr ( tbl, src, t, env, self, & m -> td, & m -> type );            
+                rc = phys_encoding_expr ( tbl, src, t, env, self, & m -> td, & m -> type );
             else if ( t -> id != eDatatype )
                 return KTokenExpected ( t, klogErr, "typename or physical column type" );
             else
@@ -1658,7 +1655,6 @@ rc_t physical_member ( KSymTable *tbl, KTokenSource *src, KToken *t,
     return rc;
 }
 
-static
 rc_t implicit_physical_member ( KSymTable *tbl, const SchemaEnv *env,
     STable *table, SColumn *c, KSymbol *sym )
 {
@@ -2303,14 +2299,7 @@ rc_t table_local_decl ( KSymTable *tbl, KTokenSource *src, KToken *t,
  *
  * table-decl-list    = <tbl-local-decl> ';' [ <table-decl-list> ]
  */
-typedef struct STableScanData STableScanData;
-struct STableScanData
-{
-    STable *self;
-    rc_t rc;
-};
 
-static
 bool CC table_fwd_scan ( BSTNode *n, void *data )
 {
     STableScanData *pb = data;
@@ -2449,6 +2438,20 @@ rc_t table_physical_syntax ( const STable *table )
 }
 #endif
 
+rc_t
+table_fix_forward_refs ( const STable *table )
+{
+    rc_t rc = table_stmt_syntax ( table );
+#if SLVL >= 8
+    if ( rc == 0 )
+        rc = table_column_syntax ( table );
+#endif
+#if SLVL >= 7
+    if ( rc == 0 )
+        rc = table_physical_syntax ( table );
+#endif
+    return rc;
+}
 
 /*
  * push-tbl-scope
@@ -2620,15 +2623,7 @@ rc_t table_decl ( KSymTable *tbl, KTokenSource *src, KToken *t,
     /* fix forward references */
     if ( rc == 0 )
     {
-        rc = table_stmt_syntax ( table );
-#if SLVL >= 8
-        if ( rc == 0 )
-            rc = table_column_syntax ( table );
-#endif
-#if SLVL >= 7
-        if ( rc == 0 )
-            rc = table_physical_syntax ( table );
-#endif
+        rc = table_fix_forward_refs ( table );
     }
 
     return rc;
@@ -2670,8 +2665,7 @@ void CC symbol_set_context ( void *item, void *data )
     self -> u . fwd . ctx = * ( const uint32_t* ) data;
 }
 
-static
-void table_set_context ( STable *self )
+void CC table_set_context ( STable *self )
 {
     VectorForEach ( & self -> col, false, column_set_context, & self -> id );
     VectorForEach ( & self -> cname, false, name_set_context, & self -> id );
@@ -2681,8 +2675,10 @@ void table_set_context ( STable *self )
 }
 
 #if NO_UPDATE_TBL_REF || 0
-#define schema_update_tbl_ref( self, exist, table ) \
-    0
+rc_t schema_update_tbl_ref ( VSchema *, const STable *, const STable * )
+{
+    return 0;
+}
 #else
 typedef struct update_tbl_ref_data update_tbl_ref_data;
 struct update_tbl_ref_data
@@ -2835,7 +2831,6 @@ bool CC db_update_tbl_ref ( void *item, void *data )
     return VectorDoUntil ( & self -> db, false, db_update_tbl_ref, data );
 }
 
-static
 rc_t schema_update_tbl_ref ( VSchema *self, const STable *exist, const STable *table )
 {
     update_tbl_ref_data pb;
