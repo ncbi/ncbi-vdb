@@ -609,6 +609,9 @@ LIB_EXPORT rc_t KHashFileAdd(KHashFile* self, const void* key,
         u8* kv = table[bucket];
         if (kv == BUCKET_INVALID) {
             void* buf = seg_alloc(self, segment, kvsize);
+            if (!buf)
+                return RC(rcCont, rcHashtable, rcInserting, rcMemory,
+                          rcExhausted);
             hkv_encode(&hkv, buf);
 
             /* Intel 64 and IA-32 Architectures Software Developers
@@ -670,6 +673,9 @@ LIB_EXPORT rc_t KHashFileAdd(KHashFile* self, const void* key,
                     }
 
                     void* buf = seg_alloc(self, segment, kvsize);
+                    if (!buf)
+                        return RC(rcCont, rcHashtable, rcInserting, rcMemory,
+                                  rcExhausted);
                     hkv_encode(&hkv, buf);
 
                     COMPILER_BARRIER;
