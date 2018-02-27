@@ -92,7 +92,7 @@ struct KVTable
 };
 
 #define KVTABLE_INITIALIZER( impl_name, itf_name, min_vers, parent_vt )   \
-    { #impl_name, & itf_name ## _tok, min_vers, parent_vt }
+    { .name = #impl_name, .itf = & itf_name ## _tok, .min = min_vers, .parent = & parent_vt . dad }
 
 
 /* Resolve

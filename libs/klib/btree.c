@@ -1287,7 +1287,7 @@ static rc_t tree_entry(EntryData *pb)
 }
 
 LIB_EXPORT rc_t CC BTreeEntry ( uint32_t *root, Pager *pager, Pager_vt const *vt, uint32_t *id,
-                               bool *was_inserted, const void *key, size_t key_size )
+    bool *was_inserted, const void *key, size_t key_size )
 {
     assert(root != NULL);
     assert(vt != NULL);
@@ -1324,7 +1324,7 @@ LIB_EXPORT rc_t CC BTreeEntry ( uint32_t *root, Pager *pager, Pager_vt const *vt
  *  "f" [ IN ] and "data" [ IN, OPAQUE ] - callback function
  */
 static void invoke_foreach_func ( void const *const cnode, void const *const ordp,
-                                 void ( CC * f ) ( const void *key, size_t key_size, uint32_t id, void *data ), void *data )
+    void ( CC * f ) ( const void *key, size_t key_size, uint32_t id, void *data ), void *data )
 {
     LeafEntry const *const ord = ordp;
     uint8_t const *const page = cnode;
@@ -1337,18 +1337,18 @@ static void invoke_foreach_func ( void const *const cnode, void const *const ord
 }
 
 static void foreach_leaf_reverse(uint32_t nodeid, Pager *pager, Pager_vt const *vt,
-                                 void ( CC * f ) ( const void *key, size_t key_size, uint32_t id, void *data ), void *data )
+    void ( CC * f ) ( const void *key, size_t key_size, uint32_t id, void *data ), void *data )
 {
     void const *const page = vt->use(pager, nodeid);
     assert(page != NULL);
     {
         unsigned i;
-    LeafNode const *const node = vt->access(pager, page);
-    assert(node != NULL);
+        LeafNode const *const node = vt->access(pager, page);
+        assert(node != NULL);
     
-    for (i = node->count; i > 0; ) {
-        invoke_foreach_func(node, &node->ord[--i], f, data);
-    }
+        for (i = node->count; i > 0; ) {
+            invoke_foreach_func(node, &node->ord[--i], f, data);
+        }
     }
     vt->unuse(pager, page);
 }
@@ -1360,20 +1360,20 @@ static void foreach_branch_reverse(uint32_t nodeid, Pager *pager, Pager_vt const
     assert(page != NULL);
     {
         unsigned i;
-    BranchNode const *const node = vt->access(pager, page);
-    assert(node != NULL);
+        BranchNode const *const node = vt->access(pager, page);
+        assert(node != NULL);
     
-    for (i = node->count; i > 0; ) {
-        uint32_t const child = node->ord[--i].trans;
+        for (i = node->count; i > 0; ) {
+            uint32_t const child = node->ord[--i].trans;
         
-        invoke_foreach_func(node, &node->ord[i], f, data);
-        if (child & 1) {
-            foreach_branch_reverse(child >> 1, pager, vt, f, data);
+            invoke_foreach_func(node, &node->ord[i], f, data);
+            if (child & 1) {
+                foreach_branch_reverse(child >> 1, pager, vt, f, data);
+            }
+            else {
+                foreach_leaf_reverse(child >> 1, pager, vt, f, data);
+            }
         }
-        else {
-            foreach_leaf_reverse(child >> 1, pager, vt, f, data);
-        }
-    }
     }
     vt->unuse(pager, page);
 }
@@ -1396,12 +1396,12 @@ static void foreach_leaf(uint32_t nodeid, Pager *pager, Pager_vt const *vt,
     assert(page != NULL);
     {
         unsigned i;
-    LeafNode const *const node = vt->access(pager, page);
-    assert(node != NULL);
+        LeafNode const *const node = vt->access(pager, page);
+        assert(node != NULL);
     
-    for (i = 0; i < node->count; ++i) {
-        invoke_foreach_func(node, &node->ord[i], f, data);
-    }
+        for (i = 0; i < node->count; ++i) {
+            invoke_foreach_func(node, &node->ord[i], f, data);
+        }
     }
     vt->unuse(pager, page);
 }
@@ -1413,20 +1413,20 @@ static void foreach_branch(uint32_t nodeid, Pager *pager, Pager_vt const *vt,
     assert(page != NULL);
     {
         unsigned i;
-    BranchNode const *const node = vt->access(pager, page);
-    assert(node != NULL);
+        BranchNode const *const node = vt->access(pager, page);
+        assert(node != NULL);
     
-    for (i = 0; i < node->count; ++i) {
-        uint32_t const child = node->ord[i].trans;
+        for (i = 0; i < node->count; ++i) {
+            uint32_t const child = node->ord[i].trans;
         
-        invoke_foreach_func(node, &node->ord[i], f, data);
-        if (child & 1) {
-            foreach_branch(child >> 1, pager, vt, f, data);
+            invoke_foreach_func(node, &node->ord[i], f, data);
+            if (child & 1) {
+                foreach_branch(child >> 1, pager, vt, f, data);
+            }
+            else {
+                foreach_leaf(child >> 1, pager, vt, f, data);
+            }
         }
-        else {
-            foreach_leaf(child >> 1, pager, vt, f, data);
-        }
-    }
     }
     vt->unuse(pager, page);
 }
@@ -1443,7 +1443,7 @@ static void foreach(uint32_t root, Pager *pager, Pager_vt const *vt,
 }
 
 LIB_EXPORT rc_t CC BTreeForEach ( uint32_t root, Pager *pager, Pager_vt const *vt, bool reverse,
-                                 void ( CC * f ) ( const void *key, size_t key_size, uint32_t id, void *data ), void *data )
+    void ( CC * f ) ( const void *key, size_t key_size, uint32_t id, void *data ), void *data )
 {
     if (vt != NULL && root != 0 && f != NULL) {
         if (reverse) {
