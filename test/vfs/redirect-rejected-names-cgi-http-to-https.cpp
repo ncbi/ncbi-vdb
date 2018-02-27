@@ -223,7 +223,8 @@ extern "C" {
     const char UsageDefaultName[] = "redirect-rejected-names-cgi-http-to-https";
     rc_t CC KMain ( int argc, char *argv [] ) {
         if ( 0 ) assert ( ! KDbgSetString ( "VFS" ) );
-                if ( out_of_ncbi() ) {
+        KConfigDisableUserSettings ();
+        if ( out_of_ncbi() ) {
             std::cerr << "Disabled outside of NCBI\n";
             return 0;
         }
