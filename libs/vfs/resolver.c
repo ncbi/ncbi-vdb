@@ -659,6 +659,7 @@ rc_t VPathCheckFromNamesCGI ( const VPath * path, const String *ticket, const VP
     switch ( path -> scheme_type )
     {
     case vpuri_http:
+    case vpuri_https:
     case vpuri_fasp:
         break;
     default:
@@ -3281,6 +3282,7 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
                 break;
 
             case vpuri_http:
+            case vpuri_https:
                 switch ( protocols )
                 {
                 case eProtocolHttp:

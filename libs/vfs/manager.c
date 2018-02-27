@@ -626,6 +626,7 @@ static rc_t VFSManagerResolvePathInt (const VFSManager * self,
 
         /* these are considered fully resolved already */
     case vpuri_http:
+    case vpuri_https:
     case vpuri_ftp:
         rc = VPathAddRef (in_path);
         if (rc == 0)
@@ -1245,6 +1246,7 @@ LIB_EXPORT rc_t CC VFSManagerOpenFileRead ( const VFSManager *self,
                     break;
 
                 case vpuri_http:
+                case vpuri_https:
                 case vpuri_ftp:
                     rc = VFSManagerOpenCurlFile ( self, f, path );
                     break;
@@ -1285,6 +1287,7 @@ rc_t CC VFSManagerOpenDirectoryUpdateDirectoryRelative (const VFSManager *self,
     switch ( uri_type )
     {
     case vpuri_http :
+    case vpuri_https :
     case vpuri_ftp :
         return RC( rcVFS, rcMgr, rcOpening, rcParam, rcWrongType );
 
@@ -1823,6 +1826,7 @@ rc_t VFSManagerOpenDirectoryReadDirectoryRelativeInt (const VFSManager *self,
                 break;
 
             case vpuri_http:
+            case vpuri_https:
             case vpuri_ftp:
                 rc = VFSManagerOpenDirectoryReadHttp ( self, dir, d, path, force_decrypt );
                 break;
@@ -1888,6 +1892,7 @@ rc_t CC VFSManagerOpenDirectoryReadDecryptRemote (const VFSManager *self,
     switch ( VPathGetUri_t ( path ) )
     {
     case vpuri_http:
+    case vpuri_https:
     case vpuri_ftp:
         rc = VFSManagerOpenDirectoryReadHttpResolved ( self, d, path, cache, true );
         break;
@@ -3108,6 +3113,7 @@ LIB_EXPORT rc_t CC VFSManagerResolveSpec ( const VFSManager * self,
                                            break;
 
                 case vpuri_http          : /* !! fall through !! */
+                case vpuri_https         :
                 case vpuri_ftp           : rc = VFSManagerResolveRemote( self, &temp, path_to_build, remote_file, local_cache );
                                            break;
 

@@ -210,6 +210,28 @@ typedef enum VPathParseState
 }
 VPathParseState;
 
+struct sm
+{
+    const char * scheme;
+    VPUri_t type;
+} schemes[] =
+{
+    { "file", vpuri_file } , /* Most popular first */
+    { "ncbi-file", vpuri_ncbi_file },
+    { "https", vpuri_https},
+    { "http", vpuri_http},
+    { "ncbi-acc", vpuri_ncbi_acc },
+    { "ftp", vpuri_ftp },
+    { "x-ncbi-legresfseq", vpuri_ncbi_legrefseq },
+    { "ncbi-obj", vpuri_ncbi_obj  },
+    { "fasp", vpuri_fasp },
+    { "s3",vpuri_s3 },
+    { "azure", vpuri_azure },
+    { "google", vpuri_google },
+    { "scp", vpuri_scp },
+    { "sftp", vpuri_sftp }
+};
+
 static
 void VPathCaptureScheme ( VPath * self, const char * uri, size_t start, size_t end )
 {
@@ -221,87 +243,12 @@ void VPathCaptureScheme ( VPath * self, const char * uri, size_t start, size_t e
     {
         const char * scheme = & uri [ start ];
         self -> scheme_type = vpuri_not_supported;
-
-        /* use size as a quick hash */
-        switch ( size )
+        size_t num_schemes=sizeof(schemes)/sizeof(schemes[0]);
+        for (size_t i=0; i!=num_schemes; ++i)
         {
-        case 3:
-            /* ftp */
-            if ( strcase_cmp (  scheme, 3, "ftp", 3, 3 ) == 0 )
-                self -> scheme_type = vpuri_ftp;
-            break;
-        case 4:
-            /* 4 character schemes */
-            switch (  uri [ 0 ] )
-            {
-            case 'f':
-            case 'F':
-                /* file */
-                if ( strcase_cmp (  scheme + 1, 3, "file" + 1, 3, 3 ) == 0 )
-                    self -> scheme_type = vpuri_file;
-                /* fasp */
-                else if ( strcase_cmp (  scheme + 1, 3, "fasp" + 1, 3, 3 ) == 0 )
-                    self -> scheme_type = vpuri_fasp;
-                break;
-            case 'h':
-            case 'H':
-                /* http */
-                if ( strcase_cmp (  scheme + 1, 3, "http" + 1, 3, 3 ) == 0 )
-                    self -> scheme_type = vpuri_http;
-                break;
-            }
-            break;
-            
-        case 8:
-            /* 8 character schemes starting with "ncbi-" */
-            if ( strcase_cmp (  scheme, 5, "ncbi-", 5, 5 ) != 0 )
-                break;
-            switch (  uri [ 5 ] )
-            {
-            case 'a':
-            case 'A':
-                /* ncbi-acc */
-                if ( strcase_cmp (  scheme + 5 + 1, 2, "acc" + 1, 2, 2 ) == 0 )
-                    self -> scheme_type = vpuri_ncbi_acc;
-                break;
-            case 'o':
-            case 'O':
-                /* ncbi-obj */
-                if ( strcase_cmp (  scheme + 5 + 1, 2, "obj" + 1, 2, 2 ) == 0 )
-                    self -> scheme_type = vpuri_ncbi_obj;
-                break;
-            }
-            break;
-            
-        case 9:
-            /* 9 character schemes starting with "ncbi-" */
-            if ( strcase_cmp (  scheme, 5, "ncbi-", 5, 5 ) != 0 )
-                break;
-            switch (  uri [ 5 ] )
-            {
-            case 'f':
-            case 'F':
-                /* ncbi-file */
-                if ( strcase_cmp (  scheme + 5 + 1, 3, "file" + 1, 3, 3 ) == 0 )
-                    self -> scheme_type = vpuri_ncbi_file;
-                break;
-            }
-            break;
-            
-        case 16:
-            /* 16 character schemes starting with "x-ncbi-" */
-            if ( strcase_cmp (  scheme, 7, "x-ncbi-", 7, 7 ) != 0 )
-                break;
-            switch (  uri [ 7 ] )
-            {
-            case 'l':
-            case 'L':
-                /* x-ncbi-legrefseq */
-                if ( strcase_cmp (  scheme + 7 + 1, 8, "legrefseq" + 1, 8, 8 ) == 0 )
-                    self -> scheme_type = vpuri_ncbi_legrefseq;
-                break;
-            }
-            break;
+            size_t l=strlen(schemes[i].scheme);
+            if (strcase_cmp(scheme, l, schemes[i].scheme, l, l) ==0)
+                self -> scheme_type = schemes[i].type;
         }
     }
 }
