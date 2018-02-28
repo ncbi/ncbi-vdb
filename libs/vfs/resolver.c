@@ -26,6 +26,11 @@
 
 
 #include <vfs/extern.h>
+
+#include <klib/time.h> /* KTime */
+
+#include "services-priv.h"
+#include "path-priv.h"
 #include "resolver-priv.h"
 
 #include <vfs/manager.h>
@@ -58,13 +63,15 @@
 #include <sysalloc.h>
 
 #include <vfs/path-priv.h>
-#include "path-priv.h"
 
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <os-native.h>
 #include <assert.h>
+
+#define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
+    if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
 
 /* to turn off CGI name resolution for
    any refseq accessions */
@@ -82,21 +89,16 @@
 #define ALLOW_AUX_REPOSITORIES 0
 
 #define NAME_SERVICE_MAJ_VERS_ 1
-#define NAME_SERVICE_MIN_VERS_ 1
+#define NAME_SERVICE_MIN_VERS_ 2
 #define ONE_DOT_ONE 0x01010000
-static uint32_t NAME_SERVICE_MAJ_VERS = NAME_SERVICE_MAJ_VERS_;
-static uint32_t NAME_SERVICE_MIN_VERS = NAME_SERVICE_MAJ_VERS_;
-static uint32_t NAME_SERVICE_VERS
-    = NAME_SERVICE_MAJ_VERS_ << 24 | NAME_SERVICE_MAJ_VERS_ << 16;
 
-static void VFSManagerSetNameResolverVersion(uint32_t maj, uint32_t min) {
-    NAME_SERVICE_MAJ_VERS = maj;
-    NAME_SERVICE_MIN_VERS = min;
-    NAME_SERVICE_VERS
-        = NAME_SERVICE_MAJ_VERS_ << 24 | NAME_SERVICE_MAJ_VERS_ << 16;
-}
-void VFSManagerSetNameResolverVersion3_0(void)
-{   VFSManagerSetNameResolverVersion(3, 0); }
+#ifdef TESTING_SERVICES_VS_OLD_RESOLVING
+    static uint32_t NAME_SERVICE_MAJ_VERS = NAME_SERVICE_MAJ_VERS_;
+    static uint32_t NAME_SERVICE_MIN_VERS = NAME_SERVICE_MIN_VERS_;
+    static uint32_t NAME_SERVICE_VERS
+        = NAME_SERVICE_MAJ_VERS_ << 24 | NAME_SERVICE_MIN_VERS_ << 16;
+#endif
+
 
 /*--------------------------------------------------------------------------
  * String
@@ -655,7 +657,7 @@ rc_t VPathCheckFromNamesCGI ( const VPath * path, const String *ticket, const VP
     if ( ! path -> from_uri )
         return RC ( rcVFS, rcResolver, rcResolving, rcMessage, rcCorrupt );
 
-    /* can only be http or fasp */
+    /* can only be http, https or fasp */
     switch ( path -> scheme_type )
     {
     case vpuri_http:
@@ -931,6 +933,23 @@ rc_t VResolverAlgParseResolverCGIResponse_1_0 ( const char *start, size_t size,
     return rc;
 }
 
+static int getDigit ( char c, rc_t * rc ) {
+     assert ( rc );
+ 
+     if ( * rc != 0 )
+         return 0;
+ 
+     c = tolower ( c );
+     if ( ! isdigit ( c ) && c < 'a' && c > 'f' ) {
+         * rc = RC ( rcVFS, rcQuery, rcExecuting, rcItem, rcIncorrect );
+         return 0;
+     }
+ 
+     if ( isdigit ( c ) )
+         return c - '0';
+ 
+     return c - 'a' + 10;
+}
 
 /* ParseResolverCGIResponse_1_1
  *  expect single row table, with this structure (SRA-1690) :
@@ -943,7 +962,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
     const String *ticket )
 {
     const char *start = astart;
-    rc_t rc;
+    rc_t rc = 0;
     KLogLevel lvl;
     char *rslt_end;
     uint32_t result_code;
@@ -1035,7 +1054,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
     if ( ! StringEqual ( & accession, acc ) && ! StringEqual ( & obj_id, acc ) ) {
         DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_ERR), (
             "@@@@@@@@2 %%s:%s:%d: %s"
-                "\n", __FILE__, __FUNCTION__, __LINE__, astart));
+                "\n", __FILE__, __func__, __LINE__, astart));
         return RC ( rcVFS, rcResolver, rcResolving, rcMessage, rcCorrupt );
     }
 
@@ -1070,20 +1089,51 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
            but can only handle 200 */
         if ( result_code == 200 )
         {
-            /* normal public response */
+            uint8_t ud5 [ 16 ];
+            bool has_md5 = false;
+            KTime_t date = 0;
+            uint64_t osize = 0;
+            if ( size_str . size != 0  && size_str . len != 0 ) {
+                rc_t r2 = 0;
+                osize = StringToU64 ( & size_str, & r2 );
+                if ( r2 != 0 )
+                    osize = 0;
+            }
+            if ( mod_date . addr != NULL && mod_date . size > 0 ) {
+                KTime kt;
+                const KTime * t = KTimeFromIso8601 ( & kt, mod_date . addr,
+                    mod_date . size );
+                if ( t != NULL )
+                    date = KTimeMakeTime ( & kt );
+            }
+            if ( md5 . addr != NULL && md5 . size == 32 ) {
+                int i = 0;
+                for ( i = 0; i < 16 && rc == 0; ++ i ) {
+                    ud5 [ i ]  = getDigit ( md5 . addr [ 2 * i ], & rc ) * 16;
+                    ud5 [ i ] += getDigit ( md5 . addr [ 2 * i + 1 ], & rc );
+                }
+                has_md5 = rc == 0;
+            }
+            /* normal public response *
             if ( download_ticket . size == 0
 #if DO_NOT_USE_TIC_HACK
                  || mapping != NULL
 #endif
-                )
+                )*/
             {
-                rc = VPathMakeFmt ( ( VPath** ) path, "%S", & url );
+                const String * id = & accession;
+                if ( id -> size == 0 )
+                    id = & obj_id;
+                rc = VPathMakeFromUrl ( ( VPath** ) path, & url,
+                    & download_ticket, true, id, osize, date,
+                    has_md5 ? ud5 : NULL, 0 );
             }
-            else
+            /*else
             {
-                /* protected response */
-                rc = VPathMakeFmt ( ( VPath** ) path, "%S?tic=%S", & url, & download_ticket );
-            }
+                * protected response *
+                rc = VPath MakeFmtExt ( ( VPath** ) path, true, & accession,
+                    size, date, "%S?tic=%S", & url, & download_ticket );
+            }*/
 
             if ( rc == 0 )
             {
@@ -1222,6 +1272,7 @@ typedef enum {
     vBad,
     v1_0,
     v1_1,
+    v1_2,
     v2,
     v3,
 } TVersion;
@@ -1236,6 +1287,7 @@ rc_t VResolverAlgParseResolverCGIResponse ( const KDataBuffer *result,
 {
     const char V1_0[] = "#1.0";
     const char V1_1[] = "#1.1";
+    const char V1_2[] = "#1.2";
     const char V2  [] = "#2.0";
     const char V3  [] = "#3.0";
     struct {
@@ -1246,6 +1298,7 @@ rc_t VResolverAlgParseResolverCGIResponse ( const KDataBuffer *result,
             const VPath **mapping, const String *acc, const String *ticket);
     } version[] = {
         {V1_1, sizeof V1_1 - 1, v1_1, VResolverAlgParseResolverCGIResponse_1_1},
+        {V1_2, sizeof V1_2 - 1, v1_2, VResolverAlgParseResolverCGIResponse_1_1},
         {V3  , sizeof V3   - 1, v3  , VResolverAlgParseResolverCGIResponse_3_0},
         {V1_0, sizeof V1_0 - 1, v1_0, VResolverAlgParseResolverCGIResponse_1_0},
         {V2  , sizeof V2   - 1, v2  , VResolverAlgParseResolverCGIResponse_2_0},
@@ -1263,7 +1316,8 @@ rc_t VResolverAlgParseResolverCGIResponse ( const KDataBuffer *result,
     start = ( const void* ) result -> base;
     size = KDataBufferBytes ( result );
 
-    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (" Response = %.*s\n", size, start));
+    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
+        (" Response = %.*s\n", ( int ) size, start));
 
     /* peel back buffer to significant bytes */
     while ( size > 0 && start [ size - 1 ] == 0 ) -- size;
@@ -1307,10 +1361,30 @@ rc_t VResolverAlgParseResolverCGIResponse ( const KDataBuffer *result,
     }
 }
 
+
+#ifdef VDB_3162
+#error 1
+/*  test-only code to emulate 403 response while calling names.cgi */
+static bool TEST_VDB_3162 = false;
+void TESTING_VDB_3162 ( void ) {
+    TEST_VDB_3162 = true;
+}
+static uint32_t TESTING_VDB_3162_CODE ( rc_t rc, uint32_t code ) {
+    if ( rc == 0 && TEST_VDB_3162 ) {
+        TEST_VDB_3162 = false;
+        return 403;
+    } else {
+        return code;
+    }
+}
+#endif
+
+#ifdef TESTING_SERVICES_VS_OLD_RESOLVING
 /* RemoteProtectedResolve
  *  use NCBI CGI to resolve accession into URL
  */
-rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
+static
+rc_t oldVResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
     const KNSManager *kns, VRemoteProtocols protocols, const String *acc,
     const VPath ** path, const VPath ** mapping, bool legacy_wgs_refseq )
 {
@@ -1320,7 +1394,7 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
     assert(path);
 
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("names.cgi = %S\n", self -> root));
-    rc = KNSManagerMakeReliableClientRequest ( kns, & req, 0x01000000, NULL, self -> root -> addr ); 
+    rc = KNSManagerMakeReliableClientRequest ( kns, & req, 0x01010000, NULL, self -> root -> addr ); 
     if ( rc == 0 )
     {
         /* build up POST information: */
@@ -1344,33 +1418,52 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
             rc = KHttpRequestAddPostParam ( req, "tic=%S", self -> ticket );
         }
 
-        if (NAME_SERVICE_VERS >= ONE_DOT_ONE) { /* SRA-1690 */
-            if ( rc == 0 ) {
-                const char *val;
-                switch ( protocols ) {
-                    case eProtocolHttp:
-                        val = "http";
-                        break;
-                    case eProtocolFasp:
-                        val = "fasp";
-                        break;
-                    case eProtocolFaspHttp:
-                        val = "fasp,http";
-                        break;
-                    case eProtocolHttpFasp:
-                        val = "http,fasp";
-                        break;
-                    default:
-                        val = NULL;
-                        rc = RC(
-                            rcVFS, rcResolver, rcResolving, rcParam, rcInvalid);
-                }
+        if ( rc == 0 && NAME_SERVICE_VERS >= ONE_DOT_ONE )
+        {
+            uint32_t i;
+            const char * prefs [ eProtocolMaxPref ];
+            const char * seps [ eProtocolMaxPref ];
+            VRemoteProtocols protos = protocols;
 
-                if ( rc == 0 ) {
-                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
-                        ("  accept-proto = %s\n", val));
-                    rc = KHttpRequestAddPostParam(req, "accept-proto=%s", val);
+            prefs [ 0 ] = seps [ 0 ] = NULL;
+            prefs [ 1 ] = prefs [ 2 ] = seps [ 1 ] = seps [ 2 ] = "";
+
+            for ( i = 0; protos != 0 && i < sizeof prefs / sizeof prefs [ 0 ]; protos >>= 3 )
+            {
+                /* 1.1 protocols */
+                switch ( protos & eProtocolMask )
+                {
+                case eProtocolHttp:
+                    prefs [ i ] = "http";
+                    seps [ i ++ ] = ",";
+                    break;
+                case eProtocolFasp:
+                    prefs [ i ] = "fasp";
+                    seps [ i ++ ] = ",";
+                    break;
+                default:
+                    if ( NAME_SERVICE_VERS > ONE_DOT_ONE )
+                    {
+                        /* 1.2 protocols */
+                        switch ( protos & eProtocolMask )
+                        {
+                        case eProtocolHttps:
+                            prefs [ i ] = "https";
+                            seps [ i ++ ] = ",";
+                            break;
+                        }
+                    }
                 }
+            }
+
+            if ( prefs [ 0 ] == NULL )
+                rc = RC ( rcVFS, rcResolver, rcResolving, rcParam, rcInvalid );
+
+            else
+            {
+                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS ),
+                         ("  accept-proto = %s%s%s%s%s\n", prefs [ 0 ], seps [ 1 ], prefs [ 1 ], seps [ 2 ], prefs [ 2 ] ) );
+                rc = KHttpRequestAddPostParam ( req, "accept-proto=%s%s%s%s%s", prefs [ 0 ], seps [ 1 ], prefs [ 1 ], seps [ 2 ], prefs [ 2 ] );
             }
         }
 
@@ -1384,6 +1477,15 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
                 uint32_t code;
 
                 rc = KHttpResultStatus ( rslt, &code, NULL, 0, NULL );
+
+#ifdef VDB_3162
+                if ( TEST_VDB_3162 ) {
+                    code = TESTING_VDB_3162_CODE ( rc, code );
+                }
+#endif
+
+                DBGMSG
+                    ( DBG_VFS, DBG_FLAG ( DBG_VFS ), ( " Code = %d\n", code ) );
                 if ( code == 200 )
                 {
                     KStream *response;
@@ -1436,13 +1538,22 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
 
                         KStreamRelease ( response );
                     }
-                } else if ( code == 404 ) { /* HTTP/1.1 400 Bad Request -
-                                       resolver CGI was not found */
-                    rc = RC ( rcVFS, rcResolver, rcResolving, rcConnection,
-                        rcNotFound );
-                } else { /* Something completely unexpected */
-                    rc = RC ( rcVFS, rcResolver, rcResolving, rcConnection,
-                        rcUnexpected );
+                }
+                else if ( code == 403 ) { // TODO CHECK AGAINS SERVICES
+                    /* HTTP/1.1 403 Forbidden
+                     - resolver CGI was called over http insted of https */
+                    rc = RC ( rcVFS, rcResolver, rcResolving,
+                        rcConnection, rcUnauthorized );
+                }
+                else if ( code == 404 )
+                {
+                    /* HTTP/1.1 404 Bad Request - resolver CGI was not found */
+                    rc = RC ( rcVFS, rcResolver, rcResolving, rcConnection, rcNotFound );
+                }
+                else
+                {
+                    /* Something completely unexpected */
+                    rc = RC ( rcVFS, rcResolver, rcResolving, rcConnection, rcUnexpected );
                 }
                 KHttpResultRelease ( rslt );
             }
@@ -1459,6 +1570,115 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
 
     return rc;
 }
+#endif
+
+rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
+    const KNSManager *kns, VRemoteProtocols protocols, const String *acc,
+    const VPath ** path, const VPath ** mapping, bool legacy_wgs_refseq,
+    const char * version )
+{
+    rc_t rc = 0;
+    const char * ticket = NULL;
+
+    assert ( self && self -> root && acc );
+    if ( self -> ticket != NULL ) {
+        ticket = self -> ticket -> addr;
+    }
+
+    rc = KService1NameWithVersion ( kns, self -> root -> addr,
+        acc -> addr, acc -> len, ticket, protocols, path, mapping,
+        legacy_wgs_refseq, version, self -> protected );
+
+    assert(*path != NULL || rc != 0);
+
+    if (rc == 0 && *path == NULL) 
+    {
+        rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcNull);
+    }
+
+    return rc;
+}
+
+/* If resolver-cgi is on government site and is called over http:
+   fix it to https */
+static
+rc_t VResolverAlgFixHTTPSOnlyStandard ( VResolverAlg * self, bool * fixed )
+{
+    rc_t rc = 0;
+
+    const String * root = NULL;
+
+    assert ( self && fixed );
+
+    * fixed = false;
+
+    root = self -> root;
+
+    if ( root != NULL ) {
+        size_t size = 0;
+        String http;
+        CONST_STRING ( & http, "http://" );
+        size = http . size;
+
+        /* resolver-cgi is called over http */
+        if ( root -> size > size &&
+             strcase_cmp ( root -> addr, size, http . addr, size, size ) == 0 )
+        {
+            VPath * path = NULL;
+            rc = VPathMakeFmt ( & path, "%S", root );
+            if ( rc == 0 ) {
+                String host;
+                rc = VPathGetHost ( path, & host );
+                if ( rc == 0 ) {
+                    String gov;
+                    CONST_STRING ( & gov, ".gov" );
+                    size = gov . size;
+
+                    /* If resolver-cgi is on government site */
+                    if ( host . size > size &&
+                        strcase_cmp ( host . addr + host . size - size,
+                            size, gov . addr, size, size ) == 0 )
+                    {
+                        size_t newLen = root -> len + 2;
+                        String * tmp = malloc ( sizeof * tmp + newLen );
+                        if ( tmp == NULL ) {
+                            rc = RC ( rcVFS, rcResolver,
+                                rcResolving, rcMemory, rcExhausted );
+                        }
+                        else
+                        {
+                            /* capture all of root past "http" */
+                            String remainder;
+                            StringSubstr ( root, & remainder, 4, 0 );
+
+                            /* prepare "tmp" to point to buffer space */
+                            tmp -> addr = ( char * ) ( tmp + 1 );
+
+                            /* print into buffer */
+                            rc = string_printf ( ( char * ) tmp -> addr,
+                                newLen, & tmp -> size, "https%S", & remainder );
+                            if ( rc != 0 )
+                                free ( tmp );
+                            else
+                            {
+                                tmp -> len = root -> len + 1;
+                                rc = VectorAppend ( & self -> vols, NULL, tmp );
+                                if ( rc == 0 )
+                                {
+                                    self -> root = tmp;
+                                    * fixed = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            VPathRelease ( path );
+        }
+    }
+
+    return rc;
+}
 
 /* RemoteResolve
  *  resolve an accession into a VPath or not found
@@ -1470,7 +1690,8 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
 static
 rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
     const KNSManager *kns, VRemoteProtocols protocols, const VResolverAccToken *tok,
-    const VPath ** path, const VPath ** mapping, const KFile ** opt_file_rtn, bool legacy_wgs_refseq )
+    const VPath ** path, const VPath ** mapping, const KFile ** opt_file_rtn, bool legacy_wgs_refseq,
+    const char * version )
 {
     rc_t rc;
     uint32_t i, count;
@@ -1491,8 +1712,40 @@ rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
 #endif
         )
     {
-        rc = VResolverAlgRemoteProtectedResolve ( self,
-            kns, protocols, & tok -> acc, path, mapping, legacy_wgs_refseq );
+        bool done = false;
+        int i = 0;
+        for ( i = 0; i < 2 && ! done; ++i ) {
+            if ( version == NULL )
+#ifdef TESTING_SERVICES_VS_OLD_RESOLVING
+              rc = oldVResolverAlgRemoteProtectedResolve ( self, kns,
+                protocols, & tok -> acc, path, mapping, legacy_wgs_refseq );
+#else
+              assert(0);
+#endif
+            else
+              rc = VResolverAlgRemoteProtectedResolve ( self, kns,
+                protocols, & tok -> acc, path, mapping, legacy_wgs_refseq, version );
+            if ( rc == SILENT_RC (
+                rcVFS, rcResolver, rcResolving, rcConnection, rcUnauthorized )
+                ||  rc == SILENT_RC (
+                rcVFS, rcQuery, rcExecuting, rcConnection, rcUnauthorized )
+               )
+            { /* resolver-cgi is called over http instead of https:
+                 fix it */
+                bool fixed = false;
+                rc_t r2 = VResolverAlgFixHTTPSOnlyStandard
+                    ( ( VResolverAlg * ) self, & fixed );
+                if ( ! fixed || r2 != 0 ) {
+                    if ( r2 != 0 ) {
+                        rc = r2;
+                    }
+                    done = true;
+                }
+            }
+            else {
+                done = true;
+            }
+        }
 
         if (rc == 0 && path != NULL && *path != NULL &&
             opt_file_rtn != NULL && *opt_file_rtn == NULL &&
@@ -1704,11 +1957,14 @@ struct VResolver
     uint32_t num_app_vols [ appCount ];
 
     /* preferred protocols preferences. Default: HTTP */
-    VRemoteProtocols protocols;
+    VRemoteProtocols protocols, dflt_protocols;
 
     /** projectId of protected user repository;
         0 when repository is not user protected */
     uint32_t projectId;
+
+    char *version;
+    bool resoveOidName;
 };
 
 
@@ -1723,6 +1979,10 @@ static atomic32_t enable_local, enable_remote, enable_cache;
 static
 rc_t VResolverWhack ( VResolver *self )
 {
+    assert ( self );
+
+    free ( self -> version );
+
     KRefcountWhack ( & self -> refcount, "VResolver" );
 
     /* drop all remote volume sets */
@@ -1745,6 +2005,7 @@ rc_t VResolverWhack ( VResolver *self )
     /* release directory onto local file system */
     KDirectoryRelease ( self -> wd );
 
+    memset ( self, 0, sizeof * self );
     free ( self );
     return 0;
 }
@@ -2131,14 +2392,14 @@ rc_t VResolverFuseMountedResolve ( const VResolver * self,
             PathType = KDirectoryPathType (
                                         NativeDir,
                                         "%.*s",
-                                        accession -> size,
+                                        ( int ) accession -> size,
                                         accession -> addr
                                         );
             if ( PathType == kptFile ) {
                 rc = VPathMakeFmt (
                                 ( VPath ** ) path,
                                 "%.*s",
-                                accession -> size,
+                                ( int ) accession -> size,
                                 accession -> addr
                                 );
             }
@@ -2223,8 +2484,8 @@ rc_t VResolverLocalFile ( const VResolver *self, const VPath * query, const VPat
     return RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
 }
 
-static
-bool VPathHasRefseqContext ( const VPath * accession )
+LIB_EXPORT
+bool CC VPathHasRefseqContext ( const VPath * accession )
 {
     size_t num_read;
     char option [ 64 ];
@@ -2251,7 +2512,7 @@ LIB_EXPORT
 rc_t CC VResolverLocal ( const VResolver * self,
     const VPath * accession, const VPath ** path )
 {
-    rc_t rc =  VResolverQuery ( self, eProtocolHttp, accession, path, NULL, NULL );
+    rc_t rc =  VResolverQuery ( self, self -> protocols, accession, path, NULL, NULL );
     if ( rc == 0 )
     {
         switch ( accession -> path_type )
@@ -2399,6 +2660,17 @@ VResolverEnableState CC VResolverCacheEnable ( const VResolver * self, VResolver
     return prior;
 }
 
+rc_t VResolverResolveName ( VResolver * self, int resolve ) {
+    if ( self == NULL )
+        return RC ( rcVFS, rcResolver, rcUpdating, rcSelf, rcNull );
+
+    switch ( resolve ) {
+        case 0 : self -> resoveOidName = DEFAULT_RESOVE_OID_NAME; break; 
+        case 1 : self -> resoveOidName = true                   ; break; 
+        default: self -> resoveOidName = false                  ; break; 
+    }
+    return 0;
+}
 
 /* RemoteResolve
  *  resolve an accession into a remote VPath or not found
@@ -2412,7 +2684,7 @@ VResolverEnableState CC VResolverCacheEnable ( const VResolver * self, VResolver
 rc_t VResolverRemoteResolve ( const VResolver *self,
     VRemoteProtocols protocols, const String * accession,
     const VPath ** path, const VPath **mapping,
-    const KFile ** opt_file_rtn, bool refseq_ctx, bool is_oid )
+    const KFile ** opt_file_rtn, bool refseq_ctx, bool is_oid, const char * version )
 {
     rc_t rc, try_rc;
     uint32_t i, count;
@@ -2459,7 +2731,8 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
             const VResolverAlg *alg = VectorGet ( & self -> remote, i );
             if ( alg -> app_id == app || alg -> app_id == wildCard )
             {
-                try_rc = VResolverAlgRemoteResolve ( alg, self -> kns, protocols, & tok, path, mapping, opt_file_rtn, legacy_wgs_refseq );
+                try_rc = VResolverAlgRemoteResolve ( alg, self -> kns, protocols,
+                    & tok, path, mapping, opt_file_rtn, legacy_wgs_refseq, version );
                 if ( try_rc == 0 )
                     return 0;
                 if ( rc == 0 )
@@ -2474,7 +2747,8 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
             const VResolverAlg *alg = VectorGet ( & self -> remote, i );
             if ( ( alg -> app_id == app || alg -> app_id == wildCard ) && ! alg -> disabled )
             {
-                try_rc = VResolverAlgRemoteResolve ( alg, self -> kns, protocols, & tok, path, mapping, opt_file_rtn, legacy_wgs_refseq );
+                try_rc = VResolverAlgRemoteResolve ( alg, self -> kns, protocols,
+                    & tok, path, mapping, opt_file_rtn, legacy_wgs_refseq, version );
                 if ( try_rc == 0 )
                     return 0;
                 if ( rc == 0 )
@@ -2783,7 +3057,7 @@ LIB_EXPORT
 rc_t CC VResolverCache ( const VResolver * self,
     const VPath * url, const VPath ** path, uint64_t file_size )
 {
-    return VResolverQuery ( self, eProtocolHttp, url, NULL, NULL, path );
+    return VResolverQuery ( self, self -> protocols, url, NULL, NULL, path );
 }
 
 /* QueryOID
@@ -2814,7 +3088,7 @@ rc_t get_query_accession ( const VPath * query, String * accession, char * oid_s
 
 static
 rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
-    const VPath * query, const VPath ** local, const VPath ** remote, const VPath ** cache )
+    const VPath * query, const VPath ** local, const VPath ** remote, const VPath ** cache, const char * version )
 {
     rc_t rc;
 
@@ -2837,25 +3111,36 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
             /* not expected to ever be true */
             bool refseq_ctx = VPathHasRefseqContext ( query );
 
-            /* PREFACE - having an oid, we will need to map it to either
-               an accession or simple filename before resolving to a
-               local or cache path. there are two ways of getting this
-               mapping: either through the VFS manager, or by asking the
-               remote resolver CGI.
+/* OLD =====================================================
+   PREFACE - having an oid, we will need to map it to either
+   an accession or simple filename before resolving to a
+   local or cache path. there are two ways of getting this
+   mapping: either through the VFS manager, or by asking the
+   remote resolver CGI.
 
-               ASSUMPTION - if the file exists locally or is cached,
-               there should be a mapping available to VFS manager. this
-               assumption can fail if the mapping database has been lost
-               or damaged.
-            */
+   ASSUMPTION - if the file exists locally or is cached,
+   there should be a mapping available to VFS manager. this
+   assumption can fail if the mapping database has been lost
+   or damaged.
+   ==========================================================
+   NEW ======================================================
+   Remote resolver CGI does not return file name since version 3.
+   File name, aling with oid comes from kart file.
+   Mapping database is updated while kart is read.
+ */
 
             /* MAP OID TO ACCESSION */
             if ( local != NULL || cache != NULL )
             {
                 /* we want a mapping. ask VFS manager for one */
                 rc = VFSManagerGetObject ( vfs, query -> obj_id, & mapped_query );
-                if ( GetRCState ( rc ) == rcNotFound )
+                if ( GetRCState ( rc ) == rcNotFound && self -> resoveOidName )
                 {
+/* NEW: should never got here, mapping should be registered when reading kart 
+   file in the same application.
+   'bool resoveOidName' is used for testing
+   or not to fail when sometihing unexpected happens
+ */
                     /* no mapping could be found. another possibility is to resolve remotely */
                     if ( remote != NULL || atomic32_read ( & enable_remote ) != vrAlwaysDisable )
                     {
@@ -2863,8 +3148,10 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
                         if ( rc == 0 )
                         {
                             const VPath * remote2, * remote_mapping = NULL;
-                            rc = VResolverRemoteResolve ( self, protocols, & accession,
-                                & remote2, & remote_mapping, NULL, refseq_ctx, true );
+/* call CGI with version 1.2 */
+                            rc = VResolverRemoteResolve ( self, protocols,
+                                & accession, & remote2, & remote_mapping, NULL,
+                                refseq_ctx, true, "#1.2" );
                             if ( rc == 0 )
                             {
                                 /* got it. now enter into VFS manager's table */
@@ -2925,20 +3212,25 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
                 }
             }
 
+/* NEW: not sure why this code is here, so do not touch it,
+        call resolver-1.2 when 'resoveOidName' is set */
             if ( local == NULL || * local == NULL )
             {
                 bool has_fragment = false;
 
                 /* RESOLVE FOR REMOTE */
-                if ( remote != NULL && * remote == NULL )
+                if ( remote != NULL && * remote == NULL
+                                    && self -> resoveOidName )
                 {
                     rc = get_query_accession ( query, & accession, oid_str, sizeof oid_str );
                     if ( rc == 0 )
                     {
                         const VPath * remote_mapping = NULL;
-                        rc = VResolverRemoteResolve ( self, protocols, & accession, remote,
-                            ( mapped_query == NULL && cache != NULL ) ? & remote_mapping : NULL,
-                            NULL, refseq_ctx, true );
+/* call CGI with version 1.2 */
+                        rc = VResolverRemoteResolve ( self, protocols,
+            & accession, remote,
+            ( mapped_query == NULL && cache != NULL ) ? & remote_mapping : NULL,
+            NULL, refseq_ctx, true, "#1.2" );
 
                         if ( rc == 0 && mapped_query == NULL && cache != NULL && remote_mapping == NULL )
                         {
@@ -3005,7 +3297,7 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
  */
 static
 rc_t VResolverQueryAcc ( const VResolver * self, VRemoteProtocols protocols,
-    const VPath * query, const VPath ** local, const VPath ** remote, const VPath ** cache )
+    const VPath * query, const VPath ** local, const VPath ** remote, const VPath ** cache, const char * version )
 {
     rc_t rc = 0;
 
@@ -3036,7 +3328,7 @@ rc_t VResolverQueryAcc ( const VResolver * self, VRemoteProtocols protocols,
             /* request remote resolution
                this does not need to map the query to an accession */
             rc = VResolverRemoteResolve ( self, protocols, accession,
-                & remote2, mapped_ptr, NULL, refseq_ctx, false );
+                & remote2, mapped_ptr, NULL, refseq_ctx, false, version );
 
             if ( rc == 0 )
             {
@@ -3231,7 +3523,7 @@ rc_t VResolverQueryURL ( const VResolver * self, VRemoteProtocols protocols,
  */
 static
 rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
-    const VPath * query, const VPath ** local, const VPath ** remote, const VPath ** cache )
+    const VPath * query, const VPath ** local, const VPath ** remote, const VPath ** cache, const char * version )
 {
     rc_t rc;
 
@@ -3239,6 +3531,9 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
         rc = RC ( rcVFS, rcResolver, rcResolving, rcParam, rcNull );
     else
     {
+        if ( protocols == eProtocolDefault )
+            protocols = self -> protocols;
+
         if ( local != NULL )
         {
             * local = NULL;
@@ -3248,10 +3543,19 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
 
         if ( remote != NULL )
         {
+            VRemoteProtocols remote_protos;
+
             * remote = NULL;
 
-            if ( protocols >= eProtocolLastDefined )
-                return RC ( rcVFS, rcResolver, rcResolving, rcParam, rcInvalid );
+            if ( protocols > VRemoteProtocolsMake3 ( eProtocolMax, eProtocolMax, eProtocolMax ) )
+                return RC ( rcVFS, rcResolver, rcUpdating, rcParam, rcInvalid );
+
+            for ( remote_protos = protocols; remote_protos != 0; remote_protos >>= 3 )
+            {
+                VRemoteProtocols proto = remote_protos & eProtocolMask;
+                if ( proto == eProtocolNone || proto > eProtocolMax )
+                    return RC ( rcVFS, rcResolver, rcUpdating, rcParam, rcInvalid );
+            }
 
             if ( atomic32_read ( & enable_remote ) == vrAlwaysDisable )
                 remote = NULL;
@@ -3272,6 +3576,15 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
             rc = RC ( rcVFS, rcResolver, rcResolving, rcPath, rcNotFound );
         else
         {
+            uint32_t i;
+
+            /* record requested protocols */
+            bool has_proto [ eProtocolMask + 1 ];
+            memset ( has_proto, 0, sizeof has_proto );
+
+            for ( i = 0; i < eProtocolMaxPref; ++ i )
+                has_proto [ ( ( protocols >> ( i * 3 ) ) & eProtocolMask ) ] = true;
+
             switch ( query -> scheme_type )
             {
             case vpuri_none:
@@ -3282,24 +3595,21 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
                 break;
 
             case vpuri_http:
-            case vpuri_https:
-                switch ( protocols )
-                {
-                case eProtocolHttp:
-                case eProtocolFaspHttp:
-                case eProtocolHttpFasp:
+                /* check for all that allow http */
+                if ( has_proto [ eProtocolHttp ] )
                     return VResolverQueryURL ( self, protocols, query, remote, cache );
-                }
+                return RC ( rcVFS, rcResolver, rcResolving, rcPath, rcIncorrect );
+
+            case vpuri_https:
+                /* check for all that allow https */
+                if ( has_proto [ eProtocolHttps ] )
+                    return VResolverQueryURL ( self, protocols, query, remote, cache );
                 return RC ( rcVFS, rcResolver, rcResolving, rcPath, rcIncorrect );
 
             case vpuri_fasp:
-                switch ( protocols )
-                {
-                case eProtocolFasp:
-                case eProtocolFaspHttp:
-                case eProtocolHttpFasp:
+                /* check for all that allow fasp */
+                if ( has_proto [ eProtocolFasp ] )
                     return VResolverQueryURL ( self, protocols, query, remote, cache );
-                }
                 return RC ( rcVFS, rcResolver, rcResolving, rcPath, rcIncorrect );
 
             default:
@@ -3313,21 +3623,21 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
                 break;
 
             case vpOID:
-                rc = VResolverQueryOID ( self, protocols, query, local, remote, cache );
+                rc = VResolverQueryOID ( self, protocols, query, local, remote, cache, version );
                 break;
 
             case vpAccession:
-                rc = VResolverQueryAcc ( self, protocols, query, local, remote, cache );
+                rc = VResolverQueryAcc ( self, protocols, query, local, remote, cache, version );
                 break;
 
             case vpNameOrOID:
-                rc = VResolverQueryOID ( self, protocols, query, local, remote, cache );
+                rc = VResolverQueryOID ( self, protocols, query, local, remote, cache, version );
                 if ( rc != 0 )
                     goto try_name;
                 break;
 
             case vpNameOrAccession:
-                rc = VResolverQueryAcc ( self, protocols, query, local, remote, cache );
+                rc = VResolverQueryAcc ( self, protocols, query, local, remote, cache, version );
                 if ( rc != 0 )
                     goto try_name;
                 break;
@@ -3338,7 +3648,7 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
                 {
                     if ( VPathHasRefseqContext ( query ) )
                     {
-                        rc = VResolverQueryAcc ( self, protocols, query, local, remote, cache );
+                        rc = VResolverQueryAcc ( self, protocols, query, local, remote, cache, version );
                         if ( rc == 0 )
                             break;
                     }
@@ -3362,11 +3672,13 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
     return rc;
 }
 
+#ifdef TESTING_SERVICES_VS_OLD_RESOLVING
 LIB_EXPORT
-rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
+rc_t CC oldVResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
     const VPath * query, const VPath ** local, const VPath ** remote, const VPath ** cache )
 {
-    rc_t rc = VResolverQueryInt ( self, protocols, query, local, remote, cache );
+    rc_t rc = VResolverQueryInt ( self, protocols, query, local, remote, cache,
+        NULL );
     if ( rc == 0 )
     {
         /* the paths returned from resolver are highly reliable */
@@ -3377,6 +3689,142 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
         if ( cache != NULL && * cache != NULL )
             VPathMarkHighReliability ( * ( VPath ** ) cache, true );
     }
+    return rc;
+}
+#endif
+
+LIB_EXPORT
+rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
+    const VPath * query, const VPath ** local, const VPath ** remote, const VPath ** cache )
+{
+    rc_t rcs = -1;
+    rc_t rc = rcs = VResolverQueryInt
+        ( self, protocols, query, local, remote, cache, self -> version );
+    if ( rc == 0 )
+    {
+        /* the paths returned from resolver are highly reliable */
+        if ( local != NULL && * local != NULL )
+            VPathMarkHighReliability ( * ( VPath ** ) local, true );
+        if ( remote != NULL && * remote != NULL )
+            VPathMarkHighReliability ( * ( VPath ** ) remote, true );
+        if ( cache != NULL && * cache != NULL )
+            VPathMarkHighReliability ( * ( VPath ** ) cache, true );
+    }
+#ifdef TESTING_SERVICES_VS_OLD_RESOLVING
+    {
+        const VPath * oath = NULL;
+        const VPath ** p = remote ? & oath : NULL;
+        const VPath * cath = NULL;
+        const VPath ** c = cache ? & cath : NULL;
+        const VPath * lath = NULL;
+        const VPath ** l = local ? & lath : NULL;
+        rc_t ro = oldVResolverQuery ( self, protocols, query, l, p, c );
+        /*ros = ro;*/
+        if ( rc != ro ) {
+            enum RCModule  mod = GetRCModule  ( rc );
+            enum RCTarget  targ = GetRCTarget  ( rc );
+            enum RCContext ctx = GetRCContext ( rc );
+            if ( targ == rcQuery && GetRCTarget ( ro ) == rcTree ) {
+                rc = ResetRCContext ( rc, mod, rcTree, ctx );
+                /*fixed = true;*/
+            }
+        }
+        assert ( rc == ro );
+        if ( remote == NULL )
+            assert ( p == NULL );
+        else if ( * remote == NULL )
+            assert ( p && * p == NULL && oath == NULL );
+        else {
+            int notequal = ~ 0;
+            assert ( ! VPathEqual ( * remote, oath, & notequal ) );
+            if ( notequal ) {
+                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
+            }
+        }
+        if ( cache == NULL )
+            assert ( c == NULL );
+        else if ( * cache == NULL )
+            assert ( c && * c == NULL && cath == NULL );
+        else {
+            int notequal = ~ 0;
+            VPathMarkHighReliability ( ( VPath * ) cath, true );
+            assert ( ! VPathEqual ( * cache, cath, & notequal ) );
+            if ( notequal ) {
+                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
+            }
+        }
+        if ( local == NULL )
+            assert ( l == NULL );
+        else if ( * local == NULL )
+            assert ( l && * l == NULL && lath == NULL );
+        else {
+            VPathMarkHighReliability ( ( VPath * ) lath, true );
+#if _DEBUGGING
+            {
+                int notequal = ~ 0;
+                assert ( ! VPathEqual ( * local, lath, & notequal ) );
+                assert ( ! notequal );
+            }
+#endif
+        }
+        RELEASE ( VPath, lath );
+        RELEASE ( VPath, oath );
+        RELEASE ( VPath, cath );
+    }
+    {
+        const VPath * oath = NULL;
+        const VPath ** p = remote ? & oath : NULL;
+        const VPath * cath = NULL;
+        const VPath ** c = cache ? & cath : NULL;
+        const VPath * lath = NULL;
+        const VPath ** l = local ? & lath : NULL;
+#if _DEBUGGING
+        rc_t ro =
+#endif
+            VResolverQueryInt ( self, protocols, query, l, p, c, "#1.2" );
+        assert ( rcs == ro );
+        if ( remote == NULL )
+            assert ( p == NULL );
+        else if ( * remote == NULL )
+            assert ( p && * p == NULL && oath == NULL );
+        else {
+            int notequal = ~ 0;
+            VPathMarkHighReliability ( ( VPath * ) oath, true );
+            assert ( ! VPathEqual ( * remote, oath, & notequal ) );
+            if ( notequal )
+                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
+        }
+        if ( cache == NULL )
+            assert ( c == NULL );
+        else if ( * cache == NULL )
+            assert ( c && * c == NULL && cath == NULL );
+        else {
+            int notequal = ~ 0;
+            VPathMarkHighReliability ( ( VPath * ) cath, true );
+            assert ( ! VPathEqual ( * cache, cath, & notequal ) );
+            if ( notequal )
+                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
+        }
+        if ( local == NULL )
+            assert ( l == NULL );
+        else if ( * local == NULL )
+            assert ( l && * l == NULL && lath == NULL );
+        else {
+            VPathMarkHighReliability ( ( VPath * ) lath, true );
+#if _DEBUGGING
+            {
+                int notequal = ~ 0;
+                assert ( ! VPathEqual ( * local, lath, & notequal ) );
+                assert ( ! notequal );
+            }
+#endif
+        }
+        RELEASE ( VPath, lath );
+        RELEASE ( VPath, oath );
+        RELEASE ( VPath, cath );
+    }
+#endif
+
     return rc;
 }
 
@@ -4076,7 +4524,7 @@ rc_t VResolverForceRemoteRefseq ( VResolver *self )
         return 0;
 
     /* create one from hard-coded constants */
-    StringInitCString ( & local_root, "http://ftp-trace.ncbi.nlm.nih.gov/sra" );
+    StringInitCString ( & local_root, "https://ftp-trace.ncbi.nlm.nih.gov/sra" );
     rc = StringCopy ( & root, & local_root );    
     if ( rc == 0 )
     {
@@ -4140,7 +4588,7 @@ rc_t VResolverForceRemoteProtected ( VResolver *self )
 
     /* create one from hard-coded constants */
     String cgi_root;
-    StringInitCString ( & cgi_root, "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
+    StringInitCString ( & cgi_root, "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
     rc = StringCopy ( & root, & cgi_root );    
     if ( rc == 0 )
     {
@@ -4496,28 +4944,40 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
         VectorReorder ( & self -> remote, VResolverAlgSort, NULL );
     }
 
-    self -> protocols = eProtocolHttp;
-
     return rc;
 }
 
 LIB_EXPORT
-rc_t CC VResolverProtocols ( VResolver * self,
-    VRemoteProtocols protocols )
+rc_t CC VResolverProtocols ( VResolver * self, VRemoteProtocols protocols )
 {
+    VRemoteProtocols remote_protos;
+
     if ( self == NULL )
         return RC ( rcVFS, rcResolver, rcUpdating, rcSelf, rcNull );
 
-    if ( protocols >= eProtocolLastDefined )
-        return RC ( rcVFS, rcResolver, rcUpdating, rcParam, rcInvalid );
+    if ( protocols == eProtocolDefault )
+        self -> protocols = self -> dflt_protocols;
+    else
+    {
+        if ( protocols > VRemoteProtocolsMake3 ( eProtocolMax, eProtocolMax, eProtocolMax ) )
+            return RC ( rcVFS, rcResolver, rcUpdating, rcParam, rcInvalid );
 
-    self -> protocols = protocols;
+        for ( remote_protos = protocols; remote_protos != 0; remote_protos >>= 3 )
+        {
+            VRemoteProtocols proto = remote_protos & eProtocolMask;
+            if ( proto == eProtocolNone || proto > eProtocolMax )
+                return RC ( rcVFS, rcResolver, rcUpdating, rcParam, rcInvalid );
+        }
+
+        self -> protocols = protocols;
+    }
 
     return 0;
 }
 
 
-rc_t VResolverGetProjectId ( const VResolver * self, uint32_t * projectId ) {
+rc_t VResolverGetProjectId ( const VResolver * self, uint32_t * projectId )
+{
     if ( self == NULL )
         return RC ( rcVFS, rcResolver, rcAccessing, rcSelf, rcNull );
     else if ( projectId == NULL )
@@ -4534,7 +4994,6 @@ rc_t VResolverGetProjectId ( const VResolver * self, uint32_t * projectId ) {
         return 0;
     }
 }
-
 
 /* Make
  *  internal factory function
@@ -4558,20 +5017,36 @@ rc_t VResolverMake ( VResolver ** objp, const KDirectory *wd,
 
         KRefcountInit ( & obj -> refcount, 1, "VResolver", "make", "resolver" );
 
-        if (mgr != NULL) {
-            rc_t rc = VFSManagerGetKNSMgr(mgr, &kns);
-            if (rc != 0) {
+        if ( mgr != NULL )
+        {
+            rc_t rc = VFSManagerGetKNSMgr ( mgr, & kns );
+            if ( rc != 0 )
+            {
                 rc = 0;
                 kns = NULL;
             }
         }
 
+
+        /* set up protocols */
+        obj -> dflt_protocols = DEFAULT_PROTOCOLS;
+        if ( kfg != NULL )
+            KConfigReadRemoteProtocols ( kfg, & obj -> dflt_protocols );
+
+        obj -> protocols = obj -> dflt_protocols;
+
         rc = VResolverLoad ( obj, protected, kfg, kns );
 
-        KNSManagerRelease(kns);
+        KNSManagerRelease ( kns );
         kns = NULL;
 
         KRepositoryProjectId ( protected, & obj -> projectId );
+
+        obj -> version = string_dup_measure ( "#3.0", NULL );
+        if ( obj -> version == NULL )
+            rc = RC ( rcVFS, rcMgr, rcCreating, rcMemory, rcExhausted );
+
+        obj -> resoveOidName = DEFAULT_RESOVE_OID_NAME; /* just in case */
 
         if ( rc == 0 )
         {
@@ -4583,6 +5058,17 @@ rc_t VResolverMake ( VResolver ** objp, const KDirectory *wd,
     }
 
     return rc;
+}
+
+rc_t VResolverSetVersion ( VResolver *self, const char * version ) {
+    if ( self == NULL )
+        return RC ( rcVFS, rcResolver, rcUpdating, rcSelf, rcNull );
+    if ( self == NULL || version == NULL )
+        return RC ( rcVFS, rcResolver, rcUpdating, rcParam, rcNull );
+
+    free ( self -> version );
+    self -> version = string_dup_measure ( version, NULL );
+    return 0;
 }
 
 /* Make
