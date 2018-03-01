@@ -121,6 +121,16 @@ FIXTURE_TEST_CASE(Http, PathFixture)
     REQUIRE_RC(VFSManagerMakePath ( vfs, &path, "http://u@h.d:9/d/f"));
 }
 
+FIXTURE_TEST_CASE(Https, PathFixture)
+{
+    REQUIRE_RC(VFSManagerMakePath ( vfs, &path, "https://u@h.d:9/d/f"));
+}
+
+FIXTURE_TEST_CASE(Httpscase, PathFixture)
+{
+    REQUIRE_RC(VFSManagerMakePath ( vfs, &path, "HTTPS://u@h.d:9/d/f"));
+}
+
 FIXTURE_TEST_CASE(ReadPath, PathFixture)
 {
     REQUIRE_RC(VFSManagerMakePath ( vfs, &path, "ncbi-file:qq?enc"));
@@ -163,6 +173,33 @@ FIXTURE_TEST_CASE(GetScheme_t, PathFixture)
     VPUri_t uri_type;
     REQUIRE_RC(VPathGetScheme_t(path, &uri_type));
     REQUIRE_EQ(uri_type, (VPUri_t)vpuri_ncbi_file);
+}
+
+FIXTURE_TEST_CASE(GetScheme_t_https, PathFixture)
+{
+    REQUIRE_RC(VFSManagerMakePath ( vfs, &path, "hTTPs://example.com/qq?enc"));
+
+    VPUri_t uri_type;
+    REQUIRE_RC(VPathGetScheme_t(path, &uri_type));
+    REQUIRE_EQ(uri_type, (VPUri_t)vpuri_https);
+}
+
+FIXTURE_TEST_CASE(GetScheme_t_aws, PathFixture)
+{
+    REQUIRE_RC(VFSManagerMakePath ( vfs, &path, "https://s3.amazonams.com/ncbi-bucket/"));
+
+    VPUri_t uri_type;
+    REQUIRE_RC(VPathGetScheme_t(path, &uri_type));
+    REQUIRE_EQ(uri_type, (VPUri_t)vpuri_https); // TODO: S3
+}
+
+FIXTURE_TEST_CASE(GetScheme_t_s3, PathFixture)
+{
+    REQUIRE_RC(VFSManagerMakePath ( vfs, &path, "S3://bucket/key"));
+
+    VPUri_t uri_type;
+    REQUIRE_RC(VPathGetScheme_t(path, &uri_type));
+    REQUIRE_EQ(uri_type, (VPUri_t)vpuri_s3);
 }
 
 FIXTURE_TEST_CASE(GetScheme_NcbiObj, PathFixture)

@@ -158,6 +158,11 @@ typedef enum eVPUri_t
     vpuri_ncbi_legrefseq,
     vpuri_ncbi_obj,     /* for dbGaP objects */
     vpuri_fasp,         /* for Aspera downloads */
+    vpuri_s3,
+    vpuri_azure,
+    vpuri_google,
+    vpuri_scp,
+    vpuri_sftp,
     vpuri_count
 } VPUri_t;
 
