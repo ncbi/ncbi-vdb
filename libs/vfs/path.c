@@ -251,8 +251,7 @@ void VPathCaptureScheme ( VPath * self, const char * uri, size_t start, size_t e
         size_t num_schemes=sizeof(schemes)/sizeof(schemes[0]);
         for (size_t i=0; i!=num_schemes; ++i)
         {
-            size_t l=strlen(schemes[i].scheme);
-            if (l==size && memcmp(buf, schemes[i].scheme, l) == 0)
+            if (strcmp(buf, schemes[i].scheme) == 0)
             {
                 self -> scheme_type = schemes[i].type;
                 return;
