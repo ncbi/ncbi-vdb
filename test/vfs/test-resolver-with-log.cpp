@@ -36,7 +36,7 @@
 
 #include "resolver-cgi.h" /* RESOLVER_CGI */
 
-#include "../../../ncbi-vdb/libs/vfs/resolver-priv.h" /* VResolverSetVersion */
+#include "../../libs/vfs/resolver-priv.h" /* VResolverSetVersion */
 
 TEST_SUITE ( VResolverWithLogTestSuite );
 
