@@ -1015,6 +1015,11 @@ static int16_t _swap_16 ( uint16_t i ) { return ( int16_t ) bswap_16 ( i ); }
 static int32_t _get_32 ( uint32_t i ) { return ( int32_t ) i; }
 static int32_t _swap_32 ( uint32_t i ) { return ( int32_t ) bswap_32 ( i ); }
 
+static uint16_t _get_U16 ( uint16_t i ) { return i; }
+static uint16_t _swap_U16 ( uint16_t i ) { return ( uint16_t ) bswap_16 ( i ); }
+static uint32_t _get_U32 ( uint32_t i ) { return i; }
+static uint32_t _swap_U32 ( uint32_t i ) { return ( uint32_t ) bswap_32 ( i ); }
+
 #define PTOFFSETOF( mbr ) \
     ( ( uint32_t ) ( size_t ) & ( ( ( P_Trie* ) 0 ) -> mbr ) )
 
@@ -1057,6 +1062,9 @@ rc_t PTrieMakeInt ( PTrie **ttp, const void *addr, size_t size, bool byteswap, b
                 int16_t ( * get_16 ) ( uint16_t ) = byteswap ? _swap_16 : _get_16;
                 int32_t ( * get_32 ) ( uint32_t ) = byteswap ? _swap_32 : _get_32;
 
+                uint16_t ( * get_U16 ) ( uint16_t ) = byteswap ? _swap_U16 : _get_U16;
+                uint32_t ( * get_U32 ) ( uint32_t ) = byteswap ? _swap_U32 : _get_U32;
+
                 /* everything looks good */
                 rc = 0;
 
@@ -1064,7 +1072,7 @@ rc_t PTrieMakeInt ( PTrie **ttp, const void *addr, size_t size, bool byteswap, b
                 ptt = addr;
 
                 /* extract data_size */
-                data_size = get_32 ( ptt -> data_size )
+                data_size = get_U32 ( ptt -> data_size )
 #if EXTENDED_PTRIE
                     + ( ( uint64_t ) ptt -> ext_data_size << 32 )
 #endif
@@ -1073,7 +1081,7 @@ rc_t PTrieMakeInt ( PTrie **ttp, const void *addr, size_t size, bool byteswap, b
                 /* minimum known size of the memory image
                    will be adjusted as image is scanned */
                 min_size = sizeof * ptt - sizeof ptt -> rmap +
-                    get_16 ( ptt -> width ) * sizeof ptt -> rmap [ 0 ] +
+                    get_U16 ( ptt -> width ) * sizeof ptt -> rmap [ 0 ] +
                     data_size;
                 if ( ( uint64_t ) size >= min_size )
                 {
@@ -1092,7 +1100,7 @@ rc_t PTrieMakeInt ( PTrie **ttp, const void *addr, size_t size, bool byteswap, b
                        while at the same time capturing the one-based
                        character code of wildcards */
                     for ( last = 0, first = ~ 0, unmapped = i = 0;
-                          i < get_16 ( ptt -> width ); ++ i )
+                          i < get_U16 ( ptt -> width ); ++ i )
                     {
                         ch = get_32 ( ptt -> rmap [ i ] );
                         if ( ch == 0 )
@@ -1304,8 +1312,8 @@ rc_t PTrieMakeInt ( PTrie **ttp, const void *addr, size_t size, bool byteswap, b
                             if ( min_size <= size )
                             {
                                 tt -> data . v32 = & tt -> trans_off . v32 [ trans_off_len ];
-                                tt -> num_trans = get_32 ( ptt -> num_trans );
-                                tt -> num_nodes = get_32 ( ptt -> num_nodes );
+                                tt -> num_trans = get_U32 ( ptt -> num_trans );
+                                tt -> num_nodes = get_U32 ( ptt -> num_nodes );
                                 tt -> data_size = ( size_t ) data_size;
                                 tt -> ext_keys = P_TrieExtKeys ( ptt_keys ) != 0;
                                 tt -> backtrace = P_TrieBacktrace ( ptt_keys ) != 0;
@@ -1325,7 +1333,14 @@ rc_t PTrieMakeInt ( PTrie **ttp, const void *addr, size_t size, bool byteswap, b
                         free ( tt );
                     }
                 }
+                else {
+                    rc = RC ( rcCont, rcTrie, rcAllocating, rcData, rcInsufficient );
+                }
             }
+        }
+
+        if ( rc == 0 ) {
+            rc = RC ( rcCont, rcTrie, rcAllocating, rcData, rcInvalid );
         }
 
         * ttp = NULL;

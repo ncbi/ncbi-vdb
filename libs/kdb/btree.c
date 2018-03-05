@@ -47,6 +47,7 @@
  */
 #define eByteOrderTag 0x05031988
 #define eByteOrderReverse 0x88190305
+#define KBTREE_CURRENT_VERS 3
 
 
 /* v3 does not store values, but stores keys in node pages */
@@ -59,8 +60,8 @@ struct KBTreeHdr_v3
     /* key min/max */
     uint16_t key_min, key_max;
 
-    /* type [ 0 ] is type
-       type [ 1 ] is non-zero if comparison function was used
+    /* type [ btti_type = 0 ] is type
+       type [ btti_usedComparison = 1 ] is non-zero if comparison function was used
        rest are for alignment */
     uint8_t type [ 4 ];
 
@@ -74,9 +75,17 @@ struct KBTreeHdr_v3
     uint32_t endian;
 };
 
-struct Pager {
-    KPageFile *pager;
+enum
+{
+    btti_type = 0,
+    btti_usedComparison = 1
+};
+
+struct Pager
+{
+    KPageFile * pager;
     rc_t rc;
+    uint32_t ignore;
 };
 
 static void const *PagerAlloc(Pager *self, uint32_t *newid)
@@ -112,7 +121,8 @@ static void PagerUnuse(Pager *self, void const *page)
     KPageRelease((KPage const *)page);
 }
 
-static Pager_vt const KPageFile_vt = {
+static Pager_vt const KPageFile_vt =
+{
     PagerAlloc,
     PagerUse,
     PagerAccess,
@@ -123,7 +133,7 @@ static Pager_vt const KPageFile_vt = {
 typedef struct KBTreeHdr_v3 KBTreeHdr;
 
 static
-rc_t KBTreeReadHeader ( KBTreeHdr *hdr, const KFile *f )
+rc_t KBTreeReadHeader ( KBTreeHdr * hdr, const KFile_v1 * f )
 {
     uint64_t eof;
     rc_t rc = KFileSize ( f, & eof );
@@ -138,31 +148,41 @@ rc_t KBTreeReadHeader ( KBTreeHdr *hdr, const KFile *f )
             return RC ( rcDB, rcTree, rcConstructing, rcData, rcNotFound );
         }
 
+        /* this would be a file so short that it can't contain a header */
         if ( eof < sizeof * hdr )
             return RC ( rcDB, rcTree, rcConstructing, rcData, rcCorrupt );
 
+        /* read in the entire header from the end of the file */
         rc = KFileReadAll ( f, eof - sizeof * hdr, hdr, sizeof * hdr, & num_read );
+
+        /* detect an incomplete read */
         if ( rc == 0 && num_read != sizeof * hdr )
             rc = RC ( rcDB, rcTree, rcConstructing, rcData, rcInsufficient );
+
         if ( rc == 0 )
         {
+            /* detect a switch in byte-ordering */
             if ( hdr -> endian != eByteOrderTag )
             {
+                /* needs a swap */
                 if ( hdr -> endian == eByteOrderReverse )
                     return RC ( rcDB, rcTree, rcConstructing, rcByteOrder, rcIncorrect );
+
+                /* either corrupt or not a recognized byte-order */
                 return RC ( rcDB, rcTree, rcConstructing, rcData, rcCorrupt );
             }
-            if ( hdr -> version != 2 )
+
+            if ( hdr -> version != KBTREE_CURRENT_VERS )
                 return RC ( rcDB, rcTree, rcConstructing, rcHeader, rcBadVersion );
         }
     }
     return rc;
 }
 
-struct KBTree
+struct KBTree_v1
 {
     /* file itself */
-    KFile *file;
+    KFile_v1 * file;
 
     /* page cache layered on top */
     Pager pgfile;
@@ -178,32 +198,39 @@ struct KBTree
 /* Whack
  */
 static
-rc_t KBTreeWhack ( KBTree *self )
+rc_t KBTreeWhack_v1 ( KBTree_v1 * self )
 {
     if ( self -> read_only || self -> file == NULL )
-        KPageFileRelease ( self -> pgfile.pager );
+        KPageFileRelease ( self -> pgfile . pager );
     else
     {
         size_t num_writ;
 
         /* request page file size */
         uint64_t eof;
-        rc_t rc = KPageFileSize ( self -> pgfile.pager, & eof, NULL, NULL );
+        rc_t rc = KPageFileSize ( self -> pgfile . pager, & eof, NULL, NULL );
         if ( rc != 0 )
             return rc;
 
         /* drop the page file and its cache */
-        KPageFileRelease ( self -> pgfile.pager );
+        KPageFileRelease ( self -> pgfile . pager );
 
         /* write header to tail */        
-        rc = KFileWrite ( self -> file, eof, & self -> hdr, sizeof self -> hdr, & num_writ );
+        rc = KFileWriteAll ( self -> file, eof, & self -> hdr, sizeof self -> hdr, & num_writ );
+
+        /* detect inability to write all */
         if ( rc == 0 && num_writ != sizeof self -> hdr )
             rc = RC ( rcDB, rcTree, rcPersisting, rcTransfer, rcIncomplete );
+
+        /* success means we can trim the file */
         if ( rc == 0 )
-            rc = KFileSetSize ( self -> file, eof + sizeof self -> hdr );
-        if ( rc != 0 )
         {
-            /* TBD - can issue a warning here */
+            rc = KFileSetSize ( self -> file, eof + sizeof self -> hdr );
+
+            if ( rc != 0 )
+            {
+                /* TBD - can issue a warning here */
+            }
         }
     }
 
@@ -228,10 +255,9 @@ rc_t KBTreeWhack ( KBTree *self )
  *   specific key types will use internal comparison functions. for opaque keys, a
  *   NULL function pointer will cause ordering by size and binary comparison.
  */
-LIB_EXPORT rc_t CC KBTreeMakeRead_1 ( const KBTree **btp,
-    const KFile *backing, size_t climit )
+LIB_EXPORT rc_t CC KBTreeMakeRead_v1 ( const KBTree_v1 ** btp, const KFile_v1 * backing, size_t climit )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     if ( btp == NULL )
         rc = RC ( rcDB, rcTree, rcConstructing, rcParam, rcNull );
@@ -241,7 +267,7 @@ LIB_EXPORT rc_t CC KBTreeMakeRead_1 ( const KBTree **btp,
             rc = RC ( rcDB, rcTree, rcConstructing, rcFile, rcNull );
         else
         {
-            KBTree *bt = malloc ( sizeof * bt );
+            KBTree_v1 * bt = malloc ( sizeof * bt );
             if ( bt == NULL )
                 rc = RC ( rcDB, rcTree, rcConstructing, rcMemory, rcExhausted );
             else
@@ -253,11 +279,11 @@ LIB_EXPORT rc_t CC KBTreeMakeRead_1 ( const KBTree **btp,
                     if ( rc == 0 )
                     {
                         /* create page file */
-                        rc = KPageFileMakeRead ( ( const KPageFile** ) & bt -> pgfile.pager, backing, climit );
+                        rc = KPageFileMakeRead ( ( const KPageFile ** ) & bt -> pgfile . pager, backing, climit );
                         if ( rc == 0 )
                         {
                             /* ready to go */
-                            bt -> file = ( KFile* ) backing;
+                            bt -> file = ( KFile_v1 * ) backing;
                             KRefcountInit ( & bt -> refcount, 1, "KBTree", "make-read", "btree" );
                             bt -> read_only = true;
 
@@ -310,67 +336,75 @@ LIB_EXPORT rc_t CC KBTreeMakeRead_1 ( const KBTree **btp,
  *
  *  "cmp" [ IN ] - comparison callback function for opaque keys.
  */
-LIB_EXPORT rc_t CC KBTreeMakeUpdate_1 ( KBTree **btp, KFile *backing,
-    size_t climit )
+LIB_EXPORT rc_t CC KBTreeMakeUpdate_v1 ( KBTree_v1 ** btp, KFile_v1 * backing, size_t climit )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     if ( btp == NULL )
         rc = RC ( rcDB, rcTree, rcConstructing, rcParam, rcNull );
     else
     {
+        KBTree_v1 *bt = calloc ( 1, sizeof * bt );
+        if ( bt == NULL )
+            rc = RC ( rcDB, rcTree, rcConstructing, rcMemory, rcExhausted );
+        else
         {
-            KBTree *bt = calloc ( 1,sizeof * bt );
-            if ( bt == NULL )
-                rc = RC ( rcDB, rcTree, rcConstructing, rcMemory, rcExhausted );
-            else
+            if ( backing != NULL )
             {
-                if ( backing == NULL || ( rc = KBTreeReadHeader ( & bt -> hdr, backing )) == 0 || GetRCState ( rc ) == rcNotFound )
+                rc = KBTreeReadHeader ( & bt -> hdr, backing );
+                if ( GetRCState ( rc ) == rcNotFound && GetRCObject ( rc ) == rcData )
+                    rc = 0;
+            }
+
+            if ( rc == 0 )
+            {
+                /* detect empty file */
+                if ( bt -> hdr . version == 0 )
                 {
-                    /* detect empty file */
-                    if ( bt -> hdr . version == 0 )
-                    {
-                        assert ( bt -> hdr . id_seq == 0 );
-                        bt -> hdr . type [ 0 ] = 0;
-                        bt -> hdr . type [ 1 ] = 0;
-                        bt -> hdr . key_min = 0;
-                        bt -> hdr . key_max = 0;
-                        bt -> hdr . version = 3;
-                        bt -> hdr . endian = eByteOrderTag;
-                        rc = 0;
-                    }
-                    else
-                    {
-                        /* check for parameter equivalence */
-                        if ( bt -> hdr . version < 3 )
-                            rc = RC ( rcDB, rcTree, rcConstructing, rcHeader, rcBadVersion );
-                    }
+                    assert ( bt -> hdr . id_seq == 0 );
+                    bt -> hdr . type [ btti_type ] = 0; /* no definition yet for what this means */
+                    bt -> hdr . type [ btti_usedComparison ] = ( uint8_t ) false;
+                    bt -> hdr . key_min = 0;
+                    bt -> hdr . key_max = 0;
+                    bt -> hdr . version = KBTREE_CURRENT_VERS;
+                    bt -> hdr . endian = eByteOrderTag;
+                }
+                else
+                {
+                    /* check for parameter equivalence */
 
-                    if ( rc == 0 )
-                    {
-                        if(backing) rc = KFileAddRef ( backing );
-                        if ( rc == 0 )
-                        {
-                            /* create page file */
-                            rc = KPageFileMakeUpdate ( & bt -> pgfile.pager, backing, climit, false );
-                            if ( rc == 0 )
-                            {
-                                /* ready to go */
-                                bt -> file = backing;
-                                KRefcountInit ( & bt -> refcount, 1, "KBTree", "make-update", "btree" );
-                                bt -> read_only = false;
-
-                                * btp = bt;
-                                return 0;
-                            }
-
-                            if(backing) KFileRelease ( backing );
-                        }
-                    }
+                    /* THIS IS TEMPORARY - ONCE THERE ARE LATER VERSIONS IN THE WILD,
+                       WE WILL HAVE TO PERFORM THE EQUIVALENCE CHECK, AND REMOVE
+                       THE CHECK WITHIN KBTreeReadHeader FOR EXACT VERSION */
+                    if ( bt -> hdr . version < KBTREE_CURRENT_VERS )
+                        rc = RC ( rcDB, rcTree, rcConstructing, rcHeader, rcBadVersion );
                 }
 
-                free ( bt );
+                if ( rc == 0 )
+                {
+                    rc = KFileAddRef ( backing );
+                    if ( rc == 0 )
+                    {
+                        /* create page file */
+                        rc = KPageFileMakeUpdate ( & bt -> pgfile . pager, backing, climit, false );
+                        if ( rc == 0 )
+                        {
+                            /* ready to go */
+                            bt -> file = backing;
+                            KRefcountInit ( & bt -> refcount, 1, "KBTree", "make-update", "btree" );
+                            bt -> read_only = false;
+                            
+                            * btp = bt;
+                            return 0;
+                        }
+
+                        if(backing)
+                            KFileRelease ( backing );
+                    }
+                }
             }
+
+            free ( bt );
         }
 
         * btp = NULL;
@@ -384,7 +418,7 @@ LIB_EXPORT rc_t CC KBTreeMakeUpdate_1 ( KBTree **btp, KFile *backing,
  * Release
  *  ignores NULL references
  */
-LIB_EXPORT rc_t CC KBTreeAddRef ( const KBTree *self )
+LIB_EXPORT rc_t CC KBTreeAddRef_v1 ( const KBTree_v1 * self )
 {
     if ( self != NULL ) switch ( KRefcountAdd ( & self -> refcount, "KBTree" ) )
     {
@@ -396,14 +430,14 @@ LIB_EXPORT rc_t CC KBTreeAddRef ( const KBTree *self )
     return 0;
 }
 
-LIB_EXPORT rc_t CC KBTreeRelease ( const KBTree *self )
+LIB_EXPORT rc_t CC KBTreeRelease_v1 ( const KBTree_v1 * self )
 {
     if ( self != NULL ) switch ( KRefcountDrop ( & self -> refcount, "KBTree" ) )
     {
     case krefOkay:
         break;
     case krefWhack:
-        return KBTreeWhack ( ( KBTree* ) self );
+        return KBTreeWhack_v1 ( ( KBTree* ) self );
     default:
         return RC ( rcDB, rcTree, rcReleasing, rcConstraint, rcViolated );
     }
@@ -416,14 +450,14 @@ LIB_EXPORT rc_t CC KBTreeRelease ( const KBTree *self )
  *  prevents modified pages from being flushed to disk
  *  renders object nearly useless
  */
-LIB_EXPORT rc_t CC KBTreeDropBacking ( KBTree *self )
+LIB_EXPORT rc_t CC KBTreeDropBacking_v1 ( KBTree_v1 * self )
 {
     rc_t rc;
 
     if ( self == NULL )
         return RC ( rcDB, rcTree, rcDetaching, rcSelf, rcNull );
 
-    rc = KPageFileDropBacking ( self -> pgfile.pager );
+    rc = KPageFileDropBacking ( self -> pgfile . pager );
     if ( rc == 0 )
     {
         rc = KFileRelease ( self -> file );
@@ -444,7 +478,7 @@ LIB_EXPORT rc_t CC KBTreeDropBacking ( KBTree *self )
  *
  *  "csize" [ OUT, NULL OKAY ] - return parameter for cache size
  */
-LIB_EXPORT rc_t CC KBTreeSize ( const KBTree *self,
+LIB_EXPORT rc_t CC KBTreeSize_v1 ( const KBTree_v1 *self,
     uint64_t *lsize, uint64_t *fsize, size_t *csize )
 {
     size_t dummysz;
@@ -478,7 +512,7 @@ LIB_EXPORT rc_t CC KBTreeSize ( const KBTree *self,
  *  "key" [ IN ] and "key_size" [ IN ] - describes an
  *   opaque key
  */
-LIB_EXPORT rc_t CC KBTreeFind ( const KBTree *self, uint64_t *id,
+LIB_EXPORT rc_t CC KBTreeFind_v1 ( const KBTree_v1 *self, uint64_t *id,
     const void *key, size_t key_size )
 {
     rc_t rc;
@@ -527,7 +561,7 @@ LIB_EXPORT rc_t CC KBTreeFind ( const KBTree *self, uint64_t *id,
  *  "key" [ IN ] and "key_size" [ IN ] - describes an
  *   opaque key
  */
-LIB_EXPORT rc_t CC KBTreeEntry ( KBTree *self, uint64_t *id,
+LIB_EXPORT rc_t CC KBTreeEntry_v1 ( KBTree_v1 *self, uint64_t *id,
     bool *was_inserted, const void *key, size_t key_size )
 {
     rc_t rc;
@@ -568,7 +602,8 @@ LIB_EXPORT rc_t CC KBTreeEntry ( KBTree *self, uint64_t *id,
  *
  *  "f" [ IN ] and "data" [ IN, OPAQUE ] - callback function
  */
-LIB_EXPORT rc_t CC KBTreeForEach ( const KBTree *self, bool reverse, void ( CC * f ) ( const void *key, size_t key_size, uint32_t id, void *data ), void *data )
+LIB_EXPORT rc_t CC KBTreeForEach_v1 ( const KBTree_v1 *self, bool reverse,
+    void ( CC * f ) ( const void *key, size_t key_size, uint32_t id, void *data ), void *data )
 {
     if ( self == NULL )
         return RC ( rcDB, rcTree, rcVisiting, rcSelf, rcNull );
