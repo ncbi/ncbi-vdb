@@ -62,18 +62,14 @@ struct KRefcount_v1
 
 extern KITFTOK_DECL ( KRefcount_v1 );
 
-#ifndef KREFCOUNT_V1
-#define KREFCOUNT_V1 struct KRefcount_v1
-#endif
-
 typedef struct KRefcount_v1_vt KRefcount_v1_vt;
 struct KRefcount_v1_vt
 {
     KVTable dad;
 
     /* begin 1.0 */
-    void ( CC * destroy ) ( KREFCOUNT_V1 *self, ctx_t ctx );
-    void * ( CC * dup ) ( const KREFCOUNT_V1 *self, ctx_t ctx, caps_t rm );
+    void ( CC * destroy ) ( KRefcount_v1 *self, ctx_t ctx );
+    void * ( CC * dup ) ( const KRefcount_v1 *self, ctx_t ctx, caps_t rm );
     /* end 1.0 */
 };
 

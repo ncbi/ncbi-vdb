@@ -35,10 +35,6 @@
 #include <klib/namelist.h>
 #endif
 
-#ifndef _h_kfc_refcount_impl_
-#include <kfc/refcount-impl.h>
-#endif
-
 #ifndef _h_atomic_
 #include <atomic.h>
 #endif
@@ -52,7 +48,6 @@ extern "C" {
 /*--------------------------------------------------------------------------
  * forwards
  */
-struct KBTreePager_v1;
 typedef union KNamelist_vt KNamelist_vt;
 
 
@@ -93,43 +88,6 @@ union KNamelist_vt
  */
 KLIB_EXTERN rc_t CC KNamelistInit ( KNamelist *self, const KNamelist_vt *vt );
 
-
-/*--------------------------------------------------------------------------
- * KBTreePager
- *  a page storage interface
- */
-struct KBTreePager_v1
-{
-    KRefcount_v1 dad;
-};
-
-extern KITFTOK_DECL ( KBTreePager_v1 );
-
-#ifndef KBTREEPAGER_V1
-#define KBTREEPAGER_V1 struct KBTreePager_v1
-#endif
-
-typedef struct KBTreePager_vt_v1 KBTreePager_vt_v1;
-struct KBTreePager_vt_v1
-{
-    KVTable dad;
-
-    /* start minor version == 0 */
-    size_t ( CC * page_size ) ( const KBTREEPAGER_V1 * self, ctx_t ctx );
-    KBTreePage_v1 * ( CC * alloc_page ) ( KBTREEPAGER_V1 * self, ctx_t ctx );
-    const KBTreePage_v1 * ( CC * get_page_read ) ( const KBTREEPAGER_V1 * self, ctx_t ctx, uint64_t pgid );
-    KBTreePage_v1 * ( CC * get_page_update ) ( KBTREEPAGER_V1 * self, ctx_t ctx, uint64_t pgid );
-    /* end minor version == 0 */
-};
-
-/* Init
- */
-KLIB_EXTERN void CC KBTreePagerInit_v1 ( KBTreePager_v1 * self, ctx_t ctx,
-    const KVTable * vt, const char * instance_name );
-
-/* Destroy
- */
-KLIB_EXTERN void CC KBTreePagerDestroy_v1 ( KBTreePager_v1 * self, ctx_t ctx );
 
 #ifdef __cplusplus
 }

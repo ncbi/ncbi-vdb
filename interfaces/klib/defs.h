@@ -108,21 +108,6 @@ typedef uint32_t KCreateMode;
 #endif
 
 
-/*--------------------------------------------------------------------------
- * kdb defines
- */
-#ifndef KBTREE_VERS
-#define KBTREE_VERS 1
-#endif
-
-#ifndef KBTree
-#if KBTREE_VERS == 1
-#define KBTree KBTree_v1
-#endif
-#endif
-
-
-
 #if 1
 
 /*--------------------------------------------------------------------------
