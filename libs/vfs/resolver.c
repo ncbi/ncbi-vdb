@@ -2303,14 +2303,23 @@ uint32_t get_accession_code ( const String * accession, VResolverAccToken *tok )
  */
 static
 VResolverAppID get_accession_app ( const String * accession, bool refseq_ctx,
-    VResolverAccToken *tok, bool *legacy_wgs_refseq, bool forUrl )
+    VResolverAccToken *tok, bool *legacy_wgs_refseq,
+    bool forUrl, bool * forUrlAdjusted )
 {
     VResolverAppID app;
     uint32_t code = get_accession_code ( accession, tok );
 
+    bool dummy;
+    if ( forUrlAdjusted == NULL)
+        forUrlAdjusted = & dummy;
+
+    * forUrlAdjusted = false;
+
     if (accession != NULL &&
         accession->addr != NULL && isdigit(accession->addr[0]))
     {
+        if ( forUrl )
+            * forUrlAdjusted = true;
         /* TODO: KART */
         return appAny;
     }
@@ -2395,8 +2404,10 @@ VResolverAppID get_accession_app ( const String * accession, bool refseq_ctx,
         /* TBD - people appear to be able to throw anything into refseq,
            so anything unrecognized we may as well test out there...
            but this should not stay the case */
-        if ( forUrl )
+        if ( forUrl ) {
+            * forUrlAdjusted = true;
             app = appFILE;
+        }
         else
             app = appREFSEQ;
     }
@@ -2485,7 +2496,7 @@ rc_t VResolverLocalResolve ( const VResolver *self,
     }
 
     app = get_accession_app ( accession, refseq_ctx, & tok,
-                              & legacy_wgs_refseq, false );
+                              & legacy_wgs_refseq, false, NULL );
 
     /* search all local volumes by app and accession algorithm expansion */
 
@@ -2744,7 +2755,7 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
     /* subject the accession to pattern recognition */
     if ( ! is_oid )
         app = get_accession_app ( accession, refseq_ctx, & tok,
-                                  & legacy_wgs_refseq, false );
+                                  & legacy_wgs_refseq, false, NULL );
     else
     {
         app = appAny;
@@ -2841,7 +2852,7 @@ static
 VResolverAppID VResolverExtractAccessionApp ( const VResolver *self,
     const VPath * query, bool has_fragment,
     String * accession, VResolverAccToken * tok,
-    bool *legacy_wgs_refseq, bool forUrl )
+    bool *legacy_wgs_refseq, bool forUrl, bool * forUrlAdjusted )
 {
     bool refseq_ctx = has_fragment;
 
@@ -2853,7 +2864,7 @@ VResolverAppID VResolverExtractAccessionApp ( const VResolver *self,
     /* should have something looking like an accession.
        determine its app to see if we were successful */
     return get_accession_app ( accession, refseq_ctx, tok,
-                               legacy_wgs_refseq, forUrl );
+                               legacy_wgs_refseq, forUrl, forUrlAdjusted );
 }
 
 static
@@ -2930,8 +2941,10 @@ rc_t VResolverCacheResolve ( const VResolver *self,
     String accession;
     VResolverAccToken tok;
     bool legacy_wgs_refseq = false;
+    bool forUrlAdjusted = false;
     VResolverAppID app = VResolverExtractAccessionApp ( self,
-        query, has_fragment, & accession, & tok, & legacy_wgs_refseq, forUrl );
+        query, has_fragment, & accession, & tok, & legacy_wgs_refseq,
+        forUrl, & forUrlAdjusted );
 
     /* going to walk the local volumes, and remember
        which one was best. actually, we have no algorithm
@@ -2953,7 +2966,7 @@ rc_t VResolverCacheResolve ( const VResolver *self,
         {
             alg = VectorGet ( & self -> local, i );
 
-            if ( forUrl && app == appFILE )
+            if ( forUrlAdjusted )
                 return VResolverAlgCacheResolveCwd ( alg, self -> wd, & tok,
                     cache, legacy_wgs_refseq, cwd );
 
@@ -2985,7 +2998,7 @@ rc_t VResolverCacheResolve ( const VResolver *self,
         {
             alg = VectorGet ( & self -> local, i );
 
-            if ( forUrl && app == appFILE )
+            if ( forUrlAdjusted )
                 return VResolverAlgCacheResolveCwd ( alg, self -> wd, & tok,
                     cache, legacy_wgs_refseq, cwd );
 
