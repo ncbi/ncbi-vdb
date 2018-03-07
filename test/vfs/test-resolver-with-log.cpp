@@ -28,6 +28,7 @@
 
 #include <kfg/config.h> /* KConfigDisableUserSettings */
 #include <klib/debug.h> /* KDbgSetString */
+#include <klib/text.h> /* CONST_STRING */
 #include <ktst/unit_test.hpp> /* KMain */
 #include <vfs/manager.h> /* VFSManagerRelease */
 #include <vfs/manager-priv.h> /* VFSManagerMakeFromKfg */
@@ -36,7 +37,7 @@
 
 #include "resolver-cgi.h" /* RESOLVER_CGI */
 
-#include "../../../ncbi-vdb/libs/vfs/resolver-priv.h" /* VResolverSetVersion */
+#include "../../libs/vfs/resolver-priv.h" /* VResolverSetVersion */
 
 TEST_SUITE ( VResolverWithLogTestSuite );
 
@@ -54,11 +55,13 @@ protected:
 
     VPath * _query;
     const VPath * _remote;
+    const VPath * _cache;
 
 public:
 
     Fixture ()
-        : _mgr ( NULL ), _resolver ( NULL ), _query ( NULL ), _remote ( NULL )
+        : _mgr ( NULL ), _resolver ( NULL )
+        , _query ( NULL ), _remote ( NULL ), _cache ( NULL )
     {
         rc_t rc = VFSManagerMakeFromKfg ( & _mgr, KFG );
         if ( rc != 0 )
@@ -77,6 +80,7 @@ public:
 
         RELEASE ( VPath, _query );
         RELEASE ( VPath, _remote );
+        RELEASE ( VPath, _cache );
 
         std::cerr << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
     }
@@ -112,11 +116,27 @@ FIXTURE_TEST_CASE ( SRR1008846, Fixture ) {
     REQUIRE_EQ ( string ( buffer ), string ( "fasp" ) );
 }
 
+FIXTURE_TEST_CASE ( ZZZZ99, Fixture ) {
+    REQUIRE_RC ( VFSManagerMakePath ( _mgr, & _query, "ZZZZ99" ) );
+    REQUIRE_RC ( VResolverQuery
+        ( _resolver, eProtocolHttps, _query, NULL, & _remote, NULL ) );
+    REQUIRE_RC ( VResolverQuery
+        ( _resolver, eProtocolHttps, _query, NULL, NULL     , & _cache ) );
+    const String * uri = NULL;
+    REQUIRE_RC ( VPathMakeUri ( _cache, & uri ) );
+    String expected;
+    CONST_STRING ( & expected, "file:///TMP/wgs/ZZZZ99" );
+    REQUIRE ( StringEqual ( uri, & expected ) );
+    free ( const_cast < String * > ( uri ) );
+}
+
 extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
 
     rc_t CC KMain ( int argc, char * argv [] ) {
+#if _DEBUGGING
         KDbgSetString ( "VFS" );
+#endif
 
         KConfigDisableUserSettings ();
 
@@ -124,6 +144,12 @@ extern "C" {
         if ( rc == 0 )
             rc = KConfigWriteString ( KFG,
                 "repository/remote/main/CGI/resolver-cgi", RESOLVER_CGI );
+        if ( rc == 0 )
+            rc = KConfigWriteString ( KFG,
+                "repository/user/main/public/root", "/TMP" );
+        if ( rc == 0 )
+            rc = KConfigWriteString ( KFG,
+                "repository/user/main/public/apps/wgs/volumes/wgsFlat", "wgs" );
 
         std::cerr << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n";
 
