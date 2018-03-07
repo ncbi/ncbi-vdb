@@ -112,11 +112,19 @@ FIXTURE_TEST_CASE ( SRR1008846, Fixture ) {
     REQUIRE_EQ ( string ( buffer ), string ( "fasp" ) );
 }
 
+FIXTURE_TEST_CASE ( ZZZZ99, Fixture ) {
+    REQUIRE_RC ( VFSManagerMakePath ( _mgr, & _query, "ZZZZ99" ) );
+    REQUIRE_RC ( VResolverQuery
+        ( _resolver, eProtocolHttps, _query, NULL, & _remote, NULL ) );
+}
+
 extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
 
     rc_t CC KMain ( int argc, char * argv [] ) {
+#if _DEBUGGING
         KDbgSetString ( "VFS" );
+#endif
 
         KConfigDisableUserSettings ();
 
