@@ -30,8 +30,6 @@
 #include "diagnose/diagnose.h" /* KDiagnoseAdvanced */
 #include "diagnose.h" /* endpoint_to_string */
 
-#include <kapp/main.h> /* Quitting */
-
 #include <kfg/config.h> /* KConfigReadString */
 
 #include <kfs/directory.h> /* KDirectoryRelease */
@@ -115,6 +113,7 @@ struct KDiagnose {
     KConfig    * kfg;
     KNSManager * kmgr;
     VFSManager * vmgr;
+    rc_t       (CC * quitting) (void);
 
     int verbosity;
 
@@ -527,12 +526,12 @@ static void STestFini ( STest * self ) {
     memset ( self, 0, sizeof * self );
 }
 
-static rc_t KDiagnoseCheckState ( KDiagnose * self ) {
+static rc_t KDiagnoseCheckState(KDiagnose * self) {
     rc_t rc = 0;
 
     assert ( self );
 
-    if ( ( rc = Quitting () ) != 0 )
+    if ( self -> quitting && ( rc = self -> quitting () ) != 0 )
         if ( rc == SILENT_RC ( rcExe,
                                rcProcess, rcExecuting, rcProcess, rcCanceled ) )
         {
@@ -1438,7 +1437,7 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
             }
             if ( total == 0 && esz > 0 ) {
                 int i = 0;
-                int s = esz;
+                size_t s = esz;
                 if ( num_read < esz )
                     s = num_read;
                 rc = STestEnd ( self, eMSG, "'" );
@@ -1467,7 +1466,7 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
                         STestEnd ( self, eEndFAIL, "%R", rc );
                     break;
                 }
-                if ( string_cmp ( buffer, num_read, exp, esz, esz ) != 0 ) {
+                if ( string_cmp ( buffer, num_read, exp, esz, (uint32_t)esz ) != 0 ) {
                     STestEnd ( self, eEndFAIL, "bad content" );
                     rc = RC ( rcRuntime,
                               rcFile, rcReading, rcString, rcUnequal );
@@ -1800,7 +1799,7 @@ static rc_t TestAbuse ( STest * self, Abuse * test,
         if ( i < misuse . size )
             break;
         if ( string_cmp ( h, misuse . size,
-                          misuse . addr, misuse . size, misuse . size ) == 0 )
+                          misuse . addr, misuse . size, (uint32_t) misuse . size) == 0)
         {
             rc_t rc = 0;
             KHttpRequest * req = NULL;
@@ -1985,7 +1984,7 @@ static rc_t STestCallCgi ( STest * self, uint64_t atest, const String * acc,
             rc = STestEnd ( self, eEndOK, "'%s': OK", response );
             if ( rs == 0 ) {
                 int i = 0;
-                unsigned p = 0;
+                uint64_t p = 0;
                 for ( i = 0; p < * resp_read ; ++ i ) {
                     char * n = string_chr ( response + p,
                                             * resp_read - p, '|' );
@@ -2657,7 +2656,7 @@ static rc_t KDiagnoseMakeDesc ( KDiagnose * self ) {
 static const char DIAGNOSE_CLSNAME [] = "KDiagnose";
 
 LIB_EXPORT rc_t CC KDiagnoseMakeExt ( KDiagnose ** test, KConfig * kfg,
-    KNSManager * kmgr, VFSManager * vmgr )
+    KNSManager * kmgr, VFSManager * vmgr, rc_t (CC *quitting)(void) )
 {
     rc_t rc = 0;
 
@@ -2720,6 +2719,7 @@ LIB_EXPORT rc_t CC KDiagnoseMakeExt ( KDiagnose ** test, KConfig * kfg,
     if ( rc == 0 ) {
         p -> verbosity = KConfig_Verbosity ( p -> kfg );
         KRefcountInit ( & p -> refcount, 1, DIAGNOSE_CLSNAME, "init", "" );
+        p -> quitting = quitting;
         * test = p;
     }
     else
@@ -3228,7 +3228,7 @@ rc_t STestHttpVsFasp ( STest * self, const char * http, uint64_t httpSize,
             else {
                 pos += ascp_read;
                 if ( string_cmp ( bAscp, ascp_read,
-                                  bHttp, http_read, ascp_read ) != 0 )
+                                  bHttp, http_read, (uint32_t)ascp_read ) != 0 )
                 {
                     rc = RC ( rcRuntime,
                               rcFile, rcComparing, rcData, rcUnequal );
@@ -4116,7 +4116,7 @@ static rc_t CC KDiagnoseRunImpl ( KDiagnose * self, const char * name,
     va_list args;
     va_start ( args, projectId );
     if ( self == NULL )
-        rc = KDiagnoseMakeExt ( & self, NULL, NULL, NULL );
+        rc = KDiagnoseMakeExt ( & self, NULL, NULL, NULL, NULL );
     else
         rc = KDiagnoseAddRef ( self );
     if ( rc != 0 )

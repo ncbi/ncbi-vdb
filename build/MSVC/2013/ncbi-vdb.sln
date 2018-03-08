@@ -39,8 +39,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "kapp-md", "kapp-md.vcxproj"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ktst-md", "ktst-md.vcxproj", "{87DB2B3E-916A-478C-AA47-A9907ABBBD54}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "diagnose", "diagnose.vcxproj", "{38EA68D5-B755-4645-B3D2-4BF6F227098D}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32

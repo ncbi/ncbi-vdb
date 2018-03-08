@@ -58,7 +58,7 @@ typedef struct KDiagnoseTestDesc KDiagnoseTestDesc;
 /**************************** Make/AddRef/Release *****************************/
 
 DIAGNOSE_EXTERN rc_t CC KDiagnoseMakeExt ( KDiagnose ** test,
-    struct KConfig * kfg, struct KNSManager * kmg, struct VFSManager * vmgr );
+struct KConfig * kfg, struct KNSManager * kmg, struct VFSManager * vmgr, rc_t (CC *quitting)(void));
 DIAGNOSE_EXTERN rc_t CC KDiagnoseAddRef ( const KDiagnose * self );
 DIAGNOSE_EXTERN rc_t CC KDiagnoseRelease ( const KDiagnose * self );
 
