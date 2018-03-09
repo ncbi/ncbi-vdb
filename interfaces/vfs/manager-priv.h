@@ -162,10 +162,11 @@ VFS_EXTERN rc_t CC VFSManagerOpenDirectoryReadDecryptUnreliable (
 /* QueryForUrl:
  * get local/cache location when URL is requested:
  * use FILE app rather than REFSEQ
- * cwd - cache location is in the current directory */
+ * inOutDir - cache location is in the output directory */
 VFS_EXTERN rc_t CC VResolverQueryForUrl ( const struct VResolver * self,
-    const struct VPath * query,
-    const struct VPath ** local, const struct VPath ** cache, bool * cwd );
+    const struct VPath * query, const struct VPath ** local,
+    const struct VPath ** cache, const struct KDirectory * outDir,
+    bool * inOutDir );
 
 
 #ifdef __cplusplus
