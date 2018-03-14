@@ -128,18 +128,16 @@ FIXTURE_TEST_CASE ( SRR100884612, Fixture ) {
 
 FIXTURE_TEST_CASE ( AAAA09, Fixture ) {
     REQUIRE_RC ( VFSManagerMakePath ( _mgr, & _query, "AAAA09" ) );
-    REQUIRE_EQ ( VResolverQuery
-            ( _resolver, eProtocolFaspHttps, _query, NULL, & _remote, NULL ),
-        rc_t(1) );
+    REQUIRE_RC_FAIL ( VResolverQuery
+        ( _resolver, eProtocolFaspHttps, _query, NULL, & _remote, NULL ) );
 }
 
 FIXTURE_TEST_CASE ( AAAA0912, Fixture ) {
     REQUIRE_RC ( VResolverSetVersion ( _resolver, "1.2" ));
 
     REQUIRE_RC ( VFSManagerMakePath ( _mgr, & _query, "AAAA09" ) );
-    REQUIRE_EQ ( VResolverQuery
-            ( _resolver, eProtocolFaspHttps, _query, NULL, & _remote, NULL ),
-        rc_t(1) );
+    REQUIRE_RC_FAIL ( VResolverQuery
+        ( _resolver, eProtocolFaspHttps, _query, NULL, & _remote, NULL ) );
 }
 
 FIXTURE_TEST_CASE ( ZZZZ99, Fixture ) {
