@@ -3121,7 +3121,7 @@ LIB_EXPORT rc_t CC VFSManagerUpdateKryptoPassword (const VFSManager * self,
 
                                         if (old_exists)
                                         {
-                                            uint64_t read;
+                                            size_t read;
                                             size_t this_read;
                                             char buffer [VFS_KRYPTO_PASSWORD_MAX_SIZE+4];
 
