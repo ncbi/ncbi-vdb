@@ -208,7 +208,7 @@ rc_t KClientHttpWhack ( KClientHttp * self )
 typedef struct KEndPointArgsIterator KEndPointArgsIterator;
 struct KEndPointArgsIterator
 {
-    const HttpProxy * proxy;
+    const struct HttpProxy * proxy;
     const String * hostname;
     uint16_t port;
     uint16_t dflt_proxy_ports [ 3 ];
@@ -227,13 +227,12 @@ void KEndPointArgsIteratorMake ( KEndPointArgsIterator * self,
     self -> dflt_proxy_ports [ 1 ] = 8080;
     self -> dflt_proxy_ports [ 2 ] = 80;
 
-    if ( ! mgr -> http_proxy_only )
-    {
+    if ( ! KNSManagerHttpProxyOnly ( mgr ) ) {
         self -> hostname = hostname;
         self -> port = port;
     }
 
-    if ( mgr -> http_proxy_enabled )
+    if ( KNSManagerGetHTTPProxyEnabled ( mgr ) )
         self -> proxy = KNSManagerGetHttpProxy ( mgr );
 
     if ( self -> hostname == NULL && self -> proxy == NULL )
@@ -453,7 +452,7 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
     if ( rc != 0 ) {
         if ( KNSManagerLogNcbiVdbNetError ( mgr ) )
             PLOGERR ( klogSys, ( klogSys, rc, "Failed to Make Connection "
-                "in KClientHttpOpen to '$(host):$(port)",
+                "in KClientHttpOpen to '$(host):$(port)'",
                 "host=%S,port=%hd", aHostname, aPort ) );
     }
     /* if the connection is open */
