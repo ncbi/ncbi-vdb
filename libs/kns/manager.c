@@ -43,6 +43,7 @@
 #include <kns/socket.h>
 #include <kns/http.h>
 
+#include <atomic.h> /* atomic_ptr_t */
 #include <sysalloc.h>
 
 #include <assert.h>
