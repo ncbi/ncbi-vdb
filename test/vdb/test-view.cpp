@@ -111,7 +111,9 @@ public:
     {
         CreateView ( p_testName, p_viewName );
         THROW_ON_RC ( VDatabaseOpenTableRead ( m_db, & m_table, TableName ) );
-        THROW_ON_RC ( VViewBindParameterTable ( m_view, TableParamName, m_table ) );
+        String t;
+        StringInitCString ( & t, TableParamName );
+        THROW_ON_RC ( VViewBindParameterTable ( m_view, & t, m_table ) );
     }
 
     void CreateCursor ( const string & p_testName, const char * p_viewName )
@@ -161,14 +163,18 @@ public:
     {
         const VView * ret;
         THROW_ON_RC ( VDBManagerOpenView ( m_mgr, & ret, m_schema, p_viewName ) );
-        THROW_ON_RC ( VViewBindParameterView ( ret, p_paramName, p_viewToBind ) );
+        String t;
+        StringInitCString ( & t, p_paramName );
+        THROW_ON_RC ( VViewBindParameterView ( ret, & t, p_viewToBind ) );
         return ret;
     }
     const VView * OpenAndBindView( const char * p_viewName, const char * p_paramName, const VTable * p_tableToBind )
     {
         const VView * ret;
         THROW_ON_RC ( VDBManagerOpenView ( m_mgr, & ret, m_schema, p_viewName ) );
-        THROW_ON_RC ( VViewBindParameterTable ( ret, p_paramName, p_tableToBind ) );
+        String t;
+        StringInitCString ( & t, p_paramName );
+        THROW_ON_RC ( VViewBindParameterTable ( ret, & t, p_tableToBind ) );
         return ret;
     }
 
@@ -259,7 +265,9 @@ FIXTURE_TEST_CASE ( View_BindParameterTable_NullObject, ViewFixture )
 {
     CreateView ( GetName(), "V" );
     REQUIRE_RC ( VDatabaseOpenTableRead ( m_db, & m_table, TableName ) );
-    REQUIRE_RC_FAIL ( VViewBindParameterTable ( 0, "", m_table ) );
+    String t;
+    CONST_STRING ( & t, "" );
+    REQUIRE_RC_FAIL ( VViewBindParameterTable ( 0, & t, m_table ) );
 }
 FIXTURE_TEST_CASE ( View_BindParameterTable_NullName, ViewFixture )
 {
@@ -270,32 +278,42 @@ FIXTURE_TEST_CASE ( View_BindParameterTable_NullName, ViewFixture )
 FIXTURE_TEST_CASE ( View_BindParameterTable_NullTable, ViewFixture )
 {
     CreateView ( GetName(), "V" );
-    REQUIRE_RC_FAIL ( VViewBindParameterTable ( m_view, TableParamName, 0 ) );
+    String t;
+    StringInitCString ( & t, TableParamName );
+    REQUIRE_RC_FAIL ( VViewBindParameterTable ( m_view, & t, 0 ) );
 }
 FIXTURE_TEST_CASE ( View_BindParameterTable_WrongName, ViewFixture )
 {
     CreateView ( GetName(), "V" );
-    REQUIRE_RC_FAIL ( VViewBindParameterTable ( m_view, "notAtbl", 0 ) );
+    String t;
+    CONST_STRING ( & t, "notAtbl" );
+    REQUIRE_RC_FAIL ( VViewBindParameterTable ( m_view, & t, 0 ) );
 }
 FIXTURE_TEST_CASE ( View_BindParameterTable_WrongTableType, ViewFixture )
 {
     CreateView ( GetName(), "V" );
     CreateTableOpenRead ( "p" );
-    REQUIRE_RC_FAIL ( VViewBindParameterTable ( m_view, TableParamName, m_table ) );
+    String t;
+    StringInitCString ( & t, TableParamName );
+    REQUIRE_RC_FAIL ( VViewBindParameterTable ( m_view, & t, m_table ) );
 }
 FIXTURE_TEST_CASE ( View_BindParameterTable, ViewFixture )
 {
     CreateView ( GetName(), "V" );
     REQUIRE_RC ( VDatabaseOpenTableRead ( m_db, & m_table, TableName ) );
-    REQUIRE_RC ( VViewBindParameterTable ( m_view, TableParamName, m_table ) ); // V<T tbl>
+    String t;
+    StringInitCString ( & t, TableParamName );
+    REQUIRE_RC ( VViewBindParameterTable ( m_view, & t, m_table ) ); // V<T tbl>
 }
 
 FIXTURE_TEST_CASE ( View_BindParameterTable_AlreadyBound, ViewFixture )
 {
     CreateView ( GetName(), "V" );
     REQUIRE_RC ( VDatabaseOpenTableRead ( m_db, & m_table, TableName ) );
-    REQUIRE_RC ( VViewBindParameterTable ( m_view, TableParamName, m_table ) ); // V<T tbl>
-    REQUIRE_RC_FAIL ( VViewBindParameterTable ( m_view, TableParamName, m_table ) );
+    String t;
+    StringInitCString ( & t, TableParamName );
+    REQUIRE_RC ( VViewBindParameterTable ( m_view, & t, m_table ) ); // V<T tbl>
+    REQUIRE_RC_FAIL ( VViewBindParameterTable ( m_view, & t, m_table ) ); // already done
 }
 
 // BindParameterView
@@ -308,7 +326,9 @@ FIXTURE_TEST_CASE ( View_BindParameterView_NullObject, ViewFixture )
     CreateView ( GetName(), "W" );
     const VView * v;
     REQUIRE_RC ( VDBManagerOpenView ( m_mgr, & v, m_schema, "V" ) );
-    REQUIRE_RC_FAIL ( VViewBindParameterView ( 0, "vw", v ) );
+    String t;
+    CONST_STRING ( & t, "vw" );
+    REQUIRE_RC_FAIL ( VViewBindParameterView ( 0, & t, v ) );
     REQUIRE_RC ( VViewRelease ( v ) );
 }
 FIXTURE_TEST_CASE ( View_BindParameterView_NullName, ViewFixture )
@@ -324,7 +344,9 @@ FIXTURE_TEST_CASE ( View_BindParameterView_NullView, ViewFixture )
 {
     m_schemaText = ViewOnView;
     CreateView ( GetName(), "W" );
-    REQUIRE_RC_FAIL ( VViewBindParameterView ( m_view, "vw", 0 ) );
+    String t;
+    CONST_STRING ( & t, "vw" );
+    REQUIRE_RC_FAIL ( VViewBindParameterView ( m_view, & t, 0 ) );
 }
 FIXTURE_TEST_CASE ( View_BindParameterView_WrongName, ViewFixture )
 {
@@ -332,7 +354,9 @@ FIXTURE_TEST_CASE ( View_BindParameterView_WrongName, ViewFixture )
     CreateView ( GetName(), "W" );
     const VView * v;
     REQUIRE_RC ( VDBManagerOpenView ( m_mgr, & v, m_schema, "V" ) );
-    REQUIRE_RC_FAIL ( VViewBindParameterView ( m_view, "notAview", v ) );
+    String t;
+    CONST_STRING ( & t, "notAview" );
+    REQUIRE_RC_FAIL ( VViewBindParameterView ( m_view, & t, v ) );
     REQUIRE_RC ( VViewRelease ( v ) );
 }
 FIXTURE_TEST_CASE ( View_BindParameterView_WrongViewType, ViewFixture )
@@ -340,8 +364,10 @@ FIXTURE_TEST_CASE ( View_BindParameterView_WrongViewType, ViewFixture )
     m_schemaText = ViewOnView;
     CreateView ( GetName(), "W" );
     const VView * v;
-    REQUIRE_RC ( VDBManagerOpenView ( m_mgr, & v, m_schema, "V" ) ); // W<W> - wrong
-    REQUIRE_RC_FAIL ( VViewBindParameterView ( m_view, "notAview", v ) );
+    REQUIRE_RC ( VDBManagerOpenView ( m_mgr, & v, m_schema, "W" ) ); // W<W> - wrong
+    String t;
+    CONST_STRING ( & t, "vw" );
+    REQUIRE_RC_FAIL ( VViewBindParameterView ( m_view, & t, v ) );
     REQUIRE_RC ( VViewRelease ( v ) );
 }
 FIXTURE_TEST_CASE ( View_BindParameterView, ViewFixture )
@@ -350,7 +376,9 @@ FIXTURE_TEST_CASE ( View_BindParameterView, ViewFixture )
     CreateView ( GetName(), "W" );
     const VView * v;
     REQUIRE_RC ( VDBManagerOpenView ( m_mgr, & v, m_schema, "V" ) );
-    REQUIRE_RC ( VViewBindParameterView ( m_view, "vw", v ) ); // W<V>
+    String t;
+    CONST_STRING ( & t, "vw" );
+    REQUIRE_RC ( VViewBindParameterView ( m_view, & t, v ) ); // W<V>
     REQUIRE_RC ( VViewRelease ( v ) );
 }
 FIXTURE_TEST_CASE ( View_BindParameterView_AlreadyBound, ViewFixture )
@@ -359,8 +387,10 @@ FIXTURE_TEST_CASE ( View_BindParameterView_AlreadyBound, ViewFixture )
     CreateView ( GetName(), "W" );
     const VView * v;
     REQUIRE_RC ( VDBManagerOpenView ( m_mgr, & v, m_schema, "V" ) );
-    REQUIRE_RC ( VViewBindParameterView ( m_view, "vw", v ) ); // W<V>
-    REQUIRE_RC_FAIL ( VViewBindParameterView ( m_view, "vw", v ) ); // W<V>
+    String t;
+    CONST_STRING ( & t, "vw" );
+    REQUIRE_RC ( VViewBindParameterView ( m_view, & t, v ) ); // W<V>
+    REQUIRE_RC_FAIL ( VViewBindParameterView ( m_view, & t, v ) ); // already done
     REQUIRE_RC ( VViewRelease ( v ) );
 }
 
@@ -448,8 +478,11 @@ FIXTURE_TEST_CASE ( View_GetBoundObject_MultipleParameters, ViewFixture )
     // m_view is a V, m_table is a T
     const VView * Y;
     REQUIRE_RC ( VDBManagerOpenView ( m_mgr, & Y, m_schema, "Y" ) );
-    REQUIRE_RC ( VViewBindParameterTable ( Y, "tab", m_table ) );
-    REQUIRE_RC ( VViewBindParameterView  ( Y, "v", m_view ) );
+    String t;
+    CONST_STRING ( & t, "tab" );
+    REQUIRE_RC ( VViewBindParameterTable ( Y, & t, m_table ) );
+    CONST_STRING ( & t, "v" );
+    REQUIRE_RC ( VViewBindParameterView  ( Y, & t, m_view ) );
 
     // expect: X.p_v refers to m_view; X.p_t refers to m_table
     const SView * sX = static_cast < const SView * > ( VectorGet ( & m_schema -> view, 1 ) ); //X
@@ -471,13 +504,85 @@ FIXTURE_TEST_CASE ( View_GetBoundObject_IndirectParentView, ViewFixture )
     ;
     CreateView ( GetName(), "Y" );
     REQUIRE_RC ( VDatabaseOpenTableRead ( m_db, & m_table, TableName ) );
-    REQUIRE_RC ( VViewBindParameterTable ( m_view, "tb", m_table ) );
+    String t;
+    CONST_STRING ( & t, "tb" );
+    REQUIRE_RC ( VViewBindParameterTable ( m_view, & t, m_table ) );
     // m_view is a Y, m_table is a T
 
     // first argument of grandparent (V) is bound to T
     // expect: V.tbl refers to m_table
     const SView * sV = static_cast < const SView * > ( VectorGet ( & m_schema -> view, 0 ) ); //V
     REQUIRE_EQ ( (const void *)m_table, VViewGetBoundObject ( m_view, sV, 0 ) );
+}
+
+FIXTURE_TEST_CASE ( View_ParameterCount_SelfNull, ViewFixture )
+{
+    REQUIRE_EQ ( 0u, VViewParameterCount ( NULL ) );
+}
+
+FIXTURE_TEST_CASE ( View_ParameterCount, ViewFixture )
+{
+    m_schemaText = BaseSchemaText + // defines T and V
+        "view X#1 < V p_v, T p_t > {};"
+    ;
+
+    CreateView ( GetName(), "X" );
+    REQUIRE_EQ ( 2u, VViewParameterCount ( m_view ) );
+}
+
+FIXTURE_TEST_CASE ( View_GetParameter_SelfNull, ViewFixture )
+{
+    const String * name;
+    bool isTable = true;
+    REQUIRE_RC_FAIL ( VViewGetParameter ( NULL, 0, & name, & isTable ) );
+}
+
+FIXTURE_TEST_CASE ( View_GetParameter_ParamsNull, ViewFixture )
+{
+    m_schemaText = BaseSchemaText + // defines T and V
+        "view X#1 < V p_v, T p_t > {};"
+    ;
+    CreateView ( GetName(), "X" );
+    REQUIRE_RC_FAIL ( VViewGetParameter ( m_view, 0, NULL, NULL ) );
+}
+
+FIXTURE_TEST_CASE ( View_GetParameter_OutOfRange, ViewFixture )
+{
+    m_schemaText = BaseSchemaText + // defines T and V
+        "view X#1 < V p_v, T p_t > {};"
+    ;
+    CreateView ( GetName(), "X" );
+    const String * name;
+    bool isTable = true;
+    REQUIRE_RC_FAIL ( VViewGetParameter ( m_view, 2, & name, & isTable ) );
+}
+
+FIXTURE_TEST_CASE ( View_GetParameter_Name, ViewFixture )
+{
+    m_schemaText = BaseSchemaText + // defines T and V
+        "view X#1 < V p_v, T p_t > {};"
+    ;
+
+    CreateView ( GetName(), "X" );
+    const String * name;
+    REQUIRE_RC ( VViewGetParameter ( m_view, 0, & name, NULL ) );
+    REQUIRE_EQ ( ToCppString ( * name ), string ( "p_v" ) );
+    REQUIRE_RC ( VViewGetParameter ( m_view, 1, & name, NULL ) );
+    REQUIRE_EQ ( ToCppString ( * name ), string ( "p_t" ) );
+}
+
+FIXTURE_TEST_CASE ( View_GetParameter_IsTable, ViewFixture )
+{
+    m_schemaText = BaseSchemaText + // defines T and V
+        "view X#1 < V p_v, T p_t > {};"
+    ;
+
+    CreateView ( GetName(), "X" );
+    bool isTable = true;
+    REQUIRE_RC ( VViewGetParameter ( m_view, 0, NULL, & isTable ) );
+    REQUIRE ( ! isTable );
+    REQUIRE_RC ( VViewGetParameter ( m_view, 1, NULL, & isTable ) );
+    REQUIRE ( isTable );
 }
 
 //////////////////////////////////////////// Main
