@@ -151,7 +151,9 @@ public:
         if ( p_bind )
         {
             THROW_ON_RC ( VDatabaseOpenTableRead ( m_db, & m_table, TableName ) );
-            THROW_ON_RC ( VViewBindParameterTable ( m_view, TableParamName, m_table ) );
+            String t;
+            StringInitCString ( & t, TableParamName );
+            THROW_ON_RC ( VViewBindParameterTable ( m_view, & t, m_table ) );
         }
         THROW_ON_RC ( VViewCreateCursor ( m_view, & m_cur ) );
     }
@@ -207,7 +209,9 @@ public:
     {
         const VTable * t;
         THROW_ON_RC ( VDatabaseOpenTableRead ( m_db, & t, p_tableName ) );
-        THROW_ON_RC ( VViewBindParameterTable ( m_view, p_paramName, t ) );
+        String n;
+        StringInitCString ( & n, p_paramName );
+        THROW_ON_RC ( VViewBindParameterTable ( m_view, & n, t ) );
         THROW_ON_RC ( VTableRelease ( t ) );
     }
 
@@ -1180,9 +1184,12 @@ public:
         const VView * paramView; // the parameter view, bound to a table
         THROW_ON_RC ( VDBManagerOpenView ( m_mgr, & paramView, m_schema, ViewOnTableName ) );
         THROW_ON_RC ( VDatabaseOpenTableRead ( m_db, & m_table, TableName ) );
-        THROW_ON_RC ( VViewBindParameterTable ( paramView, TableParamName, m_table ) );
+        String t;
+        StringInitCString ( & t, TableParamName );
+        THROW_ON_RC ( VViewBindParameterTable ( paramView, & t, m_table ) );
 
-        THROW_ON_RC ( VViewBindParameterView ( m_view, ViewParamName, paramView ) );
+        StringInitCString ( & t, ViewParamName );
+        THROW_ON_RC ( VViewBindParameterView ( m_view, & t, paramView ) );
         THROW_ON_RC ( VViewRelease ( (VView*)paramView ) );
 
         THROW_ON_RC ( VViewCreateCursor ( m_view, & m_cur ) );

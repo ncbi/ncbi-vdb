@@ -220,6 +220,50 @@ BindingIdxByName ( const SView * p_self, const String * p_name )
     return -1;
 }
 
+LIB_EXPORT
+uint32_t CC
+VViewParameterCount ( struct VView const * p_self )
+{
+    if ( p_self == NULL || p_self -> sview == NULL )
+    {
+        return 0;
+    }
+    return VectorLength ( & p_self -> sview -> params );
+}
+
+LIB_EXPORT
+rc_t CC  VViewGetParameter (
+    struct VView const *    p_self,
+    uint32_t                p_idx,
+    const String **         p_name,
+    bool *                  p_is_table )
+{
+    if ( p_self == NULL || p_self -> sview == NULL )
+    {
+        return RC ( rcVDB, rcTable, rcOpening, rcSelf, rcNull );
+    }
+    if ( p_name == NULL && p_is_table == NULL )
+    {
+        return RC ( rcVDB, rcTable, rcOpening, rcParam, rcNull );
+    }
+
+    const KSymbol * p = VectorGet ( & p_self -> sview -> params, p_idx );
+    if ( p == NULL )
+    {
+        return RC ( rcVDB, rcTable, rcOpening, rcParam, rcOutofrange );
+    }
+
+    if ( p_name != NULL )
+    {
+        * p_name = & p -> name;
+    }
+    if ( p_is_table != NULL )
+    {
+        * p_is_table = p -> type == eTable;
+    }
+    return 0;
+}
+
 /* BindParameterTable
  *  Bind a view's parameter to a table.
  *
@@ -228,28 +272,26 @@ BindingIdxByName ( const SView * p_self, const String * p_name )
  *  "index" [ IN ] - 0-based index of the corresponding parameter in the view's parameter list
  */
 LIB_EXPORT
-rc_t
+rc_t CC
 VViewBindParameterTable ( const VView *     p_self,
-                          const char *      p_param_name,
+                          const String *    p_param_name,
                           const VTable *    p_table )
 {
     if ( p_self == NULL )
     {
         return RC ( rcVDB, rcTable, rcOpening, rcSelf, rcNull );
     }
-    if ( p_table == NULL )
+    if ( p_param_name == NULL || p_table == NULL )
     {
         return RC ( rcVDB, rcTable, rcOpening, rcParam, rcNull );
     }
     else
     {   /* locate the view's parameter, make sure it is a table, bind to the given table */
-        String name;
-        StringInitCString( & name, p_param_name );
-        int32_t idx = BindingIdxByName ( p_self -> sview, & name );
+        int32_t idx = BindingIdxByName ( p_self -> sview, p_param_name );
         if ( idx >= 0 )
         {   /* self->bindings is parallel to self->sview->params */
             const KSymbol * param = VectorGet ( & p_self -> sview -> params, idx );
-            if ( StringEqual ( & param -> name, & name ) )
+            if ( StringEqual ( & param -> name, p_param_name ) )
             {
                 if ( param -> type != eTable || param -> u . obj != p_table -> stbl )
                 {
@@ -282,28 +324,26 @@ VViewBindParameterTable ( const VView *     p_self,
  *  "index" [ IN ] - 0-based index of the corresponding parameter in "self"'s parameter list
  */
 LIB_EXPORT
-rc_t
+rc_t CC
 VViewBindParameterView ( const VView *          p_self,
-                         const char *           p_param_name,
+                         const String *         p_param_name,
                          const struct VView *   p_view )
 {
     if ( p_self == NULL )
     {
         return RC ( rcVDB, rcTable, rcOpening, rcSelf, rcNull );
     }
-    if ( p_view == NULL )
+    if ( p_param_name == NULL || p_view == NULL )
     {
         return RC ( rcVDB, rcTable, rcOpening, rcParam, rcNull );
     }
     else
     {   /* locate the view's parameter, make sure it is a view, bind to the given view */
-        String name;
-        StringInitCString( & name, p_param_name );
-        int32_t idx = BindingIdxByName ( p_self -> sview, & name );
+        int32_t idx = BindingIdxByName ( p_self -> sview, p_param_name );
         if ( idx >= 0 )
         {   /* self->bindings is parallel to self->sview->params */
             const KSymbol * param = VectorGet ( & p_self -> sview -> params, idx );
-            if ( StringEqual ( & param -> name, & name ) )
+            if ( StringEqual ( & param -> name, p_param_name ) )
             {
                 if ( param -> type != eView || param -> u . obj != p_view -> sview )
                 {
@@ -404,3 +444,4 @@ VViewGetBoundObject( const VView * p_self, const SView * p_sview, uint32_t p_par
     }
     return NULL;
 }
+
