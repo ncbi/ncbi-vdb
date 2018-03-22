@@ -80,7 +80,7 @@ bool KNSManagerHttpProxyOnly ( const KNSManager * self ) {
         return KNSProxiesHttpProxyOnly ( self -> proxies );
 }
 
-const struct HttpProxy * KNSManagerGetHttpProxy ( const KNSManager * self ) {
+struct KNSProxies * KNSManagerGetProxies ( const KNSManager * self ) {
     if ( self == NULL)
         return NULL;
     else

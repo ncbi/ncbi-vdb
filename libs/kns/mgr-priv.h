@@ -106,14 +106,13 @@ bool KNSProxiesHttpProxyOnly ( const struct KNSProxies * self );
 rc_t KNSProxiesVSetHTTPProxyPath ( struct KNSProxies * self,
     const char * fmt, va_list args, bool clear );
 
-const struct HttpProxy * KNSProxiesGetHttpProxy
-    ( const struct KNSProxies * self );
+struct KNSProxies * KNSProxiesGetHttpProxy ( struct KNSProxies * self );
 
 rc_t KNSProxiesGetHttpProxyPath ( const struct KNSProxies* self,
                                   const String ** proxy );
 
 
-/* test */
+/************************************ test ************************************/
 struct KStream;
 void KStreamForceSocketClose ( struct KStream const * self );
 

@@ -208,7 +208,9 @@ rc_t KClientHttpWhack ( KClientHttp * self )
 typedef struct KEndPointArgsIterator KEndPointArgsIterator;
 struct KEndPointArgsIterator
 {
-    const struct HttpProxy * proxy;
+    struct KNSProxies * proxies;
+    size_t idx;
+
     const String * hostname;
     uint16_t port;
     uint16_t dflt_proxy_ports [ 3 ];
@@ -233,9 +235,9 @@ void KEndPointArgsIteratorMake ( KEndPointArgsIterator * self,
     }
 
     if ( KNSManagerGetHTTPProxyEnabled ( mgr ) )
-        self -> proxy = KNSManagerGetHttpProxy ( mgr );
+        self -> proxies = KNSManagerGetProxies ( mgr );
 
-    if ( self -> hostname == NULL && self -> proxy == NULL )
+    if ( self -> hostname == NULL && self -> proxies == NULL )
         self -> done = true;
 }
 
@@ -255,7 +257,7 @@ bool KEndPointArgsIteratorNext ( KEndPointArgsIterator * self,
     assert ( hostname && port && proxy_default_port && proxy_ep );
 
     /* DO NOT WHACK hostname !!! */
-    HttpProxyGet ( self -> proxy, hostname, port );
+    KNSProxiesGet ( self -> proxies, hostname, port, self -> idx );
 
     * proxy_default_port = false;
 
@@ -275,7 +277,7 @@ bool KEndPointArgsIteratorNext ( KEndPointArgsIterator * self,
         }
 
         if ( self -> dflt_proxy_ports_idx == 0 )
-            self -> proxy = HttpProxyGetNextHttpProxy ( self -> proxy );
+            ++ self -> idx;
 
         * proxy_ep = true;
         return true;
@@ -414,7 +416,7 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
     mgr = self -> mgr;
     assert ( mgr );
 
-    KEndPointArgsIteratorMake ( & it, mgr, aHostname, aPort  );
+    KEndPointArgsIteratorMake ( & it, mgr, aHostname, aPort );
     while ( KEndPointArgsIteratorNext
         ( & it, & hostname, & port, & proxy_default_port, & proxy_ep ) )
     {

@@ -3,9 +3,11 @@
 const struct KEndPointArgsIterator * KNSManagerMakeKEndPointArgsIterator
     ( const KNSManager * self, const String * hostname, uint32_t port )
 {
-    static struct KEndPointArgsIterator i;
-    KEndPointArgsIteratorMake ( & i, self, hostname, port );
-    return & i;
+    struct KEndPointArgsIterator * i = calloc ( 1, sizeof * i );
+
+    KEndPointArgsIteratorMake ( i, self, hostname, port );
+
+    return i;
 }
 
 bool KEndPointArgsIterator_Next ( KEndPointArgsIterator * self,

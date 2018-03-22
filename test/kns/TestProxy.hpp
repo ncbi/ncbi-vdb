@@ -162,11 +162,14 @@ class TestProxy : private ncbi::NK::TestCase {
         return ( ( a ) -> len == ( b ) -> len &&
             memcmp ( ( a ) -> addr, ( b ) -> addr, ( a ) -> len ) == 0 );
     }
+
     TestCase * _dad;
     CKConfig _kfg;
+
     void testProxies ( const KNSManager * mgr, E * exp ) {
+        size_t idx = 0;
         E * e = exp;
-        const HttpProxy * p = KNSManagerGetHttpProxy ( mgr );
+        KNSProxies * p = KNSManagerGetProxies ( mgr );
         if ( p != NULL && e == NULL)
             REQUIRE ( ! p );
         E * first = e;
@@ -174,8 +177,11 @@ class TestProxy : private ncbi::NK::TestCase {
             E * prev = first;
             const String * http_proxy = NULL;
             uint16_t http_proxy_port = 0;
-            HttpProxyGet ( p, & http_proxy, & http_proxy_port );
-            REQUIRE ( http_proxy );
+            KNSProxiesGet ( p, & http_proxy, & http_proxy_port, idx ++ );
+            if ( http_proxy == NULL ) {
+                REQUIRE ( ! e );
+                break;
+            }
             std::string proxy ( http_proxy -> addr, http_proxy -> len );
             while ( e -> path != proxy
                  || e -> port != http_proxy_port )
@@ -190,7 +196,9 @@ class TestProxy : private ncbi::NK::TestCase {
             }
             if ( e == NULL )
                 REQUIRE_EQ ( proxy, std::string ( "Cannot find in expected" ) );
-            else if ( e -> path == proxy && e -> port == http_proxy_port ) {
+            else if ( e -> path == proxy
+                   && e -> port == http_proxy_port )
+            {
                 if ( prev != e ) {
                     prev -> next = e -> next;
                     e -> next = NULL;
@@ -205,10 +213,9 @@ class TestProxy : private ncbi::NK::TestCase {
                 }
             }
             e = first;
-            p = HttpProxyGetNextHttpProxy ( p );
-            REQUIRE ( ( e && p ) || ( ! e && ! p ) ); 
         }
     }
+
     void testEndPoints ( const KNSManager * mgr,
                          E * exp, const C * c )
     {
@@ -224,11 +231,29 @@ class TestProxy : private ncbi::NK::TestCase {
         bool proxy_default_port = true;
         bool proxy_ep = false;
         E * first = e;
+        bool firstI = true;
         while ( e ) {
             E * prev = first;
             REQUIRE ( KEndPointArgsIterator_Next ( i,
                  & hostname, & port, & proxy_default_port, & proxy_ep ) );
             REQUIRE ( proxy_ep );
+            if ( firstI ) {
+                struct KEndPointArgsIterator * i2 =
+                    KNSManagerMakeKEndPointArgsIterator ( mgr, & aHost, aPort );
+                const String * hostname2 = NULL;
+                uint16_t port2 = ~ 0;
+                bool proxy_default_port2 = true;
+                bool proxy_ep2 = false;
+                REQUIRE ( KEndPointArgsIterator_Next ( i2, & hostname2, & port2,
+                    & proxy_default_port2, & proxy_ep2 ) );
+                free ( i2 );
+                i2 = NULL;
+                REQUIRE ( StringEqual ( hostname, hostname2 ) );
+                REQUIRE_EQ ( port               , port2 ),
+                REQUIRE_EQ ( proxy_default_port , proxy_default_port2 ),
+                REQUIRE_EQ ( proxy_ep           , proxy_ep2 ),
+                firstI = false;
+            }
             String host;
             StringInit ( & host,
                 e -> path. c_str (), e -> path. size (), e -> path. size () );
@@ -294,6 +319,9 @@ class TestProxy : private ncbi::NK::TestCase {
         }
         REQUIRE ( !   KEndPointArgsIterator_Next ( i,
                  & hostname, & port, & proxy_default_port, & proxy_ep ) );
+
+        free ( i );
+        i = NULL;
     }
 
 public:

@@ -67,6 +67,8 @@ static rc_t StringRelease ( String * self ) {
 
 /* HttpProxy ******************************************************************/
 
+typedef struct HttpProxy HttpProxy;
+
 struct HttpProxy {
     const struct String * proxy_host;
     uint16_t proxy_port;
@@ -107,29 +109,6 @@ static rc_t HttpProxyGetPath ( const HttpProxy * self,
     return rc;
 }
 
-const HttpProxy * HttpProxyGetNextHttpProxy ( const HttpProxy * self ) {
-    if ( self == NULL )
-        return NULL;
-    else
-        return self -> next;
-}
-
-/* N.B.: DO NOT WHACK THE RETURNED proxy_host String !!! */
-void HttpProxyGet ( const HttpProxy * self,
-    const String ** proxy_host, uint16_t * proxy_port )
-{
-    assert ( proxy_host && proxy_port );
-
-    if ( self != NULL ) {
-        * proxy_host = self -> proxy_host;
-        * proxy_port = self -> proxy_port;
-    }
-    else {
-        * proxy_host = NULL;
-        * proxy_port = 0;
-    }
-}
-
 void HttpProxyGetHTTPProxy ( const HttpProxy * self,
     const struct String ** proxy_host, uint16_t * proxy_port )
 {
@@ -147,11 +126,12 @@ struct KNSProxies {
     BSTree proxie_tree;
 
     HttpProxy ** http_proxies;
-    size_t http_proxies_idx;
     size_t http_proxies_cnt;
 
     int rand;
     int tmpI;
+    size_t tmpS;
+
     BSTNode * tmpB;
 };
 
@@ -201,8 +181,8 @@ static void CC KNSProxiesBSTreeInit ( BSTNode * n, void * data ) {
 
     assert ( node && self && self -> http_proxies );
 
-    if ( self -> http_proxies_idx < self -> http_proxies_cnt )
-        self -> http_proxies [ self -> http_proxies_idx ++ ] = node -> proxy;
+    if ( self -> tmpS < self -> http_proxies_cnt )
+        self -> http_proxies [ self -> tmpS ++ ] = node -> proxy;
 }
 
 static bool CC KNSProxiesBSTreeSetRand ( BSTNode * n, void * data ) {
@@ -230,13 +210,36 @@ int64_t CC BSTreeSort ( const BSTNode * item, const BSTNode * n )
 
 /* KNSProxies *****************************************************************/
 
-const HttpProxy * KNSProxiesGetHttpProxy ( const KNSProxies * self ) {
+/* N.B.: DO NOT WHACK THE RETURNED proxy_host String !!! */
+void KNSProxiesGet ( KNSProxies * self, const String ** proxy_host,
+                     uint16_t * proxy_port, size_t idx )
+{
+    assert ( proxy_host && proxy_port );
+
+    if ( self != NULL && self -> http_proxies != NULL ) {
+        if ( idx < self -> http_proxies_cnt ) {
+            const HttpProxy * proxy = self -> http_proxies [ idx ];
+            * proxy_host = proxy -> proxy_host;
+            * proxy_port = proxy -> proxy_port;
+            return;
+        }
+    }
+
+    * proxy_host = NULL;
+    * proxy_port = 0;
+}
+
+KNSProxies * KNSProxiesGetHttpProxy ( KNSProxies * self ) {
     assert ( self );
 
     if ( self -> http_proxies == NULL )
         return NULL;
-    else
-        return * self -> http_proxies;
+    else {
+        if ( self -> http_proxies_cnt == 0 )
+            return NULL;
+        else
+            return self;
+    }
 }
 
 rc_t KNSProxiesGetHttpProxyPath ( const KNSProxies* self,
@@ -638,7 +641,7 @@ KNSProxies * KNSManagerKNSProxiesMake ( struct KNSManager * mgr,
             return NULL;
     }
 
-    self -> http_proxies_idx = 0;
+    self -> tmpS = 0;
     n = self -> http_proxies_cnt;
     srand ( time ( NULL ) );
     while ( n > 0 ) {
@@ -653,8 +656,7 @@ KNSProxies * KNSManagerKNSProxiesMake ( struct KNSManager * mgr,
         }
         else {
             const BSTItem * item = ( BSTItem * ) self -> tmpB;
-            self -> http_proxies [ self -> http_proxies_idx ++ ]
-                = item -> proxy;
+            self -> http_proxies [ self -> tmpS ++ ] = item -> proxy;
             BSTreeUnlink ( & self -> proxie_tree, self -> tmpB );
             BSTItemWhack ( self -> tmpB, NULL );
             self -> tmpB = NULL;
@@ -664,15 +666,12 @@ KNSProxies * KNSManagerKNSProxiesMake ( struct KNSManager * mgr,
 
 /* BSTreeForEach ( & self -> proxie_tree, false, KNSProxiesBSTreeInit, self );*/
 
-    for ( self -> http_proxies_idx = 1;
-          self -> http_proxies_idx < self ->http_proxies_cnt;
-          ++ self -> http_proxies_idx )
+    for ( self -> tmpS = 1; self -> tmpS < self ->http_proxies_cnt;
+       ++ self -> tmpS )
     {
-        self -> http_proxies [ self -> http_proxies_idx  - 1 ] -> next
-            = self -> http_proxies [ self -> http_proxies_idx ];
+        self -> http_proxies [ self -> tmpS - 1 ] -> next
+            = self -> http_proxies [ self -> tmpS ];
     }
-
-    self -> http_proxies_idx = 0;
 
     return self;
 }
