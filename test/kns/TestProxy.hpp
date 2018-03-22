@@ -177,8 +177,9 @@ class TestProxy : private ncbi::NK::TestCase {
             E * prev = first;
             const String * http_proxy = NULL;
             uint16_t http_proxy_port = 0;
-            KNSProxiesGet ( p, & http_proxy, & http_proxy_port, idx ++ );
-            if ( http_proxy == NULL ) {
+            if ( ! KNSProxiesGet ( p, & http_proxy, & http_proxy_port,
+                                   idx ++ ) )
+            {
                 REQUIRE ( ! e );
                 break;
             }

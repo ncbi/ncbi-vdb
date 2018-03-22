@@ -211,7 +211,7 @@ int64_t CC BSTreeSort ( const BSTNode * item, const BSTNode * n )
 /* KNSProxies *****************************************************************/
 
 /* N.B.: DO NOT WHACK THE RETURNED proxy_host String !!! */
-void KNSProxiesGet ( KNSProxies * self, const String ** proxy_host,
+bool KNSProxiesGet ( KNSProxies * self, const String ** proxy_host,
                      uint16_t * proxy_port, size_t idx )
 {
     assert ( proxy_host && proxy_port );
@@ -221,12 +221,13 @@ void KNSProxiesGet ( KNSProxies * self, const String ** proxy_host,
             const HttpProxy * proxy = self -> http_proxies [ idx ];
             * proxy_host = proxy -> proxy_host;
             * proxy_port = proxy -> proxy_port;
-            return;
+            return true;
         }
     }
 
     * proxy_host = NULL;
     * proxy_port = 0;
+    return false;
 }
 
 KNSProxies * KNSProxiesGetHttpProxy ( KNSProxies * self ) {
