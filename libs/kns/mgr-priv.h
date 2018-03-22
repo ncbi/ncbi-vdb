@@ -108,6 +108,7 @@ rc_t KNSProxiesVSetHTTPProxyPath ( struct KNSProxies * self,
 
 struct KNSProxies * KNSProxiesGetHttpProxy ( struct KNSProxies * self );
 
+/* DEPRECATED */
 rc_t KNSProxiesGetHttpProxyPath ( const struct KNSProxies* self,
                                   const String ** proxy );
 

@@ -464,6 +464,7 @@ LIB_EXPORT rc_t CC KNSManagerSetHTTPTimeouts ( KNSManager *self,
 }
 
 /* GetHTTPProxyPath
+ * DEPRECATED
  *  returns path to HTTP proxy server ( if set ) or NULL.
  *  return status is 0 if the path is valid, non-zero otherwise
  */

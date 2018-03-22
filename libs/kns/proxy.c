@@ -112,7 +112,7 @@ static rc_t HttpProxyGetPath ( const HttpProxy * self,
 
 /****************************************************************** HttpProxy */
 
-struct KNSProxies {
+typedef struct KNSProxies {
     bool http_proxy_enabled;
     bool http_proxy_only; /* don't try direct connection - proxy only */
     BSTree proxie_tree;
@@ -125,9 +125,7 @@ struct KNSProxies {
     size_t tmpS;
 
     BSTNode * tmpB;
-};
-
-typedef struct KNSProxies KNSProxies;
+} KNSProxies;
 
 /* BSTItem ******************************************************************/
 
@@ -135,6 +133,10 @@ typedef struct {
     BSTNode n;
     HttpProxy * proxy;
 } BSTItem;
+
+static void BSTItemWhack ( BSTNode * n, void * ignore ) {
+    free ( n );
+}
 
 static int64_t CC BSTItemCmp ( const void * item, const BSTNode * n ) {
     int64_t res = 0;
@@ -155,8 +157,12 @@ static int64_t CC BSTItemCmp ( const void * item, const BSTNode * n ) {
         return 1;
 }
 
-static void BSTItemWhack ( BSTNode * n, void * ignore ) {
-    free ( n );
+static
+int64_t CC BSTreeSort ( const BSTNode * item, const BSTNode * n )
+{
+    const BSTItem * i = ( BSTItem * ) item;
+    assert ( i );
+    return BSTItemCmp ( i -> proxy, n );
 }
 
 static void CC KNSProxiesBSTreeCount ( BSTNode * n, void * data ) {
@@ -188,14 +194,6 @@ static bool CC KNSProxiesBSTreeSetRand ( BSTNode * n, void * data ) {
     }
     else
         return false;
-}
-
-static
-int64_t CC BSTreeSort ( const BSTNode * item, const BSTNode * n )
-{
-    const BSTItem * i = ( BSTItem * ) item;
-    assert ( i );
-    return BSTItemCmp ( i -> proxy, n );
 }
 
 /****************************************************************** BSTItem */
@@ -235,6 +233,7 @@ KNSProxies * KNSProxiesGetHttpProxy ( KNSProxies * self ) {
     }
 }
 
+/* DEPRECATED */
 rc_t KNSProxiesGetHttpProxyPath ( const KNSProxies* self,
                                   const String ** proxy )
 {
