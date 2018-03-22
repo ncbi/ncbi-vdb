@@ -73,6 +73,7 @@ struct HttpProxy {
     const struct String * proxy_host;
     uint16_t proxy_port;
 
+    /* points to a next HttpProxy in array for debugging only */
     struct HttpProxy * next;
 };
 
@@ -107,15 +108,6 @@ static rc_t HttpProxyGetPath ( const HttpProxy * self,
     }
 
     return rc;
-}
-
-void HttpProxyGetHTTPProxy ( const HttpProxy * self,
-    const struct String ** proxy_host, uint16_t * proxy_port )
-{
-    assert ( self && proxy_host && proxy_port);
-
-    * proxy_host = self -> proxy_host;
-    * proxy_port = self -> proxy_port;
 }
 
 /****************************************************************** HttpProxy */
