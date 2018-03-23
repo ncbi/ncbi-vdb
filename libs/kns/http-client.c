@@ -335,6 +335,9 @@ bool KEndPointArgsIteratorNext ( KEndPointArgsIterator * self,
             self -> dontAskForNextProxy = false; // ++ self -> idx;
         }
 
+        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_PROXY ),
+            ( "Connecting via proxy '%S:%d'\n", * hostname, * port ) );
+
         * proxy_ep = true;
         found = true;
     }
@@ -485,7 +488,7 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
         & proxy_default_port, & proxy_ep, NULL, NULL ) )
     {
         rc = KNSManagerInitDNSEndpoint ( mgr, & self -> ep, hostname, port );
-        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ),
+        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_DNS ),
             ( "KNSManagerInitDNSEndpoint(%S:%d)=%R\n", hostname, port, rc ) );
         if ( rc == 0 )
         {
