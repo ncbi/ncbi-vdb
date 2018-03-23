@@ -48,7 +48,7 @@
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while ( false )
 
 
-/* String ******************************************************************/
+/* String *********************************************************************/
 
 static bool StringCmp ( const String * self, const char * val ) {
     String v;
@@ -644,6 +644,10 @@ KNSProxies * KNSManagerKNSProxiesMake ( struct KNSManager * mgr,
                                         sizeof * self -> http_proxies );
         if ( self -> http_proxies == NULL )
             return NULL;
+        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_PROXY ),
+            ( "Will use %zu proxy spec%s%s\n", self -> http_proxies_cnt,
+              self -> http_proxies_cnt > 1 ? "s" : "",
+              self -> http_proxy_only ? "" : " and direct connection") );
     }
 
     self -> tmpS = 0;

@@ -336,7 +336,7 @@ bool KEndPointArgsIteratorNext ( KEndPointArgsIterator * self,
         }
 
         DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_PROXY ),
-            ( "Connecting via proxy '%S:%d'\n", * hostname, * port ) );
+            ( "Connecting using proxy '%S:%d'\n", * hostname, * port ) );
 
         * proxy_ep = true;
         found = true;
@@ -350,6 +350,10 @@ bool KEndPointArgsIteratorNext ( KEndPointArgsIterator * self,
                return host:port of direct connection */
             * hostname = self -> directHostname;
             * port = self -> directPort;
+
+            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_PROXY ),
+                ( "Connecting directly\n" ) );
+
             * proxy_ep = false;
             found = true;
         }
