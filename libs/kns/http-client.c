@@ -254,13 +254,21 @@ void KEndPointArgsIteratorMake ( KEndPointArgsIterator * self,
    proxy_ep = true: proxy, false: direct connection */
 static
 bool KEndPointArgsIteratorNext ( KEndPointArgsIterator * self,
-    const String ** hostname, uint16_t * port,
-    bool * proxy_default_port, bool * proxy_ep )
+    const String ** hostname, uint16_t * port, bool * proxy_default_port,
+    bool * proxy_ep, size_t * crnt_proxy_idx, bool * last_proxy )
 {
     static const uint16_t dflt_proxy_ports_sz =
         sizeof self -> dflt_proxy_ports / sizeof self -> dflt_proxy_ports [ 0 ];
 
+    bool found = false;
     bool ask = false;
+
+    size_t dummy;
+    bool dummy2;
+    if ( crnt_proxy_idx == NULL )
+        crnt_proxy_idx = & dummy;
+    if ( last_proxy == NULL )
+        last_proxy = & dummy2;
 
     assert ( self != NULL );
 
@@ -328,22 +336,27 @@ bool KEndPointArgsIteratorNext ( KEndPointArgsIterator * self,
         }
 
         * proxy_ep = true;
-        return true;
+        found = true;
+    }
+    else {
+        /* no more proxies to iterate */
+        self -> done = true;
+
+        if ( self -> directHostname != NULL )
+        {   /* allowed to make direct connection without proxies:
+               return host:port of direct connection */
+            * hostname = self -> directHostname;
+            * port = self -> directPort;
+            * proxy_ep = false;
+            found = true;
+        }
+        else /* no more proxies to iterate and cannot make direct connection */
+            found = false;
     }
 
-    /* no more proxies to iterate */
-    self -> done = true;
-
-    if ( self -> directHostname != NULL )
-    {   /* allowed to make direct connection without proxies:
-           return host:port of direct connection */
-        * hostname = self -> directHostname;
-        * port = self -> directPort;
-        * proxy_ep = false;
-        return true;
-    }
-    else /* no more proxies to iterate and cannot make direct connection */
-        return false;
+    * crnt_proxy_idx = self -> crnt;
+    * last_proxy = self -> last;
+    return found;
 }
 
 static
@@ -468,8 +481,8 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
     assert ( mgr );
 
     KEndPointArgsIteratorMake ( & it, mgr, aHostname, aPort, NULL );
-    while ( KEndPointArgsIteratorNext
-        ( & it, & hostname, & port, & proxy_default_port, & proxy_ep ) )
+    while ( KEndPointArgsIteratorNext ( & it, & hostname, & port,
+        & proxy_default_port, & proxy_ep, NULL, NULL ) )
     {
         rc = KNSManagerInitDNSEndpoint ( mgr, & self -> ep, hostname, port );
         DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ),

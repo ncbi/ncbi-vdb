@@ -205,6 +205,10 @@ static bool CC KNSProxiesBSTreeSetRand ( BSTNode * n, void * data ) {
 bool KNSProxiesGet ( KNSProxies * self, const String ** proxy_host,
                      uint16_t * proxy_port, size_t * cnt, bool * last )
 {
+    bool dummy;
+    if ( last == NULL )
+        last = & dummy;
+
     assert ( proxy_host && proxy_port && cnt );
 
     if ( self != NULL && self -> http_proxies != NULL ) {
@@ -213,8 +217,7 @@ bool KNSProxiesGet ( KNSProxies * self, const String ** proxy_host,
                 self -> http_proxies_idx = 0;
             const HttpProxy * proxy
                 = self -> http_proxies [ self -> http_proxies_idx ++ ];
-            if ( last != NULL )
-                * last = self -> http_proxies_idx == self -> http_proxies_cnt;
+            * last = self -> http_proxies_idx == self -> http_proxies_cnt;
             * proxy_host = proxy -> proxy_host;
             * proxy_port = proxy -> proxy_port;
             return true;

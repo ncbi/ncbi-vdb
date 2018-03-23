@@ -12,9 +12,9 @@ const struct KEndPointArgsIterator * KNSManagerMakeKEndPointArgsIterator (
 }
 
 bool KEndPointArgsIterator_Next ( KEndPointArgsIterator * self,
-        const String ** hostname, uint16_t * port,
-        bool * proxy_default_port, bool * proxy_ep )
+        const String ** hostname, uint16_t * port, bool * proxy_default_port,
+        bool * proxy_ep, size_t * crnt_proxy_idx, bool * last_proxy )
 {
-    return KEndPointArgsIteratorNext
-        ( self, hostname, port, proxy_default_port, proxy_ep);
+    return KEndPointArgsIteratorNext ( self, hostname, port,
+        proxy_default_port, proxy_ep, crnt_proxy_idx, last_proxy );
 }

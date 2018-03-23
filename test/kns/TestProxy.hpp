@@ -177,8 +177,9 @@ class TestProxy : private ncbi::NK::TestCase {
             E * prev = first;
             const String * http_proxy = NULL;
             uint16_t http_proxy_port = 0;
+            bool last = false;
             if ( ! KNSProxiesGet
-                ( p, & http_proxy, & http_proxy_port, & crnt, NULL ) )
+                ( p, & http_proxy, & http_proxy_port, & crnt, & last ) )
             {
                 REQUIRE ( ! e );
                 break;
@@ -234,13 +235,16 @@ class TestProxy : private ncbi::NK::TestCase {
         bool proxy_ep = false;
         E * first = e;
         bool firstI = true;
+        size_t crnt_proxy_idx = 0;
+        bool last_proxy = true;
         while ( e ) {
             E * prev = first;
             String host;
             StringInit ( & host,
                 e -> path. c_str (), e -> path. size (), e -> path. size () );
-            REQUIRE ( KEndPointArgsIterator_Next ( i,
-                 & hostname, & port, & proxy_default_port, & proxy_ep ) );
+            REQUIRE ( KEndPointArgsIterator_Next ( i, & hostname, & port,
+                & proxy_default_port, & proxy_ep,
+                & crnt_proxy_idx, & last_proxy ) );
             REQUIRE ( proxy_ep );
             while ( ! StringEqual ( hostname, & host ) ) {
                 prev = e;
@@ -265,15 +269,17 @@ class TestProxy : private ncbi::NK::TestCase {
                 REQUIRE ( proxy_default_port );
 
                 uint16_t port3 = ~ 0;
-                REQUIRE ( KEndPointArgsIterator_Next ( i, & hostname,
-                             & port3, & proxy_default_port, & proxy_ep ) );
+                REQUIRE ( KEndPointArgsIterator_Next ( i, & hostname, & port3,
+                    & proxy_default_port, & proxy_ep,
+                    & crnt_proxy_idx, & last_proxy ) );
                 REQUIRE ( proxy_ep );
                 REQUIRE ( StringEqual ( hostname, & host ) );
                 REQUIRE_EQ ( static_cast < int> ( port3 ), 8080 );
                 REQUIRE ( proxy_default_port );
 
-                REQUIRE ( KEndPointArgsIterator_Next ( i, & hostname,
-                             & port3, & proxy_default_port, & proxy_ep ) );
+                REQUIRE ( KEndPointArgsIterator_Next ( i, & hostname, & port3,
+                    & proxy_default_port, & proxy_ep,
+                    & crnt_proxy_idx, & last_proxy ) );
                 REQUIRE ( proxy_ep );
                 REQUIRE ( StringEqual ( hostname, & host ) );
                 REQUIRE_EQ ( static_cast < int> ( port3 ), 80 );
@@ -306,7 +312,8 @@ class TestProxy : private ncbi::NK::TestCase {
                 bool proxy_default_port2 = true;
                 bool proxy_ep2 = false;
                 REQUIRE ( KEndPointArgsIterator_Next ( i2, & hostname2, & port2,
-                    & proxy_default_port2, & proxy_ep2 ) );
+                    & proxy_default_port2, & proxy_ep2,
+                    & crnt_proxy_idx, NULL ) );
                 if ( cnt == 1 ) {
                     REQUIRE ( StringEqual ( hostname, hostname2 ) );
                     REQUIRE_EQ            ( port    , port2 );
@@ -314,7 +321,10 @@ class TestProxy : private ncbi::NK::TestCase {
                 }
                 else {
                     REQUIRE ( ! StringEqual ( hostname, hostname2 ) );
-                    REQUIRE_NE              ( port    , port2 );
+                    if ( proxy_default_port && proxy_default_port2 )
+                        REQUIRE_EQ          ( port    , port2 );
+                    else
+                        REQUIRE_NE          ( port    , port2 );
 
                     while ( ! StringEqual ( hostname2, & host ) ) {
                         prev = e;
@@ -339,7 +349,8 @@ class TestProxy : private ncbi::NK::TestCase {
                         REQUIRE ( proxy_default_port2 );
 
                         REQUIRE ( KEndPointArgsIterator_Next ( i2, & hostname2,
-                                & port2, & proxy_default_port2, & proxy_ep2 ) );
+                                & port2, & proxy_default_port2, & proxy_ep2,
+                                & crnt_proxy_idx, NULL ) );
                         REQUIRE ( proxy_ep2 );
                         REQUIRE ( StringEqual ( hostname2, & host ) );
                         REQUIRE_EQ ( static_cast < int> ( port2 ), 8080 );
@@ -347,7 +358,8 @@ class TestProxy : private ncbi::NK::TestCase {
                         REQUIRE ( proxy_ep2 );
 
                         REQUIRE ( KEndPointArgsIterator_Next ( i2, & hostname2,
-                                & port2, & proxy_default_port2, & proxy_ep2 ) );
+                                & port2, & proxy_default_port2, & proxy_ep2,
+                                & crnt_proxy_idx, NULL ) );
                         REQUIRE ( proxy_ep2 );
                         REQUIRE ( StringEqual ( hostname2, & host ) );
                         REQUIRE_EQ ( static_cast < int> ( port2 ), 80 );
@@ -374,39 +386,46 @@ class TestProxy : private ncbi::NK::TestCase {
             }
         }
 
-        if ( cnt > 1 ) {
+        bool checkLast
+            = c == NULL || ! c -> contains ( "/http/proxy/only", "true" );
+        bool checkPrev = false;
+        if ( last_proxy ) {
+            if ( crnt_proxy_idx < cnt && ! checkLast )
+                checkPrev = true;
+        }
+        else
+            checkPrev = true;
+        if ( checkPrev ) {
             REQUIRE ( KEndPointArgsIterator_Next ( i, & hostname,
-                             & port, & proxy_default_port, & proxy_ep ) );
+                    & port, & proxy_default_port, & proxy_ep, NULL, NULL ) );
             REQUIRE ( proxy_ep );
             if ( proxy_default_port ) {
                 REQUIRE_EQ ( static_cast < int> ( port ), 3128 );
 
                 REQUIRE ( KEndPointArgsIterator_Next ( i, & hostname,
-                             & port, & proxy_default_port, & proxy_ep ) );
+                    & port, & proxy_default_port, & proxy_ep, NULL, NULL ) );
                 REQUIRE_EQ ( static_cast < int> ( port ), 8080 );
                 REQUIRE ( proxy_default_port );
                 REQUIRE ( proxy_ep );
 
                 REQUIRE ( KEndPointArgsIterator_Next ( i, & hostname,
-                             & port, & proxy_default_port, & proxy_ep ) );
+                    & port, & proxy_default_port, & proxy_ep, NULL, NULL ) );
                 REQUIRE_EQ ( static_cast < int> ( port ), 80 );
                 REQUIRE ( proxy_default_port );
                 REQUIRE ( proxy_ep );
             }
         }
 
-        if ( c == NULL
-          || ! c -> contains ( "/http/proxy/only", "true" ) )
-        {
+        if ( checkLast ) {
             REQUIRE (     KEndPointArgsIterator_Next ( i, & hostname,
-                             & port, & proxy_default_port, & proxy_ep ) );
+                    & port, & proxy_default_port, & proxy_ep, NULL, NULL ) );
             REQUIRE ( ! proxy_ep );
             REQUIRE ( _StringEqual ( hostname, & aHost ) );
             REQUIRE_EQ ( port, aPort );
             REQUIRE ( ! proxy_default_port );
         }
-        REQUIRE ( !   KEndPointArgsIterator_Next ( i,
-                 & hostname, & port, & proxy_default_port, & proxy_ep ) );
+        REQUIRE ( !   KEndPointArgsIterator_Next ( i, & hostname, & port,
+            & proxy_default_port, & proxy_ep, NULL, NULL ) );
 
         free ( i );
         i = NULL;
