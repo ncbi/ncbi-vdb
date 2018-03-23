@@ -106,7 +106,8 @@ bool KNSProxiesHttpProxyOnly ( const struct KNSProxies * self );
 rc_t KNSProxiesVSetHTTPProxyPath ( struct KNSProxies * self,
     const char * fmt, va_list args, bool clear );
 
-struct KNSProxies * KNSProxiesGetHttpProxy ( struct KNSProxies * self );
+struct KNSProxies * KNSProxiesGetHttpProxy ( struct KNSProxies * self,
+                                             size_t * cnt );
 
 /* DEPRECATED */
 rc_t KNSProxiesGetHttpProxyPath ( const struct KNSProxies* self,

@@ -1,11 +1,12 @@
 #include "../../libs/kns/http-client.c"
 
-const struct KEndPointArgsIterator * KNSManagerMakeKEndPointArgsIterator
-    ( const KNSManager * self, const String * hostname, uint32_t port )
+const struct KEndPointArgsIterator * KNSManagerMakeKEndPointArgsIterator (
+    const KNSManager * self, const String * hostname, uint32_t port,
+    size_t * cnt )
 {
     struct KEndPointArgsIterator * i = calloc ( 1, sizeof * i );
 
-    KEndPointArgsIteratorMake ( i, self, hostname, port );
+    KEndPointArgsIteratorMake ( i, self, hostname, port, cnt );
 
     return i;
 }

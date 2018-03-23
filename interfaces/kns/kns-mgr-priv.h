@@ -103,11 +103,12 @@ rc_t KHttpRetrierDestroy ( KHttpRetrier * self );
 /*----------------------------------------------------------------------------*/
 
 //typedef struct HttpProxy HttpProxy;
-struct KNSProxies * KNSManagerGetProxies ( const struct KNSManager * self );
+struct KNSProxies * KNSManagerGetProxies ( const struct KNSManager * self,
+                                           size_t * cnt );
 
 /* N.B.: DO NOT WHACK THE RETURNED http_proxy String !!! */
-bool KNSProxiesGet ( struct KNSProxies * self,
-    const String ** http_proxy, uint16_t * http_proxy_port, size_t idx );
+bool KNSProxiesGet ( struct KNSProxies * self, const String ** http_proxy,
+    uint16_t * http_proxy_port, size_t * cnt, bool * last );
 
 /* allow to have multiple comma-separated proxies in a spec */
 #define MULTIPLE_PROXIES 1

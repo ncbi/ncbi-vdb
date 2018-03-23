@@ -118,6 +118,7 @@ typedef struct KNSProxies {
     BSTree proxie_tree;
 
     HttpProxy ** http_proxies;
+    size_t http_proxies_idx;
     size_t http_proxies_cnt;
 
     int rand;
@@ -202,13 +203,18 @@ static bool CC KNSProxiesBSTreeSetRand ( BSTNode * n, void * data ) {
 
 /* N.B.: DO NOT WHACK THE RETURNED proxy_host String !!! */
 bool KNSProxiesGet ( KNSProxies * self, const String ** proxy_host,
-                     uint16_t * proxy_port, size_t idx )
+                     uint16_t * proxy_port, size_t * cnt, bool * last )
 {
-    assert ( proxy_host && proxy_port );
+    assert ( proxy_host && proxy_port && cnt );
 
     if ( self != NULL && self -> http_proxies != NULL ) {
-        if ( idx < self -> http_proxies_cnt ) {
-            const HttpProxy * proxy = self -> http_proxies [ idx ];
+        if ( ( * cnt ) ++ < self -> http_proxies_cnt ) {
+            if ( self -> http_proxies_idx >= self ->http_proxies_cnt )
+                self -> http_proxies_idx = 0;
+            const HttpProxy * proxy
+                = self -> http_proxies [ self -> http_proxies_idx ++ ];
+            if ( last != NULL )
+                * last = self -> http_proxies_idx == self -> http_proxies_cnt;
             * proxy_host = proxy -> proxy_host;
             * proxy_port = proxy -> proxy_port;
             return true;
@@ -220,16 +226,20 @@ bool KNSProxiesGet ( KNSProxies * self, const String ** proxy_host,
     return false;
 }
 
-KNSProxies * KNSProxiesGetHttpProxy ( KNSProxies * self ) {
-    assert ( self );
+KNSProxies * KNSProxiesGetHttpProxy ( KNSProxies * self,
+                                      size_t * cnt )
+{
+    assert ( self && cnt );
 
     if ( self -> http_proxies == NULL )
         return NULL;
     else {
         if ( self -> http_proxies_cnt == 0 )
             return NULL;
-        else
+        else {
+            * cnt = self -> http_proxies_cnt;
             return self;
+        }
     }
 }
 
