@@ -377,6 +377,9 @@ static bool KNSProxiesHttpProxyInitFromEnvVar ( KNSProxies * self,
     if ( path != NULL ) {
         assert ( self );
 
+        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_PROXY ),
+            ( "Loading proxy env.var. %s='%s'\n", name, path ) );
+
         if ( KNSProxiesAddHTTPProxyPath ( self, path ) != 0 )
             return false;
         assert ( self -> http_proxy_enabled );
@@ -421,6 +424,8 @@ static bool KNSProxiesHttpProxyInitFromKfg ( KNSProxies * self,
             String * path;
             rc = KConfigNodeReadString ( proxy_path, & path );
             if ( rc == 0 ) {
+                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_PROXY ),
+                    ( "Loading proxy '%S' from configuration\n", path ) );
                 rc = KNSProxiesAddHTTPProxyPath ( self, "%S", path );
                 if ( rc == 0 )
                     fromKfg = true;
