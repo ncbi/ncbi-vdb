@@ -1766,6 +1766,7 @@ static int KConfig_Verbosity ( const KConfig * self ) {
 typedef struct {
     KDataBuffer response;
     uint32_t code;
+    char * location;
 } Abuse;
 
 static void AbuseInit ( Abuse * self ) {
@@ -1776,6 +1777,7 @@ static void AbuseInit ( Abuse * self ) {
 static rc_t AbuseFini ( Abuse * self ) {
     rc_t rc = 0;
     assert ( self );
+    free ( self -> location );
     rc = KDataBufferWhack ( & self -> response );
     memset ( self, 0, sizeof * self );
     return rc;
@@ -1786,6 +1788,15 @@ static void AbuseSetStatus ( Abuse * self, uint32_t code ) {
     self -> code = code;
 }
 
+static
+rc_t AbuseSetLocation ( Abuse * self, const char * str, size_t size )
+{
+    assert ( self );
+    self -> location = string_dup ( str, size );
+    return self -> location != NULL
+        ? 0 : RC ( rcRuntime, rcString, rcCopying, rcMemory, rcExhausted );
+}
+
 static rc_t AbuseAdd ( Abuse * self, const char * txt, int sz ) {
     rc_t rc = 0;
     assert ( self );
@@ -1793,6 +1804,63 @@ static rc_t AbuseAdd ( Abuse * self, const char * txt, int sz ) {
         return KDataBufferPrintf ( & self -> response,  "%s", txt );
     else
         return KDataBufferPrintf ( & self -> response,  "%.*s", sz, txt );
+}
+
+static rc_t TestAbuseRedirect ( const STest * self, const
+                                Abuse * test, bool * abuse )
+{
+    rc_t rc = 0;
+
+    KHttpRequest * req = NULL;
+    KHttpResult * rslt = NULL;
+    KStream * stream = NULL;
+
+    KDataBuffer buffer;
+
+    size_t total = 0;
+    char * base = NULL;
+
+    assert ( self && test && abuse );
+
+    rc = KDataBufferMakeBytes ( & buffer, 4096 );
+
+    if ( rc == 0 )
+        rc = KNSManagerMakeRequest ( self -> kmgr, & req, HTTP_VERSION,
+                                        NULL, test -> location );
+    if ( rc == 0 )
+        rc = KHttpRequestGET ( req, & rslt );
+
+    if ( rc == 0 )
+        rc = KHttpResultGetInputStream ( rslt, & stream );
+
+    while ( rc == 0 ) {
+        size_t num_read = 0;
+        uint64_t avail = buffer . elem_count - total;
+        if ( avail == 0 ) {
+            rc = KDataBufferResize ( & buffer,
+                                        buffer . elem_count + 1024 );
+            if ( rc != 0 )
+                break;
+        }
+        base = buffer . base;
+        rc = KStreamRead ( stream, & base [ total ],
+            ( size_t ) buffer . elem_count - total, & num_read );
+        if ( num_read == 0 )
+            break;
+        if ( rc != 0 ) /* TBD - look more closely at rc */
+            rc = 0;
+        total += num_read;
+    }
+
+    RELEASE ( KStream, stream );
+    RELEASE ( KHttpResult, rslt );
+    RELEASE ( KHttpRequest, req );
+
+    * abuse = true;
+
+    KDataBufferWhack ( & buffer );
+
+    return rc;
 }
 
 static rc_t TestAbuse ( STest * self, Abuse * test,
@@ -1811,6 +1879,8 @@ static rc_t TestAbuse ( STest * self, Abuse * test,
     }
     if ( test -> code != 302 )
         return 0;
+    if ( test -> location != NULL ) {
+    }
     s = test -> response . base;
     while ( true ) {
         const char * h = NULL;
@@ -1825,45 +1895,8 @@ static rc_t TestAbuse ( STest * self, Abuse * test,
         if ( string_cmp ( h, misuse . size, misuse . addr, misuse . size,
                           (uint32_t) misuse . size) == 0)
         {
-            rc_t rc = 0;
-            KHttpRequest * req = NULL;
-            KHttpResult * rslt = NULL;
-            KStream * stream = NULL;
-            KDataBuffer buffer;
-            size_t total = 0;
-            char * base = NULL;
-            rc = KDataBufferMakeBytes ( & buffer, 4096 );
-            if ( rc == 0 )
-                rc = KNSManagerMakeRequest ( self -> kmgr, & req, HTTP_VERSION,
-                                             NULL, "%S", & misuse );
-            if ( rc == 0 )
-                rc = KHttpRequestGET ( req, & rslt );
-            if ( rc == 0 )
-                rc = KHttpResultGetInputStream ( rslt, & stream );
-            while ( rc == 0 ) {
-                size_t num_read = 0;
-                uint64_t avail = buffer . elem_count - total;
-                if ( avail == 0 ) {
-                    rc = KDataBufferResize ( & buffer,
-                                             buffer . elem_count + 1024 );
-                    if ( rc != 0 )
-                        break;
-                }
-                base = buffer . base;
-                rc = KStreamRead ( stream, & base [ total ],
-                    ( size_t ) buffer . elem_count - total, & num_read );
-                if ( num_read == 0 )
-                    break;
-                if ( rc != 0 ) /* TBD - look more closely at rc */
-                    rc = 0;
-                total += num_read;
-            }
-            RELEASE ( KStream, stream );
-            RELEASE ( KHttpResult, rslt );
-            RELEASE ( KHttpRequest, req );
-            * abuse = true;
-            KDataBufferWhack ( & buffer );
-            return rc;
+            rc_t rc = AbuseSetLocation ( test, misuse . addr, misuse . size );
+            return rc == 0 ? TestAbuseRedirect ( self, test, abuse ) : rc;
         }
         ++ i;
     }
@@ -1979,8 +2012,12 @@ static rc_t STestCallCgi ( STest * self, uint64_t atest, const String * acc,
             else
                 STestEnd ( self, eEndFAIL, "%R", r2 );
         }
-        else
+        else {
             STestEnd ( self, eEndFAIL, "'%.*s'", ( int ) num_read, buffer );
+            r2 = AbuseSetLocation ( test, buffer, num_read );
+            if ( r2 != 0 && rc == 0)
+                rc = r2;
+        }
     }
     if ( rc == 0 ) {
         rc = KHttpResultGetInputStream ( rslt, & stream );
