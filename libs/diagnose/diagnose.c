@@ -1885,7 +1885,7 @@ static rc_t TestAbuse ( STest * self, Abuse * test,
     s = test -> response . base;
     while ( true ) {
         const char * h = NULL;
-        size_t size = = test -> response . elem_count - i;
+        size_t size = test -> response . elem_count - i;
         assert ( test -> response . elem_count >= i );
         h = string_chr ( s + i, size, 'h' );
         if ( h == NULL )
