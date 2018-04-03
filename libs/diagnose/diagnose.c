@@ -1879,14 +1879,15 @@ static rc_t TestAbuse ( STest * self, Abuse * test,
     }
     if ( test -> code != 302 )
         return 0;
-    if ( test -> location != NULL ) {
-    }
+    if ( test -> location != NULL )
+        return TestAbuseRedirect ( self, test, abuse );
+
     s = test -> response . base;
     while ( true ) {
         const char * h = NULL;
+        size_t size = = test -> response . elem_count - i;
         assert ( test -> response . elem_count >= i );
-        h = string_chr ( s + i, ( size_t ) test -> response . elem_count - i,
-                         'h' );
+        h = string_chr ( s + i, size, 'h' );
         if ( h == NULL )
             break;
         i = h - s;
@@ -1900,6 +1901,7 @@ static rc_t TestAbuse ( STest * self, Abuse * test,
         }
         ++ i;
     }
+
     return 0;
 }
 
