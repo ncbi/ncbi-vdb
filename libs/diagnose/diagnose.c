@@ -4337,15 +4337,19 @@ static rc_t CC STestRun ( STest * self, uint64_t tests,
             rc_t r2 = 0;
             char fasp [ PATH_MAX ] = "";
             uint64_t faspSize = 0;
+            String smallrun;
+            const String * frun = & run;
             STestStart ( self, true, KDIAGN_ASCP, "Aspera download" );
-            if ( tests & KDIAGN_ASCP_RUN && ! tooBig )
+            if ( tooBig ) {
+                CONST_STRING ( & smallrun, "SRR029074" );
+                frun = & smallrun;
+            }
+
+            if ( tests & KDIAGN_ASCP_RUN )
                 r2 = STestCheckFasp ( self, tests,
-                    & run, false, fasp, sizeof fasp, & faspSize,
+                    frun, false, fasp, sizeof fasp, & faspSize,
                     exp, sizeof exp - 1 );
-            if ( tooBig )
-                STestEnd ( self, eOK,
-                           "Aspera download: skipped (file is too big)" );
-            else if ( r2 == 0 )
+            if ( r2 == 0 )
                 r2 = STestEnd ( self, eOK,      "Aspera download" );
             else {
                 if ( _RcCanceled ( r2 ) )
@@ -4356,7 +4360,7 @@ static rc_t CC STestRun ( STest * self, uint64_t tests,
             if ( r1 == 0 && r2 != 0 )
                 r1 = r2;
             if ( tests & KDIAGN_HTTP_VS_ASCP &&
-                 r2 == 0 && httpSize != 0 && faspSize != 0 )
+                 ! tooBig && r2 == 0 && httpSize != 0 && faspSize != 0 )
             {
                 r2 = STestHttpVsFasp ( self, http, httpSize, fasp, faspSize );
                 if ( r1 == 0 && r2 != 0 )
