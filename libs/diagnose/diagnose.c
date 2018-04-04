@@ -146,6 +146,8 @@ static void AbuseInit ( Abuse * self ) {
     assert ( self );
 
     memset ( self, 0, sizeof * self );
+
+    self -> response . elem_bits = self -> redirect . elem_bits = 8;
 }
 
 static void AbuseSetStatus ( Abuse * self, uint32_t code ) {
@@ -1927,8 +1929,6 @@ static rc_t STestAbuseRedirect ( const STest * self,
     CONST_STRING ( & close, "</p>" );
 
     assert ( self && test && abuse );
-
-    memset ( & buffer, 0, sizeof buffer );
 
     buffer = & test -> redirect;
     p = & test -> p;
