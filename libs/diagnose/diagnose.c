@@ -1551,7 +1551,7 @@ static KPathType STestRemoveCache ( STest * self, const char * cache ) {
 
 static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
     const char * cache, uint64_t * cacheSize, uint64_t sz, bool print,
-    const char * exp, size_t esz, bool * tooBig )
+    const char ** exp, size_t esz, bool * tooBig )
 {
     rc_t rc = 0;
     size_t total = 0;
@@ -1618,12 +1618,15 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
                         STestEnd ( self, eEndFAIL, "%R", rc );
                     break;
                 }
-                if ( string_cmp ( buffer, num_read, exp, esz, (uint32_t) esz )
-                        != 0 )
-                {
-                    STestEnd ( self, eEndFAIL, "bad content" );
-                    rc = RC ( rcRuntime,
-                              rcFile, rcReading, rcString, rcUnequal );
+                for ( i = 0; i < 2; ++ i ) {
+                    if ( string_cmp ( buffer, num_read, exp [ i ], esz,
+                                      (uint32_t) esz ) == 0 )
+                    {   break; }
+                    else if ( i == 1 ) {
+                        STestEnd ( self, eEndFAIL, "bad content" );
+                        rc = RC ( rcRuntime,
+                                  rcFile, rcReading, rcString, rcUnequal );
+                    }
                 }
             }
             total += num_read;
@@ -1680,7 +1683,7 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
 
 static rc_t STestCheckHttpUrl ( STest * self, uint64_t tests, uint64_t atest,
     const Data * data, const char * cache, uint64_t * cacheSize,
-    bool print, const char * exp, size_t esz, bool * tooBig )
+    bool print, const char ** exp, size_t esz, bool * tooBig )
 {
     rc_t rc = 0;
     rc_t rc_read = 0;
@@ -1810,9 +1813,10 @@ static rc_t STestCheckVfsUrl ( STest * self, uint64_t atest, const Data * data,
         return rc;
     }
 
-    STestStart ( self, false, atest, "VFSManagerOpenDirectoryRead(%S):",
+    STestStart ( self, false, atest, "VFSManagerOpenDirectoryReadDecrypt(%S):",
                                                                   & path );
-    rc = VFSManagerOpenDirectoryRead ( self -> vmgr, & d, data -> vpath );
+    rc = VFSManagerOpenDirectoryReadDecrypt ( self -> vmgr, & d,
+                                              data -> vpath );
     if ( rc == 0 )
         STestEndOr ( self, & rc, eEndOK, "OK"  );
     if ( rc != 0 ) {
@@ -1827,9 +1831,9 @@ static rc_t STestCheckVfsUrl ( STest * self, uint64_t atest, const Data * data,
     return rc;
 }
 
-static rc_t STestCheckUrlImpl ( STest * self, uint64_t tests, uint64_t htest, 
+static rc_t STestCheckUrlImpl ( STest * self, uint64_t tests, uint64_t htest,
     uint64_t vtest,  const Data * data, const char * cache,
-    uint64_t * cacheSize, bool print, const char * exp, size_t esz,
+    uint64_t * cacheSize, bool print, const char ** exp, size_t esz,
     bool * tooBig )
 {
     rc_t rc = 0;
@@ -1844,7 +1848,7 @@ static rc_t STestCheckUrlImpl ( STest * self, uint64_t tests, uint64_t htest,
 
 static rc_t STestCheckUrl ( STest * self, uint64_t tests, uint64_t htest,
     uint64_t vtest, const Data * data, const char * cache, uint64_t * cacheSize,
-    bool print, const char * exp, size_t esz, bool * tooBig )
+    bool print, const char ** exp, size_t esz, bool * tooBig )
 {
     rc_t rc = 0;
 
@@ -2069,6 +2073,28 @@ static rc_t STestAbuse ( STest * self, Abuse * test,
     return 0;
 }
 
+static char * processResponse ( char * response, size_t size ) {
+    int n = 0;
+
+    size_t i = 0;
+    for ( i = 0; i < size; ++ n ) {
+        const char * p = string_chr ( response + i, size - i, '|' );
+        if ( p == NULL )
+            return NULL;
+
+        i = p - response + 1;
+
+        if ( n == 5 ) {
+            for ( ; response [ i ] != '|' && i < size; ++i )
+                response [ i ] = 'x';
+
+            return response [ i ] == '|' ? response + i + 1 : NULL;
+        }
+    }
+
+    return NULL;
+}
+
 static rc_t STestCallCgi ( STest * self, uint64_t atest, const String * acc,
     char * response, size_t response_sz, size_t * resp_read,
     const char ** url, bool http )
@@ -2130,6 +2156,45 @@ static rc_t STestCallCgi ( STest * self, uint64_t atest, const String * acc,
         if ( rc != 0 )
             STestFail ( self, rc, 0,
                         "KHttpRequestAddPostParam(%s=3.0)", param );
+    }
+    if ( rc == 0 ) {
+        rc_t r1 = 0;
+        const KConfigNode * nProtected = NULL;
+        KNamelist * names = NULL;
+        uint32_t count = 0;
+        const char path [] = "/repository/user/protected";
+        if ( KConfigOpenNodeRead ( self -> kfg, & nProtected, path ) != 0 )
+            return 0;
+        r1 = KConfigNodeListChildren ( nProtected, & names );
+        if ( r1 == 0 )
+            r1 = KNamelistCount ( names, & count );
+        if ( r1 == 0 ) {
+            uint32_t i = 0;
+            for ( i = 0; i < count; ++ i ) {
+                const KConfigNode * node = NULL;
+                String * tic = NULL;
+                const char * name = NULL;
+                r1 = KNamelistGet ( names, i, & name );
+                if ( r1 != 0 )
+                    continue;
+                r1 = KConfigNodeOpenNodeRead ( nProtected, & node,
+                                               "%s/download-ticket", name );
+                if ( r1 != 0 )
+                    continue;
+                r1 = KConfigNodeReadString ( node, & tic );
+                if ( r1 == 0 ) {
+                    const char param[] = "tic";
+                    rc = KHttpRequestAddPostParam ( req, "%s=%S", param, tic );
+                    if ( rc != 0 )
+                        STestFail ( self, rc, 0,
+                            "KHttpRequestAddPostParam(%s)", param );
+                    free ( tic );
+                    tic = NULL;
+                }
+                RELEASE ( KConfigNode, node  );
+            }
+        }
+        RELEASE ( KConfigNode, nProtected  );
     }
     if ( rc == 0 ) {
         STestStart ( self, false, 0,
@@ -2215,22 +2280,11 @@ static rc_t STestCallCgi ( STest * self, uint64_t atest, const String * acc,
                 {
                     response [ * resp_read ] = '\0';
                 }
-            }//TODO: hide the download ticket if any
-            rc = STestEnd ( self, eEndOK, "'%s': OK", response );
-            if ( rs == 0 ) {
-                int i = 0;
-                uint64_t p = 0;
-                for ( i = 0; p < * resp_read ; ++ i ) {
-                    char * n = string_chr ( response + p,
-                                            * resp_read - p, '|' );
-                    if ( n != NULL )
-                        p = n - response + 1;
-                    if ( i == 6 ) {
-                        * url = n + 1;
-                        break;
-                    }
-                }
             }
+            * url = processResponse ( response, * resp_read );
+            if ( rs != 0 )
+                * url = NULL;
+            rc = STestEnd ( self, eEndOK, "'%s': OK", response );
             if ( true )
                 AbuseAdd ( test, response, * resp_read );
 else      AbuseAdd(test,"<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n"
@@ -3343,7 +3397,7 @@ static rc_t STestCache ( const STest * self, const String * acc,
 static rc_t STestCheckHttp ( STest * self, uint64_t tests, const String * acc,
     bool print,
     char * downloaded, size_t sDownloaded, uint64_t * downloadedSize,
-    const char * exp, size_t esz, bool * tooBig )
+    const char ** exp, size_t esz, bool * tooBig )
 {
     rc_t rc = 0;
     char response [ 4096 ] = "";
@@ -3401,7 +3455,7 @@ static rc_t STestCheckHttp ( STest * self, uint64_t tests, const String * acc,
 
 static rc_t STestCheckFasp ( STest * self, uint64_t tests, const String * acc,
     bool print, char * downloaded, size_t sDownloaded,
-    uint64_t * downloadedSize, const char * exp, size_t esz )
+    uint64_t * downloadedSize )
 {
     rc_t rc = 0;
     char response [ 4096 ] = "";
@@ -4246,8 +4300,6 @@ static rc_t CC STestRun ( STest * self, uint64_t tests,
 {
     rc_t rc = 0;
 
-    const char exp [] = "NCBI.sra\210\031\003\005\001\0\0\0";
-
     assert ( self );
 
     if ( tests & KDIAGN_CONFIG ) {
@@ -4318,9 +4370,12 @@ static rc_t CC STestRun ( STest * self, uint64_t tests,
             rc_t r2 = 0;
             STestStart ( self, true, KDIAGN_HTTP, "HTTPS download" );
             if ( tests & KDIAGN_HTTP_RUN ) {
-                r2 = STestCheckHttp ( self, tests,
-                    & run, false, http, sizeof http, & httpSize,
-                    exp, sizeof exp - 1, & tooBig );
+                const char sra  [] = "NCBI.sra\210\031\003\005\001\0\0\0";
+                const char nenc [] = "NCBInenc\210\031\003\005\002\0\0\0";
+                const char * exp [] = { sra, nenc };
+                size_t s = sizeof sra - 1;
+                r2 = STestCheckHttp ( self, tests, & run, false,
+                    http, sizeof http, & httpSize, exp, s, & tooBig );
             }
             if ( r2 == 0 )
                 r2 = STestEnd ( self, eOK,      "HTTPS download" );
@@ -4347,8 +4402,7 @@ static rc_t CC STestRun ( STest * self, uint64_t tests,
 
             if ( tests & KDIAGN_ASCP_RUN )
                 r2 = STestCheckFasp ( self, tests,
-                    frun, false, fasp, sizeof fasp, & faspSize,
-                    exp, sizeof exp - 1 );
+                    frun, false, fasp, sizeof fasp, & faspSize );
             if ( r2 == 0 )
                 r2 = STestEnd ( self, eOK,      "Aspera download" );
             else {
