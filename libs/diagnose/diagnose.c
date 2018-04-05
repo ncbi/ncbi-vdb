@@ -639,31 +639,79 @@ static void STestInit ( STest * self, KDiagnose * test )
                                                     vrAlwaysEnable );
 }
 
+static void STestReport ( const STest * self ) {
+    assert ( self && self -> dad );
+
+    if ( self -> level < KVERBOSITY_INFO )
+        return;
+
+    if ( self -> n [ 0 ] == 0 || self -> n [ 1 ] != 0 ||
+            self -> level != 0 )
+    {   LogOut ( KVERBOSITY_INFO, 0, "= TEST WAS NOT COMPLETED\n" ); }
+
+    LogOut ( KVERBOSITY_INFO, 0, "= %d (%d) tests performed, %d failed\n",
+                self -> n [ 0 ], self -> total, self -> failures );
+
+    if ( self -> failures > 0 ) {
+        uint32_t i = 0;
+        LogOut ( KVERBOSITY_INFO, 0, "Errors:\n" );
+        for ( i = 0; i < VectorLength ( self -> errors ); ++ i ) {
+            const KDiagnoseError * e = VectorGet ( self -> errors, i );
+            assert ( e );
+            LogOut ( KVERBOSITY_INFO, 0, " %d: %s\n", i + 1, e -> message );
+        }
+    }
+
+    LogOut ( KVERBOSITY_INFO, 0, "\n\nANALYSIS:\n\n" );
+
+    if ( self -> failures == 0 )
+        LogOut ( KVERBOSITY_INFO, 0, "No errors detected.\n" );
+    else {
+        const Report * report = & self -> dad -> report;
+
+        if ( report -> firewall )
+            LogOut ( KVERBOSITY_INFO, 0,
+ "Most likely access to NCBI is blocked by your firewall.\n"
+ "Please look over the information about firewalls at\n"
+ "https://github.com/ncbi/sra-tools/wiki/Firewall-and-Routing-Information\n"
+ "and make sure that your IT people are aware of the requirements\n"
+ "for accessing SRA data at NCBI.\n\n" );
+
+        if ( report -> blocked ) {
+            const Abuse * test = & report -> abuse;
+            LogOut ( KVERBOSITY_INFO, 0,
+       "Your access to the NCBI website at %s has been\n"
+       "temporarily blocked due to a possible misuse/abuse situation\n"
+       "involving your site. This is not an indication of a security issue\n"
+       "such as a virus or attack.\n"
+       "To restore access and understand how to better interact with our site\n"
+       "to avoid this in the future, please have your system administrator\n"
+       "send an email with subject \"NCBI Web site BLOCKED: %S\"\n"
+       "to info@ncbi.nlm.nih.gov with the following information:\n"
+       "Error=blocked for possible abuse\n"
+       "Server=%s\n"
+       "Client=%S\n"
+       "Time=%S\n\n"
+                , test -> server
+                , & test -> ip
+                , test -> server
+                , & test -> ip
+                , & test -> date );
+        }
+    }
+
+    LogOut ( KVERBOSITY_INFO, 0,
+        "For more infotrmation mail the complete output\n"
+        "and your questions to sra-tools@ncbi.nlm.nih.gov .\n" );
+}
+
 static void STestFini ( STest * self ) {
     rc_t rc = 0;
 
     assert ( self );
 
-    if ( self -> level >= KVERBOSITY_INFO ) {
-        if ( self -> n [ 0 ] == 0 || self -> n [ 1 ] != 0 ||
-             self -> level != 0 )
-        {
-            LogOut ( KVERBOSITY_INFO, 0, "= TEST WAS NOT COMPLETED\n" );
-        }
-
-        LogOut ( KVERBOSITY_INFO, 0, "= %d (%d) tests performed, %d failed\n",
-                   self -> n [ 0 ], self -> total, self -> failures );
-
-        if ( self -> failures > 0 ) {
-            uint32_t i = 0;
-            LogOut ( KVERBOSITY_INFO, 0, "Errors:\n" );
-            for ( i = 0; i < VectorLength ( self -> errors ); ++ i ) {
-                const KDiagnoseError * e = VectorGet ( self -> errors, i );
-                assert ( e );
-                LogOut ( KVERBOSITY_INFO, 0, " %d: %s\n", i + 1, e -> message );
-            }
-        }
-    }
+    if ( self -> level >= KVERBOSITY_INFO )
+        STestReport ( self );
 
     VResolverCacheEnable ( self -> resolver, self -> cacheState );
 
@@ -744,7 +792,7 @@ static rc_t KDiagnoseCheckState(KDiagnose * self) {
 }
 
 static rc_t STestVStart ( STest * self, bool checking, uint64_t code,
-                          const char * fmt, va_list args  )
+    const char * fmt, va_list args  )
 {
     KDiagnoseTest * test = NULL;
     rc_t rc = 0;
@@ -1630,7 +1678,7 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
                 }
             }
             total += num_read;
-            if ( total > 0x40000000 /* 1GB */ ) {
+            if ( total > 1000000 /* 1mb */ ) {
                 * tooBig = true;
                 rc = STestEnd ( self, eEndOK,
                                 "Interrupted (file is too big): OK" );
@@ -2325,31 +2373,6 @@ else      AbuseAdd(test,"<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n"
         if ( rs == 0 )
             rc = STestEnd ( self, eOK,  "Resolving of %s path to '%S'",
                                         http ? "HTTPS": "FASP", acc );
-        else if ( self -> dad -> report . blocked ) {
-            rc = rs;
-                STestEnd ( self, eFAIL,
-       "Resolving of %s path to '%S': BLOCKED\n"
-       "Your access to the NCBI website at %s has been\n"
-       "temporarily blocked due to a possible misuse/abuse situation\n"
-       "involving your site. This is not an indication of a security issue\n"
-       "such as a virus or attack.\n"
-       "To restore access and understand how to better interact with our site\n"
-       "to avoid this in the future, please have your system administrator\n"
-       "contact info@ncbi.nlm.nih.gov\n"
-       "subject=NCBI Web site BLOCKED: %S\n"
-       "Error=blocked for possible abuse\n"
-       "Server=%s\n"
-       "Client=%S\n"
-       "Time=%S\n"
-                , http ? "HTTPS": "FASP"
-                , acc
-                , server
-                , & test -> ip
-                , server
-                , & test -> ip
-                , & test -> date
-                         );
-        }
         else {
             rc = rs;
             STestEnd ( self, eFAIL, "Resolving of %s path to '%S'",
@@ -4413,8 +4436,8 @@ static rc_t CC STestRun ( STest * self, uint64_t tests,
             }
             if ( r1 == 0 && r2 != 0 )
                 r1 = r2;
-            if ( tests & KDIAGN_HTTP_VS_ASCP &&
-                 ! tooBig && r2 == 0 && httpSize != 0 && faspSize != 0 )
+            if ( tests & KDIAGN_HTTP_VS_ASCP && ! tooBig &&
+                 r2 == 0 && httpSize != 0 && faspSize != 0 )
             {
                 r2 = STestHttpVsFasp ( self, http, httpSize, fasp, faspSize );
                 if ( r1 == 0 && r2 != 0 )
@@ -4546,6 +4569,3 @@ DIAGNOSE_EXTERN rc_t CC KDiagnoseKart ( KDiagnose * self,
     return KDiagnoseRunImpl ( self, "Kart file", KDIAGN_ALL, kart,
         numberOfKartItemsToCheck, checkHttp, checkAspera, true, NULL, 0 );
 }
-/*  1000 1K
-  100000 1M
-40000000 1G */
