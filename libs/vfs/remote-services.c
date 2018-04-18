@@ -457,7 +457,9 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
     assert ( self );
     rc = SHelperInitKfg ( self );
     if ( rc == 0 ) {
-        rc = KConfigRead ( self -> kfg, path, 0, buffer, bsize, NULL, NULL );
+        size_t num_read = 0;
+        rc = KConfigRead ( self -> kfg, path, 0, buffer, bsize,
+                           & num_read, NULL );
         if ( rc != 0 ) {
             if ( buffer == NULL )
                 return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
@@ -3257,6 +3259,8 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
             s . addr = buffer + offR;
             s . len = s . size = size;
             if ( start ) {
+                if ( size + 1 == num_read )
+                    DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( "\n" ) );
                 rc = SHeaderMake
                     ( & self -> resp . header, & s, self -> req . serviceType );
                 if ( rc != 0 )

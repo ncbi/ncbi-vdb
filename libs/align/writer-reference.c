@@ -1520,6 +1520,12 @@ static rc_t findSeq(ReferenceMgr *const self,
     return rc;
 }
 
+static ReferenceSeq *ReferenceMgr_FindSeq(ReferenceMgr const *const self, char const id[])
+{
+    int const fnd = findId(self, id);
+    return (fnd >= 0) ? &self->refSeq[fnd] : NULL;
+}
+
 static
 rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
                           ReferenceSeq **const rslt,
@@ -1529,13 +1535,10 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
                           bool const allowMultiMapping,
                           bool wasRenamed[])
 {
-    int const fnd = findId(self, id);
-    
-    assert(rslt != NULL);
-    *rslt = NULL;
-    if (fnd >= 0) {
-        ReferenceSeq *const obj = &self->refSeq[fnd];
-        
+    ReferenceSeq *const obj = ReferenceMgr_FindSeq(self, id);
+    if (obj) {
+        assert(rslt != NULL);
+        *rslt = NULL;
         if (obj->type == rst_dead)
             return RC(rcAlign, rcIndex, rcSearching, rcItem, rcInvalid);
         if (obj->type == rst_renamed) {
@@ -2300,6 +2303,22 @@ LIB_EXPORT rc_t CC ReferenceMgr_Verify(ReferenceMgr const *const cself,
         }
         return rc;
     }
+}
+
+LIB_EXPORT rc_t CC ReferenceMgr_Get1stRow(const ReferenceMgr* cself, int64_t* row_id, char const id[])
+{
+    rc_t rc = 0;
+    ReferenceSeq *seq;
+
+    if (cself == NULL || row_id == NULL) {
+        rc = RC(rcAlign, rcFile, rcReading, rcParam, rcNull);
+    }
+    else if ((seq = ReferenceMgr_FindSeq(cself, id)) == NULL)
+        rc = RC(rcAlign, rcFile, rcReading, rcId, rcNotFound);
+    else {
+        *row_id = seq->start_rowid;
+    }
+    return rc;
 }
 
 LIB_EXPORT rc_t CC ReferenceMgr_FastaPath(const ReferenceMgr* cself, const char* fasta_path)
