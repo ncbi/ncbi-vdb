@@ -96,6 +96,7 @@ $(TEST_BINDIR)/wb-test-schema-parser: $(TESTGRAM_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_LIB)
 
 gram: wb-test-schema-parser
+	@mkdir -p $(SRCDIR)/actual
 	$(TEST_BINDIR)/$^
 
 #-------------------------------------------------------------------------------
@@ -151,7 +152,6 @@ existing-schema-tests: wb-tests
 SCHEMATA := $(shell find $(TOP) -name "*.vschema")
 
 scantest: test-schema-scan
-	@mkdir -p $(SRCDIR)/actual;
 	$(TEST_BINDIR)/test-schema-scan $(SCHEMATA)
 	@echo "Schema scanner test complete"
 
