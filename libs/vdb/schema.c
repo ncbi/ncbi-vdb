@@ -750,9 +750,13 @@ VSchemaParseTextInt_v1 ( VSchema *self, const char *name, const char *text, size
     rc_t rc;
 
     if ( name == NULL || name [ 0 ] == 0 )
+    {
         CONST_STRING ( & path, "<unnamed>" );
+    }
     else
+    {
         StringInitCString ( & path, name );
+    }
 
     StringInit ( & str, text, bytes, string_len ( text, bytes ) );
     KTokenTextInit ( & tt, & str, & path );
@@ -761,9 +765,13 @@ VSchemaParseTextInt_v1 ( VSchema *self, const char *name, const char *text, size
     rc = schema ( & src, self );
 
     if (rc == 0)
-        PARSE_DEBUG( ("Parsed schema from %s\n", name) );
+    {
+        PARSE_DEBUG( ("Parsed schema v1 from %s\n", name) );
+    }
     else
-        PARSE_DEBUG( ("Failed to parse schema from %s\n", name) );
+    {
+        PARSE_DEBUG( ("Failed to parse v1 schema from %s\n", name) );
+    }
 
     return rc;
 }
@@ -775,11 +783,14 @@ static
 rc_t
 VSchemaParseTextInt_v2 ( VSchema *self, const char *name, const char *text, size_t bytes )
 {
-    if ( ! VSchemaParse_v2 ( self, text) )
+    if ( VSchemaParse_v2 ( self, text) )
     {
-        return RC ( rcVDB, rcSchema, rcOpening, rcSchema, rcFailed );
+        PARSE_DEBUG( ("Parsed schema v2 from %s\n", name) );
+        return 0;
     }
-    return 0;
+
+    PARSE_DEBUG( ("Failed to parse v2 schema from %s\n", name) );
+    return RC ( rcVDB, rcSchema, rcOpening, rcSchema, rcFailed );
 }
 
 static

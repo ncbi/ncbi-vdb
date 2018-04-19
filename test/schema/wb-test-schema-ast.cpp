@@ -985,6 +985,30 @@ FIXTURE_TEST_CASE(FuncCall_Vararg, AST_Fixture)
     REQUIRE_EQ ( 3u, VectorLength ( & expr -> pfunc ) );
 }
 
+FIXTURE_TEST_CASE(CondExpr, AST_Fixture)
+{
+    MakeAst  ( "table t#1 { column U8 a = 1|2|3; } " );
+    const STable * t = static_cast < const STable* > ( VectorGet ( & GetSchema () -> tbl, 0 ) );
+    const SColumn * c = static_cast < const SColumn * > ( VectorGet ( & t -> col, 0 ) );
+    REQUIRE_EQ ( ( uint32_t ) eCondExpr, c -> read -> var );
+    const SBinExpr * expr = reinterpret_cast < const SBinExpr * > ( c -> read );
+
+    // first child is "1 | 2"
+    REQUIRE_NOT_NULL ( expr -> left );
+    REQUIRE_EQ ( ( uint32_t ) eCondExpr, expr -> left -> var );
+    const SBinExpr * left = reinterpret_cast < const SBinExpr * > ( expr -> left );
+    REQUIRE_EQ ( ( uint32_t ) eConstExpr, left -> left -> var );
+    REQUIRE_EQ ( 1, (int)reinterpret_cast < const SConstExpr * > ( left -> left ) -> u . u64 [0] );
+
+    REQUIRE_EQ ( ( uint32_t ) eConstExpr, left -> right -> var );
+    REQUIRE_EQ ( 2, (int)reinterpret_cast < const SConstExpr * > ( left -> right ) -> u . u64 [0] );
+
+    // second child is "3"
+    REQUIRE_NOT_NULL ( expr -> right );
+    REQUIRE_EQ ( ( uint32_t ) eConstExpr, expr -> right -> var );
+    REQUIRE_EQ ( 3, (int)reinterpret_cast < const SConstExpr * > ( expr -> right ) -> u . u64 [0] );
+}
+
 //TODO: invalid float
 //TODO: nested vector constants - error
 //TODO: negation applied to non-scalar - error

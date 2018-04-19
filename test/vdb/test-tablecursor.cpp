@@ -84,8 +84,7 @@ public:
 
     void MakeReadCursorAddColumnOpen( const char * p_dbName, const char * p_colName )
     {
-        MakeReadCursor ( p_dbName );
-        THROW_ON_RC ( VCursorAddColumn ( m_cur, & m_columnIdx, "%s", p_colName ) );
+        MakeReadCursorAddColumn ( p_dbName, p_colName );
         THROW_ON_RC ( VCursorOpen ( m_cur ) );
     }
 
@@ -531,7 +530,7 @@ FIXTURE_TEST_CASE( VTableCursor_FindOverride, TableCursorFixture )
 {
     MakeReadCursor ( Accession );
     VCtxId id = {5, 3};
-    const KSymbol * sym = VCursorFindOverride ( m_cur, & id );
+    const KSymbol * sym = VCursorFindOverride ( m_cur, & id, VCursorGetTable ( m_cur ), NULL );
     REQUIRE_NOT_NULL ( sym );
     REQUIRE_EQ ( string ("out_spot_group"), ToCppString ( sym -> name ) );
 }
@@ -566,6 +565,25 @@ FIXTURE_TEST_CASE( VTableCursor_InstallTrigger, TableCursorFixture )
     MakeReadCursorAddColumnOpen ( Accession, Column );
     VProduction prod;
     REQUIRE_RC_FAIL ( VCursorInstallTrigger ( (VCursor*)m_cur, & prod ) ); // write side only
+}
+
+FIXTURE_TEST_CASE( VTableCursor_ListReadableColumns, TableCursorFixture )
+{
+    MakeReadCursor ( Accession );
+    REQUIRE_RC ( VCursorOpen ( m_cur ) );
+
+    BSTree columns; // VColumnRef
+    BSTreeInit ( & columns );
+    // this will print many "column undefined" errors, ignore
+    REQUIRE_RC ( VCursorListReadableColumns ( (VCursor *) m_cur, & columns ) );
+    REQUIRE_NOT_NULL ( columns . root );
+    VColumnRef * root = ( VColumnRef * ) columns . root;
+    REQUIRE_EQ ( string ( "READ" ), ToCppString ( root -> name ) );
+    VColumnRef * child = ( VColumnRef * ) root -> n . child [ 0 ];
+    REQUIRE_EQ ( string ( "CS_NATIVE" ), ToCppString ( child -> name ) );
+    child = ( VColumnRef * ) root -> n . child [ 1 ];
+    REQUIRE_EQ ( string ( "READ_TYPE" ), ToCppString ( child -> name ) );
+    // etc.
 }
 
 //////////////////////////////////////////// Main

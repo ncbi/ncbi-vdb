@@ -38,6 +38,7 @@
 #include "prod-expr.h"
 #include "phys-priv.h"
 #include "view-priv.h"
+#include "table-priv.h"
 #undef KONST
 
 #include <vdb/schema.h>
@@ -250,7 +251,6 @@ rc_t VProdResolveBestColumn ( const VProdResolve *self,
     {
         /* look for open column */
         const SColumn *scol = n -> scol;
-
         /* resolve the column as appropriate */
         rc = VProdResolveColumn ( self, out, scol, alt );
         if ( rc != 0 || * out != NULL )
@@ -396,7 +396,7 @@ rc_t VProdResolvePhysExpr ( const VProdResolve *self,
     return VProdResolveSPhysMember ( self, out, sym -> u . obj );
 }
 
-
+#include <stdio.h>
 /* FwdExpr
  *  handle a forwarded symbol in expression
  *  if the symbol is "virtual", check for its override
@@ -413,7 +413,8 @@ rc_t VProdResolveFwdExpr ( const VProdResolve *self, VProduction **out,
     {
         /* most derived table/view class */
         const KSymbol *sym2 = sym;
-        sym = VCursorFindOverride ( self -> curs, ( const VCtxId* ) & sym -> u . fwd );
+        const VCtxId* ctx = ( const VCtxId* ) & sym -> u . fwd;
+        sym = VCursorFindOverride ( self -> curs, ctx, self -> primary_table, self -> view );
         if ( sym == NULL )
         {
             PLOGMSG ( klogWarn, ( klogWarn, "virtual reference '$(fwd)' not found in overrides table"
@@ -671,6 +672,7 @@ rc_t VProdResolveExpr ( const VProdResolve *self,
 
     case eCondExpr:
         /* run left and right expressions in order until exit condition */
+VDB_DEBUG (( "eCondExpr(%p: %p/%u, %p/%u )\n", (void*)expr, (void*) ( ( const SBinExpr* ) expr ) -> left, ( ( const SBinExpr* ) expr ) -> left -> var, (void*) ( ( const SBinExpr* ) expr ) -> right, ( ( const SBinExpr* ) expr ) -> right -> var));
         rc = VProdResolveExpr ( self, out, desc, fd, ( ( const SBinExpr* ) expr ) -> left, casting );
     assert (rc != -1);
         if ( ( rc == 0 && * out == NULL ) || self -> discover_writable_columns )
@@ -801,6 +803,7 @@ rc_t VProdResolveColumnRead ( const VProdResolve *self,
     }
 
     /* fetch the column */
+VDB_DEBUG ( ( "VCursorColumns ctx = (%u, %u)\n", scol -> cid . ctx, scol -> cid . id ) );
     vcol = VCursorCacheGet ( VCursorColumns ( curs ), & scol -> cid );
     if ( vcol == NULL )
     {
@@ -808,12 +811,15 @@ rc_t VProdResolveColumnRead ( const VProdResolve *self,
                       scol -> name, __func__ ) );
         return 0;
     }
-
     /* if the read production is in place, return it */
     if ( vcol -> in != NULL )
     {
         if ( vcol -> in != FAILED_PRODUCTION )
             * out = vcol -> in;
+        else
+            VDB_DEBUG ( ( "column '%N' is failed; no output was produced by '%s'\n",
+                          scol -> name, __func__ ) );
+
         return 0;
     }
 

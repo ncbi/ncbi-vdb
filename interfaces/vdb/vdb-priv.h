@@ -62,7 +62,7 @@ struct VCursorParams;
 struct VXformInfo;
 struct KDataBuffer;
 struct KNamelist;
-
+struct BSTree;
 
 /*--------------------------------------------------------------------------
  * VDBManager
@@ -288,6 +288,13 @@ VDB_EXTERN rc_t CC VCursorLinkedCursorSet(const struct VCursor *cself,const char
 VDB_EXTERN uint64_t CC VCursorSetCacheCapacity(struct VCursor *self,uint64_t capacity);
 VDB_EXTERN uint64_t CC VCursorGetCacheCapacity(const struct VCursor *self);
 
+/* ListReadableColumns
+ *  performs an insert of '*' to cursor
+ *  attempts to resolve all read rules
+ *  records all SColumns that successfully resolved
+ *  populates BTree with VColumnRef objects
+ */
+rc_t VCursorListReadableColumns ( struct VCursor *self, struct BSTree *columns );
 
 /*--------------------------------------------------------------------------
  * VCursorParams
