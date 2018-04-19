@@ -147,6 +147,7 @@ public:
     void CreateCursor ( const string & p_testName, const char * p_viewName, bool p_bind = true )
     {
         CreateDb ( p_testName );
+
         THROW_ON_RC ( VDBManagerOpenView ( m_mgr, & m_view, m_schema, p_viewName ) );
         if ( p_bind )
         {
@@ -228,7 +229,7 @@ public:
         THROW_ON_FALSE ( p_bytes == bytes );
     }
 };
-
+#if 0
 ///////////////////////////// View-attached VCursor
 
 FIXTURE_TEST_CASE ( ViewCursor_AddRef, ViewOnTableCursorFixture )
@@ -840,15 +841,22 @@ FIXTURE_TEST_CASE( ViewCursor_IsStaticColumn, ViewOnTableCursorFixture )
 }
 
 FIXTURE_TEST_CASE( ViewCursor_LinkedCursorGet, ViewOnTableCursorFixture )
-{   // not implemented for view cursors
+{
     CreateCursor ( GetName(), ViewOnTableName );
     const VCursor * curs = 0;
     REQUIRE_RC_FAIL ( VCursorLinkedCursorGet ( m_cur, "tbl", & curs ) );
 }
 FIXTURE_TEST_CASE( ViewCursor_LinkedCursorSet, ViewOnTableCursorFixture )
-{   // not implemented for view cursors
+{
     CreateCursor ( GetName(), ViewOnTableName );
-    REQUIRE_RC_FAIL ( VCursorLinkedCursorSet ( m_cur, "tbl", m_cur ) );
+    // reuse m_cur
+    REQUIRE_RC ( VCursorLinkedCursorSet ( m_cur, "tbl", m_cur ) ); // calls AddRef(m_cur)
+    REQUIRE_RC ( VCursorRelease ( m_cur ) );
+
+    const VCursor * curs = 0;
+    REQUIRE_RC ( VCursorLinkedCursorGet ( m_cur, "tbl", & curs ) );
+    REQUIRE_EQ ( (const VCursor*)m_cur, curs );
+    REQUIRE_RC ( VCursorRelease ( curs ) );
 }
 
 FIXTURE_TEST_CASE( ViewCursor_GetCacheCapacity, ViewOnTableCursorFixture )
@@ -952,6 +960,30 @@ FIXTURE_TEST_CASE( ViewCursor_CacheActive, ViewOnTableCursorFixture )
     REQUIRE ( ! VCursorCacheActive ( m_cur, & end ) );
     REQUIRE_EQ((int64_t)0, end);
 }
+#endif
+FIXTURE_TEST_CASE( ViewCursor_ViewVsTableWithSameId, ViewOnTableCursorFixture )
+{   // when looking for overrides, we need to distinguish between the view, its's primary table and the table/view we are currently pivoted into
+    m_keepDb = true;
+    m_schemaText =
+    "version 2.0;"
+    "table T0#1 { column ascii c2 = v1; };" // v1 is virtual; T0 has the same id as V
+    "table T1#1 = T0#1{ column ascii c1; ascii v1 = c1; };" // inherits c2 from T0, resolves v1
+    "database DB#1 { table T1 t; };"
+
+    "view V#1 < T1 p_tbl > { column ascii c3 = p_tbl . c2; };"
+        // we search for c2 in p_tbl (bound to t1 of type T1 which inherits c2 from T0 with <table> id 0, same as <view> id of V)
+        // the bug this test case is exposing is in looking up c2 in V instead of T1, since c2's context id is 0.
+    ;
+
+    CreateCursorOpen ( GetName(), "V", "c3" );
+
+    // read c1
+    REQUIRE_EQ ( string ("blah"), ReadAscii ( 1, m_columnIdx ) );
+    REQUIRE_EQ ( string ("eeee"), ReadAscii ( 2, m_columnIdx ) );
+}
+//TODO: same with a parameter-view
+
+#if 0
 
 // View inheritance
 
@@ -1217,6 +1249,20 @@ FIXTURE_TEST_CASE ( ViewCursor_OnView_Read, ViewOnViewCursorFixture )
 
 //TODO: VViewCreateCursor with multiple table/view parameters
 
+FIXTURE_TEST_CASE( ViewCursor_ListReadableColumns, ViewOnViewCursorFixture )
+{
+    CreateCursor ( GetName () );
+    m_columnIdx = AddColumn ( ViewColumnName );
+    REQUIRE_RC ( VCursorOpen ( m_cur ) );
+
+    BSTree columns; // VColumnRef
+    BSTreeInit ( & columns );
+    REQUIRE_RC ( VCursorListReadableColumns ( (VCursor*)m_cur, & columns ) );
+    REQUIRE_NOT_NULL ( columns . root );
+    VColumnRef * root = ( VColumnRef * ) columns . root;
+    REQUIRE_EQ ( string ( ViewColumnName ), ToCppString ( root -> name ) );
+}
+
 //////////////////////////////////////////////////////////////////
 // VCursor write-side methods, not implemented for view cursors
 
@@ -1266,7 +1312,7 @@ FIXTURE_TEST_CASE( ViewCursor_InstallTrigger, ViewOnTableCursorFixture )
     VProduction prod;
     REQUIRE_RC_FAIL ( VCursorInstallTrigger ( (VCursor*)m_cur, & prod ) );
 }
-
+#endif
 //////////////////////////////////////////// Main
 extern "C"
 {

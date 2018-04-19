@@ -1,3 +1,4 @@
+README.md
 decrypt.py
 encrypt.py
 requirements-test.txt

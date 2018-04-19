@@ -126,45 +126,6 @@ int64_t CC NamedParamNodeComp ( const BSTNode *A, const BSTNode *B )
 
     return StringOrderNoNullCheck ( & a -> name, & b -> name );
 }
-/*--------------------------------------------------------------------------
- * LinkedCursorNode
- */
-
-typedef struct LinkedCursorNode LinkedCursorNode;
-struct LinkedCursorNode
-{
-    BSTNode n;
-    char tbl[64];
-    VCursor *curs;
-};
-
-static
-void CC LinkedCursorNodeWhack ( BSTNode *n, void *ignore )
-{
-    LinkedCursorNode *self = ( LinkedCursorNode* ) n;
-    VCursorRelease (  self -> curs );
-    free ( self );
-}
-
-static
-int64_t CC LinkedCursorComp ( const void *item, const BSTNode *n )
-{
-    const char *tbl = item;
-    const LinkedCursorNode *node = ( const LinkedCursorNode* ) n;
-
-    return strncmp ( tbl, node -> tbl, sizeof(node -> tbl) );
-}
-
-static
-int64_t CC LinkedCursorNodeComp ( const BSTNode *A, const BSTNode *B )
-{
-    const LinkedCursorNode *a = (const LinkedCursorNode *) A;
-    const LinkedCursorNode *b = (const LinkedCursorNode *) B;
-
-    return strncmp ( a -> tbl, b -> tbl,sizeof(a->tbl) );
-}
-
-
 
 /*--------------------------------------------------------------------------
  * VTableCursor
@@ -183,7 +144,6 @@ rc_t VTableCursorWhack ( const VCURSOR_IMPL * p_self )
     VBlobMRUCacheDestroy ( self->blob_mru_cache);
 
     BSTreeWhack ( & self -> named_params, NamedParamNodeWhack, NULL );
-    BSTreeWhack ( & self -> linked_cursors, LinkedCursorNodeWhack, NULL );
     VectorWhack ( & self -> trig, NULL, NULL );
     VectorWhack ( & self -> v_cache_curs, NULL, NULL );
     VectorWhack ( & self -> v_cache_cidx, NULL, NULL );
@@ -202,10 +162,10 @@ rc_t VTableCursorWhack ( const VCURSOR_IMPL * p_self )
  */
 rc_t VTableCursorMake ( VCURSOR_IMPL **cursp, const VTable *tbl, VCursor_vt *vt )
 {
-    rc_t rc;
     VTableCursor *curs;
 
     /* must have return param */
+    rc_t rc;
     assert ( cursp != NULL );
 
     /* must have parent tbl */
@@ -864,6 +824,7 @@ rc_t VCursorOpenColumn ( const VTableCursor *cself, VColumn *col )
     pb . pr . ld = self -> tbl -> linker;
     pb . pr . name = & self -> stbl -> name -> name;
     pb . pr . primary_table = VCursorGetTable ( & self -> dad );
+    pb . pr . view = NULL;
     pb . pr . curs = & self -> dad;
     pb . pr . cache = & self -> dad . prod;
     pb . pr . owned = & self -> dad . owned;
@@ -898,7 +859,7 @@ rc_t VCursorPostOpenAddRead ( VTableCursor *self, VColumn *col )
 
 
 static
-rc_t VCursorResolveColumnProductions ( VTableCursor *self,
+rc_t VTableCursorResolveColumnProductions ( VTableCursor *self,
     const KDlset *libs, bool ignore_failures )
 {
     Vector cx_bind;
@@ -908,6 +869,7 @@ rc_t VCursorResolveColumnProductions ( VTableCursor *self,
     pb . pr . libs = libs;
     pb . pr . name = & self -> stbl -> name -> name;
     pb . pr . primary_table = VCursorGetTable ( & self -> dad ) ;
+    pb . pr . view = NULL;
     pb . pr . curs = & self -> dad ;
     pb . pr . cache = & self -> dad . prod;
     pb . pr . owned = & self -> dad . owned;
@@ -938,7 +900,7 @@ rc_t VCursorOpenRead ( VCURSOR_IMPL *self, const KDlset *libs )
         rc = RC ( rcVDB, rcCursor, rcOpening, rcCursor, rcInvalid );
     else
     {
-        rc = VCursorResolveColumnProductions ( self, libs, false );
+        rc = VTableCursorResolveColumnProductions ( self, libs, false );
         if ( rc == 0 )
         {
             self -> dad . row_id =
@@ -973,7 +935,7 @@ rc_t VCursorOpenRead ( VCURSOR_IMPL *self, const KDlset *libs )
 }
 
 static
-rc_t VCursorOpenForListing ( const VCursor *cself )
+rc_t VTableCursorOpenForListing ( const VTableCursor *cself )
 {
     rc_t rc;
     VTableCursor *self = ( VTableCursor* ) cself;
@@ -984,7 +946,7 @@ rc_t VCursorOpenForListing ( const VCursor *cself )
     rc = VLinkerOpen ( ld, & libs );
     if ( rc == 0 )
     {
-        rc = VCursorResolveColumnProductions ( self, libs, true );
+        rc = VTableCursorResolveColumnProductions ( self, libs, true );
         KDlsetRelease ( libs );
     }
     return rc;
@@ -1753,7 +1715,7 @@ rc_t VTableCursorOpenParentRead ( const VCURSOR_IMPL *self, const VTable **tbl )
 
 struct insert_overloaded_pb
 {
-    VCursor *curs;
+    VTableCursor *curs;
     Vector *cx_bind;
 };
 
@@ -1764,7 +1726,7 @@ void CC insert_overloaded_scolumns ( void *item, void *data )
     const SColumn *scol = ( const void* ) item;
 
     uint32_t ignore;
-    VTableCursorAddSColumn ( ( VTableCursor * ) pb -> curs, & ignore, scol, NULL, pb -> cx_bind );
+    VTableCursorAddSColumn ( pb -> curs, & ignore, scol, NULL, pb -> cx_bind );
 }
 
 static
@@ -1775,7 +1737,7 @@ void VCursorListCol_walk_through_columns_and_add_to_cursor ( VTableCursor *self 
 
     Vector cx_bind;
     struct insert_overloaded_pb pb;
-    pb . curs = & self -> dad;
+    pb . curs = self;
     pb . cx_bind = & cx_bind;
     VectorInit ( & cx_bind, 1, self -> schema -> num_indirect );
 
@@ -1793,7 +1755,7 @@ void VCursorListCol_walk_through_columns_and_add_to_cursor ( VTableCursor *self 
 static
 rc_t VCursorListCol_consolidate_and_insert( const VTableCursor *self, BSTree *columns )
 {
-    rc_t rc = VCursorOpenForListing ( ToConstVCursor ( self ) );
+    rc_t rc = VTableCursorOpenForListing ( self );
     if ( rc == 0 )
     {
         uint32_t idx = VectorStart ( & self -> dad . row );
@@ -1825,7 +1787,7 @@ rc_t VCursorListCol_consolidate_and_insert( const VTableCursor *self, BSTree *co
  *  records all SColumns that successfully resolved
  *  populates BTree with VColumnRef objects
  */
-rc_t VCursorListReadableColumns ( VCURSOR_IMPL *self, BSTree *columns )
+rc_t VTableCursorListReadableColumns ( VCURSOR_IMPL *self, BSTree *columns )
 {
     /* add '*' to cursor */
     VCursorListCol_walk_through_columns_and_add_to_cursor ( self );
@@ -1833,85 +1795,6 @@ rc_t VCursorListReadableColumns ( VCURSOR_IMPL *self, BSTree *columns )
     /* insert all columns into tree */
     return VCursorListCol_consolidate_and_insert ( self, columns );
 }
-
-rc_t VTableCursorLinkedCursorGet(const VCURSOR_IMPL * cself,const char *tbl,VCursor const **curs)
-{
-    rc_t rc;
-
-    if ( curs == NULL )
-        rc = RC ( rcVDB, rcCursor, rcAccessing, rcParam, rcNull );
-    else
-    {
-        if ( cself == NULL )
-            rc = RC(rcVDB, rcCursor, rcAccessing, rcSelf, rcNull);
-        else if ( tbl == NULL )
-            rc = RC(rcVDB, rcCursor, rcAccessing, rcName, rcNull);
-        else if ( tbl [ 0 ] == 0 )
-            rc = RC(rcVDB, rcCursor, rcAccessing, rcName, rcEmpty);
-        else
-        {
-            LinkedCursorNode *node = (LinkedCursorNode *)
-                BSTreeFind( & cself -> linked_cursors, tbl, LinkedCursorComp);
-
-            if (node == NULL)
-                rc = RC(rcVDB, rcCursor, rcAccessing, rcName, rcNotFound);
-            else
-            {
-                rc = VCursorAddRef ( node -> curs );
-                if ( rc == 0 )
-                {
-                    * curs = node -> curs;
-                    return 0;
-                }
-            }
-        }
-
-        * curs = NULL;
-    }
-
-    return rc;
-}
-
-rc_t VTableCursorLinkedCursorSet(const VCURSOR_IMPL *cself,const char *tbl,VCursor const *curs)
-{
-    rc_t rc;
-    VTableCursor *self = (VCURSOR_IMPL *)cself;
-
-    if(cself == NULL)
-        rc = RC(rcVDB, rcCursor, rcAccessing, rcSelf, rcNull);
-    else if(tbl == NULL)
-        rc = RC(rcVDB, rcCursor, rcAccessing, rcName, rcNull);
-    else if(tbl[0] == '\0')
-        rc = RC(rcVDB, rcCursor, rcAccessing, rcName, rcEmpty);
-    else
-    {
-        rc = VCursorAddRef ( curs );
-        if ( rc == 0 )
-        {
-            LinkedCursorNode *node = malloc ( sizeof * node );
-            if (node == NULL)
-                rc = RC(rcVDB, rcCursor, rcAccessing, rcMemory, rcExhausted);
-            else
-            {
-                strncpy ( node->tbl, tbl, sizeof node->tbl );
-                node->curs = (VCursor*) curs;
-                rc = BSTreeInsertUnique( & self -> linked_cursors, (BSTNode *)node, NULL, LinkedCursorNodeComp);
-                if ( rc == 0 )
-                {
-                    ( ( VTableCursor * ) curs )->is_sub_cursor = true;
-                    return 0;
-                }
-
-                free ( node );
-            }
-
-            VCursorRelease ( curs );
-        }
-    }
-
-    return rc;
-}
-
 
 /* private */
 LIB_EXPORT rc_t CC VCursorParamsGet( struct VCursorParams const *cself,
@@ -2239,8 +2122,9 @@ uint32_t VTableCursorIncrementPhysicalProductionCount ( struct VCURSOR_IMPL * se
     return ++ self -> phys_cnt;
 }
 
-const struct KSymbol * VTableCursorFindOverride ( const VCURSOR_IMPL * self, const struct VCtxId * cid )
+const struct KSymbol * VTableCursorFindOverride ( const VCURSOR_IMPL * self, const struct VCtxId * cid, const struct VTable * tbl, const struct VView * view )
 {
+    assert ( tbl == self -> tbl );
     return STableFindOverride ( self -> stbl, cid );
 }
 

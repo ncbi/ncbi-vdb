@@ -166,7 +166,7 @@ rc_t CC KMain ( int argc, char *argv [] )
                 }
                 if ( VSchemaParseFile ( schema, "%s", arg ) != 0 )
                 {
-                    //throw runtime_error ( "VSchemaParseFile (old) failed" );
+                    throw runtime_error ( "VSchemaParseFile (old) failed" );
                 }
 
                 ostringstream out;

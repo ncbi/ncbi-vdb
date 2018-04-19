@@ -220,7 +220,7 @@ rc_t VTableOpenRead ( VTable *self )
         }
     }
 
-    DBGMSG(DBG_VDB, DBG_FLAG(DBG_VDB_VDB), ("VTableOpenRead = %d\n", rc));
+    DBGMSG(DBG_VDB, DBG_FLAG(DBG_VDB_VDB), ("VTableOpenRead(%S) = %d\n", & self -> stbl -> name -> name, rc));
 
     return rc;
 }
@@ -541,7 +541,7 @@ rc_t list_readable_columns ( const VTable *cself )
     if (  rc == 0 )
     {
         /* let this private VCursor-function list the columns */
-        rc = VCursorListReadableColumns ( curs, & self -> read_col_cache );
+        rc = VTableCursorListReadableColumns ( curs, & self -> read_col_cache );
         VCursorRelease ( ( VCursor * ) curs );
         if ( rc == 0 )
             self -> read_col_cache_valid = true;

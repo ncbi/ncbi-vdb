@@ -758,7 +758,11 @@ ASTBuilder :: AliasDef  ( const Token* p_token, AST_FQN* p_name, AST_FQN* p_newN
     const KSymbol * sym = Resolve ( * p_name ); // will report unknown name
     if ( sym != 0 )
     {
-        VectorAppend ( m_schema -> alias, 0, CreateFqnSymbol ( * p_newName, sym -> type, sym -> u . obj ) );
+        const KSymbol * fqnSym = CreateFqnSymbol ( * p_newName, sym -> type, sym -> u . obj );
+        if ( fqnSym != 0 )
+        {
+            VectorAppend ( m_schema -> alias, 0, fqnSym );
+        }
     }
 
     return ret;

@@ -84,6 +84,7 @@ static rc_t VTableWriteCursorCommit ( VTableCursor *self );
 static rc_t VTableWriteCursorOpenParentUpdate ( VTableCursor *self, VTable **tbl );
 static rc_t VTableWriteCursorMakeColumn ( VTableCursor *self, VColumn **col, const SColumn *scol, Vector *cx_bind );
 static rc_t VTableWriteCursorInstallTrigger ( struct VTableCursor * self, struct VProduction * prod );
+static rc_t VTableWriteCursorListReadableColumns ( struct VTableCursor *self, BSTree *columns );
 
 static VCursor_vt VTableCursor_write_vt =
 {
@@ -114,8 +115,6 @@ static VCursor_vt VTableCursor_write_vt =
     VTableCursorPermitPostOpenAdd,
     VTableCursorSuspendTriggers,
     VTableCursorGetSchema,
-    VTableCursorLinkedCursorGet,
-    VTableCursorLinkedCursorSet,
     VTableCursorSetCacheCapacity,
     VTableCursorGetCacheCapacity,
     VTableWriteCursorMakeColumn,
@@ -127,7 +126,8 @@ static VCursor_vt VTableCursor_write_vt =
     VTableCursorLaunchPagemapThread,
     VTableCursorPageMapProcessRequest,
     VTableCursorCacheActive,
-    VTableWriteCursorInstallTrigger
+    VTableWriteCursorInstallTrigger,
+    VTableWriteCursorListReadableColumns
 };
 
 /*--------------------------------------------------------------------------
@@ -1313,4 +1313,12 @@ rc_t VTableWriteCursorOpenParentUpdate ( VTableCursor *self, VTable **tbl )
 rc_t VTableWriteCursorInstallTrigger ( struct VTableCursor * self, struct VProduction * prod )
 {
     return VectorAppend ( & self -> trig, NULL, prod );
+}
+
+rc_t VTableWriteCursorListReadableColumns ( struct VTableCursor *self, BSTree *columns )
+{
+    /* this is normally called on an empty cursor to add all columns, but for
+    an empty write cursor resolution asserts `wcol -> val == NULL' in VProdResolveColumnRoot().
+    Disabling for now. */
+    return RC ( rcVDB, rcCursor, rcAccessing, rcMode, rcUnsupported );
 }
