@@ -196,6 +196,19 @@ rc_t tlsg_seed_rng ( KTLSGlobals *self )
     return 0;
 }
 
+static
+rc_t tlsg_init_ca ( KTLSGlobals *self, const KConfig * kfg )
+{
+    const KConfigNode * allow_all_certs;
+    rc_t rc = KConfigOpenNodeRead ( kfg, & allow_all_certs, "/tls/allow-all-certs" );
+    if ( rc == 0 )
+    {
+        rc = KConfigNodeReadBool ( allow_all_certs, & self -> allow_all_certs );
+        KConfigNodeRelease ( allow_all_certs );
+    }
+    return rc;
+}
+
 static 
 rc_t tlsg_init_certs ( KTLSGlobals *self, const KConfig * kfg )
 {
@@ -336,6 +349,13 @@ rc_t tlsg_init_certs ( KTLSGlobals *self, const KConfig * kfg )
 
             KConfigNodeRelease ( ca_crt );
         }
+    }
+
+    if ( rc == 0 )
+    {
+        rc = tlsg_init_ca ( self, kfg );
+        if ( rc != 0 )
+            return rc;
     }
 
 #if _DEBUGGING
@@ -927,29 +947,45 @@ rc_t ktls_handshake ( KTLSStream *self )
         if ( ret != MBEDTLS_ERR_SSL_WANT_READ && 
              ret != MBEDTLS_ERR_SSL_WANT_WRITE )
         {
-            rc_t rc = RC ( rcKrypto, rcSocket, rcOpening, rcConnection, rcFailed );
+            rc_t rc;
 
-            PLOGERR ( klogSys, ( klogSys, rc
-                                 , "mbedtls_ssl_handshake returned $(ret) ( $(expl) )"
-                                 , "ret=%d,expl=%s"
-                                 , ret
-                                 , mbedtls_strerror2 ( ret )
-                          ) );
-
-            if ( ret == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED )
+            /* check configuration to see if we are ignoring
+               unrecognized certificates (ones that use a CA
+               for signing that we don't recognize) */
+            if ( self -> mgr -> tlsg . allow_all_certs &&
+                 ret == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED )
             {
-                uint32_t flags = vdb_mbedtls_ssl_get_verify_result( &self -> ssl );
-                if ( flags != 0 )
-                {
-                    char buf [ 4096 ];
-                    vdb_mbedtls_x509_crt_verify_info ( buf, sizeof( buf ), " !! ", flags );
+                /* ignore this case */
+                rc = 0;
+            }
+            else
+            {
+                /* either we're forcing all certificates to be validated,
+                   or the error is something other than a validation error */
+                rc = RC ( rcKrypto, rcSocket, rcOpening, rcConnection, rcFailed );
 
-                    PLOGMSG ( klogSys, ( klogSys
-                                         , "mbedtls_ssl_get_verify_result returned $(flags) ( $(info) )"
-                                         , "flags=0x%X,info=%s"
-                                         , flags
-                                         , buf
-                                  ) );
+                PLOGERR ( klogSys, ( klogSys, rc
+                                     , "mbedtls_ssl_handshake returned $(ret) ( $(expl) )"
+                                     , "ret=%d,expl=%s"
+                                     , ret
+                                     , mbedtls_strerror2 ( ret )
+                              ) );
+
+                if ( ret == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED )
+                {
+                    uint32_t flags = vdb_mbedtls_ssl_get_verify_result( &self -> ssl );
+                    if ( flags != 0 )
+                    {
+                        char buf [ 4096 ];
+                        vdb_mbedtls_x509_crt_verify_info ( buf, sizeof( buf ), " !! ", flags );
+                        
+                        PLOGMSG ( klogSys, ( klogSys
+                                             , "mbedtls_ssl_get_verify_result returned $(flags) ( $(info) )"
+                                             , "flags=0x%X,info=%s"
+                                             , flags
+                                             , buf
+                                      ) );
+                    }
                 }
             }
 
