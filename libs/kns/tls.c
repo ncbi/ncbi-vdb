@@ -205,8 +205,12 @@ rc_t tlsg_init_ca ( KTLSGlobals *self, const KConfig * kfg )
     {
         rc = KConfigNodeReadBool ( allow_all_certs, & self -> allow_all_certs );
         KConfigNodeRelease ( allow_all_certs );
+        return rc;
     }
-    return rc;
+
+    /* if the node does not exist, it means false */
+    self -> allow_all_certs = false;
+    return 0;
 }
 
 static 
