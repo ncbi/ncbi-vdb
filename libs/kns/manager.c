@@ -1098,6 +1098,46 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char ** user_agent )
     return rc;
 }
 
+/* Set/Get AllowAllCerts
+ *  modify behavior of TLS certificate validation
+ */
+LIB_EXPORT rc_t CC KNSManagerSetAllowAllCerts ( KNSManager *self, bool allow_all_certs )
+{
+    rc_t rc = 0;
+    
+    if ( self == NULL )
+        rc = RC ( rcNS, rcMgr, rcAccessing, rcSelf, rcNull );
+    else
+    {
+        KTLSGlobalsSetAllowAllCerts ( & self -> tlsg, allow_all_certs );
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KNSManagerGetAllowAllCerts ( const KNSManager *self, bool * allow_all_certs )
+{
+    rc_t rc;
+
+    if ( allow_all_certs == NULL )
+        rc = RC ( rcNS, rcMgr, rcAccessing, rcParam, rcNull );
+    else
+    {
+        if ( self == NULL )
+            rc = RC ( rcNS, rcMgr, rcAccessing, rcSelf, rcNull );
+        else
+        {
+            * allow_all_certs = KTLSGlobalsGetAllowAllCerts ( & self -> tlsg );
+            return 0;
+        }
+        
+        * allow_all_certs = false;
+    }
+
+    return rc;
+}
+
+
 /******************************************************************************/
 
 #define NCBI_VDB_NET 1 /* VDB-3399 : temporarily enable for internal testing */

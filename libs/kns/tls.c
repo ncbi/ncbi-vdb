@@ -505,6 +505,9 @@ rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg, const KConfig * kfg )
 {
     rc_t rc;
 
+    assert ( tlsg != NULL );
+    assert ( kfg != NULL );
+
     vdb_mbedtls_x509_crt_init ( &tlsg -> cacert );
     vdb_mbedtls_ctr_drbg_init ( &tlsg -> ctr_drbg );
     vdb_mbedtls_entropy_init ( &tlsg -> entropy );
@@ -528,12 +531,29 @@ rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg, const KConfig * kfg )
  */
 void KTLSGlobalsWhack ( KTLSGlobals * self )
 {
+    assert ( self != NULL );
+    
     vdb_mbedtls_ssl_config_free ( &self -> config );
     vdb_mbedtls_entropy_free ( &self -> entropy );
     vdb_mbedtls_ctr_drbg_free ( &self -> ctr_drbg );
     vdb_mbedtls_x509_crt_free ( &self -> cacert );
 
     memset ( self, 0, sizeof * self );
+}
+
+/* Set/Get AllowAllCerts
+ *  modify behavior of TLS certificate validation
+ */
+void KTLSGlobalsSetAllowAllCerts ( KTLSGlobals * self, bool allow_all_certs )
+{
+    assert ( self != NULL );
+    self -> allow_all_certs = allow_all_certs;
+}
+
+bool KTLSGlobalsGetAllowAllCerts ( const KTLSGlobals *self )
+{
+    assert ( self != NULL );
+    return self -> allow_all_certs;
 }
 
 /*--------------------------------------------------------------------------

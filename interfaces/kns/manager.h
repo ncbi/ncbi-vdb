@@ -95,6 +95,13 @@ KNS_EXTERN rc_t CC KNSManagerSetConnectionTimeouts ( KNSManager *self,
 KNS_EXTERN rc_t CC KNSManagerSetUserAgent ( KNSManager *self, const char * fmt, ... );
 KNS_EXTERN rc_t CC KNSManagerGetUserAgent ( const char ** user_agent );
 
+    
+/* Set/Get AllowAllCerts
+ *  modify behavior of TLS certificate validation
+ */
+KNS_EXTERN rc_t CC KNSManagerSetAllowAllCerts ( KNSManager *self, bool allow_all_certs );
+KNS_EXTERN rc_t CC KNSManagerGetAllowAllCerts ( const KNSManager *self, bool * allow_all_certs );
+
 
 #ifdef __cplusplus
 }

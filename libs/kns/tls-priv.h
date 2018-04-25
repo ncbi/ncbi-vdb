@@ -74,6 +74,12 @@ rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg, struct KConfig const * kfg );
  */
 void KTLSGlobalsWhack ( KTLSGlobals * self );
 
+/* Set/Get AllowAllCerts
+ *  modify behavior of TLS certificate validation
+ */
+void KTLSGlobalsSetAllowAllCerts ( KTLSGlobals * self, bool allow_all_certs );
+bool KTLSGlobalsGetAllowAllCerts ( const KTLSGlobals *self );
+
 
 #ifdef __cplusplus
 }
