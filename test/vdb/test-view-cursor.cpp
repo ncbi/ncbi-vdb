@@ -220,12 +220,11 @@ public:
         THROW_ON_FALSE ( p_first == first );
         THROW_ON_FALSE ( p_count == count );
         // blob size depends on release/debug build, so will only check it in DEBUG
-        if (_DEBUGGING)
-        {
-            size_t bytes;
-            THROW_ON_RC ( VBlobSize ( m_blob, & bytes ) );
-            THROW_ON_FALSE ( p_bytes == bytes );
-        }
+#if _DEBUGGING
+        size_t bytes;
+        THROW_ON_RC ( VBlobSize ( m_blob, & bytes ) );
+        THROW_ON_FALSE ( p_bytes == bytes );
+#endif
     }
 };
 
