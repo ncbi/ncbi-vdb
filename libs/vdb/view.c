@@ -75,8 +75,6 @@ static
 rc_t
 VViewWhack ( VView * p_self )
 {
-    KRefcountWhack ( & p_self -> refcount, "VView" );
-
     uint32_t start = VectorStart ( & p_self -> sview -> params );
     uint32_t count = VectorLength ( & p_self -> sview -> params );
     uint32_t i;
@@ -99,6 +97,7 @@ VViewWhack ( VView * p_self )
 
     VectorWhack ( & p_self -> bindings, 0, 0 );
     VLinkerRelease ( p_self -> linker );
+    KRefcountWhack ( & p_self -> refcount, "VView" );
 
     free ( p_self );
     return 0;
@@ -245,9 +244,10 @@ VViewBindParameterTable ( const VView *     p_self,
     }
     else
     {   /* locate the view's parameter, make sure it is a table, bind to the given table */
+		int32_t idx;
         String name;
         StringInitCString( & name, p_param_name );
-        int32_t idx = BindingIdxByName ( p_self -> sview, & name );
+        idx = BindingIdxByName ( p_self -> sview, & name );
         if ( idx >= 0 )
         {   /* self->bindings is parallel to self->sview->params */
             const KSymbol * param = VectorGet ( & p_self -> sview -> params, idx );
@@ -257,18 +257,20 @@ VViewBindParameterTable ( const VView *     p_self,
                 {
                     return RC ( rcVDB, rcTable, rcOpening, rcParam, rcWrongType );
                 }
-                if ( VectorGet ( & p_self -> bindings, idx ) != NULL )
+                else if ( VectorGet ( & p_self -> bindings, idx ) != NULL )
                 {
                     return RC ( rcVDB, rcTable, rcOpening, rcTable, rcExists );
                 }
-
-                VView * self = (VView*) p_self;
-                rc_t rc = VTableAddRef ( p_table );
-                if ( rc == 0 )
-                {
-                    return VectorSet( & self -> bindings, idx, p_table );
-                }
-                return rc;
+				else
+				{
+					VView * self = (VView*) p_self;
+					rc_t rc = VTableAddRef ( p_table );
+					if ( rc == 0 )
+					{
+						return VectorSet( & self -> bindings, idx, p_table );
+					}
+					return rc;
+				}
             }
         }
 
@@ -299,9 +301,10 @@ VViewBindParameterView ( const VView *          p_self,
     }
     else
     {   /* locate the view's parameter, make sure it is a view, bind to the given view */
-        String name;
+        int32_t idx;
+		String name;
         StringInitCString( & name, p_param_name );
-        int32_t idx = BindingIdxByName ( p_self -> sview, & name );
+        idx = BindingIdxByName ( p_self -> sview, & name );
         if ( idx >= 0 )
         {   /* self->bindings is parallel to self->sview->params */
             const KSymbol * param = VectorGet ( & p_self -> sview -> params, idx );
@@ -311,18 +314,20 @@ VViewBindParameterView ( const VView *          p_self,
                 {
                     return RC ( rcVDB, rcTable, rcOpening, rcParam, rcWrongType );
                 }
-                if ( VectorGet ( & p_self -> bindings, idx ) != NULL )
+                else if ( VectorGet ( & p_self -> bindings, idx ) != NULL )
                 {
                     return RC ( rcVDB, rcTable, rcOpening, rcTable, rcExists );
                 }
-
-                VView * self = (VView*) p_self;
-                rc_t rc = VViewAddRef ( p_view );
-                if ( rc == 0 )
-                {   /* self->bindings is parallel to self->sview->params */
-                    return VectorSet( & self -> bindings, idx, p_view );
-                }
-                return rc;
+				else
+				{
+					VView * self = (VView*) p_self;
+					rc_t rc = VViewAddRef ( p_view );
+					if ( rc == 0 )
+					{   /* self->bindings is parallel to self->sview->params */
+						return VectorSet( & self -> bindings, idx, p_view );
+					}
+	                return rc;
+				}
             }
         }
         return RC ( rcVDB, rcTable, rcOpening, rcParam, rcNotFound );
@@ -340,16 +345,19 @@ VViewPrimaryTable( const VView * p_self )
     {
         return NULL; /* not bound */
     }
-    const Vector * b = & p_self -> bindings;
-    const void * obj = VectorGet ( b, VectorStart ( b ) );
-    if ( param -> type == eTable )
-    {
-        return ( const VTable * ) obj;
-    }
-    else /* view */
-    {
-        return VViewPrimaryTable ( ( const VView *) obj );
-    }
+	else
+	{
+		const Vector * b = & p_self -> bindings;
+		const void * obj = VectorGet ( b, VectorStart ( b ) );
+		if ( param -> type == eTable )
+		{
+			return ( const VTable * ) obj;
+		}
+		else /* view */
+		{
+			return VViewPrimaryTable ( ( const VView *) obj );
+		}
+	}
 }
 
 /* Follow the chain of view inheritance to find out which parameter of p_child

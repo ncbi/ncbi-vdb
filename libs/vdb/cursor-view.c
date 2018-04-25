@@ -423,7 +423,7 @@ VViewCursorResolveColumn ( void *item, void *data )
         VColumn *col = item;
         SColumn *scol = ( SColumn* ) col -> scol;
         VProdResolveData *pb = data;
-        VViewCursor * self = (VViewCursor *) pb -> pr . curs;;
+        VViewCursor * self = (VViewCursor *) pb -> pr . curs;
         VProduction * src = NULL;
 
         pb -> rc = VProdResolveColumnRoot ( & pb -> pr, & src, scol );
