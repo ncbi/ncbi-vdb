@@ -219,11 +219,11 @@ public:
         THROW_ON_RC ( VBlobIdRange ( m_blob, & first, & count ) );
         THROW_ON_FALSE ( p_first == first );
         THROW_ON_FALSE ( p_count == count );
-        size_t bytes;
-        THROW_ON_RC ( VBlobSize ( m_blob, & bytes ) );
-        if ( p_bytes != bytes )
+        // blob size depends on release/debug build, so will only check it in DEBUG
+        if (_DEBUGGING)
         {
-            cout << "p_bytes=" << p_bytes << " bytes == " << bytes << endl;
+            size_t bytes;
+            THROW_ON_RC ( VBlobSize ( m_blob, & bytes ) );
             THROW_ON_FALSE ( p_bytes == bytes );
         }
     }
