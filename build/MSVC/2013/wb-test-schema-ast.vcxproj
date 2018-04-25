@@ -33,7 +33,6 @@
   <Import Project="..\wb-test-schema-ast.files" />
   <Target Name="AfterBuild" Condition="'$(Autorun)'=='true'">
     <MakeDir Directories="$(WorkingDirectory)\actual" />
-    <MakeDir Directories="$(WorkingDirectory)\actual\inc" />
     <Exec Command="$(OutDir)$(TargetName)$(TargetExt)" WorkingDirectory="$(WorkingDirectory)\" />
   </Target>
 </Project>
