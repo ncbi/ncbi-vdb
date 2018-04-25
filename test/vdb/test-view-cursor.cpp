@@ -221,7 +221,11 @@ public:
         THROW_ON_FALSE ( p_count == count );
         size_t bytes;
         THROW_ON_RC ( VBlobSize ( m_blob, & bytes ) );
-        THROW_ON_FALSE ( p_bytes == bytes );
+        if ( p_bytes != bytes )
+        {
+            cout << "p_bytes=" << p_bytes << " bytes == " << bytes << endl;
+            THROW_ON_FALSE ( p_bytes == bytes );
+        }
     }
 };
 
