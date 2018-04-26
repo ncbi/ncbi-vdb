@@ -31,5 +31,8 @@
   <Target Name="AfterBuild" Condition="'$(Autorun)'=='true'">
     <MakeDir Directories="$(WorkingDirectory)\db" />
     <Exec Command="$(OutDir)$(TargetName)$(TargetExt)" WorkingDirectory="$(WorkingDirectory)\" />
+    <Exec Command="Timeout"?
+        <arg value="5"/>
+    </Exec>>
   </Target>
 </Project>
