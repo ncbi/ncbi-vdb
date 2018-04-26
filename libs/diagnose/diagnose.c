@@ -107,6 +107,156 @@ static rc_t LogOut ( int level, unsigned type, const char * fmt, ... )
     return rc;
 }
 
+typedef struct { const char * begin; char * end; } Block;
+
+typedef struct {
+    KDataBuffer response; /* cgi response */
+    uint32_t code;        /* cgi response status code */
+    char * location;      /* cgi response redirect location */
+    KDataBuffer redirect; /* redirect response */
+
+    Block p;
+    Block mailto;
+
+    String ip;
+    String date;
+    char * server;
+} Abuse;
+
+static rc_t AbuseFini ( Abuse * self ) {
+    rc_t rc = 0, r2 = 0;
+
+    assert ( self );
+
+    free ( self -> location );
+    free ( self -> server );
+
+    rc = KDataBufferWhack ( & self -> response );
+
+    r2 = KDataBufferWhack ( & self -> redirect );
+    if ( r2 != 0 && rc == 0 )
+        rc = r2;
+
+    memset ( self, 0, sizeof * self );
+
+    return rc;
+}
+
+static void AbuseInit ( Abuse * self ) {
+    assert ( self );
+
+    memset ( self, 0, sizeof * self );
+
+    self -> response . elem_bits = self -> redirect . elem_bits = 8;
+}
+
+static void AbuseSetStatus ( Abuse * self, uint32_t code ) {
+    assert ( self );
+
+    self -> code = code;
+}
+
+static
+rc_t AbuseSetLocation ( Abuse * self, const char * str, size_t size )
+{
+    assert ( self );
+
+    self -> location = string_dup ( str, size );
+    return self -> location != NULL
+        ? 0 : RC ( rcRuntime, rcString, rcCopying, rcMemory, rcExhausted );
+}
+
+static
+rc_t AbuseSetCgi ( Abuse * self, const String * cgi ) {
+    const char * s = NULL, * e = NULL;
+
+    size_t i = 0;
+
+    assert ( self && cgi );
+
+    s = cgi -> addr;
+    if ( s == NULL )
+        return 0;
+
+    for ( i = 0; i < cgi -> size ; ++ i ) {
+        switch ( * s ) {
+         case '\0':
+          return 0;
+
+         case ':' :
+          if ( * ++ s != '/' )
+            return 0;
+          if ( * ++ s != '/' )
+            return 0;
+          if ( i >= cgi -> size )
+            return 0;
+
+          e = string_chr ( ++ s, cgi -> size - i, '/' );
+          if ( e == NULL )
+            return 0;
+
+          self -> server = string_dup ( s, e - s );
+          if ( self -> server == NULL )
+            return RC ( rcRuntime, rcString, rcCopying, rcMemory, rcExhausted );
+          else
+            return 0;
+
+         default:
+          ++ s;
+        }
+    }
+
+    return 0;
+}
+
+static rc_t AbuseAdd ( Abuse * self, const char * txt, int sz ) {
+    rc_t rc = 0;
+
+    assert ( self );
+
+    if ( rc == 0 )
+        return KDataBufferPrintf ( & self -> response,  "%s", txt );
+    else
+        return KDataBufferPrintf ( & self -> response,  "%.*s", sz, txt );
+}
+
+static char * find ( const char * haystack, uint64_t n,
+                     const String * needle )
+{
+    uint64_t i = 0;
+
+    assert ( needle && needle -> addr );
+
+    for ( i = 0; ; ++ i ) {
+        char * c = NULL;
+        uint64_t size = n - i;
+
+        assert ( n >= i );
+
+        c = string_chr ( haystack + i, size, * needle -> addr );
+        if ( c == NULL )
+            return NULL;
+
+        i = c - haystack;
+        if ( i < needle -> size && i > 0)
+            return NULL;
+
+        if ( string_cmp ( c, needle -> size, needle -> addr, needle -> size,
+                             ( uint32_t ) needle -> size) == 0)
+        {
+            return c;
+        }
+    }
+}
+
+typedef struct {
+    bool incompleteGapKfg;
+    bool firewall;
+    bool blocked;
+
+    Abuse abuse;
+} Report;
+
 struct KDiagnose {
     atomic32_t refcount;
 
@@ -129,6 +279,8 @@ struct KDiagnose {
     } state;
     KLock * lock;
     KCondition * condition;
+
+    Report report;
 };
 
 struct KDiagnoseTest {
@@ -448,7 +600,7 @@ typedef struct {
     const char * ascp;
     const char * asperaKey;
 
-    KDiagnose * boss;
+    KDiagnose * dad;
 } STest;
 
 static void STestInit ( STest * self, KDiagnose * test )
@@ -459,7 +611,7 @@ static void STestInit ( STest * self, KDiagnose * test )
 
     memset ( self, 0, sizeof * self );
 
-    self -> boss = test;
+    self -> dad = test;
 
     self -> level = -1;
 
@@ -487,31 +639,79 @@ static void STestInit ( STest * self, KDiagnose * test )
                                                     vrAlwaysEnable );
 }
 
+static void STestReport ( const STest * self ) {
+    assert ( self && self -> dad );
+
+    if ( self -> level < KVERBOSITY_INFO )
+        return;
+
+    if ( self -> n [ 0 ] == 0 || self -> n [ 1 ] != 0 ||
+            self -> level != 0 )
+    {   LogOut ( KVERBOSITY_INFO, 0, "= TEST WAS NOT COMPLETED\n" ); }
+
+    LogOut ( KVERBOSITY_INFO, 0, "= %d (%d) tests performed, %d failed\n",
+                self -> n [ 0 ], self -> total, self -> failures );
+
+    if ( self -> failures > 0 ) {
+        uint32_t i = 0;
+        LogOut ( KVERBOSITY_INFO, 0, "Errors:\n" );
+        for ( i = 0; i < VectorLength ( self -> errors ); ++ i ) {
+            const KDiagnoseError * e = VectorGet ( self -> errors, i );
+            assert ( e );
+            LogOut ( KVERBOSITY_INFO, 0, " %d: %s\n", i + 1, e -> message );
+        }
+    }
+
+    LogOut ( KVERBOSITY_INFO, 0, "\n\nANALYSIS:\n\n" );
+
+    if ( self -> failures == 0 )
+        LogOut ( KVERBOSITY_INFO, 0, "No errors detected.\n" );
+    else {
+        const Report * report = & self -> dad -> report;
+
+        if ( report -> firewall )
+            LogOut ( KVERBOSITY_INFO, 0,
+ "Most likely access to NCBI is blocked by your firewall.\n"
+ "Please look over the information about firewalls at\n"
+ "https://github.com/ncbi/sra-tools/wiki/Firewall-and-Routing-Information\n"
+ "and make sure that your IT people are aware of the requirements\n"
+ "for accessing SRA data at NCBI.\n\n" );
+
+        if ( report -> blocked ) {
+            const Abuse * test = & report -> abuse;
+            LogOut ( KVERBOSITY_INFO, 0,
+       "Your access to the NCBI website at %s has been\n"
+       "temporarily blocked due to a possible misuse/abuse situation\n"
+       "involving your site. This is not an indication of a security issue\n"
+       "such as a virus or attack.\n"
+       "To restore access and understand how to better interact with our site\n"
+       "to avoid this in the future, please have your system administrator\n"
+       "send an email with subject \"NCBI Web site BLOCKED: %S\"\n"
+       "to info@ncbi.nlm.nih.gov with the following information:\n"
+       "Error=blocked for possible abuse\n"
+       "Server=%s\n"
+       "Client=%S\n"
+       "Time=%S\n\n"
+                , test -> server
+                , & test -> ip
+                , test -> server
+                , & test -> ip
+                , & test -> date );
+        }
+    }
+
+    LogOut ( KVERBOSITY_INFO, 0,
+        "For more infotrmation mail the complete output\n"
+        "and your questions to sra-tools@ncbi.nlm.nih.gov .\n" );
+}
+
 static void STestFini ( STest * self ) {
     rc_t rc = 0;
 
     assert ( self );
 
-    if ( self -> level >= KVERBOSITY_INFO ) {
-        if ( self -> n [ 0 ] == 0 || self -> n [ 1 ] != 0 ||
-             self -> level != 0 )
-        {
-            LogOut ( KVERBOSITY_INFO, 0, "= TEST WAS NOT COMPLETED\n" );
-        }
-
-        LogOut ( KVERBOSITY_INFO, 0, "= %d (%d) tests performed, %d failed\n",
-                   self -> n [ 0 ], self -> total, self -> failures );
-
-        if ( self -> failures > 0 ) {
-            uint32_t i = 0;
-            LogOut ( KVERBOSITY_INFO, 0, "Errors:\n" );
-            for ( i = 0; i < VectorLength ( self -> errors ); ++ i ) {
-                const KDiagnoseError * e = VectorGet ( self -> errors, i );
-                assert ( e );
-                LogOut ( KVERBOSITY_INFO, 0, " %d: %s\n", i + 1, e -> message );
-            }
-        }
-    }
+    if ( self -> level >= KVERBOSITY_INFO )
+        STestReport ( self );
 
     VResolverCacheEnable ( self -> resolver, self -> cacheState );
 
@@ -592,7 +792,7 @@ static rc_t KDiagnoseCheckState(KDiagnose * self) {
 }
 
 static rc_t STestVStart ( STest * self, bool checking, uint64_t code,
-                          const char * fmt, va_list args  )
+    const char * fmt, va_list args  )
 {
     KDiagnoseTest * test = NULL;
     rc_t rc = 0;
@@ -600,8 +800,6 @@ static rc_t STestVStart ( STest * self, bool checking, uint64_t code,
     char b [ 512 ] = "";
     bool next = false;
     KDataBuffer bf;
-
-//assert(self->boss);rc=KDiagnoseCheckState(self->boss);if ( rc != 0 )return rc;
 
     memset ( & bf, 0, sizeof bf );
     rc = string_vprintf ( b, sizeof b, NULL, fmt, args );
@@ -616,7 +814,7 @@ static rc_t STestVStart ( STest * self, bool checking, uint64_t code,
     if ( test == NULL )
         return RC ( rcRuntime, rcData, rcAllocating, rcMemory, rcExhausted );
     test -> code = code;
-    test -> name = strdup (b);//TODO
+    test -> name = strdup (b); /*TODO*/
     if ( test -> name == NULL ) {
         free ( test );
         return RC ( rcRuntime, rcData, rcAllocating, rcMemory, rcExhausted );
@@ -771,7 +969,7 @@ rc=0;
 #endif
     bool failedWhileSilent = self -> failedWhileSilent;
     bool print = false;
-    char b [ 512 ] = "";
+    char b [ 1024 ] = "";
     size_t num_writ = 0;
     size_t num_warn = 0;
 
@@ -925,8 +1123,8 @@ const char*c=self->msg.base;
     }
 
     if ( rc == 0 ) {
-        assert ( self -> boss );
-        rc = KDiagnoseCheckState ( self -> boss );
+        assert ( self -> dad );
+        rc = KDiagnoseCheckState ( self -> dad );
     }
 
     return rc;
@@ -939,8 +1137,8 @@ static bool _RcCanceled ( rc_t rc ) {
                              rcProcess, rcExecuting, rcProcess, rcCanceled );
 }
 static bool STestCanceled ( const STest * self, rc_t rc ) {
-    assert ( self && self -> boss );
-    return _RcCanceled ( rc ) && self -> boss -> state == eCanceled;
+    assert ( self && self -> dad );
+    return _RcCanceled ( rc ) && self -> dad -> state == eCanceled;
 }
 
 static rc_t STestFailure ( const STest * self ) {
@@ -1186,7 +1384,7 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
     size_t bytes = 4096;
     uint64_t ebytes = bytes;
     bool https = false;
-    char buffer [ 1024 ] = "";
+    char buffer [ 2048 ] = "";
     size_t num_read = 0;
     KClientHttp * http = NULL;
     KHttpRequest * req = NULL;
@@ -1246,8 +1444,10 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
             STestFail ( self, rc, 0, "VPathGetPath" );
         else {
             rc = KHttpMakeRequest ( http, & req, "%S", & path );
-            if ( rc != 0 )
+            if ( rc != 0 ) {
+                self -> dad -> report . firewall = true;
                 STestFail ( self, rc, 0, "KHttpMakeRequest(%S)", & path );
+            }
         }
     }
     if ( rc == 0 ) {
@@ -1399,7 +1599,7 @@ static KPathType STestRemoveCache ( STest * self, const char * cache ) {
 
 static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
     const char * cache, uint64_t * cacheSize, uint64_t sz, bool print,
-    const char * exp, size_t esz )
+    const char ** exp, size_t esz, bool * tooBig )
 {
     rc_t rc = 0;
     size_t total = 0;
@@ -1407,7 +1607,7 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
     KFile * out = NULL;
     rc_t rw = 0;
     uint64_t pos = 0;
-    assert ( cache && cacheSize );
+    assert ( cache && cacheSize && tooBig );
     if ( cache [ 0 ] != '\0' ) {
         if ( STestRemoveCache ( self, cache ) == kptNotFound ) {
             rw = KDirectoryCreateFile ( self -> dir, & out, false,  0664,
@@ -1466,13 +1666,25 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
                         STestEnd ( self, eEndFAIL, "%R", rc );
                     break;
                 }
-                if ( string_cmp ( buffer, num_read, exp, esz, (uint32_t)esz ) != 0 ) {
-                    STestEnd ( self, eEndFAIL, "bad content" );
-                    rc = RC ( rcRuntime,
-                              rcFile, rcReading, rcString, rcUnequal );
+                for ( i = 0; i < 2; ++ i ) {
+                    if ( string_cmp ( buffer, num_read, exp [ i ], esz,
+                                      (uint32_t) esz ) == 0 )
+                    {   break; }
+                    else if ( i == 1 ) {
+                        STestEnd ( self, eEndFAIL, "bad content" );
+                        rc = RC ( rcRuntime,
+                                  rcFile, rcReading, rcString, rcUnequal );
+                    }
                 }
             }
             total += num_read;
+            if ( total > 1000000 /* 1mb */ ) {
+                * tooBig = true;
+                rc = STestEnd ( self, eEndOK,
+                                "Interrupted (file is too big): OK" );
+                assert ( total < sz );
+                break;
+            }
         }
         else {
             assert ( num_read == 0 );
@@ -1519,7 +1731,7 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
 
 static rc_t STestCheckHttpUrl ( STest * self, uint64_t tests, uint64_t atest,
     const Data * data, const char * cache, uint64_t * cacheSize,
-    bool print, const char * exp, size_t esz )
+    bool print, const char ** exp, size_t esz, bool * tooBig )
 {
     rc_t rc = 0;
     rc_t rc_read = 0;
@@ -1547,8 +1759,10 @@ static rc_t STestCheckHttpUrl ( STest * self, uint64_t tests, uint64_t atest,
         if ( rc != 0 ) {
             if ( _RcCanceled ( rc ) )
                 STestEnd ( self, eCANCELED, "CANCELED" );
-            else
+            else {
+                self -> dad -> report . firewall = true;
                 STestEnd ( self, eEndFAIL, "%R", rc );
+            }
         }
     }
     if ( rc == 0 ) {
@@ -1593,7 +1807,7 @@ static rc_t STestCheckHttpUrl ( STest * self, uint64_t tests, uint64_t atest,
                         "KHttpResultGetInputStream(KHttpResult)" );
         else
             rc = STestCheckStreamRead ( self, stream, cache, cacheSize,
-                                        sz, print, exp, esz );
+                                        sz, print, exp, esz, tooBig );
         KStreamRelease ( stream );
         stream = NULL;
     }
@@ -1647,9 +1861,10 @@ static rc_t STestCheckVfsUrl ( STest * self, uint64_t atest, const Data * data,
         return rc;
     }
 
-    STestStart ( self, false, atest, "VFSManagerOpenDirectoryRead(%S):",
+    STestStart ( self, false, atest, "VFSManagerOpenDirectoryReadDecrypt(%S):",
                                                                   & path );
-    rc = VFSManagerOpenDirectoryRead ( self -> vmgr, & d, data -> vpath );
+    rc = VFSManagerOpenDirectoryReadDecrypt ( self -> vmgr, & d,
+                                              data -> vpath );
     if ( rc == 0 )
         STestEndOr ( self, & rc, eEndOK, "OK"  );
     if ( rc != 0 ) {
@@ -1664,15 +1879,16 @@ static rc_t STestCheckVfsUrl ( STest * self, uint64_t atest, const Data * data,
     return rc;
 }
 
-static rc_t STestCheckUrlImpl ( STest * self, uint64_t tests, uint64_t htest, 
+static rc_t STestCheckUrlImpl ( STest * self, uint64_t tests, uint64_t htest,
     uint64_t vtest,  const Data * data, const char * cache,
-        uint64_t * cacheSize, bool print, const char * exp, size_t esz )
+    uint64_t * cacheSize, bool print, const char ** exp, size_t esz,
+    bool * tooBig )
 {
     rc_t rc = 0;
     rc_t r2 = 0;
     if ( tests & htest )
         rc = STestCheckHttpUrl ( self, tests, htest, data,
-                                 cache, cacheSize, print, exp, esz );
+                                 cache, cacheSize, print, exp, esz, tooBig );
     if ( tests & vtest )
         r2 = STestCheckVfsUrl  ( self, vtest, data, cacheSize == 0 );
     return rc != 0 ? rc : r2;
@@ -1680,11 +1896,15 @@ static rc_t STestCheckUrlImpl ( STest * self, uint64_t tests, uint64_t htest,
 
 static rc_t STestCheckUrl ( STest * self, uint64_t tests, uint64_t htest,
     uint64_t vtest, const Data * data, const char * cache, uint64_t * cacheSize,
-    bool print, const char * exp, size_t esz )
+    bool print, const char ** exp, size_t esz, bool * tooBig )
 {
     rc_t rc = 0;
 
     String path;
+
+    bool dummy;
+    if ( tooBig == NULL )
+        tooBig = & dummy;
 
     assert ( data );
 
@@ -1698,7 +1918,7 @@ static rc_t STestCheckUrl ( STest * self, uint64_t tests, uint64_t htest,
         return 0;
 
     return STestCheckUrlImpl ( self, tests, htest, vtest, data,
-                               cache, cacheSize, print, exp, esz );
+                               cache, cacheSize, print, exp, esz, tooBig );
 }
 
 static String * KConfig_Resolver ( const KConfig * self ) {
@@ -1739,116 +1959,193 @@ static int KConfig_Verbosity ( const KConfig * self ) {
     return ( int ) v;
 }
 
-typedef struct {
-    KDataBuffer response;
-    uint32_t code;
-} Abuse;
-
-static void AbuseInit ( Abuse * self ) {
-    assert ( self );
-    memset ( self, 0, sizeof * self );
-}
-
-static rc_t AbuseFini ( Abuse * self ) {
+static rc_t STestAbuseRedirect ( const STest * self,
+                                 Abuse * test, bool * abuse )
+{
     rc_t rc = 0;
-    assert ( self );
-    rc = KDataBufferWhack ( & self -> response );
-    memset ( self, 0, sizeof * self );
+
+    KHttpRequest * req = NULL;
+    KHttpResult * rslt = NULL;
+    KStream * stream = NULL;
+
+    size_t i = 0;
+    size_t total = 0;
+    char * base = NULL;
+    const char * c = NULL;
+
+    Block * p = NULL;
+    KDataBuffer * buffer = NULL;
+
+    String open, close, needle;
+    CONST_STRING ( & open,   "<p>" );
+    CONST_STRING ( & close, "</p>" );
+
+    assert ( self && test && abuse );
+
+    buffer = & test -> redirect;
+    p = & test -> p;
+
+    if ( rc == 0 )
+        rc = KNSManagerMakeRequest ( self -> kmgr, & req, HTTP_VERSION,
+                                     NULL, test -> location );
+    if ( rc == 0 )
+        rc = KHttpRequestGET ( req, & rslt );
+
+    if ( rc == 0 )
+        rc = KHttpResultGetInputStream ( rslt, & stream );
+
+if(false){
+char*c="<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\" \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\"> \n<html>\n<head>\n<title>NCBI - WWW Error Blocked Diagnostic</title>\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />\n<meta http-equiv=\"pragma\" content=\"no-cache\" />\n<meta http-equiv=\"cache-control\" content=\"no-cache\" />\n<meta name=\"robots\" content=\"noarchive,none\" />\n\n<style type=\"text/css\">\nbody {\nmin-width: 950px;\n_width: 950px;\n}\nh1.error {color: red; font-size: 40pt}\n\n#mainContent {\npadding: 1em 2em;\n}\n\ndl#diags {\npadding: 0.5em 0.5em 1.5em 0.5em;\npadding-left: 2em;\nborder: solid 1px #888;\nborder-left: none;\nborder-right: none;\nmargin-bottom:0;\nbackground-color:#eeeeee;\ncolor:#666;\nfont-size: 80%;\n_font-size: 70%;\nfont-family: Verdana, sans-serif;\n}\n\ndl#diags dt {\nfloat: left;\nfont-weight: bold;\nwidth: auto;\n}\n\ndl#diags dd {\nmargin-left:1em;\nfloat: left;\nmargin-right: 2em;\n}\n\n#footer span {\nfloat: left;\ncolor: #888;\nfont-size: 80%;\n}\n\n#footer {\ntext-align: right;\npadding: 0 0.5em;\nclear: left;\n}\n\n#footer img {\nborder: none;\n}\n\n.ncbi {\nmargin: 0;\npadding:0;\nfont-size:240%;\nfont-weight: bold;\nfont-family: Times, serif;\ncolor: #336699;\nfloat: left;\ndisplay: inline;\n}\n\n.ncbi a {\ntext-decoration: none;\ncolor: #336699;\n}\n\n.ncbi a:visited {\ntext-decoration: none;\ncolor: #336699;\n}\n\n.ncbi a:hover {\ntext-decoration: underline;\n}\n\n.message {\nfont-family: Verdana, sans-serif;\nbackground-color: #336699;\ncolor: white;\npadding: .35em;\nmargin-left: 7em;\nmargin-top: .67em;\n_margin-top: 0.5em;\nfont-weight: bold;\nfont-size: 100%;\nmargin-bottom: 0;\n}\n\nh1 {\nclear: left;\nfont-size: 110%;\nfont-family: Verdana, sans-serif;\n}\n\n\nbody.denied {\nbackground-color: black;\ncolor: white;\n}\n\nbody.denied h1 {\ncolor: red;\n}\n\nbody.denied a {\ncolor: green;\n}\n\nbody.denied #footer, body.denied #diags {\ncolor: black;\n}\n\n#searchme:focus {\nbackground-color: #ffa;\n}\n\n.errurl {\nletter-spacing: 0;\nmargin: 0 1em;\npadding: 0.25em;\nbackground-color: #fff0f0;\ncolor: #c00;\nfont-family: \"Courier New\", Courier, monospace;\nfont-size: 90%;\n_font-size: 80%;\n}\n\nbody.denied .errurl {\nbackground-color: black;\ncolor: yellow;\n}\n\nspan.x {\ndisplay: none;\n}\n\n</style>\n\n</head>\n<body class='denied'>\n\n\n\n\n\n\n<div id='header'>\n<a href=\"#mainContent\" title=\"Skip to main content\" />\n<p class=\"ncbi\"><a href=\"http://www.ncbi.nlm.nih.gov\">NCBI</a></p>\n<p class=\"message\">Error</p>\n</div>\n\n<div id='mainContent'>\n\n\n<h1 class=\"error\">Access Denied</h1>\n\n\n<p>\nYour access to the NCBI website at <b>www.ncbi.nlm.nih.gov</b> has been\ntemporarily blocked due to a possible misuse/abuse situation\ninvolving your site. This is not an indication of a security issue\nsuch as a virus or attack. It could be something as simple as a run\naway script or learning how to better use E-utilities,\n<a href=\"http://www.ncbi.nlm.nih.gov/books/NBK25497/\">http://www.ncbi.nlm.nih.gov/books/NBK25497/</a>,\nfor more efficient work such that your work does not impact the ability of other researchers\nto also use our site.\nTo restore access and understand how to better interact with our site\nto avoid this in the future, please have your system administrator\ncontact \n<a href=\"mailto:info@ncbi.nlm.nih.gov?subject=NCBI Web site BLOCKED: 12.34.567.890&amp;body=%3E%20Error%3Dblocked for possible abuse%0D%3E%20Server%3Dmisuse.ncbi.nlm.nih.gov%0D%3E%20Client%3D12.34.567.890%0D%3E%20Time%3DTuesday, 03-Apr-2018 13:30:17 EDT  %0D%0DPlease%20enter%20comments%20below:%0D%0D\">info@ncbi.nlm.nih.gov</a>.\n</p>\n\n</div>\n\n<dl id='diags'>\n\n<dt>Error</dt><dd>blocked for possible abuse </dd>\n<dt>Server</dt><dd>misuse.ncbi.nlm.nih.gov</dd>\n<dt>Client</dt><dd>12.34.567.890</dd>\n<dt>Time</dt><dd>Tuesday, 03-Apr-2018 13:30:17 EDT</dd>\n\n</dl>\n \n\n<p id='footer'>\n<span id='rev'>Rev. 05/18/15</span>\n</p>\n\n</body>\n</html>\n\n";
+size_t s = string_size ( c );KDataBufferMakeBytes ( buffer, s + 9 );
+memmove(buffer->base,c,s);base = buffer -> base;
+buffer->elem_count=s;
+}
+else
+    while ( rc == 0 ) {
+        size_t num_read = 0;
+
+        uint64_t avail = buffer -> elem_count - total;
+        if ( avail == 0 ) {
+            rc = KDataBufferResize ( buffer, buffer -> elem_count + 1024 );
+            if ( rc != 0 )
+                break;
+        }
+
+        base = buffer -> base;
+        rc = KStreamRead ( stream, & base [ total ],
+            ( size_t ) buffer -> elem_count - total, & num_read );
+        if ( num_read == 0 ) {
+            buffer -> elem_count = total;
+            break;
+        }
+        if ( rc != 0 ) /* TBD - look more closely at rc */
+            rc = 0;
+
+        total += num_read;
+    }
+
+    if ( rc == 0 ) {
+        p -> begin = find ( base + i, buffer -> elem_count - i, & open );
+        if ( p -> begin != NULL ) {
+            i = p -> begin - base;
+            p -> end = find ( base + i, buffer -> elem_count - i, & close );
+            if ( p -> end != NULL )
+                * ( p -> end ) = '\0';
+        }
+    }
+
+    if ( p -> end != NULL ) {
+        CONST_STRING ( & needle, "<a href=\"mailto:" );
+        test -> mailto . begin = find ( p -> begin, p -> end - p -> begin,
+                                        & needle );
+        if ( test -> mailto . begin != NULL ) {
+            CONST_STRING ( & needle, "</a>" );
+            test -> mailto . end = find ( test -> mailto . begin,
+                p -> end - test -> mailto . begin, & needle );
+        }
+    }
+
+    if ( test -> mailto . end != NULL ) {
+        CONST_STRING ( & needle, "Client%3D" );
+        test -> ip . addr = find ( test -> mailto . begin,
+            test -> mailto . end - test -> mailto . begin, & needle );
+        if ( test -> ip . addr == NULL )
+            test -> ip . addr = "";
+        else {
+            test -> ip . addr += needle . size;
+            c = string_chr ( test -> ip . addr,
+                             test -> mailto . end - test -> ip . addr, '%' );
+            if ( c != NULL )
+                test -> ip . len = test -> ip . size = c - test -> ip . addr;
+        }
+    }
+
+    if ( test -> mailto . end != NULL ) {
+        CONST_STRING ( & needle, "Time%3D" );
+        test -> date . addr = find ( test -> mailto . begin,
+            test -> mailto . end - test -> mailto . begin, & needle );
+        if ( test -> date . addr == NULL )
+            test -> date . addr = "";
+        else {
+            test -> date . addr += needle . size;
+            c = string_chr ( test -> date . addr,
+                             test -> mailto . end - test -> date . addr, '%' );
+            if ( c != NULL )
+                test -> date . len = test -> date . size
+                                   = c - test -> date . addr;
+        }
+    }
+
+    * abuse = true;
+
+    RELEASE ( KStream, stream );
+    RELEASE ( KHttpResult, rslt );
+    RELEASE ( KHttpRequest, req );
+
     return rc;
 }
 
-static void AbuseSetStatus ( Abuse * self, uint32_t code ) {
-    assert ( self );
-    self -> code = code;
-}
-
-static rc_t AbuseAdd ( Abuse * self, const char * txt, int sz ) {
-    rc_t rc = 0;
-    assert ( self );
-    if ( rc == 0 )
-        return KDataBufferPrintf ( & self -> response,  "%s", txt );
-    else
-        return KDataBufferPrintf ( & self -> response,  "%.*s", sz, txt );
-}
-
-static rc_t TestAbuse ( STest * self, Abuse * test,
-                          bool * ok, bool * abuse )
+static rc_t STestAbuse ( STest * self, Abuse * test,
+                         bool * ok, bool * abuse )
 {
     size_t i = 0;
     const char * s = NULL;
+
     String misuse;
     CONST_STRING ( & misuse,
         "https://misuse.ncbi.nlm.nih.gov/error/abuse.shtml" );
-    assert ( self && test && ok && abuse );
+
+    assert ( test && ok && abuse );
+
     * ok = * abuse = false;
+
     if ( test -> code == 200 ) {
         * ok = true;
         return 0;
     }
+
     if ( test -> code != 302 )
         return 0;
+
+    if ( test -> location != NULL )
+        return STestAbuseRedirect ( self, test, abuse );
+
     s = test -> response . base;
-    while ( true ) {
-        const char * h = NULL;
-        assert ( test -> response . elem_count >= i );
-        h = string_chr ( s + i, ( size_t ) test -> response . elem_count - i,
-                         'h' );
-        if ( h == NULL )
-            break;
-        i = h - s;
-        if ( i < misuse . size )
-            break;
-        if ( string_cmp ( h, misuse . size,
-                          misuse . addr, misuse . size, (uint32_t) misuse . size) == 0)
-        {
-            rc_t rc = 0;
-            KHttpRequest * req = NULL;
-            KHttpResult * rslt = NULL;
-            KStream * stream = NULL;
-            KDataBuffer buffer;
-            size_t total = 0;
-            char * base = NULL;
-            rc = KDataBufferMakeBytes ( & buffer, 4096 );
-            if ( rc == 0 )
-                rc = KNSManagerMakeRequest ( self -> kmgr, & req, HTTP_VERSION,
-                                             NULL, "%S", & misuse );
-            if ( rc == 0 )
-                rc = KHttpRequestGET ( req, & rslt );
-            if ( rc == 0 )
-                rc = KHttpResultGetInputStream ( rslt, & stream );
-            while ( rc == 0 ) {
-                size_t num_read = 0;
-                uint64_t avail = buffer . elem_count - total;
-                if ( avail == 0 ) {
-                    rc = KDataBufferResize ( & buffer,
-                                             buffer . elem_count + 1024 );
-                    if ( rc != 0 )
-                        break;
-                }
-                base = buffer . base;
-                rc = KStreamRead ( stream, & base [ total ],
-                    ( size_t ) buffer . elem_count - total, & num_read );
-                if ( num_read == 0 )
-                    break;
-                if ( rc != 0 ) /* TBD - look more closely at rc */
-                    rc = 0;
-                total += num_read;
-            }
-            RELEASE ( KStream, stream );
-            RELEASE ( KHttpResult, rslt );
-            RELEASE ( KHttpRequest, req );
-            * abuse = true;
-            KDataBufferWhack ( & buffer );
-            return rc;
-        }
-        ++ i;
+    const char * h = find ( s + i, test -> response . elem_count - i,
+                            & misuse );
+    if ( h != NULL ) {
+        rc_t rc = AbuseSetLocation ( test, misuse . addr, misuse . size );
+        return rc == 0 ? STestAbuseRedirect ( self, test, abuse ) : rc;
     }
+
     return 0;
+}
+
+static char * processResponse ( char * response, size_t size ) {
+    int n = 0;
+
+    size_t i = 0;
+    for ( i = 0; i < size; ++ n ) {
+        const char * p = string_chr ( response + i, size - i, '|' );
+        if ( p == NULL )
+            return NULL;
+
+        i = p - response + 1;
+
+        if ( n == 5 ) {
+            for ( ; response [ i ] != '|' && i < size; ++i )
+                response [ i ] = 'x';
+
+            return response [ i ] == '|' ? response + i + 1 : NULL;
+        }
+    }
+
+    return NULL;
 }
 
 static rc_t STestCallCgi ( STest * self, uint64_t atest, const String * acc,
     char * response, size_t response_sz, size_t * resp_read,
-    const char ** url, Abuse * test, bool http )
+    const char ** url, bool http )
 {
     rc_t rc = 0;
 
@@ -1857,8 +2154,11 @@ static rc_t STestCallCgi ( STest * self, uint64_t atest, const String * acc,
     const String * cgi = NULL;
     KHttpResult * rslt = NULL;
     KStream * stream = NULL;
+    Abuse * test = NULL;
 
-    assert ( self && url );
+    assert ( url && self && self -> dad );
+
+    test = & self -> dad -> report . abuse;
 
     STestStart ( self, true, atest,
                  "Resolving of %s path to '%S'", http ? "HTTPS": "FASP", acc );
@@ -1866,6 +2166,7 @@ static rc_t STestCallCgi ( STest * self, uint64_t atest, const String * acc,
     * url = NULL;
 
     cgi = KConfig_Resolver ( self -> kfg );
+    AbuseSetCgi ( test, cgi );
     STestStart ( self, false, 0,
         "KHttpRequest = KNSManagerMakeReliableClientRequest(%S):", cgi );
     rc = KNSManagerMakeReliableClientRequest ( self -> kmgr, & req,
@@ -1875,8 +2176,10 @@ static rc_t STestCallCgi ( STest * self, uint64_t atest, const String * acc,
     if ( rc != 0 ) {
         if ( _RcCanceled ( rc ) )
             STestEnd ( self, eCANCELED, "CANCELED" );
-        else
+        else {
+            self -> dad -> report . firewall = true;
             STestEnd ( self, eEndFAIL, "%R", rc );
+        }
     }
     if ( rc == 0 ) {
         const char param [] = "accept-proto";
@@ -1903,6 +2206,45 @@ static rc_t STestCallCgi ( STest * self, uint64_t atest, const String * acc,
                         "KHttpRequestAddPostParam(%s=3.0)", param );
     }
     if ( rc == 0 ) {
+        rc_t r1 = 0;
+        const KConfigNode * nProtected = NULL;
+        KNamelist * names = NULL;
+        uint32_t count = 0;
+        const char path [] = "/repository/user/protected";
+        if ( KConfigOpenNodeRead ( self -> kfg, & nProtected, path ) != 0 )
+            return 0;
+        r1 = KConfigNodeListChildren ( nProtected, & names );
+        if ( r1 == 0 )
+            r1 = KNamelistCount ( names, & count );
+        if ( r1 == 0 ) {
+            uint32_t i = 0;
+            for ( i = 0; i < count; ++ i ) {
+                const KConfigNode * node = NULL;
+                String * tic = NULL;
+                const char * name = NULL;
+                r1 = KNamelistGet ( names, i, & name );
+                if ( r1 != 0 )
+                    continue;
+                r1 = KConfigNodeOpenNodeRead ( nProtected, & node,
+                                               "%s/download-ticket", name );
+                if ( r1 != 0 )
+                    continue;
+                r1 = KConfigNodeReadString ( node, & tic );
+                if ( r1 == 0 ) {
+                    const char param[] = "tic";
+                    rc = KHttpRequestAddPostParam ( req, "%s=%S", param, tic );
+                    if ( rc != 0 )
+                        STestFail ( self, rc, 0,
+                            "KHttpRequestAddPostParam(%s)", param );
+                    free ( tic );
+                    tic = NULL;
+                }
+                RELEASE ( KConfigNode, node  );
+            }
+        }
+        RELEASE ( KConfigNode, nProtected  );
+    }
+    if ( rc == 0 ) {
         STestStart ( self, false, 0,
                      "KHttpRequestPOST(KHttpRequest(%S)):", cgi );
         rc = KHttpRequestPOST ( req, & rslt );
@@ -1924,13 +2266,15 @@ static rc_t STestCallCgi ( STest * self, uint64_t atest, const String * acc,
             STestEnd ( self, eEndFAIL, "%R", rc );
         else {
             rc = STestEnd ( self, eMSG, "%u: ", code );
-            if ( rc == 0 )
+            if ( rc == 0 ) {
                 if ( code == 200 )
                     STestEnd ( self, eEndOK, "OK" );
                 else {
                     STestEnd ( self, eEndFAIL, "bad status" );
                     rs = RC ( rcRuntime, rcFile, rcReading, rcFile, rcInvalid );
                 }
+                AbuseSetStatus ( test, code );
+            }
             else  if ( STestCanceled ( self, rc ) )
                 STestEnd ( self, eCANCELED, "CANCELED" );
             else
@@ -1951,8 +2295,12 @@ static rc_t STestCallCgi ( STest * self, uint64_t atest, const String * acc,
             else
                 STestEnd ( self, eEndFAIL, "%R", r2 );
         }
-        else
+        else {
             STestEnd ( self, eEndFAIL, "'%.*s'", ( int ) num_read, buffer );
+            r2 = AbuseSetLocation ( test, buffer, num_read );
+            if ( r2 != 0 && rc == 0)
+                rc = r2;
+        }
     }
     if ( rc == 0 ) {
         rc = KHttpResultGetInputStream ( rslt, & stream );
@@ -1980,26 +2328,29 @@ static rc_t STestCallCgi ( STest * self, uint64_t atest, const String * acc,
                 {
                     response [ * resp_read ] = '\0';
                 }
-            }//TODO: hide the download ticket if any
-            rc = STestEnd ( self, eEndOK, "'%s': OK", response );
-            if ( rs == 0 ) {
-                int i = 0;
-                uint64_t p = 0;
-                for ( i = 0; p < * resp_read ; ++ i ) {
-                    char * n = string_chr ( response + p,
-                                            * resp_read - p, '|' );
-                    if ( n != NULL )
-                        p = n - response + 1;
-                    if ( i == 6 ) {
-                        * url = n + 1;
-                        break;
-                    }
-                }
             }
+            * url = processResponse ( response, * resp_read );
+            if ( rs != 0 )
+                * url = NULL;
+            rc = STestEnd ( self, eEndOK, "'%s': OK", response );
+            if ( true )
+                AbuseAdd ( test, response, * resp_read );
+else      AbuseAdd(test,"<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n"
+"<html><head>\n"
+"<title>302 Found</title>\n"
+"</head><body>\n"
+"<h1>Found</h1>\n"
+"<p>The document has moved <a href=\"https://misuse.ncbi.nlm.nih.gov/error/abuse.shtml\">here</a>.</p>\n"
+"</body></html>",0);
         }
     }
-    if ( rc == 0 && rs != 0 )
-        rc = rs;
+    {
+        bool ok = false;
+        bool abuse = true;
+        STestAbuse ( self, test, & ok, & abuse );
+        if ( abuse )
+            self -> dad -> report . blocked = true;
+    }
     KStreamRelease ( stream );
     stream = NULL;
     KHttpResultRelease ( rslt );
@@ -2008,19 +2359,26 @@ static rc_t STestCallCgi ( STest * self, uint64_t atest, const String * acc,
     req = NULL;
     free ( ( void * ) cgi );
     cgi = NULL;
-AbuseSetStatus(test,302);
-AbuseAdd(test,"<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n"
+/*AbuseAdd(test,"<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n"
 "<html><head>\n"
 "<title>302 Found</title>\n"
 "</head><body>\n"
 "<h1>Found</h1>\n"
 "<p>The document has moved <a href=\"https://misuse.ncbi.nlm.nih.gov/error/abuse.shtml\">here</a>.</p>\n"
-"</body></html>",0);
-{bool ok, abuse;
-TestAbuse(self,test,&ok,&abuse);}
-    if ( rc == 0 )
-        rc = STestEnd ( self, eOK,  "Resolving of %s path to '%S'",
+"</body></html>",0);*/
+    if ( rc == 0 ) {
+        const char * server = test -> server;
+        if ( server == NULL )
+            server = "www.ncbi.nlm.nih.gov ";
+        if ( rs == 0 )
+            rc = STestEnd ( self, eOK,  "Resolving of %s path to '%S'",
+                                        http ? "HTTPS": "FASP", acc );
+        else {
+            rc = rs;
+            STestEnd ( self, eFAIL, "Resolving of %s path to '%S'",
                                     http ? "HTTPS": "FASP", acc );
+        }
+    }
     else if ( _RcCanceled ( rc ) )
         STestEnd ( self, eCANCELED, "Resolving of %s path to '%S': CANCELED",
                                     http ? "HTTPS": "FASP", acc );
@@ -2720,6 +3078,7 @@ LIB_EXPORT rc_t CC KDiagnoseMakeExt ( KDiagnose ** test, KConfig * kfg,
         p -> verbosity = KConfig_Verbosity ( p -> kfg );
         KRefcountInit ( & p -> refcount, 1, DIAGNOSE_CLSNAME, "init", "" );
         p -> quitting = quitting;
+        AbuseInit ( & p -> report . abuse );
         * test = p;
     }
     else
@@ -2761,6 +3120,8 @@ LIB_EXPORT rc_t CC KDiagnoseRelease ( const KDiagnose * cself ) {
                 VectorWhack ( & self -> errors, & errorWhack, NULL );
 
                 RELEASE ( KDiagnoseTestDesc, self -> desc  );
+
+                AbuseFini ( & self -> report . abuse );
 
                 free ( self );
                 break;
@@ -2829,11 +3190,15 @@ static rc_t STestKNSManagerInitDNSEndpoint ( STest * self, uint64_t tests,
 
     KEndPoint ep;
 
+    assert ( self && self -> dad );
+
     STestStart ( self, false, tests, "KNSManagerInitDNSEndpoint(%S:%hu)",
                                                           host, port );
     rc = KNSManagerInitDNSEndpoint ( self -> kmgr, & ep, host, port );
-    if ( rc != 0 )
+    if ( rc != 0 ) {
+        self -> dad -> report . firewall = true;
         STestEnd ( self, warn ? eWarning : eEndFAIL, "%R", rc );
+    }
     else {
         char endpoint [ 1024 ] = "";
         rc_t rx = endpoint_to_string ( endpoint, sizeof endpoint, & ep );
@@ -2884,7 +3249,7 @@ static rc_t STestCheckNcbiAccess ( STest * self, uint64_t tests ) {
             if ( r1 == 0 ) {
                 uint64_t s = 0;
                 r1 = STestCheckUrl ( self, tests, KDIAGN_ACCESS_NCBI_VERSION,
-                                     0, & v, "", & s, true, 0, 0 );
+                                     0, & v, "", & s, true, 0, 0, NULL );
             }
             DataFini ( & v );
         }
@@ -3053,8 +3418,9 @@ static rc_t STestCache ( const STest * self, const String * acc,
 }
 
 static rc_t STestCheckHttp ( STest * self, uint64_t tests, const String * acc,
-    bool print, char * downloaded, size_t sDownloaded,
-    uint64_t * downloadedSize, const char * exp, size_t esz )
+    bool print,
+    char * downloaded, size_t sDownloaded, uint64_t * downloadedSize,
+    const char ** exp, size_t esz, bool * tooBig )
 {
     rc_t rc = 0;
     char response [ 4096 ] = "";
@@ -3062,14 +3428,11 @@ static rc_t STestCheckHttp ( STest * self, uint64_t tests, const String * acc,
     const char * url = NULL;
     bool failed = false;
     uint64_t atest = KDIAGN_HTTP_RUN;
-    Abuse test;
-    AbuseInit ( & test );
     STestStart ( self, true, atest,
                  "HTTPS access to '%S'", acc );
     if ( tests & KDIAGN_HTTP_CGI )
         rc = STestCallCgi ( self, KDIAGN_HTTP_CGI, acc,
-            response, sizeof response, & resp_len, & url, & test, true );
-    AbuseFini ( & test );
+            response, sizeof response, & resp_len, & url, true );
 
     if ( rc == 0 ) {
         rc = STestCache ( self, acc, downloaded, sDownloaded, "http" );
@@ -3091,7 +3454,7 @@ static rc_t STestCheckHttp ( STest * self, uint64_t tests, const String * acc,
             if ( rc == 0 ) {
                 rc_t r1 = STestCheckUrl ( self,
                     tests, KDIAGN_HTTP_SMALL_ACCESS, KDIAGN_HTTP_SMALL_VFS,
-                    & dt, downloaded, downloadedSize, print, exp, esz );
+                    & dt, downloaded, downloadedSize, print, exp, esz, tooBig );
                 if ( rc == 0 && r1 != 0 ) {
                     assert ( downloaded );
                     * downloaded = '\0';
@@ -3115,7 +3478,7 @@ static rc_t STestCheckHttp ( STest * self, uint64_t tests, const String * acc,
 
 static rc_t STestCheckFasp ( STest * self, uint64_t tests, const String * acc,
     bool print, char * downloaded, size_t sDownloaded,
-    uint64_t * downloadedSize, const char * exp, size_t esz )
+    uint64_t * downloadedSize )
 {
     rc_t rc = 0;
     char response [ 4096 ] = "";
@@ -3123,13 +3486,10 @@ static rc_t STestCheckFasp ( STest * self, uint64_t tests, const String * acc,
     const char * url = NULL;
     bool failed = false;
     uint64_t atest = KDIAGN_ASCP_RUN;
-    Abuse test;
-    AbuseInit ( & test );
     STestStart ( self, true, atest, "Aspera access to '%S'", acc );
     if ( tests & KDIAGN_ASCP_CGI )
         rc = STestCallCgi ( self, KDIAGN_ASCP_CGI, acc,
-            response, sizeof response, & resp_len, & url, & test, false );
-    AbuseFini ( & test );
+            response, sizeof response, & resp_len, & url, false );
 
     if ( tests & KDIAGN_DOWNLOAD_ASCP ) {
         if ( rc == 0 ) {
@@ -3740,10 +4100,12 @@ static rc_t STestCheckGapKfg ( STest * self, uint64_t tests ) {
                                 STestEnd ( self, eEndFAIL, "cannot read "
                                     "'%s/%s/apps/file/volumes/flat': %R",
                                     path, name, r2 );
-                            else
+                            else {
+                                self -> dad -> report . incompleteGapKfg = true;
                                 STestEnd ( self, tests & KDIAGN_TRY_TO_WARN
                                                     ? eWarning : eEndFAIL,
                                            "not found" );
+                            }
                         }
                         else
                             STestEnd ( self, eEndOK, "OK" );
@@ -3761,10 +4123,12 @@ static rc_t STestCheckGapKfg ( STest * self, uint64_t tests ) {
                                 STestEnd ( self, eEndFAIL, "cannot read "
                                     "'%s/%s/apps/sra/volumes/sraFlat': %R",
                                     path, name, r2 );
-                            else
+                            else {
+                                self -> dad -> report . incompleteGapKfg = true;
                                 STestEnd ( self, tests & KDIAGN_TRY_TO_WARN
                                                     ? eWarning : eEndFAIL,
                                            "not found" );
+                            }
                         }
                         else
                             STestEnd ( self, eEndOK, "OK" );
@@ -3817,10 +4181,12 @@ static rc_t STestCheckGapKfg ( STest * self, uint64_t tests ) {
                                 STestEnd ( self, eEndFAIL, "cannot read "
                                     "'%s/%s/download-ticket': %R",
                                     path, name, r2 );
-                            else
+                            else {
+                                self -> dad -> report . incompleteGapKfg = true;
                                 STestEnd ( self, tests & KDIAGN_TRY_TO_WARN
                                                     ? eWarning : eEndFAIL,
                                            "not found" );
+                            }
                         }
                         else
                             STestEnd ( self, eEndOK, "OK" );
@@ -3851,11 +4217,14 @@ static rc_t STestCheckGapKfg ( STest * self, uint64_t tests ) {
                                             "'%s/%s/encryption-key-path': %R",
                                             path, name, r2 );
                                     }
-                                    else
+                                    else {
+                                        self -> dad -> report . incompleteGapKfg
+                                            = true;
                                         STestEnd ( self,
                                             tests & KDIAGN_TRY_TO_WARN
                                                 ? eWarning : eEndFAIL,
                                             "not found" );
+                                    }
                                 }
                             }
                         }
@@ -3919,8 +4288,10 @@ static rc_t STestCheckGapKfg ( STest * self, uint64_t tests ) {
                     }
                     else if ( _RcCanceled ( r1 ) )
                         STestEnd ( self, eCANCELED, name );
-                    else
+                    else {
+                        self -> dad -> report . incompleteGapKfg = true;
                         STestEnd ( self, eFAIL, name );
+                    }
                 }
             }
             RELEASE ( KNamelist, names  );
@@ -3951,8 +4322,6 @@ static rc_t CC STestRun ( STest * self, uint64_t tests,
     uint32_t projectId, va_list args )
 {
     rc_t rc = 0;
-
-    const char exp [] = "NCBI.sra\210\031\003\005\001\0\0\0";
 
     assert ( self );
 
@@ -3994,10 +4363,14 @@ static rc_t CC STestRun ( STest * self, uint64_t tests,
 
     if ( tests & KDIAGN_NETWORK && ! _RcCanceled ( rc ) ) {
         rc_t r1 = 0;
+        bool tooBig = false;
         String run;
         char http [ PATH_MAX ] = "";
         uint64_t httpSize = 0;
-        CONST_STRING ( & run, "SRR029074" );
+        if ( acc != NULL )
+            StringInitCString ( & run, acc );
+        else
+            CONST_STRING ( & run, "SRR029074" );
         STestStart ( self, true, KDIAGN_NETWORK, "Network" );
         if ( tests & KDIAGN_ACCESS_NCBI && ! _RcCanceled ( r1 ) ) {
             rc_t r2 = 0;
@@ -4008,8 +4381,10 @@ static rc_t CC STestRun ( STest * self, uint64_t tests,
             else {
                 if ( _RcCanceled ( r2 ) )
                     STestEnd ( self, eCANCELED, "Access to NCBI: CANCELED" );
-                else
+                else {
                     STestEnd ( self, eFAIL,     "Access to NCBI" );
+                    self -> dad -> report . firewall = true;
+                }
             }
             if ( r1 == 0 && r2 != 0 )
                 r1 = r2;
@@ -4017,10 +4392,14 @@ static rc_t CC STestRun ( STest * self, uint64_t tests,
         if ( tests & KDIAGN_HTTP && ! _RcCanceled ( r1 ) ) {
             rc_t r2 = 0;
             STestStart ( self, true, KDIAGN_HTTP, "HTTPS download" );
-            if ( tests & KDIAGN_HTTP_RUN )
-                r2 = STestCheckHttp ( self, tests,
-                    & run, false, http, sizeof http, & httpSize,
-                    exp, sizeof exp - 1 );
+            if ( tests & KDIAGN_HTTP_RUN ) {
+                const char sra  [] = "NCBI.sra\210\031\003\005\001\0\0\0";
+                const char nenc [] = "NCBInenc\210\031\003\005\002\0\0\0";
+                const char * exp [] = { sra, nenc };
+                size_t s = sizeof sra - 1;
+                r2 = STestCheckHttp ( self, tests, & run, false,
+                    http, sizeof http, & httpSize, exp, s, & tooBig );
+            }
             if ( r2 == 0 )
                 r2 = STestEnd ( self, eOK,      "HTTPS download" );
             else {
@@ -4036,11 +4415,17 @@ static rc_t CC STestRun ( STest * self, uint64_t tests,
             rc_t r2 = 0;
             char fasp [ PATH_MAX ] = "";
             uint64_t faspSize = 0;
+            String smallrun;
+            const String * frun = & run;
             STestStart ( self, true, KDIAGN_ASCP, "Aspera download" );
+            if ( tooBig ) {
+                CONST_STRING ( & smallrun, "SRR029074" );
+                frun = & smallrun;
+            }
+
             if ( tests & KDIAGN_ASCP_RUN )
                 r2 = STestCheckFasp ( self, tests,
-                    & run, false, fasp, sizeof fasp, & faspSize,
-                    exp, sizeof exp - 1 );
+                    frun, false, fasp, sizeof fasp, & faspSize );
             if ( r2 == 0 )
                 r2 = STestEnd ( self, eOK,      "Aspera download" );
             else {
@@ -4051,7 +4436,7 @@ static rc_t CC STestRun ( STest * self, uint64_t tests,
             }
             if ( r1 == 0 && r2 != 0 )
                 r1 = r2;
-            if ( tests & KDIAGN_HTTP_VS_ASCP &&
+            if ( tests & KDIAGN_HTTP_VS_ASCP && ! tooBig &&
                  r2 == 0 && httpSize != 0 && faspSize != 0 )
             {
                 r2 = STestHttpVsFasp ( self, http, httpSize, fasp, faspSize );
@@ -4162,7 +4547,7 @@ LIB_EXPORT rc_t CC KDiagnoseAcc ( KDiagnose * self,  const char * acc,
     uint32_t projectId, bool checkHttp, bool checkAspera, bool checkDownload,
     uint64_t tests )
 {
-    return KDiagnoseRunImpl ( self, "System", KDIAGN_ALL, NULL, 0,
+    return KDiagnoseRunImpl ( self, "System", tests, NULL, 0,
                               checkHttp, checkAspera, checkDownload, acc, 0 );
 }
 

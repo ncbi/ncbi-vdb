@@ -70,6 +70,9 @@
     <Filter Include="ngs-c++">
       <UniqueIdentifier>{1cca6da3-28fe-4790-9882-9041a5a9ea51}</UniqueIdentifier>
     </Filter>
+    <Filter Include="diagnose">
+      <UniqueIdentifier>{e8ef64c9-28bc-479a-8d18-ef97b564c71e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\libs\align\al_iterator.c">
@@ -535,9 +538,6 @@
       <Filter>klib</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\klib\namelist.c">
-      <Filter>klib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\klib\ncbi-vdb-version.c">
       <Filter>klib</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\klib\out.c">
@@ -1188,7 +1188,6 @@
     <ClCompile Include="..\..\..\libs\vdb\transpose.c">
       <Filter>vdb</Filter>
     </ClCompile>
-
     <ClCompile Include="..\..\..\libs\vfs\manager.c">
       <Filter>vfs</Filter>
     </ClCompile>
@@ -1213,7 +1212,6 @@
     <ClCompile Include="..\..\..\libs\vfs\win\syspath.c">
       <Filter>vfs</Filter>
     </ClCompile>
-
     <ClCompile Include="..\..\..\libs\vxf\add-row-id.c">
       <Filter>vxf</Filter>
     </ClCompile>
@@ -1355,5 +1353,112 @@
     </ClCompile>
     <ClCompile Include="..\..\..\libs\align\reader-wgs.c" />
     <ClCompile Include="..\..\..\libs\kns\http-retrier.c" />
+    <ClCompile Include="..\..\..\libs\align\unsupported_pileup_estimator.c" />
+    <ClCompile Include="..\..\..\libs\axf\seq-restore-linkage-group.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\aes.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\aesni.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\arc4.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\asn1parse.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\asn1write.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\base64.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\bignum.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\blowfish.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\camellia.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\ccm.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\cipher.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\cipher_wrap.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\ctr_drbg.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\des.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\dhm.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\ecdh.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\ecdsa.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\ecjpake.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\ecp.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\ecp_curves.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\entropy.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\entropy_poll.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\error.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\gcm.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\havege.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\hmac_drbg.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\md.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\md2.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\md4.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\md5.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\md_wrap.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\memory_buffer_alloc.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\oid.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\padlock.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\pem.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\pk.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\pk_wrap.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\pkcs12.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\pkcs5.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\pkparse.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\pkwrite.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\platform.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\ripemd160.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\rsa.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\sha1.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\sha256.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\sha512.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\threading.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\timing.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\version.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\version_features.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\xtea.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\certs.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\pkcs11.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\x509.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\x509_create.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\x509_crl.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\x509_crt.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\x509_csr.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\x509write_crt.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\x509write_csr.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\debug.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\net.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\ssl_cache.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\ssl_ciphersuites.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\ssl_cli.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\ssl_cookie.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\ssl_srv.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\ssl_ticket.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\ssl_tls.c" />
+    <ClCompile Include="..\..\..\libs\kfg\config-aws.c" />
+    <ClCompile Include="..\..\..\libs\kfs\cacheteefile2.c" />
+    <ClCompile Include="..\..\..\libs\kfs\recorder.c" />
+    <ClCompile Include="..\..\..\libs\kfs\poolpages.c" />
+    <ClCompile Include="..\..\..\libs\kfs\lru_cache.c" />
+    <ClCompile Include="..\..\..\libs\kfs\rrcachedfile.c" />
+    <ClCompile Include="..\..\..\libs\kfs\logfile.c" />
+    <ClCompile Include="..\..\..\libs\klib\all-vdb-version.c" />
+    <ClCompile Include="..\..\..\libs\klib\btree.c" />
+    <ClCompile Include="..\..\..\libs\kns\stream-from-buffer.c" />
+    <ClCompile Include="..\..\..\libs\kns\buffered-stream.c" />
+    <ClCompile Include="..\..\..\libs\kns\tls.c" />
+    <ClCompile Include="..\..\..\libs\ngs\CSRA1_Read.c" />
+    <ClCompile Include="..\..\..\libs\ngs\NGS_FragmentBlob.c" />
+    <ClCompile Include="..\..\..\libs\ngs\NGS_FragmentBlobIterator.c" />
+    <ClCompile Include="..\..\..\libs\ngs\VByteBlob.c" />
+    <ClCompile Include="..\..\..\libs\ngs\NGS_ReferenceBlob.c" />
+    <ClCompile Include="..\..\..\libs\ngs\NGS_ReferenceBlobIterator.c" />
+    <ClCompile Include="..\..\..\libs\sraxf\tokenize-spot_name-generic-fastq.c" />
+    <ClCompile Include="..\..\..\libs\diagnose\diagnose.c">
+      <Filter>diagnose</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\diagnose\endpoint.c">
+      <Filter>diagnose</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\libs\diagnose\diagnose.h">
+      <Filter>diagnose</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\libs\diagnose\Makefile">
+      <Filter>diagnose</Filter>
+    </None>
   </ItemGroup>
 </Project>
