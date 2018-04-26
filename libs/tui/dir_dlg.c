@@ -227,13 +227,13 @@ static rc_t DirDlgDirectoryChanged ( struct KTUIDlg * dlg, dir_dlg_data * data, 
     rc_t rc = 0;
 
     if ( selection == 0 && !data->in_root )
-		DirDlg_Goto_Parent ( data );
+        DirDlg_Goto_Parent ( data );
     else
-		rc = DirDlg_Goto_Child ( dlg, data, selection );
+        rc = DirDlg_Goto_Child ( dlg, data, selection );
 
-	if ( rc == 0 )
-		rc = set_native_caption( dlg, data->vfs_mgr, ID_CURR, data->current_dir_internal );	
-	
+    if ( rc == 0 )
+        rc = set_native_caption( dlg, data->vfs_mgr, ID_CURR, data->current_dir_internal ); 
+    
     if ( rc == 0 )
         rc = fill_widget_with_dirs( dlg, data->dir, ID_DIRS, data->current_dir_internal, data->parent_dir_internal );
 
@@ -243,7 +243,7 @@ static rc_t DirDlgDirectoryChanged ( struct KTUIDlg * dlg, dir_dlg_data * data, 
     if ( rc == 0 )
         rc = KTUIDlgDraw( dlg, false );
 
-	return rc;
+    return rc;
 }
 
 
