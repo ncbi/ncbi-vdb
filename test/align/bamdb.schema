@@ -1,0 +1,68 @@
+version 1;
+
+include 'vdb/built-in.vschema';
+include 'ncbi/sra.vschema';
+include 'insdc/insdc.vschema';
+include 'align/seq.vschema';
+
+table NCBI:align:tbl:ir #1.0.0
+{
+    column utf8 READ_NAME;               // used for assembling fragments
+    column INSDC:dna:text READ;          // the actual bases. See note[1] below.
+    column ascii REFSEQ_ID_CMN;          // chr1 - this should be a dictionary column
+    column INSDC:coord:zero REF_START;     // see note[2] below
+    column U64 PROJECTED_LEN;            // maybe not from your standpoint
+    column ascii CIGAR;                  // you may not be the only producer of CIGAR
+    column bool PCR_DUPLICATE;           // extracted from sam flags. See note[3] below
+    column bool BAD;                     //   ""
+    column U32 sam_record_flags;              // blah
+
+    default column INSDC:quality:phred QUALITY
+        = out_qual_phred;
+
+    INSDC:quality:phred in_qual_phred
+        = QUALITY
+        | ( INSDC:quality:phred ) < B8 > diff < 33 > ( in_qual_text_phred_33 );
+
+    physical column INSDC:quality:phred .QUALITY
+        = in_qual_phred ;
+
+    INSDC:quality:phred out_qual_phred
+        = .QUALITY;
+
+    column INSDC:quality:text:phred_33 QUALITY
+        = out_qual_text_phred_33;
+
+    INSDC:quality:text:phred_33 in_qual_text_phred_33
+        = QUALITY;
+
+    INSDC:quality:text:phred_33 out_qual_text_phred_33
+        = ( INSDC:quality:text:phred_33 ) < B8 > sum < 33 > ( out_qual_phred );
+
+
+};
+
+table NCBI:align:tbl:hdrs #1.0.0
+{
+    column U64 GROUP;
+    column ascii HDR;
+    column ascii TAG;
+    column ascii VALUE;
+};
+
+table NCBI:align:tbl:meta #1.0.0
+{
+    column ascii TOOL;
+    column ascii CMDLINE;
+    column ascii INPUT_FILE;
+    column U64 NUM_HEADERS;
+    column U64 NUM_ALIGNMENTS;
+};
+
+database NCBI:align:db:BAM_DB #1.0.0
+{
+    table NCBI:align:tbl:ir #1 ir;
+    table NCBI:align:tbl:hdrs #1 hdrs;
+    table NCBI:align:tbl:meta #1 meta;
+};
+
