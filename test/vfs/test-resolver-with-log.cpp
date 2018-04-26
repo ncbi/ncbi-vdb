@@ -105,6 +105,16 @@ FIXTURE_TEST_CASE ( AAAB01008846, Fixture ) {
 }
 
 FIXTURE_TEST_CASE ( SRR1008846, Fixture ) {
+    REQUIRE_RC ( VFSManagerMakePath ( _mgr, & _query, "SRR1008846" ) );
+    REQUIRE_RC ( VResolverQuery
+        ( _resolver, eProtocolFaspHttps, _query, NULL, & _remote, NULL ) );
+
+    char buffer [ 9 ];
+    REQUIRE_RC ( VPathReadScheme ( _remote, buffer, sizeof buffer, NULL ) );
+    REQUIRE_EQ ( string ( buffer ), string ( "fasp" ) );
+}
+
+FIXTURE_TEST_CASE ( SRR100884612, Fixture ) {
     REQUIRE_RC ( VResolverSetVersion ( _resolver, "1.2" ));
 
     REQUIRE_RC ( VFSManagerMakePath ( _mgr, & _query, "SRR1008846" ) );
@@ -114,6 +124,20 @@ FIXTURE_TEST_CASE ( SRR1008846, Fixture ) {
     char buffer [ 9 ];
     REQUIRE_RC ( VPathReadScheme ( _remote, buffer, sizeof buffer, NULL ) );
     REQUIRE_EQ ( string ( buffer ), string ( "fasp" ) );
+}
+
+FIXTURE_TEST_CASE ( AAAA09, Fixture ) {
+    REQUIRE_RC ( VFSManagerMakePath ( _mgr, & _query, "AAAA09" ) );
+    REQUIRE_RC_FAIL ( VResolverQuery
+        ( _resolver, eProtocolFaspHttps, _query, NULL, & _remote, NULL ) );
+}
+
+FIXTURE_TEST_CASE ( AAAA0912, Fixture ) {
+    REQUIRE_RC ( VResolverSetVersion ( _resolver, "1.2" ));
+
+    REQUIRE_RC ( VFSManagerMakePath ( _mgr, & _query, "AAAA09" ) );
+    REQUIRE_RC_FAIL ( VResolverQuery
+        ( _resolver, eProtocolFaspHttps, _query, NULL, & _remote, NULL ) );
 }
 
 FIXTURE_TEST_CASE ( ZZZZ99, Fixture ) {

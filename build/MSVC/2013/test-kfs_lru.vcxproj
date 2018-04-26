@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{CFD664E1-E189-796B-E63D-67CC2D1BE00D}</ProjectGuid>
+    <ProjectGuid>{141D322E-7298-4E6D-83A5-EF06193F51D2}</ProjectGuid>
   </PropertyGroup>
   <PropertyGroup>
     <WorkingDirectory>kfs</WorkingDirectory>

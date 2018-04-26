@@ -23,9 +23,9 @@
 // ===========================================================================
 
 #include <vdb/manager.h> // VDBManager
-#include <vdb/database.h> 
-#include <vdb/table.h> 
-#include <vdb/cursor.h> 
+#include <vdb/database.h>
+#include <vdb/table.h>
+#include <vdb/cursor.h>
 #include <vdb/schema.h> /* VSchemaRelease */
 #include <vdb/vdb-priv.h>
 
@@ -83,13 +83,13 @@ public:
         KDirectoryRelease ( m_wd );
     }
     void RemoveDatabase()
-    {   
+    {
         if ( ! m_databaseName . empty () )
         {
             KDirectoryRemove ( m_wd, true, m_databaseName . c_str () );
         }
     }
-    
+
 #if !READ_ONLY
     VCursor* CreateDatabase()
     {
@@ -320,7 +320,7 @@ FIXTURE_TEST_CASE ( SparseColEmpty, VDB_Fixture)
     rc_t rc;
     int64_t row_id;
     rc = VCursorFindNextRowId ( rcursor, 0, &row_id );
-    if ( rc == 0 || GetRCState ( rc ) != rcEmpty || GetRCObject ( rc ) != rcCursor )
+    if ( rc == 0 || GetRCState ( rc ) != rcEmpty || GetRCObject ( rc ) != (int)rcCursor )
         FAIL("expected to fail with rcCursor rcNotFound");
 }
 
@@ -330,7 +330,7 @@ extern "C"
 {
 
 #include <kapp/args.h>
-#include <kfg/config.h> 
+#include <kfg/config.h>
 
 ver_t CC KAppVersion ( void )
 {

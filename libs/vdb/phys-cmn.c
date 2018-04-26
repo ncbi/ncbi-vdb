@@ -81,7 +81,7 @@ void VPhysicalDestroy ( VPhysical *self )
     PROD_TRACK_REFCOUNT(VProductionRelease, self->b2p);
     VProductionRelease ( self -> b2p, NULL );
     PROD_TRACK_REFCOUNT(VProductionRelease, self->b2s);
-    VProductionRelease ( self -> b2s, NULL ); 
+    VProductionRelease ( self -> b2s, NULL );
     PROD_TRACK_REFCOUNT(VProductionRelease, self->in);
     VProductionRelease ( self -> in, NULL );
 #endif
@@ -94,7 +94,7 @@ void VPhysicalDestroy ( VPhysical *self )
 
     KMetadataRelease ( self -> meta );
     KColumnRelease ( self -> kcol );
-    
+
     free ( self );
 }
 
@@ -211,7 +211,7 @@ rc_t VPhysicalFinishStatic ( VPhysical *self, const VSchema *schema, const SPhys
             if ( rc == 0 )
             {
                 uint64_t row_count;
-                
+
                 rc = KMDataNodeReadAsU64 ( node, & row_count );
                 KMDataNodeRelease ( node );
                 assert(row_count != 0);
@@ -222,7 +222,7 @@ rc_t VPhysicalFinishStatic ( VPhysical *self, const VSchema *schema, const SPhys
     else if ( GetRCState ( rc ) == rcNotFound )
     {
         /* get the table metadata */
-        const KMetadata *tmeta = self -> curs -> tbl -> meta;
+        const KMetadata *tmeta = VCursorGetTable ( self -> curs ) -> meta;
 
         /* original static column with no range */
         self -> sstart_id = 1;
@@ -310,7 +310,7 @@ rc_t VPhysicalOpenRead ( VPhysical *self, VSchema *schema, const VTable *tbl )
     rc = KTableOpenColumnRead ( tbl -> ktbl, & self -> kcol,
         "%.*s", ( int ) name -> name . size - 1, name -> name . addr + 1 );
     if ( rc == 0 )
-    { 
+    {
         /* open its metadata */
         rc = KColumnOpenMetadataRead ( self -> kcol, & self -> meta );
         if ( rc == 0 || GetRCState ( rc ) == rcNotFound )
@@ -422,7 +422,7 @@ rc_t VPhysicalReadKColumn ( VPhysical *self, VBlob **vblob, int64_t id, uint32_t
 #if BLOB_VALIDATION
             KDataBuffer whole_blob;
             KColumnBlobCSData cs_data;
-            bool validate_this_blob = self -> curs -> tbl -> blob_validation;
+            bool validate_this_blob = VCursorGetTable ( self -> curs ) -> blob_validation;
 
             if ( rc == 0 && validate_this_blob )
             {
@@ -619,12 +619,12 @@ rc_t VPhysicalReadBlob ( VPhysical *self, VBlob **vblob, int64_t id, uint32_t el
     }
 
     /* need to read from kcolumn path */
-    rc = VProductionReadBlob ( self -> b2p, vblob, id , 1, NULL);
+    rc = VProductionReadBlob ( self -> b2p, vblob, & id , 1, NULL);
 	if ( rc == 0 )
     {
 	    if((*vblob)->pm==NULL)
         {
-            rc = PageMapProcessGetPagemap(&self->curs->pmpr,&(*vblob)->pm);
+            rc = PageMapProcessGetPagemap( VCursorPageMapProcessRequest ( self -> curs ), &(*vblob)->pm);
 	    }
     }
 
@@ -650,10 +650,11 @@ rc_t VPhysicalProdMake ( VProduction **prodp, Vector *owned,
 
         /* this class only knows how to redirect messages to VPhysical */
         prod -> phys = phys;
-	if(sub == prodPhysicalOut){
-		(*prodp) -> cctx.cache   = curs->blob_mru_cache;
-		(*prodp) -> cctx.col_idx = PHYSPROD_INDEX_OFFSET + (++curs -> phys_cnt);
-	}
+    	if(sub == prodPhysicalOut)
+        {
+		    (*prodp) -> cctx.cache   = VCursorGetBlobMruCache ( curs );
+		    (*prodp) -> cctx.col_idx = PHYSPROD_INDEX_OFFSET + VCursorIncrementPhysicalProductionCount ( curs );
+	    }
     }
     return rc;
 }
@@ -690,7 +691,7 @@ rc_t VPhysicalProdRead ( VPhysicalProd *self, VBlob **vblob, int64_t id, uint32_
 
 uint32_t VPhysicalProdFixedRowLength ( const VPhysicalProd *Self, int64_t row_id ) {
     const VPhysical *self;
-    
+
     if ( Self == NULL )
         return 0;
     self = Self->phys;
@@ -703,14 +704,14 @@ rc_t VPhysicalProdColumnIdRange ( const VPhysicalProd *Self,
                                int64_t *first, int64_t *last )
 {
     const VPhysical *self;
-    
+
     if ( Self == NULL )
         return RC ( rcVDB, rcProduction, rcReading, rcSelf, rcNull );
 
     self = Self->phys;
     if ( self == NULL )
         return RC ( rcVDB, rcColumn, rcReading, rcSelf, rcNull );
-    
+
     if ( self -> knode != NULL )
     {
         *first = self->sstart_id;
