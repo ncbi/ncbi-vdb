@@ -37,8 +37,6 @@ TEST_TOOLS = \
 	test-out \
 	test-SraReleaseVersion \
 	test-time \
-	test-hashfile \
-	test-hashtable \
 	test-klib \
 	test-vnamelist \
 	test-progressbar \
