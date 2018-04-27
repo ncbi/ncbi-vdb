@@ -37,9 +37,9 @@ TEST_TOOLS = \
 	test-out \
 	test-SraReleaseVersion \
 	test-time \
-	test-klib \
 	test-hashfile \
 	test-hashtable \
+	test-klib \
 	test-vnamelist \
 	test-progressbar \
     test-symtab \
@@ -155,7 +155,7 @@ TEST_TIME_SRC = \
 
 TEST_TIME_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_TIME_SRC))
-
+    
 $(TEST_BINDIR)/test-time: $(TEST_TIME_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_SRA_RELEASE_VERSION_LIB)
 
@@ -188,9 +188,47 @@ TEST_KLIB_LIB = \
 	-skapp \
 	-sncbi-vdb \
 	-sktst \
+	-sklib
 
 $(TEST_BINDIR)/test-klib: $(TEST_KLIB_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
+
+#-------------------------------------------------------------------------------
+# test-hashfile
+#
+TEST_HASHFILE_SRC = \
+	test-hashfile
+
+TEST_HASHFILE_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_HASHFILE_SRC))
+
+TEST_HASHFILE_LIB = \
+	-skapp \
+	-sncbi-vdb \
+	-sktst \
+	-sklib
+
+$(TEST_BINDIR)/test-hashfile: $(TEST_HASHFILE_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_HASHFILE_LIB)
+
+
+#-------------------------------------------------------------------------------
+# test-hashtable
+#
+TEST_HASHTABLE_SRC = \
+	test-hashtable
+
+TEST_HASHTABLE_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_HASHTABLE_SRC))
+
+TEST_HASHTABLE_LIB = \
+	-skapp \
+	-sncbi-vdb \
+	-sktst \
+	-sklib
+
+$(TEST_BINDIR)/test-hashtable: $(TEST_HASHTABLE_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_HASHTABLE_LIB)
 
 
 #-------------------------------------------------------------------------------
@@ -252,41 +290,3 @@ $(TEST_BINDIR)/test-symtab: $(TEST_SYMTAB_OBJ)
 
 symtab: test-symtab
 	$(TEST_BINDIR)/test-symtab
-
-#--------------------------------------------------------------------------
-# test-hashfile
-#
-TEST_HASHFILE_SRC = \
-	test-hashfile
-
-TEST_HASHFILE_OBJ = \
-	$(addsuffix .$(OBJX),$(TEST_HASHFILE_SRC))
-
-TEST_HASHFILE_LIB = \
-	-skapp \
-	-sncbi-vdb \
-	-sktst \
-	-sklib
-
-$(TEST_BINDIR)/test-hashfile: $(TEST_HASHFILE_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_HASHFILE_LIB)
-
-
-#--------------------------------------------------------------------------
-# test-hashtable
-#
-TEST_HASHTABLE_SRC = \
-	test-hashtable
-
-TEST_HASHTABLE_OBJ = \
-	$(addsuffix .$(OBJX),$(TEST_HASHTABLE_SRC))
-
-TEST_HASHTABLE_LIB = \
-	-skapp \
-	-sncbi-vdb \
-	-sktst \
-	-sklib
-
-$(TEST_BINDIR)/test-hashtable: $(TEST_HASHTABLE_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_HASHTABLE_LIB)
-

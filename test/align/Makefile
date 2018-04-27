@@ -62,7 +62,6 @@ TEST_INDEX_LIB = \
 $(TEST_BINDIR)/test-load-index: $(TEST_INDEX_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_INDEX_LIB)
 
-
 #-------------------------------------------------------------------------------
 # test-estimator
 #
@@ -168,7 +167,8 @@ run-test-samextract: $(TEST_BINDIR)/test-samextract
 
 
 # runtests
-runtests: run-test-load-index run-test-samextract
+#runtests: run-test-samextract run-test-load-index
+runtests: run-test-samextract
 
 .PHONY: $(TEST_TOOLS)
 
