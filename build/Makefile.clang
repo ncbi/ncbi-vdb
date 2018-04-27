@@ -43,7 +43,7 @@ LPFLAGS = $(LDFLAGS)
 LP = @ $(TOP)/build/ld.sh $(OS) $(ARCH) clang++ \
 	--build $(BUILD) --ldflags "$(LDFLAGS)" $(STATIC) \
 	$(STATICSYSLIBS) $(CHECKSUM) --objx $(OBJX) --shlx $(SHLX) --libx $(LIBX) \
-	-MD --srcdir $(SRCDIR) --bindir $(BINDIR) -L$(LIBDIR):$(ILIBDIR)
+	-MD --srcdir $(SRCDIR) --bindir $(BINDIR) -L$(LIBDIR):$(ILIBDIR) --stdlib=libc++
 
 # tool options
 WARN = -Wall -Wno-variadic-macros -Wno-long-long # -Wconversion
