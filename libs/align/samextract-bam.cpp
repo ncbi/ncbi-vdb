@@ -40,7 +40,8 @@
 #include <kproc/queue.h>
 #include <kproc/thread.hpp>
 #include <kproc/timeout.h>
-#if LINUX
+#ifdef _MSC_VER
+#else
 #include <mmintrin.h>
 #include <pthread.h>
 #endif
@@ -199,10 +200,11 @@ static rc_t seeker(const KThread* kt, void* in)
 {
     rc_t rc;
     SAMExtractor* state = (SAMExtractor*)in;
-#if LINUX
-    pthread_t threadid = pthread_self();
-#else
+
+#ifdef _MSC_VER
     u64 threadid = 0;
+#else
+    pthread_t threadid = pthread_self();
 #endif
     DBG("\tSeeker thread %p %lu started.", kt, threadid);
 
@@ -383,10 +385,10 @@ static rc_t inflater(const KThread* kt, void* in)
     struct timeout_t tm;
 
     z_stream strm;
-#if LINUX
-    pthread_t threadid = pthread_self();
-#else
+#ifdef _MSC_VER
     u64 threadid = 0;
+#else
+    pthread_t threadid = pthread_self();
 #endif
     DBG("\tInflater thread %p %lu started.", kt, threadid);
 
@@ -740,13 +742,13 @@ size_t fast_u32toa(char* buf, u32 val)
     }
 
 // See http://graphics.stanford.edu/~seander/bithacks.html
-#if LINUX
-    u32 lg2 = (64 - __builtin_clzll(val | 1));
-#else
+#ifdef _MSC_VER
     // TODO: Untested
     u64 lg2;
-    BitScanReverse(&lg2, val | 1);
+    _BitScanReverse(&lg2, val | 1);
     lg2 = (u32)(64 - lg2);
+#else
+    u32 lg2 = (64 - __builtin_clzll(val | 1));
 #endif
     u32 lg10 = lg2 * 1233 >> 12;
     lg10 = lg10 - (val < pow10[lg10]) + 1;
