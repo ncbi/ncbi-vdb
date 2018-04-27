@@ -130,6 +130,7 @@ KLIB_SRC = \
 	progressbar \
 	sra-release-version \
 	hashtable \
+	hashfile \
 	btree
 #	path
 
