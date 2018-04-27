@@ -46,8 +46,6 @@
 #include <stdint.h>
 #include <sys/time.h>
 #include <unistd.h>
-#include <unordered_map>
-#include <unordered_set>
 #include <utility>
 
 using namespace std;
