@@ -66,26 +66,14 @@ void logmsg(const char* fname, int line, const char* func,
     if (!basename) basename = strrchr(fname, '\\');
     if (basename) ++basename;
     if (!basename) basename = fname;
+    if (fname_desc) fprintf(stderr, "`%s`:", fname_desc);
+    fprintf(buffd, "\t[%s:%s():%d]\n", basename, func, line);
     va_list args;
     va_start(args, fmt);
-
-    buffd = open_memstream(&buf, &bufsize);
-    if (buffd == NULL) {
-        fprintf(stderr, "can't open memstream\n");
-        return;
-    }
-    //pthread_t threadid = pthread_self();
-    //fprintf(buffd, "%s(%lu) ", severity, threadid % 100);
-    if (fname_desc) fprintf(buffd, "`%s`:", fname_desc);
-    vfprintf(buffd, fmt, args);
+    if (vfprintf(stderr, fmt, args) < 0)
+        fprintf(stderr, "bad log format: '%s'\n", fmt);
     va_end(args);
-    fprintf(buffd, "\t[%s:%s():%d]\n", basename, func, line);
-    fclose(buffd);
-    size_t r = fwrite(buf, bufsize, 1, stderr);
-    if (r != 1)
-        fprintf(stderr, "previous %zd log message truncated\n", bufsize);
-    free(buf);
-    buf = NULL;
+    fputc('\n',stderr);
     fflush(stderr);
 }
 
