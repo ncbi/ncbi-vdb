@@ -61,7 +61,6 @@ void logmsg(const char* fname, int line, const char* func,
     size_t bufsize = 0;
     FILE* buffd;
 
-    pthread_t threadid = pthread_self();
 
     const char* basename = strrchr(fname, '/');
     if (!basename) basename = strrchr(fname, '\\');
@@ -75,7 +74,8 @@ void logmsg(const char* fname, int line, const char* func,
         fprintf(stderr, "can't open memstream\n");
         return;
     }
-    fprintf(buffd, "%s(%lu) ", severity, threadid % 100);
+    //pthread_t threadid = pthread_self();
+    //fprintf(buffd, "%s(%lu) ", severity, threadid % 100);
     if (fname_desc) fprintf(buffd, "`%s`:", fname_desc);
     vfprintf(buffd, fmt, args);
     va_end(args);
