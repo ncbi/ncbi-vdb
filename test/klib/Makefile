@@ -44,6 +44,11 @@ TEST_TOOLS = \
 	test-progressbar \
     test-symtab \
 
+ifeq ($(OS),linux)
+	TEST_TOOLS += test-hashfile
+	TEST_TOOLS += test-hashtable
+endif
+
 include $(TOP)/build/Makefile.env
 
 std: $(TEST_TOOLS)
