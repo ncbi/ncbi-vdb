@@ -73,6 +73,7 @@ typedef struct Segment
     Hashtable* hashtable; /* Will be switched atomically so readers can be
                              lock-free */
     size_t load;          /* Including invisible entries */
+    size_t max_load;      /* When to rehash */
     KLock* seglock;
     u8* alloc_base;
     size_t alloc_remain;
@@ -429,6 +430,9 @@ static rc_t rehash_segment(KHashFile* self, size_t segment, size_t capacity)
     }
     COMPILER_BARRIER;
     seg->hashtable = new_hashtable;
+    /* New max_load should be 0.5..0.7X table_sz */
+    long int ratio = 50 + segment % 20;
+    seg->max_load = seg->hashtable->table_sz * ratio / 100;
 
     return 0;
 }
@@ -609,6 +613,9 @@ LIB_EXPORT rc_t KHashFileAdd(KHashFile* self, const void* key,
         u8* kv = table[bucket];
         if (kv == BUCKET_INVALID) {
             void* buf = seg_alloc(self, segment, kvsize);
+            if (!buf)
+                return RC(rcCont, rcHashtable, rcInserting, rcMemory,
+                          rcExhausted);
             hkv_encode(&hkv, buf);
 
             /* Intel 64 and IA-32 Architectures Software Developers
@@ -630,7 +637,7 @@ LIB_EXPORT rc_t KHashFileAdd(KHashFile* self, const void* key,
             table[bucket] = buf;
             ++seg->load;
             rc = 0;
-            if (((double)seg->load / (double)hashtable->table_sz) > 0.6)
+            if (seg->load > seg->max_load)
                 rc = rehash_segment(self, segment, hashtable->table_sz * 2);
 
             atomic64_inc(&self->count);
@@ -670,6 +677,9 @@ LIB_EXPORT rc_t KHashFileAdd(KHashFile* self, const void* key,
                     }
 
                     void* buf = seg_alloc(self, segment, kvsize);
+                    if (!buf)
+                        return RC(rcCont, rcHashtable, rcInserting, rcMemory,
+                                  rcExhausted);
                     hkv_encode(&hkv, buf);
 
                     COMPILER_BARRIER;

@@ -31,10 +31,7 @@ MODULE = test/align
 TEST_TOOLS = \
 	test-load-index \
 	test-samextract \
-	test-estimator \
-	samtogw \
-	bamfuzz \
-	irvrfy
+	test-estimator
 
 include $(TOP)/build/Makefile.env
 
@@ -169,6 +166,8 @@ run-test-samextract: $(TEST_BINDIR)/test-samextract
 # runtests
 #runtests: run-test-samextract run-test-load-index
 runtests: run-test-samextract
+
+miketoys: $(TEST_BINDIR)/irvrfy $(TEST_BINDIR)/samtogw $(TEST_BINDIR)/bamfuzz
 
 .PHONY: $(TEST_TOOLS)
 

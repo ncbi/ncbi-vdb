@@ -199,7 +199,7 @@ hdr: HDVN VALUE {
         rc_t rc=RC(rcAlign,rcRow,rcParsing,rcData,rcInvalid);
         state->rc=rc; }
         */
-  | TAB { ERR("empty tags");
+  | TAB { ERR("empty HD tags");
         rc_t rc=RC(rcAlign,rcRow,rcParsing,rcData,rcInvalid);
         state->rc=rc;
         return END;}
@@ -391,7 +391,7 @@ rg:  RGID VALUE {
         ;
         }
    | TAB TAB EOL {
-        ERR("empty tags");
+        ERR("empty RG tags");
         rc_t rc=RC(rcAlign,rcRow,rcParsing,rcData,rcInvalid);
         state->rc=rc; }
    | TAB EOL { WARN("empty tags"); }
