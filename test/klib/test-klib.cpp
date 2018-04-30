@@ -559,6 +559,12 @@ TEST_CASE(KLib_print_problem)
 }
 #endif
 
+TEST_CASE(string_printf_crash) {
+/* SEGFAULT
+    REQUIRE_RC_FAIL ( string_printf ( 0, 0, 0, 0 ) );
+ */
+}
+
 ///////////////////////////////////////////////// KDataBuffer
 
 TEST_CASE(KDataBuffer_Make)
