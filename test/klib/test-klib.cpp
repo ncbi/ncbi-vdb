@@ -1004,7 +1004,6 @@ const char UsageDefaultName[] = "test-klib";
 
 rc_t CC KMain(int argc, char* argv[])
 {
-    srandom(time(NULL));
     KConfigDisableUserSettings();
     rc_t rc = KlibTestSuite(argc, argv);
     return rc;
