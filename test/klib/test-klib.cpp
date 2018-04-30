@@ -44,7 +44,6 @@
 #include <set>
 #include <stdexcept>
 #include <stdint.h>
-#include <sys/time.h>
 #include <unistd.h>
 #include <utility>
 
