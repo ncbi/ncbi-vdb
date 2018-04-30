@@ -30,8 +30,8 @@
    This special exception was added by the Free Software Foundation in
    version 2.2 of Bison.  */
 
-#ifndef YY_AST_HOME_BOSHKINS_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_AST_TOKENS_H_INCLUDED
-# define YY_AST_HOME_BOSHKINS_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_AST_TOKENS_H_INCLUDED
+#ifndef YY_AST_HOME_RODARME1_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_AST_TOKENS_H_INCLUDED
+# define YY_AST_HOME_RODARME1_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_AST_TOKENS_H_INCLUDED
 /* Debug traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
@@ -179,7 +179,7 @@ extern int AST_debug;
 
 union YYSTYPE
 {
-#line 57 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1909  */
+#line 57 "/home/rodarme1/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1909  */
 
   const Token*  tok;
   AST*          node;
@@ -188,7 +188,7 @@ union YYSTYPE
   AST_ParamSig* paramSig;
   bool          boolean;
 
-#line 192 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast-tokens.h" /* yacc.c:1909  */
+#line 192 "/home/rodarme1/devel/ncbi-vdb/libs/schema/schema-ast-tokens.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;
@@ -200,4 +200,4 @@ typedef union YYSTYPE YYSTYPE;
 
 int AST_parse (AST*& p_ast, ASTBuilder& p_builder, ParseTreeScanner& p_sb);
 
-#endif /* !YY_AST_HOME_BOSHKINS_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_AST_TOKENS_H_INCLUDED  */
+#endif /* !YY_AST_HOME_RODARME1_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_AST_TOKENS_H_INCLUDED  */

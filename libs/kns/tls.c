@@ -544,16 +544,40 @@ void KTLSGlobalsWhack ( KTLSGlobals * self )
 /* Set/Get AllowAllCerts
  *  modify behavior of TLS certificate validation
  */
-void KTLSGlobalsSetAllowAllCerts ( KTLSGlobals * self, bool allow_all_certs )
+LIB_EXPORT rc_t CC KNSManagerSetAllowAllCerts ( KNSManager *self, bool allow_all_certs )
 {
-    assert ( self != NULL );
-    self -> allow_all_certs = allow_all_certs;
+    rc_t rc = 0;
+    
+    if ( self == NULL )
+        rc = RC ( rcNS, rcMgr, rcAccessing, rcSelf, rcNull );
+    else
+    {
+        self -> tlsg . allow_all_certs = allow_all_certs;
+    }
+
+    return rc;
 }
 
-bool KTLSGlobalsGetAllowAllCerts ( const KTLSGlobals *self )
+LIB_EXPORT rc_t CC KNSManagerGetAllowAllCerts ( const KNSManager *self, bool * allow_all_certs )
 {
-    assert ( self != NULL );
-    return self -> allow_all_certs;
+    rc_t rc;
+
+    if ( allow_all_certs == NULL )
+        rc = RC ( rcNS, rcMgr, rcAccessing, rcParam, rcNull );
+    else
+    {
+        if ( self == NULL )
+            rc = RC ( rcNS, rcMgr, rcAccessing, rcSelf, rcNull );
+        else
+        {
+            * allow_all_certs = self -> tlsg . allow_all_certs;
+            return 0;
+        }
+        
+        * allow_all_certs = false;
+    }
+
+    return rc;
 }
 
 /*--------------------------------------------------------------------------
@@ -1191,7 +1215,7 @@ LIB_EXPORT rc_t CC KTLSStreamVerifyCACert ( const KTLSStream * self )
    
    if ( self == NULL )
        rc = RC ( rcKrypto, rcToken, rcValidating, rcSelf, rcNull );
-   else
+   else if ( ! self -> mgr -> tlsg . allow_all_certs )
    {
        uint32_t flags = vdb_mbedtls_ssl_get_verify_result( &self -> ssl );
        if ( flags != 0 )
