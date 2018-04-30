@@ -266,6 +266,10 @@ rc_t ascpParse(const char *buf, size_t len, const char *filename,
     size_t l = len;
     assert(buf && len && filename && state && line);
     StringInit(line, NULL, 0, 0);
+    while ( l > 0 && ( * p == '\n' || * p == '\r' ) ) {
+        ++ p;
+        -- l;
+    }
     while (true) {
         const char *n = string_chr(p, l, '\n');
         const char *r = string_chr(p, l, '\r');
@@ -288,12 +292,9 @@ rc_t ascpParse(const char *buf, size_t len, const char *filename,
         else {
             StringInit(line, p, l, (uint32_t)l);
         }
-        if (line->addr && line->len && line->addr[line->len - 1] == '\r') {
-            line->size = line->len - 1;
-            line->len = line->len - 1;
-        }
-        if (line->addr && line->len && line->addr[0] == '\r') {
-            ++line->addr;
+        if (line->addr != NULL && line->len > 0 &&
+            line->addr[line->len - 1] == '\r')
+        {
             line->size = line->len - 1;
             line->len = line->len - 1;
         }
@@ -338,10 +339,10 @@ rc_t ascpParse(const char *buf, size_t len, const char *filename,
                     }
                     failure = true;
                     *state = full.s;
-                    if (sStatus) {
+                    if (sStatus)
                         OUTMSG(("%s\n", full.msg));
-                    }
-/*                  no break; */
+                    else
+                        LogLibMsg(klogErr, full.msg);
                     break;
                 case eWriteFailed:
                     if (*state == eProgress) {
@@ -351,10 +352,8 @@ rc_t ascpParse(const char *buf, size_t len, const char *filename,
                     }
                     failure = true;
                     *state = full.s;
-                    if (sStatus) {
+                    if (sStatus)
                         OUTMSG(("%s\n", full.msg));
-                    }
-/*                  no break; */
                     break;
                 case eCompleted:
                     if (*state == eProgress) {
@@ -364,10 +363,8 @@ rc_t ascpParse(const char *buf, size_t len, const char *filename,
                     }
                     failure = false;
                     *state = full.s;
-                    if (sStatus) {
+                    if (sStatus)
                         OUTMSG(("%s\n", full.msg));
-                    }
-/*                  no break; */
                     break;
                 case eProgress:
                     if (*state == eProgress) {
