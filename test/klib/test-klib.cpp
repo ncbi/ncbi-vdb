@@ -44,7 +44,6 @@
 #include <set>
 #include <stdexcept>
 #include <stdint.h>
-#include <unistd.h>
 #include <utility>
 
 using namespace std;
