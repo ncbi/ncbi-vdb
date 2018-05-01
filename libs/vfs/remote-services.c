@@ -659,6 +659,7 @@ static VRemoteProtocols SProtocolGet ( const String * url ) {
         { "https:",eProtocolHttps},
         { "file:", eProtocolFile },
         { "s3:"  , eProtocolS3   },
+        { "gs:"  , eProtocolGS   },
     };
     if ( url == NULL || url -> addr == NULL || url -> size == 0 ) {
         return eProtocolNone;

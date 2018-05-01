@@ -231,7 +231,7 @@ static const struct sm
     { "ncbi-acc", vpuri_ncbi_acc },
     { "x-ncbi-legresfseq", vpuri_ncbi_legrefseq },
     { "ncbi-obj", vpuri_ncbi_obj  },
-    { "google", vpuri_google },
+    { "gs", vpuri_google },
     { "azure", vpuri_azure }
 };
 

@@ -93,15 +93,16 @@ enum
 
       /* version 3.0 protocols */
     , eProtocolFile  = 4
-    , eProtocolS3    = 5
+    , eProtocolS3    = 5 /* Amazon Simple Storage Service */
+    , eProtocolGS    = 6 /* Google Cloud Storage */
 
-      /* values 6..7 are available for future */
+      /* value 7 are available for future */
 
     , eProtocolLast
     , eProtocolMax   = eProtocolLast - 1
     , eProtocolMask  = 7
 
-    , eProtocolMaxPref = 5
+    , eProtocolMaxPref = 6
 
       /* macros for building multi-protocol constants
          ordered by preference from least to most significant bits */
