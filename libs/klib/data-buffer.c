@@ -312,8 +312,7 @@ static rc_t KDataBufferResizeInt(KDataBuffer *self, uint64_t new_count) {
     }
 
     if (self->elem_bits == 0) {
-        self->elem_count = new_count;
-        return 0; /*** no change for empty data ***/
+	    return RC (rcRuntime, rcBuffer, rcResizing, rcSelf, rcCorrupt);
     }
 
     bits = self->elem_bits * new_count;
