@@ -31,6 +31,10 @@ include $(CONFIG_FILE)
 #-------------------------------------------------------------------------------
 # set up installation locations
 
+# unset outside defined variables
+ROOT =
+LINUX_ROOT =
+
 #fake root for debugging
 #uncomment this line and change the following test for root ( see under install: ) to succeed:
 #ROOT = ~/root
