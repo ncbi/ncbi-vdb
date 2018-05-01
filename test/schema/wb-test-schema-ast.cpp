@@ -111,6 +111,38 @@ TEST_CASE(WalkParseTree)
     delete root;
 }
 
+// ErrorReport
+TEST_CASE ( ErrorReport_Formatting_NullBuf )
+{
+    ErrorReport rep;
+    rep . ReportError ( ErrorReport :: Location ( "", 0, 0 ), "" );
+    const ErrorReport :: Error * err = rep . GetError ( 0 );
+    REQUIRE_NOT_NULL ( err );
+    REQUIRE ( ! err -> Format ( 0, 1024 ) );
+}
+
+TEST_CASE ( ErrorReport_Formatting_ShortBuf )
+{
+    ErrorReport rep;
+    rep . ReportError ( ErrorReport :: Location ( "", 0, 0 ), "msg" );
+    const ErrorReport :: Error * err = rep . GetError ( 0 );
+    REQUIRE_NOT_NULL ( err );
+    char buf [1];
+    REQUIRE ( ! err -> Format ( buf, sizeof ( buf ) ) );
+}
+
+TEST_CASE ( ErrorReport_Formatting )
+{
+    ErrorReport rep;
+    ErrorReport :: Location loc ( "dir/file", 1, 2 ); // file/line/col
+    rep . ReportError ( loc, "msg: %s, num: %i", "error message", 42 );
+    const ErrorReport :: Error * err = rep . GetError ( 0 );
+    REQUIRE_NOT_NULL ( err );
+    char buf [ 1024 ];
+    REQUIRE ( err -> Format ( buf, sizeof buf ) );
+    REQUIRE_EQ ( string ( buf ), string ( "dir/file:1:2 msg: error message, num: 42" ) );
+}
+
 // AST subclasses
 
 TEST_CASE ( AST_FQN_NakedIdent )
@@ -172,13 +204,6 @@ TEST_CASE ( AST_FQN_WithVersionMajMinRel )
     delete fqn;
 }
 
-TEST_CASE ( AST_ParamSig_Empty )
-{
-    Token tok ( PT_FUNCPARAMS );
-    AST_ParamSig* sig = new AST_ParamSig ( & tok, 0, 0, false );
-    delete sig;
-}
-
 // AST builder
 
 FIXTURE_TEST_CASE(Empty_Source, AST_Fixture)
@@ -217,9 +242,10 @@ FIXTURE_TEST_CASE(Version1, AST_Fixture)
 {
     MakeAst ( "version 1; ;" );
 
-    REQUIRE_EQ ( PT_SCHEMA_1_0, TokenType ( m_ast ) );
-    REQUIRE_EQ ( 1u,            m_ast -> ChildrenCount () );
-    REQUIRE_EQ ( PT_EMPTY,      TokenType ( m_ast -> GetChild ( 0 ) ) );
+    REQUIRE_EQ ( PT_SCHEMA_1_0,     TokenType ( m_ast ) );
+    REQUIRE_EQ ( 2u,                m_ast -> ChildrenCount () );
+    REQUIRE_EQ ( PT_EMPTY,          TokenType ( m_ast -> GetChild ( 0 ) ) );
+    REQUIRE_EQ ( PT_VERSION_1_0,    TokenType ( m_ast -> GetChild ( 1 ) ) );
 }
 
 FIXTURE_TEST_CASE(MultipleCallsToBuilder, AST_Fixture)
@@ -227,8 +253,7 @@ FIXTURE_TEST_CASE(MultipleCallsToBuilder, AST_Fixture)
     MakeAst ( "version 1; ;" );
 
     REQUIRE_EQ ( PT_SCHEMA_1_0, TokenType ( m_ast ) );
-    REQUIRE_EQ ( 1u,            m_ast -> ChildrenCount () );
-    REQUIRE_EQ ( PT_EMPTY,      TokenType ( m_ast -> GetChild ( 0 ) ) );
+    REQUIRE_EQ ( 2u,                m_ast -> ChildrenCount () );
 
     MakeAst ( "version 1; ;;" );
 
@@ -242,10 +267,13 @@ FIXTURE_TEST_CASE(MultipleDecls, AST_Fixture)
     MakeAst ( "version 1; ; ;;" );
 
     REQUIRE_EQ ( PT_SCHEMA_1_0, TokenType ( m_ast ) );
-    REQUIRE_EQ ( 3u,            m_ast -> ChildrenCount () );
-    REQUIRE_EQ ( PT_EMPTY,      TokenType ( m_ast -> GetChild ( 0 ) ) );
-    REQUIRE_EQ ( PT_EMPTY,      TokenType ( m_ast -> GetChild ( 1 ) ) );
-    REQUIRE_EQ ( PT_EMPTY,      TokenType ( m_ast -> GetChild ( 2 ) ) );
+    REQUIRE_EQ ( 2u, m_ast -> ChildrenCount () );
+    // next level of decls
+    const AST * child = m_ast -> GetChild ( 0 );
+    REQUIRE_EQ ( PT_EMPTY,  TokenType ( child ) );
+    REQUIRE_EQ ( 3u,        child -> ChildrenCount () );
+    REQUIRE_EQ ( PT_EMPTY,  TokenType ( child -> GetChild ( 0 ) ) );
+    REQUIRE_EQ ( PT_EMPTY,  TokenType ( child -> GetChild ( 1 ) ) );
 }
 
 ///////// typedef
@@ -932,6 +960,11 @@ FIXTURE_TEST_CASE(FuncCall_Param_Physical, AST_Fixture)
     REQUIRE_EQ ( string ( ".a" ), ToCppString ( sym -> _sym -> name ) );
 }
 
+FIXTURE_TEST_CASE(FuncCall_Param_Member, AST_Fixture)
+{
+    MakeAst  ( "version 2; function U8 f (U8 i); table t#1 { column U8 a; } view v#1 < t p_t> { column U8 c = f(p_t.a); }" );
+}
+
 FIXTURE_TEST_CASE(FuncCall_OptionalParams, AST_Fixture)
 {
     MakeAst  ( "function U8 f (U16 i, * U8 j); table t#1 { column U8 a; column U8 b; column U8 c = f (a); } " );
@@ -955,12 +988,15 @@ FIXTURE_TEST_CASE(FuncCall_Vararg, AST_Fixture)
 //TODO: invalid float
 //TODO: nested vector constants - error
 //TODO: negation applied to non-scalar - error
+//TODO: eFwdExpr
+//TODO: eCastExpr
+//TODO: eVectorExpr
+//TODO: eCondExpr
 
 #include "wb-test-schema-func.cpp"
 #include "wb-test-schema-table.cpp"
 #include "wb-test-schema-db.cpp"
-
-//TODO: formatted type in production in a table (not allowed?)
+#include "wb-test-schema-view.cpp"
 
 //////////////////////////////////////////// Main
 #include <kapp/args.h>

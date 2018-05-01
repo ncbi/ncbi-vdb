@@ -60,6 +60,7 @@ SUBDIRS =       \
     krypto      \
     cipher      \
     install     \
+	schema		\
 
 # common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
 include $(TOP)/build/Makefile.targets

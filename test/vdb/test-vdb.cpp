@@ -254,10 +254,10 @@ public:
                 for (i = 0; column[i] != NULL && rc == 0; ++i) {
                     assert(i < N);
                     rc = VCursorAddColumn ( curs, col_idx + i, column[i] );
-                    if ( rc == 0 )
-                    {
-                        rc = VCursorOpen(curs);
-                    }
+                }
+                if ( rc == 0 )
+                {
+                    rc = VCursorOpen(curs);
                 }
             }
         }

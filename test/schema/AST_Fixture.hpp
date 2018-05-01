@@ -43,10 +43,7 @@
 using namespace ncbi::SchemaParser;
 #include "../../libs/schema/schema-tokens.h"
 
-// hide an unfortunately named C function
-#define typename __typename
 #include "../../libs/vdb/schema-parse.h"
-#undef typename
 
 struct KSymbol;
 struct SDatatype;
@@ -102,6 +99,11 @@ public:
 
     void CreateFile ( const char * p_name, const char * p_content );
 
+    const STable * GetTable ( uint32_t p_idx )
+    {
+        return static_cast < const STable* > ( VectorGet ( & GetSchema () -> tbl, p_idx ) );
+    }
+
     // set to true to control debugging output (all false by default)
     bool m_debugParse;
     bool m_printTree;
@@ -116,6 +118,21 @@ public:
     VSchema *   m_schema;
     bool        m_newParse;
 
+};
+
+// convernience wrapper for Vector ( a KVector of void * )
+template <typename T>
+class VdbVector
+{
+public:
+    VdbVector( const Vector & p_v ) : m_v ( p_v ) {}
+    uint32_t Count() const { return  VectorLength ( & m_v ); }
+    const T * Get( uint32_t p_idx ) const
+    {
+        return static_cast < const T * > ( VectorGet ( & m_v, VectorStart ( & m_v ) + p_idx ) );
+    }
+
+    const Vector & m_v;
 };
 
 #endif
