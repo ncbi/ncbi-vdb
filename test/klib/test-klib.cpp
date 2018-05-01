@@ -559,10 +559,26 @@ TEST_CASE(KLib_print_problem)
 }
 #endif
 
-TEST_CASE(string_printf_crash) {
-/* SEGFAULT
-    REQUIRE_RC_FAIL ( string_printf ( 0, 0, 0, 0 ) );
- */
+TEST_CASE(string_printf_args) {
+    char buf [ 2 ] = "";
+    size_t num_writ = 0;
+
+    REQUIRE_RC_FAIL ( string_printf ( NULL, 0, NULL, NULL ) );
+
+    REQUIRE_RC_FAIL ( string_printf ( buf , 0, NULL, NULL ) );
+
+    REQUIRE_RC_FAIL ( string_printf ( NULL, 0, NULL, ""   ) );
+
+    REQUIRE_RC_FAIL ( string_printf ( NULL, 0, & num_writ, "%s", "X" ) );
+
+    REQUIRE_RC_FAIL ( string_printf ( buf , 0, & num_writ, "%s", "X" ) );
+
+    REQUIRE_RC    ( string_printf ( buf, sizeof buf, NULL, "%s", "X" ) );
+
+    REQUIRE_RC_FAIL(string_printf ( buf, sizeof buf, & num_writ, NULL ) );
+    REQUIRE_RC    ( string_printf ( buf, sizeof buf, & num_writ, "" ) );
+
+    REQUIRE_RC    ( string_printf ( buf, sizeof buf, & num_writ, "%s", "X" ) );
 }
 
 ///////////////////////////////////////////////// KDataBuffer
