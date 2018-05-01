@@ -239,20 +239,25 @@ static
 void VPathCaptureScheme ( VPath * self, const char * uri, size_t start, size_t end )
 {
     size_t size = end - start;
+    char buf[64];
+    size_t num_schemes;
+    size_t i;
+    size_t l;
+    const char * scheme;
+
     StringInit ( & self -> scheme, & uri [ start ], size, ( uint32_t ) ( size ) );
     self -> from_uri = true;
     self -> scheme_type = vpuri_not_supported;
 
     if ( size > 0 && size < 64)
     {
-        const char * scheme = & uri [ start ];
+        scheme = & uri [ start ];
         self -> scheme_type = vpuri_not_supported;
-        char buf[64];
         tolower_copy(buf, sizeof buf, scheme, size);
-        size_t num_schemes=sizeof(schemes)/sizeof(schemes[0]);
-        for (size_t i=0; i!=num_schemes; ++i)
+        num_schemes=sizeof(schemes)/sizeof(schemes[0]);
+        for (i=0; i!=num_schemes; ++i)
         {
-            size_t l=strlen(schemes[i].scheme);
+            l=strlen(schemes[i].scheme);
             if (l==size && memcmp(buf, schemes[i].scheme, l) == 0)
             {
                 self -> scheme_type = schemes[i].type;
