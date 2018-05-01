@@ -3594,7 +3594,8 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
 
         default:
 
-            if ( ! rslt -> len_zero || self -> http -> close_connection )
+      /*    if ( ! rslt -> len_zero || self -> http -> close_connection ) */
+            if ( false )
             {
                 /* the connection is no good */
                 KClientHttpClose ( self -> http );

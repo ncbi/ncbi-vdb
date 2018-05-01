@@ -1,3 +1,6 @@
+#ifndef _h_diagnose_extern_
+#define _h_diagnose_extern_
+
 /*===========================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
@@ -24,64 +27,17 @@
 *
 */
 
-#ifndef _h_klib_out_
-#define _h_klib_out_
+#if ! defined EXPORT_LATCH && defined _LIBRARY
+#define DIAGNOSE_EXTERN LIB_EXPORT
+#define EXPORT_LATCH 1
+#else
+#define DIAGNOSE_EXTERN LIB_IMPORT
+#endif
+
 
 #ifndef _h_klib_extern_
 #include <klib/extern.h>
 #endif
 
-#ifndef _h_klib_writer_
-#include <klib/writer.h>
-#endif
 
-#include <stdarg.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-
-/* -----
- * Handlers for application and library writers.
- */
-
-KLIB_EXTERN KWrtHandler* CC KOutHandlerGet (void);
-
-/* Handler
- *  sets output handler for standard output
- *
- *  "logger" [ IN ] and "self" [ IN, OPAQUE ] - callback function
- *  to handle log output
- */
-KLIB_EXTERN rc_t CC KOutHandlerSet          (KWrtWriter writer, void * data);
-KLIB_EXTERN rc_t CC KOutHandlerSetStdOut    (void);
-KLIB_EXTERN rc_t CC KOutHandlerSetStdErr    (void);
-
-KLIB_EXTERN KWrtWriter CC KOutWriterGet (void);
-KLIB_EXTERN void * CC KOutDataGet (void);
-
-KLIB_EXTERN rc_t CC KOutInit (void);
-
-KLIB_EXTERN rc_t CC KOutMsg (const char * fmt, ...);
-KLIB_EXTERN rc_t CC KOutVMsg ( const char * fmt, va_list args );
-
-#define KOutStr(str) KOutMsg("%s",str)
-
-/*
- * A usage could look like
- *
- * OUTMSG (kout_2, "Current Out Level is %d\n", OutLevelGet());
- *
- */
-#define OUTMSG(msg) \
-    ((KOutWriterGet() != NULL) ? KOutMsg msg : 0)
-
-#define OUTSTR(msg) \
-    ((KOutWriterGet() != NULL) ? KOutStr (msg) : 0)
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /*  _h_klib_out_ */
+#endif /* _h_diagnose_extern_ */
