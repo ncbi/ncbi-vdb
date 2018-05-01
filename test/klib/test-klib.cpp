@@ -731,6 +731,17 @@ TEST_CASE(KDataBuffer_Cast_W32Assert)
     KDataBufferWhack(&src);
 }
 
+TEST_CASE(KDataBuffer_KDataBufferResize) {
+    KDataBuffer src;
+    memset ( & src, 0, sizeof src );
+    REQUIRE_RC ( KDataBufferCheckIntegrity ( & src ) );
+
+    /* should be REQUIRE_RC_FAIL */
+    REQUIRE_RC ( KDataBufferResize ( & src, 4096 ) );
+
+    REQUIRE_RC_FAIL ( KDataBufferCheckIntegrity ( & src ) );
+}
+
 //////////////////////////////////////////// Log
 TEST_CASE(KLog_Formatting)
 {
