@@ -722,16 +722,8 @@ TEST_CASE(KDataBuffer_Resize)
     KDataBufferWhack(&src);
 }
 
-TEST_CASE(KDataBuffer_Cast_W32Assert)
+TEST_CASE(KDataBuffer_ResizeEmpty)
 {
-    KDataBuffer src;
-    REQUIRE_RC(KDataBufferMake(&src, 64, 1));
-    REQUIRE_RC(KDataBufferCast(&src, &src, 64,
-                               true)); /* used to throw am assert on Win32 */
-    KDataBufferWhack(&src);
-}
-
-TEST_CASE(KDataBuffer_KDataBufferResize) {
     KDataBuffer buffer;
     memset ( & buffer, 0, sizeof buffer );
     REQUIRE_RC ( KDataBufferCheckIntegrity ( & buffer ) );
@@ -742,6 +734,15 @@ TEST_CASE(KDataBuffer_KDataBufferResize) {
     KDataBuffer empty;
     memset ( & empty, 0, sizeof empty );
     REQUIRE ( ! memcmp ( & buffer, & empty, sizeof empty ) );
+}
+
+TEST_CASE(KDataBuffer_Cast_W32Assert)
+{
+    KDataBuffer src;
+    REQUIRE_RC(KDataBufferMake(&src, 64, 1));
+    REQUIRE_RC(KDataBufferCast(&src, &src, 64,
+                               true)); /* used to throw am assert on Win32 */
+    KDataBufferWhack(&src);
 }
 
 //////////////////////////////////////////// Log
