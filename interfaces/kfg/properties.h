@@ -89,6 +89,10 @@ KFG_EXTERN rc_t CC KConfig_Set_Site_Access_Enabled( KConfig *self, bool enabled 
 KFG_EXTERN rc_t CC KConfig_Get_User_Access_Enabled( const KConfig *self, bool * enabled );
 KFG_EXTERN rc_t CC KConfig_Set_User_Access_Enabled( KConfig *self, bool enabled );
 
+/* get/set the use of all valid certificates
+ */
+KFG_EXTERN rc_t CC KConfig_Get_Allow_All_Certs( const KConfig *self, bool * enabled );
+KFG_EXTERN rc_t CC KConfig_Set_Allow_All_Certs( KConfig *self, bool enabled );
 
 /* get/set the the cache-enabled-state for the public/protected repositories
  */
