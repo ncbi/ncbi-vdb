@@ -21,6 +21,9 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{48B1C2FB-86DE-4760-BB86-90D82BADCC69}</ProjectGuid>
   </PropertyGroup>
+  <PropertyGroup>
+    <WorkingDirectory>vdb</WorkingDirectory>
+  </PropertyGroup>
   <Import Project=".\test-project.props" />
   <ItemDefinitionGroup>
     <ClCompile>

@@ -65,6 +65,7 @@ MAIN_SUBDIRS = \
 	ngs-py   \
 	kxml     \
 	hdf5     \
+	diagnose \
 	tui
 
 NCBI_VDB_SUBDIRS =   \

@@ -103,7 +103,7 @@ KLIB_EXTERN bool CC GetUnreadRCInfo ( rc_t *rc, const char **filename, const cha
     assert ( ( int ) rcLastContext_v1_1  <= ( 1 << 7 ) )
 
 #define ASSERT_OBJ_STATE() \
-    assert ( ( int ) rcLink == ( int ) rcUri + 1 ),              \
+    assert ( ( int ) rcLink == ( int ) rcHashtable + 1 ),              \
     assert ( ( int ) rcItem == ( int ) rcLibrary + 1 ),          \
     assert ( ( int ) rcOpen == ( int ) rcOutofrange + 1 ),       \
     assert ( ( int ) rcLastObject_v1_1  <= ( 1 << 8 ) ),         \
