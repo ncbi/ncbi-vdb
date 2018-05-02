@@ -240,9 +240,7 @@ void VPathCaptureScheme ( VPath * self, const char * uri, size_t start, size_t e
 {
     size_t size = end - start;
     char buf[64];
-    size_t num_schemes;
-    size_t i;
-    size_t l;
+    size_t i, l, num_schemes;
     const char * scheme;
 
     StringInit ( & self -> scheme, & uri [ start ], size, ( uint32_t ) ( size ) );
