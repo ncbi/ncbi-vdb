@@ -732,14 +732,16 @@ TEST_CASE(KDataBuffer_Cast_W32Assert)
 }
 
 TEST_CASE(KDataBuffer_KDataBufferResize) {
-    KDataBuffer src;
-    memset ( & src, 0, sizeof src );
-    REQUIRE_RC ( KDataBufferCheckIntegrity ( & src ) );
+    KDataBuffer buffer;
+    memset ( & buffer, 0, sizeof buffer );
+    REQUIRE_RC ( KDataBufferCheckIntegrity ( & buffer ) );
 
-    /* should be REQUIRE_RC_FAIL */
-    REQUIRE_RC ( KDataBufferResize ( & src, 4096 ) );
+    /* Not allowed to KDataBufferResize when buffer's elem_bits == 0 */
+    REQUIRE_RC_FAIL ( KDataBufferResize ( & buffer, 4096 ) );
 
-    REQUIRE_RC_FAIL ( KDataBufferCheckIntegrity ( & src ) );
+    KDataBuffer empty;
+    memset ( & empty, 0, sizeof empty );
+    REQUIRE ( ! memcmp ( & buffer, & empty, sizeof empty ) );
 }
 
 //////////////////////////////////////////// Log
