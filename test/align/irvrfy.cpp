@@ -31,6 +31,8 @@
 #include <kfs/directory.h>
 #include <kfs/file.h>
 #include <klib/defs.h>
+#include <klib/hashfile.h>
+#include <klib/hashtable.h>
 #include <klib/rc.h>
 #include <klib/text.h>
 #include <klib/vector.h>
@@ -51,9 +53,36 @@ static const char tool_name[] = "irvrfy";
 
 namespace ncbi
 {
+
+/* returns true if key & value already present, adds otherwise */
+static bool check_dup(KHashFile* hf, const char* key, const char* value)
+{
+    char* tv = (char*)malloc(strlen(key) + strlen(value) + 1);
+    if (tv == NULL) return true;
+    strcpy(tv, key);
+    strcat(tv, value);
+
+    uint64_t hash = KHash(tv, strlen(tv));
+    if (KHashFileFind(hf, tv, strlen(tv), hash, NULL, NULL)) {
+        free(tv);
+        return true;
+    }
+
+    KHashFileAdd(hf, tv, strlen(tv), hash, NULL, 0);
+
+    free(tv);
+    return false;
+}
+
 static rc_t process(const char* dbname)
 {
     rc_t rc;
+    KHashFile* hf = NULL;
+    rc = KHashFileMake(&hf, NULL);
+    if (rc) {
+        fprintf(stderr, "Couldn't create KHashFile\n");
+        return rc;
+    }
 
     KDirectory* srcdir = NULL;
 
@@ -130,8 +159,6 @@ static rc_t process(const char* dbname)
     }
     printf("start=%ld,count=%lu\n", start, count);
 
-    uint64_t prev_group=0;
-    bool has_sqsn=false;
     while (count--) {
         uint64_t group;
         uint32_t row_len = 0;
@@ -143,8 +170,9 @@ static rc_t process(const char* dbname)
         }
         printf("group=%lu, row_len=%d\n", group, row_len);
 
-        char hdr[8192];
-        rc = VCursorReadDirect(curs, start, hdr_idx, 8, &hdr, 8192, &row_len);
+        char hdr[8];
+        rc = VCursorReadDirect(curs, start, hdr_idx, 8, &hdr, sizeof(hdr),
+                               &row_len);
         if (rc) {
             fprintf(stderr, "Failed %d %d", __LINE__, rc);
             return rc;
@@ -152,8 +180,9 @@ static rc_t process(const char* dbname)
         hdr[row_len] = '\0';
         printf("hdr=%s, row_len=%d\n", hdr, row_len);
 
-        char tag[8192];
-        rc = VCursorReadDirect(curs, start, tag_idx, 8, &tag, 8192, &row_len);
+        char tag[8];
+        rc = VCursorReadDirect(curs, start, tag_idx, 8, &tag, sizeof(tag),
+                               &row_len);
         if (rc) {
             fprintf(stderr, "Failed %d %d", __LINE__, rc);
             return rc;
@@ -162,7 +191,8 @@ static rc_t process(const char* dbname)
         printf("tag=%s, row_len=%d\n", tag, row_len);
 
         char value[8192];
-        rc = VCursorReadDirect(curs, start, value_idx, 8, &value, 8192, &row_len);
+        rc = VCursorReadDirect(curs, start, value_idx, 8, &value,
+                               sizeof(value), &row_len);
         if (rc) {
             fprintf(stderr, "Failed %d %d", __LINE__, rc);
             return rc;
@@ -170,27 +200,31 @@ static rc_t process(const char* dbname)
         value[row_len] = '\0';
         printf("value=%s, row_len=%d\n", value, row_len);
 
-        if (!strcmp(hdr,"SQ") && !strcmp(tag,"SN"))
-        {
-            if (prev_group && group==prev_group)
-            {
-                if (has_sqsn)
-                {
-                    fprintf(stderr,"Repeated SQSN\n");
-                }
-                has_sqsn=true;
+        if (!strcmp(hdr, "SQ") && !strcmp(tag, "SN")) {
+            if (check_dup(hf, "SQ:SN", value)) {
+                fprintf(stderr, "Duplicate SQ:SN value '%s'\n", value);
             }
         }
 
-        if (group!=prev_group)
-        {
-            prev_group=group;
-            has_sqsn=false;
+        if (!strcmp(hdr, "RG") && !strcmp(tag, "ID")) {
+            if (check_dup(hf, "RG:ID", value)) {
+                fprintf(stderr, "Duplicate RG:ID value '%s'\n", value);
+            }
+        }
+
+        if (!strcmp(hdr, "PG") && !strcmp(tag, "ID")) {
+            if (check_dup(hf, "PG:ID", value)) {
+                fprintf(stderr, "Duplicate PG:ID value '%s'\n", value);
+            }
         }
 
         start++;
+        printf("\n");
     }
+    printf("Set has %lu elements\n", KHashFileCount(hf));
     fprintf(stderr, "Made verifier for %s\n", dbname);
+
+    KHashFileDispose(hf);
 
     VCursorRelease(curs);
     VTableRelease(tbl);

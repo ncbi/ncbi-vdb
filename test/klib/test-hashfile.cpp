@@ -218,6 +218,33 @@ TEST_CASE(Klib_hashfileMap)
     KHashFileDispose(hmap);
 }
 
+TEST_CASE(Klib_hashfiledups)
+{
+    rc_t rc;
+
+    KHashFile* hmap;
+    rc = KHashFileMake(&hmap, BACKING);
+    REQUIRE_RC(rc);
+
+    uint64_t key1 = random();
+    uint64_t hash1 = KHash((const char*)&key1, sizeof(uint64_t));
+    uint64_t key2 = random();
+    uint64_t hash2 = hash1;
+    for (size_t i = 0; i != 100000; ++i) {
+        rc = KHashFileAdd(hmap, (const char*)&key1, 8, hash1,
+                          (const char*)&key1, 8);
+        REQUIRE_RC(rc);
+        rc = KHashFileAdd(hmap, (const char*)&key2, 8, hash2,
+                          (const char*)&key1, 8);
+        REQUIRE_RC(rc);
+    }
+
+    size_t sz = KHashFileCount(hmap);
+    REQUIRE_EQ(sz, (size_t)2);
+
+    KHashFileDispose(hmap);
+}
+
 TEST_CASE(Klib_hashfileMapDeletes)
 {
     rc_t rc;

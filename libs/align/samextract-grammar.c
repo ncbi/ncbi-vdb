@@ -1496,7 +1496,7 @@ yyreduce:
 
   case 19:
 #line 202 "/home/vartanianmh/devel/ncbi-vdb/libs/align/samextract-grammar.y" /* yacc.c:1646  */
-    { ERR("empty tags");
+    { ERR("empty HD tags");
         rc_t rc=RC(rcAlign,rcRow,rcParsing,rcData,rcInvalid);
         state->rc=rc;
         return END;}
@@ -1812,7 +1812,7 @@ yyreduce:
   case 57:
 #line 393 "/home/vartanianmh/devel/ncbi-vdb/libs/align/samextract-grammar.y" /* yacc.c:1646  */
     {
-        ERR("empty tags");
+        ERR("empty RG tags");
         rc_t rc=RC(rcAlign,rcRow,rcParsing,rcData,rcInvalid);
         state->rc=rc; }
 #line 1819 "/home/vartanianmh/devel/ncbi-vdb/libs/align/samextract-grammar.c" /* yacc.c:1646  */
