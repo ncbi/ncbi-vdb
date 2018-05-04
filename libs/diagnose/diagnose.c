@@ -340,12 +340,12 @@ LIB_EXPORT rc_t CC KDiagnoseTestNext ( const KDiagnoseTest * self,
     return 0;
 }
 
-LIB_EXPORT rc_t CC KDiagnoseTestChild ( const KDiagnoseTest * self, 
+LIB_EXPORT rc_t CC KDiagnoseTestChild ( const KDiagnoseTest * self,
                           uint32_t idx, const KDiagnoseTest ** test )
 {
-    const KDiagnoseTest * t = NULL; 
+    const KDiagnoseTest * t = NULL;
     uint32_t i;
-    
+
     if ( test == NULL )
         return RC ( rcRuntime, rcData, rcAccessing, rcParam, rcNull );
 
@@ -715,8 +715,8 @@ static void STestFini ( STest * self ) {
 
     VResolverCacheEnable ( self -> resolver, self -> cacheState );
 
-    RELEASE ( KDirectory, self -> dir );    
-    RELEASE ( VResolver, self -> resolver );    
+    RELEASE ( KDirectory, self -> dir );
+    RELEASE ( VResolver, self -> resolver );
 
     KDataBufferWhack ( & self -> msg );
 
@@ -2090,6 +2090,7 @@ static rc_t STestAbuse ( STest * self, Abuse * test,
 {
     size_t i = 0;
     const char * s = NULL;
+    const char * h;
 
     String misuse;
     CONST_STRING ( & misuse,
@@ -2111,7 +2112,7 @@ static rc_t STestAbuse ( STest * self, Abuse * test,
         return STestAbuseRedirect ( self, test, abuse );
 
     s = test -> response . base;
-    const char * h = find ( s + i, test -> response . elem_count - i,
+    h = find ( s + i, test -> response . elem_count - i,
                             & misuse );
     if ( h != NULL ) {
         rc_t rc = AbuseSetLocation ( test, misuse . addr, misuse . size );

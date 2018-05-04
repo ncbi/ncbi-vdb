@@ -143,11 +143,11 @@ rc_t SFunctionPush ( const SFunction *self, const VProdResolve *pr,
                             {
                                 const KSymbol *fd_name = NULL;
                                 const KSymbol *lval_name = NULL;
-                            
+
                                 const SDatatype *dt = VSchemaFindTypeid ( schema, lval_fd -> td . type_id );
                                 if ( dt != NULL )
                                     lval_name = dt -> name;
-                                
+
                                 dt = VSchemaFindTypeid ( schema, pb -> fd . td . type_id );
                                 if ( dt != NULL )
                                     fd_name = dt -> name;
@@ -158,7 +158,7 @@ rc_t SFunctionPush ( const SFunction *self, const VProdResolve *pr,
                                         fd_name = ts->name;
                                 }
 
-                                if ( lval_name != NULL && fd_name != NULL ) 
+                                if ( lval_name != NULL && fd_name != NULL )
                                 {
                                     PLOGMSG ( klogWarn, ( klogWarn,
                                                "function '$(func)' could not resolve return type '$(rtype)' in '$(typeset)'",
@@ -208,7 +208,7 @@ rc_t SFunctionPush ( const SFunction *self, const VProdResolve *pr,
                         rc = VSchemaDescribeTypedecl ( schema, & pb -> desc, & pb -> fd . td );
                     }
                 }
-                 
+
                 if ( rc == 0 )
                 {
                     /* bind factory params */
@@ -376,7 +376,7 @@ rc_t VProdResolveFuncParams ( const VProdResolve *self, Vector *out,
     /* resolve vararg parameters */
     for ( ; rc == 0 && i < count; ++ i )
     {
-        
+
         const SExpression *pexpr = VectorGet ( expr, i );
 
 #if 0
@@ -737,7 +737,7 @@ rc_t VProdResolveFuncExpr ( const VProdResolve *self,
                 {
                     /* prepare info block for function factory */
                     info . schema = self -> schema;
-                    info . tbl = self -> curs -> tbl;
+                    info . tbl = VCursorGetTable ( self -> curs );
                     info . mgr = info . tbl -> mgr;
                     info . parms = ( struct VCursorParams * ) self -> curs;
 
@@ -781,7 +781,7 @@ rc_t VProdResolveFuncExpr ( const VProdResolve *self,
                         & sfunc -> name -> name, rc ));
             rc = 0;
         }
-        
+
         SFunctionPop ( sfunc, self, & pb );
     }
 
@@ -864,7 +864,7 @@ rc_t VProdResolveEncodingExpr ( const VProdResolve *self,
                             VCursorCacheWhack ( & local, NULL, NULL );
                         }
                     }
-                
+
                     if ( inputs != NULL )
                     {
                         VectorWhack ( inputs, NULL, NULL );
@@ -872,7 +872,7 @@ rc_t VProdResolveEncodingExpr ( const VProdResolve *self,
                     }
                 }
             }
-            
+
             SPhysicalRestFactParms ( sphys, & fact_prior, self -> cx_bind );
             VectorWhack ( & fact_parms, NULL, NULL );
         }
@@ -907,9 +907,9 @@ rc_t VFunctionProdMakeBuiltInComp ( VProduction **prodp, Vector *owned,
         VFactoryParams cp;
         VFunctionParams dp;
 
-        info . schema = curs -> schema;
-        info . tbl  = curs -> tbl;
-        info . mgr = curs -> tbl -> mgr;
+        info . schema = VCursorGetSchema ( curs );
+        info . tbl  = VCursorGetTable ( curs );
+        info . mgr = info . tbl -> mgr;
 	info . parms = (struct VCursorParams*)curs;
         info . fdesc . fd = orig -> fd;
         info . fdesc . desc = orig -> desc;

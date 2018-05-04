@@ -68,6 +68,9 @@ TESTLEX_OBJ = \
 $(TEST_BINDIR)/wb-test-schema-lex: $(TESTLEX_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_LIB)
 
+lex: wb-test-schema-lex
+	$(TEST_BINDIR)/$^
+
 #-------------------------------------------------------------------------------
 # black box scanner test
 #
@@ -91,6 +94,10 @@ TESTGRAM_OBJ = \
 
 $(TEST_BINDIR)/wb-test-schema-parser: $(TESTGRAM_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_LIB)
+
+gram: wb-test-schema-parser
+	@mkdir -p $(SRCDIR)/actual
+	$(TEST_BINDIR)/$^
 
 #-------------------------------------------------------------------------------
 # black box parser test
@@ -129,21 +136,32 @@ TESTAST_OBJ = \
 $(TEST_BINDIR)/wb-test-schema-ast: $(TESTAST_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_LIB)
 
+ast: wb-test-schema-ast
+	$(TEST_BINDIR)/$^
+
 #-------------------------------------------------------------------------------
 # runtests
 #
-runtests: scantest parsetest difftest
+runtests: existing-schema-tests
+
+wb-tests: lex gram ast
+
+existing-schema-tests: wb-tests
+	$(MAKE) scantest parsetest difftest
 
 SCHEMATA := $(shell find $(TOP) -name "*.vschema")
 
 scantest: test-schema-scan
-	@mkdir -p $(SRCDIR)/actual;
 	$(TEST_BINDIR)/test-schema-scan $(SCHEMATA)
 	@echo "Schema scanner test complete"
 
 parsetest: test-schema-parse
 	-$(TEST_BINDIR)/test-schema-parse $(SCHEMATA)
 	@echo "Schema parser test complete"
+
+mv:test-schema-diff
+	mkdir -p $(OBJDIR)/data
+	-$(TEST_BINDIR)/test-schema-diff -I$(TOP)/interfaces -o$(OBJDIR)/data mv.vschema
 
 difftest: test-schema-diff
 	mkdir -p $(OBJDIR)/data

@@ -34,12 +34,8 @@
 #include <klib/printf.h>
 #include <klib/rc.h>
 
-// hide an unfortunately named C function typename()
-#define typename __typename
 #include "../vdb/schema-parse.h"
-#undef typename
 #include "../vdb/dbmgr-priv.h"
-#include "../vdb/schema-priv.h"
 #include "../vdb/schema-expr.h"
 
 using namespace ncbi::SchemaParser;
@@ -166,32 +162,6 @@ AST :: AddNode ( const Token * p_child )
     AddChild ( new AST ( p_child ) );
 }
 
-// AST_Schema
-
-AST_Schema :: AST_Schema ()
-:   m_version ( 0 )
-{
-}
-
-
-AST_Schema :: AST_Schema ( const Token * p_token, AST* p_decls /*NULL OK*/ )
-:   AST ( p_token ),
-    m_version ( 0 )
-{
-    if ( p_decls != 0 )
-    {
-        MoveChildren ( * p_decls );
-        delete p_decls;
-    }
-}
-
-void
-AST_Schema :: SetVersion ( const char* ) // version specified as "#maj[.min[.rel]]]"
-{
-    assert ( false );
-}
-
-
 // AST_FQN
 
 AST_FQN :: AST_FQN ( const Token* p_token )
@@ -250,7 +220,7 @@ AST_FQN :: GetPartialName ( char* p_buf, size_t p_bufSize, uint32_t p_lastMember
         }
     }
 
-    p_buf [ p_bufSize ] = 0;
+    p_buf [ p_bufSize - 1 ] = 0;
 }
 
 void
@@ -477,7 +447,7 @@ AST_Expr :: MakeUnsigned ( ASTBuilder & p_builder ) const
 SExpression *
 AST_Expr :: MakeFloat ( ASTBuilder & p_builder ) const
 {
-    assert ( GetTokenType () == FLOAT || GetTokenType () == EXP_FLOAT );
+    assert ( GetTokenType () == FLOAT_ || GetTokenType () == EXP_FLOAT );
     SConstExpr * x = p_builder . Alloc < SConstExpr > ( sizeof * x - sizeof x -> u + sizeof x -> u . u64 [ 0 ] );
     if ( x != 0 )
     {
@@ -832,6 +802,129 @@ AST_Expr :: MakeCast ( ASTBuilder & p_builder ) const
     return 0;
 }
 
+static
+SExpression *
+SMembExprMake ( ASTBuilder & p_builder, const KSymbol* p_obj, const KSymbol* p_mem, const SExpression * p_rowId )
+{
+    SMembExpr *x = p_builder . Alloc < SMembExpr > ();
+    if ( x == 0 )
+    {
+        return 0;
+    }
+
+    x -> dad . var = eMembExpr;
+    atomic32_set ( & x -> dad . refcount, 1 );
+
+    x -> view = p_builder . GetView ();
+
+    // link to the corresponding parameter of the current view
+    uint32_t start = VectorStart ( & x -> view -> params );
+    uint32_t count = VectorLength ( & x -> view -> params );
+    for ( uint32_t i = 0; i < count; ++i )
+    {
+        if ( VectorGet ( & x -> view -> params, start + i ) == p_obj )
+        {
+            x -> paramId = start + i;
+            break;
+        }
+    }
+
+    x -> member = p_mem;
+    x -> rowId = p_rowId;
+
+    return & x -> dad;
+}
+
+static
+SExpression *
+MakeSMembExpr ( ASTBuilder & p_builder, const AST & p_struc, const AST & p_member, const AST_Expr * p_rowId = 0 )
+{
+    assert ( p_struc . GetTokenType () == PT_IDENT );
+    assert ( p_struc . ChildrenCount () == 1 );
+    assert ( p_member . GetTokenType () == PT_IDENT );
+    assert ( p_member . ChildrenCount () == 1 );
+
+    const KSymbol * sym = p_builder . Resolve ( p_struc . GetChild ( 0 ) -> GetLocation (),
+                                                p_struc . GetChild ( 0 ) -> GetTokenValue (),
+                                                true );
+    if ( sym != 0 )
+    {
+        const SExpression * rowId = 0;
+        if ( p_rowId != 0 )
+        {
+            rowId = p_rowId -> MakeExpression ( p_builder );
+            if ( rowId == 0 )
+            {
+                return 0;
+            }
+        }
+
+        switch ( sym -> type )
+        {
+        case eTable:
+            {
+                const STable * t = static_cast < const STable * > ( sym -> u . obj );
+                // find member . GetChild ( 0 ) in t -> scope
+                String memName;
+                StringInitCString ( & memName, p_member . GetChild ( 0 ) -> GetTokenValue () );
+                const KSymbol * mem = ( const KSymbol* ) BSTreeFind ( & t -> scope, & memName, KSymbolCmp );
+                if ( mem != 0 )
+                {
+                    assert ( mem -> type == eColumn || mem -> type == eProduction );
+                    return SMembExprMake ( p_builder, sym, mem, rowId );
+                }
+                else
+                {
+                    p_builder . ReportError ( p_member . GetLocation (), "Column/production not found", memName );
+                }
+            }
+            break;
+        case eView:
+            {
+                const SView * v = static_cast < const SView * > ( sym -> u . obj );
+                // find member . GetChild ( 0 ) in v -> scope
+                String memName;
+                StringInitCString ( & memName, p_member . GetChild ( 0 ) -> GetTokenValue () );
+                const KSymbol * mem = ( const KSymbol* ) BSTreeFind ( & v -> scope, & memName, KSymbolCmp );
+                if ( mem != 0 )
+                {
+                    assert ( mem -> type == eColumn || mem -> type == eProduction );
+                    return SMembExprMake ( p_builder, sym, mem, rowId );
+                }
+                else
+                {
+                    p_builder . ReportError ( p_member . GetLocation (), "Column/production not found", memName );
+                }
+            }
+            break;
+    default:
+            //error
+            break;
+        }
+    }
+
+    return 0;
+}
+
+SExpression *
+AST_Expr :: MakeMember ( ASTBuilder & p_builder ) const
+{
+    assert ( GetTokenType () == PT_MEMBEREXPR );
+    assert ( ChildrenCount () == 2 ); // ident, ident
+    return MakeSMembExpr ( p_builder, * GetChild ( 0 ), * GetChild ( 1 ) );
+}
+
+SExpression *
+AST_Expr :: MakeJoin ( ASTBuilder & p_builder ) const
+{
+    assert ( GetTokenType () == PT_JOINEXPR );
+    assert ( ChildrenCount () == 3 ); // ident, rowid-expr, ident
+    return MakeSMembExpr ( p_builder,
+                           * GetChild ( 0 ),
+                           * GetChild ( 2 ),
+                           ToExpr ( GetChild ( 1 ) ) );
+}
+
 SExpression *
 AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
 {
@@ -869,7 +962,7 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
     case PT_UINT:
         return MakeUnsigned ( p_builder );
 
-    case FLOAT:
+    case FLOAT_:
     case EXP_FLOAT:
         return MakeFloat ( p_builder );
 
@@ -996,6 +1089,12 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
     case PT_CASTEXPR:
         return MakeCast ( p_builder );
 
+    case PT_MEMBEREXPR:
+        return MakeMember ( p_builder );
+
+    case PT_JOINEXPR:
+        return MakeJoin ( p_builder );
+
     default:
         p_builder . ReportError ( GetLocation (), "Not yet implemented" );
         break;
@@ -1019,25 +1118,4 @@ ncbi :: SchemaParser :: ToExpr ( const AST * p_ast)
     const AST_Expr * ret = dynamic_cast < const AST_Expr * > ( p_ast );
     assert ( ret != 0 );
     return ret;
-}
-
-
-// AST_ParamSig
-
-AST_ParamSig :: AST_ParamSig ( const Token * p_token, AST * p_mandatory, AST * p_optional, bool p_variadic )
-:   AST ( p_token ),
-    m_isVariadic ( p_variadic )
-{
-    AddNode ( p_mandatory == 0 ? new AST () : p_mandatory );
-    AddNode ( p_optional == 0 ? new AST () : p_optional );
-}
-
-// AST_Formal
-
-AST_Formal :: AST_Formal ( const Token * p_token, AST * p_typespec, const Token* p_id, bool p_control )
-:   AST ( p_token ),
-    m_hasControl ( p_control )
-{
-    AddNode ( p_typespec );
-    AddNode ( p_id );
 }

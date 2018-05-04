@@ -292,7 +292,6 @@ rc_t SFunctionBindSchemaParms ( const SFunction *self,
     Vector *prior, const Vector *subst, Vector *cx_bind )
 {
     rc_t rc = 0;
-
     uint32_t i, count;
     void *cx_old, *cx_new;
 
@@ -302,19 +301,17 @@ rc_t SFunctionBindSchemaParms ( const SFunction *self,
     /* count input params
        the first bunch are types
        the remainder are constants */
-    count = VectorLength ( subst );
+    uint32_t expected = VectorLength ( & self -> type ) + VectorLength ( & self -> schem );
+    uint32_t actual = VectorLength ( subst );
 
     /* initialize return value
        the prior values act as a stack for recursion */
-    VectorInit ( prior, 0, count );
-
-    /* determine total schema params */
-    i = VectorLength ( & self -> type ) + VectorLength ( & self -> schem );
+    VectorInit ( prior, 0, actual );
 
     /* param counts must match */
-    if ( count < i )
+    if ( actual < expected )
         rc = RC ( rcVDB, rcFunction, rcEvaluating, rcParam, rcInsufficient );
-    else if ( count > i )
+    else if ( actual > expected )
         rc = RC ( rcVDB, rcFunction, rcEvaluating, rcParam, rcExcessive );
     if ( rc != 0 )
     {
@@ -323,7 +320,7 @@ rc_t SFunctionBindSchemaParms ( const SFunction *self,
                  "f=%.*s,count=%u,i=%u",
                  self -> name ? self -> name -> name . size : 0,
                  self -> name ? self -> name -> name . addr : NULL,
-                 count, i ));
+                 expected, actual ));
         return rc;
     }
 
