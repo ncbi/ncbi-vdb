@@ -31,19 +31,23 @@ include $(CONFIG_FILE)
 #-------------------------------------------------------------------------------
 # set up installation locations
 
+# unset outside defined variables
+ROOT =
+LINUX_ROOT =
+
 #fake root for debugging
 #uncomment this line and change the following test for root ( see under install: ) to succeed:
-#VDB_TEST_ROOT = ~/root
+#ROOT = ~/root
 ifeq (linux, $(OS))
     ifeq (0, $(shell id -u))
-        VDB_TEST_LINUX_ROOT = true
+        LINUX_ROOT = true
     endif
 endif
 
-ifeq (true, $(VDB_TEST_LINUX_ROOT))
-    KONFIG_DIR = $(VDB_TEST_ROOT)/etc/ncbi
-    INCLUDE_SYMLINK = $(VDB_TEST_ROOT)/usr/include/ncbi-vdb
-    PROFILE_FILE = $(VDB_TEST_ROOT)/etc/profile.d/ncbi-vdb
+ifeq (true, $(LINUX_ROOT))
+    KONFIG_DIR = $(ROOT)/etc/ncbi
+    INCLUDE_SYMLINK = $(ROOT)/usr/include/ncbi-vdb
+    PROFILE_FILE = $(ROOT)/etc/profile.d/ncbi-vdb
 else
     KONFIG_DIR = $(LIB_TARGET)/ncbi
 endif
@@ -83,7 +87,7 @@ copykfg: checkversion
         then mv -v $(KONFIG_DIR)/ncbi-vdb.kfg  $(KONFIG_DIR)/ncbi-vdb.kfg.orig  ; fi
 
 install: copylibs copyincludes copykfg
-ifeq (true, $(VDB_TEST_LINUX_ROOT))
+ifeq (true, $(LINUX_ROOT))
 	@ # install symlink to includes
 	@ echo "Updating $(INCLUDE_SYMLINK)"
 	@ rm -f $(INCLUDE_SYMLINK)
@@ -125,7 +129,7 @@ TO_UNINSTALL_AS_ROOT = $(INCLUDE_SYMLINK) $(PROFILE_FILE).sh $(PROFILE_FILE).csh
 uninstall:
 	@ echo "Uninstalling $(TO_UNINSTALL) ..."
 	@ rm -rf $(TO_UNINSTALL)
-ifeq (true, $(VDB_TEST_LINUX_ROOT))
+ifeq (true, $(LINUX_ROOT))
 	@ echo "Uninstalling $(TO_UNINSTALL_AS_ROOT) ..."
 	@ rm -rf $(TO_UNINSTALL_AS_ROOT)
 endif

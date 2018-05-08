@@ -36,11 +36,11 @@ ROOTDIR = $(SRCDIR)/root
 
 SUBMAKE = $(MAKE) --no-print-directory
 
-ifeq (true,$(VDB_TEST_LINUX_ROOT))
+ifeq (true,$(LINUX_ROOT))
     #settings for the fake root mode
     INSTALL_DIR = $(ROOTDIR)
     KONFIG_DIR = $(ROOTDIR)/etc/ncbi
-    SUBMAKE += VDB_TEST_LINUX_ROOT=$(VDB_TEST_LINUX_ROOT) VDB_TEST_ROOT=$(INSTALL_DIR)
+    SUBMAKE += LINUX_ROOT=$(LINUX_ROOT) ROOT=$(INSTALL_DIR)
 else
     INSTALL_DIR = $(SRCDIR)/install
     KONFIG_DIR = $(INSTALL_DIR)/lib$(BITS)/ncbi
@@ -140,16 +140,16 @@ test-install: cleanup
 	@ ( ! test -f $(KONFIG_DIR)/certs.kfg.orig ) || ( echo "Error: $(KONFIG_DIR)/certs.kfg.orig exists" && exit 1 )
 	@ #
 	@ #
-ifeq (,$(VDB_TEST_LINUX_ROOT))
+ifeq (,$(LINUX_ROOT))
 	#
 	# Run the same tests in simulated root mode
 	#
-	@ $(MAKE) VDB_TEST_LINUX_ROOT=true
+	@ $(MAKE) LINUX_ROOT=true
 endif
 
 cleanup:
 	rm -rf $(INSTALL_DIR)
-ifeq (true,$(VDB_TEST_LINUX_ROOT))
+ifeq (true,$(LINUX_ROOT))
 	# in root mode, recreate "system" directories
 	mkdir -p $(ROOTDIR)/usr/include  $(ROOTDIR)/etc/profile.d
 endif
