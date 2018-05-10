@@ -1360,8 +1360,8 @@ rc_t VResolverAlgParseResolverCGIResponse ( const KDataBuffer *result,
     for (iVersion = 0;
         iVersion < sizeof version / sizeof *version; ++iVersion)
     {
-        if (string_cmp(&start[i], size - i,
-            version[iVersion].c, version[iVersion].s, version[iVersion].s) == 0)
+        if (string_cmp(&start[i], size - i, version[iVersion].c,
+            version[iVersion].s, ( uint32_t ) version[iVersion].s) == 0)
         {
             break;
         }
@@ -1369,7 +1369,7 @@ rc_t VResolverAlgParseResolverCGIResponse ( const KDataBuffer *result,
     switch (iVersion) {
         default:
             if (string_cmp(&start[i], size - i, version[iVersion].c,
-                version[iVersion].s, version[iVersion].s) == 0)
+                version[iVersion].s, ( uint32_t ) version[iVersion].s) == 0)
             {
                 /* accept version line */
                 i += version[iVersion].s;
@@ -1653,8 +1653,8 @@ rc_t VResolverAlgFixHTTPSOnlyStandard ( VResolverAlg * self, bool * fixed )
         size = http . size;
 
         /* resolver-cgi is called over http */
-        if ( root -> size > size &&
-             strcase_cmp ( root -> addr, size, http . addr, size, size ) == 0 )
+        if ( root -> size > size && strcase_cmp ( root -> addr, size,
+                                   http . addr, size, ( uint32_t ) size ) == 0 )
         {
             VPath * path = NULL;
             rc = VPathMakeFmt ( & path, "%S", root );
@@ -1669,7 +1669,7 @@ rc_t VResolverAlgFixHTTPSOnlyStandard ( VResolverAlg * self, bool * fixed )
                     /* If resolver-cgi is on government site */
                     if ( host . size > size &&
                         strcase_cmp ( host . addr + host . size - size,
-                            size, gov . addr, size, size ) == 0 )
+                            size, gov . addr, size, ( uint32_t ) size ) == 0 )
                     {
                         size_t newLen = root -> len + 2;
                         String * tmp = malloc ( sizeof * tmp + newLen );
@@ -2987,9 +2987,6 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
         query, has_fragment, & accession, & tok, & legacy_wgs_refseq,
         resolveAllAccToCache, & forDirAdjusted );
 
-    if ( dir != NULL )
-        forDirAdjusted = true;
-
     /* going to walk the local volumes, and remember
        which one was best. actually, we have no algorithm
        for determining it, so it's just the comment for TBD */
@@ -3002,6 +2999,9 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
     bool protected = VPathHasDownloadTicket ( query );
 
     VResolverEnableState cache_state = atomic32_read ( & enable_cache );
+
+    if ( dir != NULL )
+        forDirAdjusted = true;
 
     /* check for cache-enable override */
     if ( cache_state == vrAlwaysEnable )
