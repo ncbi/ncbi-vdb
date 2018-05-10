@@ -3925,8 +3925,11 @@ rc_t VPathClose ( const VPath * l, const VPath * r, int * notequal,
     if ( rp == 0 && re == 0 ) {
         if ( pnumred != end )
             * notequal |= 2;
-        else if ( string_cmp ( pbuffer, pnumred, ebuffer, end, end ) != 0 )
+        else if ( string_cmp ( pbuffer, pnumred, ebuffer, end,
+                               ( uint32_t ) end ) != 0 )
+        {
             * notequal |= 4;
+        }
     }
     else if ( rc == 0 ) {
         if ( rp != 0 )
