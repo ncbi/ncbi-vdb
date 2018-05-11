@@ -525,7 +525,7 @@ static yyconst flex_int32_t yy_ec[256] =
         1,    1,    1,    1,    1
     } ;
 
-static yyconst YY_CHAR yy_meta[62] =
+static yyconst flex_int32_t yy_meta[62] =
     {   0,
         1,    1,    2,    3,    1,    1,    1,    1,    1,    1,
         1,    4,    1,    1,    1,    5,    1,    6,    6,    6,
@@ -536,7 +536,7 @@ static yyconst YY_CHAR yy_meta[62] =
         1
     } ;
 
-static yyconst flex_uint16_t yy_base[315] =
+static yyconst flex_int16_t yy_base[315] =
     {   0,
         0,    0,   60,   64,   80,   84,  100,  104,  530,  531,
       531,  531,   65,   93,  531,   66,  531,  531,  531,  531,
@@ -614,7 +614,7 @@ static yyconst flex_int16_t yy_def[315] =
       299,  299,  299,  299
     } ;
 
-static yyconst flex_uint16_t yy_nxt[593] =
+static yyconst flex_int16_t yy_nxt[593] =
     {   0,
        10,   11,   12,   11,   11,   13,   14,   15,   16,   17,
        18,   19,   20,   21,   22,   23,   24,   25,   26,   26,
@@ -785,7 +785,7 @@ static yyconst flex_int16_t yy_rule_linenum[93] =
 #define yymore() yymore_used_but_not_detected
 #define YY_MORE_ADJ 0
 #define YY_RESTORE_YY_MORE_OFFSET
-#line 1 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 1 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 /*===========================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
@@ -811,7 +811,7 @@ static yyconst flex_int16_t yy_rule_linenum[93] =
 * ===========================================================================
 *
 */
-#line 28 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 28 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 
 #define YYDEBUG 1
 
@@ -848,7 +848,7 @@ static void AddWhitespace ( SchemaScanBlock* p_sb, const char* p_ws, size_t p_le
 
 
 
-#line 872 "<stdout>"
+#line 852 "<stdout>"
 
 #define INITIAL 0
 #define CMT_SLASH_STAR 1
@@ -1167,12 +1167,12 @@ YY_DECL
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
 
 /* %% [7.0] user's declarations go here */
-#line 84 "/home/rodarme1/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 84 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 
 
  /* literals */
 
-#line 1180 "<stdout>"
+#line 1176 "<stdout>"
 
     yylval = yylval_param;
 
@@ -1212,16 +1212,7 @@ YY_DECL
 		schema_yy_load_buffer_state(yyscanner );
 		}
 
-	{
-/* %% [7.0] user's declarations go here */
-#line 84 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
-
-
- /* literals */
-
-#line 1243 "<stdout>"
-
-	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
+	while ( 1 )		/* loops until end-of-file is reached */
 		{
 /* %% [8.0] yymore()-related code goes here */
 		yy_cp = yyg->yy_c_buf_p;
@@ -1309,378 +1300,378 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 88 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 88 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 89 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 89 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 90 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 90 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 91 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 91 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 92 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 92 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 93 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 93 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 94 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 94 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 95 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 95 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 96 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 96 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 97 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 97 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 98 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 98 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 99 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 99 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 100 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 100 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 101 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 101 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 102 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 102 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 103 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 103 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 104 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 104 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 105 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 105 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 106 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 106 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 107 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 107 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 108 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 108 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 110 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 110 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return ELLIPSIS; }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 112 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 112 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return DECIMAL; }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 113 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 113 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return OCTAL; }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 114 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 114 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return HEX; }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 115 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 115 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return EXP_FLOAT; }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 116 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 116 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return EXP_FLOAT; }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 117 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 117 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return FLOAT_; }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 118 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 118 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return FLOAT_; }
 	YY_BREAK
 /* single quoted strings */
 case 30:
 /* rule 30 can match eol */
 YY_RULE_SETUP
-#line 121 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 121 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return STRING; }
 	YY_BREAK
 case 31:
 /* rule 31 can match eol */
 YY_RULE_SETUP
-#line 122 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 122 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return UNTERM_STRING; }
 	YY_BREAK
 case 32:
 /* rule 32 can match eol */
 YY_RULE_SETUP
-#line 123 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 123 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return ESCAPED_STRING; }
 	YY_BREAK
 case 33:
 /* rule 33 can match eol */
 YY_RULE_SETUP
-#line 124 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 124 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return UNTERM_ESCAPED_STRING; }
 	YY_BREAK
 /* double quoted strings */
 case 34:
 /* rule 34 can match eol */
 YY_RULE_SETUP
-#line 127 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 127 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return STRING; }
 	YY_BREAK
 case 35:
 /* rule 35 can match eol */
 YY_RULE_SETUP
-#line 128 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 128 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return UNTERM_STRING; }
 	YY_BREAK
 case 36:
 /* rule 36 can match eol */
 YY_RULE_SETUP
-#line 129 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 129 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return ESCAPED_STRING; }
 	YY_BREAK
 case 37:
 /* rule 37 can match eol */
 YY_RULE_SETUP
-#line 130 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 130 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return UNTERM_ESCAPED_STRING; }
 	YY_BREAK
 /* keywords */
 case 38:
 YY_RULE_SETUP
-#line 133 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 133 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW___no_header; }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 134 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 134 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW___row_length; }
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 135 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 135 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW___untyped; }
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 136 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 136 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_alias; }
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-#line 137 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 137 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_column; }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 138 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 138 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_const; }
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 139 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 139 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_control; }
 	YY_BREAK
 case 45:
 YY_RULE_SETUP
-#line 140 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 140 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_database; }
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
-#line 141 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 141 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_decode; }
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
-#line 142 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 142 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_default; }
 	YY_BREAK
 case 48:
 YY_RULE_SETUP
-#line 143 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 143 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_encode; }
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
-#line 144 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 144 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_extern; }
 	YY_BREAK
 case 50:
 YY_RULE_SETUP
-#line 145 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 145 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_false; }
 	YY_BREAK
 case 51:
 YY_RULE_SETUP
-#line 146 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 146 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_fmtdef; }
 	YY_BREAK
 case 52:
 YY_RULE_SETUP
-#line 147 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 147 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_function; }
 	YY_BREAK
 case 53:
 YY_RULE_SETUP
-#line 148 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 148 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_include; }
 	YY_BREAK
 case 54:
 YY_RULE_SETUP
-#line 149 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 149 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_limit; }
 	YY_BREAK
 case 55:
 YY_RULE_SETUP
-#line 150 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 150 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_physical; }
 	YY_BREAK
 case 56:
 YY_RULE_SETUP
-#line 151 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 151 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_read; }
 	YY_BREAK
 case 57:
 YY_RULE_SETUP
-#line 152 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 152 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_readonly; }
 	YY_BREAK
 case 58:
 YY_RULE_SETUP
-#line 153 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 153 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_return; }
 	YY_BREAK
 case 59:
 YY_RULE_SETUP
-#line 154 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 154 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_schema; }
 	YY_BREAK
 case 60:
 YY_RULE_SETUP
-#line 155 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 155 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_static; }
 	YY_BREAK
 case 61:
 YY_RULE_SETUP
-#line 156 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 156 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_table; }
 	YY_BREAK
 case 62:
 YY_RULE_SETUP
-#line 157 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 157 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_template; }
 	YY_BREAK
 case 63:
 YY_RULE_SETUP
-#line 158 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 158 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_trigger; }
 	YY_BREAK
 case 64:
 YY_RULE_SETUP
-#line 159 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 159 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_true; }
 	YY_BREAK
 case 65:
 YY_RULE_SETUP
-#line 160 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 160 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_type; }
 	YY_BREAK
 case 66:
 YY_RULE_SETUP
-#line 161 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 161 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_typedef; }
 	YY_BREAK
 case 67:
 YY_RULE_SETUP
-#line 162 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 162 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_typeset; }
 	YY_BREAK
 case 68:
 YY_RULE_SETUP
-#line 163 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 163 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_validate; }
 	YY_BREAK
 case 69:
 YY_RULE_SETUP
-#line 165 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 165 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { yy_push_state ( VERSION_STATE, yyscanner ); return KW_version; }
 	YY_BREAK
 case 70:
 YY_RULE_SETUP
-#line 166 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 166 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { yy_pop_state ( yyscanner ); return VERS_1_0; }
 	YY_BREAK
 case 71:
 YY_RULE_SETUP
-#line 167 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 167 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { yy_pop_state ( yyscanner ); return VERS_1_0; }
 	YY_BREAK
 case 72:
 YY_RULE_SETUP
-#line 168 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 168 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { yy_pop_state ( yyscanner ); return VERS_2_0; }
 	YY_BREAK
 case 73:
 YY_RULE_SETUP
-#line 169 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 169 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { yy_pop_state ( yyscanner ); return VERS_2_0; }
 	YY_BREAK
 /* reject versions we do not know about
@@ -1689,108 +1680,108 @@ YY_RULE_SETUP
  */
 case 74:
 YY_RULE_SETUP
-#line 175 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 175 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_view; }
 	YY_BREAK
 case 75:
 YY_RULE_SETUP
-#line 176 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 176 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_virtual; }
 	YY_BREAK
 case 76:
 YY_RULE_SETUP
-#line 177 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 177 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_void; }
 	YY_BREAK
 case 77:
 YY_RULE_SETUP
-#line 178 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 178 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_write; }
 	YY_BREAK
 case 78:
 YY_RULE_SETUP
-#line 180 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 180 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return IDENTIFIER_1_0; }
 	YY_BREAK
 case 79:
 YY_RULE_SETUP
-#line 181 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 181 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return IDENTIFIER_1_0; } /* for things like 4na */
 	YY_BREAK
 case 80:
 YY_RULE_SETUP
-#line 182 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 182 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return PHYSICAL_IDENTIFIER_1_0; }
 	YY_BREAK
 case 81:
 YY_RULE_SETUP
-#line 184 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 184 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return VERSION; }
 	YY_BREAK
 case 82:
 YY_RULE_SETUP
-#line 185 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 185 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return VERSION; }
 	YY_BREAK
 case 83:
 YY_RULE_SETUP
-#line 186 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 186 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return VERSION; }
 	YY_BREAK
 /* multi-line comments */
 case 84:
 YY_RULE_SETUP
-#line 189 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 189 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { yy_push_state ( CMT_SLASH_STAR, yyscanner ); AddWs(); }
 	YY_BREAK
 case 85:
 YY_RULE_SETUP
-#line 190 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 190 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { AddWs(); }
 	YY_BREAK
 case 86:
 YY_RULE_SETUP
-#line 191 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 191 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { AddWs(); }
 	YY_BREAK
 case 87:
 /* rule 87 can match eol */
 YY_RULE_SETUP
-#line 192 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 192 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { BEGIN CMT_MULTI_LINE; AddWs(); }
 	YY_BREAK
 case 88:
 YY_RULE_SETUP
-#line 193 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 193 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { yy_pop_state ( yyscanner ); AddWs(); }
 	YY_BREAK
 case 89:
 YY_RULE_SETUP
-#line 194 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 194 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { yy_pop_state ( yyscanner ); AddWs(); }
 	YY_BREAK
 /* line comments */
 case 90:
 YY_RULE_SETUP
-#line 197 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 197 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { AddWs(); }
 	YY_BREAK
 /* ignored tokens */
 case 91:
 /* rule 91 can match eol */
 YY_RULE_SETUP
-#line 200 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 200 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { AddWs(); }
 	YY_BREAK
 /* unrecognized input */
 case 92:
 YY_RULE_SETUP
-#line 203 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 203 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 { return UNRECOGNIZED; }
 	YY_BREAK
 case 93:
 YY_RULE_SETUP
-#line 205 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 205 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 ECHO;
 	YY_BREAK
 #line 1788 "<stdout>"
@@ -3169,7 +3160,7 @@ void schema_yyfree (void * ptr , yyscan_t yyscanner)
 
 /* %ok-for-header */
 
-#line 205 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 205 "/home/user/devel/ncbi/ncbi-vdb/libs/schema/schema-lex.l"
 
 
 
