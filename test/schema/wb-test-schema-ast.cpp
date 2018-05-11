@@ -688,7 +688,7 @@ FIXTURE_TEST_CASE(Include_SearchPath, AST_Fixture)
     m_builder -> AddIncludePath ( "./actual" );
     MakeAst ( "include \"inc\";" );
     VerifySymbol ( "t", eDatatype );
-    remove ( "inc" );
+    remove ( "./actual/inc" );
 }
 
 FIXTURE_TEST_CASE(Include_MoreThanOnce, AST_Fixture)
