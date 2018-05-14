@@ -1,5 +1,5 @@
-#ifndef _h_vfs_services_priv_
-#define _h_vfs_services_priv_
+#ifndef _h_vfs_resolver_priv_
+#define _h_vfs_resolver_priv_
 
 /*===========================================================================
 *
@@ -28,7 +28,7 @@
 */
 
 
-#include <vfs/services.h> /* KService */
+#include <vfs/resolver.h> /* VResolver */
 
 
 #ifdef __cplusplus
@@ -36,30 +36,21 @@ extern "C" {
 #endif
 
 
-struct KNSManager;
-
-
-rc_t KServiceNamesQueryExt ( KService * self, VRemoteProtocols protocols, 
-                             const char * cgi, const char * version,
-                             const KSrvResponse ** response );
-
-rc_t KServiceNamesExecuteExt ( KService * self, VRemoteProtocols protocols, 
-    const char * cgi, const char * version,
-    const struct KSrvResponse ** result );
-
-rc_t KServiceSearchExecuteExt ( KService * self,
-    const char * cgi, const char * version,
-    const struct Kart ** result );
-
-
-rc_t KServiceTestNamesExecuteExt ( KService * self, VRemoteProtocols protocols, 
-    const char * cgi, const char * version,
-    const struct KSrvResponse ** result, const char * expected );
-
-
-rc_t KService1Search ( const struct KNSManager * mgr, const char * cgi,
-    const char * acc, const struct Kart ** result );
-
+/* QueryWithDir:
+ * get local/cache location when URL is requested or target dir specified:
+ * when resolveAccToCache is false: use FILE app rather than REFSEQ
+ * inOutDir - returned cache location is in the output (or current) directory
+ *
+ * outDir==NULL resolveAccToCache==true : resolve all to cache
+ * outDir==NULL resolveAccToCache==false: resolve accessions to cache,
+ *                                                files - to cwd
+ * outDir!=NULL: resolve all to outDir
+ */
+VFS_EXTERN rc_t CC VResolverQueryWithDir ( const VResolver * self,
+    VRemoteProtocols protocols,
+    const struct VPath * query, const struct VPath ** local,
+    const struct VPath ** remote, const struct VPath ** cache,
+    bool resolveAccToCache, const char * outDir, bool * inOutDir );
 
 
 #ifdef __cplusplus
@@ -67,4 +58,4 @@ rc_t KService1Search ( const struct KNSManager * mgr, const char * cgi,
 #endif
 
 
-#endif /* _h_vfs_services_priv_ */
+#endif /* _h_vfs_resolver_priv_ */
