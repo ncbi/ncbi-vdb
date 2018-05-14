@@ -4749,7 +4749,8 @@ rc_t VResolverForceRemoteProtected ( VResolver *self )
 
     /* create one from hard-coded constants */
     String cgi_root;
-    StringInitCString ( & cgi_root, "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
+    StringInitCString ( & cgi_root,
+        "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi" );
     rc = StringCopy ( & root, & cgi_root );    
     if ( rc == 0 )
     {
