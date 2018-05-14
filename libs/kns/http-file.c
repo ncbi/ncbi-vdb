@@ -642,6 +642,8 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                                                 }
                                                             }
                                                         }
+                                                        if ( ! reliable )
+                                                            print = false;
                                                         if ( print ) {
                                                           assert ( buf );
                                                           PLOGERR ( klogErr,

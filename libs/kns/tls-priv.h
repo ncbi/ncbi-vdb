@@ -62,6 +62,8 @@ struct KTLSGlobals
     mbedtls_ctr_drbg_context ctr_drbg;
     mbedtls_entropy_context entropy;
     mbedtls_ssl_config config;
+
+    bool allow_all_certs;
 };
 
 /* Init

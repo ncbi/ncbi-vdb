@@ -53,16 +53,18 @@ struct HttpRetrySpecs;
 
 struct KNSManager
 {
-    KRefcount refcount;
-    
     struct String const *aws_access_key_id;
     struct String const *aws_secret_access_key;
     struct String const *aws_region;
     struct String const *aws_output;
-    
+
+    HttpProxy * http_proxy;
+
     struct HttpRetrySpecs retry_specs;
 
     KTLSGlobals tlsg;
+
+    KRefcount refcount;
 
     int32_t conn_timeout;
     int32_t conn_read_timeout;
@@ -76,7 +78,6 @@ struct KNSManager
 
     bool http_proxy_enabled; /* TBD - does this need to be static today? */
     bool http_proxy_only; /* no direct connection - proxy only */
-    HttpProxy * http_proxy;
 
     bool verbose;
 
