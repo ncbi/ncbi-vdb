@@ -189,8 +189,10 @@
 
 /* In a future release of Bison, this section will be replaced
    by #include "schema-tokens.h".  */
+
 #ifndef YY_SCHEMA_2T_DATA_ALTDEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_TOKENS_H_INCLUDED
 # define YY_SCHEMA_2T_DATA_ALTDEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_TOKENS_H_INCLUDED
+
 /* Debug traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0

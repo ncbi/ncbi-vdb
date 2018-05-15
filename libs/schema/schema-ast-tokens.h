@@ -194,6 +194,7 @@ union YYSTYPE
   AST_FQN*      fqn;
   AST_Expr*     expr;
 
+
 #line 198 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast-tokens.h" /* yacc.c:1909  */
 };
 

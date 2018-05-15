@@ -189,7 +189,6 @@ VFS_EXTERN rc_t CC VResolverQuery ( const VResolver * self,
     struct VPath const ** local, struct VPath const ** remote,
     struct VPath const ** cache );
 
-
 /* Local - DEPRECATED
  *  Find an existing local file/directory that is named by the accession.
  *  rcState of rcNotFound means it does not exist.
