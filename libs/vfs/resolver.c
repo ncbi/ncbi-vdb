@@ -35,6 +35,7 @@
 
 #include <vfs/manager.h>
 #include <vfs/path.h>
+#include <vfs/resolver-priv.h> /* VResolverQueryWithDir */
 
 #include <kns/http.h>
 #include <kns/kns-mgr-priv.h> /* KNSManagerMakeReliableHttpFile */
