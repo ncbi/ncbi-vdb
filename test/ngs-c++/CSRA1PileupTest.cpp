@@ -28,6 +28,8 @@
 * Unit tests for NGS Pileup interface, CSRA1 based implementation
 */
 
+#include <kfg/config.h> /* KConfigDisableUserSettings */
+
 #include <ngs/ncbi/NGS.hpp>
 
 #include <ktst/unit_test.hpp>
@@ -734,6 +736,7 @@ const char UsageDefaultName[] = "test-ngs_csra1pileup-c++";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    KConfigDisableUserSettings();
     rc_t rc=NgsCsra1PileupCppTestSuite(argc, argv);
     return rc;
 }
