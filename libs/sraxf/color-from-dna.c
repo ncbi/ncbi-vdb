@@ -137,11 +137,11 @@ rc_t CC color_from_dna_drvr ( void *self, const VXformInfo *info, int64_t row_id
 
 /* 
  * function
- * INSDC:color:bin NCBI:color_from_dna #1 ( INSDC:dna:bin dna_bin,
+ * INSDC:color:bin NCBI:color_from_dna #1.0.1 ( INSDC:dna:bin dna_bin,
  *     INSDC:coord:zero read_start, U32 read_len,
  *     INSDC:dna:text cs_key, U8 color_matrix )
  */
-VTRANSFACT_IMPL ( NCBI_color_from_dna, 1, 0, 0 ) ( const void *Self, const VXfactInfo *info,
+VTRANSFACT_IMPL ( NCBI_color_from_dna, 1, 0, 1 ) ( const void *Self, const VXfactInfo *info,
     VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
 {
     rslt->u.rf = color_from_dna_drvr;
