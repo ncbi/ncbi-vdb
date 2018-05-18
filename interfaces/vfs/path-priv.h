@@ -100,6 +100,8 @@ VFS_EXTERN rc_t CC VPathMakeCurrentPath ( VPath ** new_path );
 VFS_EXTERN rc_t CC VPathMakeURI ( VPath ** new_path, const char * uri );
 #endif
 
+VFS_EXTERN bool CC VPathHasRefseqContext ( const VPath * accession );
+
 
 /* Option
  *  rc == 0 if the option has been specified

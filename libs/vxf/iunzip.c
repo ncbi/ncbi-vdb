@@ -205,9 +205,9 @@ void decode_types(uint8_t dst[], unsigned n, const uint8_t src[])
     }
 }
 
-#define DESERIAL16(X) do { if (i + 2 > n) return RC(rcXF, rcFunction, rcExecuting, rcData, rcInsufficient); memcpy(&y->u.izipped.X, &src[i], 2); i += 2; if (swap) y->u.izipped.X = bswap_16(y->u.izipped.X); } while (0)
-#define DESERIAL32(X) do { if (i + 4 > n) return RC(rcXF, rcFunction, rcExecuting, rcData, rcInsufficient); memcpy(&y->u.izipped.X, &src[i], 4); i += 4; if (swap) y->u.izipped.X = bswap_32(y->u.izipped.X); } while (0)
-#define DESERIAL64(X) do { if (i + 8 > n) return RC(rcXF, rcFunction, rcExecuting, rcData, rcInsufficient); memcpy(&y->u.izipped.X, &src[i], 8); i += 8; if (swap) y->u.izipped.X = bswap_64(y->u.izipped.X); } while (0)
+#define DESERIAL16(X) do { if (i + 2 > n) return RC(rcXF, rcFunction, rcExecuting, rcData, rcInsufficient); memmove(&y->u.izipped.X, &src[i], 2); i += 2; if (swap) y->u.izipped.X = bswap_16(y->u.izipped.X); } while (0)
+#define DESERIAL32(X) do { if (i + 4 > n) return RC(rcXF, rcFunction, rcExecuting, rcData, rcInsufficient); memmove(&y->u.izipped.X, &src[i], 4); i += 4; if (swap) y->u.izipped.X = bswap_32(y->u.izipped.X); } while (0)
+#define DESERIAL64(X) do { if (i + 8 > n) return RC(rcXF, rcFunction, rcExecuting, rcData, rcInsufficient); memmove(&y->u.izipped.X, &src[i], 8); i += 8; if (swap) y->u.izipped.X = bswap_64(y->u.izipped.X); } while (0)
 
 static rc_t deserialize_encoded(struct encoded *y, const uint8_t src[], unsigned n, int swap) {
     unsigned i = 0;
@@ -220,7 +220,7 @@ static rc_t deserialize_encoded(struct encoded *y, const uint8_t src[], unsigned
     
     if (i + 4 > n)
         return RC(rcXF, rcFunction, rcExecuting, rcData, rcInsufficient);
-    memcpy(&y->data_count, &src[i], 4); i += 4;
+    memmove(&y->data_count, &src[i], 4); i += 4;
     if (swap)
         y->data_count = bswap_32(y->data_count);
     
@@ -229,7 +229,7 @@ static rc_t deserialize_encoded(struct encoded *y, const uint8_t src[], unsigned
     case 3:
         if (i + 8 > n)
             return RC(rcXF, rcFunction, rcExecuting, rcData, rcInsufficient);
-        memcpy(&y->u.packed.min, &src[i], 8); i += 8;
+        memmove(&y->u.packed.min, &src[i], 8); i += 8;
         if (swap)
             y->u.packed.min = bswap_64(y->u.packed.min);
     case 1:
@@ -334,7 +334,7 @@ static rc_t decode_encoded(struct decoded *y, const struct encoded *x) {
         }
         else {
             y->diff->min = x->u.packed.min;
-            memcpy(y->diff->data.u8, x->u.packed.data, n = x->u.packed.data_size);
+            memmove(y->diff->data.u8, x->u.packed.data, n = x->u.packed.data_size);
         }
         elem_bits = n * 8 / x->data_count;
         if (elem_bits * x->data_count / 8 != n)
@@ -398,7 +398,7 @@ static rc_t decode_encoded(struct decoded *y, const struct encoded *x) {
         }
         else {
             n = x->u.izipped.diff_size;
-            memcpy(y->diff->data.u8, x->u.izipped.diff, n);
+            memmove(y->diff->data.u8, x->u.izipped.diff, n);
         }
 
         if ( y->diff->size != 0 )
@@ -429,7 +429,7 @@ static rc_t decode_encoded(struct decoded *y, const struct encoded *x) {
         }
         else {
             n = x->u.izipped.length_size;
-            memcpy(y->length->data.u8, x->u.izipped.length, n);
+            memmove(y->length->data.u8, x->u.izipped.length, n);
         }
         elem_bits = (n * 8) / (y->lines + y->outliers);
         if (elem_bits * (y->lines + y->outliers) / 8 != n)
@@ -455,7 +455,7 @@ static rc_t decode_encoded(struct decoded *y, const struct encoded *x) {
         }
         else {
             n = x->u.izipped.dy_size;
-            memcpy(y->dy->data.u8, x->u.izipped.dy, n);
+            memmove(y->dy->data.u8, x->u.izipped.dy, n);
         }
         elem_bits = (n * 8) / y->lines;
         if (elem_bits * y->lines / 8 != n)
@@ -481,7 +481,7 @@ static rc_t decode_encoded(struct decoded *y, const struct encoded *x) {
         }
         else {
             n = x->u.izipped.dx_size;
-            memcpy(y->dx->data.u8, x->u.izipped.dx, n);
+            memmove(y->dx->data.u8, x->u.izipped.dx, n);
         }
         elem_bits = (n * 8) / y->lines;
         if (elem_bits * y->lines / 8 != n)
@@ -507,7 +507,7 @@ static rc_t decode_encoded(struct decoded *y, const struct encoded *x) {
         }
         else {
             n = x->u.izipped.a_size;
-            memcpy(y->a->data.u8, x->u.izipped.a, n);
+            memmove(y->a->data.u8, x->u.izipped.a, n);
         }
         elem_bits = (n * 8) / y->lines;
         if (elem_bits * y->lines / 8 != n)
@@ -534,7 +534,7 @@ static rc_t decode_encoded(struct decoded *y, const struct encoded *x) {
             }
             else {
                 n = x->u.izipped.outlier_size;
-                memcpy(y->outlier->data.u8, x->u.izipped.outlier, n);
+                memmove(y->outlier->data.u8, x->u.izipped.outlier, n);
             }
             elem_bits = (n * 8) / x->u.izipped.outliers;
             if (elem_bits * x->u.izipped.outliers / 8 != n)

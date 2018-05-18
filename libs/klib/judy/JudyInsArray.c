@@ -19,7 +19,7 @@
 // PIndex as an interleaved array of indexes and values rather than just
 // indexes with a separate values array (PValue), especially considering
 // indexes and values are copied here with for-loops anyway and not the
-// equivalent of memcpy().  All code could be revised to simply count by two
+// equivalent of memmove().  All code could be revised to simply count by two
 // words for JudyL?  Supports "streaming" the data to/from disk better later?
 // In which case get rid of JU_ERRNO_NULLPVALUE, no longer needed, and simplify
 // the API to this code.

@@ -108,7 +108,7 @@ static rc_t copy(
     uint32_t num_elements
 ) {
     const self_t *self = Self;
-    memcpy(dst, src, ((size_t)num_elements * self->src.intrinsic_bits * self->src.intrinsic_dim + 7) >> 3);
+    memmove(dst, src, ((size_t)num_elements * self->src.intrinsic_bits * self->src.intrinsic_dim + 7) >> 3);
     return 0;
 }
 

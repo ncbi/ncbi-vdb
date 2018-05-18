@@ -59,7 +59,7 @@ LIB_EXPORT rc_t CC StringCopy ( const String **cpy, const String *str )
             {
                 char *addr = ( char* ) ( s + 1 );
                 StringInit ( s, addr, size, str -> len );
-                memcpy ( addr, str -> addr, size );
+                memmove ( addr, str -> addr, size );
                 addr [ size ] = 0;
                 * cpy = s;
                 return 0;
@@ -89,8 +89,8 @@ LIB_EXPORT rc_t CC StringConcat ( const String **cat, const String *a, const Str
             {
                 char *addr = ( char* ) ( s + 1 );
                 StringInit ( s, addr, size, a -> len + b -> len );
-                memcpy ( addr, a -> addr, a -> size );
-                memcpy ( & addr [ a -> size ], b -> addr, b -> size );
+                memmove ( addr, a -> addr, a -> size );
+                memmove ( & addr [ a -> size ], b -> addr, b -> size );
                 addr [ size ] = 0;
                 * cat = s;
                 return 0;
@@ -140,6 +140,41 @@ LIB_EXPORT String * CC StringSubstr ( const String *str, String *sub,
         }
     }
     return NULL;
+}
+
+/* StringTrim
+ *  trims ascii white-space from both ends
+ *  returns trimmed string in "trimmed"
+ */
+LIB_EXPORT String * CC StringTrim ( const String * str, String * trimmed )
+{
+    if ( trimmed != NULL )
+    {
+        if ( str == NULL )
+            CONST_STRING ( trimmed, "" );
+        else
+        {
+            const char * addr = str -> addr;
+            size_t i, end, sz = str -> size;
+            uint32_t len = str -> len;
+
+            for ( end = sz; end > 0; -- end )
+            {
+                if ( ! isspace ( addr [ end - 1 ] ) )
+                    break;
+            }
+
+            for ( i = 0; i < end; ++ i )
+            {
+                if ( ! isspace ( addr [ i ] ) )
+                    break;
+            }
+
+            StringInit ( trimmed, & addr [ i ], end - i, len - ( i + sz - end ) );
+        }
+    }
+
+    return trimmed;
 }
 
 /* StringHead

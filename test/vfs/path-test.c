@@ -305,6 +305,7 @@ rc_t ParseUrlTest ( const VFSManager * vfs )
         /* <scheme>://<host>[:<port>]*/
         /*9*/ "http://www.abc.com",
         /*9.5*/ "https://www.abc.com",
+        /*9.5*/ "Https://www.abc.com",
         /*10*/ "http://www.abc.com:80",
 
         /* /<path>[#fragment]*/
@@ -485,6 +486,7 @@ rc_t ModifyPathTest ( const VFSManager * vfs )
         /* urls */
         "http://www.abc.com/library/index.html",
         "https://www.abc.com/library/index.html",
+        "HTTPS://www.abc.com/library/index.html",
         "http://www.abc.com/library/index.html?x&y=123&z=test#ignore-me",
 
         /* having auth portion */

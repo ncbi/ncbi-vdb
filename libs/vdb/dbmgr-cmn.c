@@ -915,3 +915,29 @@ LIB_EXPORT rc_t CC VDBManagerSetCacheRoot ( const struct VDBManager * self,
     }
     return rc;
 }
+
+
+LIB_EXPORT rc_t CC VDBManagerDeleteCacheOlderThan ( const VDBManager * self,
+    uint32_t days )
+{
+    rc_t rc;
+    if ( self == NULL )
+        rc = RC ( rcVDB, rcMgr, rcSelecting, rcSelf, rcNull );
+    else
+    {
+        const KDBManager * kbd = NULL;
+        rc = VDBManagerGetKDBManagerRead ( self, & kbd );
+        if ( rc == 0 )
+        {
+            VFSManager * vfs = NULL;
+            rc = KDBManagerGetVFSManager ( kbd, & vfs );
+            if ( rc == 0 )
+            {
+                rc = VFSManagerDeleteCacheOlderThan ( vfs, days );
+                VFSManagerRelease ( vfs );
+            }
+            KDBManagerRelease ( kbd );
+        }
+    }
+    return rc;
+}

@@ -32,6 +32,7 @@ typedef struct CSRA1_Reference CSRA1_Reference;
 
 #include "NGS_ReadCollection.h"
 #include "NGS_Alignment.h"
+#include "NGS_ReferenceBlobIterator.h"
 
 #include "NGS_String.h"
 #include "NGS_Cursor.h"
@@ -40,6 +41,8 @@ typedef struct CSRA1_Reference CSRA1_Reference;
 
 #include "CSRA1_ReferenceWindow.h"
 #include "CSRA1_Pileup.h"
+
+#include "VByteBlob.h"
 
 #include <kfc/ctx.h>
 #include <kfc/rsrc.h>
@@ -54,6 +57,8 @@ typedef struct CSRA1_Reference CSRA1_Reference;
 #include <vdb/cursor.h>
 #include <vdb/schema.h>
 #include <vdb/vdb-priv.h>
+#include <vdb/blob.h>
+#include "../vdb/blob-priv.h"
 
 #include <stddef.h>
 #include <assert.h>
@@ -81,13 +86,14 @@ static struct NGS_Alignment*    CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Referen
 static struct NGS_Pileup*       CSRA1_ReferenceGetPileups ( CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
 static struct NGS_Pileup*       CSRA1_ReferenceGetPileupSlice ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
 struct NGS_Statistics*          CSRA1_ReferenceGetStatistics ( const CSRA1_Reference * self, ctx_t ctx );
+static struct NGS_ReferenceBlobIterator*  CSRA1_ReferenceGetBlobs ( const CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size );
 static bool                     CSRA1_ReferenceIteratorNext ( CSRA1_Reference * self, ctx_t ctx );
 
 static NGS_Reference_vt CSRA1_Reference_vt_inst =
 {
     /* NGS_Refcount */
     { CSRA1_ReferenceWhack },
-    
+
     /* NGS_Reference */
     CSRA1_ReferenceGetCommonName,
     CSRA1_ReferenceGetCanonicalName,
@@ -102,26 +108,27 @@ static NGS_Reference_vt CSRA1_Reference_vt_inst =
     CSRA1_ReferenceGetPileups,
     CSRA1_ReferenceGetPileupSlice,
     CSRA1_ReferenceGetStatistics,
-    
+    CSRA1_ReferenceGetBlobs,
+
     /* NGS_ReferenceIterator */
     CSRA1_ReferenceIteratorNext,
 };
 
 struct CSRA1_Reference
 {
-    NGS_Reference dad;   
-    
+    NGS_Reference dad;
+
     uint32_t chunk_size;
-    
+
     int64_t first_row;
     int64_t last_row;  /* inclusive */
     const struct VDatabase * db; /* pointer to the opened db, cannot be NULL */
     const struct NGS_Cursor * curs; /* can be NULL if created for an empty iterator */
     uint64_t align_id_offset;
     uint64_t cur_length; /* size of current reference in bases (0 = not yet counted) */
-    
+
     int64_t iteration_row_last; /* 0 = not iterating */
-    
+
     bool seen_first;
 };
 
@@ -140,10 +147,10 @@ int64_t CSRA1_Reference_GetLastRowId ( const struct NGS_Reference * self, ctx_t 
 /* Init
  */
 static
-void CSRA1_ReferenceInit ( ctx_t ctx, 
+void CSRA1_ReferenceInit ( ctx_t ctx,
                            CSRA1_Reference * ref,
                            NGS_ReadCollection * coll,
-                           const char *clsname, 
+                           const char *clsname,
                            const char *instname,
                            uint64_t align_id_offset )
 {
@@ -171,7 +178,7 @@ void CSRA1_ReferenceWhack ( CSRA1_Reference * self, ctx_t ctx )
 
     VDatabaseRelease ( self -> db );
     self -> db = NULL;
-    
+
     NGS_ReferenceWhack ( & self -> dad, ctx );
 }
 
@@ -183,23 +190,23 @@ NGS_String * CSRA1_ReferenceGetCommonName ( CSRA1_Reference * self, ctx_t ctx )
     if ( ! self -> seen_first )
     {
         USER_ERROR ( xcIteratorUninitialized, "Reference accessed before a call to ReferenceIteratorNext()" );
-        return NULL;        
+        return NULL;
     }
-    
+
     return NGS_CursorGetString ( self -> curs, ctx, self -> first_row, reference_NAME );
 }
 
 NGS_String * CSRA1_ReferenceGetCanonicalName ( CSRA1_Reference * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     assert ( self != NULL );
     if ( ! self -> seen_first )
     {
         USER_ERROR ( xcIteratorUninitialized, "Reference accessed before a call to ReferenceIteratorNext()" );
-        return NULL;        
+        return NULL;
     }
-    
+
     return NGS_CursorGetString ( self -> curs, ctx, self -> first_row, reference_SEQ_ID);
 }
 
@@ -208,7 +215,7 @@ bool CSRA1_ReferenceGetIsCircular ( const CSRA1_Reference * self, ctx_t ctx )
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
 
     assert ( self );
-   
+
     if ( self -> curs == NULL )
     {
         USER_ERROR ( xcCursorExhausted, "No more rows available" );
@@ -217,9 +224,9 @@ bool CSRA1_ReferenceGetIsCircular ( const CSRA1_Reference * self, ctx_t ctx )
     if ( ! self -> seen_first )
     {
         USER_ERROR ( xcIteratorUninitialized, "Reference accessed before a call to ReferenceIteratorNext()" );
-        return false;        
+        return false;
     }
-    
+
     /* if current row is valid, read data */
     if ( self -> first_row <= self -> last_row )
     {
@@ -233,7 +240,7 @@ static
 uint64_t CountRows ( NGS_Cursor const * curs, ctx_t ctx, uint32_t colIdx, const void* value, uint32_t value_size, int64_t firstRow, uint64_t end_row)
 {   /* count consecutive rows having the same value in column # colIdx as in firstRow, starting from and including firstRow */
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     const void* last_value = value;
     uint64_t cur_row = (uint64_t)firstRow + 1;
     while (cur_row < end_row)
@@ -250,7 +257,7 @@ uint64_t CountRows ( NGS_Cursor const * curs, ctx_t ctx, uint32_t colIdx, const 
 
             last_value = base;
         }
-        
+
         ++ cur_row;
     }
     return cur_row - firstRow;
@@ -269,23 +276,23 @@ uint64_t CSRA1_ReferenceGetLength ( CSRA1_Reference * self, ctx_t ctx )
     if ( ! self -> seen_first )
     {
         USER_ERROR ( xcIteratorUninitialized, "Reference accessed before a call to ReferenceIteratorNext()" );
-        return 0;        
+        return 0;
     }
-    
+
     if ( self -> cur_length == 0 ) /* not yet calculated */
-    {   
-        self -> cur_length =  self -> chunk_size * ( self -> last_row - self -> first_row ) + 
-                              NGS_CursorGetUInt32 ( self -> curs, 
-                                                    ctx, 
-                                                    self -> last_row, 
+    {
+        self -> cur_length =  self -> chunk_size * ( self -> last_row - self -> first_row ) +
+                              NGS_CursorGetUInt32 ( self -> curs,
+                                                    ctx,
+                                                    self -> last_row,
                                                     reference_SEQ_LEN );
     }
-    
+
     return self -> cur_length;
 }
 
 struct NGS_String * CSRA1_ReferenceGetBases ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size )
-{   
+{
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
 
     assert ( self );
@@ -297,9 +304,9 @@ struct NGS_String * CSRA1_ReferenceGetBases ( CSRA1_Reference * self, ctx_t ctx,
     if ( ! self -> seen_first )
     {
         USER_ERROR ( xcIteratorUninitialized, "Reference accessed before a call to ReferenceIteratorNext()" );
-        return NULL;        
+        return NULL;
     }
-    
+
     {
         uint64_t totalBases = CSRA1_ReferenceGetLength ( self, ctx );
         if ( offset >= totalBases )
@@ -307,13 +314,13 @@ struct NGS_String * CSRA1_ReferenceGetBases ( CSRA1_Reference * self, ctx_t ctx,
             return NGS_StringMake ( ctx, "", 0 );
         }
         else
-        {   
+        {
             uint64_t basesToReturn = totalBases - offset;
             char* data;
-            
+
             if (size != (size_t)-1 && basesToReturn > size)
                 basesToReturn = size;
-                
+
             data = (char*) malloc ( basesToReturn );
             if ( data == NULL )
             {
@@ -325,11 +332,16 @@ struct NGS_String * CSRA1_ReferenceGetBases ( CSRA1_Reference * self, ctx_t ctx,
                 size_t cur_offset = 0;
                 while ( cur_offset < basesToReturn )
                 {
-                    /* we will potentially ask for more than available in the current chunk; 
-                        CSRA1_ReferenceGetChunkSize will return only as much as is available in the chunk */
-                    NGS_String* chunk = CSRA1_ReferenceGetChunk ( self, ctx, offset + cur_offset, basesToReturn - cur_offset );
-                    cur_offset += string_copy(data + cur_offset, basesToReturn - cur_offset, 
-                                              NGS_StringData ( chunk, ctx ), NGS_StringSize ( chunk, ctx ) );
+                    /* we will potentially ask for more than available in the current blob;
+                        CSRA1_ReferenceGetChunk will return only as much as is available in the blob */
+                    NGS_String* chunk;
+                    ON_FAIL ( chunk = CSRA1_ReferenceGetChunk ( self, ctx, offset + cur_offset, basesToReturn - cur_offset ) )
+                    {
+                        free ( data );
+                        return NULL;
+                    }
+                    cur_offset += string_copy ( data + cur_offset, basesToReturn - cur_offset,
+                                                NGS_StringData ( chunk, ctx ), NGS_StringSize ( chunk, ctx ) );
                     NGS_StringRelease ( chunk, ctx );
                 }
                 return NGS_StringMakeOwned ( ctx, data, basesToReturn );
@@ -339,40 +351,65 @@ struct NGS_String * CSRA1_ReferenceGetBases ( CSRA1_Reference * self, ctx_t ctx,
 }
 
 struct NGS_String * CSRA1_ReferenceGetChunk ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size )
-{   
+{   /* return maximum available contiguous bases starting from the offset */
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
 
+    NGS_String* ret = NULL;
     assert ( self );
     if ( self -> curs == NULL )
     {
         USER_ERROR ( xcCursorExhausted, "No more rows available" );
-        return NULL;
     }
-    if ( ! self -> seen_first )
+    else if ( ! self -> seen_first )
     {
         USER_ERROR ( xcIteratorUninitialized, "Reference accessed before a call to ReferenceIteratorNext()" );
-        return NULL;        
     }
-    
-    if ( offset >= CSRA1_ReferenceGetLength ( self, ctx ) )
+    else if ( offset >= CSRA1_ReferenceGetLength ( self, ctx ) )
     {
-        return NGS_StringMake ( ctx, "", 0 );
+        ret = NGS_StringMake ( ctx, "", 0 );
     }
     else
     {
-        const NGS_String* read = NGS_CursorGetString ( self -> curs, ctx, self -> first_row + offset / self -> chunk_size, reference_READ);
-        NGS_String* ret;
-        if ( size == (size_t)-1 )
-            ret = NGS_StringSubstrOffset ( read, ctx, offset % self -> chunk_size );
+        uint64_t totalBases = CSRA1_ReferenceGetLength ( self, ctx );
+        if ( offset >= totalBases )
+        {
+            return NGS_StringMake ( ctx, "", 0 );
+        }
         else
-            ret = NGS_StringSubstrOffsetSize ( read, ctx, offset % self -> chunk_size, size );
-        NGS_StringRelease ( read, ctx );
-        return ret;
+        {
+            int64_t rowId = self -> first_row + offset / self -> chunk_size;
+            TRY ( const VBlob* blob = NGS_CursorGetVBlob ( self -> curs, ctx, rowId, reference_READ ) )
+            {
+                rc_t rc;
+                const void* data;
+                uint64_t cont_size;
+                TRY ( VByteBlob_ContiguousChunk ( blob, ctx, rowId, 0, true, & data, & cont_size, 0 ) ) /* stop at a repeated row */
+                {
+                    uint64_t offsetInBlob =  offset % self -> chunk_size;
+                    if ( size == (uint64_t)-1 || offsetInBlob + size > cont_size )
+                    {
+                        size = cont_size - offsetInBlob;
+                    }
+                    if ( offset + size > totalBases )
+                    {   /* when requested more bases than there are in the reference, be careful not to return a part of the next reference sitting in the same blob */
+                        size = totalBases - offset;
+                    }
+                    ret = NGS_StringMakeCopy ( ctx, (const char*)data + offsetInBlob, size ); /* have to make a copy since otherwise would have to hold on to the entire blob, with no idea when to release it */
+                }
+
+                rc = VBlobRelease ( (VBlob*) blob );
+                if ( rc != 0 )
+                {
+                    INTERNAL_ERROR ( xcUnexpected, "VBlobRelease() rc = %R", rc );
+                }
+            }
+        }
     }
+    return ret;
 }
 
 struct NGS_Alignment* CSRA1_ReferenceGetAlignment ( CSRA1_Reference * self, ctx_t ctx, const char * alignmentIdStr )
-{   
+{
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
 
     assert ( self );
@@ -384,7 +421,7 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignment ( CSRA1_Reference * self, ctx_
     if ( ! self -> seen_first )
     {
         USER_ERROR ( xcIteratorUninitialized, "Reference accessed before a call to ReferenceIteratorNext()" );
-        return NULL;        
+        return NULL;
     }
 
     {
@@ -394,9 +431,9 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignment ( CSRA1_Reference * self, ctx_
             {
                 TRY ( NGS_String * commonName = CSRA1_ReferenceGetCommonName ( self, ctx ) )
                 {
-                    if ( string_cmp( NGS_StringData ( spec, ctx ), 
+                    if ( string_cmp( NGS_StringData ( spec, ctx ),
                                      NGS_StringSize ( spec, ctx ),
-                                     NGS_StringData ( commonName, ctx ), 
+                                     NGS_StringData ( commonName, ctx ),
                                      NGS_StringSize ( commonName, ctx ),
                                      (uint32_t)NGS_StringSize ( spec, ctx ) ) == 0 )
                     {
@@ -404,12 +441,12 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignment ( CSRA1_Reference * self, ctx_
                         NGS_StringRelease ( commonName, ctx );
                         return ref;
                     }
-                        
-                    USER_ERROR ( xcWrongReference, 
-                                "Requested alignment is on a wrong reference: reference '%.*s', alignment has '%.*s'",  
+
+                    USER_ERROR ( xcWrongReference,
+                                "Requested alignment is on a wrong reference: reference '%.*s', alignment has '%.*s'",
                                 NGS_StringSize ( commonName, ctx ), NGS_StringData ( commonName, ctx ),
                                 NGS_StringSize ( spec, ctx ), NGS_StringData ( spec, ctx ) );
-                    
+
                     NGS_StringRelease ( commonName, ctx );
                 }
                 NGS_StringRelease ( spec, ctx );
@@ -421,7 +458,7 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignment ( CSRA1_Reference * self, ctx_
 }
 
 struct NGS_Alignment* CSRA1_ReferenceGetAlignments ( CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual )
-{   
+{
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
 
     assert ( self );
@@ -433,7 +470,7 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignments ( CSRA1_Reference * self, ctx
     if ( ! self -> seen_first )
     {
         USER_ERROR ( xcIteratorUninitialized, "Reference accessed before a call to ReferenceIteratorNext()" );
-        return NULL;        
+        return NULL;
     }
 
     {
@@ -444,26 +481,26 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignments ( CSRA1_Reference * self, ctx
                 /* wants_with_window does not matter, this is not a slice */
                 filters &= ~ NGS_AlignmentFilterBits_start_within_window;
 
-                return CSRA1_ReferenceWindowMake ( ctx, 
-                                                   self -> dad . coll, 
+                return CSRA1_ReferenceWindowMake ( ctx,
+                                                   self -> dad . coll,
                                                    self -> curs,
                                                    circular,
                                                    ref_len,
                                                    self -> chunk_size,
-                                                   self -> first_row, 
-                                                   self -> first_row, 
-                                                   self -> last_row + 1, 
+                                                   self -> first_row,
+                                                   self -> first_row,
+                                                   self -> last_row + 1,
                                                    0,
                                                    0,
-                                                   wants_primary, 
+                                                   wants_primary,
                                                    wants_secondary,
-                                                   filters, 
+                                                   filters,
                                                    map_qual,
                                                    self -> align_id_offset );
             }
         }
     }
-    
+
     return NULL;
 }
 
@@ -513,16 +550,16 @@ uint64_t CSRA1_ReferenceGetAlignmentCount ( const CSRA1_Reference * self, ctx_t 
 }
 
 /*
-    Calculate starting reference chunk to cover alignments overlapping with the slice; 
+    Calculate starting reference chunk to cover alignments overlapping with the slice;
     separately for primary and secondary alignments
 */
 static
-void LoadOverlaps ( CSRA1_Reference * self, 
-                    ctx_t ctx, 
+void LoadOverlaps ( CSRA1_Reference * self,
+                    ctx_t ctx,
                     uint32_t chunk_size,
-                    uint64_t offset, 
-                    int64_t * primary_begin, 
-                    int64_t * secondary_begin) 
+                    uint64_t offset,
+                    int64_t * primary_begin,
+                    int64_t * secondary_begin)
 {
     int64_t first_row = self -> first_row + offset / chunk_size;
     uint32_t primary_len;
@@ -530,34 +567,34 @@ void LoadOverlaps ( CSRA1_Reference * self,
     int32_t primary_pos;
     int32_t secondary_pos;
     uint32_t offset_in_chunk = offset % chunk_size;
-    
+
     {   /*OVERLAP_REF_LEN*/
         const void* base;
         uint32_t elem_bits, boff, row_len;
         ON_FAIL ( NGS_CursorCellDataDirect ( self -> curs, ctx, first_row, reference_OVERLAP_REF_LEN, & elem_bits, & base, & boff, & row_len ) )
         {   /* no overlap columns, apply 10-chunk lookback */
             CLEAR ();
-            if ( first_row > 11 ) 
+            if ( first_row > 11 )
             {
-                *primary_begin = 
+                *primary_begin =
                 *secondary_begin = first_row - 10;
             }
             else
             {
-                *primary_begin = 
+                *primary_begin =
                 *secondary_begin = 1;
             }
             return;
         }
-        
+
         assert ( elem_bits == 32 );
         assert ( boff == 0 );
         assert ( row_len == 3 );
-        
+
         primary_len     = ( (const uint32_t*)base ) [0];
         secondary_len   = ( (const uint32_t*)base ) [1];
     }
-    
+
     if (primary_len == 0 && secondary_len == 0)
     {
         *primary_begin = *secondary_begin = first_row;
@@ -568,14 +605,14 @@ void LoadOverlaps ( CSRA1_Reference * self,
         uint32_t elem_bits, boff, row_len;
         ON_FAIL( NGS_CursorCellDataDirect ( self -> curs, ctx, first_row, reference_OVERLAP_REF_POS, & elem_bits, & base, & boff, & row_len ) )
             return;
-            
+
         assert ( elem_bits == 32 );
         assert ( boff == 0 );
         assert ( row_len == 3 );
-        
+
         primary_pos     = ( (const int32_t*)base ) [0];
         secondary_pos   = ( (const int32_t*)base ) [1];
-    
+
         if ( primary_len == 0 || primary_len < offset_in_chunk )
         {
             * primary_begin = first_row;
@@ -584,7 +621,7 @@ void LoadOverlaps ( CSRA1_Reference * self,
         {
             * primary_begin = self -> first_row + primary_pos / chunk_size;
         }
-        
+
         if ( secondary_len == 0 || secondary_len < offset_in_chunk )
         {
             * secondary_begin = first_row;
@@ -594,18 +631,18 @@ void LoadOverlaps ( CSRA1_Reference * self,
             * secondary_begin = self -> first_row + secondary_pos / chunk_size;
         }
     }
-}               
+}
 
-struct NGS_Alignment* CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Reference * self, 
-                                                         ctx_t ctx, 
-                                                         uint64_t offset, 
-                                                         uint64_t size, 
-                                                         bool wants_primary, 
+struct NGS_Alignment* CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Reference * self,
+                                                         ctx_t ctx,
+                                                         uint64_t offset,
+                                                         uint64_t size,
+                                                         bool wants_primary,
                                                          bool wants_secondary,
                                                          uint32_t filters,
                                                          int32_t map_qual )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading ); 
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
 
     assert ( self );
     if ( self -> curs == NULL )
@@ -616,9 +653,9 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Reference * self,
     if ( ! self -> seen_first )
     {
         USER_ERROR ( xcIteratorUninitialized, "Reference accessed before a call to ReferenceIteratorNext()" );
-        return NULL;        
+        return NULL;
     }
-    
+
     if ( size == 0 )
     {
         NGS_Alignment* ret = NGS_AlignmentMakeNull ( ctx, "", 0 );
@@ -631,20 +668,20 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Reference * self,
             TRY ( uint64_t ref_len = CSRA1_ReferenceGetLength ( self, ctx ) )
             {
                 if ( circular )
-                {   /* for a circular reference, always look at the whole of it 
+                {   /* for a circular reference, always look at the whole of it
                        (to account for alignments that start near the end and overlap with the first chunk) */
-                    return CSRA1_ReferenceWindowMake ( ctx, 
-                                                       self -> dad . coll, 
+                    return CSRA1_ReferenceWindowMake ( ctx,
+                                                       self -> dad . coll,
                                                        self -> curs,
                                                        true, /* circular */
                                                        ref_len,
                                                        self -> chunk_size,
                                                        self->first_row, /*primary_begin*/
                                                        self->first_row, /*secondary_begin*/
-                                                       self -> last_row + 1, 
+                                                       self -> last_row + 1,
                                                        offset,
                                                        size,
-                                                       wants_primary, 
+                                                       wants_primary,
                                                        wants_secondary,
                                                        filters,
                                                        map_qual,
@@ -662,19 +699,19 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Reference * self,
                         int64_t end = self -> first_row + ( offset + size - 1 ) / self -> chunk_size + 1;
                         if ( end > self -> last_row )
                             end = self -> last_row + 1;
-                            
-                        return CSRA1_ReferenceWindowMake ( ctx, 
-                                                           self -> dad . coll, 
+
+                        return CSRA1_ReferenceWindowMake ( ctx,
+                                                           self -> dad . coll,
                                                            self -> curs,
                                                            false,
                                                            ref_len,
                                                            self -> chunk_size,
-                                                           primary_begin, 
+                                                           primary_begin,
                                                            secondary_begin,
-                                                           end, 
+                                                           end,
                                                            offset,
                                                            size,
-                                                           wants_primary, 
+                                                           wants_primary,
                                                            wants_secondary,
                                                            filters,
                                                            map_qual,
@@ -685,10 +722,10 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Reference * self,
         }
         return NULL;
     }
-}                                                         
+}
 
 struct NGS_Pileup* CSRA1_ReferenceGetPileups ( CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual )
-{   
+{
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
 
     assert ( self );
@@ -700,16 +737,16 @@ struct NGS_Pileup* CSRA1_ReferenceGetPileups ( CSRA1_Reference * self, ctx_t ctx
     if ( ! self -> seen_first )
     {
         USER_ERROR ( xcIteratorUninitialized, "Reference accessed before a call to ReferenceIteratorNext()" );
-        return NULL;        
+        return NULL;
     }
 
-    return CSRA1_PileupIteratorMake ( ctx, 
+    return CSRA1_PileupIteratorMake ( ctx,
                                       & self -> dad,
-                                      self -> db, 
+                                      self -> db,
                                       self -> curs,
                                       CSRA1_Reference_GetFirstRowId ( (NGS_Reference const*)self, ctx ),
                                       CSRA1_Reference_GetLastRowId ( (NGS_Reference const*)self, ctx ),
-                                      wants_primary, 
+                                      wants_primary,
                                       wants_secondary,
                                       filters,
                                       map_qual );
@@ -728,18 +765,18 @@ static struct NGS_Pileup* CSRA1_ReferenceGetPileupSlice ( CSRA1_Reference * self
     if ( ! self -> seen_first )
     {
         USER_ERROR ( xcIteratorUninitialized, "Reference accessed before a call to ReferenceIteratorNext()" );
-        return NULL;        
+        return NULL;
     }
-    
-    return CSRA1_PileupIteratorMakeSlice ( ctx, 
+
+    return CSRA1_PileupIteratorMakeSlice ( ctx,
                                            & self -> dad,
-                                           self -> db, 
+                                           self -> db,
                                            self -> curs,
                                            CSRA1_Reference_GetFirstRowId ( (NGS_Reference const*)self, ctx ),
                                            CSRA1_Reference_GetLastRowId ( (NGS_Reference const*)self, ctx ),
                                            offset,
                                            size,
-                                           wants_primary, 
+                                           wants_primary,
                                            wants_secondary,
                                            filters,
                                            map_qual );
@@ -750,6 +787,31 @@ struct NGS_Statistics* CSRA1_ReferenceGetStatistics ( const CSRA1_Reference * se
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
     /* for now, return an empty stats object */
     return SRA_StatisticsMake ( ctx );
+}
+
+struct NGS_ReferenceBlobIterator* CSRA1_ReferenceGetBlobs ( const CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
+
+    assert ( self );
+    if ( self -> curs == NULL )
+    {
+        USER_ERROR ( xcCursorExhausted, "No more rows available" );
+        return NULL;
+    }
+    if ( ! self -> seen_first )
+    {
+        USER_ERROR ( xcIteratorUninitialized, "Reference accessed before a call to ReferenceIteratorNext()" );
+        return NULL;
+    }
+    else
+    {
+        uint64_t startRow = self -> first_row + offset / self -> chunk_size;
+        uint64_t lastRow = size == (uint64_t)-1 ?
+                                    self -> last_row :
+                                    self -> first_row + ( offset + size - 1 ) / self -> chunk_size;
+        return NGS_ReferenceBlobIteratorMake ( ctx, self -> curs, self -> first_row, startRow, lastRow );
+    }
 }
 
 bool CSRA1_ReferenceFind ( NGS_Cursor const * curs, ctx_t ctx, const char * spec, int64_t* firstRow, uint64_t* rowCount )
@@ -784,20 +846,21 @@ bool CSRA1_ReferenceFind ( NGS_Cursor const * curs, ctx_t ctx, const char * spec
         }
     }
     /* index not available - do a table scan */
+    if ( ! FAILED () )
     {
         int64_t cur_row;
         int64_t end_row;
         uint64_t total_row_count;
 
         size_t spec_size = string_size ( spec );
-        
+
         TRY ( NGS_CursorGetRowRange ( curs, ctx, & cur_row, & total_row_count ) )
         {
             const void * prev_NAME_base = NULL;
             const void * prev_SEQ_ID_base = NULL;
             end_row = cur_row + total_row_count;
             while ( cur_row < end_row )
-            {   
+            {
                 const void * base;
                 uint32_t elem_bits, boff, row_len;
 
@@ -805,7 +868,7 @@ bool CSRA1_ReferenceFind ( NGS_Cursor const * curs, ctx_t ctx, const char * spec
                 ON_FAIL ( NGS_CursorCellDataDirect ( curs, ctx, cur_row, reference_NAME, & elem_bits, & base, & boff, & row_len ) )
                     return false;
 
-                /* if the value has not changed, the base ptr will not be updated */ 
+                /* if the value has not changed, the base ptr will not be updated */
                 if ( prev_NAME_base != base )
                 {
                     if ( ( size_t ) row_len == spec_size )
@@ -828,7 +891,7 @@ bool CSRA1_ReferenceFind ( NGS_Cursor const * curs, ctx_t ctx, const char * spec
                 ON_FAIL ( NGS_CursorCellDataDirect ( curs, ctx, cur_row, reference_SEQ_ID, & elem_bits, & base, & boff, & row_len ) )
                     return false;
 
-                /* if the value has not changed, the base ptr will not be updated */ 
+                /* if the value has not changed, the base ptr will not be updated */
                 if ( prev_SEQ_ID_base != base )
                 {
                     if ( ( size_t ) row_len == spec_size )
@@ -851,14 +914,14 @@ bool CSRA1_ReferenceFind ( NGS_Cursor const * curs, ctx_t ctx, const char * spec
             }
         }
     }
-    
+
     return false;
 }
 
-NGS_Reference * CSRA1_ReferenceMake ( ctx_t ctx, 
+NGS_Reference * CSRA1_ReferenceMake ( ctx_t ctx,
                                       struct NGS_ReadCollection * coll,
                                       const struct VDatabase * db,
-                                      const struct NGS_Cursor * curs, 
+                                      const struct NGS_Cursor * curs,
                                       const char * spec,
                                       uint64_t align_id_offset )
 {
@@ -866,7 +929,7 @@ NGS_Reference * CSRA1_ReferenceMake ( ctx_t ctx,
 
     assert ( coll != NULL );
     assert ( curs != NULL );
-    
+
     {
         TRY ( NGS_String * collName = NGS_ReadCollectionGetName ( coll, ctx ) )
         {
@@ -892,13 +955,13 @@ NGS_Reference * CSRA1_ReferenceMake ( ctx_t ctx,
                 TRY ( CSRA1_ReferenceInit ( ctx, ref, coll, "CSRA1_Reference", instname, align_id_offset ) )
                 {
                     uint64_t rowCount;
-                    
+
                     ref -> curs = NGS_CursorDuplicate ( curs, ctx );
 
                     ref -> db = db;
                     VDatabaseAddRef ( ref -> db );
 
-                    
+
                     /* find requested name */
                     if ( CSRA1_ReferenceFind ( ref -> curs, ctx, spec, & ref -> first_row, & rowCount ) )
                     {
@@ -910,8 +973,8 @@ NGS_Reference * CSRA1_ReferenceMake ( ctx_t ctx,
                             NGS_StringRelease ( collName, ctx );
                             return ( NGS_Reference * ) ref;
                         }
-                    }      
-                    
+                    }
+
                     INTERNAL_ERROR ( xcRowNotFound, "Reference not found ( NAME = %s )", spec );
                     CSRA1_ReferenceWhack ( ref, ctx );
                 }
@@ -931,7 +994,7 @@ NGS_Reference * CSRA1_ReferenceMake ( ctx_t ctx,
 
 /* Make
  */
-NGS_Reference * CSRA1_ReferenceIteratorMake ( ctx_t ctx, 
+NGS_Reference * CSRA1_ReferenceIteratorMake ( ctx_t ctx,
                                                     struct NGS_ReadCollection * coll,
                                                     const struct VDatabase * db,
                                                     const struct NGS_Cursor * curs,
@@ -942,7 +1005,7 @@ NGS_Reference * CSRA1_ReferenceIteratorMake ( ctx_t ctx,
     assert ( coll != NULL );
     assert ( db != NULL );
     assert ( curs != NULL );
-    
+
     {
         TRY ( NGS_String * collName = NGS_ReadCollectionGetName ( coll, ctx ) )
         {
@@ -967,12 +1030,12 @@ NGS_Reference * CSRA1_ReferenceIteratorMake ( ctx_t ctx,
                 TRY ( CSRA1_ReferenceInit ( ctx, ref, coll, "CSRA1_Reference", instname, align_id_offset ) )
                 {
                     uint64_t row_count;
-                   
+
                     ref -> curs = NGS_CursorDuplicate ( curs, ctx );
 
                     ref -> db = db;
                     VDatabaseAddRef ( ref -> db );
-                    
+
                     TRY ( NGS_CursorGetRowRange ( ref -> curs, ctx, & ref -> first_row, & row_count ) )
                     {
                         TRY ( ref -> chunk_size = NGS_CursorGetUInt32 ( ref -> curs, ctx, ref -> first_row, reference_MAX_SEQ_LEN ) )
@@ -1000,13 +1063,15 @@ NGS_Reference * CSRA1_ReferenceIteratorMake ( ctx_t ctx,
  */
 bool CSRA1_ReferenceIteratorNext ( CSRA1_Reference * self, ctx_t ctx )
 {
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
+
     assert ( self != NULL );
-    
+
     if ( self -> curs == NULL  || self -> first_row > self -> iteration_row_last)
         return false; /* iteration over or not initialized */
 
     self -> cur_length = 0;
-    
+
     if ( self -> seen_first )
     {   /* skip to the next reference */
         self -> first_row = self -> last_row + 1;
@@ -1020,20 +1085,20 @@ bool CSRA1_ReferenceIteratorNext ( CSRA1_Reference * self, ctx_t ctx )
     {   /* first reference */
         self -> seen_first = true;
     }
-    
+
     {   /* update self -> last_row */
         const void * refNameBase = NULL;
         uint32_t nameLength;
 
         {   /* get the new reference's name */
             uint32_t elem_bits, boff;
-            ON_FAIL ( NGS_CursorCellDataDirect ( self -> curs, ctx, self -> first_row, reference_NAME, 
+            ON_FAIL ( NGS_CursorCellDataDirect ( self -> curs, ctx, self -> first_row, reference_NAME,
                                                  & elem_bits, & refNameBase, & boff, & nameLength ) )
                 return false;
             assert ( elem_bits == 8 );
             assert ( boff == 0 );
         }
-    
+
         {   /* use index on reference name if available */
             uint64_t rowCount;
             rc_t rc = 1; /* != 0 in case the following TRY fails */
@@ -1052,17 +1117,17 @@ bool CSRA1_ReferenceIteratorNext ( CSRA1_Reference * self, ctx_t ctx )
                     free ( key );
                 }
             }
-            
+
             CLEAR();
-            
+
             if ( rc != 0 )
             {   /* index is not available, do a table scan */
                 rowCount = CountRows ( self -> curs, ctx, reference_NAME, refNameBase, nameLength, self -> first_row, self -> iteration_row_last );
             }
-            
+
             self -> last_row = self -> first_row + rowCount - 1;
         }
     }
-    
+
     return true;
 }

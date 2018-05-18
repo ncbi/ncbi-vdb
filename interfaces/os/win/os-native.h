@@ -76,6 +76,7 @@ extern "C" {
  */
 struct timeout_t
 {
+    int64_t ts;
     uint32_t mS;
     uint32_t prepared;
 };

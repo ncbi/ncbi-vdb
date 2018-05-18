@@ -57,6 +57,8 @@ struct AlignAccessAlignmentEnumerator;
  */
 typedef struct BAMAlignment BAMAlignment;
 
+typedef struct BAMFileSlice BAMFileSlice;
+
     
 /* GetBAMAlignment
  *  get property
@@ -73,6 +75,7 @@ ALIGN_EXTERN rc_t CC AlignAccessAlignmentEnumeratorGetBAMAlignment
 ALIGN_EXTERN rc_t CC BAMAlignmentAddRef ( const BAMAlignment *self );
 ALIGN_EXTERN rc_t CC BAMAlignmentRelease ( const BAMAlignment *self );
 
+ALIGN_EXTERN uint64_t BAMAlignmentGetFilePos(const BAMAlignment *self);
 
 /* GetReadLength
  *  get the sequence length
@@ -705,9 +708,33 @@ ALIGN_EXTERN bool CC BAMFileIsIndexed ( const BAMFile *self );
  */
 ALIGN_EXTERN bool CC BAMFileIndexHasRefSeqId ( const BAMFile *self, uint32_t refSeqId );
 
-/* Seek
- *  seeks a half-open zero-based interval on a particular reference
- *  rcSelf, rcIncomplete
+    
+/* MakeSlice
+ *  Makes a slice iterator on the BAM file
+ *  the result should be free'd
+ */
+ALIGN_EXTERN rc_t CC BAMFileMakeSlice(const BAMFile *self, BAMFileSlice **rslt, uint32_t refSeqId, uint64_t alignStart, uint64_t alignEnd);
+
+
+/* ReadSlice
+ *  Read next record as specified by the slice iterator
+ *
+ * Example:
+ * BAMFileSlice *slice;
+ * const BAMAlignment *record;
+ *
+ * BAMFileMakeSlice(file, &slice, 0, 141484029, 141495762);
+ * while (BAMFileReadSlice(file, &record, slice) == 0) {
+ *     ... do something ...
+ *     BAMAlignmentRelease(record);
+ * }
+ * free(slice);
+ */
+ALIGN_EXTERN rc_t CC BAMFileReadSlice(const BAMFile *self, const BAMAlignment **rslt, BAMFileSlice *slice);
+
+/* Seek ******** DEPRECATED *******
+ *
+ *  rcFunction, rcUnsupported
  */
 ALIGN_EXTERN rc_t CC BAMFileSeek ( const BAMFile *self, uint32_t refSeqId, uint64_t alignStart, uint64_t alignEnd );
 

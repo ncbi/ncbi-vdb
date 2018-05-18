@@ -86,7 +86,7 @@ rc_t LocalRefIDMake ( LocalRefID **objp, const VTable *tbl, const VCursor *nativ
                 if ( rc == 0 )
                 {
                     assert( row_len == 1 );
-                    memcpy( &obj->max_seq_len, base, 4 );
+                    memmove( &obj->max_seq_len, base, 4 );
                 }
             }
                     

@@ -36,11 +36,11 @@
 
 #include <kdb/manager.h>
 
+#include <kfg/config.h> /* KConfigDisableUserSettings */
+
 #include <vdb/manager.h>
 #include <vdb/vdb-priv.h>
 
-#include "CSRA1_Reference.h"
-#include "NGS_Pileup.h"
 #include "NGS_FragmentBlobIterator.h"
 #include "NGS_FragmentBlob.h"
 
@@ -500,6 +500,19 @@ FIXTURE_TEST_CASE(CSRA1_NGS_AlignmentIsPrimary_No, CSRA1_Fixture)
     EXIT;
 }
 
+FIXTURE_TEST_CASE(CSRA1_NGS_AlignmentIsFirst_Yes, CSRA1_Fixture)
+{
+    ENTRY_GET_ALIGN( CSRA1_PrimaryOnly, 1 );
+    REQUIRE( NGS_AlignmentIsFirst ( m_align, ctx ) );
+    EXIT;
+}
+FIXTURE_TEST_CASE(CSRA1_NGS_AlignmentIsFirst_No, CSRA1_Fixture)
+{
+    ENTRY_GET_ALIGN( CSRA1_PrimaryOnly, 2 );
+    REQUIRE( ! NGS_AlignmentIsFirst ( m_align, ctx ) );
+    EXIT;
+}
+
 FIXTURE_TEST_CASE(CSRA1_NGS_AlignmentGetAlignmentPosition, CSRA1_Fixture)
 {
     ENTRY_GET_ALIGN( CSRA1_PrimaryOnly, 1 );
@@ -680,403 +693,6 @@ FIXTURE_TEST_CASE(CSRA1_NGS_AlignmentGetMateIsReversedOrientation_False, CSRA1_F
     EXIT;
 }
 
-// NGS_Reference
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetCommonName, CSRA1_Fixture)
-{
-    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1");
-    REQUIRE_STRING ( "supercont2.1", NGS_ReferenceGetCommonName ( m_ref, ctx ) );
-    EXIT;
-}
-
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetCanonicalName, CSRA1_Fixture)
-{
-    ENTRY_GET_REF( "SRR821492", "chr7" );
-    const char* canoName = "NC_000007.13";
-    REQUIRE_STRING ( canoName, NGS_ReferenceGetCanonicalName ( m_ref, ctx ) );
-    EXIT;
-}
-
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceIsCircular_Yes, CSRA1_Fixture)
-{
-    ENTRY_GET_REF( "SRR821492", "chrM" );
-    REQUIRE ( NGS_ReferenceGetIsCircular ( m_ref, ctx ) );
-    EXIT;
-}
-
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceIsCircular_No, CSRA1_Fixture)
-{
-    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
-    REQUIRE ( ! NGS_ReferenceGetIsCircular ( m_ref, ctx ) );
-    EXIT;
-}
-
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetLength, CSRA1_Fixture)
-{
-    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
-    REQUIRE_EQ ( (uint64_t)2291499l, NGS_ReferenceGetLength ( m_ref, ctx ) );
-    EXIT;
-}
-
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetFirstRowId, CSRA1_Fixture)
-{
-    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
-    REQUIRE_EQ ( (int64_t)1, CSRA1_Reference_GetFirstRowId ( m_ref, ctx ) );
-    EXIT;
-}
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetLastRowId, CSRA1_Fixture)
-{
-    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
-    REQUIRE_EQ ( (int64_t)459, CSRA1_Reference_GetLastRowId ( m_ref, ctx ) );
-    EXIT;
-}
-
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetBases_Full, CSRA1_Fixture)
-{
-    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
-    string bases = toString ( NGS_ReferenceGetBases( m_ref, ctx, 0, -1 ), ctx, true );
-    REQUIRE_EQ ( NGS_ReferenceGetLength ( m_ref, ctx ), ( uint64_t ) bases. size () );
-    EXIT;
-}
-
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetBases, CSRA1_Fixture)
-{
-    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
-    REQUIRE_STRING ( "CCTGTCC", NGS_ReferenceGetBases( m_ref, ctx, 7000, 7 ) );
-    EXIT;
-}
-
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetAlignment_Primary, CSRA1_Fixture)
-{
-    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
-
-    m_align = NGS_ReferenceGetAlignment ( m_ref, ctx, ( string ( CSRA1_PrimaryOnly ) + ".PA.1" ) . c_str () );
-    REQUIRE ( ! FAILED () && m_align );
-
-    REQUIRE_STRING ( string ( CSRA1_PrimaryOnly ) + ".PA.1", NGS_AlignmentGetAlignmentId ( m_align, ctx ) );
-
-    EXIT;
-}
-
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetAlignments_PrimaryOnly_Primary, CSRA1_Fixture)
-{
-    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
-
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, false );
-    REQUIRE ( ! FAILED () && m_align );
-
-    REQUIRE ( NGS_AlignmentIteratorNext ( m_align, ctx ) );
-    REQUIRE ( ! FAILED () );
-
-    REQUIRE_STRING ( string ( CSRA1_PrimaryOnly ) + ".PA.1", NGS_AlignmentGetAlignmentId ( m_align, ctx ) );
-
-    EXIT;
-}
-
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetAlignments_PrimaryOnly_Secondary, CSRA1_Fixture)
-{
-    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
-
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, false, true );
-    REQUIRE ( ! FAILED () && m_align );
-    REQUIRE ( ! NGS_AlignmentIteratorNext ( m_align, ctx ) );
-
-    EXIT;
-}
-
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetAlignments_WithSecondary_Primary, CSRA1_Fixture)
-{
-    ENTRY_GET_REF( CSRA1_WithSecondary, "gi|169794206|ref|NC_010410.1|" );
-
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, false);
-    REQUIRE ( ! FAILED () && m_align );
-    REQUIRE ( NGS_AlignmentIteratorNext ( m_align, ctx ) );
-    REQUIRE ( ! FAILED () );
-
-    REQUIRE_STRING ( string ( CSRA1_WithSecondary ) + ".PA.1", NGS_AlignmentGetAlignmentId ( m_align, ctx ) );
-
-    EXIT;
-}
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetAlignments_WithSecondary_Secondary, CSRA1_Fixture)
-{
-    ENTRY_GET_REF( CSRA1_WithSecondary, "gi|169794206|ref|NC_010410.1|" );
-
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, false, true );
-    REQUIRE ( ! FAILED () && m_align );
-    REQUIRE ( NGS_AlignmentIteratorNext ( m_align, ctx ) );
-
-    REQUIRE_STRING ( string ( CSRA1_WithSecondary ) + ".SA.169", NGS_AlignmentGetAlignmentId ( m_align, ctx ) );
-
-    EXIT;
-}
-
-
-// ReferenceGetAlignments on circular references
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetAlignments_Circular_Wraparound, CSRA1_Fixture)
-{
-    ENTRY_GET_REF( CSRA1_WithCircularReference, "NC_012920.1" );
-
-    const bool wants_primary = true;
-    const bool wants_secondary = true;
-    const uint32_t no_filters = 0;
-    const int32_t no_map_qual = 0;
-
-    m_align = NGS_ReferenceGetFilteredAlignments ( m_ref, ctx, wants_primary, wants_secondary, no_filters, no_map_qual );
-    REQUIRE ( ! FAILED () && m_align );
-    REQUIRE ( NGS_AlignmentIteratorNext ( m_align, ctx ) );
-
-    // by default, the first returned alignment starts before the start of the circular reference
-    REQUIRE_EQ ( (int64_t)16477, NGS_AlignmentGetAlignmentPosition ( m_align, ctx ) );
-
-    EXIT;
-}
-
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetAlignments_Circular_NoWraparound, CSRA1_Fixture)
-{
-    ENTRY_GET_REF( CSRA1_WithCircularReference, "NC_012920.1" );
-
-    const bool wants_primary = true;
-    const bool wants_secondary = true;
-    const uint32_t filters = NGS_AlignmentFilterBits_no_wraparound;
-    const int32_t no_map_qual = 0;
-
-    m_align = NGS_ReferenceGetFilteredAlignments ( m_ref, ctx, wants_primary, wants_secondary, filters, no_map_qual );
-    REQUIRE ( ! FAILED () && m_align );
-    REQUIRE ( NGS_AlignmentIteratorNext ( m_align, ctx ) );
-
-    // with a no-wraparound filter, the first returned alignment starts at/after the start of the circular reference
-    REQUIRE_EQ ( (int64_t)5, NGS_AlignmentGetAlignmentPosition ( m_align, ctx ) );
-
-    EXIT;
-}
-
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetFilteredAlignmentSlice_FullReference_Wraparound_Count, CSRA1_Fixture )
-{
-    ENTRY_GET_REF( CSRA1_WithCircularReference, "NC_012920.1" );
-
-    const bool wants_primary = true;
-    const bool wants_secondary = true;
-    const uint32_t no_filters = 0;
-    const int32_t no_map_qual = 0;
-
-    m_align = NGS_ReferenceGetFilteredAlignmentSlice ( m_ref, ctx, 0, NGS_ReferenceGetLength ( m_ref, ctx ), wants_primary, wants_secondary, no_filters, no_map_qual );
-    REQUIRE ( ! FAILED () && m_align );
-
-    uint64_t count = 0;
-    while ( NGS_AlignmentIteratorNext ( m_align, ctx ) )
-    {
-        ++count;
-    }
-    REQUIRE_EQ ( (uint64_t) 12317, count );
-
-    EXIT;
-}
-
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetFilteredAlignmentSlice_FullReference_NoWraparound_Count, CSRA1_Fixture )
-{
-    ENTRY_GET_REF( CSRA1_WithCircularReference, "NC_012920.1" );
-
-    const bool wants_primary = true;
-    const bool wants_secondary = true;
-    const uint32_t filters = NGS_AlignmentFilterBits_no_wraparound;
-    const int32_t no_map_qual = 0;
-
-    m_align = NGS_ReferenceGetFilteredAlignmentSlice ( m_ref, ctx, 0, NGS_ReferenceGetLength ( m_ref, ctx ), wants_primary, wants_secondary, filters, no_map_qual );
-    REQUIRE ( ! FAILED () && m_align );
-
-    int64_t lastPos = 0;
-    uint64_t count = 0;
-    while ( NGS_AlignmentIteratorNext ( m_align, ctx ) )
-    {
-        ++count;
-        int64_t newPos = NGS_AlignmentGetAlignmentPosition ( m_align, ctx );
-        REQUIRE_LE ( lastPos, newPos );
-        lastPos = newPos;
-    }
-    REQUIRE_EQ ( (uint64_t) 12316, count );
-
-    EXIT;
-}
-
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetChunk_Empty, CSRA1_Fixture)
-{   // offset beyond the end of reference
-    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
-    REQUIRE_STRING ( "", NGS_ReferenceGetChunk ( m_ref, ctx, 30000000, 10) );
-    EXIT;
-}
-
-FIXTURE_TEST_CASE(CSRA1_NGS_Reference_SharedCursor, CSRA1_Fixture)
-{
-    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
-    NGS_Reference* ref2 = NGS_ReadCollectionGetReference ( m_coll, ctx, "supercont2.2" );
-
-    string name = toString ( NGS_ReferenceGetCommonName ( m_ref, ctx), ctx, true );
-    string name2 = toString ( NGS_ReferenceGetCommonName ( ref2, ctx), ctx, true );
-
-    REQUIRE_NE ( name, name2 );
-
-    NGS_ReferenceRelease ( ref2, m_ctx );
-
-    EXIT;
-}
-
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetStats, CSRA1_Fixture)
-{
-    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
-
-    NGS_Statistics * stats = NGS_ReferenceGetStatistics ( m_ref, ctx );
-    REQUIRE ( ! FAILED () );
-
-    // Reference stats are empty for now
-    const char* path;
-    REQUIRE ( ! NGS_StatisticsNextPath ( stats, ctx, "", &path ) );
-
-    NGS_StatisticsRelease ( stats, ctx );
-
-    EXIT;
-}
-
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetPileups, CSRA1_Fixture)
-{
-    ENTRY_GET_REF ( CSRA1_PrimaryOnly, "supercont2.1" );
-
-    NGS_Pileup* pileup = NGS_ReferenceGetPileups( m_ref, ctx, true, false);
-    REQUIRE ( ! FAILED () && pileup );
-
-    NGS_PileupRelease ( pileup, ctx );
-    EXIT;
-}
-
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetPileupSlice, CSRA1_Fixture)
-{
-    ENTRY_GET_REF ( CSRA1_PrimaryOnly, "supercont2.1" );
-
-    NGS_Pileup* pileup = NGS_ReferenceGetPileupSlice( m_ref, ctx, 500, 10, true, false);
-    REQUIRE ( ! FAILED () && pileup );
-
-    NGS_PileupRelease ( pileup, ctx );
-    EXIT;
-}
-
-// Iteration over References
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceIterator_GetLength_1, CSRA1_Fixture)
-{
-    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
-
-    NGS_Reference* refIt = NGS_ReadCollectionGetReferences ( m_coll, m_ctx );
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE ( ! FAILED () );
-
-    REQUIRE_EQ ( NGS_ReferenceGetLength ( refIt, ctx ), NGS_ReferenceGetLength ( m_ref, ctx ) );
-    REQUIRE ( ! FAILED () );
-
-    NGS_ReferenceRelease ( refIt, ctx );
-
-    EXIT;
-}
-
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceIterator_GetLength_2, CSRA1_Fixture)
-{   // bug report: after a 1-chunk reference, the next reference in an iterator report wrong length
-    ENTRY_ACC( "SRR1121656" );
-    m_ref = NGS_ReadCollectionGetReferences ( m_coll, m_ctx );
-
-    bool checked = false;
-    while ( NGS_ReferenceIteratorNext ( m_ref, ctx ) )
-    {
-        if ( string ( "GL000207.1" ) == toString ( NGS_ReferenceGetCommonName ( m_ref, ctx ), ctx, true ) )
-        {
-            REQUIRE_EQ ( (uint64_t)4262, NGS_ReferenceGetLength ( m_ref, ctx ) );
-        }
-        else if ( string ( "GL000226.1" ) == toString ( NGS_ReferenceGetCommonName ( m_ref, ctx ), ctx, true ) )
-        {
-            REQUIRE_EQ ( (uint64_t)15008, NGS_ReferenceGetLength ( m_ref, ctx ) );
-            checked = true;
-            break;
-        }
-    }
-    REQUIRE ( checked );
-
-    EXIT;
-}
-
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceIterator_GetFirstRowId, CSRA1_Fixture)
-{
-    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
-    NGS_Reference* refIt = NGS_ReadCollectionGetReferences ( m_coll, m_ctx );
-
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)1, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)460, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)785, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)1101, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)1318, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)1681, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)1966, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)2246, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)2526, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)2764, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)2976, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)3289, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)3444, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)3596, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
-    REQUIRE ( ! NGS_ReferenceIteratorNext ( refIt, ctx ) );
-
-    NGS_ReferenceRelease ( refIt, ctx );
-    EXIT;
-}
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceIterator_GetLastRowId, CSRA1_Fixture)
-{
-    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
-    NGS_Reference* refIt = NGS_ReadCollectionGetReferences ( m_coll, m_ctx );
-
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)459, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)784, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)1100, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)1317, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)1680, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)1965, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)2245, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)2525, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)2763, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)2975, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)3288, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)3443, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)3595, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
-    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)3781, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
-    REQUIRE ( ! NGS_ReferenceIteratorNext ( refIt, ctx ) );
-
-    NGS_ReferenceRelease ( refIt, ctx );
-    EXIT;
-}
-
-
-
 // ReadGroups
 FIXTURE_TEST_CASE(CSRA1_NGS_ReadGroupGetName, CSRA1_Fixture)
 {
@@ -1242,8 +858,8 @@ const char UsageDefaultName[] = "test-ngs_csra1";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
-    rc_t m_coll=NgsCsra1TestSuite(argc, argv);
-    return m_coll;
+    KConfigDisableUserSettings();
+    return NgsCsra1TestSuite(argc, argv);
 }
 
 }

@@ -213,26 +213,26 @@ typedef enum VPathParseState
 }
 VPathParseState;
 
-static struct sm
+static const struct sm
 {
     const char * scheme;
     VPUri_t type;
 } schemes[] =
 {
-    { "file", vpuri_file } , /* Most popular first */
+    { "file", vpuri_file }, /* Most popular first */
     { "https", vpuri_https},
     { "http", vpuri_http},
-    { "ncbi-file", vpuri_ncbi_file },
-    { "ncbi-acc", vpuri_ncbi_acc },
     { "ftp", vpuri_ftp },
-    { "x-ncbi-legresfseq", vpuri_ncbi_legrefseq },
-    { "ncbi-obj", vpuri_ncbi_obj  },
     { "fasp", vpuri_fasp },
     { "s3",vpuri_s3 },
-    { "azure", vpuri_azure },
-    { "google", vpuri_google },
     { "scp", vpuri_scp },
-    { "sftp", vpuri_sftp }
+    { "sftp", vpuri_sftp },
+    { "ncbi-file", vpuri_ncbi_file },
+    { "ncbi-acc", vpuri_ncbi_acc },
+    { "x-ncbi-legresfseq", vpuri_ncbi_legrefseq },
+    { "ncbi-obj", vpuri_ncbi_obj  },
+    { "google", vpuri_google },
+    { "azure", vpuri_azure }
 };
 
 static
@@ -241,17 +241,23 @@ void VPathCaptureScheme ( VPath * self, const char * uri, size_t start, size_t e
     size_t size = end - start;
     StringInit ( & self -> scheme, & uri [ start ], size, ( uint32_t ) ( size ) );
     self -> from_uri = true;
+    self -> scheme_type = vpuri_not_supported;
 
-    if ( size != 0 )
+    if ( size > 0 && size < 64)
     {
         const char * scheme = & uri [ start ];
         self -> scheme_type = vpuri_not_supported;
+        char buf[64];
+        tolower_copy(buf, sizeof buf, scheme, size);
         size_t num_schemes=sizeof(schemes)/sizeof(schemes[0]);
         for (size_t i=0; i!=num_schemes; ++i)
         {
             size_t l=strlen(schemes[i].scheme);
-            if (strcase_cmp(scheme, l, schemes[i].scheme, l, l) ==0)
+            if (l==size && memcmp(buf, schemes[i].scheme, l) == 0)
+            {
                 self -> scheme_type = schemes[i].type;
+                return;
+            }
         }
     }
 }

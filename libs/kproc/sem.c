@@ -282,12 +282,20 @@ LIB_EXPORT rc_t CC KSemaphoreCancel ( KSemaphore *self )
 LIB_EXPORT rc_t CC KSemaphoreSignal ( KSemaphore *self )
 {
     if ( self == NULL )
+    {
+        SMSG ( "%s[%p]: self is NULL\n", __func__, self );
         return RC ( rcPS, rcSemaphore, rcSignaling, rcSelf, rcNull );
+    }
 
     if ( self -> canceled )
+    {
+        SMSG ( "%s[%p]: semaphore is canceled\n", __func__, self );
         return RC ( rcPS, rcSemaphore, rcSignaling, rcSemaphore, rcCanceled );
+    }
 
     ++ self -> avail;
+    SMSG ( "%s[%p]: signal setting avail to %u\n", __func__, self, self -> avail );
+
     if ( self -> waiting != 0 && self -> avail >= self -> min_requested )
     {
         /* whacky logic
@@ -295,8 +303,17 @@ LIB_EXPORT rc_t CC KSemaphoreSignal ( KSemaphore *self )
            - and only one request can be satisfied
            - then signal. otherwise, broadcast */
         if ( self -> uniform && self -> avail / self -> min_requested == 1 )
+        {
+            SMSG ( "%s[%p]: sending simple signal to condition\n", __func__, self );
             return KConditionSignal ( self -> cond );
+        }
+
+        SMSG ( "%s[%p]: sending broadcast signal to condition\n", __func__, self );
         return KConditionBroadcast ( self -> cond );
+    }
+    else
+    {
+        SMSG ( "%s[%p]: skipping signaling: self->waiting = %u, self->avail = %u, self->min_requested = %u\n", __func__, self, self -> waiting, self -> avail, self -> min_requested );
     }
 
     return 0;

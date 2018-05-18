@@ -106,7 +106,7 @@ rc_t XMLLogger_Encode(const char* src, char *dst,
                 rc = RC(rcApp, rcLog, rcEncoding, rcBuffer, rcInsufficient);
                 break;
             } else {
-                memcpy(dst, p, bytes);
+                memmove(dst, p, bytes);
                 *num_writ = *num_writ + bytes;
                 dst += bytes;
             }
@@ -512,11 +512,15 @@ static rc_t ReportEnv(int indent) {
 
     const char tag[] = "Env";
 
-    const char *env_list[] = {
+    const char * env_list [] = {
+        "all_proxy",
+        "ALL_PROXY",
+        "http_proxy",
+        "HTTP_PROXY",
         "KLIB_CONFIG",
         "VDBCONFIG",
         "VDB_CONFIG",
-        ENV_KRYPTO_PWFILE
+        ENV_KRYPTO_PWFILE,
     };
 
     int i = 0;
@@ -695,7 +699,7 @@ static rc_t _ReportFinalize
 "=============================================================\n"
 "An error occurred during processing.\n"
 "If the problem persists, you may consider sending the following XML document\n"
-"to 'sra@ncbi.nlm.nih.gov' for assistance.\n"
+"to 'sra-tools@ncbi.nlm.nih.gov' for assistance.\n"
 "=============================================================\n\n"));
                 }
 

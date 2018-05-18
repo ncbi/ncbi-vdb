@@ -130,7 +130,7 @@ rc_t KRepositoryMake ( KRepository **rp, const KConfigNode *node,
     KRefcountInit ( & r -> refcount, 1, "KRepository", "make", name );
     r -> category = category;
     r -> subcategory = subcategory;
-    memcpy ( r + 1, name, name_str . size );
+    memmove ( r + 1, name, name_str . size );
     ( ( char* ) ( r + 1 ) ) [ name_str . size ] = 0;
 
     * rp = r;
@@ -226,7 +226,7 @@ LIB_EXPORT rc_t CC KRepositoryName ( const KRepository *self,
     if ( buffer == NULL )
         return RC ( rcKFG, rcNode, rcAccessing, rcBuffer, rcNull );
 
-    memcpy ( buffer, self -> name . addr, self -> name . size );
+    memmove ( buffer, self -> name . addr, self -> name . size );
 
     if ( bsize > self -> name . size )
         buffer [ self -> name . size ] = 0;
@@ -518,8 +518,18 @@ LIB_EXPORT rc_t CC KRepositoryAppendToRootHistory( KRepository *self, const char
                     root[ curr_root_size ] = 0;
                     rc = append_to_root_history( self, root );
                 }
+                else
+                {
+                    /* we cannot determine the current root, because it is not stored */
+                    rc = 0;
+                }
                 free( root );
             }
+        }
+        else
+        {
+            /* we cannot determine the current root, because it is not stored */
+            rc = 0;
         }
     }
     else

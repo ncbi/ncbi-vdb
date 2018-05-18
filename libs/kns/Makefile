@@ -75,6 +75,7 @@ clean: stdclean
 $(ILIBDIR)/libkns: $(addprefix $(ILIBDIR)/libkns.,$(ILIBEXT))
 
 KNS_NO_HTTP_SRC = \
+	stream-from-buffer \
 	kns_manager-ext \
 	manager \
 	buffered-stream \
@@ -85,7 +86,8 @@ KNS_NO_HTTP_SRC = \
 	sysendpoint \
 	syssock \
 	sysstream \
-    sysmgr
+	sysmgr \
+	tls
 
 ifneq (win,$(OS))
 KNS_NO_HTTP_SRC += \

@@ -321,7 +321,8 @@ rc_t SFunctionBindSchemaParms ( const SFunction *self,
         PLOGERR ( klogWarn, ( klogWarn, rc,
                  "schema parameter count mismatch - function: '$(f)'; expected $(i), received $(count)",
                  "f=%.*s,count=%u,i=%u",
-                 self -> name -> name . size, self -> name -> name . addr,
+                 self -> name ? self -> name -> name . size : 0,
+                 self -> name ? self -> name -> name . addr : NULL,
                  count, i ));
         return rc;
     }
@@ -577,8 +578,8 @@ rc_t SFunctionBindFactParms ( const SFunction *self,
         VectorSwap ( cx_bind, ic -> expr_id, cx_new, & cx_old );
         DBG_CXBIND2 ( "revert bind const", ic -> name -> name, ic -> expr_id, cx_old, cx_new );
     }
-    
-    VectorWhack ( parms, NULL, NULL ); 
+
+    VectorWhack ( parms, NULL, NULL );
     VectorWhack ( prior, NULL, NULL );
 
     return rc;
@@ -1588,7 +1589,8 @@ rc_t function_decl ( KSymTable *tbl, KTokenSource *src, KToken *t,
                         assert ( exist -> id < f -> id );
                         VectorSwap ( & self -> func, f -> id, NULL, & ignore );
                         VectorSwap ( & self -> func, f -> id = exist -> id, f, & ignore );
-                        f = exist;
+                        SFunctionWhack ( exist, NULL );
+                        return 0;
                     }
 
                     /* exists is not an error */
@@ -1603,7 +1605,7 @@ rc_t function_decl ( KSymTable *tbl, KTokenSource *src, KToken *t,
     {
         rc = 0;
     }
-    
+
     SFunctionWhack ( f, NULL );
     return rc;
 }

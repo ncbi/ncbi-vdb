@@ -100,7 +100,7 @@
  * - Pass lint
  * - make NULL in magic_file mean stdin
  * - Fix "-" argument to file to pass NULL to magic_file
- * - avoid pointer casts by using memcpy
+ * - avoid pointer casts by using _memcpy_ (replacing with memmove)
  * - rename magic_buf -> magic_buffer
  * - keep only the first error
  * - manual page: new sentence, new line

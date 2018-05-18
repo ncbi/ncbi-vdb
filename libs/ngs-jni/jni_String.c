@@ -101,7 +101,9 @@ jstring JStringVMake ( ctx_t ctx, JNIEnv * jenv, const char * fmt, va_list args 
 const char * JStringData ( jstring jself, ctx_t ctx, JNIEnv * jenv )
 {
     jboolean is_copy;
-    return ( ( * jenv ) -> GetStringUTFChars ) ( jenv, jself, & is_copy );
+    if ( jself != NULL )
+        return ( ( * jenv ) -> GetStringUTFChars ) ( jenv, jself, & is_copy );
+    return NULL;
 }
 
 
@@ -160,7 +162,7 @@ jstring NGS_StringCopyToJString ( const NGS_String * self, ctx_t ctx, JNIEnv * j
             {
                 jstring jstr;
 
-                memcpy ( copy, data, size );
+                memmove ( copy, data, size );
                 copy [ size ] = 0;
 
                 jstr = ( ( * jenv ) -> NewStringUTF ) ( jenv, copy );

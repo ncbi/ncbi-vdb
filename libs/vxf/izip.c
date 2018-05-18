@@ -217,7 +217,7 @@ static rc_t zlib_compress(szbuf *dst, const void *src, uint32_t ssize, int32_t s
         break;
     }
     zr = deflateEnd(&s);
-    if (zr != Z_OK)
+    if ( zr != Z_OK && s.total_out != 0 )
         rc = RC(rcVDB, rcFunction, rcExecuting, rcSelf, rcUnexpected);
     if (rc == 0) {
         assert(s.total_out <= UINT32_MAX);
@@ -484,9 +484,9 @@ static void free_encoded(const struct encoded *self) {
     }
 }
 
-#define SERIALZE16(X) do { if (i + 2 > dsize) return RC(rcXF, rcFunction, rcExecuting, rcBuffer, rcInsufficient); memcpy(dst + i, &x->u.izipped.X, 2); i += 2; } while(0)
-#define SERIALZE32(X) do { if (i + 4 > dsize) return RC(rcXF, rcFunction, rcExecuting, rcBuffer, rcInsufficient); memcpy(dst + i, &x->u.izipped.X, 4); i += 4; } while(0)
-#define SERIALZE64(X) do { if (i + 8 > dsize) return RC(rcXF, rcFunction, rcExecuting, rcBuffer, rcInsufficient); memcpy(dst + i, &x->u.izipped.X, 8); i += 8; } while(0)
+#define SERIALZE16(X) do { if (i + 2 > dsize) return RC(rcXF, rcFunction, rcExecuting, rcBuffer, rcInsufficient); memmove(dst + i, &x->u.izipped.X, 2); i += 2; } while(0)
+#define SERIALZE32(X) do { if (i + 4 > dsize) return RC(rcXF, rcFunction, rcExecuting, rcBuffer, rcInsufficient); memmove(dst + i, &x->u.izipped.X, 4); i += 4; } while(0)
+#define SERIALZE64(X) do { if (i + 8 > dsize) return RC(rcXF, rcFunction, rcExecuting, rcBuffer, rcInsufficient); memmove(dst + i, &x->u.izipped.X, 8); i += 8; } while(0)
 
 static
 rc_t serialize_encoded(uint8_t *dst, unsigned dsize, unsigned *psize, const struct encoded *x) {
@@ -500,19 +500,19 @@ rc_t serialize_encoded(uint8_t *dst, unsigned dsize, unsigned *psize, const stru
     
     if (i + 4 > dsize)
         return RC(rcXF, rcFunction, rcExecuting, rcBuffer, rcInsufficient);    
-    memcpy(dst + i, &x->data_count, 4); i += 4;
+    memmove(dst + i, &x->data_count, 4); i += 4;
 
     switch (x->flags & 0x03) {
     case 3:
     case 2:
         if (i + 8 > dsize)
             return RC(rcXF, rcFunction, rcExecuting, rcBuffer, rcInsufficient);    
-        memcpy(dst + i, &x->u.packed.min, 8); i += 8;
+        memmove(dst + i, &x->u.packed.min, 8); i += 8;
         /* fall thru */
     case 1:
         if (i + x->u.zipped.data_size > dsize)
             return RC(rcXF, rcFunction, rcExecuting, rcBuffer, rcInsufficient);    
-        memcpy(dst + i, x->u.zipped.data, x->u.zipped.data_size); i += x->u.zipped.data_size;
+        memmove(dst + i, x->u.zipped.data, x->u.zipped.data_size); i += x->u.zipped.data_size;
         *psize = i;
         return 0;
     default:
@@ -540,43 +540,43 @@ rc_t serialize_encoded(uint8_t *dst, unsigned dsize, unsigned *psize, const stru
     if (FLAG_TYPE(x->u.izipped) != DATA_ABSENT && FLAG_TYPE(x->u.izipped) != DATA_CONSTANT) {
         if (i + x->u.izipped.type_size > dsize)
             return RC(rcXF, rcFunction, rcExecuting, rcBuffer, rcInsufficient);
-        memcpy(dst + i, x->u.izipped.type, x->u.izipped.type_size); i += x->u.izipped.type_size;
+        memmove(dst + i, x->u.izipped.type, x->u.izipped.type_size); i += x->u.izipped.type_size;
     }
     
     if (FLAG_DIFF(x->u.izipped) != DATA_ABSENT && FLAG_DIFF(x->u.izipped) != DATA_CONSTANT) {
         if (i + x->u.izipped.diff_size > dsize)
             return RC(rcXF, rcFunction, rcExecuting, rcBuffer, rcInsufficient);
-        memcpy(dst + i, x->u.izipped.diff, x->u.izipped.diff_size); i += x->u.izipped.diff_size;
+        memmove(dst + i, x->u.izipped.diff, x->u.izipped.diff_size); i += x->u.izipped.diff_size;
     }
     
     if (FLAG_LENGTH(x->u.izipped) != DATA_ABSENT && FLAG_LENGTH(x->u.izipped) != DATA_CONSTANT) {
         if (i + x->u.izipped.length_size > dsize)
             return RC(rcXF, rcFunction, rcExecuting, rcBuffer, rcInsufficient);
-        memcpy(dst + i, x->u.izipped.length, x->u.izipped.length_size); i += x->u.izipped.length_size;
+        memmove(dst + i, x->u.izipped.length, x->u.izipped.length_size); i += x->u.izipped.length_size;
     }
     
     if (FLAG_DY(x->u.izipped) != DATA_ABSENT && FLAG_DY(x->u.izipped) != DATA_CONSTANT) {
         if (i + x->u.izipped.dy_size > dsize)
             return RC(rcXF, rcFunction, rcExecuting, rcBuffer, rcInsufficient);
-        memcpy(dst + i, x->u.izipped.dy, x->u.izipped.dy_size); i += x->u.izipped.dy_size;
+        memmove(dst + i, x->u.izipped.dy, x->u.izipped.dy_size); i += x->u.izipped.dy_size;
     }
     
     if (FLAG_DX(x->u.izipped) != DATA_ABSENT && FLAG_DX(x->u.izipped) != DATA_CONSTANT) {
         if (i + x->u.izipped.dx_size > dsize)
             return RC(rcXF, rcFunction, rcExecuting, rcBuffer, rcInsufficient);
-        memcpy(dst + i, x->u.izipped.dx, x->u.izipped.dx_size); i += x->u.izipped.dx_size;
+        memmove(dst + i, x->u.izipped.dx, x->u.izipped.dx_size); i += x->u.izipped.dx_size;
     }
     
     if (FLAG_A(x->u.izipped) != DATA_ABSENT && FLAG_A(x->u.izipped) != DATA_CONSTANT) {
         if (i + x->u.izipped.a_size > dsize)
             return RC(rcXF, rcFunction, rcExecuting, rcBuffer, rcInsufficient);
-        memcpy(dst + i, x->u.izipped.a, x->u.izipped.a_size); i += x->u.izipped.a_size;
+        memmove(dst + i, x->u.izipped.a, x->u.izipped.a_size); i += x->u.izipped.a_size;
     }
     
     if (FLAG_OUTLIER(x->u.izipped) != DATA_ABSENT && FLAG_OUTLIER(x->u.izipped) != DATA_CONSTANT) {
         if (i + x->u.izipped.outlier_size > dsize)
             return RC(rcXF, rcFunction, rcExecuting, rcBuffer, rcInsufficient);
-        memcpy(dst + i, x->u.izipped.outlier, x->u.izipped.outlier_size); i += x->u.izipped.outlier_size;
+        memmove(dst + i, x->u.izipped.outlier, x->u.izipped.outlier_size); i += x->u.izipped.outlier_size;
     }
     
     *psize = i;

@@ -52,7 +52,7 @@ struct NGS_Cursor;
 struct NGS_String;
 
 enum SequenceTableColumn
-{   // keep in sync with sequence_col_specs in SRA_Read.c 
+{   /* keep in sync with sequence_col_specs in SRA_Read.c */
     seq_READ,
     seq_READ_TYPE,
     seq_QUALITY,
@@ -61,9 +61,10 @@ enum SequenceTableColumn
     seq_GROUP,
     seq_PRIMARY_ALIGNMENT_ID,
     seq_SPOT_COUNT,
+    seq_CMP_READ,
 
     seq_NUM_COLS
-};  // keep in sync with sequence_col_specs in SRA_Read.c 
+};  /* keep in sync with sequence_col_specs in SRA_Read.c */
 
 extern const char * sequence_col_specs [];
 
@@ -72,18 +73,18 @@ extern const char * sequence_col_specs [];
  */
 struct SRA_Read
 {
-    NGS_Read dad;   
-    
+    NGS_Read dad;
+
     struct NGS_String * run_name;
     struct NGS_String * group_name; /* if not NULL, only return reads from this read group */
-    
+
     int64_t cur_row;
     int64_t row_max;
     uint64_t row_count;
 
     const INSDC_read_type * READ_TYPE;
     const INSDC_coord_len * READ_LEN;
-    
+
     struct NGS_Cursor const * curs;
 
     uint32_t cur_frag;
@@ -99,7 +100,7 @@ struct SRA_Read
 
     /* read filtering criteria */
     bool wants_full;
-    bool wants_partial; 
+    bool wants_partial;
     bool wants_unaligned;
 };
 
@@ -121,7 +122,7 @@ struct NGS_String *      SRA_ReadGetQualities ( NGS_READ * self, ctx_t ctx, uint
 uint32_t                 SRA_ReadNumFragments ( NGS_READ * self, ctx_t ctx );
 bool                     SRA_ReadFragIsAligned ( NGS_READ * self, ctx_t ctx, uint32_t frag_idx );
 bool                     SRA_ReadIteratorNext ( NGS_READ * self, ctx_t ctx );
-uint64_t                 SRA_ReadIteratorGetCount ( const NGS_READ * self, ctx_t ctx );    
+uint64_t                 SRA_ReadIteratorGetCount ( const NGS_READ * self, ctx_t ctx );
 
 /* Make
  * a single read
@@ -130,36 +131,40 @@ struct NGS_Read * SRA_ReadMake ( ctx_t ctx, const struct NGS_Cursor * curs, int6
 
 /* IteratorMake
  */
-struct NGS_Read * SRA_ReadIteratorMake ( ctx_t ctx, 
-                                               const struct NGS_Cursor * curs, 
-                                               const struct NGS_String * run_name, 
-                                               bool wants_full, 
-                                               bool wants_partial, 
+struct NGS_Read * SRA_ReadIteratorMake ( ctx_t ctx,
+                                               const struct NGS_Cursor * curs,
+                                               const struct NGS_String * run_name,
+                                               bool wants_full,
+                                               bool wants_partial,
                                                bool wants_unaligned );
+
+/* IteratorInitFragment
+ */
+void SRA_ReadIteratorInitFragment ( NGS_READ * self, ctx_t ctx );
 
 /* IteratorMakeRange
  * all reads in the specified range of rowIds
  */
-struct NGS_Read * SRA_ReadIteratorMakeRange ( ctx_t ctx, 
-                                              const struct NGS_Cursor * curs, 
-                                              const struct NGS_String * run_name, 
-                                              uint64_t first, 
-                                              uint64_t count, 
-                                              bool wants_full, 
-                                              bool wants_partial, 
+struct NGS_Read * SRA_ReadIteratorMakeRange ( ctx_t ctx,
+                                              const struct NGS_Cursor * curs,
+                                              const struct NGS_String * run_name,
+                                              uint64_t first,
+                                              uint64_t count,
+                                              bool wants_full,
+                                              bool wants_partial,
                                               bool wants_unaligned );
 
 /* IteratorMakeReadGroup
  * within the specified range of rowIds, will only return reads belonging to the specified read group (groupName)
  */
-struct NGS_Read * SRA_ReadIteratorMakeReadGroup ( ctx_t ctx, 
-                                                  const struct NGS_Cursor * curs, 
-                                                  const struct NGS_String * run_name, 
-                                                  const struct NGS_String * group_name, 
-                                                  uint64_t first, 
-                                                  uint64_t count, 
-                                                  bool wants_full, 
-                                                  bool wants_partial, 
+struct NGS_Read * SRA_ReadIteratorMakeReadGroup ( ctx_t ctx,
+                                                  const struct NGS_Cursor * curs,
+                                                  const struct NGS_String * run_name,
+                                                  const struct NGS_String * group_name,
+                                                  uint64_t first,
+                                                  uint64_t count,
+                                                  bool wants_full,
+                                                  bool wants_partial,
                                                   bool wants_unaligned );
 
 #ifdef __cplusplus

@@ -454,7 +454,7 @@ MOD_EXPORT const char * CC svdb_accession_2_path( const char * accession )
                     else
                     {
                         const VPath * local;
-                        rc = VResolverQuery ( resolver, eProtocolHttp, vpath, &local, NULL, NULL );
+                        rc = VResolverQuery ( resolver, 0, vpath, &local, NULL, NULL );
                         if ( rc != 0 )
                             log_and_err( rc, "VResolverQuery() failed in svdb_accession_2_path()" );
                         else
@@ -1836,7 +1836,7 @@ static void svdb_enable_col( p_svdb_tab tab, const char *defline,
         cast = calloc( 1, l );
         if ( cast != NULL )
         {
-            memcpy( cast, &defline[ start_cast + 1 ], l-1 );
+            memmove( cast, &defline[ start_cast + 1 ], l-1 );
             svdb_trim( cast );
         }
     }
@@ -1847,7 +1847,7 @@ static void svdb_enable_col( p_svdb_tab tab, const char *defline,
         name = calloc( 1, l + 1 );
         if ( name != NULL )
         {
-            memcpy( name, &defline[ start_name ], l );
+            memmove( name, &defline[ start_name ], l );
             svdb_trim( name );
         }
     }

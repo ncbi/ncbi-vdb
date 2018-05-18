@@ -177,7 +177,7 @@ NGS_Reference * SRA_DB_ReadCollectionGetReferences ( SRA_DB_ReadCollection * sel
 {
     FUNC_ENTRY ( ctx, rcSRA, rcTable, rcAccessing );
 
-    // create empty reference iterator
+    /* create empty reference iterator */
     return NGS_ReferenceMakeNull ( ctx, & self -> dad );
 }
 
@@ -192,7 +192,7 @@ NGS_Reference * SRA_DB_ReadCollectionGetReference ( SRA_DB_ReadCollection * self
 {
     FUNC_ENTRY ( ctx, rcSRA, rcTable, rcAccessing );
 
-    // always fail
+    /* always fail */
     INTERNAL_ERROR ( xcRowNotFound, "Reference not found ( NAME = %s )", spec );
     return NULL;
 }
@@ -203,7 +203,7 @@ NGS_Alignment * SRA_DB_ReadCollectionGetAlignments ( SRA_DB_ReadCollection * sel
 {
     FUNC_ENTRY ( ctx, rcSRA, rcTable, rcAccessing );
 
-    // create empty alignment iterator
+    /* create empty alignment iterator */
     return NGS_AlignmentMakeNull ( ctx, NGS_StringData(self -> run_name, ctx), NGS_StringSize(self -> run_name, ctx) );
 }
 
@@ -212,7 +212,7 @@ NGS_Alignment * SRA_DB_ReadCollectionGetAlignment ( SRA_DB_ReadCollection * self
 {
     FUNC_ENTRY ( ctx, rcSRA, rcTable, rcAccessing );
 
-    // always fail
+    /* always fail */
     INTERNAL_ERROR ( xcRowNotFound, "Aligment not found ( ID = %ld )", alignmentId );
     return NULL;
 }
@@ -230,7 +230,7 @@ NGS_Alignment * SRA_DB_ReadCollectionGetAlignmentRange ( SRA_DB_ReadCollection *
 {
     FUNC_ENTRY ( ctx, rcSRA, rcTable, rcAccessing );
 
-    // create empty alignment iterator
+    /* create empty alignment iterator */
     return NGS_AlignmentMakeNull ( ctx, NGS_StringData(self -> run_name, ctx), NGS_StringSize(self -> run_name, ctx) );
 }
 
@@ -247,7 +247,7 @@ NGS_Read * SRA_DB_ReadCollectionGetReads ( SRA_DB_ReadCollection * self, ctx_t c
     {
         TRY ( const NGS_Cursor * curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "SEQUENCE", sequence_col_specs, seq_NUM_COLS ) )
         {
-            NGS_Read * ret =  SRA_ReadIteratorMake ( ctx, curs, self -> run_name, wants_full, wants_partial, wants_unaligned );
+            NGS_Read * ret =  SRA_ReadIteratorMake ( ctx, curs, self -> run_name, /*wants_full, wants_partial*/ true, true, wants_unaligned );
             NGS_CursorRelease ( curs, ctx );
             return ret;
         }
@@ -313,7 +313,7 @@ NGS_Read * SRA_DB_ReadCollectionGetReadRange ( SRA_DB_ReadCollection * self, ctx
 
     TRY ( const NGS_Cursor * curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "SEQUENCE", sequence_col_specs, seq_NUM_COLS ) )
     {
-        NGS_Read * ret = SRA_ReadIteratorMakeRange ( ctx, curs, self -> run_name, first, count, wants_full, wants_partial, wants_unaligned );
+        NGS_Read * ret = SRA_ReadIteratorMakeRange ( ctx, curs, self -> run_name, first, count, /*wants_full, wants_partial*/ true, true, wants_unaligned );
         NGS_CursorRelease ( curs, ctx );
         return ret;
     }

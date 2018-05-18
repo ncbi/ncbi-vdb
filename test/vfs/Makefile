@@ -29,12 +29,15 @@ TOP ?= $(abspath ../..)
 MODULE = test/vfs
 
 TEST_TOOLS = \
-    test-caching \
-    test-vfsmanager \
-    test-path-c \
-    test-path \
-    test-resolver
-
+	redirect-rejected-names-cgi-http-to-https \
+	test-resolver-with-log \
+	test-services \
+	test-caching \
+	test-names-30 \
+	test-path \
+	test-path-c \
+	test-resolver \
+	test-vfsmanager \
 
 include $(TOP)/build/Makefile.env
 
@@ -81,6 +84,16 @@ $(TEST_BINDIR)/test-path: $(PATHTEST_OBJ)
 	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
 
 #----------------------------------------------------------------
+HTTPS_SRC = \
+	redirect-rejected-names-cgi-http-to-https
+
+HTTPS_OBJ = \
+	$(addsuffix .$(OBJX),$(HTTPS_SRC))
+
+$(TEST_BINDIR)/redirect-rejected-names-cgi-http-to-https: $(HTTPS_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+#----------------------------------------------------------------
 # test-caching
 
 CACHING_SRC = \
@@ -90,6 +103,18 @@ CACHING_OBJ = \
 	$(addsuffix .$(OBJX),$(CACHING_SRC))
 
 $(TEST_BINDIR)/test-caching: $(CACHING_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+#----------------------------------------------------------------
+# test-names-30
+
+N30_SRC = \
+	test-names-30
+
+N30_OBJ = \
+	$(addsuffix .$(OBJX),$(N30_SRC))
+
+$(TEST_BINDIR)/test-names-30: $(N30_OBJ)
 	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
 
 #----------------------------------------------------------------
@@ -127,4 +152,29 @@ RESOLVERTEST_LIB = \
 	-sncbi-vdb \
 
 $(TEST_BINDIR)/test-resolver: $(RESOLVERTEST_OBJ)
+	$(LP) --exe -o $@ $^ $(RESOLVERTEST_LIB)
+
+#----------------------------------------------------------------
+# Test of names service
+#
+
+RESOLVERTESTLOG_SRC = \
+	test-resolver-with-log
+
+RESOLVERTESTLOG_OBJ = \
+	$(addsuffix .$(OBJX),$(RESOLVERTESTLOG_SRC))
+
+$(TEST_BINDIR)/test-resolver-with-log: $(RESOLVERTESTLOG_OBJ)
+	$(LP) --exe -o $@ $^ $(RESOLVERTEST_LIB)
+
+#----------------------------------------------------------------
+# Test of names service
+#
+SERVICES_SRC = \
+	test-services
+
+SERVICES_OBJ = \
+	$(addsuffix .$(OBJX),$(SERVICES_SRC))
+
+$(TEST_BINDIR)/test-services: $(SERVICES_OBJ)
 	$(LP) --exe -o $@ $^ $(RESOLVERTEST_LIB)

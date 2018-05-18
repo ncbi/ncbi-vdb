@@ -24,9 +24,11 @@
 *
 */
 
+#include <kapp/args.h> /* ArgsMakeAndHandle */
 #include <kfg/config.h> /* KConfig */
 #include <kfs/directory.h> /* KDirectory */
 #include <kfs/file.h> /* KFileRelease */
+#include <klib/debug.h> /* KDbgSetString */
 #include <kns/kns-mgr-priv.h> /* KNSManagerMakeReliableHttpFile */
 #include <kns/manager.h> /* KNSManagerMake */
 #include <ktst/unit_test.hpp>
@@ -45,7 +47,8 @@ using ncbi::NK::TestCase;
 using std::cerr;
 using std::string;
 
-TEST_SUITE(flatSraKfgTestSuite);
+static rc_t argsHandler(int argc, char* argv[]);
+TEST_SUITE_WITH_ARGS_HANDLER(flatSraKfgTestSuite, argsHandler);
 
 static KNSManager * kns = NULL;
 
@@ -77,9 +80,9 @@ public:
 
         const VPath * remote = NULL;
         const KFile * f = NULL;
-        if ( expectedShort . size () ) {
-            REQUIRE_RC ( VResolverQuery
-                ( resolver, eProtocolHttp, queryShort, NULL, & remote, NULL ) );
+        if ( expectedShort . size () > 0 ) {
+            REQUIRE_RC ( VResolverQuery ( resolver, eProtocolHttps, queryShort,
+                                          NULL, & remote, NULL ) );
             compare ( remote, expectedShort );
             RELEASE ( VPath, remote );
             REQUIRE_RC ( KNSManagerMakeReliableHttpFile
@@ -87,12 +90,12 @@ public:
             RELEASE ( KFile, f );
         } else {
             REQUIRE_RC_FAIL ( VResolverQuery
-                ( resolver, eProtocolHttp, queryShort, NULL, & remote, NULL ) );
+                ( resolver, 0, queryShort, NULL, & remote, NULL ) );
         }
 
-        if ( expectedLong . size () ) {
-            REQUIRE_RC ( VResolverQuery
-                ( resolver, eProtocolHttp, queryLong, NULL, & remote, NULL ) );
+        if ( expectedLong . size () > 0 ) {
+            REQUIRE_RC ( VResolverQuery ( resolver, eProtocolHttps, queryLong,
+                         NULL, & remote, NULL ) );
             compare ( remote, expectedLong );
             RELEASE ( VPath, remote );
             REQUIRE_RC ( KNSManagerMakeReliableHttpFile
@@ -100,7 +103,7 @@ public:
             RELEASE ( KFile, f );
         } else {
             REQUIRE_RC_FAIL ( VResolverQuery
-                ( resolver, eProtocolHttp, queryLong, NULL, & remote, NULL ) );
+                ( resolver, 0, queryLong, NULL, & remote, NULL ) );
         }
 
 
@@ -118,16 +121,16 @@ public:
 
 static const char cgiPath[] = "/repository/remote/main/CGI/resolver-cgi";
 static const char goodCgi[]
-    = "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi";
+    = "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi";
 static const char badCgi[]
-    = "http://XXX.ncbi.nlm.nih.gov/Traces/names/names.cgi";
+    = "https://XXX.ncbi.nlm.nih.gov/Traces/names/names.cgi";
 #ifdef ALL
 TEST_CASE(test_sra) {
     const string newShort
-        ("http://sra-download.ncbi.nlm.nih.gov/srapub/SRR000001");
+     ("https://sra-download.ncbi.nlm.nih.gov/traces/sra27/SRR/000000/SRR000001");
     const string newLong
-        ("http://sra-download.ncbi.nlm.nih.gov/srapub/SRR1000254");
-    const string oldShort("http://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/"
+    ("https://sra-download.ncbi.nlm.nih.gov/traces/sra14/SRR/000976/SRR1000254");
+    const string oldShort("https://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/"
                 "reads/ByRun/sra/SRR/SRR000/SRR000001/SRR000001.sra");
 
     rc_t rc = 0;
@@ -151,7 +154,7 @@ TEST_CASE(test_sra) {
     REQUIRE_RC ( VFSManagerMakeAccPath ( mgr, & queryLong, "SRR1000254" ) );
 
 //  const char rootPath [] = "/repository/remote/aux/NCBI/root";
-//  const char newRoot[]  = "http://sra-download.ncbi.nlm.nih.gov";
+//  const char newRoot[]  = "https://sra-download.ncbi.nlm.nih.gov";
 
     // fail using incomplete configuration
     Test(this, mgr, cfg, queryShort, queryLong, "incomplete-old");
@@ -166,7 +169,7 @@ TEST_CASE(test_sra) {
 
 /* aux repositories are ignored : VDB-3090 
     // old aux configuration cannot resolve long accession
-    const char oldRoot  []  = "http://ftp-trace.ncbi.nlm.nih.gov/sra";
+    const char oldRoot  []  = "https://ftp-trace.ncbi.nlm.nih.gov/sra";
     REQUIRE_RC ( KConfigWriteString ( cfg, rootPath, oldRoot ) );
     Test(this, mgr, cfg, queryShort, queryLong, "aux-old", oldShort);
 */
@@ -249,7 +252,7 @@ public:
         REQUIRE_RC ( VFSManagerMakeResolver ( mgr, & resolver, cfg ) );
 // fail to resolve using empty config
         REQUIRE_RC_FAIL ( VResolverQuery
-            ( resolver, eProtocolHttp, query, NULL, & remote, NULL ) );
+            ( resolver, 0, query, NULL, & remote, NULL ) );
         RELEASE ( VResolver, resolver );
 
 // resolve using good cgi
@@ -257,7 +260,7 @@ public:
         REQUIRE_RC ( VFSManagerMakeResolver ( mgr, & resolver, cfg ) );
 
         REQUIRE_RC ( VResolverQuery
-            ( resolver, eProtocolHttp, query, NULL, & remoteCgi, NULL ) );
+            ( resolver, 0, query, NULL, & remoteCgi, NULL ) );
         if ( ! expected ) {
 cerr << "\nTO FIX !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! :\n "
             << "\tVResolverQuery(CGI, " << acc << ") SHOULD FAIL !!!!!!!!!!!\n";
@@ -269,14 +272,14 @@ cerr << "\nTO FIX !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! :\n "
         REQUIRE_RC ( KConfigWriteString ( cfg, cgiPath, badCgi ) );
         REQUIRE_RC ( VFSManagerMakeResolver ( mgr, & resolver, cfg ) );
         REQUIRE_RC_FAIL ( VResolverQuery
-            ( resolver, eProtocolHttp, query, NULL, & remote, NULL ) );
+            ( resolver, 0, query, NULL, & remote, NULL ) );
         RELEASE ( VResolver, resolver );
 
 // resolve using aux configuration
         REQUIRE_RC ( KConfigWriteString ( cfg, name, value ) );
         REQUIRE_RC ( VFSManagerMakeResolver ( mgr, & resolver, cfg ) );
         REQUIRE_RC ( VResolverQuery
-            ( resolver, eProtocolHttp, query, NULL, & remote, NULL ) );
+            ( resolver, 0, query, NULL, & remote, NULL ) );
         if ( ! expected ) {
 cerr << "TO FIX !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! :\n "
             << "\tVResolverQuery(AUX, " << acc << ") SHOULD FAIL !!!!!!!!!!!\n";
@@ -359,7 +362,7 @@ TEST_CASE(test_nannot) {
 TEST_CASE(test_AAAB01_1) {
     Fixture fixture(this, "refseq AAAB01.1", "AAAB01.1",
         "/repository/remote/aux/NCBI/apps/refseq/volumes/refseq", "refseq",
-        "http://ftp-trace.ncbi.nlm.nih.gov/sra/refseq/AAAB01" );
+        "https://ftp-trace.ncbi.nlm.nih.gov/sra/refseq/AAAB01" );
 }
 #endif
 #ifdef ALL
@@ -395,15 +398,28 @@ TEST_CASE(test_WGS_AAAB01) {
 TEST_CASE(test_WGS_AAAB01_1) {
     Fixture fixture(this, "WGS AAAB01_1", "AAAB01.1",
         "/repository/remote/aux/NCBI/apps/wgs/volumes/fuseWGS", "wgs",
-        "http://ftp-trace.ncbi.nlm.nih.gov/sra/wgs/AA/AB/AAAB01.1" );
+        "https://ftp-trace.ncbi.nlm.nih.gov/sra/wgs/AA/AB/AAAB01.1" );
 }
 TEST_CASE(test_WGS_AAAB01_9) {
     Fixture fixture(this, "WGS AAAB01_2", "AAAB01.9",
         "/repository/remote/aux/NCBI/apps/wgs/volumes/fuseWGS", "wgs", NULL );
 }*/
+
+static rc_t argsHandler(int argc, char * argv[]) {
+    Args * args = NULL;
+    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
+    ArgsWhack(args);
+    return rc;
+}
+rc_t CC Usage ( const Args * args ) { return 0; }
+const char UsageDefaultName [] = "flat-sra-kfg";
+rc_t CC UsageSummary ( const char * prog_name ) { return 0; }
 extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
     rc_t CC KMain ( int argc, char *argv [] ) {
+const char * p = getenv("http_proxy");
+//cerr << "http_proxy = '" << ( p == NULL ? "NULL" : p ) << "'\n";
+if ( 1 ) assert ( ! KDbgSetString ( "VFS" ) );
         KConfigDisableUserSettings();
         rc_t rc = KNSManagerMake(&kns);
         if (rc == 0) {

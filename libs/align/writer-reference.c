@@ -1067,8 +1067,8 @@ rc_t OpenFastaFile(KFile const **const kf,
         else
             return RC(rcAlign, rcFile, rcOpening, rcMemory, rcExhausted);
     }
-    memcpy(fname, base, len);
-    memcpy(fname + len, ".fasta", 7);
+    memmove(fname, base, len);
+    memmove(fname + len, ".fasta", 7);
     
     ALIGN_CF_DBGF(("trying to open fasta file: %.s\n", fname));
     rc = KDirectoryOpenFileRead(dir, kf, "%s", fname);
@@ -1163,7 +1163,7 @@ rc_t ReferenceSeq_GetRefSeqInfo(ReferenceSeq *const self)
         return rc;
     
     if (md5)
-        memcpy(self->md5, md5, 16);
+        memmove(self->md5, md5, 16);
     else
         memset(self->md5, 0, 16);
     return 0;
@@ -1520,6 +1520,12 @@ static rc_t findSeq(ReferenceMgr *const self,
     return rc;
 }
 
+static ReferenceSeq *ReferenceMgr_FindSeq(ReferenceMgr const *const self, char const id[])
+{
+    int const fnd = findId(self, id);
+    return (fnd >= 0) ? &self->refSeq[fnd] : NULL;
+}
+
 static
 rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
                           ReferenceSeq **const rslt,
@@ -1529,13 +1535,10 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
                           bool const allowMultiMapping,
                           bool wasRenamed[])
 {
-    int const fnd = findId(self, id);
-    
-    assert(rslt != NULL);
-    *rslt = NULL;
-    if (fnd >= 0) {
-        ReferenceSeq *const obj = &self->refSeq[fnd];
-        
+    ReferenceSeq *const obj = ReferenceMgr_FindSeq(self, id);
+    if (obj) {
+        assert(rslt != NULL);
+        *rslt = NULL;
         if (obj->type == rst_dead)
             return RC(rcAlign, rcIndex, rcSearching, rcItem, rcInvalid);
         if (obj->type == rst_renamed) {
@@ -2151,7 +2154,7 @@ rc_t ReferenceSeq_ReadDirect(ReferenceSeq *self,
             unsigned const readable = self->seq_len - offset;
             unsigned const to_write = readable < writable ? readable : writable;
             
-            memcpy(&buffer[dst_off], &src[offset], to_write);
+            memmove(&buffer[dst_off], &src[offset], to_write);
             *written += to_write;
             if (!self->circular)
                 break;
@@ -2300,6 +2303,22 @@ LIB_EXPORT rc_t CC ReferenceMgr_Verify(ReferenceMgr const *const cself,
         }
         return rc;
     }
+}
+
+LIB_EXPORT rc_t CC ReferenceMgr_Get1stRow(const ReferenceMgr* cself, int64_t* row_id, char const id[])
+{
+    rc_t rc = 0;
+    ReferenceSeq *seq;
+
+    if (cself == NULL || row_id == NULL) {
+        rc = RC(rcAlign, rcFile, rcReading, rcParam, rcNull);
+    }
+    else if ((seq = ReferenceMgr_FindSeq(cself, id)) == NULL)
+        rc = RC(rcAlign, rcFile, rcReading, rcId, rcNotFound);
+    else {
+        *row_id = seq->start_rowid;
+    }
+    return rc;
 }
 
 LIB_EXPORT rc_t CC ReferenceMgr_FastaPath(const ReferenceMgr* cself, const char* fasta_path)
@@ -2457,7 +2476,7 @@ rc_t cigar_bin(cigar_bin_t cigar[],
     for (i = 0; i < cigar_len; ++i) {
         uint32_t c;
         
-        memcpy(&c, cigar_bin + i, 4);
+        memmove(&c, cigar_bin + i, 4);
         {
             int const op = c & 0x0F;
             int const len = c >> 4;
@@ -2701,7 +2720,7 @@ rc_t cigar2offset(int const options,
                                 cigar[i].type = NCBI_align_ro_intron_unknown;
                                 cigar[i].code = 'N';
                             }
-                            memcpy(cigar + i - 1, cigar + i, (opcount - i) * sizeof(cigar[0]));
+                            memmove(cigar + i - 1, cigar + i, (opcount - i) * sizeof(cigar[0]));
                             --opcount;
                         }
                         else
@@ -2718,7 +2737,7 @@ rc_t cigar2offset(int const options,
                     cigar_bin_t const op = cigar[--i];
                     
                     if (op.gentype == gen_ignore_type) {
-                        memcpy(cigar + i, cigar + oi, (opcount - oi) * sizeof(cigar[0]));
+                        memmove(cigar + i, cigar + oi, (opcount - oi) * sizeof(cigar[0]));
                         --opcount;
                     }
                 }
@@ -2970,14 +2989,14 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
                         }
                     }
                     if(rc == 0 && allele_len < (max_rl - rl)) {
-                        memcpy(&ref_buf[rl], allele, allele_len);
+                        memmove(&ref_buf[rl], allele, allele_len);
                         rl += allele_len;
                         /* append tail of actual reference */
                         rc = ReferenceSeq_ReadDirect(self, allele_ref_end, max_rl - rl, true, &ref_buf[rl], &i, false);
                         rl += i;
                     } else if(rc == 0) {
                         /* allele is longer than needed */
-                        memcpy(&ref_buf[rl], allele, max_rl - rl);
+                        memmove(&ref_buf[rl], allele, max_rl - rl);
                         rl = max_rl;
                     }
                 }

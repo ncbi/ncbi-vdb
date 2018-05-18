@@ -39,7 +39,6 @@
 #undef ERR
 #endif
 
-#include <klib/debug.h> /* DBGMSG */
 #include <klib/text.h>
 #include <klib/container.h>
 #include <klib/out.h>
@@ -83,9 +82,12 @@ void URLBlockInit ( URLBlock *self )
     CONST_STRING ( & self -> query, "" );
     CONST_STRING ( & self -> fragment, "" );
 
-    self -> port = 0; /* 0 = DEFAULT 80 for http */
+    self -> port = 0; /* 0 = DEFAULT 80 for http, 443 for https */
 
     self -> scheme_type = st_NONE;
+    self -> tls = false;
+
+    self -> port_dflt = true;
 }
 
 /* ParseUrl
@@ -131,27 +133,39 @@ rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size )
             String http;
             CONST_STRING ( & http, "http" );
 
-            /* here we assume the scheme will be http */
-            b -> scheme_type = st_HTTP;
-
             /* assign scheme to the url_block */
             StringInit ( & b -> scheme, buf, sep - buf, ( uint32_t ) ( sep - buf ) );
 
-            /* check to make sure it is 'http' */
+            /* here we assume the scheme will be http */
+            b -> port = 80;
+            b -> scheme_type = st_HTTP;
             if ( ! StringCaseEqual ( & b -> scheme, & http ) )
             {
-                /* it is not http, check for s3 */
-                String s3;
-                CONST_STRING ( & s3, "s3" );
-                
-                if ( ! StringCaseEqual ( & b -> scheme, & s3 ) )
+                String https;
+                CONST_STRING ( & https, "https" );
+
+                /* check for https */
+                b -> port = 443;
+                b -> scheme_type = st_HTTPS;
+                b -> tls = true;
+                if ( ! StringCaseEqual ( & b -> scheme, & https ) )
                 {
-                    b -> scheme_type = st_NONE;
-                    rc = RC ( rcNS, rcUrl, rcEvaluating, rcName, rcIncorrect );
-                    PLOGERR ( klogErr ,( klogErr, rc, "Scheme is '$(scheme)'", "scheme=%S", & b -> scheme ) );
-                    return rc;
+                    String s3;
+                    CONST_STRING ( & s3, "s3" );
+                
+                    /* it is not http, check for s3 */
+                    b -> port = 80;
+                    b -> scheme_type = st_S3;
+                    b -> tls = false;
+                    if ( ! StringCaseEqual ( & b -> scheme, & s3 ) )
+                    {
+                        b -> port = 0;
+                        b -> scheme_type = st_NONE;
+                        rc = RC ( rcNS, rcUrl, rcEvaluating, rcName, rcIncorrect );
+                        PLOGERR ( klogErr ,( klogErr, rc, "Scheme is '$(scheme)'", "scheme=%S", & b -> scheme ) );
+                        return rc;
+                    }
                 }
-                b -> scheme_type = st_S3;
             }
 
             /* accept scheme - skip past */
@@ -286,6 +300,8 @@ rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size )
                 PLOGERR ( klogErr ,( klogErr, rc, "Port is '$(port)'", "port=%u", b -> port ) );
                 return rc;
             }
+
+            b -> port_dflt = false;
 
             /* assign host to url_block */
             StringInit ( & b -> host, buf, sep - buf, ( uint32_t ) ( sep - buf ) );

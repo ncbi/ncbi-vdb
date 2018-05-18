@@ -56,6 +56,12 @@ KFG_EXTERN rc_t CC KConfig_Get_Http_Proxy_Enabled
 KFG_EXTERN rc_t CC KConfig_Set_Http_Proxy_Enabled
     ( KConfig *self, bool enabled );
 
+/* get/set priority of environmnet vs. configuration for HTTP proxy */
+KFG_EXTERN rc_t CC KConfig_Has_Http_Proxy_Env_Higher_Priority
+    ( const KConfig *self, bool *enabled );
+KFG_EXTERN rc_t CC KConfig_Set_Http_Proxy_Env_Higher_Priority
+    ( KConfig *self, bool enabled );
+
 
 /* get the %HOME% path from config
  */

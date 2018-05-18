@@ -208,16 +208,24 @@ VDB_EXTERN rc_t CC VDBManagerGetCacheRoot ( const VDBManager * self,
  *  set a new cache-root
  *
  *  path [ IN ] - VPath of new location of cache-root
- *  
+ *
  *  The change to the cache-root is temporary, it is not automatically stored
  *  in the configuration-file. If the manager is released, the change will be
  *  forgotten. If the user wants to make the change permanent, he has to obtain
  *  a reference to the config-manager 'KConfig' and call KConfigCommit().
  */
-
 VDB_EXTERN rc_t CC VDBManagerSetCacheRoot ( const VDBManager * self,
     struct VPath const * path );
- 
+
+/* DeleteCacheOlderThan
+ *  delete old cached files
+ *
+ *  days [ IN ] - files older than this will be deleted
+ *
+ */
+VDB_EXTERN rc_t CC VDBManagerDeleteCacheOlderThan ( const VDBManager * self,
+    uint32_t days );
+
 
 #ifdef __cplusplus
 }

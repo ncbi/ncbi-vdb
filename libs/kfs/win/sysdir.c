@@ -44,6 +44,7 @@ struct KSysDir;
 #include <klib/out.h>
 #include <klib/debug.h>
 #include <klib/klib-priv.h>
+#include <klib/time.h>
 
 #include <sysalloc.h>
 
@@ -862,7 +863,7 @@ rc_t KSysDirMakeSimulatedFSPath ( const KSysDir* self, enum RCContext ctx, bool 
     /* prepend UTF-16 directory path */
     if ( buffer_length_in_wchars != 0 )
     {
-        memcpy ( buffer, self -> path, buffer_length_in_wchars * sizeof * buffer );
+        memmove ( buffer, self -> path, buffer_length_in_wchars * sizeof * buffer );
 
         /* if path is relative, expect trailing '\\'
             if path is full, expect NO trailing '\\' */
@@ -1611,7 +1612,7 @@ rc_t CC KSysDirRename ( KSysDir *self, bool force, const char *from, const char 
                             return RC ( rcFS, rcDirectory, rcRenaming, rcFile, rcNotFound );
                         case ERROR_ACCESS_DENIED:
                             try++;
-                            Sleep( 500 ); /* sleep for a half a second */
+                            KSleepMs( 500 ); /* sleep for a half a second */
                             rc = RC ( rcFS, rcDirectory, rcRenaming, rcFile, rcUnauthorized );
                             break;
                        case ERROR_SHARING_VIOLATION:
@@ -2388,6 +2389,46 @@ rc_t CC KSysDirOpenFileWrite ( KSysDir *self,
     return rc;
 }
 
+/* KSysDirOpenFileWrite
+ *  opens an existing file with write access
+ *
+ *  "f" [ OUT ] - return parameter for newly opened file
+ *
+ *  "path" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting target file
+ *
+ *  "update" [ IN ] - if non-zero, open in read/write mode
+ *  otherwise, open in write-only mode
+ */
+static
+rc_t CC KSysDirOpenFileSharedWrite ( KSysDir *self,
+    KFile **f, bool update, const char *path, va_list args )
+{
+    wchar_t file_name[ MAX_PATH ];
+    rc_t rc = KSysDirMakePath ( self, rcOpening, false, file_name, sizeof file_name, path, args );
+    if ( rc == 0 )
+    {
+        DWORD dwDesiredAccess = update ? GENERIC_READ | GENERIC_WRITE : GENERIC_WRITE;
+        HANDLE file_handle = CreateFileW( file_name, dwDesiredAccess, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, 
+                                OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL );
+
+        if ( file_handle == INVALID_HANDLE_VALUE )
+        {
+            rc = print_error_for( GetLastError(), file_name, "CreateFileW", rcAccessing, klogErr );
+
+        }
+        else
+        {
+            char buffer[ MAX_PATH ];
+            wchar_2_char( file_name, buffer, sizeof buffer );
+            rc = KSysFileMake ( ( KSysFile** ) f, file_handle, buffer, update, true );
+            if ( rc != 0 )
+                CloseHandle ( file_handle );
+        }
+    }
+    return rc;
+}
+
 /* KSysDirCreateFile
  *  opens a file with write access
  *
@@ -2925,12 +2966,73 @@ KSysDir *CC KSysDirGetSysdir ( const KSysDir *cself )
     return ( KSysDir* ) cself;
 }
 
+
+/* FileLocator
+ *  returns a 64-bit key pertinent only to the particular file
+ *  system device holding that file.
+ *
+ *  It can be used as a form of sort key except that it is not 
+ *  guaranteed to be unique.
+ *
+ *  "locator" [ OUT ] - return parameter for file locator
+ *
+ *  "path" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting target file
+ */
+static
+rc_t CC KSysDirFileLocator_v1 ( const KSysDir_v1 *self,
+    uint64_t *locator, const char *path, va_list args )
+{
+    /* TBD - could return an inode or equivalent */
+    assert ( locator != NULL );
+    * locator = 0;
+    return RC ( rcFS, rcDirectory, rcAccessing, rcFunction, rcUnsupported );
+}
+
+/* FilePhysicalSize
+ *  returns physical allocated size in bytes of target file.  It might
+ * or might not differ from FileSize
+ *
+ *  "size" [ OUT ] - return parameter for file size
+ *
+ *  "path" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting target file
+ */
+static
+rc_t CC KSysDirFilePhysicalSize_v1 ( const KSysDir_v1 *self,
+    uint64_t *size, const char *path, va_list args )
+{
+    /* TBD - can be completed */
+    assert ( size != NULL );
+    * size = 0;
+    return RC ( rcFS, rcDirectory, rcAccessing, rcFunction, rcUnsupported );
+}
+
+/* FileContiguous
+ *  returns true if the file is "contiguous".  Chunked or sparse files are not
+ *  contiguous while most data files are.  Virtual generated files would likely
+ *  not be contiguous.  
+ *
+ *  "contiguous" [ OUT ] - return parameter for file contiguous
+ *
+ *  "path" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting target file
+ */
+static
+rc_t CC KSysDirFileContiguous_v1 ( const KSysDir_v1 *self,
+    bool *contiguous, const char *path, va_list args )
+{
+    assert ( contiguous != NULL );
+    * contiguous = true;
+    return 0;
+}
+
 static KDirectory_vt_v1 vtKSysDir =
 {
-    /* version 1.0 */
-    1, 1,
+    /* version 1.4 */
+    1, 4,
 
-    /* start minor version 0 methods*/
+    /* start minor version 0*/
     KSysDirDestroy,
     KSysDirList,
 
@@ -2960,13 +3062,26 @@ static KDirectory_vt_v1 vtKSysDir =
     KSysDirOpenDirUpdate,
     KSysDirCreateDir,
     NULL, /* we don't track files*/
-    /* end minor version 0 methods*/
+    /* end minor version 0 */
 
-    /* start minor version 1 methods*/
+    /* start minor version 1 */
     KSysDirVDate,
     KSysDirVSetDate,
-    KSysDirGetSysdir
-    /* end minor version 1 methods*/
+    KSysDirGetSysdir,
+    /* end minor version 1 */
+
+    /* start minor version 2 */
+    KSysDirFileLocator_v1,
+    /* end minor version 2 */
+
+    /* start minor version 3 */
+    KSysDirFilePhysicalSize_v1,
+    KSysDirFileContiguous_v1,
+    /* end minor version 3 */
+
+    /* start minor version 4 */
+    KSysDirOpenFileSharedWrite
+    /* end minor version 4 */
 };
 
 /* KSysDirInit
@@ -3009,7 +3124,7 @@ rc_t KSysDirInit ( KSysDir *self, enum RCContext ctx, uint32_t dad_root,
 
     if ( path != NULL )
     {
-        memcpy( self->path, path, path_size );
+        memmove( self->path, path, path_size );
     }
 
     self->root = chroot ? path_length : dad_root;
@@ -3132,4 +3247,36 @@ LIB_EXPORT rc_t CC KSysDirVRealPath ( struct KSysDir const *self,
        its components, etc. to come up with a real path, then
        3) rewrite the path as a UTF-8 POSIX path */
     return KSysDirResolvePath ( self, true, real, bsize, path, args );
+}
+
+LIB_EXPORT rc_t CC KDirectoryGetDiskFreeSpace_v1 ( const KDirectory * self,
+    uint64_t * free_bytes_available, uint64_t * total_number_of_bytes )
+{
+    if ( self == NULL )
+        return RC ( rcFS, rcDirectory, rcAccessing, rcSelf, rcNull );
+    else {
+        KSysDir_v1 * dir = ( KSysDir_v1 * ) self;
+
+	LPCTSTR lpszMultibyte = dir -> path;
+
+	unsigned __int64 i64FreeBytesToCaller = 0;
+	unsigned __int64 i64TotalBytes = 0;
+	unsigned __int64 i64FreeBytes = 0;
+
+	if ( GetDiskFreeSpaceEx (lpszMultibyte,
+	    ( PULARGE_INTEGER ) & i64FreeBytesToCaller,
+            ( PULARGE_INTEGER ) & i64TotalBytes,
+            ( PULARGE_INTEGER ) & i64FreeBytes ) )
+	{
+            if ( free_bytes_available != NULL ) {
+                * free_bytes_available  = i64FreeBytes;
+            }
+            if ( total_number_of_bytes != NULL ) {
+                * total_number_of_bytes = i64TotalBytes;
+            }
+            return 0;
+        }
+
+        return RC ( rcFS, rcDirectory, rcAccessing, rcError, rcUnknown );
+    }
 }

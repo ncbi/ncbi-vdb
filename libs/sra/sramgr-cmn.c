@@ -269,7 +269,7 @@ LIB_EXPORT rc_t CC SRAMgrResolve( const SRAMgr *self, const char* acc, char* buf
             if (rc == 0)
             {
                 const VPath* resolved;
-                rc = VResolverQuery ( (const struct VResolver*)self->_pmgr, eProtocolHttp, path, &resolved, NULL, NULL );
+                rc = VResolverQuery ( (const struct VResolver*)self->_pmgr, 0, path, &resolved, NULL, NULL );
                 if (rc == 0)
                 {
                     rc = VPathReadPath ( resolved, buf, buf_size, NULL );

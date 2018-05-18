@@ -123,7 +123,7 @@ void cut_bytes(const struct self_t *self, void *Dst, const void *Src, size_t ele
     
     for (doff = soff = i = 0; i != elem_count; ++i, doff += di, soff += si) {
         for (j = 0; j != self->n; ++j) {
-            memcpy(dst + doff + j * sz, src + soff + self->idx[j] * sz, sz);
+            memmove(dst + doff + j * sz, src + soff + self->idx[j] * sz, sz);
         }
     }
 }

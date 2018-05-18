@@ -459,7 +459,7 @@ TEST_CASE(KLib_ksort_vs_qsort)
     const int Size=5;
     char karr[Size]={2, 4, 1, 0, 3};
     char qarr[Size];
-    memcpy(qarr, karr, sizeof(karr));
+    memmove(qarr, karr, sizeof(karr));
 
     ksort(karr, Size, sizeof (char), compare, 0); // do not pass any user data
     qsort(qarr, Size, sizeof (char), baseCompare);
@@ -499,7 +499,7 @@ TEST_CASE(KSORT_simple)
     const int ElemSize = sizeof(karr[0]);
     const int Size= sizeof(karr) / ElemSize;
     char qarr[Size];
-    memcpy(qarr, karr, sizeof(karr));
+    memmove(qarr, karr, sizeof(karr));
 
 #define CMP(a, b) (*(char*)(a) < *(char*)(b) ? -1 : *(char*)(a) > *(char*)(b))
 #define SWAP(a, b, offset, size) 
@@ -527,7 +527,7 @@ TEST_CASE(KSORT_int64)
     const int ElemSize = sizeof(karr[0]);
     const int Size= sizeof(karr) / ElemSize;
     int64_t qarr[Size];
-    memcpy(qarr, karr, sizeof(karr));
+    memmove(qarr, karr, sizeof(karr));
 
     ksort_int64_t (karr, Size);
     ksort(qarr, Size, ElemSize, cmp_int64_t , 0);
@@ -775,8 +775,10 @@ TEST_CASE(IsUserAnAdminTest)
         REQUIRE ( !is_iser_an_admin() );
     }
 #else
-    // Linux or not under TeamCity
+#if !defined (MAC)
+    // Linux
     REQUIRE ( !is_iser_an_admin() );
+#endif
 #endif
 }
 

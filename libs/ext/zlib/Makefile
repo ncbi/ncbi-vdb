@@ -105,7 +105,7 @@ $(ILIBDIR)/libz.$(LIBX): $(LIBZ_OBJ)
 # libz download
 #
 ZLIB_VERS := \
-	1.2.8
+	1.2.11
 
 ZLIB_TAR = \
 	zlib-$(ZLIB_VERS).tar

@@ -360,7 +360,7 @@ LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
                         {
                             /* otherwise, ask resolver to find a local path,
                                or get a remote path and optional place to cache data */
-                            rc = VResolverQuery ( resolver, eProtocolHttp, orig, & plocal, & premote, & pcache );
+                            rc = VResolverQuery ( resolver, 0, orig, & plocal, & premote, & pcache );
                             if ( rc != 0 && GetRCState ( rc ) == rcNotFound )
                             {
                                 rc = VPathAddRef ( orig );
@@ -386,6 +386,14 @@ LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
                                 if ( rc == 0 )
                                 {
                                     plocal = orig;
+#define VDB_3531_FIX 1
+#if VDB_3531_FIX
+                                    if ( pcache != NULL )
+                                    {
+                                        VPathRelease(pcache);
+                                        pcache = NULL;
+                                    }
+#endif
                                     rc = VDBManagerVPathOpenLocalDBRead ( self, dbp, schema, plocal );
                                 }
                             }
@@ -430,7 +438,7 @@ LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
                                                     KLogLevelSet ( klogFatal );
                                                     assert ( premote == NULL );
                                                     assert ( pcache == NULL );
-                                                    rc2 = VResolverQuery ( resolver, eProtocolHttp, orig, NULL, & premote, & pcache );
+                                                    rc2 = VResolverQuery ( resolver, 0, orig, NULL, & premote, & pcache );
                                                     assert ( ( rc2 == 0 ) ||
                                                         ( rc2 != 0 && premote == NULL ) );
 

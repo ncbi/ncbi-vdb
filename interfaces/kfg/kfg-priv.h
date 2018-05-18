@@ -72,11 +72,23 @@ KFG_EXTERN rc_t CC KConfigListIncluded ( const KConfig *self,
 KFG_EXTERN rc_t CC KConfigGetLoadPath ( const KConfig *self,
     const char **path );
 
+/* MakeEmpty
+ *  make a KConfig object that does not load any configuration file
+ *  during initialization except user settings ( optionally )
+ */
+KFG_EXTERN rc_t CC KConfigMakeEmpty ( KConfig ** cfg );
+
 /* MakeLocal
- *  make a KConfig object that avoids singleton
+ *  make a KConfig object that avoids initializing singleton
  */
 KFG_EXTERN rc_t CC KConfigMakeLocal ( KConfig **cfg,
     struct KDirectory const * cfgdir );
+
+
+/* make sure ResolverCgiNode is https */
+KFG_EXTERN rc_t KConfigFixMainResolverCgiNode ( KConfig * self );
+KFG_EXTERN rc_t KConfigFixProtectedResolverCgiNode ( KConfig * self );
+
 
 /* PrintDebug
  *  print configuration including some internal nodes information
