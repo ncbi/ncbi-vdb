@@ -38,6 +38,8 @@
 #include <NGS_FragmentBlob.h>
 #include <NGS_FragmentBlobIterator.h>
 
+#include <kfg/config.h> /* KConfigDisableUserSettings */
+
 #include <vdb/table.h>
 #include <vdb/database.h>
 
@@ -600,6 +602,7 @@ const char UsageDefaultName[] = "test-ngs";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    KConfigDisableUserSettings();
     rc_t m_coll=NgsFragmentBlobTestSuite(argc, argv);
     return m_coll;
 }

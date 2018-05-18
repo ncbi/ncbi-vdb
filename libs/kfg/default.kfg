@@ -38,10 +38,10 @@
 /repository/user/main/public/root = "$(HOME)/ncbi/public"
 
 # Remote access to NCBI's public repository
-/repository/remote/main/CGI/resolver-cgi = "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi"
+/repository/remote/main/CGI/resolver-cgi = "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi"
 
 # Remote access to NCBI's protected repository
-/repository/remote/protected/CGI/resolver-cgi = "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi"
+/repository/remote/protected/CGI/resolver-cgi = "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi"
 
 # Aspera configuration
 /tools/ascp/max_rate = "450m"

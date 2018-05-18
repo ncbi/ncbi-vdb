@@ -61,22 +61,6 @@ rc_t KService1Search ( const struct KNSManager * mgr, const char * cgi,
     const char * acc, const struct Kart ** result );
 
 
-/* QueryForExt:
- * get local/cache location when URL is requested or target dir specified:
- * when resolveAccToCache is false: use FILE app rather than REFSEQ
- * inOutDir - returned cache location is in the output (or current) directory
- *
- * outDir==NULL resolveAccToCache==true : resolve all to cache
- * outDir==NULL resolveAccToCache==false: resolve accessions to cache,
- *                                                files - to cwd
- * outDir!=NULL: resolve all to outDir
- */
-VFS_EXTERN rc_t CC VResolverQueryWithDir ( const struct VResolver * self,
-    VRemoteProtocols protocols,
-    const struct VPath * query, const struct VPath ** local,
-    const struct VPath ** remote, const struct VPath ** cache,
-    bool resolveAccToCache, const char * outDir, bool * inOutDir );
-
 
 #ifdef __cplusplus
 }

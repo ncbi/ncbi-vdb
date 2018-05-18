@@ -1,3 +1,6 @@
+#ifndef _h_vfs_resolver_priv_
+#define _h_vfs_resolver_priv_
+
 /*===========================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
@@ -24,20 +27,35 @@
 *
 */
 
-/* THIS FILE IS NOT GENERATED AUTOMATICALLY! */
+
+#include <vfs/resolver.h> /* VResolver */
 
 
-/* Version of current SRA Toolkit Release */
-#define RELEASE_VERS 0x02090001
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 
-/* Type of Version of current SRA Toolkit Release is one of:
- *  'd' - development
- *  'a' - alpha
- *  'b' - beta
- *  'c' - release candidate
- *  'r' - final
+/* QueryWithDir:
+ * get local/cache location when URL is requested or target dir specified:
+ * when resolveAccToCache is false: use FILE app rather than REFSEQ
+ * inOutDir - returned cache location is in the output (or current) directory
+ *
+ * outDir==NULL resolveAccToCache==true : resolve all to cache
+ * outDir==NULL resolveAccToCache==false: resolve accessions to cache,
+ *                                                files - to cwd
+ * outDir!=NULL: resolve all to outDir
  */
-#define RELEASE_TYPE 'r'
-/* Revision of Version of current SRA Toolkit Release */
-#define RELEASE_REVISION 0
+VFS_EXTERN rc_t CC VResolverQueryWithDir ( const VResolver * self,
+    VRemoteProtocols protocols,
+    const struct VPath * query, const struct VPath ** local,
+    const struct VPath ** remote, const struct VPath ** cache,
+    bool resolveAccToCache, const char * outDir, bool * inOutDir );
+
+
+#ifdef __cplusplus
+}
+#endif
+
+
+#endif /* _h_vfs_resolver_priv_ */

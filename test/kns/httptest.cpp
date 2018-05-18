@@ -795,7 +795,7 @@ TEST_CASE(ContentLength) {
 
     /* calling good cgi returns 200 and resolved path */
     REQUIRE_RC ( KNSManagerMakeReliableClientRequest ( kns, & req, 0x01000000,
-        NULL, "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" ) ); 
+        NULL, "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi" ) ); 
     REQUIRE_RC ( KHttpRequestAddPostParam ( req, "acc=AAAB01" ) );
     REQUIRE_RC ( KHttpRequestAddPostParam ( req, "accept-proto=https" ) );
     REQUIRE_RC ( KHttpRequestAddPostParam ( req, "version=1.2" ) );
