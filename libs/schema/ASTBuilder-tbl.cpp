@@ -112,6 +112,7 @@ TableDeclaration :: SetName ( const AST_FQN & p_fqn )
         if ( m_self -> name != 0 &&
                 m_builder . CreateOverload ( m_self -> name,
                                             m_self,
+                                            0,
                                             STableSort,
                                             m_builder . GetSchema () -> tbl,
                                             m_builder . GetSchema () -> tname,
@@ -500,7 +501,7 @@ TableDeclaration :: HandleBody ( const AST & p_body )
             }
         }
 
-        table_set_context ( m_self, m_builder . NextContextId() );
+        table_set_context ( m_self );
     }
     else
     {
@@ -775,6 +776,7 @@ TableDeclaration :: AddNewColumn ( SColumn & p_col, String & p_name )
     }
     return m_builder . CreateOverload ( p_col . name,
                                         & p_col,
+                                        eTable,
                                         SColumnSort,
                                         m_self -> col,
                                         m_self -> cname,
@@ -809,6 +811,7 @@ TableDeclaration :: HandleTypedColumn ( SColumn & p_col, const AST & p_typedCol 
                 priorDecl -> type = eColumn;
                 if ( ! m_builder . CreateOverload ( p_col . name,
                                                     & p_col,
+                                                    eTable,
                                                     SColumnSort,
                                                     m_self -> col,
                                                     m_self -> cname,

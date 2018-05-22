@@ -100,7 +100,7 @@ void CC VColumnWhack ( void *item, void *data )
     if ( curs != NULL )
     {
         VectorSwap ( VCursorGetRow ( curs ), self -> ord, NULL, & item );
-        VCursorCacheSwap ( VCursorColumns ( curs ), & self -> scol -> cid, NULL, & item );
+        VCursorSetColumn ( curs, self );
     }
 
     if ( ! self -> read_only )

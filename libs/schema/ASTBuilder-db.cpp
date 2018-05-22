@@ -87,6 +87,7 @@ DatabaseDeclaration :: SetName ( const AST_FQN &  p_fqn )
             if ( m_self -> name != 0 &&
                  m_builder . CreateOverload ( m_self -> name,
                                               m_self,
+                                              0,
                                               SDatabaseSort,
                                               m_builder . GetSchema () -> db,
                                               m_builder . GetSchema () -> dname,

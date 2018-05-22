@@ -132,6 +132,9 @@ int64_t CC NamedParamNodeComp ( const BSTNode *A, const BSTNode *B )
  *  a row cursor onto a VTable
  */
 
+static rc_t VTableCursorOpenColumn ( const VTableCursor *cself, VColumn *col, bool ignore_errors );
+
+
 /* Whack
  */
 rc_t VTableCursorWhack ( const VCURSOR_IMPL * p_self )
@@ -494,7 +497,7 @@ rc_t CC VTableCursorSuspendTriggers ( const VCURSOR_IMPL *cself )
  */
 static
 rc_t VTableCursorAddSColumn ( VCURSOR_IMPL *self, uint32_t *idx,
-    const SColumn *scol, const VTypedecl *cast, Vector *cx_bind )
+    const SColumn *scol, const VTypedecl *cast, Vector *cx_bind, bool ignore_errors )
 {
     rc_t rc;
     VColumn *col;
@@ -524,11 +527,6 @@ rc_t VTableCursorAddSColumn ( VCURSOR_IMPL *self, uint32_t *idx,
     rc = VCursorMakeColumn ( & self -> dad, & col, scol, cx_bind );
     if ( rc == 0 )
     {
-printf("VTableCursorAddSColumn(%p/%.*s, %.*s)...",
-        (void*)self,
-        self->tbl->stbl->name->name.len, self->tbl->stbl->name->name.addr,
-        scol->name->name.len, scol->name->name.addr
-         );
         /* insert it into vectors */
         rc = VectorAppend ( & self -> dad . row, & col -> ord, col );
         if ( rc == 0 )
@@ -540,7 +538,7 @@ printf("VTableCursorAddSColumn(%p/%.*s, %.*s)...",
                 /* open column if cursor open or type unknown */
                 if ( self -> dad . state >= vcReady || scol -> td . type_id == 0 )
                 {
-                    rc = VCursorPostOpenAdd ( self, col );
+                    rc = VTableCursorOpenColumn ( self, col, ignore_errors );
                     assert ( rc != 0 || scol -> td . type_id != 0 );
                 }
                 if ( rc == 0 )
@@ -553,7 +551,6 @@ printf("VTableCursorAddSColumn(%p/%.*s, %.*s)...",
                     {
                         /* has been entered */
                         * idx = col -> ord;
-printf("success. len=%u\n", VectorLength(& self -> dad . row));
                         return 0;
                     }
                 }
@@ -564,7 +561,6 @@ printf("success. len=%u\n", VectorLength(& self -> dad . row));
 
             VectorSwap ( & self -> dad . row, col -> ord, NULL, & ignore );
         }
-printf("failure\n");
         VColumnWhack ( col, NULL );
     }
 
@@ -593,7 +589,7 @@ rc_t VCursorAddColspec ( VCURSOR_IMPL *self, uint32_t *idx, const char *colspec 
     {
         Vector cx_bind;
         VectorInit ( & cx_bind, 1, self -> schema -> num_indirect );
-        rc = VTableCursorAddSColumn ( self, idx, scol, & cast, & cx_bind );
+        rc = VTableCursorAddSColumn ( self, idx, scol, & cast, & cx_bind, false );
         VectorWhack ( & cx_bind, NULL, NULL );
         if(rc == 0)
         {
@@ -783,6 +779,7 @@ bool CC VCursorResolveColumn ( void *item, void *data )
                 if ( scol -> td . type_id == 0 )
                     scol -> td = src -> fd . td;
 
+                pb -> rc = 0;
                 return false;
             }
 
@@ -808,19 +805,13 @@ bool CC VCursorResolveColumn ( void *item, void *data )
         /* remove from row and cache */
         VectorSwap ( & self -> dad . row, col -> ord, NULL, & ignore );
         VCursorCacheSwap ( & self -> dad . col, & scol -> cid, NULL, & ignore );
-
-        /* dump the VColumn */
-        VColumnWhack ( col, NULL );
-
-        /* return no-error */
-        pb -> rc = 0;
     }
 
     return false;
 }
 
 static
-rc_t VCursorOpenColumn ( const VTableCursor *cself, VColumn *col )
+rc_t VTableCursorOpenColumn ( const VTableCursor *cself, VColumn *col, bool ignore_errors )
 {
     KDlset *libs;
     VTableCursor *self = ( VTableCursor* ) cself;
@@ -833,12 +824,12 @@ rc_t VCursorOpenColumn ( const VTableCursor *cself, VColumn *col )
     pb . pr . primary_table = VCursorGetTable ( & self -> dad );
     pb . pr . view = NULL;
     pb . pr . curs = & self -> dad;
-    pb . pr . cache = & self -> dad . prod;
+    pb . pr . prod = & self -> dad . prod;
     pb . pr . owned = & self -> dad . owned;
     pb . pr . cx_bind = & cx_bind;
     pb . pr . chain = chainDecoding;
     pb . pr . blobbing = false;
-    pb . pr . ignore_column_errors = false;
+    pb . pr . ignore_column_errors = ignore_errors;
     pb . pr . discover_writable_columns = false;
 
     VectorInit ( & cx_bind, 1, self -> schema -> num_indirect );
@@ -853,17 +844,12 @@ rc_t VCursorOpenColumn ( const VTableCursor *cself, VColumn *col )
 
     VectorWhack ( & cx_bind, NULL, NULL );
 
+    if ( ignore_errors )
+    {
+        pb . rc = 0;
+    }
     return pb . rc;
 }
-
-/* PostOpenAdd
- *  handle opening of a column after the cursor is opened
- */
-rc_t VCursorPostOpenAddRead ( VTableCursor *self, VColumn *col )
-{
-    return VCursorOpenColumn ( self, col );
-}
-
 
 static
 rc_t VTableCursorResolveColumnProductions ( VTableCursor *self,
@@ -878,7 +864,7 @@ rc_t VTableCursorResolveColumnProductions ( VTableCursor *self,
     pb . pr . primary_table = VCursorGetTable ( & self -> dad ) ;
     pb . pr . view = NULL;
     pb . pr . curs = & self -> dad ;
-    pb . pr . cache = & self -> dad . prod;
+    pb . pr . prod = & self -> dad . prod;
     pb . pr . owned = & self -> dad . owned;
     pb . pr . cx_bind = & cx_bind;
     pb . pr . chain = chainDecoding;
@@ -1733,7 +1719,7 @@ void CC insert_overloaded_scolumns ( void *item, void *data )
     const SColumn *scol = ( const void* ) item;
 
     uint32_t ignore;
-    VTableCursorAddSColumn ( pb -> curs, & ignore, scol, NULL, pb -> cx_bind );
+    VTableCursorAddSColumn ( pb -> curs, & ignore, scol, NULL, pb -> cx_bind, true );
 }
 
 static
@@ -2129,19 +2115,26 @@ uint32_t VTableCursorIncrementPhysicalProductionCount ( struct VCURSOR_IMPL * se
     return ++ self -> phys_cnt;
 }
 
-const struct KSymbol * VTableCursorFindOverride ( const VCURSOR_IMPL * self, const struct VCtxId * cid, const struct VTable * tbl, const struct VView * view )
+const struct KSymbol * VTableCursorFindOverride ( const VCURSOR_IMPL * self, const struct VCtxId * cid, const struct VTable * tbl )
 {
     assert ( tbl == self -> tbl );
-    const struct KSymbol * ret = STableFindOverride ( self -> stbl, cid );
-    DBGMSG(DBG_VDB, DBG_FLAG(DBG_VDB_VDB), ("VTableCursorFindOverride(%.*s, ctx={%u,%u}) = %p\n",
-        self -> stbl -> name -> name . len, self -> stbl -> name -> name . addr,
-        cid -> ctx, cid -> id, (void*) ret
-    ));
-    return ret;
+    return STableFindOverride ( self -> stbl, cid );
 }
 
 const struct VTable * VTableCursorGetBoundTable( const struct VCURSOR_IMPL * self, const struct String * name )
 {
     return NULL;
+}
+
+VCursorCache *
+VTableCursorColumns ( struct VCURSOR_IMPL * self, uint32_t ctx_type )
+{
+    return & self -> dad . col;
+}
+
+VCursorCache *
+VTableCursorProductions ( struct VCURSOR_IMPL * self, uint32_t ctx_type )
+{
+    return & self -> dad . prod;
 }
 

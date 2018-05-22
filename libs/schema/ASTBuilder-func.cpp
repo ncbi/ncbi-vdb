@@ -161,6 +161,7 @@ FunctionDeclaration :: SetName ( const AST_FQN &  p_fqn,
         {
             if ( m_builder . CreateOverload ( m_self -> name,
                                               m_self,
+                                              0,
                                               SFunctionSort,
                                               m_builder . GetSchema () -> func,
                                               m_builder . GetSchema () -> fname,

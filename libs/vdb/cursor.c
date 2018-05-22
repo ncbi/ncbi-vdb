@@ -109,7 +109,9 @@ static VCursor_vt VTableCursor_read_vt =
     VTableCursorPageMapProcessRequest,
     VTableCursorCacheActive,
     VTableReadCursorInstallTrigger,
-    VTableCursorListReadableColumns
+    VTableCursorListReadableColumns,
+    VTableCursorColumns,
+    VTableCursorProductions
 };
 
 /*--------------------------------------------------------------------------
@@ -136,14 +138,6 @@ rc_t VTableReadCursorWhack ( const VTableCursor *self )
 rc_t VTableReadCursorMakeColumn ( VTableCursor *self, VColumn **col, const SColumn *scol, Vector *cx_bind )
 {
     return VColumnMake ( col, self -> schema, scol );
-}
-
-/* PostOpenAdd
- *  handle opening of a column after the cursor is opened
- */
-rc_t VCursorPostOpenAdd ( VTableCursor *self, VColumn *col )
-{
-    return VCursorPostOpenAddRead ( self, col );
 }
 
 /* Open

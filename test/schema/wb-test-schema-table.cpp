@@ -485,10 +485,12 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_Context, AST_Table_Fixture)
     REQUIRE_NOT_NULL ( ovl );
     REQUIRE_EQ ( 1u, ovl -> cid . ctx );
     REQUIRE_EQ ( 0u, ovl -> cid . id );
+    REQUIRE_EQ ( (uint32_t)eTable, ovl -> cid . ctx_type );
     const SColumn * col = v . Columns () . Get ( 0 );
     REQUIRE_NOT_NULL ( col );
     REQUIRE_EQ ( ovl -> cid . ctx, col -> cid . ctx );
     REQUIRE_EQ ( ovl -> cid . id, col -> cid . id );
+    REQUIRE_EQ ( ovl -> cid . ctx_type, col -> cid . ctx_type );
 
     ovl = v . ColumnNames () . Get ( 1 );
     REQUIRE_NOT_NULL ( ovl );

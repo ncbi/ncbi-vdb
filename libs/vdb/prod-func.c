@@ -429,7 +429,7 @@ rc_t VProdResolveScriptExpr ( const VProdResolve *self,
                     {
                         /* create new structure */
                         VProdResolve spr = * self;
-                        spr . cache = & local;
+                        spr . prod = & local;
                         spr . owned = & script -> owned;
 
                         /* forget about the inputs */
@@ -843,7 +843,7 @@ rc_t VProdResolveEncodingExpr ( const VProdResolve *self,
                                     & sphys -> encode : & sphys -> decode;
 
                                 VProdResolve spr = * self;
-                                spr . cache = & local;
+                                spr . prod = & local;
                                 spr . owned = & script -> owned;
 
                                 /* forget about input vector */
