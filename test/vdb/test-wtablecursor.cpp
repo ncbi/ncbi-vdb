@@ -33,6 +33,7 @@
 #include <vdb/vdb-priv.h>
 
 #include <../libs/vdb/schema-priv.h>
+#include <../libs/vdb/schema-parse.h>
 #include <../libs/vdb/table-priv.h>
 #include <../libs/vdb/cursor-priv.h>
 #include <../libs/vdb/prod-priv.h>
@@ -495,7 +496,7 @@ FIXTURE_TEST_CASE( VTableCursor_SetCacheCapacity, TableCursorFixture )
 FIXTURE_TEST_CASE( VTableCursor_Columns, TableCursorFixture )
 {
     MakeWriteCursorAddColumn ( GetName(), SimpleSchema );
-    VCursorCache * cols = VCursorColumns ( (VCursor*)m_cur );
+    VCursorCache * cols = VCursorColumns ( (VCursor*)m_cur, eTable );
     REQUIRE_EQ ( 1u, VectorLength ( & cols -> cache ) );
 }
 
@@ -557,7 +558,7 @@ FIXTURE_TEST_CASE( VTableCursor_FindOverride, TableCursorFixture )
 
     MakeWriteCursor ( GetName(), SchemaWithOverrides );
     VCtxId id = {0, 1}; // 0 is the id of T0 which first introduced x, 1 is its column id in T
-    const KSymbol * sym = VCursorFindOverride ( m_cur, & id, VCursorGetTable ( m_cur ), NULL );
+    const KSymbol * sym = VCursorFindOverride ( m_cur, & id, VCursorGetTable ( m_cur ) );
     REQUIRE_NOT_NULL ( sym );
     REQUIRE_EQ ( string ("x"), ToCppString ( sym -> name ) );
 }

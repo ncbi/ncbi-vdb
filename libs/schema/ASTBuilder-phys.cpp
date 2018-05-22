@@ -154,6 +154,7 @@ PhysicalDeclaration :: SetName ( const AST_FQN &  p_name )
         if ( m_self -> name == 0 ||
              ! m_builder . CreateOverload ( m_self -> name,
                                             m_self,
+                                            0,
                                             SPhysicalSort,
                                             m_builder . GetSchema () -> phys,
                                             m_builder . GetSchema () -> pname,

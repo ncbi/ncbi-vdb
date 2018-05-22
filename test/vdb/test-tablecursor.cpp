@@ -35,9 +35,11 @@
 #include <vdb/vdb-priv.h>
 
 #include <../libs/vdb/schema-priv.h>
+#include <../libs/vdb/schema-parse.h>
 #include <../libs/vdb/table-priv.h>
 #include <../libs/vdb/cursor-priv.h>
 #include <../libs/vdb/prod-priv.h>
+#include <../libs/vdb/column-priv.h>
 
 #include <ktst/unit_test.hpp>
 
@@ -45,6 +47,42 @@ using namespace std;
 
 TEST_SUITE( VdbTableCursorTestSuite_Read );
 const string ScratchDir = "./db/";
+
+const char * Accession = "SRR600096";
+
+// VTable
+
+TEST_CASE( VTable_ListReadableColumns )
+{
+    KNamelist * columns; // VColumnRef
+    {
+        const VTable * tbl;
+        {
+            const VDatabase * db;
+            {
+                const VDBManager * mgr;
+                REQUIRE_RC ( VDBManagerMakeRead ( & mgr, NULL ) );
+                REQUIRE_RC ( VDBManagerOpenDBRead ( mgr, & db, NULL, "%s", Accession ) );
+                REQUIRE_RC ( VDBManagerRelease ( mgr ) );
+            }
+            REQUIRE_RC ( VDatabaseOpenTableRead ( db, & tbl, "SEQUENCE" ) );
+            REQUIRE_RC ( VDatabaseRelease ( db ) );
+        }
+
+        REQUIRE_NOT_NULL ( tbl );
+
+        REQUIRE_RC ( VTableListReadableColumns ( tbl, & columns ) );
+        REQUIRE_RC ( VTableRelease ( (VTable*) tbl ) );
+    }
+
+    uint32_t count = 0;
+    REQUIRE_RC ( KNamelistCount ( columns, & count ) );
+    REQUIRE_EQ ( 29u, count );
+
+    REQUIRE_RC ( KNamelistRelease ( columns ) );
+}
+#if 0
+// VTableCursor
 
 class TableCursorFixture
 {
@@ -97,7 +135,6 @@ public:
     uint32_t  m_columnIdx;
 };
 
-const char * Accession = "SRR600096";
 const char * Column = "SPOT_GROUP";
 
 // The original purpose of these tests was to cover all VTableCursor methods in the process of
@@ -474,8 +511,16 @@ FIXTURE_TEST_CASE( VTableCursor_SetCacheCapacity, TableCursorFixture )
 FIXTURE_TEST_CASE( VTableCursor_Columns, TableCursorFixture )
 {
     MakeReadCursorAddColumnOpen ( Accession, Column );
-    VCursorCache * cols = VCursorColumns ( (VCursor*)m_cur );
+    VCursorCache * cols = VCursorColumns ( (VCursor*)m_cur, eTable );
     REQUIRE_EQ ( 6u, VectorLength ( & cols -> cache ) );
+}
+FIXTURE_TEST_CASE( VTableCursor_GetColumn, TableCursorFixture )
+{
+    MakeReadCursorAddColumnOpen ( Accession, Column );
+    VCtxId id = { 5, 3, eTable };
+    VColumn * col = VCursorGetColumn ( (VCursor*)m_cur, & id );
+    REQUIRE_NOT_NULL ( col );
+    REQUIRE_EQ ( string ( Column ), ToCppString ( col -> scol -> name -> name ) );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_PhysicalColumns, TableCursorFixture )
@@ -530,7 +575,7 @@ FIXTURE_TEST_CASE( VTableCursor_FindOverride, TableCursorFixture )
 {
     MakeReadCursor ( Accession );
     VCtxId id = {5, 3};
-    const KSymbol * sym = VCursorFindOverride ( m_cur, & id, VCursorGetTable ( m_cur ), NULL );
+    const KSymbol * sym = VCursorFindOverride ( m_cur, & id, VCursorGetTable ( m_cur ) );
     REQUIRE_NOT_NULL ( sym );
     REQUIRE_EQ ( string ("out_spot_group"), ToCppString ( sym -> name ) );
 }
@@ -567,6 +612,12 @@ FIXTURE_TEST_CASE( VTableCursor_InstallTrigger, TableCursorFixture )
     REQUIRE_RC_FAIL ( VCursorInstallTrigger ( (VCursor*)m_cur, & prod ) ); // write side only
 }
 
+void CC incrementUint32 ( BSTNode *n, void *data )
+{
+    uint32_t * count = reinterpret_cast<uint32_t *> ( data );
+    ++ * count;
+}
+
 FIXTURE_TEST_CASE( VTableCursor_ListReadableColumns, TableCursorFixture )
 {
     MakeReadCursor ( Accession );
@@ -574,9 +625,13 @@ FIXTURE_TEST_CASE( VTableCursor_ListReadableColumns, TableCursorFixture )
 
     BSTree columns; // VColumnRef
     BSTreeInit ( & columns );
-    // this will print many "column undefined" errors, ignore
     REQUIRE_RC ( VCursorListReadableColumns ( (VCursor *) m_cur, & columns ) );
     REQUIRE_NOT_NULL ( columns . root );
+
+    uint32_t count = 0;
+    BSTreeForEach ( & columns, false, incrementUint32, & count );
+    REQUIRE_EQ ( 45u, count );
+
     VColumnRef * root = ( VColumnRef * ) columns . root;
     REQUIRE_EQ ( string ( "READ" ), ToCppString ( root -> name ) );
     VColumnRef * child = ( VColumnRef * ) root -> n . child [ 0 ];
@@ -584,8 +639,10 @@ FIXTURE_TEST_CASE( VTableCursor_ListReadableColumns, TableCursorFixture )
     child = ( VColumnRef * ) root -> n . child [ 1 ];
     REQUIRE_EQ ( string ( "READ_TYPE" ), ToCppString ( child -> name ) );
     // etc.
-}
 
+    BSTreeWhack ( &columns, VColumnRefWhack, NULL );
+}
+#endif
 //////////////////////////////////////////// Main
 #include <kfg/config.h>
 

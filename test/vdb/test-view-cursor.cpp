@@ -33,8 +33,10 @@
 
 #include "../libs/vdb/database-priv.h"
 #include "../libs/vdb/schema-priv.h"
+#include "../libs/vdb/schema-parse.h"
 #include "../libs/vdb/table-priv.h"
 #include "../libs/vdb/cursor-priv.h"
+#include "../libs/vdb/cursor-struct.h"
 #include "../libs/vdb/prod-priv.h"
 #include "../libs/vdb/column-priv.h"
 
@@ -60,10 +62,16 @@ static const char * SchemaText =
     "view ViewOnTable#1 < T p_tbl > "
     "{ "
     "   column ascii c = p_tbl . c1; "
-    "   column ascii cc = \"\"; "
+    "   column ascii cc = c; "
     "};"
 
     "view ViewOnView#1 < ViewOnTable p_v > { column ascii c = p_v . c; };"
+
+    "view ViewWithProduction#1 < T p_tbl > "
+    "{ "
+    "   ascii prod = p_tbl . c1; "
+    "   column ascii c = prod; "
+    "};"
     ;
 
 static const char* TableName = "t";
@@ -71,6 +79,7 @@ static const char* TableColumnName = "c1";
 
 static const char* ViewOnTableName = "ViewOnTable";
 static const char* ViewOnViewName = "ViewOnView";
+static const char* ViewWithProductionName = "ViewWithProduction";
 static const char* TableParamName = "p_tbl";
 static const char* ViewParamName = "p_v";
 static const char* ViewColumnName = "c";
@@ -229,7 +238,7 @@ public:
         THROW_ON_FALSE ( p_bytes == bytes );
     }
 };
-#if 0
+
 ///////////////////////////// View-attached VCursor
 
 FIXTURE_TEST_CASE ( ViewCursor_AddRef, ViewOnTableCursorFixture )
@@ -284,13 +293,32 @@ FIXTURE_TEST_CASE ( ViewCursor_AddColumn, ViewOnTableCursorFixture )
         REQUIRE_EQ ( string ( ViewColumnName ), ToCppString ( vcol -> scol -> name -> name ) );
     }
 
-    {   // verify insertion into m_cur->col at idx [ 1, 0 ]
-        VCursorCache * cols = VCursorColumns ( ( VCursor * ) m_cur );
+    {   // verify insertion into m_cur->view_col at idx [ 0, 0 ]
+        VCursorCache * cols = VCursorColumns ( ( VCursor * ) m_cur, eView );
         REQUIRE_NOT_NULL ( cols );
-        VCtxId id = { 1, 0 };
+        VCtxId id = { 0, 0, eView };
         REQUIRE_EQ ( (void*)vcol, VCursorCacheGet ( cols, & id ) );
     }
+    {   // verify non-insertion into m_cur->col at idx [ 1, 0 ] (for table columns only)
+        VCursorCache * cols = VCursorColumns ( ( VCursor * ) m_cur, eTable );
+        REQUIRE_NOT_NULL ( cols );
+        VCtxId id = { 0, 0, eView };
+        REQUIRE_NE ( (void*)vcol, VCursorCacheGet ( cols, & id ) );
+    }
 }
+
+FIXTURE_TEST_CASE ( ViewCursor_AddProduction, ViewOnTableCursorFixture )
+{
+    CreateCursorOpen ( GetName(), ViewWithProductionName, ViewColumnName );
+    // adding column "c" involves adding production "prod" which it depends on
+    // verify insertion of production into m_cur->view_prod at [ 2, 0 ]
+    const VCursorCache * prods = VCursorProductions ( ( VCursor * ) m_cur, eView );
+    VCtxId id = { 2, 0, eView };
+    REQUIRE_NOT_NULL ( VCursorCacheGet ( prods, & id ) );
+}
+
+//TODO: add a production, verify access through VCursorProductions
+//TODO: same for table-cursor (make sure VTableCursorColumns is covered, as well)
 
 //TODO: ViewCursor_AddColumn_IncompleteType (is that possible?)
 //TODO: ViewCursor_AddColumn_IncompatibleType (is that possible?)
@@ -876,9 +904,14 @@ FIXTURE_TEST_CASE( ViewCursor_SetCacheCapacity, ViewOnTableCursorFixture )
 
 FIXTURE_TEST_CASE( ViewCursor_Columns, ViewOnTableCursorFixture )
 {
-    CreateCursorOpen ( GetName(), ViewOnTableName, ViewColumnName );
-    VCursorCache * cols = VCursorColumns ( (VCursor*)m_cur );
-    REQUIRE_EQ ( 2u, VectorLength ( & cols -> cache ) );
+    CreateCursor ( GetName(), ViewOnTableName );
+    AddColumn ( ViewColumnName );
+    AddColumn ( "cc" );
+    REQUIRE_RC ( VCursorOpen ( m_cur ) );
+
+    VCursorCache * cols = VCursorColumns ( (VCursor*)m_cur, eView );
+    REQUIRE_EQ ( 1u, VectorLength ( & cols -> cache ) ); // there is 1 view
+    REQUIRE_EQ ( 2u, VectorLength ( ( Vector * ) VectorGet ( & cols -> cache, 0 ) ) ); // ... with 2 columns
 }
 
 FIXTURE_TEST_CASE( ViewCursor_PhysicalColumns, ViewOnTableCursorFixture )
@@ -931,8 +964,8 @@ FIXTURE_TEST_CASE( ViewCursor_FindOverride, ViewOnTableCursorFixture )
     ;
 
     CreateCursor ( GetName(), "V" );
-    VCtxId id = {0, 1};
-    const KSymbol * sym = VCursorFindOverride ( m_cur, & id );
+    VCtxId id = {0, 1, eView };
+    const KSymbol * sym = VCursorFindOverride ( m_cur, & id, NULL );
     REQUIRE_NOT_NULL ( sym );
     REQUIRE_EQ ( string ("virt"), ToCppString ( sym -> name ) );
 }
@@ -960,8 +993,29 @@ FIXTURE_TEST_CASE( ViewCursor_CacheActive, ViewOnTableCursorFixture )
     REQUIRE ( ! VCursorCacheActive ( m_cur, & end ) );
     REQUIRE_EQ((int64_t)0, end);
 }
-#endif
-FIXTURE_TEST_CASE( ViewCursor_ViewVsTableWithSameId, ViewOnTableCursorFixture )
+
+FIXTURE_TEST_CASE( ViewCursor_Column_From_ViewVsTableWithSameId, ViewOnTableCursorFixture )
+{   // when looking for columns in a view cursor, we need to distinguish between columns belonging to views (main view and paramteter views) from those belonging to (parameter) tables
+    m_keepDb = true;
+    m_schemaText =
+    "version 2.0;"
+    "table T0#1 { column ascii c1; };" // T0 has the same id as V
+    "database DB#1 { table T0 t; };"
+
+    "view V#1 < T0 p_tbl > { column ascii col = p_tbl . c1; };"
+        // we search for c1 in p_tbl (bound to t of type T0 <table> id 0, same as <view> id of V)
+        // the bug this test case is exposing is in retrieving T0.c1 from column cache by its id {0, 0} which is the same as id of V.col. ctx==0 refers to different contexts, table vs view.
+        // the fix is in introducing a separate column cache for view's columns
+    ;
+
+    CreateCursorOpen ( GetName(), "V", "col" );
+
+    // read c1
+    REQUIRE_EQ ( string ("blah"), ReadAscii ( 1, m_columnIdx ) );
+    REQUIRE_EQ ( string ("eeee"), ReadAscii ( 2, m_columnIdx ) );
+}
+
+FIXTURE_TEST_CASE( ViewCursor_ViewVsTableWithSameId_Virtual, ViewOnTableCursorFixture )
 {   // when looking for overrides, we need to distinguish between the view, its's primary table and the table/view we are currently pivoted into
     m_keepDb = true;
     m_schemaText =
@@ -983,7 +1037,17 @@ FIXTURE_TEST_CASE( ViewCursor_ViewVsTableWithSameId, ViewOnTableCursorFixture )
 }
 //TODO: same with a parameter-view
 
-#if 0
+//TODO: intermediate producitons ("owned", cursor-struct.h:157) - same deal or not?
+
+FIXTURE_TEST_CASE( ViewCursor_ParametersColumnAddedToRow, ViewOnTableCursorFixture )
+{   // columns referred to via view parameter are added to view cursor's row
+    CreateCursorOpen ( GetName(), ViewOnTableName, ViewColumnName );
+    Vector * row = VCursorGetRow ( ( VCursor * ) m_cur );
+    REQUIRE_NOT_NULL ( row );
+    REQUIRE_EQ ( 2u, VectorLength ( row ) ); // ViewOnTable.c, T.c1
+    REQUIRE_EQ( string(ViewColumnName), ToCppString (((VColumn*)VectorGet(row, 1))->scol->name->name) );
+    REQUIRE_EQ( string(TableColumnName), ToCppString (((VColumn*)VectorGet(row, 2))->scol->name->name) );
+}
 
 // View inheritance
 
@@ -1261,6 +1325,7 @@ FIXTURE_TEST_CASE( ViewCursor_ListReadableColumns, ViewOnViewCursorFixture )
     REQUIRE_NOT_NULL ( columns . root );
     VColumnRef * root = ( VColumnRef * ) columns . root;
     REQUIRE_EQ ( string ( ViewColumnName ), ToCppString ( root -> name ) );
+    BSTreeWhack ( & columns, VColumnRefWhack, NULL );
 }
 
 //////////////////////////////////////////////////////////////////
@@ -1312,7 +1377,7 @@ FIXTURE_TEST_CASE( ViewCursor_InstallTrigger, ViewOnTableCursorFixture )
     VProduction prod;
     REQUIRE_RC_FAIL ( VCursorInstallTrigger ( (VCursor*)m_cur, & prod ) );
 }
-#endif
+
 //////////////////////////////////////////// Main
 extern "C"
 {

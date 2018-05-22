@@ -179,9 +179,9 @@ uint32_t VCursorIncrementPhysicalProductionCount ( struct VCursor * self )
 {
     DISPATCH_VALUE ( incrementPhysicalProductionCount ( self ), 0 );
 }
-const struct KSymbol * VCursorFindOverride ( const VCursor *self, const struct VCtxId *cid, const const VTable * tbl, const struct VView * view )
+const struct KSymbol * VCursorFindOverride ( const VCursor *self, const struct VCtxId *cid, const const VTable * tbl )
 {
-    DISPATCH_VALUE ( findOverride ( self, cid, tbl, view ), NULL );
+    DISPATCH_VALUE ( findOverride ( self, cid, tbl ), NULL );
 }
 rc_t CC VCursorPermitPostOpenAdd ( struct VCursor const *self )
 {
@@ -218,6 +218,14 @@ rc_t VCursorInstallTrigger ( struct VCursor * self, struct VProduction * prod )
 rc_t VCursorListReadableColumns ( struct VCursor *self, struct BSTree *columns )
 {
     DISPATCH ( listReadableColumns ( self, columns ) );
+}
+VCursorCache * VCursorColumns ( struct VCursor *self, uint32_t ctx_type )
+{
+    DISPATCH_VALUE ( columns ( self, ctx_type ), NULL );
+}
+VCursorCache * VCursorProductions ( struct VCursor *self, uint32_t ctx_type )
+{
+    DISPATCH_VALUE ( productions ( self, ctx_type ), NULL );
 }
 
 /*--------------------------------------------------------------------------
@@ -467,7 +475,7 @@ VCursorGetColidx ( const VCursor *          p_self,
     else
     {
         /* if the column-spec gave us the exact column, return it */
-        VColumn *col = VCursorCacheGet ( & p_self -> col, & p_scol -> cid );
+        VColumn *col = VCursorGetColumn ( (VCursor *) p_self, & p_scol -> cid );
         if ( col != NULL )
         {
             * p_idx = col -> ord;
@@ -484,10 +492,10 @@ VCursorGetColidx ( const VCursor *          p_self,
             uint32_t end = VectorLength ( & p_name -> items );
             for ( end += i, count = 0; i < end; ++ i )
             {
-                p_scol = ( const void* ) VectorGet ( & p_name -> items, i );
-                if ( p_scol != NULL )
+                const SColumn * scol = ( const SColumn* ) VectorGet ( & p_name -> items, i );
+                if ( scol != NULL )
                 {
-                    col = VCursorCacheGet ( & p_self -> col, & p_scol -> cid );
+                    col = VCursorGetColumn ( (VCursor *) p_self, & scol -> cid );
                     if ( col != NULL )
                     {
                         * p_idx = col -> ord;
@@ -979,13 +987,6 @@ VCursorIsStaticColumn ( const VCursor *self, uint32_t col_idx, bool *is_static )
 }
 
 VCursorCache *
-VCursorColumns ( VCursor * self )
-{
-    assert ( self != NULL );
-    return & self -> col;
-}
-
-VCursorCache *
 VCursorPhysicalColumns ( struct VCursor * self )
 {
     assert ( self != NULL );
@@ -1078,3 +1079,22 @@ VCursorLinkedCursorSet(const VCursor * cself,const char *tbl,VCursor const *curs
 
     return rc;
 }
+
+VColumn *
+VCursorGetColumn ( struct VCursor * p_self, const VCtxId * p_ctx )
+{
+    const VCursorCache * columns = VCursorColumns ( (VCursor *) p_self, p_ctx -> ctx_type );
+    if ( columns == NULL )
+    {
+        return NULL;
+    }
+    return VCursorCacheGet ( columns, p_ctx );
+}
+
+rc_t
+VCursorSetColumn ( struct VCursor * p_self, struct VColumn * p_col )
+{
+    void * prior;
+    return VCursorCacheSwap ( VCursorColumns ( p_self, p_col -> scol -> cid . ctx_type ), & p_col -> scol -> cid, p_col, & prior );
+}
+

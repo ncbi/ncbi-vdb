@@ -134,6 +134,7 @@ namespace ncbi
 
             bool CreateOverload ( const KSymbol * p_name,
                                   const void * p_object,
+                                  uint32_t p_context_type,
                                   int64_t (CC * p_sort)(const void *, const void *),
                                   Vector & p_objects,
                                   Vector & p_names,

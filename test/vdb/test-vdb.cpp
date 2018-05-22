@@ -616,7 +616,7 @@ FIXTURE_TEST_CASE ( VCursor_FindNextRowIdDirect, VdbFixture )
 FIXTURE_TEST_CASE ( V2ParserError, VdbFixture )
 {   // This exercises an "extended schema" scenario, when a schema embedded
     // in a table gets tacked onto the exsiting schema, possibly creating namespaces
-    // that opaque the parent schema (see callers of VSchemaParseTextCallback)
+    // that obscure the parent schema (see callers of VSchemaParseTextCallback)
     const VTable *tbl = NULL;
     VSchema *schema = NULL;
     REQUIRE_RC ( VDBManagerMakeSRASchema(mgr, &schema) );

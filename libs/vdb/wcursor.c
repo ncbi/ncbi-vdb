@@ -127,7 +127,9 @@ static VCursor_vt VTableCursor_write_vt =
     VTableCursorPageMapProcessRequest,
     VTableCursorCacheActive,
     VTableWriteCursorInstallTrigger,
-    VTableWriteCursorListReadableColumns
+    VTableWriteCursorListReadableColumns,
+    VTableCursorColumns,
+    VTableCursorProductions
 };
 
 /*--------------------------------------------------------------------------
@@ -278,23 +280,6 @@ rc_t VTableWriteCursorMakeColumn ( VTableCursor *self, VColumn **col, const SCol
     return WColumnMake ( col, self -> schema, scol, vtbl -> stbl -> limit, vtbl -> mgr, cx_bind );
 }
 
-
-/* PostOpenAdd
- *  handle opening of a column after the cursor is opened
- */
-rc_t VCursorPostOpenAdd ( VTableCursor *self, VColumn *col )
-{
-    rc_t rc = VCursorPostOpenAddRead ( self, col );
-
-    if ( ! self -> read_only && rc == 0 && self -> dad . state == vcRowOpen )
-    {
-        int64_t row_id = self -> dad . row_id;
-        WColumnOpenRow ( col, & row_id );
-    }
-
-    return rc;
-}
-
 /* Open
  *  open cursor, resolving schema
  *  for the set of opened columns
@@ -372,7 +357,7 @@ rc_t VTableWriteCursorOpen ( const VTableCursor *cself )
                     pr . primary_table = VCursorGetTable ( & self -> dad );
                     pr . view = NULL;
                     pr . curs = & self -> dad;
-                    pr . cache = & self -> dad . prod;
+                    pr . prod = & self -> dad . prod;
                     pr . owned = & self -> dad . owned;
                     pr . cx_bind = & cx_bind;
                     pr . chain = chainEncoding;
@@ -531,7 +516,7 @@ rc_t VCursorListSeededWritableColumns ( VTableCursor *self, BSTree *columns, con
     pb . pr . ld = self -> tbl -> linker;
     pb . pr . name = & self -> stbl -> name -> name;
     pb . pr . curs = & self -> dad;
-    pb . pr . cache = & self -> dad . prod;
+    pb . pr . prod = & self -> dad . prod;
     pb . pr . owned = & self -> dad . owned;
     pb . pr . cx_bind = & cx_bind;
     pb . pr . chain = chainEncoding;

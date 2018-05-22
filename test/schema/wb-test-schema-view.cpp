@@ -377,6 +377,7 @@ FIXTURE_TEST_CASE(View_Column, AST_View_Fixture)
     REQUIRE_EQ ( 1u, c . td . dim);
     REQUIRE_EQ ( 1u, c . cid . ctx ); // T;s contextId is 0, W's is 1
     REQUIRE_EQ ( 0u, c . cid . id );
+    REQUIRE_EQ ( (uint32_t)eView, c . cid . ctx_type );
     REQUIRE ( ! c . dflt );
     REQUIRE ( c . read_only );
     REQUIRE ( ! c . simple );

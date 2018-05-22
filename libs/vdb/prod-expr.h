@@ -106,7 +106,7 @@ struct VProdResolve
     struct VCursor *curs;
 
     /* vector of cached named productions */
-    VCursorCache *cache;
+    VCursorCache *prod;
 
     /* vector of owned productions */
     Vector *owned;

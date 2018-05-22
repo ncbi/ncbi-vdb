@@ -142,7 +142,7 @@ rc_t VProdResolveCastExpr ( const VProdResolve *self, VProduction **out, const S
 LIB_EXPORT rc_t CC VProdResolveParamExpr ( const VProdResolve *self, VProduction **out, const KSymbol *sym )
 {
     const SProduction *sprod = sym -> u . obj;
-    VProduction *vprod = VCursorCacheGet ( self -> cache, & sprod -> cid );
+    VProduction *vprod = VCursorCacheGet ( self -> prod, & sprod -> cid );
     if ( vprod != NULL )
     {
         * out = vprod;
@@ -167,7 +167,7 @@ rc_t VProdResolveSProduction ( const VProdResolve *self, VProduction **out, cons
     VFormatdecl fd;
 
     /* check cache */
-    VProduction *vprod = VCursorCacheGet ( self -> cache, & sprod -> cid );
+    VProduction *vprod = VCursorCacheGet ( self -> prod, & sprod -> cid );
     if ( vprod != NULL )
     {
         /* return valid or failed production */
@@ -176,7 +176,7 @@ rc_t VProdResolveSProduction ( const VProdResolve *self, VProduction **out, cons
     }
 
     /* pre-fail */
-    rc = VCursorCacheSet ( self -> cache, & sprod -> cid, FAILED_PRODUCTION );
+    rc = VCursorCacheSet ( self -> prod, & sprod -> cid, FAILED_PRODUCTION );
     if ( rc == 0 )
     {
         /* resolve production type */
@@ -203,7 +203,7 @@ rc_t VProdResolveSProduction ( const VProdResolve *self, VProduction **out, cons
             if ( rc == 0 )
             {
                 void *ignore;
-                rc = VCursorCacheSwap ( self -> cache, & sprod -> cid, * out, & ignore );
+                rc = VCursorCacheSwap ( self -> prod, & sprod -> cid, * out, & ignore );
             }
         }
     }
@@ -307,7 +307,6 @@ rc_t VProdResolveColExpr ( const VProdResolve *self, VProduction **out,
     {
         /* get SColumn */
         nodes [ i ] . scol = ( const void* ) VectorGet ( & sname -> items, i );
-
         /* perform type cast and measure distance */
         if ( casting ?
              VTypedeclCommonAncestor ( & nodes [ i ] . scol -> td, self -> schema,
@@ -396,7 +395,6 @@ rc_t VProdResolvePhysExpr ( const VProdResolve *self,
     return VProdResolveSPhysMember ( self, out, sym -> u . obj );
 }
 
-#include <stdio.h>
 /* FwdExpr
  *  handle a forwarded symbol in expression
  *  if the symbol is "virtual", check for its override
@@ -411,18 +409,17 @@ rc_t VProdResolveFwdExpr ( const VProdResolve *self, VProduction **out,
     const KSymbol *sym = x -> _sym;
     if ( sym -> type == eVirtual )
     {
-        /* most derived table/view class */
-        const KSymbol *sym2 = sym;
-        const VCtxId* ctx = ( const VCtxId* ) & sym -> u . fwd;
-        sym = VCursorFindOverride ( self -> curs, ctx, self -> primary_table, self -> view );
-        if ( sym == NULL )
+        /* most derived table/view */
+        const KSymbol *sym2 = VCursorFindOverride ( self -> curs, ( const VCtxId* ) & sym -> u . fwd, self -> primary_table );
+        if ( sym2 == NULL )
         {
             PLOGMSG ( klogWarn, ( klogWarn, "virtual reference '$(fwd)' not found in overrides table"
                        , "fwd=%.*s"
-                       , ( int ) sym2 -> name . size
-                       , sym2 -> name . addr ));
+                       , ( int ) sym -> name . size
+                       , sym -> name . addr ));
             return 0;
         }
+        sym = sym2;
     }
 
     /* test symbol type */
@@ -671,13 +668,12 @@ rc_t VProdResolveExpr ( const VProdResolve *self,
 
     case eCondExpr:
         /* run left and right expressions in order until exit condition */
-VDB_DEBUG (( "eCondExpr(%p: %p/%u, %p/%u )\n", (void*)expr, (void*) ( ( const SBinExpr* ) expr ) -> left, ( ( const SBinExpr* ) expr ) -> left -> var, (void*) ( ( const SBinExpr* ) expr ) -> right, ( ( const SBinExpr* ) expr ) -> right -> var));
         rc = VProdResolveExpr ( self, out, desc, fd, ( ( const SBinExpr* ) expr ) -> left, casting );
-    assert (rc != -1);
+        assert (rc != -1);
         if ( ( rc == 0 && * out == NULL ) || self -> discover_writable_columns )
         {
             rc = VProdResolveExpr ( self, out, desc, fd, ( ( const SBinExpr* ) expr ) -> right, casting );
-    assert (rc != -1);
+            assert (rc != -1);
         }
 #if _DEBUGGING
         -- indent_level;
@@ -692,8 +688,9 @@ VDB_DEBUG (( "eCondExpr(%p: %p/%u, %p/%u )\n", (void*)expr, (void*) ( ( const SB
 
     default:
         /* report bad expression, but don't die */
-        PLOGMSG ( klogWarn, ( klogWarn, "unrecognized expression in '$(tbl)' table schema"
-                   , "tbl=%.*s"
+        PLOGMSG ( klogWarn, ( klogWarn, "unrecognized expression type $(expr) in '$(tbl)' table schema"
+                   , "expr=%u,tbl=%.*s"
+                   , expr -> var
                    , ( int ) self -> name -> size
                    , self -> name -> addr ));
 #if _DEBUGGING
@@ -802,14 +799,18 @@ rc_t VProdResolveColumnRead ( const VProdResolve *self,
     }
 
     /* fetch the column */
-VDB_DEBUG ( ( "VCursorColumns ctx = (%u, %u)\n", scol -> cid . ctx, scol -> cid . id ) );
-    vcol = VCursorCacheGet ( VCursorColumns ( curs ), & scol -> cid );
+VDB_DEBUG ( ( "VProdResolveColumnRead ctx = (%u, %u, %s)\n",
+scol -> cid . ctx,
+scol -> cid . id,
+scol->cid.ctx_type == eTable ? "eTable" : (scol->cid.ctx_type == eView ? "eView" : "???") ) );
+    vcol = VCursorGetColumn ( curs, & scol -> cid );
     if ( vcol == NULL )
     {
         VDB_DEBUG ( ( "failed to fetch NULL for column '%N'; no output was produced by '%s'\n",
                       scol -> name, __func__ ) );
         return 0;
     }
+VDB_DEBUG ( ( "-> %.*s\n", vcol->scol->name->name.len, vcol->scol->name->name.addr ) );
     /* if the read production is in place, return it */
     if ( vcol -> in != NULL )
     {

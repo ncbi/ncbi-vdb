@@ -101,6 +101,7 @@ ViewDeclaration :: SetName ( const AST_FQN &  p_fqn )
         if ( m_self -> name != 0 &&
                 m_builder . CreateOverload ( m_self -> name,
                                             m_self,
+                                            0,
                                             SViewSort,
                                             m_builder . GetSchema () -> view,
                                             m_builder . GetSchema () -> vname,
@@ -469,6 +470,7 @@ ViewDeclaration :: AddNewColumn ( SColumn & p_col, String & p_name )
     }
     return m_builder .CreateOverload ( p_col . name,
                                        & p_col,
+                                       eView,
                                        SColumnSort,
                                        m_self -> col,
                                        m_self -> cname,
@@ -509,6 +511,7 @@ ViewDeclaration :: AddColumn ( const AST & p_type, const AST & p_ident, const AS
                     priorDecl -> type = eColumn;
                     if ( ! m_builder .CreateOverload ( c -> name,
                                                         c,
+                                                        eView,
                                                         SColumnSort,
                                                         m_self -> col,
                                                         m_self -> cname,
@@ -654,7 +657,7 @@ ViewDeclaration :: HandleBody ( const AST & p_body )
             }
         }
 
-        view_set_context ( m_self, m_builder . NextContextId () );
+        view_set_context ( m_self );
     }
     else
     {
