@@ -777,14 +777,11 @@ VSchemaParseTextInt_v1 ( VSchema *self, const char *name, const char *text, size
     return rc;
 }
 
-/*TODO: move to a header */
-extern bool VSchemaParse_v2 ( VSchema *self, const char *text );
-
 static
 rc_t
 VSchemaParseTextInt_v2 ( VSchema *self, const char *name, const char *text, size_t bytes )
 {
-    if ( VSchemaParse_v2 ( self, text) )
+    if ( VSchemaParse_v2 ( self, text, bytes ) )
     {
         PARSE_DEBUG( ("Parsed schema v2 from %s\n", name) );
         return 0;

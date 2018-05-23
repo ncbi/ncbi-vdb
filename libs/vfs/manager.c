@@ -3849,3 +3849,27 @@ LIB_EXPORT rc_t CC VFSManagerDeleteCacheOlderThan ( const VFSManager * self,
             if ( rc == 0 )
             {
                 uint32_t start = VectorStart( &user_repos );
+                uint32_t count = VectorLength( &user_repos );
+                uint32_t idx;
+                for ( idx = 0; rc == 0 && idx < count; ++idx )
+                {
+                    KRepository * repo = VectorGet ( &user_repos, idx + start );
+                    if ( repo != NULL )
+                    {
+                        char path[ 4096 ];
+                        size_t root_size;
+                        rc = KRepositoryRoot ( repo, path, sizeof path, &root_size );
+                        if ( rc == 0 )
+                        {
+                            KTime_t date = KTimeStamp() - ( days * 60 * 60 * 24 );
+                            rc = inspect_dir( self->cwd, date, path );
+                        }
+                    }
+                }
+                KRepositoryVectorWhack ( &user_repos );
+            }
+            KRepositoryMgrRelease ( repo_mgr );
+        }
+    }
+    return rc;
+}
