@@ -116,14 +116,21 @@ LogErrors ( const ErrorReport & p_rep )
 }
 
 bool
-VSchemaParse_v2 ( VSchema * p_self, const char * p_text )
+VSchemaParse_v2 ( VSchema * p_self, const char * p_text, size_t p_bytes )
 {
     ncbi :: SchemaParser :: SchemaParser parser;
-    if ( ! parser . ParseString ( p_text ) )
+
+    // bison wants its input 0-terminated
+    char * zeroTerm = string_dup ( p_text, p_bytes );
+
+    if ( ! parser . ParseString ( zeroTerm ) )
     {
         LogErrors ( parser . GetErrors () );
+        free ( zeroTerm );
         return false;
     }
+    free ( zeroTerm );
+
     ncbi :: SchemaParser :: ParseTree * parseTree = parser . MoveParseTree ();
     assert ( parseTree != 0 );
 

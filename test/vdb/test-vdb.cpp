@@ -313,7 +313,7 @@ public:
     const VCursor * curs;
     uint32_t col_idx[20];
 };
-
+#if 0
 FIXTURE_TEST_CASE(TestCursorIsStatic_SingleRowRun1, VdbFixture)
 {
     static char const *columns[] = { "READ_LEN", 0 };
@@ -613,6 +613,7 @@ FIXTURE_TEST_CASE ( VCursor_FindNextRowIdDirect, VdbFixture )
     REQUIRE_EQ ( (int64_t)2, next ) ; // VDB-3075: next == 1
 }
 
+#endif
 FIXTURE_TEST_CASE ( V2ParserError, VdbFixture )
 {   // This exercises an "extended schema" scenario, when a schema embedded
     // in a table gets tacked onto the exsiting schema, possibly creating namespaces
@@ -628,7 +629,7 @@ FIXTURE_TEST_CASE ( V2ParserError, VdbFixture )
     REQUIRE_RC ( VSchemaRelease ( schema ) );
     REQUIRE_RC ( VTableRelease ( tbl ) );
 }
-
+#if 0
 TEST_CASE ( View_On_An_Existing_Schema )
 {
     const VDBManager * mgr;
@@ -647,7 +648,7 @@ TEST_CASE ( View_On_An_Existing_Schema )
     REQUIRE_RC ( VDatabaseRelease ( db ) );
     REQUIRE_RC ( VDBManagerRelease ( mgr ) );
 }
-
+#endif
 //////////////////////////////////////////// Main
 extern "C"
 {

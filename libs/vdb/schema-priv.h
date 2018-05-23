@@ -1570,7 +1570,7 @@ const struct KSymbol * SViewFindOverride ( const SView * self, const VCtxId * ci
  * Parse the text using bison-based front end and grammar version 2
  * Log all errors
  */
-bool VSchemaParse_v2 ( VSchema *self, const char *text );
+bool VSchemaParse_v2 ( VSchema *self, const char *text, size_t bytes );
 
 #ifdef __cplusplus
 }

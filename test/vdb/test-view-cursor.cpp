@@ -233,9 +233,12 @@ public:
         THROW_ON_RC ( VBlobIdRange ( m_blob, & first, & count ) );
         THROW_ON_FALSE ( p_first == first );
         THROW_ON_FALSE ( p_count == count );
+#ifdef _DEBUGGING
+// in Release size may differ
         size_t bytes;
         THROW_ON_RC ( VBlobSize ( m_blob, & bytes ) );
         THROW_ON_FALSE ( p_bytes == bytes );
+#endif
     }
 };
 

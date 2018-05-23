@@ -375,7 +375,7 @@ FIXTURE_TEST_CASE(View_Column, AST_View_Fixture)
     REQUIRE_NULL ( c . ptype );
     REQUIRE_EQ ( U8_id, c . td . type_id );
     REQUIRE_EQ ( 1u, c . td . dim);
-    REQUIRE_EQ ( 1u, c . cid . ctx ); // T;s contextId is 0, W's is 1
+    REQUIRE_EQ ( 0u, c . cid . ctx );
     REQUIRE_EQ ( 0u, c . cid . id );
     REQUIRE_EQ ( (uint32_t)eView, c . cid . ctx_type );
     REQUIRE ( ! c . dflt );
@@ -403,7 +403,7 @@ FIXTURE_TEST_CASE(View_Column_Overloaded, AST_View_Fixture)
     const SNameOverload * ovl = v . ColumnNames () . Get ( 0 );
     REQUIRE_NOT_NULL ( ovl );
     REQUIRE_EQ ( string ("c"), ToCppString ( ovl -> name -> name ) );
-    REQUIRE_EQ ( 1u, ovl -> cid . ctx );
+    REQUIRE_EQ ( 0u, ovl -> cid . ctx );
     REQUIRE_EQ ( 0u, ovl -> cid . id );
 
     const SColumn * col = v . Columns () . Get ( 0 );
@@ -523,7 +523,7 @@ FIXTURE_TEST_CASE(View_Column_Context, AST_View_Fixture)
     "W", 1 );
     const SNameOverload * ovl = v . ColumnNames () . Get ( 0 );
     REQUIRE_NOT_NULL ( ovl );
-    REQUIRE_EQ ( 2u, ovl -> cid . ctx ); // W'1 contextId is 2
+    REQUIRE_EQ ( 1u, ovl -> cid . ctx ); // W'1 contextId is 1
     REQUIRE_EQ ( 0u, ovl -> cid . id );
     const SColumn * col = v . Columns () . Get ( 0 );
     REQUIRE_NOT_NULL ( col );
@@ -532,7 +532,7 @@ FIXTURE_TEST_CASE(View_Column_Context, AST_View_Fixture)
 
     ovl = v . ColumnNames () . Get ( 1 );
     REQUIRE_NOT_NULL ( ovl );
-    REQUIRE_EQ ( 2u, ovl -> cid . ctx );
+    REQUIRE_EQ ( 1u, ovl -> cid . ctx );
     REQUIRE_EQ ( 1u, ovl -> cid . id );
     col = v . Columns () . Get ( 1 );
     REQUIRE_NOT_NULL ( col );
@@ -763,7 +763,7 @@ FIXTURE_TEST_CASE(View_Parents_OverloadingParentsColumn, AST_View_Fixture)
     const SNameOverload * ovl = v . ColumnNames () . Get ( 0 );
     REQUIRE_NOT_NULL ( ovl );
     REQUIRE_EQ ( string ("c"), ToCppString ( ovl -> name -> name ) );
-    REQUIRE_EQ ( 1u, ovl -> cid . ctx ); // inherited from W whose contexId is 1
+    REQUIRE_EQ ( 0u, ovl -> cid . ctx ); // inherited from W whose contexId is 0
     REQUIRE_EQ ( 0u, ovl -> cid . id );
 
     VdbVector < SColumn > names ( ovl -> items );
@@ -787,19 +787,19 @@ FIXTURE_TEST_CASE(View_ColumnDecl_Context_Inherited, AST_View_Fixture)
 
     const SNameOverload * ovl = v . ColumnNames () . Get ( 0 );
     REQUIRE_NOT_NULL ( ovl );
-    REQUIRE_EQ ( 1u, ovl -> cid . ctx );
+    REQUIRE_EQ ( 0u, ovl -> cid . ctx );
     REQUIRE_EQ ( 0u, ovl -> cid . id );
     REQUIRE_EQ ( 2u, VectorLength ( & ovl -> items ) );
     {
         const SColumn * col = ( const SColumn * ) VectorGet( & ovl -> items, 0 );
         REQUIRE_NOT_NULL ( col );
-        REQUIRE_EQ ( 1u, col -> cid . ctx );
+        REQUIRE_EQ ( 0u, col -> cid . ctx );
         REQUIRE_EQ ( 1u, col -> cid . id );
     }
     {
         const SColumn * col = ( const SColumn * ) VectorGet( & ovl -> items, 1 );
         REQUIRE_NOT_NULL ( col );
-        REQUIRE_EQ ( 1u, col -> cid . ctx );
+        REQUIRE_EQ ( 0u, col -> cid . ctx );
         REQUIRE_EQ ( 0u, col -> cid . id );
     }
 }
