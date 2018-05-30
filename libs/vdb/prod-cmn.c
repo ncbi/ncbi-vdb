@@ -2096,9 +2096,8 @@ rc_t VPivotProdMake ( VPivotProd ** p_prodp,
 {
     VPivotProd * prod;
     VFormatdecl fd = { { 0, 0 }, 0 };
-    VTypedesc desc = { 64, 1, vtdInt };
     rc_t rc = VProductionMake ( ( VProduction** ) p_prodp, p_owned, sizeof * prod,
-        prodPivot, 0, p_name, & fd, & desc, NULL, p_chain );
+        prodPivot, 0, p_name, & fd, & p_member -> desc, NULL, p_chain );
     if ( rc == 0 )
     {
         prod = * p_prodp;

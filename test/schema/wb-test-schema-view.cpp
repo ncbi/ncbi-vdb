@@ -38,7 +38,7 @@ FIXTURE_TEST_CASE(Version_2_Empty_Source, AST_Fixture)
     REQUIRE_EQ ( ( int ) PT_VERSION_2,  ast -> GetChild ( 1 ) -> GetTokenType () );
 }
 
-class ViewAccess // encapsulates access to an STable in a VSchema
+class ViewAccess // encapsulates access to an SView in a VSchema
 {
 public:
     ViewAccess ( const SView* p_fn ) : m_self ( p_fn ) {}
@@ -435,15 +435,20 @@ FIXTURE_TEST_CASE(View_Column_Reference, AST_View_Fixture)
 
 FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesColumn, AST_View_Fixture)
 {   // introducing member expressions!
-    ViewAccess v = ParseView ( "version 2; table T#1 { column U8 c1 = 1; }; view W#1 <T t0, T t1> { column U8 c2 = t1 . c1; }", "W" );
+    ViewAccess v = ParseView (
+        "version 2; "
+        "table T#1 { column U8 c1 = 1; };"
+        "view W#1 <T t0, T t1> { column U8 c2 = t1 . c1; }",
+        "W" );
     REQUIRE_EQ ( 1u, v . Columns () . Count () );
     const SColumn & c = * v . Columns () . Get ( 0 );
     REQUIRE_NOT_NULL ( c . name );
     REQUIRE_EQ ( string ("c2"), ToCppString ( c . name -> name ) );
     REQUIRE_NOT_NULL ( c . read );
     REQUIRE_EQ ( ( uint32_t ) eMembExpr, c . read -> var );
+
     const SMembExpr * expr = reinterpret_cast < const SMembExpr * > ( c . read );
-    REQUIRE_EQ ( v .m_self, expr -> view );
+    REQUIRE_EQ ( v . m_self, expr -> view );
     REQUIRE_EQ ( 1u, expr -> paramId );
     REQUIRE_EQ ( string("c1"), ToCppString ( expr -> member -> name ) );
 }
@@ -456,6 +461,30 @@ FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesProduction, AST_View_Fixture
 {
     ViewAccess v = ParseView ( "version 2; table T#1 { U8 c1 = 1; }; view W#1 <T t> { column U8 c2 = t . c1; }", "W" );
     REQUIRE_EQ ( ( uint32_t ) eMembExpr, v . Columns () . Get ( 0 ) -> read -> var );
+}
+FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesArrayColumn, AST_View_Fixture)
+{   // introducing member expressions!
+    ViewAccess v = ParseView (
+        "version 2;"
+        "table T#1 { column U8[2] c1; };"
+        "view W#1 <T t0, T t1> { column U8[2] c2 = t1 . c1; }",
+        "W" );
+    REQUIRE_EQ ( 1u, v . Columns () . Count () );
+    const SColumn & c = * v . Columns () . Get ( 0 );
+    REQUIRE_EQ ( 2u, c . td . dim );
+    REQUIRE_NOT_NULL ( c . read );
+    REQUIRE_EQ ( ( uint32_t ) eMembExpr, c . read -> var );
+    const SMembExpr * expr = reinterpret_cast < const SMembExpr * > ( c . read );
+    REQUIRE_EQ ( v . m_self, expr -> view );
+    REQUIRE_EQ ( 1u, expr -> paramId );
+    REQUIRE_EQ ( string("c1"), ToCppString ( expr -> member -> name ) );
+
+    const SNameOverload * c1 = reinterpret_cast < const SNameOverload * > ( expr -> member -> u . obj );
+    REQUIRE_NOT_NULL ( c1 );
+
+    REQUIRE_EQ ( 1u, VectorLength(& c1 -> items) );
+    const SColumn * col = ( const SColumn* ) VectorGet ( & c1 -> items, 0 );
+    REQUIRE_EQ ( 2u, col -> td . dim );
 }
 
 FIXTURE_TEST_CASE(View_Join_Shorthand, AST_View_Fixture)
@@ -484,6 +513,16 @@ FIXTURE_TEST_CASE(View_Join_Shorthand, AST_View_Fixture)
     REQUIRE_EQ ( 0u, rowId -> paramId ); // t1
     REQUIRE_EQ ( string("c1"), ToCppString ( rowId -> member -> name ) );
     REQUIRE_NULL ( rowId -> rowId );
+}
+
+FIXTURE_TEST_CASE(View_Join_PseudoPhysicalToken, AST_View_Fixture)
+{   // .c2 looks like a physical identifier
+    ParseView (
+        "version 2;"
+        "table T1#1 { column I64 c1; };"
+        "table T2#1 { column U8 c2; };"
+        "view X#1 <T1 t1, T2 t2> { column U8 c3 = t2 [ t1 . c1 ].c2; }; ", // here
+        "X" );
 }
 
 FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesColumn_Undefined, AST_View_Fixture)

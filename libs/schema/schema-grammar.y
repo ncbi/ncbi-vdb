@@ -916,6 +916,8 @@ member_expr_2_0
 join_expr_2_0
     : ident_1_0 '[' cond_expr_1_0 ']' '.' ident_1_0
         { $$ . subtree = MakeTree ( PT_JOINEXPR, P ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ), T ( $5 ), P ($6 ) ); }
+    | ident_1_0 '[' cond_expr_1_0 ']' PHYSICAL_IDENTIFIER_1_0
+        { $$ . subtree = MakeTree ( PT_JOINEXPR, P ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ), T ( $5 ) ); }
     ;
 
  /* database */
