@@ -78,7 +78,8 @@ VViewWhack ( VView * p_self )
 
     uint32_t start = VectorStart ( & p_self -> sview -> params );
     uint32_t count = VectorLength ( & p_self -> sview -> params );
-    for ( uint32_t i = 0 ; i < count; ++ i)
+    uint32_t i;
+    for ( i = 0 ; i < count; ++ i)
     {
         const KSymbol * param = VectorGet ( & p_self -> sview -> params, start + i );
         void * obj = VectorGet ( & p_self -> bindings, i );
@@ -214,7 +215,8 @@ BindingIdxByName ( const SView * p_self, const String * p_name )
 {
     uint32_t start = VectorStart ( & p_self -> params );
     uint32_t count = VectorLength ( & p_self -> params );
-    for ( uint32_t i = 0 ; i < count; ++ i )
+    uint32_t i;
+    for ( i = 0 ; i < count; ++ i )
     {
         const KSymbol * p = VectorGet ( & p_self -> params, start + i );
         if ( StringEqual ( & p -> name, p_name ) )
@@ -405,7 +407,8 @@ SViewAncestorParameterBoundTo ( const SView * p_child, const SView * p_ancestor,
 {
     uint32_t start = VectorStart ( & p_child -> parents );
     uint32_t count = VectorLength ( & p_child -> parents );
-    for ( uint32_t i = 0 ; i < count; ++ i)
+    uint32_t i;
+    for ( i = 0 ; i < count; ++ i)
     {
         const SViewInstance * dadInst = VectorGet ( & p_child -> parents, start + i );
         assert ( dadInst != NULL );
