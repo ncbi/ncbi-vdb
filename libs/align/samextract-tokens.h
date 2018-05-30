@@ -118,11 +118,11 @@ extern int SAMdebug;
 
 union YYSTYPE
 {
-#line 46 "/home/vartanianmh/devel/ncbi-vdb/libs/align/samextract-grammar.y" /* yacc.c:1909  */
+
 
  char * strval;
 
-#line 126 "/home/vartanianmh/devel/ncbi-vdb/libs/align/samextract-tokens.h" /* yacc.c:1909  */
+
 };
 
 typedef union YYSTYPE YYSTYPE;
