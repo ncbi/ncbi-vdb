@@ -44,10 +44,6 @@ using namespace ncbi :: SchemaParser;
 
 TEST_SUITE( ViewTestSuite )
 
-#include <ktst/unit_test.hpp> // THROW_ON_RC
-
-const string ScratchDir = "./db/";
-
 static string BaseSchemaText =
     "version 2.0;"
     "table T#1 { column ascii c1; };"
@@ -83,9 +79,7 @@ public:
 
     void CreateDb ( const string & p_testName )
     {
-        m_databaseName = ScratchDir + p_testName;
-
-        MakeDatabase ( m_schemaText, "DB" );
+        MakeDatabase ( p_testName, m_schemaText, "DB" );
 
         {
             VCursor* cursor = CreateTable ( TableName_1 );

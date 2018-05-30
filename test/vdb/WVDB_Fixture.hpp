@@ -38,6 +38,8 @@
 
 #include <ktst/unit_test.hpp> // THROW_ON_RC
 
+const std :: string ScratchDir = "./db/";
+
 class WVDB_Fixture
 {
 public:
@@ -80,8 +82,11 @@ public:
         }
     }
 
-    void MakeDatabase ( const std :: string & p_schemaText, const std :: string & p_schemaSpec )
+    void MakeDatabase ( const std :: string & p_testName,
+                        const std :: string & p_schemaText,
+                        const std :: string & p_schemaSpec )
     {
+        m_databaseName = ScratchDir + p_testName;
         RemoveDatabase();
 
         THROW_ON_RC ( VDBManagerMakeUpdate ( & m_mgr, NULL ) );
@@ -132,6 +137,13 @@ public:
     {
         THROW_ON_RC ( VCursorOpenRow ( p_cursor ) );
         THROW_ON_RC ( VCursorWrite ( p_cursor, p_colIdx, sizeof(p_value)*8, & p_value, 0, 1 ) );
+        THROW_ON_RC ( VCursorCommitRow ( p_cursor ) );
+        THROW_ON_RC ( VCursorCloseRow ( p_cursor ) );
+    }
+    void WriteRow ( VCursor * p_cursor, uint32_t p_colIdx, int64_t * p_value, uint32_t p_count )
+    {
+        THROW_ON_RC ( VCursorOpenRow ( p_cursor ) );
+        THROW_ON_RC ( VCursorWrite ( p_cursor, p_colIdx, sizeof(p_value)*8, p_value, 0, p_count ) );
         THROW_ON_RC ( VCursorCommitRow ( p_cursor ) );
         THROW_ON_RC ( VCursorCloseRow ( p_cursor ) );
     }

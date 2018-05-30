@@ -501,7 +501,7 @@ rc_t VProdResolveMembExpr ( const VProdResolve *    p_self,
                             if ( rc == 0 )
                             {
                                 VPivotProd * ret;
-                                rc = VPivotProdMake ( & ret, p_self -> owned, vmember, rowId, p_x -> member -> name . addr, p_self -> chain );
+                                rc = VPivotProdMake ( & ret, p_self -> owned, vmember, rowId, pr . name -> addr, p_self -> chain );
                                 if ( rc == 0 )
                                 {
                                     * p_out = & ret -> dad;
@@ -799,10 +799,6 @@ rc_t VProdResolveColumnRead ( const VProdResolve *self,
     }
 
     /* fetch the column */
-VDB_DEBUG ( ( "VProdResolveColumnRead ctx = (%u, %u, %s)\n",
-scol -> cid . ctx,
-scol -> cid . id,
-scol->cid.ctx_type == eTable ? "eTable" : (scol->cid.ctx_type == eView ? "eView" : "???") ) );
     vcol = VCursorGetColumn ( curs, & scol -> cid );
     if ( vcol == NULL )
     {
@@ -810,7 +806,6 @@ scol->cid.ctx_type == eTable ? "eTable" : (scol->cid.ctx_type == eView ? "eView"
                       scol -> name, __func__ ) );
         return 0;
     }
-VDB_DEBUG ( ( "-> %.*s\n", vcol->scol->name->name.len, vcol->scol->name->name.addr ) );
     /* if the read production is in place, return it */
     if ( vcol -> in != NULL )
     {

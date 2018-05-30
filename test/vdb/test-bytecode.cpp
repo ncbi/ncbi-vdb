@@ -36,7 +36,6 @@ using namespace std;
 
 TEST_SUITE( ByteCodeTestSuite )
 
-const string ScratchDir = "./db/";
 static const char* TableName = "TABLE1";
 
 class ByteCodeFixture : public WVDB_Fixture
@@ -45,8 +44,7 @@ public:
 
     void CreateDb ( const char * p_dbName, const char * p_schema, const string & p_colName1, const string & p_colName2 = string() )
     {
-        m_databaseName = ScratchDir + p_dbName;
-        MakeDatabase ( p_schema, "root_database" );
+        MakeDatabase ( p_dbName, p_schema, "root_database" );
 
         THROW_ON_RC ( VDatabaseCreateTable ( m_db , & m_table, TableName, kcmInit + kcmMD5, TableName ) );
         THROW_ON_RC ( VTableCreateCursorWrite ( m_table, & m_cursor, kcmInsert ) );

@@ -2096,9 +2096,8 @@ rc_t VPivotProdMake ( VPivotProd ** p_prodp,
 {
     VPivotProd * prod;
     VFormatdecl fd = { { 0, 0 }, 0 };
-    VTypedesc desc = { 64, 1, vtdInt };
     rc_t rc = VProductionMake ( ( VProduction** ) p_prodp, p_owned, sizeof * prod,
-        prodPivot, 0, p_name, & fd, & desc, NULL, p_chain );
+        prodPivot, 0, p_name, & fd, & p_member -> desc, NULL, p_chain );
     if ( rc == 0 )
     {
         prod = * p_prodp;
@@ -2125,8 +2124,16 @@ rc_t VPivotProdRead ( VPivotProd * p_self, struct VBlob ** p_vblob, int64_t * p_
         uint32_t elemNum;
         uint32_t repeat_count;
         uint32_t rowLen = PageMapGetIdxRowInfo ( rowIdBlob -> pm, ( uint32_t ) ( * p_id - rowIdBlob -> start_id ), & elemNum, & repeat_count );
-        assert ( rowLen == 1);
-        assert ( repeat_count == 1);
+        if ( rowLen != 1 || repeat_count != 1)
+        {
+            rc = RC ( rcVDB, rcColumn, rcAccessing, rcType, rcInvalid );
+            PLOGERR ( klogErr, ( klogErr, rc, "pivot expression is not scalar in '$(dad)[$(row)].$(mem)'",
+                                 "dad=%s,mem=%s,row=%s",
+                                 p_self -> dad . name,
+                                 p_self -> member -> name,
+                                 p_self -> row_id -> name ));
+            return rc;
+        }
         /* assume elem size is 64 */
         int64_t newRowId = * ( ( int64_t* ) rowIdBlob -> data . base + elemNum );
        	vblob_release ( rowIdBlob, NULL );

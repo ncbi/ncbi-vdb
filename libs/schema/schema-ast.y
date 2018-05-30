@@ -801,6 +801,16 @@ member_expr
 join_expr
     : PT_JOINEXPR '(' ident '[' cond_expr ']' '.' ident ')'
         { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $3 ); $$ -> AddNode ( $5 ); $$ -> AddNode ( $8 ); }
+    | PT_JOINEXPR '(' ident '[' cond_expr ']' PHYSICAL_IDENTIFIER_1_0 ')'
+        {   /* remove leading '.'*/
+            $$ = new AST_Expr ( $1 );
+            $$ -> AddNode ( $3 );
+            $$ -> AddNode ( $5 );
+            AST * ident = new AST ( PT_IDENT );
+            Token t ( IDENTIFIER_1_0, $7 -> GetValue() + 1, $$ -> GetLocation() );
+            ident -> AddNode ( & t );
+            $$ -> AddNode ( ident );
+        }
     ;
 
 /* commonly used productions */
