@@ -271,6 +271,30 @@ rc_t CC  VViewGetParameter (
     return 0;
 }
 
+static
+bool
+STableIsA ( const STable * p_self, const STable * p_table )
+{
+    if ( p_self == p_table )
+    {
+        return true;
+    }
+    else
+    {
+        uint32_t i = VectorStart ( & p_self -> parents );
+        uint32_t count = VectorLength ( & p_self -> parents );
+        for ( count += i; i < count; ++ i )
+        {
+            const STable * dad = VectorGet ( & p_self -> parents, i );
+            if ( STableIsA ( dad, p_table ) )
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
 /* BindParameterTable
  *  Bind a view's parameter to a table.
  *
@@ -300,7 +324,9 @@ VViewBindParameterTable ( const VView *     p_self,
             const KSymbol * param = VectorGet ( & p_self -> sview -> params, idx );
             if ( StringEqual ( & param -> name, p_param_name ) )
             {
-                if ( param -> type != eTable || param -> u . obj != p_table -> stbl )
+                const STable * param_table = (const STable *) param -> u . obj;
+                if ( param -> type != eTable ||
+                     ! STableIsA ( p_table -> stbl, param_table ) )
                 {
                     return RC ( rcVDB, rcTable, rcOpening, rcParam, rcWrongType );
                 }
@@ -320,6 +346,30 @@ VViewBindParameterTable ( const VView *     p_self,
         }
 
         return RC ( rcVDB, rcTable, rcOpening, rcParam, rcNotFound );
+    }
+}
+
+static
+bool
+SViewIsA ( const SView * p_self, const SView * p_view )
+{
+    if ( p_self == p_view )
+    {
+        return true;
+    }
+    else
+    {
+        uint32_t i = VectorStart ( & p_self -> parents );
+        uint32_t count = VectorLength ( & p_self -> parents );
+        for ( count += i; i < count; ++ i )
+        {
+            const SViewInstance * dad = VectorGet ( & p_self -> parents, i );
+            if ( SViewIsA ( dad -> dad, p_view ) )
+            {
+                return true;
+            }
+        }
+        return false;
     }
 }
 
@@ -352,7 +402,9 @@ VViewBindParameterView ( const VView *          p_self,
             const KSymbol * param = VectorGet ( & p_self -> sview -> params, idx );
             if ( StringEqual ( & param -> name, p_param_name ) )
             {
-                if ( param -> type != eView || param -> u . obj != p_view -> sview )
+                const SView * param_view = (const SView *) param -> u . obj;
+                if ( param -> type != eView ||
+                     ! SViewIsA ( p_view -> sview, param_view ) )
                 {
                     return RC ( rcVDB, rcTable, rcOpening, rcParam, rcWrongType );
                 }
