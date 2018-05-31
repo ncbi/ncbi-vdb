@@ -664,7 +664,11 @@ rc_t GetEncryptionKey(const VFSManager * self, const VPath * vpath, char* obuff,
 
         if (rc == 0)
         {
-            *pwd_size = string_copy(obuff, buf_size, enc_key->value.addr, enc_key->value.size);
+         /* fix for VDB-3590 */	
+         /* *pwd_size = string_copy(obuff, buf_size, enc_key->value.addr, enc_key->value.size); */
+            memmove(obuff, enc_key->value.addr, enc_key->value.size);	    
+            *pwd_size = enc_key->value.size;
+
             if (*pwd_size != enc_key->value.size)
                 rc = RC(rcVFS, rcPath, rcReading, rcBuffer, rcInsufficient);
             rc2 = KEncryptionKeyRelease(enc_key);

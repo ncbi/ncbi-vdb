@@ -382,7 +382,10 @@ static rc_t KEncryptionKeyMakeInt(const char* value, KEncryptionKey** self)
         return RC ( rcKFG, rcEncryptionKey, rcCreating, rcMemory, rcExhausted );
     else
     {
-        size_t size = string_measure(value, NULL);
+        /* fix for VDB-3590 */
+     /* size_t size = string_measure(value, NULL); */
+        size_t size = string_size   (value);
+
         char* data = malloc(size+1);/*TODO: place in protected memory*/
         if (data == NULL)
         {
@@ -390,7 +393,10 @@ static rc_t KEncryptionKeyMakeInt(const char* value, KEncryptionKey** self)
             return RC ( rcKFG, rcEncryptionKey, rcCreating, rcMemory, rcExhausted );
         }
 
-        string_copy(data, size + 1, value, size);    
+        /* fix for VDB-3590 */	
+     /* string_copy(data, size + 1, value, size); */
+        memmove    (data,           value, size);    
+
         StringInit( & ret -> value, data, size, (uint32_t)size ); /* do not include the 0-terminator */
         
         KRefcountInit ( & ret -> refcount, 1, "KEncryptionKey", "init", "" );
