@@ -178,7 +178,6 @@ VTRANSFACT_IMPL(vdb_cut, 1, 0, 0) (const void *self, const VXfactInfo *info, VFu
 
     assert(dim != 0);
     for (i = 0; i != dim; ++i) {
-printf("vdb_cut:%u %u\n", *(cp->argv[i].data.u32), dp->argv[0].fd.td.dim);
         if (*(cp->argv[i].data.u32) >= dp->argv[0].fd.td.dim)
             return RC(rcVDB, rcFunction, rcConstructing, rcParam, rcInvalid);
     }
