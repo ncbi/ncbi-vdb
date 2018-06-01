@@ -187,7 +187,7 @@ extern int AST_debug;
 
 union YYSTYPE
 {
-#line 57 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1909  */
+
 
   const Token*  tok;
   AST*          node;
@@ -195,7 +195,6 @@ union YYSTYPE
   AST_Expr*     expr;
 
 
-#line 198 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast-tokens.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

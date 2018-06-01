@@ -100,10 +100,10 @@ BISON_VERSION = $(word 4,$(subst ., ,$(shell bison -V | grep "(GNU Bison)")))
 ifeq (1,$(shell echo "3<=$(BISON_VERSION)" | bc -l))
 
 $(SRCDIR)/schema-grammar.cpp: $(SRCDIR)/schema-grammar.y
-	bison -r state -o $(SRCDIR)/schema-grammar.cpp --defines=$(SRCDIR)/schema-tokens.h $(SRCDIR)/schema-grammar.y
+	bison -r state -v --no-lines -o $(SRCDIR)/schema-grammar.cpp --defines=$(SRCDIR)/schema-tokens.h $(SRCDIR)/schema-grammar.y
 
 $(SRCDIR)/schema-ast.cpp: $(SRCDIR)/schema-ast.y
-	bison -r state -o $(SRCDIR)/schema-ast.cpp --defines=$(SRCDIR)/schema-ast-tokens.h $(SRCDIR)/schema-ast.y
+	bison -r state -v --no-lines -o $(SRCDIR)/schema-ast.cpp --defines=$(SRCDIR)/schema-ast-tokens.h $(SRCDIR)/schema-ast.y
 
 else
 
@@ -120,7 +120,7 @@ schema-lex.$(LOBX): $(SRCDIR)/schema-lex.c
 	$(CC)  -Wno-unused-function -o $@ -fPIC $(OPT) -D_LIBRARY $< $(LOC_INFO) -D__file_ext__=c
 
 flex $(SRCDIR)/schema-lex.c: $(SRCDIR)/schema-lex.l $(SRCDIR)/schema-grammar.cpp
-	flex -d -t $(SRCDIR)/schema-lex.l > $(SRCDIR)/schema-lex.c
+	flex -d --noline -t $(SRCDIR)/schema-lex.l> $(SRCDIR)/schema-lex.c
 
 SCHEMA_OBJ = \
 	$(addsuffix .$(LOBX),$(SCHEMA_SRC))

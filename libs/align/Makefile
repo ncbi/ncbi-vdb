@@ -185,7 +185,7 @@ bison:
 	bison --no-lines -g -r all -Werror=all \
 		-o $(SRCDIR)/samextract-grammar.c \
 	--defines=$(SRCDIR)/samextract-tokens.h \
-	-v -Wall \
+	-v -Wall --no-lines \
 	$(SRCDIR)/samextract-grammar.y
 
 ifeq (dbg,$(BUILD))
