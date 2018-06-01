@@ -486,7 +486,7 @@ rc_t VProdResolveMembExpr ( const VProdResolve *    p_self,
                     VProduction * vmember;
                     rc = VProdResolveExpr ( & pr, & vmember, NULL, p_fd, ref, p_casting );
                     SExpressionWhack ( ref );
-                    if ( rc == 0 )
+                    if ( rc == 0 && vmember != NULL )
                     {
                         if ( p_x -> rowId == NULL )
                         {   /* simple member: tbl . col */
@@ -498,7 +498,7 @@ rc_t VProdResolveMembExpr ( const VProdResolve *    p_self,
                             VProduction * rowId;
                             VFormatdecl fd = { { 0, 0 }, 0 };
                             rc = VProdResolveExpr ( p_self, & rowId, NULL, & fd, p_x -> rowId, p_casting );
-                            if ( rc == 0 )
+                            if ( rc == 0 && rowId != NULL )
                             {
                                 VPivotProd * ret;
                                 rc = VPivotProdMake ( & ret, p_self -> owned, vmember, rowId, pr . name -> addr, p_self -> chain );
