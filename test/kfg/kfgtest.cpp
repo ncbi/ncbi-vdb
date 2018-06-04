@@ -51,6 +51,7 @@
 
 #include <klib/debug.h> /* KDbgSetModConds */
 #include <klib/log.h>
+#include <klib/out.h> /* OUTMSG */
 #include <klib/printf.h>
 #include <klib/text.h>
 #include <klib/writer.h>
@@ -913,7 +914,10 @@ FIXTURE_TEST_CASE(KConfigImportNgc_Basic, KfgFixture)
     string ngcPath("./prj_2956.ngc");
     C::t(ngcPath);
     Cleaner cleaner(wd);
+KConfigPrint(kfg,0);
+OUTMSG(("KConfigImportNgc\n"));
     REQUIRE_RC(KConfigImportNgc(kfg, ngcPath.c_str(), "repos/ngc/", &newRepo));
+KConfigPrint(kfg,0);
     TEST_MESSAGE("KConfigImportNgc(" << ngcPath << ")");
     // contents of the input file:
     // id = "2956"
