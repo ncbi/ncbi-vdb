@@ -9,7 +9,7 @@ pipeline {
 //                buildDiscarder(logRotator(numtoKeepStr:'10'))
         }
     triggers {
-        pollSCM("H 4/* 0 0 1-5")
+        pollSCM("H/5 * * * 1-5") // H means hash?
     }
     stages {
         stage('Checkout') {
