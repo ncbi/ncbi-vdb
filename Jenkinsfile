@@ -4,107 +4,111 @@ pipeline {
     // "$BUILD_ID"
     agent none
         options {
-            timeout(time: 30, unit: 'MINUTES')
-                buildDiscarder(logRotator(numtoKeepStr:'10'))
+            timestamps()
+//                timeout(time: 30, unit: 'MINUTES')
+//                buildDiscarder(logRotator(numtoKeepStr:'10'))
         }
     triggers {
         pollSCM("H 4/* 0 0 1-5")
     }
     stages {
         stage('Checkout') {
-            agent any
-                steps {
+            agent { label 'centos' }
+            steps {
+                echo "Starting checkout"
+
                     sh "mkdir $WORKSPACE/devel;"
-                        dir() {
-                            checkout()
-                        }
-                }
+                    git "https://github.com/ncbi/ncbi-vdb"
+                    checkout("https://github.com/ncbi/ncbi-vdb.git")
+                    // git clone ...
+            }
         }
 
         stage('Tarball') {
-            agent any
-                steps {
-                    sh "tar -caf vdb.tar.gz ./*"
-                }
+            agent { label 'centos' }
+            steps {
+                sh "tar -caf vdb.tar.gz ./*"
+            }
             post { success {
-                archiveArtifacts(artifacts: '**/target/*.jar',
-                                                        allowEmptyArchive:
-                                                        true)
+                archiveArtifacts(artifacts: "**/target/*.jar",
+                                 allowEmptyArchive:
+                                 true)
             }
             }
         }
 
         stage('Source RPM') {
-            agent any
-                steps {
-                    sh 'echo "Hello World"'
-                }
+            agent { label 'centos' }
+            steps {
+                sh 'echo "Hello World"'
+            }
         }
 
         stage('Compile') {
-            agent any
-                steps {
-                    sh "./configure --with-debug && make"
-                }
+            agent { label 'centos' }
+            steps {
+                sh "./configure --with-debug "
+                    sh "make"
+            }
         }
 
         stage('SRPM Package') {
-            agent any
-                steps {
-                    sh 'echo "Hello World"'
-                }
+            agent { label 'centos' }
+            steps {
+                sh 'echo "Hello World"'
+            }
         }
 
         stage('RPM Package') {
-            agent any
-                steps {
-                    sh 'echo "Hello World"'
-                }
+            agent { label 'centos' }
+            steps {
+                sh 'echo "Hello World"'
+            }
         }
 
         stage('Debian Package') {
-            agent any // { label 'debian' }
-        steps {
-            sh 'echo "Hello World"'
-        }
+            agent { label 'debian' }
+            steps {
+                sh 'echo "Hello World"'
+            }
         }
 
         stage('CentOS Container') {
-            agent any
-                steps {
-                    sh 'echo "Hello World"'
-                }
+            agent { label 'centos' }
+            steps {
+                sh 'echo "Hello World"'
+            }
         }
 
         stage('Debian Container') {
-            agent any
-                steps {
-                    sh 'echo "Hello World"'
-                }
+            agent { label 'centos' }
+            steps {
+                sh 'echo "Hello World"'
+            }
         }
 
         stage('CentOS Testing') {
-            agent any
-                steps {
-                    sh 'echo "Hello World"'
-                }
+            agent { label 'centos' }
+            steps {
+                sh 'echo "Hello World"'
+            }
         }
 
         stage('Debian Testing') {
-            agent any
-                steps {
-                    sh 'echo "Hello World"'
-                }
+            agent { label 'debian' }
+            steps {
+                sh 'echo "Hello World"'
+            }
         }
 
         stage('Deploy Artifcats') {
-            agent any
-                when {
-                    expression {
-                        currentBuild.result == null || currentBuild.result ==
-                            'SUCCESS'
-                    }
+            agent { label 'centos' }
+            when {
+                expression {
+                    currentBuild.result == null || currentBuild.result ==
+                        'SUCCESS'
                 }
+            }
             steps {
                 sh 'echo "Hello World"'
                     sh '''
@@ -127,7 +131,9 @@ pipeline {
             sh ''
         }
         failure {
-            sh ''
+            mail to: 'mike.vartanian@nih.gov',
+                 subject: 'build failed',
+                 body: 'something happened'
         }
     } // post
 
