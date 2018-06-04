@@ -17,10 +17,10 @@ pipeline {
             steps {
                 echo "Starting checkout"
 
-                    sh "mkdir $WORKSPACE/devel;"
-                    git "https://github.com/ncbi/ncbi-vdb"
-                    checkout("https://github.com/ncbi/ncbi-vdb.git")
-                    // git clone ...
+                    sh "mkdir $WORKSPACE/devel"
+//                    git clone https://github.com/ncbi/ncbi-vdb.git
+
+//                    checkout("https://github.com/ncbi/ncbi-vdb.git")
             }
         }
 
