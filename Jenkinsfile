@@ -160,16 +160,14 @@ pipeline {
 
         stage('Deploy Artifacts') {
             agent { docker { image 'centos7' } }
-            expression {
+            when {
+                expression {
                 currentBuild.result == null || currentBuild.result ==
                     'SUCCESS'
+                }
             }
             steps {
                 sh 'echo "Hello World"'
-                    sh '''
-                    echo "Multiline shell steps works too"
-                    ls -lah
-                    '''
             }
         }
 
