@@ -33,8 +33,9 @@ pipeline {
                     agent {
                         dockerfile {
                             filename 'Dockerfile'
-                            dir '$WORKSPACE/build'
-                            additionalBuildArgs '-t centos7'
+                                // dir '$WORKSPACE/build'
+                                dir '/build'
+                                additionalBuildArgs '-t centos7'
                         }
                     }
                     steps { sh "df -HT" }
@@ -42,7 +43,7 @@ pipeline {
 
                 stage('Debian9')
                 {
-                    agent { dockerfile { filename 'Dockerfile.debian9' dir '$WORKSPACE/build' additionalBuildArgs '-t debian9' } }
+                    agent { dockerfile { filename 'Dockerfile.debian9' dir 'build' additionalBuildArgs '-t debian9' } }
                     steps { sh "df -HT" }
                 }
             }
