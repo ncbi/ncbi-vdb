@@ -255,6 +255,7 @@ pipeline
         }
         failure
         {
+            sh ''
             /*
             mail to: 'mike.vartanian@nih.gov',
                  subject: 'build failed',
