@@ -148,6 +148,13 @@ pipeline {
                         sh 'echo "Hello World"'
                     }
                 }
+
+                stage('Debian Code Coverage') {
+                    agent { docker { image 'debian9' } }
+                    steps {
+                        sh 'echo "Hello World"'
+                    }
+                }
             }
         }
 
@@ -165,23 +172,22 @@ pipeline {
                 ls -lah
                 '''
         }
-    }
-    // TODO: Valgrind, Fuzz, Nightly Deep Test
-    // Amazon EC2 slave
-    // AWS Steps (s3Upload)
-} // stages
-post {
-    always {
-        sh 'echo'
-    }
-    success {
-        sh ''
-    }
-    failure {
-        mail to: 'mike.vartanian@nih.gov',
-             subject: 'build failed',
-             body: 'something happened'
-    }
-} // post
+        // TODO: Valgrind, Fuzz, Nightly Deep Test
+        // Amazon EC2 slave
+        // AWS Steps (s3Upload)
+    } // stages
+    post {
+        always {
+            sh 'echo'
+        }
+        success {
+            sh ''
+        }
+        failure {
+            mail to: 'mike.vartanian@nih.gov',
+                 subject: 'build failed',
+                 body: 'something happened'
+        }
+    } // post
 } // pipeline
 
