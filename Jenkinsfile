@@ -2,7 +2,7 @@
 // Helps IDE github format, not an actual Groovy script
 pipeline {
     // "$BUILD_ID"
-    agent none
+    agent any
         options {
             timestamps()
                 //                timeout(time: 30, unit: 'MINUTES')
