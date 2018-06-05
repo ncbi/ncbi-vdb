@@ -1,15 +1,18 @@
-%define _topdir /tmp
+%define _topdir /tmp/vdb
 %define version 3.0.0
 %define name vdb
 %define buildroot %{_topdir}/%{name}-%{version}-root
 
-BuildRoot: %{buildroot}
-Summary: NCBI VDB
-License: Public Domain
+
+Name: %{name}
 Version: %{version}
-Release: %{version}
-Copyright: Public Domain
-Group: Development/Tools
+Release: 1%{?dist}
+Summary: NCBI VDB
+BuildRequires: bison,flex,libxml2,gcc-c++
+Requires: libxml2,zlib
+BuildArch: x86_64
+License: Public Domain
+Packager: mike.vartanian@nih.gov
 Source: https://github.com/ncbi/ncbi-vdb
 URL: https://github.com/ncbi/ncbi-vdb
 
@@ -18,28 +21,24 @@ The SRA Toolkit and SDK from NCBI is a collection of tools and libraries
 for using data in the INSDC Sequence Read Archives.
 
 %prep
+cd $RPM_BUILD_ROOT
+rm -rf vdb*
 tar -xaf vdb.tar.gz
-
-%setup -q
 
 %build
 ./configure --without-debug
 make
 
 %install
-rm -rf $RPM_BUILD_ROOT
-make INSTALL_ROOT=$RPM_BUILD_ROOT install
+mkdir -p %{buildroot}/{%_bindir}
+mkdir -p %{buildroot}/ncbi-outdir
 
-%clean
-make clean
-rm -rf $RPM_BUILD_ROOT
+# %{_bindir} is /usr/bin
+%make_install
+make INSTALL_ROOT=$RPM_BUILD_ROOT install
+ls -lR ${buildroot}/ncbi-outdir
 
 %files
+%license LICENSE
 %defattr(-,root,root)
-%{directory}/lib
-%{directory}/bin
-%{directory}/include
-%{directory}/man/man1
-%{directory}/man/man3
-%{directory}/man/mann
-
+%{_bindir}/

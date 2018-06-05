@@ -12,6 +12,7 @@ RUN yum -y --exclude=kernel.* update \
     git \
     libcurl-devel \
     make \
+    rpmlint \
     rpm-build \
     zlib-devel \
         && \

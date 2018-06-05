@@ -9,4 +9,5 @@ cd ..
 
 rpmbuild -v -bs --clean SPECS/vdb.spec
 
+rpmlint 
 rpm -Vp RPMS/x86_64/vdb*rpm
