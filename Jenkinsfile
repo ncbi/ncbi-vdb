@@ -16,7 +16,7 @@ pipeline {
             agent any
                 steps {
                     echo "Starting checkout"
-                        id
+                        sh "id"
                         sh "echo $WORKSPACE"
                         //sh "mkdir -p $WORKSPACE/devel"
                         //                    git clone https://github.com/ncbi/ncbi-vdb.git
