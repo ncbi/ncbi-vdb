@@ -132,13 +132,29 @@ pipeline
                         sh "make"
                     }
                 }
-                stage('Compile')
+                stage('Linux Compile')
                 {
                     agent { docker { image 'centos7' } }
                     steps
                     {
                         sh "./configure --with-debug "
                         sh "make"
+                    }
+                }
+                stage('macOS Compile')
+                {
+                    agent { docker { image 'centos7' } }
+                    steps
+                    {
+                        sh "echo talk to xcode here"
+                    }
+                }
+                stage('Windows Compile')
+                {
+                    agent { docker { image 'centos7' } }
+                    steps
+                    {
+                        sh "echo talk to MSVC here"
                     }
                 }
             }
