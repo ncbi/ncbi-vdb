@@ -102,10 +102,10 @@ pipeline
                     agent { docker { image 'centos7' } }
                     steps
                     {
-                        sh 'echo "Hello World"'
+                        sh 'build/makerpm.sh'
                     }
-                    post 
-                    { 
+                    post
+                    {
                         success
                         {
                             archiveArtifacts(artifacts: "**/*.srpm",
