@@ -32,7 +32,7 @@ pipeline {
                     steps { sh "df -HT" }
                 }
 
-                statge('Debian9')
+                stage('Debian9')
                 {
                     agent { dockerfile { filename 'Dockerfile.debian9' dir 'build' additionalBuildArgs '-t debian9' } }
                     steps { sh "df -HT" }
@@ -158,7 +158,7 @@ pipeline {
             }
         }
 
-        stage('Deploy Artifcats') {
+        stage('Deploy Artifacts') {
             agent { docker { image 'centos7' } }
             expression {
                 currentBuild.result == null || currentBuild.result ==
