@@ -39,8 +39,7 @@ pipeline
                     {
                         dockerfile
                         {
-                            filename 'Dockerfile'
-                            // dir '$WORKSPACE/build'
+                            filename 'Dockerfile.centos7'
                             dir 'build'
                             additionalBuildArgs '-t centos7'
                         }
