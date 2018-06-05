@@ -33,7 +33,7 @@ pipeline
         {
             parallel
             {
-                stage('CentOS7')
+                stage('CentOS 7')
                 {
                     agent
                     {
@@ -52,7 +52,7 @@ pipeline
                     }
                 }
 
-                stage('Debian9')
+                stage('Debian 9')
                 {
                     agent
                     {
@@ -144,7 +144,7 @@ pipeline
             }
         }
 
-        stage('Packaging')
+        stage('Binary Packaging')
         {
             parallel
             {
@@ -168,7 +168,7 @@ pipeline
             }
         }
 
-        stage('Containerization')
+        stage('Dockerizing')
         {
             parallel
             {

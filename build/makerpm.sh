@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 pwd
-mkdir  BUILD RPMS SOURCES SPECS SRPMS
+ls
+mkdir -p BUILD RPMS SOURCES SPECS SRPMS
 cd SOURCES
-cp ../../vbd.tar.gz .
+tar -xavf ../vdb.tar.gz
+cp build/vdb.spec ../SPECS
 cd ..
 
 rpmbuild -v -bs --clean SPECS/vdb.spec
