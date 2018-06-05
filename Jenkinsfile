@@ -164,14 +164,15 @@ pipeline {
                 currentBuild.result == null || currentBuild.result ==
                     'SUCCESS'
             }
+            steps {
+                sh 'echo "Hello World"'
+                    sh '''
+                    echo "Multiline shell steps works too"
+                    ls -lah
+                    '''
+            }
         }
-        steps {
-            sh 'echo "Hello World"'
-                sh '''
-                echo "Multiline shell steps works too"
-                ls -lah
-                '''
-        }
+
         // TODO: Valgrind, Fuzz, Nightly Deep Test
         // Amazon EC2 slave
         // AWS Steps (s3Upload)
