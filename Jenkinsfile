@@ -1,85 +1,116 @@
 #!/usr/bin/env groovy
 // Helps IDE github format, not an actual Groovy script
-pipeline {
+pipeline
+{
     // "$BUILD_ID"
     agent any
-        options {
+        options
+        {
             timestamps()
                 //                timeout(time: 30, unit: 'MINUTES')
                 //                buildDiscarder(logRotator(numtoKeepStr:'10'))
         } // options
-    triggers {
+    triggers
+    {
         pollSCM("H/5 * * * 1-5") // H means hash?
     } // triggers
-    stages {
-        stage('Checkout') {
+    stages
+    {
+        stage('Checkout')
+        {
             agent any
-                steps {
+                steps
+                {
                     echo "Starting checkout"
-                        sh "id"
-                        sh "pwd"
-                        sh "echo $WORKSPACE"
-                        sh "head /etc/*release*"
-                        //sh "mkdir -p $WORKSPACE/devel"
-                        //                    git clone https://github.com/ncbi/ncbi-vdb.git
-
-                        //                    checkout("https://github.com/ncbi/ncbi-vdb.git")
+                    sh "id"
+                    sh "pwd"
+                    sh "echo $WORKSPACE"
+                    sh "head /etc/*release*"
                 }
         }
 
-        stage('Create build containers') {
-            parallel {
+        stage('Create build containers')
+        {
+            parallel
+            {
                 stage('CentOS7')
                 {
-                    agent {
-                        dockerfile {
+                    echo "On CentOS7"
+                    agent
+                    {
+                        dockerfile
+                        {
                             filename 'Dockerfile'
-                                // dir '$WORKSPACE/build'
-                                dir 'build'
-                                additionalBuildArgs '-t centos7'
+                            // dir '$WORKSPACE/build'
+                            dir 'build'
+                            additionalBuildArgs '-t centos7'
                         }
                     }
-                    echo "On CentOS7"
-                        steps { sh "df -HT" 
-                            sh "head /etc/*release*"
-                        }
+                    steps
+                    {
+                        sh "df -HT"
+                        sh "head /etc/*release*"
+                    }
                 }
 
                 stage('Debian9')
                 {
-                    agent { dockerfile { filename 'Dockerfile.debian9' dir 'build' additionalBuildArgs '-t debian9' } }
                     echo "On Debian9"
-                        steps { sh "df -HT" 
-                            sh "head /etc/*release*" }
+                    agent
+                    {
+                        dockerfile
+                        {
+                            filename 'Dockerfile.debian9'
+                            dir 'build'
+                            additionalBuildArgs '-t debian9'
+                        }
+                    }
+                    steps
+                    {
+                        sh "df -HT"
+                        sh "head /etc/*release*"
+                    }
                 }
             }
         }
 
-        stage('Source Packaging') {
-            parallel {
-                stage('Tarball') {
+        stage('Source Packaging')
+        {
+            parallel
+            {
+                stage('Tarball')
+                {
                     agent { docker { image 'centos7' } }
-                    steps {
+                    steps
+                    {
                         sh "tar -caf vdb.tar.gz ./*"
                     }
-                    post { success {
-                        archiveArtifacts(artifacts: "**/target/*.jar",
-                                         allowEmptyArchive:
-                                         false)
-                    }
+                    post
+                    {
+                        success
+                        {
+                            archiveArtifacts(artifacts: "**/target/*.jar",
+                                             allowEmptyArchive:
+                                             false)
+                        }
                     }
                 }
 
-                stage('Source RPM') {
+                stage('Source RPM')
+                {
                     agent { docker { image 'centos7' } }
-                    steps {
+                    steps
+                    {
                         sh 'echo "Hello World"'
                     }
-                    post { success {
-                        archiveArtifacts(artifacts: "**/*.srpm",
-                                         allowEmptyArchive:
-                                         false)
-                    }
+                    post 
+                    { 
+                        success
+                        {
+                            archiveArtifacts(artifacts: "**/*.srpm",
+                                             allowEmptyArchive:
+                                             false)
+                        }
                     }
                 }
             }
@@ -87,19 +118,24 @@ pipeline {
 
         stage('Compilation')
         {
-            parallel {
-                stage('Static Analysis') {
+            parallel
+            {
+                stage('Static Analysis')
+                {
                     agent { docker { image 'debian9' } }
-                    steps {
+                    steps
+                    {
                         sh "./configure --with-debug "
-                            sh "make"
+                        sh "make"
                     }
                 }
-                stage('Compile') {
+                stage('Compile')
+                {
                     agent { docker { image 'centos7' } }
-                    steps {
+                    steps
+                    {
                         sh "./configure --with-debug "
-                            sh "make"
+                        sh "make"
                     }
                 }
             }
@@ -109,17 +145,20 @@ pipeline {
         {
             parallel
             {
-
-                stage('RPM Package') {
+                stage('RPM Package')
+                {
                     agent { docker { image 'centos7' } }
-                    steps {
+                    steps
+                    {
                         sh 'echo "Hello World"'
                     }
                 }
 
-                stage('Debian Package') {
+                stage('Debian Package')
+                {
                     agent { docker { image 'debian9' } }
-                    steps {
+                    steps
+                    {
                         sh 'echo "Hello World"'
                     }
                 }
@@ -130,16 +169,20 @@ pipeline {
         {
             parallel
             {
-                stage('CentOS Container') {
+                stage('CentOS Container')
+                {
                     agent { docker { image 'centos7' } }
-                    steps {
+                    steps
+                    {
                         sh 'echo "Hello World"'
                     }
                 }
 
-                stage('Debian Container') {
+                stage('Debian Container')
+                {
                     agent { docker { image 'debian9' } }
-                    steps {
+                    steps
+                    {
                         sh 'echo "Hello World"'
                     }
                 }
@@ -148,40 +191,50 @@ pipeline {
 
         stage('Container Testing')
         {
-            parallel {
-
-                stage('CentOS Testing') {
+            parallel
+            {
+                stage('CentOS Testing')
+                {
                     agent { docker { image 'centos7' } }
-                    steps {
+                    steps
+                    {
                         sh 'echo "Hello World"'
                     }
                 }
 
-                stage('Debian Testing') {
+                stage('Debian Testing')
+                {
                     agent { docker { image 'debian9' } }
-                    steps {
+                    steps
+                    {
                         sh 'echo "Hello World"'
                     }
                 }
 
-                stage('Debian Code Coverage') {
+                stage('Debian Code Coverage')
+                {
                     agent { docker { image 'debian9' } }
-                    steps {
+                    steps
+                    {
                         sh 'echo "Hello World"'
                     }
                 }
             }
         }
 
-        stage('Deploy Artifacts') {
+        stage('Deploy Artifacts')
+        {
             agent { docker { image 'centos7' } }
-            when {
-                expression {
+            when
+            {
+                expression
+                {
                     currentBuild.result == null || currentBuild.result ==
                         'SUCCESS'
                 }
             }
-            steps {
+            steps
+            {
                 sh 'echo "Hello World"'
             }
         }
@@ -190,14 +243,18 @@ pipeline {
         // Amazon EC2 slave
         // AWS Steps (s3Upload)
     } // stages
-    post {
-        always {
+    post
+    {
+        always
+        {
             sh 'echo'
         }
-        success {
+        success
+        {
             sh ''
         }
-        failure {
+        failure
+        {
             mail to: 'mike.vartanian@nih.gov',
                  subject: 'build failed',
                  body: 'something happened'
