@@ -5,138 +5,183 @@ pipeline {
     agent none
         options {
             timestamps()
-//                timeout(time: 30, unit: 'MINUTES')
-//                buildDiscarder(logRotator(numtoKeepStr:'10'))
-        }
+                //                timeout(time: 30, unit: 'MINUTES')
+                //                buildDiscarder(logRotator(numtoKeepStr:'10'))
+        } // options
     triggers {
         pollSCM("H/5 * * * 1-5") // H means hash?
-    }
+    } // triggers
     stages {
         stage('Checkout') {
-            agent { label 'centos' }
-            steps {
-                echo "Starting checkout"
+            agent any
+                steps {
+                    echo "Starting checkout"
 
-                    sh "mkdir $WORKSPACE/devel"
-//                    git clone https://github.com/ncbi/ncbi-vdb.git
+                        sh "mkdir $WORKSPACE/devel"
+                        //                    git clone https://github.com/ncbi/ncbi-vdb.git
 
-//                    checkout("https://github.com/ncbi/ncbi-vdb.git")
+                        //                    checkout("https://github.com/ncbi/ncbi-vdb.git")
+                }
+        }
+
+        stage('Create build containers') {
+            parallel {
+                stage('CentOS7')
+                {
+                    agent { dockerfile { filename 'Dockerfile.centos7' dir 'build' additionalBuildArgs '-t centos7' } }
+                    steps { sh "df -HT" }
+                }
+
+                statge('Debian9')
+                {
+                    agent { dockerfile { filename 'Dockerfile.debian9' dir 'build' additionalBuildArgs '-t debian9' } }
+                    steps { sh "df -HT" }
+                }
             }
         }
 
-        stage('Tarball') {
-            agent { label 'centos' }
-            steps {
-                sh "tar -caf vdb.tar.gz ./*"
-            }
-            post { success {
-                archiveArtifacts(artifacts: "**/target/*.jar",
-                                 allowEmptyArchive:
-                                 true)
-            }
+        stage('Source Packaging') {
+            parallel {
+                stage('Tarball') {
+                    agent { docker { image 'centos7' } }
+                    steps {
+                        sh "tar -caf vdb.tar.gz ./*"
+                    }
+                    post { success {
+                        archiveArtifacts(artifacts: "**/target/*.jar",
+                                         allowEmptyArchive:
+                                         false)
+                    }
+                    }
+                }
+
+                stage('Source RPM') {
+                    agent { docker { image 'centos7' } }
+                    steps {
+                        sh 'echo "Hello World"'
+                    }
+                    post { success {
+                        archiveArtifacts(artifacts: "**/*.srpm",
+                                         allowEmptyArchive:
+                                         false)
+                    }
+                    }
+                }
             }
         }
 
-        stage('Source RPM') {
-            agent { label 'centos' }
-            steps {
-                sh 'echo "Hello World"'
+        stage('Compilation')
+        {
+            parallel {
+                stage('Static Analysis') {
+                    agent { docker { image 'debian9' } }
+                    steps {
+                        sh "./configure --with-debug "
+                            sh "make"
+                    }
+                }
+                stage('Compile') {
+                    agent { docker { image 'centos7' } }
+                    steps {
+                        sh "./configure --with-debug "
+                            sh "make"
+                    }
+                }
             }
         }
 
-        stage('Compile') {
-            agent { label 'centos' }
-            steps {
-                sh "./configure --with-debug "
-                    sh "make"
+        stage('Packaging')
+        {
+            parallel
+            {
+
+                stage('RPM Package') {
+                    agent { docker { image 'centos7' } }
+                    steps {
+                        sh 'echo "Hello World"'
+                    }
+                }
+
+                stage('Debian Package') {
+                    agent { docker { image 'debian9' } }
+                    steps {
+                        sh 'echo "Hello World"'
+                    }
+                }
             }
         }
 
-        stage('SRPM Package') {
-            agent { label 'centos' }
-            steps {
-                sh 'echo "Hello World"'
+        stage('Containerization')
+        {
+            parallel
+            {
+                stage('CentOS Container') {
+                    agent { docker { image 'centos7' } }
+                    steps {
+                        sh 'echo "Hello World"'
+                    }
+                }
+
+                stage('Debian Container') {
+                    agent { docker { image 'debian9' } }
+                    steps {
+                        sh 'echo "Hello World"'
+                    }
+                }
             }
         }
 
-        stage('RPM Package') {
-            agent { label 'centos' }
-            steps {
-                sh 'echo "Hello World"'
-            }
-        }
+        stage('Container Testing')
+        {
+            parallel {
 
-        stage('Debian Package') {
-            agent { label 'debian' }
-            steps {
-                sh 'echo "Hello World"'
-            }
-        }
+                stage('CentOS Testing') {
+                    agent { docker { image 'centos7' } }
+                    steps {
+                        sh 'echo "Hello World"'
+                    }
+                }
 
-        stage('CentOS Container') {
-            agent { label 'centos' }
-            steps {
-                sh 'echo "Hello World"'
-            }
-        }
-
-        stage('Debian Container') {
-            agent { label 'centos' }
-            steps {
-                sh 'echo "Hello World"'
-            }
-        }
-
-        stage('CentOS Testing') {
-            agent { label 'centos' }
-            steps {
-                sh 'echo "Hello World"'
-            }
-        }
-
-        stage('Debian Testing') {
-            agent { label 'debian' }
-            steps {
-                sh 'echo "Hello World"'
+                stage('Debian Testing') {
+                    agent { docker { image 'debian9' } }
+                    steps {
+                        sh 'echo "Hello World"'
+                    }
+                }
             }
         }
 
         stage('Deploy Artifcats') {
-            agent { label 'centos' }
-            when {
-                expression {
-                    currentBuild.result == null || currentBuild.result ==
-                        'SUCCESS'
-                }
-            }
-            steps {
-                sh 'echo "Hello World"'
-                    sh '''
-                    echo "Multiline shell steps works too"
-                    ls -lah
-                    '''
+            agent { docker { image 'centos7' } }
+            expression {
+                currentBuild.result == null || currentBuild.result ==
+                    'SUCCESS'
             }
         }
-        // TODO: Valgrind, Fuzz, Nightly Deep Test
-        // Debian Pbuilder
-        // Amazon EC2 slave
-        // AWS Steps (s3Upload)
-
-    } // stages
-    post {
-        always {
-            sh 'echo'
+        steps {
+            sh 'echo "Hello World"'
+                sh '''
+                echo "Multiline shell steps works too"
+                ls -lah
+                '''
         }
-        success {
-            sh ''
-        }
-        failure {
-            mail to: 'mike.vartanian@nih.gov',
-                 subject: 'build failed',
-                 body: 'something happened'
-        }
-    } // post
-
-
-}
+    }
+    // TODO: Valgrind, Fuzz, Nightly Deep Test
+    // Amazon EC2 slave
+    // AWS Steps (s3Upload)
+} // stages
+post {
+    always {
+        sh 'echo'
+    }
+    success {
+        sh ''
+    }
+    failure {
+        mail to: 'mike.vartanian@nih.gov',
+             subject: 'build failed',
+             body: 'something happened'
+    }
+} // post
+} // pipeline
 
