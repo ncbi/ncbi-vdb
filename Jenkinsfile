@@ -82,13 +82,15 @@ pipeline
                     agent { docker { image 'centos7' } }
                     steps
                     {
+                        sh "pwd"
+                        sh "ls"
                         sh "tar -caf vdb.tar.gz ./*"
                     }
                     post
                     {
                         success
                         {
-                            archiveArtifacts(artifacts: "**/target/*.jar",
+                            archiveArtifacts(artifacts: "vdb.tar.gz",
                                              allowEmptyArchive:
                                              false)
                         }
