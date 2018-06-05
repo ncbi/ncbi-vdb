@@ -16,8 +16,8 @@ pipeline {
             agent any
                 steps {
                     echo "Starting checkout"
-
-                        sh "mkdir $WORKSPACE/devel"
+                        sh "echo $WORKSPACE"
+                        //sh "mkdir -p $WORKSPACE/devel"
                         //                    git clone https://github.com/ncbi/ncbi-vdb.git
 
                         //                    checkout("https://github.com/ncbi/ncbi-vdb.git")
@@ -162,8 +162,8 @@ pipeline {
             agent { docker { image 'centos7' } }
             when {
                 expression {
-                currentBuild.result == null || currentBuild.result ==
-                    'SUCCESS'
+                    currentBuild.result == null || currentBuild.result ==
+                        'SUCCESS'
                 }
             }
             steps {
