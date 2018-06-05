@@ -19,6 +19,7 @@ pipeline {
                         sh "id"
                         sh "pwd"
                         sh "echo $WORKSPACE"
+                        sh "head /etc/*release*"
                         //sh "mkdir -p $WORKSPACE/devel"
                         //                    git clone https://github.com/ncbi/ncbi-vdb.git
 
@@ -38,13 +39,18 @@ pipeline {
                                 additionalBuildArgs '-t centos7'
                         }
                     }
-                    steps { sh "df -HT" }
+                    echo "On CentOS7"
+                        steps { sh "df -HT" 
+                            sh "head /etc/*release*"
+                        }
                 }
 
                 stage('Debian9')
                 {
                     agent { dockerfile { filename 'Dockerfile.debian9' dir 'build' additionalBuildArgs '-t debian9' } }
-                    steps { sh "df -HT" }
+                    echo "On Debian9"
+                        steps { sh "df -HT" 
+                            sh "head /etc/*release*" }
                 }
             }
         }
