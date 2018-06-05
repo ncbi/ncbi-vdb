@@ -84,7 +84,8 @@ pipeline
                     {
                         sh "pwd"
                         sh "ls"
-                        sh "tar -caf vdb.tar.gz *"
+                        sh "tar -caf /tmp/vdb.tar.gz *"
+                        sh "mv /tmp/vdb.tar.gz ."
                         sh "ls -l vdb.tar.gz"
                     }
                     post
