@@ -25,6 +25,7 @@ pipeline {
         }
 
         stage('Create build containers') {
+            agent any
             parallel {
                 stage('CentOS7')
                 {
