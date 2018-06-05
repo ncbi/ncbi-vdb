@@ -35,7 +35,6 @@ pipeline
             {
                 stage('CentOS7')
                 {
-                    echo "On CentOS7"
                     agent
                     {
                         dockerfile
@@ -48,6 +47,7 @@ pipeline
                     }
                     steps
                     {
+                        echo "On CentOS7"
                         sh "df -HT"
                         sh "head /etc/*release*"
                     }
@@ -55,7 +55,6 @@ pipeline
 
                 stage('Debian9')
                 {
-                    echo "On Debian9"
                     agent
                     {
                         dockerfile
@@ -67,6 +66,7 @@ pipeline
                     }
                     steps
                     {
+                        echo "On Debian9"
                         sh "df -HT"
                         sh "head /etc/*release*"
                     }
@@ -255,9 +255,11 @@ pipeline
         }
         failure
         {
+            /*
             mail to: 'mike.vartanian@nih.gov',
                  subject: 'build failed',
                  body: 'something happened'
+             */
         }
     } // post
 } // pipeline
