@@ -337,8 +337,8 @@ int64_t
 CC SViewNameCmp ( const void * key, const void * n )
 {
     const SView * a = ( const SView * ) key;
-    const SView * b = ( const SView * ) n;
-    return StringCompare ( & a -> name -> name, & b -> name -> name );
+    const SViewInstance * b = (const SViewInstance *)n;
+    return StringCompare ( & a -> name -> name, & b -> dad -> name -> name );
 }
 
 bool
@@ -378,7 +378,7 @@ ViewDeclaration :: Extend ( const Token :: Location & p_loc, const SView * p_dad
         }
         if ( ! InitParentInstance ( parent, p_dad, p_params ) ||
             ! m_builder . VectorAppend ( m_self -> parents, NULL, parent ) )
-        {
+        {   
             SViewInstanceWhack ( parent, 0 );
             return false;
         }

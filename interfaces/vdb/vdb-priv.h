@@ -115,6 +115,12 @@ VDB_EXTERN rc_t CC VDBManagerMakeUpdateWithVFSManager (
 VDB_EXTERN rc_t CC VDBManagerSetResolver
     ( struct VDBManager const * self, struct VResolver * resolver );
 
+
+/** Unreliable object: do not report occured erros */
+VDB_EXTERN int CC VDBManagerPathTypeUnreliable ( const struct VDBManager * self,
+     const char *object, ... );
+
+
 /*--------------------------------------------------------------------------
  * VSchema
  */

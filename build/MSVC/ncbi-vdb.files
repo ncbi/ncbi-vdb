@@ -3768,5 +3768,7 @@
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)wgsxf-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)wgsxf-%(Filename).obj</ObjectFileName>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\diagnose\diagnose.c" />
+    <ClCompile Include="..\..\..\libs\diagnose\endpoint.c" />
   </ItemGroup>
 </Project>

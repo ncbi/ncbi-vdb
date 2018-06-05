@@ -228,8 +228,8 @@ public:
         THROW_ON_RC ( VBlobIdRange ( m_blob, & first, & count ) );
         THROW_ON_FALSE ( p_first == first );
         THROW_ON_FALSE ( p_count == count );
-#ifdef _DEBUGGING
-// in Release size may differ
+        // blob size depends on release/debug build amd 32/64 bits, so will only check it in DEBUG/64
+#if _DEBUGGING && _ARCH_BITS == 64
         size_t bytes;
         THROW_ON_RC ( VBlobSize ( m_blob, & bytes ) );
         THROW_ON_FALSE ( p_bytes == bytes );

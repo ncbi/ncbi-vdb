@@ -61,6 +61,7 @@ rc_t KService1Search ( const struct KNSManager * mgr, const char * cgi,
     const char * acc, const struct Kart ** result );
 
 
+
 #ifdef __cplusplus
 }
 #endif

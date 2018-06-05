@@ -2136,9 +2136,13 @@ rc_t VPivotProdRead ( VPivotProd * p_self, struct VBlob ** p_vblob, int64_t * p_
         }
         /* assume elem size is 64 */
         int64_t newRowId = * ( ( int64_t* ) rowIdBlob -> data . base + elemNum );
-       	vblob_release ( rowIdBlob, NULL );
 
-        rc = VProductionReadBlob ( p_self -> member, p_vblob, & newRowId, p_cnt, NULL);
+		assert ( rowLen == 1);
+        assert ( repeat_count == 1);
+
+		vblob_release ( rowIdBlob, NULL );
+
+		rc = VProductionReadBlob ( p_self -> member, p_vblob, & newRowId, p_cnt, NULL);
         if ( rc == 0 )
         {
             /* the cache mechanism will get confused by our overwriting p_id, so turn it off */

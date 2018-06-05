@@ -323,6 +323,11 @@ LIB_EXPORT rc_t CC KConfig_Get_User_Access_Enabled( const KConfig *self, bool * 
 LIB_EXPORT rc_t CC KConfig_Set_User_Access_Enabled( KConfig *self, bool enabled )
 {   return KConfig_Set_Repository_State( self, enabled, true, PATH_REPOSITORY_USER_DISABLED ); }
 
+#define PATH_ALLOW_ALL_CERTS "/tls/allow-all-certs"
+LIB_EXPORT rc_t CC KConfig_Get_Allow_All_Certs( const KConfig *self, bool * enabled )
+{   return KConfig_Get_Repository_State( self, enabled, false, false, PATH_ALLOW_ALL_CERTS ); }
+LIB_EXPORT rc_t CC KConfig_Set_Allow_All_Certs( KConfig *self, bool enabled )
+{   return KConfig_Set_Repository_State( self, enabled, false, PATH_ALLOW_ALL_CERTS ); }
 
 #define PATH_REPOSITORY_USER_PUBLIC_DISABLED "/repository/user/main/public/disabled"
 LIB_EXPORT rc_t CC KConfig_Get_User_Public_Enabled( const KConfig *self, bool * enabled )

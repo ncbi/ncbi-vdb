@@ -30,8 +30,13 @@
    This special exception was added by the Free Software Foundation in
    version 2.2 of Bison.  */
 
+<<<<<<< HEAD
 #ifndef YY_SCHEMA_2T_DATA_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_TOKENS_H_INCLUDED
 # define YY_SCHEMA_2T_DATA_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_TOKENS_H_INCLUDED
+=======
+#ifndef YY_SCHEMA_2T_DATA_ALTDEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_TOKENS_H_INCLUDED
+# define YY_SCHEMA_2T_DATA_ALTDEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_TOKENS_H_INCLUDED
+>>>>>>> engineering
 /* Debug traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
@@ -207,4 +212,8 @@ struct YYLTYPE
 
 int Schema_parse (ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb);
 
+<<<<<<< HEAD
 #endif /* !YY_SCHEMA_2T_DATA_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_TOKENS_H_INCLUDED  */
+=======
+#endif /* !YY_SCHEMA_2T_DATA_ALTDEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_TOKENS_H_INCLUDED  */
+>>>>>>> engineering

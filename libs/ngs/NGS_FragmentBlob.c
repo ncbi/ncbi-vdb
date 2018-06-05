@@ -108,7 +108,7 @@ NGS_FragmentBlobMake ( ctx_t ctx, const NGS_String* run, const struct NGS_Cursor
                     {
                         TRY ( ret -> blob_READ_LEN = NGS_CursorGetVBlob ( curs, ctx, rowId, seq_READ_LEN ) )
                         {
-                            TRY ( ret -> blob_READ_TYPE = NGS_CursorGetVBlob ( curs, ctx, rowId, seq_READ_TYPE ) );
+                            TRY ( ret -> blob_READ_TYPE = NGS_CursorGetVBlob ( curs, ctx, rowId, seq_READ_TYPE ) )
                             {
                                 ret -> rowId = rowId;
                                 TRY ( VByteBlob_ContiguousChunk ( ret -> blob_READ,

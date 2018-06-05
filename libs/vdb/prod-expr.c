@@ -458,8 +458,9 @@ rc_t VProdResolveMembExpr ( const VProdResolve *    p_self,
     if ( p_x -> member -> type == eColumn || p_x -> member -> type == eProduction )
     {
         VProdResolve pr = * p_self;
+		const void * boundObj;
         pr . name = & object -> name;
-        const void * boundObj = VViewGetBoundObject ( pr . view, p_x -> view, p_x -> paramId );
+        boundObj = VViewGetBoundObject ( pr . view, p_x -> view, p_x -> paramId );
         if ( boundObj != 0 )
         {
             switch ( object -> type )

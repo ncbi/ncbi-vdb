@@ -47,7 +47,7 @@ LP = @ $(TOP)/build/ld.sh $(OS) $(ARCH) clang++ \
 
 # tool options
 WARN = -Wall -Wno-variadic-macros -Wno-long-long # -Wconversion
-
+# TODO: Lots of new clang options in later versions (-fsanitize, CFI, CPI, ...)
 ifeq (64,$(BITS))
 	CARCH = -m64
 else
