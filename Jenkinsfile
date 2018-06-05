@@ -17,6 +17,7 @@ pipeline {
                 steps {
                     echo "Starting checkout"
                         sh "id"
+                        sh "pwd"
                         sh "echo $WORKSPACE"
                         //sh "mkdir -p $WORKSPACE/devel"
                         //                    git clone https://github.com/ncbi/ncbi-vdb.git
@@ -29,7 +30,13 @@ pipeline {
             parallel {
                 stage('CentOS7')
                 {
-                    agent { dockerfile { filename 'Dockerfile.centos7' dir '$WORKSPACE/build' additionalBuildArgs '-t centos7' } }
+                    agent {
+                        dockerfile {
+                            filename 'Dockerfile'
+                            dir '$WORKSPACE/build'
+                            additionalBuildArgs '-t centos7'
+                        }
+                    }
                     steps { sh "df -HT" }
                 }
 
