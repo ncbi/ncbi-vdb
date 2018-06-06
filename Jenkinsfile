@@ -34,10 +34,24 @@ pipeline
             agent any
                 steps
                 {
-                    echo "Starting checkout"
-                    sh "./configure --with-debug "
                     echo "Debug compile"
-                    sh "make"
+                    sh '''
+                    rm -rf ngs ngs-tools ncbi-vdb sra-tools
+
+                    git clone https://github.com/ncbi/ngs.git
+                    git clone https://github.com/ncbi/ngs-tools.git
+                    git clone https://github.com/ncbi/ncbi-vdb.git
+
+                    for repo in "ngs" "ngs-tools" "ncbi-vdb"
+                    do
+                        cd $repo
+                        ./configure --without-debug
+                        make
+                        cd ..
+                    done
+                    echo "Debug compile"
+                    '''
+                    echo "Debug compile completed"
                 }
         }
 
