@@ -153,7 +153,7 @@ pipeline
                     agent { docker { image 'debian9' } }
                     steps
                     {
-                        sh "./configure --with-debug "
+                        sh "#./configure --with-debug "
                         sh "#make"
                     }
                 }
@@ -162,7 +162,7 @@ pipeline
                     agent { docker { image 'centos7' } }
                     steps
                     {
-                        sh "./configure --with-debug "
+                        sh "#./configure --with-debug "
                         sh "#make"
                     }
                 }
@@ -171,7 +171,7 @@ pipeline
                     agent { docker { image 'debian9' } }
                     steps
                     {
-                        sh "./configure --with-debug "
+                        sh "#./configure --with-debug "
                         sh "#make"
                     }
                 }
