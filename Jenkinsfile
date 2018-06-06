@@ -29,6 +29,18 @@ pipeline
                 }
         }
 
+        stage('Debug Compile')
+        {
+            agent any
+                steps
+                {
+                    echo "Starting checkout"
+                    sh "./configure --with-debug "
+                    echo "Debug compile"
+                    sh "make"
+                }
+        }
+
         stage('Create build containers')
         {
             parallel
@@ -99,7 +111,7 @@ pipeline
                     }
                 }
 
-                stage('Source RPM')
+                stage('CentOS 7 SRPM')
                 {
                     agent { docker { image 'centos7' } }
                     steps
@@ -258,8 +270,8 @@ pipeline
             }
         }
 
-        // TODO: Valgrind, Fuzz, Nightly Deep Test
-        // Amazon EC2 slave
+        // TODO: Valgrind, Fuzz, deep testing on nightly engineering branch
+        // Amazon EC2 slaves? Windows, Mac
         // AWS Steps (s3Upload)
     } // stages
     post
