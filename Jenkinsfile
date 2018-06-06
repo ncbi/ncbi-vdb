@@ -45,8 +45,8 @@ pipeline
                     for repo in "ngs" "ngs-tools" "ncbi-vdb"
                     do
                         cd $repo
-                        ./configure --without-debug
-                        make
+                        # ./configure --without-debug
+                        # make
                         cd ..
                     done
                     echo "Debug compile"
