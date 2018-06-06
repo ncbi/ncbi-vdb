@@ -7,6 +7,7 @@ tar -xaf ../vdb.tar.gz
 cp build/vdb.spec ../SPECS
 cd ..
 
+mkdir -p SRPMS/x86_64
 touch SRPMS/x86_64/vdb.3.0.0.rpm
 
 rpmbuild -v -bs --clean SPECS/vdb.spec
