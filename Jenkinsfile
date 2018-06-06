@@ -157,9 +157,18 @@ pipeline
                         sh "#make"
                     }
                 }
-                stage('Linux Compile')
+                stage('CentOS 7 Compile')
                 {
                     agent { docker { image 'centos7' } }
+                    steps
+                    {
+                        sh "./configure --with-debug "
+                        sh "#make"
+                    }
+                }
+                stage('Debian 9 Compile')
+                {
+                    agent { docker { image 'debian9' } }
                     steps
                     {
                         sh "./configure --with-debug "
