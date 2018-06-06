@@ -125,7 +125,7 @@ pipeline
                     }
                 }
 
-                stage('CentOS 7 SRPM')
+                stage('CentOS 7 Source RPM')
                 {
                     agent { docker { image 'centos7' } }
                     steps
@@ -145,7 +145,7 @@ pipeline
             }
         }
 
-        stage('Compilation')
+        stage('Release Compile')
         {
             parallel
             {
@@ -210,7 +210,7 @@ pipeline
             }
         }
 
-        stage('Dockerizing')
+        stage('Container Packaging')
         {
             parallel
             {
@@ -234,7 +234,7 @@ pipeline
             }
         }
 
-        stage('Container Testing')
+        stage('Testing in Containers')
         {
             parallel
             {
