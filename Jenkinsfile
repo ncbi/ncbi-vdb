@@ -136,9 +136,8 @@ pipeline
                     {
                         success
                         {
-                            archiveArtifacts(artifacts: "**/*.srpm",
-                                             allowEmptyArchive:
-                                             false)
+                            sh 'echo artifcat'
+                            //archiveArtifacts(artifacts: "**/*.srpm", allowEmptyArchive: false)
                         }
                     }
                 }
@@ -155,7 +154,7 @@ pipeline
                     steps
                     {
                         sh "./configure --with-debug "
-                        sh "make"
+                        sh "#make"
                     }
                 }
                 stage('Linux Compile')
@@ -164,7 +163,7 @@ pipeline
                     steps
                     {
                         sh "./configure --with-debug "
-                        sh "make"
+                        sh "#make"
                     }
                 }
                 stage('macOS Compile')
