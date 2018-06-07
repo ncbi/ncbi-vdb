@@ -555,6 +555,45 @@ FIXTURE_TEST_CASE ( VCursor_Use_cut_ToAccessArrayElement, WVDB_Fixture )
     }
 }
 
+FIXTURE_TEST_CASE ( KDBManager_Leak, WVDB_Fixture )
+{   // use valgrind to detect the leak
+    string schemaText = "table table1 #1.0.0 { column ascii column1; };"
+                        "database root_database #1 { table table1 #1 TABLE1; } ;";
+
+    const char* TableName = "TABLE1";
+    const char* ColumnName = "column1";
+
+    MakeDatabase ( GetName(), schemaText, "root_database" );
+    {
+        VCursor* cursor = CreateTable ( TableName );
+        uint32_t column_idx;
+        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, ColumnName ) );
+        REQUIRE_RC ( VCursorRelease ( cursor ) );
+    }
+    REQUIRE_RC ( VDatabaseRelease ( m_db ) );
+    m_db = 0;
+
+    {   // reopen
+        VDBManager * mgr;
+        REQUIRE_RC ( VDBManagerMakeUpdate ( & mgr, NULL ) );
+        const VDatabase * db;
+        REQUIRE_RC ( VDBManagerOpenDBRead ( mgr, & db, NULL, m_databaseName . c_str () ) );
+
+        // opening the same table twice leaks a reference to KDBManager
+        const VTable* table1;
+        REQUIRE_RC ( VDatabaseOpenTableRead ( db, & table1, "%s", TableName ) );
+        const VTable* table2;
+        REQUIRE_RC ( VDatabaseOpenTableRead ( db, & table2, "%s", TableName ) );
+
+        REQUIRE_RC ( VTableRelease ( table2 ) );
+        REQUIRE_RC ( VTableRelease ( table1 ) );
+
+        REQUIRE_RC ( VDatabaseRelease ( db ) );
+        REQUIRE_RC ( VDBManagerRelease ( mgr ) );
+    }
+}
+
+
 //////////////////////////////////////////// Main
 extern "C"
 {

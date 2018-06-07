@@ -132,6 +132,12 @@ public:
         return string ( m_buf, m_rowLen );
     }
 
+    int64_t ReadI64 ( int64_t p_row, uint32_t p_colIdx )
+    {
+        THROW_ON_RC ( VCursorReadDirect ( m_cur, p_row, p_colIdx, 8 * sizeof ( int64_t ), m_buf, 1, & m_rowLen ) );
+        return *(int64_t*)m_buf;
+    }
+
     string          m_schemaText;
     const VView *   m_view;
     const VTable *  m_table;
@@ -538,6 +544,70 @@ FIXTURE_TEST_CASE( ViewCursor_Join_Shorthand_Production, ViewOnTableCursorFixtur
     REQUIRE_EQ ( string ("t2_c_r1"), ReadAscii ( 2, m_columnIdx ) );
 }
 
+FIXTURE_TEST_CASE( ViewCursor_Join_Self, ViewOnTableCursorFixture )
+{
+    m_schemaText =
+        "version 2.0;"
+        "table T1#1 { column I64 c; };"
+        "database DB#1 { table T1 t; };"
+        "view V#1 < T1 p_t1 > { column I64 v = p_t1 [ p_t1 . c ] . c; };"
+    ;
+
+    {   // create DB
+        MakeDatabase ( GetName(), m_schemaText, "DB" );
+        CreateTablePopulate( "t", "c", 2, 1 );
+    }
+    REQUIRE_RC ( VDBManagerOpenView ( m_mgr, & m_view, m_schema, "V" ) );
+    OpenTableBind ( "t", "p_t1" );
+    REQUIRE_RC ( VViewCreateCursor ( m_view, & m_cur ) );
+    m_columnIdx = AddColumn ( "v" );
+    REQUIRE_RC ( VCursorOpen ( m_cur ) );
+
+    REQUIRE_EQ ( 1l, ReadI64 ( 1, m_columnIdx ) );
+    REQUIRE_EQ ( 2l, ReadI64 ( 2, m_columnIdx ) );
+}
+
+FIXTURE_TEST_CASE( ViewCursor_Join_NullKey, ViewOnTableCursorFixture )
+{
+    m_schemaText =
+        "version 2.0;"
+        "table T1#1 { column I64 c; };"
+        "database DB#1 { table T1 t; };"
+        "view V#1 < T1 p_t1 > { column I64 v = p_t1 [ p_t1 . c ] . c; };"
+    ;
+
+    {   // create DB
+        MakeDatabase ( GetName(), m_schemaText, "DB" );
+
+        // CreateTablePopulate( "t", "c", 2, NULL );
+        VCursor * cur = CreateTableOpenWriteCursor( "t", "c" );
+        WriteRow ( cur, m_columnIdx, 2 );
+
+        // WriteRow ( cur, m_columnIdx, NULL );
+        REQUIRE_RC ( VCursorOpenRow ( cur ) );
+        int64_t ignore;
+        REQUIRE_RC ( VCursorWrite ( cur, m_columnIdx, sizeof(int64_t)*8, & ignore, 0, 0 ) ); // this writes NULL
+        REQUIRE_RC ( VCursorCommitRow ( cur ) );
+        REQUIRE_RC ( VCursorCloseRow ( cur ) );
+
+        REQUIRE_RC ( VCursorCommit ( cur ) );
+        REQUIRE_RC ( VCursorRelease ( cur ) );
+    }
+
+    // verify: both rows contain NULL
+    REQUIRE_RC ( VDBManagerOpenView ( m_mgr, & m_view, m_schema, "V" ) );
+    OpenTableBind ( "t", "p_t1" );
+    REQUIRE_RC ( VViewCreateCursor ( m_view, & m_cur ) );
+    m_columnIdx = AddColumn ( "v" );
+    REQUIRE_RC ( VCursorOpen ( m_cur ) );
+
+    THROW_ON_RC ( VCursorReadDirect ( m_cur, 1, m_columnIdx, 8 * sizeof ( int64_t ), m_buf, 1, & m_rowLen ) );
+    REQUIRE_EQ ( 0u, m_rowLen );
+    THROW_ON_RC ( VCursorReadDirect ( m_cur, 2, m_columnIdx, 8 * sizeof ( int64_t ), m_buf, 1, & m_rowLen ) );
+    REQUIRE_EQ ( 0u, m_rowLen );
+}
+
+//TODO: join with a NULL key (NULL result)
 //TODO: join with a non-int key (error)
 //TODO: join with a non-I64 integer key (cast required?)
 

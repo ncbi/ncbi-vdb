@@ -316,7 +316,7 @@ rc_t VSimpleProdRead ( VSimpleProd *self, VBlob **vblob, int64_t * id, uint32_t 
         return RC ( rcVDB, rcProduction, rcReading, rcProduction, rcCorrupt );
     }
 
-    if ( rc == 0 )
+    if ( rc == 0 && * vblob != NULL )
     {
         VBlob *blob = * vblob;
 
@@ -2124,20 +2124,24 @@ rc_t VPivotProdRead ( VPivotProd * p_self, struct VBlob ** p_vblob, int64_t * p_
         uint32_t elemNum;
         uint32_t repeat_count;
         uint32_t rowLen = PageMapGetIdxRowInfo ( rowIdBlob -> pm, ( uint32_t ) ( * p_id - rowIdBlob -> start_id ), & elemNum, & repeat_count );
-        /* assume elem size is 64 */
-        int64_t newRowId = * ( ( int64_t* ) rowIdBlob -> data . base + elemNum );
-
-		assert ( rowLen == 1);
-        assert ( repeat_count == 1);
-
-		vblob_release ( rowIdBlob, NULL );
-
-		rc = VProductionReadBlob ( p_self -> member, p_vblob, & newRowId, p_cnt, NULL);
-        if ( rc == 0 )
+        if ( rowLen == 1 && repeat_count == 1)
         {
-            /* the cache mechanism will get confused by our overwriting p_id, so turn it off */
-            ( * p_vblob ) -> no_cache = true;
-            * p_id = newRowId;
+            /* assume elem size is 64 */
+            int64_t newRowId = * ( ( int64_t* ) rowIdBlob -> data . base + elemNum );
+            vblob_release ( rowIdBlob, NULL );
+            rc = VProductionReadBlob ( p_self -> member, p_vblob, & newRowId, p_cnt, NULL);
+            if ( rc == 0 )
+            {
+                /* the cache mechanism will get confused by our overwriting p_id, so turn it off */
+                ( * p_vblob ) -> no_cache = true;
+                * p_id = newRowId;
+            }
+        }
+        else
+        {   /* return an empty value p_id == 0 */
+            vblob_release ( rowIdBlob, NULL );
+            * p_vblob = 0;
+            * p_id = 0;
         }
     }
     return rc;

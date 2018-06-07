@@ -504,7 +504,13 @@ FIXTURE_TEST_CASE ( View_GetBoundObject_MultipleParameters, ViewFixture )
     REQUIRE_RC ( VDBManagerOpenView ( m_mgr, & Y, m_schema, "Y" ) );
     String t;
     CONST_STRING ( & t, "tab" );
+
+        // opening a table while the instance of (write-side)KDBManager that created it is still alive
+        // leaks a reference to KDatabase
+        // the suspected source of the leak is the call to KDatabaseAttach in KDatabaseVOpenTableRead
+        // (libs/kdb/wtable.c:775)    REQUIRE_RC ( VDatabaseOpenTableRead ( m_db, & m_table, TableName_1 ) );
     REQUIRE_RC ( VDatabaseOpenTableRead ( m_db, & m_table, TableName_1 ) );
+
     REQUIRE_RC ( VViewBindParameterTable ( Y, & t, m_table ) );
     CONST_STRING ( & t, "v" );
     REQUIRE_RC ( VViewBindParameterView  ( Y, & t, m_view ) );

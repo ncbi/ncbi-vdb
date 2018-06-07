@@ -68,6 +68,8 @@ setup:
 
 clean: stdclean
 
+vg-all: $(addprefix vg-,$(TEST_TOOLS))
+
 READ_LIBS = \
 	-skapp \
 	-sktst \
@@ -359,3 +361,4 @@ $(TEST_BINDIR)/test-VDB-3418: $(VDB_3418_OBJ)
 
 VDB-3418: test-VDB-3418
 	$(TEST_BINDIR)/test-VDB-3418
+

@@ -278,18 +278,28 @@ rc_t VColumnRead ( const VColumn *cself, int64_t row_id,
         rc = VProductionReadBlob ( cself -> in, vblob, & row_id, 1, NULL );
         if ( rc == 0 )
         {
-            VColumn *self = ( VColumn* ) cself;
-            VColumnReadCachedBlob ( self, *vblob, row_id, elem_bits, base, boff, row_len, NULL );
+            if ( * vblob != NULL )
+            {
+                VColumn *self = ( VColumn* ) cself;
+                VColumnReadCachedBlob ( self, *vblob, row_id, elem_bits, base, boff, row_len, NULL );
 
-#if USE_KURT
-            TRACK_BLOB ( VBlobRelease, self -> cache );
-            ( void ) VBlobRelease ( self -> cache );
-            self -> cache = *vblob;
-#else
-            TRACK_BLOB ( VBlobRelease, *vblob );
-            ( void ) VBlobRelease ( *vblob );
-            *vblob = NULL;
-#endif
+    #if USE_KURT
+                TRACK_BLOB ( VBlobRelease, self -> cache );
+                ( void ) VBlobRelease ( self -> cache );
+                self -> cache = *vblob;
+    #else
+                TRACK_BLOB ( VBlobRelease, *vblob );
+                ( void ) VBlobRelease ( *vblob );
+                *vblob = NULL;
+    #endif
+            }
+            else /* trying to read a missing value */
+            {
+                * elem_bits = 0;
+                * base = NULL;
+                * boff = 0;
+                * row_len = 0;
+            }
         }
     }
 

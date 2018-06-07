@@ -756,9 +756,76 @@ struct VProdResolveData
     rc_t rc;
 };
 
+static
+rc_t VTableCursorOpenColumn ( const VTableCursor *cself, VColumn *col, bool ignore_errors )
+{
+    KDlset *libs;
+    VTableCursor *self = ( VTableCursor* ) cself;
+
+    Vector cx_bind;
+    VProdResolveData pb;
+    pb . pr . schema = self -> schema;
+    pb . pr . ld = self -> tbl -> linker;
+    pb . pr . name = & self -> stbl -> name -> name;
+    pb . pr . primary_table = VCursorGetTable ( & self -> dad );
+    pb . pr . view = NULL;
+    pb . pr . curs = & self -> dad;
+    pb . pr . prod = & self -> dad . prod;
+    pb . pr . owned = & self -> dad . owned;
+    pb . pr . cx_bind = & cx_bind;
+    pb . pr . chain = chainDecoding;
+    pb . pr . blobbing = false;
+    pb . pr . ignore_column_errors = ignore_errors;
+    pb . pr . discover_writable_columns = false;
+
+    VectorInit ( & cx_bind, 1, self -> schema -> num_indirect );
+
+    pb . rc = VLinkerOpen ( pb . pr . ld, & libs );
+    if ( pb . rc == 0 )
+    {
+        SColumn *scol = ( SColumn* ) col -> scol;
+        VProduction * src = NULL;
+
+        pb . pr . libs = libs;
+        pb . rc = VProdResolveColumnRoot ( & pb . pr, & src, scol );
+        if ( pb . rc == 0 )
+        {
+            if ( src > FAILED_PRODUCTION )
+            {
+                /* repair for incomplete implicit column decl */
+                if ( scol -> td . type_id == 0 )
+                    scol -> td = src -> fd . td;
+            }
+            else
+            {
+                pb . rc = RC ( rcVDB, rcCursor, rcOpening, rcColumn, rcUndefined );
+            }
+        }
+        else
+        {
+            /* check for tolerance */
+            if ( ! ignore_errors )
+            {
+                if ( ! self -> permit_post_open_add )
+                {
+                    PLOGERR ( klogErr, ( klogErr, pb . rc, "failed to resolve column '$(name)' idx '$(idx)'",
+                                        "name=%.*s,idx=%u"
+                                        , ( int ) scol -> name -> name . size
+                                        , scol -> name -> name . addr
+                                        , col -> ord ));
+                }
+            }
+        }
+
+        KDlsetRelease ( libs );
+    }
+
+    VectorWhack ( & cx_bind, NULL, NULL );
+    return pb . rc;
+}
 
 static
-bool CC VCursorResolveColumn ( void *item, void *data )
+bool CC VTableCursorResolveOrKillColumn ( void *item, void *data )
 {
     if ( item != NULL )
     {
@@ -805,50 +872,10 @@ bool CC VCursorResolveColumn ( void *item, void *data )
         /* remove from row and cache */
         VectorSwap ( & self -> dad . row, col -> ord, NULL, & ignore );
         VCursorCacheSwap ( & self -> dad . col, & scol -> cid, NULL, & ignore );
+        VColumnWhack ( col, NULL );
     }
 
     return false;
-}
-
-static
-rc_t VTableCursorOpenColumn ( const VTableCursor *cself, VColumn *col, bool ignore_errors )
-{
-    KDlset *libs;
-    VTableCursor *self = ( VTableCursor* ) cself;
-
-    Vector cx_bind;
-    VProdResolveData pb;
-    pb . pr . schema = self -> schema;
-    pb . pr . ld = self -> tbl -> linker;
-    pb . pr . name = & self -> stbl -> name -> name;
-    pb . pr . primary_table = VCursorGetTable ( & self -> dad );
-    pb . pr . view = NULL;
-    pb . pr . curs = & self -> dad;
-    pb . pr . prod = & self -> dad . prod;
-    pb . pr . owned = & self -> dad . owned;
-    pb . pr . cx_bind = & cx_bind;
-    pb . pr . chain = chainDecoding;
-    pb . pr . blobbing = false;
-    pb . pr . ignore_column_errors = ignore_errors;
-    pb . pr . discover_writable_columns = false;
-
-    VectorInit ( & cx_bind, 1, self -> schema -> num_indirect );
-
-    pb . rc = VLinkerOpen ( pb . pr . ld, & libs );
-    if ( pb . rc == 0 )
-    {
-        pb . pr . libs = libs;
-        VCursorResolveColumn ( col, & pb );
-        KDlsetRelease ( libs );
-    }
-
-    VectorWhack ( & cx_bind, NULL, NULL );
-
-    if ( ignore_errors )
-    {
-        pb . rc = 0;
-    }
-    return pb . rc;
 }
 
 static
@@ -875,7 +902,7 @@ rc_t VTableCursorResolveColumnProductions ( VTableCursor *self,
 
     VectorInit ( & cx_bind, 1, self -> schema -> num_indirect );
 
-    if ( ! VectorDoUntil ( & self -> dad . row, false, VCursorResolveColumn, & pb ) )
+    if ( ! VectorDoUntil ( & self -> dad . row, false, VTableCursorResolveOrKillColumn, & pb ) )
         pb . rc = 0;
 
     VectorWhack ( & cx_bind, NULL, NULL );

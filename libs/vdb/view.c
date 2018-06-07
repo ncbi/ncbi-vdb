@@ -335,10 +335,10 @@ VViewBindParameterTable ( const VView *     p_self,
                 }
 				else
 				{
-					VView * self = (VView*) p_self;
 					rc_t rc = VTableAddRef ( p_table );
 					if ( rc == 0 )
 					{
+    					VView * self = (VView*) p_self;
 						return VectorSet( & self -> bindings, idx, p_table );
 					}
 					return rc;
@@ -536,7 +536,7 @@ VViewListCol ( const VView * p_self, struct KNamelist ** p_names )
             {
                 rc = make_column_namelist ( & columns, p_names );
             }
-            BSTreeWhack ( & columns, NULL, NULL );
+            BSTreeWhack ( & columns, VColumnRefWhack, NULL );
             VCursorRelease ( cursor );
         }
         return rc;
