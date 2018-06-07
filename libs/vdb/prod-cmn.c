@@ -2119,7 +2119,7 @@ rc_t VPivotProdRead ( VPivotProd * p_self, struct VBlob ** p_vblob, int64_t * p_
     rc_t rc;
     assert ( p_id != NULL );
     rc = VProductionReadBlob ( p_self -> row_id, & rowIdBlob, p_id , p_cnt, NULL);
-    if ( rc == 0 )
+    if ( rc == 0 && rowIdBlob != NULL )
     {
         uint32_t elemNum;
         uint32_t repeat_count;
@@ -2143,6 +2143,11 @@ rc_t VPivotProdRead ( VPivotProd * p_self, struct VBlob ** p_vblob, int64_t * p_
             * p_vblob = 0;
             * p_id = 0;
         }
+    }
+    else
+    {
+        * p_vblob = 0;
+        * p_id = 0;
     }
     return rc;
 }
