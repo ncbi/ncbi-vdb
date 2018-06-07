@@ -856,7 +856,7 @@ VViewCursorReadInt ( const VViewCursor *  p_self,
                 const void *base;
                 uint32_t boff;
                 rc = VColumnRead ( col, p_row_id, & elem_size, & base, & boff, p_row_len, NULL );
-                if ( rc == 0 )
+                if ( rc == 0 && base != NULL )
                 {
                     return CopyCell ( elem_size, p_elem_bits, base, boff, p_buffer, p_blen, p_row_len );
                 }
