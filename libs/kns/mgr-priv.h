@@ -59,8 +59,6 @@ struct KNSManager
     struct String const *aws_region;
     struct String const *aws_output;
 
-    HttpProxy * http_proxy;
-
     struct HttpRetrySpecs retry_specs;
 
     KTLSGlobals tlsg;
