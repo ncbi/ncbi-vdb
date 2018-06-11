@@ -527,6 +527,7 @@ const char UsageDefaultName[] = "test-ngs_sradb-c++";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    KConfigDisableUserSettings();
     rc_t rc=NgsSradbCppTestSuite(argc, argv);
     return rc;
 }

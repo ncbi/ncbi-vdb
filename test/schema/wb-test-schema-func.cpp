@@ -323,6 +323,7 @@ FIXTURE_TEST_CASE(Func_OneParamArray, AST_Function_Fixture)
 {
     FunctionAccess fn = ParseFunction ( "function U8 f(U8[2] p);", "f" );
     const SProduction * param = fn . GetParam ( 0 );
+    REQUIRE_NOT_NULL ( param );
     const STypeExpr * type = reinterpret_cast < const STypeExpr * > ( param -> fd );
     REQUIRE_EQ ( (uint32_t)2, type -> fd . td. dim );
 }
@@ -331,6 +332,7 @@ FIXTURE_TEST_CASE(Func_OneParamVarArray, AST_Function_Fixture)
 {
     FunctionAccess fn = ParseFunction ( "function U8 f(U8[*] p);", "f" );
     const SProduction * param = fn . GetParam ( 0 );
+    REQUIRE_NOT_NULL ( param );
     const STypeExpr * type = reinterpret_cast < const STypeExpr * > ( param -> fd );
     REQUIRE_EQ ( (uint32_t)0, type -> fd . td. dim );
 }
@@ -339,6 +341,7 @@ FIXTURE_TEST_CASE(Func_ControlParam, AST_Function_Fixture)
 {
     FunctionAccess fn = ParseFunction ( "function U8 f( control U8 p);", "f" );
     const SProduction * param = fn . GetParam ( 0 );
+    REQUIRE_NOT_NULL ( param );
     REQUIRE ( param -> control );
 }
 

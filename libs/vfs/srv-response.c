@@ -135,6 +135,9 @@ rc_t VPathSetGet ( const VPathSet * self, VRemoteProtocols protocols,
                 p = self -> file;
                 c = self -> cacheFile;
                 break;
+            case eProtocolGS:
+                p = c = NULL; /* not implemented y */
+                break;
             case eProtocolHttp:
                 p = self -> http;
                 c = self -> cacheHttp;

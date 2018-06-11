@@ -606,7 +606,6 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
             mgr -> http_write_timeout = MAX_HTTP_WRITE_LIMIT;
             mgr -> maxTotalWaitForReliableURLs_ms = 10 * 60 * 1000; /* 10 min */
             mgr -> maxNumberOfRetriesOnFailureForReliableURLs = 10;
-            mgr -> verbose = false;
 
             rc = KNSManagerInit (); /* platform specific init in sysmgr.c ( in unix|win etc. subdir ) */
             if ( rc == 0 )
@@ -684,6 +683,7 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char ** user_agent )
     }
     return rc;
 }
+
 
 /******************************************************************************/
 

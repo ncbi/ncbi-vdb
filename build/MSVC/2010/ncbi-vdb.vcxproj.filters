@@ -70,6 +70,9 @@
     <Filter Include="ngs-c++">
       <UniqueIdentifier>{1cca6da3-28fe-4790-9882-9041a5a9ea51}</UniqueIdentifier>
     </Filter>
+    <Filter Include="diagnose">
+      <UniqueIdentifier>{e8ef64c9-28bc-479a-8d18-ef97b564c71e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\libs\align\al_iterator.c">
@@ -1444,5 +1447,21 @@
     <ClCompile Include="..\..\..\libs\kns\proxy.c">
       <Filter>kns</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\diagnose\diagnose.c">
+      <Filter>diagnose</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\diagnose\endpoint.c">
+      <Filter>diagnose</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\libs\diagnose\diagnose.h">
+      <Filter>diagnose</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\libs\diagnose\Makefile">
+      <Filter>diagnose</Filter>
+    </None>
   </ItemGroup>
 </Project>

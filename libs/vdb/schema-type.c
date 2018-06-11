@@ -1949,7 +1949,7 @@ rc_t dim ( const KSymTable *tbl, KTokenSource *src, KToken *t,
 /*
  * typename           = <fqn>
  */
-rc_t typename ( const KSymTable *tbl, KTokenSource *src, KToken *t,
+rc_t type_name ( const KSymTable *tbl, KTokenSource *src, KToken *t,
     const SchemaEnv *env, uint32_t *id )
 {
     const SDatatype *dt;
@@ -1985,7 +1985,7 @@ rc_t typename ( const KSymTable *tbl, KTokenSource *src, KToken *t,
 rc_t typedecl ( const KSymTable *tbl, KTokenSource *src, KToken *t,
     const SchemaEnv *env, const VSchema *self, VTypedecl *td )
 {
-    rc_t rc = typename ( tbl, src, t, env, & td -> type_id );
+    rc_t rc = type_name ( tbl, src, t, env, & td -> type_id );
     if ( rc != 0 )
         return rc;
 
@@ -2211,7 +2211,7 @@ rc_t type_definition ( KSymTable *tbl, KTokenSource *src, KToken *t,
     const SDatatype *super;
 
     /* expect a typename */
-    rc_t rc = typename ( tbl, src, t, env, & td . type_id );
+    rc_t rc = type_name ( tbl, src, t, env, & td . type_id );
     if ( rc != 0 )
         return KTokenFailure ( t, klogErr, rc, "type name" );
     if ( td . type_id == 0 )

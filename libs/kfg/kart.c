@@ -642,8 +642,12 @@ static rc_t KartRegisterObject ( const Kart * self, const KartItem * item ) {
         return 0;
 
     rc = KartItemItemIdNumber ( item, & itemId );
-    if ( rc == SILENT_RC ( rcKFG, rcFile, rcAccessing, rcItem, rcEmpty ) )
-        return 0;
+    if ( rc == SILENT_RC ( rcKFG, rcFile, rcAccessing, rcItem, rcEmpty ) ||
+
+        /* not a number (accession) */
+         rc == SILENT_RC ( rcKFG, rcFile, rcAccessing, rcParam, rcInvalid ) )
+        
+    {   return 0; }
 
     assert ( self );
 

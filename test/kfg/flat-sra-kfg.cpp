@@ -121,9 +121,9 @@ public:
 
 static const char cgiPath[] = "/repository/remote/main/CGI/resolver-cgi";
 static const char goodCgi[]
-    = "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi";
+    = "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
 static const char badCgi[]
-    = "https://XXX.ncbi.nlm.nih.gov/Traces/names/names.cgi";
+    = "https://XXX.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
 #ifdef ALL
 TEST_CASE(test_sra) {
     const string newShort

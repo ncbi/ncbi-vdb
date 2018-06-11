@@ -107,7 +107,9 @@ int TestEnv::RunProcessTestCase(TestCase& obj, void(TestCase::*meth)(), int time
 
 bool TestEnv::SleepMs(unsigned int milliseconds)
 {
-    struct timespec time = { milliseconds / 1000, (milliseconds % 1000) * 1000 * 1000 };
+    time_t seconds = milliseconds / 1000;
+    long nanoseconds = (milliseconds % 1000) * 1000 * 1000;
+    struct timespec time = { seconds, nanoseconds };
     return nanosleep(&time, NULL) == 0; 
 }
 

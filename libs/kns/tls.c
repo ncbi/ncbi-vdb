@@ -196,6 +196,23 @@ rc_t tlsg_seed_rng ( KTLSGlobals *self )
     return 0;
 }
 
+static
+rc_t tlsg_init_ca ( KTLSGlobals *self, const KConfig * kfg )
+{
+    const KConfigNode * allow_all_certs;
+    rc_t rc = KConfigOpenNodeRead ( kfg, & allow_all_certs, "/tls/allow-all-certs" );
+    if ( rc == 0 )
+    {
+        rc = KConfigNodeReadBool ( allow_all_certs, & self -> allow_all_certs );
+        KConfigNodeRelease ( allow_all_certs );
+        return rc;
+    }
+
+    /* if the node does not exist, it means false */
+    self -> allow_all_certs = false;
+    return 0;
+}
+
 static 
 rc_t tlsg_init_certs ( KTLSGlobals *self, const KConfig * kfg )
 {
@@ -336,6 +353,13 @@ rc_t tlsg_init_certs ( KTLSGlobals *self, const KConfig * kfg )
 
             KConfigNodeRelease ( ca_crt );
         }
+    }
+
+    if ( rc == 0 )
+    {
+        rc = tlsg_init_ca ( self, kfg );
+        if ( rc != 0 )
+            return rc;
     }
 
 #if _DEBUGGING
@@ -481,6 +505,9 @@ rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg, const KConfig * kfg )
 {
     rc_t rc;
 
+    assert ( tlsg != NULL );
+    assert ( kfg != NULL );
+
     vdb_mbedtls_x509_crt_init ( &tlsg -> cacert );
     vdb_mbedtls_ctr_drbg_init ( &tlsg -> ctr_drbg );
     vdb_mbedtls_entropy_init ( &tlsg -> entropy );
@@ -504,12 +531,53 @@ rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg, const KConfig * kfg )
  */
 void KTLSGlobalsWhack ( KTLSGlobals * self )
 {
+    assert ( self != NULL );
+    
     vdb_mbedtls_ssl_config_free ( &self -> config );
     vdb_mbedtls_entropy_free ( &self -> entropy );
     vdb_mbedtls_ctr_drbg_free ( &self -> ctr_drbg );
     vdb_mbedtls_x509_crt_free ( &self -> cacert );
 
     memset ( self, 0, sizeof * self );
+}
+
+/* Set/Get AllowAllCerts
+ *  modify behavior of TLS certificate validation
+ */
+LIB_EXPORT rc_t CC KNSManagerSetAllowAllCerts ( KNSManager *self, bool allow_all_certs )
+{
+    rc_t rc = 0;
+    
+    if ( self == NULL )
+        rc = RC ( rcNS, rcMgr, rcAccessing, rcSelf, rcNull );
+    else
+    {
+        self -> tlsg . allow_all_certs = allow_all_certs;
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KNSManagerGetAllowAllCerts ( const KNSManager *self, bool * allow_all_certs )
+{
+    rc_t rc;
+
+    if ( allow_all_certs == NULL )
+        rc = RC ( rcNS, rcMgr, rcAccessing, rcParam, rcNull );
+    else
+    {
+        if ( self == NULL )
+            rc = RC ( rcNS, rcMgr, rcAccessing, rcSelf, rcNull );
+        else
+        {
+            * allow_all_certs = self -> tlsg . allow_all_certs;
+            return 0;
+        }
+        
+        * allow_all_certs = false;
+    }
+
+    return rc;
 }
 
 /*--------------------------------------------------------------------------
@@ -927,29 +995,45 @@ rc_t ktls_handshake ( KTLSStream *self )
         if ( ret != MBEDTLS_ERR_SSL_WANT_READ && 
              ret != MBEDTLS_ERR_SSL_WANT_WRITE )
         {
-            rc_t rc = RC ( rcKrypto, rcSocket, rcOpening, rcConnection, rcFailed );
+            rc_t rc;
 
-            PLOGERR ( klogSys, ( klogSys, rc
-                                 , "mbedtls_ssl_handshake returned $(ret) ( $(expl) )"
-                                 , "ret=%d,expl=%s"
-                                 , ret
-                                 , mbedtls_strerror2 ( ret )
-                          ) );
-
-            if ( ret == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED )
+            /* check configuration to see if we are ignoring
+               unrecognized certificates (ones that use a CA
+               for signing that we don't recognize) */
+            if ( self -> mgr -> tlsg . allow_all_certs &&
+                 ret == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED )
             {
-                uint32_t flags = vdb_mbedtls_ssl_get_verify_result( &self -> ssl );
-                if ( flags != 0 )
-                {
-                    char buf [ 4096 ];
-                    vdb_mbedtls_x509_crt_verify_info ( buf, sizeof( buf ), " !! ", flags );
+                /* ignore this case */
+                rc = 0;
+            }
+            else
+            {
+                /* either we're forcing all certificates to be validated,
+                   or the error is something other than a validation error */
+                rc = RC ( rcKrypto, rcSocket, rcOpening, rcConnection, rcFailed );
 
-                    PLOGMSG ( klogSys, ( klogSys
-                                         , "mbedtls_ssl_get_verify_result returned $(flags) ( $(info) )"
-                                         , "flags=0x%X,info=%s"
-                                         , flags
-                                         , buf
-                                  ) );
+                PLOGERR ( klogSys, ( klogSys, rc
+                                     , "mbedtls_ssl_handshake returned $(ret) ( $(expl) )"
+                                     , "ret=%d,expl=%s"
+                                     , ret
+                                     , mbedtls_strerror2 ( ret )
+                              ) );
+
+                if ( ret == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED )
+                {
+                    uint32_t flags = vdb_mbedtls_ssl_get_verify_result( &self -> ssl );
+                    if ( flags != 0 )
+                    {
+                        char buf [ 4096 ];
+                        vdb_mbedtls_x509_crt_verify_info ( buf, sizeof( buf ), " !! ", flags );
+                        
+                        PLOGMSG ( klogSys, ( klogSys
+                                             , "mbedtls_ssl_get_verify_result returned $(flags) ( $(info) )"
+                                             , "flags=0x%X,info=%s"
+                                             , flags
+                                             , buf
+                                      ) );
+                    }
                 }
             }
 
@@ -1131,7 +1215,7 @@ LIB_EXPORT rc_t CC KTLSStreamVerifyCACert ( const KTLSStream * self )
    
    if ( self == NULL )
        rc = RC ( rcKrypto, rcToken, rcValidating, rcSelf, rcNull );
-   else
+   else if ( ! self -> mgr -> tlsg . allow_all_certs )
    {
        uint32_t flags = vdb_mbedtls_ssl_get_verify_result( &self -> ssl );
        if ( flags != 0 )

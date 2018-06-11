@@ -36,6 +36,8 @@
 
 #include <kfc/xc.h>
 
+#include <kfg/config.h> /* KConfigDisableUserSettings */
+
 #include "NGS_Pileup.h"
 #include "NGS_ReferenceSequence.h"
 #include "NGS_String.h"
@@ -729,6 +731,7 @@ const char UsageDefaultName[] = "test-ngs_reference";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    KConfigDisableUserSettings();
     rc_t m_coll=NgsReferenceTestSuite(argc, argv);
     return m_coll;
 }
