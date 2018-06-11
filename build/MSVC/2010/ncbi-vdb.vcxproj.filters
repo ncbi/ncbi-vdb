@@ -1444,6 +1444,9 @@
     <ClCompile Include="..\..\..\libs\ngs\NGS_ReferenceBlob.c" />
     <ClCompile Include="..\..\..\libs\ngs\NGS_ReferenceBlobIterator.c" />
     <ClCompile Include="..\..\..\libs\sraxf\tokenize-spot_name-generic-fastq.c" />
+    <ClCompile Include="..\..\..\libs\kns\proxy.c">
+      <Filter>kns</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\diagnose\diagnose.c">
       <Filter>diagnose</Filter>
     </ClCompile>
