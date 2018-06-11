@@ -564,6 +564,8 @@ bool KNSProxiesSetHTTPProxyEnabled ( KNSProxies * self, bool enabled )
 KNSProxies * KNSManagerKNSProxiesMake ( struct KNSManager * mgr,
                                         const KConfig * kfg )
 {
+    rc_t rc = 0;
+
     KNSProxies * self = calloc ( 1, sizeof * self ); 
     if ( self == NULL )
         return NULL;
@@ -582,7 +584,7 @@ KNSProxies * KNSManagerKNSProxiesMake ( struct KNSManager * mgr,
 
     BSTreeInit ( & self -> proxie_tree );
 
-    rc_t rc = KConfigReadBool
+    rc = KConfigReadBool
         ( kfg, "/http/proxy/enabled", & self -> http_proxy_enabled );
     if ( rc != 0 ) {
         if ( GetRCState ( rc ) == rcNotFound )
