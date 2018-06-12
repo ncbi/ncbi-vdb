@@ -213,10 +213,10 @@ bool KNSProxiesGet ( KNSProxies * self, const String ** proxy_host,
 
     if ( self != NULL && self -> http_proxies != NULL ) {
         if ( ( * cnt ) ++ < self -> http_proxies_cnt ) {
+            const HttpProxy * proxy = NULL;
             if ( self -> http_proxies_idx >= self ->http_proxies_cnt )
                 self -> http_proxies_idx = 0;
-            const HttpProxy * proxy
-                = self -> http_proxies [ self -> http_proxies_idx ++ ];
+            proxy = self -> http_proxies [ self -> http_proxies_idx ++ ];
             * last = self -> http_proxies_idx == self -> http_proxies_cnt;
             * proxy_host = proxy -> proxy_host;
             * proxy_port = proxy -> proxy_port;
