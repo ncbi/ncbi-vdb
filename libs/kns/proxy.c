@@ -566,10 +566,6 @@ KNSProxies * KNSManagerKNSProxiesMake ( struct KNSManager * mgr,
 {
     rc_t rc = 0;
 
-    KNSProxies * self = calloc ( 1, sizeof * self ); 
-    if ( self == NULL )
-        return NULL;
-
     int i = 0;
     int n = 2;
 
@@ -579,6 +575,10 @@ KNSProxies * KNSManagerKNSProxiesMake ( struct KNSManager * mgr,
     } EType;
 
     EType type [ 2 ] = { eKfg, eEnv };
+
+    KNSProxies * self = calloc ( 1, sizeof * self ); 
+    if ( self == NULL )
+        return NULL;
 
     assert ( self );
 
