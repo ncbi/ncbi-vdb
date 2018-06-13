@@ -112,6 +112,7 @@ static VCursor_vt VTableCursor_write_vt =
     VTableWriteCursorCommit,
     VTableCursorOpenParentRead,
     VTableWriteCursorOpenParentUpdate,
+    VTableCursorIdRange,
     VTableCursorPermitPostOpenAdd,
     VTableCursorSuspendTriggers,
     VTableCursorGetSchema,
@@ -343,7 +344,7 @@ rc_t VTableWriteCursorOpen ( const VTableCursor *cself )
         rc = VLinkerOpen ( ld, & libs );
         if ( rc == 0 )
         {
-            rc = VCursorOpenRead ( self, libs );
+            rc = VTableCursorOpenRead ( self, libs );
             if ( rc == 0 )
             {
                 if ( ! self -> read_only )
@@ -1307,5 +1308,9 @@ rc_t VTableWriteCursorListReadableColumns ( struct VTableCursor *self, BSTree *c
     /* this is normally called on an empty cursor to add all columns, but for
     an empty write cursor resolution asserts `wcol -> val == NULL' in VProdResolveColumnRoot().
     Disabling for now. */
+    if ( self -> read_only )
+    {
+        return VTableCursorListReadableColumns ( self, columns );
+    }
     return RC ( rcVDB, rcCursor, rcAccessing, rcMode, rcUnsupported );
 }

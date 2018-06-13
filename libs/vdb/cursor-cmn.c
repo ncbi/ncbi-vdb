@@ -153,6 +153,10 @@ LIB_EXPORT rc_t CC VCursorOpenParentUpdate ( VCursor *self, VTable **tbl )
 {
     DISPATCH ( openParentUpdate ( self, tbl ) );
 }
+LIB_EXPORT rc_t CC VCursorIdRange ( const VCursor *self, uint32_t idx, int64_t *first, uint64_t *count )
+{
+    DISPATCH ( idRange ( self, idx, first, count ) );
+}
 
 /* private API dispatch */
 rc_t VCursorMakeColumn ( struct VCursor *self, struct VColumn **col, struct SColumn const *scol, Vector *cx_bind )
@@ -581,132 +585,6 @@ VCursorDatatype ( const VCursor *  p_self,
 
     return rc;
 }
-
-/* IdRange
- *  returns id range for column
- *
- *  "idx" [ IN ] - column index
- *
- *  "id" [ IN ] - page containing this row id is target
- *
- *  "first" [ OUT, NULL OKAY ] and "last" [ OUT, NULL OKAY ] -
- *  id range is returned in these output parameters, where
- *  at least ONE must be NOT-NULL
- */
-typedef struct VCursorIdRangeData VCursorIdRangeData;
-struct VCursorIdRangeData
-{
-    int64_t first, last;
-    rc_t rc;
-};
-
-static
-bool CC
-column_id_range ( void *item, void *data )
-{
-    if ( ( size_t ) item > 8 )
-    {
-        int64_t first, last;
-        VCursorIdRangeData *pb = data;
-
-        rc_t rc = VColumnIdRange ( ( const void* ) item, & first, & last );
-
-        if ( GetRCState ( rc ) == rcEmpty )
-            return false;
-
-        if ( ( pb -> rc = rc ) != 0 )
-            return true;
-
-        if ( first < pb -> first )
-            pb -> first = first;
-        if ( last > pb -> last )
-            pb -> last = last;
-    }
-
-    return false;
-}
-
-rc_t CC
-VCursorIdRange ( const VCursor * p_self,
-                 uint32_t        p_idx,
-                 int64_t *       p_first,
-                 uint64_t *      p_count )
-{
-    rc_t rc;
-    VCursor * self = ( VCursor * ) p_self;
-
-    if ( p_first == NULL && p_count == NULL )
-    {
-        rc = RC ( rcVDB, rcCursor, rcAccessing, rcParam, rcNull );
-    }
-    else
-    {
-        int64_t dummy;
-        uint64_t dummy_count;
-
-        if ( p_first == NULL )
-        {
-            p_first = & dummy;
-        }
-        else if ( p_count == NULL )
-        {
-            p_count = & dummy_count;
-        }
-        if ( self -> state < vcReady )
-        {
-            if ( self -> state == vcFailed )
-            {
-                rc = RC ( rcVDB, rcCursor, rcAccessing, rcCursor, rcInvalid );
-            }
-            else
-            {
-                rc = RC ( rcVDB, rcCursor, rcAccessing, rcCursor, rcNotOpen );
-            }
-        }
-        else if ( p_idx == 0 )
-        {
-            VCursorIdRangeData pb;
-
-            pb . first = INT64_MAX;
-            pb . last = INT64_MIN;
-            pb . rc = SILENT_RC ( rcVDB, rcCursor, rcAccessing, rcRange, rcEmpty );
-
-            if ( ! VectorDoUntil ( & self -> row, false, column_id_range, & pb ) )
-            {
-                * p_first = pb . first;
-                * p_count = pb . last >= pb . first ? pb . last + 1 - pb . first : 0;
-                return pb . rc;
-            }
-
-            rc = pb . rc;
-        }
-        else
-        {
-            const VColumn *vcol = ( const VColumn* ) VectorGet ( & self -> row, p_idx );
-            if ( vcol == NULL )
-            {
-                rc = RC ( rcVDB, rcCursor, rcAccessing, rcColumn, rcNotFound );
-            }
-            else
-            {
-                int64_t last;
-
-                rc = VColumnIdRange ( vcol, p_first, & last );
-                if  (rc == 0 )
-                {
-                    * p_count = last + 1 - * p_first;
-                }
-                return rc;
-            }
-        }
-
-        * p_first = 0;
-        * p_count = 0;
-    }
-
-    return rc;
-}
-
 
 /* SetRowIdRead - PRIVATE
  *  seek to given row id

@@ -2389,6 +2389,8 @@ rc_t VProductionReadBlob ( const VProduction *cself, VBlob **vblob, int64_t * p_
     VBlob *blob;
 #endif
 
+/*printf("VProductionReadBlob(%s, %li)\n", cself->name, *p_id);*/
+
     * vblob = NULL;
 
     /* should not be possible, but safety is cheap */

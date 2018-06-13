@@ -171,7 +171,7 @@ rc_t VCursorListSeededWritableColumns ( VCURSOR_IMPL *self, BSTree *columns, str
 
 /* Open
  */
-rc_t VCursorOpenRead ( VCURSOR_IMPL *self, struct KDlset const *libs );
+rc_t VTableCursorOpenRead ( VCURSOR_IMPL *self, struct KDlset const *libs );
 
 Vector * VTableCursorGetRow ( VCURSOR_IMPL * self );
 
@@ -206,6 +206,8 @@ bool VTableCursorCacheActive ( const struct VCURSOR_IMPL * self, int64_t * cache
 
 struct VCursorCache * VTableCursorColumns ( struct VCURSOR_IMPL * self, uint32_t ctx_type );
 struct VCursorCache * VTableCursorProductions ( struct VCURSOR_IMPL * self, uint32_t ctx_type );
+
+rc_t VTableCursorIdRange ( const VCURSOR_IMPL * p_self, uint32_t p_idx,int64_t * p_first, uint64_t * p_count );
 
 #ifdef __cplusplus
 }
