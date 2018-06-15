@@ -1,5 +1,17 @@
 # NCBI External Developer Release:
 
+## NCBI VDB 2.9.1
+**June 15, 2018**
+
+  **build**: 'make install' ignore ROOT environment variable  
+  **kfg, kns**: Added API to instruct VDB to silently accept any server certificate as valid.  
+  **kfg, vdb-config**: name resolver service now makes use of fcgi  
+  **kfg, vfs**: Fixed a bug that prevented decryption of objects encrypted with non-UTF8 text password keys  
+  **klib**: added check for NULL format argument to string_printf()  
+  **kns**: Randomly select from multiple proxies in configuration  
+  **test**: added Windows test projects for the new schema and the latest vdb  
+
+
 ## NCBI VDB
 **February 23, 2018**
 
