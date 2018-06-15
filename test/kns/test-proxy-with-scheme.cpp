@@ -57,7 +57,7 @@ TEST_CASE ( test ) {
     REQUIRE_RC ( KConfigMakeEmpty ( & kfg ) );
     REQUIRE_RC ( KConfigWriteString ( kfg,
                     "/repository/remote/main/CGI/resolver-cgi",
-                    "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" ) );
+                    "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi" ) );
 
     if ( PROXY != NULL )
         REQUIRE_RC ( KConfigWriteString ( kfg, "/http/proxy/path", PROXY ) );

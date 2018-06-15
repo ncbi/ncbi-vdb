@@ -30,6 +30,8 @@
 
 #include "ngs_c_fixture.hpp"
 
+#include <kfg/config.h> /* KConfigDisableUserSettings */
+
 #include <vdb/database.h>
 #include <vdb/blob.h>
 
@@ -321,6 +323,7 @@ const char UsageDefaultName[] = "test-ngs_byteblob";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    KConfigDisableUserSettings();
     rc_t m_coll=NgsByteBlobTestSuite(argc, argv);
     return m_coll;
 }

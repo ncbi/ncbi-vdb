@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\libs\kns\proxy.c" />
     <ClInclude Include="..\..\..\libs\diagnose\diagnose.h" />
   </ItemGroup>
   <ItemGroup>

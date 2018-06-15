@@ -280,6 +280,95 @@ rc_t PreHttpTest ( void )
     return rc;
 }
 
+rc_t HttpsTest ( const KFile *input )
+{
+
+    KNSManager *mgr;
+
+    rc_t rc = KNSManagerMake ( & mgr );
+    if ( rc == 0 )
+    {
+        KStream *sock;
+        rc = KStreamFromKFilePair ( & sock, input, NULL );
+        if ( rc == 0 )
+        {
+            struct KClientHttp *https;
+
+            String host;
+            CONST_STRING ( & host, "www.ncbi.nlm.nih.gov" );
+
+            rc = KNSManagerMakeClientHttps ( mgr, & https, sock, 0x01010000, & host, 443 );
+            if ( rc == 0 )
+            {
+                String msg;
+                ver_t version;
+                uint32_t status;
+
+                rc = KHttpGetStatusLine ( https, NULL, &msg, &status, &version );
+                if ( rc != 0 )
+                    OUTMSG (( "%s: KHttpGetStatusLine failed with rc=%R\n", __func__, rc ));
+                else
+                {
+                    bool blank, close_connection;
+                    BSTree hdrs;
+                    OUTMSG (( "%s: KHttpGetStatusLine returned msg='%S', status=%u, version=%V\n",
+                              __func__, & msg, status, version ));
+
+                    BSTreeInit ( & hdrs );
+
+                    for ( blank = close_connection = false; ! blank && rc == 0; )
+                        rc = KHttpGetHeaderLine ( http, NULL, & hdrs, & blank, & close_connection );
+
+                    if ( rc != 0 )
+                        OUTMSG (( "%s: KHttpGetHeaderLine failed with rc=%R\n", __func__, rc ));
+                    else
+                    {
+                        const KHttpHeader * hdr;
+
+                        OUTMSG (( "%s: KHttpGetStatusLine listing:\n", __func__ ));
+                        for ( hdr = ( const KHttpHeader * ) BSTreeFirst ( & hdrs );
+                              hdr != NULL;
+                              hdr = ( const KHttpHeader * ) BSTNodeNext ( & hdr -> dad ) )
+                        {
+                            OUTMSG (( "    name='%S', value='%S'\n", & hdr -> name, & hdr -> value ));
+                        }
+                    }
+
+                    BSTreeWhack ( & hdrs, KHttpHeaderWhack, NULL );
+
+                }
+
+                KHttpRelease ( http );
+            }
+
+            KStreamRelease ( sock );
+        }
+
+        KNSManagerRelease ( mgr );
+    }
+
+    return rc;
+}
+
+rc_t PreHttpsTest ( void )
+{
+    KDirectory *dir;
+    rc_t rc = KDirectoryNativeDir ( &dir );
+    if ( rc == 0 )
+    {
+        const KFile *f;
+        rc = KDirectoryOpenFileRead ( dir, &f, "nih_1_out_https.txt" );
+        if ( rc == 0 )
+        {
+            rc = HttpsTest ( f );
+            KFileRelease ( f );
+        }
+
+        KDirectoryRelease ( dir );
+    }
+    return rc;
+}
+
 /* Version  EXTERN
  *  return 4-part version code: 0xMMmmrrrr, where
  *      MM = major release
@@ -346,8 +435,8 @@ rc_t run ( const char *progname )
     URLBlockInitTest ();
     rc = ParseUrlTest ();
     rc = PreHttpTest ();      
-
-    return rc;
+    rc = PreHttpsTest ();
+    return 1;
 }
 
 /* KMain

@@ -431,7 +431,8 @@ rc_t run_ascp(const char *path, const char *key,
                         ++i;
                         if ((heartbeat > 0 && i >= heartbeat) || (i > 99)) {
                             uint64_t size = 0;
-                            rc_t rc = KDirectoryFileSize(dir, &size, "%s", dest);
+                            rc_t rc = KDirectoryFileSize
+                                (dir, &size, "%s", dest);
                             if (rc != 0) {
                                 size = 0;
                             }
@@ -443,7 +444,8 @@ rc_t run_ascp(const char *path, const char *key,
                                 }
                                 else {
                                     KTime_t date = 0;
-                                    rc_t rc = KDirectoryDate(dir, &date, "%s", dest);
+                                    rc_t rc = KDirectoryDate
+                                        (dir, &date, "%s", dest);
                                     if (rc == 0) {
                                         tPrev = date;
                                         if ((KTimeStamp() - date) > 60 * 99) {
@@ -544,7 +546,8 @@ rc_t run_ascp(const char *path, const char *key,
                 if (callback) {
                     callback(id, eAscpStateExitSuccess, 0, 0);
                 }
-            } else if (writeFailed) {
+            }
+            else if (writeFailed) {
                 rc = RC(rcExe, rcProcess, rcExecuting, rcMemory, rcExhausted);
                 if (callback) {
                     callback(id, eAscpStateExitWriteFailure, 0, 0);
@@ -560,7 +563,8 @@ rc_t run_ascp(const char *path, const char *key,
                     callback(id, eAscpStateExitFailure, 0, 0);
                 }
             }
-        } else if (WIFSIGNALED(status)) {
+        }
+        else if (WIFSIGNALED(status)) {
             if (rc == 0) {
                 if (quitting) {
                     rc = quitting();
@@ -580,6 +584,12 @@ rc_t run_ascp(const char *path, const char *key,
                 }
             }
         }
+
+        close(pipefrom[0]);
+        pipefrom[0] = 0;
+
+        close(pipeto[1]);
+        pipeto[1] = 0;
     }
     return rc;
 }

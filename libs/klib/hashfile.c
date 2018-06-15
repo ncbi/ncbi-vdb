@@ -46,51 +46,55 @@ extern "C" {
 #endif
 
 typedef unsigned char u8;
-static u8* BUCKET_INVALID = (u8*)0; /* Must be 0, calloc fills */
-static u8* BUCKET_INVISIBLE = (u8*)1;
+static u8 *           BUCKET_INVALID   = (u8 *)0; /* Must be 0, calloc fills */
+static u8 *           BUCKET_INVISIBLE = (u8 *)1;
 #define NUM_SEGMENTS 2048
 
 /*#define MIN(a, b) ((a) > (b) ? (b) : (a)) */
-#define MAX(a, b) ((a) < (b) ? (b) : (a))
+#define MAX( a, b ) ( ( a ) < ( b ) ? ( b ) : ( a ) )
 
-#if defined(__GNUC__)
-#define COMPILER_BARRIER __asm__ __volatile__("" ::: "memory")
-#elif defined(_MSC_VER)
+#if defined( __GNUC__ )
+#define COMPILER_BARRIER __asm__ __volatile__( "" ::: "memory" )
+#elif defined( _MSC_VER )
 #define COMPILER_BARRIER _ReadWriteBarrier()
 #else
 /* C11's stdatomic */
-#define COMPILER_BARRIER atomic_thread_fence(memory_order_release)
+#define COMPILER_BARRIER atomic_thread_fence( memory_order_release )
 #endif
 
 typedef struct Hashtable
 {
-    u8** table;
+    u8 **  table;
     size_t table_sz;
 } Hashtable;
 
 typedef struct Segment
 {
-    Hashtable* hashtable; /* Will be switched atomically so readers can be
-                             lock-free */
-    size_t load;          /* Including invisible entries */
-    size_t max_load;      /* When to rehash */
-    KLock* seglock;
-    u8* alloc_base;
-    size_t alloc_remain;
+    Hashtable * hashtable; /* Will be switched atomically so readers can be
+                              lock-free */
+    size_t  load;          /* Including invisible entries */
+    size_t  max_load;      /* When to rehash */
+    KLock * seglock;
+    u8 *    alloc_base;
+    size_t  alloc_remain;
 } Segment;
 
 struct KHashFile
 {
-    KFile* file;
+    KFile * file;
+#if _ARCH_BITS == 32
+    atomic32_t count;
+#else
     atomic64_t count;
-    size_t iter_seg;
-    size_t iter_ent;
+#endif
+    size_t  iter_seg;
+    size_t  iter_ent;
     Segment segments[NUM_SEGMENTS];
-    KLock* alloc_lock; /* protects below */
-    u8* alloc_base;
-    size_t alloc_remain;
-    size_t alloc_chunk;
-    Vector allocs;
+    KLock * alloc_lock; /* protects below */
+    u8 *    alloc_base;
+    size_t  alloc_remain;
+    size_t  alloc_chunk;
+    Vector  allocs;
 };
 
 /* Hash/Key/Values are encoded as:
@@ -107,134 +111,144 @@ struct KHashFile
  */
 typedef struct HKV
 {
-    uint64_t hash;
-    size_t key_size;
-    size_t value_size;
-    const void* key;
-    const void* value;
+    uint64_t     hash;
+    size_t       key_size;
+    size_t       value_size;
+    const void * key;
+    const void * value;
 } HKV;
 
-static size_t which_segment(uint64_t hash)
+static size_t which_segment( uint64_t hash )
 {
     hash = hash >> 8;
     hash *= 11812119942205477693ULL; /* Random prime */
-    hash = uint64_ror(hash, 53);
+    hash = uint64_ror( hash, 53 );
     return hash % NUM_SEGMENTS;
 }
 
-static size_t hkv_space(const HKV* in)
+static size_t hkv_space( const HKV * in )
 {
     size_t out = 0;
-    out += sizeof(uint64_t); /* hash */
-    out += 2;                /* key & value_size */
-    if (in->key_size > 254)
-        out += sizeof(in->key_size); /* optional key_size */
-    if (in->value_size > 254)
-        out += sizeof(in->value_size); /* optional value_size */
-    out += in->key_size;               /* key */
-    out += in->value_size;             /* value */
+    out += sizeof( uint64_t ); /* hash */
+    out += 2;                  /* key & value_size */
+    if ( in->key_size > 254 )
+        out += sizeof( in->key_size ); /* optional key_size */
+    if ( in->value_size > 254 )
+        out += sizeof( in->value_size ); /* optional value_size */
+    out += in->key_size;                 /* key */
+    out += in->value_size;               /* value */
     return out;
 }
 
-static void hkv_decode(const u8* in, HKV* out)
+static void hkv_decode( const u8 * in, HKV * out )
 {
-    const u8* p = in;
-    memcpy(&out->hash, p, sizeof(out->hash));
-    p += sizeof(out->hash);
+    const u8 * p = in;
+    memcpy( &out->hash, p, sizeof( out->hash ) );
+    p += sizeof( out->hash );
     out->key_size = *p;
     p += 1;
     out->value_size = *p;
     p += 1;
-    if (out->key_size == 255) {
-        memcpy(&out->key_size, p, sizeof(out->key_size));
-        p += sizeof(out->key_size);
+    if ( out->key_size == 255 )
+    {
+        memcpy( &out->key_size, p, sizeof( out->key_size ) );
+        p += sizeof( out->key_size );
     }
-    if (out->value_size == 255) {
-        memcpy(&out->value_size, p, sizeof(out->value_size));
-        p += sizeof(out->value_size);
+    if ( out->value_size == 255 )
+    {
+        memcpy( &out->value_size, p, sizeof( out->value_size ) );
+        p += sizeof( out->value_size );
     }
-    out->key = (const void*)p;
+    out->key = (const void *)p;
     p += out->key_size;
-    out->value = (const void*)p;
+    out->value = (const void *)p;
     p += out->value_size;
 }
 
-static void hkv_encode(const HKV* in, u8* out)
+static void hkv_encode( const HKV * in, u8 * out )
 {
-    u8* p = out;
-    memcpy(p, &in->hash, sizeof(in->hash));
-    p += sizeof(in->hash);
+    u8 * p = out;
+    memcpy( p, &in->hash, sizeof( in->hash ) );
+    p += sizeof( in->hash );
 
-    if (in->key_size <= 254)
+    if ( in->key_size <= 254 )
         *p = (u8)in->key_size;
     else
         *p = 255;
     ++p;
 
-    if (in->value_size <= 254)
+    if ( in->value_size <= 254 )
         *p = (u8)in->value_size;
     else
         *p = 255;
     ++p;
 
-    if (in->key_size >= 255) {
-        memcpy(p, &in->key_size, sizeof(in->key_size));
-        p += sizeof(in->key_size);
+    if ( in->key_size >= 255 )
+    {
+        memcpy( p, &in->key_size, sizeof( in->key_size ) );
+        p += sizeof( in->key_size );
     }
 
-    if (in->value_size >= 255) {
-        memcpy(p, &in->value_size, sizeof(in->value_size));
-        p += sizeof(in->value_size);
+    if ( in->value_size >= 255 )
+    {
+        memcpy( p, &in->value_size, sizeof( in->value_size ) );
+        p += sizeof( in->value_size );
     }
 
-    switch (in->key_size) /* Optimize common sizes */
+    switch ( in->key_size ) /* Optimize common sizes */
     {
         case 4:
-            memcpy(p, in->key, 4);
+            memcpy( p, in->key, 4 );
             break;
         case 8:
-            memcpy(p, in->key, 8);
+            memcpy( p, in->key, 8 );
             break;
         default:
-            memcpy(p, in->key, in->key_size);
+            memcpy( p, in->key, in->key_size );
     }
 
     p += in->key_size;
 
-    switch (in->value_size) {
+    switch ( in->value_size )
+    {
         case 4:
-            memcpy(p, in->value, 4);
+            memcpy( p, in->value, 4 );
             break;
         case 8:
-            memcpy(p, in->value, 8);
+            memcpy( p, in->value, 8 );
             break;
         default:
-            memcpy(p, in->value, in->value_size);
+            memcpy( p, in->value, in->value_size );
     }
 
     p += in->value_size;
 #if _DEBUGGING
     HKV test;
-    hkv_decode(out, &test);
-    if (test.hash != in->hash) {
-        fprintf(stderr, "hash mismatch %lx %lx\n", test.hash, in->hash);
+    hkv_decode( out, &test );
+    if ( test.hash != in->hash )
+    {
+        fprintf( stderr, "hash mismatch %lx %lx\n", test.hash, in->hash );
         abort();
     }
-    if (test.key_size != in->key_size) {
-        fprintf(stderr, "key_size mismatch %ld %ld\n", test.key_size,
-                in->key_size);
+    if ( test.key_size != in->key_size )
+    {
+        fprintf( stderr, "key_size mismatch %ld %ld\n", test.key_size,
+                 in->key_size );
         abort();
     }
-    if (test.value_size != in->value_size) {
-        fprintf(stderr, "value_size mismatch\n");
+    if ( test.value_size != in->value_size )
+    {
+        fprintf( stderr, "value_size mismatch\n" );
         abort();
     }
-    if (memcmp(in->key, test.key, in->key_size)) {
-        fprintf(stderr, "key mismatch\n");
+    if ( memcmp( in->key, test.key, in->key_size ) )
+    {
+        fprintf( stderr, "key mismatch\n" );
         abort();
     }
-    if (memcmp(in->value, test.value, in->value_size)) {
-        fprintf(stderr, "value mismatch\n");
+    if ( memcmp( in->value, test.value, in->value_size ) )
+    {
+        fprintf( stderr, "value mismatch\n" );
         abort();
     }
 #endif
@@ -261,21 +275,24 @@ static void dump(const KHashFile * self)
 #endif
 
 /* Single, locked allocator shared between all segments. */
-static void* map_calloc(KHashFile* self, size_t size)
+static void * map_calloc( KHashFile * self, size_t size )
 {
-    rc_t rc;
-    void* block = NULL;
+    rc_t   rc;
+    void * block = NULL;
 
-    if (self == NULL || size == 0) {
+    if ( self == NULL || size == 0 )
+    {
         return NULL;
     }
 
-    rc = KLockAcquire(self->alloc_lock);
-    if (rc) {
+    rc = KLockAcquire( self->alloc_lock );
+    if ( rc )
+    {
         return NULL;
     }
 
-    if (size > self->alloc_remain) {
+    if ( size > self->alloc_remain )
+    {
         size_t req = size;
 
         /* /proc/sys/vm/max_map_count limits us to about 64K mmaps per
@@ -284,54 +301,62 @@ static void* map_calloc(KHashFile* self, size_t size)
          * to
          * get creative. 1MB * 1.25^N will allow 1TB when N=62, 1PB at N=93.
          */
-        if (self->alloc_chunk == 0)
+        if ( self->alloc_chunk == 0 )
             self->alloc_chunk = 1048576;
-        else {
+        else
+        {
             self->alloc_chunk *= 5;
             self->alloc_chunk /= 4;
         }
 
-        req = MAX(req, self->alloc_chunk);
+        req = MAX( req, self->alloc_chunk );
         /* Round up to 4K page size */
-        req = ((req + 4095) / 4096) * 4096;
-        if (self->file != NULL) {
+        req = ( ( req + 4095 ) / 4096 ) * 4096;
+        if ( self->file != NULL )
+        {
             uint64_t filesize;
-            rc = KFileSize(self->file, &filesize);
-            if (rc) {
-                KLockUnlock(self->alloc_lock);
+            rc = KFileSize( self->file, &filesize );
+            if ( rc )
+            {
+                KLockUnlock( self->alloc_lock );
                 return NULL;
             }
 
-            rc = KFileSetSize(self->file, filesize + req);
-            if (rc) {
-                KLockUnlock(self->alloc_lock);
+            rc = KFileSetSize( self->file, filesize + req );
+            if ( rc )
+            {
+                KLockUnlock( self->alloc_lock );
                 return NULL;
             }
 
-            KMMap* mm = NULL;
-            rc = KMMapMakeRgnUpdate(&mm, self->file, filesize, req);
-            if (rc) {
-                KLockUnlock(self->alloc_lock);
+            KMMap * mm = NULL;
+            rc         = KMMapMakeRgnUpdate( &mm, self->file, filesize, req );
+            if ( rc )
+            {
+                KLockUnlock( self->alloc_lock );
                 return NULL;
             }
 
-            rc = KMMapAddrUpdate(mm, (void*)&self->alloc_base);
-            if (rc) {
-                KLockUnlock(self->alloc_lock);
+            rc = KMMapAddrUpdate( mm, (void *)&self->alloc_base );
+            if ( rc )
+            {
+                KLockUnlock( self->alloc_lock );
                 return NULL;
             }
 #if LINUX
             /* Not sure this helps */
-            madvise((void*)self->alloc_base, req, MADV_RANDOM);
+            madvise( (void *)self->alloc_base, req, MADV_RANDOM );
 #endif
 
             self->alloc_remain = req;
-            VectorAppend(&self->allocs, NULL, (void*)mm);
-        } else {
-            req = MAX(size, 1048576);
-            self->alloc_base = calloc(1, req);
+            VectorAppend( &self->allocs, NULL, (void *)mm );
+        }
+        else
+        {
+            req                = MAX( size, 1048576 );
+            self->alloc_base   = calloc( 1, req );
             self->alloc_remain = req;
-            VectorAppend(&self->allocs, NULL, self->alloc_base);
+            VectorAppend( &self->allocs, NULL, self->alloc_base );
         }
     }
 
@@ -339,91 +364,102 @@ static void* map_calloc(KHashFile* self, size_t size)
     self->alloc_base += size;
     self->alloc_remain -= size;
 
-    KLockUnlock(self->alloc_lock);
+    KLockUnlock( self->alloc_lock );
 
     return block;
 }
 
 /* Per segment allocator */
-static void* seg_alloc(KHashFile* self, size_t segment, size_t size)
+static void * seg_alloc( KHashFile * self, size_t segment, size_t size )
 {
-    assert(self != NULL);
-    assert(segment < NUM_SEGMENTS);
-    assert(size > 0);
+    assert( self != NULL );
+    assert( segment < NUM_SEGMENTS );
+    assert( size > 0 );
 
-    if (size % 8 != 0) size += 8 - (size % 8); /* Round up for alignment */
+    if ( size % 8 != 0 )
+        size += 8 - ( size % 8 ); /* Round up for alignment */
 
-    Segment* seg = &self->segments[segment];
-    if (size > seg->alloc_remain) {
-        size_t req = MAX(size, 4096);
-        seg->alloc_base = map_calloc(self, req);
-        if (!seg->alloc_base) {
+    Segment * seg = &self->segments[segment];
+    if ( size > seg->alloc_remain )
+    {
+        size_t req      = MAX( size, 4096 );
+        seg->alloc_base = map_calloc( self, req );
+        if ( !seg->alloc_base )
+        {
             return NULL;
         }
         seg->alloc_remain = req;
     }
 
-    void* r = seg->alloc_base;
+    void * r = seg->alloc_base;
     seg->alloc_base += size;
     seg->alloc_remain -= size;
 
     return r;
 }
 
-static rc_t rehash_segment(KHashFile* self, size_t segment, size_t capacity)
+static rc_t rehash_segment( KHashFile * self, size_t segment, size_t capacity )
 {
-    assert(self != NULL);
-    assert(segment < NUM_SEGMENTS);
+    assert( self != NULL );
+    assert( segment < NUM_SEGMENTS );
 
     /* Requires segment locked by caller */
 
-    Segment* seg = &self->segments[segment];
+    Segment * seg = &self->segments[segment];
 
-    Hashtable* old_hashtable = seg->hashtable;
+    Hashtable * old_hashtable = seg->hashtable;
 
     /* Don't allow shrinking */
-    if (old_hashtable) capacity = MAX(capacity, old_hashtable->table_sz);
+    if ( old_hashtable )
+        capacity = MAX( capacity, old_hashtable->table_sz );
 
-    uint64_t lg2 = (uint64_t)uint64_msbit(capacity | 1);
-    capacity = 1ULL << lg2;
+    uint64_t lg2 = (uint64_t)uint64_msbit( capacity | 1 );
+    capacity     = 1ULL << lg2;
     /* Table must be 64-bit aligned for atomic updates, seg_alloc does */
-    Hashtable* new_hashtable
-        = (Hashtable*)seg_alloc(self, segment, sizeof(Hashtable));
-    if (!new_hashtable) {
-        return RC(rcCont, rcHashtable, rcInserting, rcMemory, rcExhausted);
+    Hashtable * new_hashtable
+        = (Hashtable *)seg_alloc( self, segment, sizeof( Hashtable ) );
+    if ( !new_hashtable )
+    {
+        return RC( rcCont, rcHashtable, rcInserting, rcMemory, rcExhausted );
     }
 
     new_hashtable->table_sz = capacity;
-    new_hashtable->table = seg_alloc(self, segment, capacity * sizeof(u8*));
-    if (!new_hashtable->table) {
-        return RC(rcCont, rcHashtable, rcInserting, rcMemory, rcExhausted);
+    new_hashtable->table
+        = seg_alloc( self, segment, capacity * sizeof( u8 * ) );
+    if ( !new_hashtable->table )
+    {
+        return RC( rcCont, rcHashtable, rcInserting, rcMemory, rcExhausted );
     }
 
-    if (old_hashtable) {
-        seg->load = 0;
-        u8** old_table = old_hashtable->table;
-        u8** new_table = new_hashtable->table;
-        size_t old_table_sz = old_hashtable->table_sz;
-        size_t new_table_sz = new_hashtable->table_sz;
-        const uint64_t new_mask = new_table_sz - 1;
-        for (size_t old_bucket = 0; old_bucket != old_table_sz;
-             ++old_bucket) {
-            u8* okv = old_table[old_bucket];
-            if (okv != BUCKET_INVALID && okv != BUCKET_INVISIBLE) {
+    if ( old_hashtable )
+    {
+        seg->load                   = 0;
+        u8 **          old_table    = old_hashtable->table;
+        u8 **          new_table    = new_hashtable->table;
+        size_t         old_table_sz = old_hashtable->table_sz;
+        size_t         new_table_sz = new_hashtable->table_sz;
+        const uint64_t new_mask     = new_table_sz - 1;
+        for ( size_t old_bucket = 0; old_bucket != old_table_sz; ++old_bucket )
+        {
+            u8 * okv = old_table[old_bucket];
+            if ( okv != BUCKET_INVALID && okv != BUCKET_INVISIBLE )
+            {
                 size_t triangle = 0;
-                HKV obkv;
-                hkv_decode(okv, &obkv);
+                HKV    obkv;
+                hkv_decode( okv, &obkv );
                 uint64_t new_bucket = obkv.hash;
-                while (1) {
+                while ( 1 )
+                {
                     new_bucket &= new_mask;
-                    u8* nkv = new_table[new_bucket];
-                    if (nkv == BUCKET_INVALID) {
+                    u8 * nkv = new_table[new_bucket];
+                    if ( nkv == BUCKET_INVALID )
+                    {
                         new_table[new_bucket] = okv;
                         ++seg->load;
                         break;
                     }
                     ++triangle;
-                    new_bucket += (triangle * (triangle + 1) / 2);
+                    new_bucket += ( triangle * ( triangle + 1 ) / 2 );
                 }
             }
         }
@@ -432,43 +468,51 @@ static rc_t rehash_segment(KHashFile* self, size_t segment, size_t capacity)
     seg->hashtable = new_hashtable;
     /* New max_load should be 0.5..0.7X table_sz */
     long int ratio = 50 + segment % 20;
-    seg->max_load = seg->hashtable->table_sz * ratio / 100;
+    seg->max_load  = seg->hashtable->table_sz * ratio / 100;
 
     return 0;
 }
 
-LIB_EXPORT rc_t KHashFileMake(KHashFile** self, KFile* hashfile)
+LIB_EXPORT rc_t KHashFileMake( KHashFile ** self, KFile * hashfile )
 {
-    if (self == NULL)
-        return RC(rcCont, rcHashtable, rcConstructing, rcParam, rcInvalid);
+    if ( self == NULL )
+        return RC( rcCont, rcHashtable, rcConstructing, rcParam, rcInvalid );
 
     rc_t rc;
     *self = NULL;
 
-    KHashFile* kht = (KHashFile*)malloc(sizeof(KHashFile));
-    if (kht == NULL)
-        return RC(rcCont, rcHashtable, rcConstructing, rcMemory, rcExhausted);
+    KHashFile * kht = (KHashFile *)malloc( sizeof( KHashFile ) );
+    if ( kht == NULL )
+        return RC( rcCont, rcHashtable, rcConstructing, rcMemory, rcExhausted );
 
     kht->file = hashfile;
-    atomic64_set(&kht->count, 0);
-    VectorInit(&kht->allocs, 0, 0);
-    kht->iter_seg = NUM_SEGMENTS;
-    kht->alloc_base = NULL;
+#if _ARCH_BITS == 32
+    atomic32_set( &kht->count, 0 );
+#else
+    atomic64_set( &kht->count, 0 );
+#endif
+    VectorInit( &kht->allocs, 0, 0 );
+    kht->iter_seg     = NUM_SEGMENTS;
+    kht->alloc_base   = NULL;
     kht->alloc_remain = 0;
-    kht->alloc_chunk = 0;
-    rc = KLockMake(&kht->alloc_lock);
-    if (rc) return rc;
-    for (size_t i = 0; i != NUM_SEGMENTS; ++i) {
+    kht->alloc_chunk  = 0;
+    rc                = KLockMake( &kht->alloc_lock );
+    if ( rc )
+        return rc;
+    for ( size_t i = 0; i != NUM_SEGMENTS; ++i )
+    {
         kht->segments[i].hashtable = NULL;
-        kht->segments[i].load = 0;
-        KLockMake(&kht->segments[i].seglock);
-        if (rc) return rc;
-        kht->segments[i].alloc_base = NULL;
+        kht->segments[i].load      = 0;
+        KLockMake( &kht->segments[i].seglock );
+        if ( rc )
+            return rc;
+        kht->segments[i].alloc_base   = NULL;
         kht->segments[i].alloc_remain = 0;
-        rc = rehash_segment(kht, i, 64);
+        rc                            = rehash_segment( kht, i, 64 );
 
-        if (rc) {
-            free(kht);
+        if ( rc )
+        {
+            free( kht );
             return rc;
         }
     }
@@ -478,93 +522,113 @@ LIB_EXPORT rc_t KHashFileMake(KHashFile** self, KFile* hashfile)
     return 0;
 }
 
-LIB_EXPORT void KHashFileDispose(KHashFile* self)
+LIB_EXPORT void KHashFileDispose( KHashFile * self )
 {
-    if (self == NULL) return;
+    if ( self == NULL )
+        return;
 
-    atomic64_set(&self->count, 0);
+#if _ARCH_BITS == 32
+    atomic32_set( &self->count, 0 );
+#else
+    atomic64_set( &self->count, 0 );
+#endif
 
-    for (size_t i = 0; i != NUM_SEGMENTS; ++i) {
+    for ( size_t i = 0; i != NUM_SEGMENTS; ++i )
+    {
         self->segments[i].hashtable = NULL;
-        KLockRelease(self->segments[i].seglock);
-        self->segments[i].alloc_base = NULL;
+        KLockRelease( self->segments[i].seglock );
+        self->segments[i].alloc_base   = NULL;
         self->segments[i].alloc_remain = 0;
     }
 
-    for (uint32_t i = 0; i != VectorLength(&self->allocs); ++i) {
-        void* alloc = VectorGet(&self->allocs, i);
-        if (self->file == NULL) {
-            free(alloc);
-        } else {
-            KMMapRelease((KMMap*)alloc);
+    for ( uint32_t i = 0; i != VectorLength( &self->allocs ); ++i )
+    {
+        void * alloc = VectorGet( &self->allocs, i );
+        if ( self->file == NULL )
+        {
+            free( alloc );
+        }
+        else
+        {
+            KMMapRelease( (KMMap *)alloc );
         }
     }
-    self->iter_seg = NUM_SEGMENTS;
-    self->alloc_base = NULL;
+    self->iter_seg     = NUM_SEGMENTS;
+    self->alloc_base   = NULL;
     self->alloc_remain = 0;
-    self->alloc_chunk = 0;
-    VectorWhack(&self->allocs, NULL, NULL);
-    KLockRelease(self->alloc_lock);
+    self->alloc_chunk  = 0;
+    VectorWhack( &self->allocs, NULL, NULL );
+    KLockRelease( self->alloc_lock );
 
-    memset(self, 0, sizeof(KHashFile));
-    free(self);
+    memset( self, 0, sizeof( KHashFile ) );
+    free( self );
 }
 
-LIB_EXPORT size_t KHashFileCount(const KHashFile* self)
+LIB_EXPORT size_t KHashFileCount( const KHashFile * self )
 {
-    if (self != NULL)
-        return (size_t)atomic64_read(&self->count);
+    if ( self != NULL )
+#if _ARCH_BITS == 32
+        return (size_t)atomic32_read( &self->count );
+#else
+        return (size_t)atomic64_read( &self->count );
+#endif
     else
         return 0;
 }
 
-LIB_EXPORT bool KHashFileFind(const KHashFile* self, const void* key,
-                              const size_t key_size, const uint64_t keyhash,
-                              void* value, size_t* value_size)
+LIB_EXPORT bool KHashFileFind( const KHashFile * self, const void * key,
+                               const size_t key_size, const uint64_t keyhash,
+                               void * value, size_t * value_size )
 {
-    if (self == NULL)
-        return RC(rcCont, rcHashtable, rcInserting, rcParam, rcInvalid);
+    if ( self == NULL )
+        return RC( rcCont, rcHashtable, rcInserting, rcParam, rcInvalid );
 
-    size_t triangle = 0;
-    uint64_t bucket = keyhash;
-    size_t segment = which_segment(bucket);
-    const Segment* seg = &self->segments[segment];
-    const Hashtable* hashtable = seg->hashtable;
+    size_t            triangle  = 0;
+    uint64_t          bucket    = keyhash;
+    size_t            segment   = which_segment( bucket );
+    const Segment *   seg       = &self->segments[segment];
+    const Hashtable * hashtable = seg->hashtable;
     /* Not sure barrier required, clang 3.8/gcc 4.9 don't resolve
      * hashtable->table or hashtable->sz before seg->hashtable and I'm
      * not sure why any future optimizer would. Doesn't affect assembly, so
      * leaving it in for now.
      */
     COMPILER_BARRIER;
-    u8** table = hashtable->table;
-    const uint64_t mask = hashtable->table_sz - 1;
+    u8 **          table = hashtable->table;
+    const uint64_t mask  = hashtable->table_sz - 1;
 
-    while (1) {
+    while ( 1 )
+    {
         bucket &= mask;
-        const u8* kv = table[bucket];
-        if (kv == BUCKET_INVALID) return false;
+        const u8 * kv = table[bucket];
+        if ( kv == BUCKET_INVALID )
+            return false;
 
-        if (kv != BUCKET_INVISIBLE) {
+        if ( kv != BUCKET_INVISIBLE )
+        {
             HKV bkv;
-            hkv_decode(kv, &bkv);
+            hkv_decode( kv, &bkv );
             bool found = false;
-            if (bkv.hash == keyhash) /* hash hit */
-                if (bkv.key_size == key_size)
-                    switch (key_size) /* Optimize common sizes */
+            if ( bkv.hash == keyhash ) /* hash hit */
+                if ( bkv.key_size == key_size )
+                    switch ( key_size ) /* Optimize common sizes */
                     {
                         case 4:
-                            found = (memcmp(key, bkv.key, 4) == 0);
+                            found = ( memcmp( key, bkv.key, 4 ) == 0 );
                             break;
                         case 8:
-                            found = (memcmp(key, bkv.key, 8) == 0);
+                            found = ( memcmp( key, bkv.key, 8 ) == 0 );
                             break;
                         default:
-                            found = (memcmp(key, bkv.key, key_size) == 0);
+                            found = ( memcmp( key, bkv.key, key_size ) == 0 );
                     }
 
-            if (found) {
-                if (value) memcpy(value, bkv.value, bkv.value_size);
-                if (value_size) *value_size = bkv.value_size;
+            if ( found )
+            {
+                if ( value )
+                    memcpy( value, bkv.value, bkv.value_size );
+                if ( value_size )
+                    *value_size = bkv.value_size;
                 return true;
             }
         }
@@ -575,48 +639,50 @@ LIB_EXPORT bool KHashFileFind(const KHashFile* self, const void* key,
          * This will allow complete coverage on a % 2^N hash table.
          */
         ++triangle;
-        bucket += (triangle * (triangle + 1) / 2);
+        bucket += ( triangle * ( triangle + 1 ) / 2 );
     }
 }
 
-LIB_EXPORT rc_t KHashFileAdd(KHashFile* self, const void* key,
-                             const size_t key_size, const uint64_t keyhash,
-                             const void* value, const size_t value_size)
+LIB_EXPORT rc_t KHashFileAdd( KHashFile * self, const void * key,
+                              const size_t key_size, const uint64_t keyhash,
+                              const void * value, const size_t value_size )
 {
-    if (self == NULL)
-        return RC(rcCont, rcHashtable, rcInserting, rcParam, rcInvalid);
+    if ( self == NULL )
+        return RC( rcCont, rcHashtable, rcInserting, rcParam, rcInvalid );
 
-    if (key == NULL || key_size == 0)
-        return RC(rcCont, rcHashtable, rcInserting, rcParam, rcInvalid);
-    size_t triangle = 0;
-    uint64_t bucket = keyhash;
-    size_t segment = which_segment(bucket);
-    Segment* seg = &self->segments[segment];
-    rc_t rc = 0;
+    if ( key == NULL || key_size == 0 )
+        return RC( rcCont, rcHashtable, rcInserting, rcParam, rcInvalid );
+    size_t    triangle = 0;
+    uint64_t  bucket   = keyhash;
+    size_t    segment  = which_segment( bucket );
+    Segment * seg      = &self->segments[segment];
+    rc_t      rc       = 0;
 
-    KLockAcquire(seg->seglock);
+    KLockAcquire( seg->seglock );
 
-    Hashtable* hashtable = seg->hashtable;
+    Hashtable * hashtable = seg->hashtable;
 
-    u8** table = hashtable->table;
-    const uint64_t mask = hashtable->table_sz - 1;
-    HKV hkv;
-    hkv.hash = keyhash;
-    hkv.key_size = key_size;
+    u8 **          table = hashtable->table;
+    const uint64_t mask  = hashtable->table_sz - 1;
+    HKV            hkv;
+    hkv.hash       = keyhash;
+    hkv.key_size   = key_size;
     hkv.value_size = value_size;
-    hkv.key = (const void*)key;
-    hkv.value = (const void*)value;
-    size_t kvsize = hkv_space(&hkv);
+    hkv.key        = (const void *)key;
+    hkv.value      = (const void *)value;
+    size_t kvsize  = hkv_space( &hkv );
 
-    while (1) {
+    while ( 1 )
+    {
         bucket &= mask;
-        u8* kv = table[bucket];
-        if (kv == BUCKET_INVALID) {
-            void* buf = seg_alloc(self, segment, kvsize);
-            if (!buf)
-                return RC(rcCont, rcHashtable, rcInserting, rcMemory,
-                          rcExhausted);
-            hkv_encode(&hkv, buf);
+        u8 * kv = table[bucket];
+        if ( kv == BUCKET_INVALID )
+        {
+            void * buf = seg_alloc( self, segment, kvsize );
+            if ( !buf )
+                return RC( rcCont, rcHashtable, rcInserting, rcMemory,
+                           rcExhausted );
+            hkv_encode( &hkv, buf );
 
             /* Intel 64 and IA-32 Architectures Software Developers
              * Manual
@@ -637,163 +703,190 @@ LIB_EXPORT rc_t KHashFileAdd(KHashFile* self, const void* key,
             table[bucket] = buf;
             ++seg->load;
             rc = 0;
-            if (seg->load > seg->max_load)
-                rc = rehash_segment(self, segment, hashtable->table_sz * 2);
+            if ( seg->load > seg->max_load )
+                rc = rehash_segment( self, segment, hashtable->table_sz * 2 );
+#if _ARCH_BITS == 32
+            atomic32_inc( &self->count );
+#else
+            atomic64_inc( &self->count );
+#endif
 
-            atomic64_inc(&self->count);
-
-            KLockUnlock(seg->seglock);
+            KLockUnlock( seg->seglock );
 
             return rc;
         }
 
-        if (kv != BUCKET_INVISIBLE) {
+        if ( kv != BUCKET_INVISIBLE )
+        {
             HKV bkv;
-            hkv_decode(kv, &bkv);
+            hkv_decode( kv, &bkv );
             bool found = false;
 
-            if (bkv.hash == keyhash) /* hash hit */
-                if (bkv.key_size == key_size)
-                    switch (key_size) /* Optimize common sizes */
+            if ( bkv.hash == keyhash ) /* hash hit */
+                if ( bkv.key_size == key_size )
+                    switch ( key_size ) /* Optimize common sizes */
                     {
                         case 4:
-                            found = (memcmp(key, bkv.key, 4) == 0);
+                            found = ( memcmp( key, bkv.key, 4 ) == 0 );
                             break;
                         case 8:
-                            found = (memcmp(key, bkv.key, 8) == 0);
+                            found = ( memcmp( key, bkv.key, 8 ) == 0 );
                             break;
                         default:
-                            found = (memcmp(key, bkv.key, key_size) == 0);
+                            found = ( memcmp( key, bkv.key, key_size ) == 0 );
                     }
-            if (found) {
+            if ( found )
+            {
                 /* replacement */
-                if (value_size) {
-                    if (bkv.value_size == value_size
-                        && (memcmp(bkv.value, value, value_size) == 0)) {
+                if ( value_size )
+                {
+                    if ( bkv.value_size == value_size
+                         && ( memcmp( bkv.value, value, value_size ) == 0 ) )
+                    {
                         /* Identical */
 
-                        KLockUnlock(seg->seglock);
+                        KLockUnlock( seg->seglock );
                         return 0;
                     }
 
-                    void* buf = seg_alloc(self, segment, kvsize);
-                    if (!buf)
-                        return RC(rcCont, rcHashtable, rcInserting, rcMemory,
-                                  rcExhausted);
-                    hkv_encode(&hkv, buf);
+                    void * buf = seg_alloc( self, segment, kvsize );
+                    if ( !buf )
+                        return RC( rcCont, rcHashtable, rcInserting, rcMemory,
+                                   rcExhausted );
+                    hkv_encode( &hkv, buf );
 
                     COMPILER_BARRIER;
                     table[bucket] = buf;
                 }
-                KLockUnlock(seg->seglock);
+                KLockUnlock( seg->seglock );
                 return 0;
             }
         }
 
         ++triangle;
-        bucket += (triangle * (triangle + 1) / 2);
+        bucket += ( triangle * ( triangle + 1 ) / 2 );
     }
 }
 
-LIB_EXPORT bool KHashFileDelete(KHashFile* self, const void* key,
-                                const size_t key_size, uint64_t keyhash)
+LIB_EXPORT bool KHashFileDelete( KHashFile * self, const void * key,
+                                 const size_t key_size, uint64_t keyhash )
 {
-    if (self == NULL)
-        return RC(rcCont, rcHashtable, rcInserting, rcParam, rcInvalid);
+    if ( self == NULL )
+        return RC( rcCont, rcHashtable, rcInserting, rcParam, rcInvalid );
 
-    size_t triangle = 0;
-    uint64_t bucket = keyhash;
-    size_t segment = which_segment(bucket);
-    Segment* seg = &self->segments[segment];
+    size_t    triangle = 0;
+    uint64_t  bucket   = keyhash;
+    size_t    segment  = which_segment( bucket );
+    Segment * seg      = &self->segments[segment];
 
-    KLockAcquire(seg->seglock);
+    KLockAcquire( seg->seglock );
 
-    Hashtable* hashtable = seg->hashtable;
+    Hashtable * hashtable = seg->hashtable;
     COMPILER_BARRIER;
-    u8** table = hashtable->table;
-    const uint64_t mask = hashtable->table_sz - 1;
+    u8 **          table = hashtable->table;
+    const uint64_t mask  = hashtable->table_sz - 1;
 
-    while (1) {
+    while ( 1 )
+    {
         bucket &= mask;
-        u8* kv = table[bucket];
-        if (kv == BUCKET_INVALID) {
-            KLockUnlock(seg->seglock);
+        u8 * kv = table[bucket];
+        if ( kv == BUCKET_INVALID )
+        {
+            KLockUnlock( seg->seglock );
 
             return false;
         }
 
-        if (kv != BUCKET_INVISIBLE) {
+        if ( kv != BUCKET_INVISIBLE )
+        {
             HKV bkv;
-            hkv_decode(kv, &bkv);
+            hkv_decode( kv, &bkv );
 
-            if (bkv.hash == keyhash && /* hash hit */
-                bkv.key_size == key_size
-                && (memcmp(key, bkv.key, key_size) == 0)) {
+            if ( bkv.hash == keyhash && /* hash hit */
+                 bkv.key_size == key_size
+                 && ( memcmp( key, bkv.key, key_size ) == 0 ) )
+            {
                 table[bucket] = BUCKET_INVISIBLE;
-                atomic64_dec(&self->count);
-                KLockUnlock(seg->seglock);
+#if _ARCH_BITS == 32
+                atomic32_dec( &self->count );
+#else
+                atomic64_dec( &self->count );
+#endif
+                KLockUnlock( seg->seglock );
                 return true;
             }
         }
 
         ++triangle;
-        bucket += (triangle * (triangle + 1) / 2);
+        bucket += ( triangle * ( triangle + 1 ) / 2 );
     }
 }
 
-LIB_EXPORT rc_t KHashFileReserve(KHashFile* self, size_t capacity)
+LIB_EXPORT rc_t KHashFileReserve( KHashFile * self, size_t capacity )
 {
-    uint64_t lg2 = (uint64_t)uint64_msbit(capacity | 1);
-    capacity = 1ULL << (lg2 + 1);
+    uint64_t lg2       = (uint64_t)uint64_msbit( capacity | 1 );
+    capacity           = 1ULL << ( lg2 + 1 );
     size_t per_segment = 2 * capacity / NUM_SEGMENTS;
 
     rc_t rc;
-    for (size_t i = 0; i != NUM_SEGMENTS; ++i) {
-        Segment* seg = &self->segments[i];
-        KLockAcquire(seg->seglock);
-        rc = rehash_segment(self, i, per_segment);
-        KLockUnlock(seg->seglock);
-        if (rc) return rc;
+    for ( size_t i = 0; i != NUM_SEGMENTS; ++i )
+    {
+        Segment * seg = &self->segments[i];
+        KLockAcquire( seg->seglock );
+        rc = rehash_segment( self, i, per_segment );
+        KLockUnlock( seg->seglock );
+        if ( rc )
+            return rc;
     }
 
     return 0;
 }
 
-LIB_EXPORT void KHashFileIteratorMake(KHashFile* self)
+LIB_EXPORT void KHashFileIteratorMake( KHashFile * self )
 {
-    if (self == NULL) return;
+    if ( self == NULL )
+        return;
 
     self->iter_seg = 0;
     self->iter_ent = 0;
 }
 
-LIB_EXPORT bool KHashFileIteratorNext(KHashFile* self, void* key,
-                                      size_t* key_size, void* value,
-                                      size_t* value_size)
+LIB_EXPORT bool KHashFileIteratorNext( KHashFile * self, void * key,
+                                       size_t * key_size, void * value,
+                                       size_t * value_size )
 {
-    if (self == NULL) return false;
+    if ( self == NULL )
+        return false;
 
-    while (1) {
-        if (self->iter_seg >= NUM_SEGMENTS) return false;
+    while ( 1 )
+    {
+        if ( self->iter_seg >= NUM_SEGMENTS )
+            return false;
 
-        const Segment* seg = &self->segments[self->iter_seg];
-        const Hashtable* hashtable = seg->hashtable;
-        u8** table = hashtable->table;
-        const u8* kv = table[self->iter_ent];
+        const Segment *   seg       = &self->segments[self->iter_seg];
+        const Hashtable * hashtable = seg->hashtable;
+        u8 **             table     = hashtable->table;
+        const u8 *        kv        = table[self->iter_ent];
 
         ++self->iter_ent;
-        if (self->iter_ent >= hashtable->table_sz) {
+        if ( self->iter_ent >= hashtable->table_sz )
+        {
             self->iter_ent = 0;
             ++self->iter_seg;
         }
 
-        if (kv != BUCKET_INVALID && kv != BUCKET_INVISIBLE) {
+        if ( kv != BUCKET_INVALID && kv != BUCKET_INVISIBLE )
+        {
             HKV bkv;
-            hkv_decode(kv, &bkv);
-            if (key) memcpy(key, bkv.key, bkv.key_size);
-            if (key_size) *key_size = bkv.key_size;
-            if (value) memcpy(value, bkv.value, bkv.value_size);
-            if (value_size) *value_size = bkv.value_size;
+            hkv_decode( kv, &bkv );
+            if ( key )
+                memcpy( key, bkv.key, bkv.key_size );
+            if ( key_size )
+                *key_size = bkv.key_size;
+            if ( value )
+                memcpy( value, bkv.value, bkv.value_size );
+            if ( value_size )
+                *value_size = bkv.value_size;
             return true;
         }
     }

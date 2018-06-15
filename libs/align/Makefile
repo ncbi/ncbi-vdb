@@ -182,7 +182,7 @@ SAM_EXTRACT_OBJ = \
 SAM_EXTRACT_LIB =
 
 bison:
-	bison -g -r all -Werror=all \
+	bison --no-lines -g -r all -Werror=all \
 		-o $(SRCDIR)/samextract-grammar.c \
 	--defines=$(SRCDIR)/samextract-tokens.h \
 	-v -Wall \
@@ -193,7 +193,7 @@ ifeq (dbg,$(BUILD))
 endif
 
 flex:
-	flex --fast -v -p $(FLEX_DEBUG) \
+	flex --noline --fast -v -p $(FLEX_DEBUG) \
 		-o $(SRCDIR)/samextract-lex.c \
 		-DYY_BUF_SIZE=16777216 \
 		$(SRCDIR)/samextract-lex.l
