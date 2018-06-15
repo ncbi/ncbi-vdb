@@ -980,7 +980,7 @@ rc_t physical_declaration ( KSymTable *tbl, KTokenSource *src, KToken *t,
                         assert ( exist -> id < p -> id );
                         VectorSwap ( & self -> phys, p -> id, NULL, & ignore );
                         VectorSwap ( & self -> phys, p -> id = exist -> id, p, & ignore );
-                        SPhysicalWhack ( exit, NULL );
+                        SPhysicalWhack ( exist, NULL );
                         return 0;
                     }
 
@@ -996,7 +996,7 @@ rc_t physical_declaration ( KSymTable *tbl, KTokenSource *src, KToken *t,
     {
         rc = 0;
     }
-    
+
     SPhysicalWhack ( p, NULL );
 
     return rc;

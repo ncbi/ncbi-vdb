@@ -382,8 +382,8 @@ static rc_t KEncryptionKeyMakeInt(const char* value, KEncryptionKey** self)
         return RC ( rcKFG, rcEncryptionKey, rcCreating, rcMemory, rcExhausted );
     else
     {
-        /* fix for VDB-3590 */
-     /* size_t size = string_measure(value, NULL); */
+/* VDB-3590: Encryption key is a sequence of bytes.
+        It is not a string and can represent an invalid UNICODE sequence */
         size_t size = string_size   (value);
 
         char* data = malloc(size+1);/*TODO: place in protected memory*/
@@ -393,9 +393,7 @@ static rc_t KEncryptionKeyMakeInt(const char* value, KEncryptionKey** self)
             return RC ( rcKFG, rcEncryptionKey, rcCreating, rcMemory, rcExhausted );
         }
 
-        /* fix for VDB-3590 */	
-     /* string_copy(data, size + 1, value, size); */
-        memmove    (data,           value, size);    
+        memmove(data, value, size);    
 
         StringInit( & ret -> value, data, size, (uint32_t)size ); /* do not include the 0-terminator */
         

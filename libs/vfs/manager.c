@@ -664,8 +664,8 @@ rc_t GetEncryptionKey(const VFSManager * self, const VPath * vpath, char* obuff,
 
         if (rc == 0)
         {
-         /* fix for VDB-3590 */	
-         /* *pwd_size = string_copy(obuff, buf_size, enc_key->value.addr, enc_key->value.size); */
+/* VDB-3590: Encryption key is a sequence of bytes.
+             It is not a string and can represent an invalid UNICODE sequence */
             memmove(obuff, enc_key->value.addr, enc_key->value.size);	    
             *pwd_size = enc_key->value.size;
 
@@ -1691,12 +1691,14 @@ rc_t VFSManagerOpenDirectoryReadHttp (const VFSManager *self,
                                       KDirectory const **d,
                                       const VPath * path,
                                       bool force_decrypt,
+                                      bool reliable,
                                       bool promote )
 {
     const KFile * file = NULL;
     rc_t rc = VFSManagerOpenCurlFile ( self, &file, path, DEFAULT_CACHE_PAGE_SIZE, promote );
     if ( rc != 0 )
     {
+        bool toLog = false;
         const char extension[] = ".vdbcache";
         const String * s = & path -> path;
         assert ( s );
@@ -1707,6 +1709,9 @@ rc_t VFSManagerOpenDirectoryReadHttp (const VFSManager *self,
                 sizeof extension - 1,
                 extension, sizeof extension - 1, sizeof extension - 1 ) != 0 )
         {
+            toLog = reliable;
+        }
+        if ( toLog ) {
           const String * p = NULL;
           rc_t rc2 = VPathMakeString ( path, & p );
           if ( rc2 == 0 ) {
@@ -2041,6 +2046,7 @@ rc_t VFSManagerOpenDirectoryReadDirectoryRelativeInt (const VFSManager *self,
                                                       KDirectory const **d,
                                                       const VPath * path_,
                                                       bool force_decrypt,
+                                                      bool reliable,
                                                       bool promote)
 {
     rc_t rc;
@@ -2117,7 +2123,8 @@ rc_t VFSManagerOpenDirectoryReadDirectoryRelativeInt (const VFSManager *self,
             case vpuri_http:
             case vpuri_https:
             case vpuri_ftp:
-                rc = VFSManagerOpenDirectoryReadHttp ( self, dir, d, path, force_decrypt, promote );
+                rc = VFSManagerOpenDirectoryReadHttp ( self, dir, d, path,
+                                                      force_decrypt, reliable, promote );
                 break;
             }
             VPathRelease ( path ); /* same as path_ if not uri */
@@ -2136,7 +2143,8 @@ rc_t CC VFSManagerOpenDirectoryReadDirectoryRelative (const VFSManager *self,
     /* HACK - this function should not be exported.
        in order to not change the signature, we are synthesizing
        a "promote" parameter as "true" to mimic old behavior */
-    return VFSManagerOpenDirectoryReadDirectoryRelativeInt (self, dir, d, path, false, true);
+    return VFSManagerOpenDirectoryReadDirectoryRelativeInt (self, dir, d, path,
+        false, true, true);
 }
 
 
@@ -2149,7 +2157,8 @@ rc_t CC VFSManagerOpenDirectoryReadDirectoryRelativeDecrypt (const VFSManager *s
     /* HACK - this function should not be exported.
        in order to not change the signature, we are synthesizing
        a "promote" parameter as "true" to mimic old behavior */
-    return VFSManagerOpenDirectoryReadDirectoryRelativeInt (self, dir, d, path, true, true);
+    return VFSManagerOpenDirectoryReadDirectoryRelativeInt (self, dir, d, path,
+        true, true, true);
 }
 
 
@@ -2160,7 +2169,17 @@ LIB_EXPORT rc_t CC VFSManagerOpenDirectoryReadDecrypt (const VFSManager *self,
     /* HACK - this function should not be exported.
        in order to not change the signature, we are synthesizing
        a "promote" parameter as "true" to mimic old behavior */
-    return VFSManagerOpenDirectoryReadDirectoryRelativeInt (self, self->cwd, d, path, true, true);
+    return VFSManagerOpenDirectoryReadDirectoryRelativeInt (self, self->cwd, d,
+        path, true, true, true);
+}
+
+LIB_EXPORT rc_t CC VFSManagerOpenDirectoryReadDecryptUnreliable (
+                                                       const VFSManager *self,
+                                                       KDirectory const **d,
+                                                       const VPath * path)
+{
+    return VFSManagerOpenDirectoryReadDirectoryRelativeInt (self, self->cwd, d,
+        path, true, false, true);
 }
 
 
@@ -2173,7 +2192,8 @@ LIB_EXPORT rc_t CC VFSManagerOpenDirectoryRead (const VFSManager *self,
     /* HACK - this function should not be exported.
        in order to not change the signature, we are synthesizing
        a "promote" parameter as "true" to mimic old behavior */
-    return VFSManagerOpenDirectoryReadDirectoryRelativeInt (self, self->cwd, d, path, false, true);
+    return VFSManagerOpenDirectoryReadDirectoryRelativeInt (self, self->cwd, d,
+        path, false, true, true);
 }
 
 LIB_EXPORT 
@@ -3105,7 +3125,7 @@ LIB_EXPORT rc_t CC VFSManagerUpdateKryptoPassword (const VFSManager * self,
 
                                         if (old_exists)
                                         {
-                                            uint64_t read;
+                                            size_t read;
                                             size_t this_read;
                                             char buffer [VFS_KRYPTO_PASSWORD_MAX_SIZE+4];
 

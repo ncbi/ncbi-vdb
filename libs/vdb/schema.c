@@ -482,6 +482,7 @@ void VSchemaClearMark ( const VSchema *self )
     VectorForEach ( & self -> phys, false, SPhysicalClearMark, NULL );
     VectorForEach ( & self -> tbl, false, STableClearMark, NULL );
     VectorForEach ( & self -> db, false, SDatabaseClearMark, NULL );
+    /*TODO: self -> view ? */
 
     if ( self -> dad != NULL )
         VSchemaClearMark ( self -> dad );
@@ -525,6 +526,9 @@ void CC VSchemaDestroy ( VSchema *self )
     VectorWhack ( & self -> db, SDatabaseWhack, NULL );
     VectorWhack ( & self -> dname, SNameOverloadWhack, NULL );
 #endif
+
+    VectorWhack ( & self -> view, SViewWhack, NULL );
+    VectorWhack ( & self -> vname, SNameOverloadWhack, NULL );
 
     free ( self );
 }
@@ -656,11 +660,13 @@ rc_t VSchemaMake ( VSchema **sp,  const VSchema *dad )
     VSchemaVectorInit ( schema, dad, phys, 0, 32 );
     VSchemaVectorInit ( schema, dad, tbl, 0, 16 );
     VSchemaVectorInit ( schema, dad, db, 0, 4 );
+    VSchemaVectorInit ( schema, dad, view, 0, 16 );
 
     VectorInit ( & schema -> fname, 0, 64 );
     VectorInit ( & schema -> pname, 0, 32 );
     VectorInit ( & schema -> tname, 0, 16 );
     VectorInit ( & schema -> dname, 0, 4 );
+    VectorInit ( & schema -> vname, 0, 16 );
 
     KRefcountInit ( & schema -> refcount, 1, "VSchema", "make", "vschema" );
     schema -> file_count = 0;
@@ -1336,7 +1342,7 @@ rc_t VSchemaRuntimeTablePrint ( VSchemaRuntimeTable *self, const char *fmt, ... 
  *   either a single super-table type string or multiple comma-separated tables
  */
 LIB_EXPORT rc_t CC VSchemaMakeRuntimeTable ( VSchema *self,
-    VSchemaRuntimeTable **tblp, const char *typename, const char *supertype_spec )
+    VSchemaRuntimeTable **tblp, const char *type_name, const char *supertype_spec )
 {
     rc_t rc;
 
@@ -1346,9 +1352,9 @@ LIB_EXPORT rc_t CC VSchemaMakeRuntimeTable ( VSchema *self,
     {
         if ( self == NULL )
             rc = RC ( rcVDB, rcSchema, rcConstructing, rcSelf, rcNull );
-        else if ( typename == NULL )
+        else if ( type_name == NULL )
             rc = RC ( rcVDB, rcSchema, rcConstructing, rcType, rcNull );
-        else if ( typename [ 0 ] == 0 )
+        else if ( type_name [ 0 ] == 0 )
             rc = RC ( rcVDB, rcSchema, rcConstructing, rcType, rcEmpty );
         else
         {
@@ -1364,14 +1370,14 @@ LIB_EXPORT rc_t CC VSchemaMakeRuntimeTable ( VSchema *self,
                     if ( rc == 0 )
                     {
                         const char *dflt_vers = "";
-                        if ( strchr ( typename, '#' ) == NULL )
+                        if ( strchr ( type_name, '#' ) == NULL )
                             dflt_vers = "#1.0";
 
                         tbl -> schema = self;
                         tbl -> bytes = 0;
 
                         /* open the table */
-                        rc = VSchemaRuntimeTablePrint ( tbl, "table %s%s", typename, dflt_vers );
+                        rc = VSchemaRuntimeTablePrint ( tbl, "table %s%s", type_name, dflt_vers );
                         if ( rc == 0 )
                         {
                             if ( supertype_spec != NULL && supertype_spec [ 0 ] != 0 )

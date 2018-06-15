@@ -50,19 +50,20 @@ extern "C" {
 struct String;
 struct KConfig;
 struct HttpRetrySpecs;
+struct KNSProxies;
 
 struct KNSManager
 {
-    KRefcount refcount;
-    
     struct String const *aws_access_key_id;
     struct String const *aws_secret_access_key;
     struct String const *aws_region;
     struct String const *aws_output;
-    
+
     struct HttpRetrySpecs retry_specs;
 
     KTLSGlobals tlsg;
+
+    KRefcount refcount;
 
     int32_t conn_timeout;
     int32_t conn_read_timeout;
@@ -74,9 +75,7 @@ struct KNSManager
 
     uint8_t  maxNumberOfRetriesOnFailureForReliableURLs;
 
-    bool http_proxy_enabled; /* TBD - does this need to be static today? */
-    bool http_proxy_only; /* no direct connection - proxy only */
-    HttpProxy * http_proxy;
+    struct KNSProxies * proxies;
 
     bool verbose;
 
@@ -84,11 +83,38 @@ struct KNSManager
     bool NCBI_VDB_NETkfgValue;
 };
 
-
 bool KNSManagerLogNcbiVdbNetError ( const struct KNSManager * self );
 
+/* returns true when we should not try direct internet connection
+ * when HttpProxies are set */
+bool KNSManagerHttpProxyOnly ( const struct KNSManager * self );
 
-/* test */
+
+/******************************** KNSProxies **********************************/
+
+struct KNSProxies * KNSManagerKNSProxiesMake ( struct KNSManager * mgr,
+                                               const struct KConfig * kfg );
+
+rc_t KNSProxiesWhack ( struct KNSProxies * self );
+
+bool KNSProxiesGetHTTPProxyEnabled ( const struct KNSProxies * self );
+
+bool KNSProxiesSetHTTPProxyEnabled ( struct KNSProxies * self, bool enabled );
+
+bool KNSProxiesHttpProxyOnly ( const struct KNSProxies * self );
+
+rc_t KNSProxiesVSetHTTPProxyPath ( struct KNSProxies * self,
+    const char * fmt, va_list args, bool clear );
+
+struct KNSProxies * KNSProxiesGetHttpProxy ( struct KNSProxies * self,
+                                             size_t * cnt );
+
+/* DEPRECATED */
+rc_t KNSProxiesGetHttpProxyPath ( const struct KNSProxies* self,
+                                  const String ** proxy );
+
+
+/************************************ test ************************************/
 struct KStream;
 void KStreamForceSocketClose ( struct KStream const * self );
 

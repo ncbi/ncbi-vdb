@@ -71,6 +71,13 @@ KNS_EXTERN rc_t CC KNSManagerMakeTLSStream ( struct KNSManager const * self,
     KTLSStream ** plaintext, struct KSocket const * ciphertext,
     struct String const * host );
 
+    
+/* Set/Get AllowAllCerts
+ *  modify behavior of TLS certificate validation
+ */
+KNS_EXTERN rc_t CC KNSManagerSetAllowAllCerts ( struct KNSManager *self, bool allow_all_certs );
+KNS_EXTERN rc_t CC KNSManagerGetAllowAllCerts ( struct KNSManager const *self, bool * allow_all_certs );
+
 
 /* AddRef
  * Release
@@ -81,6 +88,7 @@ KNS_EXTERN rc_t CC KTLSStreamRelease ( const KTLSStream * self );
 
 
 /* VerifyCACert
+ *  noop if "AllowAllCerts" is true
  */
 KNS_EXTERN rc_t CC KTLSStreamVerifyCACert ( const KTLSStream * self );
 

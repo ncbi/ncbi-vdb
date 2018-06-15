@@ -145,21 +145,21 @@ protected:
     MgrFixture () : BaseMgrFixture ( password ) {}
 };
 
-class NonAscii1MgrFixture : protected BaseMgrFixture {
+class NonAsciiInvalidUnicodeMgrFixture : protected BaseMgrFixture {
 static const char* s_password;
 protected:
     static string getPassword ( void ) { return s_password; }
-    NonAscii1MgrFixture () : BaseMgrFixture ( s_password ) {}
+    NonAsciiInvalidUnicodeMgrFixture () : BaseMgrFixture ( s_password ) {}
 };
-const char* NonAscii1MgrFixture::s_password("a\243cdefghtjklm");
+const char* NonAsciiInvalidUnicodeMgrFixture::s_password("a\243cdefghtjklm");
 
-class NonAscii2MgrFixture : protected BaseMgrFixture {
+class NonAsciiValidUnicodeMgrFixture : protected BaseMgrFixture {
 static const char* s_password;
 protected:
     static string getPassword ( void ) { return s_password; }
-    NonAscii2MgrFixture () : BaseMgrFixture ( s_password ) {}
+    NonAsciiValidUnicodeMgrFixture () : BaseMgrFixture ( s_password ) {}
 };
-const char* NonAscii2MgrFixture::s_password("a\xC2\243cdefghtjklm");
+const char* NonAsciiValidUnicodeMgrFixture::s_password("a\xC2\243cdefghtjklm");
 
 #ifdef ALL
 
@@ -287,19 +287,21 @@ FIXTURE_TEST_CASE(GetKryptoPassword, MgrFixture)
 }
 #endif
 
-FIXTURE_TEST_CASE(GetNonAscii1KryptoPassword, NonAscii1MgrFixture)
+/* VDB-3590 */
+/* Non-Ascii encryption key - invalid UNICODE : see s_password in fixture */
+FIXTURE_TEST_CASE(GetNonAscii1KryptoPassword, NonAsciiInvalidUnicodeMgrFixture)
+{
+    REQUIRE_RC(VFSManagerGetKryptoPassword(mgr, buf, BufSize, &num_read));
+    REQUIRE_EQ(getPassword(), string(buf, num_read));
+}
+/* Non-Ascii encryption key - valid UNICODE : see s_password in fixture */
+FIXTURE_TEST_CASE(GetNonAscii2KryptoPassword, NonAsciiValidUnicodeMgrFixture)
 {
     REQUIRE_RC(VFSManagerGetKryptoPassword(mgr, buf, BufSize, &num_read));
     REQUIRE_EQ(getPassword(), string(buf, num_read));
 }
 
 #ifdef ALL
-FIXTURE_TEST_CASE(GetNonAscii2KryptoPassword, NonAscii2MgrFixture)
-{
-    REQUIRE_RC(VFSManagerGetKryptoPassword(mgr, buf, BufSize, &num_read));
-    REQUIRE_EQ(getPassword(), string(buf, num_read));
-}
-
 FIXTURE_TEST_CASE(UpdateKryptoPassword_NoOutput, MgrFixture)
 {
     string newPwd("new_pwd1");

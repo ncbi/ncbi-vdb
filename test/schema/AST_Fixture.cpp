@@ -30,6 +30,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <stdexcept>
 
 #include <klib/symbol.h>
 
@@ -185,7 +186,7 @@ AST_Fixture :: MakeAst ( const char* p_source )
     {
         if ( ! m_parser . ParseString ( p_source, m_debugParse ) )
         {
-            throw std :: logic_error ( "AST_Fixture::MakeAst : ParseString() failed" );
+            throw std :: logic_error ( string ( "AST_Fixture::MakeAst : ParseString() failed: " ) + m_parser . GetErrors () . GetMessageText ( 0 ) );
         }
         if ( m_parseTree != 0 )
         {

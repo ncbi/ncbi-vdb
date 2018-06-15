@@ -615,20 +615,35 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                                     KClientHttpGetLocalEndpoint  ( http, & local_ep );
                                                     KClientHttpGetRemoteEndpoint ( http, & ep );
                                                     if ( KNSManagerLogNcbiVdbNetError ( self ) ) {
+                                                        char * base = buf -> base;
                                                         bool print = true;
+                                                        char * query = string_chr ( base, buf -> elem_count, '?' );
                                                         String vdbcache;
                                                         CONST_STRING ( & vdbcache, ".vdbcache" );
                                                         if ( buf -> elem_count > vdbcache . size ) {
                                                             String ext;
-                                                            StringInit ( & ext, ( char * ) buf -> base
-                                                                            + buf -> elem_count - vdbcache . size - 1,
-                                                                vdbcache . size, vdbcache . size );
+                                                            StringInit ( & ext,
+                                                                       base + buf -> elem_count - vdbcache . size - 1,
+                                                                       vdbcache . size, vdbcache . size );
                                                             if ( ext . addr [ ext . size ] == '\0' &&
                                                                  StringEqual ( & vdbcache, & ext ) )
                                                             {
                                                                 print = false;
                                                             }
+                                                            else if ( query != NULL ) {
+                                                                size_t size = query - base;
+                                                                StringInit ( & ext,
+                                                                       base + size - vdbcache . size,
+                                                                       vdbcache . size, vdbcache . size );
+                                                                if ( ext . addr [ ext . size ] == '?' &&
+                                                                     StringEqual ( & vdbcache, & ext ) )
+                                                                {
+                                                                    print = false;
+                                                                }
+                                                            }
                                                         }
+                                                        if ( ! reliable )
+                                                            print = false;
                                                         if ( print ) {
                                                           assert ( buf );
                                                           PLOGERR ( klogErr,

@@ -37,6 +37,7 @@
 #include "prod-priv.h"
 #include "prod-expr.h"
 #include "phys-priv.h"
+#include "view-priv.h"
 #undef KONST
 
 #include <vdb/schema.h>
@@ -196,7 +197,7 @@ rc_t VProdResolveSProduction ( const VProdResolve *self, VProduction **out, cons
         {
             const char *name = sprod -> name -> name . addr;
             assert ( name [ sprod -> name -> name . size ] == 0 );
-            rc = VSimpleProdMake ( out, self -> owned, self -> curs, prodSimpleCast, 
+            rc = VSimpleProdMake ( out, self -> owned, self -> curs, prodSimpleCast,
                 name, & fd, & desc, & sprod -> cid, * out, self -> chain );
             if ( rc == 0 )
             {
@@ -280,7 +281,6 @@ rc_t VProdResolveColExpr ( const VProdResolve *self, VProduction **out,
     BSTree ordered;
     uint32_t i, count;
     SColumnBestFit buff [ 16 ], * nodes = buff;
-
     /* fail if "fd" has a format */
     if ( fd -> fmt != 0 )
     {
@@ -339,7 +339,7 @@ rc_t VProdResolveSPhysMember ( const VProdResolve *self,
     VPhysical *phys;
 
     curs = self -> curs;
-    phys = VCursorCacheGet ( & curs -> phys, & smbr -> cid );
+    phys = VCursorCacheGet ( VCursorPhysicalColumns ( curs ), & smbr -> cid );
     if ( phys != NULL )
     {
         /* this guy should be readable, but it is not guaranteed */
@@ -349,7 +349,7 @@ rc_t VProdResolveSPhysMember ( const VProdResolve *self,
     }
 
     /* pre-fail */
-    rc = VCursorCacheSet ( & curs -> phys, & smbr -> cid, FAILED_PHYSICAL );
+    rc = VCursorCacheSet ( VCursorPhysicalColumns ( curs ), & smbr -> cid, FAILED_PHYSICAL );
     if ( rc == 0 )
     {
         /* create physical object */
@@ -362,7 +362,7 @@ rc_t VProdResolveSPhysMember ( const VProdResolve *self,
             {
                 /* set success */
                 void *ignore;
-                rc = VCursorCacheSwap ( & curs -> phys, & smbr -> cid, phys, & ignore );
+                rc = VCursorCacheSwap ( VCursorPhysicalColumns ( curs ), & smbr -> cid, phys, & ignore );
                 if ( rc == 0 )
                 {
                     * out = phys -> out;
@@ -385,7 +385,7 @@ rc_t VProdResolvePhysExpr ( const VProdResolve *self,
 {
     if ( self -> chain == chainEncoding )
     {
-        assert ( self -> curs -> read_only == false );
+        assert ( ! VCursorIsReadOnly ( self -> curs ) );
         PLOGMSG ( klogWarn, ( klogWarn, "illegal access of physical column '$(name)'"
                    , "name=%.*s"
                    , ( int ) sym -> name . size
@@ -411,11 +411,9 @@ rc_t VProdResolveFwdExpr ( const VProdResolve *self, VProduction **out,
     const KSymbol *sym = x -> _sym;
     if ( sym -> type == eVirtual )
     {
-        /* most derived table class */
-        const STable *stbl = self -> stbl;
+        /* most derived table/view class */
         const KSymbol *sym2 = sym;
-        
-        sym = STableFindOverride ( stbl, ( const VCtxId* ) & sym -> u . fwd );
+        sym = VCursorFindOverride ( self -> curs, ( const VCtxId* ) & sym -> u . fwd );
         if ( sym == NULL )
         {
             PLOGMSG ( klogWarn, ( klogWarn, "virtual reference '$(fwd)' not found in overrides table"
@@ -442,6 +440,89 @@ rc_t VProdResolveFwdExpr ( const VProdResolve *self, VProduction **out,
 
     return 0;
 }
+
+static
+rc_t VProdResolveMembExpr ( const VProdResolve *    p_self,
+                            VProduction **          p_out,
+                            VFormatdecl *           p_fd,
+                            const SMembExpr *       p_x,
+                            bool                    p_casting )
+{
+    /* we know we are in a view */
+    const KSymbol * object = VectorGet ( & p_x -> view -> params, p_x -> paramId );
+    assert ( p_self -> view );
+    assert ( object != NULL );
+
+    /* p_x -> object is a table/view parameter of the view the member-expresison is in.
+        Locate the VTable/VView bound to the corresponding parameter of the view,
+        make a SSymExpr pointing to p_x -> member, call ProdResolveColExpr/VProdResolveProdExpr in the context of the VTable/VView */
+
+    if ( p_x -> member -> type == eColumn || p_x -> member -> type == eProduction )
+    {
+        VProdResolve pr = * p_self;
+		const void * boundObj;
+        pr . name = & object -> name;
+        boundObj = VViewGetBoundObject ( pr . view, p_x -> view, p_x -> paramId );
+        if ( boundObj != 0 )
+        {
+            switch ( object -> type )
+            {
+            case eTable:
+                pr . primary_table = boundObj;
+                pr . view = NULL;
+                break;
+            case eView:
+                /*TODO: should we update pr . primary_table ? */
+                pr . view = boundObj;
+                break;
+            default:
+                return RC ( rcVDB, rcProduction, rcResolving, rcMessage, rcUnsupported );
+            }
+
+            {
+                const SExpression * ref;
+                rc_t rc = SSymExprMake( & ref,
+                                        p_x -> member,
+                                        p_x -> member -> type == eColumn ? eColExpr : eProdExpr );
+                if ( rc == 0 )
+                {
+                    VProduction * vmember;
+                    rc = VProdResolveExpr ( & pr, & vmember, NULL, p_fd, ref, p_casting );
+                    SExpressionWhack ( ref );
+                    if ( rc == 0 )
+                    {
+                        if ( p_x -> rowId == NULL )
+                        {   /* simple member: tbl . col */
+                            * p_out = vmember;
+                            return 0;
+                        }
+                        else
+                        {   /* member with a pivot: tbl [ expr ] . col */
+                            VProduction * rowId;
+                            VFormatdecl fd = { { 0, 0 }, 0 };
+                            rc = VProdResolveExpr ( p_self, & rowId, NULL, & fd, p_x -> rowId, p_casting );
+                            if ( rc == 0 )
+                            {
+                                VPivotProd * ret;
+                                rc = VPivotProdMake ( & ret, p_self -> owned, vmember, rowId, p_x -> member -> name . addr, p_self -> chain );
+                                if ( rc == 0 )
+                                {
+                                    * p_out = & ret -> dad;
+                                    return 0;
+                                }
+                                VProductionWhack ( rowId, p_self -> owned );
+                            }
+                            VProductionWhack ( vmember, p_self -> owned );
+                        }
+                    }
+                }
+                return rc;
+            }
+        }
+    }
+    return RC ( rcVDB, rcProduction, rcResolving, rcMessage, rcUnsupported );
+}
+
 
 /* ResolveExpr
  *  resolves expression and returns resulting production object
@@ -524,8 +605,8 @@ rc_t VProdResolveExpr ( const VProdResolve *self,
         /* report NULL expression, but don't die */
         PLOGMSG ( klogWarn, ( klogWarn, "NULL expression in '$(tbl)' table schema"
                    , "tbl=%.*s"
-                   , ( int ) self -> stbl -> name -> name . size
-                   , self -> stbl -> name -> name . addr ));
+                   , ( int ) self -> name -> size
+                   , self -> name -> addr ));
         return 0;
     }
 
@@ -587,7 +668,7 @@ rc_t VProdResolveExpr ( const VProdResolve *self,
         rc = VProdResolveCastExpr ( self, & prod, ( const SBinExpr* ) expr );
     assert (rc != -1);
         break;
-        
+
     case eCondExpr:
         /* run left and right expressions in order until exit condition */
         rc = VProdResolveExpr ( self, out, desc, fd, ( ( const SBinExpr* ) expr ) -> left, casting );
@@ -602,12 +683,18 @@ rc_t VProdResolveExpr ( const VProdResolve *self,
 #endif
         return rc;
 
+    case eMembExpr:
+        /* return a column or a production */
+        rc = VProdResolveMembExpr ( self, & prod, fd, ( const SMembExpr* ) expr, casting );
+    assert (rc != -1);
+        break;
+
     default:
         /* report bad expression, but don't die */
         PLOGMSG ( klogWarn, ( klogWarn, "unrecognized expression in '$(tbl)' table schema"
                    , "tbl=%.*s"
-                   , ( int ) self -> stbl -> name -> name . size
-                   , self -> stbl -> name -> name . addr ));
+                   , ( int ) self -> name -> size
+                   , self -> name -> addr ));
 #if _DEBUGGING
         -- indent_level;
 #endif
@@ -712,9 +799,9 @@ rc_t VProdResolveColumnRead ( const VProdResolve *self,
                       scol -> name, __func__, rc ) );
         return rc;
     }
-    
+
     /* fetch the column */
-    vcol = VCursorCacheGet ( & curs -> col, & scol -> cid );
+    vcol = VCursorCacheGet ( VCursorColumns ( curs ), & scol -> cid );
     if ( vcol == NULL )
     {
         VDB_DEBUG ( ( "failed to fetch NULL for column '%N'; no output was produced by '%s'\n",
@@ -794,11 +881,10 @@ rc_t VProdResolvePhysicalRead ( const VProdResolve *self, VPhysical *phys )
     const SPhysMember *smbr;
 
     /* a write cursor would have opened this already */
-    if ( curs -> read_only )
+    if ( VCursorIsReadOnly ( curs ) )
     {
         /* open the physical column for read */
-        rc = VPhysicalOpenRead ( phys,
-            ( VSchema* ) self -> schema, curs -> tbl );
+        rc = VPhysicalOpenRead ( phys, ( VSchema* ) self -> schema, self -> primary_table );
         if ( rc != 0 )
         {
             /* trying to open a column that doesn't exist

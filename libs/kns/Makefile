@@ -78,6 +78,7 @@ KNS_NO_HTTP_SRC = \
 	stream-from-buffer \
 	kns_manager-ext \
 	manager \
+	proxy \
 	buffered-stream \
 	stream \
 	stream-from-files \

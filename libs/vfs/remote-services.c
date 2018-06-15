@@ -451,7 +451,7 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
 {
     const char man [] = "/repository/remote/main/CGI/resolver-cgi";
     const char prt [] = "/repository/remote/protected/CGI/resolver-cgi";
-    const char cgi[]=     "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi";
+    const char cgi [] = "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
     rc_t rc = 0;
     const char * path = aProtected ? prt : man;
     assert ( self );
@@ -659,6 +659,7 @@ static VRemoteProtocols SProtocolGet ( const String * url ) {
         { "https:",eProtocolHttps},
         { "file:", eProtocolFile },
         { "s3:"  , eProtocolS3   },
+        { "gs:"  , eProtocolGS   },
     };
     if ( url == NULL || url -> addr == NULL || url -> size == 0 ) {
         return eProtocolNone;
@@ -3259,6 +3260,8 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
             s . addr = buffer + offR;
             s . len = s . size = size;
             if ( start ) {
+                if ( size + 1 == num_read )
+                    DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( "\n" ) );
                 rc = SHeaderMake
                     ( & self -> resp . header, & s, self -> req . serviceType );
                 if ( rc != 0 )
