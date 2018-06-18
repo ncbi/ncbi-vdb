@@ -38,10 +38,22 @@ LIB_EXPORT bool CC KProcMgrOnMainThread ( void )
 
 uint32_t sys_GetPID ( void )
 {
+/* Enable Windows-32 bits build */
+#if defined(_WIN32)
+    return 0;
+#else
     return ( uint32_t) GetCurrentProcessId();
+#endif
 }
 
 int sys_GetHostName ( char * buffer, size_t buffer_size )
 {
+/* Enable Windows-32 bits build */
+#if defined(_WIN32)
+    if ( buffer_size > 0 && buffer != NULL )
+        buffer [ 0 ] = '\0';
+    return 0;
+#else
     return gethostname( buffer, buffer_size );
+#endif
 }
