@@ -207,8 +207,16 @@ LIB_EXPORT rc_t CC KSleepMs(uint32_t milliseconds) {
     time.tv_sec = (milliseconds / 1000);
     time.tv_nsec = (milliseconds % 1000) * 1000 * 1000;
 
-    if (nanosleep(&time, NULL))
-        return 0;
-    else
-        return RC(rcRuntime, rcTimeout, rcWaiting, rcTimeout, rcInterrupted);
+    if ( nanosleep ( & time, NULL ) != 0 )
+    {
+        switch ( errno )
+        {
+        case EINTR:
+            return SILENT_RC(rcRuntime, rcTimeout, rcWaiting, rcTimeout, rcInterrupted);
+        default:
+            return RC(rcRuntime, rcTimeout, rcWaiting, rcParam, rcInvalid);
+        }
+    }
+
+    return 0;
 }

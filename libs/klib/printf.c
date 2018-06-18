@@ -1408,6 +1408,9 @@ rc_t parse_format_string ( const char *fmt_str, va_list vargs,
     PrintFmt *fmt = * fmtp;
     PrintArg *args = * argp;
 
+    if ( fmt_str == NULL )
+        return RC ( rcText, rcString, rcFormatting, rcParam, rcNull );
+
     /* loop over format string */
     for ( rc = 0, i = str_idx = fmt_idx = arg_idx = 0; fmt_str [ i ] != 0; ++ i )
     {

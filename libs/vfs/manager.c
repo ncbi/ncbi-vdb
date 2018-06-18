@@ -664,7 +664,11 @@ rc_t GetEncryptionKey(const VFSManager * self, const VPath * vpath, char* obuff,
 
         if (rc == 0)
         {
-            *pwd_size = string_copy(obuff, buf_size, enc_key->value.addr, enc_key->value.size);
+/* VDB-3590: Encryption key is a sequence of bytes.
+             It is not a string and can represent an invalid UNICODE sequence */
+            memmove(obuff, enc_key->value.addr, enc_key->value.size);	    
+            *pwd_size = enc_key->value.size;
+
             if (*pwd_size != enc_key->value.size)
                 rc = RC(rcVFS, rcPath, rcReading, rcBuffer, rcInsufficient);
             rc2 = KEncryptionKeyRelease(enc_key);

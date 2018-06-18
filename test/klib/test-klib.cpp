@@ -559,6 +559,28 @@ TEST_CASE(KLib_print_problem)
 }
 #endif
 
+TEST_CASE(string_printf_args) {
+    char buf [ 2 ] = "";
+    size_t num_writ = 0;
+
+    REQUIRE_RC_FAIL ( string_printf ( NULL, 0, NULL, NULL ) );
+
+    REQUIRE_RC_FAIL ( string_printf ( buf , 0, NULL, NULL ) );
+
+    REQUIRE_RC_FAIL ( string_printf ( NULL, 0, NULL, ""   ) );
+
+    REQUIRE_RC_FAIL ( string_printf ( NULL, 0, & num_writ, "%s", "X" ) );
+
+    REQUIRE_RC_FAIL ( string_printf ( buf , 0, & num_writ, "%s", "X" ) );
+
+    REQUIRE_RC    ( string_printf ( buf, sizeof buf, NULL, "%s", "X" ) );
+
+    REQUIRE_RC_FAIL(string_printf ( buf, sizeof buf, & num_writ, NULL ) );
+    REQUIRE_RC    ( string_printf ( buf, sizeof buf, & num_writ, "" ) );
+
+    REQUIRE_RC    ( string_printf ( buf, sizeof buf, & num_writ, "%s", "X" ) );
+}
+
 ///////////////////////////////////////////////// KDataBuffer
 
 TEST_CASE(KDataBuffer_Make)
@@ -720,6 +742,20 @@ TEST_CASE(KDataBuffer_Resize)
 
     KDataBufferWhack(&dst);
     KDataBufferWhack(&src);
+}
+
+TEST_CASE(KDataBuffer_ResizeEmpty)
+{
+    KDataBuffer buffer;
+    memset ( & buffer, 0, sizeof buffer );
+    REQUIRE_RC ( KDataBufferCheckIntegrity ( & buffer ) );
+
+    /* Not allowed to KDataBufferResize when buffer's elem_bits == 0 */
+    REQUIRE_RC_FAIL ( KDataBufferResize ( & buffer, 4096 ) );
+
+    KDataBuffer empty;
+    memset ( & empty, 0, sizeof empty );
+    REQUIRE ( ! memcmp ( & buffer, & empty, sizeof empty ) );
 }
 
 TEST_CASE(KDataBuffer_Cast_W32Assert)
