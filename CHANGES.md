@@ -12,7 +12,7 @@
   **test**: added Windows test projects for the new schema and the latest vdb  
 
 
-## NCBI VDB
+## NCBI VDB 2.9.0
 **February 23, 2018**
 
   **align**: AlignAccessRefSeqEnumeratorNext no longer filters by the index  
