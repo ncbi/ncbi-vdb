@@ -90,9 +90,9 @@ static const char default_kfg[] = {
 "/repository/user/main/public/apps/wgs/volumes/wgsFlat = \"wgs\"\n"
 "/repository/user/main/public/root = \"$(HOME)/ncbi/public\"\n"
 "/repository/remote/main/CGI/resolver-cgi = "
-                      "\"https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi\"\n"
+                    "\"https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
 "/repository/remote/protected/CGI/resolver-cgi = "
-                      "\"https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi\"\n"
+                    "\"https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
 "/tools/ascp/max_rate = \"450m\"\n"
 };
 /*----------------------------------------------------------------------------*/
@@ -4122,7 +4122,7 @@ LIB_EXPORT rc_t KConfigFixProtectedResolverCgiNode ( KConfig * self ) {
         assert(result);
         if ( result->size == 0 || StringEqual ( & http, result ) ) {
             const char https []
-                = "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi";
+                = "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
             rc = KConfigNodeWrite ( node, https, sizeof https );
         }
     }

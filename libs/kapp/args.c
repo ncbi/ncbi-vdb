@@ -175,6 +175,7 @@ typedef struct Option
     bool        required;       
     bool        deprecated;     /* a warning if used */
     bool        error;          /* an error if used */
+    bool        called_by_alias;/* short name was used for this option */
     ConvertParamFnP  convert_fn;
     char        name [1];       /* key value The 1 will be the NUL */
 } Option;
@@ -190,7 +191,7 @@ rc_t CC OptionMake (Option ** pself, const char * name, size_t size, uint32_t ma
     assert ((needs_value == true)||(needs_value == false)); /* not really but lets be rigorous */
     assert ((required == true)||(required == false)); /* not really but lets be rigorous */
 
-    self = malloc (sizeof (*self) + size);
+    self = calloc (1, sizeof (*self) + size);
     if (self == NULL)
     {
         rc = RC (rcExe, rcArgv, rcConstructing, rcMemory, rcExhausted);
@@ -1393,6 +1394,7 @@ rc_t ArgsParseInt (Args * self, int argc, char *argv[])
 
                             if ( rc == 0 )
                                 rc = OptionAddValue( node, ix, value, string_size( value ) );
+                            node -> called_by_alias = true;
                             break_loop = true;
                         }
                         else
@@ -1536,8 +1538,8 @@ rc_t CC ArgsOptionCount (const Args * self, const char * option_name, uint32_t *
     }
 }
 
-rc_t CC ArgsOptionValue (const Args * self, const char * option_name, uint32_t iteration,
-                                     const void ** value_bin)
+rc_t CC ArgsOptionValueExt (const Args * self, const char * option_name,
+    uint32_t iteration, const void ** value_bin, bool * called_as_alias)
 {
     const Option * node;
     rc_t rc;
@@ -1545,8 +1547,11 @@ rc_t CC ArgsOptionValue (const Args * self, const char * option_name, uint32_t i
     if (self == NULL)
         return RC (rcExe, rcArgv, rcAccessing, rcSelf, rcNull);
 
-    if ((option_name == NULL) || (value_bin == NULL))
+    if ((option_name == NULL) || (value_bin == NULL) ||
+        (called_as_alias == NULL))
+    {
         return RC (rcExe, rcArgv, rcAccessing, rcParam, rcNull);
+    }
 
     *value_bin = NULL;
 
@@ -1555,7 +1560,17 @@ rc_t CC ArgsOptionValue (const Args * self, const char * option_name, uint32_t i
         return RC (rcExe, rcArgv, rcAccessing, rcName, rcNotFound);
     
     rc = OptionGetValue (node, iteration, value_bin);
+
+    * called_as_alias = node -> called_by_alias;
+
     return rc;
+}
+
+rc_t CC ArgsOptionValue (const Args * self, const char * option_name,
+    uint32_t iteration, const void ** value_bin)
+{
+    bool val = false;
+    return ArgsOptionValueExt (self, option_name, iteration, value_bin, & val );
 }
 
 rc_t CC ArgsParamCount (const Args * self, uint32_t * count)

@@ -55,48 +55,55 @@ void SExpressionWhack ( const SExpression *cself )
     {
         switch ( self -> var )
         {
-        case eTypeExpr:
-        {
-            STypeExpr *x = ( STypeExpr* ) self;
-            SExpressionWhack ( x -> dim );
-            break;
+            case eTypeExpr:
+            {
+                STypeExpr *x = ( STypeExpr* ) self;
+                SExpressionWhack ( x -> dim );
+                break;
+            }
+            case eFuncExpr:
+            case eScriptExpr:
+            {
+                SFuncExpr *x = ( SFuncExpr* ) self;
+                VectorWhack ( & x -> schem, SExpressionVWhack, NULL );
+                VectorWhack ( & x -> pfact, SExpressionVWhack, NULL );
+                VectorWhack ( & x -> pfunc, SExpressionVWhack, NULL );
+                break;
+            }
+            case ePhysEncExpr:
+            {
+                SPhysEncExpr *x = ( SPhysEncExpr* ) self;
+                VectorWhack ( & x -> schem, SExpressionVWhack, NULL );
+                VectorWhack ( & x -> pfact, SExpressionVWhack, NULL );
+                break;
+            }
+            case eNegateExpr:
+            {
+                SUnaryExpr *x = ( SUnaryExpr* ) self;
+                SExpressionWhack ( x -> expr );
+                break;
+            }
+            case eCastExpr:
+            case eCondExpr:
+            {
+                SBinExpr *x = ( SBinExpr* ) self;
+                SExpressionWhack ( x -> left );
+                SExpressionWhack ( x -> right );
+                break;
+            }
+            case eVectorExpr:
+            {
+                SVectExpr *x = ( SVectExpr* ) self;
+                VectorWhack ( & x -> expr, SExpressionVWhack, NULL );
+                break;
+            }
+            case eMembExpr:
+            {
+                SMembExpr *x = ( SMembExpr* ) self;
+                SExpressionWhack ( x -> rowId );
+                break;
+            }
         }
-        case eFuncExpr:
-        case eScriptExpr:
-        {
-            SFuncExpr *x = ( SFuncExpr* ) self;
-            VectorWhack ( & x -> schem, SExpressionVWhack, NULL );
-            VectorWhack ( & x -> pfact, SExpressionVWhack, NULL );
-            VectorWhack ( & x -> pfunc, SExpressionVWhack, NULL );
-            break;
-        }
-        case ePhysEncExpr:
-        {
-            SPhysEncExpr *x = ( SPhysEncExpr* ) self;
-            VectorWhack ( & x -> schem, SExpressionVWhack, NULL );
-            VectorWhack ( & x -> pfact, SExpressionVWhack, NULL );
-            break;
-        }
-        case eNegateExpr:
-        {
-            SUnaryExpr *x = ( SUnaryExpr* ) self;
-            SExpressionWhack ( x -> expr );
-            break;
-        }
-        case eCastExpr:
-        case eCondExpr:
-        {
-            SBinExpr *x = ( SBinExpr* ) self;
-            SExpressionWhack ( x -> left );
-            SExpressionWhack ( x -> right );
-            break;
-        }
-        case eVectorExpr:
-        {
-            SVectExpr *x = ( SVectExpr* ) self;
-            VectorWhack ( & x -> expr, SExpressionVWhack, NULL );
-            break;
-        }}
 
         free ( self );
     }
@@ -151,6 +158,9 @@ void CC SExpressionMark ( void * item, void * data )
     case eVectorExpr:
         VectorForEach ( & ( ( const SVectExpr* ) self ) -> expr, false,
                         SExpressionMark, data );
+        break;
+    case eMembExpr:
+        assert (false); //TODO SMembExprMark
         break;
     }
 }
@@ -601,7 +611,11 @@ rc_t SExpressionDump ( const SExpression *self, SDumper *b )
         if ( compact )
             return SExpressionBracketListDump ( & x -> expr, b, "[", "]" );
         return SExpressionBracketListDump ( & x -> expr, b, "[ ", " ]" );
-    }}
+    }
+    case eMembExpr:
+        assert (false); //TODO: SMembExprDump
+        break;
+    }
 
     return SDumperPrint ( b, "EXPR-UNKNOWN" );
 

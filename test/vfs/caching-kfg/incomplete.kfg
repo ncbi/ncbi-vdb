@@ -1,4 +1,4 @@
-/repository/remote/main/CGI/resolver-cgi = "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi"
+/repository/remote/main/CGI/resolver-cgi = "http://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi"
 /TEST_ROOT = "/tmp/$(USER)"
 /TEST_SUBROOT = "$(TEST_ROOT)/$(BUILD)"
 /repository/user/main/public/root = "$(TEST_SUBROOT)/test-caching"

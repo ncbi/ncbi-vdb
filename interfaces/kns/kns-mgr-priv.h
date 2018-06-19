@@ -100,15 +100,18 @@ rc_t KHttpRetrierInit ( KHttpRetrier * self, const char * url, const struct KNSM
 bool KHttpRetrierWait ( KHttpRetrier * self, uint32_t status );
 rc_t KHttpRetrierDestroy ( KHttpRetrier * self );
 
+/*----------------------------------------------------------------------------*/
 
-typedef struct HttpProxy HttpProxy;
-const HttpProxy * KNSManagerGetHttpProxy ( const struct KNSManager * self );
-const HttpProxy * HttpProxyGetNextHttpProxy ( const HttpProxy * self );
+//typedef struct HttpProxy HttpProxy;
+struct KNSProxies * KNSManagerGetProxies ( const struct KNSManager * self,
+                                           size_t * cnt );
 
 /* N.B.: DO NOT WHACK THE RETURNED http_proxy String !!! */
-void HttpProxyGet ( const HttpProxy * self,
-    const String ** http_proxy, uint16_t * http_proxy_port );
+bool KNSProxiesGet ( struct KNSProxies * self, const String ** http_proxy,
+    uint16_t * http_proxy_port, size_t * cnt, bool * last );
 
+/* allow to have multiple comma-separated proxies in a spec */
+#define MULTIPLE_PROXIES 1
 
 /*--------------------------------------------------------------------------
  * URLBlock

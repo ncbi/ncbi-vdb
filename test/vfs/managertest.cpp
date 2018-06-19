@@ -57,16 +57,18 @@ TEST_SUITE(VManagerTestSuite);
 
 using namespace std;
 
+#define ALL
+
 const char* pwFileName="pwfile";
 const char* password = "password";
 
-class MgrFixture
+class BaseMgrFixture
 {
 public:
     static const int BufSize = 1024;
 
-public:
-    MgrFixture()
+protected:
+    BaseMgrFixture(const char* password)
         : wd ( 0 )
         , mgr ( 0 )
         , vpath(0)
@@ -97,7 +99,7 @@ public:
         // make sure pwfile contains the correct password (some tests might update it)
         CreateFile(pwFileName, password);
     }
-    ~MgrFixture()
+    ~BaseMgrFixture()
     {
         if (KDirectoryRemove(wd, true, pwFileName))
            throw logic_error("~MgrFixture: KDirectoryRemove failed");   
@@ -115,6 +117,8 @@ public:
         if (KDirectoryCreateFile(wd, &f, false, 0660, kcmInit, name.c_str()) != 0)
            throw logic_error("CreateFile: KDirectoryCreateFile failed");   
         if (KFileWrite(f, 0, content.c_str(), content.size(), &num_writ) != 0 || num_writ != content.size())
+           throw logic_error("CreateFile: KDirectoryOpenFileWrite failed");   
+        if (KFileWrite(f, content.size(), "\n", 1, &num_writ) != 0 || num_writ != 1)
            throw logic_error("CreateFile: KDirectoryOpenFileWrite failed");   
         if (KFileRelease(f) != 0)
            throw logic_error("CreateFile: KFileRelease failed");   
@@ -135,6 +139,29 @@ public:
     size_t num_read;
     size_t num_writ;
 };
+
+class MgrFixture : protected BaseMgrFixture {
+protected:
+    MgrFixture () : BaseMgrFixture ( password ) {}
+};
+
+class NonAsciiInvalidUnicodeMgrFixture : protected BaseMgrFixture {
+static const char* s_password;
+protected:
+    static string getPassword ( void ) { return s_password; }
+    NonAsciiInvalidUnicodeMgrFixture () : BaseMgrFixture ( s_password ) {}
+};
+const char* NonAsciiInvalidUnicodeMgrFixture::s_password("a\243cdefghtjklm");
+
+class NonAsciiValidUnicodeMgrFixture : protected BaseMgrFixture {
+static const char* s_password;
+protected:
+    static string getPassword ( void ) { return s_password; }
+    NonAsciiValidUnicodeMgrFixture () : BaseMgrFixture ( s_password ) {}
+};
+const char* NonAsciiValidUnicodeMgrFixture::s_password("a\xC2\243cdefghtjklm");
+
+#ifdef ALL
 
 TEST_CASE(Make_Basic)
 {
@@ -211,6 +238,8 @@ FIXTURE_TEST_CASE(OpenFileWriteFile_Encrypt_NotEncrypted, MgrFixture)
     // open as encrypted - fail
     KFile* f;
     // this will output an error message from KEncFileMakeIntValidSize:
+    LOG(ncbi::NK::LogLevel::e_error,
+        "Expecting an err. message from KEncFileMakeIntValidSize...\n");
     REQUIRE_RC_FAIL(VFSManagerOpenFileWrite(mgr, &f, false, vpath)); 
     REQUIRE_RC(KFileRelease(f));
 
@@ -256,7 +285,23 @@ FIXTURE_TEST_CASE(GetKryptoPassword, MgrFixture)
     REQUIRE_RC(VFSManagerGetKryptoPassword(mgr, buf, BufSize, &num_read));
     REQUIRE_EQ(string("password"), string(buf, num_read));
 }
+#endif
 
+/* VDB-3590 */
+/* Non-Ascii encryption key - invalid UNICODE : see s_password in fixture */
+FIXTURE_TEST_CASE(GetNonAscii1KryptoPassword, NonAsciiInvalidUnicodeMgrFixture)
+{
+    REQUIRE_RC(VFSManagerGetKryptoPassword(mgr, buf, BufSize, &num_read));
+    REQUIRE_EQ(getPassword(), string(buf, num_read));
+}
+/* Non-Ascii encryption key - valid UNICODE : see s_password in fixture */
+FIXTURE_TEST_CASE(GetNonAscii2KryptoPassword, NonAsciiValidUnicodeMgrFixture)
+{
+    REQUIRE_RC(VFSManagerGetKryptoPassword(mgr, buf, BufSize, &num_read));
+    REQUIRE_EQ(getPassword(), string(buf, num_read));
+}
+
+#ifdef ALL
 FIXTURE_TEST_CASE(UpdateKryptoPassword_NoOutput, MgrFixture)
 {
     string newPwd("new_pwd1");
@@ -548,6 +593,7 @@ FIXTURE_TEST_CASE(RegistrerGoodAccPath, ObjIdBindingFixture) {
 
     REQUIRE_RC(Register(1154149, p));
 }
+#endif
 
 //////////////////////////////////////////// Main
 extern "C"

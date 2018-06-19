@@ -205,20 +205,29 @@ rc_t KClientHttpWhack ( KClientHttp * self )
 }
 
 
-typedef struct KEndPointArgsIterator KEndPointArgsIterator;
-struct KEndPointArgsIterator
+typedef struct KEndPointArgsIterator
 {
-    const HttpProxy * proxy;
-    const String * hostname;
-    uint16_t port;
+    struct KNSProxies * proxies;
+    size_t crnt;
+    bool last;
+
+    const String * directHostname;
+    uint16_t directPort;
+
     uint16_t dflt_proxy_ports [ 3 ];
     size_t dflt_proxy_ports_idx;
+
+    const String * hostname;
+    uint16_t port;
+    bool dontAskForNextProxy;
+
     bool done;
-};
+} KEndPointArgsIterator;
 
 static
 void KEndPointArgsIteratorMake ( KEndPointArgsIterator * self,
-    const KNSManager * mgr, const String * hostname, uint16_t port )
+    const KNSManager * mgr, const String * hostname, uint16_t port,
+    size_t * cnt  )
 {
     assert ( self );
     memset ( self, 0, sizeof * self );
@@ -227,26 +236,39 @@ void KEndPointArgsIteratorMake ( KEndPointArgsIterator * self,
     self -> dflt_proxy_ports [ 1 ] = 8080;
     self -> dflt_proxy_ports [ 2 ] = 80;
 
-    if ( ! mgr -> http_proxy_only )
-    {
-        self -> hostname = hostname;
-        self -> port = port;
+    if ( ! KNSManagerHttpProxyOnly ( mgr ) ) {
+        self -> directHostname = hostname;
+        self -> directPort = port;
     }
 
-    if ( mgr -> http_proxy_enabled )
-        self -> proxy = KNSManagerGetHttpProxy ( mgr );
+    if ( KNSManagerGetHTTPProxyEnabled ( mgr ) )
+        self -> proxies = KNSManagerGetProxies ( mgr, cnt );
 
-    if ( self -> hostname == NULL && self -> proxy == NULL )
+    if ( self -> directHostname == NULL && self -> proxies == NULL )
         self -> done = true;
 }
 
+/* proxy_default_port =
+    true : no port in proxy spec, returning one of default ports
+    false: port in proxy spec, returning it
+   proxy_ep = true: proxy, false: direct connection */
 static
 bool KEndPointArgsIteratorNext ( KEndPointArgsIterator * self,
-    const String ** hostname, uint16_t * port,
-    bool * proxy_default_port, bool * proxy_ep )
+    const String ** hostname, uint16_t * port, bool * proxy_default_port,
+    bool * proxy_ep, size_t * crnt_proxy_idx, bool * last_proxy )
 {
     static const uint16_t dflt_proxy_ports_sz =
         sizeof self -> dflt_proxy_ports / sizeof self -> dflt_proxy_ports [ 0 ];
+
+    bool found = false;
+    bool ask = false;
+
+    size_t dummy;
+    bool dummy2;
+    if ( crnt_proxy_idx == NULL )
+        crnt_proxy_idx = & dummy;
+    if ( last_proxy == NULL )
+        last_proxy = & dummy2;
 
     assert ( self != NULL );
 
@@ -255,43 +277,93 @@ bool KEndPointArgsIteratorNext ( KEndPointArgsIterator * self,
 
     assert ( hostname && port && proxy_default_port && proxy_ep );
 
+    /* KNSProxiesGet sets/returns hostname/port */
     /* DO NOT WHACK hostname !!! */
-    HttpProxyGet ( self -> proxy, hostname, port );
+    if ( ! self -> dontAskForNextProxy ) {
+        if ( ! self -> last ) {
+            /* not asked the last proxy in the list already:
+               ask for a next proxy
+               ( if (self -> last) then next call to KNSProxiesGet will
+                 reset list pointer and return the first proxy again ) */
+            ask = true;
+        }
+        else if ( self -> directHostname == NULL ) {
+            /* asked the last proxy in the list
+               but we will not return direct connection so
+               reset list pointer and return the first proxy again ) */
+            ask = true;
+        }
+        if ( ask ) {
+            KNSProxiesGet ( self -> proxies, & self -> hostname, & self -> port,
+                            & self -> crnt, & self -> last );
+            self -> dontAskForNextProxy = true;
+        }
+        else if ( self -> last ) {
+            /* asked the last proxy in the list: return direct connection */
+            self -> hostname = NULL;
+        }
+    }
+    * hostname = self -> hostname;
+    * port     = self -> port;
 
     * proxy_default_port = false;
 
-    if ( * hostname != NULL )
+    if ( * hostname != NULL ) /* KNSProxiesGet returned next proxy */
     {
-        if ( * port != 0 )
+        if ( * port != 0 ) {
+            /* KNSProxiesGet returned proxy with port :
+               don't iterate default ports */
             self -> dflt_proxy_ports_idx = 0;
+        }
         else
-        {
+        {   /* no port in proxy spec, return next default port */
             assert ( self -> dflt_proxy_ports_idx < dflt_proxy_ports_sz );
             * port = self -> dflt_proxy_ports [ self -> dflt_proxy_ports_idx ];
 
-            if ( ++ self -> dflt_proxy_ports_idx >= dflt_proxy_ports_sz )
+            if ( ++ self -> dflt_proxy_ports_idx >= dflt_proxy_ports_sz ) {
+                /* done iterating over default ports :
+                   ask for a next proxy next time */
                 self -> dflt_proxy_ports_idx = 0;
+            }
 
             * proxy_default_port = true;
         }
 
-        if ( self -> dflt_proxy_ports_idx == 0 )
-            self -> proxy = HttpProxyGetNextHttpProxy ( self -> proxy );
+        if ( self -> dflt_proxy_ports_idx == 0 ) {
+            /* KNSProxiesGet returned port or iterated over all default ports:
+               ask for a next proxy next time */
+            self -> dontAskForNextProxy = false; // ++ self -> idx;
+        }
+
+        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_PROXY ),
+            ( "Connecting using proxy '%S:%d'\n", * hostname, * port ) );
 
         * proxy_ep = true;
-        return true;
+        found = true;
+    }
+    else {
+        /* no more proxies to iterate */
+        self -> done = true;
+
+        if ( self -> directHostname != NULL )
+        {   /* allowed to make direct connection without proxies:
+               return host:port of direct connection */
+            * hostname = self -> directHostname;
+            * port = self -> directPort;
+
+            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_PROXY ),
+                ( "Connecting directly\n" ) );
+
+            * proxy_ep = false;
+            found = true;
+        }
+        else /* no more proxies to iterate and cannot make direct connection */
+            found = false;
     }
 
-    self -> done = true;
-    if ( self -> hostname != NULL )
-    {
-        * hostname = self -> hostname;
-        * port = self -> port;
-        * proxy_ep = false;
-        return true;
-    }
-
-    return false;
+    * crnt_proxy_idx = self -> crnt;
+    * last_proxy = self -> last;
+    return found;
 }
 
 static
@@ -415,12 +487,12 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
     mgr = self -> mgr;
     assert ( mgr );
 
-    KEndPointArgsIteratorMake ( & it, mgr, aHostname, aPort  );
-    while ( KEndPointArgsIteratorNext
-        ( & it, & hostname, & port, & proxy_default_port, & proxy_ep ) )
+    KEndPointArgsIteratorMake ( & it, mgr, aHostname, aPort, NULL );
+    while ( KEndPointArgsIteratorNext ( & it, & hostname, & port,
+        & proxy_default_port, & proxy_ep, NULL, NULL ) )
     {
         rc = KNSManagerInitDNSEndpoint ( mgr, & self -> ep, hostname, port );
-        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ),
+        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_DNS ),
             ( "KNSManagerInitDNSEndpoint(%S:%d)=%R\n", hostname, port, rc ) );
         if ( rc == 0 )
         {
@@ -453,7 +525,7 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
     if ( rc != 0 ) {
         if ( KNSManagerLogNcbiVdbNetError ( mgr ) )
             PLOGERR ( klogSys, ( klogSys, rc, "Failed to Make Connection "
-                "in KClientHttpOpen to '$(host):$(port)",
+                "in KClientHttpOpen to '$(host):$(port)'",
                 "host=%S,port=%hd", aHostname, aPort ) );
     }
     /* if the connection is open */
@@ -3594,7 +3666,8 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
 
         default:
 
-            if ( ! rslt -> len_zero || self -> http -> close_connection )
+      /*    if ( ! rslt -> len_zero || self -> http -> close_connection ) */
+            if ( false )
             {
                 /* the connection is no good */
                 KClientHttpClose ( self -> http );

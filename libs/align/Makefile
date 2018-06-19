@@ -32,6 +32,7 @@ INT_LIBS = \
 	libncbi-bam \
 	libalign-writer \
 	libalign-access \
+	libsam-extract \
 	libalign-reader
 
 ALL_LIBS = \
@@ -162,3 +163,46 @@ $(ILIBDIR)/libalign-writer.$(LIBX): $(ALIGN_WRITER_OBJ)
 compile: stdcompile
 
 $(TARGDIR)/compile: $(OBJFILES)
+
+#-------------------------------------------------------------------------------
+# samextract
+#
+$(ILIBDIR)/libsam-extract: $(addprefix $(ILIBDIR)/libsam-extract.,$(LIBX))
+
+SAM_EXTRACT_SRC = \
+     samextract-grammar \
+     samextract-lex \
+     samextract-lib \
+     samextract-bam \
+     samextract-pool
+
+SAM_EXTRACT_OBJ = \
+	$(addsuffix .$(LOBX),$(SAM_EXTRACT_SRC))
+
+SAM_EXTRACT_LIB =
+
+bison:
+	bison --no-lines -g -r all -Werror=all \
+		-o $(SRCDIR)/samextract-grammar.c \
+	--defines=$(SRCDIR)/samextract-tokens.h \
+	-v -Wall \
+	$(SRCDIR)/samextract-grammar.y
+
+ifeq (dbg,$(BUILD))
+  FLEX_DEBUG=-d
+endif
+
+flex:
+	flex --noline --fast -v -p $(FLEX_DEBUG) \
+		-o $(SRCDIR)/samextract-lex.c \
+		-DYY_BUF_SIZE=16777216 \
+		$(SRCDIR)/samextract-lex.l
+
+$(ILIBDIR)/libsam-extract.$(LIBX): $(SAM_EXTRACT_OBJ)
+	$(LD) --slib -o $@ $^ $(SAM_EXTRACT_LIB)
+
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)
+
+

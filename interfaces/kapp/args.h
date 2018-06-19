@@ -244,6 +244,14 @@ rc_t CC ArgsOptionCount ( const Args * self, const char * option_name, uint32_t 
 rc_t CC ArgsOptionValue ( const Args * self, const char * option_name,
     uint32_t iteration, const void ** value );
 
+/* OptionValueExt
+ *  What was the Nth value seen for this option?
+ *  Use OptionCount to know how many were seen.
+ *  Was this option called by long or short name (alias)?
+ */
+rc_t CC ArgsOptionValueExt ( const Args * self, const char * option_name,
+    uint32_t iteration, const void ** value, bool * called_as_alias );
+
 /*
  * ParamCount
  *  How many Parameters were seen?

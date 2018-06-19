@@ -166,7 +166,7 @@ rc_t CC KMain ( int argc, char *argv [] )
                 }
                 if ( VSchemaParseFile ( schema, "%s", arg ) != 0 )
                 {
-                    throw runtime_error ( "VSchemaParseFile (old) failed" );
+                    //throw runtime_error ( "VSchemaParseFile (old) failed" );
                 }
 
                 ostringstream out;
@@ -187,49 +187,60 @@ rc_t CC KMain ( int argc, char *argv [] )
                 SchemaParser parser;
                 if ( ! parser . ParseFile ( file, arg ) )
                 {
-                    cout << string ( "Parsing failed! " ) << endl;
-                    ++ failed;
-                    compare = false;
-                }
-
-                VSchema * schema;
-                if ( VDBManagerMakeSchema ( vdb, & schema ) != 0 )
-                {
-                    throw runtime_error ( "VDBManagerMakeSchema failed" );
-                }
-
-                ASTBuilder b ( schema );
-                AST * root = b . Build ( * parser . GetParseTree (), arg );
-
-                uint32_t count = b . GetErrorCount ();
-                if ( count > 0 )
-                {
-                    cout << string ( "AST build failed: " ) << endl;
-                    for ( uint32_t i = 0 ; i < count; ++ i )
+                    cout << endl;
+                    const ErrorReport & errors = parser . GetErrors ();
+                    uint32_t count = errors . GetCount ();
+                    for ( uint32_t i = 0; i < count; ++i )
                     {
-                        const ErrorReport :: Error * err = b . GetErrors () . GetError ( i );
-                        if ( err -> m_file != 0 && * err -> m_file != 0)
-                        {
-                            cout << err -> m_file << ":";
-                            if ( err -> m_line != 0 )
-                            {
-                                cout << err -> m_line << ":" << err -> m_column << ":";
-                            }
-                            cout << " error:";
-                        }
-                        cout << err -> m_message << endl;
+                        const ErrorReport :: Error * err = errors . GetError ( i );
+                        cerr << err -> m_file << ":" << err -> m_line << ":" << err -> m_column << ":" << err -> m_message << endl;
                     }
+                    cout << string ( "ParseFile failed! " ) << endl;
                     ++ failed;
                     compare = false;
                 }
+                else
+                {
+                    VSchema * schema;
+                    if ( VDBManagerMakeSchema ( vdb, & schema ) != 0 )
+                    {
+                        throw runtime_error ( "VDBManagerMakeSchema failed" );
+                    }
 
-                delete root;
+                    ASTBuilder b ( schema );
+                    AST * root = b . Build ( * parser . GetParseTree (), arg );
 
-                ostringstream out;
-                DumpSchema ( schema, out );
-                newSchemaStr = out . str ();
+                    uint32_t count = b . GetErrorCount ();
+                    if ( count > 0 )
+                    {
+                        cout << string ( "AST build failed: " ) << endl;
+                        for ( uint32_t i = 0 ; i < count; ++ i )
+                        {
+                            const ErrorReport :: Error * err = b . GetErrors () . GetError ( i );
+                            if ( err -> m_file != 0 && * err -> m_file != 0)
+                            {
+                                cout << err -> m_file << ":";
+                                if ( err -> m_line != 0 )
+                                {
+                                    cout << err -> m_line << ":" << err -> m_column << ":";
+                                }
+                                cout << " error:";
+                            }
+                            cout << err -> m_message << endl;
+                        }
+                        ++ failed;
+                        compare = false;
+                    }
 
-                VSchemaRelease ( schema );
+                    delete root;
+
+                    ostringstream out;
+                    DumpSchema ( schema, out );
+                    newSchemaStr = out . str ();
+
+                    VSchemaRelease ( schema );
+                }
+
                 KFileRelease ( file );
             }
 
@@ -259,8 +270,6 @@ rc_t CC KMain ( int argc, char *argv [] )
 
             VPathRelease ( path );
             VFSManagerRelease ( vfs );
-
-            cout << endl;
         }
         cout << "Failed: " << failed << " out of " << fileCount << endl;
 
