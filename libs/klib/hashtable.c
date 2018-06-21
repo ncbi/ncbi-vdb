@@ -120,7 +120,7 @@ static rc_t rehash(KHashTable* self, size_t capacity)
     size_t bucket_size = self->bucket_size;
     void* new_buckets = calloc(1, capacity * bucket_size);
     if (!new_buckets) {
-        return RC(rcCont, rcHashtable, rcInserting, rcMemory, rcExhausted);
+        return RC(rcCont, rcTrie, rcInserting, rcMemory, rcExhausted);
     }
 
     self->num_buckets = capacity;
@@ -158,24 +158,24 @@ LIB_EXPORT rc_t KHashTableMake(KHashTable** self, size_t key_size,
                                double max_load_factor, hashkey_type key_type)
 {
     if (self == NULL)
-        return RC(rcCont, rcHashtable, rcConstructing, rcParam, rcInvalid);
+        return RC(rcCont, rcTrie, rcConstructing, rcParam, rcInvalid);
 
     *self = NULL;
 
     if (max_load_factor < 0 || max_load_factor >= 1.0)
-        return RC(rcCont, rcHashtable, rcConstructing, rcParam, rcInvalid);
+        return RC(rcCont, rcTrie, rcConstructing, rcParam, rcInvalid);
 
     if (key_size == 0)
-        return RC(rcCont, rcHashtable, rcConstructing, rcParam, rcInvalid);
+        return RC(rcCont, rcTrie, rcConstructing, rcParam, rcInvalid);
 
     if (key_type == cstr && key_size != sizeof(char*))
-        return RC(rcCont, rcHashtable, rcConstructing, rcParam, rcInvalid);
+        return RC(rcCont, rcTrie, rcConstructing, rcParam, rcInvalid);
 
     if (capacity <= 16) capacity = 16;
 
     KHashTable* kht = (KHashTable*)malloc(sizeof(KHashTable));
     if (kht == NULL)
-        return RC(rcCont, rcHashtable, rcConstructing, rcMemory, rcExhausted);
+        return RC(rcCont, rcTrie, rcConstructing, rcMemory, rcExhausted);
     kht->key_size = key_size;
     kht->value_size = value_size;
     kht->key_type = key_type;
@@ -314,7 +314,7 @@ LIB_EXPORT rc_t KHashTableAdd(KHashTable* self, const void* key,
                               uint64_t keyhash, const void* value)
 {
     if (self == NULL || self->buckets == NULL)
-        return RC(rcCont, rcHashtable, rcInserting, rcParam, rcInvalid);
+        return RC(rcCont, rcTrie, rcInserting, rcParam, rcInvalid);
 
     keyhash |= (BUCKET_VALID | BUCKET_VISIBLE);
     uint64_t bucket = keyhash;
