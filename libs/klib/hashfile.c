@@ -420,7 +420,7 @@ static rc_t rehash_segment( KHashFile * self, size_t segment, size_t capacity )
         = (Hashtable *)seg_alloc( self, segment, sizeof( Hashtable ) );
     if ( !new_hashtable )
     {
-        return RC( rcCont, rcHashtable, rcInserting, rcMemory, rcExhausted );
+        return RC( rcCont, rcTrie, rcInserting, rcMemory, rcExhausted );
     }
 
     new_hashtable->table_sz = capacity;
@@ -428,7 +428,7 @@ static rc_t rehash_segment( KHashFile * self, size_t segment, size_t capacity )
         = seg_alloc( self, segment, capacity * sizeof( u8 * ) );
     if ( !new_hashtable->table )
     {
-        return RC( rcCont, rcHashtable, rcInserting, rcMemory, rcExhausted );
+        return RC( rcCont, rcTrie, rcInserting, rcMemory, rcExhausted );
     }
 
     if ( old_hashtable )
@@ -476,14 +476,14 @@ static rc_t rehash_segment( KHashFile * self, size_t segment, size_t capacity )
 LIB_EXPORT rc_t KHashFileMake( KHashFile ** self, KFile * hashfile )
 {
     if ( self == NULL )
-        return RC( rcCont, rcHashtable, rcConstructing, rcParam, rcInvalid );
+        return RC( rcCont, rcTrie, rcConstructing, rcParam, rcInvalid );
 
     rc_t rc;
     *self = NULL;
 
     KHashFile * kht = (KHashFile *)malloc( sizeof( KHashFile ) );
     if ( kht == NULL )
-        return RC( rcCont, rcHashtable, rcConstructing, rcMemory, rcExhausted );
+        return RC( rcCont, rcTrie, rcConstructing, rcMemory, rcExhausted );
 
     kht->file = hashfile;
 #if _ARCH_BITS == 32
@@ -581,7 +581,7 @@ LIB_EXPORT bool KHashFileFind( const KHashFile * self, const void * key,
                                void * value, size_t * value_size )
 {
     if ( self == NULL )
-        return RC( rcCont, rcHashtable, rcInserting, rcParam, rcInvalid );
+        return RC( rcCont, rcTrie, rcInserting, rcParam, rcInvalid );
 
     size_t            triangle  = 0;
     uint64_t          bucket    = keyhash;
@@ -648,10 +648,10 @@ LIB_EXPORT rc_t KHashFileAdd( KHashFile * self, const void * key,
                               const void * value, const size_t value_size )
 {
     if ( self == NULL )
-        return RC( rcCont, rcHashtable, rcInserting, rcParam, rcInvalid );
+        return RC( rcCont, rcTrie, rcInserting, rcParam, rcInvalid );
 
     if ( key == NULL || key_size == 0 )
-        return RC( rcCont, rcHashtable, rcInserting, rcParam, rcInvalid );
+        return RC( rcCont, rcTrie, rcInserting, rcParam, rcInvalid );
     size_t    triangle = 0;
     uint64_t  bucket   = keyhash;
     size_t    segment  = which_segment( bucket );
@@ -680,7 +680,7 @@ LIB_EXPORT rc_t KHashFileAdd( KHashFile * self, const void * key,
         {
             void * buf = seg_alloc( self, segment, kvsize );
             if ( !buf )
-                return RC( rcCont, rcHashtable, rcInserting, rcMemory,
+                return RC( rcCont, rcTrie, rcInserting, rcMemory,
                            rcExhausted );
             hkv_encode( &hkv, buf );
 
@@ -751,7 +751,7 @@ LIB_EXPORT rc_t KHashFileAdd( KHashFile * self, const void * key,
 
                     void * buf = seg_alloc( self, segment, kvsize );
                     if ( !buf )
-                        return RC( rcCont, rcHashtable, rcInserting, rcMemory,
+                        return RC( rcCont, rcTrie, rcInserting, rcMemory,
                                    rcExhausted );
                     hkv_encode( &hkv, buf );
 
@@ -772,7 +772,7 @@ LIB_EXPORT bool KHashFileDelete( KHashFile * self, const void * key,
                                  const size_t key_size, uint64_t keyhash )
 {
     if ( self == NULL )
-        return RC( rcCont, rcHashtable, rcInserting, rcParam, rcInvalid );
+        return RC( rcCont, rcTrie, rcInserting, rcParam, rcInvalid );
 
     size_t    triangle = 0;
     uint64_t  bucket   = keyhash;
