@@ -42,9 +42,9 @@ typeset NCBI:spot_filter_read_set { INSDC:4na:bin, INSDC:x2na:bin, INSDC:2na:bin
 function
 NCBI:SRA:spot_filter < * U32 min_length, * U8 min_quality, * U8 no_quality >
 NCBI:SRA:make_spot_filter #1
-       ( INSDC:dna:bin read, INSDC:quality:phred quality,
-         INSDC:coord:zero read_start, U32 read_len,
-         INSDC:SRA:read_type read_type, INSDC:SRA:read_filter read_filter );
+       ( NCBI:spot_filter_read_set read, INSDC:quality:phred quality,
+         INSDC:coord:zero read_start, INSDC:coord:len read_len,
+         INSDC:SRA:xread_type read_type, INSDC:SRA:spot_filter spot_filter );
 
 /*--------------------------------------------------------------------------
  * n_encoding - implementation
