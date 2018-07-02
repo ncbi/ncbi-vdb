@@ -1,5 +1,11 @@
 # NCBI External Developer Release:
 
+## NCBI VDB 2.9.1-1
+**June 25, 2018**
+
+  **ncbi-vdb**: fixed break of binary compatibility introduced in release 2.9.1
+
+
 ## NCBI VDB 2.9.1
 **June 15, 2018**
 
@@ -12,7 +18,7 @@
   **test**: added Windows test projects for the new schema and the latest vdb  
 
 
-## NCBI VDB
+## NCBI VDB 2.9.0
 **February 23, 2018**
 
   **align**: AlignAccessRefSeqEnumeratorNext no longer filters by the index  

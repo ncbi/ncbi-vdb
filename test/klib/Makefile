@@ -37,6 +37,7 @@ TEST_TOOLS = \
 	test-out \
 	test-SraReleaseVersion \
 	test-time \
+	test-rcenum \
 	test-klib \
 	test-vnamelist \
 	test-progressbar \
@@ -158,8 +159,20 @@ TEST_TIME_SRC = \
 
 TEST_TIME_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_TIME_SRC))
-    
+
 $(TEST_BINDIR)/test-time: $(TEST_TIME_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_SRA_RELEASE_VERSION_LIB)
+
+#-------------------------------------------------------------------------------
+# test-rcenum
+#
+TEST_RCENUM_SRC = \
+	test-rcenum
+
+TEST_RCENUM_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_RCENUM_SRC))
+
+$(TEST_BINDIR)/test-rcenum: $(TEST_RCENUM_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_SRA_RELEASE_VERSION_LIB)
 
 #-------------------------------------------------------------------------------
