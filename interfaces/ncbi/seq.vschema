@@ -33,7 +33,13 @@ include 'vdb/vdb.vschema';
 include 'ncbi/ncbi.vschema';
 include 'insdc/sra.vschema';
 
-extern function
+typeset NCBI:spot_filter_read_set { INSDC:4na:bin, INSDC:x2na:bin, INSDC:2na:bin };
+
+/* make_spot_filter
+ *  function to analyze qualities and bases
+ *  and potentially set SRA_SPOT_FILTER_REJECT bit
+ */
+function
 NCBI:SRA:spot_filter < * U32 min_length, * U8 min_quality, * U8 no_quality >
 NCBI:SRA:make_spot_filter #1
        ( INSDC:dna:bin read, INSDC:quality:phred quality,
