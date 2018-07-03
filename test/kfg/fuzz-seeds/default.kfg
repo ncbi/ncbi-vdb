@@ -22,79 +22,26 @@
 #
 # ===========================================================================
 
-by_default: default
+## DEFAULT CONFIGURATION FOR SRA-TOOLKIT
+# 
+#  These settings are intended to allow the tools to work under conditions
+#  when the user has not yet performed any configuration.
+/config/default = "true"
 
-TOP ?= $(abspath ..)
-MODULE = libs
+# The user's default public repository
+/repository/user/main/public/apps/file/volumes/flat = "files"
+/repository/user/main/public/apps/nakmer/volumes/nakmerFlat = "nannot"
+/repository/user/main/public/apps/nannot/volumes/nannotFlat = "nannot"
+/repository/user/main/public/apps/refseq/volumes/refseq = "refseq"
+/repository/user/main/public/apps/sra/volumes/sraFlat = "sra"
+/repository/user/main/public/apps/wgs/volumes/wgsFlat = "wgs"
+/repository/user/main/public/root = "$(HOME)/ncbi/public"
 
-include $(TOP)/build/Makefile.shell
+# Remote access to NCBI's public repository
+/repository/remote/main/CGI/resolver-cgi = "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi"
 
-include $(TOP)/build/Makefile.config
+# Remote access to NCBI's protected repository
+/repository/remote/protected/CGI/resolver-cgi = "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi"
 
-#-------------------------------------------------------------------------------
-# default
-#
-MAIN_SUBDIRS = \
-	ext      \
-	kfc      \
-	klib     \
-	kproc    \
-	kfs      \
-	kns      \
-	kfg      \
-	krypto   \
-	vfs      \
-	kapp     \
-	kdb      \
-	vdb      \
-	vxf      \
-	search   \
-	sraxf    \
-	align    \
-	axf      \
-	wgsxf    \
-	ktst     \
-	loader   \
-	blast    \
-	ascp     \
-	schema   \
-	sra      \
-	ngs      \
-	ngs-c++  \
-	ngs-jni  \
-	ngs-py   \
-	kxml     \
-	hdf5     \
-	diagnose \
-	tui
-
-NCBI_VDB_SUBDIRS =   \
-	$(MAIN_SUBDIRS) \
-	ncbi-vdb
-
-SUBDIRS = \
-	$(NCBI_VDB_SUBDIRS) \
-	vdb-sqlite
-
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
-
-$(SUBDIRS):
-	@ $(MAKE) -C $@
-
-ncbi-vdb: $(MAIN_SUBDIRS)
-
-vdb-sqlite: $(NCBI_VDB_SUBDIRS)
-
-test:
-	@true
-
-.PHONY: default $(SUBDIRS) test
-
-#-------------------------------------------------------------------------------
-# pass-through
-#
-out debug profile release GCC ICC VC++ fuzz:
-	@ $(MAKE) TOP=$(TOP) -f $(TOP)/build/Makefile.env $@
-
-.PHONY: out debug profile release GCC ICC VC++ fuzz
+# Aspera configuration
+/tools/ascp/max_rate = "450m"

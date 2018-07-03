@@ -22,7 +22,6 @@
 #
 # ===========================================================================
 
-
 ## build rules
 LOC_INFO = -D__mod_name__=$(MODULE) -D__file_name__=$*
 
@@ -109,3 +108,32 @@ LOC_INFO = -D__mod_name__=$(MODULE) -D__file_name__=$*
 # version include generation
 %.vers.h: %.vers
 	$(TOP)/build/make-vers-inc.sh $^ > $@
+
+# instrumented for fuzzing
+#	clang -c $^ -o $@ $(DEBUG) $(DBG) $(CARCH) $(PROF) $(DEFINES) $(ARCHDEFS) $(MIN_DEPLOY_OS_OPT) $(INCDIRS) $(LOC_INFO) -D__file_ext__=cpp  -fsanitize=fuzzer,address,signed-integer-overflow
+$(OBJDIR)/%.fuzz.$(OBJX): %.c
+	clang -c $< -o $@ $(CFLAGS) -fsanitize=fuzzer,address,signed-integer-overflow
+$(OBJDIR)/%.fuzz.$(LOBX): %.c
+	clang -c $< -o $@ $(CFLAGS) -fsanitize=fuzzer,address,signed-integer-overflow
+$(OBJDIR)/%.fuzz.$(OBJX): %.cpp
+	clang++ -c $< -o $@ $(CPFLAGS) -fsanitize=fuzzer,address,signed-integer-overflow
+$(OBJDIR)/%.fuzz.$(LOBX): %.cpp
+	clang++ -c $< -o $@ $(CPFLAGS) -fsanitize=fuzzer,address,signed-integer-overflow
+
+$(OBJDIR)/%.nopt.fuzz.$(OBJX): %.c
+	clang -c $< -o $@ $(CFLAGS) -fsanitize=fuzzer,address,signed-integer-overflow $(NOPT)
+$(OBJDIR)/%.nopt.fuzz.$(LOBX): %.c
+	clang -c $< -o $@ $(CFLAGS) -fsanitize=fuzzer,address,signed-integer-overflow $(NOPT)
+$(OBJDIR)/%.nopt.fuzz.$(OBJX): %.cpp
+	clang++ -c $< -o $@ $(CPFLAGS) -fsanitize=fuzzer,address,signed-integer-overflow $(NOPT)
+$(OBJDIR)/%.nopt.fuzz.$(LOBX): %.cpp
+	clang++ -c $< -o $@ $(CPFLAGS) -fsanitize=fuzzer,address,signed-integer-overflow $(NOPT)
+
+$(OBJDIR)/%.swap.nopt.fuzz.$(OBJX): %.c
+	clang -c $< -o $@ $(CFLAGS) -fsanitize=fuzzer,address,signed-integer-overflow $(NOPT) -DSWAP_PERSISTED
+$(OBJDIR)/%.swap.nopt.fuzz.$(LOBX): %.c
+	clang -c $< -o $@ $(CFLAGS) -fsanitize=fuzzer,address,signed-integer-overflow $(NOPT) -DSWAP_PERSISTED
+$(OBJDIR)/%.swap.nopt.fuzz.$(OBJX): %.cpp
+	clang++ -c $< -o $@ $(CPFLAGS) -fsanitize=fuzzer,address,signed-integer-overflow $(NOPT) -DSWAP_PERSISTED
+$(OBJDIR)/%.swap.nopt.fuzz.$(LOBX): %.cpp
+	clang++ -c $< -o $@ $(CPFLAGS) -fsanitize=fuzzer,address,signed-integer-overflow $(NOPT) -DSWAP_PERSISTED

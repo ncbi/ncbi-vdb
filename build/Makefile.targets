@@ -62,7 +62,7 @@ SUBDIRS_STD = $(addsuffix _std,$(SUBDIRS))
 
 std: $(SUBDIRS_STD) $(STD_EXTRA)
 
-$(SUBDIRS_STD): 
+$(SUBDIRS_STD):
 	@ $(MAKE) -C $(subst _std,,$@) std
 
 .PHONY: std $(SUBDIRS_STD)
@@ -115,3 +115,15 @@ $(SUBDIRS_VALGRIND):
 	@ $(MAKE) -C $(subst _valgrind,,$@) valgrind
 
 .PHONY: valgrind $(SUBDIRS_VALGRIND)
+
+#-------------------------------------------------------------------------------
+# fuzz
+#
+SUBDIRS_FUZZ ?= $(addsuffix _fuzz, $(SUBDIRS))
+
+fuzz: $(SUBDIRS_FUZZ)
+
+$(SUBDIRS_FUZZ):
+	@ $(MAKE) -C $(subst _fuzz,,$@) fuzz
+
+.PHONY: fuzz $(SUBDIRS_FUZZ)

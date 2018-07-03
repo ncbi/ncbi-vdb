@@ -159,3 +159,12 @@ compile: makedirs
 	@ $(MAKE_CMD) -j$(MAKE_JOBS) $(TARGDIR)/compile
 
 $(TARGDIR)/compile: $(OBJFILES)
+
+#-------------------------------------------------------------------------------
+# fuzz
+#
+FUZZ_OBJ = \
+	$(addprefix $(OBJDIR)/,$(addsuffix .fuzz.$(LOBX),$(KLIB_SRC)))
+
+fuzz: $(FUZZ_OBJ)
+	$(AR) $(FLIBDIR)/libklib.$(LIBX) $(FUZZ_OBJ)

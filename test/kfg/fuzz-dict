@@ -1,0 +1,14 @@
+#
+# fuzz testing dictionary for KFG files
+#
+
+comment_start="/*"
+comment_end="*/"
+line_comment="#"
+eol="\x0a"
+path="/"
+var_ref_start="{"
+var_ref_end="}"
+single_quote="'"
+double_quote="\""
+equals="="

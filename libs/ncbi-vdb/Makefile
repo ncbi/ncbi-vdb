@@ -59,7 +59,7 @@ $(TARGDIR)/std: \
 #-------------------------------------------------------------------------------
 # clean
 #
-clean: stdclean
+clean: stdclean cleanfuzz
 
 .PHONY: clean
 
@@ -158,3 +158,12 @@ $(LIBDIR)/libncbi-wvdb.$(SHLX): $(WVDB_OBJ)
 
 $(LIBDIR)/libncbi-wvdb.$(LIBX): $(WVDB_OBJ)
 	$(LD) --slib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(WVDB_LIB)
+
+#-------------------------------------------------------------------------------
+# fuzz
+#
+fuzz:
+	/2T/data/altdevel/ncbi-vdb/build/ld.sh linux x86_64 gcc --build dbg --ldflags "-g  -m64 "    --objx o --shlx so --libx a -MD --srcdir /2T/data/altdevel/ncbi-vdb/libs/ncbi-vdb --bindir /2T/data/altdevel/ncbi-outdir/ncbi-vdb/linux/gcc/x86_64/dbg/bin --slib -o $(FLIBDIR)/libncbi-vdb.$(LIBX) -L$(FLIBDIR) $(VDB_LIB)
+
+cleanfuzz:
+	rm -rf $(FLIBDIR)/*
