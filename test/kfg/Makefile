@@ -155,7 +155,7 @@ $(TEST_BINDIR)/fuzz-kfg: $(FUZZ_OBJ) $(FLIBDIR)/libncbi-vdb.a
 fuzz: $(TEST_BINDIR)/fuzz-kfg
 
 runfuzz: $(TEST_BINDIR)/fuzz-kfg
-	 mkdir fuzz-corpus
+	 mkdir -p fuzz-corpus
 	 $(TEST_BINDIR)/fuzz-kfg -dict=fuzz-dict fuzz-corpus fuzz-seeds
 
 .phony: runfuzz
