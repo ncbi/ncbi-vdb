@@ -128,6 +128,7 @@ VDB_LIB = \
 	$(addprefix -s,$(VDB_LIB_RD))
 
 $(LIBDIR)/libncbi-vdb.$(SHLX): $(VDB_OBJ)
+	echo $(SRCDIR)
 	$(LD) --dlib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(VDB_LIB)
 
 $(LIBDIR)/libncbi-vdb.$(LIBX): $(VDB_OBJ)
@@ -161,11 +162,8 @@ $(LIBDIR)/libncbi-wvdb.$(LIBX): $(WVDB_OBJ)
 #-------------------------------------------------------------------------------
 # fuzz
 #
-$(FLIBDIR)/libncbi-vdb.$(LIBX):
-	$(LD) --dlib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(VDB_LIB)
-
-fuzz: $(FLIBDIR)/libncbi-vdb.$(LIBX)
-	@ $(MAKE) -s -C $(OBJDIR) $<
+fuzz:
+	$(TOP)/build/ld.sh linux x86_64 gcc --build dbg --ldflags "-g  -m64" --objx o --shlx so --libx a --srcdir $(SRCDIR) --bindir $(BINDIR) --slib -o $(FLIBDIR)/libncbi-vdb.$(LIBX) -L$(FLIBDIR) $(VDB_LIB)
 
 cleanfuzz:
 	rm -rf $(FLIBDIR)/*
