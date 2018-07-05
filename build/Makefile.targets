@@ -30,6 +30,7 @@
 #   runtests
 #   slowtests
 #   valgrind
+#   fuzz
 #
 # requires $(SUBDIRS) to be defined
 #

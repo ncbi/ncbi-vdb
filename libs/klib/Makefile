@@ -166,5 +166,5 @@ $(TARGDIR)/compile: $(OBJFILES)
 FUZZ_OBJ = \
 	$(addprefix $(OBJDIR)/,$(addsuffix .fuzz.$(LOBX),$(KLIB_SRC)))
 
-fuzz: $(FUZZ_OBJ)
+fuzz: std $(FUZZ_OBJ)
 	$(AR) $(FLIBDIR)/libklib.$(LIBX) $(FUZZ_OBJ)

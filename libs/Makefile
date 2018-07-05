@@ -94,7 +94,7 @@ test:
 #-------------------------------------------------------------------------------
 # pass-through
 #
-out debug profile release GCC ICC VC++ fuzz:
+out debug profile release GCC ICC VC++:
 	@ $(MAKE) TOP=$(TOP) -f $(TOP)/build/Makefile.env $@
 
-.PHONY: out debug profile release GCC ICC VC++ fuzz
+.PHONY: out debug profile release GCC ICC VC++
