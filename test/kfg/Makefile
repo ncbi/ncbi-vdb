@@ -103,8 +103,8 @@ TEST_KFG_LIB = \
 $(TEST_BINDIR)/test-kfg: $(TEST_KFG_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_KFG_LIB)
 
-kfg: $(TEST_BINDIR)/test-kfg
-	$^
+kfg: test-kfg
+	$(TEST_BINDIR)/test-kfg
 
 #-------------------------------------------------------------------------------
 # test-repository
@@ -150,12 +150,28 @@ FUZZ_OBJ = \
 	$(addprefix $(OBJDIR)/,$(addsuffix .fuzz.$(OBJX),$(FUZZ_SRC)))
 
 $(TEST_BINDIR)/fuzz-kfg: $(FUZZ_OBJ) $(FLIBDIR)/libncbi-vdb.a
-	clang++ -o $@ $^ $(FUZZ_LIB) -fsanitize=fuzzer,address,signed-integer-overflow
+	clang++ -o $@ $^ $(FUZZ_LIB) $(FUZZ_OPT)
 
 fuzz: $(TEST_BINDIR)/fuzz-kfg
 
-runfuzz: $(TEST_BINDIR)/fuzz-kfg
+FUZZ_DICT = fuzz-dict
+FUZZ_PROF_RAW = profile/fuzz-kfg.rawprof
+FUZZ_PROF = profile/fuzz-kfg.profdata
+FUZZ_PROF_REPORT = profile/fuzz-kfg-coverage.txt
+
+RUNS ?= -1
+
+runfuzz $(FUZZ_PROF_RAW): $(TEST_BINDIR)/fuzz-kfg $(FUZZ_DICT)
 	 mkdir -p fuzz-corpus
-	 $(TEST_BINDIR)/fuzz-kfg -dict=fuzz-dict fuzz-corpus fuzz-seeds
+	 export LLVM_PROFILE_FILE=$(FUZZ_PROF_RAW); $(TEST_BINDIR)/fuzz-kfg -dict=$(FUZZ_DICT) -runs=$(RUNS) fuzz-corpus fuzz-seeds
+
+$(FUZZ_PROF): $(FUZZ_PROF_RAW)
+	llvm-profdata merge -sparse $(FUZZ_PROF_RAW) -o $(FUZZ_PROF)
+
+proffuzz: $(FUZZ_PROF)
+	llvm-cov report $(TEST_BINDIR)/fuzz-kfg -instr-profile=$(FUZZ_PROF) >$(FUZZ_PROF_REPORT)
+	@head -n 1 $(FUZZ_PROF_REPORT)
+	@tail -n 1 $(FUZZ_PROF_REPORT)
+	@echo "====> see the full coverage report in $(FUZZ_PROF_REPORT)"
 
 .phony: runfuzz

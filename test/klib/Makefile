@@ -209,6 +209,9 @@ TEST_KLIB_LIB = \
 $(TEST_BINDIR)/test-klib: $(TEST_KLIB_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
 
+klib: test-klib
+	$(TEST_BINDIR)/test-klib
+
 #-------------------------------------------------------------------------------
 # test-hashfile
 #

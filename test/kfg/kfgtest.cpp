@@ -705,6 +705,20 @@ FIXTURE_TEST_CASE(FixUserSettings, KfgFixture)
 
 //////////////////////////////////////////// KConfig Accessors
 
+FIXTURE_TEST_CASE(ConfigAccess_NullPath, KfgFixture)
+{   // NULL is ok
+    const char* contents="bool/f=\"FALSE\"\n";
+    CreateAndLoad(GetName(), contents);
+    REQUIRE_RC ( KConfigOpenNodeRead ( kfg, (const KConfigNode**)&node, NULL) );
+}
+
+FIXTURE_TEST_CASE(ConfigAccess_NonUtf8_Comment_InPath, KfgFixture)
+{
+    const char* contents="bool/f=\"FALSE\"\n";
+    CreateAndLoad(GetName(), contents);
+    REQUIRE_RC ( KConfigRead ( kfg, "#\377", 0, buf, sizeof buf, & num_read, & num_writ ) );
+}
+
 FIXTURE_TEST_CASE(ConfigAccessBool, KfgFixture)
 {
     const char* contents=
