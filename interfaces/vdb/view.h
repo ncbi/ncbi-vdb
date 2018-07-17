@@ -129,6 +129,12 @@ VDB_EXTERN rc_t CC VViewBindParameterView (
  */
 VDB_EXTERN rc_t CC VViewListCol ( const VView *self, struct KNamelist **names );
 
+/* OpenSchema
+ *  duplicate reference to view schema
+ *  NB - returned reference must be released
+ */
+VDB_EXTERN rc_t CC VViewOpenSchema ( const VView *self, struct VSchema const **schema );
+
 #ifdef __cplusplus
 }
 #endif
