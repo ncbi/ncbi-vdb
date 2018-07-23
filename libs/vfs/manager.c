@@ -640,6 +640,14 @@ rc_t GetEncryptionKey(const VFSManager * self, const VPath * vpath, char* obuff,
                 rc = rc2;
         }
     }
+
+    if ( GetRCState ( rc ) == rcNoPerm && GetRCObject ( rc ) == ( enum RCObject ) rcEncryptionKey )
+    {
+        LOGMSG ( klogErr, "You do not have read permissions to decrypt data from this project." );
+        LOGMSG ( klogErr, "Please contact your PI to request a NGC token with decrypt permissions." );
+        LOGMSG ( klogErr, "Import the new NGC file before decrypting again." );
+        LOGMSG ( klogErr, "If you continue to have problems, contact sra@ncbi.nlm.nih.gov for assistance." );
+    }
     
     if (rc == 0)
     {
