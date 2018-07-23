@@ -174,6 +174,11 @@ rc_t ReadEncKey(const KFile* file, char* buf, size_t bufsize)
 
     if (rc == 0)
     {
+        char * pc;
+
+        /* ensure buffer is NUL terminated */
+        buf [ readNum ] = 0;
+        
         /* -----
          * trim back the contents of the file to
          * a single ASCII/UTF-8 text line
@@ -181,17 +186,20 @@ rc_t ReadEncKey(const KFile* file, char* buf, size_t bufsize)
          * end of line characters so it could have other
          * control characters...
          */
-        char* pc = string_chr (buf, readNum, '\r');
-        if (pc == NULL)
-            pc = string_chr (buf, readNum, '\n');
-
+        pc = memchr ( buf, '\r', readNum );
+        if ( pc == NULL )
+            pc = memchr ( buf, '\n', readNum );
         if (pc != NULL)
             *pc = 0;
-        else
-            buf[readNum]=0;
-            
-        if (string_measure(buf, NULL) == 0)
+
+        /* disallow a length of 0 */
+        if ( buf [ 0 ] == 0 )
             rc = RC (rcKFG, rcEncryptionKey, rcRetrieving, rcSize, rcTooShort);
+        else if ( memcmp ( buf, "n/a", 4 ) == 0 )
+        {
+            /* download-only NGC file */
+            rc = RC ( rcKFG, rcEncryptionKey, rcRetrieving, rcEncryptionKey, rcInvalid );
+        }
     }
     return rc;
 }
