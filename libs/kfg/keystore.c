@@ -198,7 +198,7 @@ rc_t ReadEncKey(const KFile* file, char* buf, size_t bufsize)
         else if ( memcmp ( buf, "n/a", 4 ) == 0 )
         {
             /* download-only NGC file */
-            rc = RC ( rcKFG, rcEncryptionKey, rcRetrieving, rcEncryptionKey, rcInvalid );
+            rc = RC ( rcKFG, rcEncryptionKey, rcRetrieving, rcEncryptionKey, rcNoPerm );
         }
     }
     return rc;
