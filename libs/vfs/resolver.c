@@ -2412,12 +2412,25 @@ VResolverAppID get_accession_app ( const String * accession, bool refseq_ctx,
         app = appREFSEQ;
         break;
 
-    case 0x042: /* e.g. "AAAB01" is WGS package name */
-    case 0x048: /* e.g. "AAAA01000001"               */
-    case 0x049: /* contig can be 6 or 7 digits       */
-    case 0x142: /* e.g. "NZ_AAEW01"                  */
-    case 0x148: /* e.g. "NZ_AAEW01000001"            */
+    case 0x042: /* e.g. "AAAB01" is WGS package name    */
+    case 0x048: /* e.g. "AAAA01000001"                  */
+    case 0x049: /* contig can be between 6 and 8 digits */
+    case 0x04A:
+
+    case 0x062: /* e.g. "ABCDEF01" is WGS package name  */
+    case 0x068: /* e.g. "ABCDEF01000001"                */
+    case 0x069: /* contig can be between 6 and 8 digits */
+    case 0x06A:
+
+    case 0x142: /* e.g. "NZ_AAEW01"                     */
+    case 0x148: /* e.g. "NZ_AAEW01000001"               */
     case 0x149:
+    case 0x14A:
+
+    case 0x162:
+    case 0x168:
+    case 0x169:
+    case 0x16A:
         app = appWGS;
         break;
 
