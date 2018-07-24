@@ -223,7 +223,7 @@ const void *resolve_object ( const KSymTable *tbl,
 {
     rc_t rc;
     const void *obj;
-    
+
     VTypedecl td;
     bool has_type = false;
 
@@ -254,7 +254,7 @@ const void *resolve_object ( const KSymTable *tbl,
     }
 
     /* can also accept a physical name */
-    else 
+    else
     {
         if ( t . id == ePeriod )
             physical_name ( tbl, & src, & t, & env );
@@ -288,6 +288,9 @@ const void *resolve_object ( const KSymTable *tbl,
         case ePhysMember:
         case eTblMember:
         case eDBMember:
+        case eProduction:
+        case eForward:
+        case eVirtual:
             needs_name = false;
             obj = st . sym -> u . obj;
             break;

@@ -835,6 +835,20 @@ SMembExprMake ( ASTBuilder & p_builder, const KSymbol* p_obj, const KSymbol* p_m
     return & x -> dad;
 }
 
+// #include <iostream>
+// using namespace std;
+// static
+// int64_t CC
+// KSymbolCmp ( const void * key, const void * n )
+// {
+//     const KSymbol * sym = (const KSymbol *) n;
+//     String ident;
+//     StringInitCString ( & ident, (const char *) key );
+// cout<<"KSymbolCmp("<<(const char *) key<<", "<<string(sym -> name.addr,sym -> name.len)<<")"<<endl;
+//     return StringCompare ( & sym -> name, & ident );
+// }
+
+#include<iostream>
 static
 SExpression *
 MakeSMembExpr ( ASTBuilder & p_builder, const AST & p_struc, const AST & p_member, const AST_Expr * p_rowId = 0 )
@@ -859,32 +873,58 @@ MakeSMembExpr ( ASTBuilder & p_builder, const AST & p_struc, const AST & p_membe
             }
         }
 
+        const char * memberName = p_member . GetChild ( 0 ) -> GetTokenValue ();
         switch ( sym -> type )
         {
         case eTable:
             {
-                const STable * t = static_cast < const STable * > ( sym -> u . obj );
-                // find member . GetChild ( 0 ) in t -> scope
-                String memName;
-                StringInitCString ( & memName, p_member . GetChild ( 0 ) -> GetTokenValue () );
-                const KSymbol * mem = ( const KSymbol* ) BSTreeFind ( & t -> scope, & memName, KSymbolCmp );
-                if ( mem != 0 )
+                const STable * table = static_cast < const STable * > ( sym -> u . obj );
+                // find memberName in table's inheritance hierachy
+                KSymTable symtab;
+                rc_t rc = init_tbl_symtab ( &symtab, p_builder . GetSchema(), table );
+                if ( rc == 0 )
                 {
-                    assert ( mem -> type == eColumn || mem -> type == eProduction );
-                    return SMembExprMake ( p_builder, sym, mem, rowId );
+                    /* scan override tables for virtual symbols */
+                    uint32_t start = VectorStart ( & table -> overrides );
+                    uint32_t count = VectorLength ( & table -> overrides );
+                    for ( uint32_t i = 0; i < count; ++ i )
+                    {
+                        STableOverrides * ov = static_cast < STableOverrides * > ( VectorGet ( & table -> overrides, start + i ) );
+                        if ( ! p_builder . ScanVirtuals ( p_struc . GetChild ( 0 ) -> GetLocation (), ov -> by_parent ) )
+                        {
+                            pop_tbl_scope ( & p_builder . GetSymTab (), table );
+                            KSymTableWhack ( & symtab );
+                            return 0;
+                        }
+                    }
+
+                    String memName;
+                    StringInitCString ( & memName, memberName );
+std::cout<<"MakeSMembExpr("<<memberName<<"), vprods="<<VectorLength(&table->vprods)<<std::endl;
+KSymTableDump(&p_builder.GetSymTab ());
+                    const KSymbol * mem = ( const KSymbol* ) KSymTableFind ( & p_builder . GetSymTab (), & memName );
+std::cout<<"Resolve("<<memberName<<")"<<(mem == 0 ? "not found":"found")<<std::endl;
+
+                    KSymTableWhack ( & symtab );
+                    if ( mem != 0 )
+                    {
+                        assert ( mem -> type == eColumn || mem -> type == eProduction );
+                        return SMembExprMake ( p_builder, sym, mem, rowId );
+                    }
+                    p_builder . ReportError ( p_member . GetLocation (), "Column/production not found", memberName );
                 }
                 else
                 {
-                    p_builder . ReportError ( p_member . GetLocation (), "Column/production not found", memName );
+                    p_builder. ReportRc ( "init_tbl_symtab failed", rc );
                 }
             }
             break;
         case eView:
-            {
+            {   //TODO: same as above
                 const SView * v = static_cast < const SView * > ( sym -> u . obj );
                 // find member . GetChild ( 0 ) in v -> scope
                 String memName;
-                StringInitCString ( & memName, p_member . GetChild ( 0 ) -> GetTokenValue () );
+                StringInitCString ( & memName, memberName );
                 const KSymbol * mem = ( const KSymbol* ) BSTreeFind ( & v -> scope, & memName, KSymbolCmp );
                 if ( mem != 0 )
                 {

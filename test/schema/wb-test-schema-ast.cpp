@@ -46,7 +46,7 @@ using namespace ncbi::NK;
 TEST_SUITE ( SchemaASTTestSuite );
 
 // AST
-
+#if 0
 static
 bool
 VerifyNextToken ( ParseTreeScanner& p_scan, int p_type)
@@ -1008,7 +1008,7 @@ FIXTURE_TEST_CASE(CondExpr, AST_Fixture)
     REQUIRE_EQ ( ( uint32_t ) eConstExpr, expr -> right -> var );
     REQUIRE_EQ ( 3, (int)reinterpret_cast < const SConstExpr * > ( expr -> right ) -> u . u64 [0] );
 }
-
+#endif
 //TODO: invalid float
 //TODO: nested vector constants - error
 //TODO: negation applied to non-scalar - error
@@ -1017,9 +1017,9 @@ FIXTURE_TEST_CASE(CondExpr, AST_Fixture)
 //TODO: eVectorExpr
 //TODO: eCondExpr
 
-#include "wb-test-schema-func.cpp"
+//#include "wb-test-schema-func.cpp"
 #include "wb-test-schema-table.cpp"
-#include "wb-test-schema-db.cpp"
+//#include "wb-test-schema-db.cpp"
 #include "wb-test-schema-view.cpp"
 
 //////////////////////////////////////////// Main

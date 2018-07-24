@@ -336,8 +336,8 @@ CC SViewInstanceWhack ( void *item, void *ignore )
 
 /*
  * init-tbl-symtab
- *  initializes "tbl"
- *  places table in scope
+ *  initializes "p_view"
+ *  places view in scope
  *  must be balanced by KSymTableWhack
  */
 static
