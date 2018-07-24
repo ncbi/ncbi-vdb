@@ -156,7 +156,7 @@ public:
     }
 #undef THROW_ON_TRUE
 };
-
+#if 0
 FIXTURE_TEST_CASE(Table_Empty, AST_Table_Fixture)
 {
     TableAccess t = ParseTable ( "table t#1.1 { };", "t" );
@@ -295,10 +295,18 @@ FIXTURE_TEST_CASE(Table_ParentRedeclared, AST_Table_Fixture)
 }
 
 FIXTURE_TEST_CASE(Table_Parent_Override, AST_Table_Fixture)
-{
-    TableAccess t = ParseTable ( "table dad#1 { U8 a = c; } table t#1 = dad#1 { U16 b = 1; }", "t", 1 );
-    // c is inherited and is added to Overrides
-    REQUIRE_EQ ( 1u, t . Productions () . Count () );
+{   // virtual productions forward-referenced in parent tables are added to overrides of the children
+    TableAccess t = ParseTable ( "table dad#1 { U8 a = c; } table t#1 = dad#1 { column U16 b = 1; }", "t", 1 );
+
+    TableAccess dad = GetTable ( 0 );
+    // c is not in dad's overrides but in vprods
+    REQUIRE_EQ ( 1u, dad . Productions () . Count () );
+    REQUIRE_EQ ( 1u, dad . VirtualProductions () . Count () );
+    REQUIRE_EQ ( 0u, dad . Overrides () . Count () );
+
+    // c is inherited and is added to Overrides; no productions of its own
+    REQUIRE_EQ ( 0u, t . Productions () . Count () );
+    REQUIRE_EQ ( 0u, t . VirtualProductions () . Count () );
     REQUIRE_EQ ( 1u, t . Overrides () . Count () );
 }
 
@@ -307,15 +315,20 @@ FIXTURE_TEST_CASE(Table_Parent_InheritedVirtualProduction, AST_Table_Fixture)
     TableAccess t = ParseTable (
         "table granddad#1 { U8 a = v; }"
         "table dad#1 = granddad { U8 b = v; }"
-        "table t#1 = dad { column U16 c = 1; }",
+        "table t#1 = dad { column U16 c = v; }",
         "t", 2 );
 
     // verify overrides
+    // gdad
+    TableAccess gdad = GetTable ( 0 );
+    REQUIRE_EQ ( 1u, gdad . VirtualProductions () . Count  () );
+
     // dad
     TableAccess dad = GetTable ( 1 );
     REQUIRE_EQ ( 1u, dad . Overrides () . Count () ); // inherits from granddad
     VdbVector < const KSymbol > dadOvr ( dad . Overrides () . Get ( 0 ) -> by_parent );
     REQUIRE_EQ ( 1u, dadOvr . Count () ); // 1 override copied from granddad
+    REQUIRE_EQ ( 0u, dad . VirtualProductions () . Count  () ); // no forward reference introduced in dad
 
     // t
     REQUIRE_EQ ( 2u, t . Overrides () . Count () ); // v inherits from dad and granddad
@@ -327,8 +340,35 @@ FIXTURE_TEST_CASE(Table_Parent_InheritedVirtualProduction, AST_Table_Fixture)
     VdbVector < const KSymbol > tGdadOvr ( t . Overrides () . Get ( 1 ) -> by_parent );
     REQUIRE_EQ ( 0u, tGdadOvr . Count () ); // no overrides copied from granddad
 
-    // v is not resolved in t
-    REQUIRE_EQ ( 0u, t . VirtualProductions () . Count  () );
+    REQUIRE_EQ ( 0u, t . VirtualProductions () . Count  () ); // no forward reference introduced in t
+}
+
+FIXTURE_TEST_CASE(Table_Parent_InheritedVirtualProduction_Defined, AST_Table_Fixture)
+{
+    ParseTable (
+        "table granddad#1 { U8 a = v; }"
+        "table dad#1 = granddad { U8 v = 1; }" // v is defined in dad
+        "table t#1 = dad { column U16 c = v; }", // v is accessible in child tables
+        "t", 2 );
+}
+#endif
+FIXTURE_TEST_CASE(Table_Parent_InheritedVirtualProduction_Undefined, AST_Table_Fixture)
+{
+    ParseTable (
+        "table granddad#1 { U8 a = v; }"
+        "table dad#1 = granddad { }" // v is not defined
+        "table t#1 = dad { column U16 c = v; }", // v is accessible in child tables
+        "t", 2 );
+}
+#if 0
+FIXTURE_TEST_CASE(Table_Parent_InheritedVirtualProduction_DefinedHigher, AST_Table_Fixture)
+{
+    ParseTable (
+        "table greatgranddad#1              { U8 a = v; }"
+        "table granddad#1 = greatgranddad   { U8 v = 1; }" // v is defined in dad
+        "table dad#1 = granddad             { }"
+        "table t#1 = dad                    { column U16 c = v; }", // v is accessible in grandchild tables
+        "t", 3 );
 }
 
 FIXTURE_TEST_CASE(Table_Parent_MultuipleInheritedOverride, AST_Table_Fixture)
@@ -1147,3 +1187,5 @@ FIXTURE_TEST_CASE(Table_segfault, AST_Table_Fixture)
 {   // segfault caused by a bug in ASTBuilder :: Resolve ( const AST_FQN & p_fqn )
     MakeAst ( "typedef ascii n:p:t; table n:t:s #1 {}; table n:t:p #1 {};" );
 }
+
+#endif
