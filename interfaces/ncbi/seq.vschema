@@ -41,7 +41,7 @@ typeset NCBI:spot_filter_read_set { INSDC:4na:bin, INSDC:x2na:bin, INSDC:2na:bin
  */
 function INSDC:SRA:spot_filter NCBI:SRA:make_spot_filter #1
     < U32 min_length, U8 min_quality, * U8 no_quality >
-    ( INSDC:4na:bin bin_read, INSDC:quality:phred quality,
+    ( NCBI:spot_filter_read_set bin_read, INSDC:quality:phred quality,
       INSDC:coord:zero read_start, INSDC:coord:len read_len,
       INSDC:SRA:xread_type read_type, INSDC:SRA:read_filter read_filter );
 

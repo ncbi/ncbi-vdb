@@ -30,6 +30,7 @@
 #include <klib/data-buffer.h>
 #include <klib/rc.h>
 #include <sysalloc.h>
+#include <klib/log.h>
 
 #include <string.h>
 #include <assert.h>
@@ -196,6 +197,7 @@ static bool spot_filter_2na(self_t const *self
         for ( ; j < M; ++j) {
             unsigned const k = start[i] + (rev ? (readLen - j - 1) : j);
             int const qval = qual[k];
+            int const base = read[k];
 
             if (BAD_QUAL(qval)) return false; ///< first M quality values must all be >= minimum quality value
             ++count[base];
@@ -277,27 +279,31 @@ rc_t CC make_spot_filter(void *const self, const VXformInfo *const info, int64_t
 static spot_filter_func read_data_type_to_function(VSchema const *const schema, VFormatdecl const *const read_data_type)
 {
 #if 0
+    return spot_filter_4na;
+#else
     VFormatdecl decl;
     rc_t rc;
 
     rc = VSchemaResolveFmtdecl(schema, &decl, "INSDC:4na:bin");
     assert(rc == 0);
-    if (read_data_type->td.type_id == decl.td.type_id)
+    if (read_data_type->td.type_id == decl.td.type_id) {
+        LOGMSG(klogInfo, "matched INSDC:4na:bin");
         return spot_filter_4na;
-
+    }
     rc = VSchemaResolveFmtdecl(schema, &decl, "INSDC:x2na:bin");
     assert(rc == 0);
-    if (read_data_type->td.type_id == decl.td.type_id)
+    if (read_data_type->td.type_id == decl.td.type_id) {
+        LOGMSG(klogInfo, "matched INSDC:x2na:bin");
         return spot_filter_x2na;
-
+    }
     rc = VSchemaResolveFmtdecl(schema, &decl, "INSDC:2na:bin");
     assert(rc == 0);
-    if (read_data_type->td.type_id == decl.td.type_id)
+    if (read_data_type->td.type_id == decl.td.type_id) {
+        LOGMSG(klogInfo, "matched INSDC:2na:bin");
         return spot_filter_2na;
-
-    assert(!"reachable");
-#else
-    return spot_filter_4na;
+    }
+    LOGMSG(klogErr, "matched no type");
+    return NULL;
 #endif
 }
 
@@ -312,27 +318,31 @@ static spot_filter_func read_data_type_to_function(VSchema const *const schema, 
 VTRANSFACT_IMPL( NCBI_SRA_make_spot_filter, 1, 0, 0 ) ( const void *Self, const VXfactInfo *info,
     VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
 {
-    self_t *self = malloc(sizeof(*self));
-    self->min_length = 10;
-    self->min_quality = 4;
-    self->no_quality = -1;
-    assert(cp->argc <= 3);
-    if (cp->argc >= 1) {
-        assert(cp->argv[0].count == 1);
-        self->min_length = cp->argv[0].data.u32[0];
-        if (cp->argc >= 2) {
-            assert(cp->argv[1].count == 1);
-            self->min_quality = cp->argv[1].data.u8[0];
-            if (cp->argc >= 3) {
-                assert(cp->argv[2].count == 1);
-                self->no_quality = cp->argv[2].data.u8[0];
+    spot_filter_func func = read_data_type_to_function(info->schema, &dp->argv[0].fd);
+    if (func) {
+        self_t *self = malloc(sizeof(*self));
+        self->min_length = 10;
+        self->min_quality = 4;
+        self->no_quality = -1;
+        assert(cp->argc <= 3);
+        if (cp->argc >= 1) {
+            assert(cp->argv[0].count == 1);
+            self->min_length = cp->argv[0].data.u32[0];
+            if (cp->argc >= 2) {
+                assert(cp->argv[1].count == 1);
+                self->min_quality = cp->argv[1].data.u8[0];
+                if (cp->argc >= 3) {
+                    assert(cp->argv[2].count == 1);
+                    self->no_quality = cp->argv[2].data.u8[0];
+                }
             }
         }
+        self->spot_filter = func;
+        rslt->self = self;
+        rslt->whack = free;
+        rslt -> u . rf = make_spot_filter;
+        rslt -> variant = vftRow;
+        return 0;
     }
-    self->spot_filter = read_data_type_to_function(info->schema, &dp->argv[0].fd);
-    rslt->self = self;
-    rslt->whack = free;
-    rslt -> u . rf = make_spot_filter;
-    rslt -> variant = vftRow;
-    return 0;
+    return RC(rcXF, rcFunction, rcConstructing, rcType, rcInvalid);
 }
