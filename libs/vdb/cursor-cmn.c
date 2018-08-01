@@ -167,7 +167,7 @@ bool VCursorIsReadOnly ( const struct VCursor * self )
 {
     DISPATCH_VALUE ( isReadOnly ( self ), true );
 }
-struct VSchema const * VCursorGetSchema ( struct VCursor const *self )
+LIB_EXPORT struct VSchema const * VCursorGetSchema(struct VCursor const *self)
 {
     DISPATCH_VALUE ( getSchema ( self ), NULL );
 }
@@ -183,27 +183,27 @@ const struct KSymbol * VCursorFindOverride ( const VCursor *self, const struct V
 {
     DISPATCH_VALUE ( findOverride ( self, cid ), NULL );
 }
-rc_t CC VCursorPermitPostOpenAdd ( struct VCursor const *self )
+LIB_EXPORT rc_t CC VCursorPermitPostOpenAdd(struct VCursor const *self)
 {
     DISPATCH ( permitPostOpenAdd ( self ) );
 }
-rc_t CC VCursorSuspendTriggers ( struct VCursor const *self )
+LIB_EXPORT rc_t CC VCursorSuspendTriggers(struct VCursor const *self)
 {
     DISPATCH ( suspendTriggers ( self ) );
 }
-rc_t CC VCursorLinkedCursorGet( const struct VCursor * self,const char * tbl, struct VCursor const ** curs)
+LIB_EXPORT rc_t CC VCursorLinkedCursorGet(const struct VCursor * self, const char * tbl, struct VCursor const ** curs)
 {
     DISPATCH ( linkedCursorGet ( self, tbl, curs ) );
 }
-rc_t CC VCursorLinkedCursorSet( const struct VCursor * self,const char * tbl, struct VCursor const * curs)
+LIB_EXPORT rc_t CC VCursorLinkedCursorSet(const struct VCursor * self, const char * tbl, struct VCursor const * curs)
 {
     DISPATCH ( linkedCursorSet ( self, tbl, curs ) );
 }
-uint64_t CC VCursorSetCacheCapacity ( struct VCursor * self,uint64_t capacity )
+LIB_EXPORT uint64_t CC VCursorSetCacheCapacity(struct VCursor * self, uint64_t capacity)
 {
     DISPATCH_VALUE ( setCacheCapacity ( self, capacity ), 0 );
 }
-uint64_t CC VCursorGetCacheCapacity ( const struct VCursor * self )
+LIB_EXPORT uint64_t CC VCursorGetCacheCapacity(const struct VCursor * self)
 {
     DISPATCH_VALUE ( getCacheCapacity ( self ), 0 );
 }
