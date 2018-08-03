@@ -65,6 +65,18 @@
     }\
 }
 
+ /* YYERROR does not destroy $$, so we need to pass $$ here and destroy manually if things go wrong */
+#define CHECK_RC_RELEASE( call, toRelease ) \
+{\
+    rc_t rc = ( call );\
+    if ( rc != 0 )\
+    {\
+        Json_RC ( & yyloc, root, sb, rc );\
+        KJsonValueWhack ( ( toRelease )  . node );\
+        YYERROR;\
+    }\
+}
+
 %}
 
 %name-prefix "Json_"
@@ -88,6 +100,10 @@
 
 %start parse
 
+%destructor {
+    KJsonValueWhack ( $$ . node );
+} <>
+
 %%
 
 parse
@@ -110,24 +126,24 @@ members
         {
             KJsonObject * obj;
             CHECK_RC ( KJsonMakeObject ( & obj ) );
-            CHECK_RC ( KJsonObjectAddMember ( obj, $1 . value, $1 . value_len, $3 . node ) );
-            $$ . node = ( KJsonValue *) KJsonObjectToValue ( obj );
+            $$ . node = ( KJsonValue * ) KJsonObjectToValue ( obj );
+            CHECK_RC_RELEASE ( KJsonObjectAddMember ( obj, $1 . value, $1 . value_len, $3 . node ), $$ );
         }
     | members ',' jsonSTRING ':' value
         {
-            KJsonObject * obj = ( KJsonObject * ) KJsonValueToObject ( $1 . node );
-            CHECK_RC ( KJsonObjectAddMember ( obj, $3 . value, $3 . value_len, $5 . node ) );
             $$ = $1;
+            KJsonObject * obj = ( KJsonObject * ) KJsonValueToObject ( $1 . node );
+            CHECK_RC_RELEASE ( KJsonObjectAddMember ( obj, $3 . value, $3 . value_len, $5 . node ), $$ );
         }
     ;
 
 value
     : jsonSTRING    { CHECK_RC ( KJsonMakeString ( & $$ . node, $1 . value, $1 . value_len ) ); }
-    | jsonNUMBER
+    | jsonNUMBER    { CHECK_RC ( KJsonMakeNumber ( & $$ . node, $1 . value, $1 . value_len ) ); }
     | object        { $$ = $1; }
     | array         { $$ = $1; }
-    | jsonTRUE
-    | jsonFALSE
+    | jsonTRUE      { CHECK_RC ( KJsonMakeBool ( & $$ . node, true ) ); }
+    | jsonFALSE     { CHECK_RC ( KJsonMakeBool ( & $$ . node, false ) ); }
     | jsonNULL      { CHECK_RC ( KJsonMakeNull ( & $$ . node ) ); }
     ;
 
@@ -146,13 +162,13 @@ elements
         {
             KJsonArray * arr;
             CHECK_RC ( KJsonMakeArray ( & arr ) );
-            CHECK_RC ( KJsonArrayAddElement ( arr, $1 . node ) );
             $$ . node = ( KJsonValue *) KJsonArrayToValue ( arr );
+            CHECK_RC_RELEASE ( KJsonArrayAddElement ( arr, $1 . node ), $$ );
         }
     | elements ',' value
         {
-            KJsonArray * arr = ( KJsonArray * ) KJsonValueToArray ( $1 . node );
-            CHECK_RC ( KJsonArrayAddElement ( arr, $3 . node ) );
             $$ = $1;
+            KJsonArray * arr = ( KJsonArray * ) KJsonValueToArray ( $1 . node );
+            CHECK_RC_RELEASE ( KJsonArrayAddElement ( arr, $3 . node ), $$ );
         }
     ;

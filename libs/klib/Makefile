@@ -180,7 +180,7 @@ fuzz: std $(FUZZ_OBJ)
 #	$(CP) -o $@ -fPIC $(OPT) -D_LIBRARY $< $(LOC_INFO) -D__file_ext__=c
 
 $(SRCDIR)/json-grammar.c: $(SRCDIR)/json-grammar.y
-	bison --no-lines -r state -o $(SRCDIR)/json-grammar.c --defines=$(SRCDIR)/json-tokens.h $(SRCDIR)/json-grammar.y
+	bison -Wno-other --no-lines -r state -o $(SRCDIR)/json-grammar.c --defines=$(SRCDIR)/json-tokens.h $(SRCDIR)/json-grammar.y
 
 bison: $(SRCDIR)/json-grammar.c
 
