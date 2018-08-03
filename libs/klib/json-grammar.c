@@ -110,6 +110,18 @@
     }\
 }
 
+ /* YYERROR does not destroy $$, so we need to pass $$ here and destroy manually if things go wrong */
+#define CHECK_RC_RELEASE( call, toRelease ) \
+{\
+    rc_t rc = ( call );\
+    if ( rc != 0 )\
+    {\
+        Json_RC ( & yyloc, root, sb, rc );\
+        KJsonValueWhack ( ( toRelease )  . node );\
+        YYERROR;\
+    }\
+}
+
 
 
 
@@ -485,8 +497,8 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    94,    94,    98,   104,   109,   116,   125,   126,   127,
-     128,   129,   130,   131,   135,   141,   145,   152
+       0,   110,   110,   114,   120,   125,   132,   141,   142,   143,
+     144,   145,   146,   147,   151,   157,   161,   168
 };
 #endif
 
@@ -1086,7 +1098,164 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
   YY_SYMBOL_PRINT (yymsg, yytype, yyvaluep, yylocationp);
 
   YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN
-  YYUSE (yytype);
+  switch (yytype)
+    {
+          case 0: /* "end of source"  */
+
+      {
+    KJsonValueWhack ( ((*yyvaluep)) . node );
+}
+
+        break;
+
+    case 3: /* "unrecognized token"  */
+
+      {
+    KJsonValueWhack ( ((*yyvaluep)) . node );
+}
+
+        break;
+
+    case 4: /* "string"  */
+
+      {
+    KJsonValueWhack ( ((*yyvaluep)) . node );
+}
+
+        break;
+
+    case 5: /* "number"  */
+
+      {
+    KJsonValueWhack ( ((*yyvaluep)) . node );
+}
+
+        break;
+
+    case 6: /* "true"  */
+
+      {
+    KJsonValueWhack ( ((*yyvaluep)) . node );
+}
+
+        break;
+
+    case 7: /* "false"  */
+
+      {
+    KJsonValueWhack ( ((*yyvaluep)) . node );
+}
+
+        break;
+
+    case 8: /* "null"  */
+
+      {
+    KJsonValueWhack ( ((*yyvaluep)) . node );
+}
+
+        break;
+
+    case 9: /* '{'  */
+
+      {
+    KJsonValueWhack ( ((*yyvaluep)) . node );
+}
+
+        break;
+
+    case 10: /* '}'  */
+
+      {
+    KJsonValueWhack ( ((*yyvaluep)) . node );
+}
+
+        break;
+
+    case 11: /* ':'  */
+
+      {
+    KJsonValueWhack ( ((*yyvaluep)) . node );
+}
+
+        break;
+
+    case 12: /* ','  */
+
+      {
+    KJsonValueWhack ( ((*yyvaluep)) . node );
+}
+
+        break;
+
+    case 13: /* '['  */
+
+      {
+    KJsonValueWhack ( ((*yyvaluep)) . node );
+}
+
+        break;
+
+    case 14: /* ']'  */
+
+      {
+    KJsonValueWhack ( ((*yyvaluep)) . node );
+}
+
+        break;
+
+    case 16: /* parse  */
+
+      {
+    KJsonValueWhack ( ((*yyvaluep)) . node );
+}
+
+        break;
+
+    case 17: /* object  */
+
+      {
+    KJsonValueWhack ( ((*yyvaluep)) . node );
+}
+
+        break;
+
+    case 18: /* members  */
+
+      {
+    KJsonValueWhack ( ((*yyvaluep)) . node );
+}
+
+        break;
+
+    case 19: /* value  */
+
+      {
+    KJsonValueWhack ( ((*yyvaluep)) . node );
+}
+
+        break;
+
+    case 20: /* array  */
+
+      {
+    KJsonValueWhack ( ((*yyvaluep)) . node );
+}
+
+        break;
+
+    case 21: /* elements  */
+
+      {
+    KJsonValueWhack ( ((*yyvaluep)) . node );
+}
+
+        break;
+
+
+      default:
+        break;
+    }
   YY_IGNORE_MAYBE_UNINITIALIZED_END
 }
 
@@ -1398,8 +1567,8 @@ yyreduce:
     {
             KJsonObject * obj;
             CHECK_RC ( KJsonMakeObject ( & obj ) );
-            CHECK_RC ( KJsonObjectAddMember ( obj, (yyvsp[-2]) . value, (yyvsp[-2]) . value_len, (yyvsp[0]) . node ) );
-            (yyval) . node = ( KJsonValue *) KJsonObjectToValue ( obj );
+            (yyval) . node = ( KJsonValue * ) KJsonObjectToValue ( obj );
+            CHECK_RC_RELEASE ( KJsonObjectAddMember ( obj, (yyvsp[-2]) . value, (yyvsp[-2]) . value_len, (yyvsp[0]) . node ), (yyval) );
         }
 
     break;
@@ -1407,9 +1576,9 @@ yyreduce:
   case 6:
 
     {
-            KJsonObject * obj = ( KJsonObject * ) KJsonValueToObject ( (yyvsp[-4]) . node );
-            CHECK_RC ( KJsonObjectAddMember ( obj, (yyvsp[-2]) . value, (yyvsp[-2]) . value_len, (yyvsp[0]) . node ) );
             (yyval) = (yyvsp[-4]);
+            KJsonObject * obj = ( KJsonObject * ) KJsonValueToObject ( (yyvsp[-4]) . node );
+            CHECK_RC_RELEASE ( KJsonObjectAddMember ( obj, (yyvsp[-2]) . value, (yyvsp[-2]) . value_len, (yyvsp[0]) . node ), (yyval) );
         }
 
     break;
@@ -1417,6 +1586,12 @@ yyreduce:
   case 7:
 
     { CHECK_RC ( KJsonMakeString ( & (yyval) . node, (yyvsp[0]) . value, (yyvsp[0]) . value_len ) ); }
+
+    break;
+
+  case 8:
+
+    { CHECK_RC ( KJsonMakeNumber ( & (yyval) . node, (yyvsp[0]) . value, (yyvsp[0]) . value_len ) ); }
 
     break;
 
@@ -1429,6 +1604,18 @@ yyreduce:
   case 10:
 
     { (yyval) = (yyvsp[0]); }
+
+    break;
+
+  case 11:
+
+    { CHECK_RC ( KJsonMakeBool ( & (yyval) . node, true ) ); }
+
+    break;
+
+  case 12:
+
+    { CHECK_RC ( KJsonMakeBool ( & (yyval) . node, false ) ); }
 
     break;
 
@@ -1459,8 +1646,8 @@ yyreduce:
     {
             KJsonArray * arr;
             CHECK_RC ( KJsonMakeArray ( & arr ) );
-            CHECK_RC ( KJsonArrayAddElement ( arr, (yyvsp[0]) . node ) );
             (yyval) . node = ( KJsonValue *) KJsonArrayToValue ( arr );
+            CHECK_RC_RELEASE ( KJsonArrayAddElement ( arr, (yyvsp[0]) . node ), (yyval) );
         }
 
     break;
@@ -1468,9 +1655,9 @@ yyreduce:
   case 17:
 
     {
-            KJsonArray * arr = ( KJsonArray * ) KJsonValueToArray ( (yyvsp[-2]) . node );
-            CHECK_RC ( KJsonArrayAddElement ( arr, (yyvsp[0]) . node ) );
             (yyval) = (yyvsp[-2]);
+            KJsonArray * arr = ( KJsonArray * ) KJsonValueToArray ( (yyvsp[-2]) . node );
+            CHECK_RC_RELEASE ( KJsonArrayAddElement ( arr, (yyvsp[0]) . node ), (yyval) );
         }
 
     break;

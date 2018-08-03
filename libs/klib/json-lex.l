@@ -64,7 +64,7 @@
 
  /* start-state for slash-star comments */
 
-char        ([^"\\]|\\["\\bfnrt\/]|\\u[0-9a-f]{4})
+char        ([^"\\]|\\["\\bfnrt\/]|\\u[0-9a-fA-F]{4})
 whitespace  [\t\r\n ]
 
 digit       [0-9]
@@ -109,7 +109,7 @@ JsonScan_yylex_init ( JsonScanBlock* sb, const char *str, size_t len )
 {
     yylex_init ( & sb -> scanner );
     sb -> buffer = yy_scan_bytes ( ( yyconst char * ) str, len, sb -> scanner );
-    ( ( struct yyguts_t * ) sb -> scanner ) -> yyextra_r = sb; /* back pointer to the scan block, not touched by flex */
+    ( ( struct yyguts_t * ) sb -> scanner ) -> yyextra_r = sb; /* back pointer to the scan block */
     sb -> error = NULL;
 }
 
@@ -147,3 +147,4 @@ JsonScan_yylex ( YYSTYPE *lvalp, YYLTYPE *llocp, JsonScanBlock* sb )
     lvalp -> node = NULL;
     return ret;
 }
+

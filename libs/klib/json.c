@@ -28,26 +28,23 @@
 
 #include <klib/json.h>
 
+#include <limits.h>
+#include <errno.h>
+
+#include <strtol.h>
+
 #include <klib/rc.h>
 #include <klib/text.h>
 #include <klib/container.h>
 #include <klib/namelist.h>
+#include <klib/vector.h>
 
 #include "json-lex.h"
 #include "json-tokens.h"
 #include "json-priv.h"
 
-enum jsType
-{
-    jsObject,
-    jsArray,
-    jsString,
-    jsUint,
-    jsInt,
-    jsDouble,
-    jsBool,
-    jsNull
-};
+/* copy, convert the escapes and NUL-terminate */
+static rc_t CopyAndUnescape ( const char * p_value, size_t p_size, char * p_target, size_t p_targetSize );
 
 /* NameValue */
 
@@ -61,28 +58,24 @@ struct NameValue
 
 static rc_t MakeNameValue ( NameValue ** p_val, const char * p_name, size_t p_name_size, KJsonValue * p_value )
 {
-    rc_t rc;
     NameValue * ret = calloc ( 1, sizeof * ret );
     if ( ret != NULL )
     {
-        ret -> name = string_dup ( p_name, p_name_size );
+        ret -> name = malloc ( p_name_size + 1 );
         if ( ret -> name != NULL )
         {
-            ret -> value = p_value;
-            * p_val = ret;
-            rc = 0;
+            rc_t rc = CopyAndUnescape ( p_name, p_name_size, ret -> name, p_name_size + 1 );
+            if ( rc == 0 )
+            {
+                ret -> value = p_value;
+                * p_val = ret;
+                return 0;
+            }
+            free ( ret -> name );
         }
-        else
-        {
-            free ( ret );
-            return RC ( rcCont, rcNode, rcAllocating, rcMemory, rcExhausted );
-        }
+        free ( ret );
     }
-    else
-    {
-        return RC ( rcCont, rcNode, rcAllocating, rcMemory, rcExhausted );
-    }
-    return rc;
+    return RC ( rcCont, rcNode, rcAllocating, rcMemory, rcExhausted );
 }
 
 static void CC NameValueWhack ( BSTNode * p_n, void * p_data )
@@ -103,6 +96,16 @@ int64_t CC NameValueSort ( const BSTNode * p_item, const BSTNode * p_n )
                         string_len ( a -> name, size ) );
 }
 
+int64_t CC NameValueCompare ( const void * p_item, const BSTNode * p_n )
+{
+    const char * a = ( const char * ) p_item;
+    const NameValue * b = ( const NameValue* ) p_n;
+    size_t size = string_size ( a );
+    return string_cmp ( a, size,
+                        b -> name, string_size ( b -> name ),
+                        string_len ( a, size ) );
+}
+
 typedef struct AddKeyBlock AddKeyBlock;
 struct AddKeyBlock
 {
@@ -120,10 +123,11 @@ bool CC NameValueAddKey ( BSTNode * p_n, void * p_data )
 
 struct KJsonValue
 {
-    uint32_t type; /* enum jsType */
+    uint32_t    type; /* enum jsType */
     union
     {
-        char * str;
+        char *      str;
+        bool        boolean;
     } u;
 };
 
@@ -136,12 +140,14 @@ struct KJsonObject
 struct KJsonArray
 {
     KJsonValue dad;
-    /*TODO*/
+    Vector elements; /* KJsonValue* */
 };
 
 /* Public API, read only */
 
-rc_t CC KJsonMake ( KJsonObject ** p_root, const char * p_input, char * p_error, size_t p_error_size )
+LIB_EXPORT
+rc_t CC
+KJsonMake ( KJsonObject ** p_root, const char * p_input, char * p_error, size_t p_error_size )
 {
     rc_t rc;
     if ( p_root == NULL )
@@ -156,6 +162,7 @@ rc_t CC KJsonMake ( KJsonObject ** p_root, const char * p_input, char * p_error,
     {
         JsonScanBlock sb;
         JsonScan_yylex_init ( & sb, p_input, string_size ( p_input ) );
+
         if ( Json_parse ( p_root, & sb ) == 0 )
         {
             rc = 0;
@@ -185,55 +192,53 @@ void CC KJsonWhack ( KJsonObject * p_root )
     }
 }
 
+static
+void CC
+WhackValue( void * item, void * data )
+{
+    KJsonValueWhack ( ( KJsonValue * ) item );
+}
+
 void KJsonArrayWhack ( KJsonArray * p_arr )
 {
-    free ( p_arr );
+    if ( p_arr != NULL )
+    {
+        VectorWhack ( & p_arr -> elements, WhackValue, NULL );
+        free ( p_arr );
+    }
 }
 
-bool CC KJsonIsObject ( const KJsonValue * node )
+LIB_EXPORT
+rc_t CC
+KJsonGetString ( const KJsonValue * p_node, const char ** p_value )
 {
-    return node != NULL && node -> type == jsObject;
+    rc_t rc;
+    if ( p_node == NULL )
+    {
+        rc = RC ( rcCont, rcNode, rcAccessing, rcSelf, rcNull );
+    }
+    else if ( p_value == NULL )
+    {
+        rc = RC ( rcCont, rcNode, rcAccessing, rcParam, rcNull );
+    }
+    else
+    {
+        switch ( p_node -> type )
+        {
+        case jsString:
+        case jsNumber:
+            * p_value = p_node -> u . str;
+            rc = 0;
+            break;
+        default:
+            rc = RC ( rcCont, rcNode, rcAccessing, rcType, rcIncorrect );
+            break;
+        }
+    }
+    return rc;
 }
 
-bool CC KJsonIsArray ( const KJsonValue * node )
-{
-    return false;
-}
-
-bool CC KJsonIsString ( const KJsonValue * node )
-{
-    return false;
-}
-
-bool CC KJsonIsNumber ( const KJsonValue * node )
-{
-    return false;
-}
-
-bool CC KJsonIsTrue ( const KJsonValue * node )
-{
-    return false;
-}
-
-bool CC KJsonIsFalse ( const KJsonValue * node )
-{
-    return false;
-}
-
-bool CC KJsonIsNull ( const KJsonValue * node )
-{
-    return false;
-}
-
-/*
-rc_t CC KJsonToString ( const KJsonValue * root, char * error, size_t error_size );
-
-rc_t CC KJsonGetString ( const KJsonValue * node, const char ** value );
-rc_t CC KJsonGetNumber ( const KJsonValue * node, uint64_t * value );
-rc_t CC KJsonGetDouble ( const KJsonValue * node, double * value );
-
-*/
-
+LIB_EXPORT
 const KJsonObject * CC  KJsonValueToObject ( const KJsonValue * p_value )
 {
     if ( p_value == NULL || p_value -> type != jsObject )
@@ -244,7 +249,9 @@ const KJsonObject * CC  KJsonValueToObject ( const KJsonValue * p_value )
     return ( const KJsonObject * ) p_value;
 }
 
-const KJsonValue * CC   KJsonObjectToValue ( const KJsonObject * p_object )
+LIB_EXPORT
+const KJsonValue * CC
+KJsonObjectToValue ( const KJsonObject * p_object )
 {
     if ( p_object == NULL )
     {
@@ -254,7 +261,9 @@ const KJsonValue * CC   KJsonObjectToValue ( const KJsonObject * p_object )
     return & p_object -> dad;
 }
 
-rc_t CC KJsonObjectGetNames ( const KJsonObject * p_node, VNamelist * p_names )
+LIB_EXPORT
+rc_t CC
+KJsonObjectGetNames ( const KJsonObject * p_node, VNamelist * p_names )
 {
     rc_t rc;
     if ( p_node == NULL )
@@ -276,17 +285,26 @@ rc_t CC KJsonObjectGetNames ( const KJsonObject * p_node, VNamelist * p_names )
     return rc;
 }
 
-const KJsonValue * CC KJsonObjectGetValue ( const KJsonObject * p_node, const char * p_name )
+LIB_EXPORT
+const KJsonValue * CC
+KJsonObjectGetMember ( const KJsonObject * p_node, const char * p_name )
 {
     if ( p_node == NULL || p_name == 0 )
     {
         return 0;
     }
 
-    return 0;
+    const BSTNode * node = BSTreeFind ( & p_node -> members, p_name, NameValueCompare );
+    if ( node == NULL )
+    {
+        return NULL;
+    }
+    return ( ( const NameValue * ) node ) -> value;
 }
 
-const KJsonArray * CC KJsonValueToArray ( const KJsonValue * p_value )
+LIB_EXPORT
+const KJsonArray * CC
+KJsonValueToArray ( const KJsonValue * p_value )
 {
     if ( p_value == NULL || p_value -> type != jsArray )
     {
@@ -296,7 +314,9 @@ const KJsonArray * CC KJsonValueToArray ( const KJsonValue * p_value )
     return ( const KJsonArray * ) p_value;
 }
 
-const KJsonValue * CC KJsonArrayToValue ( const KJsonArray * p_array )
+LIB_EXPORT
+const KJsonValue * CC
+KJsonArrayToValue ( const KJsonArray * p_array )
 {
     if ( p_array == NULL )
     {
@@ -305,11 +325,6 @@ const KJsonValue * CC KJsonArrayToValue ( const KJsonArray * p_array )
 
     return & p_array -> dad;
 }
-
-/*
-uint32_t CC KJsonArrayLength ( const KJsonArray * node );
-KJsonValue * CC KJsonArrayGetElement ( const KJsonArray * node, uint32_t index );
-*/
 
 /* Construction methods */
 
@@ -338,6 +353,10 @@ rc_t KJsonObjectAddMember ( KJsonObject * p_obj, const char * p_name, size_t p_n
     if ( rc == 0 )
     {
         rc = BSTreeInsertUnique ( & p_obj -> members, & nv -> node, NULL, NameValueSort );
+        if ( rc != 0 )
+        {
+            NameValueWhack ( & nv -> node, NULL );
+        }
     }
     return rc;
 }
@@ -349,30 +368,175 @@ rc_t KJsonMakeArray ( KJsonArray ** obj )
     if ( ret != NULL )
     {
         ret -> dad . type = jsArray;
+        VectorInit ( & ret -> elements, 0, 16 );
         * obj = ret;
         return 0;
     }
     return RC ( rcCont, rcNode, rcAllocating, rcMemory, rcExhausted );
 }
 
+LIB_EXPORT
+uint32_t CC
+KJsonArrayGetLength ( const KJsonArray * p_node )
+{
+    if ( p_node == NULL )
+    {
+        return 0;
+    }
+    return VectorLength ( & p_node -> elements );
+}
+
 rc_t KJsonArrayAddElement ( KJsonArray * p_arr, KJsonValue * p_element )
 {
     assert ( p_arr != NULL && p_element != NULL );
+    return VectorAppend ( & p_arr -> elements, NULL, p_element );
+}
+
+LIB_EXPORT
+const KJsonValue * CC
+KJsonArrayGetElement ( const KJsonArray * p_node, uint32_t p_index )
+{
+    if ( p_node == NULL )
+    {
+        return NULL;
+    }
+    return ( const KJsonValue * ) VectorGet( & p_node -> elements, p_index );
+}
+
+/* hex_to_int
+ *  where 'c' is known to be hex
+ */
+static
+unsigned int
+hex_to_int ( char c )
+{
+    int i = c - '0';
+    if ( c > '9' )
+    {
+        if ( c < 'a' )
+            i = c - 'A' + 10;
+        else
+            i = c - 'a' + 10;
+    }
+
+    assert ( i >= 0 && i < 16 );
+    return i;
+}
+
+static
+rc_t
+CopyAndUnescape ( const char * p_value, size_t p_size, char * p_target, size_t p_targetSize )
+{   /* copy, convert the escapes and NUL-terminate */
+    uint32_t out = 0;
+    uint32_t i = 0;
+    assert ( p_size < p_targetSize );
+    while ( i < p_size )
+    {
+        if ( p_value [ i ] == '\\' )
+        {
+            ++i;
+            switch ( p_value [ i ] )
+            {
+            case 'u':
+                assert ( i + 4 < p_size );
+                {   /* treat 4-digit hex code as UTF16 */
+                    uint64_t u64 = hex_to_int ( p_value [ i + 1 ]);
+                    u64 <<= 4;
+                    u64 += hex_to_int ( p_value [ i + 2 ]);
+                    u64 <<= 4;
+                    u64 += hex_to_int ( p_value [ i + 3 ]);
+                    u64 <<= 4;
+                    u64 += hex_to_int ( p_value [ i + 4 ]);
+
+                    if ( u64 >= 0xD800 && u64 <= 0xDFFF )
+                    {   /* require a valid surrogate pair */
+                        if ( i + 10 < p_size && p_value [ i + 5 ] == '\\' && p_value [ i + 6 ] == 'u' )
+                        {
+                            uint64_t high = u64;
+                            uint64_t low = hex_to_int ( p_value [ i + 7 ]);
+                            low <<= 4;
+                            low += hex_to_int ( p_value [ i + 8 ]);
+                            low <<= 4;
+                            low += hex_to_int ( p_value [ i + 9 ]);
+                            low <<= 4;
+                            low += hex_to_int ( p_value [ i + 10 ]);
+                            if ( low >= 0xDC00 && low <= 0xDFFF )
+                            {
+                                u64 = 0x10000;
+                                u64 += ( high & 0x03FF ) << 10;
+                                u64 += ( low & 0x03FF );
+                                i += 6;
+                            }
+                            else
+                            {
+                                return RC ( rcCont, rcNode, rcParsing, rcString, rcInvalid );
+                            }
+                        }
+                        else
+                        {
+                            return RC ( rcCont, rcNode, rcParsing, rcString, rcInvalid );
+                        }
+                    }
+
+                    {
+                        int ch_len = utf32_utf8 ( p_target + out, p_target + p_size, u64 );
+                        assert ( ch_len > 0 );
+                        i += 4;
+                        out += ch_len - 1;
+                    }
+                }
+                break;
+            case '\\':
+            case '/':
+            case '"':
+                p_target [ out ] = p_value [ i ];
+                break;
+            case 'b':
+                p_target[ out ] = '\b';
+                break;
+            case 'f':
+                p_target [ out ] = '\f';
+                break;
+            case 'n':
+                p_target [ out ] = '\n';
+                break;
+            case 'r':
+                p_target [ out ] = '\r';
+                break;
+            case 't':
+                p_target [ out ] = '\t';
+                break;
+            }
+        }
+        else
+        {
+            p_target [ out ] = p_value [ i ];
+        }
+        ++i;
+        ++ out;
+    }
+    p_target [ out ] = 0;
     return 0;
 }
 
 rc_t KJsonMakeString ( KJsonValue ** p_val, const char * p_value, size_t p_size )
 {
     assert ( p_val != NULL && p_value != NULL );
-    KJsonValue * ret = calloc ( 1, sizeof * ret );
+    KJsonValue * ret = malloc ( sizeof * ret );
     if ( ret != NULL )
     {
         ret -> type = jsString;
-        ret -> u . str = string_dup ( p_value, p_size );
+        ret -> u . str = malloc ( p_size + 1 );
         if ( ret -> u . str != NULL )
         {
-            * p_val = ret;
-            return 0;
+            rc_t rc = CopyAndUnescape ( p_value, p_size, ret -> u . str, p_size + 1 );
+            if ( rc == 0 )
+            {
+                * p_val = ret;
+                return 0;
+            }
+            KJsonValueWhack ( ret );
+            return rc;
         }
         free ( ret );
     }
@@ -380,7 +544,6 @@ rc_t KJsonMakeString ( KJsonValue ** p_val, const char * p_value, size_t p_size 
 }
 
 /*
-rc_t KJsonMakeNumber ( KJsonValue ** obj, const char * value, size_t p_size );
 rc_t KJsonMakeBool ( KJsonValue ** obj, bool value );
 */
 
@@ -397,6 +560,20 @@ rc_t KJsonMakeNull ( KJsonValue ** p_val )
     return RC ( rcCont, rcNode, rcAllocating, rcMemory, rcExhausted );
 }
 
+rc_t KJsonMakeBool ( KJsonValue ** p_val, bool p_bool )
+{
+    assert ( p_val != NULL );
+    KJsonValue * ret = calloc ( 1, sizeof * ret );
+    if ( ret != NULL )
+    {
+        ret -> type = jsBool;
+        ret -> u . boolean = p_bool;
+        * p_val = ret;
+        return 0;
+    }
+    return RC ( rcCont, rcNode, rcAllocating, rcMemory, rcExhausted );
+}
+
 void KJsonValueWhack ( KJsonValue * p_value )
 {
     if ( p_value != NULL )
@@ -404,6 +581,7 @@ void KJsonValueWhack ( KJsonValue * p_value )
         switch ( p_value -> type )
         {
         case jsString:
+        case jsNumber:
         {
             free ( p_value -> u . str );
             free ( p_value );
@@ -425,4 +603,135 @@ void KJsonValueWhack ( KJsonValue * p_value )
         }
     }
 }
+
+rc_t KJsonMakeNumber ( KJsonValue ** p_val, const char * p_value, size_t p_size )
+{
+    assert ( p_val != NULL && p_value != NULL );
+    KJsonValue * ret = malloc ( sizeof * ret );
+    if ( ret != NULL )
+    {
+        ret -> type = jsNumber;
+        ret -> u . str = string_dup ( p_value, p_size );
+        if ( ret -> u . str != NULL )
+        {
+            * p_val = ret;
+            return 0;
+        }
+        free ( ret );
+    }
+    return RC ( rcCont, rcNode, rcAllocating, rcMemory, rcExhausted );
+}
+
+LIB_EXPORT
+rc_t CC
+KJsonGetNumber ( const KJsonValue * p_node, int64_t * p_value )
+{
+    rc_t rc;
+    if ( p_node == NULL )
+    {
+        rc = RC ( rcCont, rcNode, rcReading, rcSelf, rcNull );
+    }
+    else if ( p_value == NULL )
+    {
+        rc = RC ( rcCont, rcNode, rcReading, rcParam, rcNull );
+    }
+    else if ( p_node -> type != jsNumber )
+    {
+        rc = RC ( rcCont, rcNode, rcAccessing, rcType, rcIncorrect );
+    }
+    else
+    {
+        char * endptr;
+        errno = 0;
+        int64_t value = strtoi64 ( p_node -> u . str, & endptr, 10 );
+        if ( errno == ERANGE )
+        {
+            rc = RC ( rcCont, rcNode, rcAccessing, rcSize, rcExcessive );
+        }
+        else if ( *endptr != 0 )
+        {
+            rc = RC ( rcCont, rcNode, rcAccessing, rcFormat, rcIncorrect );
+        }
+        else
+        {
+            * p_value = value;
+            rc = 0;
+        }
+    }
+    return rc;
+}
+
+LIB_EXPORT
+rc_t CC
+KJsonGetDouble ( const KJsonValue * p_node, double * p_value )
+{
+    rc_t rc;
+    if ( p_node == NULL )
+    {
+        rc = RC ( rcCont, rcNode, rcReading, rcSelf, rcNull );
+    }
+    else if ( p_value == NULL )
+    {
+        rc = RC ( rcCont, rcNode, rcReading, rcParam, rcNull );
+    }
+    else if ( p_node -> type != jsNumber )
+    {
+        rc = RC ( rcCont, rcNode, rcAccessing, rcType, rcIncorrect );
+    }
+    else
+    {
+        char * endptr;
+        errno = 0;
+        double value = strtod ( p_node -> u . str, & endptr );
+        if ( errno == ERANGE )
+        {
+            rc = RC ( rcCont, rcNode, rcAccessing, rcSize, rcExcessive );
+        }
+        else
+        {
+            * p_value = value;
+            rc = 0;
+        }
+    }
+    return rc;
+}
+
+LIB_EXPORT
+rc_t CC
+KJsonGetBool ( const KJsonValue * p_node, bool * p_value )
+{
+    rc_t rc;
+    if ( p_node == NULL )
+    {
+        rc = RC ( rcCont, rcNode, rcReading, rcSelf, rcNull );
+    }
+    else if ( p_value == NULL )
+    {
+        rc = RC ( rcCont, rcNode, rcReading, rcParam, rcNull );
+    }
+    else if ( p_node -> type != jsBool )
+    {
+        rc = RC ( rcCont, rcNode, rcAccessing, rcType, rcIncorrect );
+    }
+    else
+    {
+        * p_value = p_node -> u . boolean;
+        rc = 0;
+    }
+    return rc;
+}
+
+enum jsType CC
+KJsonGetValueType ( const KJsonValue * p_value )
+{
+    if ( p_value == NULL )
+    {
+        return jsInvalid;
+    }
+    return p_value -> type;
+}
+
+/*
+rc_t CC KJsonToString ( const KJsonValue * root, char * error, size_t error_size );
+*/
 

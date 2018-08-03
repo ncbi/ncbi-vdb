@@ -33,16 +33,16 @@
 extern "C" {
 #endif
 
+rc_t KJsonMakeString ( KJsonValue ** val, const char * value, size_t size );
+rc_t KJsonMakeNumber ( KJsonValue ** val, const char * value, size_t size );
+rc_t KJsonMakeBool ( KJsonValue ** val, bool value );
+rc_t KJsonMakeNull ( KJsonValue ** val );
+
 rc_t KJsonMakeObject ( KJsonObject ** obj );
 rc_t KJsonObjectAddMember ( KJsonObject * obj, const char * name, size_t name_size, KJsonValue * val );
 
 rc_t KJsonMakeArray ( KJsonArray ** arr );
 rc_t KJsonArrayAddElement ( KJsonArray * arr, KJsonValue * element );
-
-rc_t KJsonMakeString ( KJsonValue ** val, const char * value, size_t size );
-rc_t KJsonMakeNumber ( KJsonValue ** val, const char * value, size_t size );
-rc_t KJsonMakeBool ( KJsonValue ** val, bool value );
-rc_t KJsonMakeNull ( KJsonValue ** val );
 
 void KJsonValueWhack( KJsonValue * val );
 

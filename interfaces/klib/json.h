@@ -45,38 +45,48 @@ typedef struct KJsonValue KJsonValue;
 typedef struct KJsonObject KJsonObject;
 typedef struct KJsonArray KJsonArray;
 
+enum jsType
+{
+    jsInvalid,
+    jsString,
+    jsNumber,
+    jsBool,
+    jsNull,
+    jsObject,
+    jsArray
+};
+
 /*
  * error [ OUT, NULL OK ]
  */
-rc_t CC KJsonMake ( KJsonObject ** root, const char * input, char * error, size_t error_size );
+KLIB_EXTERN rc_t CC KJsonMake ( KJsonObject ** root, const char * input, char * error, size_t error_size );
 
-void CC KJsonWhack ( KJsonObject * root );
+KLIB_EXTERN void CC KJsonWhack ( KJsonObject * root );
 
-rc_t CC KJsonToString ( const KJsonObject * root, char * error, size_t error_size );
+KLIB_EXTERN enum jsType CC KJsonGetValueType ( const KJsonValue * value );
 
-bool CC KJsonIsString ( const KJsonValue * value );
-bool CC KJsonIsNumber ( const KJsonValue * value );
-bool CC KJsonIsObject ( const KJsonValue * value );
-bool CC KJsonIsArray ( const KJsonValue * value );
-bool CC KJsonIsTrue ( const KJsonValue * value );
-bool CC KJsonIsFalse ( const KJsonValue * value );
-bool CC KJsonIsNull ( const KJsonValue * value );
+/*
+ *  Will work on Uint, Int, Double, returning the original numeric string
+*/
+KLIB_EXTERN rc_t CC KJsonGetString ( const KJsonValue * node, const char ** value );
 
-rc_t CC KJsonGetString ( const KJsonValue * node, const char ** value );
-rc_t CC KJsonGetNumber ( const KJsonValue * node, int64_t * value );
-rc_t CC KJsonGetDouble ( const KJsonValue * node, double * value );
+KLIB_EXTERN rc_t CC KJsonGetNumber ( const KJsonValue * node, int64_t * value );
+KLIB_EXTERN rc_t CC KJsonGetDouble ( const KJsonValue * node, double * value );
+KLIB_EXTERN rc_t CC KJsonGetBool ( const KJsonValue * node, bool * value );
 
-const KJsonObject * CC  KJsonValueToObject ( const KJsonValue * value );
-const KJsonValue * CC   KJsonObjectToValue ( const KJsonObject * object );
+KLIB_EXTERN const KJsonObject * CC  KJsonValueToObject ( const KJsonValue * value );
+KLIB_EXTERN const KJsonValue * CC   KJsonObjectToValue ( const KJsonObject * object );
 
-rc_t CC KJsonObjectGetNames ( const KJsonObject * node, VNamelist * names );
-const KJsonValue * CC KJsonObjectGetValue ( const KJsonObject * node, const char * name );
+KLIB_EXTERN rc_t CC KJsonObjectGetNames ( const KJsonObject * node, VNamelist * names );
+KLIB_EXTERN const KJsonValue * CC KJsonObjectGetMember ( const KJsonObject * node, const char * name );
 
-const KJsonArray * CC KJsonValueToArray ( const KJsonValue * value );
-const KJsonValue * CC KJsonArrayToValue ( const KJsonArray * array );
+KLIB_EXTERN const KJsonArray * CC KJsonValueToArray ( const KJsonValue * value );
+KLIB_EXTERN const KJsonValue * CC KJsonArrayToValue ( const KJsonArray * array );
 
-uint32_t CC KJsonArrayLength ( const KJsonArray * node );
-const KJsonValue * CC KJsonArrayGetElement ( const KJsonArray * node, uint32_t index );
+KLIB_EXTERN uint32_t CC KJsonArrayGetLength ( const KJsonArray * node );
+KLIB_EXTERN const KJsonValue * CC KJsonArrayGetElement ( const KJsonArray * node, uint32_t index );
+
+KLIB_EXTERN rc_t CC KJsonToString ( const KJsonObject * root, char * output, size_t output_size );
 
 #ifdef __cplusplus
 }

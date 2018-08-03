@@ -32,6 +32,7 @@ extern "C" {
 #endif
 
 #include <stddef.h>
+#include <stdbool.h>
 
 struct KJsonObject;
 
