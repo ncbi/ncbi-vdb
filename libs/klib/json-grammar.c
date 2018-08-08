@@ -84,14 +84,14 @@
     extern enum yytokentype JsonScan_yylex ( YYSTYPE *lvalp, YYLTYPE *llocp, JsonScanBlock* sb );
 
     void Json_error ( YYLTYPE *                 p_llocp,
-                      struct KJsonObject **     p_root,
+                      struct KJsonValue **      p_root,
                       struct JsonScanBlock *    p_sb,
                       const char *              p_msg )
     {
         p_sb -> error = string_dup ( p_msg, string_size ( p_msg ) );
     }
     void Json_RC ( YYLTYPE *                 p_llocp,
-                   struct KJsonObject **     p_root,
+                   struct KJsonValue **     p_root,
                    struct JsonScanBlock *    p_sb,
                    rc_t                      p_rc )
     {
@@ -191,7 +191,7 @@ struct YYLTYPE
 
 
 
-int Json_parse (struct KJsonObject ** root, struct JsonScanBlock* sb);
+int Json_parse (struct KJsonValue ** root, struct JsonScanBlock* sb);
 
 #endif /* !YY_JSON_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_KLIB_JSON_TOKENS_H_INCLUDED  */
 
@@ -439,9 +439,9 @@ union yyalloc
 #endif /* !YYCOPY_NEEDED */
 
 /* YYFINAL -- State number of the termination state.  */
-#define YYFINAL  7
+#define YYFINAL  18
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   30
+#define YYLAST   31
 
 /* YYNTOKENS -- Number of terminals.  */
 #define YYNTOKENS  15
@@ -524,10 +524,10 @@ static const yytype_uint16 yytoknum[] =
 };
 # endif
 
-#define YYPACT_NINF -7
+#define YYPACT_NINF -8
 
 #define yypact_value_is_default(Yystate) \
-  (!!((Yystate) == (-7)))
+  (!!((Yystate) == (-8)))
 
 #define YYTABLE_NINF -1
 
@@ -538,9 +538,9 @@ static const yytype_uint16 yytoknum[] =
      STATE-NUM.  */
 static const yytype_int8 yypact[] =
 {
-      -2,    14,    22,    23,    16,    -7,     9,    -7,    -7,     7,
-      -7,    24,    -7,    -7,    -7,    -7,    -7,    -4,    -7,    -7,
-      -7,    18,    -7,    -7,    -6,     7,     7,    -7,    -7,    -7
+      18,    -8,    -8,    -8,    -8,    -8,     4,    -3,    12,    -8,
+      19,    -8,     7,    -8,     5,    -8,    -8,    -5,    -8,    -8,
+      18,    -8,    16,    18,    -8,    -8,    17,    -8,    18,    -8
 };
 
   /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
@@ -548,21 +548,21 @@ static const yytype_int8 yypact[] =
      means the default is an error.  */
 static const yytype_uint8 yydefact[] =
 {
-       0,     0,     0,     0,     0,     3,     0,     1,     2,     0,
-       4,     0,     7,     8,    11,    12,    13,     0,     9,     5,
-      10,     0,    14,    16,     0,     0,     0,    15,     6,    17
+       0,     7,     8,    11,    12,    13,     0,     0,     0,     9,
+       0,    10,     0,     3,     0,    14,    16,     0,     1,     2,
+       0,     4,     0,     0,    15,     5,     0,    17,     0,     6
 };
 
   /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int8 yypgoto[] =
 {
-      -7,    -7,    30,    -7,     0,    -7,    -7
+      -8,    -8,    -8,    -8,    -7,    -8,    -8
 };
 
   /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int8 yydefgoto[] =
 {
-      -1,     2,    18,     6,    19,    20,    24
+      -1,     8,     9,    14,    10,    11,    17
 };
 
   /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
@@ -570,27 +570,27 @@ static const yytype_int8 yydefgoto[] =
      number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_uint8 yytable[] =
 {
-      12,    13,    14,    15,    16,     1,    26,     1,    27,    17,
-      22,    12,    13,    14,    15,    16,     1,    23,     4,    10,
-      17,    11,     7,     8,     5,    28,    29,     9,    21,    25,
-       3
+      16,     1,     2,     3,     4,     5,     6,    23,    12,    24,
+       7,    15,    18,    25,    13,    21,    27,    22,    20,    19,
+      26,    29,     1,     2,     3,     4,     5,     6,    28,     0,
+       0,     7
 };
 
-static const yytype_uint8 yycheck[] =
+static const yytype_int8 yycheck[] =
 {
-       4,     5,     6,     7,     8,     9,    12,     9,    14,    13,
-      14,     4,     5,     6,     7,     8,     9,    17,     4,    10,
-      13,    12,     0,     0,    10,    25,    26,    11,     4,    11,
-       0
+       7,     4,     5,     6,     7,     8,     9,    12,     4,    14,
+      13,    14,     0,    20,    10,    10,    23,    12,    11,     0,
+       4,    28,     4,     5,     6,     7,     8,     9,    11,    -1,
+      -1,    13
 };
 
   /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
      symbol of state STATE-NUM.  */
 static const yytype_uint8 yystos[] =
 {
-       0,     9,    16,    17,     4,    10,    18,     0,     0,    11,
-      10,    12,     4,     5,     6,     7,     8,    13,    17,    19,
-      20,     4,    14,    19,    21,    11,    12,    14,    19,    19
+       0,     4,     5,     6,     7,     8,     9,    13,    16,    17,
+      19,    20,     4,    10,    18,    14,    19,    21,     0,     0,
+      11,    10,    12,    12,    14,    19,     4,    19,    11,    19
 };
 
   /* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
@@ -745,7 +745,7 @@ do {                                                                      \
 `----------------------------------------*/
 
 static void
-yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, struct KJsonObject ** root, struct JsonScanBlock* sb)
+yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, struct KJsonValue ** root, struct JsonScanBlock* sb)
 {
   FILE *yyo = yyoutput;
   YYUSE (yyo);
@@ -767,7 +767,7 @@ yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvalue
 `--------------------------------*/
 
 static void
-yy_symbol_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, struct KJsonObject ** root, struct JsonScanBlock* sb)
+yy_symbol_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, struct KJsonValue ** root, struct JsonScanBlock* sb)
 {
   YYFPRINTF (yyoutput, "%s %s (",
              yytype < YYNTOKENS ? "token" : "nterm", yytname[yytype]);
@@ -807,7 +807,7 @@ do {                                                            \
 `------------------------------------------------*/
 
 static void
-yy_reduce_print (yytype_int16 *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp, int yyrule, struct KJsonObject ** root, struct JsonScanBlock* sb)
+yy_reduce_print (yytype_int16 *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp, int yyrule, struct KJsonValue ** root, struct JsonScanBlock* sb)
 {
   unsigned long int yylno = yyrline[yyrule];
   int yynrhs = yyr2[yyrule];
@@ -1087,7 +1087,7 @@ yysyntax_error (YYSIZE_T *yymsg_alloc, char **yymsg,
 `-----------------------------------------------*/
 
 static void
-yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocationp, struct KJsonObject ** root, struct JsonScanBlock* sb)
+yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocationp, struct KJsonValue ** root, struct JsonScanBlock* sb)
 {
   YYUSE (yyvaluep);
   YYUSE (yylocationp);
@@ -1267,7 +1267,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
 `----------*/
 
 int
-yyparse (struct KJsonObject ** root, struct JsonScanBlock* sb)
+yyparse (struct KJsonValue ** root, struct JsonScanBlock* sb)
 {
 /* The lookahead symbol.  */
 int yychar;
@@ -1542,7 +1542,7 @@ yyreduce:
     {
         case 2:
 
-    { * root = ( KJsonObject * ) KJsonValueToObject ( (yyvsp[-1]) . node ); return 0; }
+    { * root = (yyvsp[-1]) . node; return 0; }
 
     break;
 

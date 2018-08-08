@@ -149,7 +149,7 @@ struct KJsonArray
 
 LIB_EXPORT
 rc_t CC
-KJsonMake ( KJsonObject ** p_root, const char * p_input, char * p_error, size_t p_error_size )
+KJsonValueMake ( KJsonValue ** p_root, const char * p_input, char * p_error, size_t p_error_size )
 {
     rc_t rc;
     if ( p_root == NULL )
@@ -185,7 +185,7 @@ KJsonMake ( KJsonObject ** p_root, const char * p_input, char * p_error, size_t 
     return rc;
 }
 
-void CC KJsonWhack ( KJsonObject * p_root )
+void CC KJsonObjectWhack ( KJsonObject * p_root )
 {
     if ( p_root != NULL )
     {
@@ -591,7 +591,7 @@ void KJsonValueWhack ( KJsonValue * p_value )
         }
         case jsObject:
         {
-            KJsonWhack ( ( KJsonObject * ) p_value );
+            KJsonObjectWhack ( ( KJsonObject * ) p_value );
             break;
         }
         case jsArray:
@@ -963,7 +963,7 @@ ArrayToJson ( const KJsonArray * p_node, PrintData * pd )
 
 LIB_EXPORT
 rc_t CC
-KJsonToJsonString ( const KJsonObject * p_root, struct KDataBuffer * p_output, size_t p_increment, bool p_pretty )
+KJsonToJsonString ( const KJsonValue * p_root, struct KDataBuffer * p_output, size_t p_increment, bool p_pretty )
 {
     rc_t rc;
     if ( p_root == NULL )
@@ -987,7 +987,7 @@ KJsonToJsonString ( const KJsonObject * p_root, struct KDataBuffer * p_output, s
             pd . last = NULL;
             pd . pretty = p_pretty;
             pd . indentTabs = 0;
-            rc = ObjectToJson ( p_root, & pd );
+            rc = ValueToJson ( p_root, & pd );
         }
     }
     return rc;
