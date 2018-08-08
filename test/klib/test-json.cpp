@@ -195,17 +195,17 @@ TEST_CASE(KJson_Scan_Int_Frac_Exp)
 
 static
 rc_t
-Parse(  KJsonObject ** p_obj, const char * p_str )
+Parse(  KJsonValue ** p_obj, const char * p_str )
 {
-    return KJsonMake ( p_obj, p_str, NULL, 0 );
+    return KJsonValueMake ( p_obj, p_str, NULL, 0 );
 }
 
 static
 string
-ParseError(  KJsonObject ** p_obj, const char * p_str )
+ParseError(  KJsonValue ** p_obj, const char * p_str )
 {
     char error[1024];
-    if  ( KJsonMake ( p_obj, p_str, error, sizeof ( error ) ) == 0 )
+    if  ( KJsonValueMake ( p_obj, p_str, error, sizeof ( error ) ) == 0 )
     {
         return string ( " no error ");
     }
@@ -226,7 +226,7 @@ public:
     ~JsonMake_Fixture()
     {
         KJsonValueWhack( m_val );
-        KJsonWhack( m_obj );
+        KJsonValueWhack( ( KJsonValue * ) KJsonObjectToValue ( m_obj ) );
         KJsonValueWhack( ( KJsonValue * ) KJsonArrayToValue ( m_arr ) );
     }
 
@@ -314,13 +314,25 @@ public:
 
     const KJsonValue * ParseValue( const char * p_input )
     {
-        string input = "{ \"\" : ";
-        input += p_input;
-        input += "}";
-        THROW_ON_RC ( Parse ( & m_obj, input . c_str () ) );
-        const KJsonValue * ret = KJsonObjectGetMember ( m_obj, "" );
-        THROW_ON_FALSE ( ret != NULL);
-        return ret;
+        THROW_ON_RC ( Parse ( & m_val, p_input ) );
+        THROW_ON_FALSE ( m_val != NULL);
+        return m_val;
+    }
+    const KJsonObject * ParseObject( const char * p_input )
+    {
+        KJsonValue * val;
+        THROW_ON_RC ( Parse ( & val, p_input ) );
+        m_obj = ( KJsonObject * ) KJsonValueToObject ( val );
+        THROW_ON_FALSE ( m_obj != NULL);
+        return m_obj;
+    }
+    const KJsonArray * ParseArray( const char * p_input )
+    {
+        KJsonValue * val;
+        THROW_ON_RC ( Parse ( & val, p_input ) );
+        m_arr = ( KJsonArray * ) KJsonValueToArray ( val );
+        THROW_ON_FALSE ( m_arr != NULL);
+        return m_arr;
     }
 
     VNamelist *     m_names;
@@ -335,21 +347,21 @@ public:
 
 FIXTURE_TEST_CASE(Json_Make_NullSelf, KJsonFixture)
 {
-    REQUIRE_RC_FAIL ( KJsonMake ( NULL, m_str, NULL, 0 ) );
+    REQUIRE_RC_FAIL ( KJsonValueMake ( NULL, m_str, NULL, 0 ) );
 }
 FIXTURE_TEST_CASE(Json_Make_NullParam, KJsonFixture)
 {
-    REQUIRE_RC_FAIL ( KJsonMake ( & m_obj, NULL, NULL, 0 ) );
+    REQUIRE_RC_FAIL ( KJsonValueMake ( & m_val, NULL, NULL, 0 ) );
 }
 
-// KJsonWhack
+// KJsonValueWhack
 
 FIXTURE_TEST_CASE(Json_MakeWhack, KJsonFixture)
 {
-    KJsonObject * root;  /* the root is always an object */
-    KJsonMake ( & root, "{}", NULL, 0 );
+    KJsonValue * root;
+    REQUIRE_RC ( KJsonValueMake ( & root, "{}", NULL, 0 ) );
     REQUIRE_NOT_NULL ( root );
-    KJsonWhack ( root );
+    KJsonValueWhack ( root );
 }
 
 // parsing
@@ -360,66 +372,66 @@ FIXTURE_TEST_CASE(KJson_Parse_NullSelf, KJsonFixture)
 }
 FIXTURE_TEST_CASE(KJson_Parse_EmptyInput, KJsonFixture)
 {
-    REQUIRE_RC_FAIL ( Parse ( & m_obj, "" ) );
+    REQUIRE_RC_FAIL ( Parse ( & m_val, "" ) );
     REQUIRE_NULL ( m_obj );
 }
 FIXTURE_TEST_CASE(KJson_Parse_ExpectRightBrace, KJsonFixture)
 {
-    REQUIRE_RC_FAIL ( Parse ( & m_obj, "{" ) );
+    REQUIRE_RC_FAIL ( Parse ( & m_val, "{" ) );
 }
 FIXTURE_TEST_CASE(KJson_Parse_ExpectLeftBrace, KJsonFixture)
 {
-    REQUIRE_RC_FAIL ( Parse ( & m_obj, "}" ) );
+    REQUIRE_RC_FAIL ( Parse ( & m_val, "}" ) );
 }
 FIXTURE_TEST_CASE(KJson_Parse_ExpectColon, KJsonFixture)
 {
-    REQUIRE_RC_FAIL ( Parse ( & m_obj, "{\"name\"\"value\"" ) );
+    REQUIRE_RC_FAIL ( Parse ( & m_val, "{\"name\"\"value\"" ) );
 }
 FIXTURE_TEST_CASE(KJson_Parse_ExpectRightBrace2, KJsonFixture)
 {
-    REQUIRE_RC_FAIL ( Parse ( & m_obj, "{\"name\":\"value\"" ) );
+    REQUIRE_RC_FAIL ( Parse ( & m_val, "{\"name\":\"value\"" ) );
     REQUIRE_NULL ( m_obj );
 }
 FIXTURE_TEST_CASE(KJson_Parse_EmptyObject, KJsonFixture)
 {
-    REQUIRE_RC ( Parse ( & m_obj, " { } " ) );
-    REQUIRE_NOT_NULL ( m_obj );
+    REQUIRE_RC ( Parse ( & m_val, " { } " ) );
+    REQUIRE_NOT_NULL ( m_val );
 }
 FIXTURE_TEST_CASE(KJson_Parse_Object, KJsonFixture)
 {
-    REQUIRE_RC ( Parse ( & m_obj, "{\"name1\":\"value\", \"name2\":\":value\"}" ) );
-    REQUIRE_NOT_NULL ( m_obj );
+    REQUIRE_RC ( Parse ( & m_val, "{\"name1\":\"value\", \"name2\":\":value\"}" ) );
+    REQUIRE_NOT_NULL ( m_val );
 }
 FIXTURE_TEST_CASE(KJson_Parse_Object_DuplicateName, KJsonFixture)
 {
     string expectedStart = "line 1, col 33: RC(libs/klib/";
-    string expectedEnd = "KJsonMake rcCont,rcTree,rcInserting,rcNode,rcExists)";
-    string actual = ParseError ( & m_obj, "{\"name\":\"value\", \"name\":\":value\"}" );
+    string expectedEnd = "KJsonValueMake rcCont,rcTree,rcInserting,rcNode,rcExists)";
+    string actual = ParseError ( & m_val, "{\"name\":\"value\", \"name\":\":value\"}" );
     Json_debug = 0;
     REQUIRE_EQ ( expectedStart, actual . substr( 0, expectedStart . size () ) );
     REQUIRE_EQ ( expectedEnd, actual . substr( actual . size () - expectedEnd . size () ) );
-    REQUIRE_NULL ( m_obj );
+    REQUIRE_NULL ( m_val );
 }
 
 FIXTURE_TEST_CASE(KJson_ParseArray_ExpectRightBracket, KJsonFixture)
 {
-    REQUIRE_RC_FAIL ( Parse ( & m_obj, "{\"\":[}" ) );
+    REQUIRE_RC_FAIL ( Parse ( & m_val, "[}" ) );
 }
 FIXTURE_TEST_CASE(KJson_ParseArray_ExpectRightBracket2, KJsonFixture)
 {
-    REQUIRE_RC_FAIL ( Parse ( & m_obj, "{\"\":[\"name\",\"name\"}" ) );
+    REQUIRE_RC_FAIL ( Parse ( & m_val, "[\"name\",\"name\"" ) );
 }
 FIXTURE_TEST_CASE(KJson_ParseArray_ExpectLeftBracket, KJsonFixture)
 {
-    REQUIRE_RC_FAIL ( Parse ( & m_obj, "{\"\":\"name\",\"name\"]}" ) );
+    REQUIRE_RC_FAIL ( Parse ( & m_val, "\"name\",\"name\"]" ) );
 }
 FIXTURE_TEST_CASE(KJson_ParseArray_Empty, KJsonFixture)
 {
-    REQUIRE_RC ( Parse ( & m_obj, "{\"\":[]}" ) );
+    REQUIRE_RC ( Parse ( & m_val, "[]" ) );
 }
 FIXTURE_TEST_CASE(KJson_ParseArray_String_Elems, KJsonFixture)
 {
-    REQUIRE_RC ( Parse ( & m_obj, "{\"\":[\"name\",\"name\"]}" ) );
+    REQUIRE_RC ( Parse ( & m_val, "[\"name\",\"name\"]" ) );
 }
 
 // KJsonGetString
@@ -466,27 +478,27 @@ FIXTURE_TEST_CASE(KJsonGetString_Utf16_SurrogatePair_to_Utf8, KJsonFixture)
 }
 FIXTURE_TEST_CASE(KJsonGetString_Utf16_BadSurrogatePair_1, KJsonFixture)
 {   // A lone surrogate character is invalid in UTF-16
-    REQUIRE_RC_FAIL ( Parse ( & m_obj, "{\"\" : \"\\udbff\" }" ) );
+    REQUIRE_RC_FAIL ( Parse ( & m_val, "{\"\" : \"\\udbff\" }" ) );
 }
 FIXTURE_TEST_CASE(KJsonGetString_Utf16_BadSurrogatePair_2, KJsonFixture)
 {   // A lone surrogate character is invalid in UTF-16
-    REQUIRE_RC_FAIL ( Parse ( & m_obj, "{\"\" : \"\\udbff123456\" }" ) );
+    REQUIRE_RC_FAIL ( Parse ( & m_val, "{\"\" : \"\\udbff123456\" }" ) );
 }
 FIXTURE_TEST_CASE(KJsonGetString_Utf16_BadSurrogatePair_3, KJsonFixture)
 {   // A lone surrogate character is invalid in UTF-16
-    REQUIRE_RC_FAIL ( Parse ( & m_obj, "{\"\" : \"\\udbff\\t\" }" ) );
+    REQUIRE_RC_FAIL ( Parse ( & m_val, "{\"\" : \"\\udbff\\t\" }" ) );
 }
 FIXTURE_TEST_CASE(KJsonGetString_Utf16_BadSurrogatePair_4, KJsonFixture)
 {   // A lone surrogate character is invalid in UTF-16
-    REQUIRE_RC_FAIL ( Parse ( & m_obj, "{\"\" : \"\\udbff\\u123\" }" ) );
+    REQUIRE_RC_FAIL ( Parse ( & m_val, "{\"\" : \"\\udbff\\u123\" }" ) );
 }
 FIXTURE_TEST_CASE(KJsonGetString_Utf16_BadSurrogatePair_5, KJsonFixture)
 {   // Low surrogate out of range DC00-DFFF
-    REQUIRE_RC_FAIL ( Parse ( & m_obj, "{\"\" : \"\\udbff\\uCC00\" }" ) );
+    REQUIRE_RC_FAIL ( Parse ( & m_val, "{\"\" : \"\\udbff\\uCC00\" }" ) );
 }
 FIXTURE_TEST_CASE(KJsonGetString_Utf16_BadSurrogatePair_6, KJsonFixture)
 {   // Low surrogate out of range DC00-DFFF
-    REQUIRE_RC_FAIL ( Parse ( & m_obj, "{\"\" : \"\\udbff\\uE000\" }" ) );
+    REQUIRE_RC_FAIL ( Parse ( & m_val, "{\"\" : \"\\udbff\\uE000\" }" ) );
 }
 
 // KJsonGetNumber
@@ -663,12 +675,12 @@ FIXTURE_TEST_CASE(KJsonObject_GetNames_NullSelf, KJsonFixture)
 }
 FIXTURE_TEST_CASE(KJsonObject_GetNames_NullParam, KJsonFixture)
 {
-    REQUIRE_RC ( Parse ( & m_obj, "{}" ) );
+    ParseObject ( "{}" );
     REQUIRE_RC_FAIL ( KJsonObjectGetNames ( m_obj, NULL ) );
 }
 FIXTURE_TEST_CASE(KJsonObject_GetNames_Empty, KJsonFixture)
 {
-    REQUIRE_RC ( Parse ( & m_obj, "{}" ) );
+    ParseObject ( "{}" );
     REQUIRE_RC ( VNamelistMake ( & m_names, 1 ) );
     REQUIRE_RC ( KJsonObjectGetNames ( m_obj, m_names ) );
     uint32_t count;
@@ -677,7 +689,7 @@ FIXTURE_TEST_CASE(KJsonObject_GetNames_Empty, KJsonFixture)
 }
 FIXTURE_TEST_CASE(KJsonObject_GetNames, KJsonFixture)
 {
-    REQUIRE_RC ( Parse ( & m_obj, "{\"c\":null, \"a\":null, \"b\":null}" ) );
+    ParseObject ( "{\"c\":null, \"a\":null, \"b\":null}" );
     REQUIRE_RC ( VNamelistMake ( & m_names, 1 ) );
     REQUIRE_RC ( KJsonObjectGetNames ( m_obj, m_names ) );
     uint32_t count;
@@ -701,23 +713,23 @@ FIXTURE_TEST_CASE(KJsonObject_GetMember_NullSelf, KJsonFixture)
 }
 FIXTURE_TEST_CASE(KJsonObject_GetValue_NullParam, KJsonFixture)
 {
-    REQUIRE_RC ( Parse ( & m_obj, "{}" ) );
+    ParseObject ( "{}" );
     REQUIRE_NULL ( KJsonObjectGetMember ( m_obj, NULL ) );
 }
 FIXTURE_TEST_CASE(KJsonObject_GetMember_EmptyObject, KJsonFixture)
 {
-    REQUIRE_RC ( Parse ( & m_obj, "{}" ) );
+    ParseObject ( "{}" );
     REQUIRE_NULL ( KJsonObjectGetMember ( m_obj, "a" ) );
 }
 FIXTURE_TEST_CASE(KJsonObject_GetMember_NotFound, KJsonFixture)
 {
-    REQUIRE_RC ( Parse ( & m_obj, "{\"c\":null, \"a\":null, \"b\":null}" ) );
+    ParseObject ( "{\"c\":null, \"a\":null, \"b\":null}" );
     REQUIRE_NULL ( KJsonObjectGetMember ( m_obj, "aa" ) );
 }
 
 FIXTURE_TEST_CASE(KJsonObject_GetMember_Found, KJsonFixture)
 {
-    REQUIRE_RC ( Parse ( & m_obj, "{\"c\":null, \"a\":null, \"b\":{}}" ) );
+    ParseObject ( "{\"c\":null, \"a\":null, \"b\":{}}" );
     const KJsonValue * v = KJsonObjectGetMember ( m_obj, "b" );
     REQUIRE_NOT_NULL ( v );
     const KJsonObject * obj = KJsonValueToObject ( v );
@@ -731,7 +743,7 @@ FIXTURE_TEST_CASE(KJsonObject_GetMember_Found, KJsonFixture)
 
 FIXTURE_TEST_CASE(KJsonObject_QuoteAsMemberName, KJsonFixture)
 {
-    REQUIRE_RC ( Parse ( & m_obj, "{\"\\\"\":1}" ) );
+    ParseObject ( "{\"\\\"\":1}" );
     const KJsonValue * v = KJsonObjectGetMember ( m_obj, "\"" );
     REQUIRE_NOT_NULL ( v );
 }
@@ -774,13 +786,13 @@ FIXTURE_TEST_CASE(KJsonArray_GetLength_NullSelf, KJsonFixture)
 }
 FIXTURE_TEST_CASE(KJsonArray_GetLength_Empty, KJsonFixture)
 {
-    const KJsonArray * arr = KJsonValueToArray ( ParseValue ( "[]" ) );
-    REQUIRE_EQ ( 0u, KJsonArrayGetLength ( arr ) );
+    ParseArray ( "[]" );
+    REQUIRE_EQ ( 0u, KJsonArrayGetLength ( m_arr ) );
 }
 FIXTURE_TEST_CASE(KJsonArray_GetLength, KJsonFixture)
 {
-    const KJsonArray * arr = KJsonValueToArray ( ParseValue ( "[1,2.3e4, null,false , \"\" , {} ]" ) );
-    REQUIRE_EQ ( 6u, KJsonArrayGetLength ( arr ) );
+    ParseArray ( "[1,2.3e4, null,false , \"\" , {} ]" );
+    REQUIRE_EQ ( 6u, KJsonArrayGetLength ( m_arr ) );
 }
 
 // KJsonArrayGetElement
@@ -791,19 +803,19 @@ FIXTURE_TEST_CASE(KJsonArray_GetElement_NullSelf, KJsonFixture)
 }
 FIXTURE_TEST_CASE(KJsonArray_GetElement_IndexOutOfRange, KJsonFixture)
 {
-    const KJsonArray * arr = KJsonValueToArray ( ParseValue ( "[1,2.3e4, null,false , \"\" , {} ]" ) );
-    REQUIRE_NULL ( KJsonArrayGetElement ( arr, 6 ) );
+    ParseArray ( "[1,2.3e4, null,false , \"\" , {} ]" );
+    REQUIRE_NULL ( KJsonArrayGetElement ( m_arr, 6 ) );
 }
 FIXTURE_TEST_CASE(KJsonArray_GetElement_First, KJsonFixture)
 {
-    const KJsonArray * arr = KJsonValueToArray ( ParseValue ( "[1,2.3e4, null,false , \"\" , {} ]" ) );
-    const KJsonValue * val = KJsonArrayGetElement ( arr, 0 );
+    ParseArray ( "[1,2.3e4, null,false , \"\" , {} ]" );
+    const KJsonValue * val = KJsonArrayGetElement ( m_arr, 0 );
     REQUIRE_EQ ( jsNumber, KJsonGetValueType ( val ) );
 }
 FIXTURE_TEST_CASE(KJsonArray_GetElement_Last, KJsonFixture)
 {
-    const KJsonArray * arr = KJsonValueToArray ( ParseValue ( "[1,2.3e4, null,false , \"\" , {} ]" ) );
-    const KJsonValue * val = KJsonArrayGetElement ( arr, 5 );
+    ParseArray ( "[1,2.3e4, null,false , \"\" , {} ]" );
+    const KJsonValue * val = KJsonArrayGetElement ( m_arr, 5 );
     REQUIRE_EQ ( jsObject, KJsonGetValueType ( val ) );
 }
 
@@ -815,83 +827,83 @@ FIXTURE_TEST_CASE(KJson_ToJsonString_NullSelf, KJsonFixture)
 }
 FIXTURE_TEST_CASE(KJson_ToJsonString_NullParam, KJsonFixture)
 {
-    REQUIRE_RC ( Parse ( & m_obj, "{}" ) );
-    REQUIRE_RC_FAIL ( KJsonToJsonString ( m_obj, NULL, 0, false ) );
+    ParseValue ( "{}" );
+    REQUIRE_RC_FAIL ( KJsonToJsonString ( m_val, NULL, 0, false ) );
 }
 FIXTURE_TEST_CASE(KJson_ToJsonString_Empty, KJsonFixture)
 {
-    REQUIRE_RC ( Parse ( & m_obj, "{}" ) );
-    REQUIRE_RC ( KJsonToJsonString ( m_obj, & m_buf, 1024, false ) );
+    ParseValue ( "{}" );
+    REQUIRE_RC ( KJsonToJsonString ( m_val, & m_buf, 1024, false ) );
     REQUIRE_EQ ( string ( "{}" ), string ( ( const char *) m_buf . base ) );
     REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
 }
 FIXTURE_TEST_CASE(KJson_ToJsonString_Reallocation, KJsonFixture)
 {
-    REQUIRE_RC ( Parse ( & m_obj, "{}" ) );
-    REQUIRE_RC ( KJsonToJsonString ( m_obj, & m_buf, 1, false ) ); // p_increment == 1 will cause buffer reallocation
+    ParseValue ( "{}" );
+    REQUIRE_RC ( KJsonToJsonString ( m_val, & m_buf, 1, false ) ); // p_increment == 1 will cause buffer reallocation
     REQUIRE_EQ ( string ( "{}" ), string ( ( const char *) m_buf . base ) );
     REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
 }
 FIXTURE_TEST_CASE(KJson_ToJsonString_StringMember, KJsonFixture)
 {
-    REQUIRE_RC ( Parse ( & m_obj, "{ \"a\" : \"characters\" }" ) );
-    REQUIRE_RC ( KJsonToJsonString ( m_obj, & m_buf, 0, false ) );
+    ParseValue ( "{ \"a\" : \"characters\" }" );
+    REQUIRE_RC ( KJsonToJsonString ( m_val, & m_buf, 0, false ) );
     REQUIRE_EQ ( string ( "{\"a\":\"characters\"}" ), string ( ( const char *) m_buf . base ) );
     REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
 }
 FIXTURE_TEST_CASE(KJson_ToJsonString_NumericMember, KJsonFixture)
 {
-    REQUIRE_RC ( Parse ( & m_obj, "{ \"a\" : 123 }" ) );
-    REQUIRE_RC ( KJsonToJsonString ( m_obj, & m_buf, 0, false ) );
+    ParseValue ( "{ \"a\" : 123 }" );
+    REQUIRE_RC ( KJsonToJsonString ( m_val, & m_buf, 0, false ) );
     REQUIRE_EQ ( string ( "{\"a\":123}" ), string ( ( const char *) m_buf . base ) );
     REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
 }
 FIXTURE_TEST_CASE(KJson_ToJsonString_BooleanMember, KJsonFixture)
 {
-    REQUIRE_RC ( Parse ( & m_obj, "{ \"a\" : true }" ) );
-    REQUIRE_RC ( KJsonToJsonString ( m_obj, & m_buf, 0, false ) );
+    ParseValue ( "{ \"a\" : true }" );
+    REQUIRE_RC ( KJsonToJsonString ( m_val, & m_buf, 0, false ) );
     REQUIRE_EQ ( string ( "{\"a\":true}" ), string ( ( const char *) m_buf . base ) );
     REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
 }
 FIXTURE_TEST_CASE(KJson_ToJsonString_NullMember, KJsonFixture)
 {
-    REQUIRE_RC ( Parse ( & m_obj, "{ \"a\" : null }" ) );
-    REQUIRE_RC ( KJsonToJsonString ( m_obj, & m_buf, 0, false ) );
+    ParseValue ( "{ \"a\" : null }" );
+    REQUIRE_RC ( KJsonToJsonString ( m_val, & m_buf, 0, false ) );
     REQUIRE_EQ ( string ( "{\"a\":null}" ), string ( ( const char *) m_buf . base ) );
     REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
 }
 FIXTURE_TEST_CASE(KJson_ToJsonString_ObjectMember, KJsonFixture)
 {
-    REQUIRE_RC ( Parse ( & m_obj, "{ \"a\" : { \"aa\" : null, \"ab\" : 123 } }" ) );
-    REQUIRE_RC ( KJsonToJsonString ( m_obj, & m_buf, 0, false ) );
+    ParseValue ( "{ \"a\" : { \"aa\" : null, \"ab\" : 123 } }" );
+    REQUIRE_RC ( KJsonToJsonString ( m_val, & m_buf, 0, false ) );
     REQUIRE_EQ ( string ( "{\"a\":{\"aa\":null,\"ab\":123}}" ), string ( ( const char *) m_buf . base ) );
     REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
 }
 FIXTURE_TEST_CASE(KJson_ToJsonString_ArrayMember_Empty, KJsonFixture)
 {
-    REQUIRE_RC ( Parse ( & m_obj, "{ \"a\" : [ ] }" ) );
-    REQUIRE_RC ( KJsonToJsonString ( m_obj, & m_buf, 0, false ) );
+    ParseValue ( "{ \"a\" : [ ] }" );
+    REQUIRE_RC ( KJsonToJsonString ( m_val, & m_buf, 0, false ) );
     REQUIRE_EQ ( string ( "{\"a\":[]}" ), string ( ( const char *) m_buf . base ) );
     REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
 }
 FIXTURE_TEST_CASE(KJson_ToJsonString_ArrayMember, KJsonFixture)
 {
-    REQUIRE_RC ( Parse ( & m_obj, "{ \"a\" : [ 1, null, false, [ {}, \"str\" ] ] }" ) );
-    REQUIRE_RC ( KJsonToJsonString ( m_obj, & m_buf, 0, false ) );
+    ParseValue ( "{ \"a\" : [ 1, null, false, [ {}, \"str\" ] ] }" );
+    REQUIRE_RC ( KJsonToJsonString ( m_val, & m_buf, 0, false ) );
     REQUIRE_EQ ( string ( "{\"a\":[1,null,false,[{},\"str\"]]}" ), string ( ( const char *) m_buf . base ) );
     REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
 }
 FIXTURE_TEST_CASE(KJson_ToJsonString_MultipleMembers, KJsonFixture)
 {
-    REQUIRE_RC ( Parse ( & m_obj, "{ \"a\" : \"str\", \"b\" : 123, \"c\" : false, \"d\" : null, \"e\" : {}, \"f\" : [] }" ) );
-    REQUIRE_RC ( KJsonToJsonString ( m_obj, & m_buf, 0, false ) );
+    ParseValue ( "{ \"a\" : \"str\", \"b\" : 123, \"c\" : false, \"d\" : null, \"e\" : {}, \"f\" : [] }" );
+    REQUIRE_RC ( KJsonToJsonString ( m_val, & m_buf, 0, false ) );
     REQUIRE_EQ ( string ( "{\"a\":\"str\",\"b\":123,\"c\":false,\"d\":null,\"e\":{},\"f\":[]}" ), string ( ( const char *) m_buf . base ) );
     REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
 }
 FIXTURE_TEST_CASE(KJson_ToJsonString_PrettyPrint, KJsonFixture)
 {
-    REQUIRE_RC ( Parse ( & m_obj, "{ \"a\" : \"str\", \"b\" : 123, \"c\" : false, \"d\" : null, \"e\" : {\"a\":true,\"b\":false }, \"f\" : [ [ 1, 2 ], 3], \"g\":{\"a\":true}, \"h\":[1] }" ) );
-    REQUIRE_RC ( KJsonToJsonString ( m_obj, & m_buf, 0, true ) );
+    ParseValue ( "{ \"a\" : \"str\", \"b\" : 123, \"c\" : false, \"d\" : null, \"e\" : {\"a\":true,\"b\":false }, \"f\" : [ [ 1, 2 ], 3], \"g\":{\"a\":true}, \"h\":[1] }" );
+    REQUIRE_RC ( KJsonToJsonString ( m_val, & m_buf, 0, true ) );
     REQUIRE_EQ ( string (
         "{\n"
         "\t\"a\" : \"str\",\n"

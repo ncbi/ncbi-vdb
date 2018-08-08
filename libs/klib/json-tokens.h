@@ -78,6 +78,6 @@ struct YYLTYPE
 
 
 
-int Json_parse (struct KJsonObject ** root, struct JsonScanBlock* sb);
+int Json_parse (struct KJsonValue ** root, struct JsonScanBlock* sb);
 
 #endif /* !YY_JSON_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_KLIB_JSON_TOKENS_H_INCLUDED  */

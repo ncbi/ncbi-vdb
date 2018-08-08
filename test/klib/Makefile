@@ -43,6 +43,7 @@ TEST_TOOLS = \
 	test-progressbar \
     test-symtab \
 	test-json \
+	test-json-parser \
 
 ifeq (linux,$(OS))
 TEST_TOOLS += test-hashfile
@@ -268,3 +269,19 @@ $(TEST_BINDIR)/test-json: $(TEST_JSON_OBJ)
 
 json: test-json
 	$(TEST_BINDIR)/test-json
+
+
+#-------------------------------------------------------------------------------
+# test-json-parser, command line tests
+#
+TEST_JSON_PARSER_SRC = \
+	test-json-parser
+
+TEST_JSON_PARSER_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_JSON_PARSER_SRC))
+
+$(TEST_BINDIR)/test-json-parser: $(TEST_JSON_PARSER_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
+
+json-parser: test-json-parser
+	$(TEST_BINDIR)/test-json-parser $(shell find $(SRCDIR)/test-json-parser/ -name \*.json)

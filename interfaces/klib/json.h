@@ -60,9 +60,9 @@ enum jsType
 /*
  * error [ OUT, NULL OK ]
  */
-KLIB_EXTERN rc_t CC KJsonMake ( KJsonObject ** root, const char * input, char * error, size_t error_size );
+KLIB_EXTERN rc_t CC KJsonValueMake ( KJsonValue ** root, const char * input, char * error, size_t error_size );
 
-KLIB_EXTERN void CC KJsonWhack ( KJsonObject * root );
+KLIB_EXTERN void CC KJsonValueWhack ( KJsonValue * root );
 
 KLIB_EXTERN enum jsType CC KJsonGetValueType ( const KJsonValue * value );
 
@@ -94,7 +94,7 @@ KLIB_EXTERN const KJsonValue * CC KJsonArrayGetElement ( const KJsonArray * node
  * If successful, the caller is responsible for calling KDataBufferWhack on 'output'.
  * if 'pretty', will be pretty-printed using tabs
  */
-KLIB_EXTERN rc_t CC KJsonToJsonString ( const KJsonObject * root, struct KDataBuffer * output, size_t increment, bool pretty );
+KLIB_EXTERN rc_t CC KJsonToJsonString ( const KJsonValue * root, struct KDataBuffer * output, size_t increment, bool pretty );
 
 #ifdef __cplusplus
 }
