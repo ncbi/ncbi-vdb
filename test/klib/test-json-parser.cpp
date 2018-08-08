@@ -74,7 +74,7 @@ rc_t CC KMain ( int argc, char *argv [] )
         for ( int i = 0 ; i < argc - 1; ++i )
         {
             string input = argv [ i + 1 ];
-            cout << input << endl;
+            // cout << input << endl;
             stringstream buffer;
             ifstream in ( input );
             if ( ! in . good () )
@@ -83,6 +83,11 @@ rc_t CC KMain ( int argc, char *argv [] )
             }
             buffer << in.rdbuf();
 
+            // from https://github.com/nst/JSONTestSuite.git :
+            // the name of the input files tell if their contents should be accepted or rejected.
+            //      y_ content must be accepted by parsers
+            //      n_ content must be rejected by parsers
+            //      i_ parsers are free to accept or reject content
             KJsonValue * root;
             char error [1024];
             if ( KJsonValueMake ( & root, buffer . str() . c_str (), error, sizeof error ) != 0 )

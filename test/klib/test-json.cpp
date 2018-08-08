@@ -305,11 +305,13 @@ public:
         m_int64 ( 0 ),
         m_double ( 0.0 )
     {
+        memset ( & m_buf, 0, sizeof m_buf );
     }
 
     ~KJsonFixture()
     {
         VNamelistRelease ( m_names );
+        KDataBufferWhack ( & m_buf );
     }
 
     const KJsonValue * ParseValue( const char * p_input )
@@ -820,7 +822,6 @@ FIXTURE_TEST_CASE(KJsonArray_GetElement_Last, KJsonFixture)
 }
 
 // KJsonToJsonString
-//KLIB_EXTERN rc_t CC KJsonToJsonString ( const KJsonObject * root, char * output, size_t output_size );
 FIXTURE_TEST_CASE(KJson_ToJsonString_NullSelf, KJsonFixture)
 {
     REQUIRE_RC_FAIL ( KJsonToJsonString ( NULL, & m_buf, 0, false ) );
@@ -835,70 +836,66 @@ FIXTURE_TEST_CASE(KJson_ToJsonString_Empty, KJsonFixture)
     ParseValue ( "{}" );
     REQUIRE_RC ( KJsonToJsonString ( m_val, & m_buf, 1024, false ) );
     REQUIRE_EQ ( string ( "{}" ), string ( ( const char *) m_buf . base ) );
-    REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
 }
 FIXTURE_TEST_CASE(KJson_ToJsonString_Reallocation, KJsonFixture)
 {
     ParseValue ( "{}" );
     REQUIRE_RC ( KJsonToJsonString ( m_val, & m_buf, 1, false ) ); // p_increment == 1 will cause buffer reallocation
     REQUIRE_EQ ( string ( "{}" ), string ( ( const char *) m_buf . base ) );
-    REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
 }
-FIXTURE_TEST_CASE(KJson_ToJsonString_StringMember, KJsonFixture)
+FIXTURE_TEST_CASE(KJson_ToJsonString_String, KJsonFixture)
 {
-    ParseValue ( "{ \"a\" : \"characters\" }" );
+    ParseValue ( "\"characters\"" );
     REQUIRE_RC ( KJsonToJsonString ( m_val, & m_buf, 0, false ) );
-    REQUIRE_EQ ( string ( "{\"a\":\"characters\"}" ), string ( ( const char *) m_buf . base ) );
-    REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
+    REQUIRE_EQ ( string ( "\"characters\"" ), string ( ( const char *) m_buf . base ) );
 }
-FIXTURE_TEST_CASE(KJson_ToJsonString_NumericMember, KJsonFixture)
-{
-    ParseValue ( "{ \"a\" : 123 }" );
+FIXTURE_TEST_CASE(KJson_ToJsonString_String_Escapes, KJsonFixture)
+{   // all ASCII control characters that do not have Json escapes are represented as \\u00xx
+    ParseValue ( "\" \\\" \\\\ \\/ \\b \\n \\r \\t ы \a \"" );
     REQUIRE_RC ( KJsonToJsonString ( m_val, & m_buf, 0, false ) );
-    REQUIRE_EQ ( string ( "{\"a\":123}" ), string ( ( const char *) m_buf . base ) );
-    REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
+    REQUIRE_EQ ( string ( "\" \\\" \\\\ \\/ \\b \\n \\r \\t ы \\\\u0007 \"" ), string ( ( const char *) m_buf . base ) );
+}
+FIXTURE_TEST_CASE(KJson_ToJsonString_Number, KJsonFixture)
+{
+    ParseValue ( "123.45e-1" );
+    REQUIRE_RC ( KJsonToJsonString ( m_val, & m_buf, 0, false ) );
+    REQUIRE_EQ ( string ( "123.45e-1" ), string ( ( const char *) m_buf . base ) );
 }
 FIXTURE_TEST_CASE(KJson_ToJsonString_BooleanMember, KJsonFixture)
 {
     ParseValue ( "{ \"a\" : true }" );
     REQUIRE_RC ( KJsonToJsonString ( m_val, & m_buf, 0, false ) );
     REQUIRE_EQ ( string ( "{\"a\":true}" ), string ( ( const char *) m_buf . base ) );
-    REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
 }
 FIXTURE_TEST_CASE(KJson_ToJsonString_NullMember, KJsonFixture)
 {
     ParseValue ( "{ \"a\" : null }" );
     REQUIRE_RC ( KJsonToJsonString ( m_val, & m_buf, 0, false ) );
     REQUIRE_EQ ( string ( "{\"a\":null}" ), string ( ( const char *) m_buf . base ) );
-    REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
 }
 FIXTURE_TEST_CASE(KJson_ToJsonString_ObjectMember, KJsonFixture)
 {
     ParseValue ( "{ \"a\" : { \"aa\" : null, \"ab\" : 123 } }" );
     REQUIRE_RC ( KJsonToJsonString ( m_val, & m_buf, 0, false ) );
     REQUIRE_EQ ( string ( "{\"a\":{\"aa\":null,\"ab\":123}}" ), string ( ( const char *) m_buf . base ) );
-    REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
 }
 FIXTURE_TEST_CASE(KJson_ToJsonString_ArrayMember_Empty, KJsonFixture)
 {
     ParseValue ( "{ \"a\" : [ ] }" );
     REQUIRE_RC ( KJsonToJsonString ( m_val, & m_buf, 0, false ) );
     REQUIRE_EQ ( string ( "{\"a\":[]}" ), string ( ( const char *) m_buf . base ) );
-    REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
 }
 FIXTURE_TEST_CASE(KJson_ToJsonString_ArrayMember, KJsonFixture)
 {
     ParseValue ( "{ \"a\" : [ 1, null, false, [ {}, \"str\" ] ] }" );
     REQUIRE_RC ( KJsonToJsonString ( m_val, & m_buf, 0, false ) );
     REQUIRE_EQ ( string ( "{\"a\":[1,null,false,[{},\"str\"]]}" ), string ( ( const char *) m_buf . base ) );
-    REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
 }
 FIXTURE_TEST_CASE(KJson_ToJsonString_MultipleMembers, KJsonFixture)
 {
     ParseValue ( "{ \"a\" : \"str\", \"b\" : 123, \"c\" : false, \"d\" : null, \"e\" : {}, \"f\" : [] }" );
     REQUIRE_RC ( KJsonToJsonString ( m_val, & m_buf, 0, false ) );
     REQUIRE_EQ ( string ( "{\"a\":\"str\",\"b\":123,\"c\":false,\"d\":null,\"e\":{},\"f\":[]}" ), string ( ( const char *) m_buf . base ) );
-    REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
 }
 FIXTURE_TEST_CASE(KJson_ToJsonString_PrettyPrint, KJsonFixture)
 {
@@ -929,7 +926,6 @@ FIXTURE_TEST_CASE(KJson_ToJsonString_PrettyPrint, KJsonFixture)
         "\t]\n"
         "}" ),
         string ( ( const char *) m_buf . base ) );
-    REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
 }
 
 //////////////////////////////////////////////////// Main

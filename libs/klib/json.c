@@ -760,12 +760,11 @@ rc_t IncreaseBuffer ( PrintData * p_data )
 
 static
 rc_t
-Print( PrintData * p_pd, const char * p_text )
+PrintWithSize ( PrintData * p_pd, const char * p_text, size_t p_size )
 {
     /* grow the buffer if necessary */
-    size_t size = string_size ( p_text );
     rc_t rc = 0;
-    while ( rc == 0 && p_pd -> offset + size >= KDataBufferBytes ( p_pd -> output ) )
+    while ( rc == 0 && p_pd -> offset + p_size >= KDataBufferBytes ( p_pd -> output ) )
     {
         rc = IncreaseBuffer ( p_pd );
     }
@@ -773,13 +772,20 @@ Print( PrintData * p_pd, const char * p_text )
     if ( rc == 0 )
     {
         size_t num_writ;
-        rc = string_printf ( ( char * ) p_pd -> output -> base + p_pd -> offset, KDataBufferBytes ( p_pd -> output ) - p_pd -> offset, & num_writ, "%s", p_text );
+        rc = string_printf ( ( char * ) p_pd -> output -> base + p_pd -> offset, KDataBufferBytes ( p_pd -> output ) - p_pd -> offset, & num_writ, "%.*s", p_size, p_text );
         if ( rc == 0 )
         {
             p_pd -> offset += num_writ;
         }
     }
     return rc;
+}
+
+static
+rc_t
+Print( PrintData * p_pd, const char * p_text )
+{
+    return PrintWithSize ( p_pd, p_text, string_size ( p_text ) );
 }
 
 static
@@ -800,6 +806,69 @@ PrintNewLine( PrintData * p_pd )
 
 static
 rc_t
+PrintString ( PrintData * p_pd, const char * p_str )
+{
+    const char * begin = p_str;
+    const char * end = p_str + string_size ( p_str );
+    rc_t rc = 0;
+    while ( rc == 0 && begin < end )
+    {
+        uint32_t ch;
+        int bytes = utf8_utf32 ( & ch, begin, end );
+        assert ( bytes > 0 );
+        if ( ch < 32 )
+        {
+            switch (ch)
+            {
+            case 8:
+                rc = Print ( p_pd, "\\b");
+                break;
+            case 9:
+                rc = Print ( p_pd, "\\t");
+                break;
+            case 10:
+                rc = Print ( p_pd, "\\n");
+                break;
+            case 13:
+                rc = Print ( p_pd, "\\r");
+                break;
+            default:
+                {
+                    const char to_hex[16] = "0123456789abcdef";
+                    char hex [7] = { '\\', '\\', 'u' };
+                    hex [3] = to_hex [ ( ch >> 24 ) & 0xff ];
+                    hex [4] = to_hex [ ( ch >> 16 ) & 0xff ];
+                    hex [5] = to_hex [ ( ch >> 8 ) & 0xff ];
+                    hex [6] = to_hex [ ch & 0xff ];
+                    rc = PrintWithSize ( p_pd, hex, 7);
+                    break;
+                }
+            }
+        }
+        else if ( ch > 255 )
+        {   /* UTF-8 encoding; copy bytes from input */
+            rc = PrintWithSize ( p_pd, begin, bytes );
+        }
+        else
+        {   /* non-control ASCII */
+            switch (ch)
+            {
+            case '\\': rc = Print ( p_pd, "\\\\" ); break;
+            case '/':  rc = Print ( p_pd, "\\/" ); break;
+            case '"':  rc = Print ( p_pd, "\\\"" ); break;
+            default:
+                rc = PrintWithSize ( p_pd, begin, 1 );
+                break;
+            }
+        }
+
+        begin += bytes;
+    }
+    return rc;
+}
+
+static
+rc_t
 ValueToJson ( const KJsonValue * p_value, PrintData * p_pd )
 {
     size_t saved_offset = p_pd -> offset;
@@ -808,7 +877,7 @@ ValueToJson ( const KJsonValue * p_value, PrintData * p_pd )
     {
     case jsString:
         rc = Print ( p_pd, "\"" );
-        if ( rc == 0 ) rc = Print ( p_pd, p_value -> u . str );
+        if ( rc == 0 ) rc = PrintString ( p_pd, p_value -> u . str );
         if ( rc == 0 ) rc = Print ( p_pd, "\"" );
         break;
     case jsNumber:
