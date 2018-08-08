@@ -36,6 +36,7 @@
 #endif
 
 typedef struct VNamelist VNamelist;
+typedef struct KDataBuffer KDataBuffer;
 
 #ifdef __cplusplus
 extern "C" {
@@ -86,7 +87,14 @@ KLIB_EXTERN const KJsonValue * CC KJsonArrayToValue ( const KJsonArray * array )
 KLIB_EXTERN uint32_t CC KJsonArrayGetLength ( const KJsonArray * node );
 KLIB_EXTERN const KJsonValue * CC KJsonArrayGetElement ( const KJsonArray * node, uint32_t index );
 
-KLIB_EXTERN rc_t CC KJsonToString ( const KJsonObject * root, char * output, size_t output_size );
+/*
+ * Print out to a KDataBuffer containing NUL-terminated JSON-formatted string representation of KJsonObject
+ * 'output' will be initialized and allocated to grow as much as needed, in 'increment' byte increments.
+ * if 'increment' == 0, it will be set to 1024.
+ * If successful, the caller is responsible for calling KDataBufferWhack on 'output'.
+ * if 'pretty', will be pretty-printed using tabs
+ */
+KLIB_EXTERN rc_t CC KJsonToJsonString ( const KJsonObject * root, struct KDataBuffer * output, size_t increment, bool pretty );
 
 #ifdef __cplusplus
 }

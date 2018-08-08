@@ -39,6 +39,7 @@
 
 #include <klib/text.h>
 #include <klib/namelist.h>
+#include <klib/data-buffer.h>
 
 #define YYDEBUG 1
 #include "../../libs/klib/json-lex.h"
@@ -327,6 +328,7 @@ public:
     int64_t         m_int64;
     double          m_double;
     bool            m_bool;
+    KDataBuffer     m_buf;
 };
 
 // KJsonMake
@@ -805,9 +807,118 @@ FIXTURE_TEST_CASE(KJsonArray_GetElement_Last, KJsonFixture)
     REQUIRE_EQ ( jsObject, KJsonGetValueType ( val ) );
 }
 
-/*TODO:
-KLIB_EXTERN rc_t CC KJsonToString ( const KJsonObject * root, char * output, size_t output_size );
-*/
+// KJsonToJsonString
+//KLIB_EXTERN rc_t CC KJsonToJsonString ( const KJsonObject * root, char * output, size_t output_size );
+FIXTURE_TEST_CASE(KJson_ToJsonString_NullSelf, KJsonFixture)
+{
+    REQUIRE_RC_FAIL ( KJsonToJsonString ( NULL, & m_buf, 0, false ) );
+}
+FIXTURE_TEST_CASE(KJson_ToJsonString_NullParam, KJsonFixture)
+{
+    REQUIRE_RC ( Parse ( & m_obj, "{}" ) );
+    REQUIRE_RC_FAIL ( KJsonToJsonString ( m_obj, NULL, 0, false ) );
+}
+FIXTURE_TEST_CASE(KJson_ToJsonString_Empty, KJsonFixture)
+{
+    REQUIRE_RC ( Parse ( & m_obj, "{}" ) );
+    REQUIRE_RC ( KJsonToJsonString ( m_obj, & m_buf, 1024, false ) );
+    REQUIRE_EQ ( string ( "{}" ), string ( ( const char *) m_buf . base ) );
+    REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
+}
+FIXTURE_TEST_CASE(KJson_ToJsonString_Reallocation, KJsonFixture)
+{
+    REQUIRE_RC ( Parse ( & m_obj, "{}" ) );
+    REQUIRE_RC ( KJsonToJsonString ( m_obj, & m_buf, 1, false ) ); // p_increment == 1 will cause buffer reallocation
+    REQUIRE_EQ ( string ( "{}" ), string ( ( const char *) m_buf . base ) );
+    REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
+}
+FIXTURE_TEST_CASE(KJson_ToJsonString_StringMember, KJsonFixture)
+{
+    REQUIRE_RC ( Parse ( & m_obj, "{ \"a\" : \"characters\" }" ) );
+    REQUIRE_RC ( KJsonToJsonString ( m_obj, & m_buf, 0, false ) );
+    REQUIRE_EQ ( string ( "{\"a\":\"characters\"}" ), string ( ( const char *) m_buf . base ) );
+    REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
+}
+FIXTURE_TEST_CASE(KJson_ToJsonString_NumericMember, KJsonFixture)
+{
+    REQUIRE_RC ( Parse ( & m_obj, "{ \"a\" : 123 }" ) );
+    REQUIRE_RC ( KJsonToJsonString ( m_obj, & m_buf, 0, false ) );
+    REQUIRE_EQ ( string ( "{\"a\":123}" ), string ( ( const char *) m_buf . base ) );
+    REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
+}
+FIXTURE_TEST_CASE(KJson_ToJsonString_BooleanMember, KJsonFixture)
+{
+    REQUIRE_RC ( Parse ( & m_obj, "{ \"a\" : true }" ) );
+    REQUIRE_RC ( KJsonToJsonString ( m_obj, & m_buf, 0, false ) );
+    REQUIRE_EQ ( string ( "{\"a\":true}" ), string ( ( const char *) m_buf . base ) );
+    REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
+}
+FIXTURE_TEST_CASE(KJson_ToJsonString_NullMember, KJsonFixture)
+{
+    REQUIRE_RC ( Parse ( & m_obj, "{ \"a\" : null }" ) );
+    REQUIRE_RC ( KJsonToJsonString ( m_obj, & m_buf, 0, false ) );
+    REQUIRE_EQ ( string ( "{\"a\":null}" ), string ( ( const char *) m_buf . base ) );
+    REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
+}
+FIXTURE_TEST_CASE(KJson_ToJsonString_ObjectMember, KJsonFixture)
+{
+    REQUIRE_RC ( Parse ( & m_obj, "{ \"a\" : { \"aa\" : null, \"ab\" : 123 } }" ) );
+    REQUIRE_RC ( KJsonToJsonString ( m_obj, & m_buf, 0, false ) );
+    REQUIRE_EQ ( string ( "{\"a\":{\"aa\":null,\"ab\":123}}" ), string ( ( const char *) m_buf . base ) );
+    REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
+}
+FIXTURE_TEST_CASE(KJson_ToJsonString_ArrayMember_Empty, KJsonFixture)
+{
+    REQUIRE_RC ( Parse ( & m_obj, "{ \"a\" : [ ] }" ) );
+    REQUIRE_RC ( KJsonToJsonString ( m_obj, & m_buf, 0, false ) );
+    REQUIRE_EQ ( string ( "{\"a\":[]}" ), string ( ( const char *) m_buf . base ) );
+    REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
+}
+FIXTURE_TEST_CASE(KJson_ToJsonString_ArrayMember, KJsonFixture)
+{
+    REQUIRE_RC ( Parse ( & m_obj, "{ \"a\" : [ 1, null, false, [ {}, \"str\" ] ] }" ) );
+    REQUIRE_RC ( KJsonToJsonString ( m_obj, & m_buf, 0, false ) );
+    REQUIRE_EQ ( string ( "{\"a\":[1,null,false,[{},\"str\"]]}" ), string ( ( const char *) m_buf . base ) );
+    REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
+}
+FIXTURE_TEST_CASE(KJson_ToJsonString_MultipleMembers, KJsonFixture)
+{
+    REQUIRE_RC ( Parse ( & m_obj, "{ \"a\" : \"str\", \"b\" : 123, \"c\" : false, \"d\" : null, \"e\" : {}, \"f\" : [] }" ) );
+    REQUIRE_RC ( KJsonToJsonString ( m_obj, & m_buf, 0, false ) );
+    REQUIRE_EQ ( string ( "{\"a\":\"str\",\"b\":123,\"c\":false,\"d\":null,\"e\":{},\"f\":[]}" ), string ( ( const char *) m_buf . base ) );
+    REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
+}
+FIXTURE_TEST_CASE(KJson_ToJsonString_PrettyPrint, KJsonFixture)
+{
+    REQUIRE_RC ( Parse ( & m_obj, "{ \"a\" : \"str\", \"b\" : 123, \"c\" : false, \"d\" : null, \"e\" : {\"a\":true,\"b\":false }, \"f\" : [ [ 1, 2 ], 3], \"g\":{\"a\":true}, \"h\":[1] }" ) );
+    REQUIRE_RC ( KJsonToJsonString ( m_obj, & m_buf, 0, true ) );
+    REQUIRE_EQ ( string (
+        "{\n"
+        "\t\"a\" : \"str\",\n"
+        "\t\"b\" : 123,\n"
+        "\t\"c\" : false,\n"
+        "\t\"d\" : null,\n"
+        "\t\"e\" : {\n"
+        "\t\t\"a\" : true,\n"
+        "\t\t\"b\" : false\n"
+        "\t},\n"
+        "\t\"f\" : [\n"
+        "\t\t[\n"
+        "\t\t\t1,\n"
+        "\t\t\t2\n"
+        "\t\t],\n"
+        "\t\t3\n"
+        "\t],\n"
+        "\t\"g\" : {\n"
+        "\t\t\"a\" : true\n"
+        "\t},\n"
+        "\t\"h\" : [\n"
+        "\t\t1\n"
+        "\t]\n"
+        "}" ),
+        string ( ( const char *) m_buf . base ) );
+    REQUIRE_RC ( KDataBufferWhack ( & m_buf ) );
+}
 
 //////////////////////////////////////////////////// Main
 extern "C"
