@@ -60,13 +60,14 @@ struct NameValue
 
 static rc_t MakeNameValue ( NameValue ** p_val, const char * p_name, size_t p_name_size, KJsonValue * p_value )
 {
+    rc_t rc;
     NameValue * ret = calloc ( 1, sizeof * ret );
     if ( ret != NULL )
     {
         ret -> name = malloc ( p_name_size + 1 );
         if ( ret -> name != NULL )
         {
-            rc_t rc = CopyAndUnescape ( p_name, p_name_size, ret -> name, p_name_size + 1 );
+            rc = CopyAndUnescape ( p_name, p_name_size, ret -> name, p_name_size + 1 );
             if ( rc == 0 )
             {
                 ret -> value = p_value;
@@ -75,9 +76,13 @@ static rc_t MakeNameValue ( NameValue ** p_val, const char * p_name, size_t p_na
             }
             free ( ret -> name );
         }
+        else
+        {
+            rc = RC ( rcCont, rcNode, rcAllocating, rcMemory, rcExhausted );
+        }
         free ( ret );
     }
-    return RC ( rcCont, rcNode, rcAllocating, rcMemory, rcExhausted );
+    return rc;
 }
 
 static void CC NameValueWhack ( BSTNode * p_n, void * p_data )
@@ -359,6 +364,10 @@ rc_t KJsonObjectAddMember ( KJsonObject * p_obj, const char * p_name, size_t p_n
         {
             NameValueWhack ( & nv -> node, NULL );
         }
+    }
+    else
+    {
+        KJsonValueWhack ( p_value );
     }
     return rc;
 }

@@ -298,3 +298,27 @@ json-parser: test-json-parser json
 runtests: json-parser
 
 .phony: json-parser
+
+#-------------------------------------------------------------------------------
+# fuzz testing json parser
+#
+FUZZ_JSON_SRC = \
+	fuzz-json
+
+FUZZ_JSON_OBJ = \
+	$(addprefix $(OBJDIR)/,$(addsuffix .fuzz.$(OBJX),$(FUZZ_JSON_SRC)))
+
+$(TEST_BINDIR)/fuzz-json: $(FUZZ_JSON_OBJ) $(FLIBDIR)/libncbi-vdb.a
+	clang++ -o $@ $^ $(FUZZ_LIB) $(FUZZ_OPT)
+
+fuzz-json: $(TEST_BINDIR)/fuzz-json
+
+FUZZ_SEEDS ?= test-json-parser
+FUZZ_DICT ?= -dict=fuzz-dict
+RUNS ?= -1
+
+runfuzz $(FUZZ_PROF_RAW): $(TEST_BINDIR)/fuzz-json $(FUZZ_DICT)
+	 mkdir -p fuzz-corpus
+	 export LLVM_PROFILE_FILE=$(FUZZ_PROF_RAW); $(TEST_BINDIR)/fuzz-json $(FUZZ_DICT) -runs=$(RUNS) fuzz-corpus $(FUZZ_SEEDS)
+
+.phony: runfuzz

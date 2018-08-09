@@ -305,6 +305,7 @@ public:
         m_int64 ( 0 ),
         m_double ( 0.0 )
     {
+        Json_debug = 0;
         memset ( & m_buf, 0, sizeof m_buf );
     }
 
@@ -404,7 +405,7 @@ FIXTURE_TEST_CASE(KJson_Parse_Object, KJsonFixture)
     REQUIRE_RC ( Parse ( & m_val, "{\"name1\":\"value\", \"name2\":\":value\"}" ) );
     REQUIRE_NOT_NULL ( m_val );
 }
-FIXTURE_TEST_CASE(KJson_Parse_Object_DuplicateName, KJsonFixture)
+FIXTURE_TEST_CASE(KJson_Parse_Object_DuplicateName_ErrorReporting, KJsonFixture)
 {
     string expectedStart = "line 1, col 33: RC(libs/klib/";
     string expectedEnd = "KJsonValueMake rcCont,rcTree,rcInserting,rcNode,rcExists)";
@@ -413,6 +414,10 @@ FIXTURE_TEST_CASE(KJson_Parse_Object_DuplicateName, KJsonFixture)
     REQUIRE_EQ ( expectedStart, actual . substr( 0, expectedStart . size () ) );
     REQUIRE_EQ ( expectedEnd, actual . substr( actual . size () - expectedEnd . size () ) );
     REQUIRE_NULL ( m_val );
+}
+FIXTURE_TEST_CASE(KJson_Parse_Object_BadUnicodeInName, KJsonFixture)
+{
+    REQUIRE_RC_FAIL ( Parse ( & m_val, "{\"\\uDFAA\":0}" ) );
 }
 
 FIXTURE_TEST_CASE(KJson_ParseArray_ExpectRightBracket, KJsonFixture)
@@ -434,6 +439,14 @@ FIXTURE_TEST_CASE(KJson_ParseArray_Empty, KJsonFixture)
 FIXTURE_TEST_CASE(KJson_ParseArray_String_Elems, KJsonFixture)
 {
     REQUIRE_RC ( Parse ( & m_val, "[\"name\",\"name\"]" ) );
+}
+
+FIXTURE_TEST_CASE(KJson_Parse_Leak, KJsonFixture)
+{
+    // this overflows bison's stack if it is originally allocated at the default size (YYINITDEPTH=200);
+    // they do reallocate it but then do not deallocate, which causes a leak.
+    // Now, YYINITDEPTH is set to 10000 in json-grammar.y.
+    REQUIRE_RC ( Parse ( & m_val, "[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]" ) );
 }
 
 // KJsonGetString

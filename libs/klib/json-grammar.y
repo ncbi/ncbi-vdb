@@ -27,6 +27,8 @@
 %{
     #define YYDEBUG 1
 
+    #define YYINITDEPTH 10000
+
     #include "json-lex.h"
     #include "json-tokens.h"
     #include "json-priv.h"

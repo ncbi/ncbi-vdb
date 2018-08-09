@@ -72,6 +72,8 @@
 
     #define YYDEBUG 1
 
+    #define YYINITDEPTH 10000
+
     #include "json-lex.h"
     #include "json-tokens.h"
     #include "json-priv.h"
@@ -497,8 +499,8 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,   110,   110,   114,   120,   125,   132,   141,   142,   143,
-     144,   145,   146,   147,   151,   157,   161,   168
+       0,   112,   112,   116,   122,   127,   134,   143,   144,   145,
+     146,   147,   148,   149,   153,   159,   163,   170
 };
 #endif
 
