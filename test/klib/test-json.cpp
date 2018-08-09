@@ -41,14 +41,12 @@
 #include <klib/namelist.h>
 #include <klib/data-buffer.h>
 
-#define YYDEBUG 1
+#define YYDEBUG 0
 #include "../../libs/klib/json-lex.h"
 #include "../../libs/klib/json-tokens.h"
 extern "C" enum yytokentype JsonScan_yylex ( YYSTYPE *lvalp, YYLTYPE *llocp, JsonScanBlock* sb );
 
 #include "../../libs/klib/json-priv.h"
-
-extern int Json_debug;
 
 using namespace std;
 
@@ -305,7 +303,6 @@ public:
         m_int64 ( 0 ),
         m_double ( 0.0 )
     {
-        Json_debug = 0;
         memset ( & m_buf, 0, sizeof m_buf );
     }
 
@@ -410,7 +407,6 @@ FIXTURE_TEST_CASE(KJson_Parse_Object_DuplicateName_ErrorReporting, KJsonFixture)
     string expectedStart = "line 1, col 33: RC(libs/klib/";
     string expectedEnd = "KJsonValueMake rcCont,rcTree,rcInserting,rcNode,rcExists)";
     string actual = ParseError ( & m_val, "{\"name\":\"value\", \"name\":\":value\"}" );
-    Json_debug = 0;
     REQUIRE_EQ ( expectedStart, actual . substr( 0, expectedStart . size () ) );
     REQUIRE_EQ ( expectedEnd, actual . substr( actual . size () - expectedEnd . size () ) );
     REQUIRE_NULL ( m_val );
@@ -614,14 +610,14 @@ FIXTURE_TEST_CASE(KJsonGetNumber_NegOverflow, KJsonFixture)
 }
 FIXTURE_TEST_CASE(KJsonGetNumber_Underflow, KJsonFixture)
 {   // DBL_MIN - a bit
-    REQUIRE_RC_FAIL ( KJsonGetDouble ( ParseValue ( "2.1e-308" ), & m_double ) );
+    REQUIRE_RC_FAIL ( KJsonGetDouble ( ParseValue ( "2.1e-324" ), & m_double ) );
 }
 
 // KJsonGetString on numbers
 FIXTURE_TEST_CASE(KJsonGetString_Double, KJsonFixture)
 {
-    REQUIRE_RC ( KJsonGetString ( ParseValue ( "2.1e-308" ), & m_str ) );
-    REQUIRE_EQ ( string ( "2.1e-308" ), string ( m_str ) );
+    REQUIRE_RC ( KJsonGetString ( ParseValue ( "2.1e-324" ), & m_str ) );
+    REQUIRE_EQ ( string ( "2.1e-324" ), string ( m_str ) );
 }
 
 // KJsonGetBool

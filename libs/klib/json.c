@@ -490,7 +490,7 @@ CopyAndUnescape ( const char * p_value, size_t p_size, char * p_target, size_t p
                     }
 
                     {
-                        int ch_len = utf32_utf8 ( p_target + out, p_target + p_size, u64 );
+                        int ch_len = utf32_utf8 ( p_target + out, p_target + p_size, (uint32_t)u64 );
                         assert ( ch_len > 0 );
                         i += 4;
                         out += ch_len - 1;
