@@ -35,6 +35,7 @@ include 'insdc/sra.vschema';
 
 typeset NCBI:spot_filter_read_set { INSDC:4na:bin, INSDC:x2na:bin, INSDC:2na:bin };
 
+
 /* make_spot_filter
  *  function to analyze qualities and bases
  *  and potentially set SRA_SPOT_FILTER_REJECT bit
