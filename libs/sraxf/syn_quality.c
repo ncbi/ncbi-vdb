@@ -40,6 +40,15 @@
 #include <assert.h>
 #include <string.h>
 
+/*
+    This is a schema-function to synthesize quality values.
+    Its input are the read-len and the read-filter column.
+    It sums up the values in read-len to determin the length of the produced column
+    It reads the read-filter values and puts 'good' or 'bad' values into the output
+    The literals for 'good' and 'bad' are not hardcoded but passed into the function
+    from the schema.
+*/
+
 typedef struct syn_qual_params
 {
     INSDC_quality_phred good;
