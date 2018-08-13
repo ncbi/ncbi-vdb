@@ -40,15 +40,23 @@
 #include <assert.h>
 #include <string.h>
 
-static rc_t CC syn_quality_impl ( void *data,
-                                  const VXformInfo *info,
+typedef struct syn_qual_params
+{
+    INSDC_quality_phred good;
+    INSDC_quality_phred bad;
+} syn_qual_params;
+
+static rc_t CC syn_quality_impl ( void * self,
+                                  const VXformInfo * info,
                                   int64_t row_id,
-                                  VRowResult *rslt,
+                                  VRowResult * rslt,
                                   uint32_t argc,
                                   const VRowData argv [] )
 {
     rc_t rc = 0;
 
+    const syn_qual_params * params = self;
+    
     const INSDC_coord_len * read_lens = argv[ 0 ].u.data.base;
     const uint32_t num_read_lens = ( uint32_t )argv[ 0 ].u.data.elem_count;
     
@@ -92,19 +100,17 @@ static rc_t CC syn_quality_impl ( void *data,
                 for ( i = 0; i < num_read_filters; ++i )
                 {
                     INSDC_coord_len len = read_lens[ i ];
-                    INSDC_read_filter filter = read_filters[ i ];
 
-                    INSDC_quality_phred value = 30;
-                    if ( ( filter & READ_FILTER_REJECT ) > 0 )
-                        value = 3;
+                    if ( ( read_filters[ i ] & READ_FILTER_REJECT ) > 0 )
+                        memset( dst, params -> bad, len );
+                    else
+                        memset( dst, params -> good, len );
 
-                    memset( dst, value, len );
                     dst += len;
                 }
             }
         }
     }
-
     return rc;
 }
 
@@ -114,10 +120,34 @@ static rc_t CC syn_quality_impl ( void *data,
  *      ( INSDC:coord:len read_len,
  *        INSDC:SRA:read_filter read_filter );
  */
-VTRANSFACT_IMPL ( syn_quality, 1, 0, 0 ) ( const void *Self, const VXfactInfo *info,
-    VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
+VTRANSFACT_IMPL ( syn_quality, 1, 0, 0 ) ( const void * Self,
+                                           const VXfactInfo * info,
+                                           VFuncDesc * rslt,
+                                           const VFactoryParams * cp,
+                                           const VFunctionParams * dp )
 {
-    rslt -> u . rf  = syn_quality_impl;
-    rslt -> variant = vftRow;
-    return 0;
+    rc_t rc = 0;
+
+    assert( cp -> argc == 2 );
+
+    assert( cp -> argv[ 0 ].desc.domain == vtdUint );
+    assert( cp -> argv[ 0 ].count == 1 );
+
+    assert( cp -> argv[ 1 ].desc.domain == vtdUint );
+    assert( cp -> argv[ 1 ].count == 1 );
+
+    syn_qual_params * params = malloc( sizeof * params );
+    if ( params == NULL )
+        rc = RC( rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted );
+    else
+    {
+        params -> good = cp -> argv[ 0 ] . data . u8[ 0 ];
+        params -> bad  = cp -> argv[ 1 ] . data . u8[ 0 ];
+        
+        rslt -> self = params;
+        rslt -> whack = free;
+        rslt -> u . rf  = syn_quality_impl;
+        rslt -> variant = vftRow;
+    }
+    return rc;
 }
