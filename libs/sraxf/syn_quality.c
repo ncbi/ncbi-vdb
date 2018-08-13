@@ -25,20 +25,14 @@
  */
 #include <vdb/extern.h>
 
-#include <klib/defs.h>
 #include <klib/rc.h>
-#include <vdb/table.h>
 #include <vdb/xform.h>
 #include <vdb/schema.h>
 #include <insdc/insdc.h>
 #include <klib/data-buffer.h>
-#include <bitstr.h>
 #include <sysalloc.h>
 
-#include <stdint.h>
-#include <stdlib.h>
 #include <assert.h>
-#include <string.h>
 
 /*
     This is a schema-function to synthesize quality values.
@@ -65,30 +59,33 @@ static rc_t CC syn_quality_impl ( void * self,
     rc_t rc = 0;
 
     const syn_qual_params * params = self;
-    
-    const INSDC_coord_len * read_lens = argv[ 0 ].u.data.base;
-    const uint32_t num_read_lens = ( uint32_t )argv[ 0 ].u.data.elem_count;
+    const INSDC_coord_len * read_lens = NULL;
+    uint32_t num_read_lens = 0;
     
     const INSDC_read_filter * read_filters = NULL;
     uint32_t num_read_filters = 0;
     
-    uint32_t total_read_len = 0;
+    INSDC_coord_len total_read_len = 0;
     uint32_t i;
     
-    assert( argv[ 0 ].u.data.elem_bits == sizeof read_lens[ 0 ] );
-    assert( argc > 0 );
-
-    read_lens += argv[ 0 ].u.data.first_elem;
+    if ( argc > 0 )
+    {
+        read_lens = argv[ 0 ] . u . data . base;
+        read_lens += argv[ 0 ] . u . data . first_elem;
+        num_read_lens = ( uint32_t )argv[ 0 ] . u . data . elem_count;    
+    }
     
-    for ( i = 0; i < num_read_filters; ++i )
+    for ( i = 0; i < num_read_lens; ++i )
         total_read_len += read_lens[ i ];
-        
+
     if ( argc > 1 )
     {
         read_filters = argv[ 1 ].u.data.base;
-        assert( argv[ 1 ].u.data.elem_bits == sizeof read_filters[ 0 ] );
-        num_read_filters = ( uint32_t )argv[ 1 ].u.data.elem_count;
-        read_filters += argv[ 0 ].u.data.first_elem;
+        if ( argv[ 1 ] . u . data . elem_bits == ( ( sizeof read_filters[ 0 ] ) * 8 ) )
+        {
+            num_read_filters = ( uint32_t )argv[ 1 ] . u . data . elem_count;
+            read_filters += argv[ 1 ] . u . data . first_elem;
+        }
     }
     
     rslt -> data -> elem_bits = 8;
@@ -101,20 +98,22 @@ static rc_t CC syn_quality_impl ( void * self,
             INSDC_quality_phred * dst = rslt -> data -> base;
             if ( num_read_filters == 0 )
             {
-                memset( dst, 30, total_read_len );
+                memset( dst, params -> good, total_read_len );
             }
             else
             {
-                assert( num_read_lens == num_read_filters );
-                for ( i = 0; i < num_read_filters; ++i )
+                for ( i = 0; i < num_read_lens; ++i )
                 {
                     INSDC_coord_len len = read_lens[ i ];
+                    INSDC_quality_phred q = params -> good;
 
-                    if ( ( read_filters[ i ] & READ_FILTER_REJECT ) > 0 )
-                        memset( dst, params -> bad, len );
-                    else
-                        memset( dst, params -> good, len );
-
+                    if ( i < num_read_filters )
+                    {
+                        if ( read_filters[ i ] == READ_FILTER_REJECT )
+                            q = params -> bad;
+                    }
+                    
+                    memset( dst, q, len );
                     dst += len;
                 }
             }
@@ -125,33 +124,44 @@ static rc_t CC syn_quality_impl ( void * self,
 
 /* 
  * function INSDC:quality:phred NCBI:syn_quality #1
- *      < INSDC:quality:phred good_quality, INSDC:quality:phred bad_quality >
- *      ( INSDC:coord:len read_len,
- *        INSDC:SRA:read_filter read_filter );
+ *      < * INSDC:quality:phred good_quality, INSDC:quality:phred bad_quality >
+ *      ( INSDC:coord:len read_len, INSDC:SRA:read_filter read_filter );
  */
-VTRANSFACT_IMPL ( syn_quality, 1, 0, 0 ) ( const void * Self,
+VTRANSFACT_IMPL ( NCBI_SRA_syn_quality, 1, 0, 0 ) ( const void * Self,
                                            const VXfactInfo * info,
                                            VFuncDesc * rslt,
                                            const VFactoryParams * cp,
                                            const VFunctionParams * dp )
 {
     rc_t rc = 0;
+    INSDC_quality_phred q_good = 30;
+    INSDC_quality_phred q_bad  = 3;
 
-    assert( cp -> argc == 2 );
+    if ( cp -> argc > 0 )
+    {
+        if ( cp -> argv[ 0 ].desc.domain == vtdUint &&
+             cp -> argv[ 0 ].count > 0 )
+        {
+            q_good = cp -> argv[ 0 ] . data . u8[ 0 ];
+        }
 
-    assert( cp -> argv[ 0 ].desc.domain == vtdUint );
-    assert( cp -> argv[ 0 ].count == 1 );
-
-    assert( cp -> argv[ 1 ].desc.domain == vtdUint );
-    assert( cp -> argv[ 1 ].count == 1 );
-
+        if ( cp -> argc > 1 )
+        {
+            if ( cp -> argv[ 1 ].desc.domain == vtdUint &&
+                 cp -> argv[ 1 ].count > 0 )
+            {
+                q_bad = cp -> argv[ 1 ] . data . u8[ 0 ];
+            }
+        }
+    }
+    
     syn_qual_params * params = malloc( sizeof * params );
     if ( params == NULL )
         rc = RC( rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted );
     else
     {
-        params -> good = cp -> argv[ 0 ] . data . u8[ 0 ];
-        params -> bad  = cp -> argv[ 1 ] . data . u8[ 0 ];
+        params -> good = q_good;
+        params -> bad  = q_bad;
         
         rslt -> self = params;
         rslt -> whack = free;
