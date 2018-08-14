@@ -30,6 +30,7 @@ MODULE = test/sraxf
 
 TEST_TOOLS = \
 	test-fix_read_seg \
+    test_syn_quality
 
 include $(TOP)/build/Makefile.env
 
@@ -58,3 +59,28 @@ SRATEST_LIB = \
 $(TEST_BINDIR)/test-fix_read_seg: $(SRATEST_OBJ)
 	$(LP) --exe -o $@ $^ $(SRATEST_LIB)
 
+
+#----------------------------------------------------------------
+# test_syn_quality
+#
+
+TST_SYN_QUAL_SRC = \
+	test_syn_quality
+
+TST_SYN_QUAL_OBJ = \
+	$(addsuffix .$(OBJX),$(TST_SYN_QUAL_SRC))
+
+TST_SYN_QUAL_LIB = \
+	-skapp \
+	-sktst \
+	-sncbi-vdb \
+
+$(TEST_BINDIR)/test_syn_quality: $(TST_SYN_QUAL_OBJ)
+	$(LP) --exe -o $@ $^ $(TST_SYN_QUAL_LIB)
+
+#----------------------------------------------------------------
+# overwritten runtests, to pass the SRCDIR into test_syn_quality
+#
+runtests: $(TEST_BINDIR)/test_syn_quality $(TEST_BINDIR)/test-fix_read_seg
+	$(TEST_BINDIR)/test-fix_read_seg
+	$(TEST_BINDIR)/test_syn_quality $(SRCDIR)

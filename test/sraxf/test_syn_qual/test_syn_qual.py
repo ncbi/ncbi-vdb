@@ -28,19 +28,54 @@ table TEST_TBL #1.0
 
 ''' 
 
-def make_table( mgr, schema_txt, schema_table_name, table_name, row_count ) :
+def make_rows( cur, cols, row_count, read_len_data, filter_data ) :
+    for idx in xrange( 0, row_count ) :
+        cur.OpenRow()
+        cols[ "READ_LEN" ].write( read_len_data )
+        cols[ "READ_FILTER" ].write( filter_data )
+        cur.CommitRow()
+        cur.CloseRow()
+    cur.Commit()
+
+def make_table( mgr, schema_txt, schema_table_name, table_name ) :
     try :
         schema = mgr.MakeSchema( schema_txt )
         tbl = mgr.CreateTable( schema, schema_table_name, table_name )
         cur = tbl.CreateCursor( OpenMode.Write )
         cols = cur.OpenColumns( [ "READ_LEN", "READ_FILTER" ] )
-        for idx in xrange( 0, row_count ) :
-            cur.OpenRow()
-            cols[ "READ_LEN" ].write( random_data( 3, 5, 10 ) )
-            cols[ "READ_FILTER" ].write( [ 0, 1 ] )
-            cur.CommitRow()
-            cur.CloseRow()
-        cur.Commit()
+        row_count = 1
+        make_rows( cur, cols, row_count, [ 9, 8, 7 ], [ 0, 0, 0 ] )
+        make_rows( cur, cols, row_count, [ 8, 7, 6 ], [ 0, 0, 1 ] )
+        make_rows( cur, cols, row_count, [ 7, 6, 5 ], [ 0, 1, 0 ] )
+        make_rows( cur, cols, row_count, [ 6, 5, 4 ], [ 0, 1, 1 ] )
+        make_rows( cur, cols, row_count, [ 5, 4, 3 ], [ 1, 0, 0 ] )
+        make_rows( cur, cols, row_count, [ 4, 3, 2 ], [ 1, 0, 1 ] )
+        make_rows( cur, cols, row_count, [ 3, 2, 1 ], [ 1, 1, 0 ] )
+        make_rows( cur, cols, row_count, [ 1, 2, 3 ], [ 1, 1, 1 ] )
+        make_rows( cur, cols, row_count, [ 2, 3, 4 ], [ 0, 0 ] )
+        make_rows( cur, cols, row_count, [ 3, 4, 5 ], [ 0, 1 ] )
+        make_rows( cur, cols, row_count, [ 4, 5, 6 ], [ 1, 1 ] )
+        make_rows( cur, cols, row_count, [ 6, 7, 8 ], [ 1, 1 ] )
+        make_rows( cur, cols, row_count, [ 7, 8, 9 ], [ 0 ] )
+        make_rows( cur, cols, row_count, [ 8, 9, 9 ], [ 1 ] )
+        make_rows( cur, cols, row_count, [ 9, 9, 9 ], [] )
+
+        make_rows( cur, cols, row_count, [ 9, 8 ], [ 0, 0 ] )
+        make_rows( cur, cols, row_count, [ 8, 7 ], [ 0, 1 ] )
+        make_rows( cur, cols, row_count, [ 7, 6 ], [ 1, 0 ] )
+        make_rows( cur, cols, row_count, [ 6, 5 ], [ 1, 1 ] )
+        make_rows( cur, cols, row_count, [ 5, 4 ], [ 0 ] )
+        make_rows( cur, cols, row_count, [ 4, 3 ], [ 1 ] )
+        make_rows( cur, cols, row_count, [ 3, 2 ], [] )
+
+        make_rows( cur, cols, row_count, [ 9 ], [ 0 ] )
+        make_rows( cur, cols, row_count, [ 8 ], [ 1 ] )
+        make_rows( cur, cols, row_count, [ 7 ], [] )
+
+        make_rows( cur, cols, row_count, [], [ 0 ] )
+        make_rows( cur, cols, row_count, [], [ 1 ] )
+        make_rows( cur, cols, row_count, [], [] )
+        
     except vdb_error as e :
         print( e )
 
@@ -54,8 +89,8 @@ if __name__ == '__main__' :
     try :
         #open a manager
         mgr = manager( OpenMode.Write, lib_wr )
-        make_table( mgr, schematxt, schema_table_name, table_name, row_count )
-        mgr.OpenTable( table_name ).print_rows()
+        make_table( mgr, schematxt, schema_table_name, table_name )
+        #mgr.OpenTable( table_name ).print_rows()
 
     except vdb_error as e :
         print( e )
