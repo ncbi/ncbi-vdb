@@ -30,7 +30,7 @@ MODULE = test/sraxf
 
 TEST_TOOLS = \
 	test-fix_read_seg \
-    test_syn_quality
+	test_syn_quality \
 
 include $(TOP)/build/Makefile.env
 
@@ -79,8 +79,8 @@ $(TEST_BINDIR)/test_syn_quality: $(TST_SYN_QUAL_OBJ)
 	$(LP) --exe -o $@ $^ $(TST_SYN_QUAL_LIB)
 
 #----------------------------------------------------------------
-# overwritten runtests, to pass the SRCDIR into test_syn_quality
+# overriden runtests, to pass the SRCDIR into test_syn_quality
 #
-runtests: $(TEST_BINDIR)/test_syn_quality $(TEST_BINDIR)/test-fix_read_seg
-	$(TEST_BINDIR)/test-fix_read_seg
-	$(TEST_BINDIR)/test_syn_quality $(SRCDIR)
+#runtests: test_syn_quality test-fix_read_seg
+#	test-fix_read_seg
+#	test_syn_quality $(SRCDIR)

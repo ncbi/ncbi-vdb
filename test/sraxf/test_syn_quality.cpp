@@ -42,8 +42,6 @@ rc_t CC Usage( const Args * args ) { return 0; }
 const char UsageDefaultName[] = "";
 rc_t UsageSummary( const char * progname ) { return 0; }
 
-const char * src_dir = NULL;
-
 TEST_SUITE( SynQualityTestSuite );
 
 TEST_CASE( total_lt_spotlen_read_2 )
@@ -55,7 +53,7 @@ TEST_CASE( total_lt_spotlen_read_2 )
     REQUIRE_RC( VDBManagerMakeRead ( &mgr, dir ) );
 
     const VTable * tbl;
-    REQUIRE_RC( VDBManagerOpenTableRead( mgr, &tbl, NULL, "%s/test_syn_qual/data.test", src_dir ) );
+    REQUIRE_RC( VDBManagerOpenTableRead( mgr, &tbl, NULL, "./test_syn_qual/data.test" ) );
     
     const VCursor * cur;
     REQUIRE_RC( VTableCreateCursorRead( tbl, &cur ) );
@@ -145,9 +143,5 @@ TEST_CASE( total_lt_spotlen_read_2 )
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
-    if ( argc > 1 )
-        src_dir = argv[ 1 ];
-    printf( "src_dir = '%s'\n", src_dir );
-    
     return SynQualityTestSuite( argc, argv );
 }
