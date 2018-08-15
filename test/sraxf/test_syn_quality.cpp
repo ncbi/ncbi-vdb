@@ -53,7 +53,7 @@ TEST_CASE( total_lt_spotlen_read_2 )
     REQUIRE_RC( VDBManagerMakeRead ( &mgr, dir ) );
 
     const VTable * tbl;
-    REQUIRE_RC( VDBManagerOpenTableRead( mgr, &tbl, NULL, "./test_syn_qual/data.test" ) );
+    REQUIRE_RC( VDBManagerOpenTableRead( mgr, &tbl, NULL, "T_TEST_SYN_QUAL" ) );
     
     const VCursor * cur;
     REQUIRE_RC( VTableCreateCursorRead( tbl, &cur ) );
@@ -122,7 +122,7 @@ TEST_CASE( total_lt_spotlen_read_2 )
 
                     if ( idx < row_len_READ_FILTER )
                     {
-                        if ( READ_FILTER[ idx ] == READ_FILTER_REJECT )
+                        if ( READ_FILTER[ idx ] > READ_FILTER_PASS )
                             q = 3;
                     }
                     memset( dst, q, len );
@@ -138,6 +138,9 @@ TEST_CASE( total_lt_spotlen_read_2 )
     REQUIRE_RC( VCursorRelease( cur ) );
     REQUIRE_RC( VTableRelease( tbl ) );
     REQUIRE_RC( VDBManagerRelease( mgr ) );
+    
+    // we have to remove the test-directory...
+    REQUIRE_RC( KDirectoryRemove ( dir, true, "T_TEST_SYN_QUAL" ) );
     REQUIRE_RC( KDirectoryRelease( dir ) );
 }
 

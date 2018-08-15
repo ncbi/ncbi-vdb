@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
+import sys
+import os.path
 from vdb import *
-
-lib_wr = "./2.9.2/libncbi-wvdb.so.2.9.2"
 
 schematxt = '''
 version 1;
@@ -81,16 +81,21 @@ def make_table( mgr, schema_txt, schema_table_name, table_name ) :
 
         
 if __name__ == '__main__' :
+
+    argc = len( sys.argv )
     
     schema_table_name = "TEST_TBL"
     table_name = "T_TEST_SYN_QUAL"
-    row_count = 10
+    lib_name = None
     
-    try :
-        #open a manager
-        mgr = manager( OpenMode.Write, lib_wr )
-        make_table( mgr, schematxt, schema_table_name, table_name )
-        #mgr.OpenTable( table_name ).print_rows()
+    if argc > 1 : lib_wr = sys.argv[ 1 ]
+    if argc > 2 : table_name = sys.argv[ 2 ]
 
-    except vdb_error as e :
-        print( e )
+    if ( lib_wr != None ) and ( os.path.isfile( lib_wr ) ) :
+        try :
+            mgr = manager( OpenMode.Write, lib_wr )
+            make_table( mgr, schematxt, schema_table_name, table_name )
+            #mgr.OpenTable( table_name ).print_rows()
+
+        except vdb_error as e :
+            print( e )

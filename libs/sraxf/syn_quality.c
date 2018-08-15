@@ -109,7 +109,7 @@ static rc_t CC syn_quality_impl ( void * self,
 
                     if ( i < num_read_filters )
                     {
-                        if ( read_filters[ i ] == READ_FILTER_REJECT )
+                        if ( read_filters[ i ] != READ_FILTER_PASS )
                             q = params -> bad;
                     }
                     
