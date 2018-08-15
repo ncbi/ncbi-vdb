@@ -76,7 +76,7 @@ rc_t CC KMain ( int argc, char *argv [] )
             string input = argv [ i + 1 ];
             // cout << input << endl;
             stringstream buffer;
-            ifstream in ( input );
+            ifstream in ( input . c_str () );
             if ( ! in . good () )
             {
                 throw runtime_error ( string ( "Invalid file " ) + input );

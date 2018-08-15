@@ -53,7 +53,7 @@ include $(TOP)/build/Makefile.env
 
 std: $(TEST_TOOLS)
 
-test-md5append $(TEST_TOOLS): makedirs
+test-md5append test-json-parser $(TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
 .PHONY: $(TEST_TOOLS)
@@ -293,6 +293,8 @@ $(TEST_BINDIR)/test-json-parser: $(TEST_JSON_PARSER_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
 
 json-parser: test-json-parser json
+	@ echo ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+	@ echo Run $(TEST_BINDIR)/test-json-parser
 	@ $(TEST_BINDIR)/test-json-parser $(shell find $(SRCDIR)/test-json-parser/ -name \*.json)
 
 runtests: json-parser
