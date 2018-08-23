@@ -29,6 +29,8 @@
 #include <vdb/cursor.h>
 #include <vdb/vdb-priv.h>
 
+#include <../libs/vdb/schema-priv.h>
+
 #include <sra/sraschema.h> // VDBManagerMakeSRASchema
 
 #include <kdb/meta.h>
@@ -46,7 +48,7 @@ using namespace std;
 TEST_SUITE( WVdbTestSuite )
 
 const string ScratchDir = "./db/";
-
+#if 0
 // this test case is not very useful but is here as a blueprint for other write-side tests
 FIXTURE_TEST_CASE ( BlobCorruptOnCommit, WVDB_Fixture)
 {
@@ -358,7 +360,7 @@ FIXTURE_TEST_CASE ( VCursor_FindNextRowIdDirect, WVDB_Fixture )
     {   // reopen
         VDBManager * mgr;
         REQUIRE_RC ( VDBManagerMakeUpdate ( & mgr, NULL ) );
-        VDBManagerOpenDBRead ( mgr, (const VDatabase**)& m_db, NULL, m_databaseName . c_str () );
+        REQUIRE_RC ( VDBManagerOpenDBRead ( mgr, (const VDatabase**)& m_db, NULL, m_databaseName . c_str () ) );
 
         const VCursor* cursor = OpenTable ( TableName );
 
@@ -374,11 +376,65 @@ FIXTURE_TEST_CASE ( VCursor_FindNextRowIdDirect, WVDB_Fixture )
 
         REQUIRE_RC ( VCursorRelease ( cursor ) );
 
-        VDBManagerRelease ( mgr );
+        REQUIRE_RC ( VDBManagerRelease ( mgr ) );
     }
 
 }
+#endif
+FIXTURE_TEST_CASE ( EmbeddedOnGlobal_ShareIdenticalIds, WVDB_Fixture)
+{ // VDB-3635: global schema and an embedded schema loaded on top of it should share IDs for identical objects
+    m_databaseName = ScratchDir + GetName();
 
+    string schemaText = "typedef ascii INSDC:dna:text;" // same as in insdc/insdc.vschema
+                        "table table1 #1.0.0 { column INSDC:dna:text column1; };"
+                        "database root_database #1 { table table1 #1 TABLE1; } ;";
+
+    const char* TableName = "TABLE1";
+    const char* ColumnName = "column1";
+
+    MakeDatabase ( schemaText, "root_database" );
+    {
+        VCursor* cursor = CreateTable ( TableName );
+
+        uint32_t column_idx;
+        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, ColumnName ) );
+        REQUIRE_RC ( VCursorOpen ( cursor ) );
+
+        // need to insert 2 rows with different values to make the column physical
+        WriteRow ( cursor, column_idx, "blah" );
+        WriteRow ( cursor, column_idx, "eeee" );
+
+        REQUIRE_RC ( VCursorCommit ( cursor ) );
+
+        REQUIRE_RC ( VCursorRelease ( cursor ) );
+        REQUIRE_RC ( VDatabaseRelease ( m_db ) );
+        m_db = 0;
+        REQUIRE_RC ( VDBManagerRelease ( m_mgr ) );
+        m_mgr = 0;
+    }
+
+    REQUIRE_RC ( VSchemaRelease ( m_schema ) );
+    {
+        REQUIRE_RC ( VDBManagerMakeUpdate ( & m_mgr, NULL ) );
+        REQUIRE_RC ( VDBManagerMakeSRASchema ( m_mgr, & m_schema ) );
+        VTypedecl resolved_sra;
+        REQUIRE_RC ( VSchemaResolveTypedecl ( m_schema, & resolved_sra, "INSDC:dna:text" ) );
+
+        REQUIRE_RC ( VDBManagerOpenDBRead ( m_mgr, (const VDatabase**)& m_db, m_schema, m_databaseName . c_str () ) );
+
+        const VSchema *embedded;
+        REQUIRE_RC ( VDatabaseOpenSchema ( m_db, & embedded ) );
+        REQUIRE_EQ ( (const VSchema *) m_schema, embedded -> dad );
+
+        // verify: INSDC:dna:text used in the embedded schema has the same Id as INSDC:dna:text from the global SRA schema
+        VTypedecl resolved_embedded;
+        REQUIRE_RC ( VSchemaResolveTypedecl ( embedded, & resolved_embedded, "INSDC:dna:text" ) );
+        REQUIRE_EQ ( resolved_sra . type_id, resolved_embedded . type_id );
+
+        REQUIRE_RC ( VSchemaRelease ( embedded ) );
+    }
+
+}
 
 //////////////////////////////////////////// Main
 extern "C"
