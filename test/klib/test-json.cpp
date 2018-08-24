@@ -40,6 +40,7 @@
 #include <klib/text.h>
 #include <klib/namelist.h>
 #include <klib/data-buffer.h>
+#include <klib/rc.h>
 
 #define YYDEBUG 0
 #include "../../libs/klib/json-lex.h"
@@ -443,6 +444,12 @@ FIXTURE_TEST_CASE(KJson_Parse_Leak, KJsonFixture)
     // they do reallocate it but then do not deallocate, which causes a leak.
     // Now, YYINITDEPTH is set to 10000 in json-grammar.y.
     REQUIRE_RC ( Parse ( & m_val, "[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]" ) );
+}
+
+FIXTURE_TEST_CASE(KJson_Parse_DistinguishTruncatedInput, KJsonFixture)
+{
+    rc_t rc = Parse ( & m_val, "{" );
+    REQUIRE_EQ ( rcIncomplete, GetRCState ( rc ) );
 }
 
 // KJsonGetString

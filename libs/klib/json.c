@@ -183,7 +183,16 @@ KJsonValueMake ( KJsonValue ** p_root, const char * p_input, char * p_error, siz
                     p_error [ p_error_size - 1 ] = 0;
                 }
             }
-            rc = RC ( rcCont, rcNode, rcParsing, rcFormat, rcUnrecognized );
+
+            // sb . error is NUL-terminated, so strstr is safe
+            if ( strstr ( sb . error, "unexpected end of source" ) != NULL )
+            {
+                rc = RC ( rcCont, rcNode, rcParsing, rcDoc, rcIncomplete );
+            }
+            else
+            {
+                rc = RC ( rcCont, rcNode, rcParsing, rcFormat, rcUnrecognized );
+            }
         }
         JsonScan_yylex_destroy ( & sb );
     }
