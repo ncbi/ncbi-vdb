@@ -405,8 +405,8 @@ FIXTURE_TEST_CASE(KJson_Parse_Object, KJsonFixture)
 }
 FIXTURE_TEST_CASE(KJson_Parse_Object_DuplicateName_ErrorReporting, KJsonFixture)
 {
-    string expectedStart = "line 1, col 33: RC(libs/klib/";
-    string expectedEnd = "KJsonValueMake rcCont,rcTree,rcInserting,rcNode,rcExists)";
+    string expectedStart = "line 1, col 33: RC("; // in debug build, this is followed by source code location
+    string expectedEnd = "rcCont,rcTree,rcInserting,rcNode,rcExists)";
     string actual = ParseError ( & m_val, "{\"name\":\"value\", \"name\":\":value\"}" );
     REQUIRE_EQ ( expectedStart, actual . substr( 0, expectedStart . size () ) );
     REQUIRE_EQ ( expectedEnd, actual . substr( actual . size () - expectedEnd . size () ) );
