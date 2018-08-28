@@ -133,3 +133,8 @@ compile: stdcompile
 $(TARGDIR)/compile: $(OBJFILES)
 
 .PHONY: bison flex grammar ast
+#-------------------------------------------------------------------------------
+# fuzz
+#
+fuzz: std
+	cp $(addsuffix .$(LIBX),$(addprefix $(ILIBDIR)/,$(INT_LIBS))) $(FLIBDIR)/

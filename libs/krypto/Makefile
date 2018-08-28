@@ -154,13 +154,13 @@ endif
 ifeq ($(VECREG_SUPPORTED),true)
 CC_VECREG = $(_CC_VECREG)
 else
-CC_VECREG = 
+CC_VECREG =
 endif
 
 ifeq ($(AESNI_SUPPORTED),true)
 CC_AES_NI = $(_CC_AES_NI)
 else
-CC_AES_NI = 
+CC_AES_NI =
 endif
 
 # Rules for making objects using compiler vectors
@@ -224,13 +224,13 @@ ALL_LIB_SRC += \
 	aes-ncbi.vec
 LIB_SRC += \
 	no-null-ncbi.vec
-TEST_LIB_SRC += 
+TEST_LIB_SRC +=
 else
 ALL_LIB_SRC += \
 	cipher-no-vec.vec
 LIB_SRC += \
 	no-null-ncbi.vec
-TEST_LIB_SRC += 
+TEST_LIB_SRC +=
 endif
 
 ifeq ($(VECREG_SUPPORTED),true)
@@ -239,13 +239,13 @@ ALL_LIB_SRC += \
 	aes-ncbi.vecreg
 LIB_SRC += \
 	no-null-ncbi.vecreg
-TEST_LIB_SRC += 
+TEST_LIB_SRC +=
 else
 ALL_LIB_SRC += \
 	cipher-no-vec.vecreg
 LIB_SRC += \
 	no-null-ncbi.vecreg
-TEST_LIB_SRC += 
+TEST_LIB_SRC +=
 endif
 
 ifeq ($(AESNI_SUPPORTED),true)
@@ -254,13 +254,13 @@ ALL_LIB_SRC += \
 	aes-ncbi.aes-ni
 LIB_SRC += \
 	no-null-ncbi.aes-ni
-TEST_LIB_SRC += 
+TEST_LIB_SRC +=
 else
 ALL_LIB_SRC += \
 	cipher-no-vec.aes-ni
 LIB_SRC += \
 	no-null-ncbi.aes-ni
-TEST_LIB_SRC += 
+TEST_LIB_SRC +=
 endif
 
 
@@ -295,3 +295,9 @@ $(ILIBDIR)/libkryptotest.$(LIBX): $(KRYPTOTEST_OBJ)
 compile: stdcompile
 
 $(TARGDIR)/compile: $(OBJFILES)
+
+#-------------------------------------------------------------------------------
+# fuzz
+#
+fuzz: std
+	cp $(addsuffix .$(LIBX),$(addprefix $(ILIBDIR)/,$(INT_LIBS))) $(FLIBDIR)/

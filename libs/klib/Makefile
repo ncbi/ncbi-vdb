@@ -163,6 +163,17 @@ compile: makedirs
 
 $(TARGDIR)/compile: $(OBJFILES)
 
+#-------------------------------------------------------------------------------
+# fuzz
+#
+FUZZ_OBJ = \
+	$(addprefix $(OBJDIR)/,$(addsuffix .fuzz.$(LOBX),$(KLIB_SRC)))
+
+fuzz: std $(FUZZ_OBJ)
+	$(AR) $(FLIBDIR)/libklib.$(LIBX) $(FUZZ_OBJ)
+
+#-------------------------------------------------------------------------------
+#
 # flex/bison for the Json parser
 
 #json-grammar.$(LOBX): $(SRCDIR)/json-grammar.c

@@ -53,7 +53,7 @@ include $(TOP)/build/Makefile.env
 
 std: $(TEST_TOOLS)
 
-test-md5append $(TEST_TOOLS): makedirs
+test-md5append test-json-parser $(TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
 .PHONY: $(TEST_TOOLS)
@@ -183,6 +183,9 @@ TEST_KLIB_OBJ = \
 $(TEST_BINDIR)/test-klib: $(TEST_KLIB_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
 
+klib: test-klib
+	$(TEST_BINDIR)/test-klib
+
 #-------------------------------------------------------------------------------
 # test-hashfile
 #
@@ -224,6 +227,8 @@ $(TEST_BINDIR)/test-vnamelist: $(TEST_VNAMELIST_OBJ)
 VNAMELIST: test-vnamelist
 	$(TEST_BINDIR)/test-vnamelist
 
+.phony: VNAMELIST
+
 #-------------------------------------------------------------------------------
 # test-progressbar
 #
@@ -238,6 +243,8 @@ $(TEST_BINDIR)/test-progressbar: $(TEST_PROGRESSBAR_OBJ)
 
 PROGRESSBAR: test-progressbar
 	$(TEST_BINDIR)/test-progressbar
+
+.phony: PROGRESSBAR
 
 #-------------------------------------------------------------------------------
 # test-symtab
@@ -254,6 +261,8 @@ $(TEST_BINDIR)/test-symtab: $(TEST_SYMTAB_OBJ)
 symtab: test-symtab
 	$(TEST_BINDIR)/test-symtab
 
+.phony: symtab
+
 #-------------------------------------------------------------------------------
 # test-json
 #
@@ -268,3 +277,50 @@ $(TEST_BINDIR)/test-json: $(TEST_JSON_OBJ)
 
 json: test-json
 	$(TEST_BINDIR)/test-json
+
+.phony: json
+
+#-------------------------------------------------------------------------------
+# test-json-parser, command line tests
+#
+TEST_JSON_PARSER_SRC = \
+	test-json-parser
+
+TEST_JSON_PARSER_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_JSON_PARSER_SRC))
+
+$(TEST_BINDIR)/test-json-parser: $(TEST_JSON_PARSER_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
+
+json-parser: test-json-parser json
+	@ echo ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+	@ echo Run $(TEST_BINDIR)/test-json-parser
+	@ $(TEST_BINDIR)/test-json-parser $(shell find $(SRCDIR)/test-json-parser/ -name \*.json)
+
+runtests: json-parser
+
+.phony: json-parser
+
+#-------------------------------------------------------------------------------
+# fuzz testing json parser
+#
+FUZZ_JSON_SRC = \
+	fuzz-json
+
+FUZZ_JSON_OBJ = \
+	$(addprefix $(OBJDIR)/,$(addsuffix .fuzz.$(OBJX),$(FUZZ_JSON_SRC)))
+
+$(TEST_BINDIR)/fuzz-json: $(FUZZ_JSON_OBJ) $(FLIBDIR)/libncbi-vdb.a
+	clang++ -o $@ $^ $(FUZZ_LIB) $(FUZZ_OPT)
+
+fuzz-json: $(TEST_BINDIR)/fuzz-json
+
+FUZZ_SEEDS ?= test-json-parser
+FUZZ_DICT ?= -dict=fuzz-dict
+RUNS ?= -1
+
+runfuzz $(FUZZ_PROF_RAW): $(TEST_BINDIR)/fuzz-json
+	 mkdir -p fuzz-corpus
+	 export LLVM_PROFILE_FILE=$(FUZZ_PROF_RAW); $(TEST_BINDIR)/fuzz-json $(FUZZ_DICT) -runs=$(RUNS) fuzz-corpus $(FUZZ_SEEDS)
+
+.phony: runfuzz

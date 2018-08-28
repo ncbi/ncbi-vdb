@@ -27,6 +27,8 @@
 %{
     #define YYDEBUG 1
 
+    #define YYINITDEPTH 10000
+
     #include "json-lex.h"
     #include "json-tokens.h"
     #include "json-priv.h"
@@ -39,14 +41,14 @@
     extern enum yytokentype JsonScan_yylex ( YYSTYPE *lvalp, YYLTYPE *llocp, JsonScanBlock* sb );
 
     void Json_error ( YYLTYPE *                 p_llocp,
-                      struct KJsonObject **     p_root,
+                      struct KJsonValue **      p_root,
                       struct JsonScanBlock *    p_sb,
                       const char *              p_msg )
     {
         p_sb -> error = string_dup ( p_msg, string_size ( p_msg ) );
     }
     void Json_RC ( YYLTYPE *                 p_llocp,
-                   struct KJsonObject **     p_root,
+                   struct KJsonValue **     p_root,
                    struct JsonScanBlock *    p_sb,
                    rc_t                      p_rc )
     {
@@ -80,7 +82,7 @@
 %}
 
 %name-prefix "Json_"
-%parse-param { struct KJsonObject ** root }
+%parse-param { struct KJsonValue ** root }
 %param { struct JsonScanBlock* sb }
 
 %define api.value.type {JsonToken}
@@ -107,7 +109,7 @@
 %%
 
 parse
-    : object END_SOURCE { * root = ( KJsonObject * ) KJsonValueToObject ( $1 . node ); return 0; }
+    : value END_SOURCE { * root = $1 . node; return 0; }
     ;
 
 object

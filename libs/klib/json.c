@@ -38,6 +38,8 @@
 #include <klib/container.h>
 #include <klib/namelist.h>
 #include <klib/vector.h>
+#include <klib/data-buffer.h>
+#include <klib/printf.h>
 
 #include "json-lex.h"
 #include "json-tokens.h"
@@ -58,13 +60,14 @@ struct NameValue
 
 static rc_t MakeNameValue ( NameValue ** p_val, const char * p_name, size_t p_name_size, KJsonValue * p_value )
 {
+    rc_t rc;
     NameValue * ret = calloc ( 1, sizeof * ret );
     if ( ret != NULL )
     {
         ret -> name = malloc ( p_name_size + 1 );
         if ( ret -> name != NULL )
         {
-            rc_t rc = CopyAndUnescape ( p_name, p_name_size, ret -> name, p_name_size + 1 );
+            rc = CopyAndUnescape ( p_name, p_name_size, ret -> name, p_name_size + 1 );
             if ( rc == 0 )
             {
                 ret -> value = p_value;
@@ -73,9 +76,13 @@ static rc_t MakeNameValue ( NameValue ** p_val, const char * p_name, size_t p_na
             }
             free ( ret -> name );
         }
+        else
+        {
+            rc = RC ( rcCont, rcNode, rcAllocating, rcMemory, rcExhausted );
+        }
         free ( ret );
     }
-    return RC ( rcCont, rcNode, rcAllocating, rcMemory, rcExhausted );
+    return rc;
 }
 
 static void CC NameValueWhack ( BSTNode * p_n, void * p_data )
@@ -147,7 +154,7 @@ struct KJsonArray
 
 LIB_EXPORT
 rc_t CC
-KJsonMake ( KJsonObject ** p_root, const char * p_input, char * p_error, size_t p_error_size )
+KJsonValueMake ( KJsonValue ** p_root, const char * p_input, char * p_error, size_t p_error_size )
 {
     rc_t rc;
     if ( p_root == NULL )
@@ -176,14 +183,23 @@ KJsonMake ( KJsonObject ** p_root, const char * p_input, char * p_error, size_t 
                     p_error [ p_error_size - 1 ] = 0;
                 }
             }
-            rc = RC ( rcCont, rcNode, rcParsing, rcFormat, rcUnrecognized );
+
+            // sb . error is NUL-terminated, so strstr is safe
+            if ( strstr ( sb . error, "unexpected end of source" ) != NULL )
+            {
+                rc = RC ( rcCont, rcNode, rcParsing, rcDoc, rcIncomplete );
+            }
+            else
+            {
+                rc = RC ( rcCont, rcNode, rcParsing, rcFormat, rcUnrecognized );
+            }
         }
         JsonScan_yylex_destroy ( & sb );
     }
     return rc;
 }
 
-void CC KJsonWhack ( KJsonObject * p_root )
+void CC KJsonObjectWhack ( KJsonObject * p_root )
 {
     if ( p_root != NULL )
     {
@@ -358,6 +374,10 @@ rc_t KJsonObjectAddMember ( KJsonObject * p_obj, const char * p_name, size_t p_n
             NameValueWhack ( & nv -> node, NULL );
         }
     }
+    else
+    {
+        KJsonValueWhack ( p_value );
+    }
     return rc;
 }
 
@@ -479,7 +499,7 @@ CopyAndUnescape ( const char * p_value, size_t p_size, char * p_target, size_t p
                     }
 
                     {
-                        int ch_len = utf32_utf8 ( p_target + out, p_target + p_size, u64 );
+                        int ch_len = utf32_utf8 ( p_target + out, p_target + p_size, (uint32_t)u64 );
                         assert ( ch_len > 0 );
                         i += 4;
                         out += ch_len - 1;
@@ -589,7 +609,7 @@ void KJsonValueWhack ( KJsonValue * p_value )
         }
         case jsObject:
         {
-            KJsonWhack ( ( KJsonObject * ) p_value );
+            KJsonObjectWhack ( ( KJsonObject * ) p_value );
             break;
         }
         case jsArray:
@@ -721,6 +741,7 @@ KJsonGetBool ( const KJsonValue * p_node, bool * p_value )
     return rc;
 }
 
+LIB_EXPORT
 enum jsType CC
 KJsonGetValueType ( const KJsonValue * p_value )
 {
@@ -731,7 +752,330 @@ KJsonGetValueType ( const KJsonValue * p_value )
     return p_value -> type;
 }
 
-/*
-rc_t CC KJsonToString ( const KJsonValue * root, char * error, size_t error_size );
-*/
+// Conversion to a JSON formatted string
 
+typedef struct PrintData PrintData;
+struct PrintData
+{
+    KDataBuffer *   output;
+    size_t          increment;
+    size_t          offset;
+    rc_t            rc;
+    const void *    last; /* last element in a container */
+    bool            pretty;
+    uint32_t        indentTabs;
+};
+
+static rc_t ObjectToJson ( const KJsonObject * root, PrintData * pd );
+static rc_t ArrayToJson ( const KJsonArray * node, PrintData * pd );
+
+static
+rc_t IncreaseBuffer ( PrintData * p_data )
+{
+    assert ( p_data != NULL );
+    return KDataBufferResize ( p_data -> output, KDataBufferBytes ( p_data -> output ) + p_data -> increment );
+}
+
+static
+rc_t
+PrintWithSize ( PrintData * p_pd, const char * p_text, size_t p_size )
+{
+    /* grow the buffer if necessary */
+    rc_t rc = 0;
+    while ( rc == 0 && p_pd -> offset + p_size >= KDataBufferBytes ( p_pd -> output ) )
+    {
+        rc = IncreaseBuffer ( p_pd );
+    }
+
+    if ( rc == 0 )
+    {
+        size_t num_writ;
+        rc = string_printf ( ( char * ) p_pd -> output -> base + p_pd -> offset, KDataBufferBytes ( p_pd -> output ) - p_pd -> offset, & num_writ, "%.*s", p_size, p_text );
+        if ( rc == 0 )
+        {
+            p_pd -> offset += num_writ;
+        }
+    }
+    return rc;
+}
+
+static
+rc_t
+Print( PrintData * p_pd, const char * p_text )
+{
+    return PrintWithSize ( p_pd, p_text, string_size ( p_text ) );
+}
+
+static
+rc_t
+PrintNewLine( PrintData * p_pd )
+{
+    rc_t rc = Print ( p_pd, "\n" );
+
+    uint32_t i = p_pd -> indentTabs;
+    while ( rc == 0 && i > 0 )
+    {
+        rc = Print ( p_pd, "\t" );
+        --i;
+    }
+
+    return rc;
+}
+
+static
+rc_t
+PrintString ( PrintData * p_pd, const char * p_str )
+{
+    const char * begin = p_str;
+    const char * end = p_str + string_size ( p_str );
+    rc_t rc = 0;
+    while ( rc == 0 && begin < end )
+    {
+        uint32_t ch;
+        int bytes = utf8_utf32 ( & ch, begin, end );
+        assert ( bytes > 0 );
+        if ( ch < 32 )
+        {
+            switch (ch)
+            {
+            case 8:
+                rc = Print ( p_pd, "\\b");
+                break;
+            case 9:
+                rc = Print ( p_pd, "\\t");
+                break;
+            case 10:
+                rc = Print ( p_pd, "\\n");
+                break;
+            case 13:
+                rc = Print ( p_pd, "\\r");
+                break;
+            default:
+                {
+                    const char to_hex[16] = "0123456789abcdef";
+                    char hex [7] = { '\\', '\\', 'u' };
+                    hex [3] = to_hex [ ( ch >> 24 ) & 0xff ];
+                    hex [4] = to_hex [ ( ch >> 16 ) & 0xff ];
+                    hex [5] = to_hex [ ( ch >> 8 ) & 0xff ];
+                    hex [6] = to_hex [ ch & 0xff ];
+                    rc = PrintWithSize ( p_pd, hex, 7);
+                    break;
+                }
+            }
+        }
+        else if ( ch > 255 )
+        {   /* UTF-8 encoding; copy bytes from input */
+            rc = PrintWithSize ( p_pd, begin, bytes );
+        }
+        else
+        {   /* non-control ASCII */
+            switch (ch)
+            {
+            case '\\': rc = Print ( p_pd, "\\\\" ); break;
+            case '/':  rc = Print ( p_pd, "\\/" ); break;
+            case '"':  rc = Print ( p_pd, "\\\"" ); break;
+            default:
+                rc = PrintWithSize ( p_pd, begin, 1 );
+                break;
+            }
+        }
+
+        begin += bytes;
+    }
+    return rc;
+}
+
+static
+rc_t
+ValueToJson ( const KJsonValue * p_value, PrintData * p_pd )
+{
+    size_t saved_offset = p_pd -> offset;
+    rc_t rc;
+    switch ( p_value -> type )
+    {
+    case jsString:
+        rc = Print ( p_pd, "\"" );
+        if ( rc == 0 ) rc = PrintString ( p_pd, p_value -> u . str );
+        if ( rc == 0 ) rc = Print ( p_pd, "\"" );
+        break;
+    case jsNumber:
+        rc = Print ( p_pd, p_value -> u . str );
+        break;
+    case jsBool:
+        rc = Print ( p_pd, p_value -> u . boolean ? "true" : "false" );
+        break;
+    case jsNull:
+        rc = Print ( p_pd, "null");
+        break;
+    case jsObject:
+        {
+            const KJsonObject * obj = KJsonValueToObject ( p_value );
+            assert ( obj != 0 );
+            rc = ObjectToJson ( obj, p_pd );
+        }
+        break;
+    case jsArray:
+        {
+            const KJsonArray * arr = KJsonValueToArray ( p_value );
+            assert ( arr != 0 );
+            rc = ArrayToJson ( arr, p_pd );
+        }
+        break;
+    default:
+        assert ( false );
+        break;
+    }
+
+    if ( rc != 0 )
+    {
+        p_pd -> offset = saved_offset;
+    }
+    return rc;
+}
+
+static
+void CC
+NameValueToJson ( BSTNode *n, void *data )
+{
+    const NameValue * node = (const NameValue *) n;
+    PrintData * pd = (PrintData *) data;
+    size_t saved_offset = pd -> offset;
+
+    rc_t rc = Print ( pd, "\"" );
+    if ( rc == 0 ) rc = Print ( pd, node -> name );
+    if ( rc == 0 ) rc = Print ( pd, "\"" );
+    if ( rc == 0 ) rc = Print ( pd, pd -> pretty ? " : " : ":" );
+    if ( rc == 0 ) rc = ValueToJson ( node -> value, pd );
+    if ( rc == 0 )
+    {
+        if ( n == pd -> last )
+        {   /* restore indent before printing the closing '}', so that it aligns with the member name */
+            -- pd -> indentTabs;
+        }
+        else
+        {
+            rc = Print ( pd, "," );
+        }
+    }
+    if ( rc == 0 && pd -> pretty ) rc = PrintNewLine ( pd );
+
+    pd -> rc = rc;
+    if ( rc != 0 )
+    {
+        pd -> offset = saved_offset;
+    }
+}
+
+static
+rc_t
+ObjectToJson ( const KJsonObject * p_root, PrintData * pd )
+{
+    rc_t rc;
+    size_t saved_offset;
+    const void * saved_last;
+
+    assert ( p_root != NULL && pd != NULL );
+    saved_last = pd -> last;
+    saved_offset = pd -> offset;
+
+    rc = Print ( pd, "{" );
+    ++ pd -> indentTabs;
+    if ( rc == 0 && pd -> pretty ) rc = PrintNewLine ( pd );
+    if ( rc == 0 )
+    {
+        pd -> last = BSTreeLast ( & p_root -> members );
+        BSTreeForEach ( & p_root -> members, false, NameValueToJson, pd);
+    }
+    if ( rc == 0 ) rc = Print ( pd, "}" );
+
+    pd -> last = saved_last;
+    if ( rc != 0 )
+    {
+        pd -> offset = saved_offset;
+    }
+    return rc;
+}
+
+static
+bool CC
+ArrayElementToJson ( void * item, void *data )
+{
+    const KJsonValue * value =  (const KJsonValue *) item;
+    PrintData * pd = (PrintData *) data;
+
+    pd -> rc = ValueToJson ( value, pd );
+    if ( pd -> rc == 0 )
+    {
+        if ( value == pd -> last )
+        {   /* restore indent before printing the closing ']' */
+            -- pd -> indentTabs;
+        }
+        else
+        {
+            pd -> rc = Print ( pd, "," );
+        }
+    }
+    if ( pd -> pretty ) pd -> rc = PrintNewLine ( pd );
+    return pd -> rc != 0;
+}
+
+static
+rc_t
+ArrayToJson ( const KJsonArray * p_node, PrintData * pd )
+{
+    rc_t rc;
+    size_t saved_offset;
+    const void * saved_last;
+    assert ( p_node != NULL && pd != NULL );
+    saved_last = pd -> last;
+    saved_offset = pd -> offset;
+
+    rc = Print ( pd, "[" );
+    ++ pd -> indentTabs;
+    if ( pd -> pretty ) rc = PrintNewLine ( pd );
+    if ( rc == 0 )
+    {
+        pd -> last = VectorLast ( & p_node -> elements );
+        VectorDoUntil ( & p_node -> elements, false, ArrayElementToJson, pd );
+    }
+    if ( rc == 0 ) rc = Print ( pd, "]" );
+
+    pd -> last = saved_last;
+    if ( rc != 0 )
+    {
+        pd -> offset = saved_offset;
+    }
+    return rc;
+}
+
+LIB_EXPORT
+rc_t CC
+KJsonToJsonString ( const KJsonValue * p_root, struct KDataBuffer * p_output, size_t p_increment, bool p_pretty )
+{
+    rc_t rc;
+    if ( p_root == NULL )
+    {
+        rc = RC ( rcCont, rcNode, rcProcessing, rcSelf, rcNull );
+    }
+    else if ( p_output == NULL )
+    {
+        rc = RC ( rcCont, rcNode, rcReading, rcParam, rcNull );
+    }
+    else
+    {
+        rc = KDataBufferMake ( p_output, 8, p_increment == 0 ? 256 : p_increment );
+        if ( rc == 0 )
+        {
+            PrintData pd;
+            pd . output = p_output;
+            pd . increment = p_increment == 0 ? 1024 : p_increment;
+            pd . offset = 0;
+            pd . rc = 0;
+            pd . last = NULL;
+            pd . pretty = p_pretty;
+            pd . indentTabs = 0;
+            rc = ValueToJson ( p_root, & pd );
+        }
+    }
+    return rc;
+}
