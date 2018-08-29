@@ -309,13 +309,15 @@ KJsonObjectGetMember ( const KJsonObject * p_node, const char * p_name )
     {
         return 0;
     }
-
-    const BSTNode * node = BSTreeFind ( & p_node -> members, p_name, NameValueCompare );
-    if ( node == NULL )
-    {
-        return NULL;
-    }
-    return ( ( const NameValue * ) node ) -> value;
+	else
+	{
+		const BSTNode * node = BSTreeFind ( & p_node -> members, p_name, NameValueCompare );
+		if ( node == NULL )
+		{
+			return NULL;
+		}
+		return ( ( const NameValue * ) node ) -> value;
+	}
 }
 
 LIB_EXPORT
@@ -346,8 +348,9 @@ KJsonArrayToValue ( const KJsonArray * p_array )
 
 rc_t KJsonMakeObject ( KJsonObject ** obj )
 {
+    KJsonObject * ret;
     assert ( obj != NULL );
-    KJsonObject * ret = calloc ( 1, sizeof * ret );
+    ret = calloc ( 1, sizeof * ret );
     if ( ret != NULL )
     {
         ret -> dad . type = jsObject;
@@ -383,8 +386,9 @@ rc_t KJsonObjectAddMember ( KJsonObject * p_obj, const char * p_name, size_t p_n
 
 rc_t KJsonMakeArray ( KJsonArray ** obj )
 {
+    KJsonArray * ret;
     assert ( obj != NULL );
-    KJsonArray * ret = calloc ( 1, sizeof * ret );
+    ret = calloc ( 1, sizeof * ret );
     if ( ret != NULL )
     {
         ret -> dad . type = jsArray;
@@ -541,8 +545,9 @@ CopyAndUnescape ( const char * p_value, size_t p_size, char * p_target, size_t p
 
 rc_t KJsonMakeString ( KJsonValue ** p_val, const char * p_value, size_t p_size )
 {
+    KJsonValue * ret;
     assert ( p_val != NULL && p_value != NULL );
-    KJsonValue * ret = malloc ( sizeof * ret );
+    ret = malloc ( sizeof * ret );
     if ( ret != NULL )
     {
         ret -> type = jsString;
@@ -569,8 +574,9 @@ rc_t KJsonMakeBool ( KJsonValue ** obj, bool value );
 
 rc_t KJsonMakeNull ( KJsonValue ** p_val )
 {
+    KJsonValue * ret;
     assert ( p_val != NULL );
-    KJsonValue * ret = calloc ( 1, sizeof * ret );
+    ret = calloc ( 1, sizeof * ret );
     if ( ret != NULL )
     {
         ret -> type = jsNull;
@@ -582,8 +588,9 @@ rc_t KJsonMakeNull ( KJsonValue ** p_val )
 
 rc_t KJsonMakeBool ( KJsonValue ** p_val, bool p_bool )
 {
+    KJsonValue * ret;
     assert ( p_val != NULL );
-    KJsonValue * ret = calloc ( 1, sizeof * ret );
+    ret = calloc ( 1, sizeof * ret );
     if ( ret != NULL )
     {
         ret -> type = jsBool;
@@ -626,8 +633,9 @@ void KJsonValueWhack ( KJsonValue * p_value )
 
 rc_t KJsonMakeNumber ( KJsonValue ** p_val, const char * p_value, size_t p_size )
 {
+    KJsonValue * ret;
     assert ( p_val != NULL && p_value != NULL );
-    KJsonValue * ret = malloc ( sizeof * ret );
+    ret = malloc ( sizeof * ret );
     if ( ret != NULL )
     {
         ret -> type = jsNumber;
@@ -662,8 +670,9 @@ KJsonGetNumber ( const KJsonValue * p_node, int64_t * p_value )
     else
     {
         char * endptr;
+        int64_t value;
         errno = 0;
-        int64_t value = strtoi64 ( p_node -> u . str, & endptr, 10 );
+        value = strtoi64 ( p_node -> u . str, & endptr, 10 );
         if ( errno == ERANGE )
         {
             rc = RC ( rcCont, rcNode, rcAccessing, rcSize, rcExcessive );
@@ -701,8 +710,9 @@ KJsonGetDouble ( const KJsonValue * p_node, double * p_value )
     else
     {
         char * endptr;
+        double value;
         errno = 0;
-        double value = strtod ( p_node -> u . str, & endptr );
+        value = strtod ( p_node -> u . str, & endptr );
         if ( errno == ERANGE )
         {
             rc = RC ( rcCont, rcNode, rcAccessing, rcSize, rcExcessive );
