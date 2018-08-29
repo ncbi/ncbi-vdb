@@ -145,8 +145,8 @@
 
 /* In a future release of Bison, this section will be replaced
    by #include "json-tokens.h".  */
-#ifndef YY_JSON_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_KLIB_JSON_TOKENS_H_INCLUDED
-# define YY_JSON_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_KLIB_JSON_TOKENS_H_INCLUDED
+#ifndef YY_JSON_HOME_BOSHKINA_DEVEL_NCBI_VDB_LIBS_KLIB_JSON_TOKENS_H_INCLUDED
+# define YY_JSON_HOME_BOSHKINA_DEVEL_NCBI_VDB_LIBS_KLIB_JSON_TOKENS_H_INCLUDED
 /* Debug traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
@@ -195,7 +195,7 @@ struct YYLTYPE
 
 int Json_parse (struct KJsonValue ** root, struct JsonScanBlock* sb);
 
-#endif /* !YY_JSON_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_KLIB_JSON_TOKENS_H_INCLUDED  */
+#endif /* !YY_JSON_HOME_BOSHKINA_DEVEL_NCBI_VDB_LIBS_KLIB_JSON_TOKENS_H_INCLUDED  */
 
 /* Copy the second part of user declarations.  */
 
@@ -1578,8 +1578,8 @@ yyreduce:
   case 6:
 
     {
-            (yyval) = (yyvsp[-4]);
             KJsonObject * obj = ( KJsonObject * ) KJsonValueToObject ( (yyvsp[-4]) . node );
+            (yyval) = (yyvsp[-4]);
             CHECK_RC_RELEASE ( KJsonObjectAddMember ( obj, (yyvsp[-2]) . value, (yyvsp[-2]) . value_len, (yyvsp[0]) . node ), (yyval) );
         }
 
@@ -1657,8 +1657,8 @@ yyreduce:
   case 17:
 
     {
-            (yyval) = (yyvsp[-2]);
             KJsonArray * arr = ( KJsonArray * ) KJsonValueToArray ( (yyvsp[-2]) . node );
+            (yyval) = (yyvsp[-2]);
             CHECK_RC_RELEASE ( KJsonArrayAddElement ( arr, (yyvsp[0]) . node ), (yyval) );
         }
 
