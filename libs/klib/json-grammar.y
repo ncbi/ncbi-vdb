@@ -133,8 +133,8 @@ members
         }
     | members ',' jsonSTRING ':' value
         {
-            $$ = $1;
             KJsonObject * obj = ( KJsonObject * ) KJsonValueToObject ( $1 . node );
+            $$ = $1;
             CHECK_RC_RELEASE ( KJsonObjectAddMember ( obj, $3 . value, $3 . value_len, $5 . node ), $$ );
         }
     ;
@@ -169,8 +169,8 @@ elements
         }
     | elements ',' value
         {
-            $$ = $1;
             KJsonArray * arr = ( KJsonArray * ) KJsonValueToArray ( $1 . node );
+            $$ = $1;
             CHECK_RC_RELEASE ( KJsonArrayAddElement ( arr, $3 . node ), $$ );
         }
     ;
