@@ -2296,6 +2296,62 @@ rc_t CC KMDataNodeAuxFunc ( void *param, const void *node, size_t *num_writ,
     return rc;
 }
 
+/*  Some pretty forward
+ */
+KFS_EXTERN rc_t CC KRamFileMakeWrite (struct KFile ** self,
+                                    char * buffer, size_t buffer_size );
+
+/*  If Buffer == NULL, it will return size of memory needed to flush
+ *  object
+ */
+LIB_EXPORT
+rc_t CC
+KMetadataFlushToMemory ( KMetadata * self, char * buffer, size_t bsize, size_t * num_writ )
+{
+    rc_t rc;
+    KMDFlushData pb;
+
+    rc = 0;
+    memset ( & pb, 0, sizeof pb );
+
+    if ( num_writ != 0 ) {
+        * num_writ = 0;
+    }
+
+    if ( self == NULL ) {
+        rc = RC ( rcDB, rcMetadata, rcPersisting, rcSelf, rcNull );
+    }
+
+    if ( rc == 0 )
+    {
+        pb . buffer = ( uint8_t * ) buffer;
+        pb . bsize = bsize;
+
+        /* write header */
+        if ( buffer == NULL ) {
+            pb . marker = sizeof ( struct KDBHdr );
+        }
+        else {
+            KDBHdr *hdr = ( KDBHdr* ) pb . buffer;
+            hdr -> endian = eByteOrderTag;
+            hdr -> version = KMETADATAVERS;
+            pb . marker = sizeof * hdr;
+        }
+
+        /* persist root node */
+        rc = BSTreePersist (
+                        & self -> root -> child,
+                        num_writ,
+                        ( buffer == NULL ? NULL : KMDWriteFunc ),
+                        & pb,
+                        KMDataNodeAuxFunc,
+                        NULL
+                        );
+    }
+
+    return rc;
+}   /* KMetadataFlushToMemory () */
+
 static
 rc_t KMetadataFlush ( KMetadata *self )
 {
@@ -2512,6 +2568,72 @@ rc_t KMetadataSever ( const KMetadata *self )
 /* Make
  */
 
+LIB_EXPORT
+rc_t CC
+KMetadataPopulateFromMemory ( KMetadata * self, const void *addr, size_t size, bool read_only )
+{
+    union
+    {
+        KDBHdr v1;
+        KDBHdr v2;
+    } hdrs;
+
+    const KDBHdr *hdr = ( const KDBHdr* ) addr;
+    const void *pbstree_src = hdr + 1;
+
+    rc_t rc = KDBHdrValidate ( hdr, size, 1, KMETADATAVERS );
+    if ( self -> read_only && GetRCState ( rc ) == rcIncorrect && GetRCObject ( rc ) == rcByteOrder )
+    {
+        hdrs . v1 . endian = bswap_32 ( hdr -> endian );
+        hdrs . v1 . version = bswap_32 ( hdr -> version );
+        rc = KDBHdrValidate ( & hdrs . v1, size, 1, KMETADATAVERS );
+        if ( rc == 0 )
+        {
+            self -> byteswap = true;
+            switch ( hdrs . v1 . version )
+            {
+            case 1:
+                hdr = & hdrs . v1;
+                break;
+            case 2:
+                hdr = & hdrs . v2;
+                break;
+            }
+        }
+    }
+    if ( rc == 0 )
+    {
+        PBSTree *bst;
+        rc = PBSTreeMake ( & bst, pbstree_src, size - sizeof * hdr, self -> byteswap );
+        if ( rc != 0 )
+            rc = RC ( rcDB, rcMetadata, rcConstructing, rcData, rcCorrupt );
+        else
+        {
+            KMDataNodeInflateData pb;
+
+            pb . meta = self;
+            pb . par = self -> root;
+            pb . bst = & self -> root -> child;
+            pb . node_size_limit = read_only ? NODE_SIZE_LIMIT : 0;
+            pb . node_child_limit = read_only ? NODE_CHILD_LIMIT : 0;
+            pb . rc = 0;
+            pb . byteswap = self -> byteswap;
+
+            if ( hdr -> version == 1 )
+                PBSTreeDoUntil ( bst, false, KMDataNodeInflate_v1, & pb );
+            else
+                PBSTreeDoUntil ( bst, false, KMDataNodeInflate, & pb );
+            rc = pb . rc;
+
+            self -> vers = hdr -> version;
+
+            PBSTreeWhack ( bst );
+        }
+    }
+
+    return rc;
+}   /* KMetadataPopulateFromMemory () */
+
 static
 rc_t KMetadataPopulate ( KMetadata *self, const KDirectory *dir, const char *path, bool read_only )
 {
@@ -2531,65 +2653,9 @@ rc_t KMetadataPopulate ( KMetadata *self, const KDirectory *dir, const char *pat
 
             if ( rc == 0 )
             {
-                union
-                {
-                    KDBHdr v1;
-                    KDBHdr v2;
-                } hdrs;
-
-                const KDBHdr *hdr = ( const KDBHdr* ) addr;
-                const void *pbstree_src = hdr + 1;
-
-                rc = KDBHdrValidate ( hdr, size, 1, KMETADATAVERS );
-                if ( self -> read_only && GetRCState ( rc ) == rcIncorrect && GetRCObject ( rc ) == rcByteOrder )
-                {
-                    hdrs . v1 . endian = bswap_32 ( hdr -> endian );
-                    hdrs . v1 . version = bswap_32 ( hdr -> version );
-                    rc = KDBHdrValidate ( & hdrs . v1, size, 1, KMETADATAVERS );
-                    if ( rc == 0 )
-                    {
-                        self -> byteswap = true;
-                        switch ( hdrs . v1 . version )
-                        {
-                        case 1:
-                            hdr = & hdrs . v1;
-                            break;
-                        case 2:
-                            hdr = & hdrs . v2;
-                            break;
-                        }
-                    }
-                }
-                if ( rc == 0 )
-                {
-                    PBSTree *bst;
-                    rc = PBSTreeMake ( & bst, pbstree_src, size - sizeof * hdr, self -> byteswap );
-                    if ( rc != 0 )
-                        rc = RC ( rcDB, rcMetadata, rcConstructing, rcData, rcCorrupt );
-                    else
-                    {
-                        KMDataNodeInflateData pb;
-
-                        pb . meta = self;
-                        pb . par = self -> root;
-                        pb . bst = & self -> root -> child;
-                        pb . node_size_limit = read_only ? NODE_SIZE_LIMIT : 0;
-                        pb . node_child_limit = read_only ? NODE_CHILD_LIMIT : 0;
-                        pb . rc = 0;
-                        pb . byteswap = self -> byteswap;
-
-                        if ( hdr -> version == 1 )
-                            PBSTreeDoUntil ( bst, false, KMDataNodeInflate_v1, & pb );
-                        else
-                            PBSTreeDoUntil ( bst, false, KMDataNodeInflate, & pb );
-                        rc = pb . rc;
-
-                        self -> vers = hdr -> version;
-
-                        PBSTreeWhack ( bst );
-                    }
-                }
+                rc = KMetadataPopulateFromMemory ( self, addr, size, read_only );
             }
+            
 
             KMMapRelease ( mm );
         }
@@ -2610,6 +2676,52 @@ rc_t KDBManagerInsertMetadata ( KDBManager * self, KMetadata * meta )
     return rc;
 }
 
+LIB_EXPORT
+rc_t CC
+KMetadataMakeFromMemory ( KMetadata **metap, const char * path, const void * addr, size_t size, bool read_only )
+{
+    rc_t rc;
+    KMetadata *meta = malloc ( sizeof * meta + strlen ( path ) );
+    if ( meta == NULL )
+        rc = RC ( rcDB, rcMetadata, rcConstructing, rcMemory, rcExhausted );
+    else
+    {
+        memset ( meta, 0, sizeof * meta );
+        meta -> root = calloc ( 1, sizeof * meta -> root );
+        if ( meta -> root == NULL )
+            rc = RC ( rcDB, rcMetadata, rcConstructing, rcMemory, rcExhausted );
+        else
+        {
+            meta -> root -> meta = meta;
+            meta -> dir = NULL /* dir */;
+            KRefcountInit ( & meta -> refcount, 1, "KMetadata", "make-update", path );
+            meta -> opencount = 1;
+            meta -> rev =  0 /* rev */;
+            meta -> read_only = read_only;
+
+            strcpy ( meta -> path, path );
+
+            meta->sym.u.obj = meta;
+            StringInitCString (&meta->sym.name, meta->path);
+            meta->sym.type = kptMetadata;
+
+            KRefcountInit ( & meta -> root -> refcount, 0, "KMDataNode", "make-read", "/" );
+
+            rc = KMetadataPopulateFromMemory ( meta, addr, size, read_only );
+            if ( rc == 0 )
+            {
+                * metap = meta;
+                return 0;
+            }
+
+            free ( meta -> root );
+        }
+
+        free ( meta );
+    }
+    * metap = NULL;
+    return rc;
+}   /* KMetadataMakeFromMemory () */
 
 static
 rc_t KMetadataMake ( KMetadata **metap,
