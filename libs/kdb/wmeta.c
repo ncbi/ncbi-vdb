@@ -2325,7 +2325,7 @@ KMetadataFlushToMemory ( KMetadata * self, char * buffer, size_t bsize, size_t *
     if ( rc == 0 )
     {
         pb . buffer = ( uint8_t * ) buffer;
-        pb . bsize = bsize;
+        pb . bsize = ( buffer != 0 ? bsize : ( 1024 * 1024 ) );
 
         /* write header */
         if ( buffer == NULL ) {
