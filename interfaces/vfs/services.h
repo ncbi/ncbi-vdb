@@ -40,6 +40,10 @@ extern "C" {
 
 struct Kart;
 struct KNSManager;
+struct KSrvRespFile;
+struct KSrvRespFileIterator;
+struct KSrvRespObj;
+struct KSrvRespObjIterator;
 
 typedef struct KService KService;
 typedef struct KSrvError KSrvError;
@@ -129,6 +133,29 @@ rc_t KSrvErrorObject  ( const KSrvError * self,
                         String * id, EObjectType * type );
 /******************************************************************************/
 
+/************************** KSrvRespObj ******************************/
+
+rc_t KSrvRespObjRelease ( const struct KSrvRespObj * self );
+rc_t KSrvResponseGetObjByIdx ( const struct KSrvResponse * self,
+                         uint32_t idx, const struct KSrvRespObj ** obj );
+rc_t KSrvResponseGetObjByAcc ( const struct KSrvResponse * self,
+                         const char * acc, const struct KSrvRespObj ** obj );
+
+rc_t KSrvRespObjMakeIterator ( const struct KSrvRespObj * self,
+                               struct KSrvRespObjIterator ** it ); 
+rc_t KSrvRespObjIteratorRelease ( const struct KSrvRespObjIterator * self );
+
+rc_t KSrvRespObjIteratorNextFile ( struct KSrvRespObjIterator * self,
+                                   const struct KSrvRespFile ** file );
+rc_t KSrvRespFileRelease ( const struct KSrvRespFile * self );
+
+rc_t KSrvRespFileMakeIterator ( const struct KSrvRespFile * self,
+    VRemoteProtocols  scheme, struct KSrvRespFileIterator ** it );
+rc_t KSrvRespFileIteratorRelease ( const struct KSrvRespFileIterator * self );
+rc_t KSrvRespFileIteratorNextPath ( struct KSrvRespFileIterator * self,
+                                    const struct VPath ** path );
+
+/******************************************************************************/
 
 #ifdef __cplusplus
 }

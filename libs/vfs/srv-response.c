@@ -24,12 +24,14 @@
  *
  */
 
-#include "resolver-priv.h" /* DEFAULT_PROTOCOLS */
-#include "path-priv.h" /* VPathGetScheme_t */
-#include <vfs/services.h> /* KSrvResponse */
 #include <klib/rc.h> /* RC */
 #include <klib/vector.h> /* Vector */
 
+#include <vfs/services.h> /* KSrvResponse */
+
+#include "json-response.h" /* struct Response4 */
+#include "path-priv.h" /* VPathGetScheme_t */
+#include "resolver-priv.h" /* DEFAULT_PROTOCOLS */
 
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
@@ -61,6 +63,8 @@ struct KSrvResponse {
     atomic32_t refcount;
 
     Vector list;
+
+    const Response4 * r4;
 };
 
 /* VPathSet */
@@ -383,6 +387,21 @@ rc_t VPathSetMakeQuery ( VPathSet ** self, const VPath * local, rc_t localRc,
 }
 
 /* KSrvResponse */
+rc_t KSrvResponseSetR4 ( KSrvResponse * self, const Response4 * r )
+{
+    rc_t rc = 0;
+
+    assert ( self );
+
+    rc = Response4Release ( self -> r4 );
+
+    rc = Response4AddRef ( r );
+    if ( rc == 0 )
+        self -> r4 = r;
+
+    return rc;
+}
+
 rc_t KSrvResponseMake ( KSrvResponse ** self ) {
     KSrvResponse * p = ( KSrvResponse * ) calloc ( 1, sizeof * p );
     if ( p == NULL )
@@ -405,15 +424,20 @@ rc_t KSrvResponseAddRef ( const KSrvResponse * self ) {
 }
 
 rc_t KSrvResponseRelease ( const KSrvResponse * cself ) {
+    rc_t rc = 0;
+
     KSrvResponse * self = ( KSrvResponse * ) cself;
 
     if ( self != NULL && atomic32_dec_and_test ( & self -> refcount ) ) {
         VectorWhack ( & self -> list, whackVPathSet, NULL );
+
+        RELEASE ( Response4, self -> r4 );
+
         memset ( self, 0, sizeof * self );
         free ( self );
     }
 
-    return 0;
+    return rc;
 }
 
 rc_t KSrvResponseAppend ( KSrvResponse * self, const VPathSet * set ) {
@@ -472,7 +496,38 @@ uint32_t KSrvResponseLength ( const KSrvResponse * self ) {
     if ( self == NULL )
          return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
 
+    if ( self -> r4 != NULL ) {
+        uint32_t l = 0;
+        return Response4GetKSrvRespObjCount ( self -> r4, & l ) == 0 ? l : 0;
+    }
+
     return VectorLength ( & self -> list );
+}
+
+typedef struct KSrvRespObj KSrvRespObj;
+
+rc_t KSrvResponseGetObjByIdx ( const KSrvResponse * self, uint32_t idx,
+                               const KSrvRespObj ** box )
+{
+    if ( self == NULL )
+         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+
+    if ( self -> r4 == NULL )
+         return RC ( rcVFS, rcQuery, rcExecuting, rcItem, rcNotFound );
+
+    return Response4GetKSrvRespObjByIdx ( self -> r4, idx, box );
+}
+
+rc_t KSrvResponseGetObjByAcc ( const KSrvResponse * self, const char * acc,
+                               const KSrvRespObj ** box )
+{
+    if ( self == NULL )
+         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+
+    if ( self -> r4 == NULL )
+         return RC ( rcVFS, rcQuery, rcExecuting, rcItem, rcNotFound );
+
+    return Response4GetKSrvRespObjByAcc ( self -> r4, acc, box );
 }
 
 rc_t KSrvResponseGet

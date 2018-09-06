@@ -1,3 +1,4 @@
+#include "json-response.h" /* Response4 */
 /*===========================================================================
  *
  *                            PUBLIC DOMAIN NOTICE
@@ -89,6 +90,9 @@ typedef struct {
                                /* KRepositoryMgrGetProtectedRepository */
 
     uint32_t timeoutMs;
+
+    char * input;
+    size_t inSz;
 } SHelper;
 
 
@@ -368,8 +372,17 @@ struct KService {
 /* SHelper ********************************************************************/
 static rc_t SHelperInit ( SHelper * self, const KNSManager * kMgr ) {
     rc_t rc = 0;
+
     assert ( self );
+
     memset ( self, 0, sizeof * self );
+
+    self -> inSz = 1;
+    self -> input = malloc ( self -> inSz );
+
+    if ( self -> input == NULL )
+        return RC ( rcVFS, rcStorage, rcAllocating, rcMemory, rcExhausted );
+
     if ( kMgr == NULL ) {
         KNSManager * kns = NULL;
         rc = KNSManagerMake ( & kns );
@@ -378,10 +391,13 @@ static rc_t SHelperInit ( SHelper * self, const KNSManager * kMgr ) {
     else {
         rc = KNSManagerAddRef ( kMgr );
     }
+
     if ( rc == 0) {
         self -> kMgr = kMgr;
     }
+
     self -> timeoutMs = 5000;
+
     return rc;
 }
 
@@ -394,6 +410,8 @@ static rc_t SHelperFini ( SHelper * self) {
     RELEASE ( KConfig       , self -> kfg );
     RELEASE ( KNSManager    , self -> kMgr );
     RELEASE ( KRepositoryMgr, self -> repoMgr );
+
+    free ( self -> input );
 
     memset ( self, 0, sizeof * self );
 
@@ -1958,15 +1976,15 @@ static rc_t SResponseFini ( SResponse * self ) {
     rc = SHeaderFini ( & self -> header );
 
     r2 = KSrvResponseRelease ( self -> list );
-    if ( rc == 0 )
+    if ( r2 != 0 && rc == 0 )
         rc = r2;
 
     r2 = KartRelease ( self -> kart );
-    if ( rc == 0 )
+    if ( r2 != 0 && rc == 0 )
         rc = r2;
 
     r2 = SServerTimestampFini ( & self -> timestamp );
-    if ( rc == 0 )
+    if ( r2 != 0 && rc == 0 )
         rc = r2;
 
     memset ( self, 0, sizeof * self );
@@ -3171,14 +3189,166 @@ rc_t KServiceProcessLine ( KService * self,
 }
 
 
+static rc_t KServiceProcessJson ( KService * self ) {
+    rc_t rc = 0;
+    rc_t r2 = 0;
+
+    Response4 * r = NULL;
+
+    rc = Response4Make ( & r, self -> helper . input );
+
+    if ( rc == 0 )
+        rc = KSrvResponseSetR4 ( self -> resp .list, r );
+
+    r2 = Response4Release ( r );
+    if ( r2 != 0 && rc == 0 )
+        rc = r2;
+
+    return rc;
+}
+
+
 static
-rc_t KServiceProcessStream ( KService * self, KStream * stream )
+rc_t KServiceProcessStreamAll ( KService * self, KStream * stream )
 {
+    rc_t rc = 0;
+    bool start = true;
+    size_t offW = 0;
+    size_t num_read = 0;
+    size_t offR = 0;
+    size_t sizeR = 0;
+
+    size_t sizeW = 0;
+    timeout_t tm;
+
+    char * buffer = NULL;
+
+    assert ( self && self -> helper . inSz && self -> helper . input );
+
+    sizeW = self -> helper . inSz;
+    self -> resp . serviceType = self -> req . serviceType;
+
+    rc = TimeoutInit ( & tm, self -> helper . timeoutMs );
+    if ( rc == 0 )
+        rc = SResponseFini ( & self -> resp );
+    if ( rc == 0 )
+        rc = SResponseInit ( & self -> resp );
+    if ( rc == 0 && self -> req . serviceType == eSTsearch )
+        rc = KartMake2 ( & self -> resp . kart );
+    DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), (
+        "-----------------------------------------------------------\n" ) );
+    while ( rc == 0 ) {
+        if ( sizeW == 0 ) {
+            size_t inSz = self -> helper . inSz;
+            void * tmp = NULL;
+            if ( self -> helper . inSz == 0 )
+                self -> helper . inSz  = 512;
+            else
+                self -> helper . inSz *= 2;
+            if ( self -> helper . input == NULL )
+                tmp = malloc ( self -> helper . inSz );
+            else
+                tmp = realloc ( self -> helper . input, self -> helper . inSz );
+            if ( tmp == NULL )
+                return RC
+                    ( rcVFS, rcStorage, rcAllocating, rcMemory, rcExhausted );
+            else
+                self -> helper . input = tmp;
+            sizeW = self -> helper . inSz - inSz;
+        }
+        buffer = self -> helper . input;
+        rc = KStreamTimedRead ( stream, buffer + offW, sizeW, & num_read,
+                                & tm );
+        if ( rc != 0 || num_read == 0 )
+            break;
+        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
+            ( "%.*s", ( int ) num_read - 1, buffer + offW ) );
+        sizeR += num_read;
+        offW += num_read;
+        assert ( sizeW >= num_read );
+        sizeW -= num_read;
+    }
+    if ( rc == 0 && sizeR > 0 ) {
+        if ( sizeW == 0 ) {
+            void * tmp = NULL;
+            ++ self -> helper . inSz;
+            tmp = realloc ( self -> helper . input, self -> helper . inSz );
+            if ( tmp == NULL )
+                return RC
+                    ( rcVFS, rcStorage, rcAllocating, rcMemory, rcExhausted );
+            else
+                self -> helper . input = tmp;
+        }
+        buffer = self -> helper . input;
+        buffer [ offW ] = '\0';
+        if ( self != NULL && self -> req . version. major > 3 ) {
+            start = false;
+            rc = KServiceProcessJson ( self );
+        }
+        else {
+            while ( rc == 0 ) {
+                char * newline = string_chr ( buffer + offR, sizeR, '\n' );
+                if ( newline == NULL ) {
+                    if ( sizeR != 0 )
+                        rc = RC ( rcVFS, rcQuery, rcExecuting,
+                                  rcString, rcInsufficient );
+                    break;
+                }
+                else {
+                    size_t size = newline - ( buffer + offR );
+                    String s;
+                    s . addr = buffer + offR;
+                    s . len = s . size = size;
+                    if ( start ) {
+                        if ( size + 1 == num_read )
+                            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
+                                ( "\n" ) );
+                        rc = SHeaderMake ( & self -> resp . header,
+                                           & s, self -> req . serviceType );
+                        if ( rc != 0 )
+                            break;
+                        start = false;
+                    }
+                    else {
+                        bool end = false;
+                        rc = KServiceProcessLine ( self, & s, & end );
+                        if ( end || rc != 0 ) {
+                            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
+                                ( "\n" ) );
+                            break;
+                        }
+                    }
+                    ++ size;
+                    offR += size;
+                    if ( sizeR >= size )
+                        sizeR -= size;
+                    else
+                        sizeR = 0;
+                    if ( sizeR == 0 && offR == offW ) {
+                        offR = offW = 0;
+                        sizeW = sizeof buffer;
+                    }
+                }
+            }
+        }
+    }
+    if ( start )
+        rc = RC ( rcVFS, rcQuery, rcExecuting, rcString, rcInsufficient );
+    DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
+        ( "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ "
+          "rc = %R\n\n", rc ) );
+    return rc;
+}
+
+
+static
+rc_t KServiceProcessStreamByParts ( KService * self, KStream * stream )
+{
+    rc_t rc = 0;
     bool start = true;
     char buffer [ 4096 ] = "";
     size_t num_read = 0;
     timeout_t tm;
-    rc_t rc = 0;
     size_t sizeW = sizeof buffer;
     size_t sizeR = 0;
     size_t offR = 0;
@@ -3294,6 +3464,16 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
         ( "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ "
           "rc = %R\n\n", rc ) );
     return rc;
+}
+
+
+static
+rc_t KServiceProcessStream ( KService * self, KStream * stream )
+{
+    if ( false )
+        return KServiceProcessStreamByParts ( self, stream );
+    else
+        return KServiceProcessStreamAll     ( self, stream );
 }
 
 
