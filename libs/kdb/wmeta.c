@@ -2310,9 +2310,11 @@ KMetadataFlushToMemory ( KMetadata * self, char * buffer, size_t bsize, size_t *
 {
     rc_t rc;
     KMDFlushData pb;
+    size_t best_of_8;
 
     rc = 0;
     memset ( & pb, 0, sizeof pb );
+    best_of_8 = 0;
 
     if ( num_writ != 0 ) {
         * num_writ = 0;
@@ -2337,6 +2339,7 @@ KMetadataFlushToMemory ( KMetadata * self, char * buffer, size_t bsize, size_t *
             hdr -> version = KMETADATAVERS;
             pb . marker = sizeof * hdr;
         }
+        best_of_8 = pb . marker;
 
         /* persist root node */
         rc = BSTreePersist (
@@ -2347,6 +2350,9 @@ KMetadataFlushToMemory ( KMetadata * self, char * buffer, size_t bsize, size_t *
                         KMDataNodeAuxFunc,
                         NULL
                         );
+        if ( rc == 0 ) {
+            * num_writ += best_of_8;
+        }
     }
 
     return rc;
