@@ -985,6 +985,23 @@ FIXTURE_TEST_CASE(FuncCall_Vararg, AST_Fixture)
     REQUIRE_EQ ( 3u, VectorLength ( & expr -> pfunc ) );
 }
 
+FIXTURE_TEST_CASE(ChildSchema_AccessToParentsNames, AST_Fixture)
+{   // VDB-3635: partial copy of a namespace to the child schema obscures members left behind
+    MakeAst  ( "typedef U8 NS:a:t1; typedef U8 NS:b:t2; extern function NS:a:t1 NS:a:fn();"  );
+    VTypedecl resolved_dad;
+    REQUIRE_RC ( VSchemaResolveTypedecl ( m_schema, & resolved_dad, "NS:b:t2" ) );
+
+    VSchema * child;
+    REQUIRE_RC ( VSchemaMake ( &child, m_schema ) );
+    string source = "typedef NS:a:t1 OK; typedef U8 NS:b:t2; typedef NS:b:t2 NotOK; ";
+    REQUIRE_RC ( VSchemaParseText ( child, 0, source . c_str (), source . size () ) );
+    VTypedecl resolved_child;
+    REQUIRE_RC ( VSchemaResolveTypedecl ( child, & resolved_child, "NS:b:t2" ) );
+
+    REQUIRE_EQ ( resolved_dad . type_id, resolved_child . type_id );
+    REQUIRE_RC ( VSchemaRelease ( child ) );
+}
+
 //TODO: invalid float
 //TODO: nested vector constants - error
 //TODO: negation applied to non-scalar - error

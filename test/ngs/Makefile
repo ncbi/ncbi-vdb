@@ -88,6 +88,8 @@ $(TEST_BINDIR)/ngs-makedb: $(NGS_MAKEDB_OBJ)
 makedb: $(TEST_BINDIR)/ngs-makedb
 	cd $(SRCDIR)/data; $(TEST_BINDIR)/ngs-makedb
 
+.PHONY: makedb
+
 #-------------------------------------------------------------------------------
 # test-ngs
 #
@@ -214,10 +216,10 @@ TEST_NGS_FRAGBLOB_SRC = \
 TEST_NGS_FRAGBLOB_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_FRAGBLOB_SRC))
 
-$(TEST_BINDIR)/test-ngs_fragmentblob: $(TEST_NGS_FRAGBLOB_OBJ) makedb
+$(TEST_BINDIR)/test-ngs_fragmentblob: $(TEST_NGS_FRAGBLOB_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
-fragmentblob: test-ngs_fragmentblob
+fragmentblob: test-ngs_fragmentblob makedb
 	cd $(SRCDIR); $(TEST_BINDIR)/$^
 
 #-------------------------------------------------------------------------------
@@ -229,10 +231,10 @@ TEST_NGS_REFBLOB_SRC = \
 TEST_NGS_REFBLOB_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_REFBLOB_SRC))
 
-$(TEST_BINDIR)/test-ngs_referenceblob: $(TEST_NGS_REFBLOB_OBJ) makedb
+$(TEST_BINDIR)/test-ngs_referenceblob: $(TEST_NGS_REFBLOB_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
-refblob: test-ngs_referenceblob
+refblob: test-ngs_referenceblob makedb
 	cd $(SRCDIR); $(TEST_BINDIR)/$^
 
 #-------------------------------------------------------------------------------
@@ -244,8 +246,8 @@ TEST_NGS_BYTEBLOB_SRC = \
 TEST_NGS_BYTEBLOB_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_BYTEBLOB_SRC))
 
-$(TEST_BINDIR)/test-ngs_byteblob: $(TEST_NGS_BYTEBLOB_OBJ) makedb
+$(TEST_BINDIR)/test-ngs_byteblob: $(TEST_NGS_BYTEBLOB_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
-byteblob: test-ngs_byteblob
+byteblob: test-ngs_byteblob makedb
 	cd $(SRCDIR); $(TEST_BINDIR)/$^

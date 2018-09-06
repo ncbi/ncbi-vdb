@@ -779,7 +779,7 @@ bool CC STableScanVirtuals ( void *item, void *data )
             else
             {
                 /* copy the original */
-                KSymbol *copy;
+                const KSymbol *copy;
                 rc_t rc = KSymbolCopy ( scope, & copy, orig );
                 if ( rc != 0 )
                     return true;
