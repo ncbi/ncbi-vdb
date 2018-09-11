@@ -233,16 +233,22 @@ $(TEST_BINDIR)/test-cachetee-out-of-space: $(CTOFS_OBJ)
 	$(LP) --exe -o $@ $^ $(CTOFS_LIB)
 	rm *.o *.d
 
-ifeq (linux,$(OS))
-ifeq (1,$(HAVE_FUSE))
-#-------------------------------------------------------------------------------
-# scripted tests
-#
-runtests: cachetee-out-of-space-test
+kfstest: $(TEST_BINDIR)/test-kfs
+	@ echo "Running test-kfs"
+	$(TEST_BINDIR)/test-kfs
 
 cachetee-out-of-space-test: $(TEST_BINDIR)/fuse-proxy $(TEST_BINDIR)/test-cachetee-out-of-space run-cachetee-out-of-space-test.sh
 	@ echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 	@ echo "Running $(SRCDIR)/run-cachetee-out-of-space-test.sh"
 	@ $(SRCDIR)/run-cachetee-out-of-space-test.sh $(SRCDIR) $(TEST_BINDIR)
+
+ifeq (linux,$(OS))
+ifeq (1,$(HAVE_FUSE))
+#-------------------------------------------------------------------------------
+# scripted tests
+#
+runtests: kfstest cachetee-out-of-space-test
 endif
+else
+runtests: kfstest
 endif

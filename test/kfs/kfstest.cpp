@@ -29,6 +29,7 @@
 */
 
 #include <cstring>
+#include <stdio.h>
 
 #include <ktst/unit_test.hpp>
 #include <kfs/mmap.h>
@@ -164,6 +165,37 @@ TEST_CASE(Tar_Parse)
     REQUIRE_RC(KDirectoryRelease(tarDir));
     REQUIRE_RC(KDirectoryRelease(dir));
 }                                 
+
+TEST_CASE(Dir_List)
+{
+    KDirectory *dir;
+    REQUIRE_RC(KDirectoryNativeDir(&dir));
+
+    struct KNamelist *list;
+    REQUIRE_RC(KDirectoryList(dir, &list, NULL, NULL, NULL));
+
+    uint32_t count;
+    REQUIRE_RC(KNamelistCount(list, &count));
+    REQUIRE_GT(count, (uint32_t)5);
+
+    const char* name;
+    bool found=false;
+    for (uint32_t i=0; i!=count; ++i)
+    {
+        REQUIRE_RC(KNamelistGet(list, i, &name));
+        if (!strcmp(name,"kfstest.cpp"))
+        {
+            found=true;
+            //printf("Found");
+        }
+        //printf("File #%u: %s\n", i, name);
+    }
+
+    REQUIRE_EQ(found, true);
+
+    REQUIRE_RC(KNamelistRelease(list));
+    REQUIRE_RC(KDirectoryRelease(dir));
+}
 
 //////////////////////////////////////////// Main
 extern "C"
