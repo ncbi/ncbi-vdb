@@ -985,18 +985,35 @@ FIXTURE_TEST_CASE(FuncCall_Vararg, AST_Fixture)
     REQUIRE_EQ ( 3u, VectorLength ( & expr -> pfunc ) );
 }
 
-FIXTURE_TEST_CASE(ChildSchema_AccessToParentsNames, AST_Fixture)
-{   // VDB-3635: partial copy of a namespace to the child schema obscures members left behind
-    MakeAst  ( "typedef U8 NS:a:t1; typedef U8 NS:b:t2; extern function NS:a:t1 NS:a:fn();"  );
+FIXTURE_TEST_CASE(ChildSchema_AccessToParentsSchemaNames, AST_Fixture)
+{
+    MakeAst  ( "typedef U8 NS:T;"  );
     VTypedecl resolved_dad;
-    REQUIRE_RC ( VSchemaResolveTypedecl ( m_schema, & resolved_dad, "NS:b:t2" ) );
+    REQUIRE_RC ( VSchemaResolveTypedecl ( m_schema, & resolved_dad, "NS:T" ) );
 
     VSchema * child;
     REQUIRE_RC ( VSchemaMake ( &child, m_schema ) );
-    string source = "typedef NS:a:t1 OK; typedef U8 NS:b:t2; typedef NS:b:t2 NotOK; ";
+    string source = "typedef U8 NS:T;";
     REQUIRE_RC ( VSchemaParseText ( child, 0, source . c_str (), source . size () ) );
     VTypedecl resolved_child;
-    REQUIRE_RC ( VSchemaResolveTypedecl ( child, & resolved_child, "NS:b:t2" ) );
+    REQUIRE_RC ( VSchemaResolveTypedecl ( child, & resolved_child, "NS:T" ) );
+
+    REQUIRE_EQ ( resolved_dad . type_id, resolved_child . type_id );
+    REQUIRE_RC ( VSchemaRelease ( child ) );
+}
+
+FIXTURE_TEST_CASE(ChildSchema_AccessToParentsNames, AST_Fixture)
+{   // VDB-3635: partial copy of a namespace to the child schema obscures members left behind
+    MakeAst  ( "typedef U8 NS:b:T; extern function U8 NS:a:fn();"  );
+    VTypedecl resolved_dad;
+    REQUIRE_RC ( VSchemaResolveTypedecl ( m_schema, & resolved_dad, "NS:b:T" ) );
+
+    VSchema * child;
+    REQUIRE_RC ( VSchemaMake ( &child, m_schema ) );
+    string source = "typedef U8 NS:b:T;";
+    REQUIRE_RC ( VSchemaParseText ( child, 0, source . c_str (), source . size () ) );
+    VTypedecl resolved_child;
+    REQUIRE_RC ( VSchemaResolveTypedecl ( child, & resolved_child, "NS:b:T" ) );
 
     REQUIRE_EQ ( resolved_dad . type_id, resolved_child . type_id );
     REQUIRE_RC ( VSchemaRelease ( child ) );

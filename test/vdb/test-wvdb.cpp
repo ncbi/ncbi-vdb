@@ -386,11 +386,11 @@ FIXTURE_TEST_CASE ( VCursor_FindNextRowIdDirect, WVDB_Fixture )
 }
 
 FIXTURE_TEST_CASE ( EmbeddedOnGlobal_ShareIdenticalIds, WVDB_Fixture )
-{ // VDB-3635: global schema and linker schema should share IDs for identical objects
+{ // VDB-3635: global schema and embedded schema should share IDs for identical objects
     m_databaseName = ScratchDir + GetName();
 
-    string schemaText = "typedef U8 INSDC_4na_bin;" // same as in insdc/insdc.vschema
-                        "table table1 #1.0.0 { column INSDC_4na_bin column1; };"
+    string schemaText = "typedef U8 INSDC:4na:bin;" // same as in insdc/insdc.vschema
+                        "table table1 #1.0.0 { column INSDC:4na:bin column1; };"
                         "database root_database #1 { table table1 #1 TABLE1; } ;";
 
     const char* TableName = "TABLE1";
