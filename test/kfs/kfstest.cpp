@@ -186,7 +186,7 @@ TEST_CASE(Dir_List)
         if (!strcmp(name,"kfstest.cpp"))
         {
             found=true;
-            //printf("Found");
+            printf("Found %s\n", name);
         }
         //printf("File #%u: %s\n", i, name);
     }
