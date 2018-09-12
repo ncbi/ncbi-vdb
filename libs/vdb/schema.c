@@ -85,16 +85,23 @@ void CC BSTreeMbrWhack ( BSTNode *n, void *ignore )
 /*--------------------------------------------------------------------------
  * KSymbol
  */
+struct CloneBlock
+{
+    KSymbol * targetNs;
+    rc_t rc;
+};
+
 static rc_t CloneSymbol ( BSTree *scope, const KSymbol **cp, const KSymbol *orig, KSymbol * targetNs );
 
 static
 bool CC CloneNode ( BSTNode *n, void *data )
 {
     const KSymbol * sym = (const KSymbol *)n;
-    KSymbol * targetNs = (KSymbol *) data;
-    const KSymbol * copy;
-    rc_t rc = CloneSymbol ( & targetNs -> u . scope, & copy, sym, targetNs );
-    return rc != 0; /*TODO: propagate rc upwards */
+    struct CloneBlock * bl = (struct CloneBlock*) data;
+    KSymbol * targetNs = bl -> targetNs;
+    const KSymbol * ignore;
+    bl -> rc = CloneSymbol ( & targetNs -> u . scope, & ignore, sym, bl -> targetNs );
+    return bl -> rc != 0;
 }
 
 static
@@ -123,9 +130,11 @@ CloneSymbol ( BSTree *scope, const KSymbol **cp, const KSymbol *orig, KSymbol * 
         if ( orig -> type == eNamespace )
         {   /* clone the contents of the namespace*/
             assert ( existing -> type == eNamespace );
-            if ( BSTreeDoUntil ( & orig -> u . scope, false, CloneNode, existing ) )
+            struct CloneBlock bl;
+            bl . targetNs = existing;
+            if ( BSTreeDoUntil ( & orig -> u . scope, false, CloneNode, & bl ) )
             {
-                rc = RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted );/*TODO: use the one propagated from CloneNode */
+                rc = bl . rc;
             }
         }
 
@@ -142,10 +151,12 @@ CloneSymbol ( BSTree *scope, const KSymbol **cp, const KSymbol *orig, KSymbol * 
     {
         if ( rc == 0  && orig -> type == eNamespace )
         {   /* clone the contents of the namespace*/
+            struct CloneBlock bl;
+            bl . targetNs = copy;
             BSTreeInit ( & copy -> u . scope );
-            if ( BSTreeDoUntil ( & orig -> u . scope, false, CloneNode, copy ) )
+            if ( BSTreeDoUntil ( & orig -> u . scope, false, CloneNode, & bl ) )
             {
-                rc = RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted );/*TODO: use the one propagated from CloneNode */
+                rc = bl . rc;
             }
         }
 
