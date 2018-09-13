@@ -67,7 +67,7 @@
     T ( SchemaToken & p_term )
     {
         assert ( p_term . subtree == 0 );
-        return new ParseTree ( p_term );
+        return ParseTree::Make ( p_term );
     }
 
     /* Create production node */
@@ -85,7 +85,7 @@
                ParseTree * p_ch9 = 0
              )
     {
-        ParseTree * ret = new ParseTree ( Token ( p_token ) );
+        ParseTree * ret = ParseTree :: Make ( Token ( p_token ) );
         if ( p_ch1 != 0 ) ret -> AddChild ( p_ch1 );
         if ( p_ch2 != 0 ) ret -> AddChild ( p_ch2 );
         if ( p_ch3 != 0 ) ret -> AddChild ( p_ch3 );
@@ -103,7 +103,7 @@
     ParseTree *
     MakeList ( SchemaToken & p_prod )
     {
-        ParseTree * ret = new ParseTree ( Token ( PT_ASTLIST ) );
+        ParseTree * ret = ParseTree :: Make ( Token ( PT_ASTLIST ) );
         ret -> AddChild ( P ( p_prod ) );
         return ret;
     }
@@ -136,7 +136,7 @@
 
 %define api.pure full
 %destructor {
-    delete ( ParseTree * ) ( $$ . subtree );
+    ParseTree :: Destroy ( ( ParseTree * ) ( $$ . subtree ) );
 } <>
 
  /* !!! Keep token declarations in synch with schema-ast.y */

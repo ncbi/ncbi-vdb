@@ -29,6 +29,7 @@ TOP ?= $(abspath ../..)
 MODULE = test/vdb
 
 TEST_TOOLS = \
+	test-link \
 	test-vdb \
 	test-wvdb \
 	test-dependencies \
@@ -361,4 +362,23 @@ $(TEST_BINDIR)/test-VDB-3418: $(VDB_3418_OBJ)
 
 VDB-3418: test-VDB-3418
 	$(TEST_BINDIR)/test-VDB-3418
+
+#-------------------------------------------------------------------------------
+# test-link (make sure C++ stdlib is not required)
+#
+VDB_LINK_SRC = \
+	test-link
+
+VDB_LINK_OBJ = \
+	$(addsuffix .$(OBJX),$(VDB_LINK_SRC))
+
+VDB_LINK_LIB = \
+	-skapp \
+	-sncbi-vdb
+
+$(TEST_BINDIR)/test-link: $(VDB_LINK_OBJ)
+	$(LD) --exe -o $@ $^ $(VDB_LINK_LIB)
+
+link: test-link
+	$(TEST_BINDIR)/$^
 

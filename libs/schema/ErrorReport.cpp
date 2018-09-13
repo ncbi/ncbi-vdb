@@ -26,6 +26,8 @@
 
 #include "ErrorReport.hpp"
 
+#include <new>
+
 #include <klib/symbol.h>
 #include <klib/printf.h>
 
@@ -42,18 +44,36 @@ InternalError :: InternalError(const char * p_text)
 {
 }
 
-InternalError :: ~InternalError() throw()
+InternalError :: ~InternalError()
 {
     free ( m_text );
 }
 
 const char*
-InternalError :: what() const throw()
+InternalError :: what() const
 {
     return m_text;
 }
 
 ///////////////////////////////////////// Error Report :: Error
+
+ErrorReport :: Error *
+ErrorReport :: Error :: Make ( const char * p_message, const ErrorReport :: Location & p_location )
+{
+    void * ret = malloc ( sizeof ( ErrorReport :: Error ) );
+    if ( ret == 0 ) return 0; // TODO: raise KFC error
+    return new ( ret ) ErrorReport :: Error ( p_message, p_location );
+}
+
+void
+ErrorReport :: Error :: Destroy ( ErrorReport :: Error * self )
+{
+    if ( self != 0 )
+    {
+        self -> ~Error();
+        free ( self );
+    }
+}
 
 ErrorReport :: Error :: Error( const char * p_message, const ErrorReport :: Location & p_location )
 :   m_message ( string_dup_measure ( p_message, 0 ) )
@@ -97,8 +117,7 @@ static
 void CC
 WhackError ( void *item, void *data )
 {
-    ErrorReport :: Error * it = reinterpret_cast < ErrorReport :: Error * > ( item );
-    delete ( it ); // was allocated with new (see below)
+    ErrorReport :: Error :: Destroy ( reinterpret_cast < ErrorReport :: Error * > ( item ) );
 }
 
 void
@@ -118,10 +137,11 @@ ErrorReport :: ReportError ( const Location & p_location, const char* p_fmt, ...
     string_vprintf ( buf, BufSize, 0, p_fmt, args );
     va_end ( args );
 
-    rc_t rc = :: VectorAppend ( & m_errors, 0, new Error ( buf, p_location ) );
+    rc_t rc = :: VectorAppend ( & m_errors, 0, Error :: Make ( buf, p_location ) );
     if ( rc != 0 )
     {
-        throw InternalError ( "ReportError() : VectorAppend() failed" );
+        //TODO: raise a KFC error
+        // throw InternalError ( "ReportError() : VectorAppend() failed" );
     }
 }
 
@@ -137,10 +157,11 @@ ErrorReport :: ReportInternalError ( const char * p_source, const char* p_fmt, .
     va_end ( args );
 
     Location loc ( p_source, 0, 0 );
-    rc_t rc = :: VectorAppend ( & m_errors, 0, new Error ( buf, loc ) );
+    rc_t rc = :: VectorAppend ( & m_errors, 0, Error :: Make ( buf, loc ) );
     if ( rc != 0 )
     {
-        throw InternalError ( "ReportError() : VectorAppend() failed" );
+        //TODO: raise a KFC error
+        //throw InternalError ( "ReportError() : VectorAppend() failed" );
     }
 }
 

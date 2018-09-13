@@ -453,7 +453,7 @@ ASTBuilder :: DeclareTypeSet ( const AST_FQN & p_fqn, const BSTree & p_types, ui
 AST *
 ASTBuilder :: TypeDef ( const Token * p_token, AST_FQN* p_baseType, AST* p_newTypes )
 {   //TODO: do we need to keep all these subtrees beyond the population of symtab?
-    AST * ret = new AST ( p_token, p_baseType, p_newTypes );
+    AST * ret = AST :: Make ( p_token, p_baseType, p_newTypes );
 
     const KSymbol * baseType = Resolve ( * p_baseType ); // will report unknown name
     if ( baseType != 0 )
@@ -568,7 +568,7 @@ ASTBuilder :: TypeSpec ( const AST & p_spec, VTypedecl & p_td )
 AST *
 ASTBuilder :: TypeSet ( const Token* p_token, AST_FQN * p_name, AST * p_typeSpecs )
 {
-    AST * ret = new AST ( p_token, p_name, p_typeSpecs );
+    AST * ret = AST :: Make ( p_token, p_name, p_typeSpecs );
 
     const KSymbol * existing = Resolve ( * p_name, false );
 
@@ -655,7 +655,7 @@ ASTBuilder :: TypeSet ( const Token* p_token, AST_FQN * p_name, AST * p_typeSpec
 AST *
 ASTBuilder :: FmtDef ( const Token* p_token, AST_FQN* p_fqn, AST_FQN* p_super_opt )
 {
-    AST * ret = new AST ( p_token, p_fqn );
+    AST * ret = AST :: Make ( p_token, p_fqn );
     if ( p_super_opt != 0 )
     {
         ret -> AddNode ( p_super_opt );
@@ -698,7 +698,7 @@ ASTBuilder :: FmtDef ( const Token* p_token, AST_FQN* p_fqn, AST_FQN* p_super_op
 AST *
 ASTBuilder :: ConstDef  ( const Token* p_token, AST* p_type, AST_FQN* p_fqn, AST_Expr* p_expr )
 {
-    AST * ret = new AST ( p_token, p_type, p_fqn, p_expr );
+    AST * ret = AST :: Make ( p_token, p_type, p_fqn, p_expr );
 
     SConstant *cnst = Alloc < SConstant > ();
     if ( cnst != 0 )
@@ -753,7 +753,7 @@ ASTBuilder :: ConstDef  ( const Token* p_token, AST* p_type, AST_FQN* p_fqn, AST
 AST *
 ASTBuilder :: AliasDef  ( const Token* p_token, AST_FQN* p_name, AST_FQN* p_newName )
 {
-    AST * ret = new AST ( p_token, p_name, p_newName );
+    AST * ret = AST :: Make( p_token, p_name, p_newName );
 
     const KSymbol * sym = Resolve ( * p_name ); // will report unknown name
     if ( sym != 0 )
@@ -860,7 +860,7 @@ ASTBuilder :: OpenIncludeFile ( const Token :: Location & p_loc, const char * p_
 AST *
 ASTBuilder :: Include ( const Token * p_token, const Token * p_filename )
 {
-    AST * ret = new AST ( p_token );
+    AST * ret = AST :: Make ( p_token );
     assert ( p_filename != 0 );
     ret -> AddNode ( p_filename );
 
@@ -874,7 +874,9 @@ ASTBuilder :: Include ( const Token * p_token, const Token * p_filename )
             SchemaParser parser;
             if ( parser . ParseFile ( f, unquoted ) )
             {
-                delete Build ( * parser . GetParseTree (), unquoted, false );
+                AST * root = Build ( * parser . GetParseTree (), unquoted, false );
+                // Build() adds to our AST, so we do need the include's root anymore
+                AST :: Destroy ( root );
             }
             KFileRelease ( f );
         }

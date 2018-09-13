@@ -38,8 +38,8 @@ namespace ncbi
         class ParseTree
         {
         public:
-            ParseTree ( const Token& token );
-            virtual ~ParseTree ();
+            static ParseTree * Make ( const Token& token );
+            static void Destroy ( ParseTree * );
 
             void AddChild ( ParseTree * ); // make sure is allocated with new
 
@@ -53,6 +53,9 @@ namespace ncbi
             const Token :: Location & GetLocation () const { return * m_location; } // location of the leading real token
 
         protected:
+            ParseTree ( const Token& token );
+            ~ParseTree ();
+
             void MoveChildren ( ParseTree& );
             void SetToken ( const Token & p_token ) {  m_token = p_token; }
 
@@ -78,6 +81,9 @@ namespace ncbi
             void PushNode ( const ParseTree* );
 
         private:
+            ParseTree * ChildrenOpen;
+            ParseTree * ChildrenClose;
+
             char *  m_source;
             Vector  m_stack;
         };

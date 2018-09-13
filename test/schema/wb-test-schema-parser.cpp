@@ -90,33 +90,36 @@ operator == ( const Token & l, const Token & r)
 
 TEST_CASE(ParseTree_Construct)
 {
-    ParseTree t ( st );
-    REQUIRE ( t . GetToken() == Token ( st ) );
+    ParseTree * t = ParseTree :: Make ( st );
+    REQUIRE ( t -> GetToken() == Token ( st ) );
+    ParseTree :: Destroy ( t );
 }
 
 TEST_CASE(ParseTree_AddChild)
 {
-    ParseTree t = Token ( PT_PARSE );
-    t. AddChild ( new ParseTree ( st0 ) );
-    t. AddChild ( new ParseTree ( st1 ) );
+    ParseTree * t = ParseTree :: Make ( Token ( PT_PARSE ) );
+    t -> AddChild ( ParseTree :: Make ( st0 ) );
+    t -> AddChild ( ParseTree :: Make ( st1 ) );
 
-    REQUIRE ( t . GetChild ( 0 ) -> GetToken () == Token ( st0 ) );
-    REQUIRE ( t . GetChild ( 1 ) -> GetToken () == Token ( st1 ) );
+    REQUIRE ( t -> GetChild ( 0 ) -> GetToken () == Token ( st0 ) );
+    REQUIRE ( t -> GetChild ( 1 ) -> GetToken () == Token ( st1 ) );
+    ParseTree :: Destroy ( t );
 }
 TEST_CASE(ParseTree_ChildrenCount)
 {
-    ParseTree t = Token ( PT_PARSE );
-    t. AddChild ( new ParseTree ( st0 ) );
-    t. AddChild ( new ParseTree ( st1 ) );
+    ParseTree * t = ParseTree :: Make ( Token ( PT_PARSE ) );
+    t -> AddChild ( ParseTree :: Make ( st0 ) );
+    t -> AddChild ( ParseTree :: Make ( st1 ) );
 
-    REQUIRE_EQ ( 2u, t . ChildrenCount () );
+    REQUIRE_EQ ( 2u, t -> ChildrenCount () );
+    ParseTree :: Destroy ( t );
 }
 
 TEST_CASE(ParseTree_MoveChildren)
 {
-    ParseTree source = Token ( PT_PARSE );
-    source. AddChild ( new ParseTree ( st0 ) );
-    source. AddChild ( new ParseTree ( st1 ) );
+    ParseTree * source = ParseTree :: Make ( Token ( PT_PARSE ) );
+    source -> AddChild ( ParseTree :: Make ( st0 ) );
+    source -> AddChild ( ParseTree :: Make ( st1 ) );
 
     class TestTree : public ParseTree
     {
@@ -125,35 +128,40 @@ TEST_CASE(ParseTree_MoveChildren)
         TestTree(const Token & p_t) : ParseTree( p_t ) {};
     } target ( st );
 
-    target . MoveChildren ( source );
+    target . MoveChildren ( * source );
 
-    REQUIRE_EQ ( 0u, source . ChildrenCount () );
+    REQUIRE_EQ ( 0u, source -> ChildrenCount () );
 
     REQUIRE_EQ ( 2u, target . ChildrenCount () );
     REQUIRE ( target . GetChild ( 0 ) -> GetToken () == Token ( st0 ) );
     REQUIRE ( target . GetChild ( 1 ) -> GetToken () == Token ( st1 ) );
+
+    ParseTree :: Destroy ( source );
 }
 
 TEST_CASE(ParseTree_Location)
 {
     // start with a fake token, its empty location is used as the tree's location
-    ParseTree source = Token ( PT_PARSE );
-    REQUIRE_EQ ( string (), string ( source . GetLocation() . m_file ) );
-    REQUIRE_EQ ( 0u, source . GetLocation() . m_line );
-    REQUIRE_EQ ( 0u, source . GetLocation() . m_column );
+    ParseTree * source = ParseTree :: Make ( Token ( PT_PARSE ) );
+
+    REQUIRE_EQ ( string (), string ( source -> GetLocation() . m_file ) );
+    REQUIRE_EQ ( 0u, source -> GetLocation() . m_line );
+    REQUIRE_EQ ( 0u, source -> GetLocation() . m_column );
 
     // add a real token, make sure its location is used as the tree's location
     SchemaToken st1 = { KW_view, "view", 4, 0, 0, "file", 1, 2 };
-    source . AddChild ( new ParseTree ( st1 ) );
-    REQUIRE_EQ ( string ( "file" ), string ( source . GetLocation() . m_file ) ); // first real token
-    REQUIRE_EQ ( 1u, source . GetLocation() . m_line );
-    REQUIRE_EQ ( 2u, source . GetLocation() . m_column );
+    source -> AddChild ( ParseTree :: Make ( st1 ) );
+    REQUIRE_EQ ( string ( "file" ), string ( source -> GetLocation() . m_file ) ); // first real token
+    REQUIRE_EQ ( 1u, source -> GetLocation() . m_line );
+    REQUIRE_EQ ( 2u, source -> GetLocation() . m_column );
 
     // add more real tokens, make sure the location does not change
     SchemaToken st2 = { KW_view, "view", 4, 0, 0, "file", 2, 3 };
-    source . AddChild ( new ParseTree ( st2 ) );
-    REQUIRE_EQ ( 1u, source . GetLocation() . m_line );
-    REQUIRE_EQ ( 2u, source . GetLocation() . m_column );
+    source -> AddChild ( ParseTree :: Make ( st2 ) );
+    REQUIRE_EQ ( 1u, source -> GetLocation() . m_line );
+    REQUIRE_EQ ( 2u, source -> GetLocation() . m_column );
+
+    ParseTree :: Destroy ( source );
 }
 
 // SchemaParser
@@ -191,7 +199,7 @@ TEST_CASE(SchemaParser_MoveParseTree)
     p . ParseString ( "" );
     ParseTree * root = p . MoveParseTree ();
     REQUIRE_NULL ( p . GetParseTree () );
-    delete root;
+    ParseTree :: Destroy ( root );
 }
 
 // Grammar

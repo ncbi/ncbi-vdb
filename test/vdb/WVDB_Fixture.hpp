@@ -196,8 +196,8 @@ public:
         {
             throw std :: logic_error ( "AST_Fixture::MakeAst : ASTBuilder::Build() failed, no message!" );
         }
-        delete ast;
-        delete parseTree;
+        ncbi :: SchemaParser :: AST :: Destroy ( ast );
+        ncbi :: SchemaParser :: ParseTree :: Destroy ( parseTree );
     }
 
     static std :: string FormatErrorMessage( const ncbi :: SchemaParser :: ErrorReport :: Error & p_err )

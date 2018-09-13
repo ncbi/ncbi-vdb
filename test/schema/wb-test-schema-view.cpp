@@ -25,19 +25,22 @@
 */
 
 /**
-* Unit tests for view declarations in schema, this file is #included into a bigger test suite
+* Unit tests for view declarations in schema
 */
-#if 0
-FIXTURE_TEST_CASE(Version_2_Empty_Source, AST_Fixture)
-{
-    AST * ast = MakeAst ( "version 2; table t#1 {};" );
-    REQUIRE_NOT_NULL ( ast );
-    REQUIRE_EQ ( ( int ) PT_SCHEMA_2_0, ast -> GetTokenType () );
-    REQUIRE_EQ ( 2u, ast -> ChildrenCount () );
-    REQUIRE_EQ ( ( int ) PT_EMPTY,      ast -> GetChild ( 0 ) -> GetTokenType () ); // declarations in a list
-    REQUIRE_EQ ( ( int ) PT_VERSION_2,  ast -> GetChild ( 1 ) -> GetTokenType () );
-}
-#endif
+
+#include "AST_Fixture.hpp"
+
+#include <ktst/unit_test.hpp>
+
+#include <klib/symbol.h>
+
+#include "../../libs/vdb/schema-expr.h"
+
+using namespace std;
+using namespace ncbi::NK;
+
+TEST_SUITE ( SchemaViewTestSuite );
+
 class ViewAccess // encapsulates access to an SView in a VSchema
 {
 public:
@@ -112,7 +115,7 @@ public:
     #undef THROW_ON_TRUE
 
 };
-#if 0
+
 FIXTURE_TEST_CASE(View_OneTable_NoParents, AST_View_Fixture)
 {
     ViewAccess v = ParseView ( "version 2; table T#1 {}; view v#1 <T t> {}", "v" );
@@ -452,11 +455,13 @@ FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesColumn, AST_View_Fixture)
     REQUIRE_EQ ( 1u, expr -> paramId );
     REQUIRE_EQ ( string("c1"), ToCppString ( expr -> member -> name ) );
 }
+
 FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesColumn_PseudoPhysicalToken, AST_View_Fixture)
 {   // .b looks like a physical identifier
     ViewAccess v = ParseView ( "version 2; table T#1 { column U8 c1 = 1; }; view W#1 <T t> { column U8 c2 = t .c1; }", "W" );
     REQUIRE_EQ ( ( uint32_t ) eMembExpr, v . Columns () . Get ( 0 ) -> read -> var );
 }
+
 FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesProduction, AST_View_Fixture)
 {    // can access non-virtual productions defined in the parameter table
     ViewAccess v = ParseView (
@@ -466,7 +471,7 @@ FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesProduction, AST_View_Fixture
     REQUIRE_EQ ( ( uint32_t ) eMembExpr, v . Columns () . Get ( 0 ) -> read -> var );
     //TODO: verify c2's value
 }
-#endif
+
 FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesVirtualProduction, AST_View_Fixture)
 {
     ViewAccess v = ParseView (
@@ -481,11 +486,11 @@ FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesVirtualProduction_Inherited,
     ViewAccess v = ParseView (
         "version 2;"
         "table T0#1         { U8 p = q; };"
-        "table T1#1         { };"
+        "table T1#1 = T0    { };"
         "view W#1 <T1 t>    { column U8 c2 = t . q; }", "W" ); // p is a virtual production introduced in a parent table of T1 but never defined, accessible to the view
     REQUIRE_EQ ( ( uint32_t ) eMembExpr, v . Columns () . Get ( 0 ) -> read -> var );
 }
-#if 0
+
 FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesProduction_Inherited, AST_View_Fixture)
 {
     ViewAccess v = ParseView (
@@ -877,4 +882,35 @@ FIXTURE_TEST_CASE(View_ColumnDecl_Context_Inherited, AST_View_Fixture)
     }
 }
 
-#endif
+//////////////////////////////////////////// Main
+#include <kapp/args.h>
+#include <kfg/config.h>
+#include <klib/out.h>
+
+extern "C"
+{
+
+ver_t CC KAppVersion ( void )
+{
+    return 0x1000000;
+}
+
+const char UsageDefaultName[] = "wb-test-schema-view";
+
+rc_t CC UsageSummary (const char * progname)
+{
+    return KOutMsg ( "Usage:\n" "\t%s [options] -o path\n\n", progname );
+}
+
+rc_t CC Usage( const Args* args )
+{
+    return 0;
+}
+
+rc_t CC KMain ( int argc, char *argv [] )
+{
+    return SchemaViewTestSuite(argc, argv);
+}
+
+}
+

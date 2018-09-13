@@ -232,7 +232,7 @@ rc_t CC KMain ( int argc, char *argv [] )
                         compare = false;
                     }
 
-                    delete root;
+                    AST :: Destroy ( root );
 
                     ostringstream out;
                     DumpSchema ( schema, out );
