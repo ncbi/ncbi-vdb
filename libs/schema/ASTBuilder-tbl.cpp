@@ -453,8 +453,6 @@ TableDeclaration :: HandleStatement ( const AST & p_stmt )
     }
 }
 
-#include <iostream>
-using namespace std;
 void
 TableDeclaration :: HandleBody ( const AST & p_body )
 {
@@ -462,21 +460,17 @@ TableDeclaration :: HandleBody ( const AST & p_body )
     if ( rc == 0 )
     {
         /* scan override tables for virtual symbols */
-cout<<"before ScanVirtuals()"<<endl;
-KSymTableDump(&m_builder.GetSymTab ());
         uint32_t start = VectorStart ( & m_self -> overrides );
         uint32_t count = VectorLength ( & m_self -> overrides );
         for ( uint32_t i = 0; i < count; ++ i )
         {
             STableOverrides * ov = static_cast < STableOverrides * > ( VectorGet ( & m_self -> overrides, start + i ) );
-            if ( ! m_builder . ScanVirtuals ( p_body . GetLocation (), ov -> by_parent ) )
+            if ( ! m_builder . ScanVirtuals ( p_body . GetLocation (), ov -> by_parent, m_builder . GetSymTab () ) )
             {
                 pop_tbl_scope ( & m_builder . GetSymTab (), m_self );
                 return;
             }
         }
-cout<<"ScanVirtuals() done"<<endl;
-KSymTableDump(&m_builder.GetSymTab ());
 
         /* handle table declarations */
         count = p_body . ChildrenCount ();
@@ -484,9 +478,6 @@ KSymTableDump(&m_builder.GetSymTab ());
         {
             HandleStatement ( * p_body . GetChild ( i ) );
         }
-
-cout<<"HandleBody() done"<<endl;
-KSymTableDump(&m_builder.GetSymTab ());
 
         STableScanData pb;
         pb . self = m_self;
@@ -1056,7 +1047,7 @@ TableDeclaration :: AddUntyped ( const AST_FQN & p_fqn )
 AST *
 ASTBuilder ::  TableDef ( const Token * p_token, AST_FQN * p_fqn, AST * p_parents, AST * p_body )
 {
-    AST * ret = new AST ( p_token, p_fqn, p_parents, p_body );
+    AST * ret = AST :: Make ( p_token, p_fqn, p_parents, p_body );
 
     TableDeclaration table ( * this );
     assert ( p_fqn != 0 );

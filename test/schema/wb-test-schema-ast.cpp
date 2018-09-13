@@ -46,7 +46,7 @@ using namespace ncbi::NK;
 TEST_SUITE ( SchemaASTTestSuite );
 
 // AST
-#if 0
+
 static
 bool
 VerifyNextToken ( ParseTreeScanner& p_scan, int p_type)
@@ -67,7 +67,7 @@ TEST_CASE(Construct_Empty)
     REQUIRE ( VerifyNextToken ( scan, Token :: EndSource ) );
     REQUIRE ( VerifyNextToken ( scan, ')' ) );
 
-    delete root;
+    ParseTree :: Destroy ( root );
 }
 
 TEST_CASE(WalkParseTree)
@@ -108,7 +108,7 @@ TEST_CASE(WalkParseTree)
     REQUIRE ( VerifyNextToken ( scan, Token :: EndSource ) );
     REQUIRE ( VerifyNextToken ( scan, ')' ) );
 
-    delete root;
+    ParseTree :: Destroy ( root );
 }
 
 // ErrorReport
@@ -159,7 +159,7 @@ TEST_CASE ( AST_FQN_NakedIdent )
     fqn -> GetFullName ( buf, sizeof buf );
     REQUIRE_EQ ( string ("a"), string ( buf ) );
 
-    delete fqn;
+    AST_FQN :: Destroy ( fqn );
 }
 
 TEST_CASE ( AST_FQN_Full )
@@ -179,7 +179,7 @@ TEST_CASE ( AST_FQN_Full )
     fqn -> GetPartialName ( buf, sizeof buf, 1 );
     REQUIRE_EQ ( string ("a:b"), string ( buf ) );
 
-    delete fqn;
+    AST_FQN :: Destroy ( fqn );
 }
 
 TEST_CASE ( AST_FQN_WithVersionMaj )
@@ -187,21 +187,21 @@ TEST_CASE ( AST_FQN_WithVersionMaj )
     AST_FQN* fqn = AST_Fixture :: MakeFqn ( "a" );
     fqn -> SetVersion ( "#1" );
     REQUIRE_EQ ( 1 << 24, ( int ) fqn -> GetVersion () );
-    delete fqn;
+    AST_FQN :: Destroy ( fqn );
 }
 TEST_CASE ( AST_FQN_WithVersionMajMin )
 {
     AST_FQN* fqn = AST_Fixture :: MakeFqn ( "a" );
     fqn -> SetVersion ( "#1.22" );
     REQUIRE_EQ ( ( 1 << 24 ) | ( 22 << 16 ), ( int ) fqn -> GetVersion () );
-    delete fqn;
+    AST_FQN :: Destroy ( fqn );
 }
 TEST_CASE ( AST_FQN_WithVersionMajMinRel )
 {
     AST_FQN* fqn = AST_Fixture :: MakeFqn ( "a" );
     fqn -> SetVersion ( "#1.22.33" );
     REQUIRE_EQ ( ( 1 << 24 ) | ( 22 << 16 ) | 33, ( int ) fqn -> GetVersion () );
-    delete fqn;
+    AST_FQN :: Destroy ( fqn );
 }
 
 // AST builder
@@ -221,9 +221,13 @@ FIXTURE_TEST_CASE(Intrinsic, AST_Fixture)
 FIXTURE_TEST_CASE(Builder_ErrorReporting, AST_Fixture)
 {
     AST_FQN * id = AST_Fixture :: MakeFqn ( "foo" );
-    REQUIRE_NULL ( m_builder -> Resolve ( * id ) ); delete id;
+    REQUIRE_NULL ( m_builder -> Resolve ( * id ) );
+    AST_FQN :: Destroy ( id );
+
     id = AST_Fixture :: MakeFqn ( "bar" );
-    REQUIRE_NULL ( m_builder -> Resolve ( * id ) ); delete id;
+    REQUIRE_NULL ( m_builder -> Resolve ( * id ) );
+    AST_FQN :: Destroy ( id );
+
     REQUIRE_EQ ( 2u, m_builder -> GetErrorCount () );
     REQUIRE_EQ ( string ( "Undeclared identifier: 'foo'" ), string ( m_builder -> GetErrorMessage ( 0 ) ) );
     REQUIRE_EQ ( string ( "Undeclared identifier: 'bar'" ), string ( m_builder -> GetErrorMessage ( 1 ) ) );
@@ -276,6 +280,16 @@ FIXTURE_TEST_CASE(MultipleDecls, AST_Fixture)
     REQUIRE_EQ ( PT_EMPTY,  TokenType ( child -> GetChild ( 1 ) ) );
 }
 
+FIXTURE_TEST_CASE(Version_2_Empty_Source, AST_Fixture)
+{
+    AST * ast = MakeAst ( "version 2; table t#1 {};" );
+    REQUIRE_NOT_NULL ( ast );
+    REQUIRE_EQ ( ( int ) PT_SCHEMA_2_0, ast -> GetTokenType () );
+    REQUIRE_EQ ( 2u, ast -> ChildrenCount () );
+    REQUIRE_EQ ( ( int ) PT_EMPTY,      ast -> GetChild ( 0 ) -> GetTokenType () ); // declarations in a list
+    REQUIRE_EQ ( ( int ) PT_VERSION_2,  ast -> GetChild ( 1 ) -> GetTokenType () );
+}
+
 ///////// typedef
 
 FIXTURE_TEST_CASE(Typedef_SimpleNames_OneScalar, AST_Fixture)
@@ -306,7 +320,7 @@ FIXTURE_TEST_CASE(LocationInErrorMessages, AST_Fixture)
         REQUIRE ( m_parser . ParseString ( "\n\ntypedef a:zz t;" ) );
         m_parseTree = m_parser . MoveParseTree ();
         REQUIRE_NOT_NULL ( m_parseTree );
-        delete m_builder -> Build ( * m_parseTree );
+        ParseTree :: Destroy ( m_builder -> Build ( * m_parseTree ) );
         const ErrorReport & errors = m_builder -> GetErrors ();
         REQUIRE_EQ ( 1u, errors . GetCount () );
         const ErrorReport :: Error * err = errors . GetError ( 0 );
@@ -1008,7 +1022,6 @@ FIXTURE_TEST_CASE(CondExpr, AST_Fixture)
     REQUIRE_EQ ( ( uint32_t ) eConstExpr, expr -> right -> var );
     REQUIRE_EQ ( 3, (int)reinterpret_cast < const SConstExpr * > ( expr -> right ) -> u . u64 [0] );
 }
-#endif
 //TODO: invalid float
 //TODO: nested vector constants - error
 //TODO: negation applied to non-scalar - error
@@ -1016,11 +1029,6 @@ FIXTURE_TEST_CASE(CondExpr, AST_Fixture)
 //TODO: eCastExpr
 //TODO: eVectorExpr
 //TODO: eCondExpr
-
-//#include "wb-test-schema-func.cpp"
-#include "wb-test-schema-table.cpp"
-//#include "wb-test-schema-db.cpp"
-#include "wb-test-schema-view.cpp"
 
 //////////////////////////////////////////// Main
 #include <kapp/args.h>

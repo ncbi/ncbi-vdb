@@ -173,7 +173,7 @@ namespace ncbi
             const KSymbol * TypeSpec ( const AST & p_spec, VTypedecl & p_td );
 
             bool CheckForColumnCollision ( const KSymbol *sym );
-            bool ScanVirtuals ( const Token :: Location & p_loc, Vector & p_byParent );
+            bool ScanVirtuals ( const Token :: Location & p_loc, Vector & p_byParent, KSymTable & symtab );
 
             const struct SView * GetView () const { return m_view; }
 

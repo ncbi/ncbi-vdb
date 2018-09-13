@@ -2023,7 +2023,7 @@ yyreduce:
     {
         case 2:
 #line 261 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { p_ast = new AST ( (yyvsp[-1].tok) ); }
+    { p_ast = AST :: Make ( (yyvsp[-1].tok) ); }
 #line 2028 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2065,19 +2065,19 @@ yyreduce:
 
   case 9:
 #line 280 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-3].tok), (yyvsp[-1].node) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-3].tok), (yyvsp[-1].node) ); }
 #line 2070 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 10:
 #line 284 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-3].tok), (yyvsp[-1].node) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-3].tok), (yyvsp[-1].node) ); }
 #line 2076 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 11:
 #line 289 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+    { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
 #line 2082 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2173,7 +2173,7 @@ yyreduce:
 
   case 27:
 #line 310 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); }
+    { (yyval.node) = AST :: Make (); }
 #line 2178 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2185,7 +2185,7 @@ yyreduce:
 
   case 29:
 #line 319 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+    { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
 #line 2190 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2209,7 +2209,7 @@ yyreduce:
 
   case 33:
 #line 329 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].fqn), (yyvsp[-2].node) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-6].tok), (yyvsp[-4].fqn), (yyvsp[-2].node) ); }
 #line 2214 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2221,7 +2221,7 @@ yyreduce:
 
   case 35:
 #line 334 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( PT_EMPTY ); }
+    { (yyval.node) = AST :: Make ( PT_EMPTY ); }
 #line 2226 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2233,7 +2233,7 @@ yyreduce:
 
   case 37:
 #line 343 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+    { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
 #line 2238 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2293,7 +2293,7 @@ yyreduce:
 
   case 47:
 #line 372 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
 #line 2298 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2305,7 +2305,7 @@ yyreduce:
 
   case 49:
 #line 377 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+    { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
 #line 2310 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2317,19 +2317,19 @@ yyreduce:
 
   case 51:
 #line 382 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-1].fqn) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-4].tok), (yyvsp[-1].fqn) ); }
 #line 2322 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 52:
 #line 383 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].fqn) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].fqn) ); }
 #line 2328 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 53:
 #line 387 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); }
+    { (yyval.node) = AST :: Make (); }
 #line 2334 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2341,7 +2341,7 @@ yyreduce:
 
   case 55:
 #line 392 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
 #line 2346 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2359,31 +2359,31 @@ yyreduce:
 
   case 58:
 #line 401 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
 #line 2364 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 59:
 #line 402 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), new AST (), (yyvsp[-1].node) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-4].tok), (yyvsp[-2].node), AST :: Make (), (yyvsp[-1].node) ); }
 #line 2370 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 60:
 #line 403 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-5].tok), new AST (), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-5].tok), AST :: Make (), (yyvsp[-2].node), (yyvsp[-1].node) ); }
 #line 2376 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 61:
 #line 404 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
 #line 2382 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 62:
 #line 405 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
 #line 2388 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2395,7 +2395,7 @@ yyreduce:
 
   case 64:
 #line 413 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+    { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
 #line 2400 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2407,31 +2407,31 @@ yyreduce:
 
   case 66:
 #line 418 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), new AST ( (yyvsp[-1].tok) ), new AST () ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-4].tok), (yyvsp[-2].node), AST :: Make ( (yyvsp[-1].tok) ), AST :: Make () ); }
 #line 2412 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 67:
 #line 419 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-2].node), new AST ( (yyvsp[-1].tok) ), new AST ( (yyvsp[-3].tok) ) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-5].tok), (yyvsp[-2].node), AST :: Make ( (yyvsp[-1].tok) ), AST :: Make ( (yyvsp[-3].tok) ) ); }
 #line 2418 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 68:
 #line 423 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
 #line 2424 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 69:
 #line 424 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-4].tok) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-4].tok) ); }
 #line 2430 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 70:
 #line 428 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( PT_EMPTY ); }
+    { (yyval.node) = AST :: Make ( PT_EMPTY ); }
 #line 2436 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2449,7 +2449,7 @@ yyreduce:
 
   case 74:
 #line 438 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+    { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
 #line 2454 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2461,7 +2461,7 @@ yyreduce:
 
   case 76:
 #line 443 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-3].tok), (yyvsp[-2].expr) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-3].tok), (yyvsp[-2].expr) ); }
 #line 2466 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2473,13 +2473,13 @@ yyreduce:
 
   case 78:
 #line 448 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
 #line 2478 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 79:
 #line 449 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-7].tok), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
 #line 2484 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2527,13 +2527,13 @@ yyreduce:
 
   case 87:
 #line 481 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-1].node) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-4].tok), (yyvsp[-1].node) ); }
 #line 2532 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 88:
 #line 485 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-9].tok), (yyvsp[-4].node) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-9].tok), (yyvsp[-4].node) ); }
 #line 2538 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2545,7 +2545,7 @@ yyreduce:
 
   case 90:
 #line 491 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+    { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
 #line 2550 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2557,25 +2557,25 @@ yyreduce:
 
   case 92:
 #line 497 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( PT_EMPTY ); }
+    { (yyval.node) = AST :: Make ( PT_EMPTY ); }
 #line 2562 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 93:
 #line 499 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-10].tok), (yyvsp[-4].node) ) ; }
+    { (yyval.node) = AST :: Make ( (yyvsp[-10].tok), (yyvsp[-4].node) ) ; }
 #line 2568 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 94:
 #line 501 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-10].tok), (yyvsp[-4].node) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-10].tok), (yyvsp[-4].node) ); }
 #line 2574 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 95:
 #line 503 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].fqn) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-5].tok), (yyvsp[-3].fqn) ); }
 #line 2580 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2587,7 +2587,7 @@ yyreduce:
 
   case 97:
 #line 514 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
 #line 2592 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2599,7 +2599,7 @@ yyreduce:
 
   case 99:
 #line 519 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].fqn) ); }
+    { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].fqn) ); }
 #line 2604 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2611,7 +2611,7 @@ yyreduce:
 
   case 101:
 #line 524 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( PT_EMPTY ); }
+    { (yyval.node) = AST :: Make ( PT_EMPTY ); }
 #line 2616 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2623,7 +2623,7 @@ yyreduce:
 
   case 103:
 #line 529 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+    { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
 #line 2628 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2647,55 +2647,55 @@ yyreduce:
 
   case 107:
 #line 536 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-2].expr) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-7].tok), (yyvsp[-2].expr) ); }
 #line 2652 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 108:
 #line 537 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-8].tok), (yyvsp[-2].expr) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-8].tok), (yyvsp[-2].expr) ); }
 #line 2658 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 109:
 #line 538 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-2].tok), (yyvsp[-1].node) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-2].tok), (yyvsp[-1].node) ); }
 #line 2664 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 110:
 #line 539 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-2].tok), (yyvsp[-1].node) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-2].tok), (yyvsp[-1].node) ); }
 #line 2670 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 111:
 #line 540 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-3].tok), (yyvsp[-1].node) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-3].tok), (yyvsp[-1].node) ); }
 #line 2676 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 112:
 #line 541 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-8].tok), (yyvsp[-4].fqn) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-8].tok), (yyvsp[-4].fqn) ); }
 #line 2682 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 113:
 #line 542 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); }
+    { (yyval.node) = AST :: Make (); }
 #line 2688 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 114:
 #line 546 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
 #line 2694 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 115:
 #line 550 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
 #line 2700 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2707,7 +2707,7 @@ yyreduce:
 
   case 117:
 #line 555 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+    { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
 #line 2712 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2719,67 +2719,67 @@ yyreduce:
 
   case 119:
 #line 560 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
 #line 2724 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 120:
 #line 561 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
 #line 2730 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 121:
 #line 562 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
 #line 2736 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 122:
 #line 566 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
 #line 2742 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 123:
 #line 567 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
 #line 2748 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 124:
 #line 572 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-10].tok), (yyvsp[-5].node), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-10].tok), (yyvsp[-5].node), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
 #line 2754 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 125:
 #line 573 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
 #line 2760 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 126:
 #line 574 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
 #line 2766 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 127:
 #line 578 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    {  (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].node) ); }
+    {  (yyval.node) = AST :: Make ( (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].node) ); }
 #line 2772 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 128:
 #line 579 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    {  (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].expr) ); }
+    {  (yyval.node) = AST :: Make ( (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].expr) ); }
 #line 2778 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 129:
 #line 580 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    {  (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node) ); }
+    {  (yyval.node) = AST :: Make ( (yyvsp[-4].tok), (yyvsp[-2].node) ); }
 #line 2784 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2791,13 +2791,13 @@ yyreduce:
 
   case 131:
 #line 585 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
 #line 2796 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 132:
 #line 589 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); }
+    { (yyval.node) = AST :: Make (); }
 #line 2802 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2809,7 +2809,7 @@ yyreduce:
 
   case 134:
 #line 594 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+    { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
 #line 2814 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2821,61 +2821,61 @@ yyreduce:
 
   case 136:
 #line 599 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); }
+    { (yyval.node) = AST :: Make (); }
 #line 2826 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 137:
 #line 600 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-6].tok), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-6].tok), AST :: Make ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
 #line 2832 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 138:
 #line 601 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-6].tok), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-6].tok), AST :: Make ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
 #line 2838 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 139:
 #line 602 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-6].tok), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-6].tok), AST :: Make ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
 #line 2844 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 140:
 #line 607 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].node), new AST ( (yyvsp[-2].tok) ) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-5].tok), (yyvsp[-3].node), AST :: Make ( (yyvsp[-2].tok) ) ); }
 #line 2850 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 141:
 #line 609 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-3].node), new AST ( (yyvsp[-2].tok) ) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-6].tok), (yyvsp[-3].node), AST :: Make ( (yyvsp[-2].tok) ) ); }
 #line 2856 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 142:
 #line 611 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-7].tok), (yyvsp[-5].node), AST :: Make ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
 #line 2862 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 143:
 #line 613 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-8].tok), (yyvsp[-5].node), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-8].tok), (yyvsp[-5].node), AST :: Make ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
 #line 2868 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 144:
 #line 617 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].node), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-5].tok), (yyvsp[-3].node), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
 #line 2874 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 145:
 #line 621 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); }
+    { (yyval.node) = AST :: Make (); }
 #line 2880 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2887,7 +2887,7 @@ yyreduce:
 
   case 147:
 #line 626 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+    { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
 #line 2892 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2899,7 +2899,7 @@ yyreduce:
 
   case 149:
 #line 631 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].fqn), (yyvsp[-1].node) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-5].tok), (yyvsp[-3].fqn), (yyvsp[-1].node) ); }
 #line 2904 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2929,7 +2929,7 @@ yyreduce:
 
   case 154:
 #line 646 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
 #line 2934 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2947,19 +2947,19 @@ yyreduce:
 
   case 157:
 #line 651 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-4].tok) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-4].tok) ); }
 #line 2952 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 158:
 #line 655 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+    { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
 #line 2958 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 159:
 #line 656 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); }
+    { (yyval.node) = AST :: Make (); }
 #line 2964 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -2977,25 +2977,25 @@ yyreduce:
 
   case 162:
 #line 663 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-3].fqn), (yyvsp[-2].fqn) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-3].fqn), (yyvsp[-2].fqn) ); }
 #line 2982 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 163:
 #line 665 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-3].fqn), (yyvsp[-2].fqn) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-3].fqn), (yyvsp[-2].fqn) ); }
 #line 2988 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 164:
 #line 669 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
 #line 2994 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 165:
 #line 670 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
 #line 3000 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -3013,7 +3013,7 @@ yyreduce:
 
   case 168:
 #line 686 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = new AST_Expr ( (yyvsp[0].expr) ); }
+    { (yyval.expr) = AST_Expr :: Make ( (yyvsp[0].expr) ); }
 #line 3018 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -3025,19 +3025,19 @@ yyreduce:
 
   case 170:
 #line 691 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = new AST_Expr ( (yyvsp[0].fqn) ); }
+    { (yyval.expr) = AST_Expr :: Make ( (yyvsp[0].fqn) ); }
 #line 3030 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 171:
 #line 692 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+    { (yyval.expr) = AST_Expr :: Make ( (yyvsp[0].tok) ); }
 #line 3036 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 172:
 #line 693 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+    { (yyval.expr) = AST_Expr :: Make ( (yyvsp[0].tok) ); }
 #line 3042 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -3109,13 +3109,13 @@ yyreduce:
 
   case 184:
 #line 709 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = new AST_Expr ( (yyvsp[-8].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-6].node) ); (yyval.expr) -> AddNode ( (yyvsp[-5].fqn) ); (yyval.expr) -> AddNode ( (yyvsp[-4].node) ); (yyval.expr) -> AddNode ( (yyvsp[-2].node) ); }
+    { (yyval.expr) = AST_Expr :: Make ( (yyvsp[-8].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-6].node) ); (yyval.expr) -> AddNode ( (yyvsp[-5].fqn) ); (yyval.expr) -> AddNode ( (yyvsp[-4].node) ); (yyval.expr) -> AddNode ( (yyvsp[-2].node) ); }
 #line 3114 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 185:
 #line 713 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( PT_EMPTY ); }
+    { (yyval.node) = AST :: Make ( PT_EMPTY ); }
 #line 3120 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -3127,7 +3127,7 @@ yyreduce:
 
   case 187:
 #line 717 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+    { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
 #line 3132 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -3157,7 +3157,7 @@ yyreduce:
 
   case 192:
 #line 728 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
 #line 3162 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -3175,7 +3175,7 @@ yyreduce:
 
   case 195:
 #line 737 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].expr) ); }
+    { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].expr) ); }
 #line 3180 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -3187,7 +3187,7 @@ yyreduce:
 
   case 197:
 #line 742 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
 #line 3192 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -3199,7 +3199,7 @@ yyreduce:
 
   case 199:
 #line 747 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].expr) ); }
+    { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].expr) ); }
 #line 3204 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -3211,73 +3211,73 @@ yyreduce:
 
   case 201:
 #line 752 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = new AST_Expr ( (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].tok) ); }
+    { (yyval.expr) = AST_Expr :: Make ( (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].tok) ); }
 #line 3216 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 202:
 #line 753 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = new AST_Expr ( (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].tok) ); }
+    { (yyval.expr) = AST_Expr :: Make ( (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].tok) ); }
 #line 3222 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 203:
 #line 754 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = new AST_Expr ( (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].tok) ); }
+    { (yyval.expr) = AST_Expr :: Make ( (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].tok) ); }
 #line 3228 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 204:
 #line 758 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+    { (yyval.expr) = AST_Expr :: Make ( (yyvsp[0].tok) ); }
 #line 3234 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 205:
 #line 759 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+    { (yyval.expr) = AST_Expr :: Make ( (yyvsp[0].tok) ); }
 #line 3240 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 206:
 #line 763 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+    { (yyval.expr) = AST_Expr :: Make ( (yyvsp[0].tok) ); }
 #line 3246 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 207:
 #line 764 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+    { (yyval.expr) = AST_Expr :: Make ( (yyvsp[0].tok) ); }
 #line 3252 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 208:
 #line 768 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = new AST_Expr ( (yyvsp[-8].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-3].node) ); }
+    { (yyval.expr) = AST_Expr :: Make ( (yyvsp[-8].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-3].node) ); }
 #line 3258 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 209:
 #line 772 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+    { (yyval.expr) = AST_Expr :: Make ( (yyvsp[0].tok) ); }
 #line 3264 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 210:
 #line 773 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
+    { (yyval.expr) = AST_Expr :: Make ( (yyvsp[0].tok) ); }
 #line 3270 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 211:
 #line 777 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = new AST_Expr ( (yyvsp[-4].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].expr) ); }
+    { (yyval.expr) = AST_Expr :: Make ( (yyvsp[-4].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].expr) ); }
 #line 3276 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 212:
 #line 780 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = new AST_Expr ( (yyvsp[-6].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-3].node) ); (yyval.expr) -> AddNode ( (yyvsp[-1].expr) ); }
+    { (yyval.expr) = AST_Expr :: Make ( (yyvsp[-6].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-3].node) ); (yyval.expr) -> AddNode ( (yyvsp[-1].expr) ); }
 #line 3282 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -3289,22 +3289,22 @@ yyreduce:
 
   case 214:
 #line 785 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].fqn), (yyvsp[-1].fqn) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-5].tok), (yyvsp[-3].fqn), (yyvsp[-1].fqn) ); }
 #line 3294 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 215:
 #line 789 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = new AST_Expr ( (yyvsp[-5].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-3].fqn) ); (yyval.expr) -> AddNode ( (yyvsp[-1].fqn) ); }
+    { (yyval.expr) = AST_Expr :: Make ( (yyvsp[-5].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-3].fqn) ); (yyval.expr) -> AddNode ( (yyvsp[-1].fqn) ); }
 #line 3300 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 216:
 #line 791 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     {   /* remove leading '.'*/
-            (yyval.expr) = new AST_Expr ( (yyvsp[-4].tok) );
+            (yyval.expr) = AST_Expr :: Make ( (yyvsp[-4].tok) );
             (yyval.expr) -> AddNode ( (yyvsp[-2].fqn) );
-            AST * ident = new AST ( PT_IDENT );
+            AST * ident = AST :: Make ( PT_IDENT );
             Token t ( IDENTIFIER_1_0, (yyvsp[-1].tok) -> GetValue() + 1, (yyval.expr) -> GetLocation() );
             ident -> AddNode ( & t );
             (yyval.expr) -> AddNode ( ident );
@@ -3314,17 +3314,17 @@ yyreduce:
 
   case 217:
 #line 803 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.expr) = new AST_Expr ( (yyvsp[-8].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-6].fqn) ); (yyval.expr) -> AddNode ( (yyvsp[-4].expr) ); (yyval.expr) -> AddNode ( (yyvsp[-1].fqn) ); }
+    { (yyval.expr) = AST_Expr :: Make ( (yyvsp[-8].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-6].fqn) ); (yyval.expr) -> AddNode ( (yyvsp[-4].expr) ); (yyval.expr) -> AddNode ( (yyvsp[-1].fqn) ); }
 #line 3319 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 218:
 #line 805 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     {   /* remove leading '.'*/
-            (yyval.expr) = new AST_Expr ( (yyvsp[-7].tok) );
+            (yyval.expr) = AST_Expr :: Make ( (yyvsp[-7].tok) );
             (yyval.expr) -> AddNode ( (yyvsp[-5].fqn) );
             (yyval.expr) -> AddNode ( (yyvsp[-3].expr) );
-            AST * ident = new AST ( PT_IDENT );
+            AST * ident = AST :: Make ( PT_IDENT );
             Token t ( IDENTIFIER_1_0, (yyvsp[-1].tok) -> GetValue() + 1, (yyval.expr) -> GetLocation() );
             ident -> AddNode ( & t );
             (yyval.expr) -> AddNode ( ident );
@@ -3340,7 +3340,7 @@ yyreduce:
 
   case 220:
 #line 823 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.fqn) = new AST_FQN ( (yyvsp[-3].tok) ); (yyval.fqn) -> AddNode ( (yyvsp[-1].tok) ); }
+    { (yyval.fqn) = AST_FQN :: Make ( (yyvsp[-3].tok) ); (yyval.fqn) -> AddNode ( (yyvsp[-1].tok) ); }
 #line 3345 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -3352,7 +3352,7 @@ yyreduce:
 
   case 222:
 #line 828 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.fqn) = new AST_FQN ( (yyvsp[-3].tok) ); (yyval.fqn) -> AddNode ( (yyvsp[-1].tok) ); }
+    { (yyval.fqn) = AST_FQN :: Make ( (yyvsp[-3].tok) ); (yyval.fqn) -> AddNode ( (yyvsp[-1].tok) ); }
 #line 3357 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -3382,7 +3382,7 @@ yyreduce:
 
   case 227:
 #line 848 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+    { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
 #line 3387 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -3394,13 +3394,13 @@ yyreduce:
 
   case 229:
 #line 853 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].fqn) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].fqn) ); }
 #line 3399 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 230:
 #line 857 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
 #line 3405 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -3412,7 +3412,7 @@ yyreduce:
 
   case 232:
 #line 862 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+    { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
 #line 3417 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -3424,37 +3424,37 @@ yyreduce:
 
   case 234:
 #line 867 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
 #line 3429 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 235:
 #line 868 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-8].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-8].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
 #line 3435 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 236:
 #line 869 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( PT_EMPTY ); }
+    { (yyval.node) = AST :: Make ( PT_EMPTY ); }
 #line 3441 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 237:
 #line 873 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[0].tok) ); }
 #line 3447 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 238:
 #line 874 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-2].node) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-7].tok), (yyvsp[-2].node) ); }
 #line 3453 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 239:
 #line 878 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
+    { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
 #line 3459 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
@@ -3466,13 +3466,13 @@ yyreduce:
 
   case 241:
 #line 884 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST ( (yyvsp[-9].tok), (yyvsp[-7].fqn), (yyvsp[-3].node) ); }
+    { (yyval.node) = AST :: Make ( (yyvsp[-9].tok), (yyvsp[-7].fqn), (yyvsp[-3].node) ); }
 #line 3471 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 242:
 #line 888 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
-    { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].fqn) ); }
+    { (yyval.node) = AST :: Make (); (yyval.node) -> AddNode ( (yyvsp[0].fqn) ); }
 #line 3477 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 

@@ -121,7 +121,7 @@ ASTBuilder :: Build ( const ParseTree& p_root, const char * p_source, bool p_deb
     {
         return ret;
     }
-    delete ret;
+    AST :: Destroy ( ret );
     return 0;
 }
 
@@ -188,16 +188,12 @@ ASTBuilder :: CreateFqnSymbol ( const AST_FQN& p_fqn, uint32_t p_type, const voi
     return ret;
 }
 
-#include<iostream>
 KSymbol*
 ASTBuilder :: Resolve ( const Token :: Location & p_loc, const char* p_ident, bool p_reportUnknown )
 {
     String name;
     StringInitCString ( & name, p_ident );
-std::cout<<"Resolve("<<p_ident<<")"<<std::endl;
-KSymTableDump(&GetSymTab ());
     KSymbol* ret = KSymTableFind ( & m_symtab, & name );
-std::cout<<"Resolve("<<p_ident<<")"<<(ret == 0 ? "not found":"found")<<std::endl;
     if ( ret == 0 && p_reportUnknown )
     {
         ReportError ( p_loc, "Undeclared identifier", p_ident );
@@ -540,7 +536,7 @@ ASTBuilder :: CheckForColumnCollision ( const KSymbol *sym )
 }
 
 bool
-ASTBuilder :: ScanVirtuals ( const Token :: Location & p_loc, Vector & p_byParent )
+ASTBuilder :: ScanVirtuals ( const Token :: Location & p_loc, Vector & p_byParent, KSymTable & symtab )
 {
     uint32_t start = VectorStart ( & p_byParent );
     uint32_t count = VectorLength ( & p_byParent );
@@ -555,7 +551,7 @@ ASTBuilder :: ScanVirtuals ( const Token :: Location & p_loc, Vector & p_byParen
 
             /* since the virtual productions in one parent could be
                defined by another parent, test for the possibility */
-            const KSymbol *def = KSymTableFindSymbol ( & GetSymTab (), orig );
+            const KSymbol *def = KSymTableFindSymbol ( & symtab, orig );
             if ( def != NULL )
             {
                 if ( def -> type == eProduction || def -> type == eVirtual )
@@ -573,7 +569,7 @@ ASTBuilder :: ScanVirtuals ( const Token :: Location & p_loc, Vector & p_byParen
             else
             {
                 /* copy the original */
-                BSTree * scope = static_cast < BSTree * > ( VectorLast ( & GetSymTab () . stack ) );
+                BSTree * scope = static_cast < BSTree * > ( VectorLast ( & symtab . stack ) );
                 KSymbol *copy;
                 rc_t rc = KSymbolCopy ( scope, & copy, orig );
                 if ( rc != 0 )

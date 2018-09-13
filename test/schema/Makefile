@@ -33,6 +33,10 @@ TEST_TOOLS = \
 	wb-test-schema-lex \
 	wb-test-schema-parser \
 	wb-test-schema-ast \
+	wb-test-schema-func \
+	wb-test-schema-table \
+	wb-test-schema-db \
+	wb-test-schema-view \
 
 INT_TOOLS = \
     test-schema-scan \
@@ -54,7 +58,6 @@ TEST_LIB = \
 	-sktst \
 	-skapp \
     -sncbi-vdb \
-    -sschema \
 
 #-------------------------------------------------------------------------------
 # white box lexer test
@@ -137,6 +140,70 @@ $(TEST_BINDIR)/wb-test-schema-ast: $(TESTAST_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_LIB)
 
 ast: wb-test-schema-ast
+	$(TEST_BINDIR)/$^
+
+#-------------------------------------------------------------------------------
+# AST-func test
+#
+TESTFUNC_SRC = \
+	AST_Fixture \
+	wb-test-schema-func \
+
+TESTFUNC_OBJ = \
+	$(addsuffix .$(OBJX),$(TESTFUNC_SRC))
+
+$(TEST_BINDIR)/wb-test-schema-func: $(TESTFUNC_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_LIB)
+
+func: wb-test-schema-func
+	$(TEST_BINDIR)/$^
+
+#-------------------------------------------------------------------------------
+# AST-table test
+#
+TESTTABLE_SRC = \
+	AST_Fixture \
+	wb-test-schema-table \
+
+TESTTABLE_OBJ = \
+	$(addsuffix .$(OBJX),$(TESTTABLE_SRC))
+
+$(TEST_BINDIR)/wb-test-schema-table: $(TESTTABLE_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_LIB)
+
+table: wb-test-schema-table
+	$(TEST_BINDIR)/$^
+
+#-------------------------------------------------------------------------------
+# AST-db test
+#
+TESTDB_SRC = \
+	AST_Fixture \
+	wb-test-schema-db \
+
+TESTDB_OBJ = \
+	$(addsuffix .$(OBJX),$(TESTDB_SRC))
+
+$(TEST_BINDIR)/wb-test-schema-db: $(TESTDB_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_LIB)
+
+db: wb-test-schema-db
+	$(TEST_BINDIR)/$^
+
+#-------------------------------------------------------------------------------
+# AST-view test
+#
+TESTVIEW_SRC = \
+	AST_Fixture \
+	wb-test-schema-view \
+
+TESTVIEW_OBJ = \
+	$(addsuffix .$(OBJX),$(TESTVIEW_SRC))
+
+$(TEST_BINDIR)/wb-test-schema-view: $(TESTVIEW_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_LIB)
+
+view: wb-test-schema-view
 	$(TEST_BINDIR)/$^
 
 #-------------------------------------------------------------------------------

@@ -567,7 +567,7 @@ FunctionDeclaration :: SetPrologue ( const AST & p_prologue )
 AST *
 ASTBuilder :: UntypedFunctionDecl ( const Token* p_token, AST_FQN* p_name )
 {
-    AST * ret = new AST ( p_token, p_name );
+    AST * ret = AST :: Make ( p_token, p_name );
     FunctionDeclaration ( *this ) . SetName ( * p_name, eUntypedFunc, false, false );
     return ret;
 }
@@ -575,7 +575,7 @@ ASTBuilder :: UntypedFunctionDecl ( const Token* p_token, AST_FQN* p_name )
 AST *
 ASTBuilder :: RowlenFunctionDecl ( const Token* p_token, AST_FQN* p_name )
 {
-    AST * ret = new AST ( p_token, p_name );
+    AST * ret = AST :: Make ( p_token, p_name );
     FunctionDeclaration ( *this ) . SetName ( * p_name, eRowLengthFunc, false, false );
     return ret;
 }
@@ -590,7 +590,7 @@ ASTBuilder :: FunctionDecl ( const Token *  p_token,
                              AST *          p_params,
                              AST *          p_prologue )
 {
-    AST * ret = new AST ( p_token, p_schema, p_returnType, p_name, p_fact, p_params, p_prologue );
+    AST * ret = AST :: Make ( p_token, p_schema, p_returnType, p_name, p_fact, p_params, p_prologue );
 
     bool isValidate = p_token -> GetType () == PT_VALIDATE;
 
