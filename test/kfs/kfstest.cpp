@@ -254,6 +254,10 @@ const char UsageDefaultName[] = "test-kfs";
 rc_t CC KMain ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
+    for (int i=0; i!=argc; ++i)
+    {
+        printf("Arg %d is %s\n", i, argv[i]);
+    }
     rc_t rc=KfsTestSuite(argc, argv);
     return rc;
 }
