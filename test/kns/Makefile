@@ -31,6 +31,7 @@ TOP ?= $(abspath ../..)
 MODULE = test/kns
 
 TEST_TOOLS = \
+	test200for-whole-file \
 	test-kns \
 	test-http-dropconn \
 	KNSManagerSingletonTest \
@@ -125,6 +126,18 @@ $(TEST_BINDIR)/test-kns: $(KNSTEST_OBJ)
 
 kns: test-kns
 	$(TEST_BINDIR)/test-kns  #-l=all
+
+#----------------------------------------------------------------
+# test200for-whole-file
+#
+K2_SRC = \
+	test200for-whole-file \
+
+K2_OBJ = \
+	$(addsuffix .$(OBJX),$(K2_SRC))
+
+$(TEST_BINDIR)/test200for-whole-file: $(K2_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
 #----------------------------------------------------------------
 # test-proxy
