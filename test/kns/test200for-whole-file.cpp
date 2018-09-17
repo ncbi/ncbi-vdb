@@ -120,7 +120,7 @@ extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
 
     rc_t CC KMain ( int argc, char * argv [] ) { if (
-0 ) assert ( ! KDbgSetString ( "KNS-HTTP" ) );
+1 ) assert ( ! KDbgSetString ( "KNS-HTTP" ) );
         KConfigDisableUserSettings ();
 
         KConfig * kfg = NULL;
