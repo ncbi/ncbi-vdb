@@ -38,7 +38,44 @@ static rc_t argsHandler ( int argc, char * argv [] )
 
 TEST_SUITE_WITH_ARGS_HANDLER ( T200FOR_WHOLE_FILE, argsHandler )
 
-TEST_CASE ( Test200 ) {
+TEST_CASE ( Test_206) {
+    KNSManager * mgr = NULL;
+    REQUIRE_RC ( KNSManagerMake ( & mgr ) );
+
+    const KFile * file = NULL;
+    REQUIRE_RC ( KNSManagerMakeHttpFile ( mgr, & file, NULL, 0x01010000,
+       "https://sra-download.ncbi.nlm.nih.gov/traces/refseq/KC702174.1" ) );
+
+    uint64_t size = 0;
+    REQUIRE_RC ( KFileSize ( file, & size ) );
+
+    void * buffer = malloc ( size );
+    REQUIRE_NOT_NULL ( buffer );
+
+    size_t num_read = 0;
+
+    // read incomplete file: expect 206 response code
+    size_t bsize = size - 1;
+    REQUIRE_RC ( KFileRead ( file, 0, buffer, bsize, & num_read ) );
+    REQUIRE_EQ ( num_read, bsize );
+
+    // read the whole: storage.googleapis.com returns 200
+    bsize = size;
+    REQUIRE_RC ( KFileRead ( file, 0, buffer, bsize, & num_read ) );
+    REQUIRE_EQ ( num_read, bsize );
+
+    // request more that file size: expect exact file size
+    REQUIRE_RC ( KFileRead ( file, 0, buffer, size * 2, & num_read ) );
+    REQUIRE_EQ ( num_read, static_cast < size_t > ( size ) );
+
+    free ( buffer );
+
+    REQUIRE_RC ( KFileRelease ( file ) );
+
+    REQUIRE_RC ( KNSManagerRelease ( mgr ) );
+}
+
+TEST_CASE ( Test_200 ) {
     KNSManager * mgr = NULL;
     REQUIRE_RC ( KNSManagerMake ( & mgr ) );
 
@@ -55,16 +92,19 @@ TEST_CASE ( Test200 ) {
 
     size_t num_read = 0;
 
+    // read incomplete file: expect 206 response code
     size_t bsize = size - 1;
     REQUIRE_RC ( KFileRead ( file, 0, buffer, bsize, & num_read ) );
     REQUIRE_EQ ( num_read, bsize );
 
+    // read the whole: storage.googleapis.com returns 200
     bsize = size;
     REQUIRE_RC ( KFileRead ( file, 0, buffer, bsize, & num_read ) );
     REQUIRE_EQ ( num_read, bsize );
 
+    // request more that file size: expect exact file size
     REQUIRE_RC ( KFileRead ( file, 0, buffer, size * 2, & num_read ) );
-    REQUIRE_EQ ( num_read, size );
+    REQUIRE_EQ ( num_read, static_cast < size_t > ( size ) );
 
     free ( buffer );
 
@@ -85,6 +125,7 @@ extern "C" {
 
         KConfig * kfg = NULL;
         rc_t rc = KConfigMakeEmpty ( & kfg );
+     // turn off certificate validation to download from storage.googleapis.com
         if ( rc == 0 )
             rc = KConfigWriteString ( kfg, "/tls/allow-all-certs", "true" );
 
