@@ -457,6 +457,7 @@ rc_t tlsg_setup ( KTLSGlobals * self )
         return rc;
     }
 
+    /* turn off certificate validation when self -> allow_all_certs == true */
     vdb_mbedtls_ssl_conf_authmode( &self -> config,
         self -> allow_all_certs ? MBEDTLS_SSL_VERIFY_OPTIONAL
                                 : MBEDTLS_SSL_VERIFY_REQUIRED );
