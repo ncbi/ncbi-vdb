@@ -457,7 +457,10 @@ rc_t tlsg_setup ( KTLSGlobals * self )
         return rc;
     }
 
-    vdb_mbedtls_ssl_conf_authmode( &self -> config, MBEDTLS_SSL_VERIFY_REQUIRED );
+    vdb_mbedtls_ssl_conf_authmode( &self -> config,
+        self -> allow_all_certs ? MBEDTLS_SSL_VERIFY_OPTIONAL
+                                : MBEDTLS_SSL_VERIFY_REQUIRED );
+
     vdb_mbedtls_ssl_conf_ca_chain( &self -> config, &self -> cacert, NULL );
     vdb_mbedtls_ssl_conf_rng( &self -> config, vdb_mbedtls_ctr_drbg_random, &self -> ctr_drbg );
 
