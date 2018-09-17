@@ -35,6 +35,11 @@
 #include <string.h>
 #include <assert.h>
 
+#define DEBUG_PRINT_RESULT 0
+#if DEBUG_PRINT_RESULT
+#include <stdio.h>
+#endif
+
 #define A_4na (1)
 #define C_4na (2)
 #define G_4na (4)
@@ -42,13 +47,13 @@
 #define NO_4na (0)
 
 typedef struct params self_t;
-typedef bool (*spot_filter_func)(self_t const *self
-                                 , unsigned const nreads
-                                 , int32_t const *start
-                                 , uint32_t const *len
-                                 , uint8_t const *type
-                                 , uint8_t const *read
-                                 , uint8_t const *qual);
+typedef int (*spot_filter_func)(self_t const *self
+                              , unsigned const nreads
+                              , int32_t const *start
+                              , uint32_t const *len
+                              , uint8_t const *type
+                              , uint8_t const *read
+                              , uint8_t const *qual);
 struct params {
     spot_filter_func spot_filter;
     unsigned min_length;
@@ -56,11 +61,22 @@ struct params {
     int no_quality;
 };
 
-#define M (self->min_length)
-#define Q (self->min_quality)
-#define BAD_QUAL(QV) (QV < self->min_quality && QV != self->no_quality)
+#define M (((self_t const *)self)->min_length)
+#define Q (((self_t const *)self)->min_quality)
+#define BAD_QUAL(QV) (QV < ((self_t const *)self)->min_quality && QV != ((self_t const *)self)->no_quality)
 
-static bool spot_filter_4na(self_t const *self
+enum RejectCause {
+    notRejected,
+    readFilter,
+    tooShort,
+    badQualValueFirstM,
+    ambiguousFirstM,
+    lowComplexityFirstM,
+    badBaseValue,
+    tooManyAmbiguous
+};
+
+static int spot_filter_4na(self_t const *self
                             , unsigned const nreads
                             , int32_t const *start
                             , uint32_t const *len
@@ -79,7 +95,7 @@ static bool spot_filter_4na(self_t const *self
             continue;
         
         if (readLen < M)
-            return false;
+            return tooShort;
 
         memset(count, 0, sizeof(count));
         for ( ; j < M; ++j) {
@@ -88,18 +104,18 @@ static bool spot_filter_4na(self_t const *self
             int const qval = qual[k];
 
             ++count[base];
-            if (BAD_QUAL(qval)) return false; ///< first M quality values must all be >= minimum quality value
+            if (BAD_QUAL(qval)) return badQualValueFirstM; ///< first M quality values must all be >= minimum quality value
         }
         {
             unsigned const unambiguous = count[A_4na]+count[C_4na]+count[G_4na]+count[T_4na];
-            if (unambiguous != M) return false; ///< first M bases must be unambiguous
+            if (unambiguous != M) return ambiguousFirstM; ///< first M bases must be unambiguous
         }
         {
             bool const all_A = count[A_4na] == M;
             bool const all_C = count[C_4na] == M;
             bool const all_G = count[G_4na] == M;
             bool const all_T = count[T_4na] == M;
-            if (all_A || all_C || all_G || all_T) return false; ///< first M bases must not be all the same
+            if (all_A || all_C || all_G || all_T) return lowComplexityFirstM; ///< first M bases must not be all the same
         }
         for ( ; j < readLen; ++j) {
             unsigned const k = start[i] + (rev ? (readLen - j - 1) : j);
@@ -107,23 +123,23 @@ static bool spot_filter_4na(self_t const *self
 
             ++count[base];
         }
-        if (count[NO_4na] != 0) return false; ///< all bases must be one of ACGT or UIPAC ambiguity codes
+        if (count[NO_4na] != 0) return badBaseValue; ///< all bases must be one of ACGT or UIPAC ambiguity codes
         {
             unsigned const unambiguous = count[A_4na]+count[C_4na]+count[G_4na]+count[T_4na];
-            if (unambiguous < 2 * readLen) return false; ///< at least 1/2 the bases must be unambiguous
+            if (unambiguous * 2 < readLen) return tooManyAmbiguous; ///< at least 1/2 the bases must be unambiguous
         }
     }
-    return true;
+    return notRejected;
 }
 
 /* read contains only ACGTN */
-static bool spot_filter_x2na(self_t const *self
-                            , unsigned const nreads
-                            , int32_t const *start
-                            , uint32_t const *len
-                            , uint8_t const *type
-                            , uint8_t const *read
-                            , uint8_t const *qual)
+static int spot_filter_x2na(self_t const *self
+                          , unsigned const nreads
+                          , int32_t const *start
+                          , uint32_t const *len
+                          , uint8_t const *type
+                          , uint8_t const *read
+                          , uint8_t const *qual)
 {
     unsigned i;
     for (i = 0; i < nreads; ++i) {
@@ -136,7 +152,7 @@ static bool spot_filter_x2na(self_t const *self
             continue;
         
         if (readLen < M)
-            return false;
+            return tooShort;
 
         memset(count, 0, sizeof(count));
         for ( ; j < M; ++j) {
@@ -144,19 +160,19 @@ static bool spot_filter_x2na(self_t const *self
             int const base = read[k];
             int const qval = qual[k];
 
-            if (BAD_QUAL(qval)) return false; ///< first M quality values must all be >= minimum quality value
+            if (BAD_QUAL(qval)) return badQualValueFirstM; ///< first M quality values must all be >= minimum quality value
             ++count[base];
         }
         {
             unsigned const unambiguous = count[0]+count[1]+count[2]+count[3];
-            if (unambiguous != M) return false; ///< first M bases must be unambiguous
+            if (unambiguous != M) return ambiguousFirstM; ///< first M bases must be unambiguous
         }
         {
             bool const all_A = count[0] == M;
             bool const all_C = count[1] == M;
             bool const all_G = count[2] == M;
             bool const all_T = count[3] == M;
-            if (all_A || all_C || all_G || all_T) return false; ///< first M bases must not be all the same
+            if (all_A || all_C || all_G || all_T) return lowComplexityFirstM; ///< first M bases must not be all the same
         }
         for ( ; j < readLen; ++j) {
             unsigned const k = start[i] + (rev ? (readLen - j - 1) : j);
@@ -166,19 +182,19 @@ static bool spot_filter_x2na(self_t const *self
         }
         {
             unsigned const unambiguous = count[0]+count[1]+count[2]+count[3];
-            if (unambiguous < 2 * readLen) return false; ///< at least 1/2 the bases must be unambiguous
+            if (unambiguous * 2 < readLen) return tooManyAmbiguous; ///< at least 1/2 the bases must be unambiguous
         }
     }
-    return true;
+    return notRejected;
 }
 
-static bool spot_filter_2na(self_t const *self
-                            , unsigned const nreads
-                            , int32_t const *start
-                            , uint32_t const *len
-                            , uint8_t const *type
-                            , uint8_t const *read
-                            , uint8_t const *qual)
+static int spot_filter_2na(self_t const *self
+                         , unsigned const nreads
+                         , int32_t const *start
+                         , uint32_t const *len
+                         , uint8_t const *type
+                         , uint8_t const *read
+                         , uint8_t const *qual)
 {
     unsigned i;
     for (i = 0; i < nreads; ++i) {
@@ -191,7 +207,7 @@ static bool spot_filter_2na(self_t const *self
             continue;
         
         if (readLen < M)
-            return false;
+            return tooShort;
 
         memset(count, 0, sizeof(count));
         for ( ; j < M; ++j) {
@@ -199,7 +215,7 @@ static bool spot_filter_2na(self_t const *self
             int const qval = qual[k];
             int const base = read[k];
 
-            if (BAD_QUAL(qval)) return false; ///< first M quality values must all be >= minimum quality value
+            if (BAD_QUAL(qval)) return badQualValueFirstM; ///< first M quality values must all be >= minimum quality value
             ++count[base];
         }
         {
@@ -207,10 +223,11 @@ static bool spot_filter_2na(self_t const *self
             bool const all_C = count[1] == M;
             bool const all_G = count[2] == M;
             bool const all_T = count[3] == M;
-            if (all_A || all_C || all_G || all_T) return false; ///< first M bases must not be all the same
+            if (all_A || all_C || all_G || all_T) return lowComplexityFirstM; ///< first M bases must not be all the same
         }
+        /* no checks for ambiguity since 2na can't represent ambiguous bases */
     }
-    return true;
+    return notRejected;
 }
 
 #define SPOT_FILTER ((self_t const *)self)->spot_filter
@@ -238,7 +255,7 @@ rc_t CC make_spot_filter(void *const self, const VXformInfo *const info, int64_t
     BIND_COLUMN(COL_READ_LEN   , uint32_t, len   );
     BIND_COLUMN(COL_READ_TYPE  ,  uint8_t, type  );
     BIND_COLUMN(COL_READ_FILTER,  uint8_t, filter);
-    bool pass = true;
+    enum RejectCause result = notRejected;
     rc_t rc = 0;
 
     assert(read != NULL);
@@ -255,13 +272,44 @@ rc_t CC make_spot_filter(void *const self, const VXformInfo *const info, int64_t
         unsigned i;
         for (i = 0; i < nfilt; ++i) {
             if (filter[i] == SRA_READ_FILTER_REJECT) {
-                pass = false;
+                result = readFilter;
                 break;
             }
         }
     }
-    if (pass)
-        pass = SPOT_FILTER(self, nreads, start, len, type, read, qual);
+    if (result == notRejected)
+        result = SPOT_FILTER(self, nreads, start, len, type, read, qual);
+
+#if DEBUG_PRINT_RESULT
+    switch (result) {
+    case notRejected:
+        fprintf(stderr, "passed\n");
+        break;
+    case readFilter:
+        fprintf(stderr, "read filter was set\n");
+        break;
+    case tooShort:
+        fprintf(stderr, "sequence length < %i\n", M);
+        break;
+    case badQualValueFirstM:
+        fprintf(stderr, "quality value < %i in first %i bases\n", Q, M);
+        break;
+    case ambiguousFirstM:
+        fprintf(stderr, "ambiguous base in first %i bases\n", M);
+        break;
+    case lowComplexityFirstM:
+        fprintf(stderr, "first %i bases are all the same\n", M);
+        break;
+    case badBaseValue:
+        fprintf(stderr, "bad base value\n");
+        break;
+    case tooManyAmbiguous:
+        fprintf(stderr, "at lease 1/2 bases are ambiguous\n");
+        break;
+    default:
+        assert(!"reachable");
+    }
+#endif
     
     rslt->data->elem_bits = 8;
     rc = KDataBufferResize( rslt->data, 1 );
@@ -271,40 +319,36 @@ rc_t CC make_spot_filter(void *const self, const VXformInfo *const info, int64_t
 
         rslt->elem_bits = rslt->data->elem_bits;
         rslt->elem_count = 1;
-        dst[0] = pass ? SRA_SPOT_FILTER_PASS : SRA_SPOT_FILTER_REJECT;
+        dst[0] = result == notRejected ? SRA_SPOT_FILTER_PASS : SRA_SPOT_FILTER_REJECT;
     }
     return rc;
 }
 
 static spot_filter_func read_data_type_to_function(VSchema const *const schema, VFormatdecl const *const read_data_type)
 {
-#if 0
-    return spot_filter_4na;
-#else
     VFormatdecl decl;
     rc_t rc;
 
     rc = VSchemaResolveFmtdecl(schema, &decl, "INSDC:4na:bin");
     assert(rc == 0);
     if (read_data_type->td.type_id == decl.td.type_id) {
-        LOGMSG(klogInfo, "matched INSDC:4na:bin");
+        LOGMSG(klogDebug, "matched INSDC:4na:bin");
         return spot_filter_4na;
     }
     rc = VSchemaResolveFmtdecl(schema, &decl, "INSDC:x2na:bin");
     assert(rc == 0);
     if (read_data_type->td.type_id == decl.td.type_id) {
-        LOGMSG(klogInfo, "matched INSDC:x2na:bin");
+        LOGMSG(klogDebug, "matched INSDC:x2na:bin");
         return spot_filter_x2na;
     }
     rc = VSchemaResolveFmtdecl(schema, &decl, "INSDC:2na:bin");
     assert(rc == 0);
     if (read_data_type->td.type_id == decl.td.type_id) {
-        LOGMSG(klogInfo, "matched INSDC:2na:bin");
+        LOGMSG(klogDebug, "matched INSDC:2na:bin");
         return spot_filter_2na;
     }
-    LOGMSG(klogErr, "matched no type");
+    LOGMSG(klogDebug, "matched no type");
     return NULL;
-#endif
 }
 
 /*
