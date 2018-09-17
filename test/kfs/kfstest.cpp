@@ -186,7 +186,38 @@ TEST_CASE(Dir_List)
         if (!strcmp(name,"kfstest.cpp"))
         {
             found=true;
-            printf("Found %s\n", name);
+            printf("Found %s in CWD\n", name);
+        }
+        //printf("File #%u: %s\n", i, name);
+    }
+
+    REQUIRE_EQ(found, true);
+
+    REQUIRE_RC(KNamelistRelease(list));
+    REQUIRE_RC(KDirectoryRelease(dir));
+}
+
+TEST_CASE(Dot_List)
+{
+    KDirectory *dir;
+    REQUIRE_RC(KDirectoryNativeDir(&dir));
+
+    struct KNamelist *list;
+    REQUIRE_RC(KDirectoryList(dir, &list, NULL, NULL, "."));
+
+    uint32_t count;
+    REQUIRE_RC(KNamelistCount(list, &count));
+    REQUIRE_GT(count, (uint32_t)5);
+
+    const char* name;
+    bool found=false;
+    for (uint32_t i=0; i!=count; ++i)
+    {
+        REQUIRE_RC(KNamelistGet(list, i, &name));
+        if (!strcmp(name,"kfstest.cpp"))
+        {
+            found=true;
+            printf("Found %s in .\n", name);
         }
         //printf("File #%u: %s\n", i, name);
     }
