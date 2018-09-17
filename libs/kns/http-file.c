@@ -256,6 +256,8 @@ otherwise we are going to hit "Apache return HTTP headers twice" bug */
                             switch ( * http_status )
                             {
                             case 200:
+                               /* We requested Bytes Range but got 200:
+                                  accept it what the whole file was requested */
                                 have_size = KClientHttpResultSize ( rslt,
                                                     &result_size );
                                 if ( pos != 0 || ! have_size
@@ -267,13 +269,15 @@ otherwise we are going to hit "Apache return HTTP headers twice" bug */
 "& http_status, NULL, 0, NULL ); unexpected status=%d\n", * http_status );
                                     break;
                                 }
-                          /* no break here */
+                          /* no break here, now read the file */
                             case 206:
                                 /* don't need retries now */
                                 proxy_retries = 0;
 
                                 /* extract actual amount being returned by server */
                                 if ( * http_status == 206 ) {
+                                    /* get result range when 206 was returned,
+                                       we got it already when status == 200 */
                                     rc = KClientHttpResultRange ( rslt,
                                         &start_pos, &result_size );
                                     if ( rc != 0 || start_pos != pos
@@ -292,6 +296,9 @@ otherwise we are going to hit "Apache return HTTP headers twice" bug */
                                     }
                                 }
                                 {
+                                  /* read the response for partial file requests
+                                     or when the whole file was returned */
+
                                     KStream *response;
                                 
                                     rc = KClientHttpResultGetInputStream ( rslt, &response );
