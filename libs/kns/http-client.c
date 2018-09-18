@@ -2679,6 +2679,9 @@ rc_t KClientHttpMakeRequestInt ( const KClientHttp *self,
             if ( rc == 0 )
             {
                 * _req = req;
+                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
+                    ( " KClientHttpMakeRequestInt (path=%S) = (path:%S)\n",
+                      & block -> path, ( * _req ) -> url_block . path ) );
                 return 0;
             }
 
