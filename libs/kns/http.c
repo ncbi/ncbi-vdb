@@ -41,6 +41,7 @@
 
 #include <klib/text.h>
 #include <klib/container.h>
+#include <klib/debug.h> /* DBGMSG */
 #include <klib/out.h>
 #include <klib/log.h>
 #include <klib/refcount.h>
@@ -307,7 +308,11 @@ rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size )
             StringInit ( & b -> host, buf, sep - buf, ( uint32_t ) ( sep - buf ) );
         }
     }
-    
+
+    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
+        ( " ParseUrl (%.*s) = (path:%S)\n", ( int ) url_size, url,
+                                                  & b -> path ) );
+
     return 0;
 }
 
