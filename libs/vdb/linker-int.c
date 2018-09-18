@@ -122,11 +122,14 @@ extern VTRANSFACT_DECL ( NCBI_SRA_read_seg_from_readn );
 extern VTRANSFACT_DECL ( NCBI_SRA_rewrite_spot_name );
 extern VTRANSFACT_DECL ( NCBI_SRA_rotate );
 extern VTRANSFACT_DECL ( NCBI_SRA_swap );
+extern VTRANSFACT_DECL ( NCBI_SRA_syn_quality );
+
 extern VTRANSFACT_DECL ( NCBI_WGS_build_read_type );
 extern VTRANSFACT_DECL ( NCBI_WGS_build_scaffold_qual );
 extern VTRANSFACT_DECL ( NCBI_WGS_build_scaffold_read );
 extern VTRANSFACT_DECL ( NCBI_WGS_tokenize_nuc_accession );
 extern VTRANSFACT_DECL ( NCBI_WGS_tokenize_prot_accession );
+
 extern VTRANSFACT_DECL ( NCBI_align_clip );
 extern VTRANSFACT_DECL ( NCBI_align_clip_2 );
 extern VTRANSFACT_DECL ( NCBI_align_compress_quality );
@@ -513,11 +516,14 @@ rc_t VLinkerInitFactoriesRead ( VLinker *self,  KSymTable *tbl, const SchemaEnv 
         { NCBI_SRA_rewrite_spot_name, "NCBI:SRA:rewrite_spot_name" },
         { NCBI_SRA_rotate, "NCBI:SRA:rotate" },
         { NCBI_SRA_swap, "NCBI:SRA:swap" },
+        { NCBI_SRA_syn_quality, "NCBI:SRA:syn_quality" },
+
         { NCBI_WGS_build_read_type, "NCBI:WGS:build_read_type" },
         { NCBI_WGS_build_scaffold_qual, "NCBI:WGS:build_scaffold_qual" },
         { NCBI_WGS_build_scaffold_read, "NCBI:WGS:build_scaffold_read" },
         { NCBI_WGS_tokenize_nuc_accession, "NCBI:WGS:tokenize_nuc_accession" },
         { NCBI_WGS_tokenize_prot_accession, "NCBI:WGS:tokenize_prot_accession" },
+
         { NCBI_align_clip, "NCBI:align:clip" },
         { NCBI_align_clip_2, "NCBI:align:clip_2" },
         { NCBI_align_compress_quality, "NCBI:align:compress_quality" },

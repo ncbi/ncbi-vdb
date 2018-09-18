@@ -47,6 +47,11 @@ function INSDC:SRA:spot_filter NCBI:SRA:make_spot_filter #1
       INSDC:SRA:xread_type read_type, INSDC:SRA:read_filter read_filter );
 
 
+function INSDC:quality:phred NCBI:syn_quality #1
+    < INSDC:quality:phred good_quality, INSDC:quality:phred bad_quality >
+    ( INSDC:coord:len read_len, INSDC:SRA:read_filter read_filter );
+
+
 /*--------------------------------------------------------------------------
  * n_encoding - implementation
  *  introduces common virtual productions

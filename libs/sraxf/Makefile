@@ -104,7 +104,8 @@ SRAXF_SRC = \
 	fpcodec \
 	index_lookup \
 	varloc \
-	spot-filter
+	spot-filter \
+	syn_quality
 
 SRAXF_OBJ = \
 	$(addsuffix .$(LOBX),$(SRAXF_SRC))

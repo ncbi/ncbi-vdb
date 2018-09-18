@@ -211,7 +211,7 @@ public:
             throw logic_error ( "~VdbFixture: VCursorRelease failed" );
     }
 
-    rc_t Setup( const char * acc, const char* column[] )
+    rc_t Setup( const char * acc, const char* column[], bool open = true )
     {
         const VDatabase *db = NULL;
         rc_t rc = VDBManagerOpenDBRead ( mgr, &db, NULL, acc );
@@ -255,7 +255,7 @@ public:
                     assert(i < N);
                     rc = VCursorAddColumn ( curs, col_idx + i, column[i] );
                 }
-                if ( rc == 0 )
+                if ( rc == 0 && open )
                 {
                     rc = VCursorOpen(curs);
                 }
@@ -368,7 +368,6 @@ FIXTURE_TEST_CASE(VCursor_GetBlob_SRA, VdbFixture)
 {   // multiple fragments per row (some are technical), multiple rows per blob
     static char const *columns[] = { "READ", 0 };
     REQUIRE_RC ( Setup ( "SRR000123", columns ) );
-    REQUIRE_RC ( VCursorOpen (curs ) );
 
     {
         REQUIRE_RC ( VCursorSetRowId (curs, 1 ) );
@@ -439,7 +438,6 @@ FIXTURE_TEST_CASE(VCursor_GetBlob_WGS, VdbFixture)
 {   // single fragment per row, multiple rows per blob
     static char const *columns[] = { "READ", 0 };
     REQUIRE_RC ( Setup ( "ALWZ01", columns ) );
-    REQUIRE_RC ( VCursorOpen (curs ) );
 
     {
         REQUIRE_RC ( VCursorSetRowId (curs, 1 ) );
@@ -510,7 +508,6 @@ FIXTURE_TEST_CASE(VCursor_GetBlob_SequentialAccess, VdbFixture)
 {   // VDB-2858: sequential access to blobs broken
     static char const *columns[] = { "READ", 0 };
     REQUIRE_RC ( Setup ( "ALAI01", columns ) );
-    REQUIRE_RC ( VCursorOpen (curs ) );
 
     int64_t first;
     uint64_t count;
@@ -543,7 +540,6 @@ FIXTURE_TEST_CASE(VCursor_GetBlob_RandomAccess, VdbFixture)
 {
     static char const *columns[] = { "READ", 0 };
     REQUIRE_RC ( Setup ( "SRR000001", columns ) );
-    REQUIRE_RC ( VCursorOpen (curs ) );
 
     // when accessing randomly, blob sizes stay very small
     REQUIRE ( CheckBlobRange ( 1, 1, 4 ) );
@@ -561,7 +557,6 @@ FIXTURE_TEST_CASE(PageMapIterator_WGS, VdbFixture)
 {   // single fragment per row, multiple rows per blob
     static char const *columns[] = { "READ", 0 };
     REQUIRE_RC ( Setup ( "ALWZ01", columns ) );
-    REQUIRE_RC ( VCursorOpen (curs ) );
 
     {
         REQUIRE_RC ( VCursorSetRowId (curs, 1 ) );
@@ -602,7 +597,6 @@ FIXTURE_TEST_CASE ( VCursor_FindNextRowIdDirect, VdbFixture )
 {
     static char const *columns[] = { "SPOT_ID", "READ", 0 };
     REQUIRE_RC ( Setup ( "SRR000001", columns ) );
-    REQUIRE_RC ( VCursorOpen (curs ) );
     int64_t next;
     REQUIRE_RC ( VCursorFindNextRowIdDirect ( curs, 0, 1, & next ) );
     REQUIRE_EQ ( (int64_t)1, next ) ;
@@ -629,6 +623,13 @@ FIXTURE_TEST_CASE ( DoubleOpen, VdbFixture )
     REQUIRE_RC ( VTableRelease ( tbl ) );
 
     REQUIRE_RC ( VDatabaseRelease ( db ) );
+}
+
+FIXTURE_TEST_CASE(VCursor_PermitPostOpenAdd, VdbFixture)
+{
+    static char const *columns[] = { "SPOT_ID", 0 };
+    REQUIRE_RC(Setup("SRR000001", columns, false));
+    REQUIRE_RC(VCursorPermitPostOpenAdd(curs));
 }
 
 //////////////////////////////////////////// Main

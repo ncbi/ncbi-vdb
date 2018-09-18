@@ -1,5 +1,11 @@
 # NCBI External Developer Release:
 
+
+## NCBI VDB 2.9.2-1
+**July 31, 2018**
+  **vdb**: restored lost exported attribute on several entries in the private API
+
+
 ## NCBI VDB 2.9.2
 **July 23, 2018**
   **kfg, vfs**: Introduced enhanced handling of download-only NGC files that lack read/decrypt permissions
