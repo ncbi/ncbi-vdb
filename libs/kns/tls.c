@@ -465,6 +465,15 @@ rc_t tlsg_setup ( KTLSGlobals * self )
     vdb_mbedtls_ssl_conf_ca_chain( &self -> config, &self -> cacert, NULL );
     vdb_mbedtls_ssl_conf_rng( &self -> config, vdb_mbedtls_ctr_drbg_random, &self -> ctr_drbg );
 
+        /*  We need that to be sure that we are free to call 
+         *  vdb_mbedtls_ssl_conf_authmode () next time when 
+         *  KNSManagerSetAllowAllCerts () will be called
+         *  
+         *  Because smart special design we do not need to add
+         *  special code to deinitialize that variable. 
+         */ 
+    self -> safe_to_modify_ssl_config = true;
+
     return 0;
 }
 
@@ -557,6 +566,21 @@ LIB_EXPORT rc_t CC KNSManagerSetAllowAllCerts ( KNSManager *self, bool allow_all
     else
     {
         self -> tlsg . allow_all_certs = allow_all_certs;
+            /*
+             *  We are acting from supposition that at some particular
+             *  moments there should be called initlialisation of 
+             *  TLS configurations, which will be reflected at next 
+             *  handshake
+             */
+        if ( self -> tlsg . safe_to_modify_ssl_config ) {
+            vdb_mbedtls_ssl_conf_authmode(
+                            &self -> tlsg . config,
+                                ( self -> tlsg . allow_all_certs
+                                        ? MBEDTLS_SSL_VERIFY_OPTIONAL
+                                        : MBEDTLS_SSL_VERIFY_REQUIRED
+                                )
+                            );
+        }
     }
 
     return rc;
