@@ -276,13 +276,19 @@ const INSDC:coord:zero INSDC:coord:min:zero = 0x80000000;
 const INSDC:coord:zero INSDC:coord:max:zero = 0x3FFFFFFE;
 
 /*-------------------------------------------------------------------------
- * read filters bits
+ * spot and read filters bits
  */
 typedef U8 INSDC:SRA:read_filter;
 const INSDC:SRA:read_filter SRA_READ_FILTER_PASS = 0;
 const INSDC:SRA:read_filter SRA_READ_FILTER_REJECT = 1;
 const INSDC:SRA:read_filter SRA_READ_FILTER_CRITERIA = 2;
 const INSDC:SRA:read_filter SRA_READ_FILTER_REDACTED = 3;
+
+typedef U8 INSDC:SRA:spot_filter;
+const INSDC:SRA:spot_filter SRA_SPOT_FILTER_PASS = 0;
+const INSDC:SRA:spot_filter SRA_SPOT_FILTER_REJECT = 1;
+const INSDC:SRA:spot_filter SRA_SPOT_FILTER_CRITERIA = 2;
+const INSDC:SRA:spot_filter SRA_SPOT_FILTER_REDACTED = 3;
 
 /*-------------------------------------------------------------------------
  * read type bits

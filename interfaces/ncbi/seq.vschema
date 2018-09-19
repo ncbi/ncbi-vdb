@@ -33,6 +33,18 @@ include 'vdb/vdb.vschema';
 include 'ncbi/ncbi.vschema';
 include 'insdc/sra.vschema';
 
+typeset NCBI:spot_filter_read_set { INSDC:4na:bin, INSDC:x2na:bin, INSDC:2na:bin };
+
+
+/* make_spot_filter
+ *  function to analyze qualities and bases
+ *  and potentially set SRA_SPOT_FILTER_REJECT bit
+ */
+function
+NCBI:SRA:spot_filter < * U32 min_length > NCBI:SRA:make_spot_filter #1
+       ( NCBI:spot_filter_read_set read, INSDC:quality:phred quality,
+         INSDC:coord:zero read_start, INSDC:coord:len read_len,
+         INSDC:SRA:xread_type read_type, INSDC:SRA:spot_filter spot_filter );
 
 /*--------------------------------------------------------------------------
  * n_encoding - implementation
@@ -683,7 +695,7 @@ table NCBI:tbl:color_space #2.1
 /*--------------------------------------------------------------------------
  * protein
  */
-table NCBI:tbl:protein #1 = INSDC:tbl:protein
+table NCBI:tbl:protein #1 = INSDC:tbl:protein #1
 {
     /* upper-case letters */
     INSDC:protein:text in_protein_text = < INSDC:protein:text, INSDC:protein:text >
@@ -756,12 +768,17 @@ table NCBI:tbl:phred_quality #1.0.1 = NCBI:tbl:phred_quality_nocol #1.0.1
  *  2.0.2 - added input of text encodings
  *  2.0.3 - base explicitly upon sequence #1.0.1
  *  2.0.4 - change compression from izip to zip
- *  2.0.5 - change from zip to delta_average_zip
  */
 table NCBI:tbl:phred_quality #2.0.4 = INSDC:tbl:sequence #1.0.1
 {
     // read directly quality as  phred
-    INSDC:quality:phred out_qual_phred = .QUALITY;
+    INSDC:quality:phred out_qual_phred
+        = .QUALITY
+        | < INSDC:quality:phred > echo < 30 > ( out_dna_2na_bin )
+        | < INSDC:quality:phred > echo < 30 > ( out_rna_2na_bin )
+        | < INSDC:quality:phred > echo < 30 > ( out_dna_4na_bin )
+        | < INSDC:quality:phred > echo < 30 > ( out_rna_4na_bin )
+        ;
 
     // input rules
     INSDC:quality:text:phred_33 in_qual_text_phred_33 = QUALITY;
@@ -770,13 +787,30 @@ table NCBI:tbl:phred_quality #2.0.4 = INSDC:tbl:sequence #1.0.1
     INSDC:quality:phred in_qual_phred
         = QUALITY
         | ( INSDC:quality:phred ) < B8 > diff < 33 > ( in_qual_text_phred_33 )
-        | ( INSDC:quality:phred ) < B8 > diff < 64 > ( in_qual_text_phred_64 );
+        | ( INSDC:quality:phred ) < B8 > diff < 64 > ( in_qual_text_phred_64 )
+        ;
 
     // physical storage
-/*** next line is  for future change in production, but we have to wait until supporting code is released to the public ***/
-// physical column < INSDC:quality:phred > delta_average_zip_encoding .QUALITY = in_qual_phred;
-/*** NB *** MUST change table version to 2.0.5 and propagate to all derived tables ***/
-    physical column < INSDC:quality:phred > zip_encoding .QUALITY = in_qual_phred;
+
+    /* option 1: current storage as of June 29, 2018
+     */
+    physical column < INSDC:quality:phred > zip_encoding .QUALITY
+        = in_qual_phred
+        ;
+
+    /* option 2: utilize delta_average_zip_encoding
+     * /
+     physical column < INSDC:quality:phred > delta_average_zip_encoding .QUALITY
+         = in_qual_phred
+         ;
+     */
+
+    /* option 3: analyze and use to populate SPOT_FILTER
+       INSDC:SRA:spot_filter quality_filter
+           = NCBI:SRA:make_spot_filter #1 ( in_2na_bin, in_qual_phred,
+             in_read_start, in_read_len, in_read_type, in_spot_filter )
+           ;
+     */
 
     // feed to compressed statistics
     INSDC:quality:phred in_stats_qual = in_qual_phred;

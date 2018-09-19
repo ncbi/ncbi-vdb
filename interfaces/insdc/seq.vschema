@@ -200,7 +200,9 @@ table INSDC:tbl:sequence #1.1
      */
 
     // PHRED is default
-    extern default column INSDC:quality:phred QUALITY = out_qual_phred;
+    extern default column INSDC:quality:phred QUALITY
+        = out_qual_phred
+        ;
 
     // textual encodings
     extern column INSDC:quality:text:phred_33 QUALITY

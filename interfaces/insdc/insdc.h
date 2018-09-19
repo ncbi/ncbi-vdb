@@ -322,29 +322,52 @@ typedef INSDC_coord_one INSDC_position_one;
  *  describes the type of read within a spot
  *  the extended version also describes its orientation
  */
-typedef uint8_t INSDC_xread_type;
-typedef INSDC_xread_type INSDC_read_type;
+typedef uint8_t INSDC_SRA_xread_type, INSDC_xread_type;
+typedef INSDC_SRA_xread_type INSDC_SRA_read_type, INSDC_read_type;
 enum
 {
     /* read_type */
-    READ_TYPE_TECHNICAL  = 0,
-    READ_TYPE_BIOLOGICAL = 1,
+    SRA_READ_TYPE_TECHNICAL  = 0,
+    SRA_READ_TYPE_BIOLOGICAL = 1,
 
     /* orientation - applied as bits, e.g.:
        type = READ_TYPE_BIOLOGICAL | READ_TYPE_REVERSE */
-    READ_TYPE_FORWARD = 2,
-    READ_TYPE_REVERSE = 4
+    SRA_READ_TYPE_FORWARD = 2,
+    SRA_READ_TYPE_REVERSE = 4,
+
+    /* old names */
+    READ_TYPE_TECHNICAL  = SRA_READ_TYPE_TECHNICAL,
+    READ_TYPE_BIOLOGICAL = SRA_READ_TYPE_BIOLOGICAL,
+    READ_TYPE_FORWARD = SRA_READ_TYPE_FORWARD,
+    READ_TYPE_REVERSE = SRA_READ_TYPE_REVERSE
 };
 
 /* read filter
  */
-typedef uint8_t INSDC_read_filter;
+typedef uint8_t INSDC_SRA_read_filter, INSDC_read_filter;
 enum
 {
-    READ_FILTER_PASS = 0,
-    READ_FILTER_REJECT = 1,
-    READ_FILTER_CRITERIA = 2,
-    READ_FILTER_REDACTED = 3
+    SRA_READ_FILTER_PASS = 0,
+    SRA_READ_FILTER_REJECT = 1,
+    SRA_READ_FILTER_CRITERIA = 2,
+    SRA_READ_FILTER_REDACTED = 3,
+
+    /* old names */
+    READ_FILTER_PASS = SRA_READ_FILTER_PASS,
+    READ_FILTER_REJECT = SRA_READ_FILTER_REJECT,
+    READ_FILTER_CRITERIA = SRA_READ_FILTER_CRITERIA,
+    READ_FILTER_REDACTED = SRA_READ_FILTER_REDACTED
+};
+
+/* spot filter
+ */
+typedef uint8_t INSDC_SRA_spot_filter;
+enum
+{
+    SRA_SPOT_FILTER_PASS = 0,
+    SRA_SPOT_FILTER_REJECT = 1,
+    SRA_SPOT_FILTER_CRITERIA = 2,
+    SRA_SPOT_FILTER_REDACTED = 3
 };
 
 #ifdef __cplusplus
