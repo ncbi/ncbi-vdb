@@ -564,6 +564,13 @@ FIXTURE_TEST_CASE(View_Join_PseudoPhysicalToken, AST_View_Fixture)
         "X" );
 }
 
+FIXTURE_TEST_CASE(View_Column_MemberInvalid, AST_View_Fixture)
+{
+    VerifyErrorMessage (
+        "version 2; table T#1 { column U8 c1 = 1; }; view W#1 <T t> { column U8 c2 = t . c1; U8 bad = c2 . t; }",
+        "Not a view parameter: 'c2'" );
+}
+
 FIXTURE_TEST_CASE(View_Column_ReferenceToParamTablesColumn_Undefined, AST_View_Fixture)
 {
     VerifyErrorMessage (
@@ -590,6 +597,55 @@ FIXTURE_TEST_CASE(View_Column_ReferenceToParamViewsColumn_Undefined, AST_View_Fi
         " view V#1 <T t> { column U8 c1 = t . p; }"
         " view W#1 <V v> { column U8 c2 = v . c22222222; }",
         "Column/production not found: 'c22222222'" );
+}
+
+FIXTURE_TEST_CASE(View_Column_ReferenceToParamViewsProduction, AST_View_Fixture)
+{    // can access non-virtual productions defined in the parameter table
+    ViewAccess v = ParseView (
+        "version 2; table T#1 { U8 p = 1; };"
+        " view V#1 <T t> { U8 c1 = t . p; }"
+        " view W#1 <V v> { column U8 c2 = v . c1; }",
+        "W", 1 );
+    REQUIRE_NOT_NULL ( v . Columns () . Get ( 0 ) -> read );
+    REQUIRE_EQ ( ( uint32_t ) eMembExpr, v . Columns () . Get ( 0 ) -> read -> var );
+    //TODO: verify c2's value
+}
+
+FIXTURE_TEST_CASE(View_Column_ReferenceToParamViewsVirtualProduction, AST_View_Fixture)
+{
+    ViewAccess v = ParseView (
+        "version 2; table T#1 {};"
+        " view V#1 <T t> { U8 c1 = q; }"
+        " view W#1 <V v> { column U8 c2 = v . q; }",
+        "W", 1 );
+    // p is a virtual production introduced but not defined in V, accessible to child W
+    REQUIRE_NOT_NULL ( v . Columns () . Get ( 0 ) -> read );
+    REQUIRE_EQ ( ( uint32_t ) eMembExpr, v . Columns () . Get ( 0 ) -> read -> var );
+}
+
+FIXTURE_TEST_CASE(View_Column_ReferenceToParamViewVirtualProduction_Inherited, AST_View_Fixture)
+{
+    ViewAccess v = ParseView (
+        "version 2; table T#1 {};"
+        " view V0#1 <T t> {}"
+        " view V1#1 <V0 v> { U8 c1 = q; }"
+        " view W#1 <V1 v> { column U8 c2 = v . q; }",
+        "W", 2 );
+    // p is a virtual production introduced in a parent table of T1 but never defined, accessible to the view
+    REQUIRE_NOT_NULL ( v . Columns () . Get ( 0 ) -> read );
+    REQUIRE_EQ ( ( uint32_t ) eMembExpr, v . Columns () . Get ( 0 ) -> read -> var );
+}
+
+FIXTURE_TEST_CASE(View_Column_ReferenceToParamViewsProduction_Inherited, AST_View_Fixture)
+{
+    ViewAccess v = ParseView (
+        "version 2; table T#1 {};"
+        " view V0#1 <T t> {}"
+        " view V1#1 <V0 v> { U8 p = q; }"
+        " view W#1 <V1 v> { column U8 c2 = v . p; }",
+        "W", 2 );
+    // p is a non-virtual production defined in a parent table of T2, accessible to the view
+    REQUIRE_EQ ( ( uint32_t ) eMembExpr, v . Columns () . Get ( 0 ) -> read -> var );
 }
 
 FIXTURE_TEST_CASE(View_Column_Context, AST_View_Fixture)

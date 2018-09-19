@@ -79,6 +79,7 @@ SCHEMA_SRC = \
     ParseTree \
     schema-ast \
     AST \
+    AST_Expr \
     ASTBuilder \
     ASTBuilder-type \
     ASTBuilder-func \

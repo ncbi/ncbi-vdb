@@ -1505,6 +1505,13 @@ void view_set_context ( SView *self );
 
 rc_t view_fix_forward_refs ( const SView *table );
 
+/* init-tbl-symtab
+ *  initializes "p_tbl"
+ *  places view in scope
+ *  must be balanced by KSymTableWhack
+ */
+rc_t init_view_symtab ( struct KSymTable * p_tbl, const VSchema * p_schema, const SView * p_view );
+
 /* SViewOverrides
 */
 typedef struct SViewOverrides SViewOverrides;

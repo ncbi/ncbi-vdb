@@ -519,11 +519,17 @@ ASTBuilder :: AddProduction ( ctx_t ctx, const AST & p_node, Vector & p_list, co
         sym -> u . obj = prod;
 
         prod -> expr = p_expr . MakeExpression ( ctx, *this ) ;
-        /* ctx = 0 for params, ctx == 1 for productions */
-        prod -> cid . ctx = 1;
-        if ( ! VectorAppend ( ctx, p_list, & prod -> cid . id, prod ) )
-        {
+        if ( prod -> expr == 0 )
+        {   // semantic error in the rhs
             SProductionWhack ( prod, NULL );
+        }
+        else
+        {
+            prod -> cid . ctx = 1;  /* ctx = 0 for params, ctx == 1 for productions */
+            if ( ! VectorAppend ( ctx, p_list, & prod -> cid . id, prod ) )
+            {
+                SProductionWhack ( prod, NULL );
+            }
         }
     }
 }

@@ -24,84 +24,15 @@
  *
  */
 
-#ifndef _hpp_AST_
-#define _hpp_AST_
+#ifndef _hpp_AST_Expr_
+#define _hpp_AST_Expr_
 
-#include "ParseTree.hpp"
-
-#include <klib/text.h>
-
-struct SExpression;
-struct KSymbol;
+#include "AST.hpp"
 
 namespace ncbi
 {
     namespace SchemaParser
     {
-        class ASTBuilder;
-
-        class AST : public ParseTree
-        {
-        public:
-            static AST * Make ( ctx_t ctx,  const Token* token );
-            static AST * Make ( ctx_t ctx, Token :: TokenType tokenType ); // no-value token
-            static AST * Make ( ctx_t ctx ); // no token; a synthesized node
-
-            static void Destroy ( AST * );
-
-            // convenience overloads; chilren nodes cannot be NULL
-            static AST * Make ( ctx_t ctx, const Token* token, AST* );
-            static AST * Make ( ctx_t ctx, const Token* token, AST*, AST* );
-            static AST * Make ( ctx_t ctx, const Token* token, AST*, AST*, AST* );
-            static AST * Make ( ctx_t ctx, const Token* token, AST*, AST*, AST*, AST * );
-            static AST * Make ( ctx_t ctx, const Token* token, AST*, AST*, AST*, AST *, AST * );
-            static AST * Make ( ctx_t ctx, const Token* token, AST*, AST*, AST*, AST *, AST *, AST* );
-
-            void AddNode ( ctx_t ctx, AST * );
-            void AddNode ( ctx_t ctx, const Token * );
-
-            const AST* GetChild ( uint32_t idx ) const  { return static_cast < const AST * > ( ParseTree :: GetChild ( idx ) ); }
-                  AST* GetChild ( uint32_t idx )        { return static_cast <       AST * > ( ParseTree :: GetChild ( idx ) ); }
-
-            Token :: TokenType GetTokenType () const { return GetToken () . GetType (); }
-            const char* GetTokenValue () const { return GetToken () . GetValue (); }
-
-        protected:
-            AST ( const Token* token );
-            AST ( Token :: TokenType tokenType ); // no-value token
-            explicit AST (); // no token; a synthesized node
-            ~AST(); // call Destroy() instead
-        };
-
-        class AST_FQN : public AST
-        {
-        public:
-            static AST_FQN * Make ( ctx_t ctx, const Token* ); // always PT_IDENT
-
-            void SetVersion ( const char* ); // version specified as "#maj[.min[.rel]]]"
-            uint32_t GetVersion () const { return m_version; } // encoded as ( maj << 24 ) | ( min << 16 ) | ( rel )
-
-            uint32_t NamespaceCount() const;
-            void GetNamespace ( uint32_t idx, String & ) const;
-            void GetIdentifier ( String & ) const;
-
-            // reconstruct the full name "ns1:ns2:...:ident", 0-terminated. Returns size in bytes
-            void GetFullName ( char* buf, size_t bufSize ) const;
-            void GetPartialName ( char* buf, size_t bufSize, uint32_t lastMember ) const;
-
-        protected:
-            AST_FQN ( const Token* ); // always PT_IDENT
-            ~AST_FQN(); // call AST::Destroy() instead
-
-        private:
-            uint32_t m_version;
-        };
-
-        // these conversion function will assert if the argument is NULL or not an AST_FQN,
-        // otherwise guarantee to return a non-NULL AST_FQN*
-        extern AST_FQN * ToFQN ( AST * p_ast);
-        extern const AST_FQN * ToFQN ( const AST * p_ast);
-
         class AST_Expr : public AST
         {
         public:
@@ -113,7 +44,7 @@ namespace ncbi
             // these methods report problems
             SExpression * EvaluateConst ( ctx_t ctx, ASTBuilder & ) const;
             SExpression * MakeExpression ( ctx_t ctx, ASTBuilder & ) const;
-            SExpression * MakeSymExpr ( ctx_t ctx, ASTBuilder & , const struct KSymbol * p_sym ) const;
+            SExpression * MakeSymExpr ( ctx_t ctx, ASTBuilder & , const KSymbol * p_sym ) const;
             SExpression * MakeUnsigned ( ctx_t ctx, ASTBuilder & ) const;
 
         protected:
