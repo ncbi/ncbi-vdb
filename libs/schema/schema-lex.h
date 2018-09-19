@@ -34,6 +34,8 @@ extern "C" {
 #include <stddef.h>
 #include <stdint.h>
 
+#include <kfc/ctx.h>
+
 typedef struct SchemaToken
 {
     int             type;

@@ -35,8 +35,10 @@ ALL_LIBS = \
 	$(INT_LIBS)
 
 include $(TOP)/build/Makefile.env
+
 CPFLAGS += -fno-exceptions
-$(warning CPFLAGS=$(CPFLAGS))
+WARN += -Wno-unused-variable
+
 #-------------------------------------------------------------------------------
 # outer targets
 #

@@ -3277,6 +3277,7 @@ SchemaScan_yylex ( YYSTYPE *lvalp, YYLTYPE *llocp, SchemaScanBlock* sb )
 void
 AddWhitespace ( SchemaScanBlock* p_sb, const char* p_ws, size_t p_length )
 {
+    //TODO: KFCfy
     if ( p_sb -> whitespace == NULL )
     {
         p_sb -> whitespace = malloc ( p_length + 1 );

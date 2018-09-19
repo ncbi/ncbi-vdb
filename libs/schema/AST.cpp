@@ -31,6 +31,9 @@
 #include <os-native.h>
 #include <new>
 
+#include <kfc/xc.h>
+#include <kfc/except.h>
+
 #include <klib/symbol.h>
 #include <klib/printf.h>
 #include <klib/rc.h>
@@ -50,140 +53,164 @@ using namespace std;
 // AST
 
 AST *
-AST :: Make ( const Token* token )
+AST :: Make ( ctx_t ctx, const Token* token )
 {
     void * ret = malloc ( sizeof ( AST ) );
-    if ( ret == 0 ) return 0; // TODO: raise KFC error
+    if ( ret == 0 )
+    {
+        FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+        SYSTEM_ERROR ( xcNoMemory, "" );
+        return 0;
+    }
     return new ( ret ) AST ( token );
 }
 
-AST * AST :: Make ( Token :: TokenType tokenType )
+AST * AST :: Make ( ctx_t ctx, Token :: TokenType tokenType )
 {
     void * ret = malloc ( sizeof ( AST ) );
-    if ( ret == 0 ) return 0; // TODO: raise KFC error
+    if ( ret == 0 )
+    {
+        FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+        SYSTEM_ERROR ( xcNoMemory, "" );
+        return 0;
+    }
     return new ( ret ) AST ( tokenType );
 }
 
-AST * AST :: Make ()
+AST * AST :: Make ( ctx_t ctx )
 {
     void * ret = malloc ( sizeof ( AST ) );
-    if ( ret == 0 ) return 0; // TODO: raise KFC error
+    if ( ret == 0 )
+    {
+        FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+        SYSTEM_ERROR ( xcNoMemory, "" );
+        return 0;
+    }
     return new ( ret ) AST ();
 }
 
 AST *
-AST :: Make ( const Token * p_token, AST * p_child1 )
+AST :: Make ( ctx_t ctx, const Token * p_token, AST * p_child1 )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     assert ( p_child1 != 0 );
-    AST * ret = Make ( p_token );
+    AST * ret = Make ( ctx, p_token );
     if ( ret != 0 )
     {
-        ret -> AddNode ( p_child1 );
+        ret -> AddNode ( ctx, p_child1 );
     }
     return ret;
 }
 
 AST *
-AST :: Make ( const Token * p_token, AST * p_child1, AST * p_child2 )
+AST :: Make ( ctx_t ctx, const Token * p_token, AST * p_child1, AST * p_child2 )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     assert ( p_child1 != 0 );
     assert ( p_child2 != 0 );
-    AST * ret = Make ( p_token );
+    AST * ret = Make ( ctx, p_token );
     if ( ret != 0 )
     {
-        ret -> AddNode ( p_child1 );
-        ret -> AddNode ( p_child2 );
+        ret -> AddNode ( ctx, p_child1 );
+        ret -> AddNode ( ctx, p_child2 );
     }
     return ret;
 }
 
 AST *
-AST :: Make ( const Token * p_token, AST * p_child1, AST * p_child2, AST * p_child3 )
+AST :: Make ( ctx_t ctx, const Token * p_token, AST * p_child1, AST * p_child2, AST * p_child3 )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     assert ( p_child1 != 0 );
     assert ( p_child2 != 0 );
     assert ( p_child3 != 0 );
-    AST * ret = Make ( p_token );
+    AST * ret = Make ( ctx, p_token );
     if ( ret != 0 )
     {
-        ret -> AddNode ( p_child1 );
-        ret -> AddNode ( p_child2 );
-        ret -> AddNode ( p_child3 );
+        ret -> AddNode ( ctx, p_child1 );
+        ret -> AddNode ( ctx, p_child2 );
+        ret -> AddNode ( ctx, p_child3 );
     }
     return ret;
 }
 
 AST *
-AST :: Make( const Token * p_token,
+AST :: Make( ctx_t ctx,
+             const Token * p_token,
              AST * p_child1,
              AST * p_child2,
              AST * p_child3,
              AST * p_child4 )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     assert ( p_child1 != 0 );
     assert ( p_child2 != 0 );
     assert ( p_child3 != 0 );
     assert ( p_child4 != 0 );
-    AST * ret = Make ( p_token );
+    AST * ret = Make ( ctx, p_token );
     if ( ret != 0 )
     {
-        ret -> AddNode ( p_child1 );
-        ret -> AddNode ( p_child2 );
-        ret -> AddNode ( p_child3 );
-        ret -> AddNode ( p_child4 );
+        ret -> AddNode ( ctx, p_child1 );
+        ret -> AddNode ( ctx, p_child2 );
+        ret -> AddNode ( ctx, p_child3 );
+        ret -> AddNode ( ctx, p_child4 );
     }
     return ret;
 }
 
 AST *
-AST :: Make ( const Token * p_token,
-             AST * p_child1,
-             AST * p_child2,
-             AST * p_child3,
-             AST * p_child4,
-             AST * p_child5 )
+AST :: Make ( ctx_t ctx,
+              const Token * p_token,
+              AST * p_child1,
+              AST * p_child2,
+              AST * p_child3,
+              AST * p_child4,
+              AST * p_child5 )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     assert ( p_child1 != 0 );
     assert ( p_child2 != 0 );
     assert ( p_child3 != 0 );
     assert ( p_child4 != 0 );
     assert ( p_child5 != 0 );
-    AST * ret = Make ( p_token );
+    AST * ret = Make ( ctx, p_token );
     if ( ret != 0 )
     {
-        ret -> AddNode ( p_child1 );
-        ret -> AddNode ( p_child2 );
-        ret -> AddNode ( p_child3 );
-        ret -> AddNode ( p_child4 );
-        ret -> AddNode ( p_child5 );
+        ret -> AddNode ( ctx, p_child1 );
+        ret -> AddNode ( ctx, p_child2 );
+        ret -> AddNode ( ctx, p_child3 );
+        ret -> AddNode ( ctx, p_child4 );
+        ret -> AddNode ( ctx, p_child5 );
     }
     return ret;
 }
 
 AST *
-AST :: Make ( const Token * p_token,
-             AST * p_child1,
-             AST * p_child2,
-             AST * p_child3,
-             AST * p_child4,
-             AST * p_child5,
-             AST * p_child6 )
+AST :: Make ( ctx_t ctx,
+              const Token * p_token,
+              AST * p_child1,
+              AST * p_child2,
+              AST * p_child3,
+              AST * p_child4,
+              AST * p_child5,
+              AST * p_child6 )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     assert ( p_child1 != 0 );
     assert ( p_child2 != 0 );
     assert ( p_child3 != 0 );
     assert ( p_child4 != 0 );
     assert ( p_child5 != 0 );
     assert ( p_child6 != 0 );
-    AST * ret = Make ( p_token );
+    AST * ret = Make ( ctx, p_token );
     if ( ret != 0 )
     {
-        ret -> AddNode ( p_child1 );
-        ret -> AddNode ( p_child2 );
-        ret -> AddNode ( p_child3 );
-        ret -> AddNode ( p_child4 );
-        ret -> AddNode ( p_child5 );
-        ret -> AddNode ( p_child6 );
+        ret -> AddNode ( ctx, p_child1 );
+        ret -> AddNode ( ctx, p_child2 );
+        ret -> AddNode ( ctx, p_child3 );
+        ret -> AddNode ( ctx, p_child4 );
+        ret -> AddNode ( ctx, p_child5 );
+        ret -> AddNode ( ctx, p_child6 );
     }
     return ret;
 }
@@ -218,23 +245,30 @@ AST :: ~AST ()
 }
 
 void
-AST :: AddNode ( AST * p_child )
+AST :: AddNode ( ctx_t ctx, AST * p_child )
 {
-    AddChild ( p_child );
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    AddChild ( ctx, p_child );
 }
 
 void
-AST :: AddNode ( const Token * p_child )
+AST :: AddNode ( ctx_t ctx, const Token * p_child )
 {
-    AddChild ( AST :: Make ( p_child ) );
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    AddChild ( ctx, AST :: Make ( ctx, p_child ) );
 }
 
 // AST_FQN
 AST_FQN *
-AST_FQN :: Make ( const Token* token )
+AST_FQN :: Make ( ctx_t ctx, const Token* token )
 {
     void * ret = malloc ( sizeof ( AST_FQN ) );
-    if ( ret == 0 ) return 0; // TODO: raise KFC error
+    if ( ret == 0 )
+    {
+        FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+        SYSTEM_ERROR ( xcNoMemory, "" );
+        return 0;
+    }
     return new ( ret ) AST_FQN ( token );
 }
 
@@ -347,38 +381,58 @@ ncbi :: SchemaParser :: ToFQN ( const AST * p_ast)
 
 // AST_Expr
 AST_Expr *
-AST_Expr :: Make ( const Token * token )
+AST_Expr :: Make ( ctx_t ctx, const Token * token )
 {
     void * ret = malloc ( sizeof ( AST_Expr ) );
-    if ( ret == 0 ) return 0; // TODO: raise KFC error
+    if ( ret == 0 )
+    {
+        FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+        SYSTEM_ERROR ( xcNoMemory, "" );
+        return 0;
+    }
     return new ( ret ) AST_Expr ( token );
 }
 
 AST_Expr *
-AST_Expr :: Make  ( AST_FQN * fqn )
+AST_Expr :: Make  ( ctx_t ctx, AST_FQN * fqn )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     void * p = malloc ( sizeof ( AST_Expr ) );
-    if ( p == 0 ) return 0; // TODO: raise KFC error
+    if ( p == 0 )
+    {
+        SYSTEM_ERROR ( xcNoMemory, "" );
+        return 0;
+    }
     AST_Expr * ret = new ( p ) AST_Expr (  & fqn -> GetToken () );
-    ret -> AddNode ( fqn );
+    ret -> AddNode ( ctx, fqn );
     return ret;
 }
 
 AST_Expr *
-AST_Expr :: Make  ( AST_Expr* expr)
+AST_Expr :: Make  ( ctx_t ctx, AST_Expr* expr)
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     void * p = malloc ( sizeof ( AST_Expr ) );
-    if ( p == 0 ) return 0; // TODO: raise KFC error
+    if ( p == 0 )
+    {
+        SYSTEM_ERROR ( xcNoMemory, "" );
+        return 0;
+    }
     AST_Expr * ret = new ( p ) AST_Expr ();
-    ret -> AddNode ( expr );
+    ret -> AddNode ( ctx, expr );
     return ret;
 }
 
 AST_Expr *
-AST_Expr :: Make  ( Token :: TokenType tt )
+AST_Expr :: Make  ( ctx_t ctx, Token :: TokenType tt )
 {
     void * p = malloc ( sizeof ( AST_Expr ) );
-    if ( p == 0 ) return 0; // TODO: raise KFC error
+    if ( p == 0 )
+    {
+        FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+        SYSTEM_ERROR ( xcNoMemory, "" );
+        return 0;
+    }
     AST_Expr * ret = new ( p ) AST_Expr ();
     ret -> SetToken ( Token ( tt ) );
     return ret;
@@ -398,9 +452,10 @@ AST_Expr :: ~AST_Expr ()
 }
 
 SExpression *
-AST_Expr :: EvaluateConst ( ASTBuilder & p_builder ) const
+AST_Expr :: EvaluateConst ( ctx_t ctx, ASTBuilder & p_builder ) const
 {
-    SExpression * ret = MakeExpression ( p_builder );
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    SExpression * ret = MakeExpression ( ctx, p_builder );
     if ( ret != 0 )
     {
         switch ( ret -> var )
@@ -411,7 +466,7 @@ AST_Expr :: EvaluateConst ( ASTBuilder & p_builder ) const
             // MakeVectorConstant() makes sure all elements are const
             break;
         default:
-            p_builder . ReportError ( GetLocation (), "Not a constant expression" );
+            p_builder . ReportError ( ctx, GetLocation (), "Not a constant expression" );
             SExpressionWhack ( ret );
             ret = 0;
             break;
@@ -421,9 +476,10 @@ AST_Expr :: EvaluateConst ( ASTBuilder & p_builder ) const
 }
 
 static
-SExpression * SSymExprMake ( ASTBuilder & p_builder, uint32_t p_type, const KSymbol* p_sym )
+SExpression * SSymExprMake ( ctx_t ctx, ASTBuilder & p_builder, uint32_t p_type, const KSymbol* p_sym )
 {
-    SSymExpr *x = p_builder . Alloc < SSymExpr > ();
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    SSymExpr *x = p_builder . Alloc < SSymExpr > ( ctx );
     if ( x == 0 )
     {
         return 0;
@@ -438,26 +494,27 @@ SExpression * SSymExprMake ( ASTBuilder & p_builder, uint32_t p_type, const KSym
 }
 
 SExpression *
-AST_Expr :: MakeSymExpr ( ASTBuilder & p_builder, const KSymbol* p_sym ) const
+AST_Expr :: MakeSymExpr ( ctx_t ctx, ASTBuilder & p_builder, const KSymbol* p_sym ) const
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     if ( p_sym != 0 )
     {
         switch ( p_sym -> type )
         {
         case eSchemaParam :
         case eFactParam :
-            return SSymExprMake ( p_builder, eIndirectExpr, p_sym );
+            return SSymExprMake ( ctx, p_builder, eIndirectExpr, p_sym );
         case eProduction:
-            return SSymExprMake ( p_builder, eProdExpr, p_sym );
+            return SSymExprMake ( ctx, p_builder, eProdExpr, p_sym );
         case eFuncParam :
-            return SSymExprMake ( p_builder, eParamExpr, p_sym );
+            return SSymExprMake ( ctx, p_builder, eParamExpr, p_sym );
         case eColumn :
-            return SSymExprMake ( p_builder, eColExpr, p_sym );
+            return SSymExprMake ( ctx, p_builder, eColExpr, p_sym );
         case ePhysMember:
-            return SSymExprMake ( p_builder, ePhysExpr, p_sym );
+            return SSymExprMake ( ctx, p_builder, ePhysExpr, p_sym );
         case eForward:
         case eVirtual:
-            return SSymExprMake ( p_builder, eFwdExpr, p_sym );
+            return SSymExprMake ( ctx, p_builder, eFwdExpr, p_sym );
         case eConstant:
         {
             const SConstant * cnst = reinterpret_cast < const SConstant * > ( p_sym -> u . obj );
@@ -466,10 +523,10 @@ AST_Expr :: MakeSymExpr ( ASTBuilder & p_builder, const KSymbol* p_sym ) const
             return const_cast < SExpression * > ( cnst -> expr );
         }
         case eFunction :
-            p_builder . ReportError ( GetLocation (), "Function expressions are not yet implemented" );
+            p_builder . ReportError ( ctx, GetLocation (), "Function expressions are not yet implemented" );
             break;
         default:
-            p_builder . ReportError ( GetLocation (), "Object cannot be used in this context", p_sym -> name );
+            p_builder . ReportError ( ctx, GetLocation (), "Object cannot be used in this context", p_sym -> name );
             break;
         }
     }
@@ -496,10 +553,11 @@ unsigned int CC hex_to_int ( char c )
 }
 
 SExpression *
-AST_Expr :: MakeUnsigned ( ASTBuilder & p_builder ) const
+AST_Expr :: MakeUnsigned ( ctx_t ctx, ASTBuilder & p_builder ) const
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     assert ( GetTokenType () == PT_UINT );
-    SConstExpr * x = p_builder . Alloc < SConstExpr > ( sizeof * x - sizeof x -> u + sizeof x -> u . u64 [ 0 ] );
+    SConstExpr * x = p_builder . Alloc < SConstExpr > ( ctx, sizeof * x - sizeof x -> u + sizeof x -> u . u64 [ 0 ] );
     if ( x != 0 )
     {
         assert ( ChildrenCount () == 1 );
@@ -556,10 +614,11 @@ AST_Expr :: MakeUnsigned ( ASTBuilder & p_builder ) const
 }
 
 SExpression *
-AST_Expr :: MakeFloat ( ASTBuilder & p_builder ) const
+AST_Expr :: MakeFloat ( ctx_t ctx, ASTBuilder & p_builder ) const
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     assert ( GetTokenType () == FLOAT_ || GetTokenType () == EXP_FLOAT );
-    SConstExpr * x = p_builder . Alloc < SConstExpr > ( sizeof * x - sizeof x -> u + sizeof x -> u . u64 [ 0 ] );
+    SConstExpr * x = p_builder . Alloc < SConstExpr > ( ctx, sizeof * x - sizeof x -> u + sizeof x -> u . u64 [ 0 ] );
     if ( x != 0 )
     {
         const char * val = GetTokenValue ();
@@ -567,7 +626,7 @@ AST_Expr :: MakeFloat ( ASTBuilder & p_builder ) const
         double f64 = strtod ( val, & end );
         if ( ( end - val ) != ( int ) string_size ( val ) )
         {
-            p_builder . ReportError ( GetLocation (), "Invalid floating point constant" );
+            p_builder . ReportError ( ctx, GetLocation (), "Invalid floating point constant" );
             return 0;
         }
 
@@ -583,12 +642,13 @@ AST_Expr :: MakeFloat ( ASTBuilder & p_builder ) const
 }
 
 SExpression *
-AST_Expr :: MakeString ( ASTBuilder & p_builder ) const
+AST_Expr :: MakeString ( ctx_t ctx, ASTBuilder & p_builder ) const
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     assert ( GetTokenType () == STRING );
     const char * val = GetTokenValue ();
     size_t size = string_size ( val ) - 2; // minus quotes
-    SConstExpr * x = p_builder . Alloc < SConstExpr > ( sizeof * x - sizeof x -> u + size + 1 );
+    SConstExpr * x = p_builder . Alloc < SConstExpr > ( ctx, sizeof * x - sizeof x -> u + size + 1 );
     if ( x != 0 )
     {
         string_copy ( x -> u . utf8, size + 1, val + 1, size ); // add 1 for NUL
@@ -603,12 +663,13 @@ AST_Expr :: MakeString ( ASTBuilder & p_builder ) const
 }
 
 SExpression *
-AST_Expr :: MakeEscapedString ( ASTBuilder & p_builder ) const
+AST_Expr :: MakeEscapedString (ctx_t ctx,  ASTBuilder & p_builder ) const
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     assert ( GetTokenType () == ESCAPED_STRING );
     const char * val = GetTokenValue ();
     size_t size = string_size ( val ) - 2; // minus quotes
-    SConstExpr * x = p_builder . Alloc < SConstExpr > ( sizeof * x - sizeof x -> u + size + 1 );
+    SConstExpr * x = p_builder . Alloc < SConstExpr > ( ctx, sizeof * x - sizeof x -> u + size + 1 );
     if ( x != 0 )
     {
         char * buffer = x -> u . utf8;
@@ -694,10 +755,11 @@ AST_Expr :: MakeEscapedString ( ASTBuilder & p_builder ) const
 }
 
 SExpression *
-AST_Expr :: MakeVectorConstant ( ASTBuilder & p_builder ) const
+AST_Expr :: MakeVectorConstant ( ctx_t ctx, ASTBuilder & p_builder ) const
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     assert ( GetTokenType () == PT_CONSTVECT );
-    SVectExpr * x = p_builder . Alloc < SVectExpr > ();
+    SVectExpr * x = p_builder . Alloc < SVectExpr > ( ctx );
     if ( x != 0 )
     {
         x -> dad . var = eVectorExpr;
@@ -710,7 +772,7 @@ AST_Expr :: MakeVectorConstant ( ASTBuilder & p_builder ) const
         bool good = true;
         for ( uint32_t i = 0 ; i != count; ++i )
         {
-            SExpression * vx = ToExpr ( values . GetChild ( i ) ) -> EvaluateConst ( p_builder );
+            SExpression * vx = ToExpr ( values . GetChild ( i ) ) -> EvaluateConst ( ctx, p_builder );
             if ( vx == 0 )
             {
                 good = false;
@@ -718,11 +780,11 @@ AST_Expr :: MakeVectorConstant ( ASTBuilder & p_builder ) const
             }
             if ( vx -> var == eVectorExpr )
             {
-                p_builder . ReportError ( GetLocation (), "Nested vector constants are not allowed" );
+                p_builder . ReportError ( ctx, GetLocation (), "Nested vector constants are not allowed" );
                 good = false;
                 break;
             }
-            if ( ! p_builder . VectorAppend ( x -> expr, 0, vx ) )
+            if ( ! p_builder . VectorAppend ( ctx, x -> expr, 0, vx ) )
             {
                 SExpressionWhack ( vx );
                 good = false;
@@ -741,9 +803,10 @@ AST_Expr :: MakeVectorConstant ( ASTBuilder & p_builder ) const
 }
 
 SExpression *
-AST_Expr :: MakeBool ( ASTBuilder & p_builder ) const
+AST_Expr :: MakeBool ( ctx_t ctx, ASTBuilder & p_builder ) const
 {
-    SConstExpr * x = p_builder . Alloc < SConstExpr > ( sizeof * x - sizeof x -> u + sizeof x -> u . b [ 0 ] );
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    SConstExpr * x = p_builder . Alloc < SConstExpr > ( ctx, sizeof * x - sizeof x -> u + sizeof x -> u . b [ 0 ] );
     if ( x != 0 )
     {
         x -> u . b [ 0 ] = GetTokenType () == KW_true;
@@ -758,12 +821,13 @@ AST_Expr :: MakeBool ( ASTBuilder & p_builder ) const
 }
 
 SExpression *
-AST_Expr :: MakeNegate ( ASTBuilder & p_builder ) const
+AST_Expr :: MakeNegate ( ctx_t ctx, ASTBuilder & p_builder ) const
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     assert ( GetTokenType () == PT_NEGATE );
     assert ( ChildrenCount () == 1 );
 
-    SExpression * xp = ToExpr ( GetChild ( 0 ) ) -> MakeExpression ( p_builder );
+    SExpression * xp = ToExpr ( GetChild ( 0 ) ) -> MakeExpression ( ctx, p_builder );
     if ( xp != 0 )
     {
         switch ( xp -> var )
@@ -836,7 +900,7 @@ AST_Expr :: MakeNegate ( ASTBuilder & p_builder ) const
                 }
                 else
                 {
-                    p_builder . ReportError ( GetLocation (), "Negation applied to a non-scalar" );
+                    p_builder . ReportError ( ctx, GetLocation (), "Negation applied to a non-scalar" );
                 }
             }
             break;
@@ -857,13 +921,13 @@ AST_Expr :: MakeNegate ( ASTBuilder & p_builder ) const
                             const SDatatype *dt = VSchemaFindTypeid ( p_builder . GetSchema(), tx -> fd . td . type_id );
                             if ( dt != NULL && dt -> domain == vtdUint )
                             {
-                                p_builder . ReportError ( GetLocation (), "Negation applied to an unsigned integer" );
+                                p_builder . ReportError ( ctx, GetLocation (), "Negation applied to an unsigned integer" );
                             }
                         }
                     }
                 }
 
-                SUnaryExpr * x = p_builder . Alloc < SUnaryExpr > ();
+                SUnaryExpr * x = p_builder . Alloc < SUnaryExpr > ( ctx );
                 if ( x != 0 )
                 {
                     x -> dad . var = eNegateExpr;
@@ -875,7 +939,7 @@ AST_Expr :: MakeNegate ( ASTBuilder & p_builder ) const
             break;
 
         default:
-            p_builder . ReportError ( GetLocation (), "Negation applied to a non-const operand" );
+            p_builder . ReportError ( ctx, GetLocation (), "Negation applied to a non-const operand" );
             break;
         }
         SExpressionWhack ( xp );
@@ -885,18 +949,19 @@ AST_Expr :: MakeNegate ( ASTBuilder & p_builder ) const
 }
 
 SExpression *
-AST_Expr :: MakeCast ( ASTBuilder & p_builder ) const
+AST_Expr :: MakeCast ( ctx_t ctx, ASTBuilder & p_builder ) const
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     assert ( GetTokenType () == PT_CASTEXPR );
     assert ( ChildrenCount () == 2 );
 
-    STypeExpr * type = p_builder . MakeTypeExpr ( * GetChild ( 0 ) );
+    STypeExpr * type = p_builder . MakeTypeExpr ( ctx, * GetChild ( 0 ) );
     if ( type != 0 )
     {
-        SExpression * expr = ToExpr ( GetChild ( 1 ) ) -> MakeExpression ( p_builder );
+        SExpression * expr = ToExpr ( GetChild ( 1 ) ) -> MakeExpression ( ctx, p_builder );
         if ( expr != 0 )
         {
-            SBinExpr * x = p_builder . Alloc < SBinExpr > ();
+            SBinExpr * x = p_builder . Alloc < SBinExpr > ( ctx );
             if ( x != 0 )
             {
                 x -> dad . var = eCastExpr;
@@ -915,9 +980,10 @@ AST_Expr :: MakeCast ( ASTBuilder & p_builder ) const
 
 static
 SExpression *
-SMembExprMake ( ASTBuilder & p_builder, const KSymbol* p_obj, const KSymbol* p_mem, const SExpression * p_rowId )
+SMembExprMake ( ctx_t ctx, ASTBuilder & p_builder, const KSymbol* p_obj, const KSymbol* p_mem, const SExpression * p_rowId )
 {
-    SMembExpr *x = p_builder . Alloc < SMembExpr > ();
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    SMembExpr *x = p_builder . Alloc < SMembExpr > ( ctx );
     if ( x == 0 )
     {
         return 0;
@@ -948,14 +1014,16 @@ SMembExprMake ( ASTBuilder & p_builder, const KSymbol* p_obj, const KSymbol* p_m
 
 static
 SExpression *
-MakeSMembExpr ( ASTBuilder & p_builder, const AST & p_struc, const AST & p_member, const AST_Expr * p_rowId = 0 )
+MakeSMembExpr ( ctx_t ctx, ASTBuilder & p_builder, const AST & p_struc, const AST & p_member, const AST_Expr * p_rowId = 0 )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+
     assert ( p_struc . GetTokenType () == PT_IDENT );
     assert ( p_struc . ChildrenCount () == 1 );
     assert ( p_member . GetTokenType () == PT_IDENT );
     assert ( p_member . ChildrenCount () == 1 );
 
-    const KSymbol * sym = p_builder . Resolve ( p_struc . GetChild ( 0 ) -> GetLocation (),
+    const KSymbol * sym = p_builder . Resolve ( ctx, p_struc . GetChild ( 0 ) -> GetLocation (),
                                                 p_struc . GetChild ( 0 ) -> GetTokenValue (),
                                                 true );
     if ( sym != 0 )
@@ -963,7 +1031,7 @@ MakeSMembExpr ( ASTBuilder & p_builder, const AST & p_struc, const AST & p_membe
         const SExpression * rowId = 0;
         if ( p_rowId != 0 )
         {
-            rowId = p_rowId -> MakeExpression ( p_builder );
+            rowId = p_rowId -> MakeExpression ( ctx, p_builder );
             if ( rowId == 0 )
             {
                 return 0;
@@ -987,7 +1055,7 @@ MakeSMembExpr ( ASTBuilder & p_builder, const AST & p_struc, const AST & p_membe
                         for ( uint32_t i = 0; i < count; ++ i )
                         {
                             STableOverrides * ov = static_cast < STableOverrides * > ( VectorGet ( & table -> overrides, start + i ) );
-                            if ( ! p_builder . ScanVirtuals ( p_struc . GetChild ( 0 ) -> GetLocation (), ov -> by_parent, symtab ) )
+                            if ( ! p_builder . ScanVirtuals ( ctx, p_struc . GetChild ( 0 ) -> GetLocation (), ov -> by_parent, symtab ) )
                             {
                                 pop_tbl_scope ( & p_builder . GetSymTab (), table );
                                 KSymTableWhack ( & symtab );
@@ -1008,7 +1076,7 @@ MakeSMembExpr ( ASTBuilder & p_builder, const AST & p_struc, const AST & p_membe
                             if ( StringCompare ( & mem -> name, & memName ) == 0 )
                             {
                                 KSymTableWhack ( & symtab );
-                                return SMembExprMake ( p_builder, sym, mem, rowId );
+                                return SMembExprMake ( ctx, p_builder, sym, mem, rowId );
                             }
                         }
                     }
@@ -1018,13 +1086,13 @@ MakeSMembExpr ( ASTBuilder & p_builder, const AST & p_struc, const AST & p_membe
                     if ( mem != 0 )
                     {
                         assert ( mem -> type == eColumn || mem -> type == eProduction || mem -> type == eVirtual );
-                        return SMembExprMake ( p_builder, sym, mem, rowId );
+                        return SMembExprMake ( ctx, p_builder, sym, mem, rowId );
                     }
-                    p_builder . ReportError ( p_member . GetLocation (), "Column/production not found", memberName );
+                    p_builder . ReportError ( ctx, p_member . GetLocation (), "Column/production not found", memberName );
                 }
                 else
                 {
-                    p_builder. ReportRc ( "init_tbl_symtab failed", rc );
+                    p_builder. ReportRc ( ctx, "init_tbl_symtab failed", rc );
                 }
             }
             break;
@@ -1038,11 +1106,11 @@ MakeSMembExpr ( ASTBuilder & p_builder, const AST & p_struc, const AST & p_membe
                 if ( mem != 0 )
                 {
                     assert ( mem -> type == eColumn || mem -> type == eProduction );
-                    return SMembExprMake ( p_builder, sym, mem, rowId );
+                    return SMembExprMake ( ctx, p_builder, sym, mem, rowId );
                 }
                 else
                 {
-                    p_builder . ReportError ( p_member . GetLocation (), "Column/production not found", memName );
+                    p_builder . ReportError ( ctx, p_member . GetLocation (), "Column/production not found", memName );
                 }
             }
             break;
@@ -1056,19 +1124,22 @@ MakeSMembExpr ( ASTBuilder & p_builder, const AST & p_struc, const AST & p_membe
 }
 
 SExpression *
-AST_Expr :: MakeMember ( ASTBuilder & p_builder ) const
+AST_Expr :: MakeMember ( ctx_t ctx, ASTBuilder & p_builder ) const
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     assert ( GetTokenType () == PT_MEMBEREXPR );
     assert ( ChildrenCount () == 2 ); // ident, ident
-    return MakeSMembExpr ( p_builder, * GetChild ( 0 ), * GetChild ( 1 ) );
+    return MakeSMembExpr ( ctx, p_builder, * GetChild ( 0 ), * GetChild ( 1 ) );
 }
 
 SExpression *
-AST_Expr :: MakeJoin ( ASTBuilder & p_builder ) const
+AST_Expr :: MakeJoin ( ctx_t ctx, ASTBuilder & p_builder ) const
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     assert ( GetTokenType () == PT_JOINEXPR );
     assert ( ChildrenCount () == 3 ); // ident, rowid-expr, ident
-    return MakeSMembExpr ( p_builder,
+    return MakeSMembExpr ( ctx,
+                           p_builder,
                            * GetChild ( 0 ),
                            * GetChild ( 2 ),
                            ToExpr ( GetChild ( 1 ) ) );
@@ -1103,8 +1174,9 @@ bool IsExpression ( const AST & p_node )
 }
 
 SExpression *
-AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
+AST_Expr :: MakeExpression ( ctx_t ctx, ASTBuilder & p_builder ) const
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     assert ( IsExpression ( * this ) );
     switch ( GetTokenType () )
     {
@@ -1113,10 +1185,10 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
             uint32_t count = ChildrenCount ();
             assert ( count > 0 );
 
-            SExpression * xp = ToExpr (  GetChild ( 0 ) ) -> MakeExpression ( p_builder );
+            SExpression * xp = ToExpr (  GetChild ( 0 ) ) -> MakeExpression ( ctx, p_builder );
             for ( uint32_t i = 0; i < count - 1; ++i )
             {
-                SBinExpr * x = p_builder . Alloc < SBinExpr > ();
+                SBinExpr * x = p_builder . Alloc < SBinExpr > ( ctx );
                 if ( x == NULL )
                 {
                     SExpressionWhack ( xp );
@@ -1125,7 +1197,7 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
                 x -> dad . var = eCondExpr;
                 atomic32_set ( & x -> dad . refcount, 1 );
                 x -> left = xp;
-                x -> right = ToExpr (  GetChild ( i + 1 ) ) -> MakeExpression ( p_builder );
+                x -> right = ToExpr (  GetChild ( i + 1 ) ) -> MakeExpression ( ctx, p_builder );
                 if ( x -> right == 0 )
                 {
                     SExpressionWhack ( xp );
@@ -1138,42 +1210,42 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
         }
 
     case PT_UINT:
-        return MakeUnsigned ( p_builder );
+        return MakeUnsigned ( ctx, p_builder );
 
     case FLOAT_:
     case EXP_FLOAT:
-        return MakeFloat ( p_builder );
+        return MakeFloat ( ctx, p_builder );
 
     case STRING:
-        return MakeString ( p_builder );
+        return MakeString ( ctx, p_builder );
     case ESCAPED_STRING:
-        return MakeEscapedString ( p_builder );
+        return MakeEscapedString ( ctx, p_builder );
 
     case PT_CONSTVECT:
-        return MakeVectorConstant ( p_builder );
+        return MakeVectorConstant ( ctx, p_builder );
 
     case KW_true:
     case KW_false:
-        return MakeBool ( p_builder );
+        return MakeBool ( ctx, p_builder );
 
     case PT_IDENT:
         {
             const AST_FQN * fqn = ToFQN ( GetChild ( 0 ) );
             if ( fqn != 0 )
             {
-                const KSymbol * sym = p_builder . Resolve ( * fqn, false );
+                const KSymbol * sym = p_builder . Resolve ( ctx, * fqn, false );
                 if ( sym != 0 )
                 {
-                    return MakeSymExpr ( p_builder, sym );
+                    return MakeSymExpr ( ctx, p_builder, sym );
                 }
                 else if ( ChildrenCount () > 1 )
                 {
-                    p_builder . ReportError ( "Undeclared identifier", * fqn );
+                    p_builder . ReportError ( ctx, "Undeclared identifier", * fqn );
                 }
                 else
                 {   // create simple identifier as a forward reference
-                    SSymExpr * x = p_builder . Alloc < SSymExpr > ();
-                    x -> _sym = p_builder . CreateFqnSymbol ( * fqn, eForward, NULL );
+                    SSymExpr * x = p_builder . Alloc < SSymExpr > ( ctx );
+                    x -> _sym = p_builder . CreateFqnSymbol ( ctx, * fqn, eForward, NULL );
                     if (x -> _sym != 0 )
                     {
                         x -> dad . var = eFwdExpr;
@@ -1188,15 +1260,15 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
 
     case PHYSICAL_IDENTIFIER_1_0 :
         {
-            const KSymbol * sym = p_builder . Resolve ( GetLocation (), GetTokenValue (), false );
+            const KSymbol * sym = p_builder . Resolve ( ctx, GetLocation (), GetTokenValue (), false );
             if ( sym != 0 )
             {
-                return MakeSymExpr ( p_builder, sym );
+                return MakeSymExpr ( ctx, p_builder, sym );
             }
             else
             {
-                SSymExpr * x = p_builder . Alloc < SSymExpr > ();
-                x -> _sym = p_builder . CreateConstSymbol ( GetTokenValue (), eForward, NULL );
+                SSymExpr * x = p_builder . Alloc < SSymExpr > ( ctx );
+                x -> _sym = p_builder . CreateConstSymbol ( ctx, GetTokenValue (), eForward, NULL );
                 if (x -> _sym != 0 )
                 {
                     x -> dad . var = eFwdExpr;
@@ -1210,13 +1282,13 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
         break;
 
     case '@':
-        return MakeSymExpr ( p_builder, p_builder . Resolve ( GetLocation (), "@" ) );
+        return MakeSymExpr ( ctx, p_builder, p_builder . Resolve ( ctx, GetLocation (), "@" ) );
 
     case PT_FUNCEXPR:
         {   // schema_parms_opt fqn_opt_vers factory_parms_opt func_parms_opt
             assert ( ChildrenCount () == 4 );
 
-            SFuncExpr * fx = p_builder . Alloc < SFuncExpr > ();
+            SFuncExpr * fx = p_builder . Alloc < SFuncExpr > ( ctx );
             if ( fx != 0 )
             {
                 /* initialize */
@@ -1230,13 +1302,13 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
                 fx -> version_requested = false;
                 fx -> untyped = false;
 
-                if ( p_builder . FillSchemaParms ( * GetChild ( 0 ), fx -> schem ) &&
-                     p_builder . FillFactoryParms ( * GetChild ( 2 ), fx -> pfact ) &&
-                     p_builder . FillArguments ( * GetChild ( 3 ), fx -> pfunc) )
+                if ( p_builder . FillSchemaParms ( ctx, * GetChild ( 0 ), fx -> schem ) &&
+                     p_builder . FillFactoryParms ( ctx, * GetChild ( 2 ), fx -> pfact ) &&
+                     p_builder . FillArguments ( ctx, * GetChild ( 3 ), fx -> pfunc) )
                 {
                     assert ( GetChild ( 1 ) -> GetTokenType () == PT_IDENT );
                     const AST_FQN & fqn = * ToFQN ( GetChild ( 1 ) );
-                    const KSymbol * sym = p_builder . Resolve ( fqn, true );
+                    const KSymbol * sym = p_builder . Resolve ( ctx, fqn, true );
                     if ( sym != 0 )
                     {
                         const SNameOverload * vf = static_cast < const SNameOverload * > ( sym -> u . obj );
@@ -1246,7 +1318,7 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
                             fx -> dad . var = eScriptExpr;
                             // fall through
                         case eFunction:
-                            fx -> func = static_cast < const SFunction * > ( p_builder . SelectVersion ( fqn, * sym, SFunctionCmp, & fx -> version ) );
+                            fx -> func = static_cast < const SFunction * > ( p_builder . SelectVersion ( ctx, fqn, * sym, SFunctionCmp, & fx -> version ) );
                             if ( fx -> func != 0 )
                             {
                                 fx -> version_requested = fx -> version != 0;
@@ -1255,7 +1327,7 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
                             break;
 
                         default:
-                            p_builder . ReportError ( "Not a function", fqn );
+                            p_builder . ReportError ( ctx, "Not a function", fqn );
                             break;
                         }
                     }
@@ -1266,19 +1338,19 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
         break;
 
     case PT_NEGATE:
-        return MakeNegate ( p_builder );
+        return MakeNegate ( ctx, p_builder );
 
     case PT_CASTEXPR:
-        return MakeCast ( p_builder );
+        return MakeCast ( ctx, p_builder );
 
     case PT_MEMBEREXPR:
-        return MakeMember ( p_builder );
+        return MakeMember ( ctx, p_builder );
 
     case PT_JOINEXPR:
-        return MakeJoin ( p_builder );
+        return MakeJoin ( ctx, p_builder );
 
     default:
-        p_builder . ReportError ( GetLocation (), "Not yet implemented" );
+        p_builder . ReportError ( ctx, GetLocation (), "Not yet implemented" );
         break;
     }
     return 0;

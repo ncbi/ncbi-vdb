@@ -26,6 +26,8 @@
 
 #include "SchemaParser.hpp"
 
+#include <kfc/except.h>
+
 #include <klib/text.h>
 #include <klib/log.h>
 
@@ -52,18 +54,20 @@ SchemaParser :: ~SchemaParser ()
 }
 
 bool
-SchemaParser :: ParseString ( const char * p_input, bool p_debug )
+SchemaParser :: ParseString ( ctx_t ctx, const char * p_input, bool p_debug )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     SchemaScanner s ( p_input, string_size ( p_input ), false );
     Schema_debug = p_debug;
     ParseTree :: Destroy ( m_root );
     m_root = 0;
-    return Schema_parse ( & m_root, & m_errors, & s . GetScanBlock () ) == 0;
+    return Schema_parse ( ctx, & m_root, & m_errors, & s . GetScanBlock () ) == 0;
 }
 
 bool
-SchemaParser :: ParseFile ( const struct KFile * p_file, const char * p_fileName )
+SchemaParser :: ParseFile ( ctx_t ctx, const struct KFile * p_file, const char * p_fileName )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     ParseTree :: Destroy ( m_root );
     m_root = 0;
 
@@ -84,7 +88,7 @@ SchemaParser :: ParseFile ( const struct KFile * p_file, const char * p_fileName
             {
                 SchemaScanner s ( addr, size, false );
                 s . GetScanBlock () . file_name = p_fileName == 0 ? "" : p_fileName;
-                ret = Schema_parse ( & m_root, & m_errors, & s . GetScanBlock () ) == 0;
+                ret = Schema_parse ( ctx, & m_root, & m_errors, & s . GetScanBlock () ) == 0;
             }
         }
 
@@ -104,13 +108,14 @@ SchemaParser :: MoveParseTree ()
 
 static
 void
-LogErrors ( const ErrorReport & p_rep )
+LogErrors ( ctx_t ctx, const ErrorReport & p_rep )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     uint32_t count = p_rep . GetCount ();
     for (uint32_t i = 0; i < count; ++i)
     {
         char buf [1024];
-        p_rep . GetError ( i ) -> Format ( buf, sizeof ( buf )  );
+        p_rep . GetError ( i ) -> Format ( ctx, buf, sizeof ( buf )  );
         LogMsg ( klogErr, buf );
     }
 }
@@ -118,14 +123,15 @@ LogErrors ( const ErrorReport & p_rep )
 bool
 VSchemaParse_v2 ( VSchema * p_self, const char * p_text, size_t p_bytes )
 {
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing ); // entry point into the v2 schema parser
     ncbi :: SchemaParser :: SchemaParser parser;
 
     // bison wants its input 0-terminated
     char * zeroTerm = string_dup ( p_text, p_bytes );
 
-    if ( ! parser . ParseString ( zeroTerm ) )
+    if ( ! parser . ParseString ( ctx, zeroTerm ) )
     {
-        LogErrors ( parser . GetErrors () );
+        LogErrors ( ctx, parser . GetErrors () );
         free ( zeroTerm );
         return false;
     }
@@ -134,14 +140,19 @@ VSchemaParse_v2 ( VSchema * p_self, const char * p_text, size_t p_bytes )
     ncbi :: SchemaParser :: ParseTree * parseTree = parser . MoveParseTree ();
     assert ( parseTree != 0 );
 
-    ncbi :: SchemaParser :: ASTBuilder builder ( p_self );
-    ncbi :: SchemaParser :: AST * ast = builder . Build ( * parseTree, "", false );
+    ncbi :: SchemaParser :: ASTBuilder builder ( ctx, p_self );
+    ncbi :: SchemaParser :: AST * ast = builder . Build ( ctx, * parseTree, "", false );
     AST :: Destroy ( ast );
     ParseTree :: Destroy ( parseTree );
 
     if ( builder . GetErrorCount() != 0)
     {
-        LogErrors ( builder . GetErrors () );
+        LogErrors ( ctx, builder . GetErrors () );
+        return false;
+    }
+    if ( FAILED () )
+    {
+        LogMsg ( klogErr, WHAT() );
         return false;
     }
     return true;

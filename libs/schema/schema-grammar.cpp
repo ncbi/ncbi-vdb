@@ -84,14 +84,16 @@
     #define Schema_lex SchemaScan_yylex
 
     void Schema_error ( YYLTYPE *                   p_llocp,
+                        ctx_t                       ctx,
                         ParseTree **                p_root,
                         ErrorReport *               p_errors,
                         struct SchemaScanBlock *    p_sb,
                         const char *                p_msg )
     {
+        FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
         /* send message to the C++ parser for proper display and recovery */
         Token :: Location loc ( p_sb -> file_name, p_llocp -> first_line, p_llocp -> first_column );
-        p_errors -> ReportError ( loc, "%s", p_msg);
+        p_errors -> ReportError ( ctx, loc, "%s", p_msg);
     }
 
     extern "C"
@@ -109,16 +111,18 @@
 
     static
     ParseTree*
-    T ( SchemaToken & p_term )
+    T ( ctx_t ctx, SchemaToken & p_term )
     {
+        FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );//TODO: catch
         assert ( p_term . subtree == 0 );
-        return ParseTree::Make ( p_term );
+        return ParseTree::Make ( ctx, p_term );
     }
 
     /* Create production node */
     static
     ParseTree *
-    MakeTree ( int p_token,
+    MakeTree ( ctx_t ctx,
+               int p_token,
                ParseTree * p_ch1 = 0,
                ParseTree * p_ch2 = 0,
                ParseTree * p_ch3 = 0,
@@ -130,46 +134,48 @@
                ParseTree * p_ch9 = 0
              )
     {
-        ParseTree * ret = ParseTree :: Make ( Token ( p_token ) );
-        if ( p_ch1 != 0 ) ret -> AddChild ( p_ch1 );
-        if ( p_ch2 != 0 ) ret -> AddChild ( p_ch2 );
-        if ( p_ch3 != 0 ) ret -> AddChild ( p_ch3 );
-        if ( p_ch4 != 0 ) ret -> AddChild ( p_ch4 );
-        if ( p_ch5 != 0 ) ret -> AddChild ( p_ch5 );
-        if ( p_ch6 != 0 ) ret -> AddChild ( p_ch6 );
-        if ( p_ch7 != 0 ) ret -> AddChild ( p_ch7 );
-        if ( p_ch8 != 0 ) ret -> AddChild ( p_ch8 );
-        if ( p_ch9 != 0 ) ret -> AddChild ( p_ch9 );
+        FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+        ParseTree * ret = ParseTree :: Make ( ctx, Token ( p_token ) );
+        if ( p_ch1 != 0 ) ret -> AddChild ( ctx, p_ch1 );
+        if ( p_ch2 != 0 ) ret -> AddChild ( ctx, p_ch2 );
+        if ( p_ch3 != 0 ) ret -> AddChild ( ctx, p_ch3 );
+        if ( p_ch4 != 0 ) ret -> AddChild ( ctx, p_ch4 );
+        if ( p_ch5 != 0 ) ret -> AddChild ( ctx, p_ch5 );
+        if ( p_ch6 != 0 ) ret -> AddChild ( ctx, p_ch6 );
+        if ( p_ch7 != 0 ) ret -> AddChild ( ctx, p_ch7 );
+        if ( p_ch8 != 0 ) ret -> AddChild ( ctx, p_ch8 );
+        if ( p_ch9 != 0 ) ret -> AddChild ( ctx, p_ch9 );
         return ret;
     }
 
     /* Create a flat list */
     static
     ParseTree *
-    MakeList ( SchemaToken & p_prod )
+    MakeList ( ctx_t ctx, SchemaToken & p_prod )
     {
-        ParseTree * ret = ParseTree :: Make ( Token ( PT_ASTLIST ) );
-        ret -> AddChild ( P ( p_prod ) );
+        FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+        ParseTree * ret = ParseTree :: Make ( ctx, Token ( PT_ASTLIST ) );
+        ret -> AddChild ( ctx, P ( p_prod ) );
         return ret;
     }
 
     /* Add to a flat list node */
     static
     ParseTree *
-    AddToList ( ParseTree * p_root, ParseTree * p_br1, ParseTree * p_br2 = 0 )
+    AddToList ( ctx_t ctx, ParseTree * p_root, ParseTree * p_br1, ParseTree * p_br2 = 0 )
     {
+        FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
         assert ( p_br1 != 0 );
-        p_root -> AddChild ( p_br1 );
+        p_root -> AddChild ( ctx, p_br1 );
         if ( p_br2 != 0 )
         {
-            p_root -> AddChild ( p_br2 );
+            p_root -> AddChild ( ctx, p_br2 );
         }
         return p_root;
     }
 
 
-
-#line 173 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:339  */
+#line 179 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:339  */
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -364,13 +370,13 @@ struct YYLTYPE
 
 
 
-int Schema_parse (ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb);
+int Schema_parse (ctx_t ctx, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb);
 
 #endif /* !YY_SCHEMA_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_TOKENS_H_INCLUDED  */
 
 /* Copy the second part of user declarations.  */
 
-#line 374 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:358  */
+#line 380 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:358  */
 
 #ifdef short
 # undef short
@@ -683,34 +689,34 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   298,   298,   299,   303,   304,   305,   311,   315,   316,
-     320,   321,   322,   323,   324,   325,   326,   327,   328,   329,
-     330,   331,   332,   333,   339,   347,   348,   354,   359,   363,
-     370,   371,   375,   376,   380,   381,   387,   389,   394,   398,
-     405,   412,   417,   423,   427,   428,   429,   439,   444,   449,
-     450,   454,   458,   459,   463,   464,   468,   469,   473,   474,
-     478,   482,   483,   485,   487,   489,   494,   495,   499,   503,
-     507,   508,   510,   512,   514,   519,   520,   524,   525,   530,
-     531,   535,   537,   539,   544,   545,   549,   550,   557,   562,
-     569,   571,   579,   586,   596,   597,   601,   603,   608,   609,
-     613,   615,   617,   619,   624,   631,   639,   640,   644,   645,
-     649,   651,   656,   657,   661,   662,   663,   665,   667,   668,
-     669,   670,   671,   673,   677,   679,   684,   685,   689,   690,
-     694,   695,   696,   700,   702,   707,   709,   711,   716,   718,
-     720,   725,   726,   730,   734,   735,   739,   740,   744,   745,
-     746,   747,   751,   756,   758,   760,   762,   767,   772,   773,
-     777,   778,   782,   783,   787,   788,   795,   796,   800,   801,
-     805,   806,   807,   808,   809,   810,   811,   812,   813,   814,
-     815,   816,   817,   821,   828,   837,   838,   842,   843,   844,
-     848,   849,   853,   857,   858,   862,   863,   867,   868,   872,
-     873,   874,   878,   879,   883,   884,   888,   892,   893,   897,
-     898,   902,   903,   907,   908,   912,   913,   917,   919,   926,
-     934,   935,   939,   940,   944,   945,   949,   950,   951,   955,
-     956,   960,   965,   973,   981,   982,   984,   985,   986,   987,
-     988,   989,   990,   991,   995,   999,  1003,  1007,  1008,  1014,
-    1018,  1019,  1023,  1024,  1028,  1033,  1034,  1038,  1042,  1043,
-    1047,  1048,  1052,  1054,  1056,  1060,  1061,  1065,  1066,  1070,
-    1075,  1076
+       0,   306,   306,   307,   311,   312,   313,   319,   323,   324,
+     328,   329,   330,   331,   332,   333,   334,   335,   336,   337,
+     338,   339,   340,   341,   347,   355,   356,   362,   367,   371,
+     378,   379,   383,   384,   388,   389,   395,   397,   402,   406,
+     413,   420,   425,   431,   435,   436,   437,   447,   452,   457,
+     458,   462,   466,   467,   471,   472,   476,   477,   481,   482,
+     486,   490,   491,   493,   495,   497,   502,   503,   507,   511,
+     515,   516,   518,   520,   522,   527,   528,   532,   533,   538,
+     539,   543,   545,   547,   552,   553,   557,   558,   565,   570,
+     577,   579,   587,   594,   604,   605,   609,   611,   616,   617,
+     621,   623,   625,   627,   632,   639,   647,   648,   652,   653,
+     657,   659,   664,   665,   669,   670,   671,   673,   675,   676,
+     677,   678,   679,   681,   685,   687,   692,   693,   697,   698,
+     702,   703,   704,   708,   710,   715,   717,   719,   724,   726,
+     728,   733,   734,   738,   742,   743,   747,   748,   752,   753,
+     754,   755,   759,   764,   766,   768,   770,   775,   780,   781,
+     785,   786,   790,   791,   795,   796,   803,   804,   808,   809,
+     813,   814,   815,   816,   817,   818,   819,   820,   821,   822,
+     823,   824,   825,   829,   836,   845,   846,   850,   851,   852,
+     856,   857,   861,   865,   866,   870,   871,   875,   876,   880,
+     881,   882,   886,   887,   891,   892,   896,   900,   901,   905,
+     906,   910,   911,   915,   916,   920,   921,   925,   927,   934,
+     942,   943,   947,   948,   952,   953,   957,   958,   959,   963,
+     964,   968,   973,   981,   989,   990,   992,   993,   994,   995,
+     996,   997,   998,   999,  1003,  1007,  1011,  1015,  1016,  1022,
+    1026,  1027,  1031,  1032,  1036,  1041,  1042,  1046,  1050,  1051,
+    1055,  1056,  1060,  1062,  1064,  1068,  1069,  1073,  1074,  1078,
+    1083,  1084
 };
 #endif
 
@@ -1320,7 +1326,7 @@ do                                                              \
     }                                                           \
   else                                                          \
     {                                                           \
-      yyerror (&yylloc, root, errors, sb, YY_("syntax error: cannot back up")); \
+      yyerror (&yylloc, ctx, root, errors, sb, YY_("syntax error: cannot back up")); \
       YYERROR;                                                  \
     }                                                           \
 while (0)
@@ -1422,7 +1428,7 @@ do {                                                                      \
     {                                                                     \
       YYFPRINTF (stderr, "%s ", Title);                                   \
       yy_symbol_print (stderr,                                            \
-                  Type, Value, Location, root, errors, sb); \
+                  Type, Value, Location, ctx, root, errors, sb); \
       YYFPRINTF (stderr, "\n");                                           \
     }                                                                     \
 } while (0)
@@ -1433,11 +1439,12 @@ do {                                                                      \
 `----------------------------------------*/
 
 static void
-yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
+yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, ctx_t ctx, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
 {
   FILE *yyo = yyoutput;
   YYUSE (yyo);
   YYUSE (yylocationp);
+  YYUSE (ctx);
   YYUSE (root);
   YYUSE (errors);
   YYUSE (sb);
@@ -1456,14 +1463,14 @@ yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvalue
 `--------------------------------*/
 
 static void
-yy_symbol_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
+yy_symbol_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, ctx_t ctx, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
 {
   YYFPRINTF (yyoutput, "%s %s (",
              yytype < YYNTOKENS ? "token" : "nterm", yytname[yytype]);
 
   YY_LOCATION_PRINT (yyoutput, *yylocationp);
   YYFPRINTF (yyoutput, ": ");
-  yy_symbol_value_print (yyoutput, yytype, yyvaluep, yylocationp, root, errors, sb);
+  yy_symbol_value_print (yyoutput, yytype, yyvaluep, yylocationp, ctx, root, errors, sb);
   YYFPRINTF (yyoutput, ")");
 }
 
@@ -1496,7 +1503,7 @@ do {                                                            \
 `------------------------------------------------*/
 
 static void
-yy_reduce_print (yytype_int16 *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp, int yyrule, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
+yy_reduce_print (yytype_int16 *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp, int yyrule, ctx_t ctx, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
 {
   unsigned long int yylno = yyrline[yyrule];
   int yynrhs = yyr2[yyrule];
@@ -1510,7 +1517,7 @@ yy_reduce_print (yytype_int16 *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp, int yyrule
       yy_symbol_print (stderr,
                        yystos[yyssp[yyi + 1 - yynrhs]],
                        &(yyvsp[(yyi + 1) - (yynrhs)])
-                       , &(yylsp[(yyi + 1) - (yynrhs)])                       , root, errors, sb);
+                       , &(yylsp[(yyi + 1) - (yynrhs)])                       , ctx, root, errors, sb);
       YYFPRINTF (stderr, "\n");
     }
 }
@@ -1518,7 +1525,7 @@ yy_reduce_print (yytype_int16 *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp, int yyrule
 # define YY_REDUCE_PRINT(Rule)          \
 do {                                    \
   if (yydebug)                          \
-    yy_reduce_print (yyssp, yyvsp, yylsp, Rule, root, errors, sb); \
+    yy_reduce_print (yyssp, yyvsp, yylsp, Rule, ctx, root, errors, sb); \
 } while (0)
 
 /* Nonzero means print parse trace.  It is left uninitialized so that
@@ -1776,10 +1783,11 @@ yysyntax_error (YYSIZE_T *yymsg_alloc, char **yymsg,
 `-----------------------------------------------*/
 
 static void
-yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocationp, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
+yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocationp, ctx_t ctx, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
 {
   YYUSE (yyvaluep);
   YYUSE (yylocationp);
+  YYUSE (ctx);
   YYUSE (root);
   YYUSE (errors);
   YYUSE (sb);
@@ -1791,2219 +1799,2219 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
   switch (yytype)
     {
           case 0: /* "end of source"  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
-      {
-    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
-}
-#line 1799 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
-        break;
-
-    case 3: /* UNRECOGNIZED  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1807 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 4: /* ELLIPSIS  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 3: /* UNRECOGNIZED  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1815 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 5: /* INCREMENT  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 4: /* ELLIPSIS  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1823 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 6: /* DECIMAL  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 5: /* INCREMENT  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1831 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 7: /* OCTAL  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 6: /* DECIMAL  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1839 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 8: /* HEX  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 7: /* OCTAL  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1847 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 9: /* FLOAT_  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 8: /* HEX  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1855 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 10: /* EXP_FLOAT  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 9: /* FLOAT_  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1863 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 11: /* STRING  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 10: /* EXP_FLOAT  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1871 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 12: /* ESCAPED_STRING  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 11: /* STRING  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1879 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 13: /* IDENTIFIER_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 12: /* ESCAPED_STRING  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1887 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 14: /* PHYSICAL_IDENTIFIER_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 13: /* IDENTIFIER_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1895 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 15: /* VERSION  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 14: /* PHYSICAL_IDENTIFIER_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1903 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 16: /* UNTERM_STRING  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 15: /* VERSION  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1911 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 17: /* UNTERM_ESCAPED_STRING  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 16: /* UNTERM_STRING  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1919 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 18: /* VERS_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 17: /* UNTERM_ESCAPED_STRING  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1927 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 19: /* VERS_2_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 18: /* VERS_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1935 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 20: /* KW___no_header  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 19: /* VERS_2_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1943 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 21: /* KW___row_length  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 20: /* KW___no_header  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1951 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 22: /* KW___untyped  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 21: /* KW___row_length  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1959 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 23: /* KW_alias  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 22: /* KW___untyped  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1967 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 24: /* KW_column  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 23: /* KW_alias  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1975 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 25: /* KW_const  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 24: /* KW_column  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1983 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 26: /* KW_control  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 25: /* KW_const  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1991 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 27: /* KW_database  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 26: /* KW_control  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 1999 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 28: /* KW_decode  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 27: /* KW_database  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2007 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 29: /* KW_default  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 28: /* KW_decode  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2015 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 30: /* KW_encode  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 29: /* KW_default  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2023 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 31: /* KW_extern  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 30: /* KW_encode  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2031 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 32: /* KW_false  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 31: /* KW_extern  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2039 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 33: /* KW_fmtdef  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 32: /* KW_false  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2047 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 34: /* KW_function  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 33: /* KW_fmtdef  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2055 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 35: /* KW_include  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 34: /* KW_function  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2063 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 36: /* KW_limit  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 35: /* KW_include  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2071 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 37: /* KW_physical  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 36: /* KW_limit  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2079 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 38: /* KW_read  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 37: /* KW_physical  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2087 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 39: /* KW_readonly  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 38: /* KW_read  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2095 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 40: /* KW_return  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 39: /* KW_readonly  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2103 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 41: /* KW_schema  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 40: /* KW_return  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2111 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 42: /* KW_static  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 41: /* KW_schema  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2119 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 43: /* KW_table  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 42: /* KW_static  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2127 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 44: /* KW_template  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 43: /* KW_table  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2135 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 45: /* KW_trigger  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 44: /* KW_template  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2143 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 46: /* KW_true  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 45: /* KW_trigger  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2151 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 47: /* KW_type  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 46: /* KW_true  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2159 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 48: /* KW_typedef  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 47: /* KW_type  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2167 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 49: /* KW_typeset  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 48: /* KW_typedef  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2175 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 50: /* KW_validate  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 49: /* KW_typeset  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2183 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 51: /* KW_version  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 50: /* KW_validate  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2191 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 52: /* KW_view  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 51: /* KW_version  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2199 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 53: /* KW_virtual  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 52: /* KW_view  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2207 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 54: /* KW_void  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 53: /* KW_virtual  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2215 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 55: /* KW_write  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 54: /* KW_void  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2223 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 56: /* PT_ASTLIST  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 55: /* KW_write  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2231 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 57: /* PT_PARSE  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 56: /* PT_ASTLIST  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2239 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 58: /* PT_SOURCE  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 57: /* PT_PARSE  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2247 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 59: /* PT_VERSION_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 58: /* PT_SOURCE  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2255 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 60: /* PT_VERSION_2  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 59: /* PT_VERSION_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2263 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 61: /* PT_SCHEMA_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 60: /* PT_VERSION_2  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2271 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 62: /* PT_SCHEMA_2_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 61: /* PT_SCHEMA_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2279 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 63: /* PT_INCLUDE  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 62: /* PT_SCHEMA_2_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2287 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 64: /* PT_TYPEDEF  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 63: /* PT_INCLUDE  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2295 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 65: /* PT_FQN  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 64: /* PT_TYPEDEF  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2303 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 66: /* PT_IDENT  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 65: /* PT_FQN  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2311 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 67: /* PT_PHYSIDENT  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 66: /* PT_IDENT  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2319 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 68: /* PT_UINT  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 67: /* PT_PHYSIDENT  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2327 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 69: /* PT_TYPESET  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 68: /* PT_UINT  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2335 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 70: /* PT_TYPESETDEF  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 69: /* PT_TYPESET  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2343 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 71: /* PT_FORMAT  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 70: /* PT_TYPESETDEF  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2351 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 72: /* PT_CONST  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 71: /* PT_FORMAT  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2359 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 73: /* PT_ALIAS  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 72: /* PT_CONST  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2367 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 74: /* PT_EXTERN  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 73: /* PT_ALIAS  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2375 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 75: /* PT_FUNCTION  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 74: /* PT_EXTERN  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2383 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 76: /* PT_UNTYPED  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 75: /* PT_FUNCTION  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2391 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 77: /* PT_ROWLENGTH  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 76: /* PT_UNTYPED  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2399 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 78: /* PT_FUNCDECL  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 77: /* PT_ROWLENGTH  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2407 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 79: /* PT_EMPTY  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 78: /* PT_FUNCDECL  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2415 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 80: /* PT_SCHEMASIG  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 79: /* PT_EMPTY  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2423 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 81: /* PT_SCHEMAFORMAL  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 80: /* PT_SCHEMASIG  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2431 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 82: /* PT_RETURNTYPE  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 81: /* PT_SCHEMAFORMAL  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2439 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 83: /* PT_FACTSIG  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 82: /* PT_RETURNTYPE  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2447 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 84: /* PT_FUNCSIG  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 83: /* PT_FACTSIG  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2455 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 85: /* PT_FUNCPARAMS  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 84: /* PT_FUNCSIG  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2463 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 86: /* PT_FORMALPARAM  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 85: /* PT_FUNCPARAMS  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2471 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 87: /* PT_ELLIPSIS  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 86: /* PT_FORMALPARAM  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2479 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 88: /* PT_FUNCPROLOGUE  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 87: /* PT_ELLIPSIS  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2487 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 89: /* PT_RETURN  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 88: /* PT_FUNCPROLOGUE  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2495 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 90: /* PT_PRODSTMT  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 89: /* PT_RETURN  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2503 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 91: /* PT_PRODTRIGGER  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 90: /* PT_PRODSTMT  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2511 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 92: /* PT_SCHEMA  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 91: /* PT_PRODTRIGGER  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2519 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 93: /* PT_VALIDATE  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 92: /* PT_SCHEMA  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2527 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 94: /* PT_PHYSICAL  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 93: /* PT_VALIDATE  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2535 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 95: /* PT_PHYSPROLOGUE  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 94: /* PT_PHYSICAL  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2543 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 96: /* PT_PHYSSTMT  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 95: /* PT_PHYSPROLOGUE  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2551 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 97: /* PT_PHYSBODYSTMT  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 96: /* PT_PHYSSTMT  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2559 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 98: /* PT_TABLE  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 97: /* PT_PHYSBODYSTMT  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2567 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 99: /* PT_TABLEPARENTS  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 98: /* PT_TABLE  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2575 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 100: /* PT_TABLEBODY  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 99: /* PT_TABLEPARENTS  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2583 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 101: /* PT_FUNCEXPR  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 100: /* PT_TABLEBODY  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2591 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 102: /* PT_FACTPARMS  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 101: /* PT_FUNCEXPR  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2599 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 103: /* PT_COLUMN  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 102: /* PT_FACTPARMS  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2607 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 104: /* PT_COLUMNEXPR  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 103: /* PT_COLUMN  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2615 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 105: /* PT_COLDECL  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 104: /* PT_COLUMNEXPR  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2623 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 106: /* PT_TYPEDCOL  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 105: /* PT_COLDECL  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2631 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 107: /* PT_COLSTMT  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 106: /* PT_TYPEDCOL  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2639 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 108: /* PT_DFLTVIEW  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 107: /* PT_COLSTMT  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2647 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 109: /* PT_PHYSMBR  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 108: /* PT_DFLTVIEW  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2655 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 110: /* PT_PHYSCOL  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 109: /* PT_PHYSMBR  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2663 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 111: /* PT_PHYSCOLDEF  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 110: /* PT_PHYSCOL  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2671 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 112: /* PT_COLSCHEMAPARMS  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 111: /* PT_PHYSCOLDEF  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2679 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 113: /* PT_COLSCHEMAPARAM  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 112: /* PT_COLSCHEMAPARMS  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2687 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 114: /* PT_COLUNTYPED  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 113: /* PT_COLSCHEMAPARAM  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2695 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 115: /* PT_DATABASE  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 114: /* PT_COLUNTYPED  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2703 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 116: /* PT_TYPEEXPR  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 115: /* PT_DATABASE  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2711 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 117: /* PT_DBBODY  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 116: /* PT_TYPEEXPR  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2719 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 118: /* PT_DBDAD  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 117: /* PT_DBBODY  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2727 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 119: /* PT_DBMEMBER  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 118: /* PT_DBDAD  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2735 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 120: /* PT_TBLMEMBER  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 119: /* PT_DBMEMBER  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2743 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 121: /* PT_NOHEADER  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 120: /* PT_TBLMEMBER  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2751 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 122: /* PT_CASTEXPR  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 121: /* PT_NOHEADER  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2759 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 123: /* PT_CONSTVECT  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 122: /* PT_CASTEXPR  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2767 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 124: /* PT_NEGATE  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 123: /* PT_CONSTVECT  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2775 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 125: /* PT_UNARYPLUS  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 124: /* PT_NEGATE  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2783 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 126: /* PT_VERSNAME  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 125: /* PT_UNARYPLUS  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2791 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 127: /* PT_ARRAY  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 126: /* PT_VERSNAME  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2799 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 128: /* PT_PHYSENCREF  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 127: /* PT_ARRAY  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2807 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 129: /* PT_TYPEDCOLEXPR  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 128: /* PT_PHYSENCREF  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2815 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 130: /* PT_VIEW  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 129: /* PT_TYPEDCOLEXPR  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2823 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 131: /* PT_VIEWPARAM  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 130: /* PT_VIEW  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2831 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 132: /* PT_VIEWPARENTS  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 131: /* PT_VIEWPARAM  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2839 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 133: /* PT_VIEWPARENT  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 132: /* PT_VIEWPARENTS  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2847 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 134: /* PT_MEMBEREXPR  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 133: /* PT_VIEWPARENT  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2855 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 135: /* PT_JOINEXPR  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 134: /* PT_MEMBEREXPR  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2863 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 136: /* ';'  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 135: /* PT_JOINEXPR  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2871 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 137: /* ','  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 136: /* ';'  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2879 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 138: /* '{'  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 137: /* ','  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2887 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 139: /* '}'  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 138: /* '{'  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2895 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 140: /* '['  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 139: /* '}'  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2903 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 141: /* ']'  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 140: /* '['  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2911 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 142: /* '*'  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 141: /* ']'  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2919 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 143: /* '='  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 142: /* '*'  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2927 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 144: /* '('  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 143: /* '='  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2935 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 145: /* ')'  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 144: /* '('  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2943 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 146: /* '<'  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 145: /* ')'  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2951 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 147: /* '>'  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 146: /* '<'  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2959 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 148: /* '|'  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 147: /* '>'  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2967 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 149: /* '@'  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 148: /* '|'  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2975 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 150: /* '-'  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 149: /* '@'  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2983 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 151: /* '+'  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 150: /* '-'  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2991 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 152: /* '/'  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 151: /* '+'  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 2999 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 153: /* '.'  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 152: /* '/'  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3007 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 154: /* ':'  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 153: /* '.'  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3015 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 156: /* parse  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 154: /* ':'  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3023 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 157: /* source  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 156: /* parse  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3031 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 158: /* version_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 157: /* source  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3039 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 159: /* schema_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 158: /* version_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3047 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 160: /* schema_1_0_decl  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 159: /* schema_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3055 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 161: /* typedef_1_0_decl  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 160: /* schema_1_0_decl  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3063 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 162: /* typedef_1_0_new_name_list  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 161: /* typedef_1_0_decl  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3071 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 163: /* typeset_1_0_decl  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 162: /* typedef_1_0_new_name_list  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3079 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 164: /* typeset_1_0_new_name  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 163: /* typeset_1_0_decl  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3087 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 165: /* typeset_1_0_def  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 164: /* typeset_1_0_new_name  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3095 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 166: /* typespec_1_0_list  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 165: /* typeset_1_0_def  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3103 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 167: /* typespec_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 166: /* typespec_1_0_list  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3111 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 168: /* dim_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 167: /* typespec_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3119 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 169: /* format_1_0_decl  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 168: /* dim_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3127 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 170: /* format_1_0_new_name  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 169: /* format_1_0_decl  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3135 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 171: /* format_1_0_name  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 170: /* format_1_0_new_name  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3143 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 172: /* const_1_0_decl  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 171: /* format_1_0_name  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3151 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 173: /* alias_1_0_decl  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 172: /* const_1_0_decl  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3159 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 174: /* alias_1_0_new_name  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 173: /* alias_1_0_decl  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3167 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 175: /* function_1_0_decl  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 174: /* alias_1_0_new_name  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3175 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 176: /* func_1_0_decl  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 175: /* function_1_0_decl  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3183 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 177: /* untyped_func_1_0_decl  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 176: /* func_1_0_decl  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3191 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 178: /* row_length_func_1_0_decl  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 177: /* untyped_func_1_0_decl  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3199 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 179: /* opt_func_1_0_schema_sig  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 178: /* row_length_func_1_0_decl  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3207 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 180: /* func_1_0_schema_sig  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 179: /* opt_func_1_0_schema_sig  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3215 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 181: /* func_1_0_schema_formals  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 180: /* func_1_0_schema_sig  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3223 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 182: /* func_1_0_schema_formal  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 181: /* func_1_0_schema_formals  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3231 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 183: /* func_1_0_return_type  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 182: /* func_1_0_schema_formal  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3239 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 184: /* opt_func_1_0_fact_sig  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 183: /* func_1_0_return_type  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3247 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 185: /* func_1_0_fact_sig  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 184: /* opt_func_1_0_fact_sig  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3255 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 186: /* func_1_0_fact_signature  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 185: /* func_1_0_fact_sig  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3263 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 187: /* func_1_0_fact_params  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 186: /* func_1_0_fact_signature  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3271 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 188: /* fact_param_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 187: /* func_1_0_fact_params  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3279 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 189: /* func_1_0_param_sig  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 188: /* fact_param_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3287 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 190: /* func_1_0_param_signature  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 189: /* func_1_0_param_sig  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3295 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 191: /* func_1_0_formal_params  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 190: /* func_1_0_param_signature  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3303 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 192: /* formal_param_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 191: /* func_1_0_formal_params  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3311 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 193: /* func_1_0_vararg_formals  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 192: /* formal_param_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3319 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 194: /* func_1_0_prologue  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 193: /* func_1_0_vararg_formals  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3327 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 195: /* script_1_0_stmt_seq  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 194: /* func_1_0_prologue  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3335 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 196: /* script_1_0_stmt  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 195: /* script_1_0_stmt_seq  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3343 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 197: /* extern_1_0_decl  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 196: /* script_1_0_stmt  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3351 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 198: /* ext_func_1_0_decl  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 197: /* extern_1_0_decl  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3359 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 199: /* script_1_0_decl  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 198: /* ext_func_1_0_decl  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3367 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 200: /* validate_1_0_decl  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 199: /* script_1_0_decl  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3375 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 201: /* physical_1_0_decl  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 200: /* validate_1_0_decl  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3383 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 202: /* phys_1_0_return_type  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 201: /* physical_1_0_decl  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3391 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 203: /* phys_1_0_prologue  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 202: /* phys_1_0_return_type  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3399 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 204: /* phys_1_0_body  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 203: /* phys_1_0_prologue  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3407 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 205: /* phys_1_0_body_stmt  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 204: /* phys_1_0_body  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3415 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 206: /* phys_1_0_stmt  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 205: /* phys_1_0_body_stmt  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3423 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 207: /* table_1_0_decl  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 206: /* phys_1_0_stmt  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3431 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 208: /* opt_tbl_1_0_parents  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 207: /* table_1_0_decl  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3439 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 209: /* tbl_1_0_parents  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 208: /* opt_tbl_1_0_parents  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3447 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 210: /* tbl_1_0_body  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 209: /* tbl_1_0_parents  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3455 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 211: /* tbl_1_0_stmt_seq  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 210: /* tbl_1_0_body  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3463 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 212: /* tbl_1_0_stmt  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 211: /* tbl_1_0_stmt_seq  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3471 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 213: /* production_1_0_stmt  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 212: /* tbl_1_0_stmt  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3479 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 214: /* col_1_0_modifiers  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 213: /* production_1_0_stmt  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3487 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 215: /* col_1_0_modifier_seq  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 214: /* col_1_0_modifiers  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3495 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 216: /* col_1_0_modifier  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 215: /* col_1_0_modifier_seq  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3503 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 217: /* col_1_0_decl  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 216: /* col_1_0_modifier  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3511 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 218: /* phys_enc_ref  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 217: /* col_1_0_decl  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3519 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 219: /* typed_column_decl_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 218: /* phys_enc_ref  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3527 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 220: /* col_ident  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 219: /* typed_column_decl_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3535 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 221: /* phys_ident  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 220: /* col_ident  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3543 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 222: /* opt_column_body_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 221: /* phys_ident  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3551 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 223: /* column_body_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 222: /* opt_column_body_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3559 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 224: /* column_stmt_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 223: /* column_body_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3567 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 225: /* default_view_1_0_decl  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 224: /* column_stmt_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3575 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 226: /* physmbr_1_0_decl  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 225: /* default_view_1_0_decl  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3583 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 227: /* phys_coldef_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 226: /* physmbr_1_0_decl  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3591 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 228: /* opt_col_schema_parms_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 227: /* phys_coldef_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3599 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 229: /* col_schema_parms_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 228: /* opt_col_schema_parms_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3607 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 230: /* col_schema_parm_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 229: /* col_schema_parms_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3615 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 231: /* col_schema_value_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 230: /* col_schema_parm_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3623 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 232: /* cond_expr_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 231: /* col_schema_value_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3631 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 233: /* expression_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 232: /* cond_expr_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3639 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 234: /* primary_expr_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 233: /* expression_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3647 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 235: /* func_expr_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 234: /* primary_expr_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3655 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 236: /* schema_parms_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 235: /* func_expr_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3663 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 237: /* schema_parm_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 236: /* schema_parms_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3671 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 238: /* opt_factory_parms_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 237: /* schema_parm_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3679 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 239: /* factory_parms_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 238: /* opt_factory_parms_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3687 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 240: /* factory_parms  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 239: /* factory_parms_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3695 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 241: /* opt_func_1_0_parms  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 240: /* factory_parms  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3703 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 242: /* func_1_0_parms  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 241: /* opt_func_1_0_parms  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3711 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 243: /* uint_expr_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 242: /* func_1_0_parms  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3719 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 244: /* float_expr_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 243: /* uint_expr_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3727 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 245: /* string_expr_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 244: /* float_expr_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3735 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 246: /* const_vect_expr_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 245: /* string_expr_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3743 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 247: /* opt_const_vect_exprlist_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 246: /* const_vect_expr_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3751 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 248: /* const_vect_exprlist_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 247: /* opt_const_vect_exprlist_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3759 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 249: /* bool_expr_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 248: /* const_vect_exprlist_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3767 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 250: /* type_expr_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 249: /* bool_expr_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3775 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 251: /* member_expr_2_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 250: /* type_expr_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3783 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 252: /* join_expr_2_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 251: /* member_expr_2_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3791 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 253: /* database_1_0_decl  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 252: /* join_expr_2_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3799 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 254: /* opt_database_dad_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 253: /* database_1_0_decl  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3807 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 255: /* database_body_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 254: /* opt_database_dad_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3815 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 256: /* database_members_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 255: /* database_body_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3823 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 257: /* database_member_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 256: /* database_members_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3831 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 258: /* opt_template_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 257: /* database_member_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3839 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 259: /* db_member_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 258: /* opt_template_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3847 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 260: /* table_member_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 259: /* db_member_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3855 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 261: /* include_directive  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 260: /* table_member_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3863 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 262: /* fqn_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 261: /* include_directive  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3871 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 263: /* ident_1_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 262: /* fqn_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3879 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 264: /* empty  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 263: /* ident_1_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3887 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 265: /* fqn_vers  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 264: /* empty  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3895 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 266: /* fqn_opt_vers  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 265: /* fqn_vers  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3903 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 267: /* version_2_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 266: /* fqn_opt_vers  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3911 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 268: /* schema_2_0  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 267: /* version_2_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3919 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 269: /* schema_2_0_decl  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 268: /* schema_2_0  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3927 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 270: /* view_2_0_decl  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 269: /* schema_2_0_decl  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3935 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 271: /* view_parms  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 270: /* view_2_0_decl  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3943 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 272: /* view_parm  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 271: /* view_parms  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3951 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 273: /* opt_view_body  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 272: /* view_parm  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3959 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 274: /* view_body  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 273: /* opt_view_body  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3967 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 275: /* view_member  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 274: /* view_body  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3975 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 276: /* opt_view_parents  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 275: /* view_member  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3983 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 277: /* view_parents  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 276: /* opt_view_parents  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3991 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 278: /* view_parent  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 277: /* view_parents  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 3999 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
-    case 279: /* view_parent_parms  */
-#line 138 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+    case 278: /* view_parent  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
       {
     ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
 }
 #line 4007 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
+        break;
+
+    case 279: /* view_parent_parms  */
+#line 146 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1257  */
+      {
+    ParseTree :: Destroy ( ( ParseTree * ) ( ((*yyvaluep)) . subtree ) );
+}
+#line 4015 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1257  */
         break;
 
 
@@ -4021,7 +4029,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
 `----------*/
 
 int
-yyparse (ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
+yyparse (ctx_t ctx, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
 {
 /* The lookahead symbol.  */
 int yychar;
@@ -4295,1627 +4303,1627 @@ yyreduce:
   switch (yyn)
     {
         case 2:
-#line 298 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { *root = MakeTree ( PT_PARSE, T ( (yyvsp[0]) ) );              (yyval) . subtree = 0; (yyval) . leading_ws = 0;  }
-#line 4301 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 306 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { *root = MakeTree ( ctx, PT_PARSE, T ( ctx, (yyvsp[0]) ) );              (yyval) . subtree = 0; (yyval) . leading_ws = 0;  }
+#line 4309 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 3:
-#line 299 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { *root = MakeTree ( PT_PARSE, P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) );    (yyval) . subtree = 0; (yyval) . leading_ws = 0; }
-#line 4307 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 307 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { *root = MakeTree ( ctx, PT_PARSE, P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) );    (yyval) . subtree = 0; (yyval) . leading_ws = 0; }
+#line 4315 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 4:
-#line 303 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_SOURCE, P ( (yyvsp[0]) ) ); }
-#line 4313 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 311 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_SOURCE, P ( (yyvsp[0]) ) ); }
+#line 4321 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 5:
-#line 304 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_SOURCE, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4319 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 312 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_SOURCE, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4327 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 6:
-#line 305 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_SOURCE, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4325 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 313 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_SOURCE, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4333 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 7:
-#line 311 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_VERSION_1_0, T ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4331 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 319 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_VERSION_1_0, T ( ctx, (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4339 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 8:
-#line 315 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_SCHEMA_1_0, P ( (yyvsp[0]) ) ); }
-#line 4337 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 323 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_SCHEMA_1_0, P ( (yyvsp[0]) ) ); }
+#line 4345 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 9:
-#line 316 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-1]) ) , P ( (yyvsp[0]) ) ); }
-#line 4343 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 324 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-1]) ) , P ( (yyvsp[0]) ) ); }
+#line 4351 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 10:
-#line 320 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 328 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4349 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4357 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 11:
-#line 321 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 329 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4355 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4363 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 12:
-#line 322 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 330 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4361 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4369 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 13:
-#line 323 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 331 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4367 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4375 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 14:
-#line 324 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 332 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4373 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4381 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 15:
-#line 325 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 333 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4379 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4387 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 16:
-#line 326 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 334 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4385 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4393 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 17:
-#line 327 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 335 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4391 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4399 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 18:
-#line 328 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 336 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4397 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4405 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 19:
-#line 329 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 337 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4403 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4411 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 20:
-#line 330 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 338 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4409 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4417 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 21:
-#line 331 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 339 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4415 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4423 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 22:
-#line 332 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 340 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4421 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4429 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 23:
-#line 333 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-#line 4427 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 341 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = T ( ctx, (yyvsp[0]) ); }
+#line 4435 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 24:
-#line 343 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_TYPEDEF, T ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4433 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 351 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_TYPEDEF, T ( ctx, (yyvsp[-3]) ), P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4441 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 25:
-#line 347 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-#line 4439 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 355 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeList ( ctx, (yyvsp[0]) ); }
+#line 4447 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 26:
-#line 348 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = AddToList ( P((yyvsp[-2])), T((yyvsp[-1])), P((yyvsp[0])) ); }
-#line 4445 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 356 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4453 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 27:
-#line 355 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_TYPESET, T ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4451 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 363 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_TYPESET, T ( ctx, (yyvsp[-3]) ), P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4459 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 28:
-#line 359 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 367 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4457 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4465 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 29:
-#line 364 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_TYPESETDEF, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4463 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 372 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_TYPESETDEF, T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4471 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 30:
-#line 370 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-#line 4469 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 378 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeList ( ctx, (yyvsp[0]) ); }
+#line 4477 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 31:
-#line 371 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4475 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 379 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4483 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 32:
-#line 375 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 383 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4481 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4489 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 33:
-#line 376 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_ARRAY, P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4487 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 384 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_ARRAY, P ( (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4495 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 34:
-#line 380 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 388 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4493 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4501 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 35:
-#line 381 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-#line 4499 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 389 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = T ( ctx, (yyvsp[0]) ); }
+#line 4507 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 36:
-#line 388 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_FORMAT, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4505 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 396 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_FORMAT, T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4513 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 37:
-#line 390 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_FORMAT, T ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4511 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 398 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_FORMAT, T ( ctx, (yyvsp[-3]) ), P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4519 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 38:
-#line 394 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 402 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4517 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4525 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 39:
-#line 398 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 406 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4523 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4531 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 40:
-#line 406 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_CONST, T ( (yyvsp[-5]) ), P ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4529 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 414 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_CONST, T ( ctx, (yyvsp[-5]) ), P ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4537 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 41:
-#line 413 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_ALIAS, T ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4535 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 421 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_ALIAS, T ( ctx, (yyvsp[-3]) ), P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4543 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 42:
-#line 417 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 425 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4541 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4549 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 43:
-#line 423 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_FUNCTION, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4547 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 431 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_FUNCTION, T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4555 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 44:
-#line 427 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 435 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4553 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4561 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 45:
-#line 428 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 436 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4559 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4567 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 46:
-#line 435 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_FUNCDECL, P ( (yyvsp[-5]) ), P ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4565 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 443 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_FUNCDECL, P ( (yyvsp[-5]) ), P ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4573 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 47:
-#line 440 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_UNTYPED, T ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4571 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 448 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_UNTYPED, T ( ctx, (yyvsp[-3]) ), P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4579 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 48:
-#line 445 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_ROWLENGTH, T ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4577 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 453 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_ROWLENGTH, T ( ctx, (yyvsp[-3]) ), P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4585 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 49:
-#line 449 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 457 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4583 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4591 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 50:
-#line 450 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 458 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4589 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4597 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 51:
-#line 454 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_SCHEMASIG, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4595 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 462 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_SCHEMASIG, T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4603 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 52:
-#line 458 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-#line 4601 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 466 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeList ( ctx, (yyvsp[0]) ); }
+#line 4609 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 53:
-#line 459 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4607 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 467 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4615 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 54:
-#line 463 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_SCHEMAFORMAL, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4613 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 471 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_SCHEMAFORMAL, T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4621 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 55:
-#line 464 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_SCHEMAFORMAL, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4619 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 472 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_SCHEMAFORMAL, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4627 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 56:
-#line 468 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_RETURNTYPE, T ( (yyvsp[0]) ) ); }
-#line 4625 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 476 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_RETURNTYPE, T ( ctx, (yyvsp[0]) ) ); }
+#line 4633 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 57:
-#line 469 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_RETURNTYPE, P ( (yyvsp[0]) ) ); }
-#line 4631 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 477 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_RETURNTYPE, P ( (yyvsp[0]) ) ); }
+#line 4639 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 58:
-#line 473 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 481 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4637 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4645 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 59:
-#line 474 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 482 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4643 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4651 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 60:
-#line 478 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_FACTSIG, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4649 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 486 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_FACTSIG, T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4657 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 61:
-#line 482 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 490 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4655 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4663 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 62:
-#line 484 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_FUNCPARAMS, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4661 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 492 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_FUNCPARAMS, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4669 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 63:
-#line 486 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_FUNCPARAMS, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4667 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 494 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_FUNCPARAMS, T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4675 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 64:
-#line 488 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_FUNCPARAMS, P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4673 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 496 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_FUNCPARAMS, P ( (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4681 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 65:
-#line 490 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_FUNCPARAMS, P ( (yyvsp[-4]) ), T ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4679 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 498 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_FUNCPARAMS, P ( (yyvsp[-4]) ), T ( ctx, (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4687 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 66:
-#line 494 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-#line 4685 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 502 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeList ( ctx, (yyvsp[0]) ); }
+#line 4693 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 67:
-#line 495 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4691 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 503 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4699 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 68:
-#line 499 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_FORMALPARAM, P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4697 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 507 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_FORMALPARAM, P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4705 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 69:
-#line 503 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_FUNCSIG, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4703 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 511 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_FUNCSIG, T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4711 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 70:
-#line 507 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 515 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4709 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4717 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 71:
-#line 509 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_FUNCPARAMS, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4715 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 517 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_FUNCPARAMS, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4723 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 72:
-#line 511 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_FUNCPARAMS, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4721 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 519 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_FUNCPARAMS, T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4729 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 73:
-#line 513 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_FUNCPARAMS, P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4727 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 521 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_FUNCPARAMS, P ( (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4735 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 74:
-#line 515 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_FUNCPARAMS, P ( (yyvsp[-4]) ), T ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4733 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 523 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_FUNCPARAMS, P ( (yyvsp[-4]) ), T ( ctx, (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4741 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 75:
-#line 519 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-#line 4739 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 527 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeList ( ctx, (yyvsp[0]) ); }
+#line 4747 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 76:
-#line 520 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4745 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 528 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4753 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 77:
-#line 524 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_FORMALPARAM, P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4751 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 532 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_FORMALPARAM, P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4759 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 78:
-#line 526 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_FORMALPARAM, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4757 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 534 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_FORMALPARAM, T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4765 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 79:
-#line 530 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 538 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4763 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4771 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 80:
-#line 531 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_ELLIPSIS, T ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4769 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 539 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_ELLIPSIS, T ( ctx, (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4777 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 81:
-#line 536 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_FUNCPROLOGUE, T ( (yyvsp[0]) ) ); }
-#line 4775 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 544 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_FUNCPROLOGUE, T ( ctx, (yyvsp[0]) ) ); }
+#line 4783 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 82:
-#line 538 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_FUNCPROLOGUE, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4781 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 546 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_FUNCPROLOGUE, T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4789 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 83:
-#line 540 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_FUNCPROLOGUE, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4787 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 548 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_FUNCPROLOGUE, T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4795 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 84:
-#line 544 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-#line 4793 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 552 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeList ( ctx, (yyvsp[0]) ); }
+#line 4801 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 85:
-#line 545 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4799 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 553 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4807 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 86:
-#line 549 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_RETURN, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4805 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 557 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_RETURN, T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4813 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 87:
-#line 551 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_PRODSTMT, P ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4811 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 559 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_PRODSTMT, P ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4819 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 88:
-#line 558 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_EXTERN, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4817 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 566 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_EXTERN, T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4825 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 89:
-#line 562 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 570 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4823 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4831 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 90:
-#line 570 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_SCHEMA, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4829 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 578 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_SCHEMA, T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4837 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 91:
-#line 572 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_SCHEMA, T ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4835 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 580 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_SCHEMA, T ( ctx, (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4843 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 92:
-#line 580 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_VALIDATE, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4841 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 588 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_VALIDATE, T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4849 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 93:
-#line 592 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_PHYSICAL, T ( (yyvsp[-5]) ), P ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4847 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 600 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_PHYSICAL, T ( ctx, (yyvsp[-5]) ), P ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4855 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 94:
-#line 596 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 604 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4853 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4861 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 95:
-#line 597 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_NOHEADER, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4859 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 605 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_NOHEADER, T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4867 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 96:
-#line 602 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_PHYSPROLOGUE, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4865 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 610 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_PHYSPROLOGUE, T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4873 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 97:
-#line 604 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_PHYSPROLOGUE, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4871 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 612 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_PHYSPROLOGUE, T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4879 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 98:
-#line 608 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-#line 4877 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 616 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeList ( ctx, (yyvsp[0]) ); }
+#line 4885 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 99:
-#line 609 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4883 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 617 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4891 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 100:
-#line 614 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_PHYSBODYSTMT, T ( (yyvsp[0]) ) ); }
-#line 4889 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 622 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_PHYSBODYSTMT, T ( ctx, (yyvsp[0]) ) ); }
+#line 4897 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 101:
-#line 616 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_PHYSBODYSTMT, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4895 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 624 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_PHYSBODYSTMT, T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4903 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 102:
-#line 618 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_PHYSBODYSTMT, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4901 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 626 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_PHYSBODYSTMT, T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4909 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 103:
-#line 620 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_PHYSBODYSTMT, T ( (yyvsp[-4]) ), T ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4907 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 628 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_PHYSBODYSTMT, T ( ctx, (yyvsp[-4]) ), T ( ctx, (yyvsp[-3]) ), P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4915 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 104:
-#line 625 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_PHYSSTMT, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4913 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 633 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_PHYSSTMT, T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4921 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 105:
-#line 635 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_TABLE, T ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4919 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 643 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_TABLE, T ( ctx, (yyvsp[-3]) ), P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4927 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 106:
-#line 639 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 647 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4925 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4933 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 107:
-#line 640 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_TABLEPARENTS, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4931 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 648 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_TABLEPARENTS, T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4939 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 108:
-#line 644 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-#line 4937 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 652 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeList ( ctx, (yyvsp[0]) ); }
+#line 4945 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 109:
-#line 645 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4943 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 653 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4951 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 110:
-#line 650 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_TABLEBODY, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4949 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 658 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_TABLEBODY, T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4957 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 111:
-#line 652 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_TABLEBODY, T ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4955 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 660 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_TABLEBODY, T ( ctx, (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4963 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 112:
-#line 656 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-#line 4961 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 664 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeList ( ctx, (yyvsp[0]) ); }
+#line 4969 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 113:
-#line 657 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4967 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 665 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4975 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 114:
-#line 661 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 669 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 4973 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 4981 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 115:
-#line 662 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_COLUMN, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4979 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 670 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_COLUMN, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 4987 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 116:
-#line 664 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_COLUMNEXPR, T ( (yyvsp[-4]) ), T ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4985 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 672 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_COLUMNEXPR, T ( ctx, (yyvsp[-4]) ), T ( ctx, (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4993 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 117:
-#line 666 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_COLUMNEXPR, T ( (yyvsp[-5]) ), T ( (yyvsp[-4]) ), T ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 4991 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 674 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_COLUMNEXPR, T ( ctx, (yyvsp[-5]) ), T ( ctx, (yyvsp[-4]) ), T ( ctx, (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 4999 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 118:
-#line 667 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_PHYSCOL, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 4997 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 675 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_PHYSCOL, T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5005 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 119:
-#line 668 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_PHYSCOL, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5003 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 676 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_PHYSCOL, T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5011 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 120:
-#line 669 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_PHYSCOL, T ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5009 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 677 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_PHYSCOL, T ( ctx, (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5017 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 121:
-#line 670 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 678 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5015 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5023 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 122:
-#line 672 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_COLUNTYPED, T ( (yyvsp[-5]) ), T ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5021 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 680 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_COLUNTYPED, T ( ctx, (yyvsp[-5]) ), T ( ctx, (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5029 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 123:
-#line 673 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-#line 5027 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 681 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = T ( ctx, (yyvsp[0]) ); }
+#line 5035 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 124:
-#line 678 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_PRODSTMT, P ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5033 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 686 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_PRODSTMT, P ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5041 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 125:
-#line 680 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_PRODTRIGGER, T ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5039 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 688 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_PRODTRIGGER, T ( ctx, (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5047 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 126:
-#line 684 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-#line 5045 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 692 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = T ( ctx, (yyvsp[0]) ); }
+#line 5053 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 127:
-#line 685 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) = (yyvsp[-1]); AddToList ( P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5051 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 693 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) = (yyvsp[-1]); AddToList ( ctx, P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5059 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 128:
-#line 689 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-#line 5057 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 697 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeList ( ctx, (yyvsp[0]) ); }
+#line 5065 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 129:
-#line 690 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5063 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 698 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5071 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 130:
-#line 694 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-#line 5069 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 702 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = T ( ctx, (yyvsp[0]) ); }
+#line 5077 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 131:
-#line 695 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-#line 5075 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 703 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = T ( ctx, (yyvsp[0]) ); }
+#line 5083 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 132:
-#line 696 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-#line 5081 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 704 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = T ( ctx, (yyvsp[0]) ); }
+#line 5089 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 133:
-#line 701 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_COLDECL, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5087 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 709 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_COLDECL, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5095 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 134:
-#line 703 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_COLDECL, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5093 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 711 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_COLDECL, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5101 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 135:
-#line 708 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_PHYSENCREF, T ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5099 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 716 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_PHYSENCREF, T ( ctx, (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5107 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 136:
-#line 710 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_PHYSENCREF, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5105 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 718 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_PHYSENCREF, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5113 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 137:
-#line 712 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_PHYSENCREF, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5111 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 720 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_PHYSENCREF, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5119 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 138:
-#line 717 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_TYPEDCOL, P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5117 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 725 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_TYPEDCOL, P ( (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5125 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 139:
-#line 719 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_TYPEDCOLEXPR, P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5123 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 727 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_TYPEDCOLEXPR, P ( (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5131 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 140:
-#line 721 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_TYPEDCOL, P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5129 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 729 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_TYPEDCOL, P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5137 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 141:
-#line 725 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 733 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5135 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5143 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 142:
-#line 726 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 734 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5141 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5149 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 143:
-#line 730 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-#line 5147 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 738 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = T ( ctx, (yyvsp[0]) ); }
+#line 5155 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 144:
-#line 734 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 742 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5153 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5161 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 145:
-#line 735 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 743 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5159 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5167 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 146:
-#line 739 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-#line 5165 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 747 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeList ( ctx, (yyvsp[0]) ); }
+#line 5173 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 147:
-#line 740 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5171 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 748 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5179 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 148:
-#line 744 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_COLSTMT, T ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5177 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 752 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_COLSTMT, T ( ctx, (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5185 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 149:
-#line 745 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_COLSTMT, T ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5183 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 753 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_COLSTMT, T ( ctx, (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5191 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 150:
-#line 746 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_COLSTMT, T ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5189 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 754 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_COLSTMT, T ( ctx, (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5197 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 151:
-#line 747 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-#line 5195 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 755 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = T ( ctx, (yyvsp[0]) ); }
+#line 5203 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 152:
-#line 752 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_DFLTVIEW, T ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5201 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 760 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_DFLTVIEW, T ( ctx, (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5209 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 153:
-#line 757 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_PHYSMBR, P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5207 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 765 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_PHYSMBR, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5215 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 154:
-#line 759 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_PHYSMBR, P ( (yyvsp[-4]) ), T ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5213 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 767 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_PHYSMBR, P ( (yyvsp[-4]) ), T ( ctx, (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5221 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 155:
-#line 761 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_PHYSMBR, T ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5219 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 769 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_PHYSMBR, T ( ctx, (yyvsp[-3]) ), P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5227 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 156:
-#line 763 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_PHYSMBR, T ( (yyvsp[-5]) ), P ( (yyvsp[-4]) ), T ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5225 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 771 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_PHYSMBR, T ( ctx, (yyvsp[-5]) ), P ( (yyvsp[-4]) ), T ( ctx, (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5233 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 157:
-#line 768 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_PHYSCOLDEF, P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5231 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 776 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_PHYSCOLDEF, P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5239 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 158:
-#line 772 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 780 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5237 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5245 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 159:
-#line 773 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_COLSCHEMAPARMS, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5243 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 781 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_COLSCHEMAPARMS, T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5251 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 160:
-#line 777 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-#line 5249 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 785 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeList ( ctx, (yyvsp[0]) ); }
+#line 5257 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 161:
-#line 778 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5255 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 786 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5263 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 162:
-#line 782 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_COLSCHEMAPARAM, P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5261 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 790 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_COLSCHEMAPARAM, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5269 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 163:
-#line 783 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 791 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5267 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5275 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 164:
-#line 787 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 795 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5273 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5281 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 165:
-#line 788 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 796 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5279 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5287 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 166:
-#line 795 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-#line 5285 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 803 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeList ( ctx, (yyvsp[0]) ); }
+#line 5293 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 167:
-#line 796 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5291 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 804 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5299 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 168:
-#line 800 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 808 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5297 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5305 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 169:
-#line 801 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_CASTEXPR, T ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5303 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 809 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_CASTEXPR, T ( ctx, (yyvsp[-3]) ), P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5311 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 170:
-#line 805 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 813 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5309 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5317 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 171:
-#line 806 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 814 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5315 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5323 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 172:
-#line 807 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-#line 5321 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 815 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = T ( ctx, (yyvsp[0]) ); }
+#line 5329 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 173:
-#line 808 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 816 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5327 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5335 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 174:
-#line 809 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 817 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5333 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5341 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 175:
-#line 810 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 818 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5339 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5347 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 176:
-#line 811 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 819 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5345 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5353 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 177:
-#line 812 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 820 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5351 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5359 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 178:
-#line 813 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 821 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5357 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5365 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 179:
-#line 814 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_NEGATE, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5363 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 822 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_NEGATE, T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5371 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 180:
-#line 815 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_UNARYPLUS, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5369 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 823 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_UNARYPLUS, T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5377 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 181:
-#line 816 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 824 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5375 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5383 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 182:
-#line 817 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 825 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5381 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5389 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 183:
-#line 827 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_FUNCEXPR, T ( (yyvsp[-7]) ), P ( (yyvsp[-6]) ), T ( (yyvsp[-5]) ), P ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5387 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 835 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_FUNCEXPR, T ( ctx, (yyvsp[-7]) ), P ( (yyvsp[-6]) ), T ( ctx, (yyvsp[-5]) ), P ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5395 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 184:
-#line 833 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_FUNCEXPR, P ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5393 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 841 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_FUNCEXPR, P ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5401 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 185:
-#line 837 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-#line 5399 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 845 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeList ( ctx, (yyvsp[0]) ); }
+#line 5407 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 186:
-#line 838 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5405 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 846 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5413 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 187:
-#line 842 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 850 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5411 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5419 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 188:
-#line 843 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_ARRAY, P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5417 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 851 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_ARRAY, P ( (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5425 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 189:
-#line 844 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 852 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5423 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5431 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 190:
-#line 848 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 856 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5429 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5437 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 191:
-#line 849 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 857 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5435 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5443 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 192:
-#line 853 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_FACTPARMS, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5441 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 861 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_FACTPARMS, T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5449 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 193:
-#line 857 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-#line 5447 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 865 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeList ( ctx, (yyvsp[0]) ); }
+#line 5455 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 194:
-#line 858 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5453 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 866 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5461 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 195:
-#line 862 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 870 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5459 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5467 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 196:
-#line 863 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 871 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5465 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5473 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 197:
-#line 867 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-#line 5471 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 875 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeList ( ctx, (yyvsp[0]) ); }
+#line 5479 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 198:
-#line 868 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5477 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 876 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5485 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 199:
-#line 872 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_UINT, T ( (yyvsp[0]) ) ); }
-#line 5483 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 880 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_UINT, T ( ctx, (yyvsp[0]) ) ); }
+#line 5491 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 200:
-#line 873 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_UINT, T ( (yyvsp[0]) ) ); }
-#line 5489 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 881 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_UINT, T ( ctx, (yyvsp[0]) ) ); }
+#line 5497 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 201:
-#line 874 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_UINT, T ( (yyvsp[0]) ) ); }
-#line 5495 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 882 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_UINT, T ( ctx, (yyvsp[0]) ) ); }
+#line 5503 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 202:
-#line 878 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-#line 5501 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 886 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = T ( ctx, (yyvsp[0]) ); }
+#line 5509 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 203:
-#line 879 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-#line 5507 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 887 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = T ( ctx, (yyvsp[0]) ); }
+#line 5515 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 204:
-#line 883 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-#line 5513 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 891 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = T ( ctx, (yyvsp[0]) ); }
+#line 5521 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 205:
-#line 884 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-#line 5519 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 892 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = T ( ctx, (yyvsp[0]) ); }
+#line 5527 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 206:
-#line 888 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_CONSTVECT, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5525 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 896 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_CONSTVECT, T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5533 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 207:
-#line 892 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 900 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5531 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5539 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 208:
-#line 893 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 901 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5537 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5545 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 209:
-#line 897 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-#line 5543 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 905 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeList ( ctx, (yyvsp[0]) ); }
+#line 5551 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 210:
-#line 898 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5549 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 906 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5557 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 211:
-#line 902 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-#line 5555 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 910 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = T ( ctx, (yyvsp[0]) ); }
+#line 5563 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 212:
-#line 903 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-#line 5561 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 911 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = T ( ctx, (yyvsp[0]) ); }
+#line 5569 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 213:
-#line 907 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 915 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5567 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5575 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 214:
-#line 908 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_TYPEEXPR, P ( (yyvsp[-2]) ), T ( (yyvsp[-1])), P ( (yyvsp[0]) ) ); }
-#line 5573 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 916 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_TYPEEXPR, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1])), P ( (yyvsp[0]) ) ); }
+#line 5581 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 215:
-#line 912 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_MEMBEREXPR, P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5579 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 920 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_MEMBEREXPR, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5587 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 216:
-#line 913 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_MEMBEREXPR, P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5585 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 921 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_MEMBEREXPR, P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5593 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 217:
-#line 918 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_JOINEXPR, P ( (yyvsp[-5]) ), T ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ((yyvsp[0]) ) ); }
-#line 5591 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 926 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_JOINEXPR, P ( (yyvsp[-5]) ), T ( ctx, (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), P ((yyvsp[0]) ) ); }
+#line 5599 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 218:
-#line 920 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_JOINEXPR, P ( (yyvsp[-4]) ), T ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5597 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 928 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_JOINEXPR, P ( (yyvsp[-4]) ), T ( ctx, (yyvsp[-3]) ), P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5605 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 219:
-#line 930 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_DATABASE, T ( (yyvsp[-3]) ), P ( (yyvsp[-2])), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5603 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 938 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_DATABASE, T ( ctx, (yyvsp[-3]) ), P ( (yyvsp[-2])), P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5611 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 220:
-#line 934 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 942 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5609 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5617 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 221:
-#line 935 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_DBDAD, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5615 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 943 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_DBDAD, T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5623 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 222:
-#line 939 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_DBBODY, T ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5621 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 947 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_DBBODY, T ( ctx, (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5629 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 223:
-#line 940 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_DBBODY, T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5627 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 948 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_DBBODY, T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5635 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 224:
-#line 944 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-#line 5633 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 952 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeList ( ctx, (yyvsp[0]) ); }
+#line 5641 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 225:
-#line 945 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5639 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 953 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5647 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 226:
-#line 949 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 957 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5645 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5653 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 227:
-#line 950 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 958 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5651 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5659 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 228:
-#line 951 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-#line 5657 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 959 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = T ( ctx, (yyvsp[0]) ); }
+#line 5665 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 229:
-#line 955 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 963 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5663 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5671 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 230:
-#line 956 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-#line 5669 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 964 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = T ( ctx, (yyvsp[0]) ); }
+#line 5677 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 231:
-#line 961 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_DBMEMBER, P ( (yyvsp[-4]) ), T ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5675 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 969 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_DBMEMBER, P ( (yyvsp[-4]) ), T ( ctx, (yyvsp[-3]) ), P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5683 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 232:
-#line 966 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_TBLMEMBER, P ( (yyvsp[-4]) ), T ( (yyvsp[-3]) ), P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5681 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 974 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_TBLMEMBER, P ( (yyvsp[-4]) ), T ( ctx, (yyvsp[-3]) ), P ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5689 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 233:
-#line 973 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_INCLUDE, T ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5687 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 981 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_INCLUDE, T ( ctx, (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5695 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 234:
-#line 981 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_FQN, P ( (yyvsp[0]) ) ); }
-#line 5693 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 989 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_FQN, P ( (yyvsp[0]) ) ); }
+#line 5701 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 235:
-#line 982 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5699 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 990 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5707 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 236:
-#line 984 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyvsp[0]) . type = IDENTIFIER_1_0; (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), MakeTree ( PT_IDENT, T ( (yyvsp[0]) ) ) ); }
-#line 5705 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 992 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyvsp[0]) . type = IDENTIFIER_1_0; (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), MakeTree ( ctx, PT_IDENT, T ( ctx, (yyvsp[0]) ) ) ); }
+#line 5713 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 237:
-#line 985 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyvsp[0]) . type = IDENTIFIER_1_0; (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), MakeTree ( PT_IDENT, T ( (yyvsp[0]) ) ) ); }
-#line 5711 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 993 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyvsp[0]) . type = IDENTIFIER_1_0; (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), MakeTree ( ctx, PT_IDENT, T ( ctx, (yyvsp[0]) ) ) ); }
+#line 5719 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 238:
-#line 986 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyvsp[0]) . type = IDENTIFIER_1_0; (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), MakeTree ( PT_IDENT, T ( (yyvsp[0]) ) ) ); }
-#line 5717 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 994 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyvsp[0]) . type = IDENTIFIER_1_0; (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), MakeTree ( ctx, PT_IDENT, T ( ctx, (yyvsp[0]) ) ) ); }
+#line 5725 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 239:
-#line 987 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyvsp[0]) . type = IDENTIFIER_1_0; (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), MakeTree ( PT_IDENT, T ( (yyvsp[0]) ) ) ); }
-#line 5723 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 995 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyvsp[0]) . type = IDENTIFIER_1_0; (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), MakeTree ( ctx, PT_IDENT, T ( ctx, (yyvsp[0]) ) ) ); }
+#line 5731 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 240:
-#line 988 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyvsp[0]) . type = IDENTIFIER_1_0; (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), MakeTree ( PT_IDENT, T ( (yyvsp[0]) ) ) ); }
-#line 5729 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 996 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyvsp[0]) . type = IDENTIFIER_1_0; (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), MakeTree ( ctx, PT_IDENT, T ( ctx, (yyvsp[0]) ) ) ); }
+#line 5737 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 241:
-#line 989 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyvsp[0]) . type = IDENTIFIER_1_0; (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), MakeTree ( PT_IDENT, T ( (yyvsp[0]) ) ) ); }
-#line 5735 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 997 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyvsp[0]) . type = IDENTIFIER_1_0; (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), MakeTree ( ctx, PT_IDENT, T ( ctx, (yyvsp[0]) ) ) ); }
+#line 5743 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 242:
-#line 990 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyvsp[0]) . type = IDENTIFIER_1_0; (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), MakeTree ( PT_IDENT, T ( (yyvsp[0]) ) ) ); }
-#line 5741 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 998 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyvsp[0]) . type = IDENTIFIER_1_0; (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), MakeTree ( ctx, PT_IDENT, T ( ctx, (yyvsp[0]) ) ) ); }
+#line 5749 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 243:
-#line 991 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyvsp[0]) . type = IDENTIFIER_1_0; (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), MakeTree ( PT_IDENT, T ( (yyvsp[0]) ) ) ); }
-#line 5747 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 999 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyvsp[0]) . type = IDENTIFIER_1_0; (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), MakeTree ( ctx, PT_IDENT, T ( ctx, (yyvsp[0]) ) ) ); }
+#line 5755 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 244:
-#line 995 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_IDENT, T ( (yyvsp[0]) ) ); }
-#line 5753 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 1003 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_IDENT, T ( ctx, (yyvsp[0]) ) ); }
+#line 5761 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 245:
-#line 999 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_EMPTY ); }
-#line 5759 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 1007 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_EMPTY ); }
+#line 5767 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 246:
-#line 1003 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_VERSNAME, P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5765 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 1011 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_VERSNAME, P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5773 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 247:
-#line 1007 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 1015 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5771 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5779 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 248:
-#line 1008 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 1016 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5777 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5785 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 249:
-#line 1014 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_VERSION_2, T ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5783 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 1022 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_VERSION_2, T ( ctx, (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5791 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 250:
-#line 1018 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_SCHEMA_2_0, P ( (yyvsp[0]) ) ); }
-#line 5789 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 1026 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_SCHEMA_2_0, P ( (yyvsp[0]) ) ); }
+#line 5797 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 251:
-#line 1019 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-1]) ) , P ( (yyvsp[0]) ) ); }
-#line 5795 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 1027 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-1]) ) , P ( (yyvsp[0]) ) ); }
+#line 5803 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 252:
-#line 1023 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 1031 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5801 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5809 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 253:
-#line 1024 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 1032 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5807 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5815 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 254:
-#line 1029 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_VIEW, T ( (yyvsp[-8]) ), P ( (yyvsp[-7]) ), T ( (yyvsp[-6]) ), P ( (yyvsp[-5]) ), T ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5813 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 1037 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_VIEW, T ( ctx, (yyvsp[-8]) ), P ( (yyvsp[-7]) ), T ( ctx, (yyvsp[-6]) ), P ( (yyvsp[-5]) ), T ( ctx, (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5821 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 255:
-#line 1033 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-#line 5819 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 1041 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeList ( ctx, (yyvsp[0]) ); }
+#line 5827 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 256:
-#line 1034 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5825 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 1042 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5833 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 257:
-#line 1038 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_VIEWPARAM, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5831 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 1046 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_VIEWPARAM, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5839 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 258:
-#line 1042 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 1050 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5837 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5845 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 259:
-#line 1043 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 1051 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5843 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5851 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 260:
-#line 1047 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-#line 5849 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 1055 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeList ( ctx, (yyvsp[0]) ); }
+#line 5857 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 261:
-#line 1048 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5855 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 1056 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5863 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 262:
-#line 1053 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_PRODSTMT, P ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5861 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 1061 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_PRODSTMT, P ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5869 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 263:
-#line 1055 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_COLUMN, T ( (yyvsp[-5]) ), P ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5867 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 1063 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_COLUMN, T ( ctx, (yyvsp[-5]) ), P ( (yyvsp[-4]) ), P ( (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5875 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 264:
-#line 1056 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = T ( (yyvsp[0]) ); }
-#line 5873 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 1064 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = T ( ctx, (yyvsp[0]) ); }
+#line 5881 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 265:
-#line 1060 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+#line 1068 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
     { (yyval) = (yyvsp[0]); }
-#line 5879 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5887 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 266:
-#line 1061 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_VIEWPARENTS, T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5885 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 1069 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_VIEWPARENTS, T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5893 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 267:
-#line 1065 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-#line 5891 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 1073 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeList ( ctx, (yyvsp[0]) ); }
+#line 5899 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 268:
-#line 1066 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5897 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 1074 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5905 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 269:
-#line 1071 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeTree ( PT_VIEWPARENT, P ( (yyvsp[-3]) ), T ( (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( (yyvsp[0]) ) ); }
-#line 5903 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 1079 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeTree ( ctx, PT_VIEWPARENT, P ( (yyvsp[-3]) ), T ( ctx, (yyvsp[-2]) ), P ( (yyvsp[-1]) ), T ( ctx, (yyvsp[0]) ) ); }
+#line 5911 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 270:
-#line 1075 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
-#line 5909 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 1083 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = MakeList ( ctx, (yyvsp[0]) ); }
+#line 5917 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 271:
-#line 1076 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = AddToList ( P ( (yyvsp[-2]) ), T ( (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
-#line 5915 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 1084 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { (yyval) . subtree = AddToList ( ctx, P ( (yyvsp[-2]) ), T ( ctx, (yyvsp[-1]) ), P ( (yyvsp[0]) ) ); }
+#line 5923 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
 
-#line 5919 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
+#line 5927 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -5966,7 +5974,7 @@ yyerrlab:
     {
       ++yynerrs;
 #if ! YYERROR_VERBOSE
-      yyerror (&yylloc, root, errors, sb, YY_("syntax error"));
+      yyerror (&yylloc, ctx, root, errors, sb, YY_("syntax error"));
 #else
 # define YYSYNTAX_ERROR yysyntax_error (&yymsg_alloc, &yymsg, \
                                         yyssp, yytoken)
@@ -5993,7 +6001,7 @@ yyerrlab:
                 yymsgp = yymsg;
               }
           }
-        yyerror (&yylloc, root, errors, sb, yymsgp);
+        yyerror (&yylloc, ctx, root, errors, sb, yymsgp);
         if (yysyntax_error_status == 2)
           goto yyexhaustedlab;
       }
@@ -6017,7 +6025,7 @@ yyerrlab:
       else
         {
           yydestruct ("Error: discarding",
-                      yytoken, &yylval, &yylloc, root, errors, sb);
+                      yytoken, &yylval, &yylloc, ctx, root, errors, sb);
           yychar = YYEMPTY;
         }
     }
@@ -6074,7 +6082,7 @@ yyerrlab1:
 
       yyerror_range[1] = *yylsp;
       yydestruct ("Error: popping",
-                  yystos[yystate], yyvsp, yylsp, root, errors, sb);
+                  yystos[yystate], yyvsp, yylsp, ctx, root, errors, sb);
       YYPOPSTACK (1);
       yystate = *yyssp;
       YY_STACK_PRINT (yyss, yyssp);
@@ -6116,7 +6124,7 @@ yyabortlab:
 | yyexhaustedlab -- memory exhaustion comes here.  |
 `-------------------------------------------------*/
 yyexhaustedlab:
-  yyerror (&yylloc, root, errors, sb, YY_("memory exhausted"));
+  yyerror (&yylloc, ctx, root, errors, sb, YY_("memory exhausted"));
   yyresult = 2;
   /* Fall through.  */
 #endif
@@ -6128,7 +6136,7 @@ yyreturn:
          user semantic actions for why this is necessary.  */
       yytoken = YYTRANSLATE (yychar);
       yydestruct ("Cleanup: discarding lookahead",
-                  yytoken, &yylval, &yylloc, root, errors, sb);
+                  yytoken, &yylval, &yylloc, ctx, root, errors, sb);
     }
   /* Do not reclaim the symbols of the rule whose action triggered
      this YYABORT or YYACCEPT.  */
@@ -6137,7 +6145,7 @@ yyreturn:
   while (yyssp != yyss)
     {
       yydestruct ("Cleanup: popping",
-                  yystos[*yyssp], yyvsp, yylsp, root, errors, sb);
+                  yystos[*yyssp], yyvsp, yylsp, ctx, root, errors, sb);
       YYPOPSTACK (1);
     }
 #ifndef yyoverflow

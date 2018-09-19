@@ -43,8 +43,8 @@ namespace ncbi
             SchemaParser ();
             ~SchemaParser ();
 
-            bool ParseString ( const char * input, bool debug = false );
-            bool ParseFile ( const struct KFile * file, const char * fileName = 0 );
+            bool ParseString ( ctx_t ctx, const char * input, bool debug = false );
+            bool ParseFile ( ctx_t ctx, const struct KFile * file, const char * fileName = 0 );
 
             const ParseTree* GetParseTree () const { return m_root; }
                   ParseTree* MoveParseTree (); // Transfer ownership to caller

@@ -39,12 +39,13 @@ using namespace ncbi::SchemaParser;
 
 using namespace std;
 
-FunctionDeclaration :: FunctionDeclaration ( ASTBuilder & p_builder )
+FunctionDeclaration :: FunctionDeclaration ( ctx_t ctx, ASTBuilder & p_builder )
 :   m_builder ( p_builder ),
-    m_self ( m_builder . Alloc < SFunction > () ),
     m_hasReturn ( false ),
     m_destroy ( true )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    m_self = m_builder . Alloc < SFunction > ( ctx );
     if ( m_self != 0 )
     {
         VectorInit ( & m_self -> fact . parms, 0, 8 );
@@ -59,7 +60,7 @@ FunctionDeclaration :: FunctionDeclaration ( ASTBuilder & p_builder, SFunction &
 {
     memset ( m_self, 0, sizeof * m_self );
     VectorInit ( & m_self -> fact . parms, 0, 8 );
-    m_self -> script        = true;
+    m_self -> script = true;
 }
 
 FunctionDeclaration :: ~FunctionDeclaration ()
@@ -71,8 +72,9 @@ FunctionDeclaration :: ~FunctionDeclaration ()
 }
 
 bool
-FunctionDeclaration :: HandleOverload ( const AST_FQN & p_fqn, const KSymbol *  p_priorDecl )
+FunctionDeclaration :: HandleOverload ( ctx_t ctx, const AST_FQN & p_fqn, const KSymbol *  p_priorDecl )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     assert ( p_priorDecl != 0 );
 
     Vector & functions = m_builder . GetSchema () -> func;
@@ -86,19 +88,19 @@ FunctionDeclaration :: HandleOverload ( const AST_FQN & p_fqn, const KSymbol *  
     {
         if ( ! m_self -> script)
         {
-            m_builder . ReportError ( p_fqn . GetLocation (), "Overload has to have a body", p_priorDecl -> name );
+            m_builder . ReportError ( ctx, p_fqn . GetLocation (), "Overload has to have a body", p_priorDecl -> name );
         }
     }
     else if ( m_self -> script)
     {
-        m_builder . ReportError ( p_fqn . GetLocation (), "Overload cannot have a body", p_priorDecl -> name );
+        m_builder . ReportError ( ctx, p_fqn . GetLocation (), "Overload cannot have a body", p_priorDecl -> name );
     }
 
     uint32_t idx;
     rc_t rc = VectorInsertUnique ( & name -> items, m_self, & idx, SFunctionSort );
     if ( rc == 0 ) // overload added
     {
-        return m_builder . VectorAppend ( functions, & m_self -> id, m_self );
+        return m_builder . VectorAppend ( ctx, functions, & m_self -> id, m_self );
     }
     if ( GetRCState ( rc ) == rcExists )
     {   /* an overload with the same major version exists */
@@ -124,13 +126,14 @@ FunctionDeclaration :: HandleOverload ( const AST_FQN & p_fqn, const KSymbol *  
     }
     else if ( rc != 0 )
     {
-        m_builder . ReportRc ( "VectorInsertUnique", rc );
+        m_builder . ReportRc ( ctx, "VectorInsertUnique", rc );
     }
     return false;
 }
 
 bool
-FunctionDeclaration :: SetName ( const AST_FQN &  p_fqn,
+FunctionDeclaration :: SetName ( ctx_t ctx,
+                                 const AST_FQN &  p_fqn,
                                  uint32_t         p_type,
                                  bool             p_canOverload,
                                  bool             p_validate )
@@ -140,26 +143,29 @@ FunctionDeclaration :: SetName ( const AST_FQN &  p_fqn,
         return false;
     }
 
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+
     m_self -> script        = p_type == eScriptFunc;
     m_self -> untyped       = p_type == eUntypedFunc;
     m_self -> row_length    = p_type == eRowLengthFunc;
     m_self -> validate      = p_validate;
 
-    const KSymbol * priorDecl = m_builder . Resolve ( p_fqn, false );
+    const KSymbol * priorDecl = m_builder . Resolve ( ctx, p_fqn, false );
 
     m_self -> version = p_fqn . GetVersion ();
     if ( ( m_self -> version & 0xFFFF ) != 0 && priorDecl != 0 && priorDecl -> type == eFunction )
     {
-        m_builder . ReportError ( "Changing release number is not allowed", p_fqn );
+        m_builder . ReportError ( ctx, "Changing release number is not allowed", p_fqn );
         return false;
     }
 
     if ( priorDecl == 0 )
     {
-        m_self -> name = m_builder . CreateFqnSymbol ( p_fqn, p_type, m_self );
+        m_self -> name = m_builder . CreateFqnSymbol ( ctx, p_fqn, p_type, m_self );
         if ( m_self -> name != 0 )
         {
-            if ( m_builder . CreateOverload ( m_self -> name,
+            if ( m_builder . CreateOverload ( ctx,
+                                              m_self -> name,
                                               m_self,
                                               0,
                                               SFunctionSort,
@@ -176,11 +182,11 @@ FunctionDeclaration :: SetName ( const AST_FQN &  p_fqn,
     {
         if ( ! p_canOverload  || priorDecl -> type == eFactory )
         {
-            m_builder . ReportError ( "Declared earlier and cannot be overloaded", p_fqn );
+            m_builder . ReportError ( ctx, "Declared earlier and cannot be overloaded", p_fqn );
             return false;
         }
 
-        if ( HandleOverload ( p_fqn, priorDecl ) )
+        if ( HandleOverload ( ctx, p_fqn, priorDecl ) )
         {   // declared previously, this version not ignored
             m_self -> name = priorDecl;
             m_destroy = false;
@@ -201,12 +207,13 @@ FunctionDeclaration :: SetReturnType ( STypeExpr * p_retType )
 }
 
 void
-FunctionDeclaration :: AddFactoryParams ( Vector& p_sig, const AST & p_params )
+FunctionDeclaration :: AddFactoryParams ( ctx_t ctx, Vector& p_sig, const AST & p_params )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     uint32_t count = p_params . ChildrenCount ();
     for ( uint32_t i = 0; i < count; ++i )
     {
-        SIndirectConst * param = m_builder . Alloc < SIndirectConst > ();
+        SIndirectConst * param = m_builder . Alloc < SIndirectConst > ( ctx );
         if ( param == 0 )
         {
             return;
@@ -215,18 +222,19 @@ FunctionDeclaration :: AddFactoryParams ( Vector& p_sig, const AST & p_params )
         assert ( p != 0 );
         assert ( p -> ChildrenCount () == 3 ); // type, ident, control or PT_EMPTY
 
-        STypeExpr * type = m_builder . MakeTypeExpr ( * p -> GetChild ( 0 ) );
+        STypeExpr * type = m_builder . MakeTypeExpr ( ctx, * p -> GetChild ( 0 ) );
         if ( type != 0 )
         {
             param -> td = & type -> dad;
         }
 
-        param -> name = m_builder . CreateLocalSymbol ( * p -> GetChild ( 1 ),
+        param -> name = m_builder . CreateLocalSymbol ( ctx,
+                                                        * p -> GetChild ( 1 ),
                                                         p -> GetChild ( 1 ) -> GetTokenValue (),
                                                         eFactParam,
                                                         param );
 
-        if ( m_builder . VectorAppend ( p_sig, & param -> pos, param ) )
+        if ( m_builder . VectorAppend ( ctx, p_sig, & param -> pos, param ) )
         {
             param -> expr_id = ++ ( m_builder . GetSchema () -> num_indirect );
         }
@@ -238,25 +246,27 @@ FunctionDeclaration :: AddFactoryParams ( Vector& p_sig, const AST & p_params )
 }
 
 void
-FunctionDeclaration :: SetFactoryParams ( const AST & p_sig )
+FunctionDeclaration :: SetFactoryParams ( ctx_t ctx, const AST & p_sig )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     if ( m_self != 0 && p_sig . GetTokenType () != PT_EMPTY )
     {   // children: mandatory, optional, isVariadic
         assert ( p_sig . ChildrenCount () == 3 );
         m_self -> fact . mand = p_sig . GetChild ( 0 ) -> ChildrenCount ();
-        AddFactoryParams ( m_self -> fact . parms, * p_sig . GetChild ( 0 ) );
-        AddFactoryParams ( m_self -> fact . parms, * p_sig . GetChild ( 1 ) );
+        AddFactoryParams ( ctx, m_self -> fact . parms, * p_sig . GetChild ( 0 ) );
+        AddFactoryParams ( ctx, m_self -> fact . parms, * p_sig . GetChild ( 1 ) );
         m_self -> fact . vararg = p_sig . GetChild ( 2 ) -> GetTokenType () != PT_EMPTY;
     }
 }
 
 void
-FunctionDeclaration :: AddFormalParams ( Vector& p_sig, const AST & p_params )
+FunctionDeclaration :: AddFormalParams ( ctx_t ctx, Vector& p_sig, const AST & p_params )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     uint32_t count = p_params . ChildrenCount ();
     for ( uint32_t i = 0; i < count; ++i )
     {
-        SProduction * param = m_builder . Alloc < SProduction > ();
+        SProduction * param = m_builder . Alloc < SProduction > ( ctx );
         if ( param == 0 )
         {
             return;
@@ -265,20 +275,21 @@ FunctionDeclaration :: AddFormalParams ( Vector& p_sig, const AST & p_params )
         assert ( p != 0 );
         assert ( p -> ChildrenCount () == 3 ); // type, ident, control or PT_EMPTY
 
-        STypeExpr * type = m_builder . MakeTypeExpr ( * p -> GetChild ( 0 ) );
+        STypeExpr * type = m_builder . MakeTypeExpr ( ctx, * p -> GetChild ( 0 ) );
         if ( type != 0 )
         {
             param -> fd = & type -> dad;
         }
 
-        param -> name = m_builder . CreateLocalSymbol ( * p -> GetChild ( 1 ),
+        param -> name = m_builder . CreateLocalSymbol ( ctx,
+                                                        * p -> GetChild ( 1 ),
                                                         p -> GetChild ( 1 ) -> GetTokenValue (),
                                                         eFuncParam,
                                                         param );
 
         param -> control = p -> GetChild ( 2 ) -> GetTokenType () != PT_EMPTY;
 
-        if ( ! m_builder . VectorAppend ( p_sig, & param -> cid . id, param ) )
+        if ( ! m_builder . VectorAppend ( ctx, p_sig, & param -> cid . id, param ) )
         {
             SProductionWhack ( param, NULL );
         }
@@ -286,30 +297,33 @@ FunctionDeclaration :: AddFormalParams ( Vector& p_sig, const AST & p_params )
 }
 
 void
-FunctionDeclaration :: SetFormalParams ( const AST & p_sig )
+FunctionDeclaration :: SetFormalParams ( ctx_t ctx, const AST & p_sig )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     if ( m_self != 0 && p_sig . GetTokenType () != PT_EMPTY )
     {   // children: mandatory, optional, isVariadic
         assert ( p_sig . ChildrenCount () == 3 );
         m_self -> func . mand = p_sig . GetChild ( 0 ) -> ChildrenCount ();
-        AddFormalParams ( m_self -> func . parms, * p_sig . GetChild ( 0 ) );
-        AddFormalParams ( m_self -> func . parms, * p_sig . GetChild ( 1 ) );
+        AddFormalParams ( ctx, m_self -> func . parms, * p_sig . GetChild ( 0 ) );
+        AddFormalParams ( ctx, m_self -> func . parms, * p_sig . GetChild ( 1 ) );
         m_self -> func . vararg = p_sig . GetChild ( 2 ) -> GetTokenType () != PT_EMPTY;
     }
 }
 
 void
-FunctionDeclaration :: SetPhysicalParams ()
+FunctionDeclaration :: SetPhysicalParams ( ctx_t ctx )
 {
     if ( m_self != 0 )
     {
+        FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+
         VectorInit ( & m_self -> func . parms, 0, 1 );
         m_self -> func . mand     = 1;
         m_self -> func . vararg   = false;
 
         /* create special input symbol */
-        SProduction * parm = m_builder . Alloc < SProduction > ();
-        if ( parm != 0 && m_builder . VectorAppend ( m_self -> func . parms, & parm -> cid . id, parm ) )
+        SProduction * parm = m_builder . Alloc < SProduction > ( ctx );
+        if ( parm != 0 && m_builder . VectorAppend ( ctx, m_self -> func . parms, & parm -> cid . id, parm ) )
         {
             /* create special input symbol */
             String symstr;
@@ -321,7 +335,7 @@ FunctionDeclaration :: SetPhysicalParams ()
             }
             else
             {
-                m_builder . ReportRc ( "KSymTableCreateConstSymbol", rc );
+                m_builder . ReportRc ( ctx, "KSymTableCreateConstSymbol", rc );
             }
         }
         else
@@ -332,9 +346,10 @@ FunctionDeclaration :: SetPhysicalParams ()
 }
 
 SIndirectType *
-FunctionDeclaration :: MakeSchemaParamType ( const AST_FQN & p_name )
+FunctionDeclaration :: MakeSchemaParamType ( ctx_t ctx, const AST_FQN & p_name )
 {
-    SIndirectType *ret = m_builder . Alloc < SIndirectType > ();
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    SIndirectType *ret = m_builder . Alloc < SIndirectType > ( ctx );
     if ( ret != 0 )
     {   /* create symbol */
         String nameStr;
@@ -342,7 +357,7 @@ FunctionDeclaration :: MakeSchemaParamType ( const AST_FQN & p_name )
         rc_t rc = KSymTableCreateConstSymbol ( & m_builder . GetSymTab (), & ret -> name, & nameStr, eSchemaType, ret );
         if ( rc == 0 )
         {
-            if ( m_builder . VectorAppend ( m_builder . GetSchema () -> pt, & ret -> id, ret ) )
+            if ( m_builder . VectorAppend ( ctx, m_builder . GetSchema () -> pt, & ret -> id, ret ) )
             {
                 /* initialize to raw format,
                 undefined type, and no dimension */
@@ -352,7 +367,7 @@ FunctionDeclaration :: MakeSchemaParamType ( const AST_FQN & p_name )
         }
         else
         {
-            m_builder . ReportRc ( "KSymTableCreateConstSymbol", rc );
+            m_builder . ReportRc ( ctx, "KSymTableCreateConstSymbol", rc );
         }
         SIndirectTypeWhack ( ret, 0 );
     }
@@ -360,9 +375,10 @@ FunctionDeclaration :: MakeSchemaParamType ( const AST_FQN & p_name )
 }
 
 SIndirectConst *
-FunctionDeclaration :: MakeSchemaParamConst ( const AST_FQN & p_name )
+FunctionDeclaration :: MakeSchemaParamConst ( ctx_t ctx, const AST_FQN & p_name )
 {
-    SIndirectConst * ret = m_builder . Alloc < SIndirectConst > ();
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    SIndirectConst * ret = m_builder . Alloc < SIndirectConst > ( ctx );
     if ( ret != 0 )
     {   /* create symbol */
         String nameStr;
@@ -375,7 +391,7 @@ FunctionDeclaration :: MakeSchemaParamConst ( const AST_FQN & p_name )
         }
         else
         {
-            m_builder . ReportRc ( "KSymTableCreateConstSymbol", rc );
+            m_builder . ReportRc ( ctx, "KSymTableCreateConstSymbol", rc );
         }
         SIndirectConstWhack ( ret, 0 );
     }
@@ -383,19 +399,20 @@ FunctionDeclaration :: MakeSchemaParamConst ( const AST_FQN & p_name )
 }
 
 void
-FunctionDeclaration :: SetSchemaParams ( const AST & p_sig )
+FunctionDeclaration :: SetSchemaParams ( ctx_t ctx, const AST & p_sig )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     uint32_t count = p_sig . ChildrenCount ();
     for ( uint32_t i = 0; i < count; ++i )
     {
         const AST & p = * p_sig . GetChild ( i );
         if ( p . ChildrenCount () == 1 ) // type
         {
-            SIndirectType * formal = MakeSchemaParamType ( * ToFQN ( p . GetChild ( 0 ) ) );
+            SIndirectType * formal = MakeSchemaParamType ( ctx, * ToFQN ( p . GetChild ( 0 ) ) );
             if ( formal != 0 )
             {
                 /* record positional */
-                if ( m_builder . VectorAppend ( m_self -> type, 0, formal ) )
+                if ( m_builder . VectorAppend ( ctx, m_self -> type, 0, formal ) )
                 {
                     formal -> pos = i;
                     continue;
@@ -406,7 +423,7 @@ FunctionDeclaration :: SetSchemaParams ( const AST & p_sig )
         }
         else // value
         {
-            STypeExpr * type = m_builder . MakeTypeExpr ( * p . GetChild ( 0 ) );
+            STypeExpr * type = m_builder . MakeTypeExpr ( ctx, * p . GetChild ( 0 ) );
             if ( type != 0 )
             {
                 const AST_FQN & ident = * ToFQN ( p . GetChild ( 1 ) );
@@ -415,11 +432,11 @@ FunctionDeclaration :: SetSchemaParams ( const AST & p_sig )
                     type -> dt -> domain == ddUint &&
                     type -> fd . td. dim == 1 )
                 {
-                    SIndirectConst * formal = MakeSchemaParamConst ( ident );
+                    SIndirectConst * formal = MakeSchemaParamConst ( ctx, ident );
                     if ( formal != 0 )
                     {
                         /* record positional */
-                        if ( m_builder . VectorAppend ( m_self -> schem, 0, formal ) )
+                        if ( m_builder . VectorAppend ( ctx, m_self -> schem, 0, formal ) )
                         {
                             formal -> td = & type -> dad;
                             formal -> pos = i;
@@ -432,7 +449,7 @@ FunctionDeclaration :: SetSchemaParams ( const AST & p_sig )
                 {
                     String nameStr;
                     ident . GetIdentifier ( nameStr );
-                    m_builder . ReportError ( ident . GetLocation (), "Not a scalar unsigned integer", nameStr );
+                    m_builder . ReportError ( ctx, ident . GetLocation (), "Not a scalar unsigned integer", nameStr );
                 }
                 SExpressionWhack ( & type -> dad );
             }
@@ -442,8 +459,9 @@ FunctionDeclaration :: SetSchemaParams ( const AST & p_sig )
 }
 
 void
-FunctionDeclaration :: HandleStatement ( const AST & p_stmt )
+FunctionDeclaration :: HandleStatement ( ctx_t ctx, const AST & p_stmt )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     switch ( p_stmt . GetTokenType () )
     {
     case KW_return:
@@ -452,11 +470,12 @@ FunctionDeclaration :: HandleStatement ( const AST & p_stmt )
             if ( m_self -> u . script . rtn == 0 )
             {
                 assert ( p_stmt . ChildrenCount () == 1 );
-                m_self -> u . script . rtn = ToExpr ( p_stmt . GetChild ( 0 ) ) -> MakeExpression ( m_builder );
+                m_self -> u . script . rtn = ToExpr ( p_stmt . GetChild ( 0 ) ) -> MakeExpression ( ctx, m_builder );
             }
             else
             {
-                m_builder . ReportError ( p_stmt . GetLocation (),
+                m_builder . ReportError ( ctx,
+                                          p_stmt . GetLocation (),
                                           "Multiple return statements in a function",
                                           m_self -> name -> name );
             }
@@ -467,7 +486,8 @@ FunctionDeclaration :: HandleStatement ( const AST & p_stmt )
             assert ( p_stmt . ChildrenCount () == 3 );
             const AST * ident = p_stmt . GetChild ( 1 );
             assert ( ident -> ChildrenCount () == 1 );
-            m_builder . AddProduction ( * ident,
+            m_builder . AddProduction ( ctx,
+                                        * ident,
                                         m_self -> u . script . prod,
                                         ident -> GetChild ( 0 ) -> GetTokenValue (),
                                         * ToExpr ( p_stmt . GetChild ( 2 ) ),
@@ -477,34 +497,36 @@ FunctionDeclaration :: HandleStatement ( const AST & p_stmt )
     case PT_EMPTY:
         break;
     default:
-        m_builder . ReportError ( p_stmt . GetLocation (), "Unsupported statement type", p_stmt . GetTokenType () );
+        m_builder . ReportError ( ctx, p_stmt . GetLocation (), "Unsupported statement type", p_stmt . GetTokenType () );
         break;
     }
 }
 
 void
-FunctionDeclaration :: HandleScript ( const AST & p_body, const String & p_funcName )
+FunctionDeclaration :: HandleScript ( ctx_t ctx, const AST & p_body, const String & p_funcName )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     uint32_t stmtCount = p_body . ChildrenCount ();
     for ( uint32_t i = 0 ; i < stmtCount; ++ i )
     {
-        HandleStatement ( * p_body . GetChild ( i ) );
+        HandleStatement ( ctx, * p_body . GetChild ( i ) );
     }
     if ( m_self -> script && ! m_hasReturn )
     {
-        m_builder . ReportError ( p_body . GetLocation (), "Schema function does not contain a return statement", p_funcName );
+        m_builder . ReportError ( ctx, p_body . GetLocation (), "Schema function does not contain a return statement", p_funcName );
     }
 }
 
 void
-FunctionDeclaration :: SetPrologue ( const AST & p_prologue )
+FunctionDeclaration :: SetPrologue ( ctx_t ctx, const AST & p_prologue )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     switch ( p_prologue . GetTokenType () )
     {
     case PT_IDENT:
         {   // renaming
             const AST_FQN & fqn = * ToFQN ( & p_prologue );
-            const KSymbol * priorDecl = m_builder . Resolve ( fqn, false );
+            const KSymbol * priorDecl = m_builder . Resolve ( ctx, fqn, false );
             if ( priorDecl != 0 )
             {
                 if ( priorDecl -> type == eFunction || priorDecl -> type == eFactory )
@@ -513,12 +535,12 @@ FunctionDeclaration :: SetPrologue ( const AST & p_prologue )
                 }
                 else
                 {
-                    m_builder . ReportError ( "Cannot be used as factory", fqn );
+                    m_builder . ReportError ( ctx, "Cannot be used as factory", fqn );
                 }
             }
             else
             {
-                m_self -> u. ext . fact = m_builder . CreateFqnSymbol ( fqn, eFactory, 0 );
+                m_self -> u. ext . fact = m_builder . CreateFqnSymbol ( ctx, fqn, eFactory, 0 );
             }
         }
         break;
@@ -528,7 +550,8 @@ FunctionDeclaration :: SetPrologue ( const AST & p_prologue )
             {
                 if ( m_self -> fact . vararg )
                 {
-                    m_builder . ReportError ( p_prologue . GetLocation (),
+                    m_builder . ReportError ( ctx,
+                                              p_prologue . GetLocation (),
                                               "Function with factory varargs cannot have a body",
                                               m_self -> name -> name );
                 }
@@ -540,18 +563,18 @@ FunctionDeclaration :: SetPrologue ( const AST & p_prologue )
                         rc = KSymTablePushScope ( & m_builder . GetSymTab (), FunctionScope () );
                         if ( rc == 0 )
                         {
-                            HandleScript ( p_prologue, m_self -> name -> name );
+                            HandleScript ( ctx, p_prologue, m_self -> name -> name );
                             KSymTablePopScope ( & m_builder . GetSymTab () );
                         }
                         else
                         {
-                            m_builder . ReportRc ( "KSymTablePushScope", rc );
+                            m_builder . ReportRc ( ctx, "KSymTablePushScope", rc );
                         }
                         KSymTablePopScope ( & m_builder . GetSymTab () );
                     }
                     else
                     {
-                        m_builder . ReportRc ( "KSymTablePushScope", rc );
+                        m_builder . ReportRc ( ctx, "KSymTablePushScope", rc );
                     }
                 }
             }
@@ -565,23 +588,26 @@ FunctionDeclaration :: SetPrologue ( const AST & p_prologue )
 // Function-building methods from ASTBuilder
 
 AST *
-ASTBuilder :: UntypedFunctionDecl ( const Token* p_token, AST_FQN* p_name )
+ASTBuilder :: UntypedFunctionDecl ( ctx_t ctx, const Token* p_token, AST_FQN* p_name )
 {
-    AST * ret = AST :: Make ( p_token, p_name );
-    FunctionDeclaration ( *this ) . SetName ( * p_name, eUntypedFunc, false, false );
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    AST * ret = AST :: Make ( ctx, p_token, p_name );
+    FunctionDeclaration ( ctx, *this ) . SetName ( ctx, * p_name, eUntypedFunc, false, false );
     return ret;
 }
 
 AST *
-ASTBuilder :: RowlenFunctionDecl ( const Token* p_token, AST_FQN* p_name )
+ASTBuilder :: RowlenFunctionDecl ( ctx_t ctx, const Token* p_token, AST_FQN* p_name )
 {
-    AST * ret = AST :: Make ( p_token, p_name );
-    FunctionDeclaration ( *this ) . SetName ( * p_name, eRowLengthFunc, false, false );
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    AST * ret = AST :: Make ( ctx, p_token, p_name );
+    FunctionDeclaration ( ctx, *this ) . SetName ( ctx, * p_name, eRowLengthFunc, false, false );
     return ret;
 }
 
 AST *
-ASTBuilder :: FunctionDecl ( const Token *  p_token,
+ASTBuilder :: FunctionDecl ( ctx_t ctx,
+                             const Token *  p_token,
                              bool           p_script,
                              AST *          p_schema,
                              AST *          p_returnType,
@@ -590,12 +616,14 @@ ASTBuilder :: FunctionDecl ( const Token *  p_token,
                              AST *          p_params,
                              AST *          p_prologue )
 {
-    AST * ret = AST :: Make ( p_token, p_schema, p_returnType, p_name, p_fact, p_params, p_prologue );
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    AST * ret = AST :: Make ( ctx, p_token, p_schema, p_returnType, p_name, p_fact, p_params, p_prologue );
 
     bool isValidate = p_token -> GetType () == PT_VALIDATE;
 
-    FunctionDeclaration func ( *this );
-    if ( func . SetName ( * p_name,
+    FunctionDeclaration func ( ctx, *this );
+    if ( func . SetName ( ctx,
+                          * p_name,
                           ( p_script || ( p_prologue -> GetTokenType () == PT_EMPTY && p_prologue -> ChildrenCount () > 0 ) )? eScriptFunc : eFunction,
                           true,
                           isValidate ) )
@@ -607,11 +635,11 @@ ASTBuilder :: FunctionDecl ( const Token *  p_token,
             rc = KSymTablePushScope ( & m_symtab, func . SchemaScope () );
             if ( rc == 0 )
             {
-                func . SetSchemaParams ( * p_schema );
+                func . SetSchemaParams ( ctx, * p_schema );
             }
             else
             {
-                ReportRc ( "KSymTablePushScope", rc );
+                ReportRc ( ctx, "KSymTablePushScope", rc );
                 hasSchemaParms = false; // do not pop later on
             }
         }
@@ -622,28 +650,28 @@ ASTBuilder :: FunctionDecl ( const Token *  p_token,
         {   // require return type to be void, 2 mandatory parameters, no optional or varargs
             if ( ! isVoid )
             {
-                ReportError ( "Validate functions have to return void", * p_name );
+                ReportError ( ctx, "Validate functions have to return void", * p_name );
             }
             if ( p_params -> GetChild ( 0 ) -> ChildrenCount () != 2 )
             {
-                ReportError ( "Validate functions have to have 2 mandatory parameters", * p_name);
+                ReportError ( ctx, "Validate functions have to have 2 mandatory parameters", * p_name);
             }
             if ( p_params -> GetChild ( 1 ) -> ChildrenCount () != 0 )
             {
-                ReportError ( "Validate functions cannot have optional parameters", * p_name);
+                ReportError ( ctx, "Validate functions cannot have optional parameters", * p_name);
             }
             if ( p_params -> GetChild ( 2 ) -> GetTokenType () != PT_EMPTY )
             {
-                ReportError ( "Validate functions cannot have variable parameters", * p_name);
+                ReportError ( ctx, "Validate functions cannot have variable parameters", * p_name);
             }
         }
         else if ( isVoid )
         {
-            ReportError ( "Only validate functions can return void", * p_name );
+            ReportError ( ctx, "Only validate functions can return void", * p_name );
         }
         else
         {
-            func . SetReturnType ( MakeTypeExpr ( * p_returnType ) );
+            func . SetReturnType ( MakeTypeExpr ( ctx, * p_returnType ) );
         }
 
         rc = KSymTablePushScope ( & m_symtab, func . FunctionScope () );
@@ -651,16 +679,16 @@ ASTBuilder :: FunctionDecl ( const Token *  p_token,
         {
             if ( p_fact -> GetTokenType () != PT_EMPTY )
             {
-                func . SetFactoryParams ( * p_fact );
+                func . SetFactoryParams ( ctx, * p_fact );
             }
 
-            func . SetFormalParams ( * p_params );
+            func . SetFormalParams ( ctx, * p_params );
 
             KSymTablePopScope ( & m_symtab );
         }
         else
         {
-            ReportRc ( "KSymTablePushScope", rc );
+            ReportRc ( ctx, "KSymTablePushScope", rc );
         }
 
         if ( hasSchemaParms )
@@ -670,7 +698,7 @@ ASTBuilder :: FunctionDecl ( const Token *  p_token,
 
         if ( p_prologue != 0 )
         {
-            func . SetPrologue ( * p_prologue );
+            func . SetPrologue ( ctx, * p_prologue );
         }
     }
 

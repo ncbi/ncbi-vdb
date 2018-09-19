@@ -27,6 +27,8 @@
 
 #include <string>
 
+#include <kfc/except.h>
+
 #include <vdb/database.h>
 #include <vdb/manager.h>
 #include <vdb/schema.h>
@@ -176,8 +178,9 @@ public:
             return WVDB_Fixture :: ParseSchema ( p_schema, p_schemaText );
         }
 
+        HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
         ncbi :: SchemaParser :: SchemaParser parser;
-        if ( ! parser . ParseString ( p_schemaText . c_str () ) )
+        if ( ! parser . ParseString ( ctx, p_schemaText . c_str () ) )
         {
             throw std :: logic_error ( std :: string ( "WVDB_Fixture::MakeDatabase : ParseString() failed: " ) + FormatErrorMessage ( * parser . GetErrors () . GetError ( 0 ) ) );
         }
@@ -187,7 +190,7 @@ public:
             throw std :: logic_error ( "WVDB_Fixture::MakeDatabase : MoveParseTree() returned 0" );
         }
         ncbi :: SchemaParser :: ASTBuilder builder ( p_schema );
-        ncbi :: SchemaParser :: AST * ast = builder . Build ( * parseTree, "", false );
+        ncbi :: SchemaParser :: AST * ast = builder . Build ( ctx, * parseTree, "", false );
         if ( builder . GetErrorCount() != 0)
         {
             throw std :: logic_error ( std :: string ( "AST_Fixture::MakeAst : ASTBuilder::Build() failed: " ) + FormatErrorMessage ( * builder . GetErrors () . GetError ( 0 ) ) );
@@ -198,12 +201,18 @@ public:
         }
         ncbi :: SchemaParser :: AST :: Destroy ( ast );
         ncbi :: SchemaParser :: ParseTree :: Destroy ( parseTree );
+
+        if ( FAILED () )
+        {
+            throw std :: logic_error ( WHAT() );
+        }
     }
 
     static std :: string FormatErrorMessage( const ncbi :: SchemaParser :: ErrorReport :: Error & p_err )
     {
+        HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
         char buf [1024];
-        if ( p_err . Format ( buf, sizeof ( buf ) ) )
+        if ( p_err . Format ( ctx, buf, sizeof ( buf ) ) )
         {
             return std :: string ( buf );
         }

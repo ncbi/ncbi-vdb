@@ -46,28 +46,29 @@ using namespace std;
 // data types, constants, etc.
 
 void
-ASTBuilder :: DeclareType ( const AST_FQN& p_fqn, const KSymbol& p_super, const AST_Expr* p_dimension )
+ASTBuilder :: DeclareType ( ctx_t ctx, const AST_FQN& p_fqn, const KSymbol& p_super, const AST_Expr* p_dimension )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     /* capture supertype */
     assert ( p_super . type == eDatatype );
     const SDatatype * super = static_cast < const SDatatype * > ( p_super . u . obj );
 
     /* allocate a datatype */
-    SDatatype * dt = Alloc < SDatatype > ();
+    SDatatype * dt = Alloc < SDatatype > ( ctx );
     if ( dt != 0 )
     {
         /* insert into type vector */
-        if ( VectorAppend ( m_schema -> dt, & dt -> id, dt ) )
+        if ( VectorAppend ( ctx, m_schema -> dt, & dt -> id, dt ) )
         {
             // create a symtab entry
-            const KSymbol* symbol = CreateFqnSymbol ( p_fqn, eDatatype, dt ); // will add missing namespaces to symtab
+            const KSymbol* symbol = CreateFqnSymbol ( ctx, p_fqn, eDatatype, dt ); // will add missing namespaces to symtab
             if ( symbol != 0 )
             {
                 /* fill it out from super-type */
                 dt -> super     = super;
                 dt -> byte_swap = super -> byte_swap;
                 dt -> name      = symbol;
-                uint32_t dimension = p_dimension == 0 ? 1 : ( uint32_t ) EvalConstExpr ( * p_dimension );
+                uint32_t dimension = p_dimension == 0 ? 1 : ( uint32_t ) EvalConstExpr ( ctx, * p_dimension );
                 dt -> size      = super -> size * dimension;
                 dt -> dim       = dimension;
                 dt -> domain    = super -> domain;
@@ -97,8 +98,9 @@ TypeExprInit ( STypeExpr & p_expr )
 
 static
 void
-TypeExprFillTypeId ( ASTBuilder & p_builder, const AST & p_node, STypeExpr & p_expr, const KSymbol & p_sym )
+TypeExprFillTypeId ( ctx_t ctx, ASTBuilder & p_builder, const AST & p_node, STypeExpr & p_expr, const KSymbol & p_sym )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     switch ( p_sym . type )
     {
     case eDatatype:
@@ -119,15 +121,16 @@ TypeExprFillTypeId ( ASTBuilder & p_builder, const AST & p_node, STypeExpr & p_e
         p_expr . resolved             = false;
         break;
     default:
-        p_builder . ReportError ( p_node . GetLocation (), "Not a datatype", p_sym . name );
+        p_builder . ReportError ( ctx, p_node . GetLocation (), "Not a datatype", p_sym . name );
         break;
     }
 }
 
 STypeExpr *
-ASTBuilder :: MakeTypeExpr ( const AST & p_type )
+ASTBuilder :: MakeTypeExpr ( ctx_t ctx, const AST & p_type )
 {
-    STypeExpr * ret = Alloc < STypeExpr > ();
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    STypeExpr * ret = Alloc < STypeExpr > ( ctx );
     if ( ret == 0 )
     {
         return 0;
@@ -155,7 +158,7 @@ ASTBuilder :: MakeTypeExpr ( const AST & p_type )
             }
             else
             {
-                SExpression * expr = ToExpr ( & dimension ) -> MakeExpression ( * this ); // will report problems
+                SExpression * expr = ToExpr ( & dimension ) -> MakeExpression ( ctx, * this ); // will report problems
                 if ( expr != 0 )
                 {
                     switch ( expr -> var )
@@ -177,7 +180,7 @@ ASTBuilder :: MakeTypeExpr ( const AST & p_type )
                             break;
                         }
                     default:
-                        ReportError ( dimension . GetLocation (), "Not allowed in array subscripts", expr -> var );
+                        ReportError ( ctx, dimension . GetLocation (), "Not allowed in array subscripts", expr -> var );
                         SExpressionWhack ( expr );
                         break;
                     }
@@ -188,10 +191,10 @@ ASTBuilder :: MakeTypeExpr ( const AST & p_type )
     case PT_TYPEEXPR :  // fqn (format) / fqn (type)
         {
             fqn = ToFQN ( p_type . GetChild ( 0 ) );
-            const KSymbol * fmt = Resolve ( * fqn ); // will report unknown name
+            const KSymbol * fmt = Resolve ( ctx, * fqn ); // will report unknown name
             if ( fmt -> type != eFormat )
             {
-                ReportError ( "Not a format", *fqn );
+                ReportError ( ctx, "Not a format", *fqn );
                 fqn = 0;
             }
             else
@@ -211,10 +214,10 @@ ASTBuilder :: MakeTypeExpr ( const AST & p_type )
 
     if ( fqn != 0 )
     {
-        const KSymbol * type = Resolve ( * fqn ); // will report unknown name
+        const KSymbol * type = Resolve ( ctx, * fqn ); // will report unknown name
         if ( type != 0 )
         {
-            TypeExprFillTypeId ( * this, * fqn, * ret, * type );
+            TypeExprFillTypeId ( ctx, * this, * fqn, * ret, * type );
         }
     }
 
@@ -222,8 +225,9 @@ ASTBuilder :: MakeTypeExpr ( const AST & p_type )
 }
 
 bool
-ASTBuilder :: FillSchemaParms ( const AST & p_parms, Vector & p_v )
+ASTBuilder :: FillSchemaParms ( ctx_t ctx, const AST & p_parms, Vector & p_v )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     uint32_t count = p_parms . ChildrenCount ();
     for ( uint32_t i = 0; i < count; ++ i )
     {
@@ -232,7 +236,7 @@ ASTBuilder :: FillSchemaParms ( const AST & p_parms, Vector & p_v )
         {
         case PT_IDENT :
             {
-                const KSymbol * sym = Resolve ( * ToFQN ( & parm ) ); // will report unknown name
+                const KSymbol * sym = Resolve ( ctx, * ToFQN ( & parm ) ); // will report unknown name
                 if ( sym == 0 )
                 {
                     return false;
@@ -246,15 +250,15 @@ ASTBuilder :: FillSchemaParms ( const AST & p_parms, Vector & p_v )
                 case eTypeset:
                 case eSchemaType:
                     {
-                        STypeExpr * ret = Alloc < STypeExpr > ();
+                        STypeExpr * ret = Alloc < STypeExpr > ( ctx );
                         if ( ret == 0 )
                         {
                             return false;
                         }
                         TypeExprInit ( * ret );
                         ret -> fd . td . dim = 1;
-                        TypeExprFillTypeId ( * this, parm, * ret, * sym );
-                        if ( ! VectorAppend ( p_v, 0, ret ) )
+                        TypeExprFillTypeId ( ctx, * this, parm, * ret, * sym );
+                        if ( ! VectorAppend ( ctx, p_v, 0, ret ) )
                         {
                             SExpressionWhack ( & ret -> dad );
                             return false;
@@ -271,7 +275,7 @@ ASTBuilder :: FillSchemaParms ( const AST & p_parms, Vector & p_v )
                         if ( dt -> domain == ddUint && dt -> dim == 1 )
                         {
                             atomic32_inc ( & ( ( SExpression* ) cnst -> expr ) -> refcount );
-                            if ( ! VectorAppend ( p_v, 0, cnst -> expr ) )
+                            if ( ! VectorAppend ( ctx, p_v, 0, cnst -> expr ) )
                             {
                                 atomic32_dec ( & ( ( SExpression* ) cnst -> expr ) -> refcount );
                                 return false;
@@ -279,7 +283,8 @@ ASTBuilder :: FillSchemaParms ( const AST & p_parms, Vector & p_v )
                         }
                         else
                         {
-                            ReportError ( parm . GetLocation (),
+                            ReportError ( ctx,
+                                          parm . GetLocation (),
                                           "Schema argument constant has to be an unsigned integer scalar",
                                           sym -> name );
                             return false;
@@ -296,18 +301,18 @@ ASTBuilder :: FillSchemaParms ( const AST & p_parms, Vector & p_v )
                     break;
 
                 default:
-                    ReportError ( parm. GetChild ( 0 ) -> GetLocation (), "Cannot be used as a schema parameter", sym -> name );
+                    ReportError ( ctx, parm. GetChild ( 0 ) -> GetLocation (), "Cannot be used as a schema parameter", sym -> name );
                     return false;
                 }
             }
             break;
 
         case PT_UINT :
-            VectorAppend ( p_v, 0, ToExpr ( & parm ) -> MakeUnsigned ( * this ) );
+            VectorAppend ( ctx, p_v, 0, ToExpr ( & parm ) -> MakeUnsigned ( ctx, * this ) );
             break;
 
         case PT_ARRAY:
-            VectorAppend ( p_v, 0, MakeTypeExpr ( parm ) );
+            VectorAppend ( ctx, p_v, 0, MakeTypeExpr ( ctx, parm ) );
             break;
 
         default:
@@ -318,12 +323,13 @@ ASTBuilder :: FillSchemaParms ( const AST & p_parms, Vector & p_v )
 }
 
 bool
-ASTBuilder :: FillFactoryParms ( const AST & p_parms, Vector & p_v )
+ASTBuilder :: FillFactoryParms ( ctx_t ctx, const AST & p_parms, Vector & p_v )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     uint32_t count = p_parms . ChildrenCount ();
     for ( uint32_t i = 0; i < count; ++ i )
     {
-        SExpression * expr = ToExpr ( p_parms . GetChild ( i ) ) -> MakeExpression ( * this );
+        SExpression * expr = ToExpr ( p_parms . GetChild ( i ) ) -> MakeExpression ( ctx, * this );
         if ( expr != 0 )
         {
             // allowed:
@@ -336,14 +342,14 @@ ASTBuilder :: FillFactoryParms ( const AST & p_parms, Vector & p_v )
             case eCastExpr:
             case eFuncParamExpr:
             case eNegateExpr:
-                if ( ! VectorAppend ( p_v, 0, expr ) )
+                if ( ! VectorAppend ( ctx, p_v, 0, expr ) )
                 {
                     SExpressionWhack ( expr );
                     return false;
                 }
                 break;
             default:
-                ReportError ( p_parms . GetChild ( i ) -> GetLocation (), "Cannot be used as a factory parameter" );
+                ReportError ( ctx, p_parms . GetChild ( i ) -> GetLocation (), "Cannot be used as a factory parameter" );
                 break;
             }
         }
@@ -356,8 +362,9 @@ ASTBuilder :: FillFactoryParms ( const AST & p_parms, Vector & p_v )
 }
 
 bool
-ASTBuilder :: FillArguments ( const AST & p_parms, Vector & p_v )
+ASTBuilder :: FillArguments ( ctx_t ctx, const AST & p_parms, Vector & p_v )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     uint32_t count = p_parms . ChildrenCount ();
     for ( uint32_t i = 0; i < count; ++ i )
     {
@@ -371,17 +378,17 @@ ASTBuilder :: FillArguments ( const AST & p_parms, Vector & p_v )
         case PT_IDENT:
         case PHYSICAL_IDENTIFIER_1_0:
         case PT_MEMBEREXPR:
-            expr = parm -> MakeExpression ( * this );
+            expr = parm -> MakeExpression ( ctx, * this );
             break;
         default:
-            ReportError ( p_parms . GetChild ( i ) -> GetLocation (), "Cannot be used as a function call parameter" );
+            ReportError ( ctx, p_parms . GetChild ( i ) -> GetLocation (), "Cannot be used as a function call parameter" );
             break;
         }
         if ( expr == 0 )
         {
             return false;
         }
-        if ( ! VectorAppend ( p_v, 0, expr ) )
+        if ( ! VectorAppend ( ctx, p_v, 0, expr ) )
         {
             SExpressionWhack ( expr );
             return false;
@@ -429,17 +436,18 @@ int64_t CC STypesetMbrSort ( const BSTNode *item, const BSTNode *n )
 }
 
 void
-ASTBuilder :: DeclareTypeSet ( const AST_FQN & p_fqn, const BSTree & p_types, uint32_t p_typeCount )
+ASTBuilder :: DeclareTypeSet ( ctx_t ctx, const AST_FQN & p_fqn, const BSTree & p_types, uint32_t p_typeCount )
 {
-    STypeset *ts = Alloc < STypeset > ( sizeof * ts - sizeof ts -> td + p_typeCount * sizeof ts -> td [ 0 ] );
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    STypeset *ts = Alloc < STypeset > ( ctx, sizeof * ts - sizeof ts -> td + p_typeCount * sizeof ts -> td [ 0 ] );
     if ( ts != 0 )
     {
         ts -> count = 0;
         BSTreeForEach ( & p_types, false, STypesetPopulate, ts );
 
-        if ( VectorAppend ( m_schema -> ts, & ts -> id, ts ) )
+        if ( VectorAppend ( ctx, m_schema -> ts, & ts -> id, ts ) )
         {
-            const KSymbol* symbol = CreateFqnSymbol ( p_fqn, eTypeset, ts ); // will add missing namespaces to symtab
+            const KSymbol* symbol = CreateFqnSymbol ( ctx, p_fqn, eTypeset, ts ); // will add missing namespaces to symtab
             ts -> name = symbol;
             ts -> count = p_typeCount;
         }
@@ -451,16 +459,17 @@ ASTBuilder :: DeclareTypeSet ( const AST_FQN & p_fqn, const BSTree & p_types, ui
 }
 
 AST *
-ASTBuilder :: TypeDef ( const Token * p_token, AST_FQN* p_baseType, AST* p_newTypes )
+ASTBuilder :: TypeDef ( ctx_t ctx, const Token * p_token, AST_FQN* p_baseType, AST* p_newTypes )
 {   //TODO: do we need to keep all these subtrees beyond the population of symtab?
-    AST * ret = AST :: Make ( p_token, p_baseType, p_newTypes );
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    AST * ret = AST :: Make ( ctx, p_token, p_baseType, p_newTypes );
 
-    const KSymbol * baseType = Resolve ( * p_baseType ); // will report unknown name
+    const KSymbol * baseType = Resolve ( ctx, * p_baseType ); // will report unknown name
     if ( baseType != 0 )
     {
         if ( baseType -> type != eDatatype )
         {
-            ReportError ( "Not a datatype", * p_baseType );
+            ReportError ( ctx, "Not a datatype", * p_baseType );
         }
         else
         {
@@ -470,12 +479,13 @@ ASTBuilder :: TypeDef ( const Token * p_token, AST_FQN* p_baseType, AST* p_newTy
                 const AST * newType = p_newTypes -> GetChild ( i );
                 if ( newType -> GetTokenType () == PT_IDENT )
                 {
-                    DeclareType ( * ToFQN ( newType ), * baseType, 0 ); // will report duplicate definition
+                    DeclareType ( ctx, * ToFQN ( newType ), * baseType, 0 ); // will report duplicate definition
                 }
                 else // fqn [ const-expr ]
                 {
                     assert ( newType -> ChildrenCount () == 2 );
-                    DeclareType ( * ToFQN ( newType -> GetChild ( 0 ) ),
+                    DeclareType ( ctx,
+                                  * ToFQN ( newType -> GetChild ( 0 ) ),
                                   * baseType,
                                   ToExpr ( newType -> GetChild ( 1 ) ) ); // will report duplicate definition
                 }
@@ -487,9 +497,10 @@ ASTBuilder :: TypeDef ( const Token * p_token, AST_FQN* p_baseType, AST* p_newTy
 
 static
 bool
-TypeSetAddType ( ASTBuilder & p_builder, BSTree & p_tree, const VTypedecl & p_type, uint32_t & p_typeCount )
+TypeSetAddType ( ctx_t ctx, ASTBuilder & p_builder, BSTree & p_tree, const VTypedecl & p_type, uint32_t & p_typeCount )
 {
-    STypesetMbr * mbr = p_builder . Alloc < STypesetMbr > ();
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    STypesetMbr * mbr = p_builder . Alloc < STypesetMbr > ( ctx );
     if ( mbr == 0 )
     {
         return false;
@@ -511,13 +522,14 @@ TypeSetAddType ( ASTBuilder & p_builder, BSTree & p_tree, const VTypedecl & p_ty
 }
 
 const KSymbol *
-ASTBuilder :: TypeSpec ( const AST & p_spec, VTypedecl & p_td )
+ASTBuilder :: TypeSpec ( ctx_t ctx, const AST & p_spec, VTypedecl & p_td )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     const KSymbol * ret = 0;
     if ( p_spec . GetTokenType () == PT_IDENT )
     {   // scalar
         const AST_FQN & fqn = * ToFQN ( & p_spec );
-        ret = Resolve ( fqn ); // will report unknown name
+        ret = Resolve ( ctx, fqn ); // will report unknown name
         if ( ret != 0 )
         {
             switch ( ret -> type )
@@ -538,7 +550,7 @@ ASTBuilder :: TypeSpec ( const AST & p_spec, VTypedecl & p_td )
                 break;
             default:
                 {
-                    ReportError ( "Not a datatype", fqn );
+                    ReportError ( ctx, "Not a datatype", fqn );
                 }
                 return 0;
             }
@@ -549,28 +561,29 @@ ASTBuilder :: TypeSpec ( const AST & p_spec, VTypedecl & p_td )
         assert ( p_spec . GetTokenType () == PT_ARRAY );
         assert ( p_spec . ChildrenCount () == 2 ); // fqn expr
         const AST_FQN & fqn = * ToFQN ( p_spec . GetChild ( 0 ) );
-        ret = Resolve ( fqn ); // will report unknown name
+        ret = Resolve ( ctx, fqn ); // will report unknown name
         if ( ret != 0 )
         {
             if ( ret -> type != eDatatype )
             {
-                ReportError ( "Not a datatype", fqn );
+                ReportError ( ctx, "Not a datatype", fqn );
                 return 0;
             }
             const SDatatype * typeDef = static_cast < const SDatatype * > ( ret -> u . obj );
             p_td . type_id    = typeDef -> id;
-            p_td.dim = (uint32_t) EvalConstExpr(*ToExpr(p_spec.GetChild(1)));
+            p_td.dim = (uint32_t) EvalConstExpr ( ctx, *ToExpr ( p_spec . GetChild ( 1 ) ) );
         }
     }
     return ret;
 }
 
 AST *
-ASTBuilder :: TypeSet ( const Token* p_token, AST_FQN * p_name, AST * p_typeSpecs )
+ASTBuilder :: TypeSet ( ctx_t ctx, const Token* p_token, AST_FQN * p_name, AST * p_typeSpecs )
 {
-    AST * ret = AST :: Make ( p_token, p_name, p_typeSpecs );
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    AST * ret = AST :: Make ( ctx, p_token, p_name, p_typeSpecs );
 
-    const KSymbol * existing = Resolve ( * p_name, false );
+    const KSymbol * existing = Resolve ( ctx, * p_name, false );
 
     // traverse p_typeSpecs, add to tree
     BSTree tree;
@@ -583,12 +596,12 @@ ASTBuilder :: TypeSet ( const Token* p_token, AST_FQN * p_name, AST * p_typeSpec
     {
         const AST * spec = p_typeSpecs -> GetChild ( i );
         VTypedecl td;
-        const KSymbol * type = TypeSpec ( * spec, td );
+        const KSymbol * type = TypeSpec ( ctx, * spec, td );
         if ( type != 0  )
         {
             if ( type -> type == eDatatype )
             {
-                if ( ! TypeSetAddType ( * this, tree, td, typeCount ) )
+                if ( ! TypeSetAddType ( ctx, * this, tree, td, typeCount ) )
                 {
                     error = true;
                 }
@@ -599,7 +612,7 @@ ASTBuilder :: TypeSet ( const Token* p_token, AST_FQN * p_name, AST * p_typeSpec
                 const STypeset * typeset = static_cast < const STypeset * > ( type -> u . obj );
                 for ( uint16_t j = 0; j < typeset -> count; ++j )
                 {
-                    if ( ! TypeSetAddType ( *this, tree, typeset -> td [ j ], typeCount ) )
+                    if ( ! TypeSetAddType ( ctx, *this, tree, typeset -> td [ j ], typeCount ) )
                     {
                         error = true;
                     }
@@ -616,14 +629,14 @@ ASTBuilder :: TypeSet ( const Token* p_token, AST_FQN * p_name, AST * p_typeSpec
     {
         if ( existing -> type != eTypeset )
         {
-            ReportError ( "Already declared and is not a typeset", * p_name );
+            ReportError ( ctx, "Already declared and is not a typeset", * p_name );
         }
         else
         {   // allow benign redefine
             const STypeset * orig = static_cast < const STypeset * > ( existing -> u . obj );
             if ( orig -> count != typeCount )
             {
-                ReportError ( "Typeset already declared differently", * p_name );
+                ReportError ( ctx, "Typeset already declared differently", * p_name );
             }
             else
             {
@@ -634,7 +647,7 @@ ASTBuilder :: TypeSet ( const Token* p_token, AST_FQN * p_name, AST * p_typeSpec
                     STypesetMbr * mbr = reinterpret_cast < STypesetMbr * > ( node );
                     if ( VTypedeclCmp ( & orig -> td [ i ], & mbr -> td ) != 0 )
                     {
-                        ReportError ( "Typeset already declared differently", * p_name );
+                        ReportError ( ctx, "Typeset already declared differently", * p_name );
                         break;
                     }
                     node = BSTNodeNext ( node );
@@ -644,7 +657,7 @@ ASTBuilder :: TypeSet ( const Token* p_token, AST_FQN * p_name, AST * p_typeSpec
     }
     else
     {
-        DeclareTypeSet ( * p_name, tree, typeCount );
+        DeclareTypeSet ( ctx, * p_name, tree, typeCount );
     }
 
     BSTreeWhack ( & tree, BSTreeMbrWhack, 0 );
@@ -653,27 +666,28 @@ ASTBuilder :: TypeSet ( const Token* p_token, AST_FQN * p_name, AST * p_typeSpec
 }
 
 AST *
-ASTBuilder :: FmtDef ( const Token* p_token, AST_FQN* p_fqn, AST_FQN* p_super_opt )
+ASTBuilder :: FmtDef ( ctx_t ctx, const Token* p_token, AST_FQN* p_fqn, AST_FQN* p_super_opt )
 {
-    AST * ret = AST :: Make ( p_token, p_fqn );
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    AST * ret = AST :: Make ( ctx, p_token, p_fqn );
     if ( p_super_opt != 0 )
     {
-        ret -> AddNode ( p_super_opt );
+        ret -> AddNode ( ctx, p_super_opt );
     }
 
-    SFormat * fmt = Alloc < SFormat > ();
+    SFormat * fmt = Alloc < SFormat > ( ctx );
     if ( fmt != 0 )
     {
         // superfmt
         fmt -> super = 0;
         if ( p_super_opt != 0 )
         {
-            const KSymbol* super = Resolve ( * p_super_opt ); // will report undefined
+            const KSymbol* super = Resolve ( ctx, * p_super_opt ); // will report undefined
             if ( super != 0 )
             {
                 if ( super -> type != eFormat )
                 {
-                    ReportError ( "Not a format", * p_super_opt );
+                    ReportError ( ctx, "Not a format", * p_super_opt );
                     SFormatWhack ( fmt, 0 );
                     return ret;
                 }
@@ -682,9 +696,9 @@ ASTBuilder :: FmtDef ( const Token* p_token, AST_FQN* p_fqn, AST_FQN* p_super_op
         }
 
         /* insert into vector */
-        if ( VectorAppend ( m_schema -> fmt, & fmt -> id, fmt ) )
+        if ( VectorAppend ( ctx, m_schema -> fmt, & fmt -> id, fmt ) )
         {   // create a symtab entry, link fmt to it
-            fmt -> name = CreateFqnSymbol ( * p_fqn, eFormat, fmt ); // will add missing namespaces to symtab
+            fmt -> name = CreateFqnSymbol ( ctx, * p_fqn, eFormat, fmt ); // will add missing namespaces to symtab
         }
         else
         {
@@ -696,22 +710,23 @@ ASTBuilder :: FmtDef ( const Token* p_token, AST_FQN* p_fqn, AST_FQN* p_super_op
 }
 
 AST *
-ASTBuilder :: ConstDef  ( const Token* p_token, AST* p_type, AST_FQN* p_fqn, AST_Expr* p_expr )
+ASTBuilder :: ConstDef  ( ctx_t ctx, const Token* p_token, AST* p_type, AST_FQN* p_fqn, AST_Expr* p_expr )
 {
-    AST * ret = AST :: Make ( p_token, p_type, p_fqn, p_expr );
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    AST * ret = AST :: Make ( ctx, p_token, p_type, p_fqn, p_expr );
 
-    SConstant *cnst = Alloc < SConstant > ();
+    SConstant *cnst = Alloc < SConstant > ( ctx );
     if ( cnst != 0 )
     {
         if ( p_type -> GetTokenType () == PT_IDENT )
         {   // scalar
-            const KSymbol * type = Resolve ( * ToFQN ( p_type ) ); // will report unknown name
+            const KSymbol * type = Resolve ( ctx, * ToFQN ( p_type ) ); // will report unknown name
             if ( type != 0 )
             {
-                if ( VectorAppend ( m_schema -> cnst, & cnst -> id, cnst ) )
+                if ( VectorAppend ( ctx, m_schema -> cnst, & cnst -> id, cnst ) )
                 {
-                    cnst -> name = CreateFqnSymbol ( * p_fqn, eConstant, cnst );
-                    cnst -> expr = p_expr -> EvaluateConst ( *this ); // will report problems
+                    cnst -> name = CreateFqnSymbol ( ctx, * p_fqn, eConstant, cnst );
+                    cnst -> expr = p_expr -> EvaluateConst ( ctx, *this ); // will report problems
                     const SDatatype * typeDef = static_cast < const SDatatype * > ( type -> u . obj );
                     cnst -> td . type_id = typeDef -> id;
                     cnst -> td . dim = 1;
@@ -727,21 +742,21 @@ ASTBuilder :: ConstDef  ( const Token* p_token, AST* p_type, AST_FQN* p_fqn, AST
             assert ( p_type -> GetTokenType () == PT_ARRAY );
             assert ( p_type -> ChildrenCount () == 2 ); // fqn expr
             const AST_FQN & fqn = * ToFQN ( p_type -> GetChild ( 0 ) );
-            const KSymbol * sym = Resolve ( fqn ); // will report unknown name
+            const KSymbol * sym = Resolve ( ctx, fqn ); // will report unknown name
             if ( sym != 0 )
             {
                 if ( sym -> type != eDatatype )
                 {
-                    ReportError ( "Not a datatype", fqn );
+                    ReportError ( ctx, "Not a datatype", fqn );
                     return 0;
                 }
-                if ( VectorAppend ( m_schema -> cnst, & cnst -> id, cnst ) )
+                if ( VectorAppend ( ctx, m_schema -> cnst, & cnst -> id, cnst ) )
                 {
-                    cnst -> name = CreateFqnSymbol ( * p_fqn, eConstant, cnst );
-                    cnst -> expr = p_expr -> EvaluateConst ( *this ); // will report problems
+                    cnst -> name = CreateFqnSymbol ( ctx, * p_fqn, eConstant, cnst );
+                    cnst -> expr = p_expr -> EvaluateConst ( ctx, *this ); // will report problems
                     const SDatatype * typeDef = static_cast < const SDatatype * > ( sym -> u . obj );
                     cnst -> td . type_id    = typeDef -> id;
-                    cnst->td.dim = (uint32_t) EvalConstExpr(*ToExpr(p_type->GetChild(1)));
+                    cnst->td.dim = (uint32_t) EvalConstExpr ( ctx, * ToExpr ( p_type -> GetChild ( 1 ) ) );
                 }
             }
         }
@@ -751,17 +766,18 @@ ASTBuilder :: ConstDef  ( const Token* p_token, AST* p_type, AST_FQN* p_fqn, AST
 }
 
 AST *
-ASTBuilder :: AliasDef  ( const Token* p_token, AST_FQN* p_name, AST_FQN* p_newName )
+ASTBuilder :: AliasDef  ( ctx_t ctx, const Token* p_token, AST_FQN* p_name, AST_FQN* p_newName )
 {
-    AST * ret = AST :: Make( p_token, p_name, p_newName );
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    AST * ret = AST :: Make( ctx, p_token, p_name, p_newName );
 
-    const KSymbol * sym = Resolve ( * p_name ); // will report unknown name
+    const KSymbol * sym = Resolve ( ctx, * p_name ); // will report unknown name
     if ( sym != 0 )
     {
-        const KSymbol * fqnSym = CreateFqnSymbol ( * p_newName, sym -> type, sym -> u . obj );
+        const KSymbol * fqnSym = CreateFqnSymbol ( ctx, * p_newName, sym -> type, sym -> u . obj );
         if ( fqnSym != 0 )
         {
-            VectorAppend ( m_schema -> alias, 0, fqnSym );
+            VectorAppend ( ctx, m_schema -> alias, 0, fqnSym );
         }
     }
 
@@ -769,18 +785,20 @@ ASTBuilder :: AliasDef  ( const Token* p_token, AST_FQN* p_name, AST_FQN* p_newN
 }
 
 void
-ASTBuilder :: AddIncludePath ( const char * path )
+ASTBuilder :: AddIncludePath ( ctx_t ctx, const char * path )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     rc_t rc = VSchemaAddIncludePath ( m_schema, "%s", path );
     if ( rc != 0 )
     {
-        ReportRc ( "VSchemaAddIncludePath", rc );
+        ReportRc ( ctx, "VSchemaAddIncludePath", rc );
     }
 }
 
 const KFile *
-ASTBuilder :: OpenIncludeFile ( const Token :: Location & p_loc, const char * p_fmt, ... )
+ASTBuilder :: OpenIncludeFile ( ctx_t ctx, const Token :: Location & p_loc, const char * p_fmt, ... )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     const KFile * ret = 0;
     va_list args;
     va_start ( args, p_fmt );
@@ -802,7 +820,7 @@ ASTBuilder :: OpenIncludeFile ( const Token :: Location & p_loc, const char * p_
         }
         else
         {
-            ReportRc ( "KDirectoryNativeDir", rc );
+            ReportRc ( ctx, "KDirectoryNativeDir", rc );
         }
     }
 
@@ -826,31 +844,31 @@ ASTBuilder :: OpenIncludeFile ( const Token :: Location & p_loc, const char * p_
                         rc = VIncludedPathMake ( & m_schema -> paths, & m_schema -> file_count, path );
                         if ( rc != 0 )
                         {
-                            ReportRc ( "VIncludedPathMake", rc );
+                            ReportRc ( ctx, "VIncludedPathMake", rc );
                         }
                     }
                     else
                     {
-                        ReportRc ( "KMMapSize", rc );
+                        ReportRc ( ctx, "KMMapSize", rc );
                     }
                 }
                 else
                 {
-                    ReportRc ( "KMMapAddrRead", rc );
+                    ReportRc ( ctx, "KMMapAddrRead", rc );
                 }
 
                 KMMapRelease ( mm );
             }
             else
             {
-                ReportRc ( "KMMapMakeRead", rc );
+                ReportRc ( ctx, "KMMapMakeRead", rc );
             }
         }
         // else: file was included previously, now ignored
     }
     else
     {
-        ReportError ( p_loc, "Could not open include file", path );
+        ReportError ( ctx, p_loc, "Could not open include file", path );
     }
 
     va_end ( args );
@@ -858,23 +876,24 @@ ASTBuilder :: OpenIncludeFile ( const Token :: Location & p_loc, const char * p_
 }
 
 AST *
-ASTBuilder :: Include ( const Token * p_token, const Token * p_filename )
+ASTBuilder :: Include ( ctx_t ctx, const Token * p_token, const Token * p_filename )
 {
-    AST * ret = AST :: Make ( p_token );
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    AST * ret = AST :: Make ( ctx, p_token );
     assert ( p_filename != 0 );
-    ret -> AddNode ( p_filename );
+    ret -> AddNode ( ctx, p_filename );
 
     const char * quoted = p_filename -> GetValue ();
     char * unquoted = string_dup ( quoted + 1, string_size ( quoted ) - 2 );
     if ( unquoted != 0 )
     {
-        const KFile * f = OpenIncludeFile ( p_token -> GetLocation (), "%s", unquoted );
+        const KFile * f = OpenIncludeFile ( ctx, p_token -> GetLocation (), "%s", unquoted );
         if ( f != 0 )
         {
             SchemaParser parser;
-            if ( parser . ParseFile ( f, unquoted ) )
+            if ( parser . ParseFile ( ctx, f, unquoted ) )
             {
-                AST * root = Build ( * parser . GetParseTree (), unquoted, false );
+                AST * root = Build ( ctx, * parser . GetParseTree (), unquoted, false );
                 // Build() adds to our AST, so we do need the include's root anymore
                 AST :: Destroy ( root );
             }
@@ -884,7 +903,7 @@ ASTBuilder :: Include ( const Token * p_token, const Token * p_filename )
     }
     else
     {
-        ReportInternalError ( "ASTBuilder :: Include () : string_dup() failed" );
+        INTERNAL_ERROR ( xcUnexpected, "string_dup() failed" );
     }
 
     return ret;

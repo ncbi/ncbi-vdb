@@ -205,6 +205,6 @@ struct YYLTYPE
 
 
 
-int Schema_parse (ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb);
+int Schema_parse (ctx_t ctx, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb);
 
 #endif /* !YY_SCHEMA_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_TOKENS_H_INCLUDED  */

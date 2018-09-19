@@ -36,6 +36,7 @@ using namespace std;
 using namespace ncbi::SchemaParser;
 
 //////////////////////////////////////////// Main
+#include <kfc/except.h>
 #include <kapp/args.h>
 #include <kfg/config.h>
 #include <klib/out.h>
@@ -178,6 +179,8 @@ rc_t CC KMain ( int argc, char *argv [] )
 
             // new parser
             {
+                HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
+
                 struct KFile const * file;
                 if ( VFSManagerOpenFileRead ( vfs, & file, path )  != 0 )
                 {
@@ -185,7 +188,7 @@ rc_t CC KMain ( int argc, char *argv [] )
                 }
 
                 SchemaParser parser;
-                if ( ! parser . ParseFile ( file, arg ) )
+                if ( ! parser . ParseFile ( ctx, file, arg ) )
                 {
                     cout << endl;
                     const ErrorReport & errors = parser . GetErrors ();
@@ -199,6 +202,13 @@ rc_t CC KMain ( int argc, char *argv [] )
                     ++ failed;
                     compare = false;
                 }
+                else if ( FAILED () )
+                {
+                    cerr << WHAT () << endl;
+                    cout << string ( "ParseFile failed! " ) << endl;
+                    ++ failed;
+                    compare = false;
+                }
                 else
                 {
                     VSchema * schema;
@@ -207,8 +217,8 @@ rc_t CC KMain ( int argc, char *argv [] )
                         throw runtime_error ( "VDBManagerMakeSchema failed" );
                     }
 
-                    ASTBuilder b ( schema );
-                    AST * root = b . Build ( * parser . GetParseTree (), arg );
+                    ASTBuilder b ( ctx, schema );
+                    AST * root = b . Build ( ctx, * parser . GetParseTree (), arg );
 
                     uint32_t count = b . GetErrorCount ();
                     if ( count > 0 )

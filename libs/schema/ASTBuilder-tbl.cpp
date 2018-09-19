@@ -41,44 +41,47 @@ using namespace std;
 class TableDeclaration // Wrapper around STable
 {
 public:
-    TableDeclaration ( ASTBuilder & p_builder );
+    TableDeclaration ( ctx_t ctx, ASTBuilder & p_builder );
     ~TableDeclaration ();
 
-    bool SetName ( const AST_FQN &  p_fqn );
-    void HandleParents ( const AST & p_parents );
-    void HandleBody ( const AST & p_body );
+    bool SetName ( ctx_t ctx, const AST_FQN &  p_fqn );
+    void HandleParents ( ctx_t ctx, const AST & p_parents );
+    void HandleBody ( ctx_t ctx, const AST & p_body );
 
 private:
-    bool HandleOverload ( const KSymbol * p_priorDecl );
-    void AddColumn ( const AST & p_modifiers, const AST & p_decl, const AST * p_default );
-    void AddPhysicalColumn ( const AST & p_decl, bool p_static );
-    void AddUntyped ( const AST_FQN & p_fqn );
-    SExpression * MakePhysicalEncodingSpec ( const KSymbol & p_sym,
+    bool HandleOverload ( ctx_t ctx, const KSymbol * p_priorDecl );
+    void AddColumn ( ctx_t ctx, const AST & p_modifiers, const AST & p_decl, const AST * p_default );
+    void AddPhysicalColumn ( ctx_t ctx, const AST & p_decl, bool p_static );
+    void AddUntyped ( ctx_t ctx, const AST_FQN & p_fqn );
+    SExpression * MakePhysicalEncodingSpec ( ctx_t ctx,
+                                             const KSymbol & p_sym,
                                              const AST_FQN & p_fqn,
                                              const AST * p_schemaArgs,
                                              const AST * p_factoryArgs,
                                              VTypedecl & p_type );
-    bool MakePhysicalColumnType ( const AST &      p_schemaArgs,
+    bool MakePhysicalColumnType ( ctx_t            ctx,
+                                  const AST &      p_schemaArgs,
                                   const AST_FQN &  p_fqn_opt_vers,
                                   const AST &      p_factoryArgs,
                                   SPhysMember &    p_col );
-    bool HandleTypedColumn ( SColumn & p_col, const AST & p_typedCol );
-    bool Extend ( const Token :: Location & p_loc, const STable * p_dad );
+    bool HandleTypedColumn ( ctx_t ctx, SColumn & p_col, const AST & p_typedCol );
+    bool Extend ( ctx_t ctx, const Token :: Location & p_loc, const STable * p_dad );
     bool CheckForCollisions ( const STable & p_table, const String *& p_name );
-    bool CopyColumnNames ( const SNameOverload *orig );
-    void HandleStatement ( const AST & p_stmt );
-    bool AddNewColumn ( SColumn & p_col, String & p_name );
-    bool SetColumnType ( SColumn & p_col, const AST & p_type );
+    bool CopyColumnNames ( ctx_t ctx, const SNameOverload *orig );
+    void HandleStatement ( ctx_t ctx, const AST & p_stmt );
+    bool AddNewColumn ( ctx_t ctx, SColumn & p_col, String & p_name );
+    bool SetColumnType ( ctx_t ctx, SColumn & p_col, const AST & p_type );
 
 private:
     ASTBuilder &    m_builder;
     STable *        m_self;
 };
 
-TableDeclaration :: TableDeclaration ( ASTBuilder & p_builder )
-:   m_builder ( p_builder ),
-    m_self ( m_builder . Alloc < STable > () )
+TableDeclaration :: TableDeclaration ( ctx_t ctx, ASTBuilder & p_builder )
+:   m_builder ( p_builder )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    m_self = m_builder . Alloc < STable > ( ctx );
     if ( m_self != 0 )
     {
         /* prepare vectors */
@@ -99,29 +102,31 @@ TableDeclaration :: ~TableDeclaration ()
 }
 
 bool
-TableDeclaration :: SetName ( const AST_FQN & p_fqn )
+TableDeclaration :: SetName ( ctx_t ctx, const AST_FQN & p_fqn )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     assert ( m_self != 0 );
 
     m_self -> version = p_fqn . GetVersion ();
 
-    const KSymbol * priorDecl = m_builder . Resolve ( p_fqn, false );
+    const KSymbol * priorDecl = m_builder . Resolve ( ctx, p_fqn, false );
     if ( priorDecl == 0 )
     {
-        m_self -> name = m_builder . CreateFqnSymbol ( p_fqn, eTable, m_self );
+        m_self -> name = m_builder . CreateFqnSymbol ( ctx, p_fqn, eTable, m_self );
         if ( m_self -> name != 0 &&
-                m_builder . CreateOverload ( m_self -> name,
-                                            m_self,
-                                            0,
-                                            STableSort,
-                                            m_builder . GetSchema () -> tbl,
-                                            m_builder . GetSchema () -> tname,
-                                            & m_self -> id ) )
+             m_builder . CreateOverload ( ctx,
+                                          m_self -> name,
+                                          m_self,
+                                          0,
+                                          STableSort,
+                                          m_builder . GetSchema () -> tbl,
+                                          m_builder . GetSchema () -> tname,
+                                          & m_self -> id ) )
         {
             return true;
         }
     }
-    else if ( HandleOverload ( priorDecl ) )
+    else if ( HandleOverload ( ctx, priorDecl ) )
     {   // declared previously, this declaration not ignored
         m_self -> name = priorDecl;
         return true;
@@ -133,8 +138,9 @@ TableDeclaration :: SetName ( const AST_FQN & p_fqn )
 }
 
 bool
-TableDeclaration :: HandleOverload ( const KSymbol * p_priorDecl )
+TableDeclaration :: HandleOverload ( ctx_t ctx, const KSymbol * p_priorDecl )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     assert ( m_self != 0 );
     assert ( p_priorDecl != 0 );
 
@@ -147,7 +153,7 @@ TableDeclaration :: HandleOverload ( const KSymbol * p_priorDecl )
     rc_t rc = VectorInsertUnique ( & name -> items, m_self, & idx, STableSort );
     if ( rc == 0 ) // overload added
     {
-        return m_builder . VectorAppend ( tables, & m_self -> id, m_self );
+        return m_builder . VectorAppend ( ctx, tables, & m_self -> id, m_self );
     }
 
     if ( GetRCState ( rc ) == rcExists )
@@ -163,27 +169,28 @@ TableDeclaration :: HandleOverload ( const KSymbol * p_priorDecl )
             VectorSwap ( & name -> items, idx, m_self, & ignore );
             m_self -> id = exist -> id;
 
-            if ( m_builder . VectorAppend ( tables, & m_self -> id, m_self ) )
+            if ( m_builder . VectorAppend ( ctx, tables, & m_self -> id, m_self ) )
             {   // tell everyone to use new table
                 rc = schema_update_tbl_ref ( m_builder . GetSchema (), exist, m_self );
                 if ( rc == 0 )
                 {
                     return true;
                 }
-                m_builder . ReportRc ( "schema_update_tbl_ref", rc );
+                m_builder . ReportRc ( ctx, "schema_update_tbl_ref", rc );
             }
         }
     }
     else if ( rc != 0 )
     {
-        m_builder . ReportRc ( "VectorInsertUnique", rc );
+        m_builder . ReportRc ( ctx, "VectorInsertUnique", rc );
     }
     return false;
 }
 
 bool
-TableDeclaration :: CopyColumnNames ( const SNameOverload *orig )
+TableDeclaration :: CopyColumnNames ( ctx_t ctx, const SNameOverload *orig )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     rc_t rc;
     STable *self= m_self;
     SNameOverload *copy;
@@ -193,7 +200,7 @@ TableDeclaration :: CopyColumnNames ( const SNameOverload *orig )
         rc = SNameOverloadCopy ( & self -> scope, & copy, orig );
         if ( rc == 0 )
         {
-            if ( ! m_builder . VectorAppend ( self -> cname, & copy -> cid . id, copy ) )
+            if ( ! m_builder . VectorAppend ( ctx, self -> cname, & copy -> cid . id, copy ) )
             {
                 SNameOverloadWhack ( copy, NULL );
                 return false;
@@ -201,7 +208,7 @@ TableDeclaration :: CopyColumnNames ( const SNameOverload *orig )
         }
         else
         {
-            m_builder . ReportRc ( "SNameOverloadCopy", rc );
+            m_builder . ReportRc ( ctx, "SNameOverloadCopy", rc );
             return false;
         }
     }
@@ -212,7 +219,7 @@ TableDeclaration :: CopyColumnNames ( const SNameOverload *orig )
         rc = VectorMerge ( & copy -> items, true, & orig -> items, SColumnSort );
         if ( rc != 0 )
         {
-            m_builder . ReportRc ( "VectorMerge", rc );
+            m_builder . ReportRc ( ctx, "VectorMerge", rc );
             return false;
         }
     }
@@ -266,8 +273,9 @@ TableDeclaration :: CheckForCollisions ( const STable & p_table, const String *&
 }
 
 bool
-TableDeclaration :: Extend ( const Token :: Location & p_loc, const STable * p_dad )
+TableDeclaration :: Extend ( ctx_t ctx, const Token :: Location & p_loc, const STable * p_dad )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     /* reject if direct parent already there */
     uint32_t start = VectorStart ( & m_self -> parents );
     uint32_t count = VectorLength ( & m_self -> parents );
@@ -275,7 +283,7 @@ TableDeclaration :: Extend ( const Token :: Location & p_loc, const STable * p_d
     {
         if ( VectorGet ( & m_self -> parents, start + i ) == p_dad )
         {
-            m_builder . ReportError ( p_loc, "Same table inherited from more than once", p_dad -> name -> name );
+            m_builder . ReportError ( ctx, p_loc, "Same table inherited from more than once", p_dad -> name -> name );
             return false;
         }
     }
@@ -283,14 +291,14 @@ TableDeclaration :: Extend ( const Token :: Location & p_loc, const STable * p_d
     /* if parent is already in ancestry, treat as redundant */
     if ( VectorFind ( & m_self -> overrides, & p_dad -> id, NULL, STableOverridesCmp ) != NULL )
     {
-        return m_builder . VectorAppend ( m_self -> parents, NULL, p_dad );
+        return m_builder . VectorAppend ( ctx, m_self -> parents, NULL, p_dad );
     }
 
     /* enter scope for this table */
     rc_t rc = push_tbl_scope ( & m_builder . GetSymTab (), m_self );
     if ( rc != 0 )
     {
-        m_builder . ReportRc ( "push_tbl_scope", rc );
+        m_builder . ReportRc ( ctx, "push_tbl_scope", rc );
         return false;
     }
 
@@ -300,7 +308,7 @@ TableDeclaration :: Extend ( const Token :: Location & p_loc, const STable * p_d
         //|| VectorDoUntil ( & p_dad -> overrides, false, STableOverridesTestForCollisions, & m_builder . GetSymTab () ) NOTE: STableOverridesTestForCollisions is done in the old parser but looks redundant
         )
     {
-        m_builder . ReportError ( p_loc, "Duplicate symbol in parent table hierarchy", * name );
+        m_builder . ReportError ( ctx, p_loc, "Duplicate symbol in parent table hierarchy", * name );
         pop_tbl_scope ( & m_builder . GetSymTab (), m_self );
         return false;
     }
@@ -309,7 +317,7 @@ TableDeclaration :: Extend ( const Token :: Location & p_loc, const STable * p_d
     pop_tbl_scope ( & m_builder . GetSymTab (), m_self );
 
     /* add "p_dad" to parent list */
-    if ( ! m_builder . VectorAppend ( m_self -> parents, NULL, p_dad ) )
+    if ( ! m_builder . VectorAppend ( ctx, m_self -> parents, NULL, p_dad ) )
     {
         return false;
     }
@@ -320,7 +328,7 @@ TableDeclaration :: Extend ( const Token :: Location & p_loc, const STable * p_d
     for ( uint32_t i = 0; i < count; ++ i )
     {
         const SNameOverload * ovl = static_cast < const SNameOverload * > ( VectorGet ( & p_dad -> cname, start + i ) );
-        if ( ! CopyColumnNames ( ovl ) )
+        if ( ! CopyColumnNames ( ctx, ovl ) )
         {
             return false;
         }
@@ -339,14 +347,14 @@ TableDeclaration :: Extend ( const Token :: Location & p_loc, const STable * p_d
             rc = STableOverridesMake ( & m_self -> overrides, ovr -> dad, & ovr -> by_parent );
             if ( rc != 0 && GetRCState ( rc ) != rcExists)
             {
-                m_builder . ReportRc ( "STableOverridesMake", rc );
+                m_builder . ReportRc ( ctx, "STableOverridesMake", rc );
                 return false;
             }
         }
     }
     else if ( GetRCState ( rc ) != rcExists )
     {
-        m_builder . ReportRc ( "STableOverridesMake", rc );
+        m_builder . ReportRc ( ctx, "STableOverridesMake", rc );
         return false;
     }
 
@@ -354,34 +362,36 @@ TableDeclaration :: Extend ( const Token :: Location & p_loc, const STable * p_d
 }
 
 void
-TableDeclaration :: HandleParents ( const AST & p_parents )
+TableDeclaration :: HandleParents ( ctx_t ctx, const AST & p_parents )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     uint32_t parentCount = p_parents . ChildrenCount ();
     for ( uint32_t i = 0 ; i < parentCount; ++i )
     {
         const AST_FQN & parent = * ToFQN ( p_parents . GetChild ( i ) );
-        const KSymbol * parentDecl = m_builder . Resolve ( parent, true );
+        const KSymbol * parentDecl = m_builder . Resolve ( ctx, parent, true );
         if ( parentDecl != 0 )
         {
             if ( parentDecl -> type == eTable )
             {
-                const STable * dad = static_cast < const STable * > ( m_builder . SelectVersion ( parent, * parentDecl, STableCmp ) );
+                const STable * dad = static_cast < const STable * > ( m_builder . SelectVersion ( ctx, parent, * parentDecl, STableCmp ) );
                 if ( dad != 0 )
                 {
-                    Extend ( parent . GetLocation (), dad );
+                    Extend ( ctx, parent . GetLocation (), dad );
                 }
             }
             else
             {
-                m_builder . ReportError ( "A table's parent has to be a table", parent );
+                m_builder . ReportError ( ctx, "A table's parent has to be a table", parent );
             }
         }
     }
 }
 
 void
-TableDeclaration :: HandleStatement ( const AST & p_stmt )
+TableDeclaration :: HandleStatement ( ctx_t ctx, const AST & p_stmt )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     switch ( p_stmt . GetTokenType () )
     {
     case PT_PRODSTMT:
@@ -406,7 +416,8 @@ TableDeclaration :: HandleStatement ( const AST & p_stmt )
                 assert ( false );
             }
             assert ( ident -> ChildrenCount () == 1 );
-            m_builder . AddProduction ( * ident,
+            m_builder . AddProduction ( ctx,
+                                        * ident,
                                         m_self -> prod,
                                         ident -> GetChild ( 0 ) -> GetTokenValue (),
                                         * ToExpr ( expr ),
@@ -416,33 +427,33 @@ TableDeclaration :: HandleStatement ( const AST & p_stmt )
 
     case PT_COLUMN:
         // modifiers col_decl [ default ]
-        AddColumn ( * p_stmt . GetChild ( 0 ), * p_stmt . GetChild ( 1 ), p_stmt . GetChild ( 2 ) );
+        AddColumn ( ctx, * p_stmt . GetChild ( 0 ), * p_stmt . GetChild ( 1 ), p_stmt . GetChild ( 2 ) );
         break;
 
     case PT_COLUMNEXPR:
         if ( m_self -> limit == 0 )
         {
-            m_self -> limit = ToExpr ( p_stmt . GetChild ( 0 ) ) -> MakeExpression ( m_builder );
+            m_self -> limit = ToExpr ( p_stmt . GetChild ( 0 ) ) -> MakeExpression ( ctx, m_builder );
         }
         else
         {
-            m_builder . ReportError ( p_stmt . GetLocation (), "Limit constraint already specified" );
+            m_builder . ReportError ( ctx, p_stmt . GetLocation (), "Limit constraint already specified" );
         }
         break;
 
     case KW_static:
         assert ( p_stmt . ChildrenCount () == 1 );
-        AddPhysicalColumn ( * p_stmt . GetChild ( 0 ), true );
+        AddPhysicalColumn ( ctx, * p_stmt . GetChild ( 0 ), true );
         break;
 
     case KW_physical:
         assert ( p_stmt . ChildrenCount () == 1 );
-        AddPhysicalColumn ( * p_stmt . GetChild ( 0 ), false );
+        AddPhysicalColumn ( ctx, * p_stmt . GetChild ( 0 ), false );
         break;
 
     case PT_COLUNTYPED:
         assert ( p_stmt . ChildrenCount () == 1 );
-        AddUntyped ( * ToFQN ( p_stmt . GetChild ( 0 ) ) );
+        AddUntyped ( ctx, * ToFQN ( p_stmt . GetChild ( 0 ) ) );
         break;
 
     case PT_EMPTY:
@@ -454,8 +465,9 @@ TableDeclaration :: HandleStatement ( const AST & p_stmt )
 }
 
 void
-TableDeclaration :: HandleBody ( const AST & p_body )
+TableDeclaration :: HandleBody ( ctx_t ctx, const AST & p_body )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     rc_t rc = push_tbl_scope ( & m_builder . GetSymTab (), m_self );
     if ( rc == 0 )
     {
@@ -465,7 +477,7 @@ TableDeclaration :: HandleBody ( const AST & p_body )
         for ( uint32_t i = 0; i < count; ++ i )
         {
             STableOverrides * ov = static_cast < STableOverrides * > ( VectorGet ( & m_self -> overrides, start + i ) );
-            if ( ! m_builder . ScanVirtuals ( p_body . GetLocation (), ov -> by_parent, m_builder . GetSymTab () ) )
+            if ( ! m_builder . ScanVirtuals ( ctx, p_body . GetLocation (), ov -> by_parent, m_builder . GetSymTab () ) )
             {
                 pop_tbl_scope ( & m_builder . GetSymTab (), m_self );
                 return;
@@ -476,7 +488,7 @@ TableDeclaration :: HandleBody ( const AST & p_body )
         count = p_body . ChildrenCount ();
         for ( uint32_t i = 0 ; i < count; ++ i )
         {
-            HandleStatement ( * p_body . GetChild ( i ) );
+            HandleStatement ( ctx, * p_body . GetChild ( i ) );
         }
 
         STableScanData pb;
@@ -486,7 +498,7 @@ TableDeclaration :: HandleBody ( const AST & p_body )
         /* scan table scope for unresolved forward references */
         if ( BSTreeDoUntil ( & m_self -> scope, false, table_fwd_scan, & pb ) )
         {
-            m_builder . ReportRc ( "table_fwd_scan", pb . rc );
+            m_builder . ReportRc ( ctx, "table_fwd_scan", pb . rc );
         }
 
         pop_tbl_scope ( & m_builder . GetSymTab (), m_self );
@@ -497,7 +509,7 @@ TableDeclaration :: HandleBody ( const AST & p_body )
             rc = table_fix_forward_refs ( m_self );
             if ( rc != 0 )
             {
-                m_builder . ReportRc ( "table_fix_forward_refs", rc );
+                m_builder . ReportRc ( ctx, "table_fix_forward_refs", rc );
             }
         }
 
@@ -505,7 +517,7 @@ TableDeclaration :: HandleBody ( const AST & p_body )
     }
     else
     {
-        m_builder . ReportRc ( "push_tbl_scope", rc );
+        m_builder . ReportRc ( ctx, "push_tbl_scope", rc );
     }
 }
 
@@ -535,13 +547,15 @@ HandleColumnModifiers ( const AST & p_modifiers, bool & p_default, bool & p_read
 }
 
 SExpression *
-TableDeclaration :: MakePhysicalEncodingSpec ( const KSymbol & p_sym,
+TableDeclaration :: MakePhysicalEncodingSpec ( ctx_t ctx,
+                                               const KSymbol & p_sym,
                                                const AST_FQN & p_fqn,
                                                const AST * p_schemaArgs,
                                                const AST * p_factoryArgs,
                                                VTypedecl & p_type )
 {
-    SPhysEncExpr * ret = m_builder . Alloc < SPhysEncExpr > ();
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    SPhysEncExpr * ret = m_builder . Alloc < SPhysEncExpr > ( ctx );
     if ( ret != 0 )
     {
         /* initialize */
@@ -551,7 +565,7 @@ TableDeclaration :: MakePhysicalEncodingSpec ( const KSymbol & p_sym,
         VectorInit ( & ret -> schem, 0, 4 );
         VectorInit ( & ret -> pfact, 0, 8 );
 
-        if ( p_schemaArgs != 0 && ! m_builder. FillSchemaParms ( * p_schemaArgs, ret -> schem ) )
+        if ( p_schemaArgs != 0 && ! m_builder. FillSchemaParms ( ctx, * p_schemaArgs, ret -> schem ) )
         {
             SExpressionWhack ( & ret -> dad );
             return 0;
@@ -559,7 +573,7 @@ TableDeclaration :: MakePhysicalEncodingSpec ( const KSymbol & p_sym,
 
         // capture requested version
         assert ( p_sym . type == ePhysical );
-        ret -> phys = static_cast < const SPhysical * > ( m_builder . SelectVersion ( p_fqn, p_sym, SPhysicalCmp, & ret -> version ) );
+        ret -> phys = static_cast < const SPhysical * > ( m_builder . SelectVersion ( ctx, p_fqn, p_sym, SPhysicalCmp, & ret -> version ) );
         ret -> version_requested = ret -> version != 0;
 
         /* evaluate type expression */
@@ -589,7 +603,7 @@ TableDeclaration :: MakePhysicalEncodingSpec ( const KSymbol & p_sym,
                     for ( uint32_t i = 0; i < count; ++ i )
                     {
                         const AST_Expr & expr = * static_cast < const AST_Expr * > ( p_factoryArgs -> GetChild ( i ) );
-                        if ( ! m_builder . VectorAppend ( ret -> pfact, 0, expr . MakeExpression ( m_builder ) ) )
+                        if ( ! m_builder . VectorAppend ( ctx, ret -> pfact, 0, expr . MakeExpression ( ctx, m_builder ) ) )
                         {
                             SExpressionWhack ( & ret -> dad );
                             return 0;
@@ -605,8 +619,9 @@ TableDeclaration :: MakePhysicalEncodingSpec ( const KSymbol & p_sym,
 }
 
 bool
-TableDeclaration :: SetColumnType ( SColumn & p_col, const AST & p_type )
+TableDeclaration :: SetColumnType ( ctx_t ctx, SColumn & p_col, const AST & p_type )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     switch ( p_type . GetTokenType () )
     {   // p_decl . GetChild ( 0 ) represents a type or a physical encoding
     case PT_PHYSENCREF:
@@ -630,16 +645,16 @@ TableDeclaration :: SetColumnType ( SColumn & p_col, const AST & p_type )
                 default:
                     assert ( false );
             }
-            const KSymbol * sym = m_builder . Resolve ( * fqn ); // will report unknown name
+            const KSymbol * sym = m_builder . Resolve ( ctx, * fqn ); // will report unknown name
             if ( sym != 0 )
             {
                 if ( sym -> type == ePhysical )
                 {
-                    p_col . ptype = MakePhysicalEncodingSpec ( * sym, * fqn, schemaArgs, factoryArgs, p_col . td  );
+                    p_col . ptype = MakePhysicalEncodingSpec ( ctx, * sym, * fqn, schemaArgs, factoryArgs, p_col . td  );
                 }
                 else
                 {
-                    m_builder . ReportError ( "Not a physical encoding", * fqn);
+                    m_builder . ReportError ( ctx, "Not a physical encoding", * fqn);
                     return false;
                 }
             }
@@ -648,7 +663,7 @@ TableDeclaration :: SetColumnType ( SColumn & p_col, const AST & p_type )
     case PT_IDENT:
         {
             const AST_FQN & fqn = * ToFQN ( & p_type );
-            const KSymbol * sym = m_builder . Resolve ( fqn ); // will report unknown name
+            const KSymbol * sym = m_builder . Resolve ( ctx, fqn ); // will report unknown name
             if ( sym != 0 )
             {
                 switch ( sym -> type )
@@ -661,34 +676,35 @@ TableDeclaration :: SetColumnType ( SColumn & p_col, const AST & p_type )
                     }
                     break;
                 case ePhysical:
-                p_col . ptype = MakePhysicalEncodingSpec ( * sym, fqn, 0, 0, p_col . td  );
+                p_col . ptype = MakePhysicalEncodingSpec ( ctx, * sym, fqn, 0, 0, p_col . td  );
                     break;
                 default:
-                    m_builder . ReportError ( "Cannot be used as a column type", fqn );
+                    m_builder . ReportError ( ctx, "Cannot be used as a column type", fqn );
                     return false;
                 }
             }
         }
         break;
     default: // likely an array
-        m_builder . TypeSpec ( p_type, p_col . td );
+        m_builder . TypeSpec ( ctx, p_type, p_col . td );
         break;
     }
     return true;
 }
 
 void
-TableDeclaration :: AddColumn ( const AST & p_modifiers, const AST & p_decl, const AST * p_default )
+TableDeclaration :: AddColumn ( ctx_t ctx, const AST & p_modifiers, const AST & p_decl, const AST * p_default )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     assert ( p_decl . GetTokenType () == PT_COLDECL );
     assert ( p_decl . ChildrenCount () == 2 );  // typespec typed_col
 
-    SColumn * c = m_builder . Alloc < SColumn > ();
+    SColumn * c = m_builder . Alloc < SColumn > ( ctx );
     if ( c != 0 )
     {
         HandleColumnModifiers ( p_modifiers, c -> dflt, c -> read_only);
 
-        if ( ! SetColumnType ( *c , * p_decl . GetChild ( 0 ) ) )
+        if ( ! SetColumnType ( ctx, *c , * p_decl . GetChild ( 0 ) ) )
         {
             SColumnWhack ( c, 0 );
             return;
@@ -698,7 +714,7 @@ TableDeclaration :: AddColumn ( const AST & p_modifiers, const AST & p_decl, con
         if ( typedCol . ChildrenCount () == 1 )
         {
             c -> simple = true;
-            if ( ! HandleTypedColumn ( * c, typedCol ) )
+            if ( ! HandleTypedColumn ( ctx, * c, typedCol ) )
             {
                 SColumnWhack ( c, 0 );
                 return;
@@ -725,22 +741,22 @@ TableDeclaration :: AddColumn ( const AST & p_modifiers, const AST & p_decl, con
                             switch ( node . GetChild ( 0 ) -> GetTokenType () )
                             {
                             case KW_read:
-                                c -> read = expr -> MakeExpression ( m_builder );
+                                c -> read = expr -> MakeExpression ( ctx, m_builder );
                                 c -> simple = false;
                                 break;
                             case KW_validate:
-                                c -> validate = expr -> MakeExpression ( m_builder );
+                                c -> validate = expr -> MakeExpression ( ctx, m_builder );
                                 c -> simple = false;
                                 break;
                             case KW_limit:
-                                c -> limit = expr -> MakeExpression ( m_builder );
+                                c -> limit = expr -> MakeExpression ( ctx, m_builder );
                                 break;
                             default:
                                 assert ( false );
                             }
                         }
                     }
-                    if ( ! HandleTypedColumn ( * c, typedCol ) )
+                    if ( ! HandleTypedColumn ( ctx, * c, typedCol ) )
                     {
                         SColumnWhack ( c, 0 );
                         return;
@@ -750,8 +766,8 @@ TableDeclaration :: AddColumn ( const AST & p_modifiers, const AST & p_decl, con
             case PT_TYPEDCOLEXPR: // ident = cond_expr
                 {
                     assert ( typedCol . ChildrenCount () == 2 );
-                    c -> read = ToExpr ( typedCol . GetChild ( 1 ) ) -> MakeExpression ( m_builder );
-                    if ( ! HandleTypedColumn ( * c, typedCol ) )
+                    c -> read = ToExpr ( typedCol . GetChild ( 1 ) ) -> MakeExpression ( ctx, m_builder );
+                    if ( ! HandleTypedColumn ( ctx, * c, typedCol ) )
                     {
                         SColumnWhack ( c, 0 );
                         return;
@@ -766,15 +782,17 @@ TableDeclaration :: AddColumn ( const AST & p_modifiers, const AST & p_decl, con
  }
 
 bool
-TableDeclaration :: AddNewColumn ( SColumn & p_col, String & p_name )
+TableDeclaration :: AddNewColumn ( ctx_t ctx, SColumn & p_col, String & p_name )
 {   // new column: add p_col to m_self -> col, a new overload to m_self -> cname
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     rc_t rc = KSymTableCreateConstSymbol ( & m_builder . GetSymTab (), & p_col . name, & p_name, eColumn, & p_col );
     if ( rc != 0 )
     {
-        m_builder . ReportRc ( "KSymTableCreateConstSymbol", rc );
+        m_builder . ReportRc ( ctx, "KSymTableCreateConstSymbol", rc );
         return false;
     }
-    return m_builder . CreateOverload ( p_col . name,
+    return m_builder . CreateOverload ( ctx,
+                                        p_col . name,
                                         & p_col,
                                         eTable,
                                         SColumnSort,
@@ -784,18 +802,19 @@ TableDeclaration :: AddNewColumn ( SColumn & p_col, String & p_name )
 }
 
 bool
-TableDeclaration :: HandleTypedColumn ( SColumn & p_col, const AST & p_typedCol )
+TableDeclaration :: HandleTypedColumn ( ctx_t ctx, SColumn & p_col, const AST & p_typedCol )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     assert ( p_typedCol . ChildrenCount () >= 1 );
     assert ( p_typedCol . GetChild ( 0 ) -> GetTokenType () == PT_IDENT );
     const char * ident = p_typedCol . GetChild ( 0 ) -> GetChild ( 0 ) -> GetTokenValue ();
     String name;
     StringInitCString ( & name, ident );
 
-    KSymbol * priorDecl = const_cast < KSymbol * > ( m_builder . Resolve ( p_typedCol . GetLocation (), ident, false ) );
+    KSymbol * priorDecl = const_cast < KSymbol * > ( m_builder . Resolve ( ctx, p_typedCol . GetLocation (), ident, false ) );
     if ( priorDecl == 0 )
     {
-        if ( ! AddNewColumn ( p_col, name ) )
+        if ( ! AddNewColumn ( ctx, p_col, name ) )
         {
             return false;
         }
@@ -809,7 +828,8 @@ TableDeclaration :: HandleTypedColumn ( SColumn & p_col, const AST & p_typedCol 
                 /* if column was forwarded, give it a type */
                 p_col . name = priorDecl;
                 priorDecl -> type = eColumn;
-                if ( ! m_builder . CreateOverload ( p_col . name,
+                if ( ! m_builder . CreateOverload ( ctx,
+                                                    p_col . name,
                                                     & p_col,
                                                     eTable,
                                                     SColumnSort,
@@ -826,12 +846,12 @@ TableDeclaration :: HandleTypedColumn ( SColumn & p_col, const AST & p_typedCol 
                 SNameOverload *name = ( SNameOverload* ) priorDecl -> u . obj;
                 if ( VectorFind ( & name -> items, & p_col . td, NULL, SColumnCmp ) != NULL )
                 {
-                    m_builder . ReportError ( p_typedCol . GetLocation (), "Column already defined", ident );
+                    m_builder . ReportError ( ctx, p_typedCol . GetLocation (), "Column already defined", ident );
                     return false;
                 }
                 p_col . name = priorDecl;
                 // add column to m_self -> col
-                if ( ! m_builder . VectorAppend ( m_self -> col, & p_col . cid . id, & p_col ) )
+                if ( ! m_builder . VectorAppend ( ctx, m_self -> col, & p_col . cid . id, & p_col ) )
                 {
                     return false;
                 }
@@ -840,22 +860,22 @@ TableDeclaration :: HandleTypedColumn ( SColumn & p_col, const AST & p_typedCol 
                 rc_t rc = VectorInsertUnique ( & name -> items, & p_col, &idx, SColumnSort );
                 if ( rc != 0 )
                 {
-                    m_builder . ReportRc ( "VectorInsertUnique", rc );
+                    m_builder . ReportRc ( ctx, "VectorInsertUnique", rc );
                     return false;
                 }
             }
             break;
         case eVirtual:
-            m_builder . ReportError ( p_typedCol . GetLocation (), "Virtual production defined as a column", ident );
+            m_builder . ReportError ( ctx, p_typedCol . GetLocation (), "Virtual production defined as a column", ident );
             return false;
         default:
             /* allow names defined in scopes other than table and intrinsic */
             if ( KSymTableFindShallow ( & m_builder . GetSymTab (), & name ) != 0 ||
                  KSymTableFindIntrinsic ( & m_builder . GetSymTab (), & name ) )
             {
-                m_builder . ReportError ( p_typedCol . GetLocation (), "Column name already in use", name );
+                m_builder . ReportError ( ctx, p_typedCol . GetLocation (), "Column name already in use", name );
             }
-            else if ( ! AddNewColumn ( p_col, name ) )
+            else if ( ! AddNewColumn ( ctx, p_col, name ) )
             {
                 return false;
             }
@@ -869,7 +889,7 @@ TableDeclaration :: HandleTypedColumn ( SColumn & p_col, const AST & p_typedCol 
     {
         if ( p_col . read_only )
         {
-            m_builder . ReportError ( p_typedCol . GetLocation (), "Simple column cannot be readonly", ident);
+            m_builder . ReportError ( ctx, p_typedCol . GetLocation (), "Simple column cannot be readonly", ident);
         }
         else
         {
@@ -887,16 +907,16 @@ TableDeclaration :: HandleTypedColumn ( SColumn & p_col, const AST & p_typedCol 
                 /* check for explicit physical type */
                 if ( p_col . ptype != 0 )
                 {
-                    m_builder . ReportError ( p_typedCol . GetLocation (), "Implicit physical column previously declared", name );
+                    m_builder . ReportError ( ctx, p_typedCol . GetLocation (), "Implicit physical column previously declared", name );
                 }
                 else
                 {
-                    m_builder . ReportError ( p_typedCol . GetLocation (), "Missing column read or validate expression", name );
+                    m_builder . ReportError ( ctx, p_typedCol . GetLocation (), "Missing column read or validate expression", name );
                 }
             }
             else if ( ( p_col . td . type_id & 0xC0000000 ) != 0 )
             {
-                m_builder . ReportError ( p_typedCol . GetLocation (), "Simple columns cannot have typeset as type", name );
+                m_builder . ReportError ( ctx, p_typedCol . GetLocation (), "Simple columns cannot have typeset as type", name );
             }
             else
             {
@@ -906,7 +926,7 @@ TableDeclaration :: HandleTypedColumn ( SColumn & p_col, const AST & p_typedCol 
                 }
                 else
                 {
-                    sym = m_builder . CreateLocalSymbol ( p_typedCol, physname, ePhysMember, 0 );
+                    sym = m_builder . CreateLocalSymbol ( ctx, p_typedCol, physname, ePhysMember, 0 );
                 }
 
                 if ( sym != 0 )
@@ -914,7 +934,7 @@ TableDeclaration :: HandleTypedColumn ( SColumn & p_col, const AST & p_typedCol 
                     rc_t rc = implicit_physical_member ( & m_builder . GetSymTab (), 0, m_self, & p_col, sym );
                     if ( rc != 0 )
                     {
-                        m_builder . ReportRc ( "implicit_physical_member", rc);
+                        m_builder . ReportRc ( ctx, "implicit_physical_member", rc);
                     }
                 }
             }
@@ -925,12 +945,14 @@ TableDeclaration :: HandleTypedColumn ( SColumn & p_col, const AST & p_typedCol 
 }
 
 bool
-TableDeclaration :: MakePhysicalColumnType ( const AST &      p_schemaArgs,
-                                       const AST_FQN &  p_fqn_opt_vers,
-                                       const AST &      p_factoryArgs,
-                                       SPhysMember &    p_col )
+TableDeclaration :: MakePhysicalColumnType ( ctx_t ctx,
+                                             const AST &      p_schemaArgs,
+                                             const AST_FQN &  p_fqn_opt_vers,
+                                             const AST &      p_factoryArgs,
+                                             SPhysMember &    p_col )
 {
-    const KSymbol * sym = m_builder . Resolve ( p_fqn_opt_vers ); // will report unknown name
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    const KSymbol * sym = m_builder . Resolve ( ctx, p_fqn_opt_vers ); // will report unknown name
     if ( sym != 0 )
     {
         switch ( sym -> type )
@@ -943,13 +965,14 @@ TableDeclaration :: MakePhysicalColumnType ( const AST &      p_schemaArgs,
             }
             return true;
         case ePhysical:
-            p_col . type = MakePhysicalEncodingSpec ( * sym, p_fqn_opt_vers,
+            p_col . type = MakePhysicalEncodingSpec ( ctx,
+                                                      * sym, p_fqn_opt_vers,
                                                       & p_schemaArgs,
                                                       & p_factoryArgs,
                                                       p_col . td  );
             return true;
         default:
-            m_builder . ReportError ( "Cannot be used as a physical column type", p_fqn_opt_vers );
+            m_builder . ReportError ( ctx, "Cannot be used as a physical column type", p_fqn_opt_vers );
             break;
         }
     }
@@ -957,26 +980,28 @@ TableDeclaration :: MakePhysicalColumnType ( const AST &      p_schemaArgs,
 }
 
 void
-TableDeclaration :: AddPhysicalColumn ( const AST & p_decl, bool p_static )
+TableDeclaration :: AddPhysicalColumn ( ctx_t ctx, const AST & p_decl, bool p_static )
 {
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     assert ( p_decl . GetTokenType () == PT_PHYSMBR );
     assert ( p_decl . ChildrenCount () >= 2 );  // typespec typed_col [ init ]
 
-    SPhysMember * c = m_builder . Alloc < SPhysMember > ();
+    SPhysMember * c = m_builder . Alloc < SPhysMember > ( ctx );
     if ( c != 0 )
     {
         const AST * colDef = p_decl . GetChild ( 0 ); //col_schema_parms_opt fqn_opt_vers factory_parms_opt
         assert ( colDef != 0 );
         assert ( colDef -> ChildrenCount () == 3 );
 
-        if ( MakePhysicalColumnType ( * colDef -> GetChild ( 0 ),
+        if ( MakePhysicalColumnType ( ctx,
+                                      * colDef -> GetChild ( 0 ),
                                       * ToFQN ( colDef -> GetChild ( 1 ) ),
                                       * colDef -> GetChild ( 2 ),
                                       * c ) )
         {
             const AST & physIdent = * p_decl . GetChild ( 1 );
             const char * ident = physIdent . GetTokenValue();
-            KSymbol * sym = m_builder . Resolve ( physIdent . GetLocation (), ident, false ); // will not report unknown name
+            KSymbol * sym = m_builder . Resolve ( ctx, physIdent . GetLocation (), ident, false ); // will not report unknown name
             if ( sym == 0 )
             {
                 String name;
@@ -987,17 +1012,17 @@ TableDeclaration :: AddPhysicalColumn ( const AST & p_decl, bool p_static )
 
                     if ( p_decl . ChildrenCount () == 3 )
                     {
-                        c -> expr = ToExpr ( p_decl . GetChild ( 2 ) ) -> MakeExpression ( m_builder );
+                        c -> expr = ToExpr ( p_decl . GetChild ( 2 ) ) -> MakeExpression ( ctx, m_builder );
                     }
 
                     c -> stat = p_static;
 
-                    if (m_builder .  VectorAppend ( m_self -> phys, & c -> cid . id, c ) )
+                    if (m_builder .  VectorAppend ( ctx, m_self -> phys, & c -> cid . id, c ) )
                     {
                         return;
                     }
                 }
-                m_builder . ReportRc ( "KSymTableCreateConstSymbol", rc );
+                m_builder . ReportRc ( ctx, "KSymTableCreateConstSymbol", rc );
             }
             else if ( sym -> type == eForward || sym -> type == eVirtual )
             {   // phys column was predeclared
@@ -1006,19 +1031,19 @@ TableDeclaration :: AddPhysicalColumn ( const AST & p_decl, bool p_static )
                 sym -> type = ePhysMember;
                 if ( p_decl . ChildrenCount () == 3 )
                 {
-                    c -> expr = ToExpr ( p_decl . GetChild ( 2 ) ) -> MakeExpression ( m_builder );
+                    c -> expr = ToExpr ( p_decl . GetChild ( 2 ) ) -> MakeExpression ( ctx, m_builder );
                 }
 
                 c -> stat = p_static;
 
-                if ( m_builder . VectorAppend ( m_self -> phys, & c -> cid . id, c ) )
+                if ( m_builder . VectorAppend ( ctx, m_self -> phys, & c -> cid . id, c ) )
                 {
                     return;
                 }
             }
             else
             {   // redefinition
-                m_builder . ReportError ( physIdent . GetLocation (), "Physical column already defined", ident );
+                m_builder . ReportError ( ctx, physIdent . GetLocation (), "Physical column already defined", ident );
             }
         }
 
@@ -1027,9 +1052,10 @@ TableDeclaration :: AddPhysicalColumn ( const AST & p_decl, bool p_static )
 }
 
 void
-TableDeclaration :: AddUntyped ( const AST_FQN & p_fqn )
+TableDeclaration :: AddUntyped ( ctx_t ctx, const AST_FQN & p_fqn )
 {
-    const KSymbol * sym = m_builder . Resolve ( p_fqn );
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    const KSymbol * sym = m_builder . Resolve ( ctx, p_fqn );
     if ( sym != 0 )
     {
         if ( sym -> type == eUntypedFunc )
@@ -1039,24 +1065,25 @@ TableDeclaration :: AddUntyped ( const AST_FQN & p_fqn )
         }
         else
         {
-            m_builder . ReportError ( "Not an untyped function", p_fqn );
+            m_builder . ReportError ( ctx, "Not an untyped function", p_fqn );
         }
     }
 }
 
 AST *
-ASTBuilder ::  TableDef ( const Token * p_token, AST_FQN * p_fqn, AST * p_parents, AST * p_body )
+ASTBuilder ::  TableDef ( ctx_t ctx, const Token * p_token, AST_FQN * p_fqn, AST * p_parents, AST * p_body )
 {
-    AST * ret = AST :: Make ( p_token, p_fqn, p_parents, p_body );
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    AST * ret = AST :: Make ( ctx, p_token, p_fqn, p_parents, p_body );
 
-    TableDeclaration table ( * this );
+    TableDeclaration table ( ctx, * this );
     assert ( p_fqn != 0 );
-    if ( table . SetName ( * p_fqn ) )
+    if ( table . SetName ( ctx, * p_fqn ) )
     {
         assert ( p_parents != 0 );
-        table. HandleParents ( * p_parents );
+        table. HandleParents ( ctx, * p_parents );
         assert ( p_body != 0 );
-        table. HandleBody ( * p_body );
+        table. HandleBody ( ctx, * p_body );
     }
 
     return ret;
