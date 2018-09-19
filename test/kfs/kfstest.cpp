@@ -39,6 +39,7 @@
 
 #include <kfs/ffext.h>
 #include <kfs/ffmagic.h>
+#include <klib/log.h>
 
 #define class clss
 #include <kfs/fileformat.h>
@@ -250,15 +251,43 @@ rc_t CC Usage ( const Args * args )
 }
 
 const char UsageDefaultName[] = "test-kfs";
+/*
+static
+OptDef Options[] =
+{
+    { OPTION_DEC_SRA, ALIAS_DEC_SRA, NULL, UsageSra,      0, false, false },
+    { OPTION_FORCE,   ALIAS_FORCE,   NULL, ForceUsage,   0, false, false }
+};
+*/
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    Args * args;
+    //rc_t rc= ArgsMakeAndHandle (&args, argc, argv, 1, Options, sizeof (Options) / sizeof (Options[0]));
+    rc_t rc= ArgsMakeAndHandle (&args, argc, argv, 0, NULL, 0);
+
+    if (rc) LOGERR (klogInt, rc, "failed to parse command line parameters");
+
+    uint32_t ocount;
+    uint32_t pcount;
+
+    rc=ArgsParamCount(args,&ocount);
+    if (rc) LOGERR (klogInt, rc, "failed to parse command line parameters");
+
+    char * dst;
+
+    rc=ArgsParamValue(args,0,(const void **)&dst);
+    if (rc) LOGERR (klogInt, rc, "failed to parse command line parameters");
+
+    printf("param is %s\n", dst);
+
+
     KConfigDisableUserSettings();
     for (int i=0; i!=argc; ++i)
     {
         printf("Arg %d is %s\n", i, argv[i]);
     }
-    rc_t rc=KfsTestSuite(argc, argv);
+    rc=KfsTestSuite(argc, argv);
     return rc;
 }
 
