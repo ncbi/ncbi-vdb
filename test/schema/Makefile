@@ -47,6 +47,8 @@ ALL_TOOLS = $(TEST_TOOLS) $(INT_TOOLS)
 
 include $(TOP)/build/Makefile.env
 
+WARN += -Wno-unused-variable
+
 $(ALL_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 

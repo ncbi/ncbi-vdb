@@ -27,6 +27,7 @@
 #ifndef _hpp_ParseTree_
 #define _hpp_ParseTree_
 
+#include <kfc/ctx.h>
 #include <klib/vector.h>
 
 #include "Token.hpp"
@@ -38,10 +39,10 @@ namespace ncbi
         class ParseTree
         {
         public:
-            static ParseTree * Make ( const Token& token );
+            static ParseTree * Make ( ctx_t ctx, const Token& token );
             static void Destroy ( ParseTree * );
 
-            void AddChild ( ParseTree * ); // make sure is allocated with new
+            void AddChild ( ctx_t ctx, ParseTree * ); // make sure is allocated with new
 
             const Token & GetToken () const { return m_token; }
 
@@ -56,7 +57,7 @@ namespace ncbi
             ParseTree ( const Token& token );
             ~ParseTree ();
 
-            void MoveChildren ( ParseTree& );
+            void MoveChildren ( ctx_t ctx, ParseTree& );
             void SetToken ( const Token & p_token ) {  m_token = p_token; }
 
         private:
@@ -68,7 +69,7 @@ namespace ncbi
         class ParseTreeScanner
         {
         public:
-            ParseTreeScanner ( const ParseTree& p_root, const char * p_sourceFileName = "" );
+            ParseTreeScanner ( ctx_t ctx, const ParseTree& p_root, const char * p_sourceFileName = "" );
             ~ParseTreeScanner ();
 
             // returns token type, SchemaScanner::EndSource at the end of the walk; the token itself is in p_token

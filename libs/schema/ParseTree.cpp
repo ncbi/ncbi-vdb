@@ -28,6 +28,9 @@
 
 #include <new>
 
+#include <kfc/xc.h>
+#include <kfc/except.h>
+
 #include <klib/text.h>
 #include <klib/printf.h>
 
@@ -39,14 +42,16 @@ using namespace ncbi::SchemaParser;
 static const uint32_t ChildrenBlockSize = 1024; //TODO: pick a good initial size
 
 ParseTree *
-ParseTree :: Make ( const Token& token )
+ParseTree :: Make ( ctx_t ctx, const Token& token )
 {
     void * ret = malloc ( sizeof ( ParseTree ) );
-    if ( ret != 0 )
-    {
-        return new ( ret ) ParseTree ( token );
+    if ( ret == 0 )
+    {   // raise KFC error
+        FUNC_ENTRY ( ctx, rcSRA, rcSchema, rcParsing );
+        SYSTEM_ERROR ( xcNoMemory, "" );
+        return 0;
     }
-    return 0; //TODO: raise a KFC error
+    return new ( ret ) ParseTree ( token );
 }
 
 void
@@ -79,7 +84,7 @@ ParseTree :: ~ParseTree ()
 }
 
 void
-ParseTree :: AddChild ( ParseTree * p_node )
+ParseTree :: AddChild ( ctx_t ctx, ParseTree * p_node )
 {
     assert ( m_location != 0 );
     assert ( p_node != 0 );
@@ -87,7 +92,12 @@ ParseTree :: AddChild ( ParseTree * p_node )
     {   // assume p_node's location will not change in the future
         m_location = & p_node -> GetLocation ();
     }
-    VectorSet ( & m_children, VectorLength ( & m_children ), p_node );
+    rc_t rc = VectorAppend ( & m_children, 0, p_node );
+    if ( rc != 0 )
+    {
+        FUNC_ENTRY ( ctx, rcSRA, rcSchema, rcParsing );
+        INTERNAL_ERROR ( xcUnexpected, "VectorSet:%R", rc );
+    }
 }
 
 uint32_t
@@ -109,20 +119,28 @@ ParseTree :: GetChild ( uint32_t p_idx )
 }
 
 void
-ParseTree :: MoveChildren ( ParseTree& p_source )
+ParseTree :: MoveChildren ( ctx_t ctx, ParseTree& p_source )
 {
     VectorWhack ( & m_children, DestroyChild, NULL );
-    VectorCopy ( & p_source . m_children, & m_children );
-    VectorWhack ( & p_source . m_children, NULL, NULL );
+    rc_t rc = VectorCopy ( & p_source . m_children, & m_children );
+    if ( rc != 0 )
+    {
+        FUNC_ENTRY ( ctx, rcSRA, rcSchema, rcParsing );
+        INTERNAL_ERROR ( xcUnexpected, "VectorCopy:%R", rc );
+    }
+    else
+    {
+        VectorWhack ( & p_source . m_children, NULL, NULL );
+    }
 }
 
 // ParseTreeScanner
 
 static const uint32_t StackBlockSize = 1024; //TODO: pick a good initial size
 
-ParseTreeScanner :: ParseTreeScanner ( const ParseTree& p_root, const char * p_source )
-:   ChildrenOpen ( ParseTree :: Make ( Token ( '(' ) ) ),
-    ChildrenClose ( ParseTree :: Make ( Token ( ')' ) ) ),
+ParseTreeScanner :: ParseTreeScanner ( ctx_t ctx, const ParseTree& p_root, const char * p_source )
+:   ChildrenOpen ( ParseTree :: Make ( ctx, Token ( '(' ) ) ),
+    ChildrenClose ( ParseTree :: Make ( ctx, Token ( ')' ) ) ),
     m_source ( string_dup ( p_source, string_size (p_source ) ) )
 {
     VectorInit ( & m_stack, 0, StackBlockSize );
@@ -140,7 +158,12 @@ ParseTreeScanner :: ~ParseTreeScanner ()
 void
 ParseTreeScanner :: PushNode ( const ParseTree* p_node )
 {
-    VectorAppend ( & m_stack, NULL, p_node );
+    rc_t rc = VectorAppend ( & m_stack, NULL, p_node );
+    if ( rc != 0 )
+    {
+        //TODO: raise a KFC error
+        //string_printf ( msg, sizeof msg, NULL, "VectorAppend, rc = %R", rc );
+    }
 }
 
 Token :: TokenType

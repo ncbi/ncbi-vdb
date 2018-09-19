@@ -160,7 +160,7 @@ void CC SExpressionMark ( void * item, void * data )
                         SExpressionMark, data );
         break;
     case eMembExpr:
-        assert (false); //TODO SMembExprMark
+        assert (false); /*TODO SMembExprMark*/
         break;
     }
 }

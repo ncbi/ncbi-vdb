@@ -28,6 +28,9 @@
 
 #include <new>
 
+#include <kfc/xc.h>
+#include <kfc/except.h>
+
 #include <klib/symbol.h>
 #include <klib/printf.h>
 
@@ -58,10 +61,15 @@ InternalError :: what() const
 ///////////////////////////////////////// Error Report :: Error
 
 ErrorReport :: Error *
-ErrorReport :: Error :: Make ( const char * p_message, const ErrorReport :: Location & p_location )
+ErrorReport :: Error :: Make ( ctx_t ctx, const char * p_message, const ErrorReport :: Location & p_location )
 {
     void * ret = malloc ( sizeof ( ErrorReport :: Error ) );
-    if ( ret == 0 ) return 0; // TODO: raise KFC error
+    if ( ret == 0 )
+    {
+        FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+        SYSTEM_ERROR ( xcNoMemory, "" );
+        return 0;
+    }
     return new ( ret ) ErrorReport :: Error ( p_message, p_location );
 }
 
@@ -90,15 +98,22 @@ ErrorReport :: Error :: ~Error()
 }
 
 bool
-ErrorReport :: Error :: Format ( char * p_buf, size_t p_bufSize ) const
+ErrorReport :: Error :: Format ( ctx_t ctx, char * p_buf, size_t p_bufSize ) const
 {
     if ( p_buf == 0 )
     {
         return false;
     }
-    return string_printf ( p_buf, p_bufSize, 0,
+    rc_t rc = string_printf ( p_buf, p_bufSize, 0,
                            "%s:%u:%u %s",
-                           m_file, m_line, m_column, m_message ) == 0;
+                           m_file, m_line, m_column, m_message );
+    if ( rc != 0 )
+    {
+        FUNC_ENTRY ( ctx, rcSRA, rcSchema, rcParsing );
+        INTERNAL_ERROR ( xcUnexpected, "string_printf, rc=%R", rc );
+        return false;
+    }
+    return true;
 }
 
 ///////////////////////////////////////// Error Report
@@ -127,41 +142,28 @@ ErrorReport :: Clear ()
 }
 
 void
-ErrorReport :: ReportError ( const Location & p_location, const char* p_fmt, ... )
+ErrorReport :: ReportError ( ctx_t ctx, const Location & p_location, const char* p_fmt, ... )
 {
+    FUNC_ENTRY ( ctx, rcSRA, rcSchema, rcParsing );
     const unsigned int BufSize = 1024;
     char buf [ BufSize ];
 
     va_list args;
     va_start ( args, p_fmt );
-    string_vprintf ( buf, BufSize, 0, p_fmt, args );
+    rc_t rc = string_vprintf ( buf, BufSize, 0, p_fmt, args );
     va_end ( args );
 
-    rc_t rc = :: VectorAppend ( & m_errors, 0, Error :: Make ( buf, p_location ) );
     if ( rc != 0 )
     {
-        //TODO: raise a KFC error
-        // throw InternalError ( "ReportError() : VectorAppend() failed" );
+        INTERNAL_ERROR ( xcUnexpected, "string_vprintf, rc=%R", rc );
     }
-}
-
-void
-ErrorReport :: ReportInternalError ( const char * p_source, const char* p_fmt, ... )
-{
-    const unsigned int BufSize = 1024;
-    char buf [ BufSize ];
-
-    va_list args;
-    va_start ( args, p_fmt );
-    string_vprintf ( buf, BufSize, 0, p_fmt, args );
-    va_end ( args );
-
-    Location loc ( p_source, 0, 0 );
-    rc_t rc = :: VectorAppend ( & m_errors, 0, Error :: Make ( buf, loc ) );
-    if ( rc != 0 )
+    else
     {
-        //TODO: raise a KFC error
-        //throw InternalError ( "ReportError() : VectorAppend() failed" );
+        rc = :: VectorAppend ( & m_errors, 0, Error :: Make ( ctx, buf, p_location ) );
+        if ( rc != 0 )
+        {
+            INTERNAL_ERROR ( xcUnexpected, "VectorAppend, rc=%R", rc );
+        }
     }
 }
 

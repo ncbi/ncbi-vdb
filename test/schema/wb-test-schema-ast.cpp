@@ -34,6 +34,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfc/except.h>
+
 #include <klib/symbol.h>
 
 #include <kfs/directory.h>
@@ -57,11 +59,12 @@ VerifyNextToken ( ParseTreeScanner& p_scan, int p_type)
 
 TEST_CASE(Construct_Empty)
 {
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
     SchemaParser p;
-    REQUIRE ( p . ParseString ( "" ) );
+    REQUIRE ( p . ParseString ( ctx, "" ) );
     ParseTree * root = p . MoveParseTree ();
     REQUIRE_NOT_NULL ( root );
-    ParseTreeScanner scan ( * root );
+    ParseTreeScanner scan ( ctx, * root );
     REQUIRE ( VerifyNextToken ( scan, PT_PARSE ) );
     REQUIRE ( VerifyNextToken ( scan, '(' ) );
     REQUIRE ( VerifyNextToken ( scan, Token :: EndSource ) );
@@ -72,11 +75,12 @@ TEST_CASE(Construct_Empty)
 
 TEST_CASE(WalkParseTree)
 {
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
     SchemaParser p;
-    REQUIRE ( p . ParseString ( "version 1; include \"qq\";" ) );
+    REQUIRE ( p . ParseString ( ctx, "version 1; include \"qq\";" ) );
     ParseTree * root = p . MoveParseTree ();
     REQUIRE_NOT_NULL ( root );
-    ParseTreeScanner scan ( * root );
+    ParseTreeScanner scan ( ctx, * root );
     REQUIRE ( VerifyNextToken ( scan, PT_PARSE ) );
     REQUIRE ( VerifyNextToken ( scan, '(' ) );
 
@@ -114,32 +118,37 @@ TEST_CASE(WalkParseTree)
 // ErrorReport
 TEST_CASE ( ErrorReport_Formatting_NullBuf )
 {
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
     ErrorReport rep;
-    rep . ReportError ( ErrorReport :: Location ( "", 0, 0 ), "" );
+    rep . ReportError ( ctx, ErrorReport :: Location ( "", 0, 0 ), "" );
     const ErrorReport :: Error * err = rep . GetError ( 0 );
     REQUIRE_NOT_NULL ( err );
-    REQUIRE ( ! err -> Format ( 0, 1024 ) );
+    REQUIRE ( ! err -> Format ( ctx, 0, 1024 ) );
 }
 
 TEST_CASE ( ErrorReport_Formatting_ShortBuf )
 {
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
     ErrorReport rep;
-    rep . ReportError ( ErrorReport :: Location ( "", 0, 0 ), "msg" );
+    rep . ReportError ( ctx, ErrorReport :: Location ( "", 0, 0 ), "msg" );
     const ErrorReport :: Error * err = rep . GetError ( 0 );
     REQUIRE_NOT_NULL ( err );
     char buf [1];
-    REQUIRE ( ! err -> Format ( buf, sizeof ( buf ) ) );
+    REQUIRE ( ! err -> Format ( ctx, buf, sizeof ( buf ) ) );
+    REQUIRE ( string ( WHAT() ) != string () );
+    CLEAR();
 }
 
 TEST_CASE ( ErrorReport_Formatting )
 {
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
     ErrorReport rep;
     ErrorReport :: Location loc ( "dir/file", 1, 2 ); // file/line/col
-    rep . ReportError ( loc, "msg: %s, num: %i", "error message", 42 );
+    rep . ReportError ( ctx, loc, "msg: %s, num: %i", "error message", 42 );
     const ErrorReport :: Error * err = rep . GetError ( 0 );
     REQUIRE_NOT_NULL ( err );
     char buf [ 1024 ];
-    REQUIRE ( err -> Format ( buf, sizeof buf ) );
+    REQUIRE ( err -> Format ( ctx, buf, sizeof buf ) );
     REQUIRE_EQ ( string ( buf ), string ( "dir/file:1:2 msg: error message, num: 42" ) );
 }
 
@@ -220,17 +229,21 @@ FIXTURE_TEST_CASE(Intrinsic, AST_Fixture)
 
 FIXTURE_TEST_CASE(Builder_ErrorReporting, AST_Fixture)
 {
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
+
     AST_FQN * id = AST_Fixture :: MakeFqn ( "foo" );
-    REQUIRE_NULL ( m_builder -> Resolve ( * id ) );
+    REQUIRE_NULL ( m_builder -> Resolve ( ctx, * id ) );
     AST_FQN :: Destroy ( id );
 
     id = AST_Fixture :: MakeFqn ( "bar" );
-    REQUIRE_NULL ( m_builder -> Resolve ( * id ) );
+    REQUIRE_NULL ( m_builder -> Resolve ( ctx, * id ) );
     AST_FQN :: Destroy ( id );
 
     REQUIRE_EQ ( 2u, m_builder -> GetErrorCount () );
     REQUIRE_EQ ( string ( "Undeclared identifier: 'foo'" ), string ( m_builder -> GetErrorMessage ( 0 ) ) );
     REQUIRE_EQ ( string ( "Undeclared identifier: 'bar'" ), string ( m_builder -> GetErrorMessage ( 1 ) ) );
+
+    REQUIRE ( ! FAILED () );
 }
 
 FIXTURE_TEST_CASE(NoVersion, AST_Fixture)
@@ -317,10 +330,11 @@ FIXTURE_TEST_CASE(LocationInErrorMessages, AST_Fixture)
 {
     if ( m_newParse )
     {
-        REQUIRE ( m_parser . ParseString ( "\n\ntypedef a:zz t;" ) );
+        HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
+        REQUIRE ( m_parser . ParseString ( ctx, "\n\ntypedef a:zz t;" ) );
         m_parseTree = m_parser . MoveParseTree ();
         REQUIRE_NOT_NULL ( m_parseTree );
-        ParseTree :: Destroy ( m_builder -> Build ( * m_parseTree ) );
+        ParseTree :: Destroy ( m_builder -> Build ( ctx, * m_parseTree ) );
         const ErrorReport & errors = m_builder -> GetErrors ();
         REQUIRE_EQ ( 1u, errors . GetCount () );
         const ErrorReport :: Error * err = errors . GetError ( 0 );
@@ -698,11 +712,13 @@ FIXTURE_TEST_CASE(Include, AST_Fixture)
 
 FIXTURE_TEST_CASE(Include_SearchPath, AST_Fixture)
 {
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
     CreateFile ( "./actual/inc", "typedef U8 t;" );
-    m_builder -> AddIncludePath ( "./actual" );
+    m_builder -> AddIncludePath ( ctx, "./actual" );
     MakeAst ( "include \"inc\";" );
     VerifySymbol ( "t", eDatatype );
     remove ( "./actual/inc" );
+    REQUIRE ( ! FAILED () );
 }
 
 FIXTURE_TEST_CASE(Include_MoreThanOnce, AST_Fixture)

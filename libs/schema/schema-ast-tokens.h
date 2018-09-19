@@ -187,7 +187,7 @@ extern int AST_debug;
 
 union YYSTYPE
 {
-#line 57 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1909  */
+#line 58 "/home/boshkins/ncbi/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1909  */
 
   const Token*  tok;
   AST*          node;
@@ -204,6 +204,6 @@ typedef union YYSTYPE YYSTYPE;
 
 
 
-int AST_parse (AST*& p_ast, ASTBuilder& p_builder, ParseTreeScanner& p_sb);
+int AST_parse (ctx_t ctx, AST*& p_ast, ASTBuilder& p_builder, ParseTreeScanner& p_sb);
 
 #endif /* !YY_AST_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_AST_TOKENS_H_INCLUDED  */
