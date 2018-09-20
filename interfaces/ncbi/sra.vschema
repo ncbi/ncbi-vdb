@@ -261,8 +261,9 @@ function merged_fmt NCBI:SRA:fsamp4:encode #2 < U32 called, U32 alt > ( NCBI:SRA
 /* history:
  *  1.0.1 - base explicitly upon sequence #1.0.1, spotdesc #1.0.1
  *  1.0.2 - spotdesc #1.0.2
+ *  1.1 - sequence #1.1
  */
-table NCBI:SRA:tbl:spotdesc_nocol #1.0.2 = INSDC:tbl:sequence #1.0.1, INSDC:SRA:tbl:spotdesc #1.0.2
+table NCBI:SRA:tbl:spotdesc_nocol #1.1 = INSDC:tbl:sequence #1.1, INSDC:SRA:tbl:spotdesc #1.0.2
 {
     /* LABEL_SEG
      */
@@ -343,8 +344,9 @@ table NCBI:SRA:tbl:spotdesc_nocol #1.0.2 = INSDC:tbl:sequence #1.0.1, INSDC:SRA:
 /* history:
  *  1.0.1 - base explicitly upon spotdesc_nocol #1.0.1
  *  1.0.2 - base explicitly upon spotdesc_nocol #1.0.2
+ *  1.1 - base explicitly upon spotdesc_nocol #1.1
  */
-table NCBI:SRA:tbl:spotdesc_nophys #1.0.2 = NCBI:SRA:tbl:spotdesc_nocol #1.0.2
+table NCBI:SRA:tbl:spotdesc_nophys #1.1 = NCBI:SRA:tbl:spotdesc_nocol #1.1
 {
     // resolve virtual productions
     U8 out_nreads = .NREADS;
@@ -401,8 +403,9 @@ table NCBI:SRA:tbl:spotdesc_nophys #1.0.2 = NCBI:SRA:tbl:spotdesc_nocol #1.0.2
 /* history:
  *  1.0.1 - base explicitly upon spotdesc_nophys #1.0.1
  *  1.0.2 - base explicitly upon spotdesc_nophys #1.0.2
+ *  1.1 - base explicitly upon spotdesc_nophys #1.1
  */
-table NCBI:SRA:tbl:spotdesc #1.0.2 = NCBI:SRA:tbl:spotdesc_nophys #1.0.2
+table NCBI:SRA:tbl:spotdesc #1.1 = NCBI:SRA:tbl:spotdesc_nophys #1.1
 {
     // physical column encodings
     // TBD - this has to be looked at, where dynamic segmentation is involved
