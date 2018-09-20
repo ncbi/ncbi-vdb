@@ -73,7 +73,7 @@ enum
  *  the extended version also describes its orientation
  */
 #define sra_read_type_t "INSDC:SRA:xread_type"
-typedef INSDC_read_type INSDC_SRA_xread_type;
+//typedef INSDC_read_type INSDC_SRA_xread_type;
 typedef INSDC_SRA_xread_type INSDC_SRA_read_type;
 #if 0
 already defined in sra.h

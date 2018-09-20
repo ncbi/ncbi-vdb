@@ -323,7 +323,7 @@ typedef INSDC_coord_one INSDC_position_one;
  *  the extended version also describes its orientation
  */
 typedef uint8_t INSDC_SRA_xread_type, INSDC_xread_type;
-typedef INSDC_SRA_xread_type INSDC_SRA_read_type, INSDC_read_type;
+typedef INSDC_SRA_xread_type INSDC_read_type;
 enum
 {
     /* read_type */
@@ -344,7 +344,7 @@ enum
 
 /* read filter
  */
-typedef uint8_t INSDC_SRA_read_filter, INSDC_read_filter;
+typedef uint8_t INSDC_read_filter;
 enum
 {
     SRA_READ_FILTER_PASS = 0,
