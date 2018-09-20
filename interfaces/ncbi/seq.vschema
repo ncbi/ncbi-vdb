@@ -41,8 +41,8 @@ typeset NCBI:spot_filter_read_set { INSDC:4na:bin, INSDC:x2na:bin, INSDC:2na:bin
  *  and potentially set SRA_SPOT_FILTER_REJECT bit
  */
 function
-NCBI:SRA:spot_filter < * U32 min_length > NCBI:SRA:make_spot_filter #1
-       ( NCBI:spot_filter_read_set read, INSDC:quality:phred quality,
+INSDC:SRA:spot_filter NCBI:SRA:make_spot_filter #1 < * U32 min_length >
+       ( NCBI:spot_filter_read_set read_, INSDC:quality:phred quality,
          INSDC:coord:zero read_start, INSDC:coord:len read_len,
          INSDC:SRA:xread_type read_type, INSDC:SRA:spot_filter spot_filter );
 
@@ -332,7 +332,7 @@ table NCBI:tbl:base_space #2.1
         | ( INSDC:dna:x2na:bin) < INSDC:4na:bin, INSDC:x2na:bin > map < INSDC:4na:map:BINSET, [ 4,0,1,4,2,4,4,4,3,4,4,4,4,4,4,4 ] > ( in_4na_bin )
         ;
 
-    INSDC:rna:x2na:bin in_x2na_bin
+    INSDC:rna:x2na:bin in_rna_x2na_bin
         = < INSDC:rna:x2na:bin > range_validate < 0, 4 > ( READ )
         | ( INSDC:rna:x2na:bin) < INSDC:4na:bin, INSDC:x2na:bin > map < INSDC:4na:map:BINSET, [ 4,0,1,4,2,4,4,4,3,4,4,4,4,4,4,4 ] > ( in_rna_4na_bin )
         ;
@@ -353,7 +353,7 @@ table NCBI:tbl:base_space #2.1
     // input 2na packed
     INSDC:dna:2na:packed in_2na_packed = READ;
 
-    INSDC:rna:2na:packed in_rna_2na_packed = READ;
+    INSDC:rna:2na:packed in_rna_2na_packed = RNAREAD;
 
     // input 4na alt-read ( ambiguities )
     INSDC:dna:4na:bin in_alt_4na_bin
@@ -374,18 +374,18 @@ table NCBI:tbl:base_space #2.1
         | ( INSDC:dna:2na:packed ) pack ( in_2na_bin )
         ;
 
-    physical column INSDC:rna:2na:packed .READ
-        = in_rna_2na_packed
-        | ( INSDC:rna:2na:packed ) pack ( in_rna_2na_bin )
-        ;
+//    physical column INSDC:rna:2na:packed .READ
+//        = in_rna_2na_packed
+//        | ( INSDC:rna:2na:packed ) pack ( in_rna_2na_bin )
+//        ;
 
     physical column < INSDC:dna:4na:bin > zip_encoding .ALTREAD
         = < INSDC:dna:4na:bin > trim < 0, 0 > ( in_alt_4na_bin )
         ;
 
-    physical column < INSDC:rna:4na:bin > zip_encoding .ALTREAD
-        = < INSDC:rna:4na:bin > trim < 0, 0 > ( in_alt_rna_4na_bin )
-        ;
+//    physical column < INSDC:rna:4na:bin > zip_encoding .ALTREAD
+//        = < INSDC:rna:4na:bin > trim < 0, 0 > ( in_alt_rna_4na_bin )
+//        ;
 
 
     /* output rules

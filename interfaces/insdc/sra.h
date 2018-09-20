@@ -57,6 +57,8 @@ typedef uint64_t INSDC_SRA_spot_ids_found [ 4 ];
  */
 #define sra_read_filter_t "INSDC:SRA:read_filter"
 typedef INSDC_read_filter INSDC_SRA_read_filter;
+#if 0
+already defined in sra.h
 enum
 {
     SRA_READ_FILTER_PASS = READ_FILTER_PASS,
@@ -64,7 +66,7 @@ enum
     SRA_READ_FILTER_CRITERIA = READ_FILTER_CRITERIA,
     SRA_READ_FILTER_REDACTED = READ_FILTER_REDACTED
 };
-
+#endif
 
 /* read type
  *  describes the type of read within a spot
@@ -73,6 +75,8 @@ enum
 #define sra_read_type_t "INSDC:SRA:xread_type"
 typedef INSDC_read_type INSDC_SRA_xread_type;
 typedef INSDC_SRA_xread_type INSDC_SRA_read_type;
+#if 0
+already defined in sra.h
 enum
 {
     /* read_type and xread_type */
@@ -84,7 +88,7 @@ enum
     SRA_READ_TYPE_FORWARD = READ_TYPE_FORWARD,
     SRA_READ_TYPE_REVERSE = READ_TYPE_REVERSE
 };
-
+#endif
 
 /* platform id
  */

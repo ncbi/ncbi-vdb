@@ -347,11 +347,11 @@ table NCBI:SRA:tbl:spotdesc_nocol #1.0.2 = INSDC:tbl:sequence #1.0.1, INSDC:SRA:
 table NCBI:SRA:tbl:spotdesc_nophys #1.0.2 = NCBI:SRA:tbl:spotdesc_nocol #1.0.2
 {
     // resolve virtual productions
-    U8 out_nreads = .NREADS; 
+    U8 out_nreads = .NREADS;
     ascii out_label = .LABEL;
     INSDC:SRA:xread_type out_read_type = .READ_TYPE;
     INSDC:SRA:read_filter out_rd_filter  = .RD_FILTER;
-    INSDC:SRA_spot_filter out_spot_filter = .SPOT_FILTER;
+    INSDC:SRA:spot_filter out_spot_filter = .SPOT_FILTER;
 
     INSDC:coord:zero out_label_start
         = .LABEL_START
@@ -637,7 +637,7 @@ table NCBI:SRA:tbl:sra_nopos #2.1.3 = INSDC:SRA:tbl:sra #1.0.3,
     // this is already specified in INSDC:SRA:tbl:sra #1
     // but putting it here will quiet down outputs
     INSDC:SRA:platform_id out_platform = .PLATFORM;
-    
+
     column INSDC:position:one POSITION
         = out_position;
     readonly column NCBI:SRA:pos16 POSITION

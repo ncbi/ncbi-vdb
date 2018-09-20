@@ -165,7 +165,7 @@ mv:test-schema-diff
 
 difftest: test-schema-diff
 	mkdir -p $(OBJDIR)/data
-	-$(TEST_BINDIR)/test-schema-diff -I$(TOP)/interfaces -o$(OBJDIR)/data \
+	$(TEST_BINDIR)/test-schema-diff -I$(TOP)/interfaces -o$(OBJDIR)/data \
 	$(addprefix	$(TOP)/interfaces/, \
 		insdc/insdc.vschema \
 		insdc/seq.vschema \
