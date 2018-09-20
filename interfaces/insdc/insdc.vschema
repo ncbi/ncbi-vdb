@@ -31,10 +31,18 @@ version 1;
 
 
 /*--------------------------------------------------------------------------
- * dna
- *  represented in IUPAC characters
+ * IUPAC
+ *  represents IUPAC characters
+ *
+ *  dna     - ACMGRSVTWYHKDBN
+ *  rna     - ACMGRSVUWYHKDBN
+ *  protein - ABCDEFGHIKLMNPQRSTVWXYZU*OJ
  */
-typedef ascii INSDC:dna:text;
+typedef ascii INSDC:iupac:text;
+typedef INSDC:iupac:text INSDC:nuc:text;
+typedef INSDC:nuc:text INSDC:dna:text;
+typedef INSDC:nuc:text INSDC:rna:text;
+typedef INSDC:iupac:text INSDC:protein:text;
 
 
 /*--------------------------------------------------------------------------
@@ -42,16 +50,18 @@ typedef ascii INSDC:dna:text;
  *  nucleotide data with all possible ambiguity
  *  does not represent all possible EVENTS
  *
- *  text encodings use the IUPAC character set
- *  legal values: [ACMGRSVTWYHKDBNacmgrsvtwyhkdbn.]
- *  canonical values: [ACMGRSVTWYHKDBN]
+ *  'T' and 'U' are both encoded as binary 1000
  *
- *  binary values are 0..15 = { NACMGRSVTWYHKDBN }
+ *  text encodings use the IUPAC character set
+ *  legal values: [ACMGRSVTUWYHKDBNacmgrsvtuwyhkdbn.]
+ *  canonical values: [ACMGRSVTUWYHKDBN]
+ *
+ *  binary values are 0..15 => { NACMGRSVTWYHKDBN } or { NACMGRSVUWYHKDBN }
  *
  *  4na values use bits for each letter:
  *
- *       A | C | G | T
- *    =================
+ *       A | C | G | T/U
+ *    ==================
  *    N    |   |   |
  *    A  * |   |   |
  *    C    | * |   |
@@ -61,6 +71,7 @@ typedef ascii INSDC:dna:text;
  *    S    | * | * |
  *    V  * | * | * |
  *    T    |   |   | *
+ *    U    |   |   | *
  *    W  * |   |   | *
  *    Y    | * |   | *
  *    H  * | * |   | *
@@ -74,38 +85,100 @@ typedef	B1 INSDC:4na:packed [ 4 ];
 
 const INSDC:4na:bin INSDC:4na:map:BINSET
     = [ 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 ];
-const INSDC:dna:text INSDC:4na:map:CHARSET
+
+const INSDC:4na:bin INSDC:nuc:4na:map:BINSET
+    = [ 0,1,2,3,4,5,6,7,8,8,9,10,11,12,13,14,15 ];
+const INSDC:nuc:text INSDC:nuc:4na:map:CHARSET
+    = ".ACMGRSVTUWYHKDBN";
+const INSDC:nuc:text INSDC:nuc:4na:accept:CHARSET
+    = ".ACMGRSVTUWYHKDBNacmgrsvtuwyhkdbn";
+
+// DNA
+typedef INSDC:4na:bin INSDC:dna:4na:bin;
+typedef	INSDC:4na:packed INSDC:dna:4na:packed;
+
+const INSDC:dna:text INSDC:dna:4na:map:CHARSET
     = ".ACMGRSVTWYHKDBN";
-const INSDC:dna:text INSDC:4na:accept:CHARSET
+const INSDC:dna:text INSDC:dna:4na:accept:CHARSET
     = ".ACMGRSVTWYHKDBNacmgrsvtwyhkdbn";
+
+// RNA
+typedef INSDC:4na:bin INSDC:rna:4na:bin;
+typedef	INSDC:4na:packed INSDC:rna:4na:packed;
+
+const INSDC:rna:text INSDC:rna:4na:map:CHARSET
+    = ".ACMGRSVUWYHKDBN";
+const INSDC:rna:text INSDC:rna:4na:accept:CHARSET
+    = ".ACMGRSVUWYHKDBNacmgrsvuwyhkdbn";
+
+// legacy - for original DNA
+alias INSDC:dna:4na:map:CHARSET INSDC:4na:map:CHARSET;
+alias INSDC:dna:4na:accept:CHARSET INSDC:4na:accept:CHARSET;
 
 
 /*--------------------------------------------------------------------------
- * 2na  - nucleotide data A,T,G,C
+ * 2na  - nucleotide data A,C,G,T or A,C,G,U
  * x2na - nucleotide data extended with single ambiguity value (N)
  *
  *  text encodings use the IUPAC character set
- *  legal values: [ACGTNacgtn.]
- *  canonical values: [ACGTN]
+ *  legal values: [ACGTUNacgtun.]
+ *  canonical values: [ACGTUN]
  *
- *  x2na values are 0..4 = { ACGTN }
+ *  x2na values are 0..4 => { ACGTN } or { ACGUN }
  *
  *  2na values exclude N:
  *    A = 0
  *    C = 1
  *    G = 2
  *    T = 3
+ *    U = 3
  */
 typedef U8 INSDC:2na:bin;
 typedef U8 INSDC:x2na:bin;
 typedef B1 INSDC:2na:packed [ 2 ];
 
 const INSDC:2na:bin  INSDC:2na:map:BINSET      = [ 0,1,2,3 ];
-const INSDC:dna:text INSDC:2na:map:CHARSET     = "ACGT";
-const INSDC:dna:text INSDC:2na:accept:CHARSET  = "ACGTacgt";
 const INSDC:x2na:bin INSDC:x2na:map:BINSET     = [ 0,1,2,3,4 ];
-const INSDC:dna:text INSDC:x2na:map:CHARSET    = "ACGTN";
-const INSDC:dna:text INSDC:x2na:accept:CHARSET = "ACGTNacgtn.";
+
+const INSDC:2na:bin INSDC:nuc:2na:map:BINSET
+    = [ 0,1,2,3,3 ];
+const INSDC:nuc:text INSDC:nuc:2na:map:CHARSET
+    = "ACGTU";
+const INSDC:nuc:text INSDC:nuc:2na:accept:CHARSET
+    = "ACGTUacgtu";
+
+const INSDC:x2na:bin INSDC:nuc:x2na:map:BINSET
+    = [ 0,1,2,3,3,4 ];
+const INSDC:nuc:text INSDC:nuc:x2na:map:CHARSET
+    = "ACGTUN";
+const INSDC:nuc:text INSDC:nuc:x2na:accept:CHARSET
+    = "ACGTUNacgtun.";
+
+// DNA
+typedef INSDC:2na:bin INSDC:dna:2na:bin;
+typedef INSDC:x2na:bin INSDC:dna:x2na:bin;
+typedef INSDC:2na:packed INSDC:dna:2na:packed;
+
+const INSDC:dna:text INSDC:dna:2na:map:CHARSET     = "ACGT";
+const INSDC:dna:text INSDC:dna:2na:accept:CHARSET  = "ACGTacgt";
+const INSDC:dna:text INSDC:dna:x2na:map:CHARSET    = "ACGTN";
+const INSDC:dna:text INSDC:dna:x2na:accept:CHARSET = "ACGTNacgtn.";
+
+// RNA
+typedef INSDC:2na:bin INSDC:rna:2na:bin;
+typedef INSDC:x2na:bin INSDC:rna:x2na:bin;
+typedef INSDC:2na:packed INSDC:rna:2na:packed;
+
+const INSDC:rna:text INSDC:rna:2na:map:CHARSET     = "ACGU";
+const INSDC:rna:text INSDC:rna:2na:accept:CHARSET  = "ACGUacgu";
+const INSDC:rna:text INSDC:rna:x2na:map:CHARSET    = "ACGUN";
+const INSDC:rna:text INSDC:rna:x2na:accept:CHARSET = "ACGUNacgun.";
+
+// legacy - for original DNA
+alias INSDC:dna:2na:map:CHARSET INSDC:2na:map:CHARSET;
+alias INSDC:dna:2na:accept:CHARSET INSDC:2na:accept:CHARSET;
+alias INSDC:dna:x2na:map:CHARSET INSDC:x2na:map:CHARSET;
+alias INSDC:dna:x2na:accept:CHARSET INSDC:x2na:accept:CHARSET;
 
 
 /*--------------------------------------------------------------------------
@@ -144,13 +217,6 @@ const U8 INSDC:color:default_matrix =
     3, 2, 1, 0, 4,
     4, 4, 4, 4, 4
 ];
-
-
-/*--------------------------------------------------------------------------
- * protein
- *  represented in IUPAC characters
- */
-typedef ascii INSDC:protein:text;
 
 
 /*--------------------------------------------------------------------------

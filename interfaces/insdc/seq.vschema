@@ -40,8 +40,8 @@ include 'insdc/insdc.vschema';
  *  substitutes a random base for ambiguities
  *  from the bases allowed in the 4na.
  *
- *       A | C | G | T
- *    =================
+ *       A | C | G | T/U
+ *    ==================
  *    N    |   |   |     # any base may be substituted
  *    A  * |   |   |     # always A
  *    C    | * |   |     # always C
@@ -50,13 +50,13 @@ include 'insdc/insdc.vschema';
  *    R  * |   | * |     # A or G
  *    S    | * | * |     # C or G
  *    V  * | * | * |     # A, C or G
- *    T    |   |   | *   # always T
- *    W  * |   |   | *   # A or T
- *    Y    | * |   | *   # C or T
- *    H  * | * |   | *   # A, C or T
- *    K    |   | * | *   # G or T
- *    D  * |   | * | *   # A, G or T
- *    B    | * | * | *   # C, G or T
+ *    T/U  |   |   | *   # always T/U
+ *    W  * |   |   | *   # A or T/U
+ *    Y    | * |   | *   # C or T/U
+ *    H  * | * |   | *   # A, C or T/U
+ *    K    |   | * | *   # G or T/U
+ *    D  * |   | * | *   # A, G or T/U
+ *    B    | * | * | *   # C, G or T/U
  *    N  * | * | * | *   # any base may be substituted
  */
 extern function
@@ -69,30 +69,91 @@ extern function
  *
  * history:
  *  1.0.1 - introduced text-mode QUALITY columns
+ *  1.1.0 - introduced RNA text mode
  */
-table INSDC:tbl:sequence #1.0.1
+table INSDC:tbl:sequence #1.1
 {
     /* READ
-     *  native or converted DNA sequence
+     *  native or converted nucleotide sequence
      */
 
-    // default is IUPAC character representation
-    extern default column INSDC:dna:text READ
+    // default is IUPAC nucleotide character representation
+    extern default readonly column INSDC:nuc:text READ
+        = out_dna_text
+        | out_rna_text
+        ;
+
+    /*** dna ***/
+    extern column INSDC:dna:text READ
     {
-        read = out_dna_text;
+        read
+            = out_dna_text
+            | ( INSDC:dna:text ) < INSDC:nuc:text> map < 'Uu', 'Tt' > ( out_rna_text )
+            ;
         validate = < INSDC:dna:text > compare ( in_dna_text, out_dna_text );
     }
 
     // 4na representation - unpacked and packed
-    extern column INSDC:4na:bin READ = out_4na_bin;
-    extern column INSDC:4na:packed READ = out_4na_packed;
+    extern column INSDC:dna:4na:bin READ
+        = out_4na_bin
+        | ( INSDC:dna:4na:bin ) out_rna_4na_bin
+        ;
+    extern column INSDC:dna:4na:packed READ
+        = out_4na_packed
+        | ( INSDC:dna:4na:packed ) out_rna_4na_packed
+        ;
 
     // x2na representation - 2na with ambiguity
-    extern column INSDC:x2na:bin READ = out_x2na_bin;
+    extern column INSDC:dna:x2na:bin READ
+        = out_x2na_bin
+        | ( INSDC:dna:x2na:bin ) out_rna_x2na_bin
+        ;
 
     // 2na representation - 2na with no ambiguity - unpacked and packed
-    extern column INSDC:2na:bin READ = out_2na_bin;
-    extern column INSDC:2na:packed READ = out_2na_packed;
+    extern column INSDC:dna:2na:bin READ
+        = out_2na_bin
+        | ( INSDC:dna:2na:bin ) out_rna_2na_bin
+        ;
+    extern column INSDC:dna:2na:packed READ
+        = out_2na_packed
+        | ( INSDC:dna:2na:packed ) out_rna_2na_packed
+        ;
+
+    /*** rna ***/
+    extern column INSDC:rna:text READ
+    {
+        read
+            = out_rna_text
+            | ( INSDC:rna:text ) < INSDC:nuc:text> map < 'Tt', 'Uu' > ( out_dna_text )
+            ;
+        validate = < INSDC:rna:text > compare ( in_rna_text, out_rna_text );
+    }
+
+    // 4na representation - unpacked and packed
+    extern column INSDC:rna:4na:bin READ
+        = out_rna_4na_bin
+        | ( INSDC:rna:4na:bin ) out_dna_4na_bin
+        ;
+    extern column INSDC:rna:4na:packed READ
+        = out_rna_4na_packed
+        | ( INSDC:rna:4na:packed ) out_dna_4na_packed
+        ;
+
+    // x2na representation - 2na with ambiguity
+    extern column INSDC:rna:x2na:bin READ
+        = out_rna_x2na_bin
+        | ( INSDC:rna:x2na:bin) out_dna_x2na_bin
+        ;
+
+    // 2na representation - 2na with no ambiguity - unpacked and packed
+    extern column INSDC:rna:2na:bin READ
+        = out_rna_2na_bin
+        | ( INSDC:rna:2na:bin ) out_dna_2na_bin
+        ;
+    extern column INSDC:rna:2na:packed READ
+        = out_rna_2na_packed
+        | ( INSDC:rna:2na:packed ) out_dna_2na_packed
+        ;
 
 
 
@@ -139,15 +200,19 @@ table INSDC:tbl:sequence #1.0.1
      */
 
     // PHRED is default
-    extern default column INSDC:quality:phred QUALITY = out_qual_phred;
+    extern default column INSDC:quality:phred QUALITY
+        = out_qual_phred
+        ;
 
     // textual encodings
     extern column INSDC:quality:text:phred_33 QUALITY
         = out_qual_text_phred_33
-        | ( INSDC:quality:text:phred_33 ) < B8 > sum < 33 > ( out_qual_phred );
+        | ( INSDC:quality:text:phred_33 ) < B8 > sum < 33 > ( out_qual_phred )
+        ;
     extern column INSDC:quality:text:phred_64 QUALITY
         = out_qual_text_phred_64
-        | ( INSDC:quality:text:phred_64 ) < B8 > sum < 64 > ( out_qual_phred );
+        | ( INSDC:quality:text:phred_64 ) < B8 > sum < 64 > ( out_qual_phred )
+        ;
 
 
     /* SIGNAL
@@ -155,28 +220,43 @@ table INSDC:tbl:sequence #1.0.1
      */
     INSDC:coord:len signal_len
         = ( INSDC:coord:len ) row_len ( out_signal )
-        | < INSDC:coord:len > echo < 0 > ();
+        | < INSDC:coord:len > echo < 0 > ()
+        ;
     
 
-	/* VIRTUAL PRODUCTIONS
-	 *  cs_native
-	 *  in_cs_key
-	 *  out_cs_key
-	 *  out_signal
-	 *  in_dna_text
-	 *  out_2cs_bin
-	 *  out_2na_bin
-	 *  out_4na_bin
-	 *  out_dna_text
-	 *  out_x2cs_bin
-	 *  out_x2na_bin
-	 *  in_color_text
-	 *  out_2cs_packed
-	 *  out_2na_packed
-	 *  out_4na_packed
-	 *  out_color_text
-	 *  out_qual_phred
-	 *  out_color_matrix
+	/* INSDC:tbl:sequence virtual productions
+	 *  cs_native;
+	 *  in_cs_key;
+	 *  out_cs_key;
+	 *  out_signal;
+	 *  in_dna_text;
+	 *  in_rna_text;
+	 *  out_2cs_bin;
+	 *  out_2na_bin;
+	 *  out_4na_bin;
+	 *  out_dna_text;
+	 *  out_rna_text;
+	 *  out_x2cs_bin;
+	 *  out_x2na_bin;
+	 *  in_color_text;
+	 *  out_2cs_packed;
+	 *  out_2na_packed;
+	 *  out_4na_packed;
+	 *  out_color_text;
+	 *  out_qual_phred;
+	 *  out_dna_2na_bin;
+	 *  out_dna_4na_bin;
+	 *  out_rna_2na_bin;
+	 *  out_rna_4na_bin;
+	 *  out_color_matrix;
+	 *  out_dna_x2na_bin;
+	 *  out_rna_x2na_bin;
+	 *  out_dna_2na_packed;
+	 *  out_dna_4na_packed;
+	 *  out_rna_2na_packed;
+	 *  out_rna_4na_packed;
+	 *  out_qual_text_phred_33;
+	 *  out_qual_text_phred_64;
 	 */
 };
 

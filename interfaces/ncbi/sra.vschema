@@ -351,6 +351,7 @@ table NCBI:SRA:tbl:spotdesc_nophys #1.0.2 = NCBI:SRA:tbl:spotdesc_nocol #1.0.2
     ascii out_label = .LABEL;
     INSDC:SRA:xread_type out_read_type = .READ_TYPE;
     INSDC:SRA:read_filter out_rd_filter  = .RD_FILTER;
+    INSDC:SRA_spot_filter out_spot_filter = .SPOT_FILTER;
 
     INSDC:coord:zero out_label_start
         = .LABEL_START
@@ -413,6 +414,7 @@ table NCBI:SRA:tbl:spotdesc #1.0.2 = NCBI:SRA:tbl:spotdesc_nophys #1.0.2
     physical column < INSDC:coord:len > izip_encoding .READ_LEN = in_read_len;
     physical column < INSDC:SRA:xread_type > zip_encoding .READ_TYPE = in_read_type;
     physical column < INSDC:SRA:read_filter > zip_encoding .RD_FILTER = READ_FILTER;
+    physical column < INSDC:SRA:spot_filter > zip_encoding .SPOT_FILTER = SPOT_FILTER;
 
 
 	/* INSDC:SRA:tbl:spotdesc inherited productions

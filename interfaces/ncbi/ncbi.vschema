@@ -44,8 +44,6 @@ typedef INSDC:quality:log_odds NCBI:quality:n_encoded:log_odds;
 
 // these types have been restated
 alias INSDC:dna:text INSDC:fasta;
-alias INSDC:4na:packed INSDC:dna:4na;
-alias INSDC:2na:packed INSDC:dna:2na;
 alias INSDC:2na:packed NCBI:2na;
 alias INSDC:2cs:packed INSDC:color:2cs;
 alias INSDC:2cs:packed NCBI:2cs;

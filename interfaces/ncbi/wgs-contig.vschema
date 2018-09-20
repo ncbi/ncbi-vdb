@@ -688,8 +688,8 @@ table NCBI:WGS:view:scaffold #1 = NCBI:WGS:tbl:scaffold #1
  */
 database NCBI:WGS:db:contig #1.1
 {
-    table NCBI:WGS:tbl:nucleotide SEQUENCE;
-    table NCBI:WGS:tbl:protein PROTEIN;
-    table NCBI:WGS:tbl:gi_idx GI_IDX;
-    table NCBI:WGS:view:scaffold SCAFFOLD;
+    table NCBI:WGS:tbl:nucleotide #1 SEQUENCE;
+    table NCBI:WGS:tbl:protein #1 PROTEIN;
+    table NCBI:WGS:tbl:gi_idx #1 GI_IDX;
+    table NCBI:WGS:view:scaffold #1 SCAFFOLD;
 };
