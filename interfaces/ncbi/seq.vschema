@@ -374,18 +374,18 @@ table NCBI:tbl:base_space #2.1
         | ( INSDC:dna:2na:packed ) pack ( in_2na_bin )
         ;
 
-//    physical column INSDC:rna:2na:packed .READ
-//        = in_rna_2na_packed
-//        | ( INSDC:rna:2na:packed ) pack ( in_rna_2na_bin )
-//        ;
+    physical column INSDC:rna:2na:packed .RNA
+        = in_rna_2na_packed
+        | ( INSDC:rna:2na:packed ) pack ( in_rna_2na_bin )
+        ;
 
     physical column < INSDC:dna:4na:bin > zip_encoding .ALTREAD
         = < INSDC:dna:4na:bin > trim < 0, 0 > ( in_alt_4na_bin )
         ;
 
-//    physical column < INSDC:rna:4na:bin > zip_encoding .ALTREAD
-//        = < INSDC:rna:4na:bin > trim < 0, 0 > ( in_alt_rna_4na_bin )
-//        ;
+    physical column < INSDC:rna:4na:bin > zip_encoding .ALTRNA
+        = < INSDC:rna:4na:bin > trim < 0, 0 > ( in_alt_rna_4na_bin )
+        ;
 
 
     /* output rules
