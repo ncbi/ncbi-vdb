@@ -1173,12 +1173,6 @@ table NCBI:align:tbl:seq #1.1 =
     readonly column ascii LINKAGE_GROUP = NCBI:align:seq_restore_linkage_group(.CMP_LINKAGE_GROUP, .PRIMARY_ALIGNMENT_ID)
                                         | .CMP_LINKAGE_GROUP;
 
-    INSDC:SRA:spot_filter out_spot_filter
-        = NCBI:SRA:make_spot_filter < 10, 4, 30 > ( out_4na_bin, out_qual_phred, out_read_start, out_read_len, out_read_type, out_rd_filter )
-        | < INSDC:SRA:spot_filter > echo < SRA_SPOT_FILTER_PASS > ( );
-
-    readonly column INSDC:SRA:spot_filter SPOT_FILTER = out_spot_filter;
-
 };
 
 
