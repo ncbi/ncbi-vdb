@@ -40,15 +40,23 @@ extern "C" {
 
 struct Kart;
 struct KNSManager;
-struct KSrvRespFile;
-struct KSrvRespFileIterator;
-struct KSrvRespObj;
-struct KSrvRespObjIterator;
 
 typedef struct KService KService;
 typedef struct KSrvError KSrvError;
 typedef struct KSrvResponse KSrvResponse;
 
+typedef struct KSrvRespObj KSrvRespObj;
+typedef struct KSrvRespObjIterator KSrvRespObjIterator;
+typedef struct KSrvRespFile KSrvRespFile;
+typedef struct KSrvRespFileIterator KSrvRespFileIterator;
+
+/* File Format from name resolver response - verson 4 */
+typedef enum {
+    eSFFInvalid,
+    eSFFSra,
+    eSFFVdbcache,
+    eSFFMax,
+} ESrvFileFormat;
 
 /******************************************************************************/
 /* KService - EXTERNAL Service */
@@ -99,17 +107,6 @@ rc_t KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
     VRemoteProtocols p, const struct VPath ** path,
     const struct VPath ** vdbcache, const KSrvError ** error );
 
-/* GetLocal:
- *  get local path
- */
-rc_t KSrvResponseGetLocal ( const KSrvResponse * self, uint32_t idx,
-                            const struct VPath ** local );
-
-/* GetCache:
- *  get cache path
- */
-rc_t KSrvResponseGetCache ( const KSrvResponse * self, uint32_t idx,
-                            const struct VPath ** cache );
 
 /************************** KSrvError ******************************
  * KSrvError is generated for Id-s from request that produced an error response
@@ -135,24 +132,32 @@ rc_t KSrvErrorObject  ( const KSrvError * self,
 
 /************************** KSrvRespObj ******************************/
 
-rc_t KSrvRespObjRelease ( const struct KSrvRespObj * self );
+rc_t KSrvRespObjRelease ( const KSrvRespObj * self );
 rc_t KSrvResponseGetObjByIdx ( const struct KSrvResponse * self,
-                         uint32_t idx, const struct KSrvRespObj ** obj );
+                               uint32_t idx, const KSrvRespObj ** obj );
 rc_t KSrvResponseGetObjByAcc ( const struct KSrvResponse * self,
-                         const char * acc, const struct KSrvRespObj ** obj );
+                               const char * acc, const KSrvRespObj ** obj );
 
-rc_t KSrvRespObjMakeIterator ( const struct KSrvRespObj * self,
-                               struct KSrvRespObjIterator ** it ); 
-rc_t KSrvRespObjIteratorRelease ( const struct KSrvRespObjIterator * self );
+rc_t KSrvRespObjGetFileCount ( const KSrvRespObj * self, uint32_t * count ); 
 
-rc_t KSrvRespObjIteratorNextFile ( struct KSrvRespObjIterator * self,
-                                   const struct KSrvRespFile ** file );
-rc_t KSrvRespFileRelease ( const struct KSrvRespFile * self );
+rc_t KSrvRespObjMakeIterator ( const KSrvRespObj * self,
+                               KSrvRespObjIterator ** it ); 
+rc_t KSrvRespObjIteratorRelease ( const KSrvRespObjIterator * self );
 
-rc_t KSrvRespFileMakeIterator ( const struct KSrvRespFile * self,
-    VRemoteProtocols  scheme, struct KSrvRespFileIterator ** it );
-rc_t KSrvRespFileIteratorRelease ( const struct KSrvRespFileIterator * self );
-rc_t KSrvRespFileIteratorNextPath ( struct KSrvRespFileIterator * self,
+rc_t KSrvRespObjIteratorNextFile ( KSrvRespObjIterator * self,
+                                   KSrvRespFile ** file );
+rc_t KSrvRespFileGetFileFormat ( const KSrvRespFile * self,
+                                 ESrvFileFormat * ff );
+rc_t KSrvRespFileGetCache ( const KSrvRespFile * self,
+                            const struct VPath ** path );
+rc_t KSrvRespFileGetLocal ( const KSrvRespFile * self,
+                            const struct VPath ** path );
+rc_t KSrvRespFileRelease  ( const KSrvRespFile * self );
+
+rc_t KSrvRespFileMakeIterator ( const KSrvRespFile * self,
+    VRemoteProtocols scheme, KSrvRespFileIterator ** it );
+rc_t KSrvRespFileIteratorRelease ( const KSrvRespFileIterator * self );
+rc_t KSrvRespFileIteratorNextPath ( KSrvRespFileIterator * self,
                                     const struct VPath ** path );
 
 /******************************************************************************/

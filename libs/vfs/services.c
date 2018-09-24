@@ -25,16 +25,28 @@
 */
 
 
-#include "resolver-priv.h" /* VResolverResolveName */
-#include "path-priv.h" /* EVPathInitError */
-#include "services-priv.h" /* KServiceGetResolver */
 #include <kfg/config.h> /* KConfigRelease */
+
+#include <kfs/directory.h> /* KDirectoryNativeDir */
+#include <kfs/file.h> /* KFileRelease */
+
 #include <klib/container.h> /* BSTree */
+#include <klib/printf.h> /* string_printf */
 #include <klib/rc.h> /* RC */
+
 #include <vfs/manager.h> /* VFSManagerRelease */
 #include <vfs/path.h> /* VFSManagerMakePath */
+#include <vfs/resolver-priv.h> /* VResolverQueryWithDir */
 #include <vfs/services-priv.h> /* KServiceNamesExecuteExt */
 
+#include <limits.h> /* PATH_MAX */
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
+#include "path-priv.h" /* EVPathInitError */
+#include "resolver-priv.h" /* VResolverResolveName */
+#include "services-priv.h" /* KServiceGetResolver */
 
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
@@ -167,9 +179,80 @@ static rc_t HResolver ( H * self, const String * ticket,
     return rc;
 }
 
+static rc_t VFSManagerMakeVdbcache ( const VFSManager * self,
+    const VPath * orig, VPath ** vdbcache, bool * exists )
+{
+    char c [ PATH_MAX ] = "";
+    String str;
+
+    size_t len = 4;
+
+    rc_t rc = VPathGetPath ( orig, & str );
+    if ( rc != 0 )
+        return rc;
+
+    assert ( vdbcache );
+    * vdbcache = NULL;
+
+    if ( str .size <= len
+        || memcmp ( str . addr + str . size - len, ".sra", len ) != 0 )
+    {   len = 0; }
+
+    rc = string_printf ( c, sizeof c, NULL, "%.*s.vdbcache",
+                                (uint32_t) str . size - len, str . addr );
+    if ( rc != 0 )
+        return rc;
+
+    rc = VPathMake ( vdbcache, c );
+
+    if ( exists ) {
+        * exists = false;
+
+        if ( rc == 0 ) {
+            const KFile * f = NULL;
+            rc_t rc = VFSManagerOpenFileRead ( self, & f, * vdbcache );
+            if ( rc == 0 ) {
+                * exists = true;
+                RELEASE ( KFile, f );
+            }
+        }
+    }
+
+    return rc;
+}
+
+static rc_t _VFSManagerVPathMakeAndTest ( const VFSManager * self,
+    const char * outFile, const VPath ** aPath, bool * exists )
+{
+    rc_t rc = 0;
+
+    VPath * path = NULL;
+
+    KDirectory * dir = NULL;
+
+    assert ( aPath && exists );
+    * exists = false;
+
+    rc = KDirectoryNativeDir ( & dir );
+    if ( rc != 0 )
+        return rc;
+
+    * exists
+        = ( KDirectoryPathType ( dir, outFile ) & ~ kptAlias ) != kptNotFound;
+
+    rc = VFSManagerMakePath ( self, & path, outFile );
+    if ( rc == 0 )
+        * aPath = path;
+
+    RELEASE ( KDirectory, dir );
+
+    return rc;
+}
 
 static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
-    VRemoteProtocols protocols, const String * acc, VPathSet ** result )
+    VRemoteProtocols protocols, const VPath * path, const String * acc,
+    VPathSet ** result, ESrvFileFormat ff,
+    const char * outDir, const char * outFile )
 {
     rc_t rc = 0;
 
@@ -201,10 +284,62 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
         rc_t localRc = 0;
         rc_t cacheRc = 0;
 
-        localRc = VResolverQuery ( self, protocols, query,
-                                   & local, NULL, NULL );
-        cacheRc = VResolverQuery ( self, protocols, query,
-                                   NULL, NULL, & cache );
+        if ( outFile != NULL ) {
+            bool exists = false;
+            cacheRc = _VFSManagerVPathMakeAndTest
+                ( mgr, outFile, & cache, & exists );
+            if ( cacheRc == 0 && exists ) {
+                localRc = VPathAddRef ( cache );
+                if ( localRc == 0 )
+                    local = cache;
+            }
+            else if ( cacheRc != 0 )
+                localRc = cacheRc;
+            else
+                localRc = RC ( rcVFS, rcResolver, rcResolving,
+                                      rcName, rcNotFound );
+        }
+        else if ( VPathFromUri ( path ) ) {
+            cacheRc = VResolverQueryWithDir ( self, protocols, query,
+                                    NULL, NULL, & cache, false, outDir, NULL );
+            if ( cacheRc == 0 && ff == eSFFVdbcache && rc == 0 ) {
+                VPath * path = NULL;
+                cacheRc = VFSManagerMakeVdbcache ( mgr, cache, & path, NULL );
+                VPathRelease ( cache );
+                cache = path;
+            }
+            localRc = VResolverQueryWithDir ( self, protocols, query,
+                                    & local, NULL, NULL, false, outDir, NULL );
+        }
+        else {
+            cacheRc = VResolverQuery ( self, protocols, query,
+                                    NULL, NULL, & cache );
+            if ( cacheRc == 0 && ff == eSFFVdbcache && rc == 0 ) {
+                VPath * path = NULL;
+                cacheRc = VFSManagerMakeVdbcache ( mgr, cache, & path, NULL );
+                VPathRelease ( cache );
+                cache = path;
+            }
+            localRc = VResolverQuery ( self, protocols, query,
+                                    & local, NULL, NULL );
+        }
+
+        if ( ff == eSFFVdbcache && rc == 0 ) {
+            if ( localRc == 0 ) {
+                bool exists = false;
+                VPath * path = NULL;
+                localRc = VFSManagerMakeVdbcache ( mgr, local, & path,
+                                                 & exists );
+                VPathRelease ( local );
+                if ( ! exists ) {
+                    if ( localRc == 0 )
+                        localRc = RC ( rcVFS, rcResolver, rcResolving,
+                                              rcName, rcNotFound );
+                    RELEASE ( VPath, path );
+                }
+                local = path;
+            }
+        }
 
         VPathSetMakeQuery ( result, local, localRc, cache, cacheRc );
 
@@ -217,9 +352,103 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
     return rc;
 }
 
-rc_t KServiceNamesQueryExt ( KService * self, VRemoteProtocols protocols, 
-                             const char * cgi, const char * version,
-                             const KSrvResponse ** aResponse )
+static rc_t _VPathGetId ( const VPath * self, const String ** newId,
+                          String * oldId, const VFSManager * mgr ) 
+{
+    rc_t rc = 0;
+
+    VPath * acc_or_oid = NULL;
+
+    String id;
+
+    String fasp;
+    String http;
+    String https;
+
+    assert ( newId && oldId );
+
+    * newId = NULL;
+
+    if ( oldId -> addr == NULL )
+        return 0;
+
+    CONST_STRING ( & fasp , "fasp://"  );
+    CONST_STRING ( & http , "http://"  );
+    CONST_STRING ( & https, "https://" );
+
+    if ( oldId -> size <= https . size )
+        return 0;
+
+    if ( ! string_cmp ( oldId -> addr, oldId -> size, https . addr, https. size,
+                      https. size ) == 0  &&
+         ! string_cmp ( oldId -> addr, oldId -> size, fasp  . addr, fasp . size,
+                        fasp . size ) == 0 &&
+         ! string_cmp ( oldId -> addr, oldId -> size, http  . addr, fasp . size,
+                        fasp . size ) == 0 )
+    {   return 0; }
+
+    rc = VPathGetId ( self, & id );
+    if ( rc == 0 && id . size == 0 ) {
+        rc = VFSManagerExtractAccessionOrOID ( mgr, & acc_or_oid, self );
+        if ( rc != 0 ) {
+            const String * str = NULL;
+            rc_t r = VPathMakeString ( self, & str );
+            if ( r == 0 ) assert ( str );
+
+            if ( r == 0 && str != NULL && str -> size > 0 &&
+                            str -> addr [ str -> size - 1 ] == '/' )
+            {
+                rc = VFSManagerMakePath ( mgr, & acc_or_oid,
+                                          "ncbi-file:index.html" );
+            }
+            else {
+                const char * start = str -> addr;
+                size_t size = str -> size;
+                const char * end = start + size;
+                const char * slash = string_rchr ( start, size, '/' );
+                const char * scol = NULL;
+
+                String scheme;
+
+                String fasp;
+                CONST_STRING ( & fasp, "fasp" );
+
+                rc = VPathGetScheme ( self, & scheme );
+                if ( rc == 0 ) {
+                    if ( StringEqual ( & scheme, & fasp ) )
+                        scol = string_rchr ( start, size, ':' );
+                    if ( slash != NULL )
+                        start = slash + 1;
+                    if ( scol != NULL && scol > start )
+                        start = scol + 1;
+
+                    rc = VFSManagerMakePath ( mgr, & acc_or_oid,
+                        "%.*s", ( uint32_t ) ( end - start ), start );
+                }
+            }
+
+            free ( ( void * ) str );
+        }
+    }
+
+    if ( rc == 0 )
+        rc = VPathGetPath ( acc_or_oid, & id );
+
+    if ( rc == 0 )
+        rc = StringCopy ( newId, & id );
+
+    RELEASE ( VPath, acc_or_oid );
+
+    if ( rc == 0 )
+        * oldId = * * newId;
+
+    return rc;
+}
+
+static
+rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols, 
+    const char * cgi, const char * version, const KSrvResponse ** aResponse,
+    const char * outDir, const char * outFile, const char * expected )
 {
     rc_t rc = 0;
     KSrvResponse * response = NULL;
@@ -229,50 +458,140 @@ rc_t KServiceNamesQueryExt ( KService * self, VRemoteProtocols protocols,
 
     {
         const KSrvResponse * r = NULL;
-        rc = KServiceNamesExecuteExt ( self, protocols, cgi,
-                                       version, & r );
+        rc = KServiceNamesExecuteExtImpl ( self, protocols, cgi,
+                                       version, & r, expected );
         if ( rc == 0 )
             response = ( KSrvResponse* ) r;
     }
-
+    
     if ( rc == 0 ) {
         H h;
+        VFSManager * mgr = NULL;
         rc = HInit ( & h, self );
+
+        if ( rc == 0 ) {
+            rc = VFSManagerMake ( & mgr );
+            if ( rc != 0 )
+                return rc;
+        }
+
+        if ( protocols == eProtocolDefault )
+             protocols = DEFAULT_PROTOCOLS;
+        
         {
             uint32_t i = 0;
             uint32_t n = KSrvResponseLength  ( response );
             for ( i = 0; rc == 0 && i < n; ++ i ) {
+                const KSrvRespObj * obj = NULL;
                 VPathSet * vps = NULL;
                 const VPath * path = NULL;
                 const KSrvError * error = NULL;
-                rc = KSrvResponseGetPath
-                    ( response, i, protocols, & path, NULL, & error );
+                rc = KSrvResponseGetObjByIdx ( response, i, & obj );
                 if ( rc == 0 ) {
-                    if ( error == NULL ) {
-                        VResolver * resolver = NULL;
-                        String id;
-                        String ticket;
-                        rc = VPathGetId ( path, & id );
-                        if ( rc == 0 )
-                            rc = VPathGetTicket ( path, & ticket );
-                        if ( rc == 0 )
-                            rc = HResolver ( & h, & ticket, & resolver );
-                        if ( rc == 0 ) {
-                            assert ( resolver );
-                            VResolverResolveName ( resolver,
-                                           KServiceGetResolveName ( self ) );
-                            rc = VResolversQuery ( resolver, h . mgr,
-                                                   protocols, & id, & vps );
+                    KSrvRespObjIterator * it = NULL;
+                    rc = KSrvRespObjMakeIterator ( obj, & it );
+                    while ( rc == 0 ) {
+                        KSrvRespFile * file = NULL;
+                        rc = KSrvRespObjIteratorNextFile ( it, & file );
+                        if ( rc != 0 || file == NULL )
+                            break;
+                        else {
+                            ESrvFileFormat ff = eSFFInvalid;
+                            KSrvRespFileIterator * fi = NULL;
+                            String id;
+                            const char * acc = NULL;
+                            memset ( & id, 0, sizeof id );
+                            rc = KSrvRespFileGetId ( file, & acc );
+                            if ( rc == 0 ) {
+                                StringInitCString ( & id, acc );
+                                rc = KSrvRespFileGetFormat ( file, & ff );
+                            }
+                            if ( rc == 0 )
+                                rc = KSrvRespFileMakeIterator ( file, protocols,
+                                                                & fi );
+                            if ( rc == 0 ) {
+                                rc = KSrvRespFileIteratorNextPath
+                                    ( fi, & path );
+                                if ( rc == 0 ) {
+                                    if ( error == NULL ) {
+                                        VResolver * resolver = NULL;
+                                        const String * pId = NULL;
+                                        String ticket;
+                                        if ( rc == 0 )
+                                            rc = VPathGetTicket
+                                                ( path, & ticket );
+                                        if ( rc == 0 )
+                                            rc = HResolver
+                                            ( & h, & ticket, & resolver );
+                                        if ( rc == 0 )
+                                            rc = _VPathGetId ( path, & pId,
+                                                               & id, mgr );
+                                        if ( rc == 0 ) {
+                                            assert ( resolver );
+                                            VResolverResolveName ( resolver,
+                                              KServiceGetResolveName ( self ) );
+                                            rc = VResolversQuery ( resolver,
+                                                h . mgr, protocols, path, & id,
+                                                & vps, ff, outDir, outFile );
+                                        }
+                                        free ( ( void * )  pId );
+                                    }
+                                    else
+                                        RELEASE ( KSrvError, error );
+                                }
+                                if ( vps != NULL ) {
+                                    rc = KSrvRespFileAddLocalAndCache
+                                        ( file, vps );
+                                    RELEASE ( VPathSet, vps );
+                                }
+                                RELEASE ( VPath, path );
+                            }
+                            RELEASE ( KSrvRespFileIterator, fi );
                         }
+                        RELEASE ( KSrvRespFile, file );
                     }
-                    else
-                        RELEASE ( KSrvError, error );
+                    RELEASE ( KSrvRespObjIterator, it );
                 }
-                if ( vps != NULL ) {
-                    rc = KSrvResponseAddLocalAndCache ( response, i, vps );
-                    RELEASE ( VPathSet, vps );
+                else {
+                    rc = KSrvResponseGetPath
+                        ( response, i, protocols, & path, NULL, & error );
+                    if ( rc == 0 ) {
+                        if ( error == NULL ) {
+                            VPath * acc_or_oid = NULL;
+                            VResolver * resolver = NULL;
+                            String id;
+                            String ticket;
+                            rc = VPathGetId ( path, & id );
+                            if ( rc == 0 && id . size == 0) {
+                                rc = VFSManagerExtractAccessionOrOID ( mgr,
+                                        & acc_or_oid, path );
+                                if ( rc == 0 )
+                                    rc = VPathGetPath ( acc_or_oid, & id );
+                            }
+                            if ( rc == 0 )
+                                rc = VPathGetTicket ( path, & ticket );
+                            if ( rc == 0 )
+                                rc = HResolver ( & h, & ticket, & resolver );
+                            if ( rc == 0 ) {
+                                assert ( resolver );
+                                VResolverResolveName ( resolver,
+                                            KServiceGetResolveName ( self ) );
+                                rc = VResolversQuery ( resolver, h . mgr,
+                                    protocols, path, & id, & vps, eSFFInvalid,
+                                    outDir, outFile );
+                            }
+                            RELEASE ( VPath, acc_or_oid );
+                        }
+                        else
+                            RELEASE ( KSrvError, error );
+                    }
+                    if ( vps != NULL ) {
+                        rc = KSrvResponseAddLocalAndCache ( response, i, vps );
+                        RELEASE ( VPathSet, vps );
+                    }
+                    RELEASE ( VPath, path );
                 }
-                RELEASE ( VPath, path );
+                RELEASE ( KSrvRespObj, obj );
             }
             * aResponse = response;
         }
@@ -281,11 +600,29 @@ rc_t KServiceNamesQueryExt ( KService * self, VRemoteProtocols protocols,
             if ( rc == 0 )
                 rc = r2;
         }
+
+        RELEASE ( VFSManager, mgr );
     }
 
     return rc;
 }
 
+rc_t KServiceNamesQueryExt ( KService * self, VRemoteProtocols protocols, 
+                             const char * cgi, const char * version,
+                             const KSrvResponse ** aResponse )
+{
+    return KServiceNamesQueryExtImpl ( self, protocols, cgi, version,
+                                       aResponse, NULL, NULL, NULL );
+}
+                             
 rc_t KServiceNamesQuery ( KService * self, VRemoteProtocols protocols,
                           const KSrvResponse ** aResponse )
 {   return KServiceNamesQueryExt ( self, protocols, NULL, NULL, aResponse ); }
+
+rc_t KServiceTestNamesQueryExt ( KService * self, VRemoteProtocols protocols,
+    const char * version, const KSrvResponse ** response,
+    const char * dir, const char * file, const char * expected )
+{
+    return KServiceNamesQueryExtImpl
+        ( self, protocols, NULL, version, response, dir, file, expected );
+}

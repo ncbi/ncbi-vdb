@@ -35,6 +35,7 @@ TEST_SUITE ( TestResolver4 )
 TEST_CASE ( Test ) {
     KService * s = NULL;
     REQUIRE_RC ( KServiceMake ( & s ) );
+    REQUIRE_RC ( KServiceAddId ( s, "SRR000001" ) );
     const KSrvResponse * r = NULL;
     REQUIRE_RC ( KServiceTestNamesExecuteExt ( s, 0, 0, "4.", & r,
       "{\"sequence\":[{\"status\":{\"code\":200},\"acc\":\"SRR000001\","
@@ -61,7 +62,7 @@ TEST_CASE ( Test ) {
     REQUIRE_RC_FAIL ( KSrvRespObjIteratorNextFile ( NULL, NULL ) );
     REQUIRE_RC_FAIL ( KSrvRespObjIteratorNextFile ( it  , NULL ) );
 
-    const KSrvRespFile * file = NULL;
+    KSrvRespFile * file = NULL;
     REQUIRE_RC_FAIL ( KSrvRespObjIteratorNextFile ( NULL, & file ) );
     REQUIRE_NULL    ( file );
     REQUIRE_RC      ( KSrvRespObjIteratorNextFile ( it  , & file ) );
@@ -71,7 +72,9 @@ TEST_CASE ( Test ) {
     REQUIRE_RC_FAIL ( KSrvRespFileMakeIterator ( file, 0, NULL ) );
 
     KSrvRespFileIterator * fi = NULL;
-    REQUIRE_RC_FAIL ( KSrvRespFileMakeIterator ( file, 0, & fi ) );
+    REQUIRE_RC      ( KSrvRespFileMakeIterator ( file, 0, & fi ) );
+    REQUIRE_RC      ( KSrvRespFileIteratorRelease ( fi ) );
+
     REQUIRE_RC_FAIL ( KSrvRespFileMakeIterator ( file, eProtocolFasp , & fi ) );
     REQUIRE_RC_FAIL ( KSrvRespFileMakeIterator ( file, eProtocolHttps, & fi ) );
     REQUIRE_NULL    ( fi );

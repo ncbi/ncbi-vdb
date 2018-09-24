@@ -29,17 +29,34 @@
 
 #include <kfc/defs.h> /* rc_t */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct KSrvRespObj KSrvRespObj;
 typedef struct Response4 Response4;
+typedef struct Container Container;
+typedef struct Item Item;
 
-rc_t CC Response4Make    (      Response4 ** self, const char * input );
-rc_t CC Response4AddRef  ( const Response4 * self );
-rc_t CC Response4Release ( const Response4 * self );
+rc_t Response4MakeEmpty  (       Response4 ** self );
+rc_t Response4Make       (       Response4 ** self, const char * input );
+rc_t Response4AddRef     ( const Response4  * self );
+rc_t Response4Release    ( const Response4  * self );
+rc_t Response4AppendUrl  (       Response4  * self, const char * url );
+rc_t Response4AddAccOrId (       Response4 * self, const char * acc,
+                                 int64_t id, Container ** newItem );
+rc_t ContainerAdd ( Container * self,
+                    const char * acc, int64_t id, Item ** newItem );
+rc_t ItemAddVPath ( Item * self, const char * type, const struct VPath * path );
 
-rc_t CC Response4GetKSrvRespObjCount ( const Response4 * self, uint32_t * n );
-rc_t CC Response4GetKSrvRespObjByIdx ( const Response4 * self, uint32_t i,
-                                       const KSrvRespObj ** box );
-rc_t CC Response4GetKSrvRespObjByAcc ( const Response4 * self, const char * acc,
-                                       const KSrvRespObj ** box );
+rc_t Response4GetKSrvRespObjCount ( const Response4 * self, uint32_t * n );
+rc_t Response4GetKSrvRespObjByIdx ( const Response4 * self, uint32_t i,
+                                    const KSrvRespObj ** box );
+rc_t Response4GetKSrvRespObjByAcc ( const Response4 * self, const char * acc,
+                                    const KSrvRespObj ** box );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _h_vfs_json_response_ */

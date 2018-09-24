@@ -1,4 +1,3 @@
-#include "json-response.h" /* Response4 */
 /*===========================================================================
  *
  *                            PUBLIC DOMAIN NOTICE
@@ -56,12 +55,16 @@
 #include <vfs/manager.h> /* VFSManager */
 #include <vfs/services.h> /* KServiceMake */
 
+#include "json-response.h" /* Response4 */
 #include "path-priv.h" /* VPathMakeFmt */
 #include "resolver-priv.h" /* VPathCheckFromNamesCGI */
 #include "services-priv.h"
 
 #include <ctype.h> /* isdigit */
 #include <string.h> /* memset */
+
+
+typedef struct Response4 Response4;
 
 
 /******************************************************************************/
@@ -108,6 +111,7 @@ typedef struct { char * s; } SRaw;
 #define VERSION_3_0 0x03000000
 /*#define VERSION_3_1 0x03010000
 #define VERSION_3_2 0x03020000*/
+#define VERSION_4_0 0x04000000
 
 
 /* version in server request / response */
@@ -260,6 +264,7 @@ typedef struct {
     STyped typed;
     EVPath path;
     VPathSet * set;
+    char * reqId; /* request id or accession */
 } SRow;
 
 
@@ -314,6 +319,7 @@ typedef struct {
 typedef struct {
     char * objectId;
     EObjectType objectType;
+    bool isUri;
     int ordId;
 } SObject;
 
@@ -353,6 +359,7 @@ typedef struct {
     STickets tickets;
     int errorsToIgnore;
     VRemoteProtocols protocols;
+    bool hasQuery;
 } SRequest;
 
 
@@ -377,7 +384,7 @@ static rc_t SHelperInit ( SHelper * self, const KNSManager * kMgr ) {
 
     memset ( self, 0, sizeof * self );
 
-    self -> inSz = 1;
+    self -> inSz = 512;
     self -> input = malloc ( self -> inSz );
 
     if ( self -> input == NULL )
@@ -1610,7 +1617,7 @@ static rc_t EVPathInitMapping
 
 
 static rc_t EVPathInit ( EVPath * self, const STyped * src, 
-    const SRequest * req, rc_t * r, const char * acc )
+    const SRequest * req, rc_t * r, const char * reqId, const char * respId )
 {
     rc_t rc = 0;
     bool made = false;
@@ -1664,6 +1671,21 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
 
             if ( rc == 0 )
                 rc = EVPathInitMapping ( self, src, & req -> version );
+
+            if ( rc == 0 && reqId != NULL ) {
+                self -> reqId = string_dup_measure ( reqId, NULL );
+                if ( self -> reqId == NULL )
+                    rc = RC ( rcVFS, rcQuery, rcResolving,
+                                     rcMemory, rcExhausted );
+            }
+
+            if ( rc == 0 && respId != NULL ) {
+                self -> respId = string_dup_measure ( respId, NULL );
+                if ( self -> respId == NULL )
+                    rc = RC ( rcVFS, rcQuery, rcResolving,
+                                     rcMemory, rcExhausted );
+            }
+
             return rc;
         }
         rc = RC ( rcVFS, rcQuery, rcResolving, rcError, rcUnexpected );
@@ -1728,7 +1750,8 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
         else
             PLOGERR ( lvl, ( lvl, rc,
                 "failed to resolve accession '$(acc)' - $(msg) ( $(code) )",
-                "acc=%s,msg=%S,code=%u", acc, & src -> message, src -> code ) );
+                "acc=%s,msg=%S,code=%u",
+                reqId, & src -> message, src -> code ) );
     }
     else
         -- ( ( SRequest * ) req ) -> errorsToIgnore;
@@ -1756,6 +1779,9 @@ static rc_t EVPathFini ( EVPath * self ) {
 
     RELEASE ( KSrvError, self -> error );
 
+    free ( self -> reqId  );    self -> reqId  = NULL;
+    free ( self -> respId );    self -> respId = NULL;
+
     return rc;
 }
 
@@ -1774,6 +1800,9 @@ static rc_t SRowWhack ( void * p ) {
         if ( rc == 0) {
             rc = r2;
         }
+
+        free ( self -> reqId );
+
         memset ( self, 0, sizeof * self );
         free ( self );
     }
@@ -1801,30 +1830,59 @@ static rc_t SRowMake ( SRow ** self, const String * src, const SRequest * req,
     if ( rc == 0 ) {
         rc = STypedInit ( & p -> typed, & p -> ordered, f, version );
     }
-    if ( rc == 0 &&
-         p -> typed . code == 200 && req -> request . objects == 1 )
-    {
+    if ( rc == 0 /* && p -> typed . code == 200 */ ) {
         String acc;
-        size_t l
-            = string_measure ( req -> request . object [ 0 ] . objectId, NULL );
-        StringInit ( & acc, req -> request . object [ 0 ] . objectId, l, l );
-        assert ( acc . size == 0 || acc . addr != NULL );
-        if ( acc . size > 2 && acc . addr [1] == 'R' && acc . addr [2] == 'R' &&
-             ! StringEqual ( & p -> typed . accession, & acc ) &&
-             ! StringEqual ( & p -> typed . objectId , & acc ) )
-        {
-            return RC ( rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt );
+        if ( req -> request . objects == 1 ) {
+            size_t l = string_measure
+                ( req -> request . object [ 0 ] . objectId, NULL );
+            StringInit ( & acc,
+                        req -> request . object [ 0 ] . objectId, l, l );
+            assert ( acc . size == 0 || acc . addr != NULL );
+            if ( acc . size > 2 && acc . addr [1] == 'R'
+                                && acc . addr [2] == 'R' &&
+                 ! StringEqual ( & p -> typed . accession, & acc ) &&
+                 ! StringEqual ( & p -> typed . objectId , & acc ) )
+            {
+                return RC ( rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt );
+            }
+            else {
+                p -> reqId = string_dup
+                    ( req -> request . object [ 0 ] . objectId, l );
+                if ( p -> reqId == NULL )
+                    return RC ( rcVFS, rcQuery, rcExecuting,
+                                       rcMemory, rcExhausted );
+            }
+        }
+        else {
+            uint32_t i = 0;
+            for ( i = 0; i < req -> request . objects; ++ i )
+                if ( req -> request . object [ i ] . ordId ==
+                     p -> typed . ordId )
+                {
+                    size_t l = string_measure
+                        ( req -> request . object [ i ] . objectId, NULL );
+                    StringInit ( & acc,
+                        req -> request . object [ i ] . objectId, l, l );
+                    assert ( acc . size == 0 || acc . addr != NULL );
+                    p -> reqId = string_dup
+                        ( req -> request . object [ i ] . objectId, l );
+                    if ( p -> reqId == NULL )
+                        return RC ( rcVFS, rcQuery, rcExecuting,
+                                           rcMemory, rcExhausted );
+                    break;
+                }
         }
     }
     if ( rc == 0 ) {
-        const char * acc = NULL;
-        if ( req -> request . objects == 1 ) {
-            acc = req -> request . object [ 0 ] . objectId;
-        }
-        rc = EVPathInit ( & p -> path, & p -> typed, req, & r2, acc );
-        if ( rc == 0 ) {
+        char * acc = string_dup ( p -> typed . objectId . addr,
+                                        p -> typed . objectId . size );
+        if ( p -> typed . objectId . size != 0 && acc == NULL )
+            return RC ( rcVFS, rcQuery, rcResolving, rcMemory, rcExhausted );
+        rc = EVPathInit ( & p -> path, & p -> typed, req, & r2, p -> reqId,
+                                                                acc );
+        if ( rc == 0 )
             rc = r2;
-        }
+        free ( acc );
     }
 
 /* compare ticket
@@ -2345,8 +2403,10 @@ rc_t SRequestDataAppendObject ( SRequestData * self, const char * id,
     rc = SObjectInit ( & self -> object [ self -> objects ],
                        id, id_sz, objectType );
 
-    if ( rc == 0 )
+    if ( rc == 0 ) {
+        self -> object [ self -> objects ] . ordId = self -> objects;
         ++ self -> objects;
+    }
 
     return rc;
 }
@@ -2599,6 +2659,23 @@ static rc_t SRequestAddTicket ( SRequest * self, uint32_t project,
     return STicketsAppend ( & self -> tickets, project, ticket );
 }
 
+static rc_t SObjectCheckUrl ( SObject * self ) {
+    rc_t rc = 0;
+
+    VPath * path = NULL;
+
+    assert ( self && self -> objectId != NULL );
+
+    rc = VPathMake ( & path, self -> objectId );
+    if ( rc != 0 )
+        return rc;
+
+    self -> isUri = VPathFromUri ( path );
+
+    RELEASE ( VPath, path );
+
+    return rc;
+}
 
 static
 rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
@@ -2624,6 +2701,8 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     request -> protocols = protocols;
 
     self = & request -> cgiReq;
+
+    request -> hasQuery = true;
 
     DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( 
         "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n" ) );
@@ -2679,15 +2758,20 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     }
     else {
         uint32_t i = 0;
+        request -> hasQuery = false;
         for ( i = 0; i < request -> request . objects; ++i ) {
             request -> request . object [ i ] . ordId = i;
-            rc = SKVMakeObj ( & kv, & request -> request . object [ i ],
-                & request -> version );
-            if ( rc == 0 ) {
-                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
-                    ( "  %.*s=%.*s\n", kv -> k . len, kv -> k . addr,
+            rc = SObjectCheckUrl ( & request -> request . object [ i ] );
+            if ( rc != 0 || ! request -> request . object [ i ] . isUri ) {
+                rc = SKVMakeObj ( & kv, & request -> request . object [ i ],
+                                  & request -> version );
+                if ( rc == 0 ) {
+                    DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
+                        ( "  %.*s=%.*s\n", kv -> k . len, kv -> k . addr,
                                            kv -> v . len, kv -> v . addr ) );
-                rc = VectorAppend ( & self -> params, NULL, kv );
+                    rc = VectorAppend ( & self -> params, NULL, kv );
+                    request -> hasQuery = true;
+                }
             }
         }
         if ( rc != 0 )
@@ -2860,7 +2944,7 @@ rc_t SRequestInitSearchSCgiRequest ( SRequest * request, const char * cgi,
             {
                 size_t num_writ = 0;
                 rc = string_printf ( b + o, l - o, & num_writ,
-                    "%s", request -> request . object [ i ] );
+                    "%s", request -> request . object [ i ] . objectId );
                 o += num_writ;
                 if ( i + 1 == request -> request . objects ) {
                     b [ o ++ ] = '\0';
@@ -3089,6 +3173,23 @@ rc_t KServiceRelease ( KService * self ) {
     return rc;
 }
 
+static rc_t KServiceProcessJson ( KService * self ) {
+    rc_t rc = 0;
+    rc_t r2 = 0;
+
+    Response4 * r = NULL;
+
+    rc = Response4Make ( & r, self -> helper . input );
+
+    if ( rc == 0 )
+        rc = KSrvResponseSetR4 ( self -> resp .list, r );
+
+    r2 = Response4Release ( r );
+    if ( r2 != 0 && rc == 0 )
+        rc = r2;
+
+    return rc;
+}
 
 static
 rc_t KServiceProcessLine ( KService * self,
@@ -3187,26 +3288,6 @@ rc_t KServiceProcessLine ( KService * self,
     }
     return rc;
 }
-
-
-static rc_t KServiceProcessJson ( KService * self ) {
-    rc_t rc = 0;
-    rc_t r2 = 0;
-
-    Response4 * r = NULL;
-
-    rc = Response4Make ( & r, self -> helper . input );
-
-    if ( rc == 0 )
-        rc = KSrvResponseSetR4 ( self -> resp .list, r );
-
-    r2 = Response4Release ( r );
-    if ( r2 != 0 && rc == 0 )
-        rc = r2;
-
-    return rc;
-}
-
 
 static
 rc_t KServiceProcessStreamAll ( KService * self, KStream * stream )
@@ -3340,9 +3421,8 @@ rc_t KServiceProcessStreamAll ( KService * self, KStream * stream )
     return rc;
 }
 
-
-static
-rc_t KServiceProcessStreamByParts ( KService * self, KStream * stream )
+static rc_t KServiceProcessStreamByParts ( KService * self,
+                                           KStream * stream )
 {
     rc_t rc = 0;
     bool start = true;
@@ -3466,14 +3546,88 @@ rc_t KServiceProcessStreamByParts ( KService * self, KStream * stream )
     return rc;
 }
 
-
 static
 rc_t KServiceProcessStream ( KService * self, KStream * stream )
 {
-    if ( false )
-        return KServiceProcessStreamByParts ( self, stream );
+    rc_t rc = 0;
+
+    uint32_t i = 0;
+
+    Response4 * r4 = NULL;
+
+    assert ( self );
+
+    if ( self -> req . request. objects == 0 )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcString, rcInsufficient );
+    else if ( self -> req . hasQuery
+           || self -> req . serviceType == eSTsearch)
+    {
+        if ( self -> req. version . version >= VERSION_4_0 )
+            rc = KServiceProcessStreamAll     ( self, stream );
+        else
+            rc = KServiceProcessStreamByParts ( self, stream );
+    }
+
+    if ( rc == 0 )
+        rc = KSrvResponseGetR4 ( self -> resp .list, & r4 );
+
+    if ( rc == 0 && r4 == NULL )
+        rc = Response4MakeEmpty ( & r4 );
+
+    for ( i = 0; rc == 0 && i < self -> req . request . objects; ++ i )
+        if ( self -> req . request . object [ i ] . isUri )
+            rc = Response4AppendUrl ( r4,
+                self -> req . request . object [ i ] . objectId );
+
+    if ( rc == 0 && self -> req. version . version < VERSION_4_0 ) {
+        uint32_t l = KSrvResponseLength  ( self -> resp .list );
+        uint32_t i = 0;
+        for ( i = 0; rc == 0 && i < l; ++ i ) {
+            Container * box = NULL;
+            Item * file = NULL;
+            const char * reqId = NULL;
+            const char * respId = NULL;
+            VRemoteProtocols pp []
+                = { eProtocolHttp, eProtocolFasp, eProtocolHttps };
+            uint32_t p = 0;
+            rc = KSrvResponseGetIds ( self -> resp . list, i, & reqId,
+                                                              & respId );
+            if ( rc == 0 )
+                rc = Response4AddAccOrId ( r4, reqId, -1, & box );
+            if ( rc == 0 )
+                ContainerAdd ( box, respId, -1, & file );
+            if ( rc != 0 )
+                break;
+            for ( p = 0; rc == 0 && p < sizeof pp / sizeof pp [ 0 ]; ++ p ) {
+                const VPath * path = NULL;
+                const VPath * vdbcache = NULL;
+                const KSrvError * error = NULL;
+                rc = KSrvResponseGetPath ( self -> resp .list, i, pp [ p ],
+                                           & path, & vdbcache, & error );
+                if ( rc == 0 ) {
+                    if ( path != NULL ) {
+                        rc = ItemAddVPath ( file, "sra", path );
+                        RELEASE ( VPath, path );
+                        if ( rc != 0 )
+                            break;
+                    }
+                    if ( vdbcache != NULL ) {
+                        rc = ItemAddVPath ( file, "vdbcache", vdbcache );
+                        RELEASE ( VPath, vdbcache );
+                        if ( rc != 0 )
+                            break;
+                    }
+                }
+            }
+        }
+    }
+
+    if ( rc == 0 )
+        rc = KSrvResponseSetR4 ( self -> resp .list, r4 );
     else
-        return KServiceProcessStreamAll     ( self, stream );
+        Response4Release ( r4 );
+
+    return rc;
 }
 
 
@@ -3514,8 +3668,8 @@ rc_t KServiceGetResolver ( KService * self, const String * ticket,
 {
     uint32_t project = 0;
 
-    if ( self == NULL || ticket == NULL ||
-         ticket -> addr == NULL || ticket -> size == 0 || resolver == NULL)
+    if ( self == NULL || ticket == NULL || ticket -> addr == NULL
+                      || ticket -> size == 0 || resolver == NULL)
     {
         return 0;
     }
@@ -3551,7 +3705,6 @@ rc_t KServiceGetResolver ( KService * self, const String * ticket,
     return 0;
 }
 
-static
 rc_t KServiceNamesExecuteExtImpl ( KService * self, VRemoteProtocols protocols,
     const char * cgi, const char * version,
     const KSrvResponse ** response, const char * expected )
@@ -3572,7 +3725,7 @@ rc_t KServiceNamesExecuteExtImpl ( KService * self, VRemoteProtocols protocols,
     rc = KServiceInitNamesRequestWithVersion ( self, protocols, cgi, version,
         false );
 
-    if ( rc == 0 )
+    if ( rc == 0 && self -> req . hasQuery )
         rc = SCgiRequestPerform ( & self -> req . cgiReq, & self -> helper,
                                   & stream, expected );
 
@@ -4087,8 +4240,8 @@ rc_t KServiceProcessStreamTestNames1 ( const KNSManager * mgr,
 
 /* Parse "buffer" as names-3.0 response.
    Do not log "errorsToIgnore" messages during response processing */
-rc_t KServiceNames3_0StreamTest ( const char * buffer,
-    const KSrvResponse ** response, int errorsToIgnore )
+rc_t KServiceNames3_0StreamTestMany ( const char * buffer,
+    const KSrvResponse ** response, int errorsToIgnore, int itemsInRequest )
 {
     rc_t rc = 0;
     rc_t r2 = 0;
@@ -4096,6 +4249,7 @@ rc_t KServiceNames3_0StreamTest ( const char * buffer,
     KStream * stream = NULL;
 
     KService service;
+
     if ( rc == 0 )
         rc = KServiceInit ( & service, NULL );
     if ( rc == 0 )
@@ -4104,8 +4258,17 @@ rc_t KServiceNames3_0StreamTest ( const char * buffer,
     if ( rc == 0 )
         rc = KStreamMakeFromBuffer ( & stream, buffer, string_size ( buffer ) );
 
-    if ( rc == 0 )
+    if ( rc == 0 ) {
+        int i = 0;
+        for ( i = 0; i < itemsInRequest; ++ i ) {
+            char id [ 99 ] = "";
+            string_printf ( id, sizeof id, NULL,
+                            "Fake_KServiceNames3_0StreamTest_ID_%d", i + 1 );
+            KServiceAddId ( & service, id );
+        }
+        service . req . hasQuery = true;
         rc = KServiceProcessStream ( & service, stream );
+    }
 
     if ( rc == 0 )
         rc = KServiceGetResponse ( & service , response );
@@ -4117,6 +4280,13 @@ rc_t KServiceNames3_0StreamTest ( const char * buffer,
     RELEASE ( KStream, stream );
 
     return rc;
+}
+
+rc_t KServiceNames3_0StreamTest ( const char * buffer,
+    const KSrvResponse ** response, int errorsToIgnore )
+{
+    return ( KServiceNames3_0StreamTestMany ( buffer, response,
+                                              errorsToIgnore, 1 ) );
 }
 
 rc_t KServiceCgiTest1 ( const KNSManager * mgr, const char * cgi,
