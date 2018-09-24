@@ -200,6 +200,8 @@ typedef struct VPathSet VPathSet;
 rc_t VPathSetRelease ( const VPathSet * self );
 rc_t VPathSetGet ( const VPathSet * self, VRemoteProtocols protocols,
     const struct VPath ** path, const struct VPath ** vdbcache );
+rc_t VPathSetGetCache ( const VPathSet * self, const struct VPath ** path );
+rc_t VPathSetGetLocal ( const VPathSet * self, const struct VPath ** path );
 
 /* name resolver response row converted into VDB objects */
 typedef struct {
@@ -210,6 +212,8 @@ typedef struct {
     struct VPath * s3   ; struct VPath * vcS3;
     struct VPath * mapping;
     const struct KSrvError * error;
+    char * reqId;
+    char * respId;
 } EVPath;
 
 rc_t VPathSetMake
@@ -217,6 +221,7 @@ rc_t VPathSetMake
 
 rc_t VPathSetMakeQuery ( VPathSet ** self, const VPath * local, rc_t localRc,
                          const VPath * cache, rc_t cacheRc );
+
 
 #ifdef __cplusplus
 }

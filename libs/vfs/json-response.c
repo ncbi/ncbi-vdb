@@ -28,11 +28,14 @@
 #include <klib/json.h> /* KJsonObject */
 #include <klib/rc.h> /* RC */
 
+#include <vfs/manager.h> /* VFSManagerMake */
 #include <vfs/path.h> /* VPath */
+#include <vfs/services.h> /* KSrvRespObjIterator */
 
 #include "json-response.h" /* Response4 */
 
 #include "path-priv.h" /* VPathMake */
+#include "resolver-priv.h" /* DEFAULT_PROTOCOLS */
 
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (0)
@@ -48,43 +51,40 @@ typedef struct {
     size_t n;
 } Stack;
 
-typedef enum {
-    eInvalid,
-    eSra,
-    eVdbcache,
-    eMax,
-} EType;
-
 #define MAX_PATHS 6 /* Locations for Element (sra, vdbcache, ???) */
 typedef struct {
-    EType type;
+    ESrvFileFormat type;
     char * cType;
     const VPath * fasp  [ MAX_PATHS ];
     const VPath * http  [ MAX_PATHS ];
     const VPath * https [ MAX_PATHS ];
+
     const VPath * local;
+    rc_t localRc;
+
     const VPath * cache;
+    rc_t cacheRc;
 } Locations;
 
-typedef struct { /* Run ob dbGaP file */
+struct Item { /* Run ob dbGaP file */
     char * acc;
     int64_t id;
     Locations * elm;
     uint32_t nElm;
-} Item;
+};
 
 typedef struct {
     int64_t code;
 } Status;
 
 /* Corresponds to a request item, resolved to 1 or more Items (runs) */
-typedef struct {
+struct Container {
     Status status;
     char * acc;
     uint32_t id;
     Item * files;
     uint32_t nFiles;
-} Container;
+};
 
 struct Response4 { /* Response object */
     atomic32_t refcount; 
@@ -117,32 +117,33 @@ typedef struct {
     const char * tic;
 } Data;
 
-typedef struct KSrvRespObj {
+struct KSrvRespObj {
     atomic32_t refcount;
     const Response4 * dad;
     const Container * obj;
-} KSrvRespObj;
+};
 
-typedef struct {
+struct KSrvRespObjIterator {
     atomic32_t refcount;
     const Response4 * dad;
     const Container * obj;
     uint32_t iFile;
     uint32_t iElm;
-} KSrvRespObjIterator;
+};
 
-typedef struct {
+struct KSrvRespFile {
     atomic32_t refcount;
     const Response4 * dad;
-    const Locations * file;
-} KSrvRespFile;
+    const Item * item;
+    Locations * file;
+};
 
-typedef struct {
+struct KSrvRespFileIterator {
     atomic32_t refcount;
     const Response4 * dad;
     const VPath * const * path;
     uint32_t i;
-} KSrvRespFileIterator;
+};
 
 /********************************** Node *********************************/
 
@@ -422,26 +423,41 @@ static rc_t LocationsAddVPath ( Locations * self, const VPath * path ) {
     return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcInsufficient );
 }
 
-/*static
-rc_t LocationsAddVCache ( Locations * self, const VPath * path )
+static rc_t LocationsAddCache
+    ( Locations * self, const VPath * path, rc_t aRc )
 {
     rc_t rc = 0;
 
     if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
 
-    if ( path == NULL )
-        return 0;
+    self -> cacheRc = aRc;
 
     rc = VPathRelease ( self -> cache );
-
-    if ( rc == 0 )
-        rc = VPathAddRef ( path );
+    rc = VPathAddRef ( path );
 
     self -> cache = path;
 
     return rc;
-}*/
+}
+
+static rc_t LocationsAddLocal
+    ( Locations * self, const VPath * path, rc_t aRc )
+{
+    rc_t rc = 0;
+
+    if ( self == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+
+    self -> localRc = aRc;
+
+    rc = VPathRelease ( self -> local );
+    rc = VPathAddRef ( path );
+
+    self -> local = path;
+
+    return rc;
+}
 
 /********************************** Item **********************************/
 
@@ -483,33 +499,33 @@ static bool ItemHasLinks ( const Item * self ) {
 static rc_t ItemAddFormat ( Item * self, const char * cType,
                      Locations ** added )
 {
-    EType type = eInvalid;
+    ESrvFileFormat type = eSFFInvalid;
     int idx = -1;
     Locations * elm = NULL;
     if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
     assert ( added );
-    if ( type >= eMax )
-        type = eInvalid;
+    if ( type >= eSFFMax )
+        type = eSFFInvalid;
     if ( cType == NULL ) {
-        if ( type == eInvalid )
+        if ( type == eSFFInvalid )
             return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
     }
-    else if ( type == eInvalid ) {
+    else if ( type == eSFFInvalid ) {
         if      ( strcmp ( cType, "sra"      ) == 0 )
-            type = eSra;
+            type = eSFFSra;
         else if ( strcmp ( cType, "vdbcache" ) == 0 )
-            type = eVdbcache;
+            type = eSFFVdbcache;
         else
-            type = eMax;
+            type = eSFFMax;
     }
     if ( self -> elm == NULL )  {
-        size_t n = 2;
+        size_t n = 1;
         switch ( type ) {
-            case eSra     : idx = 0; n = 2; break;
-            case eVdbcache: idx = 1; n = 2; break;
-            case eMax     : idx = 2; n = 3; break;
-            default       :  assert ( 0 );
+            case eSFFSra     : idx = 0; n = 1; break;
+            case eSFFVdbcache: idx = 0; n = 1; break;
+            case eSFFMax     : idx = 0; n = 1; break;
+            default         :  assert ( 0 );
         }
         self -> elm = ( Locations * ) calloc ( n, sizeof * self -> elm );
         if ( self -> elm == NULL )
@@ -517,33 +533,33 @@ static rc_t ItemAddFormat ( Item * self, const char * cType,
         self -> nElm = n;
     }
     else {
-        switch ( type ) {
-            case eSra     : idx = 0; break;
-            case eVdbcache: idx = 1; break;
-            case eMax     : {
-                uint32_t i =0 ;
-                for ( i = 2; i < self -> nElm; ++ i ) {
-                    assert ( cType && self -> elm [ i ] . cType );
-                    if ( strcmp ( self -> elm [ i ] . cType, cType ) == 0 ) {
-                        idx = i;
-                        break;
-                    }
-                }
-                if ( idx == -1 ) {
-                    void * tmp = realloc ( self -> elm,
-                        ( self -> nElm + 1 ) * sizeof * self -> elm );
-                    if ( tmp == NULL )
-                        return RC ( rcVFS, rcQuery, rcExecuting,
-                                    rcMemory, rcExhausted );
-                    self -> elm = ( Locations * ) tmp;
-                    idx = self -> nElm ++;
-                    elm = & self -> elm [ idx ];
-                    memset ( elm, 0, sizeof * elm );
-                }
+/*      switch ( type ) {
+            case eSFFSra     : idx = 0; break;
+            case eSFFVdbcache: idx = 0; break;
+            case eSFFMax     : {*/
+        uint32_t i =0 ;
+        for ( i = 0; i < self -> nElm; ++ i ) {
+            assert ( cType && self -> elm [ i ] . cType );
+            if ( strcmp ( self -> elm [ i ] . cType, cType ) == 0 ) {
+                idx = i;
                 break;
             }
-            default       :  assert ( 0 );
         }
+        if ( idx == -1 ) {
+            void * tmp = realloc ( self -> elm,
+                                  ( self -> nElm + 1 ) * sizeof * self -> elm );
+            if ( tmp == NULL )
+                return RC ( rcVFS, rcQuery, rcExecuting,
+                            rcMemory, rcExhausted );
+            self -> elm = ( Locations * ) tmp;
+            idx = self -> nElm ++;
+            elm = & self -> elm [ idx ];
+            memset ( elm, 0, sizeof * elm );
+        }
+/*              break;
+            }
+            default       :  assert ( 0 );
+        }*/
     }
     assert ( idx >= 0 );
     elm = & self -> elm [ idx ];
@@ -557,7 +573,24 @@ static rc_t ItemAddFormat ( Item * self, const char * cType,
     return 0;
 }
 
-/*static rc_t ItemAdd ( Item * self, const VPath * path,
+rc_t ItemAddVPath ( Item * self, const char * type, const VPath * path ) {
+    rc_t rc = 0;
+    Locations * l = NULL;
+    rc = ItemAddFormat ( self, type, & l );
+    if ( rc == 0 )
+        rc = LocationsAddVPath ( l, path );
+    return rc;
+}
+
+/*rc_t ItemGetId ( const Item * self, const char ** id ) {
+    assert ( self && id );
+
+    * id = self -> acc;
+
+    return 0;
+}
+
+static rc_t ItemAdd ( Item * self, const VPath * path,
                EType type, const char * cType)
 {
     int idx = -1;
@@ -671,8 +704,8 @@ static rc_t ContainerRelease ( Container * self ) {
     return rc;
 }
 
-static rc_t ContainerAdd (
-    Container * self, const char * acc, int64_t id, Item ** newItem )
+rc_t ContainerAdd ( Container * self,
+                    const char * acc, int64_t id, Item ** newItem )
 {
     Item * item = NULL;
     void * tmp = NULL;
@@ -791,8 +824,8 @@ rc_t Response4Release ( const Response4 * cself ) {
     return rc;
 }
 
-static rc_t Response4AddAccOrId ( Response4 * self,
-    const char * acc, int64_t id, Container ** newItem )
+rc_t Response4AddAccOrId ( Response4 * self, const char * acc,
+                           int64_t id, Container ** newItem )
 {
     Container * item = NULL;
 
@@ -816,8 +849,10 @@ static rc_t Response4AddAccOrId ( Response4 * self,
         assert ( item );
         if ( acc != NULL ) {
             if ( item -> acc != NULL )
-                if ( strcmp ( item -> acc, acc ) == 0 )
+                if ( strcmp ( item -> acc, acc ) == 0 ) {
+                    * newItem = item;
                     return 0;
+                }
         }
         else {
             if ( item -> id != 0 )
@@ -859,7 +894,48 @@ static rc_t Response4AddAccOrId ( Response4 * self,
     return 0;
 }
 
-/*static rc_t Response4AddAcc
+rc_t Response4AppendUrl ( Response4 * self, const char * url ) {
+    rc_t rc = 0;
+
+    VPath * path = NULL;
+
+    Container * box = NULL;
+    Item * item = NULL;
+    Locations * l = NULL;
+
+    rc = VPathMake ( & path, url );
+    if ( rc != 0 )
+        return rc;
+
+    rc = Response4AddAccOrId ( self, url, -1, & box );
+
+    if ( rc == 0 )
+        rc = ContainerAdd ( box, url, -1, & item );
+
+    if ( rc == 0 )
+        rc = ItemAddFormat ( item, "", & l );
+
+    if ( rc == 0 )
+        rc = LocationsAddVPath ( l, path );
+
+    RELEASE ( VPath, path );
+
+    return rc;
+}
+
+/*rc_t Response4AppendFile( Response4 * self, const char * acc,
+                          struct Item ** file )
+{
+    rc_t rc = 0;
+    Container * box = NULL;
+    rc = Response4AddAccOrId ( self, acc, -1, & box );
+    if ( rc == 0 )
+        rc = ContainerAdd ( box, acc, -1, file );
+    return rc;
+}
+
+
+static rc_t Response4AddAcc
     ( Response4 * self, const char * acc, Container ** newItem )
 {
     if ( acc == NULL )
@@ -1437,8 +1513,11 @@ static rc_t Response4Init ( Response4 * self, const char * input ) {
     StackPrintInput ( input );
 
     rc_t rc = KJsonValueMake ( & root, input, NULL, 0 );
-    if ( rc != 0 )
+    if ( rc != 0 ) {
+        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+            ( "... error: invalid JSON\n" ) );
         return rc;
+    }
 
     assert ( self );
 
@@ -1509,6 +1588,16 @@ static rc_t Response4Init ( Response4 * self, const char * input ) {
     return rc;
 }
 
+rc_t Response4MakeEmpty ( Response4 ** self ) {
+    assert ( self );
+
+    * self = ( Response4 * ) calloc ( 1, sizeof ** self );
+    if ( * self == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
+
+    return 0;
+}
+
 rc_t Response4Make ( Response4 ** self, const char * input ) {
     rc_t rc = 0;
 
@@ -1516,9 +1605,9 @@ rc_t Response4Make ( Response4 ** self, const char * input ) {
 
     assert ( self );
 
-    r = ( Response4 * ) calloc ( 1, sizeof * r );
-    if ( r == NULL )
-        return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
+    rc = Response4MakeEmpty ( & r );
+    if ( rc != 0 )
+        return rc;
 
     rc = Response4Init ( r, input );
     if ( rc != 0 )
@@ -1661,6 +1750,41 @@ rc_t KSrvRespObjRelease ( const KSrvRespObj * cself ) {
     return rc;
 }
 
+rc_t KSrvRespObjGetFileCount ( const KSrvRespObj * self,
+                               uint32_t * aCount )
+{
+    rc_t rc = 0;
+
+    uint32_t count = 0;
+
+    KSrvRespObjIterator * it = NULL;
+
+    if ( aCount == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
+
+    * aCount = 0;
+
+    if ( self  == NULL)
+        return 0;
+
+    rc = KSrvRespObjMakeIterator ( self, & it );
+    while ( rc == 0 ) {
+        KSrvRespFile * file = NULL;
+        rc = KSrvRespObjIteratorNextFile ( it, & file );
+        if ( file == NULL )
+            break;
+        ++ count;
+        RELEASE ( KSrvRespFile, file );
+    }
+
+    RELEASE ( KSrvRespObjIterator, it );
+
+    if ( rc == 0 )
+       * aCount = count;
+
+    return rc;
+}
+
 rc_t KSrvRespObjMakeIterator
     ( const KSrvRespObj * self, KSrvRespObjIterator ** it )
 {
@@ -1714,7 +1838,7 @@ rc_t KSrvRespObjIteratorRelease ( const KSrvRespObjIterator * cself ) {
 }
 
 rc_t KSrvRespObjIteratorNextFile ( KSrvRespObjIterator * self,
-                                   const KSrvRespFile ** file )
+                                   KSrvRespFile ** file )
 {
     if ( file == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
@@ -1746,6 +1870,7 @@ rc_t KSrvRespObjIteratorNextFile ( KSrvRespObjIterator * self,
                 rc_t rc = Response4AddRef ( self -> dad );
                 if ( rc == 0 ) {
                     p -> dad = self -> dad;
+                    p -> item = itm;
                     p -> file = & itm -> elm [ self -> iElm ++ ];
                     atomic32_set ( & p -> refcount, 1 );
 
@@ -1785,10 +1910,96 @@ rc_t KSrvRespFileRelease ( const KSrvRespFile * cself ) {
     return rc;
 }
 
-rc_t KSrvRespFileMakeIterator ( const KSrvRespFile * self,
-    VRemoteProtocols scheme, KSrvRespFileIterator ** it )
+rc_t KSrvRespFileGetFormat ( const KSrvRespFile * self,
+                             ESrvFileFormat * ff )
+{
+    assert ( self && self -> file && ff );
+
+    * ff = self -> file -> type;
+
+    return 0;
+}
+
+rc_t KSrvRespFileGetId ( const KSrvRespFile * self, const char ** acc ) {
+    assert ( self && self -> item && acc );
+
+    * acc = self -> item -> acc;
+
+    return 0;
+}
+
+rc_t KSrvRespFileGetCache ( const KSrvRespFile * self,
+                            const VPath ** path )
 {
     rc_t rc = 0;
+
+    assert ( self && self -> file && path );
+
+    * path = NULL;
+
+    if ( self -> file -> cacheRc != 0 )
+        return self -> file -> cacheRc;
+
+    rc = VPathAddRef ( self -> file -> cache );
+
+    if ( rc == 0 )
+        * path = self -> file -> cache;
+
+    return rc;
+}
+
+rc_t KSrvRespFileGetLocal ( const KSrvRespFile * self,
+                            const VPath ** path )
+{
+    rc_t rc = 0;
+
+    assert ( self && self -> file && path );
+
+    * path = NULL;
+
+    if ( self -> file -> localRc != 0 )
+        return self -> file -> localRc;
+
+    rc = VPathAddRef ( self -> file -> local );
+
+    if ( rc == 0 )
+        * path = self -> file -> local;
+
+    return rc;
+}
+
+rc_t KSrvRespFileAddLocalAndCache ( KSrvRespFile * self,
+                                    const VPathSet * localAndCache )
+{
+    rc_t rc = 0, r2 = 0, aRc = 0;
+
+    const VPath * path = NULL;
+
+    if ( self == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+
+    if ( localAndCache == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
+
+    aRc = VPathSetGetCache ( localAndCache, & path );
+    rc = LocationsAddCache ( self -> file, path, aRc );
+    RELEASE ( VPath, path );
+
+    aRc = VPathSetGetLocal ( localAndCache, & path );
+    r2 = LocationsAddLocal ( self -> file, path, aRc );
+    if ( r2 != 0 && rc == 0 )
+        rc = r2;
+    RELEASE ( VPath, path );
+
+    return rc;
+}
+
+rc_t KSrvRespFileMakeIterator ( const KSrvRespFile * self,
+    VRemoteProtocols protocols, KSrvRespFileIterator ** it )
+{
+    rc_t rc = 0;
+
+    VRemoteProtocols protocol = protocols;
 
     const VPath * const  * path = NULL;
     KSrvRespFileIterator * p = NULL;
@@ -1798,18 +2009,25 @@ rc_t KSrvRespFileMakeIterator ( const KSrvRespFile * self,
 
     * it = NULL;
 
-    if ( scheme >= TYPES_OF_SCHEMAS )
-        return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcExhausted );
-
     if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
 
-    switch ( scheme ) {
-        case eProtocolFasp : path = self -> file -> fasp ; break;
-        case eProtocolHttp : path = self -> file -> http ; break;
-        case eProtocolHttps: path = self -> file -> https; break;
-        default:
-            return RC ( rcVFS, rcQuery, rcExecuting, rcSchema, rcInvalid );
+    if ( protocol == eProtocolDefault )
+        protocol = DEFAULT_PROTOCOLS;
+
+    assert ( protocol != 0 );
+
+    for ( ; protocol != 0; protocol >>= 3 ) {
+        switch ( protocol & eProtocolMask ) {
+            case eProtocolFasp : path = self -> file -> fasp ; break;
+            case eProtocolHttp : path = self -> file -> http ; break;
+            case eProtocolHttps: path = self -> file -> https; break;
+            default:
+                return RC ( rcVFS, rcQuery, rcExecuting, rcSchema, rcInvalid );
+        }
+        assert ( path );
+        if ( path [ 0 ] != NULL )
+            break;
     }
 
     assert ( path );

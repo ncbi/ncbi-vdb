@@ -24,9 +24,10 @@
 *
 */
 
+#include <klib/debug.h> /* KDbgSetString */
 #include <ktst/unit_test.hpp> // TEST_SUITE
 
-#include "../../libs/vfs/json-response.c"
+#include "../../libs/vfs/json-response.h" /* Response4Make */
 
 using std::string;
 
@@ -38,99 +39,99 @@ using std::string;
 }*/
 
 TEST_CASE ( test ) {
-    Response4 response;
+    Response4 * response = NULL;
 if(1){
-    REQUIRE_RC_FAIL ( Response4Init ( & response, 0 ) );
-    REQUIRE_RC_FAIL ( Response4Init ( & response, "" ) );
-    REQUIRE_RC_FAIL ( Response4Init ( & response, "{" ) );
-    REQUIRE_RC_FAIL ( Response4Init ( & response, "{}" ) );
-    REQUIRE_RC_FAIL ( Response4Init ( & response, "{\"sequence\":{}}" ) );
-    REQUIRE_RC_FAIL ( Response4Init ( & response, "{\"sequence\":[]}" ) );
-    REQUIRE_RC_FAIL ( Response4Init ( & response, "{\"sequence\":[{}]}" ) );
-    REQUIRE_RC_FAIL ( Response4Init ( & response,
+    REQUIRE_RC_FAIL ( Response4Make ( & response, 0 ) );
+    REQUIRE_RC_FAIL ( Response4Make ( & response, "" ) );
+    REQUIRE_RC_FAIL ( Response4Make ( & response, "{" ) );
+    REQUIRE_RC_FAIL ( Response4Make ( & response, "{}" ) );
+    REQUIRE_RC_FAIL ( Response4Make ( & response, "{\"sequence\":{}}" ) );
+    REQUIRE_RC_FAIL ( Response4Make ( & response, "{\"sequence\":[]}" ) );
+    REQUIRE_RC_FAIL ( Response4Make ( & response, "{\"sequence\":[{}]}" ) );
+    REQUIRE_RC_FAIL ( Response4Make ( & response,
         "{\"sequence\":[{\"acc\":\"SRR000000\"}]}" ) );
-    REQUIRE_RC_FAIL ( Response4Init ( & response,
+    REQUIRE_RC_FAIL ( Response4Make ( & response,
         "{\"sequence\":[{\"status\":{},\"acc\":\"SRR000000\"}]}" ) );
 
-    REQUIRE_RC      ( Response4Init ( & response,
+    REQUIRE_RC      ( Response4Make ( & response,
        "{\"sequence\":[{\"status\":{\"code\":404},\"acc\":\"SRR000000\"}]}" ) );
-    REQUIRE_RC      ( Response4Fini ( & response ) );
+    REQUIRE_RC      ( Response4Release ( response ) );
 
-    REQUIRE_RC_FAIL ( Response4Init ( & response,
+    REQUIRE_RC_FAIL ( Response4Make ( & response,
        "{\"sequence\":[{\"status\":{\"code\":200},\"acc\":\"SRR000001\"}]}" ) );
-    REQUIRE_RC_FAIL ( Response4Init ( & response, "{\"sequence\":["
+    REQUIRE_RC_FAIL ( Response4Make ( & response, "{\"sequence\":["
         "{\"status\":{\"code\":200},\"acc\":\"SRR000001\",\"itemClass\":\"\"}]}"
     ) );
-    REQUIRE_RC_FAIL ( Response4Init ( & response, "{\"sequence\":["
+    REQUIRE_RC_FAIL ( Response4Make ( & response, "{\"sequence\":["
      "{\"status\":{\"code\":200},\"acc\":\"SRR000001\",\"itemClass\":\"run\"}]}"
     ) );
-    REQUIRE_RC_FAIL ( Response4Init ( & response, "{\"sequence\":["
+    REQUIRE_RC_FAIL ( Response4Make ( & response, "{\"sequence\":["
      "{\"status\":{\"code\":200},\"acc\":\"SRR000001\",\"itemClass\":\"run\","
                                 "\"link\":\"\"}]}" ) );
-    REQUIRE_RC_FAIL ( Response4Init ( & response, "{\"sequence\":["
+    REQUIRE_RC_FAIL ( Response4Make ( & response, "{\"sequence\":["
      "{\"status\":{\"code\":200},\"acc\":\"SRR000001\",\"itemClass\":\"run\","
                                 "\"link\":\"https://h\"}]}" ) );
-    REQUIRE_RC_FAIL ( Response4Init ( & response, "{\"sequence\":["
+    REQUIRE_RC_FAIL ( Response4Make ( & response, "{\"sequence\":["
      "{\"status\":{\"code\":200},\"acc\":\"SRR000001\",\"itemClass\":\"run\","
                                 "\"format\":\"\"}]}" ) );
-    REQUIRE_RC_FAIL ( Response4Init ( & response, "{\"sequence\":["
+    REQUIRE_RC_FAIL ( Response4Make ( & response, "{\"sequence\":["
      "{\"status\":{\"code\":200},\"acc\":\"SRR000001\",\"itemClass\":\"run\","
                                 "\"format\":\"sra\"}]}" ) );
-    REQUIRE_RC_FAIL ( Response4Init ( & response, "{\"sequence\":["
+    REQUIRE_RC_FAIL ( Response4Make ( & response, "{\"sequence\":["
      "{\"status\":{\"code\":200},\"acc\":\"SRR000001\",\"itemClass\":\"run\","
                                 "\"format\":\"sra\",\"link\":\"\"}]}" ) );
-    REQUIRE_RC_FAIL ( Response4Init ( & response, "{\"sequence\":["
+    REQUIRE_RC_FAIL ( Response4Make ( & response, "{\"sequence\":["
      "{\"status\":{\"code\":200},\"acc\":\"SRR000001\",\"itemClass\":\"run\","
       "\"format\":\"sra\",\"link\":\"http://\"}]}" ) );
 
-    REQUIRE_RC      ( Response4Init ( & response, "{\"sequence\":["
+    REQUIRE_RC      ( Response4Make ( & response, "{\"sequence\":["
      "{\"status\":{\"code\":200},\"acc\":\"SRR000001\",\"itemClass\":\"run\","
       "\"format\":\"sra\",\"link\":\"http://h/\"}]}" ) );
-    REQUIRE_RC      ( Response4Fini ( & response ) );
+    REQUIRE_RC      ( Response4Release ( response ) );
 
-    REQUIRE_RC      ( Response4Init ( & response, "{\"sequence\":["
+    REQUIRE_RC      ( Response4Make ( & response, "{\"sequence\":["
    "{\"status\":{\"code\":200,\"msg\":\"ok\"},"
    "\"acc\":\"SRR000001\",\"itemClass\":\"run\","
    "\"format\":\"sra\",\"link\":\"http://h/\",\"size\":3,"
    "\"md5\":\"9bde35fefa9d955f457e22d9be52bcd9\",\"modDate\":1000000000}]}" ) );
-    REQUIRE_RC      ( Response4Fini ( & response ) );
+    REQUIRE_RC      ( Response4Release ( response ) );
 
-    REQUIRE_RC      ( Response4Init ( & response, "{\"sequence\":["
+    REQUIRE_RC      ( Response4Make ( & response, "{\"sequence\":["
    "{\"status\":{\"code\":200,\"msg\":\"ok\"},"
    "\"acc\":\"SRR000001\",\"itemClass\":\"run\","
    "\"format\":\"sra\",\"link\":\"fasp://h\",\"size\":3,"
    "\"md5\":\"9bde35fefa9d955f457e22d9be52bcd9\",\"modDate\":1000000000}]}" ) );
-    REQUIRE_RC      ( Response4Fini ( & response ) );
+    REQUIRE_RC      ( Response4Release ( response ) );
 
-    REQUIRE_RC_FAIL ( Response4Init ( & response, "{\"sequence\":["
+    REQUIRE_RC_FAIL ( Response4Make ( & response, "{\"sequence\":["
         "{\"status\":{\"code\":200,\"msg\":\"ok\"},\"acc\":\"SRR000001\","
         "\"itemClass\":\"run\",\"format\":\"sra\",\"size\":3,"
         "\"md5\":\"9bde35fefa9d955f457e22d9be52bcd9\",\"modDate\":1000000000,"
         "\"alternatives\":[{\"link\":\"\"      }]}]}" ) );
 
-    REQUIRE_RC ( Response4Init ( & response, "{\"sequence\":["
+    REQUIRE_RC ( Response4Make ( & response, "{\"sequence\":["
         "{\"status\":{\"code\":200,\"msg\":\"ok\"},\"acc\":\"SRR000001\","
         "\"itemClass\":\"run\",\"format\":\"sra\",\"size\":3,"
         "\"md5\":\"9bde35fefa9d955f457e22d9be52bcd9\",\"modDate\":1000000000,"
         "\"alternatives\":[{\"link\":\"http://h/\"}]}]}" ) );
-    REQUIRE_RC ( Response4Fini ( & response ) );
+    REQUIRE_RC ( Response4Release ( response ) );
 
-    REQUIRE_RC ( Response4Init ( & response, "{\"sequence\":["
+    REQUIRE_RC ( Response4Make ( & response, "{\"sequence\":["
         "{\"status\":{\"code\":200,\"msg\":\"ok\"},\"acc\":\"SRR000001\","
         "\"itemClass\":\"run\",\"format\":\"sra\",\"size\":3,"
         "\"md5\":\"9bde35fefa9d955f457e22d9be52bcd9\",\"modDate\":1000000000,"
    "\"alternatives\":[{\"link\":\"http://h/\"},{\"link\":\"fasp://h\"}]}]}" ) );
-    REQUIRE_RC ( Response4Fini ( & response ) );
+    REQUIRE_RC ( Response4Release ( response ) );
 
-    REQUIRE_RC ( Response4Init ( & response, "{\"sequence\":["
+    REQUIRE_RC ( Response4Make ( & response, "{\"sequence\":["
         "{\"status\":{\"code\":200,\"msg\":\"ok\"},\"acc\":\"SRR000001\","
         "\"itemClass\":\"run\",\"size\":3,"
         "\"md5\":\"9bde35fefa9d955f457e22d9be52bcd9\",\"modDate\":1000000000,"
         "\"alternatives\":[{\"format\":\"sra\",\"link\":\"http://h/\"}]}]"
       ",\"timestamp\":1500000000}" ) );
-    REQUIRE_RC ( Response4Fini ( & response ) );
+    REQUIRE_RC ( Response4Release ( response ) );
 
-    REQUIRE_RC ( Response4Init ( & response, "{\"sequence\":["
+    REQUIRE_RC ( Response4Make ( & response, "{\"sequence\":["
         "{\"status\":{\"code\":200,\"msg\":\"ok\"},\"acc\":\"SRR000001\","
         "\"itemClass\":\"run\","
         "\"group\":[{\"format\":\"sra\",\"link\":\"http://h/\",\"size\":3,"
@@ -138,18 +139,18 @@ if(1){
         "      {\"format\":\"vdbcache\",\"link\":\"http://h/v\",\"size\":2,"
         "\"md5\":\"11111111111111111111111111111111\",\"modDate\":1000000001}"
       "]}], \"timestamp\":1500000000}" ) );
-    REQUIRE_RC ( Response4Fini ( & response ) );
+    REQUIRE_RC ( Response4Release ( response ) );
 
-    REQUIRE_RC ( Response4Init ( & response, "{\"sequence\":["
+    REQUIRE_RC ( Response4Make ( & response, "{\"sequence\":["
         "{\"status\":{\"code\":200,\"msg\":\"ok\"},"
          "\"acc\":\"SRR000001\",\"itemClass\":\"run\","
          "\"format\":\"sra\",\"link\":\"fasp://h\",\"size\":3,"
          "\"md5\":\"9bde35fefa9d955f457e22d9be52bcd9\",\"modDate\":1000000000},"
         "{\"status\":{\"code\":404,\"msg\":\"not found\"},\"acc\":\"SRR0000\"}]"
       ",\"timestamp\":1500000000}" ) );
-    REQUIRE_RC ( Response4Fini ( & response ) );
+    REQUIRE_RC ( Response4Release ( response ) );
 
-    REQUIRE_RC ( Response4Init ( & response, "{\"sequence\":["
+    REQUIRE_RC ( Response4Make ( & response, "{\"sequence\":["
         "{\"status\":{\"code\":200,\"msg\":\"ok\"},"
          "\"acc\":\"SRR000001\",\"itemClass\":\"run\","
          "\"format\":\"sra\",\"link\":\"fasp://h\",\"size\":3,"
@@ -157,9 +158,9 @@ if(1){
         "{\"status\":{\"code\":200,\"msg\":\"ok\"},\"acc\":\"SRR000002\","
           "\"itemClass\":\"run\",\"format\":\"sra\",\"link\":\"http://h/\"}]"
       ",\"timestamp\":1500000000}" ) );
-    REQUIRE_RC ( Response4Fini ( & response ) );
+    REQUIRE_RC ( Response4Release ( response ) );
 
-    REQUIRE_RC ( Response4Init ( & response,
+    REQUIRE_RC ( Response4Make ( & response,
         "{\"sequence\":[{\"status\":{\"code\":200,\"msg\":\"ok\"},"
             "\"acc\":\"SRP000002\",\"sequence\":[{"
                 "\"acc\":\"SRR000001\",\"itemClass\":\"run\","
@@ -167,34 +168,34 @@ if(1){
            "{    \"acc\":\"SRR000002\",\"itemClass\":\"run\","
                 "\"format\":\"sra\",\"link\":\"http://h/2\"}]}]"
          ",\"timestamp\":1500000000}"));
-    REQUIRE_RC ( Response4Fini ( & response ) );
+    REQUIRE_RC ( Response4Release ( response ) );
 
-    REQUIRE_RC ( Response4Init ( & response,
+    REQUIRE_RC ( Response4Make ( & response,
         "{\"sequence\":[{\"status\":{\"code\":200,\"msg\":\"ok\"},"
                 "\"acc\":\"SRR001000\",\"itemClass\":\"run\","
                 "\"format\":\"sra\",\"link\":\"http://h/1\","
                 "\"tic\":\"0AB1C23D-E4F5-6A7B-C890-1D2345678E90\"}]"
          ",\"timestamp\":1500000000}"));
-    REQUIRE_RC ( Response4Fini ( & response ) );
+    REQUIRE_RC ( Response4Release ( response ) );
 
-    REQUIRE_RC ( Response4Init ( & response,
+    REQUIRE_RC ( Response4Make ( & response,
         "{\"sequence\":[{\"status\":{\"code\":200,\"msg\":\"ok\"},"
                 "\"oldCartObjId\":1,\"itemClass\":\"file\","
                 "\"format\":\"file\",\"name\":\"f.txt\",\"link\":\"http://h/\","
                 "\"tic\":\"0AB1C23D-E4F5-6A7B-C890-1D2345678E90\"}]"
          ",\"timestamp\":1500000000}"));
-    REQUIRE_RC ( Response4Fini ( & response ) );
+    REQUIRE_RC ( Response4Release ( response ) );
 
-    REQUIRE_RC ( Response4Init ( & response,
+    REQUIRE_RC ( Response4Make ( & response,
         "{\"sequence\":[{\"status\":{\"code\":200,\"msg\":\"ok\"},"
                 "\"oldCartObjId\":1,\"itemClass\":\"file\","
                 "\"format\":\"file\",\"name\":\"f.txt\",\"link\":\"http://h/\","
                 "\"tic\":\"0AB1C23D-E4F5-6A7B-C890-1D2345678E90\"},"
       "{\"status\":{\"code\":403,\"msg\":\"access denied\"},\"oldCartObjId\":2}"
          "],\"timestamp\":1500000000}"));
-    REQUIRE_RC ( Response4Fini ( & response ) );
+    REQUIRE_RC ( Response4Release ( response ) );
 
-    REQUIRE_RC ( Response4Init ( & response,
+    REQUIRE_RC ( Response4Make ( & response,
         "{\"sequence\":[{\"status\":{\"code\":200,\"msg\":\"ok\"},"
                "\"oldCartObjId\":1,\"itemClass\":\"file\","
                "\"format\":\"file\",\"name\":\"1.txt\",\"link\":\"http://h/1\","
@@ -204,9 +205,9 @@ if(1){
                "\"format\":\"file\",\"name\":\"2.txt\",\"link\":\"http://h/2\","
                "\"tic\":\"0AB1C23D-E4F5-6A7B-C890-1D2345678E90\"}"
          "],\"timestamp\":1500000000}"));
-    REQUIRE_RC ( Response4Fini ( & response ) );
+    REQUIRE_RC ( Response4Release ( response ) );
 
-    REQUIRE_RC ( Response4Init ( & response,
+    REQUIRE_RC ( Response4Make ( & response,
         "{\"sequence\":[{\"status\":{\"code\":200,\"msg\":\"ok\"},"
                "\"oldCartObjId\":1,\"itemClass\":\"file\","
                "\"format\":\"file\",\"name\":\"1.txt\",\"link\":\"http://h/1\","
@@ -216,7 +217,7 @@ if(1){
                "\"format\":\"file\",\"name\":\"2.txt\",\"link\":\"http://h/2\","
                "\"tic\":\"0AB1C23D-E4F5-6A7B-C890-1D2345678E90\"}"
          "],\"timestamp\":1500000000}"));
-    REQUIRE_RC ( Response4Fini ( & response ) );
+    REQUIRE_RC ( Response4Release ( response ) );
 }if(1);
   //REQUIRE_RC(validate(
 }

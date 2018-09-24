@@ -31,6 +31,7 @@
 
 #include <kfg/kart.h>      /* EObjectType */
 #include <vfs/resolver.h> /* VRemoteProtocols */
+#include <vfs/services.h> /* ESrvFileFormat */
 
 
 #ifdef __cplusplus
@@ -41,7 +42,9 @@ extern "C" {
 struct KSrvRespObj;
 struct KNSManager;
 struct KService;
+struct KSrvRespFile;
 struct KSrvResponse;
+struct Locations;
 struct Response4;
 struct VPathSet;
 
@@ -64,8 +67,28 @@ rc_t KSrvResponseAddLocalAndCache ( struct KSrvResponse * self, uint32_t idx,
                                     const struct VPathSet * localAndCache );
 rc_t KSrvResponseGet ( const struct KSrvResponse * self, uint32_t idx,
                        const struct VPathSet ** set );
+
+/* DON'T RELEASE RETURNED id-s !!! */
+rc_t KSrvResponseGetIds ( const struct KSrvResponse * self, uint32_t idx,
+                          const char ** reqId, const char ** respId );
+
+rc_t KSrvResponseGetR4 ( const struct KSrvResponse * self,
+                         struct Response4 ** r );
 rc_t KSrvResponseSetR4 ( struct KSrvResponse * self,
                          const struct Response4 * r );
+
+rc_t KSrvRespFileAddLocalAndCache ( struct KSrvRespFile * file,
+                                    const struct VPathSet * localAndCache );
+rc_t KSrvRespFileGetFormat ( const struct KSrvRespFile * self,
+                             ESrvFileFormat * ff );
+
+/* DON"T FREE RETURNED ID !!! */
+rc_t KSrvRespFileGetId ( const struct KSrvRespFile * self, const char ** id );
+
+rc_t LocationsAddCache ( struct Locations * self,
+                         const struct VPath * path, rc_t rc );
+rc_t LocationsAddLocal ( struct Locations * self,
+                         const struct VPath * path, rc_t rc );
 
 /**************************** KService ****************************************/
 /* resolve oid->file mapping inside of VFS:
@@ -80,6 +103,11 @@ rc_t KServiceResolveName ( struct KService * service, int resolve );
    get KSrvResponse (remote-only resolution) */
 rc_t KServiceNamesExecute ( struct KService * self, VRemoteProtocols protocols, 
                             const struct KSrvResponse ** response );
+
+rc_t KServiceNamesExecuteExtImpl ( struct KService * self,
+    VRemoteProtocols protocols, const char * cgi, const char * version,
+    const struct KSrvResponse ** response, const char * expected );
+
 /***************** Interface services.c -> remote-services.c  *****************/
 rc_t KServiceGetConfig ( struct KService * self, const struct KConfig ** kfg);
 rc_t KServiceGetResolver ( struct KService * self, const String * ticket,
@@ -116,6 +144,9 @@ rc_t KServiceRequestTestNames1 ( const struct KNSManager * mgr,
    Do not log "errorsToIgnore" messages during response processing */
 rc_t KServiceNames3_0StreamTest ( const char * buffer,
     const struct KSrvResponse ** response, int errorsToIgnore );
+rc_t KServiceNames3_0StreamTestMany ( const char * buffer,
+    const struct KSrvResponse ** response, int errorsToIgnore,
+    int itemsInRequest );
 rc_t KServiceNamesRequestTest ( const struct KNSManager * mgr, const char * b,
     const char * cgi, VRemoteProtocols protocols,
     const SServiceRequestTestData * d, ... );
