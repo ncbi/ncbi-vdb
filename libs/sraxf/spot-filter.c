@@ -230,50 +230,6 @@ static int spot_filter_2na(self_t const *self
     return notRejected;
 }
 
-static INSDC_SRA_spot_filter make_spot_filter_from_read_filter(unsigned const nreads, INSDC_read_filter const read_filter[])
-{
-    unsigned i;
-    unsigned bits = 0;
-    
-    for (i = 0; i < nreads; ++i) {
-        INSDC_read_filter const filter = read_filter[i];
-        unsigned const bit = 1u << filter;
-        bits |= bit;
-    }
-
-    // test for all the same; this is most likely
-    switch (bits) {
-    case 0:
-    case 1:
-        return SRA_SPOT_FILTER_PASS;
-    case 2:
-        return SRA_SPOT_FILTER_REJECT;
-    case 4:
-        return SRA_SPOT_FILTER_CRITERIA;
-    case 8:
-        return SRA_SPOT_FILTER_REDACTED;
-    }
-
-    // mixed, test in order of precedence; this is unlikely
-    if (bits & (1u << SRA_READ_FILTER_REDACTED) != 0)
-        return SRA_SPOT_FILTER_REDACTED;
-    if (bits & (1u << SRA_READ_FILTER_REJECT) != 0)
-        return SRA_SPOT_FILTER_REJECT;
-    if (bits & (1u << SRA_READ_FILTER_CRITERIA) != 0)
-        return SRA_SPOT_FILTER_CRITERIA;
-    
-    // this should be unreachable
-    return SRA_SPOT_FILTER_PASS;
-}
-
-static void make_read_filter_from_spot_filter(INSDC_read_filter read_filter[], unsigned nreads, INSDC_SRA_spot_filter const spot_filter)
-{
-    unsigned i;
-    for (i = 0; i < nreads; ++i) {
-        read_filter[i] = spot_filter;
-    }
-}
-
 #define SPOT_FILTER ((self_t const *)self)->spot_filter
 #define BIND_COLUMN(ELEM, DTYPE, POINTER) DTYPE const *const POINTER = (ELEM < argc && sizeof(DTYPE) * 8 == (size_t)argv[ELEM].u.data.elem_bits) ? (((DTYPE const *)argv[ELEM].u.data.base) + argv[ELEM].u.data.first_elem) : ((DTYPE const *)NULL)
 #define SAFE_COUNT(ELEM) (ELEM < argc ? argv[ELEM].u.data.elem_count : 0)
@@ -437,4 +393,132 @@ VTRANSFACT_IMPL( NCBI_SRA_make_spot_filter, 1, 0, 0 ) ( const void *Self, const 
         return 0;
     }
     return RC(rcXF, rcFunction, rcConstructing, rcType, rcInvalid);
+}
+
+static INSDC_SRA_spot_filter spot_filter_from_read_filter(unsigned const nreads, INSDC_read_filter const read_filter[])
+{
+    unsigned i;
+    unsigned bits = 0;
+    
+    for (i = 0; i < nreads; ++i) {
+        INSDC_read_filter const filter = read_filter[i];
+        unsigned const bit = 1u << filter;
+        bits |= bit;
+    }
+    
+    // test for all the same; this is most likely
+    switch (bits) {
+        case 0:
+        case 1:
+            return SRA_SPOT_FILTER_PASS;
+        case 2:
+            return SRA_SPOT_FILTER_REJECT;
+        case 4:
+            return SRA_SPOT_FILTER_CRITERIA;
+        case 8:
+            return SRA_SPOT_FILTER_REDACTED;
+    }
+    
+    // mixed, test in order of precedence; this is unlikely
+    if (bits & (1u << SRA_READ_FILTER_REDACTED) != 0)
+        return SRA_SPOT_FILTER_REDACTED;
+    if (bits & (1u << SRA_READ_FILTER_REJECT) != 0)
+        return SRA_SPOT_FILTER_REJECT;
+    if (bits & (1u << SRA_READ_FILTER_CRITERIA) != 0)
+        return SRA_SPOT_FILTER_CRITERIA;
+    
+    // this should be unreachable
+    return SRA_SPOT_FILTER_PASS;
+}
+
+static
+rc_t CC make_spot_filter_from_read_filter(void *const self
+                         , const VXformInfo *const info
+                         , int64_t const row_id
+                         , VRowResult *const rslt
+                         , uint32_t const argc
+                         , const VRowData *const argv)
+{
+    enum COLUMNS {
+        COL_READ_FILTER
+    };
+    unsigned const nfilt = (unsigned)SAFE_COUNT(COL_READ_FILTER);
+    BIND_COLUMN(COL_READ_FILTER,  uint8_t, filter);
+    rc_t rc = 0;
+    
+    rslt->data->elem_bits = 8;
+    rc = KDataBufferResize( rslt->data, 1 );
+    if ( rc == 0 )
+    {
+        uint8_t *const dst = (uint8_t *)rslt->data->base;
+        
+        rslt->elem_bits = rslt->data->elem_bits;
+        rslt->elem_count = 1;
+        dst[0] = make_spot_filter_from_read_filter(nfilt, filter);
+    }
+    return rc;
+}
+
+/*
+  function NCBI:SRA:spot_filter
+  NCBI:SRA:make_spot_filter_from_read_filter #1
+       ( INSDC:SRA:read_filter read_filter )
+ */
+VTRANSFACT_IMPL( NCBI_SRA_make_spot_filter_from_read_filter, 1, 0, 0 ) ( const void *Self, const VXfactInfo *info,
+    VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
+{
+    rslt -> u . rf = make_spot_filter_from_read_filter;
+    rslt -> variant = vftRow;
+    return 0;
+}
+
+static void read_filter_from_spot_filter(INSDC_read_filter read_filter[], unsigned nreads, INSDC_SRA_spot_filter const spot_filter)
+{
+    unsigned i;
+    for (i = 0; i < nreads; ++i) {
+        read_filter[i] = spot_filter;
+    }
+}
+
+static
+rc_t CC make_spot_filter(void *const self
+                         , const VXformInfo *const info
+                         , int64_t const row_id
+                         , VRowResult *const rslt
+                         , uint32_t const argc
+                         , const VRowData *const argv)
+{
+    enum COLUMNS {
+        COL_READ_LEN,
+        COL_SPOT_FILTER
+    };
+    unsigned const nreads = (unsigned)SAFE_COUNT(COL_READ_LEN);
+    unsigned const nfilt = (unsigned)SAFE_COUNT(COL_SPOT_FILTER);
+    BIND_COLUMN(COL_SPOT_FILTER,  uint8_t, filter);
+    rc_t rc = 0;
+    
+    assert(filter != NULL);
+    
+    rslt->data->elem_bits = 8;
+    rc = KDataBufferResize( rslt->data, nreads );
+    if ( rc == 0 )
+    {
+        rslt->elem_bits = rslt->data->elem_bits;
+        rslt->elem_count = nreads;
+        read_filter_from_spot_filter(rslt->data->base, nreads, filter);
+    }
+    return rc;
+}
+
+/*
+  function NCBI:SRA:read_filter
+  NCBI:SRA:make_read_filter_from_spot_filter #1
+       ( U32 read_len, INSDC:SRA:spot_filter spot_filter )
+ */
+VTRANSFACT_IMPL( NCBI_SRA_make_read_filter_from_spot_filter, 1, 0, 0 ) ( const void *Self, const VXfactInfo *info,
+    VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
+{
+    rslt -> u . rf = make_read_filter_from_spot_filter;
+    rslt -> variant = vftRow;
+    return 0;
 }
