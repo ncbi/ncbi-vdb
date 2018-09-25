@@ -420,10 +420,11 @@ static INSDC_SRA_spot_filter spot_filter_from_read_filter(unsigned const nreads,
     }
     
     // mixed, test in order of precedence; this is unlikely
-    if ((bits & (1u << SRA_READ_FILTER_REDACTED)) != 0)
-        return SRA_SPOT_FILTER_REDACTED;
+    // REJECT >> REDACTED >> CRITERIA; per KR email 2018-Sep-25
     if ((bits & (1u << SRA_READ_FILTER_REJECT)) != 0)
         return SRA_SPOT_FILTER_REJECT;
+    if ((bits & (1u << SRA_READ_FILTER_REDACTED)) != 0)
+        return SRA_SPOT_FILTER_REDACTED;
     if ((bits & (1u << SRA_READ_FILTER_CRITERIA)) != 0)
         return SRA_SPOT_FILTER_CRITERIA;
     
