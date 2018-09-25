@@ -230,6 +230,50 @@ static int spot_filter_2na(self_t const *self
     return notRejected;
 }
 
+static INSDC_SRA_spot_filter make_spot_filter_from_read_filter(unsigned const nreads, INSDC_read_filter const read_filter[])
+{
+    unsigned i;
+    unsigned bits = 0;
+    
+    for (i = 0; i < nreads; ++i) {
+        INSDC_read_filter const filter = read_filter[i];
+        unsigned const bit = 1u << filter;
+        bits |= bit;
+    }
+
+    // test for all the same; this is most likely
+    switch (bits) {
+    case 0:
+    case 1:
+        return SRA_SPOT_FILTER_PASS;
+    case 2:
+        return SRA_SPOT_FILTER_REJECT;
+    case 4:
+        return SRA_SPOT_FILTER_CRITERIA;
+    case 8:
+        return SRA_SPOT_FILTER_REDACTED;
+    }
+
+    // mixed, test in order of precedence; this is unlikely
+    if (bits & (1u << SRA_READ_FILTER_REDACTED) != 0)
+        return SRA_SPOT_FILTER_REDACTED;
+    if (bits & (1u << SRA_READ_FILTER_REJECT) != 0)
+        return SRA_SPOT_FILTER_REJECT;
+    if (bits & (1u << SRA_READ_FILTER_CRITERIA) != 0)
+        return SRA_SPOT_FILTER_CRITERIA;
+    
+    // this should be unreachable
+    return SRA_SPOT_FILTER_PASS;
+}
+
+static void make_read_filter_from_spot_filter(INSDC_read_filter read_filter[], unsigned nreads, INSDC_SRA_spot_filter const spot_filter)
+{
+    unsigned i;
+    for (i = 0; i < nreads; ++i) {
+        read_filter[i] = spot_filter;
+    }
+}
+
 #define SPOT_FILTER ((self_t const *)self)->spot_filter
 #define BIND_COLUMN(ELEM, DTYPE, POINTER) DTYPE const *const POINTER = (ELEM < argc && sizeof(DTYPE) * 8 == (size_t)argv[ELEM].u.data.elem_bits) ? (((DTYPE const *)argv[ELEM].u.data.base) + argv[ELEM].u.data.first_elem) : ((DTYPE const *)NULL)
 #define SAFE_COUNT(ELEM) (ELEM < argc ? argv[ELEM].u.data.elem_count : 0)
