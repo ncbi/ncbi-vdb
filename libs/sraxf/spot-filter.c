@@ -67,7 +67,7 @@ struct params {
 
 enum RejectCause {
     notRejected,
-    readFilter,
+    spotFilter,
     tooShort,
     badQualValueFirstM,
     ambiguousFirstM,
@@ -236,8 +236,12 @@ static int spot_filter_2na(self_t const *self
 #define SAME_COUNT(ELEM1, ELEM2) (SAFE_COUNT(ELEM1) == SAFE_COUNT(ELEM2))
 
 static
-rc_t CC make_spot_filter(void *const self, const VXformInfo *const info, int64_t const row_id,
-                         VRowResult *const rslt, uint32_t const argc, const VRowData *const argv)
+rc_t CC make_spot_filter(void *const self
+                         , const VXformInfo *const info
+                         , int64_t const row_id
+                         , VRowResult *const rslt
+                         , uint32_t const argc
+                         , const VRowData *const argv)
 {
     enum COLUMNS {
         COL_READ,
@@ -245,16 +249,16 @@ rc_t CC make_spot_filter(void *const self, const VXformInfo *const info, int64_t
         COL_READ_START,
         COL_READ_LEN,
         COL_READ_TYPE,
-        COL_READ_FILTER
+        COL_SPOT_FILTER
     };
     unsigned const nreads = (unsigned)SAFE_COUNT(COL_READ_LEN);
-    unsigned const nfilt = (unsigned)SAFE_COUNT(COL_READ_FILTER);
+    unsigned const nfilt = (unsigned)SAFE_COUNT(COL_SPOT_FILTER);
     BIND_COLUMN(COL_READ       ,  uint8_t, read  ); ///< 4NA or x2na or 2na
     BIND_COLUMN(COL_QUALITY    ,  uint8_t, qual  ); ///< phred+0
     BIND_COLUMN(COL_READ_START ,  int32_t, start );
     BIND_COLUMN(COL_READ_LEN   , uint32_t, len   );
     BIND_COLUMN(COL_READ_TYPE  ,  uint8_t, type  );
-    BIND_COLUMN(COL_READ_FILTER,  uint8_t, filter);
+    BIND_COLUMN(COL_SPOT_FILTER,  uint8_t, filter);
     enum RejectCause result = notRejected;
     rc_t rc = 0;
 
@@ -271,8 +275,8 @@ rc_t CC make_spot_filter(void *const self, const VXformInfo *const info, int64_t
     {
         unsigned i;
         for (i = 0; i < nfilt; ++i) {
-            if (filter[i] == SRA_READ_FILTER_REJECT) {
-                result = readFilter;
+            if (filter[i] == SRA_SPOT_FILTER_REJECT) {
+                result = spotFilter;
                 break;
             }
         }
@@ -285,8 +289,8 @@ rc_t CC make_spot_filter(void *const self, const VXformInfo *const info, int64_t
     case notRejected:
         fprintf(stderr, "passed\n");
         break;
-    case readFilter:
-        fprintf(stderr, "read filter was set\n");
+    case spotFilter:
+        fprintf(stderr, "spot filter was set\n");
         break;
     case tooShort:
         fprintf(stderr, "sequence length < %i\n", M);
@@ -356,7 +360,7 @@ static spot_filter_func read_data_type_to_function(VSchema const *const schema, 
   NCBI:SRA:make_spot_filter #1
        ( INSDC:dna:bin read, INSDC:quality:phred quality,
          INSDC:coord:zero read_start, U32 read_len,
-         INSDC:SRA:read_type read_type, INSDC:SRA:read_filter read_filter )
+         INSDC:SRA:read_type read_type, INSDC:SRA:spot_filter spot_filter )
 
  */
 VTRANSFACT_IMPL( NCBI_SRA_make_spot_filter, 1, 0, 0 ) ( const void *Self, const VXfactInfo *info,
