@@ -89,6 +89,7 @@ SRAXF_SRC = \
 	tokenize-spot_name-generic-fastq \
 	color-from-dna \
 	dna-from-color \
+	use-rna-flag \
 	spot-desc \
 	read-desc \
 	rotate \
@@ -103,7 +104,7 @@ SRAXF_SRC = \
 	extract-coordinates \
 	fpcodec \
 	index_lookup \
-	varloc
+	varloc \
 
 SRAXF_OBJ = \
 	$(addsuffix .$(LOBX),$(SRAXF_SRC))
@@ -131,7 +132,8 @@ WSRAXF_SRC = \
 	extract-spot_name \
 	stats \
 	stats_quality \
-	qual4_encode
+	qual4_encode \
+	set-rna-flag
 
 WSRAXF_OBJ = \
 	$(addsuffix .$(LOBX),$(WSRAXF_SRC))

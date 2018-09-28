@@ -265,6 +265,19 @@ table NCBI:tbl:base_space #1.0.3
 	 */
 };
 
+/* setRnaFlag
+ *  if metadata(RNA) is not set and in_read contains u/U, set metadata(RNA) to true
+ *  if metadata(RNA) is not set and in_read contains t/T, set metadata(RNA) to false
+ *  otherwise, do nothing
+ * return in_read
+ */
+extern function INSDC:dna:text NCBI:SRA:setRnaFlag #1 ( INSDC:dna:text in_read );
+
+/* useRnaFlag
+ *  if metadata(RNA) is set translate T to U
+ *  otherwise, do nothing
+ */
+extern function INSDC:dna:text NCBI:SRA:useRnaFlag #1 ( INSDC:dna:text in_read );
 
 /* base_space #2
  *  standard current base-space table
@@ -272,8 +285,9 @@ table NCBI:tbl:base_space #1.0.3
  * history:
  *  2.0.2 - base_space_common #1.0.2
  *  2.0.3 - base_space_common #1.0.3 now has dcmp_base_space as well
+ *  2.0.4 - uses metadata RNA_Flag to support RNA reads
  */
-table NCBI:tbl:base_space #2.0.3
+table NCBI:tbl:base_space #2.0.4
     = NCBI:tbl:base_space_common #1.0.3
     , NCBI:tbl:dcmp_base_space #1
 {
@@ -281,8 +295,9 @@ table NCBI:tbl:base_space #2.0.3
      */
 
     // input text
-    INSDC:dna:text in_dna_text
-        = < INSDC:dna:text, INSDC:dna:text > map < '.acmgrsvtwyhkdbn','NACMGRSVTWYHKDBN' > ( READ );
+    INSDC:dna:text in_dnarna_text_upper
+        = < INSDC:dna:text, INSDC:dna:text > map < '.acmgrsvtwyhkdbnu','NACMGRSVTWYHKDBNU' > ( READ );
+    INSDC:dna:text in_dna_text = NCBI:SRA:setRnaFlag ( in_dnarna_text_upper ); // change U to T
 
     // input 4na bin
     INSDC:4na:bin in_4na_bin
@@ -348,9 +363,10 @@ table NCBI:tbl:base_space #2.0.3
         | out_2na_4na_bin;
 
     // output text
-    INSDC:dna:text out_dna_text
+    INSDC:dna:text out_dnarna_text
         = < INSDC:4na:bin, INSDC:dna:text > map < INSDC:4na:map:BINSET, INSDC:4na:map:CHARSET > ( out_4na_bin );
-
+    INSDC:dna:text out_dna_text
+        = NCBI:SRA:useRnaFlag ( out_dnarna_text );
 
 	/* INSDC:tbl:sequence inherited productions
 	 *  out_signal

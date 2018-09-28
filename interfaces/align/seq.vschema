@@ -68,8 +68,9 @@ table NCBI:align:tbl:cmp_base_space #1
      */
 
     // compressed input text
-    INSDC:dna:text in_cmp_dna_text
-        = < INSDC:dna:text, INSDC:dna:text > map < '.acmgrsvtwyhkdbn','NACMGRSVTWYHKDBN' > ( CMP_READ );
+    INSDC:dna:text in_cmp_dnarna_text
+        = < INSDC:dna:text, INSDC:dna:text > map < '.acmgrsvtwyhkdbnu','NACMGRSVTWYHKDBNU' > ( CMP_READ );
+    INSDC:dna:text in_cmp_dna_text = NCBI:SRA:setRnaFlag ( in_cmp_dnarna_text ); // change U to T
 
     // compressed input 4na bin
     INSDC:4na:bin in_cmp_4na_bin
