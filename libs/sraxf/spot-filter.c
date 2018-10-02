@@ -408,19 +408,21 @@ static INSDC_SRA_spot_filter spot_filter_from_read_filter(unsigned const nreads,
     
     // test for all the same; this is most likely
     switch (bits) {
-        case 0:
-        case 1:
-            return SRA_SPOT_FILTER_PASS;
-        case 2:
-            return SRA_SPOT_FILTER_REJECT;
-        case 4:
-            return SRA_SPOT_FILTER_CRITERIA;
-        case 8:
-            return SRA_SPOT_FILTER_REDACTED;
+    case 0:
+    case 1:
+        return SRA_SPOT_FILTER_PASS;
+    case 2:
+        return SRA_SPOT_FILTER_REJECT;
+    case 4:
+        return SRA_SPOT_FILTER_CRITERIA;
+    case 8:
+        return SRA_SPOT_FILTER_REDACTED;
     }
     
-    // mixed, test in order of precedence; this is unlikely
-    // REJECT >> REDACTED >> CRITERIA; per KR email 2018-Sep-25
+    // mixed; this is unlikely
+    // test in order of precedence
+    // REJECT >> REDACTED >> CRITERIA
+    // per KR email 2018-Sep-25
     if ((bits & (1u << SRA_READ_FILTER_REJECT)) != 0)
         return SRA_SPOT_FILTER_REJECT;
     if ((bits & (1u << SRA_READ_FILTER_REDACTED)) != 0)
@@ -444,7 +446,7 @@ rc_t CC make_spot_filter_from_read_filter(void *const self
         COL_READ_FILTER
     };
     unsigned const nfilt = (unsigned)SAFE_COUNT(COL_READ_FILTER);
-    BIND_COLUMN(COL_READ_FILTER,  uint8_t, filter);
+    BIND_COLUMN(COL_READ_FILTER, INSDC_read_filter, filter);
     rc_t rc = 0;
     
     rslt->data->elem_bits = 8;
@@ -473,7 +475,7 @@ VTRANSFACT_IMPL( NCBI_SRA_make_spot_filter_from_read_filter, 1, 0, 0 ) ( const v
     return 0;
 }
 
-static void read_filter_from_spot_filter(INSDC_read_filter read_filter[], unsigned nreads, INSDC_SRA_spot_filter const spot_filter)
+static void read_filter_from_spot_filter(unsigned const nreads, INSDC_read_filter read_filter[], INSDC_SRA_spot_filter const spot_filter)
 {
     unsigned i;
     for (i = 0; i < nreads; ++i) {
@@ -487,7 +489,7 @@ rc_t CC make_read_filter_from_spot_filter(void *const self
                          , int64_t const row_id
                          , VRowResult *const rslt
                          , uint32_t const argc
-                         , const VRowData *const argv)
+                         , VRowData const argv[])
 {
     enum COLUMNS {
         COL_READ_LEN,
@@ -495,7 +497,7 @@ rc_t CC make_read_filter_from_spot_filter(void *const self
     };
     unsigned const nreads = (unsigned)SAFE_COUNT(COL_READ_LEN);
     unsigned const nfilt = (unsigned)SAFE_COUNT(COL_SPOT_FILTER);
-    BIND_COLUMN(COL_SPOT_FILTER,  uint8_t, filter);
+    BIND_COLUMN(COL_SPOT_FILTER, INSDC_SRA_spot_filter, filter);
     rc_t rc = 0;
     
     assert(filter != NULL);
@@ -506,7 +508,7 @@ rc_t CC make_read_filter_from_spot_filter(void *const self
     {
         rslt->elem_bits = rslt->data->elem_bits;
         rslt->elem_count = nreads;
-        read_filter_from_spot_filter(rslt->data->base, nreads, filter);
+        read_filter_from_spot_filter(nreads, rslt->data->base, (nfilt && filter) ? filter[0] : SRA_SPOT_FILTER_PASS);
     }
     return rc;
 }
