@@ -58,7 +58,7 @@ const NCBI:align:ro_type NCBI:align:ro_soft_clip         = 1; // soft-clipping
 const NCBI:align:ro_type NCBI:align:ro_intron_plus       = 2; // intron on positive strand
 const NCBI:align:ro_type NCBI:align:ro_intron_minus      = 3; // intron on negative strand
 const NCBI:align:ro_type NCBI:align:ro_intron_unknown    = 4; // intron strand not specified
-const NCBI:align:ro_type NCBI:align:ro_complete_genomics = 5; // 
+const NCBI:align:ro_type NCBI:align:ro_complete_genomics = 5; //
 
 
 /*--------------------------------------------------------------------------
@@ -1117,6 +1117,9 @@ table NCBI:align:tbl:align_allele #1.2
 /*--------------------------------------------------------------------------
  * seq
  *  alignment sequence table
+ *
+ * history:
+ *  2.0.0 - NCBI:tbl:base_space uses metadata RNA_Flag to support RNA reads
  */
 physical
 I64 NCBI:align:sorted:alignment_id_encoding #1.0
@@ -1134,9 +1137,8 @@ I64 NCBI:align:sorted:alignment_id_encoding #1.0
     }
 }
 
-
-table NCBI:align:tbl:seq #1.1 =
-    NCBI:tbl:base_space #2.0.3,
+ table NCBI:align:tbl:seq #2 =
+    NCBI:tbl:base_space #3,
     NCBI:tbl:phred_quality #2.0.4,
     NCBI:align:tbl:cmp_base_space #1,
     NCBI:SRA:tbl:spotdesc #1.0.2,
@@ -1457,11 +1459,13 @@ table NCBI:align:view:cs_seq #1.1 = NCBI:align:tbl:cs_seq #1.2
 * - rowlen(.READ) = 0  && SEQ_START==0 (used as flag) -  the sequence is SEQ_LEN repetition of 'N'
 * - rowlen(.READ) = 0  && SEQ_START >= 1 - the sequence have to be fetched from external sources
 * - 0 < rowlen(.READ)< SEQ_LEN -- the sequence have to be filled with 'N's
-*
-v***********************************/
-table NCBI:align:tbl:reference #2 =
+ *
+ * history:
+ *  3.0.0 - NCBI:tbl:base_space uses metadata RNA_Flag to support RNA reads
+***********************************/
+table NCBI:align:tbl:reference #3 =
     NCBI:align:tbl:cmp_base_space #1,
-    NCBI:tbl:base_space #2.0.3,
+    NCBI:tbl:base_space #3,
     NCBI:tbl:seqloc #1,
     NCBI:SRA:tbl:stats #1.2.0
 {
@@ -1558,53 +1562,53 @@ table NCBI:align:tbl:reference #2 =
 }
 
 // THE DATABASES
-database NCBI:align:db:alignment_sorted #1.3
+database NCBI:align:db:alignment_sorted #2
 {
-    table NCBI:align:tbl:reference #2 REFERENCE;
+    table NCBI:align:tbl:reference #3 REFERENCE;
     table NCBI:align:tbl:align_sorted #1.2 PRIMARY_ALIGNMENT;
     table NCBI:align:tbl:align_mate_sorted #1.1 SECONDARY_ALIGNMENT;
-    table NCBI:align:tbl:seq #1.1 SEQUENCE;
+    table NCBI:align:tbl:seq #2 SEQUENCE;
     table NCBI:align:view:cs_seq #1.1 CS_SEQUENCE;
     table NCBI:align:tbl:qstat #1.0 QUAL_STAT;
 };
 
-database NCBI:align:db:alignment_unsorted #1.3
+database NCBI:align:db:alignment_unsorted #2
 {
-    table NCBI:align:tbl:reference #2 REFERENCE;
+    table NCBI:align:tbl:reference #3 REFERENCE;
     table NCBI:align:tbl:align_unsorted #1.2 PRIMARY_ALIGNMENT;
     table NCBI:align:tbl:align_mate_unsorted #1.1 SECONDARY_ALIGNMENT;
-    table NCBI:align:tbl:seq #1.1 SEQUENCE;
+    table NCBI:align:tbl:seq #2 SEQUENCE;
     table NCBI:align:view:cs_seq #1.1 CS_SEQUENCE;
     table NCBI:align:tbl:qstat #1.0 QUAL_STAT;
 };
 
-database NCBI:align:db:alignment_evidence #1.3
+database NCBI:align:db:alignment_evidence #2
 {
-    table NCBI:align:tbl:reference #2 REFERENCE;
+    table NCBI:align:tbl:reference #3 REFERENCE;
     table NCBI:align:tbl:align_unsorted #1.2 PRIMARY_ALIGNMENT;
     table NCBI:align:tbl:align_mate_unsorted #1.1 SECONDARY_ALIGNMENT;
     table NCBI:align:tbl:align_allele #1.2 EVIDENCE_INTERVAL;
     table NCBI:align:tbl:align_mate_unsorted #1.1 EVIDENCE_ALIGNMENT;
-    table NCBI:align:tbl:seq #1.1 SEQUENCE;
+    table NCBI:align:tbl:seq #2 SEQUENCE;
     table NCBI:align:view:cs_seq #1.1 CS_SEQUENCE;
     table NCBI:align:tbl:qstat #1.0 QUAL_STAT;
 };
 
-database NCBI:align:db:alignment_evidence_sorted #1.2
+database NCBI:align:db:alignment_evidence_sorted #2
 {
-    table NCBI:align:tbl:reference #2 REFERENCE;
+    table NCBI:align:tbl:reference #3 REFERENCE;
     table NCBI:align:tbl:align_sorted #1.2 PRIMARY_ALIGNMENT;
     table NCBI:align:tbl:align_mate_sorted #1.1 SECONDARY_ALIGNMENT;
     table NCBI:align:tbl:align_allele #1.2 EVIDENCE_INTERVAL;
     table NCBI:align:tbl:align_mate_unsorted #1.1 EVIDENCE_ALIGNMENT;
-    table NCBI:align:tbl:seq #1.1 SEQUENCE;
+    table NCBI:align:tbl:seq #2 SEQUENCE;
     table NCBI:align:view:cs_seq #1.1 CS_SEQUENCE;
     table NCBI:align:tbl:qstat #1.0 QUAL_STAT;
 };
 
-database NCBI:align:db:unaligned #1
+database NCBI:align:db:unaligned #2
 {
-    table NCBI:align:tbl:seq #1.1 SEQUENCE;
+    table NCBI:align:tbl:seq #2 SEQUENCE;
     table NCBI:SRA:ABI:tbl:v2 #1.0.4 CS_SEQUENCE;
     table NCBI:align:tbl:qstat #1.0 QUAL_STAT;
 };

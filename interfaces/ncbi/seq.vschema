@@ -285,9 +285,9 @@ extern function INSDC:dna:text NCBI:SRA:useRnaFlag #1 ( INSDC:dna:text in_read )
  * history:
  *  2.0.2 - base_space_common #1.0.2
  *  2.0.3 - base_space_common #1.0.3 now has dcmp_base_space as well
- *  2.0.4 - uses metadata RNA_Flag to support RNA reads
+ *  3.0.0 - uses metadata RNA_Flag to support RNA reads
  */
-table NCBI:tbl:base_space #2.0.4
+table NCBI:tbl:base_space #3
     = NCBI:tbl:base_space_common #1.0.3
     , NCBI:tbl:dcmp_base_space #1
 {
