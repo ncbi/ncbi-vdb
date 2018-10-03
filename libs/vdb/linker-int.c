@@ -538,6 +538,7 @@ rc_t VLinkerInitFactoriesRead ( VLinker *self,  KSymTable *tbl, const SchemaEnv 
         { vdb_row_len, "vdb:row_len" },
         { vdb_fixed_row_len, "vdb:fixed_row_len" },
         { vdb_select, "vdb:select" },
+        { vdb_is_configuration_set, "vdb:is_configuration_set" },
         { vdb_compare, "vdb:compare" },
         { vdb_no_compare, "vdb:no_compare" },
         { vdb_range_validate, "vdb:range_validate" },
