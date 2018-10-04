@@ -43,8 +43,8 @@
  *  Conf ( false ) and SetAllowAllCerts ( false ) = false
  *
  *  Conf ( true )                                 = true
- *  Conf ( true ) and SetAllowAllCerts ( true )   = true
  *  Conf ( true ) and SetAllowAllCerts ( false )  = false
+ *  Conf ( true ) and SetAllowAllCerts ( true )   = true
  *
  *+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*/
 const char * Bizdrapuda = "https://storage.googleapis.com/yan-blastdb/2018-09-12-08-33-02/fuse.xml";
@@ -84,9 +84,24 @@ KOutMsg ( "##[4] Conf (true )                     = true\n" );
     REQUIRE_RC ( KFileRelease ( file ) );
 KOutMsg ( "##[4] OK : Conf (true )                     = true\n" );
 
+        /*  Second, we call KNSManagerSetAllowAllCerts again
+         */
+KOutMsg ( "##[5] Conf (true ) + SetAllow ( false ) = false\n" );
+    REQUIRE_RC ( KNSManagerSetAllowAllCerts ( mgr, false ) );
+
+    file = NULL;
+    rc = KNSManagerMakeHttpFile ( mgr, & file, NULL, 0x01010000, Bizdrapuda );
+    CHECK_NE ( rc, ( rc_t ) 0 );
+    REQUIRE_NULL ( file );
+
+    rc = 0;
+    REQUIRE_RC ( KFileRelease ( file ) );
+
+KOutMsg ( "##[5] OK : Conf (true ) + SetAllow ( false ) = false\n" );
+
         /*  Second, we call KNSManagerSetAllowAllCerts
          */
-KOutMsg ( "##[5] Conf (true ) + SetAllow ( true ) = true\n" );
+KOutMsg ( "##[6] Conf (true ) + SetAllow ( true ) = true\n" );
     REQUIRE_RC ( KNSManagerSetAllowAllCerts ( mgr, true ) );
 
     file = NULL;
@@ -103,22 +118,8 @@ KOutMsg ( "##[5] Conf (true ) + SetAllow ( true ) = true\n" );
     REQUIRE_EQ ( num_read, bsize );
 
     REQUIRE_RC ( KFileRelease ( file ) );
-KOutMsg ( "##[5] OK : Conf (true ) + SetAllow ( true ) = true\n" );
+KOutMsg ( "##[6] OK : Conf (true ) + SetAllow ( true ) = true\n" );
 
-        /*  Third, we call KNSManagerSetAllowAllCerts again
-         */
-KOutMsg ( "##[6] Conf (true ) + SetAllow ( false ) = false\n" );
-    REQUIRE_RC ( KNSManagerSetAllowAllCerts ( mgr, false ) );
-
-    file = NULL;
-    rc = KNSManagerMakeHttpFile ( mgr, & file, NULL, 0x01010000, Bizdrapuda );
-    CHECK_NE ( rc, ( rc_t ) 0 );
-    REQUIRE_NULL ( file );
-
-    rc = 0;
-    REQUIRE_RC ( KFileRelease ( file ) );
-
-KOutMsg ( "##[6] OK : Conf (true ) + SetAllow ( false ) = false\n" );
 
     REQUIRE_RC ( KNSManagerRelease ( mgr ) );
 

@@ -43,8 +43,8 @@
  *  Conf ( false ) and SetAllowAllCerts ( false ) = false
  *
  *  Conf ( true )                                 = true
- *  Conf ( true ) and SetAllowAllCerts ( true )   = true
  *  Conf ( true ) and SetAllowAllCerts ( false )  = false
+ *  Conf ( true ) and SetAllowAllCerts ( true )   = true
  *
  *+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*/
 const char * Bizdrapuda = "https://storage.googleapis.com/yan-blastdb/2018-09-12-08-33-02/fuse.xml";
