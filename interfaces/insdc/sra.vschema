@@ -284,6 +284,11 @@ table INSDC:SRA:tbl:spotdesc #1.0.2 = INSDC:tbl:sequence #1.0.1
     /* SPOT_FILTER
      *  like READ_FILTER, but applies to entire spot
      */
+    INSDC:SRA:spot_filter in_spot_filter
+        = SPOT_FILTER
+        | 
+        ;
+
     extern column INSDC:SRA:spot_filter SPOT_FILTER
         = out_spot_filter
         | < INSDC:SRA:spot_filter > echo < SRA_SPOT_FILTER_PASS > ()
