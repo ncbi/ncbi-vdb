@@ -94,14 +94,27 @@ struct KNSProxies * KNSManagerGetProxies ( const KNSManager * self,
 }
 
 
+static bool KNSManagerWhackSingleton ( KNSManager * self ) {
+    KNSManager * our_mgr
+        = atomic_test_and_set_ptr ( & kns_singleton, NULL, NULL );
+    if ( self == our_mgr )
+        return true;
+    else
+        return false;
+}
+
 static
 rc_t KNSManagerWhack ( KNSManager * self )
 {
     rc_t rc;
 
+    assert ( self );
+
 #if USE_SINGLETON
-    KNSManager * our_mgr = atomic_test_and_set_ptr ( & kns_singleton, NULL, NULL );
-    if ( self == our_mgr )
+    if ( KNSManagerWhackSingleton ( self ) )
+        return 0;
+#else
+    if ( self -> singleton && KNSManagerWhackSingleton ( self ) )
         return 0;
 #endif
 
