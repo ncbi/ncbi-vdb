@@ -309,9 +309,9 @@ rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size )
         }
     }
 
-    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
+/*  DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
         ( " ParseUrl (%.*s) = (path:%S)\n", ( int ) url_size, url,
-                                                  & b -> path ) );
+                                                  & b -> path ) ); */
 
     return 0;
 }
