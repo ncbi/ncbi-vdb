@@ -26,11 +26,16 @@
 
 #include <kfs/file.h> /* KFileRelease */
 #include <kfg/kfg-priv.h> /* KConfigMakeEmpty */
+
 #include <klib/debug.h> /* KDbgSetString */
+
 #include <kns/http.h> /* KNSManagerMakeHttpFile */
 #include <kns/manager.h> /* KNSManagerRelease */
 #include <kns/tls.h> /* KNSManagerSetAllowAllCerts */
+
 #include <ktst/unit_test.hpp> // TEST_SUITE
+
+#include <../../libs/kns/mgr-priv.h> /* KNSManager */
 
 TEST_SUITE ( GoogleProxyTestSuite )
 
@@ -60,8 +65,7 @@ TEST_CASE ( GoogleProxyTest ) {
     REQUIRE_RC ( KConfigWriteString ( KFG, "/http/proxy/only", "true" ) );
     REQUIRE_RC ( KConfigWriteString ( KFG, "/http/proxy/path", "bad.host" ) );
 
-KConfigPrint(KFG,0);
-
+    mgr -> singleton = true;
     REQUIRE_RC ( KNSManagerRelease ( mgr ) );
     REQUIRE_RC ( KNSManagerMake ( & mgr ) );
 
@@ -73,6 +77,7 @@ KConfigPrint(KFG,0);
     REQUIRE_RC ( KConfigWriteString ( KFG, "/http/proxy/path",
                                            "webproxy:3128" ) );
 
+    mgr -> singleton = true;
     REQUIRE_RC ( KNSManagerRelease ( mgr ) );
     REQUIRE_RC ( KNSManagerMake ( & mgr ) );
 
@@ -135,9 +140,9 @@ extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
 
     rc_t CC KMain ( int argc, char * argv [] ) { if (
-1 ) assert ( ! KDbgSetString ( "KNS-DNS"   ) );   if (
+0 ) assert ( ! KDbgSetString ( "KNS-DNS"   ) );   if (
 1 ) assert ( ! KDbgSetString ( "KNS-HTTP"  ) );   if (
-1 ) assert ( ! KDbgSetString ( "KNS-PROXY" ) );
+0 ) assert ( ! KDbgSetString ( "KNS-PROXY" ) );
 
         rc_t rc = KConfigMakeEmpty ( & KFG );
 
