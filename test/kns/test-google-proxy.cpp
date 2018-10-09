@@ -60,6 +60,8 @@ TEST_CASE ( GoogleProxyTest ) {
     REQUIRE_RC ( KConfigWriteString ( KFG, "/http/proxy/only", "true" ) );
     REQUIRE_RC ( KConfigWriteString ( KFG, "/http/proxy/path", "bad.host" ) );
 
+KConfigPrint(KFG,0);
+
     REQUIRE_RC ( KNSManagerRelease ( mgr ) );
     REQUIRE_RC ( KNSManagerMake ( & mgr ) );
 
