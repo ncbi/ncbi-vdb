@@ -102,6 +102,19 @@ bool KDataBufferContainsString ( const KDataBuffer *buf, const String *str )
 }
 #endif
 
+/* Form of Request-URI in HTTP Request-Line used when connecting via proxy */
+typedef enum {
+    eUFUndefined,
+
+    /* absoluteURI: https://tools.ietf.org/html/rfc2616#section-5.1.2
+       standard form recommended to use with proxies */
+    eUFAbsolute,
+
+    /* origin-form: https://tools.ietf.org/html/rfc7230#section-5.3.1
+       use it when connect to googleapis.com: it rejects absoluteURI */
+    eUFOrigin,
+} EUriForm;
+
 /*--------------------------------------------------------------------------
  * KClientHttp
  *  hyper text transfer protocol 
@@ -144,6 +157,8 @@ struct KClientHttp
     bool tls;
 
     bool close_connection;
+
+    EUriForm uf; /* Form of Request-URI in Request-Line when using proxy */
 };
 
 
@@ -2679,9 +2694,9 @@ rc_t KClientHttpMakeRequestInt ( const KClientHttp *self,
             if ( rc == 0 )
             {
                 * _req = req;
-                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
+/*              DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
                     ( " KClientHttpMakeRequestInt (path=%S) = (path:%S)\n",
-                      & block -> path, & ( * _req ) -> url_block . path ) );
+                      & block -> path, & ( * _req ) -> url_block . path ) ); */
                 return 0;
             }
 
@@ -3187,40 +3202,53 @@ LIB_EXPORT rc_t CC KClientHttpResultFormatMsg (
     return rc;
 }
 
-
-LIB_EXPORT
-rc_t CC KClientHttpRequestFormatMsg ( const KClientHttpRequest *self,
-    char *buffer, size_t bsize, const char *method, size_t *len )
+static EUriForm EUriFormGuess ( const String * hostname,
+                                uint32_t uriForm,
+                                EUriForm uf /* cached Request-URI */ )
 {
-    rc_t rc;
-    rc_t r2 = 0;
-    bool have_user_agent = false;
-    String user_agent_string;
-    size_t total;
-    size_t p_bsize = 0;
-    const KHttpHeader *node;
-    size_t dummy;
+    assert ( hostname );
 
+    switch ( uriForm ) {
+        case 0: /* used in POST requests: use absoluteURI form */
+            return eUFAbsolute;
+
+        default:
+            assert ( 0 ); /* should never happen */
+/*          no break here ; */
+        case 2: /* retry after receiving 400 */
+            if ( uf != eUFUndefined ) /* switch the previous URI form */
+                return uf == eUFAbsolute ? eUFOrigin : eUFAbsolute;
+/*          else no break here ; */
+            assert ( 0 ); /* should never happen:
+                             uf should be initialized when uriForm == 2 */
+
+        case 1:
+            if ( uf != eUFUndefined )
+                return uf; /* reuse cached uriForm */
+            else { /* first call; guess uriForm by hostname */
+                String googleapis;
+                CONST_STRING ( & googleapis, "storage.googleapis.com" );
+                if ( StringEqual ( & googleapis, hostname ) )
+                    return eUFOrigin;
+                else
+                    return eUFAbsolute;
+            }
+    }
+}
+
+static rc_t KClientHttpRequestFormatMsgBegin (
+    const KClientHttpRequest * self, char * buffer, size_t bsize,
+    const char * method, size_t * len, uint32_t uriForm )
+{
+    rc_t rc = 0;
     const char * has_query = NULL;
     String hostname;
     KClientHttp * http = NULL;
-
-    if ( self == NULL ) {
-         return RC ( rcNS, rcNoTarg, rcReading, rcSelf, rcNull );
-    }
-    if ( buffer == NULL ) {
-         return RC ( rcNS, rcNoTarg, rcReading, rcParam, rcNull );
-    }
-
-    if ( len == NULL ) {
-        len = & dummy;
-    }
-
+    assert ( self && self -> http );
     http = self -> http;
 
     /* determine if there is a query */
     has_query = ( self -> url_block . query . size == 0 ) ? "" : "?";
-
 
     /* there are 2 places where the can be a host name stored
        we give preference to the one attached to the url_block, because
@@ -3235,15 +3263,8 @@ rc_t CC KClientHttpRequestFormatMsg ( const KClientHttpRequest *self,
         if ( hostname . size == 0 )
             return RC ( rcNS, rcNoTarg, rcValidating, rcName, rcEmpty );
     }
-
-    CONST_STRING ( &user_agent_string, "User-Agent" );
-
-    /* start building the buffer that will be sent 
-       We are inlining the host:port, instead of
-       sending it in its own header */
-
     if ( ! http -> proxy_ep )
-    {
+    {   /* direct connection */
         rc = string_printf ( buffer, bsize, len, 
                              "%s %S%s%S HTTP/%.2V\r\nHost: %S\r\nAccept: */*\r\n"
                              , method
@@ -3254,9 +3275,23 @@ rc_t CC KClientHttpRequestFormatMsg ( const KClientHttpRequest *self,
                              , & hostname
             );
     }
-    else if ( http -> port != 80 )
-    {
-        rc = string_printf ( buffer, bsize, len, 
+    else { /* using proxy */
+        http -> uf = EUriFormGuess ( & hostname, uriForm, http -> uf );
+        if ( http -> uf == eUFOrigin ) {
+        /* the host does not like absoluteURI: use abs_path ( origin-form ) */
+            rc = string_printf ( buffer, bsize, len, 
+                         "%s %S%s%S HTTP/%.2V\r\nHost: %S:%u\r\nAccept: */*\r\n"
+                             , method
+                             , & self -> url_block . path
+                             , has_query
+                             , & self -> url_block . query
+                             , http -> vers
+                             , & hostname
+                             , http -> port
+                );
+        }
+        else if ( http -> port != 80 ) { /* absoluteURI: non-default port */
+            rc = string_printf ( buffer, bsize, len, 
                              "%s %S://%S:%u%S%s%S HTTP/%.2V\r\nHost: %S\r\nAccept: */*\r\n"
                              , method
                              , & self -> url_block . scheme
@@ -3267,11 +3302,10 @@ rc_t CC KClientHttpRequestFormatMsg ( const KClientHttpRequest *self,
                              , & self -> url_block . query
                              , http -> vers
                              , & hostname
-            );
-    }
-    else
-    {
-        rc = string_printf ( buffer, bsize, len, 
+                );
+        }
+        else {                           /* absoluteURI: default port */
+            rc = string_printf ( buffer, bsize, len, 
                              "%s %S://%S%S%s%S HTTP/%.2V\r\nHost: %S\r\nAccept: */*\r\n"
                              , method
                              , & self -> url_block . scheme
@@ -3281,8 +3315,46 @@ rc_t CC KClientHttpRequestFormatMsg ( const KClientHttpRequest *self,
                              , & self -> url_block . query
                              , http -> vers
                              , & hostname
-            );
+                );
+        }
     }
+
+    return rc;
+}
+
+LIB_EXPORT
+rc_t CC KClientHttpRequestFormatMsg ( const KClientHttpRequest *self,
+    char *buffer, size_t bsize, const char *method, size_t *len,
+    uint32_t uriForm )
+{
+    rc_t rc;
+    rc_t r2 = 0;
+    bool have_user_agent = false;
+    String user_agent_string;
+    size_t total;
+    size_t p_bsize = 0;
+    const KHttpHeader *node;
+    size_t dummy;
+
+    if ( self == NULL ) {
+         return RC ( rcNS, rcNoTarg, rcReading, rcSelf, rcNull );
+    }
+    if ( buffer == NULL ) {
+         return RC ( rcNS, rcNoTarg, rcReading, rcParam, rcNull );
+    }
+
+    if ( len == NULL ) {
+        len = & dummy;
+    }
+
+    CONST_STRING ( &user_agent_string, "User-Agent" );
+
+    /* start building the buffer that will be sent 
+       We are inlining the host:port, instead of
+       sending it in its own header */
+
+    rc = KClientHttpRequestFormatMsgBegin
+        ( self, buffer, bsize, method, len, uriForm );
 
     /* print all headers remaining into buffer */
     total = * len;
@@ -3420,6 +3492,8 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
 {   
     rc_t rc = 0;
 
+    uint32_t uriForm = 1;
+
     KClientHttpResult *rslt;
 
     uint32_t i;
@@ -3436,7 +3510,8 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
         char buffer [ 4096 ];
 
         /* create message */
-        rc = KClientHttpRequestFormatMsg ( self, buffer, sizeof buffer, method, & len );
+        rc = KClientHttpRequestFormatMsg ( self, buffer, sizeof buffer,
+                                           method, & len, uriForm );
         if ( rc != 0 )
             break;
 
@@ -3486,6 +3561,13 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
             }
 
             /* NO BREAK */
+
+        case 400:
+            if ( uriForm == 1 ) {
+                ++ uriForm; /* got 400; try to use different Request-URI form */
+                continue;
+            }
+/*          else no break here: tried both Request-URI forms */
 
         default:
 
@@ -3609,7 +3691,8 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
         char buffer [ 4096 ];
 
         /* create message */
-        rc = KClientHttpRequestFormatMsg ( self, buffer, sizeof buffer, "POST", & len );
+        rc = KClientHttpRequestFormatMsg ( self, buffer, sizeof buffer,
+                                           "POST", & len, 0 );
         if ( rc != 0 )
             break;
 

@@ -31,8 +31,9 @@ TOP ?= $(abspath ../..)
 MODULE = test/kns
 
 TEST_TOOLS = \
-    test_allow_all_certificates \
-    test_dis_allow_all_certificates \
+	test_allow_all_certificates \
+	test_dis_allow_all_certificates \
+	test-google-proxy \
 	test200for-whole-file \
 	test-kns \
 	test-http-dropconn \
@@ -151,6 +152,18 @@ DAA_OBJ = \
 	$(addsuffix .$(OBJX),$(DAA_SRC))
 
 $(TEST_BINDIR)/test_dis_allow_all_certificates: $(DAA_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+#----------------------------------------------------------------
+# test-google-proxy
+#
+P_SRC = \
+	test-google-proxy
+
+P_OBJ = \
+	$(addsuffix .$(OBJX),$(P_SRC))
+
+$(TEST_BINDIR)/test-google-proxy: $(P_OBJ)
 	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
 #----------------------------------------------------------------
