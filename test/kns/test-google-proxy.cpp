@@ -135,7 +135,9 @@ extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
 
     rc_t CC KMain ( int argc, char * argv [] ) { if (
-1 ) assert ( ! KDbgSetString ( "KNS-HTTP" ) );
+1 ) assert ( ! KDbgSetString ( "KNS-DNS"   ) );   if (
+1 ) assert ( ! KDbgSetString ( "KNS-HTTP"  ) );   if (
+1 ) assert ( ! KDbgSetString ( "KNS-PROXY" ) );
 
         rc_t rc = KConfigMakeEmpty ( & KFG );
 
