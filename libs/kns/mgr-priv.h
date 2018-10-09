@@ -82,7 +82,7 @@ struct KNSManager
     bool NCBI_VDB_NETkfgValueSet;
     bool NCBI_VDB_NETkfgValue;
 
-    bool singleton;
+    bool notSingleton;
 };
 
 bool KNSManagerLogNcbiVdbNetError ( const struct KNSManager * self );

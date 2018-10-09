@@ -65,7 +65,7 @@ TEST_CASE ( GoogleProxyTest ) {
     REQUIRE_RC ( KConfigWriteString ( KFG, "/http/proxy/only", "true" ) );
     REQUIRE_RC ( KConfigWriteString ( KFG, "/http/proxy/path", "bad.host" ) );
 
-    mgr -> singleton = true;
+    mgr -> notSingleton = true;
     REQUIRE_RC ( KNSManagerRelease ( mgr ) );
     REQUIRE_RC ( KNSManagerMake ( & mgr ) );
 
@@ -77,7 +77,7 @@ TEST_CASE ( GoogleProxyTest ) {
     REQUIRE_RC ( KConfigWriteString ( KFG, "/http/proxy/path",
                                            "webproxy:3128" ) );
 
-    mgr -> singleton = true;
+    mgr -> notSingleton = true;
     REQUIRE_RC ( KNSManagerRelease ( mgr ) );
     REQUIRE_RC ( KNSManagerMake ( & mgr ) );
 
