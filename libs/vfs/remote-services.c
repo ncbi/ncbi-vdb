@@ -167,6 +167,12 @@ static bool SVersionResponseHasTimestamp ( const SVersion * self ) {
     assert ( self );
     return self -> version >= VERSION_3_0;
 }
+
+static bool SVersionResponseInJson ( const SVersion * self ) {
+    assert ( self );
+    return self -> version >= VERSION_4_0;
+}
+
 /******************************************************************************/
 
 
@@ -477,6 +483,7 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
     const char man [] = "/repository/remote/main/CGI/resolver-cgi";
     const char prt [] = "/repository/remote/protected/CGI/resolver-cgi";
     const char cgi [] = "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
+    
     rc_t rc = 0;
     const char * path = aProtected ? prt : man;
     assert ( self );
@@ -557,10 +564,23 @@ static rc_t SRawFini ( SRaw * self ) {
     return 0;
 }
 
+static bool SVersionSupportsJson ( const SVersion * self,
+                        EServiceType serviceType, const char * cgi )
+{
+    assert ( self );
+
+    if ( serviceType != eSTnames || cgi == NULL || cgi [ 0 ] == '\0' )
+        return true;
+
+    if ( SVersionResponseInJson ( self ) && cgi [ strlen ( cgi ) - 1 ] == 'i' )
+        return false;
+
+    return true;
+}
 
 /* SVersion *******************************************************************/
-static rc_t SVersionInit
-    ( SVersion * self, const char * src, EServiceType serviceType )
+static rc_t SVersionInit ( SVersion * self, const char * src,
+                           EServiceType serviceType, const char * cgi )
 {
     const char * s = src;
 
@@ -607,9 +627,12 @@ static rc_t SVersionInit
         self -> minor = ( uint8_t ) l;
 
         self -> version = self -> major << 24 | self -> minor << 16;
-
-        return SRawAlloc ( & self -> raw, src, 0 );
     }
+
+    if ( ! SVersionSupportsJson ( self, serviceType, cgi ) )
+        return SVersionInit ( self, "3.", serviceType, cgi );
+
+    return SRawAlloc ( & self -> raw, src, 0 );
 }
 
 
@@ -650,7 +673,8 @@ static rc_t SHeaderMake
     rc = SRawAlloc ( & self -> raw, src -> addr, src -> size );
 
     if ( rc == 0 )
-        rc = SVersionInit ( & self -> version, self -> raw . s, serviceType );
+        rc = SVersionInit ( & self -> version, self -> raw . s,
+                            serviceType, NULL );
 
     return rc;
 }
@@ -2680,21 +2704,13 @@ static rc_t SObjectCheckUrl ( SObject * self ) {
 static
 rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     VRemoteProtocols protocols, const char * cgi,
-    const char * version, bool aProtected )
+    const char * version, bool aProtected, bool adjustVersion )
 {
     SCgiRequest * self = NULL;
     rc_t rc = 0;
     const SKV * kv = NULL;
 
     assert ( request );
-
-    rc = SVersionFini ( & request -> version );
-    if ( rc != 0 )
-        return rc;
-
-    rc = SVersionInit ( & request -> version, version, eSTnames );
-    if ( rc != 0 )
-        return rc;
 
     if ( protocols == eProtocolDefault )
         protocols = SHelperDefaultProtocols ( helper );
@@ -2716,6 +2732,15 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
         }
         rc = SCgiRequestInitCgi ( self, cgi );
     }
+
+    rc = SVersionFini ( & request -> version );
+    if ( rc != 0 )
+        return rc;
+
+    rc = SVersionInit ( & request -> version, version, eSTnames,
+                        adjustVersion ? self -> cgi : NULL );
+    if ( rc != 0 )
+        return rc;
 
     VectorWhack ( & self -> params, whackSKV, NULL );
 
@@ -2763,15 +2788,25 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
             request -> request . object [ i ] . ordId = i;
             rc = SObjectCheckUrl ( & request -> request . object [ i ] );
             if ( rc != 0 || ! request -> request . object [ i ] . isUri ) {
+              if ( SVersionResponseInJson ( & request -> version ) ) {
+                const char name [] = "acc";
+                rc = SKVMake ( & kv, name,
+                               request -> request . object [ 0 ] . objectId );
+                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( "  %s=%s\n",
+                    name, request -> request . object [ 0 ] . objectId ) );
+              }
+              else {
                 rc = SKVMakeObj ( & kv, & request -> request . object [ i ],
                                   & request -> version );
-                if ( rc == 0 ) {
+                if ( rc == 0 )
                     DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
                         ( "  %.*s=%.*s\n", kv -> k . len, kv -> k . addr,
                                            kv -> v . len, kv -> v . addr ) );
-                    rc = VectorAppend ( & self -> params, NULL, kv );
-                    request -> hasQuery = true;
-                }
+              }
+              if ( rc == 0 ) {
+                rc = VectorAppend ( & self -> params, NULL, kv );
+                request -> hasQuery = true;
+              }
             }
         }
         if ( rc != 0 )
@@ -2889,7 +2924,7 @@ rc_t SRequestInitSearchSCgiRequest ( SRequest * request, const char * cgi,
     rc_t rc = 0;
     const SKV * kv = NULL;
     assert ( request );
-    rc = SVersionInit ( & request -> version, version, eSTnames );
+    rc = SVersionInit ( & request -> version, version, eSTnames, NULL );
     if ( rc != 0 )
         return rc;
     self = & request -> cgiReq;
@@ -3032,13 +3067,13 @@ rc_t KServiceAddProject ( KService * self, uint32_t project ) {
 
 static
 rc_t KServiceInitNamesRequestWithVersion ( KService * self,
-    VRemoteProtocols protocols,
-    const char * cgi, const char * version, bool aProtected )
+    VRemoteProtocols protocols, const char * cgi, const char * version,
+    bool aProtected, bool adjustVersion )
 {
     assert ( self );
 
     return SRequestInitNamesSCgiRequest ( & self -> req,  & self -> helper,
-        protocols, cgi, version, aProtected );
+        protocols, cgi, version, aProtected, adjustVersion );
 }
 
 
@@ -3047,7 +3082,7 @@ rc_t KServiceInitNamesRequest ( KService * self, VRemoteProtocols protocols,
     const char * cgi )
 {
     return KServiceInitNamesRequestWithVersion ( self, protocols, cgi, "#3.0",
-        false );
+        false, false );
 }
 
 
@@ -3103,7 +3138,7 @@ static rc_t KServiceInitNames1 ( KService * self, const KNSManager * mgr,
 
     if ( rc == 0 )
         rc = KServiceInitNamesRequestWithVersion
-            ( self, protocols, cgi, version, aProtected );
+            ( self, protocols, cgi, version, aProtected, true );
 
     return rc;
 }
@@ -3183,6 +3218,9 @@ static rc_t KServiceProcessJson ( KService * self ) {
 
     if ( rc == 0 )
         rc = KSrvResponseSetR4 ( self -> resp .list, r );
+
+    if ( rc == 0 )
+        Response4GetRc ( r, & rc );
 
     r2 = Response4Release ( r );
     if ( r2 != 0 && rc == 0 )
@@ -3343,7 +3381,7 @@ rc_t KServiceProcessStreamAll ( KService * self, KStream * stream )
         if ( rc != 0 || num_read == 0 )
             break;
         DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
-            ( "%.*s", ( int ) num_read - 1, buffer + offW ) );
+            ( "%.*s", ( int ) num_read, buffer + offW ) );
         sizeR += num_read;
         offW += num_read;
         assert ( sizeW >= num_read );
@@ -3362,7 +3400,9 @@ rc_t KServiceProcessStreamAll ( KService * self, KStream * stream )
         }
         buffer = self -> helper . input;
         buffer [ offW ] = '\0';
-        if ( self != NULL && self -> req . version. major > 3 ) {
+        if ( self != NULL && self -> req . version. major > 3 && offW > 0
+            && buffer [ 0 ] != '#' )
+        {
             start = false;
             rc = KServiceProcessJson ( self );
         }
@@ -3562,7 +3602,7 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
     else if ( self -> req . hasQuery
            || self -> req . serviceType == eSTsearch)
     {
-        if ( self -> req. version . version >= VERSION_4_0 )
+        if ( SVersionResponseInJson ( & self -> req. version ) )
             rc = KServiceProcessStreamAll     ( self, stream );
         else
             rc = KServiceProcessStreamByParts ( self, stream );
@@ -3579,7 +3619,7 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
             rc = Response4AppendUrl ( r4,
                 self -> req . request . object [ i ] . objectId );
 
-    if ( rc == 0 && self -> req. version . version < VERSION_4_0 ) {
+    if ( rc == 0 && ! SVersionResponseInJson ( & self -> req. version ) ) {
         uint32_t l = KSrvResponseLength  ( self -> resp .list );
         uint32_t i = 0;
         for ( i = 0; rc == 0 && i < l; ++ i ) {
@@ -3595,7 +3635,7 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
             if ( rc == 0 )
                 rc = Response4AddAccOrId ( r4, reqId, -1, & box );
             if ( rc == 0 )
-                ContainerAdd ( box, respId, -1, & file );
+                ContainerAdd ( box, respId, -1, & file, NULL );
             if ( rc != 0 )
                 break;
             for ( p = 0; rc == 0 && p < sizeof pp / sizeof pp [ 0 ]; ++ p ) {
@@ -3606,7 +3646,14 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                                            & path, & vdbcache, & error );
                 if ( rc == 0 ) {
                     if ( path != NULL ) {
-                        rc = ItemAddVPath ( file, "sra", path );
+                        String ticket;
+                        rc_t r = 0;
+                        memset ( & ticket, 0, sizeof ticket );
+                        r = VPathGetTicket ( path, & ticket );
+                        if ( r == 0 )
+                            rc = ItemSetTicket ( file, & ticket );
+                        if ( rc == 0 )
+                            rc = ItemAddVPath ( file, "sra", path );
                         RELEASE ( VPath, path );
                         if ( rc != 0 )
                             break;
@@ -3723,7 +3770,7 @@ rc_t KServiceNamesExecuteExtImpl ( KService * self, VRemoteProtocols protocols,
         version = "#3.0";
 
     rc = KServiceInitNamesRequestWithVersion ( self, protocols, cgi, version,
-        false );
+        false, expected == NULL );
 
     if ( rc == 0 && self -> req . hasQuery )
         rc = SCgiRequestPerform ( & self -> req . cgiReq, & self -> helper,
@@ -3773,7 +3820,7 @@ rc_t KServiceNamesExecute ( KService * self, VRemoteProtocols protocols,
 }
 
 
-static rc_t CC KService1NameWithVersionAndType ( const KNSManager * mgr,
+static rc_t KService1NameWithVersionAndType ( const KNSManager * mgr,
     const char * url, const char * acc, size_t acc_sz, const char * ticket,
     VRemoteProtocols protocols, const VPath ** remote,  const VPath ** mapping,
     bool refseq_ctx, const char * version, EObjectType objectType,
@@ -3801,7 +3848,38 @@ static rc_t CC KService1NameWithVersionAndType ( const KNSManager * mgr,
         rc = KServiceProcessStream ( & service, stream );
 
     if ( rc == 0 ) {
-        if ( VectorLength ( & service . resp . rows ) != 1)
+        if ( SVersionResponseInJson ( & service . req . version ) ) {
+            uint32_t n = 0;
+            const KSrvResponse * response = NULL;
+            const KSrvRespObj * obj = NULL;
+            KSrvRespObjIterator * it = NULL;
+            KSrvRespFile * file = NULL;
+            KSrvRespFileIterator * fi = NULL;
+            rc = KServiceGetResponse ( & service, & response );
+            if ( rc == 0 ) {
+                n = KSrvResponseLength  ( response );
+                if ( n != 1 )
+                    rc = RC ( rcVFS, rcQuery, rcExecuting, rcRow, rcIncorrect );
+            }
+            if ( rc == 0 )
+                rc = KSrvResponseGetObjByIdx ( response, 0, & obj );
+            if ( rc == 0 )
+                rc = KSrvRespObjMakeIterator ( obj, & it );
+            if ( rc == 0 )
+                rc = KSrvRespObjIteratorNextFile ( it, & file );
+            if ( rc == 0 )
+                rc = KSrvRespFileMakeIterator ( file, protocols, & fi );
+            if ( rc == 0 )
+                rc = KSrvRespFileIteratorNextPath ( fi, remote );
+            if ( rc == 0 && mapping != NULL )
+                rc = KSrvRespFileGetMapping ( file, mapping );
+            RELEASE ( KSrvRespFileIterator, fi );
+            RELEASE ( KSrvRespFile, file );
+            RELEASE ( KSrvRespObjIterator, it );
+            RELEASE ( KSrvRespObj, obj );
+            RELEASE ( KSrvResponse, response );
+        }
+        else if ( VectorLength ( & service . resp . rows ) != 1 )
             rc = RC ( rcVFS, rcQuery, rcExecuting, rcRow, rcIncorrect );
         else {
             uint32_t l = KSrvResponseLength ( service . resp . list );
@@ -3864,7 +3942,7 @@ static rc_t CC KService1NameWithVersionAndType ( const KNSManager * mgr,
         }
     }
 
-    if ( rc == 0 ) {
+    if ( rc == 0 && ! SVersionResponseInJson ( & service . req . version ) ) {
         uint32_t l = KSrvResponseLength ( service . resp . list );
         if ( l != 1)
             rc = RC ( rcVFS, rcQuery, rcResolving, rcQuery, rcUnauthorized );
@@ -4241,7 +4319,8 @@ rc_t KServiceProcessStreamTestNames1 ( const KNSManager * mgr,
 /* Parse "buffer" as names-3.0 response.
    Do not log "errorsToIgnore" messages during response processing */
 rc_t KServiceNames3_0StreamTestMany ( const char * buffer,
-    const KSrvResponse ** response, int errorsToIgnore, int itemsInRequest )
+    const KSrvResponse ** response, int errorsToIgnore,
+    int itemsInRequest )
 {
     rc_t rc = 0;
     rc_t r2 = 0;

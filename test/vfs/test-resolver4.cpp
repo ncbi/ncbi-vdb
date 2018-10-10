@@ -39,7 +39,7 @@ TEST_CASE ( Test ) {
     const KSrvResponse * r = NULL;
     REQUIRE_RC ( KServiceTestNamesExecuteExt ( s, 0, 0, "4.", & r,
       "{\"sequence\":[{\"status\":{\"code\":200},\"acc\":\"SRR000001\","
-      "\"itemClass\":\"run\",\"format\":\"sra\",\"link\":\"http://h\"}]}" ) );
+      "\"itemClass\":\"run\",\"format\":\"sra\",\"link\":\"http://h/\"}]}" ) );
     REQUIRE_EQ ( KSrvResponseLength  ( r ), 1u );
     const KSrvRespObj * obj = NULL;
 
@@ -95,7 +95,7 @@ TEST_CASE ( Test ) {
     REQUIRE_RC      ( VPathMakeUri ( path, & uri ) );
     REQUIRE_NOT_NULL( path );
     String e;
-    CONST_STRING ( & e, "http://h" );
+    CONST_STRING ( & e, "http://h/" );
     REQUIRE ( StringEqual ( uri, & e ) );
     free ( const_cast < String * > ( uri ) );
 

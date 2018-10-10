@@ -99,7 +99,7 @@ if(1){
     REQUIRE_RC      ( Response4Make ( & response, "{\"sequence\":["
    "{\"status\":{\"code\":200,\"msg\":\"ok\"},"
    "\"acc\":\"SRR000001\",\"itemClass\":\"run\","
-   "\"format\":\"sra\",\"link\":\"fasp://h\",\"size\":3,"
+   "\"format\":\"sra\",\"link\":\"fasp://h/\",\"size\":3,"
    "\"md5\":\"9bde35fefa9d955f457e22d9be52bcd9\",\"modDate\":1000000000}]}" ) );
     REQUIRE_RC      ( Response4Release ( response ) );
 
@@ -144,7 +144,7 @@ if(1){
     REQUIRE_RC ( Response4Make ( & response, "{\"sequence\":["
         "{\"status\":{\"code\":200,\"msg\":\"ok\"},"
          "\"acc\":\"SRR000001\",\"itemClass\":\"run\","
-         "\"format\":\"sra\",\"link\":\"fasp://h\",\"size\":3,"
+         "\"format\":\"sra\",\"link\":\"fasp://h/\",\"size\":3,"
          "\"md5\":\"9bde35fefa9d955f457e22d9be52bcd9\",\"modDate\":1000000000},"
         "{\"status\":{\"code\":404,\"msg\":\"not found\"},\"acc\":\"SRR0000\"}]"
       ",\"timestamp\":1500000000}" ) );
@@ -153,7 +153,7 @@ if(1){
     REQUIRE_RC ( Response4Make ( & response, "{\"sequence\":["
         "{\"status\":{\"code\":200,\"msg\":\"ok\"},"
          "\"acc\":\"SRR000001\",\"itemClass\":\"run\","
-         "\"format\":\"sra\",\"link\":\"fasp://h\",\"size\":3,"
+         "\"format\":\"sra\",\"link\":\"fasp://h/\",\"size\":3,"
          "\"md5\":\"9bde35fefa9d955f457e22d9be52bcd9\",\"modDate\":1000000000},"
         "{\"status\":{\"code\":200,\"msg\":\"ok\"},\"acc\":\"SRR000002\","
           "\"itemClass\":\"run\",\"format\":\"sra\",\"link\":\"http://h/\"}]"
@@ -180,7 +180,7 @@ if(1){
 
     REQUIRE_RC ( Response4Make ( & response,
         "{\"sequence\":[{\"status\":{\"code\":200,\"msg\":\"ok\"},"
-                "\"oldCartObjId\":1,\"itemClass\":\"file\","
+                "\"id\":1,\"itemClass\":\"file\","
                 "\"format\":\"file\",\"name\":\"f.txt\",\"link\":\"http://h/\","
                 "\"tic\":\"0AB1C23D-E4F5-6A7B-C890-1D2345678E90\"}]"
          ",\"timestamp\":1500000000}"));
@@ -188,20 +188,20 @@ if(1){
 
     REQUIRE_RC ( Response4Make ( & response,
         "{\"sequence\":[{\"status\":{\"code\":200,\"msg\":\"ok\"},"
-                "\"oldCartObjId\":1,\"itemClass\":\"file\","
+                "\"id\":1,\"itemClass\":\"file\","
                 "\"format\":\"file\",\"name\":\"f.txt\",\"link\":\"http://h/\","
                 "\"tic\":\"0AB1C23D-E4F5-6A7B-C890-1D2345678E90\"},"
-      "{\"status\":{\"code\":403,\"msg\":\"access denied\"},\"oldCartObjId\":2}"
+      "{\"status\":{\"code\":403,\"msg\":\"access denied\"},\"id\":2}"
          "],\"timestamp\":1500000000}"));
     REQUIRE_RC ( Response4Release ( response ) );
 
     REQUIRE_RC ( Response4Make ( & response,
         "{\"sequence\":[{\"status\":{\"code\":200,\"msg\":\"ok\"},"
-               "\"oldCartObjId\":1,\"itemClass\":\"file\","
+               "\"id\":1,\"itemClass\":\"file\","
                "\"format\":\"file\",\"name\":\"1.txt\",\"link\":\"http://h/1\","
                "\"tic\":\"0AB1C23D-E4F5-6A7B-C890-1D2345678E90\"},"
                        "{\"status\":{\"code\":200,\"msg\":\"ok\"},"
-               "\"oldCartObjId\":2,\"itemClass\":\"file\","
+               "\"id\":2,\"itemClass\":\"file\","
                "\"format\":\"file\",\"name\":\"2.txt\",\"link\":\"http://h/2\","
                "\"tic\":\"0AB1C23D-E4F5-6A7B-C890-1D2345678E90\"}"
          "],\"timestamp\":1500000000}"));
@@ -209,11 +209,11 @@ if(1){
 
     REQUIRE_RC ( Response4Make ( & response,
         "{\"sequence\":[{\"status\":{\"code\":200,\"msg\":\"ok\"},"
-               "\"oldCartObjId\":1,\"itemClass\":\"file\","
+               "\"id\":1,\"itemClass\":\"file\","
                "\"format\":\"file\",\"name\":\"1.txt\",\"link\":\"http://h/1\","
                "\"tic\":\"0AB1C23D-E4F5-6A7B-C890-1D2345678E90\"},"
                        "{\"status\":{\"code\":200,\"msg\":\"ok\"},"
-               "\"oldCartObjId\":2,\"itemClass\":\"file\","
+               "\"id\":2,\"itemClass\":\"file\","
                "\"format\":\"file\",\"name\":\"2.txt\",\"link\":\"http://h/2\","
                "\"tic\":\"0AB1C23D-E4F5-6A7B-C890-1D2345678E90\"}"
          "],\"timestamp\":1500000000}"));
@@ -228,7 +228,7 @@ extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
     rc_t CC KMain ( int argc, char * argv [] ) {
 if ( 
-0 ) assert ( ! KDbgSetString ( "VFS-JSON" ) );
+0 ) assert ( ! KDbgSetString ( "VFS" ) );
     return TestResolver4 ( argc, argv );
     }
 }

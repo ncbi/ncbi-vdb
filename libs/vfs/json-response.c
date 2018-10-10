@@ -37,6 +37,8 @@
 #include "path-priv.h" /* VPathMake */
 #include "resolver-priv.h" /* DEFAULT_PROTOCOLS */
 
+#include <ctype.h> /* isdigit */
+
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (0)
 
@@ -64,11 +66,15 @@ typedef struct {
 
     const VPath * cache;
     rc_t cacheRc;
+
+    VPath * mapping;
 } Locations;
 
 struct Item { /* Run ob dbGaP file */
     char * acc;
     int64_t id;
+    char * name;
+    char * tic;
     Locations * elm;
     uint32_t nElm;
 };
@@ -90,6 +96,7 @@ struct Response4 { /* Response object */
     atomic32_t refcount; 
     Container * items;
     uint32_t nItems;
+    rc_t rc;
 };
 
 typedef enum {
@@ -98,7 +105,7 @@ typedef enum {
     eTrue
 } EState;
 
-typedef struct {
+typedef struct Data {
     const char * acc;
     int64_t id; /* oldCartObjId */
     const char * cls; /* itemClass */
@@ -115,6 +122,8 @@ typedef struct {
     const char * reg; /* region */
     const char * link; /* ??????????????????????????????????????????????????? */
     const char * tic;
+
+    int64_t code; /* status/code */
 } Data;
 
 struct KSrvRespObj {
@@ -208,6 +217,7 @@ static void StackPrintInt
         ( "/%s\" = %d\n", name, val ) );
 }
 
+#ifdef DEBUG_JSON
 static void StackPrintBul
     ( const Stack * self, const char * name, bool val )
 {
@@ -223,6 +233,7 @@ static void StackPrintStr
     DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
         ( "/%s\" = \"%s\"\n", name, val ) );
 }
+#endif
 
 static rc_t StackRelease ( Stack * self, bool failed ) {
     assert ( self );
@@ -475,8 +486,10 @@ static rc_t ItemRelease ( Item * self ) {
             rc = r2;
     }
 
-    free ( self -> elm );
     free ( self -> acc );
+    free ( self -> elm );
+    free ( self -> name );
+    free ( self -> tic );
 
     memset ( self, 0, sizeof * self );
 
@@ -580,6 +593,20 @@ rc_t ItemAddVPath ( Item * self, const char * type, const VPath * path ) {
     if ( rc == 0 )
         rc = LocationsAddVPath ( l, path );
     return rc;
+}
+
+rc_t ItemSetTicket ( Item * self, const String * tic ) {
+    if ( self == NULL
+      || tic == NULL || tic -> addr == NULL || tic -> size == 0 )
+    {   return 0; }
+
+    free ( self -> tic );
+
+    self -> tic = string_dup ( tic -> addr, tic -> size );
+    if ( self -> tic == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
+
+    return 0;
 }
 
 /*rc_t ItemGetId ( const Item * self, const char ** id ) {
@@ -704,11 +731,13 @@ static rc_t ContainerRelease ( Container * self ) {
     return rc;
 }
 
-rc_t ContainerAdd ( Container * self,
-                    const char * acc, int64_t id, Item ** newItem )
+rc_t ContainerAdd ( Container * self, const char * acc, int64_t id,
+                    Item ** newItem, const Data * data )
 {
     Item * item = NULL;
     void * tmp = NULL;
+    const char * name = NULL;
+    const char * tic  = NULL;
     uint32_t i = 0;
 
     if ( newItem == NULL )
@@ -718,6 +747,11 @@ rc_t ContainerAdd ( Container * self,
 
     if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+
+    if ( data != NULL ) {
+        name = data -> name;
+        tic  = data -> tic;
+    }
 
     for ( i = 0; i < self -> nFiles; ++ i ) {
         Item * item = & self -> files [ i ];
@@ -759,6 +793,18 @@ rc_t ContainerAdd ( Container * self,
     }
     else
         item -> id = id;
+
+    if ( name != NULL ) {
+        item -> name = strdup ( name );
+        if ( item -> name == NULL )
+            return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
+    }
+
+    if ( tic != NULL ) {
+        item -> tic = strdup ( tic );
+        if ( item -> tic == NULL )
+            return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
+    }
 
     * newItem = item;
 
@@ -910,7 +956,7 @@ rc_t Response4AppendUrl ( Response4 * self, const char * url ) {
     rc = Response4AddAccOrId ( self, url, -1, & box );
 
     if ( rc == 0 )
-        rc = ContainerAdd ( box, url, -1, & item );
+        rc = ContainerAdd ( box, url, -1, & item, NULL );
 
     if ( rc == 0 )
         rc = ItemAddFormat ( item, "", & l );
@@ -969,7 +1015,9 @@ static rc_t IntSet ( int64_t * self, const KJsonValue * node,
     if ( rc != 0 )
         return rc;
 
+#ifdef DEBUG_JSON
     StackPrintInt ( path, name, * self );
+#endif
 
     return rc;
 }
@@ -989,7 +1037,9 @@ static rc_t BulSet ( EState * self, const KJsonValue * node,
     if ( rc != 0 )
         return rc;
 
+#ifdef DEBUG_JSON
     StackPrintBul ( path, name, value );
+#endif
 
     * self = value ? eTrue : eFalse;
     return 0;
@@ -1013,8 +1063,10 @@ static rc_t StrSet ( const char ** self, const KJsonValue * node,
     if ( value == NULL )
         return 0;
 
+#ifdef DEBUG_JSON
     if ( path != NULL )
         StackPrintStr ( path, name, value );
+#endif
 
     if ( value [ 0 ] == '\0' )
         return 0;
@@ -1033,8 +1085,6 @@ static void DataInit ( Data * self ) {
     self -> qual = eUnknown;
 
     self -> id  = -1;
-    self -> sz  = -1;
-    self -> mod = -1;
     self -> exp = -1;
 }
 
@@ -1060,6 +1110,8 @@ static void DataClone ( const Data * self, Data * clone ) {
     clone -> reg  = self -> reg; /* region */
     clone -> link = self -> link; /* ???????????????????????????????????????? */
     clone -> tic  = self -> tic;
+
+    clone -> code = self -> code;
 }
 
 static rc_t DataUpdate ( const Data * self, Data * next,
@@ -1101,7 +1153,7 @@ static rc_t DataUpdate ( const Data * self, Data * next,
     name = "name";
     StrSet ( & next -> name , KJsonObjectGetMember ( node, name ), name, path );
 
-    name = "oldCartObjId";
+    name = "id";
     IntSet ( & next -> id   , KJsonObjectGetMember ( node, name ), name, path );
 
     name = "region";
@@ -1135,7 +1187,7 @@ static rc_t DataGetFormat ( const Data * data, const char ** format ) {
     return 0;
 }
 
-/******************************** Status ********************************/
+/******************************** Status **************************************/
 
 static
 void StatusInit ( Status * self, int64_t code, const char * msg )
@@ -1203,16 +1255,58 @@ static rc_t LocationsAddLink ( Locations * self, const KJsonValue * node,
 
     VPath * path = NULL;
 
+    uint8_t md5 [ 16 ];
+    bool hasMd5 = false;
+
+    String url;
+
+    String acc;
+    memset ( & acc, 0, sizeof acc );
+
     assert ( self && dad && value );
 
     if ( node == NULL )
         return 0;
 
     rc = StrSet ( value, node, NULL, NULL );
-    if ( rc != 0 )
+    if ( rc != 0 || * value == NULL )
         return rc;
 
-    rc = VPathMake ( & path, * value );
+    assert ( * value );
+
+    StringInitCString ( & url, * value );
+    StringInitCString ( & acc, dad -> acc );
+
+    if ( dad -> md5 != NULL ) {
+        int i = 0;
+        for ( i = 0; i < 16; ++ i ) {
+            if ( dad -> md5 [ 2 * i ] == '\0' )
+                break;
+            if ( isdigit ( dad -> md5 [ 2 * i ] ) )
+                md5 [ i ] = ( dad -> md5 [ 2 * i ] - '0' ) * 16;
+            else
+                md5 [ i ] = ( dad -> md5 [ 2 * i ] - 'a' + 10) * 16;
+            if ( dad -> md5 [ 2 * i + 1 ] == '\0' )
+                break;
+            if ( isdigit ( dad -> md5 [ 2 * i + 1 ] ) )
+                md5 [ i ] += dad -> md5 [ 2 * i + 1 ] - '0';
+            else
+                md5 [ i ] += dad -> md5 [ 2 * i + 1 ] - 'a' + 10;
+        }
+        if ( i == 16 )
+            hasMd5 = true;
+    }
+
+    if ( dad -> tic == NULL ) {
+        rc = VPathMakeFromUrl ( & path, & url, NULL, true, & acc, dad -> sz,
+                                dad -> mod, hasMd5 ? md5 : NULL, 0 );
+    }
+    else {
+        String ticket;
+        StringInitCString ( & ticket, dad -> tic );
+        rc = VPathMakeFromUrl ( & path, & url, & ticket, true, & acc, dad -> sz,
+                                dad -> mod, hasMd5 ? md5 : NULL, 0 );
+    }
     if ( rc != 0 ) {
         DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
             ( "... error: invalid 'link': '%s'\n", * value ) );
@@ -1298,11 +1392,52 @@ static rc_t LocationsAddLinks ( Locations * self, const KJsonObject * node,
     }
 
     else if ( ! added ) {
-        rc = RC ( rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete );
+        const char * error = "warning";
+        assert ( data . code );
+        if ( data . code == 200 ) {
+            error = "error";
+            rc = RC ( rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete );
+        }
         DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-            ( "... error: cannot find any link\n" ) );
+            ( "... %s: cannot find any link\n", error ) );
     }
 
+    return rc;
+}
+
+static rc_t LocationsInitMapping ( Locations * self, const Item * item ) {
+    rc_t rc = 0;
+    const VPath * path = NULL;
+    String ticket;
+    assert ( self && item );
+    if ( self -> https [ 0 ] != NULL )
+        path = self -> https [ 0 ];
+    else if ( self -> http [ 0 ] != NULL )
+        path = self -> http [ 0 ];
+    else if ( self -> fasp [ 0 ] != NULL )
+        path = self -> fasp [ 0 ];
+    else
+        return 0;
+    memset ( & ticket, 0, sizeof ticket );
+    if ( item -> tic != NULL )
+        StringInitCString ( & ticket, item -> tic );
+    rc = VPathCheckFromNamesCGI ( path, & ticket, NULL );
+    if ( rc == 0 ) {
+        if ( item -> tic != NULL )
+            if ( item -> acc != NULL )
+                rc = VPathMakeFmt ( & self -> mapping, "ncbi-acc:%s?tic=%s",
+                                                    item -> acc, item -> tic );
+            else
+                rc = VPathMakeFmt ( & self -> mapping, "ncbi-file:%s?tic=%s",
+                                                    item -> name, item -> tic );
+        else
+            if ( item -> acc != NULL )
+                rc = VPathMakeFmt ( & self -> mapping, "ncbi-acc:%s",
+                                                                 item -> acc );
+            else
+                rc = VPathMakeFmt ( & self -> mapping, "ncbi-file:%s",
+                                                                 item -> name );
+    }
     return rc;
 }
 
@@ -1377,6 +1512,12 @@ static rc_t ItemAddElms ( Item * self, const KJsonObject * node,
             ( "... error: file 'format' was not set\n" ) );
     }
 
+    {
+        uint32_t i = 0;
+        for ( i = 0; rc == 0 && i < self -> nElm; ++ i )
+            rc = LocationsInitMapping ( & self -> elm [ i ], self );
+    }
+
     return rc;
 }
 
@@ -1400,7 +1541,7 @@ static rc_t ContainerAddItem ( Container * self, const KJsonObject * node,
     acc = data . acc;
     id  = data . id;
 
-    rc = ContainerAdd ( self, acc, id, & item );
+    rc = ContainerAdd ( self, acc, id, & item, & data );
 
     if ( rc == 0 && item != NULL ) {
         DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
@@ -1408,8 +1549,10 @@ static rc_t ContainerAddItem ( Container * self, const KJsonObject * node,
         rc = ItemAddElms ( item, node, & data, path );
     }
 
-    if ( rc == 0 && ! ItemHasLinks ( item ) )
+    if ( rc == 0 && ! ItemHasLinks ( item ) && data . code == 200 ) {
+        assert ( data . code );
         rc = RC ( rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete );
+    }
 
     return rc;
 }
@@ -1437,9 +1580,14 @@ static rc_t Response4AddItems ( Response4 * self, Container * aBox,
             return rc;
         }
         rc = StatusSet ( & box -> status, node, path );
+        if ( rc == 0 )
+            data . code = box -> status . code;
     }
 
     assert ( box );
+
+    if ( rc == 0 && box -> status . code == 404 )
+        self -> rc = RC ( rcVFS, rcQuery, rcResolving, rcName, rcNotFound );
 
     if ( ( data . cls != NULL ) && ( strcmp ( data .cls, "run"  ) == 0 
                             || strcmp ( data .cls, "file" ) == 0 ) )
@@ -1487,7 +1635,9 @@ static rc_t Response4AddItems ( Response4 * self, Container * aBox,
         }
     }
 
-    if ( aBox == NULL && box -> status . code == 200 && box -> nFiles == 0 ) {
+    if ( aBox == NULL
+      && box -> status . code == 200 && box -> nFiles == 0 )
+    {
         rc = RC ( rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete );
         DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
             ( "... error: cannot find any container\n" ) );
@@ -1661,6 +1811,14 @@ rc_t JResponseRelease ( const JResponse * cself ) {
 rc_t Response4AddRef ( const Response4 * self ) {
     if ( self != NULL )
         atomic32_inc ( & ( ( Response4 * ) self ) -> refcount );
+
+    return 0;
+}
+
+rc_t Response4GetRc ( const Response4 * self, rc_t * rc ) {
+    assert ( self && rc );
+
+    * rc = self -> rc;
 
     return 0;
 }
@@ -1920,14 +2078,28 @@ rc_t KSrvRespFileGetFormat ( const KSrvRespFile * self,
     return 0;
 }
 
-rc_t KSrvRespFileGetId ( const KSrvRespFile * self, const char ** acc ) {
-    assert ( self && self -> item && acc );
+rc_t KSrvRespFileGetAcc ( const KSrvRespFile * self, const char ** acc,
+                                                     const char ** tic)
+{
+    assert ( self && self -> item && acc && tic );
 
+    * tic = self -> item -> tic;
     * acc = self -> item -> acc;
 
     return 0;
 }
 
+rc_t KSrvRespFileGetId ( const KSrvRespFile * self, uint64_t * id,
+                                                    const char ** tic )
+{
+    assert ( self && self -> item && id && tic );
+
+    * id  = self -> item -> id;
+    * tic = self -> item -> tic;
+
+    return 0;
+}
+                                                           
 rc_t KSrvRespFileGetCache ( const KSrvRespFile * self,
                             const VPath ** path )
 {
@@ -1990,6 +2162,22 @@ rc_t KSrvRespFileAddLocalAndCache ( KSrvRespFile * self,
     if ( r2 != 0 && rc == 0 )
         rc = r2;
     RELEASE ( VPath, path );
+
+    return rc;
+}
+
+rc_t KSrvRespFileGetMapping ( const KSrvRespFile * self,
+                              const VPath ** mapping )
+{
+    rc_t rc = 0;
+
+    assert ( self && mapping );
+
+    * mapping = NULL;
+
+    rc = VPathAddRef ( self ->file -> mapping );
+    if ( rc == 0 )
+        * mapping = self ->file -> mapping;
 
     return rc;
 }
