@@ -454,7 +454,7 @@ static INSDC_SRA_spot_filter spot_filter_from_read_filter(unsigned const nreads,
         SRA_SPOT_FILTER_REDACTED,
         SRA_SPOT_FILTER_REJECT
     };
-    return result[bits >> 1];
+    return results[bits >> 1];
 #endif
 }
 
@@ -534,8 +534,8 @@ rc_t CC make_read_filter_from_spot_filter(void *const self
     unsigned const nfilt = (unsigned)SAFE_COUNT(COL_SPOT_FILTER);
     unsigned const nreads = (unsigned)SAFE_COUNT(COL_READ_TYPE);
     BIND_COLUMN(COL_SPOT_FILTER, INSDC_SRA_spot_filter, filter);
-    INSDC_spot_filter const spot_value = (nfilt && filter) ? filter[0] : SRA_SPOT_FILTER_PASS;
-    INSDC_read_filter const read_value = (INSDC_read_filter)spot_value;
+    INSDC_SRA_spot_filter const spot_value = (nfilt && filter) ? filter[0] : SRA_SPOT_FILTER_PASS;
+    INSDC_SRA_read_filter const read_value = (INSDC_SRA_read_filter)spot_value;
     rc_t rc = 0;
     
     rslt->data->elem_bits = 8;
