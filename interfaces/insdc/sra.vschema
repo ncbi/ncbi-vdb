@@ -93,8 +93,8 @@ function INSDC:SRA:read_filter
  *  produces new-style whole-spot filter bits
  *
  *  Rules are: (listed in order of precedence)
- *    1) REDACTED, if any are REDACTED
- *    2) REJECT, if any are REJECT
+ *    1) REJECT, if any are REJECT
+ *    2) REDACTED, if any are REDACTED
  *    3) CRITERIA, if any are CRITERIA
  *    4) else PASS
  *
