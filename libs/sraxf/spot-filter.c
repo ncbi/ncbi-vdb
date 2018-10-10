@@ -330,7 +330,7 @@ rc_t CC make_spot_filter(void *const self
     return rc;
 }
 
-static bool isSameType(VSchema const *const schema, char const *const type_name, VFormatdecl *const *const qry)
+static bool isSameType(VSchema const *const schema, char const *const type_name, VFormatdecl const *const qry)
 {
     VFormatdecl decl;
     rc_t const rc = VSchemaResolveFmtdecl(schema, &decl, type_name);
