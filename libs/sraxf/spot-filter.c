@@ -35,11 +35,6 @@
 #include <string.h>
 #include <assert.h>
 
-#define DEBUG_PRINT_RESULT 0
-#if DEBUG_PRINT_RESULT
-#include <stdio.h>
-#endif
-
 #define A_4na (1)
 #define C_4na (2)
 #define G_4na (4)
@@ -76,6 +71,40 @@ enum RejectCause {
     tooManyAmbiguous
 };
 
+#define DEBUG_PRINT_RESULT 0
+#if DEBUG_PRINT_RESULT
+#include <stdio.h>
+static void printRejectCause(enum RejectCause const cause, FILE *const fp, void const *const self)
+{
+    switch (cause) {
+    case notRejected:
+        fprintf(fp, "passed\n");
+        break;
+    case spotFilter:
+        fprintf(fp, "spot filter was set\n");
+        break;
+    case tooShort:
+        fprintf(fp, "sequence length < %i\n", M);
+        break;
+    case badQualValueFirstM:
+        fprintf(fp, "quality value < %i in first %i bases\n", Q, M);
+        break;
+    case ambiguousFirstM:
+        fprintf(fp, "ambiguous base in first %i bases\n", M);
+        break;
+    case lowComplexityFirstM:
+        fprintf(fp, "first %i bases are all the same\n", M);
+        break;
+    case badBaseValue:
+        fprintf(fp, "bad base value\n");
+        break;
+    case tooManyAmbiguous:
+        fprintf(fp, "at lease 1/2 bases are ambiguous\n");
+        break;
+    }
+}
+#endif
+
 static int spot_filter_4na(self_t const *self
                             , unsigned const nreads
                             , int32_t const *start
@@ -87,11 +116,11 @@ static int spot_filter_4na(self_t const *self
     unsigned i;
     for (i = 0; i < nreads; ++i) {
         unsigned const readLen = len[i];
-        bool const rev = (type[i] & READ_TYPE_REVERSE) == READ_TYPE_REVERSE;
+        bool const rev = (type[i] & SRA_READ_TYPE_REVERSE) == SRA_READ_TYPE_REVERSE;
         unsigned j = 0;
         unsigned count[(A_4na|C_4na|G_4na|T_4na)+1];
 
-        if ((type[i] & READ_TYPE_BIOLOGICAL) != READ_TYPE_BIOLOGICAL)
+        if ((type[i] & SRA_READ_TYPE_BIOLOGICAL) != SRA_READ_TYPE_BIOLOGICAL)
             continue;
         
         if (readLen < M)
@@ -144,11 +173,11 @@ static int spot_filter_x2na(self_t const *self
     unsigned i;
     for (i = 0; i < nreads; ++i) {
         unsigned const readLen = len[i];
-        bool const rev = (type[i] & READ_TYPE_REVERSE) == READ_TYPE_REVERSE;
+        bool const rev = (type[i] & SRA_READ_TYPE_REVERSE) == SRA_READ_TYPE_REVERSE;
         unsigned j = 0;
         unsigned count[5];
 
-        if ((type[i] & READ_TYPE_BIOLOGICAL) != READ_TYPE_BIOLOGICAL)
+        if ((type[i] & SRA_READ_TYPE_BIOLOGICAL) != SRA_READ_TYPE_BIOLOGICAL)
             continue;
         
         if (readLen < M)
@@ -199,11 +228,11 @@ static int spot_filter_2na(self_t const *self
     unsigned i;
     for (i = 0; i < nreads; ++i) {
         unsigned const readLen = len[i];
-        bool const rev = (type[i] & READ_TYPE_REVERSE) == READ_TYPE_REVERSE;
+        bool const rev = (type[i] & SRA_READ_TYPE_REVERSE) == SRA_READ_TYPE_REVERSE;
         unsigned j = 0;
         unsigned count[4];
 
-        if ((type[i] & READ_TYPE_BIOLOGICAL) != READ_TYPE_BIOLOGICAL)
+        if ((type[i] & SRA_READ_TYPE_BIOLOGICAL) != SRA_READ_TYPE_BIOLOGICAL)
             continue;
         
         if (readLen < M)
@@ -285,34 +314,7 @@ rc_t CC make_spot_filter(void *const self
         result = SPOT_FILTER(self, nreads, start, len, type, read, qual);
 
 #if DEBUG_PRINT_RESULT
-    switch (result) {
-    case notRejected:
-        fprintf(stderr, "passed\n");
-        break;
-    case spotFilter:
-        fprintf(stderr, "spot filter was set\n");
-        break;
-    case tooShort:
-        fprintf(stderr, "sequence length < %i\n", M);
-        break;
-    case badQualValueFirstM:
-        fprintf(stderr, "quality value < %i in first %i bases\n", Q, M);
-        break;
-    case ambiguousFirstM:
-        fprintf(stderr, "ambiguous base in first %i bases\n", M);
-        break;
-    case lowComplexityFirstM:
-        fprintf(stderr, "first %i bases are all the same\n", M);
-        break;
-    case badBaseValue:
-        fprintf(stderr, "bad base value\n");
-        break;
-    case tooManyAmbiguous:
-        fprintf(stderr, "at lease 1/2 bases are ambiguous\n");
-        break;
-    default:
-        assert(!"reachable");
-    }
+    printRejectCause(result, stderr, self);
 #endif
     
     rslt->data->elem_bits = 8;
@@ -328,29 +330,26 @@ rc_t CC make_spot_filter(void *const self
     return rc;
 }
 
-static spot_filter_func read_data_type_to_function(VSchema const *const schema, VFormatdecl const *const read_data_type)
+static bool isSameType(VSchema const *const schema, char const *const type_name, VFormatdecl *const *const qry)
 {
     VFormatdecl decl;
-    rc_t rc;
+    rc_t const rc = VSchemaResolveFmtdecl(schema, &decl, type_name);
+    if (rc != 0 || qry->td.type_id != decl.td.type_id)
+        return false;
+#if 0
+    PLOGMSG(klogDebug, (klogDebug, "type matched $(name)", "name=%s", type_name));
+#endif
+    return true;
+}
 
-    rc = VSchemaResolveFmtdecl(schema, &decl, "INSDC:4na:bin");
-    assert(rc == 0);
-    if (read_data_type->td.type_id == decl.td.type_id) {
-        LOGMSG(klogDebug, "matched INSDC:4na:bin");
+static spot_filter_func read_data_type_to_function(VSchema const *const schema, VFormatdecl const *const read_data_type)
+{
+    if (isSameType(schema, "INSDC:4na:bin", read_data_type))
         return spot_filter_4na;
-    }
-    rc = VSchemaResolveFmtdecl(schema, &decl, "INSDC:x2na:bin");
-    assert(rc == 0);
-    if (read_data_type->td.type_id == decl.td.type_id) {
-        LOGMSG(klogDebug, "matched INSDC:x2na:bin");
+    if (isSameType(schema, "INSDC:x2na:bin", read_data_type))
         return spot_filter_x2na;
-    }
-    rc = VSchemaResolveFmtdecl(schema, &decl, "INSDC:2na:bin");
-    assert(rc == 0);
-    if (read_data_type->td.type_id == decl.td.type_id) {
-        LOGMSG(klogDebug, "matched INSDC:2na:bin");
+    if (isSameType(schema, "INSDC:2na:bin", read_data_type))
         return spot_filter_2na;
-    }
     LOGMSG(klogDebug, "matched no type");
     return NULL;
 }
