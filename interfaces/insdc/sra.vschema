@@ -88,6 +88,20 @@ ascii INSDC:SRA:format_spot_name_no_coord #1 ( ascii name_fmt  * ascii spot_name
 function INSDC:SRA:read_filter
     INSDC:SRA:spot2read_filter #1 ( INSDC:SRA:spot_filter out_spot_filter, INSDC:SRA:xread_type out_read_type );
 
+/* read2spot_filter
+ *  takes input from read filter bits
+ *  produces new-style whole-spot filter bits
+ *
+ *  Rules are: (listed in order of precedence)
+ *    1) REDACTED, if any are REDACTED
+ *    2) REJECT, if any are REJECT
+ *    3) CRITERIA, if any are CRITERIA
+ *    4) else PASS
+ *
+ */
+function INSDC:SRA:spot_filter
+    INSDC:SRA:read2spot_filter #1 ( INSDC:SRA:read_filter out_read_filter );
+
 /*--------------------------------------------------------------------------
  * spotcoord
  *  spot coordinate table
