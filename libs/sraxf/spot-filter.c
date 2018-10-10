@@ -425,11 +425,8 @@ static unsigned read_filter_array_to_bitset(unsigned const nreads, INSDC_read_fi
     return bits;
 }
 
-#define DONT_USE_TABLE 0
-static INSDC_SRA_spot_filter spot_filter_from_read_filter(unsigned const nreads, INSDC_read_filter const read_filter[])
+static INSDC_SRA_spot_filter bitset_to_spot_filter(unsigned const bits)
 {
-    unsigned const bits = read_filter_array_to_bitset(nreads, read_filter);
-#if DONT_USE_TABLE
     // *    1) REJECT, if any are REJECT
     if ((bits & (1u << SRA_READ_FILTER_REJECT)) != 0)
         return SRA_SPOT_FILTER_REJECT;
@@ -443,9 +440,17 @@ static INSDC_SRA_spot_filter spot_filter_from_read_filter(unsigned const nreads,
         return SRA_SPOT_FILTER_CRITERIA;
     
     return SRA_SPOT_FILTER_PASS;
+}
+
+#define DONT_USE_TABLE 0
+static INSDC_SRA_spot_filter spot_filter_from_read_filter(unsigned const nreads, INSDC_read_filter const read_filter[])
+{
+    unsigned const bits = read_filter_array_to_bitset(nreads, read_filter);
+#if DONT_USE_TABLE
+    return bitset_to_spot_filter(bits);
 #else
-    // equivalent to expanding above rules for all possibilities
-    // but with consecutive equal values removed
+    // equivalent to expanding bitset_to_spot_filter for all
+    // possibilities but with consecutive equal values removed
     static INSDC_SRA_spot_filter const results[] = {
         SRA_SPOT_FILTER_PASS,
         SRA_SPOT_FILTER_REJECT,
