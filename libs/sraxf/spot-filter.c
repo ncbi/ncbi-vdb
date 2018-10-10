@@ -425,6 +425,8 @@ static unsigned read_filter_array_to_bitset(unsigned const nreads, INSDC_read_fi
     return bits;
 }
 
+#define DONT_USE_TABLE 0
+#if DONT_USE_TABLE
 static INSDC_SRA_spot_filter bitset_to_spot_filter(unsigned const bits)
 {
     // *    1) REJECT, if any are REJECT
@@ -441,8 +443,8 @@ static INSDC_SRA_spot_filter bitset_to_spot_filter(unsigned const bits)
     
     return SRA_SPOT_FILTER_PASS;
 }
+#endif
 
-#define DONT_USE_TABLE 0
 static INSDC_SRA_spot_filter spot_filter_from_read_filter(unsigned const nreads, INSDC_read_filter const read_filter[])
 {
     unsigned const bits = read_filter_array_to_bitset(nreads, read_filter);
