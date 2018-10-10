@@ -220,7 +220,16 @@ rc_t VTableOpenRead ( VTable *self )
         }
     }
 
-    DBGMSG(DBG_VDB, DBG_FLAG(DBG_VDB_VDB), ("VTableOpenRead(%S) = %d\n", & self -> stbl -> name -> name, rc));
+    if ( self -> stbl && self -> stbl -> name )
+    {
+        DBGMSG(DBG_VDB, DBG_FLAG(DBG_VDB_VDB), ("VTableOpenRead(%S) = %d\n", & self -> stbl -> name -> name, rc));
+    }
+    else
+    {
+        const char * path = "?";
+        KTableGetPath ( self -> ktbl, & path );
+        DBGMSG(DBG_VDB, DBG_FLAG(DBG_VDB_VDB), ("VTableOpenRead(%s) = %d\n", path, rc));
+    }
 
     return rc;
 }
