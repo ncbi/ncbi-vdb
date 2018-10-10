@@ -430,12 +430,15 @@ static INSDC_SRA_spot_filter spot_filter_from_read_filter(unsigned const nreads,
 {
     unsigned const bits = read_filter_array_to_bitset(nreads, read_filter);
 #if DONT_USE_TABLE
+    // *    1) REJECT, if any are REJECT
     if ((bits & (1u << SRA_READ_FILTER_REJECT)) != 0)
         return SRA_SPOT_FILTER_REJECT;
     
+    // *    2) REDACTED, if any are REDACTED
     if ((bits & (1u << SRA_READ_FILTER_REDACTED)) != 0)
         return SRA_SPOT_FILTER_REDACTED;
     
+    // *    3) CRITERIA, if any are CRITERIA
     if ((bits & (1u << SRA_READ_FILTER_CRITERIA)) != 0)
         return SRA_SPOT_FILTER_CRITERIA;
     
@@ -458,7 +461,7 @@ static INSDC_SRA_spot_filter spot_filter_from_read_filter(unsigned const nreads,
 }
 
 static
-rc_t CC make_spot_filter_from_read_filter(void *const self
+rc_t CC read2spot_filter(  void *const self
                          , const VXformInfo *const info
                          , int64_t const row_id
                          , VRowResult *const rslt
@@ -496,7 +499,7 @@ VTRANSFACT_IMPL( NCBI_SRA_read2spot_filter, 1, 0, 0 ) ( const void *Self, const 
     assert((1u << SRA_READ_FILTER_CRITERIA) == 4);
     assert((1u << SRA_READ_FILTER_REDACTED) == 8);
 #endif
-    rslt -> u . rf = make_spot_filter_from_read_filter;
+    rslt -> u . rf = read2spot_filter;
     rslt -> variant = vftRow;
     return 0;
 }
@@ -519,7 +522,7 @@ static void fill_array(unsigned const count, INSDC_read_filter result[], INSDC_r
 }
 
 static
-rc_t CC make_read_filter_from_spot_filter(void *const self
+rc_t CC spot2read_filter(  void *const self
                          , const VXformInfo *const info
                          , int64_t const row_id
                          , VRowResult *const rslt
@@ -556,7 +559,7 @@ VTRANSFACT_IMPL( NCBI_SRA_spot2read_filter, 1, 0, 0 ) ( const void *Self, const 
     assert(  SRA_READ_FILTER_REJECT == SRA_SPOT_FILTER_REJECT  );
     assert(SRA_READ_FILTER_REDACTED == SRA_SPOT_FILTER_REDACTED);
     assert(SRA_READ_FILTER_CRITERIA == SRA_SPOT_FILTER_CRITERIA);
-    rslt -> u . rf = make_read_filter_from_spot_filter;
+    rslt -> u . rf = spot2read_filter;
     rslt -> variant = vftRow;
     return 0;
 }
