@@ -395,6 +395,23 @@ VTRANSFACT_IMPL( NCBI_SRA_make_spot_filter, 1, 0, 0 ) ( const void *Self, const 
     return RC(rcXF, rcFunction, rcConstructing, rcType, rcInvalid);
 }
 
+/*******************************************************************************
+ * MARK: read filter <--> spot filter conversion routines
+ */
+
+/* read2spot_filter
+ *  takes input from read filter bits
+ *  produces new-style whole-spot filter bits
+ *
+ *  Rules are: (listed in order of precedence) ///< per KR email 2018-Sep-25
+ *    1) REJECT, if any are REJECT
+ *    2) REDACTED, if any are REDACTED
+ *    3) CRITERIA, if any are CRITERIA
+ *    4) else PASS
+ *
+ * function INSDC:SRA:spot_filter
+ *     INSDC:SRA:read2spot_filter #1 ( INSDC:SRA:read_filter out_read_filter );
+ */
 static unsigned read_filter_array_to_bitset(unsigned const nreads, INSDC_read_filter const read_filter[])
 {
     unsigned bits = 0;
@@ -409,17 +426,11 @@ static unsigned read_filter_array_to_bitset(unsigned const nreads, INSDC_read_fi
     return bits;
 }
 
-#define FULL_TABLE 2
-#define COMPACT_TABLE 1
-#define NO_TABLE 0
-#define TABLE_TYPE COMPACT_TABLE
+#define DONT_USE_TABLE 0
 static INSDC_SRA_spot_filter spot_filter_from_read_filter(unsigned const nreads, INSDC_read_filter const read_filter[])
 {
     unsigned const bits = read_filter_array_to_bitset(nreads, read_filter);
-#if TABLE_TYPE == NO_TABLE
-    // test in order of precedence
-    // REJECT >> REDACTED >> CRITERIA
-    // per KR email 2018-Sep-25
+#if DONT_USE_TABLE
     if ((bits & (1u << SRA_READ_FILTER_REJECT)) != 0)
         return SRA_SPOT_FILTER_REJECT;
     
@@ -430,29 +441,9 @@ static INSDC_SRA_spot_filter spot_filter_from_read_filter(unsigned const nreads,
         return SRA_SPOT_FILTER_CRITERIA;
     
     return SRA_SPOT_FILTER_PASS;
-#elif TABLE_TYPE == FULL_TABLE
+#else
     // equivalent to expanding above rules for all possibilities
-    static INSDC_SRA_spot_filter const results[] = {
-        SRA_SPOT_FILTER_PASS,     // 0000: no values; default
-        SRA_SPOT_FILTER_PASS,     // 0001: all PASS
-        SRA_SPOT_FILTER_REJECT,   // 0010: all REJECT
-        SRA_SPOT_FILTER_REJECT,   // 0011: some REJECT
-        SRA_SPOT_FILTER_CRITERIA, // 0100: all CRITERIA
-        SRA_SPOT_FILTER_CRITERIA, // 0101: some CRITERIA
-        SRA_SPOT_FILTER_REJECT,   // 0110: some REJECT
-        SRA_SPOT_FILTER_REJECT,   // 0111: some REJECT
-        SRA_SPOT_FILTER_REDACTED, // 1000: all REDACTED
-        SRA_SPOT_FILTER_REDACTED, // 1001: some REDACTED
-        SRA_SPOT_FILTER_REJECT,   // 1010: some REJECT
-        SRA_SPOT_FILTER_REJECT,   // 1011: some REJECT
-        SRA_SPOT_FILTER_REDACTED, // 1100: some REDACTED
-        SRA_SPOT_FILTER_REDACTED, // 1101: some REDACTED
-        SRA_SPOT_FILTER_REJECT,   // 1110: some REJECT
-        SRA_SPOT_FILTER_REJECT    // 1111: some REJECT
-    };
-    return result[bits];
-#elif TABLE_TYPE == COMPACT_TABLE
-    // equivalent to above table with every other value removed
+    // but with consecutive equal values removed
     static INSDC_SRA_spot_filter const results[] = {
         SRA_SPOT_FILTER_PASS,
         SRA_SPOT_FILTER_REJECT,
@@ -464,8 +455,6 @@ static INSDC_SRA_spot_filter spot_filter_from_read_filter(unsigned const nreads,
         SRA_SPOT_FILTER_REJECT
     };
     return result[bits >> 1];
-#else
-    abort();
 #endif
 }
 
@@ -497,24 +486,36 @@ rc_t CC make_spot_filter_from_read_filter(void *const self
     return rc;
 }
 
-/*
-  function NCBI:SRA:spot_filter
-  NCBI:SRA:make_spot_filter_from_read_filter #1
-       ( INSDC:SRA:read_filter read_filter )
- */
-VTRANSFACT_IMPL( NCBI_SRA_make_spot_filter_from_read_filter, 1, 0, 0 ) ( const void *Self, const VXfactInfo *info,
+VTRANSFACT_IMPL( NCBI_SRA_read2spot_filter, 1, 0, 0 ) ( const void *Self, const VXfactInfo *info,
     VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
 {
+#if DONT_USE_TABLE
+#else
+    // this function assumes these values for read filter
+    assert(    (1u << SRA_READ_FILTER_PASS) == 1);
+    assert(  (1u << SRA_READ_FILTER_REJECT) == 2);
+    assert((1u << SRA_READ_FILTER_CRITERIA) == 4);
+    assert((1u << SRA_READ_FILTER_REDACTED) == 8);
+#endif
     rslt -> u . rf = make_spot_filter_from_read_filter;
     rslt -> variant = vftRow;
     return 0;
 }
 
-static void read_filter_from_spot_filter(unsigned const nreads, INSDC_read_filter read_filter[], INSDC_SRA_spot_filter const spot_filter)
+/* spot2read_filter
+ *  takes input from whole-spot filter bits
+ *  produces older-style array of per-read filter bits
+ *  based upon dimension and possibly type of "out_read_type"
+ *
+ * function INSDC:SRA:read_filter
+ *    INSDC:SRA:spot2read_filter #1 ( INSDC:SRA:spot_filter out_spot_filter, INSDC:SRA:xread_type out_read_type );
+ */
+static void fill_array(unsigned const count, INSDC_read_filter result[], INSDC_read_filter const value)
 {
     unsigned i;
-    for (i = 0; i < nreads; ++i) {
-        read_filter[i] = spot_filter;
+    
+    for (i = 0; i < count; ++i) {
+        result[i] = value;
     }
 }
 
@@ -527,15 +528,15 @@ rc_t CC make_read_filter_from_spot_filter(void *const self
                          , VRowData const argv[])
 {
     enum COLUMNS {
-        COL_READ_LEN,
-        COL_SPOT_FILTER
+        COL_SPOT_FILTER,
+        COL_READ_TYPE
     };
-    unsigned const nreads = (unsigned)SAFE_COUNT(COL_READ_LEN);
     unsigned const nfilt = (unsigned)SAFE_COUNT(COL_SPOT_FILTER);
+    unsigned const nreads = (unsigned)SAFE_COUNT(COL_READ_TYPE);
     BIND_COLUMN(COL_SPOT_FILTER, INSDC_SRA_spot_filter, filter);
+    INSDC_spot_filter const spot_value = (nfilt && filter) ? filter[0] : SRA_SPOT_FILTER_PASS;
+    INSDC_read_filter const read_value = (INSDC_read_filter)spot_value;
     rc_t rc = 0;
-    
-    assert(filter != NULL);
     
     rslt->data->elem_bits = 8;
     rc = KDataBufferResize( rslt->data, nreads );
@@ -543,19 +544,19 @@ rc_t CC make_read_filter_from_spot_filter(void *const self
     {
         rslt->elem_bits = rslt->data->elem_bits;
         rslt->elem_count = nreads;
-        read_filter_from_spot_filter(nreads, rslt->data->base, (nfilt && filter) ? filter[0] : SRA_SPOT_FILTER_PASS);
+        fill_array(nreads, rslt->data->base, read_value);
     }
     return rc;
 }
 
-/*
-  function NCBI:SRA:read_filter
-  NCBI:SRA:make_read_filter_from_spot_filter #1
-       ( U32 read_len, INSDC:SRA:spot_filter spot_filter )
- */
-VTRANSFACT_IMPL( NCBI_SRA_make_read_filter_from_spot_filter, 1, 0, 0 ) ( const void *Self, const VXfactInfo *info,
+VTRANSFACT_IMPL( NCBI_SRA_spot2read_filter, 1, 0, 0 ) ( const void *Self, const VXfactInfo *info,
     VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
 {
+    // this function assumes read filter and spot filter values are equal
+    assert(    SRA_READ_FILTER_PASS == SRA_SPOT_FILTER_PASS    );
+    assert(  SRA_READ_FILTER_REJECT == SRA_SPOT_FILTER_REJECT  );
+    assert(SRA_READ_FILTER_REDACTED == SRA_SPOT_FILTER_REDACTED);
+    assert(SRA_READ_FILTER_CRITERIA == SRA_SPOT_FILTER_CRITERIA);
     rslt -> u . rf = make_read_filter_from_spot_filter;
     rslt -> variant = vftRow;
     return 0;
