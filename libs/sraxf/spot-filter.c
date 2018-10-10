@@ -395,43 +395,78 @@ VTRANSFACT_IMPL( NCBI_SRA_make_spot_filter, 1, 0, 0 ) ( const void *Self, const 
     return RC(rcXF, rcFunction, rcConstructing, rcType, rcInvalid);
 }
 
-static INSDC_SRA_spot_filter spot_filter_from_read_filter(unsigned const nreads, INSDC_read_filter const read_filter[])
+static unsigned read_filter_array_to_bitset(unsigned const nreads, INSDC_read_filter const read_filter[])
 {
-    unsigned i;
     unsigned bits = 0;
-    
+    unsigned i;
+
     for (i = 0; i < nreads; ++i) {
         INSDC_read_filter const filter = read_filter[i];
         unsigned const bit = 1u << filter;
         bits |= bit;
     }
-    
-    // test for all the same; this is most likely
-    switch (bits) {
-    case 0:
-    case 1:
-        return SRA_SPOT_FILTER_PASS;
-    case 2:
-        return SRA_SPOT_FILTER_REJECT;
-    case 4:
-        return SRA_SPOT_FILTER_CRITERIA;
-    case 8:
-        return SRA_SPOT_FILTER_REDACTED;
-    }
-    
-    // mixed; this is unlikely
+    assert(bits < 16);
+    return bits;
+}
+
+#define FULL_TABLE 2
+#define COMPACT_TABLE 1
+#define NO_TABLE 0
+#define TABLE_TYPE COMPACT_TABLE
+static INSDC_SRA_spot_filter spot_filter_from_read_filter(unsigned const nreads, INSDC_read_filter const read_filter[])
+{
+    unsigned const bits = read_filter_array_to_bitset(nreads, read_filter);
+#if TABLE_TYPE == NO_TABLE
     // test in order of precedence
     // REJECT >> REDACTED >> CRITERIA
     // per KR email 2018-Sep-25
     if ((bits & (1u << SRA_READ_FILTER_REJECT)) != 0)
         return SRA_SPOT_FILTER_REJECT;
+    
     if ((bits & (1u << SRA_READ_FILTER_REDACTED)) != 0)
         return SRA_SPOT_FILTER_REDACTED;
+    
     if ((bits & (1u << SRA_READ_FILTER_CRITERIA)) != 0)
         return SRA_SPOT_FILTER_CRITERIA;
     
-    // this should be unreachable
     return SRA_SPOT_FILTER_PASS;
+#elif TABLE_TYPE == FULL_TABLE
+    // equivalent to expanding above rules for all possibilities
+    static INSDC_SRA_spot_filter const results[] = {
+        SRA_SPOT_FILTER_PASS,     // 0000: no values; default
+        SRA_SPOT_FILTER_PASS,     // 0001: all PASS
+        SRA_SPOT_FILTER_REJECT,   // 0010: all REJECT
+        SRA_SPOT_FILTER_REJECT,   // 0011: some REJECT
+        SRA_SPOT_FILTER_CRITERIA, // 0100: all CRITERIA
+        SRA_SPOT_FILTER_CRITERIA, // 0101: some CRITERIA
+        SRA_SPOT_FILTER_REJECT,   // 0110: some REJECT
+        SRA_SPOT_FILTER_REJECT,   // 0111: some REJECT
+        SRA_SPOT_FILTER_REDACTED, // 1000: all REDACTED
+        SRA_SPOT_FILTER_REDACTED, // 1001: some REDACTED
+        SRA_SPOT_FILTER_REJECT,   // 1010: some REJECT
+        SRA_SPOT_FILTER_REJECT,   // 1011: some REJECT
+        SRA_SPOT_FILTER_REDACTED, // 1100: some REDACTED
+        SRA_SPOT_FILTER_REDACTED, // 1101: some REDACTED
+        SRA_SPOT_FILTER_REJECT,   // 1110: some REJECT
+        SRA_SPOT_FILTER_REJECT    // 1111: some REJECT
+    };
+    return result[bits];
+#elif TABLE_TYPE == COMPACT_TABLE
+    // equivalent to above table with every other value removed
+    static INSDC_SRA_spot_filter const results[] = {
+        SRA_SPOT_FILTER_PASS,
+        SRA_SPOT_FILTER_REJECT,
+        SRA_SPOT_FILTER_CRITERIA,
+        SRA_SPOT_FILTER_REJECT,
+        SRA_SPOT_FILTER_REDACTED,
+        SRA_SPOT_FILTER_REJECT,
+        SRA_SPOT_FILTER_REDACTED,
+        SRA_SPOT_FILTER_REJECT
+    };
+    return result[bits >> 1];
+#else
+    abort();
+#endif
 }
 
 static
