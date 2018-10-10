@@ -98,18 +98,15 @@ table NCBI:tbl:seqloc #1.0
  *  to base space.
  */
 extern function
-INSDC:x2cs:bin NCBI:color_from_dna #1.1 ( INSDC:dna:x2na:bin bin_x2na,
+INSDC:x2cs:bin NCBI:color_from_dna #1.1 ( INSDC:x2na:bin bin_x2na,
     INSDC:coord:zero read_start, INSDC:coord:len read_len,
     INSDC:dna:text cs_key, U8 color_matrix );
 
 
 /* dcmp_base_space
  *  table to introduce common virtual productions
- *
- * history:
- *  1.1.0 - added rna productions
  */
-table NCBI:tbl:dcmp_base_space #1.1
+table NCBI:tbl:dcmp_base_space #1
 {
     // rules to introduce purely virtual productions
     // never expected to resolve...
@@ -118,10 +115,6 @@ table NCBI:tbl:dcmp_base_space #1.1
         | out_dcmp_x2na_bin
         | out_dcmp_2na_bin
         | out_dcmp_2na_packed
-        | out_dcmp_rna_4na_bin
-        | out_dcmp_rna_x2na_bin
-        | out_dcmp_rna_2na_bin
-        | out_dcmp_rna_2na_packed
         ;
 }
 
@@ -129,13 +122,12 @@ table NCBI:tbl:dcmp_base_space #1.1
  *  1.0.1 - base explicitly upon sequence #1.0.1, spotdesc #1.0.1
  *  1.0.2 - spotdesc #1.0.2
  *  1.0.3 - base upon dcmp_base_space for "out_dcmp_2na_bin"
- *  1.1.0 - base upon sequence #1.1 & dcmp_base_space #1.1
  */
-table NCBI:tbl:base_space_common #1.1
-    = INSDC:tbl:sequence #1.1
+table NCBI:tbl:base_space_common #1.0.3
+    = INSDC:tbl:sequence #1.0.1
     , INSDC:SRA:tbl:spotdesc #1.0.2
     , INSDC:SRA:tbl:stats #1.1.0
-    , NCBI:tbl:dcmp_base_space #1.1
+    , NCBI:tbl:dcmp_base_space #1.0.0
 {
 	/* INSDC:tbl:sequence inherited virtual productions
      */
@@ -222,28 +214,20 @@ table NCBI:tbl:base_space_common #1.1
  *  1.0.1 - base explicitly upon base_space_common #1.0.1
  *  1.0.2 - base explicitly upon base_space_common #1.0.2
  *  1.0.3 - " " 1.0.3
- *  1.1.0 - " " 1.1
  */
-table NCBI:tbl:base_space_nocol #1.1
-    = NCBI:tbl:base_space_common #1.1
+table NCBI:tbl:base_space_nocol #1.0.3
+    = NCBI:tbl:base_space_common #1.0.3
     , NCBI:tbl:n_encoding #1
 {
     // incoming is disabled
 
     // synthesized dna text
     INSDC:dna:text out_dna_text
-        = < INSDC:dna:x2na:bin, INSDC:dna:text > map < INSDC:x2na:map:BINSET, INSDC:dna:x2na:map:CHARSET > ( out_x2na_bin );
-
-    // synthesized rna text
-    INSDC:rna:text out_rna_text
-    = < INSDC:rna:x2na:bin, INSDC:rna:text > map < INSDC:x2na:map:BINSET, INSDC:rna:x2na:map:CHARSET > ( out_rna_x2na_bin );
+        = < INSDC:x2na:bin, INSDC:dna:text > map < INSDC:x2na:map:BINSET, INSDC:x2na:map:CHARSET > ( out_x2na_bin );
 
     // synthesized 4na
-    INSDC:dna:4na:bin out_4na_bin
-        = < INSDC:dna:x2na:bin, INSDC:dna:4na:bin > map < INSDC:x2na:map:BINSET, [ 1, 2, 4, 8, 15 ] > ( out_x2na_bin );
-
-    INSDC:rna:4na:bin out_rna_4na_bin
-        = < INSDC:rna:x2na:bin, INSDC:rna:4na:bin > map < INSDC:x2na:map:BINSET, [ 1, 2, 4, 8, 15 ] > ( out_x2na_bin );
+    INSDC:4na:bin out_4na_bin
+        = < INSDC:x2na:bin, INSDC:4na:bin > map < INSDC:x2na:map:BINSET, [ 1, 2, 4, 8, 15 ] > ( out_x2na_bin );
 
     // unpacked 2na with ambiguities
     INSDC:x2na:bin out_x2na_bin
@@ -269,10 +253,9 @@ table NCBI:tbl:base_space_nocol #1.1
  *  1.0.1 - base explicitly upon base_space_nocol #1.0.1
  *  1.0.2 - base explicitly upon base_space_nocol #1.0.2
  *  1.0.3 - base explicitly upon base_space_nocol #1.0.3
- *  1.1.0 - base explicitly upon base_space_nocol #1.1.0
  */
-table NCBI:tbl:base_space #1.1
-    = NCBI:tbl:base_space_nocol #1.1
+table NCBI:tbl:base_space #1.0.3
+    = NCBI:tbl:base_space_nocol #1.0.3
 {
     // 2-bit 2na representation (0..3)
     INSDC:2na:packed out_2na_packed = .READ;
@@ -288,6 +271,19 @@ table NCBI:tbl:base_space #1.1
 	 */
 };
 
+/* setRnaFlag
+ *  if metadata(RNA) is not set and in_read contains u/U, set metadata(RNA) to true
+ *  if metadata(RNA) is not set and in_read contains t/T, set metadata(RNA) to false
+ *  otherwise, do nothing
+ * return in_read
+ */
+extern function INSDC:dna:text NCBI:SRA:setRnaFlag #1 ( INSDC:dna:text in_read );
+
+/* useRnaFlag
+ *  if metadata(RNA) is set translate T to U
+ *  otherwise, do nothing
+ */
+extern function INSDC:dna:text NCBI:SRA:useRnaFlag #1 ( INSDC:dna:text in_read );
 
 /* base_space #2
  *  standard current base-space table
@@ -295,104 +291,59 @@ table NCBI:tbl:base_space #1.1
  * history:
  *  2.0.2 - base_space_common #1.0.2
  *  2.0.3 - base_space_common #1.0.3 now has dcmp_base_space as well
- *  2.1.0 - base_space_common #1.1.0;
- *          also accepting 'U' as input to DNA, translating to 'T'
+ *  3.0.0 - uses metadata RNA_Flag to support RNA reads
  */
-table NCBI:tbl:base_space #2.1
-    = NCBI:tbl:base_space_common #1.1
-    , NCBI:tbl:dcmp_base_space #1.1
+table NCBI:tbl:base_space #3
+    = NCBI:tbl:base_space_common #1.0.3
+    , NCBI:tbl:dcmp_base_space #1
 {
     /* input rules
      */
 
     // input text
-    INSDC:dna:text in_dna_text
-        = < INSDC:dna:text, INSDC:dna:text > map < '.acmgrsvtwyhkdbnUu','NACMGRSVTWYHKDBNTT' > ( READ );
-
-    INSDC:rna:text in_rna_text
-        = < INSDC:rna:text, INSDC:rna:text > map < '.acmgrsvuwyhkdbnTt','NACMGRSVUWYHKDBNUU' > ( READ );
+    INSDC:dna:text in_dnarna_text_upper
+        = < INSDC:dna:text, INSDC:dna:text > map < '.acmgrsvtwyhkdbnu','NACMGRSVTWYHKDBNU' > ( READ );
+    INSDC:dna:text in_dna_text = NCBI:SRA:setRnaFlag ( in_dnarna_text_upper ); // change U to T
 
     // input 4na bin
-    INSDC:dna:4na:bin in_4na_bin
-        = < INSDC:dna:4na:bin > range_validate < 0, 15 > ( READ )
-        | ( INSDC:dna:4na:bin ) unpack ( in_4na_packed )
-        | ( INSDC:dna:4na:bin ) < INSDC:dna:text, INSDC:4na:bin > map < INSDC:dna:4na:map:CHARSET, INSDC:4na:map:BINSET > ( in_dna_text )
-        | ( INSDC:dna:4na:bin ) < INSDC:x2na:bin, INSDC:4na:bin > map < INSDC:x2na:map:BINSET, [ 1, 2, 4, 8, 15 ] > ( in_x2na_bin )
-        ;
-
-    INSDC:rna:4na:bin in_rna_4na_bin
-        = < INSDC:rna:4na:bin > range_validate < 0, 15 > ( READ )
-        | ( INSDC:rna:4na:bin ) unpack ( in_rna_4na_packed )
-        | ( INSDC:rna:4na:bin ) < INSDC:rna:text, INSDC:4na:bin > map < INSDC:rna:4na:map:CHARSET, INSDC:4na:map:BINSET > ( in_rna_text )
-        | ( INSDC:rna:4na:bin ) < INSDC:x2na:bin, INSDC:4na:bin > map < INSDC:x2na:map:BINSET, [ 1, 2, 4, 8, 15 ] > ( in_rna_x2na_bin )
-        ;
+    INSDC:4na:bin in_4na_bin
+        = < INSDC:4na:bin > range_validate < 0, 15 > ( READ )
+        | ( INSDC:4na:bin ) unpack ( in_4na_packed )
+        | < INSDC:dna:text, INSDC:4na:bin > map < INSDC:4na:map:CHARSET, INSDC:4na:map:BINSET > ( in_dna_text )
+        | < INSDC:x2na:bin, INSDC:4na:bin > map < INSDC:x2na:map:BINSET, [ 1, 2, 4, 8, 15 ] > ( in_x2na_bin );
 
     // input 4na packed
-    INSDC:dna:4na:packed in_4na_packed = READ;
-
-    INSDC:rna:4na:packed in_rna_4na_packed = READ;
+    INSDC:4na:packed in_4na_packed = READ;
 
     // input x2na bin
-    INSDC:dna:x2na:bin in_x2na_bin
-        = < INSDC:dna:x2na:bin > range_validate < 0, 4 > ( READ )
-        | ( INSDC:dna:x2na:bin) < INSDC:4na:bin, INSDC:x2na:bin > map < INSDC:4na:map:BINSET, [ 4,0,1,4,2,4,4,4,3,4,4,4,4,4,4,4 ] > ( in_4na_bin )
-        ;
-
-    INSDC:rna:x2na:bin in_rna_x2na_bin
-        = < INSDC:rna:x2na:bin > range_validate < 0, 4 > ( READ )
-        | ( INSDC:rna:x2na:bin) < INSDC:4na:bin, INSDC:x2na:bin > map < INSDC:4na:map:BINSET, [ 4,0,1,4,2,4,4,4,3,4,4,4,4,4,4,4 ] > ( in_rna_4na_bin )
-        ;
+    INSDC:x2na:bin in_x2na_bin
+        = < INSDC:x2na:bin > range_validate < 0, 4 > ( READ )
+        | < INSDC:4na:bin, INSDC:x2na:bin > map < INSDC:4na:map:BINSET, [ 4,0,1,4,2,4,4,4,3,4,4,4,4,4,4,4 ] > ( in_4na_bin );
 
     // input 2na bin
-    INSDC:dna:2na:bin in_2na_bin
-        = < INSDC:dna:2na:bin > range_validate < 0, 3 > ( READ )
-        | ( INSDC:dna:2na:bin ) unpack ( in_2na_packed )
-        | ( INSDC:dna:2na:bin ) INSDC:SEQ:rand_4na_2na ( in_4na_bin )
-        ;
+    INSDC:2na:bin in_2na_bin
+        = < INSDC:2na:bin > range_validate < 0, 3 > ( READ )
+        | ( INSDC:2na:bin ) unpack ( in_2na_packed )
+        | INSDC:SEQ:rand_4na_2na ( in_4na_bin );
 
-    INSDC:rna:2na:bin in_rna_2na_bin
-        = < INSDC:rna:2na:bin > range_validate < 0, 3 > ( READ )
-        | ( INSDC:rna:2na:bin ) unpack ( in_rna_2na_packed )
-        | ( INSDC:rna:2na:bin ) INSDC:SEQ:rand_4na_2na ( in_rna_4na_bin )
-        ;
-
-    // input 2na packed
-    INSDC:dna:2na:packed in_2na_packed = READ;
-
-    INSDC:rna:2na:packed in_rna_2na_packed = RNAREAD;
+     // input 2na packed
+    INSDC:2na:packed in_2na_packed = READ;
 
     // input 4na alt-read ( ambiguities )
-    INSDC:dna:4na:bin in_alt_4na_bin
-        = ( INSDC:dna:4na:bin ) < INSDC:4na:bin, INSDC:4na:bin > map < INSDC:4na:map:BINSET, [ 15,0,0,3,0,5,6,7,0,9,10,11,12,13,14,15 ] > ( in_4na_bin );
-
-    INSDC:rna:4na:bin in_alt_rna_4na_bin
-        = ( INSDC:rna:4na:bin ) < INSDC:4na:bin, INSDC:4na:bin > map < INSDC:4na:map:BINSET, [ 15,0,0,3,0,5,6,7,0,9,10,11,12,13,14,15 ] > ( in_rna_4na_bin );
+    INSDC:4na:bin in_alt_4na_bin
+        = ( INSDC:4na:bin ) < INSDC:4na:bin, INSDC:4na:bin > map < INSDC:4na:map:BINSET, [ 15,0,0,3,0,5,6,7,0,9,10,11,12,13,14,15 ] > ( in_4na_bin );
 
     // preparing a feed into stats column
-    U8 in_stats_bin = in_2na_bin | in_rna_2na_bin;
+    U8 in_stats_bin = in_2na_bin;
 
 
     /* physical columns
      */
 
-    physical column INSDC:dna:2na:packed .READ
+    physical column INSDC:2na:packed .READ
         = in_2na_packed
-        | ( INSDC:dna:2na:packed ) pack ( in_2na_bin )
+        | ( INSDC:2na:packed ) pack ( in_2na_bin )
         ;
-
-//    physical column INSDC:rna:2na:packed .READ
-//        = in_rna_2na_packed
-//        | ( INSDC:rna:2na:packed ) pack ( in_rna_2na_bin )
-//        ;
-
-    physical column < INSDC:dna:4na:bin > zip_encoding .ALTREAD
-        = < INSDC:dna:4na:bin > trim < 0, 0 > ( in_alt_4na_bin )
-        ;
-
-//    physical column < INSDC:rna:4na:bin > zip_encoding .ALTREAD
-//        = < INSDC:rna:4na:bin > trim < 0, 0 > ( in_alt_rna_4na_bin )
-//        ;
-
 
     /* output rules
      */
@@ -418,9 +369,10 @@ table NCBI:tbl:base_space #2.1
         | out_2na_4na_bin;
 
     // output text
-    INSDC:dna:text out_dna_text
+    INSDC:dna:text out_dnarna_text
         = < INSDC:4na:bin, INSDC:dna:text > map < INSDC:4na:map:BINSET, INSDC:4na:map:CHARSET > ( out_4na_bin );
-
+    INSDC:dna:text out_dna_text
+        = NCBI:SRA:useRnaFlag ( out_dnarna_text );
 
 	/* INSDC:tbl:sequence inherited productions
 	 *  out_signal
@@ -798,25 +750,14 @@ table NCBI:tbl:phred_quality #2.0.4 = INSDC:tbl:sequence #1.0.1
 
     // physical storage
 
-    /* option 1: current storage as of June 29, 2018
-     */
-    physical column < INSDC:quality:phred > zip_encoding .QUALITY
+    physical column < INSDC:quality:phred > zip_encoding .ORIGINAL_QUALITY
         = in_qual_phred
         ;
 
-    /* option 2: utilize delta_average_zip_encoding
-     * /
-     physical column < INSDC:quality:phred > delta_average_zip_encoding .QUALITY
-         = in_qual_phred
-         ;
-     */
-
-    /* option 3: analyze and use to populate SPOT_FILTER
-       INSDC:SRA:spot_filter quality_filter
-           = NCBI:SRA:make_spot_filter #1 ( in_2na_bin, in_qual_phred,
+   INSDC:SRA:spot_filter quality_filter
+       = NCBI:SRA:make_spot_filter #1 ( in_4na_bin, in_qual_phred,
              in_read_start, in_read_len, in_read_type, in_spot_filter )
-           ;
-     */
+       ;
 
     // feed to compressed statistics
     INSDC:quality:phred in_stats_qual = in_qual_phred;

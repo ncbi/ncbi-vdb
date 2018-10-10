@@ -88,6 +88,20 @@ ascii INSDC:SRA:format_spot_name_no_coord #1 ( ascii name_fmt  * ascii spot_name
 function INSDC:SRA:read_filter
     INSDC:SRA:spot2read_filter #1 ( INSDC:SRA:spot_filter out_spot_filter, INSDC:SRA:xread_type out_read_type );
 
+/* read2spot_filter
+ *  takes input from read filter bits
+ *  produces new-style whole-spot filter bits
+ *
+ *  Rules are: (listed in order of precedence)
+ *    1) REJECT, if any are REJECT
+ *    2) REDACTED, if any are REDACTED
+ *    3) CRITERIA, if any are CRITERIA
+ *    4) else PASS
+ *
+ */
+function INSDC:SRA:spot_filter
+    INSDC:SRA:read2spot_filter #1 ( INSDC:SRA:read_filter out_read_filter );
+
 /*--------------------------------------------------------------------------
  * spotcoord
  *  spot coordinate table
@@ -284,6 +298,11 @@ table INSDC:SRA:tbl:spotdesc #1.0.2 = INSDC:tbl:sequence #1.0.1
     /* SPOT_FILTER
      *  like READ_FILTER, but applies to entire spot
      */
+    INSDC:SRA:spot_filter in_spot_filter
+        = SPOT_FILTER
+        | 
+        ;
+
     extern column INSDC:SRA:spot_filter SPOT_FILTER
         = out_spot_filter
         | < INSDC:SRA:spot_filter > echo < SRA_SPOT_FILTER_PASS > ()
@@ -367,7 +386,6 @@ table INSDC:SRA:tbl:stats #1.1
  *  1.0.1 - base explicitly upon spotname #1.0.1
  *  1.0.2 - base explicitly upon sequence #1.0.1, spotdesc #1.0.1
  *  1.0.3 - base upon spotdesc #1.0.2
- *  1.1.0 - base upon sequence #1.1.0
  */
 
 // platform constants from <insdc/sra.h>
@@ -383,8 +401,8 @@ const INSDC:SRA:platform_id SRA_PLATFORM_ION_TORRENT       = 7;
 const INSDC:SRA:platform_id SRA_PLATFORM_CAPILLARY         = 8;
 const INSDC:SRA:platform_id SRA_PLATFORM_OXFORD_NANOPORE   = 9;
 
-table INSDC:SRA:tbl:sra #1.1
-    = INSDC:tbl:sequence #1.1
+table INSDC:SRA:tbl:sra #1.0.3
+    = INSDC:tbl:sequence #1.0.1
     , INSDC:SRA:tbl:spotname #1.0.1
     , INSDC:SRA:tbl:spotdesc #1.0.2
     , INSDC:SRA:tbl:stats #1.1.0
@@ -439,45 +457,24 @@ table INSDC:SRA:tbl:sra #1.1
         ;
 
 	/* INSDC:tbl:sequence inherited virtual productions
-	 *  cs_native;
-	 *  in_cs_key;
-	 *  out_cs_key;
-	 *  out_signal;
-	 *  in_dna_text;
-	 *  in_rna_text;
-	 *  out_2cs_bin;
-	 *  out_2na_bin;
-	 *  out_4na_bin;
-	 *  out_dna_text;
-	 *  out_rna_text;
-	 *  out_x2cs_bin;
-	 *  out_x2na_bin;
-	 *  in_color_text;
-	 *  out_2cs_packed;
-	 *  out_2na_packed;
-	 *  out_4na_packed;
-	 *  out_color_text;
-	 *  out_qual_phred;
-	 *  out_rna_2na_bin;
-	 *  out_rna_4na_bin;
-	 *  out_color_matrix;
-	 *  out_dna_rna_text;
-	 *  out_rna_dna_text;
-	 *  out_rna_x2na_bin;
-	 *  out_rna_2na_packed;
-	 *  out_rna_4na_packed;
-	 *  out_dna_rna_2na_bin;
-	 *  out_dna_rna_4na_bin;
-	 *  out_rna_dna_2na_bin;
-	 *  out_rna_dna_4na_bin;
-	 *  out_dna_rna_x2na_bin;
-	 *  out_rna_dna_x2na_bin;
-	 *  out_dna_rna_2na_packed;
-	 *  out_dna_rna_4na_packed;
-	 *  out_qual_text_phred_33;
-	 *  out_qual_text_phred_64;
-	 *  out_rna_dna_2na_packed;
-	 *  out_rna_dna_4na_packed;
+	 *  cs_native
+	 *  in_cs_key
+	 *  out_cs_key
+	 *  out_signal
+	 *  in_dna_text
+	 *  out_2cs_bin
+	 *  out_2na_bin
+	 *  out_4na_bin
+	 *  out_dna_text
+	 *  out_x2cs_bin
+	 *  out_x2na_bin
+	 *  in_color_text
+	 *  out_2cs_packed
+	 *  out_2na_packed
+	 *  out_4na_packed
+	 *  out_color_text
+	 *  out_qual_phred
+	 *  out_color_matrix
 	 */
 
 	/* INSDC:SRA:tbl:spotcoord inherited virtual productions

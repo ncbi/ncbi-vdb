@@ -38,8 +38,8 @@ include 'ncbi/stats.vschema';
 extern function U8 NCBI:refseq:stats #2 ( INSDC:4na:bin seq, INSDC:coord:len len )
     = NCBI:refSeq:stats;
 
-table NCBI:refseq:tbl:reference #1.0.2 =
-    NCBI:tbl:base_space #2.0.2,
+table NCBI:refseq:tbl:reference #2 =
+    NCBI:tbl:base_space #3,
     NCBI:tbl:phred_quality #2.0.3,
     NCBI:tbl:seqloc #1.0,
     NCBI:SRA:tbl:stats #1.1.2
@@ -56,14 +56,14 @@ table NCBI:refseq:tbl:reference #1.0.2 =
 
     readonly column U64 TOTAL_SEQ_LEN
         = < U64 > meta:value < 'STATS/TOTAL_SEQ_LEN', true >();
-        
+
     readonly column U8[16] MD5
         = < U8[16] > meta:read < 'STATS/MD5', true >();
-        
+
     // indicates if sequence has circular structure
     // should be static
     extern column bool_encoding CIRCULAR;
-    
+
     /* columns:
      *  READ
      *  QUALITY (optional)
@@ -82,7 +82,7 @@ table NCBI:refseq:tbl:reference #1.0.2 =
     // extra columns needed for CS conversion
     INSDC:coord:zero out_read_start = < INSDC:coord:zero> echo < 0 > ();
     INSDC:coord:len  out_read_len =  .SEQ_LEN;
-    
+
     INSDC:coord:len _alt_in_read_len
         = READ_LEN
         | SEQ_LEN;

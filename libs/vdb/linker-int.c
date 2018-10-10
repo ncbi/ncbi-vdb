@@ -176,6 +176,7 @@ extern VTRANSFACT_DECL ( NCBI_align_seq_construct_read );
 extern VTRANSFACT_DECL ( NCBI_align_template_len );
 extern VTRANSFACT_DECL ( NCBI_color_from_dna );
 extern VTRANSFACT_DECL ( NCBI_dna_from_color );
+extern VTRANSFACT_DECL ( NCBI_SRA_useRnaFlag );
 extern VTRANSFACT_DECL ( NCBI_fp_extend );
 extern VTRANSFACT_DECL ( NCBI_lower_case_tech_reads );
 extern VTRANSFACT_DECL ( NCBI_unpack );
@@ -570,6 +571,7 @@ rc_t VLinkerInitFactoriesRead ( VLinker *self,  KSymTable *tbl, const SchemaEnv 
         { NCBI_align_template_len, "NCBI:align:template_len" },
         { NCBI_color_from_dna, "NCBI:color_from_dna" },
         { NCBI_dna_from_color, "NCBI:dna_from_color" },
+        { NCBI_SRA_useRnaFlag, "NCBI:SRA:useRnaFlag" },
         { NCBI_fp_extend, "NCBI:fp_extend" },
         { NCBI_lower_case_tech_reads, "NCBI:lower_case_tech_reads" },
         { NCBI_unpack, "NCBI:unpack" },
