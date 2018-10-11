@@ -89,13 +89,13 @@ function INSDC:SRA:read_filter
     INSDC:SRA:spot2read_filter #1 ( INSDC:SRA:spot_filter out_spot_filter, INSDC:SRA:xread_type out_read_type );
 
 /* read2spot_filter
- *  takes input from read filter bits
- *  produces new-style whole-spot filter bits
+ *  takes input older-style array of per-read filter bits
+ *  produces whole-spot filter bits
  *
  *  Rules are: (listed in order of precedence)
- *    1) REJECT, if any are REJECT
- *    2) REDACTED, if any are REDACTED
- *    3) CRITERIA, if any are CRITERIA
+ *    1) REJECT, if any reads are REJECT
+ *    2) REDACTED,        ''      REDACTED
+ *    3) CRITERIA,        ''      CRITERIA
  *    4) else PASS
  *
  */
@@ -290,6 +290,11 @@ table INSDC:SRA:tbl:spotdesc #1.0.2 = INSDC:tbl:sequence #1.0.1
         | < INSDC:SRA:read_filter > echo < SRA_READ_FILTER_PASS > ( out_read_start )
         ;
 
+    // only available if READ_FILTER is being written
+    INSDC:SRA:read_filter in_read_filter
+        = READ_FILTER
+        ;
+
     // RD_FILTER - only available if physical column is present
     extern readonly column INSDC:SRA:read_filter RD_FILTER
         = out_rd_filter
@@ -300,8 +305,8 @@ table INSDC:SRA:tbl:spotdesc #1.0.2 = INSDC:tbl:sequence #1.0.1
      */
     INSDC:SRA:spot_filter in_spot_filter
         = SPOT_FILTER
-        | 
-        ;
+        |
+       ;
 
     extern column INSDC:SRA:spot_filter SPOT_FILTER
         = out_spot_filter
