@@ -36,9 +36,9 @@
 
 /*
     This is a schema-function to synthesize quality values.
-    Its input are the read-len and the read-filter column.
+    Its input are the read-len and the spot-filter column.
     It sums up the values in read-len to determin the length of the produced column
-    It reads the read-filter values and puts 'good' or 'bad' values into the output
+    It reads the spot-filter values and puts 'good' or 'bad' values into the output
     The literals for 'good' and 'bad' are not hardcoded but passed into the function
     from the schema.
 */
@@ -49,83 +49,67 @@ typedef struct syn_qual_params
     INSDC_quality_phred bad;
 } syn_qual_params;
 
-static rc_t CC syn_quality_impl ( void * self,
+static INSDC_coord_len sum_read_len(size_t const count, INSDC_coord_len const *const lengths)
+{
+    INSDC_coord_len result = 0;
+    size_t i;
+    
+    for (i = 0; i < count; ++i) {
+        result += lengths[i];
+    }
+    return result;
+}
+
+static bool is_good(size_t const count, INSDC_SRA_spot_filter const *const filters)
+{
+    return (count == 0 || filters[0] == SRA_SPOT_FILTER_PASS) ? true : false;
+}
+
+static rc_t syn_quality_impl(syn_qual_params const *const params,
+                             size_t numreads, INSDC_coord_len const *const lengths,
+                             size_t numfilts, INSDC_SRA_spot_filter const *const filters,
+                             VRowResult *rslt)
+{
+    rc_t rc = 0;
+    INSDC_coord_len const total_read_len = sum_read_len(numreads, lengths);
+    INSDC_quality_phred const q = is_good(numfilts, filters) ? params->good : params->bad;
+
+    rslt -> data -> elem_bits = 8;
+    rslt -> elem_count = total_read_len;
+    rc = KDataBufferResize ( rslt -> data, total_read_len );
+    if ( rc == 0 )
+    {
+        memset( rslt -> data -> base, q, total_read_len );
+    }
+    return rc;
+}
+
+#define SAFE_BASE(ELEM, DTYPE) ((ELEM < argc && sizeof(DTYPE) * 8 == (size_t)argv[ELEM].u.data.elem_bits) ? (((DTYPE const *)argv[ELEM].u.data.base) + argv[ELEM].u.data.first_elem) : ((DTYPE const *)NULL))
+#define BIND_COLUMN(ELEM, DTYPE, POINTER) DTYPE const *const POINTER = SAFE_BASE(ELEM, DTYPE)
+#define SAFE_COUNT(ELEM) (ELEM < argc ? argv[ELEM].u.data.elem_count : 0)
+
+static rc_t CC syn_quality_drvr ( void * self,
                                   const VXformInfo * info,
                                   int64_t row_id,
                                   VRowResult * rslt,
                                   uint32_t argc,
                                   const VRowData argv [] )
 {
-    rc_t rc = 0;
-
-    const syn_qual_params * params = self;
-    const INSDC_coord_len * read_lens = NULL;
-    uint32_t num_read_lens = 0;
-    
-    const INSDC_read_filter * read_filters = NULL;
-    uint32_t num_read_filters = 0;
-    
-    INSDC_coord_len total_read_len = 0;
-    uint32_t i;
-    
-    if ( argc > 0 )
-    {
-        read_lens = argv[ 0 ] . u . data . base;
-        read_lens += argv[ 0 ] . u . data . first_elem;
-        num_read_lens = ( uint32_t )argv[ 0 ] . u . data . elem_count;    
-    }
-    
-    for ( i = 0; i < num_read_lens; ++i )
-        total_read_len += read_lens[ i ];
-
-    if ( argc > 1 )
-    {
-        read_filters = argv[ 1 ].u.data.base;
-        if ( argv[ 1 ] . u . data . elem_bits == ( ( sizeof read_filters[ 0 ] ) * 8 ) )
-        {
-            num_read_filters = ( uint32_t )argv[ 1 ] . u . data . elem_count;
-            read_filters += argv[ 1 ] . u . data . first_elem;
-        }
-    }
-    
-    rslt -> data -> elem_bits = 8;
-    rslt -> elem_count = total_read_len;
-    if ( total_read_len > 0 )
-    {
-        rc = KDataBufferResize ( rslt -> data, total_read_len );
-        if ( rc == 0 )
-        {
-            INSDC_quality_phred * dst = rslt -> data -> base;
-            if ( num_read_filters == 0 )
-            {
-                memset( dst, params -> good, total_read_len );
-            }
-            else
-            {
-                for ( i = 0; i < num_read_lens; ++i )
-                {
-                    INSDC_coord_len len = read_lens[ i ];
-                    INSDC_quality_phred q = params -> good;
-
-                    if ( i < num_read_filters )
-                    {
-                        if ( read_filters[ i ] != READ_FILTER_PASS )
-                            q = params -> bad;
-                    }
-                    
-                    memset( dst, q, len );
-                    dst += len;
-                }
-            }
-        }
-    }
-    return rc;
+    enum {
+        COL_READ_LEN,
+        COL_SPOT_FILTER,
+    };
+    assert(argc == 2);
+    return syn_quality_impl(self,
+                            SAFE_COUNT(COL_READ_LEN), SAFE_BASE(COL_READ_LEN, INSDC_coord_len),
+                            SAFE_COUNT(COL_SPOT_FILTER), SAFE_BASE(COL_SPOT_FILTER, INSDC_SRA_spot_filter),
+                            rslt);
 }
 
 /* 
  * function INSDC:quality:phred NCBI:syn_quality #1
  *      < * INSDC:quality:phred good_quality, INSDC:quality:phred bad_quality >
- *      ( INSDC:coord:len read_len, INSDC:SRA:read_filter read_filter );
+ *      ( INSDC:coord:len read_len, INSDC:SRA:spot_filter spot_filter );
  */
 VTRANSFACT_IMPL ( NCBI_SRA_syn_quality, 1, 0, 0 ) ( const void * Self,
                                            const VXfactInfo * info,
@@ -137,6 +121,7 @@ VTRANSFACT_IMPL ( NCBI_SRA_syn_quality, 1, 0, 0 ) ( const void * Self,
     INSDC_quality_phred q_good = 30;
     INSDC_quality_phred q_bad  = 3;
 
+    assert(dp->argc == 2);
     if ( cp -> argc > 0 )
     {
         if ( cp -> argv[ 0 ].desc.domain == vtdUint &&
@@ -162,10 +147,10 @@ VTRANSFACT_IMPL ( NCBI_SRA_syn_quality, 1, 0, 0 ) ( const void * Self,
     {
         params -> good = q_good;
         params -> bad  = q_bad;
-        
+
         rslt -> self = params;
         rslt -> whack = free;
-        rslt -> u . rf  = syn_quality_impl;
+        rslt -> u . rf  = syn_quality_drvr;
         rslt -> variant = vftRow;
     }
     return rc;
