@@ -415,8 +415,8 @@ table NCBI:SRA:tbl:spotdesc #1.1 = NCBI:SRA:tbl:spotdesc_nophys #1.1
     physical column < INSDC:coord:zero > izip_encoding .READ_START = READ_START;
     physical column < INSDC:coord:len > izip_encoding .READ_LEN = in_read_len;
     physical column < INSDC:SRA:xread_type > zip_encoding .READ_TYPE = in_read_type;
-    physical column < INSDC:SRA:read_filter > zip_encoding .RD_FILTER = READ_FILTER;
-    physical column < INSDC:SRA:spot_filter > zip_encoding .SPOT_FILTER = SPOT_FILTER;
+    physical column < INSDC:SRA:read_filter > zip_encoding .RD_FILTER = in_read_filter;
+    physical column < INSDC:SRA:spot_filter > zip_encoding .SPOT_FILTER = in_spot_filter;
 
 
 	/* INSDC:SRA:tbl:spotdesc inherited productions
