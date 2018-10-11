@@ -287,7 +287,7 @@ table INSDC:SRA:tbl:spotdesc #1.0.2 = INSDC:tbl:sequence #1.0.1
     extern column INSDC:SRA:read_filter READ_FILTER
         = out_rd_filter
         | INSDC:SRA:spot2read_filter ( out_spot_filter, out_read_type )
-        | < INSDC:SRA:read_filter > echo < SRA_READ_FILTER_PASS > ( out_read_start )
+        | < INSDC:SRA:read_filter > echo < SRA_READ_FILTER_PASS > ( out_read_type )
         ;
 
     // only available if READ_FILTER is being written
