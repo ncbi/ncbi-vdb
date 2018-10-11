@@ -731,7 +731,8 @@ table NCBI:tbl:phred_quality #2.0.4 = INSDC:tbl:sequence #1.0.1
 {
     // read directly quality as  phred
     INSDC:quality:phred phys_qual_phred
-        = .QUALITY
+        = .ORIGINAL_QUALITY
+        | .QUALITY
         ;
 
     INSDC:quality:phred const_qual_phred
