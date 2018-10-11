@@ -742,6 +742,21 @@ table NCBI:tbl:phred_quality #2.0.4 = INSDC:tbl:sequence #1.0.1
         | < INSDC:quality:phred > echo < 30 > ( out_rna_4na_bin )
         ;
 
+    INSDC:quality:phred raw_qual_phred
+        = < INSDC:quality:phred > is_configuration_set
+            < "/sra/quality_type", "raw_scores" > ( phys_qual_phred )
+        ;
+
+    INSDC:quality:phred syn_qual_phred
+        = NCBI:syn_quality < 30, 3 > ( out_read_len, out_spot_filter )
+        | const_qual_phred
+        ;
+
+    INSDC:quality:phred out_qual_phred
+        = raw_qual_phred
+        | syn_qual_phred
+        ;
+
     // input rules
     INSDC:quality:text:phred_33 in_qual_text_phred_33 = QUALITY;
     INSDC:quality:text:phred_64 in_qual_text_phred_64 = QUALITY;
