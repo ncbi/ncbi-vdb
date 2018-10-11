@@ -730,9 +730,12 @@ table NCBI:tbl:phred_quality #1.0.1 = NCBI:tbl:phred_quality_nocol #1.0.1
 table NCBI:tbl:phred_quality #2.0.4 = INSDC:tbl:sequence #1.0.1
 {
     // read directly quality as  phred
-    INSDC:quality:phred out_qual_phred
+    INSDC:quality:phred phys_qual_phred
         = .QUALITY
-        | < INSDC:quality:phred > echo < 30 > ( out_dna_2na_bin )
+        ;
+
+    INSDC:quality:phred const_qual_phred
+        = < INSDC:quality:phred > echo < 30 > ( out_dna_2na_bin )
         | < INSDC:quality:phred > echo < 30 > ( out_rna_2na_bin )
         | < INSDC:quality:phred > echo < 30 > ( out_dna_4na_bin )
         | < INSDC:quality:phred > echo < 30 > ( out_rna_4na_bin )
