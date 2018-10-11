@@ -754,11 +754,6 @@ table NCBI:tbl:phred_quality #2.0.4 = INSDC:tbl:sequence #1.0.1
         = in_qual_phred
         ;
 
-   INSDC:SRA:spot_filter quality_filter
-       = NCBI:SRA:make_spot_filter #1 ( in_4na_bin, in_qual_phred,
-             in_read_start, in_read_len, in_read_type, in_spot_filter )
-       ;
-
     // feed to compressed statistics
     INSDC:quality:phred in_stats_qual = in_qual_phred;
 
