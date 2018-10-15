@@ -309,11 +309,6 @@ table INSDC:SRA:tbl:spotdesc #1.0.2 = INSDC:tbl:sequence #1.0.1
         | < INSDC:SRA:spot_filter > echo < SRA_SPOT_FILTER_PASS > ()
         ;
 
-   INSDC:SRA:spot_filter in_spot_filter
-       = NCBI:SRA:make_spot_filter #1 ( in_4na_bin, in_qual_phred,
-             in_read_start, in_read_len, in_read_type, in_spot_filter_0 )
-       ;
-
     extern column INSDC:SRA:spot_filter SPOT_FILTER
         = out_spot_filter
         | INSDC:SRA:read2spot_filter ( out_rd_filter )

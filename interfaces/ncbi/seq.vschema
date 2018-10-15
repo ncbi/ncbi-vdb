@@ -757,6 +757,11 @@ table NCBI:tbl:phred_quality #2.0.4 = INSDC:tbl:sequence #1.0.1
         | syn_qual_phred
         ;
 
+    INSDC:SRA:spot_filter in_spot_filter
+        = NCBI:SRA:make_spot_filter #1 ( in_4na_bin, in_qual_phred,
+            in_read_start, in_read_len, in_read_type, in_spot_filter_0 )
+        ;
+
     // input rules
     INSDC:quality:text:phred_33 in_qual_text_phred_33 = QUALITY;
     INSDC:quality:text:phred_64 in_qual_text_phred_64 = QUALITY;
