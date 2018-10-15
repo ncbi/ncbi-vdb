@@ -38,6 +38,8 @@
 #include <klib/rc.h>
 #include <sysalloc.h>
 
+#include <kfg/config.h>
+
 #include <stdlib.h>
 #include <string.h>
 #include <byteswap.h>
@@ -235,22 +237,120 @@ extern bool CC NCBI_SRA_Illumina_untyped_1a ( struct KTable const *tbl, struct K
 extern bool CC NCBI_SRA_Illumina_untyped_1b ( struct KTable const *tbl, struct KMetadata const *meta );
 extern bool CC NCBI_SRA_ABI_untyped_1 ( struct KTable const *tbl, struct KMetadata const *meta );
 
-
-/* select is REALLY internal */
+/* these functions need something to fill in VFuncDesc */
 static
-rc_t CC select_func ( void *self, const VXformInfo *info, int64_t row_id,
+rc_t CC fake_stub_func ( void *self, const VXformInfo *info, int64_t row_id,
     VRowResult *rslt, uint32_t argc, const VRowData argv [] )
 {
+    assert(!"THIS FUNCTION IS NEVER TO BE CALLED");
+    abort();
     return 0;
 }
 
+/* select is REALLY internal */
 VTRANSFACT_BUILTIN_IMPL ( vdb_select, 1, 0, 0 ) ( const void *self,
     const VXfactInfo *info, VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
 {
     /* set function pointer to non-NULL */
-    rslt -> u . rf = select_func;
+    rslt -> u . rf = fake_stub_func;
     rslt -> variant = vftSelect;
     return 0;
+}
+
+#if THIS_IS_A_STUB_FOR_COPYPASTA
+/*
+function < type T >
+T passthru #1.0 ( T target )
+     = vdb:stub:function;
+ */
+/* all pass-through functions are REALLY internal */
+VTRANSFACT_BUILTIN_IMPL ( vdb_stub_function, 1, 0, 0 ) ( const void *self,
+    const VXfactInfo *info, VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
+{
+    bool shouldPassThru = false;
+
+    /* pass-through functions MUST have exactly one argument */
+    assert(dp->argc == 1);
+    
+    /* This is where to implement logic to determine if pass-through is wanted
+     */
+
+    /* from here to the end of the function stays the same */
+    if (shouldPassThru) {
+        /* set function pointer to non-NULL */
+        rslt -> u . rf = fake_stub_func;
+        
+        /* this is the magic that causes VFunctionProdRead to pass the Read
+         * message on to the first argument of this function */
+        rslt -> variant = vftPassThrough;
+        return 0;
+    }
+
+    /* some non-zero RC to signal that pass-through is NOT supposed to happen
+     * this will cause the schema to fall-through to the next rule or fail the
+     * production
+     */
+    return SILENT_RC(rcVDB, rcFunction, rcConstructing, rcFunction, rcIgnored);
+}
+#endif
+
+static bool compare_node_value(KConfigNode const *node, unsigned const len, char const *const value)
+{
+    char buffer[4096];
+    size_t num_read = 0, remaining = 0, offset = 0;
+
+    do {
+        KConfigNodeRead(node, offset, buffer, sizeof(buffer), &num_read, &remaining);
+        if (offset + num_read + remaining != len)
+            return false;
+        assert(offset + num_read <= len);
+        if (memcmp(buffer, value + offset, num_read) != 0)
+            return false;
+        offset += num_read;
+    } while (num_read > 0 && remaining > 0);
+    return offset == len;
+}
+
+static bool check_config_node(VFactoryParams const * const name_value)
+{
+    rc_t rc = 0;
+    bool result = false;
+    assert(name_value->argc == 2);
+    {
+        KConfig *cfg;
+        rc = KConfigMake(&cfg, NULL);
+        if (rc == 0) {
+            KConfigNode const *node;
+            rc = KConfigOpenNodeRead(cfg, &node, "%.*s"
+                                     , (int)name_value->argv[0].count
+                                     , name_value->argv[0].data.ascii);
+            if (rc == 0) {
+                result = compare_node_value(node
+                                            , name_value->argv[1].count
+                                            , name_value->argv[1].data.ascii);
+                KConfigNodeRelease(node);
+            }
+            KConfigRelease(cfg);
+        }
+    }
+    return result;
+}
+
+/*
+function < type T >
+T is_configuration_set #1.0 < ascii node, ascii value > ( T target )
+     = vdb:is_configuration_set;
+ */
+/* all pass-through functions are REALLY internal */
+VTRANSFACT_BUILTIN_IMPL ( vdb_is_configuration_set, 1, 0, 0 ) ( const void *self,
+    const VXfactInfo *info, VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
+{
+    if (check_config_node(cp)) {
+        rslt -> u . rf = fake_stub_func;
+        rslt -> variant = vftPassThrough;
+        return 0;
+    }
+    return SILENT_RC(rcVDB, rcFunction, rcConstructing, rcFunction, rcIgnored);
 }
 
 /* temporary silly stuff
@@ -442,6 +542,7 @@ rc_t VLinkerInitFactoriesRead ( VLinker *self,  KSymTable *tbl, const SchemaEnv 
         { vdb_row_len, "vdb:row_len" },
         { vdb_fixed_row_len, "vdb:fixed_row_len" },
         { vdb_select, "vdb:select" },
+        { vdb_is_configuration_set, "vdb:is_configuration_set" },
         { vdb_compare, "vdb:compare" },
         { vdb_no_compare, "vdb:no_compare" },
         { vdb_range_validate, "vdb:range_validate" },
