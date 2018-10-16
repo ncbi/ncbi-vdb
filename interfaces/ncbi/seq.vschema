@@ -736,10 +736,8 @@ table NCBI:tbl:phred_quality #2.0.4 = INSDC:tbl:sequence #1.0.1
         ;
 
     INSDC:quality:phred const_qual_phred
-        = < INSDC:quality:phred > echo < 30 > ( out_dna_2na_bin )
-        | < INSDC:quality:phred > echo < 30 > ( out_rna_2na_bin )
-        | < INSDC:quality:phred > echo < 30 > ( out_dna_4na_bin )
-        | < INSDC:quality:phred > echo < 30 > ( out_rna_4na_bin )
+        = < INSDC:quality:phred > echo < 30 > ( out_2na_bin )
+        | < INSDC:quality:phred > echo < 30 > ( out_4na_bin )
         ;
 
     INSDC:quality:phred raw_qual_phred
