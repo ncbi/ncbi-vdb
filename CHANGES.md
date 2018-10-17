@@ -1,6 +1,13 @@
 # NCBI External Developer Release:
 
 
+## NCBI VDB 2.9.3
+**October 17, 2018**
+  **kns**: added possibility to skip server's certificate validation
+  **kns**: expect to receive HTTP status 200 when sending range-request that includes the whole file
+  **vdb**: fixed a bug in accessing pagemap process request for cursors which do not have pagemap thread running
+
+
 ## NCBI VDB 2.9.2-1
 **July 31, 2018**
   **vdb**: restored lost exported attribute on several entries in the private API
