@@ -145,6 +145,66 @@ static int check_quality(self_t const *self
     return notRejected;
 }
 
+static int check_dna(self_t const *self
+                     , unsigned const nreads
+                     , int32_t const *start
+                     , uint32_t const *len
+                     , uint8_t const *type
+                     , uint8_t const *read)
+{
+    unsigned i;
+    for (i = 0; i < nreads; ++i) {
+        unsigned const readLen = len[i];
+        bool const rev = (type[i] & SRA_READ_TYPE_REVERSE) == SRA_READ_TYPE_REVERSE;
+        unsigned j = 0;
+        unsigned count[256];
+        
+        if ((type[i] & SRA_READ_TYPE_BIOLOGICAL) != SRA_READ_TYPE_BIOLOGICAL)
+            continue;
+        
+        memset(count, 0, sizeof(count));
+        for ( ; j < M; ++j) {
+            unsigned const k = start[i] + (rev ? (readLen - j - 1) : j);
+            int const base = read[k];
+            
+            ++count[base];
+        }
+        {
+            unsigned const unambiguous = count['A']+count['C']+count['G']+count['T']
+                                       + count['a']+count['c']+count['g']+count['t'];
+            if (unambiguous != M) return ambiguousFirstM; ///< first M bases must be unambiguous
+        }
+        {
+            bool const all_A = (count['A']+count['a']) == M;
+            bool const all_C = (count['C']+count['c']) == M;
+            bool const all_G = (count['G']+count['g']) == M;
+            bool const all_T = (count['T']+count['t']) == M;
+            if (all_A || all_C || all_G || all_T) return lowComplexityFirstM; ///< first M bases must not be all the same
+        }
+        for ( ; j < readLen; ++j) {
+            unsigned const k = start[i] + (rev ? (readLen - j - 1) : j);
+            int const base = read[k];
+            
+            ++count[base];
+        }
+        {
+            unsigned okay = 0;
+            for (j = 0; j < 16; ++j) {
+                char const K[16] = ".ACMGRSVTWYHKDBN";
+                char const k[16] = ".acmgrsvtwyhkdbn";
+                okay += count[(int)(K[j])] + count[(int)(k[j])];
+            }
+            if (okay != readLen) return badBaseValue; ///< all bases must be one of ACGT or UIPAC ambiguity codes
+        }
+        {
+            unsigned const unambiguous = count['A']+count['C']+count['G']+count['T']
+                                       + count['a']+count['c']+count['g']+count['t'];
+            if (unambiguous * 2 < readLen) return tooManyAmbiguous; ///< at least 1/2 the bases must be unambiguous
+        }
+    }
+    return notRejected;
+}
+
 static int check_4na(self_t const *self
                      , unsigned const nreads
                      , int32_t const *start
@@ -368,6 +428,8 @@ static spot_filter_func read_data_type_to_function(VSchema const *const schema, 
         return check_x2na;
     if (isSameType(schema, "INSDC:2na:bin", read_data_type))
         return check_2na;
+    if (isSameType(schema, "INSDC:dna:text", read_data_type))
+        return check_dna;
     LOGMSG(klogDebug, "matched no type");
     return NULL;
 }
