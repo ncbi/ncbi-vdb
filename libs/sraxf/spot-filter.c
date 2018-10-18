@@ -47,8 +47,7 @@ typedef int (*spot_filter_func)(self_t const *self
                               , int32_t const *start
                               , uint32_t const *len
                               , uint8_t const *type
-                              , uint8_t const *read
-                              , uint8_t const *qual);
+                              , uint8_t const *read);
 struct params {
     spot_filter_func spot_filter;
     unsigned min_length;
@@ -105,13 +104,53 @@ static void printRejectCause(enum RejectCause const cause, FILE *const fp, void 
 }
 #endif
 
-static int spot_filter_4na(self_t const *self
-                            , unsigned const nreads
-                            , int32_t const *start
-                            , uint32_t const *len
-                            , uint8_t const *type
-                            , uint8_t const *read
-                            , uint8_t const *qual)
+static int check_spot_filter(unsigned const nfilt,
+                             INSDC_SRA_spot_filter const filter[])
+{
+    unsigned i;
+    for (i = 0; i < nfilt; ++i) {
+        if (filter[i] != SRA_SPOT_FILTER_PASS) {
+            return spotFilter;
+        }
+    }
+    return notRejected;
+}
+
+static int check_quality(self_t const *self
+                         , unsigned const nreads
+                         , int32_t const *start
+                         , uint32_t const *len
+                         , uint8_t const *type
+                         , uint8_t const *qual)
+{
+    unsigned i;
+    for (i = 0; i < nreads; ++i) {
+        unsigned const readLen = len[i];
+        bool const rev = (type[i] & SRA_READ_TYPE_REVERSE) == SRA_READ_TYPE_REVERSE;
+        unsigned j = 0;
+        
+        if ((type[i] & SRA_READ_TYPE_BIOLOGICAL) != SRA_READ_TYPE_BIOLOGICAL)
+            continue;
+        
+        if (readLen < M)
+            return tooShort;
+        
+        for ( ; j < M; ++j) {
+            unsigned const k = start[i] + (rev ? (readLen - j - 1) : j);
+            int const qval = qual[k];
+            
+            if (BAD_QUAL(qval)) return badQualValueFirstM; ///< first M quality values must all be >= minimum quality value
+        }
+    }
+    return notRejected;
+}
+
+static int check_4na(self_t const *self
+                     , unsigned const nreads
+                     , int32_t const *start
+                     , uint32_t const *len
+                     , uint8_t const *type
+                     , uint8_t const *read)
 {
     unsigned i;
     for (i = 0; i < nreads; ++i) {
@@ -123,17 +162,12 @@ static int spot_filter_4na(self_t const *self
         if ((type[i] & SRA_READ_TYPE_BIOLOGICAL) != SRA_READ_TYPE_BIOLOGICAL)
             continue;
         
-        if (readLen < M)
-            return tooShort;
-
         memset(count, 0, sizeof(count));
         for ( ; j < M; ++j) {
             unsigned const k = start[i] + (rev ? (readLen - j - 1) : j);
             int const base = read[k];
-            int const qval = qual[k];
 
             ++count[base];
-            if (BAD_QUAL(qval)) return badQualValueFirstM; ///< first M quality values must all be >= minimum quality value
         }
         {
             unsigned const unambiguous = count[A_4na]+count[C_4na]+count[G_4na]+count[T_4na];
@@ -162,13 +196,12 @@ static int spot_filter_4na(self_t const *self
 }
 
 /* read contains only ACGTN */
-static int spot_filter_x2na(self_t const *self
-                          , unsigned const nreads
-                          , int32_t const *start
-                          , uint32_t const *len
-                          , uint8_t const *type
-                          , uint8_t const *read
-                          , uint8_t const *qual)
+static int check_x2na(self_t const *self
+                      , unsigned const nreads
+                      , int32_t const *start
+                      , uint32_t const *len
+                      , uint8_t const *type
+                      , uint8_t const *read)
 {
     unsigned i;
     for (i = 0; i < nreads; ++i) {
@@ -180,16 +213,11 @@ static int spot_filter_x2na(self_t const *self
         if ((type[i] & SRA_READ_TYPE_BIOLOGICAL) != SRA_READ_TYPE_BIOLOGICAL)
             continue;
         
-        if (readLen < M)
-            return tooShort;
-
         memset(count, 0, sizeof(count));
         for ( ; j < M; ++j) {
             unsigned const k = start[i] + (rev ? (readLen - j - 1) : j);
             int const base = read[k];
-            int const qval = qual[k];
 
-            if (BAD_QUAL(qval)) return badQualValueFirstM; ///< first M quality values must all be >= minimum quality value
             ++count[base];
         }
         {
@@ -217,13 +245,12 @@ static int spot_filter_x2na(self_t const *self
     return notRejected;
 }
 
-static int spot_filter_2na(self_t const *self
-                         , unsigned const nreads
-                         , int32_t const *start
-                         , uint32_t const *len
-                         , uint8_t const *type
-                         , uint8_t const *read
-                         , uint8_t const *qual)
+static int check_2na(self_t const *self
+                     , unsigned const nreads
+                     , int32_t const *start
+                     , uint32_t const *len
+                     , uint8_t const *type
+                     , uint8_t const *read)
 {
     unsigned i;
     for (i = 0; i < nreads; ++i) {
@@ -235,16 +262,11 @@ static int spot_filter_2na(self_t const *self
         if ((type[i] & SRA_READ_TYPE_BIOLOGICAL) != SRA_READ_TYPE_BIOLOGICAL)
             continue;
         
-        if (readLen < M)
-            return tooShort;
-
         memset(count, 0, sizeof(count));
         for ( ; j < M; ++j) {
             unsigned const k = start[i] + (rev ? (readLen - j - 1) : j);
-            int const qval = qual[k];
             int const base = read[k];
 
-            if (BAD_QUAL(qval)) return badQualValueFirstM; ///< first M quality values must all be >= minimum quality value
             ++count[base];
         }
         {
@@ -290,7 +312,7 @@ rc_t CC make_spot_filter(void *const self
     BIND_COLUMN(COL_READ_LEN   , uint32_t, len   );
     BIND_COLUMN(COL_READ_TYPE  ,  uint8_t, type  );
     BIND_COLUMN(COL_SPOT_FILTER,  uint8_t, filter);
-    enum RejectCause result = notRejected;
+    enum RejectCause result;
     rc_t rc = 0;
 
     assert(read != NULL);
@@ -303,17 +325,11 @@ rc_t CC make_spot_filter(void *const self
     assert(SAME_COUNT(COL_READ_START, COL_READ_LEN));
     assert(SAME_COUNT(COL_READ_START, COL_READ_TYPE));
 
-    {
-        unsigned i;
-        for (i = 0; i < nfilt; ++i) {
-            if (filter[i] == SRA_SPOT_FILTER_REJECT) {
-                result = spotFilter;
-                break;
-            }
-        }
-    }
+    result = check_spot_filter(nfilt, filter);
     if (result == notRejected)
-        result = SPOT_FILTER(self, nreads, start, len, type, read, qual);
+        result = check_quality(self, nreads, start, len, type, qual);
+    if (result == notRejected)
+        result = SPOT_FILTER(self, nreads, start, len, type, read);
 
 #if DEBUG_PRINT_RESULT
     printRejectCause(result, stderr, self);
@@ -347,11 +363,11 @@ static bool isSameType(VSchema const *const schema, char const *const type_name,
 static spot_filter_func read_data_type_to_function(VSchema const *const schema, VFormatdecl const *const read_data_type)
 {
     if (isSameType(schema, "INSDC:4na:bin", read_data_type))
-        return spot_filter_4na;
+        return check_4na;
     if (isSameType(schema, "INSDC:x2na:bin", read_data_type))
-        return spot_filter_x2na;
+        return check_x2na;
     if (isSameType(schema, "INSDC:2na:bin", read_data_type))
-        return spot_filter_2na;
+        return check_2na;
     LOGMSG(klogDebug, "matched no type");
     return NULL;
 }
