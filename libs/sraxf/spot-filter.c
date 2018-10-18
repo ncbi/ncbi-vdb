@@ -145,6 +145,25 @@ static int check_quality(self_t const *self
     return notRejected;
 }
 
+static bool check_ambiguousFirstM(self_t const *self, unsigned const A, unsigned const C, unsigned const G, unsigned const T)
+{
+    return (A+C+G+T) == M;
+}
+
+static bool check_tooManyAmbiguous(self_t const *self, unsigned readLen, unsigned const A, unsigned const C, unsigned const G, unsigned const T)
+{
+    return (A+C+G+T) * 2 >= readLen;
+}
+
+static bool check_lowComplexityFirstM(self_t const *self, unsigned const A, unsigned const C, unsigned const G, unsigned const T)
+{
+    bool const all_A = A == M;
+    bool const all_C = C == M;
+    bool const all_G = G == M;
+    bool const all_T = T == M;
+    return !(all_A || all_C || all_G || all_T);
+}
+
 static int check_dna(self_t const *self
                      , unsigned const nreads
                      , int32_t const *start
@@ -169,37 +188,27 @@ static int check_dna(self_t const *self
             
             ++count[base];
         }
-        {
-            unsigned const unambiguous = count['A']+count['C']+count['G']+count['T']
-                                       + count['a']+count['c']+count['g']+count['t'];
-            if (unambiguous != M) return ambiguousFirstM; ///< first M bases must be unambiguous
-        }
-        {
-            bool const all_A = (count['A']+count['a']) == M;
-            bool const all_C = (count['C']+count['c']) == M;
-            bool const all_G = (count['G']+count['g']) == M;
-            bool const all_T = (count['T']+count['t']) == M;
-            if (all_A || all_C || all_G || all_T) return lowComplexityFirstM; ///< first M bases must not be all the same
-        }
+        
+        if (!check_ambiguousFirstM(self, count['A'] + count['a'], count['C'] + count['c'], count['G'] + count['g'], count['T'] + count['t'])) return ambiguousFirstM; ///< first M bases must be unambiguous
+
+        if (!check_lowComplexityFirstM(self, count['A'] + count['a'], count['C'] + count['c'], count['G'] + count['g'], count['T'] + count['t'])) return lowComplexityFirstM; ///< first M bases must not be all the same
+
         for ( ; j < readLen; ++j) {
             unsigned const k = start[i] + (rev ? (readLen - j - 1) : j);
             int const base = read[k];
             
             ++count[base];
         }
+        if (!check_tooManyAmbiguous(self, readLen, count['A'] + count['a'], count['C'] + count['c'], count['G'] + count['g'], count['T'] + count['t'])) return tooManyAmbiguous; ///< at least 1/2 the bases must be unambiguous
+
         {
-            unsigned okay = 0;
+            unsigned iupac = 0;
             for (j = 0; j < 16; ++j) {
                 char const K[16] = ".ACMGRSVTWYHKDBN";
                 char const k[16] = ".acmgrsvtwyhkdbn";
-                okay += count[(int)(K[j])] + count[(int)(k[j])];
+                iupac += count[(int)(K[j])] + count[(int)(k[j])];
             }
-            if (okay != readLen) return badBaseValue; ///< all bases must be one of ACGT or UIPAC ambiguity codes
-        }
-        {
-            unsigned const unambiguous = count['A']+count['C']+count['G']+count['T']
-                                       + count['a']+count['c']+count['g']+count['t'];
-            if (unambiguous * 2 < readLen) return tooManyAmbiguous; ///< at least 1/2 the bases must be unambiguous
+            if (iupac != readLen) return badBaseValue; ///< all bases must be one of ACGT or UIPAC ambiguity codes
         }
     }
     return notRejected;
@@ -229,28 +238,20 @@ static int check_4na(self_t const *self
 
             ++count[base];
         }
-        {
-            unsigned const unambiguous = count[A_4na]+count[C_4na]+count[G_4na]+count[T_4na];
-            if (unambiguous != M) return ambiguousFirstM; ///< first M bases must be unambiguous
-        }
-        {
-            bool const all_A = count[A_4na] == M;
-            bool const all_C = count[C_4na] == M;
-            bool const all_G = count[G_4na] == M;
-            bool const all_T = count[T_4na] == M;
-            if (all_A || all_C || all_G || all_T) return lowComplexityFirstM; ///< first M bases must not be all the same
-        }
+        
+        if (!check_ambiguousFirstM(self, count[A_4na], count[C_4na], count[G_4na], count[T_4na])) return ambiguousFirstM; ///< first M bases must be unambiguous
+        
+        if (!check_lowComplexityFirstM(self, count[A_4na], count[C_4na], count[G_4na], count[T_4na])) return lowComplexityFirstM; ///< first M bases must not be all the same
+        
         for ( ; j < readLen; ++j) {
             unsigned const k = start[i] + (rev ? (readLen - j - 1) : j);
             int const base = read[k];
-
+            
             ++count[base];
         }
+        if (!check_tooManyAmbiguous(self, readLen, count[A_4na], count[C_4na], count[G_4na], count[T_4na])) return tooManyAmbiguous; ///< at least 1/2 the bases must be unambiguous
+
         if (count[NO_4na] != 0) return badBaseValue; ///< all bases must be one of ACGT or UIPAC ambiguity codes
-        {
-            unsigned const unambiguous = count[A_4na]+count[C_4na]+count[G_4na]+count[T_4na];
-            if (unambiguous * 2 < readLen) return tooManyAmbiguous; ///< at least 1/2 the bases must be unambiguous
-        }
     }
     return notRejected;
 }
@@ -280,27 +281,18 @@ static int check_x2na(self_t const *self
 
             ++count[base];
         }
-        {
-            unsigned const unambiguous = count[0]+count[1]+count[2]+count[3];
-            if (unambiguous != M) return ambiguousFirstM; ///< first M bases must be unambiguous
-        }
-        {
-            bool const all_A = count[0] == M;
-            bool const all_C = count[1] == M;
-            bool const all_G = count[2] == M;
-            bool const all_T = count[3] == M;
-            if (all_A || all_C || all_G || all_T) return lowComplexityFirstM; ///< first M bases must not be all the same
-        }
+        
+        if (!check_ambiguousFirstM(self, count[0], count[1], count[2], count[3])) return ambiguousFirstM; ///< first M bases must be unambiguous
+        
+        if (!check_lowComplexityFirstM(self, count[0], count[1], count[2], count[3])) return lowComplexityFirstM; ///< first M bases must not be all the same
+        
         for ( ; j < readLen; ++j) {
             unsigned const k = start[i] + (rev ? (readLen - j - 1) : j);
             int const base = read[k];
-
+            
             ++count[base];
         }
-        {
-            unsigned const unambiguous = count[0]+count[1]+count[2]+count[3];
-            if (unambiguous * 2 < readLen) return tooManyAmbiguous; ///< at least 1/2 the bases must be unambiguous
-        }
+        if (!check_tooManyAmbiguous(self, readLen, count[0], count[1], count[2], count[3])) return tooManyAmbiguous; ///< at least 1/2 the bases must be unambiguous
     }
     return notRejected;
 }
@@ -329,14 +321,9 @@ static int check_2na(self_t const *self
 
             ++count[base];
         }
-        {
-            bool const all_A = count[0] == M;
-            bool const all_C = count[1] == M;
-            bool const all_G = count[2] == M;
-            bool const all_T = count[3] == M;
-            if (all_A || all_C || all_G || all_T) return lowComplexityFirstM; ///< first M bases must not be all the same
-        }
         /* no checks for ambiguity since 2na can't represent ambiguous bases */
+
+        if (!check_lowComplexityFirstM(self, count[0], count[1], count[2], count[3])) return lowComplexityFirstM; ///< first M bases must not be all the same
     }
     return notRejected;
 }
