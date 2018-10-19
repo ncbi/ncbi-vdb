@@ -50,7 +50,12 @@ TEST_CASE(VDB_2877) {
     REQUIRE(vmgr); 
 
     REQUIRE_RC(VFSManagerGetKNSMgr(vmgr, &mgr2));
+
+#if USE_SINGLETON
     REQUIRE_EQ(mgr, mgr2); 
+else
+    REQUIRE_NE(mgr, mgr2); 
+#endif
 
     RELEASE(KNSManager, mgr2);
 
