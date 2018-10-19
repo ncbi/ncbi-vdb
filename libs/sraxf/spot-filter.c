@@ -55,6 +55,22 @@ struct params {
     int no_quality;
 };
 
+#define PARAMS_DEFAULT_MIN_LENGTH (10u)
+#define PARAMS_DEFAULT_MIN_QUALITY (4)
+#define PARAMS_DEFAULT_NO_QUALITY (-1)
+
+/** \brief: Initialize parameter block with default values */
+static struct params *initialize_params(struct params *self)
+{
+    if (self) {
+        memset(self, 0, sizeof(*self));
+        self->min_length = PARAMS_DEFAULT_MIN_LENGTH;
+        self->min_quality = PARAMS_DEFAULT_MIN_QUALITY;
+        self->no_quality = PARAMS_DEFAULT_NO_QUALITY;
+    }
+    return self;
+}
+
 #define M (((self_t const *)self)->min_length)
 #define Q (((self_t const *)self)->min_quality)
 #define BAD_QUAL(QV) (QV < ((self_t const *)self)->min_quality && QV != ((self_t const *)self)->no_quality)
@@ -70,51 +86,41 @@ enum RejectCause {
     tooManyAmbiguous
 };
 
-#define DEBUG_PRINT_RESULT 0
-#if DEBUG_PRINT_RESULT
+#define DEBUG_PRINT_CAUSE 0
+#if DEBUG_PRINT_CAUSE
 #include <stdio.h>
-static void printRejectCause(enum RejectCause const cause, FILE *const fp, void const *const self)
+static void printRejectCause(enum RejectCause const cause, void const *const self)
 {
     switch (cause) {
     case notRejected:
-        fprintf(fp, "passed\n");
+        fprintf(stderr, "passed\n");
         break;
     case spotFilter:
-        fprintf(fp, "spot filter was set\n");
+        fprintf(stderr, "spot filter was set\n");
         break;
     case tooShort:
-        fprintf(fp, "sequence length < %i\n", M);
+        fprintf(stderr, "sequence length < %i\n", M);
         break;
     case badQualValueFirstM:
-        fprintf(fp, "quality value < %i in first %i bases\n", Q, M);
+        fprintf(stderr, "quality value < %i in first %i bases\n", Q, M);
         break;
     case ambiguousFirstM:
-        fprintf(fp, "ambiguous base in first %i bases\n", M);
+        fprintf(stderr, "ambiguous base in first %i bases\n", M);
         break;
     case lowComplexityFirstM:
-        fprintf(fp, "first %i bases are all the same\n", M);
+        fprintf(stderr, "first %i bases are all the same\n", M);
         break;
     case badBaseValue:
-        fprintf(fp, "bad base value\n");
+        fprintf(stderr, "bad base value\n");
         break;
     case tooManyAmbiguous:
-        fprintf(fp, "at lease 1/2 bases are ambiguous\n");
+        fprintf(stderr, "at lease 1/2 bases are ambiguous\n");
         break;
     }
 }
+#else
+static void printRejectCause(enum RejectCause const cause, void const *const self) {}
 #endif
-
-static int check_spot_filter(unsigned const nfilt,
-                             INSDC_SRA_spot_filter const filter[])
-{
-    unsigned i;
-    for (i = 0; i < nfilt; ++i) {
-        if (filter[i] != SRA_SPOT_FILTER_PASS) {
-            return spotFilter;
-        }
-    }
-    return notRejected;
-}
 
 static int check_quality(self_t const *self
                          , unsigned const nreads
@@ -352,14 +358,12 @@ rc_t CC make_spot_filter(void *const self
         COL_SPOT_FILTER
     };
     unsigned const nreads = (unsigned)SAFE_COUNT(COL_READ_LEN);
-    unsigned const nfilt = (unsigned)SAFE_COUNT(COL_SPOT_FILTER);
     BIND_COLUMN(COL_READ       ,  uint8_t, read  ); ///< 4NA or x2na or 2na
     BIND_COLUMN(COL_QUALITY    ,  uint8_t, qual  ); ///< phred+0
     BIND_COLUMN(COL_READ_START ,  int32_t, start );
     BIND_COLUMN(COL_READ_LEN   , uint32_t, len   );
     BIND_COLUMN(COL_READ_TYPE  ,  uint8_t, type  );
     BIND_COLUMN(COL_SPOT_FILTER,  uint8_t, filter);
-    enum RejectCause result;
     rc_t rc = 0;
 
     assert(read != NULL);
@@ -371,26 +375,23 @@ rc_t CC make_spot_filter(void *const self
     assert(SAME_COUNT(COL_READ, COL_QUALITY));
     assert(SAME_COUNT(COL_READ_START, COL_READ_LEN));
     assert(SAME_COUNT(COL_READ_START, COL_READ_TYPE));
-
-    result = check_spot_filter(nfilt, filter);
-    if (result == notRejected)
-        result = check_quality(self, nreads, start, len, type, qual);
-    if (result == notRejected)
-        result = SPOT_FILTER(self, nreads, start, len, type, read);
-
-#if DEBUG_PRINT_RESULT
-    printRejectCause(result, stderr, self);
-#endif
+    assert(SAFE_COUNT(COL_SPOT_FILTER) == 1);
     
     rslt->data->elem_bits = 8;
+    rslt->elem_bits = rslt->data->elem_bits;
+    rslt->elem_count = 1;
     rc = KDataBufferResize( rslt->data, 1 );
-    if ( rc == 0 )
-    {
-        uint8_t *const dst = (uint8_t *)rslt->data->base;
-
-        rslt->elem_bits = rslt->data->elem_bits;
-        rslt->elem_count = 1;
-        dst[0] = result == notRejected ? SRA_SPOT_FILTER_PASS : SRA_SPOT_FILTER_REJECT;
+    if (rc == 0) {
+        INSDC_SRA_spot_filter result = filter[0];
+        enum RejectCause cause = spotFilter;
+        if (result == SRA_SPOT_FILTER_PASS) {
+            cause = check_quality(self, nreads, start, len, type, qual);
+            if (cause == notRejected)
+                cause = SPOT_FILTER(self, nreads, start, len, type, read);
+            result = cause == notRejected ? SRA_SPOT_FILTER_PASS : SRA_SPOT_FILTER_REJECT;
+        }
+        printRejectCause(cause, self);
+        *((uint8_t *)rslt->data->base) = result;
     }
     return rc;
 }
@@ -434,10 +435,8 @@ VTRANSFACT_IMPL( NCBI_SRA_make_spot_filter, 1, 0, 0 ) ( const void *Self, const 
 {
     spot_filter_func func = read_data_type_to_function(info->schema, &dp->argv[0].fd);
     if (func) {
-        self_t *self = malloc(sizeof(*self));
-        self->min_length = 10;
-        self->min_quality = 4;
-        self->no_quality = -1;
+        self_t *self = initialize_params(malloc(sizeof(*self)));
+        assert(self != NULL);
         assert(cp->argc <= 3);
         if (cp->argc >= 1) {
             assert(cp->argv[0].count == 1);
@@ -636,4 +635,36 @@ VTRANSFACT_IMPL( NCBI_SRA_spot2read_filter, 1, 0, 0 ) ( const void *Self, const 
     rslt -> u . rf = spot2read_filter;
     rslt -> variant = vftRow;
     return 0;
+}
+
+/*******************************************************************************
+ * MARK: function for writer-sequence
+ */
+
+INSDC_SRA_spot_filter private_make_spot_filter(unsigned const nreads
+                                               , int32_t const *start
+                                               , uint32_t const *len
+                                               , uint8_t const *type
+                                               , uint8_t const *read_filter
+                                               , uint8_t const *read
+                                               , uint8_t const *qual)
+{
+    assert(read != NULL);
+    assert(qual != NULL);
+    assert(start != NULL);
+    assert(len != NULL);
+    assert(type != NULL);
+    assert(read_filter != NULL);
+    
+    struct params params, *const self = initialize_params(&params);
+    INSDC_SRA_spot_filter spot_filter = spot_filter_from_read_filter(nreads, read_filter);
+
+    if (spot_filter == SRA_SPOT_FILTER_PASS)
+        spot_filter =  check_quality(self, nreads, start, len, type, qual) == notRejected
+                    && check_dna(self, nreads, start, len, type, read) == notRejected
+                    ?  SRA_SPOT_FILTER_PASS
+                    :  SRA_SPOT_FILTER_REJECT
+                    ;
+
+    return spot_filter;
 }
