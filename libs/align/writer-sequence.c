@@ -30,6 +30,7 @@
 #include <klib/sort.h>
 #include <klib/data-buffer.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 #include <insdc/insdc.h>
 #include <vdb/database.h>
 #include <vdb/cursor.h>
@@ -292,6 +293,7 @@ static rc_t MakeSequenceTable(TableWriterSeq *self, VDatabase* db,
 {
     char const *tblName = (self->options & ewseq_co_ColorSpace) ? "CS_SEQUENCE" : "SEQUENCE";
 
+#if 0
     if (qual_quantization && strcmp(qual_quantization, "0") == 0) {
         self->options |= ewseq_co_FullQuality;
     }
@@ -307,6 +309,9 @@ static rc_t MakeSequenceTable(TableWriterSeq *self, VDatabase* db,
             return RC(rcAlign, rcFormatter, rcConstructing, rcParam, rcInvalid);
         }
     }
+#else
+    self->options |= ewseq_co_FullQuality; /* always write full quality */
+#endif
     memmove(self->cols, TableWriterSeq_cols, sizeof(TableWriterSeq_cols));
     if (self->options & ewseq_co_KeepKey) {
         self->cols[ewseq_cn_TMP_KEY_ID].flags &= ~ewcol_Temporary;
@@ -631,6 +636,7 @@ LIB_EXPORT rc_t CC TableWriterSeq_Write(const TableWriterSeq* cself, const Table
                 }
             }
         }
+#if 0 /* always write full quality */
         if( cself->options & ewseq_co_FullQuality ) {
             TW_COL_WRITE(cself->base, cself->cols[ewseq_cn_QUALITY], data->quality);
         } else {
@@ -680,6 +686,9 @@ LIB_EXPORT rc_t CC TableWriterSeq_Write(const TableWriterSeq* cself, const Table
                 }
             }
         }
+#else
+        TW_COL_WRITE(cself->base, cself->cols[ewseq_cn_QUALITY], data->quality);
+#endif
         if( !(cself->options & ewseq_co_NoLabelData) ) {
             TW_COL_WRITE(cself->base, cself->cols[ewseq_cn_LABEL], data->label);
             TW_COL_WRITE(cself->base, cself->cols[ewseq_cn_LABEL_START], data->label_start);
