@@ -60,7 +60,7 @@ enum ETableWriterSeq_ColNames {
 };
 
 enum ETableWriterSeq_ColOptions {
-    ewseq_co_SaveRead = 0x01,       /* write read even when there are alignments */
+    ewseq_co_SaveRead = 0x01,       /* READ is always written; this options causes CMP_READ to not be written */
     ewseq_co_FullQuality = 0x02,    /* this option is ignored; full quality values will always be written */
     ewseq_co_AlignData = 0x04,      /* PRIMARY_ALIGNMENT_ID, ALIGNMENT_COUNT will be written with the whole record */
     ewseq_co_NoLabelData = 0x08,    /* LABEL and related columns will not be written */
@@ -74,7 +74,7 @@ enum ETableWriterSeq_ColOptions {
 
 typedef struct TableWriterSeqData_struct {
     uint64_t        spot_len;
-    TableWriterData sequence; /* writes sequence ONLY if alignment_count == 0 */
+    TableWriterData sequence; /* always writes sequence; compression is later */
     TableWriterData quality;
 
     TableWriterData primary_alignment_id;
@@ -100,6 +100,7 @@ typedef struct TableWriterSeqData_struct {
 typedef struct TableWriterSeq TableWriterSeq;
 
 /*
+ * THIS FEATURE IS DISABLED
  * quality_quantization:
  *  is a ',' seperated list of value pairs, with the pairs seperated by ':'.
  *  The first of the pair is the value to substitute.
