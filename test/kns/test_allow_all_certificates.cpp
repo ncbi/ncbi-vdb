@@ -83,6 +83,9 @@ KOutMsg ( "##[2] Conf (false ) + SetAllow ( true ) = true\n" );
     REQUIRE_RC ( KNSManagerSetAllowAllCerts ( mgr, true ) );
 
     file = NULL;
+
+#if GOOGLE_FILE_EXISTS
+
     REQUIRE_RC ( KNSManagerMakeHttpFile ( mgr, & file, NULL, 0x01010000, Bizdrapuda ) );
     REQUIRE_NOT_NULL ( file );
 
@@ -113,6 +116,7 @@ KOutMsg ( "##[3] Conf (false ) + SetAllow ( false ) = false\n" );
     REQUIRE_RC ( KFileRelease ( file ) );
 
 KOutMsg ( "##[3] OK : Conf (false ) + SetAllow ( false ) = false\n" );
+#endif
 
     REQUIRE_RC ( KNSManagerRelease ( mgr ) );
 
