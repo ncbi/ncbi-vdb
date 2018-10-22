@@ -73,7 +73,6 @@ rc_t KServiceAddId     ( KService * self, const char * id );
 /* Add a dbGaP Project to service request */
 rc_t KServiceAddProject ( KService * self, uint32_t id );
 
-
 /************************** name service - version 3 **************************/
 /* Execute Names Service Call using current default protocol version;
  * get KSrvResponse - it contains:
@@ -82,6 +81,9 @@ rc_t KServiceAddProject ( KService * self, uint32_t id );
  */
 rc_t KServiceNamesQuery ( KService * self, VRemoteProtocols protocols, 
                           const KSrvResponse ** response );
+
+rc_t KServiceNamesQueryTo ( KService * self, VRemoteProtocols protocols,
+    const char * outDir, const char * outFile, const KSrvResponse ** response );
 
 /************************** search service - version 1 ************************/
 /* Execute Search Service Call; get Kart response */

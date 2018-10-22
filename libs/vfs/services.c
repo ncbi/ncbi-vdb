@@ -636,6 +636,13 @@ rc_t KServiceNamesQuery ( KService * self, VRemoteProtocols protocols,
                                    NULL, NULL, aResponse );
 }
 
+rc_t KServiceNamesQueryTo ( KService * self, VRemoteProtocols protocols,
+    const char * outDir, const char * outFile, const KSrvResponse ** response )
+{
+    return KServiceNamesQueryExt ( self, protocols, NULL, NULL,
+                                   outDir, outFile, aResponse );
+}
+
 rc_t KServiceTestNamesQueryExt ( KService * self, VRemoteProtocols protocols,
     const char * version, const KSrvResponse ** response,
     const char * dir, const char * file, const char * expected )
