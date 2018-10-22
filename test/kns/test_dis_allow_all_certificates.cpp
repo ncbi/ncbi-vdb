@@ -68,6 +68,8 @@ TEST_CASE ( Test_ConfDisAllowCerts ) {
          */
 KOutMsg ( "##[4] Conf (true )                     = true\n" );
     const KFile * file = NULL;
+
+#if GOOGLE_FILE_EXISTS
     REQUIRE_RC ( KNSManagerMakeHttpFile ( mgr, & file, NULL, 0x01010000, Bizdrapuda ) );
     REQUIRE_NOT_NULL ( file );
 
@@ -116,6 +118,7 @@ KOutMsg ( "##[6] Conf (true ) + SetAllow ( true ) = true\n" );
 
     REQUIRE_RC ( KFileRead ( file, 0, buffer, bsize, & num_read ) );
     REQUIRE_EQ ( num_read, bsize );
+#endif
 
     REQUIRE_RC ( KFileRelease ( file ) );
 KOutMsg ( "##[6] OK : Conf (true ) + SetAllow ( true ) = true\n" );
