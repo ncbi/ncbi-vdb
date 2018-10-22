@@ -636,35 +636,3 @@ VTRANSFACT_IMPL( NCBI_SRA_spot2read_filter, 1, 0, 0 ) ( const void *Self, const 
     rslt -> variant = vftRow;
     return 0;
 }
-
-/*******************************************************************************
- * MARK: function for writer-sequence
- */
-
-INSDC_SRA_spot_filter private_make_spot_filter(unsigned const nreads
-                                               , int32_t const *start
-                                               , uint32_t const *len
-                                               , uint8_t const *type
-                                               , uint8_t const *read_filter
-                                               , uint8_t const *read
-                                               , uint8_t const *qual)
-{
-    assert(read != NULL);
-    assert(qual != NULL);
-    assert(start != NULL);
-    assert(len != NULL);
-    assert(type != NULL);
-    assert(read_filter != NULL);
-    
-    struct params params, *const self = initialize_params(&params);
-    INSDC_SRA_spot_filter spot_filter = spot_filter_from_read_filter(nreads, read_filter);
-
-    if (spot_filter == SRA_SPOT_FILTER_PASS)
-        spot_filter =  check_quality(self, nreads, start, len, type, qual) == notRejected
-                    && check_dna(self, nreads, start, len, type, read) == notRejected
-                    ?  SRA_SPOT_FILTER_PASS
-                    :  SRA_SPOT_FILTER_REJECT
-                    ;
-
-    return spot_filter;
-}
