@@ -61,13 +61,13 @@ enum ETableWriterSeq_ColNames {
 
 enum ETableWriterSeq_ColOptions {
     ewseq_co_SaveRead = 0x01,       /* write read even when there are alignments */
-    ewseq_co_FullQuality = 0x02,    /* write full quality values, by default [1,10,20,30] */
+    ewseq_co_FullQuality = 0x02,    /* this option is ignored; full quality values will always be written */
     ewseq_co_AlignData = 0x04,      /* PRIMARY_ALIGNMENT_ID, ALIGNMENT_COUNT will be written with the whole record */
     ewseq_co_NoLabelData = 0x08,    /* LABEL and related columns will not be written */
     ewseq_co_ColorSpace = 0x10,     /* CMP_CSREAD will be written instead of CMP_READ */
     ewseq_co_SpotGroup = 0x20,      /* SPOT_GROUP will be written */
     ewseq_co_TI = 0x40,             /* TI will be written */
-    ewseq_co_SaveQual = 0x80,       /* write quality even when there are alignments */
+    ewseq_co_SaveQual_DEAD = 0x80,  /* DEAD OPTION; quality will always be written */
     ewseq_co_SpotName = 0x100,      /* NAME will be written */
     ewseq_co_KeepKey = 0x200,       /* TMP_KEY_ID won't be removed */
 };

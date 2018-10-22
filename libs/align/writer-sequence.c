@@ -111,6 +111,7 @@ struct TableWriterSeq {
     int64_t firstUnaligned;
 };
 
+#if 0 /* always write full quality */
 static bool TableWriterSeq_InitQuantMatrix(uint8_t dst[256], char const quant[])
 {
     unsigned i = 0;
@@ -187,6 +188,7 @@ static bool TableWriterSeq_InitQuantMatrix(uint8_t dst[256], char const quant[])
     }
     return false;
 }
+#endif
 
 typedef struct { uint64_t distance, count; } stats_pair_t;
 
@@ -293,7 +295,7 @@ static rc_t MakeSequenceTable(TableWriterSeq *self, VDatabase* db,
 {
     char const *tblName = (self->options & ewseq_co_ColorSpace) ? "CS_SEQUENCE" : "SEQUENCE";
 
-#if 0
+#if 0  /* always write full quality */
     if (qual_quantization && strcmp(qual_quantization, "0") == 0) {
         self->options |= ewseq_co_FullQuality;
     }
@@ -310,7 +312,7 @@ static rc_t MakeSequenceTable(TableWriterSeq *self, VDatabase* db,
         }
     }
 #else
-    self->options |= ewseq_co_FullQuality; /* always write full quality */
+    self->options |= ewseq_co_FullQuality;
 #endif
     memmove(self->cols, TableWriterSeq_cols, sizeof(TableWriterSeq_cols));
     if (self->options & ewseq_co_KeepKey) {
@@ -352,7 +354,6 @@ LIB_EXPORT rc_t CC TableWriterSeq_Make(const TableWriterSeq** cself, VDatabase* 
     rc_t rc = 0;
     TableWriterSeq* self = NULL;
 
-    options |= ewseq_co_SaveQual; /* TODO: remove when ready */
     if( cself == NULL || db == NULL ) {
         rc = RC(rcAlign, rcFormatter, rcConstructing, rcParam, rcNull);
     } else {
