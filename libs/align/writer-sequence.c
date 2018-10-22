@@ -536,11 +536,24 @@ static void UpdateAlignmentRowStats(TableWriterSeq *const self, int64_t rowid, T
     }
 }
 
-LIB_EXPORT rc_t CC TableWriterSeq_Write(const TableWriterSeq* cself, const TableWriterSeqData* data, int64_t* rowid)
+static rc_t TableWriterSeq_Write_validate_params(const TableWriterSeq* cself, const TableWriterSeqData* data)
 {
     rc_t rc = 0;
     int lbl;
+    
+    /* make debug builds produce FATAL errors */
+    assert(cself != NULL);
+    assert(data != NULL);
+    assert(data->sequence.elements == data->quality.elements);
+    assert(data->read_start.elements == data->nreads);
+    assert(data->read_len.elements == data->nreads);
+    assert(data->read_filter.elements == data->nreads);
+    assert(data->read_type.elements == data->nreads);
 
+    assert(data->primary_alignment_id.elements == 0 || data->primary_alignment_id.elements == data->nreads);
+    assert(data->alignment_count.elements == 0 || data->alignment_count.elements == data->nreads);
+    assert(data->no_quantize_mask.elements == 0 || data->no_quantize_mask.elements == data->quality.elements);
+    
     if( cself == NULL || data == NULL ) {
         rc = RC( rcAlign, rcType, rcWriting, rcParam, rcNull);
         ALIGN_DBGERR(rc);
@@ -574,13 +587,23 @@ LIB_EXPORT rc_t CC TableWriterSeq_Write(const TableWriterSeq* cself, const Table
         ALIGN_DBGERRP("quality and no_quantize_mask length %u <> %lu", rc, data->quality.elements, data->no_quantize_mask.elements);
     }
     else if( !(cself->options & ewseq_co_NoLabelData) &&
-               (lbl = ((data->label.buffer ? 1 : 0) + (data->label_start.buffer ? 1 : 0) +
-                                                  (data->label_len.buffer ? 1 : 0))) != 0 && lbl != 3 )
+            (lbl = ((data->label.buffer ? 1 : 0) + (data->label_start.buffer ? 1 : 0) +
+                    (data->label_len.buffer ? 1 : 0))) != 0 && lbl != 3 )
     {
         rc = RC(rcAlign, rcType, rcWriting, rcData, rcInconsistent);
         ALIGN_DBGERRP("LABEL %s", rc, "incomplete");
     }
-    else if( (rc = TableWriter_OpenRow(cself->base, rowid, cself->cursor_id)) == 0 ) {
+    return rc;
+}
+
+LIB_EXPORT rc_t CC TableWriterSeq_Write(const TableWriterSeq* cself, const TableWriterSeqData* data, int64_t* rowid)
+{
+    rc_t rc = TableWriterSeq_Write_validate_params(cself, data);
+    if (rc) return rc;
+
+    assert(rowid != NULL);
+
+    if( (rc = TableWriter_OpenRow(cself->base, rowid, cself->cursor_id)) == 0 ) {
         if( cself->options & ewseq_co_AlignData ) {
             UpdateAlignmentRowStats((TableWriterSeq *)cself, *rowid, &data->alignment_count);
             TW_COL_WRITE(cself->base, cself->cols[ewseq_cn_PRIMARY_ALIGNMENT_ID], data->primary_alignment_id);
