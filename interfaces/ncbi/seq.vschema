@@ -776,6 +776,8 @@ table NCBI:tbl:phred_quality #2.0.4 = INSDC:tbl:sequence #1.0.1
         = in_qual_phred
         ;
 
+    trigger pull_original_quality = .ORIGINAL_QUALITY;
+
     // feed to compressed statistics
     INSDC:quality:phred in_stats_qual = in_qual_phred;
 
