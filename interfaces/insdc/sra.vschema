@@ -275,6 +275,10 @@ table INSDC:SRA:tbl:spotdesc #1.0.2 = INSDC:tbl:sequence #1.0.1
     readonly column U16 READ_START = cast ( out_read_start );
     readonly column U16 READ_LEN = cast ( out_read_len );
 
+    INSDC:coord:zero in_read_start
+        = READ_START
+        ;
+
     INSDC:coord:len in_read_len
         = READ_LEN
         | _alt_in_read_len;
