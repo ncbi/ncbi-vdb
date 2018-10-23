@@ -628,10 +628,10 @@ VTRANSFACT_IMPL( INSDC_SRA_spot2read_filter, 1, 0, 0 ) ( const void *Self, const
     VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
 {
     // this function assumes read filter and spot filter values are equal
-    assert(    SRA_READ_FILTER_PASS == SRA_SPOT_FILTER_PASS    );
-    assert(  SRA_READ_FILTER_REJECT == SRA_SPOT_FILTER_REJECT  );
-    assert(SRA_READ_FILTER_REDACTED == SRA_SPOT_FILTER_REDACTED);
-    assert(SRA_READ_FILTER_CRITERIA == SRA_SPOT_FILTER_CRITERIA);
+    assert((int)    SRA_READ_FILTER_PASS == (int)SRA_SPOT_FILTER_PASS    );
+    assert((int)  SRA_READ_FILTER_REJECT == (int)SRA_SPOT_FILTER_REJECT  );
+    assert((int)SRA_READ_FILTER_REDACTED == (int)SRA_SPOT_FILTER_REDACTED);
+    assert((int)SRA_READ_FILTER_CRITERIA == (int)SRA_SPOT_FILTER_CRITERIA);
     rslt -> u . rf = spot2read_filter;
     rslt -> variant = vftRow;
     return 0;
