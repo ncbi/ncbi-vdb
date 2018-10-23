@@ -81,7 +81,9 @@ static int64_t CC BSTItemCmp ( const void * item, const BSTNode * n ) {
         i -> ticket -> addr, i -> ticket -> size, s -> size );
 }
 
-static int64_t CC BSTreeSort ( const BSTNode * item, const BSTNode * n ) {
+static
+int64_t CC BSTreeSort ( const BSTNode * item, const BSTNode * n )
+{
     const BSTItem * i = ( BSTItem * ) item;
 
     assert ( i );
@@ -637,10 +639,11 @@ rc_t KServiceNamesQuery ( KService * self, VRemoteProtocols protocols,
 }
 
 rc_t KServiceNamesQueryTo ( KService * self, VRemoteProtocols protocols,
-    const char * outDir, const char * outFile, const KSrvResponse ** response )
+    const char * outDir, const char * outFile,
+    const KSrvResponse ** response )
 {
     return KServiceNamesQueryExt ( self, protocols, NULL, NULL,
-                                   outDir, outFile, aResponse );
+                                   outDir, outFile, response );
 }
 
 rc_t KServiceTestNamesQueryExt ( KService * self, VRemoteProtocols protocols,
