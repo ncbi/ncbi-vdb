@@ -83,6 +83,8 @@ extern VTRANSFACT_DECL ( ALIGN_seq_restore_linkage_group );
 extern VTRANSFACT_DECL ( INSDC_SEQ_rand_4na_2na );
 extern VTRANSFACT_DECL ( INSDC_SRA_format_spot_name );
 extern VTRANSFACT_DECL ( INSDC_SRA_format_spot_name_no_coord );
+extern VTRANSFACT_DECL ( INSDC_SRA_read2spot_filter );
+extern VTRANSFACT_DECL ( INSDC_SRA_spot2read_filter );
 extern VTRANSFACT_DECL ( NCBI_SRA_ABI_tokenize_spot_name );
 extern VTRANSFACT_DECL ( NCBI_SRA_Helicos_tokenize_spot_name );
 extern VTRANSFACT_DECL ( NCBI_SRA_Illumina_tokenize_spot_name );
@@ -575,6 +577,8 @@ rc_t VLinkerInitFactoriesRead ( VLinker *self,  KSymTable *tbl, const SchemaEnv 
         { INSDC_SEQ_rand_4na_2na, "INSDC:SEQ:rand_4na_2na" },
         { INSDC_SRA_format_spot_name, "INSDC:SRA:format_spot_name" },
         { INSDC_SRA_format_spot_name_no_coord, "INSDC:SRA:format_spot_name_no_coord" },
+        { INSDC_SRA_read2spot_filter, "INSDC:SRA:read2spot_filter" },
+        { INSDC_SRA_spot2read_filter, "INSDC:SRA:spot2read_filter" },
         { NCBI_SRA_ABI_tokenize_spot_name, "NCBI:SRA:ABI:tokenize_spot_name" },
         { NCBI_SRA_Helicos_tokenize_spot_name, "NCBI:SRA:Helicos:tokenize_spot_name" },
         { NCBI_SRA_Illumina_tokenize_spot_name, "NCBI:SRA:Illumina:tokenize_spot_name" },
