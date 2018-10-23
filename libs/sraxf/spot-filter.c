@@ -561,7 +561,7 @@ rc_t CC read2spot_filter(  void *const self
     return rc;
 }
 
-VTRANSFACT_IMPL( NCBI_SRA_read2spot_filter, 1, 0, 0 ) ( const void *Self, const VXfactInfo *info,
+VTRANSFACT_IMPL( INSDC_SRA_read2spot_filter, 1, 0, 0 ) ( const void *Self, const VXfactInfo *info,
     VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
 {
 #if DONT_USE_TABLE
@@ -624,7 +624,7 @@ rc_t CC spot2read_filter(  void *const self
     return rc;
 }
 
-VTRANSFACT_IMPL( NCBI_SRA_spot2read_filter, 1, 0, 0 ) ( const void *Self, const VXfactInfo *info,
+VTRANSFACT_IMPL( INSDC_SRA_spot2read_filter, 1, 0, 0 ) ( const void *Self, const VXfactInfo *info,
     VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
 {
     // this function assumes read filter and spot filter values are equal
