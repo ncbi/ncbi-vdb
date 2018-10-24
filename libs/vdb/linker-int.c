@@ -296,6 +296,29 @@ VTRANSFACT_BUILTIN_IMPL ( vdb_stub_function, 1, 0, 0 ) ( const void *self,
 }
 #endif
 
+/* Pass-through function constructors should use this to prepare the result */
+static rc_t maybePass(bool const shouldPass, VFuncDesc *const rslt)
+{
+    if (shouldPass) {
+        rslt -> u . rf = fake_stub_func;
+        rslt -> variant = vftPassThrough;
+        return 0;
+    }
+    return SILENT_RC(rcVDB, rcFunction, rcConstructing, rcFunction, rcIgnored);
+}
+
+/* This function ALWAYS passes through
+function < type T >
+T passthru #1.0 ( T target )
+     = vdb:passthru;
+ */
+/* all pass-through functions are REALLY internal */
+VTRANSFACT_BUILTIN_IMPL ( vdb_passthru, 1, 0, 0 ) ( const void *self,
+    const VXfactInfo *info, VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
+{
+    return maybePass(true, rslt);
+}
+
 static bool compare_node_value(KConfigNode const *node, unsigned const len, char const *const value)
 {
     char buffer[4096];
@@ -347,12 +370,7 @@ T is_configuration_set #1.0 < ascii node, ascii value > ( T target )
 VTRANSFACT_BUILTIN_IMPL ( vdb_is_configuration_set, 1, 0, 0 ) ( const void *self,
     const VXfactInfo *info, VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
 {
-    if (check_config_node(cp)) {
-        rslt -> u . rf = fake_stub_func;
-        rslt -> variant = vftPassThrough;
-        return 0;
-    }
-    return SILENT_RC(rcVDB, rcFunction, rcConstructing, rcFunction, rcIgnored);
+    return maybePass(check_config_node(cp), rslt);
 }
 
 /* temporary silly stuff
@@ -545,6 +563,7 @@ rc_t VLinkerInitFactoriesRead ( VLinker *self,  KSymTable *tbl, const SchemaEnv 
         { vdb_fixed_row_len, "vdb:fixed_row_len" },
         { vdb_select, "vdb:select" },
         { vdb_is_configuration_set, "vdb:is_configuration_set" },
+        { vdb_passthru, "vdb:passthru" },
         { vdb_compare, "vdb:compare" },
         { vdb_no_compare, "vdb:no_compare" },
         { vdb_range_validate, "vdb:range_validate" },
