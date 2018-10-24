@@ -53,6 +53,7 @@ typedef struct KSrvRespFileIterator KSrvRespFileIterator;
 /* File Format from name resolver response - verson 4 */
 typedef enum {
     eSFFInvalid,
+    eSFFSkipped,
     eSFFSra,
     eSFFVdbcache,
     eSFFMax,

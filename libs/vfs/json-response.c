@@ -357,6 +357,7 @@ static rc_t LocationsRelease ( Locations * self ) {
 
     RELEASE ( VPath, self -> local );
     RELEASE ( VPath, self -> cache );
+    RELEASE ( VPath, self -> mapping );
     free ( self -> cType );
 
     memset ( self, 0, sizeof * self );
@@ -522,7 +523,7 @@ static rc_t ItemAddFormat ( Item * self, const char * cType,
         type = eSFFInvalid;
     if ( cType == NULL ) {
         if ( type == eSFFInvalid )
-            return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
+            type = eSFFSkipped;
     }
     else if ( type == eSFFInvalid ) {
         if      ( strcmp ( cType, "sra"      ) == 0 )
@@ -535,6 +536,7 @@ static rc_t ItemAddFormat ( Item * self, const char * cType,
     if ( self -> elm == NULL )  {
         size_t n = 1;
         switch ( type ) {
+            case eSFFSkipped : idx = 0; n = 1; break;
             case eSFFSra     : idx = 0; n = 1; break;
             case eSFFVdbcache: idx = 0; n = 1; break;
             case eSFFMax     : idx = 0; n = 1; break;
@@ -552,8 +554,15 @@ static rc_t ItemAddFormat ( Item * self, const char * cType,
             case eSFFMax     : {*/
         uint32_t i =0 ;
         for ( i = 0; i < self -> nElm; ++ i ) {
-            assert ( cType && self -> elm [ i ] . cType );
-            if ( strcmp ( self -> elm [ i ] . cType, cType ) == 0 ) {
+            assert ( ( cType && self -> elm [ i ] . cType )
+                    || type == eSFFSkipped );
+            if ( ( cType != NULL && self -> elm [ i ] . cType != NULL &&
+                   strcmp ( self -> elm [ i ] . cType, cType ) == 0 )
+                 ||
+                 ( cType == NULL && self -> elm [ i ] . cType == NULL &&
+                   self -> elm [ i ] . type == type && type == eSFFSkipped )
+               )
+            {
                 idx = i;
                 break;
             }
@@ -577,16 +586,21 @@ static rc_t ItemAddFormat ( Item * self, const char * cType,
     assert ( idx >= 0 );
     elm = & self -> elm [ idx ];
     if ( elm -> cType == NULL ) {
-        elm -> cType = strdup ( cType );
-        if ( elm -> cType == NULL )
-            return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
+        if ( cType != NULL ) {
+            elm -> cType = strdup ( cType );
+            if ( elm -> cType == NULL )
+                return RC ( rcVFS, rcQuery, rcExecuting,
+                                   rcMemory, rcExhausted );
+        }
         elm -> type = type;
     }
     * added = & self -> elm [ idx ];
     return 0;
 }
 
-rc_t ItemAddVPath ( Item * self, const char * type, const VPath * path ) {
+rc_t ItemAddVPath ( Item * self, const char * type,
+                    const VPath * path )
+{
     rc_t rc = 0;
     Locations * l = NULL;
     rc = ItemAddFormat ( self, type, & l );
@@ -758,8 +772,10 @@ rc_t ContainerAdd ( Container * self, const char * acc, int64_t id,
         assert ( item );
         if ( acc != NULL ) {
             if ( item -> acc != NULL )
-                if ( strcmp ( item -> acc, acc ) == 0 )
+                if ( strcmp ( item -> acc, acc ) == 0 ) {
+                    * newItem = item;
                     return 0;
+                }
         }
         else {
             if ( item -> id != 0 )
@@ -1249,7 +1265,7 @@ static rc_t StatusSet
 
 /* "link" is found in JSON: add "link" to Elm (File) using Data from dad */
 static rc_t LocationsAddLink ( Locations * self, const KJsonValue * node,
-                        const Data * dad, const char ** value )
+                               const Data * dad, const char ** value )
 {
     rc_t rc = 0;
 
@@ -1405,11 +1421,19 @@ static rc_t LocationsAddLinks ( Locations * self, const KJsonObject * node,
     return rc;
 }
 
-static rc_t LocationsInitMapping ( Locations * self, const Item * item ) {
+static
+rc_t LocationsInitMapping ( Locations * self, const Item * item )
+{
     rc_t rc = 0;
+
     const VPath * path = NULL;
     String ticket;
+
     assert ( self && item );
+
+    if ( self -> mapping != NULL )
+        return 0;
+
     if ( self -> https [ 0 ] != NULL )
         path = self -> https [ 0 ];
     else if ( self -> http [ 0 ] != NULL )
@@ -1418,10 +1442,14 @@ static rc_t LocationsInitMapping ( Locations * self, const Item * item ) {
         path = self -> fasp [ 0 ];
     else
         return 0;
+
     memset ( & ticket, 0, sizeof ticket );
+
     if ( item -> tic != NULL )
         StringInitCString ( & ticket, item -> tic );
+
     rc = VPathCheckFromNamesCGI ( path, & ticket, NULL );
+
     if ( rc == 0 ) {
         if ( item -> tic != NULL )
             if ( item -> acc != NULL )
@@ -1438,6 +1466,7 @@ static rc_t LocationsInitMapping ( Locations * self, const Item * item ) {
                 rc = VPathMakeFmt ( & self -> mapping, "ncbi-file:%s",
                                                                  item -> name );
     }
+
     return rc;
 }
 
@@ -1496,20 +1525,24 @@ static rc_t ItemAddElms ( Item * self, const KJsonObject * node,
         StackPop ( path );
     }
 
-    else if ( format != NULL ) {
-        Locations * elm = NULL;
-        rc = ItemAddFormat ( self, format, & elm );
-        if ( rc == 0 && elm != NULL ) {
-            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-                ( "Adding links to a file...\n" ) );
-            rc = LocationsAddLinks ( elm, node, & data, path );
-        }
-    }
-
     else {
-        rc = RC ( rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete );
-        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-            ( "... error: file 'format' was not set\n" ) );
+        value = KJsonObjectGetMember ( node, "link" );
+
+        if ( format != NULL || value != NULL ) {
+            Locations * elm = NULL;
+            rc = ItemAddFormat ( self, format, & elm );
+            if ( rc == 0 && elm != NULL ) {
+                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+                    ( "Adding links to a file...\n" ) );
+                rc = LocationsAddLinks ( elm, node, & data, path );
+            }
+        }
+
+        else {
+            rc = RC ( rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete );
+            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+                ( "... error: file 'format' was not set\n" ) );
+        }
     }
 
     {
@@ -1566,6 +1599,8 @@ static rc_t Response4AddItems ( Response4 * self, Container * aBox,
 
     Container * box = aBox;
 
+    const KJsonValue * value = NULL;
+
     Data data;
     DataUpdate ( dad, & data, node, path );
 
@@ -1589,8 +1624,11 @@ static rc_t Response4AddItems ( Response4 * self, Container * aBox,
     if ( rc == 0 && box -> status . code == 404 )
         self -> rc = RC ( rcVFS, rcQuery, rcResolving, rcName, rcNotFound );
 
-    if ( ( data . cls != NULL ) && ( strcmp ( data .cls, "run"  ) == 0 
-                            || strcmp ( data .cls, "file" ) == 0 ) )
+    value = KJsonObjectGetMember ( node, "link" );
+
+    if ( ( ( data . cls != NULL ) && ( strcmp ( data .cls, "run"  ) == 0 
+                                    || strcmp ( data .cls, "file" ) == 0 ) )
+        || value != NULL )
     {
         DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
             ( "Adding a '%s' item to container...\n", data .cls ) );
@@ -1598,7 +1636,7 @@ static rc_t Response4AddItems ( Response4 * self, Container * aBox,
     }
     else {
         const char * name = "sequence";
-        const KJsonValue * value = KJsonObjectGetMember ( node, name );
+        value = KJsonObjectGetMember ( node, name );
         if ( value == NULL ) {
             name = "group";
             value = KJsonObjectGetMember ( node, name );
@@ -2079,7 +2117,7 @@ rc_t KSrvRespFileGetFormat ( const KSrvRespFile * self,
 }
 
 rc_t KSrvRespFileGetAcc ( const KSrvRespFile * self, const char ** acc,
-                                                     const char ** tic)
+                                                const char ** tic)
 {
     assert ( self && self -> item && acc && tic );
 
@@ -2090,7 +2128,7 @@ rc_t KSrvRespFileGetAcc ( const KSrvRespFile * self, const char ** acc,
 }
 
 rc_t KSrvRespFileGetId ( const KSrvRespFile * self, uint64_t * id,
-                                                    const char ** tic )
+                                                const char ** tic )
 {
     assert ( self && self -> item && id && tic );
 

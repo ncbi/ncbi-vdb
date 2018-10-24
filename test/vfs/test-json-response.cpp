@@ -31,7 +31,7 @@
 
 using std::string;
 
-/*ststic rc_t validate ( const char * input ) {
+/*static rc_t validate ( const char * input ) {
     KJsonValue * root = NULL;
     rc_t rc = KJsonValueMake ( & root, input, NULL, 0 );
     KJsonValueWhack ( root );
@@ -84,10 +84,22 @@ if(1){
      "{\"status\":{\"code\":200},\"acc\":\"SRR000001\",\"itemClass\":\"run\","
       "\"format\":\"sra\",\"link\":\"http://\"}]}" ) );
 
+
     REQUIRE_RC      ( Response4Make ( & response, "{\"sequence\":["
      "{\"status\":{\"code\":200},\"acc\":\"SRR000001\",\"itemClass\":\"run\","
       "\"format\":\"sra\",\"link\":\"http://h/\"}]}" ) );
     REQUIRE_RC      ( Response4Release ( response ) );
+
+    REQUIRE_RC      ( Response4Make ( & response, "{\"sequence\":["
+     "{\"status\":{\"code\":200},\"acc\":\"SRR000001\",\"itemClass\":\"bar\","
+      "\"format\":\"sra\",\"link\":\"http://h/\"}]}" ) );
+    REQUIRE_RC      ( Response4Release ( response ) );
+
+    REQUIRE_RC      ( Response4Make ( & response, "{\"sequence\":["
+     "{\"status\":{\"code\":200},\"acc\":\"SRR000001\","
+      "\"link\":\"http://h/\"}]}" ) );
+    REQUIRE_RC      ( Response4Release ( response ) );
+
 
     REQUIRE_RC      ( Response4Make ( & response, "{\"sequence\":["
    "{\"status\":{\"code\":200,\"msg\":\"ok\"},"
@@ -95,6 +107,14 @@ if(1){
    "\"format\":\"sra\",\"link\":\"http://h/\",\"size\":3,"
    "\"md5\":\"9bde35fefa9d955f457e22d9be52bcd9\",\"modDate\":1000000000}]}" ) );
     REQUIRE_RC      ( Response4Release ( response ) );
+
+    REQUIRE_RC      ( Response4Make ( & response, "{\"sequence\":["
+   "{\"status\":{\"code\":200,\"msg\":\"ok\"},"
+   "\"acc\":\"SRR000001\",\"itemClass\":\"bar\","
+   "\"format\":\"sra\",\"link\":\"http://h/\",\"size\":3,"
+   "\"md5\":\"9bde35fefa9d955f457e22d9be52bcd9\",\"modDate\":1000000000}]}" ) );
+    REQUIRE_RC      ( Response4Release ( response ) );
+
 
     REQUIRE_RC      ( Response4Make ( & response, "{\"sequence\":["
    "{\"status\":{\"code\":200,\"msg\":\"ok\"},"
@@ -109,6 +129,7 @@ if(1){
         "\"md5\":\"9bde35fefa9d955f457e22d9be52bcd9\",\"modDate\":1000000000,"
         "\"alternatives\":[{\"link\":\"\"      }]}]}" ) );
 
+
     REQUIRE_RC ( Response4Make ( & response, "{\"sequence\":["
         "{\"status\":{\"code\":200,\"msg\":\"ok\"},\"acc\":\"SRR000001\","
         "\"itemClass\":\"run\",\"format\":\"sra\",\"size\":3,"
@@ -118,10 +139,38 @@ if(1){
 
     REQUIRE_RC ( Response4Make ( & response, "{\"sequence\":["
         "{\"status\":{\"code\":200,\"msg\":\"ok\"},\"acc\":\"SRR000001\","
+        "\"itemClass\":\"bar\",\"format\":\"sra\",\"size\":3,"
+        "\"md5\":\"9bde35fefa9d955f457e22d9be52bcd9\",\"modDate\":1000000000,"
+        "\"alternatives\":[{\"link\":\"http://h/\"}]}]}" ) );
+    REQUIRE_RC ( Response4Release ( response ) );
+
+    REQUIRE_RC ( Response4Make ( & response, "{\"sequence\":["
+        "{\"status\":{\"code\":200,\"msg\":\"ok\"},\"acc\":\"SRR000001\","
+        "\"alternatives\":[{\"link\":\"http://h/\"}]}]}" ) );
+    REQUIRE_RC ( Response4Release ( response ) );
+
+
+}
+if(1){
+    REQUIRE_RC ( Response4Make ( & response, "{\"sequence\":["
+        "{\"status\":{\"code\":200,\"msg\":\"ok\"},\"acc\":\"SRR000001\","
         "\"itemClass\":\"run\",\"format\":\"sra\",\"size\":3,"
         "\"md5\":\"9bde35fefa9d955f457e22d9be52bcd9\",\"modDate\":1000000000,"
    "\"alternatives\":[{\"link\":\"http://h/\"},{\"link\":\"fasp://h\"}]}]}" ) );
     REQUIRE_RC ( Response4Release ( response ) );
+
+    REQUIRE_RC ( Response4Make ( & response, "{\"sequence\":["
+        "{\"status\":{\"code\":200,\"msg\":\"ok\"},\"acc\":\"SRR000001\","
+        "\"itemClass\":\"bar\",\"format\":\"sra\",\"size\":3,"
+        "\"md5\":\"9bde35fefa9d955f457e22d9be52bcd9\",\"modDate\":1000000000,"
+   "\"alternatives\":[{\"link\":\"http://h/\"},{\"link\":\"fasp://h\"}]}]}" ) );
+    REQUIRE_RC ( Response4Release ( response ) );
+
+    REQUIRE_RC ( Response4Make ( & response, "{\"sequence\":["
+        "{\"status\":{\"code\":200,\"msg\":\"ok\"},\"acc\":\"SRR000001\","
+   "\"alternatives\":[{\"link\":\"http://h/\"},{\"link\":\"fasp://h\"}]}]}" ) );
+    REQUIRE_RC ( Response4Release ( response ) );
+
 
     REQUIRE_RC ( Response4Make ( & response, "{\"sequence\":["
         "{\"status\":{\"code\":200,\"msg\":\"ok\"},\"acc\":\"SRR000001\","
@@ -131,6 +180,7 @@ if(1){
       ",\"timestamp\":1500000000}" ) );
     REQUIRE_RC ( Response4Release ( response ) );
 
+
     REQUIRE_RC ( Response4Make ( & response, "{\"sequence\":["
         "{\"status\":{\"code\":200,\"msg\":\"ok\"},\"acc\":\"SRR000001\","
         "\"itemClass\":\"run\","
@@ -138,8 +188,28 @@ if(1){
         "\"md5\":\"00000000000000000000000000000000\",\"modDate\":1000000000},"
         "      {\"format\":\"vdbcache\",\"link\":\"http://h/v\",\"size\":2,"
         "\"md5\":\"11111111111111111111111111111111\",\"modDate\":1000000001}"
-      "]}], \"timestamp\":1500000000}" ) );
+      "]}], \"timestamp\":1500000001}" ) );
     REQUIRE_RC ( Response4Release ( response ) );
+
+    REQUIRE_RC ( Response4Make ( & response, "{\"sequence\":["
+        "{\"status\":{\"code\":200,\"msg\":\"ok\"},\"acc\":\"SRR000001\","
+        "\"itemClass\":\"bar\","
+        "\"group\":[{\"format\":\"sra\",\"link\":\"http://h/\",\"size\":3,"
+        "\"md5\":\"00000000000000000000000000000000\",\"modDate\":1000000000},"
+        "      {\"format\":\"vdbcache\",\"link\":\"http://h/v\",\"size\":2,"
+        "\"md5\":\"11111111111111111111111111111111\",\"modDate\":1000000001}"
+      "]}], \"timestamp\":1500000001}" ) );
+    REQUIRE_RC ( Response4Release ( response ) );
+
+    REQUIRE_RC ( Response4Make ( & response, "{\"sequence\":["
+        "{\"status\":{\"code\":200,\"msg\":\"ok\"},\"acc\":\"SRR000001\","
+        "\"group\":[{\"format\":\"run\",\"link\":\"http://h/\",\"size\":3,"
+        "\"md5\":\"00000000000000000000000000000000\",\"modDate\":1000000000},"
+        "      {\"format\":\"vdbcache\",\"link\":\"http://h/v\",\"size\":2,"
+        "\"md5\":\"11111111111111111111111111111111\",\"modDate\":1000000001}"
+      "]}], \"timestamp\":1500000002}" ) );
+    REQUIRE_RC ( Response4Release ( response ) );
+
 
     REQUIRE_RC ( Response4Make ( & response, "{\"sequence\":["
         "{\"status\":{\"code\":200,\"msg\":\"ok\"},"
@@ -147,8 +217,9 @@ if(1){
          "\"format\":\"sra\",\"link\":\"fasp://h/\",\"size\":3,"
          "\"md5\":\"9bde35fefa9d955f457e22d9be52bcd9\",\"modDate\":1000000000},"
         "{\"status\":{\"code\":404,\"msg\":\"not found\"},\"acc\":\"SRR0000\"}]"
-      ",\"timestamp\":1500000000}" ) );
+      ",\"timestamp\":1500000003}" ) );
     REQUIRE_RC ( Response4Release ( response ) );
+
 
     REQUIRE_RC ( Response4Make ( & response, "{\"sequence\":["
         "{\"status\":{\"code\":200,\"msg\":\"ok\"},"
@@ -157,8 +228,28 @@ if(1){
          "\"md5\":\"9bde35fefa9d955f457e22d9be52bcd9\",\"modDate\":1000000000},"
         "{\"status\":{\"code\":200,\"msg\":\"ok\"},\"acc\":\"SRR000002\","
           "\"itemClass\":\"run\",\"format\":\"sra\",\"link\":\"http://h/\"}]"
-      ",\"timestamp\":1500000000}" ) );
+      ",\"timestamp\":1500000004}" ) );
     REQUIRE_RC ( Response4Release ( response ) );
+
+    REQUIRE_RC ( Response4Make ( & response, "{\"sequence\":["
+        "{\"status\":{\"code\":200,\"msg\":\"ok\"},"
+         "\"acc\":\"SRR000001\",\"itemClass\":\"foo\","
+         "\"format\":\"sra\",\"link\":\"fasp://h/\",\"size\":3,"
+         "\"md5\":\"9bde35fefa9d955f457e22d9be52bcd9\",\"modDate\":1000000000},"
+        "{\"status\":{\"code\":200,\"msg\":\"ok\"},\"acc\":\"SRR000002\","
+          "\"itemClass\":\"bar\",\"format\":\"sra\",\"link\":\"http://h/\"}]"
+      ",\"timestamp\":1500000004}" ) );
+    REQUIRE_RC ( Response4Release ( response ) );
+
+    REQUIRE_RC ( Response4Make ( & response, "{\"sequence\":["
+        "{\"status\":{\"code\":200,\"msg\":\"ok\"},"
+         "\"acc\":\"SRR000001\","
+         "\"link\":\"fasp://h/\",\"size\":3},"
+        "{\"status\":{\"code\":200,\"msg\":\"ok\"},\"acc\":\"SRR000002\","
+          "\"link\":\"http://h/\"}]"
+      ",\"timestamp\":1500000005}" ) );
+    REQUIRE_RC ( Response4Release ( response ) );
+
 
     REQUIRE_RC ( Response4Make ( & response,
         "{\"sequence\":[{\"status\":{\"code\":200,\"msg\":\"ok\"},"
@@ -167,7 +258,7 @@ if(1){
                 "\"format\":\"sra\",\"link\":\"http://h/1\"},"
            "{    \"acc\":\"SRR000002\",\"itemClass\":\"run\","
                 "\"format\":\"sra\",\"link\":\"http://h/2\"}]}]"
-         ",\"timestamp\":1500000000}"));
+         ",\"timestamp\":1500000006}"));
     REQUIRE_RC ( Response4Release ( response ) );
 
     REQUIRE_RC ( Response4Make ( & response,
@@ -175,7 +266,7 @@ if(1){
                 "\"acc\":\"SRR001000\",\"itemClass\":\"run\","
                 "\"format\":\"sra\",\"link\":\"http://h/1\","
                 "\"tic\":\"0AB1C23D-E4F5-6A7B-C890-1D2345678E90\"}]"
-         ",\"timestamp\":1500000000}"));
+         ",\"timestamp\":1500000007}"));
     REQUIRE_RC ( Response4Release ( response ) );
 
     REQUIRE_RC ( Response4Make ( & response,
@@ -183,7 +274,7 @@ if(1){
                 "\"id\":1,\"itemClass\":\"file\","
                 "\"format\":\"file\",\"name\":\"f.txt\",\"link\":\"http://h/\","
                 "\"tic\":\"0AB1C23D-E4F5-6A7B-C890-1D2345678E90\"}]"
-         ",\"timestamp\":1500000000}"));
+         ",\"timestamp\":1500000008}"));
     REQUIRE_RC ( Response4Release ( response ) );
 
     REQUIRE_RC ( Response4Make ( & response,
@@ -192,7 +283,7 @@ if(1){
                 "\"format\":\"file\",\"name\":\"f.txt\",\"link\":\"http://h/\","
                 "\"tic\":\"0AB1C23D-E4F5-6A7B-C890-1D2345678E90\"},"
       "{\"status\":{\"code\":403,\"msg\":\"access denied\"},\"id\":2}"
-         "],\"timestamp\":1500000000}"));
+         "],\"timestamp\":1500000009}"));
     REQUIRE_RC ( Response4Release ( response ) );
 
     REQUIRE_RC ( Response4Make ( & response,
@@ -204,7 +295,7 @@ if(1){
                "\"id\":2,\"itemClass\":\"file\","
                "\"format\":\"file\",\"name\":\"2.txt\",\"link\":\"http://h/2\","
                "\"tic\":\"0AB1C23D-E4F5-6A7B-C890-1D2345678E90\"}"
-         "],\"timestamp\":1500000000}"));
+         "],\"timestamp\":1500000010}"));
     REQUIRE_RC ( Response4Release ( response ) );
 
     REQUIRE_RC ( Response4Make ( & response,
@@ -216,9 +307,42 @@ if(1){
                "\"id\":2,\"itemClass\":\"file\","
                "\"format\":\"file\",\"name\":\"2.txt\",\"link\":\"http://h/2\","
                "\"tic\":\"0AB1C23D-E4F5-6A7B-C890-1D2345678E90\"}"
-         "],\"timestamp\":1500000000}"));
+         "],\"timestamp\":1500000011}"));
     REQUIRE_RC ( Response4Release ( response ) );
-}if(1);
+
+    REQUIRE_RC ( Response4Make ( & response,
+"{"
+	"\"version\": 4.0,"
+	"\"sequence\": ["
+	"	{"
+	"		\"status\": {"
+	"			\"code\": 200,"
+	"			\"msg\": \"ok\""
+	"		},"
+	"		\"acc\": \"SRR053325\","
+	"		\"format\": \"sra\","
+	"		\"group\": ["
+	"			{"
+	"				\"itemClass\": \"run\","
+	"				\"service\": \"ftp-ncbi\","
+	"				\"md5\": \"f0a3970669cd5719c146fd79bce3b50b\","
+	"				\"modDate\": 1327031309,"
+	"				\"size\": 31681,"
+	"				\"alternatives\": ["
+	"					{"
+	"						\"link\":"
+   "\"https://sra-download.ncbi.nlm.nih.gov/traces/sra59/SRR/000052/SRR053325\""
+	"					}"
+	"				]"
+	"			}"
+	"		]"
+	"	}"
+	"],"
+	"\"timestamp\": 1540239237"
+"}"    ));
+    REQUIRE_RC ( Response4Release ( response ) );
+}
+if(1);
   //REQUIRE_RC(validate(
 }
 
@@ -228,7 +352,7 @@ extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
     rc_t CC KMain ( int argc, char * argv [] ) {
 if ( 
-0 ) assert ( ! KDbgSetString ( "VFS" ) );
+0 ) assert ( ! KDbgSetString ( "VFS-JSON" ) );
     return TestResolver4 ( argc, argv );
     }
 }
