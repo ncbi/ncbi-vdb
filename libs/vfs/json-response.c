@@ -595,6 +595,14 @@ static rc_t ItemAddFormat ( Item * self, const char * cType,
         elm -> type = type;
     }
     * added = & self -> elm [ idx ];
+    if ( self -> acc != NULL )
+        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+            ( "Item '%s': added file '%s'\n", self -> acc,
+              ( * added ) -> cType ) );
+    else
+        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+            ( "Item %u: added file '%s'\n", self -> id,
+              ( * added ) -> cType ) );
     return 0;
 }
 
@@ -824,6 +832,25 @@ rc_t ContainerAdd ( Container * self, const char * acc, int64_t id,
 
     * newItem = item;
 
+    if ( self -> acc != NULL )
+        if ( item -> acc != NULL )
+            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+                ( "Container '%s': added item '%s'\n",
+                  self -> acc, item -> acc ) );
+        else
+            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+                ( "Container '%s': added item %u\n",
+                  self -> acc, item -> id ) );
+    else
+        if ( item -> acc != NULL )
+            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+                ( "Container %u: added item '%s'\n",
+                  self -> id, item -> acc ) );
+        else
+            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+                ( "Container %u: added item %u\n",
+                  self -> id, item -> id ) );
+
     return 0;
 }
 
@@ -945,10 +972,14 @@ rc_t Response4AddAccOrId ( Response4 * self, const char * acc,
         item -> acc = strdup ( acc );
         if ( item -> acc == NULL )
             return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
+        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+            ( "Added to response: container '%s'\n", item -> acc ) );
     }
     else {
         assert ( id >= 0 );
         item -> id = id;
+        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+            ( "Added to response: container %u\n", item -> id ) );
     }
 
     * newItem = item;
@@ -1363,7 +1394,7 @@ static rc_t LocationsAddLinks ( Locations * self, const KJsonObject * node,
         rc = LocationsAddLink ( self, value, & data, & cValue );
         if ( rc == 0 ) {
             DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-                ( "Added 'link' = '%s'\n", cValue ) );
+                ( "File '%s': added 'link' = '%s'\n", self -> cType, cValue ) );
             added = true;
         }
     }
@@ -1577,8 +1608,12 @@ static rc_t ContainerAddItem ( Container * self, const KJsonObject * node,
     rc = ContainerAdd ( self, acc, id, & item, & data );
 
     if ( rc == 0 && item != NULL ) {
-        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-            ( "Adding files to an item...\n" ) );
+        if ( item -> acc != NULL )
+            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+                ( "Adding files to item '%s'...\n", item -> acc ) );
+        else
+            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+                ( "Adding files to item %u...\n", item -> id ) );
         rc = ItemAddElms ( item, node, & data, path );
     }
 
@@ -1630,8 +1665,14 @@ static rc_t Response4AddItems ( Response4 * self, Container * aBox,
                                     || strcmp ( data .cls, "file" ) == 0 ) )
         || value != NULL )
     {
-        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-            ( "Adding a '%s' item to container...\n", data .cls ) );
+        if ( box -> acc != NULL )
+            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+                ( "Adding a '%s' item to container '%s'...\n",
+                  data . cls, box -> acc ) );
+        else
+            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+                ( "Adding a '%s' item to container %u...\n",
+                  data . cls, box -> id ) );
         rc = ContainerAddItem ( box, node, & data, path );
     }
     else {
@@ -1686,6 +1727,7 @@ static rc_t Response4AddItems ( Response4 * self, Container * aBox,
 
 /* Add response document */
 static rc_t Response4Init ( Response4 * self, const char * input ) {
+    char error [ 99 ] = "";
     rc_t r2 = 0;
 
     KJsonValue * root = NULL;
@@ -1700,7 +1742,7 @@ static rc_t Response4Init ( Response4 * self, const char * input ) {
 
     StackPrintInput ( input );
 
-    rc_t rc = KJsonValueMake ( & root, input, NULL, 0 );
+    rc_t rc = KJsonValueMake ( & root, input, error, sizeof error );
     if ( rc != 0 ) {
         DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
             ( "... error: invalid JSON\n" ) );
