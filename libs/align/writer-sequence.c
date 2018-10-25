@@ -237,11 +237,13 @@ static rc_t TableWriterSeq_WriteStatistics(TableWriterSeq const *cself, KMDataNo
     KDataBuffer buf;
     
     rc = KDataBufferMake(&buf, 8 * sizeof(pb.stats[0]), cself->statsCount);
+    assert(rc == 0);
     if (rc) return rc;
     
     pb.stats = buf.base;
     pb.i = 0;
     rc = KVectorVisitU64(cself->stats, 0, stats_cb, &pb);
+    assert(rc == 0);
     if (rc == 0) {
         unsigned i;
         unsigned const n = cself->statsCount < 126 ? cself->statsCount : 126;
@@ -253,6 +255,7 @@ static rc_t TableWriterSeq_WriteStatistics(TableWriterSeq const *cself, KMDataNo
             distance[i] = pb.stats[i].distance;
         }
         rc = KMDataNodeWrite(node, distance, n * sizeof(distance[0]));
+        assert(rc == 0);
     }
     KDataBufferWhack(&buf);
     return rc;
