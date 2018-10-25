@@ -313,7 +313,7 @@ static rc_t MakeSequenceTable(TableWriterSeq *self, VDatabase* db,
     memmove(self->cols, TableWriterSeq_cols, sizeof(TableWriterSeq_cols));
 
     /* always write full sequence */
-    self->cols[ewseq_cn_READ].name = "(INSDC:dna:text)READ";
+    self->cols[ewseq_cn_READ].name = TableSeqReadREAD_cols[0].name;
     if ((self->options & ewseq_co_SaveRead) != 0) {
         self->cols[ewseq_cn_READ].flags |= ewcol_Temporary;
     }
@@ -394,9 +394,12 @@ static rc_t CompressREAD(TableWriterSeq *const self, int64_t *const buffer)
     assert(rc == 0);
     
     if ((self->options & ewseq_co_SaveRead) != 0) {
+        static TableWriterData const d = { "", 0 };
+
         self->cols[0] = TableWriterSeq_cols[0];
         rc = TableWriter_AddCursor(self->base, self->cols, 1, &cursor_id);
         assert(rc == 0);
+        TW_COL_WRITE_DEF(self->base, cursor_id, self->cols[0], d);
     }
     for (row = 1; ; ++row) {
         rc = TableReader_ReadRow(self->reader, row);
@@ -407,18 +410,19 @@ static rc_t CompressREAD(TableWriterSeq *const self, int64_t *const buffer)
             }
             return rc;
         }
-        rc = TableWriter_OpenRowId(self->base, row, cursor_id);
-        assert(rc == 0);
+        if ((self->options & ewseq_co_SaveRead) != 0) {
+            rc = TableWriter_OpenRowId(self->base, row, cursor_id);
+            assert(rc == 0);
+        }
         {
             char const *const seq = self->cols_read[0].base.str;
             unsigned const seqLen = (unsigned)self->cols_read[0].len;
-            INSDC_coord_zero const *const start = self->cols_read[1].base.coord0;
-            INSDC_coord_len const *const length = self->cols_read[2].base.coord_len;
-            int64_t const *const pid = self->cols_read[3].base.i64;
             unsigned const nreads = (int)self->cols_read[1].len;
+            int64_t const *const pid = self->cols_read[3].base.i64;
             unsigned i;
             unsigned aligned = 0;
-            
+
+            assert(self->cols_read[3].len == nreads);
             for (i = 0; i < nreads; ++i) {
                 if (pid[i] != 0)
                     ++aligned;
@@ -427,6 +431,8 @@ static rc_t CompressREAD(TableWriterSeq *const self, int64_t *const buffer)
                 if (aligned != 0) {
                     TW_COL_WRITE_BUF(self->base, self->cols[0], seq, 0);
                     if (aligned < nreads) {
+                        INSDC_coord_zero const *const start = self->cols_read[1].base.coord0;
+                        INSDC_coord_len const *const length = self->cols_read[2].base.coord_len;
                         for (i = 0; i < nreads; ++i) {
                             if (pid[i] == 0) {
                                 TW_COL_WRITE_BUF(self->base, self->cols[0], &seq[start[i]], length[i]);
@@ -447,8 +453,10 @@ static rc_t CompressREAD(TableWriterSeq *const self, int64_t *const buffer)
                 }
             }
         }
-        rc = TableWriter_CloseRow(self->base);
-        assert(rc == 0);
+        if ((self->options & ewseq_co_SaveRead) != 0) {
+            rc = TableWriter_CloseRow(self->base);
+            assert(rc == 0);
+        }
     }
     rc = TableWriter_CloseCursor(self->base, cursor_id, NULL);
     assert(rc == 0);
