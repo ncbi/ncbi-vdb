@@ -345,6 +345,10 @@ table NCBI:tbl:base_space #3
         | ( INSDC:2na:packed ) pack ( in_2na_bin )
         ;
 
+    physical column < INSDC:4na:bin > zip_encoding .ALTREAD
+        = < INSDC:4na:bin > trim < 0, 0 > ( in_alt_4na_bin )
+        ;
+
     /* output rules
      */
 
