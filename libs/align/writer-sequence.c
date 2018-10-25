@@ -235,6 +235,8 @@ static rc_t TableWriterSeq_WriteStatistics(TableWriterSeq const *cself, KMDataNo
     pb_t pb;
     rc_t rc;
     KDataBuffer buf;
+
+    if (cself->stats == NULL) return 0; /* if there were no alignments */
     
     rc = KDataBufferMake(&buf, 8 * sizeof(pb.stats[0]), cself->statsCount);
     assert(rc == 0);
