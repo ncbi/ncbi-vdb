@@ -68,7 +68,7 @@
 
 
 /* Copy the first part of user declarations.  */
-#line 27 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:339  */
+#line 27 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:339  */
 
     #define YYDEBUG 1
 
@@ -91,7 +91,7 @@
     }
 
 
-#line 95 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:339  */
+#line 95 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:339  */
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -111,8 +111,8 @@
 
 /* In a future release of Bison, this section will be replaced
    by #include "schema-ast-tokens.h".  */
-#ifndef YY_AST_2T_DATA_ALTDEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_AST_TOKENS_H_INCLUDED
-# define YY_AST_2T_DATA_ALTDEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_AST_TOKENS_H_INCLUDED
+#ifndef YY_AST_HOME_BOSHKINA_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_AST_TOKENS_H_INCLUDED
+# define YY_AST_HOME_BOSHKINA_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_AST_TOKENS_H_INCLUDED
 /* Debug traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
@@ -268,14 +268,14 @@ extern int AST_debug;
 
 union YYSTYPE
 {
-#line 57 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:355  */
+#line 57 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:355  */
 
   const Token*  tok;
   AST*          node;
   AST_FQN*      fqn;
   AST_Expr*     expr;
 
-#line 279 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:355  */
+#line 279 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:355  */
 };
 
 typedef union YYSTYPE YYSTYPE;
@@ -287,11 +287,11 @@ typedef union YYSTYPE YYSTYPE;
 
 int AST_parse (AST*& p_ast, ASTBuilder& p_builder, ParseTreeScanner& p_sb);
 
-#endif /* !YY_AST_2T_DATA_ALTDEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_AST_TOKENS_H_INCLUDED  */
+#endif /* !YY_AST_HOME_BOSHKINA_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_AST_TOKENS_H_INCLUDED  */
 
 /* Copy the second part of user declarations.  */
 
-#line 295 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:358  */
+#line 295 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:358  */
 
 #ifdef short
 # undef short
@@ -2012,1285 +2012,1285 @@ yyreduce:
   switch (yyn)
     {
         case 2:
-#line 261 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 261 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { p_ast = new AST ( (yyvsp[-1].tok) ); }
-#line 2018 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2018 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 3:
-#line 262 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 262 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { p_ast = (yyvsp[-2].node); }
-#line 2024 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2024 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 4:
-#line 266 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 266 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-1].node); }
-#line 2030 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2030 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 5:
-#line 267 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 267 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[-2].tok) ); }
-#line 2036 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2036 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 6:
-#line 268 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 268 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[-2].tok) ); }
-#line 2042 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2042 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 7:
-#line 272 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 272 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.tok) = (yyvsp[-5].tok); }
-#line 2048 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2048 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 8:
-#line 276 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 276 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.tok) = (yyvsp[-5].tok); }
-#line 2054 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2054 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 9:
-#line 280 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 280 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-3].tok), (yyvsp[-1].node) ); }
-#line 2060 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2060 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 10:
-#line 284 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 284 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-3].tok), (yyvsp[-1].node) ); }
-#line 2066 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2066 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 11:
-#line 289 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 289 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2072 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2072 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 12:
-#line 290 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 290 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2078 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2078 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 13:
-#line 296 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 296 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].node); }
-#line 2084 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2084 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 14:
-#line 297 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 297 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].node); }
-#line 2090 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2090 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 15:
-#line 298 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 298 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].node); }
-#line 2096 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2096 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 16:
-#line 299 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 299 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].node); }
-#line 2102 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2102 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 17:
-#line 300 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 300 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].node); }
-#line 2108 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2108 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 18:
-#line 301 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 301 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].node); }
-#line 2114 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2114 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 19:
-#line 302 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 302 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].node); }
-#line 2120 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2120 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 20:
-#line 303 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 303 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].node); }
-#line 2126 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2126 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 21:
-#line 304 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 304 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].node); }
-#line 2132 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2132 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 22:
-#line 305 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 305 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].node); }
-#line 2138 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2138 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 23:
-#line 306 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 306 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].node); }
-#line 2144 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2144 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 24:
-#line 307 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 307 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].node); }
-#line 2150 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2150 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 25:
-#line 308 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 308 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].node); }
-#line 2156 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2156 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 26:
-#line 309 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 309 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].node); }
-#line 2162 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2162 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 27:
-#line 310 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 310 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST (); }
-#line 2168 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2168 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 28:
-#line 315 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 315 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = p_builder . TypeDef ( (yyvsp[-9].tok), (yyvsp[-6].fqn), (yyvsp[-3].node) ); }
-#line 2174 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2174 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 29:
-#line 319 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 319 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2180 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2180 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 30:
-#line 320 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 320 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2186 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2186 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 31:
-#line 324 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 324 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].fqn); }
-#line 2192 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2192 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 32:
-#line 325 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 325 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].node); }
-#line 2198 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2198 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 33:
-#line 329 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 329 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].fqn), (yyvsp[-2].node) ); }
-#line 2204 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2204 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 34:
-#line 333 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 333 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].expr); }
-#line 2210 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2210 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 35:
-#line 334 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 334 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( PT_EMPTY ); }
-#line 2216 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2216 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 36:
-#line 339 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 339 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = p_builder . TypeSet ( (yyvsp[-14].tok), (yyvsp[-11].fqn), (yyvsp[-5].node) ); }
-#line 2222 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2222 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 37:
-#line 343 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 343 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2228 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2228 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 38:
-#line 344 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 344 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2234 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2234 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 39:
-#line 348 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 348 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = p_builder . FmtDef ( (yyvsp[-5].tok), (yyvsp[-2].fqn), 0 ); }
-#line 2240 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2240 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 40:
-#line 349 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 349 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = p_builder . FmtDef ( (yyvsp[-6].tok), (yyvsp[-2].fqn), (yyvsp[-3].fqn) ); }
-#line 2246 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2246 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 41:
-#line 353 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 353 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = p_builder . ConstDef ( (yyvsp[-8].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
-#line 2252 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2252 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 42:
-#line 357 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 357 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = p_builder . AliasDef ( (yyvsp[-6].tok), (yyvsp[-3].fqn), (yyvsp[-2].fqn) ); }
-#line 2258 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2258 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 43:
-#line 361 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 361 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-1].node); }
-#line 2264 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2264 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 44:
-#line 365 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 365 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = p_builder . UntypedFunctionDecl ( (yyvsp[-6].tok), (yyvsp[-3].fqn) ); }
-#line 2270 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2270 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 45:
-#line 366 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 366 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = p_builder . RowlenFunctionDecl ( (yyvsp[-6].tok), (yyvsp[-3].fqn) ); }
-#line 2276 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2276 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 46:
-#line 368 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 368 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = p_builder . FunctionDecl ( (yyvsp[-8].tok), false, (yyvsp[-6].node), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-3].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
-#line 2282 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2282 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 47:
-#line 372 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 372 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 2288 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2288 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 48:
-#line 373 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 373 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-3].node); }
-#line 2294 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2294 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 49:
-#line 377 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 377 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2300 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2300 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 50:
-#line 378 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 378 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2306 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2306 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 51:
-#line 382 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 382 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-1].fqn) ); }
-#line 2312 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2312 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 52:
-#line 383 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 383 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].fqn) ); }
-#line 2318 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2318 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 53:
-#line 387 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 387 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST (); }
-#line 2324 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2324 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 54:
-#line 388 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 388 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-1].node); }
-#line 2330 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2330 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 55:
-#line 392 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 392 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 2336 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2336 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 56:
-#line 393 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 393 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-2].node); }
-#line 2342 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2342 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 57:
-#line 397 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 397 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-2].node); }
-#line 2348 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2348 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 58:
-#line 401 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 401 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 2354 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2354 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 59:
-#line 402 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 402 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), new AST (), (yyvsp[-1].node) ); }
-#line 2360 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2360 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 60:
-#line 403 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 403 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-5].tok), new AST (), (yyvsp[-2].node), (yyvsp[-1].node) ); }
-#line 2366 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2366 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 61:
-#line 404 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 404 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
-#line 2372 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2372 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 62:
-#line 405 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 405 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
-#line 2378 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2378 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 63:
-#line 409 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 409 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-1].node); }
-#line 2384 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2384 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 64:
-#line 413 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 413 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2390 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2390 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 65:
-#line 414 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 414 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2396 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2396 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 66:
-#line 418 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 418 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), new AST ( (yyvsp[-1].tok) ), new AST () ); }
-#line 2402 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2402 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 67:
-#line 419 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 419 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-2].node), new AST ( (yyvsp[-1].tok) ), new AST ( (yyvsp[-3].tok) ) ); }
-#line 2408 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2408 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 68:
-#line 423 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 423 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 2414 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2414 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 69:
-#line 424 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 424 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-4].tok) ); }
-#line 2420 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2420 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 70:
-#line 428 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 428 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( PT_EMPTY ); }
-#line 2426 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2426 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 71:
-#line 429 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 429 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-2].fqn); }
-#line 2432 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2432 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 73:
-#line 434 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 434 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-3].node); }
-#line 2438 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2438 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 74:
-#line 438 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 438 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2444 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2444 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 75:
-#line 439 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 439 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2450 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2450 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 76:
-#line 443 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 443 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-3].tok), (yyvsp[-2].expr) ); }
-#line 2456 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2456 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 77:
-#line 444 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 444 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].node); }
-#line 2462 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2462 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 78:
-#line 448 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 448 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
-#line 2468 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2468 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 79:
-#line 449 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 449 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
-#line 2474 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2474 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 80:
-#line 453 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 453 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-1].node); }
-#line 2480 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2480 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 81:
-#line 456 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 456 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-1].node); }
-#line 2486 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2486 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 82:
-#line 457 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 457 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-1].node); }
-#line 2492 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2492 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 83:
-#line 462 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 462 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = p_builder . FunctionDecl ( (yyvsp[-8].tok), true, (yyvsp[-6].node), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-3].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
-#line 2498 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2498 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 84:
-#line 471 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 471 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = p_builder . FunctionDecl ( (yyvsp[-16].tok), false, (yyvsp[-8].node), (yyvsp[-7].node), (yyvsp[-6].fqn), (yyvsp[-5].node), (yyvsp[-4].node), (yyvsp[-3].node) ); }
-#line 2504 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2504 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 85:
-#line 476 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 476 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = p_builder . PhysicalDecl ( (yyvsp[-8].tok), (yyvsp[-5].node), (yyvsp[-4].node), (yyvsp[-3].fqn), (yyvsp[-2].node), (yyvsp[-1].node) ); }
-#line 2510 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2510 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 86:
-#line 480 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 480 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].node); }
-#line 2516 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2516 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 87:
-#line 481 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 481 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-1].node) ); }
-#line 2522 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2522 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 88:
-#line 485 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 485 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-9].tok), (yyvsp[-4].node) ); }
-#line 2528 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2528 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 89:
-#line 487 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 487 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-3].node); }
-#line 2534 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2534 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 90:
-#line 491 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 491 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2540 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2540 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 91:
-#line 492 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 492 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2546 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2546 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 92:
-#line 497 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 497 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( PT_EMPTY ); }
-#line 2552 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2552 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 93:
-#line 499 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 499 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-10].tok), (yyvsp[-4].node) ) ; }
-#line 2558 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2558 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 94:
-#line 501 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 501 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-10].tok), (yyvsp[-4].node) ); }
-#line 2564 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2564 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 95:
-#line 503 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 503 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].fqn) ); }
-#line 2570 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2570 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 96:
-#line 510 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 510 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = p_builder . TableDef ( (yyvsp[-11].tok), (yyvsp[-8].fqn), (yyvsp[-7].node), (yyvsp[-3].node) ); }
-#line 2576 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2576 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 97:
-#line 514 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 514 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 2582 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2582 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 98:
-#line 515 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 515 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-2].node); }
-#line 2588 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2588 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 99:
-#line 519 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 519 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].fqn) ); }
-#line 2594 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2594 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 100:
-#line 520 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 520 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].fqn) ); }
-#line 2600 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2600 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 101:
-#line 524 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 524 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( PT_EMPTY ); }
-#line 2606 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2606 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 102:
-#line 525 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 525 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-1].node); }
-#line 2612 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2612 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 103:
-#line 529 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 529 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2618 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2618 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 104:
-#line 530 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 530 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2624 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2624 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 105:
-#line 534 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 534 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].node); }
-#line 2630 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2630 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 106:
-#line 535 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 535 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].node); }
-#line 2636 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2636 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 107:
-#line 536 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 536 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-2].expr) ); }
-#line 2642 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2642 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 108:
-#line 537 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 537 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-8].tok), (yyvsp[-2].expr) ); }
-#line 2648 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2648 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 109:
-#line 538 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 538 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-2].tok), (yyvsp[-1].node) ); }
-#line 2654 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2654 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 110:
-#line 539 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 539 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-2].tok), (yyvsp[-1].node) ); }
-#line 2660 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2660 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 111:
-#line 540 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 540 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-3].tok), (yyvsp[-1].node) ); }
-#line 2666 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2666 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 112:
-#line 541 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 541 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-8].tok), (yyvsp[-4].fqn) ); }
-#line 2672 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2672 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 113:
-#line 542 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 542 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST (); }
-#line 2678 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2678 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 114:
-#line 546 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 546 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
-#line 2684 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2684 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 115:
-#line 550 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 550 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 2690 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2690 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 116:
-#line 551 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 551 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-2].node); }
-#line 2696 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2696 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 117:
-#line 555 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 555 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2702 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2702 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 118:
-#line 556 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 556 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2708 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2708 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 119:
-#line 560 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 560 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 2714 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2714 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 120:
-#line 561 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 561 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 2720 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2720 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 121:
-#line 562 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 562 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 2726 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2726 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 122:
-#line 566 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 566 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
-#line 2732 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2732 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 123:
-#line 567 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 567 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
-#line 2738 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2738 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 124:
-#line 572 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 572 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-10].tok), (yyvsp[-5].node), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
-#line 2744 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2744 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 125:
-#line 573 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 573 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
-#line 2750 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2750 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 126:
-#line 574 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 574 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
-#line 2756 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2756 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 127:
-#line 578 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 578 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     {  (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].node) ); }
-#line 2762 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2762 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 128:
-#line 579 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 579 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     {  (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].expr) ); }
-#line 2768 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2768 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 129:
-#line 580 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 580 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     {  (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].node) ); }
-#line 2774 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2774 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 130:
-#line 584 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 584 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].fqn); }
-#line 2780 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2780 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 131:
-#line 585 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 585 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 2786 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2786 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 132:
-#line 589 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 589 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST (); }
-#line 2792 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2792 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 133:
-#line 590 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 590 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-1].node); }
-#line 2798 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2798 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 134:
-#line 594 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 594 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2804 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2804 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 135:
-#line 595 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 595 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2810 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2810 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 136:
-#line 599 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 599 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST (); }
-#line 2816 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2816 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 137:
-#line 600 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 600 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-6].tok), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
-#line 2822 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2822 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 138:
-#line 601 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 601 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-6].tok), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
-#line 2828 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2828 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 139:
-#line 602 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 602 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-6].tok), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
-#line 2834 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2834 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 140:
-#line 607 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 607 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].node), new AST ( (yyvsp[-2].tok) ) ); }
-#line 2840 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2840 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 141:
-#line 609 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 609 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-6].tok), (yyvsp[-3].node), new AST ( (yyvsp[-2].tok) ) ); }
-#line 2846 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2846 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 142:
-#line 611 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 611 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
-#line 2852 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2852 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 143:
-#line 613 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 613 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-8].tok), (yyvsp[-5].node), new AST ( (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
-#line 2858 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2858 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 144:
-#line 617 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 617 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].node), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
-#line 2864 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2864 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 145:
-#line 621 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 621 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST (); }
-#line 2870 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2870 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 146:
-#line 622 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 622 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-3].node); }
-#line 2876 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2876 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 147:
-#line 626 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 626 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2882 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2882 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 148:
-#line 627 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 627 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2888 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2888 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 149:
-#line 631 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 631 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].fqn), (yyvsp[-1].node) ); }
-#line 2894 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2894 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 150:
-#line 632 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 632 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].node); }
-#line 2900 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2900 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 151:
-#line 636 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 636 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].fqn); }
-#line 2906 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2906 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 152:
-#line 637 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 637 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].expr); }
-#line 2912 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2912 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 153:
-#line 642 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 642 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = p_builder . DatabaseDef ( (yyvsp[-6].tok), (yyvsp[-3].fqn), (yyvsp[-2].node), (yyvsp[-1].node) ); }
-#line 2918 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2918 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 154:
-#line 646 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 646 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 2924 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2924 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 155:
-#line 647 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 647 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-1].fqn); }
-#line 2930 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2930 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 156:
-#line 650 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 650 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-3].node); }
-#line 2936 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2936 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 157:
-#line 651 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 651 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-4].tok) ); }
-#line 2942 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2942 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 158:
-#line 655 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 655 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2948 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2948 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 159:
-#line 656 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 656 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST (); }
-#line 2954 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2954 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 160:
-#line 657 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 657 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 2960 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2960 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 161:
-#line 658 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 658 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-1].node); }
-#line 2966 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2966 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 162:
-#line 663 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 663 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-3].fqn), (yyvsp[-2].fqn) ); }
-#line 2972 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2972 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 163:
-#line 665 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 665 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-3].fqn), (yyvsp[-2].fqn) ); }
-#line 2978 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2978 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 164:
-#line 669 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 669 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 2984 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2984 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 165:
-#line 670 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 670 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 2990 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2990 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 166:
-#line 676 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 676 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = p_builder . Include ( (yyvsp[-2].tok), (yyvsp[-1].tok) ); }
-#line 2996 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 2996 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 167:
-#line 682 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 682 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = (yyvsp[-1].expr); }
-#line 3002 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3002 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 168:
-#line 686 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 686 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = new AST_Expr ( (yyvsp[0].expr) ); }
-#line 3008 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3008 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 169:
-#line 687 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 687 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = (yyvsp[-2].expr); (yyval.expr) -> AddNode ( (yyvsp[0].expr) ); }
-#line 3014 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3014 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 170:
-#line 691 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 691 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = new AST_Expr ( (yyvsp[0].fqn) ); }
-#line 3020 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3020 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 171:
-#line 692 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 692 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
-#line 3026 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3026 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 172:
-#line 693 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 693 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
-#line 3032 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3032 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 173:
-#line 694 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 694 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = (yyvsp[0].expr); }
-#line 3038 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3038 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 174:
-#line 695 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 695 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = (yyvsp[0].expr); }
-#line 3044 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3044 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 175:
-#line 696 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 696 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = (yyvsp[0].expr); }
-#line 3050 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3050 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 176:
-#line 697 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 697 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = (yyvsp[0].expr); }
-#line 3056 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3056 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 177:
-#line 698 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 698 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = (yyvsp[0].expr); }
-#line 3062 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3062 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 178:
-#line 699 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 699 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = (yyvsp[0].expr); }
-#line 3068 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3068 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 179:
-#line 700 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 700 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = (yyvsp[0].expr); }
-#line 3074 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3074 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 180:
-#line 701 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 701 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = (yyvsp[-1].expr); }
-#line 3080 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3080 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 181:
-#line 702 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 702 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = (yyvsp[0].expr); }
-#line 3086 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3086 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 182:
-#line 703 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 703 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = (yyvsp[0].expr); }
-#line 3092 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3092 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 183:
-#line 704 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 704 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = (yyvsp[0].expr); }
-#line 3098 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3098 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 184:
-#line 709 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 709 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = new AST_Expr ( (yyvsp[-8].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-6].node) ); (yyval.expr) -> AddNode ( (yyvsp[-5].fqn) ); (yyval.expr) -> AddNode ( (yyvsp[-4].node) ); (yyval.expr) -> AddNode ( (yyvsp[-2].node) ); }
-#line 3104 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3104 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 185:
-#line 713 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 713 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( PT_EMPTY ); }
-#line 3110 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3110 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 186:
-#line 714 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 714 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-2].node); }
-#line 3116 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3116 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 187:
-#line 717 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 717 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 3122 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3122 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 188:
-#line 718 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 718 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 3128 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3128 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 189:
-#line 722 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 722 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].fqn); }
-#line 3134 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3134 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 190:
-#line 723 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 723 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].node); }
-#line 3140 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3140 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 191:
-#line 724 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 724 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].expr); }
-#line 3146 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3146 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 192:
-#line 728 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 728 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 3152 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3152 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 193:
-#line 729 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 729 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].node); }
-#line 3158 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3158 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 194:
-#line 733 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 733 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-3].node); }
-#line 3164 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3164 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 195:
-#line 737 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 737 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].expr) ); }
-#line 3170 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3170 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 196:
-#line 738 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 738 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].expr) ); }
-#line 3176 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3176 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 197:
-#line 742 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 742 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 3182 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3182 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 198:
-#line 743 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 743 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-1].node); }
-#line 3188 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3188 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 199:
-#line 747 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 747 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].expr) ); }
-#line 3194 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3194 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 200:
-#line 748 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 748 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].expr) ); }
-#line 3200 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3200 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 201:
-#line 752 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 752 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = new AST_Expr ( (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].tok) ); }
-#line 3206 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3206 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 202:
-#line 753 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 753 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = new AST_Expr ( (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].tok) ); }
-#line 3212 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3212 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 203:
-#line 754 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 754 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = new AST_Expr ( (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].tok) ); }
-#line 3218 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3218 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 204:
-#line 758 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 758 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
-#line 3224 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3224 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 205:
-#line 759 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 759 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
-#line 3230 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3230 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 206:
-#line 763 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 763 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
-#line 3236 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3236 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 207:
-#line 764 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 764 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
-#line 3242 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3242 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 208:
-#line 768 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 768 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = new AST_Expr ( (yyvsp[-8].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-3].node) ); }
-#line 3248 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3248 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 209:
-#line 772 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 772 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
-#line 3254 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3254 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 210:
-#line 773 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 773 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = new AST_Expr ( (yyvsp[0].tok) ); }
-#line 3260 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3260 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 211:
-#line 777 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 777 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = new AST_Expr ( (yyvsp[-4].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-1].expr) ); }
-#line 3266 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3266 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 212:
-#line 780 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 780 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = new AST_Expr ( (yyvsp[-6].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-3].node) ); (yyval.expr) -> AddNode ( (yyvsp[-1].expr) ); }
-#line 3272 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3272 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 213:
-#line 784 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 784 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[0].node); }
-#line 3278 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3278 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 214:
-#line 785 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 785 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-5].tok), (yyvsp[-3].fqn), (yyvsp[-1].fqn) ); }
-#line 3284 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3284 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 215:
-#line 789 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 789 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = new AST_Expr ( (yyvsp[-5].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-3].fqn) ); (yyval.expr) -> AddNode ( (yyvsp[-1].fqn) ); }
-#line 3290 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3290 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 216:
-#line 791 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 791 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     {   /* remove leading '.'*/
             (yyval.expr) = new AST_Expr ( (yyvsp[-4].tok) );
             (yyval.expr) -> AddNode ( (yyvsp[-2].fqn) );
@@ -3299,167 +3299,167 @@ yyreduce:
             ident -> AddNode ( & t );
             (yyval.expr) -> AddNode ( ident );
         }
-#line 3303 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3303 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 217:
-#line 803 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 803 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.expr) = new AST_Expr ( (yyvsp[-8].tok) ); (yyval.expr) -> AddNode ( (yyvsp[-6].fqn) ); (yyval.expr) -> AddNode ( (yyvsp[-4].expr) ); (yyval.expr) -> AddNode ( (yyvsp[-1].fqn) ); }
-#line 3309 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3309 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 218:
-#line 809 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 809 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.fqn) = (yyvsp[-1].fqn); }
-#line 3315 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3315 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 219:
-#line 813 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 813 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.fqn) = new AST_FQN ( (yyvsp[-3].tok) ); (yyval.fqn) -> AddNode ( (yyvsp[-1].tok) ); }
-#line 3321 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3321 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 220:
-#line 814 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 814 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.fqn) = (yyvsp[-5].fqn); (yyval.fqn) -> AddNode ( (yyvsp[-1].tok) ); }
-#line 3327 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3327 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 221:
-#line 818 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 818 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.fqn) = new AST_FQN ( (yyvsp[-3].tok) ); (yyval.fqn) -> AddNode ( (yyvsp[-1].tok) ); }
-#line 3333 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3333 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 222:
-#line 822 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 822 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.fqn) = (yyvsp[0].fqn); }
-#line 3339 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3339 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 223:
-#line 823 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 823 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.fqn) = (yyvsp[0].fqn); }
-#line 3345 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3345 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 224:
-#line 827 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 827 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.fqn) = (yyvsp[-2].fqn); (yyval.fqn) -> SetVersion ( (yyvsp[-1].tok) -> GetValue () ); }
-#line 3351 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3351 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 225:
-#line 834 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 834 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = p_builder . ViewDef ( (yyvsp[-14].tok), (yyvsp[-11].fqn), (yyvsp[-7].node), (yyvsp[-4].node), (yyvsp[-2].node) ); }
-#line 3357 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3357 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 226:
-#line 838 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 838 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 3363 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3363 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 227:
-#line 839 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 839 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 3369 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3369 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 228:
-#line 843 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 843 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].fqn) ); }
-#line 3375 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3375 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 229:
-#line 847 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 847 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 3381 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3381 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 230:
-#line 848 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 848 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-1].node); }
-#line 3387 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3387 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 231:
-#line 852 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 852 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 3393 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3393 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 232:
-#line 853 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 853 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 3399 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3399 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 233:
-#line 857 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 857 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
-#line 3405 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3405 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 234:
-#line 858 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 858 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-8].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
-#line 3411 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3411 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 235:
-#line 859 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 859 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( PT_EMPTY ); }
-#line 3417 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3417 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 236:
-#line 863 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 863 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[0].tok) ); }
-#line 3423 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3423 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 237:
-#line 864 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 864 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-7].tok), (yyvsp[-2].node) ); }
-#line 3429 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3429 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 238:
-#line 868 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 868 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 3435 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3435 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 239:
-#line 869 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 869 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].node) ); }
-#line 3441 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3441 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 240:
-#line 874 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 874 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST ( (yyvsp[-9].tok), (yyvsp[-7].fqn), (yyvsp[-3].node) ); }
-#line 3447 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3447 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 241:
-#line 878 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 878 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = new AST (); (yyval.node) -> AddNode ( (yyvsp[0].fqn) ); }
-#line 3453 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3453 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
   case 242:
-#line 879 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
+#line 879 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.y" /* yacc.c:1646  */
     { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( (yyvsp[0].fqn) ); }
-#line 3459 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3459 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
     break;
 
 
-#line 3463 "/2T/data/altdevel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
+#line 3463 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-ast.cpp" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires

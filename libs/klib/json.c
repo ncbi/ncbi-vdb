@@ -93,24 +93,28 @@ static void CC NameValueWhack ( BSTNode * p_n, void * p_data )
     free ( self );
 }
 
+static
+int StringCmp( const char * a, const char * b )
+{
+    size_t sizeA = string_size ( a );
+    size_t sizeB = string_size ( b );
+    return string_cmp ( a, sizeA,
+                        b, sizeB,
+                        sizeA < sizeB ? sizeB : sizeA );
+}
+
 int64_t CC NameValueSort ( const BSTNode * p_item, const BSTNode * p_n )
 {
     const NameValue *a = ( const NameValue* ) p_item;
     const NameValue *b = ( const NameValue* ) p_n;
-    size_t size = string_size ( a -> name );
-    return string_cmp ( a -> name, size,
-                        b -> name, string_size ( b -> name ),
-                        string_len ( a -> name, size ) );
+    return StringCmp ( a -> name, b -> name );
 }
 
 int64_t CC NameValueCompare ( const void * p_item, const BSTNode * p_n )
 {
     const char * a = ( const char * ) p_item;
     const NameValue * b = ( const NameValue* ) p_n;
-    size_t size = string_size ( a );
-    return string_cmp ( a, size,
-                        b -> name, string_size ( b -> name ),
-                        string_len ( a, size ) );
+    return StringCmp ( a, b -> name );
 }
 
 typedef struct AddKeyBlock AddKeyBlock;
