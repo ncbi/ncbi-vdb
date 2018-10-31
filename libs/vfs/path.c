@@ -1899,8 +1899,10 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
     if ( pileup_ext_present )
     {
         uri[uri_size] = '.';
-        if ( i == uri_size )
+        if ( i == uri_size ) {
             i += pileup_ext_size;
+            count += pileup_ext_size;
+        }
         uri_size += pileup_ext_size;
         
         if ( acc_alpha && acc_digit )
