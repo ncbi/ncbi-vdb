@@ -74,6 +74,9 @@ rc_t KServiceAddId     ( KService * self, const char * id );
 /* Add a dbGaP Project to service request */
 rc_t KServiceAddProject ( KService * self, uint32_t id );
 
+/* Set accept-format-in of service request */
+rc_t KServiceSetFormat(KService * self, const char * format);
+
 /************************** name service - version 3 **************************/
 /* Execute Names Service Call using current default protocol version;
  * get KSrvResponse - it contains:
@@ -141,6 +144,11 @@ rc_t KSrvResponseGetObjByIdx ( const struct KSrvResponse * self,
 rc_t KSrvResponseGetObjByAcc ( const struct KSrvResponse * self,
                                const char * acc, const KSrvRespObj ** obj );
 
+/* Do not release returned acc */
+rc_t KSrvRespObjGetAccOrId(const KSrvRespObj * self,
+	                       const char ** acc, uint32_t * id);
+
+
 rc_t KSrvRespObjGetFileCount ( const KSrvRespObj * self, uint32_t * count ); 
 
 rc_t KSrvRespObjMakeIterator ( const KSrvRespObj * self,
@@ -149,8 +157,14 @@ rc_t KSrvRespObjIteratorRelease ( const KSrvRespObjIterator * self );
 
 rc_t KSrvRespObjIteratorNextFile ( KSrvRespObjIterator * self,
                                    KSrvRespFile ** file );
-rc_t KSrvRespFileGetFileFormat ( const KSrvRespFile * self,
-                                 ESrvFileFormat * ff );
+
+/* Do not release returned char pointers */
+rc_t KSrvRespFileGetAccOrId(const KSrvRespFile * self,
+    const char ** acc, uint32_t * id);
+rc_t KSrvRespFileGetClass(const KSrvRespFile * self, const char ** itemClass);
+
+/*rc_t KSrvRespFileGetFileFormat ( const KSrvRespFile * self,
+                                 ESrvFileFormat * ff );*/
 rc_t KSrvRespFileGetCache ( const KSrvRespFile * self,
                             const struct VPath ** path );
 rc_t KSrvRespFileGetLocal ( const KSrvRespFile * self,

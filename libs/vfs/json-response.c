@@ -47,6 +47,11 @@ typedef struct {
     int32_t level;
 } Node;
 
+#define THRESHOLD_NO_DEBUG 0
+#define THRESHOLD_ERROR    1
+
+static int THRESHOLD = THRESHOLD_NO_DEBUG;
+
 typedef struct {
     Node * nodes;
     size_t i;
@@ -74,6 +79,7 @@ struct Item { /* Run ob dbGaP file */
     char * acc;
     int64_t id;
     char * name;
+    char * itemClass;
     char * tic;
     Locations * elm;
     uint32_t nElm;
@@ -172,8 +178,9 @@ struct KSrvRespFileIterator {
 /********************************** Stack *********************************/
 
 static void StackPrintInput ( const char * input ) {
-    DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-        ( "Parsing \"%s\"\n", input ) );
+    if (THRESHOLD > THRESHOLD_ERROR)
+        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+            ( "Parsing \"%s\"\n", input ) );
 }
 
 static
@@ -183,6 +190,9 @@ void StackPrint ( const Stack * self, const char * msg, bool eol )
 
     assert ( self );
     assert ( msg || ! eol );
+
+    if (THRESHOLD <= THRESHOLD_ERROR)
+        return;
 
     DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ), ( "\"/" ) );
 
@@ -213,8 +223,9 @@ static void StackPrintInt
     ( const Stack * self, const char * name, int64_t val )
 {
     StackPrint ( self, NULL, false );
-    DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-        ( "/%s\" = %d\n", name, val ) );
+    if (THRESHOLD > THRESHOLD_ERROR)
+        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+            ( "/%s\" = %d\n", name, val ) );
 }
 
 #ifdef DEBUG_JSON
@@ -222,16 +233,18 @@ static void StackPrintBul
     ( const Stack * self, const char * name, bool val )
 {
     StackPrint ( self, NULL, false );
-    DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-        ( "/%s\" = %s\n", name, val ? "true" : "false" ) );
+    if (THRESHOLD > THRESHOLD_ERROR)
+        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+            ( "/%s\" = %s\n", name, val ? "true" : "false" ) );
 }
 
 static void StackPrintStr
     ( const Stack * self, const char * name, const char * val )
 {
     StackPrint ( self, NULL, false );
-    DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-        ( "/%s\" = \"%s\"\n", name, val ) );
+    if (THRESHOLD > THRESHOLD_ERROR)
+        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+            ( "/%s\" = \"%s\"\n", name, val ) );
 }
 #endif
 
@@ -319,7 +332,9 @@ static rc_t StackArrNext ( Stack * self ) {
     assert ( self && self -> i > 0 );
     assert ( self -> nodes [ self -> i - 1 ] . level >= 0 );
 
+    StackPrintEnd(self);
     ++ self -> nodes [ self -> i - 1 ] . level;
+    StackPrintBegin(self);
 
     return 0;
 }
@@ -491,6 +506,7 @@ static rc_t ItemRelease ( Item * self ) {
     free ( self -> elm );
     free ( self -> name );
     free ( self -> tic );
+    free(self->itemClass);
 
     memset ( self, 0, sizeof * self );
 
@@ -595,14 +611,18 @@ static rc_t ItemAddFormat ( Item * self, const char * cType,
         elm -> type = type;
     }
     * added = & self -> elm [ idx ];
-    if ( self -> acc != NULL )
-        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-            ( "Item '%s': added file '%s'\n", self -> acc,
-              ( * added ) -> cType ) );
-    else
-        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-            ( "Item %u: added file '%s'\n", self -> id,
-              ( * added ) -> cType ) );
+
+    if (THRESHOLD > THRESHOLD_ERROR) {
+        if ( self -> acc != NULL )
+            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+                ( "Item '%s': added file '%s'\n", self -> acc,
+                  ( * added ) -> cType ) );
+        else
+            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+                ( "Item %u: added file '%s'\n", self -> id,
+                  ( * added ) -> cType ) );
+    }
+
     return 0;
 }
 
@@ -782,13 +802,33 @@ rc_t ContainerAdd ( Container * self, const char * acc, int64_t id,
             if ( item -> acc != NULL )
                 if ( strcmp ( item -> acc, acc ) == 0 ) {
                     * newItem = item;
+                    if (THRESHOLD > THRESHOLD_ERROR) {
+                        if (self->acc != NULL)
+                            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
+                                ("Container '%s': found '%s' item '%s'\n",
+                                    self->acc, item->itemClass, item->acc));
+                        else
+                            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
+                                ("Container %u: found '%s' item '%s'\n",
+                                    self->id, item->itemClass, item->acc));
+                    }
                     return 0;
                 }
         }
         else {
             if ( item -> id != 0 )
-                if ( item -> id == id )
+                if (item->id == id) {
+                    *newItem = item;
+                    if (self->acc != NULL)
+                        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
+                            ("Container '%s': added '%s' item %u\n",
+                                self->acc, item->itemClass, item->id));
+                    else
+                        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
+                            ("Container %u: added '%s' item %u\n",
+                                self->id, item->itemClass, item->id));
                     return 0;
+                }
         }
     }
 
@@ -811,7 +851,7 @@ rc_t ContainerAdd ( Container * self, const char * acc, int64_t id,
     memset ( item, 0, sizeof * item );
 
     if ( acc != NULL ) {
-        item -> acc = strdup ( acc );
+        item -> acc = string_dup_measure( acc, NULL);
         if ( item -> acc == NULL )
             return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
     }
@@ -819,37 +859,45 @@ rc_t ContainerAdd ( Container * self, const char * acc, int64_t id,
         item -> id = id;
 
     if ( name != NULL ) {
-        item -> name = strdup ( name );
+        item -> name = string_dup_measure( name, NULL);
         if ( item -> name == NULL )
             return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
     }
 
     if ( tic != NULL ) {
-        item -> tic = strdup ( tic );
+        item -> tic = string_dup_measure( tic, NULL);
         if ( item -> tic == NULL )
             return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
     }
 
+    if (data != NULL && data->cls != NULL) {
+        item->itemClass = string_dup_measure(data->cls, NULL);
+        if (item->itemClass == NULL)
+            return RC(rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted);
+    }
+
     * newItem = item;
 
-    if ( self -> acc != NULL )
-        if ( item -> acc != NULL )
-            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-                ( "Container '%s': added item '%s'\n",
-                  self -> acc, item -> acc ) );
+    if (THRESHOLD > THRESHOLD_ERROR) {
+        if (self->acc != NULL)
+            if (item->acc != NULL)
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
+                    ("Container '%s': added '%s' item '%s'\n",
+                        self->acc, item->itemClass, item->acc));
+            else
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
+                    ("Container '%s': added '%s' item %u\n",
+                        self->acc, item->itemClass, item->id));
         else
-            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-                ( "Container '%s': added item %u\n",
-                  self -> acc, item -> id ) );
-    else
-        if ( item -> acc != NULL )
-            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-                ( "Container %u: added item '%s'\n",
-                  self -> id, item -> acc ) );
-        else
-            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-                ( "Container %u: added item %u\n",
-                  self -> id, item -> id ) );
+            if (item->acc != NULL)
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
+                    ("Container %u: added '%s' item '%s'\n",
+                        self->id, item->itemClass, item->acc));
+            else
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
+                    ("Container %u: added '%s' item %u\n",
+                        self->id, item->itemClass, item->id));
+    }
 
     return 0;
 }
@@ -969,17 +1017,19 @@ rc_t Response4AddAccOrId ( Response4 * self, const char * acc,
     memset ( item, 0, sizeof * item );
 
     if ( acc != NULL ) {
-        item -> acc = strdup ( acc );
+        item -> acc = string_dup_measure( acc, NULL);
         if ( item -> acc == NULL )
             return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
-        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-            ( "Added to response: container '%s'\n", item -> acc ) );
+        if (THRESHOLD > THRESHOLD_ERROR)
+            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+                ( "Added to response: container '%s'\n", item -> acc ) );
     }
     else {
         assert ( id >= 0 );
         item -> id = id;
-        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-            ( "Added to response: container %u\n", item -> id ) );
+        if (THRESHOLD > THRESHOLD_ERROR)
+            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+                ( "Added to response: container %u\n", item -> id ) );
     }
 
     * newItem = item;
@@ -1258,8 +1308,9 @@ static rc_t StatusSet
         return rc;
     value = KJsonObjectGetMember ( node, name );
     if ( value == NULL ) {
-        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-            ( "... error: cannot find '%s'\n", name ) );
+        if (THRESHOLD > THRESHOLD_NO_DEBUG)
+            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+                ( "... error: cannot find '%s'\n", name ) );
         return RC ( rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete );
     }
     rc = StackPushObj ( path, name );
@@ -1274,8 +1325,9 @@ static rc_t StatusSet
         value = KJsonObjectGetMember ( object, name );
         if ( value == NULL ) {
             rc = RC ( rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete );
-            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-                ( "... error: cannot find 'status/code'\n" ) );
+            if (THRESHOLD > THRESHOLD_NO_DEBUG)
+                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+                    ( "... error: cannot find 'status/code'\n" ) );
         }
     }
 
@@ -1355,8 +1407,9 @@ static rc_t LocationsAddLink ( Locations * self, const KJsonValue * node,
                                 dad -> mod, hasMd5 ? md5 : NULL, 0 );
     }
     if ( rc != 0 ) {
-        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-            ( "... error: invalid 'link': '%s'\n", * value ) );
+        if (THRESHOLD > THRESHOLD_NO_DEBUG)
+            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+                ( "... error: invalid 'link': '%s'\n", * value ) );
         return rc;
     }
 
@@ -1393,8 +1446,10 @@ static rc_t LocationsAddLinks ( Locations * self, const KJsonObject * node,
         const char * cValue = NULL;
         rc = LocationsAddLink ( self, value, & data, & cValue );
         if ( rc == 0 ) {
-            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-                ( "File '%s': added 'link' = '%s'\n", self -> cType, cValue ) );
+            if (THRESHOLD > THRESHOLD_ERROR)
+                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+                    ( "File '%s': added 'link' = '%s'\n",
+                              self -> cType, cValue ) );
             added = true;
         }
     }
@@ -1445,8 +1500,9 @@ static rc_t LocationsAddLinks ( Locations * self, const KJsonObject * node,
             error = "error";
             rc = RC ( rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete );
         }
-        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-            ( "... %s: cannot find any link\n", error ) );
+        if (THRESHOLD > THRESHOLD_NO_DEBUG)
+            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+                ( "... %s: cannot find any link\n", error ) );
     }
 
     return rc;
@@ -1563,16 +1619,18 @@ static rc_t ItemAddElms ( Item * self, const KJsonObject * node,
             Locations * elm = NULL;
             rc = ItemAddFormat ( self, format, & elm );
             if ( rc == 0 && elm != NULL ) {
-                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-                    ( "Adding links to a file...\n" ) );
+                if (THRESHOLD > THRESHOLD_ERROR)
+                    DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+                        ( "Adding links to a file...\n" ) );
                 rc = LocationsAddLinks ( elm, node, & data, path );
             }
         }
 
         else {
             rc = RC ( rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete );
-            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-                ( "... error: file 'format' was not set\n" ) );
+            if (THRESHOLD > THRESHOLD_NO_DEBUG)
+                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+                    ( "... error: file 'format' was not set\n" ) );
         }
     }
 
@@ -1608,12 +1666,14 @@ static rc_t ContainerAddItem ( Container * self, const KJsonObject * node,
     rc = ContainerAdd ( self, acc, id, & item, & data );
 
     if ( rc == 0 && item != NULL ) {
-        if ( item -> acc != NULL )
-            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-                ( "Adding files to item '%s'...\n", item -> acc ) );
-        else
-            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-                ( "Adding files to item %u...\n", item -> id ) );
+        if (THRESHOLD > THRESHOLD_ERROR) {
+            if (item->acc != NULL)
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), ("Adding files to '%s' "
+                    "item '%s'...\n", item->itemClass, item->acc));
+            else
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), ("Adding files to '%s' "
+                    "item %u...\n", item->itemClass, item->id));
+        }
         rc = ItemAddElms ( item, node, & data, path );
     }
 
@@ -1645,8 +1705,9 @@ static rc_t Response4AddItems ( Response4 * self, Container * aBox,
         rc = Response4AddAccOrId ( self, acc, id, & box );
         if ( box == NULL ) {
             if ( acc == NULL && id < 0 )
-                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-                    ( "... error: cannot find any 'acc' or 'id'\n" ) );
+                if (THRESHOLD > THRESHOLD_NO_DEBUG)
+                    DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+                        ( "... error: cannot find any 'acc' or 'id'\n" ) );
             return rc;
         }
         rc = StatusSet ( & box -> status, node, path );
@@ -1665,14 +1726,16 @@ static rc_t Response4AddItems ( Response4 * self, Container * aBox,
                                     || strcmp ( data .cls, "file" ) == 0 ) )
         || value != NULL )
     {
-        if ( box -> acc != NULL )
-            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-                ( "Adding a '%s' item to container '%s'...\n",
-                  data . cls, box -> acc ) );
-        else
-            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-                ( "Adding a '%s' item to container %u...\n",
-                  data . cls, box -> id ) );
+        if (THRESHOLD > THRESHOLD_ERROR) {
+            if (box->acc != NULL)
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
+                    ("Adding a '%s' item to container '%s'...\n",
+                        data.cls, box->acc));
+            else
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
+                    ("Adding a '%s' item to container %u...\n",
+                        data.cls, box->id));
+        }
         rc = ContainerAddItem ( box, node, & data, path );
     }
     else {
@@ -1718,8 +1781,9 @@ static rc_t Response4AddItems ( Response4 * self, Container * aBox,
       && box -> status . code == 200 && box -> nFiles == 0 )
     {
         rc = RC ( rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete );
-        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-            ( "... error: cannot find any container\n" ) );
+        if (THRESHOLD > THRESHOLD_NO_DEBUG)
+            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+                ( "... error: cannot find any container\n" ) );
     }
 
     return rc;
@@ -1727,6 +1791,7 @@ static rc_t Response4AddItems ( Response4 * self, Container * aBox,
 
 /* Add response document */
 static rc_t Response4Init ( Response4 * self, const char * input ) {
+    rc_t rc = 0;
     char error [ 99 ] = "";
     rc_t r2 = 0;
 
@@ -1742,10 +1807,11 @@ static rc_t Response4Init ( Response4 * self, const char * input ) {
 
     StackPrintInput ( input );
 
-    rc_t rc = KJsonValueMake ( & root, input, error, sizeof error );
+    rc = KJsonValueMake ( & root, input, error, sizeof error );
     if ( rc != 0 ) {
-        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-            ( "... error: invalid JSON\n" ) );
+        if (THRESHOLD > THRESHOLD_NO_DEBUG)
+            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+                ( "... error: invalid JSON\n" ) );
         return rc;
     }
 
@@ -1753,19 +1819,20 @@ static rc_t Response4Init ( Response4 * self, const char * input ) {
 
     memset ( self, 0, sizeof * self );
 
+    rc = StackInit(&path);
+    if (rc != 0)
+        return rc;
+
     object = KJsonValueToObject ( root );
 
     DataUpdate ( NULL, & data, object, & path );
 
-    rc = StackInit ( & path );
-    if ( rc != 0 )
-        return rc;
-
     value = KJsonObjectGetMember ( object, name );
     if ( value == NULL ) {
         rc = RC ( rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete );
-        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-            ( "... error: cannot find '%s'\n", name ) );
+        if (THRESHOLD > THRESHOLD_NO_DEBUG)
+            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+                ( "... error: cannot find '%s'\n", name ) );
     }
     else {
         const KJsonArray * array = KJsonValueToArray ( value );
@@ -1780,8 +1847,9 @@ static rc_t Response4Init ( Response4 * self, const char * input ) {
 
             if ( n == 0 ) {
                 rc = RC ( rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete );
-                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-                    ( "... error: '%s' is empty\n", name ) );
+                if (THRESHOLD > THRESHOLD_NO_DEBUG)
+                    DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
+                        ( "... error: '%s' is empty\n", name ) );
             }
             else {
                 uint32_t i = 0;
@@ -1819,11 +1887,31 @@ static rc_t Response4Init ( Response4 * self, const char * input ) {
 }
 
 rc_t Response4MakeEmpty ( Response4 ** self ) {
+    const char * env = NULL;
+
     assert ( self );
 
     * self = ( Response4 * ) calloc ( 1, sizeof ** self );
     if ( * self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
+
+    env = getenv("NCBI_VDB_JSON");
+
+    if (env != NULL) {
+        int NCBI_VDB_JSON = 0;
+
+        for (; *env != '\0'; ++env) {
+            char c = *env;
+            if (c < '0' || c > '9')
+                break;
+
+            NCBI_VDB_JSON = NCBI_VDB_JSON * 10 + c - '0';
+        }
+
+        THRESHOLD = NCBI_VDB_JSON;
+    }
+    else
+        THRESHOLD = THRESHOLD_ERROR;
 
     return 0;
 }
@@ -1986,6 +2074,17 @@ rc_t KSrvRespObjRelease ( const KSrvRespObj * cself ) {
     free ( self );
 
     return rc;
+}
+
+rc_t KSrvRespObjGetAccOrId(const KSrvRespObj * self,
+    const char ** acc, uint32_t * id)
+{
+    assert( self && self ->obj && acc && id );
+
+    *acc = self->obj->acc;
+    *id = self->obj->id;
+
+    return 0;
 }
 
 rc_t KSrvRespObjGetFileCount ( const KSrvRespObj * self,
@@ -2158,13 +2257,36 @@ rc_t KSrvRespFileGetFormat ( const KSrvRespFile * self,
     return 0;
 }
 
+rc_t KSrvRespFileGetClass(const KSrvRespFile * self, const char ** itemClass) {
+    assert(self && self->item && itemClass);
+
+    *itemClass = self->item->itemClass;
+
+    return 0;
+}
+
+rc_t KSrvRespFileGetAccOrId(const KSrvRespFile * self,
+    const char ** acc, uint32_t * id)
+{
+    assert(self && self -> item && acc && id);
+
+    *acc = self->item->acc;
+    *id = self->item->id;
+
+    return 0;
+}
+
 rc_t KSrvRespFileGetAcc ( const KSrvRespFile * self, const char ** acc,
                                                 const char ** tic)
 {
     assert ( self && self -> item && acc && tic );
 
     * tic = self -> item -> tic;
-    * acc = self -> item -> acc;
+
+    if ( self -> item -> name != NULL )
+        * acc = self -> item -> name;
+    else
+        * acc = self -> item -> acc;
 
     return 0;
 }
