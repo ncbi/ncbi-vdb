@@ -326,7 +326,7 @@ typedef struct {
     char * objectId;
     EObjectType objectType;
     bool isUri;
-    int ordId;
+    uint32_t ordId;
 } SObject;
 
 
@@ -365,6 +365,7 @@ typedef struct {
     STickets tickets;
     int errorsToIgnore;
     VRemoteProtocols protocols;
+    char * format;
     bool hasQuery;
 } SRequest;
 
@@ -391,7 +392,7 @@ static rc_t SHelperInit ( SHelper * self, const KNSManager * kMgr ) {
     memset ( self, 0, sizeof * self );
 
     self -> inSz = 512;
-    self -> input = malloc ( self -> inSz );
+    self -> input = (char *) malloc ( self -> inSz );
 
     if ( self -> input == NULL )
         return RC ( rcVFS, rcStorage, rcAllocating, rcMemory, rcExhausted );
@@ -478,7 +479,7 @@ static VRemoteProtocols SHelperDefaultProtocols ( SHelper * self ) {
 /* try to get cgi from kfg, otherwise use hardcoded */
 static
 rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
-    char * buffer, size_t bsize )
+    char * buffer, size_t bsize, const char * aCgi, const SVersion * version )
 {
     const char man [] = "/repository/remote/main/CGI/resolver-cgi";
     const char prt [] = "/repository/remote/protected/CGI/resolver-cgi";
@@ -486,9 +487,9 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
     
     rc_t rc = 0;
     const char * path = aProtected ? prt : man;
-    assert ( self );
+    assert ( self && version );
     rc = SHelperInitKfg ( self );
-    if ( rc == 0 ) {
+    if ( rc == 0 && aCgi == NULL ) {
         size_t num_read = 0;
         rc = KConfigRead ( self -> kfg, path, 0, buffer, bsize,
                            & num_read, NULL );
@@ -500,6 +501,13 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
                             rcInsufficient );
             string_copy ( buffer, bsize, cgi, sizeof cgi );
         }
+    }
+    else
+        string_copy_measure ( buffer, bsize, aCgi );
+    if ( rc == 0 && version -> major < 4 &&
+         strcmp ( buffer, "https://sponomar.ncbi.nlm.nih.gov/Traces/sdl_test/4.0/retrieve" ) == 0 )
+    {
+        string_copy ( buffer, bsize, cgi, sizeof cgi );
     }
     return rc;
 }
@@ -1153,7 +1161,7 @@ static int getDigit ( char c, rc_t * rc ) {
 
 
 static rc_t md5Init ( void * p, const String * src ) {
-    SMd5 * md5 = p;
+    SMd5 * md5 = (SMd5 *) p;
 
     assert ( src && src -> addr && md5 );
 
@@ -1171,7 +1179,7 @@ static rc_t md5Init ( void * p, const String * src ) {
                 md5 -> md5 [ i ] += getDigit ( src -> addr [ 2 * i + 1 ],
                                                                          & rc );
             }
-	        md5 -> has_md5 = rc == 0;
+            md5 -> has_md5 = rc == 0;
             return rc;
         }
         default:
@@ -1551,7 +1559,7 @@ static bool VPathMakeOrNot ( VPath ** new_path, const String * src,
         * rc = VPathMakeFromUrl ( new_path, src, ticket, ext, id,
             typed -> osize,
             useDates ? typed -> date : 0,
-			typed -> md5 . has_md5 ? typed -> md5 . md5 : NULL,
+            typed -> md5 . has_md5 ? typed -> md5 . md5 : NULL,
             useDates ? typed -> expiration : 0 );
         if ( * rc == 0 )
             VPathMarkHighReliability ( * new_path, true );
@@ -1570,7 +1578,7 @@ static rc_t EVPathInitMapping
     if ( self -> https == NULL && self -> http == NULL && self -> fasp == NULL )
         return 0;
     vsrc = self -> http ? self -> http 
-	    : ( self -> https ? self -> https : self -> fasp );
+        : ( self -> https ? self -> https : self -> fasp );
     rc = VPathCheckFromNamesCGI ( vsrc, & src -> ticket,
         ( const struct VPath ** ) ( & self -> mapping ) );
     if ( rc == 0) {
@@ -1715,7 +1723,7 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
         rc = RC ( rcVFS, rcQuery, rcResolving, rcError, rcUnexpected );
         break;
 
-	  case 3:
+      case 3:
         /* redirection
            currently this is being handled by our request object */
         rc = RC ( rcVFS, rcQuery, rcResolving, rcError, rcUnexpected );
@@ -1959,7 +1967,7 @@ static rc_t STimestampInitCurrent ( STimestamp * self ) {
 
     if ( self -> time != 0 ) {
         const size_t s = 32;
-        self -> raw . s = calloc ( 1, s );
+        self -> raw . s = (char *) calloc ( 1, s );
         if ( self -> raw . s == NULL )
             return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
         else {
@@ -2375,7 +2383,7 @@ static rc_t SRequestDataInit ( SRequestData * self ) {
 
     self -> allocated = 512;
 
-    self -> object = calloc ( self -> allocated, sizeof * self -> object );
+    self -> object = (SObject *) calloc ( self -> allocated, sizeof * self -> object );
     if ( self -> object == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
 
@@ -2411,7 +2419,7 @@ rc_t SRequestDataAppendObject ( SRequestData * self, const char * id,
         if ( t == NULL )
             return RC ( rcVFS, rcQuery, rcExecuting, rcItem, rcExcessive );
         else {
-            self -> object = t;
+            self -> object = (SObject *) t;
             self -> allocated = n;
         }
     }
@@ -2438,7 +2446,7 @@ rc_t SRequestDataAppendObject ( SRequestData * self, const char * id,
 
 /* BSTItem ********************************************************************/
 static int64_t CC BSTItemCmp ( const void * item, const BSTNode * n ) {
-    const String * s = item;
+    const String * s = (String *) item;
     const BSTItem * i = ( BSTItem * ) n;
 
     assert ( s && i );
@@ -2493,7 +2501,7 @@ static rc_t STicketsAppend ( STickets * self, uint32_t project,
         if ( i != NULL )
             return 0;
 
-        i = calloc ( 1, sizeof * i );
+        i = (BSTItem *) calloc ( 1, sizeof * i );
         if ( i != NULL )
             i -> ticket = string_dup_measure ( ticket, NULL );
         if ( i == NULL || i -> ticket == NULL ) {
@@ -2723,13 +2731,21 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( 
         "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n" ) );
 
+    rc = SVersionFini ( & request -> version );
+    if ( rc != 0 )
+        return rc;
+
+    rc = SVersionInit ( & request -> version, version, eSTnames, NULL );
+    if ( rc != 0 )
+        return rc;
+
     if ( self -> cgi == NULL ) {
         char buffer [ 1024 ] = "";
-        if ( cgi == NULL ) {
+  //    if ( cgi == NULL ) {
             rc = SHelperResolverCgi ( helper, aProtected,
-                                       buffer, sizeof buffer );
+                buffer, sizeof buffer, cgi, & request -> version );
             cgi = buffer;
-        }
+   //   }
         rc = SCgiRequestInitCgi ( self, cgi );
     }
 
@@ -2912,6 +2928,42 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
             return rc;
         }
     }
+/*  {
+        const char n [] = "location";
+        const char v [] = "sra-ncbi.public";
+        rc = SKVMake ( & kv, n, v );
+        if ( rc == 0 ) {
+                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
+                    ( "  %s=%s\n", n, v ) );
+            rc = VectorAppend ( & self -> params, NULL, kv );
+        }
+        if ( rc != 0 )
+            return rc;
+    }
+    {
+        const char n [] = "retmode";
+        const char v [] = "json";
+        rc = SKVMake ( & kv, n, v );
+        if ( rc == 0 ) {
+                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
+                    ( "  %s=%s\n", n, v ) );
+            rc = VectorAppend ( & self -> params, NULL, kv );
+        }
+        if ( rc != 0 )
+            return rc;
+    }*/
+    if ( request ->format != NULL ) {
+        const char n [] = "type";
+        const char * v = request->format;
+        rc = SKVMake ( & kv, n, v );
+        if ( rc == 0 ) {
+                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
+                    ( "  %s=%s\n", n, v ) );
+            rc = VectorAppend ( & self -> params, NULL, kv );
+        }
+        if ( rc != 0 )
+            return rc;
+    }
     return rc;
 }
 
@@ -3062,6 +3114,21 @@ rc_t KServiceAddProject ( KService * self, uint32_t project ) {
     assert ( ticket_size <= sizeof buffer );
 
     return SRequestAddTicket ( & self -> req, project, buffer );
+}
+
+/* Set accept-format-in of service request */
+rc_t KServiceSetFormat(KService * self, const char * format) {
+    assert(self && format);
+
+    free( self -> req . format );
+
+    self->req.format = NULL;
+
+    self->req.format = string_dup_measure(format, NULL);
+    if (self->req.format == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted);
+    else
+        return 0;
 }
 
 
@@ -3279,7 +3346,8 @@ rc_t KServiceProcessLine ( KService * self,
 /* SRA-5283 VDB-3423: names.cgi version 3.0 incorrectly returns
            2 rows for filtered runs instead of 1: here we compensate this bug */
                         const KSrvError * error = NULL;
-                        SRow * prev = VectorGet ( & self -> resp . rows, 0 );
+                        SRow * prev
+                            = (SRow *) VectorGet ( & self -> resp . rows, 0 );
                         assert ( prev );
                         error = row -> path . error;
                         if ( error != NULL && 
@@ -3372,7 +3440,7 @@ rc_t KServiceProcessStreamAll ( KService * self, KStream * stream )
                 return RC
                     ( rcVFS, rcStorage, rcAllocating, rcMemory, rcExhausted );
             else
-                self -> helper . input = tmp;
+                self -> helper . input = (char *) tmp;
             sizeW = self -> helper . inSz - inSz;
         }
         buffer = self -> helper . input;
@@ -3396,7 +3464,7 @@ rc_t KServiceProcessStreamAll ( KService * self, KStream * stream )
                 return RC
                     ( rcVFS, rcStorage, rcAllocating, rcMemory, rcExhausted );
             else
-                self -> helper . input = tmp;
+                self -> helper . input = (char *) tmp;
         }
         buffer = self -> helper . input;
         buffer [ offW ] = '\0';
@@ -3767,7 +3835,7 @@ rc_t KServiceNamesExecuteExtImpl ( KService * self, VRemoteProtocols protocols,
          return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
 
     if ( version == NULL )
-        version = "#3.0";
+        version = "4.";
 
     rc = KServiceInitNamesRequestWithVersion ( self, protocols, cgi, version,
         false, expected == NULL );
