@@ -96,6 +96,7 @@ struct TableWriterSeq {
     int64_t tmpKeyIdLast;
     TableWriterColumn cols[sizeof(TableWriterSeq_cols)/sizeof(TableWriterSeq_cols[0])];
     TableWriterColumn cols_alignd[2];
+    TableWriterColumn cols_compress[1];
     TableReaderColumn cols_read[5];
     unsigned options;
     unsigned init; /* default written indicator */
@@ -478,8 +479,8 @@ static rc_t CompressREAD(TableWriterSeq *const self, int64_t *const buffer)
     if (notSavingRead) {
         static TableWriterData const d = { "", 0 };
 
-        self->cols[0] = TableWriterSeq_cols[0];
-        rc = TableWriter_AddCursor(self->base, self->cols, 1, &cursor_id);
+        self->cols_compress[0] = TableWriterSeq_cols[0];
+        rc = TableWriter_AddCursor(self->base, self->cols_compress, 1, &cursor_id);
         assert(rc == 0);
         TW_COL_WRITE_DEF(self->base, cursor_id, self->cols[0], d);
         for (row = 1; ; ++row) {
