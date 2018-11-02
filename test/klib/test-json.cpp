@@ -403,6 +403,11 @@ FIXTURE_TEST_CASE(KJson_Parse_Object, KJsonFixture)
     REQUIRE_RC ( Parse ( & m_val, "{\"name1\":\"value\", \"name2\":\":value\"}" ) );
     REQUIRE_NOT_NULL ( m_val );
 }
+FIXTURE_TEST_CASE(KJson_Parse_Object_SimilarNames, KJsonFixture)
+{   // VDB-3660: { "xxA":..., "xx":...} fails
+    REQUIRE_RC ( Parse ( & m_val, "{\"nameA\":\"value\", \"name\":\":value\"}" ) );
+    REQUIRE_NOT_NULL ( m_val );
+}
 FIXTURE_TEST_CASE(KJson_Parse_Object_DuplicateName_ErrorReporting, KJsonFixture)
 {
     string expectedStart = "line 1, col 33: RC("; // in debug build, this is followed by source code location
