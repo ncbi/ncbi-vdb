@@ -468,6 +468,15 @@ rc_t tlsg_setup ( KTLSGlobals * self )
     return 0;
 }
 
+/* threshold
+   theshold level of messages to filter on.
+   Messages at a higher level will be discarded.
+  Debug levels
+	0 No debug
+	1 Error
+	2 State change
+	3 Informational
+	4 Verbose */
 static int set_threshold ( const KConfig * kfg ) {
     bool set = false;
 
