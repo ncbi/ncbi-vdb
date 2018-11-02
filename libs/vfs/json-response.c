@@ -62,9 +62,8 @@ typedef struct {
 typedef struct {
     ESrvFileFormat type;
     char * cType;
-    const VPath * fasp  [ MAX_PATHS ];
-    const VPath * http  [ MAX_PATHS ];
-    const VPath * https [ MAX_PATHS ];
+
+    const VPath * path [ MAX_PATHS ];
 
     const VPath * local;
     rc_t localRc;
@@ -87,6 +86,7 @@ struct Item { /* Run ob dbGaP file */
 
 typedef struct {
     int64_t code;
+    char * msg;
 } Status;
 
 /* Corresponds to a request item, resolved to 1 or more Items (runs) */
@@ -96,6 +96,7 @@ struct Container {
     uint32_t id;
     Item * files;
     uint32_t nFiles;
+    rc_t rc;
 };
 
 struct Response4 { /* Response object */
@@ -237,16 +238,16 @@ static void StackPrintBul
         DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
             ( "/%s\" = %s\n", name, val ? "true" : "false" ) );
 }
+#endif
 
 static void StackPrintStr
-    ( const Stack * self, const char * name, const char * val )
+    (const Stack * self, const char * name, const char * val)
 {
-    StackPrint ( self, NULL, false );
+    StackPrint(self, NULL, false);
     if (THRESHOLD > THRESHOLD_ERROR)
-        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-            ( "/%s\" = \"%s\"\n", name, val ) );
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
+            ("/%s\" = \"%s\"\n", name, val));
 }
-#endif
 
 static rc_t StackRelease ( Stack * self, bool failed ) {
     assert ( self );
@@ -343,31 +344,19 @@ static rc_t StackArrNext ( Stack * self ) {
 
 static rc_t LocationsRelease ( Locations * self ) {
 
-#define TYPES_OF_SCHEMAS 3
+#define TYPES_OF_SCHEMAS 1
 
     rc_t rc = 0;
 
-    int i = 0, j = 0;
+    int i = 0;
 
     if ( self == NULL )
         return 0;
 
-    for ( j = 0; j < TYPES_OF_SCHEMAS; ++ j ) {
-        const VPath ** p = NULL;
-        switch ( j ) {
-            case 0: p = self -> fasp ; break;
-            case 1: p = self -> http ; break;
-            case 2: p = self -> https; break;
-            default: assert ( 0 );
-        }
-
-        assert ( p );
-
-        for ( i = 0; i < MAX_PATHS; ++ i ) {
-            if ( p [ i ] == NULL )
-                break;
-            RELEASE ( VPath, p [ i ] );
-        }
+    for ( i = 0; i < MAX_PATHS; ++ i ) {
+        if ( self -> path [ i ] == NULL )
+            break;
+        RELEASE ( VPath, self->path[ i ] );
     }
 
     RELEASE ( VPath, self -> local );
@@ -381,27 +370,15 @@ static rc_t LocationsRelease ( Locations * self ) {
 }
 
 static bool LocationsEmpty ( const Locations * self ) {
-    int i = 0, j = 0;
+    int i = 0;
 
     if ( self == NULL )
         return true;
 
-    for ( j = 0; j < TYPES_OF_SCHEMAS; ++ j ) {
-        const VPath ** p = NULL;
-        switch ( j ) {
-            case 0: p = ( const VPath** ) self -> fasp ; break;
-            case 1: p = ( const VPath** ) self -> http ; break;
-            case 2: p = ( const VPath** ) self -> https; break;
-            default: assert ( 0 );
-        }
-
-        assert ( p );
-
-        for ( i = 0; i < MAX_PATHS; ++ i ) {
-            if ( p [ i ] == NULL )
-                break;
-            return false;
-        }
+    for ( i = 0; i < MAX_PATHS; ++ i ) {
+        if (self->path [ i ] == NULL )
+            break;
+        return false;
     }
 
     return true;
@@ -412,7 +389,6 @@ static rc_t LocationsAddVPath ( Locations * self, const VPath * path ) {
 
     int i = 0;
     char scheme [ 6 ] = "";
-    const VPath ** p = NULL;
 
     if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
@@ -424,24 +400,13 @@ static rc_t LocationsAddVPath ( Locations * self, const VPath * path ) {
     if ( rc != 0 )
         return rc;
 
-    if      ( strcmp ( scheme, "https" ) == 0 )
-        p = self -> https;
-    else if ( strcmp ( scheme, "fasp"  ) == 0 )
-        p = self -> fasp;
-    else if ( strcmp ( scheme, "http"  ) == 0 )
-        p = self -> http;
-    else
-        return 0;
-
-    assert ( p );
-
     for ( i = 0; i < MAX_PATHS; ++ i ) {
-        if ( p [ i ] == NULL ) {
+        if ( self -> path [ i ] == NULL ) {
             rc_t rc = VPathAddRef ( path );
             if ( rc != 0 )
                 return rc;
 
-            p [ i ] = path;
+            self -> path [ i ] = path;
 
             return 0;
         }
@@ -749,6 +714,96 @@ static rc_t ItemAddVbdcache ( Item * self, const VPath * path ) {
     return ItemAdd ( self, path, eVdbcache, "vdbcache" );
 }*/
 
+/******************************** Status **************************************/
+
+static
+rc_t StatusInit(Status * self, int64_t code, const char * msg)
+{
+    assert(self);
+
+    self->code = code;
+
+    self->msg = string_dup_measure(msg, NULL);
+    if (self->msg == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted);
+    return 0;
+}
+
+static rc_t StatusFini(Status * self) {
+    assert(self);
+    free(self->msg);
+    memset(self, 0, sizeof * self);
+    return 0;
+}
+
+static rc_t StatusSet
+(Status * self, const KJsonObject * node, Stack * path)
+{
+    rc_t rc = 0;
+
+    const KJsonValue * value = NULL;
+    const KJsonObject * object = NULL;;
+    int64_t code = -1;
+    const char * msg = NULL;
+    const char * name = "status";
+    assert(self);
+    StatusInit(self, -1, NULL);
+    if (node == NULL)
+        return rc;
+    value = KJsonObjectGetMember(node, name);
+    if (value == NULL) {
+        if (THRESHOLD > THRESHOLD_NO_DEBUG)
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
+            ("... error: cannot find '%s'\n", name));
+        return RC(rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete);
+    }
+    rc = StackPushObj(path, name);
+    if (rc != 0)
+        return rc;
+    object = KJsonValueToObject(value);
+    if (object == NULL)
+        rc = RC(rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete);
+
+    if (rc == 0) {
+        name = "code";
+        value = KJsonObjectGetMember(object, name);
+        if (value == NULL) {
+            rc = RC(rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete);
+            if (THRESHOLD > THRESHOLD_NO_DEBUG)
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
+                ("... error: cannot find 'status/code'\n"));
+        }
+
+        if (rc == 0)
+            rc = KJsonGetNumber(value, &code);
+        if (rc == 0)
+            StackPrintInt(path, name, code);
+    }
+
+    if (rc == 0) {
+        name = "msg";
+        value = KJsonObjectGetMember(object, name);
+        if (value == NULL) {
+            rc = RC(rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete);
+            if (THRESHOLD > THRESHOLD_NO_DEBUG)
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
+                ("... error: cannot find 'status/msg'\n"));
+        }
+
+        if (rc == 0)
+            rc = KJsonGetString(value, &msg);
+        if (rc == 0)
+            StackPrintStr(path, name, msg);
+    }
+
+    if (rc == 0)
+        StatusInit(self, code, msg);
+
+    StackPop(path);
+
+    return rc;
+}
+
 /********************************** Container *********************************/
 
 static rc_t ContainerRelease ( Container * self ) {
@@ -764,6 +819,8 @@ static rc_t ContainerRelease ( Container * self ) {
         assert ( item );
         RELEASE ( Item, item );
     }
+
+    StatusFini( & self -> status );
 
     free ( self -> files );
     free ( self -> acc );
@@ -1284,66 +1341,6 @@ static rc_t DataGetFormat ( const Data * data, const char ** format ) {
     return 0;
 }
 
-/******************************** Status **************************************/
-
-static
-void StatusInit ( Status * self, int64_t code, const char * msg )
-{
-    assert ( self );
-    self -> code = code;
-}
-
-static rc_t StatusSet
-    ( Status * self, const KJsonObject * node, Stack * path )
-{
-    rc_t rc = 0;
-
-    const KJsonValue * value = NULL;
-    const KJsonObject * object = NULL;;
-    int64_t code = -1;
-    const char * name = "status";
-    assert ( self );
-    StatusInit ( self, -1, NULL );
-    if ( node == NULL )
-        return rc;
-    value = KJsonObjectGetMember ( node, name );
-    if ( value == NULL ) {
-        if (THRESHOLD > THRESHOLD_NO_DEBUG)
-            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-                ( "... error: cannot find '%s'\n", name ) );
-        return RC ( rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete );
-    }
-    rc = StackPushObj ( path, name );
-    if ( rc != 0 )
-        return rc;
-    object = KJsonValueToObject ( value );
-    if ( object == NULL )
-        rc = RC ( rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete );
-
-    if ( rc == 0 ) {
-        name = "code";
-        value = KJsonObjectGetMember ( object, name );
-        if ( value == NULL ) {
-            rc = RC ( rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete );
-            if (THRESHOLD > THRESHOLD_NO_DEBUG)
-                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-                    ( "... error: cannot find 'status/code'\n" ) );
-        }
-    }
-
-    if ( rc == 0 ) {
-        rc = KJsonGetNumber ( value, & code );
-
-    if ( rc == 0 )
-        StackPrintInt ( path, name, code );
-        StatusInit ( self, code, NULL );
-    }
-
-    StackPop ( path );
-
-    return rc;
-}
-
 /********************************** Locations *********************************/
 
 /* "link" is found in JSON: add "link" to Elm (File) using Data from dad */
@@ -1406,6 +1403,8 @@ static rc_t LocationsAddLink ( Locations * self, const KJsonValue * node,
         rc = VPathMakeFromUrl ( & path, & url, & ticket, true, & acc, dad -> sz,
                                 dad -> mod, hasMd5 ? md5 : NULL, 0 );
     }
+    if ( rc == 0 )
+        VPathMarkHighReliability ( path, true );
     if ( rc != 0 ) {
         if (THRESHOLD > THRESHOLD_NO_DEBUG)
             DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
@@ -1521,12 +1520,8 @@ rc_t LocationsInitMapping ( Locations * self, const Item * item )
     if ( self -> mapping != NULL )
         return 0;
 
-    if ( self -> https [ 0 ] != NULL )
-        path = self -> https [ 0 ];
-    else if ( self -> http [ 0 ] != NULL )
-        path = self -> http [ 0 ];
-    else if ( self -> fasp [ 0 ] != NULL )
-        path = self -> fasp [ 0 ];
+    if ( self -> path [ 0 ] != NULL )
+        path = self -> path [ 0 ];
     else
         return 0;
 
@@ -1586,7 +1581,7 @@ static rc_t ItemAddElms ( Item * self, const KJsonObject * node,
         value = KJsonObjectGetMember ( node, name );
     }
 
-    if ( data . fmt == NULL && value != NULL ) {
+    if (format == NULL && value != NULL ) {
         uint32_t i = 0;
 
         const KJsonArray * array = KJsonValueToArray ( value );
@@ -1717,8 +1712,8 @@ static rc_t Response4AddItems ( Response4 * self, Container * aBox,
 
     assert ( box );
 
-    if ( rc == 0 && box -> status . code == 404 )
-        self -> rc = RC ( rcVFS, rcQuery, rcResolving, rcName, rcNotFound );
+    if (rc == 0 && box->status.code == 404)
+        box->rc = RC(rcVFS, rcQuery, rcResolving, rcName, rcNotFound);
 
     value = KJsonObjectGetMember ( node, "link" );
 
@@ -2087,6 +2082,18 @@ rc_t KSrvRespObjGetAccOrId(const KSrvRespObj * self,
     return 0;
 }
 
+rc_t KSrvRespObjGetError(const KSrvRespObj * self,
+                         rc_t * rc, int64_t * code, const char ** msg)
+{
+    assert(self && self->obj && rc && code && msg);
+
+    *rc = self->obj->rc;
+    *code = self->obj->status.code;
+    *msg = self->obj->status.msg;
+
+    return 0;
+}
+
 rc_t KSrvRespObjGetFileCount ( const KSrvRespObj * self,
                                uint32_t * aCount )
 {
@@ -2283,10 +2290,10 @@ rc_t KSrvRespFileGetAcc ( const KSrvRespFile * self, const char ** acc,
 
     * tic = self -> item -> tic;
 
-    if ( self -> item -> name != NULL )
+    *acc = self->item->acc;
+
+    if ( self -> item -> id <= 0 && self -> item -> name != NULL )
         * acc = self -> item -> name;
-    else
-        * acc = self -> item -> acc;
 
     return 0;
 }
@@ -2385,11 +2392,9 @@ rc_t KSrvRespFileGetMapping ( const KSrvRespFile * self,
 }
 
 rc_t KSrvRespFileMakeIterator ( const KSrvRespFile * self,
-    VRemoteProtocols protocols, KSrvRespFileIterator ** it )
+    KSrvRespFileIterator ** it )
 {
     rc_t rc = 0;
-
-    VRemoteProtocols protocol = protocols;
 
     const VPath * const  * path = NULL;
     KSrvRespFileIterator * p = NULL;
@@ -2402,23 +2407,7 @@ rc_t KSrvRespFileMakeIterator ( const KSrvRespFile * self,
     if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
 
-    if ( protocol == eProtocolDefault )
-        protocol = DEFAULT_PROTOCOLS;
-
-    assert ( protocol != 0 );
-
-    for ( ; protocol != 0; protocol >>= 3 ) {
-        switch ( protocol & eProtocolMask ) {
-            case eProtocolFasp : path = self -> file -> fasp ; break;
-            case eProtocolHttp : path = self -> file -> http ; break;
-            case eProtocolHttps: path = self -> file -> https; break;
-            default:
-                return RC ( rcVFS, rcQuery, rcExecuting, rcSchema, rcInvalid );
-        }
-        assert ( path );
-        if ( path [ 0 ] != NULL )
-            break;
-    }
+    path = self->file->path;
 
     assert ( path );
     if ( path [ 0 ] == NULL )

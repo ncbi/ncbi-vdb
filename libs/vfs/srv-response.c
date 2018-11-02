@@ -635,9 +635,114 @@ rc_t KSrvResponseGet
 }
 
 rc_t KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
-    VRemoteProtocols p, const VPath ** path, const VPath ** vdbcache,
+    VRemoteProtocols p, const VPath ** aPath, const VPath ** vdbcache,
     const KSrvError ** error )
 {
+    rc_t rc = 0;
+    const VPathSet * s = NULL;
+    const KSrvRespObj * obj = NULL;
+    bool has_proto[eProtocolMask + 1];
+    uint32_t i;
+    String fasp;
+    String http;
+    String https;
+    if (self == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
+    if (p == eProtocolDefault)
+        p = DEFAULT_PROTOCOLS;
+    if (aPath != NULL)
+        * aPath = NULL;
+    if (vdbcache != NULL)
+        * vdbcache = NULL;
+    if (error != NULL)
+        * error = NULL;
+    CONST_STRING(&fasp, "fasp");
+    CONST_STRING(&http, "http");
+    CONST_STRING(&https, "https");
+    memset(has_proto, 0, sizeof has_proto);
+    for (i = 0; i < eProtocolMaxPref; ++i)
+        has_proto[(p >> (i * 3)) & eProtocolMask] = true;
+    s = (VPathSet *)VectorGet(&self->list, idx);
+    if ( s != NULL ) {
+        if (s->error == NULL)
+            return VPathSetGet(s, p, aPath, vdbcache);
+        else {
+            if (error != NULL) {
+                rc_t rc = KSrvErrorAddRef(s->error);
+                if (rc == 0)
+                    * error = s->error;
+                return rc;
+            }
+            return RC(rcVFS, rcQuery, rcExecuting, rcError, rcExists);
+        }
+    }
+    else {
+        rc_t rx = 0;
+        int64_t code = 0;
+        const char * msg = NULL;
+        bool found = false;
+        rc = KSrvResponseGetObjByIdx(self, idx, &obj);
+        if (rc != 0)
+            return rc;
+        rc = KSrvRespObjGetError(obj, & rx, & code, & msg);
+        if (rx != 0) {
+            if (error == NULL)
+                return RC(rcVFS, rcQuery, rcExecuting, rcError, rcExists);
+            else
+                return KSrvErrorMake4(error, rx, code, msg);
+        }
+        else {
+            KSrvRespObjIterator * it = NULL;
+            rc = KSrvRespObjMakeIterator(obj, &it);
+            while (rc == 0) {
+                KSrvRespFile * file = NULL;
+                KSrvRespFileIterator * fi = NULL;
+                const VPath * path = NULL;
+                rc = KSrvRespObjIteratorNextFile(it, &file);
+                if (rc != 0 || file == NULL)
+                    break;
+                rc = KSrvRespFileMakeIterator(file, &fi);
+                if (rc == 0)
+                    rc = KSrvRespFileIteratorNextPath(fi, &path);
+                if (rc == 0)
+                    if (path != NULL) {
+                        String scheme;
+                        rc = VPathGetScheme(path, &scheme);
+                        if (rc == 0) {
+                            if (StringEqual(&scheme, &https)) {
+                                if (has_proto[eProtocolHttps]) {
+                                    *aPath = path;
+                                    found = true;
+                                }
+                            }
+                            else if (StringEqual(&scheme, &fasp)) {
+                                if (has_proto[eProtocolFasp]) {
+                                    *aPath = path;
+                                    found = true;
+                                }
+                            }
+                            else if (StringEqual(&scheme, &http)) {
+                                if (has_proto[eProtocolHttp]) {
+                                    *aPath = path;
+                                    found = true;
+                                }
+                            }
+                        }
+                    }
+                RELEASE(KSrvRespFileIterator, fi);
+                RELEASE(KSrvRespFile, file);
+                if (found)
+                    break;
+            }
+            RELEASE(KSrvRespObjIterator, it);
+        }
+        RELEASE(KSrvRespObj, obj);
+        if (!found)
+            rc = RC(rcVFS, rcPath, rcAccessing, rcItem, rcNotFound);
+
+        return rc;
+    }
+/*
     const VPathSet * s = NULL;
 
     if ( self == NULL )
@@ -669,6 +774,7 @@ rc_t KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
             return RC ( rcVFS, rcQuery, rcExecuting, rcError, rcExists );
         }
     }
+*/
 }
 
 static rc_t KSrvResponseGetFile ( const KSrvResponse * self, uint32_t idx,

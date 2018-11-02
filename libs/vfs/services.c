@@ -522,8 +522,7 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                                 }
                             }
                             if ( rc == 0 )
-                                rc = KSrvRespFileMakeIterator ( file, protocols,
-                                                                & fi );
+                                rc = KSrvRespFileMakeIterator ( file, & fi );
                             if ( rc == 0 ) {
                                 rc = KSrvRespFileIteratorNextPath
                                     ( fi, & path );

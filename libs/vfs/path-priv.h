@@ -55,10 +55,9 @@
 extern "C" {
 #endif
 
-/*--------------------------------------------------------------------------
- * VPath
- */
-/* VPath Type:
+struct KSrvError;
+
+/* VPath Type: -----------------------------------------------------------------
  * how many extended properties ( from name resolver response ) are initialized
  */
 typedef enum {
@@ -66,6 +65,14 @@ typedef enum {
     eVPWithId, /* has object-id */
     eVPext,    /* has all extanded properties */
 } EVPathType;
+typedef enum {
+    eSCundefined,
+    eSCrun,
+    eSCpileup,
+} ESraClass;
+/*
+* VPath
+*/
 struct VPath
 {
     KDataBuffer data;
@@ -94,6 +101,8 @@ struct VPath
     bool from_uri;
     bool missing_port;
     bool highly_reliable;
+
+    ESraClass sraClass; /* type of SRA file: undefined, run, pileup etc */
 
     /* how many extended properties ( from name resolver response )
        are initialized */
@@ -221,6 +230,9 @@ rc_t VPathSetMake
 
 rc_t VPathSetMakeQuery ( VPathSet ** self, const VPath * local, rc_t localRc,
                          const VPath * cache, rc_t cacheRc );
+
+rc_t KSrvErrorMake4(const struct KSrvError ** self,
+                    rc_t rc, uint32_t code, const char * msg);
 
 
 #ifdef __cplusplus

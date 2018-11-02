@@ -148,6 +148,9 @@ rc_t KSrvResponseGetObjByAcc ( const struct KSrvResponse * self,
 rc_t KSrvRespObjGetAccOrId(const KSrvRespObj * self,
 	                       const char ** acc, uint32_t * id);
 
+/* Do not release returned msg */
+rc_t KSrvRespObjGetError(const KSrvRespObj * self,
+                         rc_t * rc, int64_t * code, const char ** msg);
 
 rc_t KSrvRespObjGetFileCount ( const KSrvRespObj * self, uint32_t * count ); 
 
@@ -172,7 +175,7 @@ rc_t KSrvRespFileGetLocal ( const KSrvRespFile * self,
 rc_t KSrvRespFileRelease  ( const KSrvRespFile * self );
 
 rc_t KSrvRespFileMakeIterator ( const KSrvRespFile * self,
-    VRemoteProtocols scheme, KSrvRespFileIterator ** it );
+    KSrvRespFileIterator ** it );
 rc_t KSrvRespFileIteratorRelease ( const KSrvRespFileIterator * self );
 rc_t KSrvRespFileIteratorNextPath ( KSrvRespFileIterator * self,
                                     const struct VPath ** path );

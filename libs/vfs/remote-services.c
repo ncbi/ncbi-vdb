@@ -196,7 +196,7 @@ typedef struct {
 
 
 /* response row parsed into named typed fields */
-typedef struct {
+typedef struct STyped {
     bool inited;
     uint32_t ordId;
     EObjectType objectType;
@@ -1386,7 +1386,7 @@ rc_t SOrderedInit ( SOrdered * self, const SRaw * raw, int fields )
 
 /* KSrvError ******************************************************************/
 static
-rc_t KSrvErrorMake ( const KSrvError ** self,
+rc_t KSrvErrorMake ( KSrvError ** self,
     const STyped * src, rc_t aRc )
 {
     KSrvError * o = NULL;
@@ -1424,6 +1424,30 @@ rc_t KSrvErrorMake ( const KSrvError ** self,
     return 0;
 }
 
+rc_t KSrvErrorMake4(const struct KSrvError ** self,
+                    rc_t aRc, uint32_t code, const char * msg)
+{
+    struct KSrvError * e = NULL;
+    rc_t rc = KSrvErrorMake( & e, NULL, aRc);
+
+    if (rc == 0) {
+        assert( self );
+        e ->code = code;
+        if (msg != NULL) {
+            e->message.addr = string_dup_measure(msg, &e->message.size);
+            if (e->message.addr == NULL)
+                rc = RC(rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted);
+            else
+                e->message.len = e->message.size;
+        }
+        if (rc == 0)
+            *self = e;
+        else
+            KSrvErrorRelease(e);
+    }
+
+    return rc;
+}
 
 rc_t KSrvErrorAddRef ( const KSrvError * cself ) {
     KSrvError * self = ( KSrvError * ) cself;
@@ -1788,7 +1812,13 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
     else
         -- ( ( SRequest * ) req ) -> errorsToIgnore;
 
-    return KSrvErrorMake ( & self -> error, src, rc );
+    {
+        KSrvError * e = NULL;
+        rc_t r = KSrvErrorMake(&e, src, rc);
+        if (r == 0)
+            self->error = e;
+        return r;
+    }
 }
 
 
@@ -3936,7 +3966,7 @@ static rc_t KService1NameWithVersionAndType ( const KNSManager * mgr,
             if ( rc == 0 )
                 rc = KSrvRespObjIteratorNextFile ( it, & file );
             if ( rc == 0 )
-                rc = KSrvRespFileMakeIterator ( file, protocols, & fi );
+                rc = KSrvRespFileMakeIterator ( file, & fi );
             if ( rc == 0 )
                 rc = KSrvRespFileIteratorNextPath ( fi, remote );
             if ( rc == 0 && mapping != NULL )
