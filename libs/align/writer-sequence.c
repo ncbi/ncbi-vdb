@@ -88,24 +88,33 @@ static const TableReaderColumn TableSeqReadREAD_cols[] = {
 };
 
 struct TableWriterSeq {
-    uint32_t options;
-    const TableWriter* base;
-    uint8_t cursor_id;
-    TableWriterColumn cols[sizeof(TableWriterSeq_cols)/sizeof(TableWriterSeq_cols[0])];
-    int init; /* default written indicator */
-    int64_t qual_buf_sz;
+    TableWriter const *base;
+    TableReader const *reader;
     uint8_t* qual_buf;
-    uint8_t discrete_qual[256];
-    uint8_t alignd_cursor_id;
-    TableWriterColumn cols_alignd[2];
-    const TableReader* reader;
-    TableReaderColumn cols_read[5];
     KVector *stats;
-    unsigned statsCount;
     int64_t tmpKeyIdFirst;
     int64_t tmpKeyIdLast;
+    TableWriterColumn cols[sizeof(TableWriterSeq_cols)/sizeof(TableWriterSeq_cols[0])];
+    TableWriterColumn cols_alignd[2];
+    TableReaderColumn cols_read[5];
+    unsigned options;
+    unsigned init; /* default written indicator */
+    unsigned qual_buf_sz;
+    unsigned statsCount;
     bool flush;
+    uint8_t cursor_id;
+    uint8_t alignd_cursor_id;
+    uint8_t discrete_qual[256];
 };
+
+static void CopyTableReaderColumns(unsigned const N, TableReaderColumn *const dst, TableReaderColumn const *const src)
+{
+    unsigned i;
+    for (i = 0; i < N; ++i)
+        dst[i] = src[i];
+}
+
+#define COPY_TableReaderColumns(DST, SRC) do { CopyTableReaderColumns(sizeof(SRC)/sizeof(TableReaderColumn), DST, SRC); } while (0)
 
 #if 0 /* always write full quality */
 static bool TableWriterSeq_InitQuantMatrix(uint8_t dst[256], char const quant[])
@@ -315,7 +324,8 @@ static rc_t MakeSequenceTable(TableWriterSeq *self, VDatabase* db,
 #else
     self->options |= ewseq_co_FullQuality;
 #endif
-    memmove(self->cols, TableWriterSeq_cols, sizeof(TableWriterSeq_cols));
+    
+    COPY_TableReaderColumns(self->cols, TableWriterSeq_cols);
 
     /* always write full sequence */
     self->cols[ewseq_cn_READ].name = TableSeqReadREAD_cols[0].name;
@@ -391,14 +401,15 @@ static rc_t CompressREAD(TableWriterSeq *const self, int64_t *const buffer)
     int64_t row = 0;
     int64_t *const firstUnaligned = &buffer[0];
     int64_t *const firstHalfAligned = &buffer[1];
+    bool const NotSavingRead = ((self->options & ewseq_co_SaveRead) == 0);
 
-    memmove(&self->cols_read, &TableSeqReadREAD_cols, sizeof(self->cols_read));
     rc = TableWriter_GetVTable(self->base, &vtbl);
     assert(rc == 0);
+    COPY_TableReaderColumns(self->cols_read, TableSeqReadREAD_cols);
     rc = TableReader_Make(&self->reader, vtbl, self->cols_read, 50 * 1024 * 1024);
     assert(rc == 0);
     
-    if ((self->options & ewseq_co_SaveRead) != 0) {
+    if (NotSavingRead) {
         static TableWriterData const d = { "", 0 };
 
         self->cols[0] = TableWriterSeq_cols[0];
@@ -432,7 +443,7 @@ static rc_t CompressREAD(TableWriterSeq *const self, int64_t *const buffer)
                 if (pid[i] != 0)
                     ++aligned;
             }
-            if ((self->options & ewseq_co_SaveRead) != 0) {
+            if (NotSavingRead) {
                 if (aligned != 0) {
                     TW_COL_WRITE_BUF(self->base, self->cols[0], seq, 0);
                     if (aligned < nreads) {
