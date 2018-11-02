@@ -340,8 +340,9 @@ static rc_t MakeSequenceTable(TableWriterSeq *self, VDatabase* db,
 
     /* always write full sequence */
     self->cols[ewseq_cn_READ].name = TableSeqReadREAD_cols[0].name;
+    self->cols[ewseq_cn_READ].flags |= ewcol_Temporary;
     if ((self->options & ewseq_co_SaveRead) != 0) {
-        self->cols[ewseq_cn_READ].flags |= ewcol_Temporary;
+        self->cols[ewseq_cn_READ].flags &= ~ewcol_Temporary;
     }
     if (self->options & ewseq_co_KeepKey) {
         self->cols[ewseq_cn_TMP_KEY_ID].flags &= ~ewcol_Temporary;
