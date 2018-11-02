@@ -1907,6 +1907,8 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
         
         if ( acc_alpha && acc_digit )
             ++acc_ext;
+
+        self->sraClass = eSCpileup;
     }
     
     switch ( state )
