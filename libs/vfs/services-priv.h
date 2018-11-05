@@ -59,6 +59,8 @@ rc_t CC KService1NameWithVersion ( const struct KNSManager * mgr,
 
 
 /******************************** KSrvResponse ********************************/
+rc_t KServiceGetKSrvResponse( struct KService * self, struct KSrvResponse ** r);
+
 rc_t KSrvResponseMake ( struct KSrvResponse ** self );
 rc_t KSrvResponseAddRef ( const struct KSrvResponse * self );
 rc_t KSrvResponseAppend ( struct KSrvResponse * self,

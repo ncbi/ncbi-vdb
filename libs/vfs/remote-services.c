@@ -64,9 +64,6 @@
 #include <string.h> /* memset */
 
 
-typedef struct Response4 Response4;
-
-
 /******************************************************************************/
 
 
@@ -3319,6 +3316,14 @@ rc_t KServiceRelease ( KService * self ) {
     }
 
     return rc;
+}
+
+rc_t KServiceGetKSrvResponse( KService * self, KSrvResponse ** r ) {
+    assert( self && r );
+
+    *r = self->resp.list;
+
+    return 0;
 }
 
 static rc_t KServiceProcessJson ( KService * self ) {

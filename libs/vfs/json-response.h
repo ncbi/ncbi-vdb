@@ -34,10 +34,10 @@ extern "C" {
 #endif
 
 struct Data;
+struct KSrvRespObj;
 
 typedef struct Container Container;
 typedef struct Item Item;
-typedef struct KSrvRespObj KSrvRespObj;
 typedef struct Response4 Response4;
 
 rc_t Response4MakeEmpty  (       Response4 ** self );
@@ -56,9 +56,9 @@ rc_t KSrvRespFileGetMapping ( const struct KSrvRespFile * self,
                               const struct VPath ** mapping );
 rc_t Response4GetKSrvRespObjCount ( const Response4 * self, uint32_t * n );
 rc_t Response4GetKSrvRespObjByIdx ( const Response4 * self, uint32_t i,
-                                    const KSrvRespObj ** box );
+                                    const struct KSrvRespObj ** box );
 rc_t Response4GetKSrvRespObjByAcc ( const Response4 * self, const char * acc,
-                                    const KSrvRespObj ** box );
+                                    const struct KSrvRespObj ** box );
 
 #ifdef __cplusplus
 }
