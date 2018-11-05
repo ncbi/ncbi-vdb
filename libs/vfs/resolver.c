@@ -1429,8 +1429,10 @@ rc_t oldVResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("names.cgi = %S\n", self -> root));
 if(((self)->root)->addr[self->root->size - 1] == 'i')
     rc = KNSManagerMakeReliableClientRequest ( kns, & req, 0x01010000, NULL, self -> root -> addr ); 
-else
+else if (((self)->root)->addr[4] == 's')
 rc = KNSManagerMakeReliableClientRequest(kns, &req, 0x01010000, NULL, "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi");
+else
+rc = KNSManagerMakeReliableClientRequest(kns, &req, 0x01010000, NULL, "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi");
 
     if ( rc == 0 )
     {
