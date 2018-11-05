@@ -475,11 +475,138 @@ static VRemoteProtocols SHelperDefaultProtocols ( SHelper * self ) {
     return protocols;
 }
 
+/* SRaw ***********************************************************************/
+static void SRawInit(SRaw * self, char * s) {
+    assert(self);
+
+    self->s = s;
+}
+
+
+static rc_t SRawAlloc(SRaw * self, const char * s, size_t sz) {
+    char * p = NULL;
+
+    if (sz == 0)
+        p = string_dup_measure(s, NULL);
+    else
+        p = string_dup(s, sz);
+
+    if (p == NULL)
+        return RC(rcVFS, rcPath, rcAllocating, rcMemory, rcExhausted);
+
+    SRawInit(self, p);
+
+    return 0;
+}
+
+
+static rc_t SRawFini(SRaw * self) {
+    if (self != NULL) {
+        free(self->s);
+        self->s = NULL;
+    }
+
+    return 0;
+}
+
+/* SVersion *******************************************************************/
+static bool SVersionSupportsJson(const SVersion * self,
+    EServiceType serviceType, const char * cgi)
+{
+    assert(self);
+
+    if (serviceType != eSTnames || cgi == NULL || cgi[0] == '\0')
+        return true;
+
+    if (SVersionResponseInJson(self) && cgi[strlen(cgi) - 1] == 'i')
+        return false;
+
+    return true;
+}
+
+static rc_t SVersionInit(SVersion * self, const char * src,
+    EServiceType serviceType, const char * cgi)
+{
+    const char * s = src;
+
+    assert(self);
+
+    memset(self, 0, sizeof * self);
+
+    if (s == NULL) {
+        return RC(rcVFS, rcQuery, rcExecuting, rcMessage, rcBadVersion);
+    }
+
+    if (*s != '#') {
+        if (serviceType != eSTnames || *s == '\0' || !isdigit(*s))
+            return RC(rcVFS, rcQuery, rcExecuting, rcMessage, rcBadVersion);
+    }
+    else
+        ++s;
+
+    if (serviceType == eSTsearch) {
+        const char version[] = "version ";
+        size_t sz = sizeof version - 1;
+        if (string_cmp(s, sz, version, sz, (uint32_t)sz) != 0)
+            return RC(rcVFS, rcQuery, rcExecuting, rcMessage, rcBadVersion);
+        s += sz;
+    }
+
+    if (*s == '\0') {
+        return RC(rcVFS, rcQuery, rcExecuting, rcMessage, rcBadVersion);
+    }
+
+    {
+        char * end = NULL;
+        uint64_t l = strtoul(s, &end, 10);
+        if (end == NULL || *end != '.') {
+            return RC(rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt);
+        }
+        self->major = (uint8_t)l;
+        s = ++end;
+
+        l = strtoul(s, &end, 10);
+        if (end == NULL || *end != '\0') {
+            return RC(rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt);
+        }
+        self->minor = (uint8_t)l;
+
+        self->version = self->major << 24 | self->minor << 16;
+    }
+
+    if (!SVersionSupportsJson(self, serviceType, cgi))
+        return SVersionInit(self, "3.", serviceType, cgi);
+
+    return SRawAlloc(&self->raw, src, 0);
+}
+
+
+static rc_t SVersionToString(const SVersion * self, char ** s) {
+    size_t num_writ = 0;
+    char tmp[1];
+    assert(self && s);
+    string_printf(tmp, 1, &num_writ, "%u.%u", self->major, self->minor);
+    ++num_writ;
+    *s = (char *)malloc(num_writ);
+    if (*s == NULL) {
+        return RC(rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted);
+    }
+    return string_printf(*s, num_writ,
+        &num_writ, "%u.%u", self->major, self->minor);
+}
+
+static rc_t SVersionFini(SVersion * self) {
+    rc_t rc = 0;
+    assert(self);
+    rc = SRawFini(&self->raw);
+    memset(self, 0, sizeof * self);
+    return rc;
+}
 
 /* try to get cgi from kfg, otherwise use hardcoded */
 static
 rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
-    char * buffer, size_t bsize, const char * aCgi, const SVersion * version )
+    char * buffer, size_t bsize, const char * aCgi, SRequest * request )
 {
     const char man [] = "/repository/remote/main/CGI/resolver-cgi";
     const char prt [] = "/repository/remote/protected/CGI/resolver-cgi";
@@ -487,6 +614,9 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
     
     rc_t rc = 0;
     const char * path = aProtected ? prt : man;
+    SVersion * version = NULL;
+    assert( request );
+    version = & request->version;
     assert ( self && version );
     rc = SHelperInitKfg ( self );
     if ( rc == 0 && aCgi == NULL ) {
@@ -504,11 +634,29 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
     }
     else
         string_copy_measure ( buffer, bsize, aCgi );
-    if ( rc == 0 && version -> major < 4 &&
-         strcmp ( buffer, "https://sponomar.ncbi.nlm.nih.gov/Traces/sdl_test/4.0/retrieve" ) == 0 )
-    {
-        string_copy ( buffer, bsize, cgi, sizeof cgi );
+
+    if (rc == 0) {
+        if (strcmp(buffer,
+            "https://sponomar.ncbi.nlm.nih.gov/Traces/sdl_test/4.0/retrieve")
+            == 0)
+        {
+            if (version->major < 4)
+                string_copy(buffer, bsize, cgi, sizeof cgi);
+            else {
+                if (request->request.objects > 0 &&
+                    request->request.object[0].objectId != NULL &&
+                    isdigit(request->request.object[0].objectId[0]))
+                {
+                    string_copy(buffer, bsize, cgi, sizeof cgi);
+                    rc = SVersionFini(&request->version);
+                    if (rc == 0)
+                        rc = SVersionInit(&request->version,
+                            "3.", eSTnames, NULL);
+                }
+            }
+        }
     }
+
     return rc;
 }
 
@@ -535,136 +683,6 @@ rc_t SHelperProjectToTicket ( SHelper * self, uint32_t projectId,
     RELEASE ( KRepository, repo );
 
     return rc;
-}
-
-
-/* SRaw ***********************************************************************/
-static void SRawInit ( SRaw * self, char * s ) {
-    assert ( self );
-
-    self -> s = s;
-}
-
-
-static rc_t SRawAlloc ( SRaw * self, const char * s, size_t sz ) {
-    char * p = NULL;
-
-    if ( sz == 0 )
-        p = string_dup_measure ( s, NULL );
-    else
-        p = string_dup ( s, sz );
-
-    if ( p == NULL )
-        return RC ( rcVFS, rcPath, rcAllocating, rcMemory, rcExhausted );
-
-    SRawInit ( self, p );
-
-    return 0;
-}
-
-
-static rc_t SRawFini ( SRaw * self ) {
-    if ( self != NULL ) {
-        free ( self -> s );
-        self -> s = NULL;
-    }
-
-    return 0;
-}
-
-static bool SVersionSupportsJson ( const SVersion * self,
-                        EServiceType serviceType, const char * cgi )
-{
-    assert ( self );
-
-    if ( serviceType != eSTnames || cgi == NULL || cgi [ 0 ] == '\0' )
-        return true;
-
-    if ( SVersionResponseInJson ( self ) && cgi [ strlen ( cgi ) - 1 ] == 'i' )
-        return false;
-
-    return true;
-}
-
-/* SVersion *******************************************************************/
-static rc_t SVersionInit ( SVersion * self, const char * src,
-                           EServiceType serviceType, const char * cgi )
-{
-    const char * s = src;
-
-    assert ( self );
-
-    memset ( self, 0, sizeof * self );
-
-    if ( s == NULL ) {
-        return RC ( rcVFS, rcQuery, rcExecuting, rcMessage, rcBadVersion );
-    }
-
-    if ( * s != '#' ) {
-        if ( serviceType != eSTnames || * s == '\0' || ! isdigit ( * s ) )
-            return RC ( rcVFS, rcQuery, rcExecuting, rcMessage, rcBadVersion );
-    }
-    else
-        ++ s;
-
-    if ( serviceType == eSTsearch ) {
-        const char version [] = "version ";
-        size_t sz = sizeof version - 1;
-        if ( string_cmp ( s, sz, version, sz, ( uint32_t ) sz ) != 0 )
-            return RC ( rcVFS, rcQuery, rcExecuting, rcMessage, rcBadVersion );
-        s += sz;
-    }
-
-    if ( * s == '\0' ) {
-        return RC ( rcVFS, rcQuery, rcExecuting, rcMessage, rcBadVersion );
-    }
-
-    {
-        char * end = NULL;
-        uint64_t l = strtoul ( s, & end, 10 );
-        if ( end == NULL || * end != '.' ) {
-            return RC ( rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt );
-        }
-        self -> major = ( uint8_t ) l;
-        s = ++ end;
-
-        l = strtoul ( s, & end, 10 );
-        if ( end == NULL || * end != '\0' ) {
-            return RC ( rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt );
-        }
-        self -> minor = ( uint8_t ) l;
-
-        self -> version = self -> major << 24 | self -> minor << 16;
-    }
-
-    if ( ! SVersionSupportsJson ( self, serviceType, cgi ) )
-        return SVersionInit ( self, "3.", serviceType, cgi );
-
-    return SRawAlloc ( & self -> raw, src, 0 );
-}
-
-
-static rc_t SVersionFini ( SVersion * self ) {
-    rc_t rc = 0;
-    assert ( self );
-    rc = SRawFini ( & self -> raw );
-    memset ( self, 0, sizeof * self );
-    return rc;
-}
-
-
-static rc_t SVersionToString ( const SVersion * self, char ** s ) {
-    size_t num_writ = 0;
-    char tmp [ 1 ];
-    assert ( self && s );
-    string_printf ( tmp, 1, & num_writ, "%u.%u", self -> major, self -> minor );
-    ++ num_writ;
-    * s = ( char * ) malloc ( num_writ );
-    if ( * s == NULL ) {
-        return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
-    }
-    return string_printf ( * s, num_writ,
-        & num_writ, "%u.%u", self -> major, self -> minor );
 }
 
 
@@ -2771,11 +2789,9 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
 
     if ( self -> cgi == NULL ) {
         char buffer [ 1024 ] = "";
-  //    if ( cgi == NULL ) {
             rc = SHelperResolverCgi ( helper, aProtected,
-                buffer, sizeof buffer, cgi, & request -> version );
+                buffer, sizeof buffer, cgi, request );
             cgi = buffer;
-   //   }
         rc = SCgiRequestInitCgi ( self, cgi );
     }
 
@@ -2837,9 +2853,9 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
               if ( SVersionResponseInJson ( & request -> version ) ) {
                 const char name [] = "acc";
                 rc = SKVMake ( & kv, name,
-                               request -> request . object [ 0 ] . objectId );
+                               request -> request . object [ i ] . objectId );
                 DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( "  %s=%s\n",
-                    name, request -> request . object [ 0 ] . objectId ) );
+                    name, request -> request . object [ i ] . objectId ) );
               }
               else {
                 rc = SKVMakeObj ( & kv, & request -> request . object [ i ],
