@@ -542,7 +542,7 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                     rc = KLockMake ( & f -> lock );
                     if ( rc == 0 )
                     {
-                        KDataBuffer *buf = & f -> url_buffer;
+                        KDataBuffer urlbuf, *const buf = &urlbuf;
                         buf -> elem_bits = 8;
                         rc = KDataBufferVPrintf ( buf, url, args );
                         if ( rc == 0 )
@@ -564,8 +564,11 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                     {
                                         KClientHttpResult *rslt;
                                         rc = KClientHttpRequestHEAD ( req, & rslt );
-                                        KClientHttpRequestRelease ( req );
 
+                                        KClientHttpRequestURL ( req, & f -> url_buffer ); /* NB. f -> url_buffer is not valid until this point */
+                                        KClientHttpRequestRelease ( req );
+                                        KDataBufferWhack(buf);
+                                        
                                         if ( rc != 0 ) {
                                             if ( KNSManagerLogNcbiVdbNetError ( self ) )
                                             {
