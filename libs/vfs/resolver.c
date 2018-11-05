@@ -3799,9 +3799,16 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
                     if ( rc == 0 )
                         break;
                 }
-            try_name:
-                rc = VResolverQueryName ( self, protocols, query, local, remote, cache );
+            try_name: {
+                String str;
+                memset( & str, 0, sizeof str );
+                VPathGetPath(query, &str);
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+                       ( "Checking '%S' as file name\n", & str) );
+                rc = VResolverQueryName(self, protocols, query,
+                                        local, remote, cache);
                 break;
+            }
 
             case vpRelPath:
             case vpFullPath:
