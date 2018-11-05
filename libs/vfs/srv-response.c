@@ -681,6 +681,7 @@ rc_t KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
         int64_t code = 0;
         const char * msg = NULL;
         bool found = false;
+        bool hasAny = false;
         rc = KSrvResponseGetObjByIdx(self, idx, &obj);
         if (rc != 0)
             return rc;
@@ -709,6 +710,7 @@ rc_t KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
                             String scheme;
                             rc = VPathGetScheme(path, &scheme);
                             if (rc == 0) {
+                                hasAny = true;
                                 if (StringEqual(&scheme, &https)) {
                                     if (has_proto[eProtocolHttps]) {
                                         *aPath = path;
@@ -727,6 +729,8 @@ rc_t KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
                                         found = true;
                                     }
                                 }
+                                if (found)
+                                    break;
                             }
                         }
                         else
@@ -741,44 +745,11 @@ rc_t KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
             RELEASE(KSrvRespObjIterator, it);
         }
         RELEASE(KSrvRespObj, obj);
-        if (!found)
+        if (!found && !hasAny)
             rc = RC(rcVFS, rcPath, rcAccessing, rcItem, rcNotFound);
 
         return rc;
     }
-/*
-    const VPathSet * s = NULL;
-
-    if ( self == NULL )
-        return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
-
-    s = ( VPathSet * ) VectorGet ( & self -> list, idx );
-
-    if ( p == eProtocolDefault )
-        p = DEFAULT_PROTOCOLS;
-
-    if ( s == NULL )
-        return RC ( rcVFS, rcPath, rcAccessing, rcItem, rcNotFound );
-    else {
-        if ( path != NULL )
-            * path = NULL;
-        if ( vdbcache != NULL )
-            * vdbcache = NULL;
-        if ( error != NULL )
-            * error = NULL;
-        if ( s -> error == NULL )
-            return VPathSetGet ( s, p, path, vdbcache );
-        else {
-            if ( error != NULL ) {
-                rc_t rc = KSrvErrorAddRef ( s -> error );
-                if ( rc == 0 )
-                    * error = s -> error;
-                return rc;
-            }
-            return RC ( rcVFS, rcQuery, rcExecuting, rcError, rcExists );
-        }
-    }
-*/
 }
 
 static rc_t KSrvResponseGetFile ( const KSrvResponse * self, uint32_t idx,
