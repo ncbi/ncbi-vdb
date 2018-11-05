@@ -495,77 +495,86 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                 const KSrvError * error = NULL;
                 rc = KSrvResponseGetObjByIdx ( response, i, & obj );
                 if ( rc == 0 ) {
-                    KSrvRespObjIterator * it = NULL;
-                    rc = KSrvRespObjMakeIterator ( obj, & it );
-                    while ( rc == 0 ) {
-                        KSrvRespFile * file = NULL;
-                        rc = KSrvRespObjIteratorNextFile ( it, & file );
-                        if ( rc != 0 || file == NULL )
-                            break;
-                        else {
-                            ESrvFileFormat ff = eSFFInvalid;
-                            KSrvRespFileIterator * fi = NULL;
-                            String id;
-                            const char * acc = NULL;
-                            const char * tic = NULL;
-                            uint64_t iid = 0;
-                            memset ( & id, 0, sizeof id );
-                            rc = KSrvRespFileGetAcc ( file, & acc, & tic );
-                            if ( rc == 0 ) {
-                                if ( acc != NULL ) {
-                                    StringInitCString ( & id, acc );
-                                    rc = KSrvRespFileGetFormat ( file, & ff );
-                                }
-                                else {
-                                    rc = KSrvRespFileGetId ( file, & iid,
-                                                                   & tic );
-                                }
-                            }
-                            if ( rc == 0 )
-                                rc = KSrvRespFileMakeIterator ( file, & fi );
-                            if ( rc == 0 ) {
-                                rc = KSrvRespFileIteratorNextPath
-                                    ( fi, & path );
-                                if ( rc == 0 ) {
-                                    if ( error == NULL ) {
-                                        VResolver * resolver = NULL;
-                                        const String * pId = NULL;
-                                        String ticket;
-                                        memset ( & ticket, 0, sizeof ticket );
-                                        if ( rc == 0 && tic != NULL )
-                                            StringInitCString ( & ticket, tic );
-                                        if ( rc == 0 )
-                                            rc = HResolver
-                                            ( & h, & ticket, & resolver );
-                                        if ( rc == 0 )
-                                            rc = _VPathGetId ( path, & pId,
-                                                               & id, mgr );
-                                        if ( rc == 0 ) {
-                                            assert ( resolver );
-                                            VResolverResolveName ( resolver,
-                                              KServiceGetResolveName ( self ) );
-                                            rc = VResolversQuery ( resolver,
-                                                h . mgr, protocols, path, & id,
-                                                iid, & vps, ff,
-                                                outDir, outFile );
-                                        }
-                                        free ( ( void * )  pId );
+                    rc_t rx = 0;
+                    rc = KSrvRespObjGetError(obj, &rx, NULL, NULL);
+                    if (rc == 0 && rx == 0) {
+                        KSrvRespObjIterator * it = NULL;
+                        rc = KSrvRespObjMakeIterator(obj, &it);
+                        while (rc == 0) {
+                            KSrvRespFile * file = NULL;
+                            rc = KSrvRespObjIteratorNextFile(it, &file);
+                            if (rc != 0 || file == NULL)
+                                break;
+                            else {
+                                ESrvFileFormat ff = eSFFInvalid;
+                                KSrvRespFileIterator * fi = NULL;
+                                String id;
+                                const char * acc = NULL;
+                                const char * tic = NULL;
+                                uint64_t iid = 0;
+                                memset(&id, 0, sizeof id);
+                                rc = KSrvRespFileGetAcc(file, &acc, &tic);
+                                if (rc == 0) {
+                                    if (acc != NULL) {
+                                        StringInitCString(&id, acc);
+                                        rc = KSrvRespFileGetFormat(file,
+                                            &ff);
                                     }
-                                    else
-                                        RELEASE ( KSrvError, error );
+                                    else {
+                                        rc = KSrvRespFileGetId(file, &iid,
+                                            &tic);
+                                    }
                                 }
-                                if ( vps != NULL ) {
-                                    rc = KSrvRespFileAddLocalAndCache
-                                        ( file, vps );
-                                    RELEASE ( VPathSet, vps );
+                                if (rc == 0)
+                                    rc = KSrvRespFileMakeIterator(file,
+                                        &fi);
+                                if (rc == 0) {
+                                    rc = KSrvRespFileIteratorNextPath
+                                    (fi, &path);
+                                    if (rc == 0) {
+                                        if (error == NULL) {
+                                            VResolver * resolver = NULL;
+                                            const String * pId = NULL;
+                                            String ticket;
+                                            memset(&ticket,
+                                                0, sizeof ticket);
+                                            if (rc == 0 && tic != NULL)
+                                                StringInitCString(&ticket,
+                                                    tic);
+                                            if (rc == 0)
+                                                rc = HResolver(&h,
+                                                    &ticket, &resolver);
+                                            if (rc == 0)
+                                                rc = _VPathGetId(path, &pId,
+                                                    &id, mgr);
+                                            if (rc == 0) {
+                                                assert(resolver);
+                                                VResolverResolveName(resolver,
+                                                    KServiceGetResolveName(
+                                                        self));
+                                                rc = VResolversQuery(resolver,
+                                                    h.mgr, protocols, path,
+                                                    &id, iid, &vps, ff,
+                                                    outDir, outFile);
+                                            }
+                                            free((void *)pId);
+                                        }
+                                        else
+                                            RELEASE(KSrvError, error);
+                                    }
+                                    if (vps != NULL) {
+                                        rc = KSrvRespFileAddLocalAndCache
+                                        (file, vps);
+                                        RELEASE(VPathSet, vps);
+                                    }
+                                    RELEASE(VPath, path);
                                 }
-                                RELEASE ( VPath, path );
+                                RELEASE(KSrvRespFileIterator, fi);
                             }
-                            RELEASE ( KSrvRespFileIterator, fi );
+                            RELEASE(KSrvRespFile, file);
                         }
-                        RELEASE ( KSrvRespFile, file );
+                        RELEASE(KSrvRespObjIterator, it);
                     }
-                    RELEASE ( KSrvRespObjIterator, it );
                 }
                 else {
                     rc = KSrvResponseGetPath

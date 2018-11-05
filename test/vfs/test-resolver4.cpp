@@ -68,18 +68,12 @@ TEST_CASE ( Test ) {
     REQUIRE_RC      ( KSrvRespObjIteratorNextFile ( it  , & file ) );
     REQUIRE_NOT_NULL( file );
 
-    REQUIRE_RC_FAIL ( KSrvRespFileMakeIterator ( NULL, 0, NULL ) );
-    REQUIRE_RC_FAIL ( KSrvRespFileMakeIterator ( file, 0, NULL ) );
+    REQUIRE_RC_FAIL ( KSrvRespFileMakeIterator ( NULL, NULL ) );
+    REQUIRE_RC_FAIL ( KSrvRespFileMakeIterator ( file, NULL ) );
 
     KSrvRespFileIterator * fi = NULL;
-    REQUIRE_RC      ( KSrvRespFileMakeIterator ( file, 0, & fi ) );
-    REQUIRE_RC      ( KSrvRespFileIteratorRelease ( fi ) );
-
-    REQUIRE_RC_FAIL ( KSrvRespFileMakeIterator ( file, eProtocolFasp , & fi ) );
-    REQUIRE_RC_FAIL ( KSrvRespFileMakeIterator ( file, eProtocolHttps, & fi ) );
-    REQUIRE_NULL    ( fi );
-    REQUIRE_RC      ( KSrvRespFileMakeIterator ( file, eProtocolHttp , & fi ) );
-    REQUIRE_NOT_NULL( fi );
+    REQUIRE_RC      ( KSrvRespFileMakeIterator ( file, & fi ) );
+    REQUIRE_NOT_NULL(fi);
 
     REQUIRE_RC_FAIL ( KSrvRespFileIteratorNextPath (  NULL, NULL ) );
     REQUIRE_RC_FAIL ( KSrvRespFileIteratorNextPath (  fi  , NULL ) );

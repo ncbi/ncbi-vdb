@@ -702,33 +702,37 @@ rc_t KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
                 if (rc != 0 || file == NULL)
                     break;
                 rc = KSrvRespFileMakeIterator(file, &fi);
-                if (rc == 0)
+                while (rc == 0) {
                     rc = KSrvRespFileIteratorNextPath(fi, &path);
-                if (rc == 0)
-                    if (path != NULL) {
-                        String scheme;
-                        rc = VPathGetScheme(path, &scheme);
-                        if (rc == 0) {
-                            if (StringEqual(&scheme, &https)) {
-                                if (has_proto[eProtocolHttps]) {
-                                    *aPath = path;
-                                    found = true;
+                    if (rc == 0) {
+                        if (path != NULL) {
+                            String scheme;
+                            rc = VPathGetScheme(path, &scheme);
+                            if (rc == 0) {
+                                if (StringEqual(&scheme, &https)) {
+                                    if (has_proto[eProtocolHttps]) {
+                                        *aPath = path;
+                                        found = true;
+                                    }
                                 }
-                            }
-                            else if (StringEqual(&scheme, &fasp)) {
-                                if (has_proto[eProtocolFasp]) {
-                                    *aPath = path;
-                                    found = true;
+                                else if (StringEqual(&scheme, &fasp)) {
+                                    if (has_proto[eProtocolFasp]) {
+                                        *aPath = path;
+                                        found = true;
+                                    }
                                 }
-                            }
-                            else if (StringEqual(&scheme, &http)) {
-                                if (has_proto[eProtocolHttp]) {
-                                    *aPath = path;
-                                    found = true;
+                                else if (StringEqual(&scheme, &http)) {
+                                    if (has_proto[eProtocolHttp]) {
+                                        *aPath = path;
+                                        found = true;
+                                    }
                                 }
                             }
                         }
+                        else
+                            break;
                     }
+                }
                 RELEASE(KSrvRespFileIterator, fi);
                 RELEASE(KSrvRespFile, file);
                 if (found)

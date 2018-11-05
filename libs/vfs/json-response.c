@@ -784,16 +784,15 @@ static rc_t StatusSet
         name = "msg";
         value = KJsonObjectGetMember(object, name);
         if (value == NULL) {
-            rc = RC(rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete);
             if (THRESHOLD > THRESHOLD_NO_DEBUG)
                 DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
                 ("... error: cannot find 'status/msg'\n"));
         }
-
-        if (rc == 0)
+        else {
             rc = KJsonGetString(value, &msg);
-        if (rc == 0)
-            StackPrintStr(path, name, msg);
+            if (rc == 0)
+                StackPrintStr(path, name, msg);
+        }
     }
 
     if (rc == 0)
@@ -2085,11 +2084,15 @@ rc_t KSrvRespObjGetAccOrId(const KSrvRespObj * self,
 rc_t KSrvRespObjGetError(const KSrvRespObj * self,
                          rc_t * rc, int64_t * code, const char ** msg)
 {
-    assert(self && self->obj && rc && code && msg);
+    assert(self && self->obj && rc);
 
     *rc = self->obj->rc;
-    *code = self->obj->status.code;
-    *msg = self->obj->status.msg;
+
+    if ( code != NULL )
+        *code = self->obj->status.code;
+
+    if (msg != NULL)
+        *msg = self->obj->status.msg;
 
     return 0;
 }
@@ -2141,8 +2144,11 @@ rc_t KSrvRespObjMakeIterator
 
     * it = NULL;
 
-    if ( self == NULL )
+    if ( self == NULL || self->obj == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+
+    if (self->obj->rc != 0)
+        return self->obj->rc;
 
     p = ( KSrvRespObjIterator * ) calloc ( 1, sizeof * p );
 
