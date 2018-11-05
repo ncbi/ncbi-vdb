@@ -34,7 +34,10 @@ extern "C" {
 #endif
 
 struct Data;
+struct KSrvRespFile;
 struct KSrvRespObj;
+struct String;
+struct VPath;
 
 typedef struct Container Container;
 typedef struct Item Item;
