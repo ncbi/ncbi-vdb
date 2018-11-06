@@ -161,6 +161,7 @@ typedef enum
     appNANNOT,
     appNAKMER,
     appSRAPileup,
+    appSRARealign,
     appCount
 } VResolverAppID;
 

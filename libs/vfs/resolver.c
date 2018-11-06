@@ -2265,6 +2265,11 @@ uint32_t get_accession_code ( const String * accession, VResolverAccToken *tok )
     {
         i = 6;
     }
+    /* check realign extension */
+    else if (string_cmp(acc, size, "realign", 7, size + 7) == 0)
+    {
+        i = 7;
+    }
     else
     {
         /* scan numeric extension */
@@ -2391,6 +2396,18 @@ VResolverAppID get_accession_app ( const String * accession, bool refseq_ctx,
                  suffix . addr [ 5 ] == 'p' )
             {
                 app = appSRAPileup;
+            }
+            /* check realign suffix, e.g. "SRR012345.realign" */
+            else if (suffix.size == 7 &&
+                suffix.addr[0] == 'r' &&
+                suffix.addr[1] == 'e' &&
+                suffix.addr[2] == 'a' &&
+                suffix.addr[3] == 'l' &&
+                suffix.addr[4] == 'i' &&
+                suffix.addr[5] == 'g' &&
+                suffix.addr[6] == 'n')
+            {
+                app = appSRARealign;
             }
             else
             {
@@ -3804,7 +3821,8 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
                 memset( & str, 0, sizeof str );
                 VPathGetPath(query, &str);
                 DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
-                       ( "Checking '%S' as file name\n", & str) );
+                       ( "Resolver-%s: checking '%S' as file name\n",
+                         self -> version, & str) );
                 rc = VResolverQueryName(self, protocols, query,
                                         local, remote, cache);
                 break;
@@ -4464,7 +4482,8 @@ rc_t VResolverLoadApp ( VResolver *self, Vector *algs, const String *root,
  *        = <app-name> <app> ;
  *
  *    app-name
- *        = "refseq" | "sra" | "wgs" | "nannot" | "nakmer" | "sraPileup" ;
+ *        = "refseq" | "sra" | "wgs" | "nannot" | "nakmer" | "sraPileup"
+ *                                                         | "sraRealign";
  */
 static
 rc_t VResolverLoadApps ( VResolver *self, Vector *algs, const String *root,
@@ -4516,6 +4535,8 @@ rc_t VResolverLoadApps ( VResolver *self, Vector *algs, const String *root,
                         app_id = appWGS;
                     else if ( strcmp ( appname, "sraPileup" ) == 0 )
                         app_id = appSRAPileup;
+                    else if (strcmp(appname, "sraRealign") == 0)
+                        app_id = appSRARealign;
 
                     rc = VResolverLoadApp ( self, algs, root, ticket,
                         cache_capable, app_id,
