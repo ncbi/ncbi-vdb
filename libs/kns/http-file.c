@@ -543,6 +543,8 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                     if ( rc == 0 )
                     {
                         KDataBuffer urlbuf, *const buf = &urlbuf;
+
+                        memset(buf, 0, sizeof(*buf));
                         buf -> elem_bits = 8;
                         rc = KDataBufferVPrintf ( buf, url, args );
                         if ( rc == 0 )
@@ -564,8 +566,11 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                     {
                                         KClientHttpResult *rslt;
                                         rc = KClientHttpRequestHEAD ( req, & rslt );
-
+#if 1
                                         KClientHttpRequestURL ( req, & f -> url_buffer ); /* NB. f -> url_buffer is not valid until this point */
+#else
+                                        KDataBufferSub ( buf, & f -> url_buffer, 0, buf -> elem_count ); /* old behavior: breaks if redirected */
+#endif
                                         KClientHttpRequestRelease ( req );
                                         KDataBufferWhack(buf);
                                         
