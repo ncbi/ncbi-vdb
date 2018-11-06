@@ -31,14 +31,13 @@ TOP ?= $(abspath ../..)
 MODULE = test/kns
 
 TEST_TOOLS = \
-    test_allow_all_certificates \
-    test_dis_allow_all_certificates \
+	test_allow_all_certificates \
+	test_dis_allow_all_certificates \
 	test200for-whole-file \
 	test-kns \
 	test-http-dropconn \
 	KNSManagerSingletonTest \
 	test-VDB-3661
-
 
 include $(TOP)/build/Makefile.env
 
