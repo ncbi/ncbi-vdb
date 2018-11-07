@@ -103,7 +103,8 @@ SRAXF_SRC = \
 	extract-coordinates \
 	fpcodec \
 	index_lookup \
-	varloc
+	varloc \
+	spot-filter
 
 SRAXF_OBJ = \
 	$(addsuffix .$(LOBX),$(SRAXF_SRC))

@@ -274,7 +274,7 @@ rc_t VDBManagerVPathOpenLocalDBRead ( const VDBManager *self,
                 return 0;
             }
         }
-        
+
         VDatabaseWhack ( db );
     }
 
@@ -306,7 +306,7 @@ rc_t VDBManagerVPathOpenRemoteDBRead ( const VDBManager *self,
                 return 0;
             }
         }
-        
+
         VDatabaseWhack ( db );
     }
 
@@ -344,7 +344,7 @@ LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
                     {
                         /* the original VPath may get resolved into other paths */
                         const VPath * plocal = NULL, * premote = NULL, * pcache = NULL;
-                        
+
                         /* check whether we were given a path or accession */
                         bool is_accession = VPathIsAccessionOrOID ( orig );
 
@@ -431,7 +431,7 @@ LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
                                                 /* was not found locally - try to get one remotely */
                                                 if ( rc2 == 0 )
                                                 {
-                                                        /* We need suppress error message in the 
+                                                        /* We need suppress error message in the
                                                          * case if here any error happened
                                                          */
                                                     KLogLevel lvl = KLogLevelGet ();
@@ -473,7 +473,7 @@ LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
                             VPathRelease ( premote );
                             VPathRelease ( pcache );
                         }
-                        
+
                         VPathRelease ( orig );
                     }
 
@@ -579,7 +579,7 @@ LIB_EXPORT bool CC VDatabaseLocked ( const VDatabase *self )
  *  valid values are kptDatabase, kptTable and kptIndex
  *
  *  "resolved" [ OUT ] and "rsize" [ IN ] - optional output buffer
- *  for fundamenta object name if "alias" is not a fundamental name, 
+ *  for fundamenta object name if "alias" is not a fundamental name,
  *
  *  "name" [ IN ] - NUL terminated object name
  */
@@ -605,7 +605,7 @@ LIB_EXPORT bool CC VDatabaseIsAlias ( const VDatabase *self, uint32_t type,
  *
  *  "path" [ IN ] - NUL terminated path
  */
-LIB_EXPORT rc_t CC VDatabaseVWritable ( const VDatabase *self, uint32_t type, 
+LIB_EXPORT rc_t CC VDatabaseVWritable ( const VDatabase *self, uint32_t type,
         const char *name, va_list args )
 {
     rc_t rc;
@@ -757,8 +757,8 @@ LIB_EXPORT rc_t CC VDatabaseOpenSchema ( const VDatabase *self, const VSchema **
 
 
 /* lists the tables of the database
- * 
- * "names" [ OUT ] - return parameter for tables 
+ *
+ * "names" [ OUT ] - return parameter for tables
  */
 LIB_EXPORT rc_t CC VDatabaseListTbl ( const VDatabase *self, KNamelist **names )
 {
@@ -785,8 +785,8 @@ LIB_EXPORT rc_t CC VDatabaseListTbl ( const VDatabase *self, KNamelist **names )
 }
 
 /* lists the sub-databases of the database
- * 
- * "names" [ OUT ] - return parameter for databases 
+ *
+ * "names" [ OUT ] - return parameter for databases
  */
 LIB_EXPORT rc_t CC VDatabaseListDB ( const VDatabase *self, KNamelist **names )
 {

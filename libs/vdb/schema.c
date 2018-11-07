@@ -86,93 +86,166 @@ void CC BSTreeMbrWhack ( BSTNode *n, void *ignore )
 /*--------------------------------------------------------------------------
  * KSymbol
  */
-rc_t KSymbolCopy ( BSTree *scope, KSymbol **cp, const KSymbol *orig )
+struct CloneBlock
+{
+    KSymbol * targetNs;
+    rc_t rc;
+};
+
+static rc_t CloneSymbol ( BSTree *scope, const KSymbol **cp, const KSymbol *orig, KSymbol * targetNs );
+
+static
+bool CC CloneNode ( BSTNode *n, void *data )
+{
+    const KSymbol * sym = (const KSymbol *)n;
+    struct CloneBlock * bl = (struct CloneBlock*) data;
+    KSymbol * targetNs = bl -> targetNs;
+    const KSymbol * ignore;
+    bl -> rc = CloneSymbol ( & targetNs -> u . scope, & ignore, sym, bl -> targetNs );
+    return bl -> rc != 0;
+}
+
+static
+rc_t
+CloneSymbol ( BSTree *scope, const KSymbol **cp, const KSymbol *orig, KSymbol * targetNs )
 {
     rc_t rc;
-    KSymbol *copy, *dad = NULL;
+    KSymbol * copy = malloc ( sizeof (*copy) + orig->name.size + 1 );
+    KSymbol * existing;
 
-    /* recursively copy namespaces */
-    if ( orig -> dad != NULL )
-    {
-        rc = KSymbolCopy ( scope, cp, orig -> dad );
-        if ( rc != 0 )
-            return rc;
-
-        /* copied dad becomes scope */
-        dad = * cp;
-        scope = & dad -> u . scope;
-    }
-
-#if COPY_SHARE_TEXT
-    /* create simple copy with no new space for text */
-    copy = malloc ( sizeof * copy );
-#else
-    copy = malloc ( sizeof (*copy) + orig->name.size + 1 );
-#endif
-    if ( copy == NULL )
-        return RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted );
-
-    /* copy original, including pointer to string */
-    * copy = * orig;
-
-#if ! COPY_SHARE_TEXT
-
+    assert ( targetNs == NULL || scope == & targetNs -> u . scope );
     /* copy original including string */
-    string_copy ( ( char* ) ( copy + 1 ), orig -> name . size + 1,
-        orig -> name . addr, orig -> name . size );
+    * copy = * orig;
+    string_copy ( ( char* ) ( copy + 1 ), orig -> name . size + 1, orig -> name . addr, orig -> name . size );
 
     /* fix up pointer to string */
     copy -> name . addr = ( const char* ) ( copy + 1 );
-#endif
-    copy -> dad = dad;
-
-    /* if we just created a namespace, forget its children */
-    if ( copy -> type == eNamespace )
+    copy -> dad = targetNs; /* NULL for global names */
+    rc = BSTreeInsertUnique ( scope, & copy -> n, (BSTNode **) &existing, KSymbolSort );
+    if ( GetRCState ( rc ) == rcExists )
     {
-        BSTreeInit ( & copy -> u . scope );
-        rc = BSTreeInsertUnique ( scope, & copy -> n, ( BSTNode** ) cp, KSymbolSort );
-        if ( rc != 0 )
+        assert ( existing != NULL );
+
+        free ( copy );
+        rc = 0;
+        if ( orig -> type == eNamespace )
+        {   /* clone the contents of the namespace*/
+            assert ( existing -> type == eNamespace );
+            struct CloneBlock bl;
+            bl . targetNs = existing;
+            if ( BSTreeDoUntil ( & orig -> u . scope, false, CloneNode, & bl ) )
+            {
+                rc = bl . rc;
+            }
+        }
+
+        if ( rc == 0 )
         {
-            free ( copy );
-            copy = * cp;
-            if ( copy -> type == eNamespace )
-                rc = 0;
-            else
-                copy = NULL;
+            *cp = existing;
+        }
+        else
+        {
+            *cp = NULL;
         }
     }
     else
     {
-        rc = BSTreeInsertUnique ( scope, & copy -> n, ( BSTNode** ) cp, KSymbolSort );
-        if ( rc != 0 )
+        if ( rc == 0  && orig -> type == eNamespace )
+        {   /* clone the contents of the namespace*/
+            struct CloneBlock bl;
+            bl . targetNs = copy;
+            BSTreeInit ( & copy -> u . scope );
+            if ( BSTreeDoUntil ( & orig -> u . scope, false, CloneNode, & bl ) )
+            {
+                rc = bl . rc;
+            }
+        }
+
+        if ( rc == 0 )
         {
-            free ( copy );
-            copy = NULL;
+            *cp = copy;
+        }
+        else
+        {
+            *cp = NULL;
         }
     }
+    return rc;
+}
 
-/*     if (*cp != copy) */
-/*      fprintf(stderr,"%p\t%30s %30.*s\tmalloc\t%d\n", (void*)copy,  */
-/*              __func__,(int)copy->name.size,copy->name.addr, copy->type); */
+static
+const KSymbol *
+LookupQualIdent ( const BSTree *scope, const KSymbol *orig )
+{   /* descend the chain of namespaces leading to 'orig' to locate the corresponding leaf in 'scope' */
+    Vector namespaceStack; /* const KSymbol* */
+    {
+        const KSymbol * ns;
+        VectorInit ( & namespaceStack, 0, 32 );
+        ns = orig -> dad;
+        while ( ns != NULL )
+        {
+            VectorAppend( & namespaceStack, NULL, ns );
+            ns = ns -> dad;
+        }
+    }
+    /* now namespaces are in the vector in order from innermost to outermost, traverse back to front to descend to 'orig' starting from 'scope' */
+    {
+        const BSTree * curScope = scope;
+        uint32_t i = VectorLength ( & namespaceStack );
+        while ( i != 0 )
+        {
+            const KSymbol * origNs = ( const KSymbol* ) VectorGet ( & namespaceStack, i - 1 );
+            const KSymbol * newInnerNs = ( const KSymbol* ) BSTreeFind ( curScope, & origNs -> name, KSymbolCmp );
+            assert ( newInnerNs != NULL );
+            assert ( newInnerNs -> type == eNamespace );
+            curScope = & newInnerNs -> u . scope;
+            --i;
+        }
+        /* now curScope is the innermost namespace in the copy, find the copy of the 'orig' in it */
+        const KSymbol * ret = ( const KSymbol* ) BSTreeFind ( curScope, & orig -> name, KSymbolCmp );
+        assert ( ret != NULL );
+        VectorWhack ( & namespaceStack, NULL, NULL );
+        return ret;
+    }
+}
 
-    * cp = copy;
+rc_t KSymbolCopy ( BSTree *scope, const KSymbol **cp, const KSymbol *orig )
+{
+    rc_t rc;
+    assert ( scope != NULL );
+    assert ( cp != NULL );
+    assert ( orig != NULL );
+
+    if ( orig -> dad != NULL )
+    {
+        KSymbol * ns = orig -> dad;
+        /* locate the topmost namespace */
+        while ( ns -> dad != NULL )
+        {
+            ns = ns -> dad;
+        }
+        /* copy the entire namespace */
+        rc = CloneSymbol( scope, cp, ns, NULL );
+        if ( rc == 0 )
+        {   /* locate and return the copy of the original symbol */
+            *cp = ( KSymbol * ) LookupQualIdent ( scope, orig );
+        }
+    }
+    else
+    {   /* global name */
+        rc = CloneSymbol( scope, cp, orig, NULL );
+    }
+    if ( rc == 0 )
+    {
+        assert ( *cp != NULL );
+    }
     return rc;
 }
 
 bool CC KSymbolCopyScope ( BSTNode *n, void *scope )
 {
-    const KSymbol *sym = ( const KSymbol* ) n;
-
-    /* perform a deep copy of leaf symbols */
-    if ( sym -> type != eNamespace )
-    {
-        KSymbol *ignore;
-        rc_t rc = KSymbolCopy ( scope, & ignore, sym );
-        return ( rc != 0 ) ? true : false;
-    }
-
-    /* traverse namespaces to find leaves */
-    return BSTreeDoUntil ( & sym -> u . scope, false, KSymbolCopyScope, scope );
+    const KSymbol * ignore;
+    return KSymbolCopy ( scope, & ignore, ( const KSymbol* ) n ) != 0;
 }
 
 #if _DEBUGGING
@@ -328,7 +401,7 @@ rc_t SNameOverloadMake ( SNameOverload **np,
 rc_t SNameOverloadCopy ( BSTree *scope,
     SNameOverload **cp, const SNameOverload *orig )
 {
-    KSymbol *sym;
+    const KSymbol *sym;
     rc_t rc = KSymbolCopy ( scope, & sym, orig -> name );
     if ( rc == 0 )
     {
@@ -347,9 +420,6 @@ rc_t SNameOverloadCopy ( BSTree *scope,
 
             SNameOverloadWhack ( copy, NULL );
         }
-
-        BSTreeUnlink ( scope, & sym -> n );
-        KSymbolWhack ( & sym -> n, NULL );
     }
 
     * cp = NULL;
@@ -389,7 +459,6 @@ rc_t SNameOverloadVectorCopy ( BSTree *scope, const Vector *src, Vector *dest )
 
     return 0;
 }
-
 
 /*--------------------------------------------------------------------------
  * VIncludedPath
@@ -764,7 +833,6 @@ VSchemaParseTextInt_v1 ( VSchema *self, const char *name, const char *text, size
     KTokenSourceInit ( & src, & tt );
 
     rc = schema ( & src, self );
-
     if (rc == 0)
     {
         PARSE_DEBUG( ("Parsed schema v1 from %s\n", name) );
@@ -853,18 +921,50 @@ LIB_EXPORT rc_t CC VSchemaParseText ( VSchema *self, const char *name,
 rc_t VSchemaParseTextCallback ( VSchema *self, const char *name,
     rc_t ( CC * fill ) ( void *self, KTokenText *tt, size_t save ), void *data )
 {
-    KTokenText tt;
-    KTokenSource src;
+    KConfig * kfg;
+    rc_t rc = KConfigMake ( & kfg, NULL );
+    if ( rc == 0 )
+    {
+        uint8_t version;
 
-    KTokenTextInitCString ( & tt, "", name );
-    tt . read = fill;
-    tt . data = data;
+version=1;
+//        rc = KConfigGetSchemaParserVersion( kfg , & version );
+//        if ( rc == 0 )
+        {
+            switch (version)
+            {
+            case 1:
+                {
+                    KTokenText tt;
+                    KTokenSource src;
 
-    KTokenSourceInit ( & src, & tt );
-    /*NB: this invokes v1 parser, even though the parent schema may have been
-          processed by v2 parser. The reason is the possibility of v0 constructs
-          coming from older objects */
-    return schema ( & src, self );
+                    KTokenTextInitCString ( & tt, "", name );
+                    tt . read = fill;
+                    tt . data = data;
+
+                    KTokenSourceInit ( & src, & tt );
+                    /*NB: this invokes v1 parser, even though the parent schema may have been
+                        processed by v2 parser. The reason is the possibility of v0 constructs
+                        coming from older objects */
+                    rc = schema ( & src, self );
+                }
+                break;
+            case 2:
+                {
+                    KTokenText tt;
+                    rc = fill ( data, & tt, 0 );
+                    rc = VSchemaParseTextInt_v2 ( self, name, tt.str.addr, tt.str.size );
+                }
+                break;
+            default:
+                rc = RC ( rcVDB, rcSchema, rcParsing, rcFileFormat, rcUnsupported );
+                break;
+            }
+        }
+    }
+    KConfigRelease ( kfg );
+    return rc;
+
 }
 
 
