@@ -794,6 +794,7 @@ TEST_CASE(NGS_FailedToOpen)
     }
     REQUIRE_FAILED ();
     REQUIRE_RC ( KRepositoryMgrRelease ( repoMgr ) );
+    REQUIRE_RC ( KConfigRelease ( kfg ) );
 }
 
 //////////////////////////////////////////// Open read collection using system path

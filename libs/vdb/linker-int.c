@@ -107,6 +107,7 @@ extern VTRANSFACT_DECL ( NCBI_SRA_lookup );
 extern VTRANSFACT_DECL ( NCBI_SRA_make_position );
 extern VTRANSFACT_DECL ( NCBI_SRA_make_read_desc );
 extern VTRANSFACT_DECL ( NCBI_SRA_make_spot_desc );
+extern VTRANSFACT_DECL ( NCBI_SRA_make_spot_filter );
 extern VTRANSFACT_DECL ( NCBI_SRA_normalize );
 #if HAVE_PREFIX_TREE_TO_NAME
 extern VTRANSFACT_DECL ( NCBI_SRA_prefix_tree_to_name );
@@ -497,6 +498,7 @@ rc_t VLinkerInitFactoriesRead ( VLinker *self,  KSymTable *tbl, const SchemaEnv 
         { NCBI_SRA_make_position, "NCBI:SRA:make_position" },
         { NCBI_SRA_make_read_desc, "NCBI:SRA:make_read_desc" },
         { NCBI_SRA_make_spot_desc, "NCBI:SRA:make_spot_desc" },
+        { NCBI_SRA_make_spot_filter, "NCBI:SRA:make_spot_filter" },
         { NCBI_SRA_normalize, "NCBI:SRA:normalize" },
 #if HAVE_PREFIX_TREE_TO_NAME
         { NCBI_SRA_prefix_tree_to_name, "NCBI:SRA:prefix_tree_to_name" },

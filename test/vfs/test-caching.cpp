@@ -37,6 +37,8 @@
 #include <vfs/resolver.h> /* VResolverCacheEnable */
 #include <vdb/database.h> /* VDatabase */
 #include <vdb/schema.h> /* VSchema */
+#include <kfc/ctx.h> /* HYBRID_FUNC_ENTRY */
+#include <kfc/rsrc-global.h> /* KRsrcGlobalWhack */
 
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
@@ -51,7 +53,7 @@ typedef enum {
     eAppsRefseq                      =      1,
     eAppsSra                         =      2,
     eAppsWgs                         =      4,
-    
+
     eUserCacheDisabledSetFalse       =   0x20, //                 10b
     eUserCacheDisabledSetTrue        =   0x30, //                 11b
 
@@ -203,8 +205,8 @@ public:
     {
 #define WGS "AFVF01"
         const char * acc = type == eRefseq ? "KC702199.1" :
-                           type == eSra    ? "SRR003325" : WGS ".1"; 
-//                         type == eSra    ? "SRR053325" : WGS ".1"; 
+                           type == eSra    ? "SRR003325" : WGS ".1";
+//                         type == eSra    ? "SRR053325" : WGS ".1";
         rc_t rc = 0;
         KDirectory * native  = NULL;
         REQUIRE_RC ( KDirectoryNativeDir ( & native ) );
@@ -237,7 +239,7 @@ public:
         REQUIRE_RC ( VDBManagerMakeSRASchema ( mgr, & schema ) );
 
         // KConfigReadString creates NULL-terminated strings
-        REQUIRE ( user_root ); 
+        REQUIRE ( user_root );
         REQUIRE_EQ ( KDirectoryPathType ( native, user_root -> addr ),
                      ( KPathType ) kptNotFound );
         const VDatabase * db = NULL;
@@ -250,7 +252,7 @@ public:
         }
 
         // KConfigReadString creates NULL-terminated strings
-        REQUIRE ( user_root ); 
+        REQUIRE ( user_root );
         if ( caching ) {
             REQUIRE_EQ ( KDirectoryPathType ( native, user_root -> addr ),
                          ( KPathType ) kptDir );
@@ -287,7 +289,7 @@ public:
         RELEASE ( KDirectory, dir );
 
         // KConfigReadString creates NULL-terminated strings
-        REQUIRE ( user_root ); 
+        REQUIRE ( user_root );
         REQUIRE_RC ( KDirectoryRemove ( native, true, user_root -> addr ) );
         REQUIRE_EQ ( KDirectoryPathType ( native, user_root -> addr ),
                      ( KPathType ) kptNotFound );
@@ -301,7 +303,7 @@ public:
         RELEASE ( String, user_root );
 
         // KConfigReadString creates NULL-terminated strings
-        REQUIRE ( test_root ); 
+        REQUIRE ( test_root );
         KDirectoryRemove ( native, false, test_root -> addr );
         // might fail when there is another test build running parallelly
 
@@ -312,8 +314,11 @@ public:
 }
 
   ~Test ( void ) {
+      HYBRID_FUNC_ENTRY ( rcRuntime, rcResources, rcReleasing ); /* recover KFC context */
       assert( _dad );
       _dad->ErrorCounterAdd(GetErrorCounter());
+      /* make sure all references to managed objects from KFC are released, for the next test case to re-initialize them */
+      KRsrcGlobalWhack ( ctx );
     }
 };
 

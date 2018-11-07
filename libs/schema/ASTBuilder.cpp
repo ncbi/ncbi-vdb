@@ -557,7 +557,7 @@ ASTBuilder :: CheckForColumnCollision ( const KSymbol *sym )
 }
 
 bool
-ASTBuilder :: ScanVirtuals ( ctx_t ctx, const Token :: Location & p_loc, Vector & p_byParent, KSymTable & symtab )
+ASTBuilder :: ScanVirtuals ( ctx_t ctx, const Token :: Location & p_loc, Vector & p_byParent, KSymTable & p_symtab )
 {
     FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     uint32_t start = VectorStart ( & p_byParent );
@@ -573,7 +573,7 @@ ASTBuilder :: ScanVirtuals ( ctx_t ctx, const Token :: Location & p_loc, Vector 
 
             /* since the virtual productions in one parent could be
                defined by another parent, test for the possibility */
-            const KSymbol *def = KSymTableFindSymbol ( & symtab, orig );
+            const KSymbol *def = KSymTableFindSymbol ( & p_symtab, orig );
             if ( def != NULL )
             {
                 if ( def -> type == eProduction || def -> type == eVirtual )
@@ -592,8 +592,8 @@ ASTBuilder :: ScanVirtuals ( ctx_t ctx, const Token :: Location & p_loc, Vector 
             else
             {
                 /* copy the original */
-                BSTree * scope = static_cast < BSTree * > ( VectorLast ( & symtab . stack ) );
-                KSymbol *copy;
+                BSTree * scope = static_cast < BSTree * > ( VectorLast ( & p_symtab . stack ) );
+                const KSymbol *copy;
                 rc_t rc = KSymbolCopy ( scope, & copy, orig );
                 if ( rc != 0 )
                 {

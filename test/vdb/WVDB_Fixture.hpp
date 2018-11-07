@@ -189,7 +189,7 @@ public:
         {
             throw std :: logic_error ( "WVDB_Fixture::MakeDatabase : MoveParseTree() returned 0" );
         }
-        ncbi :: SchemaParser :: ASTBuilder builder ( p_schema );
+        ncbi :: SchemaParser :: ASTBuilder builder ( ctx, p_schema );
         ncbi :: SchemaParser :: AST * ast = builder . Build ( ctx, * parseTree, "", false );
         if ( builder . GetErrorCount() != 0)
         {

@@ -25,6 +25,7 @@
 #include <vdb/manager.h> // VDBManager
 #include <vdb/database.h>
 #include <vdb/table.h>
+#include <vdb/view.h>
 #include <vdb/cursor.h>
 #include <vdb/blob.h>
 #include <vdb/vdb-priv.h>
@@ -38,6 +39,7 @@ extern "C" {
 }
 
 #include <ktst/unit_test.hpp> // TEST_CASE
+#include <klib/container.h>
 #include <kfg/config.h>
 
 #include <sysalloc.h>
@@ -330,7 +332,7 @@ FIXTURE_TEST_CASE(TestCursorIsStatic_VariableREAD_LEN, VdbFixture)
     REQUIRE_RC ( VCursorIsStaticColumn ( curs, col_idx[0], &is_static) );
     REQUIRE ( ! is_static );
 }
-#if 0
+
 FIXTURE_TEST_CASE(TestCursorIsStatic_SingleRowRun2, VdbFixture)
 {
     static char const *columns[] = { "READ_LEN", 0 };
@@ -339,7 +341,6 @@ FIXTURE_TEST_CASE(TestCursorIsStatic_SingleRowRun2, VdbFixture)
     REQUIRE_RC ( VCursorIsStaticColumn ( curs, col_idx[0], &is_static) );
     REQUIRE ( is_static );
 }
-#endif
 FIXTURE_TEST_CASE(TestCursorIsStatic_FixedREAD_LEN_MultipleRows, VdbFixture)
 {
     static char const *columns[] = { "READ_LEN", 0 };
@@ -607,6 +608,27 @@ FIXTURE_TEST_CASE ( VCursor_FindNextRowIdDirect, VdbFixture )
     REQUIRE_EQ ( (int64_t)2, next ) ; // VDB-3075: next == 1
 }
 
+FIXTURE_TEST_CASE ( DoubleOpen, VdbFixture )
+{
+    const char SRR619505[] = "SRR619505";
+
+    const VDatabase *db = NULL;
+    REQUIRE_RC ( VDBManagerOpenDBRead ( mgr, &db, NULL, SRR619505 ) );
+    const VTable * tbl;
+    REQUIRE_RC ( VDatabaseOpenTableRead ( db, &tbl, "REFERENCE") );
+    //DumpScope( tbl -> stbl -> scope, "Table" );
+    REQUIRE_RC ( VTableRelease ( tbl ) );
+    //DumpScope( db -> schema -> dad -> scope, "Db->dad" );
+    //DumpScope( db -> schema -> scope, "Db" );
+
+    // this used to corrupt the heap
+    REQUIRE_RC ( VDatabaseOpenTableRead ( db, &tbl, "SEQUENCE") );
+    // DumpScope( tbl -> stbl -> scope, "Table" );
+    REQUIRE_RC ( VTableRelease ( tbl ) );
+
+    REQUIRE_RC ( VDatabaseRelease ( db ) );
+}
+
 FIXTURE_TEST_CASE(VCursor_PermitPostOpenAdd, VdbFixture)
 {
     static char const *columns[] = { "SPOT_ID", 0 };
@@ -630,23 +652,60 @@ FIXTURE_TEST_CASE ( V2ParserError, VdbFixture )
     REQUIRE_RC ( VTableRelease ( tbl ) );
 }
 
-TEST_CASE ( View_On_An_Existing_Schema )
+rc_t CC FlushSchema(void *fd, const void * buffer, size_t size)
+{
+    ostream & out = *static_cast < ostream * > (fd);
+    out.write(static_cast < const char * > (buffer), size);
+    out.flush();
+    return 0;
+}
+
+#include <sstream>
+string
+DumpSchema(const VSchema * p_schema)
+{
+    ostringstream out;
+    if (VSchemaDump(p_schema, sdmPrint, 0, FlushSchema, &out) != 0)
+    {
+        throw runtime_error("DumpSchema failed");
+    }
+    return out.str();
+}
+
+TEST_CASE(View_On_An_Existing_Schema)
 {
     const VDBManager * mgr;
-    REQUIRE_RC ( VDBManagerMakeRead ( & mgr, NULL ) );
+    REQUIRE_RC(VDBManagerMakeRead(&mgr, NULL));
+
     const VDatabase *db = NULL;
     const char * acc = "SRR1063272";
-    REQUIRE_RC ( VDBManagerOpenDBRead ( mgr, &db, NULL, acc ) );
+
+    const string schemaText =
+        "version 2; "
+        "view V1#1 < NCBI:align:tbl:align_cmn align >"
+        "{"
+        "    column I64 SEQ_SPOT_ID = align.SEQ_SPOT_ID;"
+        "}";
+
     VSchema * schema;
-    REQUIRE_RC ( VDatabaseOpenSchema ( db, ( const VSchema ** ) & schema ) );
+    REQUIRE_RC(VDBManagerOpenDBRead(mgr, &db, NULL, acc));
+    REQUIRE_RC(VDatabaseOpenSchema(db, (const VSchema **)& schema));
+    REQUIRE_RC(VSchemaParseText(schema, "", schemaText.c_str(), schemaText.size()));
 
-    // we can use objects from the existing schema while parsing an add-on
-    const string schemaText = "version 2; view V#1 < NCBI:align:tbl:seq t > { column ascii READ = t.READ; }";
-    REQUIRE_RC ( VSchemaParseText ( schema, "", schemaText . c_str (), schemaText . size () ) );
+    const VView * view;
+    REQUIRE_RC(VDBManagerOpenView(mgr, &view, schema, "V1"));
 
-    REQUIRE_RC ( VSchemaRelease ( schema ) );
-    REQUIRE_RC ( VDatabaseRelease ( db ) );
-    REQUIRE_RC ( VDBManagerRelease ( mgr ) );
+    const VTable * tbl_pa;
+    REQUIRE_RC(VDatabaseOpenTableRead(db, &tbl_pa, "PRIMARY_ALIGNMENT")); // this used to mess up VSchema
+
+    string d = DumpSchema(schema);
+
+    REQUIRE_RC(VTableRelease(tbl_pa));
+    REQUIRE_RC(VViewRelease(view));
+    REQUIRE_RC(VSchemaRelease(schema));
+
+    REQUIRE_RC(VDatabaseRelease(db));
+    REQUIRE_RC(VDBManagerRelease(mgr));
 }
 
 //////////////////////////////////////////// Main

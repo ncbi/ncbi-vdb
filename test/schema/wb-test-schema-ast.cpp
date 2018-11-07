@@ -369,14 +369,20 @@ FIXTURE_TEST_CASE(Typedef_UndefinedBase, AST_Fixture)
     VerifyErrorMessage ( "typedef zz t;", "Undeclared identifier: 'zz'" );
 }
 
-FIXTURE_TEST_CASE(Typedef_DuplicateDefinition_1, AST_Fixture)
+FIXTURE_TEST_CASE(Typedef_BenignRedefinesAllowed_1, AST_Fixture)
 {
-    VerifyErrorMessage ( "typedef U8 t; typedef U8 t;", "Object already declared: 't'" );
+    MakeAst ( "typedef U8 t; typedef U8 t;" );
+    VerifyDatatype ( "t", "U8", 1, 8 );
+}
+FIXTURE_TEST_CASE(Typedef_BenignRedefinesAllowed_2, AST_Fixture)
+{
+    MakeAst ( "typedef U8 t, t;" );
+    VerifyDatatype ( "t", "U8", 1, 8 );
 }
 
-FIXTURE_TEST_CASE(Typedef_DuplicateDefinition_2, AST_Fixture)
+FIXTURE_TEST_CASE(Typedef_DuplicateDefinition_1, AST_Fixture)
 {
-    VerifyErrorMessage ( "typedef U8 t, t;", "Object already declared: 't'" );
+    VerifyErrorMessage ( "typedef U8 t; typedef U32 t;", "Type already declared differently: 't'" );
 }
 
 FIXTURE_TEST_CASE(Typedef_BaseNotAType, AST_Fixture)
@@ -1038,6 +1044,24 @@ FIXTURE_TEST_CASE(CondExpr, AST_Fixture)
     REQUIRE_EQ ( ( uint32_t ) eConstExpr, expr -> right -> var );
     REQUIRE_EQ ( 3, (int)reinterpret_cast < const SConstExpr * > ( expr -> right ) -> u . u64 [0] );
 }
+
+FIXTURE_TEST_CASE(ChildSchema_AccessToParentsNames, AST_Fixture)
+{   // VDB-3635: partial copy of a namespace to the child schema obscures members left behind
+    MakeAst  ( "typedef U8 NS:b:T; extern function U8 NS:a:fn();"  );
+    VTypedecl resolved_dad;
+    REQUIRE_RC ( VSchemaResolveTypedecl ( m_schema, & resolved_dad, "NS:b:T" ) );
+
+    VSchema * child;
+    REQUIRE_RC ( VSchemaMake ( &child, m_schema ) );
+    string source = "typedef U8 NS:b:T;";
+    REQUIRE_RC ( VSchemaParseText ( child, 0, source . c_str (), source . size () ) );
+    VTypedecl resolved_child;
+    REQUIRE_RC ( VSchemaResolveTypedecl ( child, & resolved_child, "NS:b:T" ) );
+
+    REQUIRE_EQ ( resolved_dad . type_id, resolved_child . type_id );
+    REQUIRE_RC ( VSchemaRelease ( child ) );
+}
+
 //TODO: invalid float
 //TODO: nested vector constants - error
 //TODO: negation applied to non-scalar - error

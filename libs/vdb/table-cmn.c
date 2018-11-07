@@ -1140,7 +1140,7 @@ rc_t VColumnRefMake ( VColumnRef **rp, const VSchema *schema, const SColumn *sco
     {
         size_t tdsize = strlen ( text );
         const String *name = & scol -> name -> name;
-        VColumnRef *cref = malloc ( sizeof * cref + name -> size + tdsize );
+        VColumnRef *cref = calloc ( 1, sizeof * cref + name -> size + tdsize );
         if ( cref == NULL )
             rc = RC ( rcVDB, rcTable, rcListing, rcMemory, rcExhausted );
         else
