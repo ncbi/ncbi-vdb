@@ -760,19 +760,26 @@ rc_t VPathCheckFromNamesCGI ( const VPath * path, const String *ticket, const VP
 
     if ( path -> query . size != 0 )
     {
-        String name, val, req;
+        String name, val, req, host;
 
-        /* query must match ticket */
-        if ( ticket == NULL )
-            return RC ( rcVFS, rcResolver, rcResolving, rcMessage, rcCorrupt );
+        CONST_STRING(&host, "storage.googleapis.com");
+        /* googleapis URLs han have query */
+        if (!StringEqual(&path->host, &host)) {
+            /* query must match ticket */
+            if (ticket == NULL)
+                return RC(rcVFS, rcResolver, rcResolving,
+                    rcMessage, rcCorrupt);
 
-        StringSubstr ( & path -> query, & name, 0, 5 );
-        StringSubstr ( & path -> query, & val, 5, 0 );
-        if ( ! StringEqual ( & val, ticket ) )
-            return RC ( rcVFS, rcResolver, rcResolving, rcMessage, rcCorrupt );
-        CONST_STRING ( & req, "?tic=" );
-        if ( ! StringEqual ( & name, & req ) )
-            return RC ( rcVFS, rcResolver, rcResolving, rcMessage, rcCorrupt );
+            StringSubstr(&path->query, &name, 0, 5);
+            StringSubstr(&path->query, &val, 5, 0);
+            if (!StringEqual(&val, ticket))
+                return RC(rcVFS, rcResolver, rcResolving,
+                    rcMessage, rcCorrupt);
+            CONST_STRING(&req, "?tic=");
+            if (!StringEqual(&name, &req))
+                return RC(rcVFS, rcResolver, rcResolving,
+                    rcMessage, rcCorrupt);
+        }
     }
 
 #if DISALLOW_FRAGMENT
