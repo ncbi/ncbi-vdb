@@ -2764,6 +2764,57 @@
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(NGS_SDK);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\schema\AST_Expr.cpp">
+      <ObjectFileName>$(IntDir)schema-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\schema\AST.cpp">
+      <ObjectFileName>$(IntDir)schema-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\schema\ASTBuilder-db.cpp">
+      <ObjectFileName>$(IntDir)schema-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\schema\ASTBuilder-func.cpp">
+      <ObjectFileName>$(IntDir)schema-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\schema\ASTBuilder-phys.cpp">
+      <ObjectFileName>$(IntDir)schema-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\schema\ASTBuilder-tbl.cpp">
+      <ObjectFileName>$(IntDir)schema-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\schema\ASTBuilder-type.cpp">
+      <ObjectFileName>$(IntDir)schema-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\schema\ASTBuilder-view.cpp">
+      <ObjectFileName>$(IntDir)schema-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\schema\ASTBuilder.cpp">
+      <ObjectFileName>$(IntDir)schema-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\schema\ErrorReport.cpp">
+      <ObjectFileName>$(IntDir)schema-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\schema\ParseTree.cpp">
+      <ObjectFileName>$(IntDir)schema-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\schema\schema-ast.cpp">
+      <ObjectFileName>$(IntDir)schema-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\schema\schema-grammar.cpp">
+      <ObjectFileName>$(IntDir)schema-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\schema\schema-lex.c">
+      <ObjectFileName>$(IntDir)schema-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\schema\SchemaParser.cpp">
+      <ObjectFileName>$(IntDir)schema-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\schema\SchemaScanner.cpp">
+      <ObjectFileName>$(IntDir)schema-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\schema\Token.cpp">
+      <ObjectFileName>$(IntDir)schema-%(Filename).obj</ObjectFileName>
+    </ClCompile>
       <ClCompile Include="..\..\..\libs\search\agrep-dp.c">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)ksrch-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)ksrch-%(Filename).obj</ObjectFileName>

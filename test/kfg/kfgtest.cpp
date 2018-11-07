@@ -916,6 +916,23 @@ FIXTURE_TEST_CASE(predef_SCHEMA_VERSION_2, KfgFixture)
     REQUIRE_EQ ( (uint8_t)2, version );
 }
 
+#if WINDOWS
+int setenv(const char *name, const char *value, int overwrite)
+{
+    int errcode = 0;
+    if (!overwrite) {
+        size_t envsize = 0;
+        errcode = getenv_s(&envsize, NULL, 0, name);
+        if (errcode || envsize) return errcode;
+    }
+    return _putenv_s(name, value);
+}
+int unsetenv(const char *name)
+{
+    return _putenv_s(name, "");
+}
+#endif
+
 // keep the following 2 test cases together
 FIXTURE_TEST_CASE(predef_SCHEMA_VERSION_from_env_setup, KfgFixture)
 {   // set up environment to take effect at the next cases's construction time

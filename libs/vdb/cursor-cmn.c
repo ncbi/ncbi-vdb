@@ -32,6 +32,8 @@
 #include "prod-priv.h"
 
 #include <vdb/cursor.h>
+#include <vdb/vdb-priv.h>
+
 #include <klib/rc.h>
 #include <stdbool.h>
 
@@ -183,7 +185,7 @@ uint32_t VCursorIncrementPhysicalProductionCount ( struct VCursor * self )
 {
     DISPATCH_VALUE ( incrementPhysicalProductionCount ( self ), 0 );
 }
-const struct KSymbol * VCursorFindOverride ( const VCursor *self, const struct VCtxId *cid, const const VTable * tbl )
+const struct KSymbol * VCursorFindOverride ( const VCursor *self, const struct VCtxId *cid, const struct VTable * tbl )
 {
     DISPATCH_VALUE ( findOverride ( self, cid, tbl ), NULL );
 }
@@ -958,6 +960,7 @@ VCursorLinkedCursorSet(const VCursor * cself,const char *tbl,VCursor const *curs
     return rc;
 }
 
+LIB_EXPORT
 VColumn *
 VCursorGetColumn ( struct VCursor * p_self, const VCtxId * p_ctx )
 {
