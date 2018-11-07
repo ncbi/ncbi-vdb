@@ -89,6 +89,8 @@ rc_t KSrvRespFileGetAcc ( const struct KSrvRespFile * self, const char ** acc,
                                                             const char ** tic);
 rc_t KSrvRespFileGetId  ( const struct KSrvRespFile * self, uint64_t * id,
                                                             const char ** tic );
+rc_t KSrvRespFileGetMapping(const struct KSrvRespFile * self,
+    const struct VPath ** mapping);
 
 rc_t LocationsAddCache ( struct Locations * self,
                          const struct VPath * path, rc_t rc );
@@ -164,8 +166,8 @@ rc_t KServiceSearchTest (
 
 /* THE FOLLOWING DEFINE TURNS ON COMPARING OLD/NEW RESOLVING CALLS AND
    ASSERTING WHEN THE RESULTS DO NOT MATCH.
-   REMOVE IT WHEN MERGING THE BRANCH */
-#define TESTING_SERVICES_VS_OLD_RESOLVING 1
+   REMOVE IT WHEN MERGING THE BRANCH *
+#define TESTING_SERVICES_VS_OLD_RESOLVING 1*/
 
 
 #ifdef __cplusplus

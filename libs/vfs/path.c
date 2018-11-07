@@ -3878,9 +3878,16 @@ rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
     if ( tick == NULL || tick -> addr == NULL || tick -> size == 0 )
         return VPathMakeFmtExt ( new_path, ext, id, tick, osize, date, md5,
 		                         exp_date, "%S", url  );
-    else
-        return VPathMakeFmtExt ( new_path, ext, id, tick, osize, date, md5,
-                                 exp_date, "%S?tic=%S", url, tick );
+    else {
+        const char * fmt = NULL;
+        assert(url);
+        if (string_chr(url->addr, url->size, '?') == NULL)
+            fmt = "%S?tic=%S";
+        else
+            fmt = "%S&tic=%S";
+        return VPathMakeFmtExt(new_path, ext, id, tick, osize, date, md5,
+            exp_date, fmt, url, tick);
+    }
 }
 
 rc_t LegacyVPathMakeVFmt ( VPath ** new_path, const char * fmt, va_list args )

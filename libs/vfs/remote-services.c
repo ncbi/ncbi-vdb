@@ -293,6 +293,7 @@ typedef struct {
     KSrvResponse * list;
     Kart * kart;
     SServerTimestamp timestamp;
+    rc_t rc;
 } SResponse;
 
 
@@ -2078,11 +2079,17 @@ static rc_t SServerTimestampFini ( SServerTimestamp * self ) {
 
 
 /* SResponse ******************************************************************/
-static rc_t SResponseInit ( SResponse * self ) {
+static rc_t SResponseInit ( SResponse * self, rc_t aRc ) {
     rc_t rc = 0;
+
     assert ( self );
+
     VectorInit ( & self -> rows, 0, 5 );
+
     rc = KSrvResponseMake ( & self -> list );
+
+    self->rc = aRc;
+
     return rc;
 }
 
@@ -2324,12 +2331,12 @@ static void SCgiRequestFini ( SCgiRequest * self ) {
 
 
 static rc_t SCgiRequestPerform ( const SCgiRequest * self,
-    const SHelper * helper, KStream ** response,
-    const char * expected )
+    const SHelper * helper, KStream ** stream,
+    const char * expected, KService * service)
 {
-    rc_t rc = 0;
+    rc_t rc = 0, rx = 0;
 
-    assert ( self && helper && response );
+    assert ( self && helper && stream && service);
 
     if ( rc == 0 ) {
         SHttpRequestHelper h;
@@ -2354,36 +2361,48 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
                             "  code=%d\n", code ) );
                         switch ( code ) {
                           case 200:
-                            rc = KHttpResultGetInputStream ( rslt, response );
                             break;
                           case 403:
                      /* HTTP/1.1 403 Forbidden
                       - resolver CGI was called over http insted of https */
-                            rc = RC ( rcVFS, rcQuery, rcExecuting, rcConnection,
-                                      rcUnauthorized );
+                            rx = RC ( rcVFS, rcQuery, rcExecuting,
+                                             rcConnection, rcUnauthorized );
                             break;
                           case 404:
                     /* HTTP/1.1 404 Bad Request - resolver CGI was not found */
-                            rc = RC ( rcVFS, rcQuery, rcExecuting, rcConnection,
-                                      rcNotFound );
+                            rx = RC ( rcVFS, rcQuery, rcExecuting,
+                                             rcConnection, rcNotFound );
                             break;
                           default: /* Something completely unexpected */
-                            rc = RC ( rcVFS, rcQuery, rcExecuting, rcConnection,
-                                      rcUnexpected );
+                            rx = RC ( rcVFS, rcQuery, rcExecuting,
+                                             rcConnection, rcUnexpected );
                             break;
                         }
+                        if (rx != 0) {
+                            if (SVersionResponseInJson(&service->req.version)) {
+                                service->resp.rc = rx;
+                                rc = KHttpResultGetInputStream(rslt, stream);
+                            }
+                            else {
+                                rc = rx;
+                                if ( stream != NULL )
+                                    RELEASE(KStream, *stream);
+                            }
+                        }
+                        else
+                            rc = KHttpResultGetInputStream(rslt, stream);
                     }
                 }
                 RELEASE ( KHttpResult, rslt );
             }
             else {
-                KStream * stream = NULL;
+                KStream * strm = NULL;
                 DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( 
             "XXXXXXXXXXXX NOT sending HTTP POST request XXXXXXXXXXXXXXXX\n" ) );
-                rc = KStreamMakeFromBuffer ( & stream, expected,
+                rc = KStreamMakeFromBuffer ( &strm, expected,
                                          string_size ( expected ) );
                 if ( rc == 0 )
-                    * response = stream;
+                    * stream = strm;
             }
         }
 
@@ -2609,15 +2628,6 @@ static rc_t STicketsAppend ( STickets * self, uint32_t project,
 }
 
 
-/*static void STicketsAppendFromVector ( void * item, void * data ) {
-    STickets   * self   = ( STickets * ) data;
-    rc_t rc = STicketsAppend ( self, ( char * ) item );
-    if ( rc != 0 ) {
-        self -> rc = rc;
-    }
-}*/
-
-
 static rc_t STicketsInit ( STickets * self ) {
     assert ( self );
     memset ( self, 0, sizeof * self );
@@ -2651,18 +2661,24 @@ static rc_t STicketsFini ( STickets * self ) {
 /* Tickets ********************************************************************/
 typedef struct {
     Vector * v;
+    const STickets * r;
     rc_t   rc;
 } Tickets;
 
 
 static void TicketsAppendTicket ( void * item, void * data ) {
     const String * ticket = ( String    * ) item;
-    Tickets    * v      = ( Tickets * ) data;
+    Tickets * t = (Tickets * ) data;
+    const STickets * r = NULL;
+    Vector * v = NULL;
     const SKV * kv = NULL;
-    const char k [] = "tic";
+    const char * k = "tic";
     char * c = string_dup ( ticket -> addr, ticket -> size );
+    assert(t && t->r && t->v);
+    r = t->r;
+    v = t->v;
     if ( c == NULL ) {
-        v -> rc = RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
+        t -> rc = RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
         return;
     }
     DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( "  %s=%s\n",
@@ -2671,9 +2687,33 @@ static void TicketsAppendTicket ( void * item, void * data ) {
         rc_t rc = SKVMake ( & kv, k, c );
         free ( c );
         if ( rc == 0 ) {
-            rc = VectorAppend ( v -> v, NULL, kv );
-            if ( rc != 0 && v -> rc == 0)
-                v -> rc = rc;
+            rc = VectorAppend ( v, NULL, kv );
+            if ( rc != 0 && t -> rc == 0)
+                t -> rc = rc;
+        }
+    }
+
+    if (t->rc == 0 && VectorLength(&r->tickets) == 1) {
+        BSTItem * i = (BSTItem *)BSTreeFind
+            (&r->ticketsToProjects, ticket, BSTItemCmp);
+        if (i != NULL) {
+            char c[9] = "";
+            rc_t rc = 0;
+            k = "project-id";
+            rc = string_printf(c, sizeof c, NULL, "%d", i -> project);
+            if ( rc != 0 )
+                t->rc = rc;
+            else {
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), ("  %s=%s\n", k, c));
+                rc = SKVMake(&kv, k, c);
+                if (rc != 0 && t->rc == 0)
+                    t->rc = rc;
+                else {
+                    rc = VectorAppend(v, NULL, kv);
+                    if (rc != 0 && t->rc == 0)
+                        t->rc = rc;
+                }
+            }
         }
     }
 }
@@ -2750,6 +2790,38 @@ static rc_t SObjectCheckUrl ( SObject * self ) {
     self -> isUri = VPathFromUri ( path );
 
     RELEASE ( VPath, path );
+
+    return rc;
+}
+
+static rc_t SCgiRequestAddKfgParams (SCgiRequest * self, const SHelper * helper)
+{
+    rc_t rc = 0;
+
+    char buffer[ 99 ] = "";
+
+    const char * path = NULL;
+    size_t num_read = 0;
+
+    assert( helper );
+
+    path = "/libs/vfs/location";
+    rc = KConfigRead (helper->kfg, path, 0,
+                      buffer, sizeof buffer, &num_read, NULL);
+    if (rc != 0)
+        rc = 0;
+    else {
+        const SKV * kv = NULL;
+        const char n[] = "location";
+        rc = SKVMake(&kv, n, buffer);
+        if (rc == 0) {
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
+                ("  %s=%s\n", n, buffer));
+            rc = VectorAppend(&self->params, NULL, kv);
+        }
+        if (rc != 0)
+            return rc;
+    }
 
     return rc;
 }
@@ -2872,7 +2944,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
             return rc;
     }
     if ( request -> tickets . size != 0 ) { /* optional */
-        Tickets t = { & self -> params, 0 };
+        Tickets t = { &self->params, & request ->tickets, 0 };
         VectorForEach ( & request -> tickets .tickets , false,
             TicketsAppendTicket, & t );
         rc = t . rc;
@@ -3007,6 +3079,8 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
         if ( rc != 0 )
             return rc;
     }
+    if (rc == 0)
+        rc = SCgiRequestAddKfgParams( self, helper );
     return rc;
 }
 
@@ -3216,7 +3290,7 @@ static rc_t KServiceInit ( KService * self, const KNSManager * mgr ) {
         rc = SHelperInit ( & self -> helper, mgr );
 
     if ( rc == 0 )
-        rc = SResponseInit ( & self ->  resp );
+        rc = SResponseInit ( & self ->  resp, 0 );
 
     if ( rc == 0 )
         rc = SRequestInit ( & self -> req );
@@ -3331,6 +3405,9 @@ static rc_t KServiceProcessJson ( KService * self ) {
     rc_t r2 = 0;
 
     Response4 * r = NULL;
+
+    if (self->resp.rc != 0)
+        return self->resp.rc;
 
     rc = Response4Make ( & r, self -> helper . input );
 
@@ -3449,7 +3526,7 @@ rc_t KServiceProcessLine ( KService * self,
 static
 rc_t KServiceProcessStreamAll ( KService * self, KStream * stream )
 {
-    rc_t rc = 0;
+    rc_t rc = 0, rx = 0;;
     bool start = true;
     size_t offW = 0;
     size_t num_read = 0;
@@ -3467,10 +3544,12 @@ rc_t KServiceProcessStreamAll ( KService * self, KStream * stream )
     self -> resp . serviceType = self -> req . serviceType;
 
     rc = TimeoutInit ( & tm, self -> helper . timeoutMs );
+    if (rc == 0) {
+        rx = self->resp.rc;
+        rc = SResponseFini(&self->resp);
+    }
     if ( rc == 0 )
-        rc = SResponseFini ( & self -> resp );
-    if ( rc == 0 )
-        rc = SResponseInit ( & self -> resp );
+        rc = SResponseInit ( & self -> resp, rx );
     if ( rc == 0 && self -> req . serviceType == eSTsearch )
         rc = KartMake2 ( & self -> resp . kart );
     DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), (
@@ -3583,7 +3662,7 @@ rc_t KServiceProcessStreamAll ( KService * self, KStream * stream )
 static rc_t KServiceProcessStreamByParts ( KService * self,
                                            KStream * stream )
 {
-    rc_t rc = 0;
+    rc_t rc = 0, rx;
     bool start = true;
     char buffer [ 4096 ] = "";
     size_t num_read = 0;
@@ -3597,10 +3676,12 @@ static rc_t KServiceProcessStreamByParts ( KService * self,
     self -> resp . serviceType = self -> req . serviceType;
     rc = TimeoutInit ( & tm, self -> helper . timeoutMs );
 
+    if (rc == 0) {
+        rx = self->resp.rc;
+        rc = SResponseFini(&self->resp);
+    }
     if ( rc == 0 )
-        rc = SResponseFini ( & self -> resp );
-    if ( rc == 0 )
-        rc = SResponseInit ( & self -> resp );
+        rc = SResponseInit ( & self -> resp, rx );
 
     if ( rc == 0 && self -> req . serviceType == eSTsearch )
         rc = KartMake2 ( & self -> resp . kart );
@@ -3891,9 +3972,9 @@ rc_t KServiceNamesExecuteExtImpl ( KService * self, VRemoteProtocols protocols,
     rc = KServiceInitNamesRequestWithVersion ( self, protocols, cgi, version,
         false, expected == NULL );
 
-    if ( rc == 0 && self -> req . hasQuery )
-        rc = SCgiRequestPerform ( & self -> req . cgiReq, & self -> helper,
-                                  & stream, expected );
+    if (rc == 0 && self->req.hasQuery)
+        rc = SCgiRequestPerform(&self->req.cgiReq, &self->helper,
+            &stream, expected, self);
 
     if ( rc == 0 )
         rc = KServiceProcessStream ( self, stream );
@@ -3959,9 +4040,13 @@ static rc_t KService1NameWithVersionAndType ( const KNSManager * mgr,
 
     protocols = service . req . protocols;
 
-    if ( rc == 0 )
-        rc = SCgiRequestPerform ( & service . req . cgiReq, & service . helper,
-                                  & stream, NULL );
+    if (rc == 0) {
+        rc_t rx = 0;
+        rc = SCgiRequestPerform(&service.req.cgiReq, &service.helper,
+            &stream, NULL, &service);
+        if (rc == 0)
+            service.resp.rc = rx;
+    }
 
     if ( rc == 0 )
         rc = KServiceProcessStream ( & service, stream );
@@ -4137,9 +4222,13 @@ rc_t KServiceSearchExecuteExt ( KService * self, const char * cgi,
 
     rc = KServiceInitSearchRequestWithVersion ( self, cgi, version );
 
-    if ( rc == 0 )
-        rc = SCgiRequestPerform ( & self -> req . cgiReq, & self -> helper,
-                                  & stream, NULL );
+    if (rc == 0) {
+        rc_t rx = 0;
+        rc = SCgiRequestPerform(&self->req.cgiReq, &self->helper,
+            &stream, NULL, self);
+        if (rc == 0)
+            self->resp.rc = rx;
+    }
 
     if ( rc == 0 )
         rc = KServiceProcessStream ( self, stream );
@@ -4362,7 +4451,7 @@ rc_t SCgiRequestPerformTestNames1 ( const KNSManager * mgr, const char * cgi,
     if ( rc == 0 ) {
         KStream * response = NULL;
         rc = SCgiRequestPerform ( & service . req . cgiReq, & service . helper,
-                                  & response, NULL );
+                                  & response, NULL, & service );
         RELEASE ( KStream, response );
     }
 

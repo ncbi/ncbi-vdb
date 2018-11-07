@@ -24,7 +24,6 @@
 *
 */
 
-
 #include <kfg/config.h> /* KConfigRelease */
 
 #include <kfs/directory.h> /* KDirectoryNativeDir */
@@ -256,7 +255,7 @@ static rc_t _VFSManagerVPathMakeAndTest ( const VFSManager * self,
 static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
     VRemoteProtocols protocols, const VPath * path, const String * acc,
     uint64_t id, VPathSet ** result, ESrvFileFormat ff,
-    const char * outDir, const char * outFile )
+    const char * outDir, const char * outFile, const VPath * mapping )
 {
     rc_t rc = 0;
 
@@ -308,7 +307,7 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
         }
         else if ( VPathFromUri ( path ) ) {
             cacheRc = VResolverQueryWithDir ( self, protocols, query,
-                            NULL, NULL, & cache, false, outDir, NULL, true );
+                NULL, NULL, & cache, false, outDir, NULL, true, path, mapping);
             if ( cacheRc == 0 && ff == eSFFVdbcache && rc == 0 ) {
                 VPath * path = NULL;
                 cacheRc = VFSManagerMakeVdbcache ( mgr, cache, & path, NULL );
@@ -316,7 +315,7 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
                 cache = path;
             }
             localRc = VResolverQueryWithDir ( self, protocols, query,
-                            & local, NULL, NULL, false, outDir, NULL, true );
+                & local, NULL, NULL, false, outDir, NULL, true, path, mapping);
         }
         else {
             cacheRc = VResolverQuery ( self, protocols, query,
@@ -508,10 +507,11 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                             else {
                                 ESrvFileFormat ff = eSFFInvalid;
                                 KSrvRespFileIterator * fi = NULL;
-                                String id;
                                 const char * acc = NULL;
                                 const char * tic = NULL;
                                 uint64_t iid = 0;
+                                const VPath * mapping = NULL;
+                                String id;
                                 memset(&id, 0, sizeof id);
                                 rc = KSrvRespFileGetAcc(file, &acc, &tic);
                                 if (rc == 0) {
@@ -526,11 +526,13 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                                     }
                                 }
                                 if (rc == 0)
+                                    KSrvRespFileGetMapping(file, &mapping);
+                                if (rc == 0)
                                     rc = KSrvRespFileMakeIterator(file,
                                         &fi);
                                 if (rc == 0) {
-                                    rc = KSrvRespFileIteratorNextPath
-                                    (fi, &path);
+                                    rc = KSrvRespFileIteratorNextPath(
+                                        fi, &path);
                                     if (rc == 0) {
                                         if (error == NULL) {
                                             VResolver * resolver = NULL;
@@ -555,7 +557,7 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                                                 rc = VResolversQuery(resolver,
                                                     h.mgr, protocols, path,
                                                     &id, iid, &vps, ff,
-                                                    outDir, outFile);
+                                                    outDir, outFile, mapping);
                                             }
                                             free((void *)pId);
                                         }
@@ -570,6 +572,7 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                                     RELEASE(VPath, path);
                                 }
                                 RELEASE(KSrvRespFileIterator, fi);
+                                RELEASE(VPath, mapping);
                             }
                             RELEASE(KSrvRespFile, file);
                         }
@@ -602,7 +605,7 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                                             KServiceGetResolveName ( self ) );
                                 rc = VResolversQuery ( resolver, h . mgr,
                                     protocols, path, & id, 0, & vps,
-                                    eSFFInvalid, outDir, outFile );
+                                    eSFFInvalid, outDir, outFile, NULL );
                             }
                             RELEASE ( VPath, acc_or_oid );
                         }

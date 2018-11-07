@@ -21,7 +21,6 @@
  *  Please cite the author in any work or product based on this material.
  *
  * =============================================================================
- *
  */
 
 
@@ -3442,7 +3441,8 @@ static
 rc_t VResolverQueryAcc ( const VResolver * self, VRemoteProtocols protocols,
     const VPath * query, const VPath ** local,
     const VPath ** remote, const VPath ** cache, const char * version,
-    bool resolveAllAccToCache, const char * dir, bool * resolvedToDir )
+    bool resolveAllAccToCache, const char * dir, bool * resolvedToDir,
+    const VPath * oldRemote, const VPath * oldMapping )
 {
     rc_t rc = 0;
 
@@ -3470,22 +3470,28 @@ rc_t VResolverQueryAcc ( const VResolver * self, VRemoteProtocols protocols,
             const VPath ** mapped_ptr = ( self -> ticket != NULL && cache != NULL ) ?
                 & mapped_query : NULL;
 
-            /* request remote resolution
-               this does not need to map the query to an accession */
-            rc = VResolverRemoteResolve ( self, protocols, accession,
-                & remote2, mapped_ptr, NULL, refseq_ctx, false, version );
+            if (oldRemote != NULL) {
+                remote2 = oldRemote;
+                if (mapped_ptr != NULL)
+                    mapped_query = oldMapping;
+            }
+            else {
+                /* request remote resolution
+                   this does not need to map the query to an accession */
+                rc = VResolverRemoteResolve ( self, protocols, accession,
+                    & remote2, mapped_ptr, NULL, refseq_ctx, false, version );
 
-            if ( rc == 0 )
-            {
-                if ( remote2 -> fragment . size != 0 )
-                    has_fragment = true;
+                if ( rc == 0 ) {
+                    if ( remote2 -> fragment . size != 0 )
+                        has_fragment = true;
 
-                if ( remote != NULL )
-                    * remote = remote2;
-                else
-                    VPathRelease ( remote2 );
+                    if ( remote != NULL )
+                        * remote = remote2;
+                    else
+                        VPathRelease ( remote2 );
 
-                remote2 = NULL;
+                    remote2 = NULL;
+                }
             }
         }
 
@@ -3675,7 +3681,8 @@ static
 rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
     const VPath * query, const VPath ** local,
     const VPath ** remote, const VPath ** cache, const char * version,
-    bool resolveAllAccToCache, const char * dir, bool * resolvedToDir )
+    bool resolveAllAccToCache, const char * dir, bool * resolvedToDir,
+    const VPath * oldRemote, const VPath * oldMapping )
 {
     rc_t rc;
 
@@ -3780,7 +3787,8 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
 
             case vpAccession:
                 rc = VResolverQueryAcc ( self, protocols, query, local, remote,
-                    cache, version, resolveAllAccToCache, dir, resolvedToDir );
+                    cache, version, resolveAllAccToCache, dir, resolvedToDir,
+                    oldRemote, oldMapping );
                 break;
 
             case vpNameOrOID:
@@ -3791,7 +3799,8 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
 
             case vpNameOrAccession:
                 rc = VResolverQueryAcc ( self, protocols, query, local, remote,
-                    cache, version, resolveAllAccToCache, dir, resolvedToDir );
+                    cache, version, resolveAllAccToCache, dir, resolvedToDir,
+                    oldRemote, oldMapping );
                 if ( rc != 0 )
                     goto try_name;
                 break;
@@ -3803,16 +3812,16 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
                     if ( VPathHasRefseqContext ( query ) )
                     {
                         rc = VResolverQueryAcc ( self, protocols, query, local,
-                            remote, cache, version,
-                            resolveAllAccToCache, dir, resolvedToDir );
+                            remote, cache, version, resolveAllAccToCache,
+                            dir, resolvedToDir, oldRemote, oldMapping );
                         if ( rc == 0 )
                             break;
                     }
                 }
                 else if ( ! resolveAllAccToCache ) {
                     rc = VResolverQueryAcc ( self, protocols, query, local,
-                        remote, cache, version,
-                        resolveAllAccToCache, dir, resolvedToDir );
+                        remote, cache, version, resolveAllAccToCache,
+                        dir, resolvedToDir, oldRemote, oldMapping );
                     if ( rc == 0 )
                         break;
                 }
@@ -3867,12 +3876,14 @@ rc_t CC oldVResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
 static
 rc_t CC VResolverQueryImpl ( const VResolver * self, VRemoteProtocols protocols,
     const VPath * query, const VPath ** local, const VPath ** remote,
-    const VPath ** cache, bool resolveAllAccToCache,
-    const char * dir, bool * inOutDir, bool queryIsUrl )
+    const VPath ** cache, bool resolveAllAccToCache, const char * dir,
+    bool * inOutDir, bool queryIsUrl,
+    const VPath * oldRemote, const VPath * oldMapping )
 {
     rc_t rcs = -1;
     rc_t rc = rcs = VResolverQueryInt ( self, protocols, query, local,
-        remote, cache, self -> version, resolveAllAccToCache, dir, inOutDir );
+        remote, cache, self -> version, resolveAllAccToCache, dir, inOutDir,
+        oldRemote, oldMapping );
     if ( rc == 0 )
     {
         /* the paths returned from resolver are highly reliable */
@@ -3895,7 +3906,7 @@ rc_t CC VResolverQueryImpl ( const VResolver * self, VRemoteProtocols protocols,
         rc_t ro =
 #endif
             VResolverQueryInt ( self, protocols, query, l, p, c,
-                                "#3.", true, NULL, NULL );
+                                "#3.", true, NULL, NULL, NULL );
         assert ( rcs == ro );
         if ( remote == NULL )
             assert ( p == NULL );
@@ -3947,8 +3958,8 @@ rc_t CC VResolverQueryImpl ( const VResolver * self, VRemoteProtocols protocols,
 #if _DEBUGGING
         rc_t ro =
 #endif
-            VResolverQueryInt ( self, protocols, query, l, p, c,
-                                "#3.", resolveAllAccToCache, dir, inOutDir );
+            VResolverQueryInt ( self, protocols, query, l, p, c, "#3.",
+                                resolveAllAccToCache, dir, inOutDir, NULL );
         assert ( rcs == ro );
         if ( remote == NULL )
             assert ( p == NULL );
@@ -4001,8 +4012,7 @@ rc_t CC VResolverQueryImpl ( const VResolver * self, VRemoteProtocols protocols,
         rc_t ro =
 #endif
             VResolverQueryInt ( self, protocols, query, l, p, c,
-                                "#1.2", //resolveAllAccToCache, dir, inOutDir );
-                                true, NULL, NULL );
+                                "#1.2", true, NULL, NULL, NULL );
         
         assert ( rcs == ro );
         if ( remote == NULL )
@@ -4055,8 +4065,8 @@ rc_t CC VResolverQueryImpl ( const VResolver * self, VRemoteProtocols protocols,
 #if _DEBUGGING
         rc_t ro =
 #endif
-            VResolverQueryInt ( self, protocols, query, l, p, c,
-                                "#1.2", resolveAllAccToCache, dir, inOutDir );
+            VResolverQueryInt ( self, protocols, query, l, p, c, "#1.2",
+                                resolveAllAccToCache, dir, inOutDir, NULL );
         
         assert ( rcs == ro );
         if ( remote == NULL )
@@ -4170,17 +4180,19 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
     const VPath ** cache )
 {
     return VResolverQueryImpl ( self, protocols, query, local, remote, cache,
-                                true, NULL, NULL, false );
+                                true, NULL, NULL, false, NULL, NULL );
 }
 
 LIB_EXPORT
 rc_t CC VResolverQueryWithDir ( const VResolver * self,
     VRemoteProtocols protocols, const VPath * query, const VPath ** local,
     const VPath ** remote, const VPath ** cache, bool resolveAccToCache,
-    const char * outDir, bool * inOutDir, bool queryIsUrl )
+    const char * outDir, bool * inOutDir, bool queryIsUrl,
+    const VPath * oldRemote, const VPath * oldMapping )
 {
     return VResolverQueryImpl ( self, protocols, query, local, remote, cache,
-                            resolveAccToCache, outDir, inOutDir, queryIsUrl );
+        resolveAccToCache, outDir, inOutDir, queryIsUrl,
+        oldRemote, oldMapping );
 }
 
 /* LoadVolume

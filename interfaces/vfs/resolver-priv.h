@@ -50,7 +50,8 @@ VFS_EXTERN rc_t CC VResolverQueryWithDir ( const VResolver * self,
     VRemoteProtocols protocols, const struct VPath * query,
     const struct VPath ** local, const struct VPath ** remote,
     const struct VPath ** cache, bool resolveAccToCache,
-    const char * outDir, bool * inOutDir, bool queryIsUrl );
+    const char * outDir, bool * inOutDir, bool queryIsUrl,
+    const struct VPath * oldRemote, const VPath * oldMapping );
 
 
 VFS_EXTERN rc_t CC VResolverGetProject ( const VResolver * self,
