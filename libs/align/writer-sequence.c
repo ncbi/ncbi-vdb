@@ -34,6 +34,7 @@
 #include <insdc/insdc.h>
 #include <vdb/database.h>
 #include <vdb/cursor.h>
+#include <vdb/vdb-priv.h>
 #include <sra/sradb.h>
 #include <align/writer-sequence.h>
 #include "writer-priv.h"
@@ -98,6 +99,8 @@ struct TableWriterSeq {
     TableWriterColumn cols_alignd[2];
     TableWriterColumn cols_compress[1];
     TableReaderColumn cols_read[5];
+    int64_t numAlignedSpots;
+    int64_t numSpots;
     unsigned options;
     unsigned init; /* default written indicator */
     unsigned qual_buf_sz;
@@ -470,6 +473,14 @@ static rc_t CompressREAD(TableWriterSeq *const self, int64_t *const buffer)
     int64_t row = 0;
     bool const notSavingRead = ((self->options & ewseq_co_SaveRead) == 0);
 
+    if (self->numSpots == 0)
+        return 0;
+    
+    if (self->numAlignedSpots == 0) {
+        buffer[0] = 1;
+        return 0;
+    }
+    
     rc = TableWriter_GetVTable(self->base, &vtbl);
     assert(rc == 0);
     COPY_TableReaderColumns(self->cols_read, TableSeqReadREAD_cols);
@@ -498,8 +509,12 @@ static rc_t CompressREAD(TableWriterSeq *const self, int64_t *const buffer)
             rc = TableWriter_CloseRow(self->base);
             assert(rc == 0);
         }
+        VTableAddRef(vtbl);
         rc = TableWriter_CloseCursor(self->base, cursor_id, NULL);
         assert(rc == 0);
+        VTableDropColumn(vtbl, "READ");
+        VTableDropColumn(vtbl, "ALTREAD");
+        VTableRelease(vtbl);
     }
     else {
         for (row = 1; ; ++row) {
@@ -889,6 +904,19 @@ LIB_EXPORT rc_t CC TableWriterSeq_WriteAlignmentData(const TableWriterSeq* cself
         if( rc == 0 &&
            (rc = TableWriter_OpenRowId(cself->base, rowid, cself->alignd_cursor_id)) == 0 )
         {
+            {
+                unsigned i;
+                int64_t *numAlignedSpots = &((TableWriterSeq *)cself)->numAlignedSpots;
+                int64_t *numSpots = &((TableWriterSeq *)cself)->numSpots;
+                int64_t const *const pid = primary_alignment_id->buffer;
+                for (i = 0; i < (unsigned)primary_alignment_id->elements; ++i) {
+                    if (pid[i] != 0) {
+                        *numAlignedSpots += 1;
+                        break;
+                    }
+                }
+                *numSpots += 1;
+            }
             TW_COL_WRITE(cself->base, cself->cols_alignd[0], *primary_alignment_id);
             TW_COL_WRITE(cself->base, cself->cols_alignd[1], *alignment_count);
             if( rc == 0 ) {
