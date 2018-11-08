@@ -3036,6 +3036,8 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
     /* check for cache-enable override */
     if ( cache_state == vrAlwaysEnable )
     {
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
+               ("VResolverCacheResolve: app = %d\n", app));
         for ( i = 0; i < count; ++ i )
         {
             alg = VectorGet ( & self -> local, i );
@@ -3744,12 +3746,17 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
         {
             uint32_t i;
 
+            String sQuery;
+
             /* record requested protocols */
             bool has_proto [ eProtocolMask + 1 ];
             memset ( has_proto, 0, sizeof has_proto );
 
             for ( i = 0; i < eProtocolMaxPref; ++ i )
                 has_proto [ ( ( protocols >> ( i * 3 ) ) & eProtocolMask ) ] = true;
+
+            memset(&sQuery, 0, sizeof sQuery);
+            VPathGetPath(query, &sQuery);
 
             switch ( query -> scheme_type )
             {
@@ -3800,16 +3807,24 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
 
             case vpNameOrOID:
                 rc = VResolverQueryOID ( self, protocols, query, local, remote, cache, version );
-                if ( rc != 0 )
+                if (rc != 0) {
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+                        ("Resolver-%s: VResolverQueryOID('%S') failed, try_name\n",
+                            self->version, &sQuery));
                     goto try_name;
+                }
                 break;
 
             case vpNameOrAccession:
                 rc = VResolverQueryAcc ( self, protocols, query, local, remote,
                     cache, version, resolveAllAccToCache, dir, resolvedToDir,
                     oldRemote, oldMapping );
-                if ( rc != 0 )
+                if (rc != 0) {
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+                        ("Resolver-%s: VResolverQueryAcc('%S') failed, try_name\n",
+                            self->version, &sQuery));
                     goto try_name;
+                }
                 break;
 
             case vpName:
@@ -3832,17 +3847,13 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
                     if ( rc == 0 )
                         break;
                 }
-            try_name: {
-                String str;
-                memset( & str, 0, sizeof str );
-                VPathGetPath(query, &str);
+            try_name:
                 DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
                        ( "Resolver-%s: checking '%S' as file name\n",
-                         self -> version, & str) );
+                         self -> version, &sQuery) );
                 rc = VResolverQueryName(self, protocols, query,
                                         local, remote, cache);
                 break;
-            }
 
             case vpRelPath:
             case vpFullPath:
