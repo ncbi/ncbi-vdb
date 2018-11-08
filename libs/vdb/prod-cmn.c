@@ -1800,7 +1800,7 @@ rc_t VFunctionProdSelect ( VFunctionProd *self, VBlob **vblob, int64_t id, uint3
 static
 rc_t VFunctionProdPassThrough ( VFunctionProd *self, VBlob **vblob, int64_t id, uint32_t cnt ) {
     assert(VectorLength(&self->parms) == 1);
-    return VProductionReadBlob(VectorGet(&self->parms, 0), vblob, id, cnt, NULL);
+    return VProductionReadBlob(VectorGet(&self->parms, 0), vblob, &id, cnt, NULL);
 }
 
 static rc_t VFunctionProdReadNormal ( VFunctionProd *self, VBlob **vblob, int64_t id ,uint32_t cnt)
