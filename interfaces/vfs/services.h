@@ -1,7 +1,6 @@
 #ifndef _h_vfs_services_
 #define _h_vfs_services_
 
-
 /*===========================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
@@ -24,8 +23,8 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ===========================================================================
-*
+* ==============================================================================
+* external SERVICES
 */
 
 
@@ -166,8 +165,7 @@ rc_t KSrvRespFileGetAccOrId(const KSrvRespFile * self,
     const char ** acc, uint32_t * id);
 rc_t KSrvRespFileGetClass(const KSrvRespFile * self, const char ** itemClass);
 
-/*rc_t KSrvRespFileGetFileFormat ( const KSrvRespFile * self,
-                                 ESrvFileFormat * ff );*/
+rc_t KSrvRespFileGetSize(const KSrvRespFile * self, uint64_t *size);
 rc_t KSrvRespFileGetCache ( const KSrvRespFile * self,
                             const struct VPath ** path );
 rc_t KSrvRespFileGetLocal ( const KSrvRespFile * self,
