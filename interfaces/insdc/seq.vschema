@@ -139,8 +139,10 @@ table INSDC:tbl:sequence #1.0.1
 
     // PHRED is default
     extern default column INSDC:quality:phred QUALITY
-        = out_qual_phred
-        ;
+    {
+        read = out_qual_phred;
+        validate = < INSDC:quality:phred > compare ( in_qual_phred, phys_qual_phred );
+    }
 
     // textual encodings
     extern column INSDC:quality:text:phred_33 QUALITY
