@@ -101,9 +101,13 @@ SRA_DFLT_SCHEMA_LIBS = \
 	-skrypto \
 	-skfg \
 	-skfs \
-	-sksproc \
+	-skq \
+	-skproc \
 	-sklib \
-    -sjudy
+    -sjudy \
+	-smbedx509     \
+	-smbedtls      \
+	-smbedcrypto   \
 
 SRA_DFLT_SCHEMA_OS_LIBS = \
 	-ldl \
@@ -111,7 +115,7 @@ SRA_DFLT_SCHEMA_OS_LIBS = \
 	-sbz2 \
 	-lm
 
-# set workdir for RUN_REMOTELY in rwin mode 
+# set workdir for RUN_REMOTELY in rwin mode
 RWORKDIR=$(OBJDIR)
 
 $(ILIBDIR)/sra-dflt-schema: sra-dflt-schema.$(OBJX)
@@ -247,3 +251,9 @@ $(ILIBDIR)/libsrareader.$(LIBX): $(SRAREADER_OBJ)
 compile: stdcompile
 
 $(TARGDIR)/compile: $(OBJFILES)
+
+#-------------------------------------------------------------------------------
+# fuzz
+#
+fuzz: std
+	cp $(addsuffix .$(LIBX),$(addprefix $(ILIBDIR)/,$(INT_LIBS))) $(FLIBDIR)/
