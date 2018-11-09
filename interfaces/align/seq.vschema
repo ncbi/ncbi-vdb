@@ -143,8 +143,10 @@ table NCBI:align:tbl:cmp_base_space #1
         = ( INSDC:4na:packed ) pack ( out_cmp_4na_bin );
 
     // output text
-    INSDC:dna:text out_cmp_dna_text
+    INSDC:dna:text out_cmp_dnarna_text
         = < INSDC:4na:bin, INSDC:dna:text > map < INSDC:4na:map:BINSET, INSDC:4na:map:CHARSET > ( out_cmp_4na_bin );
+    INSDC:dna:text out_cmp_dna_text
+        = NCBI:SRA:useRnaFlag ( out_cmp_dnarna_text );
 
 
     /* decompressed sequences
