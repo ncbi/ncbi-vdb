@@ -209,7 +209,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetAlignments_WithSecondary_Secondary, CSRA
 }
 
 
-// ReferenceGetAlignments on circular references
+// ReferenceGetFilteredAlignments on circular references
 FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetAlignments_Circular_Wraparound, CSRA1_ReferenceFixture)
 {
     ENTRY_GET_REF( CSRA1_WithCircularReference, "NC_012920.1" );
@@ -502,6 +502,20 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetBlobs, CSRA1_ReferenceFixture)
 
     NGS_ReferenceBlobRelease ( blob, ctx );
     NGS_ReferenceBlobIteratorRelease ( blobIt, ctx );
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceIsLocal_Yes, CSRA1_ReferenceFixture)
+{
+    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
+    REQUIRE ( NGS_ReferenceGetIsLocal ( m_ref, ctx ) );
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceIsLocal_No, CSRA1_ReferenceFixture)
+{
+    ENTRY_GET_REF( "SRR821492", "chrM" );
+    REQUIRE ( ! NGS_ReferenceGetIsLocal ( m_ref, ctx ) );
     EXIT;
 }
 
