@@ -86,6 +86,7 @@ KFS_CMN = \
 	directory \
 	arrayfile \
 	file \
+	chunk-reader \
 	sysdir \
 	sysfile \
 	sysmmap \
