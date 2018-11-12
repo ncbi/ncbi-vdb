@@ -601,6 +601,75 @@ LIB_EXPORT rc_t CC KFileTimedReadExactly_v1 ( const KFile_v1 *self,
     return rc;
 }
 
+
+/* ReadChunked
+ * TimedReadChunked
+ *  behaves like Read or TimedRead,
+ *  except that bytes read are delivered via callback message
+ *  there may be multiple such messages, allowing a long
+ *  synchronous read with multiple intermediate delivery.
+ */
+LIB_EXPORT rc_t CC KFileReadChunked_v1 ( const KFile_v1 *self, uint64_t pos,
+    struct KChunkReader * chunks, size_t bytes, size_t * num_read )
+{
+    if ( num_read == NULL )
+        return RC ( rcFS, rcFile, rcReading, rcParam, rcNull );
+
+    * num_read = 0;
+
+    if ( self == NULL )
+        return RC ( rcFS, rcFile, rcReading, rcSelf, rcNull );
+
+    if ( ! self -> read_enabled )
+        return RC ( rcFS, rcFile, rcReading, rcFile, rcNoPerm );
+
+    if ( chunks == NULL )
+        return RC ( rcFS, rcFile, rcReading, rcBuffer, rcNull );
+    if ( bytes == 0 )
+        return RC ( rcFS, rcFile, rcReading, rcBuffer, rcInsufficient );
+
+    switch ( self -> vt -> v1 . maj )
+    {
+    case 1:
+        if ( self -> vt -> v1 . min >= 3 )
+            return ( * self -> vt -> v1 . read_chunked ) ( self, pos, chunks, bytes, num_read );
+        break;
+    }
+
+    return RC ( rcFS, rcFile, rcReading, rcInterface, rcBadVersion );
+}
+
+LIB_EXPORT rc_t CC KFileTimedReadChunked_v1 ( const KFile_v1 *self, uint64_t pos,
+    struct KChunkReader * chunks, size_t bytes, size_t * num_read, struct timeout_t *tm )
+{
+    if ( num_read == NULL )
+        return RC ( rcFS, rcFile, rcReading, rcParam, rcNull );
+
+    * num_read = 0;
+
+    if ( self == NULL )
+        return RC ( rcFS, rcFile, rcReading, rcSelf, rcNull );
+
+    if ( ! self -> read_enabled )
+        return RC ( rcFS, rcFile, rcReading, rcFile, rcNoPerm );
+
+    if ( chunks == NULL )
+        return RC ( rcFS, rcFile, rcReading, rcBuffer, rcNull );
+    if ( bytes == 0 )
+        return RC ( rcFS, rcFile, rcReading, rcBuffer, rcInsufficient );
+
+    switch ( self -> vt -> v1 . maj )
+    {
+    case 1:
+        if ( self -> vt -> v1 . min >= 3 )
+            return ( * self -> vt -> v1 . timed_read_chunked ) ( self, pos, chunks, bytes, num_read, tm );
+        break;
+    }
+
+    return RC ( rcFS, rcFile, rcReading, rcInterface, rcBadVersion );
+}
+
+
 /* Write
  *  write file at known position
  *
@@ -969,6 +1038,12 @@ LIB_EXPORT rc_t CC KFileInit ( KFile_v1 *self, const KFile_vt *vt,
         switch ( vt -> v1 . min )
         {
             /* ADD NEW MINOR VERSION CASES HERE */
+        case 3:
+#if _DEBUGGING
+            if ( vt -> v1 . timed_read_chunked == NULL ||
+                 vt -> v1 . read_chunked == NULL )
+                return RC ( rcFS, rcFile, rcConstructing, rcInterface, rcNull );
+#endif
         case 2:
 #if _DEBUGGING
             if ( vt -> v1 . timed_write == NULL ||

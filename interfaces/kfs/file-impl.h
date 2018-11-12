@@ -118,6 +118,13 @@ struct KFile_vt_v1
         const void *buffer, size_t size, size_t *num_writ, struct timeout_t *tm );
     /* end minor version == 2 */
 
+    /* start minor version == 3 */
+    rc_t ( CC * read_chunked ) ( const KFILE_IMPL *self, uint64_t pos,
+        struct KChunkReader * chunks, size_t bsize, size_t * num_read );
+    rc_t ( CC * timed_read_chunked ) ( const KFILE_IMPL *self, uint64_t pos,
+        struct KChunkReader * chunks, size_t bsize, size_t * num_read, struct timeout_t *tm );
+    /* end minor version == 3 */
+
     /* ANY NEW ENTRIES MUST BE REFLECTED IN libs/kfs/file.c
        BY BOTH THE CORRESPONDING MESSAGE DISPATCH FUNCTION(s) AND
        VTABLE VALIDITY CHECKS IN KFileInit_v1 */
