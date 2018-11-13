@@ -387,7 +387,9 @@ static bool LocationsEmpty ( const Locations * self ) {
     return true;
 }
 
-static rc_t LocationsAddVPath ( Locations * self, const VPath * path ) {
+static rc_t LocationsAddVPath ( Locations * self, const VPath * path,
+                                const VPath * mapping )
+{
     rc_t rc = 0;
 
     int i = 0;
@@ -410,6 +412,13 @@ static rc_t LocationsAddVPath ( Locations * self, const VPath * path ) {
                 return rc;
 
             self -> path [ i ] = path;
+
+            if (mapping != NULL && self->mapping == NULL) {
+                rc_t rc = VPathAddRef(mapping);
+                if (rc != 0)
+                    return rc;
+                self->mapping = (VPath *) mapping;
+            }
 
             return 0;
         }
@@ -605,13 +614,13 @@ static rc_t ItemAddFormat ( Item * self, const char * cType, const char * name,
 }
 
 rc_t ItemAddVPath ( Item * self, const char * type,
-                    const VPath * path )
+                    const VPath * path, const VPath * mapping )
 {
     rc_t rc = 0;
     Locations * l = NULL;
     rc = ItemAddFormat ( self, type, NULL, & l );
     if ( rc == 0 )
-        rc = LocationsAddVPath ( l, path );
+        rc = LocationsAddVPath ( l, path, mapping);
     return rc;
 }
 
@@ -1128,7 +1137,7 @@ rc_t Response4AppendUrl ( Response4 * self, const char * url ) {
         rc = ItemAddFormat ( item, "", NULL, & l );
 
     if ( rc == 0 )
-        rc = LocationsAddVPath ( l, path );
+        rc = LocationsAddVPath ( l, path, NULL );
 
     RELEASE ( VPath, path );
 
@@ -1420,7 +1429,7 @@ static rc_t LocationsAddLink ( Locations * self, const KJsonValue * node,
         return rc;
     }
 
-    rc = LocationsAddVPath ( self, path );
+    rc = LocationsAddVPath ( self, path, NULL );
 
     RELEASE ( VPath, path );
 

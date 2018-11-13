@@ -57,6 +57,8 @@ struct VPathSet {
 
     const struct KSrvError * error;
 
+    const VPath * mapping;
+
     const VPath * local;
     const VPath * cache;
     /* rc code after call to VResolverQuery(&local,&cache) */
@@ -94,6 +96,8 @@ rc_t VPathSetWhack ( VPathSet * self ) {
         RELEASE ( VPath, self -> cacheHttp );
         RELEASE ( VPath, self -> cacheHttps );
         RELEASE ( VPath, self -> cacheS3 );
+
+        RELEASE(VPath, self->mapping);
 
         RELEASE ( VPath, self -> local );
         RELEASE ( VPath, self -> cache );
@@ -338,6 +342,12 @@ rc_t VPathSetMake ( VPathSet ** self, const EVPath * src,
         if ( r2 == 0 )
             p -> cacheS3 = src -> vcS3;
         else if ( rc == 0 )
+            rc = r2;
+
+        r2 = VPathAddRef(src->mapping);
+        if (r2 == 0)
+            p->mapping = src->mapping;
+        else if (rc == 0)
             rc = r2;
     }
 
@@ -632,6 +642,27 @@ rc_t KSrvResponseGet
             return rc;
         }
     }
+}
+
+rc_t KSrvResponseGetMapping(const KSrvResponse * self, uint32_t idx,
+    const VPath ** mapping)
+{
+    rc_t rc = 0;
+    const VPathSet * s = NULL;
+    if (mapping == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
+    *mapping = NULL;
+    if (self == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
+    s = (VPathSet *)VectorGet(&self->list, idx);
+    if (s != NULL) {
+        if (s->error != NULL)
+            return 0;
+        rc = VPathAddRef(s->mapping);
+        if ( rc == 0 )
+            * mapping = s->mapping;
+    }
+    return rc;
 }
 
 rc_t KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,

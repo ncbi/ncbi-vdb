@@ -106,68 +106,51 @@ typedef struct { char * s; } SRaw;
 #define VERSION_1_1 0x01010000
 #define VERSION_1_2 0x01020000
 #define VERSION_3_0 0x03000000
-/*#define VERSION_3_1 0x03010000
-#define VERSION_3_2 0x03020000*/
 #define VERSION_4_0 0x04000000
 
 
 /* version in server request / response */
-typedef struct {
-    SRaw raw;
-    ver_t version;
-    uint8_t major;
-    uint8_t minor;
-} SVersion; 
+typedef ver_t SVersion; 
 
 /* features that are different for different protocol versions ****************/
-static bool SVersionNotExtendedVPaths ( const SVersion * self ) {
-    assert ( self );
-    return self -> version == VERSION_1_0;
+static bool SVersionNotExtendedVPaths ( const SVersion  self ) {
+    return self == VERSION_1_0;
 }
 
-static bool SVersionBefore3_0 ( const SVersion * self ) {
-    assert ( self );
-    return self -> version < VERSION_3_0;
+static bool SVersionBefore3_0 ( const SVersion  self ) {
+    return self < VERSION_3_0;
 }
 
-static bool SVersionHasRefseqCtx ( const SVersion * self ) {
-    assert ( self );
-    return self -> version < VERSION_3_0;
+static bool SVersionHasRefseqCtx ( const SVersion  self ) {
+    return self < VERSION_3_0;
 }
 
-static bool SVersionAccInRequest ( const SVersion * self ) {
-    assert ( self );
-    return self -> version < VERSION_3_0;
+static bool SVersionAccInRequest ( const SVersion  self ) {
+    return self < VERSION_3_0;
 }
 
-static bool SVersionTypInRequest ( const SVersion * self ) {
-    assert ( self );
-    return self -> version == VERSION_3_0;
+static bool SVersionTypInRequest ( const SVersion  self ) {
+    return self == VERSION_3_0;
 }
 
-static bool SVersionHasMultpileObjects ( const SVersion * self ) {
-    assert ( self );
-    return self -> version >= VERSION_3_0;
+static bool SVersionHasMultpileObjects ( const SVersion  self ) {
+    return self >= VERSION_3_0;
 }
 
-static bool SVersionSingleUrl ( const SVersion * self ) {
-    assert ( self );
-    return self -> version < VERSION_3_0;
+static bool SVersionSingleUrl ( const SVersion  self ) {
+    return self < VERSION_3_0;
 }
 
-static bool SVersionResponseHasMultipeUrls ( const SVersion * self ) {
-    assert ( self );
-    return self -> version >= VERSION_3_0;
+static bool SVersionResponseHasMultipeUrls ( const SVersion  self ) {
+    return self >= VERSION_3_0;
 }
 
-static bool SVersionResponseHasTimestamp ( const SVersion * self ) {
-    assert ( self );
-    return self -> version >= VERSION_3_0;
+static bool SVersionResponseHasTimestamp ( const SVersion  self ) {
+    return self >= VERSION_3_0;
 }
 
-static bool SVersionResponseInJson ( const SVersion * self ) {
-    assert ( self );
-    return self -> version >= VERSION_4_0;
+static bool SVersionResponseInJson ( const SVersion  self ) {
+    return self >= VERSION_4_0;
 }
 
 /******************************************************************************/
@@ -507,21 +490,25 @@ static rc_t SRawFini(SRaw * self) {
     return 0;
 }
 
-/* SVersion *******************************************************************/
-static bool SVersionSupportsJson(const SVersion * self,
-    EServiceType serviceType, const char * cgi)
-{
-    assert(self);
+static bool cgiSupportsFullJson(const char * cgi) {
+    assert(cgi);
 
-    if (serviceType != eSTnames || cgi == NULL || cgi[0] == '\0')
+    if (cgi[strlen(cgi) - 1] == '/')
         return true;
-
-    if (SVersionResponseInJson(self) && cgi[strlen(cgi) - 1] == 'i')
+    else
         return false;
-
-    return true;
 }
 
+static bool cgiNotSupportsJson(const char * cgi) {
+    assert(cgi);
+
+    if (cgi[strlen(cgi) - 1] == 'i')
+        return true;
+    else
+        return false;
+}
+
+/* SVersion *******************************************************************/
 static rc_t SVersionInit(SVersion * self, const char * src,
     EServiceType serviceType, const char * cgi)
 {
@@ -529,11 +516,10 @@ static rc_t SVersionInit(SVersion * self, const char * src,
 
     assert(self);
 
-    memset(self, 0, sizeof * self);
+    *self = 0;
 
-    if (s == NULL) {
+    if (s == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcMessage, rcBadVersion);
-    }
 
     if (*s != '#') {
         if (serviceType != eSTnames || *s == '\0' || !isdigit(*s))
@@ -550,55 +536,53 @@ static rc_t SVersionInit(SVersion * self, const char * src,
         s += sz;
     }
 
-    if (*s == '\0') {
+    if (*s == '\0')
         return RC(rcVFS, rcQuery, rcExecuting, rcMessage, rcBadVersion);
-    }
 
     {
+        uint8_t major = 0;
+        uint8_t minor = 0;
+
         char * end = NULL;
         uint64_t l = strtoul(s, &end, 10);
-        if (end == NULL || *end != '.') {
+        if (end == NULL || (*end != '.' && *end != '\0'))
             return RC(rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt);
-        }
-        self->major = (uint8_t)l;
-        s = ++end;
+        major = (uint8_t)l;
 
-        l = strtoul(s, &end, 10);
-        if (end == NULL || *end != '\0') {
-            return RC(rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt);
-        }
-        self->minor = (uint8_t)l;
+        if (*end != '\0') {
+            s = ++end;
 
-        self->version = self->major << 24 | self->minor << 16;
+            l = strtoul(s, &end, 10);
+            if (end == NULL || *end != '\0')
+                return RC(rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt);
+            minor = (uint8_t)l;
+        }
+
+        *self = major << 24 | minor << 16;
     }
 
-    if (!SVersionSupportsJson(self, serviceType, cgi))
-        return SVersionInit(self, "3.", serviceType, cgi);
-
-    return SRawAlloc(&self->raw, src, 0);
+    return 0;
 }
 
 
-static rc_t SVersionToString(const SVersion * self, char ** s) {
+static rc_t SVersionToString(const SVersion  self, char ** s) {
     size_t num_writ = 0;
     char tmp[1];
     assert(self && s);
-    string_printf(tmp, 1, &num_writ, "%u.%u", self->major, self->minor);
+    string_printf(tmp, num_writ, &num_writ, "%.2V", self);
     ++num_writ;
     *s = (char *)malloc(num_writ);
-    if (*s == NULL) {
+    if (*s == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted);
-    }
-    return string_printf(*s, num_writ,
-        &num_writ, "%u.%u", self->major, self->minor);
+    return string_printf(*s, num_writ, &num_writ, "%.2V", self);
 }
 
 static rc_t SVersionFini(SVersion * self) {
-    rc_t rc = 0;
     assert(self);
-    rc = SRawFini(&self->raw);
-    memset(self, 0, sizeof * self);
-    return rc;
+
+    *self = 0;
+
+    return 0;
 }
 
 /* try to get cgi from kfg, otherwise use hardcoded */
@@ -612,10 +596,8 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
     
     rc_t rc = 0;
     const char * path = aProtected ? prt : man;
-    SVersion * version = NULL;
     assert( request );
-    version = & request->version;
-    assert ( self && version );
+    assert ( self );
     rc = SHelperInitKfg ( self );
     if ( rc == 0 && aCgi == NULL ) {
         size_t num_read = 0;
@@ -634,23 +616,17 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
         string_copy_measure ( buffer, bsize, aCgi );
 
     if (rc == 0) {
-        if (strcmp(buffer,
-            "https://sponomar.ncbi.nlm.nih.gov/Traces/sdl_test/4.0/retrieve")
-            == 0)
-        {
-            if (version->major < 4)
+        if (cgiNotSupportsJson(buffer)) {
+            if (SVersionResponseInJson(request->version))
+                request->version = VERSION_3_0;
+        }
+        else if (!cgiSupportsFullJson(buffer)) {
+            if (request->request.objects > 0 &&
+                request->request.object[0].objectId != NULL &&
+                isdigit(request->request.object[0].objectId[0]))
+            {
                 string_copy(buffer, bsize, cgi, sizeof cgi);
-            else {
-                if (request->request.objects > 0 &&
-                    request->request.object[0].objectId != NULL &&
-                    isdigit(request->request.object[0].objectId[0]))
-                {
-                    string_copy(buffer, bsize, cgi, sizeof cgi);
-                    rc = SVersionFini(&request->version);
-                    if (rc == 0)
-                        rc = SVersionInit(&request->version,
-                            "3.", eSTnames, NULL);
-                }
+                request->version = VERSION_3_0;
             }
         }
     }
@@ -839,11 +815,11 @@ static rc_t STypedInitUrls ( STyped * self ) {
 
 static
 rc_t STypedInit ( STyped * self, const SOrdered * raw, const SConverters * how,
-    const SVersion * version )
+    const SVersion  version )
 {
     rc_t rc = 0;
     int i = 0;
-    assert ( self && raw && how && version );
+    assert ( self && raw && how );
     memset ( self, 0, sizeof * self );
 
     if ( raw -> n != how -> n )                              /* BREAK */
@@ -1344,7 +1320,7 @@ static
 rc_t SConvertersMake ( const SConverters ** self, SHeader * header )
 {
     assert ( self && header );
-    switch ( header -> version. version ) {
+    switch ( header -> version ) {
         case VERSION_1_0:
             * self = SConvertersNames1_0Make ();
             return 0;
@@ -1610,11 +1586,11 @@ static bool VPathMakeOrNot ( VPath ** new_path, const String * src,
 
 
 static rc_t EVPathInitMapping
-    ( EVPath * self, const STyped * src, const SVersion * version )
+    ( EVPath * self, const STyped * src, const SVersion  version )
 {
     rc_t rc = 0;
     const VPath * vsrc = NULL;
-    assert ( self && src && version );
+    assert ( self && src );
     if ( self -> https == NULL && self -> http == NULL && self -> fasp == NULL )
         return 0;
     vsrc = self -> http ? self -> http 
@@ -1715,7 +1691,7 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
             bool ext = true;
             assert ( req );
             if ( req -> serviceType == eSTnames &&
-                 SVersionNotExtendedVPaths ( & req -> version ) )
+                 SVersionNotExtendedVPaths ( req -> version ) )
             {
                 ext = false;
             }
@@ -1742,7 +1718,7 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
                 & src -> s3VdbcacheUrl,& src -> ticket, src, ext, & rc, false );
 
             if ( rc == 0 )
-                rc = EVPathInitMapping ( self, src, & req -> version );
+                rc = EVPathInitMapping ( self, src,  req -> version );
 
             if ( rc == 0 && reqId != NULL ) {
                 self -> reqId = string_dup_measure ( reqId, NULL );
@@ -1889,7 +1865,7 @@ static rc_t SRowWhack ( void * p ) {
 
 
 static rc_t SRowMake ( SRow ** self, const String * src, const SRequest * req,
-    const SConverters * f, const SVersion * version )
+    const SConverters * f, const SVersion  version )
 {
     rc_t rc = 0;
     rc_t r2 = 0;
@@ -1898,7 +1874,7 @@ static rc_t SRowMake ( SRow ** self, const String * src, const SRequest * req,
     if ( p == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
 
-    assert ( req && version && src );
+    assert ( req && src );
 
     rc = SRawAlloc ( & p -> raw, src -> addr, src -> size );
     if ( rc == 0 ) {
@@ -2194,7 +2170,7 @@ rc_t SKVMake ( const SKV ** self, const char * k, const char * v )
 
 static
 rc_t SKVMakeObj ( const SKV ** self, const SObject * obj,
-    const SVersion * version )
+    const SVersion  version )
 {
     rc_t rc = 0;
     size_t sk = 0;
@@ -2379,7 +2355,7 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
                             break;
                         }
                         if (rx != 0) {
-                            if (SVersionResponseInJson(&service->req.version)) {
+                            if (SVersionResponseInJson(service->req.version)) {
                                 service->resp.rc = rx;
                                 rc = KHttpResultGetInputStream(rslt, stream);
                             }
@@ -2848,30 +2824,17 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( 
         "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n" ) );
 
-    rc = SVersionFini ( & request -> version );
-    if ( rc != 0 )
-        return rc;
-
-    rc = SVersionInit ( & request -> version, version, eSTnames, NULL );
+    rc = SVersionInit ( &request->version, version, eSTnames, NULL );
     if ( rc != 0 )
         return rc;
 
     if ( self -> cgi == NULL ) {
         char buffer [ 1024 ] = "";
-            rc = SHelperResolverCgi ( helper, aProtected,
-                buffer, sizeof buffer, cgi, request );
-            cgi = buffer;
+        rc = SHelperResolverCgi ( helper, aProtected,
+            buffer, sizeof buffer, cgi, request );
+        cgi = buffer;
         rc = SCgiRequestInitCgi ( self, cgi );
     }
-
-    rc = SVersionFini ( & request -> version );
-    if ( rc != 0 )
-        return rc;
-
-    rc = SVersionInit ( & request -> version, version, eSTnames,
-                        adjustVersion ? self -> cgi : NULL );
-    if ( rc != 0 )
-        return rc;
 
     VectorWhack ( & self -> params, whackSKV, NULL );
 
@@ -2883,7 +2846,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     if ( rc == 0 ) {
         const char name [] = "version";
         char * version = NULL;
-        rc = SVersionToString ( & request -> version, & version );
+        rc = SVersionToString (  request -> version, & version );
         if ( rc != 0 ) {
             return rc;
         }
@@ -2897,7 +2860,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
         if ( rc != 0 )
             return rc;
     }
-    if ( ! SVersionHasMultpileObjects ( & request -> version ) ) {
+    if ( ! SVersionHasMultpileObjects (  request -> version ) ) {
         if ( request -> request . object [ 0 ] . objectId == NULL )
             return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
         else {
@@ -2919,7 +2882,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
             request -> request . object [ i ] . ordId = i;
             rc = SObjectCheckUrl ( & request -> request . object [ i ] );
             if ( rc != 0 || ! request -> request . object [ i ] . isUri ) {
-              if ( SVersionResponseInJson ( & request -> version ) ) {
+              if ( SVersionResponseInJson (  request -> version ) ) {
                 const char name [] = "acc";
                 rc = SKVMake ( & kv, name,
                                request -> request . object [ i ] . objectId );
@@ -2928,7 +2891,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
               }
               else {
                 rc = SKVMakeObj ( & kv, & request -> request . object [ i ],
-                                  & request -> version );
+                                   request -> version );
                 if ( rc == 0 )
                     DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
                         ( "  %.*s=%.*s\n", kv -> k . len, kv -> k . addr,
@@ -3011,7 +2974,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
             return rc;
         }
     }
-    if ( SVersionHasRefseqCtx ( & request -> version ) &&
+    if ( SVersionHasRefseqCtx (  request -> version ) &&
          request -> request . refseq_ctx )
     {
         const char name [] = "ctx";
@@ -3025,7 +2988,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
             return rc;
         }
     }
-    if ( SVersionTypInRequest ( & request -> version ) ) {
+    if ( SVersionTypInRequest (  request -> version ) ) {
         if ( request -> request . object [ 0 ] . objectType !=
             eOT_undefined )
         {
@@ -3112,7 +3075,7 @@ rc_t SRequestInitSearchSCgiRequest ( SRequest * request, const char * cgi,
     if ( rc == 0 ) {
         const char name [] = "version";
         char * version = NULL;
-        rc = SVersionToString ( & request -> version, & version );
+        rc = SVersionToString (  request -> version, & version );
         if ( rc != 0 ) {
             return rc;
         }
@@ -3433,7 +3396,7 @@ rc_t KServiceProcessLine ( KService * self,
     if ( line -> addr [ 0 ] == '$' ) {
         * end = true;
         if ( SVersionResponseHasTimestamp
-                ( & self -> resp . header . version )
+                (  self -> resp . header . version )
             && line -> size > 2 && line -> len > 2 )
         {
             String timestamp;
@@ -3461,11 +3424,11 @@ rc_t KServiceProcessLine ( KService * self,
             bool append = true;
             SRow * row = NULL;
             rc_t r2 = SRowMake ( & row, line, & self -> req, f,
-                & self -> resp . header . version );
+                 self -> resp . header . version );
             uint32_t l = VectorLength ( & self -> resp . rows );
             if ( r2 == 0 ) {
                 if ( SVersionHasMultpileObjects
-                        ( & self -> resp . header. version )
+                        (  self -> resp . header. version )
                     || l == 0 )
                 {
                     if ( l == 1 &&
@@ -3507,7 +3470,7 @@ rc_t KServiceProcessLine ( KService * self,
             }
             if ( r2 == 0 ) {
                 if ( append && ( SVersionHasMultpileObjects
-                                     ( & self -> resp . header . version)
+                                     (  self -> resp . header . version)
                           || KSrvResponseLength ( self -> resp . list ) == 0 ) )
                             
                 {
@@ -3598,7 +3561,8 @@ rc_t KServiceProcessStreamAll ( KService * self, KStream * stream )
         }
         buffer = self -> helper . input;
         buffer [ offW ] = '\0';
-        if ( self != NULL && self -> req . version. major > 3 && offW > 0
+        if ( self != NULL
+            && SVersionResponseInJson(self -> req . version) && offW > 0
             && buffer [ 0 ] != '#' )
         {
             start = false;
@@ -3802,7 +3766,7 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
     else if ( self -> req . hasQuery
            || self -> req . serviceType == eSTsearch)
     {
-        if ( SVersionResponseInJson ( & self -> req. version ) )
+        if ( SVersionResponseInJson (  self -> req. version ) )
             rc = KServiceProcessStreamAll     ( self, stream );
         else
             rc = KServiceProcessStreamByParts ( self, stream );
@@ -3819,7 +3783,7 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
             rc = Response4AppendUrl ( r4,
                 self -> req . request . object [ i ] . objectId );
 
-    if ( rc == 0 && ! SVersionResponseInJson ( & self -> req. version ) ) {
+    if ( rc == 0 && ! SVersionResponseInJson (  self -> req. version ) ) {
         uint32_t l = KSrvResponseLength  ( self -> resp .list );
         uint32_t i = 0;
         for ( i = 0; rc == 0 && i < l; ++ i ) {
@@ -3842,26 +3806,29 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                 const VPath * path = NULL;
                 const VPath * vdbcache = NULL;
                 const KSrvError * error = NULL;
+                const VPath * mapping = NULL;
                 rc = KSrvResponseGetPath ( self -> resp .list, i, pp [ p ],
                                            & path, & vdbcache, & error );
-                if ( rc == 0 ) {
-                    if ( path != NULL ) {
+                if (rc == 0)
+                    rc = KSrvResponseGetMapping(self->resp.list, i, &mapping);
+                if (rc == 0) {
+                    if (path != NULL) {
                         String ticket;
                         rc_t r = 0;
-                        memset ( & ticket, 0, sizeof ticket );
-                        r = VPathGetTicket ( path, & ticket );
-                        if ( r == 0 )
-                            rc = ItemSetTicket ( file, & ticket );
-                        if ( rc == 0 )
-                            rc = ItemAddVPath ( file, "sra", path );
-                        RELEASE ( VPath, path );
-                        if ( rc != 0 )
+                        memset(&ticket, 0, sizeof ticket);
+                        r = VPathGetTicket(path, &ticket);
+                        if (r == 0)
+                            rc = ItemSetTicket(file, &ticket);
+                        if (rc == 0)
+                            rc = ItemAddVPath(file, "sra", path, mapping);
+                        RELEASE(VPath, path);
+                        if (rc != 0)
                             break;
                     }
-                    if ( vdbcache != NULL ) {
-                        rc = ItemAddVPath ( file, "vdbcache", vdbcache );
-                        RELEASE ( VPath, vdbcache );
-                        if ( rc != 0 )
+                    if (vdbcache != NULL) {
+                        rc = ItemAddVPath(file, "vdbcache", vdbcache, NULL);
+                        RELEASE(VPath, vdbcache);
+                        if (rc != 0)
                             break;
                     }
                 }
@@ -3967,7 +3934,7 @@ rc_t KServiceNamesExecuteExtImpl ( KService * self, VRemoteProtocols protocols,
          return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
 
     if ( version == NULL )
-        version = "4.";
+        version = "4";
 
     rc = KServiceInitNamesRequestWithVersion ( self, protocols, cgi, version,
         false, expected == NULL );
@@ -4052,7 +4019,7 @@ static rc_t KService1NameWithVersionAndType ( const KNSManager * mgr,
         rc = KServiceProcessStream ( & service, stream );
 
     if ( rc == 0 ) {
-        if ( SVersionResponseInJson ( & service . req . version ) ) {
+        if ( SVersionResponseInJson (  service . req . version ) ) {
             uint32_t n = 0;
             const KSrvResponse * response = NULL;
             const KSrvRespObj * obj = NULL;
@@ -4146,7 +4113,7 @@ static rc_t KService1NameWithVersionAndType ( const KNSManager * mgr,
         }
     }
 
-    if ( rc == 0 && ! SVersionResponseInJson ( & service . req . version ) ) {
+    if ( rc == 0 && ! SVersionResponseInJson (  service . req . version ) ) {
         uint32_t l = KSrvResponseLength ( service . resp . list );
         if ( l != 1)
             rc = RC ( rcVFS, rcQuery, rcResolving, rcQuery, rcUnauthorized );
@@ -4218,7 +4185,7 @@ rc_t KServiceSearchExecuteExt ( KService * self, const char * cgi,
         return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
 
     if ( version == NULL )
-        version = "#1.0";
+        version = "1";
 
     rc = KServiceInitSearchRequestWithVersion ( self, cgi, version );
 

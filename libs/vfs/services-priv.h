@@ -74,6 +74,9 @@ rc_t KSrvResponseGet ( const struct KSrvResponse * self, uint32_t idx,
 rc_t KSrvResponseGetIds ( const struct KSrvResponse * self, uint32_t idx,
                           const char ** reqId, const char ** respId );
 
+rc_t KSrvResponseGetMapping(const KSrvResponse * self, uint32_t idx,
+                            const struct VPath ** mapping);
+
 rc_t KSrvResponseGetR4 ( const struct KSrvResponse * self,
                          struct Response4 ** r );
 rc_t KSrvResponseSetR4 ( struct KSrvResponse * self,
