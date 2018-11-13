@@ -1588,14 +1588,14 @@ rc_t LocationsInitMapping ( Locations * self, const Item * item )
         const char * name = ItemOrLocationGetName(item, self);
 
         if ( item -> tic != NULL )
-            if ( ItemMappingByAcc( item ) )
+            if ( ItemMappingByAcc( item ) || name == NULL )
                 rc = VPathMakeFmt ( & self -> mapping, "ncbi-acc:%s?tic=%s",
                                                     item -> acc, item -> tic );
             else
                 rc = VPathMakeFmt ( & self -> mapping, "ncbi-file:%s?tic=%s",
                                                     name, item -> tic );
         else
-            if (ItemMappingByAcc(item))
+            if (ItemMappingByAcc(item) || name == NULL)
                 rc = VPathMakeFmt ( & self -> mapping, "ncbi-acc:%s",
                                                                  item -> acc );
             else
