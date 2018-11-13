@@ -611,6 +611,7 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
                 return RC ( rcVFS, rcQuery, rcExecuting, rcBuffer,
                             rcInsufficient );
             string_copy ( buffer, bsize, cgi, sizeof cgi );
+            rc = 0;
         }
     }
     else
