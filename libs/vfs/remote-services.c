@@ -490,6 +490,7 @@ static rc_t SRawFini(SRaw * self) {
     return 0;
 }
 
+/* cgi supports just 4.9 and doesn't support numeric id-s */
 static bool cgiSupportsFullJson(const char * cgi) {
     assert(cgi);
 
@@ -623,11 +624,14 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
         else if (!cgiSupportsFullJson(buffer)) {
             if (request->request.objects > 0 &&
                 request->request.object[0].objectId != NULL &&
-                isdigit(request->request.object[0].objectId[0]))
+                isdigit(request->request.object[0].objectId[0]) &&
+                SVersionResponseInJson(request->version))
             {
                 string_copy(buffer, bsize, cgi, sizeof cgi);
                 request->version = VERSION_3_0;
             }
+            else if (!SVersionResponseInJson(request->version))
+                string_copy(buffer, bsize, cgi, sizeof cgi);
         }
     }
 
