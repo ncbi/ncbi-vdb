@@ -38,6 +38,8 @@ struct KSysFile_v1;
 #include <klib/debug.h>
 #include <sysalloc.h>
 
+/* use socket poll function for timeout */
+#include "../../kns/poll-priv.h"
 
 #ifndef __USE_UNIX98
 #define __USE_UNIX98 1
@@ -51,6 +53,7 @@ struct KSysFile_v1;
 #include <sys/stat.h>
 #include <assert.h>
 #include <string.h>
+#include <poll.h>
 
 #ifdef _DEBUGGING
 #define SYSDEBUG(msg) DBGMSG(DBG_KFS,DBG_FLAG(DBG_KFS_SYS),msg)
@@ -60,106 +63,19 @@ struct KSysFile_v1;
 #define POS_DEBUG(msg)
 #endif
 
+#ifndef USE_TIMEOUT
+#define USE_TIMEOUT 1
+#endif
+
+#ifndef USE_NO_TIMEOUT_TTY
+#define USE_NO_TIMEOUT_TTY 0
+#endif
+
+
 /*--------------------------------------------------------------------------
  * KSysFile
  *  a Unix file
  */
-
-
-#if USE_TIMEOUT
-/* default timeout amount 3 seconds is 10,000 milliseconds */
-#define TIMEOUT_MSECS (3 * 1000)
-
-int32_t KSysFileTimeout = TIMEOUT_MSECS;
-
-enum
-{
-    select_read = 1,
-    select_write = 2,
-    select_exception = 4
-} select_operations;
-
-static
-rc_t KSysFileSelect_v1 (const KSysFile_v1* self, uint32_t operations)
-{
-    rc_t rc = 0;
-
-    SYSDEBUG(( "%s: Enter (%p, %x)\n", __func__, self, operations));
-
-
-    if (self->use_to)
-    {
-        fd_set fdsread;
-        fd_set fdswrite;
-        fd_set fdsexcept;
-        struct timeval to;
-        int selected;
-
-        fdsread = self->fds;
-        fdswrite = self->fds;
-        fdsexcept = self->fds;
-
-        to = self->to;
-
-        for (rc = 0; rc == 0; ) 
-        {
-            SYSDEBUG(( "%s: call select\n", __func__));
-
-            selected = select (self->fd + 1, 
-                               (operations & select_read) ? &fdsread : NULL,
-                               (operations & select_write) ? &fdswrite : NULL,
-                               (operations & select_exception) ? &fdsexcept : NULL,
-                               &to);
-            SYSDEBUG(( "%s: select returned '%d' \n", __func__, selected));
-
-            if (selected == 0)
-            {
-
-                rc = RC (rcFS, rcFile, rcSelecting, rcTimeout, rcDone);
-            }
-            else if (selected < 0)
-            {
-                int lerrno = errno;
-
-                switch (lerrno)
-                {
-                case EINVAL:
-                    rc = RC (rcFS, rcFile, rcSelecting, rcTimeout, rcInvalid);
-                    LOGERR (klogInt, rc, "coding error bad timeout or negative nfds");
-                    break;
-
-                case EBADF:
-                    rc = RC ( rcFS, rcFile, rcSelecting, rcFileDesc, rcInvalid );
-                    PLOGERR (klogErr,
-                             (klogErr, rc, "system bad file descriptor error fd='$(E)'",
-                              "E=%d", self->fd));
-                    break;
-
-                case EINTR:/*  A signal was caught. */
-                    continue;
-
-                case ENOMEM:
-                    rc = RC (rcFS, rcFile, rcSelecting, rcMemory, rcExhausted);
-                    LOGERR (klogErr, rc, "out of memory setting up read timeout");
-                    break;
-                }
-                /* function documentation seems to show that unless EINTR was 
-                 * set we can now do our read
-                 */
-            }
-            else
-            {
-                assert (FD_ISSET (self->fd, &fdsread) ||
-                        FD_ISSET (self->fd, &fdswrite) ||
-                        FD_ISSET (self->fd, &fdsexcept));
-
-                return 0;
-            }
-        }
-    }
-    return rc;
-}
-#endif
 
 
 /* Destroy
@@ -347,18 +263,27 @@ rc_t KSysFileSetSize_v1 ( KSysFile_v1 *self, uint64_t size )
 }
 
 /* Read
+ * TimedRead
  *  read file from known position
  *
  *  "pos" [ IN ] - starting position within file
  *
  *  "buffer" [ OUT ] and "bsize" [ IN ] - return buffer for read
  *
- *  "num_read" [ OUT, NULL OKAY ] - optional return parameter
- *  giving number of bytes actually read
+ *  "num_read" [ OUT ] - return parameter giving number of bytes
+ *  actually read. when returned value is zero and return code is
+ *  also zero, interpreted as end of file.
+ *
+ *  "tm" [ IN/OUT, NULL OKAY ] - an optional indicator of
+ *  blocking behavior. not all implementations will support
+ *  timed reads. a NULL timeout will block indefinitely,
+ *  a value of "tm->mS == 0" will have non-blocking behavior
+ *  if supported by implementation, and "tm->mS > 0" will indicate
+ *  a maximum wait timeout.
  */
 static
-rc_t KSysFileRead_v1 ( const KSysFile_v1 *self, uint64_t pos,
-    void *buffer, size_t bsize, size_t *num_read )
+rc_t KSysFileRead_v1 ( const KSysFile_v1 * self, uint64_t pos,
+    void * buffer, size_t bsize, size_t * num_read )
 {
     rc_t rc;
 
@@ -371,12 +296,6 @@ rc_t KSysFileRead_v1 ( const KSysFile_v1 *self, uint64_t pos,
     {
         ssize_t count;
         int lerrno;
-
-#if USE_TIMEOUT
-        rc = KSysFileSelect_v1 ( self, select_read | select_exception );
-        if (rc)
-            return rc;
-#endif
 
 #ifdef _DEBUGGING
         {
@@ -428,7 +347,84 @@ rc_t KSysFileRead_v1 ( const KSysFile_v1 *self, uint64_t pos,
     return 0;
 }
 
+static
+rc_t KSysFileTimedRead_v1 ( const KSysFile_v1 * self, uint64_t pos,
+    void * buffer, size_t bsize, size_t * num_read, struct timeout_t * tm )
+{
+    rc_t rc;
+    int revents;
+    
+    assert ( self != NULL );
+    assert ( num_read != NULL );
+
+    /* an infinite timeout in this case is the default for KSysFile */
+    if ( tm == NULL )
+        return KSysFileRead_v1 ( self, pos, buffer, bsize, num_read );
+
+    * num_read = 0;
+
+    /* wait for file to become readable */
+    revents = socket_wait ( self -> fd
+                            , POLLIN
+                            | POLLRDNORM
+                            | POLLRDBAND
+                            | POLLPRI
+                            | POLLRDHUP
+                            , tm );
+
+    /* check for error */
+    if ( revents < 0 )
+    {
+        switch ( errno )
+        {
+        case EFAULT:
+        case EINVAL:
+            rc = RC ( rcFS, rcFile, rcReading, rcParam, rcInvalid );
+            break;
+        case EINTR:
+            rc = RC ( rcFS, rcFile, rcReading, rcTransfer, rcInterrupted );
+            break;
+        case ENOMEM:
+            rc = RC ( rcFS, rcFile, rcReading, rcMemory, rcExhausted );
+            break;
+        default:
+            rc = RC ( rcFS, rcFile, rcReading, rcError, rcUnknown );
+            break;
+        }
+
+        DBGMSG(DBG_KFS, DBG_FLAG(DBG_KFS_FILE), ( "%p: %s socket_wait returned '%!'\n",
+                                                    self, __func__, errno ) );
+        return rc;
+    }
+
+    /* check for read availability */
+    if ( ( revents & ( POLLRDNORM | POLLRDBAND ) ) != 0 )
+    {
+        return KSysFileRead_v1 ( self, pos, buffer, bsize, num_read );
+    }
+
+    /* check for broken connection */
+    if ( ( revents & ( POLLHUP | POLLRDHUP ) ) != 0 )
+    {
+        DBGMSG(DBG_KFS, DBG_FLAG(DBG_KFS_FILE), ( "%p: %s broken connection\n",
+                                                  self, __func__ ) );
+        return 0;
+    }
+
+    /* anything else in revents is an error */
+    if ( ( revents & ~ POLLIN ) != 0 && errno != 0 )
+    {
+        DBGMSG(DBG_KFS, DBG_FLAG(DBG_KFS_FILE), ( "%p: %s error '%!'\n", self, __func__, errno ) );
+        return RC ( rcFS, rcFile, rcReading, rcError, rcUnknown );
+    }
+
+    /* finally, call this a timeout */
+    DBGMSG(DBG_KFS, DBG_FLAG(DBG_KFS_FILE), ( "%p: %s timeout\n", self, __func__ ) );
+    return RC ( rcFS, rcFile, rcReading, rcTimeout, rcExhausted );
+}
+
 /* Write
+ * TimedWrite
  *  write file at known position
  *
  *  "pos" [ IN ] - starting position within file
@@ -437,10 +433,17 @@ rc_t KSysFileRead_v1 ( const KSysFile_v1 *self, uint64_t pos,
  *
  *  "num_writ" [ OUT, NULL OKAY ] - optional return parameter
  *  giving number of bytes actually written
+ *
+ *  "tm" [ IN/OUT, NULL OKAY ] - an optional indicator of
+ *  blocking behavior. not all implementations will support
+ *  timed writes. a NULL timeout will block indefinitely,
+ *  a value of "tm->mS == 0" will have non-blocking behavior
+ *  if supported by implementation, and "tm->mS > 0" will indicate
+ *  a maximum wait timeout.
  */
 static
-rc_t KSysFileWrite_v1 ( KSysFile_v1 *self, uint64_t pos,
-    const void *buffer, size_t size, size_t *num_writ)
+rc_t KSysFileWrite_v1 ( KSysFile_v1 * self, uint64_t pos,
+    const void * buffer, size_t size, size_t * num_writ )
 {
     assert ( self != NULL );
     while ( 1 )
@@ -448,12 +451,6 @@ rc_t KSysFileWrite_v1 ( KSysFile_v1 *self, uint64_t pos,
         rc_t rc;
         int lerrno;
         ssize_t count;
-
-#if USE_TIMEOUT
-        rc = KSysFileSelect_v1 (self, select_write | select_exception);
-        if (rc)
-            return rc;
-#endif
 
         count = pwrite ( self -> fd, buffer, size, pos );
 
@@ -512,6 +509,90 @@ rc_t KSysFileWrite_v1 ( KSysFile_v1 *self, uint64_t pos,
     return 0;
 }
 
+static
+rc_t KSysFileTimedWrite_v1 ( KSysFile_v1 * self, uint64_t pos,
+    const void * buffer, size_t size, size_t * num_writ, struct timeout_t * tm )
+{
+    rc_t rc;
+    int revents;
+
+    assert ( self != NULL );
+    assert ( buffer != NULL );
+    assert ( size != 0 );
+    assert ( num_writ != NULL );
+
+    /* an infinite timeout in this case is the default for KSysFile */
+    if ( tm == NULL )
+        return KSysFileWrite_v1 ( self, pos, buffer, size, num_writ );
+
+    * num_writ = 0;
+
+    /* wait for file to become writable */
+    revents = socket_wait ( self -> fd
+                            , POLLOUT
+                            | POLLWRNORM
+                            | POLLWRBAND
+                            , tm );
+
+    /* check for error */
+    if ( revents < 0 )
+    {
+        switch ( errno )
+        {
+        case EFAULT:
+        case EINVAL:
+            rc = RC ( rcFS, rcFile, rcWriting, rcParam, rcInvalid );
+            break;
+        case EINTR:
+            rc = RC ( rcFS, rcFile, rcWriting, rcTransfer, rcInterrupted );
+            break;
+        case ENOMEM:
+            rc = RC ( rcFS, rcFile, rcWriting, rcMemory, rcExhausted );
+            break;
+        default:
+            rc = RC ( rcFS, rcFile, rcWriting, rcError, rcUnknown );
+            break;
+        }
+
+        assert ( rc != 0 );
+        DBGMSG(DBG_KFS, DBG_FLAG(DBG_KFS_FILE), ( "%p: %s socket_wait returned '%s'\n",
+                                                  self, __func__, strerror ( errno ) ) );
+        return rc;
+    }
+
+    if ( ( revents & ( POLLERR | POLLNVAL ) ) != 0 )
+    {
+        DBGMSG(DBG_KFS, DBG_FLAG(DBG_KFS_FILE), ( "%p: %s socket_wait returned POLLERR | POLLNVAL\n",
+                                                  self, __func__ ) );
+        return RC ( rcFS, rcFile, rcWriting, rcNoObj, rcUnknown );
+    }
+
+    /* check for broken connection */
+    if ( ( revents & POLLHUP ) != 0 )
+    {
+        DBGMSG(DBG_KFS, DBG_FLAG(DBG_KFS_FILE), ( "%p: POLLHUP received\n", self ) );
+        return  RC ( rcFS, rcFile, rcWriting, rcTransfer, rcIncomplete );
+    }
+
+    /* check for ability to send */
+    if ( ( revents & ( POLLWRNORM | POLLWRBAND ) ) != 0 )
+    {
+        return KSysFileWrite_v1 ( self, pos, buffer, size, num_writ );
+    }
+
+    /* anything else in revents is an error */
+    if ( ( revents & ~ POLLOUT ) != 0 && errno != 0 )
+    {
+        DBGMSG(DBG_KFS, DBG_FLAG(DBG_KFS_FILE), ( "%p: %s error '%s'\n",
+                                      self, __func__, strerror ( errno ) ) );
+        return RC ( rcFS, rcFile, rcWriting, rcError, rcUnknown );
+    }
+
+    /* finally, call this a timeout */
+    DBGMSG(DBG_KFS, DBG_FLAG(DBG_KFS_FILE), ( "%p: %s timeout\n", self, __func__ ) );
+    return RC ( rcFS, rcFile, rcWriting, rcTimeout, rcExhausted );
+}
+
 
 /* Make
  *  create a new file object
@@ -519,8 +600,8 @@ rc_t KSysFileWrite_v1 ( KSysFile_v1 *self, uint64_t pos,
  */
 static KFile_vt_v1 vtKSysFile =
 {
-    /* version 1.1 */
-    1, 1,
+    /* version 1.2 */
+    1, 2,
 
     /* start minor version 0 methods */
     KSysFileDestroy_v1,
@@ -533,8 +614,13 @@ static KFile_vt_v1 vtKSysFile =
     /* end minor version 0 methods */
 
     /* start minor version == 1 */
-    KSysFileType_v1
+    KSysFileType_v1,
     /* end minor version == 1 */
+
+    /* start minor version == 2 */
+    KSysFileTimedRead_v1,
+    KSysFileTimedWrite_v1
+    /* end minor version == 2 */
 };
 
 static
@@ -562,17 +648,6 @@ rc_t KSysFileMakeVT ( KSysFile_v1 **fp, int fd, const KFile_vt *vt,
     }
     else
     {
-#if USE_TIMEOUT
-        if (KSysFileTimeout >= 0)
-        {
-            f->to.tv_sec = KSysFileTimeout / 1000;
-            f->to.tv_usec = (KSysFileTimeout % 1000) * 1000;
-            f->use_to = true;
-            FD_ZERO (&f->fds);
-            FD_SET (fd, &f->fds);
-        }
-#endif
-
         rc = KFileInit_v1( & f -> dad, vt, "KSysFile", path, read_enabled, write_enabled );
         if ( rc == 0 )
         {
@@ -611,8 +686,8 @@ rc_t KStdIOFileDestroy ( KSysFile_v1*self )
 
 static KFile_vt_v1 vtKStdIOFile =
 {
-    /* version 1.1 */
-    1, 1,
+    /* version 1.2 */
+    1, 2,
 
     /* start minor version 0 methods */
     KStdIOFileDestroy,
@@ -625,8 +700,13 @@ static KFile_vt_v1 vtKStdIOFile =
     /* end minor version 0 methods */
 
     /* start minor version == 1 */
-    KSysFileType_v1
+    KSysFileType_v1,
     /* end minor version == 1 */
+
+    /* start minor version == 2 */
+    KSysFileTimedRead_v1,
+    KSysFileTimedWrite_v1
+    /* end minor version == 2 */
 };
 
 /* RandomAccess
@@ -634,7 +714,6 @@ static KFile_vt_v1 vtKStdIOFile =
 static
 rc_t KStdIOFileRandomAccess ( const KSysFile_v1 *self )
 {
-/*     return RC ( rcFS, rcFile, rcAccessing, rcFileDesc, rcIncorrect ); */
     return RC ( rcFS, rcFile, rcAccessing, rcFunction, rcUnsupported );
 }
 
@@ -646,7 +725,6 @@ rc_t KStdIOFileSize ( const KSysFile_v1 *self, uint64_t *size )
 {
     * size = 0;
 
-/*     return RC ( rcFS, rcFile, rcAccessing, rcFileDesc, rcIncorrect ); */
     return RC ( rcFS, rcFile, rcAccessing, rcFunction, rcUnsupported );
 }
 
@@ -655,7 +733,6 @@ rc_t KStdIOFileSize ( const KSysFile_v1 *self, uint64_t *size )
 static
 rc_t KStdIOFileSetSize ( KSysFile_v1 *self, uint64_t size )
 {
-/*     return RC ( rcFS, rcFile, rcUpdating, rcFileDesc, rcIncorrect ); */
     return RC ( rcFS, rcFile, rcAccessing, rcFunction, rcUnsupported );
 }
 
@@ -691,12 +768,6 @@ rc_t KStdIOFileRead ( const KSysFile_v1 *dad, uint64_t pos,
     {
         ssize_t count;
         int lerrno;
-
-#if USE_TIMEOUT
-        rc = KSysFileSelect_v1 (&self->dad, select_read | select_exception);
-        if (rc)
-            return rc;
-#endif
 
         count = read ( self -> dad . fd, buffer, bsize );
 
@@ -775,12 +846,6 @@ rc_t KStdIOFileWrite ( KSysFile_v1 *dad, uint64_t pos,
     {
         int lerrno;
         ssize_t count;
-
-#if USE_TIMEOUT
-        rc = KSysFileSelect_v1 ( &self->dad, select_read | select_exception);
-        if (rc)
-            return rc;
-#endif
 
         count = write ( self -> dad . fd, buffer, size );
 
@@ -941,22 +1006,6 @@ rc_t KStdIOFileMake ( KFile_v1 **fp, int fd,
         }
         else
         {
-#if USE_TIMEOUT
-            if ((KSysFileTimeout >= 0)
-#if USE_NO_TIMEOUT_TTY
-                && (! isatty (fd)
-#endif
-                    )
-            {
-                KSysFile_v1 *ff = &f->dad;
-
-                ff->to.tv_sec = KSysFileTimeout / 1000;
-                ff->to.tv_usec = (KSysFileTimeout % 1000) * 1000;
-                ff->use_to = true;
-                FD_ZERO (&ff->fds);
-                FD_SET (fd, &ff->fds);
-            }
-#endif
             rc = KFileInit_v1 ( &f->dad.dad, ( const KFile_vt * ) &vtKStdIOStream,
                              "KStdIOFile", "fd", read_enabled, write_enabled );
             if ( rc == 0 )
