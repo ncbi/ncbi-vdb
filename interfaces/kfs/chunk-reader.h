@@ -73,11 +73,11 @@ KFS_EXTERN rc_t CC KChunkReaderNextBuffer ( KChunkReader * self, void ** buf, si
  *  delivered to consumer to process the chunk as desired,
  *  e.g. to write to a file or display to a monitor
  *
- *  "pos" - the position of the chunk within the stream or object
+ *  "pos" [ IN ] - the position of the chunk within the stream or object
  *
- *  "buf" - pointer to buffer
+ *  "buf" [ IN ] - pointer to buffer
  *
- *  "bytes - the number of valid bytes in buffer; <= size
+ *  "bytes [ IN ] - the number of valid bytes in buffer; <= size
  */
 KFS_EXTERN rc_t CC KChunkReaderConsumeChunk ( KChunkReader * self,
     uint64_t pos, const void * buf, size_t size );
@@ -85,9 +85,9 @@ KFS_EXTERN rc_t CC KChunkReaderConsumeChunk ( KChunkReader * self,
 /* ReturnBuffer
  *  allows reader to recycle or free the chunk buffer
  *
- *  "buf" - pointer to chunk buffer
+ *  "buf" [ IN ] - pointer to chunk buffer
  *
- *  "size" - size of chunk buffer
+ *  "size" [ IN ] - size of chunk buffer
  */
 KFS_EXTERN rc_t CC KChunkReaderReturnBuffer ( KChunkReader * self, void * buf, size_t size );
 
