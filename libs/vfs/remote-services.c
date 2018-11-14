@@ -588,8 +588,8 @@ static rc_t SVersionFini(SVersion * self) {
 
 /* try to get cgi from kfg, otherwise use hardcoded */
 static
-rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
-    char * buffer, size_t bsize, const char * aCgi, SRequest * request )
+rc_t SHelperResolverCgi ( SHelper * self, bool aProtected, char * buffer,
+    size_t bsize, const char * aCgi, SRequest * request, bool adjustVersion)
 {
     const char man [] = "/repository/remote/main/CGI/resolver-cgi";
     const char prt [] = "/repository/remote/protected/CGI/resolver-cgi";
@@ -617,7 +617,7 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
     else
         string_copy_measure ( buffer, bsize, aCgi );
 
-    if (rc == 0) {
+    if (rc == 0 && adjustVersion) {
         if (cgiNotSupportsJson(buffer)) {
             if (SVersionResponseInJson(request->version))
                 request->version = VERSION_3_0;
@@ -2836,7 +2836,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     if ( self -> cgi == NULL ) {
         char buffer [ 1024 ] = "";
         rc = SHelperResolverCgi ( helper, aProtected,
-            buffer, sizeof buffer, cgi, request );
+            buffer, sizeof buffer, cgi, request, adjustVersion );
         cgi = buffer;
         rc = SCgiRequestInitCgi ( self, cgi );
     }
