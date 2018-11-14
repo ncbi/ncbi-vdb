@@ -509,12 +509,10 @@ static rc_t CompressREAD(TableWriterSeq *const self, int64_t *const buffer)
             rc = TableWriter_CloseRow(self->base);
             assert(rc == 0);
         }
-        VTableAddRef(vtbl);
         rc = TableWriter_CloseCursor(self->base, cursor_id, NULL);
         assert(rc == 0);
         VTableDropColumn(vtbl, "READ");
         VTableDropColumn(vtbl, "ALTREAD");
-        VTableRelease(vtbl);
     }
     else {
         for (row = 1; ; ++row) {
