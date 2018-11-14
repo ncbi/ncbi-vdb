@@ -136,13 +136,16 @@ rc_t CC KCacheTeeChunkReaderConsume ( KCacheTeeChunkReader * self, uint64_t pos,
     /* AT THIS POINT...
 
        what we have is a newly read buffer, potentially partial.
-       if partial, we zero the remainder.
+       if partial, we zero the remainder. actually if partial, it
+       had better be the last page in the file.
 
        the buffer needs to be inserted into the ram_cache,
        and written to the cache_file,
        and entered into the index.
 
        finally, we signal the fg thread that something has changed. */
+
+    /* TBD */
     return -1;
 }
 
@@ -205,7 +208,54 @@ rc_t KCacheTeeFileMakeChunkReader ( KCacheTeeFile_v3 * self )
 static
 rc_t CC KCacheTeeFileDestroy ( KCacheTeeFile_v3 *self )
 {
+    rc_t rc;
+    ( void ) rc;
+
+    /* seal msg queue */
+    KQueueSeal ( self -> msgq );
+
+    /* stop background thread */
+    self -> quitting = true;
+    rc = KThreadWait ( self -> thread, NULL );
+
+    /* release thread */
+    KThreadRelease ( self -> thread );
+
+    /* release queue */
+    KQueueRelease ( self -> msgq );
+
+    /* release lock */
+    KLockRelease ( self -> lock );
+
+    /* release condition */
+    KConditionRelease ( self -> cond );
+
+    /* free ram_cache pages */
     /* TBD */
+
+    /* free ram_cache */
+    KVectorRelease ( self -> ram_cache );
+
+    /* release source */
+    KFileRelease ( self -> source );
+
+    /* release chunked reader */
+    KChunkReaderRelease ( self -> chunks );
+
+    /* ? promote cache_file ? */
+    /* TBD */
+
+    /* free bitmap */
+    free ( self -> bitmap );
+
+    /* release cache_file */
+    KFileRelease ( self -> cache_file );
+
+    /* release directory */
+    KDirectoryRelease ( self -> dir );
+
+    free ( self );
+
     return 0;
 }
 
@@ -240,6 +290,7 @@ static
 rc_t CC KCacheTeeFileRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
     void *buffer, size_t bsize, size_t *num_read )
 {
+    /* TBD */
     * num_read = 0;
     return -1;
 }
@@ -264,6 +315,7 @@ static
 rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
     void *buffer, size_t bsize, size_t *num_read, struct timeout_t *tm )
 {
+    /* TBD */
     * num_read = 0;
     return -1;
 }
@@ -278,18 +330,64 @@ rc_t CC KCacheTeeFileTimedWrite ( KCacheTeeFile_v3 *self, uint64_t pos,
 
 static
 rc_t CC KCacheTeeFileReadChunked ( const KCacheTeeFile_v3 *self, uint64_t pos,
-    KChunkReader * chunks, size_t bsize, size_t * num_read )
+    KChunkReader * chunks, size_t bsize, size_t * total_read )
 {
-    * num_read = 0;
-    return -1;
+    rc_t rc = 0;
+    size_t total, num_read;
+
+    assert ( chunks != NULL );
+
+    for ( total = 0; rc == 0 && total < bsize; total += num_read )
+    {
+        void * chbuf;
+        size_t chsize;
+        rc = KChunkReaderNextBuffer ( chunks, & chbuf, & chsize );
+        if ( rc == 0 )
+        {
+            rc = KCacheTeeFileRead ( self, pos + total, chbuf, chsize, & num_read );
+            if ( rc == 0 && num_read != 0 )
+                rc = KChunkReaderConsumeChunk ( chunks, pos + total, chbuf, num_read );
+            KChunkReaderReturnBuffer ( chunks, chbuf, chsize );
+        }
+
+        if ( num_read == 0 )
+            break;
+    }
+
+    * total_read = total;
+
+    return ( total == 0 ) ? rc : 0;
 }
 
 static
 rc_t CC KCacheTeeFileTimedReadChunked ( const KCacheTeeFile_v3 *self, uint64_t pos,
-    KChunkReader * chunks, size_t bsize, size_t * num_read, struct timeout_t * tm )
+    KChunkReader * chunks, size_t bsize, size_t * total_read, struct timeout_t * tm )
 {
-    * num_read = 0;
-    return -1;
+    rc_t rc = 0;
+    size_t total, num_read;
+
+    assert ( chunks != NULL );
+
+    for ( total = 0; rc == 0 && total < bsize; total += num_read )
+    {
+        void * chbuf;
+        size_t chsize;
+        rc = KChunkReaderNextBuffer ( chunks, & chbuf, & chsize );
+        if ( rc == 0 )
+        {
+            rc = KCacheTeeFileTimedRead ( self, pos + total, chbuf, chsize, & num_read, tm );
+            if ( rc == 0 && num_read != 0 )
+                rc = KChunkReaderConsumeChunk ( chunks, pos + total, chbuf, num_read );
+            KChunkReaderReturnBuffer ( chunks, chbuf, chsize );
+        }
+
+        if ( num_read == 0 )
+            break;
+    }
+
+    * total_read = total;
+
+    return ( total == 0 ) ? rc : 0;
 }
 
 static KFile_vt_v1 KCacheTeeFile_v3_vt =
