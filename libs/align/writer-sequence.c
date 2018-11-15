@@ -399,60 +399,55 @@ LIB_EXPORT rc_t CC TableWriterSeq_Make(const TableWriterSeq** cself, VDatabase* 
     return rc;
 }
 
-static rc_t CompressOneRead(TableWriterSeq *const self, TableReaderColumn const *const cols_read, int64_t const row, int64_t *const buffer)
+struct CompressRowData {
+    char const *sequence;
+    INSDC_coord_zero const *read_start;
+    INSDC_coord_len const *read_length;
+    int64_t const *alignment_id;
+    unsigned num_reads;
+    unsigned sequence_length;
+};
+typedef struct CompressRowData CompressRowData;
+
+static rc_t compressOneRead(VCursor *const out, CompressRowData const *data, int64_t const row, int64_t *const buffer)
 {
-    rc_t rc = 0;
-    char const *const seq = cols_read[0].base.str;
-    unsigned const seqLen = (unsigned)cols_read[0].len;
-    INSDC_coord_zero const *const start = cols_read[1].base.coord0;
-    INSDC_coord_len const *const length = cols_read[2].base.coord_len;
-    unsigned const nreads = (unsigned)cols_read[1].len;
-    int64_t const *const pid = cols_read[3].base.i64;
-    unsigned i;
-    unsigned aligned = 0;
     int64_t *const firstUnaligned = &buffer[0];
     int64_t *const firstHalfAligned = &buffer[1];
+    rc_t rc;
+    unsigned i;
+    unsigned aligned = 0;
     
-    assert(cols_read[3].len == nreads);
-    for (i = 0; i < nreads; ++i) {
-        if (pid[i] != 0)
+    for (i = 0; i < data->num_reads; ++i) {
+        if (data->alignment_id[i] != 0)
             ++aligned;
     }
     if (aligned == 0 && *firstUnaligned == 0) *firstUnaligned = row;
-    if (aligned > 0 && aligned < nreads && *firstHalfAligned == 0) *firstHalfAligned = row;
+    if (aligned > 0 && aligned < data->num_reads && *firstHalfAligned == 0) *firstHalfAligned = row;
+    
+    if (out == NULL) return 0;
+    
+    rc = VCursorOpenRow(out);
+    assert(rc == 0); if (rc) return rc;
     
     if (aligned == 0) {
-        TW_COL_WRITE_BUF(self->base, self->cols[0], seq, seqLen);
-        return rc;
+        rc = VCursorWrite(out, 1, sizeof(data->sequence[0]), data->sequence, 0, data->sequence_length);
+        assert(rc == 0); if (rc) return rc;
     }
-    TW_COL_WRITE_BUF(self->base, self->cols[0], seq, 0);
-    if (aligned == nreads) return rc;
-    for (i = 0; i < nreads; ++i) {
-        if (pid[i] == 0) {
-            TW_COL_WRITE_BUF(self->base, self->cols[0], &seq[start[i]], length[i]);
+    else if (aligned == data->num_reads) {
+        rc = VCursorWrite(out, 1, sizeof(data->sequence[0]), data->sequence, 0, 0);
+        assert(rc == 0); if (rc) return rc;
+    }
+    else {
+        for (i = 0; i < data->num_reads; ++i) {
+            if (data->alignment_id[i] != 0) continue;
+
+            rc = VCursorWrite(out, 1, sizeof(data->sequence[0]), data->sequence + data->read_start[i], 0, data->read_length[i]);
+            assert(rc == 0); if (rc) return rc;
         }
     }
-    return rc;
-}
-
-static rc_t CheckForAlignment(TableWriterSeq *const self, TableReaderColumn const *const cols_read, int64_t const row, int64_t *const buffer)
-{
-    rc_t rc = 0;
-    unsigned const nreads = (unsigned)cols_read[1].len;
-    int64_t const *const pid = cols_read[3].base.i64;
-    unsigned i;
-    unsigned aligned = 0;
-    int64_t *const firstUnaligned = &buffer[0];
-    int64_t *const firstHalfAligned = &buffer[1];
-
-    assert(cols_read[3].len == nreads);
-    for (i = 0; i < nreads; ++i) {
-        if (pid[i] != 0)
-            ++aligned;
-    }
-    if (aligned == 0 && *firstUnaligned == 0) *firstUnaligned = row;
-    if (aligned > 0 && aligned < nreads && *firstHalfAligned == 0) *firstHalfAligned = row;
-    return rc;
+    rc = VCursorCommitRow(out); assert(rc == 0); if (rc) return rc;
+    rc = VCursorCloseRow(out); assert(rc == 0); if (rc) return rc;
+    return 0;
 }
 
 static VTable *getVTable(TableWriterSeq *const self) {
@@ -462,12 +457,33 @@ static VTable *getVTable(TableWriterSeq *const self) {
     return vtbl;
 }
 
-static TableReader const *makeTableReader(VTable *const vtbl, TableReaderColumn *const cols)
-{
-    TableReader const *result = NULL;
-    rc_t const rc = TableReader_Make(&result, vtbl, cols, 50 * 1024 * 1024);
-    assert(rc == 0 && result != NULL);
-    return result;
+static rc_t readOneCompressRow(VCursor const *const curs, CompressRowData *result, int64_t const row) {
+    rc_t rc;
+    void const *base;
+    uint32_t count;
+    uint32_t boff;
+    uint32_t elem_bits;
+    
+    rc = VCursorCellDataDirect(curs, row, 1, &elem_bits, &base, &boff, &count);
+    if (rc) return rc;
+    assert(rc == 0 && boff == 0 && elem_bits == sizeof(result->sequence[0]) * 8);
+    result->sequence = base;
+    result->sequence_length = count;
+    
+    rc = VCursorCellDataDirect(curs, row, 2, &elem_bits, &base, &boff, &count);
+    assert(rc == 0 && boff == 0 && elem_bits == sizeof(result->read_start[0]) * 8);
+    result->read_start = base;
+    result->num_reads = count;
+    
+    rc = VCursorCellDataDirect(curs, row, 3, &elem_bits, &base, &boff, &count);
+    assert(rc == 0 && boff == 0 && elem_bits == sizeof(result->read_length[0]) * 8 && count == result->num_reads);
+    result->read_length = base;
+    
+    rc = VCursorCellDataDirect(curs, row, 4, &elem_bits, &base, &boff, &count);
+    assert(rc == 0 && boff == 0 && elem_bits == sizeof(result->alignment_id[0]) * 8 && count == result->num_reads);
+    result->alignment_id = base;
+    
+    return rc;
 }
 
 /* CompressREAD has the IMPORTANT side-effect of calculating the initial row IDs
@@ -478,66 +494,68 @@ static rc_t CompressREAD(TableWriterSeq *const self, int64_t *const buffer)
     bool const notSavingRead = ((self->options & ewseq_co_SaveRead) == 0);
     rc_t rc = 0;
     VTable *const vtbl = getVTable(self);
-    TableReaderColumn cols_read[] = {
+    VCursor const *in = NULL;
+    VCursor *out = NULL;
+    TableReaderColumn const cols_read[] = {
         {0, READ_DNA_TEXT, {NULL}, 0, 0},
         {0, "READ_START", {NULL}, 0, 0},
         {0, "READ_LEN", {NULL}, 0, 0},
         {0, "PRIMARY_ALIGNMENT_ID", {NULL}, 0, 0},
         {0, NULL, {NULL}, 0, 0}
     };
-    TableReader const *reader = makeTableReader(vtbl, cols_read);
-    int64_t row = 0;
+    CompressRowData data;
+    int64_t i;
     
-    if (notSavingRead) {
-        static TableWriterData const d = { "", 0 };
-        TableWriterColumn col_compress = TableWriterSeq_cols[0];
-        uint8_t cursor_id = 0;
-        
-        rc = TableWriter_AddCursor(self->base, &col_compress, 1, &cursor_id);
-        assert(rc == 0);
-        TW_COL_WRITE_DEF(self->base, cursor_id, col_compress, d);
-        assert(rc == 0);
-        
-        while ((rc = TableReader_ReadRow(reader, ++row)) == 0) {
-            rc = TableWriter_OpenRowId(self->base, row, cursor_id);
-            assert(rc == 0);
-            rc = CompressOneRead(self, cols_read, row, buffer);
-            assert(rc == 0);
-            rc = TableWriter_CloseRow(self->base);
-            assert(rc == 0);
+    rc = VTableCreateCursorRead(vtbl, &in); assert(rc == 0); if (rc) return rc;
+    for (i = 0; ; ++i) {
+        if (cols_read[i].name) {
+            uint32_t cid = 0;
+            rc = VCursorAddColumn(in, &cid, cols_read[i].name);
+            assert(rc == 0 && cid == i + 1); if (rc) return rc;
+            continue;
         }
-        if (rc != 0 && GetRCState(rc) == rcNotFound) rc = 0;
-        assert(rc == 0);
+        break;
+    }
+    rc = VCursorOpen(in); assert(rc == 0); if (rc) return rc;
+
+    if (notSavingRead) {
+        uint32_t cid = 0;
         
-        rc = TableWriter_CloseCursor(self->base, cursor_id, NULL);
-        assert(rc == 0);
+        rc = VTableColumnCreateParams(vtbl, kcmCreate, kcsCRC32, 0); assert(rc == 0); if (rc) return rc;
+        rc = VTableCreateCursorWrite(vtbl, &out, kcmInsert); assert(rc == 0); if (rc) return rc;
+        rc = VCursorAddColumn(out, &cid, TableWriterSeq_cols[0].name); assert(rc == 0 && cid == 1); if (rc) return rc;
+        rc = VCursorOpen(out); assert(rc == 0); if (rc) return rc;
+    }
+    i = 0;
+    while ((rc = readOneCompressRow(in, &data, i + 1)) == 0) {
+        ++i;
+        compressOneRead(out, &data, i, buffer);
+    }
+    if (GetRCState(rc) == rcNotFound) rc = 0;
+    assert(rc == 0);
+    
+    rc = VCursorRelease(in); assert(rc == 0); if (rc) return rc;
+    if (out) {
+        rc = VCursorCommit(out); assert(rc == 0); if (rc) return rc;
+        rc = VCursorRelease(out); assert(rc == 0); if (rc) return rc;
         VTableDropColumn(vtbl, "READ");
         VTableDropColumn(vtbl, "ALTREAD");
     }
-    else {
-        while ((rc = TableReader_ReadRow(reader, ++row)) == 0) {
-            rc = CheckForAlignment(self, cols_read, row, buffer);
-            assert(rc == 0);
-        }
-        if (rc != 0 && GetRCState(rc) == rcNotFound) rc = 0;
-        assert(rc == 0);
-    }
-    
-    TableReader_Whack(reader);
-    return rc;
+
+    return 0;
 }
 
 static KMetadata *getMetadata(TableWriterSeq *const self) {
     KMetadata* md = NULL;
     VTable *vtbl = getVTable(self);
-    rc_t rc = VTableOpenMetadataUpdate(vtbl, &md);
+    rc_t const rc = VTableOpenMetadataUpdate(vtbl, &md);
     assert(rc == 0);
     return md;
 }
 
 static KMDataNode *openNode(KMetadata *const md, char const *const nodeName) {
     KMDataNode *node = NULL;
-    rc_t rc = KMetadataOpenNodeUpdate(md, &node, "%s", nodeName);
+    rc_t const rc = KMetadataOpenNodeUpdate(md, &node, "%s", nodeName);
     assert(rc == 0);
     return node;
 }
