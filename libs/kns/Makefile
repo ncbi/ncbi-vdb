@@ -97,6 +97,7 @@ endif
 
 KNS_SRC = \
 	$(KNS_NO_HTTP_SRC) \
+	cloud              \
 	http-file          \
 	http-client        \
 	http-retrier       \

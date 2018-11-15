@@ -77,18 +77,25 @@ struct KNSManager
 
     struct KNSProxies * proxies;
 
+    const struct Cloud * cloud;
+
     bool verbose;
 
+    bool NCBI_VDB_NETnoLogError;
     bool NCBI_VDB_NETkfgValueSet;
     bool NCBI_VDB_NETkfgValue;
 };
 
 bool KNSManagerLogNcbiVdbNetError ( const struct KNSManager * self );
+void KNSManagerSetLogNcbiVdbNetError(struct KNSManager * self, bool set);
 
 /* returns true when we should not try direct internet connection
  * when HttpProxies are set */
 bool KNSManagerHttpProxyOnly ( const struct KNSManager * self );
 
+/* don't free returned location */
+rc_t KNSManagerGetCloudLocation(const struct KNSManager * self,
+    const char ** location);
 
 /******************************** KNSProxies **********************************/
 
