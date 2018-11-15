@@ -116,7 +116,7 @@ static rc_t _KNSManager_Read(struct KNSManager * self,
     KClientHttp *http = NULL;
     KClientHttpRequest *req = NULL;
     rc = KNSManagerMakeTimedClientHttp(self,
-        &http, NULL, 0, 0, 0x01010000, &host, 80);
+        &http, NULL, 0x01010000, 0, 0, &host, 80);
     if (rc != 0)
         return rc;
     rc = KNSManagerMakeClientRequest(self, &req, 0x01010000, NULL, url);
@@ -169,7 +169,7 @@ rc_t KNSManagerMakeCloud(struct KNSManager * self,
 
         bool log = KNSManagerLogNcbiVdbNetError(self);
 
-        if (_KDirectory_FileExists(dir, "/bin/ec2-metadata"))
+        if (_KDirectory_FileExists(dir, "/usr/bin/ec2-metadata"))
             gcsFirst = false;
         else if (_KDirectory_FileExists(dir, "/bin/gcloud"))
             gcsFirst = true;
