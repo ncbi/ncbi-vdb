@@ -116,7 +116,7 @@ static rc_t _KNSManager_Read(struct KNSManager * self,
     KClientHttp *http = NULL;
     KClientHttpRequest *req = NULL;
     rc = KNSManagerMakeTimedClientHttp(self,
-        &http, NULL, 0x01010000, 0, 0, &host, 80);
+        &http, NULL, 0x01010000, 9, 9, &host, 80);
     if (rc != 0)
         return rc;
     rc = KNSManagerMakeClientRequest(self, &req, 0x01010000, NULL, url);
