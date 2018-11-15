@@ -73,11 +73,19 @@ static rc_t CloudMake(const Cloud ** self,
 {
     size_t size = 2 + 1 + zsize;
 
+    const char* slash = NULL;
+
     Cloud * p = NULL;
 
     rc_t rc = CloudMakeEmpty(&p);
     if (rc != 0)
         return rc;
+
+    slash = string_rchr(zone, zsize, '/');
+    if (slash != NULL && slash - zone < zsize) {
+        size -= slash - zone + 1;
+        zone = slash + 1;
+    }
 
     p->location = calloc(1, size);
     if (p->location == NULL)
