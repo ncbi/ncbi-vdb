@@ -179,7 +179,7 @@ rc_t KNSManagerMakeCloud(struct KNSManager * self,
 
         if (_KDirectory_FileExists(dir, "/usr/bin/ec2-metadata"))
             gcsFirst = false;
-        else if (_KDirectory_FileExists(dir, "/bin/gcloud"))
+        else if (_KDirectory_FileExists(dir, "/usr/bin/gcloud"))
             gcsFirst = true;
 
         if (log)
