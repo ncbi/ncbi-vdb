@@ -26,12 +26,6 @@
 
 #include <kns/extern.h>
 
-#include "http-priv.h"
-#include "mgr-priv.h"
-#include "stream-priv.h"
-#include "sysmgr.h"
-#include "../klib/release-vers.h"
-
 #include <kfg/config.h>
 
 #include <klib/printf.h>
@@ -50,7 +44,13 @@
 
 #include <stdio.h> /* fprintf */
 
+#include "../klib/release-vers.h"
+#include "cloud.h" /* KNSManagerMakeCloud */
+#include "http-priv.h"
 #include "kns_manager-singleton.h" /* USE_SINGLETON */
+#include "mgr-priv.h"
+#include "stream-priv.h"
+#include "sysmgr.h"
 
 #ifndef MAX_CONN_LIMIT
 #define MAX_CONN_LIMIT ( 60 * 1000 )
@@ -106,6 +106,7 @@ rc_t KNSManagerWhack ( KNSManager * self )
 #endif
 
     KNSProxiesWhack ( self -> proxies );
+    CloudRelease(self->cloud);
 
     if ( self -> aws_access_key_id != NULL )
         StringWhack ( self -> aws_access_key_id );
@@ -689,6 +690,11 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char ** user_agent )
 
 #define NCBI_VDB_NET 1 /* VDB-3399 : temporarily enable for internal testing */
 
+void KNSManagerSetLogNcbiVdbNetError(KNSManager * self, bool set) {
+    if (self)
+        self->NCBI_VDB_NETnoLogError = ! set;
+}
+
 bool KNSManagerLogNcbiVdbNetError ( const KNSManager * self ) {
     if ( self == NULL )
 #ifdef NCBI_VDB_NET
@@ -697,25 +703,55 @@ bool KNSManagerLogNcbiVdbNetError ( const KNSManager * self ) {
     return false;
 #endif
     else {
-        const char * e = getenv ( "NCBI_VDB_NET" );
-        if ( e != NULL ) {
-            if ( e [ 0 ] == '0' ||
-                 e [ 0 ] == 'f' ) /* false */
-            {
-                return false;
-            }
-            else
-                return true;
-        }
+        if (self->NCBI_VDB_NETnoLogError)
+            return false;
         else {
-            if ( self -> NCBI_VDB_NETkfgValueSet )
-                return self -> NCBI_VDB_NETkfgValue;
-        }
+            const char * e = getenv("NCBI_VDB_NET");
+            if (e != NULL) {
+                if (e[0] == '0' ||
+                    e[0] == 'f') /* false */
+                {
+                    return false;
+                }
+                else
+                    return true;
+            }
+            else {
+                if (self->NCBI_VDB_NETkfgValueSet)
+                    return self->NCBI_VDB_NETkfgValue;
+            }
 
 #ifdef NCBI_VDB_NET
-        return true;
+            return true;
 #else
-        return false;
+            return false;
 #endif
+        }
     }
+}
+
+rc_t KNSManagerGetCloudLocation(const KNSManager * cself,
+    const char ** location)
+{
+    KNSManager * self = (KNSManager *)cself;
+
+    rc_t rc = 0;
+
+    if (location == NULL)
+        return RC(rcNS, rcMgr, rcAccessing, rcParam, rcNull);
+
+    *location = NULL;
+
+    if (self == NULL)
+        return RC(rcNS, rcMgr, rcAccessing, rcParam, rcNull);
+
+    if (self->cloud == NULL)
+        rc = KNSManagerMakeCloud(self, &self->cloud);
+
+    if (rc == 0) {
+        assert(self->cloud);
+        *location = CloudGetLocation(self->cloud);
+    }
+
+    return rc;
 }

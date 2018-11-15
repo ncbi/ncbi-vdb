@@ -31,8 +31,9 @@ TOP ?= $(abspath ../..)
 MODULE = test/kns
 
 TEST_TOOLS = \
-    test_allow_all_certificates \
-    test_dis_allow_all_certificates \
+	test_allow_all_certificates \
+	test_dis_allow_all_certificates \
+	test-cloud \
 	test200for-whole-file \
 	test-kns \
 	test-http-dropconn \
@@ -151,6 +152,18 @@ DAA_OBJ = \
 	$(addsuffix .$(OBJX),$(DAA_SRC))
 
 $(TEST_BINDIR)/test_dis_allow_all_certificates: $(DAA_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+#-------------------------------------------------------------------------------
+# test-cloud
+
+CL_SRC = \
+	test-cloud
+
+CL_OBJ = \
+	$(addsuffix .$(OBJX),$(CL_SRC))
+
+$(TEST_BINDIR)/test-cloud: $(CL_OBJ)
 	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
 #----------------------------------------------------------------
