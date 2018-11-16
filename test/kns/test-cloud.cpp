@@ -47,7 +47,7 @@ TEST_CASE(Test) {
     REQUIRE_RC(KNSManagerMakeCloud(mgr, &cloud));
 
     const char * location = CloudGetLocation(cloud);
-    if ( location != NULL )
+    if (location != NULL)
         cout << "Location: '" << location << "'\n";
     else
         cout << "Location: outside of cloud\n";
@@ -60,12 +60,17 @@ TEST_CASE(Test) {
 const char UsageDefaultName[] = "test-cloud";
 rc_t CC UsageSummary(const char * progname) { return 0; }
 rc_t CC Usage(const Args * args) { return 0; }
+
 extern "C" {
+
     ver_t CC KAppVersion(void) { return 0; }
+
     int KMain(int argc, char *argv[]) {
         KConfigDisableUserSettings();
+
         return TestCloud(argc, argv);
     }
+
 }
 
 /******************************************************************************/
