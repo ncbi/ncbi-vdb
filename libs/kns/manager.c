@@ -731,16 +731,14 @@ bool KNSManagerLogNcbiVdbNetError ( const KNSManager * self ) {
 }
 
 rc_t KNSManagerGetCloudLocation(const KNSManager * cself,
-    const char ** location)
+    char * buffer, size_t bsize, size_t * num_read, size_t * remaining)
 {
     KNSManager * self = (KNSManager *)cself;
 
     rc_t rc = 0;
 
-    if (location == NULL)
+    if (buffer == NULL)
         return RC(rcNS, rcMgr, rcAccessing, rcParam, rcNull);
-
-    *location = NULL;
 
     if (self == NULL)
         return RC(rcNS, rcMgr, rcAccessing, rcParam, rcNull);
@@ -749,8 +747,34 @@ rc_t KNSManagerGetCloudLocation(const KNSManager * cself,
         rc = KNSManagerMakeCloud(self, &self->cloud);
 
     if (rc == 0) {
+        const char * location = NULL;
+
+        size_t dummy = 0;
+
+        if (num_read == NULL)
+            num_read = &dummy;
+        if (remaining == NULL)
+            remaining = &dummy;
+
         assert(self->cloud);
-        *location = CloudGetLocation(self->cloud);
+        location = CloudGetLocation(self->cloud);
+
+        if (location == NULL) {
+            if (bsize > 0)
+                buffer[0] = '\0';
+            *num_read = *remaining = 0;
+        }
+        else {
+            size_t s = string_copy_measure(buffer, bsize, location);
+            if (s <= bsize) {
+                *num_read = s;
+                *remaining = 0;
+            }
+            else {
+                *num_read = bsize;
+                *remaining = s - bsize;
+            }
+        }
     }
 
     return rc;

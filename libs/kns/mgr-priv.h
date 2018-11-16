@@ -93,9 +93,8 @@ void KNSManagerSetLogNcbiVdbNetError(struct KNSManager * self, bool set);
  * when HttpProxies are set */
 bool KNSManagerHttpProxyOnly ( const struct KNSManager * self );
 
-/* don't free returned location */
 rc_t KNSManagerGetCloudLocation(const struct KNSManager * self,
-    const char ** location);
+    char * buffer, size_t bsize, size_t * num_read, size_t * remaining);
 
 /******************************** KNSProxies **********************************/
 

@@ -115,20 +115,20 @@ static rc_t _KNSManager_Read(struct KNSManager * self,
     rc_t rc = 0;
 
     const char * url = gs ? GS : S3;
-    String host;
-    if (gs)
-        CONST_STRING(&host, "metadata.google.internal");
-    else
-        CONST_STRING(&host, "169.254.169.254");
 
-    KClientHttp *http = NULL;
     KClientHttpRequest *req = NULL;
-    rc = KNSManagerMakeTimedClientHttp(self,
-        &http, NULL, 0x01010000, 900, 900, &host, 80);
-    if (rc != 0)
-        return rc;
+
+    int32_t timeout = 200; /* milliseconds */
+    int32_t msec = self->conn_timeout;
+
+    /* avoid connection retry loop in KNSManagerMakeRetryTimedConnection */
+    self->conn_timeout = timeout;
+
     rc = KNSManagerMakeClientRequest(self, &req, 0x01010000, NULL, url);
-    rc = KClientHttpMakeRequest(http, &req, url);
+
+    /* restore connection timeout in KNSManager */
+    self->conn_timeout = msec;
+
     if (rc != 0)
         return rc;
     else {
@@ -160,7 +160,6 @@ static rc_t _KNSManager_Read(struct KNSManager * self,
         }
     }
 
-    RELEASE(KClientHttp, http);
     RELEASE(KClientHttpRequest, req);
 
     return rc;
@@ -177,10 +176,10 @@ rc_t KNSManagerMakeCloud(struct KNSManager * self,
 
         bool log = KNSManagerLogNcbiVdbNetError(self);
 
-        if (_KDirectory_FileExists(dir, "/usr/bin/ec2-metadata"))
-            gcsFirst = false;
-        else if (_KDirectory_FileExists(dir, "/usr/bin/gcloud"))
+        if (_KDirectory_FileExists(dir, "/usr/bin/gcloud"))
             gcsFirst = true;
+        else if (_KDirectory_FileExists(dir, "/usr/bin/ec2-metadata"))
+            gcsFirst = false;
 
         if (log)
             KNSManagerSetLogNcbiVdbNetError(self, false);
