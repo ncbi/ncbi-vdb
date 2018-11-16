@@ -28,6 +28,7 @@
 #include <sra/sradb.h>
 #include <vdb/xform.h>
 #include <vdb/table.h>
+#include <vdb/cursor.h>
 #include <klib/data-buffer.h>
 #include <klib/text.h>
 #include <klib/printf.h>
@@ -50,16 +51,21 @@ static int string_buffer_add(KDataBuffer *const self,
                              unsigned const len, char const name[/* len */])
 {
     size_t const rslt = self->elem_count;
-    size_t const newsize = rslt + len;
+    size_t const newsize = rslt + len + 1; /* +1 for nul-terminator */
     
     if (KDataBufferResize(self, newsize) != 0)
         return -1;
-    
+    else {
+        char *const dst = (char *)self->base + rslt;
+        unsigned i;
+        
+        for (i = 0; i < len; ++i)
+            dst[i] = name[i];
+        dst[len] = '\0';
+    }
 #if 1
     PLOGMSG(klogInfo, (klogInfo, "New spot group '$(NAME)'", "NAME=%.*s", (int)len, name));
 #endif
-    
-    memmove(((char *)self->base) + rslt, name, len);
     
     return (int)rslt;
 }
@@ -81,45 +87,47 @@ struct group_stats_s {
     spot_t  spot_max;
     unsigned name_offset;
     unsigned name_len;
-    unsigned node_name;
+    unsigned node_id;
 };
 
 static void group_stats_init(group_stats_t *const self,
                              unsigned const offset,
                              unsigned const length,
-                             unsigned const node_name)
+                             unsigned const node_id)
 {
     memset(self, 0, sizeof(*self));
     self->name_offset = offset;
     self->name_len = length;
-    self->node_name = node_name;
+    self->node_id = node_id;
     self->spot_min = MAX_SPOT_ID;
     self->spot_max = MIN_SPOT_ID;
 }
 
-#define STATS_DATA_MRU_COUNT 3
+enum StatsOptions {
+    so_HasSpotGroup = 1,    /* group by SPOT_GROUP. IOW, there is a SPOT_GROUP column */
+    so_SpotCount = 2,       /* write SPOT_COUNT, SPOT_MIN, SPOT_MAX */
+    so_BaseCount = 4,       /* write BASE_COUNT */
+    so_BioBaseCount = 8,    /* write BIO_BASE_COUNT */
+    so_CmpBaseCount = 16    /* write CMP_BASE_COUNT */
+};
+
+#define STATS_DATA_MRU_COUNT (((size_t)256) / (sizeof(void *) * 8))
 struct stats_data_s {
-    rc_t (*update)(stats_data_t *self,
-                   int64_t spot_id,
-                   uint32_t spot_len,
-                   uint32_t bio_spot_len,
-                   uint32_t cmp_spot_len,
-                   const char *grp,
-                   uint64_t grp_len);
-    rc_t (*write)(group_stats_t const *const self, KMDataNode *const node);
-    rc_t (*write_all)(stats_data_t *const self);
+    VCursor const *curs;
     KMetadata *meta;
     KDataBuffer names;
     KDataBuffer group;
-    unsigned count;
-    group_stats_t *mru[STATS_DATA_MRU_COUNT];
     group_stats_t table;
     group_stats_t deflt;
+    group_stats_t *mru[STATS_DATA_MRU_COUNT];
+    uint64_t options;
+    uint32_t cid;
+    unsigned count; /* number of spot groups */
 };
 
-static char *get_name(stats_data_t *const self, unsigned const idx)
+static char *get_name(stats_data_t const *const self, group_stats_t const *const child)
 {
-    return ((char *)self->names.base) + idx;
+    return ((char *)self->names.base) + child->name_offset;
 }
 
 static group_stats_t *get_group(stats_data_t *const self, unsigned const idx)
@@ -138,7 +146,7 @@ static void stats_data_update_mru(stats_data_t *const self, group_stats_t *const
         unsigned di;
         unsigned si;
         
-        memset(newmru, 0, sizeof(self->mru));
+        memset(newmru, 0, sizeof(newmru));
         newmru[0] = mru;
         for (di = 1, si = 0; di < STATS_DATA_MRU_COUNT && si < STATS_DATA_MRU_COUNT; ++si) {
             group_stats_t *const u = self->mru[si];
@@ -158,7 +166,7 @@ static int stats_data_name_cmp(stats_data_t *const self,
                                char const Aname[])
 {
     unsigned const Blen = B->name_len;
-    char const *const Bname = get_name(self, B->name_offset);
+    char const *const Bname = get_name(self, B);
     unsigned Ai;
     unsigned Bi;
     
@@ -204,46 +212,52 @@ static unsigned stats_data_search(stats_data_t *const self,
     return f;
 }
 
-static group_stats_t *stats_data_get_group(stats_data_t *const self,
-                                           unsigned const len,
-                                           char const name[])
+static group_stats_t *search_mru_list(stats_data_t *const self,
+                                      unsigned const len,
+                                      char const name[])
 {
     unsigned i;
-    unsigned which;
-    group_stats_t *fnd;
     
     for (i = 0; i < STATS_DATA_MRU_COUNT && i < self->count; ++i) {
         group_stats_t *const k = self->mru[i];
         
-        if (k && stats_data_name_cmp(self, k, len, name) == 0) {
-            fnd = k;
-            goto UPDATE_MRU;
+        if (k && stats_data_name_cmp(self, k, len, name) == 0)
+            return k;
+    }
+    return NULL;
+}
+
+static group_stats_t *stats_data_get_group(stats_data_t *const self,
+                                           unsigned const len,
+                                           char const name[])
+{
+    group_stats_t *fnd = search_mru_list(self, len, name);
+    
+    if (fnd == NULL) {
+        unsigned const which = stats_data_search(self, len, name);
+        if (which < self->count && stats_data_name_cmp_idx(self, which, len, name) == 0)
+            fnd = get_group(self, which);
+        else {
+            int const offset = string_buffer_add(&self->names, len, name);
+            unsigned const move = self->count - which;
+            
+            if (offset < 0)
+                return NULL;
+            
+            if (++self->count > MAX_GROUP_COUNT)
+                return get_group(self, MAX_GROUP_COUNT);
+            
+            if (KDataBufferResize(&self->group, self->count) != 0)
+                return NULL;
+            
+            fnd = get_group(self, which);
+            assert(fnd + move + 1 <= get_group(self, self->count) || move == 0);
+            memmove(fnd + 1, fnd, move * sizeof(*fnd));
+            
+            group_stats_init(fnd, offset, len, self->count);
+            stats_data_invald_mru(self);
         }
     }
-    which = stats_data_search(self, len, name);
-    if (which < self->count && stats_data_name_cmp_idx(self, which, len, name) == 0)
-        fnd = get_group(self, which);
-    else {
-        int const offset = string_buffer_add(&self->names, len, name);
-        unsigned const move = self->count - which;
-        
-        if (offset < 0)
-            return NULL;
-        
-        if (++self->count > MAX_GROUP_COUNT)
-            return get_group(self, MAX_GROUP_COUNT);
-        
-        if (KDataBufferResize(&self->group, self->count) != 0)
-            return NULL;
-        
-        fnd = get_group(self, which);
-        assert(fnd + move + 1 <= get_group(self, self->count) || move == 0);
-        memmove(fnd + 1, fnd, move * sizeof(*fnd));
-        
-        group_stats_init(fnd, offset, len, self->count);
-        stats_data_invald_mru(self);
-    }
-UPDATE_MRU:
     stats_data_update_mru(self, fnd);
     return fnd;
 }
@@ -261,70 +275,47 @@ static rc_t group_stats_write_node(KMDataNode *const node,
     return rc;
 }
 
-static rc_t group_stats_write_name(KMDataNode *const node,
-                                   unsigned const namelen,
-                                   char const name[/* namelen */])
-{
-    char        sbuf[4096];
-    char *const hbuf   = (namelen + 1) < sizeof(sbuf) ? NULL : malloc(namelen + 1);
-    char *const buffer = (namelen + 1) < sizeof(sbuf) ? sbuf : hbuf;
-    
-    if (buffer == NULL)
-        return RC(rcXF, rcFunction, rcExecuting, rcMemory, rcExhausted);
-
-    memmove(buffer, name, namelen);
-    buffer[namelen] = '\0';
-    {
-        rc_t const rc = KMDataNodeWriteAttr(node, STATS_NODE_NAME_ATTR, buffer);
-            
-        free(hbuf);
-        return rc;
-    }
-}
-
 #define RC_THROW(STMT) do { rc_t const rc = (STMT); if (rc) return rc; } while(0)
 
-static rc_t group_stats_write_no_compressed(group_stats_t const *const self,
-                                            KMDataNode *const node)
-{
-    RC_THROW(group_stats_write_node(node, "SPOT_COUNT"    , &self->spot_count    ));
-    RC_THROW(group_stats_write_node(node, "BASE_COUNT"    , &self->base_count    ));
-    RC_THROW(group_stats_write_node(node, "BIO_BASE_COUNT", &self->bio_base_count));
-    RC_THROW(group_stats_write_node(node, "SPOT_MIN"      , &self->spot_min      ));
-    RC_THROW(group_stats_write_node(node, "SPOT_MAX"      , &self->spot_max      ));
-    
-    return 0;
-}
-
-static rc_t group_stats_write_compressed(group_stats_t const *const self,
-                                         KMDataNode *const node)
-{
-    RC_THROW(group_stats_write_no_compressed(self, node));
-    RC_THROW(group_stats_write_node(node, "CMP_BASE_COUNT", &self->cmp_base_count));
-    
-    return 0;
-}
-
-static rc_t group_stats_write_1(group_stats_t const *const self,
+static rc_t group_stats_write_stats(group_stats_t const *const self,
                                 stats_data_t const *const parent,
-                                unsigned const namelen,
-                                char const name[/* namelen */],
                                 KMDataNode *const node)
 {
-    RC_THROW(group_stats_write_name(node, namelen, name));
-    RC_THROW(parent->write(self, node));
+    if ((parent->options & so_SpotCount) != 0) {
+        RC_THROW(group_stats_write_node(node, "SPOT_COUNT"    , &self->spot_count    ));
+        RC_THROW(group_stats_write_node(node, "SPOT_MIN"      , &self->spot_min      ));
+        RC_THROW(group_stats_write_node(node, "SPOT_MAX"      , &self->spot_max      ));
+    }
+    if ((parent->options & so_BaseCount) != 0) {
+        RC_THROW(group_stats_write_node(node, "BASE_COUNT"    , &self->base_count    ));
+    }
+    if ((parent->options & so_BioBaseCount) != 0) {
+        RC_THROW(group_stats_write_node(node, "BIO_BASE_COUNT", &self->bio_base_count));
+    }
+    if ((parent->options & so_CmpBaseCount) != 0) {
+        RC_THROW(group_stats_write_node(node, "CMP_BASE_COUNT", &self->cmp_base_count));
+    }
+
+    return 0;
+}
+
+static rc_t group_stats_write_with_name(group_stats_t const *const self,
+                                stats_data_t const *const parent,
+                                KMDataNode *const node)
+{
+    RC_THROW(KMDataNodeWriteAttr(node, STATS_NODE_NAME_ATTR, get_name(parent, self)));
+    RC_THROW(group_stats_write_stats(self, parent, node));
 
     return 0;
 }
 
 static rc_t group_stats_write(group_stats_t const *const self,
-                              stats_data_t const *const parent,
-                              char const strings[])
+                              stats_data_t const *const parent)
 {
     static char const namebase[] = "STATS/SPOT_GROUP/";
     char namepath[sizeof(namebase) + 3]; /* sizeof(namebase) includes terminator */
     char *const name = namepath + sizeof(namebase) - 1;
-    unsigned nodeid = self->node_name - 1;
+    unsigned nodeid = self->node_id - 1;
     KMDataNode *node;
     rc_t rc;
 
@@ -335,12 +326,9 @@ static rc_t group_stats_write(group_stats_t const *const self,
     name[1] = nodeid % 26 + 'A'; nodeid /= 26;
     name[0] = nodeid % 26 + 'A'; nodeid /= 26;
     
-    RC_THROW(KMetadataOpenNodeUpdate(parent->meta, &node, "%s", namepath));
+    RC_THROW(KMetadataOpenNodeUpdate(parent->meta, &node, namepath)); /* namepath is safe (we just generated it) */
 
-    rc = group_stats_write_1(self, parent,
-                             self->name_len,
-                             strings + self->name_offset,
-                             node);
+    rc = group_stats_write_with_name(self, parent, node);
     KMDataNodeRelease(node);
     
     return rc;
@@ -354,7 +342,7 @@ static rc_t group_stats_write_default(group_stats_t const *const self,
     
     RC_THROW(KMetadataOpenNodeUpdate(parent->meta, &node, "STATS/SPOT_GROUP/default"));
 
-    rc = parent->write(self, node);
+    rc = group_stats_write_stats(self, parent, node);
     KMDataNodeRelease(node);
     
     return rc;
@@ -368,30 +356,27 @@ static rc_t group_stats_write_table(group_stats_t const *const self,
     
     RC_THROW(KMetadataOpenNodeUpdate(parent->meta, &node, "STATS/TABLE"));
 
-    rc = parent->write(self, node);
+    rc = group_stats_write_stats(self, parent, node);
     KMDataNodeRelease(node);
     
     return rc;
-}
-
-static rc_t stats_data_write_table(stats_data_t *const self)
-{
-    RC_THROW(group_stats_write_table(&self->table, self));
-    return 0;
 }
 
 static rc_t stats_data_write_all(stats_data_t *const self)
 {
     unsigned i;
 
-    RC_THROW(stats_data_write_table(self));
-    if (self->count <= MAX_GROUP_COUNT) {
-        if (self->deflt.spot_count != 0)
-            RC_THROW(group_stats_write_default(&self->deflt, self));
-        RC_THROW(group_stats_write_table(&self->table, self));
-        for (i = 0; i < self->count; ++i) {
-            RC_THROW(group_stats_write(get_group(self, i), self, self->names.base));
-        }
+    RC_THROW(group_stats_write_table(&self->table, self));
+    if ((self->options & so_HasSpotGroup) == 0)
+        return 0;
+    
+    if (self->deflt.spot_count != 0)
+        RC_THROW(group_stats_write_default(&self->deflt, self));
+
+    RC_THROW(group_stats_write_table(&self->table, self));
+
+    for (i = 0; i < self->count; ++i) {
+        RC_THROW(group_stats_write(get_group(self, i), self));
     }
     return 0;
 }
@@ -400,8 +385,11 @@ static
 void CC stats_data_whack(void *const data)
 {
     stats_data_t *const self = data;
+
+    if (self->curs)
+        VCursorRelease(self->curs);
     
-    self->write_all(self);
+    stats_data_write_all(self);
     KDataBufferWhack(&self->group);
     KDataBufferWhack(&self->names);
     KMetadataRelease(self->meta);
@@ -415,40 +403,14 @@ static void group_stats_update(group_stats_t *const self,
                                INSDC_coord_len const cmp_spot_len
                                )
 {
-    if (spot_id) {
-        ++self->spot_count;
-        if (self->spot_max < spot_id)
-            self->spot_max = spot_id;
-        if (self->spot_min > spot_id)
-            self->spot_min = spot_id;
-    }
+    ++self->spot_count;
+    if (self->spot_max < spot_id)
+        self->spot_max = spot_id;
+    if (self->spot_min > spot_id)
+        self->spot_min = spot_id;
     self->base_count     += spot_len;
     self->bio_base_count += bio_spot_len;
     self->cmp_base_count += cmp_spot_len;
-}
-
-static
-rc_t stats_data_update_table(stats_data_t *self,
-                             int64_t spot_id,
-                             uint32_t spot_len,
-                             uint32_t bio_spot_len,
-                             uint32_t cmp_spot_len,
-                             char const grp[],
-                             uint64_t grp_len);
-
-static
-rc_t stats_data_update_all(stats_data_t *self,
-                           int64_t spot_id,
-                           uint32_t spot_len,
-                           uint32_t bio_spot_len,
-                           uint32_t cmp_spot_len,
-                           char const grp[],
-                           uint64_t grp_len);
-
-static void stats_data_init_funcs(stats_data_t *const self, bool has_spot_groups)
-{
-    self->update    = has_spot_groups ? stats_data_update_all : stats_data_update_table;
-    self->write_all = has_spot_groups ? stats_data_write_all  : stats_data_write_table;
 }
 
 static
@@ -490,39 +452,22 @@ rc_t stats_data_update_group(stats_data_t *self,
         else {
             KDataBufferWhack(&self->group);
             KDataBufferWhack(&self->names);
-            stats_data_init_funcs(self, false);
+            self->options &= ~so_HasSpotGroup;
             (void)PLOGMSG(klogWarn, (klogWarn, "Too many spot groups ($(count)); dropping group stats", "count=%u", (unsigned)(self->count)));
         }
     }
     return 0;
 }
 
-static
-rc_t stats_data_update_all(stats_data_t *self,
-                           int64_t spot_id,
-                           uint32_t spot_len,
-                           uint32_t bio_spot_len,
-                           uint32_t cmp_spot_len,
-                           const char *grp,
-                           uint64_t grp_len)
-{
-    stats_data_update_table(self, spot_id, spot_len, bio_spot_len, cmp_spot_len, 0, 0);
-    return stats_data_update_group(self, spot_id, spot_len, bio_spot_len, cmp_spot_len, grp, grp_len);
-}
-
 static rc_t stats_data_init(stats_data_t *const self,
-                            VTable *const tbl,
-                            bool has_spot_group,
-                            bool compressed)
+                            VTable *const tbl, int64_t options)
 {
-    stats_data_init_funcs(self, has_spot_group);
-    self->write  = compressed ? group_stats_write_compressed : group_stats_write_no_compressed;
-    
+    self->options = options;
     group_stats_init(&self->table, 0, 0, 0);
     group_stats_init(&self->deflt, 0, 0, 0);
 
     RC_THROW(VTableOpenMetadataUpdate(tbl, &self->meta));
-    if (has_spot_group) {
+    if ((options & so_HasSpotGroup) != 0) {
         RC_THROW(KDataBufferMakeBytes(&self->names, 0));
         RC_THROW(KDataBufferMake(&self->group, sizeof(group_stats_t) * 8, 0));
     }
@@ -531,15 +476,13 @@ static rc_t stats_data_init(stats_data_t *const self,
 
 static
 rc_t stats_data_make(stats_data_t **const pself,
-                     VTable *const tbl,
-                     bool has_spot_group,
-                     bool compressed)
+                     VTable *const tbl, int64_t options)
 {
     rc_t rc = 0;
     stats_data_t *const self = calloc(1, sizeof(*self));
     
     if (self) {
-        rc = stats_data_init(self, tbl, has_spot_group, compressed);
+        rc = stats_data_init(self, tbl, options);
         if (rc == 0) {
             *pself = self;
             return 0;
@@ -550,20 +493,32 @@ rc_t stats_data_make(stats_data_t **const pself,
     return RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted);
 }
 
-static
-rc_t CC stats_data_update(stats_data_t* self,
+static rc_t stats_data_update(stats_data_t* self,
     const int64_t spot_id, const uint32_t spot_len,
     const uint32_t bio_spot_len, const uint32_t cmp_spot_len,
-    bool has_grp, const char* grp, uint64_t grp_len)
+    const char* grp, uint64_t grp_len)
 {
-    return self->update(self, spot_id, spot_len, bio_spot_len, cmp_spot_len, grp, grp_len);
+    rc_t const rc = stats_data_update_table(self, spot_id, spot_len, bio_spot_len, cmp_spot_len, 0, 0);
+    if ((self->options & so_HasSpotGroup) == 0 || rc != 0)
+        return rc;
+    return stats_data_update_group(self, spot_id, spot_len, bio_spot_len, cmp_spot_len, grp, grp_len);
+}
+
+static unsigned bioSpotLength(unsigned const nreads, INSDC_SRA_xread_type const *const read_type, INSDC_coord_len const *const read_len)
+{
+    unsigned i;
+    unsigned len;
+    for (len = i = 0; i < nreads; ++i) {
+        if ((read_type[i] & SRA_READ_TYPE_BIOLOGICAL) != 0)
+            len += read_len[i];
+    }
+    return len;
 }
 
 static
 rc_t CC stats_data_trigger(void *data, const VXformInfo *info, int64_t row_id,
                                VRowResult *rslt, uint32_t argc, const VRowData argv[])
 {
-    uint32_t i, bio_spot_len;
     const char* grp = NULL;
     uint64_t len = 0;
 
@@ -579,25 +534,19 @@ rc_t CC stats_data_trigger(void *data, const VXformInfo *info, int64_t row_id,
     assert(argc >= 3 && argc <= 4);
     assert(nreads == argv[2].u.data.elem_count);
 
-    for(i = bio_spot_len = 0; i < nreads; i++) {
-        if( (read_type[i] & SRA_READ_TYPE_BIOLOGICAL) != 0 ) {
-            bio_spot_len += read_len[i];
-        }
-    }
     if( argc == 4 ) {
         /* get group name and length */
         grp = argv[3].u.data.base;
         len = argv[3].u.data.elem_count;
         grp += argv[3].u.data.first_elem;
     }
-    return stats_data_update(data, row_id, spot_len, bio_spot_len, 0, argc == 4, grp, len);
+    return stats_data_update(data, row_id, spot_len, bioSpotLength(nreads, read_type, read_len), 0, grp, len);
 }
 
 static
 rc_t CC stats_data_cmp_trigger(void *data, const VXformInfo *info, int64_t row_id,
                                    VRowResult *rslt, uint32_t argc, const VRowData argv[])
 {
-    uint32_t i, bio_spot_len;
     const char* grp = NULL;
     uint64_t len = 0;
 
@@ -615,25 +564,19 @@ rc_t CC stats_data_cmp_trigger(void *data, const VXformInfo *info, int64_t row_i
     assert(argc >= 4 && argc <= 5);
     assert(nreads == argv[3].u.data.elem_count);
 
-    for(i = bio_spot_len = 0; i < nreads; i++) {
-        if( (read_type[i] & SRA_READ_TYPE_BIOLOGICAL) != 0 ) {
-            bio_spot_len += read_len[i];
-        }
-    }
     if( argc == 5 ) {
         /* get group name and length */
         grp = argv[4].u.data.base;
         len = argv[4].u.data.elem_count;
         grp += argv[4].u.data.first_elem;
     }
-    return stats_data_update(data, row_id, spot_len, bio_spot_len, cmp_spot_len, argc == 5, grp, len);
+    return stats_data_update(data, row_id, spot_len, bioSpotLength(nreads, read_type, read_len), cmp_spot_len, grp, len);
 }
 
 static
 rc_t CC stats_data_cmpf_trigger(void *data, const VXformInfo *info, int64_t row_id,
                                    VRowResult *rslt, uint32_t argc, const VRowData argv[])
 {
-    uint32_t i, bio_spot_len;
     const char* grp = NULL;
     uint64_t len = 0;
 
@@ -652,30 +595,52 @@ rc_t CC stats_data_cmpf_trigger(void *data, const VXformInfo *info, int64_t row_
     assert(argc >= 4 && argc <= 5);
     assert(nreads == argv[3].u.data.elem_count);
 
-    for(i = bio_spot_len = 0; i < nreads; i++) {
-        if( (read_type[i] & SRA_READ_TYPE_BIOLOGICAL) != 0 ) {
-            bio_spot_len += read_len[i];
-        }
-    }
     if( argc == 5 ) {
         /* get group name and length */
         grp = argv[4].u.data.base;
         len = argv[4].u.data.elem_count;
         grp += argv[4].u.data.first_elem;
     }
-    return stats_data_update(data, row_id, *spot_len, bio_spot_len, cmp_spot_len, argc == 5, grp, len);
+    return stats_data_update(data, row_id, spot_len[0], bioSpotLength(nreads, read_type, read_len), cmp_spot_len, grp, len);
+}
+
+static
+rc_t CC stats_data_cmpb_trigger(void *data, const VXformInfo *info, int64_t row_id,
+                                VRowResult *rslt, uint32_t argc, const VRowData argv[])
+{
+    stats_data_t *const self = data;
+    const char* grp = NULL;
+    uint64_t len = 0;
+    uint32_t const cmp_spot_len = argv[0].u.data.elem_count;
+    
+    if( argc == 2 ) {
+        /* get group name and length */
+        grp = argv[1].u.data.base;
+        len = argv[1].u.data.elem_count;
+        grp += argv[1].u.data.first_elem;
+    }
+    else if (self->curs) {
+        void const *base;
+        uint32_t count;
+        uint32_t boff;
+        uint32_t elem_bits;
+        rc_t rc;
+        
+        rc = VCursorCellDataDirect(self->curs, row_id, self->cid, &elem_bits, &base, &boff, &count);
+        grp = base;
+        len = count;
+        if (rc) return rc;
+    }
+    return stats_data_update(self, 0, 0, 0, cmp_spot_len, grp, len);
 }
 
 static
 rc_t CC stats_data_csra2_trigger(void *data, const VXformInfo *info, int64_t row_id,
                                  VRowResult *rslt, uint32_t argc, const VRowData argv[])
 {
-    uint32_t bio_spot_len;
     const char* grp = NULL;
     uint64_t len = 0;
-    
     uint32_t read_len = argv[0].u.data.elem_count;
-    bio_spot_len = read_len;
     
     assert(argc >= 1 && argc <= 2);
     
@@ -687,7 +652,7 @@ rc_t CC stats_data_csra2_trigger(void *data, const VXformInfo *info, int64_t row
         len = argv[1].u.data.elem_count;
         grp += argv[1].u.data.first_elem;
     }
-    return stats_data_update(data, row_id, read_len, bio_spot_len, 0, argc == 2, grp, len);
+    return stats_data_update(data, row_id, read_len, read_len, 0, grp, len);
 }
 
 
@@ -697,10 +662,13 @@ VTRANSFACT_IMPL ( NCBI_SRA_stats_trigger, 1, 0, 0 )
 {
     rc_t rc;
     stats_data_t *data;
+    int64_t options = so_SpotCount | so_BaseCount | so_BioBaseCount;
 
     assert(dp->argc >= 3 && dp->argc <= 4);
+    if (dp->argc == 4)
+        options |= so_HasSpotGroup;
 
-    if( (rc = stats_data_make(&data, (VTable*)info->tbl, dp->argc > 3, false)) == 0 ) {
+    if( (rc = stats_data_make(&data, (VTable*)info->tbl, options)) == 0 ) {
         rslt->self = data;
         rslt->whack = stats_data_whack;
         rslt->variant = vftNonDetRow;
@@ -715,10 +683,13 @@ VTRANSFACT_IMPL ( NCBI_SRA_cmp_stats_trigger, 1, 0, 0 )
 {
     rc_t rc;
     stats_data_t *data;
+    int64_t options = so_SpotCount | so_BaseCount | so_BioBaseCount | so_CmpBaseCount;
 
     assert(dp->argc >= 4 && dp->argc <= 5);
+    if (dp->argc == 5)
+        options |= so_HasSpotGroup;
 
-    if( (rc = stats_data_make(&data, (VTable*)info->tbl, dp->argc > 4, true)) == 0 ) {
+    if( (rc = stats_data_make(&data, (VTable*)info->tbl, options)) == 0 ) {
         rslt->self = data;
         rslt->whack = stats_data_whack;
         rslt->variant = vftNonDetRow;
@@ -733,10 +704,13 @@ VTRANSFACT_IMPL ( NCBI_SRA_cmpf_stats_trigger, 1, 0, 0 )
 {
     rc_t rc;
     stats_data_t *data;
+    int64_t options = so_SpotCount | so_BaseCount | so_BioBaseCount | so_CmpBaseCount;
 
     assert(dp->argc >= 4 && dp->argc <= 5);
+    if (dp->argc == 5)
+        options |= so_HasSpotGroup;
 
-    if( (rc = stats_data_make(&data, (VTable*)info->tbl, dp->argc > 4, true)) == 0 ) {
+    if( (rc = stats_data_make(&data, (VTable*)info->tbl, options)) == 0 ) {
         rslt->self = data;
         rslt->whack = stats_data_whack;
         rslt->variant = vftNonDetRow;
@@ -751,14 +725,53 @@ VTRANSFACT_IMPL ( NCBI_csra2_stats_trigger, 1, 0, 0 )
 {
     rc_t rc;
     stats_data_t *data;
-    
+    int64_t options = so_SpotCount | so_BaseCount | so_BioBaseCount;
+
     assert(dp->argc >= 1 && dp->argc <= 2);
-    
-    if( (rc = stats_data_make(&data, (VTable*)info->tbl, dp->argc > 1, false)) == 0 ) {
+    if (dp->argc == 2)
+        options |= so_HasSpotGroup;
+
+    if( (rc = stats_data_make(&data, (VTable*)info->tbl, options)) == 0 ) {
         rslt->self = data;
         rslt->whack = stats_data_whack;
         rslt->variant = vftNonDetRow;
         rslt->u.rf = stats_data_csra2_trigger;
+    }
+    return rc;
+}
+
+VTRANSFACT_IMPL ( NCBI_SRA_cmpb_stats_trigger, 1, 0, 0 )
+    ( const void *self, const VXfactInfo *info, VFuncDesc *rslt,
+      const VFactoryParams *cp, const VFunctionParams *dp )
+{
+    rc_t rc;
+    stats_data_t *data;
+    VCursor const *curs = NULL;
+    uint32_t cid = 0;
+    int64_t options = so_CmpBaseCount;
+
+    assert(dp->argc >= 1 && dp->argc <= 2);
+    if (dp->argc == 2)
+        options |= so_HasSpotGroup;
+    else {
+        rc = VTableCreateCursorRead(info->tbl, &curs);
+        if (rc == 0)
+            rc = VCursorAddColumn(curs, &cid, "SPOT_GROUP");
+        if (rc == 0)
+            rc = VCursorOpen(curs);
+        if (rc != 0 && curs != NULL) {
+            VCursorRelease(curs);
+            curs = NULL;
+        }
+    }
+
+    if( (rc = stats_data_make(&data, (VTable*)info->tbl, options)) == 0 ) {
+        data->curs = curs;
+        data->cid = cid;
+        rslt->self = data;
+        rslt->whack = stats_data_whack;
+        rslt->variant = vftNonDetRow;
+        rslt->u.rf = stats_data_cmpb_trigger;
     }
     return rc;
 }
