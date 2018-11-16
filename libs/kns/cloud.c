@@ -47,7 +47,7 @@ static bool _KDirectory_FileExists(const KDirectory * self,
 }
 
 rc_t CloudRelease(const Cloud * cself) {
-    Cloud * self = (Cloud*) cself;
+    Cloud * self = (Cloud*)cself;
 
     if (self != NULL) {
         free(self->location);
@@ -61,7 +61,8 @@ rc_t CloudRelease(const Cloud * cself) {
 }
 
 static rc_t CloudMakeEmpty(Cloud ** self) {
-    * self = calloc(1, sizeof **self);
+    *self = calloc(1, sizeof **self);
+
     if (*self == NULL)
         return RC(rcNS, rcStorage, rcAllocating, rcMemory, rcExhausted);
     else
@@ -104,10 +105,8 @@ static rc_t CloudMake(const Cloud ** self,
     return rc;
 }
 
-static const char GS [] =
-    "http://metadata.google.internal/computeMetadata/v1/instance/zone";
-static const char S3 [] =
-    "http://169.254.169.254/latest/meta-data/placement/availability-zone";
+#define GS "http://metadata.google.internal/computeMetadata/v1/instance/zone"
+#define S3 "http://169.254.169.254/latest/meta-data/placement/availability-zone"
 
 static rc_t _KNSManager_Read(struct KNSManager * self,
     bool gs, const Cloud ** cloud)
@@ -186,7 +185,7 @@ rc_t KNSManagerMakeCloud(struct KNSManager * self,
 
         rc = _KNSManager_Read(self, gcsFirst, cloud);
 
-        if ( rc != 0 )
+        if (rc != 0)
             rc = _KNSManager_Read(self, !gcsFirst, cloud);
 
         if (rc != 0)
