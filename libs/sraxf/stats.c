@@ -386,8 +386,7 @@ void CC stats_data_whack(void *const data)
 {
     stats_data_t *const self = data;
 
-    if (self->curs)
-        VCursorRelease(self->curs);
+    VCursorRelease(self->curs);
     
     stats_data_write_all(self);
     KDataBufferWhack(&self->group);
@@ -709,17 +708,11 @@ VTRANSFACT_IMPL ( NCBI_SRA_cmpb_stats_trigger, 1, 0, 0 )
     uint32_t cid = 0;
 
     if (dp->argc == 1) {
-        curs = (VCursor const *)info->parms;
-        VCursorAddRef(curs);
-        rc = VCursorAddColumn(curs, &cid, "SPOT_GROUP");
-        
-        if (rc != 0) {
-            rc = VTableCreateCursorRead(info->tbl, &curs);
-            if (rc == 0)
-                rc = VCursorAddColumn(curs, &cid, "SPOT_GROUP");
-            if (rc == 0)
-                rc = VCursorOpen(curs);
-        }
+        rc = VTableCreateCursorRead(info->tbl, &curs);
+        if (rc == 0)
+            rc = VCursorAddColumn(curs, &cid, "SPOT_GROUP");
+        if (rc == 0)
+            rc = VCursorOpen(curs);
         if (rc != 0 && curs != NULL) {
             VCursorRelease(curs);
             curs = NULL;
