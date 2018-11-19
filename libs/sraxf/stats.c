@@ -90,17 +90,17 @@ struct group_stats_s {
     unsigned node_id;
 };
 
-static void group_stats_init(group_stats_t *const self,
-                             unsigned const offset,
-                             unsigned const length,
-                             unsigned const node_id)
+static group_stats_t group_stats_init(unsigned const offset,
+                                      unsigned const length,
+                                      unsigned const node_id)
 {
-    memset(self, 0, sizeof(*self));
-    self->name_offset = offset;
-    self->name_len = length;
-    self->node_id = node_id;
-    self->spot_min = MAX_SPOT_ID;
-    self->spot_max = MIN_SPOT_ID;
+    group_stats_t result = {0};
+    result.name_offset = offset;
+    result.name_len = length;
+    result.node_id = node_id;
+    result.spot_min = MAX_SPOT_ID;
+    result.spot_max = MIN_SPOT_ID;
+    return result;
 }
 
 enum StatsOptions {
@@ -254,7 +254,7 @@ static group_stats_t *stats_data_get_group(stats_data_t *const self,
             assert(fnd + move + 1 <= get_group(self, self->count) || move == 0);
             memmove(fnd + 1, fnd, move * sizeof(*fnd));
             
-            group_stats_init(fnd, offset, len, self->count);
+            *fnd = group_stats_init(offset, len, self->count);
             stats_data_invald_mru(self);
         }
     }
@@ -459,38 +459,34 @@ rc_t stats_data_update_group(stats_data_t *self,
     return 0;
 }
 
-static rc_t stats_data_init(stats_data_t *const self,
-                            VTable *const tbl, int64_t options)
+static KMetadata *openMetadataUpdate(VTable const *const tbl, rc_t *const rc)
 {
-    self->options = options;
-    group_stats_init(&self->table, 0, 0, 0);
-    group_stats_init(&self->deflt, 0, 0, 0);
-
-    RC_THROW(VTableOpenMetadataUpdate(tbl, &self->meta));
-    if ((options & so_HasSpotGroup) != 0) {
-        RC_THROW(KDataBufferMakeBytes(&self->names, 0));
-        RC_THROW(KDataBufferMake(&self->group, sizeof(group_stats_t) * 8, 0));
-    }
-    return 0;
+    KMetadata *meta = NULL;
+    
+    *rc = VTableOpenMetadataUpdate((VTable *)tbl, &meta);
+    assert(*rc == 0 && meta != NULL);
+    if (*rc != 0 || meta == NULL)
+        return NULL;
+    return meta;
 }
 
 static
-rc_t stats_data_make(stats_data_t **const pself,
-                     VTable *const tbl, int64_t options)
+stats_data_t *stats_data_make(VTable const *const tbl, int64_t const options, VCursor const *const curs, uint32_t const cid, rc_t *const rc)
 {
-    rc_t rc = 0;
     stats_data_t *const self = calloc(1, sizeof(*self));
-    
-    if (self) {
-        rc = stats_data_init(self, tbl, options);
-        if (rc == 0) {
-            *pself = self;
-            return 0;
-        }
-        KMetadataRelease(self->meta);
-        free(self);
+    assert(self != NULL);
+    if (self == NULL) {
+        *rc = RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted);
+        return NULL;
     }
-    return RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted);
+    self->table = self->deflt = group_stats_init(0, 0, 0);
+    self->curs = curs;
+    self->cid = cid;
+    self->meta = openMetadataUpdate(tbl, rc);
+    self->names.elem_bits = 8;
+    self->group.elem_bits = sizeof(group_stats_t) * 8;
+    self->options = options | (curs != NULL ? so_HasSpotGroup : 0);
+    return self;
 }
 
 static rc_t stats_data_update(stats_data_t* self,
@@ -515,31 +511,27 @@ static unsigned bioSpotLength(unsigned const nreads, INSDC_SRA_xread_type const 
     return len;
 }
 
+#define SAFE_BASE(ELEM, DTYPE) ((ELEM < argc && sizeof(DTYPE) * 8 == (size_t)argv[ELEM].u.data.elem_bits) ? (((DTYPE const *)argv[ELEM].u.data.base) + argv[ELEM].u.data.first_elem) : ((DTYPE const *)NULL))
+#define BIND_COLUMN(ELEM, DTYPE, POINTER) DTYPE const *const POINTER = SAFE_BASE(ELEM, DTYPE)
+#define SAFE_COUNT(ELEM) (ELEM < argc ? argv[ELEM].u.data.elem_count : 0)
+
 static
 rc_t CC stats_data_trigger(void *data, const VXformInfo *info, int64_t row_id,
                                VRowResult *rslt, uint32_t argc, const VRowData argv[])
 {
-    const char* grp = NULL;
-    uint64_t len = 0;
+    enum COLUMNS {
+        col_READ,
+        col_READ_LEN,
+        col_READ_TYPE,
+        col_SPOT_GROUP
+    };
+    unsigned const spot_len = SAFE_COUNT(col_READ);
+    unsigned const nreads = SAFE_COUNT(col_READ_LEN);
+    BIND_COLUMN(col_READ_LEN, INSDC_coord_len, read_len);
+    BIND_COLUMN(col_READ_TYPE, INSDC_SRA_xread_type, read_type);
+    BIND_COLUMN(col_SPOT_GROUP, char, grp);
+    unsigned const len = SAFE_COUNT(col_SPOT_GROUP);
 
-    uint32_t spot_len = argv[0].u.data.elem_count;
-    /* take nreads from read_len */
-    uint32_t nreads = argv[1].u.data.elem_count;
-    /* get read_len and read_type */
-    const INSDC_coord_len *read_len = argv[1].u.data.base;
-    const INSDC_SRA_xread_type *read_type = argv[2].u.data.base;
-    read_len += argv[1].u.data.first_elem;
-    read_type += argv[2].u.data.first_elem;
-
-    assert(argc >= 3 && argc <= 4);
-    assert(nreads == argv[2].u.data.elem_count);
-
-    if( argc == 4 ) {
-        /* get group name and length */
-        grp = argv[3].u.data.base;
-        len = argv[3].u.data.elem_count;
-        grp += argv[3].u.data.first_elem;
-    }
     return stats_data_update(data, row_id, spot_len, bioSpotLength(nreads, read_type, read_len), 0, grp, len);
 }
 
@@ -547,29 +539,21 @@ static
 rc_t CC stats_data_cmp_trigger(void *data, const VXformInfo *info, int64_t row_id,
                                    VRowResult *rslt, uint32_t argc, const VRowData argv[])
 {
-    const char* grp = NULL;
-    uint64_t len = 0;
+    enum COLUMNS {
+        col_CMP_READ,
+        col_QUALITY,
+        col_READ_LEN,
+        col_READ_TYPE,
+        col_SPOT_GROUP
+    };
+    unsigned const cmp_spot_len = SAFE_COUNT(col_CMP_READ);
+    unsigned const spot_len = SAFE_COUNT(col_QUALITY);
+    unsigned const nreads = SAFE_COUNT(col_READ_LEN);
+    BIND_COLUMN(col_READ_LEN, INSDC_coord_len, read_len);
+    BIND_COLUMN(col_READ_TYPE, INSDC_SRA_xread_type, read_type);
+    BIND_COLUMN(col_SPOT_GROUP, char, grp);
+    unsigned const len = SAFE_COUNT(col_SPOT_GROUP);
 
-    uint32_t cmp_spot_len = argv[0].u.data.elem_count;
-    uint32_t spot_len = argv[1].u.data.elem_count;
-    /* take nreads from read_len */
-    uint32_t nreads = argv[2].u.data.elem_count;
-    /* get read_len and read_type */
-    const INSDC_coord_len *read_len = argv[2].u.data.base;
-    const INSDC_SRA_xread_type *read_type = argv[3].u.data.base;
-    read_len += argv[2].u.data.first_elem;
-    read_type += argv[3].u.data.first_elem;
-
-    assert(data != NULL);
-    assert(argc >= 4 && argc <= 5);
-    assert(nreads == argv[3].u.data.elem_count);
-
-    if( argc == 5 ) {
-        /* get group name and length */
-        grp = argv[4].u.data.base;
-        len = argv[4].u.data.elem_count;
-        grp += argv[4].u.data.first_elem;
-    }
     return stats_data_update(data, row_id, spot_len, bioSpotLength(nreads, read_type, read_len), cmp_spot_len, grp, len);
 }
 
@@ -577,30 +561,21 @@ static
 rc_t CC stats_data_cmpf_trigger(void *data, const VXformInfo *info, int64_t row_id,
                                    VRowResult *rslt, uint32_t argc, const VRowData argv[])
 {
-    const char* grp = NULL;
-    uint64_t len = 0;
+    enum COLUMNS {
+        col_CMP_READ,
+        col_SPOT_LEN,
+        col_READ_LEN,
+        col_READ_TYPE,
+        col_SPOT_GROUP
+    };
+    unsigned const cmp_spot_len = SAFE_COUNT(col_CMP_READ);
+    unsigned const nreads = SAFE_COUNT(col_READ_LEN);
+    BIND_COLUMN(col_SPOT_LEN, uint32_t, spot_len);
+    BIND_COLUMN(col_READ_LEN, INSDC_coord_len, read_len);
+    BIND_COLUMN(col_READ_TYPE, INSDC_SRA_xread_type, read_type);
+    BIND_COLUMN(col_SPOT_GROUP, char, grp);
+    unsigned const len = SAFE_COUNT(col_SPOT_GROUP);
 
-    uint32_t cmp_spot_len = argv[0].u.data.elem_count;
-    const uint32_t* spot_len = argv[1].u.data.base;
-    /* take nreads from read_len */
-    uint32_t nreads = argv[2].u.data.elem_count;
-    /* get read_len and read_type */
-    const INSDC_coord_len *read_len = argv[2].u.data.base;
-    const INSDC_SRA_xread_type *read_type = argv[3].u.data.base;
-    spot_len += argv[1].u.data.first_elem;
-    read_len += argv[2].u.data.first_elem;
-    read_type += argv[3].u.data.first_elem;
-
-    assert(data != NULL);
-    assert(argc >= 4 && argc <= 5);
-    assert(nreads == argv[3].u.data.elem_count);
-
-    if( argc == 5 ) {
-        /* get group name and length */
-        grp = argv[4].u.data.base;
-        len = argv[4].u.data.elem_count;
-        grp += argv[4].u.data.first_elem;
-    }
     return stats_data_update(data, row_id, spot_len[0], bioSpotLength(nreads, read_type, read_len), cmp_spot_len, grp, len);
 }
 
@@ -608,18 +583,18 @@ static
 rc_t CC stats_data_cmpb_trigger(void *data, const VXformInfo *info, int64_t row_id,
                                 VRowResult *rslt, uint32_t argc, const VRowData argv[])
 {
+    enum COLUMNS {
+        col_CMP_READ,
+        col_SPOT_GROUP
+    };
+    unsigned const cmp_spot_len = SAFE_COUNT(col_CMP_READ);
+    BIND_COLUMN(col_SPOT_GROUP, char, phys_grp);
+    unsigned const phys_len = SAFE_COUNT(col_SPOT_GROUP);
     stats_data_t *const self = data;
-    const char* grp = NULL;
-    uint64_t len = 0;
-    uint32_t const cmp_spot_len = argv[0].u.data.elem_count;
+    char const *grp = phys_grp;
+    unsigned len = phys_len;
     
-    if( argc == 2 ) {
-        /* get group name and length */
-        grp = argv[1].u.data.base;
-        len = argv[1].u.data.elem_count;
-        grp += argv[1].u.data.first_elem;
-    }
-    else if (self->curs) {
+    if (grp == NULL && self->curs != NULL) {
         void const *base;
         uint32_t count;
         uint32_t boff;
@@ -638,42 +613,32 @@ static
 rc_t CC stats_data_csra2_trigger(void *data, const VXformInfo *info, int64_t row_id,
                                  VRowResult *rslt, uint32_t argc, const VRowData argv[])
 {
-    const char* grp = NULL;
-    uint64_t len = 0;
-    uint32_t read_len = argv[0].u.data.elem_count;
-    
-    assert(argc >= 1 && argc <= 2);
-    
-    if( argc == 2 ) {
-        assert(1 == argv[1].u.data.elem_count);
-        
-        /* get group name and length */
-        grp = argv[1].u.data.base;
-        len = argv[1].u.data.elem_count;
-        grp += argv[1].u.data.first_elem;
-    }
+    enum COLUMNS {
+        col_READ,
+        col_SPOT_GROUP
+    };
+    unsigned const read_len = SAFE_COUNT(col_READ);
+    unsigned const len = SAFE_COUNT(col_SPOT_GROUP);
+    BIND_COLUMN(col_SPOT_GROUP, char, grp);
+
     return stats_data_update(data, row_id, read_len, read_len, 0, grp, len);
 }
-
 
 VTRANSFACT_IMPL ( NCBI_SRA_stats_trigger, 1, 0, 0 )
     ( const void *self, const VXfactInfo *info, VFuncDesc *rslt,
       const VFactoryParams *cp, const VFunctionParams *dp )
 {
-    rc_t rc;
-    stats_data_t *data;
-    int64_t options = so_SpotCount | so_BaseCount | so_BioBaseCount;
+    int64_t const options = so_SpotCount
+                          | so_BaseCount
+                          | so_BioBaseCount
+                          | (dp->argc > 3 ? so_HasSpotGroup : 0);
+    rc_t rc = 0;
 
-    assert(dp->argc >= 3 && dp->argc <= 4);
-    if (dp->argc == 4)
-        options |= so_HasSpotGroup;
+    rslt->self = stats_data_make(info->tbl, options, NULL, 0, &rc);
+    rslt->whack = stats_data_whack;
+    rslt->variant = vftNonDetRow;
+    rslt->u.rf = stats_data_trigger;
 
-    if( (rc = stats_data_make(&data, (VTable*)info->tbl, options)) == 0 ) {
-        rslt->self = data;
-        rslt->whack = stats_data_whack;
-        rslt->variant = vftNonDetRow;
-        rslt->u.rf = stats_data_trigger;
-    }
     return rc;
 }
 
@@ -681,20 +646,18 @@ VTRANSFACT_IMPL ( NCBI_SRA_cmp_stats_trigger, 1, 0, 0 )
     ( const void *self, const VXfactInfo *info, VFuncDesc *rslt,
       const VFactoryParams *cp, const VFunctionParams *dp )
 {
-    rc_t rc;
-    stats_data_t *data;
-    int64_t options = so_SpotCount | so_BaseCount | so_BioBaseCount | so_CmpBaseCount;
-
-    assert(dp->argc >= 4 && dp->argc <= 5);
-    if (dp->argc == 5)
-        options |= so_HasSpotGroup;
-
-    if( (rc = stats_data_make(&data, (VTable*)info->tbl, options)) == 0 ) {
-        rslt->self = data;
-        rslt->whack = stats_data_whack;
-        rslt->variant = vftNonDetRow;
-        rslt->u.rf = stats_data_cmp_trigger;
-    }
+    int64_t const options = so_SpotCount
+                          | so_BaseCount
+                          | so_BioBaseCount
+                          | so_CmpBaseCount
+                          | (dp->argc > 4 ? so_HasSpotGroup : 0);
+    rc_t rc = 0;
+    
+    rslt->self = stats_data_make(info->tbl, options, NULL, 0, &rc);
+    rslt->whack = stats_data_whack;
+    rslt->variant = vftNonDetRow;
+    rslt->u.rf = stats_data_cmp_trigger;
+    
     return rc;
 }
 
@@ -702,20 +665,18 @@ VTRANSFACT_IMPL ( NCBI_SRA_cmpf_stats_trigger, 1, 0, 0 )
     ( const void *self, const VXfactInfo *info, VFuncDesc *rslt,
       const VFactoryParams *cp, const VFunctionParams *dp )
 {
-    rc_t rc;
-    stats_data_t *data;
-    int64_t options = so_SpotCount | so_BaseCount | so_BioBaseCount | so_CmpBaseCount;
-
-    assert(dp->argc >= 4 && dp->argc <= 5);
-    if (dp->argc == 5)
-        options |= so_HasSpotGroup;
-
-    if( (rc = stats_data_make(&data, (VTable*)info->tbl, options)) == 0 ) {
-        rslt->self = data;
-        rslt->whack = stats_data_whack;
-        rslt->variant = vftNonDetRow;
-        rslt->u.rf = stats_data_cmpf_trigger;
-    }
+    int64_t const options = so_SpotCount
+                          | so_BaseCount
+                          | so_BioBaseCount
+                          | so_CmpBaseCount
+                          | (dp->argc > 4 ? so_HasSpotGroup : 0);
+    rc_t rc = 0;
+    
+    rslt->self = stats_data_make(info->tbl, options, NULL, 0, &rc);
+    rslt->whack = stats_data_whack;
+    rslt->variant = vftNonDetRow;
+    rslt->u.rf = stats_data_cmpf_trigger;
+    
     return rc;
 }
 
@@ -723,20 +684,17 @@ VTRANSFACT_IMPL ( NCBI_csra2_stats_trigger, 1, 0, 0 )
     ( const void * self, const VXfactInfo *info, VFuncDesc *rslt,
       const VFactoryParams *cp, const VFunctionParams *dp )
 {
-    rc_t rc;
-    stats_data_t *data;
-    int64_t options = so_SpotCount | so_BaseCount | so_BioBaseCount;
-
-    assert(dp->argc >= 1 && dp->argc <= 2);
-    if (dp->argc == 2)
-        options |= so_HasSpotGroup;
-
-    if( (rc = stats_data_make(&data, (VTable*)info->tbl, options)) == 0 ) {
-        rslt->self = data;
-        rslt->whack = stats_data_whack;
-        rslt->variant = vftNonDetRow;
-        rslt->u.rf = stats_data_csra2_trigger;
-    }
+    int64_t const options = so_SpotCount
+                          | so_BaseCount
+                          | so_BioBaseCount
+                          | (dp->argc > 1 ? so_HasSpotGroup : 0);
+    rc_t rc = 0;
+    
+    rslt->self = stats_data_make(info->tbl, options, NULL, 0, &rc);
+    rslt->whack = stats_data_whack;
+    rslt->variant = vftNonDetRow;
+    rslt->u.rf = stats_data_csra2_trigger;
+    
     return rc;
 }
 
@@ -744,34 +702,33 @@ VTRANSFACT_IMPL ( NCBI_SRA_cmpb_stats_trigger, 1, 0, 0 )
     ( const void *self, const VXfactInfo *info, VFuncDesc *rslt,
       const VFactoryParams *cp, const VFunctionParams *dp )
 {
-    rc_t rc;
-    stats_data_t *data;
+    int64_t const options = so_CmpBaseCount
+                          | (dp->argc > 1 ? so_HasSpotGroup : 0);
+    rc_t rc = 0;
     VCursor const *curs = NULL;
     uint32_t cid = 0;
-    int64_t options = so_CmpBaseCount;
 
-    assert(dp->argc >= 1 && dp->argc <= 2);
-    if (dp->argc == 2)
-        options |= so_HasSpotGroup;
-    else {
-        rc = VTableCreateCursorRead(info->tbl, &curs);
-        if (rc == 0)
-            rc = VCursorAddColumn(curs, &cid, "SPOT_GROUP");
-        if (rc == 0)
-            rc = VCursorOpen(curs);
+    if (dp->argc == 1) {
+        curs = (VCursor const *)info->parms;
+        VCursorAddRef(curs);
+        rc = VCursorAddColumn(curs, &cid, "SPOT_GROUP");
+        
+        if (rc != 0) {
+            rc = VTableCreateCursorRead(info->tbl, &curs);
+            if (rc == 0)
+                rc = VCursorAddColumn(curs, &cid, "SPOT_GROUP");
+            if (rc == 0)
+                rc = VCursorOpen(curs);
+        }
         if (rc != 0 && curs != NULL) {
             VCursorRelease(curs);
             curs = NULL;
         }
     }
-
-    if( (rc = stats_data_make(&data, (VTable*)info->tbl, options)) == 0 ) {
-        data->curs = curs;
-        data->cid = cid;
-        rslt->self = data;
-        rslt->whack = stats_data_whack;
-        rslt->variant = vftNonDetRow;
-        rslt->u.rf = stats_data_cmpb_trigger;
-    }
+    rslt->self = stats_data_make(info->tbl, options, curs, cid, &rc);
+    rslt->whack = stats_data_whack;
+    rslt->variant = vftNonDetRow;
+    rslt->u.rf = stats_data_cmpb_trigger;
+    
     return rc;
 }
