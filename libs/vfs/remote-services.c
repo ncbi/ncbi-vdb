@@ -20,13 +20,7 @@
  *
  *  Please cite the author in any work or product based on this material.
  *
- * =============================================================================
- *
- */
-
-
-/******************************************************************************/
-
+ * ===========================================================================*/
 
 #include <vfs/extern.h>
 
@@ -55,6 +49,7 @@
 #include <vfs/manager.h> /* VFSManager */
 #include <vfs/services.h> /* KServiceMake */
 
+#include "../kns/mgr-priv.h" /* KNSManagerGetCloudLocation */
 #include "json-response.h" /* Response4 */
 #include "path-priv.h" /* VPathMakeFmt */
 #include "resolver-priv.h" /* VPathCheckFromNamesCGI */
@@ -2775,7 +2770,7 @@ static rc_t SObjectCheckUrl ( SObject * self ) {
     return rc;
 }
 
-static rc_t SCgiRequestAddKfgParams (SCgiRequest * self, const SHelper * helper)
+static rc_t SCgiRequestAddLocation (SCgiRequest * self, const SHelper * helper)
 {
     rc_t rc = 0;
 
@@ -2786,12 +2781,16 @@ static rc_t SCgiRequestAddKfgParams (SCgiRequest * self, const SHelper * helper)
 
     assert( helper );
 
-    path = "/libs/vfs/location";
+    path = "/libs/cloud/location";
     rc = KConfigRead (helper->kfg, path, 0,
                       buffer, sizeof buffer, &num_read, NULL);
     if (rc != 0)
+        rc = KNSManagerGetCloudLocation(helper->kMgr,
+            buffer, sizeof buffer, &num_read, NULL);
+
+    if (rc != 0)
         rc = 0;
-    else {
+    else if (num_read > 0) {
         const SKV * kv = NULL;
         const char n[] = "location";
         rc = SKVMake(&kv, n, buffer);
@@ -3048,7 +3047,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
             return rc;
     }
     if (rc == 0)
-        rc = SCgiRequestAddKfgParams( self, helper );
+        rc = SCgiRequestAddLocation( self, helper );
     return rc;
 }
 
