@@ -3876,7 +3876,7 @@ rc_t CC oldVResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
     const VPath * query, const VPath ** local, const VPath ** remote, const VPath ** cache )
 {
     rc_t rc = VResolverQueryInt ( self, protocols, query, local, remote, cache,
-        NULL, true, NULL, NULL );
+        NULL, true, NULL, NULL, NULL, NULL);
     if ( rc == 0 )
     {
         /* the paths returned from resolver are highly reliable */
@@ -3924,7 +3924,7 @@ rc_t CC VResolverQueryImpl ( const VResolver * self, VRemoteProtocols protocols,
         rc_t ro =
 #endif
             VResolverQueryInt ( self, protocols, query, l, p, c,
-                                "#3.", true, NULL, NULL, NULL );
+                                "3", true, NULL, NULL, NULL, NULL);
         assert ( rcs == ro );
         if ( remote == NULL )
             assert ( p == NULL );
@@ -3976,8 +3976,8 @@ rc_t CC VResolverQueryImpl ( const VResolver * self, VRemoteProtocols protocols,
 #if _DEBUGGING
         rc_t ro =
 #endif
-            VResolverQueryInt ( self, protocols, query, l, p, c, "#3.",
-                                resolveAllAccToCache, dir, inOutDir, NULL );
+            VResolverQueryInt ( self, protocols, query, l, p, c, "3",
+                            resolveAllAccToCache, dir, inOutDir, NULL, NULL);
         assert ( rcs == ro );
         if ( remote == NULL )
             assert ( p == NULL );
@@ -4030,7 +4030,7 @@ rc_t CC VResolverQueryImpl ( const VResolver * self, VRemoteProtocols protocols,
         rc_t ro =
 #endif
             VResolverQueryInt ( self, protocols, query, l, p, c,
-                                "#1.2", true, NULL, NULL, NULL );
+                                "1.2", true, NULL, NULL, NULL, NULL );
         
         assert ( rcs == ro );
         if ( remote == NULL )
@@ -4083,8 +4083,8 @@ rc_t CC VResolverQueryImpl ( const VResolver * self, VRemoteProtocols protocols,
 #if _DEBUGGING
         rc_t ro =
 #endif
-            VResolverQueryInt ( self, protocols, query, l, p, c, "#1.2",
-                                resolveAllAccToCache, dir, inOutDir, NULL );
+            VResolverQueryInt ( self, protocols, query, l, p, c, "1.2",
+                            resolveAllAccToCache, dir, inOutDir, NULL, NULL );
         
         assert ( rcs == ro );
         if ( remote == NULL )
