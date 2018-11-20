@@ -3840,10 +3840,7 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
         }
     }
 
-    if ( rc == 0 )
-        rc = KSrvResponseSetR4 ( self -> resp .list, r4 );
-    else
-        Response4Release ( r4 );
+    RELEASE(Response4, r4);
 
     return rc;
 }
