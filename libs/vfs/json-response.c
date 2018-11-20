@@ -2384,7 +2384,10 @@ rc_t KSrvRespFileGetCache ( const KSrvRespFile * self,
 {
     rc_t rc = 0;
 
-    assert ( self && self -> file && path );
+    if (self == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
+
+    assert ( self -> file && path );
 
     * path = NULL;
 
