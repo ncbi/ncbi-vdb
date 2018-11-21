@@ -434,9 +434,10 @@ rc_t translate_file_error( DWORD error, enum RCContext ctx )
 
         case ERROR_BUFFER_OVERFLOW :
         case ERROR_FILENAME_EXCED_RANGE :
-            rc = RC ( rcFS, rcDirectory, ctx, rcPath, rcExcessive );
+            rc = RC ( rcFS, rcDirectory, ctx, rcPath, rcExcessive ); break;
         
-        default : RC ( rcFS, rcDirectory, ctx, rcNoObj, rcUnknown );
+        default : 
+            rc = RC ( rcFS, rcDirectory, ctx, rcNoObj, rcUnknown ); break;
     }
     return rc;
 }

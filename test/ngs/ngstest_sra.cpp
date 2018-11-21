@@ -1066,8 +1066,8 @@ rc_t CC KMain ( int argc, char *argv [] )
     //assert(!KDbgSetString("KFG"));
     //assert(!KDbgSetString("VFS"));
     KConfigDisableUserSettings();
-    rc_t m_coll=NgsSraTestSuite(argc, argv);
-    return m_coll;
+    rc_t ret=NgsSraTestSuite(argc, argv);
+    return ret;
 }
 
 }
