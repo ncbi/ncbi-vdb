@@ -457,6 +457,9 @@ rc_t KSrvResponseSetR4 ( KSrvResponse * self, Response4 * r )
 
     assert ( self );
 
+    if (self->r4 == r)
+        return 0;
+
     rc = Response4Release ( self -> r4 );
 
     rc = Response4AddRef ( r );
