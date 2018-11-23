@@ -2349,19 +2349,24 @@ uint32_t get_accession_code ( const String * accession, VResolverAccToken *tok )
 
 /* get_accession_app
  */
-static
 VResolverAppID get_accession_app ( const String * accession, bool refseq_ctx,
     VResolverAccToken *tok, bool *legacy_wgs_refseq,
     bool resolveAllAccToCache, bool * forDirAdjusted )
 {
     VResolverAppID app;
-    uint32_t code = get_accession_code ( accession, tok );
+    uint32_t code = 0;
+
+    VResolverAccToken tummy;
 
     bool dummy;
     if ( forDirAdjusted == NULL)
         forDirAdjusted = & dummy;
+    *forDirAdjusted = false;
 
-    * forDirAdjusted = false;
+    if (tok == NULL)
+        tok = &tummy;
+
+    code = get_accession_code(accession, tok);
 
     if (accession != NULL &&
         accession->addr != NULL && isdigit(accession->addr[0]))
@@ -3481,8 +3486,12 @@ rc_t VResolverQueryAcc ( const VResolver * self, VRemoteProtocols protocols,
 
             if (oldRemote != NULL) {
                 remote2 = oldRemote;
-                if (mapped_ptr != NULL)
+                if (mapped_ptr != NULL) {
+                    rc = VPathAddRef(oldMapping);
+                    if (rc != 0)
+                        return rc;
                     mapped_query = oldMapping;
+                }
             }
             else {
                 /* request remote resolution
