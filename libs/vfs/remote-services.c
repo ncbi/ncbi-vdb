@@ -312,6 +312,9 @@ typedef struct {
     size_t allocated;
     uint32_t objects;
     bool refseq_ctx;
+
+    VResolverAppID app;
+    rc_t appRc; /* to record inconsistent app-s when calling revolver-v4 */
 } SRequestData;
 
 
@@ -505,8 +508,8 @@ static bool cgiNotSupportsJson(const char * cgi) {
 }
 
 /* SVersion *******************************************************************/
-static rc_t SVersionInit(SVersion * self, const char * src,
-    EServiceType serviceType, const char * cgi)
+static
+rc_t SVersionInit(SVersion * self, const char * src, EServiceType serviceType)
 {
     const char * s = src;
 
@@ -583,8 +586,9 @@ static rc_t SVersionFini(SVersion * self) {
 
 /* try to get cgi from kfg, otherwise use hardcoded */
 static
-rc_t SHelperResolverCgi ( SHelper * self, bool aProtected, char * buffer,
-    size_t bsize, const char * aCgi, SRequest * request, bool adjustVersion)
+rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
+    char * buffer, size_t bsize, const char * aCgi,
+    SRequest * request, bool adjustVersion)
 {
     const char man [] = "/repository/remote/main/CGI/resolver-cgi";
     const char prt [] = "/repository/remote/protected/CGI/resolver-cgi";
@@ -613,21 +617,40 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected, char * buffer,
         string_copy_measure ( buffer, bsize, aCgi );
 
     if (rc == 0 && adjustVersion) {
-        if (cgiNotSupportsJson(buffer)) {
+        if (cgiNotSupportsJson(buffer)) { /* cgi supports versions < 4 */
             if (SVersionResponseInJson(request->version))
+                /* version >= 4 but cgi does't support 4: use version-3.0 */
                 request->version = VERSION_3_0;
         }
-        else if (!cgiSupportsFullJson(buffer)) {
-            if (request->request.objects > 0 &&
-                request->request.object[0].objectId != NULL &&
-                isdigit(request->request.object[0].objectId[0]) &&
-                SVersionResponseInJson(request->version))
+        else { /* cgi supports versions >= 4 */
+            if (request->request.appRc != 0
+                && SVersionResponseInJson(request->version))
             {
+                /* version >= 4
+                but different acc-s in request:
+                require to use "filetype=run" (SRR)
+                and not (not SRR):
+                call version-3.0 using old cgi */
                 string_copy(buffer, bsize, cgi, sizeof cgi);
                 request->version = VERSION_3_0;
             }
-            else if (!SVersionResponseInJson(request->version))
-                string_copy(buffer, bsize, cgi, sizeof cgi);
+            else if (!cgiSupportsFullJson(buffer)) {
+                if (request->request.objects > 0 &&
+                    request->request.object[0].objectId != NULL &&
+                    isdigit(request->request.object[0].objectId[0]) &&
+                    SVersionResponseInJson(request->version))
+                {
+                    /* version >= 4; request contains numeric kart-ids
+                    but cgi does not support numeric kart-ids:
+                    call version-3.0 using old cgi */
+                    string_copy(buffer, bsize, cgi, sizeof cgi);
+                    request->version = VERSION_3_0;
+                }
+                else if (!SVersionResponseInJson(request->version))
+                    /* version < 4; but cgi supports version>=4:
+                    use old cgi */
+                    string_copy(buffer, bsize, cgi, sizeof cgi);
+            }
         }
     }
 
@@ -673,8 +696,7 @@ static rc_t SHeaderMake
     rc = SRawAlloc ( & self -> raw, src -> addr, src -> size );
 
     if ( rc == 0 )
-        rc = SVersionInit ( & self -> version, self -> raw . s,
-                            serviceType, NULL );
+        rc = SVersionInit ( & self -> version, self -> raw . s, serviceType);
 
     return rc;
 }
@@ -2451,6 +2473,10 @@ rc_t SRequestDataAppendObject ( SRequestData * self, const char * id,
 {
     rc_t rc = 0;
 
+    VResolverAppID app = appUnknown;
+
+    String accession;
+
     assert ( self );
 
     if ( self -> objects > self -> allocated - 1 ) {
@@ -2471,6 +2497,13 @@ rc_t SRequestDataAppendObject ( SRequestData * self, const char * id,
 
     if ( id_sz == 0 )
         id_sz = string_measure ( id, NULL );
+
+    StringInitCString(&accession, id);
+    app = get_accession_app(&accession, false, NULL, NULL, false, NULL);
+    if (self->objects == 0)
+        self->app = app;
+    else if (self->app != app && (self->app == appSRA || app == appSRA))
+        self->appRc = RC(rcVFS, rcQuery, rcExecuting, rcItem, rcInconsistent);
 
     rc = SObjectInit ( & self -> object [ self -> objects ],
                        id, id_sz, objectType );
@@ -2828,7 +2861,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( 
         "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n" ) );
 
-    rc = SVersionInit ( &request->version, version, eSTnames, NULL );
+    rc = SVersionInit(&request->version, version, eSTnames);
     if ( rc != 0 )
         return rc;
 
@@ -3010,30 +3043,6 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
             return rc;
         }
     }
-/*  {
-        const char n [] = "location";
-        const char v [] = "sra-ncbi.public";
-        rc = SKVMake ( & kv, n, v );
-        if ( rc == 0 ) {
-                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
-                    ( "  %s=%s\n", n, v ) );
-            rc = VectorAppend ( & self -> params, NULL, kv );
-        }
-        if ( rc != 0 )
-            return rc;
-    }
-    {
-        const char n [] = "retmode";
-        const char v [] = "json";
-        rc = SKVMake ( & kv, n, v );
-        if ( rc == 0 ) {
-                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
-                    ( "  %s=%s\n", n, v ) );
-            rc = VectorAppend ( & self -> params, NULL, kv );
-        }
-        if ( rc != 0 )
-            return rc;
-    }*/
     if ( request ->format != NULL ) {
         const char n [] = "type";
         const char * v = request->format;
@@ -3046,6 +3055,26 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
         if ( rc != 0 )
             return rc;
     }
+
+    if (rc == 0 && SVersionResponseInJson(request->version)) {
+        if (request->request.appRc != 0)
+            /* different query items require to add
+            and at the same time not to add filetype=run */
+            return request->request.appRc;
+        else if (request->request.app == appSRA) {
+            const char n[] = "filetype";
+            const char v[] = "run";
+            rc = SKVMake(&kv, n, v);
+            if (rc == 0) {
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
+                    ("  %s=%s\n", n, v));
+                rc = VectorAppend(&self->params, NULL, kv);
+            }
+            if (rc != 0)
+                return rc;
+        }
+    }
+
     if (rc == 0)
         rc = SCgiRequestAddLocation( self, helper );
     return rc;
@@ -3060,7 +3089,7 @@ rc_t SRequestInitSearchSCgiRequest ( SRequest * request, const char * cgi,
     rc_t rc = 0;
     const SKV * kv = NULL;
     assert ( request );
-    rc = SVersionInit ( & request -> version, version, eSTnames, NULL );
+    rc = SVersionInit ( & request -> version, version, eSTnames);
     if ( rc != 0 )
         return rc;
     self = & request -> cgiReq;
@@ -3779,15 +3808,17 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
     if ( rc == 0 )
         rc = KSrvResponseGetR4 ( self -> resp .list, & r4 );
 
-    if ( rc == 0 && r4 == NULL )
-        rc = Response4MakeEmpty ( & r4 );
+    if (rc == 0 && r4 == NULL)
+        rc = Response4MakeEmpty(&r4);
 
     for ( i = 0; rc == 0 && i < self -> req . request . objects; ++ i )
         if ( self -> req . request . object [ i ] . isUri )
             rc = Response4AppendUrl ( r4,
                 self -> req . request . object [ i ] . objectId );
 
-    if ( rc == 0 && ! SVersionResponseInJson (  self -> req. version ) ) {
+    if ( rc == 0 &&
+        ! SVersionResponseInJson (  self -> req. version ) )
+    {
         uint32_t l = KSrvResponseLength  ( self -> resp .list );
         uint32_t i = 0;
         for ( i = 0; rc == 0 && i < l; ++ i ) {
@@ -3839,6 +3870,9 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
             }
         }
     }
+
+    if (rc == 0)
+        rc = KSrvResponseSetR4(self->resp.list, r4);
 
     RELEASE(Response4, r4);
 
