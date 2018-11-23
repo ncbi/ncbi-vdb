@@ -610,8 +610,8 @@ rc_t CC KSysFileReadChunked_v1 ( const KSysFile_v1 * self, uint64_t pos,
         rc = KChunkReaderNextBuffer ( chunks, & chbuf, & chsize );
         if ( rc == 0 )
         {
-            rc = KSysFileRead_v1 ( self, pos + total, chbuf, chsize, & num_read );
-            if ( rc == 0 && num_read != 0 )
+            rc = KFileReadAll_v1 ( self, pos + total, chbuf, chsize, & num_read );
+            if ( rc == 0 )
                 rc = KChunkReaderConsumeChunk ( chunks, pos + total, chbuf, num_read );
             KChunkReaderReturnBuffer ( chunks, chbuf, chsize );
         }

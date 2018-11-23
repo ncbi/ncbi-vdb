@@ -432,6 +432,7 @@ rc_t KCacheTeeFileBGLoop ( KCacheTeeFile_v3 * self )
     {
         KCacheTeeFileMsg * dmsg;
         STATUS ( STAT_PRG, "BG: %s - waiting on message queue\n", __func__ );
+        /* TBD - use a timeout for looking at queue */
         rc = KQueuePop ( self -> msgq, ( void ** ) & dmsg, NULL );
         if ( rc == 0 )
         {
@@ -671,6 +672,8 @@ rc_t KCacheTeeFileInitExisting ( KCacheTeeFile_v3 * self )
                      , actual_eof
                      , calculated_eof
                 );
+            
+            rc = RC ();
         }
         else
         {
@@ -702,6 +705,8 @@ rc_t KCacheTeeFileInitExisting ( KCacheTeeFile_v3 * self )
                                      , __func__
                                      , self -> path
                               ) );
+
+                rc = RC ();
             }
             else
             {
@@ -833,8 +838,9 @@ rc_t KCacheTeeFileOpen ( KCacheTeeFile_v3 * self, KDirectory * dir,
                              , __func__
                              , self -> path
                         );
+                    /* TBD - if this fails, go back to open-shared-write */
                     rc = KDirectoryCreateFile ( dir, & self -> cache_file,
-                        true, 0666, kcmInit | kcmParents, "%s.cache", self -> path );
+                        true, 0666, kcmCreate | kcmParents, "%s.cache", self -> path );
                     STATUS ( STAT_GEEK
                              , "%s - create file attempt: fd = %d, rc = $R\n"
                              , __func__
@@ -993,6 +999,8 @@ void KCacheTeeFileBindConstants ( KCacheTeeFile_v3 * self,
 
         if ( page_size > MAX_PAGE_SIZE )
             page_size = MAX_PAGE_SIZE;
+        else if ( page_size < MIN_PAGE_SIZE )
+            page_size = MIN_PAGE_SIZE;
 
         /* require even power of 2 */
         assert ( ( ( page_size - 1 ) & page_size ) == 0 );
