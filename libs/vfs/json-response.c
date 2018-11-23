@@ -1864,8 +1864,6 @@ static rc_t Response4Init ( Response4 * self, const char * input ) {
 
     assert ( self );
 
-    memset ( self, 0, sizeof * self );
-
     rc = StackInit(&path);
     if (rc != 0)
         return rc;
@@ -1928,8 +1926,6 @@ static rc_t Response4Init ( Response4 * self, const char * input ) {
     if ( r2 != 0 && rc == 0 )
         rc = r2;
 
-    atomic32_set ( & self -> refcount, 1 );
-
     return rc;
 }
 
@@ -1959,6 +1955,8 @@ rc_t Response4MakeEmpty ( Response4 ** self ) {
     }
     else
         THRESHOLD = THRESHOLD_ERROR;
+
+    atomic32_set(&(*self)->refcount, 1);
 
     return 0;
 }
