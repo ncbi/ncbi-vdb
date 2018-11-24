@@ -59,6 +59,21 @@ struct KCacheTeeChunkReader;
 #define MIN_PAGE_SIZE ( 4U * 1024U )
 #endif
 #define MSGQ_LENGTH 16
+#define BMWORDBITS 5
+#define BMWORDSIZE ( 1U << BMWORDBITS )
+#define BMWORDMASK ( BMWORDSIZE - 1 )
+
+#if BMWORDSIZE == 32
+typedef uint32_t bmap_t;
+typedef int32_t sbmap_t;
+#define bmap_lsbit( self ) uint32_lsbit( self )
+#elif BMWORDSIZE == 64
+typedef uint64_t bmap_t;
+typedef int64_t sbmap_t;
+#define bmap_lsbit( self ) uint64_lsbit( self )
+#else
+#error "bitmap word size neither 32 nor 64 bits"
+#endif
 
 typedef struct KCacheTeeFile_v3 KCacheTeeFile_v3;
 typedef struct KCacheTeeFileTail KCacheTeeFileTail;
@@ -100,7 +115,7 @@ struct KCacheTeeFile_v3
     KVector * ram_cache;            /* shared use    */
     KVector * ram_cache_mru_idx;    /* shared use    */
     DLList ram_cache_mru;           /* shared use    */
-    volatile uint32_t * bitmap;     /* shared use    */
+    volatile bmap_t * bitmap;       /* shared use    */
     const KCacheTeeFileTail * tail; /* constant      */
     KQueue * msgq;                  /* shared use    */
     KLock * lock;                   /* shared use    */
@@ -323,7 +338,7 @@ rc_t CC KCacheTeeChunkReaderConsume ( KCacheTeeChunkReader * chunk,
         {
             /* set the "present" bit in bitmap */
             STATUS ( STAT_PRG, "BG: %s - set page %zu present in bitmap\n", __func__, pg_idx );
-            self -> bitmap [ pg_idx >> 5 ] |= 1U << ( pg_idx & 31 );
+            self -> bitmap [ pg_idx >> BMWORDBITS ] |= 1U << ( pg_idx & BMWORDMASK );
 
             /* notify any listeners */
             STATUS ( STAT_PRG, "BG: %s - broadcasting event to all waiting readers\n", __func__ );
@@ -521,8 +536,8 @@ static
 bool KCacheTeeFilePageInCache ( const KCacheTeeFile_v3 * self, const size_t pg_idx )
 {
     /* NB - assumes bitmap is locked against modification */
-    assert ( ( pg_idx / 32 ) * 4 < self -> bmap_size );
-    return ( self -> bitmap [ pg_idx >> 5 ] & ( 1 << ( pg_idx & 31 ) ) ) != 0;
+    assert ( ( pg_idx / BMWORDSIZE ) * sizeof self -> bitmap [ 0 ] < self -> bmap_size );
+    return ( self -> bitmap [ pg_idx >> BMWORDBITS ] & ( 1 << ( pg_idx & BMWORDMASK ) ) ) != 0;
 }
 
 static
@@ -580,13 +595,13 @@ size_t KCacheTeeFileReadFromRAM ( const KCacheTeeFile_v3 *self, uint64_t pos,
 }
 
 static
-uint32_t uint32_contig_bits ( const uint32_t word, const uint32_t initial_bit_pos, bool * found_zero )
+uint32_t bmword_contig_bits ( const bmap_t word, const uint32_t initial_bit_pos, bool * found_zero )
 {
     /* NB - assumes a masked word, so counts all bits set */
 
     /* EXPLANATION
 
-      given a word such as:
+      assuming 32-bit bmap word and given a word such as:
 
         0bxxxxxxxxxxxxxxxxxxxx100000000000
 
@@ -602,7 +617,7 @@ uint32_t uint32_contig_bits ( const uint32_t word, const uint32_t initial_bit_po
 
       or by some whole word trickery:
 
-        ( word & ( word - 1 ) ) ^ word
+        ( word & - word )
 
       if we assume that the bits to the left look like
 
@@ -632,7 +647,7 @@ uint32_t uint32_contig_bits ( const uint32_t word, const uint32_t initial_bit_po
 
     */
 
-    uint32_t first_one_value;
+    bmap_t first_one_value;
     int first_one_pos, first_zero_pos;
 
     /* edge case "a" */
@@ -644,25 +659,28 @@ uint32_t uint32_contig_bits ( const uint32_t word, const uint32_t initial_bit_po
 
     /* edge case "b" */
     if ( ~ word == 0 )
-        return 32;
+        return BMWORDSIZE;
 
     /* find position of right-most bit */
-    first_one_pos = uint32_lsbit ( word );
+    first_one_pos = bmap_lsbit ( word );
     assert ( first_one_pos >= 0 );
 
     /* detect case where the initial bit is NOT set */
-    assert ( initial_bit_pos < 32 );
+    assert ( initial_bit_pos < BMWORDSIZE );
     if ( ( uint32_t ) first_one_pos > initial_bit_pos )
     {
         * found_zero = true;
         return 0;
     }
 
+    /* in truth, the initial_bit_pos should be identical */
+    assert ( ( uint32_t ) first_one_pos == initial_bit_pos );
+
     /* generate the value at right-most bit */
-    first_one_value = 1U << first_one_pos;
+    first_one_value = word & - ( sbmap_t ) word;
 
     /* find the position of the right-most zero beyond right-most one */
-    first_zero_pos = uint32_lsbit ( word + first_one_value );
+    first_zero_pos = bmap_lsbit ( word + first_one_value );
 
     /* handle edge case "c" when "word + first_one_value" will roll over to 0 */
     if ( first_zero_pos < 0 )
@@ -679,12 +697,13 @@ uint32_t KCacheTeeFileContigPagesInFileCache ( const KCacheTeeFile_v3 * self,
 {
     size_t i, last;
     bool found_zero;
-    uint32_t initial_bit_pos, initial_mask;
-    uint32_t word, count, max_page_count;
+    uint32_t initial_bit_pos;
+    uint32_t count, max_page_count;
+    bmap_t word, initial_mask;
 
     found_zero = false;
 
-    i = initial_page_idx >> 5;
+    i = initial_page_idx >> BMWORDBITS;
     STATUS ( STAT_GEEK, "%s - initial page idx=%zu, initial word idx=%zu\n"
              , __func__
              , initial_page_idx
@@ -692,21 +711,23 @@ uint32_t KCacheTeeFileContigPagesInFileCache ( const KCacheTeeFile_v3 * self,
         );
 
     /* generate mask against left-most word */
-    initial_bit_pos = ( uint32_t ) ( initial_page_idx & 31 );
-    initial_mask = ( uint32_t ) ( 0xFFFFFFFFU << ( initial_page_idx & 31 ) );
-    STATUS ( STAT_GEEK, "%s - initial word bitpos=%u, initial mask=0b%032b\n"
+    initial_bit_pos = ( uint32_t ) ( initial_page_idx & BMWORDMASK );
+    initial_mask = ( uint32_t ) ( 0xFFFFFFFFU << ( initial_page_idx & BMWORDMASK ) );
+    STATUS ( STAT_GEEK, "%s - initial word bitpos=%u, initial mask=0b%0*lb\n"
              , __func__
              , initial_bit_pos
-             , initial_mask
+             , BMWORDSIZE
+             , ( uint64_t ) initial_mask
         );
 
     /* NB - assumes bitmap is locked against modification */
 
     /* get the initial word from bitmap */
     word = self -> bitmap [ i ] & initial_mask;
-    STATUS ( STAT_GEEK, "%s - initial masked word=0b%032b\n"
+    STATUS ( STAT_GEEK, "%s - initial masked word=0b%0*lb\n"
              , __func__
-             , word
+             , BMWORDSIZE
+             , ( uint64_t ) word
         );
     
     /* limit the count after seeing max pages */
@@ -718,7 +739,7 @@ uint32_t KCacheTeeFileContigPagesInFileCache ( const KCacheTeeFile_v3 * self,
         );
 
     /* count the bits in the initial word */
-    count = uint32_contig_bits ( word, initial_bit_pos, & found_zero );
+    count = bmword_contig_bits ( word, initial_bit_pos, & found_zero );
     STATUS ( STAT_GEEK, "%s - initial contiguous page count=%u, found zero=%s\n"
              , __func__
              , count
@@ -737,7 +758,7 @@ uint32_t KCacheTeeFileContigPagesInFileCache ( const KCacheTeeFile_v3 * self,
         return count;
 
     /* calculate the last word index */
-    last = ( end_page_idx - 1 ) >> 5;
+    last = ( end_page_idx - 1 ) >> BMWORDBITS;
 
     /* if the last page was within the same word,
        we'd have returned already. */
@@ -753,14 +774,15 @@ uint32_t KCacheTeeFileContigPagesInFileCache ( const KCacheTeeFile_v3 * self,
     {
         /* retrieve bitmap word */
         word = self -> bitmap [ i ];
-        STATUS ( STAT_GEEK, "%s - word[%zu]=0b%032b\n"
+        STATUS ( STAT_GEEK, "%s - word[%zu]=0b%0*lb\n"
                  , __func__
                  , i
-                 , word
+                 , BMWORDSIZE
+                 , ( uint64_t ) word
             );
 
         /* count the number of bits from leading */
-        count += uint32_contig_bits ( word, 0, & found_zero );
+        count += bmword_contig_bits ( word, 0, & found_zero );
         STATUS ( STAT_GEEK, "%s - contiguous page count=%u, found zero=%s\n"
                  , __func__
                  , count
@@ -1754,7 +1776,9 @@ rc_t KCacheTeeFileMakeBitmap ( KCacheTeeFile_v3 * self )
     STATUS ( STAT_PRG, "%s - allocating bitmap index\n", __func__ );
 
     num_pages = ( self -> source_size + self -> page_size - 1 ) / self -> page_size;
+    /* keep this hard-coded on 32-bit entries for legacy */
     num_words = ( size_t ) ( num_pages + 31 ) >> 5;
+    assert ( sizeof * bitmap == 4 );
     bmsize = ( size_t ) num_words * sizeof * bitmap;
     bmsize += sizeof * tail;
 
@@ -1775,7 +1799,7 @@ rc_t KCacheTeeFileMakeBitmap ( KCacheTeeFile_v3 * self )
     tail -> orig_size = self -> source_size;
     tail -> page_size = self -> page_size;
 
-    self -> bitmap = ( volatile uint32_t * ) bitmap;
+    self -> bitmap = ( volatile bmap_t * ) bitmap;
     self -> tail = tail;
     self -> bmap_size = bmsize;
 
