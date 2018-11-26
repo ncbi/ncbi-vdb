@@ -292,6 +292,24 @@ rc_t KCacheTeeFileCacheInsert ( KCacheTeeFile_v3 * self,
 }
 
 static
+rc_t KCacheTeeFileSaveBitmap ( KCacheTeeFile_v3 * self )
+{
+    rc_t rc = 0;
+    
+    if ( self -> cache_file != NULL )
+    {
+        STATUS ( STAT_PRG, "BG: %s - saving cache bitmap\n", __func__ );
+    
+        rc = KFileWriteExactly_v1 ( self -> cache_file, self -> source_size, self -> bitmap, self -> bmap_size );
+    
+        STATUS ( STAT_GEEK, "BG: %s - saved bm result code %R\n", __func__, rc );
+
+    }
+    
+    return rc;
+}
+
+static
 rc_t CC KCacheTeeChunkReaderConsume ( KCacheTeeChunkReader * chunk,
     uint64_t pos, const void * buf, size_t size )
 {
@@ -339,6 +357,9 @@ rc_t CC KCacheTeeChunkReaderConsume ( KCacheTeeChunkReader * chunk,
             /* set the "present" bit in bitmap */
             STATUS ( STAT_PRG, "BG: %s - set page %zu present in bitmap\n", __func__, pg_idx );
             self -> bitmap [ pg_idx >> BMWORDBITS ] |= 1U << ( pg_idx & BMWORDMASK );
+            
+            /* save the change immediately */
+            KCacheTeeFileSaveBitmap ( self );
 
             /* notify any listeners */
             STATUS ( STAT_PRG, "BG: %s - broadcasting event to all waiting readers\n", __func__ );
@@ -350,7 +371,7 @@ rc_t CC KCacheTeeChunkReaderConsume ( KCacheTeeChunkReader * chunk,
         }
 
         STATUS ( STAT_PRG, "BG: %s - releasing lock\n", __func__ );
-        KLockRelease ( self -> lock );
+        KLockUnlock ( self -> lock );
     }
 
     return rc;
@@ -437,7 +458,7 @@ rc_t CC KCacheTeeFileDestroy ( KCacheTeeFile_v3 *self )
     KQueueRelease ( self -> msgq );
 
     /* release lock */
-    STATUS ( STAT_PRG, "%s - releasing lock\n", __func__ );
+    STATUS ( STAT_PRG, "%s - releasing lock object\n", __func__ );
     KLockRelease ( self -> lock );
 
     /* release condition */
@@ -891,7 +912,7 @@ rc_t CC KCacheTeeFileRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
             if ( msg == NULL )
             {
                 STATUS ( STAT_PRG, "%s - malloc failed - releasing mutex\n", __func__ );
-                KLockRelease ( self -> lock );
+                KLockUnlock ( self -> lock );
                 return RC ( rcFS, rcFile, rcReading, rcMemory, rcExhausted );
             }
 
@@ -914,7 +935,7 @@ rc_t CC KCacheTeeFileRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
             if ( rc != 0 )
             {
                 STATUS ( STAT_QA, "%s - message queue failed: %R - releasing mutex\n", __func__, rc );
-                KLockRelease ( self -> lock );
+                KLockUnlock ( self -> lock );
                 free ( msg );
                 return rc;
             }
@@ -925,7 +946,7 @@ rc_t CC KCacheTeeFileRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
             if ( rc != 0 )
             {
                 STATUS ( STAT_QA, "%s - timed wait failed: %R - releasing mutex\n", __func__, rc );
-                KLockRelease ( self -> lock );
+                KLockUnlock ( self -> lock );
                 return rc;
             }
 
@@ -948,7 +969,7 @@ rc_t CC KCacheTeeFileRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
 
         /* 9. release lock */
         STATUS ( STAT_PRG, "%s - releasing mutex\n", __func__ );
-        KLockRelease ( self -> lock );
+        KLockUnlock ( self -> lock );
     }
 
     return rc;
@@ -1012,7 +1033,7 @@ rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
             if ( msg == NULL )
             {
                 STATUS ( STAT_PRG, "%s - malloc failed - releasing mutex\n", __func__ );
-                KLockRelease ( self -> lock );
+                KLockUnlock ( self -> lock );
                 return RC ( rcFS, rcFile, rcReading, rcMemory, rcExhausted );
             }
 
@@ -1035,7 +1056,7 @@ rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
             if ( rc != 0 )
             {
                 STATUS ( STAT_QA, "%s - message queue failed: %R - releasing mutex\n", __func__, rc );
-                KLockRelease ( self -> lock );
+                KLockUnlock ( self -> lock );
                 free ( msg );
                 return rc;
             }
@@ -1046,7 +1067,7 @@ rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
             if ( rc != 0 )
             {
                 STATUS ( STAT_QA, "%s - timed wait failed: %R - releasing mutex\n", __func__, rc );
-                KLockRelease ( self -> lock );
+                KLockUnlock ( self -> lock );
                 return rc;
             }
 
@@ -1069,7 +1090,7 @@ rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
 
         /* 9. release lock */
         STATUS ( STAT_PRG, "%s - releasing mutex\n", __func__ );
-        KLockRelease ( self -> lock );
+        KLockUnlock ( self -> lock );
     }
 
     return rc;
@@ -1349,7 +1370,8 @@ rc_t CC KCacheTeeFileRunThread ( const KThread * t, void * data )
 
     STATUS ( STAT_PRG, "BG: %s - signaling FG to sync\n", __func__ );
     rc = KConditionSignal ( self -> cond );
-    KLockRelease ( self -> lock );
+    STATUS ( STAT_PRG, "BG: %s - releasing lock\n", __func__ );
+    KLockUnlock ( self -> lock );
     if ( rc != 0 )
     {
         PLOGERR ( klogSys, ( klogSys, rc, "BG: $(func) - failed to signal foreground"
@@ -1404,7 +1426,7 @@ rc_t KCacheTeeFileStartBgThread ( KCacheTeeFile_v3 * self )
         }
 
         STATUS ( STAT_PRG, "%s - releasing lock\n", __func__ );
-        KLockRelease ( self -> lock );
+        KLockUnlock ( self -> lock );
     }
 
     return rc;
@@ -1700,9 +1722,9 @@ rc_t KCacheTeeFileOpen ( KCacheTeeFile_v3 * self, KDirectory * dir,
                     );
                 rc = KDirectoryOpenFileSharedWrite ( dir, & self -> cache_file, true, "%s.cache", self -> path );
                 STATUS ( STAT_GEEK
-                         , "%s - open shared file attempt: fd = %d, rc = $R\n"
+                         , "%s - open shared file attempt: fd = %d, rc = %R\n"
                          , __func__
-                         , KFileGetSysFile ( self -> cache_file, & dummy ) -> fd
+                         , ( rc == 0 ) ? KFileGetSysFile ( self -> cache_file, & dummy ) -> fd : -1
                          , rc
                     );
                 if ( rc == 0 )

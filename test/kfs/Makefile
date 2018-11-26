@@ -36,6 +36,7 @@ TEST_TOOLS = \
 	test-resolve \
 	test-cachetee \
 	test-cachetee2 \
+	test-cachetee3 \
 	test-lru-cache \
 	test-kfs-md5
 
@@ -177,6 +178,27 @@ $(TEST_BINDIR)/test-cachetee2: $(TEST_CACHETEE2_OBJ)
 
 cachetee2: $(TEST_BINDIR)/test-cachetee2
 	$(TEST_BINDIR)/test-cachetee2
+
+#-------------------------------------------------------------------------------
+# test-cachetee3
+#
+TEST_CACHETEE3_SRC = \
+	cachetee3test
+
+TEST_CACHETEE3_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_CACHETEE3_SRC))
+
+TEST_CACHETEE3_LIB = \
+	-lkapp \
+    -sncbi-vdb \
+	-lktst
+
+$(TEST_BINDIR)/test-cachetee3: $(TEST_CACHETEE3_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_CACHETEE3_LIB)
+	rm *.o *.d
+
+cachetee3: $(TEST_BINDIR)/test-cachetee3
+	$(TEST_BINDIR)/test-cachetee3
 
 #-------------------------------------------------------------------------------
 # test-lru-cache
