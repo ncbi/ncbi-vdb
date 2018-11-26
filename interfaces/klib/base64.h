@@ -42,11 +42,36 @@ extern "C" {
 struct String;
 struct KDataBuffer;
 
-rc_t encodeBase64 ( struct String const ** encoded, const void * data, size_t bytes );
-rc_t decodeBase64 ( struct KDataBuffer * decoded, struct String const * encoding );
+/* encodeBase64
+ *  encode a buffer of binary data as string of base64 ASCII characters
+ *
+ *  "encoded" [ OUT ] - base64 encoded string representing input data
+ *  must be freed with StringWhack() [ see <klib/text.h> ]
+ *
+ *  "data" [ IN ] and "bytes" [ IN ] - buffer of binary data to be encoded
+ */
+KLIB_EXTERN rc_t CC encodeBase64 ( struct String const ** encoded, const void * data, size_t bytes );
 
-rc_t encodeBase64URL ( struct String const ** encoded, const void * data, size_t bytes );
-rc_t decodeBase64URL ( struct KDataBuffer * decoded, struct String const * encoding );
+
+/* decodeBase64
+ *  decode a string of base64 ASCII characters into a buffer of binary data
+ *
+ *  "decoded" [ OUT ] - pointer to an UNINITIALIZED KDataBuffer structure that
+ *  will be initialized by the function to contain decoded binary data. must be
+ *  freed with KDataBufferWhack() [ see <klib/data-buffer.h> ]
+ *
+ *  "encoding" [ IN ] - base64-encoded text representation of data
+ */
+KLIB_EXTERN rc_t CC decodeBase64 ( struct KDataBuffer * decoded, struct String const * encoding );
+
+
+/* encodeBase64URL
+ * decodeBase64URL
+ *  identical to simple base-64 codec functions above,
+ *  except that base-64-URL encoding is used.
+ */
+KLIB_EXTERN rc_t CC encodeBase64URL ( struct String const ** encoded, const void * data, size_t bytes );
+KLIB_EXTERN rc_t CC decodeBase64URL ( struct KDataBuffer * decoded, struct String const * encoding );
 
 
 #ifdef __cplusplus
