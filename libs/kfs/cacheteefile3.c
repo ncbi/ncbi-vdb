@@ -684,7 +684,7 @@ uint32_t bmword_contig_bits ( const bmap_t word, const uint32_t initial_bit_pos,
 
     /* handle edge case "c" when "word + first_one_value" will roll over to 0 */
     if ( first_zero_pos < 0 )
-        return 32 - first_one_pos;
+        return BMWORDSIZE - first_one_pos;
 
     * found_zero = true;
     assert ( first_one_pos < first_zero_pos );
