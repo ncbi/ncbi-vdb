@@ -134,7 +134,8 @@ KLIB_SRC = \
 	btree \
 	json \
 	json-grammar \
-	json-lex
+	json-lex \
+	base64
 #	path
 
 ifeq (win,$(OS))
