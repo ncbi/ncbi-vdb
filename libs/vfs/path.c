@@ -506,6 +506,10 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
     const char realign_ext[] = ".realign";
     size_t realign_ext_size = sizeof(realign_ext) / sizeof(realign_ext[0]) - 1;
 
+    bool vdbcache_ext_present = false;
+    const char vdbcache_ext[] = ".vdbcache";
+    size_t vdbcache_ext_size = sizeof(vdbcache_ext) / sizeof(vdbcache_ext[0]) - 1;
+
     /* remove pileup extension before parsing, so that it won't change parsing results */
     if ( uri_size > pileup_ext_size && memcmp(&uri[uri_size - pileup_ext_size], pileup_ext, pileup_ext_size) == 0)
     {
@@ -522,6 +526,13 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
         uri_size -= realign_ext_size;
         uri[uri_size] = '\0';
         realign_ext_present = true;
+    }
+
+    /* detect vdbcahde extension */
+    else if (uri_size > vdbcache_ext_size && memcmp
+        (&uri[uri_size - vdbcache_ext_size], vdbcache_ext, vdbcache_ext_size) == 0)
+    {
+        vdbcache_ext_present = true;
     }
 
     for ( i = anchor = 0, total = count = 0; i < uri_size; ++ total, ++ count, i += bytes )
@@ -1939,6 +1950,11 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
             ++acc_ext;
 
         self->sraClass = eSCrealign;
+    }
+    /* record dbcache type */
+    else if (vdbcache_ext_present)
+    {
+        self->sraClass = eSCvdbcache;
     }
 
     switch ( state )

@@ -139,6 +139,7 @@ struct VResolverAccToken
     String ext1;
     String ext2;
     String suffix;
+    bool   vdbcache;
 };
 
 static
@@ -149,6 +150,8 @@ void VResolverAccTokenInitFromOID ( VResolverAccToken *t, const String *acc )
     t -> acc = t -> digits = * acc;
     t -> ext1 = t -> ext2 = t -> prefix;
     t -> suffix = t -> prefix;
+
+    t -> vdbcache = false;
 }
 
 /*--------------------------------------------------------------------------
@@ -330,23 +333,26 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
         break;
     case algSRAFlat:
         rc = string_printf ( expanded, bsize, size,
-            "%S%S.sra", & tok -> alpha, & tok -> digits );
+            "%S%S.%s", & tok -> alpha, & tok -> digits, tok -> vdbcache ? "vdbcache" : "sra" );
         break;
     case algSRA1024:
         num = ( uint32_t ) strtoul ( tok -> digits . addr, NULL, 10 );
         rc = string_printf ( expanded, bsize, size,
-            "%S/%06u/%S%S.sra", & tok -> alpha, num >> 10, & tok -> alpha, & tok -> digits );
+            "%S/%06u/%S%S.%s", & tok -> alpha, num >> 10, & tok -> alpha, & tok -> digits,
+                               tok -> vdbcache ? "vdbcache" : "sra" );
         break;
     case algSRA1000:
         num = ( uint32_t ) ( tok -> alpha . size + tok -> digits . size - 3 );
         rc = string_printf ( expanded, bsize, size,
-            "%S/%.*S/%S%S.sra", & tok -> alpha, num, & tok -> acc, & tok -> alpha, & tok -> digits );
+            "%S/%.*S/%S%S.%s", & tok -> alpha, num, & tok -> acc, & tok -> alpha, & tok -> digits,
+                               tok -> vdbcache ? "vdbcache" : "sra" );
         break;
     case algFUSE1000:
         num = ( uint32_t ) ( tok -> alpha . size + tok -> digits . size - 3 );
         rc = string_printf ( expanded, bsize, size,
-            "%S/%.*S/%S%S/%S%S.sra", & tok -> alpha, num, & tok -> acc, 
-            & tok -> alpha, & tok -> digits, & tok -> alpha, & tok -> digits );
+            "%S/%.*S/%S%S/%S%S.%s", & tok -> alpha, num, & tok -> acc, 
+            & tok -> alpha, & tok -> digits, & tok -> alpha, & tok -> digits,
+            tok -> vdbcache ? "vdbcache" : "sra" );
         break;
     case algREFSEQ:
         if ( ! legacy_wgs_refseq )
@@ -387,12 +393,14 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
     case algSRA_NCBI:
         num = ( uint32_t ) strtoul ( tok -> digits . addr, NULL, 10 );
         rc = string_printf ( expanded, bsize, size,
-            "%S/%06u/%S%S", & tok -> alpha, num >> 10, & tok -> alpha, & tok -> digits );
+            "%S/%06u/%S%S%s", & tok -> alpha, num >> 10, & tok -> alpha, & tok -> digits,
+                              tok -> vdbcache ? ".vdbcache" : "" );
         break;
     case algSRA_EBI:
         num = ( uint32_t ) ( tok -> alpha . size + tok -> digits . size - 3 );
         rc = string_printf ( expanded, bsize, size,
-            "%S/%.*S/%S%S", & tok -> alpha, num, & tok -> acc, & tok -> alpha, & tok -> digits );
+            "%S/%.*S/%S%S%s", & tok -> alpha, num, & tok -> acc, & tok -> alpha, & tok -> digits,
+                              tok -> vdbcache ? ".vdbcache" : "" );
         break;
 
     case algNANNOTFlat:
@@ -2167,6 +2175,9 @@ uint32_t get_accession_code ( const String * accession, VResolverAccToken *tok )
     acc = accession -> addr;
     size = accession -> size;
 
+
+    tok -> vdbcache = false;
+
     /* capture the whole accession */
     tok -> acc = * accession;
 
@@ -2275,6 +2286,12 @@ uint32_t get_accession_code ( const String * accession, VResolverAccToken *tok )
     else if (string_cmp(acc, size, "realign", 7, size + 7) == 0)
     {
         i = 7;
+    }
+    /* check vdbcache extension */
+    else if (string_cmp(acc, size, "vdbcache", 8, size + 8) == 0)
+    {   /* vdbcache uses the same code as its accession */
+        tok -> vdbcache = true;
+        return code;
     }
     else
     {

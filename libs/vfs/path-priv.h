@@ -70,6 +70,7 @@ typedef enum {
     eSCrun,
     eSCpileup,
     eSCrealign,
+    eSCvdbcache,
 } ESraClass;
 /*
 * VPath

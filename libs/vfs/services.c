@@ -182,48 +182,6 @@ static rc_t HResolver ( H * self, const String * ticket,
     return rc;
 }
 
-static rc_t VFSManagerMakeVdbcache ( const VFSManager * self,
-    const VPath * orig, VPath ** vdbcache, bool * exists )
-{
-    char c [ PATH_MAX ] = "";
-    String str;
-
-    size_t len = 4;
-
-    rc_t rc = VPathGetPath ( orig, & str );
-    if ( rc != 0 )
-        return rc;
-
-    assert ( vdbcache );
-    * vdbcache = NULL;
-
-    if ( str .size <= len
-        || memcmp ( str . addr + str . size - len, ".sra", len ) != 0 )
-    {   len = 0; }
-
-    rc = string_printf ( c, sizeof c, NULL, "%.*s.vdbcache",
-                                (uint32_t) str . size - len, str . addr );
-    if ( rc != 0 )
-        return rc;
-
-    rc = VPathMake ( vdbcache, c );
-
-    if ( exists ) {
-        * exists = false;
-
-        if ( rc == 0 ) {
-            const KFile * f = NULL;
-            rc_t rc = VFSManagerOpenFileRead ( self, & f, * vdbcache );
-            if ( rc == 0 ) {
-                * exists = true;
-                RELEASE ( KFile, f );
-            }
-        }
-    }
-
-    return rc;
-}
-
 static rc_t _VFSManagerVPathMakeAndTest ( const VFSManager * self,
     const char * outFile, const VPath ** aPath, bool * exists )
 {
@@ -308,43 +266,14 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
         else if ( VPathFromUri ( path ) ) {
             cacheRc = VResolverQueryWithDir ( self, protocols, query,
                 NULL, NULL, & cache, false, outDir, NULL, true, path, mapping);
-            if ( cacheRc == 0 && ff == eSFFVdbcache && rc == 0 ) {
-                VPath * path = NULL;
-                cacheRc = VFSManagerMakeVdbcache ( mgr, cache, & path, NULL );
-                VPathRelease ( cache );
-                cache = path;
-            }
             localRc = VResolverQueryWithDir ( self, protocols, query,
                 & local, NULL, NULL, false, outDir, NULL, true, path, mapping);
         }
         else {
             cacheRc = VResolverQuery ( self, protocols, query,
                                     NULL, NULL, & cache );
-            if ( cacheRc == 0 && ff == eSFFVdbcache && rc == 0 ) {
-                VPath * path = NULL;
-                cacheRc = VFSManagerMakeVdbcache ( mgr, cache, & path, NULL );
-                VPathRelease ( cache );
-                cache = path;
-            }
             localRc = VResolverQuery ( self, protocols, query,
                                     & local, NULL, NULL );
-        }
-
-        if ( ff == eSFFVdbcache && rc == 0 ) {
-            if ( localRc == 0 ) {
-                bool exists = false;
-                VPath * path = NULL;
-                localRc = VFSManagerMakeVdbcache ( mgr, local, & path,
-                                                 & exists );
-                VPathRelease ( local );
-                if ( ! exists ) {
-                    if ( localRc == 0 )
-                        localRc = RC ( rcVFS, rcResolver, rcResolving,
-                                              rcName, rcNotFound );
-                    RELEASE ( VPath, path );
-                }
-                local = path;
-            }
         }
 
         VPathSetMakeQuery ( result, local, localRc, cache, cacheRc );
