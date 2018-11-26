@@ -117,7 +117,7 @@ static rc_t _KNSManager_Read(struct KNSManager * self,
 
     KClientHttpRequest *req = NULL;
 
-    int32_t timeout = 25; /* milliseconds */
+    int32_t timeout = 1; /* milliseconds */
     int32_t msec = self->conn_timeout;
 
     /* avoid connection retry loop in KNSManagerMakeRetryTimedConnection */
