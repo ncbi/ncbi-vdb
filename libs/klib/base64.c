@@ -30,6 +30,8 @@
 #include <klib/text.h>
 #include <klib/rc.h>
 
+/* don't yet have any indication of how else to do it */
+#define BASE64_PAD_ENCODING 1
 
 // from binary 0..63 to standard BASE64 encoding
 static
@@ -105,19 +107,20 @@ rc_t encodeBase64Impl ( const String ** encoded, const void * data, size_t bytes
 {
     size_t i, j;
     char *buff;
-    // gather encoded output in a string - this is why we wanted to limit the data size
+    /* gather encoded output in a string - this is why we wanted to limit the data size */
     String *encoding;
 
     if ( encoded == NULL )
-        return RC ();
+        return RC ( rcRuntime, rcString, rcEncoding, rcParam, rcNull );
 
     * encoded = NULL;
     
     // allow an empty source
     if ( bytes == 0 )
     {
-        StringInitCString ( encoding, "" );
-        return 0;
+        String empty;
+        CONST_STRING ( & empty, "" );
+        return StringCopy ( encoded, & empty );
     }
     
     // this exception represents an internal error in any case
@@ -128,11 +131,11 @@ rc_t encodeBase64Impl ( const String ** encoded, const void * data, size_t bytes
     // a very large payload will create a very large string allocation
     // and may indicate garbage that could result in a segfault
     if ( bytes >= 0x40000000 )
-        return RC ();
+        return RC ( rcRuntime, rcString, rcEncoding, rcData, rcExcessive );
     
     encoding = malloc ( sizeof *encoding + bytes + 1 );
     if ( encoding == NULL )
-        return RC ();
+        return RC ( rcRuntime, rcString, rcEncoding, rcMemory, rcExhausted );
 
     // perform work in a stack-local buffer to reduce
     // memory manager thrashing when adding to "encoding" string
@@ -229,8 +232,8 @@ rc_t encodeBase64Impl ( const String ** encoded, const void * data, size_t bytes
         default:
         
             // this is theoretically impossible
-            return RC ();
-            //throw JWTException ( __func__, __LINE__, "1 - aaaah!" );
+            free ( encoding );
+            return RC ( rcRuntime, rcString, rcEncoding, rcConstraint, rcViolated );
         }
     }
         
@@ -243,23 +246,35 @@ rc_t encodeBase64Impl ( const String ** encoded, const void * data, size_t bytes
 }
 
 static
-rc_t decodeBase64Impl ( KDataBuffer **decoded, const String *encoding, const char decode_table [] )
+rc_t decodeBase64Impl ( KDataBuffer *decoded, const String *encoding, const char decode_table [] )
 {
+    rc_t rc;
+    
     // base the estimate of decoded size on input size
     // this can be over-estimated due to embedded padding or formatting characters
-    size_t i, j, len = StringSize ( encoding );
+    size_t i, j, len;
     
     uint32_t acc, ac;
-    const unsigned char * en = ( const unsigned char * ) encoding -> addr;
+    const unsigned char * en;
     
     // the returned buffer should be 3/4 the size of the input string,
     // provided that there are no padding bytes in the input
-    size_t bytes = ( ( len + 3 ) / 4 ) * 3;
+    size_t bytes;
+    unsigned char * buff;
+
+    if ( decoded == NULL || encoding == NULL )
+        return RC ( rcRuntime, rcString, rcDecoding, rcParam, rcNull );
+
+    len = StringSize ( encoding );
+    en = ( const unsigned char * ) encoding -> addr;
+    bytes = ( ( len + 3 ) / 4 ) * 3;
     
     // create an output buffer
-    KDataBuffer * decoding;
-    rc_t rc = KDataBufferMakeBytes ( decoding, bytes );
-    unsigned char * buff = decoding -> base;
+    rc = KDataBufferMakeBytes ( decoded, bytes );
+    if ( rc != 0 )
+        return rc;
+    
+    buff = decoded -> base;
     
     // walk across the input string a byte at a time
     // avoid temptation to consume 4 bytes at a time,
@@ -310,7 +325,10 @@ rc_t decodeBase64Impl ( KDataBuffer **decoded, const String *encoding, const cha
             // but it's not allowed in JWT and so is not expected to be in table
             // any other value ( notably -1 ) is illegal
             if ( byte != -3 )
-                rc = RC (); // illegal input characters
+            {
+                KDataBufferWhack ( decoded );
+                return RC ( rcRuntime, rcString, rcDecoding, rcData, rcInvalid );
+            }
         }
     }
     
@@ -325,7 +343,8 @@ rc_t decodeBase64Impl ( KDataBuffer **decoded, const String *encoding, const cha
         // encoding granularity is an octet - 8 bits
         // it MUST be split across two codes - 6 bits each, i.e. 12 bits
         // having only 6 bits in accumulator is illegal
-        return RC (); //malformed input - group with 1 base64 encode character
+        KDataBufferWhack ( decoded );
+        return RC ( rcRuntime, rcString, rcDecoding, rcConstraint, rcViolated );
         
     case 2:
         
@@ -356,34 +375,49 @@ rc_t decodeBase64Impl ( KDataBuffer **decoded, const String *encoding, const cha
     default:
         
         // theoretically impossible
-        return RC (); // aahhh
+        KDataBufferWhack ( decoded );
+        return RC ( rcRuntime, rcString, rcDecoding, rcConstraint, rcViolated );
     }
 
-    KDataBufferResize ( decoding, j );
-    
-    *decoded = decoding;
-    
-    return rc;
+    assert ( j <= bytes );
+    return KDataBufferResize ( decoded, j );
 }
 
-rc_t encodeBase64 ( const String ** encoded, const void * data, size_t bytes )
+/* encodeBase64
+ *  encode a buffer of binary data as string of base64 ASCII characters
+ *
+ *  "encoded" [ OUT ] - base64 encoded string representing input data
+ *  must be freed with StringWhack() [ see <klib/text.h> ]
+ *
+ *  "data" [ IN ] and "bytes" [ IN ] - buffer of binary data to be encoded
+ */
+LIB_EXPORT rc_t CC encodeBase64 ( const String ** encoded, const void * data, size_t bytes )
 {
     return encodeBase64Impl ( encoded, data, bytes, encode_std_table );
 }
 
-rc_t decodeBase64 ( KDataBuffer * decoded, const String * encoding )
-{
-    return decodeBase64Impl ( & decoded, encoding, decode_std_table );
-}
-
-rc_t encodeBase64URL ( const String ** encoded, const void * data, size_t bytes )
+LIB_EXPORT rc_t CC encodeBase64URL ( const String ** encoded, const void * data, size_t bytes )
 {
     return encodeBase64Impl ( encoded, data, bytes, encode_url_table );
 }
 
-rc_t decodeBase64URL ( KDataBuffer * decoded, const String * encoding )
+/* decodeBase64
+ *  decode a string of base64 ASCII characters into a buffer of binary data
+ *
+ *  "decoded" [ OUT ] - pointer to an UNINITIALIZED KDataBuffer structure that
+ *  will be initialized by the function to contain decoded binary data. must be
+ *  freed with KDataBufferWhack() [ see <klib/data-buffer.h> ]
+ *
+ *  "encoding" [ IN ] - base64-encoded text representation of data
+ */
+LIB_EXPORT rc_t CC decodeBase64 ( KDataBuffer * decoded, const String * encoding )
 {
-    return decodeBase64Impl ( & decoded, encoding, decode_url_table );
+    return decodeBase64Impl ( decoded, encoding, decode_std_table );
+}
+
+LIB_EXPORT rc_t CC decodeBase64URL ( KDataBuffer * decoded, const String * encoding )
+{
+    return decodeBase64Impl ( decoded, encoding, decode_url_table );
 }
 
 
