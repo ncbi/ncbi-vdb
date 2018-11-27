@@ -442,7 +442,7 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                                 const VPath * mapping = NULL;
                                 String id;
                                 memset(&id, 0, sizeof id);
-                                rc = KSrvRespFileGetAcc(file, &acc, &tic);
+                                rc = KSrvRespFileGetAccOrName(file, &acc, &tic);
                                 if (rc == 0) {
                                     if (acc != NULL) {
                                         StringInitCString(&id, acc);

@@ -88,8 +88,8 @@ rc_t KSrvRespFileGetFormat ( const struct KSrvRespFile * self,
                              ESrvFileFormat * ff );
 
 /* DON"T FREE RETURNED STRINGS !!! */
-rc_t KSrvRespFileGetAcc ( const struct KSrvRespFile * self, const char ** acc,
-                                                            const char ** tic);
+rc_t KSrvRespFileGetAccOrName ( const struct KSrvRespFile * self,
+                                const char ** out, const char ** tic);
 rc_t KSrvRespFileGetId  ( const struct KSrvRespFile * self, uint64_t * id,
                                                             const char ** tic );
 rc_t KSrvRespFileGetMapping(const struct KSrvRespFile * self,

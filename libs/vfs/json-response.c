@@ -26,6 +26,7 @@
 
 #include <klib/debug.h> /* DBGMSG */
 #include <klib/json.h> /* KJsonObject */
+#include <klib/printf.h> /* string_printf */
 #include <klib/rc.h> /* RC */
 
 #include <vfs/manager.h> /* VFSManagerMake */
@@ -503,12 +504,14 @@ static bool ItemHasLinks ( const Item * self ) {
     return false;
 }
 
-static rc_t ItemAddFormat ( Item * self, const char * cType, const char * name,
+static rc_t ItemAddFormat ( Item * self, const char * cType, const Data * dad,
                      Locations ** added )
 {
+    rc_t rc = 0;
     ESrvFileFormat type = eSFFInvalid;
     int idx = -1;
     Locations * elm = NULL;
+    const char * name = dad == NULL ? NULL : dad -> name;
     if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
     assert ( added );
@@ -590,11 +593,21 @@ static rc_t ItemAddFormat ( Item * self, const char * cType, const char * name,
         elm -> type = type;
     }
 
-    if (elm->name == NULL && name != NULL) {
-        elm->name = strdup(name);
-        if (elm->name == NULL)
-            return RC(rcVFS, rcQuery, rcExecuting,
-                rcMemory, rcExhausted);
+    if (elm->name == NULL ) {
+        if ( name != NULL) {
+            elm->name = strdup(name);
+            if (elm->name == NULL)
+                return RC(rcVFS, rcQuery, rcExecuting,
+                                 rcMemory, rcExhausted);
+	}
+	else if ( type == eSFFVdbcache && dad != NULL && dad -> acc != NULL ) {
+	    uint32_t s = string_measure ( dad -> acc, NULL ) + 1 + 8 + 1;
+            elm->name = calloc ( 1, s );
+            if ( elm->name == NULL )
+                return RC ( rcVFS, rcQuery, rcExecuting,
+                            rcMemory, rcExhausted );
+            rc = string_printf ( elm->name, s, NULL, "%s.vdbcache", dad -> acc );
+	}
     }
 
     * added = elm;
@@ -610,7 +623,7 @@ static rc_t ItemAddFormat ( Item * self, const char * cType, const char * name,
                   ( * added ) -> cType ) );
     }
 
-    return 0;
+    return rc;
 }
 
 rc_t ItemAddVPath ( Item * self, const char * type,
@@ -1559,6 +1572,19 @@ static const char * ItemOrLocationGetName(const Item * item,
     return file->name != NULL ? file->name : item->name;
 }
 
+static /* don't free returned name !!! */
+rc_t LocationsGetVdbcacheName ( const Locations * self, const char ** name )
+{
+    assert ( self && name );
+
+    * name = NULL;
+
+    if ( self -> type == eSFFVdbcache )
+        * name = self -> name;
+
+    return 0;
+}
+
 static
 rc_t LocationsInitMapping ( Locations * self, const Item * item )
 {
@@ -1664,7 +1690,7 @@ static rc_t ItemAddElms ( Item * self, const KJsonObject * node,
 
         if ( format != NULL || value != NULL ) {
             Locations * elm = NULL;
-            rc = ItemAddFormat ( self, format, data.name, & elm );
+            rc = ItemAddFormat ( self, format, & data, & elm );
             if ( rc == 0 && elm != NULL ) {
                 if (THRESHOLD > THRESHOLD_ERROR)
                     DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
@@ -2348,13 +2374,11 @@ rc_t KSrvRespFileGetAccOrId(const KSrvRespFile * self,
     return 0;
 }
 
-rc_t KSrvRespFileGetAcc ( const KSrvRespFile * self, const char ** acc,
-                                                const char ** tic)
+static
+rc_t KSrvRespFileGetAccNoTic ( const KSrvRespFile * self, const char ** acc )
 {
-    assert ( self && self -> item && acc && tic );
-
-    * tic = self -> item -> tic;
-
+    assert ( self && self -> item && acc );
+    
     *acc = self->item->acc;
 
     if (self->item->id <= 0) {
@@ -2364,6 +2388,20 @@ rc_t KSrvRespFileGetAcc ( const KSrvRespFile * self, const char ** acc,
     }
 
     return 0;
+}
+
+/* don't free returned ptr-s !!! */
+rc_t KSrvRespFileGetAccOrName ( const KSrvRespFile * self, const char ** out,
+                                                           const char ** tic)
+{
+    rc_t rc = 0;
+    assert ( self && self -> item && tic );
+    * tic = self -> item -> tic;
+    rc = LocationsGetVdbcacheName ( self -> file, out );
+    if ( * out != NULL )
+        return rc;
+    else
+        return KSrvRespFileGetAccNoTic ( self, out );
 }
 
 rc_t KSrvRespFileGetId ( const KSrvRespFile * self, uint64_t * id,
