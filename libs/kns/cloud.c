@@ -21,6 +21,8 @@
 *  Please cite the author in any work or product based on this material.
 * ================================================================================== */
 
+#include <kns/extern.h>
+
 #include <kfs/directory.h> /* KDirectoryRelease */
 
 #include <klib/printf.h> /* string_printf */
