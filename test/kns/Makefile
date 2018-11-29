@@ -167,6 +167,18 @@ $(TEST_BINDIR)/test-cloud: $(CL_OBJ)
 	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
 #----------------------------------------------------------------
+# test-cloud
+
+CL_SRC = \
+	test-cloud
+
+CL_OBJ = \
+	$(addsuffix .$(OBJX),$(CL_SRC))
+
+$(TEST_BINDIR)/test-cloud: $(CL_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+#----------------------------------------------------------------
 # test200for-whole-file
 #
 K2_SRC = \

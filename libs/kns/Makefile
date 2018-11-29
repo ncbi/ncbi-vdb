@@ -80,6 +80,7 @@ KNS_NO_HTTP_SRC = \
 	manager \
 	proxy \
 	buffered-stream \
+	cloud \
 	stream \
 	stream-from-files \
 	stream-from-streams \

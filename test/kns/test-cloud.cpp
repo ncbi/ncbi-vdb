@@ -23,12 +23,18 @@
 * =========================================================================== */
 
 #include <kapp/args.h> /* Args */
+
 #include <kfg/config.h> /* KConfigDisableUserSettings */
+
+#include <kns/cloud.h> /* KNSManagerMakeAwsAuthenticationHeader */
 #include <kns/manager.h> /* KNSManagerRelease */
+
 #include <ktst/unit_test.hpp> /* TEST_SUITE_WITH_ARGS_HANDLER */
+
 #include "../../libs/kns/cloud.h" /* KNSManagerMakeCloud */
 
 using std::cout;
+using std::string;
 
 static rc_t argsHandler(int argc, char* argv[]) {
     Args* args = NULL;
@@ -39,7 +45,7 @@ static rc_t argsHandler(int argc, char* argv[]) {
 
 TEST_SUITE_WITH_ARGS_HANDLER(TestCloud, argsHandler)
 
-TEST_CASE(Test) {
+TEST_CASE(TestLocation) {
     KNSManager * mgr = NULL;
     REQUIRE_RC(KNSManagerMake(&mgr));
 
@@ -55,6 +61,27 @@ TEST_CASE(Test) {
     REQUIRE_RC(CloudRelease(cloud));
 
     REQUIRE_RC(KNSManagerRelease(mgr));
+}
+
+/* https://docs.aws.amazon.com/AmazonS3/latest/dev/RESTAuthentication.html
+#RESTAuthenticationExamples */
+TEST_CASE(TestAuthentication) {
+    char authentication[96] = "";
+
+    const char AWSAccessKeyId[] = "AKIAIOSFODNN7EXAMPLE";
+    const char AWSSecretAccessKey[] = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY";
+    const char StringToSign[] =
+        "GET\n"
+        "\n"
+        "\n"
+        "Tue, 27 Mar 2007 19:36:42 +0000\n"
+        "/johnsmith/photos/puppy.jpg";
+    REQUIRE_RC(KNSManagerMakeAwsAuthenticationHeader(NULL,
+        AWSAccessKeyId, AWSSecretAccessKey, StringToSign,
+        authentication, sizeof authentication));
+
+    REQUIRE_EQ(string(authentication),
+        string("AWS AKIAIOSFODNN7EXAMPLE:bWq2s1WEIj+Ydj0vQ697zp+IXMU="));
 }
 
 const char UsageDefaultName[] = "test-cloud";
