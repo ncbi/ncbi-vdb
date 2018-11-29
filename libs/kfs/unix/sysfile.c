@@ -72,6 +72,9 @@ struct KSysFile_v1;
 #define USE_NO_TIMEOUT_TTY 0
 #endif
 
+#if ! LINUX
+#define POLLRDHUP 0
+#endif
 
 /*--------------------------------------------------------------------------
  * KSysFile
