@@ -432,12 +432,13 @@ LIB_EXPORT rc_t CC KConditionTimedWait ( KCondition *self, struct KLock *lock, t
     int status;
     timespec ts;
 
+    if ( tm == NULL )
+        return KConditionWait ( self, lock );
+
     if ( self == NULL )
         return RC ( rcPS, rcCondition, rcWaiting, rcSelf, rcNull );
     if ( lock == NULL )
         return RC ( rcPS, rcCondition, rcWaiting, rcLock, rcNull );
-    if ( tm == NULL )
-        return RC ( rcPS, rcCondition, rcWaiting, rcTimeout, rcNull );
 
     if ( ! tm -> prepared )
         TimeoutPrepare ( tm );
