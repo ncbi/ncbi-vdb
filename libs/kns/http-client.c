@@ -3266,7 +3266,7 @@ static rc_t KClientHttpRequestFormatMsgBegin (
     if ( ! http -> proxy_ep )
     {   /* direct connection */
         rc = string_printf ( buffer, bsize, len, 
-                             "%s %S%s%S HTTP/%.2V\r\nHost: %S\r\nAccept: */*\r\n"
+                             "%s %S%s%S HTTP/%.2V\r\nHost: %S\r\n"
                              , method
                              , & self -> url_block . path
                              , has_query
@@ -3280,7 +3280,7 @@ static rc_t KClientHttpRequestFormatMsgBegin (
         if ( http -> uf == eUFOrigin ) {
         /* the host does not like absoluteURI: use abs_path ( origin-form ) */
             rc = string_printf ( buffer, bsize, len, 
-                         "%s %S%s%S HTTP/%.2V\r\nHost: %S:%u\r\nAccept: */*\r\n"
+                         "%s %S%s%S HTTP/%.2V\r\nHost: %S:%u\r\n"
                              , method
                              , & self -> url_block . path
                              , has_query
@@ -3292,7 +3292,7 @@ static rc_t KClientHttpRequestFormatMsgBegin (
         }
         else if ( http -> port != 80 ) { /* absoluteURI: non-default port */
             rc = string_printf ( buffer, bsize, len, 
-                             "%s %S://%S:%u%S%s%S HTTP/%.2V\r\nHost: %S\r\nAccept: */*\r\n"
+                             "%s %S://%S:%u%S%s%S HTTP/%.2V\r\nHost: %S\r\n"
                              , method
                              , & self -> url_block . scheme
                              , & hostname
@@ -3306,7 +3306,7 @@ static rc_t KClientHttpRequestFormatMsgBegin (
         }
         else {                           /* absoluteURI: default port */
             rc = string_printf ( buffer, bsize, len, 
-                             "%s %S://%S%S%s%S HTTP/%.2V\r\nHost: %S\r\nAccept: */*\r\n"
+                             "%s %S://%S%S%s%S HTTP/%.2V\r\nHost: %S\r\n"
                              , method
                              , & self -> url_block . scheme
                              , & hostname
@@ -3330,7 +3330,9 @@ rc_t CC KClientHttpRequestFormatMsg ( const KClientHttpRequest *self,
     rc_t rc;
     rc_t r2 = 0;
     bool have_user_agent = false;
+    bool have_accept = false;
     String user_agent_string;
+    String accept_string;
     size_t total;
     size_t p_bsize = 0;
     const KHttpHeader *node;
@@ -3348,6 +3350,7 @@ rc_t CC KClientHttpRequestFormatMsg ( const KClientHttpRequest *self,
     }
 
     CONST_STRING ( &user_agent_string, "User-Agent" );
+    CONST_STRING(&accept_string, "Accept");
 
     /* start building the buffer that will be sent 
        We are inlining the host:port, instead of
@@ -3370,6 +3373,11 @@ rc_t CC KClientHttpRequestFormatMsg ( const KClientHttpRequest *self,
         {
             if ( StringCaseCompare ( & node -> name, & user_agent_string ) == 0 )
                 have_user_agent = true;
+        }
+        /* look for "Accept" */
+        else if (!have_accept && node->name.len == 6) {
+            if (StringCaseCompare(&node->name, &accept_string) == 0)
+                have_accept = true;
         }
 
         p_bsize = bsize >= total ? bsize - total : 0;
@@ -3400,6 +3408,13 @@ rc_t CC KClientHttpRequestFormatMsg ( const KClientHttpRequest *self,
                 rc = r2;
             }
         }
+    }
+
+    if (!have_accept) {
+        r2 = string_printf(&buffer[total], p_bsize, len, "Accept: */*\r\n");
+        total += *len;
+        if (rc == 0 && r2 != 0)
+            rc = r2;
     }
 
     /* add terminating empty header line */

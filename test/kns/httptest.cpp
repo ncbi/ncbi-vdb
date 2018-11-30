@@ -38,6 +38,7 @@
 #include <kns/manager.h>
 #include <kns/kns-mgr-priv.h>
 #include <kns/http.h>
+#include <kns/http-priv.h> /* KClientHttpRequestFormatMsg */
 
 #include <../libs/kns/mgr-priv.h>
 #include <../libs/kns/http-priv.h>
@@ -957,6 +958,27 @@ TEST_CASE ( TestKClientHttpResultTestHeaderValue ) {
     RELEASE ( KNSManager, mgr );
 
     REQUIRE_RC ( rc );
+}
+
+TEST_CASE(TestAcceptHeader) {
+    rc_t rc = 0;
+    KNSManager * mgr = NULL;
+    REQUIRE_RC(KNSManagerMake(&mgr));
+    KClientHttp * http = NULL;
+    REQUIRE_RC(KNSManagerMakeHttp(mgr, &http,
+        NULL, 0x01010000, &s_v.host, 80));
+    string url("http://" HOST);
+    KClientHttpRequest * req = NULL;
+    REQUIRE_RC(KClientHttpMakeRequest(http, &req, url.c_str()));
+    REQUIRE_RC(KClientHttpRequestAddHeader(req, "Accept", "text/html"));
+    char buffer[4096] = "";
+    REQUIRE_RC(KClientHttpRequestFormatMsg(req,
+        buffer, sizeof buffer, "HEAD", NULL, 1));
+    REQUIRE(strstr(buffer, "Accept: */*") == NULL);
+    RELEASE(KClientHttpRequest, req);
+    RELEASE(KClientHttp, http);
+    RELEASE(KNSManager, mgr);
+    REQUIRE_RC(rc);
 }
 
 TEST_CASE ( AllowAllCertificates )
