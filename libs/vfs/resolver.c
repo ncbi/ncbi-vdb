@@ -768,11 +768,22 @@ rc_t VPathCheckFromNamesCGI ( const VPath * path, const String *ticket, const VP
 
     if ( path -> query . size != 0 )
     {
+        bool skip = false;
+
         String name, val, req, host;
 
         CONST_STRING(&host, "storage.googleapis.com");
         /* googleapis URLs han have query */
-        if (!StringEqual(&path->host, &host)) {
+        if (StringEqual(&path->host, &host))
+            skip = true;
+        else {
+            CONST_STRING(&host, "nih-nhlbi-datacommons.s3.amazonaws.com");
+            /* amazonaws URLs han have query */
+            if (StringEqual(&path->host, &host))
+                skip = true;
+        }
+
+        if (!skip) {
             /* query must match ticket */
             if (ticket == NULL)
                 return RC(rcVFS, rcResolver, rcResolving,
