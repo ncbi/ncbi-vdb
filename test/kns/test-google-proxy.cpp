@@ -55,11 +55,14 @@ TEST_CASE ( GoogleProxyTest ) {
     REQUIRE_RC ( KNSManagerSetAllowAllCerts ( mgr, true ) );
 
     /* skip certificate vaildation; direct (no proxy) connection*/
+#if GOOGLE_FILE_EXISTS
     REQUIRE_RC ( KNSManagerMakeHttpFile ( mgr, & file, NULL, 0x01010000,
        "https://storage.googleapis.com/yan-blastdb/2018-09-12-08-33-02/fuse.xml"
       ) );
+#endif
 
     REQUIRE_RC ( KFileRelease ( file ) );
+    file = NULL;
 
     REQUIRE_RC ( KConfigWriteString ( KFG, "/tls/allow-all-certs", "true" ) );
     REQUIRE_RC ( KConfigWriteString ( KFG, "/http/proxy/only", "true" ) );
@@ -93,19 +96,23 @@ TEST_CASE ( GoogleProxyTest ) {
     REQUIRE_RC ( KFileRead ( file, 0, buffer, sizeof buffer, & num_read ) );
 
     REQUIRE_RC ( KFileRelease ( file ) );
+    file = NULL;
 
     /* special connection via proxy:
        format HTTP request in KClientHttpRequestFormatMsgBegin using
        origin-form (absolute-path) of Request-URI 
        ( https://tools.ietf.org/html/rfc7230#section-5.3.1 ) */
+#if GOOGLE_FILE_EXISTS
     REQUIRE_RC ( KNSManagerMakeHttpFile ( mgr, & file, NULL, 0x01010000,
        "https://storage.googleapis.com/yan-blastdb/2018-09-12-08-33-02/fuse.xml"
       ) );
 
     /* reuse the same origin-form stored in KFile */
     REQUIRE_RC ( KFileRead ( file, 0, buffer, sizeof buffer, & num_read ) );
+#endif
 
     REQUIRE_RC ( KFileRelease ( file ) );
+    file = NULL;
 
     REQUIRE_RC ( KNSManagerRelease ( mgr ) );
 }
