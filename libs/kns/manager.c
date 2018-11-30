@@ -101,8 +101,12 @@ rc_t KNSManagerWhack ( KNSManager * self )
 
 #if USE_SINGLETON
     KNSManager * our_mgr = atomic_test_and_set_ptr ( & kns_singleton, NULL, NULL );
-    if ( self == our_mgr )
-        return 0;
+    if ( self == our_mgr ) {
+        if ( ! self -> notSingleton )
+            return 0;
+        else
+            atomic_test_and_set_ptr ( & kns_singleton, NULL, self );
+    }
 #endif
 
     KNSProxiesWhack ( self -> proxies );

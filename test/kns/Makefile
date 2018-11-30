@@ -34,6 +34,7 @@ TEST_TOOLS = \
 	test_allow_all_certificates \
 	test_dis_allow_all_certificates \
 	test-cloud \
+	test-google-proxy \
 	test200for-whole-file \
 	test-kns \
 	test-http-dropconn \
@@ -176,6 +177,18 @@ CL_OBJ = \
 	$(addsuffix .$(OBJX),$(CL_SRC))
 
 $(TEST_BINDIR)/test-cloud: $(CL_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+#----------------------------------------------------------------
+# test-google-proxy
+#
+P_SRC = \
+	test-google-proxy
+
+P_OBJ = \
+	$(addsuffix .$(OBJX),$(P_SRC))
+
+$(TEST_BINDIR)/test-google-proxy: $(P_OBJ)
 	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
 #----------------------------------------------------------------

@@ -48,7 +48,7 @@ extern "C" {
 
 KNS_EXTERN rc_t CC KClientHttpRequestFormatMsg (
     const struct KClientHttpRequest * self, char * buffer,
-    size_t bsize, const char * method, size_t * len );
+    size_t bsize, const char * method, size_t * len, uint32_t uriForm );
 
 KNS_EXTERN rc_t CC KClientHttpResultFormatMsg (
     const struct KClientHttpResult * self, char * buffer,
