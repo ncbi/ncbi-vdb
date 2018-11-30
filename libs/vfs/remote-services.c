@@ -2848,6 +2848,8 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     rc_t rc = 0;
     const SKV * kv = NULL;
 
+    bool anytype = false;
+
     assert ( request );
 
     if ( protocols == eProtocolDefault )
@@ -3046,14 +3048,23 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     if ( request ->format != NULL ) {
         const char n [] = "type";
         const char * v = request->format;
-        rc = SKVMake ( & kv, n, v );
-        if ( rc == 0 ) {
-                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
-                    ( "  %s=%s\n", n, v ) );
-            rc = VectorAppend ( & self -> params, NULL, kv );
+        if (request->format[0] == 'a' &&
+            request->format[1] == 'n' &&
+            request->format[2] == 'y' &&
+            request->format[3] == '\0')
+        {
+            anytype = true;
         }
-        if ( rc != 0 )
-            return rc;
+        else {
+            rc = SKVMake(&kv, n, v);
+            if (rc == 0) {
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
+                    ("  %s=%s\n", n, v));
+                rc = VectorAppend(&self->params, NULL, kv);
+            }
+            if (rc != 0)
+                return rc;
+        }
     }
 
     if (rc == 0 && SVersionResponseInJson(request->version)) {
@@ -3061,7 +3072,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
             /* different query items require to add
             and at the same time not to add filetype=run */
             return request->request.appRc;
-        else if (request->request.app == appSRA) {
+        else if (request->request.app == appSRA && !anytype) {
             const char n[] = "filetype";
             const char v[] = "run";
             rc = SKVMake(&kv, n, v);
