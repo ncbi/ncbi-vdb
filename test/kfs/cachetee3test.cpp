@@ -37,6 +37,7 @@
 
 #include <klib/out.h>
 #include <klib/rc.h>
+#include <klib/time.h>
 
 #include <kproc/thread.h>
 
@@ -51,7 +52,7 @@ using namespace std;
 #define DATAFILE "org.dat"
 #define CACHEFILE "cache.dat"
 #define CACHEFILE1 "cache.dat.cache"
-#define DATAFILESIZE ( ( 1024 * 1024 ) + 300 )
+#define DATAFILESIZE ( ( 1024 * 1024 * 32 ) + 300 )
 #define BLOCKSIZE ( 1024 * 16 )
 
 TEST_SUITE( CacheTeeTests );
@@ -134,30 +135,46 @@ static void report_diff( uint8_t * b1, uint8_t * b2, size_t n, uint32_t max_diff
         }
     }
 }
-
-static rc_t compare_file_content( const KFile * file1, const KFile * file2, uint64_t pos, size_t bytes )
+                           
+static rc_t compare_file_content_1( const KFile * file1, const KFile * file2,
+                                    uint64_t pos, size_t num_bytes, const char * msg )
 {
     rc_t rc = 0;
-    uint8_t * buffer1 = ( uint8_t * )malloc( bytes );
+    uint8_t * buffer1 = ( uint8_t * )malloc( num_bytes );
+    if ( msg != NULL )
+        KOutMsg( "Test: KFileReadAll ( pos %lu, %u bytes, '%s' )\n", pos, num_bytes, msg );
     if ( buffer1 == NULL )
+    {
         rc = RC ( rcRuntime, rcBuffer, rcConstructing, rcMemory, rcExhausted );
+        KOutMsg( "Test: cannot make buffer1 of size %u\n", num_bytes );
+    }
     else
     {
-        uint8_t * buffer2 = ( uint8_t * )malloc( bytes );
+        uint8_t * buffer2 = ( uint8_t * )malloc( num_bytes );
         if ( buffer2 == NULL )
+        {
             rc = RC ( rcRuntime, rcBuffer, rcConstructing, rcMemory, rcExhausted );
+            KOutMsg( "Test: cannot make buffer2 of size %u\n", num_bytes );
+        }
         else
         {
             size_t num_read1;
-            rc = KFileReadAll ( file1, pos, buffer1, bytes, &num_read1 );
-            if ( rc == 0 )
+            rc = KFileReadAll ( file1, pos, buffer1, num_bytes, &num_read1 );
+            if ( rc != 0 )
+                KOutMsg( "Test: KFileReadAll( 1 ) -> %R\n", rc );
+            else
             {
                 size_t num_read2;
-                rc = KFileReadAll ( file2, pos, buffer2, bytes, &num_read2 );
-                if ( rc == 0 )
+                rc = KFileReadAll ( file2, pos, buffer2, num_bytes, &num_read2 );
+                if ( rc != 0 )
+                    KOutMsg( "Test: KFileReadAll( 2 ) -> %R\n", rc );
+                else
                 {
                     if ( num_read1 != num_read2 )
+                    {
                         rc = RC ( rcRuntime, rcBuffer, rcReading, rcMemory, rcInvalid );
+                        KOutMsg( "Test %d vs %d\n", num_read1, num_read2 );
+                    }
                     else
                     {
                         int diff = memcmp( buffer1, buffer2, num_read1 );
@@ -176,6 +193,126 @@ static rc_t compare_file_content( const KFile * file1, const KFile * file2, uint
     return rc;
 }
 
+static rc_t compare_file_content_2( const KFile * file1, const KFile * file2,
+                                    uint64_t pos, size_t num_bytes, const char * msg )
+{
+    rc_t rc = 0;
+    uint8_t * buffer1 = ( uint8_t * )malloc( num_bytes );
+    if ( msg != NULL )
+        KOutMsg( "Test: KFileReadExactly ( pos %lu, %u bytes, '%s' )\n", pos, num_bytes, msg );
+    if ( buffer1 == NULL )
+    {
+        rc = RC ( rcRuntime, rcBuffer, rcConstructing, rcMemory, rcExhausted );
+        KOutMsg( "Test: cannot make buffer1 of size %u\n", num_bytes );
+    }
+    else
+    {
+        uint8_t * buffer2 = ( uint8_t * )malloc( num_bytes );
+        if ( buffer2 == NULL )
+        {
+            rc = RC ( rcRuntime, rcBuffer, rcConstructing, rcMemory, rcExhausted );
+            KOutMsg( "Test: cannot make buffer2 of size %u\n", num_bytes );
+        }
+        else
+        {
+            rc = KFileReadExactly ( file1, pos, buffer1, num_bytes );
+            if ( rc != 0 )
+                KOutMsg( "Test: KFileReadExactly( 1 ) -> %R\n", rc );
+            else
+            {
+                rc = KFileReadExactly ( file2, pos, buffer2, num_bytes );
+                if ( rc != 0 )
+                    KOutMsg( "Test: KFileReadExactly( 2 ) -> %R\n", rc );
+                else
+                {
+                    int diff = memcmp( buffer1, buffer2, num_bytes );
+                    if ( diff != 0 )
+                    {
+                        report_diff( buffer1, buffer2, num_bytes, 20 );
+                        rc = RC ( rcRuntime, rcBuffer, rcReading, rcMemory, rcCorrupt );
+                    }
+                }
+            }
+            free( buffer2 );
+        }
+        free( buffer1 );
+    }
+    return rc;
+}
+
+static rc_t read_all_loop( const KFile * f, uint64_t pos, uint8_t * buffer, size_t to_read )
+{
+    rc_t rc = 0;
+    size_t num_read_total = 0;
+    uint32_t loop = 1;
+    uint8_t * dst = buffer;
+    KOutMsg( "read_all_loop( at %lu, %u bytes )\n", pos, to_read );
+    while( rc == 0 && num_read_total < to_read )
+    {
+        size_t num_read, n = to_read - num_read_total;
+        rc = KFileRead ( f, pos, dst, n, &num_read );
+        if ( rc != 0 )
+        {
+            KOutMsg( "Test: KFileRead( at %lu, %u bytes ) -> %R\n", pos, n, rc );
+            if ( rcExhausted == GetRCState( rc ) && rcTimeout == GetRCObject( rc ) )
+            {
+                KSleepMs( 50 );
+                rc = 0;
+            }
+        }
+        else
+        {
+            KOutMsg( "#%d read_all_loop( at %lu, %u bytes ) -> %u bytes\n", loop++, pos, n, num_read );
+            num_read_total += num_read;
+            pos += num_read;
+            dst += num_read;
+        }
+    }
+    return rc;
+}
+
+static rc_t compare_file_content_3( const KFile * file1, const KFile * file2,
+                                    uint64_t pos, size_t num_bytes, const char * msg )
+{
+    rc_t rc = 0;
+    uint8_t * buffer1 = ( uint8_t * )malloc( num_bytes );
+    if ( msg != NULL )
+        KOutMsg( "Test: read_all_loop( pos %lu, %u bytes, '%s' )\n", pos, num_bytes, msg );
+    if ( buffer1 == NULL )
+    {
+        rc = RC ( rcRuntime, rcBuffer, rcConstructing, rcMemory, rcExhausted );
+        KOutMsg( "Test: cannot make buffer1 of size %u\n", num_bytes );
+    }
+    else
+    {
+        uint8_t * buffer2 = ( uint8_t * )malloc( num_bytes );
+        if ( buffer2 == NULL )
+        {
+            rc = RC ( rcRuntime, rcBuffer, rcConstructing, rcMemory, rcExhausted );
+            KOutMsg( "Test: cannot make buffer2 of size %u\n", num_bytes );
+        }
+        else
+        {
+            rc = read_all_loop ( file1, pos, buffer1, num_bytes );
+            if ( rc == 0 )
+            {
+                rc = read_all_loop ( file2, pos, buffer2, num_bytes );
+                if ( rc == 0 )
+                {
+                    int diff = memcmp( buffer1, buffer2, num_bytes );
+                    if ( diff != 0 )
+                    {
+                        report_diff( buffer1, buffer2, num_bytes, 20 );
+                        rc = RC ( rcExe, rcBuffer, rcReading, rcMemory, rcCorrupt );
+                    }
+                }
+            }
+            free( buffer2 );
+        }
+        free( buffer1 );
+    }
+    return rc;
+}
 
 static rc_t read_partial( const KFile * src, size_t block_size, uint64_t to_read )
 {
@@ -245,6 +382,8 @@ static void finish_cachetee_tests( void )
 }
 
 //////////////////////////////////////////// Test-cases
+
+/*
 TEST_CASE( CacheTee3_Basic )
 {
     KOutMsg( "Test: CacheTee3_Basic\n" );
@@ -268,7 +407,10 @@ TEST_CASE( CacheTee3_Basic )
     const KFile * cache;
     REQUIRE_RC( KDirectoryOpenFileRead( dir, &cache, "%s.cache", CACHEFILE ) );
     
-#if 0    
+    KOutMsg( "Test: CacheTee3 file opened\n" );
+
+    if ( false )
+    {
     bool is_complete;
     REQUIRE_RC( CacheTee3FileIsComplete( cache, &is_complete ) );    
     REQUIRE( !is_complete );
@@ -278,11 +420,192 @@ TEST_CASE( CacheTee3_Basic )
     REQUIRE_RC( CacheTee3FileGetCompleteness( cache, &percent, &bytes_in_cache ) );
     REQUIRE( ( percent == 0.0 ) );
     REQUIRE( ( bytes_in_cache == 0 ) );
-#endif
+    }
 
     REQUIRE_RC( KFileRelease( cache ) );
+    KOutMsg( "Test: CacheTee3 file closed\n" );
+    
     REQUIRE_RC( KDirectoryRelease( dir ) );
 }                                 
+*/
+
+TEST_CASE( CacheTee3_Read )
+{
+    KOutMsg( "Test: CacheTee3_Read\n" );
+    
+    KDirectory * dir;
+    REQUIRE_RC( KDirectoryNativeDir( &dir ) );
+
+    const KFile * org;
+    REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE ) );
+    
+    const KFile * tee;
+    uint32_t cluster_factor = 0;
+    uint32_t ram_pages = 0;
+    REQUIRE_RC( KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org, BLOCKSIZE,
+                                          cluster_factor, ram_pages,
+                                          "%s", CACHEFILE ) );
+
+    uint64_t at = 0;
+    size_t len = 100;
+#if 0
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "small read at pos zero, not yet chached" ) );
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "small read at pos zero, now cached" ) );
+    
+    at = 10;
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "small read at pos 10, cached" ) );
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "again, cached" ) );
+
+    at = 1024L * BLOCKSIZE;
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "small read at block boundary, not yet cached" ) );
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "again, now cached" ) );
+
+    at = BLOCKSIZE / 2; len = BLOCKSIZE;
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "spans 2 blocks, not yet cached" ) );
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "again, now cached" ) );
+
+    len = BLOCKSIZE * 5 + 100;
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "spans 5 blocks, partly cached" ) );
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "again, now cached" ) );
+
+    at = 100; len = 1024 * BLOCKSIZE + 500;
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "large read crossing block boundary, partly cached" ) );
+#endif
+
+    at = 200; len = 256 * BLOCKSIZE;
+    REQUIRE_RC( compare_file_content_3( org, tee, at, len, "very large read, partly cached" ) );
+
+#if 0
+    at = 1024 * BLOCKSIZE * 2 + 10; len = 100;
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "small read after block boundary" ) );
+    at = 1024 * BLOCKSIZE * 2 - 10;
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "small read crossing block boundary" ) );
+
+    at = DATAFILESIZE - 100; len = 300;
+    REQUIRE_RC( compare_file_content_1( org, tee, at, len, "small read crossing EOF" ) );
+    
+    len = BLOCKSIZE * 10;
+    REQUIRE_RC( compare_file_content_1( org, tee, at, len, "large read crossing EOF" ) );
+
+    at = DATAFILESIZE - 10000; len = 10000;
+    REQUIRE_RC( compare_file_content_1( org, tee, at, len, "large read at EOF" ) );
+
+    at = DATAFILESIZE + 100; len = 100;
+    REQUIRE_RC( compare_file_content_1( org, tee, at, len, "beyond EOF" ) );
+#endif
+
+    REQUIRE_RC( KFileRelease( tee ) );    
+    REQUIRE_RC( KFileRelease( org ) );
+    REQUIRE_RC( KDirectoryRelease( dir ) );
+}
+
+/* ------------------- CacheTee2_Multiple_Users_Multiple_Inst -------------------------------- */
+
+static rc_t cache_access( int tid, int num_threads, const KFile * origfile, const KFile * cacheteefile )
+{
+    rc_t rc;
+    int i;
+    const int num_chunks = 256;
+    int chunk_pos[ num_chunks ];
+    int data_size = ( DATAFILESIZE / num_threads );
+    int data_offset = data_size * ( tid - 1 );
+    int chunk_size;
+    // last thread should read all remaining bytes
+    if ( tid == num_threads )
+        data_size = ( DATAFILESIZE - data_offset );
+    chunk_size = ( data_size / num_chunks );
+
+    for ( i = 0; i < num_chunks; ++i )
+    {
+        chunk_pos[ i ] = i * chunk_size + data_offset;
+    }
+    std::random_shuffle( &chunk_pos[ 0 ], &chunk_pos[ num_chunks ] );
+    for ( i = 0; i < num_chunks; ++i )
+    {
+        rc = compare_file_content_3( origfile, cacheteefile, chunk_pos[ i ], chunk_size, NULL );
+        if ( rc != 0 )
+            break;
+    }
+    if ( rc == 0 )
+        KOutMsg( "Test: Thread #%d OK\n", tid );
+    else
+        KOutMsg( "Test: Thread #%d failed\n", tid );
+                    
+    return rc;
+}
+
+struct ThreadData
+{
+    int tid;
+    int num_threads;
+    const KFile * origfile; // optional
+    const KFile * cacheteefile; // optional
+};
+
+static rc_t CC thread_func( const KThread *self, void *data )
+{
+    ThreadData * td = ( ThreadData * ) data;
+    if ( td -> cacheteefile == NULL || td -> origfile == NULL )
+    {
+        KDirectory * dir;
+        rc_t rc = KDirectoryNativeDir( &dir );
+        if ( rc == 0 )
+        {
+            const KFile * org;
+            rc = KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE );
+            if ( rc == 0 )
+            {
+                const KFile * tee;
+                uint32_t cluster_factor = 0;
+                uint32_t ram_pages = 0;
+                rc = KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org, BLOCKSIZE,
+                                                     cluster_factor, ram_pages,
+                                                     "%s", CACHEFILE );
+                if ( rc == 0 )
+                {
+                    rc = cache_access( td -> tid, td -> num_threads, org, tee );
+                    KFileRelease( tee );
+                }
+                KFileRelease( org );
+            }
+            KDirectoryRelease( dir );
+        }
+        return rc;
+    }
+    return cache_access( td -> tid, td -> num_threads, td -> origfile, td -> cacheteefile );
+}
+
+/*
+TEST_CASE( CacheTee2_Multiple_Users_Multiple_Inst )
+{
+    KOutMsg( "Test: CacheTee2_Multiple_Users_Multiple_Inst\n" );
+    remove_file( CACHEFILE );
+    remove_file( CACHEFILE1 );
+
+    const int n = 8;
+    KThread * t [ n ];
+    ThreadData td [ n ];
+    rc_t rc = 0;
+    for ( int i = 0; i < n && rc == 0; ++i )
+    {
+        td[ i ].tid = i + 1;
+        td[ i ].num_threads = n;
+        td[ i ].origfile = NULL;
+        td[ i ].cacheteefile = NULL;
+        rc = KThreadMake ( &( t[ i ] ), thread_func, &( td[ i ] ) );
+        REQUIRE_RC( rc );
+    }
+    
+    for ( int i = 0; i < n && rc == 0; ++i )
+    {
+        rc_t rc_thread;
+        rc = KThreadWait ( t[ i ], &rc_thread );
+        REQUIRE_RC( rc );
+        REQUIRE_RC( rc_thread );
+        REQUIRE_RC( KThreadRelease ( t[ i ] ) );
+    }
+}
+*/
 
 //////////////////////////////////////////// Main
 extern "C"
@@ -321,7 +644,8 @@ OptDef TestOptions[] =
 rc_t CC KMain ( int argc, char *argv [] )
 {
     Args * args;
-
+    bool has_info = true;
+    /* we are adding this dummy argument to enable commandline parsing for the verbose flag(s) -vvvvvvvv */
     rc_t rc = ArgsMakeAndHandle( &args, argc, argv,
             1, TestOptions, sizeof TestOptions / sizeof TestOptions [ 0 ] );
     if ( rc == 0 )
@@ -336,6 +660,17 @@ rc_t CC KMain ( int argc, char *argv [] )
         }
         KOutMsg( "and the result is: %R\n", rc );
     }
+
+    /*
+    while( has_info )
+    {
+        rc_t rc1;
+        const char * filename;
+        const char * funcname;
+        uint32_t lineno;
+        has_info = GetUnreadRCInfo ( &rc1, &filename, &funcname, &lineno );    
+    }
+    */
     return rc;
 }
 
