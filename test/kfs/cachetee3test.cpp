@@ -246,15 +246,16 @@ static rc_t read_all_loop( const KFile * f, uint64_t pos, uint8_t * buffer, size
     size_t num_read_total = 0;
     uint32_t loop = 1;
     uint8_t * dst = buffer;
-    KOutMsg( "read_all_loop( at %lu, %u bytes )\n", pos, to_read );
+    /* KOutMsg( "read_all_loop( at %lu, %u bytes )\n", pos, to_read ); */
     while( rc == 0 && num_read_total < to_read )
     {
         size_t num_read, n = to_read - num_read_total;
         rc = KFileRead ( f, pos, dst, n, &num_read );
         if ( rc != 0 )
         {
-            KOutMsg( "Test: KFileRead( at %lu, %u bytes ) -> %R\n", pos, n, rc );
-            if ( rcExhausted == GetRCState( rc ) && rcTimeout == GetRCObject( rc ) )
+            /* KOutMsg( "Test: KFileRead( at %lu, %u bytes ) -> %R\n", pos, n, rc ); */
+            if ( rcExhausted == GetRCState( rc ) && 
+                 ( enum RCObject ) rcTimeout == GetRCObject( rc ) )
             {
                 KSleepMs( 50 );
                 rc = 0;
@@ -262,7 +263,7 @@ static rc_t read_all_loop( const KFile * f, uint64_t pos, uint8_t * buffer, size
         }
         else
         {
-            KOutMsg( "#%d read_all_loop( at %lu, %u bytes ) -> %u bytes\n", loop++, pos, n, num_read );
+            /* KOutMsg( "#%d read_all_loop( at %lu, %u bytes ) -> %u bytes\n", loop++, pos, n, num_read ); */
             num_read_total += num_read;
             pos += num_read;
             dst += num_read;
@@ -383,7 +384,6 @@ static void finish_cachetee_tests( void )
 
 //////////////////////////////////////////// Test-cases
 
-/*
 TEST_CASE( CacheTee3_Basic )
 {
     KOutMsg( "Test: CacheTee3_Basic\n" );
@@ -409,8 +409,7 @@ TEST_CASE( CacheTee3_Basic )
     
     KOutMsg( "Test: CacheTee3 file opened\n" );
 
-    if ( false )
-    {
+    /*
     bool is_complete;
     REQUIRE_RC( CacheTee3FileIsComplete( cache, &is_complete ) );    
     REQUIRE( !is_complete );
@@ -420,14 +419,14 @@ TEST_CASE( CacheTee3_Basic )
     REQUIRE_RC( CacheTee3FileGetCompleteness( cache, &percent, &bytes_in_cache ) );
     REQUIRE( ( percent == 0.0 ) );
     REQUIRE( ( bytes_in_cache == 0 ) );
-    }
-
+    */
+    
     REQUIRE_RC( KFileRelease( cache ) );
     KOutMsg( "Test: CacheTee3 file closed\n" );
     
     REQUIRE_RC( KDirectoryRelease( dir ) );
 }                                 
-*/
+
 
 TEST_CASE( CacheTee3_Read )
 {
@@ -448,7 +447,7 @@ TEST_CASE( CacheTee3_Read )
 
     uint64_t at = 0;
     size_t len = 100;
-#if 0
+
     REQUIRE_RC( compare_file_content_2( org, tee, at, len, "small read at pos zero, not yet chached" ) );
     REQUIRE_RC( compare_file_content_2( org, tee, at, len, "small read at pos zero, now cached" ) );
     
@@ -469,13 +468,11 @@ TEST_CASE( CacheTee3_Read )
     REQUIRE_RC( compare_file_content_2( org, tee, at, len, "again, now cached" ) );
 
     at = 100; len = 1024 * BLOCKSIZE + 500;
-    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "large read crossing block boundary, partly cached" ) );
-#endif
+    REQUIRE_RC( compare_file_content_3( org, tee, at, len, "large read crossing block boundary, partly cached" ) );
 
-    at = 200; len = 256 * BLOCKSIZE;
+    at = 200; len = 2048 * BLOCKSIZE;
     REQUIRE_RC( compare_file_content_3( org, tee, at, len, "very large read, partly cached" ) );
 
-#if 0
     at = 1024 * BLOCKSIZE * 2 + 10; len = 100;
     REQUIRE_RC( compare_file_content_2( org, tee, at, len, "small read after block boundary" ) );
     at = 1024 * BLOCKSIZE * 2 - 10;
@@ -492,7 +489,6 @@ TEST_CASE( CacheTee3_Read )
 
     at = DATAFILESIZE + 100; len = 100;
     REQUIRE_RC( compare_file_content_1( org, tee, at, len, "beyond EOF" ) );
-#endif
 
     REQUIRE_RC( KFileRelease( tee ) );    
     REQUIRE_RC( KFileRelease( org ) );
