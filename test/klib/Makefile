@@ -43,6 +43,7 @@ TEST_TOOLS = \
 	test-progressbar \
     test-symtab \
 	test-json \
+	test-base64 \
 
 ifeq (linux,$(OS))
 TEST_TOOLS += test-hashfile
@@ -324,3 +325,20 @@ runfuzz $(FUZZ_PROF_RAW): $(TEST_BINDIR)/fuzz-json
 	 export LLVM_PROFILE_FILE=$(FUZZ_PROF_RAW); $(TEST_BINDIR)/fuzz-json $(FUZZ_DICT) -runs=$(RUNS) fuzz-corpus $(FUZZ_SEEDS)
 
 .phony: runfuzz
+
+#-------------------------------------------------------------------------------
+# test-base64
+#
+TEST_BASE64_SRC = \
+	test-base64
+
+TEST_BASE64_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_BASE64_SRC))
+
+$(TEST_BINDIR)/test-base64: $(TEST_BASE64_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
+
+base64: test-base64
+	$(TEST_BINDIR)/test-base64
+
+.phony: base64
