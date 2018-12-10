@@ -32,6 +32,7 @@
 
 #include <klib/base64.h>
 #include <klib/text.h>
+#include <klib/data-buffer.h>
 
 TEST_SUITE(KBase64TestSuite);
 
@@ -39,14 +40,322 @@ TEST_SUITE(KBase64TestSuite);
 
 TEST_CASE ( KBase64_encodeBase64 )
 {
-    rc_t rc;
+    //KEncodeBase64 ( "Test for basic Base64 encoding" );
+    rc_t rc = 0;
     const String *encoded;
     const char *data = "Test for basic Base64 encoding";
-    const char *expected = "VGVzdCBmb3IgYmFzaWMgQmFzZTY0IGVuY29kaW5n";
-
+    
     rc = encodeBase64 ( &encoded, data, strlen (data) );
+    
     REQUIRE_RC ( rc );
-    REQUIRE_EQ ( expected, encoded -> addr );
+    
+    std :: string expected ( "VGVzdCBmb3IgYmFzaWMgQmFzZTY0IGVuY29kaW5n" );
+    std :: string result ( encoded -> addr, encoded -> size );
+    
+    REQUIRE_EQ ( expected, result );
+    
+    StringWhack ( encoded );
+}
+
+TEST_CASE ( KBase64_decodeBase64 )
+{
+    rc_t rc = 0;
+    KDataBuffer decoded;
+    String str;
+    StringInitCString ( &str, "VGVzdCBmb3IgYmFzaWMgQmFzZTY0IGVuY29kaW5n" );
+    const String *encoding;
+    StringCopy ( &encoding, &str );
+    
+    rc = decodeBase64 ( &decoded, encoding );
+    REQUIRE_RC ( rc );
+
+    std :: string expected ( "Test for basic Base64 encoding" );
+    std :: string result ( ( char * ) decoded . base, decoded . elem_count );
+    
+    REQUIRE_EQ ( expected, result );
+
+    rc = KDataBufferWhack ( &decoded );
+    REQUIRE_RC ( rc );
+}
+
+TEST_CASE ( KBase64_encodeBase64_rfc1 )
+{
+    //KEncodeBase64 ( "Test for basic Base64 encoding" );
+    rc_t rc = 0;
+    const String *encoded;
+    const char *data = "";
+    
+    rc = encodeBase64 ( &encoded, data, strlen (data) );
+    
+    REQUIRE_RC ( rc );
+    
+    std :: string expected ( "" );
+    std :: string result ( encoded -> addr, encoded -> size );
+    
+    REQUIRE_EQ ( expected, result );
+    
+    StringWhack ( encoded );
+}
+
+TEST_CASE ( KBase64_decodeBase64_rfc1 )
+{
+    rc_t rc = 0;
+    KDataBuffer decoded;
+    String str;
+    StringInitCString ( &str, "" );
+    const String *encoding;
+    StringCopy ( &encoding, &str );
+    
+    rc = decodeBase64 ( &decoded, encoding );
+    REQUIRE_RC ( rc );
+
+    std :: string expected ( "" );
+    std :: string result ( ( char * ) decoded . base, decoded . elem_count );
+    
+    REQUIRE_EQ ( expected, result );
+
+    rc = KDataBufferWhack ( &decoded );
+    REQUIRE_RC ( rc );
+}
+
+TEST_CASE ( KBase64_encodeBase64_rfc2 )
+{
+    //KEncodeBase64 ( "Test for basic Base64 encoding" );
+    rc_t rc = 0;
+    const String *encoded;
+    const char *data = "f";
+    
+    rc = encodeBase64 ( &encoded, data, strlen (data) );
+    
+    REQUIRE_RC ( rc );
+    
+    std :: string expected ( "Zg==" );
+    std :: string result ( encoded -> addr, encoded -> size );
+    
+    REQUIRE_EQ ( expected, result );
+    
+    StringWhack ( encoded );
+}
+
+TEST_CASE ( KBase64_decodeBase64_rfc2 )
+{
+    rc_t rc = 0;
+    KDataBuffer decoded;
+    String str;
+    StringInitCString ( &str, "Zg==" );
+    const String *encoding;
+    StringCopy ( &encoding, &str );
+    
+    rc = decodeBase64 ( &decoded, encoding );
+    REQUIRE_RC ( rc );
+
+    std :: string expected ( "f" );
+    std :: string result ( ( char * ) decoded . base, decoded . elem_count );
+    
+    REQUIRE_EQ ( expected, result );
+
+    rc = KDataBufferWhack ( &decoded );
+    REQUIRE_RC ( rc );
+}
+
+TEST_CASE ( KBase64_encodeBase64_rfc3 )
+{
+    //KEncodeBase64 ( "Test for basic Base64 encoding" );
+    rc_t rc = 0;
+    const String *encoded;
+    const char *data = "fo";
+    
+    rc = encodeBase64 ( &encoded, data, strlen (data) );
+    
+    REQUIRE_RC ( rc );
+    
+    std :: string expected ( "Zm8=" );
+    std :: string result ( encoded -> addr, encoded -> size );
+    
+    REQUIRE_EQ ( expected, result );
+    
+    StringWhack ( encoded );
+}
+
+TEST_CASE ( KBase64_decodeBase64_rfc3 )
+{
+    rc_t rc = 0;
+    KDataBuffer decoded;
+    String str;
+    StringInitCString ( &str, "Zm8=" );
+    const String *encoding;
+    StringCopy ( &encoding, &str );
+    
+    rc = decodeBase64 ( &decoded, encoding );
+    REQUIRE_RC ( rc );
+
+    std :: string expected ( "fo" );
+    std :: string result ( ( char * ) decoded . base, decoded . elem_count );
+    
+    REQUIRE_EQ ( expected, result );
+
+    rc = KDataBufferWhack ( &decoded );
+    REQUIRE_RC ( rc );
+}
+
+TEST_CASE ( KBase64_encodeBase64_rfc4 )
+{
+    //KEncodeBase64 ( "Test for basic Base64 encoding" );
+    rc_t rc = 0;
+    const String *encoded;
+    const char *data = "foo";
+    
+    rc = encodeBase64 ( &encoded, data, strlen (data) );
+    
+    REQUIRE_RC ( rc );
+    
+    std :: string expected ( "Zm9v" );
+    std :: string result ( encoded -> addr, encoded -> size );
+    
+    REQUIRE_EQ ( expected, result );
+    
+    StringWhack ( encoded );
+}
+
+TEST_CASE ( KBase64_decodeBase64_rfc4 )
+{
+    rc_t rc = 0;
+    KDataBuffer decoded;
+    String str;
+    StringInitCString ( &str, "Zm9v" );
+    const String *encoding;
+    StringCopy ( &encoding, &str );
+    
+    rc = decodeBase64 ( &decoded, encoding );
+    REQUIRE_RC ( rc );
+
+    std :: string expected ( "foo" );
+    std :: string result ( ( char * ) decoded . base, decoded . elem_count );
+    
+    REQUIRE_EQ ( expected, result );
+
+    rc = KDataBufferWhack ( &decoded );
+    REQUIRE_RC ( rc );
+}
+
+TEST_CASE ( KBase64_encodeBase64_rfc5 )
+{
+    //KEncodeBase64 ( "Test for basic Base64 encoding" );
+    rc_t rc = 0;
+    const String *encoded;
+    const char *data = "foob";
+    
+    rc = encodeBase64 ( &encoded, data, strlen (data) );
+    
+    REQUIRE_RC ( rc );
+    
+    std :: string expected ( "Zm9vYg==" );
+    std :: string result ( encoded -> addr, encoded -> size );
+    
+    REQUIRE_EQ ( expected, result );
+    
+    StringWhack ( encoded );
+}
+
+TEST_CASE ( KBase64_decodeBase64_rfc5 )
+{
+    rc_t rc = 0;
+    KDataBuffer decoded;
+    String str;
+    StringInitCString ( &str, "Zm9vYg==" );
+    const String *encoding;
+    StringCopy ( &encoding, &str );
+    
+    rc = decodeBase64 ( &decoded, encoding );
+    REQUIRE_RC ( rc );
+
+    std :: string expected ( "foob" );
+    std :: string result ( ( char * ) decoded . base, decoded . elem_count );
+    
+    REQUIRE_EQ ( expected, result );
+
+    rc = KDataBufferWhack ( &decoded );
+    REQUIRE_RC ( rc );
+}
+
+TEST_CASE ( KBase64_encodeBase64_rfc6 )
+{
+    //KEncodeBase64 ( "Test for basic Base64 encoding" );
+    rc_t rc = 0;
+    const String *encoded;
+    const char *data = "fooba";
+    
+    rc = encodeBase64 ( &encoded, data, strlen (data) );
+    
+    REQUIRE_RC ( rc );
+    
+    std :: string expected ( "Zm9vYmE=" );
+    std :: string result ( encoded -> addr, encoded -> size );
+    
+    REQUIRE_EQ ( expected, result );
+    
+    StringWhack ( encoded );
+}
+
+TEST_CASE ( KBase64_decodeBase64_rfc6 )
+{
+    rc_t rc = 0;
+    KDataBuffer decoded;
+    String str;
+    StringInitCString ( &str, "Zm9vYmE=" );
+    const String *encoding;
+    StringCopy ( &encoding, &str );
+    
+    rc = decodeBase64 ( &decoded, encoding );
+    REQUIRE_RC ( rc );
+
+    std :: string expected ( "fooba" );
+    std :: string result ( ( char * ) decoded . base, decoded . elem_count );
+    
+    REQUIRE_EQ ( expected, result );
+
+    rc = KDataBufferWhack ( &decoded );
+    REQUIRE_RC ( rc );
+}
+
+TEST_CASE ( KBase64_encodeBase64_rfc7 )
+{
+    //KEncodeBase64 ( "Test for basic Base64 encoding" );
+    rc_t rc = 0;
+    const String *encoded;
+    const char *data = "foobar";
+    
+    rc = encodeBase64 ( &encoded, data, strlen (data) );
+    
+    REQUIRE_RC ( rc );
+    
+    std :: string expected ( "Zm9vYmFy" );
+    std :: string result ( encoded -> addr, encoded -> size );
+    
+    REQUIRE_EQ ( expected, result );
+    
+    StringWhack ( encoded );
+}
+
+TEST_CASE ( KBase64_decodeBase64_rfc7 )
+{
+    rc_t rc = 0;
+    KDataBuffer decoded;
+    String str;
+    StringInitCString ( &str, "Zm9vYmFy" );
+    const String *encoding;
+    StringCopy ( &encoding, &str );
+    
+    rc = decodeBase64 ( &decoded, encoding );
+    REQUIRE_RC ( rc );
+
+    std :: string expected ( "foobar" );
+    std :: string result ( ( char * ) decoded . base, decoded . elem_count );
+    
+    REQUIRE_EQ ( expected, result );
+
+    rc = KDataBufferWhack ( &decoded );
+    REQUIRE_RC ( rc );
 }
 
 //////////////////////////////////////////////////// Main
