@@ -92,8 +92,8 @@
 #define OCTAL_PREFIX_COUNTS_TOWARD_PRECISION  STDC_COMPATIBILITY
 #define HEX_PREFIX_FOLLOWS_CASE               STDC_COMPATIBILITY
 /* Present in 2.3.3 (from SLES 9.3), absent in 2.5 (from CentOS 5.6) */
-#define EMULATE_SMALLINT_EXTENSION_BUG      ( STDC_COMPATIBILITY && defined(__GLIBC__) && (__GLIBC__ < 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 5) ) )
-#define ZERO_PAD_ONLY_NUMBERS               ( !STDC_COMPATIBILITY || defined(__GLIBC__) )
+#define EMULATE_SMALLINT_EXTENSION_BUG      ( STDC_COMPATIBILITY && __GLIBC__ != 0 && (__GLIBC__ < 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 5) ) )
+#define ZERO_PAD_ONLY_NUMBERS               ( !STDC_COMPATIBILITY || __GLIBC__ != 0 )
 
 #define USE_LIB_FLOAT 1
 
