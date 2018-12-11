@@ -28,7 +28,7 @@
 
 
 /* Version of current SRA Toolkit Release */
-#define RELEASE_VERS 0x02090003
+#define RELEASE_VERS 0x02090004
 
 
 /* Type of Version of current SRA Toolkit Release is one of:
@@ -38,6 +38,5 @@
  *  'c' - release candidate
  *  'r' - final
  */
-#define RELEASE_TYPE 'r'
-/* Revision of Version of current SRA Toolkit Release */
-#define RELEASE_REVISION 1
+#define RELEASE_TYPE 'b'
+#define RELEASE_REVISION 0
