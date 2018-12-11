@@ -125,6 +125,12 @@ typedef enum
     st_S3
 } SchemeType;
 
+typedef enum
+{
+    ct_NONE,
+    ct_S3,
+} CloudType;
+
 typedef struct URLBlock URLBlock;
 struct URLBlock
 {
@@ -137,6 +143,7 @@ struct URLBlock
     uint32_t port;
 
     SchemeType scheme_type;
+    CloudType cloud_type;
     bool tls;
 
     bool port_dflt;
