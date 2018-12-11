@@ -973,7 +973,7 @@ TEST_CASE(TestAcceptHeader) {
     REQUIRE_RC(KClientHttpRequestAddHeader(req, "Accept", "text/html"));
     char buffer[4096] = "";
     REQUIRE_RC(KClientHttpRequestFormatMsg(req,
-        buffer, sizeof buffer, "HEAD", NULL, 1));
+        buffer, sizeof buffer, "HEAD", NULL));
     REQUIRE(strstr(buffer, "Accept: */*") == NULL);
     RELEASE(KClientHttpRequest, req);
     RELEASE(KClientHttp, http);
