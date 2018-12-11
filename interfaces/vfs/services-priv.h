@@ -57,7 +57,7 @@ rc_t KServiceTestNamesExecuteExt ( KService * self, VRemoteProtocols protocols,
 
 
 rc_t KServiceTestNamesQueryExt ( KService * self, VRemoteProtocols protocols, 
-    const char * version, const KSrvResponse ** result,
+    const char * cgi, const char * version, const KSrvResponse ** result,
     const char * dir, const char * file, const char * expected );
 
 
