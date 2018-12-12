@@ -430,18 +430,18 @@ static rc_t compressOneRead(VCursor *const out, CompressRowData const *data, int
     assert(rc == 0); if (rc) return rc;
     
     if (aligned == 0) {
-        rc = VCursorWrite(out, 1, sizeof(data->sequence[0]), data->sequence, 0, data->sequence_length);
+        rc = VCursorWrite(out, 1, sizeof(data->sequence[0]) * 8, data->sequence, 0, data->sequence_length);
         assert(rc == 0); if (rc) return rc;
     }
     else if (aligned == data->num_reads) {
-        rc = VCursorWrite(out, 1, sizeof(data->sequence[0]), data->sequence, 0, 0);
+        rc = VCursorWrite(out, 1, sizeof(data->sequence[0]) * 8, data->sequence, 0, 0);
         assert(rc == 0); if (rc) return rc;
     }
     else {
         for (i = 0; i < data->num_reads; ++i) {
             if (data->alignment_id[i] != 0) continue;
 
-            rc = VCursorWrite(out, 1, sizeof(data->sequence[0]), data->sequence + data->read_start[i], 0, data->read_length[i]);
+            rc = VCursorWrite(out, 1, sizeof(data->sequence[0]) * 8, data->sequence + data->read_start[i], 0, data->read_length[i]);
             assert(rc == 0); if (rc) return rc;
         }
     }
