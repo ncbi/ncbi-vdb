@@ -34,6 +34,7 @@
 /repository/user/main/public/apps/nannot/volumes/nannotFlat = "nannot"
 /repository/user/main/public/apps/refseq/volumes/refseq = "refseq"
 /repository/user/main/public/apps/sra/volumes/sraFlat = "sra"
+/repository/user/main/public/apps/sraPileup/volumes/flat = "sra"
 /repository/user/main/public/apps/wgs/volumes/wgsFlat = "wgs"
 /repository/user/main/public/root = "$(HOME)/ncbi/public"
 
