@@ -108,7 +108,7 @@ bison:
 	bison -o $(SRCDIR)/config-grammar.c --defines=$(SRCDIR)/config-tokens.h -v --no-lines $(SRCDIR)/config-grammar.y
 
 flex:
-	flex -t $(SRCDIR)/config-lex.l | grep -v '^#line' > $(SRCDIR)/config-lex.c
+	flex --noline -t $(SRCDIR)/config-lex.l > $(SRCDIR)/config-lex.c
 
 #$(SRCDIR)/config-grammar.c $(SRCDIR)/config-tokens.h: $(SRCDIR)/config-grammar.y
 #	$(YACC) -o $(SRCDIR)/config-grammar.c --defines=$(SRCDIR)/config-tokens.h $^
