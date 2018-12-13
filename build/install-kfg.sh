@@ -39,7 +39,8 @@ TGT_FILE=$3/$1
 mkdir -p ${KONFIG_DIR}
 
 # create a backup if installed file has been modified by user
-if [ -f ${TGT_FILE} ] ; then
+if md5sum --help ; then
+  if [ -f ${TGT_FILE} ] ; then
     echo md5sum ${TGT_FILE}
     md5sum ${TGT_FILE}
     echo md5sum ${TGT_FILE} done
@@ -50,6 +51,7 @@ if [ -f ${TGT_FILE} ] ; then
         # not a known version of the file; create a backup copy
         mv -v ${TGT_FILE} ${TGT_FILE}.orig
     fi
+  fi
 fi
 
 # copy to the install location
