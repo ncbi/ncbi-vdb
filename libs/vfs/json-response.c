@@ -26,6 +26,7 @@
 
 #include <klib/debug.h> /* DBGMSG */
 #include <klib/json.h> /* KJsonObject */
+#include <klib/log.h> /* PLOGERR */
 #include <klib/printf.h> /* string_printf */
 #include <klib/rc.h> /* RC */
 
@@ -1790,8 +1791,86 @@ static rc_t Response4AddItems ( Response4 * self, Container * aBox,
 
     assert ( box );
 
-    if (rc == 0 && box->status.code == 404)
-        box->rc = RC(rcVFS, rcQuery, rcResolving, rcName, rcNotFound);
+    if (rc == 0 && box->status.code != 200) {
+        KLogLevel lvl = klogInt;
+        bool logError = true;
+
+        switch (box->status.code / 100) {
+        case 0:
+            box->rc = RC(rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt);
+            break;
+
+        case 1:
+            /* informational response
+            not much we can do here */
+            box->rc = RC(rcVFS, rcQuery, rcResolving, rcError, rcUnexpected);
+            break;
+
+        case 2:
+            /* but can only handle 200 */
+            box->rc = RC(rcVFS, rcQuery, rcResolving, rcError, rcUnexpected);
+            break;
+
+        case 3:
+            /* redirection
+            currently this is being handled by our request object */
+            box->rc = RC(rcVFS, rcQuery, rcResolving, rcError, rcUnexpected);
+            break;
+
+        case 4:
+            /* client error */
+            lvl = klogErr;
+            switch (box->status.code) {
+            case 400:
+                box->rc = RC(rcVFS, rcQuery, rcResolving, rcMessage, rcInvalid);
+                break;
+            case 401:
+            case 403:
+                box->rc = RC(rcVFS, rcQuery, rcResolving,
+                    rcQuery, rcUnauthorized);
+                break;
+            case 404: /* 404|no data :
+                      If it is a real response then this assession is not found.
+                      What if it is a DB failure?
+                      Will be retried if configured to do so? */
+                box->rc = RC(rcVFS, rcQuery, rcResolving, rcName, rcNotFound);
+                break;
+            case 410:
+                box->rc = RC(rcVFS, rcQuery, rcResolving, rcName, rcNotFound);
+                break;
+            default:
+                box->rc = RC(rcVFS, rcQuery, rcResolving, rcError, rcUnexpected);
+            }
+            break;
+
+        case 5:
+            /* server error */
+            lvl = klogSys;
+            switch (box->status.code) {
+            case 503:
+                box->rc = RC(rcVFS, rcQuery, rcResolving,
+                    rcDatabase, rcNotAvailable);
+                break;
+            case 504:
+                box->rc = RC(rcVFS, rcQuery, rcResolving,
+                    rcTimeout, rcExhausted);
+                break;
+            default:
+                box->rc = RC(rcVFS, rcQuery, rcResolving,
+                    rcError, rcUnexpected);
+            }
+            break;
+        default:
+            box->rc = RC(rcVFS, rcQuery, rcResolving, rcError, rcUnexpected);
+        }
+
+        /* log message to user */
+        if (logError)
+            PLOGERR(lvl, (lvl, box->rc,
+                "failed to resolve accession '$(acc)' - $(msg) ( $(code) )",
+                "acc=%s,msg=%s,code=%u",
+                data.acc, box->status.msg, box->status.code));
+    }
 
     value = KJsonObjectGetMember ( node, "link" );
 
