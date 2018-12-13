@@ -40,7 +40,11 @@ mkdir -p ${KONFIG_DIR}
 
 # create a backup if installed file has been modified by user
 if [ -f ${TGT_FILE} ] ; then
+    echo md5sum ${TGT_FILE}
+    md5sum ${TGT_FILE}
+    echo md5sum ${TGT_FILE} done
     md5=$(md5sum ${TGT_FILE} | awk '{print $1;}')
+    echo md5sum ${TGT_FILE} = ${md5}
     # echo "$1 md5=$md5"
     if [ "$(grep ${md5} ${MD5SUMS})" == "" ] ; then
         # not a known version of the file; create a backup copy
