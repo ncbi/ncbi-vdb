@@ -88,6 +88,7 @@ static const char default_kfg[] = {
 "/repository/user/main/public/apps/refseq/volumes/refseq = \"refseq\"\n"
 "/repository/user/main/public/apps/sra/volumes/sraFlat = \"sra\"\n"
 "/repository/user/main/public/apps/sraPileup/volumes/flat = \"sra\"\n"
+"/repository/user/main/public/apps/sraRealign/volumes/flat = \"sra\"\n"
 "/repository/user/main/public/apps/wgs/volumes/wgsFlat = \"wgs\"\n"
 "/repository/user/main/public/root = \"$(HOME)/ncbi/public\"\n"
 "/repository/remote/main/CGI/resolver-cgi = "
