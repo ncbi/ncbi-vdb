@@ -81,7 +81,7 @@ include $(TOP)/build/Makefile.targets
 
 $(SUBDIRS):
 	@ $(MAKE) -C $@
-	
+
 ncbi-vdb: $(MAIN_SUBDIRS)
 
 vdb-sqlite: $(NCBI_VDB_SUBDIRS)

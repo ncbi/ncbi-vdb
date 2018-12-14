@@ -31,6 +31,9 @@ TOP ?= $(abspath ../..)
 MODULE = test/kns
 
 TEST_TOOLS = \
+    test_allow_all_certificates \
+    test_dis_allow_all_certificates \
+	test200for-whole-file \
 	test-kns \
 	test-http-dropconn \
 	KNSManagerSingletonTest \
@@ -125,6 +128,42 @@ $(TEST_BINDIR)/test-kns: $(KNSTEST_OBJ)
 
 kns: test-kns
 	$(TEST_BINDIR)/test-kns  #-l=all
+
+#----------------------------------------------------------------
+# test_allow_all_certificates
+#
+AAA_SRC = \
+	test_allow_all_certificates
+
+AAA_OBJ = \
+	$(addsuffix .$(OBJX),$(AAA_SRC))
+
+$(TEST_BINDIR)/test_allow_all_certificates: $(AAA_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+#----------------------------------------------------------------
+# test_dis_allow_all_certificates
+#
+DAA_SRC = \
+	test_dis_allow_all_certificates
+
+DAA_OBJ = \
+	$(addsuffix .$(OBJX),$(DAA_SRC))
+
+$(TEST_BINDIR)/test_dis_allow_all_certificates: $(DAA_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+#----------------------------------------------------------------
+# test200for-whole-file
+#
+K2_SRC = \
+	test200for-whole-file \
+
+K2_OBJ = \
+	$(addsuffix .$(OBJX),$(K2_SRC))
+
+$(TEST_BINDIR)/test200for-whole-file: $(K2_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
 #----------------------------------------------------------------
 # test-proxy

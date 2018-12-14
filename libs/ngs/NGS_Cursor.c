@@ -76,8 +76,14 @@ void NGS_CursorWhack ( NGS_Cursor * self, ctx_t ctx )
 
     for ( i = 0; i < self -> num_cols; ++i )
     {
-        free ( self -> col_specs [ i ] );
-        NGS_StringRelease ( self -> col_data [ i ], ctx );
+        if ( self -> col_specs != NULL )
+        {
+            free ( self -> col_specs [ i ] );
+        }
+        if ( self -> col_data != NULL )
+        {
+            NGS_StringRelease ( self -> col_data [ i ], ctx );
+        }
     }
 
     free ( self -> col_specs );

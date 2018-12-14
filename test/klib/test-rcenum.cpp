@@ -33,7 +33,7 @@
 #include <stdexcept>
 #include <stdint.h>
 #include <utility>
-
+#include <cstdio>
 
 TEST_SUITE( KlibTestSuite );
 

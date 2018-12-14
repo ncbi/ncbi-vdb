@@ -111,7 +111,7 @@ SRA_DFLT_SCHEMA_OS_LIBS = \
 	-sbz2 \
 	-lm
 
-# set workdir for RUN_REMOTELY in rwin mode 
+# set workdir for RUN_REMOTELY in rwin mode
 RWORKDIR=$(OBJDIR)
 
 $(ILIBDIR)/sra-dflt-schema: sra-dflt-schema.$(OBJX)
@@ -247,3 +247,9 @@ $(ILIBDIR)/libsrareader.$(LIBX): $(SRAREADER_OBJ)
 compile: stdcompile
 
 $(TARGDIR)/compile: $(OBJFILES)
+
+#-------------------------------------------------------------------------------
+# fuzz
+#
+fuzz: std
+	cp $(addsuffix .$(LIBX),$(addprefix $(ILIBDIR)/,$(INT_LIBS))) $(FLIBDIR)/
