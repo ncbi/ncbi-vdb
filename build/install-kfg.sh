@@ -39,7 +39,7 @@ TGT_FILE=$3/$1
 mkdir -p ${KONFIG_DIR}
 
 # create a backup if installed file has been modified by user
-if md5sum --help ; then
+if md5sum --help > /dev/null ; then
   if [ -f ${TGT_FILE} ] ; then
     md5=$(md5sum ${TGT_FILE} | awk '{print $1;}')
     # echo "$1 md5=$md5"
