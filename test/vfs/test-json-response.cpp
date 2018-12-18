@@ -38,9 +38,9 @@ using std::string;
     return rc;
 }*/
 
-TEST_CASE ( test ) {
+TEST_CASE ( testIncomplete ) {
     Response4 * response = NULL;
-if(1){
+
     REQUIRE_RC_FAIL ( Response4Make ( & response, 0 ) );
     REQUIRE_RC_FAIL ( Response4Make ( & response, "" ) );
     REQUIRE_RC_FAIL ( Response4Make ( & response, "{" ) );
@@ -52,6 +52,10 @@ if(1){
         "{\"sequence\":[{\"acc\":\"SRR000000\"}]}" ) );
     REQUIRE_RC_FAIL ( Response4Make ( & response,
         "{\"sequence\":[{\"status\":{},\"acc\":\"SRR000000\"}]}" ) );
+}
+
+TEST_CASE(testinsufficient) {
+    Response4 * response = NULL;
 
     REQUIRE_RC      ( Response4Make ( & response,
        "{\"sequence\":[{\"status\":{\"code\":404},\"acc\":\"SRR000000\"}]}" ) );
@@ -83,7 +87,10 @@ if(1){
     REQUIRE_RC_FAIL ( Response4Make ( & response, "{\"sequence\":["
      "{\"status\":{\"code\":200},\"acc\":\"SRR000001\",\"itemClass\":\"run\","
       "\"format\":\"sra\",\"link\":\"http://\"}]}" ) );
+}
 
+TEST_CASE(testMin) {
+    Response4 * response = NULL;
 
     REQUIRE_RC      ( Response4Make ( & response, "{\"sequence\":["
      "{\"status\":{\"code\":200},\"acc\":\"SRR000001\",\"itemClass\":\"run\","
@@ -99,7 +106,10 @@ if(1){
      "{\"status\":{\"code\":200},\"acc\":\"SRR000001\","
       "\"link\":\"http://h/\"}]}" ) );
     REQUIRE_RC      ( Response4Release ( response ) );
+}
 
+TEST_CASE(testFlat) {
+    Response4 * response = NULL;
 
     REQUIRE_RC      ( Response4Make ( & response, "{\"sequence\":["
    "{\"status\":{\"code\":200,\"msg\":\"ok\"},"
@@ -122,6 +132,10 @@ if(1){
    "\"format\":\"sra\",\"link\":\"fasp://h/\",\"size\":3,"
    "\"md5\":\"9bde35fefa9d955f457e22d9be52bcd9\",\"modDate\":1000000000}]}" ) );
     REQUIRE_RC      ( Response4Release ( response ) );
+}
+
+TEST_CASE(testAlternative) {
+    Response4 * response = NULL;
 
     REQUIRE_RC_FAIL ( Response4Make ( & response, "{\"sequence\":["
         "{\"status\":{\"code\":200,\"msg\":\"ok\"},\"acc\":\"SRR000001\","
@@ -148,10 +162,11 @@ if(1){
         "{\"status\":{\"code\":200,\"msg\":\"ok\"},\"acc\":\"SRR000001\","
         "\"alternatives\":[{\"link\":\"http://h/\"}]}]}" ) );
     REQUIRE_RC ( Response4Release ( response ) );
-
-
 }
-if(1){
+
+TEST_CASE(testAlternatives) {
+    Response4 * response = NULL;
+
     REQUIRE_RC ( Response4Make ( & response, "{\"sequence\":["
         "{\"status\":{\"code\":200,\"msg\":\"ok\"},\"acc\":\"SRR000001\","
         "\"itemClass\":\"run\",\"format\":\"sra\",\"size\":3,"
@@ -179,7 +194,10 @@ if(1){
         "\"alternatives\":[{\"format\":\"sra\",\"link\":\"http://h/\"}]}]"
       ",\"timestamp\":1500000000}" ) );
     REQUIRE_RC ( Response4Release ( response ) );
+}
 
+TEST_CASE(testGroup) {
+    Response4 * response = NULL;
 
     REQUIRE_RC ( Response4Make ( & response, "{\"sequence\":["
         "{\"status\":{\"code\":200,\"msg\":\"ok\"},\"acc\":\"SRR000001\","
@@ -209,7 +227,10 @@ if(1){
         "\"md5\":\"11111111111111111111111111111111\",\"modDate\":1000000001}"
       "]}], \"timestamp\":1500000002}" ) );
     REQUIRE_RC ( Response4Release ( response ) );
+}
 
+TEST_CASE(testSequence) {
+    Response4 * response = NULL;
 
     REQUIRE_RC ( Response4Make ( & response, "{\"sequence\":["
         "{\"status\":{\"code\":200,\"msg\":\"ok\"},"
@@ -249,7 +270,10 @@ if(1){
           "\"link\":\"http://h/\"}]"
       ",\"timestamp\":1500000005}" ) );
     REQUIRE_RC ( Response4Release ( response ) );
+}
 
+TEST_CASE(testSRP) {
+    Response4 * response = NULL;
 
     REQUIRE_RC ( Response4Make ( & response,
         "{\"sequence\":[{\"status\":{\"code\":200,\"msg\":\"ok\"},"
@@ -260,6 +284,10 @@ if(1){
                 "\"format\":\"sra\",\"link\":\"http://h/2\"}]}]"
          ",\"timestamp\":1500000006}"));
     REQUIRE_RC ( Response4Release ( response ) );
+}
+
+TEST_CASE(testGaP) {
+    Response4 * response = NULL;
 
     REQUIRE_RC ( Response4Make ( & response,
         "{\"sequence\":[{\"status\":{\"code\":200,\"msg\":\"ok\"},"
@@ -309,6 +337,10 @@ if(1){
                "\"tic\":\"0AB1C23D-E4F5-6A7B-C890-1D2345678E90\"}"
          "],\"timestamp\":1500000011}"));
     REQUIRE_RC ( Response4Release ( response ) );
+}
+
+TEST_CASE(testLive) {
+    Response4 * response = NULL;
 
     REQUIRE_RC ( Response4Make ( & response,
 "{"
@@ -341,10 +373,11 @@ if(1){
 	"\"timestamp\": 1540239237"
 "}"    ));
     REQUIRE_RC ( Response4Release ( response ) );
-}
+
 if(1);
   //REQUIRE_RC(validate(
 }
+
 
 TEST_SUITE ( TestResolver4 )
 
