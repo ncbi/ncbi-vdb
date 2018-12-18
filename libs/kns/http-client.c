@@ -2614,6 +2614,11 @@ struct KClientHttpRequest
     bool accept_not_modified;
 };
 
+rc_t KClientHttpRequestURL(KClientHttpRequest const *self, KDataBuffer *rslt)
+{
+    return KDataBufferSub(&self->url_buffer, rslt, 0, UINT64_MAX);
+}
+
 static
 rc_t KClientHttpRequestClear ( KClientHttpRequest *self )
 {
@@ -3355,7 +3360,7 @@ rc_t CC KClientHttpRequestFormatMsg ( const KClientHttpRequest *self,
 }
 
 static
-rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, KClientHttpResult *rslt )
+rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, KClientHttpResult const *const rslt )
 {
     rc_t rc = 0;
     String Location;

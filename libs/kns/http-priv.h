@@ -130,6 +130,9 @@ void KClientHttpGetRemoteEndpoint ( const struct KClientHttp * self,
 void KClientHttpGetLocalEndpoint ( const struct KClientHttp * self,
                                    struct KEndPoint * ep );
 
+/* if the request followed redirects, the final URL will be different than the initial URL */
+rc_t KClientHttpRequestURL ( struct KClientHttpRequest const *self, KDataBuffer *rslt );
+    
 
 /* exported private functions
 */

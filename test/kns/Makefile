@@ -31,12 +31,13 @@ TOP ?= $(abspath ../..)
 MODULE = test/kns
 
 TEST_TOOLS = \
-    test_allow_all_certificates \
-    test_dis_allow_all_certificates \
+	test_allow_all_certificates \
+	test_dis_allow_all_certificates \
 	test200for-whole-file \
 	test-kns \
 	test-http-dropconn \
 	KNSManagerSingletonTest \
+	test-VDB-3661
 
 include $(TOP)/build/Makefile.env
 
@@ -163,6 +164,18 @@ K2_OBJ = \
 	$(addsuffix .$(OBJX),$(K2_SRC))
 
 $(TEST_BINDIR)/test200for-whole-file: $(K2_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+#----------------------------------------------------------------
+# test-VDB-3661
+#
+VDB_3661_SRC = \
+	test-VDB-3661
+
+VDB_3661_OBJ = \
+	$(addsuffix .$(OBJX),$(VDB_3661_SRC))
+
+$(TEST_BINDIR)/test-VDB-3661: $(VDB_3661_OBJ)
 	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
 #----------------------------------------------------------------
