@@ -2616,7 +2616,7 @@ struct KClientHttpRequest
 
 rc_t KClientHttpRequestURL(KClientHttpRequest const *self, KDataBuffer *rslt)
 {
-    return KDataBufferSub(&self->url_buffer, rslt, 0, UINT64_MAX);
+    return KDataBufferSub(&self->url_buffer, rslt, 0, self->url_buffer.elem_count);
 }
 
 static
