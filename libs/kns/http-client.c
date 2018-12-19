@@ -29,9 +29,12 @@
 #define KSTREAM_IMPL KClientHttpStream
 typedef struct KClientHttpStream KClientHttpStream;
 
+#include <kfg/config.h> /* KConfigRelease */
+
 #include <kns/manager.h>
 #include <kns/http.h>
 #include <kns/adapt.h>
+#include <kns/cloud.h> /* KNSManagerMakeAwsAuthenticationHeader */
 #include <kns/endpoint.h>
 #include <kns/http-priv.h> /* KClientHttpResultFormatMsg */
 #include <kns/socket.h>
@@ -48,6 +51,7 @@ typedef struct KClientHttpStream KClientHttpStream;
 
 #include <klib/debug.h>
 #include <klib/text.h>
+#include <klib/time.h> /* KTimeStamp */
 #include <klib/container.h>
 #include <klib/out.h>
 #include <klib/log.h>
@@ -86,6 +90,9 @@ typedef struct KClientHttpStream KClientHttpStream;
     ( ( void ) 0 )
 #endif
 
+#define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
+    if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
+
 static 
 void  KDataBufferClear ( KDataBuffer *buf )
 {
@@ -101,6 +108,19 @@ bool KDataBufferContainsString ( const KDataBuffer *buf, const String *str )
         & str -> addr [ str -> size ] <= & ( ( const char* ) buf -> base ) [ buf -> elem_count ];
 }
 #endif
+
+/* Form of Request-URI in HTTP Request-Line used when connecting via proxy */
+typedef enum {
+    eUFUndefined,
+
+    /* absoluteURI: https://tools.ietf.org/html/rfc2616#section-5.1.2
+       standard form recommended to use with proxies */
+    eUFAbsolute,
+
+    /* origin-form: https://tools.ietf.org/html/rfc7230#section-5.3.1
+       use it when connect to googleapis.com: it rejects absoluteURI */
+    eUFOrigin,
+} EUriForm;
 
 /*--------------------------------------------------------------------------
  * KClientHttp
@@ -144,6 +164,8 @@ struct KClientHttp
     bool tls;
 
     bool close_connection;
+
+    EUriForm uf; /* Form of Request-URI in Request-Line when using proxy */
 };
 
 
@@ -2614,6 +2636,11 @@ struct KClientHttpRequest
     bool accept_not_modified;
 };
 
+rc_t KClientHttpRequestURL(KClientHttpRequest const *self, KDataBuffer *rslt)
+{
+    return KDataBufferSub(&self->url_buffer, rslt, 0, self->url_buffer.elem_count);
+}
+
 static
 rc_t KClientHttpRequestClear ( KClientHttpRequest *self )
 {
@@ -2679,9 +2706,9 @@ rc_t KClientHttpMakeRequestInt ( const KClientHttp *self,
             if ( rc == 0 )
             {
                 * _req = req;
-                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
+/*              DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
                     ( " KClientHttpMakeRequestInt (path=%S) = (path:%S)\n",
-                      & block -> path, & ( * _req ) -> url_block . path ) );
+                      & block -> path, & ( * _req ) -> url_block . path ) ); */
                 return 0;
             }
 
@@ -3187,40 +3214,239 @@ LIB_EXPORT rc_t CC KClientHttpResultFormatMsg (
     return rc;
 }
 
-
-LIB_EXPORT
-rc_t CC KClientHttpRequestFormatMsg ( const KClientHttpRequest *self,
-    char *buffer, size_t bsize, const char *method, size_t *len )
+static EUriForm EUriFormGuess ( const String * hostname,
+                                uint32_t uriForm,
+                                EUriForm uf /* cached Request-URI */ )
 {
-    rc_t rc;
-    rc_t r2 = 0;
-    bool have_user_agent = false;
-    String user_agent_string;
-    size_t total;
-    size_t p_bsize = 0;
-    const KHttpHeader *node;
-    size_t dummy;
+    assert ( hostname );
 
+    switch ( uriForm ) {
+        case 0: /* used in POST requests: use absoluteURI form */
+            return eUFAbsolute;
+
+        default:
+            assert ( 0 ); /* should never happen */
+/*          no break here ; */
+        case 2: /* retry after receiving 400 */
+            if ( uf != eUFUndefined ) /* switch the previous URI form */
+                return uf == eUFAbsolute ? eUFOrigin : eUFAbsolute;
+/*          else no break here ; */
+            assert ( 0 ); /* should never happen:
+                             uf should be initialized when uriForm == 2 */
+
+        case 1:
+            if ( uf != eUFUndefined )
+                return uf; /* reuse cached uriForm */
+            else { /* first call; guess uriForm by hostname */
+                String googleapis;
+                CONST_STRING ( & googleapis, "storage.googleapis.com" );
+                if ( StringEqual ( & googleapis, hostname ) )
+                    return eUFOrigin;
+                else
+                    return eUFAbsolute;
+            }
+    }
+}
+
+/* https://docs.aws.amazon.com/AmazonS3/latest/dev/RESTAuthentication.html */
+static rc_t StringToSign(
+    const String * HTTPVerb,
+    const String * Date,
+    const String * hostname,
+    const String * HTTPRequestURI,
+    char * buffer, size_t bsize, size_t * len)
+{
+    rc_t rc = 0;
+    rc_t r2 = 0;
+    size_t total = 0;
+    size_t skip = 0;
+    size_t p_bsize = 0;
+    String dateString;
+    String s3;
+    CONST_STRING(&s3, ".s3.amazonaws.com");
+    CONST_STRING(&dateString, "Date");
+    assert(buffer && len);
+
+    /* StringToSign = HTTP-Verb + "\n" */
+    assert(HTTPVerb);
+    rc = string_printf(buffer, bsize, len, "%S\n", HTTPVerb);
+    total += *len;
+
+    /* StringToSign += Content-MD5 + "\n" */
+    {
+        const char ContentMD5[] = "";
+        p_bsize = bsize >= total ? bsize - total : 0;
+        r2 = string_printf(&buffer[total], p_bsize, len, "%s\n", ContentMD5);
+        total += *len;
+        if (rc == 0 && r2 != 0)
+            rc = r2;
+    }
+
+    /* StringToSign += Content-Type + "\n" */
+    {
+        const char ContentType[] = "";
+        p_bsize = bsize >= total ? bsize - total : 0;
+        r2 = string_printf(&buffer[total], p_bsize, len, "%s\n", ContentType);
+        total += *len;
+        if (rc == 0 && r2 != 0)
+            rc = r2;
+    }
+
+    /* StringToSign += Date + "\n" */
+    assert(Date); /* Signed Amazon queries: Date header is required. */
+    p_bsize = bsize >= total ? bsize - total : 0;
+    r2 = string_printf(&buffer[total], p_bsize, len, "%S\n", Date);
+    total += *len;
+    if (rc == 0 && r2 != 0)
+        rc = r2;
+
+    /* StringToSign += CanonicalizedAmzHeaders */
+
+    /* StringToSign += CanonicalizedResource */
+    skip = hostname->size - s3.size;
+    if (skip > 0 && hostname->size >= s3.size &&
+        string_cmp(s3.addr, s3.size, hostname->addr + skip,
+            hostname->size - skip, s3.size) == 0)
+    { /* CanonicalizedResource = [ "/" + Bucket ] */
+        String Bucket;
+        StringInit(&Bucket, hostname->addr, skip, skip);
+        p_bsize = bsize >= total ? bsize - total : 0;
+        r2 = string_printf(&buffer[total], p_bsize, len, "/%S", &Bucket);
+        total += *len;
+        if (rc == 0 && r2 != 0)
+            rc = r2;
+    }
+    /* CanonicalizedResource += <HTTP-Request-URI protocol name to the query> */
+    p_bsize = bsize >= total ? bsize - total : 0;
+    assert(HTTPRequestURI);
+    r2 = string_printf(&buffer[total], p_bsize, len, "%S", HTTPRequestURI);
+    total += *len;
+    if (rc == 0 && r2 != 0)
+        rc = r2;
+
+    return rc;
+}
+
+static rc_t KClientHttpRequestAuthenticate(const KClientHttpRequest *cself,
+    const char *method,
+    const char *AWSAccessKeyId, const char *YourSecretAccessKeyID)
+{
+    rc_t rc = 0;
+    KClientHttpRequest *self = (KClientHttpRequest *)cself;
+    KClientHttp * http = NULL;
+    const String * hostname = NULL;
+    bool authenticate = false;
+    char stringToSign[4096] = "";
+    char authorization[4096] = "";
+    const String * sdate = NULL;
+    char date[64] = "";
+    String dates;
+    assert(self && self->http);
+    http = self->http;
+    hostname = &self->url_block.host;
+    if (hostname->size == 0) {
+        hostname = &http->hostname;
+        if (hostname->size == 0)
+            return RC(rcNS, rcNoTarg, rcValidating, rcName, rcEmpty);
+    }
+
+    authenticate =
+        AWSAccessKeyId != NULL && YourSecretAccessKeyID != NULL;
+    if (authenticate) {
+        size_t skip = 0;
+        String stor31;
+        CONST_STRING(&stor31, "s3-stor31.st-va.ncbi.nlm.nih.gov");
+        skip = hostname->size - stor31.size;
+        if (hostname->size >= stor31.size &&
+            string_cmp(stor31.addr, stor31.size, hostname->addr + skip,
+                hostname->size - skip, stor31.size) == 0);
+        else {
+            String amazonaws;
+            CONST_STRING(&amazonaws, "amazonaws.com");
+            skip = hostname->size - amazonaws.size;
+            if (hostname->size >= amazonaws.size &&
+                string_cmp(amazonaws.addr, amazonaws.size,
+                    hostname->addr + skip, hostname->size - skip,
+                    amazonaws.size) == 0);
+            else
+                authenticate = false;
+        }
+    }
+
+    if (authenticate) {
+        rc_t rc = 0;
+        const KHttpHeader *node = NULL;
+
+        String dateString;
+        String authorizationString;
+        CONST_STRING(&dateString, "Date");
+        CONST_STRING(&authorizationString, "Authorization");
+
+        for (node = (const KHttpHeader*)BSTreeFirst(&self->hdrs);
+            (rc == 0 ||
+            (GetRCObject(rc) == (enum RCObject) rcBuffer &&
+                GetRCState(rc) == rcInsufficient)) && node != NULL;
+            node = (const KHttpHeader*)BSTNodeNext(&node->dad))
+        {
+            if (node->name.len == 4 &&
+                StringCaseCompare(&node->name, &dateString) == 0)
+            {
+                sdate = &node->value;
+            }
+            else if (node->name.len == 13 &&
+                StringCaseCompare(&node->name, &authorizationString) == 0)
+            {   /* already has Authorization header */
+                authenticate = false;
+            }
+        }
+
+        if (!authenticate)
+            return 0;
+
+        if (sdate == NULL) {
+            KTime_t t = KTimeStamp();
+            size_t sz = KTimeRfc2616(t, date, sizeof date);
+            assert(sz < sizeof date);
+            StringInitCString(&dates, date);
+            sdate = &dates;
+            rc = KClientHttpRequestAddHeader(self, "Date", date);
+        }
+    }
+    else /* not connecting to s3 or AccessKeyId/SecretAccessKeyID are unknown */
+        return 0;
+
+    if (rc == 0) {
+        size_t len = 0;
+        String HTTPVerb;
+        StringInitCString(&HTTPVerb, method);
+        rc = StringToSign(&HTTPVerb, sdate, hostname, &self->url_block.path,
+            stringToSign, sizeof stringToSign, &len);
+    }
+
+    if (rc == 0)
+        rc = KNSManagerMakeAwsAuthenticationHeader(NULL,
+            AWSAccessKeyId, YourSecretAccessKeyID, stringToSign,
+            authorization, sizeof authorization);
+
+    if (rc == 0)
+        rc = KClientHttpAddHeader(&self->hdrs, "Authorization", authorization);
+            
+    return rc;
+}
+
+static rc_t KClientHttpRequestFormatMsgBegin (
+    const KClientHttpRequest * self, char * buffer, size_t bsize,
+    const char * method, size_t * len, uint32_t uriForm )
+{
+    rc_t rc = 0;
     const char * has_query = NULL;
     String hostname;
     KClientHttp * http = NULL;
-
-    if ( self == NULL ) {
-         return RC ( rcNS, rcNoTarg, rcReading, rcSelf, rcNull );
-    }
-    if ( buffer == NULL ) {
-         return RC ( rcNS, rcNoTarg, rcReading, rcParam, rcNull );
-    }
-
-    if ( len == NULL ) {
-        len = & dummy;
-    }
-
+    assert ( self && self -> http );
     http = self -> http;
 
     /* determine if there is a query */
     has_query = ( self -> url_block . query . size == 0 ) ? "" : "?";
-
 
     /* there are 2 places where the can be a host name stored
        we give preference to the one attached to the url_block, because
@@ -3235,17 +3461,10 @@ rc_t CC KClientHttpRequestFormatMsg ( const KClientHttpRequest *self,
         if ( hostname . size == 0 )
             return RC ( rcNS, rcNoTarg, rcValidating, rcName, rcEmpty );
     }
-
-    CONST_STRING ( &user_agent_string, "User-Agent" );
-
-    /* start building the buffer that will be sent 
-       We are inlining the host:port, instead of
-       sending it in its own header */
-
     if ( ! http -> proxy_ep )
-    {
+    {   /* direct connection */
         rc = string_printf ( buffer, bsize, len, 
-                             "%s %S%s%S HTTP/%.2V\r\nHost: %S\r\nAccept: */*\r\n"
+                             "%s %S%s%S HTTP/%.2V\r\nHost: %S\r\n"
                              , method
                              , & self -> url_block . path
                              , has_query
@@ -3254,10 +3473,24 @@ rc_t CC KClientHttpRequestFormatMsg ( const KClientHttpRequest *self,
                              , & hostname
             );
     }
-    else if ( http -> port != 80 )
-    {
-        rc = string_printf ( buffer, bsize, len, 
-                             "%s %S://%S:%u%S%s%S HTTP/%.2V\r\nHost: %S\r\nAccept: */*\r\n"
+    else { /* using proxy */
+        http -> uf = EUriFormGuess ( & hostname, uriForm, http -> uf );
+        if ( http -> uf == eUFOrigin ) {
+        /* the host does not like absoluteURI: use abs_path ( origin-form ) */
+            rc = string_printf ( buffer, bsize, len, 
+                         "%s %S%s%S HTTP/%.2V\r\nHost: %S:%u\r\n"
+                             , method
+                             , & self -> url_block . path
+                             , has_query
+                             , & self -> url_block . query
+                             , http -> vers
+                             , & hostname
+                             , http -> port
+                );
+        }
+        else if ( http -> port != 80 ) { /* absoluteURI: non-default port */
+            rc = string_printf ( buffer, bsize, len, 
+                             "%s %S://%S:%u%S%s%S HTTP/%.2V\r\nHost: %S\r\n"
                              , method
                              , & self -> url_block . scheme
                              , & hostname
@@ -3267,12 +3500,11 @@ rc_t CC KClientHttpRequestFormatMsg ( const KClientHttpRequest *self,
                              , & self -> url_block . query
                              , http -> vers
                              , & hostname
-            );
-    }
-    else
-    {
-        rc = string_printf ( buffer, bsize, len, 
-                             "%s %S://%S%S%s%S HTTP/%.2V\r\nHost: %S\r\nAccept: */*\r\n"
+                );
+        }
+        else {                           /* absoluteURI: default port */
+            rc = string_printf ( buffer, bsize, len, 
+                             "%s %S://%S%S%s%S HTTP/%.2V\r\nHost: %S\r\n"
                              , method
                              , & self -> url_block . scheme
                              , & hostname
@@ -3281,8 +3513,53 @@ rc_t CC KClientHttpRequestFormatMsg ( const KClientHttpRequest *self,
                              , & self -> url_block . query
                              , http -> vers
                              , & hostname
-            );
+                );
+        }
     }
+
+    return rc;
+}
+
+static
+rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
+    char *buffer, size_t bsize, const char *method,
+    const char *AWSAccessKeyId, const char *YourSecretAccessKeyID,
+    size_t *len, uint32_t uriForm )
+{
+    rc_t rc;
+    rc_t r2 = 0;
+    bool have_user_agent = false;
+    bool have_accept = false;
+    String user_agent_string;
+    String accept_string;
+    size_t total;
+    size_t p_bsize = 0;
+    const KHttpHeader *node;
+    size_t dummy;
+
+    if ( self == NULL ) {
+         return RC ( rcNS, rcNoTarg, rcReading, rcSelf, rcNull );
+    }
+    if ( buffer == NULL ) {
+         return RC ( rcNS, rcNoTarg, rcReading, rcParam, rcNull );
+    }
+
+    if ( len == NULL ) {
+        len = & dummy;
+    }
+
+    CONST_STRING ( &user_agent_string, "User-Agent" );
+    CONST_STRING(&accept_string, "Accept");
+
+    rc = KClientHttpRequestAuthenticate(self, method,
+        AWSAccessKeyId, YourSecretAccessKeyID);
+
+    /* start building the buffer that will be sent 
+       We are inlining the host:port, instead of
+       sending it in its own header */
+
+    rc = KClientHttpRequestFormatMsgBegin
+        ( self, buffer, bsize, method, len, uriForm );
 
     /* print all headers remaining into buffer */
     total = * len;
@@ -3298,6 +3575,11 @@ rc_t CC KClientHttpRequestFormatMsg ( const KClientHttpRequest *self,
         {
             if ( StringCaseCompare ( & node -> name, & user_agent_string ) == 0 )
                 have_user_agent = true;
+        }
+        /* look for "Accept" */
+        else if (!have_accept && node->name.len == 6) {
+            if (StringCaseCompare(&node->name, &accept_string) == 0)
+                have_accept = true;
         }
 
         p_bsize = bsize >= total ? bsize - total : 0;
@@ -3330,6 +3612,13 @@ rc_t CC KClientHttpRequestFormatMsg ( const KClientHttpRequest *self,
         }
     }
 
+    if (!have_accept) {
+        r2 = string_printf(&buffer[total], p_bsize, len, "Accept: */*\r\n");
+        total += *len;
+        if (rc == 0 && r2 != 0)
+            rc = r2;
+    }
+
     /* add terminating empty header line */
     if ( rc == 0 ||
         ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
@@ -3354,8 +3643,34 @@ rc_t CC KClientHttpRequestFormatMsg ( const KClientHttpRequest *self,
     return rc;
 }
 
+LIB_EXPORT
+rc_t CC KClientHttpRequestFormatMsg(const KClientHttpRequest *self,
+    char *buffer, size_t bsize, const char *method, size_t *len)
+{
+    return KClientHttpRequestFormatMsgInt(self,
+        buffer, bsize, method, NULL, NULL, len, 1);
+}
+
+LIB_EXPORT
+rc_t CC KClientHttpRequestFormatPostMsg(const KClientHttpRequest *self,
+    char *buffer, size_t bsize, size_t *len)
+{
+    return KClientHttpRequestFormatMsgInt(self,
+        buffer, bsize, "POST", NULL, NULL, len, 0);
+}
+
+LIB_EXPORT
+rc_t CC KClientHttpRequestFormatCloudMsg(const KClientHttpRequest *self,
+    char *buffer, size_t bsize, const char *method,
+    const char *AWSAccessKeyId, const char *YourSecretAccessKeyID,
+    size_t *len)
+{
+    return KClientHttpRequestFormatMsgInt(self, buffer, bsize,
+        method, AWSAccessKeyId, YourSecretAccessKeyID, len, 1);
+}
+
 static
-rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, KClientHttpResult *rslt )
+rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, KClientHttpResult const *const rslt )
 {
     rc_t rc = 0;
     String Location;
@@ -3420,10 +3735,43 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
 {   
     rc_t rc = 0;
 
+    uint32_t uriForm = 1;
+
     KClientHttpResult *rslt;
 
     uint32_t i;
     const uint32_t max_redirect = 5;
+
+    bool authenticate = false;
+
+    char aws_access_key_id[512] = "";
+    char aws_secret_access_key[512] = "";
+
+    const char *AWSAccessKeyId = NULL;
+    const char *YourSecretAccessKeyID = NULL;
+
+    authenticate = self->url_block.cloud_type == ct_S3;
+
+    if (authenticate) {
+        size_t num_read = 0;
+        KConfig * kfg = NULL;
+        rc = KConfigMake(&kfg, NULL);
+        if (rc != 0)
+            return rc;
+        rc = KConfigRead(kfg, "/AWS/aws_access_key_id", 0,
+            aws_access_key_id, sizeof aws_access_key_id, &num_read, NULL);
+        if (rc == 0)
+            rc = KConfigRead(kfg, "/AWS/aws_secret_access_key", 0,
+                aws_secret_access_key, sizeof aws_secret_access_key,
+                &num_read, NULL);
+        if (rc == 0) {
+            AWSAccessKeyId = aws_access_key_id;
+            YourSecretAccessKeyID = aws_secret_access_key;
+        }
+        else
+            rc = 0;
+        RELEASE(KConfig, kfg);
+    }
 
     /* TBD - may want to prevent a Content-Type or other headers here */
 
@@ -3436,7 +3784,8 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
         char buffer [ 4096 ];
 
         /* create message */
-        rc = KClientHttpRequestFormatMsg ( self, buffer, sizeof buffer, method, & len );
+        rc = KClientHttpRequestFormatMsgInt ( self, buffer, sizeof buffer,
+                method, AWSAccessKeyId, YourSecretAccessKeyID, & len, uriForm );
         if ( rc != 0 )
             break;
 
@@ -3486,6 +3835,13 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
             }
 
             /* NO BREAK */
+
+        case 400:
+            if ( uriForm == 1 ) {
+                ++ uriForm; /* got 400; try to use different Request-URI form */
+                continue;
+            }
+/*          else no break here: tried both Request-URI forms */
 
         default:
 
@@ -3609,7 +3965,8 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
         char buffer [ 4096 ];
 
         /* create message */
-        rc = KClientHttpRequestFormatMsg ( self, buffer, sizeof buffer, "POST", & len );
+        rc = KClientHttpRequestFormatMsgInt ( self, buffer, sizeof buffer,
+                                           "POST", NULL, NULL, & len, 0 );
         if ( rc != 0 )
             break;
 

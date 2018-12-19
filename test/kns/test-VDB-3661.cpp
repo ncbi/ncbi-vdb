@@ -36,83 +36,32 @@
 static rc_t argsHandler ( int argc, char * argv [] )
 {   return ArgsMakeAndHandle ( NULL, argc, argv, 0, NULL, 0 ); }
 
-TEST_SUITE_WITH_ARGS_HANDLER ( T200FOR_WHOLE_FILE, argsHandler )
+TEST_SUITE_WITH_ARGS_HANDLER ( VDB_3661, argsHandler )
 
-TEST_CASE ( Test_206) {
+TEST_CASE ( Test_VDB_3661 ) {
     KNSManager * mgr = NULL;
     REQUIRE_RC ( KNSManagerMake ( & mgr ) );
 
     const KFile * file = NULL;
-
-#if GOOGLE_FILE_EXISTS
     REQUIRE_RC ( KNSManagerMakeHttpFile ( mgr, & file, NULL, 0x01010000,
-       "https://sra-download.ncbi.nlm.nih.gov/traces/refseq/KC702174.1" ) );
-
-    uint64_t size = 0;
-    REQUIRE_RC ( KFileSize ( file, & size ) );
-
-    void * buffer = malloc ( size );
-    REQUIRE_NOT_NULL ( buffer );
-
-    size_t num_read = 0;
-
-    // read incomplete file: expect 206 response code
-    size_t bsize = size - 1;
-    REQUIRE_RC ( KFileRead ( file, 0, buffer, bsize, & num_read ) );
-    REQUIRE_EQ ( num_read, bsize );
-
-    // read the whole: storage.googleapis.com returns 200
-    bsize = size;
-    REQUIRE_RC ( KFileRead ( file, 0, buffer, bsize, & num_read ) );
-    REQUIRE_EQ ( num_read, bsize );
-
-    // request more that file size: expect exact file size
-    REQUIRE_RC ( KFileRead ( file, 0, buffer, size * 2, & num_read ) );
-    REQUIRE_EQ ( num_read, static_cast < size_t > ( size ) );
-
-    free ( buffer );
-#endif
-
-    REQUIRE_RC ( KFileRelease ( file ) );
-
-    REQUIRE_RC ( KNSManagerRelease ( mgr ) );
-}
-
-TEST_CASE ( Test_200 ) {
-    KNSManager * mgr = NULL;
-    REQUIRE_RC ( KNSManagerMake ( & mgr ) );
-
-    const KFile * file = NULL;
-
-#if GOOGLE_FILE_EXISTS
-    REQUIRE_RC ( KNSManagerMakeHttpFile ( mgr, & file, NULL, 0x01010000,
-       "https://storage.googleapis.com/yan-blastdb/2018-09-12-08-33-02/fuse.xml"
+       "http://public_docs.crg.es/rguigo/Papers/2017_lagarde-uszczynska_CLS/data/trackHub//dataFiles/hsAll_Cap1_Brain_hiSeq.bam"
       ) );
 
     uint64_t size = 0;
     REQUIRE_RC ( KFileSize ( file, & size ) );
+    size = std::min(size, decltype(size)(4 * 1024 * 1024));
 
     void * buffer = malloc ( size );
     REQUIRE_NOT_NULL ( buffer );
 
     size_t num_read = 0;
 
-    // read incomplete file: expect 206 response code
-    size_t bsize = size - 1;
+    // read small chunck; should succeed
+    size_t bsize = size;
     REQUIRE_RC ( KFileRead ( file, 0, buffer, bsize, & num_read ) );
     REQUIRE_EQ ( num_read, bsize );
-
-    // read the whole: storage.googleapis.com returns 200
-    bsize = size;
-    REQUIRE_RC ( KFileRead ( file, 0, buffer, bsize, & num_read ) );
-    REQUIRE_EQ ( num_read, bsize );
-
-    // request more that file size: expect exact file size
-    REQUIRE_RC ( KFileRead ( file, 0, buffer, size * 2, & num_read ) );
-    REQUIRE_EQ ( num_read, static_cast < size_t > ( size ) );
 
     free ( buffer );
-#endif
 
     REQUIRE_RC ( KFileRelease ( file ) );
 
@@ -120,13 +69,13 @@ TEST_CASE ( Test_200 ) {
 }
 
 extern "C" {
-    const char UsageDefaultName[] = "test200for-whole-file";
+    const char UsageDefaultName[] = "test-VDB-3661";
     rc_t CC UsageSummary ( const char     * progname) { return 0; }
     rc_t CC Usage        ( const struct Args * args ) { return 0; }
     ver_t CC KAppVersion ( void ) { return 0; }
 
-    rc_t CC KMain ( int argc, char * argv [] ) { if (
-0 ) assert ( ! KDbgSetString ( "KNS-HTTP" ) );
+    rc_t CC KMain ( int argc, char * argv [] ) {
+        if ( 1 ) assert ( ! KDbgSetString ( "KNS-HTTP" ) );
         KConfigDisableUserSettings ();
 
         KConfig * kfg = NULL;
@@ -136,7 +85,7 @@ extern "C" {
             rc = KConfigWriteString ( kfg, "/tls/allow-all-certs", "true" );
 
         if ( rc == 0 )
-            rc = T200FOR_WHOLE_FILE ( argc, argv );
+            rc = VDB_3661 ( argc, argv );
 
         RELEASE ( KConfig, kfg );
 

@@ -73,7 +73,8 @@ clean: stdclean
 $(ILIBDIR)/libvfs: $(addprefix $(ILIBDIR)/libvfs.,$(ILIBEXT))
 
 VFS_SRC_CMN = \
-	manager  \
+	json-response \
+	manager \
 	remote-services \
 	resolver \
 	resolver-3.0 \
