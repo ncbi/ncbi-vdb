@@ -367,15 +367,31 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
         num = ( uint32_t ) ( tok -> alpha . size + 2 );
         if ( tok -> prefix . size != 0 )
             num += (uint32_t) ( tok -> prefix . size + 1 );
-        if ( tok -> ext1 . size == 0 )
+        if ( tok -> alpha . size == 6 )
         {
-            rc = string_printf ( expanded, bsize, size,
-                "WGS/%.2s/%.2s/%.*S", tok -> alpha . addr, tok -> alpha . addr + 2, num, & tok -> acc );
+            if ( tok -> ext1 . size == 0 )
+            {
+                rc = string_printf ( expanded, bsize, size,
+                    "WGS/%.2s/%.2s/%.2s/%.*S", tok -> alpha . addr, tok -> alpha . addr + 2, tok -> alpha . addr + 4, num, & tok -> acc );
+            }
+            else
+            {
+                rc = string_printf ( expanded, bsize, size,
+                    "WGS/%.2s/%.2s/%.2s/%.*S.%S", tok -> alpha . addr, tok -> alpha . addr + 2, tok -> alpha . addr + 4, num, & tok -> acc, & tok -> ext1 );
+            }
         }
         else
         {
-            rc = string_printf ( expanded, bsize, size,
-                "WGS/%.2s/%.2s/%.*S.%S", tok -> alpha . addr, tok -> alpha . addr + 2, num, & tok -> acc, & tok -> ext1 );
+            if ( tok -> ext1 . size == 0 )
+            {
+                rc = string_printf ( expanded, bsize, size,
+                    "WGS/%.2s/%.2s/%.*S", tok -> alpha . addr, tok -> alpha . addr + 2, num, & tok -> acc );
+            }
+            else
+            {
+                rc = string_printf ( expanded, bsize, size,
+                    "WGS/%.2s/%.2s/%.*S.%S", tok -> alpha . addr, tok -> alpha . addr + 2, num, & tok -> acc, & tok -> ext1 );
+            }
         }
         break;
     case algFuseWGS:
