@@ -139,6 +139,7 @@ extern "C" {
 struct KDataBuffer;
 struct KNSManager;
 struct String;
+struct VResolverAccToken;
 struct VResolverAlg;
 
 rc_t VPathCheckFromNamesCGI(const struct VPath *path,
@@ -161,6 +162,7 @@ typedef enum
     appNANNOT,
     appNAKMER,
     appSRAPileup,
+    appSRARealign,
     appCount
 } VResolverAppID;
 
@@ -247,6 +249,10 @@ rc_t VResolverResolveName ( VResolver *self, int resolve );
 #define DEFAULT_RESOVE_OID_NAME true
 
 void KConfigReadRemoteProtocols ( struct KConfig const * self, VRemoteProtocols * remote_protos );
+
+VResolverAppID get_accession_app(const String * accession, bool refseq_ctx,
+    struct VResolverAccToken *tok, bool *legacy_wgs_refseq,
+    bool resolveAllAccToCache, bool * forDirAdjusted);
 
 #ifdef __cplusplus
 }

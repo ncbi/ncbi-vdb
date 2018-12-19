@@ -59,6 +59,8 @@ rc_t CC KService1NameWithVersion ( const struct KNSManager * mgr,
 
 
 /******************************** KSrvResponse ********************************/
+rc_t KServiceGetKSrvResponse( struct KService * self, struct KSrvResponse ** r);
+
 rc_t KSrvResponseMake ( struct KSrvResponse ** self );
 rc_t KSrvResponseAddRef ( const struct KSrvResponse * self );
 rc_t KSrvResponseAppend ( struct KSrvResponse * self,
@@ -72,6 +74,9 @@ rc_t KSrvResponseGet ( const struct KSrvResponse * self, uint32_t idx,
 rc_t KSrvResponseGetIds ( const struct KSrvResponse * self, uint32_t idx,
                           const char ** reqId, const char ** respId );
 
+rc_t KSrvResponseGetMapping(const KSrvResponse * self, uint32_t idx,
+                            const struct VPath ** mapping);
+
 rc_t KSrvResponseGetR4 ( const struct KSrvResponse * self,
                          struct Response4 ** r );
 rc_t KSrvResponseSetR4 ( struct KSrvResponse * self,
@@ -83,10 +88,12 @@ rc_t KSrvRespFileGetFormat ( const struct KSrvRespFile * self,
                              ESrvFileFormat * ff );
 
 /* DON"T FREE RETURNED STRINGS !!! */
-rc_t KSrvRespFileGetAcc ( const struct KSrvRespFile * self, const char ** acc,
-                                                            const char ** tic);
+rc_t KSrvRespFileGetAccOrName ( const struct KSrvRespFile * self,
+                                const char ** out, const char ** tic);
 rc_t KSrvRespFileGetId  ( const struct KSrvRespFile * self, uint64_t * id,
                                                             const char ** tic );
+rc_t KSrvRespFileGetMapping(const struct KSrvRespFile * self,
+    const struct VPath ** mapping);
 
 rc_t LocationsAddCache ( struct Locations * self,
                          const struct VPath * path, rc_t rc );
@@ -162,8 +169,8 @@ rc_t KServiceSearchTest (
 
 /* THE FOLLOWING DEFINE TURNS ON COMPARING OLD/NEW RESOLVING CALLS AND
    ASSERTING WHEN THE RESULTS DO NOT MATCH.
-   REMOVE IT WHEN MERGING THE BRANCH */
-#define TESTING_SERVICES_VS_OLD_RESOLVING 1
+   REMOVE IT WHEN MERGING THE BRANCH 
+#define TESTING_SERVICES_VS_OLD_RESOLVING 1 */
 
 
 #ifdef __cplusplus

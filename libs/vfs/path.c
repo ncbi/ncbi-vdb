@@ -502,12 +502,37 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
     const char pileup_ext[] = ".pileup";
     size_t pileup_ext_size = sizeof( pileup_ext ) / sizeof( pileup_ext[0] ) - 1;
     
+    bool realign_ext_present = false;
+    const char realign_ext[] = ".realign";
+    size_t realign_ext_size = sizeof(realign_ext) / sizeof(realign_ext[0]) - 1;
+
+    bool vdbcache_ext_present = false;
+    const char vdbcache_ext[] = ".vdbcache";
+    size_t vdbcache_ext_size = sizeof(vdbcache_ext) / sizeof(vdbcache_ext[0]) - 1;
+
     /* remove pileup extension before parsing, so that it won't change parsing results */
     if ( uri_size > pileup_ext_size && memcmp(&uri[uri_size - pileup_ext_size], pileup_ext, pileup_ext_size) == 0)
     {
         uri_size -= pileup_ext_size;
         uri[uri_size] = '\0';
         pileup_ext_present = true;
+    }
+
+    /* remove realign extension before parsing,
+       so that it won't change parsing results */
+    else if (uri_size > realign_ext_size && memcmp
+        (&uri[uri_size - realign_ext_size], realign_ext, realign_ext_size) == 0)
+    {
+        uri_size -= realign_ext_size;
+        uri[uri_size] = '\0';
+        realign_ext_present = true;
+    }
+
+    /* detect vdbcahde extension */
+    else if (uri_size > vdbcache_ext_size && memcmp
+        (&uri[uri_size - vdbcache_ext_size], vdbcache_ext, vdbcache_ext_size) == 0)
+    {
+        vdbcache_ext_present = true;
     }
 
     for ( i = anchor = 0, total = count = 0; i < uri_size; ++ total, ++ count, i += bytes )
@@ -1907,8 +1932,31 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
         
         if ( acc_alpha && acc_digit )
             ++acc_ext;
+
+        self->sraClass = eSCpileup;
     }
-    
+
+    /* return realign extension back */
+    else if (realign_ext_present)
+    {
+        uri[uri_size] = '.';
+        if (i == uri_size) {
+            i += realign_ext_size;
+            count += realign_ext_size;
+        }
+        uri_size += realign_ext_size;
+
+        if (acc_alpha && acc_digit)
+            ++acc_ext;
+
+        self->sraClass = eSCrealign;
+    }
+    /* record dbcache type */
+    else if (vdbcache_ext_present)
+    {
+        self->sraClass = eSCvdbcache;
+    }
+
     switch ( state )
     {
     case vppStart:
@@ -3846,9 +3894,16 @@ rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
     if ( tick == NULL || tick -> addr == NULL || tick -> size == 0 )
         return VPathMakeFmtExt ( new_path, ext, id, tick, osize, date, md5,
 		                         exp_date, "%S", url  );
-    else
-        return VPathMakeFmtExt ( new_path, ext, id, tick, osize, date, md5,
-                                 exp_date, "%S?tic=%S", url, tick );
+    else {
+        const char * fmt = NULL;
+        assert(url);
+        if (string_chr(url->addr, url->size, '?') == NULL)
+            fmt = "%S?tic=%S";
+        else
+            fmt = "%S&tic=%S";
+        return VPathMakeFmtExt(new_path, ext, id, tick, osize, date, md5,
+            exp_date, fmt, url, tick);
+    }
 }
 
 rc_t LegacyVPathMakeVFmt ( VPath ** new_path, const char * fmt, va_list args )

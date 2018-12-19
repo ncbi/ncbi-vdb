@@ -1,4 +1,7 @@
-/*===========================================================================
+#ifndef _h_kns_cloud_
+#define _h_kns_cloud_
+
+/*=====================================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
 *               National Center for Biotechnology Information
@@ -20,53 +23,44 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ===========================================================================
-*
-*/
-
-
-#ifndef _h_kns_http_priv_
-#define _h_kns_http_priv_
-
-
-#ifndef _h_klib_defs_
-#include <klib/defs.h> /* rc_t */
-#endif
+* ================================================================================== */
 
 #ifndef _h_kns_extern_
 #include <kns/extern.h> /* KNS_EXTERN */
 #endif
 
-
-struct KClientHttpResult;
-
+#ifndef _h_klib_defs_
+#include <klib/defs.h> /* rc_t */
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+struct KNSManager;
 
-KNS_EXTERN rc_t CC KClientHttpRequestFormatMsg (
-    const struct KClientHttpRequest * self, char * buffer,
-    size_t bsize, const char * method, size_t * len );
 
-KNS_EXTERN rc_t CC KClientHttpRequestFormatPostMsg(
-    const struct KClientHttpRequest * self, char * buffer,
-    size_t bsize, size_t * len);
-
-KNS_EXTERN rc_t CC KClientHttpRequestFormatCloudMsg(
-    const KClientHttpRequest *self,
-    char *buffer, size_t bsize, const char *method,
-    const char *AWSAccessKeyId, const char *YourSecretAccessKeyID, size_t *len);
-
-KNS_EXTERN rc_t CC KClientHttpResultFormatMsg (
-    const struct KClientHttpResult * self, char * buffer,
-    size_t bsize, size_t * len, const char * bol, const char * eol );
+ /* MakeAwsAuthenticationHeader
+ *  constructs the Authorization request header value
+ *
+ *  AWSAccessKeyId [ IN ] - AWS access key ID
+ *  YourSecretAccessKeyID [ IN ] - AWS secret access key
+ *  StringToSign [ IN ] - String To Sign
+ *  dst [ OUT ] - destination buffer, NULL-terminated
+ *  dlen [ IN ] - size of the destination buffer
+ */
+KNS_EXTERN rc_t CC KNSManagerMakeAwsAuthenticationHeader(
+    const struct KNSManager *self,
+    const char *AWSAccessKeyId,
+    const char *YourSecretAccessKeyID,
+    const char *StringToSign,
+    char *dst, size_t dlen);
 
 
 #ifdef __cplusplus
 }
 #endif
 
+/*************************************************************************************/
 
-#endif /* _h_kns_http_priv_ */
+#endif /* _h_kns_cloud_ */

@@ -34,10 +34,13 @@ extern "C" {
 #endif
 
 struct Data;
+struct KSrvRespFile;
+struct KSrvRespObj;
+struct String;
+struct VPath;
 
 typedef struct Container Container;
 typedef struct Item Item;
-typedef struct KSrvRespObj KSrvRespObj;
 typedef struct Response4 Response4;
 
 rc_t Response4MakeEmpty  (       Response4 ** self );
@@ -50,15 +53,14 @@ rc_t Response4AddAccOrId (       Response4 * self, const char * acc,
 rc_t Response4GetRc      ( const Response4 * self, rc_t * rc );
 rc_t ContainerAdd ( Container * self, const char * acc, int64_t id,
                     Item ** newItem, const struct Data * data );
-rc_t ItemAddVPath ( Item * self, const char * type, const struct VPath * path );
+rc_t ItemAddVPath(Item * self, const char * type, const struct VPath * path,
+                                                  const struct VPath * mapping);
 rc_t ItemSetTicket ( Item * self, const struct String * ticket );
-rc_t KSrvRespFileGetMapping ( const struct KSrvRespFile * self,
-                              const struct VPath ** mapping );
 rc_t Response4GetKSrvRespObjCount ( const Response4 * self, uint32_t * n );
 rc_t Response4GetKSrvRespObjByIdx ( const Response4 * self, uint32_t i,
-                                    const KSrvRespObj ** box );
+                                    const struct KSrvRespObj ** box );
 rc_t Response4GetKSrvRespObjByAcc ( const Response4 * self, const char * acc,
-                                    const KSrvRespObj ** box );
+                                    const struct KSrvRespObj ** box );
 
 #ifdef __cplusplus
 }

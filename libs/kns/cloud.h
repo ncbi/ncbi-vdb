@@ -1,7 +1,7 @@
-#ifndef _h_vfs_resolver_priv_
-#define _h_vfs_resolver_priv_
+#ifndef _h_libs_klib_cloud_
+#define _h_libs_klib_cloud_
 
-/*===========================================================================
+/*==============================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
 *               National Center for Biotechnology Information
@@ -27,40 +27,25 @@
 *
 */
 
-
-#include <vfs/resolver.h> /* VResolver */
-
+#include <kfc/defs.h> /* rc_t */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+struct Cloud;
+struct KNSManager;
 
-/* QueryWithDir:
- * get local/cache location when URL is requested or target dir specified:
- * when resolveAccToCache is false: use FILE app rather than REFSEQ
- * inOutDir - returned cache location is in the output (or current) directory
- *
- * outDir==NULL resolveAccToCache==true : resolve all to cache
- * outDir==NULL resolveAccToCache==false: resolve accessions to cache,
- *                                                files - to cwd
- * outDir!=NULL: resolve all to outDir
- */
-VFS_EXTERN rc_t CC VResolverQueryWithDir ( const VResolver * self,
-    VRemoteProtocols protocols, const struct VPath * query,
-    const struct VPath ** local, const struct VPath ** remote,
-    const struct VPath ** cache, bool resolveAccToCache,
-    const char * outDir, bool * inOutDir, bool queryIsUrl,
-    const struct VPath * oldRemote, const VPath * oldMapping );
+rc_t KNSManagerMakeCloud(struct KNSManager * self, const struct Cloud ** cloud);
+rc_t CloudRelease(const struct Cloud * self);
 
-
-VFS_EXTERN rc_t CC VResolverGetProject ( const VResolver * self,
-                                         uint32_t * project );
-
+/* don't release returned char* */
+const char * CloudGetLocation(const struct Cloud * self);
 
 #ifdef __cplusplus
 }
 #endif
 
+#endif /* _h_libs_klib_cloud_ */
 
-#endif /* _h_vfs_resolver_priv_ */
+/******************************************************************************/
