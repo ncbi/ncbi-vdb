@@ -3835,9 +3835,9 @@ rc_t CC oldVResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
 
 static
 rc_t CC VResolverQueryImpl ( const VResolver * self, VRemoteProtocols protocols,
-    const VPath * query,
-    const VPath ** local, const VPath ** remote, const VPath ** cache,
-    bool resolveAllAccToCache, const char * dir, bool * inOutDir )
+    const VPath * query, const VPath ** local, const VPath ** remote,
+    const VPath ** cache, bool resolveAllAccToCache,
+    const char * dir, bool * inOutDir, bool queryIsUrl )
 {
     rc_t rcs = -1;
     rc_t rc = rcs = VResolverQueryInt ( self, protocols, query, local,
@@ -3853,7 +3853,222 @@ rc_t CC VResolverQueryImpl ( const VResolver * self, VRemoteProtocols protocols,
             VPathMarkHighReliability ( * ( VPath ** ) cache, true );
     }
 #ifdef TESTING_SERVICES_VS_OLD_RESOLVING
-    {
+    if ( ! queryIsUrl ) {
+        const VPath * oath = NULL;
+        const VPath ** p = remote ? & oath : NULL;
+        const VPath * cath = NULL;
+        const VPath ** c = cache ? & cath : NULL;
+        const VPath * lath = NULL;
+        const VPath ** l = local ? & lath : NULL;
+#if _DEBUGGING
+        rc_t ro =
+#endif
+            VResolverQueryInt ( self, protocols, query, l, p, c,
+                                "#3.", true, NULL, NULL );
+        assert ( rcs == ro );
+        if ( remote == NULL )
+            assert ( p == NULL );
+        else if ( * remote == NULL )
+            assert ( p && * p == NULL && oath == NULL );
+        else {
+            int notequal = ~ 0;
+            VPathMarkHighReliability ( ( VPath * ) oath, true );
+            assert ( ! VPathEqual ( * remote, oath, & notequal ) );
+            if ( notequal )
+                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
+        }
+        if ( cache == NULL )
+            assert ( c == NULL );
+        else if ( * cache == NULL )
+            assert ( c && * c == NULL && cath == NULL );
+        else {
+            int notequal = ~ 0;
+            VPathMarkHighReliability ( ( VPath * ) cath, true );
+            assert ( ! VPathEqual ( * cache, cath, & notequal ) );
+            if ( notequal )
+                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
+        }
+        if ( local == NULL )
+            assert ( l == NULL );
+        else if ( * local == NULL )
+            assert ( l && * l == NULL && lath == NULL );
+        else {
+            VPathMarkHighReliability ( ( VPath * ) lath, true );
+#if _DEBUGGING
+            {
+                int notequal = ~ 0;
+                assert ( ! VPathEqual ( * local, lath, & notequal ) );
+                assert ( ! notequal );
+            }
+#endif
+        }
+        RELEASE ( VPath, lath );
+        RELEASE ( VPath, oath );
+        RELEASE ( VPath, cath );
+    }
+    if ( true || ! queryIsUrl ) {
+        const VPath * oath = NULL;
+        const VPath ** p = remote ? & oath : NULL;
+        const VPath * cath = NULL;
+        const VPath ** c = cache ? & cath : NULL;
+        const VPath * lath = NULL;
+        const VPath ** l = local ? & lath : NULL;
+#if _DEBUGGING
+        rc_t ro =
+#endif
+            VResolverQueryInt ( self, protocols, query, l, p, c,
+                                "#3.", resolveAllAccToCache, dir, inOutDir );
+        assert ( rcs == ro );
+        if ( remote == NULL )
+            assert ( p == NULL );
+        else if ( * remote == NULL )
+            assert ( p && * p == NULL && oath == NULL );
+        else {
+            int notequal = ~ 0;
+            VPathMarkHighReliability ( ( VPath * ) oath, true );
+            assert ( ! VPathEqual ( * remote, oath, & notequal ) );
+            if ( notequal )
+                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
+        }
+        if ( cache == NULL )
+            assert ( c == NULL );
+        else if ( * cache == NULL )
+            assert ( c && * c == NULL && cath == NULL );
+        else {
+            int notequal = ~ 0;
+            VPathMarkHighReliability ( ( VPath * ) cath, true );
+            assert ( ! VPathEqual ( * cache, cath, & notequal ) );
+            if ( notequal )
+                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
+        }
+        if ( local == NULL )
+            assert ( l == NULL );
+        else if ( * local == NULL )
+            assert ( l && * l == NULL && lath == NULL );
+        else {
+            VPathMarkHighReliability ( ( VPath * ) lath, true );
+#if _DEBUGGING
+            {
+                int notequal = ~ 0;
+                assert ( ! VPathEqual ( * local, lath, & notequal ) );
+                assert ( ! notequal );
+            }
+#endif
+        }
+        RELEASE ( VPath, lath );
+        RELEASE ( VPath, oath );
+        RELEASE ( VPath, cath );
+    }
+    if ( ! queryIsUrl ) {
+        const VPath * oath = NULL;
+        const VPath ** p = remote ? & oath : NULL;
+        const VPath * cath = NULL;
+        const VPath ** c = cache ? & cath : NULL;
+        const VPath * lath = NULL;
+        const VPath ** l = local ? & lath : NULL;
+#if _DEBUGGING
+        rc_t ro =
+#endif
+            VResolverQueryInt ( self, protocols, query, l, p, c,
+                                "#1.2", //resolveAllAccToCache, dir, inOutDir );
+                                true, NULL, NULL );
+        
+        assert ( rcs == ro );
+        if ( remote == NULL )
+            assert ( p == NULL );
+        else if ( * remote == NULL )
+            assert ( p && * p == NULL && oath == NULL );
+        else {
+            int notequal = ~ 0;
+            VPathMarkHighReliability ( ( VPath * ) oath, true );
+            assert ( ! VPathEqual ( * remote, oath, & notequal ) );
+            if ( notequal )
+                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
+        }
+        if ( cache == NULL )
+            assert ( c == NULL );
+        else if ( * cache == NULL )
+            assert ( c && * c == NULL && cath == NULL );
+        else {
+            int notequal = ~ 0;
+            VPathMarkHighReliability ( ( VPath * ) cath, true );
+            assert ( ! VPathEqual ( * cache, cath, & notequal ) );
+            if ( notequal )
+                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
+        }
+        if ( local == NULL )
+            assert ( l == NULL );
+        else if ( * local == NULL )
+            assert ( l && * l == NULL && lath == NULL );
+        else {
+            VPathMarkHighReliability ( ( VPath * ) lath, true );
+#if _DEBUGGING
+            {
+                int notequal = ~ 0;
+                assert ( ! VPathEqual ( * local, lath, & notequal ) );
+                assert ( ! notequal );
+            }
+#endif
+        }
+        RELEASE ( VPath, lath );
+        RELEASE ( VPath, oath );
+        RELEASE ( VPath, cath );
+    }
+    if ( true ) { // ! queryIsUrl ) {
+        const VPath * oath = NULL;
+        const VPath ** p = remote ? & oath : NULL;
+        const VPath * cath = NULL;
+        const VPath ** c = cache ? & cath : NULL;
+        const VPath * lath = NULL;
+        const VPath ** l = local ? & lath : NULL;
+#if _DEBUGGING
+        rc_t ro =
+#endif
+            VResolverQueryInt ( self, protocols, query, l, p, c,
+                                "#1.2", resolveAllAccToCache, dir, inOutDir );
+        
+        assert ( rcs == ro );
+        if ( remote == NULL )
+            assert ( p == NULL );
+        else if ( * remote == NULL )
+            assert ( p && * p == NULL && oath == NULL );
+        else {
+            int notequal = ~ 0;
+            VPathMarkHighReliability ( ( VPath * ) oath, true );
+            assert ( ! VPathEqual ( * remote, oath, & notequal ) );
+            if ( notequal )
+                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
+        }
+        if ( cache == NULL )
+            assert ( c == NULL );
+        else if ( * cache == NULL )
+            assert ( c && * c == NULL && cath == NULL );
+        else {
+            int notequal = ~ 0;
+            VPathMarkHighReliability ( ( VPath * ) cath, true );
+            assert ( ! VPathEqual ( * cache, cath, & notequal ) );
+            if ( notequal )
+                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
+        }
+        if ( local == NULL )
+            assert ( l == NULL );
+        else if ( * local == NULL )
+            assert ( l && * l == NULL && lath == NULL );
+        else {
+            VPathMarkHighReliability ( ( VPath * ) lath, true );
+#if _DEBUGGING
+            {
+                int notequal = ~ 0;
+                assert ( ! VPathEqual ( * local, lath, & notequal ) );
+                assert ( ! notequal );
+            }
+#endif
+        }
+        RELEASE ( VPath, lath );
+        RELEASE ( VPath, oath );
+        RELEASE ( VPath, cath );
+    }
+    if ( ! queryIsUrl ) {
         const VPath * oath = NULL;
         const VPath ** p = remote ? & oath : NULL;
         const VPath * cath = NULL;
@@ -3913,59 +4128,6 @@ rc_t CC VResolverQueryImpl ( const VResolver * self, VRemoteProtocols protocols,
         RELEASE ( VPath, oath );
         RELEASE ( VPath, cath );
     }
-    {
-        const VPath * oath = NULL;
-        const VPath ** p = remote ? & oath : NULL;
-        const VPath * cath = NULL;
-        const VPath ** c = cache ? & cath : NULL;
-        const VPath * lath = NULL;
-        const VPath ** l = local ? & lath : NULL;
-#if _DEBUGGING
-        rc_t ro =
-#endif
-            VResolverQueryInt ( self, protocols, query, l, p, c,
-                                "#1.2", true, NULL, NULL );
-        assert ( rcs == ro );
-        if ( remote == NULL )
-            assert ( p == NULL );
-        else if ( * remote == NULL )
-            assert ( p && * p == NULL && oath == NULL );
-        else {
-            int notequal = ~ 0;
-            VPathMarkHighReliability ( ( VPath * ) oath, true );
-            assert ( ! VPathEqual ( * remote, oath, & notequal ) );
-            if ( notequal )
-                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
-        }
-        if ( cache == NULL )
-            assert ( c == NULL );
-        else if ( * cache == NULL )
-            assert ( c && * c == NULL && cath == NULL );
-        else {
-            int notequal = ~ 0;
-            VPathMarkHighReliability ( ( VPath * ) cath, true );
-            assert ( ! VPathEqual ( * cache, cath, & notequal ) );
-            if ( notequal )
-                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
-        }
-        if ( local == NULL )
-            assert ( l == NULL );
-        else if ( * local == NULL )
-            assert ( l && * l == NULL && lath == NULL );
-        else {
-            VPathMarkHighReliability ( ( VPath * ) lath, true );
-#if _DEBUGGING
-            {
-                int notequal = ~ 0;
-                assert ( ! VPathEqual ( * local, lath, & notequal ) );
-                assert ( ! notequal );
-            }
-#endif
-        }
-        RELEASE ( VPath, lath );
-        RELEASE ( VPath, oath );
-        RELEASE ( VPath, cath );
-    }
 #endif
 
     return rc;
@@ -3977,17 +4139,17 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
     const VPath ** cache )
 {
     return VResolverQueryImpl ( self, protocols, query, local, remote, cache,
-                                true, NULL, NULL );
+                                true, NULL, NULL, false );
 }
 
 LIB_EXPORT
 rc_t CC VResolverQueryWithDir ( const VResolver * self,
-    VRemoteProtocols protocols, const VPath * query,
-    const VPath ** local, const VPath ** remote, const VPath ** cache,
-    bool resolveAccToCache, const char * outDir, bool * inOutDir )
+    VRemoteProtocols protocols, const VPath * query, const VPath ** local,
+    const VPath ** remote, const VPath ** cache, bool resolveAccToCache,
+    const char * outDir, bool * inOutDir, bool queryIsUrl )
 {
     return VResolverQueryImpl ( self, protocols, query, local, remote, cache,
-                                resolveAccToCache, outDir, inOutDir );
+                            resolveAccToCache, outDir, inOutDir, queryIsUrl );
 }
 
 /* LoadVolume
@@ -5144,7 +5306,7 @@ rc_t VResolverGetProjectId ( const VResolver * self, uint32_t * projectId )
     if ( self == NULL )
         return RC ( rcVFS, rcResolver, rcAccessing, rcSelf, rcNull );
     else if ( projectId == NULL )
-        return RC ( rcVFS, rcResolver, rcUpdating, rcParam, rcNull );
+        return RC ( rcVFS, rcResolver, rcAccessing, rcParam, rcNull );
     else {
         bool has_project_id = self -> projectId != 0;
 
@@ -5157,6 +5319,23 @@ rc_t VResolverGetProjectId ( const VResolver * self, uint32_t * projectId )
         return 0;
     }
 }
+
+LIB_EXPORT rc_t CC VResolverGetProject ( const VResolver * self,
+                                         uint32_t * project )
+{
+    if ( project == NULL )
+        return RC ( rcVFS, rcResolver, rcAccessing, rcParam, rcNull );
+
+    * project = 0;
+
+    if ( self == NULL )
+        return RC ( rcVFS, rcResolver, rcAccessing, rcSelf, rcNull );
+
+    * project = self -> projectId;
+
+    return 0;
+}
+
 
 /* Make
  *  internal factory function
@@ -5205,7 +5384,7 @@ rc_t VResolverMake ( VResolver ** objp, const KDirectory *wd,
 
         KRepositoryProjectId ( protected, & obj -> projectId );
 
-        obj -> version = string_dup_measure ( "#3.0", NULL );
+        obj -> version = string_dup_measure ( "#4.", NULL );
         if ( obj -> version == NULL )
             rc = RC ( rcVFS, rcMgr, rcCreating, rcMemory, rcExhausted );
 

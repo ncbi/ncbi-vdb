@@ -47,10 +47,14 @@ extern "C" {
  * outDir!=NULL: resolve all to outDir
  */
 VFS_EXTERN rc_t CC VResolverQueryWithDir ( const VResolver * self,
-    VRemoteProtocols protocols,
-    const struct VPath * query, const struct VPath ** local,
-    const struct VPath ** remote, const struct VPath ** cache,
-    bool resolveAccToCache, const char * outDir, bool * inOutDir );
+    VRemoteProtocols protocols, const struct VPath * query,
+    const struct VPath ** local, const struct VPath ** remote,
+    const struct VPath ** cache, bool resolveAccToCache,
+    const char * outDir, bool * inOutDir, bool queryIsUrl );
+
+
+VFS_EXTERN rc_t CC VResolverGetProject ( const VResolver * self,
+                                         uint32_t * project );
 
 
 #ifdef __cplusplus
