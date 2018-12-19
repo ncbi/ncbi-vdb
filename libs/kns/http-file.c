@@ -572,7 +572,6 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                         KDataBufferSub ( buf, & f -> url_buffer, 0, buf -> elem_count ); /* old behavior: breaks if redirected */
 #endif
                                         KClientHttpRequestRelease ( req );
-                                        KDataBufferWhack(buf);
                                         
                                         if ( rc != 0 ) {
                                             if ( KNSManagerLogNcbiVdbNetError ( self ) )
@@ -637,6 +636,7 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                                         f -> no_cache = size >= NO_CACHE_LIMIT;
                                                         
                                                         * file = & f -> dad;
+                                                        KDataBufferWhack(buf);
                                                         return 0;
                                                     }
                                                 }
@@ -698,7 +698,7 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                 }
                             }
                         }
-
+                        KDataBufferWhack( & f -> url_buffer );
                         KDataBufferWhack ( buf );
                         KLockRelease ( f -> lock );
                     }
