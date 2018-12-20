@@ -3533,7 +3533,7 @@ rc_t KServiceProcessLine ( KService * self,
 static
 rc_t KServiceProcessStreamAll ( KService * self, KStream * stream )
 {
-    rc_t rc = 0, rx = 0;;
+    rc_t rc = 0, rx = 0;
     bool start = true;
     size_t offW = 0;
     size_t num_read = 0;

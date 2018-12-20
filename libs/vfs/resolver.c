@@ -2616,7 +2616,7 @@ rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
 
     bool resolveAllAccToCache = true;
     if ( dir != NULL )
-        resolveAllAccToCache = false;;
+        resolveAllAccToCache = false;
 
     if ( VResolverFuseMountedResolve ( self, accession, path ) == 0 ) {
         return 0;
