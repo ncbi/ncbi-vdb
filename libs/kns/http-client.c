@@ -3231,7 +3231,7 @@ static EUriForm EUriFormGuess ( const String * hostname,
             if ( uf != eUFUndefined ) /* switch the previous URI form */
                 return uf == eUFAbsolute ? eUFOrigin : eUFAbsolute;
 /*          else no break here ; */
-            assert ( 0 ); /* should never happen:
+            assert (uf != eUFUndefined); /* should never happen:
                              uf should be initialized when uriForm == 2 */
 
         case 1:
