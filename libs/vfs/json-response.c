@@ -778,7 +778,7 @@ static rc_t StatusSet
     rc_t rc = 0;
 
     const KJsonValue * value = NULL;
-    const KJsonObject * object = NULL;;
+    const KJsonObject * object = NULL;
     int64_t code = -1;
     const char * msg = NULL;
     const char * name = "status";
