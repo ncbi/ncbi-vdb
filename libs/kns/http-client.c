@@ -3225,14 +3225,12 @@ static EUriForm EUriFormGuess ( const String * hostname,
             return eUFAbsolute;
 
         default:
-            assert ( 0 ); /* should never happen */
 /*          no break here ; */
+
         case 2: /* retry after receiving 400 */
             if ( uf != eUFUndefined ) /* switch the previous URI form */
                 return uf == eUFAbsolute ? eUFOrigin : eUFAbsolute;
 /*          else no break here ; */
-            assert (uf != eUFUndefined); /* should never happen:
-                             uf should be initialized when uriForm == 2 */
 
         case 1:
             if ( uf != eUFUndefined )
