@@ -76,7 +76,7 @@ const INSDC:4na:bin INSDC:4na:map:BINSET
     = [ 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 ];
 const INSDC:dna:text INSDC:4na:map:CHARSET
     = ".ACMGRSVTWYHKDBN";
-const INSDC:dna:text INSDC:dna:4na:accept:CHARSET
+const INSDC:dna:text INSDC:4na:accept:CHARSET
     = ".ACMGRSVTWYHKDBNacmgrsvtwyhkdbn";
 
 /*--------------------------------------------------------------------------
