@@ -52,7 +52,6 @@ struct VPath;
 struct VResolver;
 struct KDirectory;
 struct KNSManager;
-struct VPath;
 
 /* temporary */
 

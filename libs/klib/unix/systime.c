@@ -201,6 +201,34 @@ KLIB_EXTERN size_t CC KTimeIso8601 ( KTime_t ts, char * s, size_t size ) {
 }
 
 
+/* Iso8601
+*  populate "s" from "ks" according to RFC 2616:
+*         Sun Nov 6 08:49:37 1994 +0000 ; ANSI C's asctime() format
+*
+* https://www.ietf.org/rfc/rfc2616.txt 3.3.1 Full Date
+*
+* https://www.ietf.org/rfc/rfc2822.txt 3.3. Date and Time Specification
+*     The form "+0000" SHOULD be used to indicate a time zone at Universal Time.
+*/
+KLIB_EXTERN size_t CC KTimeRfc2616(KTime_t ts, char * s, size_t size) {
+    const KTime * r = NULL;
+    KTime now;
+
+    time_t unix_time = (time_t)ts;
+    struct tm t;
+
+    if (ts == 0 || s == NULL || size == 0)
+        return 0;
+
+    r = KTimeGlobal(&now, ts);
+    if (r == NULL)
+        return 0;
+
+    gmtime_r(&unix_time, &t);
+    return strftime(s, size, "%a, %d %b %Y %H:%M:%S +0000", &t);
+}
+
+
 LIB_EXPORT rc_t CC KSleepMs(uint32_t milliseconds) {
     struct timespec time;
 

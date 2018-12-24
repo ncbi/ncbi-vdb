@@ -370,6 +370,15 @@ FIXTURE_TEST_CASE(CSRA1_Reference_IsCircular_Yes, CSRA1_Fixture)
     REQUIRE( ncbi :: NGS :: openReadCollection ( "SRR821492" ) . getReference ( "chrM" ) . getIsCircular () );
 }
 
+FIXTURE_TEST_CASE(CSRA1_Reference_IsLocal_Yes, CSRA1_Fixture)
+{
+    REQUIRE( getReference ( "supercont2.1" ). getIsLocal () );
+}
+FIXTURE_TEST_CASE(CSRA1_Reference_IsLocal_No, CSRA1_Fixture)
+{
+    REQUIRE( ! ncbi :: NGS :: openReadCollection ( "SRR821492" ) . getReference ( "chrM" ) . getIsLocal () );
+}
+
 static uint64_t CSRA1_ReferenceLength = (uint64_t)2291499l;
 FIXTURE_TEST_CASE(CSRA1_Reference_GetLength, CSRA1_Fixture)
 {
