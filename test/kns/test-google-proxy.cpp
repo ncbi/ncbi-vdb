@@ -29,6 +29,7 @@
 
 #include <klib/debug.h> /* KDbgSetString */
 
+#include <kns/endpoint.h> /* KNSManagerInitDNSEndpoint */
 #include <kns/http.h> /* KNSManagerMakeHttpFile */
 #include <kns/manager.h> /* KNSManagerRelease */
 #include <kns/tls.h> /* KNSManagerSetAllowAllCerts */
@@ -77,8 +78,19 @@ TEST_CASE ( GoogleProxyTest ) {
        "https://storage.googleapis.com/yan-blastdb/2018-09-12-08-33-02/fuse.xml"
       ) );
 
-    REQUIRE_RC ( KConfigWriteString ( KFG, "/http/proxy/path",
-                                           "webproxy:3128" ) );
+    const char * http_proxy = getenv("http_proxy");
+    if (http_proxy == NULL)
+        http_proxy = "webproxy:3128";
+
+    REQUIRE_RC ( KConfigWriteString ( KFG, "/http/proxy/path", http_proxy) );
+
+    String dns;
+    StringInitCString( & dns, "webproxy" );
+
+    KEndPoint ep;
+    memset(&ep, 0, sizeof ep);
+    if (KNSManagerInitDNSEndpoint(mgr, &ep, &dns, 3128) != 0)
+        http_proxy = NULL;
 
     mgr -> notSingleton = true;
     REQUIRE_RC ( KNSManagerRelease ( mgr ) );
@@ -87,13 +99,20 @@ TEST_CASE ( GoogleProxyTest ) {
     /* standard connection via proxy:
        format HTTP request in KClientHttpRequestFormatMsgBegin using
        absoluteURI form of Request-URI */
-    REQUIRE_RC ( KNSManagerMakeHttpFile ( mgr, & file, NULL, 0x01010000,
-       "http://www.baidu.com/" ) );
+    if (http_proxy != NULL)
+        REQUIRE_RC ( KNSManagerMakeHttpFile ( mgr, & file, NULL, 0x01010000,
+            "http://www.baidu.com/" ) );
+    else
+        REQUIRE_RC_FAIL(KNSManagerMakeHttpFile(mgr, &file, NULL, 0x01010000,
+            "http://www.baidu.com/"));
 
     char buffer [ 256 ] = "";
     size_t num_read = 0;
     /* reuse the same absoluteURI form stored in KFile */
-    REQUIRE_RC ( KFileRead ( file, 0, buffer, sizeof buffer, & num_read ) );
+    if (http_proxy != NULL)
+        REQUIRE_RC ( KFileRead ( file, 0, buffer, sizeof buffer, & num_read ) );
+    else
+        REQUIRE_RC_FAIL(KFileRead(file, 0, buffer, sizeof buffer, &num_read));
 
     REQUIRE_RC ( KFileRelease ( file ) );
     file = NULL;
