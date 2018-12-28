@@ -42,6 +42,8 @@ TEST_SUITE ( GoogleProxyTestSuite )
 
 static KConfig * KFG = NULL;
 
+static const char * http_proxy = NULL;
+
 TEST_CASE ( GoogleProxyTest ) {
     KNSManager * mgr = NULL;
     REQUIRE_RC ( KNSManagerMake ( & mgr ) );
@@ -78,7 +80,7 @@ TEST_CASE ( GoogleProxyTest ) {
        "https://storage.googleapis.com/yan-blastdb/2018-09-12-08-33-02/fuse.xml"
       ) );
 
-    const char * http_proxy = getenv("http_proxy");
+    http_proxy = getenv("http_proxy");
     if (http_proxy == NULL)
         http_proxy = "webproxy:3128";
 
@@ -143,18 +145,30 @@ TEST_CASE ( KClientHttpRequestPOSTTest ) {
     REQUIRE_RC ( KNSManagerMake ( & mgr ) );
 
     KHttpRequest * req = NULL;
-    REQUIRE_RC ( KNSManagerMakeClientRequest ( mgr, & req, 0x01000000,
-        NULL, "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi" ) ); 
+    if (http_proxy != NULL)
+        REQUIRE_RC ( KNSManagerMakeClientRequest ( mgr, & req, 0x01000000,
+            NULL, "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi" ) ); 
+    else
+        REQUIRE_RC_FAIL(KNSManagerMakeClientRequest(mgr, &req, 0x01000000,
+            NULL, "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi"));
 
-    REQUIRE_RC ( KHttpRequestAddPostParam ( req, "acc=AAAB01" ) );
-    REQUIRE_RC ( KHttpRequestAddPostParam ( req, "accept-proto=https" ) );
-    REQUIRE_RC ( KHttpRequestAddPostParam ( req, "version=1.2" ) );
+    if (http_proxy != NULL) {
+        REQUIRE_RC(KHttpRequestAddPostParam(req, "acc=AAAB01"));
+        REQUIRE_RC(KHttpRequestAddPostParam(req, "accept-proto=https"));
+        REQUIRE_RC(KHttpRequestAddPostParam(req, "version=1.2"));
+    }
+    else
+        REQUIRE_RC_FAIL(KHttpRequestAddPostParam(req, "acc=AAAB01"));
 
     KHttpResult * rslt = NULL;
     /* POST: format HTTP request in KClientHttpRequestFormatMsgBegin using
        absoluteURI form of Request-URI
        ( https://tools.ietf.org/html/rfc2616#section-5.1.2 ) */
-    REQUIRE_RC ( KHttpRequestPOST ( req, & rslt ) );
+    if (http_proxy != NULL)
+        REQUIRE_RC ( KHttpRequestPOST ( req, & rslt ) );
+    else
+        REQUIRE_RC_FAIL(KHttpRequestPOST(req, &rslt));
+
     REQUIRE_RC ( KHttpResultRelease ( rslt ) );
 
     REQUIRE_RC ( KHttpRequestRelease ( req ) );
