@@ -89,6 +89,8 @@ void URLBlockInit ( URLBlock *self )
     self -> tls = false;
 
     self -> port_dflt = true;
+
+    self->cloud_type = ct_NONE;
 }
 
 /* ParseUrl
