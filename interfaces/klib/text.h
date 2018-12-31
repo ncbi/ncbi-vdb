@@ -36,15 +36,69 @@
 #endif
 
 #include <stdarg.h>
-#include <string.h> /* memcmp */
+#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /*--------------------------------------------------------------------------
+ * UTF-8
+ *  UNICODE TRANFORMATION FORMAT into sequences of 8-bit bytes
+ *
+ *  An ASCII character encoded with UTF-8 formatting will have a bit
+ *  pattern of 0b0xxxxxxx.
+ *
+ *  A non-ASCII UNICODE character encoded with UTF-8 formatting will
+ *  use 2..6 bytes, where the character length will be encoded into
+ *  the number of contiguous bits in the leading byte:
+ *
+ *    0b110xxxxx => 2 byte character
+ *    0b1110xxxx => 3 byte character
+ *    0b11110xxx => 4 byte character
+ *    0b111110xx => 5 byte character
+ *    0b1111110x => 6 byte character
+ *
+ *  all UTF-8 characters uniformly represent their non-leading bytes
+ *  by having the MSB set and the next bit 0:
+ *
+ *    0b10xxxxxx => non-leading byte
+ *
+ *  this allows a pointer to an arbitrary byte within UTF-8 to
+ *  be used to synchronize on the start of a character, since
+ *  non-starting bytes cannot be confused with start bytes. The test
+ *
+ *    if ( ( * utf8 & 0xC0 ) == 0x80 )
+ *      start_byte = false;
+ *
+ *  is sufficient for detecting this.
+ *
+ *  an understanding that string LENGTH ( the count of characters )
+ *  and string SIZE ( the count of bytes ) are different is critical.
+ */
+
+    
+/*--------------------------------------------------------------------------
  * String
  *  pseudo-intrinsic string
+ *
+ *  "addr" gives a pointer to constant UTF-8 data
+ *
+ *  "size" gives the number of BYTES in the UTF-8 string,
+ *   NOT the number of characters.
+ *
+ *  "len" gives the number of CHARACTERS in the UTF-8 string,
+ *   NOT the number of bytes.
+ *
+ *  with UTF-8 encoding, only ASCII-7 characters will be represented
+ *  using a single byte per character. In the case that a string is
+ *  composed of 100% ASCII-7 characters, String.size == String.len,
+ *  while if there is even a single UTF-8 character,
+ *  String.size > String.len by definition.
+ *
+ *  indexing into a string by BYTES is ridiculous because it may
+ *  land in the middle of a character. String operations index by
+ *  CHARACTER so as to always designate an entire character.
  */
 typedef struct String String;
 struct String
@@ -75,13 +129,13 @@ struct String
     StringInit ( s, val, sizeof val - 1, sizeof val - 1 )
 
 /* StringSize
- *  size of string in bytes
+ *  size of string in BYTES
  */
 #define StringSize( s ) \
     ( s ) -> size
 
 /* StringLength
- *  length of string in characters
+ *  length of string in CHARACTERS
  */
 #define StringLength( s ) \
     ( s ) -> len
@@ -143,8 +197,8 @@ KLIB_EXTERN rc_t CC StringPopHead ( String *str, uint32_t *ch );
  *  not lexical for all characters
  */
 #define StringEqual( a, b ) \
-    ( ( a ) -> len == ( b ) -> len && \
-    memcmp ( ( a ) -> addr, ( b ) -> addr, ( a ) -> len ) == 0 )
+    ( ( a ) -> size == ( b ) -> size && \
+    memcmp ( ( a ) -> addr, ( b ) -> addr, ( a ) -> size ) == 0 )
 
 /* StringCompare
  *  compare strings for relative ordering
@@ -308,10 +362,6 @@ KLIB_EXTERN char* CC string_dup ( const char *str, size_t size );
  *  returns size of string unless "size" is NULL
  */
 KLIB_EXTERN char* CC string_dup_measure ( const char *str, size_t *size );
-
-/* string_printf
- *  NOW IN <klib/printf.h>
- */
 
 /* tolower_copy
  *  copies whole character text in lower-case
