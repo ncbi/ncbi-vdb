@@ -107,7 +107,6 @@ static
 rc_t encodeBase64Impl ( const String ** encoded, const void * data, size_t bytes,
                         const char encode_table [] )
 {
-    size_t i, j, esize;
     char *buff;
     size_t i, j, esize;
     
