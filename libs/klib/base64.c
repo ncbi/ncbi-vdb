@@ -107,8 +107,9 @@ static
 rc_t encodeBase64Impl ( const String ** encoded, const void * data, size_t bytes,
                         const char encode_table [] )
 {
-    size_t i, j;
     char *buff;
+    size_t i, j, esize;
+    
     /* gather encoded output in a string - this is why we wanted to limit the data size */
     String *encoding;
 
@@ -134,8 +135,10 @@ rc_t encodeBase64Impl ( const String ** encoded, const void * data, size_t bytes
      * and may indicate garbage that could result in a segfault */
     if ( bytes >= 0x40000000 )
         return RC ( rcRuntime, rcString, rcEncoding, rcData, rcExcessive );
+
+    esize = ( ( bytes + 2 ) / 3 ) * 4;
     
-    encoding = malloc ( sizeof *encoding + bytes + 1 );
+    encoding = malloc ( sizeof *encoding + esize + 1 );
     if ( encoding == NULL )
         return RC ( rcRuntime, rcString, rcEncoding, rcMemory, rcExhausted );
 
@@ -239,8 +242,8 @@ rc_t encodeBase64Impl ( const String ** encoded, const void * data, size_t bytes
         }
     }
         
-    buff [ bytes ] = 0;
-    StringInit ( encoding, buff, bytes, ( uint32_t ) bytes );
+    buff [ j ] = 0;
+    StringInit ( encoding, buff, j, ( uint32_t ) j );
     
     /* done. */
     *encoded = encoding;

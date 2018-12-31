@@ -39,14 +39,25 @@ TEST_SUITE(KBase64TestSuite);
 
 TEST_CASE ( KBase64_encodeBase64 )
 {
-    rc_t rc;
+    rc_t rc = 0;
     const String *encoded;
     const char *data = "Test for basic Base64 encoding";
-    const char *expected = "VGVzdCBmb3IgYmFzaWMgQmFzZTY0IGVuY29kaW5n";
 
+#if 1
     rc = encodeBase64 ( &encoded, data, strlen (data) );
+#else
+    String dummy;
+    CONST_STRING ( & dummy, "VGVzdCBmb3IgYmFzaWMgQmFzZTY0IGVuY29kaW5n" );
+    encoded = & dummy;
+#endif
     REQUIRE_RC ( rc );
-    REQUIRE_EQ ( expected, encoded -> addr );
+
+    std :: string expected ( "VGVzdCBmb3IgYmFzaWMgQmFzZTY0IGVuY29kaW5n" );
+    std :: string result ( encoded -> addr, encoded -> size );
+    
+    REQUIRE_EQ ( expected, result );
+
+    StringWhack ( encoded );
 }
 
 //////////////////////////////////////////////////// Main
