@@ -105,7 +105,8 @@ VDB_LIB_CMN =    \
 	$(LIBKQ)     \
 	kfc          \
 	bz2          \
-	z
+	z            \
+	jwt
 
 VDB_LIB_RD =              \
 	align-reader          \
