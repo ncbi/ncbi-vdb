@@ -73,7 +73,8 @@ KPROC_EXTERN rc_t CC KSemaphoreRelease ( const KSemaphore *self );
  *  "lock" [ IN ] - externally acquired lock
  *
  *  "tm" [ IN, NULL OKAY ] - optional timeout where
- *  NULL means timeout value of 0
+ *  NULL means infinite timeout. a non-NULL timeout
+ *  pointer with a value of 0 means non-blocking.
  */
 KPROC_EXTERN rc_t CC KSemaphoreWait ( KSemaphore *self, struct KLock *lock );
 KPROC_EXTERN rc_t CC KSemaphoreTimedWait ( KSemaphore *self,
@@ -105,7 +106,8 @@ KPROC_EXTERN rc_t CC KSemaphoreSignal ( KSemaphore *self );
  *  "count" [ IN ] - the resource count
  *
  *  "tm" [ IN, NULL OKAY ] - optional timeout where
- *  NULL means timeout value of 0
+ *  NULL means infinite timeout. a non-NULL timeout
+ *  pointer with a value of 0 means non-blocking.
  */
 KPROC_EXTERN rc_t CC KSemaphoreAlloc ( KSemaphore *self,
     struct KLock *lock, uint64_t count );

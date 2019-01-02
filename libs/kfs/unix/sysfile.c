@@ -76,7 +76,6 @@ struct KSysFile_v1;
 #define POLLRDHUP 0
 #endif
 
-
 /*--------------------------------------------------------------------------
  * KSysFile
  *  a Unix file

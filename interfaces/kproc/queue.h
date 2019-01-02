@@ -76,6 +76,7 @@ KQ_EXTERN rc_t CC KQueueMake ( KQueue **q, uint32_t capacity );
  *  structure. if the queue is full, wait for indicated period
  *  of time for space to become available, or return status
  *  code indicating a timeout. when NULL and queue is full,
+ *  Push will wait indefinitely. When not-NULL and value is 0,
  *  Push will time out immediately and return status code.
  */
 KQ_EXTERN rc_t CC KQueuePush ( KQueue *self, const void *item, struct timeout_t *tm );
@@ -89,6 +90,7 @@ KQ_EXTERN rc_t CC KQueuePush ( KQueue *self, const void *item, struct timeout_t 
  *  structure. if the queue is empty, wait for indicated period
  *  of time for an object to become available, or return status
  *  code indicating a timeout. when NULL and queue is empty,
+ *  Pop will wait indefinitely. When not-NULL and value is 0,
  *  Pop will time out immediately and return status code.
  */
 KQ_EXTERN rc_t CC KQueuePop ( KQueue *self, void **item, struct timeout_t *tm );

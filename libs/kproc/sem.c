@@ -190,7 +190,8 @@ LIB_EXPORT rc_t CC KSemaphoreWait ( KSemaphore *self, struct KLock *lock )
  *  "lock" [ IN ] - externally acquired lock
  *
  *  "tm" [ IN, NULL OKAY ] - optional timeout where
- *  NULL means timeout value of 0
+ *  NULL means infinite timeout. a non-NULL timeout
+ *  pointer with a value of 0 means non-blocking.
  */
 LIB_EXPORT rc_t CC KSemaphoreTimedWait ( KSemaphore *self,
     struct KLock *lock, struct timeout_t *tm )
@@ -198,14 +199,12 @@ LIB_EXPORT rc_t CC KSemaphoreTimedWait ( KSemaphore *self,
     if ( self == NULL )
         return RC ( rcPS, rcSemaphore, rcWaiting, rcSelf, rcNull );
 
+    if ( tm == NULL )
+        return KSemaphoreWait ( self, lock );
+
     if ( self -> avail == 0 )
     {
         SMSG ( "%s[%p]: avail == 0\n", __func__, self );
-        if ( tm == NULL )
-        {
-            SMSG ( "%s[%p]: non-blocking mode - return timeout exhausted\n", __func__, self );
-            return RC ( rcPS, rcSemaphore, rcWaiting, rcTimeout, rcExhausted );
-        }
 
         if ( ++ self -> waiting == 1 )
         {
@@ -383,7 +382,8 @@ LIB_EXPORT rc_t CC KSemaphoreAlloc ( KSemaphore *self,
  *  "count" [ IN ] - the resource count
  *
  *  "tm" [ IN, NULL OKAY ] - optional timeout where
- *  NULL means timeout value of 0
+ *  NULL means infinite timeout. a non-NULL timeout
+ *  pointer with a value of 0 means non-blocking.
  */
 LIB_EXPORT rc_t CC KSemaphoreTimedAlloc ( KSemaphore *self,
     struct KLock *lock, uint64_t count, struct timeout_t *tm )
@@ -391,11 +391,11 @@ LIB_EXPORT rc_t CC KSemaphoreTimedAlloc ( KSemaphore *self,
     if ( self == NULL )
         return RC ( rcPS, rcSemaphore, rcWaiting, rcSelf, rcNull );
 
+    if ( tm == NULL )
+        return KSemaphoreAlloc ( self, lock, count );
+
     if ( self -> avail < count )
     {
-        if ( tm == NULL )
-            return RC ( rcPS, rcSemaphore, rcWaiting, rcTimeout, rcExhausted );
-
         if ( ++ self -> waiting == 1 )
         {
             self -> requested = self -> min_requested = count;

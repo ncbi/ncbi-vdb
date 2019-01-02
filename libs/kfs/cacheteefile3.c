@@ -44,6 +44,7 @@ struct KCacheTeeChunkReader;
 #include <kproc/cond.h>
 #include <kproc/thread.h>
 #include <kproc/queue.h>
+#include <kproc/timeout.h>
 #include <kfs/chunk-reader.h>
 
 #include <arch-impl.h>
@@ -871,127 +872,6 @@ rc_t KCacheTeeFileReadFromFile ( const KCacheTeeFile_v3 *self, uint64_t pos,
 }
 
 static
-rc_t CC KCacheTeeFileRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
-    void *buffer, size_t bsize, size_t *num_read )
-{
-    rc_t rc = 0;
-    size_t count, initial_page_idx;
-
-    /* 1. limit request to file dimensions */
-    if ( pos >= self -> source_size || bsize == 0 )
-    {
-        STATUS ( STAT_GEEK, "%s - read starts beyond EOF\n", __func__ );
-        * num_read = 0;
-        return 0;
-    }
-    if ( ( pos + bsize ) > self -> source_size )
-    {
-        STATUS ( STAT_GEEK, "%s - read ends beyond EOF\n", __func__ );
-        bsize = ( size_t ) ( self -> source_size - pos );
-    }
-
-    /* 2. transform "pos" into initial page index */
-    assert ( self -> page_size != 0 );
-    initial_page_idx = ( size_t ) ( pos / self -> page_size );
-    STATUS ( STAT_GEEK, "%s - read starts at page %zu\n", __func__, initial_page_idx );
-
-    /* 3. acquire lock */
-    STATUS ( STAT_PRG, "%s - acquiring mutex\n", __func__ );
-    rc = KLockAcquire ( self -> lock );
-    if ( rc == 0 )
-    {
-        /* 4. check for existence of initial page in cache */
-        STATUS ( STAT_PRG, "%s - testing for existence of starting page in cache\n", __func__ );
-        while ( ! KCacheTeeFilePageInCache ( self, initial_page_idx ) )
-        {
-            KCacheTeeFileMsg * msg;
-
-            /* 5. deliver read request message to bg thread */
-            STATUS ( STAT_GEEK, "%s - allocating message object\n", __func__ );
-            msg = malloc ( sizeof * msg );
-            if ( msg == NULL )
-            {
-                STATUS ( STAT_PRG, "%s - malloc failed - releasing mutex\n", __func__ );
-                KLockUnlock ( self -> lock );
-                return RC ( rcFS, rcFile, rcReading, rcMemory, rcExhausted );
-            }
-
-            msg -> pos = pos;
-            msg -> size = bsize;
-            msg -> tm = NULL;
-            msg -> initial_page_idx = initial_page_idx;
-
-            STATUS ( STAT_GEEK, "%s - populated message object "
-                     "{ pos=%lu, size=%zu, tm=%s, initial_page_idx=%zu\n"
-                     , __func__
-                     , msg -> pos
-                     , msg -> size
-                     , ( msg -> tm != NULL ) ? "present" : "infinite"
-                     , msg -> initial_page_idx
-                );
-
-            STATUS ( STAT_PRG, "%s - queueing message\n", __func__ );
-            rc = KQueuePush ( self -> msgq, msg, NULL );
-            if ( rc != 0 )
-            {
-                STATUS ( STAT_QA, "%s - message queue failed: %R - releasing mutex\n", __func__, rc );
-                KLockUnlock ( self -> lock );
-                free ( msg );
-                return rc;
-            }
-
-            /* 6. wait for event */
-            STATUS ( STAT_PRG, "%s - waiting on condition\n", __func__ );
-            rc = KConditionWait ( self -> cond, self -> lock );
-            if ( rc != 0 )
-            {
-                STATUS ( STAT_QA, "%s - timed wait failed: %R - releasing mutex\n", __func__, rc );
-                KLockUnlock ( self -> lock );
-                return rc;
-            }
-
-            STATUS ( STAT_PRG, "%s - testing for existence of starting page in cache\n", __func__ );
-        }
-
-        STATUS ( STAT_PRG, "%s - starting page found in cache\n", __func__ );
-
-        /* 7. try to read from RAM */
-        STATUS ( STAT_PRG, "%s - attempt to read from RAM cache\n", __func__ );
-        count = KCacheTeeFileReadFromRAM ( self, pos, buffer, bsize, num_read, initial_page_idx );
-        if ( count == 0 )
-        {
-
-            /* 8. read from file */
-            STATUS ( STAT_PRG, "%s - attempt to read from cache file\n", __func__ );
-            assert ( self -> cache_file != NULL );
-            rc = KCacheTeeFileReadFromFile ( self, pos, buffer, bsize, num_read, initial_page_idx );
-        }
-
-        /* 9. release lock */
-        STATUS ( STAT_PRG, "%s - releasing mutex\n", __func__ );
-        KLockUnlock ( self -> lock );
-    }
-
-    return rc;
-}
-
-static
-rc_t CC KCacheTeeFileWrite ( KCacheTeeFile_v3 *self, uint64_t pos,
-    const void *buffer, size_t size, size_t *num_writ )
-{
-    * num_writ = 0;
-    return RC ( rcFS, rcFile, rcUpdating, rcInterface, rcUnsupported );
-}
-
-static
-uint32_t CC KCacheTeeFileGetType ( const KCacheTeeFile_v3 * self )
-{
-    if ( self -> cache_file != NULL )
-        return KFileType ( self -> cache_file );
-    return KFileType ( self -> source );
-}
-
-static
 rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
     void *buffer, size_t bsize, size_t *num_read, struct timeout_t *tm )
 {
@@ -1094,6 +974,32 @@ rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
     }
 
     return rc;
+}
+
+static
+rc_t CC KCacheTeeFileRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
+    void *buffer, size_t bsize, size_t *num_read )
+{
+    struct timeout_t tm;
+    /* TBD - need a default timeout on the manager object */
+    TimeoutInit ( & tm, 2 * 1000 );
+    return KCacheTeeFileTimedRead ( self, pos, buffer, bsize, num_read, & tm );
+}
+
+static
+rc_t CC KCacheTeeFileWrite ( KCacheTeeFile_v3 *self, uint64_t pos,
+    const void *buffer, size_t size, size_t *num_writ )
+{
+    * num_writ = 0;
+    return RC ( rcFS, rcFile, rcUpdating, rcInterface, rcUnsupported );
+}
+
+static
+uint32_t CC KCacheTeeFileGetType ( const KCacheTeeFile_v3 * self )
+{
+    if ( self -> cache_file != NULL )
+        return KFileType ( self -> cache_file );
+    return KFileType ( self -> source );
 }
 
 static
