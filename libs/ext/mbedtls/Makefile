@@ -91,6 +91,8 @@ CRYPTO_SRC =            \
     blowfish            \
     camellia            \
     ccm                 \
+    chacha20            \
+    chachapoly          \
     cipher              \
     cipher_wrap         \
     ctr_drbg            \
@@ -123,8 +125,11 @@ CRYPTO_SRC =            \
     pkparse             \
     pkwrite             \
     platform            \
+    platform_util       \
+    poly1305            \
     ripemd160           \
     rsa                 \
+    rsa_internal        \
     sha1                \
     sha256              \
     sha512              \
