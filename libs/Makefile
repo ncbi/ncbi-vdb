@@ -66,7 +66,8 @@ MAIN_SUBDIRS = \
 	kxml     \
 	hdf5     \
 	diagnose \
-	tui
+	tui      \
+	jwt
 
 NCBI_VDB_SUBDIRS =   \
 	$(MAIN_SUBDIRS) \
