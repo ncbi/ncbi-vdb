@@ -499,10 +499,34 @@
     <ClCompile Include="..\..\..\libs\ext\mbedtls\ssl_ticket.c">
       <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="..\..\..\libs\ext\mbedtls\ssl_tls.c">
-      <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\kdb\btree.c">
+      <ClCompile Include="..\..\..\libs\ext\mbedtls\ssl_tls.c">
+          <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+      </ClCompile>
+      <ClCompile Include="..\..\..\libs\ext\mbedtls\aria.c">
+          <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+      </ClCompile>
+      <ClCompile Include="..\..\..\libs\ext\mbedtls\chacha20.c">
+          <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+      </ClCompile>
+      <ClCompile Include="..\..\..\libs\ext\mbedtls\chachapoly.c">
+          <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+      </ClCompile>
+      <ClCompile Include="..\..\..\libs\ext\mbedtls\hkdf.c">
+          <ObjectFileName>$(IntDir)mbedtls-%(Filename)nist_kw.obj</ObjectFileName>
+      </ClCompile>
+      <ClCompile Include="..\..\..\libs\ext\mbedtls\nist_kw.c">
+          <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+      </ClCompile>
+      <ClCompile Include="..\..\..\libs\ext\mbedtls\platform_util.c">
+          <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+      </ClCompile>
+      <ClCompile Include="..\..\..\libs\ext\mbedtls\poly1305.c">
+          <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+      </ClCompile>
+      <ClCompile Include="..\..\..\libs\ext\mbedtls\rsa_internal.c">
+          <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+      </ClCompile>
+      <ClCompile Include="..\..\..\libs\kdb\btree.c">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)kdb-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)kdb-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)kdb-%(Filename).obj</ObjectFileName>
