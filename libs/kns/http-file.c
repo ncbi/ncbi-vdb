@@ -250,32 +250,55 @@ otherwise we are going to hit "Apache return HTTP headers twice" bug */
                             TRACE ( "KClientHttpResultStatus ( rslt, & http_status, NULL, 0, NULL ); failed: rc=%u\n", rc );
                         else
                         {
+                            uint64_t start_pos = 0;
+                            size_t result_size = 0;
+                            bool have_size = false;
                             switch ( * http_status )
                             {
+                            case 200:
+                               /* We requested Bytes Range but got 200:
+                                  accept it what the whole file was requested */
+                                have_size = KClientHttpResultSize ( rslt,
+                                                    &result_size );
+                                if ( pos != 0 || ! have_size
+                                              || result_size > bsize )
+                                {
+                                    rc = RC ( rcNS, rcFile, rcReading,
+                                                    rcData, rcUnexpected );
+                                    TRACE ( "KClientHttpResultStatus ( rslt, "
+"& http_status, NULL, 0, NULL ); unexpected status=%d\n", * http_status );
+                                    break;
+                                }
+                          /* no break here, now read the file */
                             case 206:
-                            {
-                                uint64_t start_pos;
-                                size_t result_size;
-
                                 /* don't need retries now */
                                 proxy_retries = 0;
 
                                 /* extract actual amount being returned by server */
-                                rc = KClientHttpResultRange ( rslt, &start_pos, &result_size );
-                                if ( rc != 0 || start_pos != pos || result_size != bsize )
-                                {
-                                    if ( rc != 0 )
-                                        TRACE ( "KClientHttpResultRange ( rslt, & start_pos, & result_size ); failed: rc=%u\n", rc );
-                                    else
+                                if ( * http_status == 206 ) {
+                                    /* get result range when 206 was returned,
+                                       we got it already when status == 200 */
+                                    rc = KClientHttpResultRange ( rslt,
+                                        &start_pos, &result_size );
+                                    if ( rc != 0 || start_pos != pos
+                                                 || result_size != bsize )
                                     {
-                                        if ( start_pos != pos )
-                                            TRACE ( "KClientHttpResultRange ( rslt, & start_pos, & result_size ); failed: start_pos=%lu != pos=%lu\n", start_pos, pos );
-                                        if ( result_size != bsize )
-                                            TRACE ( "KClientHttpResultRange ( rslt, & start_pos, & result_size ); failed: result_size=%lu != bsize=%lu\n", result_size, bsize );
+                                        if ( rc != 0 )
+                                            TRACE ( "KClientHttpResultRange ( rslt, & start_pos, & result_size ); failed: rc=%u\n", rc );
+                                        else
+                                        {
+                                            if ( start_pos != pos )
+                                                TRACE ( "KClientHttpResultRange ( rslt, & start_pos, & result_size ); failed: start_pos=%lu != pos=%lu\n", start_pos, pos );
+                                            if ( result_size != bsize )
+                                                TRACE ( "KClientHttpResultRange ( rslt, & start_pos, & result_size ); failed: result_size=%lu != bsize=%lu\n", result_size, bsize );
+                                        }
+                                        break;
                                     }
                                 }
-                                else
                                 {
+                                  /* read the response for partial file requests
+                                     or when the whole file was returned */
+
                                     KStream *response;
                                 
                                     rc = KClientHttpResultGetInputStream ( rslt, &response );
@@ -318,7 +341,6 @@ otherwise we are going to hit "Apache return HTTP headers twice" bug */
                                     }
                                 }
                                 break;
-                            }
 
                             case 403:
                             case 404:
@@ -520,7 +542,9 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                     rc = KLockMake ( & f -> lock );
                     if ( rc == 0 )
                     {
-                        KDataBuffer *buf = & f -> url_buffer;
+                        KDataBuffer urlbuf, *const buf = &urlbuf;
+
+                        memset(buf, 0, sizeof(*buf));
                         buf -> elem_bits = 8;
                         rc = KDataBufferVPrintf ( buf, url, args );
                         if ( rc == 0 )
@@ -542,8 +566,13 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                     {
                                         KClientHttpResult *rslt;
                                         rc = KClientHttpRequestHEAD ( req, & rslt );
+#if 1
+                                        KClientHttpRequestURL ( req, & f -> url_buffer ); /* NB. f -> url_buffer is not valid until this point */
+#else
+                                        KDataBufferSub ( buf, & f -> url_buffer, 0, buf -> elem_count ); /* old behavior: breaks if redirected */
+#endif
                                         KClientHttpRequestRelease ( req );
-
+                                        
                                         if ( rc != 0 ) {
                                             if ( KNSManagerLogNcbiVdbNetError ( self ) )
                                             {
@@ -607,6 +636,7 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                                         f -> no_cache = size >= NO_CACHE_LIMIT;
                                                         
                                                         * file = & f -> dad;
+                                                        KDataBufferWhack(buf);
                                                         return 0;
                                                     }
                                                 }
@@ -668,7 +698,7 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                 }
                             }
                         }
-
+                        KDataBufferWhack( & f -> url_buffer );
                         KDataBufferWhack ( buf );
                         KLockRelease ( f -> lock );
                     }

@@ -38,6 +38,8 @@ TEST_TOOLS = \
 	test-path-c \
 	test-resolver \
 	test-vfsmanager \
+	test-json-response \
+	test-resolver4 \
 
 include $(TOP)/build/Makefile.env
 
@@ -91,6 +93,30 @@ HTTPS_OBJ = \
 	$(addsuffix .$(OBJX),$(HTTPS_SRC))
 
 $(TEST_BINDIR)/redirect-rejected-names-cgi-http-to-https: $(HTTPS_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+#----------------------------------------------------------------
+# resolver4
+
+R4_SRC = \
+	test-resolver4
+
+R4_OBJ = \
+	$(addsuffix .$(OBJX),$(R4_SRC))
+
+$(TEST_BINDIR)/test-resolver4: $(R4_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+#----------------------------------------------------------------
+# json-response
+
+J_SRC = \
+	test-json-response
+
+J_OBJ = \
+	$(addsuffix .$(OBJX),$(J_SRC))
+
+$(TEST_BINDIR)/test-json-response: $(J_OBJ)
 	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
 
 #----------------------------------------------------------------

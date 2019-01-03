@@ -457,13 +457,35 @@ rc_t tlsg_setup ( KTLSGlobals * self )
         return rc;
     }
 
-    vdb_mbedtls_ssl_conf_authmode( &self -> config, MBEDTLS_SSL_VERIFY_REQUIRED );
+    /* turn off certificate validation when self -> allow_all_certs == true */
+    vdb_mbedtls_ssl_conf_authmode( &self -> config,
+        self -> allow_all_certs ? MBEDTLS_SSL_VERIFY_OPTIONAL
+                                : MBEDTLS_SSL_VERIFY_REQUIRED );
+
     vdb_mbedtls_ssl_conf_ca_chain( &self -> config, &self -> cacert, NULL );
     vdb_mbedtls_ssl_conf_rng( &self -> config, vdb_mbedtls_ctr_drbg_random, &self -> ctr_drbg );
+
+        /*  We need that to be sure that we are free to call 
+         *  vdb_mbedtls_ssl_conf_authmode () next time when 
+         *  KNSManagerSetAllowAllCerts () will be called
+         *  
+         *  Because smart special design we do not need to add
+         *  special code to deinitialize that variable. 
+         */ 
+    self -> safe_to_modify_ssl_config = true;
 
     return 0;
 }
 
+/* threshold
+   theshold level of messages to filter on.
+   Messages at a higher level will be discarded.
+  Debug levels
+	0 No debug
+	1 Error
+	2 State change
+	3 Informational
+	4 Verbose */
 static int set_threshold ( const KConfig * kfg ) {
     bool set = false;
 
@@ -553,6 +575,21 @@ LIB_EXPORT rc_t CC KNSManagerSetAllowAllCerts ( KNSManager *self, bool allow_all
     else
     {
         self -> tlsg . allow_all_certs = allow_all_certs;
+            /*
+             *  We are acting from supposition that at some particular
+             *  moments there should be called initlialisation of 
+             *  TLS configurations, which will be reflected at next 
+             *  handshake
+             */
+        if ( self -> tlsg . safe_to_modify_ssl_config ) {
+            vdb_mbedtls_ssl_conf_authmode(
+                            &self -> tlsg . config,
+                                ( self -> tlsg . allow_all_certs
+                                        ? MBEDTLS_SSL_VERIFY_OPTIONAL
+                                        : MBEDTLS_SSL_VERIFY_REQUIRED
+                                )
+                            );
+        }
     }
 
     return rc;

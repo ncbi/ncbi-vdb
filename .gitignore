@@ -34,5 +34,5 @@ core
 *.pyc
 .gdb_history
 .vscode
-.gdb_history
 *.cache
+

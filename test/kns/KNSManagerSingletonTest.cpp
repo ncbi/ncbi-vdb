@@ -28,6 +28,8 @@
 #include <ktst/unit_test.hpp> // TEST_SUITE
 #include <vfs/manager.h> // VFSManagerMake
 
+#include "../../libs/kns/kns_manager-singleton.h" // USE_SINGLETON
+
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
 
@@ -50,7 +52,12 @@ TEST_CASE(VDB_2877) {
     REQUIRE(vmgr); 
 
     REQUIRE_RC(VFSManagerGetKNSMgr(vmgr, &mgr2));
-    REQUIRE_EQ(mgr, mgr2); 
+
+#if USE_SINGLETON
+    REQUIRE_EQ(mgr, mgr2);
+#else
+    REQUIRE_NE(mgr, mgr2);
+#endif
 
     RELEASE(KNSManager, mgr2);
 

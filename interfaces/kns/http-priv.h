@@ -50,6 +50,15 @@ KNS_EXTERN rc_t CC KClientHttpRequestFormatMsg (
     const struct KClientHttpRequest * self, char * buffer,
     size_t bsize, const char * method, size_t * len );
 
+KNS_EXTERN rc_t CC KClientHttpRequestFormatPostMsg(
+    const struct KClientHttpRequest * self, char * buffer,
+    size_t bsize, size_t * len);
+
+KNS_EXTERN rc_t CC KClientHttpRequestFormatCloudMsg(
+    const KClientHttpRequest *self,
+    char *buffer, size_t bsize, const char *method,
+    const char *AWSAccessKeyId, const char *YourSecretAccessKeyID, size_t *len);
+
 KNS_EXTERN rc_t CC KClientHttpResultFormatMsg (
     const struct KClientHttpResult * self, char * buffer,
     size_t bsize, size_t * len, const char * bol, const char * eol );

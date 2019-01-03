@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="..\..\..\libs\align\align-access.c">
@@ -499,10 +499,34 @@
     <ClCompile Include="..\..\..\libs\ext\mbedtls\ssl_ticket.c">
       <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="..\..\..\libs\ext\mbedtls\ssl_tls.c">
-      <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\kdb\btree.c">
+      <ClCompile Include="..\..\..\libs\ext\mbedtls\ssl_tls.c">
+          <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+      </ClCompile>
+      <ClCompile Include="..\..\..\libs\ext\mbedtls\aria.c">
+          <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+      </ClCompile>
+      <ClCompile Include="..\..\..\libs\ext\mbedtls\chacha20.c">
+          <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+      </ClCompile>
+      <ClCompile Include="..\..\..\libs\ext\mbedtls\chachapoly.c">
+          <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+      </ClCompile>
+      <ClCompile Include="..\..\..\libs\ext\mbedtls\hkdf.c">
+          <ObjectFileName>$(IntDir)mbedtls-%(Filename)nist_kw.obj</ObjectFileName>
+      </ClCompile>
+      <ClCompile Include="..\..\..\libs\ext\mbedtls\nist_kw.c">
+          <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+      </ClCompile>
+      <ClCompile Include="..\..\..\libs\ext\mbedtls\platform_util.c">
+          <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+      </ClCompile>
+      <ClCompile Include="..\..\..\libs\ext\mbedtls\poly1305.c">
+          <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+      </ClCompile>
+      <ClCompile Include="..\..\..\libs\ext\mbedtls\rsa_internal.c">
+          <ObjectFileName>$(IntDir)mbedtls-%(Filename).obj</ObjectFileName>
+      </ClCompile>
+      <ClCompile Include="..\..\..\libs\kdb\btree.c">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)kdb-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)kdb-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)kdb-%(Filename).obj</ObjectFileName>
@@ -2016,6 +2040,28 @@
       <ObjectFileName>$(IntDir)klib-%(Filename).obj</ObjectFileName>
       <AdditionalIncludeDirectories>$(ProjectDir)../../../libs/klib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\json-grammar.c">
+      <ObjectFileName>$(IntDir)klib-%(Filename).obj</ObjectFileName>
+      <AdditionalIncludeDirectories>$(ProjectDir)../../../libs/klib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\json-lex.c">
+      <ObjectFileName>$(IntDir)klib-%(Filename).obj</ObjectFileName>
+      <AdditionalIncludeDirectories>$(ProjectDir)../../../libs/klib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\json.c">
+      <ObjectFileName>$(IntDir)klib-%(Filename).obj</ObjectFileName>
+      <AdditionalIncludeDirectories>$(ProjectDir)../../../libs/klib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kns\cloud.c">
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)kns-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)kns-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)kns-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)kns-%(Filename).obj</ObjectFileName>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)../../../libs/kns;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)../../../libs/kns;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)../../../libs/kns;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)../../../libs/kns;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\kns\endpoint.c">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)kns-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)kns-%(Filename).obj</ObjectFileName>
@@ -3465,6 +3511,12 @@
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)vdb-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)vdb-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)vdb-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vfs\json-response.c">
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\vfs\manager.c">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>

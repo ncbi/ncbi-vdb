@@ -87,6 +87,8 @@ static const char default_kfg[] = {
 "/repository/user/main/public/apps/nannot/volumes/nannotFlat = \"nannot\"\n"
 "/repository/user/main/public/apps/refseq/volumes/refseq = \"refseq\"\n"
 "/repository/user/main/public/apps/sra/volumes/sraFlat = \"sra\"\n"
+"/repository/user/main/public/apps/sraPileup/volumes/flat = \"sra\"\n"
+"/repository/user/main/public/apps/sraRealign/volumes/flat = \"sra\"\n"
 "/repository/user/main/public/apps/wgs/volumes/wgsFlat = \"wgs\"\n"
 "/repository/user/main/public/root = \"$(HOME)/ncbi/public\"\n"
 "/repository/remote/main/CGI/resolver-cgi = "
@@ -1308,7 +1310,7 @@ rc_t write_nvp(void* pself, const char* name, size_t nameLen, VNamelist* values)
         /* some old config files may have "dbGaP" in their repository keys misspelled as "dbGap" - fix if seen */
         const char* oldGaPprefix = "/repository/user/protected/dbGap-";
         size_t size = sizeof("/repository/user/protected/dbGap-") - 1;
-        bool needsFix = string_cmp(name, string_measure(name, NULL), oldGaPprefix, size, (uint32_t)size) == 0;
+        bool needsFix = string_cmp(name, string_size(name), oldGaPprefix, size, (uint32_t)size) == 0;
 
         String tmp;
         StringInit(&tmp, name, nameLen, (uint32_t)nameLen);
@@ -1842,6 +1844,21 @@ rc_t parse_file ( KConfig * self, const char* path, const char * src )
     KFGScan_yylex_destroy(&sb);
 
     return 0;
+}
+
+LIB_EXPORT rc_t CC
+KConfigParse ( KConfig * self, const char* path, const char * src )
+{
+    if ( self == NULL )
+        return RC ( rcKFG, rcMgr, rcLoading, rcSelf, rcNull );
+    else if ( src == NULL )
+        return RC ( rcKFG, rcMgr, rcLoading, rcParam, rcNull );
+
+    if ( path == NULL )
+    {
+        path = "UNSPECIFIED";
+    }
+    return parse_file ( self, path, src );
 }
 
 /* LoadFile
@@ -3188,7 +3205,7 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
         KConfig * mgr = NULL;
 
         if ( cfgdir != NULL ) {
-            /* local = true; 
+            /* local = true;
             ALWAYS create and/or return a singleton object. */
         }
 
