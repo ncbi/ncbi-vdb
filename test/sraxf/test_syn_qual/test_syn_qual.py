@@ -12,18 +12,18 @@ include 'insdc/insdc.vschema';
 extern function
 INSDC:quality:phred NCBI:SRA:syn_quality #1
     < INSDC:quality:phred good_quality, INSDC:quality:phred bad_quality >
-    ( INSDC:coord:len read_len, INSDC:SRA:read_filter read_filter );
+    ( INSDC:coord:len read_len, INSDC:SRA:spot_filter spot_filter );
 
 table TEST_TBL #1.0
 {
     column INSDC:coord:len READ_LEN;
-    column INSDC:SRA:read_filter READ_FILTER;
+    column INSDC:SRA:spot_filter SPOT_FILTER;
     
     INSDC:coord:len out_read_len = .READ_LEN;
-    INSDC:SRA:read_filter out_read_filter = .READ_FILTER;
+    INSDC:SRA:spot_filter out_spot_filter = .SPOT_FILTER;
     
     readonly column INSDC:quality:phred QUALITY =
-        NCBI:SRA:syn_quality #1 < 30, 3 > ( out_read_len, out_read_filter );
+        NCBI:SRA:syn_quality #1 < 30, 3 > ( out_read_len, out_spot_filter );
 };
 
 ''' 
@@ -32,7 +32,7 @@ def make_rows( cur, cols, row_count, read_len_data, filter_data ) :
     for idx in xrange( 0, row_count ) :
         cur.OpenRow()
         cols[ "READ_LEN" ].write( read_len_data )
-        cols[ "READ_FILTER" ].write( filter_data )
+        cols[ "SPOT_FILTER" ].write( filter_data )
         cur.CommitRow()
         cur.CloseRow()
     cur.Commit()
@@ -42,28 +42,28 @@ def make_table( mgr, schema_txt, schema_table_name, table_name ) :
         schema = mgr.MakeSchema( schema_txt )
         tbl = mgr.CreateTable( schema, schema_table_name, table_name )
         cur = tbl.CreateCursor( OpenMode.Write )
-        cols = cur.OpenColumns( [ "READ_LEN", "READ_FILTER" ] )
+        cols = cur.OpenColumns( [ "READ_LEN", "SPOT_FILTER" ] )
         row_count = 1
-        make_rows( cur, cols, row_count, [ 9, 8, 7 ], [ 0, 0, 0 ] )
-        make_rows( cur, cols, row_count, [ 8, 7, 6 ], [ 0, 0, 1 ] )
-        make_rows( cur, cols, row_count, [ 7, 6, 5 ], [ 0, 1, 0 ] )
-        make_rows( cur, cols, row_count, [ 6, 5, 4 ], [ 0, 1, 1 ] )
-        make_rows( cur, cols, row_count, [ 5, 4, 3 ], [ 1, 0, 0 ] )
-        make_rows( cur, cols, row_count, [ 4, 3, 2 ], [ 1, 0, 1 ] )
-        make_rows( cur, cols, row_count, [ 3, 2, 1 ], [ 1, 1, 0 ] )
-        make_rows( cur, cols, row_count, [ 1, 2, 3 ], [ 1, 1, 1 ] )
-        make_rows( cur, cols, row_count, [ 2, 3, 4 ], [ 0, 0 ] )
-        make_rows( cur, cols, row_count, [ 3, 4, 5 ], [ 0, 1 ] )
-        make_rows( cur, cols, row_count, [ 4, 5, 6 ], [ 1, 1 ] )
-        make_rows( cur, cols, row_count, [ 6, 7, 8 ], [ 1, 1 ] )
+        make_rows( cur, cols, row_count, [ 9, 8, 7 ], [ 0 ] )
+        make_rows( cur, cols, row_count, [ 8, 7, 6 ], [ 1 ] )
+        make_rows( cur, cols, row_count, [ 7, 6, 5 ], [ 1 ] )
+        make_rows( cur, cols, row_count, [ 6, 5, 4 ], [ 1 ] )
+        make_rows( cur, cols, row_count, [ 5, 4, 3 ], [ 1 ] )
+        make_rows( cur, cols, row_count, [ 4, 3, 2 ], [ 1 ] )
+        make_rows( cur, cols, row_count, [ 3, 2, 1 ], [ 1 ] )
+        make_rows( cur, cols, row_count, [ 1, 2, 3 ], [ 1 ] )
+        make_rows( cur, cols, row_count, [ 2, 3, 4 ], [ 0 ] )
+        make_rows( cur, cols, row_count, [ 3, 4, 5 ], [ 1 ] )
+        make_rows( cur, cols, row_count, [ 4, 5, 6 ], [ 1 ] )
+        make_rows( cur, cols, row_count, [ 6, 7, 8 ], [ 1 ] )
         make_rows( cur, cols, row_count, [ 7, 8, 9 ], [ 0 ] )
         make_rows( cur, cols, row_count, [ 8, 9, 9 ], [ 1 ] )
         make_rows( cur, cols, row_count, [ 9, 9, 9 ], [] )
 
-        make_rows( cur, cols, row_count, [ 9, 8 ], [ 0, 0 ] )
-        make_rows( cur, cols, row_count, [ 8, 7 ], [ 0, 1 ] )
-        make_rows( cur, cols, row_count, [ 7, 6 ], [ 1, 0 ] )
-        make_rows( cur, cols, row_count, [ 6, 5 ], [ 1, 1 ] )
+        make_rows( cur, cols, row_count, [ 9, 8 ], [ 0 ] )
+        make_rows( cur, cols, row_count, [ 8, 7 ], [ 1 ] )
+        make_rows( cur, cols, row_count, [ 7, 6 ], [ 1 ] )
+        make_rows( cur, cols, row_count, [ 6, 5 ], [ 1 ] )
         make_rows( cur, cols, row_count, [ 5, 4 ], [ 0 ] )
         make_rows( cur, cols, row_count, [ 4, 3 ], [ 1 ] )
         make_rows( cur, cols, row_count, [ 3, 2 ], [] )

@@ -58,10 +58,10 @@ TEST_CASE( total_lt_spotlen_read_2 )
     const VCursor * cur;
     REQUIRE_RC( VTableCreateCursorRead( tbl, &cur ) );
 
-    uint32_t idx_READ_LEN, idx_READ_FILTER, idx_QUALITY;
+    uint32_t idx_READ_LEN, idx_SPOT_FILTER, idx_QUALITY;
 
     REQUIRE_RC( VCursorAddColumn( cur, & idx_READ_LEN, "READ_LEN" ) );
-    REQUIRE_RC( VCursorAddColumn( cur, & idx_READ_FILTER, "READ_FILTER" ) );
+    REQUIRE_RC( VCursorAddColumn( cur, & idx_SPOT_FILTER, "SPOT_FILTER" ) );
     REQUIRE_RC( VCursorAddColumn( cur, & idx_QUALITY, "QUALITY" ) );
     REQUIRE_RC( VCursorOpen ( cur ) );
     
@@ -76,8 +76,8 @@ TEST_CASE( total_lt_spotlen_read_2 )
     uint32_t row_len_READ_LEN;
     const INSDC_coord_len * READ_LEN;
 
-    uint32_t row_len_READ_FILTER;
-    const INSDC_read_filter * READ_FILTER;
+    uint32_t row_len_SPOT_FILTER;
+    const INSDC_SRA_spot_filter * SPOT_FILTER;
 
     uint32_t row_len_QUALITY;
     const INSDC_quality_phred * QUALITY;
@@ -92,10 +92,11 @@ TEST_CASE( total_lt_spotlen_read_2 )
         for ( uint32_t idx = 0; idx < row_len_READ_LEN; ++idx )
             total_read_len += READ_LEN[ idx ];
         
-        REQUIRE_RC( VCursorCellDataDirect( cur, row_id, idx_READ_FILTER, &elem_bits,
-                        ( const void** )&READ_FILTER, &boff, &row_len_READ_FILTER ) );
+        REQUIRE_RC( VCursorCellDataDirect( cur, row_id, idx_SPOT_FILTER, &elem_bits,
+                        ( const void** )&SPOT_FILTER, &boff, &row_len_SPOT_FILTER ) );
         REQUIRE( boff == 0 );
-        REQUIRE( elem_bits == ( sizeof READ_FILTER[ 0 ] ) * 8 );
+        REQUIRE( elem_bits == ( sizeof SPOT_FILTER[ 0 ] ) * 8 );
+        bool is_good = row_len_SPOT_FILTER == 0 || SPOT_FILTER[0] == SRA_SPOT_FILTER_PASS;
         
         REQUIRE_RC( VCursorCellDataDirect( cur, row_id, idx_QUALITY, &elem_bits,
                         ( const void** )&QUALITY, &boff, &row_len_QUALITY ) );
@@ -107,28 +108,9 @@ TEST_CASE( total_lt_spotlen_read_2 )
         {
             INSDC_quality_phred * computed = ( INSDC_quality_phred * )malloc( total_read_len );
             REQUIRE( computed != NULL );
-            
-            INSDC_quality_phred * dst = computed;
-            if ( row_len_READ_FILTER == 0 )
-            {
-                memset( dst, 30, total_read_len );
-            }
-            else
-            {
-                for ( uint32_t idx = 0; idx < row_len_READ_LEN; ++idx )
-                {
-                    INSDC_coord_len len = READ_LEN[ idx ];
-                    INSDC_quality_phred q = 30;
 
-                    if ( idx < row_len_READ_FILTER )
-                    {
-                        if ( READ_FILTER[ idx ] > READ_FILTER_PASS )
-                            q = 3;
-                    }
-                    memset( dst, q, len );
-                    dst += len;
-                }
-            }
+            memset ( computed, is_good ? 30 : 3, total_read_len );
+
             int cmp = memcmp( QUALITY, computed, total_read_len );
             REQUIRE( cmp == 0 );
             free( computed );
