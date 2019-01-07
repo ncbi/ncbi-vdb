@@ -53,10 +53,10 @@ SUBDIRS =       \
 	search      \
 	sraxf       \
 	vxf         \
-	schema		\
 	kapp        \
 	loader      \
 	install     \
+	schema		\
 	ngs         \
 	ngs-c++     \
 	ngs-python  \
