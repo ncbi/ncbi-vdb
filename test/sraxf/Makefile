@@ -30,7 +30,7 @@ MODULE = test/sraxf
 
 TEST_TOOLS = \
 	test-fix_read_seg \
-	test_syn_quality \
+	#test_syn_quality \
 
 include $(TOP)/build/Makefile.env
 
