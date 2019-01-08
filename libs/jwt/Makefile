@@ -35,6 +35,8 @@ ALL_LIBS = \
 
 include $(TOP)/build/Makefile.env
 
+clean: stdclean
+
 #-------------------------------------------------------------------------------
 # outer targets
 #

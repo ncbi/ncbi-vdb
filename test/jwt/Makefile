@@ -30,6 +30,7 @@ TOP ?= $(abspath ../..)
 MODULE = test/jwt
 
 TEST_TOOLS = \
+	test-jwt-json \
 	test-jwt \
 
 include $(TOP)/build/Makefile.env
@@ -45,6 +46,18 @@ TEST_LIB = \
 	-sktst \
 	-skapp \
     -sncbi-vdb
+
+#-------------------------------------------------------------------------------
+# test-json
+
+JSON_SRC = \
+	test-jwt-json
+
+JSON_OBJ = \
+	$(addsuffix .$(OBJX),$(JSON_SRC))
+
+$(TEST_BINDIR)/test-jwt-json: $(JSON_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_LIB)
 
 #-------------------------------------------------------------------------------
 # test-jwt

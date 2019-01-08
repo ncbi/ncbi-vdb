@@ -30,6 +30,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <iostream>
+
 using namespace std;
 
 #include <jwt/jws.hpp>
@@ -37,8 +39,6 @@ using namespace std;
 #include <jwt/jwt.hpp>
 
 using namespace ncbi;
-
-#include <iostream>
 
 TEST_SUITE(JwtTestSuite);
 
@@ -142,12 +142,16 @@ FIXTURE_TEST_CASE ( JWT_Example, JWTFixture_BasicConstruction )
 {
     JWTClaims claims = jwt_fact -> make ();
     claims . addClaimOrDeleteValue ( "example", JSONValue :: makeString ( "hello there" ) );
+    CHECK_EQUAL( string ( "{\"example\":\"hello there\",\"iss\":\"ncbi\"}" ), claims . toJSON ());
 
     JWT jwt = jwt_fact -> sign ( claims );
+    CHECK_EQUAL( string ( "eyJhbGciOiJIUzM4NCIsImtpZCI6IndvbmRlci1rZXktaWQiLCJ0eXAiOiJKV1QifQ.eyJleGFtcGxlIjoiaGVsbG8gdGhlcmUiLCJleHAiOjE1NDA2NjQxNzksImlhdCI6MTU0MDY2NDE2NCwiaXNzIjoibmNiaSJ9.UWIn88KYxos1aiSKxqBdsak9VUMy0t9kylcwB1yEqHKb6cXHlwAoRA4NcDcGzf4N"), jwt );
 
     JWTClaims decoded = jwt_fact -> decode ( jwt );
+    CHECK_EQUAL( string ( "{\"example\":\"hello there\",\"exp\":1540664179,\"iat\":1540664164,\"iss\":\"ncbi\"}" ), decoded . toJSON () );
 
     printJWTTransitionStack ( claims, jwt, decoded );
+
 }
 
 //////////////////////////////////////////// Main

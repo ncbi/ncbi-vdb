@@ -138,10 +138,6 @@ namespace ncbi
         friend class JSON;
         friend struct JSONNumber;
         friend struct JSONString;
-
-        // for testing
-        static JSONValue * test_parse ( const std :: string & json, bool consume_all );
-        friend class JSONFixture_WhiteBox;
     };
 
     /* JSONArray
@@ -223,8 +219,6 @@ namespace ncbi
         friend class JSON;
         friend class JSONValue;
 
-        // for testing
-        friend class JSONFixture_WhiteBox;
     };
 
     /* JSONObject
