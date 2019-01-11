@@ -30,7 +30,6 @@
 #include <cstdint>
 #include <cstring>
 #include <cassert>
-#include <string>
 
 namespace ncbi
 {
@@ -103,7 +102,7 @@ namespace ncbi
     ;
 
     static
-    const std :: string encodeBase64Impl ( const void * data, size_t bytes, const char encode_table [] )
+    const JwtString encodeBase64Impl ( const void * data, size_t bytes, const char encode_table [] )
     {
         // allow an empty source
         if ( bytes == 0 )
@@ -121,7 +120,7 @@ namespace ncbi
 
         // gather encoded output in a string
         // this is why we wanted to limit the data size
-        std :: string encoding;
+        JwtString encoding;
 
         // perform work in a stack-local buffer to reduce
         // memory manager thrashing when adding to "encoding" string
@@ -149,7 +148,7 @@ namespace ncbi
             // flush the local buffer if it cannot hold them all
             if ( j > ( sizeof buff - 4 ) )
             {
-                encoding += std :: string ( buff, j );
+                encoding += JwtString ( buff, j );
                 j = 0;
             }
 
@@ -182,7 +181,7 @@ namespace ncbi
                 // flush buffer if insufficient space is available
                 if ( j > ( sizeof buff - 4 ) )
                 {
-                    encoding += std :: string ( buff, j );
+                    encoding += JwtString ( buff, j );
                     j = 0;
                 }
 
@@ -216,7 +215,7 @@ namespace ncbi
                 // test for buffer space as above
                 if ( j > ( sizeof buff - 4 ) )
                 {
-                    encoding += std :: string ( buff, j );
+                    encoding += JwtString ( buff, j );
                     j = 0;
                 }
 
@@ -248,7 +247,7 @@ namespace ncbi
         // there are encoding characters in the stack-local buffer
         // append them to the encoding string
         if ( j != 0 )
-            encoding += std :: string ( buff, j );
+            encoding += JwtString ( buff, j );
 
         // done.
         return encoding;
@@ -322,7 +321,7 @@ namespace ncbi
     }
 
     static
-    const Base64Payload decodeBase64Impl ( const std :: string &encoding, const char decode_table [] )
+    const Base64Payload decodeBase64Impl ( const JwtString &encoding, const char decode_table [] )
     {
         // base the estimate of decoded size on input size
         // this can be over-estimated due to embedded padding or formatting characters
@@ -472,7 +471,7 @@ namespace ncbi
     }
 
     static
-    const std :: string payloadToUTF8 ( const Base64Payload & payload )
+    const JwtString payloadToUTF8 ( const Base64Payload & payload )
     {
         const unsigned char * buff = payload . data ();
         size_t size = payload . size ();
@@ -485,37 +484,37 @@ namespace ncbi
                 throw JWTException ( __func__, __LINE__, "text contains embedded NUL" );
         }
 
-        return std :: string ( ( const char * ) buff, size );
+        return JwtString ( ( const char * ) buff, size );
     }
 
-    const std :: string encodeBase64 ( const void * data, size_t bytes )
+    const JwtString encodeBase64 ( const void * data, size_t bytes )
     {
         return encodeBase64Impl ( data, bytes, encode_std_table );
     }
 
-    const Base64Payload decodeBase64 ( const std :: string &encoding )
+    const Base64Payload decodeBase64 ( const JwtString &encoding )
     {
         Base64Payload payload = decodeBase64Impl ( encoding, decode_std_table );
         return payload;
     }
 
-    const std :: string decodeBase64String ( const std :: string &encoding )
+    const JwtString decodeBase64String ( const JwtString &encoding )
     {
         Base64Payload payload = decodeBase64Impl ( encoding, decode_std_table );
         return payloadToUTF8 ( payload );
     }
 
-    const std :: string encodeBase64URL ( const void * data, size_t bytes )
+    const JwtString encodeBase64URL ( const void * data, size_t bytes )
     {
         return encodeBase64Impl ( data, bytes, encode_url_table );
     }
 
-    const Base64Payload decodeBase64URL ( const std :: string &encoding )
+    const Base64Payload decodeBase64URL ( const JwtString &encoding )
     {
         return decodeBase64Impl ( encoding, decode_url_table );
     }
 
-    const std :: string decodeBase64URLString ( const std :: string &encoding )
+    const JwtString decodeBase64URLString ( const JwtString &encoding )
     {
         Base64Payload payload = decodeBase64Impl ( encoding, decode_url_table );
         return payloadToUTF8 ( payload );

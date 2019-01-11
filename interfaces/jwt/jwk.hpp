@@ -28,9 +28,10 @@
 #define _hpp_ncbi_oauth_jwk_
 
 #include <atomic>
-#include <string>
 #include <vector>
 #include <map>
+
+#include "jwt-string.hpp"
 
 namespace ncbi
 {
@@ -50,25 +51,25 @@ namespace ncbi
     public:
 
         // inflate a JWK from JSON text
-        static const JWK * parse ( const std :: string & json_text );
+        static const JWK * parse ( const JwtString & json_text );
 
         // inflate from PEM text format
-        static const JWK * parsePEM ( const std :: string & pem_text,
-            const std :: string & use, const std :: string & alg, const std :: string & kid );
-        static const JWK * parsePEM ( const std :: string & pem_text, const std :: string & pwd,
-            const std :: string & use, const std :: string & alg, const std :: string & kid );
+        static const JWK * parsePEM ( const JwtString & pem_text,
+            const JwtString & use, const JwtString & alg, const JwtString & kid );
+        static const JWK * parsePEM ( const JwtString & pem_text, const JwtString & pwd,
+            const JwtString & use, const JwtString & alg, const JwtString & kid );
 
         // inflate from DER format
         static const JWK * parseDER ( const void * key, size_t key_size,
-            const std :: string & use, const std :: string & alg, const std :: string & kid );
-        static const JWK * parseDER ( const void * key, size_t key_size, const std :: string & pwd,
-            const std :: string & use, const std :: string & alg, const std :: string & kid );
+            const JwtString & use, const JwtString & alg, const JwtString & kid );
+        static const JWK * parseDER ( const void * key, size_t key_size, const JwtString & pwd,
+            const JwtString & use, const JwtString & alg, const JwtString & kid );
 
         // inflate from PEM or DER format
         static const JWK * parsePEMorDER ( const void * key, size_t key_size,
-            const std :: string & use, const std :: string & alg, const std :: string & kid );
-        static const JWK * parsePEMorDER ( const void * key, size_t key_size, const std :: string & pwd,
-            const std :: string & use, const std :: string & alg, const std :: string & kid );
+            const JwtString & use, const JwtString & alg, const JwtString & kid );
+        static const JWK * parsePEMorDER ( const void * key, size_t key_size, const JwtString & pwd,
+            const JwtString & use, const JwtString & alg, const JwtString & kid );
 
         // questions about key that don't involve looking at values
         virtual bool forSigning () const;
@@ -88,27 +89,27 @@ namespace ncbi
         // "kty"
         //  MANDATORY in a JWK (section 4.1)
         //  legal values "oct", "RSA", "EC"
-        std :: string getType () const;
+        JwtString getType () const;
 
         // "kid"
         //  optional (section 4.5), but
         //  our library currently makes it MANDATORY
-        std :: string getID () const;
+        JwtString getID () const;
 
         // "alg"
         //  identifies the algorithm (section 4.4)
-        std :: string getAlg () const;
+        JwtString getAlg () const;
 
         // "use"
         //  needed for public keys (section 4.2)
         //  legal values are "sig" (signature) and "enc" (encryption)
-        std :: string getUse () const;
+        JwtString getUse () const;
 
         // serialize as JSON text
-        std :: string toJSON () const;
+        JwtString toJSON () const;
 
         // for creating a "readable" JSON text
-        std :: string readableJSON ( unsigned int indent = 0 ) const;
+        JwtString readableJSON ( unsigned int indent = 0 ) const;
 
         // primitive memory management
         const JWK * duplicate () const;
@@ -138,14 +139,14 @@ namespace ncbi
         //  "use" - "sig" for signing, "enc" for encryption
         //  "alg" - algorithm id in { "HS256", "HS384", "HS512" }
         static const HMAC_JWKey * make ( unsigned int key_bits,
-            const std :: string & use, const std :: string & alg, const std :: string & kid );
+            const JwtString & use, const JwtString & alg, const JwtString & kid );
 
         // JWK overrides
         virtual bool isSymmetric () const;
         virtual const HMAC_JWKey * toHMAC () const;
 
         // get symmetric key "k"
-        std :: string getValue () const;
+        JwtString getValue () const;
 
     private:
 
@@ -166,7 +167,7 @@ namespace ncbi
         //  "use" - "sig" for signing, "enc" for encryption
         //  "alg" - algorithm id in { "RS256", "RS384", "RS512" }
         static const RSAPrivate_JWKey * make ( unsigned int key_bits,
-            const std :: string & use, const std :: string & alg, const std :: string & kid );
+            const JwtString & use, const JwtString & alg, const JwtString & kid );
 
         // JWK overrides
         virtual bool isRSA () const;
@@ -175,28 +176,28 @@ namespace ncbi
         virtual const RSAPublic_JWKey * toRSAPublic () const;
 
         // modulus "n"
-        std :: string getModulus () const;
+        JwtString getModulus () const;
 
         // exponent "e"
-        std :: string getExponent () const;
+        JwtString getExponent () const;
 
         // private exponent "d"
-        std :: string getPrivateExponent () const;
+        JwtString getPrivateExponent () const;
 
         // first prime factor "p"
-        std :: string getFirstPrimeFactor () const;
+        JwtString getFirstPrimeFactor () const;
 
         // second prime factor "q"
-        std :: string getSecondPrimeFactor () const;
+        JwtString getSecondPrimeFactor () const;
 
         // first factor CRT exponent "dp"
-        std :: string getFirstFactorCRTExponent () const;
+        JwtString getFirstFactorCRTExponent () const;
 
         // second factor CRT exponent "dq"
-        std :: string getSecondFactorCRTExponent () const;
+        JwtString getSecondFactorCRTExponent () const;
 
         // first CRT coefficient "qi"
-        std :: string getFirstCRTCoefficient () const;
+        JwtString getFirstCRTCoefficient () const;
 
         // other primes "oth"
         //  prime factor "r"
@@ -227,10 +228,10 @@ namespace ncbi
         virtual const RSAPublic_JWKey * toRSAPublic () const;
 
         // modulus "n"
-        std :: string getModulus () const;
+        JwtString getModulus () const;
 
         // exponent "e"
-        std :: string getExponent () const;
+        JwtString getExponent () const;
 
     private:
 
@@ -251,8 +252,8 @@ namespace ncbi
         //  "key_bits" size of the key in bits - must be multiple of 8
         //  "use" - "sig" for signing, "enc" for encryption
         //  "alg" - algorithm id in { "ES256", "ES384", "ES512" }
-        static const EllipticCurvePrivate_JWKey * make ( const std :: string & curve,
-            const std :: string & use, const std :: string & alg, const std :: string & kid );
+        static const EllipticCurvePrivate_JWKey * make ( const JwtString & curve,
+            const JwtString & use, const JwtString & alg, const JwtString & kid );
 
         // JWK overrides
         virtual bool isEllipticCurve () const;
@@ -261,16 +262,16 @@ namespace ncbi
         virtual const EllipticCurvePublic_JWKey * toEllipticCurvePublic () const;
 
         // curve "crv"
-        std :: string getCurve () const;
+        JwtString getCurve () const;
 
         // X coordinate "x"
-        std :: string getXCoordinate () const;
+        JwtString getXCoordinate () const;
 
         // Y coordinate "y"
-        std :: string getYCoordinate () const;
+        JwtString getYCoordinate () const;
 
         // ECC private key "d"
-        std :: string getECCPrivateKey () const;
+        JwtString getECCPrivateKey () const;
 
     private:
 
@@ -294,13 +295,13 @@ namespace ncbi
         virtual const EllipticCurvePublic_JWKey * toEllipticCurvePublic () const;
 
         // curve "crv"
-        std :: string getCurve () const;
+        JwtString getCurve () const;
 
         // X coordinate "x"
-        std :: string getXCoordinate () const;
+        JwtString getXCoordinate () const;
 
         // Y coordinate "y"
-        std :: string getYCoordinate () const;
+        JwtString getYCoordinate () const;
 
     private:
 
@@ -320,13 +321,13 @@ namespace ncbi
         bool isEmpty () const;
         unsigned long int count () const;
 
-        bool contains ( const std :: string & kid ) const;
+        bool contains ( const JwtString & kid ) const;
 
-        std :: vector < std :: string > getKeyIDs () const;
+        std :: vector < JwtString > getKeyIDs () const;
 
         void addKey ( const JWK * jwk );
-        const JWK * getKey ( const std :: string & kid ) const;
-        void removeKey ( const std :: string & kid );
+        const JWK * getKey ( const JwtString & kid ) const;
+        void removeKey ( const JwtString & kid );
 
         JWKSet ( const JWKSet & ks );
         JWKSet & operator = ( const JWKSet & ks );
@@ -337,7 +338,7 @@ namespace ncbi
     private:
 
         JSONObject * kset;
-        std :: map < std :: string, const JWK * > map;
+        std :: map < JwtString, const JWK * > map;
     };
 }
 

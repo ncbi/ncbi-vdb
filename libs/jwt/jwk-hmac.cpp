@@ -35,7 +35,7 @@
 namespace ncbi
 {
     const HMAC_JWKey * HMAC_JWKey :: make ( unsigned int key_bits,
-        const std :: string & use, const std :: string & alg, const std :: string & kid )
+        const JwtString & use, const JwtString & alg, const JwtString & kid )
     {
         JSONObject * props = JSONObject :: make ();
         try
@@ -69,7 +69,7 @@ namespace ncbi
     }
 
     // get/set symmetric key "k"
-    std :: string HMAC_JWKey :: getValue () const
+    JwtString HMAC_JWKey :: getValue () const
     {
         return props -> getValue ( "k" ) . toString ();
     }

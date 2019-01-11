@@ -105,7 +105,7 @@ namespace ncbi
         }
     }
 
-    void JWTClaims :: addClaim ( const std :: string & name, JSONValue * value, bool isFinal )
+    void JWTClaims :: addClaim ( const JwtString & name, JSONValue * value, bool isFinal )
     {
         JWTLocker locker ( obj_lock );
 
@@ -159,7 +159,7 @@ namespace ncbi
             claims -> setValue ( name, value );
     }
 
-    void JWTClaims :: addClaimOrDeleteValue ( const std :: string & name, JSONValue * value, bool isFinal )
+    void JWTClaims :: addClaimOrDeleteValue ( const JwtString & name, JSONValue * value, bool isFinal )
     {
         try
         {
@@ -172,7 +172,7 @@ namespace ncbi
         }
     }
 
-    JSONValue & JWTClaims :: getClaim ( const std :: string & name ) const
+    JSONValue & JWTClaims :: getClaim ( const JwtString & name ) const
     {
         return claims -> getValue ( name );
     }
@@ -243,13 +243,13 @@ namespace ncbi
         }
         catch ( JSONException & x )
         {
-            std :: string what ( "Invalid JWTClaims - " );
+            JwtString what ( "Invalid JWTClaims - " );
             what += x . what ();
             throw JWTException ( __func__, __LINE__, what . c_str () );
         }
     }
 
-    std :: string JWTClaims :: toJSON () const
+    JwtString JWTClaims :: toJSON () const
     {
         JWTLocker locker ( obj_lock );
 
@@ -257,7 +257,7 @@ namespace ncbi
         return claims -> toJSON ();
     }
 
-    std :: string JWTClaims :: readableJSON ( unsigned int indent ) const
+    JwtString JWTClaims :: readableJSON ( unsigned int indent ) const
     {
         JWTLocker locker ( obj_lock );
 
@@ -306,7 +306,7 @@ namespace ncbi
         claims = static_cast < JSONObject * > ( jwt . claims -> clone () );
     }
 
-    void JWTClaims :: validateStringOrURI ( const std::string &str )
+    void JWTClaims :: validateStringOrURI ( const JwtString &str )
     {
         // TBD
     }
@@ -316,7 +316,7 @@ namespace ncbi
         // TBD
     }
 
-    void JWTClaims :: setValueOrDelete ( const std :: string & name, JSONValue * value ) const
+    void JWTClaims :: setValueOrDelete ( const JwtString & name, JSONValue * value ) const
     {
         try
         {
@@ -329,7 +329,7 @@ namespace ncbi
         }
     }
 
-    void JWTClaims :: setFinalValueOrDelete ( const std :: string & name, JSONValue * value ) const
+    void JWTClaims :: setFinalValueOrDelete ( const JwtString & name, JSONValue * value ) const
     {
         try
         {

@@ -107,7 +107,7 @@ namespace ncbi
     // "kty"
     //  MANDATORY in a JWK (section 4.1)
     //  legal values "oct", "RSA", "EC"
-    std :: string JWK :: getType () const
+    JwtString JWK :: getType () const
     {
         return props -> getValue ( "kty" ) . toString ();
     }
@@ -115,14 +115,14 @@ namespace ncbi
     // "kid"
     //  optional (section 4.5), but
     //  our library currently makes it MANDATORY
-    std :: string JWK :: getID () const
+    JwtString JWK :: getID () const
     {
         return props -> getValue ( "kid" ) . toString ();
     }
 
     // "alg"
     //  identifies the algorithm (section 4.4)
-    std :: string JWK :: getAlg () const
+    JwtString JWK :: getAlg () const
     {
         return props -> getValue ( "alg" ) . toString ();
     }
@@ -130,17 +130,17 @@ namespace ncbi
     // "use"
     //  only for public keys (section 4.2)
     //  legal values are "sig" (signature) and "enc" (encryption)
-    std :: string JWK :: getUse () const
+    JwtString JWK :: getUse () const
     {
         return props -> getValue ( "use" ) . toString ();
     }
 
-    std :: string JWK :: toJSON () const
+    JwtString JWK :: toJSON () const
     {
         return props -> toJSON ();
     }
 
-    std :: string JWK :: readableJSON ( unsigned int indent ) const
+    JwtString JWK :: readableJSON ( unsigned int indent ) const
     {
         return props -> readableJSON ( indent );
     }
@@ -165,7 +165,7 @@ namespace ncbi
 
         if ( props -> exists ( "use" ) )
         {
-            std :: string use = props -> getValue ( "use" ) . toString ();
+            JwtString use = props -> getValue ( "use" ) . toString ();
             if ( use . compare ( "sig" ) != 0 &&
                  use . compare ( "enc" ) != 0 )
             {
@@ -175,7 +175,7 @@ namespace ncbi
 
         if ( props -> exists ( "alg" ) )
         {
-            std :: string alg = props -> getValue ( "alg" ) . toString ();
+            JwtString alg = props -> getValue ( "alg" ) . toString ();
             if ( ! gJWAFactory . acceptJWKAlgorithm ( alg ) )
                 throw JWTException ( __func__, __LINE__, "unknown 'alg' property value" );
         }
@@ -204,7 +204,7 @@ namespace ncbi
         return map . size ();
     }
 
-    bool JWKSet :: contains ( const std :: string & kid ) const
+    bool JWKSet :: contains ( const JwtString & kid ) const
     {
         auto it = map . find ( kid );
 
@@ -214,9 +214,9 @@ namespace ncbi
         return true;
     }
 
-    std :: vector < std :: string > JWKSet :: getKeyIDs () const
+    std :: vector < JwtString > JWKSet :: getKeyIDs () const
     {
-        std :: vector < std :: string > ids;
+        std :: vector < JwtString > ids;
 
         for ( auto it = map . cbegin(); it != map . cend (); ++ it )
             ids . push_back ( it -> first );
@@ -228,11 +228,11 @@ namespace ncbi
     {
         if ( jwk != nullptr )
         {
-            std :: string kid = jwk -> getID ();
+            JwtString kid = jwk -> getID ();
             auto it = map . find ( kid );
             if ( it != map . end () )
             {
-                std :: string what ( "duplicate key id: '" );
+                JwtString what ( "duplicate key id: '" );
                 what += kid;
                 what += "'";
                 throw JWTException ( __func__, __LINE__, what . c_str () );
@@ -252,12 +252,12 @@ namespace ncbi
         }
     }
 
-    const JWK * JWKSet :: getKey ( const std :: string & kid ) const
+    const JWK * JWKSet :: getKey ( const JwtString & kid ) const
     {
         auto it = map . find ( kid );
         if ( it == map . end () )
         {
-            std :: string what ( "key not found: id = '" );
+            JwtString what ( "key not found: id = '" );
             what += kid;
             what += "'";
             throw JWTException ( __func__, __LINE__, what . c_str () );
@@ -266,7 +266,7 @@ namespace ncbi
         return it -> second;
     }
 
-    void JWKSet :: removeKey ( const std :: string & kid )
+    void JWKSet :: removeKey ( const JwtString & kid )
     {
         throw JWTException ( __func__, __LINE__, "UNIMPLEENTED" );
     }

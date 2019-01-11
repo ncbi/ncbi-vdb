@@ -35,7 +35,7 @@ namespace ncbi
 {
     struct NONE_Signer : JWASigner
     {
-        virtual std :: string sign ( const void * data, size_t bytes ) const
+        virtual JwtString sign ( const void * data, size_t bytes ) const
         {
             return "";
         }
@@ -45,8 +45,8 @@ namespace ncbi
             return new NONE_Signer ( alg, nam, key );
         }
 
-        NONE_Signer ( const std :: string & name,
-                const std :: string & alg, const JWK * key )
+        NONE_Signer ( const JwtString & name,
+                const JwtString & alg, const JWK * key )
             : JWASigner ( name, alg, key )
         {
         }
@@ -54,7 +54,7 @@ namespace ncbi
 
     struct NONE_Verifier : JWAVerifier
     {
-        virtual bool verify ( const void * data, size_t bytes, const std :: string & signature ) const
+        virtual bool verify ( const void * data, size_t bytes, const JwtString & signature ) const
         {
             return true;
         }
@@ -64,8 +64,8 @@ namespace ncbi
             return new NONE_Verifier ( nam, alg, key );
         }
 
-        NONE_Verifier ( const std :: string & name,
-                const std :: string & alg, const JWK * key )
+        NONE_Verifier ( const JwtString & name,
+                const JwtString & alg, const JWK * key )
             : JWAVerifier ( name, alg, key )
         {
         }
@@ -73,13 +73,13 @@ namespace ncbi
 
     struct NONE_SignerFact : JWASignerFact
     {
-        virtual JWASigner * make ( const std :: string & name,
-            const std :: string & alg, const JWK * key ) const
+        virtual JWASigner * make ( const JwtString & name,
+            const JwtString & alg, const JWK * key ) const
         {
             return new NONE_Signer ( name, alg, key );
         }
 
-        NONE_SignerFact ( const std :: string & alg )
+        NONE_SignerFact ( const JwtString & alg )
         {
             gJWAFactory . registerSignerFact ( alg, this );
         }
@@ -87,13 +87,13 @@ namespace ncbi
 
     struct NONE_VerifierFact : JWAVerifierFact
     {
-        virtual JWAVerifier * make ( const std :: string & name,
-            const std :: string & alg, const JWK * key ) const
+        virtual JWAVerifier * make ( const JwtString & name,
+            const JwtString & alg, const JWK * key ) const
         {
             return new NONE_Verifier ( name, alg, key );
         }
 
-        NONE_VerifierFact ( const std :: string & alg )
+        NONE_VerifierFact ( const JwtString & alg )
         {
             gJWAFactory . registerVerifierFact ( alg, this );
         }
@@ -102,7 +102,7 @@ namespace ncbi
 
     static struct NONE_Registry
     {
-        NONE_Registry ( const std :: string & alg )
+        NONE_Registry ( const JwtString & alg )
             : signer_fact ( alg )
             , verifier_fact ( alg )
         {
@@ -121,7 +121,7 @@ namespace ncbi
     {
         if ( always_false )
         {
-            std :: string empty;
+            JwtString empty;
             none_registry . signer_fact . make ( empty, empty, nullptr );
         }
     }

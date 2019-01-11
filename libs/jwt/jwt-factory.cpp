@@ -86,9 +86,9 @@ namespace ncbi
 
     JWT JWTFactory :: sign ( const JWTClaims & claims ) const
     {
-        std :: string jwt;
+        JwtString jwt;
 
-        std :: string payload = claimsToPayload ( claims );
+        JwtString payload = claimsToPayload ( claims );
 
         // this would be a case when we encode with "none" algorithm
         if ( jws_fact == nullptr )
@@ -123,9 +123,9 @@ namespace ncbi
         return jwt;
     }
 
-    std :: string JWTFactory :: claimsToPayload ( const JWTClaims & claims ) const
+    JwtString JWTFactory :: claimsToPayload ( const JWTClaims & claims ) const
     {
-        std :: string payload;
+        JwtString payload;
 
         JWTLocker claims_lock ( claims . obj_lock );
 
@@ -225,12 +225,12 @@ namespace ncbi
         // 1. verify that the JWT contains at least one '.'
         size_t pos = 0;
         size_t p = jwt . find_first_of ( '.' );
-        if ( p == std :: string :: npos )
+        if ( p == JwtString :: npos )
             throw JWTException ( __func__, __LINE__, "Invalid JWT - expected: 3 or 5 sections" );
 
         // 2. split off the JOSE header from the start of "jwt" to the period.
         // this must be a base64url-encoded string representing a JSONObject
-        std :: string header = jwt . substr ( pos, p - pos );
+        JwtString header = jwt . substr ( pos, p - pos );
         pos = ++ p;
 
         // 3. run decodeBase64URL() on the JOSE string
@@ -238,7 +238,7 @@ namespace ncbi
         {
             // declare base64 payload outside of try block ( thanks so much, C++! )
             // so that we can properly interpret any exceptions caught by decoding
-            std :: string payload;
+            JwtString payload;
             try
             {
                 // decode the header text
@@ -247,7 +247,7 @@ namespace ncbi
             catch ( JWTException & x )
             {
                 // any error in base64URL encoding is an invalid JWT/JOSE object
-                std :: string what ( "Invalid JWT - " );
+                JwtString what ( "Invalid JWT - " );
                 what += x . what ();
                 throw JWTException ( __func__, __LINE__, what . c_str () );
             }
@@ -278,7 +278,7 @@ namespace ncbi
         }
         catch ( JSONException & x )
         {
-            std :: string what ( "Invalid JWT - " );
+            JwtString what ( "Invalid JWT - " );
             what += x . what ();
             throw JWTException ( __func__, __LINE__, what . c_str () );
         }
@@ -299,7 +299,7 @@ namespace ncbi
             // retain the end of payload for JWS
             size_t payload_pos = p;
             size_t last_pos = p;
-            while ( p != std :: string :: npos )
+            while ( p != JwtString :: npos )
             {
                 // found another period
                 if ( ++ period_count > 4 )
@@ -354,7 +354,7 @@ namespace ncbi
 
             // 9. decode payload
             {
-                std :: string pay;
+                JwtString pay;
                 try
                 {
                     pay = decodeBase64URLString ( jwt . substr ( pos, payload_pos - pos ) );
@@ -362,7 +362,7 @@ namespace ncbi
                 catch ( JWTException & x )
                 {
                     // any error in base64URL encoding is an invalid JWT object
-                    std :: string what ( "Invalid JWT - " );
+                    JwtString what ( "Invalid JWT - " );
                     what += x . what ();
                     throw JWTException ( __func__, __LINE__, what . c_str () );
                 }
@@ -542,7 +542,7 @@ namespace ncbi
         dflt_skew = 0;
     }
 
-    std :: string JWTFactory :: newJTI () const
+    JwtString JWTFactory :: newJTI () const
     {
         // TBD - generate from something involving id_seq
         // or some other source of unique numbers

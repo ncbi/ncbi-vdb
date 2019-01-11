@@ -34,50 +34,50 @@ namespace ncbi
         return new JSONArray ();
     }
 
-    std :: string JSONArray :: toString () const
+    JwtString JSONArray :: toString () const
     {
         throw JSONException ( __func__, __LINE__, "this value cannot be converted to a string" );
     }
-    
-    std :: string JSONArray :: toJSON () const
+
+    JwtString JSONArray :: toJSON () const
     {
-        std :: string to_string = "[";
-        
+        JwtString to_string = "[";
+
         const char* sep = "";
         auto size = array . size ();
-        
+
         for ( size_t i = 0; i < size; ++ i )
         {
             const JSONValue* value = array [ i ];
-            
+
             to_string += sep;
             to_string += value -> toJSON();
-            
+
             sep = ",";
         }
-        
+
         to_string += "]";
-        
+
         return to_string;
     }
-    
-    std :: string JSONArray :: readableJSON ( unsigned int indent ) const
+
+    JwtString JSONArray :: readableJSON ( unsigned int indent ) const
     {
-        std :: string margin;
+        JwtString margin;
         for ( unsigned int i = 0; i < indent; ++ i )
             margin += "    ";
 
-        std :: string to_string = margin + '[';
+        JwtString to_string = margin + '[';
         margin += "    ";
 
         const char* sep = "\n";
 
         auto size = array . size ();
-        
+
         for ( size_t i = 0; i < size; ++ i )
         {
             const JSONValue* value = array [ i ];
-            
+
             to_string += sep;
             if ( value -> isArray () )
             {
@@ -91,17 +91,17 @@ namespace ncbi
             {
                 to_string += margin + value -> toJSON ();
             }
-            
+
             sep = ",\n";
         }
-        
+
         to_string += "\n";
         to_string += margin . substr ( 4 );
         to_string += "]";
-        
+
         return to_string;
     }
-    
+
     JSONValue * JSONArray :: clone () const
     {
         JSONArray * copy = new JSONArray ();
@@ -110,7 +110,7 @@ namespace ncbi
 
         return copy;
     }
-    
+
     void JSONArray :: invalidate ()
     {
         size_t i, count = array . size ();
@@ -137,7 +137,7 @@ namespace ncbi
     {
         if ( idx < 0 || ( size_t ) idx >= array . size () )
             return false;
-        
+
         // TBD - determine whether null objects are considered to exist...
         return array [ idx ] -> isNull ();
     }
@@ -185,7 +185,7 @@ namespace ncbi
                 array [ idx ] = elem;
             }
         }
-        
+
     }
 
     // get value at index
@@ -197,7 +197,7 @@ namespace ncbi
 
         return * array [ idx ];
     }
-    
+
     const JSONValue & JSONArray :: getValue ( long int idx ) const
     {
         if ( idx < 0 || ( size_t ) idx >= array . size () )
@@ -266,12 +266,12 @@ namespace ncbi
             // append them
             appendValue ( elem );
         }
-        
+
         locked = a . locked;
 
         return * this;
     }
-    
+
     JSONArray :: JSONArray ( const JSONArray & a )
     : locked ( false )
     {
@@ -283,7 +283,7 @@ namespace ncbi
         }
         locked = a . locked;
     }
-        
+
     JSONArray :: ~ JSONArray ()
     {
         locked = false;
@@ -307,7 +307,7 @@ namespace ncbi
             array . pop_back ();
         }
     }
-    
+
     void JSONArray :: lock ()
     {
         locked = true;
@@ -317,5 +317,5 @@ namespace ncbi
     : locked ( false )
     {
     }
-    
+
 }

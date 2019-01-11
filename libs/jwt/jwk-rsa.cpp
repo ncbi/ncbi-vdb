@@ -36,7 +36,7 @@ namespace ncbi
 {
 
     const RSAPrivate_JWKey * RSAPrivate_JWKey :: make ( unsigned int key_bits,
-        const std :: string & use, const std :: string & alg, const std :: string & kid )
+        const JwtString & use, const JwtString & alg, const JwtString & kid )
     {
         JSONObject * props = JSONObject :: make ();
         try
@@ -79,49 +79,49 @@ namespace ncbi
     }
 
     // modulus "n"
-    std :: string RSAPrivate_JWKey :: getModulus () const
+    JwtString RSAPrivate_JWKey :: getModulus () const
     {
         return props -> getValue ( "n" ) . toString ();
     }
 
     // exponent "e"
-    std :: string RSAPrivate_JWKey :: getExponent () const
+    JwtString RSAPrivate_JWKey :: getExponent () const
     {
         return props -> getValue ( "e" ) . toString ();
     }
 
     // private exponent "d"
-    std :: string RSAPrivate_JWKey :: getPrivateExponent () const
+    JwtString RSAPrivate_JWKey :: getPrivateExponent () const
     {
         return props -> getValue ( "d" ) . toString ();
     }
 
     // first prime factor "p"
-    std :: string RSAPrivate_JWKey :: getFirstPrimeFactor () const
+    JwtString RSAPrivate_JWKey :: getFirstPrimeFactor () const
     {
         return props -> getValue ( "p" ) . toString ();
     }
 
     // second prime factor "q"
-    std :: string RSAPrivate_JWKey :: getSecondPrimeFactor () const
+    JwtString RSAPrivate_JWKey :: getSecondPrimeFactor () const
     {
         return props -> getValue ( "q" ) . toString ();
     }
 
     // first factor CRT exponent "dp"
-    std :: string RSAPrivate_JWKey :: getFirstFactorCRTExponent () const
+    JwtString RSAPrivate_JWKey :: getFirstFactorCRTExponent () const
     {
         return props -> getValue ( "dp" ) . toString ();
     }
 
     // second factor CRT exponent "dq"
-    std :: string RSAPrivate_JWKey :: getSecondFactorCRTExponent () const
+    JwtString RSAPrivate_JWKey :: getSecondFactorCRTExponent () const
     {
         return props -> getValue ( "dq" ) . toString ();
     }
 
     // first CRT coefficient "qi"
-    std :: string RSAPrivate_JWKey :: getFirstCRTCoefficient () const
+    JwtString RSAPrivate_JWKey :: getFirstCRTCoefficient () const
     {
         return props -> getValue ( "qi" ) . toString ();
     }
@@ -207,13 +207,13 @@ namespace ncbi
     }
 
     // modulus "n"
-    std :: string RSAPublic_JWKey :: getModulus () const
+    JwtString RSAPublic_JWKey :: getModulus () const
     {
         return props -> getValue ( "n" ) . toString ();
     }
 
     // exponent "e"
-    std :: string RSAPublic_JWKey :: getExponent () const
+    JwtString RSAPublic_JWKey :: getExponent () const
     {
         return props -> getValue ( "e" ) . toString ();
     }

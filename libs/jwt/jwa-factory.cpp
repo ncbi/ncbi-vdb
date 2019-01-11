@@ -58,23 +58,23 @@ namespace ncbi
      *  performs a brute force overwrite of key memory when destroyed
      */
 
-    const std :: string & JWAKeyHolder :: authority_name () const
+    const JwtString & JWAKeyHolder :: authority_name () const
     {
         return nam;
     }
 
-    const std :: string & JWAKeyHolder :: algorithm () const
+    const JwtString & JWAKeyHolder :: algorithm () const
     {
         return alg;
     }
 
-    std :: string JWAKeyHolder :: keyID () const
+    JwtString JWAKeyHolder :: keyID () const
     {
         return key -> getID ();
     }
 
-    JWAKeyHolder :: JWAKeyHolder ( const std :: string & _nam,
-            const std :: string & _alg, const JWK * _key )
+    JWAKeyHolder :: JWAKeyHolder ( const JwtString & _nam,
+            const JwtString & _alg, const JWK * _key )
         : nam ( _nam )
         , alg ( _alg )
         , key ( nullptr )
@@ -94,8 +94,8 @@ namespace ncbi
      *  performs the operation of generating a signature
      */
 
-    JWASigner :: JWASigner ( const std :: string & name,
-            const std :: string & alg, const JWK * key )
+    JWASigner :: JWASigner ( const JwtString & name,
+            const JwtString & alg, const JWK * key )
         : JWAKeyHolder ( name, alg, key )
     {
     }
@@ -106,8 +106,8 @@ namespace ncbi
      *  performs the operation of verifying a signature
      */
 
-    JWAVerifier :: JWAVerifier ( const std :: string & name,
-            const std :: string & alg, const JWK * key )
+    JWAVerifier :: JWAVerifier ( const JwtString & name,
+            const JwtString & alg, const JWK * key )
         : JWAKeyHolder ( name, alg, key )
     {
     }
@@ -136,8 +136,8 @@ namespace ncbi
      *  with polymorphic implementations
      */
 
-    JWASigner * JWAFactory :: makeSigner ( const std :: string & name,
-            const std :: string & alg, const JWK * key ) const
+    JWASigner * JWAFactory :: makeSigner ( const JwtString & name,
+            const JwtString & alg, const JWK * key ) const
     {
         // NB - expect this to be called after static constructors run
         assert ( maps != nullptr );
@@ -154,7 +154,7 @@ namespace ncbi
         auto it = const_cast < const Maps * > ( maps ) -> signer_facts . find ( alg );
         if ( it == const_cast < const Maps * > ( maps ) -> signer_facts . cend () )
         {
-            std :: string msg ( "signing algorithm '" );
+            JwtString msg ( "signing algorithm '" );
             msg += alg;
             msg += "' not registered.";
             throw JWTException ( __func__, __LINE__, msg . c_str () );
@@ -168,8 +168,8 @@ namespace ncbi
         return fact -> make ( name, alg, key );
     }
 
-    JWAVerifier * JWAFactory :: makeVerifier ( const std :: string & name,
-            const std :: string & alg, const JWK * key ) const
+    JWAVerifier * JWAFactory :: makeVerifier ( const JwtString & name,
+            const JwtString & alg, const JWK * key ) const
     {
         // NB - expect this to be called after static constructors run
         assert ( maps != nullptr );
@@ -184,7 +184,7 @@ namespace ncbi
         auto it = const_cast < const Maps * > ( maps ) -> verifier_facts . find ( alg );
         if ( it == const_cast < const Maps * > ( maps ) -> verifier_facts . cend () )
         {
-            std :: string msg ( "signing algorithm '" );
+            JwtString msg ( "signing algorithm '" );
             msg += alg;
             msg += "' not registered.";
             throw JWTException ( __func__, __LINE__, msg . c_str () );
@@ -198,7 +198,7 @@ namespace ncbi
         return fact -> make ( name, alg, key );
     }
 
-    void JWAFactory :: registerSignerFact ( const std :: string & alg, JWASignerFact * fact )
+    void JWAFactory :: registerSignerFact ( const JwtString & alg, JWASignerFact * fact )
     {
         // NB - can be called BEFORE constructor runs
         makeMaps ();
@@ -226,7 +226,7 @@ namespace ncbi
         }
     }
 
-    bool JWAFactory :: acceptJWKAlgorithm ( const std :: string & alg ) const
+    bool JWAFactory :: acceptJWKAlgorithm ( const JwtString & alg ) const
     {
         {
             auto found = maps -> verifier_facts . find ( alg );
@@ -241,7 +241,7 @@ namespace ncbi
         return false;
     }
 
-    void JWAFactory :: registerVerifierFact ( const std :: string & alg, JWAVerifierFact * fact )
+    void JWAFactory :: registerVerifierFact ( const JwtString & alg, JWAVerifierFact * fact )
     {
         // NB - can be called BEFORE constructor runs
         makeMaps ();

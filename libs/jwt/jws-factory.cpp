@@ -36,7 +36,7 @@ namespace ncbi
 {
 #if JWT_TESTING
     static bool ignore_signature_mismatch;
-    static std :: string unrecognized_string ( "unrecognized" );
+    static JwtString unrecognized_string ( "unrecognized" );
 
     void setIgnoreSignatureMismatch ( bool ignore )
     {
@@ -59,7 +59,7 @@ namespace ncbi
         hdr . setValueOrDelete ( "alg", JSONValue :: makeString ( signer -> algorithm () ) );
 
         // set the "kid" property
-        std :: string signing_kid = signer -> keyID ();
+        JwtString signing_kid = signer -> keyID ();
         if ( ! signing_kid . empty () )
             hdr . setValueOrDelete ( "kid", JSONValue :: makeString ( signing_kid ) );
 
@@ -68,21 +68,21 @@ namespace ncbi
         {
             {
                 // convert the header to text
-                std :: string hdr_json = hdr . toJSON ();
+                JwtString hdr_json = hdr . toJSON ();
 
                 // encode the header with base64url
                 jws = encodeBase64URL ( hdr_json . data (), hdr_json . size () );
             }
 
             // encode the payload with base64url
-            std :: string pay_base64 = encodeBase64URL ( payload, bytes );
+            JwtString pay_base64 = encodeBase64URL ( payload, bytes );
 
             // concatenate the two strings
             jws += '.';
             jws += pay_base64;
 
             // now we should be able to generate a signature
-            std :: string sig_base64 = signer -> sign ( jws . data (), jws . size () );
+            JwtString sig_base64 = signer -> sign ( jws . data (), jws . size () );
 
             // concatenate the third strings
             jws += '.';
@@ -92,13 +92,13 @@ namespace ncbi
         return jws;
     }
 
-    const std :: string & JWSFactory :: validate ( const JSONObject & hdr, const JWS & jws, size_t last_period ) const
+    const JwtString & JWSFactory :: validate ( const JSONObject & hdr, const JWS & jws, size_t last_period ) const
     {
         // the "last_period" tells us already where to split the jws
         assert ( last_period < jws . size () );
 
-        std :: string content = jws . substr ( 0, last_period );
-        std :: string signature = jws . substr ( last_period + 1 );
+        JwtString content = jws . substr ( 0, last_period );
+        JwtString signature = jws . substr ( last_period + 1 );
 
         // loop through verifiers
         const JWAVerifier * v = verifier;
@@ -138,7 +138,7 @@ namespace ncbi
 
         if ( hdr . exists ( "alg" ) )
         {
-            std :: string alg = hdr . getValue ( "alg" ) . toString ();
+            JwtString alg = hdr . getValue ( "alg" ) . toString ();
             if ( alg . compare ( v -> algorithm () ) != 0 )
             {
 #if JWT_TESTING
@@ -164,7 +164,7 @@ namespace ncbi
         return v -> authority_name ();
     }
 
-    void JWSFactory :: addVerifier ( const std :: string & name, const std :: string & alg, const JWK * key )
+    void JWSFactory :: addVerifier ( const JwtString & name, const JwtString & alg, const JWK * key )
     {
         JWAVerifier * verifier = gJWAFactory . makeVerifier ( name, alg, key );
         addl_verifiers . push_back ( verifier );
@@ -212,8 +212,8 @@ namespace ncbi
         }
     }
 
-    JWSFactory :: JWSFactory ( const std :: string & name,
-             const std :: string & alg, const JWK * key )
+    JWSFactory :: JWSFactory ( const JwtString & name,
+             const JwtString & alg, const JWK * key )
         : signer ( nullptr )
         , verifier ( nullptr )
     {

@@ -32,7 +32,8 @@
 #endif
 
 #include <atomic>
-#include <string>
+
+#include "jwt-string.hpp"
 
 namespace ncbi
 {
@@ -42,11 +43,11 @@ namespace ncbi
 
     // a JSON Web Token - RFC 7519: Line 233
     // A string representing a set of claims as a JSON object
-    typedef std :: string JWT;
+    typedef JwtString JWT;
 
     // RFC 7519: Line 273
     // if the string contains a ':', then it MUST be a URI [RFC3986]
-    typedef std :: string StringOrURI;
+    typedef JwtString StringOrURI;
 
     /* JWTException
      **********************************************************************************/
@@ -63,7 +64,7 @@ namespace ncbi
 
     private:
 
-        std :: string msg;
+        JwtString msg;
         const char * fl_msg;
     };
 
@@ -102,9 +103,9 @@ namespace ncbi
         void setNotBefore ( long long int nbf_seconds );
 
         // claims can be any valid JSONValue
-        void addClaim ( const std :: string & name, JSONValue * value, bool isFinal = false );
-        void addClaimOrDeleteValue ( const std :: string & name, JSONValue * value, bool isFinal = false );
-        JSONValue & getClaim ( const std :: string & name ) const;
+        void addClaim ( const JwtString & name, JSONValue * value, bool isFinal = false );
+        void addClaimOrDeleteValue ( const JwtString & name, JSONValue * value, bool isFinal = false );
+        JSONValue & getClaim ( const JwtString & name ) const;
 
         // validate claims read from JWT payload
         // mark protected claims as final
@@ -112,8 +113,8 @@ namespace ncbi
         void validate ( long long cur_time, long long skew = 0 );
 
         // serialization
-        std :: string toJSON () const;
-        std :: string readableJSON ( unsigned int indent = 0 ) const;
+        JwtString toJSON () const;
+        JwtString readableJSON ( unsigned int indent = 0 ) const;
 
         // C++ assignment
         JWTClaims & operator = ( const JWTClaims & jwt );
@@ -122,15 +123,15 @@ namespace ncbi
 
     private:
 
-        // any std :: string parameter typed as StringOrURI MUST be validated
+        // any JwtString parameter typed as StringOrURI MUST be validated
         // throws an exception for an invalid string
-        static void validateStringOrURI ( const std :: string & str );
+        static void validateStringOrURI ( const JwtString & str );
         static void validateStringOrURI ( JSONValue * value );
 
         // store a newly allocated value under claim name
         // delete the value if there are any problems
-        void setValueOrDelete ( const std :: string & name, JSONValue * value ) const;
-        void setFinalValueOrDelete ( const std :: string & name, JSONValue * value ) const;
+        void setValueOrDelete ( const JwtString & name, JSONValue * value ) const;
+        void setFinalValueOrDelete ( const JwtString & name, JSONValue * value ) const;
 
         JWTClaims ();
         JWTClaims ( JSONObject * claims, bool require_iat_on_validate, bool require_exp_on_validate );
@@ -198,10 +199,10 @@ namespace ncbi
     private:
 
         // make a new identifier
-        std :: string newJTI () const;
+        JwtString newJTI () const;
 
         // convert claims to JSON text
-        std :: string claimsToPayload ( const JWTClaims & claims ) const;
+        JwtString claimsToPayload ( const JWTClaims & claims ) const;
 
         // return timestamp in seconds since epoch
         static long long int now ();
@@ -212,9 +213,9 @@ namespace ncbi
         const JWSFactory * jws_fact;
 
         // factory claims
-        std :: string iss;
-        std :: string sub;
-        std :: vector < std :: string > aud;
+        JwtString iss;
+        JwtString sub;
+        std :: vector < JwtString > aud;
         long long duration;
         long long not_before;
 

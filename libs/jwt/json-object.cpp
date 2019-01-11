@@ -34,41 +34,41 @@ namespace ncbi
         return new JSONObject ();
     }
 
-    std :: string JSONObject :: toString () const
+    JwtString JSONObject :: toString () const
     {
         throw JSONException ( __func__, __LINE__, "this value cannot be converted to a string" );
     }
-    
+
     // JSONValue interface implementations
-    std :: string JSONObject :: toJSON () const
+    JwtString JSONObject :: toJSON () const
     {
-        std :: string to_string = "{";
+        JwtString to_string = "{";
         const char* sep = "";
-        
+
         for ( auto it = members . begin (); it != members . end (); ++ it )
         {
-            std :: string key =  it -> first;
-            
+            JwtString key =  it -> first;
+
             JSONValue* value = it -> second . second;
-            
+
             to_string += sep;
             to_string += string_to_json ( key ) + ":" + value -> toJSON();
-            
+
             sep = ",";
         }
-        
+
         to_string += "}";
-        
+
         return to_string;
     }
-    
-    std :: string JSONObject :: readableJSON ( unsigned int indent ) const
+
+    JwtString JSONObject :: readableJSON ( unsigned int indent ) const
     {
-        std :: string margin;
+        JwtString margin;
         for ( unsigned int i = 0; i < indent; ++ i )
             margin += "    ";
 
-        std :: string to_string = margin + "{";
+        JwtString to_string = margin + "{";
         margin += "    ";
 
         const char* sep = "\n";
@@ -80,8 +80,8 @@ namespace ncbi
             JSONValue * value = it -> second . second;
             if ( ! value -> isArray () && ! value -> isObject () )
             {
-                std :: string key =  it -> first;
-                
+                JwtString key =  it -> first;
+
                 // count the length in bytes
                 size_t mbr_size = key . size ();
 
@@ -95,18 +95,18 @@ namespace ncbi
                     if ( ( cp [ i ] & 0xC0 ) == 0x80 )
                         -- mbr_len;
                 }
-                
+
                 if ( mbr_len > longest_mbr_len )
                     longest_mbr_len = mbr_len;
             }
         }
-        
+
         for ( auto it = members . begin (); it != members . end (); ++ it )
         {
-            std :: string key =  it -> first;
-            
+            JwtString key =  it -> first;
+
             JSONValue * value = it -> second . second;
-            
+
             to_string += sep;
             to_string += margin;
             to_string += string_to_json ( key );
@@ -124,26 +124,26 @@ namespace ncbi
             {
                 for ( size_t s = key . size (); s < longest_mbr_len; ++ s )
                     to_string += ' ';
-                
+
                 to_string += " : " + value -> toJSON ();
             }
-            
+
             sep = ",\n";
         }
-        
+
         to_string += "\n";
         to_string += margin . substr ( 4 );
         to_string += "}";
-        
+
         return to_string;
     }
-    
+
     JSONValue * JSONObject :: clone () const
     {
         JSONObject *copy = new JSONObject ();
-        
+
         *copy = *this;
-        
+
         return copy;
     }
 
@@ -160,13 +160,13 @@ namespace ncbi
     }
 
     // does a member exist
-    bool JSONObject :: exists ( const std :: string & name ) const
+    bool JSONObject :: exists ( const JwtString & name ) const
     {
         auto it = members . find ( name );
 
         if ( it == members . end () )
                 return false;
-        
+
         return true;
     }
 
@@ -175,28 +175,28 @@ namespace ncbi
     {
         return members . size ();
     }
-        
+
     // return names/keys
-    std :: vector < std :: string > JSONObject :: getNames () const
+    std :: vector < JwtString > JSONObject :: getNames () const
     {
-        std :: vector < std :: string > names;
-        
+        std :: vector < JwtString > names;
+
         for ( auto it = members . cbegin(); it != members . cend (); ++ it )
             names . push_back ( it -> first );
-        
+
         return names;
     }
-        
+
     // add a new ( name, value ) pair
     // "name" must be unique or an exception will be thrown
-    void JSONObject :: addNameValuePair ( const std :: string & name, JSONValue * val )
+    void JSONObject :: addNameValuePair ( const JwtString & name, JSONValue * val )
     {
         auto it = members . find ( name );
-        
+
         // error if it exists
         if ( it != members . end () )
         {
-            std :: string what ( "duplicate member name: '" );
+            JwtString what ( "duplicate member name: '" );
             what += name;
             what += "'";
             throw JSONException ( __func__, __LINE__, what . c_str () );
@@ -205,17 +205,17 @@ namespace ncbi
         std :: pair < bool, JSONValue * > pair ( false, val );
         members . emplace ( name, pair );
     }
-        
+
     // add a new ( name, value ) pair
     // "name" must be unique or an exception will be thrown
-    void JSONObject :: addFinalNameValuePair ( const std :: string & name, JSONValue * val )
+    void JSONObject :: addFinalNameValuePair ( const JwtString & name, JSONValue * val )
     {
         auto it = members . find ( name );
-        
+
         // error if it exists
         if ( it != members . end () )
         {
-            std :: string what ( "duplicate member name: '" );
+            JwtString what ( "duplicate member name: '" );
             what += name;
             what += "'";
             throw JSONException ( __func__, __LINE__, what . c_str () );
@@ -224,13 +224,13 @@ namespace ncbi
         std :: pair < bool, JSONValue * > pair ( true, val );
         members . emplace ( name, pair );
     }
-        
+
     // set entry to a new value
     // throws exception if entry exists and is final
-    void JSONObject :: setValue ( const std :: string & name, JSONValue * val )
+    void JSONObject :: setValue ( const JwtString & name, JSONValue * val )
     {
         auto it = members . find ( name );
-        
+
         // if doesnt exist, add
         if ( it == members . end () )
         {
@@ -242,7 +242,7 @@ namespace ncbi
             // if non modifiable, throw
             if ( it -> second . first )
                 throw JSONException ( __func__, __LINE__, "Cannot overwrite final member" );
-            
+
             // overwrite value
             // TBD - need to look at threat safety
             delete it -> second . second;
@@ -250,7 +250,7 @@ namespace ncbi
         }
     }
 
-    void JSONObject :: setValueOrDelete ( const std :: string & name, JSONValue * val )
+    void JSONObject :: setValueOrDelete ( const JwtString & name, JSONValue * val )
     {
         try
         {
@@ -265,10 +265,10 @@ namespace ncbi
 
     // set entry to a final value
     // throws exception if entry exists and is final
-    void JSONObject :: setFinalValue ( const std :: string & name, JSONValue * val )
+    void JSONObject :: setFinalValue ( const JwtString & name, JSONValue * val )
     {
         auto it = members . find ( name );
-        
+
         // if doesnt exist, add
         if ( it == members . end () )
         {
@@ -280,14 +280,14 @@ namespace ncbi
             // if non modifiable, throw
             if ( it -> second . first )
                 throw JSONException ( __func__, __LINE__, "Cannot overwrite final member" );
-            
+
             // overwrite value
             delete it -> second . second;
             it -> second . second = val;
         }
     }
 
-    void JSONObject :: setFinalValueOrDelete ( const std :: string & name, JSONValue * val )
+    void JSONObject :: setFinalValueOrDelete ( const JwtString & name, JSONValue * val )
     {
         try
         {
@@ -301,30 +301,30 @@ namespace ncbi
     }
 
     // get named value
-    JSONValue & JSONObject :: getValue ( const std :: string & name )
+    JSONValue & JSONObject :: getValue ( const JwtString & name )
     {
         auto it = members . find ( name );
         if ( it != members . end () )
         {
             return * it -> second . second;
         }
-        
+
         throw JSONException ( __func__, __LINE__, "Member not found" );
     }
-    
-    const JSONValue & JSONObject :: getValue ( const std :: string & name ) const
+
+    const JSONValue & JSONObject :: getValue ( const JwtString & name ) const
     {
         auto it = members . find ( name );
         if ( it != members . cend () )
         {
             return * it -> second . second;
         }
-        
+
         throw JSONException ( __func__, __LINE__, "Member not found" );
     }
-        
+
     // remove a named value
-    void JSONObject :: removeValue ( const std :: string & name )
+    void JSONObject :: removeValue ( const JwtString & name )
     {
         auto it = members . find ( name );
         if ( it != members . end () && it -> second . first == false )
@@ -338,28 +338,28 @@ namespace ncbi
     JSONObject & JSONObject :: operator = ( const JSONObject & obj )
     {
         clear ();
-        
+
         for ( auto it = obj . members . cbegin(); it != obj . members . cend (); ++ it )
         {
-            std :: string name = it -> first;
+            JwtString name = it -> first;
             JSONValue *val = it -> second . second  -> clone ();
-            
+
             if ( it -> second . first )
                 setFinalValue ( name, val );
             else
                 setValue ( name, val );
         }
-        
+
         return * this;
     }
-    
+
     JSONObject :: JSONObject ( const JSONObject & obj )
     {
         for ( auto it = obj . members . cbegin(); it != obj . members . cend (); ++ it )
         {
-            std :: string name = it -> first;
+            JwtString name = it -> first;
             JSONValue *val = it -> second . second  -> clone ();
-            
+
             if ( it -> second . first )
                 setFinalValue ( name, val );
             else
@@ -371,7 +371,7 @@ namespace ncbi
     {
         clear ();
     }
-    
+
     // used to empty out the object before copy
     void JSONObject :: clear ()
     {

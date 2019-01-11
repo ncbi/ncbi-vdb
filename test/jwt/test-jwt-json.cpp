@@ -39,7 +39,7 @@ public:
         if ( json . size () > JSONValue :: default_limits . json_string_size )
             throw JSONException ( __func__, __LINE__, "JSON source exceeds allowed size limit" );
 
-        JSONValue *val = parse ( default_limits, json, pos, 0 );
+        JSONValue *val = parse ( default_limits, JwtString(json.data()), pos, 0 );
 
         if ( consume_all && pos < json . size () )
         {
@@ -75,7 +75,7 @@ public:
         {
             case Object:
             case Array:
-                EXPECT_ANY_THROW ( JSON :: parse ( json ) );
+                EXPECT_ANY_THROW ( JSON :: parse ( JwtString ( json . data () ) ) );
                 break;
             case Value:
                 EXPECT_ANY_THROW ( TestJSONValue :: test_parse ( json ) );
@@ -90,7 +90,7 @@ public:
             case Object:
             case Array:
             {
-                jObj = JSON :: parse ( json );
+                jObj = JSON :: parse ( JwtString ( json . data () ) );
                 break;
             }
             case Value:
@@ -107,7 +107,7 @@ public:
     void make_and_verify_eq ( JSONType type, const std :: string &json, const std :: string &expected, bool consume_all = true )
     {
         make ( type, json, consume_all );
-        THROW_ON_FALSE ( jObj -> toJSON() == expected );
+        THROW_ON_FALSE ( string ( jObj -> toJSON() . data () ) == expected );
     }
 
 protected:
@@ -394,8 +394,8 @@ public:
 
     void make_and_verify_eq ( const std :: string &json, const std :: string &expected )
     {
-        JSONValue * jVal = JSON :: parse ( json );
-        THROW_ON_FALSE ( jVal -> toJSON() == expected );
+        JSONValue * jVal = JSON :: parse ( JwtString ( json . data () ) );
+        THROW_ON_FALSE ( std :: string ( jVal -> toJSON() . data () ) == expected );
     }
 
     void make_throw ( JSONType type, const std :: string &json, bool consume_all = true )
@@ -404,7 +404,7 @@ public:
         {
             case Object:
             case Array:
-                EXPECT_ANY_THROW ( JSON :: parse ( json ) );
+                EXPECT_ANY_THROW ( JSON :: parse ( JwtString ( json . data () ) ) );
                 break;
             case Value:
                 FAIL("make_throw: bad object type");
@@ -691,7 +691,7 @@ public:
                 EXPECT_ANY_THROW  ( jObj -> toBool () );
                 EXPECT_ANY_THROW  ( jObj -> toInteger () );
                 EXPECT_ANY_THROW  ( jObj -> toNumber() );
-                THROW_ON_FALSE  ( jObj -> toString () == "null" );
+                THROW_ON_FALSE  ( string ( jObj -> toString () . data () ) == "null" );
                 EXPECT_ANY_THROW  ( jObj -> toArray () );
                 EXPECT_ANY_THROW  ( jObj -> toObject () );
                 break;
@@ -699,16 +699,16 @@ public:
                 THROW_ON_FALSE  ( jObj -> toBool () );
                 EXPECT_ANY_THROW  ( jObj -> toInteger () );
                 EXPECT_ANY_THROW  ( jObj -> toNumber() );
-                THROW_ON_FALSE  ( jObj -> toString () == ( const char * ) cmp );
+                THROW_ON_FALSE  ( string ( jObj -> toString () . data () ) == ( const char * ) cmp );
                 EXPECT_ANY_THROW  ( jObj -> toArray () );
                 EXPECT_ANY_THROW  ( jObj -> toObject () );
                 break;
             case jvt_int:
                 EXPECT_ANY_THROW  ( jObj -> toBool () );
                 THROW_ON_FALSE  ( jObj -> toInteger () == * ( long long int * ) cmp  );
-                THROW_ON_FALSE  ( jObj -> toNumber () ==
+                THROW_ON_FALSE  ( string ( jObj -> toNumber () . data () ) ==
                                 std :: to_string ( * ( long long int * ) cmp ) );
-                THROW_ON_FALSE  ( jObj -> toString () ==
+                THROW_ON_FALSE  ( string ( jObj -> toString () . data () ) ==
                                 std :: to_string ( * ( long long int * ) cmp ) );
                 EXPECT_ANY_THROW  ( jObj -> toArray () );
                 EXPECT_ANY_THROW  ( jObj -> toObject () );
@@ -716,9 +716,9 @@ public:
             case jvt_double:
                 EXPECT_ANY_THROW  ( jObj -> toBool () );
                 EXPECT_ANY_THROW  ( jObj -> toInteger () );
-                THROW_ON_FALSE  ( jObj -> toNumber () ==
+                THROW_ON_FALSE  ( string ( jObj -> toNumber () . data () ) ==
                                 std :: to_string ( * ( long double * ) cmp ) );
-                THROW_ON_FALSE  ( jObj -> toString () ==
+                THROW_ON_FALSE  ( string ( jObj -> toString () . data () ) ==
                                 std :: to_string ( * ( long double * ) cmp ) );
                 EXPECT_ANY_THROW  ( jObj -> toArray () );
                 EXPECT_ANY_THROW  ( jObj -> toObject () );
@@ -726,8 +726,8 @@ public:
             case jvt_num:
                 EXPECT_ANY_THROW  ( jObj -> toBool () );
                 EXPECT_ANY_THROW  ( jObj -> toInteger () );
-                THROW_ON_FALSE  ( jObj -> toNumber () == ( const char * ) cmp );
-                THROW_ON_FALSE  ( jObj -> toString () == ( const char * ) cmp );
+                THROW_ON_FALSE  ( string ( jObj -> toNumber () . data () ) == ( const char * ) cmp );
+                THROW_ON_FALSE  ( string ( jObj -> toString () . data () ) == ( const char * ) cmp );
                 EXPECT_ANY_THROW  ( jObj -> toArray () );
                 EXPECT_ANY_THROW  ( jObj -> toObject () );
                 break;
@@ -735,7 +735,7 @@ public:
                 EXPECT_ANY_THROW  ( jObj -> toBool () );
                 EXPECT_ANY_THROW  ( jObj -> toInteger () );
                 EXPECT_ANY_THROW  ( jObj -> toNumber () );
-                THROW_ON_FALSE  ( jObj -> toString () == ( const char * ) cmp );
+                THROW_ON_FALSE  ( string ( jObj -> toString () . data () ) == ( const char * ) cmp );
                 EXPECT_ANY_THROW  ( jObj -> toArray () );
                 EXPECT_ANY_THROW  ( jObj -> toObject () );
                 break;
@@ -819,7 +819,7 @@ FIXTURE_TEST_CASE ( t_number, JSONFixture_JSONValue_Interface )
 {
     Type type = jvt_num;
     const char * val = "123.456789";
-    jObj = JSONValue :: makeNumber ( std :: string ( val ) );
+    jObj = JSONValue :: makeNumber ( val );
     ASSERT_TRUE ( jObj != nullptr );
     assert_is_of_type ( type );
     set_types ( type );
@@ -1217,7 +1217,7 @@ public:
                     size_t num_read = fread ( buff, 1, fSize, file );
                     if ( num_read == ( size_t ) fSize )
                     {
-                        EXPECT_ANY_THROW ( delete JSON :: parse ( std :: string ( buff, num_read ) ) );
+                        EXPECT_ANY_THROW ( delete JSON :: parse ( JwtString ( buff, num_read ) ) );
                     }
                 }
                 catch ( ... )

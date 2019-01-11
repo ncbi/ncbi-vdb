@@ -30,8 +30,10 @@ TOP ?= $(abspath ../..)
 MODULE = test/jwt
 
 TEST_TOOLS = \
+	test-jwt-string \
 	test-jwt-json \
 	test-jwt \
+	test-jwt-c \
 
 include $(TOP)/build/Makefile.env
 
@@ -46,6 +48,21 @@ TEST_LIB = \
 	-sktst \
 	-skapp \
     -sncbi-vdb
+
+#-------------------------------------------------------------------------------
+# test-jwt-string
+
+JWTSTRING_SRC = \
+	test-jwt-string
+
+JWTSTRING_OBJ = \
+	$(addsuffix .$(OBJX),$(JWTSTRING_SRC))
+
+$(TEST_BINDIR)/test-jwt-string: $(JWTSTRING_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_LIB)
+
+str: test-jwt-string
+	$(TEST_BINDIR)/$^
 
 #-------------------------------------------------------------------------------
 # test-json
@@ -70,4 +87,20 @@ JWT_OBJ = \
 
 $(TEST_BINDIR)/test-jwt: $(JWT_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_LIB)
+
+#-------------------------------------------------------------------------------
+# test-jwt-c
+# make sure we can use Jwt and link without stdc++
+
+JWTC_SRC = \
+	test-jwt-c
+
+JWTC_OBJ = \
+	$(addsuffix .$(OBJX),$(JWTC_SRC))
+
+$(TEST_BINDIR)/test-jwt-c: $(JWTC_OBJ)
+	$(LD) --exe -o $@ $^ $(TEST_LIB)
+
+c: test-jwt-c
+	$(TEST_BINDIR)/$^
 

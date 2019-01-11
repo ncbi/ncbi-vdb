@@ -27,7 +27,7 @@
 #ifndef _hpp_ncbi_oauth_base64_priv_
 #define _hpp_ncbi_oauth_base64_priv_
 
-#include <string>
+#include <jwt/jwt-string.hpp>
 
 namespace ncbi
 {
@@ -61,13 +61,13 @@ namespace ncbi
         mutable size_t sz, cap;
     };
 
-    const std :: string encodeBase64 ( const void * data, size_t bytes );
-    const Base64Payload decodeBase64 ( const std :: string &encoding );
-    const std :: string decodeBase64String ( const std :: string &encoding );
+    const JwtString encodeBase64 ( const void * data, size_t bytes );
+    const Base64Payload decodeBase64 ( const JwtString &encoding );
+    const JwtString decodeBase64String ( const JwtString &encoding );
 
-    const std :: string encodeBase64URL ( const void * data, size_t bytes );
-    const Base64Payload decodeBase64URL ( const std :: string &encoding );
-    const std :: string decodeBase64URLString ( const std :: string &encoding );
+    const JwtString encodeBase64URL ( const void * data, size_t bytes );
+    const Base64Payload decodeBase64URL ( const JwtString &encoding );
+    const JwtString decodeBase64URLString ( const JwtString &encoding );
 
 } // namespace ncbi
 

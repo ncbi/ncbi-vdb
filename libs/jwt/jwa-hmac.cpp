@@ -39,17 +39,17 @@
 namespace ncbi
 {
     static
-    std :: string mbedtls_error ( int err )
+    JwtString mbedtls_error ( int err )
     {
         char buffer [ 256 ];
         vdb_mbedtls_strerror ( err, buffer, sizeof buffer );
-        return std :: string ( buffer );
+        return JwtString ( buffer );
     }
 
     static
     JWTException MBEDTLSException ( const char * func, unsigned int line, int err, const char * msg )
     {
-        std :: string what ( msg );
+        JwtString what ( msg );
         what += ": ";
         what += mbedtls_error ( err );
         return JWTException ( func, line, what . c_str () );
@@ -57,7 +57,7 @@ namespace ncbi
 
     struct HMAC_Signer : JWASigner
     {
-        virtual std :: string sign ( const void * data, size_t bytes ) const
+        virtual JwtString sign ( const void * data, size_t bytes ) const
         {
             // hash the data
             vdb_mbedtls_md_hmac_update ( & ctx, ( const unsigned char * ) data, bytes );
@@ -79,7 +79,7 @@ namespace ncbi
             return new HMAC_Signer ( alg, nam, key, md_type );
         }
 
-        HMAC_Signer ( const std :: string & name, const std :: string & alg,
+        HMAC_Signer ( const JwtString & name, const JwtString & alg,
                 const JWK * key, mbedtls_md_type_t type )
             : JWASigner ( name, alg, key )
             , ctx ( cctx )
@@ -100,7 +100,7 @@ namespace ncbi
                 throw MBEDTLSException ( __func__, __LINE__, status, "failed to setup HMAC context" );
 
             // bind the key to the context
-            std :: string kval = static_cast < const HMAC_JWKey * > ( key ) -> getValue ();
+            JwtString kval = static_cast < const HMAC_JWKey * > ( key ) -> getValue ();
             status = vdb_mbedtls_md_hmac_starts ( & ctx, ( const unsigned char * ) kval . data (), kval . size () );
             if ( status != 0 )
                 throw MBEDTLSException ( __func__, __LINE__, status, "failed to bind key to HMAC context" );
@@ -118,7 +118,7 @@ namespace ncbi
 
     struct HMAC_Verifier : JWAVerifier
     {
-        virtual bool verify ( const void * data, size_t bytes, const std :: string & sig_base64 ) const
+        virtual bool verify ( const void * data, size_t bytes, const JwtString & sig_base64 ) const
         {
             // hash the data
             vdb_mbedtls_md_hmac_update ( & ctx, ( const unsigned char * ) data, bytes );
@@ -151,7 +151,7 @@ namespace ncbi
             return new HMAC_Verifier ( nam, alg, key, md_type );
         }
 
-        HMAC_Verifier ( const std :: string & name, const std :: string & alg,
+        HMAC_Verifier ( const JwtString & name, const JwtString & alg,
                 const JWK * key, mbedtls_md_type_t type )
             : JWAVerifier ( name, alg, key )
             , ctx ( cctx )
@@ -170,7 +170,7 @@ namespace ncbi
                 throw MBEDTLSException ( __func__, __LINE__, status, "failed to setup HMAC context" );
 
             // bind the key to the context
-            std :: string kval = static_cast < const HMAC_JWKey * > ( key ) -> getValue ();
+            JwtString kval = static_cast < const HMAC_JWKey * > ( key ) -> getValue ();
             status = vdb_mbedtls_md_hmac_starts ( & ctx, ( const unsigned char * ) kval . data (), kval . size () );
             if ( status != 0 )
                 throw MBEDTLSException ( __func__, __LINE__, status, "failed to bind key to HMAC context" );
@@ -188,8 +188,8 @@ namespace ncbi
 
     struct HMAC_SignerFact : JWASignerFact
     {
-        virtual JWASigner * make ( const std :: string & name,
-            const std :: string & alg, const JWK * key ) const
+        virtual JWASigner * make ( const JwtString & name,
+            const JwtString & alg, const JWK * key ) const
         {
             if ( key -> getType () . compare ( "oct" ) != 0 )
                 throw JWTException ( __func__, __LINE__, "bad key type" );
@@ -197,7 +197,7 @@ namespace ncbi
             return new HMAC_Signer ( name, alg, key, md_type );
         }
 
-        HMAC_SignerFact ( const std :: string & alg, mbedtls_md_type_t type )
+        HMAC_SignerFact ( const JwtString & alg, mbedtls_md_type_t type )
             : md_type ( type )
         {
             gJWAFactory . registerSignerFact ( alg, this );
@@ -208,8 +208,8 @@ namespace ncbi
 
     struct HMAC_VerifierFact : JWAVerifierFact
     {
-        virtual JWAVerifier * make ( const std :: string & name,
-            const std :: string & alg, const JWK * key ) const
+        virtual JWAVerifier * make ( const JwtString & name,
+            const JwtString & alg, const JWK * key ) const
         {
             if ( key -> getType () . compare ( "oct" ) != 0 )
                 throw JWTException ( __func__, __LINE__, "bad key type" );
@@ -217,7 +217,7 @@ namespace ncbi
             return new HMAC_Verifier ( name, alg, key, md_type );
         }
 
-        HMAC_VerifierFact ( const std :: string & alg, mbedtls_md_type_t type )
+        HMAC_VerifierFact ( const JwtString & alg, mbedtls_md_type_t type )
             : md_type ( type )
         {
             gJWAFactory . registerVerifierFact ( alg, this );
@@ -228,7 +228,7 @@ namespace ncbi
 
     static struct HMAC_Registry
     {
-        HMAC_Registry ( const std :: string & alg, mbedtls_md_type_t md_type )
+        HMAC_Registry ( const JwtString & alg, mbedtls_md_type_t md_type )
             : signer_fact ( alg, md_type )
             , verifier_fact ( alg, md_type )
         {
@@ -245,7 +245,7 @@ namespace ncbi
     {
         if ( always_false )
         {
-            std :: string empty;
+            JwtString empty;
             hs256 . signer_fact . make ( empty, empty, nullptr );
             hs384 . signer_fact . make ( empty, empty, nullptr );
             hs512 . signer_fact . make ( empty, empty, nullptr );

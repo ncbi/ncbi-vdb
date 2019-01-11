@@ -31,32 +31,32 @@
 namespace ncbi
 {
     // JSONWrapper - an implementation of JSONValue
-    
+
     bool JSONWrapper :: isNull () const
     {
         return type == jvt_null;
     }
-    
+
     bool JSONWrapper :: isBool () const
     {
         return type == jvt_bool;
     }
-    
+
     bool JSONWrapper :: isInteger () const
     {
         return type == jvt_int;
     }
-    
+
     bool JSONWrapper :: isNumber () const
     {
         return type == jvt_num;
     }
-    
+
     bool JSONWrapper :: isString () const
     {
         return type == jvt_str;
     }
-    
+
     JSONValue & JSONWrapper :: setNull ()
     {
         delete value;
@@ -65,45 +65,45 @@ namespace ncbi
 
         return * this;
     }
-    
+
     JSONValue & JSONWrapper :: setBool ( bool val )
     {
         delete value;
         value = new JSONBoolean ( val );
         type = jvt_bool;
-        
+
         return * this;
     }
-    
+
     JSONValue & JSONWrapper :: setInteger ( long long int val )
     {
         delete value;
         value = new JSONInteger ( val );
         type = jvt_int;
-        
+
         return * this;
     }
-    
+
     JSONValue & JSONWrapper :: setDouble ( long double val, unsigned int precision )
     {
         return setNumber ( double_to_string ( val, precision ) );
     }
-    
-    JSONValue & JSONWrapper :: setNumber ( const std :: string & val )
+
+    JSONValue & JSONWrapper :: setNumber ( const JwtString & val )
     {
         delete value;
         value = new JSONNumber ( val );
         type = jvt_num;
-        
+
         return * this;
     }
-    
-    JSONValue & JSONWrapper :: setString ( const std :: string & val )
+
+    JSONValue & JSONWrapper :: setString ( const JwtString & val )
     {
         delete value;
         value = new JSONString ( val );
         type = jvt_str;
-        
+
         return * this;
     }
 
@@ -117,7 +117,7 @@ namespace ncbi
 
         return JSONValue :: toBool ();
     }
-    
+
     long long JSONWrapper :: toInteger () const
     {
         if ( type == jvt_int )
@@ -128,8 +128,8 @@ namespace ncbi
 
         return JSONValue :: toInteger ();
     }
-    
-    std :: string JSONWrapper :: toNumber () const
+
+    JwtString JSONWrapper :: toNumber () const
     {
         switch ( type )
         {
@@ -143,23 +143,23 @@ namespace ncbi
 
         return JSONValue :: toNumber ();
     }
-    
-    std :: string JSONWrapper :: toString () const
+
+    JwtString JSONWrapper :: toString () const
     {
         if ( value == nullptr )
             return "null";
 
         return value -> toString ();
     }
-    
-    std :: string JSONWrapper :: toJSON () const
+
+    JwtString JSONWrapper :: toJSON () const
     {
         if ( value == nullptr )
             return "null";
-        
+
         return value -> toJSON ();
     }
-    
+
     JSONValue * JSONWrapper :: clone () const
     {
         if ( value == nullptr )

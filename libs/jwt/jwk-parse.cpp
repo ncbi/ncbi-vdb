@@ -39,23 +39,23 @@
 namespace ncbi
 {
     static
-    std :: string mbedtls_error ( int err )
+    JwtString mbedtls_error ( int err )
     {
         char buffer [ 256 ];
         vdb_mbedtls_strerror ( err, buffer, sizeof buffer );
-        return std :: string ( buffer );
+        return JwtString ( buffer );
     }
 
     static
     JWTException MBEDTLSException ( const char * func, unsigned int line, int err, const char * msg )
     {
-        std :: string what ( msg );
+        JwtString what ( msg );
         what += ": ";
         what += mbedtls_error ( err );
         return JWTException ( func, line, what . c_str () );
     }
 
-    const JWK * JWK :: parse ( const std :: string & json_text )
+    const JWK * JWK :: parse ( const JwtString & json_text )
     {
         JWK * jwk = nullptr;
 
@@ -64,7 +64,7 @@ namespace ncbi
         try
         {
             // examine the type
-            std :: string kty = props -> getValue ( "kty" ) . toString ();
+            JwtString kty = props -> getValue ( "kty" ) . toString ();
             if ( kty . compare ( "oct" ) == 0 )
                 jwk = HMAC_JWKey :: make ( props );
             else if ( kty . compare ( "RSA" ) == 0 )
@@ -83,7 +83,7 @@ namespace ncbi
             }
             else
             {
-                std :: string what ( "bad kty value for JWK: '" );
+                JwtString what ( "bad kty value for JWK: '" );
                 what += kty;
                 what += "'";
                 throw JWTException ( __func__, __LINE__, what . c_str () );
@@ -126,7 +126,7 @@ namespace ncbi
                 throw MBEDTLSException ( __func__, __LINE__, status, "failed to write key parameter" );
 
             // base64url encode the thing
-            std :: string encoded = encodeBase64URL ( ( void * ) bp, mpi_size );
+            JwtString encoded = encodeBase64URL ( ( void * ) bp, mpi_size );
 
             // write it into the props
             props -> setValueOrDelete ( mbr, JSONValue :: makeString ( encoded ) );
@@ -144,21 +144,21 @@ namespace ncbi
 
 
     // inflate from PEM text format
-    const JWK * JWK :: parsePEM ( const std :: string & pem_text,
-        const std :: string & use, const std :: string & alg, const std :: string & kid )
+    const JWK * JWK :: parsePEM ( const JwtString & pem_text,
+        const JwtString & use, const JwtString & alg, const JwtString & kid )
     {
         return parsePEM ( pem_text, "", use, alg, kid );
     }
 
-    const JWK * JWK :: parsePEM ( const std :: string & pem_text, const std :: string & pwd,
-        const std :: string & use, const std :: string & alg, const std :: string & kid )
+    const JWK * JWK :: parsePEM ( const JwtString & pem_text, const JwtString & pwd,
+        const JwtString & use, const JwtString & alg, const JwtString & kid )
     {
         size_t i, start, end;
         for ( i = end = 0; ; ++ i )
         {
             // locate the start of opening delimiter line
             start = pem_text . find ( "-----BEGIN ", end );
-            if ( start == std :: string :: npos )
+            if ( start == JwtString :: npos )
                 throw JWTException ( __func__, __LINE__, "invalid PEM text" );
 
             // locate the start of the label
@@ -169,7 +169,7 @@ namespace ncbi
             // but PEM text can contain multiple entries.
             // regardless, the line MUST end in "-----"
             size_t key_start = pem_text . find ( "-----", label_start );
-            if ( key_start == std :: string :: npos )
+            if ( key_start == JwtString :: npos )
                 throw JWTException ( __func__, __LINE__, "invalid PEM text" );
 
             // convert into potential start of base64-encoded key string
@@ -180,7 +180,7 @@ namespace ncbi
             // which should be a closing delimiter line
             // which would also be the end of the key
             size_t key_end = pem_text . find ( "-----", key_start );
-            if ( key_end == std :: string :: npos )
+            if ( key_end == JwtString :: npos )
                 throw JWTException ( __func__, __LINE__, "invalid PEM text" );
 
             // this should be an "-----END " ... line
@@ -193,7 +193,7 @@ namespace ncbi
 
             // locate the end of this delimiter
             size_t end = pem_text . find ( "-----", end_label );
-            if ( end == std :: string :: npos )
+            if ( end == JwtString :: npos )
                 throw JWTException ( __func__, __LINE__, "invalid PEM text" );
             end += 5;
 
@@ -210,10 +210,10 @@ namespace ncbi
                 const JWK * jwk = nullptr;
 
                 // get the label
-                std :: string label = pem_text . substr ( label_start, type_start - label_start );
+                JwtString label = pem_text . substr ( label_start, type_start - label_start );
 
                 // get the full PEM text of this entry
-                std :: string key_text = pem_text . substr ( start, end - start );
+                JwtString key_text = pem_text . substr ( start, end - start );
 
                 // learn whether the key claims to be public or private
                 bool key_is_public = false;
@@ -390,26 +390,26 @@ namespace ncbi
 
     // inflate from DER format
     const JWK * JWK :: parseDER ( const void * key, size_t key_size,
-        const std :: string & use, const std :: string & alg, const std :: string & kid )
+        const JwtString & use, const JwtString & alg, const JwtString & kid )
     {
         throw JWTException ( __func__, __LINE__, "UNIMPLEMENTED" );
     }
 
-    const JWK * JWK :: parseDER ( const void * key, size_t key_size, const std :: string & pwd,
-        const std :: string & use, const std :: string & alg, const std :: string & kid )
+    const JWK * JWK :: parseDER ( const void * key, size_t key_size, const JwtString & pwd,
+        const JwtString & use, const JwtString & alg, const JwtString & kid )
     {
         throw JWTException ( __func__, __LINE__, "UNIMPLEMENTED" );
     }
 
     // inflate from PEM or DER format
     const JWK * JWK :: parsePEMorDER ( const void * key, size_t key_size,
-        const std :: string & use, const std :: string & alg, const std :: string & kid )
+        const JwtString & use, const JwtString & alg, const JwtString & kid )
     {
         throw JWTException ( __func__, __LINE__, "UNIMPLEMENTED" );
     }
 
-    const JWK * JWK :: parsePEMorDER ( const void * key, size_t key_size, const std :: string & pwd,
-        const std :: string & use, const std :: string & alg, const std :: string & kid )
+    const JWK * JWK :: parsePEMorDER ( const void * key, size_t key_size, const JwtString & pwd,
+        const JwtString & use, const JwtString & alg, const JwtString & kid )
     {
         throw JWTException ( __func__, __LINE__, "UNIMPLEMENTED" );
     }

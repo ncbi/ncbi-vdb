@@ -36,7 +36,8 @@
 #endif
 
 #include <vector>
-#include <string>
+
+#include "jwt-string.hpp"
 
 namespace ncbi
 {
@@ -49,7 +50,7 @@ namespace ncbi
 
     // JSON Web Signature - RFC 7515: Line 350
     // A data structure representing a digitally signed or MACed message
-    typedef std :: string JWS;
+    typedef JwtString JWS;
 
     class JWSFactory
     {
@@ -66,12 +67,12 @@ namespace ncbi
         // validates signature
         // or throw exception
         // returns authority-name of matching validator
-        const std :: string & validate ( const JSONObject & hdr, const JWS & jws, size_t last_period ) const;
+        const JwtString & validate ( const JSONObject & hdr, const JWS & jws, size_t last_period ) const;
 
         // additional verifiers
         // duplicates reference when successful
-        void addVerifier ( const std :: string & authority_name,
-            const std :: string & alg, const JWK * key );
+        void addVerifier ( const JwtString & authority_name,
+            const JwtString & alg, const JWK * key );
 
         // copy construction
         JWSFactory & operator = ( const JWSFactory & fact );
@@ -79,8 +80,8 @@ namespace ncbi
 
         // create a standard factory
         // duplicates key reference when successful
-        JWSFactory ( const std :: string & authority_name,
-            const std :: string & alg, const JWK * key );
+        JWSFactory ( const JwtString & authority_name,
+            const JwtString & alg, const JWK * key );
         ~ JWSFactory ();
 
     private:

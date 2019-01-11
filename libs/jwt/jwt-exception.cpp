@@ -38,7 +38,7 @@ namespace ncbi
         : std :: logic_error ( message )
         , msg ( function )
     {
-        msg += ":" + std :: to_string ( line ) + " - " + message;
+        msg += JwtString(":") + to_string ( line ) + " - " + message;
         fl_msg = msg . c_str ();
     }
 

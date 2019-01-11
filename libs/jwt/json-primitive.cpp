@@ -30,15 +30,15 @@
 
 namespace ncbi
 {
-    std :: string string_to_json ( const std :: string & string )
+    JwtString string_to_json ( const JwtString & string )
     {
-        std :: string quoted = "\"";
+        JwtString quoted = "\"";
         size_t i, pos, count = string . size ();
-        
+
         for ( i = pos = 0; i < count ; ++ i )
         {
             char ch = string [ i ];
-            
+
             if ( isascii ( ch ) )
             {
                 const char * esc = nullptr;
@@ -75,7 +75,7 @@ namespace ncbi
                                                   ( unsigned int ) ( unsigned char ) ch );
 
                             assert ( len == 6 );
-                            
+
                             quoted += string . substr ( pos, i - pos );
                             pos = i + 1;
                         }
@@ -85,36 +85,36 @@ namespace ncbi
                 {
                     quoted += string . substr ( pos, i - pos );
                     quoted += esc;
-                    
+
                     pos = i + 1;
                 }
             }
         }
-        
+
         if ( pos < count )
             quoted += string . substr ( pos, count - pos );
-       
+
         quoted +=  "\"";
-        
+
         return quoted;
     }
 
-    std :: string JSONPrimitive :: toJSON () const
+    JwtString JSONPrimitive :: toJSON () const
     {
         return toString ();
     }
-    
-    std :: string JSONBoolean :: toString () const
+
+    JwtString JSONBoolean :: toString () const
     {
-        return std :: string ( value ? "true" : "false" );
+        return JwtString ( value ? "true" : "false" );
     }
 
-    std :: string JSONInteger :: toString () const
+    JwtString JSONInteger :: toString () const
     {
-        return std :: to_string ( value );
+        return to_string ( value );
     }
 
-    std :: string JSONString :: toJSON () const
+    JwtString JSONString :: toJSON () const
     {
         return string_to_json ( value );
     }

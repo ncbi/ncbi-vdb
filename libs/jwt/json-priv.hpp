@@ -45,8 +45,8 @@
 
 namespace ncbi
 {
-    std :: string double_to_string ( long double val, unsigned int precision );
-    std :: string string_to_json ( const std :: string & string );
+    JwtString double_to_string ( long double val, unsigned int precision );
+    JwtString string_to_json ( const JwtString & string );
 
     enum JSONValType
     {
@@ -59,8 +59,8 @@ namespace ncbi
 
     struct JSONPrimitive
     {
-        virtual std :: string toString () const = 0;
-        virtual std :: string toJSON () const;
+        virtual JwtString toString () const = 0;
+        virtual JwtString toJSON () const;
         virtual JSONPrimitive * clone () const = 0;
         virtual void invalidate () = 0;
         virtual ~ JSONPrimitive () {}
@@ -68,12 +68,12 @@ namespace ncbi
 
     struct JSONBoolean : JSONPrimitive
     {
-        static JSONValue * parse ( const std::string &json, size_t & pos );
+        static JSONValue * parse ( const JwtString &json, size_t & pos );
 
         bool toBool () const
         { return value; }
 
-        virtual std :: string toString () const;
+        virtual JwtString toString () const;
 
         virtual JSONPrimitive * clone () const
         { return new JSONBoolean ( value ); }
@@ -94,7 +94,7 @@ namespace ncbi
         long long int toInteger () const
         { return value; }
 
-        virtual std :: string toString () const;
+        virtual JwtString toString () const;
 
         virtual JSONPrimitive * clone () const
         { return new JSONInteger ( value ); }
@@ -112,9 +112,9 @@ namespace ncbi
 
     struct JSONNumber : JSONPrimitive
     {
-        static JSONValue * parse ( const JSONValue :: Limits & lim, const std::string &json, size_t & pos );
+        static JSONValue * parse ( const JSONValue :: Limits & lim, const JwtString &json, size_t & pos );
 
-        virtual std :: string toString () const
+        virtual JwtString toString () const
         { return value; }
 
         virtual JSONPrimitive * clone () const
@@ -126,7 +126,7 @@ namespace ncbi
             memset_while_respecting_language_semantics ( ( void * ) value . data (), vsize, ' ', vsize, value . c_str () );
         }
 
-        JSONNumber ( const std :: string & val )
+        JSONNumber ( const JwtString & val )
             : value ( val )
         {
         }
@@ -135,17 +135,17 @@ namespace ncbi
         {
         }
 
-        std :: string value;
+        JwtString value;
     };
 
     struct JSONString : JSONPrimitive
     {
-        static JSONValue * parse ( const JSONValue :: Limits & lim, const std::string &json, size_t & pos );
+        static JSONValue * parse ( const JSONValue :: Limits & lim, const JwtString &json, size_t & pos );
 
-        virtual std :: string toString () const
+        virtual JwtString toString () const
         { return value; }
 
-        virtual std :: string toJSON () const;
+        virtual JwtString toJSON () const;
 
         virtual JSONPrimitive * clone () const
         { return new JSONString ( value ); }
@@ -156,7 +156,7 @@ namespace ncbi
             memset_while_respecting_language_semantics ( ( void * ) value . data (), vsize, ' ', vsize, value . c_str () );
         }
 
-        JSONString ( const std :: string & val )
+        JSONString ( const JwtString & val )
             : value ( val )
         {
         }
@@ -165,7 +165,7 @@ namespace ncbi
         {
         }
 
-        std :: string value;
+        JwtString value;
     };
 
     struct JSONWrapper : JSONValue
@@ -180,21 +180,21 @@ namespace ncbi
         virtual JSONValue & setBool ( bool val );
         virtual JSONValue & setInteger ( long long int val );
         virtual JSONValue & setDouble ( long double val, unsigned int precision );
-        virtual JSONValue & setNumber ( const std :: string & val );
-        virtual JSONValue & setString ( const std :: string & val );
+        virtual JSONValue & setNumber ( const JwtString & val );
+        virtual JSONValue & setString ( const JwtString & val );
 
         virtual bool toBool () const;
         virtual long long toInteger () const;
-        virtual std :: string toNumber () const;
-        virtual std :: string toString () const;
-        virtual std :: string toJSON () const;
+        virtual JwtString toNumber () const;
+        virtual JwtString toString () const;
+        virtual JwtString toJSON () const;
 
         virtual JSONValue * clone () const;
 
         virtual void invalidate ();
 
         // parses "null"
-        static JSONValue * parse ( const std :: string & json, size_t & pos );
+        static JSONValue * parse ( const JwtString & json, size_t & pos );
 
         // C++ assignment
         JSONWrapper & operator = ( const JSONWrapper & val );

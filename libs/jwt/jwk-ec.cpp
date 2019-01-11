@@ -34,8 +34,8 @@
 
 namespace ncbi
 {
-    const EllipticCurvePrivate_JWKey * EllipticCurvePrivate_JWKey :: make ( const std :: string & curve,
-        const std :: string & use, const std :: string & alg, const std :: string & kid )
+    const EllipticCurvePrivate_JWKey * EllipticCurvePrivate_JWKey :: make ( const JwtString & curve,
+        const JwtString & use, const JwtString & alg, const JwtString & kid )
     {
         JSONObject * props = JSONObject :: make ();
         try
@@ -78,25 +78,25 @@ namespace ncbi
     }
 
     // curve "crv"
-    std :: string EllipticCurvePrivate_JWKey :: getCurve () const
+    JwtString EllipticCurvePrivate_JWKey :: getCurve () const
     {
         return props -> getValue ( "crv" ) . toString ();
     }
 
     // X coordinate "x"
-    std :: string EllipticCurvePrivate_JWKey :: getXCoordinate () const
+    JwtString EllipticCurvePrivate_JWKey :: getXCoordinate () const
     {
         return props -> getValue ( "x" ) . toString ();
     }
 
     // Y coordinate "y"
-    std :: string EllipticCurvePrivate_JWKey :: getYCoordinate () const
+    JwtString EllipticCurvePrivate_JWKey :: getYCoordinate () const
     {
         return props -> getValue ( "y" ) . toString ();
     }
 
     // ECC private key "d"
-    std :: string EllipticCurvePrivate_JWKey :: getECCPrivateKey () const
+    JwtString EllipticCurvePrivate_JWKey :: getECCPrivateKey () const
     {
         return props -> getValue ( "d" ) . toString ();
     }
@@ -145,19 +145,19 @@ namespace ncbi
     }
 
     // curve "crv"
-    std :: string EllipticCurvePublic_JWKey :: getCurve () const
+    JwtString EllipticCurvePublic_JWKey :: getCurve () const
     {
         return props -> getValue ( "crv" ) . toString ();
     }
 
     // X coordinate "x"
-    std :: string EllipticCurvePublic_JWKey :: getXCoordinate () const
+    JwtString EllipticCurvePublic_JWKey :: getXCoordinate () const
     {
         return props -> getValue ( "x" ) . toString ();
     }
 
     // Y coordinate "y"
-    std :: string EllipticCurvePublic_JWKey :: getYCoordinate () const
+    JwtString EllipticCurvePublic_JWKey :: getYCoordinate () const
     {
         return props -> getValue ( "y" ) . toString ();
     }

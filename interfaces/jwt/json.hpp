@@ -28,9 +28,10 @@
 #define _hpp_ncbi_oauth_json_
 
 #include <map>
-#include <string>
 #include <vector>
 #include <stdexcept>
+
+#include "jwt-string.hpp"
 
 namespace ncbi
 {
@@ -55,7 +56,7 @@ namespace ncbi
 
     private:
 
-        std :: string msg;
+        JwtString msg;
         const char * fl_msg;
     };
 
@@ -82,8 +83,8 @@ namespace ncbi
         static JSONValue * makeBool ( bool val );
         static JSONValue * makeInteger ( long long int val );
         static JSONValue * makeDouble ( long double val, unsigned int precision );
-        static JSONValue * makeNumber ( const std :: string & val );
-        static JSONValue * makeString ( const std :: string & val );
+        static JSONValue * makeNumber ( const JwtString & val );
+        static JSONValue * makeString ( const JwtString & val );
 
         // query value type
         virtual bool isNull () const;
@@ -99,16 +100,16 @@ namespace ncbi
         virtual JSONValue & setBool ( bool val );
         virtual JSONValue & setInteger ( long long int val );
         virtual JSONValue & setDouble ( long double val, unsigned int precision );
-        virtual JSONValue & setNumber ( const std :: string & val );
-        virtual JSONValue & setString ( const std :: string & val );
+        virtual JSONValue & setNumber ( const JwtString & val );
+        virtual JSONValue & setString ( const JwtString & val );
 
         // retrieve a value - will attempt to convert if possible
         // throws an exception if conversion is not supported
         virtual bool toBool () const;
         virtual long long toInteger () const;
-        virtual std :: string toNumber () const;
-        virtual std :: string toString () const;
-        virtual std :: string toJSON () const = 0;
+        virtual JwtString toNumber () const;
+        virtual JwtString toString () const;
+        virtual JwtString toJSON () const = 0;
 
         // retrieve as structured value - will not convert
         // throws an exception if not of the correct container type
@@ -127,10 +128,10 @@ namespace ncbi
 
     protected:
 
-        static JSONValue * makeParsedNumber ( const std :: string & val );
-        static JSONValue * makeParsedString ( const std :: string & val );
+        static JSONValue * makeParsedNumber ( const JwtString & val );
+        static JSONValue * makeParsedString ( const JwtString & val );
 
-        static JSONValue * parse ( const Limits & lim, const std :: string & json, size_t & pos, unsigned int depth );
+        static JSONValue * parse ( const Limits & lim, const JwtString & json, size_t & pos, unsigned int depth );
         static Limits default_limits;
 
         JSONValue ();
@@ -153,8 +154,8 @@ namespace ncbi
         // JSONValue interface implementations
         virtual bool isArray () const
         { return true; }
-        virtual std :: string toString () const;
-        virtual std :: string toJSON () const;
+        virtual JwtString toString () const;
+        virtual JwtString toJSON () const;
         virtual JSONArray & toArray ()
         { return * this; }
         virtual const JSONArray & toArray () const
@@ -162,7 +163,7 @@ namespace ncbi
         virtual JSONValue * clone () const;
 
         // for creating a "readable" JSON text
-        std :: string readableJSON ( unsigned int indent = 0 ) const;
+        JwtString readableJSON ( unsigned int indent = 0 ) const;
 
         // asks whether array is empty
         bool isEmpty () const;
@@ -206,7 +207,7 @@ namespace ncbi
 
     private:
 
-        static JSONArray * parse ( const Limits & lim, const std :: string & json, size_t & pos, unsigned int depth );
+        static JSONArray * parse ( const Limits & lim, const JwtString & json, size_t & pos, unsigned int depth );
 
         // used to empty out the array before copy
         void clear ();
@@ -232,14 +233,14 @@ namespace ncbi
         static JSONObject * make ();
 
         // make an object from source
-        static JSONObject * parse ( const std :: string & json );
-        static JSONObject * parse ( const Limits & lim, const std :: string & json );
+        static JSONObject * parse ( const JwtString & json );
+        static JSONObject * parse ( const Limits & lim, const JwtString & json );
 
         // JSONValue interface implementations
         virtual bool isObject () const
         { return true; }
-        virtual std :: string toString () const;
-        virtual std :: string toJSON () const;
+        virtual JwtString toString () const;
+        virtual JwtString toJSON () const;
         virtual JSONObject & toObject ()
         { return * this; }
         virtual const JSONObject & toObject () const
@@ -247,41 +248,41 @@ namespace ncbi
         virtual JSONValue * clone () const;
 
         // for creating a "readable" JSON text
-        std :: string readableJSON ( unsigned int indent = 0 ) const;
+        JwtString readableJSON ( unsigned int indent = 0 ) const;
 
         // asks whether object is empty
         bool isEmpty () const;
 
         // does a member exist
-        bool exists ( const std :: string & name ) const;
+        bool exists ( const JwtString & name ) const;
 
         // return the number of members
         unsigned long int count () const;
 
         // return names/keys
-        std :: vector < std :: string > getNames () const;
+        std :: vector < JwtString > getNames () const;
 
         // add a new ( name, value ) pair
         // "name" must be unique or an exception will be thrown
-        void addNameValuePair ( const std :: string & name, JSONValue * val );
-        void addFinalNameValuePair ( const std :: string & name, JSONValue * val );
+        void addNameValuePair ( const JwtString & name, JSONValue * val );
+        void addFinalNameValuePair ( const JwtString & name, JSONValue * val );
 
         // set entry to a new value
         // throws exception if entry exists and is final
-        void setValue ( const std :: string & name, JSONValue * val );
-        void setValueOrDelete ( const std :: string & name, JSONValue * val );
+        void setValue ( const JwtString & name, JSONValue * val );
+        void setValueOrDelete ( const JwtString & name, JSONValue * val );
 
         // set entry to a final value
         // throws exception if entry exists and is final
-        void setFinalValue ( const std :: string & name, JSONValue * val );
-        void setFinalValueOrDelete ( const std :: string & name, JSONValue * val );
+        void setFinalValue ( const JwtString & name, JSONValue * val );
+        void setFinalValueOrDelete ( const JwtString & name, JSONValue * val );
 
         // get named value
-        JSONValue & getValue ( const std :: string & name );
-        const JSONValue & getValue ( const std :: string & name ) const;
+        JSONValue & getValue ( const JwtString & name );
+        const JSONValue & getValue ( const JwtString & name ) const;
 
         // remove and delete named value
-        void removeValue ( const std :: string & name );
+        void removeValue ( const JwtString & name );
 
         // lock the object against change
         void lock ();
@@ -298,13 +299,13 @@ namespace ncbi
 
     private:
 
-        static JSONObject * parse ( const Limits & lim, const std :: string & json, size_t & pos, unsigned int depth );
+        static JSONObject * parse ( const Limits & lim, const JwtString & json, size_t & pos, unsigned int depth );
 
         void clear ();
 
         JSONObject ();
 
-        std :: map < std :: string, std :: pair < bool, JSONValue * > > members;
+        std :: map < JwtString, std :: pair < bool, JSONValue * > > members;
         bool locked;
 
         friend class JSON;
@@ -316,8 +317,8 @@ namespace ncbi
     public:
 
         // make an object from JSON source
-        static JSONValue * parse ( const std :: string & json );
-        static JSONValue * parse ( const JSONValue :: Limits & lim, const std :: string & json );
+        static JSONValue * parse ( const JwtString & json );
+        static JSONValue * parse ( const JSONValue :: Limits & lim, const JwtString & json );
     };
 
 }

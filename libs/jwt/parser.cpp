@@ -40,7 +40,7 @@ namespace ncbi
     // skip whitespace
     // return the position of the first not whitespace character or npos
     static
-    bool skip_whitespace ( const std :: string & text, size_t & pos )
+    bool skip_whitespace ( const JwtString & text, size_t & pos )
     {
         size_t count = text . size ();
 
@@ -54,7 +54,7 @@ namespace ncbi
 
         if ( pos >= count )
         {
-            pos = std::string::npos;
+            pos = JwtString::npos;
             return false;
         }
 
@@ -62,7 +62,7 @@ namespace ncbi
     }
 
     static
-    std :: string hex_to_utf8 ( const std :: string &text )
+    JwtString hex_to_utf8 ( const JwtString &text )
     {
         size_t index;
 
@@ -73,7 +73,7 @@ namespace ncbi
                 throw JSONException ( __func__, __LINE__, "Invalid \\u escape sequence" ); // test hit
 
             std :: wstring_convert < std :: codecvt_utf8 < char32_t >, char32_t > conv;
-            std :: string utf8 = conv . to_bytes ( val );
+            JwtString utf8 ( conv . to_bytes ( val ) . data () );
 
             return utf8;
         }
@@ -84,7 +84,7 @@ namespace ncbi
     }
 
     static
-    void test_wellformed_utf8 ( const std :: string & text )
+    void test_wellformed_utf8 ( const JwtString & text )
     {
         const char * cp = text . data ();
         size_t i, count = text . size ();
@@ -198,7 +198,7 @@ namespace ncbi
 
     /* JSONWrapper
      **********************************************************************************/
-    JSONValue * JSONWrapper :: parse ( const std::string & json, size_t & pos )
+    JSONValue * JSONWrapper :: parse ( const JwtString & json, size_t & pos )
     {
         assert ( json [ pos ] == 'n' );
 
@@ -215,7 +215,7 @@ namespace ncbi
 
     /* JSONBoolean
      **********************************************************************************/
-    JSONValue * JSONBoolean :: parse ( const std::string &json, size_t & pos )
+    JSONValue * JSONBoolean :: parse ( const JwtString &json, size_t & pos )
     {
         assert ( json [ pos ] == 'f' || json [ pos ] == 't' );
 
@@ -256,7 +256,7 @@ namespace ncbi
 
     /* JSONNumber
      **********************************************************************************/
-    JSONValue * JSONNumber :: parse  ( const JSONValue :: Limits & lim, const std::string &json, size_t & pos )
+    JSONValue * JSONNumber :: parse  ( const JSONValue :: Limits & lim, const JwtString &json, size_t & pos )
     {
         assert ( isdigit ( json [ pos ] ) || json [ pos ] == '-' );
 
@@ -324,14 +324,14 @@ namespace ncbi
 
         // "pos" could potentially be a little beyond the end of
         // a legitimate number - let the conversion routines tell us
-        std :: string num_str = json . substr ( start, pos - start );
+        JwtString num_str = json . substr ( start, pos - start );
 
         size_t num_len = 0;
         if ( ! is_float )
         {
             try
             {
-                long long int num = std :: stoll ( num_str, &num_len );
+                long long int num = ncbi :: stoll ( num_str, &num_len );
                 pos = start + num_len;
 
                 return JSONValue :: makeInteger ( num );
@@ -343,7 +343,7 @@ namespace ncbi
         }
 
         // must be floating point
-        std :: stold ( num_str, &num_len );
+        ncbi :: stold ( num_str, &num_len );
         pos = start + num_len;
 
         if ( num_len > lim . numeral_length )
@@ -358,15 +358,15 @@ namespace ncbi
 
     /* JSONString
      **********************************************************************************/
-    JSONValue * JSONString :: parse  ( const JSONValue :: Limits & lim, const std::string &json, size_t & pos )
+    JSONValue * JSONString :: parse  ( const JSONValue :: Limits & lim, const JwtString &json, size_t & pos )
     {
         assert ( json [ pos ] == '"' );
 
-        std :: string str;
+        JwtString str;
 
         // Find ending '"' or control characters
         size_t esc = json . find_first_of ( "\\\"", ++ pos );
-        if ( esc == std :: string :: npos )
+        if ( esc == JwtString :: npos )
             throw JSONException ( __func__, __LINE__, "Invalid begin of string format" ); // test hit
 
         while ( 1 )
@@ -414,8 +414,8 @@ namespace ncbi
                 {
                     // start at the element after 'u'
 #pragma warning "still need to deal with this properly"
-                    std :: string unicode = json . substr ( pos + 1, 4 );
-                    std :: string utf8 = hex_to_utf8 ( unicode );
+                    JwtString unicode = json . substr ( pos + 1, 4 );
+                    JwtString utf8 = hex_to_utf8 ( unicode );
 
                     str += utf8;
                     pos += 4;
@@ -432,7 +432,7 @@ namespace ncbi
 
             // Find ending '"' or control characters
             esc = json . find_first_of ( "\\\"", pos );
-            if ( esc == std :: string :: npos )
+            if ( esc == JwtString :: npos )
                 throw JSONException ( __func__, __LINE__, "Invalid end of string format" ); // test hit
         }
 
@@ -455,7 +455,7 @@ namespace ncbi
         return val;
     }
 
-    JSONValue * JSONValue :: parse ( const Limits & lim, const std :: string & json, size_t & pos, unsigned int depth )
+    JSONValue * JSONValue :: parse ( const Limits & lim, const JwtString & json, size_t & pos, unsigned int depth )
     {
         if ( skip_whitespace ( json, pos ) )
         {
@@ -486,13 +486,13 @@ namespace ncbi
         return nullptr;
     }
 
-    JSONValue * JSONValue :: makeNumber ( const std :: string & val )
+    JSONValue * JSONValue :: makeNumber ( const JwtString & val )
     {
         size_t pos = 0;
         return JSONNumber :: parse ( default_limits, val, pos );
     }
 
-    JSONValue * JSONValue :: makeString ( const std :: string & str )
+    JSONValue * JSONValue :: makeString ( const JwtString & str )
     {
         if ( str . size () > default_limits . string_size )
             throw JSONException ( __func__, __LINE__, "string size exceeds allowed limit" );
@@ -510,7 +510,7 @@ namespace ncbi
 
     /* JSONArray
      **********************************************************************************/
-    JSONArray * JSONArray :: parse ( const Limits & lim, const std :: string & json, size_t & pos, unsigned int depth )
+    JSONArray * JSONArray :: parse ( const Limits & lim, const JwtString & json, size_t & pos, unsigned int depth )
     {
         assert ( json [ pos ] == '[' );
 
@@ -546,7 +546,7 @@ namespace ncbi
             }
 
             // must end on ']'
-            if ( pos == std :: string :: npos || json [ pos ] != ']' )
+            if ( pos == JwtString :: npos || json [ pos ] != ']' )
                 throw JSONException ( __func__, __LINE__, "Expected: ']'" ); // Test hit
 
             // skip over ']'
@@ -567,12 +567,12 @@ namespace ncbi
      **********************************************************************************/
 
     // make an object from JSON source
-    JSONObject * JSONObject :: parse ( const std :: string & json )
+    JSONObject * JSONObject :: parse ( const JwtString & json )
     {
         return parse ( default_limits, json );
     }
 
-    JSONObject * JSONObject :: parse ( const JSONValue :: Limits & lim, const std :: string & json )
+    JSONObject * JSONObject :: parse ( const JSONValue :: Limits & lim, const JwtString & json )
     {
         if ( json . empty () )
             throw JSONException ( __func__, __LINE__, "Empty JSON source" );
@@ -593,7 +593,7 @@ namespace ncbi
         return obj;
     }
 
-    JSONObject * JSONObject :: parse ( const Limits & lim, const std :: string & json, size_t & pos, unsigned int depth )
+    JSONObject * JSONObject :: parse ( const Limits & lim, const JwtString & json, size_t & pos, unsigned int depth )
     {
         test_depth ( lim, depth );
 
@@ -663,7 +663,7 @@ namespace ncbi
             }
 
             // must end on '}'
-            if ( pos == std :: string :: npos || json [ pos ] != '}' )
+            if ( pos == JwtString :: npos || json [ pos ] != '}' )
                 throw JSONException ( __func__, __LINE__, "Expected: '}'" ); // test hit
 
             // skip over '}'
@@ -686,12 +686,12 @@ namespace ncbi
      **********************************************************************************/
 
     // make an object from JSON source
-    JSONValue * JSON :: parse ( const std :: string & json )
+    JSONValue * JSON :: parse ( const JwtString & json )
     {
         return parse ( JSONValue :: default_limits, json );
     }
 
-    JSONValue * JSON :: parse ( const JSONValue :: Limits & lim, const std :: string & json )
+    JSONValue * JSON :: parse ( const JSONValue :: Limits & lim, const JwtString & json )
     {
         if ( json . empty () )
             throw JSONException ( __func__, __LINE__, "Empty JSON source" );
@@ -760,12 +760,12 @@ namespace ncbi
      **********************************************************************************/
 
     // make an object from JSON source
-    JSONValue * JSON :: parse ( const std :: string & json )
+    JSONValue * JSON :: parse ( const JwtString & json )
     {
         return parse ( JSONValue :: default_limits, json );
     }
 
-    JSONValue * JSON :: parse ( const JSONValue :: Limits & lim, const std :: string & json )
+    JSONValue * JSON :: parse ( const JSONValue :: Limits & lim, const JwtString & json )
     {
         if ( json . empty () )
             throw JSONException ( __func__, __LINE__, "Empty JSON source" );

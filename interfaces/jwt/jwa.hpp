@@ -29,7 +29,8 @@
 
 #include <map>
 #include <set>
-#include <string>
+
+#include "jwt-string.hpp"
 
 namespace ncbi
 {
@@ -40,20 +41,20 @@ namespace ncbi
     class JWAKeyHolder
     {
     public:
-        
-        const std :: string & authority_name () const;
-        const std :: string & algorithm () const;
-        std :: string keyID () const;
+
+        const JwtString & authority_name () const;
+        const JwtString & algorithm () const;
+        JwtString keyID () const;
 
         virtual ~ JWAKeyHolder ();
-        
+
     protected:
 
-        JWAKeyHolder ( const std :: string & authority_name,
-            const std :: string & alg, const JWK * key );
+        JWAKeyHolder ( const JwtString & authority_name,
+            const JwtString & alg, const JWK * key );
 
-        std :: string nam;
-        std :: string alg;
+        JwtString nam;
+        JwtString alg;
         const JWK * key;
     };
 
@@ -61,59 +62,59 @@ namespace ncbi
     {
     public:
 
-        virtual std :: string sign ( const void * data, size_t bytes ) const = 0;
+        virtual JwtString sign ( const void * data, size_t bytes ) const = 0;
         virtual JWASigner * clone () const = 0;
-        
+
     protected:
 
-        JWASigner ( const std :: string & authority_name,
-            const std :: string & alg, const JWK * key );
+        JWASigner ( const JwtString & authority_name,
+            const JwtString & alg, const JWK * key );
     };
 
     class JWAVerifier : public JWAKeyHolder
     {
     public:
 
-        virtual bool verify ( const void * data, size_t bytes, const std :: string & signature ) const = 0;
+        virtual bool verify ( const void * data, size_t bytes, const JwtString & signature ) const = 0;
         virtual JWAVerifier * clone () const = 0;
 
     protected:
 
-        JWAVerifier ( const std :: string & authority_name,
-            const std :: string & alg, const JWK * key );
+        JWAVerifier ( const JwtString & authority_name,
+            const JwtString & alg, const JWK * key );
     };
 
     struct JWASignerFact
     {
-        virtual JWASigner * make ( const std :: string & authority_name,
-            const std :: string & alg, const JWK * key ) const = 0;
+        virtual JWASigner * make ( const JwtString & authority_name,
+            const JwtString & alg, const JWK * key ) const = 0;
         virtual ~ JWASignerFact ();
     };
 
     struct JWAVerifierFact
     {
-        virtual JWAVerifier * make ( const std :: string & authority_name,
-            const std :: string & alg, const JWK * key ) const = 0;
+        virtual JWAVerifier * make ( const JwtString & authority_name,
+            const JwtString & alg, const JWK * key ) const = 0;
         virtual ~ JWAVerifierFact ();
     };
-    
+
     class JWAFactory
     {
     public:
 
-        JWASigner * makeSigner ( const std :: string & authority_name,
-            const std :: string & alg, const JWK * key ) const;
-        JWAVerifier * makeVerifier ( const std :: string & authority_name,
-            const std :: string & alg, const JWK * key ) const;
+        JWASigner * makeSigner ( const JwtString & authority_name,
+            const JwtString & alg, const JWK * key ) const;
+        JWAVerifier * makeVerifier ( const JwtString & authority_name,
+            const JwtString & alg, const JWK * key ) const;
 
-        void registerSignerFact ( const std :: string & alg, JWASignerFact * fact );
-        void registerVerifierFact ( const std :: string & alg, JWAVerifierFact * fact );
+        void registerSignerFact ( const JwtString & alg, JWASignerFact * fact );
+        void registerVerifierFact ( const JwtString & alg, JWAVerifierFact * fact );
 
-        bool acceptJWKAlgorithm ( const std :: string & alg ) const;
+        bool acceptJWKAlgorithm ( const JwtString & alg ) const;
 
         JWAFactory ();
         ~ JWAFactory ();
-        
+
     private:
 
         void makeMaps ();
@@ -122,10 +123,10 @@ namespace ncbi
         {
             Maps ();
             ~ Maps ();
-            
-            std :: set < std :: string > sign_accept;
-            std :: map < std :: string, JWASignerFact * > signer_facts;
-            std :: map < std :: string, JWAVerifierFact * > verifier_facts;
+
+            std :: set < JwtString > sign_accept;
+            std :: map < JwtString, JWASignerFact * > signer_facts;
+            std :: map < JwtString, JWAVerifierFact * > verifier_facts;
 
         } * maps;
 

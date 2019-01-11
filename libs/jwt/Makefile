@@ -63,6 +63,7 @@ $(ILIBDIR)/libjwt: \
 	$(addprefix $(ILIBDIR)/libjwt.,$(ILIBEXT))
 
 JWT_SRC =            \
+	jwt-string         \
 	jwt-factory        \
 	jwt-claims         \
 	jws-factory        \
@@ -77,20 +78,19 @@ JWT_SRC =            \
 	jwa-factory        \
 	jwt-lock           \
 	jwt-exception      \
-	base64
+	base64             \
+	parser             \
+	json-object        \
+	json-array         \
+	json-wrapper       \
+	json-primitive     \
+	json-value         \
+	json-exception     \
+	memset_s           \
 
-LIBJSONSRC =       \
-	parser         \
-	json-object    \
-	json-array     \
-	json-wrapper   \
-	json-primitive \
-	json-value     \
-	json-exception \
-	memset_s
 
 JWT_OBJ = \
-	$(addsuffix .$(LOBX),$(JWT_SRC) $(LIBJSONSRC))
+	$(addsuffix .$(LOBX),$(JWT_SRC))
 
 $(ILIBDIR)/libjwt.$(ILIBEXT): $(JWT_OBJ)
 	$(LD) --slib -o $@ $^
