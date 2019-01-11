@@ -396,6 +396,7 @@ public:
     {
         JSONValue * jVal = JSON :: parse ( JwtString ( json . data () ) );
         THROW_ON_FALSE ( std :: string ( jVal -> toJSON() . data () ) == expected );
+        delete jVal;
     }
 
     void make_throw ( JSONType type, const std :: string &json, bool consume_all = true )

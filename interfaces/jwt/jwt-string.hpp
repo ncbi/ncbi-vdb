@@ -48,6 +48,8 @@ public:
 
     ~JwtString();
 
+    JwtString& operator= (const JwtString& s);
+
     static const size_t npos = -1;
 
     bool empty() const;

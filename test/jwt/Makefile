@@ -76,6 +76,9 @@ JSON_OBJ = \
 $(TEST_BINDIR)/test-jwt-json: $(JSON_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_LIB)
 
+json: test-jwt-json
+	$(TEST_BINDIR)/$^
+
 #-------------------------------------------------------------------------------
 # test-jwt
 

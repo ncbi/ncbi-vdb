@@ -29,6 +29,8 @@
 #include <klib/text.h>
 #include <klib/printf.h>
 
+//#include <stdexcept> // TODO: remove
+
 using namespace std;
 
 namespace ncbi
@@ -56,9 +58,15 @@ namespace ncbi
             String str;
             InitString ( str, v );
             rc_t rc = StringCopy ( & m_str, & str );
-            //TODO: throw if rc != 0
+            if (rc != 0)
+            {
+                //TODO throw std::logic_error("StringCopy failed");
+            }
         }
-        //TODO: else throw
+        else
+        {
+            //TODO throw std::logic_error("JwtString(null)");
+        }
     }
 
     JwtString :: JwtString(const char* v, size_t sz)
@@ -69,20 +77,44 @@ namespace ncbi
             String str;
             StringInit( & str, v, sz, len );
             rc_t rc = StringCopy ( & m_str, & str );
-            //TODO: throw if rc != 0
+            if (rc != 0)
+            {
+                //TODO throw std::logic_error("StringCopy failed");
+            }
         }
-        //TODO: else throw
+        else
+        {
+            //TODO throw std::logic_error("JwtString(null, sz)");
+        }
     }
 
     JwtString :: JwtString(const JwtString& v)
     {
         rc_t rc = StringCopy ( & m_str, v.m_str );
-        //TODO: throw if rc != 0
+        if (rc != 0)
+        {
+            //TODO throw std::logic_error("StringCopy failed");
+        }
     }
 
     JwtString :: ~JwtString()
     {
         clear();
+    }
+
+    JwtString &
+    JwtString :: operator = ( const JwtString & v )
+    {
+        if ( & v != this )
+        {
+            clear();
+            rc_t rc = StringCopy ( & m_str, v.m_str );
+            if (rc != 0)
+            {
+                //TODO throw std::logic_error("StringCopy failed");
+            }
+        }
+        return *this;
     }
 
     bool
@@ -196,9 +228,21 @@ namespace ncbi
         {
             return 1;
         }
+        if ( pos > m_str->size || subpos > s.m_str->size )
+        {
+            //TODO throw std::logic_error("compare pos out of range");
+        }
+        if ( len == npos || pos + len > m_str->size)
+        {
+            len = m_str->size - pos;
+        }
+        if ( sublen == npos || subpos + sublen > s.m_str->size)
+        {
+            sublen = s.m_str->size - subpos;
+        }
         return string_cmp ( m_str->addr + pos, len,
                             s.m_str->addr + subpos, sublen,
-                            m_str->size );
+                            len > sublen ? len : sublen );
     }
 
     int
@@ -225,7 +269,16 @@ namespace ncbi
         {
             return 1;
         }
-        return string_cmp ( m_str->addr + pos, len, s, n, m_str->size );
+
+        if ( pos > m_str->size )
+        {
+            //TODO throw std::logic_error("compare pos out of range");
+        }
+        if ( len == npos || pos + len > m_str->size)
+        {
+            len = m_str->size - pos;
+        }
+        return string_cmp ( m_str->addr + pos, len, s, strlen(s), n );
     }
 
     size_t
@@ -254,7 +307,10 @@ namespace ncbi
         {
             const String* cat;
             rc_t rc = StringConcat( & cat, m_str, s.m_str );
-            //TODO throw if rc != 0
+            if (rc != 0)
+            {
+                //TODO throw std::logic_error("StringConcat failed");
+            }
             clear();
             m_str = cat;
         }
@@ -272,8 +328,7 @@ namespace ncbi
     {
         if ( pos >= m_str->size )
         {
-            static char zero = 0;
-            return zero; //TODO: throw
+            //TODO throw std::logic_error("JwtString[] ot of bounds");
         }
         return m_str->addr[pos];
     }

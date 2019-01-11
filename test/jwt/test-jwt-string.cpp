@@ -71,19 +71,28 @@ TEST_CASE ( JwtString_ConstructorCStringLen_NULL )
     //JwtString str(nullptr, 2);
     //TODO: verify THROW
 }
-TEST_CASE ( JwtString_ConstructorString )
+TEST_CASE ( JwtString_ConstructorCopy )
 {
     JwtString str1("qq");
     JwtString str2(str1);
     REQUIRE_EQ ( string("qq"), string (str2.data() ) );
 }
-TEST_CASE ( JwtString_ConstructorString_Empty )
+TEST_CASE ( JwtString_ConstructorCopy_Empty )
 {
     JwtString str1;
     JwtString str2(str1);
     REQUIRE_EQ ( string(), string (str2.data() ) );
     REQUIRE_EQ ( (size_t)0, str2.size() );
 }
+TEST_CASE ( JwtString_Assignment )
+{
+    JwtString str1("qq");
+    JwtString str2;
+    str2 = str1;
+    REQUIRE_EQ ( string("qq"), string (str2.data() ) );
+    REQUIRE_EQ ( (size_t)2, str2.size() );
+}
+
 TEST_CASE ( JwtString_Empty_True )
 {
     REQUIRE ( JwtString().empty() );
@@ -197,6 +206,11 @@ TEST_CASE ( JwtString_compare_string_pos_size_eq )
 {
     JwtString str("12345");
     REQUIRE_EQ ( 0, str.compare(1, 4, "234567", 4) );
+}
+TEST_CASE ( JwtString_compare_string_pos_size_shorter )
+{
+    JwtString str("12345");
+    REQUIRE_GT ( 0, str.compare(0, 7, "1234567", 7) );
 }
 
 TEST_CASE ( JwtString_compare_JwtString_pos_len_subpos_len_less )

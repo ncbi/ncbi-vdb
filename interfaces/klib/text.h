@@ -77,7 +77,7 @@ extern "C" {
  *  and string SIZE ( the count of bytes ) are different is critical.
  */
 
-    
+
 /*--------------------------------------------------------------------------
  * String
  *  pseudo-intrinsic string
