@@ -177,9 +177,9 @@ namespace ncbi
     }
 
     // return names/keys
-    std :: vector < JwtString > JSONObject :: getNames () const
+    JwtVector < JwtString > JSONObject :: getNames () const
     {
-        std :: vector < JwtString > names;
+        JwtVector < JwtString > names;
 
         for ( auto it = members . cbegin(); it != members . cend (); ++ it )
             names . push_back ( it -> first );
@@ -202,7 +202,7 @@ namespace ncbi
             throw JSONException ( __func__, __LINE__, what . c_str () );
         }
 
-        std :: pair < bool, JSONValue * > pair ( false, val );
+        JwtPair pair ( false, val );
         members . emplace ( name, pair );
     }
 
@@ -221,7 +221,7 @@ namespace ncbi
             throw JSONException ( __func__, __LINE__, what . c_str () );
         }
 
-        std :: pair < bool, JSONValue * > pair ( true, val );
+        JwtPair pair ( true, val );
         members . emplace ( name, pair );
     }
 
@@ -234,7 +234,7 @@ namespace ncbi
         // if doesnt exist, add
         if ( it == members . end () )
         {
-            std :: pair < bool, JSONValue * > pair ( false, val );
+            JwtPair pair ( false, val );
             members . emplace ( name, pair );
         }
         else
@@ -272,7 +272,7 @@ namespace ncbi
         // if doesnt exist, add
         if ( it == members . end () )
         {
-            std :: pair < bool, JSONValue * > pair ( true, val );
+            JwtPair pair ( true, val );
             members . emplace ( name, pair );
         }
         else

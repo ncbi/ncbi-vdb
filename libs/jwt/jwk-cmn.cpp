@@ -29,6 +29,7 @@
 #include <jwt/jws.hpp>
 #include <jwt/jwk.hpp>
 #include "base64-priv.hpp"
+#include "jwt-vector-impl.hpp"
 
 #include <iostream>
 
@@ -214,9 +215,9 @@ namespace ncbi
         return true;
     }
 
-    std :: vector < JwtString > JWKSet :: getKeyIDs () const
+    JwtVector < JwtString > JWKSet :: getKeyIDs () const
     {
-        std :: vector < JwtString > ids;
+        JwtVector < JwtString > ids;
 
         for ( auto it = map . cbegin(); it != map . cend (); ++ it )
             ids . push_back ( it -> first );

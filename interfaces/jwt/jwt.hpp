@@ -215,7 +215,7 @@ namespace ncbi
         // factory claims
         JwtString iss;
         JwtString sub;
-        std :: vector < JwtString > aud;
+        JwtVector < JwtString > aud;
         long long duration;
         long long not_before;
 

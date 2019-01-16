@@ -33,9 +33,10 @@
 #include <cfloat>
 
 #include <jwt/jwt-string.hpp>
+#include <../libs/jwt/jwt-vector-impl.hpp>
 
 using namespace ncbi;
-// this is compiled by a c++ compiler but will be linked without C++ std library
+// this is compiled by a c++ compiler but will be linked without C++ std library (using gcc)
 
 //TODO: remove this when done removing exceptions from JWT
 void *__gxx_personality_v0;
@@ -45,7 +46,7 @@ extern "C"
 
 #define THROW return RC(rcText,rcString,rcProcessing,rcError,rcUnexpected)
 
-rc_t JWT_Example()
+rc_t JWT_String()
 {
     {   // empty
         JwtString str;
@@ -173,6 +174,132 @@ rc_t JWT_Example()
     return 0;
 }
 
+rc_t JWT_Vector_POD()
+{   // Vector of Plain Old Data
+    {   // ctor, dtor, size()
+        JwtVector<int> v;
+        if ( v.size() != 0 ) THROW;
+    }
+    {   // push_back(), size(), const []
+        JwtVector<int> v;
+        v.push_back(2);
+        if ( v.size() != 1 ) THROW;
+        const JwtVector<int>& rv = v;
+        if ( rv [ 0 ] != 2 ) THROW;
+    }
+    {   // empty()
+        JwtVector<int> v;
+        if ( ! v.empty() ) THROW;
+        v.push_back(2);
+        if ( v.empty() ) THROW;
+    }
+    {   // copy ctor
+        JwtVector<int> v1;
+        v1.push_back(2);
+        JwtVector<int> v2 ( v1 );
+        if ( v2 [ 0 ] != 2 ) THROW;
+    }
+    {   // non-const []
+        JwtVector<int> v;
+        v.push_back(2);
+        v[0] = 1;
+        if ( v [ 0 ] != 1 ) THROW;
+    }
+    {   // clear()
+        JwtVector<int> v;
+        v.push_back(2);
+        v.clear();
+        if ( v.size() != 0 ) THROW;
+    }
+    {   // const back()
+        JwtVector<int> v;
+        v.push_back(2);
+        v.push_back(3);
+        const JwtVector<int>& rv = v;
+        if ( rv . back () != 3 ) THROW;
+    }
+    {   // non-const back()
+        JwtVector<int> v;
+        v.push_back(2);
+        v.push_back(3);
+        v.back() = 4;
+        if ( v . back () != 4 ) THROW;
+    }
+    {   // pop_back()
+        JwtVector<int> v;
+        v.push_back(2);
+        v.push_back(3);
+        v.push_back(4);
+        v.pop_back();
+        if ( v . size () != 2 ) THROW;
+        if ( v . back () != 3 ) THROW;
+    }
+    return 0;
+}
+
+rc_t JWT_Vector_JwtString()
+{   // Vector of Plain Old Data
+    {   // ctor, dtor, size()
+        JwtVector<JwtString> v;
+        if ( v.size() != 0 ) THROW;
+    }
+    {   // push_back(), size(), const []
+        JwtVector<JwtString> v;
+        v.push_back("2");
+        if ( v.size() != 1 ) THROW;
+        const JwtVector<JwtString>& rv = v;
+        if ( rv [ 0 ] != JwtString ( "2" ) ) THROW;
+    }
+    {   // empty()
+        JwtVector<JwtString> v;
+        if ( ! v.empty() ) THROW;
+        v.push_back(JwtString ( "2" ));
+        if ( v.empty() ) THROW;
+    }
+    {   // copy ctor
+        JwtVector<JwtString> v1;
+        v1.push_back(JwtString ( "2" ));
+        JwtVector<JwtString> v2 ( v1 );
+        if ( v2 [ 0 ] != JwtString ( "2" ) ) THROW;
+    }
+    {   // non-const []
+        JwtVector<JwtString> v;
+        v.push_back(JwtString ( "2" ));
+        v[0] = JwtString ( "1" );
+        if ( v [ 0 ] != JwtString ( "1" ) ) THROW;
+    }
+    {   // clear()
+        JwtVector<JwtString> v;
+        v.push_back(JwtString ( "2" ));
+        v.clear();
+        if ( v.size() != 0 ) THROW;
+    }
+    {   // const back()
+        JwtVector<JwtString> v;
+        v.push_back(JwtString ( "2" ));
+        v.push_back(JwtString ( "3" ));
+        const JwtVector<JwtString>& rv = v;
+        if ( rv . back () != JwtString ( "3" ) ) THROW;
+    }
+    {   // non-const back()
+        JwtVector<JwtString> v;
+        v.push_back(JwtString ( "2" ));
+        v.push_back(JwtString ( "3" ));
+        v.back() = JwtString ( "4" );
+        if ( v . back () != JwtString ( "4" ) ) THROW;
+    }
+    {   // pop_back()
+        JwtVector<JwtString> v;
+        v.push_back(JwtString ( "2" ));
+        v.push_back(JwtString ( "3" ));
+        v.push_back(JwtString ( "4" ));
+        v.pop_back();
+        if ( v . size () != 2 ) THROW;
+        if ( v . back () != JwtString ( "3" ) ) THROW;
+    }
+    return 0;
+}
+
 //////////////////////////////////////////// Main
 
 #include <kapp/args.h>
@@ -197,7 +324,10 @@ const char UsageDefaultName[] = "test-jwt-c";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
-    rc_t rc = JWT_Example();
+    rc_t rc = JWT_String();
+    if ( rc == 0 ) JWT_Vector_POD();
+    if ( rc == 0 ) JWT_Vector_JwtString();
+
     if ( rc == 0 )
     {
         printf("No errors detected\n");

@@ -35,9 +35,8 @@
 #include <jwt/jwa.hpp>
 #endif
 
-#include <vector>
-
 #include "jwt-string.hpp"
+#include "jwt-vector.hpp"
 
 namespace ncbi
 {
@@ -88,7 +87,7 @@ namespace ncbi
 
         const JWASigner * signer;
         const JWAVerifier * verifier;
-        std :: vector < const JWAVerifier * > addl_verifiers;
+        JwtVector < const JWAVerifier * > addl_verifiers;
     };
 }
 

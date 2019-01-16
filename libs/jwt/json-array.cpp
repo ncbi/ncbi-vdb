@@ -25,6 +25,7 @@
  */
 
 #include "json-priv.hpp"
+#include "jwt-vector-impl.hpp"
 
 namespace ncbi
 {

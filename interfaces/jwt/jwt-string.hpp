@@ -75,6 +75,9 @@ public:
     JwtString& operator+= (const JwtString& s);
     JwtString& operator+= (char c);
 
+    bool operator == ( const JwtString & v ) const { return compare(v) == 0; }
+    bool operator != ( const JwtString & v ) const { return compare(v) != 0; }
+
     const char& operator[] (size_t pos) const;
 
 private:

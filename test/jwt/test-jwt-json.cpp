@@ -9,6 +9,7 @@
 #include <ktst/unit_test.hpp>
 
 #include <jwt/json.hpp>
+#include <../libs/jwt/jwt-vector-impl.hpp>
 
 #include <iostream>
 

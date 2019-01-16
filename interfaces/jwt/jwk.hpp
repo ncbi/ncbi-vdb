@@ -28,10 +28,10 @@
 #define _hpp_ncbi_oauth_jwk_
 
 #include <atomic>
-#include <vector>
 #include <map>
 
 #include "jwt-string.hpp"
+#include "jwt-vector.hpp"
 
 namespace ncbi
 {
@@ -323,7 +323,7 @@ namespace ncbi
 
         bool contains ( const JwtString & kid ) const;
 
-        std :: vector < JwtString > getKeyIDs () const;
+        JwtVector < JwtString > getKeyIDs () const;
 
         void addKey ( const JWK * jwk );
         const JWK * getKey ( const JwtString & kid ) const;

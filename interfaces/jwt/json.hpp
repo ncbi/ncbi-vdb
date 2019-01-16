@@ -28,18 +28,31 @@
 #define _hpp_ncbi_oauth_json_
 
 #include <map>
-#include <vector>
 #include <stdexcept>
 
 #include "jwt-string.hpp"
+#include "jwt-vector.hpp"
 
 namespace ncbi
 {
     class JSON;
     class JSONArray;
     class JSONObject;
+    class JSONValue;
     struct JSONString;
     struct JSONNumber;
+
+    class JwtPair
+    {
+    public:
+        JwtPair( bool f, JSONValue * s)
+        : first (f), second (s)
+        {
+        }
+
+        bool first;
+        JSONValue * second;
+    };
 
     /* JSONException
      **********************************************************************************/
@@ -214,7 +227,7 @@ namespace ncbi
 
         JSONArray ();
 
-        std :: vector < JSONValue * > array;
+        JwtVector < JSONValue * > array;
         bool locked;
 
         friend class JSON;
@@ -260,7 +273,7 @@ namespace ncbi
         unsigned long int count () const;
 
         // return names/keys
-        std :: vector < JwtString > getNames () const;
+        JwtVector < JwtString > getNames () const;
 
         // add a new ( name, value ) pair
         // "name" must be unique or an exception will be thrown
@@ -305,7 +318,7 @@ namespace ncbi
 
         JSONObject ();
 
-        std :: map < JwtString, std :: pair < bool, JSONValue * > > members;
+        std :: map < JwtString, JwtPair > members;
         bool locked;
 
         friend class JSON;

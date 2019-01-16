@@ -28,6 +28,7 @@
 #include <jwt/jws.hpp>
 #include <jwt/jwk.hpp>
 #include "base64-priv.hpp"
+#include "jwt-vector-impl.hpp"
 
 #include <iostream>
 #include <climits>
