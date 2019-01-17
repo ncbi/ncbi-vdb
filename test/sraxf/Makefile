@@ -30,7 +30,7 @@ MODULE = test/sraxf
 
 TEST_TOOLS = \
 	test-fix_read_seg \
-	#test_syn_quality \
+	test_syn_quality \
 
 include $(TOP)/build/Makefile.env
 
@@ -78,8 +78,12 @@ TST_SYN_QUAL_LIB = \
 $(TEST_BINDIR)/test_syn_quality: $(TST_SYN_QUAL_OBJ) produce_test_src
 	$(LP) --exe -o $@ $^ $(TST_SYN_QUAL_LIB)
 
+produce_test_src: VDB_CONFIG=$(SRCDIR)/test_syn_qual/test.kfg
 produce_test_src:
+	@ echo "/vdb/schema/paths = \"$(TOP)/interfaces\"" > $(VDB_CONFIG)
+	@ cat $(VDB_CONFIG)
 	@ $(SRCDIR)/test_syn_qual/test_syn_qual.py $(LIBDIR)/libncbi-wvdb.so $(SRCDIR)/T_TEST_SYN_QUAL
+	@ rm $(SRCDIR)/test_syn_qual/test.kfg
 
 #----------------------------------------------------------------
 # overriden runtests, to pass the SRCDIR into test_syn_quality
