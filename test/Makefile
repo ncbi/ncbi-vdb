@@ -56,11 +56,11 @@ SUBDIRS =       \
 	kapp        \
 	loader      \
 	install     \
+	schema		\
 	ngs         \
 	ngs-c++     \
 	ngs-python  \
 	ngs-java    \
-	schema		\
 
 # common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
 include $(TOP)/build/Makefile.targets
