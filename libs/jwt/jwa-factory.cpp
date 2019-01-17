@@ -28,6 +28,8 @@
 #include <jwt/jwk.hpp>
 #include <jwt/jwt.hpp>
 
+#include "jwt-map-impl.hpp"
+
 #include <iostream>
 #include <cstring>
 #include <cassert>

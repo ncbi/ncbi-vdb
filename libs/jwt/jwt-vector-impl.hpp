@@ -24,9 +24,12 @@
  *
  */
 
+#ifndef _hpp_jwt_vector_impl_
+#define _hpp_jwt_vector_impl_
+
 #include <jwt/jwt-vector.hpp>
 
-using namespace std;
+#include <cstring>
 
 namespace ncbi
 {
@@ -37,13 +40,15 @@ namespace ncbi
     }
 
     template < typename T > JwtVector < T > :: JwtVector(const JwtVector& p_v)
-    :   m_v ( ( T * ) malloc ( sizeof ( T ) *  (p_v .  m_elems  ) ) ),
+    :   m_v ( ( T * ) calloc ( p_v .  m_elems, sizeof ( T ) ) ),
         m_elems ( p_v . m_elems )
     {
         //TODO: throw if m_v == nullptr
         for (size_t i = 0; i < m_elems; ++i )
         {
-            new ( m_v + i ) T ( p_v [ i ] );
+            // a placement ctor does not compile for scalars
+            // hope all 0s constitute a valid value for lhs
+            m_v [ i ] = p_v [ i ];
         }
     }
 
@@ -68,7 +73,10 @@ namespace ncbi
     {
         m_v = ( T * ) realloc ( m_v, sizeof ( T ) * ( m_elems + 1 ) );
         //TODO: throw if m_v == nullptr
-        new ( m_v + m_elems ) T ( val );
+        // a placement ctor does not compile for scalars
+        // hope all 0s constitute a valid value for lhs
+        memset ( m_v + m_elems, 0, sizeof ( T ) );
+        m_v [ m_elems ] = val;
         ++m_elems;
     }
 
@@ -102,3 +110,5 @@ namespace ncbi
         --m_elems;
     }
 }
+
+#endif

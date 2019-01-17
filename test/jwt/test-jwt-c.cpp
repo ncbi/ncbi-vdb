@@ -34,6 +34,8 @@
 
 #include <jwt/jwt-string.hpp>
 #include <../libs/jwt/jwt-vector-impl.hpp>
+#include <jwt/jwt-pair.hpp>
+#include <../libs/jwt/jwt-map-impl.hpp>
 
 using namespace ncbi;
 // this is compiled by a c++ compiler but will be linked without C++ std library (using gcc)
@@ -300,6 +302,159 @@ rc_t JWT_Vector_JwtString()
     return 0;
 }
 
+rc_t JWT_Pair()
+{
+    JwtPair<bool, int> p(true, 1);
+    if ( ! p . first ) THROW;
+    if ( p . second != 1 ) THROW;
+    return 0;
+}
+
+rc_t JWT_Map()
+{
+    {   // ctor/dtor
+        JwtMap < JwtString, int > m;
+    }
+    {   // empty() true
+        JwtMap < JwtString, int > m;
+        if ( ! m . empty() ) THROW;
+    }
+    {   // emplace() success, empty() false
+        JwtMap < JwtString, int > m;
+        auto it = m . emplace ( "1", 1 );
+        if ( it . first -> first != JwtString ( "1" ) ) THROW;
+        if ( it . first -> second != 1 ) THROW;
+        if ( ! it . second ) THROW;
+        if ( m . empty() ) THROW;
+    }
+    {   // emplace() fail
+        JwtMap < JwtString, int > m;
+        m . emplace ( "1", 1 );
+        auto it = m . emplace ( "1", 2 ); // no effect, the existing node pointed to by it
+        if ( it . first -> first != JwtString ( "1" ) ) THROW;
+        if ( it . first -> second != 1 ) THROW;
+        if ( it . second ) THROW;
+    }
+    {   // size()
+        JwtMap < JwtString, int > m;
+        if ( m . size () != 0 ) THROW;
+        m . emplace ( "1", 1 );
+        if ( m . size () != 1 ) THROW;
+        m . emplace ( "2", 2 );
+        if ( m . size () != 2 ) THROW;
+    }
+    {   // end()
+        JwtMap < JwtString, int > m;
+        if ( * m . end ()  != nullptr ) THROW;
+    }
+    {   // non-const find()
+        JwtMap < JwtString, int > m;
+        m . emplace ( "2", 2 );
+        m . emplace ( "1", 1 );
+
+        auto it = m . find ( JwtString ( "1" ) );
+        if ( it == m . end () ) THROW;
+        if ( it -> first != JwtString ( "1" ) ) THROW;
+        if ( it -> second != 1 ) THROW;
+
+        it = m . find ( JwtString ( "2" ) );
+        if ( it == m . end () ) THROW;
+        if ( it -> first != JwtString ( "2" ) ) THROW;
+        if ( it -> second != 2 ) THROW;
+
+        it = m . find ( JwtString ( "3" ) );
+        if ( it != m . end() ) THROW;
+    }
+    {   // const find()
+        JwtMap < JwtString, int > m;
+        m . emplace ( "1", 1 );
+
+        const JwtMap < JwtString, int > & c ( m );
+        auto it = c . find ( JwtString ( "1" ) );
+        if ( it == c . end () ) THROW;
+        if ( it -> first != JwtString ( "1" ) ) THROW;
+    }
+
+    {   // non-const begin()
+        JwtMap < JwtString, int > m;
+        if ( m.begin() != m . end () ) THROW;
+        m . emplace ( "1", 1 );
+        auto it = m . begin();
+        if ( it == m . end () ) THROW;
+        if ( it -> first != JwtString ( "1" ) ) THROW;
+        if ( it -> second != 1 ) THROW;
+    }
+    {   // const begin()
+        JwtMap < JwtString, int > m;
+        if ( m.begin() != m . end () ) THROW;
+        m . emplace ( "1", 1 );
+        const JwtMap < JwtString, int > & c ( m );
+        auto it = c . begin();
+        if ( it == c . end () ) THROW;
+        if ( it -> first != JwtString ( "1" ) ) THROW;
+        if ( it -> second != 1 ) THROW;
+    }
+    {   // cend()
+        JwtMap < JwtString, int > m;
+        if ( * m . cend ()  != nullptr ) THROW;
+    }
+    {   // cbegin()
+        JwtMap < JwtString, int > m;
+        if ( m.cbegin() != m . cend () ) THROW;
+        m . emplace ( "1", 1 );
+        auto it = m . cbegin();
+        if ( it == m . cend () ) THROW;
+        if ( it -> first != JwtString ( "1" ) ) THROW;
+        if ( it -> second != 1 ) THROW;
+    }
+    {   // erase(), const_iterator(iterator)
+        JwtMap < JwtString, int > m;
+        m . emplace ( "1", 1 );
+        m . emplace ( "2", 2 );
+        m . emplace ( "3", 3 );
+
+        auto it = m . erase ( m . find ( JwtString ( "2" ) ) );
+        if ( it == m . end () ) THROW;
+        if ( it -> first != JwtString ( "3" ) ) THROW; // the following element
+        if ( it -> second != 3 ) THROW;
+        if ( m . size () != 2 ) THROW;
+
+        it = m . begin();
+        if ( it -> first != JwtString ( "1" ) ) THROW;
+        if ( it -> second != 1 ) THROW;
+    }
+    {   // non-const ++
+        JwtMap < JwtString, int > m;
+        m . emplace ( "1", 1 );
+        m . emplace ( "2", 2 );
+        m . emplace ( "3", 3 );
+        auto it = m . begin();
+        if ( it -> first != JwtString ( "1" ) ) THROW;
+        ++ it;
+        if ( it -> first != JwtString ( "2" ) ) THROW;
+        ++ it;
+        if ( it -> first != JwtString ( "3" ) ) THROW;
+        ++ it;
+        if ( it != m . end () ) THROW;
+    }
+    {   // const ++
+        JwtMap < JwtString, int > m;
+        m . emplace ( "1", 1 );
+        m . emplace ( "2", 2 );
+        m . emplace ( "3", 3 );
+        const JwtMap < JwtString, int > & c ( m );
+        auto it = c . begin();
+        if ( it -> first != JwtString ( "1" ) ) THROW;
+        ++ it;
+        if ( it -> first != JwtString ( "2" ) ) THROW;
+        ++ it;
+        if ( it -> first != JwtString ( "3" ) ) THROW;
+        ++ it;
+        if ( it != c . end () ) THROW;
+    }
+    return 0;
+}
+
 //////////////////////////////////////////// Main
 
 #include <kapp/args.h>
@@ -325,8 +480,10 @@ const char UsageDefaultName[] = "test-jwt-c";
 rc_t CC KMain ( int argc, char *argv [] )
 {
     rc_t rc = JWT_String();
-    if ( rc == 0 ) JWT_Vector_POD();
-    if ( rc == 0 ) JWT_Vector_JwtString();
+    if ( rc == 0 ) rc = JWT_Vector_POD();
+    if ( rc == 0 ) rc = JWT_Vector_JwtString();
+    if ( rc == 0 ) rc = JWT_Pair();
+    if ( rc == 0 ) rc = JWT_Map();
 
     if ( rc == 0 )
     {

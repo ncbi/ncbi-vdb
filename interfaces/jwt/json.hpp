@@ -27,11 +27,12 @@
 #ifndef _hpp_ncbi_oauth_json_
 #define _hpp_ncbi_oauth_json_
 
-#include <map>
 #include <stdexcept>
 
+#include "jwt-pair.hpp"
 #include "jwt-string.hpp"
 #include "jwt-vector.hpp"
+#include "jwt-map.hpp"
 
 namespace ncbi
 {
@@ -41,18 +42,6 @@ namespace ncbi
     class JSONValue;
     struct JSONString;
     struct JSONNumber;
-
-    class JwtPair
-    {
-    public:
-        JwtPair( bool f, JSONValue * s)
-        : first (f), second (s)
-        {
-        }
-
-        bool first;
-        JSONValue * second;
-    };
 
     /* JSONException
      **********************************************************************************/
@@ -318,7 +307,7 @@ namespace ncbi
 
         JSONObject ();
 
-        std :: map < JwtString, JwtPair > members;
+        JwtMap < JwtString, JwtPair<bool, JSONValue *> > members;
         bool locked;
 
         friend class JSON;

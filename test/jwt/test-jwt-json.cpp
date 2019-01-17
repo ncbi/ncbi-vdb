@@ -1017,8 +1017,10 @@ FIXTURE_TEST_CASE ( operator_equals_obj, JSONFixture_JSONObject_Interface )
 {
     make_empty();
     jObj -> setValue ( "name", JSONValue :: makeString ( "value" ) );
-    JSONObject obj = *jObj;
-    EXPECT_STREQ ( jObj -> toJSON() . c_str(), obj . toJSON() . c_str () );
+    JSONObject * obj = JSONObject :: make ();
+    * obj = * jObj;
+    EXPECT_STREQ ( jObj -> toJSON() . c_str(), obj -> toJSON() . c_str () );
+    delete obj;
 }
 
 FIXTURE_TEST_CASE ( copy_constructor_obj, JSONFixture_JSONObject_Interface )

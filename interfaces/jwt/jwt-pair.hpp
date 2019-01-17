@@ -24,40 +24,11 @@
  *
  */
 
-#ifndef _hpp_jwt_vector_
-#define _hpp_jwt_vector_
+#ifndef _hpp_jwt_pair_
+#define _hpp_jwt_pair_
 
-//
-// VDB Vector based imitation of std::vector
-//
+// this does not seem to pull in any libc++ names
+#include <utility>
+#define JwtPair std::pair
 
-namespace ncbi
-{
-    template < typename T > class JwtVector
-    {
-    public:
-        JwtVector();
-        JwtVector(const JwtVector&);
-        ~JwtVector();
-
-        size_t size() const { return m_elems; }
-        T& operator[] (size_t n);
-        const T& operator[] (size_t n) const;
-        void push_back (const T& val);
-        void clear();
-        bool empty() const { return m_elems == 0; }
-        T& back();
-        const T& back() const;
-        void pop_back();
-
-        // no iterators are used at this point
-
-    private:
-        JwtVector& operator=(const JwtVector&);
-
-        T*      m_v;
-        size_t  m_elems;
-    };
-}
-
-#endif /* _hpp_jwt_vector_ */
+#endif /* _hpp_jwt_pair_ */

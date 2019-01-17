@@ -26,6 +26,8 @@
 
 #include "json-priv.hpp"
 
+#include "jwt-map-impl.hpp"
+
 namespace ncbi
 {
     // make an empty object
@@ -202,7 +204,7 @@ namespace ncbi
             throw JSONException ( __func__, __LINE__, what . c_str () );
         }
 
-        JwtPair pair ( false, val );
+        JwtPair<bool, JSONValue*> pair ( false, val );
         members . emplace ( name, pair );
     }
 
@@ -221,7 +223,7 @@ namespace ncbi
             throw JSONException ( __func__, __LINE__, what . c_str () );
         }
 
-        JwtPair pair ( true, val );
+        JwtPair<bool, JSONValue*> pair ( true, val );
         members . emplace ( name, pair );
     }
 
@@ -234,7 +236,7 @@ namespace ncbi
         // if doesnt exist, add
         if ( it == members . end () )
         {
-            JwtPair pair ( false, val );
+            JwtPair<bool, JSONValue*> pair ( false, val );
             members . emplace ( name, pair );
         }
         else
@@ -272,7 +274,7 @@ namespace ncbi
         // if doesnt exist, add
         if ( it == members . end () )
         {
-            JwtPair pair ( true, val );
+            JwtPair<bool, JSONValue*> pair ( true, val );
             members . emplace ( name, pair );
         }
         else

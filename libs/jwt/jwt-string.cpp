@@ -29,8 +29,6 @@
 #include <klib/text.h>
 #include <klib/printf.h>
 
-//#include <stdexcept> // TODO: remove
-
 using namespace std;
 
 namespace ncbi

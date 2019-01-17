@@ -28,10 +28,10 @@
 #define _hpp_ncbi_oauth_jwk_
 
 #include <atomic>
-#include <map>
 
 #include "jwt-string.hpp"
 #include "jwt-vector.hpp"
+#include "jwt-map.hpp"
 
 namespace ncbi
 {
@@ -338,7 +338,7 @@ namespace ncbi
     private:
 
         JSONObject * kset;
-        std :: map < JwtString, const JWK * > map;
+        JwtMap < JwtString, const JWK * > map;
     };
 }
 
