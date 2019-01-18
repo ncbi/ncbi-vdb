@@ -24,11 +24,11 @@
  *
  */
 
-#ifndef _hpp_jwt_map_
-#define _hpp_jwt_map_
+#ifndef _hpp_jwt_set_
+#define _hpp_jwt_set_
 
 //
-// VDB BSTree based imitation of std::map
+// VDB BSTree based imitation of std::set
 //
 
 #include <klib/container.h>
@@ -37,7 +37,7 @@
 
 namespace ncbi
 {
-    template < typename Key, typename Value > class JwtMap
+    template < class T > class JwtSet
     {
     private:
         struct Node;
@@ -51,62 +51,30 @@ namespace ncbi
             bool operator == (const iterator&) const;
             bool operator != (const iterator&) const;
 
-            iterator & operator ++ ();
-
-            JwtPair<const Key,Value>* operator -> () const;
+            T* operator -> () const;
 
             const Node * get () const { return it; }
 
         private:
             Node * it;
         };
-        class const_iterator
-        {
-        public:
-            const_iterator(const Node *);
-            const_iterator(const iterator&);
-
-            bool operator == (const const_iterator&) const;
-            bool operator != (const const_iterator&) const;
-
-            const_iterator & operator ++ ();
-
-            const JwtPair<const Key, Value>* operator -> () const;
-
-            const Node * get () const { return it; }
-
-        private:
-            const Node * it;
-        };
 
     public:
-        JwtMap();
-        ~JwtMap();
+        JwtSet();
+        ~JwtSet();
 
-        bool empty() const;
-        size_t size() const;
+        iterator find (const T& k);
 
-        iterator        find (const Key& k);
-        const_iterator  find (const Key& k) const;
-
-        iterator        begin() noexcept;
-        const_iterator  begin() const noexcept;
-        const_iterator  cbegin() const noexcept;
-
-        iterator        end() noexcept;
-        const_iterator  end() const noexcept;
-        const_iterator  cend() const noexcept;
+        iterator end() noexcept;
 
         template <class... Args> JwtPair<iterator,bool> emplace (Args&&... args);
 
-        iterator erase (const_iterator position);
-
     private:
-        JwtMap(const JwtMap&);
-        JwtMap& operator=(const JwtMap&);
+        JwtSet(const JwtSet&);
+        JwtSet& operator=(const JwtSet&);
 
         struct BSTree m_tree;
     };
 }
 
-#endif /* _hpp_jwt_map_ */
+#endif /* _hpp_jwt_set_ */

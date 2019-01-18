@@ -185,13 +185,13 @@ namespace ncbi
     typename JwtMap < Key, Value > :: iterator
     JwtMap < Key, Value > :: erase (const_iterator position)
     {
-        BSTNode * elem = ( BSTNode * ) * position;
+        BSTNode * elem = ( BSTNode * ) position . get ();
         Node * next = ( Node * ) BSTNodeNext ( elem );
         if ( ! BSTreeUnlink ( & m_tree, elem ) )
         {   //NB: undefined behavior
             return end();
         }
-        ( * position ) -> ~Node();
+        position . get() -> ~Node();
         free ( elem );
         return iterator ( next );
     }
@@ -248,7 +248,7 @@ namespace ncbi
     };
     template < typename Key, typename Value > JwtMap < Key, Value > :: const_iterator ::
     const_iterator (const iterator& p_it)
-    : it ( * p_it )
+    : it ( p_it . get() )
     {
     };
 

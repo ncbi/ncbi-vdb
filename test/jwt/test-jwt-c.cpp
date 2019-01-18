@@ -36,6 +36,7 @@
 #include <../libs/jwt/jwt-vector-impl.hpp>
 #include <jwt/jwt-pair.hpp>
 #include <../libs/jwt/jwt-map-impl.hpp>
+#include <../libs/jwt/jwt-set-impl.hpp>
 
 using namespace ncbi;
 // this is compiled by a c++ compiler but will be linked without C++ std library (using gcc)
@@ -345,7 +346,7 @@ rc_t JWT_Map()
     }
     {   // end()
         JwtMap < JwtString, int > m;
-        if ( * m . end ()  != nullptr ) THROW;
+        if ( m . end () . get () != nullptr ) THROW;
     }
     {   // non-const find()
         JwtMap < JwtString, int > m;
@@ -396,7 +397,7 @@ rc_t JWT_Map()
     }
     {   // cend()
         JwtMap < JwtString, int > m;
-        if ( * m . cend ()  != nullptr ) THROW;
+        if ( m . cend () . get () != nullptr ) THROW;
     }
     {   // cbegin()
         JwtMap < JwtString, int > m;
@@ -455,6 +456,47 @@ rc_t JWT_Map()
     return 0;
 }
 
+rc_t JWT_Set()
+{
+    {   // ctor/dtor
+        JwtSet < JwtString > s;
+    }
+    {   // emplace() success
+        JwtSet < JwtString > s;
+        auto it = s . emplace ( "1" );
+        if ( it . first -> compare ( JwtString ( "1" ) ) ) THROW;
+        if ( ! it . second ) THROW;
+    }
+    {   // emplace() fail
+        JwtSet < JwtString > s;
+        s . emplace ( "1" );
+        auto it = s . emplace ( "1" ); // no effect, the existing node pointed to by it
+        if ( it . first -> compare ( JwtString ( "1" ) ) ) THROW;
+        if ( it . second ) THROW;
+    }
+    {   // end()
+        JwtSet < JwtString > s;
+        if ( s . end () . get () != nullptr ) THROW;
+    }
+    {   // non-const find()
+        JwtSet < JwtString > s;
+        s . emplace ( "2" );
+        s . emplace ( "1" );
+
+        auto it = s . find ( JwtString ( "1" ) );
+        if ( it == s . end () ) THROW;
+        if ( it -> compare ( JwtString ( "1" ) ) ) THROW;
+
+        it = s . find ( JwtString ( "2" ) );
+        if ( it == s . end () ) THROW;
+        if ( it -> compare ( JwtString ( "2" ) ) ) THROW;
+
+        it = s . find ( JwtString ( "3" ) );
+        if ( it != s . end() ) THROW;
+    }
+
+    return 0;
+}
 //////////////////////////////////////////// Main
 
 #include <kapp/args.h>
@@ -484,6 +526,7 @@ rc_t CC KMain ( int argc, char *argv [] )
     if ( rc == 0 ) rc = JWT_Vector_JwtString();
     if ( rc == 0 ) rc = JWT_Pair();
     if ( rc == 0 ) rc = JWT_Map();
+    if ( rc == 0 ) rc = JWT_Set();
 
     if ( rc == 0 )
     {

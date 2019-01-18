@@ -27,10 +27,9 @@
 #ifndef _hpp_ncbi_oauth_jwa_
 #define _hpp_ncbi_oauth_jwa_
 
-#include <set>
-
 #include "jwt-string.hpp"
 #include "jwt-map.hpp"
+#include "jwt-set.hpp"
 
 namespace ncbi
 {
@@ -124,7 +123,7 @@ namespace ncbi
             Maps ();
             ~ Maps ();
 
-            std :: set < JwtString > sign_accept;
+            JwtSet < JwtString > sign_accept;
             JwtMap < JwtString, JWASignerFact * > signer_facts;
             JwtMap < JwtString, JWAVerifierFact * > verifier_facts;
 

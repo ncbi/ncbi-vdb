@@ -29,6 +29,7 @@
 #include <jwt/jwt.hpp>
 
 #include "jwt-map-impl.hpp"
+#include "jwt-set-impl.hpp"
 
 #include <iostream>
 #include <cstring>
