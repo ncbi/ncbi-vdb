@@ -102,7 +102,9 @@ JWTC_OBJ = \
 	$(addsuffix .$(OBJX),$(JWTC_SRC))
 
 $(TEST_BINDIR)/test-jwt-c: $(JWTC_OBJ)
-	$(LD) --exe -o $@ $^ $(TEST_LIB)
+	#$(LD) --exe -o $@ $^ $(TEST_LIB)
+	# this is temporary, until all libc++ references have been removed:
+	$(LP) --exe -o $@ $^ $(TEST_LIB)
 
 c: test-jwt-c
 	$(TEST_BINDIR)/$^

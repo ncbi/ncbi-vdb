@@ -87,6 +87,7 @@ JWT_SRC =            \
 	json-value         \
 	json-exception     \
 	memset_s           \
+	jwt-c
 
 
 JWT_OBJ = \

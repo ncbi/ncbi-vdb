@@ -29,6 +29,7 @@
 */
 
 #include <klib/rc.h>
+#include <klib/text.h>
 
 #include <cfloat>
 
@@ -37,6 +38,14 @@
 #include <jwt/jwt-pair.hpp>
 #include <../libs/jwt/jwt-map-impl.hpp>
 #include <../libs/jwt/jwt-set-impl.hpp>
+
+#include <jwt/jwt.h>
+
+// call this function with a reasonable but fixed value
+// before generating any JWT so that the result is predictable
+//
+// setting the value to 0 will revert to a real timestamp
+extern void jwt_setStaticCurrentTime ( long long cur_time );
 
 using namespace ncbi;
 // this is compiled by a c++ compiler but will be linked without C++ std library (using gcc)
@@ -497,6 +506,25 @@ rc_t JWT_Set()
 
     return 0;
 }
+
+rc_t JWT()
+{
+    // fix the current time to a known value
+    jwt_setStaticCurrentTime ( 1540664164 );
+
+    String use; CONST_STRING ( & use, "sig" );
+    String alg; CONST_STRING ( & alg, "HS284" );
+    String kid; CONST_STRING ( & kid, "wonder-key-id" );
+
+    const HMAC_JWKey * k = HMAC_JWKey_make ( 384, & use, & alg, & kid );
+    if ( nullptr == k ) THROW;
+
+    // JWTClaims * c = JWTFactory_make ();
+    // if ( nullptr == c ) THROW;
+
+    return 0;
+}
+
 //////////////////////////////////////////// Main
 
 #include <kapp/args.h>
@@ -527,6 +555,7 @@ rc_t CC KMain ( int argc, char *argv [] )
     if ( rc == 0 ) rc = JWT_Pair();
     if ( rc == 0 ) rc = JWT_Map();
     if ( rc == 0 ) rc = JWT_Set();
+    if ( rc == 0 ) rc = JWT();
 
     if ( rc == 0 )
     {
