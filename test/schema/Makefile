@@ -147,7 +147,7 @@ runtests: existing-schema-tests
 wb-tests: lex gram ast
 
 existing-schema-tests: wb-tests
-	$(MAKE) scantest parsetest #difftest
+	$(MAKE) scantest parsetest difftest
 
 SCHEMATA := $(shell find $(TOP) -name "*.vschema")
 
