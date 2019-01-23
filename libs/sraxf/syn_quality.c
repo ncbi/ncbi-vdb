@@ -26,13 +26,15 @@
 #include <vdb/extern.h>
 
 #include <klib/rc.h>
-#include <vdb/xform.h>
-#include <vdb/schema.h>
 #include <insdc/insdc.h>
 #include <klib/data-buffer.h>
 #include <sysalloc.h>
-
 #include <assert.h>
+
+#ifndef UNIT_TEST_FUNCTION
+#include <vdb/xform.h>
+#include <vdb/schema.h>
+#endif
 
 /*
     This is a schema-function to synthesize quality values.
@@ -68,21 +70,20 @@ static bool is_good(size_t const count, INSDC_SRA_spot_filter const *const filte
 static rc_t syn_quality_impl(syn_qual_params const *const params,
                              size_t numreads, INSDC_coord_len const *const lengths,
                              size_t numfilts, INSDC_SRA_spot_filter const *const filters,
-                             VRowResult *rslt)
+                             KDataBuffer *rslt)
 {
     rc_t rc = 0;
     INSDC_coord_len const total_read_len = sum_read_len(numreads, lengths);
     INSDC_quality_phred const q = is_good(numfilts, filters) ? params->good : params->bad;
 
-    rslt -> data -> elem_bits = 8;
-    rslt -> elem_count = total_read_len;
-    rc = KDataBufferResize ( rslt -> data, total_read_len );
+    rslt->elem_bits = 8;
+    rc = KDataBufferResize(rslt, total_read_len);
     if ( rc == 0 )
-    {
-        memset( rslt -> data -> base, q, total_read_len );
-    }
+        memset(rslt->base, q, total_read_len);
     return rc;
 }
+
+#ifndef UNIT_TEST_FUNCTION
 
 #define SAFE_BASE(ELEM, DTYPE) ((ELEM < argc && sizeof(DTYPE) * 8 == (size_t)argv[ELEM].u.data.elem_bits) ? (((DTYPE const *)argv[ELEM].u.data.base) + argv[ELEM].u.data.first_elem) : ((DTYPE const *)NULL))
 #define BIND_COLUMN(ELEM, DTYPE, POINTER) DTYPE const *const POINTER = SAFE_BASE(ELEM, DTYPE)
@@ -100,10 +101,47 @@ static rc_t CC syn_quality_drvr ( void * self,
         COL_SPOT_FILTER,
     };
     assert(argc == 2);
-    return syn_quality_impl(self,
-                            SAFE_COUNT(COL_READ_LEN), SAFE_BASE(COL_READ_LEN, INSDC_coord_len),
-                            SAFE_COUNT(COL_SPOT_FILTER), SAFE_BASE(COL_SPOT_FILTER, INSDC_SRA_spot_filter),
-                            rslt);
+    rc_t const rc = syn_quality_impl
+        (self,
+         SAFE_COUNT(COL_READ_LEN), SAFE_BASE(COL_READ_LEN, INSDC_coord_len),
+         SAFE_COUNT(COL_SPOT_FILTER), SAFE_BASE(COL_SPOT_FILTER, INSDC_SRA_spot_filter),
+         rslt->data);
+    rslt->elem_count = rslt->data->elem_count;
+    return rc;
+}
+
+static void make_params(syn_qual_params *const params, VFactoryParams const *const fp)
+{
+    params->good = 30;
+    params->bad = 3;
+    if (fp->argc > 0) {
+        assert(fp->argv[0].desc.domain == vtdUint && fp->argv[0].count == 1);
+        params->good = fp->argv[0].data.u8[0];
+
+        if (fp->argc > 1) {
+            assert(fp->argv[1].desc.domain == vtdUint && fp->argv[1].count == 1);
+            params->bad = fp->argv[1].data.u8[0];
+        }
+    }
+}
+
+static rc_t NCBI_SRA_syn_quality_factory(
+    VFuncDesc * rslt,
+    const VFactoryParams * cp,
+    const VFunctionParams * dp )
+{
+    /* expecting 2 data arguments and 0, 1, or 2 factory arguments */
+    assert(dp->argc == 2 && 0 <= cp->argc && cp->argc <= 2);
+
+    rslt->whack = free;
+    rslt->u.rf = syn_quality_drvr;
+    rslt->variant = vftRow;
+    rslt->self = malloc(sizeof(syn_qual_params));
+    if (rslt->self) {
+        make_params(rslt->self, cp);
+        return 0;
+    }
+    return RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted);
 }
 
 /* 
@@ -117,41 +155,166 @@ VTRANSFACT_IMPL ( NCBI_SRA_syn_quality, 1, 0, 0 ) ( const void * Self,
                                            const VFactoryParams * cp,
                                            const VFunctionParams * dp )
 {
-    rc_t rc = 0;
-    INSDC_quality_phred q_good = 30;
-    INSDC_quality_phred q_bad  = 3;
-
-    assert(dp->argc == 2);
-    if ( cp -> argc > 0 )
-    {
-        if ( cp -> argv[ 0 ].desc.domain == vtdUint &&
-             cp -> argv[ 0 ].count > 0 )
-        {
-            q_good = cp -> argv[ 0 ] . data . u8[ 0 ];
-        }
-
-        if ( cp -> argc > 1 )
-        {
-            if ( cp -> argv[ 1 ].desc.domain == vtdUint &&
-                 cp -> argv[ 1 ].count > 0 )
-            {
-                q_bad = cp -> argv[ 1 ] . data . u8[ 0 ];
-            }
-        }
-    }
-    
-    syn_qual_params * params = malloc( sizeof * params );
-    if ( params == NULL )
-        rc = RC( rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted );
-    else
-    {
-        params -> good = q_good;
-        params -> bad  = q_bad;
-
-        rslt -> self = params;
-        rslt -> whack = free;
-        rslt -> u . rf  = syn_quality_drvr;
-        rslt -> variant = vftRow;
-    }
-    return rc;
+    return NCBI_SRA_syn_quality_factory(rslt, cp, dp);
 }
+
+#else /* ifndef UNIT_TEST_FUNCTION */
+
+#define ASSERT(X) do { if (!(X)) return -1; } while(0)
+
+static int UnitTest_0Read_NoFilter(void)
+{
+    syn_qual_params p; p.good = 30; p.bad = 3;
+    KDataBuffer buffer; memset(&buffer, 0, sizeof(buffer));
+    INSDC_coord_len length[] = { 20, 40 };
+    INSDC_SRA_spot_filter filter[] = { SRA_SPOT_FILTER_PASS, SRA_SPOT_FILTER_REJECT };
+    {
+        rc_t rc = syn_quality_impl(&p, 0, NULL, 0, NULL, &buffer);
+        ASSERT(rc == 0);
+        ASSERT(buffer.elem_bits == 8);
+        ASSERT(buffer.elem_count == 0);
+        (void)(length[0]);
+        (void)(filter[0]);
+    }
+    KDataBufferWhack(&buffer);
+    return 0;
+}
+
+static int UnitTest_1Read_NoFilter(void)
+{
+    syn_qual_params p; p.good = 30; p.bad = 3;
+    KDataBuffer buffer; memset(&buffer, 0, sizeof(buffer));
+    INSDC_coord_len length[] = { 20, 40 };
+    INSDC_SRA_spot_filter filter[] = { SRA_SPOT_FILTER_PASS, SRA_SPOT_FILTER_REJECT };
+    {
+        unsigned i;
+        rc_t rc = syn_quality_impl(&p, 1, length, 0, NULL, &buffer);
+        ASSERT(rc == 0);
+        ASSERT(buffer.elem_bits == 8);
+        ASSERT(buffer.elem_count == length[0]);
+        for (i = 0; i < buffer.elem_count; ++i) {
+            INSDC_quality_phred const qv = ((INSDC_quality_phred *)buffer.base)[i];
+            ASSERT(qv == p.good);
+        }
+        (void)(length[0]);
+        (void)(filter[0]);
+    }
+    KDataBufferWhack(&buffer);
+    return 0;
+}
+
+static int UnitTest_2Read_NoFilter(void)
+{
+    syn_qual_params p; p.good = 30; p.bad = 3;
+    KDataBuffer buffer; memset(&buffer, 0, sizeof(buffer));
+    INSDC_coord_len length[] = { 20, 40 };
+    INSDC_SRA_spot_filter filter[] = { SRA_SPOT_FILTER_PASS, SRA_SPOT_FILTER_REJECT };
+    {
+        unsigned i;
+        rc_t rc = syn_quality_impl(&p, 2, length, 0, NULL, &buffer);
+        ASSERT(rc == 0);
+        ASSERT(buffer.elem_bits == 8);
+        ASSERT(buffer.elem_count == length[0] + length[1]);
+        for (i = 0; i < buffer.elem_count; ++i) {
+            INSDC_quality_phred const qv = ((INSDC_quality_phred *)buffer.base)[i];
+            ASSERT(qv == p.good);
+        }
+        (void)(length[0]);
+        (void)(filter[0]);
+    }
+    KDataBufferWhack(&buffer);
+    return 0;
+}
+
+static int UnitTest_1Read_Pass(void)
+{
+    syn_qual_params p; p.good = 30; p.bad = 3;
+    KDataBuffer buffer; memset(&buffer, 0, sizeof(buffer));
+    INSDC_coord_len length[] = { 20, 40 };
+    INSDC_SRA_spot_filter filter[] = { SRA_SPOT_FILTER_PASS, SRA_SPOT_FILTER_REJECT };
+    {
+        unsigned i;
+        rc_t rc = syn_quality_impl(&p, 1, length, 1, filter, &buffer);
+        ASSERT(rc == 0);
+        ASSERT(buffer.elem_bits == 8);
+        ASSERT(buffer.elem_count == length[0]);
+        for (i = 0; i < buffer.elem_count; ++i) {
+            INSDC_quality_phred const qv = ((INSDC_quality_phred *)buffer.base)[i];
+            ASSERT(qv == p.good);
+        }
+        (void)(length[0]);
+        (void)(filter[0]);
+    }
+    KDataBufferWhack(&buffer);
+    return 0;
+}
+
+static int UnitTest_1Read_Fail(void)
+{
+    syn_qual_params p; p.good = 30; p.bad = 3;
+    KDataBuffer buffer; memset(&buffer, 0, sizeof(buffer));
+    INSDC_coord_len length[] = { 20, 40 };
+    INSDC_SRA_spot_filter filter[] = { SRA_SPOT_FILTER_PASS, SRA_SPOT_FILTER_REJECT };
+    {
+        unsigned i;
+        rc_t rc = syn_quality_impl(&p, 1, length, 1, filter + 1, &buffer);
+        ASSERT(rc == 0);
+        ASSERT(buffer.elem_bits == 8);
+        ASSERT(buffer.elem_count == length[0]);
+        for (i = 0; i < buffer.elem_count; ++i) {
+            INSDC_quality_phred const qv = ((INSDC_quality_phred *)buffer.base)[i];
+            ASSERT(qv == p.bad);
+        }
+        (void)(length[0]);
+        (void)(filter[0]);
+    }
+    KDataBufferWhack(&buffer);
+    return 0;
+}
+
+static int UnitTest_2Read_Pass(void)
+{
+    syn_qual_params p; p.good = 30; p.bad = 3;
+    KDataBuffer buffer; memset(&buffer, 0, sizeof(buffer));
+    INSDC_coord_len length[] = { 20, 40 };
+    INSDC_SRA_spot_filter filter[] = { SRA_SPOT_FILTER_PASS, SRA_SPOT_FILTER_REJECT };
+    {
+        unsigned i;
+        rc_t rc = syn_quality_impl(&p, 2, length, 1, filter, &buffer);
+        ASSERT(rc == 0);
+        ASSERT(buffer.elem_bits == 8);
+        ASSERT(buffer.elem_count == length[0] + length[1]);
+        for (i = 0; i < buffer.elem_count; ++i) {
+            INSDC_quality_phred const qv = ((INSDC_quality_phred *)buffer.base)[i];
+            ASSERT(qv == p.good);
+        }
+        (void)(length[0]);
+        (void)(filter[0]);
+    }
+    KDataBufferWhack(&buffer);
+    return 0;
+}
+
+static int UnitTest_2Read_Fail(void)
+{
+    syn_qual_params p; p.good = 30; p.bad = 3;
+    KDataBuffer buffer; memset(&buffer, 0, sizeof(buffer));
+    INSDC_coord_len length[] = { 20, 40 };
+    INSDC_SRA_spot_filter filter[] = { SRA_SPOT_FILTER_PASS, SRA_SPOT_FILTER_REJECT };
+    {
+        unsigned i;
+        rc_t rc = syn_quality_impl(&p, 2, length, 1, filter + 1, &buffer);
+        ASSERT(rc == 0);
+        ASSERT(buffer.elem_bits == 8);
+        ASSERT(buffer.elem_count == length[0] + length[1]);
+        for (i = 0; i < buffer.elem_count; ++i) {
+            INSDC_quality_phred const qv = ((INSDC_quality_phred *)buffer.base)[i];
+            ASSERT(qv == p.bad);
+        }
+        (void)(length[0]);
+        (void)(filter[0]);
+    }
+    KDataBufferWhack(&buffer);
+    return 0;
+}
+#endif

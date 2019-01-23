@@ -75,11 +75,8 @@ TST_SYN_QUAL_LIB = \
 	-sktst \
 	-sncbi-vdb \
 
-$(TEST_BINDIR)/test_syn_quality: $(TST_SYN_QUAL_OBJ) produce_test_src
+$(TEST_BINDIR)/test_syn_quality: $(TST_SYN_QUAL_OBJ)
 	$(LP) --exe -o $@ $^ $(TST_SYN_QUAL_LIB)
-
-produce_test_src:
-	@ $(SRCDIR)/test_syn_qual/test_syn_qual.py $(LIBDIR)/libncbi-wvdb.so $(SRCDIR)/T_TEST_SYN_QUAL
 
 #----------------------------------------------------------------
 # overriden runtests, to pass the SRCDIR into test_syn_quality
