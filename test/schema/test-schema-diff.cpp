@@ -92,6 +92,8 @@ rc_t CC Usage( const Args* args )
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    KConfigDisableUserSettings();
+    
     int failed = 0;
     if ( argc < 2 )
     {
