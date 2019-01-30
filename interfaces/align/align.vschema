@@ -1155,8 +1155,11 @@ table NCBI:align:tbl:seq #1.1 =
     // size is NREADS
     extern column < U8 > zip_encoding ALIGNMENT_COUNT;
 
+    // unparsed read name
+    extern column < utf8 > zip_encoding RAW_NAME;
+
     // auto-generate name from row-id
-    ascii out_name_fmt = < ascii > echo < '$R' > ();
+    ascii out_name_fmt = .RAW_NAME | < ascii > echo < '$R' > ();
 
     // temparary column
     extern column < U64 > izip_encoding TMP_KEY_ID;
