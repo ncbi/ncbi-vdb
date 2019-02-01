@@ -4,7 +4,6 @@
 ## NCBI VDB 2.9.4
 **January 31, 2019**
 
-  **klib**: fixed a bug in Json parser: bad comparison of member names  
   **kns**: added detection of zone where cloud instance runs  
   **kns**: added support of AWS authentication  
   **kns**: allow to access googleapis.com via proxy  
