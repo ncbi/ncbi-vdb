@@ -2833,6 +2833,11 @@ LIB_EXPORT rc_t CC ReferenceMgr_Compress(const ReferenceMgr* cself,
     return rc;
 }
 
+static bool isMatchingBase(int const refBase, int const seqBase)
+{
+    return (refBase == seqBase || seqBase == '=' || (refBase == 'T' && seqBase == 'U'));
+}
+
 LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
                                          uint32_t options,
                                          INSDC_coord_zero offset,
@@ -3028,8 +3033,8 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
                             ref_pos += length;
                             ++ro;
                         }
-                        if (ref_pos < 0 || ref_pos >= max_rl ||
-                            ((toupper(ref_buf[ref_pos]) != toupper(seq[seq_pos])) && (seq[seq_pos] != '=')))
+                        if (ref_pos < 0 || ref_pos >= max_rl
+                            || !isMatchingBase(toupper(ref_buf[ref_pos]), toupper(seq[seq_pos])))
                         {
                             has_mismatch[seq_pos] = 1;
                             mismatch[data->mismatch.elements++] = seq[seq_pos];

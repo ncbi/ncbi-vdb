@@ -527,7 +527,7 @@ ASTBuilder :: ScanVirtuals ( const Token :: Location & p_loc, Vector & p_byParen
             {
                 /* copy the original */
                 BSTree * scope = static_cast < BSTree * > ( VectorLast ( & GetSymTab () . stack ) );
-                KSymbol *copy;
+                const KSymbol *copy;
                 rc_t rc = KSymbolCopy ( scope, & copy, orig );
                 if ( rc != 0 )
                 {

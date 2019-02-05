@@ -2594,7 +2594,19 @@
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)wsraxf-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)wsraxf-%(Filename).obj</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="..\..\..\libs\sra\sra-schema.c">
+      <ClCompile Include="..\..\..\libs\sraxf\spot-filter.c">
+          <ObjectFileName >$(IntDir)sraxf-%(Filename).obj</ObjectFileName>
+      </ClCompile>
+      <ClCompile Include="..\..\..\libs\sraxf\syn_quality.c">
+          <ObjectFileName >$(IntDir)sraxf-%(Filename).obj</ObjectFileName>
+      </ClCompile>
+      <ClCompile Include="..\..\..\libs\sraxf\use-rna-flag.c">
+          <ObjectFileName >$(IntDir)sraxf-%(Filename).obj</ObjectFileName>
+      </ClCompile>
+      <ClCompile Include="..\..\..\libs\sraxf\set-rna-flag.c">
+          <ObjectFileName >$(IntDir)sraxf-%(Filename).obj</ObjectFileName>
+      </ClCompile>
+      <ClCompile Include="..\..\..\libs\sra\sra-schema.c">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)wsra-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)wsra-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)wsra-%(Filename).obj</ObjectFileName>

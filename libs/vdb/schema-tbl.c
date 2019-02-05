@@ -135,16 +135,17 @@ rc_t SColumnDumpExpr ( SDumper *d, const SExpression *e )
 
     if ( ! compact )
         SDumperIncIndentLevel ( d );
-    rc = SDumperPrint ( d, compact ? "=%E" : "\n\t= %E\n", c -> left );
+
+    rc = SDumperPrint ( d, compact ? "=%E" : "\n\t= %E", c -> left );
     while ( rc == 0 )
     {
         if ( c -> right -> var != eCondExpr )
             break;
         c = ( const SBinExpr* ) c -> right;
-        rc = SDumperPrint ( d, compact ? "|%E" : "\n\t| %E\n", c -> left );
+        rc = SDumperPrint ( d, compact ? "|%E" : "\n\t| %E", c -> left );
     }
 
-    rc = SDumperPrint ( d, compact ? "|%E" : "\n\t| %E\n", c -> right );
+    rc = SDumperPrint ( d, compact ? "|%E;" : "\n\t| %E\n\t;\n", c -> right );
     if ( ! compact )
         SDumperDecIndentLevel ( d );
     return rc;
@@ -779,7 +780,7 @@ bool CC STableScanVirtuals ( void *item, void *data )
             else
             {
                 /* copy the original */
-                KSymbol *copy;
+                const KSymbol *copy;
                 rc_t rc = KSymbolCopy ( scope, & copy, orig );
                 if ( rc != 0 )
                     return true;
