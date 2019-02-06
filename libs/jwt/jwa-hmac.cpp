@@ -32,7 +32,6 @@
 #include <mbedtls/md.h>
 #include <mbedtls/error.h>
 
-#include <iostream>
 #include <cstring>
 #include <cassert>
 

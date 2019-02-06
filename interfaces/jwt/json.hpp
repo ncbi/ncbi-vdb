@@ -27,8 +27,6 @@
 #ifndef _hpp_ncbi_oauth_json_
 #define _hpp_ncbi_oauth_json_
 
-#include <stdexcept>
-
 #include "jwt-pair.hpp"
 #include "jwt-string.hpp"
 #include "jwt-vector.hpp"
@@ -45,7 +43,7 @@ namespace ncbi
 
     /* JSONException
      **********************************************************************************/
-    class JSONException : public std :: logic_error
+    class JSONException //: public std :: exception
     {
     public:
 

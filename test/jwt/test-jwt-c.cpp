@@ -41,6 +41,11 @@
 
 #include <jwt/jwt.h>
 
+void* operator new (size_t s) { return malloc(s); }
+void operator delete (void* p) { free(p); }
+void* operator new[] (size_t s) { return malloc(s); }
+void operator delete[] (void* p) { free(p); }
+
 // call this function with a reasonable but fixed value
 // before generating any JWT so that the result is predictable
 //
@@ -51,7 +56,7 @@ using namespace ncbi;
 // this is compiled by a c++ compiler but will be linked without C++ std library (using gcc)
 
 //TODO: remove this when done removing exceptions from JWT
-void *__gxx_personality_v0;
+//void *__gxx_personality_v0;
 
 extern "C"
 {
@@ -507,20 +512,109 @@ rc_t JWT_Set()
     return 0;
 }
 
+#define DeclString(s,v) String s; CONST_STRING ( & s, v );
+
+rc_t JWT_throw()
+{
+    // fix the current time to a known value
+    jwt_setStaticCurrentTime ( 1540664164 );
+
+    DeclString ( use, "sig" );
+    DeclString ( alg, "HS284" );
+    DeclString ( kid, "wonder-key-id" );
+
+    const HMAC_JWKey * k = HMAC_JWKey_make ( 384, & use, & alg, & kid );
+    if ( nullptr == k ) THROW;
+
+    DeclString ( ncbi, "ncbi" );
+    DeclString ( HS384, "HS384" );
+    JWSFactory * jwsf = JWSFactory_ctor( & ncbi, & HS384, (const JWK*)k );
+    if ( nullptr == jwsf ) THROW;
+
+    JWTFactory * jwtf = JWTFactory_ctor( jwsf );
+    if ( nullptr == jwtf ) THROW;
+
+    rc_t rc;
+    rc = JWTFactory_setIssuer ( jwtf, & ncbi );
+    if ( 0 != rc ) THROW;
+    rc = JWTFactory_setDuration ( jwtf, 15 );
+    if ( 0 != rc ) THROW;
+
+    JWTClaims * c = JWTFactory_make ( jwtf );
+    if ( nullptr == c ) THROW;
+
+    DeclString ( hello, "hello there" );
+    JSONValue * json = JSONValue_makeString ( & hello );
+    if ( nullptr == json ) THROW;
+
+    DeclString ( example, "iat" ); // protected name, JWTClaims :: addClaim should throw:
+    rc = JWTClaims_addClaimOrDeleteValue ( c, & example, json, false );
+    if ( 0 == rc ) THROW;
+
+    JWTClaims_dtor ( c );
+    JWTFactory_dtor ( jwtf );
+    JWSFactory_dtor ( jwsf );
+    HMAC_JWKey_dtor ( k );
+
+    return 0;
+}
+
 rc_t JWT()
 {
     // fix the current time to a known value
     jwt_setStaticCurrentTime ( 1540664164 );
 
-    String use; CONST_STRING ( & use, "sig" );
-    String alg; CONST_STRING ( & alg, "HS284" );
-    String kid; CONST_STRING ( & kid, "wonder-key-id" );
+    DeclString ( use, "sig" );
+    DeclString ( alg, "HS284" );
+    DeclString ( kid, "wonder-key-id" );
 
     const HMAC_JWKey * k = HMAC_JWKey_make ( 384, & use, & alg, & kid );
     if ( nullptr == k ) THROW;
 
-    // JWTClaims * c = JWTFactory_make ();
-    // if ( nullptr == c ) THROW;
+    DeclString ( ncbi, "ncbi" );
+    DeclString ( HS384, "HS384" );
+    JWSFactory * jwsf = JWSFactory_ctor( & ncbi, & HS384, (const JWK*)k );
+    if ( nullptr == jwsf ) THROW;
+
+    JWTFactory * jwtf = JWTFactory_ctor( jwsf );
+    if ( nullptr == jwtf ) THROW;
+
+    rc_t rc;
+    rc = JWTFactory_setIssuer ( jwtf, & ncbi );
+    if ( 0 != rc ) THROW;
+    rc = JWTFactory_setDuration ( jwtf, 15 );
+    if ( 0 != rc ) THROW;
+
+    JWTClaims * c = JWTFactory_make ( jwtf );
+    if ( nullptr == c ) THROW;
+
+    DeclString ( hello, "hello there" );
+    JSONValue * json = JSONValue_makeString ( & hello );
+    if ( nullptr == json ) THROW;
+
+    DeclString ( example, "example" );
+    rc = JWTClaims_addClaimOrDeleteValue ( c, & example, json, false );
+    if ( 0 != rc ) THROW;
+
+    const String * res = nullptr;
+    rc = JWTClaims_toJSON ( c, & res );
+    if ( nullptr == res ) THROW;
+    if ( 0 != strncmp ( "{\"example\":\"hello there\",\"iss\":\"ncbi\"}", res -> addr, res -> size ) ) THROW;
+    StringWhack ( res );
+
+    // JWT jwt = jwt_fact -> sign ( claims );
+    // CHECK_EQUAL( string ( "eyJhbGciOiJIUzM4NCIsImtpZCI6IndvbmRlci1rZXktaWQiLCJ0eXAiOiJKV1QifQ.eyJleGFtcGxlIjoiaGVsbG8gdGhlcmUiLCJleHAiOjE1NDA2NjQxNzksImlhdCI6MTU0MDY2NDE2NCwiaXNzIjoibmNiaSJ9.UWIn88KYxos1aiSKxqBdsak9VUMy0t9kylcwB1yEqHKb6cXHlwAoRA4NcDcGzf4N"), string ( jwt . data () ) );
+
+    // JWTClaims decoded = jwt_fact -> decode ( jwt );
+    // CHECK_EQUAL( string ( "{\"example\":\"hello there\",\"exp\":1540664179,\"iat\":1540664164,\"iss\":\"ncbi\"}" ), string ( decoded . toJSON () . data () ) );
+
+    // printJWTTransitionStack ( claims, jwt, decoded );
+
+
+    JWTClaims_dtor ( c );
+    JWTFactory_dtor ( jwtf );
+    JWSFactory_dtor ( jwsf );
+    HMAC_JWKey_dtor ( k );
 
     return 0;
 }
@@ -555,6 +649,7 @@ rc_t CC KMain ( int argc, char *argv [] )
     if ( rc == 0 ) rc = JWT_Pair();
     if ( rc == 0 ) rc = JWT_Map();
     if ( rc == 0 ) rc = JWT_Set();
+    if ( rc == 0 ) rc = JWT_throw();
     if ( rc == 0 ) rc = JWT();
 
     if ( rc == 0 )

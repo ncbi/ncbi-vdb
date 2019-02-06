@@ -27,6 +27,8 @@
 #include "json-priv.hpp"
 
 #include <assert.h>
+#include <ctype.h>
+#include <cstdio>
 
 namespace ncbi
 {

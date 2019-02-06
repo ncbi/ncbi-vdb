@@ -28,7 +28,8 @@ TOP ?= $(abspath ../..)
 MODULE = libs/jwt
 
 INT_LIBS = \
-	libjwt
+	libjwt \
+	libcppex
 
 ALL_LIBS = \
 	$(INT_LIBS)
@@ -36,6 +37,12 @@ ALL_LIBS = \
 include $(TOP)/build/Makefile.env
 
 clean: stdclean
+
+OPT += -fno-rtti
+
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)
 
 #-------------------------------------------------------------------------------
 # outer targets
@@ -96,7 +103,37 @@ JWT_OBJ = \
 $(ILIBDIR)/libjwt.$(ILIBEXT): $(JWT_OBJ)
 	$(LD) --slib -o $@ $^
 
-compile: stdcompile
+#-------------------------------------------------------------------------------
+# c++ exception handling support, copied from libstdc++-v3 (git-svn-id: svn+ssh://gcc.gnu.org/svn/gcc/trunk@268424 138bc75d-0d04-0410-961f-82ee72b054a4)
+# (changed extensions from .cc to .cpp)
+#
+$(ILIBDIR)/libcppex: \
+	$(addprefix $(ILIBDIR)/libcppex.,$(ILIBEXT))
 
-$(TARGDIR)/compile: $(OBJFILES)
+DEFINES += -DIN_GLIBCPP_V3
+
+CPPEX_SRC =         \
+	class_type_info \
+	pure            \
+	eh_alloc        \
+	eh_throw        \
+	eh_catch        \
+	tinfo           \
+	eh_terminate    \
+	eh_call         \
+	eh_exception    \
+	eh_globals      \
+	eh_term_handler \
+	eh_unex_handler \
+	vterminate      \
+	eh_personality      \
+	si_class_type_info  \
+	eh_type             \
+	cp-demangle
+
+CPPEX_OBJ = \
+	$(addsuffix .$(LOBX),$(CPPEX_SRC))
+
+$(ILIBDIR)/libcppex.$(ILIBEXT): $(CPPEX_OBJ)
+	$(LD) --slib -o $@ $^
 

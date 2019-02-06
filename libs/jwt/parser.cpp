@@ -28,9 +28,13 @@
 
 #include <assert.h>
 #include <ctype.h>
-#include <codecvt>
-#include <locale>
+#include <errno.h>
 
+//#include <codecvt>
+//#include <locale>
+
+#include <klib/text.h>
+#include <strtol.h>
 
 namespace ncbi
 {
@@ -61,26 +65,67 @@ namespace ncbi
         return true;
     }
 
+    /* hex_to_int
+    *  where 'c' is known to be hex
+    */
+    static
+    unsigned int
+    hex_to_int ( char c )
+    {
+        int i = c - '0';
+        if ( c > '9' )
+        {
+            if ( c < 'a' )
+                i = c - 'A' + 10;
+            else
+                i = c - 'a' + 10;
+        }
+
+        if ( i < 0 || i > 16 )
+        {
+            throw JSONException ( __func__, __LINE__, "Invalid \\u escape sequence" );
+        }
+        return i;
+    }
+
     static
     JwtString hex_to_utf8 ( const JwtString &text )
     {
-        size_t index;
+        // size_t index;
 
-        try
-        {
-            unsigned int val = stoi ( text, &index, 16 );
-            if ( index != 4 )
-                throw JSONException ( __func__, __LINE__, "Invalid \\u escape sequence" ); // test hit
+        // try
+        // {
+            // unsigned int val = stoi ( text, &index, 16 );
+            // if ( index != 4 )
+            //     throw JSONException ( __func__, __LINE__, "Invalid \\u escape sequence" ); // test hit
 
-            std :: wstring_convert < std :: codecvt_utf8 < char32_t >, char32_t > conv;
-            JwtString utf8 ( conv . to_bytes ( val ) . data () );
+//            std :: wstring_convert < std :: codecvt_utf8 < char32_t >, char32_t > conv;
+//            JwtString utf8 ( conv . to_bytes ( val ) . data () );
 
-            return utf8;
-        }
-        catch ( ... )
-        {
-            throw JSONException ( __func__, __LINE__, "Invalid \\u escape sequence" ); // test hit
-        }
+//            return utf8;
+
+            if ( text.size() != 4 )
+                throw JSONException ( __func__, __LINE__, "Invalid \\u escape sequence" );
+
+            /* treat 4-digit hex code as UTF16 */
+            uint32_t u32 = hex_to_int ( text [ 0 ]);
+            u32 <<= 4;
+            u32 += hex_to_int ( text [ 1 ]);
+            u32 <<= 4;
+            u32 += hex_to_int ( text [ 2 ]);
+            u32 <<= 4;
+            u32 += hex_to_int ( text [ 3 ]);
+
+            char utf8[5];
+            int ch_len = utf32_utf8 ( utf8, utf8 + 4, u32 );
+            assert ( ch_len > 0 && ch_len < 5 );
+            utf8 [ ch_len ] = 0;
+            return JwtString(utf8);
+        // }
+        // catch ( ... )
+        // {
+        //     throw JSONException ( __func__, __LINE__, "Invalid \\u escape sequence" ); // test hit
+        // }
     }
 
     static
@@ -329,17 +374,28 @@ namespace ncbi
         size_t num_len = 0;
         if ( ! is_float )
         {
-            try
-            {
-                long long int num = ncbi :: stoll ( num_str, &num_len );
-                pos = start + num_len;
+            // try
+            // {
+            //     long long int num = ncbi :: stoll ( num_str, &num_len );
+            //     pos = start + num_len;
 
-                return JSONValue :: makeInteger ( num );
-            }
-            catch ( std :: out_of_range &e )
+            //     return JSONValue :: makeInteger ( num );
+            // }
+            // catch ( std :: out_of_range &e )
+            // {
+            //     // fall out
+            // }
+
+            char * endptr;
+            errno = 0;
+            int64_t value = strtoi64 ( num_str . c_str(), & endptr, 10 );
+            if ( errno == 0 )
             {
-                // fall out
+                num_len = endptr - num_str . c_str ();
+                pos = start + num_len;
+                return JSONValue :: makeInteger ( value );
             }
+            // fall out
         }
 
         // must be floating point

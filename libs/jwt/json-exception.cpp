@@ -35,8 +35,7 @@ namespace ncbi
     }
 
     JSONException :: JSONException ( const char * function, unsigned int line, const char * message )
-        : std :: logic_error ( message )
-        , msg ( function )
+        : msg ( function )
     {
         msg += JwtString(":") + to_string ( line ) + " - " + message;
         fl_msg = msg . c_str ();

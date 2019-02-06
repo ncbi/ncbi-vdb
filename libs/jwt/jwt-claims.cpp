@@ -28,7 +28,6 @@
 #include <jwt/jws.hpp>
 #include "base64-priv.hpp"
 
-#include <iostream>
 #include <climits>
 #include <cassert>
 

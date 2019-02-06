@@ -34,7 +34,6 @@
 #include <mbedtls/error.h>
 #include <mbedtls/bignum.h>
 
-#include <iostream>
 #include <cstring>
 #include <cassert>
 

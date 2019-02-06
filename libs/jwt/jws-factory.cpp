@@ -30,7 +30,6 @@
 #include "base64-priv.hpp"
 #include "jwt-vector-impl.hpp"
 
-#include <iostream>
 #include <cassert>
 
 namespace ncbi

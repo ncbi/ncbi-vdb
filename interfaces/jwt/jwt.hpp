@@ -51,7 +51,7 @@ namespace ncbi
 
     /* JWTException
      **********************************************************************************/
-    class JWTException : public std :: logic_error
+    class JWTException //: public std :: logic_error
     {
     public:
 

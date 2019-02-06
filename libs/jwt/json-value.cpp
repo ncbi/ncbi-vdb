@@ -25,6 +25,7 @@
  */
 
 #include "json-priv.hpp"
+#include <cstdio>
 
 namespace ncbi
 {

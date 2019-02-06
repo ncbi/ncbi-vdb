@@ -26,6 +26,8 @@
 
 #include "memset-priv.hpp"
 
+#include <jwt/jwt.hpp>
+
 #include <cstring>
 #include <string.h>
 
@@ -61,9 +63,9 @@ namespace ncbi
         for ( size_t i = 0; i < count; ++ i )
         {
             if ( ( int ) str [ i ] != ch )
-                throw "error in memset code";
+                throw JWTException ( __func__, __LINE__, "error in memset code" );
         }
-        
+
     }
 
 }

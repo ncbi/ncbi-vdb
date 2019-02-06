@@ -33,8 +33,6 @@
 #include "jwt-vector-impl.hpp"
 #include "jwt-map-impl.hpp"
 
-#include <iostream>
-
 namespace ncbi
 {
     bool JWK :: forSigning () const

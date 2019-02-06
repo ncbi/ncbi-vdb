@@ -37,6 +37,8 @@ TEST_TOOLS = \
 
 include $(TOP)/build/Makefile.env
 
+OPT += -fno-rtti
+
 $(TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
@@ -102,9 +104,9 @@ JWTC_OBJ = \
 	$(addsuffix .$(OBJX),$(JWTC_SRC))
 
 $(TEST_BINDIR)/test-jwt-c: $(JWTC_OBJ)
-	#$(LD) --exe -o $@ $^ $(TEST_LIB)
+	$(LD) --exe -o $@ $^ $(TEST_LIB) -scppex
 	# this is temporary, until all libc++ references have been removed:
-	$(LP) --exe -o $@ $^ $(TEST_LIB)
+	#$(LP) --exe -o $@ $^ $(TEST_LIB)
 
 c: test-jwt-c
 	$(TEST_BINDIR)/$^

@@ -30,8 +30,6 @@
 #include <jwt/jwk.hpp>
 #include "base64-priv.hpp"
 
-#include <iostream>
-
 namespace ncbi
 {
     const HMAC_JWKey * HMAC_JWKey :: make ( unsigned int key_bits,

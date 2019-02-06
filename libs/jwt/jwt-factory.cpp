@@ -30,8 +30,8 @@
 #include "base64-priv.hpp"
 #include "jwt-vector-impl.hpp"
 
-#include <iostream>
 #include <climits>
+#include <ctime>
 
     static long long jwt_static_cur_time = 0;
 
