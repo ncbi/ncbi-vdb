@@ -297,14 +297,14 @@ TEST_CASE ( DOUBLE ) {
     const KTime_t exp = 1489700000  ;
     const string date1 (  "1981-01-13T13:25:31" );
     const KTime_t exp1 = 1489710000  ;
-    REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.0\n"
+    REQUIRE_RC ( KServiceNames3_0StreamTestMany ( "#3.0\n"
         "0|| object-id |90|1981-01-13T13:25:30||ticket|"
 "http://url/$fasp://frl/$https://hsl/$file:///p$s3:p||||"
 "http://vdbcacheUrl/$fasp://fvdbcache/$https://vdbcache/$file:///vdbcache$s3:v|"
             "1489700000|200| message\n"
         "1|| object-i1 |10|1981-01-13T13:25:31|| ticke1 |"
           "http://ur1/||||https://vdbcacheUrl1/|1489710000|200| messag1\n"
-        "$1489690000\n", & response, 0 ) );
+        "$1489690000\n", & response, 0, 2 ) );
 
     CHECK_NOT_NULL ( response );
     REQUIRE_EQ ( KSrvResponseLength ( response ), 2u );

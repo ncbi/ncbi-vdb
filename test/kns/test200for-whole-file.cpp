@@ -43,6 +43,11 @@ TEST_CASE ( Test_206) {
     REQUIRE_RC ( KNSManagerMake ( & mgr ) );
 
     const KFile * file = NULL;
+<<<<<<< HEAD
+=======
+
+#if GOOGLE_FILE_EXISTS
+>>>>>>> 2.9.4rc
     REQUIRE_RC ( KNSManagerMakeHttpFile ( mgr, & file, NULL, 0x01010000,
        "https://sra-download.ncbi.nlm.nih.gov/traces/refseq/KC702174.1" ) );
 
@@ -69,6 +74,10 @@ TEST_CASE ( Test_206) {
     REQUIRE_EQ ( num_read, static_cast < size_t > ( size ) );
 
     free ( buffer );
+<<<<<<< HEAD
+=======
+#endif
+>>>>>>> 2.9.4rc
 
     REQUIRE_RC ( KFileRelease ( file ) );
 
@@ -80,6 +89,11 @@ TEST_CASE ( Test_200 ) {
     REQUIRE_RC ( KNSManagerMake ( & mgr ) );
 
     const KFile * file = NULL;
+<<<<<<< HEAD
+=======
+
+#if GOOGLE_FILE_EXISTS
+>>>>>>> 2.9.4rc
     REQUIRE_RC ( KNSManagerMakeHttpFile ( mgr, & file, NULL, 0x01010000,
        "https://storage.googleapis.com/yan-blastdb/2018-09-12-08-33-02/fuse.xml"
       ) );
@@ -107,6 +121,10 @@ TEST_CASE ( Test_200 ) {
     REQUIRE_EQ ( num_read, static_cast < size_t > ( size ) );
 
     free ( buffer );
+<<<<<<< HEAD
+=======
+#endif
+>>>>>>> 2.9.4rc
 
     REQUIRE_RC ( KFileRelease ( file ) );
 

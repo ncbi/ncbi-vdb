@@ -150,3 +150,9 @@ $(ILIBDIR)/libwsraxf.$(LIBX): $(WSRAXF_OBJ)
 compile: stdcompile
 
 $(TARGDIR)/compile: $(OBJFILES)
+
+#-------------------------------------------------------------------------------
+# fuzz
+#
+fuzz: std
+	cp $(addsuffix .$(LIBX),$(addprefix $(ILIBDIR)/,$(INT_LIBS))) $(FLIBDIR)/

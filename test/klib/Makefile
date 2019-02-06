@@ -42,6 +42,7 @@ TEST_TOOLS = \
 	test-vnamelist \
 	test-progressbar \
     test-symtab \
+	test-json \
 
 ifeq (linux,$(OS))
 TEST_TOOLS += test-hashfile
@@ -52,12 +53,17 @@ include $(TOP)/build/Makefile.env
 
 std: $(TEST_TOOLS)
 
-test-md5append $(TEST_TOOLS): makedirs
+test-md5append test-json-parser $(TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
 .PHONY: $(TEST_TOOLS)
 
 clean: stdclean
+
+TEST_KLIB_LIB = \
+	-skapp \
+	-sktst \
+	-sncbi-vdb \
 
 #-------------------------------------------------------------------------------
 # test-asm
@@ -68,13 +74,8 @@ TEST_ASM_SRC = \
 TEST_ASM_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_ASM_SRC))
 
-TEST_ASM_LIB = \
-	-skapp \
-	-sncbi-vdb \
-	-sktst \
-
 $(TEST_BINDIR)/test-asm: $(TEST_ASM_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_ASM_LIB)
+	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
 
 #-------------------------------------------------------------------------------
 # test-md5append
@@ -85,13 +86,8 @@ TEST_MD5APPEND_SRC = \
 TEST_MD5APPEND_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_MD5APPEND_SRC))
 
-TEST_MD5APPEND_LIB = \
-	-skapp \
-	-sncbi-vdb \
-	-sktst \
-
 $(TEST_BINDIR)/test-md5append: $(TEST_MD5APPEND_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_MD5APPEND_LIB)
+	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
 
 #-------------------------------------------------------------------------------
 # test-printf
@@ -102,13 +98,8 @@ TEST_PRINTF_SRC = \
 TEST_PRINTF_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_PRINTF_SRC))
 
-TEST_PRINTF_LIB = \
-	-skapp \
-	-sncbi-vdb \
-	-sktst \
-
 $(TEST_BINDIR)/test-printf: $(TEST_PRINTF_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_PRINTF_LIB)
+	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
 
 #-------------------------------------------------------------------------------
 # test-log
@@ -119,13 +110,8 @@ TEST_LOG_SRC = \
 TEST_LOG_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_LOG_SRC))
 
-TEST_LOG_LIB = \
-	-skapp \
-	-sncbi-vdb \
-	-sktst \
-
 $(TEST_BINDIR)/test-log: $(TEST_LOG_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_LOG_LIB)
+	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
 
 #-------------------------------------------------------------------------------
 # test-SraReleaseVersion
@@ -136,14 +122,8 @@ TEST_SRA_RELEASE_VERSION_SRC = \
 TEST_SRA_RELEASE_VERSION_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_SRA_RELEASE_VERSION_SRC))
 
-TEST_SRA_RELEASE_VERSION_LIB = \
-	-skapp \
-	-sncbi-vdb \
-	-sktst \
-
-
 $(TEST_BINDIR)/test-SraReleaseVersion: $(TEST_SRA_RELEASE_VERSION_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_SRA_RELEASE_VERSION_LIB)
+	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
 
 valgrind_sra_release_version:
 	valgrind --ncbi $(TEST_BINDIR)/test-SraReleaseVersion
@@ -161,7 +141,19 @@ TEST_TIME_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_TIME_SRC))
 
 $(TEST_BINDIR)/test-time: $(TEST_TIME_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_SRA_RELEASE_VERSION_LIB)
+	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
+
+#-------------------------------------------------------------------------------
+# test-rcenum
+#
+TEST_RCENUM_SRC = \
+	test-rcenum
+
+TEST_RCENUM_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_RCENUM_SRC))
+
+$(TEST_BINDIR)/test-rcenum: $(TEST_RCENUM_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
 
 #-------------------------------------------------------------------------------
 # test-rcenum
@@ -200,14 +192,11 @@ TEST_KLIB_SRC = \
 TEST_KLIB_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_KLIB_SRC))
 
-TEST_KLIB_LIB = \
-	-skapp \
-	-sncbi-vdb \
-	-sktst \
-	-sklib
-
 $(TEST_BINDIR)/test-klib: $(TEST_KLIB_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
+
+klib: test-klib
+	$(TEST_BINDIR)/test-klib
 
 #-------------------------------------------------------------------------------
 # test-hashfile
@@ -218,14 +207,8 @@ TEST_HASHFILE_SRC = \
 TEST_HASHFILE_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_HASHFILE_SRC))
 
-TEST_HASHFILE_LIB = \
-	-skapp \
-	-sncbi-vdb \
-	-sktst \
-	-sklib
-
 $(TEST_BINDIR)/test-hashfile: $(TEST_HASHFILE_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_HASHFILE_LIB)
+	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
 
 
 #-------------------------------------------------------------------------------
@@ -237,14 +220,8 @@ TEST_HASHTABLE_SRC = \
 TEST_HASHTABLE_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_HASHTABLE_SRC))
 
-TEST_HASHTABLE_LIB = \
-	-skapp \
-	-sncbi-vdb \
-	-sktst \
-	-sklib
-
 $(TEST_BINDIR)/test-hashtable: $(TEST_HASHTABLE_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_HASHTABLE_LIB)
+	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
 
 
 #-------------------------------------------------------------------------------
@@ -256,16 +233,13 @@ TEST_VNAMELIST_SRC = \
 TEST_VNAMELIST_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_VNAMELIST_SRC))
 
-TEST_VNAMELIST_LIB = \
-	-skapp \
-	-sncbi-vdb \
-	-sktst \
-
 $(TEST_BINDIR)/test-vnamelist: $(TEST_VNAMELIST_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_VNAMELIST_LIB)
+	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
 
 VNAMELIST: test-vnamelist
 	$(TEST_BINDIR)/test-vnamelist
+
+.phony: VNAMELIST
 
 #-------------------------------------------------------------------------------
 # test-progressbar
@@ -276,16 +250,13 @@ TEST_PROGRESSBAR_SRC = \
 TEST_PROGRESSBAR_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_PROGRESSBAR_SRC))
 
-TEST_PROGRESSBAR_LIB = \
-	-skapp \
-	-sncbi-vdb \
-	-sktst \
-
 $(TEST_BINDIR)/test-progressbar: $(TEST_PROGRESSBAR_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_PROGRESSBAR_LIB)
+	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
 
 PROGRESSBAR: test-progressbar
 	$(TEST_BINDIR)/test-progressbar
+
+.phony: PROGRESSBAR
 
 #-------------------------------------------------------------------------------
 # test-symtab
@@ -296,13 +267,72 @@ TEST_SYMTAB_SRC = \
 TEST_SYMTAB_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_SYMTAB_SRC))
 
-TEST_SYMTAB_LIB = \
-	-skapp \
-	-sncbi-vdb \
-	-sktst \
-
 $(TEST_BINDIR)/test-symtab: $(TEST_SYMTAB_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_SYMTAB_LIB)
+	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
 
 symtab: test-symtab
 	$(TEST_BINDIR)/test-symtab
+
+.phony: symtab
+
+#-------------------------------------------------------------------------------
+# test-json
+#
+TEST_JSON_SRC = \
+	test-json
+
+TEST_JSON_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_JSON_SRC))
+
+$(TEST_BINDIR)/test-json: $(TEST_JSON_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
+
+json: test-json
+	$(TEST_BINDIR)/test-json
+
+.phony: json
+
+#-------------------------------------------------------------------------------
+# test-json-parser, command line tests
+#
+TEST_JSON_PARSER_SRC = \
+	test-json-parser
+
+TEST_JSON_PARSER_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_JSON_PARSER_SRC))
+
+$(TEST_BINDIR)/test-json-parser: $(TEST_JSON_PARSER_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
+
+json-parser: test-json-parser json
+	@ echo ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+	@ echo Run $(TEST_BINDIR)/test-json-parser
+	@ $(TEST_BINDIR)/test-json-parser $(shell find $(SRCDIR)/test-json-parser/ -name \*.json)
+
+runtests: json-parser
+
+.phony: json-parser
+
+#-------------------------------------------------------------------------------
+# fuzz testing json parser
+#
+FUZZ_JSON_SRC = \
+	fuzz-json
+
+FUZZ_JSON_OBJ = \
+	$(addprefix $(OBJDIR)/,$(addsuffix .fuzz.$(OBJX),$(FUZZ_JSON_SRC)))
+
+$(TEST_BINDIR)/fuzz-json: $(FUZZ_JSON_OBJ) $(FLIBDIR)/libncbi-vdb.a
+	clang++ -o $@ $^ $(FUZZ_LIB) $(FUZZ_OPT)
+
+fuzz-json: $(TEST_BINDIR)/fuzz-json
+
+FUZZ_SEEDS ?= test-json-parser
+FUZZ_DICT ?= -dict=fuzz-dict
+RUNS ?= -1
+
+runfuzz $(FUZZ_PROF_RAW): $(TEST_BINDIR)/fuzz-json
+	 mkdir -p fuzz-corpus
+	 export LLVM_PROFILE_FILE=$(FUZZ_PROF_RAW); $(TEST_BINDIR)/fuzz-json $(FUZZ_DICT) -runs=$(RUNS) fuzz-corpus $(FUZZ_SEEDS)
+
+.phony: runfuzz

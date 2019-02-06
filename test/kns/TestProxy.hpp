@@ -93,9 +93,6 @@ struct E { // Expected Proxy Values
     E * clone ( void ) const {
         E * r = NULL;
 
-        if ( this == NULL )
-            return NULL;
-
         const E * p = this;
 
         do {
@@ -439,6 +436,9 @@ public:
         rc_t rc = 0;
         KNSManager * mgr = NULL;
         REQUIRE_RC ( KNSManagerMakeConfig ( & mgr, _kfg . get () ) );
+
+        if ( e == NULL )
+            return;
 
         E * ec = e -> clone ();
         testProxies   ( mgr, e );

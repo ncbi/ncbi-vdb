@@ -49,6 +49,8 @@ typedef enum {
     , eProgress
     , eWriteFailed
     , eFailed
+    , eFailedAuthenticate
+    , eFailedInitiation
     , eCompleted
     , eEnd
 } EAscpState;

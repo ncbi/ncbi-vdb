@@ -79,6 +79,8 @@ struct AscpOptions
     bool cache_key; /* Add the server's host key to PuTTY's cache */
 
     bool disabled; /* output parameter for aspera_options */
+
+    bool dryRun; /* Dry run: don't download, only print command */
 };
 
 /**  status - whether to print STSMSG(1-2) - information messages

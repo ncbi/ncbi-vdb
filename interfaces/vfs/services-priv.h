@@ -40,12 +40,11 @@ struct KNSManager;
 
 
 rc_t KServiceNamesQueryExt ( KService * self, VRemoteProtocols protocols, 
-                             const char * cgi, const char * version,
-                             const KSrvResponse ** response );
+    const char * cgi, const char * version, const char * outDir,
+    const char * outFile, const KSrvResponse ** response );
 
 rc_t KServiceNamesExecuteExt ( KService * self, VRemoteProtocols protocols, 
-    const char * cgi, const char * version,
-    const struct KSrvResponse ** result );
+    const char * cgi, const char * version, const KSrvResponse ** result );
 
 rc_t KServiceSearchExecuteExt ( KService * self,
     const char * cgi, const char * version,
@@ -54,7 +53,12 @@ rc_t KServiceSearchExecuteExt ( KService * self,
 
 rc_t KServiceTestNamesExecuteExt ( KService * self, VRemoteProtocols protocols, 
     const char * cgi, const char * version,
-    const struct KSrvResponse ** result, const char * expected );
+    const KSrvResponse ** result, const char * expected );
+
+
+rc_t KServiceTestNamesQueryExt ( KService * self, VRemoteProtocols protocols, 
+    const char * cgi, const char * version, const KSrvResponse ** result,
+    const char * dir, const char * file, const char * expected );
 
 
 rc_t KService1Search ( const struct KNSManager * mgr, const char * cgi,

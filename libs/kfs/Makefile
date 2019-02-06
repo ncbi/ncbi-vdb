@@ -173,7 +173,7 @@ KFS2_SRC = \
 	$(KFS_SRC) \
 	file-v2 \
 	directory-v2 \
-	sysfile-v2 
+	sysfile-v2
 #	sysdir-v2
 
 KFS2_OBJ = \
@@ -226,3 +226,16 @@ endif
 compile: stdcompile
 
 $(TARGDIR)/compile: $(OBJFILES)
+
+
+#-------------------------------------------------------------------------------
+# fuzz
+#
+ifneq (1,$(HAVE_MAGIC))
+INT_LIBS = \
+	libkfs \
+	libkfs-nommap
+endif
+
+fuzz: std
+	cp $(addsuffix .$(LIBX),$(addprefix $(ILIBDIR)/,$(INT_LIBS))) $(FLIBDIR)/
