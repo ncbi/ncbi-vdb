@@ -100,8 +100,9 @@ static rc_t CC syn_quality_drvr ( void * self,
         COL_READ_LEN,
         COL_SPOT_FILTER,
     };
+    rc_t rc;
     assert(argc == 2);
-    rc_t const rc = syn_quality_impl
+    rc = syn_quality_impl
         (self,
          SAFE_COUNT(COL_READ_LEN), SAFE_BASE(COL_READ_LEN, INSDC_coord_len),
          SAFE_COUNT(COL_SPOT_FILTER), SAFE_BASE(COL_SPOT_FILTER, INSDC_SRA_spot_filter),

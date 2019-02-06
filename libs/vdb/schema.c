@@ -129,8 +129,8 @@ CloneSymbol ( BSTree *scope, const KSymbol **cp, const KSymbol *orig, KSymbol * 
         rc = 0;
         if ( orig -> type == eNamespace )
         {   /* clone the contents of the namespace*/
-            assert ( existing -> type == eNamespace );
             struct CloneBlock bl;
+            assert ( existing -> type == eNamespace );
             bl . targetNs = existing;
             if ( BSTreeDoUntil ( & orig -> u . scope, false, CloneNode, & bl ) )
             {
@@ -200,11 +200,13 @@ LookupQualIdent ( const BSTree *scope, const KSymbol *orig )
             curScope = & newInnerNs -> u . scope;
             --i;
         }
-        /* now curScope is the innermost namespace in the copy, find the copy of the 'orig' in it */
-        const KSymbol * ret = ( const KSymbol* ) BSTreeFind ( curScope, & orig -> name, KSymbolCmp );
-        assert ( ret != NULL );
-        VectorWhack ( & namespaceStack, NULL, NULL );
-        return ret;
+
+		{ /* now curScope is the innermost namespace in the copy, find the copy of the 'orig' in it */
+			const KSymbol * ret = ( const KSymbol* ) BSTreeFind ( curScope, & orig -> name, KSymbolCmp );
+			assert ( ret != NULL );
+			VectorWhack ( & namespaceStack, NULL, NULL );
+			return ret;
+		}
     }
 }
 
