@@ -156,18 +156,6 @@ $(TEST_BINDIR)/test-rcenum: $(TEST_RCENUM_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
 
 #-------------------------------------------------------------------------------
-# test-rcenum
-#
-TEST_RCENUM_SRC = \
-	test-rcenum
-
-TEST_RCENUM_OBJ = \
-	$(addsuffix .$(OBJX),$(TEST_RCENUM_SRC))
-
-$(TEST_BINDIR)/test-rcenum: $(TEST_RCENUM_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_SRA_RELEASE_VERSION_LIB)
-
-#-------------------------------------------------------------------------------
 # test-out
 #
 TEST_OUT_SRC = \
