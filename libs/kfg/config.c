@@ -4154,7 +4154,7 @@ LIB_EXPORT rc_t KConfigFixMainResolverCgiNode ( KConfig * self ) {
         assert(result);
         if ( result->size == 0 || StringEqual ( & http, result ) ) {
             const char https []
-                = "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi";
+                = "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
             rc = KConfigNodeWrite ( node, https, sizeof https );
         }
     }
@@ -4189,7 +4189,7 @@ LIB_EXPORT rc_t KConfigFixProtectedResolverCgiNode ( KConfig * self ) {
         assert(result);
         if ( result->size == 0 || StringEqual ( & http, result ) ) {
             const char https []
-                = "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
+                = "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
             rc = KConfigNodeWrite ( node, https, sizeof https );
         }
     }
