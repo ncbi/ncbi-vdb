@@ -38,5 +38,5 @@
  *  'c' - release candidate
  *  'r' - final
  */
-#define RELEASE_TYPE 'r'
+#define RELEASE_TYPE 'd'
 #define RELEASE_REVISION 0
