@@ -796,7 +796,7 @@ TEST_CASE(ContentLength) {
 
     /* calling good cgi returns 200 and resolved path */
     REQUIRE_RC ( KNSManagerMakeReliableClientRequest ( kns, & req, 0x01000000,
-        NULL, "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi" ) ); 
+        NULL, "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi" ) ); 
     REQUIRE_RC ( KHttpRequestAddPostParam ( req, "acc=AAAB01" ) );
     REQUIRE_RC ( KHttpRequestAddPostParam ( req, "accept-proto=https" ) );
     REQUIRE_RC ( KHttpRequestAddPostParam ( req, "version=1.2" ) );
@@ -816,7 +816,7 @@ TEST_CASE(ContentLength) {
 
     /* calling non-existing cgi returns 404 */
     REQUIRE_RC ( KNSManagerMakeReliableClientRequest ( kns, & req, 0x01000000,
-        NULL, "https://www.ncbi.nlm.nih.gov/Traces/names/bad.cgi" ) ); 
+        NULL, "https://trace.ncbi.nlm.nih.gov/Traces/names/bad.cgi" ) ); 
     REQUIRE_RC ( KHttpRequestAddPostParam ( req, "acc=AAAB01" ) );
     REQUIRE_RC ( KHttpRequestPOST ( req, & rslt ) );
     REQUIRE_RC ( KClientHttpResultStatus ( rslt, & code, NULL, 0, NULL ) );

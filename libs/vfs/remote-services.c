@@ -592,7 +592,7 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
 {
     const char man [] = "/repository/remote/main/CGI/resolver-cgi";
     const char prt [] = "/repository/remote/protected/CGI/resolver-cgi";
-    const char cgi [] = "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
+    const char cgi [] = "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
     
     rc_t rc = 0;
     const char * path = aProtected ? prt : man;
@@ -3107,8 +3107,7 @@ rc_t SRequestInitSearchSCgiRequest ( SRequest * request, const char * cgi,
     if ( self -> cgi == NULL ) {
         if ( cgi == NULL ) {
 /* try to get cgi from kfg, otherwise use hardcoded below */
-            cgi =  "http://www.ncbi.nlm.nih.gov/Traces/names/search.cgi";
-            cgi = "https://www.ncbi.nlm.nih.gov/Traces/names/search.cgi";
+            cgi = "https://trace.ncbi.nlm.nih.gov/Traces/names/search.cgi";
         }
         rc = SCgiRequestInitCgi ( self, cgi );
     }
