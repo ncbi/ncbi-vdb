@@ -78,7 +78,7 @@ static rc_t syn_quality_impl(syn_qual_params const *const params,
 
     rslt->elem_bits = 8;
     rc = KDataBufferResize(rslt, total_read_len);
-    if ( rc == 0 )
+    if ( rc == 0 && total_read_len > 0 )
         memset(rslt->base, q, total_read_len);
     return rc;
 }
