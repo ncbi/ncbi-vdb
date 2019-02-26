@@ -44,7 +44,6 @@ typedef INSDC:quality:log_odds NCBI:quality:n_encoded:log_odds;
 
 // these types have been restated
 alias INSDC:dna:text INSDC:fasta;
-alias INSDC:4na:packed INSDC:dna:4na;
 alias INSDC:2na:packed INSDC:dna:2na;
 alias INSDC:2na:packed NCBI:2na;
 alias INSDC:2cs:packed INSDC:color:2cs;
@@ -59,7 +58,7 @@ typedef I16 NCBI:isamp1, NCBI:isamp4 [ 4 ];
 typedef F32 NCBI:fsamp1, NCBI:fsamp4 [ 4 ];
 
 // ASN.1
-typedef B8 NCBI:asn:binary; 
+typedef B8 NCBI:asn:binary;
 typedef ascii NCBI:asn:text;
 
 // GenInfo id - 64 bit because we are almost out of 32 bit ids

@@ -760,6 +760,7 @@ FIXTURE_TEST_CASE(View_Parents_OverloadingParentsColumn, AST_View_Fixture)
     REQUIRE_EQ ( 1u, v . ColumnNames () . Count () );
     const SNameOverload * ovl = v . ColumnNames () . Get ( 0 );
     REQUIRE_NOT_NULL ( ovl );
+    REQUIRE_NOT_NULL ( ovl -> name );
     REQUIRE_EQ ( string ("c"), ToCppString ( ovl -> name -> name ) );
     REQUIRE_EQ ( 1u, ovl -> cid . ctx ); // inherited from W whose contexId is 1
     REQUIRE_EQ ( 0u, ovl -> cid . id );

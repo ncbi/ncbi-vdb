@@ -112,9 +112,9 @@ const NCBI:WGS:component_props NCBI:WGS:gap:repeat                     = -28;
  */
 typedef I32 NCBI:WGS:gap_linkage;
 
-/* gap linkage and linkage evidence 
+/* gap linkage and linkage evidence
  * There can be multiple linkage evidences or linkage with no evidence
- * 
+ *
  *  paired-ends       paired sequences from the two ends of a DNA fragment
  *  align_genus       alignment to a reference genome within the same genus
  *  align_xgenus      alignment to a reference genome within another genus
@@ -207,9 +207,12 @@ extern function INSDC:SRA:xread_type
 
 /*--------------------------------------------------------------------------
  * nucleotide
+ *
+ * history:
+ *  2.0.0 - NCBI:tbl:base_space uses metadata RNA_Flag to support RNA reads
  */
-table NCBI:WGS:tbl:nucleotide #1.1
-    = NCBI:tbl:base_space #2.0.3
+table NCBI:WGS:tbl:nucleotide #2
+    = NCBI:tbl:base_space #3
     , NCBI:tbl:phred_quality #2.0.4
     , NCBI:SRA:tbl:stats #1.2.0
 {
@@ -686,10 +689,10 @@ table NCBI:WGS:view:scaffold #1 = NCBI:WGS:tbl:scaffold #1
 /*--------------------------------------------------------------------------
  * contig
  */
-database NCBI:WGS:db:contig #1.1
+database NCBI:WGS:db:contig #2
 {
-    table NCBI:WGS:tbl:nucleotide SEQUENCE;
-    table NCBI:WGS:tbl:protein PROTEIN;
-    table NCBI:WGS:tbl:gi_idx GI_IDX;
-    table NCBI:WGS:view:scaffold SCAFFOLD;
+    table NCBI:WGS:tbl:nucleotide #2 SEQUENCE;
+    table NCBI:WGS:tbl:protein #1 PROTEIN;
+    table NCBI:WGS:tbl:gi_idx #1 GI_IDX;
+    table NCBI:WGS:view:scaffold #1 SCAFFOLD;
 };

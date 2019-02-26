@@ -694,13 +694,10 @@ FIXTURE_TEST_CASE(EBI_Reference_Open_EBI_MD5, NGS_C_Fixture)
 http://www.ebi.ac.uk/ena/cram/md5/ffd6aeffb54ade3d28ec7644afada2e9
 Otherwise CALL_TO_EBI_RESOLVER_FAILS is set
 and this test is expected to fail */
-    const bool CALL_TO_EBI_RESOLVER_FAILS = false; //true;
+    const bool CALL_TO_EBI_RESOLVER_FAILS = false;
 
     ENTRY;
     const char* EBI_Accession = "ffd6aeffb54ade3d28ec7644afada2e9";
-
-    if ( CALL_TO_EBI_RESOLVER_FAILS ) {
-    }
 
     NGS_ReferenceSequence * ref = NGS_ReferenceSequenceMake ( ctx, EBI_Accession );
 

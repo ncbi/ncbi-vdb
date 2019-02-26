@@ -3403,8 +3403,15 @@ static rc_t KClientHttpRequestAuthenticate(const KClientHttpRequest *cself,
 
         if (sdate == NULL) {
             KTime_t t = KTimeStamp();
-            size_t sz = KTimeRfc2616(t, date, sizeof date);
+
+#if _DEBUGGING
+            size_t sz =
+#endif
+                KTimeRfc2616(t, date, sizeof date);
+#if _DEBUGGING
             assert(sz < sizeof date);
+#endif
+
             StringInitCString(&dates, date);
             sdate = &dates;
             rc = KClientHttpRequestAddHeader(self, "Date", date);

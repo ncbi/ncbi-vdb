@@ -1,20 +1,35 @@
 # NCBI External Developer Release:
 
 
+## NCBI VDB 2.9.4
+**January 31, 2019**
+
+  **kns**: added detection of zone where cloud instance runs  
+  **kns**: added support of AWS authentication  
+  **kns**: allow to access googleapis.com via proxy  
+  **kns**: don't add "Accept: */*" request header when it already contains an Accept header  
+  **kns**: updated mbedtls to version 2.16  
+  **sra-tools, vfs**: added support of realign objects  
+  **vdb**: A Json parser is now available in klib  
+
+
 ## NCBI VDB 2.9.3
 **October 11, 2018**
-  **kns**: added possibility to skip server's certificate validation
-  **kns**: expect to receive HTTP status 200 when sending range-request that includes the whole file
+
+  **kns**: added possibility to skip server's certificate validation  
+  **kns**: expect to receive HTTP status 200 when sending range-request that includes the whole file  
   **vdb**: fixed a bug in accessing pagemap process request for cursors which do not have pagemap thread running
 
 
 ## NCBI VDB 2.9.2-1
 **July 31, 2018**
+
   **vdb**: restored lost exported attribute on several entries in the private API
 
 
 ## NCBI VDB 2.9.2
 **July 23, 2018**
+
   **kfg, vfs**: Introduced enhanced handling of download-only NGC files that lack read/decrypt permissions
 
 

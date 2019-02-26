@@ -320,7 +320,7 @@ FUZZ_SEEDS ?= test-json-parser
 FUZZ_DICT ?= -dict=fuzz-dict
 RUNS ?= -1
 
-runfuzz $(FUZZ_PROF_RAW): $(TEST_BINDIR)/fuzz-json
+runfuzz $(FUZZ_PROF_RAW): makedirs $(TEST_BINDIR)/fuzz-json
 	 mkdir -p fuzz-corpus
 	 export LLVM_PROFILE_FILE=$(FUZZ_PROF_RAW); $(TEST_BINDIR)/fuzz-json $(FUZZ_DICT) -runs=$(RUNS) fuzz-corpus $(FUZZ_SEEDS)
 

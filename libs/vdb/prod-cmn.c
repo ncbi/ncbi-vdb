@@ -1797,6 +1797,12 @@ rc_t VFunctionProdSelect ( VFunctionProd *self, VBlob **vblob, int64_t id, uint3
     return pb.rc;
 }
 
+static
+rc_t VFunctionProdPassThrough ( VFunctionProd *self, VBlob **vblob, int64_t id, uint32_t cnt ) {
+    assert(VectorLength(&self->parms) == 1);
+    return VProductionReadBlob(VectorGet(&self->parms, 0), vblob, &id, cnt, NULL);
+}
+
 static rc_t VFunctionProdReadNormal ( VFunctionProd *self, VBlob **vblob, int64_t id ,uint32_t cnt)
 {
     rc_t rc;
@@ -1923,6 +1929,8 @@ rc_t VFunctionProdRead ( VFunctionProd *self, VBlob **vblob, int64_t id , uint32
 {
     if ( self -> dad . sub == vftSelect )
         return VFunctionProdSelect ( self, vblob, id , cnt);
+    if ( self -> dad . sub == vftPassThrough )
+        return VFunctionProdPassThrough ( self, vblob, id , cnt);
     return VFunctionProdReadNormal(self, vblob, id, cnt);
 }
 
