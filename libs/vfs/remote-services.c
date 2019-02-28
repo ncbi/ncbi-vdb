@@ -144,6 +144,10 @@ static bool SVersionResponseHasTimestamp ( const SVersion  self ) {
     return self >= VERSION_3_0;
 }
 
+static bool SVersionNeedCloudLOcation(const SVersion  self) {
+    return self == VERSION_4_0;
+}
+
 static bool SVersionResponseInJson ( const SVersion  self ) {
     return self >= VERSION_4_0;
 }
@@ -3086,7 +3090,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
         }
     }
 
-    if (rc == 0)
+    if (rc == 0 && SVersionNeedCloudLOcation(request->version))
         rc = SCgiRequestAddLocation( self, helper );
     return rc;
 }
