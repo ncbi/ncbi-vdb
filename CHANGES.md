@@ -2,9 +2,9 @@
 
 
 ## NCBI VDB 2.9.4-1
-**March 1, 2019**
+**March 4, 2019**
 
-  **vfs**: fixed regression introduced in 2.9.4 release causing delay when starting sra tools  
+  **sra-tools, **vfs**: fixed regression introduced in 2.9.4 release causing delay when starting sra tools  
 
 
 ## NCBI VDB 2.9.4
