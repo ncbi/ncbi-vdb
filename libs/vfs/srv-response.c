@@ -49,6 +49,9 @@ struct VPathSet {
     const VPath * http;
     const VPath * https;
     const VPath * s3;
+    uint64_t osize; /*size of VPath object */
+
+    /* vdbcache */
     const VPath * cacheFasp;
     const VPath * cacheFile;
     const VPath * cacheHttp;
@@ -383,6 +386,8 @@ rc_t VPathSetMake ( VPathSet ** self, const EVPath * src,
                                      rcMemory, rcExhausted );
             }
         }
+
+        p->osize = src->osize;
     }
 
     if ( rc == 0 ) {
@@ -664,6 +669,26 @@ rc_t KSrvResponseGetMapping(const KSrvResponse * self, uint32_t idx,
         rc = VPathAddRef(s->mapping);
         if ( rc == 0 )
             * mapping = s->mapping;
+    }
+    return rc;
+}
+
+rc_t KSrvResponseGetOSize(const KSrvResponse * self, uint32_t idx,
+    uint64_t * osize)
+{
+    rc_t rc = 0;
+    const VPathSet * s = NULL;
+    if (osize == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
+    *osize = 0;
+    if (self == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
+    s = (VPathSet *)VectorGet(&self->list, idx);
+    if (s != NULL) {
+        if (s->error != NULL)
+            return 0;
+        if (rc == 0)
+            * osize = s->osize;
     }
     return rc;
 }
