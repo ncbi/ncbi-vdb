@@ -1760,6 +1760,8 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
                                      rcMemory, rcExhausted );
             }
 
+            self->osize = src->osize;
+
             return rc;
         }
         rc = RC ( rcVFS, rcQuery, rcResolving, rcError, rcUnexpected );
@@ -3856,10 +3858,13 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                 const VPath * vdbcache = NULL;
                 const KSrvError * error = NULL;
                 const VPath * mapping = NULL;
+                uint64_t osize = 0;
                 rc = KSrvResponseGetPath ( self -> resp .list, i, pp [ p ],
                                            & path, & vdbcache, & error );
                 if (rc == 0)
                     rc = KSrvResponseGetMapping(self->resp.list, i, &mapping);
+                if (rc == 0)
+                    rc = KSrvResponseGetOSize(self->resp.list, i, &osize);
                 if (rc == 0) {
                     if (path != NULL) {
                         String ticket;
@@ -3869,13 +3874,15 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                         if (r == 0)
                             rc = ItemSetTicket(file, &ticket);
                         if (rc == 0)
-                            rc = ItemAddVPath(file, "sra", path, mapping);
+                            rc = ItemAddVPath(file, "sra", path, mapping,
+                                true, osize);
                         RELEASE(VPath, path);
                         if (rc != 0)
                             break;
                     }
                     if (vdbcache != NULL) {
-                        rc = ItemAddVPath(file, "vdbcache", vdbcache, NULL);
+                        rc = ItemAddVPath(file, "vdbcache", vdbcache, NULL,
+                            true, 0);
                         RELEASE(VPath, vdbcache);
                         if (rc != 0)
                             break;

@@ -65,6 +65,8 @@ rc_t KService1Search ( const struct KNSManager * mgr, const char * cgi,
     const char * acc, const struct Kart ** result );
 
 
+rc_t KSrvRespFileGetHttp ( const KSrvRespFile * self,
+                           const struct VPath ** path );
 
 #ifdef __cplusplus
 }
