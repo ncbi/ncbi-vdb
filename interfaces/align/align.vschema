@@ -1156,7 +1156,7 @@ table NCBI:align:tbl:seq #1.1 =
     extern column < U8 > zip_encoding ALIGNMENT_COUNT;
 
     // unparsed read name
-    extern column < utf8 > zip_encoding RAW_NAME;
+    extern column < ascii > zip_encoding RAW_NAME;
 
     // auto-generate name from row-id
     ascii out_name_fmt = .RAW_NAME | < ascii > echo < '$R' > ();
