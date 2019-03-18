@@ -31,6 +31,10 @@
 #include "index-cmn.h"
 #endif
 
+#ifndef _h_klib_hashtable_
+#include <klib/hashtable.h>
+#endif /* _h_klib_hashtable_ */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -126,6 +130,29 @@ struct KU64Index_v3
     struct PBSTree *tree;
     struct KMMap const *mm;
 };
+
+/* JOJOBA START */
+/*--------------------------------------------------------------------------
+ * KHashIndex_v5
+ */
+
+typedef struct KHashIndex_v5 KHashIndex_v5;
+struct KHashIndex_v5
+{
+    const struct KMMap * map;
+
+    KHashTable * key_to_val;
+    KHashTable * val_to_key;
+
+    uint64_t qty;           /* amount of records in index */
+    uint64_t max_val;       /* maximum value */
+    uint64_t max_key_len;   /* maximum key length */
+
+    uint16_t val_wid;       /* width of Val field */
+    uint16_t key_len_wid;   /* width of Key lenght field */
+};
+
+/* JOJOBA END */
 
 #ifdef __cplusplus
 }

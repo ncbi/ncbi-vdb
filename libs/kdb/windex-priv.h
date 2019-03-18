@@ -35,6 +35,10 @@
 #include <klib/trie.h>
 #endif
 
+#ifndef _h_klib_hashtable_
+#include <klib/hashtable.h>
+#endif /* _h_klib_hashtable_ */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -210,6 +214,35 @@ rc_t KU64IndexDelete_v3(KU64Index_v3* self, uint64_t key);
 rc_t KU64IndexPersist_v3(KU64Index_v3* self, bool proj, struct KDirectory *dir, const char *path, bool use_md5);
 
 
+/* JOJOBA START */
+/*--------------------------------------------------------------------------
+ * KHashIndex_v5
+ */
+struct KHashIndex_v5
+{
+    KHashTable * key_to_val;
+    KHashTable * val_to_key;
+
+    uint64_t qty;           /* amount of records in index */
+    uint64_t max_val;       /* maximum value */
+    uint64_t max_key_len;   /* maximum key length */
+};
+
+/*  Will implement those later
+ */
+
+/*  insert string into hashtable, mapping to 64 bit id */
+rc_t KHashIndexInsert_v5 ( KHashIndex_v5 *self,
+    const char *key, int64_t id );
+
+/*  drop string from hashtable and all mappings */
+rc_t KHashIndexDelete_v5 ( KHashIndex_v5 *self, const char *key );
+
+/*  persist index to file */
+rc_t KHashIndexPersist_v5 ( const KHashIndex_v5 *self,
+    struct KDirectory *dir, const char *path, bool use_md5 );
+
+/* JOJOBA END */
 
 /*--------------------------------------------------------------------------
  * KIndex

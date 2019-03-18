@@ -35,7 +35,11 @@
 extern "C" {
 #endif
 
+/* JOJOBA */
+/*  Fake news already
 #define KDBINDEXVERS 4
+ */
+#define KDBINDEXVERS 5
 #define V2FIND_RETURNS_SPAN 1
 
 /*--------------------------------------------------------------------------
@@ -61,7 +65,7 @@ typedef struct KDBHdr KIndexFileHeader_v1, KIndexFileHeader_v2, KIndexFileHeader
 /* v3, v4
  *  indicates type
  */
-typedef struct KIndexFileHeader_v3 KIndexFileHeader_v3, KIndexFileHeader_v4, KIndexFileHeader_v3_v4;
+typedef struct KIndexFileHeader_v3 KIndexFileHeader_v3, KIndexFileHeader_v4, KIndexFileHeader_v3_v4, KIndexFileHeader_v5;
 struct KIndexFileHeader_v3
 {
     KIndexFileHeader_v1_v2 h;
@@ -278,6 +282,31 @@ rc_t KU64IndexFind_v3 ( const KU64Index_v3 *self, uint64_t offset,
 rc_t KU64IndexFindAll_v3 ( const KU64Index_v3 *self, uint64_t offset, 
     rc_t ( CC * f ) ( uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty, void* data ),
     void* data );
+
+/* JOJOBA START */
+/*--------------------------------------------------------------------------
+ * KHashIndex_v5
+ */
+typedef struct KHashIndex_v5 KHashIndex_v5;
+
+rc_t CC KHashIndexOpen_v5 ( KHashIndex_v5 *self, struct KMMap const *mm, bool byteswap );
+rc_t CC KHashIndexWhack_v5 ( KHashIndex_v5 *self );
+
+/* JOJOBA Not Sure */
+rc_t CC KHashIndexFind_v5 ( const KHashIndex_v5 *self,
+        const char *key, int64_t *id );
+
+/* conspiracy check not sure if I need it here */
+rc_t CC KHashIndexCheckConsistency_v5 ( const KHashIndex_v5 *self,
+        int64_t *start_id, uint64_t *id_range, uint64_t *num_keys,
+        uint64_t *num_rows, uint64_t *num_holes );
+
+/* projection index id to key-string */
+rc_t KHashIndexProject_v5 ( const KHashIndex_v5 *self,
+        uint32_t id, char *key_buff, size_t buff_size, size_t *actsize );
+
+
+/* JOJOBA END */
 
 #ifdef __cplusplus
 }

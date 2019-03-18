@@ -59,6 +59,10 @@ enum
 
     kitText,          /* text string => id */
     kitU64,           /* uint64 (like file offset) to row id */
+    kitHash,          /* text string => id, for large indexes
+                       * it is also using Mike's hash table, which
+                       * makes it super duper cooler puller
+                       */
 
     kitProj = 128     /* reverse index flag, row id => key */
 };

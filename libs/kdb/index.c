@@ -65,6 +65,7 @@ struct KIndex
         KTrieIndex_v1 txt1;
         KTrieIndex_v2 txt234;
         KU64Index_v3  u64_3;
+        KHashIndex_v5 hash_5;
     } u;
     bool converted_from_v1;
     uint8_t type;
@@ -134,6 +135,15 @@ rc_t KIndexWhack ( KIndex *self )
             }
             break;
 
+/* JOJOBA START */
+        case kitHash:
+            switch ( self -> vers )
+            {
+            case 5:
+                rc = KHashIndexWhack_v5 ( & self -> u . hash_5 );
+                break;
+            }
+/* JOJOBA END */
         }
 
         if ( rc == 0 )
@@ -257,6 +267,7 @@ rc_t KIndexAttach ( KIndex *self, const KMMap *mm, bool *byteswap )
                         break;
                     case 3:
                     case 4:
+                    case 5: /* JOJOBA LINE */
                         hdrs . v3 . index_type = bswap_32 ( fh -> index_type );
                         hdrs . v3 . reserved1 = bswap_32 ( fh -> reserved1 );
                         hdr = & hdrs . v3 . h;
@@ -279,12 +290,14 @@ rc_t KIndexAttach ( KIndex *self, const KMMap *mm, bool *byteswap )
                     break;
                 case 3:
                 case 4:
+                case 5: /* JOJOBA LINE */
                 {
                     self -> type = fh -> index_type;
                     switch ( self -> type )
                     {
                     case kitText:
                     case kitU64:
+                    case kitHash: /* JOJOBA LINE */
                         break;
                     default:
                         rc = RC(rcDB, rcIndex, rcConstructing, rcIndex, rcUnrecognized);
@@ -357,6 +370,20 @@ rc_t KIndexMakeRead ( KIndex **idxp,
                                 break;
                         }
                         break;
+                    case 5:     /* JOJOBA STARTS */
+                        switch ( idx->type ) {
+                            case kitText | kitProj:
+                                /* JOJOBA ... error? */
+                                rc = RC ( rcDB, rcIndex, rcConstructing, rcIndex, rcWrongType );
+                                break;
+                            case kitText:
+                                rc = KHashIndexOpen_v5 ( & idx -> u . hash_5, mm, byteswap );
+                                break;
+                            case kitU64:
+                                rc = KU64IndexOpen_v3(&idx->u.u64_3, mm, byteswap);
+                                break;
+                        }
+                    break;  /* JOJOBA ENDS */
 #endif
                     }
                 }
@@ -649,6 +676,17 @@ LIB_EXPORT rc_t CC KIndexConsistencyCheck ( const KIndex *self, uint32_t level,
             }
             break;
 
+        case kitHash:   /* JOJOBA START */
+            switch ( self -> vers )
+            {
+            case 5:
+                rc = KHashIndexCheckConsistency_v5 ( & self -> u . hash_5,
+                    start_id, id_range, num_keys, num_rows, num_holes );
+                break;
+            default:
+                return RC ( rcDB, rcIndex, rcValidating, rcIndex, rcBadVersion );
+            }
+            break;      /* JOJOBA START */
         default:
             rc = RC ( rcDB, rcIndex, rcValidating, rcFunction, rcUnsupported );
         }
@@ -710,6 +748,23 @@ LIB_EXPORT rc_t CC KIndexFindText ( const KIndex *self, const char *key, int64_t
             return RC ( rcDB, rcIndex, rcSelecting, rcIndex, rcBadVersion );
         }
         break;
+    case kitHash:   /* JOJOBA STARTS */
+        switch ( self -> vers )
+        {
+        case 1:
+            {
+                int64_t id64;
+                rc = KHashIndexFind_v5 ( & self -> u . hash_5, key, & id64 );
+                if ( rc == 0 ) {
+                    * start_id = id64;
+                    span = 1;
+                }
+            }
+            break;
+        default:
+            return RC ( rcDB, rcIndex, rcSelecting, rcIndex, rcBadVersion );
+        }
+        break;      /* JOJOBA END */
     default:
         return RC ( rcDB, rcIndex, rcSelecting, rcNoObj, rcUnknown );
     }
@@ -770,6 +825,23 @@ LIB_EXPORT rc_t CC KIndexFindAllText ( const KIndex *self, const char *key,
             return RC ( rcDB, rcIndex, rcSelecting, rcIndex, rcBadVersion );
         }
         break;
+    case kitHash:   /* JOJOBA START */
+        switch ( self -> vers )
+        {
+        case 5:
+            {
+                int64_t id64;
+                rc = KHashIndexFind_v5 ( & self -> u . hash_5, key, & id64 );
+/* JOJOBA what should i do with id32 ??? */
+                id32 = ( uint32_t ) id64;
+                if ( rc == 0 )
+                    rc = ( * f ) ( id32, 1, data );
+            }
+            break;
+        default:
+            return RC ( rcDB, rcIndex, rcSelecting, rcIndex, rcBadVersion );
+        }
+        break;      /* JOJOBA END */
     default:
         return RC ( rcDB, rcIndex, rcSelecting, rcNoObj, rcUnknown );
     }
