@@ -10,6 +10,11 @@ Please check the CHANGES.md file for change history.
 The SRA Toolkit and SDK from NCBI is a collection of tools and libraries for
 using data in the INSDC Sequence Read Archives.
 
+## Antivirus Warnings
+Windows Defender and a few other anti-virus tools have recently been [falsely](https://www.virustotal.com/#/file/042af43fc1318b07a4411c1bea2ff7eed8efe07ca954685268ce42f8f818b10e/detection) warning about test-sra.exe.
+
+We suggest verifying [MD5 checksums](https://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/current/md5sum.txt) after downloading.
+
 ### IMPORTANT ANNOUNCEMENT
 As was announced in [OMB memorandum M-15-13](https://www.whitehouse.gov/sites/default/files/omb/memoranda/2015/m-15-13.pdf) on June 8, 2015, NCBI and all Federal systems will be transitioning to using HTTPS-only protocols before the end of 2016. This change will affect any software that uses NCBI APIs such as the E-utilities or NCBI software toolkits such as `sra-tools`, `ncbi-vdb` or `ngs`.
 
