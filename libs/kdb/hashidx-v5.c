@@ -113,6 +113,8 @@ KHashIndexOpen_v5 (
 
     RCt = KMMapAddRef ( Map );
     if ( RCt == 0 ) {
+        self -> map = Map;
+
         RCt = KMMapSize ( Map, & Size );
         if ( Size < sizeof ( KIndexFileHeader_v5 ) ) {
             return RC ( rcDB, rcIndex, rcConstructing, rcIndex, rcCorrupt );
@@ -348,17 +350,33 @@ skhiReadString (
             return RC ( rcDB, rcIndex, rcCreating, rcIndex, rcCorrupt );
         }
 
-        if ( ( * NewAddr ) [ Len - 1 ] != 0 ) {
+        if ( ( * NewAddr ) [ Len ] != 0 ) {
             return RC ( rcDB, rcIndex, rcCreating, rcIndex, rcCorrupt );
         }
 
         * Ret = * NewAddr;
-        * NewAddr += Len;
-        * NewSize -= Len;
+        * NewAddr += Len + 1;
+        * NewSize -= Len + 1;
     }
 
     return RCt;
 }   /* skhiReadString () */
+
+/*  Calculates a hash value ... did it 10000 errors :D
+ */
+static
+uint64_t CC
+skhiHashStr ( const char * Str )
+{
+    return Str == NULL ? 0 : KHash ( Str, strlen ( Str ) );
+}   /* skhiHashStr () */
+
+static
+uint64_t CC
+skhiHashU64 ( uint64_t Val )
+{
+    return KHash ( ( const char * ) & Val, sizeof ( uint64_t ) );
+}   /* skhiHashU64 () */
 
 static
 uint16_t CC
@@ -560,7 +578,7 @@ skhiReadKeyVal (
         return RCt;
     }
 
-    Hsh = KHash ( Key, strlen ( Key ) );
+    Hsh = skhiHashStr ( Key );
 
     switch ( self -> val_wid ) {
         case 2 :
@@ -569,7 +587,7 @@ skhiReadKeyVal (
                 RCt = KHashTableAdd (
                                     self -> val_to_key,
                                     & V16,
-                                    KHash ( ( const char * ) & V16, 2 ),
+                                    skhiHashU64 ( ( uint64_t ) V16 ),
                                     & Key
                                     );
             }
@@ -580,7 +598,7 @@ skhiReadKeyVal (
                 RCt = KHashTableAdd (
                                     self -> val_to_key,
                                     & V32,
-                                    KHash ( ( const char * ) & V32, 4 ),
+                                    skhiHashU64 ( ( uint64_t ) V32 ),
                                     & Key
                                     );
             }
@@ -591,7 +609,7 @@ skhiReadKeyVal (
                 RCt = KHashTableAdd (
                                     self -> val_to_key,
                                     & V64,
-                                    KHash ( ( const char * ) & V64, 8 ),
+                                    skhiHashU64 ( V64 ),
                                     & Key
                                     );
             }
@@ -724,7 +742,7 @@ KHashIndexFind_v5 (
         RCt = RC ( rcDB, rcIndex, rcSelecting, rcString, rcNotFound );
     }
     else {
-        Hsh = KHash ( key, strlen ( key ) );
+        Hsh = skhiHashStr ( key );
         switch ( self -> val_wid ) {
             case 2 :
                 {
@@ -790,11 +808,13 @@ KHashIndexProject_v5 (
 {
     rc_t RCt;
     bool Found;
+    uint64_t Hash;
     const char * Key;
     size_t KeyLen;
 
     RCt = 0;
     Found = false;
+    Hash = 0;
     Key = NULL;
     KeyLen = 0;
 
@@ -818,6 +838,7 @@ KHashIndexProject_v5 (
         RCt = RC ( rcDB, rcIndex, rcSelecting, rcString, rcNotFound );
     }
     else {
+        Hash = skhiHashU64 ( ( uint64_t ) id );
         switch ( self -> val_wid ) {
             case 2 :
                 {
@@ -825,7 +846,7 @@ KHashIndexProject_v5 (
                     Found = KHashTableFind (
                                     self -> val_to_key,
                                     & Val, 
-                                    KHash ( ( const char * ) & Val, 2 ),
+                                    Hash,
                                     & Key
                                     );
                 }
@@ -836,7 +857,7 @@ KHashIndexProject_v5 (
                     Found = KHashTableFind (
                                     self -> val_to_key,
                                     & Val, 
-                                    KHash ( ( const char * ) & Val, 4 ),
+                                    Hash,
                                     & Key
                                     );
                 }
@@ -847,7 +868,7 @@ KHashIndexProject_v5 (
                     Found = KHashTableFind (
                                     self -> val_to_key,
                                     & Val, 
-                                    KHash ( ( const char * ) & Val, 8 ),
+                                    Hash,
                                     & Key
                                     );
                 }

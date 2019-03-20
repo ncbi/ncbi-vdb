@@ -164,6 +164,7 @@ rc_t KIndexWhack ( KIndex *self )
                     break;
 
                 case kitHash:
+                case kitHash | kitProj:
                     switch ( self -> vers )
                     {
                     case 5:
@@ -548,8 +549,11 @@ rc_t KIndexMakeUpdate ( KIndex **idxp, KDirectory *dir, const char *path )
                                 /* JOJOBA ... error? */
                                 rc = RC ( rcDB, rcIndex, rcConstructing, rcIndex, rcWrongType );
                                 break;
-                            case kitText:
+                            case kitHash:
                                 rc = KHashIndexOpen_v5 ( & idx -> u . hash_5, mm, byteswap );
+                                if ( rc == 0 ) {
+                                    idx -> type |= kitProj;
+                                }
                                 break;
                             case kitU64:
                                 rc = KU64IndexOpen_v3(&idx->u.u64_3, mm, byteswap);
@@ -677,6 +681,7 @@ rc_t KIndexCreate ( KIndex **idxp, KDirectory *dir,
             break;
 
         case kitHash:   /* JOJOBA START */
+        case kitHash | kitProj:
             rc = KHashIndexOpen_v5 ( & idx->u.hash_5, NULL, false );
             break;      /* JOJOBA END */
 
@@ -1385,6 +1390,7 @@ LIB_EXPORT rc_t CC KIndexCommit ( KIndex *self )
             }
             break;
         case kitHash:   /* JOJOBA START */
+        case kitHash | kitProj:
             switch(self -> vers) {
             case 5:
                 rc = KHashIndexPersist_v5(&self->u.hash_5, self->dir,
@@ -1451,10 +1457,12 @@ LIB_EXPORT rc_t CC KIndexInsertText ( KIndex *self, bool unique,
             return RC ( rcDB, rcIndex, rcInserting, rcIndex, rcBadVersion );
         }
         break;
-    case kitHash:   /* JOJOBA START */
+    case kitHash | kitProj:   /* JOJOBA START */
+        proj = true;    /* do we need that ??? */
+    case kitHash:
         switch ( self -> vers )
         {
-        case 1:
+        case 5:
             rc = KHashIndexInsert_v5 ( & self -> u . hash_5, key, id );
             break;
         }
@@ -1516,10 +1524,12 @@ LIB_EXPORT rc_t CC KIndexDeleteText ( KIndex *self, const char *key )
             return RC ( rcDB, rcIndex, rcRemoving, rcIndex, rcBadVersion );
         }
         break;
-    case kitHash:   /* JOJOBA START */
+    case kitHash | kitProj:   /* JOJOBA START */
+        proj = true;    /* do we need that ??? */
+    case kitHash:
         switch ( self -> vers )
         {
-        case 1:
+        case 5:
             rc = KHashIndexDelete_v5 ( & self -> u . hash_5, key );
             break;
         }
@@ -1588,9 +1598,10 @@ LIB_EXPORT rc_t CC KIndexFindText ( const KIndex *self, const char *key, int64_t
         }
         break;
         case kitHash:   /* JOJOBA STARTS */
+        case kitHash | kitProj:
             switch ( self -> vers )
             {
-            case 1:
+            case 5:
                 {
                     int64_t id64;
                     rc = KHashIndexFind_v5 ( & self -> u . hash_5, key, & id64 );
@@ -1663,6 +1674,7 @@ LIB_EXPORT rc_t CC KIndexFindAllText ( const KIndex *self, const char *key,
         }
         break;
         case kitHash:   /* JOJOBA START */
+        case kitHash | kitProj:
             switch ( self -> vers )
             {
             case 5:
@@ -1751,6 +1763,19 @@ LIB_EXPORT rc_t CC KIndexProjectText ( const KIndex *self,
             return RC ( rcDB, rcIndex, rcProjecting, rcIndex, rcBadVersion );
         }
         break;
+        case kitHash:   /* JOJOBA : START */
+        case kitHash | kitProj:
+            switch ( self -> vers )
+            {
+            case 5:
+                rc = KHashIndexProject_v5 ( & self -> u . hash_5, id, key, kmax, actsize );
+                if ( rc == 0 )
+                    * start_id = id;
+                break;
+            default:
+                return RC ( rcDB, rcIndex, rcProjecting, rcIndex, rcBadVersion );
+            }
+            break;   /* JOJOBA : ENDS */
     default:
         return RC ( rcDB, rcIndex, rcProjecting, rcType, rcUnsupported );
     }

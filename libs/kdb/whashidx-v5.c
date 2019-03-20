@@ -91,6 +91,7 @@ static rc_t CC skhiIndexLoad (
                                 size_t Size,
                                 bool ByteSwap
                                 );
+static rc_t CC skhiIndexInit (  KHashIndex_v5 * self );
 
 rc_t CC
 KHashIndexOpen_v5 (
@@ -109,7 +110,7 @@ KHashIndexOpen_v5 (
 
         /* When opened for create, there will be no existing index */
     if ( Map == NULL ) {
-        return 0;
+        return skhiIndexInit ( self );
     }
 
     if ( self == NULL ) {
@@ -139,6 +140,22 @@ KHashIndexOpen_v5 (
 
     return 0;
 }   /* KHashIndexOpen_v5 () */
+
+/*  Calculates a hash value ... did it 10000 errors :D
+ */
+static
+uint64_t CC
+skhiHashStr ( const char * Str )
+{
+    return Str == NULL ? 0 : KHash ( Str, strlen ( Str ) );
+}   /* skhiHashStr () */
+
+static
+uint64_t CC
+skhiHashU64 ( uint64_t Val )
+{
+    return KHash ( ( const char * ) & Val, sizeof ( uint64_t ) );
+}   /* skhiHashU64 () */
 
 /*  copies null terminated string ... I need two of them :LOL:
  */
@@ -171,7 +188,7 @@ skhiDupStr ( const char ** Dst, const char * Src )
         return RC ( rcDB, rcIndex, rcCreating, rcMemory, rcExhausted );
     }
 
-    memmove ( Str, Dst, Len );
+    memmove ( Str, Src, Len );
 
     * Dst = Str;
 
@@ -389,14 +406,14 @@ skhiReadString (
             return RC ( rcDB, rcIndex, rcCreating, rcIndex, rcCorrupt );
         }
 
-        if ( ( * NewAddr ) [ Len - 1 ] != 0 ) {
+        if ( ( * NewAddr ) [ Len ] != 0 ) {
             return RC ( rcDB, rcIndex, rcCreating, rcIndex, rcCorrupt );
         }
 
         RCt = skhiDupStr ( Ret, * NewAddr );
         if ( RCt == 0 ) {
-            * NewAddr += Len;
-            * NewSize -= Len;
+            * NewAddr += Len + 1;
+            * NewSize -= Len + 1;
         }
     }
 
@@ -490,8 +507,9 @@ skhiReadStat (
     return RCt;
 }   /* skhiReadStat () */
 
+static
 rc_t CC
-skhiIndexPrepareTables ( KHashIndex_v5 * self, uint64_t Qty )
+skhiIndexInit ( KHashIndex_v5 * self )
 {
     rc_t RCt = 0;
 
@@ -504,7 +522,7 @@ skhiIndexPrepareTables ( KHashIndex_v5 * self, uint64_t Qty )
                         & ( self -> key_to_val ),   /* Table */
                         sizeof ( char * ),          /* Key(str) */
                         sizeof ( uint64_t ),        /* Val wid */
-                        Qty,                        /* Capacity */
+                        0,                          /* Capacity */
                         0,                          /* Load fact */
                         cstr                        /* Key type */
                         );
@@ -514,15 +532,31 @@ skhiIndexPrepareTables ( KHashIndex_v5 * self, uint64_t Qty )
                             & ( self -> val_to_key ),   /* Table */
                             sizeof ( uint64_t ),        /* Key wid */
                             sizeof ( char * ),          /* Val(str) */
-                            Qty,                        /* Capacity */
+                            0,                          /* Capacity */
                             0,                          /* Load fact */
                             raw                         /* Key type */
                             );
+
+    }
+
+    return RCt;
+}   /* skhiIndexInit () */
+
+static
+rc_t CC
+skhiIndexPrepareTables ( KHashIndex_v5 * self, uint64_t Qty )
+{
+    rc_t RCt = 0;
+
+    if ( self == NULL ) {
+        return RC ( rcDB, rcIndex, rcCreating, rcSelf, rcNull );
+    }
+
+    RCt = skhiIndexInit ( self );
+    if ( RCt == 0 ) {
+        RCt = KHashTableReserve ( self -> key_to_val, Qty );
         if ( RCt == 0 ) {
-            RCt = KHashTableReserve ( self -> key_to_val, Qty );
-            if ( RCt == 0 ) {
-                RCt = KHashTableReserve ( self -> val_to_key, Qty );
-            }
+            RCt = KHashTableReserve ( self -> val_to_key, Qty );
         }
     }
 
@@ -546,13 +580,11 @@ skhiReadKeyVal (
     const char * Key;
     size_t KeyLen;
     uint64_t Val;
-    uint64_t Hsh;
 
     RCt = 0;
     Key = NULL;
     KeyLen = 0;
     Val = 0;
-    Hsh = 0;
 
     RCt = skhiReadUint (
                         & Val,
@@ -577,20 +609,17 @@ skhiReadKeyVal (
         if ( RCt == 0 ) {
 
             KeyLen = strlen ( Key );
-            Hsh = KHash ( Key, KeyLen );
-
             RCt = KHashTableAdd (
                                 self -> key_to_val,
-                                & Key,
-                                Hsh,
+                                Key,
+                                skhiHashStr ( Key ),
                                 & Val
                                 );
             if ( RCt == 0 ) {
-
                 RCt = KHashTableAdd (
                                     self -> val_to_key,
                                     & Val,
-                                    KHash ( ( const char * ) & Val, 8 ),
+                                    skhiHashU64 ( Val ),
                                     & Key
                                     );
                 if ( RCt == 0 ) {
@@ -720,11 +749,9 @@ KHashIndexFind_v5 (
 )
 {
     rc_t RCt = 0;
-    uint64_t Hsh;
     uint64_t Val;
 
     RCt = 0;
-    Hsh = 0;
     Val = 0;
 
     if ( id != NULL ) {
@@ -743,11 +770,10 @@ KHashIndexFind_v5 (
         RCt = RC ( rcDB, rcIndex, rcSelecting, rcString, rcNotFound );
     }
     else {
-        Hsh = KHash ( key, strlen ( key ) );
         if ( KHashTableFind (
                             self -> key_to_val,
-                            & key,
-                            Hsh,
+                            key,
+                            skhiHashStr ( key ),
                             & Val
                             )
         ) {
@@ -787,17 +813,15 @@ rc_t CC
 KHashIndexInsert_v5 (
                     KHashIndex_v5 * self,
                     const char * key,
-                    int64_t id
+                    int64_t Val
 )
 {
     rc_t RCt;
-    int64_t Val;
     const char * Key;
     size_t KeyLen;
     uint64_t Hash;
 
     RCt = 0;
-    Val = 0;
     Key = NULL;
     KeyLen = 0;
     Hash = 0;
@@ -813,9 +837,8 @@ KHashIndexInsert_v5 (
         /*  Fist we should check if there is already value with the
          *  same key
          */
-    KeyLen = strlen ( key );
-    Hash = KHash ( key, KeyLen );
-    if ( KHashTableFind ( self -> key_to_val, & key, Hash, & Val ) ) {
+    Hash = skhiHashStr ( key );
+    if ( KHashTableFind ( self -> key_to_val, key, Hash, & Val ) ) {
         RCt = RC ( rcDB, rcIndex, rcInserting, rcItem, rcExists );
     }
     else {
@@ -823,7 +846,7 @@ KHashIndexInsert_v5 (
         if ( RCt == 0 ) {
             RCt = KHashTableAdd (
                                 self -> key_to_val,
-                                & Key,
+                                Key,
                                 Hash,
                                 & Val
                                 );    
@@ -831,7 +854,7 @@ KHashIndexInsert_v5 (
                 RCt = KHashTableAdd (
                                     self -> val_to_key,
                                     & Val,
-                                    KHash ( ( const char * ) & Val, 8 ),
+                                    skhiHashU64 ( Val ),
                                     & Key
                                     );
                 if ( RCt == 0 ) {
@@ -839,6 +862,7 @@ KHashIndexInsert_v5 (
                     if ( self -> max_val < Val ) {
                         self -> max_val = Val;
                     }
+                    KeyLen = strlen ( key );
                     if ( self -> max_key_len < KeyLen ) {
                         self -> max_key_len = KeyLen;
                     }
@@ -874,17 +898,17 @@ KHashIndexDelete_v5 ( KHashIndex_v5 * self, const char * key )
         return RC ( rcDB, rcIndex, rcInserting, rcParam, rcNull );
     }
 
-    Hash = KHash ( key, strlen ( key ) );
-
+    Hash = skhiHashStr ( key );
         /*  Obtaining Val for Key
          */
-    if ( KHashTableFind ( self -> key_to_val, & key, Hash, & Val ) ) {
+    if ( KHashTableFind ( self -> key_to_val, key, Hash, & Val ) ) {
             /*  Deleting Key record from table
              */
-        KHashTableDelete ( self -> key_to_val, & Key, Hash );
+        KHashTableDelete ( self -> key_to_val, key, Hash );
 
             /*  Obtaining Key for Val
              */
+        Hash = skhiHashU64 ( Val );
         if ( KHashTableFind ( self -> val_to_key, & Val, Hash, & Key ) ) {
                 /*  Deleting Val from table
                  */
@@ -895,6 +919,9 @@ KHashIndexDelete_v5 ( KHashIndex_v5 * self, const char * key )
             free ( ( char * ) Key );
 
             self -> qty --;
+        }
+        else {
+            RCt = RC ( rcDB, rcIndex, rcRemoving, rcIndex, rcCorrupt );
         }
     }
     else {
@@ -943,11 +970,12 @@ skhiHIP_dataInit (
         return RC ( rcDB, rcIndex, rcPersisting, rcParam, rcNull );
     }
 
-    memset ( HIP, sizeof ( struct HIP_data ), 0 );
+    memset ( HIP, 0, sizeof ( struct HIP_data ) );
 
         /*  First we are allocating buffer
          */
-    HIP -> buf = calloc ( 128 * 1024, sizeof ( char ) );
+    HIP -> buf_size = 128 * 1024;
+    HIP -> buf = calloc ( HIP -> buf_size, sizeof ( char ) );
     if ( HIP -> buf == NULL ) {
         RCt = RC ( rcDB, rcIndex, rcPersisting, rcMemory, rcExhausted );
     }
@@ -1239,7 +1267,7 @@ skhiPerspireHeader ( const KHashIndex_v5 * self, struct HIP_data * HIP )
     KIndexFileHeader_v5 Header;
 
     RCt = 0;
-    memset ( & Header, sizeof ( Header ), 0 );
+    memset ( & Header, 0, sizeof ( Header ) );
 
     if ( self == NULL ) {
         return RC ( rcDB, rcIndex, rcPersisting, rcSelf, rcNull );
@@ -1261,22 +1289,22 @@ skhiPerspireHeader ( const KHashIndex_v5 * self, struct HIP_data * HIP )
     RCt = skhiWriteSome ( HIP, ( const char * ) & Header, sizeof ( Header ) );
     if ( RCt == 0 ) {
         RCt = skhiWriteSome (
-                            HIP,
-                            ( const char * ) self -> qty,
-                            sizeof ( self -> qty )
-                            );
+                        HIP,
+                        ( const char * ) & self -> qty,
+                        sizeof ( self -> qty )
+                        );
         if ( RCt == 0 ) {
             RCt = skhiWriteSome (
-                                HIP,
-                                ( const char * ) self -> qty,
-                                sizeof ( self -> max_val )
-                                );
+                            HIP,
+                            ( const char * ) & self -> max_val,
+                            sizeof ( self -> max_val )
+                            );
             if ( RCt == 0 ) {
                 RCt = skhiWriteSome (
-                                    HIP,
-                                    ( const char * ) self -> qty,
-                                    sizeof ( self -> max_key_len )
-                                    );
+                                HIP,
+                                ( const char * ) & self -> max_key_len,
+                                sizeof ( self -> max_key_len )
+                                );
             }
         }
     }
@@ -1446,6 +1474,42 @@ skhiPerspireTable ( const KHashIndex_v5 * self, struct HIP_data * HIP )
     return RCt;
 }   /* skhiPerspireTable () */
 
+/*  Moving files all around
+ */
+static 
+rc_t CC
+skhiFinishPerspiration (
+                        struct HIP_data * HIP,
+                        struct KDirectory * Dir,
+                        bool use_md5
+)
+{
+    rc_t RCt = 0;
+
+    if ( HIP == NULL || Dir == NULL ) {
+        return RC ( rcDB, rcIndex, rcInserting, rcParam, rcNull );
+    }
+
+    RCt = KDirectoryRename (
+                            Dir,
+                            false,
+                            HIP -> file_path_tmp,
+                            HIP -> file_path
+                            );
+    if ( RCt == 0 ) {
+        if ( use_md5 ) {
+            RCt = KDirectoryRename (
+                                    Dir,
+                                    false,
+                                    HIP -> md5_file_path_tmp,
+                                    HIP -> md5_file_path
+                                    );
+        }
+    }
+
+    return RCt;
+}   /* kshiFinishPerspiration () */
+
 /*  persist index to file
  */
 rc_t CC
@@ -1488,6 +1552,10 @@ KHashIndexPersist_v5 (
         }
     }
 
+    if ( RCt == 0 ) {
+        RCt = skhiFinishPerspiration ( & HIP, dir, use_md5 );
+    }
+
     skhiHIP_dataWhack ( & HIP );
 
     return RCt;
@@ -1510,6 +1578,7 @@ KHashIndexProject_v5 (
 
     RCt = 0;
     Found = false;
+    Val = ( uint64_t ) id;
     Key = NULL;
     KeyLen = 0;
 
@@ -1536,7 +1605,7 @@ KHashIndexProject_v5 (
         Found = KHashTableFind (
                                 self -> val_to_key,
                                 & Val,
-                                KHash ( ( const char * ) & Val, 8 ),
+                                skhiHashU64 ( Val ),
                                 & Key
                                 );
         if ( Found != true ) {
