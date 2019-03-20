@@ -450,7 +450,8 @@ rc_t KIndexMakeRead ( KIndex **idxp, const KDirectory *dir, const char *path )
                                 /* JOJOBA ... error? */
                                 rc = RC ( rcDB, rcIndex, rcConstructing, rcIndex, rcWrongType );
                                 break;
-                            case kitText:
+                            case kitHash:
+                            case kitHash | kitProj:
                                 rc = KHashIndexOpen_v5 ( & idx -> u . hash_5, mm, byteswap );
                                 break;
                             case kitU64:
@@ -550,6 +551,7 @@ rc_t KIndexMakeUpdate ( KIndex **idxp, KDirectory *dir, const char *path )
                                 rc = RC ( rcDB, rcIndex, rcConstructing, rcIndex, rcWrongType );
                                 break;
                             case kitHash:
+                            case kitHash | kitProj:
                                 rc = KHashIndexOpen_v5 ( & idx -> u . hash_5, mm, byteswap );
                                 if ( rc == 0 ) {
                                     idx -> type |= kitProj;

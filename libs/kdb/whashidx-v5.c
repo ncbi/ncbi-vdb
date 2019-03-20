@@ -642,6 +642,7 @@ static
 rc_t CC
 skhiReadData (
                 KHashIndex_v5 * self,  
+                uint64_t Qty,
                 uint16_t ValWid,
                 uint16_t KeyLenWid,
                 const char * Addr,
@@ -661,7 +662,7 @@ skhiReadData (
     CAddr = Addr;
     CSize = Size;
 
-    for ( llp = 0; llp < self -> qty; llp ++ ) {
+    for ( llp = 0; llp < Qty; llp ++ ) {
         RCt = skhiReadKeyVal (
                             self,
                             ValWid,
@@ -724,6 +725,7 @@ skhiIndexLoad (
         if ( RCt == 0 ) {
             RCt = skhiReadData (
                                 self,
+                                Qty,
                                 ValWid,
                                 KeyLenWid,
                                 HashAddr,
