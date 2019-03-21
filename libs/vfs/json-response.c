@@ -69,6 +69,10 @@ typedef struct {
 
     int64_t size;
 
+    const VPath * http; /* http path from path[]
+when all path[] are alternative ways to get the same acc by different protocols:
+data received by names protocol-3.0 */
+
     const VPath * path [ MAX_PATHS ];
 
     const VPath * local;
@@ -366,6 +370,7 @@ static rc_t LocationsRelease ( Locations * self ) {
     RELEASE ( VPath, self -> local );
     RELEASE ( VPath, self -> cache );
     RELEASE ( VPath, self -> mapping );
+    RELEASE(VPath, self->http);
     free(self->cType);
     free ( self -> name );
 
@@ -389,23 +394,46 @@ static bool LocationsEmpty ( const Locations * self ) {
     return true;
 }
 
-static rc_t LocationsAddVPath ( Locations * self, const VPath * path,
-                                const VPath * mapping )
-{
+static rc_t LocationsSetHttp(Locations * self, const VPath * path) {
     rc_t rc = 0;
 
+    char scheme[6] = "";
+
+    assert( self );
+
+    if (self->http != NULL)
+        return 0;
+
+    rc = VPathReadScheme(path, scheme, sizeof scheme, NULL);
+    if (rc != 0)
+        return rc;
+
+    if (scheme[0] != 'h' ||
+        scheme[1] != 't' ||
+        scheme[2] != 't' ||
+        scheme[3] != 'p')
+    {
+        return 0;
+    }
+
+    rc = VPathAddRef(path);
+    if (rc != 0)
+        return rc;
+
+    self->http = path;
+    return rc;
+}
+
+static rc_t LocationsAddVPath ( Locations * self, const VPath * path,
+                            const VPath * mapping, bool setHttp, uint64_t osize)
+{
     int i = 0;
-    char scheme [ 6 ] = "";
 
     if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
 
     if ( path == NULL )
         return 0;
-
-    rc = VPathReadScheme ( path, scheme, sizeof scheme, NULL );
-    if ( rc != 0 )
-        return rc;
 
     for ( i = 0; i < MAX_PATHS; ++ i ) {
         if ( self -> path [ i ] == NULL ) {
@@ -422,7 +450,12 @@ static rc_t LocationsAddVPath ( Locations * self, const VPath * path,
                 self->mapping = (VPath *) mapping;
             }
 
-            return 0;
+            if (setHttp) {
+                self->size = osize;
+                rc = LocationsSetHttp(self, path);
+            }
+
+            return rc;
         }
     }
 
@@ -628,13 +661,13 @@ static rc_t ItemAddFormat ( Item * self, const char * cType, const Data * dad,
 }
 
 rc_t ItemAddVPath ( Item * self, const char * type,
-                    const VPath * path, const VPath * mapping )
+    const VPath * path, const VPath * mapping, bool setHttp, uint64_t osize )
 {
     rc_t rc = 0;
     Locations * l = NULL;
     rc = ItemAddFormat ( self, type, NULL, & l );
     if ( rc == 0 )
-        rc = LocationsAddVPath ( l, path, mapping);
+        rc = LocationsAddVPath ( l, path, mapping, setHttp, osize);
     return rc;
 }
 
@@ -1151,7 +1184,7 @@ rc_t Response4AppendUrl ( Response4 * self, const char * url ) {
         rc = ItemAddFormat ( item, "", NULL, & l );
 
     if ( rc == 0 )
-        rc = LocationsAddVPath ( l, path, NULL );
+        rc = LocationsAddVPath ( l, path, NULL, false, 0 );
 
     RELEASE ( VPath, path );
 
@@ -1443,7 +1476,7 @@ static rc_t LocationsAddLink ( Locations * self, const KJsonValue * node,
         return rc;
     }
 
-    rc = LocationsAddVPath ( self, path, NULL );
+    rc = LocationsAddVPath ( self, path, NULL, false, 0);
 
     RELEASE ( VPath, path );
 
@@ -2494,6 +2527,23 @@ rc_t KSrvRespFileGetId ( const KSrvRespFile * self, uint64_t * id,
     return 0;
 }
                                                            
+rc_t KSrvRespFileGetHttp ( const KSrvRespFile * self,
+                            const VPath ** path )
+{
+    rc_t rc = 0;
+
+    assert ( self && self -> file && path );
+
+    * path = NULL;
+
+    rc = VPathAddRef ( self -> file -> http );
+
+    if ( rc == 0 )
+        * path = self -> file -> http;
+
+    return rc;
+}
+
 rc_t KSrvRespFileGetCache ( const KSrvRespFile * self,
                             const VPath ** path )
 {

@@ -144,6 +144,10 @@ static bool SVersionResponseHasTimestamp ( const SVersion  self ) {
     return self >= VERSION_3_0;
 }
 
+static bool SVersionNeedCloudLocation(const SVersion  self) {
+    return self == VERSION_4_0;
+}
+
 static bool SVersionResponseInJson ( const SVersion  self ) {
     return self >= VERSION_4_0;
 }
@@ -592,7 +596,7 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
 {
     const char man [] = "/repository/remote/main/CGI/resolver-cgi";
     const char prt [] = "/repository/remote/protected/CGI/resolver-cgi";
-    const char cgi [] = "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
+    const char cgi [] = "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
     
     rc_t rc = 0;
     const char * path = aProtected ? prt : man;
@@ -1755,6 +1759,8 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
                     rc = RC ( rcVFS, rcQuery, rcResolving,
                                      rcMemory, rcExhausted );
             }
+
+            self->osize = src->osize;
 
             return rc;
         }
@@ -3086,7 +3092,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
         }
     }
 
-    if (rc == 0)
+    if (rc == 0 && SVersionNeedCloudLocation(request->version))
         rc = SCgiRequestAddLocation( self, helper );
     return rc;
 }
@@ -3107,8 +3113,7 @@ rc_t SRequestInitSearchSCgiRequest ( SRequest * request, const char * cgi,
     if ( self -> cgi == NULL ) {
         if ( cgi == NULL ) {
 /* try to get cgi from kfg, otherwise use hardcoded below */
-            cgi =  "http://www.ncbi.nlm.nih.gov/Traces/names/search.cgi";
-            cgi = "https://www.ncbi.nlm.nih.gov/Traces/names/search.cgi";
+            cgi = "https://trace.ncbi.nlm.nih.gov/Traces/names/search.cgi";
         }
         rc = SCgiRequestInitCgi ( self, cgi );
     }
@@ -3853,10 +3858,13 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                 const VPath * vdbcache = NULL;
                 const KSrvError * error = NULL;
                 const VPath * mapping = NULL;
+                uint64_t osize = 0;
                 rc = KSrvResponseGetPath ( self -> resp .list, i, pp [ p ],
                                            & path, & vdbcache, & error );
                 if (rc == 0)
                     rc = KSrvResponseGetMapping(self->resp.list, i, &mapping);
+                if (rc == 0)
+                    rc = KSrvResponseGetOSize(self->resp.list, i, &osize);
                 if (rc == 0) {
                     if (path != NULL) {
                         String ticket;
@@ -3866,13 +3874,15 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                         if (r == 0)
                             rc = ItemSetTicket(file, &ticket);
                         if (rc == 0)
-                            rc = ItemAddVPath(file, "sra", path, mapping);
+                            rc = ItemAddVPath(file, "sra", path, mapping,
+                                true, osize);
                         RELEASE(VPath, path);
                         if (rc != 0)
                             break;
                     }
                     if (vdbcache != NULL) {
-                        rc = ItemAddVPath(file, "vdbcache", vdbcache, NULL);
+                        rc = ItemAddVPath(file, "vdbcache", vdbcache, NULL,
+                            true, 0);
                         RELEASE(VPath, vdbcache);
                         if (rc != 0)
                             break;

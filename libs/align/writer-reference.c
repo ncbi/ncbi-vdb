@@ -288,6 +288,17 @@ static void addToHashTable(ReferenceMgr *const self, ReferenceSeq const *const r
         addToHashBucket(&self->ht[hash0(rs->seqId)], index);
 }
 
+static void freeHashTableEntries(ReferenceMgr *const self)
+{
+    unsigned i;
+    for (i = 0; i < BUCKETS; ++i) {
+        if (self->ht[i].count > 0)
+            free(self->ht[i].index);
+        if (self->used[i].count > 0)
+            free(self->used[i].index);
+    }
+}
+
 static
 void CC ReferenceSeq_Whack(ReferenceSeq *self)
 {
@@ -2090,6 +2101,8 @@ LIB_EXPORT rc_t CC ReferenceMgr_Release(const ReferenceMgr *cself,
         uint64_t rows = 0;
         unsigned i;
 
+        freeHashTableEntries(self);
+        
         rc = TableWriterRef_Whack(self->writer, commit, &rows);
         if (Rows) *Rows = rows;
         KDirectoryRelease(self->dir);

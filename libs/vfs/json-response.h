@@ -54,7 +54,7 @@ rc_t Response4GetRc      ( const Response4 * self, rc_t * rc );
 rc_t ContainerAdd ( Container * self, const char * acc, int64_t id,
                     Item ** newItem, const struct Data * data );
 rc_t ItemAddVPath(Item * self, const char * type, const struct VPath * path,
-                                                  const struct VPath * mapping);
+                    const struct VPath * mapping, bool setHttp, uint64_t osize);
 rc_t ItemSetTicket ( Item * self, const struct String * ticket );
 rc_t Response4GetKSrvRespObjCount ( const Response4 * self, uint32_t * n );
 rc_t Response4GetKSrvRespObjByIdx ( const Response4 * self, uint32_t i,

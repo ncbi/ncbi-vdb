@@ -215,7 +215,7 @@ rc_t VPathSetGetCache ( const VPathSet * self, const struct VPath ** path );
 rc_t VPathSetGetLocal ( const VPathSet * self, const struct VPath ** path );
 
 /* name resolver response row converted into VDB objects */
-typedef struct {
+typedef struct {          /*       vdbcache */
     struct VPath * fasp ; struct VPath * vcFasp;
     struct VPath * file ; struct VPath * vcFile;
     struct VPath * http ; struct VPath * vcHttp;
@@ -225,6 +225,7 @@ typedef struct {
     const struct KSrvError * error;
     char * reqId;
     char * respId;
+    uint64_t osize; /*size of VPath object */
 } EVPath;
 
 rc_t VPathSetMake

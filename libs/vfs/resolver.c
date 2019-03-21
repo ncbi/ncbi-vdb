@@ -1471,9 +1471,9 @@ rc_t oldVResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
 if(((self)->root)->addr[self->root->size - 1] == 'i')
     rc = KNSManagerMakeReliableClientRequest ( kns, & req, 0x01010000, NULL, self -> root -> addr ); 
 else if (((self)->root)->addr[4] == 's')
-rc = KNSManagerMakeReliableClientRequest(kns, &req, 0x01010000, NULL, "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi");
+rc = KNSManagerMakeReliableClientRequest(kns, &req, 0x01010000, NULL, "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi");
 else
-rc = KNSManagerMakeReliableClientRequest(kns, &req, 0x01010000, NULL, "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi");
+rc = KNSManagerMakeReliableClientRequest(kns, &req, 0x01010000, NULL, "http://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi");
 
     if ( rc == 0 )
     {
@@ -5043,7 +5043,7 @@ rc_t VResolverForceRemoteProtected ( VResolver *self )
     /* create one from hard-coded constants */
     String cgi_root;
     StringInitCString ( & cgi_root,
-        "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi" );
+        "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi" );
     rc = StringCopy ( & root, & cgi_root );    
     if ( rc == 0 )
     {

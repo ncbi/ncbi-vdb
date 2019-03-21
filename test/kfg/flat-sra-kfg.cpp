@@ -121,7 +121,7 @@ public:
 
 static const char cgiPath[] = "/repository/remote/main/CGI/resolver-cgi";
 static const char goodCgi[]
-    = "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
+    = "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
 static const char badCgi[]
     = "https://XXX.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
 #ifdef ALL
