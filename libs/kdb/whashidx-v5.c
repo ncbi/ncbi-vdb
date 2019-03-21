@@ -1197,12 +1197,14 @@ skhiWriteSome ( struct HIP_data * HIP, const char * Data, size_t Size )
 
             cData += toWR;
             cSize -= toWR;
+            HIP -> buf_pos = 0;
             HIP -> pos += HIP -> buf_size;
         }
 
         if ( RCt == 0 ) {
             if ( cSize != 0 ) {
                 memmove ( HIP -> buf, cData, cSize );
+                HIP -> buf_pos += cSize;
             }
         }
     }
