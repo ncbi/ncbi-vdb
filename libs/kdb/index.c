@@ -119,6 +119,7 @@ rc_t KIndexWhack ( KIndex *self )
             case 2:
             case 3:
             case 4:
+            case 5: /* JOJOBA - we need it here */
                 KTrieIndexWhack_v2 ( & self -> u . txt234 );
                 rc = 0;
                 break;
@@ -130,6 +131,7 @@ rc_t KIndexWhack ( KIndex *self )
             {
             case 3:
             case 4:
+            case 5: /* JOJOBA - we need it here */
                 rc = KU64IndexWhack_v3 ( & self -> u . u64_3 );
                 break;
             }
@@ -356,6 +358,7 @@ rc_t KIndexMakeRead ( KIndex **idxp,
                         idx -> vers = 3;
                     case 3:
                     case 4:
+                    case 5: /* JOJOBA - we need it here */
                         switch ( idx -> type )
                         {
                             case kitText:
@@ -369,26 +372,15 @@ rc_t KIndexMakeRead ( KIndex **idxp,
                             case kitU64:
                                 rc = KU64IndexOpen_v3 ( & idx -> u . u64_3, mm, byteswap );
                                 break;
-                        }
-                        break;
-                    case 5:     /* JOJOBA STARTS */
-                        switch ( idx->type ) {
-                            case kitText | kitProj:
-                                /* JOJOBA ... error? */
-                                rc = RC ( rcDB, rcIndex, rcConstructing, rcIndex, rcWrongType );
-                                break;
-                            case kitHash:
+                            case kitHash:   /* JOJOBA STARTS */
                             case kitHash | kitProj:
                                 rc = KHashIndexOpen_v5 ( & idx -> u . hash_5, mm, byteswap );
                                 if ( rc == 0 ) {
                                     idx -> type |= kitProj;
                                 }
-                                break;
-                            case kitU64:
-                                rc = KU64IndexOpen_v3(&idx->u.u64_3, mm, byteswap);
-                                break;
+                                break;   /* JOJOBA ENDS */
                         }
-                    break;  /* JOJOBA ENDS */
+                        break;
 #endif
                     }
                 }
@@ -672,6 +664,7 @@ LIB_EXPORT rc_t CC KIndexConsistencyCheck ( const KIndex *self, uint32_t level,
             case 2:
             case 3:
             case 4:
+            case 5: /* JOJOBA - we need it here */
                 rc = KTrieIndexCheckConsistency_v2 ( & self -> u . txt234,
                     start_id, id_range, num_keys, num_rows, num_holes,
                     self, key2id, id2key, all_ids, self -> converted_from_v1 );
@@ -744,6 +737,7 @@ LIB_EXPORT rc_t CC KIndexFindText ( const KIndex *self, const char *key, int64_t
         case 2:
         case 3:
         case 4:
+        case 5: /* JOJOBA - we need it here */
 #if V2FIND_RETURNS_SPAN
             rc = KTrieIndexFind_v2 ( & self -> u . txt234, key, start_id, & span, custom_cmp, data, self -> converted_from_v1 );
 #else
@@ -820,6 +814,7 @@ LIB_EXPORT rc_t CC KIndexFindAllText ( const KIndex *self, const char *key,
         case 2:
         case 3:
         case 4:
+        case 5: /* JOJOBA - we need it here */
 #if V2FIND_RETURNS_SPAN
             rc = KTrieIndexFind_v2 ( & self -> u . txt234, key, & id64, & span, NULL, NULL, self -> converted_from_v1 );
 #else
@@ -912,6 +907,7 @@ LIB_EXPORT rc_t CC KIndexProjectText ( const KIndex *self,
         case 2:
         case 3:
         case 4:
+        case 5: /* JOJOBA - we need it here */
 #if V2FIND_RETURNS_SPAN
             rc = KTrieIndexProject_v2 ( & self -> u . txt234, id, start_id, & span, key, kmax, actsize );
 #else
@@ -991,6 +987,7 @@ LIB_EXPORT rc_t CC KIndexProjectAllText ( const KIndex *self, int64_t id,
         case 2:
         case 3:
         case 4:
+        case 5: /* JOJOBA - we need it here */
 #if V2FIND_RETURNS_SPAN
             rc = KTrieIndexProject_v2 ( & self -> u . txt234, id, & start_id, & span, key, sizeof key, NULL );
 #else
@@ -1030,6 +1027,7 @@ LIB_EXPORT rc_t CC KIndexFindU64( const KIndex* self, uint64_t offset, uint64_t*
         {
         case 3:
         case 4:
+        case 5: /* JOJOBA - we need it here */
             rc = KU64IndexFind_v3(&self->u.u64_3, offset, key, key_size, id, id_qty);
             break;
         default:
@@ -1059,6 +1057,7 @@ LIB_EXPORT rc_t CC KIndexFindAllU64( const KIndex* self, uint64_t offset,
         {
         case 3:
         case 4:
+        case 5: /* JOJOBA - we need it here */
             rc = KU64IndexFindAll_v3(&self->u.u64_3, offset, f, data);
             break;
         default:
@@ -1089,6 +1088,7 @@ LIB_EXPORT void CC KIndexSetMaxRowId ( const KIndex *cself, int64_t max_row_id )
         case 2:
         case 3:
         case 4:
+        case 5: /* JOJOBA - we need it here */
             /* here we can repair the max row id */
             if ( cself -> u . txt234 . pt . maxid < max_row_id )
                 ( ( KIndex* ) cself ) -> u . txt234 . pt . maxid = max_row_id;
