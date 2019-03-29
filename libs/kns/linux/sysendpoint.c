@@ -40,6 +40,7 @@
 #include <arpa/inet.h>
 #include <assert.h>
 
+#include <stdio.h>
 #include <errno.h>  /* ERANGE definition */
 
 #include <sysalloc.h>
@@ -114,7 +115,7 @@ rc_t CC KNSManagerInitDNSEndpoint ( struct KNSManager const *self,
                                         & h_errnop
                                         );
                     if ( ghbnr == 0 && remote != NULL )
-                    { 
+                    {
                         struct in_addr ** addr_list
                             = ( struct in_addr ** ) remote -> h_addr_list;
                         string_copy_measure ( ep -> ip_address,
@@ -133,14 +134,9 @@ rc_t CC KNSManagerInitDNSEndpoint ( struct KNSManager const *self,
                     case HOST_NOT_FOUND: /* The specified host is unknown */
                         rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcNotFound );
                         break;
-                    case NO_ADDRESS: /* The requested names valid but does not have an IP address */
-                        rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcInconsistent );
-                        break;
-#if ! defined NO_ADDRESS || ! defined NO_DATA || NO_ADDRESS != NO_DATA
-                    case NO_DATA: /* The requested name s valid but does not have an IP address */
+                    case NO_DATA: /* The requested name is valid but does not have an IP address */
                         rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcEmpty );
                         break;
-#endif
                     case NO_RECOVERY: /* A nonrecoverable name server error occured */
                         rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcDestroyed );
                         break;
@@ -151,6 +147,7 @@ rc_t CC KNSManagerInitDNSEndpoint ( struct KNSManager const *self,
                         rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcExhausted );
                         break;
                     default :
+                        fprintf(stderr,"Unknown errno: %d\n", h_errnop);
                         rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcUnknown );
                     }
                 }
