@@ -61,7 +61,7 @@
 
 #undef index
 
-static void KTableGetName(KTable const *self, char const **rslt)
+void KTableGetName(KTable const *self, char const **rslt)
 {
     char *sep;
     
