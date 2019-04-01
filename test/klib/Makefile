@@ -31,6 +31,7 @@ MODULE = test/klib
 # WARNING: test-md5append is excluded from TEST_TOOLS since it's supposed
 # to be run manually
 TEST_TOOLS = \
+	test-hashtable \
 	test-asm \
 	test-printf \
 	test-log \
@@ -47,7 +48,6 @@ TEST_TOOLS = \
 
 ifeq (linux,$(OS))
 TEST_TOOLS += test-hashfile
-TEST_TOOLS += test-hashtable
 endif
 
 include $(TOP)/build/Makefile.env

@@ -67,7 +67,7 @@ KLIB_EXTERN rc_t KHashTableLoad ( KHashTable **self, const KDataBuffer *inbuf );
  * "self" [ IN ] - Self
  * "outbuf" [ OUT ] - Buffer to serialize to
  */
-KLIB_EXTERN rc_t KHashTableSave ( const KHashTable *self, KDataBuffer *outbuf );
+KLIB_EXTERN rc_t KHashTableSave ( KHashTable *self, KDataBuffer *outbuf );
 
 /* Destroy hash table and optionally elements.
  * If keywhack/valuewhack !=NULL invoke for each element in table.

@@ -257,53 +257,60 @@ TEST_CASE ( Klib_HashTableMapPersist )
     rc_t rc = KHashTableMake ( &hmap, 8, 8, 0, 0, cstr );
     REQUIRE_RC ( rc );
 
-    uint64_t hash = 1;
     uint64_t val1 = 123;
-    rc = KHashTableAdd ( hmap, str1, hash, &val1 );
+    rc = KHashTableAdd ( hmap, str1, KHash ( str1, strlen ( str1 ) ), &val1 );
     REQUIRE_RC ( rc );
 
-    rc = KHashTableAdd ( hmap, str1, hash, &val1 );
+    rc = KHashTableAdd ( hmap, str1, KHash ( str1, strlen ( str1 ) ), &val1 );
     REQUIRE_RC ( rc );
 
     uint64_t val2 = 124;
-    rc = KHashTableAdd ( hmap, str1, hash, &val2 );
+    rc = KHashTableAdd ( hmap, str1, KHash ( str1, strlen ( str1 ) ), &val2 );
     REQUIRE_RC ( rc );
 
+    size_t sz;
     sz = KHashTableCount ( hmap );
     REQUIRE_EQ ( sz, (size_t)1 );
 
     uint64_t val3 = 125;
-    rc = KHashTableAdd ( hmap, str2, hash, &val3 );
+    rc = KHashTableAdd ( hmap, str2, KHash ( str2, strlen ( str2 ) ), &val3 );
     REQUIRE_RC ( rc );
 
     KDataBuffer db;
-    rc = KHashTableSave ( hmap, &db );
+    KDataBuffer wdb;
+    rc = KDataBufferMakeBytes ( &db, 1 );
+    REQUIRE_RC ( rc );
+    rc = KDataBufferMakeWritable ( &db, &wdb );
+    REQUIRE_RC ( rc );
+    KDataBufferWhack ( &db );
+    rc = KHashTableSave ( hmap, &wdb );
     REQUIRE_RC ( rc );
     KHashTableDispose ( hmap, NULL, NULL, NULL );
     hmap = NULL;
 
-    rc = KHashTableLoad ( &hmap, db );
+    rc = KHashTableLoad ( &hmap, &wdb );
     REQUIRE_RC ( rc );
-
-    bool found;
-    uint64_t val;
-    found = KHashTableFind ( hmap, str1, hash, &val );
-    REQUIRE_EQ ( found, true );
-    REQUIRE_EQ ( val, (uint64_t)124 );
-
-    found = KHashTableFind ( hmap, str2, hash, &val );
-    REQUIRE_EQ ( found, false );
-
-    found = KHashTableFind ( hmap, str2, hash, &val );
-    REQUIRE_EQ ( found, true );
-    REQUIRE_EQ ( val, (uint64_t)125 );
 
     sz = KHashTableCount ( hmap );
     REQUIRE_EQ ( sz, (size_t)2 );
 
-    found = KHashTableFind ( hmap, str1, hash, &val );
+    bool found;
+    uint64_t val;
+    found
+        = KHashTableFind ( hmap, str1, KHash ( str1, strlen ( str1 ) ), &val );
     REQUIRE_EQ ( found, true );
-    REQUIRE_EQ ( val, (uint64_t)123 );
+    REQUIRE_EQ ( val, (uint64_t)124 );
+
+    found = KHashTableFind (
+        hmap, str2, 1 + KHash ( str2, strlen ( str2 ) ), &val );
+    REQUIRE_EQ ( found, false );
+
+    found
+        = KHashTableFind ( hmap, str2, KHash ( str2, strlen ( str2 ) ), &val );
+    REQUIRE_EQ ( found, true );
+    REQUIRE_EQ ( val, (uint64_t)125 );
+
+    KDataBufferWhack ( &wdb );
 }
 
 TEST_CASE ( Klib_HashTableMapInts )

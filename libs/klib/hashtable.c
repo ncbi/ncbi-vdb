@@ -26,13 +26,17 @@
 
 #include <arch-impl.h>
 #include <assert.h>
+#include <endian.h>
 #include <klib/hashtable.h>
 #include <klib/rc.h>
 #include <klib/sort.h>
+#include <klib/vector.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 
 #undef memcpy
 
@@ -56,6 +60,7 @@ struct KHashTable {
 
 static const uint64_t BUCKET_VALID = (uint64_t)1ULL << 63;
 static const uint64_t BUCKET_VISIBLE = (uint64_t)1ULL << 62;
+static const uint64_t MAGIC = 0x4841534854424C31ULL; // HASHTBL1
 
 /*
 static double getloadfactor(const KHashTable* self)
@@ -199,22 +204,144 @@ LIB_EXPORT rc_t KHashTableMake ( KHashTable **self, size_t key_size,
 
 LIB_EXPORT rc_t KHashTableLoad ( KHashTable **self, const KDataBuffer *inbuf )
 {
-    if ( self == NULL )
-        return RC ( rcCont, rcTrie, rcInserting, rcParam, rcInvalid );
+    rc_t rc;
+
+    if ( self == NULL || inbuf == NULL )
+        return RC ( rcCont, rcTrie, rcConstructing, rcParam, rcNull );
 
     *self = NULL;
 
-    return 0;
+    uint64_t *pos = (uint64_t *)inbuf->base;
+    uint64_t inmagic = *pos++;
+    // fprintf ( stderr, "inmagic is %" PRIx64 "\n", inmagic );
+    if ( inmagic != MAGIC ) {
+        if ( inmagic == be64toh ( MAGIC ) )
+            return RC (
+                rcCont, rcTrie, rcConstructing, rcByteOrder, rcNotAvailable );
+        return RC ( rcCont, rcTrie, rcConstructing, rcFormat, rcUnrecognized );
+    }
+    // fprintf ( stderr, "magic OK\n" );
+
+    size_t inkey_size = *pos++;
+    size_t invalue_size = *pos++;
+    size_t incount = *pos++;
+    hashkey_type inkey_type = *pos++;
+
+    // fprintf ( stderr, "inkey size is %zu\n", inkey_size );
+    // fprintf ( stderr, "invalue size is %zu\n", invalue_size );
+    // fprintf ( stderr, "incount is %zu\n", incount );
+    // fprintf ( stderr, "inkey_type is %u\n", inkey_type );
+
+    // if ( inkey_type == cstr ) fprintf ( stderr, "cstr\n" );
+    rc = KHashTableMake (
+        self, inkey_size, invalue_size, incount, 0.0, inkey_type );
+
+    void *key;
+    void *value = NULL;
+
+    for ( size_t cnt = 0; cnt != incount; ++cnt ) {
+        uint64_t hash;
+        if ( inkey_type == raw ) {
+            hash = *pos++;
+            key = (void *)*pos++;
+        } else {
+            hash = *pos++;
+            size_t keylen = *pos++;
+            key = pos++;
+            while ( keylen > 8 ) {
+                pos++;
+                keylen -= 8;
+            }
+
+            // fprintf ( stderr, "key is '%s'\n", (const char *)key );
+            hash = KHash ( key, strlen ( key ) );
+        }
+        if ( invalue_size ) value = (void *)*pos++;
+
+        // fprintf ( stderr, "hash is  %zu\n", hash );
+        rc = KHashTableAdd ( *self, key, hash, &value );
+    }
+
+    return rc;
 }
 
-LIB_EXPORT rc_t KHashTableSave ( const KHashTable *self, KDataBuffer *outbuf )
+LIB_EXPORT rc_t KHashTableSave ( KHashTable *self, KDataBuffer *outbuf )
 {
     rc_t rc = 0;
 
     if ( self == NULL )
-        return RC ( rcCont, rcTrie, rcInserting, rcParam, rcInvalid );
+        return RC ( rcCont, rcTrie, rcPersisting, rcParam, rcNull );
 
-    // rc=KDataBufferMakeBytes(outbuf,1);
+    if ( !KDataBufferWritable ( outbuf ) )
+        return RC ( rcCont, rcTrie, rcPersisting, rcParam, rcInvalid );
+
+    Vector bytes;
+    VectorInit ( &bytes, 0, 1024 );
+
+    rc = VectorAppend ( &bytes, NULL, (void *)MAGIC );
+    if ( rc ) return rc;
+    rc = VectorAppend ( &bytes, NULL, (void *)self->key_size );
+    if ( rc ) return rc;
+    rc = VectorAppend ( &bytes, NULL, (void *)self->value_size );
+    if ( rc ) return rc;
+    rc = VectorAppend ( &bytes, NULL, (void *)self->count );
+    if ( rc ) return rc;
+    rc = VectorAppend ( &bytes, NULL, (void *)self->key_type );
+    if ( rc ) return rc;
+
+    void *key;
+    void *value;
+
+    self->iterator = -1; /* Invalidate any current iterators */
+    KHashTableIteratorMake ( self );
+    while ( KHashTableIteratorNext ( self, &key, &value ) ) {
+        if ( self->key_type == raw ) {
+            rc = VectorAppend (
+                &bytes, NULL, (void *)KHash ( key, self->key_size ) );
+            if ( rc ) return rc;
+            rc = VectorAppend ( &bytes, NULL, key );
+            if ( rc ) return rc;
+        } else {
+            // fprintf ( stderr, "saving key='%s'\n", (char *)key );
+            size_t keylen = strlen ( key );
+
+            uint64_t hash = KHash ( key, keylen );
+            // fprintf ( stderr, "hash was %zu\n", hash );
+            rc = VectorAppend ( &bytes, NULL, (void *)hash );
+            if ( rc ) return rc;
+
+            size_t l8 = ( keylen + 1 + 7 ) & ~7;
+            rc = VectorAppend ( &bytes, NULL, (void *)( l8 ) );
+            if ( rc ) return rc;
+
+            void *kstr = malloc ( l8 );
+            memmove ( kstr, key, keylen + 1 );
+
+            uint64_t *p = kstr;
+            size_t i = 0;
+            while ( l8 ) {
+                rc = VectorAppend ( &bytes, NULL, (void *)p[i++] );
+                if ( rc ) return rc;
+                l8 -= 8;
+            }
+            free ( kstr );
+        }
+
+        if ( self->value_size ) {
+            rc = VectorAppend ( &bytes, NULL, value );
+            if ( rc ) return rc;
+        }
+    }
+
+    KDataBufferResize ( outbuf, VectorLength ( &bytes ) * sizeof ( void * ) );
+    memmove (
+        outbuf->base, bytes.v, VectorLength ( &bytes ) * sizeof ( void * ) );
+    for ( uint32_t i = 0; i != VectorLength ( &bytes ); ++i ) {
+        // fprintf ( stderr, "%3d %p\n", i, VectorGet ( &bytes, i ) );
+    }
+    // fprintf ( stderr, "Table saved %d\n", VectorLength ( &bytes ) );
+
+    VectorWhack ( &bytes, NULL, NULL );
     return rc;
 }
 
