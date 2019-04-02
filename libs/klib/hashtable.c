@@ -215,9 +215,11 @@ LIB_EXPORT rc_t KHashTableLoad ( KHashTable **self, const KDataBuffer *inbuf )
     uint64_t inmagic = *pos++;
     // fprintf ( stderr, "inmagic is %" PRIx64 "\n", inmagic );
     if ( inmagic != MAGIC ) {
+#if LINUX
         if ( inmagic == be64toh ( MAGIC ) )
             return RC (
                 rcCont, rcTrie, rcConstructing, rcByteOrder, rcNotAvailable );
+#endif
         return RC ( rcCont, rcTrie, rcConstructing, rcFormat, rcUnrecognized );
     }
     // fprintf ( stderr, "magic OK\n" );

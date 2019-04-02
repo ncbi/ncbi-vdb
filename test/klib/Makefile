@@ -31,7 +31,6 @@ MODULE = test/klib
 # WARNING: test-md5append is excluded from TEST_TOOLS since it's supposed
 # to be run manually
 TEST_TOOLS = \
-	test-hashtable \
 	test-asm \
 	test-printf \
 	test-log \
@@ -45,6 +44,7 @@ TEST_TOOLS = \
     test-symtab \
 	test-json \
 	test-base64 \
+	test-hashtable
 
 ifeq (linux,$(OS))
 TEST_TOOLS += test-hashfile

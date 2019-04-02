@@ -47,8 +47,8 @@
 #include <stdio.h>
 #include <sys/time.h>
 #include <unistd.h>
-#include <unordered_map>
-#include <unordered_set>
+#include <map>
+#include <set>
 #include <utility>
 
 using namespace std;
@@ -118,7 +118,7 @@ TEST_CASE ( Klib_KHash_Collide )
     char buf[37];
     for ( size_t l = 0; l != sizeof ( buf ); l++ ) buf[l] = (char)random ();
 
-    std::unordered_set<uint64_t> set;
+    std::set<uint64_t> set;
 
     size_t inserts = 0;
     size_t collisions = 0;
@@ -441,7 +441,7 @@ TEST_CASE ( Klib_HashTableMapValid )
     rc = KHashTableMake ( &hmap, 4, 4, 0, 0.0, raw );
     REQUIRE_RC ( rc );
 
-    std::unordered_map<uint32_t, uint32_t> map;
+    std::map<uint32_t, uint32_t> map;
 
     uint64_t hash = (uint64_t)random (); // Test probing
     const int loops = 10000;
@@ -487,7 +487,7 @@ TEST_CASE ( Klib_HashTableMapDeletes )
     rc = KHashTableMake ( &hmap, 4, 4, 0, 0.95, raw );
     REQUIRE_RC ( rc );
 
-    std::unordered_map<uint32_t, uint32_t> map;
+    std::map<uint32_t, uint32_t> map;
 
     // Test probing, constant hash value
     uint64_t hash = random ();
@@ -549,7 +549,7 @@ TEST_CASE ( Klib_HashTableMapIterator )
     uint32_t key;
     uint32_t value;
 
-    std::unordered_map<uint32_t, uint32_t> map;
+    std::map<uint32_t, uint32_t> map;
     for ( int iter = 0; iter != 2; ++iter ) {
         for ( int i = 0; i != loops; ++i ) {
             key = random () % loops;
@@ -633,7 +633,7 @@ TEST_CASE ( Klib_HashTableMapSmallKeys )
     rc = KHashTableMake ( &hmap, 2, 2, 0, 0.0, raw );
     REQUIRE_RC ( rc );
 
-    std::unordered_map<uint16_t, uint16_t> map;
+    std::map<uint16_t, uint16_t> map;
 
     uint64_t hash = (uint64_t)random (); // Test probing
     const int loops = 1000;
@@ -677,7 +677,7 @@ TEST_CASE ( Klib_HashTableMapReserve )
     rc = KHashTableMake ( &hmap, 2, 2, capacity, 0.0, raw );
     REQUIRE_RC ( rc );
 
-    std::unordered_map<uint16_t, uint16_t> map;
+    std::map<uint16_t, uint16_t> map;
 
     uint64_t hash = (uint64_t)random (); // Test probing
     const int loops = 1000;
@@ -750,7 +750,7 @@ static void make_benchkeys ( void )
 TEST_CASE ( Klib_stdunorderedSetBench )
 {
     make_benchkeys ();
-    std::unordered_set<uint64_t> hset;
+    std::set<uint64_t> hset;
 
     for ( unsigned long numelem = 4; numelem < ( 1ULL << 26 ); numelem *= 2 ) {
         hset.clear ();
@@ -761,7 +761,7 @@ TEST_CASE ( Klib_stdunorderedSetBench )
         }
         size_t sz = hset.size ();
         REQUIRE_EQ ( sz, (size_t)numelem );
-        printf ( "std::unordered_set " );
+        printf ( "std::set " );
         printf (
             "required %lu ms to insert %lu\n", stopwatch () / 1000, numelem );
 
