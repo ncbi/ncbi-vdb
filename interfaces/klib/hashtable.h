@@ -36,7 +36,7 @@ extern "C" {
 
 typedef struct KHashTable KHashTable;
 
-typedef enum hashkey_type { raw, cstr } hashkey_type;
+typedef enum hashkey_type { raw = 0x666, cstr = 0x667 } hashkey_type;
 /* NB: Not thread safe */
 
 /* Create a new KHashTable.
@@ -120,10 +120,11 @@ KLIB_EXTERN void KHashTableIteratorMake ( KHashTable *self );
 /* Next key/value
  * "key" [ OUT ] - Next key
  * "value" [ OUT ] - Next value. Ignored if value_size==0 or NULL.
+ * "keyhash" [ OUT ] - Next hash. Ignored if NULL.
  * Returns true if additional keys available
  */
 KLIB_EXTERN bool KHashTableIteratorNext (
-    KHashTable *self, void *key, void *value );
+    KHashTable *self, void *key, void *value, uint64_t *keyhash );
 
 /* Returns current load factor (# buckets / # items) */
 /* KLIB_EXTERN double KHashTableGetLoadFactor(const KHashTable* self); */

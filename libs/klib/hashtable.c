@@ -174,6 +174,9 @@ LIB_EXPORT rc_t KHashTableMake ( KHashTable **self, size_t key_size,
     if ( key_type == cstr && key_size != sizeof ( char * ) )
         return RC ( rcCont, rcTrie, rcConstructing, rcParam, rcInvalid );
 
+    if ( key_type == raw && key_size > sizeof ( void * ) )
+        return RC ( rcCont, rcTrie, rcConstructing, rcParam, rcInvalid );
+
     if ( capacity <= 16 ) capacity = 16;
 
     KHashTable *kht = (KHashTable *)malloc ( sizeof ( KHashTable ) );
@@ -237,6 +240,7 @@ LIB_EXPORT rc_t KHashTableLoad ( KHashTable **self, const KDataBuffer *inbuf )
     // if ( inkey_type == cstr ) fprintf ( stderr, "cstr\n" );
     rc = KHashTableMake (
         self, inkey_size, invalue_size, incount, 0.0, inkey_type );
+    if ( rc ) return rc;
 
     void *key;
     void *value = NULL;
@@ -245,9 +249,10 @@ LIB_EXPORT rc_t KHashTableLoad ( KHashTable **self, const KDataBuffer *inbuf )
         uint64_t hash;
         if ( inkey_type == raw ) {
             hash = *pos++;
-            key = (void *)*pos++;
+            key = (void *)( pos )++;
+            // fprintf ( stderr, "raw key is %zx\n", *(uint64_t *)key );
         } else {
-            pos++; // Recompute hash below
+            hash = *pos++;
             size_t keylen = *pos++;
             key = pos++;
             while ( keylen > 8 ) {
@@ -255,13 +260,14 @@ LIB_EXPORT rc_t KHashTableLoad ( KHashTable **self, const KDataBuffer *inbuf )
                 keylen -= 8;
             }
 
-            // fprintf ( stderr, "key is '%s'\n", (const char *)key );
-            hash = KHash ( key, strlen ( key ) );
+            // fprintf ( stderr, "cstr key is '%s'\n", (const char *)key );
         }
+
         if ( invalue_size ) value = (void *)*pos++;
 
-        // fprintf ( stderr, "hash is  %zu\n", hash );
+        // fprintf ( stderr, "hash is  %zx\n", hash );
         rc = KHashTableAdd ( *self, key, hash, &value );
+        if ( rc ) return rc;
     }
 
     return rc;
@@ -293,23 +299,24 @@ LIB_EXPORT rc_t KHashTableSave ( KHashTable *self, KDataBuffer *outbuf )
 
     void *key;
     void *value;
+    uint64_t keyhash;
 
     self->iterator = -1; /* Invalidate any current iterators */
     KHashTableIteratorMake ( self );
-    while ( KHashTableIteratorNext ( self, &key, &value ) ) {
+    while ( KHashTableIteratorNext ( self, &key, &value, &keyhash ) ) {
         if ( self->key_type == raw ) {
-            rc = VectorAppend (
-                &bytes, NULL, (void *)KHash ( key, self->key_size ) );
+            rc = VectorAppend ( &bytes, NULL, (void *)keyhash );
             if ( rc ) return rc;
+
             rc = VectorAppend ( &bytes, NULL, key );
             if ( rc ) return rc;
         } else {
             // fprintf ( stderr, "saving key='%s'\n", (char *)key );
             size_t keylen = strlen ( key );
 
-            uint64_t hash = KHash ( key, keylen );
+            // uint64_t hash = KHash ( key, keylen );
             // fprintf ( stderr, "hash was %zu\n", hash );
-            rc = VectorAppend ( &bytes, NULL, (void *)hash );
+            rc = VectorAppend ( &bytes, NULL, (void *)keyhash );
             if ( rc ) return rc;
 
             size_t l8 = ( keylen + 1u + 7u ) & ~7u;
@@ -341,9 +348,9 @@ LIB_EXPORT rc_t KHashTableSave ( KHashTable *self, KDataBuffer *outbuf )
     KDataBufferResize ( outbuf, VectorLength ( &bytes ) * sizeof ( void * ) );
     memmove (
         outbuf->base, bytes.v, VectorLength ( &bytes ) * sizeof ( void * ) );
-    for ( uint32_t i = 0; i != VectorLength ( &bytes ); ++i ) {
-        // fprintf ( stderr, "%3d %p\n", i, VectorGet ( &bytes, i ) );
-    }
+    // for ( uint32_t i = 0; i != VectorLength ( &bytes ); ++i ) {
+    //    fprintf ( stderr, "%3d %p\n", i, VectorGet ( &bytes, i ) );
+    // }
     // fprintf ( stderr, "Table saved %d\n", VectorLength ( &bytes ) );
 
     VectorWhack ( &bytes, NULL, NULL );
@@ -617,7 +624,7 @@ LIB_EXPORT void KHashTableIteratorMake ( KHashTable *self )
 }
 
 LIB_EXPORT bool KHashTableIteratorNext (
-    KHashTable *self, void *key, void *value )
+    KHashTable *self, void *key, void *value, uint64_t *keyhash )
 {
     if ( self == NULL || self->iterator == -1 ) return false;
 
@@ -646,6 +653,7 @@ LIB_EXPORT bool KHashTableIteratorNext (
             && ( buckethash & BUCKET_VISIBLE ) ) {
             memcpy ( key, keyptr, key_size );
             if ( value && value_size ) memcpy ( value, valueptr, value_size );
+            if ( keyhash ) *keyhash = buckethash;
             return true;
         }
     }

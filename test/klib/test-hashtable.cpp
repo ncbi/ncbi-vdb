@@ -42,13 +42,13 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <map>
+#include <set>
 #include <stdexcept>
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/time.h>
 #include <unistd.h>
-#include <map>
-#include <set>
 #include <utility>
 
 using namespace std;
@@ -479,6 +479,150 @@ TEST_CASE ( Klib_HashTableMapValid )
     KHashTableDispose ( hmap, NULL, NULL, NULL );
 }
 
+TEST_CASE ( Klib_HashTableSetPersist )
+{
+    rc_t rc;
+
+    KHashTable *hset;
+    rc = KHashTableMake ( &hset, 4, 0, 0, 0.0, raw );
+    REQUIRE_RC ( rc );
+
+    std::set<uint32_t> set;
+
+    uint64_t hash = (uint64_t)random (); // Test probing
+    const int loops = 30;
+    for ( int i = 0; i != loops; ++i ) {
+        uint32_t key = 123 + random () % loops;
+        uint32_t value = i;
+
+        set.erase ( key );
+        set.insert ( key );
+        rc = KHashTableAdd ( hset, (void *)&key, hash, NULL );
+        REQUIRE_RC ( rc );
+        bool hfound
+            = KHashTableFind ( hset, (void *)&key, hash, (void *)&value );
+        REQUIRE_EQ ( hfound, true );
+    }
+
+    uint32_t key = 0xababab;
+    rc = KHashTableAdd ( hset, (void *)&key, hash, NULL );
+    REQUIRE_RC ( rc );
+    set.insert ( key );
+    key = 0xacacac;
+    rc = KHashTableAdd ( hset, (void *)&key, hash, NULL );
+    REQUIRE_RC ( rc );
+    set.insert ( key );
+
+    KDataBuffer db;
+    KDataBuffer wdb;
+    rc = KDataBufferMakeBytes ( &db, 1 );
+    REQUIRE_RC ( rc );
+    rc = KDataBufferMakeWritable ( &db, &wdb );
+    REQUIRE_RC ( rc );
+    KDataBufferWhack ( &db );
+    rc = KHashTableSave ( hset, &wdb );
+    REQUIRE_RC ( rc );
+    KHashTableDispose ( hset, NULL, NULL, NULL );
+    hset = NULL;
+
+    rc = KHashTableLoad ( &hset, &wdb );
+    REQUIRE_RC ( rc );
+
+    bool hfound;
+    hfound = KHashTableFind ( hset, (void *)&key, hash, NULL );
+    REQUIRE_EQ ( hfound, true );
+    key = 0x9999999;
+    hfound = KHashTableFind ( hset, (void *)&key, hash, NULL );
+    REQUIRE_EQ ( hfound, false );
+
+    size_t setcount = set.size ();
+    size_t hsetcount = KHashTableCount ( hset );
+    REQUIRE_EQ ( setcount, hsetcount );
+
+    for ( int i = 0; i != loops; ++i ) {
+        uint32_t key = random () % loops;
+        int hvalue = i;
+        hfound = KHashTableFind ( hset, (void *)&key, hash, &hvalue );
+
+        auto setfound = set.find ( key );
+        if ( setfound == set.end () ) {
+            REQUIRE_EQ ( hfound, false );
+        } else {
+            REQUIRE_EQ ( hfound, true );
+            REQUIRE_EQ ( hvalue, i );
+        }
+    }
+
+    KDataBufferWhack ( &wdb );
+    KHashTableDispose ( hset, NULL, NULL, NULL );
+}
+
+
+TEST_CASE ( Klib_HashTableMapValidPersist )
+{
+    rc_t rc;
+
+    KHashTable *hmap;
+    rc = KHashTableMake ( &hmap, 4, 4, 0, 0.0, raw );
+    REQUIRE_RC ( rc );
+
+    std::map<uint32_t, uint32_t> map;
+
+    uint64_t hash = (uint64_t)random (); // Test probing
+    const int loops = 10000;
+    for ( int i = 0; i != loops; ++i ) {
+        uint32_t key = random () % loops;
+        uint32_t value = i;
+
+        auto pair = std::make_pair ( key, value );
+        map.erase ( key );
+        map.insert ( pair );
+        rc = KHashTableAdd ( hmap, (void *)&key, hash, (void *)&value );
+        bool hfound
+            = KHashTableFind ( hmap, (void *)&key, hash, (void *)&value );
+        REQUIRE_EQ ( hfound, true );
+    }
+
+    KDataBuffer db;
+    KDataBuffer wdb;
+    rc = KDataBufferMakeBytes ( &db, 1 );
+    REQUIRE_RC ( rc );
+    rc = KDataBufferMakeWritable ( &db, &wdb );
+    REQUIRE_RC ( rc );
+    KDataBufferWhack ( &db );
+    rc = KHashTableSave ( hmap, &wdb );
+    REQUIRE_RC ( rc );
+    KHashTableDispose ( hmap, NULL, NULL, NULL );
+    hmap = NULL;
+
+    rc = KHashTableLoad ( &hmap, &wdb );
+    REQUIRE_RC ( rc );
+
+    size_t mapcount = map.size ();
+    size_t hmapcount = KHashTableCount ( hmap );
+    REQUIRE_EQ ( mapcount, hmapcount );
+
+    for ( int i = 0; i != loops; ++i ) {
+        uint32_t key = random () % loops;
+        uint32_t hvalue = 0;
+        bool hfound = KHashTableFind ( hmap, (void *)&key, hash, &hvalue );
+
+        auto mapfound = map.find ( key );
+        // fprintf ( stderr, "#%d, key=%d %d mapfound=%d hfound=%d\n", i, key,
+        //    mapfound != map.end (), mapfound, hfound );
+        if ( mapfound == map.end () ) {
+            REQUIRE_EQ ( hfound, false );
+        } else {
+            uint32_t mvalue = mapfound->second;
+            REQUIRE_EQ ( hfound, true );
+            REQUIRE_EQ ( hvalue, mvalue );
+        }
+    }
+
+    KDataBufferWhack ( &wdb );
+    KHashTableDispose ( hmap, NULL, NULL, NULL );
+}
+
 TEST_CASE ( Klib_HashTableMapDeletes )
 {
     rc_t rc;
@@ -596,10 +740,10 @@ TEST_CASE ( Klib_HashTableMapIterator )
         size_t founds = 0;
         key = loops + 1;
         KHashTableIteratorMake ( hmap );
-        while ( KHashTableIteratorNext ( hmap, &key, &value ) ) {
+        while ( KHashTableIteratorNext ( hmap, &key, &value, NULL ) ) {
             auto mapfound = map.find ( key );
             if ( mapfound == map.end () ) {
-                fprintf ( stderr, "no key=%d\n", key );
+                // fprintf ( stderr, "no key=%d\n", key );
                 REQUIRE_EQ ( true, false );
             } else {
                 uint32_t mvalue = mapfound->second;
@@ -612,7 +756,7 @@ TEST_CASE ( Klib_HashTableMapIterator )
         REQUIRE_EQ ( founds, hmapcount );
 
         KHashTableIteratorMake ( hmap );
-        while ( KHashTableIteratorNext ( hmap, &key, NULL ) ) {
+        while ( KHashTableIteratorNext ( hmap, &key, NULL, NULL ) ) {
             map.erase ( key );
             uint64_t hash = KHash ( (char *)&key, 4 );
             KHashTableDelete ( hmap, (void *)&key, hash );
