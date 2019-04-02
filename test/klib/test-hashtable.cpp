@@ -310,6 +310,7 @@ TEST_CASE ( Klib_HashTableMapPersist )
     REQUIRE_EQ ( found, true );
     REQUIRE_EQ ( val, (uint64_t)125 );
 
+    KHashTableDispose ( hmap, NULL, NULL, NULL );
     KDataBufferWhack ( &wdb );
 }
 
