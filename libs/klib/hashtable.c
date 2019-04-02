@@ -58,8 +58,8 @@ struct KHashTable {
     hashkey_type key_type;
 };
 
-static const uint64_t BUCKET_VALID = (uint64_t)1ULL << 63;
-static const uint64_t BUCKET_VISIBLE = (uint64_t)1ULL << 62;
+static const uint64_t BUCKET_VALID = (uint64_t)1ULL << 63u;
+static const uint64_t BUCKET_VISIBLE = (uint64_t)1ULL << 62u;
 static const uint64_t MAGIC = 0x4841534854424C31ULL; // HASHTBL1
 
 /*
@@ -107,7 +107,7 @@ static rc_t rehash ( KHashTable *self, size_t capacity )
 
     if ( capacity < self->count ) capacity = self->count;
 
-    uint64_t lg2 = (uint64_t)uint64_msbit ( capacity | 1 );
+    uint64_t lg2 = (uint64_t)uint64_msbit ( capacity | 1u );
     capacity = 1ULL << lg2;
 
     void *old_buckets = self->buckets;
@@ -245,7 +245,7 @@ LIB_EXPORT rc_t KHashTableLoad ( KHashTable **self, const KDataBuffer *inbuf )
             hash = *pos++;
             key = (void *)*pos++;
         } else {
-            hash = *pos++;
+            pos++; // Recompute hash below
             size_t keylen = *pos++;
             key = pos++;
             while ( keylen > 8 ) {
@@ -310,7 +310,7 @@ LIB_EXPORT rc_t KHashTableSave ( KHashTable *self, KDataBuffer *outbuf )
             rc = VectorAppend ( &bytes, NULL, (void *)hash );
             if ( rc ) return rc;
 
-            size_t l8 = ( keylen + 1 + 7 ) & ~7;
+            size_t l8 = ( keylen + 1u + 7u ) & ~7u;
             rc = VectorAppend ( &bytes, NULL, (void *)( l8 ) );
             if ( rc ) return rc;
 
@@ -321,7 +321,10 @@ LIB_EXPORT rc_t KHashTableSave ( KHashTable *self, KDataBuffer *outbuf )
             size_t i = 0;
             while ( l8 ) {
                 rc = VectorAppend ( &bytes, NULL, (void *)p[i++] );
-                if ( rc ) return rc;
+                if ( rc ) {
+                    free ( kstr );
+                    return rc;
+                }
                 l8 -= 8;
             }
             free ( kstr );
@@ -362,10 +365,8 @@ LIB_EXPORT void KHashTableDispose ( KHashTable *self,
 
 LIB_EXPORT size_t KHashTableCount ( const KHashTable *self )
 {
-    if ( self != NULL )
-        return self->count;
-    else
-        return 0;
+    if ( self != NULL ) return self->count;
+    return 0;
 }
 
 /*
@@ -510,9 +511,8 @@ LIB_EXPORT rc_t KHashTableAdd (
             if ( load_factor > self->max_load_factor ) {
                 if ( (double)self->count / (double)self->load > 0.5 )
                     return rehash ( self, self->num_buckets * 2 );
-                else
-                    /* lots of deletes, just rehash table at existing size */
-                    return rehash ( self, self->num_buckets );
+                /* lots of deletes, just rehash table at existing size */
+                return rehash ( self, self->num_buckets );
             }
 
             return 0;
@@ -681,15 +681,15 @@ static const uint64_t k0 = 0xc3a5c85c97cb3127ULL;
 static const uint64_t k1 = 0xb492b66fbe98f273ULL;
 static const uint64_t k2 = 0x9ae16a3b2f90404fULL;
 
-static uint64_t ShiftMix ( uint64_t val ) { return val ^ ( val >> 47 ); }
+static uint64_t ShiftMix ( uint64_t val ) { return val ^ ( val >> 47u ); }
 
 static uint64_t HashLen16 ( uint64_t u, uint64_t v, uint64_t mul )
 {
     /* Murmur-inspired hashing. */
     uint64_t a = ( u ^ v ) * mul;
-    a ^= ( a >> 47 );
+    a ^= ( a >> 47u );
     uint64_t b = ( v ^ a ) * mul;
-    b ^= ( b >> 47 );
+    b ^= ( b >> 47u );
     b *= mul;
     return b;
 }
@@ -707,14 +707,14 @@ static uint64_t HashLen0to16 ( const char *s, size_t len )
     if ( len >= 4 ) {
         uint64_t mul = k2 + len * 2;
         uint64_t a = Fetch32 ( s );
-        return HashLen16 ( len + ( a << 3 ), Fetch32 ( s + len - 4 ), mul );
+        return HashLen16 ( len + ( a << 3u ), Fetch32 ( s + len - 4 ), mul );
     }
     if ( len > 0 ) {
         uint8_t a = s[0];
-        uint8_t b = s[len >> 1];
+        uint8_t b = s[len >> 1u];
         uint8_t c = s[len - 1];
-        uint64_t y = ( uint32_t ) ( a ) + ( ( uint32_t ) ( b ) << 8 );
-        uint64_t z = len + ( ( uint32_t ) ( c ) << 2 );
+        uint64_t y = ( uint32_t ) ( a ) + ( ( uint32_t ) ( b ) << 8u );
+        uint64_t z = len + ( ( uint32_t ) ( c ) << 2u );
         return ShiftMix ( y * k2 ^ z * k0 ) * k2;
     }
     return k2;
@@ -820,7 +820,7 @@ LIB_EXPORT uint64_t KHash ( const char *s, size_t len )
      * or little-endian integers. */
     if ( len == 8 ) {
         uint64_t a = Fetch64 ( s );
-        return ( a << 1 ) + ( a >> 55 );
+        return ( a << 1u ) + ( a >> 55u );
     }
 
     if ( len == 0 ) return 0;
