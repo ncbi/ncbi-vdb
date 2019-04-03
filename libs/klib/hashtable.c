@@ -60,7 +60,7 @@ struct KHashTable {
 
 static const uint64_t BUCKET_VALID = (uint64_t)1ULL << 63u;
 static const uint64_t BUCKET_VISIBLE = (uint64_t)1ULL << 62u;
-static const uint64_t MAGIC = 0x4841534854424C31ULL; // HASHTBL1
+static const uint64_t MAGIC = 0x4841534854424C31ULL; /* HASHTBL1 */
 
 /*
 static double getloadfactor(const KHashTable* self)
@@ -205,6 +205,22 @@ LIB_EXPORT rc_t KHashTableMake ( KHashTable **self, size_t key_size,
     return 0;
 }
 
+/* Serialized format is little-endian:
+ * uint64_t MAGIC // Used to detect endian switch
+ * uint64_t key_size
+ * uint64_t value_size
+ * uint64_t count
+ * uint64_t key_type
+ * Followed by count entries of:
+ *     keyhash
+ *     if key_type is raw:
+ *        key
+ *     else if key_type is cstr:
+ *        length of key, rounded to multiple of 8 bytes
+ *        key
+ *     if value_size>0
+ *        value
+ */
 LIB_EXPORT rc_t KHashTableLoad ( KHashTable **self, const KDataBuffer *inbuf )
 {
     rc_t rc;
@@ -216,7 +232,7 @@ LIB_EXPORT rc_t KHashTableLoad ( KHashTable **self, const KDataBuffer *inbuf )
 
     uint64_t *pos = (uint64_t *)inbuf->base;
     uint64_t inmagic = *pos++;
-    // fprintf ( stderr, "inmagic is %" PRIx64 "\n", inmagic );
+    /* fprintf ( stderr, "inmagic is %" PRIx64 "\n", inmagic ); */
     if ( inmagic != MAGIC ) {
 #if LINUX
         if ( inmagic == be64toh ( MAGIC ) )
@@ -225,19 +241,19 @@ LIB_EXPORT rc_t KHashTableLoad ( KHashTable **self, const KDataBuffer *inbuf )
 #endif
         return RC ( rcCont, rcTrie, rcConstructing, rcFormat, rcUnrecognized );
     }
-    // fprintf ( stderr, "magic OK\n" );
+    /* fprintf ( stderr, "magic OK\n" ); */
 
     size_t inkey_size = *pos++;
     size_t invalue_size = *pos++;
     size_t incount = *pos++;
     hashkey_type inkey_type = *pos++;
 
-    // fprintf ( stderr, "inkey size is %zu\n", inkey_size );
-    // fprintf ( stderr, "invalue size is %zu\n", invalue_size );
-    // fprintf ( stderr, "incount is %zu\n", incount );
-    // fprintf ( stderr, "inkey_type is %u\n", inkey_type );
+    /* fprintf ( stderr, "inkey size is %zu\n", inkey_size ); */
+    /* fprintf ( stderr, "invalue size is %zu\n", invalue_size ); */
+    /* fprintf ( stderr, "incount is %zu\n", incount ); */
+    /* fprintf ( stderr, "inkey_type is %u\n", inkey_type ); */
 
-    // if ( inkey_type == cstr ) fprintf ( stderr, "cstr\n" );
+    /* if ( inkey_type == cstr ) fprintf ( stderr, "cstr\n" ); */
     rc = KHashTableMake (
         self, inkey_size, invalue_size, incount, 0.0, inkey_type );
     if ( rc ) return rc;
@@ -250,7 +266,7 @@ LIB_EXPORT rc_t KHashTableLoad ( KHashTable **self, const KDataBuffer *inbuf )
         if ( inkey_type == raw ) {
             hash = *pos++;
             key = (void *)( pos )++;
-            // fprintf ( stderr, "raw key is %zx\n", *(uint64_t *)key );
+            /* fprintf ( stderr, "raw key is %zx\n", *(uint64_t *)key ); */
         } else {
             hash = *pos++;
             size_t keylen = *pos++;
@@ -260,12 +276,12 @@ LIB_EXPORT rc_t KHashTableLoad ( KHashTable **self, const KDataBuffer *inbuf )
                 keylen -= 8;
             }
 
-            // fprintf ( stderr, "cstr key is '%s'\n", (const char *)key );
+            /* fprintf ( stderr, "cstr key is '%s'\n", (const char *)key ); */
         }
 
         if ( invalue_size ) value = (void *)*pos++;
 
-        // fprintf ( stderr, "hash is  %zx\n", hash );
+        /* fprintf ( stderr, "hash is  %zx\n", hash ); */
         rc = KHashTableAdd ( *self, key, hash, &value );
         if ( rc ) return rc;
     }
@@ -311,11 +327,11 @@ LIB_EXPORT rc_t KHashTableSave ( KHashTable *self, KDataBuffer *outbuf )
             rc = VectorAppend ( &bytes, NULL, key );
             if ( rc ) return rc;
         } else {
-            // fprintf ( stderr, "saving key='%s'\n", (char *)key );
+            /* fprintf ( stderr, "saving key='%s'\n", (char *)key ); */
             size_t keylen = strlen ( key );
 
-            // uint64_t hash = KHash ( key, keylen );
-            // fprintf ( stderr, "hash was %zu\n", hash );
+            /* uint64_t hash = KHash ( key, keylen ); */
+            /* fprintf ( stderr, "hash was %zu\n", hash ); */
             rc = VectorAppend ( &bytes, NULL, (void *)keyhash );
             if ( rc ) return rc;
 
@@ -348,10 +364,11 @@ LIB_EXPORT rc_t KHashTableSave ( KHashTable *self, KDataBuffer *outbuf )
     KDataBufferResize ( outbuf, VectorLength ( &bytes ) * sizeof ( void * ) );
     memmove (
         outbuf->base, bytes.v, VectorLength ( &bytes ) * sizeof ( void * ) );
-    // for ( uint32_t i = 0; i != VectorLength ( &bytes ); ++i ) {
-    //    fprintf ( stderr, "%3d %p\n", i, VectorGet ( &bytes, i ) );
-    // }
-    // fprintf ( stderr, "Table saved %d\n", VectorLength ( &bytes ) );
+    /* for ( uint32_t i = 0; i != VectorLength ( &bytes ); ++i ) {
+          fprintf ( stderr, "%3d %p\n", i, VectorGet ( &bytes, i ) );
+       }
+       fprintf ( stderr, "Table saved %d\n", VectorLength ( &bytes ) );
+      */
 
     VectorWhack ( &bytes, NULL, NULL );
     return rc;
