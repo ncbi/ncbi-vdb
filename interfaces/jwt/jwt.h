@@ -48,6 +48,7 @@ extern "C" {
 struct String;
 typedef struct String String;
 typedef String StringOrURI;
+typedef String JWT;
 
 struct JSONValue;
 typedef struct JSONValue JSONValue;
@@ -74,7 +75,7 @@ typedef struct JSONValue JSONValue;
     //     static JSONValue * makeInteger ( long long int val );
     //     static JSONValue * makeDouble ( long double val, unsigned int precision );
     //     static JSONValue * makeNumber ( const JwtString & val );
-    //     static JSONValue * makeString ( const JwtString & val );
+
 JWT_EXTERN JSONValue * CC JSONValue_makeString ( const String * val );
 
     //     // query value type
@@ -99,7 +100,7 @@ JWT_EXTERN JSONValue * CC JSONValue_makeString ( const String * val );
     //     virtual bool toBool () const;
     //     virtual long long toInteger () const;
     //     virtual JwtString toNumber () const;
-    //     virtual JwtString toString () const;
+
 JWT_EXTERN rc_t CC JSONValue_toString ( const JSONValue * self, const String ** str );
 
     //     virtual JwtString toJSON () const = 0;
@@ -144,11 +145,13 @@ typedef struct HMAC_JWKey HMAC_JWKey;
 //  "alg" - algorithm id in { "HS256", "HS384", "HS512" }
 JWT_EXTERN const HMAC_JWKey * CC HMAC_JWKey_make ( unsigned int key_bits,
     const String * use, const String * alg, const String * kid );
+
 // JWK overrides
 // virtual bool isSymmetric () const;
 // virtual const HMAC_JWKey * toHMAC () const;
 // // get symmetric key "k"
 // JwtString getValue () const;
+
 JWT_EXTERN void CC HMAC_JWKey_dtor ( const HMAC_JWKey * );
 
 struct JWK;
@@ -181,7 +184,6 @@ typedef struct JWSFactory JWSFactory;
 
 // create a standard factory
 // duplicates key reference when successful
-// JWSFactory ( const JwtString & authority_name, const JwtString & alg, const JWK * key );
 JWT_EXTERN JWSFactory * CC JWSFactory_ctor ( const String * authority_name, const String * alg, const JWK * key );
 
 JWT_EXTERN void CC JWSFactory_dtor ( JWSFactory * self );
@@ -201,7 +203,6 @@ typedef struct JWTClaims JWTClaims;
 
 //     // claims can be any valid JSONValue
 //     void addClaim ( const JwtString & name, JSONValue * value, bool isFinal = false );
-//     void addClaimOrDeleteValue ( const JwtString & name, JSONValue * value, bool isFinal = false );
 JWT_EXTERN rc_t CC JWTClaims_addClaimOrDeleteValue ( JWTClaims * self, const String * name, JSONValue * value, bool isFinal );
 
 //     // validate claims read from JWT payload
@@ -209,8 +210,7 @@ JWT_EXTERN rc_t CC JWTClaims_addClaimOrDeleteValue ( JWTClaims * self, const Str
 //     // test validity based on time +/- skew amount
 //     void validate ( long long cur_time, long long skew = 0 );
 
-//     // serialization
-//     JwtString toJSON () const;
+// serialization
 JWT_EXTERN rc_t CC JWTClaims_toJSON ( const JWTClaims * self, const String ** json );
 
 //     JwtString readableJSON ( unsigned int indent = 0 ) const;
@@ -233,30 +233,29 @@ typedef struct JWTFactory JWTFactory;
 //     JWTFactory & operator = ( const JWTFactory & jwt_fact );
 //     JWTFactory ( const JWTFactory & jwt_fact );
 
-//     // create a factory without signing or encrypting capability
+// create a factory without signing or encrypting capability
 JWT_EXTERN JWTFactory * CC JWTFactory_ctor_default ();
 
-//     // create a standard factory with signing capability
+// create a standard factory with signing capability
 JWT_EXTERN JWTFactory * CC JWTFactory_ctor ( const JWSFactory * jws_fact );
 
 /* make a new, more or less empty JWT object */
 JWT_EXTERN JWTClaims * CC JWTFactory_make ( JWTFactory * );
 
-//     // create a signed JWT as a compact JWS from the claims set
-//     JWT JWTFactory_sign ( const JWTClaims & claims ) const;
+// create a signed JWT as a compact JWS from the claims set
+JWT_EXTERN JWT * CC JWTFactory_sign ( JWTFactory * self, JWTClaims * claims );
 
-//     // decode a JWT against current time with default skew
-//     JWTClaims decode ( const JWT & jwt ) const;
+// decode a JWT against current time with default skew
+JWT_EXTERN rc_t CC JWTFactory_decode ( const JWTFactory * self, const JWT *, JWTClaims ** claims );
+
 //     // decode a JWT against provided time with optional explicit skew
 //     JWTClaims decode ( const JWT & jwt, long long cur_time, long long skew = 0 ) const;
 
-//     // registered claim factory parameters
-//     void setIssuer ( const StringOrURI & iss );
+// registered claim factory parameters
 JWT_EXTERN rc_t CC JWTFactory_setIssuer ( JWTFactory * self, const StringOrURI * iss );
 
 //     void setSubject ( const StringOrURI & sub );
 //     void addAudience ( const StringOrURI & aud );
-//     void setDuration ( long long int dur_seconds );
 JWT_EXTERN rc_t CC JWTFactory_setDuration ( JWTFactory * self, long long int dur_seconds );
 
 //     void setNotBefore ( long long int nbf_seconds );

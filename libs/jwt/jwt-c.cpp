@@ -27,30 +27,61 @@
 #include <jwt/jwt.h>
 
 #include <klib/text.h>
+#include <klib/log.h>
+
 #include <jwt/jwk.hpp>
 #include <jwt/jwt.hpp>
 #include <jwt/jws.hpp>
 #include <jwt/json.hpp>
 
-//TODO: catch exceptions, convert into RC
+#define EXC2RC \
+    catch ( const ncbi :: JWTException & ex ) \
+    { \
+        LogMsg( klogErr, ex . what () ); \
+        return RC(rcKrypto,rcString,rcProcessing,rcError,rcUnexpected); \
+    } \
+    catch (...) \
+    { \
+        return RC(rcKrypto,rcString,rcProcessing,rcError,rcUnexpected); \
+    } \
+
+#define EXC2NULL \
+    catch ( const ncbi :: JWTException & ex ) \
+    { \
+        LogMsg( klogErr, ex . what () ); \
+        return nullptr; \
+    } \
+    catch (...) \
+    { \
+        return nullptr; \
+    } \
+
 
 LIB_EXPORT
 JSONValue * CC JSONValue_makeString ( const String * val )
 {
-    assert ( val != nullptr );
-    return ( JSONValue * ) ncbi :: JSONValue :: makeString ( ncbi :: JwtString ( val -> addr, val -> size) );
+    try
+    {
+        assert ( val != nullptr );
+        return ( JSONValue * ) ncbi :: JSONValue :: makeString ( ncbi :: JwtString ( val -> addr, val -> size) );
+    }
+    EXC2NULL
 }
 
 LIB_EXPORT
 rc_t CC JSONValue_toString ( const JSONValue * p_self, const String ** p_str )
 {
-    assert ( p_self != nullptr );
-    assert ( p_str != nullptr );
-    const ncbi::JSONValue * self = (const ncbi::JSONValue *) p_self;
-    ncbi::JwtString src = self -> toString();
-    String s;
-    StringInitCString( & s, src . c_str () );
-    return StringCopy ( p_str, & s);
+    try
+    {
+        assert ( p_self != nullptr );
+        assert ( p_str != nullptr );
+        const ncbi::JSONValue * self = (const ncbi::JSONValue *) p_self;
+        ncbi::JwtString src = self -> toString();
+        String s;
+        StringInitCString( & s, src . c_str () );
+        return StringCopy ( p_str, & s);
+    }
+    EXC2RC
 }
 
 LIB_EXPORT
@@ -58,7 +89,11 @@ const HMAC_JWKey * CC
 HMAC_JWKey_make ( unsigned int key_bits,
     const String * use, const String * alg, const String * kid )
 {
-    return ( const HMAC_JWKey * ) ncbi :: HMAC_JWKey :: make(key_bits, use->addr, alg->addr, kid->addr);
+    try
+    {
+        return ( const HMAC_JWKey * ) ncbi :: HMAC_JWKey :: make(key_bits, use->addr, alg->addr, kid->addr);
+    }
+    EXC2NULL
 }
 
 LIB_EXPORT
@@ -71,12 +106,16 @@ HMAC_JWKey_dtor ( const HMAC_JWKey * self )
 LIB_EXPORT
 JWSFactory * CC JWSFactory_ctor ( const String * authority_name, const String * alg, const JWK * key )
 {
-    assert ( authority_name != nullptr );
-    assert ( alg != nullptr );
-    assert ( key != nullptr );
-    return ( JWSFactory * ) new ncbi::JWSFactory( ncbi :: JwtString ( authority_name -> addr, authority_name -> size),
-                                                  ncbi :: JwtString ( alg -> addr, alg -> size),
-                                                  (const ncbi::JWK*)key );
+    try
+    {
+        assert ( authority_name != nullptr );
+        assert ( alg != nullptr );
+        assert ( key != nullptr );
+        return ( JWSFactory * ) new ncbi::JWSFactory( ncbi :: JwtString ( authority_name -> addr, authority_name -> size),
+                                                    ncbi :: JwtString ( alg -> addr, alg -> size),
+                                                    (const ncbi::JWK*)key );
+    }
+    EXC2NULL
 }
 
 LIB_EXPORT
@@ -90,14 +129,22 @@ JWSFactory_dtor ( JWSFactory * p_self )
 LIB_EXPORT
 JWTFactory * CC JWTFactory_ctor_default ()
 {
-    return ( JWTFactory * ) new ncbi :: JWTFactory();
+    try
+    {
+        return ( JWTFactory * ) new ncbi :: JWTFactory();
+    }
+    EXC2NULL
 }
 
 LIB_EXPORT
 JWTFactory * CC JWTFactory_ctor ( const JWSFactory * jws_fact )
 {
-    assert ( jws_fact );
-    return ( JWTFactory * ) new ncbi :: JWTFactory( * ( const ncbi :: JWSFactory * ) jws_fact );
+    try
+    {
+        assert ( jws_fact );
+        return ( JWTFactory * ) new ncbi :: JWTFactory( * ( const ncbi :: JWSFactory * ) jws_fact );
+    }
+    EXC2NULL
 }
 
 LIB_EXPORT
@@ -112,30 +159,81 @@ LIB_EXPORT
 JWTClaims * CC
 JWTFactory_make ( JWTFactory * p_self )
 {
-    assert ( p_self != nullptr );
-    ncbi :: JWTFactory * self = ( ncbi :: JWTFactory * ) p_self;
-    return ( JWTClaims * ) new ncbi :: JWTClaims ( self -> make () );
+    try
+    {
+        assert ( p_self != nullptr );
+        ncbi :: JWTFactory * self = ( ncbi :: JWTFactory * ) p_self;
+        return ( JWTClaims * ) new ncbi :: JWTClaims ( self -> make () );
+    }
+    EXC2NULL
+}
+
+LIB_EXPORT
+JWT * CC JWTFactory_sign ( JWTFactory * p_self, JWTClaims * p_claims )
+{
+    try
+    {
+        assert ( p_self != nullptr );
+        assert ( p_claims != nullptr );
+        ncbi :: JWTFactory * self = ( ncbi :: JWTFactory * ) p_self;
+        ncbi :: JWT ret = self -> sign ( * ( ncbi :: JWTClaims * ) p_claims );
+        String s;
+        StringInitCString( & s, ret . c_str () );
+        const String * cpy;
+        rc_t rc = StringCopy ( & cpy, & s );
+        if ( rc != 0 )
+        {
+            //TODO: report rc
+            return nullptr;
+        }
+        return ( JWT * ) cpy;
+    }
+    EXC2NULL
+}
+
+LIB_EXPORT
+rc_t CC
+JWTFactory_decode ( const JWTFactory * p_self, const JWT * p_jwt, JWTClaims ** p_claims )
+{
+    try
+    {
+        assert ( p_self != nullptr );
+        assert ( p_jwt != nullptr );
+        assert ( p_claims != nullptr );
+        ncbi :: JWTFactory * self = ( ncbi :: JWTFactory * ) p_self;
+        * p_claims = ( JWTClaims * ) new ncbi :: JWTClaims ( self -> decode ( ncbi :: JWT ( p_jwt -> addr, p_jwt -> size ) ) );
+        return 0;
+    }
+    EXC2RC
 }
 
 LIB_EXPORT
 rc_t CC
 JWTFactory_setIssuer ( JWTFactory * p_self, const StringOrURI * iss )
 {
-    assert ( p_self != nullptr );
-    assert ( iss != nullptr );
-    ncbi :: JWTFactory * self = ( ncbi :: JWTFactory * ) p_self;
-    self->setIssuer ( ncbi :: JwtString ( iss -> addr, iss -> size) );
-    return 0;
+    try
+    {
+        assert ( p_self != nullptr );
+        assert ( iss != nullptr );
+        ncbi :: JWTFactory * self = ( ncbi :: JWTFactory * ) p_self;
+        self->setIssuer ( ncbi :: JwtString ( iss -> addr, iss -> size) );
+        return 0;
+    }
+    EXC2RC
 }
 
 LIB_EXPORT
 rc_t CC
 JWTFactory_setDuration ( JWTFactory * p_self, long long int dur_seconds )
 {
-    assert ( p_self != nullptr );
-    ncbi :: JWTFactory * self = ( ncbi :: JWTFactory * ) p_self;
-    self->setDuration ( dur_seconds );
-    return 0;
+    try
+    {
+        assert ( p_self != nullptr );
+        ncbi :: JWTFactory * self = ( ncbi :: JWTFactory * ) p_self;
+        self->setDuration ( dur_seconds );
+        return 0;
+    }
+    EXC2RC
 }
 
 LIB_EXPORT
@@ -150,21 +248,22 @@ JWTClaims_addClaimOrDeleteValue ( JWTClaims * p_self, const String * name, JSONV
         self -> addClaimOrDeleteValue ( ncbi :: JwtString ( name -> addr, name -> size ), (ncbi::JSONValue*)value, isFinal );
         return 0;
     }
-    catch (...)
-    {
-        return RC(rcText,rcString,rcProcessing,rcError,rcUnexpected);
-    }
+    EXC2RC
 }
 
 LIB_EXPORT
 rc_t CC
 JWTClaims_toJSON ( const JWTClaims * p_self, const String ** p_json )
 {
-    const ncbi::JWTClaims * self = (const ncbi::JWTClaims *) p_self;
-    ncbi::JwtString src = self -> toJSON();
-    String s;
-    StringInitCString( & s, src . c_str () );
-    return StringCopy ( p_json, & s);
+    try
+    {
+        const ncbi::JWTClaims * self = (const ncbi::JWTClaims *) p_self;
+        ncbi::JwtString src = self -> toJSON();
+        String s;
+        StringInitCString( & s, src . c_str () );
+        return StringCopy ( p_json, & s);
+    }
+    EXC2RC
 }
 
 LIB_EXPORT

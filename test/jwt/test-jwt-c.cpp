@@ -31,7 +31,8 @@
 #include <klib/rc.h>
 #include <klib/text.h>
 
-#include <cfloat>
+#include <float.h>
+#include <stdio.h>
 
 #include <jwt/jwt-string.hpp>
 #include <../libs/jwt/jwt-vector-impl.hpp>
@@ -559,7 +560,7 @@ rc_t JWT_throw()
     return 0;
 }
 
-rc_t JWT()
+rc_t JWT_test()
 {
     // fix the current time to a known value
     jwt_setStaticCurrentTime ( 1540664164 );
@@ -594,23 +595,57 @@ rc_t JWT()
 
     DeclString ( example, "example" );
     rc = JWTClaims_addClaimOrDeleteValue ( c, & example, json, false );
+    const String * claimsJson = nullptr;
     if ( 0 != rc ) THROW;
+    else
+    {
+        rc = JWTClaims_toJSON ( c, & claimsJson );
+        if ( nullptr == claimsJson ) THROW;
+        if ( 0 != strncmp ( "{\"example\":\"hello there\",\"iss\":\"ncbi\"}", claimsJson -> addr, claimsJson -> size ) ) THROW;
+    }
 
-    const String * res = nullptr;
-    rc = JWTClaims_toJSON ( c, & res );
-    if ( nullptr == res ) THROW;
-    if ( 0 != strncmp ( "{\"example\":\"hello there\",\"iss\":\"ncbi\"}", res -> addr, res -> size ) ) THROW;
-    StringWhack ( res );
+    {
+        JWT * signd = JWTFactory_sign ( jwtf, c);
+        if ( nullptr == signd ) THROW;
+        if ( 0 != strncmp ( "eyJhbGciOiJIUzM4NCIsImtpZCI6IndvbmRlci1rZXktaWQiLCJ0eXAiOiJKV1QifQ.eyJleGFtcGxlIjoiaGVsbG8gdGhlcmUiLCJleHAiOjE1NDA2NjQxNzksImlhdCI6MTU0MDY2NDE2NCwiaXNzIjoibmNiaSJ9.UWIn88KYxos1aiSKxqBdsak9VUMy0t9kylcwB1yEqHKb6cXHlwAoRA4NcDcGzf4N",
+            signd -> addr, signd -> size ) ) THROW;
 
-    // JWT jwt = jwt_fact -> sign ( claims );
-    // CHECK_EQUAL( string ( "eyJhbGciOiJIUzM4NCIsImtpZCI6IndvbmRlci1rZXktaWQiLCJ0eXAiOiJKV1QifQ.eyJleGFtcGxlIjoiaGVsbG8gdGhlcmUiLCJleHAiOjE1NDA2NjQxNzksImlhdCI6MTU0MDY2NDE2NCwiaXNzIjoibmNiaSJ9.UWIn88KYxos1aiSKxqBdsak9VUMy0t9kylcwB1yEqHKb6cXHlwAoRA4NcDcGzf4N"), string ( jwt . data () ) );
+        {
+            JWTClaims * decoded = nullptr;
+            const String * decodedJson = nullptr;
+            rc = JWTFactory_decode ( jwtf, signd, & decoded );
+            if ( 0 != rc || nullptr == decoded ) THROW;
+            else
+            {
+                rc = JWTClaims_toJSON ( decoded, & decodedJson );
+                if ( nullptr == decodedJson ) THROW;
+                if ( 0 != strncmp ( "{\"example\":\"hello there\",\"exp\":1540664179,\"iat\":1540664164,\"iss\":\"ncbi\"}", decodedJson -> addr, decodedJson -> size ) ) THROW;
+            }
+            JWTClaims_dtor ( decoded );
 
-    // JWTClaims decoded = jwt_fact -> decode ( jwt );
-    // CHECK_EQUAL( string ( "{\"example\":\"hello there\",\"exp\":1540664179,\"iat\":1540664164,\"iss\":\"ncbi\"}" ), string ( decoded . toJSON () . data () ) );
+            //printClaims ( c, false );
+            printf( "{\n" );
+            printf( "---- JSON Claims ----\n"
+                    "    %s\n"
+                    "---- JSON Claims ----\n\n",
+                    claimsJson -> addr );
+            //printJWT ( signd );
+            printf ( "---- JWT ----\n"
+                    "    %s\n"
+                    "---- JWT ----\n\n",
+                    signd -> addr );
+            //printClaims ( decoded, true );
+            printf ( "---- Decoded Claims ----\n"
+                     "    %s\n"
+                     "---- Decoded Claims ----\n\n",
+                     decodedJson -> addr );
+            StringWhack ( decodedJson );
+        }
 
-    // printJWTTransitionStack ( claims, jwt, decoded );
+        free ( signd );
+    }
 
-
+    StringWhack ( claimsJson );
     JWTClaims_dtor ( c );
     JWTFactory_dtor ( jwtf );
     JWSFactory_dtor ( jwsf );
@@ -650,7 +685,7 @@ rc_t CC KMain ( int argc, char *argv [] )
     if ( rc == 0 ) rc = JWT_Map();
     if ( rc == 0 ) rc = JWT_Set();
     if ( rc == 0 ) rc = JWT_throw();
-    if ( rc == 0 ) rc = JWT();
+    if ( rc == 0 ) rc = JWT_test();
 
     if ( rc == 0 )
     {
