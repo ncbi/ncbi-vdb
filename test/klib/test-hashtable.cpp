@@ -55,7 +55,7 @@ using namespace std;
 
 /* #define BENCHMARK */
 
-TEST_SUITE ( KHashTableTestSuite );
+TEST_SUITE ( KHashTableTestSuite )
 
 TEST_CASE ( Klib_KHash )
 {
@@ -324,7 +324,6 @@ TEST_CASE ( Klib_HashTableMapInts )
 
     // Test probing, constant hash value
     uint64_t hash = random ();
-    hash = random () % 5;
 
     for ( uint64_t i = 0; i != 100; i++ ) {
         bool found;
@@ -453,6 +452,7 @@ TEST_CASE ( Klib_HashTableMapValid )
         map.erase ( key );
         map.insert ( pair );
         rc = KHashTableAdd ( hmap, (void *)&key, hash, (void *)&value );
+        REQUIRE_RC ( rc );
         bool hfound
             = KHashTableFind ( hmap, (void *)&key, hash, (void *)&value );
         REQUIRE_EQ ( hfound, true );
@@ -490,7 +490,7 @@ TEST_CASE ( Klib_HashTableSetPersist )
     std::set<uint32_t> set;
 
     uint64_t hash = (uint64_t)random (); // Test probing
-    const int loops = 30;
+    const int loops = 3000;
     for ( int i = 0; i != loops; ++i ) {
         uint32_t key = 123 + random () % loops;
         uint32_t value = i;
@@ -578,6 +578,7 @@ TEST_CASE ( Klib_HashTableMapValidPersist )
         map.erase ( key );
         map.insert ( pair );
         rc = KHashTableAdd ( hmap, (void *)&key, hash, (void *)&value );
+        REQUIRE_RC ( rc );
         bool hfound
             = KHashTableFind ( hmap, (void *)&key, hash, (void *)&value );
         REQUIRE_EQ ( hfound, true );
@@ -650,6 +651,7 @@ TEST_CASE ( Klib_HashTableMapDeletes )
                 map.insert ( pair );
 
                 rc = KHashTableAdd ( hmap, (void *)&key, hash, (void *)&value );
+                REQUIRE_RC ( rc );
                 bool hfound = KHashTableFind ( hmap, (void *)&key, hash, NULL );
                 REQUIRE_EQ ( hfound, true );
             }
@@ -704,6 +706,7 @@ TEST_CASE ( Klib_HashTableMapIterator )
             map.erase ( key );
             map.insert ( pair );
             rc = KHashTableAdd ( hmap, (void *)&key, hash, (void *)&value );
+            REQUIRE_RC ( rc );
 
             size_t mapcount = map.size ();
             size_t hmapcount = KHashTableCount ( hmap );
@@ -731,6 +734,7 @@ TEST_CASE ( Klib_HashTableMapIterator )
             map.erase ( key );
             map.insert ( pair );
             rc = KHashTableAdd ( hmap, (void *)&key, hash, (void *)&value );
+            REQUIRE_RC ( rc );
 
             size_t mapcount = map.size ();
             size_t hmapcount = KHashTableCount ( hmap );
@@ -753,6 +757,7 @@ TEST_CASE ( Klib_HashTableMapIterator )
         }
         size_t mapcount = map.size ();
         size_t hmapcount = KHashTableCount ( hmap );
+        REQUIRE_EQ ( founds, mapcount );
         REQUIRE_EQ ( founds, hmapcount );
 
         KHashTableIteratorMake ( hmap );
@@ -789,6 +794,7 @@ TEST_CASE ( Klib_HashTableMapSmallKeys )
         map.erase ( key );
         map.insert ( pair );
         rc = KHashTableAdd ( hmap, (void *)&key, hash, (void *)&value );
+        REQUIRE_RC ( rc );
     }
 
     size_t mapcount = map.size ();
@@ -837,6 +843,7 @@ TEST_CASE ( Klib_HashTableMapReserve )
         map.erase ( key );
         map.insert ( pair );
         rc = KHashTableAdd ( hmap, (void *)&key, hash, (void *)&value );
+        REQUIRE_RC ( rc );
     }
 
     capacity = random () % 20000;
