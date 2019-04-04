@@ -36,7 +36,10 @@ extern "C" {
 
 typedef struct KHashTable KHashTable;
 
-typedef enum hashkey_type { raw = 0x666, cstr = 0x667 } hashkey_type;
+typedef enum hashkey_type {
+    hashkey_raw = 0x666,
+    hashkey_cstr = 0x667
+} hashkey_type;
 /* NB: Not thread safe */
 
 /* Create a new KHashTable.
@@ -132,8 +135,9 @@ KLIB_EXTERN bool KHashTableIteratorNext (
 /* Reserve space for capacity elements */
 KLIB_EXTERN rc_t KHashTableReserve ( KHashTable *self, size_t capacity );
 
-/* Hash function */
+/* Hash functions */
 KLIB_EXTERN uint64_t KHash ( const char *s, size_t len );
+KLIB_EXTERN uint64_t KHashCStr ( const char *s );
 
 #ifdef __cplusplus
 }

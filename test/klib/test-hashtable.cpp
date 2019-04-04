@@ -67,6 +67,9 @@ TEST_CASE ( Klib_KHash )
 
     uint64_t hash2 = KHash ( str, size );
     REQUIRE_EQ ( hash, hash2 );
+
+    uint64_t hash3 = KHashCStr ( str );
+    REQUIRE_EQ ( hash, hash3 );
 }
 
 TEST_CASE ( Klib_KHash_unique )
@@ -149,20 +152,20 @@ TEST_CASE ( Klib_KHashTableSet )
     size_t size = strlen ( str1 );
 
     KHashTable *hset = NULL;
-    rc = KHashTableMake ( NULL, 8, 0, 0, 1.0, cstr );
+    rc = KHashTableMake ( NULL, 8, 0, 0, 1.0, hashkey_cstr );
     REQUIRE_RC_FAIL ( rc );
     REQUIRE_EQ ( (void *)hset, (void *)NULL );
-    rc = KHashTableMake ( &hset, 8, 0, 0, -1.0, cstr );
+    rc = KHashTableMake ( &hset, 8, 0, 0, -1.0, hashkey_cstr );
     REQUIRE_RC_FAIL ( rc );
-    rc = KHashTableMake ( &hset, 8, 0, 0, 1.0, cstr );
+    rc = KHashTableMake ( &hset, 8, 0, 0, 1.0, hashkey_cstr );
     REQUIRE_RC_FAIL ( rc );
-    rc = KHashTableMake ( &hset, 0, 0, 0, 1.0, raw );
+    rc = KHashTableMake ( &hset, 0, 0, 0, 1.0, hashkey_raw );
     REQUIRE_RC_FAIL ( rc );
-    rc = KHashTableMake ( &hset, 4, 0, 0, 1.0, cstr );
+    rc = KHashTableMake ( &hset, 4, 0, 0, 1.0, hashkey_cstr );
     REQUIRE_RC_FAIL ( rc );
     REQUIRE_EQ ( (void *)hset, (void *)NULL );
 
-    rc = KHashTableMake ( &hset, 8, 0, 0, 0.0, cstr );
+    rc = KHashTableMake ( &hset, 8, 0, 0, 0.0, hashkey_cstr );
     REQUIRE_RC ( rc );
     REQUIRE_NE ( (void *)hset, (void *)NULL );
 
@@ -194,7 +197,7 @@ TEST_CASE ( Klib_HashTableMap )
     const char *str2 = "Tu estas probando este hoy, no mananX";
 
     KHashTable *hmap;
-    rc_t rc = KHashTableMake ( &hmap, 8, 8, 0, 0, cstr );
+    rc_t rc = KHashTableMake ( &hmap, 8, 8, 0, 0, hashkey_cstr );
     REQUIRE_RC ( rc );
 
     size_t sz = KHashTableCount ( hmap );
@@ -254,7 +257,7 @@ TEST_CASE ( Klib_HashTableMapPersist )
     const char *str2 = "Tu estas probando este hoy, no mananX";
 
     KHashTable *hmap;
-    rc_t rc = KHashTableMake ( &hmap, 8, 8, 0, 0, cstr );
+    rc_t rc = KHashTableMake ( &hmap, 8, 8, 0, 0, hashkey_cstr );
     REQUIRE_RC ( rc );
 
     uint64_t val1 = 123;
@@ -319,7 +322,7 @@ TEST_CASE ( Klib_HashTableMapInts )
     rc_t rc;
 
     KHashTable *hmap;
-    rc = KHashTableMake ( &hmap, 8, 8, 0, 0, raw );
+    rc = KHashTableMake ( &hmap, 8, 8, 0, 0, hashkey_raw );
     REQUIRE_RC ( rc );
 
     // Test probing, constant hash value
@@ -367,7 +370,7 @@ TEST_CASE ( Klib_HashTableMapStrings )
 
     KHashTable *hmap;
     rc = KHashTableMake (
-        &hmap, sizeof ( char * ), sizeof ( char * ), 0, 0.0, cstr );
+        &hmap, sizeof ( char * ), sizeof ( char * ), 0, 0.0, hashkey_cstr );
     REQUIRE_RC ( rc );
     const char *JOJOA[] = {"JOJO01", "JOJO02", "JOJO03", "JOJO04", "JOJO05",
         "JOJO06", "JOJO07", "JOJO08", "JOJO09", "JOJO10", "JOJO11", "JOJO12"};
@@ -398,7 +401,7 @@ TEST_CASE ( Klib_HashTableMapInts2 )
     rc_t rc;
 
     KHashTable *hmap;
-    rc = KHashTableMake ( &hmap, 8, 8, 0, 0.0, raw );
+    rc = KHashTableMake ( &hmap, 8, 8, 0, 0.0, hashkey_raw );
     REQUIRE_RC ( rc );
 
     size_t count = 0;
@@ -437,7 +440,7 @@ TEST_CASE ( Klib_HashTableMapValid )
     rc_t rc;
 
     KHashTable *hmap;
-    rc = KHashTableMake ( &hmap, 4, 4, 0, 0.0, raw );
+    rc = KHashTableMake ( &hmap, 4, 4, 0, 0.0, hashkey_raw );
     REQUIRE_RC ( rc );
 
     std::map<uint32_t, uint32_t> map;
@@ -484,7 +487,7 @@ TEST_CASE ( Klib_HashTableSetPersist )
     rc_t rc;
 
     KHashTable *hset;
-    rc = KHashTableMake ( &hset, 4, 0, 0, 0.0, raw );
+    rc = KHashTableMake ( &hset, 4, 0, 0, 0.0, hashkey_raw );
     REQUIRE_RC ( rc );
 
     std::set<uint32_t> set;
@@ -563,7 +566,7 @@ TEST_CASE ( Klib_HashTableMapValidPersist )
     rc_t rc;
 
     KHashTable *hmap;
-    rc = KHashTableMake ( &hmap, 4, 4, 0, 0.0, raw );
+    rc = KHashTableMake ( &hmap, 4, 4, 0, 0.0, hashkey_raw );
     REQUIRE_RC ( rc );
 
     std::map<uint32_t, uint32_t> map;
@@ -629,7 +632,7 @@ TEST_CASE ( Klib_HashTableMapDeletes )
     rc_t rc;
 
     KHashTable *hmap;
-    rc = KHashTableMake ( &hmap, 4, 4, 0, 0.95, raw );
+    rc = KHashTableMake ( &hmap, 4, 4, 0, 0.95, hashkey_raw );
     REQUIRE_RC ( rc );
 
     std::map<uint32_t, uint32_t> map;
@@ -690,7 +693,7 @@ TEST_CASE ( Klib_HashTableMapIterator )
     rc_t rc;
 
     KHashTable *hmap;
-    rc = KHashTableMake ( &hmap, 4, 4, loops, 0.0, raw );
+    rc = KHashTableMake ( &hmap, 4, 4, loops, 0.0, hashkey_raw );
     REQUIRE_RC ( rc );
     uint32_t key;
     uint32_t value;
@@ -779,7 +782,7 @@ TEST_CASE ( Klib_HashTableMapSmallKeys )
     rc_t rc;
 
     KHashTable *hmap;
-    rc = KHashTableMake ( &hmap, 2, 2, 0, 0.0, raw );
+    rc = KHashTableMake ( &hmap, 2, 2, 0, 0.0, hashkey_raw );
     REQUIRE_RC ( rc );
 
     std::map<uint16_t, uint16_t> map;
@@ -824,7 +827,7 @@ TEST_CASE ( Klib_HashTableMapReserve )
 
     KHashTable *hmap;
     size_t capacity = random () % 20000;
-    rc = KHashTableMake ( &hmap, 2, 2, capacity, 0.0, raw );
+    rc = KHashTableMake ( &hmap, 2, 2, capacity, 0.0, hashkey_raw );
     REQUIRE_RC ( rc );
 
     std::map<uint16_t, uint16_t> map;
@@ -1009,7 +1012,7 @@ TEST_CASE ( Klib_HashMapBench )
     KHashTable *hmap;
 
     for ( unsigned long numelem = 4; numelem != ( 1ULL << 26 ); numelem *= 2 ) {
-        rc_t rc = KHashTableMake ( &hmap, 8, 8, 0, 0.0, raw );
+        rc_t rc = KHashTableMake ( &hmap, 8, 8, 0, 0.0, hashkey_raw );
         REQUIRE_RC ( rc );
 
         size_t sz = KHashTableCount ( hmap );
