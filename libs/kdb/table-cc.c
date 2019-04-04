@@ -61,16 +61,6 @@
 
 #undef index
 
-static void KTableGetName(KTable const *self, char const **rslt)
-{
-    char *sep;
-    
-    *rslt = self->path;
-    sep = strrchr(self->path, '/');
-    if (sep != NULL)
-        *rslt = sep + 1;
-}
-
 static
 rc_t KTableCheckMD5 ( const KTable *self, CCReportFunc report, void *ctx )
 {
