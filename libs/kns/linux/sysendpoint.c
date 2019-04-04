@@ -76,7 +76,7 @@ rc_t CC KNSManagerInitDNSEndpoint ( struct KNSManager const *self,
         else
         {
             KDataBuffer b;
-            char buffer [ 4096 ], * hostname = buffer;
+            char buffer [ 65536 ], * hostname = buffer;
             size_t buff_size = sizeof buffer;
 
             if ( dns -> size >= sizeof buffer )
