@@ -284,6 +284,19 @@ rc_t KU64IndexFindAll_v3 ( const KU64Index_v3 *self, uint64_t offset,
  * KHTIndex_v5
  */
 typedef struct KHTIndex_v5 KHTIndex_v5;
+struct KHTIndex_v5 {
+    KHashTable *hashtable;
+    struct BufferListEntry *current;
+    struct IdMapEntry *entries;
+    size_t keyCount, maxKeys;
+    int64_t minId; /* since IDs are unique-increasing, this is also the first ID */
+    int64_t prvId; /* since IDs are unique-increasing, this is also the max ID */
+    size_t numId;  /* if numId == keyCount, then mapping was 1:1 (onto)
+                    * if minId + numId == prvId, then IDs are contiguous
+                    * if contiguous, then IDs don't need storage
+                    * if onto, then ID-ranges per key doesn't not need storage
+                    */
+};
 
 rc_t KHTIndexOpen_v5 ( KHTIndex_v5 *self, struct KMMap const *mm, bool byteswap );
 rc_t KHTIndexWhack_v5 ( KHTIndex_v5 *self );

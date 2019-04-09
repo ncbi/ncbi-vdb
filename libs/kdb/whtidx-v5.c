@@ -49,15 +49,25 @@
 #include <errno.h>
 #include <assert.h>
 
-typedef struct BufferListEntry BufferListEntry;
-struct BufferListEntry {
-    BufferListEntry *prv;
-    char *buffer;
-    size_t used;
-};
-
 #define KEY_BUFFER_SIZE ((size_t)(16ull * 1024ull *1024ull))
 
+/** @brief: add up all the key lengths
+ **/
+static size_t totalKeySize(KHTIndex_v5 const *const self)
+{
+    size_t rslt = 0;
+    
+    BufferListEntry const *current = self->current;
+    while (current) {
+        rslt += current->used;
+        current = current->prv;
+    }
+    
+    return rslt;
+}
+
+/** @brief: make a new buffer to hold more keys
+ **/
 static BufferListEntry *makeBufferListEntry(BufferListEntry *prv, rc_t *rc)
 {
     BufferListEntry *rslt = malloc(sizeof(*rslt));
@@ -74,14 +84,8 @@ static BufferListEntry *makeBufferListEntry(BufferListEntry *prv, rc_t *rc)
     return NULL;
 }
 
-struct IdMapEntry {
-    char const *name;
-    int64_t firstId, lastId;
-};
-
-#define LOADING_FACTOR (0.618) /* PHI - 1 */
-#define INITIAL_ENTRY_COUNT (4096u)
-
+/** @brief: setup in preparation of filling the index with new entries
+ **/
 static bool initializeWrite(KHTIndex_v5 *const self, rc_t *rc)
 {
     self->entries = malloc((self->maxKeys = INITIAL_ENTRY_COUNT) * sizeof(self->entries[0]));
@@ -99,14 +103,8 @@ static bool initializeWrite(KHTIndex_v5 *const self, rc_t *rc)
     return true;
 }
 
-static size_t cstring_byte_count(char const *const cstring)
-{
-    size_t n = 0;
-    while (cstring[n] != '\0')
-        ++n;
-    return n;
-}
-
+/** @brief: copy a nul-terminated string
+ **/
 static char *cstring_copy(size_t const n, char *const dst, char const *const src)
 {
     size_t i;
@@ -118,28 +116,8 @@ static char *cstring_copy(size_t const n, char *const dst, char const *const src
     return dst;
 }
 
-static bool addEntryToHashTable(KHTIndex_v5 *const self, size_t const i, rc_t *rc)
-{
-    IDMapEntry const *const entry = self->entries + i;
-    *rc = KHashTableAdd(self->hashtable, entry->name, KHashCStr(entry->name), &i);
-    return *rc == 0;
-}
-
-static bool initializeRead(KHTIndex_v5 *const self, rc_t *rc)
-{
-    size_t i;
-    
-    *rc = KHashTableMake(&self->hashtable, sizeof(char *), sizeof(size_t), self->keyCount, LOADING_FACTOR, KHT_key_type_cstr);
-    if (*rc) return false;
-
-    for (i = 0; i < self->keyCount; ++i) {
-        if (addEntryToHashTable(self, i, rc))
-            continue;
-        return false;
-    }
-    return true;
-}
-
+/** @brief: checks that current key buffer is big enough, or creates a new one
+ **/
 static bool growKeys(KHTIndex_v5 *const self, size_t const keylen, rc_t *rc)
 {
     if (self->current->used + keylen + 1 < KEY_BUFFER_SIZE)
@@ -148,6 +126,8 @@ static bool growKeys(KHTIndex_v5 *const self, size_t const keylen, rc_t *rc)
     return self->current != NULL;
 }
 
+/** @brief: checks that array is big enough, or realloc's it
+ **/
 static bool growEntries(KHTIndex_v5 *const self, rc_t *rc)
 {
     if (self->keyCount < self->maxKeys)
@@ -164,6 +144,8 @@ static bool growEntries(KHTIndex_v5 *const self, rc_t *rc)
     return false;
 }
 
+/** @brief: adds a new entry to id-to-key index AND adds key to hashtable
+ **/
 static bool insertNewEntry( KHTIndex_v5 *const self
                           , size_t const keylen
                           , char const *const key
@@ -187,6 +169,8 @@ static bool insertNewEntry( KHTIndex_v5 *const self
     return false;
 }
 
+/** @brief: extends id-span of an existing entry, fails if not contiguous
+ **/
 static bool updateEntry(KHTIndex_v5 *const self, uint64_t const i, int64_t const id, rc_t *rc)
 {
     IdMapEntry *const entry = self->entries + i;
@@ -199,6 +183,8 @@ static bool updateEntry(KHTIndex_v5 *const self, uint64_t const i, int64_t const
     return false;
 }
 
+/** @brief: inserts a new entry into the index, or updates an existing one
+ **/
 rc_t KHTIndexInsert( KHTIndex_v5 *const self
                    , char const *const key
                    , int64_t const id )
@@ -210,14 +196,17 @@ rc_t KHTIndexInsert( KHTIndex_v5 *const self
     assert(key != NULL);
 
     keylen = cstring_byte_count(key);
-    assert(keylen != 0); /* is this true */
+    assert(keylen != 0); /* is this true? */
     
     if (self->keyCount > 0) {
+        /* expected path */
+
+        uint64_t fnd = 0;
+
         if (id <= self->prvId)
             return RC(rcDB, rcIndex, rcInserting, rcConstraint, rcViolated);
         
         /* check if key exists */
-        uint64_t fnd = 0;
         if (!KHashTableFind(self->hashtable, key, keylen, KHash(keylen, key), &fnd)) {
             if (!insertNewEntry(self, keylen, key, id, &rc))
                 return rc;
@@ -231,6 +220,7 @@ rc_t KHTIndexInsert( KHTIndex_v5 *const self
         self->numId += 1;
     }
     else {
+        /* first time path */
         if (!initializeWrite(self, &rc))
             return rc;
         if (!insertNewEntry(self, key, id, &rc))
@@ -241,124 +231,124 @@ rc_t KHTIndexInsert( KHTIndex_v5 *const self
     return 0;
 }
 
-rc_t KHTIndexFind( KHTIndex_v5 const *const self
-                 , char const *const key
-                 , int64_t *const out_firstId
-                 , uint32_t *const out_span )
+rc_t KHTIndexDelete( KHTIndex_v5 *const self,
+                   , const char *const key
+                   )
+{
+    return RC(rcDB, rcIndex, rcDeleting, rcFunction, rcNotImplemented);
+}
+
+typedef struct KHTIndexHdr IndexHeader;
+struct KHTIndexHdr {
+    KIndexFileHeader_v3 dad; /* index-cmn.h:65 */
+    uint64_t entries;
+    int64_t numIds, firstId, lastId;
+    uint64_t cmp_idsize, cmp_spansize;
+    uint64_t keysize, cmp_keysize;
+};
+
+static size_t serialize( KHTIndex_v3 const *const self
+                       , void *const buffer
+                       , size_t const maxsize
+                       , size_t const keySize
+                       )
+{
+    IndexHeader *const hdr = buffer;
+    uint64_t *const id = (void *)(hdr + 1);
+    uint32_t *span = (void *)(id + self->entries);
+    char *key = (void *)(span + self->entries);
+    uint32_t minspan = 0, maxspan = 0;
+    int64_t next = self->minId;
+    bool gap = false;
+    size_t i;
+    
+    assert(((void const *)(key + keySize)) <= ((void const *)(((uint8_t const *)buffer) + maxsize)));
+
+    memset(hdr, 0, sizeof(*hdr));
+    KDBHdrInit(&hdr->dad.h, KDBINDEXVERS);
+    hdr->dad.index_type = kitText | kitProj;
+
+    hdr->entries = self->keyCount;
+    hdr->numIds = self->numId;
+    hdr->firstId = self->minId;
+    hdr->lastId = self->prvId;
+    hdr->keysize = keySize;
+    
+    for (i = 0; i < self->keyCount; ++i) {
+        IdMapEntry const *const entry = self->entries + i;
+        int64_t const cur = entry->firstId;
+        uint32_t const Span = entry->lastId - cur;
+
+        assert(cur + Span == entry->lastId);
+        
+        id[i] = cur - self->minId;
+
+        gap |= cur != next;
+        next = cur + Span + 1;
+        
+        minspan = (minspan > Span || i == 0) ? Span : minspan;
+        maxspan = (maxspan < Span || i == 0) ? Span : maxspan;
+    }
+    if (gap == false && minspan == 0 && maxspan == 0) {
+        key = (void *)id; /* no need to store IDs or spans */
+    }
+    else {
+        /* optimization potential if minspan == maxspan */
+        for (i = 0; i < self->keyCount; ++i) {
+            IdMapEntry const *const entry = self->entries + i;
+            
+            span[i] = entry->lastId - entry->firstId;
+        }
+        hdr->cmp_idsize = sizeof(int64_t) * self->keyCount;
+        hdr->cmp_spansize = sizeof(uint32_t) * self->keyCount;
+    }
+    {
+        char *cur = key;
+        for (i = 0; i < self->keyCount; ++i) {
+            size_t j = 0;
+            char const *entry = self->entries[i].name;
+            while ((cur[j] = entry[j]) != '\0')
+                ++j;
+        }
+        hdr->cmp_keysize = hdr->keysize;
+    }
+    return (key + keySize) - (uint8_t const *)buffer;
+}
+
+static bool persistFile(KHTIndex_v3 const *const self, KFile *const file, rc_t *const rc)
+{
+    size_t const keySize = totalKeySize(self);
+    size_t const maxsize = sizeof(KHTIndexHdr) + sizeof(int64_t) * self->entries + sizeof(uint32_t) * self->entries + totalKeySize;
+    KMMap *map = NULL;
+    void *mem = NULL;
+    size_t finalSize;
+
+    *rc = KFileSetSize(file, maxsize);
+    if (*rc) return false;
+    
+    *rc = KMMapMakeMaxUpdate(&map, kfile);
+    if (*rc) return false;
+
+    *rc = KMMapAddrUpdate(map, &mem);
+    if (*rc) return false;
+    
+    finalSize = serialize(self, mem, maxsize, keysize);
+    KMMapRelease(map);
+    KFileSetSize(file, finalSize);
+    
+    return true;
+}
+
+rc_t KHTIndexPersist( KHTIndex_v3 *const self
+                    , bool const proj
+                    , struct KDirectory *const dir
+                    , const char *const path
+                    , bool const use_md5
+                    )
 {
     rc_t rc = 0;
-    size_t keylen;
-    uint64_t fnd = 0;
-    IDMapEntry const *entry = NULL;
-
-    assert(self != NULL);
-    assert(key != NULL);
-
-    if (self->hashtable == NULL) {
-        if (!initializeRead((KHTIndex_v5 *)self, &rc))
-            return rc;
-    }
-    assert(self->hashtable != NULL);
+    KFile *file = NULL;
     
-    keylen = cstring_byte_count(key);
-    if (!KHashTableFind(self->hashtable, key, keylen, KHash(keylen, key), &fnd))
-        return RC(rcDB, rcIndex, rcSelecting, rcString, rcNotFound);
-  
-    assert(fnd < self->keyCount);
-    entry = self->entries + fnd;
-    if (out_firstId)
-        *out_firstId = entry->firstId;
-    if (out_span)
-        *out_span = 1 + (entry->lastId - entry->firstId);
-
-    return 0;
-}
-
-static bool isOntoAndGapless(KHTIndex_v5 const *const self)
-{
-    return self->numId == self->keyCount
-        && self->numId == 1 + (self->prvId - self->minId);
-}
-
-rc_t KHTIndexProject_v5 ( KHTIndex_v5 const *const self
-                        , int64_t const id
-                        , char const **const key
-                        , int64_t *const first_id
-                        , uint32_t *const span
-                        )
-{
-    IDMapEntry const *fnd = NULL;
-
-    assert(self != NULL);
-    
-    if (self->minId <= id && id <= self->prvId) {
-        if (isOntoAndGapless(self)) {
-            /* can do a linear lookup by id */
-            size_t const i = id - self->minId;
-            IDMapEntry const *const entry = self->entries + i;
-            
-            assert(i < self->keyCount);
-            assert(id == entry->firstId);
-            assert(entry->lastId == entry->firstId);
-
-            fnd = entry;
-            goto FOUND;
-        }
-        else {
-            /* keys map to a range of IDs
-             * or there are gaps in the ID range 
-             * do a binary search
-             */
-            size_t f = 0;
-            size_t e = self->keyCount;
-
-            if (f < e) {
-                /* make an initial guess based on the assumption that
-                 * the number of IDs per key is roughly constant
-                 */
-                uint64_t const span = 1 + (self->prvId - self->minId);
-                size_t const initial_guess = self->keyCount * ((id - minId) / (double)span);
-                if (initial_guess < self->keyCount) {
-                    IDMapEntry const *const entry = self->entries + initial_guess;
-
-                    if (entry->lastId < id)
-                        f = initial_guess + 1;
-                    else if (id < entry->firstId)
-                        e = initial_guess;
-                    else {
-                        /* LUCKY GUESS! */
-                        fnd = entry;
-                        goto FOUND;
-                    }
-                }
-            }
-            while (f < e && fnd == NULL) {
-                size_t const m = f + ((e - f) >> 1);
-                IDMapEntry const *const entry = self->entries + m;
-
-                if (entry->lastId < id) {
-                    f = m + 1;
-                    continue;
-                }
-                if (id < entry->firstId) {
-                    e = m;
-                    continue;
-                }
-                fnd = entry;
-                goto FOUND;
-            }
-        }
-    }
-    if (fnd) {
-    FOUND:
-        assert(fnd->firstId <= id && id <= fnd->lastId);
-        
-        if (key     ) *key      = fnd->name;
-        if (first_id) *first_id = fnd->firstId;
-        if (span    ) *span     = 1 + (fnd->lastId - fnd->firstId);
-
-        return 0;
-    }
-    else
-        return RC(rcDB, rcIndex, rcProjecting, rcId, rcNotFound);
+    persistFile(self, file, &rc);
+    return rc;
 }
