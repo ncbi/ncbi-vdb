@@ -279,6 +279,28 @@ rc_t KU64IndexFindAll_v3 ( const KU64Index_v3 *self, uint64_t offset,
     rc_t ( CC * f ) ( uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty, void* data ),
     void* data );
 
+
+/*--------------------------------------------------------------------------
+ * KHTIndex_v5
+ */
+typedef struct KHTIndex_v5 KHTIndex_v5;
+
+rc_t KHTIndexOpen_v5 ( KHTIndex_v5 *self, struct KMMap const *mm, bool byteswap );
+rc_t KHTIndexWhack_v5 ( KHTIndex_v5 *self );
+
+rc_t KHTIndexFind_v5 ( const KHTIndex_v5 *self
+                     , const char *key
+                     , int64_t *first_id
+                     , uint32_t *span
+                     );
+
+rc_t KHTIndexProject_v5 ( const KHTIndex_v5 *self
+                        , int64_t id
+                        , const char **key
+                        , int64_t *first_id
+                        , uint32_t *span
+                        );
+
 #ifdef __cplusplus
 }
 #endif

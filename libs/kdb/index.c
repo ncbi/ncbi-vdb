@@ -1,28 +1,28 @@
 /*===========================================================================
-*
-*                            PUBLIC DOMAIN NOTICE
-*               National Center for Biotechnology Information
-*
-*  This software/database is a "United States Government Work" under the
-*  terms of the United States Copyright Act.  It was written as part of
-*  the author's official duties as a United States Government employee and
-*  thus cannot be copyrighted.  This software/database is freely available
-*  to the public for use. The National Library of Medicine and the U.S.
-*  Government have not placed any restriction on its use or reproduction.
-*
-*  Although all reasonable efforts have been taken to ensure the accuracy
-*  and reliability of the software and data, the NLM and the U.S.
-*  Government do not and cannot warrant the performance or results that
-*  may be obtained by using this software or data. The NLM and the U.S.
-*  Government disclaim all warranties, express or implied, including
-*  warranties of performance, merchantability or fitness for any particular
-*  purpose.
-*
-*  Please cite the author in any work or product based on this material.
-*
-* ===========================================================================
-*
-*/
+ *
+ *                            PUBLIC DOMAIN NOTICE
+ *               National Center for Biotechnology Information
+ *
+ *  This software/database is a "United States Government Work" under the
+ *  terms of the United States Copyright Act.  It was written as part of
+ *  the author's official duties as a United States Government employee and
+ *  thus cannot be copyrighted.  This software/database is freely available
+ *  to the public for use. The National Library of Medicine and the U.S.
+ *  Government have not placed any restriction on its use or reproduction.
+ *
+ *  Although all reasonable efforts have been taken to ensure the accuracy
+ *  and reliability of the software and data, the NLM and the U.S.
+ *  Government do not and cannot warrant the performance or results that
+ *  may be obtained by using this software or data. The NLM and the U.S.
+ *  Government disclaim all warranties, express or implied, including
+ *  warranties of performance, merchantability or fitness for any particular
+ *  purpose.
+ *
+ *  Please cite the author in any work or product based on this material.
+ *
+ * ===========================================================================
+ *
+ */
 
 #include <kdb/extern.h>
 
@@ -64,7 +64,7 @@ struct KIndex
     {
         KTrieIndex_v1 txt1;
         KTrieIndex_v2 txt234;
-        KU64Index_v3  u64_3;
+        KU64Index_v3  u64_3;        // TODO insert new entry for KHashTableIndex
     } u;
     bool converted_from_v1;
     uint8_t type;
@@ -120,7 +120,7 @@ rc_t KIndexWhack ( KIndex *self )
             case 4:
                 KTrieIndexWhack_v2 ( & self -> u . txt234 );
                 rc = 0;
-                break;
+                break; // TODO insert new case for KHTIndex
             }
             break;
 
@@ -231,7 +231,7 @@ rc_t KIndexAttach ( KIndex *self, const KMMap *mm, bool *byteswap )
             {
                 KIndexFileHeader_v1 v1;
                 KIndexFileHeader_v2 v2;
-                KIndexFileHeader_v3 v3;
+                KIndexFileHeader_v3 v3; // TODO: analyze: need a new header version for KHTIndex?
             } hdrs;
 
             const KDBHdr *hdr = addr;
@@ -261,7 +261,7 @@ rc_t KIndexAttach ( KIndex *self, const KMMap *mm, bool *byteswap )
                         hdrs . v3 . reserved1 = bswap_32 ( fh -> reserved1 );
                         hdr = & hdrs . v3 . h;
                         fh = & hdrs . v3;
-                        break;
+                        break; // TODO: insert new case for KHTIndex?
                     }
                 }
             }
@@ -278,7 +278,7 @@ rc_t KIndexAttach ( KIndex *self, const KMMap *mm, bool *byteswap )
                     self -> type = kitText;
                     break;
                 case 3:
-                case 4:
+                case 4: // TODO: add case for KHTIndex?
                 {
                     self -> type = fh -> index_type;
                     switch ( self -> type )
@@ -325,9 +325,9 @@ rc_t KIndexMakeRead ( KIndex **idxp,
                     switch ( idx -> vers )
                     {
                     case 1:
+#if KDBINDEXVERS == 1
                         /* open using v1 code only if KDBINDEXVERS is 1
                            if 2 or later, open as a v2 index */
-#if KDBINDEXVERS == 1
                         rc = KTrieIndexOpen_v1 ( & idx -> u . txt1, mm );
                         if ( rc == 0 )
                         {
@@ -338,6 +338,7 @@ rc_t KIndexMakeRead ( KIndex **idxp,
                         }
                         break;
 #else
+                        // fallthrough
                     case 2:
                         idx -> vers = 3;
                     case 3:
@@ -356,7 +357,7 @@ rc_t KIndexMakeRead ( KIndex **idxp,
                                 rc = KU64IndexOpen_v3 ( & idx -> u . u64_3, mm, byteswap );
                                 break;
                         }
-                        break;
+                        break; // TODO: add case for KHTIndex
 #endif
                     }
                 }
@@ -643,7 +644,7 @@ LIB_EXPORT rc_t CC KIndexConsistencyCheck ( const KIndex *self, uint32_t level,
                 rc = KTrieIndexCheckConsistency_v2 ( & self -> u . txt234,
                     start_id, id_range, num_keys, num_rows, num_holes,
                     self, key2id, id2key, all_ids, self -> converted_from_v1 );
-                break;
+                break; // TODO: add case for KHTIndex
             default:
                 return RC ( rcDB, rcIndex, rcValidating, rcIndex, rcBadVersion );
             }
@@ -705,7 +706,7 @@ LIB_EXPORT rc_t CC KIndexFindText ( const KIndex *self, const char *key, int64_t
 #else
             rc = KTrieIndexFind_v2 ( & self -> u . txt234, key, start_id, custom_cmp, data, self -> converted_from_v1 );
 #endif
-            break;
+            break; // TODO: add case for KHTIndex
         default:
             return RC ( rcDB, rcIndex, rcSelecting, rcIndex, rcBadVersion );
         }
@@ -765,7 +766,7 @@ LIB_EXPORT rc_t CC KIndexFindAllText ( const KIndex *self, const char *key,
 #endif
             if ( rc == 0 )
                 rc = ( * f ) ( id64, span, data );
-            break;
+            break; // TODO: add case for KHTIndex (return unimplemented)
         default:
             return RC ( rcDB, rcIndex, rcSelecting, rcIndex, rcBadVersion );
         }
@@ -839,7 +840,7 @@ LIB_EXPORT rc_t CC KIndexProjectText ( const KIndex *self,
             if ( rc == 0 )
                 * start_id = id;
 #endif
-            break;
+            break; // TODO: add case for KHTIndex
         default:
             return RC ( rcDB, rcIndex, rcProjecting, rcIndex, rcBadVersion );
         }
@@ -906,7 +907,7 @@ LIB_EXPORT rc_t CC KIndexProjectAllText ( const KIndex *self, int64_t id,
             if ( rc == 0 )
                 rc = ( * f ) ( start_id, span, key, data );
             break;
-            
+// TODO: add case for KHTIndex (return unimplemented)            
         default:
             return RC ( rcDB, rcIndex, rcProjecting, rcIndex, rcBadVersion );
         }

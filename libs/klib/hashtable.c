@@ -40,10 +40,6 @@
 
 #undef memcpy
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 struct KHashTable {
     void *buckets;
     uint64_t mask;
@@ -58,11 +54,16 @@ struct KHashTable {
     hashkey_type key_type;
 };
 
-static const uint64_t BUCKET_VALID = (uint64_t)1ULL << 63u;
-static const uint64_t BUCKET_VISIBLE = (uint64_t)1ULL << 62u;
-static const uint64_t MAGIC = 0x4841534854424C31ULL; /* HASHTBL1 */
+#define BUCKET_VALID ((uint64_t)(1ULL << 63u))
+#define BUCKET_VISIBLE ((uint64_t)(1ULL << 62u))
 
-/*
+/*                          H A S H T B L 1 */
+#define MAGIC ((uint64_t)(0x4841534854424C31ULL))
+
+#define cstr KHT_key_type_cstr
+#define raw  KHT_key_type_raw
+
+#if 0
 static double getloadfactor(const KHashTable* self)
 {
     if (self == NULL) return 0.0;
@@ -97,7 +98,7 @@ static void dump(const KHashTable* self)
         fprintf(stderr, "\n");
     }
 }
-*/
+#endif
 
 static rc_t rehash ( KHashTable *self, size_t capacity )
 {
@@ -870,7 +871,3 @@ LIB_EXPORT uint64_t KHash ( const char *s, size_t len )
 
     return hash + s[len] * 2;
 }
-
-#ifdef __cplusplus
-}
-#endif

@@ -45,7 +45,8 @@ extern "C" {
  */
 struct BSTNode;
 struct KDirectory;
-
+struct KDataBuffer;
+struct KHashTable;
 
 /*--------------------------------------------------------------------------
  * V1
@@ -66,7 +67,7 @@ struct KDirectory;
 typedef struct KTrieIdxNode_v1 KTrieIdxNode_v1;
 struct KTrieIdxNode_v1
 {
-    TNode n;
+`    TNode n;
     uint32_t id;
     char key [ 1 ];
 };
@@ -209,7 +210,28 @@ rc_t KU64IndexDelete_v3(KU64Index_v3* self, uint64_t key);
 
 rc_t KU64IndexPersist_v3(KU64Index_v3* self, bool proj, struct KDirectory *dir, const char *path, bool use_md5);
 
+/*--------------------------------------------------------------------------
+ * KHTIndex
+ *  represents an index bases on KHashTable
+ */
+struct KHTIndex_v5 {
+    KHashTable *hashtable;
+    struct BufferListEntry *current;
+    struct IdMapEntry *entries;
+    size_t keyCount, maxKeys;
+    int64_t minId; /* since IDs are unique-increasing, this is also the first ID */
+    int64_t prvId; /* since IDs are unique-increasing, this is also the max ID */
+    size_t numId;  /* if numId == keyCount, then mapping was 1:1 (onto)
+                    * if minId + numId == prvId, then IDs are contiguous
+                    * if contiguous, then IDs don't need storage
+                    * if onto, then ID-ranges per key doesn't not need storage
+                    */
+};
+typedef struct KHTIndex_v5 KHTIndex_v5;
 
+rc_t KHTIndexInsert(  KHTIndex_v5 *self
+                    , const char *key
+                    , int64_t id);
 
 /*--------------------------------------------------------------------------
  * KIndex

@@ -36,7 +36,12 @@ extern "C" {
 
 typedef struct KHashTable KHashTable;
 
-typedef enum hashkey_type { raw = 0x666, cstr = 0x667 } hashkey_type;
+typedef enum hashkey_type hashkey_type;
+enum hashkey_type {
+    KHT_key_type_raw = 0x72617720, /* 'raw ' */
+    KHT_key_type_cstr = 0x63737472 /* 'cstr' */
+};
+
 /* NB: Not thread safe */
 
 /* Create a new KHashTable.
