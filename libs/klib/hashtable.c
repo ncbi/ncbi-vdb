@@ -135,7 +135,7 @@ static rc_t rehash ( KHashTable *self, size_t capacity )
 
     if ( old_buckets ) {
         hashkey_type old_key_type = self->key_type;
-        self->key_type = hashkey_raw;
+        self->key_type = KHT_key_type_raw;
 
         for ( size_t bucket = 0; bucket != old_num_buckets; bucket++ ) {
             const char *bucketptr
@@ -172,10 +172,10 @@ LIB_EXPORT rc_t KHashTableMake ( KHashTable **self, size_t key_size,
     if ( key_size == 0 )
         return RC ( rcCont, rcTrie, rcConstructing, rcParam, rcInvalid );
 
-    if ( key_type == hashkey_cstr && key_size != sizeof ( char * ) )
+    if ( key_type == KHT_key_type_cstr && key_size != sizeof ( char * ) )
         return RC ( rcCont, rcTrie, rcConstructing, rcParam, rcInvalid );
 
-    if ( key_type == hashkey_raw && key_size > sizeof ( void * ) )
+    if ( key_type == KHT_key_type_raw && key_size > sizeof ( void * ) )
         return RC ( rcCont, rcTrie, rcConstructing, rcParam, rcInvalid );
 
     if ( capacity <= 16 ) capacity = 16;
@@ -214,9 +214,9 @@ LIB_EXPORT rc_t KHashTableMake ( KHashTable **self, size_t key_size,
  * uint64_t key_type
  * Followed by count entries of:
  *     keyhash
- *     if key_type is hashkey_raw:
+ *     if key_type is KHT_key_type_raw:
  *        key
- *     else if key_type is hashkey_cstr:
+ *     else if key_type is KHT_key_type_cstr:
  *        length of key, rounded to multiple of 8 bytes
  *        key
  *     if value_size>0
@@ -254,7 +254,7 @@ LIB_EXPORT rc_t KHashTableLoad ( KHashTable **self, const KDataBuffer *inbuf )
     /* fprintf ( stderr, "incount is %zu\n", incount ); */
     /* fprintf ( stderr, "inkey_type is %u\n", inkey_type ); */
 
-    /* if ( inkey_type == hashkey_cstr ) fprintf ( stderr, "hashkey_cstr\n" );
+    /* if ( inkey_type == KHT_key_type_cstr ) fprintf ( stderr, "KHT_key_type_cstr\n" );
      */
     rc = KHashTableMake (
         self, inkey_size, invalue_size, incount, 0.0, inkey_type );
@@ -265,10 +265,10 @@ LIB_EXPORT rc_t KHashTableLoad ( KHashTable **self, const KDataBuffer *inbuf )
 
     for ( size_t cnt = 0; cnt != incount; ++cnt ) {
         uint64_t hash;
-        if ( inkey_type == hashkey_raw ) {
+        if ( inkey_type == KHT_key_type_raw ) {
             hash = *pos++;
             key = (void *)( pos )++;
-            /* fprintf ( stderr, "hashkey_raw key is %zx\n", *(uint64_t *)key );
+            /* fprintf ( stderr, "KHT_key_type_raw key is %zx\n", *(uint64_t *)key );
              */
         } else {
             hash = *pos++;
@@ -279,7 +279,7 @@ LIB_EXPORT rc_t KHashTableLoad ( KHashTable **self, const KDataBuffer *inbuf )
                 keylen -= 8;
             }
 
-            /* fprintf ( stderr, "hashkey_cstr key is '%s'\n", (const char *)key
+            /* fprintf ( stderr, "KHT_key_type_cstr key is '%s'\n", (const char *)key
              * ); */
         }
 
@@ -324,7 +324,7 @@ LIB_EXPORT rc_t KHashTableSave ( KHashTable *self, KDataBuffer *outbuf )
     self->iterator = -1; /* Invalidate any current iterators */
     KHashTableIteratorMake ( self );
     while ( KHashTableIteratorNext ( self, &key, &value, &keyhash ) ) {
-        if ( self->key_type == hashkey_raw ) {
+        if ( self->key_type == KHT_key_type_raw ) {
             rc = VectorAppend ( &bytes, NULL, (void *)keyhash );
             if ( rc ) return rc;
 
@@ -444,7 +444,7 @@ LIB_EXPORT bool KHashTableFind (
             bool found;
             const char *keyptr = bucketptr + 8;
 
-            if ( key_type == hashkey_cstr ) {
+            if ( key_type == KHT_key_type_cstr ) {
                 char *p;
                 memcpy ( &p, keyptr, sizeof ( char * ) );
                 found = ( strcmp ( p, key ) == 0 );
@@ -513,7 +513,7 @@ LIB_EXPORT rc_t KHashTableAdd (
         {
             memcpy ( hashptr, &keyhash, 8 );
 
-            if ( key_type == hashkey_cstr )
+            if ( key_type == KHT_key_type_cstr )
                 memcpy ( keyptr, &key, sizeof ( &keyptr ) );
             else {
                 if ( key_size == 8 )
@@ -551,7 +551,7 @@ LIB_EXPORT rc_t KHashTableAdd (
         if ( buckethash == keyhash ) /* hash hit */
         {
             bool found;
-            if ( key_type == hashkey_cstr ) {
+            if ( key_type == KHT_key_type_cstr ) {
                 char *p;
                 memcpy ( &p, keyptr, sizeof ( char * ) );
                 found = ( strcmp ( p, key ) == 0 );
@@ -607,7 +607,7 @@ LIB_EXPORT bool KHashTableDelete (
             bool found;
             const char *keyptr = bucketptr + 8;
 
-            if ( key_type == hashkey_cstr ) {
+            if ( key_type == KHT_key_type_cstr ) {
                 char *p;
                 memcpy ( &p, keyptr, sizeof ( char * ) );
                 found = ( strcmp ( p, key ) == 0 );
