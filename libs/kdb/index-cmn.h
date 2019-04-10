@@ -35,7 +35,7 @@
 extern "C" {
 #endif
 
-#define KDBINDEXVERS 4
+#define KDBINDEXVERS 5
 #define V2FIND_RETURNS_SPAN 1
 
 /*--------------------------------------------------------------------------
@@ -284,8 +284,10 @@ rc_t KU64IndexFindAll_v3 ( const KU64Index_v3 *self, uint64_t offset,
  * KHTIndex_v5
  */
 typedef struct KHTIndex_v5 KHTIndex_v5;
+    
+/* this structure is common to both read and write sides */
 struct KHTIndex_v5 {
-    KHashTable *hashtable;
+    struct KHashTable *hashtable;
     struct BufferListEntry *current;
     struct IdMapEntry *entries;
     size_t keyCount, maxKeys;
