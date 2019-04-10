@@ -126,6 +126,7 @@ table NCBI:SRA:tbl:stats #1.2.1 = INSDC:SRA:tbl:stats #1.1, INSDC:SRA:tbl:sra #1
 
     trigger readlen_stats
         = NCBI:SRA:readlen_stats_trigger ( in_read_len, in_read_type );
+
     trigger qual_stats
         = NCBI:SRA:phred_stats_trigger #1 ( in_qual_phred );
 
