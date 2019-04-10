@@ -67,7 +67,7 @@ struct KHashTable;
 typedef struct KTrieIdxNode_v1 KTrieIdxNode_v1;
 struct KTrieIdxNode_v1
 {
-`    TNode n;
+    TNode n;
     uint32_t id;
     char key [ 1 ];
 };
@@ -220,11 +220,11 @@ rc_t KHTIndexInsert(  KHTIndex_v5 *self
                     , int64_t id);
 
 /** NOT IMPLEMENTED **/
-rc_t KHTIndexDelete( KHTIndex_v5 *self,
+rc_t KHTIndexDelete( KHTIndex_v5 *self
                    , const char *key
                    );
 
-rc_t KHTIndexPersist( KHTIndex_v3* self
+rc_t KHTIndexPersist( KHTIndex_v5 *self
                     , bool proj
                     , struct KDirectory *dir
                     , const char *path

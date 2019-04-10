@@ -45,26 +45,10 @@
 #include <errno.h>
 #include <assert.h>
 
+#include "index-cmn.h"
+#include "htidx-priv.h"
+
 #define LOADING_FACTOR (0.618) /* PHI - 1 */
-#define INITIAL_ENTRY_COUNT (1048576u)
-
-/** @brief: the id-to-key map entry
- **/
-struct IdMapEntry {
-    char const *name;
-    int64_t firstId, lastId;
-};
-
-/** @brief: holds key values
- **
- ** @note: buffer CAN NOT be realloc'ed
- **/
-typedef struct BufferListEntry BufferListEntry;
-struct BufferListEntry {
-    BufferListEntry *prv;
-    char *buffer;
-    size_t used;
-};
 
 /** @brief: free a buffer
  **
@@ -80,40 +64,21 @@ static BufferListEntry *freeBufferListEntry(BufferListEntry *const self)
     return chain;
 }
 
-/** @brief: free the index and the resources it holds
+/** @brief: free the resources, but not self
  **/
 rc_t KHTIndexWhack_v5(KHTIndex_v5 *const self)
 {
-    if (self) {
-        BufferListEntry *current = self->current;
-        
-        if (self->hashtable)
-            KHashTableDispose(self->hashtable, NULL, NULL, NULL);
-        free(self->entries);
-        
-        while (current != NULL)
-            current = freeBufferListEntry(current);
-    }
+    BufferListEntry *current = self->current;
+
+    assert(self != NULL);
+    
+    if (self->hashtable)
+        KHashTableDispose(self->hashtable, NULL, NULL, NULL);
+    free(self->entries);
+    
+    while (current != NULL)
+        current = freeBufferListEntry(current);
     return 0;
-}
-
-/** @brief: measure a nul-terminated string
- **/
-static size_t cstring_byte_count(char const *const cstring)
-{
-    size_t n = 0;
-    while (cstring[n] != '\0')
-        ++n;
-    return n;
-}
-
-/** @brief: add the key of an entry in the id-to-key map to the hashtable
- **/
-static bool addEntryToHashTable(KHTIndex_v5 *const self, size_t const i, rc_t *rc)
-{
-    IDMapEntry const *const entry = self->entries + i;
-    *rc = KHashTableAdd(self->hashtable, entry->name, KHashCStr(entry->name), &i);
-    return *rc == 0;
 }
 
 /** @brief: create a hashtable and add the existing keys to it
@@ -144,7 +109,7 @@ rc_t KHTIndexFind( KHTIndex_v5 const *const self
     rc_t rc = 0;
     size_t keylen;
     uint64_t fnd = 0;
-    IDMapEntry const *entry = NULL;
+    IdMapEntry const *entry = NULL;
 
     assert(self != NULL);
     assert(key != NULL);
@@ -156,7 +121,7 @@ rc_t KHTIndexFind( KHTIndex_v5 const *const self
     assert(self->hashtable != NULL);
     
     keylen = cstring_byte_count(key);
-    if (!KHashTableFind(self->hashtable, key, keylen, KHash(keylen, key), &fnd))
+    if (!KHashTableFind(self->hashtable, key, KHash(key, keylen), &fnd))
         return RC(rcDB, rcIndex, rcSelecting, rcString, rcNotFound);
   
     assert(fnd < self->keyCount);
@@ -169,7 +134,7 @@ rc_t KHTIndexFind( KHTIndex_v5 const *const self
     return 0;
 }
 
-/** @brief: is the index onto and is the id span contiguous
+/** @brief: is the index 1:1 and is the ID space contiguous
  **/
 static bool isOntoAndGapless(KHTIndex_v5 const *const self)
 {
@@ -179,7 +144,8 @@ static bool isOntoAndGapless(KHTIndex_v5 const *const self)
 
 /** @brief: retrieve the key that was associated with an id
  **
- ** @note: O(log n) at worst, O(1) if index is 1:1 and id range is gapless
+ ** @note: O(log n) at worst, O(1) if index is 1:1 and the
+ **        ID space is contiguous.
  **/
 rc_t KHTIndexProject_v5 ( KHTIndex_v5 const *const self
                         , int64_t const id
@@ -188,7 +154,7 @@ rc_t KHTIndexProject_v5 ( KHTIndex_v5 const *const self
                         , uint32_t *const span
                         )
 {
-    IDMapEntry const *fnd = NULL;
+    IdMapEntry const *fnd = NULL;
 
     assert(self != NULL);
     
@@ -196,7 +162,7 @@ rc_t KHTIndexProject_v5 ( KHTIndex_v5 const *const self
         if (isOntoAndGapless(self)) {
             /* can do a linear lookup by id */
             size_t const i = id - self->minId;
-            IDMapEntry const *const entry = self->entries + i;
+            IdMapEntry const *const entry = self->entries + i;
             
             assert(i < self->keyCount);
             assert(id == entry->firstId);
@@ -218,9 +184,9 @@ rc_t KHTIndexProject_v5 ( KHTIndex_v5 const *const self
                  * the number of IDs per key is roughly constant
                  */
                 uint64_t const span = 1 + (self->prvId - self->minId);
-                size_t const initial_guess = self->keyCount * ((id - minId) / (double)span);
+                size_t const initial_guess = self->keyCount * ((id - self->minId) / (double)span);
                 if (initial_guess < self->keyCount) {
-                    IDMapEntry const *const entry = self->entries + initial_guess;
+                    IdMapEntry const *const entry = self->entries + initial_guess;
 
                     if (entry->lastId < id)
                         f = initial_guess + 1;
@@ -235,7 +201,7 @@ rc_t KHTIndexProject_v5 ( KHTIndex_v5 const *const self
             }
             while (f < e && fnd == NULL) {
                 size_t const m = f + ((e - f) >> 1);
-                IDMapEntry const *const entry = self->entries + m;
+                IdMapEntry const *const entry = self->entries + m;
 
                 if (entry->lastId < id) {
                     f = m + 1;
@@ -277,7 +243,7 @@ static bool deserialize(KHTIndex_v5 *const self
     
     self->keyCount = hdr->entries;
     self->numId = hdr->numIds;
-    self->minId = hdr->minId;
+    self->minId = hdr->firstId;
     self->prvId = hdr->lastId;
     
     self->entries = malloc(self->keyCount * sizeof(self->entries[0]));
@@ -303,7 +269,7 @@ static bool deserialize(KHTIndex_v5 *const self
         memmove(self->current->buffer, cmp_keys, keysize);
     else {
         /* decompress */
-        /* not implemented yet */
+        assert(!"implemented");
         abort();
     }
     if (hdr->cmp_idsize == 0 && hdr->cmp_spansize == 0) {
@@ -311,18 +277,19 @@ static bool deserialize(KHTIndex_v5 *const self
         for (i = 0; i < self->keyCount; ++i) {
             self->entries[i].firstId = self->entries[i].lastId = self->minId + i;
         }
+        assert(self->minId + i == self->prvId + 1);
     }
     else {
         if (   hdr->cmp_idsize != sizeof(uint64_t) * self->keyCount
             || hdr->cmp_spansize != sizeof(uint32_t) * self->keyCount)
         {
             /* decompress */
-            /* not implemented yet */
+            assert(!"implemented");
             abort();
         }
         else {
-            uint64_t const *const id = cmp_id;
-            uint32_t const *const span = cmp_span;
+            uint64_t const *const id = (void const *)cmp_id;
+            uint32_t const *const span = (void const *)cmp_span;
             size_t i;
             for (i = 0; i < self->keyCount; ++i) {
                 self->entries[i].lastId = span[i];
@@ -352,10 +319,61 @@ rc_t KHTIndexOpen_v5( KHTIndex_v5 *const self
                     , bool byteswap
                     )
 {
-    if (byteswap)
-        return RC(rcDB, rcIndex, rcReading, rcByteOrder, rcInvalid);
-    if (deserialize(self, map))
-        return 0;
-    else
-        return RC(rcDB, rcIndex, rcReading, rcData, rcInvalid);
+    if (!byteswap) {
+        rc_t rc = 0;
+        
+        if (map != NULL) deserialize(self, map, &rc);
+        return rc;
+    }
+    return RC(rcDB, rcIndex, rcReading, rcByteOrder, rcInvalid);
+}
+
+rc_t KHTIndexCheckConsistency ( KHTIndex_v5 *const self
+                              , int64_t *const start_id
+                              , uint64_t *const id_range
+                              , uint64_t *const num_keys
+                              , uint64_t *const num_rows
+                              , uint64_t *const num_holes
+                              , bool const key2id
+                              , bool const id2key
+                              , bool const id_all
+                              )
+{
+    size_t i;
+
+    if (start_id != NULL) start_id[0] = self->minId;
+    if (id_range != NULL) id_range[0] = self->prvId - self->minId;
+    if (num_keys != NULL) num_keys[0] = self->keyCount;
+    if (num_rows != NULL) num_rows[0] = self->numId;
+
+    if (num_holes != NULL || id2key || id_all) {
+        size_t holes = 0;
+        int64_t next = self->minId;
+        
+        for (i = 0; i < self->keyCount; ++i) {
+            IdMapEntry const *const entry = self->entries + i;
+            
+            if (next != entry->firstId)
+                holes += 1;
+            next = entry->lastId + 1;
+        }
+        if (isOntoAndGapless(self) && holes != 0)
+            goto BAD;
+        if (num_holes != NULL) num_holes[0] = holes;
+    }
+    if (key2id || id_all) {
+        for (i = 0; i < self->keyCount; ++i) {
+            IdMapEntry const *const entry = self->entries + i;
+            int64_t firstId = 0;
+            uint32_t span = 0;
+            rc_t rc = KHTIndexFind(self, entry->name, &firstId, &span);
+            
+            if (rc != 0 || firstId != entry->firstId || firstId + (span - 1) != entry->lastId)
+                goto BAD;
+        }
+    }
+    return 0;
+    
+BAD:
+    return RC ( rcDB, rcIndex, rcValidating, rcSelf, rcCorrupt );
 }

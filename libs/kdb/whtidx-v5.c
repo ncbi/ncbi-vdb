@@ -49,7 +49,13 @@
 #include <errno.h>
 #include <assert.h>
 
+#include "index-cmn.h"
+#include "htidx-priv.h"
+
+#define LOADING_FACTOR (0.618) /* PHI - 1 */
+
 #define KEY_BUFFER_SIZE ((size_t)(16ull * 1024ull *1024ull))
+#define INITIAL_ENTRY_COUNT (1048576u)
 
 /** @brief: add up all the key lengths
  **/
@@ -156,7 +162,7 @@ static bool insertNewEntry( KHTIndex_v5 *const self
 
     if (growEntries(self, rc) && growKeys(self, keylen, rc)) {
         IdMapEntry *const entry = self->entries + i;
-        char const *const copy = self->current->buffer + self->current->used;
+        char *const copy = self->current->buffer + self->current->used;
 
         entry->name = cstring_copy(keylen, copy, key);
         entry->firstId = entry->lastId = id;
@@ -192,7 +198,7 @@ rc_t KHTIndexInsert( KHTIndex_v5 *const self
     rc_t rc = 0;
     size_t keylen;
 
-    assert(self != NULL)
+    assert(self != NULL);
     assert(key != NULL);
 
     keylen = cstring_byte_count(key);
@@ -207,7 +213,7 @@ rc_t KHTIndexInsert( KHTIndex_v5 *const self
             return RC(rcDB, rcIndex, rcInserting, rcConstraint, rcViolated);
         
         /* check if key exists */
-        if (!KHashTableFind(self->hashtable, key, keylen, KHash(keylen, key), &fnd)) {
+        if (!KHashTableFind(self->hashtable, key, KHash(key, keylen), &fnd)) {
             if (!insertNewEntry(self, keylen, key, id, &rc))
                 return rc;
         }
@@ -223,7 +229,7 @@ rc_t KHTIndexInsert( KHTIndex_v5 *const self
         /* first time path */
         if (!initializeWrite(self, &rc))
             return rc;
-        if (!insertNewEntry(self, key, id, &rc))
+        if (!insertNewEntry(self, keylen, key, id, &rc))
             return rc;
         self->prvId = self->minId = id;
         self->numId = 1;
@@ -231,23 +237,14 @@ rc_t KHTIndexInsert( KHTIndex_v5 *const self
     return 0;
 }
 
-rc_t KHTIndexDelete( KHTIndex_v5 *const self,
+rc_t KHTIndexDelete( KHTIndex_v5 *const self
                    , const char *const key
                    )
 {
-    return RC(rcDB, rcIndex, rcDeleting, rcFunction, rcNotImplemented);
+    return RC(rcDB, rcIndex, rcRemoving, rcFunction, rcUnexpected);
 }
 
-typedef struct KHTIndexHdr IndexHeader;
-struct KHTIndexHdr {
-    KIndexFileHeader_v3 dad; /* index-cmn.h:65 */
-    uint64_t entries;
-    int64_t numIds, firstId, lastId;
-    uint64_t cmp_idsize, cmp_spansize;
-    uint64_t keysize, cmp_keysize;
-};
-
-static size_t serialize( KHTIndex_v3 const *const self
+static size_t serialize( KHTIndex_v5 const *const self
                        , void *const buffer
                        , size_t const maxsize
                        , size_t const keySize
@@ -255,8 +252,8 @@ static size_t serialize( KHTIndex_v3 const *const self
 {
     IndexHeader *const hdr = buffer;
     uint64_t *const id = (void *)(hdr + 1);
-    uint32_t *span = (void *)(id + self->entries);
-    char *key = (void *)(span + self->entries);
+    uint32_t *span = (void *)(id + self->keyCount);
+    char *key = (void *)(span + self->keyCount);
     uint32_t minspan = 0, maxspan = 0;
     int64_t next = self->minId;
     bool gap = false;
@@ -312,13 +309,13 @@ static size_t serialize( KHTIndex_v3 const *const self
         }
         hdr->cmp_keysize = hdr->keysize;
     }
-    return (key + keySize) - (uint8_t const *)buffer;
+    return (key + keySize) - (char *)buffer;
 }
 
-static bool persistFile(KHTIndex_v3 const *const self, KFile *const file, rc_t *const rc)
+static bool persistFile(KHTIndex_v5 const *const self, KFile *const file, rc_t *const rc)
 {
     size_t const keySize = totalKeySize(self);
-    size_t const maxsize = sizeof(KHTIndexHdr) + sizeof(int64_t) * self->entries + sizeof(uint32_t) * self->entries + totalKeySize;
+    size_t const maxsize = sizeof(IndexHeader) + sizeof(int64_t) * self->keyCount + sizeof(uint32_t) * self->keyCount + keySize;
     KMMap *map = NULL;
     void *mem = NULL;
     size_t finalSize;
@@ -326,20 +323,20 @@ static bool persistFile(KHTIndex_v3 const *const self, KFile *const file, rc_t *
     *rc = KFileSetSize(file, maxsize);
     if (*rc) return false;
     
-    *rc = KMMapMakeMaxUpdate(&map, kfile);
+    *rc = KMMapMakeMaxUpdate(&map, file);
     if (*rc) return false;
 
     *rc = KMMapAddrUpdate(map, &mem);
     if (*rc) return false;
     
-    finalSize = serialize(self, mem, maxsize, keysize);
+    finalSize = serialize(self, mem, maxsize, keySize);
     KMMapRelease(map);
     KFileSetSize(file, finalSize);
     
     return true;
 }
 
-rc_t KHTIndexPersist( KHTIndex_v3 *const self
+rc_t KHTIndexPersist( KHTIndex_v5 *const self
                     , bool const proj
                     , struct KDirectory *const dir
                     , const char *const path

@@ -64,7 +64,8 @@ struct KIndex
     {
         KTrieIndex_v1 txt1;
         KTrieIndex_v2 txt234;
-        KU64Index_v3  u64_3;        // TODO insert new entry for KHashTableIndex
+        KU64Index_v3  u64_3;
+        KHTIndex_v5   hash;
     } u;
     bool converted_from_v1;
     uint8_t type;
@@ -231,7 +232,7 @@ rc_t KIndexAttach ( KIndex *self, const KMMap *mm, bool *byteswap )
             {
                 KIndexFileHeader_v1 v1;
                 KIndexFileHeader_v2 v2;
-                KIndexFileHeader_v3 v3; // TODO: analyze: need a new header version for KHTIndex?
+                KIndexFileHeader_v3 v3;
             } hdrs;
 
             const KDBHdr *hdr = addr;
@@ -261,7 +262,8 @@ rc_t KIndexAttach ( KIndex *self, const KMMap *mm, bool *byteswap )
                         hdrs . v3 . reserved1 = bswap_32 ( fh -> reserved1 );
                         hdr = & hdrs . v3 . h;
                         fh = & hdrs . v3;
-                        break; // TODO: insert new case for KHTIndex?
+                        break;
+                    // ???: add case for KHTIndex? KHTIndex doesn't currently support byte-swapping
                     }
                 }
             }
@@ -278,7 +280,8 @@ rc_t KIndexAttach ( KIndex *self, const KMMap *mm, bool *byteswap )
                     self -> type = kitText;
                     break;
                 case 3:
-                case 4: // TODO: add case for KHTIndex?
+                case 4:
+                case 5:
                 {
                     self -> type = fh -> index_type;
                     switch ( self -> type )
@@ -357,7 +360,21 @@ rc_t KIndexMakeRead ( KIndex **idxp,
                                 rc = KU64IndexOpen_v3 ( & idx -> u . u64_3, mm, byteswap );
                                 break;
                         }
-                        break; // TODO: add case for KHTIndex
+                        break;
+                    case 5:
+                        switch (idx->type) {
+                            case kitText:
+                            case kitText | kitProj:
+                                rc = KHTIndexOpen_v5( & idx -> u . hash, mm, byteswap );
+                                idx -> vers = 5;
+                                idx -> type |= kitProj;
+                                break;
+                                
+                            case kitU64:
+                                rc = KU64IndexOpen_v3(&idx->u.u64_3, mm, byteswap);
+                                break;
+                        }
+                        break;
 #endif
                     }
                 }
@@ -644,7 +661,18 @@ LIB_EXPORT rc_t CC KIndexConsistencyCheck ( const KIndex *self, uint32_t level,
                 rc = KTrieIndexCheckConsistency_v2 ( & self -> u . txt234,
                     start_id, id_range, num_keys, num_rows, num_holes,
                     self, key2id, id2key, all_ids, self -> converted_from_v1 );
-                break; // TODO: add case for KHTIndex
+                break;
+            case 5:
+                rc = KHTIndexCheckConsistency ( & self -> u . hash
+                                               , start_id
+                                               , id_range
+                                               , num_keys
+                                               , num_rows
+                                               , num_holes
+                                               , key2id
+                                               , id2key
+                                               , all_ids);
+                break;
             default:
                 return RC ( rcDB, rcIndex, rcValidating, rcIndex, rcBadVersion );
             }
@@ -706,7 +734,10 @@ LIB_EXPORT rc_t CC KIndexFindText ( const KIndex *self, const char *key, int64_t
 #else
             rc = KTrieIndexFind_v2 ( & self -> u . txt234, key, start_id, custom_cmp, data, self -> converted_from_v1 );
 #endif
-            break; // TODO: add case for KHTIndex
+            break;
+        case 5:
+            rc = KHTIndexFind( & self -> u . hash, key, start_id, &span);
+            break;
         default:
             return RC ( rcDB, rcIndex, rcSelecting, rcIndex, rcBadVersion );
         }
@@ -766,7 +797,9 @@ LIB_EXPORT rc_t CC KIndexFindAllText ( const KIndex *self, const char *key,
 #endif
             if ( rc == 0 )
                 rc = ( * f ) ( id64, span, data );
-            break; // TODO: add case for KHTIndex (return unimplemented)
+            break;
+        case 5:
+            return RC ( rcDB, rcIndex, rcSelecting, rcFunction, rcUnsupported );
         default:
             return RC ( rcDB, rcIndex, rcSelecting, rcIndex, rcBadVersion );
         }
@@ -840,7 +873,26 @@ LIB_EXPORT rc_t CC KIndexProjectText ( const KIndex *self,
             if ( rc == 0 )
                 * start_id = id;
 #endif
-            break; // TODO: add case for KHTIndex
+            break;
+        case 5:
+        {
+            char const *keytmp = NULL;
+            
+            rc = KHTIndexProject_v5 ( & self -> u . hash, id, keytmp, start_id, &span );
+            if (rc == 0) {
+                size_t i = 0;
+                for ( ; ; ) {
+                    char const ch = keytmp[i];
+                    if (ch == '\0')
+                        break;
+                    if (i < kmax)
+                        key[i] = ch;
+                }
+                if (actsize != NULL)
+                    *actsize = i;
+            }
+        }
+            break;
         default:
             return RC ( rcDB, rcIndex, rcProjecting, rcIndex, rcBadVersion );
         }
@@ -907,7 +959,8 @@ LIB_EXPORT rc_t CC KIndexProjectAllText ( const KIndex *self, int64_t id,
             if ( rc == 0 )
                 rc = ( * f ) ( start_id, span, key, data );
             break;
-// TODO: add case for KHTIndex (return unimplemented)            
+        case 5:
+            return RC ( rcDB, rcIndex, rcSelecting, rcFunction, rcUnsupported );
         default:
             return RC ( rcDB, rcIndex, rcProjecting, rcIndex, rcBadVersion );
         }

@@ -149,7 +149,10 @@ rc_t KIndexWhack ( KIndex *self )
                     case 4:
                         KTrieIndexWhack_v2 ( & self -> u . txt2 );
                         rc = 0;
-                        break; // TODO: add case for KHTIndex
+                        break;
+                    case 5:
+                        KHTIndexWhack_v5 ( & self -> u . hash );
+                        break;
                     }
                     break;
 
@@ -232,7 +235,7 @@ rc_t KIndexAttach ( KIndex *self, const KMMap *mm, bool *byteswap )
             {
                 KIndexFileHeader_v1 v1;
                 KIndexFileHeader_v2 v2;
-                KIndexFileHeader_v3 v3; // TODO: analyze: need new header for KHTIndex?
+                KIndexFileHeader_v3 v3;
             } hdrs;
 
             const KDBHdr *hdr = addr;
@@ -262,7 +265,8 @@ rc_t KIndexAttach ( KIndex *self, const KMMap *mm, bool *byteswap )
                         hdrs . v3 . reserved1 = bswap_32 ( fh -> reserved1 );
                         hdr = & hdrs . v3 . h;
                         fh = & hdrs . v3;
-                        break; // TODO: add case for KHTIndex?
+                        break;
+                    // ???: add case for KHTIndex? KHTIndex doesn't currently support byte-swapping
                     }
                 }
             }
@@ -280,6 +284,7 @@ rc_t KIndexAttach ( KIndex *self, const KMMap *mm, bool *byteswap )
                     break;
                 case 3:
                 case 4:
+                case 5:
                 {
                     self -> type = fh -> index_type;
                     switch( self->type )
@@ -331,7 +336,7 @@ rc_t KIndexMake ( KIndex **idxp, KDirectory *dir, const char *path )
             if (rc == 0)
             {
                 KIndex* idx = malloc ( sizeof *idx + strlen ( fullpath ) );
-                if ( yidx == NULL )
+                if ( idx == NULL )
                     rc = RC ( rcDB, rcIndex, rcConstructing, rcMemory, rcExhausted );
                 else
                 {
@@ -430,7 +435,21 @@ rc_t KIndexMakeRead ( KIndex **idxp, const KDirectory *dir, const char *path )
                                 rc = KU64IndexOpen_v3(&idx->u.u64_3, mm, byteswap);
                                 break;
                         }
-                        break; // TODO: add case for KHTIndex
+                        break;
+                    case 5:
+                        switch (idx->type) {
+                            case kitText:
+                            case kitText | kitProj:
+                                rc = KHTIndexOpen_v5( & idx -> u . hash, mm, byteswap );
+                                idx -> vers = 5;
+                                idx -> type |= kitProj;
+                                break;
+                                
+                            case kitU64:
+                                rc = KU64IndexOpen_v3(&idx->u.u64_3, mm, byteswap);
+                                break;
+                        }
+                        break;
 #endif
                     }
                 }
@@ -515,7 +534,20 @@ rc_t KIndexMakeUpdate ( KIndex **idxp, KDirectory *dir, const char *path )
                                 rc = KU64IndexOpen_v3(&idx->u.u64_3, mm, byteswap);
                                 break;
                         }
-                        break; // TODO: add case for KHTIndex
+                        break;
+                    case 5:
+                        switch(idx->type) {
+                            case kitText:
+                            case kitText | kitProj:
+                                rc = KHTIndexOpen_v5 ( & idx -> u . hash, mm, byteswap );
+                                idx -> type = kitText | kitProj;
+                                break;
+                                
+                            case kitU64:
+                                rc = KU64IndexOpen_v3(&idx->u.u64_3, mm, byteswap);
+                                break;
+                        }
+                        break;
 #endif
                     default:
                         rc = RC ( rcDB, rcIndex, rcConstructing, rcIndex, rcBadVersion );
@@ -566,6 +598,7 @@ LIB_EXPORT rc_t CC KIndexMarkModified ( KIndex *self )
                 self -> type != ( uint8_t ) kitText );
             if ( rc == 0 )
                 self -> dirty = true;
+            /* ???: need anything for KHTIndex; probably not */
         }
         break;
     default:
@@ -629,7 +662,9 @@ rc_t KIndexCreate ( KIndex **idxp, KDirectory *dir,
             rc = KTrieIndexOpen_v1 ( & idx -> u . txt1, NULL, false );
 #elsif KDBINDEXVERS <= 4
             rc = KTrieIndexOpen_v2 ( & idx -> u . txt2, NULL, false );
-#endif // TODO: add create KHTIndex
+#else
+            rc = KHTIndexOpen_v5 ( & idx -> u . hash, NULL, false );
+#endif
             break;
 
         case kitU64:
@@ -1327,7 +1362,12 @@ LIB_EXPORT rc_t CC KIndexCommit ( KIndex *self )
             case 4:
                 rc = KTrieIndexPersist_v2 ( & self -> u . txt2,
                     proj, self -> dir, self -> path, self -> use_md5 );
-                break; // TODO: add case for KHTIndex
+                break;
+            case 5:
+                rc = KHTIndexPersist ( & self -> u . hash
+                                     , true, self -> dir, self -> path
+                                     , self -> use_md5 );
+                break;
             }
             break;
 
@@ -1394,7 +1434,10 @@ LIB_EXPORT rc_t CC KIndexInsertText ( KIndex *self, bool unique,
         case 4:
             rc = KTrieIndexInsert_v2 ( & self -> u . txt2,
                 proj, key, id );
-            break; // TODO: add case for KHTIndex
+            break;
+        case 5:
+            rc = KHTIndexInsert( & self -> u . hash, key, id );
+            break;
         default:
             return RC ( rcDB, rcIndex, rcInserting, rcIndex, rcBadVersion );
         }
@@ -1451,7 +1494,10 @@ LIB_EXPORT rc_t CC KIndexDeleteText ( KIndex *self, const char *key )
         case 3:
         case 4:
             rc = KTrieIndexDelete_v2 ( & self -> u . txt2, proj, key );
-            break; // TODO: add case for KHTIndex
+            break;
+        case 5:
+            rc = KHTIndexDelete ( & self -> u . hash, key );
+            break;
         default:
             return RC ( rcDB, rcIndex, rcRemoving, rcIndex, rcBadVersion );
         }
@@ -1514,7 +1560,10 @@ LIB_EXPORT rc_t CC KIndexFindText ( const KIndex *self, const char *key, int64_t
             ( void ) ( span = 0 );
             rc = KTrieIndexFind_v2 ( & self -> u . txt2, key, start_id, custom_cmp, data, self -> converted_from_v1  );
 #endif
-            break; // TODO: add case for KHTIndex
+            break;
+        case 5:
+            rc = KHTIndexFind_v5 ( & self -> u . hash, key, start_id, &span );
+            break;
         default:
             return RC ( rcDB, rcIndex, rcSelecting, rcIndex, rcBadVersion );
         }
@@ -1572,7 +1621,9 @@ LIB_EXPORT rc_t CC KIndexFindAllText ( const KIndex *self, const char *key,
 #endif
             if ( rc == 0 )
                 rc = ( * f ) ( id64, span, data );
-            break; // TODO: add case for KHTIndex
+            break;
+        case 5:
+            return RC ( rcDB, rcIndex, rcSelecting, rcFunction, rcUnsupported );
         default:
             return RC ( rcDB, rcIndex, rcSelecting, rcIndex, rcBadVersion );
         }
@@ -1644,7 +1695,26 @@ LIB_EXPORT rc_t CC KIndexProjectText ( const KIndex *self,
             if ( rc == 0 )
                 * start_id = id;
 #endif
-            break; // TODO: add case for KHTIndex
+            break;
+        case 5:
+            {
+                char const *keytmp = NULL;
+                
+                rc = KHTIndexProject_v5 ( & self -> u . hash, id, &keytmp, start_id, &span );
+                if (rc == 0) {
+                    size_t i = 0;
+                    for ( ; ; ) {
+                        char const ch = keytmp[i];
+                        if (ch == '\0')
+                            break;
+                        if (i < kmax)
+                            key[i] = ch;
+                    }
+                    if (actsize != NULL)
+                        *actsize = i;
+                }
+            }
+            break;
         default:
             return RC ( rcDB, rcIndex, rcProjecting, rcIndex, rcBadVersion );
         }
@@ -1710,7 +1780,8 @@ LIB_EXPORT rc_t CC KIndexProjectAllText ( const KIndex *self, int64_t id,
             if ( rc == 0 )
                 rc = ( * f ) ( start_id, span, key, data );
             break;
-            // TODO: add case for KHTIndex
+        case 5:
+            return RC ( rcDB, rcIndex, rcSelecting, rcFunction, rcUnsupported );
         default:
             return RC ( rcDB, rcIndex, rcProjecting, rcIndex, rcBadVersion );
         }
