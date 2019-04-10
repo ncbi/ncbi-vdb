@@ -346,6 +346,10 @@ rc_t KHTIndexPersist( KHTIndex_v5 *const self
     rc_t rc = 0;
     KFile *file = NULL;
     
-    persistFile(self, file, &rc);
+    rc = KDirectoryCreateFile(dir, &file, true, 0664, kcmInit, "%s", path);
+    if (rc == 0) {
+        persistFile(self, file, &rc);
+        KFileRelease(file);
+    }
     return rc;
 }
