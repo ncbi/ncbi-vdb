@@ -69,6 +69,6 @@ static size_t cstring_byte_count(char const *const cstring)
 static bool addEntryToHashTable(KHTIndex_v5 *const self, size_t const i, rc_t *rc)
 {
     IdMapEntry const *const entry = self->entries + i;
-    *rc = KHashTableAdd(self->hashtable, entry->name, KHashCStr(entry->name), &i);
+    *rc = KHashTableAdd(self->hashtable, entry->name, KHash(entry->name, cstring_byte_count(entry->name)), &i);
     return *rc == 0;
 }

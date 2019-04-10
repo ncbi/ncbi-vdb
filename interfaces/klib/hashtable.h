@@ -138,7 +138,6 @@ KLIB_EXTERN rc_t KHashTableReserve ( KHashTable *self, size_t capacity );
 
 /* Hash functions */
 KLIB_EXTERN uint64_t KHash ( const char *s, size_t len );
-KLIB_EXTERN uint64_t KHashCStr ( const char *s );
 
 #ifdef __cplusplus
 }
