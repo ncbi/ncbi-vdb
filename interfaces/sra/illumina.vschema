@@ -253,11 +253,8 @@ table NCBI:SRA:Illumina:common #1.0.4 = INSDC:SRA:tbl:sra #1.0.4
  *  1.0.1 - explictly base upon sra #1.0.1 and related tables
  *  1.0.2 - updated ancestry
  *  1.0.3 - updated ancestry
-<<<<<<< HEAD
- *  2.0.0 - updated ancestry
-=======
  *  1.0.4 - updated ancestry
->>>>>>> responded to a single change for NAME in schema
+ *  2.0.0 - updated ancestry
  */
 
 physical NCBI:SRA:swapped_fsamp4 NCBI:SRA:Illumina:encoding:SIGNAL #2
@@ -287,17 +284,10 @@ physical NCBI:SRA:swapped_fsamp4 NCBI:SRA:Illumina:encoding:INTENSITY #2
 }
 
 // v2 base table
-<<<<<<< HEAD
 table NCBI:SRA:Illumina:tbl:v2 #2
-    = NCBI:SRA:tbl:sra #2.1.3
-    , NCBI:tbl:base_space #3
-    , NCBI:SRA:Illumina:common #1.0.3
-=======
-table NCBI:SRA:Illumina:tbl:v2 #1.0.5
     = NCBI:SRA:tbl:sra #2.1.4
-    , NCBI:tbl:base_space #2.0.3
+    , NCBI:tbl:base_space #3
     , NCBI:SRA:Illumina:common #1.0.4
->>>>>>> responded to a single change for NAME in schema
 {
     /* NAME tokenizing and coordinates
      *  most work happens in skeyname table

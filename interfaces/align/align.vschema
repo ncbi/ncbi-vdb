@@ -1126,13 +1126,9 @@ table NCBI:align:tbl:align_allele #1.2.1
  * seq
  *  alignment sequence table
  *
-<<<<<<< HEAD
  * history:
- *  2.0.0 - NCBI:tbl:base_space uses metadata RNA_Flag to support RNA reads
-=======
- * History:
  *  1.1.1 - respond to changes in base table
->>>>>>> responded to a single change for NAME in schema
+ *  2.0.0 - NCBI:tbl:base_space uses metadata RNA_Flag to support RNA reads
  */
 physical
 I64 NCBI:align:sorted:alignment_id_encoding #1.0
@@ -1150,22 +1146,12 @@ I64 NCBI:align:sorted:alignment_id_encoding #1.0
     }
 }
 
-<<<<<<< HEAD
  table NCBI:align:tbl:seq #2 =
     NCBI:tbl:base_space #3,
     NCBI:tbl:phred_quality #2.0.4,
     NCBI:align:tbl:cmp_base_space #1,
     NCBI:SRA:tbl:spotdesc #1.0.2,
-    NCBI:SRA:tbl:stats #1.2.0
-=======
-
-table NCBI:align:tbl:seq #1.1.1
-    = NCBI:tbl:base_space #2.0.3
-    , NCBI:tbl:phred_quality #2.0.4
-    , NCBI:align:tbl:cmp_base_space #1
-    , NCBI:SRA:tbl:spotdesc #1.0.2
-    , NCBI:SRA:tbl:stats #1.2.1
->>>>>>> responded to a single change for NAME in schema
+    NCBI:SRA:tbl:stats #1.2.1
 {
     // 128K
     column default limit = 131072;
@@ -1201,7 +1187,6 @@ table NCBI:align:tbl:seq #1.1.1
 };
 
 /***********************************
-<<<<<<< HEAD
 * Reference table - to store reference sequences
 * Sequences are divided in chunks. Two sequences never share a chunk.
 * SEQ_LEN     - real size of a chunk should never exceed MAX_SEQ_LEN when it is set
@@ -1218,40 +1203,14 @@ table NCBI:align:tbl:seq #1.1.1
 * - 0 < rowlen(.READ)< SEQ_LEN -- the sequence have to be filled with 'N's
  *
  * history:
+ *  2.0.1 - respond to changes in base table
  *  3.0.0 - NCBI:tbl:base_space uses metadata RNA_Flag to support RNA reads
 ***********************************/
 table NCBI:align:tbl:reference #3 =
     NCBI:align:tbl:cmp_base_space #1,
     NCBI:tbl:base_space #3,
     NCBI:tbl:seqloc #1,
-    NCBI:SRA:tbl:stats #1.2.0
-=======
- * Reference table - to store reference sequences
- * Sequences are divided in chunks. Two sequences never share a chunk.
- * SEQ_LEN     - real size of a chunk should never exceed MAX_SEQ_LEN when it is set
- * READ        - inherited from NCBI:tbl:base_space
- * CMP_READ,CMP_ALTREAD - are inherited from NCBI:align:tbl:cmp_base_space
- * SEQ_ID,SEQ_START,SEQ_LEN are inherited from  NCBI:align:tbl:seqloc
- * .skey contains NAME of the chunk - it corresponds to actual name used in BAM (chr1,chr2, etc....)
- *
- * SEQ_START,SEQ_LEN,MAX_SEQ_LEN,SEQID and rowlen(READ) operate the following way
- * - SEQ_LEN < MAX_SEQ_LEN - should only happen on the last chunk of the sequence
- * - .READ is absent - there should be a retrieval from external services by SEQ_ID,SEQ_START,SEQ_LEN
- * - rowlen(.READ) = 0  && SEQ_START==0 (used as flag) -  the sequence is SEQ_LEN repetition of 'N'
- * - rowlen(.READ) = 0  && SEQ_START >= 1 - the sequence have to be fetched from external sources
- * - 0 < rowlen(.READ)< SEQ_LEN -- the sequence have to be filled with 'N's
- *
- *
- * History:
- *  2.0.1 - respond to changes in base table
- *
- ***********************************/
-table NCBI:align:tbl:reference #2.0.1
-    = NCBI:align:tbl:cmp_base_space #1
-    , NCBI:tbl:base_space #2.0.3
-    , NCBI:tbl:seqloc #1
-    , NCBI:SRA:tbl:stats #1.2.1
->>>>>>> responded to a single change for NAME in schema
+    NCBI:SRA:tbl:stats #1.2.1
 {
     INSDC:quality:phred out_qual_phred
         = < INSDC:quality:phred > echo < 30 > ( out_dcmp_4na_bin );
