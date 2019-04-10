@@ -100,11 +100,11 @@ static bool initializeRead(KHTIndex_v5 *const self, rc_t *rc)
 
 /** @brief: look up key in the index
  **/
-rc_t KHTIndexFind( KHTIndex_v5 const *const self
-                 , char const *const key
-                 , int64_t *const out_firstId
-                 , uint32_t *const out_span
-                 )
+rc_t KHTIndexFind_v5 ( KHTIndex_v5 const *const self
+                     , char const *const key
+                     , int64_t *const out_firstId
+                     , uint32_t *const out_span
+                     )
 {
     rc_t rc = 0;
     size_t keylen;
@@ -328,7 +328,7 @@ rc_t KHTIndexOpen_v5( KHTIndex_v5 *const self
     return RC(rcDB, rcIndex, rcReading, rcByteOrder, rcInvalid);
 }
 
-rc_t KHTIndexCheckConsistency ( KHTIndex_v5 *const self
+rc_t KHTIndexCheckConsistency ( KHTIndex_v5 const *const self
                               , int64_t *const start_id
                               , uint64_t *const id_range
                               , uint64_t *const num_keys
@@ -366,7 +366,7 @@ rc_t KHTIndexCheckConsistency ( KHTIndex_v5 *const self
             IdMapEntry const *const entry = self->entries + i;
             int64_t firstId = 0;
             uint32_t span = 0;
-            rc_t rc = KHTIndexFind(self, entry->name, &firstId, &span);
+            rc_t rc = KHTIndexFind_v5(self, entry->name, &firstId, &span);
             
             if (rc != 0 || firstId != entry->firstId || firstId + (span - 1) != entry->lastId)
                 goto BAD;

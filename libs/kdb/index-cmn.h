@@ -316,6 +316,17 @@ rc_t KHTIndexProject_v5 ( const KHTIndex_v5 *self
                         , uint32_t *span
                         );
 
+rc_t KHTIndexCheckConsistency ( KHTIndex_v5 const *self
+                              , int64_t *start_id
+                              , uint64_t *id_range
+                              , uint64_t *num_keys
+                              , uint64_t *num_rows
+                              , uint64_t *num_holes
+                              , bool key2id
+                              , bool id2key
+                              , bool id_all
+                              );
+
 #ifdef __cplusplus
 }
 #endif

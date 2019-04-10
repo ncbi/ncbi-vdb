@@ -736,7 +736,7 @@ LIB_EXPORT rc_t CC KIndexFindText ( const KIndex *self, const char *key, int64_t
 #endif
             break;
         case 5:
-            rc = KHTIndexFind( & self -> u . hash, key, start_id, &span);
+            rc = KHTIndexFind_v5 ( & self -> u . hash, key, start_id, &span);
             break;
         default:
             return RC ( rcDB, rcIndex, rcSelecting, rcIndex, rcBadVersion );
