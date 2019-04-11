@@ -129,10 +129,10 @@ FIXTURE_TEST_CASE ( IndexPersist, WKDB_Fixture )
         REQUIRE_RC(KDatabaseRelease(db));
     }
     {
-        KDatabase* db;
+        KDatabase const *db;
         REQUIRE_RC(KDBManagerOpenDBRead(m_mgr, &db, GetName()));
         
-        KIndex *idx;
+        KIndex const *idx;
         REQUIRE_RC(KDatabaseOpenIndexRead(db, &idx, "index"));
 
         int64_t start_id;
