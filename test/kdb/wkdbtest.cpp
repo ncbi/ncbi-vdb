@@ -109,6 +109,56 @@ FIXTURE_TEST_CASE ( MissingRows, WKDB_Fixture )
     KDirectoryRemove(m_wd, true, GetName());
 }
 
+FIXTURE_TEST_CASE ( IndexPersist, WKDB_Fixture )
+{   // VDB-3577
+    KDirectoryRemove(m_wd, true, GetName());
+    {
+        KDatabase* db;
+        REQUIRE_RC(KDBManagerCreateDB(m_mgr, &db, kcmCreate, GetName()));
+        
+        KIndex *idx;
+        REQUIRE_RC(KDatabaseCreateIndex(db, &idx, kitText, kcmCreate, "index"));
+        
+        REQUIRE_RC(KIndexInsertText(idx, true, "aaaa1", 1));
+        REQUIRE_RC(KIndexInsertText(idx, true, "aaaa2", 2));
+        REQUIRE_RC(KIndexInsertText(idx, true, "aaaa3", 3));
+        
+        REQUIRE_RC(KIndexCommit(idx));
+        REQUIRE_RC(KIndexRelease(idx));
+        
+        REQUIRE_RC(KDatabaseRelease(db));
+    }
+    {
+        KDatabase* db;
+        REQUIRE_RC(KDBManagerOpenDBRead(m_mgr, &db, GetName()));
+        
+        KIndex *idx;
+        REQUIRE_RC(KDatabaseOpenIndexRead(db, &idx, "index"));
+
+        int64_t start_id;
+        uint64_t id_count;
+
+        REQUIRE_RC_FAIL(KIndexFindText (idx, "aaaa0", &start_id, &id_count, NULL, NULL));
+
+        REQUIRE_RC(KIndexFindText (idx, "aaaa1", &start_id, &id_count, NULL, NULL));
+        REQUIRE_EQ(start_id, (int64_t)1);
+        REQUIRE_EQ(id_count, (uint64_t)1);
+        
+        REQUIRE_RC(KIndexFindText (idx, "aaaa2", &start_id, &id_count, NULL, NULL));
+        REQUIRE_EQ(start_id, (int64_t)2);
+        REQUIRE_EQ(id_count, (uint64_t)1);
+
+        REQUIRE_RC(KIndexFindText (idx, "aaaa3", &start_id, &id_count, NULL, NULL));
+        REQUIRE_EQ(start_id, (int64_t)3);
+        REQUIRE_EQ(id_count, (uint64_t)1);
+        
+        REQUIRE_RC(KIndexRelease(idx));
+        
+        REQUIRE_RC(KDatabaseRelease(db));
+    }
+    KDirectoryRemove(m_wd, true, GetName());
+}
+
 FIXTURE_TEST_CASE ( ColumnMetadataWKDB_Fixture, WKDB_Fixture )
 {
     KDirectoryRemove(m_wd, true, GetName());
