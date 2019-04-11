@@ -263,7 +263,7 @@ static size_t serialize( KHTIndex_v5 const *const self
 
     memset(hdr, 0, sizeof(*hdr));
     KDBHdrInit(&hdr->dad.h, KDBINDEXVERS);
-    hdr->dad.index_type = kitText | kitProj;
+    hdr->dad.index_type = kitText;
 
     hdr->entries = self->keyCount;
     hdr->numIds = self->numId;
@@ -302,10 +302,9 @@ static size_t serialize( KHTIndex_v5 const *const self
     {
         char *cur = key;
         for (i = 0; i < self->keyCount; ++i) {
-            size_t j = 0;
-            char const *entry = self->entries[i].name;
-            while ((cur[j] = entry[j]) != '\0')
-                ++j;
+            char const *name = self->entries[i].name;
+            while ((*cur++ = *name++) != '\0')
+                ;
         }
         hdr->cmp_keysize = hdr->keysize;
     }
