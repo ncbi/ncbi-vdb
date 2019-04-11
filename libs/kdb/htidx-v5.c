@@ -320,7 +320,11 @@ rc_t KHTIndexOpen_v5( KHTIndex_v5 *const self
     if (!byteswap) {
         rc_t rc = 0;
         
-        if (map != NULL) deserialize(self, map, &rc);
+        if (map != NULL) {
+            void const *mem = NULL;
+            rc = KMMapAddrRead(map, &mem);
+            if (rc == 0) deserialize(self, mem, &rc);
+        }
         return rc;
     }
     return RC(rcDB, rcIndex, rcReading, rcByteOrder, rcInvalid);
