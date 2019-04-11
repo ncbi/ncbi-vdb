@@ -70,8 +70,6 @@ rc_t KHTIndexWhack_v5(KHTIndex_v5 *const self)
 {
     BufferListEntry *current = self->current;
 
-    assert(self != NULL);
-    
     if (self->hashtable)
         KHashTableDispose(self->hashtable, NULL, NULL, NULL);
     free(self->entries);

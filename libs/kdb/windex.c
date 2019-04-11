@@ -152,6 +152,7 @@ rc_t KIndexWhack ( KIndex *self )
                         break;
                     case 5:
                         KHTIndexWhack_v5 ( & self -> u . hash );
+                        rc = 0;
                         break;
                     }
                     break;

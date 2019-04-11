@@ -121,7 +121,11 @@ rc_t KIndexWhack ( KIndex *self )
             case 4:
                 KTrieIndexWhack_v2 ( & self -> u . txt234 );
                 rc = 0;
-                break; // TODO insert new case for KHTIndex
+                break;
+            case 5:
+                KHTIndexWhack_v5 ( & self -> u . hash );
+                rc = 0;
+                break;
             }
             break;
 
