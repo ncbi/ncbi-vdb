@@ -290,12 +290,11 @@ static bool deserialize(KHTIndex_v5 *const self
             uint32_t const *const span = (void const *)cmp_span;
             size_t i;
             for (i = 0; i < self->keyCount; ++i) {
-                self->entries[i].lastId = span[i];
-            }
-            for (i = 0; i < self->keyCount; ++i) {
                 int64_t const first = id[i] + self->minId;
+                int64_t const last = first + span[i];
+
                 self->entries[i].firstId = first;
-                self->entries[i].lastId += first;
+                self->entries[i].lastId = last;
             }
         }
     }
