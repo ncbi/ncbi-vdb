@@ -462,7 +462,6 @@ LIB_EXPORT rc_t CC KProcMgrGetPID ( const KProcMgr * self, uint32_t * pid )
     return rc;
 }
 
-
 int sys_GetHostName ( char * buffer, size_t buffer_size );
 
 LIB_EXPORT rc_t CC KProcMgrGetHostName ( const KProcMgr * self, char * buffer, size_t buffer_size )
@@ -480,6 +479,32 @@ LIB_EXPORT rc_t CC KProcMgrGetHostName ( const KProcMgr * self, char * buffer, s
     else
     {
         int res = sys_GetHostName ( buffer, buffer_size );
+        if ( res == 0 )
+            rc = 0;
+        else
+            rc = RC ( rcPS, rcMgr, rcAccessing, rcName, rcFailed );    
+    }
+    
+    return rc;
+}
+
+int sys_MakeTempName ( char * buffer, size_t buffer_size );
+
+LIB_EXPORT rc_t CC KProcMgrMakeTempName ( const KProcMgr * self, char * buffer, size_t buffer_size )
+{
+    rc_t rc = 0;
+
+    if ( self == NULL )
+        rc = RC ( rcPS, rcMgr, rcAccessing, rcSelf, rcNull );
+    else if ( self != s_proc_mgr . ptr )
+        rc = RC ( rcPS, rcMgr, rcAccessing, rcSelf, rcIncorrect );
+    else if ( buffer == NULL )
+        rc = RC ( rcPS, rcMgr, rcAccessing, rcParam, rcNull );
+    else if ( buffer_size == 0 )
+        rc = RC ( rcPS, rcMgr, rcAccessing, rcParam, rcInvalid );    
+    else
+    {
+        int res = sys_MakeTempName ( buffer, buffer_size );
         if ( res == 0 )
             rc = 0;
         else

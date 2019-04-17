@@ -123,6 +123,7 @@ KFS_CMN = \
 	cacheteefile2 \
 	rrcachedfile \
 	cacheteefile_wm \
+	cacheteefile_wm_cleanup \
 	recorder \
 	logfile \
 	poolpages \

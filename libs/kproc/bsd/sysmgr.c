@@ -28,6 +28,7 @@
 #include <kproc/procmgr.h>
 
 #include <pthread.h>
+#include <stdio.h>
 
 /* OnMainThread
  *  returns true if running on main thread
@@ -45,4 +46,13 @@ uint32_t sys_GetPID ( void )
 int sys_GetHostName ( char * buffer, size_t buffer_size )
 {
     return gethostname( buffer, buffer_size );
+}
+
+uint32_t sys_MakeTempName ( char * buffer, size_t buffer_size )
+{
+    uint32_t res = 1;
+    char * t = mktemp( buffer );
+    if ( t != NULL )
+        res = 0;
+    return res;
 }

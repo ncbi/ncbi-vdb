@@ -27,7 +27,7 @@
 KCacheTeeFileWM stands for CacheTeeFile-WaterMark.
 
 This file is process local.
-The file has one writer but can server multiple readers.
+The file has one writer/reader. There is no read-only version of it.
 The location of the file is in /tmp
 
 The strategy is to read the whole file up to the requested position in
@@ -47,8 +47,9 @@ struct KCacheTeeFileWM;
 #include <klib/printf.h>
 #include <klib/time.h>
 
-#include <kfs/cacheteefile_wm.h>
+#include <kproc/procmgr.h>
 
+#include <kfs/cacheteefile_wm.h>
 #include <kfs/defs.h>
 
 #include <sysalloc.h>
@@ -57,46 +58,106 @@ struct KCacheTeeFileWM;
 #define DFLT_BLOCK_SIZE ( 1024 * 1024 * 32 )
 #define MIN_BLOCK_SIZE ( 64 * 1024 )
 
+struct CacheTeeWMCleanupTask;
+rc_t Make_CacheTeeWMCleanup_Task ( struct CacheTeeWMCleanupTask **task, const char * cache_file );
+rc_t Execute_and_Release_CacheTeeWMCleanup_Task ( struct CacheTeeWMCleanupTask * self );
+
 typedef struct KCacheTeeFileWM
 {
     KFile dad;
-    const KFile * wrapped;                  /* the file we are wrapping */
-    KFile * cache;                          /* the cache-file */
+    const KFile * wrapped;      /* the file we are wrapping */
+    KFile * cache;              /* the cache-file */
+    struct CacheTeeWMCleanupTask * cleanup;     /* cleanup-task for windows... */
 
-    uint8_t * block;
-    uint64_t wrapped_size;                  /* the size of the wrapped file */
-    uint32_t block_size;                    /* how big is a block ( aka 1 bit in the bitmap )*/
+    uint8_t * block;            /* to buffer to read from wrapped and write to cache */
+    uint64_t wrapped_size;      /* the size of the wrapped file */
+    uint32_t block_size;        /* how big is the block */
     
-    bool read_only;
 } KCacheTeeFileWM;
 
+/* helper to call the platform-independent function to get the process-id */
+static rc_t assemble_file_path( const char * location, char * buffer, size_t buffer_size )
+{
+    struct KProcMgr * proc_mgr;
+    rc_t rc = KProcMgrMakeSingleton ( &proc_mgr );
+    if ( rc != 0 )
+    {
+        LOGERR( klogInt, rc, "cannot access process-manager" );
+    }
+    else
+    {
+        uint32_t pid;
+        rc = KProcMgrGetPID ( proc_mgr, &pid );
+        if ( rc != 0 )
+        {
+            LOGERR( klogInt, rc, "cannot access process-id" );
+        }
+        else
+        {
+            size_t num_writ;
+            size_t loc_len = string_size ( location );
+            char term = location[ loc_len - 1 ];
+            if ( ( term  == '/' ) || ( term == '\\' ) )
+                rc = string_printf ( buffer, buffer_size, &num_writ, "%s%d_XXXXXX", location, pid );
+            else
+            {
+#if WINDOWS
+                rc = string_printf ( buffer, buffer_size, &num_writ, "%s\\%d_XXXXXX", location, pid );
+#else
+                rc = string_printf ( buffer, buffer_size, &num_writ, "%s/%d_XXXXXX", location, pid );    
+#endif    
+            }
+            
+            if ( rc != 0 )
+            {
+                LOGERR( klogInt, rc, "cannot assemble file path" );
+            }
+            else
+            {
+                rc = KProcMgrMakeTempName ( proc_mgr, buffer, buffer_size );            
+                if ( rc != 0 )
+                {
+                    LOGERR( klogInt, rc, "cannot assemble temp. file path" );    
+                }
+            }
+        }
+        KProcMgrRelease ( proc_mgr );
+    }
+    return rc;
+}
 
 /**********************************************************************************************
     START vt-functions
 **********************************************************************************************/
 static rc_t CC KCacheTeeFileWMDestroy( KCacheTeeFileWM * self )
 {
-    rc_t rc;
-    
-    if ( self -> block != NULL )
-    {
-        free( ( void * ) self -> block );
-        self -> block = NULL;
-    }
-
-    rc = KFileRelease ( self -> wrapped );
+    rc_t rc = KFileRelease ( self -> wrapped );
     if ( rc != 0 )
     {
         LOGERR( klogInt, rc, "Error releasing wrapped file" );
     }
     
     rc = KFileRelease ( self -> cache );
+    if ( rc != 0 )
     {
         LOGERR( klogInt, rc, "Error releasing cache file" );
     }
+
+    if ( self -> cleanup != NULL )
+    {
+        rc = Execute_and_Release_CacheTeeWMCleanup_Task ( self -> cleanup );
+        self -> cleanup = NULL;
+    }
     
+    /* now remove the cache-file itself if we created it ( self -> block != NULL ) */
+    if ( self -> block != NULL )
+    {
+        free( ( void * ) self -> block );
+        self -> block = NULL;
+    }
+
     free ( ( void * ) self );
-    return 0;
+    return rc;
 }
 
 static struct KSysFile* KCacheTeeFileWMGetSysFile( const KCacheTeeFileWM * self,
@@ -125,7 +186,7 @@ static rc_t KCacheTeeFileWMSetSize( KCacheTeeFileWM * self, uint64_t size )
     return RC ( rcFS, rcFile, rcUpdating, rcFile, rcReadonly );
 }
 
-static rc_t KCacheTeeFileWMRead_rw ( const KCacheTeeFileWM *cself,
+static rc_t KCacheTeeFileWMRead ( const KCacheTeeFileWM *cself,
     uint64_t pos, void * buffer, size_t bsize, size_t * num_read )
 {
     uint64_t r_pos;
@@ -158,33 +219,42 @@ static rc_t KCacheTeeFileWMRead_rw ( const KCacheTeeFileWM *cself,
                                     cself -> block_size, &r_num_read );
                 if ( rc == 0 )
                 {
-                    size_t r_num_written;
-                    rc = KFileWriteAll ( cself -> cache, r_pos, ( const void * ) cself -> block, r_num_read, &r_num_written );
-                    if ( pos < ( r_pos + r_num_read ) )
+                    if ( r_num_read == 0 )
                     {
-                        /* we have at least a part of the requested data in memory.. */
                         done = true;
-                        uint64_t offset = r_pos - pos;                            
-                        uint8_t * src = cself -> block;
-                        size_t count = r_num_read - offset;
-                        src += offset;
-                        memmove( buffer, src, count );
-                        *num_read = count;
+                        *num_read = 0;
                     }
                     else
                     {
-                        /* continue reading towards the watermark ... */
-                        if ( rc == 0 && r_num_read == r_num_written )
+                        size_t r_num_written;
+                        rc = KFileWriteAll ( cself -> cache, r_pos, ( const void * ) cself -> block, r_num_read, &r_num_written );
+                        if ( pos < ( r_pos + r_num_read ) )
                         {
-                            r_pos += r_num_read;
+                            /* we have at least a part of the requested data in memory.. */
+                            done = true;
+                            uint64_t offset = r_pos - pos;                            
+                            uint8_t * src = cself -> block;
+                            size_t count = r_num_read - offset;
+                            if ( count > bsize ) count = bsize;
+                            src += offset;
+                            memmove( buffer, src, count );
+                            *num_read = count;
                         }
                         else
                         {
-                            /* we are not able to write to the cache-file, and the requested
-                               range is not in the block-buffer: fall back to reading
-                               from the wrapped file... */
-                            rc = KFileReadAll ( cself -> wrapped, pos, buffer, bsize, num_read );
-                            done = true;
+                            /* continue reading towards the watermark ... */
+                            if ( rc == 0 && r_num_read == r_num_written )
+                            {
+                                r_pos += r_num_read;
+                            }
+                            else
+                            {
+                                /* we are not able to write to the cache-file, and the requested
+                                   range is not in the block-buffer: fall back to reading
+                                   from the wrapped file... */
+                                rc = KFileReadAll ( cself -> wrapped, pos, buffer, bsize, num_read );
+                                done = true;
+                            }
                         }
                     }
                 }
@@ -195,32 +265,6 @@ static rc_t KCacheTeeFileWMRead_rw ( const KCacheTeeFileWM *cself,
                     done = true;
                 }
             }
-        }
-    }
-    return rc;
-}
-
-static rc_t KCacheTeeFileWMRead_ro ( const KCacheTeeFileWM *cself,
-    uint64_t pos, void * buffer, size_t bsize, size_t * num_read )
-{
-    uint64_t cache_size;
-    rc_t rc = KFileSize ( cself -> cache, &cache_size );
-    if ( rc != 0 )
-    {
-        LOGERR( klogErr, rc, "cannot detect size of cache-file" );
-        rc = KFileReadAll ( cself -> wrapped, pos, buffer, bsize, num_read );
-    }
-    else
-    {
-        if ( pos < cache_size )
-        {
-            /* we can at least use some part of the cache to read from */
-            rc = KFileReadAll ( cself -> cache, pos, buffer, bsize, num_read );
-        }
-        else
-        {
-            /* requested range is not in the cache, read from wrapped instead */
-            rc = KFileReadAll ( cself -> wrapped, pos, buffer, bsize, num_read );
         }
     }
     return rc;
@@ -236,7 +280,7 @@ static rc_t KCacheTeeFileWMWrite( KCacheTeeFileWM *self, uint64_t pos,
     END vt-functions
 **********************************************************************************************/
 
-static KFile_vt_v1 vtKCacheTeeFile_WM_rw =
+static KFile_vt_v1 vtKCacheTeeFile_WM =
 {
     /* version 1.0 */
     1, 0,
@@ -247,23 +291,7 @@ static KFile_vt_v1 vtKCacheTeeFile_WM_rw =
     KCacheTeeFileWMRandomAccess,
     KCacheTeeFileWMSize,
     KCacheTeeFileWMSetSize,
-    KCacheTeeFileWMRead_rw,
-    KCacheTeeFileWMWrite
-    /* end minor version 0 methods */
-};
-
-static KFile_vt_v1 vtKCacheTeeFile_WM_ro =
-{
-    /* version 1.0 */
-    1, 0,
-
-    /* start minor version 0 methods */
-    KCacheTeeFileWMDestroy,
-    KCacheTeeFileWMGetSysFile,
-    KCacheTeeFileWMRandomAccess,
-    KCacheTeeFileWMSize,
-    KCacheTeeFileWMSetSize,
-    KCacheTeeFileWMRead_ro,
+    KCacheTeeFileWMRead,
     KCacheTeeFileWMWrite
     /* end minor version 0 methods */
 };
@@ -280,149 +308,100 @@ static uint32_t normalize_block_size( uint32_t block_size )
     return res;
 }
 
-static rc_t finish_rw( struct KFile const **tee,
-                       struct KFile const * to_wrap,
-                       struct KFile * cache,
-                       const char * resolved_path,
-                       uint64_t wrapped_size,
-                       uint32_t block_size )
+static rc_t finish( struct KDirectory * self,
+                    struct KFile const **tee,
+                    struct KFile const * to_wrap,
+                    struct KFile * cache,
+                    const char * cache_file_name,
+                    uint64_t wrapped_size,
+                    uint32_t block_size )
 {
+    KCacheTeeFileWM * obj;
+    
     rc_t rc = KFileAddRef ( to_wrap );
     if ( rc != 0 )
     {
         LOGERR( klogErr, rc, "cannot add-ref the wrapped file" );
+        return rc;
     }
-    else
+    
+    obj = malloc ( sizeof * obj );
+    if ( obj == NULL )
     {
-        KCacheTeeFileWM * obj = malloc ( sizeof * obj );
-        if ( obj == NULL )
-        {
-            rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
-            LOGERR( klogErr, rc, "cannot allocate cache-tee-struct" );
-        }
-        else
-        {
-            obj -> wrapped = to_wrap;
-            obj -> cache = cache;
-            obj -> wrapped_size = wrapped_size;
-            obj -> block_size = normalize_block_size( block_size );
-            obj -> read_only = false;
-
-            obj -> block = malloc( obj -> block_size );
-            if ( obj -> block == NULL )
-            {
-                rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
-                LOGERR( klogErr, rc, "cannot allocate cache-block" );
-                free( ( void * ) obj );
-            }
-            else
-            {
-                rc = KFileInit ( &obj -> dad,
-                                 ( const union KFile_vt * ) &vtKCacheTeeFile_WM_rw,
-                                 "KCacheTeeFileWM",
-                                 resolved_path,
-                                 true,
-                                 false );
-                if ( rc != 0 )
-                {
-                    LOGERR( klogErr, rc, "cannot initialize KFile" );
-                    free( ( void * ) obj -> block );
-                    free( ( void * ) obj );
-                }
-                else
-                {
-                    *tee = ( const KFile * ) &obj -> dad;
-                }
-            }
-        }
+        rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
+        LOGERR( klogErr, rc, "cannot allocate cache-tee-struct" );
+        KFileRelease( to_wrap );
+        return rc;
     }
-    return rc;
 
-}
+    obj -> wrapped = to_wrap;
+    obj -> cache = cache;
+    obj -> wrapped_size = wrapped_size;
+    obj -> block_size = normalize_block_size( block_size );
+        
+    obj -> block = malloc( obj -> block_size );
+    if ( obj -> block == NULL )
+    {
+        rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
+        LOGERR( klogErr, rc, "cannot allocate cache-block" );
+        KFileRelease( to_wrap );
+        free( ( void * ) obj );
+        return rc;
+    }
 
-static rc_t finish_ro( struct KFile const **tee,
-                       struct KFile const * to_wrap,
-                       struct KFile * cache,
-                       const char * resolved_path,
-                       uint64_t wrapped_size,
-                       uint32_t block_size )
-{
-    rc_t rc = KFileAddRef ( to_wrap );
+    rc = KFileInit ( &obj -> dad,
+                    ( const union KFile_vt * ) &vtKCacheTeeFile_WM,
+                     "KCacheTeeFileWM",
+                     cache_file_name,
+                     true,
+                     false );
     if ( rc != 0 )
     {
-        LOGERR( klogErr, rc, "cannot add-ref the wrapped file" );
+        LOGERR( klogErr, rc, "cannot initialize KFile" );
+        KFileRelease( to_wrap );
+        free( ( void * ) obj -> block );
+        free( ( void * ) obj );
+        return rc;
+    }
+
+#if WINDOWS
+    rc = Make_CacheTeeWMCleanup_Task ( &obj -> cleanup, cache_file_name );
+    if ( rc != 0 )
+    {
+        obj -> cleanup = NULL;
+        LOGERR( klogErr, rc, "cannot create cleanup task" );
+        KFileRelease( to_wrap );
+        free( ( void * ) obj -> block );
+        free( ( void * ) obj );
+    }
+#else
+    obj -> cleanup = NULL;
+    rc = KDirectoryRemove ( self, true, "%s", cache_file_name );
+    if ( rc != 0 )
+    {
+        PLOGERR( klogErr, ( klogErr, rc, "cannot remove cache file '$(path)'", 
+                "path=%s", cache_file_name ) );
+    }
+#endif    
+
+    if ( rc != 0 )
+    {
+        KFileRelease( to_wrap );
+        free( ( void * ) obj -> block );
+        free( ( void * ) obj );
     }
     else
     {
-        KCacheTeeFileWM * obj = malloc ( sizeof * obj );
-        if ( obj == NULL )
-        {
-            rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
-            LOGERR( klogErr, rc, "cannot allocate cache-tee-struct" );
-        }
-        else
-        {
-            obj -> wrapped = to_wrap;
-            obj -> cache = cache;
-            obj -> wrapped_size = wrapped_size;
-            obj -> block_size = normalize_block_size( block_size );
-            obj -> read_only = true;
-            obj -> block = NULL;
-
-            rc = KFileInit ( &obj -> dad,
-                             ( const union KFile_vt * ) &vtKCacheTeeFile_WM_ro,
-                             "KCacheTeeFileWM",
-                             resolved_path,
-                             true,
-                             false );
-            if ( rc != 0 )
-            {
-                LOGERR( klogErr, rc, "cannot initialize KFile" );
-                free( ( void * ) obj );
-            }
-            else
-            {
-                *tee = ( const KFile * ) &obj -> dad;
-            }
-        }
+        *tee = ( const KFile * ) &obj -> dad;
     }
     return rc;
 }
 
-static rc_t create_new_tee( struct KDirectory * self,
-                            struct KFile const **tee,
-                            struct KFile const * to_wrap,
-                            const char * resolved_path,
-                            uint64_t wrapped_size,
-                            uint32_t block_size )
-{
-    KFile * cache;
-    rc_t rc = KDirectoryCreateFile ( self,
-                                     &cache,
-                                     true,
-                                     0664,
-                                     kcmOpen | kcmParents,
-                                     "%s.cache",
-                                     resolved_path );
-    if ( rc != 0 )
-    {
-        LOGERR( klogErr, rc, "cannot create cache-file" );
-    }
-    else
-    {
-        rc = finish_rw( tee, to_wrap, cache, resolved_path,
-                        wrapped_size, block_size );
-    }
-    return 0;
-}
-
-
-LIB_EXPORT rc_t CC KDirectoryVMakeCacheTeeWM ( struct KDirectory * self,
-                                               struct KFile const ** tee,
-                                               struct KFile const * to_wrap,
-                                               uint32_t block_size,
-                                               const char * path,
-                                               va_list args )
+LIB_EXPORT rc_t CC KDirectoryMakeCacheTeeWM ( struct KDirectory * self,
+                                              struct KFile const ** tee,
+                                              struct KFile const * to_wrap,
+                                              uint32_t block_size,
+                                              const char * location )
 {
     rc_t rc = 0;
     
@@ -435,9 +414,9 @@ LIB_EXPORT rc_t CC KDirectoryVMakeCacheTeeWM ( struct KDirectory * self,
             rc = RC ( rcFS, rcFile, rcAllocating, rcParam, rcNull );
         else if ( self == NULL )
             rc = RC ( rcFS, rcFile, rcAllocating, rcSelf, rcNull );
-        else if ( path == NULL )
+        else if ( location == NULL )
             rc = RC ( rcFS, rcFile, rcAllocating, rcPath, rcNull );
-        else if ( path [ 0 ] == 0 )
+        else if ( location [ 0 ] == 0 )
             rc = RC ( rcFS, rcFile, rcAllocating, rcPath, rcEmpty );
     }
     
@@ -456,53 +435,25 @@ LIB_EXPORT rc_t CC KDirectoryVMakeCacheTeeWM ( struct KDirectory * self,
         }
         else
         {
-            char resolved_path [ 4096 ];
-            rc = KDirectoryVResolvePath ( self,
-                                          false, /* absolute */
-                                          resolved_path,
-                                          sizeof resolved_path,
-                                          path,
-                                          args );
-            if ( rc != 0 )
-            {
-                PLOGERR( klogErr, ( klogErr, rc, "cannot resolve path of cache file '$(path)'", 
-                        "path=%s", path ) );
-            }
-            else
+            char buffer[ 4096 ];
+            rc = assemble_file_path( location, buffer, sizeof buffer );
+            if ( rc == 0 )
             {
                 KFile * cache;
-                /* lets see if we can open the cache-file in read/write - mode */
-                rc = KDirectoryOpenFileSharedWrite ( self, &cache, true, "%s.cache", resolved_path );
-                if ( rc == 0 )
+                rc = KDirectoryCreateFile ( self, &cache, true, 0664, kcmOpen | kcmParents,
+                                            "%s", buffer );
+                if ( rc != 0 )
                 {
-                    /* cache-file exists and we have the exclusive rd/wr access to it !*/
-                    rc = finish_rw( tee, to_wrap, cache, resolved_path,
-                                    wrapped_size, block_size );
-
-                }
-                else if ( GetRCState( rc ) == rcNotFound )
-                {
-                    /* cache-file does not exist, let's try to create it */
-                    rc = create_new_tee ( self, tee, to_wrap, resolved_path,
-                                          wrapped_size, block_size );                    
+                    PLOGERR( klogErr, ( klogErr, rc, "cannot create cache file '$(path)'", 
+                            "path=%s", buffer ) );
                 }
                 else
                 {
-                    /* let us try to open the cache in read-only mode !*/
-                    rc = KDirectoryOpenFileRead ( self,
-                                                  ( const struct KFile ** )&( cache ),
-                                                  "%s.cache",
-                                                  resolved_path );
+                    /* creating the cache-file did succeed */
+                    rc = finish( self, tee, to_wrap, cache, buffer, wrapped_size, block_size );
                     if ( rc != 0 )
                     {
-                        /* we cannot open the cache-file in read-only-mode */
-                        LOGERR( klogErr, rc, "cannot open cache-file in read-only-mode" );
-                    }
-                    else
-                    {
-                        /* finish in read-only mode... */
-                        rc = finish_ro( tee, to_wrap, cache, resolved_path,
-                                        wrapped_size, block_size );
+                        KFileRelease( cache );
                     }
                 }
             }
@@ -526,18 +477,12 @@ LIB_EXPORT rc_t CC KDirectoryVMakeCacheTeeWM ( struct KDirectory * self,
     return rc;
 }
 
-
-LIB_EXPORT rc_t CC KDirectoryMakeCacheTeeWM ( struct KDirectory *self,
-                                              struct KFile const **tee,
-                                              struct KFile const *to_wrap,
-                                              uint32_t block_size,
-                                              const char *path, ... )
+LIB_EXPORT bool CC KFileIsKCacheTeeWM( const struct KFile * self )
 {
-    rc_t rc;
-    va_list args;
-    va_start ( args, path );
-    rc = KDirectoryVMakeCacheTeeWM ( self, tee, to_wrap, block_size, path, args );
-    va_end ( args );
-    return rc;
+    bool res = false;
+    if ( self != NULL )
+    {
+        res = ( &self->vt->v1 == &vtKCacheTeeFile_WM );
+    }
+    return res;
 }
-

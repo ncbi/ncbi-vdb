@@ -36,6 +36,7 @@ TEST_TOOLS = \
 	test-resolve \
 	test-cachetee \
 	test-cachetee2 \
+	test-cacheteeWM \
 	test-lru-cache \
 	test-kfs-md5
 
@@ -177,6 +178,28 @@ $(TEST_BINDIR)/test-cachetee2: $(TEST_CACHETEE2_OBJ)
 
 cachetee2: $(TEST_BINDIR)/test-cachetee2
 	$(TEST_BINDIR)/test-cachetee2
+
+#-------------------------------------------------------------------------------
+# test-cacheteeWM
+#
+TEST_CACHETEE_WM_SRC = \
+	cache_tee_helper \
+	cachetee_wm_test
+
+TEST_CACHETEE_WM_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_CACHETEE_WM_SRC))
+
+TEST_CACHETEE_WM_LIB = \
+	-lkapp \
+    -sncbi-vdb \
+	-lktst
+
+$(TEST_BINDIR)/test-cacheteeWM: $(TEST_CACHETEE_WM_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_CACHETEE_WM_LIB)
+	rm *.o *.d
+
+cacheteeWM: $(TEST_BINDIR)/test-cacheteeWM
+	$(TEST_BINDIR)/test-cacheteeWM
 
 #-------------------------------------------------------------------------------
 # test-lru-cache

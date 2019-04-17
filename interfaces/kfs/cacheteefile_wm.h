@@ -52,25 +52,19 @@ struct KDirectory;
  * KDirectory
  */
 
-/* MakeCacheTee
+/* KDirectoryMakeCacheTeeWM / KDirectoryVMakeCacheTeeWM
+ *
  *  takes a KFile as source
+ *
+ *  "self" [ IN ] - KDirectory for handling the internal cache-file
  *
  *  "tee" [ OUT ] - return parameter for tee file
  *
- *  "remote" [ IN ] - the source file, generally costly to read which is
+ *  "to_wrap" [ IN ] - the source file, generally costly to read which is
  *  the motivation behind caching its output
  *
- *  "logger" [ IN, NULL OKAY ] - optional debugging output for observing
- *  access patterns of "remote"
- *
  *  "blocksize" [ IN ] - the cache-file page size
- *                       ( if 0 ... default-value will be 32k )
- *
- *  "cluster" [ IN ] - a blocking factor for accessing "remote"
- *  reads are in blocks of size "blocksize" * "cluster"
- *  ( 1...4 makes most sense )
- *
- *  "report" [ IN ] - when true, provides more verbose debugging output
+ *                       ( if 0 ... default-value will be 32M )
  *
  *  "path" [ IN ] - NUL terminated string in directory-native
  *  character set denoting full cache file, i.e. the name of the file
@@ -103,16 +97,8 @@ KFS_EXTERN rc_t CC KDirectoryMakeCacheTeeWM ( struct KDirectory * self,
                                              struct KFile const ** tee,
                                              struct KFile const * to_wrap,
                                              uint32_t blocksize,
-                                             const char * path,
-                                             ... );
+                                             const char * location );
                                              
-KFS_EXTERN rc_t CC KDirectoryVMakeCacheTeeWM ( struct KDirectory * self,
-                                              struct KFile const ** tee,
-                                              struct KFile const * to_wrap,
-                                              uint32_t blocksize,
-                                              const char * path,
-                                              va_list args );
-
 /* -----
  * checks if the given file is internally a CacheTee2File
  *

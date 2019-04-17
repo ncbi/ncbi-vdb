@@ -26,6 +26,7 @@
 
 #include <kproc/extern.h>
 #include <kproc/procmgr.h>
+#include <stdio.h>
 
 /* OnMainThread
  *  returns true if running on main thread
@@ -56,4 +57,18 @@ int sys_GetHostName ( char * buffer, size_t buffer_size )
 #else
     return gethostname( buffer, buffer_size );
 #endif
+}
+
+uint32_t sys_MakeTempName ( char * buffer, size_t buffer_size )
+{
+    uint32_t res = 1;
+#if defined(_WIN32)
+    if ( buffer_size > 0 && buffer != NULL )
+        buffer [ 0 ] = '\0';
+#else
+    char * t = mktemp( buffer );
+    if ( t != NULL )
+        res = 0;
+#endif
+    return res;
 }
