@@ -700,6 +700,19 @@ table NCBI:sra:tbl:trace #1                     // declare the table
     // U32 -> ASCII. Has 170K names like: "THUNNUS ATLANTICUS", etc
     extern column < ascii > zip_encoding ORGANISM_NAME;
 
+    // *
+    // status
+    typedef U8 NCBI:SRA:trace_filter;
+    const NCBI:SRA:trace_filter SRA_TRACE_FILTER_PASS = 0;
+    const NCBI:SRA:trace_filter SRA_TRACE_FILTER_REJECT = 1;
+    const NCBI:SRA:trace_filter SRA_TRACE_FILTER_CRITERIA = 2;
+    const NCBI:SRA:trace_filter SRA_TRACE_FILTER_REDACTED = 3;
+    extern column NCBI:SRA:trace_filter TRACE_FILTER;
+
+    in_spot_filter
+                = SPOT_FILTER
+                | 
+
 	/* INSDC:tbl:sequence inherited virtual productions
 	 *  bool cs_native;
 	 *  virtual in_cs_key = 0;
