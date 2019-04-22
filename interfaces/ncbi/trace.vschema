@@ -710,10 +710,6 @@ table NCBI:sra:tbl:trace #1                     // declare the table
     const NCBI:SRA:trace_filter SRA_TRACE_FILTER_REDACTED = 3;
     extern column NCBI:SRA:trace_filter TRACE_FILTER;
 
-    in_spot_filter
-                = SPOT_FILTER
-                | 
-
 	/* INSDC:tbl:sequence inherited virtual productions
 	 *  bool cs_native;
 	 *  virtual in_cs_key = 0;
