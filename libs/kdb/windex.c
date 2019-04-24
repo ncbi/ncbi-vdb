@@ -47,6 +47,7 @@
 #include <string.h>
 #include <byteswap.h>
 #include <assert.h>
+#include <stdio.h>
 
 /*--------------------------------------------------------------------------
  * KIndex
@@ -661,7 +662,7 @@ rc_t KIndexCreate ( KIndex **idxp, KDirectory *dir,
         case kitText | kitProj:
 #if KDBINDEXVERS == 1
             rc = KTrieIndexOpen_v1 ( & idx -> u . txt1, NULL, false );
-#elsif KDBINDEXVERS <= 4
+#elif KDBINDEXVERS <= 4
             rc = KTrieIndexOpen_v2 ( & idx -> u . txt2, NULL, false );
 #else
             rc = KHTIndexOpen_v5 ( & idx -> u . hash, NULL, false );
@@ -1700,19 +1701,21 @@ LIB_EXPORT rc_t CC KIndexProjectText ( const KIndex *self,
         case 5:
             {
                 char const *keytmp = NULL;
-                
+
                 rc = KHTIndexProject_v5 ( & self -> u . hash, id, &keytmp, start_id, &span );
                 if (rc == 0) {
-                    size_t i = 0;
-                    for ( ; ; ) {
-                        char const ch = keytmp[i];
+                    size_t i, n;
+
+                    for (n = 0; ; ++n) {
+                        int const ch = keytmp[n];
                         if (ch == '\0')
                             break;
-                        if (i < kmax)
-                            key[i] = ch;
+                    }
+                    for (i = 0; i < n && i < kmax; ++i) {
+                        key[i] = keytmp[i];
                     }
                     if (actsize != NULL)
-                        *actsize = i;
+                        *actsize = n;
                 }
             }
             break;

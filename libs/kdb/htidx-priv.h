@@ -27,6 +27,9 @@
 #pragma once
 
 /** @brief: the id-to-key map entry
+ **
+ ** @note: name points into a BufferListEntry's buffer field,
+ **        hence why that can not be realloc'ed.
  **/
 typedef struct IdMapEntry IdMapEntry;
 struct IdMapEntry {

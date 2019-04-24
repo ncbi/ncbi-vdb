@@ -884,16 +884,18 @@ LIB_EXPORT rc_t CC KIndexProjectText ( const KIndex *self,
             
             rc = KHTIndexProject_v5 ( & self -> u . hash, id, &keytmp, start_id, &span );
             if (rc == 0) {
-                size_t i = 0;
-                for ( ; ; ) {
-                    char const ch = keytmp[i];
+                size_t i, n;
+
+                for (n = 0; ; ++n) {
+                    int const ch = keytmp[n];
                     if (ch == '\0')
                         break;
-                    if (i < kmax)
-                        key[i] = ch;
+                }
+                for (i = 0; i < n && i < kmax; ++i) {
+                    key[i] = keytmp[i];
                 }
                 if (actsize != NULL)
-                    *actsize = i;
+                    *actsize = n;
             }
         }
             break;

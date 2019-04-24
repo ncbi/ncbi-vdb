@@ -109,25 +109,14 @@ static bool initializeWrite(KHTIndex_v5 *const self, rc_t *rc)
     return true;
 }
 
-/** @brief: copy a nul-terminated string
- **/
-static char *cstring_copy(size_t const n, char *const dst, char const *const src)
-{
-    size_t i;
-    for (i = 0; i < n; ++i) {
-        dst[i] = src[i];
-    }
-    assert(src[n] == '\0');
-    dst[n] = '\0';
-    return dst;
-}
-
 /** @brief: checks that current key buffer is big enough, or creates a new one
  **/
 static bool growKeys(KHTIndex_v5 *const self, size_t const keylen, rc_t *rc)
 {
+    static size_t count = 0;
     if (self->current->used + keylen + 1 < KEY_BUFFER_SIZE)
         return true;
+    count += 1;
     self->current = makeBufferListEntry(self->current, rc);
     return self->current != NULL;
 }
@@ -150,23 +139,41 @@ static bool growEntries(KHTIndex_v5 *const self, rc_t *rc)
     return false;
 }
 
+/** @brief: copy and nul-terminate a string
+ **/
+static char *cstring_copy(size_t const len, char *const dst, char const *const src)
+{
+    size_t i;
+    for (i = 0; i < len; ++i)
+        dst[i] = src[i];
+    dst[i] = '\0';
+    return dst;
+}
+
+/** @brief: initialize a new entry
+ **/
+static IdMapEntry makeEntry(char *const name, int64_t const id)
+{
+    IdMapEntry entry;
+
+    entry.name = name;
+    entry.firstId = entry.lastId = id;
+
+    return entry;
+}
+
 /** @brief: adds a new entry to id-to-key index AND adds key to hashtable
  **/
-static bool insertNewEntry( KHTIndex_v5 *const self
-                          , size_t const keylen
-                          , char const *const key
-                          , int64_t const id
-                          , rc_t *rc)
+static bool addNewEntry( KHTIndex_v5 *const self
+                       , size_t const keylen
+                       , char const *const key
+                       , int64_t const id
+                       , rc_t *rc)
 {
     size_t const i = self->keyCount;
 
     if (growEntries(self, rc) && growKeys(self, keylen, rc)) {
-        IdMapEntry *const entry = self->entries + i;
-        char *const copy = self->current->buffer + self->current->used;
-
-        entry->name = cstring_copy(keylen, copy, key);
-        entry->firstId = entry->lastId = id;
-
+        self->entries[i] = makeEntry(cstring_copy(keylen, self->current->buffer + self->current->used, key), id);
         self->keyCount = i + 1;
         self->current->used += keylen + 1;
 
@@ -214,7 +221,7 @@ rc_t KHTIndexInsert( KHTIndex_v5 *const self
         
         /* check if key exists */
         if (!KHashTableFind(self->hashtable, key, KHash(key, keylen), &fnd)) {
-            if (!insertNewEntry(self, keylen, key, id, &rc))
+            if (!addNewEntry(self, keylen, key, id, &rc))
                 return rc;
         }
         else {
@@ -229,7 +236,7 @@ rc_t KHTIndexInsert( KHTIndex_v5 *const self
         /* first time path */
         if (!initializeWrite(self, &rc))
             return rc;
-        if (!insertNewEntry(self, keylen, key, id, &rc))
+        if (!addNewEntry(self, keylen, key, id, &rc))
             return rc;
         self->prvId = self->minId = id;
         self->numId = 1;
