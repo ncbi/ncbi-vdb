@@ -44,7 +44,7 @@
 #endif
 
 #ifndef MAX_HTTP_READ_LIMIT
-#define MAX_HTTP_READ_LIMIT ( 30 * 1000 )
+#define MAX_HTTP_READ_LIMIT ( 5 * 60 * 1000 ) /* 5 minutes */
 #endif
 
 #ifndef MAX_HTTP_WRITE_LIMIT
