@@ -592,7 +592,7 @@ static void KNSManagerSetNCBI_VDB_NET ( KNSManager * self, const KConfig * kfg )
 
 static int32_t KNSManagerPrepareHttpReadTimeout(KConfig* kfg) {
     int64_t result = 0;
-    rc_t rc = KConfigReadI64(kfg, "/http/read-timeout", &result);
+    rc_t rc = KConfigReadI64(kfg, "/http/timeout/read", &result);
     if (rc == 0)
         return result;
     else
