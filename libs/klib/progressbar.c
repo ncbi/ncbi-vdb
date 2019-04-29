@@ -161,7 +161,10 @@ static rc_t progess_1( progressbar * pb, const percent_t percent )
     percent_t p0 = percent - ( p1 * 10 );
     if ( ( p1 & 1 )&&( p0 == 0 ) )
         return print_progress_2( pb, "\b\b\b\b\b\b- %2u.%01u%%", p1, p0 );
-    return print_progress_2( pb, "\b\b\b\b\b%2u.%01u%%", p1, p0 );
+    if (p1 != 100 || p0 != 0)
+        return print_progress_2( pb, "\b\b\b\b\b%2u.%01u%%", p1, p0 );
+    else
+        return print_progress_2( pb, "\b\b\b\b\b%2u%%  \b\b",p1, p0);
 }
 
 
@@ -179,7 +182,10 @@ static rc_t progess_2( progressbar * pb, const percent_t percent )
     percent_t p0 = percent - ( p1 * 100 );
     if ( ( p1 & 1 )&&( p0 == 0 ) )
         return print_progress_2( pb, "\b\b\b\b\b\b\b- %2u.%02u%%", p1, p0 );
-    return print_progress_2( pb, "\b\b\b\b\b\b%2u.%02u%%", p1, p0 );
+    if (p1 != 100 || p0 != 0)
+        return print_progress_2( pb, "\b\b\b\b\b\b%2u.%02u%%", p1, p0 );
+    else
+        return print_progress_2( pb, "\b\b\b\b\b\b%2u%%   \b\b\b", p1, p0);
 }
 
 static rc_t progress_forward( progressbar * pb, const percent_t to )
