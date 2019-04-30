@@ -140,6 +140,16 @@ static bool isOntoAndGapless(KHTIndex_v5 const *const self)
         && self->numId == 1 + (self->prvId - self->minId);
 }
 
+static IdMapEntry const *lastProjectionEntry(KHTIndex_v5 const *const self)
+{
+    IdMapEntry const *const end = self->entries + self->keyCount;
+    IdMapEntry const *const last = self->entries + self->lastProjEntry;
+    if (last < end && last->name && last->firstId <= self->lastProjId && self->lastProjId <= last->lastId)
+        return last;
+    else
+        return NULL;
+}
+
 /** @brief: retrieve the key that was associated with an id
  **
  ** @note: O(log n) at worst, O(1) if index is 1:1 and the
@@ -155,8 +165,28 @@ rc_t KHTIndexProject_v5 ( KHTIndex_v5 const *const self
     IdMapEntry const *fnd = NULL;
 
     assert(self != NULL);
-    
+
     if (self->minId <= id && id <= self->prvId) {
+        IdMapEntry const *const lpe = lastProjectionEntry(self);
+        
+        if (lpe) {
+            if (id > lpe->lastId) {
+                /* the expectation is the projection is occuring in sequence of id
+                 * so first check based on the previous found entry (if there is one)
+                 */
+                fnd = lpe + 1;
+                if (fnd < self->entries + self->keyCount && fnd->firstId <= id && id <= fnd->lastId)
+                    goto FOUND;
+                fnd = NULL;
+            }
+            else if (lpe->firstId <= id) {
+                /* since entries can represent a range of ids, maybe it is in the range
+                 * of the last found entry
+                 */
+                fnd = lpe;
+                goto FOUND;
+            }
+        }
         if (isOntoAndGapless(self)) {
             /* can do a linear lookup by id */
             size_t const i = id - self->minId;
@@ -223,6 +253,9 @@ rc_t KHTIndexProject_v5 ( KHTIndex_v5 const *const self
         if (key     ) *key      = fnd->name;
         if (first_id) *first_id = fnd->firstId;
         if (span    ) *span     = 1 + (fnd->lastId - fnd->firstId);
+
+        ((KHTIndex_v5 *)self)->lastProjId = id;
+        ((KHTIndex_v5 *)self)->lastProjEntry = fnd - self->entries;
 
         return 0;
     }

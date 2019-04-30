@@ -298,6 +298,8 @@ struct KHTIndex_v5 {
                     * if contiguous, then IDs don't need storage
                     * if onto, then ID-ranges per key doesn't not need storage
                     */
+    int64_t lastProjId;
+    size_t lastProjEntry;
 };
 
 rc_t KHTIndexOpen_v5 ( KHTIndex_v5 *self, struct KMMap const *mm, bool byteswap );

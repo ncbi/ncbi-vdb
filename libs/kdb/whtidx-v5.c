@@ -152,12 +152,13 @@ static char *cstring_copy(size_t const len, char *const dst, char const *const s
 
 /** @brief: initialize a new entry
  **/
-static IdMapEntry makeEntry(char *const name, int64_t const id)
+static IdMapEntry makeEntry(char *const name, int64_t const id1, int64_t const id2)
 {
     IdMapEntry entry;
 
     entry.name = name;
-    entry.firstId = entry.lastId = id;
+    entry.firstId = id1;
+    entry.lastId = id2;
 
     return entry;
 }
@@ -167,13 +168,14 @@ static IdMapEntry makeEntry(char *const name, int64_t const id)
 static bool addNewEntry( KHTIndex_v5 *const self
                        , size_t const keylen
                        , char const *const key
-                       , int64_t const id
+                       , int64_t const id1
+                       , int64_t const id2
                        , rc_t *rc)
 {
     size_t const i = self->keyCount;
 
     if (growEntries(self, rc) && growKeys(self, keylen, rc)) {
-        self->entries[i] = makeEntry(cstring_copy(keylen, self->current->buffer + self->current->used, key), id);
+        self->entries[i] = makeEntry(cstring_copy(keylen, self->current->buffer + self->current->used, key), id1, id2);
         self->keyCount = i + 1;
         self->current->used += keylen + 1;
 
@@ -196,6 +198,47 @@ static bool updateEntry(KHTIndex_v5 *const self, uint64_t const i, int64_t const
     return false;
 }
 
+static bool FlushChecked(KHTIndex_v5 *const self, rc_t *rc)
+{
+    IdMapEntry *const end = self->entries + self->keyCount;
+    IdMapEntry *const last = self->entries + self->lastProjEntry;
+    if (last < end && last->firstId <= self->lastProjId && self->lastProjId <= last->lastId) {
+        KHTIndex_v5 newself;
+        IdMapEntry *entry = last;
+
+        memset(&newself, 0, sizeof(newself));
+        
+        while (++entry < end) {
+            char const *const key = entry->name;
+            size_t const keylen = cstring_byte_count(key);
+            int64_t const firstId = entry->firstId;
+            int64_t const lastId = entry->lastId;
+            
+            if (newself.keyCount == 0) {
+                if (!initializeWrite(&newself, rc)) return false;
+            }
+            if (!addNewEntry(&newself, keylen, key, firstId, lastId, rc))
+                return false;
+            newself.prvId = lastId;
+            newself.numId += (lastId - firstId) + 1;
+        }
+        KHTIndexWhack_v5(self);
+        *self = newself;
+    }
+    return true;
+}
+
+static FILE *LogFile(bool close) {
+    static FILE *file = NULL;
+    if (close) {
+        fclose(file);
+        file = NULL;
+    }
+    else if (file == NULL)
+        file = fopen("index.log", "w");
+    return file;
+}
+
 /** @brief: inserts a new entry into the index, or updates an existing one
  **/
 rc_t KHTIndexInsert( KHTIndex_v5 *const self
@@ -207,6 +250,13 @@ rc_t KHTIndexInsert( KHTIndex_v5 *const self
 
     assert(self != NULL);
     assert(key != NULL);
+
+#if 0
+    if (!FlushChecked(self, &rc))
+        abort();
+    
+    fprintf(LogFile(false), "%lli\t%s\n", (long long int)id, key);
+#endif
 
     keylen = cstring_byte_count(key);
     assert(keylen != 0); /* is this true? */
@@ -221,7 +271,7 @@ rc_t KHTIndexInsert( KHTIndex_v5 *const self
         
         /* check if key exists */
         if (!KHashTableFind(self->hashtable, key, KHash(key, keylen), &fnd)) {
-            if (!addNewEntry(self, keylen, key, id, &rc))
+            if (!addNewEntry(self, keylen, key, id, id, &rc))
                 return rc;
         }
         else {
@@ -236,7 +286,7 @@ rc_t KHTIndexInsert( KHTIndex_v5 *const self
         /* first time path */
         if (!initializeWrite(self, &rc))
             return rc;
-        if (!addNewEntry(self, keylen, key, id, &rc))
+        if (!addNewEntry(self, keylen, key, id, id, &rc))
             return rc;
         self->prvId = self->minId = id;
         self->numId = 1;
@@ -351,7 +401,7 @@ rc_t KHTIndexPersist( KHTIndex_v5 *const self
 {
     rc_t rc = 0;
     KFile *file = NULL;
-    
+
     rc = KDirectoryCreateFile(dir, &file, true, 0664, kcmInit, "%s", path);
     if (rc == 0) {
         persistFile(self, file, &rc);
