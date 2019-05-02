@@ -122,12 +122,6 @@ KPROC_EXTERN rc_t CC KProcMgrGetPID ( const KProcMgr * self, uint32_t * pid );
  */
 KPROC_EXTERN rc_t CC KProcMgrGetHostName ( const KProcMgr * self, char * buffer, size_t buffer_size );
 
-/* MakeTempName
- *  creates a temp. filename
- *  buffer has to contain the template ending in XXXXXX ( will be replaced in place by random values )
- */
-KPROC_EXTERN rc_t CC KProcMgrMakeTempName ( const KProcMgr * self, char * buffer, size_t buffer_size );
-
 #ifdef __cplusplus
 }
 #endif

@@ -48,6 +48,7 @@ struct KCacheTeeFileWM;
 #include <klib/time.h>
 
 #include <kproc/procmgr.h>
+#include <kproc/lock.h>
 
 #include <kfs/cacheteefile_wm.h>
 #include <kfs/defs.h>
@@ -58,6 +59,7 @@ struct KCacheTeeFileWM;
 #define DFLT_BLOCK_SIZE ( 1024 * 1024 * 32 )
 #define MIN_BLOCK_SIZE ( 64 * 1024 )
 
+/* prototypes for functions in cacheteefile_wm_cleanup.c ( avoids another private header-file ) */
 struct CacheTeeWMCleanupTask;
 rc_t Make_CacheTeeWMCleanup_Task ( struct CacheTeeWMCleanupTask **task, const char * cache_file );
 rc_t Execute_and_Release_CacheTeeWMCleanup_Task ( struct CacheTeeWMCleanupTask * self );
@@ -67,6 +69,7 @@ typedef struct KCacheTeeFileWM
     KFile dad;
     const KFile * wrapped;      /* the file we are wrapping */
     KFile * cache;              /* the cache-file */
+    KLock * cache_lock;         /* a lock in case the file is used multithreaded */
     struct CacheTeeWMCleanupTask * cleanup;     /* cleanup-task for windows... */
 
     uint8_t * block;            /* to buffer to read from wrapped and write to cache */
@@ -94,30 +97,36 @@ static rc_t assemble_file_path( const char * location, char * buffer, size_t buf
         }
         else
         {
-            size_t num_writ;
-            size_t loc_len = string_size ( location );
-            char term = location[ loc_len - 1 ];
-            if ( ( term  == '/' ) || ( term == '\\' ) )
-                rc = string_printf ( buffer, buffer_size, &num_writ, "%s%d_XXXXXX", location, pid );
-            else
-            {
-#if WINDOWS
-                rc = string_printf ( buffer, buffer_size, &num_writ, "%s\\%d_XXXXXX", location, pid );
-#else
-                rc = string_printf ( buffer, buffer_size, &num_writ, "%s/%d_XXXXXX", location, pid );    
-#endif    
-            }
-            
+            char hostname[ 1024 ];
+            rc = KProcMgrGetHostName ( proc_mgr, hostname, sizeof hostname );
             if ( rc != 0 )
             {
-                LOGERR( klogInt, rc, "cannot assemble file path" );
+                LOGERR( klogInt, rc, "cannot access hostname" );    
             }
             else
             {
-                rc = KProcMgrMakeTempName ( proc_mgr, buffer, buffer_size );            
+                size_t num_writ;
+                size_t loc_len = string_size ( location );
+                char term = location[ loc_len - 1 ];
+                KTime_t t = KTimeStamp ();
+                
+                if ( ( term  == '/' ) || ( term == '\\' ) )
+                    rc = string_printf ( buffer, buffer_size, &num_writ, "%s%s_%u_%u",
+                                         location, hostname, pid, t );
+                else
+                {
+#if WINDOWS
+                    rc = string_printf ( buffer, buffer_size, &num_writ, "%s\\%s_%u_%u",
+                                         location, hostname, pid, t );
+#else
+                    rc = string_printf ( buffer, buffer_size, &num_writ, "%s/%s_%u_%u",
+                                         location, hostname, pid, t );    
+#endif    
+                }
+            
                 if ( rc != 0 )
                 {
-                    LOGERR( klogInt, rc, "cannot assemble temp. file path" );    
+                    LOGERR( klogInt, rc, "cannot assemble file path" );
                 }
             }
         }
@@ -143,9 +152,19 @@ static rc_t CC KCacheTeeFileWMDestroy( KCacheTeeFileWM * self )
         LOGERR( klogInt, rc, "Error releasing cache file" );
     }
 
+    if ( self -> cache_lock != NULL )
+    {
+        rc = KLockRelease( self -> cache_lock );
+        if ( rc != 0 )
+        {
+            LOGERR( klogInt, rc, "Error releasing cache-lock" );    
+        }
+        self -> cache_lock = NULL;
+    }
+    
     if ( self -> cleanup != NULL )
     {
-        rc = Execute_and_Release_CacheTeeWMCleanup_Task ( self -> cleanup );
+        rc = Execute_and_Release_CacheTeeWMCleanup_Task ( self -> cleanup ); /* in cacheteefile_wm_cleanup.c */
         self -> cleanup = NULL;
     }
     
@@ -186,6 +205,68 @@ static rc_t KCacheTeeFileWMSetSize( KCacheTeeFileWM * self, uint64_t size )
     return RC ( rcFS, rcFile, rcUpdating, rcFile, rcReadonly );
 }
 
+static rc_t KCacheTeeFileWMLoop( const KCacheTeeFileWM *cself,
+    uint64_t r_pos, uint64_t pos, void * buffer, size_t bsize, size_t * num_read )
+{
+    rc_t rc;
+    /* requested range is not in the cache, read from wrapped instead,
+       but store in cache, use large reads... */
+    bool done = false;
+    while ( !done )
+    {
+        size_t r_num_read;
+        rc = KFileReadAll ( cself -> wrapped, r_pos, cself -> block,
+                            cself -> block_size, &r_num_read );
+        if ( rc == 0 )
+        {
+            if ( r_num_read == 0 )
+            {
+                done = true;
+                *num_read = 0;
+            }
+            else
+            {
+                size_t r_num_written;
+                rc = KFileWriteAll ( cself -> cache, r_pos, ( const void * ) cself -> block, r_num_read, &r_num_written );
+                if ( pos < ( r_pos + r_num_read ) )
+                {
+                    /* we have at least a part of the requested data in memory.. */
+                    uint8_t * src = cself -> block;
+                    uint64_t offset = r_pos >= pos ? r_pos - pos : pos - r_pos;
+                    size_t count = r_num_read - offset;
+                    done = true;
+                    if ( count > bsize ) count = bsize;
+                    src += offset;
+                    memmove( buffer, src, count );
+                    *num_read = count;
+                }
+                else
+                {
+                    /* continue reading towards the watermark ... */
+                    if ( rc == 0 && r_num_read == r_num_written )
+                    {
+                        r_pos += r_num_read;
+                    }
+                    else
+                    {
+                        /* we are not able to write to the cache-file, and the requested
+                           range is not in the block-buffer: fall back to reading
+                           from the wrapped file... */
+                        rc = KFileReadAll ( cself -> wrapped, pos, buffer, bsize, num_read );
+                        done = true;
+                    }
+                }
+            }
+        }
+        else
+        {
+            /* there is nothing we can do if we cannot read from the wrapped
+               file, we are done, return the error code to the caller */
+            done = true;
+        }
+    }
+    return rc;
+}
 static rc_t KCacheTeeFileWMRead ( const KCacheTeeFileWM *cself,
     uint64_t pos, void * buffer, size_t bsize, size_t * num_read )
 {
@@ -209,61 +290,20 @@ static rc_t KCacheTeeFileWMRead ( const KCacheTeeFileWM *cself,
         }
         else
         {
-            /* requested range is not in the cache, read from wrapped instead,
-               but store in cache, use large reads... */
-            bool done = false;
-            while ( !done )
+            rc = KLockAcquire ( cself -> cache_lock );
+            if ( rc != 0 )
             {
-                size_t r_num_read;
-                rc = KFileReadAll ( cself -> wrapped, r_pos, cself -> block,
-                                    cself -> block_size, &r_num_read );
-                if ( rc == 0 )
-                {
-                    if ( r_num_read == 0 )
-                    {
-                        done = true;
-                        *num_read = 0;
-                    }
-                    else
-                    {
-                        size_t r_num_written;
-                        rc = KFileWriteAll ( cself -> cache, r_pos, ( const void * ) cself -> block, r_num_read, &r_num_written );
-                        if ( pos < ( r_pos + r_num_read ) )
-                        {
-                            /* we have at least a part of the requested data in memory.. */
-                            done = true;
-                            uint64_t offset = r_pos - pos;                            
-                            uint8_t * src = cself -> block;
-                            size_t count = r_num_read - offset;
-                            if ( count > bsize ) count = bsize;
-                            src += offset;
-                            memmove( buffer, src, count );
-                            *num_read = count;
-                        }
-                        else
-                        {
-                            /* continue reading towards the watermark ... */
-                            if ( rc == 0 && r_num_read == r_num_written )
-                            {
-                                r_pos += r_num_read;
-                            }
-                            else
-                            {
-                                /* we are not able to write to the cache-file, and the requested
-                                   range is not in the block-buffer: fall back to reading
-                                   from the wrapped file... */
-                                rc = KFileReadAll ( cself -> wrapped, pos, buffer, bsize, num_read );
-                                done = true;
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    /* there is nothing we can do if we cannot read from the wrapped
-                       file, we are done, return the error code to the caller */
-                    done = true;
-                }
+                LOGERR( klogErr, rc, "cannot acquire cache-lock" );
+                /* if that is not possible, we use the wrapped file instead - no caching */
+                rc = KFileReadAll ( cself -> wrapped, pos, buffer, bsize, num_read );
+            }
+            else
+            {
+                /* requested range is not in the cache, read from wrapped instead,
+                   but store in cache, use large reads... */
+                rc = KCacheTeeFileWMLoop( cself, r_pos, pos, buffer, bsize, num_read );
+
+                KLockUnlock ( cself -> cache_lock );
             }
         }
     }
@@ -349,6 +389,16 @@ static rc_t finish( struct KDirectory * self,
         return rc;
     }
 
+    rc = KLockMake ( &obj -> cache_lock );
+    if ( rc != 0 )
+    {
+        LOGERR( klogErr, rc, "cannot create cache-lock" );
+        KFileRelease( to_wrap );
+        free( ( void * ) obj -> block );
+        free( ( void * ) obj );
+        return rc;
+    }
+    
     rc = KFileInit ( &obj -> dad,
                     ( const union KFile_vt * ) &vtKCacheTeeFile_WM,
                      "KCacheTeeFileWM",
@@ -358,6 +408,7 @@ static rc_t finish( struct KDirectory * self,
     if ( rc != 0 )
     {
         LOGERR( klogErr, rc, "cannot initialize KFile" );
+        KLockRelease( obj -> cache_lock );
         KFileRelease( to_wrap );
         free( ( void * ) obj -> block );
         free( ( void * ) obj );
@@ -370,6 +421,7 @@ static rc_t finish( struct KDirectory * self,
     {
         obj -> cleanup = NULL;
         LOGERR( klogErr, rc, "cannot create cleanup task" );
+        KLockRelease( obj -> cache_lock );        
         KFileRelease( to_wrap );
         free( ( void * ) obj -> block );
         free( ( void * ) obj );
@@ -387,6 +439,7 @@ static rc_t finish( struct KDirectory * self,
     if ( rc != 0 )
     {
         KFileRelease( to_wrap );
+        KLockRelease( obj -> cache_lock );        
         free( ( void * ) obj -> block );
         free( ( void * ) obj );
     }
@@ -471,6 +524,82 @@ LIB_EXPORT rc_t CC KDirectoryMakeCacheTeeWM ( struct KDirectory * self,
             else
             {
                 *tee = to_wrap;
+            }
+        }
+    }
+    return rc;
+}
+
+rc_t CTWM_get( const void ** ctwm, const char * basename );
+rc_t CTWM_register( const void * ctwm, const char * basename );
+
+LIB_EXPORT rc_t CC KDirectoryMakeCacheTeeWMfromURL ( struct KDirectory * self,
+                 struct KFile const ** tee,
+                 uint32_t block_size,
+                 const char * location,
+                 const char * token,
+                 rc_t ( CC * on_create ) ( struct KFile const ** f, void *data ),
+                 void *data )
+{
+    rc_t rc = 0;
+    
+    if ( tee == NULL )
+        rc = RC ( rcFS, rcFile, rcAllocating, rcParam, rcNull );
+    else
+    {
+        *tee = NULL;
+        if ( self == NULL )
+            rc = RC ( rcFS, rcFile, rcAllocating, rcSelf, rcNull );
+        else if ( location == NULL )
+            rc = RC ( rcFS, rcFile, rcAllocating, rcPath, rcNull );
+        else if ( location [ 0 ] == 0 )
+            rc = RC ( rcFS, rcFile, rcAllocating, rcPath, rcEmpty );
+        else if ( token == NULL )
+            rc = RC ( rcFS, rcFile, rcAllocating, rcPath, rcNull );
+        else if ( token [ 0 ] == 0 )
+            rc = RC ( rcFS, rcFile, rcAllocating, rcPath, rcEmpty );
+    }
+
+    if ( rc == 0 )
+    {
+        const void * existing_tee = NULL;
+        rc = CTWM_get( &existing_tee, token );
+        if ( rc == 0 )
+        {
+            if ( existing_tee != NULL )
+            {
+                *tee = existing_tee;
+            }
+            else
+            {
+                if ( on_create == NULL )
+                {
+                    rc = RC ( rcFS, rcFile, rcConstructing, rcParam, rcInvalid );
+                    LOGERR( klogErr, rc, "invalid callback" );
+                }
+                else
+                {
+                    struct KFile const * remote_file;
+                    rc = on_create( &remote_file, data );
+                    if ( rc == 0 )
+                    {
+                        rc = KDirectoryMakeCacheTeeWM ( self, tee, remote_file,
+                                              block_size, location );
+                        if ( rc == 0 )
+                        {
+                            rc = CTWM_register( ( void * )*tee, token );
+                            if ( rc != 0 )
+                            {
+                                rc = 0;
+                            }
+                        }
+                        else
+                        {
+                            *tee = remote_file;
+                            rc = 0;
+                        }
+                    }
+                }
             }
         }
     }

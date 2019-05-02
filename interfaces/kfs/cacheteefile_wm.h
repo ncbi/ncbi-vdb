@@ -96,9 +96,17 @@ struct KDirectory;
 KFS_EXTERN rc_t CC KDirectoryMakeCacheTeeWM ( struct KDirectory * self,
                                              struct KFile const ** tee,
                                              struct KFile const * to_wrap,
-                                             uint32_t blocksize,
+                                             uint32_t block_size,
                                              const char * location );
-                                             
+
+KFS_EXTERN rc_t CC KDirectoryMakeCacheTeeWMfromURL ( struct KDirectory * self,
+                                             struct KFile const ** tee,
+                                             uint32_t block_size,
+                                             const char * location,
+                                             const char * token,
+                                             rc_t ( CC * on_create ) ( struct KFile const ** f, void *data ),
+                                             void *data );
+
 /* -----
  * checks if the given file is internally a CacheTee2File
  *

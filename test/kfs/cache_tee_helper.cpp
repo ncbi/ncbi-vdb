@@ -31,7 +31,13 @@
 #include <kfs/directory.h>
 #include <kfs/file.h>
 
-static uint32_t rand_32( uint32_t min, uint32_t max )
+uint32_t rand_32( uint32_t min, uint32_t max )
+{
+       double scaled = ( ( double )rand() / RAND_MAX );
+       return ( ( max - min + 1 ) * scaled ) + min;
+}
+
+uint64_t rand_64( uint64_t min, uint64_t max )
 {
        double scaled = ( ( double )rand() / RAND_MAX );
        return ( ( max - min + 1 ) * scaled ) + min;
