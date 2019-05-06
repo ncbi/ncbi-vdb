@@ -236,29 +236,16 @@ TEST_CASE( CacheTeeWM_MultiThreads )
     }
 }
 
+rc_t resolve_accession( const char * acc, const VPath ** remote_path ); /* in cache_tee_helper.cpp */
+
 TEST_CASE( CacheTeeWM_RandomSRR )
 {
     KOutMsg( "Test: CacheTeeWM_RandomSRR\n" );
-    
+
     /* this accession is located at cloudian at the moment... */
     std::string acc( "SRR948806" );
-
-    VFSManager * vfs_mgr;
-    REQUIRE_RC( VFSManagerMake( &vfs_mgr ) );
-
-    VResolver * resolver;
-    REQUIRE_RC( VFSManagerGetResolver( vfs_mgr, &resolver ) );
-    
-    VPath * acc_path;
-    REQUIRE_RC( VFSManagerMakePath( vfs_mgr, &acc_path, "ncbi-acc:%s", acc.c_str() ) );
-
     const VPath * remote_path = NULL;
-    REQUIRE_RC( VResolverRemoteEnable( resolver, vrAlwaysEnable ) );
-    REQUIRE_RC( VResolverQuery ( resolver, 0, acc_path, NULL, &remote_path, NULL ) );
-    REQUIRE_RC( VPathRelease ( acc_path ) );
-    REQUIRE_RC( VResolverRelease( resolver ) );
-    REQUIRE_RC( VFSManagerRelease ( vfs_mgr ) );
-    
+    REQUIRE_RC( resolve_accession( acc.c_str(), &remote_path ) );
     if ( remote_path != NULL )
     {
         const String * s_remote_path;
@@ -303,6 +290,23 @@ TEST_CASE( CacheTeeWM_RandomSRR )
         std::cout << acc << " --> not found" << std::endl;
     }
 }
+
+/*
+TEST_CASE( VFSManagerOpenFile1 )
+{
+    std::string acc( "SRR948806" );
+
+    VFSManager * vfs_mgr;
+    REQUIRE_RC( VFSManagerMake( &vfs_mgr ) );
+    
+    LIB_EXPORT rc_t CC VFSManagerOpenFileReadWithBlocksize ( const VFSManager *self,
+                                            KFile const **f,
+                                            const VPath * path_,
+                                            uint32_t blocksize,
+                                            bool promote )
+
+}
+*/
 
 //////////////////////////////////////////// Main
 extern "C"

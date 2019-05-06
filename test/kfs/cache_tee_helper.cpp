@@ -23,13 +23,16 @@
 * ===========================================================================
 *
 */
-
 #include <klib/rc.h>
 #include <klib/out.h>
 
 #include <kfs/defs.h>
 #include <kfs/directory.h>
 #include <kfs/file.h>
+
+#include <vfs/manager.h>
+#include <vfs/path.h>
+#include <vfs/resolver.h>
 
 uint32_t rand_32( uint32_t min, uint32_t max )
 {
@@ -199,6 +202,35 @@ rc_t read_all( const KFile * src, size_t block_size )
             if ( rc == 0 )    pos += num_read;
         }
         free( buffer );
+    }
+    return rc;
+}
+
+rc_t resolve_accession( const char *acc, const VPath ** remote_path )
+{
+    VFSManager * vfs_mgr;
+    rc_t rc = VFSManagerMake( &vfs_mgr );
+    *remote_path = NULL;
+    if ( rc == 0 )
+    {
+        VResolver * resolver;
+        rc = VFSManagerGetResolver( vfs_mgr, &resolver );
+        if ( rc == 0 )
+        {
+            rc = VResolverRemoteEnable( resolver, vrAlwaysEnable ); 
+            if ( rc == 0 )
+            {
+                VPath * acc_path;
+                rc = VFSManagerMakePath( vfs_mgr, &acc_path, "ncbi-acc:%s", acc );
+                if ( rc == 0 )
+                {
+                    rc = VResolverQuery ( resolver, 0, acc_path, NULL, remote_path, NULL );
+                    VPathRelease ( acc_path );
+                }
+            }
+            VResolverRelease( resolver );
+        }
+        VFSManagerRelease ( vfs_mgr );
     }
     return rc;
 }
