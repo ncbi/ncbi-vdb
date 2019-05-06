@@ -80,6 +80,27 @@ ascii INSDC:SRA:format_spot_name #1 ( ascii name_fmt , I32 X , I32 Y * ascii spo
 function
 ascii INSDC:SRA:format_spot_name_no_coord #1 ( ascii name_fmt  * ascii spot_name );
 
+/* spot2read_filter
+ *  takes input from whole-spot filter bits
+ *  produces older-style array of per-read filter bits
+ *  based upon dimension and possibly type of "out_read_type"
+ */
+function INSDC:SRA:read_filter
+    INSDC:SRA:spot2read_filter #1 ( INSDC:SRA:spot_filter out_spot_filter, INSDC:SRA:xread_type out_read_type );
+
+/* read2spot_filter
+ *  takes input older-style array of per-read filter bits
+ *  produces whole-spot filter bits
+ *
+ *  Rules are: (listed in order of precedence)
+ *    1) REJECT, if any reads are REJECT
+ *    2) REDACTED,        ''      REDACTED
+ *    3) CRITERIA,        ''      CRITERIA
+ *    4) else PASS
+ *
+ */
+function INSDC:SRA:spot_filter
+    INSDC:SRA:read2spot_filter #1 ( INSDC:SRA:read_filter out_read_filter );
 
 /*--------------------------------------------------------------------------
  * spotcoord
@@ -169,6 +190,7 @@ table INSDC:SRA:tbl:spotname #1.0.2 = INSDC:SRA:tbl:spotcoord #1
  * history:
  *  1.0.1 - base explicitly upon sequence #1.0.1
  *  1.0.2 - added alternate taps for in_read_type and in_read_len
+ *  1.1.0 - added SPOT_FILTER
  */
 table INSDC:SRA:tbl:spotdesc #1.0.2 = INSDC:tbl:sequence #1.0.1
 {
@@ -253,6 +275,10 @@ table INSDC:SRA:tbl:spotdesc #1.0.2 = INSDC:tbl:sequence #1.0.1
     readonly column U16 READ_START = cast ( out_read_start );
     readonly column U16 READ_LEN = cast ( out_read_len );
 
+    INSDC:coord:zero in_read_start
+        = READ_START
+        ;
+
     INSDC:coord:len in_read_len
         = READ_LEN
         | _alt_in_read_len;
@@ -264,10 +290,34 @@ table INSDC:SRA:tbl:spotdesc #1.0.2 = INSDC:tbl:sequence #1.0.1
      */
     extern column INSDC:SRA:read_filter READ_FILTER
         = out_rd_filter
-        | < INSDC:SRA:read_filter > echo < SRA_READ_FILTER_PASS > ( out_read_start );
+        | INSDC:SRA:spot2read_filter ( out_spot_filter, out_read_type )
+        | < INSDC:SRA:read_filter > echo < SRA_READ_FILTER_PASS > ( out_read_type )
+        ;
+
+    // only available if READ_FILTER is being written
+    INSDC:SRA:read_filter in_read_filter
+        = READ_FILTER
+        ;
 
     // RD_FILTER - only available if physical column is present
-    extern readonly column INSDC:SRA:read_filter RD_FILTER = out_rd_filter;
+    extern readonly column INSDC:SRA:read_filter RD_FILTER
+        = out_rd_filter
+        ;
+
+    /* SPOT_FILTER
+     *  like READ_FILTER, but applies to entire spot
+     */
+    INSDC:SRA:spot_filter in_spot_filter_0
+        = SPOT_FILTER
+        | INSDC:SRA:read2spot_filter ( in_read_filter )
+        | < INSDC:SRA:spot_filter > echo < SRA_SPOT_FILTER_PASS > ()
+        ;
+
+    extern column INSDC:SRA:spot_filter SPOT_FILTER
+        = out_spot_filter
+        | INSDC:SRA:read2spot_filter ( out_rd_filter )
+        | < INSDC:SRA:spot_filter > echo < SRA_SPOT_FILTER_PASS > ()
+        ;
 
 
     /* spot_len is used internally */
@@ -362,9 +412,11 @@ const INSDC:SRA:platform_id SRA_PLATFORM_ION_TORRENT       = 7;
 const INSDC:SRA:platform_id SRA_PLATFORM_CAPILLARY         = 8;
 const INSDC:SRA:platform_id SRA_PLATFORM_OXFORD_NANOPORE   = 9;
 
-table INSDC:SRA:tbl:sra #1.0.3 =
-    INSDC:tbl:sequence #1.0.1, INSDC:SRA:tbl:spotname #1.0.1,
-    INSDC:SRA:tbl:spotdesc #1.0.2, INSDC:SRA:tbl:stats #1.1.0
+table INSDC:SRA:tbl:sra #1.0.3
+    = INSDC:tbl:sequence #1.0.1
+    , INSDC:SRA:tbl:spotname #1.0.1
+    , INSDC:SRA:tbl:spotdesc #1.0.2
+    , INSDC:SRA:tbl:stats #1.1.0
 {
     /* PLATFORM
      *  platform description
@@ -373,12 +425,15 @@ table INSDC:SRA:tbl:sra #1.0.3 =
      */
     extern column INSDC:SRA:platform_id PLATFORM
         = .PLATFORM
-        | out_platform;
+        | out_platform
+        ;
     readonly column  ascii PLATFORM
-        = platform_name;
+        = platform_name
+        ;
 
-    physical column
-        < INSDC:SRA:platform_id > zip_encoding .PLATFORM = PLATFORM;
+    physical column < INSDC:SRA:platform_id > zip_encoding .PLATFORM
+        = PLATFORM
+        ;
 
 
     /* SPOT_ID
@@ -386,11 +441,13 @@ table INSDC:SRA:tbl:sra #1.0.3 =
      */
     extern column INSDC:SRA:spotid_t SPOT_ID
         = < INSDC:SRA:spotid_t > add_row_id ( .SPOT_ID )
-        | cast ( rowid_64 );
+        | cast ( rowid_64 )
+        ;
     I64 rowid_64 = row_id ();
 
     physical column < INSDC:SRA:spotid_t > izip_encoding .SPOT_ID
-        = < INSDC:SRA:spotid_t > sub_row_id ( SPOT_ID );
+        = < INSDC:SRA:spotid_t > sub_row_id ( SPOT_ID )
+        ;
 
 
     /* SPOT_GROUP
@@ -400,13 +457,15 @@ table INSDC:SRA:tbl:sra #1.0.3 =
     extern column ascii SPOT_GROUP
         = out_spot_group
         | .SPOT_GROUP
-        | < ascii > echo < '' > ();
+        | < ascii > echo < '' > ()
+        ;
 
     ascii in_spot_group = SPOT_GROUP;
 
     physical column
-        < ascii > zip_encoding <  Z_DEFAULT_STRATEGY, Z_BEST_SPEED > .SPOT_GROUP = in_spot_group;
-
+    < ascii > zip_encoding <  Z_DEFAULT_STRATEGY, Z_BEST_SPEED > .SPOT_GROUP
+        = in_spot_group
+        ;
 
 	/* INSDC:tbl:sequence inherited virtual productions
 	 *  cs_native

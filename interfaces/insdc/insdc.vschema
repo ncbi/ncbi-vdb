@@ -46,12 +46,12 @@ typedef ascii INSDC:dna:text;
  *  legal values: [ACMGRSVTWYHKDBNacmgrsvtwyhkdbn.]
  *  canonical values: [ACMGRSVTWYHKDBN]
  *
- *  binary values are 0..15 = { NACMGRSVTWYHKDBN }
+ *  binary values are 0..15 => { NACMGRSVTWYHKDBN }
  *
  *  4na values use bits for each letter:
  *
  *       A | C | G | T
- *    =================
+ *    ==================
  *    N    |   |   |
  *    A  * |   |   |
  *    C    | * |   |
@@ -79,7 +79,6 @@ const INSDC:dna:text INSDC:4na:map:CHARSET
 const INSDC:dna:text INSDC:4na:accept:CHARSET
     = ".ACMGRSVTWYHKDBNacmgrsvtwyhkdbn";
 
-
 /*--------------------------------------------------------------------------
  * 2na  - nucleotide data A,T,G,C
  * x2na - nucleotide data extended with single ambiguity value (N)
@@ -88,7 +87,7 @@ const INSDC:dna:text INSDC:4na:accept:CHARSET
  *  legal values: [ACGTNacgtn.]
  *  canonical values: [ACGTN]
  *
- *  x2na values are 0..4 = { ACGTN }
+ *  x2na values are 0..4 => { ACGTN } or { ACGUN }
  *
  *  2na values exclude N:
  *    A = 0
@@ -103,6 +102,7 @@ typedef B1 INSDC:2na:packed [ 2 ];
 const INSDC:2na:bin  INSDC:2na:map:BINSET      = [ 0,1,2,3 ];
 const INSDC:dna:text INSDC:2na:map:CHARSET     = "ACGT";
 const INSDC:dna:text INSDC:2na:accept:CHARSET  = "ACGTacgt";
+
 const INSDC:x2na:bin INSDC:x2na:map:BINSET     = [ 0,1,2,3,4 ];
 const INSDC:dna:text INSDC:x2na:map:CHARSET    = "ACGTN";
 const INSDC:dna:text INSDC:x2na:accept:CHARSET = "ACGTNacgtn.";
@@ -145,13 +145,11 @@ const U8 INSDC:color:default_matrix =
     4, 4, 4, 4, 4
 ];
 
-
 /*--------------------------------------------------------------------------
  * protein
  *  represented in IUPAC characters
  */
 typedef ascii INSDC:protein:text;
-
 
 /*--------------------------------------------------------------------------
  * aa
@@ -210,13 +208,19 @@ const INSDC:coord:zero INSDC:coord:min:zero = 0x80000000;
 const INSDC:coord:zero INSDC:coord:max:zero = 0x3FFFFFFE;
 
 /*-------------------------------------------------------------------------
- * read filters bits
+ * spot and read filters bits
  */
 typedef U8 INSDC:SRA:read_filter;
 const INSDC:SRA:read_filter SRA_READ_FILTER_PASS = 0;
 const INSDC:SRA:read_filter SRA_READ_FILTER_REJECT = 1;
 const INSDC:SRA:read_filter SRA_READ_FILTER_CRITERIA = 2;
 const INSDC:SRA:read_filter SRA_READ_FILTER_REDACTED = 3;
+
+typedef U8 INSDC:SRA:spot_filter;
+const INSDC:SRA:spot_filter SRA_SPOT_FILTER_PASS = 0;
+const INSDC:SRA:spot_filter SRA_SPOT_FILTER_REJECT = 1;
+const INSDC:SRA:spot_filter SRA_SPOT_FILTER_CRITERIA = 2;
+const INSDC:SRA:spot_filter SRA_SPOT_FILTER_REDACTED = 3;
 
 /*-------------------------------------------------------------------------
  * read type bits

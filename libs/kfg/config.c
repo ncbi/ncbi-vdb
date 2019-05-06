@@ -87,12 +87,14 @@ static const char default_kfg[] = {
 "/repository/user/main/public/apps/nannot/volumes/nannotFlat = \"nannot\"\n"
 "/repository/user/main/public/apps/refseq/volumes/refseq = \"refseq\"\n"
 "/repository/user/main/public/apps/sra/volumes/sraFlat = \"sra\"\n"
+"/repository/user/main/public/apps/sraPileup/volumes/flat = \"sra\"\n"
+"/repository/user/main/public/apps/sraRealign/volumes/flat = \"sra\"\n"
 "/repository/user/main/public/apps/wgs/volumes/wgsFlat = \"wgs\"\n"
 "/repository/user/main/public/root = \"$(HOME)/ncbi/public\"\n"
 "/repository/remote/main/CGI/resolver-cgi = "
-                    "\"https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
+                  "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
 "/repository/remote/protected/CGI/resolver-cgi = "
-                    "\"https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
+                  "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
 "/tools/ascp/max_rate = \"450m\"\n"
 };
 /*----------------------------------------------------------------------------*/
@@ -2579,10 +2581,19 @@ bool load_from_std_location ( KConfig *self, const KDirectory *dir )
 #endif
     };
 
-    /* rc_t rc = 0; */
-
     int i;
     bool loaded = false;
+
+    const char* NCBI_VDB_NO_ETC_NCBI_KFG = getenv("NCBI_VDB_NO_ETC_NCBI_KFG");
+    if (NCBI_VDB_NO_ETC_NCBI_KFG != NULL &&
+        NCBI_VDB_NO_ETC_NCBI_KFG[0] != '\0')
+    {
+        DBGMSG(DBG_KFG, DBG_FLAG(DBG_KFG),
+            ("KFG: load from std. location /etc/ncbi is disabled. "
+                "NCBI_VDB_NO_ETC_NCBI_KFG='%s'\n", NCBI_VDB_NO_ETC_NCBI_KFG));
+        return loaded;
+    }
+
     for ( i = 0; ! loaded && i < sizeof std_locs / sizeof std_locs [ 0 ]; ++ i )
     {
         DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG), ( "KFG: try to load from std. location '%s'\n", std_locs[ i ] ) );
@@ -3095,46 +3106,82 @@ static rc_t _KConfigFixRepeatedDrives(KConfig *self,
 
 #endif
 
-static rc_t _KConfigLowerAscpRate ( KConfig * self, bool * updated ) {
+static rc_t _KConfigUpdateDefault( KConfig * self, bool * updated,
+    const char * node_name, 
+    const char * node2_name,
+    const char * old_value,
+    const char * new_value,
+    const char * updated_name )
+{
     rc_t rc = 0;
-
-    const char MAX_RATE     [] = "/tools/ascp/max_rate";
-    const char RATE_UPDATED [] = "/tools/ascp/max_rate/450m";
 
     String * result = NULL;
 
-    String g;
-    CONST_STRING ( & g, "1000m" );
+    String sOldValue;
+
+    bool update1 = false, update2 = false;
+
+    assert(node_name && old_value && new_value && updated_name);
+
+    StringInitCString(&sOldValue, old_value);
 
     assert ( updated );
     * updated = false;
 
-    rc = KConfigReadString ( self, RATE_UPDATED, & result );
+    rc = KConfigReadString ( self, updated_name, & result );
     if ( rc == 0 ) { /* was updated already */
         free ( result );
         return rc;
     }
 
-    rc = KConfigReadString ( self, MAX_RATE, & result );
-    if ( rc == 0 ) { /* when found: update just rate=1000m (old value) */
-        if ( StringEqual ( & g, result ) )
-            * updated = true;
+    rc = KConfigReadString ( self, node_name, & result );
+    if ( rc == 0 ) { /* when found: update just value = old-value */
+        if ( StringEqual ( & sOldValue, result ) )
+            update1 = * updated = true;
         free ( result );
         result = NULL;
     }
-    else { /* update when max-rate was not set */
-        * updated = true;
+    else /* don't update when node did not exist */
         rc = 0;
+
+    if (node2_name != NULL) {
+        rc = KConfigReadString(self, node2_name, &result);
+        if (rc == 0) { /* when found: update just value = old-value */
+            if (StringEqual(&sOldValue, result))
+                update2 = * updated = true;
+            free(result);
+            result = NULL;
+        }
+        else /* don't update when node did not exist */
+            rc = 0;
     }
 
     if ( * updated ) {
         assert ( rc == 0 );
-        rc = KConfigWriteString ( self, MAX_RATE, "450m" );
+        if (update1)
+            rc = KConfigWriteString ( self, node_name, new_value);
+        if (rc == 0 && update2)
+            rc = KConfigWriteString(self, node2_name, new_value);
         if ( rc == 0 )
-            rc = KConfigWriteString ( self, RATE_UPDATED, "updated" );
+            rc = KConfigWriteString ( self, updated_name, "updated" );
     }
 
     return rc;
+}
+
+static rc_t _KConfigLowerAscpRate ( KConfig * self, bool * updated ) {
+    return _KConfigUpdateDefault(self, updated,
+        "/tools/ascp/max_rate", NULL, "1000m", "450m",
+        "/tools/ascp/max_rate/450m");
+}
+
+static rc_t _KConfigUseTraceCgi(KConfig * self, bool * updated) {
+    return _KConfigUpdateDefault(self, updated,
+        "/repository/remote/main/CGI/resolver-cgi",
+        "/repository/remote/protected/CGI/resolver-cgi",
+        "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi",
+        "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi",
+        "/repository_remote/CGI/resolver-cgi/trace");
 }
 
 static
@@ -3235,6 +3282,11 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
 
                 if ( ! s_disable_user_settings ) {
                     rc = _KConfigLowerAscpRate ( mgr,  & updated );
+                    if (rc == 0) {
+                        bool updated2 = false;
+                        rc = _KConfigUseTraceCgi(mgr, &updated2);
+                        updated |= updated2;
+                    }
                     if ( rc == 0 && updated ) {
                         rc = KConfigCommit ( mgr );
                         updated = false;
@@ -4102,7 +4154,7 @@ LIB_EXPORT rc_t KConfigFixMainResolverCgiNode ( KConfig * self ) {
         assert(result);
         if ( result->size == 0 || StringEqual ( & http, result ) ) {
             const char https []
-                = "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi";
+                = "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
             rc = KConfigNodeWrite ( node, https, sizeof https );
         }
     }
@@ -4137,7 +4189,7 @@ LIB_EXPORT rc_t KConfigFixProtectedResolverCgiNode ( KConfig * self ) {
         assert(result);
         if ( result->size == 0 || StringEqual ( & http, result ) ) {
             const char https []
-                = "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
+                = "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
             rc = KConfigNodeWrite ( node, https, sizeof https );
         }
     }

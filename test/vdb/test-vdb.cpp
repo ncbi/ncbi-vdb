@@ -604,6 +604,27 @@ FIXTURE_TEST_CASE ( VCursor_FindNextRowIdDirect, VdbFixture )
     REQUIRE_EQ ( (int64_t)2, next ) ; // VDB-3075: next == 1
 }
 
+FIXTURE_TEST_CASE ( DoubleOpen, VdbFixture )
+{
+    const char SRR619505[] = "SRR619505";
+
+    const VDatabase *db = NULL;
+    REQUIRE_RC ( VDBManagerOpenDBRead ( mgr, &db, NULL, SRR619505 ) );
+    const VTable * tbl;
+    REQUIRE_RC ( VDatabaseOpenTableRead ( db, &tbl, "REFERENCE") );
+    //DumpScope( tbl -> stbl -> scope, "Table" );
+    REQUIRE_RC ( VTableRelease ( tbl ) );
+    //DumpScope( db -> schema -> dad -> scope, "Db->dad" );
+    //DumpScope( db -> schema -> scope, "Db" );
+
+    // this used to corrupt the heap
+    REQUIRE_RC ( VDatabaseOpenTableRead ( db, &tbl, "SEQUENCE") );
+    // DumpScope( tbl -> stbl -> scope, "Table" );
+    REQUIRE_RC ( VTableRelease ( tbl ) );
+
+    REQUIRE_RC ( VDatabaseRelease ( db ) );
+}
+
 FIXTURE_TEST_CASE(VCursor_PermitPostOpenAdd, VdbFixture)
 {
     static char const *columns[] = { "SPOT_ID", 0 };

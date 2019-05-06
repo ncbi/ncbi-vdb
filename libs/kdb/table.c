@@ -170,6 +170,16 @@ rc_t KTableSever ( const KTable *self )
     return 0;
 }
 
+void KTableGetName(KTable const *self, char const **rslt)
+{
+    char *sep;
+    
+    *rslt = self->path;
+    sep = strrchr(self->path, '/');
+    if (sep != NULL)
+        *rslt = sep + 1;
+}
+
 /* Make
  *  make an initialized structure
  *  NB - does NOT attach reference to dir, but steals it

@@ -223,6 +223,32 @@ function < type T >
 T select #1.0 ( T first, T second, ... )
     = vdb:select;
 
+/* passthru
+ *  unconditionally passes through
+ *  useful for when syntax requires a function (such as trigger productions)
+ *  but there is no semantically significant function to call
+ *
+ *  "T" [ TYPE ] - data type of the input
+ *
+ *  "target" [ DATA ] - the input
+ */
+function < type T >
+T passthru #1.0 ( T target )
+    = vdb:passthru;
+
+/* is_configuration_set
+ *  if the configuration node is set to the
+ *  given value, return the input
+ *  else fail to resolve
+ *
+ *  "T" [ TYPE ] - data type of the input
+ *
+ *  "target" [ DATA ] - the input
+ */
+function < type T >
+T is_configuration_set #1.0 < ascii node, ascii value > ( T target )
+    = vdb:is_configuration_set;
+
 
 /* transpose
  *  transpose a page of unformatted data

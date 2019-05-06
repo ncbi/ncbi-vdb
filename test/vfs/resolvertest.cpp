@@ -191,6 +191,26 @@ FIXTURE_TEST_CASE ( VDB_2936_resolve_local_WGS_with_version, ResolverFixture )
     VPathRelease ( query ); query = 0;
 }
 
+FIXTURE_TEST_CASE(WGS_with_6letter_prefix, ResolverFixture)
+{
+    REQUIRE_RC(VFSManagerMakePath(vfs, &query, "AAAAAA01"));
+    REQUIRE_RC(VResolverQuery(resolver, 0, query, &local, &remote, 0));
+    REQUIRE(local || remote);
+    VPathRelease(query); query = 0;
+    VPathRelease(local); local = 0;
+    VPathRelease(remote); remote = 0;
+}
+
+FIXTURE_TEST_CASE(WGS_with_6letter_prefix_and_version, ResolverFixture)
+{
+    REQUIRE_RC(VFSManagerMakePath(vfs, &query, "AAAAAA01.1"));
+    REQUIRE_RC(VResolverQuery(resolver, 0, query, &local, &remote, 0));
+    REQUIRE(local || remote);
+    VPathRelease(query); query = 0;
+    VPathRelease(local); local = 0;
+    VPathRelease(remote); remote = 0;
+}
+
 class ResolverFixtureCustomConfig
 {
 public:

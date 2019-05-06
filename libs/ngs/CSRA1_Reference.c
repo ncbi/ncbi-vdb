@@ -86,6 +86,7 @@ static struct NGS_Alignment*    CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Referen
 static struct NGS_Pileup*       CSRA1_ReferenceGetPileups ( CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
 static struct NGS_Pileup*       CSRA1_ReferenceGetPileupSlice ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
 struct NGS_Statistics*          CSRA1_ReferenceGetStatistics ( const CSRA1_Reference * self, ctx_t ctx );
+static bool                     CSRA1_ReferenceGetIsLocal ( const CSRA1_Reference * self, ctx_t ctx );
 static struct NGS_ReferenceBlobIterator*  CSRA1_ReferenceGetBlobs ( const CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size );
 static bool                     CSRA1_ReferenceIteratorNext ( CSRA1_Reference * self, ctx_t ctx );
 
@@ -108,6 +109,7 @@ static NGS_Reference_vt CSRA1_Reference_vt_inst =
     CSRA1_ReferenceGetPileups,
     CSRA1_ReferenceGetPileupSlice,
     CSRA1_ReferenceGetStatistics,
+    CSRA1_ReferenceGetIsLocal,
     CSRA1_ReferenceGetBlobs,
 
     /* NGS_ReferenceIterator */
@@ -787,6 +789,43 @@ struct NGS_Statistics* CSRA1_ReferenceGetStatistics ( const CSRA1_Reference * se
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
     /* for now, return an empty stats object */
     return SRA_StatisticsMake ( ctx );
+}
+
+bool
+CSRA1_ReferenceGetIsLocal ( const CSRA1_Reference * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
+    assert ( self );
+
+    if ( self -> curs == NULL )
+    {
+        USER_ERROR ( xcCursorExhausted, "No more rows available" );
+        return false;
+    }
+    if ( ! self -> seen_first )
+    {
+        USER_ERROR ( xcIteratorUninitialized, "Reference accessed before a call to ReferenceIteratorNext()" );
+        return false;
+    }
+
+    /* if current row is valid, read data */
+    if ( self -> first_row <= self -> last_row )
+    {
+        const void *base;
+        uint32_t row_len;
+        TRY ( NGS_CursorCellDataDirect ( self -> curs,
+                                         ctx,
+                                         self -> first_row,
+                                         reference_CMP_READ,
+                                         NULL,
+                                         & base,
+                                         NULL,
+                                         & row_len ) )
+        {
+            return row_len != 0;
+        }
+    }
+    return false;
 }
 
 struct NGS_ReferenceBlobIterator* CSRA1_ReferenceGetBlobs ( const CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size )

@@ -24,24 +24,34 @@
  *
  */
 
-#include "resolver-priv.h" /* DEFAULT_PROTOCOLS */
-#include "path-priv.h" /* VPathGetScheme_t */
-#include <vfs/services.h> /* KSrvResponse */
 #include <klib/rc.h> /* RC */
 #include <klib/vector.h> /* Vector */
 
+#include <vfs/services.h> /* KSrvResponse */
+
+#include "json-response.h" /* struct Response4 */
+#include "path-priv.h" /* VPathGetScheme_t */
+#include "resolver-priv.h" /* DEFAULT_PROTOCOLS */
 
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
 
+typedef struct Response4 Response4;
+
 struct VPathSet {
     atomic32_t refcount;
+
+    char * reqId;
+    char * respId;
 
     const VPath * fasp;
     const VPath * file;
     const VPath * http;
     const VPath * https;
     const VPath * s3;
+    uint64_t osize; /*size of VPath object */
+
+    /* vdbcache */
     const VPath * cacheFasp;
     const VPath * cacheFile;
     const VPath * cacheHttp;
@@ -49,6 +59,8 @@ struct VPathSet {
     const VPath * cacheS3;
 
     const struct KSrvError * error;
+
+    const VPath * mapping;
 
     const VPath * local;
     const VPath * cache;
@@ -61,6 +73,8 @@ struct KSrvResponse {
     atomic32_t refcount;
 
     Vector list;
+
+    Response4 * r4;
 };
 
 /* VPathSet */
@@ -85,6 +99,8 @@ rc_t VPathSetWhack ( VPathSet * self ) {
         RELEASE ( VPath, self -> cacheHttp );
         RELEASE ( VPath, self -> cacheHttps );
         RELEASE ( VPath, self -> cacheS3 );
+
+        RELEASE(VPath, self->mapping);
 
         RELEASE ( VPath, self -> local );
         RELEASE ( VPath, self -> cache );
@@ -176,7 +192,6 @@ rc_t VPathSetGet ( const VPathSet * self, VRemoteProtocols protocols,
     return 0;
 }
 
-static
 rc_t VPathSetGetLocal ( const VPathSet * self, const VPath ** path )
 {
     rc_t rc = 0;
@@ -200,15 +215,16 @@ rc_t VPathSetGetLocal ( const VPathSet * self, const VPath ** path )
     return rc;
 }
 
-static
 rc_t VPathSetGetCache ( const VPathSet * self, const VPath ** path )
 {
     rc_t rc = 0;
 
     if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+
     if ( self -> error != NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcError, rcExists );
+
     if ( path == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
 
@@ -218,6 +234,7 @@ rc_t VPathSetGetCache ( const VPathSet * self, const VPath ** path )
         return self -> cacheRc;
 
     rc = VPathAddRef ( self -> cache );
+
     if ( rc == 0 )
         * path = self -> cache;
 
@@ -329,6 +346,48 @@ rc_t VPathSetMake ( VPathSet ** self, const EVPath * src,
             p -> cacheS3 = src -> vcS3;
         else if ( rc == 0 )
             rc = r2;
+
+        r2 = VPathAddRef(src->mapping);
+        if (r2 == 0)
+            p->mapping = src->mapping;
+        else if (rc == 0)
+            rc = r2;
+    }
+
+    if ( rc == 0 ) {
+        if ( src -> reqId != NULL ) {
+            p -> reqId = string_dup_measure ( src -> reqId, NULL );
+            if ( p -> reqId == NULL )
+                rc = RC ( rcVFS, rcPath, rcAllocating, rcMemory, rcExhausted );
+        }
+        else if ( p -> error != NULL ) {
+            String message;
+            rc = KSrvErrorMessage ( p -> error, & message );
+            if ( rc == 0 ) {
+                p -> reqId = string_dup ( message. addr, message. size );
+                if ( p -> reqId == NULL )
+                    rc = RC ( rcVFS, rcPath, rcAllocating,
+                                     rcMemory, rcExhausted );
+            }
+        }
+
+        if ( src -> respId != NULL ) {
+            p -> respId = string_dup_measure ( src -> respId, NULL );
+            if ( p -> respId == NULL )
+                rc = RC ( rcVFS, rcPath, rcAllocating, rcMemory, rcExhausted );
+        }
+        else if ( p -> error != NULL ) {
+            String message;
+            rc = KSrvErrorMessage ( p -> error, & message );
+            if ( rc == 0 ) {
+                p -> reqId = string_dup ( message. addr, message. size );
+                if ( p -> reqId == NULL )
+                    rc = RC ( rcVFS, rcPath, rcAllocating,
+                                     rcMemory, rcExhausted );
+            }
+        }
+
+        p->osize = src->osize;
     }
 
     if ( rc == 0 ) {
@@ -383,6 +442,38 @@ rc_t VPathSetMakeQuery ( VPathSet ** self, const VPath * local, rc_t localRc,
 }
 
 /* KSrvResponse */
+
+rc_t KSrvResponseGetR4 ( const KSrvResponse * self, Response4 ** r ) {
+
+    rc_t rc = 0;
+
+    assert ( self && r );
+
+    rc = Response4AddRef ( self -> r4 );
+    if ( rc == 0 )
+        * r = self -> r4;
+
+    return rc;
+}
+
+rc_t KSrvResponseSetR4 ( KSrvResponse * self, Response4 * r )
+{
+    rc_t rc = 0;
+
+    assert ( self );
+
+    if (self->r4 == r)
+        return 0;
+
+    rc = Response4Release ( self -> r4 );
+
+    rc = Response4AddRef ( r );
+    if ( rc == 0 )
+        self -> r4 = r;
+
+    return rc;
+}
+
 rc_t KSrvResponseMake ( KSrvResponse ** self ) {
     KSrvResponse * p = ( KSrvResponse * ) calloc ( 1, sizeof * p );
     if ( p == NULL )
@@ -405,15 +496,20 @@ rc_t KSrvResponseAddRef ( const KSrvResponse * self ) {
 }
 
 rc_t KSrvResponseRelease ( const KSrvResponse * cself ) {
+    rc_t rc = 0;
+
     KSrvResponse * self = ( KSrvResponse * ) cself;
 
     if ( self != NULL && atomic32_dec_and_test ( & self -> refcount ) ) {
         VectorWhack ( & self -> list, whackVPathSet, NULL );
+
+        RELEASE ( Response4, self -> r4 );
+
         memset ( self, 0, sizeof * self );
         free ( self );
     }
 
-    return 0;
+    return rc;
 }
 
 rc_t KSrvResponseAppend ( KSrvResponse * self, const VPathSet * set ) {
@@ -429,9 +525,28 @@ rc_t KSrvResponseAppend ( KSrvResponse * self, const VPathSet * set ) {
     return rc;
 }
 
+rc_t KSrvResponseGetIds ( const KSrvResponse * self, uint32_t idx,
+                          const char ** reqId, const char ** respId )
+{
+    VPathSet * s = NULL;
+
+    assert ( self && reqId && respId );
+
+    s = ( VPathSet * ) VectorGet ( & self -> list, idx );
+    if ( s == NULL )
+        return RC ( rcVFS, rcPath, rcAccessing, rcItem, rcNotFound );
+
+    * reqId  = s -> reqId ;
+    * respId = s -> respId;
+
+    return 0;
+}
+
 rc_t KSrvResponseAddLocalAndCache ( KSrvResponse * self, uint32_t idx,
                                     const VPathSet * localAndCache )
 {
+    rc_t rc = 0;
+
     if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
 
@@ -439,10 +554,20 @@ rc_t KSrvResponseAddLocalAndCache ( KSrvResponse * self, uint32_t idx,
         return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
     else {
         VPathSet * s = ( VPathSet * ) VectorGet ( & self -> list, idx );
-        if ( s == NULL )
-            return RC ( rcVFS, rcPath, rcAccessing, rcItem, rcNotFound );
-        else {
-            rc_t rc = 0;
+        if ( s == NULL ) {
+            if ( self -> r4 == NULL )
+                return RC ( rcVFS, rcPath, rcAccessing, rcItem, rcNotFound );
+            else {
+                s = calloc ( 1, sizeof * s );
+                if ( s == NULL )
+                    return RC
+                        ( rcVFS, rcPath, rcAllocating, rcMemory,  rcExhausted );
+                rc = VectorSet ( & self -> list, idx, s );
+                if ( rc != 0 )
+                    return rc;
+            }
+        }
+        if ( s != NULL ) {
             RELEASE ( VPath, s -> local );
             if ( rc == 0 ) {
                 if ( localAndCache -> localRc == 0 ) {
@@ -465,6 +590,8 @@ rc_t KSrvResponseAddLocalAndCache ( KSrvResponse * self, uint32_t idx,
             }
             return rc;
         }
+        assert ( 0 );
+        return 1;
     }
 }
 
@@ -472,7 +599,36 @@ uint32_t KSrvResponseLength ( const KSrvResponse * self ) {
     if ( self == NULL )
          return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
 
+    if ( self -> r4 != NULL ) {
+        uint32_t l = 0;
+        return Response4GetKSrvRespObjCount ( self -> r4, & l ) == 0 ? l : 0;
+    }
+
     return VectorLength ( & self -> list );
+}
+
+rc_t KSrvResponseGetObjByIdx ( const KSrvResponse * self, uint32_t idx,
+                               const KSrvRespObj ** box )
+{
+    if ( self == NULL )
+         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+
+    if ( self -> r4 == NULL )
+         return RC ( rcVFS, rcQuery, rcExecuting, rcItem, rcNotFound );
+
+    return Response4GetKSrvRespObjByIdx ( self -> r4, idx, box );
+}
+
+rc_t KSrvResponseGetObjByAcc ( const KSrvResponse * self, const char * acc,
+                               const KSrvRespObj ** box )
+{
+    if ( self == NULL )
+         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+
+    if ( self -> r4 == NULL )
+         return RC ( rcVFS, rcQuery, rcExecuting, rcItem, rcNotFound );
+
+    return Response4GetKSrvRespObjByAcc ( self -> r4, acc, box );
 }
 
 rc_t KSrvResponseGet
@@ -496,41 +652,195 @@ rc_t KSrvResponseGet
     }
 }
 
+rc_t KSrvResponseGetMapping(const KSrvResponse * self, uint32_t idx,
+    const VPath ** mapping)
+{
+    rc_t rc = 0;
+    const VPathSet * s = NULL;
+    if (mapping == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
+    *mapping = NULL;
+    if (self == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
+    s = (VPathSet *)VectorGet(&self->list, idx);
+    if (s != NULL) {
+        if (s->error != NULL)
+            return 0;
+        rc = VPathAddRef(s->mapping);
+        if ( rc == 0 )
+            * mapping = s->mapping;
+    }
+    return rc;
+}
+
+rc_t KSrvResponseGetOSize(const KSrvResponse * self, uint32_t idx,
+    uint64_t * osize)
+{
+    rc_t rc = 0;
+    const VPathSet * s = NULL;
+    if (osize == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
+    *osize = 0;
+    if (self == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
+    s = (VPathSet *)VectorGet(&self->list, idx);
+    if (s != NULL) {
+        if (s->error != NULL)
+            return 0;
+        if (rc == 0)
+            * osize = s->osize;
+    }
+    return rc;
+}
+
 rc_t KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
-    VRemoteProtocols p, const VPath ** path, const VPath ** vdbcache,
+    VRemoteProtocols p, const VPath ** aPath, const VPath ** vdbcache,
     const KSrvError ** error )
 {
+    rc_t rc = 0;
     const VPathSet * s = NULL;
-
-    if ( self == NULL )
-        return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
-
-    s = ( VPathSet * ) VectorGet ( & self -> list, idx );
-
-    if ( p == eProtocolDefault )
+    const KSrvRespObj * obj = NULL;
+    bool has_proto[eProtocolMask + 1];
+    uint32_t i;
+    String fasp;
+    String http;
+    String https;
+    if (self == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
+    if (p == eProtocolDefault)
         p = DEFAULT_PROTOCOLS;
-
-    if ( s == NULL )
-        return RC ( rcVFS, rcPath, rcAccessing, rcItem, rcNotFound );
-    else {
-        if ( path != NULL )
-            * path = NULL;
-        if ( vdbcache != NULL )
-            * vdbcache = NULL;
-        if ( error != NULL )
-            * error = NULL;
-        if ( s -> error == NULL )
-            return VPathSetGet ( s, p, path, vdbcache );
+    if (aPath != NULL)
+        * aPath = NULL;
+    if (vdbcache != NULL)
+        * vdbcache = NULL;
+    if (error != NULL)
+        * error = NULL;
+    CONST_STRING(&fasp, "fasp");
+    CONST_STRING(&http, "http");
+    CONST_STRING(&https, "https");
+    memset(has_proto, 0, sizeof has_proto);
+    for (i = 0; i < eProtocolMaxPref; ++i)
+        has_proto[(p >> (i * 3)) & eProtocolMask] = true;
+    s = (VPathSet *)VectorGet(&self->list, idx);
+    if ( s != NULL ) {
+        if (s->error == NULL)
+            return VPathSetGet(s, p, aPath, vdbcache);
         else {
-            if ( error != NULL ) {
-                rc_t rc = KSrvErrorAddRef ( s -> error );
-                if ( rc == 0 )
-                    * error = s -> error;
+            if (error != NULL) {
+                rc_t rc = KSrvErrorAddRef(s->error);
+                if (rc == 0)
+                    * error = s->error;
                 return rc;
             }
-            return RC ( rcVFS, rcQuery, rcExecuting, rcError, rcExists );
+            return RC(rcVFS, rcQuery, rcExecuting, rcError, rcExists);
         }
     }
+    else {
+        rc_t rx = 0;
+        int64_t code = 0;
+        const char * msg = NULL;
+        bool found = false;
+        bool hasAny = false;
+        rc = KSrvResponseGetObjByIdx(self, idx, &obj);
+        if (rc != 0)
+            return rc;
+        rc = KSrvRespObjGetError(obj, & rx, & code, & msg);
+        if (rx != 0) {
+            if (error == NULL)
+                return RC(rcVFS, rcQuery, rcExecuting, rcError, rcExists);
+            else
+                return KSrvErrorMake4(error, rx, code, msg);
+        }
+        else {
+            KSrvRespObjIterator * it = NULL;
+            rc = KSrvRespObjMakeIterator(obj, &it);
+            while (rc == 0) {
+                KSrvRespFile * file = NULL;
+                KSrvRespFileIterator * fi = NULL;
+                const VPath * path = NULL;
+                rc = KSrvRespObjIteratorNextFile(it, &file);
+                if (rc != 0 || file == NULL)
+                    break;
+                rc = KSrvRespFileMakeIterator(file, &fi);
+                while (rc == 0) {
+                    rc = KSrvRespFileIteratorNextPath(fi, &path);
+                    if (rc == 0) {
+                        if (path != NULL) {
+                            String scheme;
+                            rc = VPathGetScheme(path, &scheme);
+                            if (rc == 0) {
+                                hasAny = true;
+                                if (StringEqual(&scheme, &https)) {
+                                    if (has_proto[eProtocolHttps]) {
+                                        *aPath = path;
+                                        found = true;
+                                    }
+                                }
+                                else if (StringEqual(&scheme, &fasp)) {
+                                    if (has_proto[eProtocolFasp]) {
+                                        *aPath = path;
+                                        found = true;
+                                    }
+                                }
+                                else if (StringEqual(&scheme, &http)) {
+                                    if (has_proto[eProtocolHttp]) {
+                                        *aPath = path;
+                                        found = true;
+                                    }
+                                }
+                                if (found)
+                                    break;
+                            }
+                        }
+                        else
+                            break;
+                    }
+                }
+                RELEASE(KSrvRespFileIterator, fi);
+                RELEASE(KSrvRespFile, file);
+                if (found)
+                    break;
+            }
+            RELEASE(KSrvRespObjIterator, it);
+        }
+        RELEASE(KSrvRespObj, obj);
+        if (!found && !hasAny)
+            rc = RC(rcVFS, rcPath, rcAccessing, rcItem, rcNotFound);
+
+        return rc;
+    }
+}
+
+static rc_t KSrvResponseGetFile ( const KSrvResponse * self, uint32_t idx,
+                                  const KSrvRespFile ** aFile )
+{
+    rc_t rc = 0;
+
+    const KSrvRespObj * obj = NULL;
+
+    KSrvRespObjIterator * it = NULL;
+
+    KSrvRespFile * file = NULL;
+
+    assert ( self && self -> r4 && aFile );
+    * aFile = NULL;
+
+    rc = KSrvResponseGetObjByIdx ( self, idx, & obj );
+    if ( rc != 0 )
+        return rc;
+
+    rc = KSrvRespObjMakeIterator ( obj, & it );
+
+    if ( rc == 0 )
+        rc = KSrvRespObjIteratorNextFile ( it, & file );
+    if ( rc == 0 )
+        * aFile = file;
+
+    RELEASE ( KSrvRespObjIterator, it );
+
+    RELEASE ( KSrvRespObj, obj );
+
+    return rc;
 }
 
 rc_t KSrvResponseGetLocal ( const KSrvResponse * self, uint32_t idx,
@@ -541,6 +851,19 @@ rc_t KSrvResponseGetLocal ( const KSrvResponse * self, uint32_t idx,
     if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
 
+    if ( self -> r4 != NULL ) {
+        const KSrvRespFile * file = NULL;
+
+        rc_t rc = KSrvResponseGetFile ( self, idx, & file );
+
+        if ( rc == 0 )
+            rc = KSrvRespFileGetLocal ( file, path );
+
+        RELEASE ( KSrvRespFile, file );
+
+        return rc;
+    }
+
     s = ( VPathSet * ) VectorGet ( & self -> list, idx );
 
     if ( s == NULL )
@@ -548,8 +871,10 @@ rc_t KSrvResponseGetLocal ( const KSrvResponse * self, uint32_t idx,
     else {
         if ( path != NULL )
             * path = NULL;
+
         if ( s -> error == NULL )
             return VPathSetGetLocal ( s, path );
+
         else {
             rc_t erc = 0;
             rc_t rc = KSrvErrorRc ( s -> error, & erc );
@@ -566,6 +891,19 @@ rc_t KSrvResponseGetCache ( const KSrvResponse * self, uint32_t idx,
     if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
 
+    if ( self -> r4 != NULL ) {
+        const KSrvRespFile * file = NULL;
+
+        rc_t rc = KSrvResponseGetFile ( self, idx, & file );
+
+        if ( rc == 0 )
+            rc = KSrvRespFileGetCache ( file, path );
+
+        RELEASE ( KSrvRespFile, file );
+
+        return rc;
+    }
+
     s = ( VPathSet * ) VectorGet ( & self -> list, idx );
 
     if ( s == NULL )
@@ -573,8 +911,10 @@ rc_t KSrvResponseGetCache ( const KSrvResponse * self, uint32_t idx,
     else {
         if ( path != NULL )
             * path = NULL;
+
         if ( s -> error == NULL )
             return VPathSetGetCache ( s, path );
+
         else {
             rc_t erc = 0;
             rc_t rc = KSrvErrorRc ( s -> error, & erc );

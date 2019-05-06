@@ -44,6 +44,7 @@ enum
 {
     vftBlobN = vftBlob + 1,
     vftSelect,
+    vftPassThrough,
 
     vftLastFuncProto
 };
