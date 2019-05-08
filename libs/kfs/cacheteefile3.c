@@ -127,7 +127,7 @@ struct KCacheTeeFile_v3
     uint32_t cluster_fact;          /* constant      */
     uint32_t ram_limit;             /* constant      */
     uint32_t ram_pg_count;          /* bg thread use */
-    bool quitting;                  /* shared use    */
+    volatile bool quitting;         /* shared use    */
     bool whole_file;                /* constant      */
     char path [ 4098 ];             /* constant      */
 };
@@ -228,10 +228,18 @@ rc_t KCacheTeeFileRAMCacheInsert ( KCacheTeeFile_v3 * self,
             if ( rc == 0 && existing != NULL )
             {
                 STATUS ( STAT_PRG, "BG: %s - freeing LRU buffer\n", __func__ );
+                KVectorUnset ( self -> ram_cache, lmru -> pg_idx );
                 free ( existing );
             }
 
-            /* 8. reuse node and insert new guy as MRU */
+            /* clear bit in bitmap if cache file not in use */
+            if ( self -> cache_file == NULL )
+            {
+                STATUS ( STAT_PRG, "BG: %s - clear page %zu present in bitmap\n", __func__, pg_idx );
+                self -> bitmap [ pg_idx >> BMWORDBITS ] &= ~ ( 1U << ( pg_idx & BMWORDMASK ) );
+            }
+
+            /* 9. reuse node and insert new guy as MRU */
             STATUS ( STAT_PRG, "BG: %s - reusing MRU node and placing at head of list\n", __func__ );
             lmru -> pg_idx = pg_idx;
             DLListPushHead ( & self -> ram_cache_mru, & lmru -> dad );
@@ -240,24 +248,24 @@ rc_t KCacheTeeFileRAMCacheInsert ( KCacheTeeFile_v3 * self,
         /* cache is not full */
         else
         {
-            /* 9. allocate node */
+            /* 10. allocate node */
             STATUS ( STAT_PRG, "BG: %s - allocating MRU node\n", __func__ );
             lmru = malloc ( sizeof * lmru );
             if ( lmru == NULL )
                 rc = RC ( rcFS, rcFile, rcReading, rcMemory, rcExhausted );
             else
             {
-                /* 10. insert into index */
+                /* 11. insert into index */
                 lmru -> pg_idx = pg_idx;
                 STATUS ( STAT_PRG, "BG: %s - inserting MRU node into index @ %zu\n", __func__, pg_idx );
                 rc = KVectorSetPtr ( self -> ram_cache_mru_idx, pg_idx, lmru );
                 if ( rc == 0 )
                 {
-                    /* 11. insert as MRU */
+                    /* 12. insert as MRU */
                     STATUS ( STAT_PRG, "BG: %s - placing MRU node into head of list\n", __func__ );
                     DLListPushHead ( & self -> ram_cache_mru, & lmru -> dad );
 
-                    /* 12. update cache count */
+                    /* 13. update cache count */
                     ++ self -> ram_pg_count;
                     STATUS ( STAT_PRG, "BG: %s - new RAM cache page count is %u\n"
                              , __func__
@@ -301,7 +309,8 @@ rc_t KCacheTeeFileSaveBitmap ( KCacheTeeFile_v3 * self )
     {
         STATUS ( STAT_PRG, "BG: %s - saving cache bitmap\n", __func__ );
     
-        rc = KFileWriteExactly_v1 ( self -> cache_file, self -> source_size, self -> bitmap, self -> bmap_size );
+        rc = KFileWriteExactly_v1 ( self -> cache_file, self -> source_size,
+            ( const void * ) self -> bitmap, self -> bmap_size );
     
         STATUS ( STAT_GEEK, "BG: %s - saved bm result code %R\n", __func__, rc );
 
@@ -352,6 +361,9 @@ rc_t CC KCacheTeeChunkReaderConsume ( KCacheTeeChunkReader * chunk,
         rc2 = KCacheTeeFileRAMCacheInsert ( self, buf, pg_idx );
         STATUS ( STAT_PRG, "BG: %s - write buffer to cache file\n", __func__ );
         rc3 = KCacheTeeFileCacheInsert ( self, pos, buf, size );
+
+        if ( rc2 != 0 )
+            free ( ( void * ) buf );
 
         if ( rc2 == 0 || rc3 == 0 )
         {
@@ -734,6 +746,7 @@ uint32_t KCacheTeeFileContigPagesInFileCache ( const KCacheTeeFile_v3 * self,
 
     /* generate mask against left-most word */
     initial_bit_pos = ( uint32_t ) ( initial_page_idx & BMWORDMASK );
+    /* TBD - this will break in 64-bit */
     initial_mask = ( uint32_t ) ( 0xFFFFFFFFU << ( initial_page_idx & BMWORDMASK ) );
     STATUS ( STAT_GEEK, "%s - initial word bitpos=%u, initial mask=0b%0*lb\n"
              , __func__
@@ -784,7 +797,7 @@ uint32_t KCacheTeeFileContigPagesInFileCache ( const KCacheTeeFile_v3 * self,
 
     /* if the last page was within the same word,
        we'd have returned already. */
-    assert ( last >= i );
+    assert ( last > i );
 
     /* walk across the bitmap */
     STATUS ( STAT_PRG, "%s - walking from word index %zu to %zu, inclusive\n"
@@ -923,7 +936,7 @@ rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
             msg -> initial_page_idx = initial_page_idx;
 
             STATUS ( STAT_GEEK, "%s - populated message object "
-                     "{ pos=%lu, size=%zu, tm=%s, initial_page_idx=%zu\n"
+                     "{ pos=%lu, size=%zu, tm=%s, initial_page_idx=%zu }\n"
                      , __func__
                      , msg -> pos
                      , msg -> size
@@ -1030,8 +1043,12 @@ rc_t CC KCacheTeeFileReadChunked ( const KCacheTeeFile_v3 *self, uint64_t pos,
         rc = KChunkReaderNextBuffer ( chunks, & chbuf, & chsize );
         if ( rc == 0 )
         {
+            size_t to_read = chsize;
+            if ( total + chsize > bsize )
+                to_read = bsize - total;
+            
             STATUS ( STAT_PRG, "%s - reading from file @ lu\n", __func__, pos + total );
-            rc = KFileReadAll_v1 ( & self -> dad, pos + total, chbuf, chsize, & num_read );
+            rc = KFileReadAll_v1 ( & self -> dad, pos + total, chbuf, to_read, & num_read );
             if ( rc == 0 && num_read != 0 )
             {
                 STATUS ( STAT_PRG, "%s - consuming chunk of %zu bytes @ lu\n"
@@ -1075,8 +1092,12 @@ rc_t CC KCacheTeeFileTimedReadChunked ( const KCacheTeeFile_v3 *self, uint64_t p
         rc = KChunkReaderNextBuffer ( chunks, & chbuf, & chsize );
         if ( rc == 0 )
         {
+            size_t to_read = chsize;
+            if ( total + chsize > bsize )
+                to_read = bsize - total;
+            
             STATUS ( STAT_PRG, "%s - reading from file @ lu\n", __func__, pos + total );
-            rc = KFileTimedReadAll_v1 ( & self -> dad, pos + total, chbuf, chsize, & num_read, tm );
+            rc = KFileTimedReadAll_v1 ( & self -> dad, pos + total, chbuf, to_read, & num_read, tm );
             if ( rc == 0 && num_read != 0 )
             {
                 STATUS ( STAT_PRG, "%s - consuming chunk of %zu bytes @ lu\n"
@@ -1156,7 +1177,7 @@ rc_t KCacheTeeFileBGLoop ( KCacheTeeFile_v3 * self )
             KCacheTeeFileMsg msg = * dmsg;
             free ( dmsg );
 
-            STATUS ( STAT_PRG, "BG: %s - received msg { pos=%lu, size=%zu, tm=%s, initial_page_idx=%zu\n"
+            STATUS ( STAT_PRG, "BG: %s - received msg { pos=%lu, size=%zu, tm=%s, initial_page_idx=%zu }\n"
                      , __func__
                      , msg . pos
                      , msg . size
@@ -1170,7 +1191,7 @@ rc_t KCacheTeeFileBGLoop ( KCacheTeeFile_v3 * self )
                 msg . size = self -> source_size;
                 msg . initial_page_idx = 0;
                 STATUS ( STAT_PRG, "BG: %s - mapping request to whole file "
-                         "{ pos=%lu, size=%zu, tm=%s, initial_page_idx=%zu\n"
+                         "{ pos=%lu, size=%zu, tm=%s, initial_page_idx=%zu }\n"
                          , __func__
                          , msg . pos
                          , msg . size
