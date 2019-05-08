@@ -613,7 +613,11 @@ rc_t CC KSysFileReadChunked_v1 ( const KSysFile_v1 * self, uint64_t pos,
         rc = KChunkReaderNextBuffer ( chunks, & chbuf, & chsize );
         if ( rc == 0 )
         {
-            rc = KFileReadAll_v1 ( self, pos + total, chbuf, chsize, & num_read );
+            size_t to_read = bsize - total;
+            if ( to_read > chsize )
+                to_read = chsize;
+            
+            rc = KFileReadAll_v1 ( & self -> dad, pos + total, chbuf, to_read, & num_read );
             if ( rc == 0 )
                 rc = KChunkReaderConsumeChunk ( chunks, pos + total, chbuf, num_read );
             KChunkReaderReturnBuffer ( chunks, chbuf, chsize );
@@ -644,7 +648,11 @@ rc_t CC KSysFileTimedReadChunked_v1 ( const KFILE_IMPL *self, uint64_t pos,
         rc = KChunkReaderNextBuffer ( chunks, & chbuf, & chsize );
         if ( rc == 0 )
         {
-            rc = KSysFileTimedRead_v1 ( self, pos + total, chbuf, chsize, & num_read, tm );
+            size_t to_read = bsize - total;
+            if ( to_read > chsize )
+                to_read = chsize;
+            
+            rc = KSysFileTimedRead_v1 ( self, pos + total, chbuf, to_read, & num_read, tm );
             if ( rc == 0 && num_read != 0 )
                 rc = KChunkReaderConsumeChunk ( chunks, pos + total, chbuf, num_read );
             KChunkReaderReturnBuffer ( chunks, chbuf, chsize );
