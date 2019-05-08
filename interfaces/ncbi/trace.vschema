@@ -38,12 +38,6 @@ include 'sra/454.vschema';
 typedef U16 NCBI:usamp1;
 typedef NCBI:usamp1 NCBI:usamp4 [ 4 ];
 
-typedef U8 NCBI:SRA:trace_filter;
-const NCBI:SRA:trace_filter SRA_TRACE_FILTER_PASS = 0;
-const NCBI:SRA:trace_filter SRA_TRACE_FILTER_REJECT = 1;
-const NCBI:SRA:trace_filter SRA_TRACE_FILTER_CRITERIA = 2;
-const NCBI:SRA:trace_filter SRA_TRACE_FILTER_REDACTED = 3;
-
 physical NCBI:usamp4 NCBI:usamp4_encoding #1.0
 {
     encode
@@ -706,10 +700,6 @@ table NCBI:sra:tbl:trace #1                     // declare the table
     // Field is dictionary from OrganismName
     // U32 -> ASCII. Has 170K names like: "THUNNUS ATLANTICUS", etc
     extern column < ascii > zip_encoding ORGANISM_NAME;
-
-    // *
-    // trace_filter
-    extern column NCBI:SRA:trace_filter TRACE_FILTER;
 
 	/* INSDC:tbl:sequence inherited virtual productions
 	 *  bool cs_native;
