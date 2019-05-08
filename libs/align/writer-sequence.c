@@ -30,9 +30,11 @@
 #include <klib/sort.h>
 #include <klib/data-buffer.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 #include <insdc/insdc.h>
 #include <vdb/database.h>
 #include <vdb/cursor.h>
+#include <vdb/vdb-priv.h>
 #include <sra/sradb.h>
 #include <align/writer-sequence.h>
 #include "writer-priv.h"
@@ -78,38 +80,51 @@ static const TableReaderColumn TableSeqReadTmpKey_cols[] = {
     {0, NULL, {NULL}, 0, 0}
 };
 
-static const TableReaderColumn TableSeqReadREAD_cols[] = {
-    {0, "(INSDC:dna:text)READ", {NULL}, 0, 0},
-    {0, "READ_START", {NULL}, 0, 0},
-    {0, "READ_LEN", {NULL}, 0, 0},
-    {0, "ALIGNMENT_COUNT", {NULL}, 0, 0},
-    {0, NULL, {NULL}, 0, 0}
-};
+static const char READ_DNA_TEXT[] = "(INSDC:dna:text)READ";
 
 struct TableWriterSeq {
-    uint32_t options;
-    const TableWriter* base;
-    uint8_t cursor_id;
-    TableWriterColumn cols[sizeof(TableWriterSeq_cols)/sizeof(TableWriterSeq_cols[0])];
-    int init; /* default written indicator */
-    int64_t qual_buf_sz;
+    TableWriter const *base;
+    TableReader const *reader;
     uint8_t* qual_buf;
-    uint8_t discrete_qual[256];
-    uint8_t alignd_cursor_id;
-    TableWriterColumn cols_alignd[2];
-    const TableReader* reader;
-    TableReaderColumn cols_read[5];
     KVector *stats;
-    unsigned statsCount;
     int64_t tmpKeyIdFirst;
     int64_t tmpKeyIdLast;
+    TableWriterColumn cols[sizeof(TableWriterSeq_cols)/sizeof(TableWriterSeq_cols[0])];
+    TableWriterColumn cols_alignd[2];
+    TableReaderColumn cols_read[5];
+    int64_t numAlignedSpots;
+    int64_t numSpots;
+    unsigned options;
+    unsigned init; /* default written indicator */
+    unsigned qual_buf_sz;
+    unsigned statsCount;
     bool flush;
-    bool haveFirstHalfAligned;
-    bool haveFirstUnaligned;
-    int64_t firstHalfAligned;
-    int64_t firstUnaligned;
+    uint8_t cursor_id;
+    uint8_t alignd_cursor_id;
+    uint8_t discrete_qual[256];
 };
 
+static void CopyTableWriterColumns(unsigned const N, TableWriterColumn *const dst, TableWriterColumn const *const src)
+{
+    unsigned i;
+    for (i = 0; i < N; ++i)
+        dst[i] = src[i];
+}
+
+static void CopyTableReaderColumns(unsigned const N, TableReaderColumn *const dst, TableReaderColumn const *const src)
+{
+    unsigned i;
+    for (i = 0; i < N; ++i)
+        dst[i] = src[i];
+}
+
+#define COPY_TableWriterColumns(DST, SRC) do { CopyTableWriterColumns(sizeof(SRC)/sizeof(*SRC), DST, SRC); } while (0)
+
+#define COPY_TableReaderColumns(DST, SRC) do { CopyTableReaderColumns(sizeof(SRC)/sizeof(*SRC), DST, SRC); } while (0)
+
+#define TableReaderColumn_GET(TYPE, DST, COL) do { union uv { uint8_t u[sizeof(TYPE)]; TYPE v; } uv; memmove(uv.u, (COL).base.var, sizeof(TYPE)); DST = uv.v; } while(0)
+
+#if 0 /* always write full quality */
 static bool TableWriterSeq_InitQuantMatrix(uint8_t dst[256], char const quant[])
 {
     unsigned i = 0;
@@ -186,6 +201,7 @@ static bool TableWriterSeq_InitQuantMatrix(uint8_t dst[256], char const quant[])
     }
     return false;
 }
+#endif
 
 typedef struct { uint64_t distance, count; } stats_pair_t;
 
@@ -236,13 +252,17 @@ static rc_t TableWriterSeq_WriteStatistics(TableWriterSeq const *cself, KMDataNo
     pb_t pb;
     rc_t rc;
     KDataBuffer buf;
+
+    if (cself->stats == NULL) return 0; /* if there were no alignments */
     
     rc = KDataBufferMake(&buf, 8 * sizeof(pb.stats[0]), cself->statsCount);
+    assert(rc == 0);
     if (rc) return rc;
     
     pb.stats = buf.base;
     pb.i = 0;
     rc = KVectorVisitU64(cself->stats, 0, stats_cb, &pb);
+    assert(rc == 0);
     if (rc == 0) {
         unsigned i;
         unsigned const n = cself->statsCount < 126 ? cself->statsCount : 126;
@@ -254,6 +274,7 @@ static rc_t TableWriterSeq_WriteStatistics(TableWriterSeq const *cself, KMDataNo
             distance[i] = pb.stats[i].distance;
         }
         rc = KMDataNodeWrite(node, distance, n * sizeof(distance[0]));
+        assert(rc == 0);
     }
     KDataBufferWhack(&buf);
     return rc;
@@ -292,6 +313,7 @@ static rc_t MakeSequenceTable(TableWriterSeq *self, VDatabase* db,
 {
     char const *tblName = (self->options & ewseq_co_ColorSpace) ? "CS_SEQUENCE" : "SEQUENCE";
 
+#if 0  /* always write full quality */
     if (qual_quantization && strcmp(qual_quantization, "0") == 0) {
         self->options |= ewseq_co_FullQuality;
     }
@@ -307,11 +329,20 @@ static rc_t MakeSequenceTable(TableWriterSeq *self, VDatabase* db,
             return RC(rcAlign, rcFormatter, rcConstructing, rcParam, rcInvalid);
         }
     }
-    memmove(self->cols, TableWriterSeq_cols, sizeof(TableWriterSeq_cols));
+#else
+    self->options |= ewseq_co_FullQuality;
+#endif
+    
+    COPY_TableWriterColumns(self->cols, TableWriterSeq_cols);
+
+    /* always write full sequence */
+    self->cols[ewseq_cn_READ].name = READ_DNA_TEXT;
+    self->cols[ewseq_cn_READ].flags |= ewcol_Temporary;
+    if ((self->options & ewseq_co_SaveRead) != 0) {
+        self->cols[ewseq_cn_READ].flags &= ~ewcol_Temporary;
+    }
     if (self->options & ewseq_co_KeepKey) {
         self->cols[ewseq_cn_TMP_KEY_ID].flags &= ~ewcol_Temporary;
-        if (self->options & ewseq_co_SaveRead)
-            self->cols[ewseq_cn_READ].name = "(INSDC:dna:text)READ";
     }
     if( self->options & ewseq_co_AlignData ) {
         self->cols[ewseq_cn_TMP_KEY_ID].flags |= ewcol_Ignore;
@@ -347,7 +378,6 @@ LIB_EXPORT rc_t CC TableWriterSeq_Make(const TableWriterSeq** cself, VDatabase* 
     rc_t rc = 0;
     TableWriterSeq* self = NULL;
 
-    options |= ewseq_co_SaveQual; /* TODO: remove when ready */
     if( cself == NULL || db == NULL ) {
         rc = RC(rcAlign, rcFormatter, rcConstructing, rcParam, rcNull);
     } else {
@@ -369,109 +399,230 @@ LIB_EXPORT rc_t CC TableWriterSeq_Make(const TableWriterSeq** cself, VDatabase* 
     return rc;
 }
 
-static rc_t CompressREAD(TableWriterSeq *self)
+struct CompressRowData {
+    char const *sequence;
+    INSDC_coord_zero const *read_start;
+    INSDC_coord_len const *read_length;
+    int64_t const *alignment_id;
+    unsigned num_reads;
+    unsigned sequence_length;
+};
+typedef struct CompressRowData CompressRowData;
+
+static rc_t compressOneRead(VCursor *const out, CompressRowData const *data, int64_t const row, int64_t *const buffer)
 {
-    rc_t rc = 0;
-    VTable *vtbl = NULL;
-    uint8_t cursor_id = 0;
-    int64_t row = 0;
+    int64_t *const firstUnaligned = &buffer[0];
+    int64_t *const firstHalfAligned = &buffer[1];
+    rc_t rc;
+    unsigned i;
+    unsigned aligned = 0;
     
-    memmove(&self->cols_read, &TableSeqReadREAD_cols, sizeof(self->cols_read));
-    rc = TableWriter_GetVTable(self->base, &vtbl);
-    assert(rc == 0);
-    rc = TableReader_Make(&self->reader, vtbl, self->cols_read, 50 * 1024 * 1024);
-    assert(rc == 0);
-    
-    self->cols[0] = TableWriterSeq_cols[0];
-    rc = TableWriter_AddCursor(self->base, self->cols, 1, &cursor_id);
-    assert(rc == 0);
-    
-    for (row = 1; ; ++row) {
-        rc = TableReader_ReadRow(self->reader, row);
-        if (rc) {
-            if (GetRCState(rc) == rcNotFound) {
-                rc = 0;
-                break;
-            }
-            return rc;
-        }
-        rc = TableWriter_OpenRowId(self->base, row, cursor_id);
-        assert(rc == 0);
-        {
-            char const *const seq = self->cols_read[0].base.str;
-            INSDC_coord_zero const *const start = self->cols_read[1].base.coord0;
-            INSDC_coord_len const *const length = self->cols_read[2].base.coord_len;
-            uint8_t const *const cnt = self->cols_read[3].base.u8;
-            int const nreads = (int)self->cols_read[1].len;
-            int i;
-            
-            TW_COL_WRITE_BUF(self->base, self->cols[0], NULL, 0);
-            for (i = 0; i < nreads; ++i) {
-                if (cnt[i] == 0) {
-                    TW_COL_WRITE_BUF(self->base, self->cols[0], &seq[start[i]], length[i]);
-                }
-            }
-        }
-        rc = TableWriter_CloseRow(self->base);
-        assert(rc == 0);
+    for (i = 0; i < data->num_reads; ++i) {
+        if (data->alignment_id[i] != 0)
+            ++aligned;
     }
-    rc = TableWriter_CloseCursor(self->base, cursor_id, NULL);
-    assert(rc == 0);
-    TableReader_Whack(self->reader);
+    if (aligned == 0 && *firstUnaligned == 0) *firstUnaligned = row;
+    if (aligned > 0 && aligned < data->num_reads && *firstHalfAligned == 0) *firstHalfAligned = row;
+    
+    if (out == NULL) return 0;
+    
+    rc = VCursorOpenRow(out);
+    assert(rc == 0); if (rc) return rc;
+    
+    if (aligned == 0) {
+        rc = VCursorWrite(out, 1, sizeof(data->sequence[0]) * 8, data->sequence, 0, data->sequence_length);
+        assert(rc == 0); if (rc) return rc;
+    }
+    else if (aligned == data->num_reads) {
+        rc = VCursorWrite(out, 1, sizeof(data->sequence[0]) * 8, data->sequence, 0, 0);
+        assert(rc == 0); if (rc) return rc;
+    }
+    else {
+        for (i = 0; i < data->num_reads; ++i) {
+            if (data->alignment_id[i] != 0) continue;
+
+            rc = VCursorWrite(out, 1, sizeof(data->sequence[0]) * 8, data->sequence + data->read_start[i], 0, data->read_length[i]);
+            assert(rc == 0); if (rc) return rc;
+        }
+    }
+    rc = VCursorCommitRow(out); assert(rc == 0); if (rc) return rc;
+    rc = VCursorCloseRow(out); assert(rc == 0); if (rc) return rc;
     return 0;
 }
 
-LIB_EXPORT rc_t CC TableWriterSeq_Whack(const TableWriterSeq* cself, bool commit, uint64_t* rows)
+static VTable *getVTable(TableWriterSeq *const self) {
+    VTable *vtbl = NULL;
+    rc_t rc = TableWriter_GetVTable(self->base, &vtbl);
+    assert(rc == 0);
+    return vtbl;
+}
+
+static rc_t readOneCompressRow(VCursor const *const curs, CompressRowData *result, int64_t const row) {
+    rc_t rc;
+    void const *base;
+    uint32_t count;
+    uint32_t boff;
+    uint32_t elem_bits;
+    
+    rc = VCursorCellDataDirect(curs, row, 1, &elem_bits, &base, &boff, &count);
+    if (rc) return rc;
+    assert(rc == 0 && boff == 0 && elem_bits == sizeof(result->sequence[0]) * 8);
+    result->sequence = base;
+    result->sequence_length = count;
+    
+    rc = VCursorCellDataDirect(curs, row, 2, &elem_bits, &base, &boff, &count);
+    assert(rc == 0 && boff == 0 && elem_bits == sizeof(result->read_start[0]) * 8);
+    result->read_start = base;
+    result->num_reads = count;
+    
+    rc = VCursorCellDataDirect(curs, row, 3, &elem_bits, &base, &boff, &count);
+    assert(rc == 0 && boff == 0 && elem_bits == sizeof(result->read_length[0]) * 8 && count == result->num_reads);
+    result->read_length = base;
+    
+    rc = VCursorCellDataDirect(curs, row, 4, &elem_bits, &base, &boff, &count);
+    assert(rc == 0 && boff == 0 && elem_bits == sizeof(result->alignment_id[0]) * 8 && count == result->num_reads);
+    result->alignment_id = base;
+    
+    return rc;
+}
+
+/* CompressREAD has the IMPORTANT side-effect of calculating the initial row IDs
+ * for half aligned and unaligned spots, needed by sra-sort
+ */
+static rc_t CompressREAD(TableWriterSeq *const self, int64_t *const buffer)
 {
+    bool const notSavingRead = ((self->options & ewseq_co_SaveRead) == 0);
     rc_t rc = 0;
-
-    if( cself != NULL ) {
-        TableWriterSeq* self = (TableWriterSeq*)cself;
-        VTable *vtbl;
-        
-        TableReader_Whack(cself->reader);
-        if (commit) {
-            rc = TableWriter_CloseCursor(cself->base, 1, NULL);
-            assert(rc == 0);
-            if ((cself->options & (ewseq_co_KeepKey | ewseq_co_SaveRead)) == (ewseq_co_KeepKey | ewseq_co_SaveRead))
-                CompressREAD(self);
-
-            if ((rc = TableWriter_GetVTable(cself->base, &vtbl)) == 0 ) {
-                KMetadata* meta;
-                
-                if ((rc = VTableOpenMetadataUpdate(vtbl, &meta)) == 0) {
-                    KMDataNode* node = NULL;
-                    
-                    if (cself->stats) {
-                        if ((rc = KMetadataOpenNodeUpdate(meta, &node, "MATE_STATISTICS")) == 0) {
-                            rc = TableWriterSeq_WriteStatistics(cself, node);
-                            KMDataNodeRelease(node);
-                        }
-                    }
-                    if ((rc = KMetadataOpenNodeUpdate(meta, &node, "unaligned")) == 0) {
-                        KMDataNode *sub = NULL;
-                        
-                        KMDataNodeOpenNodeUpdate(node, &sub, "first-unaligned");
-                        KMDataNodeWriteB64(sub, &self->firstUnaligned);
-                        KMDataNodeRelease(sub);
-                        
-                        KMDataNodeOpenNodeUpdate(node, &sub, "first-half-aligned");
-                        KMDataNodeWriteB64(sub, &self->firstHalfAligned);
-                        KMDataNodeRelease(sub);
-
-                        KMDataNodeRelease(node);
-                    }
-                    KMetadataRelease(meta);
-                }
-            }
+    VTable *const vtbl = getVTable(self);
+    VCursor const *in = NULL;
+    VCursor *out = NULL;
+    TableReaderColumn const cols_read[] = {
+        {0, READ_DNA_TEXT, {NULL}, 0, 0},
+        {0, "READ_START", {NULL}, 0, 0},
+        {0, "READ_LEN", {NULL}, 0, 0},
+        {0, "PRIMARY_ALIGNMENT_ID", {NULL}, 0, 0},
+        {0, NULL, {NULL}, 0, 0}
+    };
+    CompressRowData data;
+    int64_t i;
+    
+    rc = VTableCreateCursorRead(vtbl, &in); assert(rc == 0); if (rc) return rc;
+    for (i = 0; ; ++i) {
+        if (cols_read[i].name) {
+            uint32_t cid = 0;
+            rc = VCursorAddColumn(in, &cid, cols_read[i].name);
+            assert(rc == 0 && cid == i + 1); if (rc) return rc;
+            continue;
         }
+        break;
+    }
+    rc = VCursorOpen(in); assert(rc == 0); if (rc) return rc;
 
-        rc = TableWriter_Whack(cself->base, commit && (rc == 0), rows);
-        KVectorRelease(cself->stats);
+    if (notSavingRead) {
+        uint32_t cid = 0;
+        
+        rc = VTableColumnCreateParams(vtbl, kcmCreate, kcsCRC32, 0); assert(rc == 0); if (rc) return rc;
+        rc = VTableCreateCursorWrite(vtbl, &out, kcmInsert); assert(rc == 0); if (rc) return rc;
+        rc = VCursorAddColumn(out, &cid, TableWriterSeq_cols[0].name); assert(rc == 0 && cid == 1); if (rc) return rc;
+        rc = VCursorOpen(out); assert(rc == 0); if (rc) return rc;
+    }
+    i = 0;
+    while ((rc = readOneCompressRow(in, &data, i + 1)) == 0) {
+        ++i;
+        compressOneRead(out, &data, i, buffer);
+    }
+    if (GetRCState(rc) == rcNotFound) rc = 0;
+    assert(rc == 0);
+    
+    rc = VCursorRelease(in); assert(rc == 0); if (rc) return rc;
+    if (out) {
+        rc = VCursorCommit(out); assert(rc == 0); if (rc) return rc;
+        rc = VCursorRelease(out); assert(rc == 0); if (rc) return rc;
+        VTableDropColumn(vtbl, "READ");
+        VTableDropColumn(vtbl, "ALTREAD");
+    }
+
+    return 0;
+}
+
+static KMetadata *getMetadata(TableWriterSeq *const self) {
+    KMetadata* md = NULL;
+    VTable *vtbl = getVTable(self);
+    rc_t const rc = VTableOpenMetadataUpdate(vtbl, &md);
+    assert(rc == 0);
+    return md;
+}
+
+static KMDataNode *openNode(KMetadata *const md, char const *const nodeName) {
+    KMDataNode *node = NULL;
+    rc_t const rc = KMetadataOpenNodeUpdate(md, &node, "%s", nodeName);
+    assert(rc == 0);
+    return node;
+}
+
+static void writeStatsMetadata(TableWriterSeq *const self, KMetadata *const md) {
+    KMDataNode *const node = openNode(md, "MATE_STATISTICS");
+    rc_t const rc = TableWriterSeq_WriteStatistics(self, node);
+    KMDataNodeRelease(node);
+    assert(rc == 0);
+}
+
+static void writeInt64Metadata(KMDataNode *const pnode, char const *const nodeName, int64_t const *const pValue)
+{
+    KMDataNode *sub = NULL;
+    rc_t const rc1 = KMDataNodeOpenNodeUpdate(pnode, &sub, "%s", nodeName);
+    rc_t const rc2 = KMDataNodeWriteB64(sub, pValue);
+    KMDataNodeRelease(sub);
+    assert(rc1 == 0);
+    assert(rc2 == 0);
+}
+
+static void writeUnalignedMetadata(KMetadata *const md, int64_t const *const rows)
+{
+    KMDataNode *const node = openNode(md, "unaligned");
+    writeInt64Metadata(node, "first-unaligned", &rows[0]);
+    writeInt64Metadata(node, "first-half-aligned", &rows[1]);
+    KMDataNodeRelease(node);
+}
+
+static void SaveMetadata(TableWriterSeq *const self, int64_t const *const rows)
+{
+    KMetadata *const md = getMetadata(self);
+    writeStatsMetadata(self, md);
+    writeUnalignedMetadata(md, rows);
+    KMetadataRelease(md);
+}
+
+/* compress READ and save metadata */
+static void Commit(TableWriterSeq *const self)
+{
+    int64_t rows[2] = {0, 0}; /* to hold first-unaligned and first-half-aligned row id */
+
+    if (self->numSpots > 0) {
+        if (self->numAlignedSpots > 0)
+            CompressREAD(self, rows);
+        else
+            rows[0] = 1;
+    }
+    SaveMetadata(self, rows);
+}
+
+LIB_EXPORT rc_t CC TableWriterSeq_Whack(TableWriterSeq const *const cself, bool const commit, uint64_t *const rows)
+{
+    TableWriterSeq *const self = (TableWriterSeq *)cself;
+
+    if (self != NULL) {
+        TableReader_Whack(self->reader);
+        if (commit) {
+            TableWriter_CloseCursor(self->base, 1, NULL);
+            Commit(self);
+        }
+        TableWriter_Whack(self->base, commit, rows);
+        KVectorRelease(self->stats);
         free(self->qual_buf);
         free(self);
     }
-    return rc;
+    return 0;
 }
 
 static
@@ -508,39 +659,24 @@ LIB_EXPORT rc_t CC TableWriterSeq_GetNextRowId(const TableWriterSeq* cself, int6
     return TableWriter_GetNextRowId(cself->base, rowid, cself->cursor_id);
 }
 
-static void UpdateAlignmentRowStats(TableWriterSeq *const self, int64_t rowid, TableWriterData const *const alignment_count)
-{
-    uint8_t const *const ac = alignment_count->buffer;
-    if (ac) {
-        unsigned const nreads = (unsigned)alignment_count->elements;
-        unsigned naligned = 0;
-        unsigned i;
-
-        for (i = 0; i < nreads; ++i) {
-            if (ac[i] != 0) {
-                ++naligned;
-            }
-        }
-        if (naligned == 0) {
-            if (!self->haveFirstUnaligned) {
-                self->firstUnaligned = rowid;
-                self->haveFirstUnaligned = true;
-            }
-        }
-        else if (naligned < nreads) {
-            if (!self->haveFirstHalfAligned) {
-                self->firstHalfAligned = rowid;
-                self->haveFirstHalfAligned = true;
-            }
-        }
-    }
-}
-
-LIB_EXPORT rc_t CC TableWriterSeq_Write(const TableWriterSeq* cself, const TableWriterSeqData* data, int64_t* rowid)
+static rc_t TableWriterSeq_Write_validate_params(const TableWriterSeq* cself, const TableWriterSeqData* data)
 {
     rc_t rc = 0;
     int lbl;
+    
+    /* make debug builds produce FATAL errors */
+    assert(cself != NULL);
+    assert(data != NULL);
+    assert(data->sequence.elements == data->quality.elements);
+    assert(data->read_start.elements == data->nreads);
+    assert(data->read_len.elements == data->nreads);
+    assert(data->read_filter.elements == data->nreads);
+    assert(data->read_type.elements == data->nreads);
 
+    assert(data->primary_alignment_id.elements == 0 || data->primary_alignment_id.elements == data->nreads);
+    assert(data->alignment_count.elements == 0 || data->alignment_count.elements == data->nreads);
+    assert(data->no_quantize_mask.elements == 0 || data->no_quantize_mask.elements == data->quality.elements);
+    
     if( cself == NULL || data == NULL ) {
         rc = RC( rcAlign, rcType, rcWriting, rcParam, rcNull);
         ALIGN_DBGERR(rc);
@@ -574,21 +710,31 @@ LIB_EXPORT rc_t CC TableWriterSeq_Write(const TableWriterSeq* cself, const Table
         ALIGN_DBGERRP("quality and no_quantize_mask length %u <> %lu", rc, data->quality.elements, data->no_quantize_mask.elements);
     }
     else if( !(cself->options & ewseq_co_NoLabelData) &&
-               (lbl = ((data->label.buffer ? 1 : 0) + (data->label_start.buffer ? 1 : 0) +
-                                                  (data->label_len.buffer ? 1 : 0))) != 0 && lbl != 3 )
+            (lbl = ((data->label.buffer ? 1 : 0) + (data->label_start.buffer ? 1 : 0) +
+                    (data->label_len.buffer ? 1 : 0))) != 0 && lbl != 3 )
     {
         rc = RC(rcAlign, rcType, rcWriting, rcData, rcInconsistent);
         ALIGN_DBGERRP("LABEL %s", rc, "incomplete");
     }
-    else if( (rc = TableWriter_OpenRow(cself->base, rowid, cself->cursor_id)) == 0 ) {
+    return rc;
+}
+
+LIB_EXPORT rc_t CC TableWriterSeq_Write(const TableWriterSeq* cself, const TableWriterSeqData* data, int64_t* rowid)
+{
+    rc_t rc = TableWriterSeq_Write_validate_params(cself, data);
+    if (rc) return rc;
+
+    assert(rowid != NULL);
+
+    if( (rc = TableWriter_OpenRow(cself->base, rowid, cself->cursor_id)) == 0 ) {
         if( cself->options & ewseq_co_AlignData ) {
-            UpdateAlignmentRowStats((TableWriterSeq *)cself, *rowid, &data->alignment_count);
             TW_COL_WRITE(cself->base, cself->cols[ewseq_cn_PRIMARY_ALIGNMENT_ID], data->primary_alignment_id);
             TW_COL_WRITE(cself->base, cself->cols[ewseq_cn_ALIGNMENT_COUNT], data->alignment_count);
             if (rc == 0) {
                 rc = TableWriterSeq_CollectStatistics((TableWriterSeq *)cself, &data->primary_alignment_id);
             }
         }
+#if 0 /* always write full sequence */
         if( cself->options & ewseq_co_SaveRead ) {
             TW_COL_WRITE(cself->base, cself->cols[ewseq_cn_READ], data->sequence);
         }
@@ -608,6 +754,10 @@ LIB_EXPORT rc_t CC TableWriterSeq_Write(const TableWriterSeq* cself, const Table
                 }
             }
         }
+#else
+        TW_COL_WRITE(cself->base, cself->cols[ewseq_cn_READ], data->sequence);
+#endif
+#if 0 /* always write full quality */
         if( cself->options & ewseq_co_FullQuality ) {
             TW_COL_WRITE(cself->base, cself->cols[ewseq_cn_QUALITY], data->quality);
         } else {
@@ -657,6 +807,9 @@ LIB_EXPORT rc_t CC TableWriterSeq_Write(const TableWriterSeq* cself, const Table
                 }
             }
         }
+#else
+        TW_COL_WRITE(cself->base, cself->cols[ewseq_cn_QUALITY], data->quality);
+#endif
         if( !(cself->options & ewseq_co_NoLabelData) ) {
             TW_COL_WRITE(cself->base, cself->cols[ewseq_cn_LABEL], data->label);
             TW_COL_WRITE(cself->base, cself->cols[ewseq_cn_LABEL_START], data->label_start);
@@ -697,13 +850,11 @@ LIB_EXPORT rc_t CC TableWriterSeq_TmpKeyStart(const TableWriterSeq* cself)
         
         self->tmpKeyIdFirst = INT64_MAX;
         self->tmpKeyIdLast = INT64_MIN;
-        memmove(&self->cols_read, &TableSeqReadTmpKey_cols, sizeof(self->cols_read));
+        COPY_TableReaderColumns(self->cols_read, TableSeqReadTmpKey_cols);
         if( (rc = TableWriter_GetVTable(cself->base, &vtbl)) == 0 &&
             (rc = TableReader_Make(&self->reader, vtbl, self->cols_read, 50 * 1024 * 1024)) == 0 ) {
-            memmove(self->cols_alignd, &TableWriterSeq_cols[ewseq_cn_PRIMARY_ALIGNMENT_ID], sizeof(self->cols_alignd));
-            rc = TableWriter_AddCursor(self->base, self->cols_alignd,
-                                       sizeof(self->cols_alignd) / sizeof(self->cols_alignd[0]),
-                                       &self->alignd_cursor_id);
+            CopyTableWriterColumns(2, self->cols_alignd, &TableWriterSeq_cols[ewseq_cn_PRIMARY_ALIGNMENT_ID]);
+            rc = TableWriter_AddCursor(self->base, self->cols_alignd, 2, &self->alignd_cursor_id);
             self->init = 2;
         }
     }
@@ -721,7 +872,7 @@ LIB_EXPORT rc_t CC TableWriterSeq_TmpKey(const TableWriterSeq* cself, int64_t ro
         rc = RC( rcAlign, rcType, rcReading, rcMode, rcNotOpen);
         ALIGN_DBGERR(rc);
     } else if( (rc = TableReader_ReadRow(cself->reader, rowid)) == 0 ) {
-        memmove(key_id, cself->cols_read[0].base.var, sizeof(*key_id));
+        TableReaderColumn_GET(uint64_t, *key_id, cself->cols_read[0]);
         if (cself->tmpKeyIdLast < rowid || rowid < cself->tmpKeyIdFirst) {
             rc = TableReader_PageIdRange(cself->reader, rowid,
                                         &((TableWriterSeq*)cself)->tmpKeyIdFirst,
@@ -763,7 +914,19 @@ LIB_EXPORT rc_t CC TableWriterSeq_WriteAlignmentData(const TableWriterSeq* cself
         if( rc == 0 &&
            (rc = TableWriter_OpenRowId(cself->base, rowid, cself->alignd_cursor_id)) == 0 )
         {
-            UpdateAlignmentRowStats((TableWriterSeq *)cself, rowid, alignment_count);
+            {
+                unsigned i;
+                int64_t *numAlignedSpots = &((TableWriterSeq *)cself)->numAlignedSpots;
+                int64_t *numSpots = &((TableWriterSeq *)cself)->numSpots;
+                int64_t const *const pid = primary_alignment_id->buffer;
+                for (i = 0; i < (unsigned)primary_alignment_id->elements; ++i) {
+                    if (pid[i] != 0) {
+                        *numAlignedSpots += 1;
+                        break;
+                    }
+                }
+                *numSpots += 1;
+            }
             TW_COL_WRITE(cself->base, cself->cols_alignd[0], *primary_alignment_id);
             TW_COL_WRITE(cself->base, cself->cols_alignd[1], *alignment_count);
             if( rc == 0 ) {

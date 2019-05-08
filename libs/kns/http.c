@@ -89,6 +89,8 @@ void URLBlockInit ( URLBlock *self )
     self -> tls = false;
 
     self -> port_dflt = true;
+
+    self->cloud_type = ct_NONE;
 }
 
 /* ParseUrl
@@ -239,11 +241,35 @@ rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size )
     /* capture host ( could be empty - just given a file system path ) */
     if ( have_host )
     {
+        String amazonaws;
+        String stor31;
+
+        CONST_STRING(&amazonaws, "amazonaws.com");
+        CONST_STRING(&stor31, "s3-stor31.st-va.ncbi.nlm.nih.gov");
+
         /* assign host to url_block */
         StringInit ( & b -> host, buf, sep - buf, ( uint32_t ) ( sep - buf ) );
 
         /* advance to path */
         buf = sep;
+
+        /* detect "cloudy host" */
+        if (b->host.size >= stor31.size) {
+            size_t skip = b->host.size - stor31.size;
+            if (string_cmp(stor31.addr, stor31.size, b->host.addr + skip,
+                b->host.size - skip, stor31.size) == 0)
+            {
+                b->cloud_type = ct_S3;
+            }
+        }
+        if (b->host.size >= amazonaws.size) {
+            size_t skip = b->host.size - amazonaws.size;
+            if (string_cmp(amazonaws.addr, amazonaws.size, b->host.addr + skip,
+                b->host.size - skip, amazonaws.size) == 0)
+            {
+                b->cloud_type = ct_S3;
+            }
+        }
     }
 
     /* detect relative path 
@@ -309,9 +335,9 @@ rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size )
         }
     }
 
-    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
+/*  DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
         ( " ParseUrl (%.*s) = (path:%S)\n", ( int ) url_size, url,
-                                                  & b -> path ) );
+                                                  & b -> path ) ); */
 
     return 0;
 }

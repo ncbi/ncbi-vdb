@@ -784,7 +784,7 @@ uint32_t KCacheTeeFileContigPagesInFileCache ( const KCacheTeeFile_v3 * self,
 
     /* if the last page was within the same word,
        we'd have returned already. */
-    assert ( last > i );
+    assert ( last >= i );
 
     /* walk across the bitmap */
     STATUS ( STAT_PRG, "%s - walking from word index %zu to %zu, inclusive\n"

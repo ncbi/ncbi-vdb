@@ -288,6 +288,17 @@ static void addToHashTable(ReferenceMgr *const self, ReferenceSeq const *const r
         addToHashBucket(&self->ht[hash0(rs->seqId)], index);
 }
 
+static void freeHashTableEntries(ReferenceMgr *const self)
+{
+    unsigned i;
+    for (i = 0; i < BUCKETS; ++i) {
+        if (self->ht[i].count > 0)
+            free(self->ht[i].index);
+        if (self->used[i].count > 0)
+            free(self->used[i].index);
+    }
+}
+
 static
 void CC ReferenceSeq_Whack(ReferenceSeq *self)
 {
@@ -2090,6 +2101,8 @@ LIB_EXPORT rc_t CC ReferenceMgr_Release(const ReferenceMgr *cself,
         uint64_t rows = 0;
         unsigned i;
 
+        freeHashTableEntries(self);
+        
         rc = TableWriterRef_Whack(self->writer, commit, &rows);
         if (Rows) *Rows = rows;
         KDirectoryRelease(self->dir);
@@ -2833,6 +2846,11 @@ LIB_EXPORT rc_t CC ReferenceMgr_Compress(const ReferenceMgr* cself,
     return rc;
 }
 
+static bool isMatchingBase(int const refBase, int const seqBase)
+{
+    return (refBase == seqBase || seqBase == '=' || (refBase == 'T' && seqBase == 'U'));
+}
+
 LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
                                          uint32_t options,
                                          INSDC_coord_zero offset,
@@ -3028,8 +3046,8 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
                             ref_pos += length;
                             ++ro;
                         }
-                        if (ref_pos < 0 || ref_pos >= max_rl ||
-                            ((toupper(ref_buf[ref_pos]) != toupper(seq[seq_pos])) && (seq[seq_pos] != '=')))
+                        if (ref_pos < 0 || ref_pos >= max_rl
+                            || !isMatchingBase(toupper(ref_buf[ref_pos]), toupper(seq[seq_pos])))
                         {
                             has_mismatch[seq_pos] = 1;
                             mismatch[data->mismatch.elements++] = seq[seq_pos];

@@ -92,6 +92,8 @@ rc_t CC Usage( const Args* args )
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    KConfigDisableUserSettings();
+    
     int failed = 0;
     if ( argc < 2 )
     {
@@ -195,7 +197,7 @@ rc_t CC KMain ( int argc, char *argv [] )
                         const ErrorReport :: Error * err = errors . GetError ( i );
                         cerr << err -> m_file << ":" << err -> m_line << ":" << err -> m_column << ":" << err -> m_message << endl;
                     }
-                    cout << string ( "ParseFile failed! " ) << endl;
+                    cout << endl << string ( "ParseFile failed! " ) << endl;
                     ++ failed;
                     compare = false;
                 }
@@ -213,7 +215,7 @@ rc_t CC KMain ( int argc, char *argv [] )
                     uint32_t count = b . GetErrorCount ();
                     if ( count > 0 )
                     {
-                        cout << string ( "AST build failed: " ) << endl;
+                        cout << endl << string ( "AST build failed: " ) << endl;
                         for ( uint32_t i = 0 ; i < count; ++ i )
                         {
                             const ErrorReport :: Error * err = b . GetErrors () . GetError ( i );

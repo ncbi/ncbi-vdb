@@ -41,10 +41,9 @@
  *  a schema object pre-loaded with default SRA schema
  */
 
-/* Make
+/* Make - DEPRECATED
  *  create an instance of the default SRA schema
  */
-
 LIB_EXPORT rc_t CC SRASchemaMake ( VSchema **schema, const VDBManager *mgr )
 {
     rc_t rc;
@@ -60,7 +59,9 @@ LIB_EXPORT rc_t CC SRASchemaMake ( VSchema **schema, const VDBManager *mgr )
             rc = VDBManagerMakeSchema ( mgr, schema );
             if ( rc == 0 )
             {
-                rc = VSchemaParseText ( * schema, "sra-schema", sra_schema_text, sra_schema_size );
+/* SRASchemaMake is deprecated: when it is called - return an empty schema 
+                rc = VSchemaParseText ( * schema, "sra-schema",
+                                        sra_schema_text, sra_schema_size ); */
                 if ( rc == 0 )
                     return 0;
 

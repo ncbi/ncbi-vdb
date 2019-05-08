@@ -1,7 +1,6 @@
 #ifndef _h_vfs_services_
 #define _h_vfs_services_
 
-
 /*===========================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
@@ -24,8 +23,8 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ===========================================================================
-*
+* ==============================================================================
+* external SERVICES
 */
 
 
@@ -45,6 +44,19 @@ typedef struct KService KService;
 typedef struct KSrvError KSrvError;
 typedef struct KSrvResponse KSrvResponse;
 
+typedef struct KSrvRespObj KSrvRespObj;
+typedef struct KSrvRespObjIterator KSrvRespObjIterator;
+typedef struct KSrvRespFile KSrvRespFile;
+typedef struct KSrvRespFileIterator KSrvRespFileIterator;
+
+/* File Format from name resolver response - verson 4 */
+typedef enum {
+    eSFFInvalid,
+    eSFFSkipped,
+    eSFFSra,
+    eSFFVdbcache,
+    eSFFMax,
+} ESrvFileFormat;
 
 /******************************************************************************/
 /* KService - EXTERNAL Service */
@@ -61,6 +73,8 @@ rc_t KServiceAddId     ( KService * self, const char * id );
 /* Add a dbGaP Project to service request */
 rc_t KServiceAddProject ( KService * self, uint32_t id );
 
+/* Set accept-format-in of service request */
+rc_t KServiceSetFormat(KService * self, const char * format);
 
 /************************** name service - version 3 **************************/
 /* Execute Names Service Call using current default protocol version;
@@ -70,6 +84,9 @@ rc_t KServiceAddProject ( KService * self, uint32_t id );
  */
 rc_t KServiceNamesQuery ( KService * self, VRemoteProtocols protocols, 
                           const KSrvResponse ** response );
+
+rc_t KServiceNamesQueryTo ( KService * self, VRemoteProtocols protocols,
+    const char * outDir, const char * outFile, const KSrvResponse ** response );
 
 /************************** search service - version 1 ************************/
 /* Execute Search Service Call; get Kart response */
@@ -95,17 +112,6 @@ rc_t KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
     VRemoteProtocols p, const struct VPath ** path,
     const struct VPath ** vdbcache, const KSrvError ** error );
 
-/* GetLocal:
- *  get local path
- */
-rc_t KSrvResponseGetLocal ( const KSrvResponse * self, uint32_t idx,
-                            const struct VPath ** local );
-
-/* GetCache:
- *  get cache path
- */
-rc_t KSrvResponseGetCache ( const KSrvResponse * self, uint32_t idx,
-                            const struct VPath ** cache );
 
 /************************** KSrvError ******************************
  * KSrvError is generated for Id-s from request that produced an error response
@@ -129,6 +135,50 @@ rc_t KSrvErrorObject  ( const KSrvError * self,
                         String * id, EObjectType * type );
 /******************************************************************************/
 
+/************************** KSrvRespObj ******************************/
+
+rc_t KSrvRespObjRelease ( const KSrvRespObj * self );
+rc_t KSrvResponseGetObjByIdx ( const struct KSrvResponse * self,
+                               uint32_t idx, const KSrvRespObj ** obj );
+rc_t KSrvResponseGetObjByAcc ( const struct KSrvResponse * self,
+                               const char * acc, const KSrvRespObj ** obj );
+
+/* Do not release returned acc */
+rc_t KSrvRespObjGetAccOrId(const KSrvRespObj * self,
+	                       const char ** acc, uint32_t * id);
+
+/* Do not release returned msg */
+rc_t KSrvRespObjGetError(const KSrvRespObj * self,
+                         rc_t * rc, int64_t * code, const char ** msg);
+
+rc_t KSrvRespObjGetFileCount ( const KSrvRespObj * self, uint32_t * count ); 
+
+rc_t KSrvRespObjMakeIterator ( const KSrvRespObj * self,
+                               KSrvRespObjIterator ** it ); 
+rc_t KSrvRespObjIteratorRelease ( const KSrvRespObjIterator * self );
+
+rc_t KSrvRespObjIteratorNextFile ( KSrvRespObjIterator * self,
+                                   KSrvRespFile ** file );
+
+/* Do not release returned char pointers */
+rc_t KSrvRespFileGetAccOrId(const KSrvRespFile * self,
+    const char ** acc, uint32_t * id);
+rc_t KSrvRespFileGetClass(const KSrvRespFile * self, const char ** itemClass);
+
+rc_t KSrvRespFileGetSize(const KSrvRespFile * self, uint64_t *size);
+rc_t KSrvRespFileGetCache ( const KSrvRespFile * self,
+                            const struct VPath ** path );
+rc_t KSrvRespFileGetLocal ( const KSrvRespFile * self,
+                            const struct VPath ** path );
+rc_t KSrvRespFileRelease  ( const KSrvRespFile * self );
+
+rc_t KSrvRespFileMakeIterator ( const KSrvRespFile * self,
+    KSrvRespFileIterator ** it );
+rc_t KSrvRespFileIteratorRelease ( const KSrvRespFileIterator * self );
+rc_t KSrvRespFileIteratorNextPath ( KSrvRespFileIterator * self,
+                                    const struct VPath ** path );
+
+/******************************************************************************/
 
 #ifdef __cplusplus
 }

@@ -330,6 +330,18 @@ static struct NGS_Pileup_v1 * ITF_Reference_v1_get_filtered_pileup_slice ( const
     return ( struct NGS_Pileup_v1 * ) ret;
 }
 
+static bool ITF_Reference_v1_is_local ( const NGS_Reference_v1 * self, NGS_ErrBlock_v1 * err )
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
+    ON_FAIL ( bool ret = NGS_ReferenceGetIsLocal ( Self ( self ), ctx ) )
+    {
+        NGS_ErrBlockThrow ( err, ctx );
+    }
+
+    CLEAR ();
+    return ret;
+}
+
 
 #undef Self
 
@@ -339,7 +351,7 @@ NGS_Reference_v1_vt ITF_Reference_vt =
     {
         "NGS_Reference",
         "NGS_Reference_v1",
-        3,
+        4,
         & ITF_Refcount_vt . dad
     },
 
@@ -366,7 +378,10 @@ NGS_Reference_v1_vt ITF_Reference_vt =
 
     /* 1.3 */
     ITF_Reference_v1_get_filtered_alignments,
-    ITF_Reference_v1_get_filtered_align_slice
+    ITF_Reference_v1_get_filtered_align_slice,
+
+    /* 1.4 */
+    ITF_Reference_v1_is_local
 };
 
 
@@ -407,6 +422,7 @@ void NGS_ReferenceInit ( ctx_t ctx,
         assert ( vt -> get_statistics     != NULL );
         assert ( vt -> next               != NULL );
         assert ( vt -> get_blobs          != NULL );
+        assert ( vt -> get_is_local       != NULL );
     }
 
     assert ( coll );
@@ -737,6 +753,23 @@ struct NGS_Statistics* NGS_ReferenceGetStatistics ( const NGS_Reference * self, 
     return NULL;
 }
 
+/* GetisLocal
+ */
+bool NGS_ReferenceGetIsLocal ( const NGS_Reference * self, ctx_t ctx )
+{
+    if ( self == NULL )
+    {
+        FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get local" );
+    }
+    else
+    {
+        return VT ( self, get_is_local ) ( self, ctx );
+    }
+
+    return false;
+}
+
 /* GetBlobs
  */
 struct NGS_ReferenceBlobIterator* NGS_ReferenceGetBlobs ( NGS_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size )
@@ -883,6 +916,13 @@ struct NGS_Statistics* Null_ReferenceGetStatistics ( const NGS_Reference * self,
     return NULL;
 }
 
+static bool Null_ReferenceGetIsLocal ( const NGS_Reference * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing);
+    INTERNAL_ERROR ( xcSelfNull, "NULL Reference accessed" );
+    return false;
+}
+
 static bool Null_ReferenceIteratorNext ( NGS_Reference * self, ctx_t ctx )
 {
     return false;
@@ -914,6 +954,7 @@ static NGS_Reference_vt Null_Reference_vt_inst =
     Null_ReferenceGetPileups,
     Null_ReferenceGetPileupSlice,
     Null_ReferenceGetStatistics,
+    Null_ReferenceGetIsLocal,
     Null_ReferenceGetBlobs,
 
     /* NGS_ReferenceIterator */

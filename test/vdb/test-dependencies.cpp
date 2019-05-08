@@ -141,18 +141,18 @@ FIXTURE_TEST_CASE(TestNoDeps, RefseqFixture) {
     const VDatabase *db = NULL;
     const char SRR600096[] = "SRR600096";
     REQUIRE_RC(VDBManagerOpenDBRead(mgr, &db, NULL, SRR600096));
-    RELEASE(VDatabase, db);
+//  RELEASE(VDatabase, db);
 
     VPath* acc = NULL;
     REQUIRE_RC(VFSManagerMakePath(vmgr, &acc, SRR600096));
     const VPath *local = NULL;
-    REQUIRE_RC(VResolverLocal(resolver, acc, &local));
-    RELEASE(VPath, acc);
+/*  REQUIRE_RC(VResolverLocal(resolver, acc, &local));
+    RELEASE(VPath, acc); noved to cldn */
     const String *s = NULL;
-    REQUIRE_RC(VPathMakeString(local, &s));
+/*  REQUIRE_RC(VPathMakeString(local, &s));
     REQUIRE(s && s->addr);
 
-    REQUIRE_RC(VDBManagerOpenDBRead(mgr, &db, NULL, s->addr));
+    REQUIRE_RC(VDBManagerOpenDBRead(mgr, &db, NULL, s->addr)); */
 
     const VDBDependencies *dep = NULL;
 
@@ -326,18 +326,18 @@ FIXTURE_TEST_CASE(TestManyYesDep, RefseqFixture) {
     const VDatabase *db = NULL;
     const char SRR543323[] = "SRR543323";
     REQUIRE_RC(VDBManagerOpenDBRead(mgr, &db, NULL, SRR543323));
-    RELEASE(VDatabase, db);
+//  RELEASE(VDatabase, db);
 
     VPath* acc = NULL;
     REQUIRE_RC(VFSManagerMakePath(vmgr, &acc, SRR543323));
     const VPath *local = NULL;
-    REQUIRE_RC(VResolverLocal(resolver, acc, &local));
+//  REQUIRE_RC(VResolverLocal(resolver, acc, &local)); noved to cldn
     RELEASE(VPath, acc);
     const String *s = NULL;
-    REQUIRE_RC(VPathMakeString(local, &s));
+/*  REQUIRE_RC(VPathMakeString(local, &s));
     REQUIRE(s && s->addr);
 
-    REQUIRE_RC(VDBManagerOpenDBRead(mgr, &db, NULL, s->addr));
+    REQUIRE_RC(VDBManagerOpenDBRead(mgr, &db, NULL, s->addr)); */
 
     const VDBDependencies *dep = NULL;
 

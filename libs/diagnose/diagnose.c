@@ -1929,7 +1929,7 @@ static String * KConfig_Resolver ( const KConfig * self ) {
     if ( rc != 0 ) {
         String str;
         CONST_STRING ( & str,
-                       "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi" );
+                       "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi" );
         rc = StringCopy ( ( const String ** ) & s, & str );
         assert ( rc == 0 );
     }
@@ -3714,12 +3714,16 @@ static rc_t STestCheckRemoteRepoKfg ( STest * self, bool * exists ) {
             }
         }
         else {
-            String c, f;
+            String c, f, t;
             CONST_STRING ( & c,
                 "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
             CONST_STRING ( & f,
                 "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi" );
-            if ( ! StringEqual ( p, & f ) && ! StringEqual ( p, & c ) ) {
+            CONST_STRING ( & t,
+                "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi" );
+            if ( ! StringEqual ( p, & f ) && ! StringEqual ( p, & c ) &&
+                 ! StringEqual ( p, & t ))
+            {
                 STestEnd ( self, eWarning,
                     "Main resolver-cgi is not standard: '%S'", p );
                 printed = true;
@@ -4027,12 +4031,16 @@ static rc_t STestCheckGapKfg ( STest * self, uint64_t tests ) {
             }
         }
         else {
-            String c, f;
+            String c, f, t;
             CONST_STRING ( & c,
                 "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
             CONST_STRING ( & f,
                 "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi" );
-            if ( ! StringEqual ( p, & f ) && ! StringEqual ( p, & c ) ) {
+            CONST_STRING ( & t,
+                "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi" );
+            if ( ! StringEqual ( p, & f ) && ! StringEqual ( p, & c ) &&
+                 ! StringEqual ( p, & t ))
+            {
                 STestEnd ( self, eWarning,
                            "Protected resolver-cgi is not standard: '%S'", p );
                 printed = true;
