@@ -37,6 +37,8 @@ struct KCacheTeeChunkReader;
 #include <klib/rc.h>
 #include <klib/debug.h>
 #include <klib/log.h>
+#include <klib/text.h>
+#include <klib/time.h>
 #include <klib/status.h>
 #include <klib/vector.h>
 #include <klib/container.h>
@@ -46,6 +48,7 @@ struct KCacheTeeChunkReader;
 #include <kproc/queue.h>
 #include <kproc/timeout.h>
 #include <kfs/chunk-reader.h>
+#include <kfs/lockfile.h>
 
 #include <arch-impl.h>
 
@@ -59,7 +62,7 @@ struct KCacheTeeChunkReader;
 #else
 #define MIN_PAGE_SIZE ( 4U * 1024U )
 #endif
-#define MSGQ_LENGTH 16
+#define MSGQ_LENGTH ( 16 * 1024 )
 #define BMWORDBITS 5
 #define BMWORDSIZE ( 1U << BMWORDBITS )
 #define BMWORDMASK ( BMWORDSIZE - 1 )
@@ -146,6 +149,46 @@ struct KCacheTeeFileMsg
     struct timeout_t * tm;
     size_t initial_page_idx;
 };
+
+typedef struct KCacheTeeFileTreeNode KCacheTeeFileTreeNode;
+struct KCacheTeeFileTreeNode
+{
+    BSTNode dad;
+    const KFile * file;
+    char path [ 4096 ];
+};
+
+static
+int64_t CC KCacheTeeFileTreeNodeFind ( const void *item, const BSTNode *n )
+{
+    const char * path = ( const char * ) item;
+    const KCacheTeeFileTreeNode * node = ( const KCacheTeeFileTreeNode * ) n;
+
+    return strcmp ( path, node -> path );
+}
+
+static
+int64_t CC KCacheTeeFileTreeNodeSort ( const BSTNode *item, const BSTNode *n )
+{
+    const KCacheTeeFileTreeNode * a = ( const KCacheTeeFileTreeNode * ) item;
+    const KCacheTeeFileTreeNode * b = ( const KCacheTeeFileTreeNode * ) n;
+
+    return strcmp ( a -> path, b -> path );
+}
+
+#if WINDOWS
+#error "declare a critical section here"
+#error "declare ENTER_CRIT_SECTION() here"
+#error "declare EXIT_CRIT_SECTION() here"
+#else
+#include <pthread.h>
+static pthread_mutex_t crit = PTHREAD_MUTEX_INITIALIZER;
+#define ENTER_CRIT_SECTION() \
+    pthread_mutex_lock ( & crit )
+#define EXIT_CRIT_SECTION() \
+    pthread_mutex_unlock ( & crit )
+#endif
+static BSTree open_cache_tee_files;
 
 static
 rc_t CC KCacheTeeChunkReaderDestroy ( KCacheTeeChunkReader * self )
@@ -453,6 +496,23 @@ static
 rc_t CC KCacheTeeFileDestroy ( KCacheTeeFile_v3 *self )
 {
     rc_t rc;
+
+    if ( self -> cache_file != NULL )
+    {
+        int status = ENTER_CRIT_SECTION ();
+        if ( status == 0 )
+        {
+            BSTNode * node = BSTreeFind ( & open_cache_tee_files, self -> path, KCacheTeeFileTreeNodeFind );
+            if ( node != NULL )
+            {
+                BSTreeUnlink ( & open_cache_tee_files, node );
+                free ( node );
+            }
+            
+            EXIT_CRIT_SECTION ();
+        }
+    }
+
     ( void ) rc;
 
     /* this must be done before sealing the queue */
@@ -1004,7 +1064,7 @@ rc_t CC KCacheTeeFileRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
 {
     struct timeout_t tm;
     /* TBD - need a default timeout on the manager object */
-    TimeoutInit ( & tm, 2 * 1000 );
+    TimeoutInit ( & tm, 10 * 1000 );
     return KCacheTeeFileTimedRead ( self, pos, buffer, bsize, num_read, & tm );
 }
 
@@ -1616,53 +1676,47 @@ rc_t KCacheTeeFileInitShared ( KCacheTeeFile_v3 * self )
 }
 
 static
-rc_t KCacheTeeFileOpen ( KCacheTeeFile_v3 * self, KDirectory * dir,
-    const char * fmt, va_list args, const KFile ** promoted )
+rc_t KCacheTeeFileOpen ( KCacheTeeFile_v3 * self, KDirectory * dir, const KFile ** promoted )
 {
     rc_t rc;
     uint64_t dummy;
-
     ( void ) dummy;
 
-    /* detect NO FILE CACHE case */
-    if ( fmt == NULL || fmt [ 0 ] == 0 )
+    STATUS ( STAT_PRG, "%s - duplicating directory reference %#p for possible promotion\n", __func__, dir );
+    rc = KDirectoryAddRef ( dir );
+    if ( rc == 0 )
     {
-        /* if ALSO not caching in RAM, then what's up? */
-        if ( self -> ram_limit == 0 )
+        uint32_t wait_loop_count;
+        KLockFile * lock = NULL;
+        
+        self -> dir = dir;
+
+        for ( wait_loop_count = 0; wait_loop_count < 10; ++ wait_loop_count )
         {
-            /* just return a reference to the input file */
-            STATUS ( STAT_QA, "%s - no RAM cache or file cache will be used\n", __func__ );
-            * promoted = self -> source;
-            return KFileAddRef ( self -> source );
-        }
-
-        STATUS ( STAT_PRG, "%s - no file cache will be used\n", __func__ );
-        return 0;
-    }
-
-    STATUS ( STAT_PRG, "%s - resolving cache file location\n", __func__ );
-    rc = KDirectoryVResolvePath ( dir, true, self -> path, sizeof self -> path, fmt, args );
-    if ( rc != 0 )
-    {
-        PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to resolve cache file path"
-                             , "func=%s"
-                             , __func__
-                      ) );
-    }
-    else
-    {
-        STATUS ( STAT_PRG, "%s - duplicating directory reference %#p\n", __func__, dir );
-        rc = KDirectoryAddRef ( dir );
-        if ( rc == 0 )
-        {
-            self -> dir = dir;
-
+            
             STATUS ( STAT_PRG, "%s - attempting to open file '%s' read-only\n", __func__, self -> path );
             rc = KDirectoryOpenFileRead ( dir, promoted, "%s", self -> path );
             if ( rc == 0 )
                 STATUS ( STAT_QA, "%s - file '%s' exists\n", __func__, self -> path );
             else
             {
+                STATUS ( STAT_PRG, "%s - attempting to lock file '%s' for update\n", __func__, self -> path );
+                rc = KDirectoryCreateLockFile ( dir, & lock, "%s.lock", self -> path );
+                if ( GetRCState ( rc ) == rcBusy )
+                {
+                    STATUS ( STAT_QA, "%s - file '%s' is busy - sleeping\n", __func__, self -> path );
+                    
+                    /* sleep */
+                    KSleepMs ( 250 );
+                    continue;
+                }
+
+                if ( rc != 0 )
+                {
+                    STATUS ( STAT_QA, "%s - failed to acquire lock for '%s' - %R\n", __func__, self -> path, rc );
+                    return rc;
+                }
+            
                 STATUS ( STAT_PRG
                          , "%s - attempting to open file '%s.cache' shared read/write\n"
                          , __func__
@@ -1716,6 +1770,9 @@ rc_t KCacheTeeFileOpen ( KCacheTeeFile_v3 * self, KDirectory * dir,
                         rc = KCacheTeeFileInitExisting ( self );
                 }
 
+                STATUS ( STAT_PRG, "%s - releasing lock on file '%s'\n", __func__, self -> path );
+                KLockFileRelease ( lock );
+
                 if ( rc != 0 )
                 {
                     PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to open cache file '$(path).cache'"
@@ -1728,6 +1785,9 @@ rc_t KCacheTeeFileOpen ( KCacheTeeFile_v3 * self, KDirectory * dir,
                     self -> cache_file = NULL;
                 }
             }
+
+            /* always break */
+            break;
         }
     }
 
@@ -1883,14 +1943,114 @@ void KCacheTeeFileBindConstants ( KCacheTeeFile_v3 * self,
     self -> ram_limit = ram_pages;
 }
 
+static
+rc_t KDirectoryVMakeKCacheTeeFileInt ( KDirectory * self,
+    const KFile ** tee, const KFile * source,
+    size_t page_size, uint32_t cluster_factor, uint32_t ram_pages,
+    const char * nul_term_cache_path )
+{
+    rc_t rc;
+    KCacheTeeFile_v3 * obj;
+
+    STATUS ( STAT_QA, "%s - making cache-tee file v3\n", __func__ );
+
+    /* allocate space for the object */
+    STATUS ( STAT_PRG, "%s - allocating %u byte object\n", __func__, sizeof * obj );
+    obj = malloc ( sizeof * obj );
+    if ( obj == NULL )
+    {
+        rc = RC ( rcFS, rcFile, rcAllocating, rcMemory, rcExhausted );
+        PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to allocate $(bytes) bytes for object"
+                             , "func=%s,bytes=%zu"
+                             , __func__
+                             , sizeof * obj
+                      ) );
+    }
+    else
+    {
+        /* zero everything out but the path */
+        const size_t clear_bytes = sizeof * obj - sizeof obj -> path + 1;
+        STATUS ( STAT_GEEK, "%s - zeroing first %zu bytes\n", __func__, clear_bytes );
+        memset ( obj, 0, clear_bytes );
+
+        /* bind it to vtable - it becomes a KFile after this */
+        STATUS ( STAT_PRG, "%s - binding virtual table\n", __func__ );
+        rc = KFileInit_v1 ( & obj -> dad, ( const KFile_vt * ) & KCacheTeeFile_v3_vt,
+                            "KCacheTeeFile_v3", "", true, false );
+        if ( rc != 0 )
+        {
+            free ( obj );
+            PLOGERR ( klogInt, ( klogInt, rc, "$(func) - failed to bind vtable to object"
+                                 , "func=%s"
+                                 , __func__
+                          ) );
+        }
+        else
+        {
+            /* bind the parameters and constants to object */
+            KCacheTeeFileBindConstants ( obj, page_size, cluster_factor, ram_pages );
+
+            /* study the source file */
+            rc = KCacheTeeFileBindSourceFile ( obj, source );
+            if ( rc == 0 )
+            {
+                /* create the RAM cache */
+                rc = KCacheTeeFileMakeRAMCache ( obj );
+                if ( rc == 0 )
+                {
+                    /* make the bitmap */
+                    rc = KCacheTeeFileMakeBitmap ( obj );
+                    if ( rc == 0 )
+                    {
+                        /* open cache file - ignore errors */
+                        if ( nul_term_cache_path == NULL || nul_term_cache_path [ 0 ] == 0 )
+                            STATUS ( STAT_PRG, "%s - no file cache will be used\n", __func__ );
+                        else
+                        {
+                            size_t cache_path_size = string_copy_measure
+                                ( obj -> path, sizeof obj -> path, nul_term_cache_path );
+                            assert ( cache_path_size < sizeof obj -> path );
+
+                            KCacheTeeFileOpen ( obj, self, tee );
+                        }
+                        
+                        /* if the promoted file exists,
+                           then just hand out that */
+                        if ( * tee != NULL )
+                        {
+                            KFileRelease_v1 ( & obj -> dad );
+                            return 0;
+                        }
+
+                        /* make all of the synchronization primitives */
+                        rc = KCacheTeeFileInitSync ( obj );
+                        if ( rc == 0 )
+                        {
+                            /* start the background thread */
+                            rc = KCacheTeeFileStartBgThread ( obj );
+                            if ( rc == 0 )
+                            {
+                                * tee = & obj -> dad;
+                                return 0;
+                            }
+                        }
+                    }
+                }
+            }
+ 
+            KFileRelease_v1 ( & obj -> dad );
+        }
+    }
+
+    return rc;
+}
+
 LIB_EXPORT rc_t CC KDirectoryVMakeKCacheTeeFile_v3 ( KDirectory * self,
     const KFile ** tee, const KFile * source,
     size_t page_size, uint32_t cluster_factor, uint32_t ram_pages,
     const char * fmt, va_list args )
 {
     rc_t rc;
-
-    STATUS ( STAT_QA, "%s - making cache-tee file v3\n", __func__ );
 
     if ( tee == NULL )
         rc = RC ( rcFS, rcFile, rcConstructing, rcParam, rcNull );
@@ -1911,84 +2071,81 @@ LIB_EXPORT rc_t CC KDirectoryVMakeKCacheTeeFile_v3 ( KDirectory * self,
         }
         else
         {
-            KCacheTeeFile_v3 * obj;
-
-            /* allocate space for the object */
-            STATUS ( STAT_PRG, "%s - allocating %u byte object\n", __func__, sizeof * obj );
-            obj = malloc ( sizeof * obj );
-            if ( obj == NULL )
+            /* detect case where caller wants no physical cache file */
+            if ( fmt == NULL || fmt [ 0 ] == 0 )
             {
-                rc = RC ( rcFS, rcFile, rcAllocating, rcMemory, rcExhausted );
-                PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to allocate $(bytes) bytes for object"
-                                     , "func=%s,bytes=%zu"
-                                     , __func__
-                                     , sizeof * obj
-                              ) );
+                /* if ALSO not caching in RAM, then what's up? */
+                if ( ram_pages == 0 )
+                {
+                    /* just return a reference to the input file */
+                    STATUS ( STAT_QA, "%s - no RAM cache or file cache will be used\n", __func__ );
+                    rc = KFileAddRef ( source );
+                    if ( rc == 0 )
+                        * tee = source;
+                    return rc;
+                }
+
+                rc = KDirectoryVMakeKCacheTeeFileInt ( self, tee, source,
+                    page_size, cluster_factor, ram_pages, fmt );
             }
             else
             {
-                /* zero everything out but the path */
-                const size_t clear_bytes = sizeof * obj - sizeof obj -> path + 1;
-                STATUS ( STAT_GEEK, "%s - zeroing first %zu bytes\n", __func__, clear_bytes );
-                memset ( obj, 0, clear_bytes );
-
-                /* bind it to vtable - it becomes a KFile after this */
-                STATUS ( STAT_PRG, "%s - binding virtual table\n", __func__ );
-                rc = KFileInit_v1 ( & obj -> dad, ( const KFile_vt * ) & KCacheTeeFile_v3_vt,
-                    "KCacheTeeFile_v3", "", true, false );
-                if ( rc != 0 )
-                {
-                    free ( obj );
-                    PLOGERR ( klogInt, ( klogInt, rc, "$(func) - failed to bind vtable to object"
-                                         , "func=%s"
-                                         , __func__
-                                  ) );
-                }
+                KCacheTeeFileTreeNode * new_node = malloc ( sizeof * new_node );
+                if ( new_node == NULL )
+                    rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
                 else
                 {
-                    /* bind the parameters and constants to object */
-                    KCacheTeeFileBindConstants ( obj, page_size, cluster_factor, ram_pages );
-
-                    /* study the source file */
-                    rc = KCacheTeeFileBindSourceFile ( obj, source );
-                    if ( rc == 0 )
+                    /* expand cache path */
+                    rc = KDirectoryVResolvePath ( self, true,
+                        new_node -> path, sizeof new_node -> path, fmt, args );
+                    if ( rc != 0 )
                     {
-                        /* create the RAM cache */
-                        rc = KCacheTeeFileMakeRAMCache ( obj );
-                        if ( rc == 0 )
+                        PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to resolve cache file path"
+                                             , "func=%s"
+                                             , __func__
+                                      ) );
+                    }
+                    else
+                    {
+
+                        /* protect cache FILE from multiple threads and processes */
+                        int status = ENTER_CRIT_SECTION ();
+                        if ( status != 0 )
+                            rc = RC ( rcFS, rcDirectory, rcConstructing, rcLock, rcUnknown );
+                        else
                         {
-                            /* make the bitmap */
-                            rc = KCacheTeeFileMakeBitmap ( obj );
-                            if ( rc == 0 )
+                            const KCacheTeeFileTreeNode * node = ( const KCacheTeeFileTreeNode * )
+                                BSTreeFind ( & open_cache_tee_files, new_node -> path, KCacheTeeFileTreeNodeFind );
+                            if ( node != NULL )
                             {
-                                /* open cache file - ignore errors */
-                                KCacheTeeFileOpen ( obj, self, fmt, args, tee );
-
-                                /* if the promoted file exists,
-                                   then just hand out that */
-                                if ( * tee != NULL )
-                                {
-                                    KFileRelease_v1 ( & obj -> dad );
-                                    return 0;
-                                }
-
-                                /* make all of the synchronization primitives */
-                                rc = KCacheTeeFileInitSync ( obj );
+                                free ( new_node );
+                                rc = KFileAddRef ( node -> file );
                                 if ( rc == 0 )
+                                    * tee = node -> file;
+                            }
+                            else
+                            {
+                                rc = KDirectoryVMakeKCacheTeeFileInt ( self, & new_node -> file, source,
+                                    page_size, cluster_factor, ram_pages, new_node -> path );
+                                if ( rc != 0 )
+                                    free ( new_node );
+                                else
                                 {
-                                    /* start the background thread */
-                                    rc = KCacheTeeFileStartBgThread ( obj );
+                                    rc = BSTreeInsertUnique ( & open_cache_tee_files,
+                                        & new_node -> dad, NULL, KCacheTeeFileTreeNodeSort );
                                     if ( rc == 0 )
+                                        * tee = new_node -> file;
+                                    else
                                     {
-                                        * tee = & obj -> dad;
-                                        return 0;
+                                        KFileRelease ( new_node -> file );
+                                        free ( new_node );
                                     }
                                 }
                             }
                         }
+            
+                        EXIT_CRIT_SECTION ();
                     }
- 
-                    KFileRelease_v1 ( & obj -> dad );
                 }
             }
         }
