@@ -688,8 +688,34 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
 
     while ( 1 )
     {
+        static bool inited = false;
+        static int m = 0;
+        static int e = 0;
+
         /* read through TLS library */
         ret = vdb_mbedtls_ssl_read( &self -> ssl, buffer, bsize );
+
+        if (!inited) {
+            const char * v = getenv("NCBI_VDB_ERR_MBEDTLS_READ");
+            if (v != NULL) {
+                m = atoi(v);
+                if (m < 0)
+                    m = 0;
+            }
+            e = m;
+            inited = true;
+        }
+        if (m > 0) {
+            if (!e) {
+                e = m;
+                if (ret >= 0) {
+                    ret = -76;
+                    self->rd_rc
+                        = RC(rcNS, rcStream, rcReading, rcTimeout, rcExhausted);
+                }
+            }
+            --e;
+        }
 
         /* no error */
         if ( ret >= 0 )
@@ -1022,11 +1048,38 @@ rc_t ktls_ssl_setup ( KTLSStream *self, const String *host )
 static 
 rc_t ktls_handshake ( KTLSStream *self )
 {
+    static bool inited = false;
+    static int m = 0;
+    static int e = 0;
+
     int ret;
 
     STATUS ( STAT_QA, "Performing SSL/TLS handshake...\n" );
 
     ret = vdb_mbedtls_ssl_handshake( &self -> ssl );
+
+    if (!inited) {
+        const char * v = getenv("NCBI_VDB_ERR_MBEDTLS_HANDSHAKE");
+        if (v != NULL) {
+            m = atoi(v);
+            if (m < 0)
+                m = 0;
+        }
+        e = m;
+        inited = true;
+    }
+    if (m > 0) {
+        if (!e) {
+            e = m;
+            if (ret >= 0) {
+                ret = -76;
+                self->rd_rc
+                    = RC(rcKrypto, rcFile, rcOpening, rcConnection, rcFailed);
+            }
+        }
+        --e;
+    }
+
     while ( ret != 0 )
     {
         if ( ret != MBEDTLS_ERR_SSL_WANT_READ && 
