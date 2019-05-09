@@ -289,7 +289,7 @@ rc_t KCacheTeeFileCacheInsert ( KCacheTeeFile_v3 * self,
         STATUS ( STAT_PRG, "BG: %s - cache file not in use\n", __func__ );
     else
     {
-        STATUS ( STAT_PRG, "BG: %s - writing %zu bytes to cache file @ lu\n"
+        STATUS ( STAT_PRG, "BG: %s - writing %zu bytes to cache file @ %lu\n"
                  , __func__
                  , size
                  , pos
@@ -452,13 +452,15 @@ rc_t CC KCacheTeeFileDestroy ( KCacheTeeFile_v3 *self )
     rc_t rc;
     ( void ) rc;
 
+    /* this must be done before sealing the queue */
+    STATUS ( STAT_PRG, "%s - setting 'quitting' flag\n", __func__ );
+    self -> quitting = true;
+
     /* seal msg queue */
     STATUS ( STAT_PRG, "%s - sealing message queue\n", __func__ );
     KQueueSeal ( self -> msgq );
 
     /* stop background thread */
-    STATUS ( STAT_PRG, "%s - setting 'quitting' flag\n", __func__ );
-    self -> quitting = true;
     STATUS ( STAT_PRG, "%s - waiting for bg thread to quit\n", __func__ );
     rc = KThreadWait ( self -> thread, NULL );
 
@@ -919,6 +921,7 @@ rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
         while ( ! KCacheTeeFilePageInCache ( self, initial_page_idx ) )
         {
             KCacheTeeFileMsg * msg;
+            STATUS ( STAT_PRG, "%s - starting page not found in cache\n", __func__ );
 
             /* 5. deliver read request message to bg thread */
             STATUS ( STAT_GEEK, "%s - allocating message object\n", __func__ );
@@ -936,11 +939,12 @@ rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
             msg -> initial_page_idx = initial_page_idx;
 
             STATUS ( STAT_GEEK, "%s - populated message object "
-                     "{ pos=%lu, size=%zu, tm=%s, initial_page_idx=%zu }\n"
+                     "{ pos=%lu, size=%zu, tm=%d%s, initial_page_idx=%zu }\n"
                      , __func__
                      , msg -> pos
                      , msg -> size
-                     , ( msg -> tm != NULL ) ? "present" : "infinite"
+                     , ( msg -> tm != NULL ) ? ( int ) msg -> tm -> mS : -1
+                     , ( msg -> tm != NULL ) ? "mS (present)" : " (infinite)"
                      , msg -> initial_page_idx
                 );
 
@@ -1047,11 +1051,11 @@ rc_t CC KCacheTeeFileReadChunked ( const KCacheTeeFile_v3 *self, uint64_t pos,
             if ( total + chsize > bsize )
                 to_read = bsize - total;
             
-            STATUS ( STAT_PRG, "%s - reading from file @ lu\n", __func__, pos + total );
+            STATUS ( STAT_PRG, "%s - reading from file @ %lu\n", __func__, pos + total );
             rc = KFileReadAll_v1 ( & self -> dad, pos + total, chbuf, to_read, & num_read );
             if ( rc == 0 && num_read != 0 )
             {
-                STATUS ( STAT_PRG, "%s - consuming chunk of %zu bytes @ lu\n"
+                STATUS ( STAT_PRG, "%s - consuming chunk of %zu bytes @ %lu\n"
                          , __func__
                          , num_read
                          , pos + total
@@ -1096,11 +1100,11 @@ rc_t CC KCacheTeeFileTimedReadChunked ( const KCacheTeeFile_v3 *self, uint64_t p
             if ( total + chsize > bsize )
                 to_read = bsize - total;
             
-            STATUS ( STAT_PRG, "%s - reading from file @ lu\n", __func__, pos + total );
+            STATUS ( STAT_PRG, "%s - reading from file @ %lu\n", __func__, pos + total );
             rc = KFileTimedReadAll_v1 ( & self -> dad, pos + total, chbuf, to_read, & num_read, tm );
             if ( rc == 0 && num_read != 0 )
             {
-                STATUS ( STAT_PRG, "%s - consuming chunk of %zu bytes @ lu\n"
+                STATUS ( STAT_PRG, "%s - consuming chunk of %zu bytes @ %lu\n"
                          , __func__
                          , num_read
                          , pos + total
@@ -1177,11 +1181,12 @@ rc_t KCacheTeeFileBGLoop ( KCacheTeeFile_v3 * self )
             KCacheTeeFileMsg msg = * dmsg;
             free ( dmsg );
 
-            STATUS ( STAT_PRG, "BG: %s - received msg { pos=%lu, size=%zu, tm=%s, initial_page_idx=%zu }\n"
+            STATUS ( STAT_PRG, "BG: %s - received msg { pos=%lu, size=%zu, tm=%d%s, initial_page_idx=%zu }\n"
                      , __func__
                      , msg . pos
                      , msg . size
-                     , ( msg . tm != NULL ) ? "present" : "infinite"
+                     , ( msg . tm != NULL ) ? ( int ) msg . tm -> mS : -1
+                     , ( msg . tm != NULL ) ? "mS (present)" : " (infinite)"
                      , msg . initial_page_idx
                 );
 
@@ -1233,6 +1238,10 @@ rc_t KCacheTeeFileBGLoop ( KCacheTeeFile_v3 * self )
                 STATUS ( STAT_PRG, "BG: %s - broadcasting event to all waiting readers\n", __func__ );
                 KConditionBroadcast ( self -> cond );
             }
+            else
+            {
+                STATUS ( STAT_PRG, "BG: %s - page %zu not found.\n", __func__, msg . initial_page_idx );
+            }
 
             STATUS ( STAT_PRG, "BG: %s - testing number of pages to read\n", __func__ );
             if ( msg . initial_page_idx < end_page_idx )
@@ -1257,6 +1266,7 @@ rc_t KCacheTeeFileBGLoop ( KCacheTeeFile_v3 * self )
                              , msg . pos
                         );
                     rc = KFileReadChunked ( self -> source, msg . pos, self -> chunks, msg . size, & num_read );
+                    STATUS ( STAT_PRG, "BG: %s - rc=%R, num_read=%zu\n", __func__, rc, num_read );
                 }
                 else
                 {
@@ -1267,10 +1277,16 @@ rc_t KCacheTeeFileBGLoop ( KCacheTeeFile_v3 * self )
                         );
                     rc = KFileTimedReadChunked ( self -> source, msg . pos,
                         self -> chunks, msg . size, & num_read, msg . tm );
+                    STATUS ( STAT_PRG, "BG: %s - rc=%R, num_read=%zu\n", __func__, rc, num_read );
                 }
+            }
+            else
+            {
+                STATUS ( STAT_PRG, "BG: %s - no pages to read, message ignored\n", __func__ );
             }
         }
     }
+    STATUS ( STAT_PRG, "BG: %s - exiting loop and background thread\n", __func__ );
 
     return rc;
 }
@@ -1667,7 +1683,7 @@ rc_t KCacheTeeFileOpen ( KCacheTeeFile_v3 * self, KDirectory * dir,
                     rc = KDirectoryCreateFile ( dir, & self -> cache_file,
                         true, 0666, kcmCreate | kcmParents, "%s.cache", self -> path );
                     STATUS ( STAT_GEEK
-                             , "%s - create file attempt: fd = %d, rc = $R\n"
+                             , "%s - create file attempt: fd = %d, rc = %R\n"
                              , __func__
                              , KFileGetSysFile ( self -> cache_file, & dummy ) -> fd
                              , rc
