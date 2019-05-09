@@ -838,23 +838,23 @@ rc_t KSocketMakePath ( const char * name, char * buf, size_t buf_size )
 
 static
 rc_t
-TimedConnect( int fd, const struct sockaddr* ss, size_t ss_size, int32_t timeoutMs )
+TimedConnect( int socketFd, const struct sockaddr* ss, size_t ss_size, int32_t timeoutMs )
 {
     int res;
     /* set non-blocking mode */
-    int flag = fcntl ( fd, F_GETFL );
+    int flag = fcntl ( socketFd, F_GETFL );
     if ( flag == -1 )
     {
-        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "TimedConnect(%d): fcntl(F_GETFL) failed\n", fd ) );
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "TimedConnect(%d): fcntl(F_GETFL) failed\n", socketFd ) );
         return KSocketHandleConnectCall ( errno );
     }
-    if ( fcntl ( fd, F_SETFL, flag | O_NONBLOCK ) == -1 )
+    if ( fcntl ( socketFd, F_SETFL, flag | O_NONBLOCK ) == -1 )
     {
-        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "TimedConnect(%d): fcnl(F_SETFL) failed\n", fd ) );
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "TimedConnect(%d): fcnl(F_SETFL) failed\n", socketFd ) );
         return KSocketHandleConnectCall ( errno );
     }
 
-    res = connect ( fd, ss, ss_size );
+    res = connect ( socketFd, ss, ss_size );
     if ( res == 0 )
     {
         return 0;
@@ -862,53 +862,57 @@ TimedConnect( int fd, const struct sockaddr* ss, size_t ss_size, int32_t timeout
 
     if ( errno == EINPROGRESS )
     {
-        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "TimedConnect(%d): in progress\n", fd ) );
-        struct epoll_event newPeerConnectionEvent;
-        struct epoll_event processableEvents;
-        unsigned int numEvents = -1;
+        rc_t rc = 0;
+        int epollFD;
 
-        int retVal = -1;
-        socklen_t retValLen = sizeof (retVal);
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "TimedConnect(%d): in progress\n", socketFd ) );
 
-        int epollFD = epoll_create( 1 );
+        epollFD = epoll_create( 1 );
         if ( epollFD == -1 )
         {
-            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "TimedConnect(%d): epoll_create() failed\n", fd ) );
-            return KSocketHandleConnectCall ( errno );
+            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "TimedConnect(%d): epoll_create() failed\n", socketFd ) );
+            rc = KSocketHandleConnectCall ( errno );
         }
-
-        newPeerConnectionEvent.data.fd = fd;
-        newPeerConnectionEvent.events = EPOLLOUT | EPOLLIN | EPOLLERR;
-
-        if ( epoll_ctl( epollFD, EPOLL_CTL_ADD, fd, & newPeerConnectionEvent ) == -1 )
+        else
         {
-            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "TimedConnect(%d): epoll_ctl() failed\n", fd ) );
-            return KSocketHandleConnectCall ( errno );
+            struct epoll_event newPeerConnectionEvent;
+            struct epoll_event processableEvents;
+            memset ( & newPeerConnectionEvent, 0, sizeof newPeerConnectionEvent );
+            newPeerConnectionEvent.data.fd = socketFd;
+            newPeerConnectionEvent.events = EPOLLOUT | EPOLLIN | EPOLLERR;
+
+            if ( epoll_ctl( epollFD, EPOLL_CTL_ADD, socketFd, & newPeerConnectionEvent ) == -1 )
+            {
+                DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "TimedConnect(%d): epoll_ctl() failed\n", socketFd ) );
+                rc = KSocketHandleConnectCall ( errno );
+            }
+            else if ( epoll_wait( epollFD, & processableEvents, 1, timeoutMs ) < 0 )
+            {
+                DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "TimedConnect(%d): epoll_wait() failed\n", socketFd ) );
+                rc = KSocketHandleConnectCall ( errno );
+            }
+            else
+            {
+                int retVal = -1;
+                socklen_t retValLen = sizeof (retVal);
+                if ( getsockopt( socketFd, SOL_SOCKET, SO_ERROR, & retVal, & retValLen ) < 0 )
+                {
+                    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "TimedConnect(%d): getsockopt() failed\n", socketFd ) );
+                    rc = KSocketHandleConnectCall ( errno );
+                }
+                else if ( retVal != 0 )
+                {
+                    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "TimedConnect(%d): getsockopt() returned error %d on the socket\n", socketFd, retVal ) );
+                    rc = KSocketHandleConnectCall ( errno );
+                }
+            }
         }
 
-        numEvents = epoll_wait( epollFD, & processableEvents, 1, timeoutMs );
-        if ( numEvents < 0 )
-        {
-            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "TimedConnect(%d): epoll_wait() failed\n", fd ) );
-            return KSocketHandleConnectCall ( errno );
-        }
-
-        if ( getsockopt( fd, SOL_SOCKET, SO_ERROR, & retVal, & retValLen ) < 0 )
-        {
-            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "TimedConnect(%d): getsockopt() failed\n", fd ) );
-            return KSocketHandleConnectCall ( errno );
-        }
-        if ( retVal != 0 )
-        {
-            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "TimedConnect(%d): getsockopt() returned error %d on the socket\n", fd, retVal ) );
-            return KSocketHandleConnectCall ( errno );
-        }
-
-        return 0;
+        return rc;
     }
     else
     {
-        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "TimedConnect(%d): connect() failed\n", fd ) );
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "TimedConnect(%d): connect() failed\n", socketFd ) );
         return KSocketHandleConnectCall ( errno );
     }
 }
