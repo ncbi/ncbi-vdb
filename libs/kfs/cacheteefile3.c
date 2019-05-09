@@ -363,7 +363,10 @@ rc_t CC KCacheTeeChunkReaderConsume ( KCacheTeeChunkReader * chunk,
         rc3 = KCacheTeeFileCacheInsert ( self, pos, buf, size );
 
         if ( rc2 != 0 )
+        {
+            STATUS ( STAT_PRG, "BG: %s - buffer not inserted into RAM cache - freeing\n", __func__ );
             free ( ( void * ) buf );
+        }
 
         if ( rc2 == 0 || rc3 == 0 )
         {
@@ -740,9 +743,10 @@ uint32_t KCacheTeeFileContigPagesInFileCache ( const KCacheTeeFile_v3 * self,
     found_zero = false;
 
     i = initial_page_idx >> BMWORDBITS;
-    STATUS ( STAT_GEEK, "%s - initial page idx=%zu, initial word idx=%zu\n"
+    STATUS ( STAT_GEEK, "%s - initial page idx=%zu, end page idx=%zu, initial word idx=%zu\n"
              , __func__
              , initial_page_idx
+             , end_page_idx
              , i
         );
 
@@ -978,6 +982,7 @@ rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
         count = KCacheTeeFileReadFromRAM ( self, pos, buffer, bsize, num_read, initial_page_idx );
         if ( count == 0 )
         {
+            STATUS ( STAT_PRG, "%s - page %zu not found in RAM cache\n", __func__, initial_page_idx );
 
             /* 8. read from file */
             STATUS ( STAT_PRG, "%s - attempt to read from cache file\n", __func__ );
