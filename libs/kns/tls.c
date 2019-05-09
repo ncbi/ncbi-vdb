@@ -695,7 +695,7 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
         /* read through TLS library */
         ret = vdb_mbedtls_ssl_read( &self -> ssl, buffer, bsize );
 
-        if (!inited) {
+        if (!inited) { /* simulate mbedtls read timeout */
             const char * v = getenv("NCBI_VDB_ERR_MBEDTLS_READ");
             if (v != NULL) {
                 m = atoi(v);
@@ -728,7 +728,8 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
         if ( self -> rd_rc != 0 )
         {
             rc = self -> rd_rc;
-            PLOGERR ( klogSys, ( klogSys, rc
+            if (self->mgr->logTlsErrors)
+              PLOGERR ( klogSys, ( klogSys, rc
                                  , "mbedtls_ssl_read returned $(ret) ( $(expl) )"
                                  , "ret=%d,expl=%s"
                                  , ret
@@ -1056,9 +1057,11 @@ rc_t ktls_handshake ( KTLSStream *self )
 
     STATUS ( STAT_QA, "Performing SSL/TLS handshake...\n" );
 
+    assert(self && self->mgr);
+
     ret = vdb_mbedtls_ssl_handshake( &self -> ssl );
 
-    if (!inited) {
+    if (!inited) { /* simulate mbedtls handshake timeout */
         const char * v = getenv("NCBI_VDB_ERR_MBEDTLS_HANDSHAKE");
         if (v != NULL) {
             m = atoi(v);
@@ -1102,7 +1105,8 @@ rc_t ktls_handshake ( KTLSStream *self )
                    or the error is something other than a validation error */
                 rc = RC ( rcKrypto, rcSocket, rcOpening, rcConnection, rcFailed );
 
-                PLOGERR ( klogSys, ( klogSys, rc
+                if (self->mgr->logTlsErrors)
+                  PLOGERR ( klogSys, ( klogSys, rc
                                      , "mbedtls_ssl_handshake returned $(ret) ( $(expl) )"
                                      , "ret=%d,expl=%s"
                                      , ret
