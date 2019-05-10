@@ -271,44 +271,49 @@ rc_t KCacheTeeFileRAMCacheInsert ( KCacheTeeFile_v3 * self,
             if ( rc == 0 && existing != NULL )
             {
                 STATUS ( STAT_PRG, "BG: %s - freeing LRU buffer\n", __func__ );
-                KVectorUnset ( self -> ram_cache, lmru -> pg_idx );
                 free ( existing );
             }
 
-            /* clear bit in bitmap if cache file not in use */
+            /* 8. forget pointers in vectors */
+            STATUS ( STAT_PRG, "BG: %s - clearing cache and mru-index vector entries\n", __func__ );
+            KVectorUnset ( self -> ram_cache, lmru -> pg_idx );
+            KVectorUnset ( self -> ram_cache_mru_idx, lmru -> pg_idx );
+
+            /* 9. clear bit in bitmap if cache file not in use */
             if ( self -> cache_file == NULL )
             {
                 STATUS ( STAT_PRG, "BG: %s - clear page %zu present in bitmap\n", __func__, pg_idx );
                 self -> bitmap [ pg_idx >> BMWORDBITS ] &= ~ ( 1U << ( pg_idx & BMWORDMASK ) );
             }
 
-            /* 9. reuse node and insert new guy as MRU */
+            /* 10. reuse node and insert new guy as MRU */
             STATUS ( STAT_PRG, "BG: %s - reusing MRU node and placing at head of list\n", __func__ );
             lmru -> pg_idx = pg_idx;
             DLListPushHead ( & self -> ram_cache_mru, & lmru -> dad );
+            KVectorSetPtr ( self -> ram_cache_mru_idx, pg_idx, lmru );
         }
 
         /* cache is not full */
         else
         {
-            /* 10. allocate node */
+            /* 11. allocate node */
             STATUS ( STAT_PRG, "BG: %s - allocating MRU node\n", __func__ );
             lmru = malloc ( sizeof * lmru );
             if ( lmru == NULL )
                 rc = RC ( rcFS, rcFile, rcReading, rcMemory, rcExhausted );
             else
             {
-                /* 11. insert into index */
+                /* 12. insert into index */
                 lmru -> pg_idx = pg_idx;
                 STATUS ( STAT_PRG, "BG: %s - inserting MRU node into index @ %zu\n", __func__, pg_idx );
                 rc = KVectorSetPtr ( self -> ram_cache_mru_idx, pg_idx, lmru );
                 if ( rc == 0 )
                 {
-                    /* 12. insert as MRU */
+                    /* 13. insert as MRU */
                     STATUS ( STAT_PRG, "BG: %s - placing MRU node into head of list\n", __func__ );
                     DLListPushHead ( & self -> ram_cache_mru, & lmru -> dad );
 
-                    /* 13. update cache count */
+                    /* 14. update cache count */
                     ++ self -> ram_pg_count;
                     STATUS ( STAT_PRG, "BG: %s - new RAM cache page count is %u\n"
                              , __func__
@@ -649,7 +654,7 @@ size_t KCacheTeeFileReadFromRAM ( const KCacheTeeFile_v3 *self, uint64_t pos,
     size_t i, total;
 
     STATUS ( STAT_PRG, "%s - reading contiguous pages from RAM cache\n", __func__ );
-    for ( i = total = 0; total < bsize; total += num_copied )
+    for ( i = total = 0; total < bsize; total += num_copied, ++ i )
     {
         rc_t rc;
         uint8_t * pg = NULL;
