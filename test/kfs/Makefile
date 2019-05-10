@@ -195,10 +195,11 @@ TEST_CACHETEE3_LIB = \
 
 $(TEST_BINDIR)/test-cachetee3: $(TEST_CACHETEE3_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_CACHETEE3_LIB)
-	rm *.o *.d
+#	rm *.o *.d
 
 cachetee3: $(TEST_BINDIR)/test-cachetee3
-	$(TEST_BINDIR)/test-cachetee3
+	rm -f cache.dat.cache org.dat
+	$(TEST_BINDIR)/test-cachetee3 -vvv
 
 #-------------------------------------------------------------------------------
 # test-lru-cache
@@ -255,6 +256,27 @@ $(TEST_BINDIR)/test-cachetee-out-of-space: $(CTOFS_OBJ)
 	$(LP) --exe -o $@ $^ $(CTOFS_LIB)
 	rm *.o *.d
 
+#-------------------------------------------------------------------------------
+# simple_q_test
+#
+SIMPLE_Q_TEST_SRC = \
+	simple_q_test
+
+SIMPLE_Q_TEST_OBJ = \
+	$(addsuffix .$(OBJX),$(SIMPLE_Q_TEST_SRC))
+
+SIMPLE_Q_TEST_LIB = \
+	-lkapp \
+    -sncbi-vdb \
+	-lktst
+
+$(TEST_BINDIR)/simple_q: $(SIMPLE_Q_TEST_OBJ)
+	$(LP) --exe -o $@ $^ $(SIMPLE_Q_TEST_LIB)
+	rm *.o *.d
+
+simple_q: $(TEST_BINDIR)/simple_q
+	$(TEST_BINDIR)/simple_q
+    
 ifeq (linux,$(OS))
 ifeq (1,$(HAVE_FUSE))
 #-------------------------------------------------------------------------------

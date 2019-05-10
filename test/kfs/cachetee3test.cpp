@@ -384,6 +384,7 @@ static rc_t read_all( const KFile * src, size_t block_size )
 
 //////////////////////////////////////////// Test-cases
 
+#if 0
 FIXTURE_TEST_CASE( CacheTee3_Basic, CT3Fixture )
 {
     KOutMsg( "Test: CacheTee3_Basic\n" );
@@ -494,6 +495,7 @@ FIXTURE_TEST_CASE( CacheTee3_Read, CT3Fixture )
     REQUIRE_RC( KFileRelease( org ) );
     REQUIRE_RC( KDirectoryRelease( dir ) );
 }
+#endif
 
 /* ------------------- CacheTee2_Multiple_Users_Multiple_Inst -------------------------------- */
 
@@ -502,27 +504,23 @@ static rc_t cache_access( CT3Fixture *fixture,
                           const KFile * origfile, const KFile * cacheteefile )
 {
     rc_t rc = 0;
-    int i;
-    const int num_chunks = 256;
+    const int num_chunks = 16;
     int chunk_pos[ num_chunks ];
-    int data_size = ( DATAFILESIZE / num_threads );
-    int data_offset = data_size * ( tid - 1 );
-    int chunk_size;
-    // last thread should read all remaining bytes
-    if ( tid == num_threads )
-        data_size = ( DATAFILESIZE - data_offset );
-    chunk_size = ( data_size / num_chunks );
-
-    for ( i = 0; i < num_chunks; ++i )
+    int chunk_len[ num_chunks ];
+    
+    for ( int i = 0; i < num_chunks; ++i )
     {
-        chunk_pos[ i ] = i * chunk_size + data_offset;
+        chunk_pos[ i ] = fixture -> rand_32( 0, DATAFILESIZE );
+        chunk_len[ i ] = fixture -> rand_32( 100, DATAFILESIZE / 128 );
     }
-    std::random_shuffle( &chunk_pos[ 0 ], &chunk_pos[ num_chunks ] );
-    for ( i = 0; i < num_chunks; ++i )
+    
+    for ( int i = 0; i < num_chunks; ++i )
     {
-        rc = fixture -> compare_file_content_3( origfile, cacheteefile, chunk_pos[ i ], chunk_size, NULL );
+        KOutMsg( "THREAD #%d / CHUNK #%d (%d.%d)\n", tid, i, chunk_pos[ i ], chunk_len[ i ] );
+        rc = fixture -> compare_file_content_3( origfile, cacheteefile, chunk_pos[ i ], chunk_len[ i ], NULL );
         if ( rc != 0 )
             break;
+        KOutMsg( "THREAD #%d / CHUNK #%d done\n", tid, i );
     }
     return rc;
 }
@@ -557,7 +555,7 @@ static rc_t CC thread_func( const KThread *self, void *data )
                                                      "%s", CACHEFILE );
                 if ( rc == 0 )
                 {
-                    KOutMsg( "Thread #%d\n", td -> tid );
+                    //KOutMsg( "Thread #%d\n", td -> tid );
                     rc = cache_access( td -> fixture, td -> tid, td -> num_threads, org, tee );
                     KOutMsg( "Thread #%d : %s\n", td -> tid, rc == 0 ? "OK" : "ERR" );
                     KFileRelease( tee );
@@ -571,7 +569,7 @@ static rc_t CC thread_func( const KThread *self, void *data )
     return 0;
 }
 
-const int num_treads = 8;
+const int num_treads = 2;
 
 FIXTURE_TEST_CASE( CacheTee3_Multiple_Users_Multiple_Inst, CT3Fixture )
 {
