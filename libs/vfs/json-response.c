@@ -635,12 +635,12 @@ static rc_t ItemAddFormat ( Item * self, const char * cType, const Data * dad,
                                  rcMemory, rcExhausted);
 	}
 	else if ( type == eSFFVdbcache && dad != NULL && dad -> acc != NULL ) {
-	    uint32_t s = string_measure ( dad -> acc, NULL ) + 1 + 8 + 1;
+	    uint32_t s = string_measure ( dad -> acc, NULL ) + 1 + 4 + 8 + 1;
             elm->name = calloc ( 1, s );
             if ( elm->name == NULL )
                 return RC ( rcVFS, rcQuery, rcExecuting,
                             rcMemory, rcExhausted );
-            rc = string_printf ( elm->name, s, NULL, "%s.vdbcache", dad -> acc );
+            rc = string_printf ( elm->name, s, NULL, "%s.sra.vdbcache", dad -> acc );
 	}
     }
 
@@ -1607,16 +1607,31 @@ static const char * ItemOrLocationGetName(const Item * item,
 }
 
 static /* don't free returned name !!! */
-rc_t LocationsGetVdbcacheName ( const Locations * self, const char ** name )
+rc_t LocationsGetVdbcacheName ( const Locations * cself,
+    const char ** name, const KSrvRespFile * file)
 {
-    assert ( self && name );
+    rc_t rc = 0;
+
+    assert ( cself && name );
 
     * name = NULL;
 
-    if ( self -> type == eSFFVdbcache )
-        * name = self -> name;
+    if (cself->type == eSFFVdbcache) {
+        if (cself->name == NULL
+            && file != NULL && file->item != NULL && file->item->acc != NULL)
+        {
+            Locations * self = (Locations*)cself;
+            uint32_t s = string_measure(file->item->acc, NULL) + 1 + 4 + 8 + 1;
+            self->name = calloc(1, s);
+            if (self->name == NULL)
+                return RC(rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted);
+            rc = string_printf(self->name, s, NULL,
+                "%s.sra.vdbcache", file->item->acc);
+        }
+        *name = cself->name;
+    }
 
-    return 0;
+    return rc;
 }
 
 static
@@ -2507,13 +2522,22 @@ rc_t KSrvRespFileGetAccOrName ( const KSrvRespFile * self, const char ** out,
                                                            const char ** tic)
 {
     rc_t rc = 0;
-    assert ( self && self -> item && tic );
+    const char *dummy = NULL;
+    if (tic == NULL)
+        tic = &dummy;
+    *tic = *out = NULL;
+    if (self == NULL || self->item == NULL)
+        return 0;
     * tic = self -> item -> tic;
-    rc = LocationsGetVdbcacheName ( self -> file, out );
+    rc = LocationsGetVdbcacheName ( self -> file, out, self );
     if ( * out != NULL )
         return rc;
     else
         return KSrvRespFileGetAccNoTic ( self, out );
+}
+
+rc_t KSrvRespFileGetName(const KSrvRespFile * self, const char ** name) {
+    return KSrvRespFileGetAccOrName(self, name, NULL);
 }
 
 rc_t KSrvRespFileGetId ( const KSrvRespFile * self, uint64_t * id,

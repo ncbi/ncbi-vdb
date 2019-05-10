@@ -68,6 +68,9 @@ rc_t KService1Search ( const struct KNSManager * mgr, const char * cgi,
 rc_t KSrvRespFileGetHttp ( const KSrvRespFile * self,
                            const struct VPath ** path );
 
+/* DON'T FREE RETURNED STRINGS !!! */
+rc_t KSrvRespFileGetName(const struct KSrvRespFile * self, const char ** name);
+
 #ifdef __cplusplus
 }
 #endif

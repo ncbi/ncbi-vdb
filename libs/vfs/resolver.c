@@ -333,26 +333,26 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
         break;
     case algSRAFlat:
         rc = string_printf ( expanded, bsize, size,
-            "%S%S.%s", & tok -> alpha, & tok -> digits, tok -> vdbcache ? "vdbcache" : "sra" );
+            "%S%S.%s", & tok -> alpha, & tok -> digits, tok -> vdbcache ? "sra.vdbcache" : "sra" );
         break;
     case algSRA1024:
         num = ( uint32_t ) strtoul ( tok -> digits . addr, NULL, 10 );
         rc = string_printf ( expanded, bsize, size,
             "%S/%06u/%S%S.%s", & tok -> alpha, num >> 10, & tok -> alpha, & tok -> digits,
-                               tok -> vdbcache ? "vdbcache" : "sra" );
+                               tok -> vdbcache ? "sra.vdbcache" : "sra" );
         break;
     case algSRA1000:
         num = ( uint32_t ) ( tok -> alpha . size + tok -> digits . size - 3 );
         rc = string_printf ( expanded, bsize, size,
             "%S/%.*S/%S%S.%s", & tok -> alpha, num, & tok -> acc, & tok -> alpha, & tok -> digits,
-                               tok -> vdbcache ? "vdbcache" : "sra" );
+                               tok -> vdbcache ? "sra.vdbcache" : "sra" );
         break;
     case algFUSE1000:
         num = ( uint32_t ) ( tok -> alpha . size + tok -> digits . size - 3 );
         rc = string_printf ( expanded, bsize, size,
             "%S/%.*S/%S%S/%S%S.%s", & tok -> alpha, num, & tok -> acc, 
             & tok -> alpha, & tok -> digits, & tok -> alpha, & tok -> digits,
-            tok -> vdbcache ? "vdbcache" : "sra" );
+            tok -> vdbcache ? "sra.vdbcache" : "sra" );
         break;
     case algREFSEQ:
         if ( ! legacy_wgs_refseq )
@@ -2318,6 +2318,11 @@ uint32_t get_accession_code ( const String * accession, VResolverAccToken *tok )
     else if (string_cmp(acc, size, "vdbcache", 8, size + 8) == 0)
     {   /* vdbcache uses the same code as its accession */
         tok -> vdbcache = true;
+        return code;
+    }
+    else if (string_cmp(acc, size, "sra.vdbcache", 12, size + 8) == 0)
+    {   /* vdbcache uses the same code as its accession */
+        tok->vdbcache = true;
         return code;
     }
     else

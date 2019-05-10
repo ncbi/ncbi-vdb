@@ -90,7 +90,7 @@ rc_t KSrvRespFileAddLocalAndCache ( struct KSrvRespFile * file,
 rc_t KSrvRespFileGetFormat ( const struct KSrvRespFile * self,
                              ESrvFileFormat * ff );
 
-/* DON"T FREE RETURNED STRINGS !!! */
+/* DON'T FREE RETURNED STRINGS !!! */
 rc_t KSrvRespFileGetAccOrName ( const struct KSrvRespFile * self,
                                 const char ** out, const char ** tic);
 rc_t KSrvRespFileGetId  ( const struct KSrvRespFile * self, uint64_t * id,
