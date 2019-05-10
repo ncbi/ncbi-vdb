@@ -504,7 +504,7 @@ static rc_t cache_access( CT3Fixture *fixture,
                           const KFile * origfile, const KFile * cacheteefile )
 {
     rc_t rc = 0;
-    const int num_chunks = 16;
+    const int num_chunks = 4;
     int chunk_pos[ num_chunks ];
     int chunk_len[ num_chunks ];
     
@@ -548,7 +548,7 @@ static rc_t CC thread_func( const KThread *self, void *data )
             if ( rc == 0 )
             {
                 const KFile * tee;
-                uint32_t cluster_factor = 0;
+                uint32_t cluster_factor = 2;
                 uint32_t ram_pages = 0;
                 rc = KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org, BLOCKSIZE,
                                                      cluster_factor, ram_pages,
@@ -579,25 +579,20 @@ FIXTURE_TEST_CASE( CacheTee3_Multiple_Users_Multiple_Inst, CT3Fixture )
 
     KThread *t [ num_treads ];
     ThreadData td [ num_treads ];
-    rc_t rc = 0;
-    for ( int i = 0; i < num_treads && rc == 0; ++i )
+    for ( int i = 0; i < num_treads; ++i )
     {
-        //KOutMsg( "creating thread #%d\n", i );
         td[ i ].tid = i + 1;
         td[ i ].num_threads = num_treads;
         td[ i ].origfile = NULL;
         td[ i ].cacheteefile = NULL;
         td[ i ].fixture = this;        
-        rc = KThreadMake ( &( t[ i ] ), thread_func, &( td[ i ] ) );
-        REQUIRE_RC( rc );
+        REQUIRE_RC( KThreadMake ( &( t[ i ] ), thread_func, &( td[ i ] ) ) );
     }
     
-    for ( int i = 0; i < num_treads && rc == 0; ++i )
+    for ( int i = 0; i < num_treads; ++i )
     {
-        //KOutMsg( "waiting for thread #%d\n", i );        
         rc_t rc_thread;
-        rc = KThreadWait ( t[ i ], &rc_thread );
-        REQUIRE_RC( rc );
+        REQUIRE_RC( KThreadWait ( t[ i ], &rc_thread ) );
         REQUIRE_RC( rc_thread );
         REQUIRE_RC( KThreadRelease ( t[ i ] ) );
     }
@@ -641,7 +636,6 @@ OptDef TestOptions[] =
 rc_t CC KMain ( int argc, char *argv [] )
 {
     Args * args;
-    /* bool has_info = true; */
     /* we are adding this dummy argument to enable commandline parsing for the verbose flag(s) -vvvvvvvv */
     rc_t rc = ArgsMakeAndHandle( &args, argc, argv,
             1, TestOptions, sizeof TestOptions / sizeof TestOptions [ 0 ] );
@@ -652,17 +646,6 @@ rc_t CC KMain ( int argc, char *argv [] )
         rc = CacheTeeTests( argc, argv );
         KOutMsg( "and the result is: %R\n", rc );
     }
-
-    /*
-    while( has_info )
-    {
-        rc_t rc1;
-        const char * filename;
-        const char * funcname;
-        uint32_t lineno;
-        has_info = GetUnreadRCInfo ( &rc1, &filename, &funcname, &lineno );    
-    }
-    */
     return rc;
 }
 
