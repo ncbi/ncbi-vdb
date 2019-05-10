@@ -53,7 +53,7 @@
 
 using namespace std;
 
-/* #define BENCHMARK */
+//#define BENCHMARK
 
 TEST_SUITE ( KHashTableTestSuite )
 
@@ -369,8 +369,8 @@ TEST_CASE ( Klib_HashTableMapStrings )
     rc_t rc;
 
     KHashTable *hmap;
-    rc = KHashTableMake (
-        &hmap, sizeof ( char * ), sizeof ( char * ), 0, 0.0, KHT_key_type_cstr );
+    rc = KHashTableMake ( &hmap, sizeof ( char * ), sizeof ( char * ), 0, 0.0,
+        KHT_key_type_cstr );
     REQUIRE_RC ( rc );
     const char *JOJOA[] = {"JOJO01", "JOJO02", "JOJO03", "JOJO04", "JOJO05",
         "JOJO06", "JOJO07", "JOJO08", "JOJO09", "JOJO10", "JOJO11", "JOJO12"};
@@ -930,8 +930,6 @@ TEST_CASE ( Klib_stdunorderedSetBench )
         printf ( "Found %lu,", c );
         double lps = (double)loops / us;
         printf ( "numelem=%lu\t%.1f Mlookups/sec, ", numelem, lps );
-        printf ( "load factor %f,", hset.load_factor () );
-        printf ( "buckets %ld,", hset.bucket_count () );
 
         stopwatch ();
         c = 0;
@@ -943,8 +941,6 @@ TEST_CASE ( Klib_stdunorderedSetBench )
         printf ( "Random found %lu,", c );
         lps = (double)loops / us;
         printf ( "\t%.1f Mlookups/sec, ", lps );
-        printf ( "load factor %f,", hset.load_factor () );
-        printf ( "buckets %ld,", hset.bucket_count () );
         printf ( "\n" );
     }
     printf ( "\n" );
@@ -1093,7 +1089,7 @@ TEST_CASE ( Klib_KHash_Speed )
         printf ( "KHash %lu %lu us elapsed (%lu hash/sec, %lu Mbytes/sec)\n",
             len, us, hps, mbps );
 
-        len *= 2;
+        len *= 1.5;
     }
 }
 

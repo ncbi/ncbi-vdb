@@ -850,8 +850,9 @@ LIB_EXPORT uint64_t KHash ( const char *s, size_t len )
     /* Special handling of 8 byte keys. We're not sure if they're strings
      * or little-endian integers. */
     if ( len == 8 ) {
-        uint64_t a = Fetch64 ( s );
-        return ( a << 1u ) + ( a >> 55u );
+        uint64_t ll1 = Fetch64 ( s );
+        uint64_t hash=HashLen16(ll1, k0, k2);
+        return hash;
     }
 
     if ( len == 0 ) return 0;
