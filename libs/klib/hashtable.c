@@ -851,7 +851,13 @@ LIB_EXPORT uint64_t KHash ( const char *s, size_t len )
      * or little-endian integers. */
     if ( len == 8 ) {
         uint64_t ll1 = Fetch64 ( s );
-        uint64_t hash=HashLen16(ll1, k0, k2);
+        uint64_t ll2 = ( ll1 & 0xFCFFFFFFFFFFFFFCU );
+        uint64_t hash;
+        hash = ll2 * k1;
+        hash += uint64_ror(ll2, 33) * k2;
+        hash = uint64_ror(hash,33);
+        hash += (ll1 << 2);
+        hash += (ll1 >> 54);
         return hash;
     }
 

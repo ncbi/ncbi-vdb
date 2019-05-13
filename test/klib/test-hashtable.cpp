@@ -114,6 +114,24 @@ TEST_CASE ( Klib_KHash_Adjacent )
     REQUIRE_LE ( diff, (uint64_t)7 );
 }
 
+TEST_CASE ( Klib_KHash_Adjacent2 )
+{
+    uint64_t hash1, hash2;
+
+    char buf[16];
+
+    int i=0;
+    sprintf(buf,"ABCDEFG%d", ++i);
+    hash1 = KHash ( buf , strlen(buf));
+    sprintf(buf,"ABCDEFG%d", ++i);
+    hash2 = KHash ( buf , strlen(buf));
+
+    hash1 &= 0xffffffu;
+    hash2 &= 0xffffffu;
+    auto diff = labs ( static_cast<long int> ( hash2 - hash1 ) );
+    REQUIRE_LE ( diff, (long int)7 );
+}
+
 TEST_CASE ( Klib_KHash_Collide )
 {
     // We fill a buffer with random bytes, and then increment each byte once
