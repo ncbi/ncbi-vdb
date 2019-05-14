@@ -41,6 +41,7 @@
 #include <poll.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sys/event.h>
 
 
 /* socket_wait
@@ -94,3 +95,36 @@ int socket_wait ( int fd, int events, timeout_t *tm )
 
     return status;
 }
+
+
+int connect_wait ( int socketFd, int32_t timeoutMs )
+{
+    int kq = kqueue();
+    if ( kq < 0) 
+    {
+        return errno;
+    }
+
+    struct kevent change; 
+    EV_SET( & change, socketFd, EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, NULL);
+    EV_SET( & change, socketFd, EVFILT_WRITE, EV_ADD | EV_CLEAR, 0, 0, NULL);  
+
+    struct kevent event;
+    struct timespec tmout = { 0, 0 };
+    tmout . tv_nsec = timeoutMs * 1000000;
+    int nev = kevent(kq, &change, 1, &event, 1, &tmout);
+    if ( nev == 0 )
+    {
+        printf("Number events: %d, filter: %x, flags: %x, data: %ld\n", nev, event.filter, event.flags, event.data);
+    }
+    else if ( nev < 0 )
+    {
+        close ( kq );
+        return errno;
+    }
+
+    close ( kq );
+    return 0;
+}
+
+
