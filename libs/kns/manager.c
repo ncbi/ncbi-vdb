@@ -590,11 +590,44 @@ static void KNSManagerSetNCBI_VDB_NET ( KNSManager * self, const KConfig * kfg )
 } 
 
 
+static int32_t KNSManagerPrepareHttpReadTimeout(KConfig* kfg) {
+    int64_t result = 0;
+    rc_t rc = KConfigReadI64(kfg, "/http/timeout/read", &result);
+    if (rc == 0)
+        return result;
+    else
+        return MAX_HTTP_READ_LIMIT;
+}
+
+static bool KNSManagerPrepareLogTlsErrors(KConfig* kfg) {
+    const char * e = getenv("NCBI_VDB_TLS_LOG_ERR");
+    if (e != NULL)
+        if (e[0] == '\0')
+            return true;
+        else {
+            if (e[0] == '0' ||
+                e[0] == 'f') /* false */
+            {
+                return false;
+            }
+            else
+                return true;
+        }
+    else {
+        bool log = false;
+        rc_t rc = KConfigReadBool(kfg, "/tls/NCBI_VDB_TLS_LOG_ERR", &log);
+        if (rc != 0)
+            return false;
+        else
+            return log;
+    }
+}
+
 LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
 {
     rc_t rc;
 
-    if ( mgrp == NULL )
+    if ( mgrp == NULL || kfg == NULL)
         rc = RC ( rcNS, rcMgr, rcAllocating, rcParam, rcNull );
     else
     {
@@ -607,10 +640,12 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
             mgr -> conn_timeout = MAX_CONN_LIMIT;
             mgr -> conn_read_timeout = MAX_CONN_READ_LIMIT;
             mgr -> conn_write_timeout = MAX_CONN_WRITE_LIMIT;
-            mgr -> http_read_timeout = MAX_HTTP_READ_LIMIT;
+            mgr -> http_read_timeout = KNSManagerPrepareHttpReadTimeout(kfg);
             mgr -> http_write_timeout = MAX_HTTP_WRITE_LIMIT;
             mgr -> maxTotalWaitForReliableURLs_ms = 10 * 60 * 1000; /* 10 min */
             mgr -> maxNumberOfRetriesOnFailureForReliableURLs = 10;
+
+            mgr->logTlsErrors = KNSManagerPrepareLogTlsErrors(kfg);
 
             rc = KNSManagerInit (); /* platform specific init in sysmgr.c ( in unix|win etc. subdir ) */
             if ( rc == 0 )
@@ -707,6 +742,9 @@ bool KNSManagerLogNcbiVdbNetError ( const KNSManager * self ) {
     return false;
 #endif
     else {
+        if (!self->logTlsErrors)
+            return false;
+
         if (self->NCBI_VDB_NETnoLogError)
             return false;
         else {

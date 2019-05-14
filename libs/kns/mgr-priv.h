@@ -80,6 +80,7 @@ struct KNSManager
     const struct Cloud * cloud;
 
     bool verbose;
+    bool logTlsErrors;
 
     bool NCBI_VDB_NETnoLogError;
     bool NCBI_VDB_NETkfgValueSet;
