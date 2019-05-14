@@ -43,6 +43,10 @@ struct timeout_t;
  */
 int socket_wait ( int fd, int events, struct timeout_t *tm );
 
+/* connect_wait
+ *  wait for a connection to become active or a timeout
+ */
+int connect_wait ( int socketFd, int32_t timeoutMs );
 
 #ifdef __cplusplus
 }
