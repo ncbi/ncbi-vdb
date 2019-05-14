@@ -31,6 +31,7 @@
 #include <ktst/unit_test.hpp>
 
 #include <unistd.h>
+#include <errno.h>
 
 #include <klib/rc.h>
 #include <klib/text.h>
@@ -47,14 +48,21 @@ TEST_SUITE_WITH_ARGS_HANDLER(KnsTestSuite, argsHandler);
 using namespace std;
 using namespace ncbi::NK;
 
-//////////////////////////////////////////// HTTP connections
+//////////////////////////////////////////// errors connecting to Internet sockets
 
 // mock system call
 int set_errno = 0;
 uint32_t tries = 0;
-extern "C"
-int epoll_wait(int epfd, struct epoll_event *events, int maxevents, int timeout)
-{   // fake a timeout
+
+#ifdef MAC
+    extern "C"
+    int kevent(int kq, const struct kevent *changelist, int nchanges, struct kevent *eventlist, int nevents,
+         const struct timespec *timeout)
+#else
+    extern "C"
+    int epoll_wait(int epfd, struct epoll_event *events, int maxevents, int timeout)
+#endif
+{   // fake an error
     errno = set_errno;
     ++tries;
     return -1;
@@ -69,12 +77,12 @@ TEST_CASE(Connect_Timeout)
     String url;
     CONST_STRING( &url, "www.google.com" );
     KEndPoint ep;
-    REQUIRE_RC ( KNSManagerInitDNSEndpoint ( mgr, & ep, &url, 0 ) );
+    REQUIRE_RC ( KNSManagerInitDNSEndpoint ( mgr, & ep, &url, 80 ) );
 
     timeout_t tm;
     TimeoutInit ( & tm, 1 );
     KSocket* socket;
-    cerr << "vvv expect to see 'epoll_wait() failed: connect_wait() failed'" << endl;
+    cerr << "vvv expect to see 'connect_wait() failed'" << endl;
     set_errno = ETIMEDOUT;
     tries = 0;
     rc_t rc = KNSManagerMakeRetryTimedConnection( mgr, & socket, & tm, 0, 0, NULL, & ep);
@@ -82,7 +90,7 @@ TEST_CASE(Connect_Timeout)
     REQUIRE_EQ ( ( int ) rcTimeout, ( int ) GetRCObject ( rc ) );
     REQUIRE_EQ ( ( int ) rcExhausted, ( int ) GetRCState ( rc ) );
     REQUIRE_EQ ( 1u, tries );
-    cerr << "^^^ expect to see 'epoll_wait() failed: connect_wait() failed'" << endl;
+    cerr << "^^^ expect to see 'connect_wait() failed'" << endl;
 
     REQUIRE_RC ( KNSManagerRelease(mgr) );
 }
@@ -96,12 +104,12 @@ TEST_CASE(Connect_CtrlC)
     String url;
     CONST_STRING( &url, "www.google.com" );
     KEndPoint ep;
-    REQUIRE_RC ( KNSManagerInitDNSEndpoint ( mgr, & ep, &url, 0 ) );
+    REQUIRE_RC ( KNSManagerInitDNSEndpoint ( mgr, & ep, &url, 80 ) );
 
     timeout_t tm;
     TimeoutInit ( & tm, 10000 );
     KSocket* socket;
-    cerr << "vvv expect to see 'epoll_wait() failed: connect_wait() interrupted'" << endl;
+    cerr << "vvv expect to see 'connect_wait() interrupted'" << endl;
     set_errno = EINTR;
     tries = 0;
     rc_t rc = KNSManagerMakeRetryTimedConnection( mgr, & socket, & tm, 0, 0, NULL, & ep);
@@ -109,7 +117,7 @@ TEST_CASE(Connect_CtrlC)
     REQUIRE_EQ ( ( int ) rcConnection, ( int ) GetRCObject ( rc ) );
     REQUIRE_EQ ( ( int ) rcInterrupted, ( int ) GetRCState ( rc ) );
     REQUIRE_EQ ( 1u, tries );
-    cerr << "^^^ expect to see 'epoll_wait() failed: connect_wait() interrupted'" << endl;
+    cerr << "^^^ expect to see 'connect_wait() interrupted'" << endl;
 
     REQUIRE_RC ( KNSManagerRelease(mgr) );
 }

@@ -106,25 +106,17 @@ int connect_wait ( int socketFd, int32_t timeoutMs )
     }
 
     struct kevent change; 
-    EV_SET( & change, socketFd, EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, NULL);
-    EV_SET( & change, socketFd, EVFILT_WRITE, EV_ADD | EV_CLEAR, 0, 0, NULL);  
+    EV_SET( & change, socketFd, EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, NULL );
+    EV_SET( & change, socketFd, EVFILT_WRITE, EV_ADD | EV_CLEAR, 0, 0, NULL );  
 
     struct kevent event;
     struct timespec tmout = { 0, 0 };
     tmout . tv_nsec = timeoutMs * 1000000;
-    int nev = kevent(kq, &change, 1, &event, 1, &tmout);
-    if ( nev == 0 )
-    {
-        printf("Number events: %d, filter: %x, flags: %x, data: %ld\n", nev, event.filter, event.flags, event.data);
-    }
-    else if ( nev < 0 )
-    {
-        close ( kq );
-        return errno;
-    }
 
-    close ( kq );
-    return 0;
+    int nev = kevent( kq, & change, 1, & event, 1, & tmout );
+
+    close( kq );
+    return nev < 0 ? errno : 0;
 }
 
 
