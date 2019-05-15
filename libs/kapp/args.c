@@ -2403,3 +2403,59 @@ bool CC Is32BitAndDisplayMessage( void )
     return false;
 #endif
 }
+
+/* ==========
+ * AppendMode option lives here
+ */
+static
+const char * append_usage[] =
+        { "Append program output to a file if it does exist.", NULL };
+
+OptDef AppenddModeOptions []  =
+{
+    {
+        OPTION_APPEND,  /* option name */
+        ALIAS_APPEND,   /* option alias */
+        NULL,           /* helper function */
+        append_usage,     /* array of strings used as a helper */
+        1,              /* "There can be only one" (c) Highlander */
+        false,          /* it is a flag, so no argument value */
+        false           /* that is not required parameter */
+    }
+};
+
+rc_t CC ArgsAddAppendModeOption ( Args * self )
+{
+    return ArgsAddOptionArray (
+                        self,
+                        AppenddModeOptions,
+                        sizeof ( AppenddModeOptions ) / sizeof (OptDef)
+                        /*, NULL, NULL */
+                        );
+}   /* ArgsAddAppendModeOption () */
+
+rc_t CC ArgsHandleAppendMode (const Args * self)
+{
+    uint32_t count;
+    rc_t rc;
+
+    rc = ArgsOptionCount ( self, OPTION_APPEND, & count);
+    if (rc == 0)
+    {
+        ArgsAppendModeSet ( count != 0 );
+    }
+
+    return rc;
+}   /* ArgsHandleAppendMode () */
+
+static bool G_append_mode = false;
+
+bool CC ArgsIsAppendModeSet ( void )
+{
+    return G_append_mode;
+}   /* ArgsIsAppendModeSet () */
+
+void CC ArgsAppendModeSet ( bool AppendMode )
+{
+    G_append_mode = AppendMode;
+}   /* ArgsAppendModeSet () */
