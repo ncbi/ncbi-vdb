@@ -861,8 +861,19 @@ TimedConnect( int socketFd, const struct sockaddr* ss, size_t ss_size, int32_t t
 
     if ( errno == EINPROGRESS )
     {
-        int err = connect_wait( socketFd, timeoutMs );
-        if ( err == EINTR )
+        int res = connect_wait( socketFd, timeoutMs );
+        if ( res > 0 )
+        {
+            return 0;
+        }
+
+        if ( res == 0 ) /* timed out */
+        {
+            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "TimedConnect(%d): connect_wait() timed out\n", socketFd ) );
+            return KSocketHandleConnectCall ( ETIMEDOUT );
+        }
+
+        if ( errno == EINTR )
         {
             DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "TimedConnect(%d): connect_wait() interrupted\n", socketFd ) );
             return RC ( rcNS, rcSocket, rcCreating, rcConnection, rcInterrupted );
@@ -870,7 +881,7 @@ TimedConnect( int socketFd, const struct sockaddr* ss, size_t ss_size, int32_t t
         else
         {
             DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "TimedConnect(%d): connect_wait() failed\n", socketFd ) );
-            return KSocketHandleConnectCall ( err );
+            return KSocketHandleConnectCall ( errno );
         }
     }
     else

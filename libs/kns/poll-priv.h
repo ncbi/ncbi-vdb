@@ -45,6 +45,10 @@ int socket_wait ( int fd, int events, struct timeout_t *tm );
 
 /* connect_wait
  *  wait for a connection to become active or a timeout
+ * Returns
+ *  1 on success
+ *  0 on timeout
+ *  -1 on error (sets errno)
  */
 int connect_wait ( int socketFd, int32_t timeoutMs );
 

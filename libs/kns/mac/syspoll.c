@@ -51,14 +51,14 @@ int socket_wait ( int fd, int events, timeout_t *tm )
 {
     int i, status;
     struct pollfd fds [ 1 ];
-        
+
     /* poll for data with no delay */
     for ( i = 0; i < 2; ++ i )
     {
         fds [ 0 ] . fd = fd;
         fds [ 0 ] . events = events;
         fds [ 0 ] . revents = 0;
-        
+
         status = poll ( fds, sizeof fds / sizeof fds [ 0 ], 0 );
         if ( status > 0 )
             return fds [ 0 ] . revents;
@@ -100,14 +100,14 @@ int socket_wait ( int fd, int events, timeout_t *tm )
 int connect_wait ( int socketFd, int32_t timeoutMs )
 {
     int kq = kqueue();
-    if ( kq < 0) 
+    if ( kq < 0)
     {
-        return errno;
+        return -1;
     }
 
-    struct kevent change; 
+    struct kevent change;
     EV_SET( & change, socketFd, EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, NULL );
-    EV_SET( & change, socketFd, EVFILT_WRITE, EV_ADD | EV_CLEAR, 0, 0, NULL );  
+    EV_SET( & change, socketFd, EVFILT_WRITE, EV_ADD | EV_CLEAR, 0, 0, NULL );
 
     struct kevent event;
     struct timespec tmout = { 0, 0 };
@@ -116,7 +116,11 @@ int connect_wait ( int socketFd, int32_t timeoutMs )
     int nev = kevent( kq, & change, 1, & event, 1, & tmout );
 
     close( kq );
-    return nev < 0 ? errno : 0;
+    if ( nev < 0 )
+    {
+        return -1;
+    }
+    return nev == 0 ? 0 : 1;
 }
 
 

@@ -48,9 +48,37 @@ TEST_SUITE_WITH_ARGS_HANDLER(KnsTestSuite, argsHandler);
 using namespace std;
 using namespace ncbi::NK;
 
-//////////////////////////////////////////// errors connecting to Internet sockets
+//////////////////////////////////////////// connecting to Internet sockets
+
+class ConnectFixture
+{
+public:
+    ConnectFixture()
+    :   mgr ( nullptr ),
+        socket ( nullptr )
+    {
+        THROW_ON_RC ( KNSManagerMake ( & mgr ) );
+        String url;
+        CONST_STRING( &url, "www.google.com" );
+        THROW_ON_RC ( KNSManagerInitDNSEndpoint ( mgr, & ep, &url, 80 ) );
+
+        TimeoutInit ( & tm, 1 );
+
+    }
+
+    ~ConnectFixture()
+    {
+        KNSManagerRelease(mgr);
+    }
+
+    KNSManager* mgr;
+    KEndPoint ep;
+    timeout_t tm;
+    KSocket* socket;
+};
 
 // mock system call
+int return_val = 0;
 int set_errno = 0;
 uint32_t tries = 0;
 
@@ -65,51 +93,33 @@ uint32_t tries = 0;
 {   // fake an error
     errno = set_errno;
     ++tries;
-    return -1;
+    return return_val;
 }
 
-TEST_CASE(Connect_Timeout)
-{   //VDB-3754: asynch connnection, test timeout
+FIXTURE_TEST_CASE(Connect_OK, ConnectFixture)
+{   //VDB-3754: asynch connnection, success
+    return_val = 1; /* epoll_wait: success */
+    rc_t rc = KNSManagerMakeRetryTimedConnection( mgr, & socket, & tm, 0, 0, NULL, & ep );
+    REQUIRE_RC ( rc );
+}
 
-    KNSManager* mgr;
-    REQUIRE_RC ( KNSManagerMake(&mgr) );
-
-    String url;
-    CONST_STRING( &url, "www.google.com" );
-    KEndPoint ep;
-    REQUIRE_RC ( KNSManagerInitDNSEndpoint ( mgr, & ep, &url, 80 ) );
-
-    timeout_t tm;
-    TimeoutInit ( & tm, 1 );
-    KSocket* socket;
-    cerr << "vvv expect to see 'connect_wait() failed'" << endl;
-    set_errno = ETIMEDOUT;
+FIXTURE_TEST_CASE(Connect_Timeout, ConnectFixture)
+{   //VDB-3754: asynch connnection, test timeout, no retries
+    cerr << "vvv expect to see 'connect_wait() timed out'" << endl;
+    return_val = 0; /* epoll_wait: timeout */
     tries = 0;
     rc_t rc = KNSManagerMakeRetryTimedConnection( mgr, & socket, & tm, 0, 0, NULL, & ep);
     REQUIRE_RC_FAIL ( rc );
     REQUIRE_EQ ( ( int ) rcTimeout, ( int ) GetRCObject ( rc ) );
     REQUIRE_EQ ( ( int ) rcExhausted, ( int ) GetRCState ( rc ) );
     REQUIRE_EQ ( 1u, tries );
-    cerr << "^^^ expect to see 'connect_wait() failed'" << endl;
-
-    REQUIRE_RC ( KNSManagerRelease(mgr) );
+    cerr << "^^^ expect to see 'connect_wait() timed out'" << endl;
 }
 
-TEST_CASE(Connect_CtrlC)
-{   //VDB-3754: asynch connnection, test interruption by CtrlC
-
-    KNSManager* mgr;
-    REQUIRE_RC ( KNSManagerMake(&mgr) );
-
-    String url;
-    CONST_STRING( &url, "www.google.com" );
-    KEndPoint ep;
-    REQUIRE_RC ( KNSManagerInitDNSEndpoint ( mgr, & ep, &url, 80 ) );
-
-    timeout_t tm;
-    TimeoutInit ( & tm, 10000 );
-    KSocket* socket;
+FIXTURE_TEST_CASE(Connect_CtrlC, ConnectFixture)
+{   //VDB-3754: asynch connnection, test interruption by CtrlC, no retries
     cerr << "vvv expect to see 'connect_wait() interrupted'" << endl;
+    return_val = -1; /* epoll_wait: error */
     set_errno = EINTR;
     tries = 0;
     rc_t rc = KNSManagerMakeRetryTimedConnection( mgr, & socket, & tm, 0, 0, NULL, & ep);
@@ -118,8 +128,6 @@ TEST_CASE(Connect_CtrlC)
     REQUIRE_EQ ( ( int ) rcInterrupted, ( int ) GetRCState ( rc ) );
     REQUIRE_EQ ( 1u, tries );
     cerr << "^^^ expect to see 'connect_wait() interrupted'" << endl;
-
-    REQUIRE_RC ( KNSManagerRelease(mgr) );
 }
 
 //////////////////////////////////////////// Main

@@ -112,41 +112,44 @@ int socket_wait ( int fd, int events, timeout_t *tm )
 int connect_wait ( int socketFd, int32_t timeoutMs )
 {
     int epollFD = epoll_create( 1 );
-    if ( epollFD == -1 )
+    if ( epollFD < 0 )
     {
-        return errno;
+        return -1;
     }
     else
     {
         struct epoll_event newPeerConnectionEvent;
-        struct epoll_event processableEvents;
         memset ( & newPeerConnectionEvent, 0, sizeof newPeerConnectionEvent );
         newPeerConnectionEvent.data.fd = socketFd;
         newPeerConnectionEvent.events = EPOLLOUT | EPOLLIN | EPOLLERR;
 
-        if ( epoll_ctl( epollFD, EPOLL_CTL_ADD, socketFd, & newPeerConnectionEvent ) == -1 )
+        if ( epoll_ctl( epollFD, EPOLL_CTL_ADD, socketFd, & newPeerConnectionEvent ) < 0 )
         {
-            return errno;
-        }
-        else if ( epoll_wait( epollFD, & processableEvents, 1, timeoutMs ) < 0 )
-        {
-            return errno;
+            return -1;
         }
         else
         {
-            int retVal = -1;
-            socklen_t retValLen = sizeof (retVal);
-            if ( getsockopt( socketFd, SOL_SOCKET, SO_ERROR, & retVal, & retValLen ) < 0 )
+            struct epoll_event processableEvents;
+            int fdCount = epoll_wait( epollFD, & processableEvents, 1, timeoutMs );
+            if ( fdCount > 0 )
             {
-                return errno;
+                int retVal = -1;
+                socklen_t retValLen = sizeof (retVal);
+                if ( getsockopt( socketFd, SOL_SOCKET, SO_ERROR, & retVal, & retValLen ) < 0 )
+                {
+                    return -1;
+                }
+                else if ( retVal != 0 )
+                {
+                    return -1;
+                }
+                return 1;
             }
-            else if ( retVal != 0 )
-            {
-                return errno;
-            }
+
+            /* timed out or error */
+            return fdCount == 0 ? 0 : -1;
         }
     }
 
-    return 0;
 }
 
