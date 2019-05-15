@@ -139,9 +139,12 @@ FIXTURE_TEST_CASE ( IndexBigInsert, WKDB_Fixture )
                 int64_t row;
                 std::string key;
                 if (strm >> row >> key) {
-                    REQUIRE_RC(KIndexInsertText(idx, true, key.c_str(), row));
+                    rc_t rc = KIndexInsertText(idx, true, key.c_str(), row);
+                    if (rc != 0) {
+                        REQUIRE_RC(rc);
+                    }
                     ++n;
-                    if ((n & 0x3F) == 0) {
+                    if ((n & 0x3FF) == 0) {
                         if (Quitting()) break;
                         auto const now = clock();
                         if (now >= report) {

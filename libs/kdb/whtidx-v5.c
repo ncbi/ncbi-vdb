@@ -198,47 +198,6 @@ static bool updateEntry(KHTIndex_v5 *const self, uint64_t const i, int64_t const
     return false;
 }
 
-static bool FlushChecked(KHTIndex_v5 *const self, rc_t *rc)
-{
-    IdMapEntry *const end = self->entries + self->keyCount;
-    IdMapEntry *const last = self->entries + self->lastProjEntry;
-    if (last < end && last->firstId <= self->lastProjId && self->lastProjId <= last->lastId) {
-        KHTIndex_v5 newself;
-        IdMapEntry *entry = last;
-
-        memset(&newself, 0, sizeof(newself));
-        
-        while (++entry < end) {
-            char const *const key = entry->name;
-            size_t const keylen = cstring_byte_count(key);
-            int64_t const firstId = entry->firstId;
-            int64_t const lastId = entry->lastId;
-            
-            if (newself.keyCount == 0) {
-                if (!initializeWrite(&newself, rc)) return false;
-            }
-            if (!addNewEntry(&newself, keylen, key, firstId, lastId, rc))
-                return false;
-            newself.prvId = lastId;
-            newself.numId += (lastId - firstId) + 1;
-        }
-        KHTIndexWhack_v5(self);
-        *self = newself;
-    }
-    return true;
-}
-
-static FILE *LogFile(bool close) {
-    static FILE *file = NULL;
-    if (close) {
-        fclose(file);
-        file = NULL;
-    }
-    else if (file == NULL)
-        file = fopen("index.log", "w");
-    return file;
-}
-
 /** @brief: inserts a new entry into the index, or updates an existing one
  **/
 rc_t KHTIndexInsert( KHTIndex_v5 *const self
@@ -250,13 +209,6 @@ rc_t KHTIndexInsert( KHTIndex_v5 *const self
 
     assert(self != NULL);
     assert(key != NULL);
-
-#if 0
-    if (!FlushChecked(self, &rc))
-        abort();
-    
-    fprintf(LogFile(false), "%lli\t%s\n", (long long int)id, key);
-#endif
 
     keylen = cstring_byte_count(key);
     assert(keylen != 0); /* is this true? */
