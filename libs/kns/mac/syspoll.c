@@ -106,14 +106,14 @@ int connect_wait ( int socketFd, int32_t timeoutMs )
     }
 
     struct kevent change;
-    EV_SET( & change, socketFd, EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, NULL );
-    EV_SET( & change, socketFd, EVFILT_WRITE, EV_ADD | EV_CLEAR, 0, 0, NULL );
+    EV_SET( & change, socketFd, EVFILT_WRITE, EV_ADD, 0, 0, NULL );
 
     struct kevent event;
-    struct timespec tmout = { 0, 0 };
-    tmout . tv_nsec = timeoutMs * 1000000;
+    struct timespec timeout = { 0, 0 };
+    timeout . tv_sec = ( timeoutMs / 1000 );
+    timeout . tv_nsec = ( timeoutMs % 1000) * 1000 * 1000;
 
-    int nev = kevent( kq, & change, 1, & event, 1, & tmout );
+    int nev = kevent( kq, & change, 1, & event, 1, & timeout );
 
     close( kq );
     if ( nev < 0 )
