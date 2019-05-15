@@ -48,6 +48,14 @@ struct String;
 
 
 /*--------------------------------------------------------------------------
+ * PTNodeId
+ *  an integer pair encoded within a single word
+ */
+typedef uint32_t PTNodeId_v1;
+typedef uint64_t PTNodeId_v2;
+
+
+/*--------------------------------------------------------------------------
  * PTNode
  *  a node within text tree
  *
@@ -67,8 +75,8 @@ struct String;
  *  persisted image. navigation is therefore intrusive on an externally
  *  allocated node structure.
  */
-typedef struct PTNode PTNode;
-struct PTNode
+typedef struct PTNode_v1 PTNode_v1;
+struct PTNode_v1
 {
     /* minimally value data
        may also contain key string information,
@@ -82,8 +90,27 @@ struct PTNode
 
     /* used internally */
     const void *internal;
-    uint32_t id;
+    PTNodeId_v1 id;
 };
+
+typedef struct PTNode_v2 PTNode_v2;
+struct PTNode_v2
+{
+    /* minimally value data
+       may also contain key string information,
+       either by reference or literal text */
+    struct
+    {
+        const void *addr;
+        size_t size;
+
+    } data;
+
+    /* used internally */
+    const void *internal;
+    PTNodeId_v2 id;
+};
+
 
 /* MakeKey
  *  tries to make a key string from node
@@ -92,7 +119,8 @@ struct PTNode
  *  "key" [ OUT ] - return parameter for a key string allocation
  *  that must be whacked with StringWhack when no longer needed.
  */
-KLIB_EXTERN rc_t CC PTNodeMakeKey ( const PTNode *self, struct String const **key );
+KLIB_EXTERN rc_t CC PTNodeMakeKey_v1 ( const PTNode_v1 *self, struct String const **key );
+KLIB_EXTERN rc_t CC PTNodeMakeKey_v2 ( const PTNode_v2 *self, struct String const **key );
 
 
 /*--------------------------------------------------------------------------
@@ -117,7 +145,8 @@ KLIB_EXTERN rc_t CC PTNodeMakeKey ( const PTNode *self, struct String const **ke
  *  as a serial, integer value. it may be a byte offset or a combination of
  *  two integer values, as well as anything else.
  */
-typedef struct PTrie PTrie;
+typedef struct PTrie_v1 PTrie_v1;
+typedef struct PTrie_v2 PTrie_v2;
 
 /* Make
  *  make a persisted tree structure
@@ -130,9 +159,11 @@ typedef struct PTrie PTrie;
  *
  *  "byteswap" [ IN ] - true if persisted image must be byteswapped
  */
-KLIB_EXTERN rc_t CC PTrieMake ( PTrie **tt,
+KLIB_EXTERN rc_t CC PTrieMake_v1 ( PTrie_v1 **tt,
     const void *addr, size_t size, bool byteswap );
-KLIB_EXTERN rc_t CC PTrieMakeOrig ( PTrie **tt,
+KLIB_EXTERN rc_t CC PTrieMake_v2 ( PTrie_v2 **tt,
+    const void *addr, size_t size, bool byteswap );
+KLIB_EXTERN rc_t CC PTrieMakeOrig_v1 ( PTrie_v1 **tt,
     const void *addr, size_t size, bool byteswap );
 
 /* Count
@@ -143,13 +174,15 @@ KLIB_EXTERN rc_t CC PTrieMakeOrig ( PTrie **tt,
  *  return value:
  *    integer value >= 0
  */
-KLIB_EXTERN uint32_t CC PTrieCount ( const PTrie *self );
+KLIB_EXTERN pbst_count_t_v1 CC PTrieCount_v1 ( const PTrie_v1 *self );
+KLIB_EXTERN pbst_count_t_v2 CC PTrieCount_v2 ( const PTrie_v2 *self );
 
 /* Size
  *  returns the size in bytes
  *  of the PTrie image
  */
-KLIB_EXTERN size_t CC PTrieSize ( const PTrie *self );
+KLIB_EXTERN size_t CC PTrieSize_v1 ( const PTrie_v1 *self );
+KLIB_EXTERN size_t CC PTrieSize_v2 ( const PTrie_v2 *self );
 
 /* GetNode
  *  gets a PTNode from an id
@@ -162,7 +195,8 @@ KLIB_EXTERN size_t CC PTrieSize ( const PTrie *self );
  *    EINVAL => an invalid parameter was passed
  *    ENOENT => id out of range
  */
-KLIB_EXTERN rc_t CC PTrieGetNode ( const PTrie *self, PTNode *node, uint32_t id );
+KLIB_EXTERN rc_t CC PTrieGetNode_v1 ( const PTrie_v1 *self, PTNode_v1 *node, PTNodeId_v1 id );
+KLIB_EXTERN rc_t CC PTrieGetNode_v2 ( const PTrie_v2 *self, PTNode_v2 *node, PTNodeId_v2 id );
 
 /* Find
  * PTrieFindRE
@@ -182,11 +216,14 @@ KLIB_EXTERN rc_t CC PTrieGetNode ( const PTrie *self, PTNode *node, uint32_t id 
  *    0    => not found
  *    1..n => id of found pair
  */
-KLIB_EXTERN uint32_t CC PTrieFind ( const PTrie *self, struct String const *key, PTNode *rtn,
-    int ( CC * custom_cmp ) ( const void *item, const PBSTNode *n ,void *data), void * data );
+KLIB_EXTERN PTNodeId_v1 CC PTrieFind_v1 ( const PTrie_v1 *self, struct String const *key, PTNode_v1 *rtn,
+    int ( CC * custom_cmp ) ( const void *item, const PBSTNode_v1 *n, void *data ), void * data );
+KLIB_EXTERN PTNodeId_v2 CC PTrieFind_v2 ( const PTrie_v2 *self, struct String const *key, PTNode_v2 *rtn,
+    int ( CC * custom_cmp ) ( const void *item, const PBSTNode_v2 *n, void *data ), void * data );
 
 #if 0
-KLIB_EXTERN uint32_t CC PTrieFindRE ( const PTrie *self, struct String const *re, PTNode *rtn );
+KLIB_EXTERN PTNodeId_v1 CC PTrieFindRE_v1 ( const PTrie_v1 *self, struct String const *re, PTNode_v1 *rtn );
+KLIB_EXTERN PTNodeId_v2 CC PTrieFindRE_v2 ( const PTrie_v2 *self, struct String const *re, PTNode_v2 *rtn );
 #endif
 
 /* FindAll
@@ -214,11 +251,16 @@ KLIB_EXTERN uint32_t CC PTrieFindRE ( const PTrie *self, struct String const *re
  *    ENOBUFS => the found set was too large
  */
 #if 0
-KLIB_EXTERN rc_t CC PTrieFindAll ( const PTrie *self, struct String const *key,
-    PTNode buffer [], uint32_t capacity, uint32_t *num_found,
-    int ( CC * custom_cmp ) ( const void *item, const PBSTNode *n, void *data ), void *data );
-KLIB_EXTERN rc_t CC PTrieFindAllRE ( const PTrie *self, struct String const *re,
-    PTNode buffer [], uint32_t capacity, uint32_t *num_found );
+KLIB_EXTERN rc_t CC PTrieFindAll_v1 ( const PTrie_v1 *self, struct String const *key,
+    PTNode_v1 buffer [], pbst_count_t_v1 capacity, pbst_count_t_v1 *num_found,
+    int ( CC * custom_cmp ) ( const void *item, const PBSTNode_v1 *n, void *data ), void *data );
+KLIB_EXTERN rc_t CC PTrieFindAll_v2 ( const PTrie_v2 *self, struct String const *key,
+    PTNode_v2 buffer [], pbst_count_t_v2 capacity, pbst_count_t_v2 *num_found,
+    int ( CC * custom_cmp ) ( const void *item, const PBSTNode_v2 *n, void *data ), void *data );
+KLIB_EXTERN rc_t CC PTrieFindAllRE_v1 ( const PTrie_v1 *self, struct String const *re,
+    PTNode_v1 buffer [], pbst_count_t_v1 capacity, pbst_count_t_v1 *num_found );
+KLIB_EXTERN rc_t CC PTrieFindAllRE_v2 ( const PTrie_v2 *self, struct String const *re,
+    PTNode_v2 buffer [], pbst_count_t_v2 capacity, pbst_count_t_v2 *num_found );
 #endif
 
 /* ForEach
@@ -227,8 +269,10 @@ KLIB_EXTERN rc_t CC PTrieFindAllRE ( const PTrie *self, struct String const *re,
  *  "f" [ IN ] and "data" [ IN ] - iteration callback function for
  *  examining each TNode in the tree
  */
-KLIB_EXTERN void CC PTrieForEach ( const PTrie *self,
-    void ( CC * f ) ( PTNode *n, void *data ), void *data );
+KLIB_EXTERN void CC PTrieForEach_v1 ( const PTrie_v1 *self,
+    void ( CC * f ) ( PTNode_v1 *n, void *data ), void *data );
+KLIB_EXTERN void CC PTrieForEach_v2 ( const PTrie_v2 *self,
+    void ( CC * f ) ( PTNode_v2 *n, void *data ), void *data );
 
 /* DoUntil
  *  executes a function on each tree element
@@ -241,13 +285,16 @@ KLIB_EXTERN void CC PTrieForEach ( const PTrie *self,
  *  return values:
  *    the last value returned by "f" or false if never invoked
  */
-KLIB_EXTERN bool CC PTrieDoUntil ( const PTrie *self,
-    bool ( CC * f ) ( PTNode *n, void *data ), void *data );
+KLIB_EXTERN bool CC PTrieDoUntil_v1 ( const PTrie_v1 *self,
+    bool ( CC * f ) ( PTNode_v1 *n, void *data ), void *data );
+KLIB_EXTERN bool CC PTrieDoUntil_v2 ( const PTrie_v2 *self,
+    bool ( CC * f ) ( PTNode_v2 *n, void *data ), void *data );
 
 /* Whack
  *  tears down internal structure
  */
-KLIB_EXTERN void CC PTrieWhack ( PTrie *self );
+KLIB_EXTERN void CC PTrieWhack_v1 ( PTrie_v1 *self );
+KLIB_EXTERN void CC PTrieWhack_v2 ( PTrie_v2 *self );
 
 
 /*--------------------------------------------------------------------------
@@ -285,9 +332,40 @@ KLIB_EXTERN void CC PTrieWhack ( PTrie *self );
  *  function for gathering size data, and during the third pass with
  *  a non-NULL write function.
  */
-KLIB_EXTERN rc_t CC TriePersist ( struct Trie const *self, size_t *num_writ, bool ext_keys,
+KLIB_EXTERN rc_t CC TriePersist_v1 ( struct Trie const *self, size_t *num_writ, bool ext_keys,
+    PTWriteFunc write, void *write_param, PTAuxFunc aux, void *aux_param );
+KLIB_EXTERN rc_t CC TriePersist_v2 ( struct Trie const *self, size_t *num_writ, bool ext_keys,
     PTWriteFunc write, void *write_param, PTAuxFunc aux, void *aux_param );
 
+
+/*--------------------------------------------------------------------------
+ * remapped names
+ */
+
+#if PTRIE_BITS == 64
+#define PTRIE_VERS 2
+#else
+#define PTRIE_VERS 1
+#endif
+
+#define PTNodeId NAME_VERS ( PTNodeId, PTRIE_VERS )
+#define PTNode NAME_VERS ( PTNode, PTRIE_VERS )
+#define PTNodeMakeKey NAME_VERS ( PTNodeMakeKey, PTRIE_VERS )
+
+#define PTrie NAME_VERS ( PTrie, PTRIE_VERS )
+#define PTrieMake NAME_VERS ( PTrieMake, PTRIE_VERS )
+#define PTrieCount NAME_VERS ( PTrieCount, PTRIE_VERS )
+#define PTrieSize NAME_VERS ( PTrieSize, PTRIE_VERS )
+#define PTrieGetNode NAME_VERS ( PTrieGetNode, PTRIE_VERS )
+#define PTrieFind NAME_VERS ( PTrieFind, PTRIE_VERS )
+#define PTrieFindRE NAME_VERS ( PTrieFindRE, PTRIE_VERS )
+#define PTrieFindAll NAME_VERS ( PTrieFindAll, PTRIE_VERS )
+#define PTrieFindAllRE NAME_VERS ( PTrieFindAllRE, PTRIE_VERS )
+#define PTrieForEach NAME_VERS ( PTrieForEach, PTRIE_VERS )
+#define PTrieDoUntil NAME_VERS ( PTrieDoUntil, PTRIE_VERS )
+#define PTrieWhack NAME_VERS ( PTrieWhack, PTRIE_VERS )
+
+#define TriePersist NAME_VERS ( TriePersist, PTRIE_VERS )
 
 #ifdef __cplusplus
 }

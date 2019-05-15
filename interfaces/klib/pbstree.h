@@ -47,6 +47,21 @@ struct BSTree;
 
 
 /*--------------------------------------------------------------------------
+ * integer typedefs
+ */
+typedef uint32_t pbst_count_t_v1;
+typedef uint64_t pbst_count_t_v2;
+
+
+/*--------------------------------------------------------------------------
+ * PBSTNodeId
+ *  an integer node identifier
+ */
+typedef uint32_t PBSTNodeId_v1;
+typedef uint64_t PBSTNodeId_v2;
+
+
+/*--------------------------------------------------------------------------
  * PBSTNode
  *  identifies a node within persisted binary search tree
  *
@@ -64,8 +79,8 @@ struct BSTree;
  *  persisted image. navigation is therefore intrusive on an externally
  *  allocated node structure.
  */
-typedef struct PBSTNode PBSTNode;
-struct PBSTNode
+typedef struct PBSTNode_v1 PBSTNode_v1;
+struct PBSTNode_v1
 {
     struct
     {
@@ -75,36 +90,56 @@ struct PBSTNode
     } data;
 
     const void *internal;
-    uint32_t id;
+    PBSTNodeId_v1 id;
+};
+
+typedef struct PBSTNode_v2 PBSTNode_v2;
+struct PBSTNode_v2
+{
+    struct
+    {
+        const void *addr;
+        size_t size;
+
+    } data;
+
+    const void *internal;
+    PBSTNodeId_v2 id;
 };
 
 /* PBSTNodeNext
  *  updates the structure
  *  returns next 1-based node id or 0 for NULL
  */
-KLIB_EXTERN uint32_t CC PBSTNodeNext ( PBSTNode *self );
+KLIB_EXTERN PBSTNodeId_v1 CC PBSTNodeNext_v1 ( PBSTNode_v1 *self );
+KLIB_EXTERN PBSTNodeId_v2 CC PBSTNodeNext_v2 ( PBSTNode_v2 *self );
 
 /* PBSTNodePrev
  *  updates the structure
  *  returns prev 1-based node id or 0 for NULL
  */
-KLIB_EXTERN uint32_t CC PBSTNodePrev ( PBSTNode *self );
+KLIB_EXTERN PBSTNodeId_v1 CC PBSTNodePrev_v1 ( PBSTNode_v1 *self );
+KLIB_EXTERN PBSTNodeId_v2 CC PBSTNodePrev_v2 ( PBSTNode_v2 *self );
 
 /* PBSTNodeFindNext
  *  find next element satisfying criteria
  *  fills out "n" if found
  *  returns 1-based node id or 0 for NULL
  */
-KLIB_EXTERN uint32_t CC PBSTNodeFindNext ( PBSTNode *self,
-     bool ( CC * f ) ( const PBSTNode *n ) );
+KLIB_EXTERN PBSTNodeId_v1 CC PBSTNodeFindNext_v1 ( PBSTNode_v1 *self,
+     bool ( CC * f ) ( const PBSTNode_v1 *n ) );
+KLIB_EXTERN PBSTNodeId_v2 CC PBSTNodeFindNext_v2 ( PBSTNode_v2 *self,
+     bool ( CC * f ) ( const PBSTNode_v2 *n ) );
 
 /* PBSTNodeFindPrev
  *  find previous element satisfying criteria
  *  fills out "n" if found
  *  returns 1-based node id or 0 for NULL
  */
-KLIB_EXTERN uint32_t CC PBSTNodeFindPrev ( PBSTNode *self,
-    bool ( CC * f ) ( const PBSTNode *n ) );
+KLIB_EXTERN PBSTNodeId_v1 CC PBSTNodeFindPrev_v1 ( PBSTNode_v1 *self,
+    bool ( CC * f ) ( const PBSTNode_v1 *n ) );
+KLIB_EXTERN PBSTNodeId_v2 CC PBSTNodeFindPrev_v2 ( PBSTNode_v2 *self,
+    bool ( CC * f ) ( const PBSTNode_v2 *n ) );
 
 
 /*--------------------------------------------------------------------------
@@ -113,7 +148,8 @@ KLIB_EXTERN uint32_t CC PBSTNodeFindPrev ( PBSTNode *self,
  *
  *  mimics read-only behavior of a BSTree
  */
-typedef struct PBSTree PBSTree;
+typedef struct PBSTree_v1 PBSTree_v1;
+typedef struct PBSTree_v2 PBSTree_v2;
 
 /* PBSTreeMake
  *  make a PBSTree structure
@@ -124,7 +160,8 @@ typedef struct PBSTree PBSTree;
  *  "byteswap" [ IN ] - if true, the persisted image needs
  *  to be read with byteswapping
  */
-KLIB_EXTERN rc_t CC PBSTreeMake ( PBSTree **pt, const void *addr, size_t size, bool byteswap );
+KLIB_EXTERN rc_t CC PBSTreeMake_v1 ( PBSTree_v1 **pt, const void *addr, size_t size, bool byteswap );
+KLIB_EXTERN rc_t CC PBSTreeMake_v2 ( PBSTree_v2 **pt, const void *addr, size_t size, bool byteswap );
 
 /* PBSTreeCount
  *  returns number of elements in tree
@@ -134,7 +171,8 @@ KLIB_EXTERN rc_t CC PBSTreeMake ( PBSTree **pt, const void *addr, size_t size, b
  *  return value:
  *    integer value >= 0
  */
-KLIB_EXTERN uint32_t CC PBSTreeCount ( const PBSTree *self );
+KLIB_EXTERN pbst_count_t_v1 CC PBSTreeCount_v1 ( const PBSTree_v1 *self );
+KLIB_EXTERN pbst_count_t_v2 CC PBSTreeCount_v2 ( const PBSTree_v2 *self );
 
 /* PBSTreeDepth
  *  returns number of layers in tree
@@ -142,13 +180,15 @@ KLIB_EXTERN uint32_t CC PBSTreeCount ( const PBSTree *self );
  *  return value:
  *    integer value >= 0
  */
-KLIB_EXTERN uint32_t CC PBSTreeDepth ( const PBSTree *self );
+KLIB_EXTERN pbst_count_t_v1 CC PBSTreeDepth_v1 ( const PBSTree_v1 *self );
+KLIB_EXTERN pbst_count_t_v2 CC PBSTreeDepth_v2 ( const PBSTree_v2 *self );
 
 /* PBSTreeSize
  *  returns the size in bytes
  *  of the PBSTree image
  */
-KLIB_EXTERN size_t CC PBSTreeSize ( const PBSTree *self );
+KLIB_EXTERN size_t CC PBSTreeSize_v1 ( const PBSTree_v1 *self );
+KLIB_EXTERN size_t CC PBSTreeSize_v2 ( const PBSTree_v2 *self );
 
 /* PBSTreeGetNode
  *  gets a PBSTNode from an id
@@ -161,7 +201,8 @@ KLIB_EXTERN size_t CC PBSTreeSize ( const PBSTree *self );
  *    EINVAL => an invalid parameter was passed
  *    ENOENT => id out of range
  */
-KLIB_EXTERN rc_t CC PBSTreeGetNode ( const PBSTree *self, PBSTNode *node, uint32_t id );
+KLIB_EXTERN rc_t CC PBSTreeGetNode_v1 ( const PBSTree_v1 *self, PBSTNode_v1 *node, PBSTNodeId_v1 id );
+KLIB_EXTERN rc_t CC PBSTreeGetNode_v2 ( const PBSTree_v2 *self, PBSTNode_v2 *node, PBSTNodeId_v2 id );
 
 /* PBSTreeFind
  *  find an object within tree
@@ -180,8 +221,10 @@ KLIB_EXTERN rc_t CC PBSTreeGetNode ( const PBSTree *self, PBSTNode *node, uint32
  *    0    => not found
  *    1..n => internal id of node, also recorded within "rtn"
  */
-KLIB_EXTERN uint32_t CC PBSTreeFind ( const PBSTree *self, PBSTNode *rtn,
-    const void *item, int ( CC * cmp ) ( const void *item, const PBSTNode *n , void * data), void * data );
+KLIB_EXTERN PBSTNodeId_v1 CC PBSTreeFind_v1 ( const PBSTree_v1 *self, PBSTNode_v1 *rtn,
+    const void *item, int ( CC * cmp ) ( const void *item, const PBSTNode_v1 *n , void * data), void * data );
+KLIB_EXTERN PBSTNodeId_v2 CC PBSTreeFind_v2 ( const PBSTree_v2 *self, PBSTNode_v2 *rtn,
+    const void *item, int ( CC * cmp ) ( const void *item, const PBSTNode_v2 *n , void * data), void * data );
 
 /* PBSTreeForEach
  *  executes a function on each tree element
@@ -193,8 +236,10 @@ KLIB_EXTERN uint32_t CC PBSTreeFind ( const PBSTree *self, PBSTNode *rtn,
  *  node within the tree. the passed out node structure is itself fully
  *  modifiable.
  */
-KLIB_EXTERN void CC PBSTreeForEach ( const PBSTree *self, bool reverse,
-    void ( CC * f ) ( PBSTNode *n, void *data ), void *data );
+KLIB_EXTERN void CC PBSTreeForEach_v1 ( const PBSTree_v1 *self, bool reverse,
+    void ( CC * f ) ( PBSTNode_v1 *n, void *data ), void *data );
+KLIB_EXTERN void CC PBSTreeForEach_v2 ( const PBSTree_v2 *self, bool reverse,
+    void ( CC * f ) ( PBSTNode_v2 *n, void *data ), void *data );
 
 /* PBSTreeDoUntil
  *  executes a function on each element
@@ -210,14 +255,17 @@ KLIB_EXTERN void CC PBSTreeForEach ( const PBSTree *self, bool reverse,
  *  return values:
  *    the last value returned by "f" or false if never invoked
  */
-KLIB_EXTERN bool CC PBSTreeDoUntil ( const PBSTree *self, bool reverse,
-    bool ( CC * f ) ( PBSTNode *n, void *data ), void *data );
+KLIB_EXTERN bool CC PBSTreeDoUntil_v1 ( const PBSTree_v1 *self, bool reverse,
+    bool ( CC * f ) ( PBSTNode_v1 *n, void *data ), void *data );
+KLIB_EXTERN bool CC PBSTreeDoUntil_v2 ( const PBSTree_v2 *self, bool reverse,
+    bool ( CC * f ) ( PBSTNode_v2 *n, void *data ), void *data );
 
 /* PBSTreeWhack
  *  whacks PBSTree object
  *  the constant memory image used to create the PBSTree may now be released
  */
-KLIB_EXTERN void CC PBSTreeWhack ( PBSTree *self );
+KLIB_EXTERN void CC PBSTreeWhack_v1 ( PBSTree_v1 *self );
+KLIB_EXTERN void CC PBSTreeWhack_v2 ( PBSTree_v2 *self );
 
 
 
@@ -277,8 +325,42 @@ typedef rc_t ( CC * PTAuxFunc )
  *  function for gathering size data, and during the third pass with
  *  a non-NULL write function.
  */
-KLIB_EXTERN rc_t CC BSTreePersist ( struct BSTree const *self, size_t *num_writ,
+KLIB_EXTERN rc_t CC BSTreePersist_v1 ( struct BSTree const *self, size_t *num_writ,
     PTWriteFunc write, void *write_param, PTAuxFunc aux, void *aux_param );
+KLIB_EXTERN rc_t CC BSTreePersist_v2 ( struct BSTree const *self, size_t *num_writ,
+    PTWriteFunc write, void *write_param, PTAuxFunc aux, void *aux_param );
+
+/*--------------------------------------------------------------------------
+ * remapped names
+ */
+
+#if PBSTREE_BITS == 64
+#define PBSTREE_VERS 2
+#else
+#define PBSTREE_VERS 1
+#endif
+
+#define pbst_count_t NAME_VERS ( pbst_count_t, PBSTREE_VERS )
+#define PBSTNodeId NAME_VERS ( PBSTNodeId, PBSTREE_VERS )
+
+#define PBSTNode NAME_VERS ( PBSTNode, PBSTREE_VERS )
+#define PBSTNodeNext NAME_VERS ( PBSTNodeNext, PBSTREE_VERS )
+#define PBSTNodePrev NAME_VERS ( PBSTNodePrev, PBSTREE_VERS )
+#define PBSTNodeFindNext NAME_VERS ( PBSTNodeFindNext, PBSTREE_VERS )
+#define PBSTNodeFindPrev NAME_VERS ( PBSTNodeFindPrev, PBSTREE_VERS )
+
+#define PBSTree NAME_VERS ( PBSTree, PBSTREE_VERS )
+#define PBSTreeMake NAME_VERS ( PBSTreeMake, PBSTREE_VERS )
+#define PBSTreeCount NAME_VERS ( PBSTreeCount, PBSTREE_VERS )
+#define PBSTreeDepth NAME_VERS ( PBSTreeDepth, PBSTREE_VERS )
+#define PBSTreeSize NAME_VERS ( PBSTreeSize, PBSTREE_VERS )
+#define PBSTreeGetNode NAME_VERS ( PBSTreeGetNode, PBSTREE_VERS )
+#define PBSTreeFind NAME_VERS ( PBSTreeFind, PBSTREE_VERS )
+#define PBSTreeForEach NAME_VERS ( PBSTreeForEach, PBSTREE_VERS )
+#define PBSTreeDoUntil NAME_VERS ( PBSTreeDoUntil, PBSTREE_VERS )
+#define PBSTreeWhack NAME_VERS ( PBSTreeWhack, PBSTREE_VERS )
+
+#define BSTreePersist NAME_VERS ( BSTreePersist, PBSTREE_VERS )
 
 #ifdef __cplusplus
 }

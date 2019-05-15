@@ -95,7 +95,7 @@ rc_t PBSTreeInit ( PBSTree *self, const PBSTree_vt *vt, const P_BSTree *pt )
         return RC ( rcCont, rcTree, rcConstructing, rcInterface, rcNull );
     if ( vt -> v1 . maj == 0 )
         return RC ( rcCont, rcTree, rcConstructing, rcInterface, rcInvalid );
-    if ( vt -> v1 . maj > PBSTREE_LATEST )
+    if ( vt -> v1 . maj > PBSTREE_ITF_LATEST )
         return RC ( rcFS, rcFile, rcConstructing, rcInterface, rcBadVersion );
 
     if ( pt == NULL )
@@ -127,7 +127,7 @@ rc_t PBSTreeInit ( PBSTree *self, const PBSTree_vt *vt, const P_BSTree *pt )
 /* Count
  *  returns number of elements in b-tree
  */
-LIB_EXPORT uint32_t CC PBSTreeCount ( const PBSTree *self )
+LIB_EXPORT pbst_count_t CC PBSTreeCount ( const PBSTree *self )
 {
     if ( self != NULL )
     {
@@ -143,7 +143,7 @@ LIB_EXPORT uint32_t CC PBSTreeCount ( const PBSTree *self )
 /* Depth
  *  returns number of layers in b-tree
  */
-LIB_EXPORT uint32_t CC PBSTreeDepth ( const PBSTree *self )
+LIB_EXPORT pbst_count_t CC PBSTreeDepth ( const PBSTree *self )
 {
     if ( self != NULL )
     {
@@ -180,7 +180,7 @@ LIB_EXPORT size_t CC PBSTreeSize ( const PBSTree *self )
  *  finds node data boundaries
  */
 rc_t PBSTreeGetNodeData ( const PBSTree *self,
-    const void **addr, size_t *size, uint32_t id )
+    const void **addr, size_t *size, PBSTNodeId id )
 {
     assert ( self != NULL );
     switch ( self -> vt -> v1 . maj )
@@ -204,7 +204,7 @@ rc_t PBSTreeGetNodeData ( const PBSTree *self,
  *    EINVAL => an invalid parameter was passed
  *    ENOENT => id out of range
  */
-LIB_EXPORT rc_t CC PBSTreeGetNode ( const PBSTree *self, PBSTNode *node, uint32_t id )
+LIB_EXPORT rc_t CC PBSTreeGetNode ( const PBSTree *self, PBSTNode *node, PBSTNodeId id )
 {
     rc_t rc;
     if ( node == NULL )
@@ -236,7 +236,7 @@ LIB_EXPORT rc_t CC PBSTreeGetNode ( const PBSTree *self, PBSTNode *node, uint32_
  *  find an object within tree
  *  "cmp" function returns equivalent of "item" - "n"
  */
-LIB_EXPORT uint32_t CC PBSTreeFind ( const PBSTree *self, PBSTNode *n, const void *item,
+LIB_EXPORT PBSTNodeId CC PBSTreeFind ( const PBSTree *self, PBSTNode *n, const void *item,
     int ( CC * cmp ) ( const void *item, const PBSTNode *n, void *data ), void *data )
 {
     PBSTNode buffer;
@@ -321,7 +321,7 @@ LIB_EXPORT void CC PBSTreeWhack ( PBSTree *self )
 /* Next
  *  returns next node id
  */
-LIB_EXPORT uint32_t CC PBSTNodeNext ( PBSTNode *n )
+LIB_EXPORT PBSTNodeId CC PBSTNodeNext ( PBSTNode *n )
 {
     if ( n == NULL )
         return 0;
@@ -336,7 +336,7 @@ LIB_EXPORT uint32_t CC PBSTNodeNext ( PBSTNode *n )
 /* Prev
  *  returns prev node id
  */
-LIB_EXPORT uint32_t CC PBSTNodePrev ( PBSTNode *n )
+LIB_EXPORT PBSTNodeId CC PBSTNodePrev ( PBSTNode *n )
 {
     if ( n == NULL )
         return 0;
@@ -351,7 +351,7 @@ LIB_EXPORT uint32_t CC PBSTNodePrev ( PBSTNode *n )
 /* FindNext
  *  find next element satisfying criteria
  */
-LIB_EXPORT uint32_t CC PBSTNodeFindNext ( PBSTNode *n,
+LIB_EXPORT PBSTNodeId CC PBSTNodeFindNext ( PBSTNode *n,
     bool ( CC * f ) ( const PBSTNode *n ) )
 {
     PBSTNode save;
@@ -374,7 +374,7 @@ LIB_EXPORT uint32_t CC PBSTNodeFindNext ( PBSTNode *n,
 /* FindPrev
  *  find previous element satisfying criteria
  */
-LIB_EXPORT uint32_t CC PBSTNodeFindPrev ( PBSTNode *n, 
+LIB_EXPORT PBSTNodeId CC PBSTNodeFindPrev ( PBSTNode *n, 
     bool ( CC * f ) ( const PBSTNode *n ) )
 {
     PBSTNode save;

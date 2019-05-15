@@ -85,11 +85,11 @@ LIB_EXPORT rc_t CC PTNodeMakeKey ( const PTNode *self, const String **keyp )
         else
         {
             const PTrie *tt = self -> internal;
-            if ( tt->ext_keys || ! tt->backtrace )
+            if ( tt -> ext_keys || ! tt -> backtrace )
                 rc = RC ( rcCont, rcNode, rcAccessing, rcString, rcNotFound );
             else
             {
-                uint32_t tid, btid;
+                pbst_count_t tid, btid;
 
                 /* decode the node id into trans and btnode ids */
                 rc = PTrieDecodeNodeId ( tt, self -> id, & tid, & btid );
@@ -112,10 +112,12 @@ LIB_EXPORT rc_t CC PTNodeMakeKey ( const PTNode *self, const String **keyp )
                         {
                             /* the depth of this transition is
                                the length of the key string up to node */
-                            uint32_t depth = PTTransGetDepth ( & trans, tt );
+                            pbst_count_t depth = PTTransGetDepth ( & trans, tt );
 
                             /* get an adequate UTF-32 buffer */
-                            uint32_t tbbuff [ 64 ], *traceback = tbbuff;
+                            uint32_t tbbuff [ 64 ], * traceback = tbbuff;
+
+                            /* allocate more if needed */
                             if ( depth > sizeof tbbuff / sizeof tbbuff [ 0 ] )
                                 traceback = malloc ( depth * sizeof traceback [ 0 ] );
 
@@ -126,7 +128,7 @@ LIB_EXPORT rc_t CC PTNodeMakeKey ( const PTNode *self, const String **keyp )
                                 uint32_t nlen;
                                 size_t tbsize, nsize;
 
-                                uint32_t i;
+                                pbst_count_t i;
                                 for ( i = depth; i > 0; )
                                 {
                                     uint32_t zidx = PTTransGetTransCharCode ( & trans, tt );
@@ -205,7 +207,7 @@ void PTTransWhack ( PTTrans *trans )
 LIB_EXPORT uint32_t CC PTTransGetDepth ( const PTTrans *self, const PTrie *tt )
 {
     PTTrans trans;
-    uint32_t dad, depth;
+    pbst_count_t dad, depth;
 
     assert ( self != NULL );
     if ( self -> depth != 0 )
@@ -225,7 +227,7 @@ LIB_EXPORT uint32_t CC PTTransGetDepth ( const PTTrans *self, const PTrie *tt )
 /* GetChildChildIdx
  */
 static
-uint32_t PTTransGetChildChildIdx ( const PTTrans *self,
+pbst_count_t PTTransGetChildChildIdx ( const PTTrans *self,
     const PTrie *tt, uint32_t zidx )
 {
     const uint8_t *child_seq_type = self -> child_seq_type;
@@ -1605,8 +1607,8 @@ rc_t PTrieMakeNode ( const PTrie *self, PTTrans **transp, uint32_t idx )
 static
 uint32_t PTrieMapChar ( const PTrie *tt, uint32_t ch )
 {
-  if ( ch >= tt -> first_char && ch <= tt -> last_char )
-    return tt -> map [ ch - tt -> first_char ];
+    if ( ch >= tt -> first_char && ch <= tt -> last_char )
+        return tt -> map [ ch - tt -> first_char ];
     return tt -> unmapped_idx;
 }
 

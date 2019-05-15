@@ -92,6 +92,10 @@ KLIB_SRC = \
 	all-vdb-version \
 	vector_namelist \
 	trie \
+	pbstree-v2 \
+	pbstree-v2-impl.nopt \
+	pbstree-v2-impl.swap.nopt \
+	bstpersist-v2.nopt \
 	pbstree \
 	pbstree-impl.nopt \
 	pbstree-impl.swap.nopt \
