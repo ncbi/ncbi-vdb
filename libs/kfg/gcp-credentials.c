@@ -34,6 +34,7 @@
 #include <klib/text.h>
 
 #include <ctype.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 
@@ -45,6 +46,7 @@ rc_t CC LoadGcpCredentials (
     KDirectory *dir = NULL;
     uint64_t json_size;
     char *buffer = NULL;
+    *GcpAccountCredentials = NULL;
 
     rc = KDirectoryNativeDir ( &dir );
     if ( rc ) return rc;
@@ -52,7 +54,7 @@ rc_t CC LoadGcpCredentials (
     rc = KFileSize ( pathToJsonFile, &json_size );
     if ( rc ) return rc;
 
-    buffer = (char *)malloc ( json_size );
+    buffer = (char *)calloc ( json_size + 1, 1 );
 
     rc = KFileReadExactly ( pathToJsonFile, 0, buffer, json_size );
     if ( rc ) {
@@ -60,8 +62,31 @@ rc_t CC LoadGcpCredentials (
         return rc;
     }
 
-    rc = KJsonValueMake ( GcpAccountCredentials, buffer, NULL, 0 );
+    KJsonValue *root = NULL;
+    rc = KJsonValueMake ( &root, buffer, NULL, 0 );
+    if ( rc ) return rc;
+
     free ( buffer );
+
+    const KJsonObject *obj = KJsonValueToObject ( root );
+
+    const char *required[] = {"type", "project_id", "private_key_id",
+        "private_key", "client_email", "client_id", "auth_uri", "token_uri",
+        "auth_provider_x509_cert_url", "client_x509_cert_url", NULL};
+
+    size_t i = 0;
+    while ( required[i] != NULL ) {
+        const KJsonValue *v = KJsonObjectGetMember ( obj, required[i] );
+        if ( v == NULL ) {
+            return RC ( rcKFG, rcFile, rcParsing, rcParam, rcInvalid );
+        }
+        if ( KJsonGetValueType ( v ) != jsString ) {
+            return RC ( rcKFG, rcFile, rcParsing, rcParam, rcInvalid );
+        }
+        ++i;
+    }
+
+    *GcpAccountCredentials = root;
 
     return rc;
 }

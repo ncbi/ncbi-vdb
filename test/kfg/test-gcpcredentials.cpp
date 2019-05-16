@@ -55,15 +55,23 @@ TEST_CASE ( GCPCredentialsMake )
     KDirectory *wd = NULL;
     REQUIRE_RC ( KDirectoryNativeDir ( &wd ) );
     const char *fileName = "test-gcp.json";
-    const KFile *file;
-    KJsonValue *root;
+    const KFile *file = NULL;
     REQUIRE_RC ( KDirectoryOpenFileRead ( wd, &file, fileName ) );
+    KJsonValue *root = NULL;
     REQUIRE_RC ( LoadGcpCredentials ( file, &root ) );
 
     REQUIRE_NOT_NULL ( root );
 
     REQUIRE_RC ( KFileRelease ( file ) );
 
+    const KJsonObject *obj = KJsonValueToObject ( root );
+
+    const KJsonValue *v = KJsonObjectGetMember ( obj, "type" );
+    const char *strval = NULL;
+    REQUIRE_RC ( KJsonGetString ( v, &strval ) );
+    REQUIRE_EQ ( strcmp ( strval, "service_account" ), 0 );
+
+    REQUIRE_RC ( KDirectoryRelease ( wd ) );
     KJsonValueWhack ( root );
 }
 
