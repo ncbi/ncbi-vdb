@@ -411,8 +411,7 @@ bool CC Is32BitAndDisplayMessage( void );
  * To add 'append' option, user should call ArgsAddAppendModeOption ()
  * fucntion
  */
-#define ALIAS_APPEND     "A"
-#define OPTION_APPEND    "append"
+#define OPTION_APPEND_OUTPUT    "append_output"
 
 /*
  * Adding append mode option to arguments

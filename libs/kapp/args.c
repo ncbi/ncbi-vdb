@@ -1684,6 +1684,12 @@ static
 const char * no_user_settings_usage[] = 
 { "Turn off user-specific configuration.", NULL };
 
+    /*  We need dat here
+     */
+static
+const char * append_usage[] =
+        { "Append program output to a file if it does exist. Otherwise new file will be created", NULL };
+
 static
 void CC gen_log_usage (const char ** _buffers)
 {
@@ -2346,6 +2352,12 @@ void CC HelpParamLine (const char * param, const char * const * msgs)
 	    OUTMSG (("%*s%s\n", MSG_INDENT, " ", msg));
 }
 
+    /*  Actually it is better to use
+     *  BSTreeFind ( Args -> names, OPTION_APPEND_OUTPUT ... )
+     *  but HelpOptionsStandart () does not accept args as arg lol
+     */
+bool CC ArgsAppendModeWasSet ( void );
+
 void CC HelpOptionsStandard(void){
     HelpOptionLine(ALIAS_HELP1    ,OPTION_HELP     , NULL    , help_usage);
 
@@ -2362,8 +2374,14 @@ void CC HelpOptionsStandard(void){
 #if _DEBUGGING
     HelpOptionLine(ALIAS_DEBUG    ,OPTION_DEBUG, "Module[-Flag]", debug_usage); 
 #endif
+        /* Dat is spooky place, we will print 'standard' append mode
+         * help only it is necessary
+         */
+    if ( ArgsAppendModeWasSet () )
+    {
+        HelpOptionLine(NULL, OPTION_APPEND_OUTPUT, NULL, append_usage);
+    }
 }
-
 
 void CC HelpOptionsReport (void)
 {
@@ -2407,15 +2425,11 @@ bool CC Is32BitAndDisplayMessage( void )
 /* ==========
  * AppendMode option lives here
  */
-static
-const char * append_usage[] =
-        { "Append program output to a file if it does exist.", NULL };
-
 OptDef AppenddModeOptions []  =
 {
     {
-        OPTION_APPEND,  /* option name */
-        ALIAS_APPEND,   /* option alias */
+        OPTION_APPEND_OUTPUT,  /* option name */
+        NULL,   /* option alias */
         NULL,           /* helper function */
         append_usage,     /* array of strings used as a helper */
         1,              /* "There can be only one" (c) Highlander */
@@ -2424,8 +2438,17 @@ OptDef AppenddModeOptions []  =
     }
 };
 
+static bool G_append_mode_was_set = false;
+
+bool CC ArgsAppendModeWasSet ( void )
+{
+    return G_append_mode_was_set;
+}   /* ArgsIsAppendModeWasSet () */
+
+
 rc_t CC ArgsAddAppendModeOption ( Args * self )
 {
+    G_append_mode_was_set = true;
     return ArgsAddOptionArray (
                         self,
                         AppenddModeOptions,
@@ -2439,7 +2462,7 @@ rc_t CC ArgsHandleAppendMode (const Args * self)
     uint32_t count;
     rc_t rc;
 
-    rc = ArgsOptionCount ( self, OPTION_APPEND, & count);
+    rc = ArgsOptionCount ( self, OPTION_APPEND_OUTPUT, & count);
     if (rc == 0)
     {
         ArgsAppendModeSet ( count != 0 );
