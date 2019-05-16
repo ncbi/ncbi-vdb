@@ -135,7 +135,108 @@ namespace tui {
             return false;
     }
 
+    Tui_Rect Dlg::center( uint32_t x_margin, uint32_t y_margin )
+    {
+        Tui_Rect r;
+        GetRect( r );
+        r.set_w( r.get_w() - ( 2 * x_margin ) );
+        r.set_x( r.get_x() + x_margin );
+        r.set_h( r.get_h() - ( 2 * y_margin ) );
+        r.set_y( r.get_y() + y_margin );
+        return r;
+    };
 
+    void Dlg::center( Tui_Rect &r )
+    {
+        Tui_Rect rd;
+        GetRect( rd );
+        if ( r.get_w() > ( rd.get_w() - 2 ) ) r.set_w( rd.get_w() - 2 );
+        if ( r.get_h() > ( rd.get_h() -2 ) ) r.set_h( rd.get_h() - 2 );
+        r.set_x( rd.get_x() + ( ( rd.get_w() - r.get_w() ) / 2 ) );
+        r.set_y( rd.get_y() + ( ( rd.get_h() - r.get_h() ) / 2 ) );
+    };
+
+    void Dlg::ShowWidgets( bool active, tui_id from, tui_id to )
+    {
+        for ( tui_id id = from; id <= to; id++ )
+        {
+            SetWidgetVisible( id, active );
+            SetWidgetCanFocus( id, active );
+        }
+    }
+
+    void Dlg::PopulateLabel( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
+            KTUI_color bg, KTUI_color fg )
+    {
+        if ( resize )
+            SetWidgetRect( id, r, false );
+        else
+        {
+            if ( HasWidget( id ) )
+                SetWidgetCaption( id, ( txt == NULL ) ? "" : txt );
+            else
+            {
+                AddLabel( id, r, ( txt == NULL ) ? "" : txt );
+                SetWidgetBackground( id, bg );
+                SetWidgetForeground( id, fg );
+            }
+        }
+    }
+
+    void Dlg::PopulateButton( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
+            KTUI_color bg, KTUI_color fg )
+    {
+        if ( resize )
+            SetWidgetRect( id, r, false );
+        else
+        {
+            if ( HasWidget( id ) )
+                SetWidgetCaption( id, ( txt == NULL ) ? "" : txt );
+            else
+            {
+                AddButton( id, r, ( txt == NULL ) ? "" : txt );
+                SetWidgetBackground( id, bg );
+                SetWidgetForeground( id, fg );
+            }
+        }
+    }
+
+    void Dlg::PopulateCheckbox( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
+            bool checked, KTUI_color bg, KTUI_color fg )
+    {
+        if ( resize )
+            SetWidgetRect( id, r, false );
+        else
+        {
+            if ( HasWidget( id ) )
+                SetWidgetCaption( id, ( txt == NULL ) ? "" : txt );
+            else
+            {
+                AddCheckBox( id, r, ( txt == NULL ) ? "" : txt, checked );
+                SetWidgetBackground( id, bg );
+                SetWidgetForeground( id, fg );
+            }
+        }
+    }
+
+    void Dlg::PopulateInput( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
+            size_t length, KTUI_color bg, KTUI_color fg )
+    {
+        if ( resize )
+            SetWidgetRect( id, r, false );
+        else
+        {
+            if ( HasWidget( id ) )
+                SetWidgetCaption( id, ( txt == NULL ) ? "" : txt );
+            else
+            {
+                AddInput( id, r, ( txt == NULL ) ? "" : txt, length );
+                SetWidgetBackground( id, bg );
+                SetWidgetForeground( id, fg );
+            }
+        }
+    }
+    
     bool Dlg_Runner::handle_tui_event( Tui_Event &ev )
     {
         bool res = false;

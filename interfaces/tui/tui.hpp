@@ -339,27 +339,8 @@ class Dlg
         bool SetCaption( std::string &s ) { return ( KTUIDlgSetCaption ( dlg_, s.c_str() ) == 0 ); };
         bool SetCaptionF( const char * fmt, ... );
 
-        Tui_Rect center( uint32_t x_margin, uint32_t y_margin )
-        {
-            Tui_Rect r;
-            GetRect( r );
-            r.set_w( r.get_w() - ( 2 * x_margin ) );
-            r.set_x( r.get_x() + x_margin );
-            r.set_h( r.get_h() - ( 2 * y_margin ) );
-            r.set_y( r.get_y() + y_margin );
-            return r;
-        };
-
-        void center( Tui_Rect &r )
-        {
-            Tui_Rect rd;
-            GetRect( rd );
-            if ( r.get_w() > ( rd.get_w() - 2 ) ) r.set_w( rd.get_w() - 2 );
-            if ( r.get_h() > ( rd.get_h() -2 ) ) r.set_h( rd.get_h() - 2 );
-            r.set_x( rd.get_x() + ( ( rd.get_w() - r.get_w() ) / 2 ) );
-            r.set_y( rd.get_y() + ( ( rd.get_h() - r.get_h() ) / 2 ) );
-        };
-
+        Tui_Rect center( uint32_t x_margin, uint32_t y_margin );
+        void center( Tui_Rect &r );
 
         void SetData( void * data ) { KTUIDlgSetData ( dlg_, data ); };
         void * GetData( void ) { return KTUIDlgGetData ( dlg_ ); };
@@ -460,6 +441,15 @@ class Dlg
         bool AddSpinEdit( tui_id id, Tui_Rect const &r, tui_long value, tui_long min, tui_long max ) { return ( KTUIDlgAddSpinEdit ( dlg_, id, &( r.r_ ), value, min, max ) == 0 ); };
         bool AddGrid( tui_id id, Tui_Rect const &r, Grid &grid, bool cached ) { return( KTUIDlgAddGrid ( dlg_, id, &( r.r_ ), grid.get_ptr(), cached ) == 0 ); };
 
+        void PopulateLabel( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
+                            KTUI_color bg, KTUI_color fg );
+        void PopulateButton( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
+                            KTUI_color bg, KTUI_color fg );
+        void PopulateCheckbox( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
+                            bool checked, KTUI_color bg, KTUI_color fg );
+        void PopulateInput( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
+            size_t length, KTUI_color bg, KTUI_color fg );
+            
         bool HasWidget( tui_id id ) { return KTUIDlgHasWidget ( dlg_, id ); };
 
         tui_long GetGridCol( tui_id id ) { uint64_t col = 0; KTUIDlgGetGridCol( dlg_, id, &col ); return col; };
@@ -472,6 +462,8 @@ class Dlg
         bool DrawWidget( tui_id id ) { return ( KTUIDlgDrawWidget( dlg_, id ) == 0 ); };
         bool DrawCaption( void ) { return ( KTUIDlgDrawCaption( dlg_ ) == 0 ); };
 
+        void ShowWidgets( bool active, tui_id from, tui_id to );
+        
         bool SetFocus( tui_id id ) { return ( KTUIDlgSetFocus( dlg_, id ) == 0 ); };
         bool MoveFocus( bool forward ) { return ( KTUIDlgMoveFocus( dlg_, forward ) == 0 ); };
         bool FocusValid( void ) { return KTUIDlgFocusValid( dlg_ ); };

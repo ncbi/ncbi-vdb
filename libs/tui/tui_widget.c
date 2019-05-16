@@ -413,7 +413,12 @@ rc_t SetWidgetCanFocus( struct KTUIWidget * self, bool can_focus )
 {
     rc_t rc = 0;
     if ( self != NULL )
-        self->can_focus = can_focus;   
+    {
+        if ( self -> wtype != KTUIW_label )
+            self->can_focus = can_focus;
+        else
+            self->can_focus = false; /* a label should never be able to get a focus */
+    }
     else
         rc = RC( rcApp, rcAttr, rcUpdating, rcSelf, rcNull );
     return rc;
