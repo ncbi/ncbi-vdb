@@ -771,3 +771,122 @@ LIB_EXPORT rc_t CC KConfigSetProtectedRepositoryCachedById( KConfig *self, uint3
         rc = KConfig_Set_Repository_State( self, enabled, false, "/repository/user/protected/%s/cache-enabled", repo_name );
     return rc;
 }
+
+/* ---------------------------------------------------------------------------------------------------- */
+
+#define PREFETCH_DOWNLOAD_TO_CACHE "/tools/prefetch/download_to_cache"
+LIB_EXPORT rc_t CC KConfig_Get_Prefetch_Download_To_Cache ( const KConfig *self, bool * value )
+{
+    rc_t rc = KConfigReadBool ( self, PREFETCH_DOWNLOAD_TO_CACHE, value );
+    if ( GetRCState ( rc ) == rcNotFound)
+    {
+        * value = true;
+        rc = 0;
+    }
+    return rc;
+}
+LIB_EXPORT rc_t CC KConfig_Set_Prefetch_Download_To_Cache ( KConfig *self, bool value )
+{
+    return KConfigWriteBool( self, PREFETCH_DOWNLOAD_TO_CACHE, value );
+}
+
+#define USER_ACCEPT_AWS_CHARGES "/libs/cloud/accept_aws_charges"
+LIB_EXPORT rc_t CC KConfig_Get_User_Accept_Aws_Charges ( const KConfig *self, bool * value )
+{
+    rc_t rc = KConfigReadBool ( self, USER_ACCEPT_AWS_CHARGES, value );
+    if ( GetRCState ( rc ) == rcNotFound)
+    {
+        * value = false;
+        rc = 0;
+    }
+    return rc;
+}
+LIB_EXPORT rc_t CC KConfig_Set_User_Accept_Aws_Charges ( KConfig *self, bool value )
+{
+    return KConfigWriteBool( self, USER_ACCEPT_AWS_CHARGES, value );
+}
+
+#define USER_ACCEPT_GCP_CHARGES "/libs/cloud/accept_gcp_charges"
+LIB_EXPORT rc_t CC KConfig_Get_User_Accept_Gcp_Charges ( const KConfig *self, bool * value )
+{
+    rc_t rc = KConfigReadBool ( self, USER_ACCEPT_GCP_CHARGES, value );
+    if ( GetRCState ( rc ) == rcNotFound)
+    {
+        * value = false;
+        rc = 0;
+    }
+    return rc;
+}
+LIB_EXPORT rc_t CC KConfig_Set_User_Accept_Gcp_Charges ( KConfig *self, bool value )
+{
+    return KConfigWriteBool( self, USER_ACCEPT_GCP_CHARGES, value );
+}
+
+#define TEMP_CACHE "/libs/temp_cache"
+LIB_EXPORT rc_t CC
+KConfig_Get_Temp_Cache( const KConfig *self,
+    char * value, size_t value_size, size_t * written )
+{
+    return KConfig_Get_Repository_String( self, value, value_size, written, TEMP_CACHE );
+}
+LIB_EXPORT rc_t CC
+KConfig_Set_Temp_Cache( KConfig *self, const char * value )
+{
+    return KConfig_Set_Repository_String( self, value, TEMP_CACHE );
+}
+
+#define GCP_CREDENTIAL_FILE "/gcp/credential_file"
+LIB_EXPORT rc_t CC
+KConfig_Get_Gcp_Credential_File( const KConfig *self,
+    char * value, size_t value_size, size_t * written )
+{
+    return KConfig_Get_Repository_String( self, value, value_size, written, GCP_CREDENTIAL_FILE );
+}
+LIB_EXPORT rc_t CC
+KConfig_Set_Gcp_Credential_File( KConfig *self, const char * value )
+{
+    return KConfig_Set_Repository_String( self, value, GCP_CREDENTIAL_FILE );
+}
+
+#define AWS_CREDENTIAL_FILE "/aws/credential_file"
+LIB_EXPORT rc_t CC
+KConfig_Get_Aws_Credential_File( const KConfig *self,
+    char * value, size_t value_size, size_t * written )
+{
+    return KConfig_Get_Repository_String( self, value, value_size, written, AWS_CREDENTIAL_FILE );
+}
+LIB_EXPORT rc_t CC
+KConfig_Set_Aws_Credential_File( KConfig *self, const char * value )
+{
+    return KConfig_Set_Repository_String( self, value, AWS_CREDENTIAL_FILE );
+}
+
+#define AWS_PROFILE "/aws/profile"
+LIB_EXPORT rc_t CC
+KConfig_Get_Aws_Profile( const KConfig *self,
+    char * value, size_t value_size, size_t * written )
+{
+    return KConfig_Get_Repository_String( self, value, value_size, written, AWS_PROFILE );
+}
+LIB_EXPORT rc_t CC
+KConfig_Set_Aws_Profile( KConfig *self, const char * value )
+{
+    return KConfig_Set_Repository_String( self, value, AWS_PROFILE );
+}
+
+#define AWS_CREDENTIALS_FROM_ENV "/aws/credentials_from_env"
+LIB_EXPORT rc_t CC KConfig_Get_Aws_Credentials_from_env ( const KConfig *self, bool * value )
+{
+    rc_t rc = KConfigReadBool ( self, AWS_CREDENTIALS_FROM_ENV, value );
+    if ( GetRCState ( rc ) == rcNotFound)
+    {
+        * value = false;
+        rc = 0;
+    }
+    return rc;
+}
+LIB_EXPORT rc_t CC KConfig_Set_Aws_Credentials_from_env ( KConfig *self, bool value )
+{
+    return KConfigWriteBool( self, AWS_CREDENTIALS_FROM_ENV, value );
+}
+
