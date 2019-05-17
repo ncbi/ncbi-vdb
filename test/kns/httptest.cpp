@@ -1049,7 +1049,7 @@ TEST_CASE(NoRetryOnFailedHttpFileRead) {
 
     char bHttp[1024 * 1024] = "";
     char bFile[1024 * 1024] = "";
-    const char path[] = "data/SRR000001.1048576";
+    const char path[] = "expected/SRR000001.1048576";
     assert(1024 * 1024 == 1048576);
 
     uint64_t pos = 0;
