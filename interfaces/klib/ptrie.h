@@ -354,6 +354,7 @@ KLIB_EXTERN rc_t CC TriePersist_v2 ( struct Trie const *self, size_t *num_writ, 
 
 #define PTrie NAME_VERS ( PTrie, PTRIE_VERS )
 #define PTrieMake NAME_VERS ( PTrieMake, PTRIE_VERS )
+#define PTrieMakeOrig NAME_VERS ( PTrieMakeOrig, 1 )
 #define PTrieCount NAME_VERS ( PTrieCount, PTRIE_VERS )
 #define PTrieSize NAME_VERS ( PTrieSize, PTRIE_VERS )
 #define PTrieGetNode NAME_VERS ( PTrieGetNode, PTRIE_VERS )

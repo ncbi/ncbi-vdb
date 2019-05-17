@@ -42,9 +42,9 @@ extern "C" {
  * forwards
  */
 struct KMMap;
-struct PTrie;
-struct BSTNode;
-struct PBSTNode;
+struct PTrie_v1;
+struct BSTNode_v1;
+struct PBSTNode_v1;
 struct KIndex;
 
 
@@ -91,7 +91,7 @@ typedef struct KPTrieIndex_v1 KPTrieIndex_v1;
 struct KPTrieIndex_v1
 {
     struct KMMap const *mm;
-    struct PTrie *key2id;
+    struct PTrie_v1 *key2id;
     const uint32_t *id2node;
     uint32_t first;
     uint32_t last;
@@ -125,7 +125,7 @@ void KTrieIndexWhack_v1 ( KTrieIndex_v1 *self );
 /* map key to id ( was Key2Id ) */
 rc_t KTrieIndexFind_v1 ( const KTrieIndex_v1 *self,
     const char *key, uint32_t *id,
-    int ( CC * custom_cmp ) ( const void *item, struct PBSTNode const *n, void *data ),
+    int ( CC * custom_cmp ) ( const void *item, struct PBSTNode_v1 const *n, void *data ),
     void *data );
 
 /* projection index id to key-string ( was Id2Key ) */
@@ -192,7 +192,7 @@ struct KPTrieIndex_v2
 {
     int64_t first, last, maxid;
     struct KMMap const *mm;
-    struct PTrie *key2id;
+    struct PTrie_v1 *key2id;
     const uint32_t *ord2node;
     union
     {
@@ -243,7 +243,7 @@ rc_t KTrieIndexFind_v2 ( const KTrieIndex_v2 *self,
 #if V2FIND_RETURNS_SPAN
     uint32_t *span,
 #endif
-    int ( CC * custom_cmp ) ( const void *item, struct PBSTNode const *n, void *data ),
+    int ( CC * custom_cmp ) ( const void *item, struct PBSTNode_v1 const *n, void *data ),
     void * data,
     bool convertFromV1);
 
