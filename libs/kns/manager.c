@@ -623,6 +623,21 @@ static bool KNSManagerPrepareLogTlsErrors(KConfig* kfg) {
     }
 }
 
+static int KNSManagerPrepareEmulateTldReadErrors(KConfig* kfg) {
+    const char * e = getenv("NCBI_VDB_ERR_MBEDTLS_READ");
+    if (e != NULL)
+        return atoi(e);
+    else {
+        int64_t emult = 0;
+        rc_t rc = KConfigReadI64(kfg, "/tls/NCBI_VDB_ERR_MBEDTLS_READ", &emult);
+        if (rc != 0)
+            return 0;
+        else
+            return emult;
+    }
+}
+
+
 LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
 {
     rc_t rc;
@@ -646,6 +661,8 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
             mgr -> maxNumberOfRetriesOnFailureForReliableURLs = 10;
 
             mgr->logTlsErrors = KNSManagerPrepareLogTlsErrors(kfg);
+            mgr->emulateTlsReadErrors
+                = KNSManagerPrepareEmulateTldReadErrors(kfg);
 
             rc = KNSManagerInit (); /* platform specific init in sysmgr.c ( in unix|win etc. subdir ) */
             if ( rc == 0 )

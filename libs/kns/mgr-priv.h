@@ -81,6 +81,7 @@ struct KNSManager
 
     bool verbose;
     bool logTlsErrors;
+    int emulateTlsReadErrors;
 
     bool NCBI_VDB_NETnoLogError;
     bool NCBI_VDB_NETkfgValueSet;

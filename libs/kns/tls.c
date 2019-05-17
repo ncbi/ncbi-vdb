@@ -640,6 +640,8 @@ struct KTLSStream
     /* error returned from ciphertext stream */
     rc_t rd_rc;
     rc_t wr_rc;
+
+    int emulateTlsReadErrors;
 };
 
 static
@@ -676,6 +678,8 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
     rc_t rc = 0;
     KTLSStream * self = ( KTLSStream * ) cself;
 
+    assert(self);
+
     if ( self -> ciphertext == NULL )
     {
         * num_read = 0;
@@ -696,12 +700,7 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
         ret = vdb_mbedtls_ssl_read( &self -> ssl, buffer, bsize );
 
         if (!inited) { /* simulate mbedtls read timeout */
-            const char * v = getenv("NCBI_VDB_ERR_MBEDTLS_READ");
-            if (v != NULL) {
-                m = atoi(v);
-                if (m < 0)
-                    m = 0;
-            }
+            m = self->emulateTlsReadErrors;
             e = m;
             inited = true;
         }
@@ -1148,6 +1147,8 @@ rc_t KTLSStreamMake ( KTLSStream ** objp, const KNSManager * mgr, const KSocket 
 
     STATUS ( STAT_PRG, "%s\n", __func__ );
 
+    assert(mgr);
+
     obj = calloc ( 1, sizeof * obj );
     if ( obj == NULL )
         rc = RC ( rcNS, rcMgr, rcAllocating, rcMemory, rcExhausted );
@@ -1170,6 +1171,8 @@ rc_t KTLSStreamMake ( KTLSStream ** objp, const KNSManager * mgr, const KSocket 
 
                     STATUS ( STAT_PRG, "%s - initializing tls wrapper\n", __func__ );
                     vdb_mbedtls_ssl_init ( &obj -> ssl );
+
+                    obj->emulateTlsReadErrors = mgr->emulateTlsReadErrors;;
 
                     * objp = obj;
                     return 0;
