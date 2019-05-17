@@ -305,8 +305,9 @@ otherwise we are going to hit "Apache return HTTP headers twice" bug */
                                     if ( rc == 0 )
                                     {
                                         size_t skip = 0;
-
-                                        rc = KStreamTimedReadExactly( response, bPtr, result_size, tm );
+                                        size_t was_read = 0;
+                                        rc = KStreamTimedReadAll( response, bPtr, result_size, &was_read, tm );
+                                        result_size = was_read;
                                         if ( rc != 0 )
                                         {
                                             KStreamRelease ( response );
@@ -398,6 +399,8 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
     KHttpRetrier retrier;
     rc_t rc = KHttpRetrierInit ( & retrier, self -> url_buffer . base, self -> kns );
     
+    assert(num_read);
+
     if ( rc == 0 )
     {
         DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
@@ -406,27 +409,50 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
         /* loop using existing KClientHttp object */
         while ( rc == 0 ) 
         {
+            bool done = false;
+            size_t pos = 0;
             uint32_t http_status;
-            rc = KHttpFileTimedReadLocked ( self, pos, buffer, bsize, num_read, tm, & http_status );
-            if ( rc != 0 ) 
-            {   
-                rc_t rc2=KClientHttpReopen ( self -> http );
-                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedRead: KHttpFileTimedReadLocked failed, reopening\n" ) );
-                if ( rc2 == 0 )
+            while (pos < bsize) {
+                size_t was_read = 0;
+                void *buf = (char*)buffer + pos;
+                rc = KHttpFileTimedReadLocked(self, pos, buf, bsize - pos, &was_read, tm, &http_status);
+                if (rc != 0)
                 {
-                    rc2 = KHttpFileTimedReadLocked ( self, pos, buffer, bsize, num_read, tm, & http_status );
-                    if ( rc2 == 0 ) 
-                    {
-                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedRead: reopened successfully\n" ) );
-                        rc= 0;
+                    rc_t rc2 = KClientHttpReopen(self->http);
+                    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP), ("KHttpFileTimedRead: KHttpFileTimedReadLocked failed, reopening\n"));
+                    if (rc2 == 0) {
+                        rc2 = KHttpFileTimedReadLocked(self, pos, buf, bsize - pos, &was_read, tm, &http_status);
+                        if (rc2 == 0) {
+                            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP), ("KHttpFileTimedRead: reopened successfully\n"));
+                            rc = 0;
+                        }
+                        else {
+                            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP), ("KHttpFileTimedRead: reopen failed\n"));
+                            done = true;
+                            break;
+                        }
                     }
-                    else 
-                    {
-                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedRead: reopen failed\n" ) );
+                }
+                if (rc != 0)
+                    break;
+                else if (was_read == 0) {
+                    *num_read = pos;
+                    done = true;
+                    break;
+                }
+                else {
+                    pos += was_read;
+                    if (pos == bsize) {
+                        *num_read = pos;
+                        done = true;
                         break;
                     }
                 }
             }
+
+            if (done)
+                break;
+
             if ( ! KHttpRetrierWait ( & retrier, http_status ) )
             {
                 assert ( num_read );

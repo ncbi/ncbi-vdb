@@ -32,7 +32,7 @@
 #include <klib/debug.h> /* KDbgSetString */
 #include <klib/log.h>
 #include <klib/rc.h>
-#include <kfg/config.h>
+#include <kfg/kfg-priv.h> /* KConfigMakeEmpty */
 
 #include <kns/adapt.h> /* KStreamFromKFilePair */
 #include <kns/manager.h>
@@ -844,6 +844,7 @@ struct NV {
 };
 static const NV s_v;
 
+#ifdef ALL
 TEST_CASE ( RepeatedHeader ) {
     rc_t rc = 0;
     KDirectory * dir = NULL;
@@ -1024,6 +1025,59 @@ TEST_CASE ( AllowAllCertificates )
     // restore prior settings
     REQUIRE_RC ( KNSManagerSetAllowAllCerts ( mgr, allow_all_certs ) );
 }
+#endif
+
+TEST_CASE(NoRetryOnFailedHttpFileRead) {
+    KConfig * cfg = NULL;
+    REQUIRE_RC(KConfigMakeEmpty(&cfg));
+    REQUIRE_RC(KConfigWriteString(cfg, "/tls/NCBI_VDB_TLS_LOG_ERR", "true"));
+//  REQUIRE_RC(KConfigWriteString(cfg, "/tls/NCBI_VDB_ERR_MBEDTLS_READ","129"));
+//REQUIRE_RC(KConfigWriteString(cfg,"/tls/NCBI_VDB_ERR_MBEDTLS_READ",   "258"));
+//  KConfigPrint(cfg, 0);
+
+    KNSManager * mgr = NULL;
+    REQUIRE_RC(KNSManagerMakeConfig(&mgr, cfg));
+    
+    // hardcoded, might need to be updated
+    const char url[] = "https://sra-download-internal.ncbi.nlm.nih.gov"
+        "/traces/sra27/SRR/000000/SRR000001";
+
+    const KFile * http = NULL;
+
+    REQUIRE_RC(
+        KNSManagerMakeReliableHttpFile(mgr, &http, NULL, 0x01010000, url));
+
+    char bHttp[1024 * 1024] = "";
+    char bFile[1024 * 1024] = "";
+    const char path[] = "data/SRR000001.1048576";
+    assert(1024 * 1024 == 1048576);
+
+    uint64_t pos = 0;
+    size_t num_readH = 0;
+    REQUIRE_RC(KFileRead(http, pos, bHttp, sizeof bHttp, &num_readH));
+    REQUIRE_EQ(num_readH, sizeof bHttp);
+
+    KDirectory * dir = NULL;
+    REQUIRE_RC(KDirectoryNativeDir(&dir));
+
+    const KFile * file = NULL;
+    REQUIRE_RC(KDirectoryOpenFileRead(dir, &file, path));
+
+    size_t num_readF = 0;
+    REQUIRE_RC(KFileReadAll(file, 0, bFile, sizeof bFile, &num_readF));
+    REQUIRE_EQ(num_readF, sizeof bFile);
+
+    REQUIRE_EQ(num_readF, num_readH);
+    REQUIRE_EQ(memcmp(bFile, bHttp, num_readH), 0);
+
+    REQUIRE_RC(KFileRelease(file)); file = NULL;
+
+    REQUIRE_RC(KDirectoryRelease(dir)); dir = NULL;
+    REQUIRE_RC(KFileRelease(http)); http = NULL;
+    REQUIRE_RC(KNSManagerRelease(mgr)); mgr = NULL;
+    REQUIRE_RC(KConfigRelease(cfg)); cfg = NULL;
+}
+
 
 //////////////////////////////////////////// Main
 
