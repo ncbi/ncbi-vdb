@@ -34,7 +34,6 @@ TEST_TOOLS = \
 	wb-test-kfg \
 	test-kfg \
 	test-repository \
-	test-gcpcredentials \
 	test-keystore
 
 include $(TOP)/build/Makefile.env
@@ -140,23 +139,6 @@ TEST_KEYSTORE_LIB = \
 
 $(TEST_BINDIR)/test-keystore: $(TEST_KEYSTORE_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_KEYSTORE_LIB)
-
-#-------------------------------------------------------------------------------
-# test-gcpcredentials
-#
-TEST_GCPCREDENTIALS_SRC = \
-	test-gcpcredentials
-
-TEST_GCPCREDENTIALS_OBJ = \
-	$(addsuffix .$(OBJX),$(TEST_GCPCREDENTIALS_SRC))
-
-TEST_GCPCREDENTIALS_LIB = \
-	-sktst \
-	-skapp \
-    -sncbi-vdb
-
-$(TEST_BINDIR)/test-gcpcredentials: $(TEST_GCPCREDENTIALS_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_GCPCREDENTIALS_LIB)
 
 #-------------------------------------------------------------------------------
 # fuzz test

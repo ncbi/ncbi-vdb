@@ -75,7 +75,7 @@ ifeq (dbg, $(BUILD))
 	PED = -std=gnu11 -pedantic # -fdiagnostics-show-option
 else
 	# TODO: use -fstack-protector-strong for gcc >= 4.9
-	OPT = -O3 -Wno-variadic-macros -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -fstack-protector -Wa,--noexecstack -Wall -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-c++11-extensions -D _GLIBCXX_ASSERTIONS
+	OPT = -O3 -Wno-variadic-macros -fno-strict-aliasing -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -fstack-protector -Wa,--noexecstack -Wall -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-c++11-extensions
 endif
 
 ifeq (mac,$(OS))
