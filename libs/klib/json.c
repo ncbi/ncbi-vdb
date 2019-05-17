@@ -904,7 +904,7 @@ rc_t
 ValueToJson ( const KJsonValue * p_value, PrintData * p_pd )
 {
     size_t saved_offset = p_pd -> offset;
-    rc_t rc;
+    rc_t rc = 0;
     switch ( p_value -> type )
     {
     case jsString:
