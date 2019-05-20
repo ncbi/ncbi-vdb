@@ -49,15 +49,20 @@ void draw_button( struct KTUIWidget * w )
 
             if ( rc == 0 && w->caption != NULL )
             {
-                uint32_t x_txt = x + 2;
-                uint32_t w_txt = w1 - 4;
-                uint32_t l_cap = string_measure( w->caption, NULL );
-                if ( l_cap < w_txt )
+                tui_ac hl_ac;   // the highlighted style
+                rc = GetWidgetHlAc( w, ktuipa_button, &hl_ac );
+                if ( rc == 0 )
                 {
-                    x_txt += ( ( w_txt - l_cap ) / 2 );
-                    w_txt = l_cap;
+                    uint32_t x_txt = x + 2;
+                    uint32_t w_txt = w1 - 4;
+                    uint32_t l_cap = string_measure( w->caption, NULL );
+                    if ( l_cap < w_txt )
+                    {
+                        x_txt += ( ( w_txt - l_cap ) / 2 );
+                        w_txt = l_cap;
+                    }
+                    rc = draw_highlighted( tui, x_txt, y, w_txt, &ac, &hl_ac, w->caption );
                 }
-                rc = draw_highlighted( tui, x_txt, y, w_txt, &ac, w->caption );
             }
 
             if ( rc == 0 )

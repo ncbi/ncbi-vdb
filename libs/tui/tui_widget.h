@@ -36,7 +36,8 @@ extern "C" {
 #define MAX_GRID_COLS 256
 #define MAX_GRID_ROWS 128
 
-rc_t draw_highlighted( struct KTUI * tui, uint32_t x, uint32_t y, uint32_t w, tui_ac * ac, const char * caption );
+rc_t draw_highlighted( struct KTUI * tui, uint32_t x, uint32_t y, uint32_t w,
+                       tui_ac * ac, tui_ac * hl_ac, const char * caption );
 
 rc_t DlgPaint( struct KTUI * tui, int x, int y, int w, int h, KTUI_color c );
 rc_t DlgWrite( struct KTUI * tui, int x, int y, const tui_ac * ac, const char * s, uint32_t l );
@@ -148,6 +149,7 @@ rc_t SetWidgetRect ( struct KTUIWidget * self, const tui_rect * r, bool redraw )
 
 rc_t SetWidgetCanFocus( struct KTUIWidget * self, bool can_focus );
 rc_t GetWidgetAc( struct KTUIWidget * self, KTUIPa_entry pa_entry, tui_ac * ac );
+rc_t GetWidgetHlAc( struct KTUIWidget * self, KTUIPa_entry pa_entry, tui_ac * ac );
 
 const char * GetWidgetCaption ( struct KTUIWidget * self );
 rc_t SetWidgetCaption ( struct KTUIWidget * self, const char * caption );

@@ -71,6 +71,8 @@ enum
     ktuipa_menu_sel,
     ktuipa_menu_hi,
 
+    ktuipa_hl,  /* for the high-light */
+    
     ktuipa_last
 };
 

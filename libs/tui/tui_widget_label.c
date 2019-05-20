@@ -46,7 +46,12 @@ void draw_label( struct KTUIWidget * w )
                 uint32_t y = r.top_left.y;
                 rc = DlgPaint( tui, x, y, r.w, r.h, ac.bg );
                 if ( rc == 0 && w->caption != NULL )
-                    draw_highlighted( tui, x + 1, y, r.w - 2, &ac, w->caption );
+                {
+                    tui_ac hl_ac;   // the highlighted style
+                    rc = GetWidgetHlAc( w, ktuipa_label, &hl_ac );
+                    if ( rc == 0 )
+                        draw_highlighted( tui, x + 1, y, r.w - 2, &ac, &hl_ac, w->caption );
+                }
             }
         }
     }

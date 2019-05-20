@@ -58,31 +58,28 @@ rc_t DlgWrite( struct KTUI * tui, int x, int y, const tui_ac * ac, const char * 
 }
 
 
-static rc_t hl( struct KTUI * tui, uint32_t x, uint32_t y, const tui_ac * ac, const char * c )
+static rc_t draw_hl_label( struct KTUI * tui, uint32_t x, uint32_t y, uint32_t w,
+                           tui_ac * ac, tui_ac * hl_ac, size_t offset, const char * caption )
 {
-    tui_ac inv;
-    inverse_ac( &inv, ac );
-    return DlgWrite( tui, x, y, &inv, c, 1 );
-}
-
-
-static rc_t draw_hl_label( struct KTUI * tui, uint32_t x, uint32_t y, uint32_t w, tui_ac * ac, size_t offset, const char * caption )
-{
-    rc_t rc = 0;
+    rc_t rc;
+    
     if ( offset == 0 )
     {
         rc = DlgWrite( tui, x, y, ac, caption + 1, w );
         if ( rc == 0 )
-            rc = hl( tui, x, y, ac, caption + 1 );
+            /* one highlighted char */
+            rc = DlgWrite( tui, x, y, hl_ac, caption + 1, 1 );
     }
     else if ( offset < w )
     {
         rc = DlgWrite( tui, x, y, ac, caption, offset );
         if ( rc == 0 )
         {
-            rc = DlgWrite( tui, x + offset, y, ac, caption + offset + 1, w - offset );
+            const char * cap_ofs = caption + offset + 1;
+            /* one highlighted char */
+            rc = DlgWrite( tui, x + offset, y, hl_ac, cap_ofs, 1 );
             if ( rc == 0 )
-                rc = hl( tui, x + offset, y, ac, caption + offset + 1 );
+                rc = DlgWrite( tui, x + offset + 1, y, ac, cap_ofs + 1, w - ( offset + 1 ) );
         }
     }
     else
@@ -91,7 +88,8 @@ static rc_t draw_hl_label( struct KTUI * tui, uint32_t x, uint32_t y, uint32_t w
 }
 
 
-rc_t draw_highlighted( struct KTUI * tui, uint32_t x, uint32_t y, uint32_t w, tui_ac * ac, const char * caption )
+rc_t draw_highlighted( struct KTUI * tui, uint32_t x, uint32_t y, uint32_t w,
+                       tui_ac * ac, tui_ac * hl_ac, const char * caption )
 {
     rc_t rc = 0;
     size_t s_cap;
@@ -100,7 +98,7 @@ rc_t draw_highlighted( struct KTUI * tui, uint32_t x, uint32_t y, uint32_t w, tu
     {
         char * ampersand = string_chr ( caption, s_cap, '&' );
         if ( ampersand != NULL )
-            rc = draw_hl_label( tui, x, y, w, ac, ( ampersand - caption ), caption );
+            rc = draw_hl_label( tui, x, y, w, ac, hl_ac, ( ampersand - caption ), caption );
         else
             rc = DlgWrite( tui, x, y, ac, caption, w );
     }
@@ -184,8 +182,9 @@ static void init_widget( KTUIWidget * w, uint32_t id, KTUI_Widget_type wtype, co
 }
 
 
-rc_t TUI_MakeWidget ( KTUIWidget ** self, struct KTUIDlg * dlg, uint32_t id, KTUI_Widget_type wtype,
-                      const tui_rect * r, draw_cb on_draw, event_cb on_event )
+rc_t TUI_MakeWidget ( KTUIWidget ** self, struct KTUIDlg * dlg, uint32_t id,
+                      KTUI_Widget_type wtype, const tui_rect * r,
+                      draw_cb on_draw, event_cb on_event )
 {
     rc_t rc = 0;
     if ( self == NULL )
@@ -286,7 +285,7 @@ rc_t ReleaseWidgetPalette( struct KTUIWidget * self )
     return rc;
 }
 
-
+/* the attribute and color of regular text */
 rc_t GetWidgetAc( struct KTUIWidget * self, KTUIPa_entry pa_entry, tui_ac * ac )
 {
     rc_t rc = 0;
@@ -297,14 +296,27 @@ rc_t GetWidgetAc( struct KTUIWidget * self, KTUIPa_entry pa_entry, tui_ac * ac )
             ac->bg = self->bg_override;
         if ( self->fg_override_flag )
             ac->fg = self->fg_override;
-
     }
     else
         rc = RC( rcApp, rcAttr, rcUpdating, rcSelf, rcNull );
     return rc;
-   
 }
 
+/* the attribute and color of highlighted text */
+rc_t GetWidgetHlAc( struct KTUIWidget * self, KTUIPa_entry pa_entry, tui_ac * ac )
+{
+    tui_ac norm;
+    rc_t rc = GetWidgetAc( self, pa_entry, &norm );
+    if ( rc == 0  )
+    {
+        const tui_ac * palette_hl = KTUIPaletteGet ( self -> palette, ktuipa_hl );
+        // determine the highlighted style...
+        ac -> attr = palette_hl -> attr;
+        ac -> fg = palette_hl -> fg;
+        ac -> bg = norm . bg;
+    }
+    return rc;
+}
 
 rc_t RedrawWidget( KTUIWidget * w )
 {
@@ -318,7 +330,6 @@ rc_t RedrawWidget( KTUIWidget * w )
     }
     return rc;
 }
-
 
 rc_t RedrawWidgetAndPushEvent( KTUIWidget * w,
            KTUIDlg_event_type ev_type, uint64_t value_1, uint64_t value_2, void * ptr_0 )

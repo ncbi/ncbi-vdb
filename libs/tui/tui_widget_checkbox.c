@@ -54,10 +54,16 @@ void draw_checkbox( struct KTUIWidget * w )
 
                 if ( rc == 0 )
                 {
-                    uint32_t x = r.top_left.x + 1;
-                    uint32_t y = r.top_left.y;
-                    uint32_t w = r.w - 2;
-                    draw_highlighted( tui, x, y, w, &ac, txt );
+                    tui_ac hl_ac;   // the highlighted style
+                    rc = GetWidgetHlAc( w, ktuipa_checkbox, &hl_ac );
+                    if ( rc == 0 )
+                    {
+                        uint32_t x = r.top_left.x + 1;
+                        uint32_t y = r.top_left.y;
+                        uint32_t w = r.w - 2;
+
+                        draw_highlighted( tui, x, y, w, &ac, &hl_ac, txt );
+                    }
                 }
             }
         }
