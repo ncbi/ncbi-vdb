@@ -2373,14 +2373,14 @@ void CC HelpOptionsStandard(void){
 #endif
 #if _DEBUGGING
     HelpOptionLine(ALIAS_DEBUG    ,OPTION_DEBUG, "Module[-Flag]", debug_usage); 
-#endif
         /* Dat is spooky place, we will print 'standard' append mode
-         * help only it is necessary
+         * help only it is necessary and only in debugging mode
          */
     if ( ArgsAppendModeWasSet () )
     {
         HelpOptionLine(NULL, OPTION_APPEND_OUTPUT, NULL, append_usage);
     }
+#endif
 }
 
 void CC HelpOptionsReport (void)

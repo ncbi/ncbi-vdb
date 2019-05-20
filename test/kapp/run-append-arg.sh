@@ -26,6 +26,17 @@ SHKRIPT=`basename $0`
 
 EXECUTABLE=$1
 
+
+DEBMO=`echo $2 | grep -- "-DNDEBUG" >/dev/null 2>&2 || echo "Y"`
+if [ -z "$DEBMO" ]
+then
+    DEBMO=N
+    echo "## TESTING RELEASE VERSION"
+else
+    echo "## TESTING DEBUG VERSION"
+fi
+
+
 usage ()
 {
     cat <<EOF >&2
@@ -59,7 +70,13 @@ fi
 ###
 echo "## 1. Testing argument existence in help string"
 CMD="$EXECUTABLE -h"
-RET=`eval $CMD | ( grep -- "--append_output" >/dev/null 2>&1 && echo GOOD )`
+if [ "$DEBMO" == "Y" ]
+then
+    RET=`eval $CMD | ( grep -- "--append_output" >/dev/null 2>&1 && echo GOOD )`
+else
+    RET=`eval $CMD | ( grep -- "--append_output" >/dev/null 2>&1 || echo GOOD )`
+fi
+
 if [ "$RET" != "GOOD" ]
 then
     echo "## <<== FAILED"

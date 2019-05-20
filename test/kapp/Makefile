@@ -187,5 +187,5 @@ kns-agent-tests: report-kns-agent
 
 append-arg-tests:   append-arg-test
 	@ echo "Running append argument tests"
-	@ $(SRCDIR)/run-append-arg.sh $(TEST_BINDIR)/append-arg-test
+	@ $(SRCDIR)/run-append-arg.sh $(TEST_BINDIR)/append-arg-test $(DBG)
 	@ echo "JOJOBA!!!"
