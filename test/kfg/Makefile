@@ -34,6 +34,7 @@ TEST_TOOLS = \
 	wb-test-kfg \
 	test-kfg \
 	test-repository \
+	test-awscredentials \
 	test-keystore
 
 include $(TOP)/build/Makefile.env
@@ -122,6 +123,23 @@ TEST_REPOSITORY_LIB = \
 
 $(TEST_BINDIR)/test-repository: $(TEST_REPOSITORY_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_REPOSITORY_LIB)
+
+#-------------------------------------------------------------------------------
+# test-awscredentials
+#
+TEST_AWSCREDENTIALS_SRC = \
+	test-awscredentials
+
+TEST_AWSCREDENTIALS_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_AWSCREDENTIALS_SRC))
+
+TEST_AWSCREDENTIALS_LIB = \
+	-sktst \
+	-skapp \
+    -sncbi-vdb
+
+$(TEST_BINDIR)/test-awscredentials: $(TEST_AWSCREDENTIALS_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_AWSCREDENTIALS_LIB)
 
 #-------------------------------------------------------------------------------
 # test-keystore
