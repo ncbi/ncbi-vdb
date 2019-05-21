@@ -195,6 +195,8 @@ struct VResolverAlg
 #if 0
     VRemoteProtocols protocols;
 #endif
+
+    uint32_t version; /* 3.0 or SDL ... */
 };
 
 
@@ -2933,18 +2935,41 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
     }
     else
     {
+        ver_t v = InitVersion(version);
         for ( i = 0; i < count; ++ i )
         {
             const VResolverAlg *alg = VectorGet ( & self -> remote, i );
+            assert(alg);
             if ( ( alg -> app_id == app || alg -> app_id == wildCard ) && ! alg -> disabled )
             {
-                try_rc = VResolverAlgRemoteResolve ( alg, self -> kns, protocols,
-                    & tok, path, mapping, opt_file_rtn, legacy_wgs_refseq, version );
-                if ( try_rc == 0 )
-                    return 0;
-                if ( rc == 0 )
-                    rc = try_rc;
+                bool ok = false;
+                if (v == 0);
+                else if (v <= VERSION_4_0) {
+                    if (alg->version == VERSION_3_0 ||
+                        alg->version == VERSION_4_0)
+                    {
+                        ok = true;
+                    }
+                }
+                else if (v == alg->version)
+                    ok = true;
+                if (ok) {
+                    try_rc = VResolverAlgRemoteResolve(alg, self->kns,
+                        protocols, &tok, path, mapping, opt_file_rtn,
+                        legacy_wgs_refseq, version);
+                    if (try_rc == 0)
+                        return 0;
+                    if (rc == 0)
+                        rc = try_rc;
+                }
             }
+        }
+        if (rc == 0 && count > 0) {
+            rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcNotFound);
+            PLOGERR(klogErr, (klogErr, rc,
+                "cannot find names service version $(vers). "
+                "Hint: run \"vdb-config --restore-defaults\"",
+                "vers=%V", v));
         }
     }
 
@@ -4679,7 +4704,7 @@ enum {
  */
 static
 rc_t VResolverLoadRepo ( VResolver *self, Vector *algs, const KConfigNode *repo,
-    const String *ticket, bool cache_capable, bool protected,
+    const String *ticket, const char *name, bool cache_capable, bool protected,
     EDisabled isDisabled, bool cacheEnabled )
 {
     rc_t rc = 0;
@@ -4787,7 +4812,26 @@ rc_t VResolverLoadRepo ( VResolver *self, Vector *algs, const KConfigNode *repo,
                         rc = VResolverAlgMake ( & cgi, root, appAny, algCGI, protected, disabled );
                         if ( rc == 0 )
                         {
+                            assert(cgi);
+
                             cgi -> ticket = ticket;
+
+                            if (name != NULL) {
+                                if (strcmp(name, "CGI") == 0)
+                                    cgi->version = 0x03000000;
+                                else if (strcmp(name, "CGI.4") == 0)
+                                    cgi->version = 0x04000000;
+                                else if (strcmp(name, "SDL.1") == 0)
+                                    cgi->version = 0x81000000;
+                                else if (strcmp(name, "SDL.2") == 0)
+                                    cgi->version = 0x82000000;
+                            }
+
+                            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_KFG),
+                                ("VResolverAlg(%s.%V, %S)\n",
+                                    cgi->protected
+                                    ? " PROTECTED" : "!protected",
+                                    cgi->version, cgi->root));
 
                             rc = VectorAppend ( algs, NULL, cgi );
                             if ( rc == 0 )
@@ -4824,7 +4868,7 @@ rc_t VResolverLoadNamedRepo ( VResolver *self, Vector *algs,
     else if ( rc == 0 )
     {
         rc = VResolverLoadRepo ( self, algs, repo,
-            ticket, cache_capable, protected, disabled, cacheEnabled );
+            ticket, name, cache_capable, protected, disabled, cacheEnabled );
         KConfigNodeRelease ( repo );
     }
     return rc;
@@ -4889,7 +4933,7 @@ rc_t VResolverLoadProtected ( VResolver *self, const KConfigNode *kfg,
     else if ( rc == 0 )
     {
         rc = VResolverLoadRepo ( self, & self -> local,
-            repo, NULL, cache_capable, true, disabled, cacheEnabled );
+            repo, NULL, NULL, cache_capable, true, disabled, cacheEnabled );
         KConfigNodeRelease ( repo );
     }
     return rc;
@@ -5519,7 +5563,7 @@ rc_t VResolverMake ( VResolver ** objp, const KDirectory *wd,
 
         KRepositoryProjectId ( protected, & obj -> projectId );
 
-        obj -> version = string_dup_measure ( "#4.", NULL );
+        obj -> version = string_dup_measure( "#4.", NULL );
         if ( obj -> version == NULL )
             rc = RC ( rcVFS, rcMgr, rcCreating, rcMemory, rcExhausted );
 
