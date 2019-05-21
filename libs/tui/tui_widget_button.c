@@ -29,6 +29,18 @@
 #include <tui/tui_dlg.h>
 #include "tui_widget.h"
 
+static uint32_t lenght_without_first_ampersand( const char * s )
+{
+    size_t s_cap;
+    uint32_t l_cap = string_measure( s, &s_cap );
+    if ( l_cap > 0 )
+    {
+        char * ampersand = string_chr ( s, s_cap, '&' );
+        if ( ampersand != NULL ) l_cap--;
+    }
+    return l_cap;
+}
+
 void draw_button( struct KTUIWidget * w )
 {
     tui_rect r;
@@ -55,7 +67,7 @@ void draw_button( struct KTUIWidget * w )
                 {
                     uint32_t x_txt = x + 2;
                     uint32_t w_txt = w1 - 4;
-                    uint32_t l_cap = string_measure( w->caption, NULL );
+                    uint32_t l_cap = lenght_without_first_ampersand( w->caption );
                     if ( l_cap < w_txt )
                     {
                         x_txt += ( ( w_txt - l_cap ) / 2 );

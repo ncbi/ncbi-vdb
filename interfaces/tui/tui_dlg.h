@@ -164,6 +164,9 @@ TUI_EXTERN bool CC KTUIDlgGetChanged ( struct KTUIDlg * self );
 TUI_EXTERN rc_t CC KTUIDlgGetRect ( struct KTUIDlg * self, tui_rect * r );
 TUI_EXTERN rc_t CC KTUIDlgSetRect ( struct KTUIDlg * self, const tui_rect * r, bool redraw );
 
+TUI_EXTERN rc_t CC KTUIDlgGetActivePage ( struct KTUIDlg * self, uint32_t * page_id );
+TUI_EXTERN rc_t CC KTUIDlgSetActivePage ( struct KTUIDlg * self, uint32_t page_id );
+
 TUI_EXTERN bool CC KTUIDlgGetMenuActive ( const struct KTUIDlg * self );
 TUI_EXTERN rc_t CC KTUIDlgSetMenuActive ( struct KTUIDlg * self, bool active );
 TUI_EXTERN rc_t CC KTUIDlgSetMenu ( struct KTUIDlg * self, struct KTUI_Menu * menu );
@@ -176,6 +179,9 @@ TUI_EXTERN rc_t CC KTUIDlgReleaseWidgetPalette ( struct KTUIDlg * self, uint32_t
 
 TUI_EXTERN rc_t CC KTUIDlgGetWidgetRect ( struct KTUIDlg * self, uint32_t id, tui_rect * r );
 TUI_EXTERN rc_t CC KTUIDlgSetWidgetRect ( struct KTUIDlg * self, uint32_t id, const tui_rect * r, bool redraw );
+
+TUI_EXTERN rc_t CC KTUIDlgGetWidgetPageId ( struct KTUIDlg * self, uint32_t id, uint32_t * page_id );
+TUI_EXTERN rc_t CC KTUIDlgSetWidgetPageId ( struct KTUIDlg * self, uint32_t id, uint32_t page_id );
 
 TUI_EXTERN rc_t CC KTUIDlgSetWidgetCanFocus ( struct KTUIDlg * self, uint32_t id, bool can_focus );
 

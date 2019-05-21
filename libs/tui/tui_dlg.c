@@ -104,7 +104,7 @@ typedef struct KTUIDlg
     Event_Ring events;
     Vector widgets;
     tui_rect r;
-    uint32_t focused;
+    uint32_t focused, active_page;
     bool menu_active, changed, done;
 
 } KTUIDlg;
@@ -158,6 +158,7 @@ LIB_EXPORT rc_t CC KTUIDlgMake ( struct KTUI * tui, struct KTUIDlg ** self, stru
             {
                 td->tui = tui;
                 td->parent = parent;
+                td->active_page = 0;
 
                 if ( palette == NULL )
                 {
@@ -457,6 +458,61 @@ LIB_EXPORT rc_t CC KTUIDlgSetMenu ( struct KTUIDlg * self, struct KTUI_Menu * me
     return rc;
 }
 
+LIB_EXPORT rc_t CC KTUIDlgSetActivePage ( struct KTUIDlg * self, uint32_t page_id )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+        rc = RC( rcApp, rcAttr, rcSelecting, rcSelf, rcNull );
+    else if ( self -> active_page != page_id )
+    {
+        uint32_t i, n = VectorLength( &self->widgets );
+        bool dlg_redraw = false;
+        
+        /* hide/deactivate all widgets belonging to the current active page */
+        for ( i = 0; i < n; ++i )
+        {
+            KTUIWidget * w = VectorGet ( &self->widgets, i );
+            if ( w != NULL )
+            {
+                if ( w -> page_id == 0 )
+                {
+                    // widgets on page zero are always visible
+                }
+                else if ( w -> page_id == self -> active_page )
+                {
+                    bool redraw;
+                    SetWidgetCanFocus( w, false );
+                    SetWidgetVisible ( w, false, &redraw );
+                    dlg_redraw |= redraw;
+                }
+                else if ( w -> page_id == page_id )
+                {
+                    bool redraw;
+                    SetWidgetCanFocus( w, true );
+                    SetWidgetVisible ( w, true, &redraw );
+                    dlg_redraw |= redraw;
+                }
+            }
+        }
+        self->active_page = page_id;
+        if ( dlg_redraw )
+            rc = KTUIDlgDraw( self, false );    
+    }
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KTUIDlgGetActivePage ( struct KTUIDlg * self, uint32_t * page_id )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+        rc = RC( rcApp, rcAttr, rcSelecting, rcSelf, rcNull );
+    else if ( page_id == NULL )
+        rc = RC( rcApp, rcAttr, rcSelecting, rcParam, rcNull );
+    else
+        *page_id = self->active_page;
+    return rc;
+   
+}
 
 /* ****************************************************************************************** */
 
@@ -899,6 +955,10 @@ LIB_EXPORT rc_t CC KTUIDlgGetWidgetRect ( struct KTUIDlg * self, uint32_t id, tu
 LIB_EXPORT rc_t CC KTUIDlgSetWidgetRect ( struct KTUIDlg * self, uint32_t id, const tui_rect * r, bool redraw )
 {   return SetWidgetRect( KTUIDlgGetWidgetById( self, id ), r, redraw );    }
 
+LIB_EXPORT rc_t CC KTUIDlgGetWidgetPageId ( struct KTUIDlg * self, uint32_t id, uint32_t * page_id )
+{   return GetWidgetPageId( KTUIDlgGetWidgetById( self, id ), page_id );    }
+LIB_EXPORT rc_t CC KTUIDlgSetWidgetPageId ( struct KTUIDlg * self, uint32_t id, uint32_t page_id )
+{   return SetWidgetPageId( KTUIDlgGetWidgetById( self, id ), page_id );    }
 
 LIB_EXPORT rc_t CC KTUIDlgSetWidgetCanFocus ( struct KTUIDlg * self, uint32_t id, bool can_focus )
 {   return SetWidgetCanFocus( KTUIDlgGetWidgetById( self, id ), can_focus );    }
@@ -1166,11 +1226,11 @@ static KTUIWidget * KTUIDlgWidgetAtPoint( struct KTUIDlg * self, tui_point * rel
     for ( i = 0; i < n && res == NULL; ++i )
     {
         KTUIWidget * w = VectorGet ( &self->widgets, i );
-        if ( w != NULL )
+        if ( w != NULL && w -> visible && w -> wtype != KTUIW_label )
         {
-            uint32_t x_left  = w->r.top_left.x;
-            uint32_t x_right = w->r.top_left.x + w->r.w;
-            if ( relative_point->x >= x_left && relative_point->x < x_right )
+            uint32_t x_left  = w -> r . top_left . x;
+            uint32_t x_right = w -> r . top_left . x + w -> r . w;
+            if ( relative_point -> x >= x_left && relative_point-> x < x_right )
             {
                 uint32_t y_top    = w->r.top_left.y;
                 uint32_t y_bottom = w->r.top_left.y + w->r.h;
@@ -1189,9 +1249,9 @@ static KTUIWidget * KTUIDlgWidgetAtPoint( struct KTUIDlg * self, tui_point * rel
 static rc_t DlgEventHandler( struct KTUIDlg * self, tui_event * event )
 {
     rc_t rc = 0;
-    if ( event->event_type == ktui_event_kb )
+    if ( event -> event_type == ktui_event_kb )
     {
-        switch( event->data.kb_data.code )
+        switch( event -> data . kb_data . code )
         {
             case ktui_tab   : ;
             case ktui_down  : ;
@@ -1207,23 +1267,24 @@ static rc_t DlgEventHandler( struct KTUIDlg * self, tui_event * event )
         tui_point p;
         KTUIWidget * w;
 
-        p.x = event->data.mouse_data.x;
-        p.y = event->data.mouse_data.y;
+        p . x = event -> data . mouse_data . x;
+        p . y = event -> data . mouse_data . y;
         KTUIDlgRelativePoint( self, &p );
         w = KTUIDlgWidgetAtPoint( self, &p );
         if ( w != NULL )
         {
-            rc = KTUIDlgSetFocusTo( self, w );
+            if ( w -> can_focus )
+                rc = KTUIDlgSetFocusTo( self, w );
             if ( rc == 0 && w->on_event != 0 )
             {
                 /* now send the mouse-event with coordinates relative to the widget
                    to this widget */
 
                 tui_event m_event;
-                m_event.event_type = ktui_event_mouse;
-                m_event.data.mouse_data.x = ( p.x - w->r.top_left.x );
-                m_event.data.mouse_data.y = ( p.y - w->r.top_left.y );
-                m_event.data.mouse_data.button = event->data.mouse_data.button;
+                m_event . event_type = ktui_event_mouse;
+                m_event . data . mouse_data . x = ( p . x - w -> r . top_left . x );
+                m_event . data . mouse_data . y = ( p . y - w -> r . top_left . y );
+                m_event . data . mouse_data.button = event -> data . mouse_data . button;
                 w->on_event( w, &m_event );
             }
         }

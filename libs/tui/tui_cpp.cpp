@@ -74,6 +74,15 @@ namespace tui {
         return res;
     }
 
+    bool Dlg::SetActivePage( uint32_t id )
+    {
+        uint32_t old_id = GetActivePage();
+        bool res = ( 0 == KTUIDlgSetActivePage ( dlg_, id ) );
+        if ( res )
+            onPageChanged( old_id, id );
+        return res;
+    };
+    
     bool Dlg::SetCaptionF( const char * fmt, ... )
     {
         va_list args;
@@ -156,17 +165,20 @@ namespace tui {
         r.set_y( rd.get_y() + ( ( rd.get_h() - r.get_h() ) / 2 ) );
     };
 
-    void Dlg::ShowWidgets( bool active, tui_id from, tui_id to )
+    void Dlg::Populate_common( uint32_t id, KTUI_color bg, KTUI_color fg, uint32_t page_id )
     {
-        for ( tui_id id = from; id <= to; id++ )
+        SetWidgetBackground( id, bg );
+        SetWidgetForeground( id, fg );
+        SetWidgetPageId( id, page_id );
+        if ( page_id > 0 && ( GetActivePage() != page_id ) )
         {
-            SetWidgetVisible( id, active );
-            SetWidgetCanFocus( id, active );
+            SetWidgetVisible( id, false );
+            SetWidgetCanFocus( id, false ); 
         }
     }
-
+    
     void Dlg::PopulateLabel( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
-            KTUI_color bg, KTUI_color fg )
+            KTUI_color bg, KTUI_color fg, uint32_t page_id )
     {
         if ( resize )
             SetWidgetRect( id, r, false );
@@ -177,14 +189,13 @@ namespace tui {
             else
             {
                 AddLabel( id, r, ( txt == NULL ) ? "" : txt );
-                SetWidgetBackground( id, bg );
-                SetWidgetForeground( id, fg );
+                Populate_common( id, bg, fg, page_id );
             }
         }
     }
 
     void Dlg::PopulateButton( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
-            KTUI_color bg, KTUI_color fg )
+            KTUI_color bg, KTUI_color fg, uint32_t page_id )
     {
         if ( resize )
             SetWidgetRect( id, r, false );
@@ -195,14 +206,13 @@ namespace tui {
             else
             {
                 AddButton( id, r, ( txt == NULL ) ? "" : txt );
-                SetWidgetBackground( id, bg );
-                SetWidgetForeground( id, fg );
+                Populate_common( id, bg, fg, page_id );
             }
         }
     }
 
     void Dlg::PopulateCheckbox( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
-            bool checked, KTUI_color bg, KTUI_color fg )
+            bool checked, KTUI_color bg, KTUI_color fg, uint32_t page_id )
     {
         if ( resize )
             SetWidgetRect( id, r, false );
@@ -213,14 +223,13 @@ namespace tui {
             else
             {
                 AddCheckBox( id, r, ( txt == NULL ) ? "" : txt, checked );
-                SetWidgetBackground( id, bg );
-                SetWidgetForeground( id, fg );
+                Populate_common( id, bg, fg, page_id );
             }
         }
     }
 
     void Dlg::PopulateInput( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
-            size_t length, KTUI_color bg, KTUI_color fg )
+            size_t length, KTUI_color bg, KTUI_color fg, uint32_t page_id )
     {
         if ( resize )
             SetWidgetRect( id, r, false );
@@ -231,10 +240,38 @@ namespace tui {
             else
             {
                 AddInput( id, r, ( txt == NULL ) ? "" : txt, length );
-                SetWidgetBackground( id, bg );
-                SetWidgetForeground( id, fg );
+                Populate_common( id, bg, fg, page_id );
             }
         }
+    }
+    
+    void Dlg::SetHighLightColor( KTUI_color value )
+    {
+        struct KTUIPalette * palette = KTUIDlgGetPalette ( dlg_ );
+        if ( palette != NULL )
+        {
+            const tui_ac * org = KTUIPaletteGet ( palette, ktuipa_hl );
+            tui_ac n;
+            n . fg = value;
+            n . bg = org -> bg;
+            n . attr = org -> attr;
+            KTUIPaletteSet ( palette, ktuipa_hl, &n );
+        }
+    }
+
+    void Dlg::SetHighLightAttr( KTUI_attrib value )
+    {
+        struct KTUIPalette * palette = KTUIDlgGetPalette ( dlg_ );
+        if ( palette != NULL )
+        {
+            const tui_ac * org = KTUIPaletteGet ( palette, ktuipa_hl );
+            tui_ac n;
+            n . fg = org -> fg;
+            n . bg = org -> bg;
+            n . attr = value;
+            KTUIPaletteSet ( palette, ktuipa_hl, &n );
+        }
+       
     }
     
     bool Dlg_Runner::handle_tui_event( Tui_Event &ev )

@@ -325,7 +325,7 @@ class Dlg
 {
     private :
         struct KTUIDlg * dlg_;  // opaque struct from interfaces/tui/tui_dlg.h
-
+        
     public :
         Dlg( void )
         {
@@ -357,6 +357,11 @@ class Dlg
         bool SetRect( Tui_Rect const &r, bool redraw ) { return ( KTUIDlgSetRect ( dlg_, &( r.r_ ), redraw ) == 0 ); };
         virtual bool Resize( Tui_Rect const &r );
 
+        virtual void onPageChanged( uint32_t old_page, uint32_t new_page ) {};
+        
+        uint32_t GetActivePage( void ) { uint32_t id; KTUIDlgGetActivePage ( dlg_, &id ); return id; };
+        bool SetActivePage( uint32_t id );
+        
         bool IsMenuActive( void ) { return KTUIDlgGetMenuActive ( dlg_ ); };
         bool SetMenuActive( bool active ) { return ( KTUIDlgSetMenuActive ( dlg_, active ) == 0 ); };
         bool SetMenu( Tui_Menu &menu ) { return ( KTUIDlgSetMenu ( dlg_, menu.get( true ) ) == 0 ); };
@@ -365,9 +370,13 @@ class Dlg
         bool SetWidgetCaption( tui_id id, const char * caption ) { return ( KTUIDlgSetWidgetCaption ( dlg_, id, caption ) == 0 ); };
         bool SetWidgetCaption( tui_id id, std::string caption ) { return ( KTUIDlgSetWidgetCaption ( dlg_, id, caption.c_str() ) == 0 ); };
         bool SetWidgetCaptionF( tui_id id, const char * fmt, ... );
+
         bool GetWidgetRect( tui_id id, Tui_Rect &r ) { return ( KTUIDlgGetWidgetRect ( dlg_, id, &( r.r_ ) ) == 0 ); };
         bool SetWidgetRect( tui_id id, Tui_Rect const &r, bool redraw ) { return ( KTUIDlgSetWidgetRect ( dlg_, id, &( r.r_ ), redraw ) == 0 ); };
 
+        bool GetWidgetPageId( tui_id id, uint32_t * pg_id ) { return ( KTUIDlgGetWidgetPageId ( dlg_, id, pg_id ) == 0 ); };
+        bool SetWidgetPageId( tui_id id, uint32_t pg_id ) { return ( KTUIDlgSetWidgetPageId ( dlg_, id, pg_id ) == 0 ); };
+        
         bool SetWidgetCanFocus( tui_id id, bool can_focus ) { return ( KTUIDlgSetWidgetCanFocus ( dlg_, id, can_focus ) == 0 ); };
 
         bool IsWidgetVisisble( tui_id id ) { return KTUIDlgGetWidgetVisible ( dlg_, id ); };
@@ -378,7 +387,8 @@ class Dlg
 
         bool GetWidgetBoolValue( tui_id id ) { return KTUIDlgGetWidgetBoolValue ( dlg_, id ); };
         bool SetWidgetBoolValue( tui_id id, bool value ) { return ( KTUIDlgSetWidgetBoolValue ( dlg_, id, value ) == 0 ); };
-
+        bool ToggleWidgetBoolValue( tui_id id ) { return SetWidgetBoolValue( id, !GetWidgetBoolValue( id ) ); };
+        
         bool SetWidgetBackground( tui_id id, KTUI_color value ) { return ( KTUIDlgSetWidgetBg ( dlg_, id, value ) == 0 ); };
         bool ReleaseWidgetBackground( tui_id id ) { return ( KTUIDlgReleaseWidgetBg ( dlg_, id ) == 0 ); };
 
@@ -441,14 +451,15 @@ class Dlg
         bool AddSpinEdit( tui_id id, Tui_Rect const &r, tui_long value, tui_long min, tui_long max ) { return ( KTUIDlgAddSpinEdit ( dlg_, id, &( r.r_ ), value, min, max ) == 0 ); };
         bool AddGrid( tui_id id, Tui_Rect const &r, Grid &grid, bool cached ) { return( KTUIDlgAddGrid ( dlg_, id, &( r.r_ ), grid.get_ptr(), cached ) == 0 ); };
 
+        void Populate_common( uint32_t id, KTUI_color bg, KTUI_color fg, uint32_t page_id );
         void PopulateLabel( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
-                            KTUI_color bg, KTUI_color fg );
+                            KTUI_color bg, KTUI_color fg, uint32_t page_id );
         void PopulateButton( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
-                            KTUI_color bg, KTUI_color fg );
+                            KTUI_color bg, KTUI_color fg, uint32_t page_id );
         void PopulateCheckbox( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
-                            bool checked, KTUI_color bg, KTUI_color fg );
+                            bool checked, KTUI_color bg, KTUI_color fg, uint32_t page_id );
         void PopulateInput( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
-            size_t length, KTUI_color bg, KTUI_color fg );
+            size_t length, KTUI_color bg, KTUI_color fg, uint32_t page_id );
             
         bool HasWidget( tui_id id ) { return KTUIDlgHasWidget ( dlg_, id ); };
 
@@ -462,8 +473,6 @@ class Dlg
         bool DrawWidget( tui_id id ) { return ( KTUIDlgDrawWidget( dlg_, id ) == 0 ); };
         bool DrawCaption( void ) { return ( KTUIDlgDrawCaption( dlg_ ) == 0 ); };
 
-        void ShowWidgets( bool active, tui_id from, tui_id to );
-        
         bool SetFocus( tui_id id ) { return ( KTUIDlgSetFocus( dlg_, id ) == 0 ); };
         bool MoveFocus( bool forward ) { return ( KTUIDlgMoveFocus( dlg_, forward ) == 0 ); };
         bool FocusValid( void ) { return KTUIDlgFocusValid( dlg_ ); };
@@ -472,6 +481,9 @@ class Dlg
         bool HandleEvent( Tui_Event &ev ) { return ( KTUIDlgHandleEvent( dlg_, &( ev.ev_ ) ) == 0 ); };
         bool GetDlgEvent( tuidlg_event * event ) { return ( KTUIDlgGet ( dlg_, event ) == 0 ); };
 
+        void SetHighLightColor( KTUI_color value );
+        void SetHighLightAttr( KTUI_attrib value );
+        
         friend class Std_Dlg_Base;
 };
 

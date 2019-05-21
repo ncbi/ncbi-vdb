@@ -385,6 +385,30 @@ rc_t SetWidgetRect ( struct KTUIWidget * self, const tui_rect * r, bool redraw )
 
 /* ---------------------------------------------------------------------------------------------- */
 
+rc_t GetWidgetPageId ( struct KTUIWidget * self, uint32_t * id )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+        rc = RC( rcApp, rcAttr, rcSelecting, rcSelf, rcNull );
+    else if ( id == NULL )
+        rc = RC( rcApp, rcAttr, rcSelecting, rcParam, rcNull );
+    else
+        *id = self -> page_id;
+    return rc;
+}
+
+rc_t SetWidgetPageId ( struct KTUIWidget * self, uint32_t id )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+        rc = RC( rcApp, rcAttr, rcSelecting, rcSelf, rcNull );
+    else
+        self -> page_id = id;
+    return rc;
+}
+
+/* ---------------------------------------------------------------------------------------------- */
+
 
 const char * GetWidgetCaption ( struct KTUIWidget * self )
 {

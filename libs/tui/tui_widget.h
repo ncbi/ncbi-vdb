@@ -81,6 +81,7 @@ typedef struct KTUIWidget
     struct KTUI * tui;      /* pointer to the hw-specific layer */
     struct KTUIPalette * palette;   /* where the colors come from */
     uint32_t id;            /* a unique id... */
+    uint32_t page_id;       /* the page of the parent the widget belongs to */
     KTUI_Widget_type wtype; /* what type of widget it is... */
     uint32_t vector_idx;    /* where in the vector it is inserted */
     tui_rect r;             /*  - a rect where it appears */
@@ -146,6 +147,9 @@ rc_t RedrawWidgetAndPushEvent( KTUIWidget * w,
 
 rc_t GetWidgetRect ( struct KTUIWidget * self, tui_rect * r );
 rc_t SetWidgetRect ( struct KTUIWidget * self, const tui_rect * r, bool redraw );
+
+rc_t GetWidgetPageId ( struct KTUIWidget * self, uint32_t * id );
+rc_t SetWidgetPageId ( struct KTUIWidget * self, uint32_t id );
 
 rc_t SetWidgetCanFocus( struct KTUIWidget * self, bool can_focus );
 rc_t GetWidgetAc( struct KTUIWidget * self, KTUIPa_entry pa_entry, tui_ac * ac );
