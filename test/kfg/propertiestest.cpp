@@ -44,7 +44,10 @@ TEST_SUITE(PropertiesTestSuite);
 FIXTURE_TEST_CASE( GetHttpProxyPath_NotFound, KfgFixture )
 {
     CreateAndLoad(GetName(), "#");
+    buf[0] = '1';
     REQUIRE_RC_FAIL ( KConfig_Get_Http_Proxy_Path( kfg, buf, BufSize, & num_writ ) );
+    // in case of failure, clears the buffer
+    REQUIRE_EQ ( string(), string ( buf, num_writ ) );
 }
 FIXTURE_TEST_CASE( GetHttpProxyPath, KfgFixture )
 {
@@ -222,31 +225,6 @@ FIXTURE_TEST_CASE( Set_Aws_Profile, KfgFixture )
     REQUIRE_RC ( KConfig_Set_Aws_Profile( kfg, "path" ) );
     REQUIRE_RC ( KConfig_Get_Aws_Profile( kfg, buf, BufSize, & num_writ ) );
     REQUIRE_EQ ( string ( "path" ), string ( buf, num_writ ) );
-}
-
-// KConfig_Get_Aws_Credentials_from_env, KConfig_Set_Aws_Credentials_from_env
-
-FIXTURE_TEST_CASE( Get_Aws_Credentials_from_env_Default, KfgFixture )
-{   // default = false
-    CreateAndLoad(GetName(), "#");
-    bool b = true;
-    REQUIRE_RC ( KConfig_Get_Aws_Credentials_from_env( kfg, &b ) );
-    REQUIRE ( ! b );
-}
-FIXTURE_TEST_CASE( Get_Aws_Credentials_from_env, KfgFixture )
-{
-    CreateAndLoad(GetName(), "/aws/credentials_from_env='true'");
-    bool b = false;
-    REQUIRE_RC ( KConfig_Get_Aws_Credentials_from_env( kfg, & b ) );
-    REQUIRE ( b );
-}
-FIXTURE_TEST_CASE( Set_Aws_Credentials_from_env, KfgFixture )
-{
-    CreateAndLoad(GetName(), "#");
-    REQUIRE_RC ( KConfig_Set_Aws_Credentials_from_env( kfg, true ) );
-    bool b = false;
-    REQUIRE_RC ( KConfig_Get_Aws_Credentials_from_env( kfg, & b ) );
-    REQUIRE ( b );
 }
 
 //////////////////////////////////////////// Main

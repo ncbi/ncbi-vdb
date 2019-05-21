@@ -172,11 +172,6 @@ KFG_EXTERN rc_t KConfig_Set_Aws_Credential_File ( KConfig *self, const char * va
 KFG_EXTERN rc_t KConfig_Get_Aws_Profile ( const KConfig *self, char * buffer, size_t buffer_size, size_t * written );
 KFG_EXTERN rc_t KConfig_Set_Aws_Profile ( KConfig *self, const char * value );
 
-/* reads /aws/credentials_from_env
-   returns false if not found */
-KFG_EXTERN rc_t KConfig_Get_Aws_Credentials_from_env ( const KConfig *self, bool *from_env );
-KFG_EXTERN rc_t KConfig_Set_Aws_Credentials_from_env ( KConfig *self, bool from_env );
-
 #ifdef __cplusplus
 }
 #endif

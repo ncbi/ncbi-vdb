@@ -137,6 +137,11 @@ static rc_t KConfig_Get_Repository_String( const KConfig *self,
                 rc = string_printf( buffer, buffer_size, written, "%S", res );
                 StringWhack ( res );
             }
+            else
+            {
+                * buffer = 0;
+                * written = 0;
+            }
         }
     }
     return rc;
@@ -872,21 +877,5 @@ LIB_EXPORT rc_t CC
 KConfig_Set_Aws_Profile( KConfig *self, const char * value )
 {
     return KConfig_Set_Repository_String( self, value, AWS_PROFILE );
-}
-
-#define AWS_CREDENTIALS_FROM_ENV "/aws/credentials_from_env"
-LIB_EXPORT rc_t CC KConfig_Get_Aws_Credentials_from_env ( const KConfig *self, bool * value )
-{
-    rc_t rc = KConfigReadBool ( self, AWS_CREDENTIALS_FROM_ENV, value );
-    if ( GetRCState ( rc ) == rcNotFound)
-    {
-        * value = false;
-        rc = 0;
-    }
-    return rc;
-}
-LIB_EXPORT rc_t CC KConfig_Set_Aws_Credentials_from_env ( KConfig *self, bool value )
-{
-    return KConfigWriteBool( self, AWS_CREDENTIALS_FROM_ENV, value );
 }
 
