@@ -100,8 +100,6 @@ typedef struct { char * s; } SRaw;
 #define VERSION_1_0 0x01000000
 #define VERSION_1_1 0x01010000
 #define VERSION_1_2 0x01020000
-#define VERSION_3_0 0x03000000
-#define VERSION_4_0 0x04000000
 
 
 /* version in server request / response */
@@ -567,6 +565,14 @@ rc_t SVersionInit(SVersion * self, const char * src, EServiceType serviceType)
     return 0;
 }
 
+ver_t InitVersion(const char * src) {
+    SVersion self = 0;
+    rc_t rc = SVersionInit(&self, src, eSTnames);
+    if (rc == 0)
+        return self;
+    else
+        return 0;
+}
 
 static rc_t SVersionToString(const SVersion  self, char ** s) {
     size_t num_writ = 0;
