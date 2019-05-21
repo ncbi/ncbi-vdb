@@ -3919,11 +3919,25 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
                         break;
                 }
             try_name:
-                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
-                       ( "Resolver-%s: checking '%S' as file name\n",
-                         self -> version, &sQuery) );
-                rc = VResolverQueryName(self, protocols, query,
-                                        local, remote, cache);
+                {
+                    bool try = true;
+                    if (dir != NULL && query->path.size != 0 &&
+                        strlen(dir) == query->path.size &&
+                        strncmp(dir, query->path.addr, query->path.size) == 0)
+                    {
+                        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+                            ("Resolver-%s: not checking '%S' as file name: "
+                                "it's outdir\n", self->version, &sQuery));
+                        try = false;
+                    }
+                    if (try) {
+                        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+                            ("Resolver-%s: checking '%S' as file name\n",
+                                self->version, &sQuery));
+                        rc = VResolverQueryName(self, protocols, query,
+                            local, remote, cache);
+                    }
+                }
                 break;
 
             case vpRelPath:
