@@ -117,10 +117,6 @@ TEST_CASE(VDB_CACHE) {
     REQUIRE_RC(example("SRR850901"));
 }
 
-TEST_CASE(Ken) {
-    REQUIRE_RC(example("SRR850901"));
-}
-
 #include <vfs/services-priv.h> /* KServiceNamesExecuteExt */
 
 TEST_CASE ( Test ) {
