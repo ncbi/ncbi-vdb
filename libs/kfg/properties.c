@@ -140,7 +140,10 @@ static rc_t KConfig_Get_Repository_String( const KConfig *self,
             else
             {
                 * buffer = 0;
-                * written = 0;
+                if ( written != NULL )
+                {
+                    * written = 0;
+                }
             }
         }
     }
