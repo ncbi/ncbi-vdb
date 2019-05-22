@@ -35,7 +35,8 @@ TEST_TOOLS = \
 	test-kfg \
 	test-repository \
 	test-awscredentials \
-	test-keystore
+	test-keystore \
+	test-properties \
 
 include $(TOP)/build/Makefile.env
 
@@ -45,6 +46,11 @@ $(TEST_TOOLS): makedirs
 .PHONY: $(TEST_TOOLS)
 
 clean: stdclean
+
+TEST_LIB = \
+	-sktst \
+	-skapp \
+    -sncbi-vdb
 
 #-------------------------------------------------------------------------------
 # ncbi-home-from-env
@@ -56,7 +62,7 @@ ENV_OBJ = \
 	$(addsuffix .$(OBJX),$(ENV_SRC))
 
 $(TEST_BINDIR)/ncbi-home-from-env: $(ENV_OBJ)
-	$(LP) --exe -o $@ $^ $(ENV_LIB)
+	$(LP) --exe -o $@ $^
 
 #-------------------------------------------------------------------------------
 # white-box test
@@ -66,11 +72,6 @@ TEST_SRC = \
 
 TEST_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_SRC))
-
-TEST_LIB = \
-	-sktst \
-	-skapp \
-    -sncbi-vdb
 
 $(TEST_BINDIR)/wb-test-kfg: $(TEST_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_LIB)
@@ -91,18 +92,14 @@ $(TEST_BINDIR)/flat-sra-kfg: $(FLAT_OBJ)
 # test-kfg
 #
 TEST_KFG_SRC = \
+	kfg-fixture \
 	kfgtest
 
 TEST_KFG_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_KFG_SRC))
 
-TEST_KFG_LIB = \
-	-sktst \
-	-skapp \
-    -sncbi-vdb
-
 $(TEST_BINDIR)/test-kfg: $(TEST_KFG_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_KFG_LIB)
+	$(LP) --exe -o $@ $^ $(TEST_LIB)
 
 kfg: test-kfg
 	$(TEST_BINDIR)/test-kfg
@@ -116,13 +113,8 @@ TEST_REPOSITORY_SRC = \
 TEST_REPOSITORY_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_REPOSITORY_SRC))
 
-TEST_REPOSITORY_LIB = \
-	-sktst \
-	-skapp \
-    -sncbi-vdb
-
 $(TEST_BINDIR)/test-repository: $(TEST_REPOSITORY_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_REPOSITORY_LIB)
+	$(LP) --exe -o $@ $^ $(TEST_LIB)
 
 #-------------------------------------------------------------------------------
 # test-awscredentials
@@ -150,13 +142,24 @@ TEST_KEYSTORE_SRC = \
 TEST_KEYSTORE_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_KEYSTORE_SRC))
 
-TEST_KEYSTORE_LIB = \
-	-sktst \
-	-skapp \
-    -sncbi-vdb
-
 $(TEST_BINDIR)/test-keystore: $(TEST_KEYSTORE_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_KEYSTORE_LIB)
+	$(LP) --exe -o $@ $^ $(TEST_LIB)
+
+#-------------------------------------------------------------------------------
+# test-properties
+#
+TEST_PROPERTIES_SRC = \
+	kfg-fixture \
+	propertiestest
+
+TEST_PROPERTIES_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_PROPERTIES_SRC))
+
+$(TEST_BINDIR)/test-properties: $(TEST_PROPERTIES_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_LIB)
+
+prop: test-properties
+	$(TEST_BINDIR)/test-properties
 
 #-------------------------------------------------------------------------------
 # fuzz test

@@ -140,6 +140,38 @@ KFG_EXTERN rc_t CC KConfigSetProtectedRepositoryEnabledById( KConfig *self, uint
 KFG_EXTERN rc_t CC KConfigGetProtectedRepositoryCachedById( const KConfig *self, uint32_t id, bool * enabled );
 KFG_EXTERN rc_t CC KConfigSetProtectedRepositoryCachedById( KConfig *self, uint32_t id, bool enabled );
 
+/* reads /tools/prefetch/download_to_cache
+   return true of not found */
+KFG_EXTERN rc_t CC KConfig_Get_Prefetch_Download_To_Cache ( const KConfig *self, bool * download_to_cache );
+KFG_EXTERN rc_t CC KConfig_Set_Prefetch_Download_To_Cache ( KConfig *self, bool download_to_cache );
+
+
+/* reads /libs/cloud/accept_aws_charges
+   returns false if not found  */
+KFG_EXTERN rc_t CC KConfig_Get_User_Accept_Aws_Charges ( const KConfig *self, bool * accepts_charges );
+KFG_EXTERN rc_t CC KConfig_Set_User_Accept_Aws_Charges ( KConfig *self, bool accepts_charges );
+
+/* reads /libs/cloud/accept_gcp_charges
+   returns false if not found  */
+KFG_EXTERN rc_t CC KConfig_Get_User_Accept_Gcp_Charges ( const KConfig *self, bool * accepts_charges );
+KFG_EXTERN rc_t CC KConfig_Set_User_Accept_Gcp_Charges ( KConfig *self, bool accepts_charges );
+
+/* reads /libs/temp_cache */
+KFG_EXTERN rc_t CC KConfig_Get_Temp_Cache ( const KConfig *self, char * buffer, size_t buffer_size, size_t * written );
+KFG_EXTERN rc_t CC KConfig_Set_Temp_Cache ( KConfig *self, const char * value );
+
+/* reads /gcp/credential_file */
+KFG_EXTERN rc_t KConfig_Get_Gcp_Credential_File ( const KConfig *self, char * buffer, size_t buffer_size, size_t * written );
+KFG_EXTERN rc_t KConfig_Set_Gcp_Credential_File ( KConfig *self, const char * value );
+
+/* reads /aws/credential_file */
+KFG_EXTERN rc_t KConfig_Get_Aws_Credential_File ( const KConfig *self, char * buffer, size_t buffer_size, size_t * written );
+KFG_EXTERN rc_t KConfig_Set_Aws_Credential_File ( KConfig *self, const char * value );
+
+/* reads /aws/profile */
+KFG_EXTERN rc_t KConfig_Get_Aws_Profile ( const KConfig *self, char * buffer, size_t buffer_size, size_t * written );
+KFG_EXTERN rc_t KConfig_Set_Aws_Profile ( KConfig *self, const char * value );
+
 #ifdef __cplusplus
 }
 #endif
