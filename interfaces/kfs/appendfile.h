@@ -43,14 +43,10 @@ struct KFile;
 
 typedef struct KAppendFile KAppendFile;
 
-KFS_EXTERN rc_t CC KFileMakeAppendRead (
-                                        const struct KFile ** self,
-                                        const struct KFile * original
-                                        );
-KFS_EXTERN rc_t CC KFileMakeAppendUpdate (
-                                        struct KFile ** self,
-                                        struct KFile * original
-                                        );
+KFS_EXTERN rc_t CC KFileMakeAppend (
+                                    struct KFile ** self,
+                                    struct KFile * original
+                                    );
 
 #ifdef __cplusplus
 }

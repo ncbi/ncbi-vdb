@@ -139,10 +139,9 @@ struct KAppendFile
  * KAppendFileMake
  *  create a new file object
  */
-static
-rc_t KAppendFileMake (
-                    KAppendFile ** self,
-                    KFile * original
+LIB_EXPORT rc_t CC KFileMakeAppend (
+                                        KFile ** self,
+                                        struct KFile * original
 )
 {
     rc_t	rc;
@@ -164,6 +163,12 @@ rc_t KAppendFileMake (
 	/* fail */
 	return RC (rcFS, rcFile, rcConstructing, rcParam, rcNull);
     }
+
+	if ( ! original -> write_enabled )
+	{
+	/* fail */
+	return RC (rcFS, rcFile, rcConstructing, rcParam, rcInvalid);
+	}
 
 	rc = KFileSize ( original, & original_size );
 	if ( rc != 0 )
@@ -203,30 +208,13 @@ rc_t KAppendFileMake (
 	    pF -> original = original;
 	    pF -> original_size = original_size;
 
-	    *self = pF;
+	    *self = ( KFile * ) pF;
 	    return 0;
 	}
 	/* fail */
 	free (pF);
     }
     return rc;
-}
-
-
-LIB_EXPORT rc_t CC KFileMakeAppendRead (
-                                        const KFile ** self,
-                                        const struct KFile * original
-)
-{
-    return KAppendFileMake ( (KAppendFile **)self, (KFile *) original );
-}
-
-LIB_EXPORT rc_t CC KFileMakeAppendUpdate (
-                                        KFile ** self,
-                                        struct KFile * original
-)
-{
-    return KAppendFileMake ( (KAppendFile **)self, (KFile *) original );
 }
 
 /* ----------------------------------------------------------------------
