@@ -131,26 +131,29 @@ static rc_t _KNSManager_Read(struct KNSManager * self,
 
     KClientHttpRequest *req = NULL;
 
-    int32_t timeout = 1; /* milliseconds */
-    int32_t msec = self->conn_timeout;
+    /* save existing timeouts */
+    int32_t cmsec = self->conn_timeout;
+    int32_t wmsec = self->http_write_timeout;
 
-    /* avoid connection retry loop in KNSManagerMakeRetryTimedConnection */
-    self->conn_timeout = timeout;
+    int32_t timeout = 1; /* milliseconds */
+
+    /* minimize timeouts to check cloudy URLs */
+    self->conn_timeout = self->http_write_timeout = timeout;
 
     rc = KNSManagerMakeClientRequest(self, &req, 0x01010000, NULL, url);
 
-    /* restore connection timeout in KNSManager */
-    self->conn_timeout = msec;
-
-    if (rc != 0)
-        return rc;
-    else {
+    if (rc == 0) {
         if (gs)
             rc = KClientHttpRequestAddHeader(req, "Metadata-Flavor", "Google");
 
         if (rc == 0) {
             KClientHttpResult * rslt = NULL;
             rc = KClientHttpRequestGET(req, &rslt);
+
+            /* restore timeouts in KNSManager; may be not needed here */
+            self->conn_timeout = cmsec;
+            self->http_write_timeout=wmsec;
+
             if (rc == 0) {
                 KStream * s = NULL;
                 rc = KClientHttpResultGetInputStream(rslt, &s);
@@ -174,6 +177,10 @@ static rc_t _KNSManager_Read(struct KNSManager * self,
     }
 
     RELEASE(KClientHttpRequest, req);
+
+    /* restore timeouts in KNSManager */
+    self->conn_timeout = cmsec;
+    self->http_write_timeout = wmsec;
 
     return rc;
 }
