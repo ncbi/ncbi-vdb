@@ -37,7 +37,8 @@ TEST_TOOLS = \
 	test-cachetee \
 	test-cachetee2 \
 	test-lru-cache \
-	test-kfs-md5
+	test-kfs-md5    \
+	test-appendfile
 
 include $(TOP)/build/Makefile.env
 
@@ -246,3 +247,21 @@ cachetee-out-of-space-test: $(TEST_BINDIR)/fuse-proxy $(TEST_BINDIR)/test-cachet
 	@ $(SRCDIR)/run-cachetee-out-of-space-test.sh $(SRCDIR) $(TEST_BINDIR)
 endif
 endif
+
+#-------------------------------------------------------------------------------
+# test-appendfile
+#
+TEST_APPENDFILE_SRC = \
+	appendfiletest 
+
+TEST_APPENDFILE_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_APPENDFILE_SRC))
+
+TEST_APPENDFILE_LIB = \
+	-lkapp \
+    -sncbi-vdb \
+	-lktst
+
+$(TEST_BINDIR)/test-appendfile: $(TEST_APPENDFILE_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_APPENDFILE_LIB)
+
