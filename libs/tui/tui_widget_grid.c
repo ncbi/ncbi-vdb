@@ -414,7 +414,18 @@ static bool prepare_grid_context( struct KTUIWidget * w, grid_cb_ctx * cb_ctx, g
 bool event_grid( struct KTUIWidget * w, tui_event * event )
 {
     bool changed = false;
+    bool enter_space = false;        
     TUIWGrid_data * gd = w->grid_data;
+    
+    if ( event->event_type == ktui_event_kb )
+    {
+        switch( event->data.kb_data.code )
+        {
+            case ktui_enter : enter_space = true; break;
+            case ktui_alpha : enter_space = ( event->data.kb_data.key == ' ' ); break;
+        }
+    }
+
     if ( gd != NULL )
     {
         gd->row_offset_changed = false;
@@ -438,9 +449,13 @@ bool event_grid( struct KTUIWidget * w, tui_event * event )
             }
         }
 
+        w -> int64_value = gd -> row;
         if ( changed )
             RedrawWidgetAndPushEvent( w, ktuidlg_event_changed, gd->col, gd->row, NULL );
     }
+    if ( enter_space )
+        KTUIDlgPushEvent( w->dlg, ktuidlg_event_select, w->id, 0, 0, NULL );
+    
     return changed;
 }
 
