@@ -105,7 +105,9 @@ FIXTURE_TEST_CASE(Connect_OK, ConnectFixture)
 
 FIXTURE_TEST_CASE(Connect_Timeout, ConnectFixture)
 {   //VDB-3754: asynch connnection, test timeout, no retries
+#ifdef DEBUG
     cerr << "vvv expect to see 'connect_wait() timed out'" << endl;
+#endif
     return_val = 0; /* epoll_wait: timeout */
     tries = 0;
     rc_t rc = KNSManagerMakeRetryTimedConnection( mgr, & socket, & tm, 0, 0, NULL, & ep);
@@ -113,12 +115,16 @@ FIXTURE_TEST_CASE(Connect_Timeout, ConnectFixture)
     REQUIRE_EQ ( ( int ) rcTimeout, ( int ) GetRCObject ( rc ) );
     REQUIRE_EQ ( ( int ) rcExhausted, ( int ) GetRCState ( rc ) );
     REQUIRE_EQ ( 1u, tries );
+#ifdef DEBUG
     cerr << "^^^ expect to see 'connect_wait() timed out'" << endl;
+#endif
 }
 
 FIXTURE_TEST_CASE(Connect_CtrlC, ConnectFixture)
 {   //VDB-3754: asynch connnection, test interruption by CtrlC, no retries
+#ifdef DEBUG
     cerr << "vvv expect to see 'connect_wait() interrupted'" << endl;
+#endif
     return_val = -1; /* epoll_wait: error */
     set_errno = EINTR;
     tries = 0;
@@ -127,7 +133,9 @@ FIXTURE_TEST_CASE(Connect_CtrlC, ConnectFixture)
     REQUIRE_EQ ( ( int ) rcConnection, ( int ) GetRCObject ( rc ) );
     REQUIRE_EQ ( ( int ) rcInterrupted, ( int ) GetRCState ( rc ) );
     REQUIRE_EQ ( 1u, tries );
+#ifdef DEBUG
     cerr << "^^^ expect to see 'connect_wait() interrupted'" << endl;
+#endif
 }
 
 //////////////////////////////////////////// Main
@@ -168,8 +176,10 @@ rc_t CC KMain ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
 
-	// uncomment to see messages from socket code
+#ifdef DEBUG
+    // to see messages from socket code
     KDbgSetModConds ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), DBG_FLAG ( DBG_KNS_SOCKET ) );
+#endif
 
     rc_t rc=KnsTestSuite(argc, argv);
     return rc;
