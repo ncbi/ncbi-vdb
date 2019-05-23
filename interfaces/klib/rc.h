@@ -147,6 +147,13 @@ KLIB_EXTERN bool CC GetUnreadRCInfo ( rc_t *rc, const char **filename, const cha
         ( ( rc_t ) ( obj ) << 6 ) | /*  8 bits */            \
         ( ( rc_t ) ( state ) ) ) )  /*  6 bits */
 
+/* RC_EXITCODE
+ *  form an rc from the desired process exit code
+ */
+#define RC_EXITCODE( exitcode )                             \
+    ( ( rc_t )( CTX ( rcExitCode, rcProcess, rcClosing ) |  \
+    ( ( rc_t )( ( ( unsigned ) exitcode ) & 0x7F ) ) )
+ 
 /* ResetRCContext
  *  rewrite rc to reflect different context
  *  typically used to pass out return codes
