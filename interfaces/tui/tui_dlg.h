@@ -257,6 +257,7 @@ TUI_EXTERN rc_t CC KTUIDlgAddSpinEdit ( struct KTUIDlg * self, uint32_t id,
 
 TUI_EXTERN bool CC KTUIDlgHasWidget ( struct KTUIDlg * self, uint32_t id );
 
+TUI_EXTERN void KTUIDlgEnableCursorNavigation( struct KTUIDlg * self, bool enabled );
 
 /* ****************************************************************************************** */
 

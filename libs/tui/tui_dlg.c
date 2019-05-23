@@ -105,7 +105,7 @@ typedef struct KTUIDlg
     Vector widgets;
     tui_rect r;
     uint32_t focused, active_page;
-    bool menu_active, changed, done;
+    bool menu_active, changed, done, cursor_navigation;
 
 } KTUIDlg;
 
@@ -159,7 +159,8 @@ LIB_EXPORT rc_t CC KTUIDlgMake ( struct KTUI * tui, struct KTUIDlg ** self, stru
                 td->tui = tui;
                 td->parent = parent;
                 td->active_page = 0;
-
+                td->cursor_navigation = true;
+                
                 if ( palette == NULL )
                 {
                     if ( parent == NULL )
@@ -1242,6 +1243,11 @@ static KTUIWidget * KTUIDlgWidgetAtPoint( struct KTUIDlg * self, tui_point * rel
     return res;
 }
 
+LIB_EXPORT void KTUIDlgEnableCursorNavigation( struct KTUIDlg * self, bool enabled )
+{
+    if ( self != NULL )
+        self -> cursor_navigation = enabled;
+}
 
 /* ****************************************************************************************** */
 
@@ -1251,15 +1257,26 @@ static rc_t DlgEventHandler( struct KTUIDlg * self, tui_event * event )
     rc_t rc = 0;
     if ( event -> event_type == ktui_event_kb )
     {
-        switch( event -> data . kb_data . code )
+        if ( self -> cursor_navigation )
         {
-            case ktui_tab   : ;
-            case ktui_down  : ;
-            case ktui_right : rc = KTUIDlgMoveFocus( self, true ); break;
+            switch( event -> data . kb_data . code )
+            {
+                case ktui_tab   : ;
+                case ktui_down  : ;
+                case ktui_right : rc = KTUIDlgMoveFocus( self, true ); break;
 
-            case ktui_shift_tab : ;
-            case ktui_up    : ;
-            case ktui_left  : rc = KTUIDlgMoveFocus( self, false ); break;
+                case ktui_shift_tab : ;
+                case ktui_up    : ;
+                case ktui_left  : rc = KTUIDlgMoveFocus( self, false ); break;
+            }
+        }
+        else
+        {
+            switch( event -> data . kb_data . code )
+            {
+                case ktui_tab   : rc = KTUIDlgMoveFocus( self, true ); break;
+                case ktui_shift_tab : rc = KTUIDlgMoveFocus( self, false ); break;
+            }
         }
     }
     else if ( event->event_type == ktui_event_mouse )

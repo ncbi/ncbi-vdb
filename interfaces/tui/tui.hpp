@@ -483,6 +483,7 @@ class Dlg
 
         void SetHighLightColor( KTUI_color value );
         void SetHighLightAttr( KTUI_attrib value );
+        void EnableCursorNavigation( bool enabled ) { KTUIDlgEnableCursorNavigation( dlg_, enabled ); }
         
         friend class Std_Dlg_Base;
 };
