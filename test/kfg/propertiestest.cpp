@@ -210,7 +210,14 @@ FIXTURE_TEST_CASE( Set_Aws_Credential_File, KfgFixture )
 FIXTURE_TEST_CASE( Get_Aws_Profile_Default, KfgFixture )
 {
     CreateAndLoad(GetName(), "#");
-    REQUIRE_RC_FAIL ( KConfig_Get_Aws_Profile ( kfg, buf, BufSize, & num_writ ) );
+    REQUIRE_RC ( KConfig_Get_Aws_Profile ( kfg, buf, BufSize, & num_writ ) );
+    REQUIRE_EQ ( string ( "default"), string ( buf, num_writ ) );
+}
+FIXTURE_TEST_CASE( Get_Aws_Profile_Empty, KfgFixture )
+{
+    CreateAndLoad(GetName(), "/aws/profile=''");
+    REQUIRE_RC ( KConfig_Get_Aws_Profile ( kfg, buf, BufSize, & num_writ ) );
+    REQUIRE_EQ ( string ( "default"), string ( buf, num_writ ) );
 }
 FIXTURE_TEST_CASE( Get_Aws_Profile, KfgFixture )
 {
