@@ -30,11 +30,11 @@ TOP ?= $(abspath ../..)
 MODULE = test/kfg
 
 TEST_TOOLS = \
+	test-awscredentials \
 	flat-sra-kfg \
 	wb-test-kfg \
 	test-kfg \
 	test-repository \
-	test-awscredentials \
 	test-keystore \
 	test-properties \
 

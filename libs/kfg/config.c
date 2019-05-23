@@ -57,6 +57,7 @@ struct KfgConfigNamelist;
 #include <string.h>
 #include <ctype.h>
 #include <os-native.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <va_copy.h>
@@ -3193,7 +3194,7 @@ rc_t KConfigFill ( KConfig * self, const KDirectory * cfgdir,
     rc_t rc;
 
     CONST_STRING ( & empty, "" );
-
+fprintf(stderr,"in KConfigFill\n");
     rc = KConfigNodeMake ( & root, & empty );
     if (rc == 0)
     {

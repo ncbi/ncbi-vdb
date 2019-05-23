@@ -52,33 +52,47 @@ TEST_SUITE ( awsCredentialsTestSuite );
 
 TEST_CASE ( awsCredentialsEnv )
 {
-    const char *test_key = "ABCDEFG";
+    // rc_t rc=0;
+
+    KDirectory *native = NULL;
+    REQUIRE_RC ( KDirectoryNativeDir ( &native ) );
+
+    const KDirectory *dirc = NULL;
+    KConfig *cfg = NULL;
+    // VFSManager * mgr = NULL;
+
+    char aws_access_key_id[512] = "";
+    char aws_secret_access_key[512] = "";
+
+    const char *test_key = "ABCDEFH";
     const char *test_secret = "SECRETSECRET";
 
-    char *aws_access_key_id = NULL;
-    char *aws_secret_access_key = NULL;
+    setenv ( "AWS_ACCESS_KEY_ID", test_key, 1 );
+    setenv ( "AWS_SECRET_ACCESS_KEY", test_secret, 1 );
+
+    REQUIRE_RC ( KDirectoryOpenDirRead ( native, &dirc, false, "cloud-kfg" ) );
+    REQUIRE_RC ( KConfigMake ( &cfg, dirc ) );
+
+    size_t buf_sz;
+
+    REQUIRE_RC ( KConfigRead ( cfg, "/aws/aws_access_key_id", 0,
+        aws_access_key_id, sizeof aws_access_key_id, &buf_sz, NULL ) );
+    fprintf ( stderr, "returned %s\n", aws_access_key_id );
+    REQUIRE_EQ ( strcmp ( aws_access_key_id, test_key ), 0 );
+    REQUIRE_RC ( KConfigRead ( cfg, "/aws/aws_secret_access_key", 0,
+        aws_secret_access_key, sizeof aws_secret_access_key, &buf_sz, NULL ) );
+    REQUIRE_EQ ( strcmp ( aws_secret_access_key, test_secret ), 0 );
 
     unsetenv ( "AWS_ACCESS_KEY_ID" );
     unsetenv ( "AWS_SECRET_ACCESS_KEY" );
-/*
-    REQUIRE_RC_FAIL ( LoadAwsCredentialsFromEnv ( NULL, NULL ) );
 
-    REQUIRE_RC_FAIL ( LoadAwsCredentialsFromEnv (
-        &aws_access_key_id, &aws_secret_access_key ) );
-*/
-    setenv ( "AWS_ACCESS_KEY_ID", test_key, 1 );
-    setenv ( "AWS_SECRET_ACCESS_KEY", test_secret, 1 );
-/*
-    REQUIRE_RC ( LoadAwsCredentialsFromEnv (
-        &aws_access_key_id, &aws_secret_access_key ) );
-*/
-    REQUIRE_NOT_NULL ( aws_access_key_id );
-    REQUIRE_NOT_NULL ( aws_secret_access_key );
-    REQUIRE_EQ ( strcmp ( aws_access_key_id, test_key ), 0 );
-    REQUIRE_EQ ( strcmp ( aws_secret_access_key, test_secret ), 0 );
-
-    free ( aws_access_key_id );
-    free ( aws_secret_access_key );
+    REQUIRE_RC ( KConfigMake ( &cfg, dirc ) );
+    REQUIRE_RC ( KConfigRead ( cfg, "/aws/aws_access_key_id", 0,
+        aws_access_key_id, sizeof aws_access_key_id, &buf_sz, NULL ) );
+    REQUIRE_EQ ( strcmp ( aws_access_key_id, "test_from_file" ), 0 );
+    REQUIRE_RC ( KConfigRead ( cfg, "/aws/aws_secret_access_key", 0,
+        aws_secret_access_key, sizeof aws_secret_access_key, &buf_sz, NULL ) );
+    REQUIRE_EQ ( strcmp ( aws_secret_access_key, "secret_from_file" ), 0 );
 }
 
 

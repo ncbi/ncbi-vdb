@@ -3763,10 +3763,10 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
         rc = KConfigMake(&kfg, NULL);
         if (rc != 0)
             return rc;
-        rc = KConfigRead(kfg, "/AWS/aws_access_key_id", 0,
+        rc = KConfigRead(kfg, "/aws/aws_access_key_id", 0,
             aws_access_key_id, sizeof aws_access_key_id, &num_read, NULL);
         if (rc == 0)
-            rc = KConfigRead(kfg, "/AWS/aws_secret_access_key", 0,
+            rc = KConfigRead(kfg, "/aws/aws_secret_access_key", 0,
                 aws_secret_access_key, sizeof aws_secret_access_key,
                 &num_read, NULL);
         if (rc == 0) {

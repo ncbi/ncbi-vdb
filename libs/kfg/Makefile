@@ -100,7 +100,6 @@ KFG_SRC = \
 	properties \
 	ngc \
 	report-kfg \
-	aws-credentials \
     keystore
 
 # flex/bison should only be invoked manually in an environment ensures the correct versions:
