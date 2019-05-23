@@ -27,6 +27,8 @@
 #ifndef _h_kfg_priv_
 #define _h_kfg_priv_
 
+#include <kfg/kfg-priv.h>
+
 extern void add_aws_nodes ( KConfig *self );
 
 #endif /* _h_kfg_priv_ */

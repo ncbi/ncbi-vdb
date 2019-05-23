@@ -43,6 +43,7 @@ static rc_t aws_KConfigNodeUpdateChild (
     KConfigNode *self, String *name, String *value )
 {
     KConfigNode *child;
+
     rc_t rc = KConfigNodeOpenNodeUpdate ( self, &child, "%S", name );
     if ( rc == 0 ) {
         rc = KConfigNodeWrite ( child, value->addr, value->size );
@@ -84,16 +85,16 @@ static void aws_parse_file ( const KFile *self, KConfigNode *aws_node,
     const char *end = start + buf_size;
     bool in_profile = false;
 
-    String brack_profile;
-    StringInitCString ( &brack_profile, "" );
+    // StringInitCString ( &brack_profile, "" );
 
     String bracket;
     CONST_STRING ( &bracket, "[" );
 
-    const String *temp;
-    StringConcat ( &temp, &bracket, profile );
+    const String *temp1;
+    StringConcat ( &temp1, &bracket, profile );
     CONST_STRING ( &bracket, "]" );
-    StringConcat ( &temp, temp, &bracket );
+    const String *brack_profile;
+    StringConcat ( &brack_profile, temp1, &bracket );
 
     for ( ; start < end; start = sep + 1 ) {
         rc_t rc;
@@ -110,14 +111,19 @@ static void aws_parse_file ( const KFile *self, KConfigNode *aws_node,
 
         /* check for empty line and skip */
         if ( StringLength ( &trim ) == 0 ) continue;
-
+/*
+        {
+            char *p = string_dup ( trim.addr, StringLength ( &trim ) );
+            fprintf ( stderr, "line: %s\n", p );
+            free ( p );
+        }
+*/
         /* check for comment line and skip */
         if ( trim.addr[0] == '#' ) continue;
 
         /* check for [profile] line */
         if ( trim.addr[0] == '[' ) {
-            if ( StringEqual ( &trim, &brack_profile ) ) in_profile = true;
-            fprintf ( stderr, "new profile: %s\n", trim.addr );
+            if ( StringEqual ( &trim, brack_profile ) ) in_profile = true;
             continue;
         }
 
@@ -135,13 +141,11 @@ static void aws_parse_file ( const KFile *self, KConfigNode *aws_node,
 
             if ( StringCaseEqual ( &key, &access_key_id ) ) {
                 rc = aws_KConfigNodeUpdateChild ( aws_node, &key, &value );
-                fprintf ( stderr, "found key %s\n", value.addr );
                 if ( rc != 0 ) return;
             }
 
             if ( StringCaseEqual ( &key, &secret_access_key ) ) {
                 rc = aws_KConfigNodeUpdateChild ( aws_node, &key, &value );
-                fprintf ( stderr, "found key %s\n", value.addr );
                 if ( rc != 0 ) return;
             }
         } else {
@@ -159,6 +163,8 @@ static void aws_parse_file ( const KFile *self, KConfigNode *aws_node,
             }
         }
     }
+    free ( (void *)temp1 );         /* Hack */
+    free ( (void *)brack_profile ); /* Hack */
 }
 
 static rc_t aws_find_nodes (
@@ -174,7 +180,6 @@ static rc_t aws_find_nodes (
 
         const KFile *credentials, *config;
 
-        fprintf ( stder, "checking credentials\n" );
         rc = KDirectoryOpenFileRead (
             wd, &credentials, "%s%s", aws_path, "/credentials" );
         if ( rc == 0 ) {
@@ -196,7 +201,6 @@ static rc_t aws_find_nodes (
             KFileRelease ( credentials );
         }
 
-        fprintf ( stder, "checking config\n" );
         rc = KDirectoryOpenFileRead (
             wd, &config, "%s%s", aws_path, "/config" );
         if ( rc == 0 ) {
@@ -267,7 +271,6 @@ extern void add_aws_nodes ( KConfig *self )
 
     size_t num_writ;
     rc_t rc;
-    fprintf ( stderr, "in add_aws_nodes\n" );
 
     /* Get Profile */
     rc = KConfig_Get_Aws_Profile (
@@ -290,23 +293,23 @@ extern void add_aws_nodes ( KConfig *self )
         String access_key_id, secret_access_key;
         CONST_STRING ( &access_key_id, "aws_access_key_id" );
         CONST_STRING ( &secret_access_key, "aws_secret_access_key" );
-        fprintf ( stderr, "Using env: %s\n", aws_access_key_id );
         String value;
         StringInitCString ( &value, aws_access_key_id );
         aws_KConfigNodeUpdateChild ( aws_node, &access_key_id, &value );
         StringInitCString ( &value, aws_secret_access_key );
         aws_KConfigNodeUpdateChild ( aws_node, &secret_access_key, &value );
+
+        KConfigNodeRelease ( aws_node );
+
         return;
     }
 
     /* Check paths and parse */
-    fprintf ( stderr, "Checking paths\n" );
     char home[4096] = "";
     char path[4096] = "";
 
     make_home_node ( self, home, sizeof home );
     if ( home[0] != 0 ) {
-        fprintf ( stderr, "Checking home\n" );
         rc = string_printf ( path, sizeof path, &num_writ, "%s/.aws", home );
         if ( rc == 0 && num_writ != 0 ) {
             /* create aws node */
@@ -314,6 +317,7 @@ extern void add_aws_nodes ( KConfig *self )
         }
     }
 
+    /*    KConfigPrint ( self, 0 ); */
 
     KConfigNodeRelease ( aws_node );
 }
