@@ -1202,7 +1202,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
                     id = & obj_id;
                 rc = VPathMakeFromUrl ( ( VPath** ) path, & url,
                     & download_ticket, true, id, osize, date,
-                    has_md5 ? ud5 : NULL, 0 );
+                    has_md5 ? ud5 : NULL, 0, NULL );
             }
             /*else
             {

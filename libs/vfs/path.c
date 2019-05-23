@@ -59,6 +59,7 @@ void VPathWhack ( VPath * self )
     KRefcountWhack ( & self -> refcount, "VPath" );
     free ( ( void * ) self -> id   . addr );
     free ( ( void * ) self -> tick . addr );
+    free ( ( void * ) self -> service . addr );
     memset ( self, 0, sizeof * self );
     free ( self );
 }
@@ -3334,6 +3335,27 @@ LIB_EXPORT rc_t CC VPathGetTicket ( const VPath * self, String * str )
     return rc;
 }
 
+LIB_EXPORT rc_t CC VPathGetService ( const VPath * self, String * str )
+{
+    rc_t rc;
+
+    if ( str == NULL )
+        rc = RC ( rcVFS, rcPath, rcAccessing, rcParam, rcNull );
+    else
+    {
+        rc = VPathGetTestSelf ( self );
+        if ( rc == 0 )
+        {
+            * str = self -> service;
+            return 0;
+        }
+
+        StringInit ( str, "", 0, 0 );
+    }
+
+    return rc;
+}
+
 LIB_EXPORT KTime_t CC VPathGetModDate ( const VPath * self  )
 {
     if ( self != NULL )
@@ -3801,7 +3823,7 @@ rc_t LegacyVPathMakeFmt ( VPath ** new_path, const char * fmt, ... )
 static
 rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
     const String * tick, uint64_t osize, KTime_t date, const uint8_t md5 [ 16 ],
-    KTime_t exp_date, const char * fmt, va_list args )
+    KTime_t exp_date, const char * service, const char * fmt, va_list args )
 {
     rc_t rc;
 
@@ -3858,6 +3880,15 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
                             rcPath, rcAllocating, rcMemory, rcExhausted );
                 }
 
+                if ( service != NULL ) {
+                    size_t size = 0;
+                    char * srv = string_dup_measure ( service, & size );
+                    if ( srv == NULL )
+                        return RC ( rcVFS,
+                            rcPath, rcAllocating, rcMemory, rcExhausted );
+                    StringInit ( & path -> service, srv, size, size );
+                }
+
                 return 0;
             }
         }
@@ -3871,7 +3902,7 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
 static
 rc_t VPathMakeFmtExt ( VPath ** new_path, bool ext, const String * id,
 	const String * tick, uint64_t osize, KTime_t date, const uint8_t md5 [ 16 ],
-	KTime_t exp_date, const char * fmt, ... )
+	KTime_t exp_date, const char * service, const char * fmt, ... )
 {
     EVPathType t = ext ? eVPext : eVPWithId; 
     rc_t rc;
@@ -3880,7 +3911,7 @@ rc_t VPathMakeFmtExt ( VPath ** new_path, bool ext, const String * id,
     va_start ( args, fmt );
 
     rc = VPathMakeVFmtExt ( t, new_path, id, tick, osize, date, md5, exp_date,
-		fmt, args );
+        service, fmt, args );
 
     va_end ( args );
 
@@ -3889,11 +3920,12 @@ rc_t VPathMakeFmtExt ( VPath ** new_path, bool ext, const String * id,
 
 rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
     const String * tick, bool ext, const String * id, uint64_t osize,
-    KTime_t date, const uint8_t md5 [ 16 ], KTime_t exp_date )
+    KTime_t date, const uint8_t md5 [ 16 ], KTime_t exp_date,
+    const char * service )
 {
     if ( tick == NULL || tick -> addr == NULL || tick -> size == 0 )
         return VPathMakeFmtExt ( new_path, ext, id, tick, osize, date, md5,
-		                         exp_date, "%S", url  );
+		                         exp_date, service, "%S", url  );
     else {
         const char * fmt = NULL;
         assert(url);
@@ -3902,14 +3934,14 @@ rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
         else
             fmt = "%S&tic=%S";
         return VPathMakeFmtExt(new_path, ext, id, tick, osize, date, md5,
-            exp_date, fmt, url, tick);
+            exp_date, service, fmt, url, tick);
     }
 }
 
 rc_t LegacyVPathMakeVFmt ( VPath ** new_path, const char * fmt, va_list args )
 {
-    return VPathMakeVFmtExt ( false, new_path, NULL, NULL, 0, 0, NULL, 0, fmt,
-                              args );
+    return VPathMakeVFmtExt ( false, new_path, NULL, NULL, 0, 0, NULL, 0, NULL,
+        fmt, args );
 }
 
 LIB_EXPORT rc_t CC LegacyVPathGetScheme_t ( const VPath * self, VPUri_t * uri_type )
