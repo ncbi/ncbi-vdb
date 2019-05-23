@@ -306,6 +306,27 @@ LIB_EXPORT rc_t CC KDBManagerRunPeriodicTasks ( const KDBManager *self )
     return 0;
 }
 
+static void ad(const KDBManager *self, const VPath *aPath, const VPath **path)
+{
+    String spath;
+    assert(self);
+    if (VPathGetPath(aPath, &spath) != 0)
+        return;
+    if ((KDirectoryPathType(self->wd, spath.addr) & ~kptAlias) != kptDir)
+        return;
+    const char *slash = strrchr(spath.addr, '/');
+    if (slash)
+        ++slash;
+    else
+        slash = spath.addr;
+    if ((KDirectoryPathType(self->wd, "%s/%s.sra", spath.addr, slash)
+        & ~kptAlias) != kptFile)
+    {
+        return;
+    }
+    VFSManagerMakePath(self->vfsmgr, (VPath **)path,
+        "%s/%s.sra", spath.addr, slash);
+}
 
 /* PathType
  *  check the path type of an object/directory path.
@@ -314,11 +335,14 @@ LIB_EXPORT rc_t CC KDBManagerRunPeriodicTasks ( const KDBManager *self )
  *  kdb object
  */
 static int CC KDBManagerPathTypeVPImpl ( const KDBManager * self,
-    const VPath * path, bool reliable )
+    const VPath * aPath, bool reliable )
 {
+    const VPath * path = aPath;
     VPath * rpath;
     int path_type;
     rc_t rc;
+
+    ad(self, aPath, &path);
 
     path_type = kptBadPath;
     if ((self != NULL) && (path != NULL))
@@ -389,6 +413,10 @@ static int CC KDBManagerPathTypeVPImpl ( const KDBManager * self,
             VPathRelease (rpath);
         }
     }
+
+    if (aPath != path)
+        VPathRelease(path);
+
     return path_type;
 }
 
