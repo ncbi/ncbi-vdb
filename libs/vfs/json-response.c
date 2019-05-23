@@ -1459,13 +1459,13 @@ static rc_t LocationsAddLink ( Locations * self, const KJsonValue * node,
 
     if ( dad -> tic == NULL ) {
         rc = VPathMakeFromUrl ( & path, & url, NULL, true, & acc, dad -> sz,
-                                dad -> mod, hasMd5 ? md5 : NULL, 0 );
+                                dad -> mod, hasMd5 ? md5 : NULL, 0, dad ->srv );
     }
     else {
         String ticket;
         StringInitCString ( & ticket, dad -> tic );
         rc = VPathMakeFromUrl ( & path, & url, & ticket, true, & acc, dad -> sz,
-                                dad -> mod, hasMd5 ? md5 : NULL, 0 );
+                                dad -> mod, hasMd5 ? md5 : NULL, 0, dad->srv);
     }
     if ( rc == 0 )
         VPathMarkHighReliability ( path, true );
@@ -2478,6 +2478,14 @@ rc_t KSrvRespFileGetClass(const KSrvRespFile * self, const char ** itemClass) {
     assert(self && self->item && itemClass);
 
     *itemClass = self->item->itemClass;
+
+    return 0;
+}
+
+rc_t KSrvRespFileGetType(const KSrvRespFile * self, const char ** type) {
+    assert(self && self->item && type);
+
+    *type = self->file->cType;
 
     return 0;
 }

@@ -1602,7 +1602,7 @@ static bool VPathMakeOrNot ( VPath ** new_path, const String * src,
             typed -> osize,
             useDates ? typed -> date : 0,
             typed -> md5 . has_md5 ? typed -> md5 . md5 : NULL,
-            useDates ? typed -> expiration : 0 );
+            useDates ? typed -> expiration : 0, NULL );
         if ( * rc == 0 )
             VPathMarkHighReliability ( * new_path, true );
 
@@ -3092,10 +3092,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
         }
     }
 
-    /*
     if (rc == 0 && SVersionNeedCloudLocation(request->version))
-    */
-    if (rc == 0)
         rc = SCgiRequestAddLocation( self, helper );
     return rc;
 }
