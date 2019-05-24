@@ -85,8 +85,6 @@ static void aws_parse_file ( const KFile *self, KConfigNode *aws_node,
     const char *end = start + buf_size;
     bool in_profile = false;
 
-    // StringInitCString ( &brack_profile, "" );
-
     String bracket;
     CONST_STRING ( &bracket, "[" );
 
@@ -111,13 +109,13 @@ static void aws_parse_file ( const KFile *self, KConfigNode *aws_node,
 
         /* check for empty line and skip */
         if ( StringLength ( &trim ) == 0 ) continue;
-/*
-        {
-            char *p = string_dup ( trim.addr, StringLength ( &trim ) );
-            fprintf ( stderr, "line: %s\n", p );
-            free ( p );
-        }
-*/
+        /*
+                {
+                    char *p = string_dup ( trim.addr, StringLength ( &trim ) );
+                    fprintf ( stderr, "line: %s\n", p );
+                    free ( p );
+                }
+        */
         /* check for comment line and skip */
         if ( trim.addr[0] == '#' ) continue;
 
@@ -163,8 +161,8 @@ static void aws_parse_file ( const KFile *self, KConfigNode *aws_node,
             }
         }
     }
-    free ( (void *)temp1 );         /* Hack */
-    free ( (void *)brack_profile ); /* Hack */
+    StringWhack ( temp1 );
+    StringWhack ( brack_profile );
 }
 
 static rc_t aws_find_nodes (
@@ -260,11 +258,6 @@ static void make_home_node ( const KConfig *self, char *path, size_t path_size )
     }
 }
 
-
-/* KConfigRead(kfg, "/AWS/aws_access_key_id",
- * KConfigRead(kfg, "/AWS/aws_secret_access_key"
- */
-
 extern void add_aws_nodes ( KConfig *self )
 {
     char profile[4096] = "";
@@ -316,8 +309,6 @@ extern void add_aws_nodes ( KConfig *self )
             if ( rc == 0 ) rc = aws_find_nodes ( aws_node, path, &sprofile );
         }
     }
-
-    /*    KConfigPrint ( self, 0 ); */
 
     KConfigNodeRelease ( aws_node );
 }
