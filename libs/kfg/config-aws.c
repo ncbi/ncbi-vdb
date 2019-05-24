@@ -76,14 +76,23 @@ static rc_t aws_extract_key_value_pair (
     return 0;
 }
 
-static void aws_parse_file ( const KFile *self, KConfigNode *aws_node,
-    const char *buffer, size_t buf_size, bool isCredentialsFile,
-    const String *profile )
+static void aws_parse_file (
+    const KFile *cred_file, KConfigNode *aws_node, const String *profile )
 {
-    char *sep;
-    const char *start = buffer;
-    const char *end = start + buf_size;
-    bool in_profile = false;
+    size_t buf_size = 0;
+    size_t num_read = 0;
+    rc_t rc = 0;
+
+    rc = KFileSize ( cred_file, &buf_size );
+    if ( rc ) return;
+
+    char *buffer = malloc ( buf_size );
+    rc = KFileReadAll ( cred_file, 0, buffer, (size_t)buf_size, &num_read );
+
+    if ( rc ) {
+        free ( buffer );
+        return;
+    }
 
     String bracket;
     CONST_STRING ( &bracket, "[" );
@@ -93,6 +102,11 @@ static void aws_parse_file ( const KFile *self, KConfigNode *aws_node,
     CONST_STRING ( &bracket, "]" );
     const String *brack_profile;
     StringConcat ( &brack_profile, temp1, &bracket );
+
+    char *sep;
+    const char *start = buffer;
+    const char *end = start + buf_size;
+    bool in_profile = false;
 
     for ( ; start < end; start = sep + 1 ) {
         rc_t rc;
@@ -132,98 +146,86 @@ static void aws_parse_file ( const KFile *self, KConfigNode *aws_node,
         if ( rc != 0 ) continue;
 
         /* now check keys we are looking for and populate the node*/
-        if ( isCredentialsFile ) {
-            String access_key_id, secret_access_key;
-            CONST_STRING ( &access_key_id, "aws_access_key_id" );
-            CONST_STRING ( &secret_access_key, "aws_secret_access_key" );
 
-            if ( StringCaseEqual ( &key, &access_key_id ) ) {
-                rc = aws_KConfigNodeUpdateChild ( aws_node, &key, &value );
-                if ( rc != 0 ) return;
-            }
+        String access_key_id, secret_access_key;
+        CONST_STRING ( &access_key_id, "aws_access_key_id" );
+        CONST_STRING ( &secret_access_key, "aws_secret_access_key" );
 
-            if ( StringCaseEqual ( &key, &secret_access_key ) ) {
-                rc = aws_KConfigNodeUpdateChild ( aws_node, &key, &value );
-                if ( rc != 0 ) return;
-            }
-        } else {
-            String region, output;
-            CONST_STRING ( &region, "region" );
-            CONST_STRING ( &output, "output" );
+        if ( StringCaseEqual ( &key, &access_key_id ) ) {
+            rc = aws_KConfigNodeUpdateChild ( aws_node, &key, &value );
+            if ( rc != 0 ) return;
+        }
 
-            if ( StringCaseEqual ( &key, &region ) ) {
-                rc = aws_KConfigNodeUpdateChild ( aws_node, &key, &value );
-                if ( rc != 0 ) return;
-            }
-            if ( StringCaseEqual ( &key, &output ) ) {
-                rc = aws_KConfigNodeUpdateChild ( aws_node, &key, &value );
-                if ( rc != 0 ) return;
-            }
+        if ( StringCaseEqual ( &key, &secret_access_key ) ) {
+            rc = aws_KConfigNodeUpdateChild ( aws_node, &key, &value );
+            if ( rc != 0 ) return;
+        }
+
+        String region, output;
+        CONST_STRING ( &region, "region" );
+        CONST_STRING ( &output, "output" );
+
+        if ( StringCaseEqual ( &key, &region ) ) {
+            rc = aws_KConfigNodeUpdateChild ( aws_node, &key, &value );
+            if ( rc != 0 ) return;
+        }
+        if ( StringCaseEqual ( &key, &output ) ) {
+            rc = aws_KConfigNodeUpdateChild ( aws_node, &key, &value );
+            if ( rc != 0 ) return;
         }
     }
     StringWhack ( temp1 );
     StringWhack ( brack_profile );
+    free ( buffer );
 }
 
 static rc_t aws_find_nodes (
     KConfigNode *aws_node, const char *aws_path, const String *profile )
 {
-    KDirectory *wd;
+    bool done = false;
 
+    KDirectory *wd = NULL;
     rc_t rc = KDirectoryNativeDir ( &wd );
-    if ( rc == 0 ) {
-        char *buffer;
-        size_t num_read;
-        uint64_t buf_size;
+    if ( rc ) return rc;
+    const KFile *cred_file = NULL;
 
-        const KFile *credentials, *config;
+    const char *conf_env = getenv ( "AWS_CONFIG_FILE" );
+    const char *cred_env = getenv ( "AWS_SHARED_CREDENTIAL_FILE" );
+    if ( conf_env ) {
+        rc = KDirectoryOpenFileRead ( wd, &cred_file, "%s", conf_env );
+        if ( rc ) return rc;
+
+        aws_parse_file ( cred_file, aws_node, profile );
+        KFileRelease ( cred_file );
+        done = true;
+    }
+    if ( cred_env ) {
+        rc = KDirectoryOpenFileRead ( wd, &cred_file, "%s", cred_env );
+        if ( rc ) return rc;
+
+        aws_parse_file ( cred_file, aws_node, profile );
+        KFileRelease ( cred_file );
+        done = true;
+    }
+    if ( !done ) {
+        rc = KDirectoryOpenFileRead (
+            wd, &cred_file, "%s%s", aws_path, "/credentials" );
+        if ( rc ) return rc;
+
+        aws_parse_file ( cred_file, aws_node, profile );
+        KFileRelease ( cred_file );
 
         rc = KDirectoryOpenFileRead (
-            wd, &credentials, "%s%s", aws_path, "/credentials" );
-        if ( rc == 0 ) {
-            rc = KFileSize ( credentials, &buf_size );
-            if ( rc == 0 ) {
-                buffer = malloc ( buf_size );
-                if ( buffer != NULL ) {
-                    rc = KFileReadAll (
-                        credentials, 0, buffer, (size_t)buf_size, &num_read );
+            wd, &cred_file, "%s%s", aws_path, "/config" );
+        if ( rc ) return rc;
 
-                    if ( rc == 0 )
-                        aws_parse_file ( credentials, aws_node, buffer,
-                            num_read, true, profile );
+        aws_parse_file ( cred_file, aws_node, profile );
 
-                    free ( buffer );
-                }
-            }
-
-            KFileRelease ( credentials );
-        }
-
-        rc = KDirectoryOpenFileRead (
-            wd, &config, "%s%s", aws_path, "/config" );
-        if ( rc == 0 ) {
-            rc = KFileSize ( config, &buf_size );
-            if ( rc == 0 ) {
-                buffer = malloc ( buf_size );
-                if ( buffer != NULL ) {
-                    rc = KFileReadAll (
-                        config, 0, buffer, (size_t)buf_size, &num_read );
-
-                    if ( rc == 0 )
-                        aws_parse_file ( config, aws_node, buffer, num_read,
-                            false, profile );
-
-                    free ( buffer );
-                }
-            }
-
-            KFileRelease ( config );
-        }
-
-        KDirectoryRelease ( wd );
+        KFileRelease ( cred_file );
     }
 
-    return rc;
+    KDirectoryRelease ( wd );
+    return 0;
 }
 
 
@@ -258,14 +260,13 @@ static void make_home_node ( const KConfig *self, char *path, size_t path_size )
     }
 }
 
-extern void add_aws_nodes ( KConfig *self )
+KFG_EXTERN rc_t CC add_aws_nodes ( KConfig *self )
 {
-    char profile[4096] = "";
-
-    size_t num_writ;
-    rc_t rc;
+    rc_t rc = 0;
 
     /* Get Profile */
+    char profile[4096] = "";
+    size_t num_writ;
     rc = KConfig_Get_Aws_Profile (
         self, profile, sizeof ( profile ), &num_writ );
     if ( rc != 0 && num_writ == 0 ) { strcpy ( profile, "default" ); }
@@ -276,6 +277,11 @@ extern void add_aws_nodes ( KConfig *self )
     /* Build config node */
     KConfigNode *aws_node = NULL;
     rc = KConfigOpenNodeUpdate ( self, &aws_node, "aws", NULL );
+    if ( rc ) return rc;
+
+    /* Check paths and parse */
+    char home[4096] = "";
+    make_home_node ( self, home, sizeof home );
 
     /* Check Environment first */
     const char *aws_access_key_id = getenv ( "AWS_ACCESS_KEY_ID" );
@@ -283,6 +289,7 @@ extern void add_aws_nodes ( KConfig *self )
     if ( aws_access_key_id != NULL && aws_secret_access_key != NULL
         && strlen ( aws_access_key_id ) > 0
         && strlen ( aws_secret_access_key ) > 0 ) {
+        /* Use environment variables */
         String access_key_id, secret_access_key;
         CONST_STRING ( &access_key_id, "aws_access_key_id" );
         CONST_STRING ( &secret_access_key, "aws_secret_access_key" );
@@ -293,22 +300,19 @@ extern void add_aws_nodes ( KConfig *self )
         aws_KConfigNodeUpdateChild ( aws_node, &secret_access_key, &value );
 
         KConfigNodeRelease ( aws_node );
-
-        return;
+        return 0;
     }
 
-    /* Check paths and parse */
-    char home[4096] = "";
-    char path[4096] = "";
-
-    make_home_node ( self, home, sizeof home );
     if ( home[0] != 0 ) {
+        char path[4096] = "";
         rc = string_printf ( path, sizeof path, &num_writ, "%s/.aws", home );
         if ( rc == 0 && num_writ != 0 ) {
-            /* create aws node */
+            /* Use config files */
             if ( rc == 0 ) rc = aws_find_nodes ( aws_node, path, &sprofile );
         }
     }
 
     KConfigNodeRelease ( aws_node );
+
+    return rc;
 }

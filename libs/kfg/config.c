@@ -2954,7 +2954,7 @@ static rc_t KConfigFill (
         if ( !self->disableFileLoadOnKfgCreating )
             rc = load_config_files ( self, cfgdir, &ks, &loaded_from_dir );
 
-        add_aws_nodes ( self );
+        rc = add_aws_nodes ( self );
 
         if ( rc == 0 ) {
             /* commit changes made to magic file nodes
