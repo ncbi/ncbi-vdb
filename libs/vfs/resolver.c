@@ -331,6 +331,12 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
     case algFlat:
         rc = string_printf ( expanded, bsize, size, "%S", & tok -> acc );
         break;
+    case algSRAAD:
+        rc = string_printf ( expanded, bsize, size,
+            "%S%S/%S%S.%s", & tok -> alpha, & tok -> digits,
+            & tok -> alpha, & tok -> digits,
+            tok -> vdbcache ? "sra.vdbcache" : "sra" );
+        break;
     case algSRAFlat:
         rc = string_printf ( expanded, bsize, size,
             "%S%S.%s", & tok -> alpha, & tok -> digits, tok -> vdbcache ? "sra.vdbcache" : "sra" );
@@ -2059,6 +2065,7 @@ struct VResolver
     /* volume algorithms - stored as VResolverAlg* */
     Vector local;
     Vector remote;
+    Vector ad; /* vector having 1 dummy alg to implement AccessionAsDirectory */
 
     /* working directory for testing local paths */
     const KDirectory *wd;
@@ -2630,8 +2637,22 @@ rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
     app = get_accession_app ( accession, refseq_ctx, & tok,
                               & legacy_wgs_refseq, resolveAllAccToCache, NULL );
 
-    /* search all local volumes by app and accession algorithm expansion */
+    /* check AD */
+    count = VectorLength ( & self -> ad );
+    for ( i = 0; i < count; ++ i )
+    {
+        const VResolverAlg *alg = VectorGet ( & self ->ad, i );
+        if ( alg -> app_id == app )
+        {
+            const bool for_cache = false;
+            rc_t rc = VResolverAlgLocalResolve ( alg, self -> wd,
+                & tok, path, legacy_wgs_refseq, for_cache, dir );
+            if ( rc == 0 )
+                return 0;
+        }
+    }
 
+    /* search all local volumes by app and accession algorithm expansion */
 
     count = VectorLength ( & self -> local );
     for ( i = 0; i < count; ++ i )
@@ -4427,6 +4448,8 @@ rc_t VResolverLoadVolumes ( Vector *algs, const String *root,
                     /* if using CGI for resolution */
                     if ( resolver_cgi || strcmp ( algname, "cgi" ) == 0 )
                         alg_id = algCGI;
+                    else if ( strcmp ( algname, "sraAd" ) == 0 )
+                        alg_id = algSRAAD;
                     /* stored in a flat directory as-is */
                     else if ( strcmp ( algname, "flat" ) == 0 )
                         alg_id = algFlat;
@@ -5308,6 +5331,11 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
             rc = VResolverLoadSubCategory ( self, & self -> local, kfg, NULL,
                 "user/aux", true, false, userDisabled, userCacheEnabled );
 #endif
+
+        /* load Accession as Directory repository */
+        if (rc == 0)
+            rc = VResolverLoadSubCategory(self, &self->ad, kfg, NULL,
+                "user/ad", false, false, eDisabledNotSet, true);
 
         /* load any site repositories */
         if ( rc == 0 )

@@ -170,6 +170,7 @@ typedef enum
 {
     algCGI,
     algFlat,
+    algSRAAD, /* Accession as Directory */
     algSRAFlat,
     algSRA1024,
     algSRA1000,
