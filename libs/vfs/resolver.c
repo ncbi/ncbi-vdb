@@ -5407,7 +5407,7 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
                    when it does not exist */
                 if (rc == 0)
                     rc = KConfigWriteString((KConfig*)cfg,
-                        "/repository/user/ad/public/apps/file/volumes/sraAd",
+                        "/repository/user/ad/public/apps/file/volumes/flat",
                         ".");
                 if (rc == 0)
                     rc = KConfigWriteString((KConfig*)cfg,
