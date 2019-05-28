@@ -5399,11 +5399,41 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
 #endif
 
         /* load Accession as Directory repository */
-        if (rc == 0)
+        if (rc == 0) {
             rc = VResolverLoadSubCategory(self, &self->ad, kfg, NULL,
                 "user/ad", true, false, eDisabledNotSet, true);
+            if (VectorLength(&self->ad) == 0) {
+                /* create Accession as Directory repository
+                   when it does not exist */
+                if (rc == 0)
+                    rc = KConfigWriteString((KConfig*)cfg,
+                        "/repository/user/ad/public/apps/file/volumes/sraAd",
+                        ".");
+                if (rc == 0)
+                    rc = KConfigWriteString((KConfig*)cfg,
+                        "/repository/user/ad/public/apps/sra/volumes/sraAd",
+                        ".");
+                if (rc == 0)
+                    rc = KConfigWriteString((KConfig*)cfg,
+                        "/repository/user/ad/public/apps/sraPileup/volumes/"
+                        "sraAd", ".");
+                if (rc == 0)
+                    rc = KConfigWriteString((KConfig*)cfg,
+                        "/repository/user/ad/public/apps/sraRealign/volumes/"
+                        "sraAd", ".");
+                if (rc == 0)
+                    rc = KConfigWriteString((KConfig*)cfg,
+                        "/repository/user/ad/public/root", ".");
+                if (rc == 0)
+                    rc = KConfigNodeRelease(kfg);
+                if (rc == 0)
+                    rc = KConfigOpenNodeRead(cfg, &kfg, "repository");
+                if (rc == 0)
+                    rc = VResolverLoadSubCategory(self, &self->ad, kfg, NULL,
+                        "user/ad", true, false, eDisabledNotSet, true);
+            }
+        }
         /* TODO:
-        Create ad here if it was not loaded;
         Add ad to embedded configuration. 
         Add ad to default.kfg */
 
