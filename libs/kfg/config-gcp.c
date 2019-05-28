@@ -25,36 +25,52 @@
  */
 
 
-#include <kfg/gcp-credentials.h>
+#include <kfg/properties.h>
 #include <kfs/directory.h>
 #include <kfs/file.h>
-#include <klib/defs.h>
 #include <klib/printf.h>
 #include <klib/rc.h>
 #include <klib/text.h>
 
 #include <ctype.h>
+#include <os-native.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <kfg/kfg-priv.h>
 
-LIB_EXPORT
-rc_t CC LoadGcpCredentials (
-    const KFile *pathToJsonFile, KJsonValue **GcpAccountCredentials )
+
+static rc_t gcp_KConfigNodeUpdateChild (
+    KConfigNode *self, String *name, String *value )
+{
+    KConfigNode *child;
+
+    rc_t rc = KConfigNodeOpenNodeUpdate ( self, &child, "%S", name );
+    if ( rc == 0 ) {
+        rc = KConfigNodeWrite ( child, value->addr, value->size );
+        KConfigNodeRelease ( child );
+    }
+
+    return rc;
+}
+
+KFG_EXTERN rc_t CC add_gcp_nodes ( KConfig *self )
 {
     rc_t rc = 0;
-    KDirectory *dir = NULL;
-    uint64_t json_size;
-    char *buffer = NULL;
-    *GcpAccountCredentials = NULL;
 
+    const char *pathToJsonFile = getenv ( "GOOGLE_APPLICATION_CREDENTIALS" );
+
+    if ( pathToJsonFile == NULL ) return 0;
+
+    KDirectory *dir = NULL;
     rc = KDirectoryNativeDir ( &dir );
     if ( rc ) return rc;
 
-    rc = KFileSize ( pathToJsonFile, &json_size );
+    uint64_t json_size = 0;
+    rc = KFileSize ( getenv ( "GOOGLE_APPLICATION_CREDENTIALS" ), &json_size );
     if ( rc ) return rc;
 
-    buffer = (char *)calloc ( json_size + 1, 1 );
+    char *buffer = (char *)calloc ( json_size + 1, 1 );
 
     rc = KFileReadExactly ( pathToJsonFile, 0, buffer, json_size );
     if ( rc ) {
@@ -86,7 +102,48 @@ rc_t CC LoadGcpCredentials (
         ++i;
     }
 
-    *GcpAccountCredentials = root;
 
-    return rc;
+    /* Build config node */
+    KConfigNode *gcp_node = NULL;
+    rc = KConfigOpenNodeUpdate ( self, &gcp_node, "gcp", NULL );
+    if ( rc ) return rc;
+
+    const KJsonValue *v = NULL;
+    const char *val = NULL;
+    String value;
+
+    String private_key;
+    CONST_STRING ( &private_key, "private_key" );
+    v = KJsonObjectGetMember ( obj, "private_key" );
+    if ( v == NULL ) {
+        return RC ( rcKFG, rcFile, rcParsing, rcParam, rcInvalid );
+    }
+    rc = KJsonGetString ( v, &val );
+    if ( rc ) return rc;
+    StringInitCString ( &value, val );
+    gcp_KConfigNodeUpdateChild ( gcp_node, &private_key, &value );
+
+    if ( KJsonGetValueType ( v ) != jsString ) {
+        return RC ( rcKFG, rcFile, rcParsing, rcParam, rcInvalid );
+    }
+
+
+    String client_email;
+    CONST_STRING ( &client_email, "client_email" );
+    v = KJsonObjectGetMember ( obj, "client_email" );
+    if ( v == NULL ) {
+        return RC ( rcKFG, rcFile, rcParsing, rcParam, rcInvalid );
+    }
+    rc = KJsonGetString ( v, &val );
+    if ( rc ) return rc;
+    StringInitCString ( &value, val );
+    gcp_KConfigNodeUpdateChild ( gcp_node, &client_email, &value );
+
+    if ( KJsonGetValueType ( v ) != jsString ) {
+        return RC ( rcKFG, rcFile, rcParsing, rcParam, rcInvalid );
+    }
+
+
+    KConfigNodeRelease ( gcp_node );
+    return 0;
 }

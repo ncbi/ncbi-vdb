@@ -1,0 +1,4 @@
+/aws/aws_access_key_id = "test_from_file"
+/aws/aws_secret_access_key = "secret_from_file"
+/aws/profile = "other_profile"
+

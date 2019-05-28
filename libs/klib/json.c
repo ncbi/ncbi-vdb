@@ -936,6 +936,7 @@ ValueToJson ( const KJsonValue * p_value, PrintData * p_pd )
         }
         break;
     default:
+        rc = RC ( rcCont, rcNode, rcAccessing, rcType, rcIncorrect );
         assert ( false );
         break;
     }

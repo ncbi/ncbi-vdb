@@ -35,7 +35,6 @@
 #include <kfs/lockfile.h>
 
 #include <kfg/config.h>
-#include <kfg/gcp-credentials.h>
 #include <kfg/kfg-priv.h>
 
 #include <klib/text.h>
@@ -52,27 +51,38 @@ TEST_SUITE ( GCPCredentialsTestSuite );
 
 TEST_CASE ( GCPCredentialsMake )
 {
-    KDirectory *wd = NULL;
-    REQUIRE_RC ( KDirectoryNativeDir ( &wd ) );
-    const char *fileName = "test-gcp.json";
-    const KFile *file = NULL;
-    REQUIRE_RC ( KDirectoryOpenFileRead ( wd, &file, fileName ) );
-    KJsonValue *root = NULL;
-    REQUIRE_RC ( LoadGcpCredentials ( file, &root ) );
+    char gcp_private_key[512] = "";
+    char gcp_client_email[512] = "";
+    size_t buf_sz;
 
-    REQUIRE_NOT_NULL ( root );
+
+    setenv (
+        "GOOGLE_APPLICATION_CREDENTIALS", "cloud-kfg/gcp_service.json", 1 );
+
+    KDirectory *native = NULL;
+    REQUIRE_RC ( KDirectoryNativeDir ( &native ) );
+
+    KConfig *cfg = NULL;
+    REQUIRE_RC ( KConfigMake ( &cfg, native ) );
+
+    const KFile *file;
+    REQUIRE_RC ( KDirectoryOpenFileRead ( native, &file, "cloud-kfg/empty" ) );
+    REQUIRE_RC ( KConfigLoadFile ( cfg, "", file ) );
 
     REQUIRE_RC ( KFileRelease ( file ) );
+    REQUIRE_RC ( KDirectoryRelease ( native ) );
 
-    const KJsonObject *obj = KJsonValueToObject ( root );
+    REQUIRE_RC ( KConfigRead ( cfg, "/gcp/gcp_private_key", 0, gcp_private_key,
+        sizeof gcp_private_key, &buf_sz, NULL ) );
+    REQUIRE_RC ( KConfigRead ( cfg, "/gcp/gcp_client_email", 0,
+        gcp_client_email, sizeof gcp_client_email, &buf_sz, NULL ) );
 
-    const KJsonValue *v = KJsonObjectGetMember ( obj, "type" );
-    const char *strval = NULL;
-    REQUIRE_RC ( KJsonGetString ( v, &strval ) );
-    REQUIRE_EQ ( strcmp ( strval, "service_account" ), 0 );
-
-    REQUIRE_RC ( KDirectoryRelease ( wd ) );
-    KJsonValueWhack ( root );
+    const char *private_key = "-----BEGIN NOTPRIVATE KEY";
+    const char *client_email = "ncbivdb-compute@developer.gserviceaccount.com";
+    REQUIRE_EQ (
+        strncmp ( gcp_private_key, private_key, strlen ( private_key ) ), 0 );
+    REQUIRE_EQ ( strcmp ( gcp_client_email, client_email ), 0 );
+    KConfigRelease ( cfg );
 }
 
 
