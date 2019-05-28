@@ -267,9 +267,13 @@ KFG_EXTERN rc_t CC add_aws_nodes ( KConfig *self )
     /* Get Profile */
     char profile[4096] = "";
     size_t num_writ;
-    rc = KConfig_Get_Aws_Profile (
-        self, profile, sizeof ( profile ), &num_writ );
-    if ( rc != 0 && num_writ == 0 ) { strcpy ( profile, "default" ); }
+    if ( getenv ( "AWS_PROFILE" ) != NULL ) {
+        snprintf ( profile, sizeof profile, "%s", getenv ( "AWS_PROFILE" ) );
+    } else {
+        rc = KConfig_Get_Aws_Profile (
+            self, profile, sizeof ( profile ), &num_writ );
+        if ( rc != 0 && num_writ == 0 ) { strcpy ( profile, "default" ); }
+    }
 
     String sprofile;
     StringInitCString ( &sprofile, profile );

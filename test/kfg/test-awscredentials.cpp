@@ -126,6 +126,7 @@ TEST_CASE ( awsCredentialsOtherFile )
     unsetenv ( "AWS_CONFIG_FILE" );
 
     setenv ( "AWS_SHARED_CREDENTIAL_FILE", "cloud-kfg/aws_other_config", 1 );
+    setenv ( "AWS_PROFILE", "other_profile", 1 );
 
     KDirectory *native = NULL;
     REQUIRE_RC ( KDirectoryNativeDir ( &native ) );
@@ -134,8 +135,7 @@ TEST_CASE ( awsCredentialsOtherFile )
     REQUIRE_RC ( KConfigMake ( &cfg, native ) );
 
     const KFile *file;
-    REQUIRE_RC (
-        KDirectoryOpenFileRead ( native, &file, "cloud-kfg/aws.kfg" ) );
+    REQUIRE_RC ( KDirectoryOpenFileRead ( native, &file, "cloud-kfg/empty" ) );
     REQUIRE_RC ( KConfigLoadFile ( cfg, "", file ) );
 
     REQUIRE_RC ( KFileRelease ( file ) );
@@ -146,9 +146,45 @@ TEST_CASE ( awsCredentialsOtherFile )
     REQUIRE_RC ( KConfigRead ( cfg, "/aws/aws_secret_access_key", 0,
         aws_secret_access_key, sizeof aws_secret_access_key, &buf_sz, NULL ) );
 
-    fprintf ( stderr, "got %s\n", aws_access_key_id );
-    REQUIRE_EQ ( strcmp ( aws_access_key_id, "ABC123" ), 0 );
-    REQUIRE_EQ ( strcmp ( aws_secret_access_key, "SECRET" ), 0 );
+    REQUIRE_EQ ( strcmp ( aws_access_key_id, "ABC123_OTHER" ), 0 );
+    REQUIRE_EQ ( strcmp ( aws_secret_access_key, "SECRET_OTHER" ), 0 );
+    KConfigRelease ( cfg );
+}
+
+TEST_CASE ( awsCredentialsOtherDefaulFile )
+{
+    char aws_access_key_id[512] = "";
+    char aws_secret_access_key[512] = "";
+    size_t buf_sz;
+
+    unsetenv ( "AWS_ACCESS_KEY_ID" );
+    unsetenv ( "AWS_SECRET_ACCESS_KEY" );
+    unsetenv ( "AWS_SHARED_CREDENTIAL_FILE" );
+    unsetenv ( "AWS_CONFIG_FILE" );
+    unsetenv ( "AWS_PROFILE" );
+
+    setenv ( "AWS_SHARED_CREDENTIAL_FILE", "cloud-kfg/aws_other_config", 1 );
+
+    KDirectory *native = NULL;
+    REQUIRE_RC ( KDirectoryNativeDir ( &native ) );
+
+    KConfig *cfg = NULL;
+    REQUIRE_RC ( KConfigMake ( &cfg, native ) );
+
+    const KFile *file;
+    REQUIRE_RC ( KDirectoryOpenFileRead ( native, &file, "cloud-kfg/empty" ) );
+    REQUIRE_RC ( KConfigLoadFile ( cfg, "", file ) );
+
+    REQUIRE_RC ( KFileRelease ( file ) );
+    REQUIRE_RC ( KDirectoryRelease ( native ) );
+
+    REQUIRE_RC ( KConfigRead ( cfg, "/aws/aws_access_key_id", 0,
+        aws_access_key_id, sizeof aws_access_key_id, &buf_sz, NULL ) );
+    REQUIRE_RC ( KConfigRead ( cfg, "/aws/aws_secret_access_key", 0,
+        aws_secret_access_key, sizeof aws_secret_access_key, &buf_sz, NULL ) );
+
+    REQUIRE_EQ ( strcmp ( aws_access_key_id, "ABC123_OTHER" ), 0 );
+    REQUIRE_EQ ( strcmp ( aws_secret_access_key, "SECRET_OTHER" ), 0 );
     KConfigRelease ( cfg );
 }
 
