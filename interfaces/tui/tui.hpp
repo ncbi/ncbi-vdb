@@ -333,6 +333,16 @@ class Dlg
             KTUIDlgMake ( instance->tui_, &dlg_, /*parent*/ NULL, /*palette*/ NULL, /*rect*/ NULL );
         };
 
+        Dlg( Dlg &parent )
+        {
+            KTUIDlgMake ( KTUIDlgGetTui ( parent . dlg_ ), &dlg_, parent . dlg_, /*palette*/ NULL, /*rect*/ NULL );
+        };
+        
+        Dlg( Dlg &parent, Tui_Rect &r )
+        {
+            KTUIDlgMake ( KTUIDlgGetTui ( parent . dlg_ ), &dlg_, parent . dlg_, /*palette*/ NULL, & r.r_ );
+        };
+        
         ~Dlg( void ) { KTUIDlgRelease ( dlg_ ); };
 
         bool SetCaption( const char * s ) { return ( KTUIDlgSetCaption ( dlg_, s ) == 0 ); };
