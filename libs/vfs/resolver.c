@@ -64,6 +64,8 @@
 
 #include <vfs/path-priv.h>
 
+#include "../kns/mgr-priv.h" /* KNSManager */
+
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -3126,32 +3128,68 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
     {
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
                ("VResolverCacheResolve: app = %d\n", app));
-        for ( i = 0; i < count; ++ i )
-        {
-            alg = VectorGet ( & self -> local, i );
+        if (self->kns->resolveToCache) {
+            for (i = 0; i < count; ++i)
+            {
+                alg = VectorGet(&self->local, i);
 
-            if ( alg -> cache_capable && alg -> protected == protected &&
-                 ( alg -> app_id == app || alg -> app_id == appAny ) )
+                if (alg->cache_capable && alg -> protected == protected &&
+                    (alg->app_id == app || alg->app_id == appAny))
+                {
+                    /* try to find an existing cache file
+                       NB - race condition exists unless
+                       we do something with lock files */
+                    if (forDirAdjusted)
+                        rc = VResolverAlgCacheResolveDir(alg, self->wd, &tok,
+                            cache, legacy_wgs_refseq, dir, resolvedToDir);
+                    else
+                        rc = VResolverAlgCacheResolve(alg, self->wd, &tok,
+                            cache, legacy_wgs_refseq);
+                    if (rc == 0)
+                        return 0;
+
+                    /* just remember the first as best for now */
+                    if (alg->app_id == app) {
+                        if (best == NULL)
+                            best = alg;
+                    }
+                    else {
+                        assert(alg->app_id == appAny);
+                        if (better == NULL)
+                            better = alg;
+                    }
+                }
+            }
+        }
+
+        /* check AD */
+        count = VectorLength(&self->ad);
+        for (i = 0; i < count; ++i)
+        {
+            const VResolverAlg *alg = VectorGet(&self->ad, i);
+            if (alg->cache_capable && alg -> protected == protected &&
+                (alg->app_id == app || alg->app_id == appAny))
             {
                 /* try to find an existing cache file
                    NB - race condition exists unless
                    we do something with lock files */
-                if ( forDirAdjusted )
-                    rc = VResolverAlgCacheResolveDir ( alg, self -> wd, & tok,
-                        cache, legacy_wgs_refseq, dir, resolvedToDir );
+                if (forDirAdjusted)
+                    rc = VResolverAlgCacheResolveDir(alg, self->wd, &tok,
+                        cache, legacy_wgs_refseq, dir, resolvedToDir);
                 else
-                    rc = VResolverAlgCacheResolve ( alg, self -> wd, & tok,
-                        cache, legacy_wgs_refseq );
-                if ( rc == 0 )
+                    rc = VResolverAlgCacheResolve(alg, self->wd, &tok,
+                        cache, legacy_wgs_refseq);
+                if (rc == 0)
                     return 0;
 
                 /* just remember the first as best for now */
-                if ( alg -> app_id == app ) {
-                    if ( best == NULL )
+                if (alg->app_id == app) {
+                    if (best == NULL)
                         best = alg;
-                } else {
-                    assert ( alg -> app_id == appAny );
-                    if ( better == NULL )
+                }
+                else {
+                    assert(alg->app_id == appAny);
+                    if (better == NULL)
                         better = alg;
                 }
             }
@@ -3159,27 +3197,55 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
     }
     else
     {
-        for ( i = 0; i < count; ++ i )
-        {
-            alg = VectorGet ( & self -> local, i );
+        if (self->kns->resolveToCache) {
+            for (i = 0; i < count; ++i)
+            {
+                alg = VectorGet(&self->local, i);
 
-            if ( alg -> cache_enabled && alg -> protected == protected &&
-                 ( alg -> app_id == app || alg -> app_id == appAny ) )
+                if (alg->cache_enabled && alg -> protected == protected &&
+                    (alg->app_id == app || alg->app_id == appAny))
+                {
+                    /* try to find an existing cache file
+                       NB - race condition exists unless
+                       we do something with lock files */
+                    if (forDirAdjusted)
+                        rc = VResolverAlgCacheResolveDir(alg, self->wd, &tok,
+                            cache, legacy_wgs_refseq, dir, resolvedToDir);
+                    else
+                        rc = VResolverAlgCacheResolve(alg, self->wd, &tok,
+                            cache, legacy_wgs_refseq);
+                    if (rc == 0)
+                        return 0;
+
+                    /* just remember the first as best for now */
+                    if (best == NULL)
+                        best = alg;
+                }
+            }
+        }
+
+        /* check AD */
+        count = VectorLength(&self->ad);
+        for (i = 0; i < count; ++i)
+        {
+            const VResolverAlg *alg = VectorGet(&self->ad, i);
+            if (alg->cache_enabled && alg -> protected == protected &&
+                (alg->app_id == app || alg->app_id == appAny))
             {
                 /* try to find an existing cache file
                    NB - race condition exists unless
                    we do something with lock files */
-                if ( forDirAdjusted )
-                    rc = VResolverAlgCacheResolveDir ( alg, self -> wd, & tok,
-                        cache, legacy_wgs_refseq, dir, resolvedToDir );
+                if (forDirAdjusted)
+                    rc = VResolverAlgCacheResolveDir(alg, self->wd, &tok,
+                        cache, legacy_wgs_refseq, dir, resolvedToDir);
                 else
-                    rc = VResolverAlgCacheResolve ( alg, self -> wd, & tok,
-                        cache, legacy_wgs_refseq );
-                if ( rc == 0 )
+                    rc = VResolverAlgCacheResolve(alg, self->wd, &tok,
+                        cache, legacy_wgs_refseq);
+                if (rc == 0)
                     return 0;
 
                 /* just remember the first as best for now */
-                if ( best == NULL )
+                if (best == NULL)
                     best = alg;
             }
         }
@@ -5335,7 +5401,11 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
         /* load Accession as Directory repository */
         if (rc == 0)
             rc = VResolverLoadSubCategory(self, &self->ad, kfg, NULL,
-                "user/ad", false, false, eDisabledNotSet, true);
+                "user/ad", true, false, eDisabledNotSet, true);
+        /* TODO:
+        Create ad here if it was not loaded;
+        Add ad to embedded configuration. 
+        Add ad to default.kfg */
 
         /* load any site repositories */
         if ( rc == 0 )
