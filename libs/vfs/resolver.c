@@ -290,11 +290,26 @@ rc_t VResolverAlgMakeRemotePath ( const VResolverAlg *self,
  */
 static
 rc_t VResolverAlgMakeLocalPath ( const VResolverAlg *self,
-    const String *vol, const String *exp, const VPath ** path )
+    const String *vol, const String *exp, const VPath ** path,
+    const KDirectory * wd )
 {
     if ( self -> root == NULL )
         return VPathMakeFmt ( ( VPath** ) path, "%S/%S", vol, exp );
-    return VPathMakeFmt ( ( VPath** ) path, "%S/%S/%S", self -> root, vol, exp );
+
+    if (wd == NULL)
+        return VPathMakeFmt ( ( VPath** ) path, "%S/%S/%S",
+            self -> root, vol, exp );
+    else {
+        char resolved [ PATH_MAX ] = "";
+        rc_t rc = KDirectoryResolvePath (wd, true, resolved, sizeof resolved,
+            "%.*s/%.*s/%.*s", (int)self->root->size, self->root->addr,
+            (int)vol->size, vol->addr, (int)exp->size, exp->addr );
+        if ( rc != 0 )
+            return VPathMakeFmt ( ( VPath** ) path, "%S/%S/%S",
+                self -> root, vol, exp );
+        else
+            return VPathMakeFmt ( ( VPath** ) path, "%s", resolved );
+    }
 }
 
 static rc_t VResolverMakeAbsPath ( const String * dir, const String * exp,
@@ -566,7 +581,8 @@ rc_t VResolverAlgLocalResolve ( const VResolverAlg *self,
             case kptDir:
                 if ( legacy_wgs_refseq )
                     return VResolverAlgMakeLocalWGSRefseqURI ( self, vol, & exp, & tok -> acc, path );
-                return VResolverAlgMakeLocalPath ( self, vol, & exp, path );
+                return VResolverAlgMakeLocalPath ( self, vol, & exp, path,
+                    NULL );
             default:
                 break;
             }
@@ -587,7 +603,8 @@ rc_t VResolverAlgLocalResolve ( const VResolverAlg *self,
             case kptDir:
                 if ( legacy_wgs_refseq )
                     return VResolverAlgMakeLocalWGSRefseqURI ( self, vol, & exp, & tok -> acc, path );
-                return VResolverAlgMakeLocalPath ( self, vol, & exp, path );
+                return VResolverAlgMakeLocalPath ( self, vol, & exp, path,
+                    NULL );
             default:
                 break;
             }
@@ -1995,7 +2012,8 @@ rc_t VResolverAlgCacheFile ( const VResolverAlg *self,
  */
 static
 rc_t VResolverAlgMakeCachePath ( const VResolverAlg *self,
-    const VResolverAccToken *tok, const VPath ** path, bool legacy_wgs_refseq )
+    const VResolverAccToken *tok, const VPath ** path, bool legacy_wgs_refseq,
+    const KDirectory * wd )
 {
     uint32_t i, count;
 
@@ -2023,7 +2041,7 @@ rc_t VResolverAlgMakeCachePath ( const VResolverAlg *self,
     for ( i = 0; i < count; ++ i )
     {
         vol = VectorGet ( & self -> vols, i );
-        return VResolverAlgMakeLocalPath ( self, vol, & exp, path );
+        return VResolverAlgMakeLocalPath ( self, vol, & exp, path, wd );
     }
     
     return RC ( rcVFS, rcResolver, rcResolving, rcPath, rcNotFound );
@@ -3120,6 +3138,8 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
 
     VResolverEnableState cache_state = atomic32_read ( & enable_cache );
 
+    bool ad = false;
+
     if ( dir != NULL )
         forDirAdjusted = true;
 
@@ -3185,8 +3205,10 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
 
                 /* just remember the first as best for now */
                 if (alg->app_id == app) {
-                    if (best == NULL)
+                    if (best == NULL) {
                         best = alg;
+                        ad = true;
+                    }
                 }
                 else {
                     assert(alg->app_id == appAny);
@@ -3247,8 +3269,10 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
                     return 0;
 
                 /* just remember the first as best for now */
-                if (best == NULL)
+                if (best == NULL) {
                     best = alg;
+                    ad = true;
+                }
             }
         }
     }
@@ -3261,7 +3285,8 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
     else {
         alg = best == NULL ? better : best;
         assert ( alg );
-        rc = VResolverAlgMakeCachePath ( alg, & tok, cache, legacy_wgs_refseq );
+        rc = VResolverAlgMakeCachePath ( alg, & tok, cache, legacy_wgs_refseq,
+            ad ? self -> wd : NULL );
     }
 
     return rc;
