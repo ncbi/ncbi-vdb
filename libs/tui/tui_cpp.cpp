@@ -219,7 +219,10 @@ namespace tui {
         else
         {
             if ( HasWidget( id ) )
+            {
                 SetWidgetCaption( id, ( txt == NULL ) ? "" : txt );
+                SetWidgetBoolValue( id, checked );
+            }
             else
             {
                 AddCheckBox( id, r, ( txt == NULL ) ? "" : txt, checked );
@@ -236,7 +239,7 @@ namespace tui {
         else
         {
             if ( HasWidget( id ) )
-                SetWidgetCaption( id, ( txt == NULL ) ? "" : txt );
+                SetWidgetText( id, ( txt == NULL ) ? "" : txt );
             else
             {
                 AddInput( id, r, ( txt == NULL ) ? "" : txt, length );
