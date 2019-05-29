@@ -3873,3 +3873,9 @@ LIB_EXPORT rc_t CC VFSManagerDeleteCacheOlderThan ( const VFSManager * self,
     }
     return rc;
 }
+
+LIB_EXPORT rc_t CC VFSManagerSetAdCaching(VFSManager * self, bool enabled) {
+    if (self != NULL)
+        return KNSManagerSetAdCaching(self->kns, enabled);
+    return 0;
+}
