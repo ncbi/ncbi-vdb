@@ -160,7 +160,7 @@ $(TEST_BINDIR)/rc-mod-exitcode: $(RC_MOD_EXITCODE_TEST_OBJ)
 #-------------------------------------------------------------------------------
 # scripted tests
 #
-runtests: sig-core-tests kns-agent-tests
+runtests: sig-core-tests kns-agent-tests rc-exitcode-tests
 
 sig-core-tests: sig-core
 	@ echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
@@ -183,3 +183,8 @@ kns-agent-tests: report-kns-agent
 	@ $(SRCDIR)/run-kns-agent.sh $(TEST_BINDIR)/report-kns-agent ./tmp/abcdefghi abcdefghi.1.2.3
 	@ $(SRCDIR)/run-kns-agent.sh $(TEST_BINDIR)/report-kns-agent ./tmp/abcdefghi.55.111 abcdefghi.1.2.3
 	@ rm -rf ./tmp/
+
+rc-exitcode-tests: rc-mod-exitcode
+	@ echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+	@ echo "Running RC module EXITCODE tests" 
+	@ perl $(SRCDIR)/exitcode.pl $(TEST_BINDIR)/rc-mod-exitcode 75
