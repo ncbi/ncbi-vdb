@@ -3184,7 +3184,7 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
         }
 
         /* check AD */
-        count = VectorLength(&self->ad);
+        count = self->kns->enableResolveToCache ? VectorLength(&self->ad) : 0;
         for (i = 0; i < count; ++i)
         {
             const VResolverAlg *alg = VectorGet(&self->ad, i);
@@ -3249,7 +3249,7 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
         }
 
         /* check AD */
-        count = VectorLength(&self->ad);
+        count = self->kns->enableResolveToCache ? VectorLength(&self->ad) : 0;
         for (i = 0; i < count; ++i)
         {
             const VResolverAlg *alg = VectorGet(&self->ad, i);
