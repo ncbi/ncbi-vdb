@@ -4634,7 +4634,9 @@ rc_t VResolverLoadApp ( VResolver *self, Vector *algs, const String *root,
         bool app_disabled = false;
         rc = KConfigNodeReadBool ( node, & app_disabled );
         KConfigNodeRelease ( node );
-        if ( rc == 0 && app_disabled && algs == & self -> local )
+        if ( rc == 0 && app_disabled && (
+            algs == & self -> local || /* allow to disable user app */
+            algs == & self -> ad ) )   /* or AD app */
             return 0;
         disabled |= app_disabled;
     }
