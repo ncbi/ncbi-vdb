@@ -152,7 +152,7 @@ KLIB_EXTERN bool CC GetUnreadRCInfo ( rc_t *rc, const char **filename, const cha
  */
 #define RC_EXITCODE( exitcode )                             \
     ( ( rc_t )( CTX ( rcExitCode, rcProcess, rcClosing ) |  \
-    ( ( rc_t )( ( ( unsigned ) exitcode ) & 0x7F ) ) )
+    ( ( rc_t )( ( ( unsigned ) exitcode ) & 0x7F ) ) ) )
  
 /* ResetRCContext
  *  rewrite rc to reflect different context
