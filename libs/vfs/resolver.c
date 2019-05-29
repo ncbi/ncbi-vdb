@@ -3128,6 +3128,7 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
     {
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
                ("VResolverCacheResolve: app = %d\n", app));
+        assert(self->kns);
         if (self->kns->resolveToCache) {
             for (i = 0; i < count; ++i)
             {
@@ -3197,6 +3198,7 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
     }
     else
     {
+        assert(self->kns);
         if (self->kns->resolveToCache) {
             for (i = 0; i < count; ++i)
             {
@@ -5402,36 +5404,6 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
         if (rc == 0) {
             rc = VResolverLoadSubCategory(self, &self->ad, kfg, NULL,
                 "user/ad", true, false, eDisabledNotSet, true);
-            if (VectorLength(&self->ad) == 0) {
-                /* create Accession as Directory repository
-                   when it does not exist */
-                if (rc == 0)
-                    rc = KConfigWriteString((KConfig*)cfg,
-                        "/repository/user/ad/public/apps/file/volumes/flat",
-                        ".");
-                if (rc == 0)
-                    rc = KConfigWriteString((KConfig*)cfg,
-                        "/repository/user/ad/public/apps/sra/volumes/sraAd",
-                        ".");
-                if (rc == 0)
-                    rc = KConfigWriteString((KConfig*)cfg,
-                        "/repository/user/ad/public/apps/sraPileup/volumes/"
-                        "sraAd", ".");
-                if (rc == 0)
-                    rc = KConfigWriteString((KConfig*)cfg,
-                        "/repository/user/ad/public/apps/sraRealign/volumes/"
-                        "sraAd", ".");
-                if (rc == 0)
-                    rc = KConfigWriteString((KConfig*)cfg,
-                        "/repository/user/ad/public/root", ".");
-                if (rc == 0)
-                    rc = KConfigNodeRelease(kfg);
-                if (rc == 0)
-                    rc = KConfigOpenNodeRead(cfg, &kfg, "repository");
-                if (rc == 0)
-                    rc = VResolverLoadSubCategory(self, &self->ad, kfg, NULL,
-                        "user/ad", true, false, eDisabledNotSet, true);
-            }
         }
         /* TODO:
         Add ad to embedded configuration. 
@@ -5631,7 +5603,14 @@ rc_t VResolverMake ( VResolver ** objp, const KDirectory *wd,
                 kns = NULL;
             }
         }
-
+        else {
+            rc_t rc = KNSManagerMake ( & kns );
+            if ( rc != 0 )
+            {
+                rc = 0;
+                kns = NULL;
+            }
+        }
 
         /* set up protocols */
         obj -> dflt_protocols = DEFAULT_PROTOCOLS;
@@ -5642,7 +5621,7 @@ rc_t VResolverMake ( VResolver ** objp, const KDirectory *wd,
 
         rc = VResolverLoad ( obj, protected, kfg, kns );
 
-        KNSManagerRelease ( kns );
+        obj->kns = kns;
         kns = NULL;
 
         KRepositoryProjectId ( protected, & obj -> projectId );
