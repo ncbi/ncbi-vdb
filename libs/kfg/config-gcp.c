@@ -28,6 +28,7 @@
 #include <kfg/properties.h>
 #include <kfs/directory.h>
 #include <kfs/file.h>
+#include <klib/json.h>
 #include <klib/printf.h>
 #include <klib/rc.h>
 #include <klib/text.h>
@@ -59,28 +60,39 @@ KFG_EXTERN rc_t CC add_gcp_nodes ( KConfig *self )
     rc_t rc = 0;
 
     const char *pathToJsonFile = getenv ( "GOOGLE_APPLICATION_CREDENTIALS" );
-
     if ( pathToJsonFile == NULL ) return 0;
 
     KDirectory *dir = NULL;
     rc = KDirectoryNativeDir ( &dir );
     if ( rc ) return rc;
 
-    uint64_t json_size = 0;
-    rc = KFileSize ( getenv ( "GOOGLE_APPLICATION_CREDENTIALS" ), &json_size );
+    const KFile *cred_file = NULL;
+    rc = KDirectoryOpenFileRead ( dir, &cred_file, "%s", pathToJsonFile );
     if ( rc ) return rc;
+    uint64_t json_size = 0;
+    rc = KFileSize ( cred_file, &json_size );
+    if ( rc ) {
+        KFileRelease ( cred_file );
+        return rc;
+    }
 
     char *buffer = (char *)calloc ( json_size + 1, 1 );
 
-    rc = KFileReadExactly ( pathToJsonFile, 0, buffer, json_size );
+    rc = KFileReadExactly ( cred_file, 0, buffer, json_size );
+    if ( rc ) {
+        free ( buffer );
+        KFileRelease ( cred_file );
+        return rc;
+    }
+    KFileRelease ( cred_file );
+    KDirectoryRelease ( dir );
+
+    KJsonValue *root = NULL;
+    rc = KJsonValueMake ( &root, buffer, NULL, 0 );
     if ( rc ) {
         free ( buffer );
         return rc;
     }
-
-    KJsonValue *root = NULL;
-    rc = KJsonValueMake ( &root, buffer, NULL, 0 );
-    if ( rc ) return rc;
 
     free ( buffer );
 
@@ -102,7 +114,6 @@ KFG_EXTERN rc_t CC add_gcp_nodes ( KConfig *self )
         ++i;
     }
 
-
     /* Build config node */
     KConfigNode *gcp_node = NULL;
     rc = KConfigOpenNodeUpdate ( self, &gcp_node, "gcp", NULL );
@@ -110,7 +121,6 @@ KFG_EXTERN rc_t CC add_gcp_nodes ( KConfig *self )
 
     const KJsonValue *v = NULL;
     const char *val = NULL;
-    String value;
 
     String private_key;
     CONST_STRING ( &private_key, "private_key" );
@@ -118,14 +128,16 @@ KFG_EXTERN rc_t CC add_gcp_nodes ( KConfig *self )
     if ( v == NULL ) {
         return RC ( rcKFG, rcFile, rcParsing, rcParam, rcInvalid );
     }
-    rc = KJsonGetString ( v, &val );
-    if ( rc ) return rc;
-    StringInitCString ( &value, val );
-    gcp_KConfigNodeUpdateChild ( gcp_node, &private_key, &value );
-
     if ( KJsonGetValueType ( v ) != jsString ) {
         return RC ( rcKFG, rcFile, rcParsing, rcParam, rcInvalid );
     }
+    rc = KJsonGetString ( v, &val );
+    if ( rc ) return rc;
+
+    String value;
+    StringInitCString ( &value, val );
+    rc = gcp_KConfigNodeUpdateChild ( gcp_node, &private_key, &value );
+    if ( rc ) return rc;
 
 
     String client_email;
@@ -134,16 +146,17 @@ KFG_EXTERN rc_t CC add_gcp_nodes ( KConfig *self )
     if ( v == NULL ) {
         return RC ( rcKFG, rcFile, rcParsing, rcParam, rcInvalid );
     }
-    rc = KJsonGetString ( v, &val );
-    if ( rc ) return rc;
-    StringInitCString ( &value, val );
-    gcp_KConfigNodeUpdateChild ( gcp_node, &client_email, &value );
-
     if ( KJsonGetValueType ( v ) != jsString ) {
         return RC ( rcKFG, rcFile, rcParsing, rcParam, rcInvalid );
     }
 
+    rc = KJsonGetString ( v, &val );
+    if ( rc ) return rc;
+    StringInitCString ( &value, val );
+    rc = gcp_KConfigNodeUpdateChild ( gcp_node, &client_email, &value );
+    if ( rc ) return rc;
 
+    KJsonValueWhack ( root );
     KConfigNodeRelease ( gcp_node );
     return 0;
 }

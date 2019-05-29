@@ -30,8 +30,8 @@ TOP ?= $(abspath ../..)
 MODULE = test/kfg
 
 TEST_TOOLS = \
-	test-awscredentials \
 	test-gcpcredentials \
+	test-awscredentials \
 	flat-sra-kfg \
 	wb-test-kfg \
 	test-kfg \

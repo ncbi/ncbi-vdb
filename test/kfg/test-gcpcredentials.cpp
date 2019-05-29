@@ -37,6 +37,7 @@
 #include <kfg/config.h>
 #include <kfg/kfg-priv.h>
 
+#include <klib/out.h>
 #include <klib/text.h>
 
 #include <kproc/thread.h>
@@ -72,10 +73,10 @@ TEST_CASE ( GCPCredentialsMake )
     REQUIRE_RC ( KFileRelease ( file ) );
     REQUIRE_RC ( KDirectoryRelease ( native ) );
 
-    REQUIRE_RC ( KConfigRead ( cfg, "/gcp/gcp_private_key", 0, gcp_private_key,
+    REQUIRE_RC ( KConfigRead ( cfg, "/gcp/private_key", 0, gcp_private_key,
         sizeof gcp_private_key, &buf_sz, NULL ) );
-    REQUIRE_RC ( KConfigRead ( cfg, "/gcp/gcp_client_email", 0,
-        gcp_client_email, sizeof gcp_client_email, &buf_sz, NULL ) );
+    REQUIRE_RC ( KConfigRead ( cfg, "/gcp/client_email", 0, gcp_client_email,
+        sizeof gcp_client_email, &buf_sz, NULL ) );
 
     const char *private_key = "-----BEGIN NOTPRIVATE KEY";
     const char *client_email = "ncbivdb-compute@developer.gserviceaccount.com";
