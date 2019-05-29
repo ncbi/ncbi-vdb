@@ -82,7 +82,11 @@ struct KNSManager
     bool verbose;
     bool logTlsErrors;
 
-    bool resolveToCache; /* VResolverCache resolve to user's cache vs. cwd/AD */
+    /* VResolverCache try to resolve to user's cache before cwd/AD */
+    bool resolveToCache;
+
+    /* VResolverCache ia allowed to resolve to cwd/AD */
+    bool enableResolveToCache; 
 
     bool NCBI_VDB_NETnoLogError;
     bool NCBI_VDB_NETkfgValueSet;
