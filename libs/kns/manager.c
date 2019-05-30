@@ -625,12 +625,12 @@ static bool KNSManagerPrepareLogTlsErrors(KConfig* kfg) {
 
 static bool KNSManagerPrepareResolveToCache(KConfig* kfg) {
     /* VResolverCache resolve to user's cache vs. cwd/AD */
-    bool result = true;
+    bool reslt = true;
 
     /* TODO: call ncbi-vdb/interfaces/kfg/properties.h for exact key name */
-    rc_t rc = KConfigReadBool(kfg, "/Resolve/Runs/To/Cache", &result);
+    rc_t rc = KConfigReadBool(kfg, "/tools/prefetch/download_to_cache", &reslt);
     if (rc == 0)
-        return result;
+        return reslt;
     else
         return true;
 }
