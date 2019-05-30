@@ -85,8 +85,8 @@ struct KNSManager
     /* VResolverCache try to resolve to user's cache before cwd/AD */
     bool resolveToCache;
 
-    /* VResolverCache ia allowed to resolve to cwd/AD */
-    bool enableResolveToCache; 
+    /* VResolverCache ia allowed to resolve to user's cache vs. cwd/AD */
+    bool enabledResolveToAd; 
 
     bool NCBI_VDB_NETnoLogError;
     bool NCBI_VDB_NETkfgValueSet;

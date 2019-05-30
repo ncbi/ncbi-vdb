@@ -839,6 +839,6 @@ rc_t KNSManagerGetCloudLocation(const KNSManager * cself,
 LIB_EXPORT rc_t CC KNSManagerSetAdCaching(struct KNSManager* self, bool enabled)
 {
     if (self != NULL)
-        self->enableResolveToCache = enabled;
+        self->enabledResolveToAd = enabled;
     return 0;
 }
