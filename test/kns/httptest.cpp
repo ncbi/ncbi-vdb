@@ -25,11 +25,12 @@
 * Unit tests for HTTP interfaces
 */
 
+#include "HttpFixture.hpp"
+
 #include <kapp/args.h> // Args
 
 #include <ktst/unit_test.hpp>
 
-#include <klib/debug.h> /* KDbgSetString */
 #include <klib/log.h>
 #include <klib/rc.h>
 #include <kfg/config.h>
@@ -45,14 +46,9 @@
 
 #include <kfs/directory.h>
 #include <kfs/file.h>
-#include <kfs/defs.h>
 
 #include <kproc/thread.h>
 
-#include <sysalloc.h>
-#include <stdexcept>
-#include <cstring>
-#include <list>
 #include <sstream>
 
 #define ALL
@@ -63,189 +59,12 @@ TEST_SUITE_WITH_ARGS_HANDLER ( HttpTestSuite, argsHandler );
 using namespace std;
 using namespace ncbi::NK;
 
-class TestStream;
-#define KSTREAM_IMPL TestStream
-#include <kns/impl.h>
-
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
 
-
-class TestStream
-{
-public:
-    static KStream_vt_v1 vt;
-
-    static rc_t CC Whack ( KSTREAM_IMPL *self ) 
-    { 
-        if ( TestEnv::verbosity == LogLevel::e_message )
-            cout << "TestStream::Whack() called" << endl;
-        return 0; 
-    }
-    static rc_t CC Read ( const KSTREAM_IMPL *self, void *buffer, size_t bsize, size_t *num_read )
-    { 
-        if ( TestEnv::verbosity == LogLevel::e_message )
-            cout << "TestStream::Read() called" << endl;
-        * num_read = 0; 
-        return 0; 
-    }
-    static rc_t CC Write ( KSTREAM_IMPL *self, const void *buffer, size_t size, size_t *num_writ )
-    { 
-        if ( TestEnv::verbosity == LogLevel::e_message )
-            cout << "TestStream::Write() called" << endl;
-        * num_writ = size; 
-        return 0; 
-    }
-    static rc_t CC TimedRead ( const KSTREAM_IMPL *self, void *buffer, size_t bsize, size_t *num_read, struct timeout_t *tm )
-    { 
-        if ( TestEnv::verbosity == LogLevel::e_message )
-            cout << "TestStream::TimedRead() called" << endl;
-            
-        string response;
-        if ( m_responses.size()> 0)
-        {
-            response = m_responses.front();
-            m_responses.pop_front();
-        }
-        
-        if ( response.size() >= bsize )
-        {
-            memmove(buffer, response.c_str(), bsize);
-            * num_read = bsize; 
-            response = response.substr(bsize);
-        }
-        else
-        {
-            memmove(buffer, response.c_str(), response.size());
-            * num_read = response.size();
-            response.clear();
-        }
-        if ( TestEnv::verbosity == LogLevel::e_message )
-            cout << "TestStream::TimedRead returned \"" << string((const char*)buffer, * num_read) << "\"" << endl;
-        
-        return 0; 
-    }
-    static rc_t CC TimedWrite ( KSTREAM_IMPL *self, const void *buffer, size_t size, size_t *num_writ, struct timeout_t *tm )
-    { 
-        if ( TestEnv::verbosity == LogLevel::e_message )
-            cout << "TestStream::TimedWrite(\"" << string((const char*)buffer, size) << "\") called" << endl;
-        * num_writ = size; 
-        return 0; 
-    }
-
-    static void AddResponse ( const string& p_str, bool end_binary = false )
-    {
-        if (end_binary)
-            m_responses.push_back(p_str);
-        else
-            m_responses.push_back(std::string(p_str.c_str(), p_str.size() + 1));
-    }
-    
-    static list<string> m_responses;
-};
-
-KStream_vt_v1 TestStream::vt =
-{
-    1, 1,
-    TestStream::Whack,
-    TestStream::Read,
-    TestStream::Write,
-    TestStream::TimedRead,
-    TestStream::TimedWrite
-};
-
-list<string> TestStream::m_responses;
-
-class HttpFixture
-{
-public:
-    HttpFixture()
-    : m_mgr(0), m_file(0)
-    {
-        if ( KNSManagerMake ( & m_mgr ) != 0 )
-            throw logic_error ( "HttpFixture: KNSManagerMake failed" );
-                
-        if ( KStreamInit ( & m_stream, ( const KStream_vt* ) & TestStream::vt, "TestStream", "", true, true ) != 0 )
-            throw logic_error ( "HttpFixture: KStreamInit failed" );
-            
-        TestStream::m_responses.clear();
-    }
-    
-    ~HttpFixture()
-    {
-        if ( m_mgr && KNSManagerRelease ( m_mgr ) != 0 )
-            throw logic_error ( "HttpFixture::~HttpFixture KNSManagerRelease failed" );
-            
-        if ( m_file && KFileRelease ( m_file ) != 0 )
-            throw logic_error ( "HttpFixture::~HttpFixture KFileRelease failed" );
-            
-        if ( ! TestStream::m_responses.empty() )
-            throw logic_error ( "HttpFixture::~HttpFixture not all TestStream::m_responses have been consumed" );
-    }
-    
-    KConfig* MakeConfig( const char* name, const char* contents )
-    {
-        KDirectory* wd;
-        if ( KDirectoryNativeDir ( & wd ) != 0 )
-            throw logic_error("KfgFixture: KDirectoryNativeDir failed");
-            
-        {
-            KFile* file;    
-            if (KDirectoryCreateFile(wd, &file, true, 0664, kcmInit, name) != 0)
-                throw logic_error("MakeConfig: KDirectoryCreateFile failed");
-
-            size_t num_writ=0;
-            if (KFileWrite(file, 0, contents, strlen(contents), &num_writ) != 0)
-                throw logic_error("MakeConfig: KFileWrite failed");
-
-            if (KFileRelease(file) != 0)
-                throw logic_error("MakeConfig: KFileRelease failed");    
-        }
-        
-        KConfig* ret;
-        {
-            if (KConfigMake ( & ret, wd ) != 0) 
-                throw logic_error("MakeConfig: KConfigMake failed");        
-                
-            KFile* file;    
-            if (KDirectoryOpenFileRead(wd, (const KFile**)&file, name) != 0)
-                throw logic_error("MakeConfig: KDirectoryOpenFileRead failed");
-            
-            if (KConfigLoadFile ( ret, name, file) != 0)
-                throw logic_error("MakeConfig: KConfigLoadFile failed");
-
-            if (KFileRelease(file) != 0)
-                throw logic_error("MakeConfig: KFileRelease failed");
-        }
-        
-        if (KDirectoryRemove(wd, true, name) != 0)
-            throw logic_error("MakeConfig: KDirectoryRemove failed");
-        if (KDirectoryRelease(wd) != 0)
-            throw logic_error("MakeConfig: KDirectoryRelease failed");
-        
-        return ret;
-    }
-    
-    static struct KStream * Reconnect ()
-    {   
-        return & m_stream; 
-    }
-    
-    static string MakeURL(const char* base)
-    {
-        return string("http://") + base + ".com/";
-    }    
-    
-    KNSManager* m_mgr;
-    static KStream m_stream;
-    KFile* m_file;
-};
-
-KStream HttpFixture::m_stream;
-
 #ifdef ALL
 //////////////////////////
-// Regular HTTP 
+// Regular HTTP
 FIXTURE_TEST_CASE(Http_Make, HttpFixture)
 {
     TestStream::AddResponse("HTTP/1.1 200 OK\r\nAccept-Ranges: bytes\r\nContent-Length: 7\r\n");
@@ -556,7 +375,7 @@ public:
     ~RetrierFixture()
     {
         if ( KHttpRetrierDestroy ( & m_retrier ) != 0 )
-            throw logic_error ( "RetrierFixture::~RetrierFixture KHttpRetrierDestroy failed" );
+            cerr << "RetrierFixture::~RetrierFixture KHttpRetrierDestroy failed" << endl;
     }
 
     void Configure ( const char* kfg_name, const char* kfg_content, uint8_t max_retries = MaxRetries, uint32_t max_total_wait = MaxTotalWait )
@@ -796,7 +615,7 @@ TEST_CASE(ContentLength) {
 
     /* calling good cgi returns 200 and resolved path */
     REQUIRE_RC ( KNSManagerMakeReliableClientRequest ( kns, & req, 0x01000000,
-        NULL, "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi" ) ); 
+        NULL, "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi" ) );
     REQUIRE_RC ( KHttpRequestAddPostParam ( req, "acc=AAAB01" ) );
     REQUIRE_RC ( KHttpRequestAddPostParam ( req, "accept-proto=https" ) );
     REQUIRE_RC ( KHttpRequestAddPostParam ( req, "version=1.2" ) );
@@ -816,7 +635,7 @@ TEST_CASE(ContentLength) {
 
     /* calling non-existing cgi returns 404 */
     REQUIRE_RC ( KNSManagerMakeReliableClientRequest ( kns, & req, 0x01000000,
-        NULL, "https://trace.ncbi.nlm.nih.gov/Traces/names/bad.cgi" ) ); 
+        NULL, "https://trace.ncbi.nlm.nih.gov/Traces/names/bad.cgi" ) );
     REQUIRE_RC ( KHttpRequestAddPostParam ( req, "acc=AAAB01" ) );
     REQUIRE_RC ( KHttpRequestPOST ( req, & rslt ) );
     REQUIRE_RC ( KClientHttpResultStatus ( rslt, & code, NULL, 0, NULL ) );
@@ -889,7 +708,7 @@ TEST_CASE ( RepeatedHeader ) {
     string via ( "1.0 fred,1.1 example.com (Apache/1.1)" );
 
     for ( const KHttpHeader * hdr = reinterpret_cast
-                < const KHttpHeader * > ( BSTreeFirst ( & hdrs ) ); 
+                < const KHttpHeader * > ( BSTreeFirst ( & hdrs ) );
           hdr != NULL;
           hdr = reinterpret_cast
                 < const KHttpHeader * > ( BSTNodeNext ( & hdr -> dad ) )
@@ -984,7 +803,7 @@ TEST_CASE(TestAcceptHeader) {
 TEST_CASE ( AllowAllCertificates )
 {
     rc_t rc = 0;
-    
+
     KNSManager * mgr = NULL;
     REQUIRE_RC ( KNSManagerMake ( & mgr ) );
 
@@ -1001,10 +820,10 @@ TEST_CASE ( AllowAllCertificates )
 
     // capture log level
     KLogLevel log_level = KLogLevelGet ();
-    
+
     // set log level to practically silent
     KLogLevelSet ( 0 );
-    
+
     KClientHttp * https = NULL;
     REQUIRE ( KNSManagerMakeClientHttps
               ( mgr, & https, NULL, 0x01010000, & host, 443 ) != 0 );
@@ -1066,7 +885,7 @@ rc_t CC KMain ( int argc, char *argv [] )
 	// this makes messages from the test code appear
 	// (same as running the executable with "-l=message")
 	// TestEnv::verbosity = LogLevel::e_message;
-	
+
     rc_t rc=HttpTestSuite(argc, argv);
     return rc;
 }

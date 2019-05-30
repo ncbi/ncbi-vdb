@@ -40,7 +40,8 @@ TEST_TOOLS = \
 	test-http-dropconn \
 	KNSManagerSingletonTest \
 	test-VDB-3661 \
-	test-connect
+	test-connect \
+	test-refresh-expired
 
 include $(TOP)/build/Makefile.env
 
@@ -236,6 +237,7 @@ $(BINDIR)/test-proxy-with-scheme: $(PROXYSCH_OBJ)
 # test-http
 #
 HTTPTEST_SRC = \
+	HttpFixture \
 	httptest
 
 HTTPTEST_OBJ = \
@@ -289,6 +291,24 @@ $(TEST_BINDIR)/test-connect: $(CONNECT_OBJ)
 
 connect: test-connect
 	$(TEST_BINDIR)/test-connect
+
+#----------------------------------------------------------------
+
+#----------------------------------------------------------------
+# test-refresh-expired
+#
+REFRESH_SRC = \
+	HttpFixture \
+	test-refresh-expired-url \
+
+REFRESH_OBJ = \
+	$(addsuffix .$(OBJX),$(REFRESH_SRC))
+
+$(TEST_BINDIR)/test-refresh-expired: $(REFRESH_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+refresh: test-refresh-expired
+	$(TEST_BINDIR)/test-refresh-expired
 
 #----------------------------------------------------------------
 

@@ -66,50 +66,54 @@ class TestStream;
 
 #if _DEBUGGING
 #   define DBG_KNS_ON()  \
-        KDbgSetModConds ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), DBG_FLAG ( DBG_KNS_HTTP ) );          
+        KDbgSetModConds ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), DBG_FLAG ( DBG_KNS_HTTP ) );
 #   define DBG_KNS_OFF() \
-        KDbgSetModConds ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ~ DBG_FLAG ( DBG_KNS_HTTP ) );          
+        KDbgSetModConds ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ~ DBG_FLAG ( DBG_KNS_HTTP ) );
 #else
 #   define DBG_KNS_ON()
-#   define DBG_KNS_OFF() 
+#   define DBG_KNS_OFF()
 #endif
 
 static const string Response_HEAD_OK = "HTTP/1.1 200 OK\nAccept-Ranges: bytes\nContent-Length: 7\n";
 static const string Response_GET_Content = "HTTP/1.1 206 Partial Content\n"
                                             "Accept-Ranges: bytes\n"
                                             "Transfer-Encoding: chunked\n"
-                                            "Content-Range: bytes 0-6/7\n" 
+                                            "Content-Range: bytes 0-6/7\n"
                                             "\n"
                                             "7\n"
                                             "content\n";
-                                    
+
 static rc_t RC_TransferIncomplete = SILENT_RC ( rcNS, rcFile, rcWriting, rcTransfer, rcIncomplete );
 static rc_t RC_Timeout = SILENT_RC ( rcNS, rcStream, rcReading, rcTimeout, rcExhausted );
 
+//
+// these implementations of TestStream/HttpFixture look very different from the ones in HttpFixture.hpp/cpp, so
+// leaving them here as they are for now. In the future, consider merging.
+//
 class TestStream
 {
 public:
     static KStream_vt_v1 vt;
 
-    static rc_t CC Whack ( KSTREAM_IMPL *self ) 
-    { 
+    static rc_t CC Whack ( KSTREAM_IMPL *self )
+    {
         if ( TestEnv::verbosity == LogLevel::e_message )
             cout << "TestStream::Whack() called" << endl;
-        return 0; 
+        return 0;
     }
     static rc_t CC Read ( const KSTREAM_IMPL *self, void *buffer, size_t bsize, size_t *num_read )
-    { 
+    {
         throw logic_error ( "TestStream::<non-timed>Read called" );
     }
     static rc_t CC Write ( KSTREAM_IMPL *self, const void *buffer, size_t size, size_t *num_writ )
-    { 
+    {
         throw logic_error ( "TestStream::<non-timed>Write called" );
     }
     static rc_t CC TimedRead ( const KSTREAM_IMPL *self, void *buffer, size_t bsize, size_t *num_read, struct timeout_t *tm )
-    { 
+    {
         if ( TestEnv::verbosity == LogLevel::e_message )
             cout << "TestStream::TimedRead() called" << endl;
-            
+
         string response;
         if ( m_readResponses.size()> 0)
         {
@@ -120,7 +124,7 @@ public:
         {
             throw logic_error ( "TestStream::TimedRead: out of responses" );
         }
-        
+
         if ( response == "DROP" )
         {
             num_read = 0;
@@ -130,11 +134,11 @@ public:
         {
             return RC_Timeout;
         }
-        
+
         if ( response.size() >= bsize )
         {
             memmove(buffer, response.c_str(), bsize);
-            * num_read = bsize; 
+            * num_read = bsize;
             response = response.substr(bsize);
         }
         else
@@ -146,14 +150,14 @@ public:
         }
         if ( TestEnv::verbosity == LogLevel::e_message )
             cout << "TestStream::TimedRead returned \"" << string((const char*)buffer, * num_read) << "\"" << endl;
-        
-        return 0; 
+
+        return 0;
     }
     static rc_t CC TimedWrite ( KSTREAM_IMPL *self, const void *buffer, size_t size, size_t *num_writ, struct timeout_t *tm )
-    { 
+    {
         if ( TestEnv::verbosity == LogLevel::e_message )
             cout << "TestStream::TimedWrite(\"" << string((const char*)buffer, size) << "\") called" << endl;
-            
+
         rc_t response;
         if ( m_writeResponses.size()> 0)
         {
@@ -164,16 +168,16 @@ public:
         {
             throw logic_error ( "TestStream::TimedWrite: out of responses" );
         }
-        
+
         if ( response == 0 )
         {
-            * num_writ = size; 
-            return 0; 
+            * num_writ = size;
+            return 0;
         }
         else
         {
-            * num_writ = 0; 
-            return response; 
+            * num_writ = 0;
+            return response;
         }
     }
 
@@ -181,12 +185,12 @@ public:
     {
         m_readResponses.push_back(p_str);
     }
-    
+
     static void AddWriteRC ( rc_t p_rc )
     {
         m_writeResponses.push_back(p_rc);
     }
-    
+
     static list<string> m_readResponses;
     static list<rc_t> m_writeResponses;
 };
@@ -212,24 +216,24 @@ public:
     {
         if ( KNSManagerMake ( & m_mgr ) != 0 )
             throw logic_error ( "HttpFixture: KNSManagerMake failed" );
-                
+
         if ( KStreamInit ( & m_stream, ( const KStream_vt* ) & TestStream::vt, "TestStream", "", true, true ) != 0 )
             throw logic_error ( "HttpFixture: KStreamInit failed" );
-            
+
         TestStream::m_readResponses.clear();
-        
+
         m_reconnected = false;
-        
+
 #if _DEBUGGING
     SetClientHttpReopenCallback( Reconnect ); // NB. this hook is only available in DEBUG mode
-#endif        
+#endif
     }
-    
+
     ~HttpFixture()
     {
         if ( m_file && KFileRelease ( m_file ) != 0 )
             throw logic_error ( "HttpFixture::~HttpFixture KFileRelease failed" );
-            
+
         //if ( ! TestStream::m_readResponses.empty() )
         //    throw logic_error ( "HttpFixture::~HttpFixture not all TestStream::m_readResponses have been consumed" );
 
@@ -238,35 +242,35 @@ public:
         if ( m_mgr && KNSManagerRelease ( m_mgr ) != 0 )
             throw logic_error ( "HttpFixture::~HttpFixture KNSManagerRelease failed" );
     }
-    
+
     static string MakeURL(const char* base)
     {
         return string("http://") + base + ".com/";
-    }    
-    static struct KStream * Reconnect ()
-    {   
-        m_reconnected = true;
-        return & m_stream; 
     }
-    
+    static struct KStream * Reconnect ()
+    {
+        m_reconnected = true;
+        return & m_stream;
+    }
+
     void TraceOn()
     {
         KNSManagerSetVerbose ( m_mgr, true );
         DBG_KNS_ON();
     }
-    
+
     void SendReceiveHEAD(const char* p_url)
     {
         TestStream::AddWriteRC(0); // send HEAD succeeds
-        TestStream::AddReadResponse ( Response_HEAD_OK ); 
+        TestStream::AddReadResponse ( Response_HEAD_OK );
         if ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL ( p_url ) . c_str () ) != 0 )
             throw logic_error ( "HttpFixture::SendReceiveHEAD KNSManagerMakeHttpFile failed" );
     }
-    
-    
+
+
     static KStream m_stream;
     static bool m_reconnected;
-    
+
     KNSManager* m_mgr;
     KFile* m_file;
     char m_buf[1024];
@@ -284,12 +288,12 @@ bool HttpFixture::m_reconnected = false;
 FIXTURE_TEST_CASE(Http_Normal, HttpFixture)
 {
     TestStream::AddWriteRC ( 0 ); // send HEAD succeeds
-    TestStream::AddReadResponse ( Response_HEAD_OK ); 
-    REQUIRE_RC ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) ); 
-    
+    TestStream::AddReadResponse ( Response_HEAD_OK );
+    REQUIRE_RC ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) );
+
     TestStream::AddWriteRC ( 0 ); // send GET succeeds
-    TestStream::AddReadResponse( Response_GET_Content ); 
-    
+    TestStream::AddReadResponse( Response_GET_Content );
+
     REQUIRE_RC( KFileTimedRead ( m_file, 0, m_buf, sizeof m_buf, &m_numRead, NULL ) );
     REQUIRE_EQ( string("content"), string(m_buf, m_numRead) );
 }
@@ -300,14 +304,14 @@ FIXTURE_TEST_CASE(HEAD_BadResponse, HttpFixture)
 {
     TestStream::AddWriteRC(0); // send HEAD succeeds
     TestStream::AddReadResponse("garbage"); // bad response to HEAD
-    REQUIRE_RC_FAIL ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) ); 
+    REQUIRE_RC_FAIL ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) );
 }
 
 FIXTURE_TEST_CASE(HEAD_BrokenConnection, HttpFixture)
 {
     TestStream::AddWriteRC(0); // send HEAD succeeds
     TestStream::AddReadResponse(""); // simulates reaction to POLLHUP/POLLRDHUP
-    REQUIRE_RC_FAIL ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) ); 
+    REQUIRE_RC_FAIL ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) );
 }
 
 #if CAN_USE_RECONNECT_HOOK
@@ -315,14 +319,14 @@ FIXTURE_TEST_CASE(HEAD_Invalid_Reconnect_Succeed, HttpFixture)
 {
     TestStream::AddWriteRC ( RC_TransferIncomplete ); // first send HEAD fails
     TestStream::AddWriteRC ( 0 ); // retry send HEAD succeeds
-    TestStream::AddReadResponse ( Response_HEAD_OK ); 
-    REQUIRE_RC ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) ); 
+    TestStream::AddReadResponse ( Response_HEAD_OK );
+    REQUIRE_RC ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) );
     REQUIRE ( m_reconnected );
-    
+
     // make sure GET works after reconnection
     TestStream::AddWriteRC ( 0 ); // send GET succeeds
-    TestStream::AddReadResponse( Response_GET_Content ); 
-    
+    TestStream::AddReadResponse( Response_GET_Content );
+
     REQUIRE_RC( KFileTimedRead ( m_file, 0, m_buf, sizeof m_buf, &m_numRead, NULL ) );
     REQUIRE_EQ( string("content"), string(m_buf, m_numRead) );
 }
@@ -333,7 +337,7 @@ FIXTURE_TEST_CASE(HEAD_Invalid_Reconnect_Fail, HttpFixture)
 {
     TestStream::AddWriteRC( RC_TransferIncomplete ); // first send HEAD fails
     TestStream::AddWriteRC( RC_TransferIncomplete ); // retry send HEAD fails
-    REQUIRE_RC_FAIL ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) ); 
+    REQUIRE_RC_FAIL ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) );
     REQUIRE ( m_reconnected );
 }
 #endif
@@ -344,19 +348,19 @@ FIXTURE_TEST_CASE(HEAD_Invalid_Reconnect_Fail, HttpFixture)
 FIXTURE_TEST_CASE(GET_Invalid_Reconnect_Succeed, HttpFixture)
 {
     SendReceiveHEAD(GetName());
-    
+
     TestStream::AddWriteRC(0); // send GET succeeds
     TestStream::AddReadResponse( // broken response to GET
         "HTTP/1.1 206 Partial Content\n"
         "Transfer-Encoding: chunked\n"
-        "Content-Range: bytes 0-6/7\n" 
+        "Content-Range: bytes 0-6/7\n"
         "\n");
     TestStream::AddWriteRC(0); // retry GET succeeds
-    TestStream::AddReadResponse( Response_GET_Content ); 
-    
+    TestStream::AddReadResponse( Response_GET_Content );
+
     REQUIRE_RC( KFileTimedRead ( m_file, 0, m_buf, sizeof m_buf, &m_numRead, NULL ) );
     REQUIRE_EQ( string("content"), string(m_buf, m_numRead) );
-    
+
     REQUIRE ( m_reconnected );
 }
 #endif
@@ -365,14 +369,14 @@ FIXTURE_TEST_CASE(GET_Invalid_Reconnect_Succeed, HttpFixture)
 FIXTURE_TEST_CASE(GET_Failed_Reconnect_Succeed, HttpFixture)
 {
     SendReceiveHEAD(GetName());
-    
+
     TestStream::AddWriteRC( RC_TransferIncomplete ); // send GET fails
     TestStream::AddWriteRC(0); // retry send GET succeeds
-    TestStream::AddReadResponse( Response_GET_Content ); 
-    
+    TestStream::AddReadResponse( Response_GET_Content );
+
     REQUIRE_RC( KFileTimedRead ( m_file, 0, m_buf, sizeof m_buf, &m_numRead, NULL ) );
     REQUIRE_EQ( string("content"), string(m_buf, m_numRead) );
-    
+
     REQUIRE ( m_reconnected );
 }
 #endif
@@ -381,14 +385,14 @@ FIXTURE_TEST_CASE(GET_Failed_Reconnect_Succeed, HttpFixture)
 FIXTURE_TEST_CASE(GET_Timedout_Reconnect_Succeed, HttpFixture)
 {
     SendReceiveHEAD(GetName());
-    
+
     TestStream::AddWriteRC(0); // send GET succeeds
     TestStream::AddReadResponse( "TIMEOUT" ); // response to GET times out
     TestStream::AddWriteRC(0); // retry GET succeeds
-    TestStream::AddReadResponse( Response_GET_Content ); 
+    TestStream::AddReadResponse( Response_GET_Content );
     REQUIRE_RC ( KFileTimedRead ( m_file, 0, m_buf, sizeof m_buf, &m_numRead, NULL ) );
     REQUIRE_EQ( string("content"), string(m_buf, m_numRead) );
-    
+
     REQUIRE ( m_reconnected );
 }
 #endif
@@ -397,13 +401,13 @@ FIXTURE_TEST_CASE(GET_Timedout_Reconnect_Succeed, HttpFixture)
 FIXTURE_TEST_CASE(GET_Read_Failed_Reconnect_Failed, HttpFixture)
 {
     SendReceiveHEAD(GetName());
-    
+
     TestStream::AddWriteRC(0); // send GET succeeds
     TestStream::AddReadResponse( "TIMEOUT" ); // response to GET times out
     TestStream::AddWriteRC(0); // reconnect GET succeeds
     TestStream::AddReadResponse( "TIMEOUT" ); // response to GET times out
     REQUIRE_RC_FAIL ( KFileTimedRead ( m_file, 0, m_buf, sizeof m_buf, &m_numRead, NULL ) );
-    
+
     REQUIRE ( m_reconnected );
 }
 #endif
@@ -438,7 +442,7 @@ rc_t CC KMain ( int argc, char *argv [] )
 	// this makes messages from the test code appear
 	// (same as running the executable with "-l=message")
 	// TestEnv::verbosity = LogLevel::e_message;
-	
+
     rc_t rc=HttpTestSuite(argc, argv);
     return rc;
 }
