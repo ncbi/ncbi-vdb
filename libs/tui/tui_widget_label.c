@@ -56,3 +56,11 @@ void draw_label( struct KTUIWidget * w )
         }
     }
 }
+
+bool event_label( struct KTUIWidget * w, tui_event * event, bool hotkey )
+{
+    bool res = hotkey;
+    if ( res )
+        KTUIDlgPushEvent( w -> dlg, ktuidlg_event_select, w -> id, 0, 0, NULL );
+    return res;
+}

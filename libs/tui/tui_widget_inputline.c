@@ -148,7 +148,7 @@ static bool always_handle_these_keys( tui_event * event, uint32_t h )
 }
 
 
-bool event_inputline( struct KTUIWidget * w, tui_event * event )
+bool event_inputline( struct KTUIWidget * w, tui_event * event, bool hotkey )
 {
     bool res;
 

@@ -411,7 +411,7 @@ static bool prepare_grid_context( struct KTUIWidget * w, grid_cb_ctx * cb_ctx, g
 }
 
 
-bool event_grid( struct KTUIWidget * w, tui_event * event )
+bool event_grid( struct KTUIWidget * w, tui_event * event, bool hotkey )
 {
     bool changed = false;
     bool enter_space = false;        

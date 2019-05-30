@@ -44,22 +44,22 @@ static uint32_t lenght_without_first_ampersand( const char * s )
 void draw_button( struct KTUIWidget * w )
 {
     tui_rect r;
-    rc_t rc = KTUIDlgAbsoluteRect ( w->dlg, &r, &w->r );
+    rc_t rc = KTUIDlgAbsoluteRect ( w -> dlg, &r, &( w -> r ) );
     if ( rc == 0 )
     {
         tui_ac ac;
         rc = GetWidgetAc( w, ktuipa_button, &ac );
         if ( rc == 0 )
         {
-            struct KTUI * tui = w->tui;
+            struct KTUI * tui = w -> tui;
             uint32_t ofs_y = r.h / 2;
-            uint32_t x = r.top_left.x;
-            uint32_t y = r.top_left.y + ofs_y;
-            uint32_t w1 = r.w;
+            uint32_t x = r . top_left . x;
+            uint32_t y = r . top_left . y + ofs_y;
+            uint32_t w1 = r . w;
 
-            rc = draw_background( tui, w->focused, &r.top_left, w1, r.h, ac.bg );
+            rc = draw_background( tui, w -> focused, &( r . top_left ), w1, r . h, ac . bg );
 
-            if ( rc == 0 && w->caption != NULL )
+            if ( rc == 0 && w -> caption != NULL )
             {
                 tui_ac hl_ac;   // the highlighted style
                 rc = GetWidgetHlAc( w, ktuipa_button, &hl_ac );
@@ -67,13 +67,13 @@ void draw_button( struct KTUIWidget * w )
                 {
                     uint32_t x_txt = x + 2;
                     uint32_t w_txt = w1 - 4;
-                    uint32_t l_cap = lenght_without_first_ampersand( w->caption );
+                    uint32_t l_cap = lenght_without_first_ampersand( w -> caption );
                     if ( l_cap < w_txt )
                     {
                         x_txt += ( ( w_txt - l_cap ) / 2 );
                         w_txt = l_cap;
                     }
-                    rc = draw_highlighted( tui, x_txt, y, w_txt, &ac, &hl_ac, w->caption );
+                    rc = draw_highlighted( tui, x_txt, y, w_txt, &ac, &hl_ac, w -> caption );
                 }
             }
 
@@ -85,20 +85,19 @@ void draw_button( struct KTUIWidget * w )
     }
 }
 
-
-bool event_button( struct KTUIWidget * w, tui_event * event )
+bool event_button( struct KTUIWidget * w, tui_event * event, bool hotkey )
 {
-    bool res = false;
-    if ( event->event_type == ktui_event_kb )
+    bool res = hotkey;
+    if ( !res && event -> event_type == ktui_event_kb )
     {
-        switch( event->data.kb_data.code )
+        switch( event -> data . kb_data . code )
         {
             case ktui_enter : res = true; break;
-            case ktui_alpha : res = ( event->data.kb_data.key == ' ' ); break;
+            case ktui_alpha : res = event -> data . kb_data . key == ' '; break;
         }
     }
 
     if ( res )
-        KTUIDlgPushEvent( w->dlg, ktuidlg_event_select, w->id, 0, 0, NULL );
+        KTUIDlgPushEvent( w -> dlg, ktuidlg_event_select, w -> id, 0, 0, NULL );
     return res;
 }

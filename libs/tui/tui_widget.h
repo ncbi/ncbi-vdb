@@ -73,7 +73,7 @@ struct KTUIDlg;
 
 typedef void ( * draw_cb ) ( struct KTUIWidget * w );
 typedef void ( * init_cb ) ( struct KTUIWidget * w );
-typedef bool ( * event_cb ) ( struct KTUIWidget * w, tui_event * event );
+typedef bool ( * event_cb ) ( struct KTUIWidget * w, tui_event * event, bool hotkey );
 
 typedef struct KTUIWidget
 {

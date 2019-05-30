@@ -71,10 +71,10 @@ void draw_checkbox( struct KTUIWidget * w )
 }
 
 
-bool event_checkbox( struct KTUIWidget * w, tui_event * event )
+bool event_checkbox( struct KTUIWidget * w, tui_event * event, bool hotkey )
 {
-    bool res = false;
-    if ( event->event_type == ktui_event_kb )
+    bool res = hotkey;
+    if ( !res && event->event_type == ktui_event_kb )
     {
         switch( event->data.kb_data.code )
         {
