@@ -504,7 +504,7 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
 static
 rc_t VResolverAlgLocalResolve ( const VResolverAlg *self,
     const KDirectory *wd, const VResolverAccToken *tok, const VPath ** path,
-    bool legacy_wgs_refseq, bool for_cache, const char * dir )
+    bool legacy_wgs_refseq, bool for_cache, const char * dir, bool ad )
 {
     KPathType kpt;
     uint32_t i, count;
@@ -604,7 +604,7 @@ rc_t VResolverAlgLocalResolve ( const VResolverAlg *self,
                 if ( legacy_wgs_refseq )
                     return VResolverAlgMakeLocalWGSRefseqURI ( self, vol, & exp, & tok -> acc, path );
                 return VResolverAlgMakeLocalPath ( self, vol, & exp, path,
-                    NULL );
+                    ad ? wd : NULL );
             default:
                 break;
             }
@@ -1976,7 +1976,7 @@ rc_t VResolverAlgCacheResolve ( const VResolverAlg *self,
 {
     /* see if the cache file already exists */
     const bool for_cache = true;
-    rc_t rc = VResolverAlgLocalResolve ( self, wd, tok, path, legacy_wgs_refseq, for_cache, NULL );
+    rc_t rc = VResolverAlgLocalResolve ( self, wd, tok, path, legacy_wgs_refseq, for_cache, NULL, false );
     if ( rc == 0 )
         return 0;
 
@@ -2666,7 +2666,7 @@ rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
         {
             const bool for_cache = false;
             rc_t rc = VResolverAlgLocalResolve ( alg, self -> wd,
-                & tok, path, legacy_wgs_refseq, for_cache, dir );
+                & tok, path, legacy_wgs_refseq, for_cache, dir, true );
             if ( rc == 0 )
                 return 0;
         }
@@ -2682,7 +2682,7 @@ rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
         {
             const bool for_cache = false;
             rc_t rc = VResolverAlgLocalResolve ( alg, self -> wd,
-                & tok, path, legacy_wgs_refseq, for_cache, dir );
+                & tok, path, legacy_wgs_refseq, for_cache, dir, false );
             if ( rc == 0 )
                 return 0;
         }
