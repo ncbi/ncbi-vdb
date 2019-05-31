@@ -565,6 +565,8 @@ static rc_t SVersionInit(SVersion * self, bool * sdl, const char * src,
         if (sdl != NULL) {
             *sdl = false;
 
+            /* NB. I SET THE UPPER BIT(128) OF MAJOR VERSION TO 1
+               TO MARK IT AS SDL VERSION */
             if (major & 128) {
                 major &= ~128;
                 *sdl = true;
