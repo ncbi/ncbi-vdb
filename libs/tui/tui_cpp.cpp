@@ -247,7 +247,45 @@ namespace tui {
             }
         }
     }
+
+    void Dlg::PopulateSpinEdit( Tui_Rect const &r, bool resize, uint32_t id, tui_long value,
+            tui_long min, tui_long max, KTUI_color bg, KTUI_color fg, uint32_t page_id )
+    {
+        if ( resize )
+            SetWidgetRect( id, r, false );
+        else
+        {
+            if ( HasWidget( id ) )
+            {
+                SetWidgetInt64Value( id, value );
+                SetWidgetInt64Min( id, min );
+                SetWidgetInt64Max( id, max );
+            }
+            else
+            {
+                AddSpinEdit( id, r, value, min, max );
+                Populate_common( id, bg, fg, page_id );
+            }
+        }
+    }
     
+    void Dlg::PopulateGrid( Tui_Rect const &r, bool resize, uint32_t id, Grid &grid_model,
+                            KTUI_color bg, KTUI_color fg, uint32_t page_id )
+    {
+        if ( resize )
+            SetWidgetRect( id, r, false );
+        else
+        {
+            if ( HasWidget( id ) ) { }
+            else
+            {
+                AddGrid( id, r, grid_model, false );
+                Populate_common( id, bg, fg, page_id );                    
+            }
+        }
+    }
+
+
     void Dlg::SetHighLightColor( KTUI_color value )
     {
         struct KTUIPalette * palette = KTUIDlgGetPalette ( dlg_ );

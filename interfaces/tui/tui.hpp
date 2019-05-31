@@ -470,6 +470,10 @@ class Dlg
                             bool checked, KTUI_color bg, KTUI_color fg, uint32_t page_id );
         void PopulateInput( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
             size_t length, KTUI_color bg, KTUI_color fg, uint32_t page_id );
+        void PopulateSpinEdit( Tui_Rect const &r, bool resize, uint32_t id, tui_long value, tui_long min,
+            tui_long max, KTUI_color bg, KTUI_color fg, uint32_t page_id );
+        void PopulateGrid( Tui_Rect const &r, bool resize, uint32_t id, Grid &grid_model,
+                            KTUI_color bg, KTUI_color fg, uint32_t page_id );
             
         bool HasWidget( tui_id id ) { return KTUIDlgHasWidget ( dlg_, id ); };
 
