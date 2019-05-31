@@ -424,7 +424,7 @@ static rc_t LocationsSetHttp(Locations * self, const VPath * path) {
     return rc;
 }
 
-static rc_t LocationsAddVPath ( Locations * self, const VPath * path,
+rc_t LocationsAddVPath ( Locations * self, const VPath * path,
                             const VPath * mapping, bool setHttp, uint64_t osize)
 {
     int i = 0;
@@ -538,7 +538,7 @@ static bool ItemHasLinks ( const Item * self ) {
     return false;
 }
 
-static rc_t ItemAddFormat ( Item * self, const char * cType, const Data * dad,
+rc_t ItemAddFormat ( Item * self, const char * cType, const Data * dad,
                      Locations ** added )
 {
     rc_t rc = 0;
@@ -1808,7 +1808,7 @@ static rc_t ContainerAddItem ( Container * self, const KJsonObject * node,
 }
 
 /* We are inside or above of a Container
-   and are llooking for Items(runs, gdGaP files) to ddd */
+   and are looking for Items(runs, gdGaP files) to ddd */
 static rc_t Response4AddItems ( Response4 * self, Container * aBox,
     const KJsonObject * node, const Data * dad, Stack * path )
 {
