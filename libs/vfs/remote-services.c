@@ -142,8 +142,8 @@ static bool SVersionResponseHasTimestamp ( const SVersion  self ) {
     return self >= VERSION_3_0;
 }
 
-static bool SVersionNeedCloudLocation(const SVersion  self) {
-    return self == VERSION_4_0;
+static bool SVersionNeedCloudLocation(const SVersion  self, bool sdl) {
+    return self == VERSION_4_0 || sdl;
 }
 
 static bool SVersionResponseInJson ( const SVersion  self ) {
@@ -340,7 +340,10 @@ typedef struct {
 /* service request */
 typedef struct {
     EServiceType serviceType;
+
     SVersion version;
+    bool sdl;
+
     SCgiRequest cgiReq;
     SRequestData request;
     STickets tickets;
@@ -510,8 +513,8 @@ static bool cgiNotSupportsJson(const char * cgi) {
 }
 
 /* SVersion *******************************************************************/
-static
-rc_t SVersionInit(SVersion * self, const char * src, EServiceType serviceType)
+static rc_t SVersionInit(SVersion * self, bool * sdl, const char * src,
+    EServiceType serviceType)
 {
     const char * s = src;
 
@@ -559,6 +562,15 @@ rc_t SVersionInit(SVersion * self, const char * src, EServiceType serviceType)
             minor = (uint8_t)l;
         }
 
+        if (sdl != NULL) {
+            *sdl = false;
+
+            if (major & 128) {
+                major &= ~128;
+                *sdl = true;
+            }
+        }
+
         *self = major << 24 | minor << 16;
     }
 
@@ -567,7 +579,7 @@ rc_t SVersionInit(SVersion * self, const char * src, EServiceType serviceType)
 
 ver_t InitVersion(const char * src) {
     SVersion self = 0;
-    rc_t rc = SVersionInit(&self, src, eSTnames);
+    rc_t rc = SVersionInit(&self, NULL, src, eSTnames);
     if (rc == 0)
         return self;
     else
@@ -625,6 +637,9 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
     }
     else
         string_copy_measure ( buffer, bsize, aCgi );
+
+    if (rc == 0 && request->sdl) /* don't auto-correct version and cgi */
+        adjustVersion = false;   /* when calling SDL */
 
     if (rc == 0 && adjustVersion) {
         if (cgiNotSupportsJson(buffer)) { /* cgi supports versions < 4 */
@@ -706,7 +721,7 @@ static rc_t SHeaderMake
     rc = SRawAlloc ( & self -> raw, src -> addr, src -> size );
 
     if ( rc == 0 )
-        rc = SVersionInit ( & self -> version, self -> raw . s, serviceType);
+        rc = SVersionInit ( & self -> version, NULL, self -> raw . s, serviceType);
 
     return rc;
 }
@@ -2877,7 +2892,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( 
         "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n" ) );
 
-    rc = SVersionInit(&request->version, version, eSTnames);
+    rc = SVersionInit(&request->version, &request->sdl, version, eSTnames);
     if ( rc != 0 )
         return rc;
 
@@ -2897,21 +2912,26 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     DBGMSG ( DBG_VFS,
         DBG_FLAG ( DBG_VFS_SERVICE ), ( "CGI = '%s'\n", self -> cgi ) );
     if ( rc == 0 ) {
-        const char name [] = "version";
-        char * version = NULL;
-        rc = SVersionToString (  request -> version, & version );
-        if ( rc != 0 ) {
-            return rc;
+        if (request->sdl)
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), (
+                "  not sending version in SDL protocol\n"));
+        else {
+            const char name[] = "version";
+            char * version = NULL;
+            rc = SVersionToString(request->version, &version);
+            if (rc != 0) {
+                return rc;
+            }
+            rc = SKVMake(&kv, name, version);
+            if (rc == 0) {
+                rc = VectorAppend(&self->params, NULL, kv);
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
+                    ("  %s=%s\n", name, version));
+            }
+            free(version);
+            if (rc != 0)
+                return rc;
         }
-        rc = SKVMake ( & kv, name, version );
-        if ( rc == 0 ) {
-            rc = VectorAppend ( & self -> params, NULL, kv );
-            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
-                ( "  %s=%s\n", name, version ) );
-        }
-        free ( version );
-        if ( rc != 0 )
-            return rc;
     }
     if ( ! SVersionHasMultpileObjects (  request -> version ) ) {
         if ( request -> request . object [ 0 ] . objectId == NULL )
@@ -3100,7 +3120,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
         }
     }
 
-    if (rc == 0 && SVersionNeedCloudLocation(request->version))
+    if (rc == 0 && SVersionNeedCloudLocation(request->version, request->sdl))
         rc = SCgiRequestAddLocation( self, helper );
     return rc;
 }
@@ -3114,7 +3134,7 @@ rc_t SRequestInitSearchSCgiRequest ( SRequest * request, const char * cgi,
     rc_t rc = 0;
     const SKV * kv = NULL;
     assert ( request );
-    rc = SVersionInit ( & request -> version, version, eSTnames);
+    rc = SVersionInit ( & request -> version, NULL, version, eSTnames);
     if ( rc != 0 )
         return rc;
     self = & request -> cgiReq;
