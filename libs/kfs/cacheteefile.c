@@ -290,7 +290,9 @@ static rc_t calculate_local_size_from_remote_size( KCacheTeeFile *self )
 static rc_t create_bitmap_buffer( atomic32_t ** bitmap, uint64_t bitmap_bytes )
 {
     rc_t rc = 0;
-    *bitmap = calloc ( sizeof **bitmap, ( bitmap_bytes + sizeof ** bitmap - 1 ) / sizeof ** bitmap );
+    /* unaligned atomic reads require padding beyond end of bitmap */
+    size_t bitmap_sz=bitmap_bytes + 8;
+    *bitmap = calloc ( 1, bitmap_sz );
     if ( *bitmap == NULL )
     {
         rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
