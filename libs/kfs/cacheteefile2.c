@@ -99,7 +99,7 @@ typedef struct KCacheTee2File
     (((val)>>8)&0xff00) | /* move byte 2 to byte 1 */ \
     (((val)<<24)&0xff000000) /* byte 0 to byte 3 */
 #endif
-#define GEN_BIT_NR_MASK_ROW(i) SWAP_FN( 1 << ( (i) * 4 ) ), SWAP_FN( 1 << ( (i) * 4 + 1 ) ), SWAP_FN( 1 << ( (i) * 4 + 2 ) ), SWAP_FN( 1 << ( (i) * 4 + 3 ) )
+#define GEN_BIT_NR_MASK_ROW(i) SWAP_FN( 1u << ( (i) * 4 ) ), SWAP_FN( 1u << ( (i) * 4 + 1 ) ), SWAP_FN( 1u << ( (i) * 4 + 2 ) ), SWAP_FN( 1u << ( (i) * 4 + 3 ) )
 
 const uint32_t BitNr2Mask_2[ 32 ] =
 {
@@ -1003,7 +1003,7 @@ typedef struct cache_tee_params
 
 
 static rc_t finish_tee( struct KFile const **tee,
-                        const cache_tee_params const * ctp,
+                        const cache_tee_params * ctp,
                         uint64_t block_count,
                         uint64_t bitmap_bytes,
                         atomic32_t * bitmap )
