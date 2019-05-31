@@ -5515,6 +5515,37 @@ LIB_EXPORT rc_t CC VResolverGetProject ( const VResolver * self,
     return 0;
 }
 
+static rc_t VResolverInitVersion(VResolver * self, const KConfig *kfg) {
+    rc_t rc = 0;
+
+    String * result = NULL;
+
+    assert(self);
+
+    rc = KConfigReadString(kfg, "/repository/remote/version", &result);
+
+    if (rc == 0) {
+        assert(result);
+
+        self->version = string_dup_measure(result->addr, NULL);
+
+        free(result);
+
+        if (self->version == NULL)
+            return RC(rcVFS, rcMgr, rcCreating, rcMemory, rcExhausted);
+        else
+            return 0;
+    }
+
+    else {
+        self->version = string_dup_measure("4", NULL);
+
+        if (self->version == NULL)
+            return RC(rcVFS, rcMgr, rcCreating, rcMemory, rcExhausted);
+        else
+            return 0;
+    }
+}
 
 /* Make
  *  internal factory function
@@ -5563,9 +5594,8 @@ rc_t VResolverMake ( VResolver ** objp, const KDirectory *wd,
 
         KRepositoryProjectId ( protected, & obj -> projectId );
 
-        obj -> version = string_dup_measure( "#4.", NULL );
-        if ( obj -> version == NULL )
-            rc = RC ( rcVFS, rcMgr, rcCreating, rcMemory, rcExhausted );
+        if (rc == 0)
+            rc = VResolverInitVersion(obj, kfg);
 
         obj -> resoveOidName = DEFAULT_RESOVE_OID_NAME; /* just in case */
 

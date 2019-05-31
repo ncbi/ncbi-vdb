@@ -1427,12 +1427,14 @@ rc_t KSrvErrorMake ( KSrvError ** self,
         o -> message . size = src -> message . size;
         o -> message . len  = src -> message . len;
 
-        o -> objectId . addr = string_dup ( src -> objectId . addr,
-                                        src -> objectId . size );
-        if ( o -> objectId . addr == NULL )
-            return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
-        o -> objectId . size = src -> objectId . size;
-        o -> objectId . len  = src -> objectId . len;
+        if (src->objectId.size > 0) {
+            o->objectId.addr = string_dup(src->objectId.addr,
+                src->objectId.size);
+            if (o->objectId.addr == NULL)
+                return RC(rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted);
+            o->objectId.size = src->objectId.size;
+            o->objectId.len = src->objectId.len;
+        }
 
         o -> objectType = src -> objectType;
 

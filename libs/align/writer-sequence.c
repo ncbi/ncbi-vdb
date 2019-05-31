@@ -70,7 +70,7 @@ static const TableWriterColumn TableWriterSeq_cols[ewseq_cn_Last + 1] =
     {0, "SPOT_GROUP", sizeof(char) * 8, ewcol_IsArray | ewcol_Ignore},
     {0, "READ_FILTER", sizeof(uint8_t) * 8, ewcol_IsArray},
     {0, "TI", sizeof(uint64_t) * 8, ewcol_IsArray | ewcol_Ignore},
-    {0, "NAME", sizeof(char) * 8, ewcol_IsArray | ewcol_Ignore},
+    {0, "RAW_NAME", sizeof(char) * 8, ewcol_IsArray | ewcol_Ignore},
     {0, "CMP_LINKAGE_GROUP", sizeof(char) * 8, ewcol_IsArray},
 };
 

@@ -41,6 +41,7 @@
 #include <poll.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sys/event.h>
 
 
 /* socket_wait
@@ -50,14 +51,14 @@ int socket_wait ( int fd, int events, timeout_t *tm )
 {
     int i, status;
     struct pollfd fds [ 1 ];
-        
+
     /* poll for data with no delay */
     for ( i = 0; i < 2; ++ i )
     {
         fds [ 0 ] . fd = fd;
         fds [ 0 ] . events = events;
         fds [ 0 ] . revents = 0;
-        
+
         status = poll ( fds, sizeof fds / sizeof fds [ 0 ], 0 );
         if ( status > 0 )
             return fds [ 0 ] . revents;
@@ -94,3 +95,32 @@ int socket_wait ( int fd, int events, timeout_t *tm )
 
     return status;
 }
+
+
+int connect_wait ( int socketFd, int32_t timeoutMs )
+{
+    int kq = kqueue();
+    if ( kq < 0)
+    {
+        return -1;
+    }
+
+    struct kevent change;
+    EV_SET( & change, socketFd, EVFILT_WRITE, EV_ADD, 0, 0, NULL );
+
+    struct kevent event;
+    struct timespec timeout = { 0, 0 };
+    timeout . tv_sec = ( timeoutMs / 1000 );
+    timeout . tv_nsec = ( timeoutMs % 1000) * 1000 * 1000;
+
+    int nev = kevent( kq, & change, 1, & event, 1, & timeout );
+
+    close( kq );
+    if ( nev < 0 )
+    {
+        return -1;
+    }
+    return nev == 0 ? 0 : 1;
+}
+
+
