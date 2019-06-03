@@ -5,12 +5,49 @@
 #include "json-response.h" /* Response4MakeSdl */
 #include "path-priv.h" /* VPathMakeFmt */
 
-typedef struct Data {
-    const char * acc;
-    const char * bundle;
-    const char * type;
-    const char * link;
-} Data;
+#include <ctype.h> /* isdigit */
+
+static rc_t IntSet(int64_t * self, const KJsonValue * node,
+    const char * name)
+{
+    rc_t rc = 0;
+
+    assert(self);
+
+    if (node == NULL)
+        return 0;
+
+    rc = KJsonGetNumber(node, self);
+    if (rc != 0)
+        return rc;
+
+    /*if (THRESHOLD > THRESHOLD_INFO)
+        StackPrintInt(path, name, *self);*/
+
+    return rc;
+}
+
+static rc_t BulSet(EState * self, const KJsonValue * node,
+    const char * name)
+{
+    rc_t rc = 0;
+    bool value = false;
+
+    assert(self);
+
+    if (node == NULL)
+        return 0;
+
+    rc = KJsonGetBool(node, &value);
+    if (rc != 0)
+        return rc;
+
+    /*if (THRESHOLD > THRESHOLD_INFO)
+        StackPrintBul(path, name, value);*/
+
+    *self = value ? eTrue : eFalse;
+    return 0;
+}
 
 static rc_t StrSet(const char ** self, const KJsonValue * node,
     const char * name)
@@ -39,37 +76,126 @@ static rc_t StrSet(const char ** self, const KJsonValue * node,
     return 0;
 }
 
-static rc_t DataUpdate(Data * self, const KJsonObject * node)
-{
-    const char * name = NULL;
-
+static void DataInit(Data * self) {
     assert(self);
 
-    memset(self, 0, sizeof *self);
+    memset(self, 0, sizeof * self);
 
-    name = "bundle";
-    StrSet(&self->acc, KJsonObjectGetMember(node, name), name);
+    self->qual = eUnknown;
 
-    name = "bundle";
-    StrSet(&self->bundle, KJsonObjectGetMember(node, name), name);
-
-    name = "link";
-    StrSet(&self->link, KJsonObjectGetMember(node, name), name);
-
-    name = "type";
-    StrSet(&self->type, KJsonObjectGetMember(node, name), name);
-
-    return 0;
+    self->id = -1;
+    self->exp = -1;
 }
 
-struct Locations;
+static void DataClone(const Data * self, Data * clone) {
+    DataInit(clone);
+
+    if (self == NULL)
+        return;
+
+    clone->acc = self->acc;
+    clone->bundle = self->bundle;
+    clone->id = self->id; /* oldCartObjId */
+    clone->cls = self->cls; /* itemClass */
+    clone->vsblt = self->vsblt;
+    clone->name = self->name;
+    clone->fmt = self->fmt; /* format */
+    clone->qual = self->qual; /* hasOrigQuality */
+    clone->sz = self->sz; /* size */
+    clone->md5 = self->md5;
+    clone->sha = self->sha; /* sha256 */
+    clone->mod = self->mod; /* modDate */
+    clone->exp = self->exp; /* expDate */
+    clone->srv = self->srv; /* service */
+    clone->reg = self->reg; /* region */
+    clone->link = self->link; /* ???????????????????????????????????????? */
+    clone->tic = self->tic;
+
+    clone->code = self->code;
+}
+
+static rc_t DataUpdate(const Data * self,
+    Data * next, const KJsonObject * node)
+{
+    rc_t rc = 0;
+
+    const char * name = NULL;
+
+    assert(next);
+
+    DataClone(self, next);
+
+    if (node == NULL)
+        return 0;
+
+    name = "bundle";
+    StrSet(&next->acc, KJsonObjectGetMember(node, name), name);
+
+    name = "ceRequired";
+    BulSet(&next->ceRequired, KJsonObjectGetMember(node, name), name);
+
+    name = "link";
+    StrSet(&next->link, KJsonObjectGetMember(node, name), name);
+
+    name = "bundle";
+    StrSet(&next->name, KJsonObjectGetMember(node, name), name);
+
+    name = "region";
+    StrSet(&next->reg, KJsonObjectGetMember(node, name), name);
+
+    name = "size";
+    IntSet(&next->sz, KJsonObjectGetMember(node, name), name);
+
+    name = "service";
+    StrSet(&next->srv, KJsonObjectGetMember(node, name), name);
+
+    name = "type";
+    StrSet(&next->type, KJsonObjectGetMember(node, name), name);
+
+    name = "md5";
+    StrSet(&next->md5, KJsonObjectGetMember(node, name), name);
+
+    if (next->md5 != NULL) {
+        int i = 0;
+        for (i = 0; i < 16; ++i) {
+            if (next->md5[2 * i] == '\0')
+                break;
+            if (isdigit(next->md5[2 * i]))
+                next->md5i[i] = (next->md5[2 * i] - '0') * 16;
+            else
+                next->md5i[i] = (next->md5[2 * i] - 'a' + 10) * 16;
+            if (next->md5[2 * i + 1] == '\0')
+                break;
+            if (isdigit(next->md5[2 * i + 1]))
+                next->md5i[i] += next->md5[2 * i + 1] - '0';
+            else
+                next->md5i[i] += next->md5[2 * i + 1] - 'a' + 10;
+        }
+        if (i == 16)
+            next->hasMd5 = true;
+    }
+
+    name = "modificationDate";
+    StrSet(&next->modificationDate, KJsonObjectGetMember(node, name), name);
+
+    if (next->modificationDate != NULL) {
+        const KTime* t = KTimeFromIso8601(&next->modT, next->modificationDate,
+            string_measure(next->modificationDate, NULL));
+        if (t == NULL)
+            rc = RC(rcVFS, rcQuery, rcExecuting, rcItem, rcIncorrect);
+        else
+            next->mod = KTimeMakeTime(&next->modT);
+    }
+
+    return rc;
+}
+
 rc_t ItemAddFormat(Item * self, const char * cType, const Data * dad,
     struct Locations ** added);
-rc_t LocationsAddVPath(struct Locations * self, const VPath * path,
-    const VPath * mapping, bool setHttp, uint64_t osize);
 
 /* We are scanning Item(Run) to find all its Elm-s(Files) -sra, vdbcache, ??? */
-static rc_t ItemAddElms(Item * self, const KJsonObject * node)
+static
+rc_t ItemAddElmsSdl(Item * self, const KJsonObject * node, const Data * dad)
 {
     rc_t rc = 0;
 
@@ -78,11 +204,11 @@ static rc_t ItemAddElms(Item * self, const KJsonObject * node)
     struct Locations * elm = NULL;
 
     Data data;
-    DataUpdate(&data, node);
+    DataUpdate(dad, &data, node);
 
     value = KJsonObjectGetMember(node, "link");
     if (data.type != NULL || value != NULL) {
-        rc = ItemAddFormat(self, data.type, NULL, &elm);
+        rc = ItemAddFormat(self, data.type, &data, &elm);
         if (elm == NULL || rc != 0) {
             return rc;
         }
@@ -91,16 +217,21 @@ static rc_t ItemAddElms(Item * self, const KJsonObject * node)
     value = KJsonObjectGetMember ( node, "link" );
     if (value != NULL)
     {
-        Data data;
-        DataUpdate(&data, node);
+        Data ldata;
+        DataUpdate(&data, &ldata, node);
 
-        if (data.link != NULL) {
+        if (ldata.link != NULL) {
             VPath * path = NULL;
 
-            String url;
-            StringInitCString(&url, data.link);
+            String id;
 
-            rc = VPathMakeFmt(&path, "%s", data.link);
+            String url;
+            StringInitCString(&url, ldata.link);
+
+            StringInitCString(&id, ldata.acc);
+
+            rc = VPathMakeFromUrl(&path, &url, NULL, true, &id, ldata.sz,
+                ldata.mod, ldata.hasMd5 ? ldata.md5i : NULL, 0, ldata.srv);
 
             if (rc == 0)
                 VPathMarkHighReliability(path, true);
@@ -128,7 +259,7 @@ static rc_t Response4AddItems(Response4 * self, const KJsonObject * node)
     Item * item = NULL;
 
     Data data;
-    DataUpdate(&data, node);
+    DataUpdate(NULL, &data, node);
 
     {
         const char * bundle = data.bundle;
@@ -158,7 +289,7 @@ static rc_t Response4AddItems(Response4 * self, const KJsonObject * node)
 
                 value = KJsonArrayGetElement(array, i);
                 object = KJsonValueToObject(value);
-                r2 = ItemAddElms(item, object);
+                r2 = ItemAddElmsSdl(item, object, &data);
                 if (r2 != 0 && rc == 0)
                     rc = r2;
             }

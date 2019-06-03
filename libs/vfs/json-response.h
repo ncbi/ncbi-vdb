@@ -28,6 +28,7 @@
 #define _h_vfs_json_response_
 
 #include <kfc/defs.h> /* rc_t */
+#include <klib/time.h> /* KTime */
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,7 +42,44 @@ struct VPath;
 
 typedef struct Container Container;
 typedef struct Item Item;
+struct Locations;
 typedef struct Response4 Response4;
+
+typedef enum {
+    eUnknown,
+    eFalse,
+    eTrue
+} EState;
+
+typedef struct Data {
+    const char * acc;
+    const char * bundle;
+    int64_t      code; /* status/code */
+    EState       ceRequired;
+    int64_t      exp;  /* expDate */
+    const char * fmt;  /* format */
+    EState       qual; /* hasOrigQuality */
+    const char * cls;  /* itemClass */
+    const char * link; /* ??????????????????????????????????????????????????? */
+
+    bool         hasMd5;
+    const char * md5;
+    uint8_t      md5i[16];
+
+    const char * modificationDate;
+    KTime        modT; /* modificationDate */
+    int64_t      mod;  /* modDate */
+
+    const char * name;
+    int64_t      id;   /* oldCartObjId */
+    const char * reg;  /* region */
+    const char * sha;  /* sha256 */
+    const char * srv;  /* service */
+    const char * tic;
+    int64_t      sz;   /* size */
+    const char * type;
+    const char * vsblt;
+} Data;
 
 rc_t Response4MakeEmpty  (       Response4 ** self );
 rc_t Response4Make       (       Response4 ** self, const char * input );
@@ -57,6 +95,8 @@ rc_t ContainerAdd ( Container * self, const char * acc, int64_t id,
 rc_t ItemAddVPath(Item * self, const char * type, const struct VPath * path,
                     const struct VPath * mapping, bool setHttp, uint64_t osize);
 rc_t ItemSetTicket ( Item * self, const struct String * ticket );
+rc_t LocationsAddVPath(struct Locations * self, const struct VPath * path,
+    const struct VPath * mapping, bool setHttp, uint64_t osize);
 rc_t Response4GetKSrvRespObjCount ( const Response4 * self, uint32_t * n );
 rc_t Response4GetKSrvRespObjByIdx ( const Response4 * self, uint32_t i,
                                     const struct KSrvRespObj ** box );

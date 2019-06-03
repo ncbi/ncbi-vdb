@@ -62,7 +62,7 @@ typedef struct {
 } Stack;
 
 #define MAX_PATHS 6 /* Locations for Element (sra, vdbcache, ???) */
-typedef struct {
+typedef struct Locations {
     ESrvFileFormat type;
     char * cType;
     char * name;
@@ -115,7 +115,7 @@ struct Response4 { /* Response object */
     uint32_t nItems;
     rc_t rc;
 };
-
+#if 0
 typedef enum {
     eUnknown,
     eFalse,
@@ -124,24 +124,34 @@ typedef enum {
 
 typedef struct Data {
     const char * acc;
-    int64_t id; /* oldCartObjId */
-    const char * cls; /* itemClass */
-    const char * vsblt;
-    const char * name;
-    const char * fmt; /* format */
-    EState qual; /* hasOrigQuality */
-    int64_t sz; /* size */
-    const char * md5;
-    const char * sha; /* sha256 */
-    int64_t mod; /* modDate */
-    int64_t exp; /* expDate */
-    const char * srv; /* service */
-    const char * reg; /* region */
+    const char * bundle;
+    int64_t      code; /* status/code */
+    EState       ceRequired;
+    int64_t      exp;  /* expDate */
+    const char * fmt;  /* format */
+    EState       qual; /* hasOrigQuality */
+    const char * cls;  /* itemClass */
     const char * link; /* ??????????????????????????????????????????????????? */
-    const char * tic;
 
-    int64_t code; /* status/code */
+    bool         hasMd5;
+    const char * md5;
+    uint8_t      md5i[16];
+
+    const char * modificationDate;
+    KTime        modT; /* modificationDate */
+    int64_t      mod;  /* modDate */
+
+    const char * name;
+    int64_t      id;   /* oldCartObjId */
+    const char * reg;  /* region */
+    const char * sha;  /* sha256 */
+    const char * srv;  /* service */
+    const char * tic;
+    int64_t      sz;   /* size */
+    const char * type;
+    const char * vsblt;
 } Data;
+#endif
 
 struct KSrvRespObj {
     atomic32_t refcount;
@@ -1683,7 +1693,7 @@ rc_t LocationsInitMapping ( Locations * self, const Item * item )
 /********************************** Item **********************************/
 
 /* We are scanning Item(Run) to find all its Elm-s(Files) -sra, vdbcache, ??? */
-static rc_t ItemAddElms ( Item * self, const KJsonObject * node,
+static rc_t ItemAddElms4 ( Item * self, const KJsonObject * node,
                    const Data * dad, Stack * path )
 {
     rc_t rc = 0;
@@ -1724,7 +1734,7 @@ static rc_t ItemAddElms ( Item * self, const KJsonObject * node,
 
             value = KJsonArrayGetElement ( array, i );
             object = KJsonValueToObject ( value );
-            r2 = ItemAddElms ( self, object, & data, path );
+            r2 = ItemAddElms4 ( self, object, & data, path );
             if ( r2 != 0 && rc == 0 )
                 rc = r2;
 
@@ -1796,7 +1806,7 @@ static rc_t ContainerAddItem ( Container * self, const KJsonObject * node,
                 DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), ("Adding files to '%s' "
                     "item %u...\n", item->itemClass, item->id));
         }
-        rc = ItemAddElms ( item, node, & data, path );
+        rc = ItemAddElms4 ( item, node, & data, path );
     }
 
     if ( rc == 0 && ! ItemHasLinks ( item ) && data . code == 200 ) {
