@@ -374,7 +374,11 @@ FIXTURE_TEST_CASE(Test1YesDep, RefseqFixture) {
     VPath* acc = NULL;
     REQUIRE_RC(VFSManagerMakePath(vmgr, &acc, SRR619505));
     const VPath *local = NULL;
-    REQUIRE_RC(VResolverLocal(resolver, acc, &local));
+
+//  REQUIRE_RC(VResolverLocal(resolver, acc, &local));
+    REQUIRE_RC(VResolverRemote(resolver, eProtocolHttps, acc, &local));
+
+
     RELEASE(VPath, acc);
     const String *s = NULL;
     REQUIRE_RC(VPathMakeString(local, &s));
