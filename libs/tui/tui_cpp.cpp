@@ -285,6 +285,21 @@ namespace tui {
         }
     }
 
+    void Dlg::PopulateList( Tui_Rect const &r, bool resize, uint32_t id,
+                            KTUI_color bg, KTUI_color fg, uint32_t page_id )
+    {
+        if ( resize )
+            SetWidgetRect( id, r, false );
+        else
+        {
+            if ( HasWidget( id ) ) { }
+            else
+            {
+                AddList( id, r );
+                Populate_common( id, bg, fg, page_id );                    
+            }
+        }
+    }
 
     void Dlg::SetHighLightColor( KTUI_color value )
     {

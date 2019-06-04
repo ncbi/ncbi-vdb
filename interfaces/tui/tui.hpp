@@ -474,7 +474,9 @@ class Dlg
             tui_long max, KTUI_color bg, KTUI_color fg, uint32_t page_id = 0 );
         void PopulateGrid( Tui_Rect const &r, bool resize, uint32_t id, Grid &grid_model,
                             KTUI_color bg, KTUI_color fg, uint32_t page_id = 0 );
-            
+        void PopulateList( Tui_Rect const &r, bool resize, uint32_t id,
+                            KTUI_color bg, KTUI_color fg, uint32_t page_id = 0 );
+
         bool HasWidget( tui_id id ) { return KTUIDlgHasWidget ( dlg_, id ); };
 
         tui_long GetGridCol( tui_id id ) { uint64_t col = 0; KTUIDlgGetGridCol( dlg_, id, &col ); return col; };
@@ -796,7 +798,7 @@ class msg_colors
 class dflt_msg_colors : public msg_colors
 {
     public :
-        dflt_msg_colors( void ) : msg_colors( KTUI_c_gray, 
+        dflt_msg_colors( void ) : msg_colors( KTUI_c_light_gray, 
                                               widget_colors( KTUI_c_gray, KTUI_c_white ),
                                               widget_colors( KTUI_c_cyan, KTUI_c_black ) ) {}
 };
@@ -815,35 +817,36 @@ class input_colors
 class dflt_input_colors : public input_colors
 {
     public :
-        dflt_input_colors( void ) : input_colors( KTUI_c_gray,
-                                                  widget_colors( KTUI_c_light_gray, KTUI_c_black ),
+        dflt_input_colors( void ) : input_colors( KTUI_c_light_gray,
+                                                  widget_colors( KTUI_c_gray, KTUI_c_white ),
                                                   widget_colors( KTUI_c_white, KTUI_c_black ),
                                                   widget_colors( KTUI_c_cyan, KTUI_c_black ) ) {}
 };
 
 /* ==== message sub-dialog =================================================================== */
-class msg_view : public Dlg
-{
-    public :
-        msg_view( Dlg &parent, Tui_Rect &r, const std::string &msg, const msg_colors &colors )
-            : Dlg( parent, r )
-        {
-            SetDlgBg( colors.bg );
-            Tui_Rect r1( 1, 1, r.get_w() -2, 1 );
-            PopulateLabel( r1, false, 100, msg.c_str(), colors.label.bg, colors.label.fg );
-            Tui_Rect r2( 1, 3, 12, 1 );
-            PopulateButton( r2, false, 101, "&ok", colors.button.bg, colors.button.fg );
-        }
-};
-
 class msg_ctrl : public Dlg_Runner
 {
+    private :
+        virtual bool on_select( Dlg &dlg, void * data, Tui_Dlg_Event &dev )
+        { dlg.SetDone( dev.get_widget_id() == 101 ); return true; }
+
+    class msg_view : public Dlg
+    {
+        public :
+            msg_view( Dlg &parent, Tui_Rect &r, const std::string &msg, const msg_colors &colors )
+                : Dlg( parent, r )
+            {
+                SetDlgBg( colors.bg );
+                Tui_Rect r1( 1, 1, r.get_w() -2, 1 );
+                PopulateLabel( r1, false, 100, msg.c_str(), colors.label.bg, colors.label.fg );
+                Tui_Rect r2( 1, 3, 12, 1 );
+                PopulateButton( r2, false, 101, "&ok", colors.button.bg, colors.button.fg );
+            }
+    };
+        
     public :
         msg_ctrl( Dlg &dlg ) : Dlg_Runner( dlg, NULL ) { dlg.SetFocus( 101 ); }
 
-        virtual bool on_select( Dlg &dlg, void * data, Tui_Dlg_Event &dev )
-        { dlg.SetDone( dev.get_widget_id() == 101 ); return true; }
-        
         static bool show_msg( Dlg & parent, const std::string &msg, Tui_Rect r,
                               msg_colors colors = dflt_msg_colors() )
         {
@@ -864,29 +867,27 @@ class msg_ctrl : public Dlg_Runner
 };
 
 /* ==== question sub-dialog =================================================================== */
-class question_view : public Dlg
-{
-    public :
-        question_view( Dlg &parent, Tui_Rect r, const std::string &msg, const msg_colors &colors ) 
-            : Dlg( parent, r )
-        {
-            SetDlgBg( colors.bg );
-            Tui_Rect r1( 1, 1, r.get_w() -2, 1 );
-            PopulateLabel( r1, false, 100, msg.c_str(), colors.label.bg, colors.label.fg );
-            Tui_Rect r2( 1, 3, 10, 1 );
-            PopulateButton( r2, false, 101, "&yes", colors.button.bg, colors.button.fg );
-            Tui_Rect r3( 12, 3, 10, 1 );
-            PopulateButton( r3, false, 102, "&no", colors.button.bg, colors.button.fg );
-        }
-};
-
 class question_ctrl : public Dlg_Runner
 {
-    public :
+    private :
         bool answer;
-        
-        question_ctrl( Dlg &dlg ) : Dlg_Runner( dlg, NULL ), answer( false ) { dlg.SetFocus( 101 ); }
 
+        class question_view : public Dlg
+        {
+            public :
+                question_view( Dlg &parent, Tui_Rect r, const std::string &msg, const msg_colors &colors ) 
+                    : Dlg( parent, r )
+                {
+                    SetDlgBg( colors.bg );
+                    Tui_Rect r1( 1, 1, r.get_w() -2, 1 );
+                    PopulateLabel( r1, false, 100, msg.c_str(), colors.label.bg, colors.label.fg );
+                    Tui_Rect r2( 1, 3, 12, 1 );
+                    PopulateButton( r2, false, 101, "&yes", colors.button.bg, colors.button.fg );
+                    Tui_Rect r3( 14, 3, 12, 1 );
+                    PopulateButton( r3, false, 102, "&no", colors.button.bg, colors.button.fg );
+                }
+        };
+        
         virtual bool on_select( Dlg &dlg, void * data, Tui_Dlg_Event &dev )
         {
             switch ( dev.get_widget_id() )
@@ -896,15 +897,19 @@ class question_ctrl : public Dlg_Runner
             }
             return true;
         }
-        
+
+    public :
+        question_ctrl( Dlg &dlg ) : Dlg_Runner( dlg, NULL ), answer( false ) { dlg.SetFocus( 101 ); }
+
         static bool question( Dlg &parent, const std::string &msg, Tui_Rect r,
                               msg_colors colors = dflt_msg_colors() )
         {
+            KTUI_color c = parent.GetDlgBg();
             parent.center( r );
             question_view view( parent, r, msg, colors );
             question_ctrl ctrl( view );
             ctrl.run();
-            parent.Draw();
+            parent.SetDlgBg( c );
             return ctrl . answer;
         }
         
@@ -916,32 +921,30 @@ class question_ctrl : public Dlg_Runner
 };
 
 /* ==== input sub-dialog =================================================================== */
-class input_view : public Dlg
-{
-    public :
-        input_view( Dlg &parent, Tui_Rect r,
-                    const std::string &caption, const std::string &txt,
-                    uint32_t txt_len, input_colors &colors ) : Dlg( parent, r )
-        {
-            Tui_Rect r1( 1, 1, r.get_w() - 2, 1 );
-            PopulateLabel( r1, false, 100, caption.c_str(), colors.label.bg, colors.label.fg );
-            Tui_Rect r2( 1, 2, r.get_w() - 2, 1 );
-            PopulateInput( r2, false, 101, txt.c_str(), txt_len, colors.input.bg, colors.input.fg );
-            Tui_Rect r3( 1, 4, 10, 1 );
-            PopulateButton( r3, false, 102, "&ok", colors.button.bg, colors.button.fg );
-            Tui_Rect r4( 12, 4, 10, 1 );
-            PopulateButton( r4, false, 103, "&cancel", colors.button.bg, colors.button.fg );
-        }
-};
-
 class input_ctrl : public Dlg_Runner
 {
-    public :
+    private :
         std::string &txt;
         bool ok;
-        
-        input_ctrl( Dlg &dlg, std::string &a_txt ) : Dlg_Runner( dlg, NULL ), txt( a_txt ), ok( false )
-        { dlg.SetFocus( 101 ); }
+
+        class input_view : public Dlg
+        {
+            public :
+                input_view( Dlg &parent, Tui_Rect r,
+                            const std::string &caption, const std::string &txt,
+                            uint32_t txt_len, input_colors &colors ) : Dlg( parent, r )
+                {
+                    SetDlgBg( colors.bg );
+                    Tui_Rect r1( 1, 1, r.get_w() - 2, 1 );
+                    PopulateLabel( r1, false, 100, caption.c_str(), colors.label.bg, colors.label.fg );
+                    Tui_Rect r2( 1, 2, r.get_w() - 2, 1 );
+                    PopulateInput( r2, false, 101, txt.c_str(), txt_len, colors.input.bg, colors.input.fg );
+                    Tui_Rect r3( 1, 4, 12, 1 );
+                    PopulateButton( r3, false, 102, "&ok", colors.button.bg, colors.button.fg );
+                    Tui_Rect r4( 14, 4, 12, 1 );
+                    PopulateButton( r4, false, 103, "&cancel", colors.button.bg, colors.button.fg );
+                }
+        };
 
         virtual bool on_changed( Dlg &dlg, void * data, Tui_Dlg_Event &dev )
         {
@@ -959,15 +962,20 @@ class input_ctrl : public Dlg_Runner
             }
             return true;
         }
-        
+
+    public :
+        input_ctrl( Dlg &dlg, std::string &a_txt ) : Dlg_Runner( dlg, NULL ), txt( a_txt ), ok( false )
+        { dlg.SetFocus( 101 ); }
+
         static bool input( Dlg &parent, const std::string &caption, std::string &txt, uint32_t txt_len,
                            Tui_Rect r, input_colors colors = dflt_input_colors() )
         {
+            KTUI_color c = parent.GetDlgBg();
             parent.center( r );
             input_view view( parent, r, caption, txt, txt_len, colors );
             input_ctrl ctrl( view, txt );
             ctrl.run();
-            parent.Draw();
+            parent.SetDlgBg( c );
             return ctrl . ok;
         }
 
@@ -977,6 +985,73 @@ class input_ctrl : public Dlg_Runner
             return input( parent, caption, txt, txt_len, Tui_Rect( 0, 0, w, 6 ), colors );
         }
 
+};
+
+/* ==== pick path sub-dialog =================================================================== */
+class pick_path_ctrl : public Dlg_Runner
+{
+    private :
+        std::string path;
+        bool ok;
+
+        class pick_path_view : public Dlg
+        {
+            public :
+                pick_path_view( Dlg &parent, Tui_Rect r, const std::string &caption,
+                                const std::string &path, input_colors &colors ) : Dlg( parent, r )
+                {
+                    SetDlgBg( colors.bg );
+                    
+                    Tui_Rect r1( 0, 0, r.get_w(), 1 );
+                    PopulateLabel( r1, false, 100, caption.c_str(), colors.label.bg, colors.label.fg );
+
+                    Tui_Rect r2( 1, 2, r.get_w() - 2, 1 );
+                    PopulateLabel( r2, false, 101, path.c_str(), colors.label.bg, colors.label.fg );
+                    
+                    Tui_Rect r3( 1, 4, r.get_w() - 2, r.get_h() - 7 );
+                    PopulateList( r3, false, 102, colors.label.bg, colors.label.fg );
+                    
+                    Tui_Rect r4( 1, r.get_h() - 2, 12, 1 );
+                    PopulateButton( r4, false, 103, "&ok", colors.button.bg, colors.button.fg );
+                    Tui_Rect r5( 14, r.get_h() - 2, 12, 1 );
+                    PopulateButton( r5, false, 104, "&cancel", colors.button.bg, colors.button.fg );
+                   
+                }
+        };
+
+        virtual bool on_select( Dlg &dlg, void * data, Tui_Dlg_Event &dev )
+        {
+            switch ( dev.get_widget_id() )
+            {
+                case 103 : ok = true; dlg.SetDone( true ); break;
+                case 104 : ok = false; dlg.SetDone( true ); break;
+            }
+            return true;
+        }
+
+    public :
+        pick_path_ctrl( Dlg &dlg, const std::string &a_path ) : Dlg_Runner( dlg, NULL ),
+                path( a_path ), ok( false ) { dlg.SetFocus( 102 ); }
+        
+        static bool pick( Dlg &parent, const std::string &caption, std::string &path,
+                          Tui_Rect r, input_colors colors = dflt_input_colors() )
+        {
+            KTUI_color c = parent.GetDlgBg();
+            pick_path_view view( parent, r, caption, path, colors );
+            pick_path_ctrl ctrl( view, caption );
+            ctrl.run();
+            parent.SetDlgBg( c );
+            if ( ctrl . ok ) path = ctrl.path;
+            return ctrl . ok;
+        }
+
+        static bool pick( Dlg &parent, const std::string &caption, std::string &path,
+                          input_colors colors = dflt_input_colors() )
+        {
+            Tui_Rect r;
+            parent.GetRect( r );
+            return pick( parent, caption, path, r, colors );
+        }
 };
 
 } // namespace tui
