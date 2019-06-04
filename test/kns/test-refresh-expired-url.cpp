@@ -27,10 +27,12 @@
 #include <ktst/unit_test.hpp>
 
 #include <kfg/kfg-priv.h>
-#include <kns/http.h>
+#include <kns/kns-mgr-priv.h>
 #include <kfs/file.h>
+#include <klib/time.h>
 
 #include <cassert>
+#include <sstream>
 
 using namespace std;
 
@@ -43,23 +45,32 @@ TEST_SUITE_WITH_ARGS_HANDLER ( HttpRefreshTestSuite, argsHandler );
 FIXTURE_TEST_CASE( HttpRefreshTestSuite, HttpFixture )
 {
     string url = MakeURL(GetName()).c_str();
-    TestStream::AddResponse("HTTP/1.1 200 OK\r\nAccept-Ranges: bytes\r\nContent-Length: 7\r\n");
-    REQUIRE_RC ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, url . c_str () ) );
+    // Request 7 bytes
+    const size_t dataSize = 7;
+    {
+        ostringstream ostr;
+        ostr << "HTTP/1.1 200 OK\r\nAccept-Ranges: bytes\r\nContent-Length: " << dataSize << "\r\n";
+        TestStream::AddResponse( ostr.str() );
+    }
+    REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, url . c_str (), true ) );
     REQUIRE_NOT_NULL ( m_file ) ;
 
-//    #define NEW_URL "s3://sra-pub-src-1/ERR2888284/K51.bam.1"
-    #define NEW_URL "https://s3.amazonaws.com/yaschenk-test/cSRA/SRR1635253.sra"
+    // simulates a response to HEAD from the "signer" service. Pretend this is the object we need
+    #define NEW_URL "https://sra-download.ncbi.nlm.nih.gov/traces/sra4/SRR/000000/SRR000123"
+    // 65 seconds in the future; the refresh timer will be set to 60 seconds before that
+    char expirationStr[100];
+    KTimeIso8601 ( KTimeStamp () + 65, expirationStr, sizeof expirationStr );
+    string resp = string ( "HTTP/1.1 307 Temporary Redirect\r\n"
+                           "Location: " NEW_URL "\r\n"
+                           "Expires: " ) + expirationStr + "\r\n";
+    TestStream::AddResponse( resp );
+
     char buf[1024];
     size_t num_read;
-    TestStream::AddResponse(    // simulates a response to GET from the "signer" service
-        "HTTP/1.1 307 Temporary Redirect\r\n"
-        "Location: " NEW_URL "\r\n"
-        "Expires: ??????\r\n"   // 65 seconds in the future; the refresh timer will be set to 60 seconds before that
-        NEW_URL,
-        true
-    );
+    REQUIRE_RC( KFileTimedRead ( m_file, 0, buf, sizeof buf, & num_read, NULL ) );
+    REQUIRE_EQ ( dataSize, num_read );
 
-    REQUIRE_RC( KFileTimedRead ( m_file, 0, buf, sizeof buf, &num_read, NULL ) );
+    // make sure expiration time is reflected on the HttpFile object
 }
 
 //////////////////////////////////////////// Main

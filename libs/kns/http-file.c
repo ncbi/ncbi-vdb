@@ -100,8 +100,20 @@ struct KHttpFile
     KLock * lock;
     KClientHttp *http;
 
-    KDataBuffer url_buffer;
     KDataBuffer orig_url_buffer;
+    KDataBuffer url_buffer;
+    KTime url_expiration; /* if temporary_url == true, refresh url_buffer using orig_url_buffer, by this time */
+
+    /* if need_env_token == true: */
+    /* Create http client connected to orig_url_buffer. */
+    /* Call HEAD with a computing environment token attached */
+    /* The response will be a 307 Temp Redirect with Location and Expiry headers */
+    /* Save the Location URL in url_buffer, Expiry in url_expiration. */
+    /* Reopen the connection using url_buffer. */
+    /* Add "promise-to-pay" headers if they are required. */
+    /* In all read functions, if the expiration time will have passed in 1 minute, refresh url_buffer first, */
+    /* using the same procedure (connect to orig_url_buffer/HEAD/307/save URL and expiry) */
+    bool need_env_token;
 
     bool no_cache;
 };
@@ -515,7 +527,7 @@ static KFile_vt_v1 vtKHttpFile =
 
 static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
     const KFile **file, KStream *conn, ver_t vers, bool reliable,
-    const char *url, va_list args )
+    const char *url, bool need_env_token, va_list args )
 {
     rc_t rc;
 
@@ -566,15 +578,21 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                     rc = KClientHttpMakeRequestInt ( http, &req, &block, buf );
                                     if ( rc == 0 )
                                     {
-                                        // do i need the env token? - Ken will communicate
-                                        // if i do, call Mike's fn and add the token to a header (Mike knows which one)
-                                        // maybe pass req to the fn to fill out
-                                        // do the same when reopening the connection with the original URL after expiration
                                         KClientHttpResult *rslt;
-                                        rc = KClientHttpRequestHEAD ( req, & rslt );
-                                        // retrieve expiration time from req if set
-                                        // start a timer to T-1 min
-                                        // still, handle the expiration in read methods
+                                        if ( need_env_token )
+                                        {
+                                            // call Mike's fn and add the token to a header (Mike knows which one)
+                                            // maybe pass req to the fn to fill out
+                                            // do the same when reopening the connection with the original URL after expiration
+                                            rc = KClientHttpRequestHEAD ( req, & rslt );
+                                            // retrieve expiration time Expires header of rslt -> http. if missing, error out
+                                            // save in http -> url_expiration
+                                            // still, handle the expiration in read methods (find out how AWS/GCP signal expiration)
+                                        }
+                                        else
+                                        {
+                                            rc = KClientHttpRequestHEAD ( req, & rslt );
+                                        }
 #if 1
                                         KClientHttpRequestURL ( req, & f -> url_buffer ); /* NB. f -> url_buffer is not valid until this point */
 #else
@@ -643,6 +661,7 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                                         f -> file_size = size;
                                                         f -> http = http;
                                                         f -> no_cache = size >= NO_CACHE_LIMIT;
+                                                        f -> need_env_token = need_env_token;
 
                                                         * file = & f -> dad;
                                                         return 0;
@@ -729,18 +748,18 @@ LIB_EXPORT rc_t CC KNSManagerMakeHttpFile(const KNSManager *self,
     rc_t rc = 0;
     va_list args;
     va_start(args, url);
-    rc = KNSManagerVMakeHttpFileInt ( self, file, conn, vers, false, url, args);
+    rc = KNSManagerVMakeHttpFileInt ( self, file, conn, vers, false, url, false, args);
     va_end(args);
     return rc;
 }
 
 LIB_EXPORT rc_t CC KNSManagerMakeReliableHttpFile(const KNSManager *self,
-    const KFile **file, struct KStream *conn, ver_t vers, const char *url, ...)
+    const KFile **file, struct KStream *conn, ver_t vers, const char *url, bool need_env_token, ...)
 {
     rc_t rc = 0;
     va_list args;
-    va_start(args, url);
-    rc = KNSManagerVMakeHttpFileInt ( self, file, conn, vers, true, url, args);
+    va_start(args, need_env_token);
+    rc = KNSManagerVMakeHttpFileInt ( self, file, conn, vers, true, url, need_env_token, args);
     va_end(args);
     return rc;
 }

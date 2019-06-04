@@ -3695,12 +3695,8 @@ rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, KClientHttp
     {
         /* find expiration time if any */
         String Expiration;
-        CONST_STRING ( & Expiration, "Expiration" );
+        CONST_STRING ( & Expiration, "Expires" );
         exp = ( KHttpHeader* ) BSTreeFind ( & rslt -> hdrs, & Expiration, KHttpHeaderCmp );
-        if ( exp != NULL )
-        {
-            // save the expiration time to self
-        }
     }
 
     /* capture the new URI in loc -> value_storage */
@@ -3716,6 +3712,10 @@ rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, KClientHttp
 
         DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP), ("Redirected from '%s'\n", (const char*) self -> url_buffer . base ) );
         DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP), ("Redirected to '%S'\n", & loc -> value ) );
+        if ( exp != NULL )
+        {
+            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP), ("'To' URL expires at '%S'\n", & exp -> value ) );
+        }
 
         /* pull out uri */
         rc = KDataBufferSub ( &loc -> value_storage, &uri, loc -> name . size, loc -> value . size + 1 );
@@ -3729,7 +3729,7 @@ rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, KClientHttp
 
                 /* close the open http connection and clear out all data except for the manager */
                 KClientHttpClear ( http );
-
+//TODO: transfer expiration to the new rslt?
                 /* clear the previous endpoint */
                 http -> ep_valid = false;
 

@@ -77,23 +77,23 @@ KNS_EXTERN rc_t CC KNSManagerMakeConfig ( struct KNSManager **mgr, struct KConfi
  */
 KNS_EXTERN rc_t CC KNSManagerMakeReliableHttpFile(
     struct KNSManager const *self, struct KFile const **file,
-    struct KStream *conn, ver_t vers, const char *url, ...);
-KNS_EXTERN rc_t CC KNSManagerMakeReliableClientRequest ( 
-    struct KNSManager const *self, struct KClientHttpRequest **req, 
+    struct KStream *conn, ver_t vers, const char *url, bool need_env_token, ...);
+KNS_EXTERN rc_t CC KNSManagerMakeReliableClientRequest (
+    struct KNSManager const *self, struct KClientHttpRequest **req,
     ver_t version, struct KStream *conn, const char *url, ... );
 
 typedef struct {
     const char *url;
-    
+
     const struct KNSManager * kns; /* used to retrieve HttpRetrySpecs */
     uint32_t last_sleep;
     uint32_t total_wait_ms;
     uint32_t max_total_wait_ms;
-    
+
     uint32_t last_status;
-    
-    uint8_t max_retries;    
-    uint8_t retries_count;    
+
+    uint8_t max_retries;
+    uint8_t retries_count;
 } KHttpRetrier;
 
 rc_t KHttpRetrierInit ( KHttpRetrier * self, const char * url, const struct KNSManager * kns );
