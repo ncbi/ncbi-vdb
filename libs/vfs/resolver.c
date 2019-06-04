@@ -2634,8 +2634,8 @@ rc_t VResolverFuseMountedResolve ( const VResolver * self,
     return rc;
 }
 
-static
-rc_t VResolverLocalMagicResolve(const VResolver * self, const VPath ** path)
+static rc_t VResolverLocalMagicResolve(
+    const VResolver * self, const VPath ** path)
 {
     rc_t rc = 0;
 
