@@ -111,7 +111,7 @@ FIXTURE_TEST_CASE ( SRR1008846, Fixture ) {
 
     char buffer [ 9 ];
     REQUIRE_RC ( VPathReadScheme ( _remote, buffer, sizeof buffer, NULL ) );
-    REQUIRE_EQ ( string ( buffer ), string ( "fasp" ) );
+    REQUIRE_EQ ( string ( buffer ), string ( "https" /* TODO: find fasp run "fasp"*/ ) );
 }
 
 FIXTURE_TEST_CASE ( SRR100884612, Fixture ) {
@@ -123,7 +123,7 @@ FIXTURE_TEST_CASE ( SRR100884612, Fixture ) {
 
     char buffer [ 9 ];
     REQUIRE_RC ( VPathReadScheme ( _remote, buffer, sizeof buffer, NULL ) );
-    REQUIRE_EQ ( string ( buffer ), string ( "fasp" ) );
+    REQUIRE_EQ ( string ( buffer ), string ( "https" /* TODO: find fasp run "fasp"*/ ) );
 }
 
 FIXTURE_TEST_CASE ( AAAA09, Fixture ) {
