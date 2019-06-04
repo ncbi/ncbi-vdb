@@ -1,3 +1,6 @@
+/* TODO: move them to interfaces/klib/strings.h */
+#define MAGIC_LOCAL "VDB_LOCAL_URL"
+
 /*===========================================================================
  *
  *                            PUBLIC DOMAIN NOTICE
@@ -2631,6 +2634,45 @@ rc_t VResolverFuseMountedResolve ( const VResolver * self,
     return rc;
 }
 
+static
+rc_t VResolverLocalMagicResolve(const VResolver * self, const VPath ** path)
+{
+    rc_t rc = 0;
+
+    KPathType kpt = kptNotFound;
+
+    const char * magic = getenv(MAGIC_LOCAL);
+    if (magic == NULL) {
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("Local magic not set\n"));
+        return 0;
+    }
+
+    /* variable set to empty: VResilverQuery returns not found */
+    if (magic[0] == '\0') {
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("Local magic empty\n"));
+        return RC(rcVFS, rcResolver, rcResolving, rcName, rcNotFound);
+    }
+
+    assert(self->wd);
+    kpt = KDirectoryPathType(self->wd, magic) & ~kptAlias;
+    if (kpt != kptFile && kpt != kptDir) {
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+            "Local magic '%s' not found\n", magic));
+        return RC(rcVFS, rcResolver, rcResolving, rcName, rcNotFound);
+    }
+
+    rc = LegacyVPathMakeFmt((VPath**)path, "%s", magic);
+
+    if (rc == 0)
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+            "Local magic '%s' found\n", magic));
+    else
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+            "Local magic '%s' cannot be converted to VPath: %R\n", magic, rc));
+
+    return rc;
+}
+
 /* LocalResolve
  *  resolve an accession into a VPath or not found
  *
@@ -2642,19 +2684,28 @@ static
 rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
     const VPath ** path, bool refseq_ctx, const char * dir )
 {
+    rc_t rc = 0;
+
     uint32_t i, count;
 
     VResolverAccToken tok;
     bool legacy_wgs_refseq = false;
+
     VResolverAppID app;
 
     bool resolveAllAccToCache = true;
     if ( dir != NULL )
         resolveAllAccToCache = false;
 
+    assert(path);
+
     if ( VResolverFuseMountedResolve ( self, accession, path ) == 0 ) {
         return 0;
     }
+
+    rc = VResolverLocalMagicResolve(self, path);
+    if (rc != 0 || *path != NULL)
+        return rc;
 
     app = get_accession_app ( accession, refseq_ctx, & tok,
                               & legacy_wgs_refseq, resolveAllAccToCache, NULL );
