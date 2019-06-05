@@ -293,7 +293,10 @@ VFS_EXTERN rc_t CC VPathGetId ( const VPath * self, struct String * str );
 VFS_EXTERN rc_t CC VPathGetTicket ( const VPath * self, struct String * str );
 
 /* s3, gs, sra-ncbi, ftp-ncbi, sra-sos, etc. */
-VFS_EXTERN rc_t CC VPathGetService ( const VPath * self, struct String * str );
+VFS_EXTERN rc_t CC VPathGetService(const VPath * self, struct String * str);
+
+VFS_EXTERN rc_t CC VPathGetCeRequired ( const VPath * self, bool * required );
+VFS_EXTERN rc_t CC VPathGetPayRequired ( const VPath * self, bool * required );
 
 VFS_EXTERN KTime_t CC VPathGetModDate ( const VPath * self );
 VFS_EXTERN uint64_t CC VPathGetSize ( const VPath * self );
