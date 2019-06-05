@@ -123,6 +123,8 @@ struct VPath
 
     String     service;      /* s3, gs, sra-ncbi, ftp-ncbi, sra-sos, etc. */
     String     objectType;
+    bool       ceRequired;
+    bool       payRequired;
 };
 
 enum VPathVariant
@@ -190,7 +192,8 @@ VPUri_t VPathGetUri_t (const VPath * self);
 rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
     const String * tick, bool ext, const String * id, uint64_t osize,
     KTime_t date, const uint8_t md5 [ 16 ], KTime_t exp_date,
-    const char * service, const char * objectType );
+    const char * service, const String * objectType,
+    bool ceRequired, bool payRequired );
 
 /* Equal
  *  compares two VPath-s

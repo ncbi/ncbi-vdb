@@ -67,7 +67,9 @@ typedef struct Data {
     int64_t      mod;  /* modDate */
 
     const char * name;
+    const char * object;
     const char * objectType;
+    EState       payRequired;
     int64_t      id;   /* oldCartObjId */
     const char * reg;  /* region */
     const char * sha;  /* sha256 */

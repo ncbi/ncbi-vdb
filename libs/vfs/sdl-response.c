@@ -153,6 +153,7 @@ static rc_t DataUpdate(const Data * self,
     name = "bundle";
     StrSet(&next->acc, KJsonObjectGetMember(node, name), name);
     StrSet(&next->bundle, KJsonObjectGetMember(node, name), name);
+    StrSet(&next->name, KJsonObjectGetMember(node, name), name);
 
     name = "ceRequired";
     BulSet(&next->ceRequired, KJsonObjectGetMember(node, name), name);
@@ -160,26 +161,29 @@ static rc_t DataUpdate(const Data * self,
     name = "link";
     StrSet(&next->link, KJsonObjectGetMember(node, name), name);
 
-    name = "bundle";
-    StrSet(&next->name, KJsonObjectGetMember(node, name), name);
-
-    name = "region";
-    StrSet(&next->reg, KJsonObjectGetMember(node, name), name);
-
-    name = "size";
-    IntSet(&next->sz, KJsonObjectGetMember(node, name), name);
-
-    name = "service";
-    StrSet(&next->srv, KJsonObjectGetMember(node, name), name);
-
-    name = "type";
-    StrSet(&next->type, KJsonObjectGetMember(node, name), name);
-
     name = "md5";
     StrSet(&next->md5, KJsonObjectGetMember(node, name), name);
 
     name = "modificationDate";
     StrSet(&next->modificationDate, KJsonObjectGetMember(node, name), name);
+
+    name = "object";
+    StrSet(&next->object, KJsonObjectGetMember(node, name), name);
+
+    name = "region";
+    StrSet(&next->reg, KJsonObjectGetMember(node, name), name);
+
+    name = "payRequired";
+    BulSet(&next->payRequired, KJsonObjectGetMember(node, name), name);
+
+    name = "service";
+    StrSet(&next->srv, KJsonObjectGetMember(node, name), name);
+
+    name = "size";
+    IntSet(&next->sz, KJsonObjectGetMember(node, name), name);
+
+    name = "type";
+    StrSet(&next->type, KJsonObjectGetMember(node, name), name);
 
     return 0;
 }
@@ -215,6 +219,9 @@ rc_t ItemAddElmsSdl(Item * self, const KJsonObject * node, const Data * dad)
         DataUpdate(&data, &ldata, node);
 
         if (ldata.link != NULL) {
+            bool ceRequired = false;
+            bool payRequired = false;
+
             int64_t mod = 0;  /* modDate */
 
             bool    hasMd5 = false;
@@ -223,11 +230,14 @@ rc_t ItemAddElmsSdl(Item * self, const KJsonObject * node, const Data * dad)
             VPath * path = NULL;
 
             String id;
+            String objectType;
 
             String url;
             StringInitCString(&url, ldata.link);
 
             StringInitCString(&id, ldata.acc);
+
+            memset(&objectType, 0, sizeof objectType);
 
             if (ldata.md5 != NULL) {
                 int i = 0;
@@ -259,8 +269,25 @@ rc_t ItemAddElmsSdl(Item * self, const KJsonObject * node, const Data * dad)
                     mod = KTimeMakeTime(&modT);
             }
 
+            if (ldata.object != NULL) {
+                size_t size = 0;
+                uint32_t len = 0;
+                const char * c = strchr(ldata.object, '|');
+                if (c != NULL)
+                    size = len = c - data.object;
+                else
+                    size = len = strlen(data.object);
+                StringInit(&objectType, ldata.object, size, len);
+            }
+
+            if (ldata.ceRequired == eTrue)
+                ceRequired = true;
+            if (ldata.payRequired == eTrue)
+                payRequired = true;
+
             rc = VPathMakeFromUrl(&path, &url, NULL, true, &id, ldata.sz,
-                mod, hasMd5 ? md5 : NULL, 0, ldata.srv, NULL);
+                mod, hasMd5 ? md5 : NULL, 0, ldata.srv, &objectType,
+                ceRequired, payRequired);
 
             if (rc == 0)
                 VPathMarkHighReliability(path, true);
