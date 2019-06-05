@@ -1,5 +1,7 @@
 /* TODO: move them to interfaces/klib/strings.h */
-#define MAGIC_LOCAL "VDB_LOCAL_URL"
+#define MAGIC_CACHE  "VDB_CACHE_URL"
+#define MAGIC_LOCAL  "VDB_LOCAL_URL"
+#define MAGIC_REMOTE "VDB_REMOTE_URL"
 
 /*===========================================================================
  *
@@ -2634,43 +2636,138 @@ rc_t VResolverFuseMountedResolve ( const VResolver * self,
     return rc;
 }
 
-static rc_t VResolverLocalMagicResolve(
-    const VResolver * self, const VPath ** path)
+typedef enum {
+    eCheckExistFalse,
+    eCheckExistTrue,
+} ECheckExist;
+
+typedef enum {
+    eCheckFilePathFalse,
+    eCheckFilePathTrue,
+} ECheckFilePath;
+
+typedef enum {
+    eCheckUrlFalse,
+    eCheckUrlTrue,
+} ECheckUrl;
+
+static rc_t VResolverMagicResolve(const VResolver * self,
+    const VPath ** path, VResolverAppID app, const char * name,
+    ECheckExist checkExist,
+    ECheckFilePath checkPath,
+    ECheckUrl checkUrl)
 {
     rc_t rc = 0;
 
     KPathType kpt = kptNotFound;
 
-    const char * magic = getenv(MAGIC_LOCAL);
+    /* resolver is not confused by shell variables
+        when retrieving reference objects */
+    if (app == appREFSEQ) {
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+            ("'%s' magic ignored for refseq", name));
+        return 0;
+    }
+
+    const char * magic = getenv(name);
     if (magic == NULL) {
-        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("Local magic not set\n"));
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("'%s' magic not set\n", name));
         return 0;
     }
 
     /* variable set to empty: VResilverQuery returns not found */
     if (magic[0] == '\0') {
-        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("Local magic empty\n"));
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("'%s' magic empty\n", name));
         return RC(rcVFS, rcResolver, rcResolving, rcName, rcNotFound);
     }
 
-    assert(self->wd);
-    kpt = KDirectoryPathType(self->wd, magic) & ~kptAlias;
-    if (kpt != kptFile && kpt != kptDir) {
-        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-            "Local magic '%s' not found\n", magic));
-        return RC(rcVFS, rcResolver, rcResolving, rcName, rcNotFound);
+    if (checkExist == eCheckExistTrue) {
+        assert(self->wd);
+        kpt = KDirectoryPathType(self->wd, magic) & ~kptAlias;
+        if (kpt != kptFile && kpt != kptDir) {
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                "'%s' magic '%s' not found\n", name, magic));
+            return RC(rcVFS, rcResolver, rcResolving, rcName, rcNotFound);
+        }
     }
 
     rc = LegacyVPathMakeFmt((VPath**)path, "%s", magic);
 
-    if (rc == 0)
-        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-            "Local magic '%s' found\n", magic));
+    if (rc == 0) {
+        assert(path);
+
+        assert(checkPath == eCheckFilePathTrue || checkUrl == eCheckUrlTrue);
+
+        if (checkPath == eCheckFilePathTrue) {
+            if ((*path)->from_uri)
+            {
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                    "'%s' magic '%s' is URL\n", name, magic));
+                rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcInvalid);
+            }
+            else if ((*path)->path_type != vpFullPath
+                  && (*path)->path_type != vpRelPath
+                  && (*path)->path_type != vpUNCPath)
+            {
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                    "'%s' magic '%s' is not path\n", name, magic));
+                rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcInvalid);
+            }
+        }
+
+        if (checkUrl == eCheckUrlTrue) {
+            if (!(*path)->from_uri)
+            {
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                    "'%s' magic '%s' is not URL\n", name, magic));
+                rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcInvalid);
+            }
+            else if ((*path)->scheme_type != vpuri_http
+                  && (*path)->scheme_type != vpuri_https)
+            {
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                    "'%s' magic '%s' is not HTTP[S] URL\n", name, magic));
+                rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcInvalid);
+            }
+        }
+
+        if (rc != 0) {
+            VPathRelease(*path);
+            *path = NULL;
+            return rc;
+        }
+        else
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                "'%s' magic '%s' found\n", name, magic));
+    }
+
     else
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-            "Local magic '%s' cannot be converted to VPath: %R\n", magic, rc));
+            "'%s' magic '%s' cannot be converted to VPath: %R\n",
+            name, magic, rc));
 
     return rc;
+}
+
+static rc_t VResolverCacheMagicResolve(
+    const VResolver * self, const VPath ** path, VResolverAppID app)
+{
+    return VResolverMagicResolve(self, path, app,
+        MAGIC_CACHE, eCheckExistFalse, eCheckFilePathTrue, eCheckUrlFalse);
+}
+
+static rc_t VResolverLocalMagicResolve(
+    const VResolver * self, const VPath ** path, VResolverAppID app)
+{
+    return VResolverMagicResolve(self, path, app,
+        MAGIC_LOCAL, eCheckExistTrue, eCheckFilePathTrue, eCheckUrlFalse);
+}
+
+static rc_t VResolverRemoteMagicResolve(
+    const VResolver * self, const VPath ** path, VResolverAppID app)
+{
+    return VResolverMagicResolve(self, path, app,
+        MAGIC_REMOTE, eCheckExistFalse, eCheckFilePathFalse, eCheckUrlTrue);
 }
 
 /* LocalResolve
@@ -2703,12 +2800,12 @@ rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
         return 0;
     }
 
-    rc = VResolverLocalMagicResolve(self, path);
-    if (rc != 0 || *path != NULL)
-        return rc;
-
     app = get_accession_app ( accession, refseq_ctx, & tok,
                               & legacy_wgs_refseq, resolveAllAccToCache, NULL );
+
+    rc = VResolverLocalMagicResolve(self, path, app);
+    if (rc != 0 || *path != NULL)
+        return rc;
 
     /* check AD */
     count = VectorLength ( & self -> ad );
@@ -2989,6 +3086,10 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
         VResolverAccTokenInitFromOID ( & tok, accession );
     }
 
+    rc = VResolverRemoteMagicResolve(self, path, app);
+    if (rc != 0 || *path != NULL)
+        return rc;
+
     assert(self);
 
     /* search all remote volumes by app and accession algorithm expansion */
@@ -3215,6 +3316,10 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
     VResolverEnableState cache_state = atomic32_read ( & enable_cache );
 
     bool ad = false;
+
+    rc = VResolverCacheMagicResolve(self, cache, app);
+    if (rc != 0 || *cache != NULL)
+        return rc;
 
     if ( dir != NULL )
         forDirAdjusted = true;
