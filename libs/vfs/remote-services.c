@@ -375,7 +375,8 @@ static rc_t SHelperInit ( SHelper * self, const KNSManager * kMgr ) {
 
     memset ( self, 0, sizeof * self );
 
-    self -> inSz = 512;
+    /* buffer for names service responses */
+    self -> inSz = 1024;
     self -> input = (char *) malloc ( self -> inSz );
 
     if ( self -> input == NULL )
@@ -1630,7 +1631,7 @@ static bool VPathMakeOrNot ( VPath ** new_path, const String * src,
             typed -> osize,
             useDates ? typed -> date : 0,
             typed -> md5 . has_md5 ? typed -> md5 . md5 : NULL,
-            useDates ? typed -> expiration : 0, NULL );
+            useDates ? typed -> expiration : 0, NULL, NULL );
         if ( * rc == 0 )
             VPathMarkHighReliability ( * new_path, true );
 
@@ -3612,8 +3613,8 @@ rc_t KServiceProcessStreamAll ( KService * self, KStream * stream )
         if ( sizeW == 0 ) {
             size_t inSz = self -> helper . inSz;
             void * tmp = NULL;
-            if ( self -> helper . inSz == 0 )
-                self -> helper . inSz  = 512;
+            if ( self -> helper . inSz == 0 )  /* buffer for names service */
+                self -> helper . inSz  = 1024; /*                 response */
             else
                 self -> helper . inSz *= 2;
             if ( self -> helper . input == NULL )

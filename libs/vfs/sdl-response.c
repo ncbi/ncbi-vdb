@@ -152,6 +152,7 @@ static rc_t DataUpdate(const Data * self,
 
     name = "bundle";
     StrSet(&next->acc, KJsonObjectGetMember(node, name), name);
+    StrSet(&next->bundle, KJsonObjectGetMember(node, name), name);
 
     name = "ceRequired";
     BulSet(&next->ceRequired, KJsonObjectGetMember(node, name), name);
@@ -259,7 +260,7 @@ rc_t ItemAddElmsSdl(Item * self, const KJsonObject * node, const Data * dad)
             }
 
             rc = VPathMakeFromUrl(&path, &url, NULL, true, &id, ldata.sz,
-                mod, hasMd5 ? md5 : NULL, 0, ldata.srv);
+                mod, hasMd5 ? md5 : NULL, 0, ldata.srv, NULL);
 
             if (rc == 0)
                 VPathMarkHighReliability(path, true);

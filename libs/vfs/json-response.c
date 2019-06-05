@@ -115,43 +115,6 @@ struct Response4 { /* Response object */
     uint32_t nItems;
     rc_t rc;
 };
-#if 0
-typedef enum {
-    eUnknown,
-    eFalse,
-    eTrue
-} EState;
-
-typedef struct Data {
-    const char * acc;
-    const char * bundle;
-    int64_t      code; /* status/code */
-    EState       ceRequired;
-    int64_t      exp;  /* expDate */
-    const char * fmt;  /* format */
-    EState       qual; /* hasOrigQuality */
-    const char * cls;  /* itemClass */
-    const char * link; /* ??????????????????????????????????????????????????? */
-
-    bool         hasMd5;
-    const char * md5;
-    uint8_t      md5i[16];
-
-    const char * modificationDate;
-    KTime        modT; /* modificationDate */
-    int64_t      mod;  /* modDate */
-
-    const char * name;
-    int64_t      id;   /* oldCartObjId */
-    const char * reg;  /* region */
-    const char * sha;  /* sha256 */
-    const char * srv;  /* service */
-    const char * tic;
-    int64_t      sz;   /* size */
-    const char * type;
-    const char * vsblt;
-} Data;
-#endif
 
 struct KSrvRespObj {
     atomic32_t refcount;
@@ -1338,6 +1301,7 @@ static void DataClone ( const Data * self, Data * clone ) {
     clone -> reg  = self -> reg; /* region */
     clone -> link = self -> link; /* ???????????????????????????????????????? */
     clone -> tic  = self -> tic;
+    clone ->objectType = self ->objectType;
 
     clone -> code = self -> code;
 }
@@ -1386,6 +1350,9 @@ static rc_t DataUpdate ( const Data * self, Data * next,
 
     name = "region";
     StrSet ( & next -> reg  , KJsonObjectGetMember ( node, name ), name, path );
+
+    name = "objectType";
+    StrSet(&next->objectType, KJsonObjectGetMember(node, name), name, path);
 
     name = "service";
     StrSet ( & next -> srv  , KJsonObjectGetMember ( node, name ), name, path );
@@ -1469,13 +1436,13 @@ static rc_t LocationsAddLink ( Locations * self, const KJsonValue * node,
 
     if ( dad -> tic == NULL ) {
         rc = VPathMakeFromUrl ( & path, & url, NULL, true, & acc, dad -> sz,
-                                dad -> mod, hasMd5 ? md5 : NULL, 0, dad ->srv );
+            dad -> mod, hasMd5 ? md5 : NULL, 0, dad -> srv, dad -> objectType );
     }
     else {
         String ticket;
         StringInitCString ( & ticket, dad -> tic );
         rc = VPathMakeFromUrl ( & path, & url, & ticket, true, & acc, dad -> sz,
-                                dad -> mod, hasMd5 ? md5 : NULL, 0, dad->srv);
+            dad -> mod, hasMd5 ? md5 : NULL, 0, dad -> srv, dad -> objectType );
     }
     if ( rc == 0 )
         VPathMarkHighReliability ( path, true );
