@@ -191,6 +191,7 @@ LIB_EXPORT rc_t CC KQueueMake ( KQueue **qp, uint32_t capacity )
  *  structure. if the queue is full, wait for indicated period
  *  of time for space to become available, or return status
  *  code indicating a timeout. when NULL and queue is full,
+ *  Push will wait indefinitely. When not-NULL and value is 0,
  *  Push will time out immediately and return status code.
  */
 LIB_EXPORT rc_t CC KQueuePush ( KQueue *self, const void *item, timeout_t *tm )
@@ -286,6 +287,7 @@ LIB_EXPORT rc_t CC KQueuePush ( KQueue *self, const void *item, timeout_t *tm )
  *  structure. if the queue is empty, wait for indicated period
  *  of time for an object to become available, or return status
  *  code indicating a timeout. when NULL and queue is empty,
+ *  Pop will wait indefinitely. When not-NULL and value is 0,
  *  Pop will time out immediately and return status code.
  */
 LIB_EXPORT rc_t CC KQueuePop ( KQueue *self, void **item, timeout_t *tm )
@@ -306,8 +308,15 @@ LIB_EXPORT rc_t CC KQueuePop ( KQueue *self, void **item, timeout_t *tm )
             rc = KLockAcquire ( self -> rl );
             if ( rc == 0 )
             {
+                struct timeout_t no_block;
+                if ( atomic32_read ( & self -> sealed ) != 0 )
+                {
+                    TimeoutInit ( & no_block, 0 );
+                    tm = & no_block;
+                }
+                
                 QMSG ( "%s[%p]: waiting on read semaphore...\n", __func__, self );
-                rc = KSemaphoreTimedWait ( self -> rc, self -> rl, ( atomic32_read ( & self -> sealed ) != 0 ) ? NULL : tm );
+                rc = KSemaphoreTimedWait ( self -> rc, self -> rl, tm );
                 QMSG ( "%s[%p]: ...done, rc = %R.\n", __func__, self, rc );
 
                 if ( rc == 0 )

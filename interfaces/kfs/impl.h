@@ -35,6 +35,10 @@
 #include <kfs/file-impl.h>
 #endif
 
+#ifndef _h_klib_chunk_reader_
+#include <kfs/chunk-reader.h>
+#endif
+
 #ifndef _h_kfs_directory_
 #include <kfs/directory.h>
 #endif
@@ -64,12 +68,55 @@ struct KBufFile;
 struct KSysDir_v1;
 struct KSysDir_v2;
 typedef union KDirectory_vt KDirectory_vt;
+typedef union KChunkReader_vt KChunkReader_vt;
 
 #if KDIRECTORY_VERS == 1
 #define KSysDir KSysDir_v1
 #elif KDIRECTORY_VERS == 2
 #define KSysDir KSysDir_v2
 #endif
+
+
+/*--------------------------------------------------------------------------
+ * KChunkReader
+ *  an interface for driving chunked responses from a single read
+ */
+struct KChunkReader
+{
+    const KChunkReader_vt *vt;
+    KRefcount refcount;
+    uint32_t align;
+};
+
+#ifndef KCHUNKREADER_IMPL
+#define KCHUNKREADER_IMPL struct KChunkReader
+#endif
+
+typedef struct KChunkReader_vt_v1 KChunkReader_vt_v1;
+struct KChunkReader_vt_v1
+{
+    /* version == 1.x */
+    uint32_t maj;
+    uint32_t min;
+
+    /* start minor version == 0 */
+    rc_t ( CC * destroy ) ( KCHUNKREADER_IMPL *self );
+    size_t ( CC * buffer_size ) ( const KCHUNKREADER_IMPL * self );
+    rc_t ( CC * next_buffer ) ( KCHUNKREADER_IMPL * self, void ** buf, size_t * size );
+    rc_t ( CC * consume_chunk ) ( KCHUNKREADER_IMPL * self, uint64_t pos, const void * buf, size_t size );
+    rc_t ( CC * return_buffer ) ( KCHUNKREADER_IMPL * self, void * buf, size_t size );
+    /* end minor version == 0 */
+};
+
+union KChunkReader_vt
+{
+    KChunkReader_vt_v1 v1;
+};
+
+/* Init
+ *  initialize a newly allocated chunk-reader object
+ */
+KFS_EXTERN rc_t CC KChunkReaderInit ( KChunkReader * self, const KChunkReader_vt *vt );
 
 
 /*--------------------------------------------------------------------------

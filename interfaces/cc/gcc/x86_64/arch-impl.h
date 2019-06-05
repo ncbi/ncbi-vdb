@@ -51,94 +51,43 @@ extern "C" {
 static __inline__
 int16_t uint16_lsbit ( uint16_t self )
 {
-    int16_t rtn;
-#if USE_GCC_BUILTIN
-    rtn = ( int16_t ) __builtin_ffs ( self ) - 1;
-#else
-    __asm__ __volatile__
-    (
-        "bsf %%ax, %%ax;"
-        "jnz 1f;"
-        "xor %%eax, %%eax;"
-        "dec %%eax;"
-        "1:"
-        : "=a" ( rtn )
-        : "a" ( self )
-    );
-#endif
-    return rtn;
+    return ( int16_t ) __builtin_ffs ( self ) - 1;
 }
 
 static __inline__
 int32_t uint32_lsbit ( uint32_t self )
 {
-    int32_t rtn;
-#if USE_GCC_BUILTIN
-    rtn = __builtin_ffs ( self ) - 1;
-#else
-    __asm__ __volatile__
-    (
-        "bsf %%eax, %%eax;"
-        "jnz 1f;"
-        "xor %%eax, %%eax;"
-        "dec %%eax;"
-        "1:"
-        : "=a" ( rtn )
-        : "a" ( self )
-    );
-#endif
-    return rtn;
+    return __builtin_ffs ( self ) - 1;
+}
+
+static __inline__
+int32_t uint64_lsbit ( uint64_t self )
+{
+    return __builtin_ffsll ( self ) - 1;
 }
 
 static __inline__
 int16_t uint16_msbit ( uint16_t self )
 {
-    int16_t rtn;
-#if USE_GCC_BUILTIN
-    if ( self == 0 ) return -1;
-    rtn = ( int16_t ) 31 - __builtin_clz ( ( uint32_t ) self );
-#else
-    __asm__ __volatile__
-    (
-        "bsr %%ax, %%ax;"
-        "jnz 1f;"
-        "xor %%eax, %%eax;"
-        "dec %%eax;"
-        "1:"
-        : "=a" ( rtn )
-        : "a" ( self )
-    );
-#endif
-    return rtn;
+    if ( self != 0 )
+        return ( int16_t ) 31 - __builtin_clz ( ( uint32_t ) self );
+    return -1;
 }
 
 static __inline__
 int32_t uint32_msbit ( uint32_t self )
 {
-    int32_t rtn;
-#if USE_GCC_BUILTIN
-    if ( self == 0 ) return -1;
-    rtn = 31 - __builtin_clz ( self );
-#else
-    __asm__ __volatile__
-    (
-        "bsr %%eax, %%eax;"
-        "jnz 1f;"
-        "xor %%eax, %%eax;"
-        "dec %%eax;"
-        "1:"
-        : "=a" ( rtn )
-        : "a" ( self )
-    );
-#endif
-    return rtn;
+    if ( self != 0 )
+        return 31 - __builtin_clz ( self );
+    return -1;
 }
 
 static __inline__
 int32_t uint64_msbit ( uint64_t self )
 {
-    if (self==0) return -1;
-    return 63 - __builtin_clzll ( self );
+    if ( self != 0 )
+        return 63 - __builtin_clzll ( self );
+    return -1;
 }
 
 typedef struct int128_t int128_t;

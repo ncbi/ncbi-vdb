@@ -48,6 +48,7 @@ extern "C" {
  * forwards
  */
 struct timeout_t;
+struct KChunkReader;
 
 
 /*--------------------------------------------------------------------------
@@ -170,6 +171,18 @@ KFS_EXTERN rc_t CC KFileReadExactly_v1 ( const KFile_v1 *self,
     uint64_t pos, void *buffer, size_t bytes );
 KFS_EXTERN rc_t CC KFileTimedReadExactly_v1 ( const KFile_v1 *self,
     uint64_t pos, void *buffer, size_t bytes, struct timeout_t *tm );
+
+/* ReadChunked
+ * TimedReadChunked
+ *  behaves like Read or TimedRead,
+ *  except that bytes read are delivered via callback message
+ *  there may be multiple such messages, allowing a long
+ *  synchronous read with multiple intermediate delivery.
+ */
+KFS_EXTERN rc_t CC KFileReadChunked_v1 ( const KFile_v1 *self, uint64_t pos,
+    struct KChunkReader * chunks, size_t bytes, size_t * num_read );
+KFS_EXTERN rc_t CC KFileTimedReadChunked_v1 ( const KFile_v1 *self, uint64_t pos,
+    struct KChunkReader * chunks, size_t bytes, size_t * num_read, struct timeout_t *tm );
 
 /* Write
  * TimedWrite
