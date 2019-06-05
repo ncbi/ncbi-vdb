@@ -57,6 +57,7 @@ typedef uint32_t KTUI_Widget_type;
 enum
 {
     KTUIW_label = 0,
+    KTUIW_tabhdr,
     KTUIW_button,
     KTUIW_checkbox,
     KTUIW_input,

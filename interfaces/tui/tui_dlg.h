@@ -231,6 +231,7 @@ TUI_EXTERN uint32_t CC KTUIDlgGetWidgetSelectedString( struct KTUIDlg * self, ui
 TUI_EXTERN rc_t CC KTUIDlgSetWidgetSelectedString ( struct KTUIDlg * self, uint32_t id, uint32_t selection );
 
 TUI_EXTERN rc_t CC KTUIDlgAddLabel( struct KTUIDlg * self, uint32_t id, const tui_rect * r, const char * caption );
+TUI_EXTERN rc_t CC KTUIDlgAddTabHdr( struct KTUIDlg * self, uint32_t id, const tui_rect * r, const char * caption );
 TUI_EXTERN rc_t CC KTUIDlgAddLabel2( struct KTUIDlg * self, uint32_t id, uint32_t x, uint32_t y, uint32_t w,
                                      const char * caption );
 

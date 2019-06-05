@@ -59,6 +59,10 @@ bool event_button( struct KTUIWidget * w, tui_event * event, bool hotkey );
 void draw_checkbox( struct KTUIWidget * w );
 bool event_checkbox( struct KTUIWidget * w, tui_event * event, bool hotkey );
 
+/* from tui_widget_tabhdr.c */
+void draw_tabhdr( struct KTUIWidget * w );
+bool event_tabhdr( struct KTUIWidget * w, tui_event * event, bool hotkey );
+
 /* from tui_widget_inputline.c */
 void init_inputline( struct KTUIWidget * w );
 void draw_inputline( struct KTUIWidget * w );
@@ -628,6 +632,13 @@ LIB_EXPORT rc_t CC KTUIDlgAddLabel( struct KTUIDlg * self, uint32_t id, const tu
     return rc;
 }
 
+LIB_EXPORT rc_t CC KTUIDlgAddTabHdr( struct KTUIDlg * self, uint32_t id, const tui_rect * r, const char * caption )
+{
+    rc_t rc = KTUIDlgAddWidget( self, id, KTUIW_tabhdr, r, draw_tabhdr, event_tabhdr, NULL );
+    if ( rc == 0 && caption != NULL )
+        rc = KTUIDlgSetWidgetCaption ( self, id, caption );
+    return rc;
+}
 
 LIB_EXPORT rc_t CC KTUIDlgAddLabel2( struct KTUIDlg * self, uint32_t id,
                                      uint32_t x, uint32_t y, uint32_t w, const char * caption )

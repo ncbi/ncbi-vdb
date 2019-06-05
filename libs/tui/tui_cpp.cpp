@@ -194,6 +194,23 @@ namespace tui {
         }
     }
 
+    void Dlg::PopulateTabHdr( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
+            KTUI_color bg, KTUI_color fg, uint32_t page_id )
+    {
+        if ( resize )
+            SetWidgetRect( id, r, false );
+        else
+        {
+            if ( HasWidget( id ) )
+                SetWidgetCaption( id, ( txt == NULL ) ? "" : txt );
+            else
+            {
+                AddTabHdr( id, r, ( txt == NULL ) ? "" : txt );
+                Populate_common( id, bg, fg, page_id );
+            }
+        }
+    }
+
     void Dlg::PopulateButton( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
             KTUI_color bg, KTUI_color fg, uint32_t page_id )
     {

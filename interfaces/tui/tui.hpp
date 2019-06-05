@@ -444,6 +444,7 @@ class Dlg
         bool SetWidgetSelectedString( tui_id id, tui_id idx ) { return ( KTUIDlgSetWidgetSelectedString ( dlg_, id, idx ) == 0 ); };
 
         bool AddLabel( tui_id id, Tui_Rect const &r, const char * s ) { return ( KTUIDlgAddLabel( dlg_, id, &( r.r_ ), s ) == 0 ); };
+        bool AddTabHdr( tui_id id, Tui_Rect const &r, const char * s ) { return ( KTUIDlgAddTabHdr( dlg_, id, &( r.r_ ), s ) == 0 ); };        
         bool AddButton( tui_id id, Tui_Rect const &r, const char * s ) { return ( KTUIDlgAddBtn ( dlg_, id, &( r.r_ ), s ) == 0 ); };
 
         bool AddCheckBox( tui_id id, Tui_Rect const &r, const char * s, bool enabled )
@@ -463,6 +464,8 @@ class Dlg
 
         void Populate_common( uint32_t id, KTUI_color bg, KTUI_color fg, uint32_t page_id );
         void PopulateLabel( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
+                            KTUI_color bg, KTUI_color fg, uint32_t page_id = 0 );
+        void PopulateTabHdr( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
                             KTUI_color bg, KTUI_color fg, uint32_t page_id = 0 );
         void PopulateButton( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
                             KTUI_color bg, KTUI_color fg, uint32_t page_id = 0 );
