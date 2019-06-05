@@ -3356,6 +3356,49 @@ LIB_EXPORT rc_t CC VPathGetService ( const VPath * self, String * str )
     return rc;
 }
 
+LIB_EXPORT rc_t CC VPathGetCeRequired(const VPath * self, bool * required)
+{
+    rc_t rc;
+
+    if (required == NULL )
+        rc = RC ( rcVFS, rcPath, rcAccessing, rcParam, rcNull );
+    else
+    {
+        rc = VPathGetTestSelf ( self );
+        if ( rc == 0 )
+        {
+            * required = self -> ceRequired;
+            return 0;
+        }
+
+        * required = false;
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC VPathGetPayRequired(const VPath * self, bool * required)
+{
+    rc_t rc;
+
+    if (required == NULL )
+        rc = RC ( rcVFS, rcPath, rcAccessing, rcParam, rcNull );
+    else
+    {
+        rc = VPathGetTestSelf ( self );
+        if ( rc == 0 )
+        {
+            * required = self -> payRequired;
+            return 0;
+        }
+
+        * required = false;
+    }
+
+    return rc;
+}
+
+
 LIB_EXPORT KTime_t CC VPathGetModDate ( const VPath * self  )
 {
     if ( self != NULL )
