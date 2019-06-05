@@ -129,7 +129,8 @@ TEST_CASE(test_sra) {
     const string newShort
      ("https://sra-download-internal.ncbi.nlm.nih.gov/traces/sra27/SRR/000000/SRR000001");
     const string newLong
-    ("https://sra-download-internal.ncbi.nlm.nih.gov/traces/sra14/SRR/000976/SRR1000254");
+("https://sra-download-internal.ncbi.nlm.nih.gov/sos/sra-pub-run-2/SRR1000254/SRR1000254.1");
+//  ("https://sra-download-internal.ncbi.nlm.nih.gov/traces/sra14/SRR/000976/SRR1000254");
     const string oldShort("https://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/"
                 "reads/ByRun/sra/SRR/SRR000/SRR000001/SRR000001.sra");
 

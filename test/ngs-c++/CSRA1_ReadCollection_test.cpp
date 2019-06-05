@@ -56,7 +56,7 @@ TEST_CASE (CSRA1_ReadCollection_GetName)
 {
     ngs::String name1, name2;
     {
-        ngs::ReadCollection run = ncbi::NGS::openReadCollection ("./SRR611340");
+        ngs::ReadCollection run = ncbi::NGS::openReadCollection ("data/SRR611340");
         name1 = run.getName();
         char const* pNoSlash = string_rchr( name1.c_str(), name1.length(), '/' );
         REQUIRE ( pNoSlash == NULL );

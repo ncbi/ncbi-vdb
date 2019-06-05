@@ -2876,17 +2876,17 @@ LIB_EXPORT rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
                         rc = KKeyStoreMake ( & obj -> keystore, obj -> cfg );
                         if ( rc == 0 )
                         {
-                            rc = VFSManagerMakeResolver ( obj, & obj -> resolver, obj -> cfg );
-                            if ( rc != 0 )
-                            {
-                                LOGERR ( klogWarn, rc, "could not build vfs-resolver" );
-                                rc = 0;
-                            }
-
                             rc = KNSManagerMake ( & obj -> kns );
                             if ( rc != 0 )
                             {
                                 LOGERR ( klogWarn, rc, "could not build network manager" );
+                                rc = 0;
+                            }
+
+                            rc = VFSManagerMakeResolver ( obj, & obj -> resolver, obj -> cfg );
+                            if ( rc != 0 )
+                            {
+                                LOGERR ( klogWarn, rc, "could not build vfs-resolver" );
                                 rc = 0;
                             }
 
@@ -4018,4 +4018,10 @@ LIB_EXPORT rc_t CC VFSManagerDeleteCacheOlderThan ( const VFSManager * self,
         }
     }
     return rc;
+}
+
+LIB_EXPORT rc_t CC VFSManagerSetAdCaching(VFSManager * self, bool enabled) {
+    if (self != NULL)
+        return KNSManagerSetAdCaching(self->kns, enabled);
+    return 0;
 }

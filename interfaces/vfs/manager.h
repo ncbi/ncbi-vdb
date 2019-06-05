@@ -318,7 +318,11 @@ VFS_EXTERN rc_t CC VFSManagerGetObjectId(const struct VFSManager* self, const st
  */
 VFS_EXTERN rc_t CC VFSManagerGetObject(const struct VFSManager* self, uint32_t oid, struct VPath** obj);
 
-
+/* SetAdCaching
+ *  Enable Caching to Accession as Directory in cwd
+ */
+VFS_EXTERN
+rc_t CC VFSManagerSetAdCaching(struct VFSManager* self, bool enabled);
                                                   
 #ifdef __cplusplus
 }

@@ -48,6 +48,10 @@ struct Locations;
 struct Response4;
 struct VPathSet;
 
+#define VERSION_3_0 0x03000000
+#define VERSION_4_0 0x04000000
+
+ver_t InitVersion(const char * src);
 
 /* make name service call : request: 1 object, response: 1 object */
 VFS_EXTERN

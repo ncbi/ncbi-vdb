@@ -3184,6 +3184,34 @@ static rc_t _KConfigUseTraceCgi(KConfig * self, bool * updated) {
         "/repository_remote/CGI/resolver-cgi/trace");
 }
 
+/* create Accession as Directory repository when it does not exist */
+static rc_t _KConfigCheckAd(KConfig * self) {
+    const KConfigNode * kfg = NULL;
+    rc_t rc = KConfigOpenNodeRead(self, &kfg, "/repository/user/ad");
+    if (rc != 0) {
+        /* create Accession as Directory repository
+           when it does not exist */
+        rc = KConfigWriteString(self,
+            "/repository/user/ad/public/apps/file/volumes/flat", ".");
+        if (rc == 0)
+            rc = KConfigWriteString(self,
+                "/repository/user/ad/public/apps/sra/volumes/sraAd", ".");
+        if (rc == 0)
+            rc = KConfigWriteString(self,
+                "/repository/user/ad/public/apps/sraPileup/volumes/sraAd", ".");
+        if (rc == 0)
+            rc = KConfigWriteString(self,
+                "/repository/user/ad/public/apps/sraRealign/volumes/sraAd",
+                ".");
+        if (rc == 0)
+            rc = KConfigWriteString(self,
+                "/repository/user/ad/public/root", ".");
+    }
+    else
+        rc = KConfigNodeRelease(kfg);
+    return rc;
+}
+
 static
 rc_t KConfigFill ( KConfig * self, const KDirectory * cfgdir,
     const char * appname, bool local )
@@ -3298,6 +3326,9 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
                 if ( rc == 0 && updated )
                     rc = KConfigCommit ( mgr );
 #endif
+
+                if ( rc == 0 )
+                    _KConfigCheckAd ( mgr );
             }
 
             DBGMSG ( DBG_KFG, DBG_FLAG ( DBG_KFG ), ( "\n" ) );
