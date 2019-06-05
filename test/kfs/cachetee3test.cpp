@@ -646,6 +646,7 @@ rc_t CC KMain ( int argc, char *argv [] )
         rc = CacheTeeTests( argc, argv );
         KOutMsg( "and the result is: %R\n", rc );
     }
+    ArgsWhack(args);
     return rc;
 }
 
