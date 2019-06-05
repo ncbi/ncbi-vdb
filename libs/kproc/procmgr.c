@@ -462,7 +462,6 @@ LIB_EXPORT rc_t CC KProcMgrGetPID ( const KProcMgr * self, uint32_t * pid )
     return rc;
 }
 
-
 int sys_GetHostName ( char * buffer, size_t buffer_size );
 
 LIB_EXPORT rc_t CC KProcMgrGetHostName ( const KProcMgr * self, char * buffer, size_t buffer_size )

@@ -26,6 +26,7 @@
 
 #include <kproc/extern.h>
 #include <kproc/procmgr.h>
+#include <stdio.h>
 
 /* OnMainThread
  *  returns true if running on main thread
