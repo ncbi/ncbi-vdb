@@ -190,6 +190,17 @@ TEST_CACHETEE3_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_CACHETEE3_SRC))
 
 TEST_CACHETEE3_LIB = \
+	-lkapp \
+	-sncbi-vdb \
+	-lktst
+
+$(TEST_BINDIR)/test-cachetee3: $(TEST_CACHETEE3_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_CACHETEE3_LIB)
+#	rm *.o *.d
+
+cachetee3: $(TEST_BINDIR)/test-cachetee3
+	rm -f cache.dat.cache org.dat
+	$(TEST_BINDIR)/test-cachetee3 -vvv
 
 # test-cacheteeWM
 #
@@ -205,13 +216,6 @@ TEST_CACHETEE_WM_LIB = \
 	-sncbi-vdb \
 	-lktst
 
-$(TEST_BINDIR)/test-cachetee3: $(TEST_CACHETEE3_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_CACHETEE3_LIB)
-#	rm *.o *.d
-
-cachetee3: $(TEST_BINDIR)/test-cachetee3
-	rm -f cache.dat.cache org.dat
-	$(TEST_BINDIR)/test-cachetee3 -vvv
 
 $(TEST_BINDIR)/test-cacheteeWM: $(TEST_CACHETEE_WM_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_CACHETEE_WM_LIB)
@@ -301,7 +305,7 @@ ifeq (1,$(HAVE_FUSE))
 #-------------------------------------------------------------------------------
 # scripted tests
 #
-runtests: cachetee-out-of-space-test
+runtests: test-cachetee3 test-cacheteeWM cachetee-out-of-space-test
 
 cachetee-out-of-space-test: $(TEST_BINDIR)/fuse-proxy $(TEST_BINDIR)/test-cachetee-out-of-space run-cachetee-out-of-space-test.sh
 	@ echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++"

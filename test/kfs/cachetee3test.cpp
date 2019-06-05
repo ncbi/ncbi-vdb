@@ -55,7 +55,7 @@ using namespace std;
 #define DATAFILESIZE ( ( 1024 * 1024 * 32 ) + 300 )
 #define BLOCKSIZE ( 1024 * 16 )
 
-TEST_SUITE( CacheTeeTests );
+TEST_SUITE( CacheTee3Tests );
 
 class CT3Fixture
 {
@@ -643,7 +643,7 @@ rc_t CC KMain ( int argc, char *argv [] )
     {
         srand( time( NULL ) );
         KConfigDisableUserSettings();
-        rc = CacheTeeTests( argc, argv );
+        rc = CacheTee3Tests( argc, argv );
         KOutMsg( "and the result is: %R\n", rc );
     }
     ArgsWhack(args);
