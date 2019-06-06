@@ -83,17 +83,17 @@ KfgFixture :: ~KfgFixture()
 }
 
 void
-KfgFixture :: CreateFile(const char* name, const char* contents)
+KfgFixture :: MakeFile(const char* name, const char* contents)
 {
     if (KDirectoryCreateFile(wd, &file, true, 0664, kcmInit, name) != 0)
-        throw logic_error("CreateFile: KDirectoryCreateFile failed");
+        throw logic_error("MakeFile: KDirectoryCreateFile failed");
 
     size_t num_writ=0;
     if (KFileWrite(file, 0, contents, strlen(contents), &num_writ) != 0)
-        throw logic_error("CreateFile: KFileWrite failed");
+        throw logic_error("MakeFile: KFileWrite failed");
 
     if (KFileRelease(file) != 0)
-        throw logic_error("CreateFile: KFileRelease failed");
+        throw logic_error("MakeFile: KFileRelease failed");
 
     file=0;
 }
@@ -120,7 +120,7 @@ KfgFixture :: CreateAndLoad(const string & sname, const char* contents)
 #ifdef DBG_KFG
     cout << "26 CreateAndLoad(" << name << ")\n";
 #endif
-    CreateFile(name, contents);
+    MakeFile(name, contents);
     LoadFile(name);
     // the .kfg is not needed anymore
     if (KDirectoryRemove(wd, true, name) != 0)
