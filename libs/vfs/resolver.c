@@ -350,7 +350,7 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
     case algFUSE1000:
         num = ( uint32_t ) ( tok -> alpha . size + tok -> digits . size - 3 );
         rc = string_printf ( expanded, bsize, size,
-            "%S/%.*S/%S%S/%S%S.%s", & tok -> alpha, num, & tok -> acc, 
+            "%S/%.*S/%S%S/%S%S.%s", & tok -> alpha, num, & tok -> acc,
             & tok -> alpha, & tok -> digits, & tok -> alpha, & tok -> digits,
             tok -> vdbcache ? "sra.vdbcache" : "sra" );
         break;
@@ -452,7 +452,7 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
         rc = string_printf ( expanded, bsize, size,
              "SRZ/%06u/%S%S/%S", num / 1000, & tok -> alpha, & tok -> digits, & tok -> acc );
         break;
-            
+
     case algPileup_EBI:
         num = ( uint32_t ) strtoul ( tok -> digits . addr, NULL, 10 );
         rc = string_printf ( expanded, bsize, size,
@@ -463,7 +463,7 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
         rc = string_printf ( expanded, bsize, size,
              "DRZ/%06u/%S%S/%S", num / 1000, & tok -> alpha, & tok -> digits, & tok -> acc );
         break;
-        
+
     default:
         return RC ( rcVFS, rcResolver, rcResolving, rcType, rcUnrecognized );
     }
@@ -585,7 +585,7 @@ rc_t VResolverAlgLocalResolve ( const VResolverAlg *self,
             }
         }
     }
-    
+
     return SILENT_RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
 }
 
@@ -700,7 +700,7 @@ rc_t VResolverAlgLocalFile ( const VResolverAlg *self,
             }
         }
     }
-    
+
     return RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
 }
 
@@ -909,7 +909,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_0 ( const char *start, size_t size,
     if ( ( const char* ) rslt_end - rslt_code . addr != rslt_code . size )
         return RC ( rcVFS, rcResolver, rcResolving, rcMessage, rcCorrupt );
 
-    /* still have to test the URL */    
+    /* still have to test the URL */
 
     switch ( result_code / 100 )
     {
@@ -1009,19 +1009,19 @@ rc_t VResolverAlgParseResolverCGIResponse_1_0 ( const char *start, size_t size,
 
 static int getDigit ( char c, rc_t * rc ) {
      assert ( rc );
- 
+
      if ( * rc != 0 )
          return 0;
- 
+
      c = tolower ( c );
      if ( ! isdigit ( c ) && c < 'a' && c > 'f' ) {
          * rc = RC ( rcVFS, rcQuery, rcExecuting, rcItem, rcIncorrect );
          return 0;
      }
- 
+
      if ( isdigit ( c ) )
          return c - '0';
- 
+
      return c - 'a' + 10;
 }
 
@@ -1147,7 +1147,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
     if ( ( const char* ) rslt_end - rslt_code . addr != rslt_code . size )
         return RC ( rcVFS, rcResolver, rcResolving, rcMessage, rcCorrupt );
 
-    /* still have to test the URL */    
+    /* still have to test the URL */
 
     switch ( result_code / 100 )
     {
@@ -1469,7 +1469,7 @@ rc_t oldVResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
 
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("names.cgi = %S\n", self -> root));
 if(((self)->root)->addr[self->root->size - 1] == 'i')
-    rc = KNSManagerMakeReliableClientRequest ( kns, & req, 0x01010000, NULL, self -> root -> addr ); 
+    rc = KNSManagerMakeReliableClientRequest ( kns, & req, 0x01010000, NULL, self -> root -> addr );
 else if (((self)->root)->addr[4] == 's')
 rc = KNSManagerMakeReliableClientRequest(kns, &req, 0x01010000, NULL, "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi");
 else
@@ -1485,7 +1485,7 @@ rc = KNSManagerMakeReliableClientRequest(kns, &req, 0x01010000, NULL, "http://tr
         if ( rc == 0 )
         {
             DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("  acc = %S\n", acc));
-            rc = KHttpRequestAddPostParam ( req, "acc=%S", acc ); 
+            rc = KHttpRequestAddPostParam ( req, "acc=%S", acc );
         }
         if ( rc == 0 && legacy_wgs_refseq )
         {
@@ -1550,7 +1550,7 @@ rc = KNSManagerMakeReliableClientRequest(kns, &req, 0x01010000, NULL, "http://tr
         if ( rc == 0 )
         {
             KHttpResult *rslt;
-            
+
             rc = KHttpRequestPOST ( req, &rslt ); /* will retry if needed `*/
             if ( rc == 0 )
             {
@@ -1569,13 +1569,13 @@ rc = KNSManagerMakeReliableClientRequest(kns, &req, 0x01010000, NULL, "http://tr
                 if ( code == 200 )
                 {
                     KStream *response;
-                    
+
                     rc = KHttpResultGetInputStream ( rslt, &response );
                     if ( rc == 0 )
                     {
                         size_t num_read;
                         size_t total = 0;
-                        
+
                         KDataBuffer result;
                         memset ( & result, 0, sizeof result );
                         KDataBufferMakeBytes ( & result, 4096 );
@@ -1590,7 +1590,7 @@ rc = KNSManagerMakeReliableClientRequest(kns, &req, 0x01010000, NULL, "http://tr
                                 if ( rc != 0 )
                                     break;
                             }
-                            
+
                             base = result . base;
                             rc = KStreamRead ( response, & base [ total ], ( size_t ) result . elem_count - total, & num_read );
                             if ( rc != 0 )
@@ -1643,7 +1643,7 @@ rc = KNSManagerMakeReliableClientRequest(kns, &req, 0x01010000, NULL, "http://tr
 
     assert(*path != NULL || rc != 0);
 
-    if (rc == 0 && *path == NULL) 
+    if (rc == 0 && *path == NULL)
     {
         rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcNull);
     }
@@ -1671,7 +1671,7 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
 
     assert(*path != NULL || rc != 0);
 
-    if (rc == 0 && *path == NULL) 
+    if (rc == 0 && *path == NULL)
     {
         rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcNull);
     }
@@ -1840,7 +1840,7 @@ rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
             }
             else
             {
-                rc = KNSManagerMakeReliableHttpFile ( kns, opt_file_rtn, NULL, 0x01010000, "%S", s );
+                rc = KNSManagerMakeReliableHttpFile ( kns, opt_file_rtn, NULL, 0x01010000, false, false, "%S", s );
                 if (rc != 0)
                 {
                     PLOGERR(klogInt, (klogInt, rc,
@@ -1896,7 +1896,7 @@ rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
             }
         }
     }
-    
+
     return RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
 }
 
@@ -2017,7 +2017,7 @@ rc_t VResolverAlgMakeCachePath ( const VResolverAlg *self,
         vol = VectorGet ( & self -> vols, i );
         return VResolverAlgMakeLocalPath ( self, vol, & exp, path );
     }
-    
+
     return RC ( rcVFS, rcResolver, rcResolving, rcPath, rcNotFound );
 }
 
@@ -2042,7 +2042,7 @@ rc_t VResolverAlgMakeCacheFilePath ( const VResolverAlg *self,
         const String *vol = VectorGet ( & self -> vols, i );
         return VResolverAlgMakeLocalFilePath ( self, vol, & fname, krypto_ext, path );
     }
-    
+
     return RC ( rcVFS, rcResolver, rcResolving, rcPath, rcNotFound );
 }
 
@@ -2174,7 +2174,7 @@ rc_t CC VResolverRelease ( const VResolver * self )
             return RC ( rcVFS, rcResolver, rcAttaching, rcRefcount, rcInvalid );
         default:
             rc = RC ( rcVFS, rcResolver, rcAttaching, rcRefcount, rcUnknown );
-            break;            
+            break;
         }
     }
     return rc;
@@ -2303,7 +2303,7 @@ uint32_t get_accession_code ( const String * accession, VResolverAccToken *tok )
     /* remove digit */
     acc += ++ i;
     size -= i;
-    
+
     /* check pileup extension */
     if ( string_cmp( acc, size, "pileup", 6, size + 6 ) == 0 )
     {
@@ -2695,7 +2695,7 @@ bool CC VPathHasRefseqContext ( const VPath * accession )
  *
  *  other rc code for failure are possible.
  *
- *  Accession must be an ncbi-acc scheme or a simple name with no 
+ *  Accession must be an ncbi-acc scheme or a simple name with no
  *  directory paths.
  */
 LIB_EXPORT
@@ -2855,9 +2855,9 @@ rc_t VResolverResolveName ( VResolver * self, int resolve ) {
         return RC ( rcVFS, rcResolver, rcUpdating, rcSelf, rcNull );
 
     switch ( resolve ) {
-        case 0 : self -> resoveOidName = DEFAULT_RESOVE_OID_NAME; break; 
-        case 1 : self -> resoveOidName = true                   ; break; 
-        default: self -> resoveOidName = false                  ; break; 
+        case 0 : self -> resoveOidName = DEFAULT_RESOVE_OID_NAME; break;
+        case 1 : self -> resoveOidName = true                   ; break;
+        default: self -> resoveOidName = false                  ; break;
     }
     return 0;
 }
@@ -2958,7 +2958,7 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
 /* Remote
  *  Find an existing remote file that is named by the accession.
  *
- *  rcState of rcNotFound means it did not exist and can not be 
+ *  rcState of rcNotFound means it did not exist and can not be
  *  downloaded. Probably a bad accession name.
  *
  *  Need a specific rc for no network configured.
@@ -2966,7 +2966,7 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
  *
  *  Other rc code for failure are possible.
  *
- *  Accession must be an ncbi-acc scheme or a simple name with no 
+ *  Accession must be an ncbi-acc scheme or a simple name with no
  *  directory paths.
  */
 LIB_EXPORT
@@ -3163,7 +3163,7 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
             }
         }
     }
-    
+
     /* no existing cache file was found,
        so create a new one using the best
        TBD - this should remember a volume path */
@@ -3237,7 +3237,7 @@ rc_t VResolverCacheFile ( const VResolver *self, const VPath * query, const VPat
             }
         }
     }
-    
+
     /* no existing cache file was found,
        so create a new one using the best
        TBD - this should remember a volume path */
@@ -3254,7 +3254,7 @@ rc_t VResolverCacheFile ( const VResolver *self, const VPath * query, const VPat
  *  Find a cache directory that might or might not contain a partially
  *  downloaded file.
  *
- *  Accession must be an ncbi-acc scheme, an http url or a simple name with no 
+ *  Accession must be an ncbi-acc scheme, an http url or a simple name with no
  *  directory paths. All three should return the same directory URL as a VPath. (?)
  *  Or should it be a directory or a file url depending upon finding a partial
  *  download? This would require co-ordination with all download mechanisms that
@@ -3264,7 +3264,7 @@ rc_t VResolverCacheFile ( const VResolver *self, const VPath * query, const VPat
  *  named the same as the original accession as the file archive you want is a
  *  container for other files.
  *
- *  Find local will give a path that has a special scheme in these cases. 
+ *  Find local will give a path that has a special scheme in these cases.
  *  Find remote will give the url for the container that contains the accession
  *  so using the returned VPath from resolve remote is better than the original
  *  accession in this one case.  I think...
@@ -3352,7 +3352,7 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
                 rc = VFSManagerGetObject ( vfs, query -> obj_id, & mapped_query );
                 if ( GetRCState ( rc ) == rcNotFound && self -> resoveOidName )
                 {
-/* NEW: should never got here, mapping should be registered when reading kart 
+/* NEW: should never got here, mapping should be registered when reading kart
    file in the same application.
    'bool resoveOidName' is used for testing
    or not to fail when sometihing unexpected happens
@@ -4102,7 +4102,7 @@ rc_t CC VResolverQueryImpl ( const VResolver * self, VRemoteProtocols protocols,
 #endif
             VResolverQueryInt ( self, protocols, query, l, p, c,
                                 "1.2", true, NULL, NULL, NULL, NULL );
-        
+
         assert ( rcs == ro );
         if ( remote == NULL )
             assert ( p == NULL );
@@ -4156,7 +4156,7 @@ rc_t CC VResolverQueryImpl ( const VResolver * self, VRemoteProtocols protocols,
 #endif
             VResolverQueryInt ( self, protocols, query, l, p, c, "1.2",
                             resolveAllAccToCache, dir, inOutDir, NULL, NULL );
-        
+
         assert ( rcs == ro );
         if ( remote == NULL )
             assert ( p == NULL );
@@ -4478,7 +4478,7 @@ rc_t VResolverLoadVolumes ( Vector *algs, const String *root,
                         alg_id = algNAKMER;
                     else if ( strcmp ( algname, "fuseNAKMER" ) == 0 )
                         alg_id = algFuseNAKMER;
-                    
+
                     /* pileup files */
                     else if ( strcmp ( algname, "pileupNCBI" ) == 0 )
                         alg_id = algPileup_NCBI;
@@ -4984,7 +4984,7 @@ rc_t VResolverForceRemoteRefseq ( VResolver *self )
 
     /* create one from hard-coded constants */
     StringInitCString ( & local_root, "https://ftp-trace.ncbi.nlm.nih.gov/sra" );
-    rc = StringCopy ( & root, & local_root );    
+    rc = StringCopy ( & root, & local_root );
     if ( rc == 0 )
     {
         rc = VectorAppend ( & self -> roots, NULL, root );
@@ -5049,7 +5049,7 @@ rc_t VResolverForceRemoteProtected ( VResolver *self )
     String cgi_root;
     StringInitCString ( & cgi_root,
         "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi" );
-    rc = StringCopy ( & root, & cgi_root );    
+    rc = StringCopy ( & root, & cgi_root );
     if ( rc == 0 )
     {
         rc = VectorAppend ( & self -> roots, NULL, root );
@@ -5160,7 +5160,7 @@ rc_t VResolverDetectSRALeafPath ( VResolver *self )
                                 return 0;
                         }
                     }
-                
+
                     VResolverAlgWhack ( alg, NULL );
                 }
             }
@@ -5207,7 +5207,7 @@ rc_t VResolverForceUserFilesVol ( VResolver *self, const VResolverAlg *sraAlg )
                 }
             }
         }
-                
+
         VResolverAlgWhack ( alg, NULL );
     }
 
@@ -5280,7 +5280,7 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
                 bool disabled = false;
                 rc = KConfigNodeReadBool ( node, & disabled );
                 KConfigNodeRelease ( node );
- 
+
                 if ( rc == 0 && disabled ) {
                     userCacheEnabled = false;
                 }

@@ -435,7 +435,7 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
     rc_t rc;
 
     if ( high_reliability )
-        rc = KNSManagerMakeReliableHttpFile ( self -> kns, cfp, NULL, 0x01010000, url, false );
+        rc = KNSManagerMakeReliableHttpFile ( self -> kns, cfp, NULL, 0x01010000, false, false, url );
     else
         rc = KNSManagerMakeHttpFile ( self -> kns, cfp, NULL, 0x01010000, url );
 

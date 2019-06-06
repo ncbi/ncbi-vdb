@@ -56,7 +56,6 @@ typedef struct KClientHttpStream KClientHttpStream;
 #include <klib/out.h>
 #include <klib/log.h>
 #include <klib/status.h>
-#include <klib/refcount.h>
 #include <klib/rc.h>
 #include <klib/printf.h>
 #include <klib/vector.h>
@@ -131,6 +130,7 @@ struct KClientHttp
 {
     const KNSManager *mgr;
     KStream * sock;
+    KStream * test_sock; /* if not NULL, use to communicate with a mocked server in testing, do not reopen on redirects */
 
     /* buffer for accumulating response data from "sock" */
     KDataBuffer block_buffer;
@@ -216,6 +216,9 @@ rc_t KClientHttpWhack ( KClientHttp * self )
     }
 
     KClientHttpClear ( self );
+
+    KStreamRelease ( self -> test_sock );
+    self -> test_sock = NULL;
 
     KDataBufferWhack ( & self -> block_buffer );
     KDataBufferWhack ( & self -> line_buffer );
@@ -509,6 +512,12 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
     mgr = self -> mgr;
     assert ( mgr );
 
+    if ( self -> sock == NULL && self -> test_sock != NULL ) /* protect mocked stream from overwriting */
+    {
+        self -> sock = self -> test_sock;
+        return 0;
+    }
+
     KEndPointArgsIteratorMake ( & it, mgr, aHostname, aPort, NULL );
     while ( KEndPointArgsIteratorNext ( & it, & hostname, & port,
         & proxy_default_port, & proxy_ep, NULL, NULL ) )
@@ -661,9 +670,9 @@ rc_t KClientHttpReopen ( KClientHttp * self )
 
 /* Initialize KClientHttp object */
 static
-rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, KStream * conn, ver_t _vers, const String * _host, uint32_t port, bool tls )
+rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, ver_t _vers, const String * _host, uint32_t port, bool tls )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     if ( port == 0 )
         rc = RC ( rcNS, rcNoTarg, rcInitializing, rcParam, rcInvalid );
@@ -671,16 +680,7 @@ rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, K
     /* early setting of TLS property */
     http -> tls = tls;
 
-    /* we accept a NULL connection ( from ) */
-    if ( conn == NULL )
-        rc = KClientHttpOpen ( http, _host, port );
-    else
-    {
-        rc = KStreamAddRef ( conn );
-        if ( rc == 0 )
-            http -> sock = conn;
-    }
-
+    rc = KClientHttpOpen ( http, _host, port );
     if ( rc == 0 )
     {
         http -> port = port;
@@ -767,14 +767,24 @@ rc_t KNSManagerMakeClientHttpInt ( const KNSManager *self, KClientHttp **_http,
             text [ host -> size ] = save;
 
             /* init the KClientHttp object */
-            rc = KClientHttpInit ( http, hostname_buffer, opt_conn, vers, host, port, tls );
+            if ( opt_conn != NULL )
+            {
+                http -> test_sock = opt_conn;
+                rc = KStreamAddRef ( http -> test_sock );
+            }
+
             if ( rc == 0 )
             {
-                http -> reliable = reliable;
+                rc = KClientHttpInit ( http, hostname_buffer, vers, host, port, tls );
+                if ( rc == 0 )
+                {
+                    http -> reliable = reliable;
 
-                /* assign to OUT http param */
-                * _http = http;
-                return 0;
+                    /* assign to OUT http param */
+                    * _http = http;
+                    return 0;
+                }
+                KStreamRelease ( http->test_sock );
             }
 
             KNSManagerRelease ( self );
@@ -1851,19 +1861,6 @@ rc_t KClientHttpStreamMakeChunked ( KClientHttp *self, KStream **sp, const char 
  *  Holds all the headers in a BSTree
  *  Records the status msg, status code and version of the response
  */
-struct KClientHttpResult
-{
-    KClientHttp *http;
-
-    BSTree hdrs;
-
-    String msg;
-    uint32_t status;
-    ver_t version;
-
-    KRefcount refcount;
-    bool len_zero;
-};
 
 static
 rc_t KClientHttpResultWhack ( KClientHttpResult * self )
@@ -1873,6 +1870,8 @@ rc_t KClientHttpResultWhack ( KClientHttpResult * self )
     KClientHttpRelease ( self -> http );
 
     KRefcountWhack ( & self -> refcount, "KClientHttpResult" );
+
+    free ( self -> expiration );
 
     free ( self );
 
@@ -1978,6 +1977,7 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
                     result -> http = self;
                     result -> status = status;
                     result -> version = version;
+                    result -> expiration = NULL;
 
                     /* correlate msg string in result to the text space */
                     StringInit ( & result -> msg, text, msg . size, msg . len );
@@ -3675,7 +3675,7 @@ rc_t CC KClientHttpRequestFormatCloudMsg(const KClientHttpRequest *self,
 }
 
 static
-rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, KClientHttpResult const *const rslt )
+rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, KClientHttpResult const *const rslt, char ** expiration )
 {
     rc_t rc = 0;
     KHttpHeader *loc;
@@ -3714,7 +3714,15 @@ rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, KClientHttp
         DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP), ("Redirected to '%S'\n", & loc -> value ) );
         if ( exp != NULL )
         {
-            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP), ("'To' URL expires at '%S'\n", & exp -> value ) );
+            if ( expiration != NULL )
+            {
+                DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP), ("'To' URL expires at '%S'\n", & exp -> value ) );
+                * expiration = string_dup( exp -> value . addr, exp -> value . size );
+            }
+            else
+            {
+                * expiration = NULL;
+            }
         }
 
         /* pull out uri */
@@ -3729,12 +3737,12 @@ rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, KClientHttp
 
                 /* close the open http connection and clear out all data except for the manager */
                 KClientHttpClear ( http );
-//TODO: transfer expiration to the new rslt?
+
                 /* clear the previous endpoint */
                 http -> ep_valid = false;
 
                 /* reinitialize the http from uri */
-                rc = KClientHttpInit ( http, &uri, NULL, http -> vers , &b . host, b . port, b . tls );
+                rc = KClientHttpInit ( http, &uri, http -> vers , &b . host, b . port, b . tls );
                 if ( rc == 0 )
                 {
                     KClientHttpRequestClear ( self );
@@ -3771,6 +3779,8 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
 
     const char *AWSAccessKeyId = NULL;
     const char *YourSecretAccessKeyID = NULL;
+
+    char * expiration = NULL;
 
     authenticate = self->url_block.cloud_type == ct_S3;
 
@@ -3823,6 +3833,8 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
 
         /* look at status code */
         rslt = * _rslt;
+        rslt -> expiration = expiration;
+        expiration = NULL;
         switch ( rslt -> status )
         {
         case 200:
@@ -3878,7 +3890,7 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
         }
 
         /* reset connection, reset request */
-        rc = KClientHttpRequestHandleRedirection ( self, rslt );
+        rc = KClientHttpRequestHandleRedirection ( self, rslt, & expiration );
         if ( rc != 0 )
             break;
     }
@@ -4060,7 +4072,7 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
         }
 
         /* reset connection, reset request */
-        rc = KClientHttpRequestHandleRedirection ( self, rslt );
+        rc = KClientHttpRequestHandleRedirection ( self, rslt, NULL );
         if ( rc != 0 )
             break;
     }

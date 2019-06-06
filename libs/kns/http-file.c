@@ -23,23 +23,18 @@
 * ==============================================================================
 *
 */
-#include <kns/extern.h>
+#include "http-file-priv.h"
 
-#define KFILE_IMPL KHttpFile
-typedef struct KHttpFile KHttpFile;
-#include <kfs/impl.h>
+#include <kns/extern.h>
 
 #include "http-priv.h"
 #include "mgr-priv.h"
 #include "stream-priv.h"
 
-#include <kproc/lock.h>
 #include <kns/adapt.h>
 #include <kns/endpoint.h>
-#include <kns/http.h>
 #include <kns/impl.h>
 #include <kns/kns-mgr-priv.h> /* KHttpRetrier */
-#include <kns/manager.h>
 #include <kns/socket.h>
 #include <kns/stream.h>
 
@@ -58,7 +53,6 @@ typedef struct KHttpFile KHttpFile;
 #include <klib/rc.h>
 #include <klib/refcount.h>
 #include <klib/text.h>
-#include <klib/time.h> /* KSleep */
 #include <klib/vector.h>
 
 #include <kproc/timeout.h>
@@ -84,39 +78,6 @@ typedef struct KHttpFile KHttpFile;
 
 #define USE_CACHE_CONTROL 1
 #define NO_CACHE_LIMIT ( ( uint64_t ) ( 16 * 1024 * 1024 ) )
-
-
-/*--------------------------------------------------------------------------
- * KHttpFile
- */
-struct KHttpFile
-{
-    KFile dad;
-
-    uint64_t file_size;
-
-    const KNSManager * kns;
-
-    KLock * lock;
-    KClientHttp *http;
-
-    KDataBuffer orig_url_buffer;
-    KDataBuffer url_buffer;
-    KTime url_expiration; /* if temporary_url == true, refresh url_buffer using orig_url_buffer, by this time */
-
-    /* if need_env_token == true: */
-    /* Create http client connected to orig_url_buffer. */
-    /* Call HEAD with a computing environment token attached */
-    /* The response will be a 307 Temp Redirect with Location and Expiry headers */
-    /* Save the Location URL in url_buffer, Expiry in url_expiration. */
-    /* Reopen the connection using url_buffer. */
-    /* Add "promise-to-pay" headers if they are required. */
-    /* In all read functions, if the expiration time will have passed in 1 minute, refresh url_buffer first, */
-    /* using the same procedure (connect to orig_url_buffer/HEAD/307/save URL and expiry) */
-    bool need_env_token;
-
-    bool no_cache;
-};
 
 static
 rc_t CC KHttpFileDestroy ( KHttpFile *self )
@@ -161,6 +122,66 @@ rc_t CC KHttpFileSetSize ( KHttpFile *self, uint64_t size )
 }
 
 static
+rc_t CloudRefresh( KHttpFile * self, struct timeout_t *tm )
+{
+    /* If we are working with a temporary (cloud) URL, check the expiration time */
+    /* If the expiration time is close, refresh the URL */
+    rc_t rc = 0;
+    if ( self -> need_env_token )
+    {
+        // KTime_t is in seconds
+        KTime_t now = KTimeStamp();
+        KTime_t expTime = KTimeMakeTime ( & self -> url_expiration );
+        KTime_t advance = 60;
+        bool need_refresh;
+        if ( tm == NULL )
+        {
+            need_refresh = expTime < ( now + advance );
+        }
+        else
+        {
+            need_refresh = expTime < ( now + ( tm -> mS / 1000 ) + advance );
+        }
+
+        if ( need_refresh )
+        {
+            //TODO: attach the computing environment identity token
+            //TODO: requester-pays info if required
+            KClientHttpRequest *req;
+            rc_t rc = KClientHttpMakeRequestInt ( self -> http, & req, & self -> block, & self -> orig_url_buffer );
+            if ( rc == 0 )
+            {
+                KClientHttpResult * rslt;
+                rc = KClientHttpRequestHEAD ( req, & rslt );
+                if ( rc == 0 )
+                {
+                    /* retrieve expiration time Expires header of rslt -> http. if missing, error out? */
+                    if ( rslt -> expiration != NULL )
+                    {   /* save in self -> url_expiration */
+                        KTimeFromIso8601 ( & self -> url_expiration, rslt -> expiration, string_size ( rslt -> expiration ) );
+                        free ( rslt -> expiration );
+                        rslt -> expiration = NULL;
+                    }
+
+                    /* Refresh url_buffer with the latest temporary URL */
+                    rc = KClientHttpRequestURL ( req, & self -> url_buffer );
+                    if ( rc == 0 )
+                    {
+                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
+                                ( "HttpFile.URL updated to '%.*s'\n",
+                                ( int ) self -> url_buffer . elem_count, self -> url_buffer . base ) );
+                        KClientHttpResultRelease ( rslt );
+                    }
+                }
+                KClientHttpRequestRelease( req );
+            }
+        }
+    }
+
+    return rc;
+}
+
+static
 rc_t KHttpFileTimedReadInt ( const KHttpFile *cself,
     uint64_t aPos, void *aBuf, size_t aBsize,
     size_t *num_read, struct timeout_t *tm, uint32_t * http_status )
@@ -198,6 +219,12 @@ rc_t KHttpFileTimedReadInt ( const KHttpFile *cself,
         void *bPtr = aBuf;
         size_t bsize = aBsize;
         uint32_t proxy_retries;
+
+        rc = CloudRefresh( self, tm );
+        if ( rc != 0 )
+        {
+            return rc;
+        }
 
         /* extend buffer size to MIN_SZ */
         if ( bsize < sizeof buf )
@@ -411,7 +438,6 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
 {
     KHttpRetrier retrier;
     rc_t rc = KHttpRetrierInit ( & retrier, self -> url_buffer . base, self -> kns );
-
     if ( rc == 0 )
     {
         DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
@@ -526,8 +552,8 @@ static KFile_vt_v1 vtKHttpFile =
 };
 
 static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
-    const KFile **file, KStream *conn, ver_t vers, bool reliable,
-    const char *url, bool need_env_token, va_list args )
+    const KFile **file, KStream *conn, ver_t vers, bool reliable, bool need_env_token, bool requester_pays,
+    const char *url, va_list args )
 {
     rc_t rc;
 
@@ -563,38 +589,49 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                         rc = KDataBufferVPrintf ( buf, url, args );
                         if ( rc == 0 )
                         {
-                            URLBlock block;
-                            rc = ParseUrl ( &block, buf -> base, buf -> elem_count - 1 );
+                            rc = ParseUrl ( & f -> block, buf -> base, buf -> elem_count - 1 );
                             if ( rc == 0 )
                             {
                                 KClientHttp *http;
 
                                 rc = KNSManagerMakeClientHttpInt ( self, & http, buf, conn, vers,
-                                    self -> http_read_timeout, self -> http_write_timeout, &block . host, block . port, reliable, block . tls );
+                                    self -> http_read_timeout, self -> http_write_timeout, & f -> block . host, f -> block . port, reliable, f -> block . tls );
                                 if ( rc == 0 )
                                 {
                                     KClientHttpRequest *req;
 
-                                    rc = KClientHttpMakeRequestInt ( http, &req, &block, buf );
+                                    rc = KClientHttpMakeRequestInt ( http, & req, & f -> block, buf );
                                     if ( rc == 0 )
                                     {
                                         KClientHttpResult *rslt;
                                         if ( need_env_token )
                                         {
-                                            // call Mike's fn and add the token to a header (Mike knows which one)
-                                            // maybe pass req to the fn to fill out
-                                            // do the same when reopening the connection with the original URL after expiration
+                                            //TODO: attach the computing environment identity token
+                                            //TODO: requester-pays info if required
                                             rc = KClientHttpRequestHEAD ( req, & rslt );
-                                            // retrieve expiration time Expires header of rslt -> http. if missing, error out
-                                            // save in http -> url_expiration
-                                            // still, handle the expiration in read methods (find out how AWS/GCP signal expiration)
+                                            if ( rc == 0 )
+                                            {
+                                                /* retrieve expiration time Expires header of rslt -> http. if missing, error out? */
+                                                if ( rslt -> expiration != NULL )
+                                                {   /* save in self -> url_expiration */
+                                                    KTimeFromIso8601 ( & f -> url_expiration, rslt -> expiration, string_size ( rslt -> expiration ) );
+                                                    free ( rslt -> expiration );
+                                                    rslt -> expiration = NULL;
+                                                }
+                                                // still, handle the expiration in read methods (find out how AWS/GCP signal expiration)
+                                            }
                                         }
                                         else
                                         {
                                             rc = KClientHttpRequestHEAD ( req, & rslt );
                                         }
 #if 1
+                                        /* update url_buffer with the (possibly different and/or temporary temporary URL)*/
                                         KClientHttpRequestURL ( req, & f -> url_buffer ); /* NB. f -> url_buffer is not valid until this point */
+                                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
+                                            ( "HttpFile.URL updated to '%.*s'\n",
+                                                ( int ) f -> url_buffer . elem_count, f -> url_buffer . base ) );
+
 #else
                                         KDataBufferSub ( buf, & f -> url_buffer, 0, buf -> elem_count ); /* old behavior: breaks if redirected */
 #endif
@@ -662,6 +699,7 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                                         f -> http = http;
                                                         f -> no_cache = size >= NO_CACHE_LIMIT;
                                                         f -> need_env_token = need_env_token;
+                                                        f -> requester_pays = requester_pays;
 
                                                         * file = & f -> dad;
                                                         return 0;
@@ -748,18 +786,18 @@ LIB_EXPORT rc_t CC KNSManagerMakeHttpFile(const KNSManager *self,
     rc_t rc = 0;
     va_list args;
     va_start(args, url);
-    rc = KNSManagerVMakeHttpFileInt ( self, file, conn, vers, false, url, false, args);
+    rc = KNSManagerVMakeHttpFileInt ( self, file, conn, vers, false, false, false, url, args);
     va_end(args);
     return rc;
 }
 
 LIB_EXPORT rc_t CC KNSManagerMakeReliableHttpFile(const KNSManager *self,
-    const KFile **file, struct KStream *conn, ver_t vers, const char *url, bool need_env_token, ...)
+    const KFile **file, struct KStream *conn, ver_t vers, bool need_env_token, bool requester_pays, const char *url, ...)
 {
     rc_t rc = 0;
     va_list args;
-    va_start(args, need_env_token);
-    rc = KNSManagerVMakeHttpFileInt ( self, file, conn, vers, true, url, need_env_token, args);
+    va_start(args, url);
+    rc = KNSManagerVMakeHttpFileInt ( self, file, conn, vers, true, need_env_token, requester_pays, url, args);
     va_end(args);
     return rc;
 }

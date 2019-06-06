@@ -77,7 +77,7 @@ KNS_EXTERN rc_t CC KNSManagerMakeConfig ( struct KNSManager **mgr, struct KConfi
  */
 KNS_EXTERN rc_t CC KNSManagerMakeReliableHttpFile(
     struct KNSManager const *self, struct KFile const **file,
-    struct KStream *conn, ver_t vers, const char *url, bool need_env_token, ...);
+    struct KStream *conn, ver_t vers, bool need_env_token, bool requester_pays, const char *url, ...);
 KNS_EXTERN rc_t CC KNSManagerMakeReliableClientRequest (
     struct KNSManager const *self, struct KClientHttpRequest **req,
     ver_t version, struct KStream *conn, const char *url, ... );
