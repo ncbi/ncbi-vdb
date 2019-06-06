@@ -458,9 +458,12 @@ LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
                                         bool vdbcacheChecked = false;
                                         rc2 = VPathGetVdbcache ( premote,
                                             & cremote, & vdbcacheChecked );
-                                        if ( rc2 != 0 ||
-                                                      vdbcacheChecked == false )
+
+                                        /* try to manually build remote vdbcache path
+                                           just when names service was not able to return vdbcache: shold never happen these days */
+                                        if ( rc2 != 0 || vdbcacheChecked == false )
                                             rc2 = VFSManagerMakePathWithExtension ( vfs, (VPath**) & cremote, premote, ".vdbcache" );
+
                                         if ( rc2 == 0 && pcache != NULL )
                                             rc2 = VFSManagerMakePathWithExtension ( vfs, & ccache, pcache, ".vdbcache" );
                                         if ( rc2 == 0 )
