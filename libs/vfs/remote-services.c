@@ -1785,6 +1785,9 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
                                      rcMemory, rcExhausted );
             }
 
+            if (rc == 0 && self->https != NULL && self->vcHttps != NULL)
+                rc = VPathAttachVdbcache(self->https, self->vcHttps);
+
             self->osize = src->osize;
 
             return rc;
