@@ -405,8 +405,8 @@ LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
                                 {
                                     /* CSRA databases may have an associated "vdbcache" */
                                     const VDatabase * vdbcache = NULL;
-                                    VPath * clocal = NULL, * cremote = NULL, * ccache = NULL;
-
+                                    VPath * clocal = NULL, * ccache = NULL;
+                                    const VPath * cremote = NULL;
                                     /* if principal was local */
                                     if ( plocal != NULL )
                                     {
@@ -453,7 +453,17 @@ LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
                                     /* if principal was remote, or attempting remote vdbcache */
                                     if ( premote != NULL )
                                     {
-                                        rc2 = VFSManagerMakePathWithExtension ( vfs, & cremote, premote, ".vdbcache" );
+                                        /* check
+                                           if names service returned vdbache */
+                                        bool vdbcacheChecked = false;
+                                        rc2 = VPathGetVdbcache ( premote,
+                                            & cremote, & vdbcacheChecked );
+
+                                        /* try to manually build remote vdbcache path
+                                           just when names service was not able to return vdbcache: shold never happen these days */
+                                        if ( rc2 != 0 || vdbcacheChecked == false )
+                                            rc2 = VFSManagerMakePathWithExtension ( vfs, (VPath**) & cremote, premote, ".vdbcache" );
+
                                         if ( rc2 == 0 && pcache != NULL )
                                             rc2 = VFSManagerMakePathWithExtension ( vfs, & ccache, pcache, ".vdbcache" );
                                         if ( rc2 == 0 )

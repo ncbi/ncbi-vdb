@@ -122,6 +122,10 @@ struct VPath
     bool       has_md5;
 
     String     objectType;
+
+    const VPath * vdbcache;
+    bool          vdbcacheChecked; /* no need to check vdbcache URL when
+                                  vdbcacheChecked = true and vdbcache == NULL */
 };
 
 enum VPathVariant
@@ -190,6 +194,8 @@ rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
     const String * tick, bool ext, const String * id, uint64_t osize,
     KTime_t date, const uint8_t md5 [ 16 ], KTime_t exp_date,
     const char * objectType );
+
+rc_t VPathAttachVdbcache(VPath * self, const VPath * vdbcache);
 
 /* Equal
  *  compares two VPath-s
