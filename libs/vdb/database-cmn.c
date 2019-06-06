@@ -1,3 +1,5 @@
+#define MAGIC_LOCAL_VDBCACHE  "VDB_LOCAL_VDBCACHE"
+
 /*===========================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
@@ -50,6 +52,9 @@
 #include <klib/namelist.h>
 #include <klib/log.h>
 #include <sysalloc.h>
+
+#include "../vfs/path-priv.h"     /* VPath */
+#include "../vfs/resolver-priv.h" /* rcResolver */
 
 #include <stdlib.h>
 #include <string.h>
@@ -313,6 +318,78 @@ rc_t VDBManagerVPathOpenRemoteDBRead ( const VDBManager *self,
     return rc;
 }
 
+typedef enum {
+    eCheckUrlFalse,
+    eCheckUrlTrue,
+} ECheckUrl;
+
+static rc_t VFSManagerMagicResolve(const VFSManager *self,
+    VPath ** path, const char * name, ECheckUrl checkUrl)
+{
+    rc_t rc = 0;
+
+    const char * magic = getenv(name);
+
+    assert(path);
+    *path = NULL;
+
+    if (magic == NULL) {
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("'%s' magic not set\n", name));
+        return 0;
+    }
+
+    /* variable set to empty: VResolverQuery returns not found */
+    if (magic[0] == '\0') {
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("'%s' magic empty\n", name));
+        return RC(rcVDB, rcResolver, rcResolving, rcName, rcNotFound);
+    }
+
+    rc = VFSManagerMakePath(self, path, "%s", magic);
+
+    if (rc == 0) {
+        assert(path);
+
+        if (checkUrl == eCheckUrlTrue) {
+            if (!(*path)->from_uri)
+            {
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                    "'%s' magic '%s' is not URL\n", name, magic));
+                rc = RC(rcVDB, rcResolver, rcResolving, rcName, rcInvalid);
+            }
+            else if ((*path)->scheme_type != vpuri_http
+                && (*path)->scheme_type != vpuri_https)
+            {
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                    "'%s' magic '%s' is not HTTP[S] URL\n", name, magic));
+                rc = RC(rcVDB, rcResolver, rcResolving, rcName, rcInvalid);
+            }
+        }
+
+        if (rc != 0) {
+            VPathRelease(*path);
+            *path = NULL;
+            return rc;
+        }
+        else
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                "'%s' magic '%s' found\n", name, magic));
+    }
+
+    else
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+            "'%s' magic '%s' cannot be converted to VPath: %R\n",
+            name, magic, rc));
+
+    return rc;
+}
+
+static
+rc_t VFSManagerLocalMagicResolve(const VFSManager * self, VPath ** path)
+{
+    return VFSManagerMagicResolve(self, path,
+        MAGIC_LOCAL_VDBCACHE, eCheckUrlFalse);
+}
+
 static rc_t DBManagerOpenVdbcache(const VDBManager *self,
     const VFSManager * vfs, const VDatabase * db, const VSchema *schema,
     const VPath * orig, bool is_accession, const VResolver * resolver,
@@ -329,8 +406,12 @@ static rc_t DBManagerOpenVdbcache(const VDBManager *self,
     /* if principal was local */
     if (plocal != NULL)
     {
-        rc2 =                /* make local path to vdbcaceh out of DB's path */
-            VFSManagerMakePathWithExtension(vfs, &clocal, plocal, ".vdbcache");
+        rc2 = VFSManagerLocalMagicResolve(vfs, &clocal);
+        if (rc2 == 0 && clocal == NULL)
+            /* make local path to vdbcache out of DB's path
+               just when magic variable is not set */
+            rc2 = VFSManagerMakePathWithExtension(
+                vfs, &clocal, plocal, ".vdbcache");
         if (rc2 == 0)
         {
             rc2 = VDBManagerVPathOpenLocalDBRead( /* try to open local */
