@@ -1,4 +1,7 @@
+/* TODO: move them to interfaces/klib/strings.h */
+#define MAGIC_CACHE_VDBCACHE  "VDB_CACHE_VDBCACHE"
 #define MAGIC_LOCAL_VDBCACHE  "VDB_LOCAL_VDBCACHE"
+#define MAGIC_REMOTE_VDBCACHE "VDB_REMOTE_VDBCACHE"
 
 /*===========================================================================
 *
@@ -319,12 +322,31 @@ rc_t VDBManagerVPathOpenRemoteDBRead ( const VDBManager *self,
 }
 
 typedef enum {
+    eCheckExistFalse,
+    eCheckExistTrue,
+} ECheckExist;
+
+typedef enum {
+    eCheckFilePathFalse,
+    eCheckFilePathTrue,
+} ECheckFilePath; 
+
+typedef enum {
     eCheckUrlFalse,
     eCheckUrlTrue,
 } ECheckUrl;
 
+/* Returned rc != 0: env-var was set but somehow invalid
+                     or it is eet to empty string == query returns not found
+ *  rc == 0:
+ *      * path != NULL: env-var was set and valid: use it!
+ *      * path == NULL:         was not set, keep going the old way
+ */
 static rc_t VFSManagerMagicResolve(const VFSManager *self,
-    VPath ** path, const char * name, ECheckUrl checkUrl)
+    VPath ** path, const char * name,
+    ECheckExist checkExist,
+    ECheckFilePath checkPath,
+    ECheckUrl checkUrl)
 {
     rc_t rc = 0;
 
@@ -383,11 +405,28 @@ static rc_t VFSManagerMagicResolve(const VFSManager *self,
     return rc;
 }
 
-static
-rc_t VFSManagerLocalMagicResolve(const VFSManager * self, VPath ** path)
+static rc_t VFSManagerCacheMagicResolve(
+    const VFSManager * self, VPath ** path)
 {
     return VFSManagerMagicResolve(self, path,
-        MAGIC_LOCAL_VDBCACHE, eCheckUrlFalse);
+        MAGIC_CACHE_VDBCACHE,
+        eCheckExistFalse, eCheckFilePathTrue, eCheckUrlFalse);
+}
+
+static rc_t VFSManagerLocalMagicResolve(
+    const VFSManager * self, VPath ** path)
+{
+    return VFSManagerMagicResolve(self, path,
+        MAGIC_LOCAL_VDBCACHE,
+        eCheckExistTrue, eCheckFilePathTrue, eCheckUrlFalse);
+}
+
+static rc_t VFSManagerRemoteMagicResolve(
+    const VFSManager * self, VPath ** path)
+{
+    return VFSManagerMagicResolve(self, path,
+        MAGIC_REMOTE_VDBCACHE,
+        eCheckExistFalse, eCheckFilePathFalse, eCheckUrlTrue);
 }
 
 static rc_t DBManagerOpenVdbcache(const VDBManager *self,
@@ -398,11 +437,14 @@ static rc_t DBManagerOpenVdbcache(const VDBManager *self,
     /* just one of plocal | premote is set */
 {
     rc_t rc2 = 0;
+
     /* CSRA databases may have an associated "vdbcache" */
     const VDatabase * vdbcache = NULL;
+
     VPath * clocal = NULL; /* local  VPath to vdbcache DB */
     VPath * ccache = NULL; /* remote VPath to vdbcache DB */
-    const VPath * cremote = NULL;
+    VPath * cremote = NULL;
+
     /* if principal was local */
     if (plocal != NULL)
     {
@@ -456,21 +498,35 @@ static rc_t DBManagerOpenVdbcache(const VDBManager *self,
     /* if principal was remote, or attempting remote vdbcache */
     if (premote != NULL)
     {
-        /* check
-           if names service returned vdbache */
-        bool vdbcacheChecked = false;
-        rc2 = VPathGetVdbcache(premote,
-            &cremote, &vdbcacheChecked);
+        rc2 = VFSManagerRemoteMagicResolve(vfs, &cremote);
+        if (rc2 == 0 && cremote == NULL) {
+            /* check if names service returned vdbcache */
+            bool vdbcacheChecked = false;
 
-        /* try to manually build remote vdbcache path just when names service
-           was not able to return vdbcache: shold never happen these days */
-        if (rc2 != 0 || vdbcacheChecked == false)
-            rc2 = VFSManagerMakePathWithExtension(
-                vfs, (VPath**)& cremote, premote, ".vdbcache");
+            /* check remote path to vdbcache 
+               just when magic variable is not set */
+            rc2 = VPathGetVdbcache(premote,
+                (const VPath **)& cremote, &vdbcacheChecked);
 
-        if (rc2 == 0 && * pcache != NULL)
-            rc2 = VFSManagerMakePathWithExtension(
-                vfs, &ccache, * pcache, ".vdbcache");
+            /* try to manually build remote vdbcache path
+               just when names service was not able to return vdbcache:
+               should never happen these days */
+            if (rc2 != 0 || vdbcacheChecked == false)
+                rc2 = VFSManagerMakePathWithExtension(
+                    vfs, (VPath**)& cremote, premote, ".vdbcache");
+        }
+
+        if (rc2 == 0) {
+            rc2 = VFSManagerCacheMagicResolve(vfs, &ccache);
+            if (rc2 == 0 && ccache == NULL) {
+                /* manually build cache path to vdbcache
+                   just when magic variable is not set */
+                if (*pcache != NULL)
+                    rc2 = VFSManagerMakePathWithExtension(
+                        vfs, &ccache, *pcache, ".vdbcache");
+            }
+        }
+
         if (rc2 == 0)
             rc2 = VDBManagerVPathOpenRemoteDBRead(
                 self, &vdbcache, schema, cremote, ccache);
