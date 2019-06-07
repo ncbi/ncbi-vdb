@@ -585,10 +585,10 @@ static rc_t CC thread_func( const KThread *self, void *data )
 }
 
 // const int num_treads = 2;
-// const int num_treads = 4;
+const int num_treads = 4;
 // const int num_treads = 16;
 // const int num_treads = 32;
-const int num_treads = 64;
+// const int num_treads = 64;
 
 FIXTURE_TEST_CASE( CacheTee3_Multiple_Users_Multiple_Inst, CT3Fixture )
 {
