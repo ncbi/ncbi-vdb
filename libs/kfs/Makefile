@@ -132,7 +132,8 @@ KFS_CMN = \
 	poolpages \
 	lru_cache \
 	from_to_namelist \
-	limitfile
+	limitfile   \
+	appendfile
 
 KFS_SRC = \
 	mmap \
