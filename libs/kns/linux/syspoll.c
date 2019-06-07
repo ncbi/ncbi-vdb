@@ -43,6 +43,9 @@
 #include <unistd.h>
 #include <errno.h>
 
+#include <sys/epoll.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 
 /* socket_wait
  *  wait for an event or a timeout
@@ -51,14 +54,14 @@ int socket_wait ( int fd, int events, timeout_t *tm )
 {
     int i, status;
     struct pollfd fds [ 1 ];
-        
+
     /* poll for data with no delay */
     for ( i = 0; i < 2; ++ i )
     {
         fds [ 0 ] . fd = fd;
         fds [ 0 ] . events = events;
         fds [ 0 ] . revents = 0;
-        
+
         status = poll ( fds, sizeof fds / sizeof fds [ 0 ], 0 );
         if ( status > 0 )
             return fds [ 0 ] . revents;
@@ -105,3 +108,48 @@ int socket_wait ( int fd, int events, timeout_t *tm )
 
     return status;
 }
+
+int connect_wait ( int socketFd, int32_t timeoutMs )
+{
+    int epollFD = epoll_create( 1 );
+    if ( epollFD < 0 )
+    {
+        return -1;
+    }
+    else
+    {
+        struct epoll_event newPeerConnectionEvent;
+        memset ( & newPeerConnectionEvent, 0, sizeof newPeerConnectionEvent );
+        newPeerConnectionEvent.data.fd = socketFd;
+        newPeerConnectionEvent.events = EPOLLOUT | EPOLLIN | EPOLLERR;
+
+        if ( epoll_ctl( epollFD, EPOLL_CTL_ADD, socketFd, & newPeerConnectionEvent ) < 0 )
+        {
+            return -1;
+        }
+        else
+        {
+            struct epoll_event processableEvents;
+            int fdCount = epoll_wait( epollFD, & processableEvents, 1, timeoutMs );
+            if ( fdCount > 0 )
+            {
+                int retVal = -1;
+                socklen_t retValLen = sizeof (retVal);
+                if ( getsockopt( socketFd, SOL_SOCKET, SO_ERROR, & retVal, & retValLen ) < 0 )
+                {
+                    return -1;
+                }
+                else if ( retVal != 0 )
+                {
+                    return -1;
+                }
+                return 1;
+            }
+
+            /* timed out or error */
+            return fdCount == 0 ? 0 : -1;
+        }
+    }
+
+}
+
