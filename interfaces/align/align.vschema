@@ -1157,8 +1157,11 @@ I64 NCBI:align:sorted:alignment_id_encoding #1.0
     // size is NREADS
     extern column < U8 > zip_encoding ALIGNMENT_COUNT;
 
+    // unparsed read name
+    extern column < ascii > zip_encoding RAW_NAME;
+
     // auto-generate name from row-id
-    ascii out_name_fmt = < ascii > echo < '$R' > ();
+    ascii out_name_fmt = .RAW_NAME | < ascii > echo < '$R' > ();
 
     // temparary column
     extern column < U64 > izip_encoding TMP_KEY_ID;

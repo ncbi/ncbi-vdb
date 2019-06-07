@@ -3246,12 +3246,22 @@ static EUriForm EUriFormGuess ( const String * hostname,
     }
 }
 
+/* TODO:
+    get REQUESTER_PAYER from configuration
+    or how it should be correctly set
+ */
+#define REQUESTER_PAYER false
+
+#define X_AMZ_REQUEST_PAYER "x-amz-request-payer"
+#define REQUESTER "requester"
+
 /* https://docs.aws.amazon.com/AmazonS3/latest/dev/RESTAuthentication.html */
 static rc_t StringToSign(
     const String * HTTPVerb,
     const String * Date,
     const String * hostname,
     const String * HTTPRequestURI,
+    bool requester_payer,
     char * buffer, size_t bsize, size_t * len)
 {
     rc_t rc = 0;
@@ -3259,6 +3269,7 @@ static rc_t StringToSign(
     size_t total = 0;
     size_t skip = 0;
     size_t p_bsize = 0;
+
     String dateString;
     String s3;
     CONST_STRING(&s3, ".s3.amazonaws.com");
@@ -3299,6 +3310,12 @@ static rc_t StringToSign(
         rc = r2;
 
     /* StringToSign += CanonicalizedAmzHeaders */
+    if (requester_payer) {
+        p_bsize = bsize >= total ? bsize - total : 0;
+        r2 = string_printf(
+            &buffer[total], p_bsize, len, X_AMZ_REQUEST_PAYER ":" REQUESTER "\n");
+        total += *len;
+    }
 
     /* StringToSign += CanonicalizedResource */
     skip = hostname->size - s3.size;
@@ -3338,6 +3355,9 @@ static rc_t KClientHttpRequestAuthenticate(const KClientHttpRequest *cself,
     char authorization[4096] = "";
     const String * sdate = NULL;
     char date[64] = "";
+
+    bool requester_payer = REQUESTER_PAYER;
+
     String dates;
     assert(self && self->http);
     http = self->http;
@@ -3425,7 +3445,7 @@ static rc_t KClientHttpRequestAuthenticate(const KClientHttpRequest *cself,
         String HTTPVerb;
         StringInitCString(&HTTPVerb, method);
         rc = StringToSign(&HTTPVerb, sdate, hostname, &self->url_block.path,
-            stringToSign, sizeof stringToSign, &len);
+            requester_payer, stringToSign, sizeof stringToSign, &len);
     }
 
     if (rc == 0)
@@ -3435,7 +3455,10 @@ static rc_t KClientHttpRequestAuthenticate(const KClientHttpRequest *cself,
 
     if (rc == 0)
         rc = KClientHttpAddHeader(&self->hdrs, "Authorization", authorization);
-            
+
+    if (rc == 0 && requester_payer)
+        rc = KClientHttpAddHeader(&self->hdrs, X_AMZ_REQUEST_PAYER, REQUESTER);
+
     return rc;
 }
 

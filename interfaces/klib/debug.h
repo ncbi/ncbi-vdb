@@ -154,7 +154,7 @@ extern "C" {
     _condition(KNS,TLS)
 
 #define VFS_CONDITIONS() \
-    _condition(VFS,JSON)     _condition(VFS,MGR) \
+    _condition(VFS,JSON)     _condition(VFS,KFG)     _condition(VFS,MGR) \
     _condition(VFS,PATH)     _condition(VFS,SERVICE)
 
 #define XML_CONDITIONS() \
