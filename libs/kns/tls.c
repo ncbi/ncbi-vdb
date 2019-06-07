@@ -688,8 +688,34 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
 
     while ( 1 )
     {
+        static bool inited = false;
+        static int m = 0;
+        static int e = 0;
+
         /* read through TLS library */
         ret = vdb_mbedtls_ssl_read( &self -> ssl, buffer, bsize );
+
+        if (!inited) { /* simulate mbedtls read timeout */
+            const char * v = getenv("NCBI_VDB_ERR_MBEDTLS_READ");
+            if (v != NULL) {
+                m = atoi(v);
+                if (m < 0)
+                    m = 0;
+            }
+            e = m;
+            inited = true;
+        }
+        if (m > 0) {
+            if (!e) {
+                e = m;
+                if (ret >= 0) {
+                    ret = -76;
+                    self->rd_rc
+                        = RC(rcNS, rcStream, rcReading, rcTimeout, rcExhausted);
+                }
+            }
+            --e;
+        }
 
         /* no error */
         if ( ret >= 0 )
@@ -702,7 +728,8 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
         if ( self -> rd_rc != 0 )
         {
             rc = self -> rd_rc;
-            PLOGERR ( klogSys, ( klogSys, rc
+            if (self->mgr->logTlsErrors)
+              PLOGERR ( klogSys, ( klogSys, rc
                                  , "mbedtls_ssl_read returned $(ret) ( $(expl) )"
                                  , "ret=%d,expl=%s"
                                  , ret
@@ -1022,11 +1049,40 @@ rc_t ktls_ssl_setup ( KTLSStream *self, const String *host )
 static 
 rc_t ktls_handshake ( KTLSStream *self )
 {
+    static bool inited = false;
+    static int m = 0;
+    static int e = 0;
+
     int ret;
 
     STATUS ( STAT_QA, "Performing SSL/TLS handshake...\n" );
 
+    assert(self && self->mgr);
+
     ret = vdb_mbedtls_ssl_handshake( &self -> ssl );
+
+    if (!inited) { /* simulate mbedtls handshake timeout */
+        const char * v = getenv("NCBI_VDB_ERR_MBEDTLS_HANDSHAKE");
+        if (v != NULL) {
+            m = atoi(v);
+            if (m < 0)
+                m = 0;
+        }
+        e = m;
+        inited = true;
+    }
+    if (m > 0) {
+        if (!e) {
+            e = m;
+            if (ret >= 0) {
+                ret = -76;
+                self->rd_rc
+                    = RC(rcKrypto, rcFile, rcOpening, rcConnection, rcFailed);
+            }
+        }
+        --e;
+    }
+
     while ( ret != 0 )
     {
         if ( ret != MBEDTLS_ERR_SSL_WANT_READ && 
@@ -1049,7 +1105,8 @@ rc_t ktls_handshake ( KTLSStream *self )
                    or the error is something other than a validation error */
                 rc = RC ( rcKrypto, rcSocket, rcOpening, rcConnection, rcFailed );
 
-                PLOGERR ( klogSys, ( klogSys, rc
+                if (self->mgr->logTlsErrors)
+                  PLOGERR ( klogSys, ( klogSys, rc
                                      , "mbedtls_ssl_handshake returned $(ret) ( $(expl) )"
                                      , "ret=%d,expl=%s"
                                      , ret
