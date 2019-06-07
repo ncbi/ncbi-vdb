@@ -48,6 +48,10 @@ struct Locations;
 struct Response4;
 struct VPathSet;
 
+#define VERSION_3_0 0x03000000
+#define VERSION_4_0 0x04000000
+
+ver_t InitVersion(const char * src);
 
 /* make name service call : request: 1 object, response: 1 object */
 VFS_EXTERN
@@ -90,7 +94,7 @@ rc_t KSrvRespFileAddLocalAndCache ( struct KSrvRespFile * file,
 rc_t KSrvRespFileGetFormat ( const struct KSrvRespFile * self,
                              ESrvFileFormat * ff );
 
-/* DON"T FREE RETURNED STRINGS !!! */
+/* DON'T FREE RETURNED STRINGS !!! */
 rc_t KSrvRespFileGetAccOrName ( const struct KSrvRespFile * self,
                                 const char ** out, const char ** tic);
 rc_t KSrvRespFileGetId  ( const struct KSrvRespFile * self, uint64_t * id,

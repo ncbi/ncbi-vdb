@@ -113,7 +113,7 @@ Create a new KService object for each run! */
     return rc;
 }
 
-TEST_CASE(Ken) {
+TEST_CASE(VDB_CACHE) {
     REQUIRE_RC(example("SRR850901"));
 }
 
@@ -202,6 +202,8 @@ extern "C" {
     rc_t CC KMain ( int argc, char * argv [] ) {
 if (
 0 ) assert ( ! KDbgSetString ( "VFS-JSON" ) );
+if (
+0 ) assert ( ! KDbgSetString ( "VFS" ) );
         return TestResolver4 ( argc, argv );
     }
 }
