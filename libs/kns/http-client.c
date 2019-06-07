@@ -2634,7 +2634,17 @@ struct KClientHttpRequest
 
     KRefcount refcount;
     bool accept_not_modified;
+
+    bool payRequired;
 };
+
+void KClientHttpRequestPayRequired(struct KClientHttpRequest * self,
+    bool payRequired)
+{
+    if (self != NULL)
+        self->payRequired = payRequired;
+}
+
 
 rc_t KClientHttpRequestURL(KClientHttpRequest const *self, KDataBuffer *rslt)
 {
@@ -3246,12 +3256,6 @@ static EUriForm EUriFormGuess ( const String * hostname,
     }
 }
 
-/* TODO:
-    get REQUESTER_PAYER from configuration
-    or how it should be correctly set
- */
-#define REQUESTER_PAYER false
-
 #define X_AMZ_REQUEST_PAYER "x-amz-request-payer"
 #define REQUESTER "requester"
 
@@ -3356,7 +3360,7 @@ static rc_t KClientHttpRequestAuthenticate(const KClientHttpRequest *cself,
     const String * sdate = NULL;
     char date[64] = "";
 
-    bool requester_payer = REQUESTER_PAYER;
+    bool requester_payer = self->payRequired;
 
     String dates;
     assert(self && self->http);

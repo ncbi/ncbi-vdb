@@ -88,6 +88,12 @@ KNS_EXTERN rc_t CC KNSManagerMakeReliableHttpFile(
 KNS_EXTERN rc_t CC KNSManagerMakeReliableClientRequest ( 
     struct KNSManager const *self, struct KClientHttpRequest **req, 
     ver_t version, struct KStream *conn, const char *url, ... );
+KNS_EXTERN rc_t CC KNSManagerMakePaidHttpFile(struct KNSManager const *self,
+    struct KFile const **file, struct KStream *conn, ver_t vers,
+    bool payRequired, const char *url, ...);
+KNS_EXTERN rc_t CC KNSManagerMakePaidReliableHttpFile(
+    struct KNSManager const *self, struct KFile const **file,
+    struct KStream *conn, ver_t vers, bool payRequired, const char *url, ...);
 
 typedef struct {
     const char *url;

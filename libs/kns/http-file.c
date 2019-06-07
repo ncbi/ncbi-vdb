@@ -108,6 +108,8 @@ struct KHttpFile
     KDataBuffer url_buffer;
 
     bool no_cache;
+
+    bool payRequired;
 };
 
 static
@@ -190,6 +192,8 @@ rc_t KHttpFileMakeRequest ( const KHttpFile *self, uint64_t pos, size_t req_size
 
             if ( rc == 0 )
             {
+                KClientHttpRequestPayRequired(req, self->payRequired);
+
                 /* TBD - there should be a version of GET that takes a timeout */
                 rc = KClientHttpRequestGET ( req, rslt );
                 if ( rc != 0 )
@@ -1171,7 +1175,7 @@ static KFile_vt_v1 vtKHttpFile =
 
 static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
     const KFile **file, KStream *conn, ver_t vers, bool reliable,
-    const char *url, va_list args )
+    bool payRequired, const char *url, va_list args )
 {
     rc_t rc;
 
@@ -1223,6 +1227,10 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                     if ( rc == 0 )
                                     {
                                         KClientHttpResult *rslt;
+
+                                        KClientHttpRequestPayRequired(req,
+                                            payRequired);
+
                                         rc = KClientHttpRequestHEAD ( req, & rslt );
 #if 1
                                         KClientHttpRequestURL ( req, & f -> url_buffer ); /* NB. f -> url_buffer is not valid until this point */
@@ -1292,6 +1300,7 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                                         f -> file_size = size;
                                                         f -> http = http;
                                                         f -> no_cache = size >= NO_CACHE_LIMIT;
+                                                        f -> payRequired = payRequired;
                                                         
                                                         * file = & f -> dad;
                                                         KDataBufferWhack(buf);
@@ -1378,7 +1387,8 @@ LIB_EXPORT rc_t CC KNSManagerMakeHttpFile(const KNSManager *self,
     rc_t rc = 0;
     va_list args;
     va_start(args, url);
-    rc = KNSManagerVMakeHttpFileInt ( self, file, conn, vers, false, url, args);
+    rc = KNSManagerVMakeHttpFileInt ( self, file, conn, vers, false, false,
+        url, args);
     va_end(args);
     return rc;
 }
@@ -1389,7 +1399,34 @@ LIB_EXPORT rc_t CC KNSManagerMakeReliableHttpFile(const KNSManager *self,
     rc_t rc = 0;
     va_list args;
     va_start(args, url);
-    rc = KNSManagerVMakeHttpFileInt ( self, file, conn, vers, true, url, args);
+    rc = KNSManagerVMakeHttpFileInt ( self, file, conn, vers, true, false,
+        url, args);
+    va_end(args);
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KNSManagerMakePaidHttpFile(const KNSManager *self,
+    const KFile **file, struct KStream *conn, ver_t vers, bool payRequired,
+    const char *url, ...)
+{
+    rc_t rc = 0;
+    va_list args;
+    va_start(args, url);
+    rc = KNSManagerVMakeHttpFileInt ( self, file, conn, vers, true, payRequired,
+        url, args);
+    va_end(args);
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KNSManagerMakePaidReliableHttpFile(const KNSManager *self,
+    const KFile **file, struct KStream *conn, ver_t vers, bool payRequired,
+    const char *url, ...)
+{
+    rc_t rc = 0;
+    va_list args;
+    va_start(args, url);
+    rc = KNSManagerVMakeHttpFileInt ( self, file, conn, vers, true, payRequired,
+        url, args);
     va_end(args);
     return rc;
 }
