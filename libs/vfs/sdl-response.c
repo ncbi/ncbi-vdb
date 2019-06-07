@@ -91,7 +91,7 @@ static rc_t StrSet(const char ** self, const KJsonValue * node,
     if (value == NULL)
         return 0;
 
-    //if (THRESHOLD > THRESHOLD_INFO && path != NULL)        StackPrintStr(path, name, value);
+    /*if (THRESHOLD > THRESHOLD_INFO && path != NULL)        StackPrintStr(path, name, value);*/
 
     if (value[0] == '\0')
         return 0;
@@ -119,14 +119,18 @@ static void DataClone(const Data * self, Data * clone) {
 
     clone->acc = self->acc;
     clone->bundle = self->bundle;
+    clone->ceRequired = self->ceRequired;
     clone->id = self->id; /* oldCartObjId */
     clone->cls = self->cls; /* itemClass */
     clone->vsblt = self->vsblt;
     clone->name = self->name;
+    clone->object = self->object;
+    clone->payRequired = self->payRequired;
     clone->fmt = self->fmt; /* format */
     clone->qual = self->qual; /* hasOrigQuality */
     clone->sz = self->sz; /* size */
     clone->md5 = self->md5;
+    clone->modificationDate = self->modificationDate;
     clone->sha = self->sha; /* sha256 */
     clone->mod = self->mod; /* modDate */
     clone->exp = self->exp; /* expDate */
@@ -134,6 +138,7 @@ static void DataClone(const Data * self, Data * clone) {
     clone->reg = self->reg; /* region */
     clone->link = self->link; /* ???????????????????????????????????????? */
     clone->tic = self->tic;
+    clone->type = self->type;
 
     clone->code = self->code;
 }
@@ -201,11 +206,36 @@ rc_t ItemAddElmsSdl(Item * self, const KJsonObject * node, const Data * dad)
 
     struct Locations * elm = NULL;
 
+    const char * name = "locations";
+
     Data data;
     DataUpdate(dad, &data, node);
 
+    value = KJsonObjectGetMember ( node, name );
+
+    if ( value != NULL ) {
+        uint32_t i = 0;
+
+        const KJsonArray * array = KJsonValueToArray ( value );
+        uint32_t n = KJsonArrayGetLength ( array );
+    /*    rc = StackPushArr ( path, name ); if ( rc != 0 ) return rc;*/
+        for ( i = 0; i < n; ++ i ) {
+            rc_t r2 = 0;
+
+            const KJsonObject * object = NULL;
+
+            value = KJsonArrayGetElement ( array, i );
+            object = KJsonValueToObject ( value );
+            r2 = ItemAddElmsSdl ( self, object, & data);/*, path );*/
+            if ( r2 != 0 && rc == 0 )
+                rc = r2;
+
+/*            if ( i + 1 < n ) StackArrNext ( path );*/
+        }
+    }
+
     value = KJsonObjectGetMember(node, "link");
-    if (data.type != NULL || value != NULL) {
+    if (/*data.type != NULL ||*/ value != NULL) {
         rc = ItemAddFormat(self, data.type, &data, &elm);
         if (elm == NULL || rc != 0) {
             return rc;
