@@ -1,3 +1,6 @@
+/* TODO: move it to interfaces/klib/strings.h */
+#define MAGIC_PAY_REQUIRED "NCBI_VDB_PAY_REQUIRED"
+
 /*===========================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
@@ -3360,9 +3363,11 @@ static rc_t KClientHttpRequestAuthenticate(const KClientHttpRequest *cself,
     const String * sdate = NULL;
     char date[64] = "";
 
-    bool requester_payer = self->payRequired;
-
     String dates;
+
+    const char * magic = getenv(MAGIC_PAY_REQUIRED);
+    bool requester_payer = magic != NULL ? true : self->payRequired;
+
     assert(self && self->http);
     http = self->http;
     hostname = &self->url_block.host;
