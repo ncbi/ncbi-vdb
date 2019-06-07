@@ -52,9 +52,6 @@ struct KCacheTeeChunkReader;
 
 #include <arch-impl.h>
 
-/* JOJOBA */
-#include <stdio.h>
-
 #define DEFAULT_PAGE_SIZE ( 32U * 1024U )
 #define DEFAULT_CLUSTER_FACT 4U
 #define MAX_REQUEST_SIZE ( 256U * 1024U * 1024U )
@@ -95,18 +92,18 @@ typedef int64_t sbmap_t;
  * The general pattern is :
  *
  * in reading thread >>
- *    KCeQueNewObj ( KCeQue, & KCeQueObj, Pos, Size, InitialPageIndex );
- *    KCeQueObjWait ( KCeQueObj );
+ *    KSQueNewObj ( KSQue, & KSQueObj, Pos, Size, InitialPageIndex );
+ *    KSQueObjWait ( KSQueObj );
  *
  * in queue thread >>
- *    KCeQueNotify ( KCeQue, LastPageIndex );
- *    KCeQue -> findObjForPage ( & KCeQueObj, LastPageIndex );
- *    KCeQueObj -> Signal ( condition );
- *    KCeQue -> unLink ( KCeQueObj );
+ *    KSQueNotify ( KSQue, LastPageIndex );
+ *    KSQue -> findObjForPage ( & KSQueObj, LastPageIndex );
+ *    KSQueObj -> Signal ( condition );
+ *    KSQue -> unLink ( KSQueObj );
  *
  *_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
-typedef struct KCeQueObj KCeQueObj;
-struct KCeQueObj {
+typedef struct KSQueObj KSQueObj;
+struct KSQueObj {
     DLNode dad;
 
     size_t initial_page_idx;
@@ -122,7 +119,7 @@ struct KCeQueObj {
 
 static
 rc_t CC
-KCeQueObjDispose_please_do_not_call_that_method ( KCeQueObj * self )
+KSQueObjDispose_please_do_not_call_that_method ( KSQueObj * self )
 {
     if ( self != NULL ) {
         if ( self -> obj_lock != NULL ) {
@@ -143,21 +140,21 @@ KCeQueObjDispose_please_do_not_call_that_method ( KCeQueObj * self )
     }
 
     return 0;
-}   /* KCeQueObjDispose_please_do_not_call_that_method () */
+}   /* KSQueObjDispose_please_do_not_call_that_method () */
 
-/*  Please, do not call that method directly, use KCeQueNewObj() method
+/*  Please, do not call that method directly, use KSQueNewObj() method
  */
 static
 rc_t CC
-KCeQueObjMake_please_do_not_call_that_method (
-                                            KCeQueObj ** Obj,
+KSQueObjMake_please_do_not_call_that_method (
+                                            KSQueObj ** Obj,
                                             size_t InitialPageIndex,
                                             size_t LastPageIndex,
                                             bool ReadyToRead
 )
 {
     rc_t rc;
-    KCeQueObj * Ret;
+    KSQueObj * Ret;
 
     rc = 0;
     Ret = NULL;
@@ -174,7 +171,7 @@ KCeQueObjMake_please_do_not_call_that_method (
         return RC ( rcFS, rcQueue, rcConstructing, rcParam, rcNull );
     }
 
-    Ret = calloc ( 1, sizeof ( KCeQueObj ) );
+    Ret = calloc ( 1, sizeof ( KSQueObj ) );
     if ( Ret == NULL ) {
             /* Sorry, I do know that is wrong rcCeQue, but it is still
              * pew-pew
@@ -200,40 +197,40 @@ KCeQueObjMake_please_do_not_call_that_method (
         * Obj = NULL;
 
         if ( Ret != NULL ) {
-            KCeQueObjDispose_please_do_not_call_that_method ( Ret );
+            KSQueObjDispose_please_do_not_call_that_method ( Ret );
         }
     }
 
     return rc;
-}   /* KCeQueObjMake_please_do_not_call_that_method () */
+}   /* KSQueObjMake_please_do_not_call_that_method () */
 
 static
 rc_t CC
-KCeQueObjAddRef ( KCeQueObj * self )
+KSQueObjAddRef ( KSQueObj * self )
 {
     if ( self != NULL ) {
         atomic32_inc ( & ( self -> refcount ) );
     }
     return 0;
-}   /* KCeQueObjAddRef () */
+}   /* KSQueObjAddRef () */
 
 static
 rc_t CC
-KCeQueObjRelease ( KCeQueObj * self )
+KSQueObjRelease ( KSQueObj * self )
 {
     if ( self != NULL ) {
         if ( atomic32_dec_and_test ( & ( self -> refcount ) ) ) {
-            return KCeQueObjDispose_please_do_not_call_that_method (
+            return KSQueObjDispose_please_do_not_call_that_method (
                                                                     self
                                                                     );
         }
     }
     return 0;
-}   /* KCeQueObjRelease () */
+}   /* KSQueObjRelease () */
 
 static
 rc_t CC
-KCeQueObjWait ( KCeQueObj * self, struct timeout_t * Tm )
+KSQueObjWait ( KSQueObj * self, struct timeout_t * Tm )
 {
     rc_t rc = 0;
 
@@ -243,53 +240,51 @@ KCeQueObjWait ( KCeQueObj * self, struct timeout_t * Tm )
 
     if ( self -> ready_to_read )
     {
-        STATUS ( STAT_PRG, "%s - ceque obj ready to read\n", __func__ );
+        STATUS ( STAT_PRG, "%s - sque obj ready to read\n", __func__ );
     }
     else {
-        STATUS ( STAT_PRG, "%s - ceque obj setting lock\n", __func__ );
+        STATUS ( STAT_PRG, "%s - sque obj setting lock\n", __func__ );
         rc = KLockAcquire ( self -> obj_lock );
         if ( rc == 0 )
         {
-            STATUS ( STAT_PRG, "%s - ceque obj waiting on condition\n", __func__ );
+            STATUS ( STAT_PRG, "%s - sque obj waiting on condition\n", __func__ );
             rc = KConditionTimedWait ( self -> obj_cond, self -> obj_lock, Tm );
             if ( rc != 0 )
             {
                 STATUS ( STAT_QA, "%s - timed wait failed: %R\n", __func__, rc );
             }
 
-            STATUS ( STAT_PRG, "%s - ceque obj releasing lock\n", __func__ );
+            STATUS ( STAT_PRG, "%s - sque obj releasing lock\n", __func__ );
             KLockUnlock ( self -> obj_lock );
         }
     }
 
         /*  Long story short: we are not going to reuse that object
          */
-    KCeQueObjRelease ( self );
+    KSQueObjRelease ( self );
 
     return rc;
-}   /* KCeQueObjWait () */
+}   /* KSQueObjWait () */
 
 static
 rc_t CC
-KCeQueObjNotify ( KCeQueObj * self )
+KSQueObjNotify ( KSQueObj * self )
 {
     if ( self == NULL ) {
         return RC ( rcFS, rcQueue, rcSignaling, rcSelf, rcNull );
     }
 
     return KConditionSignal ( self -> obj_cond );
-}   /* KCeQueObjNotify () */
+}   /* KSQueObjNotify () */
 
-typedef struct KCeQue KCeQue;
-struct KCeQue {
-/* JOJOBA : ToDo
-    KCeQueObj ** ceque;
-    size_t ceque_qty;
- */
+typedef struct KSQue KSQue;
+struct KSQue {
+    // KSQueObj ** sque;
+    // size_t sque_qty;
 
-    DLList ceque;
+    DLList sque;
 
-    KLock * que_lock;
+    KLock * sque_lock;
     atomic32_t sealed;
 
     KLock * read_lock;
@@ -308,10 +303,10 @@ struct KCeQue {
 
 static
 rc_t CC
-KCeQueClear ( KCeQue * self )
+KSQueClear ( KSQue * self )
 {
     rc_t rc;
-    KCeQueObj * Obj;
+    KSQueObj * Obj;
 
     rc = 0;
     Obj = NULL;
@@ -323,48 +318,48 @@ KCeQueClear ( KCeQue * self )
         /* May be that is maniacal check, but ... if it is null,
          * we do not know what should we do here
          */
-    if ( self -> que_lock == NULL ) {
+    if ( self -> sque_lock == NULL ) {
         return RC ( rcFS, rcQueue, rcDestroying, rcSelf, rcInvalid );
     }
 
-    rc = KLockAcquire ( self -> que_lock );
+    rc = KLockAcquire ( self -> sque_lock );
     if ( rc == 0 ) {
-        while ( ( Obj = ( KCeQueObj * )
-                        DLListPopHead ( & ( self -> ceque ) ) ) != NULL )
+        while ( ( Obj = ( KSQueObj * )
+                        DLListPopHead ( & ( self -> sque ) ) ) != NULL )
         {
-            rc = KCeQueObjNotify ( Obj );
+            rc = KSQueObjNotify ( Obj );
             if ( rc != 0 ) {
                 break;
             }
 
-            rc = KCeQueObjRelease ( Obj );
+            rc = KSQueObjRelease ( Obj );
             if ( rc != 0 ) {
                 break;
             }
         }
-        KLockUnlock ( self -> que_lock );
+        KLockUnlock ( self -> sque_lock );
     }
 
     return 0;
-}   /* KCeQueClear () */
+}   /* KSQueClear () */
 
 #ifdef JOJOBA
     /* Not sure if we need that one
      */
 static
 bool CC
-KCeQueSealed ( KCeQue * self )
+KSQueSealed ( KSQue * self )
 {
     return self == NULL
                         ? false
                         : ( atomic32_read ( & ( self -> sealed )) != 0 )
                         ;
-}   /* KCeQueSealed () */
+}   /* KSQueSealed () */
 #endif /* JOJOBA */
 
 static
 rc_t CC
-KCeQueSeal ( KCeQue * self )
+KSQueSeal ( KSQue * self )
 {
     if ( self == NULL ) {
         return RC ( rcFS, rcQueue, rcFreezing, rcSelf, rcNull );
@@ -376,23 +371,23 @@ KCeQueSeal ( KCeQue * self )
     atomic32_set ( & ( self -> sealed ), 1 );
 
     return 0;
-}   /* KCeQueSeal () */
+}   /* KSQueSeal () */
 
 static
 rc_t CC
-KCeQueDispose ( KCeQue * self )
+KSQueDispose ( KSQue * self )
 {
     if ( self != NULL ) {
-        STATUS ( STAT_PRG, "%s - sealing ceque\n", __func__ );
-        KCeQueSeal ( self );
+        STATUS ( STAT_PRG, "%s - sealing sque\n", __func__ );
+        KSQueSeal ( self );
 
-        STATUS ( STAT_PRG, "%s - clearing ceque\n", __func__ );
-        KCeQueClear ( self );
+        STATUS ( STAT_PRG, "%s - clearing sque\n", __func__ );
+        KSQueClear ( self );
 
-        if ( self -> que_lock != NULL ) {
-            STATUS ( STAT_PRG, "%s - releasing ceque lock\n", __func__ );
-            KLockRelease ( self -> que_lock );
-            self -> que_lock = NULL;
+        if ( self -> sque_lock != NULL ) {
+            STATUS ( STAT_PRG, "%s - releasing sque lock\n", __func__ );
+            KLockRelease ( self -> sque_lock );
+            self -> sque_lock = NULL;
         }
 
         if ( self -> read_cond != NULL ) {
@@ -417,16 +412,16 @@ KCeQueDispose ( KCeQue * self )
     }
 
     return 0;
-}   /* KCeQueDispose () */
+}   /* KSQueDispose () */
 
 /* NOTE : zero PagesQty value is not an error
  */
 static
 rc_t CC
-KCeQueMake ( KCeQue ** CeQue, size_t PagesQty )
+KSQueMake ( KSQue ** CeQue, size_t PagesQty )
 {
     rc_t rc;
-    KCeQue * Ret;
+    KSQue * Ret;
 
     rc = 0;
     Ret = NULL;
@@ -439,14 +434,14 @@ KCeQueMake ( KCeQue ** CeQue, size_t PagesQty )
         return RC ( rcFS, rcQueue, rcConstructing, rcParam, rcNull );
     }
 
-    Ret = calloc ( 1, sizeof ( struct KCeQue ) );
+    Ret = calloc ( 1, sizeof ( struct KSQue ) );
     if ( Ret == NULL ) {
         return RC ( rcFS, rcQueue, rcConstructing, rcMemory, rcExhausted );
     }
 
-    DLListInit ( & ( Ret -> ceque ) );
+    DLListInit ( & ( Ret -> sque ) );
 
-    rc = KLockMake ( & ( Ret -> que_lock ) );
+    rc = KLockMake ( & ( Ret -> sque_lock ) );
     if ( rc == 0 )
     {
         rc = KLockMake ( & ( Ret -> read_lock ) );
@@ -471,24 +466,24 @@ KCeQueMake ( KCeQue ** CeQue, size_t PagesQty )
         * CeQue = NULL;
 
         if ( Ret != NULL ) {
-            KCeQueDispose ( Ret );
+            KSQueDispose ( Ret );
         }
     }
 
     return rc;
-}   /* KCeQueMake () */
+}   /* KSQueMake () */
 
 static
 rc_t CC
-KCeQueNewObj (
-                KCeQue * self,
-                KCeQueObj ** Obj,
+KSQueNewObj (
+                KSQue * self,
+                KSQueObj ** Obj,
                 size_t InitialPageIndex,
                 size_t LastPageIndex
 )
 {
     rc_t rc;
-    KCeQueObj * Ret;
+    KSQueObj * Ret;
     bool ReadyToRead;
 
     rc = 0;
@@ -507,16 +502,13 @@ KCeQueNewObj (
         return RC ( rcFS, rcQueue, rcAllocating, rcParam, rcNull );
     }
 
-    rc = KLockAcquire ( self -> que_lock );
+    rc = KLockAcquire ( self -> sque_lock );
     if ( rc == 0 ) {
         ReadyToRead = LastPageIndex <= self -> last_available_page_index;
-        KLockUnlock ( self -> que_lock );
+        KLockUnlock ( self -> sque_lock );
     }
 
-/* JOJOBA TODO check if page is available already
- */
-
-    rc = KCeQueObjMake_please_do_not_call_that_method (
+    rc = KSQueObjMake_please_do_not_call_that_method (
                                                     & Ret,
                                                     InitialPageIndex,
                                                     LastPageIndex,
@@ -527,22 +519,21 @@ KCeQueNewObj (
             * Obj = Ret;
         }
         else {
-            rc = KCeQueObjAddRef ( Ret );
+            rc = KSQueObjAddRef ( Ret );
             if ( rc == 0 ) {
                 STATUS ( STAT_PRG, "BG: %s - setting lock\n", __func__ );
-                rc = KLockAcquire ( self -> que_lock );
+                rc = KLockAcquire ( self -> sque_lock );
                 if ( rc == 0 ) {
                     DLListPushTail (
-                                    & ( self -> ceque ),
+                                    & ( self -> sque ),
                                     & ( Ret -> dad )
                                     );
 
-                    if ( self -> last_requested_page_index < self -> pages_qty )
+                    if ( LastPageIndex < self -> pages_qty
+                        && self -> last_requested_page_index < LastPageIndex
+                    )
                     {
-                        if ( self -> last_requested_page_index < LastPageIndex )
-                        {
-                            self -> last_requested_page_index = LastPageIndex;
-                        }
+                        self -> last_requested_page_index = LastPageIndex;
                     }
 
                     * Obj = Ret;
@@ -562,10 +553,10 @@ KCeQueNewObj (
                     }
 
                     STATUS ( STAT_PRG, "BG: %s - releasing lock\n", __func__ );
-                    KLockUnlock ( self -> que_lock );
+                    KLockUnlock ( self -> sque_lock );
                 }
                 else {
-                    KCeQueObjRelease ( Ret );
+                    KSQueObjRelease ( Ret );
                 }
             }
         }
@@ -575,20 +566,20 @@ KCeQueNewObj (
         * Obj = NULL;
 
         if ( Ret != NULL ) {
-            KCeQueObjRelease ( Ret );
+            KSQueObjRelease ( Ret );
         }
     }
 
     return rc;
-}   /* KCeQueNewObj () */
+}   /* KSQueNewObj () */
 
 static
 rc_t CC
-KCeQueNotify ( KCeQue * self, size_t LastPageIndex )
+KSQueNotify ( KSQue * self, size_t LastPageIndex )
 {
     rc_t rc;
     DLList new_list;
-    KCeQueObj * Obj;
+    KSQueObj * Obj;
 
     rc = 0;
     Obj = NULL;
@@ -602,7 +593,7 @@ KCeQueNotify ( KCeQue * self, size_t LastPageIndex )
          * notification, because we are reading in the same single
          * thread. But ... who knows ... lol
          */
-    rc = KLockAcquire ( self -> que_lock );
+    rc = KLockAcquire ( self -> sque_lock );
     if ( rc == 0 )
     {
 
@@ -618,8 +609,8 @@ KCeQueNotify ( KCeQue * self, size_t LastPageIndex )
 
             DLListInit ( & new_list );
 
-            while ( ( Obj = ( KCeQueObj * )
-                    DLListPopHead ( & ( self -> ceque ) ) ) != NULL )
+            while ( ( Obj = ( KSQueObj * )
+                    DLListPopHead ( & ( self -> sque ) ) ) != NULL )
             {
 /* JOJOBA : to check if we should change objects
  */
@@ -631,26 +622,26 @@ KCeQueNotify ( KCeQue * self, size_t LastPageIndex )
                 {
                         /* JOJOBA - think about exit codes
                          */
-                    KCeQueObjNotify ( Obj );
-                    KCeQueObjRelease ( Obj );
+                    KSQueObjNotify ( Obj );
+                    KSQueObjRelease ( Obj );
                 }
                 else {
                     DLListPushTail ( & new_list, & ( Obj -> dad ) );
                 }
             }
 
-            DLListAppendList ( & ( self -> ceque ), & new_list ); 
+            DLListAppendList ( & ( self -> sque ), & new_list ); 
 
         }
-        KLockUnlock ( self -> que_lock );
+        KLockUnlock ( self -> sque_lock );
     }
 
     return rc;
-}   /* KCeQueNotify () */
+}   /* KSQueNotify () */
 
 static
 rc_t CC
-KCeQueWaitForRead ( KCeQue * self )
+KSQueWaitForRead ( KSQue * self )
 {
     rc_t rc = 0;
 
@@ -677,11 +668,11 @@ KCeQueWaitForRead ( KCeQue * self )
     }
 
     return rc;
-}   /* KCeQueWaitForRead () */
+}   /* KSQueWaitForRead () */
 
 static
 rc_t CC
-KCeQueLastRequestedPageIndex ( KCeQue * self, size_t * Index )
+KSQueLastRequestedPageIndex ( KSQue * self, size_t * Index )
 {
     rc_t rc = 0;
 
@@ -697,15 +688,15 @@ KCeQueLastRequestedPageIndex ( KCeQue * self, size_t * Index )
         return RC ( rcFS, rcQueue, rcAccessing, rcParam, rcNull );
     }
 
-    rc = KLockAcquire ( self -> que_lock );
+    rc = KLockAcquire ( self -> sque_lock );
     if ( rc == 0 ) {
         * Index = self -> last_requested_page_index;
 
-        KLockUnlock ( self -> que_lock );
+        KLockUnlock ( self -> sque_lock );
     }
 
     return rc;
-}   /* KCeQueLastRequestedPageIndex () */
+}   /* KSQueLastRequestedPageIndex () */
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*
  * another kind of queue ends here
@@ -754,7 +745,7 @@ struct KCacheTeeFile_v3
     DLList ram_cache_mru;           /* shared use    */
     volatile bmap_t * bitmap;       /* shared use    */
     const KCacheTeeFileTail * tail; /* constant      */
-    KCeQue * ceque;                 /* shared use    */
+    KSQue * sque;                   /* shared use    */
     KLock * lock;                   /* shared use    */
                                     /* used in chunk consume */
                                     /* and in threads start  */
@@ -1065,7 +1056,7 @@ rc_t CC KCacheTeeChunkReaderConsume ( KCacheTeeChunkReader * chunk,
 
             /* notify any listeners */
             STATUS ( STAT_PRG, "BG: %s - broadcasting event to all waiting readers\n", __func__ );
-            KCeQueNotify ( self -> ceque, pg_idx );
+            KSQueNotify ( self -> sque, pg_idx );
         }
         else
         {
@@ -1162,9 +1153,9 @@ rc_t CC KCacheTeeFileDestroy ( KCacheTeeFile_v3 *self )
     STATUS ( STAT_PRG, "%s - setting 'quitting' flag\n", __func__ );
     self -> quitting = true;
 
-    /* disposing cache ceque */
-    STATUS ( STAT_PRG, "%s - disposing ceque\n", __func__ );
-    KCeQueDispose ( self -> ceque );
+    /* disposing cache sque */
+    STATUS ( STAT_PRG, "%s - disposing sque\n", __func__ );
+    KSQueDispose ( self -> sque );
 
     /* stop background thread */
     STATUS ( STAT_PRG, "%s - waiting for bg thread to quit\n", __func__ );
@@ -1625,15 +1616,15 @@ rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
     /* 4. check for existence of initial page in cache */
     STATUS ( STAT_PRG, "%s - testing for existence of starting page in cache\n", __func__ );
 
-    KCeQueObj * Obj = NULL;
+    KSQueObj * Obj = NULL;
 
     STATUS ( STAT_PRG, "%s - starting page not found in cache\n", __func__ );
     last_page_idx = ( size_t ) ( (pos + bsize ) / self -> page_size );
 
 
-    /* 5. deliver read request ceque object to bg thread */
-    STATUS ( STAT_GEEK, "%s - allocating ceque object\n", __func__ );
-    STATUS ( STAT_GEEK, "%s - allocating ceque object "
+    /* 5. deliver read request sque object to bg thread */
+    STATUS ( STAT_GEEK, "%s - allocating sque object\n", __func__ );
+    STATUS ( STAT_GEEK, "%s - allocating sque object "
              "{ pos=%lu, size=%zu, tm=%d%s, initial_page_idx=%zu, last_page_idx=%zu }\n"
              , __func__
              , pos
@@ -1644,8 +1635,8 @@ rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
              , last_page_idx
         );
 
-    rc = KCeQueNewObj (
-                        self -> ceque,
+    rc = KSQueNewObj (
+                        self -> sque,
                         & Obj,
                         initial_page_idx,
                         last_page_idx
@@ -1654,13 +1645,13 @@ rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
             /* Apparently if there is error code returned,
              * the Obj will be NULL ... so just exiting
              */
-        STATUS ( STAT_QA, "%s - ceque object allocation failed: %R\n", __func__, rc );
+        STATUS ( STAT_QA, "%s - sque object allocation failed: %R\n", __func__, rc );
         return rc;
     }
 
     /* 6. wait for event */
     STATUS ( STAT_PRG, "%s - waiting on condition\n", __func__ );
-    rc = KCeQueObjWait ( Obj, tm );
+    rc = KSQueObjWait ( Obj, tm );
     if ( rc != 0 )
     {
         STATUS ( STAT_QA, "%s - timed wait failed: %R\n", __func__, rc );
@@ -1866,8 +1857,8 @@ rc_t KCacheTeeFileBGLoop ( KCacheTeeFile_v3 * self )
     while ( ! self -> quitting )
     {
         size_t LastRequestedPage = 0;
-        rc = KCeQueLastRequestedPageIndex (
-                                            self -> ceque,
+        rc = KSQueLastRequestedPageIndex (
+                                            self -> sque,
                                             & LastRequestedPage
                                             );
         if ( rc != 0 )
@@ -1878,7 +1869,7 @@ rc_t KCacheTeeFileBGLoop ( KCacheTeeFile_v3 * self )
         {
             if ( KCacheTeeFilePageInCache ( self, LastRequestedPage ) ) {
                 STATUS ( STAT_PRG, "BG: %s - waiting for next read\n", __func__ );
-                rc = KCeQueWaitForRead ( self -> ceque );
+                rc = KSQueWaitForRead ( self -> sque );
             }
             else {
                 size_t num_read = 0;
@@ -2003,12 +1994,12 @@ rc_t KCacheTeeFileInitSync ( KCacheTeeFile_v3 * self )
     rc_t rc;
 
     size_t end_page_idx = ( size_t ) ( ( self -> source_size + self -> page_size - 1 ) / self -> page_size );
-    STATUS ( STAT_PRG, "%s - allocating fg->bg ceque for %ul pages\n", __func__, end_page_idx );
+    STATUS ( STAT_PRG, "%s - allocating fg->bg sque for %ul pages\n", __func__, end_page_idx );
 
 
-    rc = KCeQueMake ( & self -> ceque, end_page_idx );
+    rc = KSQueMake ( & self -> sque, end_page_idx );
     if ( rc != 0 ) {
-        PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to allocate ceque"
+        PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to allocate sque"
                              , "func=%s"
                              , __func__
                       ) );
