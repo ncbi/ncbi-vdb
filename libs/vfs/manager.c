@@ -244,7 +244,7 @@ static void get_caching_params( caching_params * params,
     rc_t rc = KConfigMake ( &cfg, NULL );
 
     /* set some default values... */
-    params -> version = MGR_CACHETEE3;
+    params -> version = MGR_CACHETEE; /* TODO MGR_CACHETEE3 */
     params -> cache_page_size = dflt_block_size;
     params -> cache_page_count = DEFAULT_CACHE_PAGE_COUNT;
     params -> use_cwd = 0;
