@@ -120,27 +120,26 @@ static void DataClone(const Data * self, Data * clone) {
     clone->acc = self->acc;
     clone->bundle = self->bundle;
     clone->ceRequired = self->ceRequired;
-    clone->id = self->id; /* oldCartObjId */
     clone->cls = self->cls; /* itemClass */
-    clone->vsblt = self->vsblt;
+    clone->code = self->code;
+    clone->exp = self->exp; /* expDate */
+    clone->fmt = self->fmt; /* format */
+    clone->id = self->id; /* oldCartObjId */
+    clone->link = self->link; /* ???????????????????????????????????????? */
+    clone->md5 = self->md5;
+    clone->mod = self->mod; /* modDate */
+    clone->modificationDate = self->modificationDate;
     clone->name = self->name;
     clone->object = self->object;
     clone->payRequired = self->payRequired;
-    clone->fmt = self->fmt; /* format */
     clone->qual = self->qual; /* hasOrigQuality */
-    clone->sz = self->sz; /* size */
-    clone->md5 = self->md5;
-    clone->modificationDate = self->modificationDate;
-    clone->sha = self->sha; /* sha256 */
-    clone->mod = self->mod; /* modDate */
-    clone->exp = self->exp; /* expDate */
-    clone->srv = self->srv; /* service */
     clone->reg = self->reg; /* region */
-    clone->link = self->link; /* ???????????????????????????????????????? */
+    clone->sha = self->sha; /* sha256 */
+    clone->srv = self->srv; /* service */
+    clone->sz = self->sz; /* size */
     clone->tic = self->tic;
     clone->type = self->type;
-
-    clone->code = self->code;
+    clone->vsblt = self->vsblt;
 }
 
 static rc_t DataUpdate(const Data * self,
