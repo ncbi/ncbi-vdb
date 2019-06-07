@@ -73,6 +73,12 @@ typedef struct KHttpFile KHttpFile;
 #include <ctype.h>
 #include <assert.h>
 
+#define SUPPORT_CHUNKED_READ 1
+
+#if SUPPORT_CHUNKED_READ
+#include <kfs/chunk-reader.h>
+#endif
+
 #if _DEBUGGING && 0
 #include <stdio.h>
 #define TRACE( x, ... ) \
@@ -84,7 +90,6 @@ typedef struct KHttpFile KHttpFile;
 
 #define USE_CACHE_CONTROL 1
 #define NO_CACHE_LIMIT ( ( uint64_t ) ( 16 * 1024 * 1024 ) )
-
 
 /*--------------------------------------------------------------------------
  * KHttpFile
@@ -146,6 +151,213 @@ rc_t CC KHttpFileSetSize ( KHttpFile *self, uint64_t size )
     return RC ( rcNS, rcFile, rcUpdating, rcFile, rcReadonly );
 }
 
+#if SUPPORT_CHUNKED_READ
+static
+rc_t KHttpFileMakeRequest ( const KHttpFile *self, uint64_t pos, size_t req_size,
+    struct timeout_t *tm, KClientHttpResult **rslt, uint32_t * http_status )
+{
+    rc_t rc;
+    KClientHttpRequest *req;
+
+    * rslt = NULL;
+    * http_status = 0;
+
+    rc = KClientHttpMakeRequest ( self -> http, &req, self -> url_buffer . base );
+    if ( rc != 0 )
+    {
+        TRACE ( "KClientHttpMakeRequest ( http, & req, url=\"%s\" ); failed: rc=%u\n",
+                ( const char* ) self -> url_buffer . base, rc );
+    }
+    else
+    {
+#if USE_CACHE_CONTROL
+            /* tell proxies not to cache if file is above limit */
+        if ( self -> no_cache )
+            rc = KClientHttpRequestSetNoCache ( req );
+        if ( rc == 0 )
+#endif
+        {
+            /* request range unless whole file */
+            if ( pos != 0 || ( uint64_t ) req_size < self -> file_size )
+            {
+                rc = KClientHttpRequestByteRange ( req, pos, req_size );
+                if ( rc != 0 )
+                {
+                    TRACE ( "KClientHttpRequestByteRange ( req, pos=%lu, bsize=%lu ); failed: rc=%u\n",
+                            pos, req_size, rc );
+                }
+            }
+
+            if ( rc == 0 )
+            {
+                /* TBD - there should be a version of GET that takes a timeout */
+                rc = KClientHttpRequestGET ( req, rslt );
+                if ( rc != 0 )
+                    TRACE ( "KClientHttpRequestGET ( req, & rslt ); failed: rc=%u\n", rc );
+                else
+                {
+                    /* dont need to know what the response message was */
+                    rc = KClientHttpResultStatus ( * rslt, http_status, NULL, 0, NULL );
+                    if ( rc != 0 )
+                    {
+                        TRACE ( "KClientHttpResultStatus ( rslt, & http_status, NULL, 0, NULL );"
+                                " failed: rc=%u\n", rc );
+
+                        KClientHttpResultRelease ( * rslt );
+                        * rslt = NULL;
+                    }
+                }
+            }
+        }
+
+        KClientHttpRequestRelease ( req );
+    }
+    return rc;
+}
+#endif /* SUPPORT_CHUNKED_READ */
+
+#if SUPPORT_CHUNKED_READ
+static
+rc_t KHttpFileReadResponse ( KStream * response,
+    void * buf, size_t bsize, size_t * num_read,
+    struct timeout_t * tm )
+{
+    rc_t rc = KStreamTimedReadExactly ( response, buf, bsize, tm );
+
+    if ( rc != 0 )
+        rc = ResetRCContext ( rc, rcNS, rcFile, rcReading );
+    else
+        * num_read = bsize;
+
+    return rc;
+}
+#endif /* SUPPORT_CHUNKED_READ */
+
+#if SUPPORT_CHUNKED_READ
+static
+rc_t KHttpFileTimedReadInt ( const KHttpFile * self,
+    uint64_t pos, void * buf, size_t bsize, size_t *num_read,
+    struct timeout_t *tm, uint32_t * http_status )
+{
+    rc_t rc = 0;
+    uint32_t proxy_retries;
+
+    size_t req_size = bsize;
+
+    * http_status = 0;
+
+    /* limit request size to EOF */
+    assert ( pos < self -> file_size );
+    if ( pos + bsize > self -> file_size )
+        req_size = ( size_t ) ( self -> file_size - pos );
+
+    /* try for a number of times to issue a request and get result */
+    for ( proxy_retries = 5; rc == 0 && proxy_retries != 0; )
+    {
+        KClientHttpResult * rslt = NULL;
+        rc = KHttpFileMakeRequest ( self, pos, req_size, tm, & rslt, http_status );
+        if ( rc == 0 )
+        {
+            bool have_size;
+            uint64_t start_pos;
+            size_t result_size;
+
+            switch ( * http_status )
+            {
+
+            case 200:
+                proxy_retries = 0;
+
+                /* extract stated bytes returned - must be whole file */
+                have_size = KClientHttpResultSize ( rslt, & result_size );
+                if ( pos != 0 || ! have_size || result_size > bsize )
+                {
+                    rc = RC ( rcNS, rcFile, rcReading, rcData, rcUnexpected );
+                    TRACE ( "KClientHttpResultSize ( rslt, & result_size ); unexpected status=%d\n",
+                            * http_status );
+                }
+                else
+                {
+                    KStream * response;
+
+                    /* assume we are reading the entire file */
+                    assert ( ( uint64_t ) result_size == self -> file_size );
+                    rc = KClientHttpResultGetInputStream ( rslt, & response );
+                    if ( rc == 0 )
+                    {
+                        rc = KHttpFileReadResponse ( response, buf, req_size, num_read, tm );
+                        KStreamRelease ( response );
+                    }
+                }
+                break;
+
+            case 206:
+                proxy_retries = 0;
+
+                /* extract actual amount being returned by server */
+                rc = KClientHttpResultRange ( rslt, & start_pos, & result_size );
+                if ( rc != 0 )
+                {
+                    TRACE ( "KClientHttpResultRange ( rslt, & start_pos, & result_size ); "
+                            "failed: rc=%u\n", rc );
+                }
+                else if ( start_pos != pos )
+                {
+                    TRACE ( "KClientHttpResultRange ( rslt, & start_pos, & result_size ); "
+                            "failed: start_pos=%lu != pos=%lu\n", start_pos, pos );
+                    rc = RC ( rcNS, rcFile, rcReading, rcData, rcUnexpected );
+                }
+                else
+                {
+                    KStream * response;
+
+                    if ( result_size != bsize )
+                    {
+                        TRACE ( "KClientHttpResultRange ( rslt, & start_pos, & result_size ); "
+                                "short read: result_size=%lu != bsize=%lu\n", result_size, bsize );
+                    }
+
+                    rc = KClientHttpResultGetInputStream ( rslt, & response );
+                    if ( rc == 0 )
+                    {
+                        rc = KHttpFileReadResponse ( response, buf, result_size, num_read, tm );
+                        KStreamRelease ( response );
+                    }
+                }
+                break;
+
+            case 403:
+            case 404:
+                if ( -- proxy_retries != 0 )
+                {
+                    TRACE ( "KClientHttpResultStatus ( rslt, & http_status, NULL, 0, NULL ); "
+                            "unexpected status=%d - sleeping and retrying\n", * http_status );
+                    KSleep ( 1 );
+                    rc = 0;
+                    break;
+                }
+
+                /* NO BREAK */
+
+            default:
+                rc = RC ( rcNS, rcFile, rcReading, rcData, rcUnexpected );
+                TRACE ( "KClientHttpResultStatus ( rslt, & http_status, NULL, 0, NULL ); "
+                        "unexpected status=%d\n", * http_status );
+                break;
+            }
+
+            KClientHttpResultRelease ( rslt );
+        }
+    }
+
+    if ( rc != 0 || * num_read == 0 )
+        KClientHttpClose ( self -> http );
+
+    return rc;
+}
+#endif /* SUPPORT_CHUNKED_READ */
+
+#if ! SUPPORT_CHUNKED_READ
 static
 rc_t KHttpFileTimedReadInt ( const KHttpFile *cself,
     uint64_t aPos, void *aBuf, size_t aBsize,
@@ -375,17 +587,124 @@ otherwise we are going to hit "Apache return HTTP headers twice" bug */
     
     return rc;
 }
+#endif /* ! SUPPORT_CHUNKED_READ */
+
+#if SUPPORT_CHUNKED_READ
+static
+rc_t KHttpFileTimedReadShort ( const KHttpFile * self,
+    uint64_t pos, void * buf, size_t bsize, size_t * num_read,
+    struct timeout_t * tm, uint32_t * http_status )
+{
+    rc_t rc = 0;
+    uint8_t min_read_buffer [ 256 ];
+
+    /* if the whole file fits into 256 bytes */
+    if ( self -> file_size <= sizeof min_read_buffer )
+    {
+        /* read into local buffer */
+        rc = KHttpFileTimedReadInt ( self, 0, min_read_buffer,
+            sizeof min_read_buffer, num_read, tm, http_status );
+
+        /* transfer any bytes read up to bsize */
+        if ( * num_read != 0 )
+        {
+            if ( * num_read > bsize )
+                * num_read = bsize;
+                    
+            /* move bytes out into supplied buffer.
+               because we know that file size <= 256,
+               and we know that pos < file_size, we
+               and we know that pos + bsize <= file_size,
+               the following assertions must hold. */
+            assert ( pos < sizeof min_read_buffer );
+            assert ( pos + * num_read <= sizeof min_read_buffer );
+            memmove ( buf, & min_read_buffer [ pos ], * num_read );
+        }
+    }
+
+    /* if the read is at the end of file, it could be short
+       just because of buffer-size modulus. */
+    else if ( pos + bsize == self -> file_size )
+    {
+        /* this is the pos offset to produce a full 256-byte read */
+        size_t d = sizeof min_read_buffer - bsize;
+
+        /* read last 256 bytes from file.
+           because we know that bsize < 256,
+           and we know that file_size > 256,
+           we know that sizeof buffer - bsize <= file_size - pos
+           and the following assertions must hold. */
+        assert ( pos >= d );
+        rc = KHttpFileTimedReadInt ( self, pos - d, min_read_buffer,
+            sizeof min_read_buffer, num_read, tm, http_status );
+        
+        /* transfer any bytes read up to bsize */
+        if ( * num_read != 0 )
+        {
+            if ( * num_read > bsize )
+                * num_read = bsize;
+                    
+            assert ( d + * num_read <= sizeof min_read_buffer );
+            memmove ( buf, & min_read_buffer [ d ], * num_read );
+        }
+
+    }
+
+    /* this appears to be a short read of a partial file,
+       but not at the end. */
+    else
+    {
+        /* try to read 256 bytes at stated position */
+        rc = KHttpFileTimedReadInt ( self, pos, min_read_buffer,
+            sizeof min_read_buffer, num_read, tm, http_status );
+
+        /* transfer any bytes read up to bsize */
+        if ( * num_read != 0 )
+        {
+            if ( * num_read > bsize )
+                * num_read = bsize;
+                    
+            memmove ( buf, min_read_buffer, * num_read );
+        }
+    }
+
+    return rc;
+}
+#endif
 
 static
-rc_t KHttpFileTimedReadLocked ( const KHttpFile *cself,
-    uint64_t aPos, void *aBuf, size_t aBsize,
-    size_t * num_read, struct timeout_t * tm, uint32_t * http_status )
+rc_t KHttpFileTimedReadLocked ( const KHttpFile * self,
+    uint64_t pos, void * buf, size_t bsize, size_t * num_read,
+    struct timeout_t * tm, uint32_t * http_status )
 {
-    rc_t rc = KLockAcquire ( cself -> lock );
+    rc_t rc = KLockAcquire ( self -> lock );
     if ( rc == 0 )
     {
-        rc = KHttpFileTimedReadInt ( cself, aPos, aBuf, aBsize, num_read, tm, http_status );
-        KLockUnlock ( cself -> lock );
+#if SUPPORT_CHUNKED_READ
+        /* moved the request boundary processing here.
+           first, check trivial case of read beyond EOF. */
+        if ( pos >= self -> file_size )
+            * num_read = 0;
+        else
+        {
+            /* limit read request to amount available in file */
+            if ( pos + bsize > self -> file_size )
+                bsize = ( size_t ) ( self -> file_size - pos );
+
+            /* if there are at least 256 bytes between pos and EOF,
+               just go ahead and read it directly into this buffer. */
+            if ( bsize >= 256 )
+                rc = KHttpFileTimedReadInt ( self, pos, buf, bsize, num_read, tm, http_status );
+
+            /* otherwise, perform a short read */
+            else
+                rc = KHttpFileTimedReadShort ( self, pos, buf, bsize, num_read, tm, http_status );
+        }
+
+#else
+        rc = KHttpFileTimedReadInt ( self, pos, buf, bsize, num_read, tm, http_status );
+#endif
+        KLockUnlock ( self -> lock );
     }
     return rc;
 }
@@ -400,6 +719,8 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
     
     if ( rc == 0 )
     {
+        rc_t rc2;
+
         DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
             ( "KHttpFileTimedRead(pos=%lu,size=%zu)...\n", pos, bsize ) );
         
@@ -410,7 +731,7 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
             rc = KHttpFileTimedReadLocked ( self, pos, buffer, bsize, num_read, tm, & http_status );
             if ( rc != 0 ) 
             {   
-                rc_t rc2=KClientHttpReopen ( self -> http );
+                rc2 = KClientHttpReopen ( self -> http );
                 DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedRead: KHttpFileTimedReadLocked failed, reopening\n" ) );
                 if ( rc2 == 0 )
                 {
@@ -438,10 +759,23 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
             rc = KClientHttpReopen ( self -> http );
         }
         
-        {
-            rc_t rc2 = KHttpRetrierDestroy ( & retrier );
-            if ( rc == 0 ) rc = rc2;
-        }
+        rc2 = KHttpRetrierDestroy ( & retrier );
+        if ( rc == 0 )
+            rc = rc2;
+    }
+
+    if ( rc != 0 && KNSManagerLogNcbiVdbNetError ( self -> kns ) )
+    {
+        KEndPoint ep, local_ep;
+        KClientHttpGetLocalEndpoint  ( self -> http, & local_ep );
+        KClientHttpGetRemoteEndpoint ( self -> http, & ep );
+
+        PLOGERR ( klogErr, ( klogErr, rc,
+            "Failed to KHttpFileTimedRead("
+            "'$(path)' ($(ip)), $(bytes)) from '$(local)'",
+               "path=%s,ip=%s,bytes=%zu,local=%s",
+            self -> url_buffer . base,
+            ep . ip_address, bsize, local_ep . ip_address ) );
     }
     
     return rc;
@@ -451,22 +785,10 @@ static
 rc_t CC KHttpFileRead ( const KHttpFile *self, uint64_t pos,
      void *buffer, size_t bsize, size_t *num_read )
 {
-    rc_t rc = 0;
     struct timeout_t tm;
     TimeoutInit ( & tm, self -> kns -> http_read_timeout );
-    rc = KHttpFileTimedRead ( self, pos, buffer, bsize, num_read, & tm );
-    if ( rc != 0 && KNSManagerLogNcbiVdbNetError ( self -> kns ) ) {
-        KEndPoint ep, local_ep;
-        KClientHttpGetLocalEndpoint  ( self -> http, & local_ep );
-        KClientHttpGetRemoteEndpoint ( self -> http, & ep );
-        PLOGERR ( klogErr, ( klogErr, rc,
-            "Failed to KHttpFileRead("
-            "'$(path)' ($(ip)), $(bytes)) from '$(local)'",
-               "path=%s,ip=%s,bytes=%zu,local=%s",
-            self -> url_buffer . base,
-            ep . ip_address, bsize, local_ep . ip_address ) );
-    }
-    return rc;
+
+    return KHttpFileTimedRead ( self, pos, buffer, bsize, num_read, & tm );
 }
 
 static
@@ -495,9 +817,341 @@ uint32_t CC KHttpFileGetType ( const KHttpFile *self )
     return kfdFile;
 }
 
+#if SUPPORT_CHUNKED_READ
+static
+rc_t KHttpFileReadResponseInChunks ( KStream * response,
+    uint64_t pos, KChunkReader * chunks, size_t bsize, size_t * num_read,
+    struct timeout_t * tm )
+{
+    rc_t rc = 0;
+    size_t total, chunk_size;
+
+    for ( total = 0; total < bsize && rc == 0; total += chunk_size )
+    {
+        void * chbuf;
+        size_t chsize;
+
+        /* retrieve buffer */
+        rc = KChunkReaderNextBuffer ( chunks, & chbuf, & chsize );
+        if ( rc != 0 )
+        {
+            TRACE ( "KHttpFileReadResponseInChunks (); failed: rc=%u\n", rc );
+            break;
+        }
+
+        /* adjust number to read */
+        chunk_size = chsize;
+        if ( total + chsize > bsize )
+            chunk_size = bsize - total;
+
+        /* read bytes */
+        rc = KStreamTimedReadExactly ( response, chbuf, chunk_size, tm );
+        if ( rc != 0 )
+        {
+            TRACE ( "KStreamTimedReadExactly ( response, chbuf, chunk_size=%zu ); failed: rc=%u\n",
+                    chunk_size, rc );
+            chunk_size = 0;
+        }
+        else
+        {
+            /* consume them */
+            rc = KChunkReaderConsumeChunk ( chunks, pos + total, chbuf, chunk_size );
+        }
+
+        /* return the buffer */
+        KChunkReaderReturnBuffer ( chunks, chbuf, chsize );
+
+        /* for multiple chunks, prepare the timeout */
+        if ( tm != NULL && ! tm -> prepared && total + chunk_size < bsize )
+            TimeoutPrepare ( tm );
+    }
+
+    * num_read = total;
+
+    KStreamRelease ( response );
+    return ( total == 0 ) ? rc : 0;
+}
+
+static
+rc_t KHttpFileTimedReadChunkedInt ( const KHttpFile * self,
+    uint64_t pos, KChunkReader * chunks, size_t bytes, size_t * num_read,
+    struct timeout_t * tm, uint32_t * http_status )
+{
+    rc_t rc = 0;
+    uint32_t proxy_retries;
+
+    size_t req_size = bytes;
+
+    * http_status = 0;
+
+    /* limit request size to EOF */
+    assert ( pos < self -> file_size );
+    if ( pos + bytes > self -> file_size )
+        req_size = ( size_t ) ( self -> file_size - pos );
+
+    /* try for a number of times to issue a request and get result */
+    for ( proxy_retries = 5; rc == 0 && proxy_retries != 0; )
+    {
+        KClientHttpResult * rslt = NULL;
+        rc = KHttpFileMakeRequest ( self, pos, req_size, tm, & rslt, http_status );
+        if ( rc == 0 )
+        {
+            bool have_size;
+            uint64_t start_pos;
+            size_t result_size;
+
+            switch ( * http_status )
+            {
+
+            case 200:
+                proxy_retries = 0;
+
+                /* extract stated bytes returned - must be whole file */
+                have_size = KClientHttpResultSize ( rslt, & result_size );
+                if ( pos != 0 || ! have_size || result_size > bytes )
+                {
+                    rc = RC ( rcNS, rcFile, rcReading, rcData, rcUnexpected );
+                    TRACE ( "KClientHttpResultSize ( rslt, & result_size ); unexpected status=%d\n",
+                            * http_status );
+                }
+                else
+                {
+                    KStream * response;
+
+                    /* assume we are reading the entire file */
+                    assert ( ( uint64_t ) result_size == self -> file_size );
+                    rc = KClientHttpResultGetInputStream ( rslt, & response );
+                    if ( rc == 0 )
+                    {
+                        rc = KHttpFileReadResponseInChunks ( response, pos, chunks, req_size, num_read, tm );
+                        KStreamRelease ( response );
+                    }
+                }
+                break;
+
+            case 206:
+                proxy_retries = 0;
+
+                /* extract actual amount being returned by server */
+                rc = KClientHttpResultRange ( rslt, & start_pos, & result_size );
+                if ( rc != 0 )
+                {
+                    TRACE ( "KClientHttpResultRange ( rslt, & start_pos, & result_size ); "
+                            "failed: rc=%u\n", rc );
+                }
+                else if ( start_pos != pos )
+                {
+                    TRACE ( "KClientHttpResultRange ( rslt, & start_pos, & result_size ); "
+                            "failed: start_pos=%lu != pos=%lu\n", start_pos, pos );
+                    rc = RC ( rcNS, rcFile, rcReading, rcData, rcUnexpected );
+                }
+                else
+                {
+                    KStream * response;
+
+                    if ( result_size != bytes )
+                    {
+                        TRACE ( "KClientHttpResultRange ( rslt, & start_pos, & result_size ); "
+                                "short read: result_size=%lu != bytes=%lu\n", result_size, bytes );
+                    }
+
+                    rc = KClientHttpResultGetInputStream ( rslt, & response );
+                    if ( rc == 0 )
+                    {
+                        rc = KHttpFileReadResponseInChunks ( response, pos, chunks, req_size, num_read, tm );
+                        KStreamRelease ( response );
+                    }
+                }
+                break;
+
+            case 403:
+            case 404:
+                if ( -- proxy_retries != 0 )
+                {
+                    TRACE ( "KClientHttpResultStatus ( rslt, & http_status, NULL, 0, NULL ); "
+                            "unexpected status=%d - sleeping and retrying\n", * http_status );
+                    KSleep ( 1 );
+                    rc = 0;
+                    break;
+                }
+
+                /* NO BREAK */
+
+            default:
+                rc = RC ( rcNS, rcFile, rcReading, rcData, rcUnexpected );
+                TRACE ( "KClientHttpResultStatus ( rslt, & http_status, NULL, 0, NULL ); "
+                        "unexpected status=%d\n", * http_status );
+                break;
+            }
+
+            KClientHttpResultRelease ( rslt );
+        }
+    }
+
+    if ( rc != 0 || * num_read == 0 )
+        KClientHttpClose ( self -> http );
+
+    return rc;
+}
+
+static
+rc_t KHttpFileTimedReadChunkedLocked ( const KHttpFile * self,
+    uint64_t pos, KChunkReader * chunks, size_t bytes, size_t * num_read,
+    struct timeout_t * tm, uint32_t * http_status )
+{
+    rc_t rc = KLockAcquire ( self -> lock );
+    if ( rc == 0 )
+    {
+        /* moved the request boundary processing here.
+           first, check trivial case of read beyond EOF. */
+        if ( pos >= self -> file_size )
+            * num_read = 0;
+        else
+        {
+            /* limit read request to amount available in file */
+            if ( pos + bytes > self -> file_size )
+                bytes = ( size_t ) ( self -> file_size - pos );
+
+            /* if request is for 256 bytes or more, go ahead */
+            if ( bytes >= 256 )
+                rc = KHttpFileTimedReadChunkedInt ( self, pos, chunks, bytes, num_read, tm, http_status );
+
+            else
+            {
+                /* a single chunk will do */
+                void * chbuf;
+                size_t chsize;
+                rc = KChunkReaderNextBuffer ( chunks, & chbuf, & chsize );
+                if ( rc == 0 )
+                {
+                    /* issue request through normal, non-chunked read */
+                    assert ( chsize >= 256 );
+                    rc = KHttpFileTimedReadShort ( self, pos, chbuf, bytes, num_read, tm, http_status );
+                    if ( rc == 0 )
+                    {
+                        KChunkReaderConsumeChunk ( chunks, pos, chbuf, * num_read );
+                    }
+
+                    KChunkReaderReturnBuffer ( chunks, chbuf, chsize );
+                }
+            }
+        }
+
+        KLockUnlock ( self -> lock );
+    }
+    return rc;
+}
+
+static
+rc_t CC KHttpFileTimedReadChunked ( const KHttpFile * self, uint64_t pos,
+     KChunkReader * chunks, size_t bytes, size_t * num_read, struct timeout_t * tm )
+{
+    rc_t rc;
+    KHttpRetrier retrier;
+
+    /* this shoud have been checked in the interface dispatch.
+       it addresses the concern over attempts to read small amounts
+       over HTTP with the Apache short-read bug. */
+    assert ( KChunkReaderBufferSize ( chunks ) == 0 || KChunkReaderBufferSize ( chunks ) >= 256 );
+
+    rc = KHttpRetrierInit ( & retrier, self -> url_buffer . base, self -> kns );
+    if ( rc == 0 )
+    {
+        rc_t rc2;
+
+        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
+            ( "KHttpFileTimedReadChunked(pos=%lu,size=%zu)...\n", pos, bytes ) );
+        
+        /* loop using existing KClientHttp object */
+        while ( rc == 0 ) 
+        {
+            uint32_t http_status;
+            rc = KHttpFileTimedReadChunkedLocked ( self, pos, chunks, bytes, num_read, tm, & http_status );
+
+            /* ALWAYS account for chunks already read */
+            pos += * num_read;
+            bytes -= * num_read;
+
+            if ( rc != 0 ) 
+            {   
+                rc2 = KClientHttpReopen ( self -> http );
+                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedReadChunked: "
+                    "KHttpFileTimedReadChunkedLocked failed, reopening\n" ) );
+                if ( rc2 == 0 )
+                {
+                    rc2 = KHttpFileTimedReadChunkedLocked ( self, pos, chunks, bytes, num_read, tm, & http_status );
+
+                    /* ALWAYS account for chunks already read */
+                    pos += * num_read;
+                    bytes -= * num_read;
+
+                    if ( rc2 == 0 ) 
+                    {
+                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedReadChunked: "
+                                                                       "reopened successfully\n" ) );
+                        rc = 0;
+                    }
+                    else 
+                    {
+                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedReadChunked: "
+                                                                       "reopen failed\n" ) );
+                        break;
+                    }
+                }
+            }
+
+            if ( ! KHttpRetrierWait ( & retrier, http_status ) )
+            {
+                assert ( num_read != NULL );
+                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
+                    ( "...KHttpFileTimedReadChunked(pos=%lu,size=%zu)=%zu\n\n",
+                      pos, bytes, * num_read ) );
+                break;
+            }
+            rc = KClientHttpReopen ( self -> http );
+        }
+        
+        rc2 = KHttpRetrierDestroy ( & retrier );
+        if ( rc == 0 )
+            rc = rc2;
+    }
+
+    if ( rc != 0 && KNSManagerLogNcbiVdbNetError ( self -> kns ) )
+    {
+        KEndPoint ep, local_ep;
+        KClientHttpGetLocalEndpoint  ( self -> http, & local_ep );
+        KClientHttpGetRemoteEndpoint ( self -> http, & ep );
+
+        PLOGERR ( klogErr, ( klogErr, rc,
+            "Failed to KHttpFileTimedReadChunked("
+            "'$(path)' ($(ip)), $(bytes)) from '$(local)'",
+               "path=%s,ip=%s,bytes=%zu,local=%s",
+            self -> url_buffer . base,
+            ep . ip_address, bytes, local_ep . ip_address ) );
+    }
+
+    return rc;
+}
+
+static
+rc_t CC KHttpFileReadChunked ( const KHttpFile * self, uint64_t pos,
+    KChunkReader * chunks, size_t bytes, size_t * num_read )
+{
+    struct timeout_t tm;
+    TimeoutInit ( & tm, self -> kns -> http_read_timeout );
+
+    return KHttpFileTimedReadChunked ( self, pos, chunks, bytes, num_read, & tm );
+}
+#endif /* SUPPORT_CHUNKED_READ */
+
 static KFile_vt_v1 vtKHttpFile = 
 {
-    1, 2,
+    1,
+#if SUPPORT_CHUNKED_READ
+    3,
+#else
+    2,
+#endif
 
     KHttpFileDestroy,
     KHttpFileGetSysFile,
@@ -509,6 +1163,10 @@ static KFile_vt_v1 vtKHttpFile =
     KHttpFileGetType,
     KHttpFileTimedRead,
     KHttpFileTimedWrite
+#if SUPPORT_CHUNKED_READ
+    , KHttpFileReadChunked
+    , KHttpFileTimedReadChunked
+#endif
 };
 
 static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
