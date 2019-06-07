@@ -255,7 +255,7 @@ class CT3Fixture
             return rc;
         }
 
-        rc_t read_all_loop( const KFile * f, uint64_t pos, uint8_t * buffer, size_t to_read )
+        rc_t read_all_loop( const KFile * f, uint64_t pos, uint8_t * buffer, size_t to_read, size_t * NumRead )
         {
             rc_t rc = 0;
             size_t num_read_total = 0;
@@ -282,6 +282,11 @@ class CT3Fixture
                     num_read_total += num_read;
                     pos += num_read;
                     dst += num_read;
+
+                    * NumRead = num_read_total;
+                    if ( num_read == 0 ) {
+                        break;
+                    }
                 }
             }
             return rc;
@@ -309,17 +314,27 @@ class CT3Fixture
                 }
                 else
                 {
-                    rc = read_all_loop ( file1, pos, buffer1, num_bytes );
+                    size_t NumRead1;
+                    rc = read_all_loop ( file1, pos, buffer1, num_bytes , & NumRead1);
                     if ( rc == 0 )
                     {
-                        rc = read_all_loop ( file2, pos, buffer2, num_bytes );
+                        size_t NumRead2;
+                        rc = read_all_loop ( file2, pos, buffer2, num_bytes, & NumRead2 );
                         if ( rc == 0 )
                         {
-                            int diff = memcmp( buffer1, buffer2, num_bytes );
-                            if ( diff != 0 )
-                            {
-                                report_diff( buffer1, buffer2, num_bytes, 20 );
-                                rc = RC ( rcExe, rcBuffer, rcReading, rcMemory, rcCorrupt );
+                            if ( NumRead1 != NumRead2 ) {
+                                rc = RC ( rcRuntime, rcBuffer, rcRetrieving, rcItem, rcInvalid );
+                            }
+                            if ( rc == 0 ) {
+                                if ( NumRead1 != 0 ) {
+
+                                    int diff = memcmp( buffer1, buffer2, NumRead1 );
+                                    if ( diff != 0 )
+                                    {
+                                        report_diff( buffer1, buffer2, NumRead1, 20 );
+                                        rc = RC ( rcExe, rcBuffer, rcReading, rcMemory, rcCorrupt );
+                                    }
+                                }
                             }
                         }
                     }
@@ -569,7 +584,11 @@ static rc_t CC thread_func( const KThread *self, void *data )
     return 0;
 }
 
-const int num_treads = 2;
+// const int num_treads = 2;
+// const int num_treads = 4;
+// const int num_treads = 16;
+// const int num_treads = 32;
+const int num_treads = 64;
 
 FIXTURE_TEST_CASE( CacheTee3_Multiple_Users_Multiple_Inst, CT3Fixture )
 {

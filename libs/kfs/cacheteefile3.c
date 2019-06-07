@@ -52,6 +52,9 @@ struct KCacheTeeChunkReader;
 
 #include <arch-impl.h>
 
+/* JOJOBA */
+#include <stdio.h>
+
 #define DEFAULT_PAGE_SIZE ( 32U * 1024U )
 #define DEFAULT_CLUSTER_FACT 4U
 #define MAX_REQUEST_SIZE ( 256U * 1024U * 1024U )
@@ -106,10 +109,10 @@ typedef struct KCeQueObj KCeQueObj;
 struct KCeQueObj {
     DLNode dad;
 
-    uint64_t pos;
-    uint64_t size;
     size_t initial_page_idx;
     size_t last_page_idx;
+
+    bool ready_to_read;
 
     atomic32_t refcount;
 
@@ -145,10 +148,9 @@ static
 rc_t CC
 KCeQueObjMake_please_do_not_call_that_method (
                                             KCeQueObj ** Obj,
-                                            uint64_t Pos,
-                                            uint64_t Size,
                                             size_t InitialPageIndex,
-                                            size_t LastPageIndex
+                                            size_t LastPageIndex,
+                                            bool ReadyToRead
 )
 {
     rc_t rc;
@@ -183,10 +185,9 @@ KCeQueObjMake_please_do_not_call_that_method (
     if ( rc == 0 ) {
         rc = KConditionMake ( & ( Ret -> condition ) );
         if ( rc == 0 ) {
-            Ret -> pos = Pos;
-            Ret -> size = Size;
             Ret -> initial_page_idx = InitialPageIndex;
             Ret -> last_page_idx = LastPageIndex;
+            Ret -> ready_to_read = ReadyToRead;
 
             * Obj = Ret;
         }
@@ -237,18 +238,25 @@ KCeQueObjWait ( KCeQueObj * self, struct timeout_t * Tm )
         return RC ( rcFS, rcQueue, rcWaiting, rcSelf, rcNull );
     }
 
-    STATUS ( STAT_PRG, "%s - ceque obj setting lock\n", __func__ );
-    rc = KLockAcquire ( self -> lock );
-    if ( rc == 0 ) {
-        STATUS ( STAT_PRG, "%s - ceque obj waiting on condition\n", __func__ );
-        rc = KConditionTimedWait ( self -> condition, self -> lock, Tm );
-        if ( rc != 0 )
+    if ( self -> ready_to_read )
+    {
+        STATUS ( STAT_PRG, "%s - ceque obj ready to read\n", __func__ );
+    }
+    else {
+        STATUS ( STAT_PRG, "%s - ceque obj setting lock\n", __func__ );
+        rc = KLockAcquire ( self -> lock );
+        if ( rc == 0 )
         {
-            STATUS ( STAT_QA, "%s - timed wait failed: %R\n", __func__, rc );
-        }
+            STATUS ( STAT_PRG, "%s - ceque obj waiting on condition\n", __func__ );
+            rc = KConditionTimedWait ( self -> condition, self -> lock, Tm );
+            if ( rc != 0 )
+            {
+                STATUS ( STAT_QA, "%s - timed wait failed: %R\n", __func__, rc );
+            }
 
-        STATUS ( STAT_PRG, "%s - ceque obj releasing lock\n", __func__ );
-        KLockUnlock ( self -> lock );
+            STATUS ( STAT_PRG, "%s - ceque obj releasing lock\n", __func__ );
+            KLockUnlock ( self -> lock );
+        }
     }
 
         /*  Long story short: we are not going to reuse that object
@@ -262,21 +270,34 @@ static
 rc_t CC
 KCeQueObjNotify ( KCeQueObj * self )
 {
-        /* JOJOBA */
-        /* ???? */
+    if ( self == NULL ) {
+        return RC ( rcFS, rcQueue, rcSignaling, rcSelf, rcNull );
+    }
 
-    return 0;
+    return KConditionSignal ( self -> condition );
 }   /* KCeQueObjNotify () */
 
 typedef struct KCeQue KCeQue;
 struct KCeQue {
+/* JOJOBA : ToDo
+    KCeQueObj ** ceque;
+    size_t ceque_qty;
+ */
+
     DLList ceque;
 
     KLock * lock;
     atomic32_t sealed;
 
-    uint64_t last_available_page_index;
-    uint64_t last_requested_page_index;
+        /* NOTE: that one sets once at the beginning and
+         * does not need to lock to read
+         */
+    size_t pages_qty;
+
+        /* NOTE: these are need to be locked to set
+         */
+    size_t last_available_page_index;
+    size_t last_requested_page_index;
 };
 
 static
@@ -369,9 +390,11 @@ KCeQueDispose ( KCeQue * self )
     return 0;
 }   /* KCeQueDispose () */
 
+/* NOTE : zero PagesQty value is not an error
+ */
 static
 rc_t CC
-KCeQueMake ( KCeQue ** CeQue /* ???? */ )
+KCeQueMake ( KCeQue ** CeQue, size_t PagesQty )
 {
     rc_t rc;
     KCeQue * Ret;
@@ -398,6 +421,8 @@ KCeQueMake ( KCeQue ** CeQue /* ???? */ )
     if ( rc == 0 ) {
         atomic32_set ( & ( Ret -> sealed ), 0 );
 
+        Ret -> pages_qty = PagesQty;
+
         Ret -> last_available_page_index = 0;
         Ret -> last_requested_page_index = 0;
 
@@ -420,24 +445,34 @@ rc_t CC
 KCeQueNewObj (
                 KCeQue * self,
                 KCeQueObj ** Obj,
-                uint64_t Pos,
-                uint64_t Size,
                 size_t InitialPageIndex,
                 size_t LastPageIndex
 )
 {
     rc_t rc;
     KCeQueObj * Ret;
+    bool ReadyToRead;
 
     rc = 0;
     Ret = NULL;
+    ReadyToRead = false;
 
     if ( Obj != NULL ) {
         * Obj = NULL;
     }
 
+    if ( self == NULL ) {
+        return RC ( rcFS, rcQueue, rcAllocating, rcSelf, rcNull );
+    }
+
     if ( Obj == NULL ) {
         return RC ( rcFS, rcQueue, rcAllocating, rcParam, rcNull );
+    }
+
+    rc = KLockAcquire ( self -> lock );
+    if ( rc == 0 ) {
+        ReadyToRead = LastPageIndex <= self -> last_available_page_index;
+        KLockUnlock ( self -> lock );
     }
 
 /* JOJOBA TODO check if page is available already
@@ -445,31 +480,39 @@ KCeQueNewObj (
 
     rc = KCeQueObjMake_please_do_not_call_that_method (
                                                     & Ret,
-                                                    Pos,
-                                                    Size,
                                                     InitialPageIndex,
-                                                    LastPageIndex
+                                                    LastPageIndex,
+                                                    ReadyToRead
                                                     );
     if ( rc == 0 ) {
-        rc = KCeQueObjAddRef ( Ret );
-        if ( rc == 0 ) {
-            rc = KLockAcquire ( self -> lock );
+        if ( ReadyToRead ) {
+            * Obj = Ret;
+        }
+        else {
+            rc = KCeQueObjAddRef ( Ret );
             if ( rc == 0 ) {
-                DLListPushTail (
-                                & ( self -> ceque ),
-                                & ( Ret -> dad )
-                                );
+                rc = KLockAcquire ( self -> lock );
+                if ( rc == 0 ) {
+                    DLListPushTail (
+                                    & ( self -> ceque ),
+                                    & ( Ret -> dad )
+                                    );
 
-                if ( self -> last_requested_page_index < LastPageIndex ) {
-                    self -> last_requested_page_index = LastPageIndex;
+                    if ( self -> last_requested_page_index < self -> pages_qty )
+                    {
+                        if ( self -> last_requested_page_index < LastPageIndex )
+                        {
+                            self -> last_requested_page_index = LastPageIndex;
+                        }
+                    }
+
+                    * Obj = Ret;
+
+                    KLockUnlock ( self -> lock );
                 }
-
-                * Obj = Ret;
-
-                KLockRelease ( self -> lock );
-            }
-            else {
-                KCeQueObjRelease ( Ret );
+                else {
+                    KCeQueObjRelease ( Ret );
+                }
             }
         }
     }
@@ -489,21 +532,95 @@ static
 rc_t CC
 KCeQueNotify ( KCeQue * self, size_t LastPageIndex )
 {
-    rc_t rc = 0;
+    rc_t rc;
+    DLList new_list;
+    KCeQueObj * Obj;
+
+    rc = 0;
+    Obj = NULL;
 
     if ( self == NULL ) {
-        // return RC ( rcFS, rcQueue, rcAllocating, rcParam, rcNull );
+        return RC ( rcFS, rcQueue, rcSignaling, rcSelf, rcNull );
     }
 
-/* Lock ??? */
+        /* Locking: in real life there should not happen that
+         * situation when we are going to receive two simultaneous
+         * notification, because we are reading in the same single
+         * thread. But ... who knows ... lol
+         */
+    rc = KLockAcquire ( self -> lock );
+    if ( rc == 0 )
+    {
 
-    self -> last_available_page_index = LastPageIndex;
-/* JOJOBA
- * ..... 
+        if ( LastPageIndex <= self -> last_available_page_index )
+        {
+                /* It should not be happen thou
+                 */
+        }
+        else
+        {
+
+            self -> last_available_page_index = LastPageIndex;
+
+            DLListInit ( & new_list );
+
+            while ( ( Obj = ( KCeQueObj * )
+                    DLListPopHead ( & ( self -> ceque ) ) ) != NULL )
+            {
+/* JOJOBA : to check if we should change objects
  */
+                /*  Here we are checking if thread locked on that object
+                 *  is withing available pages and signal it.
+                 */
+                if ( Obj -> last_page_idx
+                                <= self -> last_available_page_index )
+                {
+                        /* JOJOBA - think about exit codes
+                         */
+                    KCeQueObjNotify ( Obj );
+                    KCeQueObjRelease ( Obj );
+                }
+                else {
+                    DLListPushTail ( & new_list, & ( Obj -> dad ) );
+                }
+            }
+
+            DLListAppendList ( & ( self -> ceque ), & new_list ); 
+
+        }
+        KLockUnlock ( self -> lock );
+    }
 
     return rc;
 }   /* KCeQueNotify () */
+
+static
+rc_t CC
+KCeQueLastRequestedPageIndex ( KCeQue * self, size_t * Index )
+{
+    rc_t rc = 0;
+
+    if ( Index != NULL ) {
+        * Index = 0;
+    }
+
+    if ( self == NULL ) {
+        return RC ( rcFS, rcQueue, rcAccessing, rcSelf, rcNull );
+    }
+
+    if ( Index == NULL ) {
+        return RC ( rcFS, rcQueue, rcAccessing, rcParam, rcNull );
+    }
+
+    rc = KLockAcquire ( self -> lock );
+    if ( rc == 0 ) {
+        * Index = self -> last_requested_page_index;
+
+        KLockUnlock ( self -> lock );
+    }
+
+    return rc;
+}   /* KCeQueLastRequestedPageIndex () */
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*
  * another kind of queue ends here
@@ -827,6 +944,8 @@ rc_t CC KCacheTeeChunkReaderConsume ( KCacheTeeChunkReader * chunk,
     }
 
     /* mutex around shared structures */
+    /* We do not need here mutex ... but 
+     */
     STATUS ( STAT_PRG, "BG: %s - acquiring lock\n", __func__ );
     rc = KLockAcquire ( self -> lock );
     if ( rc == 0 )
@@ -858,7 +977,7 @@ rc_t CC KCacheTeeChunkReaderConsume ( KCacheTeeChunkReader * chunk,
 
             /* notify any listeners */
             STATUS ( STAT_PRG, "BG: %s - broadcasting event to all waiting readers\n", __func__ );
-            KConditionBroadcast ( self -> cond );
+            KCeQueNotify ( self -> ceque, pg_idx );
         }
         else
         {
@@ -1417,55 +1536,50 @@ rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
 
     /* 4. check for existence of initial page in cache */
     STATUS ( STAT_PRG, "%s - testing for existence of starting page in cache\n", __func__ );
-    while ( ! KCacheTeeFilePageInCache ( self, initial_page_idx ) )
-    {
-        KCeQueObj * Obj = NULL;
 
-        STATUS ( STAT_PRG, "%s - starting page not found in cache\n", __func__ );
-        last_page_idx =
-                ( size_t ) ( (pos + bsize + self -> page_size - 1 ) / self -> page_size );
+    KCeQueObj * Obj = NULL;
+
+    STATUS ( STAT_PRG, "%s - starting page not found in cache\n", __func__ );
+    last_page_idx = ( size_t ) ( (pos + bsize ) / self -> page_size );
 
 
-        /* 5. deliver read request ceque object to bg thread */
-        STATUS ( STAT_GEEK, "%s - allocating ceque object\n", __func__ );
-        STATUS ( STAT_GEEK, "%s - allocating ceque object "
-                 "{ pos=%lu, size=%zu, tm=%d%s, initial_page_idx=%zu, last_page_idx=%zu }\n"
-                 , __func__
-                 , pos
-                 , bsize
-                 , ( tm != NULL ) ? ( int ) tm -> mS : -1
-                 , ( tm != NULL ) ? "mS (present)" : " (infinite)"
-                 , initial_page_idx
-                 , last_page_idx
-            );
+    /* 5. deliver read request ceque object to bg thread */
+    STATUS ( STAT_GEEK, "%s - allocating ceque object\n", __func__ );
+    STATUS ( STAT_GEEK, "%s - allocating ceque object "
+             "{ pos=%lu, size=%zu, tm=%d%s, initial_page_idx=%zu, last_page_idx=%zu }\n"
+             , __func__
+             , pos
+             , bsize
+             , ( tm != NULL ) ? ( int ) tm -> mS : -1
+             , ( tm != NULL ) ? "mS (present)" : " (infinite)"
+             , initial_page_idx
+             , last_page_idx
+        );
 
-        rc = KCeQueNewObj (
-                            self -> ceque,
-                            & Obj,
-                            pos,
-                            bsize,
-                            initial_page_idx,
-                            last_page_idx
-                            );
-        if ( rc != 0 ) {
-                /* Apparently if there is error code returned,
-                 * the Obj will be NULL ... so just exiting
-                 */
-            STATUS ( STAT_QA, "%s - ceque object allocation failed: %R\n", __func__, rc );
-            return rc;
-        }
-
-        /* 6. wait for event */
-        STATUS ( STAT_PRG, "%s - waiting on condition\n", __func__ );
-        rc = KCeQueObjWait ( Obj, tm );
-        if ( rc != 0 )
-        {
-            STATUS ( STAT_QA, "%s - timed wait failed: %R\n", __func__, rc );
-            return rc;
-        }
-
-        STATUS ( STAT_PRG, "%s - testing for existence of starting page in cache\n", __func__ );
+    rc = KCeQueNewObj (
+                        self -> ceque,
+                        & Obj,
+                        initial_page_idx,
+                        last_page_idx
+                        );
+    if ( rc != 0 ) {
+            /* Apparently if there is error code returned,
+             * the Obj will be NULL ... so just exiting
+             */
+        STATUS ( STAT_QA, "%s - ceque object allocation failed: %R\n", __func__, rc );
+        return rc;
     }
+
+    /* 6. wait for event */
+    STATUS ( STAT_PRG, "%s - waiting on condition\n", __func__ );
+    rc = KCeQueObjWait ( Obj, tm );
+    if ( rc != 0 )
+    {
+        STATUS ( STAT_QA, "%s - timed wait failed: %R\n", __func__, rc );
+        return rc;
+    }
+
+    STATUS ( STAT_PRG, "%s - testing for existence of starting page in cache\n", __func__ );
 
     STATUS ( STAT_PRG, "%s - starting page found in cache\n", __func__ );
 
@@ -1542,7 +1656,7 @@ rc_t CC KCacheTeeFileReadChunked ( const KCacheTeeFile_v3 *self, uint64_t pos,
             size_t to_read = chsize;
             if ( total + chsize > bsize )
                 to_read = bsize - total;
-            
+
             STATUS ( STAT_PRG, "%s - reading from file @ %lu\n", __func__, pos + total );
             rc = KFileReadAll_v1 ( & self -> dad, pos + total, chbuf, to_read, & num_read );
             if ( rc == 0 && num_read != 0 )
@@ -1658,129 +1772,55 @@ rc_t KCacheTeeFileBGLoop ( KCacheTeeFile_v3 * self )
        but anything more will still be in whole page increments */
     size_t min_read_amount = self -> page_size * self -> cluster_fact;
 
+    size_t initial_page_index = 0;
+
     STATUS ( STAT_PRG, "BG: %s - entering loop\n", __func__ );
     while ( ! self -> quitting )
     {
-/* JOJOBA *** */
-#ifdef JOJOBA
-        KCacheTeeFileMsg * dmsg;
-        STATUS ( STAT_PRG, "BG: %s - waiting on message queue\n", __func__ );
-        /* TBD - use a timeout for looking at queue */
-        rc = KQueuePop ( self -> msgq, ( void ** ) & dmsg, NULL );
-        if ( rc == 0 )
+        size_t LastRequestedPage = 0;
+        rc = KCeQueLastRequestedPageIndex (
+                                            self -> ceque,
+                                            & LastRequestedPage
+                                            );
+        if ( rc != 0 )
         {
-            size_t num_read;
-            size_t end_page_idx;
-
-            KCacheTeeFileMsg msg = * dmsg;
-            free ( dmsg );
-
-            STATUS ( STAT_PRG, "BG: %s - received msg { pos=%lu, size=%zu, tm=%d%s, initial_page_idx=%zu }\n"
-                     , __func__
-                     , msg . pos
-                     , msg . size
-                     , ( msg . tm != NULL ) ? ( int ) msg . tm -> mS : -1
-                     , ( msg . tm != NULL ) ? "mS (present)" : " (infinite)"
-                     , msg . initial_page_idx
-                );
-
-            if ( self -> whole_file )
-            {
-                msg . pos = 0;
-                msg . size = self -> source_size;
-                msg . initial_page_idx = 0;
-                STATUS ( STAT_PRG, "BG: %s - mapping request to whole file "
-                         "{ pos=%lu, size=%zu, tm=%s, initial_page_idx=%zu }\n"
-                         , __func__
-                         , msg . pos
-                         , msg . size
-                         , ( msg . tm != NULL ) ? "present" : "infinite"
-                         , msg . initial_page_idx
-                    );
+            STATUS ( STAT_PRG, "BG: %s - can not find last requested page inded.\n", __func__ );
+        }
+        else
+        {
+            if ( KCacheTeeFilePageInCache ( self, LastRequestedPage ) ) {
+                STATUS ( STAT_PRG, "BG: %s - waiting for next read\n", __func__ );
+                /* WQRNI: that is temporary, we will put semaphor here
+                 */
             }
-
-            /* we will deal in pages, not bytes */
-            end_page_idx =
-                ( size_t ) ( ( msg . pos + msg . size + self -> page_size - 1 ) / self -> page_size );
-
-            STATUS ( STAT_GEEK, "BG: %s - calculated end_page_idx=%zu\n"
-                     , __func__
-                     , end_page_idx
-                );
-
-            /* test if any pages appeared since caller posted message */
-            STATUS ( STAT_PRG, "BG: %s - testing for existence of page %zu\n"
-                     , __func__
-                     , msg . initial_page_idx
-                );
-            if ( KCacheTeeFilePageInCache ( self, msg . initial_page_idx ) )
-            {
-                /* check how many were there */
-                uint32_t num_contig_pages;
-
-                STATUS ( STAT_PRG, "BG: %s - found. calculating number of pages actually there\n", __func__ );
-                num_contig_pages =
-                    KCacheTeeFileContigPagesInFileCache ( self, msg . initial_page_idx, end_page_idx );
-
-                STATUS ( STAT_PRG, "BG: %s - %u contiguous pages found\n", __func__, num_contig_pages );
-                assert ( num_contig_pages != 0 );
-
-                /* remove them from the request */
-                msg . initial_page_idx += num_contig_pages;
-
-                /* tell callers that something changed since they posted message */
-                STATUS ( STAT_PRG, "BG: %s - broadcasting event to all waiting readers\n", __func__ );
-                KConditionBroadcast ( self -> cond );
-            }
-            else
-            {
-                STATUS ( STAT_PRG, "BG: %s - page %zu not found.\n", __func__, msg . initial_page_idx );
-            }
-
-            STATUS ( STAT_PRG, "BG: %s - testing number of pages to read\n", __func__ );
-            if ( msg . initial_page_idx < end_page_idx )
-            {
-                /* align starting position */
-                msg . pos &= ~ ( size_t ) ( self -> page_size - 1 );
-
-                /* determine read amount */
-                msg . size = ( end_page_idx - msg . initial_page_idx ) * self -> page_size;
-
-                /* potentially amplify */
-                if ( msg . size < min_read_amount )
-                    msg . size = min_read_amount;
-
-                /* issue a chunked read to source file
-                   if the request has unsatisfied starting position */
-                if ( msg . tm == NULL )
-                {
-                    STATUS ( STAT_PRG, "BG: %s - chunked read of %zu source bytes @ %lu\n"
-                             , __func__
-                             , msg . size
-                             , msg . pos
-                        );
-                    rc = KFileReadChunked ( self -> source, msg . pos, self -> chunks, msg . size, & num_read );
-                    STATUS ( STAT_PRG, "BG: %s - rc=%R, num_read=%zu\n", __func__, rc, num_read );
+            else {
+                size_t num_read = 0;
+                uint64_t InitialPos = initial_page_index
+                                                    * self -> page_size;
+                size_t SizeRead = ( LastRequestedPage - initial_page_index )
+                                                    * self -> page_size;
+                if ( SizeRead < min_read_amount ) {
+                    SizeRead = min_read_amount;
                 }
-                else
+                rc = KFileTimedReadChunked (
+                                            self -> source, 
+                                            InitialPos,
+                                            self -> chunks,
+                                            SizeRead,
+                                            & num_read,
+                                            NULL // size 
+                                            );
+                STATUS ( STAT_PRG, "BG: %s - rc=%R, num_read=%zu\n", __func__, rc, num_read );
+                if ( rc == 0 )
                 {
-                    STATUS ( STAT_PRG, "BG: %s - timed chunked read of %zu source bytes @ %lu\n"
-                             , __func__
-                             , msg . size
-                             , msg . pos
-                        );
-                    rc = KFileTimedReadChunked ( self -> source, msg . pos,
-                        self -> chunks, msg . size, & num_read, msg . tm );
-                    STATUS ( STAT_PRG, "BG: %s - rc=%R, num_read=%zu\n", __func__, rc, num_read );
+                    initial_page_index += ( size_t ) ( num_read + self -> page_size - 1 ) / self -> page_size;
                 }
-            }
-            else
-            {
-                STATUS ( STAT_PRG, "BG: %s - no pages to read, message ignored\n", __func__ );
             }
         }
-#endif /* JOJOBA */
+
+        STATUS ( STAT_PRG, "BG: %s - rc=%R, init_idx=%zu, end_idx=%zu\n", __func__, rc, initial_page_index, LastRequestedPage );
     }
+
     STATUS ( STAT_PRG, "BG: %s - exiting loop and background thread\n", __func__ );
 
     return rc;
@@ -1875,8 +1915,11 @@ rc_t KCacheTeeFileInitSync ( KCacheTeeFile_v3 * self )
 {
     rc_t rc;
 
-    STATUS ( STAT_PRG, "%s - allocating fg->bg ceque\n", __func__ );
-    rc = KCeQueMake ( & self -> ceque );
+    size_t end_page_idx = ( size_t ) ( ( self -> source_size + self -> page_size - 1 ) / self -> page_size );
+    STATUS ( STAT_PRG, "%s - allocating fg->bg ceque for %ul pages\n", __func__, end_page_idx );
+
+
+    rc = KCeQueMake ( & self -> ceque, end_page_idx );
     if ( rc != 0 ) {
         PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to allocate ceque"
                              , "func=%s"
