@@ -101,13 +101,13 @@ SRA_DFLT_SCHEMA_LIBS = \
 	-skrypto \
 	-skfg \
 	-skfs \
-	-skq \
-	-skproc \
 	-sklib \
     -sjudy \
-	-smbedx509     \
-	-smbedtls      \
-	-smbedcrypto   \
+	-smbedx509 \
+	-smbedtls \
+	-smbedcrypto \
+	-skq \
+	-skproc \
 
 SRA_DFLT_SCHEMA_OS_LIBS = \
 	-ldl \
