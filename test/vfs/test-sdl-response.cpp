@@ -38,6 +38,41 @@ TEST_SUITE(TestSdlResolver)
     return rc;
 }*/
 
+TEST_CASE(testArrayExample) {
+    Response4 * response = NULL;
+
+    REQUIRE_RC      ( Response4MakeSdl ( & response,
+"{"
+    "\"version\": \"2\","
+    "\"result\": ["
+        "{"
+            "\"bundle\": \"SRR850901\","
+            "\"status\": 200,"
+            "\"msg\": \"ok\","
+            "\"files\": ["
+                "{"
+                    "\"object\": \"srapub|SRR850901\","
+                    "\"type\": \"sra\","
+                    "\"name\": \"SRR850901\","
+                    "\"size\": 323741972,"
+                    "\"md5\": \"5e213b2319bd1af17c47120ee8b16dbc\","
+                    "\"modificationDate\": \"2016-11-19T07:35:20Z\","
+                    "\"locations\": ["
+                        "{"
+                            "\"link\": \"https://sra-download.ncbi.nlm.nih.gov/traces/sra3/SRR/000830/SRR850901\","
+                            "\"service\": \"sra-ncbi\","
+                            "\"region\": \"public\""
+                        "}"
+                    "]"
+                "}"
+            "]"
+        "}"
+    "]"
+"}"
+) );
+    REQUIRE_RC      ( Response4Release ( response ) );
+}
+
 TEST_CASE(testExample) {
     Response4 * response = NULL;
 
