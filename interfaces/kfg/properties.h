@@ -172,6 +172,10 @@ KFG_EXTERN rc_t KConfig_Set_Aws_Credential_File ( KConfig *self, const char * va
 KFG_EXTERN rc_t KConfig_Get_Aws_Profile ( const KConfig *self, char * buffer, size_t buffer_size, size_t * written );
 KFG_EXTERN rc_t KConfig_Set_Aws_Profile ( KConfig *self, const char * value );
 
+/* reads /libs/cache_amount, returns 0 if missing or empty */
+KFG_EXTERN rc_t CC KConfig_Get_Cache_Amount ( const KConfig *self, uint32_t * value );
+KFG_EXTERN rc_t CC KConfig_Set_Cache_Amount( KConfig *self, uint32_t value );
+
 #ifdef __cplusplus
 }
 #endif

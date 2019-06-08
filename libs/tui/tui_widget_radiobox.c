@@ -89,7 +89,7 @@ void draw_radiobox( struct KTUIWidget * w )
 }
 
 
-bool event_radiobox( struct KTUIWidget * w, tui_event * event )
+bool event_radiobox( struct KTUIWidget * w, tui_event * event, bool hotkey )
 {
     bool res = false;
 
