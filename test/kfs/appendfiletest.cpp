@@ -29,8 +29,10 @@
 */
 #include <cstring>
 #include <ktst/unit_test.hpp>
-#include <kfs/appendfile.h>
+
 #include <kfs/impl.h>
+#include <kfs/appendfile.h>
+
 #include <klib/out.h>
 #include <kapp/args.h>
 #include <kfg/config.h>
@@ -192,7 +194,7 @@ checkOpenFile ( KFile ** File, const char * Name, bool Write )
 
 static
 bool
-checkFileSize ( const char * FileName, size_t Size )
+checkFileSize ( const char * FileName, uint64_t Size )
 {
     rc_t RCt;
     KDirectory * Dir;
@@ -202,7 +204,7 @@ checkFileSize ( const char * FileName, size_t Size )
     Dir = NULL;
     FileSize = 0;
 
-    printf ( "[SIZ] [%s] [%lu]\n", FileName, Size );
+    printf ( "[SIZ] [%s] [%llu]\n", FileName, Size );
 
     RCt = KDirectoryNativeDir ( & Dir );
     if ( RCt == 0 ) {
@@ -250,8 +252,8 @@ TEST_CASE(KAppendFile_read_write)
 {
     KFile * File;
     KFile * AFile;
-    size_t FileSize;
-    size_t NewSize;
+    uint64_t FileSize;
+    uint64_t NewSize;
 
     File = NULL;
     AFile = NULL;
@@ -287,8 +289,8 @@ TEST_CASE(KAppendFile_read_write_zerosize)
 {
     KFile * File;
     KFile * AFile;
-    size_t FileSize;
-    size_t NewSize;
+    uint64_t FileSize;
+    uint64_t NewSize;
 
     File = NULL;
     AFile = NULL;
@@ -324,8 +326,8 @@ TEST_CASE(KAppendFile_set_size)
 {
     KFile * File;
     KFile * AFile;
-    size_t FileSize;
-    size_t NewSize;
+    uint64_t FileSize;
+    uint64_t NewSize;
 
     File = NULL;
     AFile = NULL;
