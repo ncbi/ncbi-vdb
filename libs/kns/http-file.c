@@ -192,7 +192,7 @@ rc_t KHttpFileMakeRequest ( const KHttpFile *self, uint64_t pos, size_t req_size
 
             if ( rc == 0 )
             {
-                KClientHttpRequestPayRequired(req, self->payRequired);
+                KClientHttpRequestSetPayRequired(req, NULL, self->payRequired);
 
                 /* TBD - there should be a version of GET that takes a timeout */
                 rc = KClientHttpRequestGET ( req, rslt );
@@ -1228,8 +1228,8 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                     {
                                         KClientHttpResult *rslt;
 
-                                        KClientHttpRequestPayRequired(req,
-                                            payRequired);
+                                        KClientHttpRequestSetPayRequired(req,
+                                            self, payRequired);
 
                                         rc = KClientHttpRequestHEAD ( req, & rslt );
 #if 1
