@@ -37,6 +37,7 @@ struct KCacheTeeChunkReader;
 #include <klib/rc.h>
 #include <klib/debug.h>
 #include <klib/log.h>
+#include <klib/printf.h>
 #include <klib/text.h>
 #include <klib/time.h>
 #include <klib/status.h>
@@ -445,7 +446,7 @@ KSQueMake ( KSQue ** CeQue, size_t PagesQty )
     if ( rc == 0 )
     {
         rc = KLockMake ( & ( Ret -> read_lock ) );
-        if ( rc == 0 ) 
+        if ( rc == 0 )
         {
             rc = KConditionMake ( & ( Ret -> read_cond ) );
             if ( rc == 0 )
@@ -630,7 +631,7 @@ KSQueNotify ( KSQue * self, size_t LastPageIndex )
                 }
             }
 
-            DLListAppendList ( & ( self -> sque ), & new_list ); 
+            DLListAppendList ( & ( self -> sque ), & new_list );
 
         }
         KLockUnlock ( self -> sque_lock );
@@ -760,6 +761,8 @@ struct KCacheTeeFile_v3
     volatile bool quitting;         /* shared use    */
     bool whole_file;                /* constant      */
     char path [ 4098 ];             /* constant      */
+    bool promote;                   /* constant      */
+    bool temporary;                 /* constant      */
 };
 
 struct KCacheTeeFileTail
@@ -784,6 +787,54 @@ struct KCacheTeeFileTreeNode
     const KFile * file;
     char path [ 4096 ];
 };
+
+static rc_t promote_cache( KCacheTeeFile_v3 * self )
+{
+    rc_t rc = 0;
+#if 0
+    char cache_file_name [ 4096 ];
+    char temp_file_name [ 4096 ];
+    size_t num_writ;
+    rc = string_printf ( cache_file_name, sizeof cache_file_name, &num_writ, "%s.cache", self -> local_path );
+    if ( rc == 0 )
+        rc = string_printf ( temp_file_name, sizeof temp_file_name, &num_writ, "%s.cache.temp", self -> local_path );
+
+    /* (1) releaes open cache file ( windows cannot rename open files ) */
+    if ( rc == 0 )
+        rc = KFileRelease( self -> local );
+
+    /* (2) rename to temporary name */
+    if ( rc == 0 )
+    {
+        self -> local = NULL;
+        rc = KDirectoryRename ( self -> dir, true, cache_file_name, temp_file_name );
+    }
+
+    /* (3) open from temporary name */
+    if ( rc == 0 )
+        rc = KDirectoryOpenFileWrite( self -> dir, &self -> local, true, "%s", temp_file_name );
+
+    /* (4) perform truncation */
+    if ( rc == 0 )
+        rc = TruncateCacheFile( self -> local );
+
+    /* (5) releaes open temp. cache file ( windows cannot rename open files ) */
+    if ( rc == 0 )
+        rc = KFileRelease( self -> local );
+
+    /* (6) rename to final filename ( windows cannot rename open files ) */
+    if ( rc == 0 )
+    {
+        self -> local = NULL;
+        rc = KDirectoryRename ( self -> dir, true, temp_file_name, self -> local_path );
+    }
+
+    /* (6) open from final filename */
+    if ( rc == 0 )
+        rc = KDirectoryOpenFileWrite( self -> dir, &self -> local, true, "%s", self -> local_path );
+#endif
+    return rc;
+}
 
 static
 int64_t CC KCacheTeeFileTreeNodeFind ( const void *item, const BSTNode *n )
@@ -2444,7 +2495,8 @@ rc_t KCacheTeeFileBindSourceFile ( KCacheTeeFile_v3 * self, const KFile * source
 
 static
 void KCacheTeeFileBindConstants ( KCacheTeeFile_v3 * self,
-    size_t page_size, uint32_t cluster_factor, uint32_t ram_pages )
+    size_t page_size, uint32_t cluster_factor, uint32_t ram_pages,
+    bool promote, bool temporary)
 {
     size_t request_size, ram_cache_size;
 
@@ -2490,12 +2542,15 @@ void KCacheTeeFileBindConstants ( KCacheTeeFile_v3 * self,
         ram_pages = MAX_RAM_CACHE_BYTES / self -> page_size;
 
     self -> ram_limit = ram_pages;
+    self -> promote = promote;
+    self -> temporary = temporary;
 }
 
 static
 rc_t KDirectoryVMakeKCacheTeeFileInt ( KDirectory * self,
     const KFile ** tee, const KFile * source,
     size_t page_size, uint32_t cluster_factor, uint32_t ram_pages,
+    bool promote, bool temporary,
     const char * nul_term_cache_path )
 {
     rc_t rc;
@@ -2537,7 +2592,7 @@ rc_t KDirectoryVMakeKCacheTeeFileInt ( KDirectory * self,
         else
         {
             /* bind the parameters and constants to object */
-            KCacheTeeFileBindConstants ( obj, page_size, cluster_factor, ram_pages );
+            KCacheTeeFileBindConstants ( obj, page_size, cluster_factor, ram_pages, promote, temporary );
 
             /* study the source file */
             rc = KCacheTeeFileBindSourceFile ( obj, source );
@@ -2597,6 +2652,7 @@ rc_t KDirectoryVMakeKCacheTeeFileInt ( KDirectory * self,
 LIB_EXPORT rc_t CC KDirectoryVMakeKCacheTeeFile_v3 ( KDirectory * self,
     const KFile ** tee, const KFile * source,
     size_t page_size, uint32_t cluster_factor, uint32_t ram_pages,
+    bool promote, bool temporary,
     const char * fmt, va_list args )
 {
     rc_t rc;
@@ -2618,6 +2674,10 @@ LIB_EXPORT rc_t CC KDirectoryVMakeKCacheTeeFile_v3 ( KDirectory * self,
             else
                 rc = RC ( rcFS, rcFile, rcConstructing, rcFile, rcNoPerm );
         }
+        else if (promote && temporary)
+        {
+                rc= RC ( rcFS, rcFile, rcConstructing, rcParam, rcInvalid );
+        }
         else
         {
             /* detect case where caller wants no physical cache file */
@@ -2635,7 +2695,7 @@ LIB_EXPORT rc_t CC KDirectoryVMakeKCacheTeeFile_v3 ( KDirectory * self,
                 }
 
                 rc = KDirectoryVMakeKCacheTeeFileInt ( self, tee, source,
-                    page_size, cluster_factor, ram_pages, fmt );
+                    page_size, cluster_factor, ram_pages, promote, temporary, fmt );
             }
             else
             {
@@ -2675,7 +2735,9 @@ LIB_EXPORT rc_t CC KDirectoryVMakeKCacheTeeFile_v3 ( KDirectory * self,
                             else
                             {
                                 rc = KDirectoryVMakeKCacheTeeFileInt ( self, & new_node -> file, source,
-                                    page_size, cluster_factor, ram_pages, new_node -> path );
+                                    page_size, cluster_factor, ram_pages, 
+                                    promote, temporary,
+                                    new_node -> path );
                                 if ( rc != 0 )
                                     free ( new_node );
                                 else
@@ -2692,7 +2754,7 @@ LIB_EXPORT rc_t CC KDirectoryVMakeKCacheTeeFile_v3 ( KDirectory * self,
                                 }
                             }
                         }
-            
+
                         EXIT_CRIT_SECTION ();
                     }
                 }
@@ -2706,6 +2768,7 @@ LIB_EXPORT rc_t CC KDirectoryVMakeKCacheTeeFile_v3 ( KDirectory * self,
 LIB_EXPORT rc_t CC KDirectoryMakeKCacheTeeFile_v3 ( KDirectory * self,
     const KFile ** tee, const KFile * source,
     size_t page_size, uint32_t cluster_factor, uint32_t ram_pages,
+    bool promote, bool temporary,
     const char * fmt, ... )
 {
     rc_t rc;
@@ -2713,7 +2776,7 @@ LIB_EXPORT rc_t CC KDirectoryMakeKCacheTeeFile_v3 ( KDirectory * self,
     va_list args;
     va_start ( args, fmt );
 
-    rc = KDirectoryVMakeKCacheTeeFile_v3 ( self, tee, source, page_size, cluster_factor, ram_pages, fmt, args );
+    rc = KDirectoryVMakeKCacheTeeFile_v3 ( self, tee, source, page_size, cluster_factor, ram_pages, promote, temporary, fmt, args );
 
     va_end ( args );
 

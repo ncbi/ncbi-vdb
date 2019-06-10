@@ -567,6 +567,7 @@ static rc_t CC thread_func( const KThread *self, void *data )
                 uint32_t ram_pages = 0;
                 rc = KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org, BLOCKSIZE,
                                                      cluster_factor, ram_pages,
+                                                     false, false,
                                                      "%s", CACHEFILE );
                 if ( rc == 0 )
                 {

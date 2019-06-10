@@ -454,6 +454,8 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
                                         cps -> cache_page_size,
                                         2, /* TODO: cluster factor */
                                         0, /* ram_pages, via vdb-config */
+                                        true, /* promote */
+                                        false, /* temporary */
                                         loc );
         if ( rc == 0 )
         {
