@@ -479,6 +479,8 @@ class Dlg
                             KTUI_color bg, KTUI_color fg, uint32_t page_id = 0 );
         void PopulateList( Tui_Rect const &r, bool resize, uint32_t id,
                             KTUI_color bg, KTUI_color fg, uint32_t page_id = 0 );
+        void PopulateRadioBox( Tui_Rect const &r, bool resize, uint32_t id,
+                            KTUI_color bg, KTUI_color fg, uint32_t page_id = 0 );
 
         bool HasWidget( tui_id id ) { return KTUIDlgHasWidget ( dlg_, id ); };
 
