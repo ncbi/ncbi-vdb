@@ -82,19 +82,12 @@ static bool s_disable_user_settings = false;
 /*----------------------------------------------------------------------------*/
 static const char default_kfg[] = {
 "/config/default = \"true\"\n"
-"/repository/user/main/public/apps/file/volumes/flat = \"files\"\n"
-"/repository/user/main/public/apps/nakmer/volumes/nakmerFlat = \"nannot\"\n"
-"/repository/user/main/public/apps/nannot/volumes/nannotFlat = \"nannot\"\n"
-"/repository/user/main/public/apps/refseq/volumes/refseq = \"refseq\"\n"
-"/repository/user/main/public/apps/sra/volumes/sraFlat = \"sra\"\n"
-"/repository/user/main/public/apps/sraPileup/volumes/flat = \"sra\"\n"
-"/repository/user/main/public/apps/sraRealign/volumes/flat = \"sra\"\n"
-"/repository/user/main/public/apps/wgs/volumes/wgsFlat = \"wgs\"\n"
-"/repository/user/main/public/root = \"$(HOME)/ncbi/public\"\n"
 "/repository/remote/main/CGI/resolver-cgi = "
-                  "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
+               "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
 "/repository/remote/protected/CGI/resolver-cgi = "
-                  "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
+               "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
+"/repository/remote/main/SDL.2/resolver-cgi = "
+               "\"https://trace.ncbi.nlm.nih.gov/Traces/sdl/unstable/retrieve\n"
 "/tools/ascp/max_rate = \"450m\"\n"
 };
 /*----------------------------------------------------------------------------*/
