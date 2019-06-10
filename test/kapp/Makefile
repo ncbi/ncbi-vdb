@@ -36,7 +36,8 @@ TEST_TOOLS = \
 ALL_TOOLS = \
 	env-test-tool \
 	sig-core \
-	report-kns-agent
+	report-kns-agent    \
+	append-arg-test
     
 include $(TOP)/build/Makefile.env
 
@@ -139,11 +140,28 @@ REPORT_KNS_AGENT_TEST_LIB = \
 
 $(TEST_BINDIR)/report-kns-agent: $(REPORT_KNS_AGENT_TEST_OBJ)
 	$(LD) --exe -o $@ $^ $(REPORT_KNS_AGENT_TEST_LIB)
+	
+#-------------------------------------------------------------------------------
+# append-arg-test
+#
+APPEND_ARG_TEST_SRC = \
+	append-arg-test
+
+APPEND_ARG_TEST_OBJ = \
+	$(addsuffix .$(OBJX),$(APPEND_ARG_TEST_SRC))
+
+APPEND_ARG_TEST_LIB = \
+	-skapp \
+	-sncbi-vdb
+
+$(TEST_BINDIR)/append-arg-test: $(APPEND_ARG_TEST_OBJ)
+	$(LD) --exe -o $@ $^ $(APPEND_ARG_TEST_LIB)
+
 
 #-------------------------------------------------------------------------------
 # scripted tests
 #
-runtests: sig-core-tests kns-agent-tests
+runtests: sig-core-tests kns-agent-tests append-arg-tests
 
 sig-core-tests: sig-core
 	@ echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
@@ -166,4 +184,8 @@ kns-agent-tests: report-kns-agent
 	@ $(SRCDIR)/run-kns-agent.sh $(TEST_BINDIR)/report-kns-agent ./tmp/abcdefghi abcdefghi.1.2.3
 	@ $(SRCDIR)/run-kns-agent.sh $(TEST_BINDIR)/report-kns-agent ./tmp/abcdefghi.55.111 abcdefghi.1.2.3
 	@ rm -rf ./tmp/
-	
+
+append-arg-tests:   append-arg-test
+	@ echo "Running append argument tests"
+	@ $(SRCDIR)/run-append-arg.sh $(TEST_BINDIR)/append-arg-test $(DBG)
+	@ echo "JOJOBA!!!"

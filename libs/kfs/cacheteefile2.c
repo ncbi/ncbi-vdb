@@ -38,6 +38,7 @@ struct KCacheTee2File;
 #include <kfs/recorder.h>
 #include "poolpages.h"
 #include <kproc/queue.h>
+#include <kproc/timeout.h>
 #include <kfs/cachetee2file.h>
 
 #include <kfs/defs.h>
@@ -363,6 +364,29 @@ static bool file_exist( KDirectory * dir, const char * filename )
     return ( ( pt & ~kptAlias ) == kptFile );
 }
 
+static void * pop_page( KQueue * buffer_pool, uint32_t timeout_millisec )
+{
+    rc_t rc;
+    void * page;
+    struct timeout_t tm;
+    TimeoutInit ( & tm, timeout_millisec );
+    rc = KQueuePop( buffer_pool, &page, &tm );
+    if ( rc != 0 )
+        page = NULL;
+    return page;
+}
+
+/* helper to clean up the buffer_pool */
+static void clean_up_pool( KQueue * buffer_pool )
+{
+    void * pool_page;
+    while ( ( pool_page = pop_page( buffer_pool, 100 ) ) != NULL )
+    {
+        free( pool_page );
+    }
+    KQueueRelease( buffer_pool );
+}
+
 /* Destroy ( entered into vtKCacheTee2File-struct )
  */
 static rc_t CC KCacheTee2FileDestroy( KCacheTee2File * self )
@@ -383,15 +407,7 @@ static rc_t CC KCacheTee2FileDestroy( KCacheTee2File * self )
         free( ( void * ) self->bitmap );
 
     if ( self -> scratch_pool != NULL )
-    {
-        void * page;
-        while ( KQueuePop( self -> scratch_pool, &page, NULL ) == 0 )
-        {
-            free( page );
-        }
-
-        KQueueRelease ( self -> scratch_pool );
-    }
+        clean_up_pool( self -> scratch_pool );
 
     if ( self -> pool != NULL )
         pool_release ( self -> pool );
@@ -651,9 +667,9 @@ static rc_t KCacheTee2FileRead_rw_using_scratch_buffer ( const KCacheTee2File *c
         uint64_t pos, void *buffer, size_t bsize, size_t *num_read, read_info * info )
 {
     rc_t rc = 0;
-    void * page;
+    void * page = pop_page( cself -> scratch_pool, 100 );
     
-    if ( KQueuePop ( cself -> scratch_pool, (void **)&page, NULL ) != 0 )
+    if ( page == NULL )
         page = malloc ( cself -> block_size );
     if ( page == NULL )
         rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
