@@ -73,6 +73,7 @@ static rc_t aws_extract_key_value_pair (
     /* value */
     StringInit ( &v, start, end - start, string_len ( start, end - start ) );
     StringTrim ( &v, val );
+
     return 0;
 }
 
@@ -93,7 +94,6 @@ static void aws_parse_file (
         free ( buffer );
         return;
     }
-
     String bracket;
     CONST_STRING ( &bracket, "[" );
 
@@ -103,16 +103,17 @@ static void aws_parse_file (
     const String *brack_profile;
     StringConcat ( &brack_profile, temp1, &bracket );
 
-    char *sep;
     const char *start = buffer;
     const char *end = start + buf_size;
+    const char *sep = start;
+    --sep;
     bool in_profile = false;
+
 
     for ( ; start < end; start = sep + 1 ) {
         rc_t rc;
         String string, trim;
         String key, value;
-
         sep = string_chr ( start, end - start, '\n' );
         if ( sep == NULL ) sep = (char *)end;
 
@@ -120,7 +121,6 @@ static void aws_parse_file (
             &string, start, sep - start, string_len ( start, sep - start ) );
 
         StringTrim ( &string, &trim );
-
         /* check for empty line and skip */
         if ( StringLength ( &trim ) == 0 ) continue;
         /*
@@ -135,7 +135,7 @@ static void aws_parse_file (
 
         /* check for [profile] line */
         if ( trim.addr[0] == '[' ) {
-            if ( StringEqual ( &trim, brack_profile ) ) in_profile = true;
+            if ( StringEqual ( &trim, brack_profile ) ) { in_profile = true; }
             continue;
         }
 
@@ -190,15 +190,14 @@ static rc_t aws_find_nodes (
     const KFile *cred_file = NULL;
 
     const char *conf_env = getenv ( "AWS_CONFIG_FILE" );
-    const char *cred_env = getenv ( "AWS_SHARED_CREDENTIAL_FILE" );
     if ( conf_env ) {
         rc = KDirectoryOpenFileRead ( wd, &cred_file, "%s", conf_env );
         if ( rc ) return rc;
-
         aws_parse_file ( cred_file, aws_node, profile );
         KFileRelease ( cred_file );
         done = true;
     }
+    const char *cred_env = getenv ( "AWS_SHARED_CREDENTIAL_FILE" );
     if ( cred_env ) {
         rc = KDirectoryOpenFileRead ( wd, &cred_file, "%s", cred_env );
         if ( rc ) return rc;
@@ -265,18 +264,20 @@ KFG_EXTERN rc_t CC add_aws_nodes ( KConfig *self )
     rc_t rc = 0;
 
     /* Get Profile */
-    char profile[4096] = "";
-    size_t num_writ;
+    String sprofile;
+    char profile[4096];
     if ( getenv ( "AWS_PROFILE" ) != NULL ) {
-        snprintf ( profile, sizeof profile, "%s", getenv ( "AWS_PROFILE" ) );
+        StringInitCString ( &sprofile, getenv ( "AWS_PROFILE" ) );
     } else {
+        size_t num_writ = 0;
         rc = KConfig_Get_Aws_Profile (
             self, profile, sizeof ( profile ), &num_writ );
-        if ( rc != 0 && num_writ == 0 ) { strcpy ( profile, "default" ); }
+        if ( rc != 0 && num_writ == 0 ) {
+            CONST_STRING ( &sprofile, "default" );
+        } else {
+            StringInitCString ( &sprofile, profile );
+        }
     }
-
-    String sprofile;
-    StringInitCString ( &sprofile, profile );
 
     /* Build config node */
     KConfigNode *aws_node = NULL;
@@ -309,10 +310,17 @@ KFG_EXTERN rc_t CC add_aws_nodes ( KConfig *self )
 
     if ( home[0] != 0 ) {
         char path[4096] = "";
+        size_t num_writ = 0;
         rc = string_printf ( path, sizeof path, &num_writ, "%s/.aws", home );
         if ( rc == 0 && num_writ != 0 ) {
             /* Use config files */
-            if ( rc == 0 ) rc = aws_find_nodes ( aws_node, path, &sprofile );
+            if ( rc == 0 ) {
+                rc = aws_find_nodes ( aws_node, path, &sprofile );
+                if ( rc ) {
+                    /* OK if no .aws available */
+                    rc = 0;
+                }
+            }
         }
     }
 

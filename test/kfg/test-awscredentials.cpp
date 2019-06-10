@@ -156,7 +156,6 @@ TEST_CASE ( awsCredentialsOtherDefaulFile )
     char aws_access_key_id[512] = "";
     char aws_secret_access_key[512] = "";
     size_t buf_sz;
-
     unsetenv ( "AWS_ACCESS_KEY_ID" );
     unsetenv ( "AWS_SECRET_ACCESS_KEY" );
     unsetenv ( "AWS_SHARED_CREDENTIAL_FILE" );
