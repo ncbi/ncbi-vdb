@@ -24,4 +24,32 @@
 *
 */
 
-#define LIBKDB_VERS 0x02070020
+#ifndef _h_kfs_appendfile_
+#define _h_kfs_appendfile_
+
+#ifndef _h_kfs_extern_
+#include <kfs/extern.h>
+#endif
+
+#ifndef _h_klib_defs_
+#include <klib/defs.h>
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+struct KFile;
+
+typedef struct KAppendFile KAppendFile;
+
+KFS_EXTERN rc_t CC KFileMakeAppend (
+                                    struct KFile ** self,
+                                    struct KFile * original
+                                    );
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* _h_kfs_appendfile_ */

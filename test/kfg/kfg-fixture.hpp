@@ -24,4 +24,52 @@
 *
 */
 
-#define LIBKDB_VERS 0x02070020
+/**
+* Unit test fixture for the Kfg tests
+*/
+
+#include <string>
+
+#include <kfs/directory.h>
+
+struct KConfig;
+struct KFile;
+struct VPath;
+struct KConfigNode;
+
+// test fixture for creation and lookup of kfg files
+class KfgFixture
+{
+public:
+    KfgFixture();
+    ~KfgFixture();
+
+    void MakeFile(const char* name, const char* contents);
+
+    void LoadFile(const char* name);
+
+    void CreateAndLoad(const std :: string & sname, const char* contents);
+
+    bool GetValue(const char* path, std :: string& value);
+    bool ValueMatches(const char* path, const char* value, bool nullAsEmpty=false);
+    void UpdateNode(const char* key, const char* value);
+
+    std :: string DirPath(const KDirectory* dir);
+    std :: string GetHomeDirectory();
+    const KConfigNode* GetNode(const char* path);
+    std :: string ReadContent(const std :: string& fileName);
+
+    KDirectory* wd;
+    struct KConfig* kfg;
+    struct KFile* file;
+    struct VPath* path;
+
+    struct KConfigNode* node;
+
+    static const int BufSize = 8192;
+    char buf[BufSize];
+    size_t num_read;
+    size_t num_writ;
+
+    static std :: string apppath; // only gets set for the 1st instance of KConfig; save it here for the corresponding test case
+};
