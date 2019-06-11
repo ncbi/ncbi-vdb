@@ -662,10 +662,12 @@ KSQueWaitForRead ( KSQue * self )
                                      , "func=%s"
                                      , __func__
                               ) );
+        	STATUS ( STAT_PRG, "%s - releasing lock\n", __func__ );
+        	KLockUnlock ( self -> read_lock );
         }
-
-        STATUS ( STAT_PRG, "%s - releasing lock\n", __func__ );
-        KLockUnlock ( self -> read_lock );
+		else {
+        	STATUS ( STAT_PRG, "%s - resuming background reading\n", __func__ );
+		}
     }
 
     return rc;
@@ -2032,6 +2034,11 @@ rc_t KCacheTeeFileStartBgThread ( KCacheTeeFile_v3 * self )
             }
         }
 
+			/* That could be error, if ConditionWait did return '0',
+			 * the lock was unlocked already, and here it is unlocking
+			 * forcely again. That may crash on mac if environment
+			 * variable MallocScribble is set.
+			 */
         STATUS ( STAT_PRG, "%s - releasing lock\n", __func__ );
         KLockUnlock ( self -> lock );
     }
