@@ -594,7 +594,7 @@ TEST_CASE ( CacheTee3_conflict_args )
     REQUIRE_RC ( KDirectoryNativeDir ( &dir ) );
 
     KFile *org;
-    // KDirectoryOpenFileWrite( dir, &org, true, "%s", DATAFILE );
+    KDirectoryOpenFileWrite ( dir, &org, true, "%s", DATAFILE );
 
     const KFile *tee;
     uint32_t cluster_factor = 0;
@@ -609,6 +609,7 @@ TEST_CASE ( CacheTee3_conflict_args )
 
 FIXTURE_TEST_CASE ( CacheTee3_promotion, CT3Fixture )
 {
+    KOutMsg ( "promotion test\n" );
     remove_file ( CACHEFILE );
     remove_file ( CACHEFILE1 );
     /*
@@ -622,14 +623,19 @@ FIXTURE_TEST_CASE ( CacheTee3_promotion, CT3Fixture )
     KDirectory *dir;
     REQUIRE_RC ( KDirectoryNativeDir ( &dir ) );
     const KFile *org;
-    REQUIRE_RC ( KDirectoryOpenFileRead ( dir, &org, "%s", DATAFILE ) );
+    REQUIRE_RC (
+        KDirectoryOpenFileRead ( dir, &org, "%s", DATAFILE ) ); // org.data
     const KFile *tee;
     uint32_t cluster_factor = 2;
     uint32_t ram_pages = 0;
     REQUIRE_RC ( KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org, BLOCKSIZE,
-        cluster_factor, ram_pages, true, false, "%s", CACHEFILE ) );
-    rc_t rc = cache_access ( this, 1, 1, org, tee );
-    REQUIRE_RC ( rc );
+        cluster_factor, ram_pages, true, false, "%s",
+        CACHEFILE ) ); // cache.dat
+    for ( size_t i = 0; i != 200; ++i ) {
+        rc_t rc = cache_access ( this, i, i, org, tee );
+        REQUIRE_RC ( rc );
+    }
+    // KSleepMs ( 50000 );
     KFileRelease ( tee );
     KFileRelease ( org );
     KDirectoryRelease ( dir );
