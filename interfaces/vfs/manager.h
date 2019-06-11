@@ -55,6 +55,16 @@ struct KNSManager;
 
 /* temporary */
 
+/* Which cache mechanism to use */
+typedef enum
+{
+    MGR_CACHETEE = 0,
+    MGR_CACHETEE2 = 1,
+    MGR_RRCACHE = 2,
+    MGR_LOGFILE = 3,
+    MGR_CACHETEE_WM = 4,
+    MGR_CACHETEE3 =5
+} mgr_cache_t;
 
 /*--------------------------------------------------------------------------
  * VFSManager
