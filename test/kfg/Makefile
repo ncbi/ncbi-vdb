@@ -30,12 +30,14 @@ TOP ?= $(abspath ../..)
 MODULE = test/kfg
 
 TEST_TOOLS = \
+	test-gcpcredentials \
+	test-awscredentials \
 	flat-sra-kfg \
 	wb-test-kfg \
 	test-kfg \
 	test-repository \
 	test-keystore \
-	test-properties \
+	test-properties
 
 include $(TOP)/build/Makefile.env
 
@@ -116,6 +118,23 @@ $(TEST_BINDIR)/test-repository: $(TEST_REPOSITORY_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_LIB)
 
 #-------------------------------------------------------------------------------
+# test-awscredentials
+#
+TEST_AWSCREDENTIALS_SRC = \
+	test-awscredentials
+
+TEST_AWSCREDENTIALS_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_AWSCREDENTIALS_SRC))
+
+TEST_AWSCREDENTIALS_LIB = \
+	-sktst \
+	-skapp \
+    -sncbi-vdb
+
+$(TEST_BINDIR)/test-awscredentials: $(TEST_AWSCREDENTIALS_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_AWSCREDENTIALS_LIB)
+
+#-------------------------------------------------------------------------------
 # test-keystore
 #
 TEST_KEYSTORE_SRC = \
@@ -142,6 +161,23 @@ $(TEST_BINDIR)/test-properties: $(TEST_PROPERTIES_OBJ)
 
 prop: test-properties
 	$(TEST_BINDIR)/test-properties
+
+#-------------------------------------------------------------------------------
+# test-gcpcredentials
+#
+TEST_GCPCREDENTIALS_SRC = \
+	test-gcpcredentials
+
+TEST_GCPCREDENTIALS_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_GCPCREDENTIALS_SRC))
+
+TEST_GCPCREDENTIALS_LIB = \
+	-sktst \
+	-skapp \
+    -sncbi-vdb
+
+$(TEST_BINDIR)/test-gcpcredentials: $(TEST_GCPCREDENTIALS_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_GCPCREDENTIALS_LIB)
 
 #-------------------------------------------------------------------------------
 # fuzz test

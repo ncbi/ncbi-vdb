@@ -66,7 +66,7 @@ ifeq (prof, $(BUILD))
 endif
 
 ifeq (dbg, $(BUILD))
-	DBG = -g
+	DBG = -g # -fsanitize=address
 	OPT = $(WARN) -Wno-variadic-macros -fno-strict-aliasing -fstack-protector -Wa,--noexecstack -Wall
 	NOPT = $(WARN) -Wno-variadic-macros -fno-strict-aliasing -fstack-protector -Wa,--noexecstack -Wall
 	# GCC seems unable to use c99 without ansi, which
@@ -75,7 +75,7 @@ ifeq (dbg, $(BUILD))
 	PED = -std=gnu11 -pedantic # -fdiagnostics-show-option
 else
 	# TODO: use -fstack-protector-strong for gcc >= 4.9
-	OPT = -O3 -Wno-variadic-macros -fno-strict-aliasing -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -fstack-protector -Wa,--noexecstack -Wall -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-c++11-extensions
+	OPT = -O3 -Wno-variadic-macros -fno-strict-aliasing -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -fstack-protector -Wa,--noexecstack -Wall -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-c++11-extensions -D_GLIBCXX_ASSERTIONS # -fsanitize=address
 endif
 
 ifeq (mac,$(OS))
