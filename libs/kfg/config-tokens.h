@@ -32,6 +32,9 @@
 
 #ifndef YY_KFG_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_KFG_CONFIG_TOKENS_H_INCLUDED
 # define YY_KFG_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_KFG_CONFIG_TOKENS_H_INCLUDED
+
+#include "kfg-lex.h"
+#include "kfg-parse.h"
 /* Debug traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0

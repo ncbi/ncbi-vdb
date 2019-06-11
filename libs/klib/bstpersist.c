@@ -52,11 +52,11 @@ struct PBSTreeData
     void *aux_param;
 
     P_BSTree *pt;
-    void ( CC * record ) ( P_BSTree*, unsigned int, size_t );
+    void ( CC * record ) ( P_BSTree*, pbst_count_t, size_t );
 
     size_t num_writ;
     size_t data_size;
-    uint32_t num_nodes;
+    pbst_count_t num_nodes;
 
     rc_t rc;
 };
@@ -81,22 +81,30 @@ bool CC PBSTreeGatherInfo ( BSTNode *n, void *data )
 }
 
 static
-void CC PBSTreeRecordU8 ( P_BSTree *pt, unsigned int idx, size_t offset )
+void CC PBSTreeRecordU8 ( P_BSTree *pt, pbst_count_t idx, size_t offset )
 {
     pt -> data_idx . v8 [ idx ] = ( uint8_t ) offset;
 }
 
 static
-void CC PBSTreeRecordU16 ( P_BSTree *pt, unsigned int idx, size_t offset )
+void CC PBSTreeRecordU16 ( P_BSTree *pt, pbst_count_t idx, size_t offset )
 {
     pt -> data_idx . v16 [ idx ] = ( uint16_t ) offset;
 }
 
 static
-void CC PBSTreeRecordU32 ( P_BSTree *pt, unsigned int idx, size_t offset )
+void CC PBSTreeRecordU32 ( P_BSTree *pt, pbst_count_t idx, size_t offset )
 {
     pt -> data_idx . v32 [ idx ] = ( uint32_t ) offset;
 }
+
+#if PBSTREE_BITS == 64
+static
+void CC PBSTreeRecordU64 ( P_BSTree *pt, pbst_count_t idx, size_t offset )
+{
+    pt -> data_idx . v64 [ idx ] = ( uint64_t ) offset;
+}
+#endif
 
 static
 bool CC PBSTreeWriteNodes ( BSTNode *n, void *data )
@@ -205,11 +213,24 @@ KLIB_EXTERN rc_t CC BSTreePersist ( const BSTree *bt, size_t *num_writ,
                 pt_size = 2;
                 pb . record = PBSTreeRecordU16;
             }
+#if PBSTREE_BITS == 64
+            else if ( pb . data_size <= 0x100000000UL )
+            {
+                pt_size = 4;
+                pb . record = PBSTreeRecordU32;
+            }
+            else
+            {
+                pt_size = 8;
+                pb . record = PBSTreeRecordU64;
+            }
+#else
             else
             {
                 pt_size = 4;
                 pb . record = PBSTreeRecordU32;
             }
+#endif
 
             pt_size = sizeof * pb . pt - sizeof pb . pt -> data_idx +
                 pb . num_nodes * pt_size;

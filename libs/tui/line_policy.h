@@ -40,7 +40,8 @@ typedef struct lp_context
     uint64_t len, max_len, visible;
     uint64_t * cur_pos;
     uint64_t * offset;
-    uint64_t * mode;
+    uint64_t * ins_mode;
+    uint64_t * alpha_mode;
     bool content_changed;
 } lp_context;
 

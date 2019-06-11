@@ -71,6 +71,8 @@ enum
     ktuipa_menu_sel,
     ktuipa_menu_hi,
 
+    ktuipa_hl,  /* for the high-light */
+    
     ktuipa_last
 };
 
@@ -162,6 +164,9 @@ TUI_EXTERN bool CC KTUIDlgGetChanged ( struct KTUIDlg * self );
 TUI_EXTERN rc_t CC KTUIDlgGetRect ( struct KTUIDlg * self, tui_rect * r );
 TUI_EXTERN rc_t CC KTUIDlgSetRect ( struct KTUIDlg * self, const tui_rect * r, bool redraw );
 
+TUI_EXTERN rc_t CC KTUIDlgGetActivePage ( struct KTUIDlg * self, uint32_t * page_id );
+TUI_EXTERN rc_t CC KTUIDlgSetActivePage ( struct KTUIDlg * self, uint32_t page_id );
+
 TUI_EXTERN bool CC KTUIDlgGetMenuActive ( const struct KTUIDlg * self );
 TUI_EXTERN rc_t CC KTUIDlgSetMenuActive ( struct KTUIDlg * self, bool active );
 TUI_EXTERN rc_t CC KTUIDlgSetMenu ( struct KTUIDlg * self, struct KTUI_Menu * menu );
@@ -174,6 +179,9 @@ TUI_EXTERN rc_t CC KTUIDlgReleaseWidgetPalette ( struct KTUIDlg * self, uint32_t
 
 TUI_EXTERN rc_t CC KTUIDlgGetWidgetRect ( struct KTUIDlg * self, uint32_t id, tui_rect * r );
 TUI_EXTERN rc_t CC KTUIDlgSetWidgetRect ( struct KTUIDlg * self, uint32_t id, const tui_rect * r, bool redraw );
+
+TUI_EXTERN rc_t CC KTUIDlgGetWidgetPageId ( struct KTUIDlg * self, uint32_t id, uint32_t * page_id );
+TUI_EXTERN rc_t CC KTUIDlgSetWidgetPageId ( struct KTUIDlg * self, uint32_t id, uint32_t page_id );
 
 TUI_EXTERN rc_t CC KTUIDlgSetWidgetCanFocus ( struct KTUIDlg * self, uint32_t id, bool can_focus );
 
@@ -211,6 +219,8 @@ TUI_EXTERN const char * CC KTUIDlgGetWidgetText( struct KTUIDlg * self, uint32_t
 TUI_EXTERN rc_t CC KTUIDlgSetWidgetText ( struct KTUIDlg * self, uint32_t id, const char * value );
 TUI_EXTERN size_t CC KTUIDlgGetWidgetTextLength( struct KTUIDlg * self, uint32_t id );
 TUI_EXTERN rc_t CC KTUIDlgSetWidgetTextLength ( struct KTUIDlg * self, uint32_t id, size_t value );
+TUI_EXTERN rc_t CC KTUIDlgSetWidgetCarretPos ( struct KTUIDlg * self, uint32_t id, size_t value );
+TUI_EXTERN rc_t CC KTUIDlgSetWidgetAlphaMode ( struct KTUIDlg * self, uint32_t id, uint32_t value );
 
 TUI_EXTERN rc_t CC KTUIDlgAddWidgetString ( struct KTUIDlg * self, uint32_t id, const char * txt );
 TUI_EXTERN rc_t CC KTUIDlgAddWidgetStrings ( struct KTUIDlg * self, uint32_t id, VNamelist * src );
@@ -223,6 +233,7 @@ TUI_EXTERN uint32_t CC KTUIDlgGetWidgetSelectedString( struct KTUIDlg * self, ui
 TUI_EXTERN rc_t CC KTUIDlgSetWidgetSelectedString ( struct KTUIDlg * self, uint32_t id, uint32_t selection );
 
 TUI_EXTERN rc_t CC KTUIDlgAddLabel( struct KTUIDlg * self, uint32_t id, const tui_rect * r, const char * caption );
+TUI_EXTERN rc_t CC KTUIDlgAddTabHdr( struct KTUIDlg * self, uint32_t id, const tui_rect * r, const char * caption );
 TUI_EXTERN rc_t CC KTUIDlgAddLabel2( struct KTUIDlg * self, uint32_t id, uint32_t x, uint32_t y, uint32_t w,
                                      const char * caption );
 
@@ -249,6 +260,7 @@ TUI_EXTERN rc_t CC KTUIDlgAddSpinEdit ( struct KTUIDlg * self, uint32_t id,
 
 TUI_EXTERN bool CC KTUIDlgHasWidget ( struct KTUIDlg * self, uint32_t id );
 
+TUI_EXTERN void KTUIDlgEnableCursorNavigation( struct KTUIDlg * self, bool enabled );
 
 /* ****************************************************************************************** */
 
