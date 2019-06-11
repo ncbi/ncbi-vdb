@@ -613,7 +613,6 @@ FIXTURE_TEST_CASE( CacheTee3_Multiple_Users_Multiple_Inst, CT3Fixture )
         rc_t rc_thread;
         REQUIRE_RC( KThreadWait ( t[ i ], &rc_thread ) );
         REQUIRE_RC( rc_thread );
-fprintf ( stderr, "[RETRE] [%d] [%p] [%d]\n", i, t[i], rc_thread );
         REQUIRE_RC( KThreadRelease ( t[ i ] ) );
     }
 }
