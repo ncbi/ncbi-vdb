@@ -219,6 +219,8 @@ TUI_EXTERN const char * CC KTUIDlgGetWidgetText( struct KTUIDlg * self, uint32_t
 TUI_EXTERN rc_t CC KTUIDlgSetWidgetText ( struct KTUIDlg * self, uint32_t id, const char * value );
 TUI_EXTERN size_t CC KTUIDlgGetWidgetTextLength( struct KTUIDlg * self, uint32_t id );
 TUI_EXTERN rc_t CC KTUIDlgSetWidgetTextLength ( struct KTUIDlg * self, uint32_t id, size_t value );
+TUI_EXTERN rc_t CC KTUIDlgSetWidgetCarretPos ( struct KTUIDlg * self, uint32_t id, size_t value );
+TUI_EXTERN rc_t CC KTUIDlgSetWidgetAlphaMode ( struct KTUIDlg * self, uint32_t id, uint32_t value );
 
 TUI_EXTERN rc_t CC KTUIDlgAddWidgetString ( struct KTUIDlg * self, uint32_t id, const char * txt );
 TUI_EXTERN rc_t CC KTUIDlgAddWidgetStrings ( struct KTUIDlg * self, uint32_t id, VNamelist * src );

@@ -196,6 +196,8 @@ rc_t SetWidgetText ( struct KTUIWidget * self, const char * txt );
 
 size_t GetWidgetTextLength ( struct KTUIWidget * self );
 rc_t SetWidgetTextLength ( struct KTUIWidget * self, size_t new_length );
+rc_t SetWidgetCarretPos ( struct KTUIWidget * self, size_t new_pos );
+rc_t SetWidgetAlphaMode ( struct KTUIWidget * self, uint32_t alpha_mode );
 
 rc_t AddWidgetString ( struct KTUIWidget * self, const char * txt );
 rc_t AddWidgetStrings ( struct KTUIWidget * self, VNamelist * src );
