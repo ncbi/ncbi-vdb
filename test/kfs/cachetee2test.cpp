@@ -25,7 +25,7 @@
 */
 
 /**
-* Unit tests for cacheteefile
+* Unit tests for cacheteefile2
 */
 
 #include <cstring>
@@ -248,9 +248,9 @@ static void finish_cachetee_tests( void )
 
 //////////////////////////////////////////// Test-cases
 
-TEST_CASE( CacheTee_Basic )
+TEST_CASE( CacheTee2_Basic )
 {
-    KOutMsg( "Test: CacheTee_Basic\n" );
+    KOutMsg( "Test: CacheTee2_Basic\n" );
     
     KDirectory * dir;
     REQUIRE_RC( KDirectoryNativeDir( &dir ) );
@@ -282,9 +282,9 @@ TEST_CASE( CacheTee_Basic )
 }                                 
 
 
-TEST_CASE( CacheTee_Read )
+TEST_CASE( CacheTee2_Read )
 {
-    KOutMsg( "Test: CacheTee_Read\n" );
+    KOutMsg( "Test: CacheTee2_Read\n" );
     
     KDirectory * dir;
     REQUIRE_RC( KDirectoryNativeDir( &dir ) );
@@ -327,9 +327,9 @@ TEST_CASE( CacheTee_Read )
 }
 
 
-TEST_CASE( CacheTee_Promoting )
+TEST_CASE( CacheTee2_Promoting )
 {
-    KOutMsg( "Test: CacheTee_Promoting\n" );
+    KOutMsg( "Test: CacheTee2_Promoting\n" );
     
     remove_file( CACHEFILE );    // to start with a clean slate on caching...
     remove_file( CACHEFILE1 );
@@ -442,9 +442,9 @@ static rc_t CC thread_func( const KThread *self, void *data )
     return cache_access( td -> tid, td -> num_threads, td -> origfile, td -> cacheteefile );
 }
 
-TEST_CASE( CacheTee_Multiple_Users_Multiple_Inst )
+TEST_CASE( CacheTee2_Multiple_Users_Multiple_Inst )
 {
-    KOutMsg( "Test: CacheTee_Multiple_Users_Multiple_Inst\n" );
+    KOutMsg( "Test: CacheTee2_Multiple_Users_Multiple_Inst\n" );
     remove_file( CACHEFILE );    // to start with a clean slate on caching...
     remove_file( CACHEFILE1 );
 
@@ -472,9 +472,9 @@ TEST_CASE( CacheTee_Multiple_Users_Multiple_Inst )
     }
 }
 
-TEST_CASE( CacheTee_Multiple_Users_Single_Inst )
+TEST_CASE( CacheTee2_Multiple_Users_Single_Inst )
 {
-    KOutMsg( "Test: CacheTee_Multiple_Users_Single_Inst\n" );
+    KOutMsg( "Test: CacheTee2_Multiple_Users_Single_Inst\n" );
     remove_file( CACHEFILE );   // to start with a clean slate on caching...
     remove_file( CACHEFILE1 );
 
@@ -515,9 +515,9 @@ TEST_CASE( CacheTee_Multiple_Users_Single_Inst )
 
 // TODO: fix, this does not work on Windows
 #if !defined(WINDOWS) && !defined(_WIN32) && !defined(MAC)
-TEST_CASE( CacheTee_ReadOnly )
+TEST_CASE( CacheTee2_ReadOnly )
 {
-	KOutMsg( "Test: CacheTee_ReadOnly %s\n", CACHEFILE1 );
+	KOutMsg( "Test: CacheTee2_ReadOnly %s\n", CACHEFILE1 );
 	remove_file( CACHEFILE );	// to start with a clean slate on caching...
 	remove_file( CACHEFILE1 );
 
@@ -572,9 +572,9 @@ TEST_CASE( CacheTee_ReadOnly )
 }
 #endif
 
-TEST_CASE( CacheTee_Multiple_Users_with_Promoting )
+TEST_CASE( CacheTee2_Multiple_Users_with_Promoting )
 {
-    KOutMsg( "Test: CacheTee_Multiple_Users_with_Promoting\n" );
+    KOutMsg( "Test: CacheTee2_Multiple_Users_with_Promoting\n" );
     remove_file( CACHEFILE );    // to start with a clean slate on caching...
     remove_file( CACHEFILE1 );
 
@@ -634,7 +634,7 @@ rc_t CC Usage ( const Args * args )
     return 0;
 }
 
-const char UsageDefaultName[] = "cachetee-test";
+const char UsageDefaultName[] = "cachetee2-test";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
