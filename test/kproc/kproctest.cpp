@@ -644,15 +644,16 @@ TEST_CASE(KQueueSimpleTest) {
     KQueue * queue = NULL;
     REQUIRE_RC(KQueueMake(&queue, 2));
 
+    timeout_t tm = { 0 };
     void *item = NULL;
     {   // pushed 2 - popped 2 = ok
         for (uint64_t i = 1; i < 3; ++i) {
             item = (void*)i;
-            REQUIRE_RC(KQueuePush(queue, item, NULL));
+            REQUIRE_RC(KQueuePush(queue, item, & tm));
         }
         for (uint64_t i = 1; i < 3; ++i) {
             uint64_t j = 0;
-            REQUIRE_RC(KQueuePop(queue, &item, NULL));
+            REQUIRE_RC(KQueuePop(queue, &item, & tm));
             j = (uint64_t)item;
             REQUIRE_EQ(i, j);
         }
@@ -661,13 +662,13 @@ TEST_CASE(KQueueSimpleTest) {
     {   // pushed 3 > capacity (failure) - popped 2 (ok)
         for (uint64_t i = 1; i < 3; ++i) {
             void *item = (void*)i;
-            REQUIRE_RC(KQueuePush(queue, item, NULL));
+            REQUIRE_RC(KQueuePush(queue, item, & tm));
         }
-        REQUIRE_RC_FAIL(KQueuePush(queue, item, NULL));
+        REQUIRE_RC_FAIL(KQueuePush(queue, item, & tm));
         for (uint64_t i = 1; i < 3; ++i) {
             uint64_t j = 0;
             void *item = 0;
-            REQUIRE_RC(KQueuePop(queue, &item, NULL));
+            REQUIRE_RC(KQueuePop(queue, &item, & tm));
             j = (uint64_t)item;
             REQUIRE_EQ(i, j);
         }
@@ -676,16 +677,16 @@ TEST_CASE(KQueueSimpleTest) {
     {   // pushed 2 = capacity (ok) - popped 3 >capacity (failure)
         for (uint64_t i = 1; i < 3; ++i) {
             void *item = (void*)i;
-            REQUIRE_RC(KQueuePush(queue, item, NULL));
+            REQUIRE_RC(KQueuePush(queue, item, & tm));
         }
         for (uint64_t i = 1; i < 3; ++i) {
             uint64_t j = 0;
             void *item = 0;
-            REQUIRE_RC(KQueuePop(queue, &item, NULL));
+            REQUIRE_RC(KQueuePop(queue, &item, & tm));
             j = (uint64_t)item;
             REQUIRE_EQ(i, j);
         }
-        REQUIRE_RC_FAIL(KQueuePop(queue, &item, NULL));
+        REQUIRE_RC_FAIL(KQueuePop(queue, &item, & tm));
     }
 
     REQUIRE_RC(KQueueRelease(queue));
@@ -755,11 +756,11 @@ protected:
 
             for (int i = 0; i < numOps; ++i)
             {
-                timeout_t tm;
-                timeout_t* tm_p = td->timeout_ms == 0 ? NULL : &tm;
+                timeout_t tm = { 0 };
+                timeout_t* tm_p = &tm;
                 void * item;
                 if (tm_p != NULL)
-                rc = TimeoutInit(tm_p, td->timeout_ms);
+                    rc = TimeoutInit(tm_p, td->timeout_ms);
                 if (rc != 0)
                 {
                     LOG(LogLevel::e_fatal_error, "KQueue_ThreadFn: TimeoutInit failed\n");
