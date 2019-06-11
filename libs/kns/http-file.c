@@ -130,9 +130,9 @@ rc_t CloudRefresh( KHttpFile * self, struct timeout_t *tm )
     if ( self -> need_env_token )
     {
         // KTime_t is in seconds
-        KTime_t now = KTimeStamp();
-        KTime_t expTime = KTimeMakeTime ( & self -> url_expiration );
-        KTime_t advance = 60;
+        const KTime_t now = KTimeStamp();
+        const KTime_t expTime = KTimeMakeTime ( & self -> url_expiration );
+        const KTime_t advance = 60;
         bool need_refresh;
         if ( tm == NULL )
         {
@@ -151,29 +151,44 @@ rc_t CloudRefresh( KHttpFile * self, struct timeout_t *tm )
             rc_t rc = KClientHttpMakeRequestInt ( self -> http, & req, & self -> block, & self -> orig_url_buffer );
             if ( rc == 0 )
             {
+                rc_t rc2;
                 KClientHttpResult * rslt;
                 rc = KClientHttpRequestHEAD ( req, & rslt );
                 if ( rc == 0 )
-                {
-                    /* retrieve expiration time Expires header of rslt -> http. if missing, error out? */
+                {   /* retrieve expiration time Expires header of rslt -> http. if missing, error out? */
                     if ( rslt -> expiration != NULL )
                     {   /* save in self -> url_expiration */
                         KTimeFromIso8601 ( & self -> url_expiration, rslt -> expiration, string_size ( rslt -> expiration ) );
                         free ( rslt -> expiration );
                         rslt -> expiration = NULL;
                     }
-
-                    /* Refresh url_buffer with the latest temporary URL */
-                    rc = KClientHttpRequestURL ( req, & self -> url_buffer );
+                    rc2 = KClientHttpResultRelease ( rslt );
                     if ( rc == 0 )
                     {
-                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
-                                ( "HttpFile.URL updated to '%.*s'\n",
-                                ( int ) self -> url_buffer . elem_count, self -> url_buffer . base ) );
-                        KClientHttpResultRelease ( rslt );
+                        rc = rc2;
                     }
                 }
-                KClientHttpRequestRelease( req );
+
+                if ( rc == 0 )
+                {   /* Refresh url_buffer with the latest temporary URL */
+                    rc = KDataBufferWhack ( & self -> url_buffer );
+                    if ( rc == 0 )
+                    {
+                        rc = KClientHttpRequestURL ( req, & self -> url_buffer );
+                        if ( rc == 0 )
+                        {
+                            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
+                                    ( "HttpFile.URL updated to '%.*s'\n",
+                                    ( int ) self -> url_buffer . elem_count, self -> url_buffer . base ) );
+                        }
+                    }
+                }
+
+                rc2 = KClientHttpRequestRelease( req );
+                if ( rc == 0 )
+                {
+                    rc = rc2;
+                }
             }
         }
     }
