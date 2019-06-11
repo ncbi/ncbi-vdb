@@ -636,11 +636,80 @@ rc_t CC KSysDiskFileRead_v1 ( const KSysFile_v1 *cself, uint64_t pos,
 }
 
 static
-rc_t CC KSysFileRead_v1 ( const KSysFile_v1 *cself, uint64_t pos,
-    void *buffer, size_t bsize, size_t *num_read )
+rc_t CC KSysDiskFileTimedRead_v1 ( const KSysFile_v1 * self, uint64_t pos,
+    void * buffer, size_t bsize, size_t * num_read, struct timeout_t * tm )
+{
+    return KSysDiskFileRead_v1 ( self, pos, buffer, bsize, num_read );
+}
+
+static
+rc_t CC KSysDiskFileReadChunked_v1 ( const KSysFile_v1 * self, uint64_t pos,
+    KChunkReader * chunks, size_t bsize, size_t * total_read )
+{
+    rc_t rc = 0;
+    size_t total, num_read;
+
+    assert ( chunks != NULL );
+
+    for ( total = 0; rc == 0 && total < bsize; total += num_read )
+    {
+        void * chbuf;
+        size_t chsize;
+        rc = KChunkReaderNextBuffer ( chunks, & chbuf, & chsize );
+        if ( rc == 0 )
+        {
+            rc = KSysDiskFileRead_v1 ( self, pos + total, chbuf, chsize, & num_read );
+            if ( rc == 0 && num_read != 0 )
+                rc = KChunkReaderConsumeChunk ( chunks, pos + total, chbuf, num_read );
+            KChunkReaderReturnBuffer ( chunks, chbuf, chsize );
+        }
+
+        if ( num_read == 0 )
+            break;
+    }
+
+    * total_read = total;
+
+    return ( total == 0 ) ? rc : 0;
+}
+
+static
+rc_t CC KSysDiskFileTimedReadChunked_v1 ( const KFILE_IMPL *self, uint64_t pos,
+    KChunkReader * chunks, size_t bsize, size_t * total_read, struct timeout_t * tm )
+{
+    rc_t rc = 0;
+    size_t total, num_read;
+
+    assert ( chunks != NULL );
+
+    for ( total = 0; rc == 0 && total < bsize; total += num_read )
+    {
+        void * chbuf;
+        size_t chsize;
+        rc = KChunkReaderNextBuffer ( chunks, & chbuf, & chsize );
+        if ( rc == 0 )
+        {
+            rc = KSysDiskFileTimedRead_v1 ( self, pos + total, chbuf, chsize, & num_read, tm );
+            if ( rc == 0 && num_read != 0 )
+                rc = KChunkReaderConsumeChunk ( chunks, pos + total, chbuf, num_read );
+            KChunkReaderReturnBuffer ( chunks, chbuf, chsize );
+        }
+
+        if ( num_read == 0 )
+            break;
+    }
+
+    * total_read = total;
+
+    return ( total == 0 ) ? rc : 0;
+}
+
+static
+rc_t CC KSysFileRead_v1 ( const KSysFile_v1 * cself, uint64_t pos,
+    void * buffer, size_t bsize, size_t * num_read )
 {
     rc_t rc;
-    KSysFile_v1 *self = ( KSysFile* ) cself;
+    KSysFile_v1 * self = ( KSysFile * ) cself;
     
     EnterCriticalSection(&self->lock);
     if ( self -> pos != pos )
@@ -650,9 +719,78 @@ rc_t CC KSysFileRead_v1 ( const KSysFile_v1 *cself, uint64_t pos,
         return RC ( rcFS, rcFile, rcPositioning, rcFileDesc, rcIncorrect );
     }
 
-    rc = KSysFileReadCommon_v1 ( cself, buffer, bsize, num_read );
+    rc = KSysFileReadCommon_v1 ( self, buffer, bsize, num_read );
     LeaveCriticalSection(&self->lock);
     return rc;    
+}
+
+static
+rc_t CC KSysFileTimedRead_v1 ( const KSysFile_v1 * self, uint64_t pos,
+    void * buffer, size_t bsize, size_t * num_read, struct timeout_t * tm )
+{
+    return KSysFileRead_v1 ( self, pos, buffer, bsize, num_read );
+}
+
+static
+rc_t CC KSysFileReadChunked_v1 ( const KSysFile_v1 * self, uint64_t pos,
+    KChunkReader * chunks, size_t bsize, size_t * total_read )
+{
+    rc_t rc = 0;
+    size_t total, num_read;
+
+    assert ( chunks != NULL );
+
+    for ( total = 0; rc == 0 && total < bsize; total += num_read )
+    {
+        void * chbuf;
+        size_t chsize;
+        rc = KChunkReaderNextBuffer ( chunks, & chbuf, & chsize );
+        if ( rc == 0 )
+        {
+            rc = KSysFileRead_v1 ( self, pos + total, chbuf, chsize, & num_read );
+            if ( rc == 0 && num_read != 0 )
+                rc = KChunkReaderConsumeChunk ( chunks, pos + total, chbuf, num_read );
+            KChunkReaderReturnBuffer ( chunks, chbuf, chsize );
+        }
+
+        if ( num_read == 0 )
+            break;
+    }
+
+    * total_read = total;
+
+    return ( total == 0 ) ? rc : 0;
+}
+
+static
+rc_t CC KSysFileTimedReadChunked_v1 ( const KFILE_IMPL *self, uint64_t pos,
+    KChunkReader * chunks, size_t bsize, size_t * total_read, struct timeout_t * tm )
+{
+    rc_t rc = 0;
+    size_t total, num_read;
+
+    assert ( chunks != NULL );
+
+    for ( total = 0; rc == 0 && total < bsize; total += num_read )
+    {
+        void * chbuf;
+        size_t chsize;
+        rc = KChunkReaderNextBuffer ( chunks, & chbuf, & chsize );
+        if ( rc == 0 )
+        {
+            rc = KSysFileTimedRead_v1 ( self, pos + total, chbuf, chsize, & num_read, tm );
+            if ( rc == 0 && num_read != 0 )
+                rc = KChunkReaderConsumeChunk ( chunks, pos + total, chbuf, num_read );
+            KChunkReaderReturnBuffer ( chunks, chbuf, chsize );
+        }
+
+        if ( num_read == 0 )
+            break;
+    }
+
+    * total_read = total;
+
+    return ( total == 0 ) ? rc : 0;
 }
 
 
@@ -743,9 +881,10 @@ rc_t KSysFileWriteCommon_v1 ( KSysFile_v1 *self,
 
     return 0;
 }
+
 static
-rc_t CC KSysDiskFileWrite_v1 ( KSysFile_v1 *self, uint64_t pos,
-    const void *buffer, size_t size, size_t *num_writ)
+rc_t CC KSysDiskFileWrite_v1 ( KSysFile_v1 * self, uint64_t pos,
+    const void * buffer, size_t size, size_t * num_writ )
 {
     rc_t rc;
     EnterCriticalSection(&self->lock);
@@ -809,9 +948,17 @@ rc_t CC KSysDiskFileWrite_v1 ( KSysFile_v1 *self, uint64_t pos,
     LeaveCriticalSection(&self->lock);
     return rc;    
 }
+
 static
-rc_t CC KSysFileWrite_v1 ( KSysFile_v1 *self, uint64_t pos,
-    const void *buffer, size_t size, size_t *num_writ)
+rc_t CC KSysDiskFileTimedWrite_v1 ( KSysFile_v1 * self, uint64_t pos,
+    const void * buffer, size_t size, size_t * num_writ, struct timeout_t * tm )
+{
+    return KSysDiskFileWrite_v1 ( self, pos, buffer, size, num_writ );
+}
+
+static
+rc_t CC KSysFileWrite_v1 ( KSysFile_v1 * self, uint64_t pos,
+    const void * buffer, size_t size, size_t * num_writ )
 {
     rc_t rc;
     EnterCriticalSection(&self->lock);
@@ -827,6 +974,12 @@ rc_t CC KSysFileWrite_v1 ( KSysFile_v1 *self, uint64_t pos,
     return rc;    
 }
 
+static
+rc_t CC KSysFileTimedWrite_v1 ( KSysFile_v1 * self, uint64_t pos,
+    const void * buffer, size_t size, size_t * num_writ, struct timeout_t * tm )
+{
+    return KSysFileWrite_v1 ( self, pos, buffer, size, num_writ);
+}
 
 /* Make
  *  create a new file object
@@ -834,8 +987,8 @@ rc_t CC KSysFileWrite_v1 ( KSysFile_v1 *self, uint64_t pos,
  */
 static const KFile_vt_v1 vtKSysDiskFile =
 {
-    /* version 1.1 */
-    1, 1,
+    /* version 1.3 */
+    1, 3,
 
     /* start minor version 0 methods */
     KSysFileDestroy_v1,
@@ -848,13 +1001,23 @@ static const KFile_vt_v1 vtKSysDiskFile =
     /* end minor version 0 methods */
 
     /* start minor version == 1 */
-    KSysFileType_v1
+    KSysFileType_v1,
     /* end minor version == 1 */
+
+    /* start minor version == 2 */
+    KSysDiskTimedFileRead_v1,
+    KSysDiskTimedFileWrite_v1,
+    /* end minor version == 2 */
+
+    /* start minor version == 3 */
+    KSysDiskFileReadChunked_v1,
+    KSysDiskTimedFileReadChunked_v1
+    /* end minor version == 3 */
 };
 static const KFile_vt_v1 vtKSysOtherFile =
 {
-    /* version 1.1 */
-    1, 1,
+    /* version 1.2 */
+    1, 2,
 
     /* start minor version 0 methods */
     KSysFileDestroy_v1,
@@ -867,13 +1030,23 @@ static const KFile_vt_v1 vtKSysOtherFile =
     /* end minor version 0 methods */
 
     /* start minor version == 1 */
-    KSysFileType_v1
+    KSysFileType_v1,
     /* end minor version == 1 */
+
+    /* start minor version == 2 */
+    KSysTimedFileRead_v1,
+    KSysTimedFileWrite_v1,
+    /* end minor version == 2 */
+
+    /* start minor version == 3 */
+    KSysFileReadChunked_v1,
+    KSysTimedFileReadChunked_v1
+    /* end minor version == 3 */
 };
 static const KFile_vt_v1 vtKSysStdIODiskFile =
 {
-    /* version 1.1 */
-    1, 1,
+    /* version 1.3 */
+    1, 3,
 
     /* start minor version 0 methods */
     KSysStdIOFileDestroy_v1,
@@ -886,13 +1059,23 @@ static const KFile_vt_v1 vtKSysStdIODiskFile =
     /* end minor version 0 methods */
 
     /* start minor version == 1 */
-    KSysFileType_v1
+    KSysFileType_v1,
     /* end minor version == 1 */
+
+    /* start minor version == 2 */
+    KSysDiskTimedFileRead_v1,
+    KSysDiskTimedFileWrite_v1,
+    /* end minor version == 2 */
+
+    /* start minor version == 3 */
+    KSysDiskFileReadChunked_v1,
+    KSysDiskTimedFileReadChunked_v1
+    /* end minor version == 3 */
 };
 static const KFile_vt_v1 vtKSysStdIOOtherFile =
 {
-    /* version 1.1 */
-    1, 1,
+    /* version 1.3 */
+    1, 3,
 
     /* start minor version 0 methods */
     KSysStdIOFileDestroy_v1,
@@ -905,8 +1088,18 @@ static const KFile_vt_v1 vtKSysStdIOOtherFile =
     /* end minor version 0 methods */
 
     /* start minor version == 1 */
-    KSysFileType_v1
+    KSysFileType_v1,
     /* end minor version == 1 */
+
+    /* start minor version == 2 */
+    KSysTimedFileRead_v1,
+    KSysTimedFileWrite_v1,
+    /* end minor version == 2 */
+
+    /* start minor version == 3 */
+    KSysFileReadChunked_v1,
+    KSysTimedFileReadChunked_v1
+    /* end minor version == 3 */
 };
 
 

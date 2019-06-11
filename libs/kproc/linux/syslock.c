@@ -285,6 +285,9 @@ LIB_EXPORT rc_t CC KTimedLockAcquire ( KTimedLock *self, timeout_t *tm )
 {
     int status;
 
+    if ( tm == NULL )
+        return KLockAcquire ( self );
+
     if ( self == NULL )
         return RC ( rcPS, rcLock, rcLocking, rcSelf, rcNull );
 
@@ -296,7 +299,7 @@ LIB_EXPORT rc_t CC KTimedLockAcquire ( KTimedLock *self, timeout_t *tm )
     case 0:
         return 0;
     case EBUSY:
-        if ( tm != NULL )
+        if ( tm -> mS != 0 )
             break;
         return RC ( rcPS, rcLock, rcLocking, rcLock, rcBusy );
     case EINVAL:

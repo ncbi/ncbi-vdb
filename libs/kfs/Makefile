@@ -86,6 +86,7 @@ KFS_CMN = \
 	directory \
 	arrayfile \
 	file \
+	chunk-reader \
 	sysdir \
 	sysfile \
 	sysmmap \
@@ -121,13 +122,15 @@ KFS_CMN = \
 	syslockfile \
 	cacheteefile \
 	cacheteefile2 \
+	cacheteefile3 \
 	rrcachedfile \
 	recorder \
 	logfile \
 	poolpages \
 	lru_cache \
 	from_to_namelist \
-	limitfile
+	limitfile   \
+	appendfile
 
 KFS_SRC = \
 	mmap \

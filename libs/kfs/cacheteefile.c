@@ -40,6 +40,7 @@ struct KCacheTeeFile;
 #include <kfs/cacheteefile.h>
 #include <kfs/defs.h>
 #include <kproc/queue.h>
+#include <kproc/timeout.h>
 #include <atomic32.h>
 
 #include <sysalloc.h>
@@ -759,6 +760,30 @@ static rc_t promote_cache( KCacheTeeFile * self )
     return rc;
 }
 
+#if USE_BUFFER_POOL
+static void * pop_page( KQueue * buffer_pool, uint32_t timeout_millisec )
+{
+    rc_t rc;
+    void * page;
+    struct timeout_t tm;
+    TimeoutInit ( & tm, timeout_millisec );
+    rc = KQueuePop( buffer_pool, &page, &tm );
+    if ( rc != 0 )
+        page = NULL;
+    return page;
+}
+
+/* helper to clean up the buffer_pool */
+static void clean_up_buffer_pool( KQueue * buffer_pool )
+{
+    void * pool_page;
+    while ( ( pool_page = pop_page( buffer_pool, 100 ) ) != NULL )
+    {
+        free( pool_page );
+    }
+    KQueueRelease( buffer_pool );
+}
+#endif
 
 /* Destroy
  */
@@ -792,11 +817,7 @@ static rc_t CC KCacheTeeFileDestroy( KCacheTeeFile * self )
 #endif
 
 #if USE_BUFFER_POOL
-    while ( (rc = KQueuePop( self -> buffer_pool, &pool_page, NULL )) == 0 )
-    {
-        free( pool_page );
-    }
-    KQueueRelease( self -> buffer_pool );
+    clean_up_buffer_pool( self -> buffer_pool );
 #endif
 
     KFileRelease ( self -> remote );
@@ -979,13 +1000,15 @@ static rc_t KCacheTeeFileRead_simple2( const KCacheTeeFile *cself, uint64_t pos,
     rc_t rc = 0;
     uint64_t first_block_in_scratch = -1;
     uint64_t valid_scratch_bytes = 0;
-    uint8_t * scratch_buffer;
+    uint8_t * scratch_buffer = NULL;
+    
 #if USE_BUFFER_POOL
-    if ( KQueuePop( cself -> buffer_pool, (void **)&scratch_buffer, NULL ) != 0 )
+    scratch_buffer = pop_page( cself -> buffer_pool, 200 );
+#endif    
+
+    if ( scratch_buffer == NULL )
         scratch_buffer = malloc ( cself -> block_size );
-#else
-    scratch_buffer = malloc ( cself -> block_size );
-#endif
+
     if ( scratch_buffer == NULL )
         return RC ( rcFS, rcFile, rcReading, rcMemory, rcExhausted );
 #else

@@ -139,6 +139,7 @@ typedef struct Data {
     const char * reg; /* region */
     const char * link; /* ??????????????????????????????????????????????????? */
     const char * tic;
+    const char * objectType;
 
     int64_t code; /* status/code */
 } Data;
@@ -1328,6 +1329,7 @@ static void DataClone ( const Data * self, Data * clone ) {
     clone -> reg  = self -> reg; /* region */
     clone -> link = self -> link; /* ???????????????????????????????????????? */
     clone -> tic  = self -> tic;
+    clone ->objectType = self ->objectType;
 
     clone -> code = self -> code;
 }
@@ -1376,6 +1378,9 @@ static rc_t DataUpdate ( const Data * self, Data * next,
 
     name = "region";
     StrSet ( & next -> reg  , KJsonObjectGetMember ( node, name ), name, path );
+
+    name = "objectType";
+    StrSet(&next->objectType, KJsonObjectGetMember(node, name), name, path);
 
     name = "service";
     StrSet ( & next -> srv  , KJsonObjectGetMember ( node, name ), name, path );
@@ -1459,13 +1464,13 @@ static rc_t LocationsAddLink ( Locations * self, const KJsonValue * node,
 
     if ( dad -> tic == NULL ) {
         rc = VPathMakeFromUrl ( & path, & url, NULL, true, & acc, dad -> sz,
-                                dad -> mod, hasMd5 ? md5 : NULL, 0 );
+                        dad -> mod, hasMd5 ? md5 : NULL, 0, dad -> objectType );
     }
     else {
         String ticket;
         StringInitCString ( & ticket, dad -> tic );
         rc = VPathMakeFromUrl ( & path, & url, & ticket, true, & acc, dad -> sz,
-                                dad -> mod, hasMd5 ? md5 : NULL, 0 );
+                        dad -> mod, hasMd5 ? md5 : NULL, 0, dad -> objectType );
     }
     if ( rc == 0 )
         VPathMarkHighReliability ( path, true );
