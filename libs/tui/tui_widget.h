@@ -36,7 +36,8 @@ extern "C" {
 #define MAX_GRID_COLS 256
 #define MAX_GRID_ROWS 128
 
-rc_t draw_highlighted( struct KTUI * tui, uint32_t x, uint32_t y, uint32_t w, tui_ac * ac, const char * caption );
+rc_t draw_highlighted( struct KTUI * tui, uint32_t x, uint32_t y, uint32_t w,
+                       tui_ac * ac, tui_ac * hl_ac, const char * caption );
 
 rc_t DlgPaint( struct KTUI * tui, int x, int y, int w, int h, KTUI_color c );
 rc_t DlgWrite( struct KTUI * tui, int x, int y, const tui_ac * ac, const char * s, uint32_t l );
@@ -56,6 +57,7 @@ typedef uint32_t KTUI_Widget_type;
 enum
 {
     KTUIW_label = 0,
+    KTUIW_tabhdr,
     KTUIW_button,
     KTUIW_checkbox,
     KTUIW_input,
@@ -72,7 +74,7 @@ struct KTUIDlg;
 
 typedef void ( * draw_cb ) ( struct KTUIWidget * w );
 typedef void ( * init_cb ) ( struct KTUIWidget * w );
-typedef bool ( * event_cb ) ( struct KTUIWidget * w, tui_event * event );
+typedef bool ( * event_cb ) ( struct KTUIWidget * w, tui_event * event, bool hotkey );
 
 typedef struct KTUIWidget
 {
@@ -80,6 +82,7 @@ typedef struct KTUIWidget
     struct KTUI * tui;      /* pointer to the hw-specific layer */
     struct KTUIPalette * palette;   /* where the colors come from */
     uint32_t id;            /* a unique id... */
+    uint32_t page_id;       /* the page of the parent the widget belongs to */
     KTUI_Widget_type wtype; /* what type of widget it is... */
     uint32_t vector_idx;    /* where in the vector it is inserted */
     tui_rect r;             /*  - a rect where it appears */
@@ -146,8 +149,12 @@ rc_t RedrawWidgetAndPushEvent( KTUIWidget * w,
 rc_t GetWidgetRect ( struct KTUIWidget * self, tui_rect * r );
 rc_t SetWidgetRect ( struct KTUIWidget * self, const tui_rect * r, bool redraw );
 
+rc_t GetWidgetPageId ( struct KTUIWidget * self, uint32_t * id );
+rc_t SetWidgetPageId ( struct KTUIWidget * self, uint32_t id );
+
 rc_t SetWidgetCanFocus( struct KTUIWidget * self, bool can_focus );
 rc_t GetWidgetAc( struct KTUIWidget * self, KTUIPa_entry pa_entry, tui_ac * ac );
+rc_t GetWidgetHlAc( struct KTUIWidget * self, KTUIPa_entry pa_entry, tui_ac * ac );
 
 const char * GetWidgetCaption ( struct KTUIWidget * self );
 rc_t SetWidgetCaption ( struct KTUIWidget * self, const char * caption );
@@ -189,6 +196,8 @@ rc_t SetWidgetText ( struct KTUIWidget * self, const char * txt );
 
 size_t GetWidgetTextLength ( struct KTUIWidget * self );
 rc_t SetWidgetTextLength ( struct KTUIWidget * self, size_t new_length );
+rc_t SetWidgetCarretPos ( struct KTUIWidget * self, size_t new_pos );
+rc_t SetWidgetAlphaMode ( struct KTUIWidget * self, uint32_t alpha_mode );
 
 rc_t AddWidgetString ( struct KTUIWidget * self, const char * txt );
 rc_t AddWidgetStrings ( struct KTUIWidget * self, VNamelist * src );

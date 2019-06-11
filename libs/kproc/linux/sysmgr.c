@@ -28,6 +28,7 @@
 #include <kproc/procmgr.h>
 
 #include <unistd.h>
+#include <stdio.h>
 #include <sys/syscall.h>
 
 static __thread bool have_tid, on_main_thread;
@@ -55,7 +56,6 @@ uint32_t sys_GetPID ( void )
 {
     return getpid ();
 }
-
 
 int sys_GetHostName ( char * buffer, size_t buffer_size )
 {

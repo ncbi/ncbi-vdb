@@ -74,6 +74,15 @@ namespace tui {
         return res;
     }
 
+    bool Dlg::SetActivePage( uint32_t id )
+    {
+        uint32_t old_id = GetActivePage();
+        bool res = ( 0 == KTUIDlgSetActivePage ( dlg_, id ) );
+        if ( res )
+            onPageChanged( old_id, id );
+        return res;
+    };
+    
     bool Dlg::SetCaptionF( const char * fmt, ... )
     {
         va_list args;
@@ -135,7 +144,225 @@ namespace tui {
             return false;
     }
 
+    Tui_Rect Dlg::center( uint32_t x_margin, uint32_t y_margin )
+    {
+        Tui_Rect r;
+        GetRect( r );
+        r.set_w( r.get_w() - ( 2 * x_margin ) );
+        r.set_x( r.get_x() + x_margin );
+        r.set_h( r.get_h() - ( 2 * y_margin ) );
+        r.set_y( r.get_y() + y_margin );
+        return r;
+    };
 
+    void Dlg::center( Tui_Rect &r )
+    {
+        Tui_Rect rd;
+        GetRect( rd );
+        if ( r.get_w() > ( rd.get_w() - 2 ) ) r.set_w( rd.get_w() - 2 );
+        if ( r.get_h() > ( rd.get_h() -2 ) ) r.set_h( rd.get_h() - 2 );
+        r.set_x( rd.get_x() + ( ( rd.get_w() - r.get_w() ) / 2 ) );
+        r.set_y( rd.get_y() + ( ( rd.get_h() - r.get_h() ) / 2 ) );
+    };
+
+    void Dlg::Populate_common( uint32_t id, KTUI_color bg, KTUI_color fg, uint32_t page_id )
+    {
+        SetWidgetBackground( id, bg );
+        SetWidgetForeground( id, fg );
+        SetWidgetPageId( id, page_id );
+        if ( page_id > 0 && ( GetActivePage() != page_id ) )
+        {
+            SetWidgetVisible( id, false );
+            SetWidgetCanFocus( id, false ); 
+        }
+    }
+    
+    void Dlg::PopulateLabel( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
+            KTUI_color bg, KTUI_color fg, uint32_t page_id )
+    {
+        if ( resize )
+            SetWidgetRect( id, r, false );
+        else
+        {
+            if ( HasWidget( id ) )
+                SetWidgetCaption( id, ( txt == NULL ) ? "" : txt );
+            else
+            {
+                AddLabel( id, r, ( txt == NULL ) ? "" : txt );
+                Populate_common( id, bg, fg, page_id );
+            }
+        }
+    }
+
+    void Dlg::PopulateTabHdr( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
+            KTUI_color bg, KTUI_color fg, uint32_t page_id )
+    {
+        if ( resize )
+            SetWidgetRect( id, r, false );
+        else
+        {
+            if ( HasWidget( id ) )
+                SetWidgetCaption( id, ( txt == NULL ) ? "" : txt );
+            else
+            {
+                AddTabHdr( id, r, ( txt == NULL ) ? "" : txt );
+                Populate_common( id, bg, fg, page_id );
+            }
+        }
+    }
+
+    void Dlg::PopulateButton( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
+            KTUI_color bg, KTUI_color fg, uint32_t page_id )
+    {
+        if ( resize )
+            SetWidgetRect( id, r, false );
+        else
+        {
+            if ( HasWidget( id ) )
+                SetWidgetCaption( id, ( txt == NULL ) ? "" : txt );
+            else
+            {
+                AddButton( id, r, ( txt == NULL ) ? "" : txt );
+                Populate_common( id, bg, fg, page_id );
+            }
+        }
+    }
+
+    void Dlg::PopulateCheckbox( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
+            bool checked, KTUI_color bg, KTUI_color fg, uint32_t page_id )
+    {
+        if ( resize )
+            SetWidgetRect( id, r, false );
+        else
+        {
+            if ( HasWidget( id ) )
+            {
+                SetWidgetCaption( id, ( txt == NULL ) ? "" : txt );
+                SetWidgetBoolValue( id, checked );
+            }
+            else
+            {
+                AddCheckBox( id, r, ( txt == NULL ) ? "" : txt, checked );
+                Populate_common( id, bg, fg, page_id );
+            }
+        }
+    }
+
+    void Dlg::PopulateInput( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
+            size_t length, KTUI_color bg, KTUI_color fg, uint32_t page_id )
+    {
+        if ( resize )
+            SetWidgetRect( id, r, false );
+        else
+        {
+            if ( HasWidget( id ) )
+                SetWidgetText( id, ( txt == NULL ) ? "" : txt );
+            else
+            {
+                AddInput( id, r, ( txt == NULL ) ? "" : txt, length );
+                Populate_common( id, bg, fg, page_id );
+            }
+        }
+    }
+
+    void Dlg::PopulateSpinEdit( Tui_Rect const &r, bool resize, uint32_t id, tui_long value,
+            tui_long min, tui_long max, KTUI_color bg, KTUI_color fg, uint32_t page_id )
+    {
+        if ( resize )
+            SetWidgetRect( id, r, false );
+        else
+        {
+            if ( HasWidget( id ) )
+            {
+                SetWidgetInt64Value( id, value );
+                SetWidgetInt64Min( id, min );
+                SetWidgetInt64Max( id, max );
+            }
+            else
+            {
+                AddSpinEdit( id, r, value, min, max );
+                Populate_common( id, bg, fg, page_id );
+            }
+        }
+    }
+    
+    void Dlg::PopulateGrid( Tui_Rect const &r, bool resize, uint32_t id, Grid &grid_model,
+                            KTUI_color bg, KTUI_color fg, uint32_t page_id )
+    {
+        if ( resize )
+            SetWidgetRect( id, r, false );
+        else
+        {
+            if ( HasWidget( id ) ) { }
+            else
+            {
+                AddGrid( id, r, grid_model, false );
+                Populate_common( id, bg, fg, page_id );                    
+            }
+        }
+    }
+
+    void Dlg::PopulateList( Tui_Rect const &r, bool resize, uint32_t id,
+                            KTUI_color bg, KTUI_color fg, uint32_t page_id )
+    {
+        if ( resize )
+            SetWidgetRect( id, r, false );
+        else
+        {
+            if ( HasWidget( id ) ) { }
+            else
+            {
+                AddList( id, r );
+                Populate_common( id, bg, fg, page_id );                    
+            }
+        }
+    }
+
+    void Dlg::PopulateRadioBox( Tui_Rect const &r, bool resize, uint32_t id,
+                                KTUI_color bg, KTUI_color fg, uint32_t page_id )
+    {
+        if ( resize )
+            SetWidgetRect( id, r, false );
+        else
+        {
+            if ( HasWidget( id ) ) { }
+            else
+            {
+                AddRadioBox( id, r );
+                Populate_common( id, bg, fg, page_id );                    
+            }
+        }
+    }
+
+    void Dlg::SetHighLightColor( KTUI_color value )
+    {
+        struct KTUIPalette * palette = KTUIDlgGetPalette ( dlg_ );
+        if ( palette != NULL )
+        {
+            const tui_ac * org = KTUIPaletteGet ( palette, ktuipa_hl );
+            tui_ac n;
+            n . fg = value;
+            n . bg = org -> bg;
+            n . attr = org -> attr;
+            KTUIPaletteSet ( palette, ktuipa_hl, &n );
+        }
+    }
+
+    void Dlg::SetHighLightAttr( KTUI_attrib value )
+    {
+        struct KTUIPalette * palette = KTUIDlgGetPalette ( dlg_ );
+        if ( palette != NULL )
+        {
+            const tui_ac * org = KTUIPaletteGet ( palette, ktuipa_hl );
+            tui_ac n;
+            n . fg = org -> fg;
+            n . bg = org -> bg;
+            n . attr = value;
+            KTUIPaletteSet ( palette, ktuipa_hl, &n );
+        }
+       
+    }
+    
     bool Dlg_Runner::handle_tui_event( Tui_Event &ev )
     {
         bool res = false;

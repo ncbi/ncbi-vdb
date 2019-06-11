@@ -35,7 +35,7 @@
 extern "C" {
 #endif
 
-#define KDBINDEXVERS 4
+#define KDBINDEXVERS 5
 #define V2FIND_RETURNS_SPAN 1
 
 /*--------------------------------------------------------------------------
@@ -278,6 +278,56 @@ rc_t KU64IndexFind_v3 ( const KU64Index_v3 *self, uint64_t offset,
 rc_t KU64IndexFindAll_v3 ( const KU64Index_v3 *self, uint64_t offset, 
     rc_t ( CC * f ) ( uint64_t key, uint64_t key_size, int64_t id, uint64_t id_qty, void* data ),
     void* data );
+
+
+/*--------------------------------------------------------------------------
+ * KHTIndex_v5
+ */
+typedef struct KHTIndex_v5 KHTIndex_v5;
+    
+/* this structure is common to both read and write sides */
+struct KHTIndex_v5 {
+    struct KHashTable *hashtable;
+    struct BufferListEntry *current;
+    struct IdMapEntry *entries;
+    size_t keyCount, maxKeys;
+    int64_t minId; /* since IDs are unique-increasing, this is also the first ID */
+    int64_t prvId; /* since IDs are unique-increasing, this is also the max ID */
+    size_t numId;  /* if numId == keyCount, then mapping was 1:1 (onto)
+                    * if minId + numId == prvId, then IDs are contiguous
+                    * if contiguous, then IDs don't need storage
+                    * if onto, then ID-ranges per key doesn't not need storage
+                    */
+    int64_t lastProjId;
+    size_t lastProjEntry;
+};
+
+rc_t KHTIndexOpen_v5 ( KHTIndex_v5 *self, struct KMMap const *mm, bool byteswap );
+rc_t KHTIndexWhack_v5 ( KHTIndex_v5 *self );
+
+rc_t KHTIndexFind_v5 ( const KHTIndex_v5 *self
+                     , const char *key
+                     , int64_t *first_id
+                     , uint32_t *span
+                     );
+
+rc_t KHTIndexProject_v5 ( const KHTIndex_v5 *self
+                        , int64_t id
+                        , const char **key
+                        , int64_t *first_id
+                        , uint32_t *span
+                        );
+
+rc_t KHTIndexCheckConsistency ( KHTIndex_v5 const *self
+                              , int64_t *start_id
+                              , uint64_t *id_range
+                              , uint64_t *num_keys
+                              , uint64_t *num_rows
+                              , uint64_t *num_holes
+                              , bool key2id
+                              , bool id2key
+                              , bool id_all
+                              );
 
 #ifdef __cplusplus
 }
