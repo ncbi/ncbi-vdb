@@ -24,48 +24,52 @@
 *
 */
 
-#ifndef _h_sysfile_priv_
-#define _h_sysfile_priv_
+/**
+* Unit test fixture for the Kfg tests
+*/
 
-#ifndef _h_kfs_impl_
-#include <kfs/impl.h>
-#endif
+#include <string>
 
-#include <sys/select.h>
+#include <kfs/directory.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+struct KConfig;
+struct KFile;
+struct VPath;
+struct KConfigNode;
 
-/*--------------------------------------------------------------------------
- * KSysFile
- *  a Unix file
- */
-typedef struct KSysFile_v1 KSysFile_v1;
-struct KSysFile_v1
+// test fixture for creation and lookup of kfg files
+class KfgFixture
 {
-    KFile_v1 dad;
-    int fd;
+public:
+    KfgFixture();
+    ~KfgFixture();
+
+    void MakeFile(const char* name, const char* contents);
+
+    void LoadFile(const char* name);
+
+    void CreateAndLoad(const std :: string & sname, const char* contents);
+
+    bool GetValue(const char* path, std :: string& value);
+    bool ValueMatches(const char* path, const char* value, bool nullAsEmpty=false);
+    void UpdateNode(const char* key, const char* value);
+
+    std :: string DirPath(const KDirectory* dir);
+    std :: string GetHomeDirectory();
+    const KConfigNode* GetNode(const char* path);
+    std :: string ReadContent(const std :: string& fileName);
+
+    KDirectory* wd;
+    struct KConfig* kfg;
+    struct KFile* file;
+    struct VPath* path;
+
+    struct KConfigNode* node;
+
+    static const int BufSize = 8192;
+    char buf[BufSize];
+    size_t num_read;
+    size_t num_writ;
+
+    static std :: string apppath; // only gets set for the 1st instance of KConfig; save it here for the corresponding test case
 };
-
-typedef struct KSysFile_v2 KSysFile_v2;
-struct KSysFile_v2
-{
-    KFile_v2 dad;
-    int fd;
-};
-
-/* KSysFileMake
- *  create a new file object
- *  from file descriptor
- */
-rc_t KSysFileMake_v1 ( KSysFile_v1 **fp, int fd, const char *path, bool read_enabled, bool write_enabled );
-    KSysFile_v2 * KSysFileMake_v2 ( ctx_t ctx, int fd, const char *path, bool read_enabled, bool write_enabled );
-
-#define KSysFileMake NAME_VERS ( KSysFileMake, KFILE_VERS )
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /*  _h_sysfile_priv_ */

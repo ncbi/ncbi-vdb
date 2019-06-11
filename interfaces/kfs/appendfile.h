@@ -24,48 +24,32 @@
 *
 */
 
-#ifndef _h_sysfile_priv_
-#define _h_sysfile_priv_
+#ifndef _h_kfs_appendfile_
+#define _h_kfs_appendfile_
 
-#ifndef _h_kfs_impl_
-#include <kfs/impl.h>
+#ifndef _h_kfs_extern_
+#include <kfs/extern.h>
 #endif
 
-#include <sys/select.h>
+#ifndef _h_klib_defs_
+#include <klib/defs.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/*--------------------------------------------------------------------------
- * KSysFile
- *  a Unix file
- */
-typedef struct KSysFile_v1 KSysFile_v1;
-struct KSysFile_v1
-{
-    KFile_v1 dad;
-    int fd;
-};
+struct KFile;
 
-typedef struct KSysFile_v2 KSysFile_v2;
-struct KSysFile_v2
-{
-    KFile_v2 dad;
-    int fd;
-};
+typedef struct KAppendFile KAppendFile;
 
-/* KSysFileMake
- *  create a new file object
- *  from file descriptor
- */
-rc_t KSysFileMake_v1 ( KSysFile_v1 **fp, int fd, const char *path, bool read_enabled, bool write_enabled );
-    KSysFile_v2 * KSysFileMake_v2 ( ctx_t ctx, int fd, const char *path, bool read_enabled, bool write_enabled );
-
-#define KSysFileMake NAME_VERS ( KSysFileMake, KFILE_VERS )
+KFS_EXTERN rc_t CC KFileMakeAppend (
+                                    struct KFile ** self,
+                                    struct KFile * original
+                                    );
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /*  _h_sysfile_priv_ */
+#endif /* _h_kfs_appendfile_ */
