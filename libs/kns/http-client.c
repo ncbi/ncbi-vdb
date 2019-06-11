@@ -515,6 +515,7 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
     if ( self -> sock == NULL && self -> test_sock != NULL ) /* protect mocked stream from overwriting */
     {
         self -> sock = self -> test_sock;
+        KStreamAddRef ( self -> test_sock );
         return 0;
     }
 
