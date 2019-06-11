@@ -745,7 +745,7 @@ static rc_t promote_cache ( KCacheTeeFile_v3 *self )
     KFile *temp_file = NULL;
     /* (3) open from temporary name */
     rc = KDirectoryOpenFileWrite (
-        self->dir, temp_file, true, "%s", temp_file_name );
+        self->dir, &temp_file, true, "%s", temp_file_name );
     if ( rc ) return rc;
 
     /* (4) perform truncation */
