@@ -242,11 +242,18 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
         rc = VFSManagerMakeOidPath ( mgr, & query, oid );
 
     if ( rc == 0 ) {
+        bool isSource = false;
+
         const VPath * local = NULL;
         const VPath * cache = NULL;
 
         rc_t localRc = 0;
         rc_t cacheRc = 0;
+
+        String srapub_files;
+        CONST_STRING(&srapub_files, "srapub_files");
+
+        isSource = StringEqual(&path->objectType, &srapub_files);
 
         if ( outFile != NULL ) {
             bool exists = false;
@@ -264,10 +271,26 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
                                       rcName, rcNotFound );
         }
         else if ( VPathFromUri ( path ) ) {
-            cacheRc = VResolverQueryWithDir ( self, protocols, query,
-                NULL, NULL, & cache, false, outDir, NULL, true, path, mapping);
-            localRc = VResolverQueryWithDir ( self, protocols, query,
-                & local, NULL, NULL, false, outDir, NULL, true, path, mapping);
+            if (isSource) {
+                size_t size = path->path.size;
+                const char * s = string_rchr(path->path.addr, size, '/');
+                if (s != NULL && s > path->path.addr) {
+                    size = path->path.size - (s - path->path.addr - 1);
+                    s = string_rchr(path->path.addr, size, '/');
+                }
+                if (s != NULL)
+                    ++s;
+                if (s == NULL)
+                    s = path->path.addr + path->path.size;
+                size = path->path.size - (s - path->path.addr - 2);
+                cacheRc = VPathMakeFmt((VPath**)&cache, "%.*s", (int)size, s);
+            }
+            else {
+                cacheRc = VResolverQueryWithDir(self, protocols, query, NULL,
+                    NULL, &cache, false, outDir, NULL, true, path, mapping);
+                localRc = VResolverQueryWithDir(self, protocols, query, &local,
+                    NULL, NULL, false, outDir, NULL, true, path, mapping);
+            }
         }
         else {
             cacheRc = VResolverQuery ( self, protocols, query,
