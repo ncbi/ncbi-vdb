@@ -146,7 +146,7 @@ extern "C" {
     _condition(KFS,ARCENTRY) _condition(KFS,ARC) _condition(KFS,TOCENTRY) _condition(KFS,TOC)  \
     _condition(KFS,TARENTRY) _condition(KFS,TAR) _condition(KFS,SRASORT)  _condition(KFS,GZIP) \
     _condition(KFS,DIR)  _condition(KFS,COUNTER) _condition(KFS,BZIP)     _condition(KFS,SYS) \
-    _condition(KFS,POS)  _condition(KFS,PAGE)
+    _condition(KFS,POS)  _condition(KFS,PAGE) _condition(KFS,FILE)
 
 #define KNS_CONDITIONS() \
     _condition(KNS,DNS) _condition(KNS,ERR)   _condition(KNS,HTTP) \
