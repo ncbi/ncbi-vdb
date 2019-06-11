@@ -44,10 +44,10 @@ TEST_TOOLS = \
     test-symtab \
 	test-json \
 	test-base64 \
+	test-hashtable
 
 ifeq (linux,$(OS))
 TEST_TOOLS += test-hashfile
-TEST_TOOLS += test-hashtable
 endif
 
 include $(TOP)/build/Makefile.env

@@ -844,6 +844,12 @@ FIXTURE_TEST_CASE(KConfigImportNgc_NullLocation_NullNewRepo, KfgFixture)
     REQUIRE_RC(KConfigImportNgc(kfg, "./prj_2956.ngc", NULL, NULL));
 }
 
+FIXTURE_TEST_CASE(aws_profile, KfgFixture)
+{
+    CreateAndLoad(GetName(), "/aws/profile=\"default\"");
+    REQUIRE(ValueMatches("/aws/profile", "default"));
+}
+
 //////////////////////////////////////////// Main
 static rc_t argsHandler(int argc, char* argv[]) {
     Args* args = NULL;

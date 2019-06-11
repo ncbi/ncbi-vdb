@@ -69,6 +69,11 @@ struct KDirectory;
  *  "ram_pages" [ IN ] - a requested number of pages to be held
  *  in RAM cache.
  *
+ *  "promote" [ IN ] - whether to promote cache file to complete file once
+ *  completed.
+ *
+ *  "temporary" [ IN ] - cache file should be deleted upon process exit
+ *
  *  "path" [ IN ] and "args" [ IN ] - NUL terminated string in directory-native
  *  character set denoting full cache file, i.e. the name of the file
  *  as it would appear after promoting from partial to full status.
@@ -100,11 +105,13 @@ struct KDirectory;
 KFS_EXTERN rc_t CC  KDirectoryMakeKCacheTeeFile_v3 ( struct KDirectory * self,
     struct KFile const ** tee, struct KFile const * source,
     uint32_t page_size, uint32_t cluster_factor, uint32_t ram_pages,
+    bool promote, bool temporary,
     const char * path, ... );
-                                             
+
 KFS_EXTERN rc_t CC  KDirectoryVMakeKCacheTeeFile_v3 ( struct KDirectory * self,
     struct KFile const ** tee, struct KFile const * source,
     uint32_t page_size, uint32_t cluster_factor, uint32_t ram_pages,
+    bool promote, bool temporary,
     const char * path, va_list args );
 
 #if 0
