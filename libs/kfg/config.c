@@ -2960,7 +2960,8 @@ static rc_t _KConfigCheckAd(KConfig * self) {
 }
 
 static
-rc_t KConfigFill ( KConfig * self, const KDirectory * cfgdir, const char * appname, bool local )
+rc_t KConfigFill ( KConfig * self, const KDirectory * cfgdir,
+    const char * appname, bool local )
 {
     KConfigNode *root;
     String empty;
@@ -2983,6 +2984,10 @@ rc_t KConfigFill ( KConfig * self, const KDirectory * cfgdir, const char * appna
             rc = load_config_files ( self, cfgdir, &ks, &loaded_from_dir );
 
         rc = add_aws_nodes ( self );
+        if (rc) return rc;
+
+        rc = add_gcp_nodes ( self );
+        if (rc) return rc;
 
         if ( rc == 0 ) {
             /* commit changes made to magic file nodes

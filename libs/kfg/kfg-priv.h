@@ -30,5 +30,6 @@
 #include <kfg/kfg-priv.h>
 
 KFG_EXTERN rc_t CC add_aws_nodes ( KConfig *self );
+KFG_EXTERN rc_t CC add_gcp_nodes ( KConfig *self );
 
 #endif /* _h_kfg_priv_ */

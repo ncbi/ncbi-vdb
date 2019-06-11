@@ -45,7 +45,8 @@ extern "C" {
  */
 struct BSTNode;
 struct KDirectory;
-
+struct KDataBuffer;
+struct KHashTable;
 
 /*--------------------------------------------------------------------------
  * V1
@@ -209,7 +210,25 @@ rc_t KU64IndexDelete_v3(KU64Index_v3* self, uint64_t key);
 
 rc_t KU64IndexPersist_v3(KU64Index_v3* self, bool proj, struct KDirectory *dir, const char *path, bool use_md5);
 
+/*--------------------------------------------------------------------------
+ * KHTIndex
+ *  represents an index bases on KHashTable
+ */
 
+rc_t KHTIndexInsert(  KHTIndex_v5 *self
+                    , const char *key
+                    , int64_t id);
+
+/** NOT IMPLEMENTED **/
+rc_t KHTIndexDelete( KHTIndex_v5 *self
+                   , const char *key
+                   );
+
+rc_t KHTIndexPersist( KHTIndex_v5 *self
+                    , bool proj
+                    , struct KDirectory *dir
+                    , const char *path
+                    , bool use_md5);
 
 /*--------------------------------------------------------------------------
  * KIndex

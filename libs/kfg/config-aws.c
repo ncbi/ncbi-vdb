@@ -328,3 +328,4 @@ KFG_EXTERN rc_t CC add_aws_nodes ( KConfig *self )
 
     return rc;
 }
+
