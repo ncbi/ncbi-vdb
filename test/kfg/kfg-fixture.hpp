@@ -44,7 +44,7 @@ public:
     KfgFixture();
     ~KfgFixture();
 
-    void CreateFile(const char* name, const char* contents);
+    void MakeFile(const char* name, const char* contents);
 
     void LoadFile(const char* name);
 

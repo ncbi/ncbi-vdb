@@ -28,9 +28,96 @@
 #include <ktst/unit_test.hpp> // TEST_SUITE
 
 #include <vfs/path.h> /* VPathRelease */
-#include <vfs/services-priv.h> /* KServiceNamesExecuteExt */
 
-TEST_SUITE ( TestResolver4 )
+TEST_SUITE(TestResolver4)
+
+#include <vfs/services.h> /* KService */
+static rc_t example(const char * run) {
+    KService * service = NULL; /* remote service */
+/* N.B. KService is not reference counted and not reusable!
+Create a new KService object for each run! */
+    rc_t rc = KServiceMake(&service);
+    if (rc != 0)
+        return rc;
+    rc = KServiceAddId(service, run); // has vdbcache
+        if (rc != 0)
+            return rc;
+    char * filetype = NULL;
+    // filetype = "pileup";
+    if(filetype != NULL)
+        rc = KServiceSetFormat(service, filetype);
+    if (rc != 0)
+        return rc;
+    VRemoteProtocols protocols = eProtocolHttpHttps;
+    const KSrvResponse * response = NULL;
+    uint32_t length = 0;
+    rc = KServiceNamesQuery(service, protocols, &response);
+    if (rc != 0)
+        return rc;
+
+    length = KSrvResponseLength(response);;
+    //  FOR RUNS LENGTH SHOULD BE 1
+
+    const KSrvRespObj * obj = NULL;
+    rc = KSrvResponseGetObjByIdx(response, 0, &obj);
+    if (rc != 0)
+        return rc;
+    KSrvRespObjIterator * it = NULL;
+    rc = KSrvRespObjMakeIterator(obj, &it);
+    if (rc != 0)
+        return rc;
+    while (true) { // iterate files (e.g. run, vdbcache)
+        KSrvRespFile * file = NULL;
+        rc = KSrvRespObjIteratorNextFile(it, &file);
+        if (rc != 0)
+            return rc;
+        if (file == NULL)
+            break;
+
+        /* there is a way to get file format (srr, vdbcache)
+        but is's not published yet */
+
+        const VPath * local = NULL;
+        rc_t lRc = KSrvRespFileGetLocal(file, &local);
+        if (lRc != 0); // we cannot get local path to this accession
+
+        const VPath * cache = NULL;
+        rc_t cRc = KSrvRespFileGetCache(file, &cache);
+        if (cRc != 0); // we cannot get cache location of accession
+
+        KSrvRespFileIterator * fi = NULL;
+        rc = KSrvRespFileMakeIterator(file, &fi);
+        if (rc != 0)
+            return rc;
+        while (true) { // iterate alternatives paths for the same file
+            const VPath * remote = NULL;
+            rc = KSrvRespFileIteratorNextPath(fi, &remote);
+            if (rc != 0)
+                return rc;
+            if (remote == NULL) // no more
+                break;
+            const String * uri = NULL;
+            VPathMakeUri(remote, &uri);
+            free((void*)uri);
+            VPathRelease(remote);
+            /* YOU NEED TO ITERATE TO GET AN ALTERNATIVE PATH
+            WHEN THERE WAS A FAILURE FETCHING THE PREVOIUS ONE */
+        }
+        KSrvRespFileIteratorRelease(fi);
+        KSrvRespFileRelease(file);
+    }
+    KSrvRespObjIteratorRelease(it);
+    KSrvRespObjRelease(obj);
+    KSrvResponseRelease(response);
+    KServiceRelease(service);
+    return rc;
+}
+
+TEST_CASE(VDB_CACHE) {
+    REQUIRE_RC(example("SRR850901"));
+}
+
+#include <vfs/services-priv.h> /* KServiceNamesExecuteExt */
 
 TEST_CASE ( Test ) {
     KService * s = NULL;
@@ -115,6 +202,8 @@ extern "C" {
     rc_t CC KMain ( int argc, char * argv [] ) {
 if (
 0 ) assert ( ! KDbgSetString ( "VFS-JSON" ) );
+if (
+0 ) assert ( ! KDbgSetString ( "VFS" ) );
         return TestResolver4 ( argc, argv );
     }
 }

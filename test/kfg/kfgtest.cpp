@@ -28,8 +28,6 @@
 * Unit tests for Kfg interface
 */
 
-#include "kfg-fixture.hpp"
-
 #include <ktst/unit_test.hpp>
 
 #include <kapp/args.h> /* Args */
@@ -59,6 +57,8 @@
 
 #include <cstdlib>
 #include <cstring>
+
+#include "kfg-fixture.hpp"
 
 using namespace std;
 
@@ -402,7 +402,7 @@ FIXTURE_TEST_CASE(include_files, KfgFixture)
 {
 #define includeName "include_file"
     const char* contents1="root/var='Value'\n";
-    CreateFile((GetName()+"1").c_str(), contents1);
+    MakeFile((GetName()+"1").c_str(), contents1);
     const char* contents2="include ./" includeName "\n"
                           "ref=$(root/var)\n";
     CreateAndLoad((GetName()+"2").c_str(), contents2);
@@ -500,7 +500,7 @@ FIXTURE_TEST_CASE(FixUserSettings, KfgFixture)
 
     REQUIRE_RC(KConfigRelease(kfg));
     // create the local .mkfg with the old spelling of dbGap;
-    CreateFile(mkfgFilename.c_str(),
+    MakeFile(mkfgFilename.c_str(),
                     (string("NCBI_SETTINGS=\"") + globalMkfgFilename + "\"\n"
                      "/repository/user/protected/dbGap-123=\"qq\"\n").c_str());
     REQUIRE_RC(KConfigMake ( & kfg, wd )); // this should load the local .mkfg, replace "dbGap" with "dbGaP" and update the global .mkfg

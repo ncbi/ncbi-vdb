@@ -878,6 +878,7 @@ KConfig_Get_Aws_Profile( const KConfig *self,
     if ( GetRCState ( rc ) == rcNotFound || ( rc == 0 && * written == 0 ) )
     {
         * written = string_copy_measure ( value, value_size, "default" );
+        rc = 0;
     }
     return rc;
 }

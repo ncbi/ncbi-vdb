@@ -39,7 +39,8 @@ TEST_TOOLS = \
 	test-kns \
 	test-http-dropconn \
 	KNSManagerSingletonTest \
-	test-VDB-3661
+	test-VDB-3661 \
+	test-connect
 
 include $(TOP)/build/Makefile.env
 
@@ -169,18 +170,6 @@ $(TEST_BINDIR)/test-cloud: $(CL_OBJ)
 	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
 #----------------------------------------------------------------
-# test-cloud
-
-CL_SRC = \
-	test-cloud
-
-CL_OBJ = \
-	$(addsuffix .$(OBJX),$(CL_SRC))
-
-$(TEST_BINDIR)/test-cloud: $(CL_OBJ)
-	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
-
-#----------------------------------------------------------------
 # test-google-proxy
 #
 P_SRC = \
@@ -286,6 +275,20 @@ TOOL_OBJ = \
 $(BINDIR)/test-proxy-with-env: $(TOOL_OBJ)
 	$(LP) --exe -o $@ $^ -L$(VDB_LIBDIR) -L$(VDB_LIBDIR)/../ilib $(KNSTEST_LIB)
 
+#----------------------------------------------------------------
+# test-connect
+#
+CONNECT_SRC = \
+	test-connect \
+
+CONNECT_OBJ = \
+	$(addsuffix .$(OBJX),$(CONNECT_SRC))
+
+$(TEST_BINDIR)/test-connect: $(CONNECT_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+connect: test-connect
+	$(TEST_BINDIR)/test-connect
 
 #----------------------------------------------------------------
 

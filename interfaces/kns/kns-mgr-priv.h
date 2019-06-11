@@ -70,6 +70,13 @@ bool HttpGetRetryCodes ( const HttpRetrySpecs* self, uint16_t code, uint8_t * ma
  */
 KNS_EXTERN rc_t CC KNSManagerMakeConfig ( struct KNSManager **mgr, struct KConfig* kfg );
 
+/* SetAdCaching
+ *  Enable Caching to Accession as Directory in cwd
+ */
+KNS_EXTERN
+rc_t CC KNSManagerSetAdCaching(struct KNSManager* self, bool enabled);
+
+
 /** MakeReliableHttpFile, KNSManagerMakeReliableClientRequest:
  * Make HTTP file/request from a reliable URL:
  * we will try harder to recover upon any error
