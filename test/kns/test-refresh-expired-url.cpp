@@ -121,7 +121,7 @@ FIXTURE_TEST_CASE( HttpRefreshTestSuite_UntimedRead, CloudFixture )
     REQUIRE_RC( KFileTimedRead ( m_file, 0, m_buf, sizeof m_buf, & num_read, NULL ) );
     REQUIRE_EQ ( newExpTime, KTimeMakeTime ( & ( (const struct KHttpFile*)m_file ) -> url_expiration ) ); // expiration did not change
 }
-
+#if 0
 FIXTURE_TEST_CASE( HttpRefreshTestSuite_TimedRead, CloudFixture )
 {
     //TestEnv::verbosity = LogLevel::e_message;
@@ -166,7 +166,7 @@ FIXTURE_TEST_CASE( HttpRefreshTestSuite_TimedRead, CloudFixture )
     REQUIRE_RC( KFileTimedRead ( m_file, 0, m_buf, sizeof m_buf, & num_read, NULL ) );
     REQUIRE_EQ ( newExpTime, KTimeMakeTime ( & ( (const struct KHttpFile*)m_file ) -> url_expiration ) ); // expiration did not change
 }
-
+#endif
 //////////////////////////////////////////// Main
 
 #include <kapp/args.h> // Args

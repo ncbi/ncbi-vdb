@@ -232,7 +232,9 @@ public:
     ~HttpFixture()
     {
         if ( m_file && KFileRelease ( m_file ) != 0 )
-            throw logic_error ( "HttpFixture::~HttpFixture KFileRelease failed" );
+        {
+            cout << "HttpFixture::~HttpFixture KFileRelease failed" << endl;
+        }
 
         //if ( ! TestStream::m_readResponses.empty() )
         //    throw logic_error ( "HttpFixture::~HttpFixture not all TestStream::m_readResponses have been consumed" );
@@ -240,7 +242,9 @@ public:
         DBG_KNS_OFF();
         KNSManagerSetVerbose ( m_mgr, false );
         if ( m_mgr && KNSManagerRelease ( m_mgr ) != 0 )
-            throw logic_error ( "HttpFixture::~HttpFixture KNSManagerRelease failed" );
+        {
+            cout << "HttpFixture::~HttpFixture KNSManagerRelease failed" << endl;
+        }
     }
 
     static string MakeURL(const char* base)
@@ -304,6 +308,10 @@ FIXTURE_TEST_CASE(HEAD_BadResponse, HttpFixture)
 {
     TestStream::AddWriteRC(0); // send HEAD succeeds
     TestStream::AddReadResponse("garbage"); // bad response to HEAD
+    // KNS tries to connect twice
+    TestStream::AddWriteRC(0); // send HEAD succeeds
+    TestStream::AddReadResponse("garbage"); // bad response to HEAD
+
     REQUIRE_RC_FAIL ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) );
 }
 
@@ -311,6 +319,10 @@ FIXTURE_TEST_CASE(HEAD_BrokenConnection, HttpFixture)
 {
     TestStream::AddWriteRC(0); // send HEAD succeeds
     TestStream::AddReadResponse(""); // simulates reaction to POLLHUP/POLLRDHUP
+    // KNS tries to connect twice
+    TestStream::AddWriteRC(0); // send HEAD succeeds
+    TestStream::AddReadResponse(""); // simulates reaction to POLLHUP/POLLRDHUP
+
     REQUIRE_RC_FAIL ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) );
 }
 
@@ -335,8 +347,11 @@ FIXTURE_TEST_CASE(HEAD_Invalid_Reconnect_Succeed, HttpFixture)
 #if CAN_USE_RECONNECT_HOOK
 FIXTURE_TEST_CASE(HEAD_Invalid_Reconnect_Fail, HttpFixture)
 {
-    TestStream::AddWriteRC( RC_TransferIncomplete ); // first send HEAD fails
-    TestStream::AddWriteRC( RC_TransferIncomplete ); // retry send HEAD fails
+    // KNS tries each HEAD twice, each attempt tries to write to the stream write
+    TestStream::AddWriteRC( RC_TransferIncomplete ); // first send HEAD fails once
+    TestStream::AddWriteRC( RC_TransferIncomplete ); // first send HEAD fails twice
+    TestStream::AddWriteRC( RC_TransferIncomplete ); // retry send HEAD fails once
+    TestStream::AddWriteRC( RC_TransferIncomplete ); // retry send HEAD fails twice
     REQUIRE_RC_FAIL ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) );
     REQUIRE ( m_reconnected );
 }
@@ -387,7 +402,9 @@ FIXTURE_TEST_CASE(GET_Timedout_Reconnect_Succeed, HttpFixture)
     SendReceiveHEAD(GetName());
 
     TestStream::AddWriteRC(0); // send GET succeeds
-    TestStream::AddReadResponse( "TIMEOUT" ); // response to GET times out
+    TestStream::AddReadResponse( "TIMEOUT" ); // response to GET times out, first attempt
+    TestStream::AddWriteRC(0); // send GET succeeds
+    TestStream::AddReadResponse( "TIMEOUT" ); // response to GET times out, second attempt
     TestStream::AddWriteRC(0); // retry GET succeeds
     TestStream::AddReadResponse( Response_GET_Content );
     REQUIRE_RC ( KFileTimedRead ( m_file, 0, m_buf, sizeof m_buf, &m_numRead, NULL ) );
@@ -402,10 +419,16 @@ FIXTURE_TEST_CASE(GET_Read_Failed_Reconnect_Failed, HttpFixture)
 {
     SendReceiveHEAD(GetName());
 
+    // firsty try
     TestStream::AddWriteRC(0); // send GET succeeds
-    TestStream::AddReadResponse( "TIMEOUT" ); // response to GET times out
-    TestStream::AddWriteRC(0); // reconnect GET succeeds
-    TestStream::AddReadResponse( "TIMEOUT" ); // response to GET times out
+    TestStream::AddReadResponse( "TIMEOUT" ); // response to GET times out, first attempt
+    TestStream::AddWriteRC(0); // send GET succeeds
+    TestStream::AddReadResponse( "TIMEOUT" ); // response to GET times out, second attempt
+    // atempt to reconnect
+    TestStream::AddWriteRC(0); // send GET succeeds
+    TestStream::AddReadResponse( "TIMEOUT" ); // response to GET times out, first attempt
+    TestStream::AddWriteRC(0); // send GET succeeds
+    TestStream::AddReadResponse( "TIMEOUT" ); // response to GET times out, second attempt
     REQUIRE_RC_FAIL ( KFileTimedRead ( m_file, 0, m_buf, sizeof m_buf, &m_numRead, NULL ) );
 
     REQUIRE ( m_reconnected );
