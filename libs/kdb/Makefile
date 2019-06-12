@@ -109,8 +109,7 @@ KDB_SRC = \
 	trieidx-v2 \
 	trieval-v2 \
 	ptrieval-v2 \
-	u64idx-v3 \
-	htidx-v5
+	u64idx-v3
 
 KDB_OBJ = \
 	$(addsuffix .$(LOBX),$(KDB_SRC))
@@ -148,9 +147,7 @@ WKDB_SRC = \
 	windex \
 	wtrieidx-v1 \
 	wtrieidx-v2 \
-	wu64idx-v3 \
-	htidx-v5 \
-	whtidx-v5
+	wu64idx-v3
 
 WKDB_OBJ = \
 	$(addsuffix .$(LOBX),$(WKDB_SRC))

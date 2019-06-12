@@ -146,8 +146,8 @@ static bool SVersionNeedCloudLocation(const SVersion  self, bool sdl) {
     return self == VERSION_4_0 || sdl;
 }
 
-static bool SVersionResponseInJson ( const SVersion  self, bool sdl ) {
-    return self >= VERSION_4_0 || sdl;
+static bool SVersionResponseInJson ( const SVersion  self ) {
+    return self >= VERSION_4_0;
 }
 
 /******************************************************************************/
@@ -375,8 +375,7 @@ static rc_t SHelperInit ( SHelper * self, const KNSManager * kMgr ) {
 
     memset ( self, 0, sizeof * self );
 
-    /* buffer for names service responses */
-    self -> inSz = 1024;
+    self -> inSz = 512;
     self -> input = (char *) malloc ( self -> inSz );
 
     if ( self -> input == NULL )
@@ -646,13 +645,13 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
 
     if (rc == 0 && adjustVersion) {
         if (cgiNotSupportsJson(buffer)) { /* cgi supports versions < 4 */
-            if (SVersionResponseInJson(request->version, request->sdl))
+            if (SVersionResponseInJson(request->version))
                 /* version >= 4 but cgi does't support 4: use version-3.0 */
                 request->version = VERSION_3_0;
         }
         else { /* cgi supports versions >= 4 */
             if (request->request.appRc != 0
-                && SVersionResponseInJson(request->version, request->sdl))
+                && SVersionResponseInJson(request->version))
             {
                 /* version >= 4
                 but different acc-s in request:
@@ -666,7 +665,7 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
                 if (request->request.objects > 0 &&
                     request->request.object[0].objectId != NULL &&
                     isdigit(request->request.object[0].objectId[0]) &&
-                    SVersionResponseInJson(request->version, request->sdl))
+                    SVersionResponseInJson(request->version))
                 {
                     /* version >= 4; request contains numeric kart-ids
                     but cgi does not support numeric kart-ids:
@@ -674,13 +673,10 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
                     string_copy(buffer, bsize, cgi, sizeof cgi);
                     request->version = VERSION_3_0;
                 }
-                else if (!SVersionResponseInJson(request->version,
-                    request->sdl))
-                {
+                else if (!SVersionResponseInJson(request->version))
                     /* version < 4; but cgi supports version>=4:
                     use old cgi */
                     string_copy(buffer, bsize, cgi, sizeof cgi);
-                }
             }
         }
     }
@@ -1631,7 +1627,7 @@ static bool VPathMakeOrNot ( VPath ** new_path, const String * src,
             typed -> osize,
             useDates ? typed -> date : 0,
             typed -> md5 . has_md5 ? typed -> md5 . md5 : NULL,
-            useDates ? typed -> expiration : 0, NULL, NULL, false, false );
+            useDates ? typed -> expiration : 0, NULL );
         if ( * rc == 0 )
             VPathMarkHighReliability ( * new_path, true );
 
@@ -2412,9 +2408,7 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
                             break;
                         }
                         if (rx != 0) {
-                            if (SVersionResponseInJson(service->req.version,
-                                service->req.sdl))
-                            {
+                            if (SVersionResponseInJson(service->req.version)) {
                                 service->resp.rc = rx;
                                 rc = KHttpResultGetInputStream(rslt, stream);
                             }
@@ -2963,9 +2957,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
             request -> request . object [ i ] . ordId = i;
             rc = SObjectCheckUrl ( & request -> request . object [ i ] );
             if ( rc != 0 || ! request -> request . object [ i ] . isUri ) {
-              if ( SVersionResponseInJson ( request -> version,
-                  request ->sdl ) )
-              {
+              if ( SVersionResponseInJson (  request -> version ) ) {
                 const char name [] = "acc";
                 rc = SKVMake ( & kv, name,
                                request -> request . object [ i ] . objectId );
@@ -3111,7 +3103,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
         }
     }
 
-    if (rc == 0 && SVersionResponseInJson(request->version, request->sdl)) {
+    if (rc == 0 && SVersionResponseInJson(request->version)) {
         if (request->request.appRc != 0)
             /* different query items require to add
             and at the same time not to add filetype=run */
@@ -3132,7 +3124,6 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
 
     if (rc == 0 && SVersionNeedCloudLocation(request->version, request->sdl))
         rc = SCgiRequestAddLocation( self, helper );
-
     return rc;
 }
 
@@ -3457,18 +3448,13 @@ static rc_t KServiceProcessJson ( KService * self ) {
 
     Response4 * r = NULL;
 
-    assert(self);
-
     if (self->resp.rc != 0)
         return self->resp.rc;
 
-    if (self->req.sdl)
-        rc = Response4MakeSdl ( & r, self -> helper . input );
-    else
-        rc = Response4Make ( & r, self -> helper . input );
+    rc = Response4Make ( & r, self -> helper . input );
 
     if ( rc == 0 )
-        rc = KSrvResponseSetR4 ( self -> resp . list, r );
+        rc = KSrvResponseSetR4 ( self -> resp .list, r );
 
     if ( rc == 0 )
         Response4GetRc ( r, & rc );
@@ -3614,8 +3600,8 @@ rc_t KServiceProcessStreamAll ( KService * self, KStream * stream )
         if ( sizeW == 0 ) {
             size_t inSz = self -> helper . inSz;
             void * tmp = NULL;
-            if ( self -> helper . inSz == 0 )  /* buffer for names service */
-                self -> helper . inSz  = 1024; /*                 response */
+            if ( self -> helper . inSz == 0 )
+                self -> helper . inSz  = 512;
             else
                 self -> helper . inSz *= 2;
             if ( self -> helper . input == NULL )
@@ -3655,8 +3641,7 @@ rc_t KServiceProcessStreamAll ( KService * self, KStream * stream )
         buffer = self -> helper . input;
         buffer [ offW ] = '\0';
         if ( self != NULL
-            && SVersionResponseInJson(self -> req . version, self -> req .sdl)
-            && offW > 0
+            && SVersionResponseInJson(self -> req . version) && offW > 0
             && buffer [ 0 ] != '#' )
         {
             start = false;
@@ -3860,7 +3845,7 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
     else if ( self -> req . hasQuery
            || self -> req . serviceType == eSTsearch)
     {
-        if ( SVersionResponseInJson (self -> req . version, self -> req . sdl) )
+        if ( SVersionResponseInJson (  self -> req. version ) )
             rc = KServiceProcessStreamAll     ( self, stream );
         else
             rc = KServiceProcessStreamByParts ( self, stream );
@@ -3878,7 +3863,7 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                 self -> req . request . object [ i ] . objectId );
 
     if ( rc == 0 &&
-        ! SVersionResponseInJson ( self -> req . version, self -> req . sdl ) )
+        ! SVersionResponseInJson (  self -> req. version ) )
     {
         uint32_t l = KSrvResponseLength  ( self -> resp .list );
         uint32_t i = 0;
@@ -4120,9 +4105,7 @@ static rc_t KService1NameWithVersionAndType ( const KNSManager * mgr,
         rc = KServiceProcessStream ( & service, stream );
 
     if ( rc == 0 ) {
-        if ( SVersionResponseInJson ( service . req . version,
-            service . req . sdl ) )
-        {
+        if ( SVersionResponseInJson (  service . req . version ) ) {
             uint32_t n = 0;
             const KSrvResponse * response = NULL;
             const KSrvRespObj * obj = NULL;
@@ -4216,9 +4199,7 @@ static rc_t KService1NameWithVersionAndType ( const KNSManager * mgr,
         }
     }
 
-    if ( rc == 0 &&
-        ! SVersionResponseInJson(service . req . version, service . req . sdl) )
-    {
+    if ( rc == 0 && ! SVersionResponseInJson (  service . req . version ) ) {
         uint32_t l = KSrvResponseLength ( service . resp . list );
         if ( l != 1)
             rc = RC ( rcVFS, rcQuery, rcResolving, rcQuery, rcUnauthorized );

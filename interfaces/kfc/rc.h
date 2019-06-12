@@ -90,11 +90,7 @@ RC_ENUM ( RCModule )
     RC_ENTRY ( rcRDBMS, "RDBMS" )
     RC_ENTRY ( rcNS, "network system" )
     RC_ENTRY ( rcVFS, "virtual file system" )
-    RC_VLAST ( rcLastModule_v1_1 )
-    RC_VFIRST ( rcFirstModule_v1_2, rcLastModule_v1_1 )
-    RC_ENTRY ( rcExitCode, "exit code" )
-    RC_ENTRY ( rcTLS, "transport layer security" )
-    RC_LAST ( rcLastModule_v1_2 )
+    RC_LAST ( rcLastModule_v1_1 )
 };
 
 /* RCTarget

@@ -95,7 +95,6 @@ KFG_SRC = \
 	config-grammar \
 	config \
 	config-aws \
-	config-gcp \
 	kart \
 	repository \
 	properties \

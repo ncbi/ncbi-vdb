@@ -32,8 +32,7 @@ MODULE = test/kdb
 TEST_TOOLS = \
     test-kdb \
     test-wkdb \
-    test-rowset \
-    test-wkdb-index
+    test-rowset
 
 include $(TOP)/build/Makefile.env
 
@@ -66,7 +65,7 @@ TEST_BTREE_LIB = \
 
 $(BINDIR)/test-btree: $(TEST_BTREE_OBJ)
 	$(LD) --exe -o $@ $^ $(TEST_BTREE_LIB)
-
+	
 #-------------------------------------------------------------------------------
 # test rowset
 #
@@ -83,7 +82,7 @@ TEST_ROWSET_LIB = \
 
 $(TEST_BINDIR)/test-rowset: $(TEST_ROWSET_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_ROWSET_LIB)
-
+	
 vg_rowset: std
 	$(VALGRIND) $(TEST_BINDIR)/test-rowset
 
@@ -123,20 +122,3 @@ $(TEST_BINDIR)/test-wkdb: $(TEST_WKDB_OBJ)
 
 wkdb: test-wkdb
 	$(TEST_BINDIR)/test-wkdb
-
-#-------------------------------------------------------------------------------
-# test-wkdb
-#
-TEST_WKDBIDX_SRC = \
-	wkdbindex
-
-TEST_WKDBIDX_OBJ = \
-	$(addsuffix .$(OBJX),$(TEST_WKDBIDX_SRC))
-
-TEST_WKDBIDX_LIB = \
-    -skapp \
-    -sktst \
-	-sncbi-wvdb
-
-$(TEST_BINDIR)/test-wkdb-index: $(TEST_WKDBIDX_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_WKDBIDX_LIB)

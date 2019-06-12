@@ -27,7 +27,7 @@
 LD_EXPORT_GLOBAL="-Wl,--export-dynamic"
 LD_MULTIPLE_DEFS="-Wl,-zmuldefs"
 LD_STATIC="-Wl,-Bstatic"
-LD_DYNAMIC="-Wl,-Bdynamic" # -lasan -fuse-ld=gold
+LD_DYNAMIC="-Wl,-Bdynamic"
 LD_ALL_SYMBOLS="-Wl,-whole-archive"
 LD_REF_SYMBOLS="-Wl,-no-whole-archive"
 

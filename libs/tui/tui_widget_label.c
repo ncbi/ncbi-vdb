@@ -46,21 +46,8 @@ void draw_label( struct KTUIWidget * w )
                 uint32_t y = r.top_left.y;
                 rc = DlgPaint( tui, x, y, r.w, r.h, ac.bg );
                 if ( rc == 0 && w->caption != NULL )
-                {
-                    tui_ac hl_ac;   // the highlighted style
-                    rc = GetWidgetHlAc( w, ktuipa_label, &hl_ac );
-                    if ( rc == 0 )
-                        draw_highlighted( tui, x + 1, y, r.w - 2, &ac, &hl_ac, w->caption );
-                }
+                    draw_highlighted( tui, x + 1, y, r.w - 2, &ac, w->caption );
             }
         }
     }
-}
-
-bool event_label( struct KTUIWidget * w, tui_event * event, bool hotkey )
-{
-    bool res = hotkey;
-    if ( res )
-        KTUIDlgPushEvent( w -> dlg, ktuidlg_event_select, w -> id, 0, 0, NULL );
-    return res;
 }

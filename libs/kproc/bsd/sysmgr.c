@@ -28,7 +28,6 @@
 #include <kproc/procmgr.h>
 
 #include <pthread.h>
-#include <stdio.h>
 
 /* OnMainThread
  *  returns true if running on main thread

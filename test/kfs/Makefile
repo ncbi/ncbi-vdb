@@ -37,7 +37,6 @@ TEST_TOOLS = \
 	test-cachetee \
 	test-cachetee2 \
 	test-cachetee3 \
-	test-cacheteeWM \
 	test-lru-cache \
 	test-kfs-md5    \
 	test-appendfile
@@ -55,7 +54,7 @@ clean: stdclean
 # test-kfs
 #
 TEST_KFS_SRC = \
-	kfstest
+	kfstest 
 
 TEST_KFS_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_KFS_SRC))
@@ -91,7 +90,7 @@ $(TEST_BINDIR)/kdf: $(DU_OBJ)
 # test-kfs-md5
 #
 TEST_MD5_SRC = \
-	md5test
+	md5test 
 
 TEST_MD5_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_MD5_SRC))
@@ -109,7 +108,7 @@ $(TEST_BINDIR)/test-kfs-md5: $(TEST_MD5_OBJ)
 # test-ramfile
 #
 TEST_RAMFILE_SRC = \
-	ramfiletest
+	ramfiletest 
 
 TEST_RAMFILE_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_RAMFILE_SRC))
@@ -126,7 +125,7 @@ $(TEST_BINDIR)/test-ramfile: $(TEST_RAMFILE_OBJ)
 # test-resolve
 #
 TEST_RESOLVE_SRC = \
-	resolvetest
+	resolvetest 
 
 TEST_RESOLVE_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_RESOLVE_SRC))
@@ -192,7 +191,7 @@ TEST_CACHETEE3_OBJ = \
 
 TEST_CACHETEE3_LIB = \
 	-lkapp \
-	-sncbi-vdb \
+    -sncbi-vdb \
 	-lktst
 
 $(TEST_BINDIR)/test-cachetee3: $(TEST_CACHETEE3_OBJ)
@@ -203,28 +202,6 @@ cachetee3: $(TEST_BINDIR)/test-cachetee3
 	rm -f cache.dat.cache org.dat
 	$(TEST_BINDIR)/test-cachetee3 -vvv
 	# $(TEST_BINDIR)/test-cachetee3 -vvv
-
-# test-cacheteeWM
-#
-TEST_CACHETEE_WM_SRC = \
-	cache_tee_helper \
-	cachetee_wm_test
-
-TEST_CACHETEE_WM_OBJ = \
-	$(addsuffix .$(OBJX),$(TEST_CACHETEE_WM_SRC))
-
-TEST_CACHETEE_WM_LIB = \
-	-lkapp \
-	-sncbi-vdb \
-	-lktst
-
-
-$(TEST_BINDIR)/test-cacheteeWM: $(TEST_CACHETEE_WM_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_CACHETEE_WM_LIB)
-	rm *.o *.d
-
-cacheteeWM: $(TEST_BINDIR)/test-cacheteeWM
-	$(TEST_BINDIR)/test-cacheteeWM
 
 #-------------------------------------------------------------------------------
 # test-lru-cache
@@ -268,7 +245,7 @@ $(TEST_BINDIR)/fuse-proxy: $(FUSE_PROXY_OBJ)
 #
 CTOFS_SRC = \
 	cachetee-out-of-space
-
+    
 CTOFS_OBJ = \
 	$(addsuffix .$(OBJX),$(CTOFS_SRC))
 
@@ -301,13 +278,13 @@ $(TEST_BINDIR)/simple_q: $(SIMPLE_Q_TEST_OBJ)
 
 simple_q: $(TEST_BINDIR)/simple_q
 	$(TEST_BINDIR)/simple_q
-
+    
 ifeq (linux,$(OS))
 ifeq (1,$(HAVE_FUSE))
 #-------------------------------------------------------------------------------
 # scripted tests
 #
-runtests: test-cachetee3 test-cacheteeWM cachetee-out-of-space-test
+runtests: cachetee-out-of-space-test
 
 cachetee-out-of-space-test: $(TEST_BINDIR)/fuse-proxy $(TEST_BINDIR)/test-cachetee-out-of-space run-cachetee-out-of-space-test.sh
 	@ echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
