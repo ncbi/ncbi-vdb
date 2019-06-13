@@ -112,6 +112,11 @@ rc_t KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
     VRemoteProtocols p, const struct VPath ** path,
     const struct VPath ** vdbcache, const KSrvError ** error );
 
+/* GetCache
+ * get cache location for KSrvResponse element number "idx"
+ */
+rc_t KSrvResponseGetCache(const KSrvResponse * self, uint32_t idx,
+    const struct VPath ** path);
 
 /************************** KSrvError ******************************
  * KSrvError is generated for Id-s from request that produced an error response
@@ -165,11 +170,15 @@ rc_t KSrvRespFileGetAccOrId(const KSrvRespFile * self,
     const char ** acc, uint32_t * id);
 rc_t KSrvRespFileGetClass(const KSrvRespFile * self, const char ** itemClass);
 
+/* type: sra, vdbcache, etc. */
+rc_t KSrvRespFileGetType(const KSrvRespFile * self, const char ** type);
+
 rc_t KSrvRespFileGetSize(const KSrvRespFile * self, uint64_t *size);
 rc_t KSrvRespFileGetCache ( const KSrvRespFile * self,
                             const struct VPath ** path );
 rc_t KSrvRespFileGetLocal ( const KSrvRespFile * self,
                             const struct VPath ** path );
+
 rc_t KSrvRespFileRelease  ( const KSrvRespFile * self );
 
 rc_t KSrvRespFileMakeIterator ( const KSrvRespFile * self,
