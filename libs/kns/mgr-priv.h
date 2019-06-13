@@ -88,6 +88,9 @@ struct KNSManager
     /* VResolverCache ia allowed to resolve to user's cache vs. cwd/AD */
     bool enabledResolveToAd; 
 
+    bool accept_aws_charges;
+    bool accept_gcp_charges;
+
     bool NCBI_VDB_NETnoLogError;
     bool NCBI_VDB_NETkfgValueSet;
     bool NCBI_VDB_NETkfgValue;

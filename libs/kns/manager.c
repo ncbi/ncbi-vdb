@@ -686,6 +686,28 @@ static bool KNSManagerPrepareResolveToCache(KConfig* kfg) {
         return true;
 }
 
+static bool KNSManagerPrepareAcceptAwsCharges(KConfig* kfg) {
+    bool reslt = false;
+
+    /* TODO: call ncbi-vdb/interfaces/kfg/properties.h for exact key name */
+    rc_t rc = KConfigReadBool(kfg, "/libs/cloud/accept_aws_charges", &reslt);
+    if (rc == 0)
+        return reslt;
+    else
+        return false;
+}
+
+static bool KNSManagerPrepareAcceptGcpCharges(KConfig* kfg) {
+    bool reslt = false;
+
+    /* TODO: call ncbi-vdb/interfaces/kfg/properties.h for exact key name */
+    rc_t rc = KConfigReadBool(kfg, "/libs/cloud/accept_gcp_charges", &reslt);
+    if (rc == 0)
+        return reslt;
+    else
+        return false;
+}
+
 LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
 {
     rc_t rc;
@@ -713,6 +735,9 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
                 = KNSManagerPrepareEmulateTldReadErrors(kfg); */
 
             mgr->resolveToCache = KNSManagerPrepareResolveToCache(kfg);
+
+            mgr->accept_aws_charges = KNSManagerPrepareAcceptAwsCharges(kfg);
+            mgr->accept_gcp_charges = KNSManagerPrepareAcceptGcpCharges(kfg);
 
             rc = KNSManagerInit (); /* platform specific init in sysmgr.c ( in unix|win etc. subdir ) */
             if ( rc == 0 )

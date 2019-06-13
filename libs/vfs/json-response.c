@@ -62,7 +62,7 @@ typedef struct {
 } Stack;
 
 #define MAX_PATHS 6 /* Locations for Element (sra, vdbcache, ???) */
-typedef struct {
+typedef struct Locations {
     ESrvFileFormat type;
     char * cType;
     char * name;
@@ -115,34 +115,6 @@ struct Response4 { /* Response object */
     uint32_t nItems;
     rc_t rc;
 };
-
-typedef enum {
-    eUnknown,
-    eFalse,
-    eTrue
-} EState;
-
-typedef struct Data {
-    const char * acc;
-    int64_t id; /* oldCartObjId */
-    const char * cls; /* itemClass */
-    const char * vsblt;
-    const char * name;
-    const char * fmt; /* format */
-    EState qual; /* hasOrigQuality */
-    int64_t sz; /* size */
-    const char * md5;
-    const char * sha; /* sha256 */
-    int64_t mod; /* modDate */
-    int64_t exp; /* expDate */
-    const char * srv; /* service */
-    const char * reg; /* region */
-    const char * link; /* ??????????????????????????????????????????????????? */
-    const char * tic;
-    const char * objectType;
-
-    int64_t code; /* status/code */
-} Data;
 
 struct KSrvRespObj {
     atomic32_t refcount;
@@ -425,7 +397,7 @@ static rc_t LocationsSetHttp(Locations * self, const VPath * path) {
     return rc;
 }
 
-static rc_t LocationsAddVPath ( Locations * self, const VPath * path,
+rc_t LocationsAddVPath ( Locations * self, const VPath * path,
                             const VPath * mapping, bool setHttp, uint64_t osize)
 {
     int i = 0;
@@ -539,7 +511,7 @@ static bool ItemHasLinks ( const Item * self ) {
     return false;
 }
 
-static rc_t ItemAddFormat ( Item * self, const char * cType, const Data * dad,
+rc_t ItemAddFormat ( Item * self, const char * cType, const Data * dad,
                      Locations ** added )
 {
     rc_t rc = 0;
@@ -1463,14 +1435,18 @@ static rc_t LocationsAddLink ( Locations * self, const KJsonValue * node,
     }
 
     if ( dad -> tic == NULL ) {
+        const String * objectType = NULL;
         rc = VPathMakeFromUrl ( & path, & url, NULL, true, & acc, dad -> sz,
-                        dad -> mod, hasMd5 ? md5 : NULL, 0, dad -> objectType );
+            dad -> mod, hasMd5 ? md5 : NULL, 0, dad -> srv, objectType,
+            false, false );
     }
     else {
+        const String * objectType = NULL;
         String ticket;
         StringInitCString ( & ticket, dad -> tic );
         rc = VPathMakeFromUrl ( & path, & url, & ticket, true, & acc, dad -> sz,
-                        dad -> mod, hasMd5 ? md5 : NULL, 0, dad -> objectType );
+            dad -> mod, hasMd5 ? md5 : NULL, 0, dad -> srv, objectType,
+            false, false );
     }
     if ( rc == 0 )
         VPathMarkHighReliability ( path, true );
@@ -1688,7 +1664,7 @@ rc_t LocationsInitMapping ( Locations * self, const Item * item )
 /********************************** Item **********************************/
 
 /* We are scanning Item(Run) to find all its Elm-s(Files) -sra, vdbcache, ??? */
-static rc_t ItemAddElms ( Item * self, const KJsonObject * node,
+static rc_t ItemAddElms4 ( Item * self, const KJsonObject * node,
                    const Data * dad, Stack * path )
 {
     rc_t rc = 0;
@@ -1729,7 +1705,7 @@ static rc_t ItemAddElms ( Item * self, const KJsonObject * node,
 
             value = KJsonArrayGetElement ( array, i );
             object = KJsonValueToObject ( value );
-            r2 = ItemAddElms ( self, object, & data, path );
+            r2 = ItemAddElms4 ( self, object, & data, path );
             if ( r2 != 0 && rc == 0 )
                 rc = r2;
 
@@ -1801,7 +1777,7 @@ static rc_t ContainerAddItem ( Container * self, const KJsonObject * node,
                 DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), ("Adding files to '%s' "
                     "item %u...\n", item->itemClass, item->id));
         }
-        rc = ItemAddElms ( item, node, & data, path );
+        rc = ItemAddElms4 ( item, node, & data, path );
     }
 
     if ( rc == 0 && ! ItemHasLinks ( item ) && data . code == 200 ) {
@@ -1813,7 +1789,7 @@ static rc_t ContainerAddItem ( Container * self, const KJsonObject * node,
 }
 
 /* We are inside or above of a Container
-   and are llooking for Items(runs, gdGaP files) to ddd */
+   and are looking for Items(runs, gdGaP files) to ddd */
 static rc_t Response4AddItems ( Response4 * self, Container * aBox,
     const KJsonObject * node, const Data * dad, Stack * path )
 {
@@ -2483,6 +2459,14 @@ rc_t KSrvRespFileGetClass(const KSrvRespFile * self, const char ** itemClass) {
     assert(self && self->item && itemClass);
 
     *itemClass = self->item->itemClass;
+
+    return 0;
+}
+
+rc_t KSrvRespFileGetType(const KSrvRespFile * self, const char ** type) {
+    assert(self && self->item && type);
+
+    *type = self->file->cType;
 
     return 0;
 }
