@@ -121,7 +121,10 @@ struct VPath
     uint8_t    md5 [ 16 ];  /* md5 checksum object's un-encrypted if known */
     bool       has_md5;
 
+    String     service;      /* s3, gs, sra-ncbi, ftp-ncbi, sra-sos, etc. */
     String     objectType;
+    bool       ceRequired;
+    bool       payRequired;
 };
 
 enum VPathVariant
@@ -159,7 +162,7 @@ VFS_EXTERN rc_t LegacyVPathMakeSysPath ( VPath ** new_path, const char * sys_pat
 typedef enum eVPUri_t
 {
     vpuri_invalid = -1,
-    vpuri_none, 
+    vpuri_none,
     vpuri_not_supported,
     vpuri_ncbi_file,
     vpuri_ncbi_vfs = vpuri_ncbi_file,

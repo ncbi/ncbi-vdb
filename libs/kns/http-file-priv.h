@@ -64,13 +64,13 @@ struct KHttpFile
     /* The response will be a 307 Temp Redirect with Location and Expires headers */
     /* Save the Location URL in url_buffer, Expires in url_expiration. */
     /* Reopen the connection using url_buffer. */
-    /* Add "promise-to-pay" headers if requester_pays == true. */
+    /* Add "promise-to-pay" headers if payRequired == true. */
     /* In all read functions, if the expiration time will have passed in 1 minute, refresh url_buffer first, */
     /* using the same procedure (connect to orig_url_buffer/HEAD/307/save URL and expiration) */
     bool need_env_token; //TODO: rename into "temporary_url", "cloud_url", or something
 
     /* if true, add user-account info headers to each request */
-    bool requester_pays;
+    bool payRequired;
 
     bool no_cache;
 };

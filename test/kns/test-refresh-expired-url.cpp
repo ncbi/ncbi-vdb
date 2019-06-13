@@ -91,7 +91,7 @@ FIXTURE_TEST_CASE( HttpRefreshTestSuite_UntimedRead, CloudFixture )
     AddHead();
 
     // needs an environment token, no requester-pays
-    REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, true, false, url . c_str () ) );
+    REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, true, url . c_str () ) );
     REQUIRE_NOT_NULL ( m_file ) ;
 
     // make sure expiration time is reflected on the HttpFile object

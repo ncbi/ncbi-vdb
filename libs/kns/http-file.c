@@ -127,6 +127,82 @@ rc_t CC KHttpFileSetSize ( KHttpFile *self, uint64_t size )
     return RC ( rcNS, rcFile, rcUpdating, rcFile, rcReadonly );
 }
 
+static
+rc_t CloudRefresh( const KHttpFile * cself, struct timeout_t *tm )
+{
+    KHttpFile * self = (KHttpFile *) cself;
+    /* If we are working with a temporary (cloud) URL, check the expiration time */
+    /* If the expiration time is close, refresh the URL */
+    rc_t rc = 0;
+    if ( self -> need_env_token )
+    {
+        // KTime_t is in seconds
+        const KTime_t now = KTimeStamp();
+        const KTime_t expTime = KTimeMakeTime ( & self -> url_expiration );
+        const KTime_t advance = 60;
+        bool need_refresh;
+        if ( tm == NULL )
+        {
+            need_refresh = expTime < ( now + advance );
+        }
+        else
+        {
+            need_refresh = expTime < ( now + ( tm -> mS / 1000 ) + advance );
+        }
+
+        if ( need_refresh )
+        {
+            //TODO: attach the computing environment identity token
+            //TODO: requester-pays info if required
+            KClientHttpRequest *req;
+            rc_t rc = KClientHttpMakeRequestInt ( self -> http, & req, & self -> block, & self -> orig_url_buffer );
+            if ( rc == 0 )
+            {
+                rc_t rc2;
+                KClientHttpResult * rslt;
+                rc = KClientHttpRequestHEAD ( req, & rslt );
+                if ( rc == 0 )
+                {   /* retrieve expiration time Expires header of rslt -> http. if missing, error out? */
+                    if ( rslt -> expiration != NULL )
+                    {   /* save in self -> url_expiration */
+                        KTimeFromIso8601 ( & self -> url_expiration, rslt -> expiration, string_size ( rslt -> expiration ) );
+                        free ( rslt -> expiration );
+                        rslt -> expiration = NULL;
+                    }
+                    rc2 = KClientHttpResultRelease ( rslt );
+                    if ( rc == 0 )
+                    {
+                        rc = rc2;
+                    }
+                }
+
+                if ( rc == 0 )
+                {   /* Refresh url_buffer with the latest temporary URL */
+                    rc = KDataBufferWhack ( & self -> url_buffer );
+                    if ( rc == 0 )
+                    {
+                        rc = KClientHttpRequestURL ( req, & self -> url_buffer );
+                        if ( rc == 0 )
+                        {
+                            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
+                                    ( "HttpFile.URL updated to '%.*s'\n",
+                                    ( int ) self -> url_buffer . elem_count, self -> url_buffer . base ) );
+                        }
+                    }
+                }
+
+                rc2 = KClientHttpRequestRelease( req );
+                if ( rc == 0 )
+                {
+                    rc = rc2;
+                }
+            }
+        }
+    }
+
+    return rc;
+}
+
 #if SUPPORT_CHUNKED_READ
 static
 rc_t KHttpFileMakeRequest ( const KHttpFile *self, uint64_t pos, size_t req_size,
@@ -166,6 +242,8 @@ rc_t KHttpFileMakeRequest ( const KHttpFile *self, uint64_t pos, size_t req_size
 
             if ( rc == 0 )
             {
+                KClientHttpRequestSetPayRequired(req, NULL, self->payRequired);
+
                 /* TBD - there should be a version of GET that takes a timeout */
                 rc = KClientHttpRequestGET ( req, rslt );
                 if ( rc != 0 )
@@ -219,6 +297,12 @@ rc_t KHttpFileTimedReadInt ( const KHttpFile * self,
     uint32_t proxy_retries;
 
     size_t req_size = bsize;
+
+    rc = CloudRefresh( self, tm );
+    if ( rc != 0 )
+    {
+        return rc;
+    }
 
     * http_status = 0;
 
@@ -334,80 +418,6 @@ rc_t KHttpFileTimedReadInt ( const KHttpFile * self,
 #endif /* SUPPORT_CHUNKED_READ */
 
 #if ! SUPPORT_CHUNKED_READ
-static
-rc_t CloudRefresh( KHttpFile * self, struct timeout_t *tm )
-{
-    /* If we are working with a temporary (cloud) URL, check the expiration time */
-    /* If the expiration time is close, refresh the URL */
-    rc_t rc = 0;
-    if ( self -> need_env_token )
-    {
-        // KTime_t is in seconds
-        const KTime_t now = KTimeStamp();
-        const KTime_t expTime = KTimeMakeTime ( & self -> url_expiration );
-        const KTime_t advance = 60;
-        bool need_refresh;
-        if ( tm == NULL )
-        {
-            need_refresh = expTime < ( now + advance );
-        }
-        else
-        {
-            need_refresh = expTime < ( now + ( tm -> mS / 1000 ) + advance );
-        }
-
-        if ( need_refresh )
-        {
-            //TODO: attach the computing environment identity token
-            //TODO: requester-pays info if required
-            KClientHttpRequest *req;
-            rc_t rc = KClientHttpMakeRequestInt ( self -> http, & req, & self -> block, & self -> orig_url_buffer );
-            if ( rc == 0 )
-            {
-                rc_t rc2;
-                KClientHttpResult * rslt;
-                rc = KClientHttpRequestHEAD ( req, & rslt );
-                if ( rc == 0 )
-                {   /* retrieve expiration time Expires header of rslt -> http. if missing, error out? */
-                    if ( rslt -> expiration != NULL )
-                    {   /* save in self -> url_expiration */
-                        KTimeFromIso8601 ( & self -> url_expiration, rslt -> expiration, string_size ( rslt -> expiration ) );
-                        free ( rslt -> expiration );
-                        rslt -> expiration = NULL;
-                    }
-                    rc2 = KClientHttpResultRelease ( rslt );
-                    if ( rc == 0 )
-                    {
-                        rc = rc2;
-                    }
-                }
-
-                if ( rc == 0 )
-                {   /* Refresh url_buffer with the latest temporary URL */
-                    rc = KDataBufferWhack ( & self -> url_buffer );
-                    if ( rc == 0 )
-                    {
-                        rc = KClientHttpRequestURL ( req, & self -> url_buffer );
-                        if ( rc == 0 )
-                        {
-                            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
-                                    ( "HttpFile.URL updated to '%.*s'\n",
-                                    ( int ) self -> url_buffer . elem_count, self -> url_buffer . base ) );
-                        }
-                    }
-                }
-
-                rc2 = KClientHttpRequestRelease( req );
-                if ( rc == 0 )
-                {
-                    rc = rc2;
-                }
-            }
-        }
-    }
-
-    return rc;
-}
 
 static
 rc_t KHttpFileTimedReadInt ( const KHttpFile *cself,
@@ -1226,7 +1236,7 @@ static KFile_vt_v1 vtKHttpFile =
 };
 
 static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
-    const KFile **file, KStream *conn, ver_t vers, bool reliable, bool need_env_token, bool requester_pays,
+    const KFile **file, KStream *conn, ver_t vers, bool reliable, bool need_env_token, bool payRequired,
     const char *url, va_list args )
 {
     rc_t rc;
@@ -1267,7 +1277,6 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                             if ( rc == 0 )
                             {
                                 KClientHttp *http;
-
                                 rc = KNSManagerMakeClientHttpInt ( self, & http, buf, conn, vers,
                                     self -> http_read_timeout, self -> http_write_timeout, & f -> block . host, f -> block . port, reliable, f -> block . tls );
                                 if ( rc == 0 )
@@ -1278,10 +1287,12 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                     if ( rc == 0 )
                                     {
                                         KClientHttpResult *rslt;
+
+                                        KClientHttpRequestSetPayRequired ( req, self, payRequired );
+
                                         if ( need_env_token )
                                         {
                                             //TODO: attach the computing environment identity token
-                                            //TODO: requester-pays info if required
                                             rc = KClientHttpRequestHEAD ( req, & rslt );
                                             if ( rc == 0 )
                                             {
@@ -1299,6 +1310,7 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                         {
                                             rc = KClientHttpRequestHEAD ( req, & rslt );
                                         }
+
 #if 1
                                         /* update url_buffer with the (possibly different and/or temporary temporary URL)*/
                                         KClientHttpRequestURL ( req, & f -> url_buffer ); /* NB. f -> url_buffer is not valid until this point */
@@ -1373,7 +1385,7 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                                         f -> http = http;
                                                         f -> no_cache = size >= NO_CACHE_LIMIT;
                                                         f -> need_env_token = need_env_token;
-                                                        f -> requester_pays = requester_pays;
+                                                        f -> payRequired = payRequired;
 
                                                         * file = & f -> dad;
                                                         return 0;
@@ -1466,12 +1478,37 @@ LIB_EXPORT rc_t CC KNSManagerMakeHttpFile(const KNSManager *self,
 }
 
 LIB_EXPORT rc_t CC KNSManagerMakeReliableHttpFile(const KNSManager *self,
-    const KFile **file, struct KStream *conn, ver_t vers, bool need_env_token, bool requester_pays, const char *url, ...)
+    const KFile **file, struct KStream *conn, ver_t vers, bool need_env_token, const char *url, ...)
 {
     rc_t rc = 0;
     va_list args;
     va_start(args, url);
-    rc = KNSManagerVMakeHttpFileInt ( self, file, conn, vers, true, need_env_token, requester_pays, url, args);
+    rc = KNSManagerVMakeHttpFileInt ( self, file, conn, vers, true, need_env_token, false, url, args);
+    va_end(args);
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KNSManagerMakePaidHttpFile(const KNSManager *self,
+    const KFile **file, struct KStream *conn, ver_t vers, bool payRequired,
+    const char *url, ...)
+{
+    rc_t rc = 0;
+    va_list args;
+    va_start(args, url);
+    rc = KNSManagerVMakeHttpFileInt ( self, file, conn, vers, false, false, payRequired, url, args);
+    va_end(args);
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KNSManagerMakePaidReliableHttpFile(const KNSManager *self,
+    const KFile **file, struct KStream *conn, ver_t vers, bool need_env_token, bool payRequired,
+    const char *url, ...)
+{
+    rc_t rc = 0;
+    va_list args;
+    va_start(args, url);
+    rc = KNSManagerVMakeHttpFileInt ( self, file, conn, vers, true, need_env_token, payRequired,
+        url, args);
     va_end(args);
     return rc;
 }

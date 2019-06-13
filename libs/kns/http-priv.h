@@ -137,6 +137,8 @@ void KClientHttpGetLocalEndpoint ( const struct KClientHttp * self,
 /* if the request followed redirects, the final URL will be different than the initial URL */
 rc_t KClientHttpRequestURL ( struct KClientHttpRequest const *self, KDataBuffer *rslt );
 
+void KClientHttpRequestSetPayRequired(struct KClientHttpRequest * self,
+    const struct KNSManager * kns, bool payRequired);
 
 /* exported private functions
 */

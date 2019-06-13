@@ -1,3 +1,6 @@
+/* TODO: move it to interfaces/klib/strings.h */
+#define MAGIC_PAY_REQUIRED "NCBI_VDB_PAY_REQUIRED"
+
 /*===========================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
@@ -2635,7 +2638,30 @@ struct KClientHttpRequest
 
     KRefcount refcount;
     bool accept_not_modified;
+
+    bool payRequired; /* required to access this URL */
+
+    /* user agrees to accept charges */
+    bool accept_aws_charges;
+    bool accept_gcp_charges;
 };
+
+void KClientHttpRequestSetPayRequired(struct KClientHttpRequest * self,
+    const KNSManager *mgr, bool payRequired)
+{
+    if (self != NULL) {
+        self->payRequired = payRequired;
+
+        if (mgr == NULL && self->http != NULL)
+            mgr = self->http->mgr;
+
+        if (mgr != NULL) {
+            self->accept_aws_charges = mgr->accept_aws_charges;
+            self->accept_gcp_charges = mgr->accept_gcp_charges;
+        }
+    }
+}
+
 
 rc_t KClientHttpRequestURL(KClientHttpRequest const *self, KDataBuffer *rslt)
 {
@@ -3247,12 +3273,6 @@ static EUriForm EUriFormGuess ( const String * hostname,
     }
 }
 
-/* TODO:
-    get REQUESTER_PAYER from configuration
-    or how it should be correctly set
- */
-#define REQUESTER_PAYER false
-
 #define X_AMZ_REQUEST_PAYER "x-amz-request-payer"
 #define REQUESTER "requester"
 
@@ -3343,6 +3363,7 @@ static rc_t StringToSign(
     return rc;
 }
 
+/* N.B. Just AWS authentication is implemented now */
 static rc_t KClientHttpRequestAuthenticate(const KClientHttpRequest *cself,
     const char *method,
     const char *AWSAccessKeyId, const char *YourSecretAccessKeyID)
@@ -3357,9 +3378,15 @@ static rc_t KClientHttpRequestAuthenticate(const KClientHttpRequest *cself,
     const String * sdate = NULL;
     char date[64] = "";
 
-    bool requester_payer = REQUESTER_PAYER;
-
     String dates;
+
+    const char * magic = getenv(MAGIC_PAY_REQUIRED);
+    bool requester_payer = magic != NULL ? true : self->payRequired;
+
+    /* don't set requester_payer when user did not agree to accept charges */
+    if (requester_payer & !self->accept_aws_charges)
+        requester_payer = false;
+
     assert(self && self->http);
     http = self->http;
     hostname = &self->url_block.host;
