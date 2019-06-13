@@ -1227,7 +1227,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
                     id = & obj_id;
                 rc = VPathMakeFromUrl ( ( VPath** ) path, & url,
                     & download_ticket, true, id, osize, date,
-                    has_md5 ? ud5 : NULL, 0, NULL );
+                    has_md5 ? ud5 : NULL, 0, NULL, NULL, false, false );
             }
             /*else
             {
@@ -2976,6 +2976,7 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
     }
     else
     {
+        const VResolverAlg * alg4 = NULL;
         ver_t v = InitVersion(version);
         for ( i = 0; i < count; ++ i )
         {
@@ -3003,14 +3004,31 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
                     if (rc == 0)
                         rc = try_rc;
                 }
+                else if (alg->version == VERSION_3_0 ||
+                    alg->version == VERSION_4_0)
+                {
+                    alg4 = alg;
+                }
             }
         }
         if (rc == 0 && count > 0) {
-            rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcNotFound);
-            PLOGERR(klogErr, (klogErr, rc,
-                "cannot find names service version $(vers). "
-                "Hint: run \"vdb-config --restore-defaults\"",
-                "vers=%V", v));
+            if (v > VERSION_4_0 && alg4 != NULL) {
+                /* fallback to old names service */
+                try_rc = VResolverAlgRemoteResolve(alg4, self->kns,
+                    protocols, &tok, path, mapping, opt_file_rtn,
+                    legacy_wgs_refseq, "4");
+                if (try_rc == 0)
+                    return 0;
+                if (rc == 0)
+                    rc = try_rc;
+            }
+            else {
+                rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcNotFound);
+                PLOGERR(klogErr, (klogErr, rc,
+                    "cannot find names service version $(vers). "
+                    "Hint: run \"vdb-config --restore-defaults\"",
+                    "vers=%V", v));
+            }
         }
     }
 
@@ -5694,8 +5712,8 @@ static rc_t VResolverInitVersion(VResolver * self, const KConfig *kfg) {
             return 0;
     }
 
-    else {
-        self->version = string_dup_measure("4", NULL);
+    else { /* default version is SDL-2 ( 128(SDL) | 2 ) */
+        self->version = string_dup_measure("130", NULL);
 
         if (self->version == NULL)
             return RC(rcVFS, rcMgr, rcCreating, rcMemory, rcExhausted);
