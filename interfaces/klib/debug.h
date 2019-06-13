@@ -108,7 +108,7 @@ extern "C" {
     _module(LEGREF) _module(LOADLIB) \
     _module(REF)    _module(SEARCH)  _module(SRA) \
     _module(VDB)    _module(VFS)     _module(XARC) _module(XML)  \
-    
+    _module(TLS)
 
 #define APP_CONDITIONS() \
     _condition(APP,0)  _condition(APP,1)  _condition(APP,2)  _condition(APP,3)  \
@@ -202,6 +202,9 @@ extern "C" {
 #define ARGS_CONDITIONS() \
     _condition(ARGS,WRITER)
 
+#define TLS_CONDITIONS() \
+    _condition(TLS,TLS)
+    
 /*
  * Nothing below here needs to be changed when just adding new modules
  * and/or conditions
