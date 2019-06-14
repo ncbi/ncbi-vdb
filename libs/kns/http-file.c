@@ -1290,37 +1290,19 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
 
                                         KClientHttpRequestSetPayRequired ( req, self, payRequired );
 
-                                        if ( need_env_token )
-                                        {
-                                            //TODO: attach the computing environment identity token
-                                            rc = KClientHttpRequestHEAD ( req, & rslt );
-                                            if ( rc == 0 )
-                                            {
-                                                /* retrieve expiration time Expires header of rslt -> http. if missing, error out? */
-                                                if ( rslt -> expiration != NULL )
-                                                {   /* save in self -> url_expiration */
-                                                    KTimeFromIso8601 ( & f -> url_expiration, rslt -> expiration, string_size ( rslt -> expiration ) );
-                                                    free ( rslt -> expiration );
-                                                    rslt -> expiration = NULL;
-                                                }
-                                                // still, handle the expiration in read methods (find out how AWS/GCP signal expiration)
-                                            }
-                                        }
-                                        else
-                                        {
-                                            rc = KClientHttpRequestHEAD ( req, & rslt );
+                                        rc = KClientHttpRequestHEAD ( req, & rslt );
+                                        if ( rc == 0 && rslt -> expiration != NULL )
+                                        {   /* retrieve and save the URL expiration time */
+                                            f -> url_is_temporary = true;
+                                            KTimeFromIso8601 ( & f -> url_expiration, rslt -> expiration, string_size ( rslt -> expiration ) );
+                                            //TODO: still, handle the expiration in read methods (find out how AWS/GCP signal expiration)
                                         }
 
-#if 1
-                                        /* update url_buffer with the (possibly different and/or temporary temporary URL)*/
+                                        /* update url_buffer with the (possibly different and/or temporary) URL*/
                                         KClientHttpRequestURL ( req, & f -> url_buffer ); /* NB. f -> url_buffer is not valid until this point */
                                         DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
                                             ( "HttpFile.URL updated to '%.*s'\n",
                                                 ( int ) f -> url_buffer . elem_count, f -> url_buffer . base ) );
-
-#else
-                                        KDataBufferSub ( buf, & f -> url_buffer, 0, buf -> elem_count ); /* old behavior: breaks if redirected */
-#endif
                                         KClientHttpRequestRelease ( req );
 
                                         if ( rc != 0 ) {
@@ -1478,37 +1460,12 @@ LIB_EXPORT rc_t CC KNSManagerMakeHttpFile(const KNSManager *self,
 }
 
 LIB_EXPORT rc_t CC KNSManagerMakeReliableHttpFile(const KNSManager *self,
-    const KFile **file, struct KStream *conn, ver_t vers, bool need_env_token, const char *url, ...)
+    const KFile **file, struct KStream *conn, ver_t vers, bool reliable, bool need_env_token, bool payRequired, const char *url, ...)
 {
     rc_t rc = 0;
     va_list args;
     va_start(args, url);
-    rc = KNSManagerVMakeHttpFileInt ( self, file, conn, vers, true, need_env_token, false, url, args);
-    va_end(args);
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KNSManagerMakePaidHttpFile(const KNSManager *self,
-    const KFile **file, struct KStream *conn, ver_t vers, bool payRequired,
-    const char *url, ...)
-{
-    rc_t rc = 0;
-    va_list args;
-    va_start(args, url);
-    rc = KNSManagerVMakeHttpFileInt ( self, file, conn, vers, false, false, payRequired, url, args);
-    va_end(args);
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KNSManagerMakePaidReliableHttpFile(const KNSManager *self,
-    const KFile **file, struct KStream *conn, ver_t vers, bool need_env_token, bool payRequired,
-    const char *url, ...)
-{
-    rc_t rc = 0;
-    va_list args;
-    va_start(args, url);
-    rc = KNSManagerVMakeHttpFileInt ( self, file, conn, vers, true, need_env_token, payRequired,
-        url, args);
+    rc = KNSManagerVMakeHttpFileInt ( self, file, conn, vers, true, need_env_token, payRequired, url, args);
     va_end(args);
     return rc;
 }

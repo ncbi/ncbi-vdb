@@ -84,17 +84,7 @@ rc_t CC KNSManagerSetAdCaching(struct KNSManager* self, bool enabled);
  */
 KNS_EXTERN rc_t CC KNSManagerMakeReliableHttpFile(
     struct KNSManager const *self, struct KFile const **file, struct KStream *conn, ver_t vers,
-    bool need_env_token,
-    const char *url, ...);
-
-KNS_EXTERN rc_t CC KNSManagerMakePaidHttpFile(
-    struct KNSManager const *self,struct KFile const **file, struct KStream *conn, ver_t vers,
-    bool payRequired,
-    const char *url, ...);
-
-KNS_EXTERN rc_t CC KNSManagerMakePaidReliableHttpFile(
-    struct KNSManager const *self, struct KFile const **file, struct KStream *conn, ver_t vers,
-    bool need_env_token, bool payRequired,
+    bool reliable, bool need_env_token, bool payRequired,
     const char *url, ...);
 
 KNS_EXTERN rc_t CC KNSManagerMakeReliableClientRequest (

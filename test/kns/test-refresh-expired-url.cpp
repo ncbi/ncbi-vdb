@@ -33,6 +33,7 @@
 #include <kproc/timeout.h>
 
 #include "../../libs/kns/http-file-priv.h"
+#include "../../libs/kns/mgr-priv.h"
 
 #include <cassert>
 #include <sstream>
@@ -42,6 +43,8 @@ using namespace ncbi::NK;
 
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
+
+KConfig * kfg = NULL;
 
 static rc_t argsHandler ( int argc, char * argv [] );
 TEST_SUITE_WITH_ARGS_HANDLER ( HttpRefreshTestSuite, argsHandler );
@@ -78,6 +81,121 @@ public:
     char m_buf[1024];
     size_t num_read;
 };
+#if 0
+FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_NoTokenNoPayer, CloudFixture )
+{
+    //TestEnv::verbosity = LogLevel::e_message;
+    string url = MakeURL(GetName()).c_str();
+
+    // simulates a 2-stage (redirect, real) response to a HEAD request from the "signer" service.
+    // Pretend this is the object we need expiring 65 seconds in the future; the refresh timer will be set to 60 seconds before that
+    KTime_t expTime = KTimeStamp () + 65;
+    const char * CloudURL = "https://somewhere.in.the.cloud/accession";
+    AddRedirect ( CloudURL, expTime );
+    AddHead();
+
+    // no environment token, no payRequired
+    REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, true, false, false, url . c_str () ) );
+    REQUIRE_NOT_NULL ( m_file ) ;
+
+    const struct KHttpFile& httpFile = * reinterpret_cast < const struct KHttpFile* > ( m_file );
+
+    // make sure both original and redirection URLs and the expiration time are reflected on the HttpFile object
+    REQUIRE_EQ ( url, string ( (const char*) httpFile . orig_url_buffer . base ) );
+    REQUIRE_EQ ( string ( CloudURL ), string ( (const char*) httpFile . url_buffer . base ) );
+    REQUIRE ( httpFile . url_is_temporary );
+    REQUIRE_EQ ( expTime, KTimeMakeTime ( & httpFile . url_expiration ) );
+}
+#endif
+
+#if NOT_IMPLEMENTED
+FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_Token_NoPayer, CloudFixture )
+{
+    //TestEnv::verbosity = LogLevel::e_message;
+    string url = MakeURL(GetName()).c_str();
+
+    // simulates a 2-stage (redirect, real) response to a HEAD request from the "signer" service.
+    // Pretend this is the object we need expiring 65 seconds in the future; the refresh timer will be set to 60 seconds before that
+    KTime_t expTime = KTimeStamp () + 65;
+    const char * CloudURL = "https://somewhere.in.the.cloud/accession";
+    AddRedirect ( CloudURL, expTime );
+    AddHead();
+
+    // environment token, no payRequired
+    REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, true, true, false, url . c_str () ) );
+    REQUIRE_NOT_NULL ( m_file ) ;
+
+    const struct KHttpFile& httpFile = * reinterpret_cast < const struct KHttpFile* > ( m_file );
+
+    // make sure both original and redirection URLs and the expiration time are reflected on the HttpFile object
+    REQUIRE_EQ ( url, string ( (const char*) httpFile . orig_url_buffer . base ) );
+    REQUIRE_EQ ( string ( CloudURL ), string ( (const char*) httpFile . url_buffer . base ) );
+    REQUIRE ( httpFile . url_is_temporary );
+    REQUIRE_EQ ( expTime, KTimeMakeTime ( & httpFile . url_expiration ) );
+}
+#endif
+
+#if NOT_IMPLEMENTED
+FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_Token_Payer, CloudFixture )
+{
+    //TestEnv::verbosity = LogLevel::e_message;
+    string url = MakeURL(GetName()).c_str();
+
+    REQUIRE_RC ( KConfigWriteBool( kfg, "/libs/cloud/accept_aws_charges", true );
+
+    // simulates a 2-stage (redirect, real) response to a HEAD request from the "signer" service.
+    // Pretend this is the object we need expiring 65 seconds in the future; the refresh timer will be set to 60 seconds before that
+    KTime_t expTime = KTimeStamp () + 65;
+    const char * CloudURL = "https://somewhere.in.the.cloud/accession";
+    AddRedirect ( CloudURL, expTime );
+    AddHead();
+
+    // environment token, no payRequired
+    REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, true, true, false, url . c_str () ) );
+    REQUIRE_NOT_NULL ( m_file ) ;
+
+    const struct KHttpFile& httpFile = * reinterpret_cast < const struct KHttpFile* > ( m_file );
+
+    // make sure both original and redirection URLs and the expiration time are reflected on the HttpFile object
+    REQUIRE_EQ ( url, string ( (const char*) httpFile . orig_url_buffer . base ) );
+    REQUIRE_EQ ( string ( CloudURL ), string ( (const char*) httpFile . url_buffer . base ) );
+    REQUIRE ( httpFile . url_is_temporary );
+    REQUIRE_EQ ( expTime, KTimeMakeTime ( & httpFile . url_expiration ) );
+}
+#endif
+
+FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_NoToken_AWS_Payer, CloudFixture )
+{
+    //TestEnv::verbosity = LogLevel::e_message;
+    string url = MakeURL(GetName()).c_str();
+
+    m_mgr -> accept_aws_charges = true;
+    REQUIRE_RC ( KConfigWriteString( kfg, "/AWS/aws_access_key_id", "access_key_id" ) );
+    REQUIRE_RC ( KConfigWriteString( kfg, "/AWS/aws_secret_access_key", "secret_access_key" ) );
+
+    // simulates a 2-stage (redirect, real) response to a HEAD request from the "signer" service.
+    // Pretend this is the object we need expiring 65 seconds in the future; the refresh timer will be set to 60 seconds before that
+    KTime_t expTime = KTimeStamp () + 65;
+    const char * CloudURL = "https://amazonaws.com/accession";
+    AddRedirect ( CloudURL, expTime );
+    AddHead();
+
+    // no environment token, payRequired
+    REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, true, false, true, url . c_str () ) );
+    REQUIRE_NOT_NULL ( m_file ) ;
+
+    const struct KHttpFile& httpFile = * reinterpret_cast < const struct KHttpFile* > ( m_file );
+
+    // make sure both original and redirection URLs and the expiration time are reflected on the HttpFile object
+    REQUIRE_EQ ( url, string ( (const char*) httpFile . orig_url_buffer . base ) );
+    REQUIRE_EQ ( string ( CloudURL ), string ( (const char*) httpFile . url_buffer . base ) );
+    REQUIRE ( httpFile . url_is_temporary );
+    REQUIRE_EQ ( expTime, KTimeMakeTime ( & httpFile . url_expiration ) );
+    // there is an 'x-amz-request-payer' header on the final URL
+    REQUIRE_NE ( string::npos, TestStream::m_requests.back().find("x-amz-request-payer") );
+}
+
+#if 0
 
 FIXTURE_TEST_CASE( HttpRefreshTestSuite_UntimedRead, CloudFixture )
 {
@@ -87,15 +205,20 @@ FIXTURE_TEST_CASE( HttpRefreshTestSuite_UntimedRead, CloudFixture )
     // simulates a 2-stage (redirect, real) response to HEAD from "signer" service. Pretend this is the object we need
     // expiring 65 seconds in the future; the refresh timer will be set to 60 seconds before that
     KTime_t expTime = KTimeStamp () + 65;
-    AddRedirect ( "https://somewhere.in.the.cloud/accession", expTime );
+    const char * CloudURL = "https://somewhere.in.the.cloud/accession";
+    AddRedirect ( CloudURL, expTime );
     AddHead();
 
-    // needs an environment token, no requester-pays
-    REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, true, url . c_str () ) );
+    // reliable, needs an environment token, no requester-info
+    REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, true, true, false, url . c_str () ) );
     REQUIRE_NOT_NULL ( m_file ) ;
 
-    // make sure expiration time is reflected on the HttpFile object
-    REQUIRE_EQ ( expTime, KTimeMakeTime ( & ( (const struct KHttpFile*)m_file ) -> url_expiration ) );
+    const struct KHttpFile& httpFile = * reinterpret_cast < const struct KHttpFile* > ( m_file );
+
+    // make sure both original and redirection URLs and the expiration time are reflected on the HttpFile object
+    REQUIRE_EQ ( url, string ( (const char*) httpFile . orig_url_buffer . base ) );
+    REQUIRE_EQ ( string ( CloudURL ), string ( (const char*) httpFile . url_buffer . base ) );
+    REQUIRE_EQ ( expTime, KTimeMakeTime ( & httpFile . url_expiration ) );
 
     // use GET to read a portion of the file
     AddGet();
@@ -111,17 +234,17 @@ FIXTURE_TEST_CASE( HttpRefreshTestSuite_UntimedRead, CloudFixture )
     AddHead();
 
     // KFileTimedRead without a timeout
-    // this Read will notice that the expiration time is nigh, and call the "signer" for a new temporary URL
+    // this Read will notice that the expiration time is nigh, use the original URL and get redirected to the "signer" for a new temporary URL
     AddGet();
     REQUIRE_RC( KFileTimedRead ( m_file, 0, m_buf, sizeof m_buf, & num_read, NULL ) );
-    REQUIRE_EQ ( newExpTime, KTimeMakeTime ( & ( (const struct KHttpFile*)m_file ) -> url_expiration ) );
+    REQUIRE_EQ ( newExpTime, KTimeMakeTime ( & httpFile . url_expiration ) );
 
-    // the next Read (right away) will not refresh the URL
+    // the next Read (right away) will not refresh the URL or expiration
     AddGet();
     REQUIRE_RC( KFileTimedRead ( m_file, 0, m_buf, sizeof m_buf, & num_read, NULL ) );
-    REQUIRE_EQ ( newExpTime, KTimeMakeTime ( & ( (const struct KHttpFile*)m_file ) -> url_expiration ) ); // expiration did not change
+    REQUIRE_EQ ( newExpTime, KTimeMakeTime ( & httpFile . url_expiration ) ); // expiration did not change
 }
-#if 0
+
 FIXTURE_TEST_CASE( HttpRefreshTestSuite_TimedRead, CloudFixture )
 {
     //TestEnv::verbosity = LogLevel::e_message;
@@ -188,10 +311,9 @@ extern "C" {
 
     rc_t CC KMain ( int argc, char * argv [] )
     {
-        if ( 1 ) assert ( ! KDbgSetString ( "KNS-HTTP" ) );
+        //if ( 1 ) assert ( ! KDbgSetString ( "KNS-HTTP" ) );
         KConfigDisableUserSettings ();
 
-        KConfig * kfg = NULL;
         rc_t rc = KConfigMakeEmpty ( & kfg );
      // turn off certificate validation to download from storage.googleapis.com
         if ( rc == 0 )

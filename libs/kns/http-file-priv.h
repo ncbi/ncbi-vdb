@@ -56,7 +56,9 @@ struct KHttpFile
     URLBlock block; /* the original URL, parsed */
 
     KDataBuffer url_buffer;
-    KTime url_expiration; /* if need_env_token == true, refresh url_buffer using orig_url_buffer, by this time */
+
+    bool url_is_temporary;
+    KTime url_expiration; /* if is_temporary == true, refresh url_buffer using orig_url_buffer, by this time */
 
     /* if need_env_token == true: */
     /* Create http client connected to orig_url_buffer. */

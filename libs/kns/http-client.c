@@ -3815,46 +3815,9 @@ static
 rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientHttpResult **_rslt, const char *method )
 {
     rc_t rc = 0;
-
-    uint32_t uriForm = 1;
-
-    KClientHttpResult *rslt;
-
     uint32_t i;
     const uint32_t max_redirect = 5;
-
-    bool authenticate = false;
-
-    char aws_access_key_id[512] = "";
-    char aws_secret_access_key[512] = "";
-
-    const char *AWSAccessKeyId = NULL;
-    const char *YourSecretAccessKeyID = NULL;
-
     char * expiration = NULL;
-
-    authenticate = self->url_block.cloud_type == ct_S3;
-
-    if (authenticate) {
-        size_t num_read = 0;
-        KConfig * kfg = NULL;
-        rc = KConfigMake(&kfg, NULL);
-        if (rc != 0)
-            return rc;
-        rc = KConfigRead(kfg, "/AWS/aws_access_key_id", 0,
-            aws_access_key_id, sizeof aws_access_key_id, &num_read, NULL);
-        if (rc == 0)
-            rc = KConfigRead(kfg, "/AWS/aws_secret_access_key", 0,
-                aws_secret_access_key, sizeof aws_secret_access_key,
-                &num_read, NULL);
-        if (rc == 0) {
-            AWSAccessKeyId = aws_access_key_id;
-            YourSecretAccessKeyID = aws_secret_access_key;
-        }
-        else
-            rc = 0;
-        RELEASE(KConfig, kfg);
-    }
 
     /* TBD - may want to prevent a Content-Type or other headers here */
 
@@ -3863,8 +3826,43 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
 
     for ( i = 0; i < max_redirect; ++ i )
     {
+        uint32_t uriForm = 1;
+
+        KClientHttpResult *rslt;
+
         size_t len;
         char buffer [ 4096 ];
+
+        bool authenticate = false;
+
+        char aws_access_key_id[512] = "";
+        char aws_secret_access_key[512] = "";
+
+        const char *AWSAccessKeyId = NULL;
+        const char *YourSecretAccessKeyID = NULL;
+
+        authenticate = self->url_block.cloud_type == ct_S3;
+
+        if (authenticate) {
+            size_t num_read = 0;
+            KConfig * kfg = NULL;
+            rc = KConfigMake(&kfg, NULL);
+            if (rc != 0)
+                return rc;
+            rc = KConfigRead(kfg, "/AWS/aws_access_key_id", 0,
+                aws_access_key_id, sizeof aws_access_key_id, &num_read, NULL);
+            if (rc == 0)
+                rc = KConfigRead(kfg, "/AWS/aws_secret_access_key", 0,
+                    aws_secret_access_key, sizeof aws_secret_access_key,
+                    &num_read, NULL);
+            if (rc == 0) {
+                AWSAccessKeyId = aws_access_key_id;
+                YourSecretAccessKeyID = aws_secret_access_key;
+            }
+            else
+                rc = 0;
+            RELEASE(KConfig, kfg);
+        }
 
         /* create message */
         rc = KClientHttpRequestFormatMsgInt ( self, buffer, sizeof buffer,
@@ -3884,8 +3882,10 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
 
         /* look at status code */
         rslt = * _rslt;
-        rslt -> expiration = expiration;
+
+        rslt -> expiration = expiration; /* expiration has to reach the caller */
         expiration = NULL;
+
         switch ( rslt -> status )
         {
         case 200:
@@ -3906,8 +3906,8 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
         case 301: /* "moved permanently" */
         case 302: /* "found" - okay to reissue for HEAD and GET, but not for POST */
         case 303: /* "see other" - the response to the request can be found under another URI using a GET method */
-        case 307: /* "moved temporarily" */
         case 308: /* "permanent redirect" */
+        case 307: /* "moved temporarily" */
             break;
 
         case 505: /* HTTP Version Not Supported */
@@ -3940,7 +3940,6 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
             return 0;
         }
 
-        /* reset connection, reset request */
         rc = KClientHttpRequestHandleRedirection ( self, rslt, & expiration );
         if ( rc != 0 )
             break;

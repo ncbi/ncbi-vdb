@@ -1867,7 +1867,7 @@ rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
             }
             else
             {
-                rc = KNSManagerMakeReliableHttpFile ( kns, opt_file_rtn, NULL, 0x01010000, false, false, "%S", s );
+                rc = KNSManagerMakeReliableHttpFile ( kns, opt_file_rtn, NULL, 0x01010000, true, false, false, "%S", s );
                 if (rc != 0)
                 {
                     PLOGERR(klogInt, (klogInt, rc,
@@ -5525,7 +5525,7 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
                 "user/ad", true, false, eDisabledNotSet, true, true);
         }
         /* TODO:
-        Add ad to embedded configuration. 
+        Add ad to embedded configuration.
         Add ad to default.kfg */
 
         /* load any site repositories */

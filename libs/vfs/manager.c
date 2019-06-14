@@ -434,12 +434,7 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
                              bool promote,
                              bool payRequired )
 {
-    rc_t rc;
-
-    if ( high_reliability )
-        rc = KNSManagerMakePaidReliableHttpFile ( self -> kns, cfp, NULL, 0x01010000, false, payRequired, url );
-    else
-        rc = KNSManagerMakePaidHttpFile ( self -> kns, cfp, NULL, 0x01010000, payRequired, url );
+    rc_t rc = KNSManagerMakeReliableHttpFile ( self -> kns, cfp, NULL, 0x01010000, high_reliability, false, payRequired, url );
 
     /* in case we are not able to open the remote-file : return with error-code */
     if ( rc == 0 )

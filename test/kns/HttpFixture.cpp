@@ -59,6 +59,7 @@ TestStream :: Write ( KSTREAM_IMPL *self, const void *buffer, size_t size, size_
     if ( TestEnv::verbosity == LogLevel::e_message )
         cout << "TestStream::Write() called" << endl;
     * num_writ = size;
+    m_requests . push_back ( string ( (const char*)buffer, size) );
     return 0;
 }
 
@@ -99,6 +100,7 @@ TestStream :: TimedWrite ( KSTREAM_IMPL *self, const void *buffer, size_t size, 
     if ( TestEnv::verbosity == LogLevel::e_message )
         cout << "TestStream::TimedWrite(\"" << string((const char*)buffer, size) << "\") called" << endl;
     * num_writ = size;
+    m_requests . push_back ( string ( (const char*)buffer, size) );
     return 0;
 }
 
@@ -111,6 +113,7 @@ TestStream :: AddResponse ( const string& p_str, bool end_binary )
         m_responses.push_back(std::string(p_str.c_str(), p_str.size() + 1));
 }
 
+list<string> TestStream :: m_requests;
 list<string> TestStream :: m_responses;
 
 KStream_vt_v1 TestStream::vt =
@@ -132,6 +135,7 @@ HttpFixture :: HttpFixture()
     if ( KStreamInit ( & m_stream, ( const KStream_vt* ) & TestStream::vt, "TestStream", "", true, true ) != 0 )
         throw logic_error ( "HttpFixture: KStreamInit failed" );
 
+    TestStream::m_requests.clear();
     TestStream::m_responses.clear();
 }
 

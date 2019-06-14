@@ -48,6 +48,7 @@ public:
     static rc_t CC TimedWrite ( KSTREAM_IMPL *self, const void *buffer, size_t size, size_t *num_writ, struct timeout_t *tm );
     static void AddResponse ( const std :: string& p_str, bool end_binary = false );
 
+    static std :: list < std :: string > m_requests;
     static std :: list < std :: string > m_responses;
 };
 
