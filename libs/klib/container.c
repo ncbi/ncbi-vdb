@@ -97,6 +97,7 @@ LIB_EXPORT SLNode* CC SLListPopHead ( SLList *sl )
             sl -> head = n -> next;
             if ( n -> next == NULL )
                 sl -> tail = NULL;
+            n -> next = NULL;
         }
         return n;
     }
@@ -117,6 +118,7 @@ LIB_EXPORT SLNode* CC SLListPopTail ( SLList *sl )
             if ( n == tail )
             {
                 sl -> head = sl -> tail = NULL;
+                n -> next = NULL;
                 return n;
             }
             while ( n -> next != tail )
@@ -154,6 +156,7 @@ LIB_EXPORT void CC SLListUnlink ( SLList *sl, SLNode *n )
             }
             p = p -> next;
         }
+        n -> next = NULL;
     }
 }
 
@@ -346,6 +349,7 @@ LIB_EXPORT DLNode* CC DLListPopHead ( DLList *dl )
                 dl -> tail = NULL;
             else
                 n -> next -> prev = NULL;
+            n -> prev = n -> next = NULL;
         }
         return n;
     }
@@ -367,6 +371,7 @@ LIB_EXPORT DLNode* CC DLListPopTail ( DLList *dl )
                 dl -> head = NULL;
             else
                 n -> prev -> next = NULL;
+            n -> prev = n -> next = NULL;
         }
         return n;
     }
@@ -539,17 +544,20 @@ LIB_EXPORT void CC DLListUnlink ( DLList *dl, DLNode *n )
                 if ( n -> prev != NULL )
                     n -> prev -> next = NULL;
             }
+            n -> prev = NULL;
         }
         else if ( n -> prev == NULL )
         {
             n -> next -> prev = NULL;
             if ( dl != NULL && dl -> head == n )
                 dl -> head = n -> next;
+            n -> next = NULL;
         }
         else
         {
             n -> next -> prev = n -> prev;
             n -> prev -> next = n -> next;
+            n -> prev = n -> next = NULL;
         }
     }
 }
