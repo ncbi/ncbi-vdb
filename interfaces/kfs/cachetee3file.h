@@ -105,14 +105,12 @@ struct KDirectory;
 KFS_EXTERN rc_t CC  KDirectoryMakeKCacheTeeFile_v3 ( struct KDirectory * self,
     struct KFile const ** tee, struct KFile const * source,
     uint32_t page_size, uint32_t cluster_factor, uint32_t ram_pages,
-    bool promote, bool temporary,
-    const char * path, ... );
+    bool try_promote_on_close, bool remove_on_close, const char * path, ... );
 
 KFS_EXTERN rc_t CC  KDirectoryVMakeKCacheTeeFile_v3 ( struct KDirectory * self,
     struct KFile const ** tee, struct KFile const * source,
     uint32_t page_size, uint32_t cluster_factor, uint32_t ram_pages,
-    bool promote, bool temporary,
-    const char * path, va_list args );
+    bool try_promote_on_close, bool remove_on_close, const char * path, va_list args );
 
 #if 0
 /* IsComplete

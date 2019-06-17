@@ -133,7 +133,8 @@ struct KCacheTeeFile_v3
     uint32_t ram_limit;             /* constant      */
     uint32_t ram_pg_count;          /* bg thread use */
     volatile bool quitting;         /* shared use    */
-    bool promote_on_close;          /* fg thread use */
+    bool try_promote_on_close;      /* fg thread use */
+    bool remove_on_close;           /* fg thread use */    
     bool whole_file;                /* constant      */
     char path [ 4098 ];             /* constant      */
 };
@@ -1994,7 +1995,7 @@ rc_t KCacheTeeFileBindSourceFile ( KCacheTeeFile_v3 * self, const KFile * source
 
 static
 void KCacheTeeFileBindConstants ( KCacheTeeFile_v3 * self,
-    size_t page_size, uint32_t cluster_factor, uint32_t ram_pages )
+    size_t page_size, uint32_t cluster_factor, uint32_t ram_pages, bool try_promote_on_close, bool remove_on_close )
 {
     size_t request_size, ram_cache_size;
 
@@ -2040,12 +2041,15 @@ void KCacheTeeFileBindConstants ( KCacheTeeFile_v3 * self,
         ram_pages = MAX_RAM_CACHE_BYTES / self -> page_size;
 
     self -> ram_limit = ram_pages;
+    self -> try_promote_on_close = try_promote_on_close;
+    self -> remove_on_close = remove_on_close;
 }
 
 static
 rc_t KDirectoryVMakeKCacheTeeFileInt ( KDirectory * self,
     const KFile ** tee, const KFile * source,
     size_t page_size, uint32_t cluster_factor, uint32_t ram_pages,
+    bool try_promote_on_close, bool remove_on_close,
     const char * nul_term_cache_path )
 {
     rc_t rc;
@@ -2087,7 +2091,7 @@ rc_t KDirectoryVMakeKCacheTeeFileInt ( KDirectory * self,
         else
         {
             /* bind the parameters and constants to object */
-            KCacheTeeFileBindConstants ( obj, page_size, cluster_factor, ram_pages );
+            KCacheTeeFileBindConstants ( obj, page_size, cluster_factor, ram_pages, try_promote_on_close, remove_on_close );
 
             /* study the source file */
             rc = KCacheTeeFileBindSourceFile ( obj, source );
@@ -2147,6 +2151,7 @@ rc_t KDirectoryVMakeKCacheTeeFileInt ( KDirectory * self,
 LIB_EXPORT rc_t CC KDirectoryVMakeKCacheTeeFile_v3 ( KDirectory * self,
     const KFile ** tee, const KFile * source,
     size_t page_size, uint32_t cluster_factor, uint32_t ram_pages,
+    bool try_promote_on_close, bool remove_on_close,
     const char * fmt, va_list args )
 {
     rc_t rc;
@@ -2186,7 +2191,7 @@ LIB_EXPORT rc_t CC KDirectoryVMakeKCacheTeeFile_v3 ( KDirectory * self,
                 }
 
                 rc = KDirectoryVMakeKCacheTeeFileInt ( self, tee, source,
-                    page_size, cluster_factor, ram_pages, fmt );
+                    page_size, cluster_factor, ram_pages, try_promote_on_close, remove_on_close, fmt );
             }
             else
             {
@@ -2226,7 +2231,8 @@ LIB_EXPORT rc_t CC KDirectoryVMakeKCacheTeeFile_v3 ( KDirectory * self,
                             else
                             {
                                 rc = KDirectoryVMakeKCacheTeeFileInt ( self, & new_node -> file, source,
-                                    page_size, cluster_factor, ram_pages, new_node -> path );
+                                    page_size, cluster_factor, ram_pages, try_promote_on_close,
+                                    remove_on_close, new_node -> path );
                                 if ( rc != 0 )
                                     free ( new_node );
                                 else
@@ -2257,6 +2263,7 @@ LIB_EXPORT rc_t CC KDirectoryVMakeKCacheTeeFile_v3 ( KDirectory * self,
 LIB_EXPORT rc_t CC KDirectoryMakeKCacheTeeFile_v3 ( KDirectory * self,
     const KFile ** tee, const KFile * source,
     size_t page_size, uint32_t cluster_factor, uint32_t ram_pages,
+    bool try_promote_on_close, bool remove_on_close,
     const char * fmt, ... )
 {
     rc_t rc;
@@ -2264,7 +2271,8 @@ LIB_EXPORT rc_t CC KDirectoryMakeKCacheTeeFile_v3 ( KDirectory * self,
     va_list args;
     va_start ( args, fmt );
 
-    rc = KDirectoryVMakeKCacheTeeFile_v3 ( self, tee, source, page_size, cluster_factor, ram_pages, fmt, args );
+    rc = KDirectoryVMakeKCacheTeeFile_v3 ( self, tee, source, page_size, cluster_factor, ram_pages,
+                                           try_promote_on_close, remove_on_close, fmt, args );
 
     va_end ( args );
 
