@@ -1931,7 +1931,7 @@ rc_t KCacheTeeFileMakeBitmap ( KCacheTeeFile_v3 * self )
 
     self -> bitmap = ( volatile bmap_t * ) bitmap;
     self -> tail = tail;
-    self -> bmap_size = bmsize;
+    self -> bmap_size = bmsize - ( sizeof * tail );
 
     return 0;
 }
@@ -2277,4 +2277,66 @@ LIB_EXPORT rc_t CC KDirectoryMakeKCacheTeeFile_v3 ( KDirectory * self,
     va_end ( args );
 
     return rc;
+}
+
+static uint32_t count_set_bits( bmap_t value )
+{
+    uint32_t ret = 0;
+    while ( value > 0 )
+    {
+        ret += ( value & 1 );
+        value >>= 1;
+    }
+    return ret;
+}
+
+static bool is_bitmap_complete( const KCacheTeeFile_v3 * self )
+{
+    //size_t just_bitmap_bytes = ( self -> bmap_size ) - ( sizeof ( *( self -> tail ) ) );
+    size_t bitmap_words = self -> bmap_size / ( sizeof ( *( self -> bitmap ) ) );
+    size_t num_pages, in_last_word;
+    size_t idx;
+    /* all but the last word in the bitmap has to be set to 0xFFFFFFFFU */
+    for ( idx = 0; idx < ( bitmap_words - 1 ); ++idx )
+    {
+#if BMWORDSIZE == 32
+        if ( self -> bitmap[ idx ] != 0xFFFFFFFFU )
+            return false;
+#else
+    #error "this code does not support this word size"
+#endif
+    }
+    /* how many bits have to be set in the last word? */
+    num_pages = ( self -> source_size + self -> page_size - 1 ) / self -> page_size;
+    in_last_word = num_pages - ( ( bitmap_words - 1 ) * BMWORDSIZE );
+    return ( count_set_bits( self -> bitmap[ bitmap_words - 1 ] ) == in_last_word );
+}
+
+LIB_EXPORT rc_t CC CacheTee3FileIsComplete ( struct KFile const * self, bool * is_complete )
+{
+    rc_t rc = 0;
+    if ( self == NULL || is_complete == NULL )
+        rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcNull );
+    else
+    {
+        if ( &( self -> vt -> v1 ) != &KCacheTeeFile_v3_vt )
+        {
+            /* the given file is NOT a KCacheTeeFile_v3 */
+            /* rc = IsThisCacheFileComplete( self, is_complete ); */
+        }
+        else
+        {
+            struct KCacheTeeFile_v3 * ctf = ( struct KCacheTeeFile_v3 * )self;
+            *is_complete = is_bitmap_complete( ctf );
+        }
+    }
+    return rc;
+}
+
+LIB_EXPORT bool CC KFileIsKCacheTeeFile_v3( const struct KFile * self )
+{
+    bool res = false;
+    if ( self != NULL )
+        res = ( &( self -> vt -> v1 ) == &KCacheTeeFile_v3_vt );
+    return res;
 }

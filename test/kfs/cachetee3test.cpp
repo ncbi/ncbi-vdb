@@ -52,7 +52,7 @@ using namespace std;
 #define DATAFILE "org.dat"
 #define CACHEFILE "cache.dat"
 #define CACHEFILE1 "cache.dat.cache"
-#define DATAFILESIZE ( ( 1024 * 1024 * 32 ) + 300 )
+#define DATAFILESIZE ( ( 1024 * 1024 * 64 ) + 300 )
 #define BLOCKSIZE ( 1024 * 16 )
 
 TEST_SUITE ( CacheTee3Tests );
@@ -82,10 +82,12 @@ public:
     rc_t fill_file_with_random_data ( KFile *file, size_t file_size )
     {
         rc_t rc = KFileSetSize ( file, file_size );
-        if ( rc == 0 ) {
+        if ( rc == 0 )
+        {
             uint64_t pos = 0;
             size_t total = 0;
-            while ( rc == 0 && total < file_size ) {
+            while ( rc == 0 && total < file_size )
+            {
                 uint32_t data[512];
                 uint32_t i;
                 size_t to_write, num_writ;
@@ -95,7 +97,8 @@ public:
                 to_write = ( file_size - total );
                 if ( to_write > sizeof data ) to_write = sizeof data;
                 rc = KFileWriteAll ( file, pos, data, to_write, &num_writ );
-                if ( rc == 0 ) {
+                if ( rc == 0 )
+                {
                     pos += num_writ;
                     total += num_writ;
                 }
@@ -108,11 +111,13 @@ public:
     {
         KDirectory *dir;
         rc_t rc = KDirectoryNativeDir ( &dir );
-        if ( rc == 0 ) {
+        if ( rc == 0 )
+        {
             KFile *file;
             rc = KDirectoryCreateFile (
                 dir, &file, false, 0664, kcmInit, filename );
-            if ( rc == 0 ) {
+            if ( rc == 0 )
+            {
                 if ( rc == 0 )
                     rc = fill_file_with_random_data ( file, file_size );
                 KFileRelease ( file );
@@ -126,7 +131,8 @@ public:
     {
         KDirectory *dir;
         rc_t rc = KDirectoryNativeDir ( &dir );
-        if ( rc == 0 ) {
+        if ( rc == 0 )
+        {
             rc = KDirectoryRemove ( dir, true, "%s", filename );
             KDirectoryRelease ( dir );
         }
@@ -136,8 +142,10 @@ public:
     void report_diff ( uint8_t *b1, uint8_t *b2, size_t n, uint32_t max_diffs )
     {
         size_t i, d;
-        for ( i = 0, d = 0; i < n && d < max_diffs; ++i ) {
-            if ( b1[i] != b2[i] ) {
+        for ( i = 0, d = 0; i < n && d < max_diffs; ++i )
+        {
+            if ( b1[i] != b2[i] )
+            {
                 KOutMsg ( "[ %.08d ] %.02X %.02X\n", i, b1[i], b2[i] );
                 d++;
             }
@@ -145,46 +153,51 @@ public:
     }
 
     rc_t compare_file_content_1 ( const KFile *file1, const KFile *file2,
-        uint64_t pos, size_t num_bytes, const char *msg )
+                                  uint64_t pos, size_t num_bytes, const char *msg )
     {
         rc_t rc = 0;
         uint8_t *buffer1 = (uint8_t *)malloc ( num_bytes );
         if ( msg != NULL )
-            KOutMsg ( "Test: KFileReadAll ( pos %lu, %u bytes, '%s' )\n", pos,
-                num_bytes, msg );
-        if ( buffer1 == NULL ) {
-            rc = RC (
-                rcRuntime, rcBuffer, rcConstructing, rcMemory, rcExhausted );
+            KOutMsg ( "Test: KFileReadAll ( pos %lu, %u bytes, '%s' )\n", pos, num_bytes, msg );
+        if ( buffer1 == NULL )
+        {
+            rc = RC ( rcRuntime, rcBuffer, rcConstructing, rcMemory, rcExhausted );
             KOutMsg ( "Test: cannot make buffer1 of size %u\n", num_bytes );
-        } else {
+        }
+        else
+        {
             uint8_t *buffer2 = (uint8_t *)malloc ( num_bytes );
-            if ( buffer2 == NULL ) {
-                rc = RC ( rcRuntime, rcBuffer, rcConstructing, rcMemory,
-                    rcExhausted );
+            if ( buffer2 == NULL )
+            {
+                rc = RC ( rcRuntime, rcBuffer, rcConstructing, rcMemory, rcExhausted );
                 KOutMsg ( "Test: cannot make buffer2 of size %u\n", num_bytes );
-            } else {
+            }
+            else
+            {
                 size_t num_read1;
-                rc = KFileReadAll (
-                    file1, pos, buffer1, num_bytes, &num_read1 );
+                rc = KFileReadAll ( file1, pos, buffer1, num_bytes, &num_read1 );
                 if ( rc != 0 )
                     KOutMsg ( "Test: KFileReadAll( 1 ) -> %R\n", rc );
-                else {
+                else
+                {
                     size_t num_read2;
-                    rc = KFileReadAll (
-                        file2, pos, buffer2, num_bytes, &num_read2 );
+                    rc = KFileReadAll ( file2, pos, buffer2, num_bytes, &num_read2 );
                     if ( rc != 0 )
                         KOutMsg ( "Test: KFileReadAll( 2 ) -> %R\n", rc );
-                    else {
-                        if ( num_read1 != num_read2 ) {
-                            rc = RC ( rcRuntime, rcBuffer, rcReading, rcMemory,
-                                rcInvalid );
+                    else
+                    {
+                        if ( num_read1 != num_read2 )
+                        {
+                            rc = RC ( rcRuntime, rcBuffer, rcReading, rcMemory, rcInvalid );
                             KOutMsg ( "Test %d vs %d\n", num_read1, num_read2 );
-                        } else {
+                        }
+                        else
+                        {
                             int diff = memcmp ( buffer1, buffer2, num_read1 );
-                            if ( diff != 0 ) {
+                            if ( diff != 0 )
+                            {
                                 report_diff ( buffer1, buffer2, num_read1, 20 );
-                                rc = RC ( rcRuntime, rcBuffer, rcReading,
-                                    rcMemory, rcCorrupt );
+                                rc = RC ( rcRuntime, rcBuffer, rcReading, rcMemory, rcCorrupt );
                             }
                         }
                     }
@@ -197,37 +210,42 @@ public:
     }
 
     rc_t compare_file_content_2 ( const KFile *file1, const KFile *file2,
-        uint64_t pos, size_t num_bytes, const char *msg )
+                                  uint64_t pos, size_t num_bytes, const char *msg )
     {
         rc_t rc = 0;
         uint8_t *buffer1 = (uint8_t *)malloc ( num_bytes );
         if ( msg != NULL )
-            KOutMsg ( "Test: KFileReadExactly ( pos %lu, %u bytes, '%s' )\n",
-                pos, num_bytes, msg );
-        if ( buffer1 == NULL ) {
-            rc = RC (
-                rcRuntime, rcBuffer, rcConstructing, rcMemory, rcExhausted );
+            KOutMsg ( "Test: KFileReadExactly ( pos %lu, %u bytes, '%s' )\n", pos, num_bytes, msg );
+        if ( buffer1 == NULL )
+        {
+            rc = RC ( rcRuntime, rcBuffer, rcConstructing, rcMemory, rcExhausted );
             KOutMsg ( "Test: cannot make buffer1 of size %u\n", num_bytes );
-        } else {
+        }
+        else
+        {
             uint8_t *buffer2 = (uint8_t *)malloc ( num_bytes );
-            if ( buffer2 == NULL ) {
-                rc = RC ( rcRuntime, rcBuffer, rcConstructing, rcMemory,
-                    rcExhausted );
+            if ( buffer2 == NULL )
+            {
+                rc = RC ( rcRuntime, rcBuffer, rcConstructing, rcMemory, rcExhausted );
                 KOutMsg ( "Test: cannot make buffer2 of size %u\n", num_bytes );
-            } else {
+            }
+            else
+            {
                 rc = KFileReadExactly ( file1, pos, buffer1, num_bytes );
                 if ( rc != 0 )
                     KOutMsg ( "Test: KFileReadExactly( 1 ) -> %R\n", rc );
-                else {
+                else
+                {
                     rc = KFileReadExactly ( file2, pos, buffer2, num_bytes );
                     if ( rc != 0 )
                         KOutMsg ( "Test: KFileReadExactly( 2 ) -> %R\n", rc );
-                    else {
+                    else
+                    {
                         int diff = memcmp ( buffer1, buffer2, num_bytes );
-                        if ( diff != 0 ) {
+                        if ( diff != 0 )
+                        {
                             report_diff ( buffer1, buffer2, num_bytes, 20 );
-                            rc = RC ( rcRuntime, rcBuffer, rcReading, rcMemory,
-                                rcCorrupt );
+                            rc = RC ( rcRuntime, rcBuffer, rcReading, rcMemory, rcCorrupt );
                         }
                     }
                 }
@@ -239,27 +257,27 @@ public:
     }
 
     rc_t read_all_loop ( const KFile *f, uint64_t pos, uint8_t *buffer,
-        size_t to_read, size_t *NumRead )
+                         size_t to_read, size_t *NumRead )
     {
         rc_t rc = 0;
         size_t num_read_total = 0;
-        /* uint32_t loop = 1; */
         uint8_t *dst = buffer;
-        KOutMsg ( "read_all_loop( at %lu, %u bytes )\n", pos, to_read );
-        while ( rc == 0 && num_read_total < to_read ) {
+        while ( rc == 0 && num_read_total < to_read )
+        {
             size_t num_read, n = to_read - num_read_total;
             rc = KFileRead ( f, pos, dst, n, &num_read );
-            if ( rc != 0 ) {
-                KOutMsg (
-                    "Test: KFileRead( at %lu, %u bytes ) -> %R\n", pos, n, rc );
-                if ( rcExhausted == GetRCState ( rc )
-                    && (enum RCObject)rcTimeout == GetRCObject ( rc ) ) {
+            if ( rc != 0 )
+            {
+                KOutMsg ( "Test: KFileRead( at %lu, %u bytes ) -> %R\n", pos, n, rc );
+                if ( rcExhausted == GetRCState ( rc ) &&
+                     (enum RCObject)rcTimeout == GetRCObject ( rc ) )
+                {
                     KSleepMs ( 50 );
                     rc = 0;
                 }
-            } else {
-                /* KOutMsg( "#%d read_all_loop( at %lu, %u bytes ) -> %u
-                 * bytes\n", loop++, pos, n, num_read ); */
+            }
+            else
+            {
                 num_read_total += num_read;
                 pos += num_read;
                 dst += num_read;
@@ -272,45 +290,48 @@ public:
     }
 
     rc_t compare_file_content_3 ( const KFile *file1, const KFile *file2,
-        uint64_t pos, size_t num_bytes, const char *msg )
+                                  uint64_t pos, size_t num_bytes, const char *msg )
     {
         rc_t rc = 0;
         uint8_t *buffer1 = (uint8_t *)malloc ( num_bytes );
         if ( msg != NULL )
-            KOutMsg ( "Test: read_all_loop( pos %lu, %u bytes, '%s' )\n", pos,
-                num_bytes, msg );
-        if ( buffer1 == NULL ) {
-            rc = RC (
-                rcRuntime, rcBuffer, rcConstructing, rcMemory, rcExhausted );
+            KOutMsg ( "Test: read_all_loop( pos %lu, %u bytes, '%s' )\n", pos, num_bytes, msg );
+        if ( buffer1 == NULL )
+        {
+            rc = RC ( rcRuntime, rcBuffer, rcConstructing, rcMemory, rcExhausted );
             KOutMsg ( "Test: cannot make buffer1 of size %u\n", num_bytes );
-        } else {
+        }
+        else
+        {
             uint8_t *buffer2 = (uint8_t *)malloc ( num_bytes );
-            if ( buffer2 == NULL ) {
-                rc = RC ( rcRuntime, rcBuffer, rcConstructing, rcMemory,
-                    rcExhausted );
+            if ( buffer2 == NULL )
+            {
+                rc = RC ( rcRuntime, rcBuffer, rcConstructing, rcMemory, rcExhausted );
                 KOutMsg ( "Test: cannot make buffer2 of size %u\n", num_bytes );
-            } else {
+            }
+            else
+            {
                 size_t NumRead1;
-                rc = read_all_loop (
-                    file1, pos, buffer1, num_bytes, &NumRead1 );
-                if ( rc == 0 ) {
+                rc = read_all_loop ( file1, pos, buffer1, num_bytes, &NumRead1 );
+                if ( rc == 0 )
+                {
                     size_t NumRead2;
-                    rc = read_all_loop (
-                        file2, pos, buffer2, num_bytes, &NumRead2 );
-                    if ( rc == 0 ) {
-                        if ( NumRead1 != NumRead2 ) {
-                            rc = RC ( rcRuntime, rcBuffer, rcRetrieving, rcItem,
-                                rcInvalid );
+                    rc = read_all_loop ( file2, pos, buffer2, num_bytes, &NumRead2 );
+                    if ( rc == 0 )
+                    {
+                        if ( NumRead1 != NumRead2 )
+                        {
+                            rc = RC ( rcRuntime, rcBuffer, rcRetrieving, rcItem, rcInvalid );
                         }
-                        if ( rc == 0 ) {
-                            if ( NumRead1 != 0 ) {
-                                int diff
-                                    = memcmp ( buffer1, buffer2, NumRead1 );
-                                if ( diff != 0 ) {
-                                    report_diff (
-                                        buffer1, buffer2, NumRead1, 20 );
-                                    rc = RC ( rcExe, rcBuffer, rcReading,
-                                        rcMemory, rcCorrupt );
+                        if ( rc == 0 )
+                        {
+                            if ( NumRead1 != 0 )
+                            {
+                                int diff = memcmp ( buffer1, buffer2, NumRead1 );
+                                if ( diff != 0 )
+                                {
+                                    report_diff ( buffer1, buffer2, NumRead1, 20 );
+                                    rc = RC ( rcExe, rcBuffer, rcReading, rcMemory, rcCorrupt );
                                 }
                             }
                         }
@@ -377,7 +398,6 @@ static rc_t read_all( const KFile * src, size_t block_size )
 
 //////////////////////////////////////////// Test-cases
 
-#if 0
 FIXTURE_TEST_CASE( CacheTee3_Basic, CT3Fixture )
 {
     KOutMsg( "Test: CacheTee3_Basic\n" );
@@ -392,7 +412,7 @@ FIXTURE_TEST_CASE( CacheTee3_Basic, CT3Fixture )
     uint32_t cluster_factor = 0;
     uint32_t ram_pages = 0;
     REQUIRE_RC( KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org, BLOCKSIZE,
-                                          cluster_factor, ram_pages,
+                                          cluster_factor, ram_pages, false, false,
                                           "%s", CACHEFILE ) );
 
     REQUIRE_RC( KFileRelease( tee ) );
@@ -436,7 +456,7 @@ FIXTURE_TEST_CASE( CacheTee3_Read, CT3Fixture )
     uint32_t cluster_factor = 0;
     uint32_t ram_pages = 0;
     REQUIRE_RC( KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org, BLOCKSIZE,
-                                          cluster_factor, ram_pages,
+                                          cluster_factor, ram_pages, false, false,
                                           "%s", CACHEFILE ) );
 
     uint64_t at = 0;
@@ -488,41 +508,40 @@ FIXTURE_TEST_CASE( CacheTee3_Read, CT3Fixture )
     REQUIRE_RC( KFileRelease( org ) );
     REQUIRE_RC( KDirectoryRelease( dir ) );
 }
-#endif
 
 /* ------------------- CacheTee2_Multiple_Users_Multiple_Inst
  * -------------------------------- */
 
-static rc_t cache_access ( CT3Fixture *fixture, int tid, int num_threads,
-    const KFile *origfile, const KFile *cacheteefile )
+static rc_t cache_access ( CT3Fixture *fixture, int tid, const KFile *origfile,
+                           const KFile *cacheteefile, uint32_t min_len, uint32_t max_len )
 {
     rc_t rc = 0;
-    const int num_chunks = 4;
-    int chunk_pos[num_chunks];
-    int chunk_len[num_chunks];
+    const int num_chunks = 32;
+    uint64_t chunk_pos[ num_chunks ];
+    size_t   chunk_len[ num_chunks ];
 
-    for ( int i = 0; i < num_chunks; ++i ) {
-        chunk_pos[i] = fixture->rand_32 ( 0, DATAFILESIZE );
-        chunk_len[i] = fixture->rand_32 ( 100, DATAFILESIZE / 128 );
+    for ( int i = 0; i < num_chunks; ++i )
+    {
+        chunk_pos[ i ] = fixture->rand_32 ( 0, DATAFILESIZE );
+        chunk_len[ i ] = fixture->rand_32 ( min_len, max_len );
     }
 
-    for ( int i = 0; i < num_chunks; ++i ) {
-        KOutMsg ( "THREAD #%d / CHUNK #%d (%d.%d)\n", tid, i, chunk_pos[i],
-            chunk_len[i] );
-        rc = fixture->compare_file_content_3 (
-            origfile, cacheteefile, chunk_pos[i], chunk_len[i], NULL );
-        if ( rc != 0 ) {
+    for ( int i = 0; i < num_chunks; ++i )
+    {
+        /* KOutMsg ( "THREAD #%d / CHUNK #%d (%d.%d)\n", tid, i, chunk_pos[ i ], chunk_len[ i ] ); */
+        rc = fixture->compare_file_content_3 ( origfile, cacheteefile, chunk_pos[ i ], chunk_len[ i ], NULL );
+        if ( rc != 0 )
+        {
             KOutMsg ( "THREAD #%d / CHUNK #%d compare fail\n", tid, i );
             break;
         }
-        KOutMsg ( "THREAD #%d / CHUNK #%d done\n", tid, i );
     }
     return rc;
 }
 
-struct ThreadData {
+struct ThreadData
+{
     int tid;
-    int num_threads;
     const KFile *origfile;     // optional
     const KFile *cacheteefile; // optional
     CT3Fixture *fixture;
@@ -531,24 +550,30 @@ struct ThreadData {
 static rc_t CC thread_func ( const KThread *self, void *data )
 {
     ThreadData *td = (ThreadData *)data;
-    if ( td->cacheteefile == NULL || td->origfile == NULL ) {
+    if ( td -> cacheteefile == NULL || td -> origfile == NULL )
+    {
         KDirectory *dir;
         rc_t rc = KDirectoryNativeDir ( &dir );
-        if ( rc == 0 ) {
+        if ( rc == 0 )
+        {
             const KFile *org;
             rc = KDirectoryOpenFileRead ( dir, &org, "%s", DATAFILE );
-            if ( rc == 0 ) {
+            if ( rc == 0 )
+            {
                 const KFile *tee;
                 uint32_t cluster_factor = 2;
                 uint32_t ram_pages = 0;
                 rc = KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org, BLOCKSIZE,
-                    cluster_factor, ram_pages, false, false, "%s", CACHEFILE );
-                if ( rc == 0 ) {
-                    // KOutMsg( "Thread #%d\n", td -> tid );
-                    rc = cache_access (
-                        td->fixture, td->tid, td->num_threads, org, tee );
-                    KOutMsg (
-                        "Thread #%d : %s\n", td->tid, rc == 0 ? "OK" : "ERR" );
+                            cluster_factor, ram_pages, false, false, "%s", CACHEFILE );
+                if ( rc == 0 )
+                {
+                    /* make random requests in the range of 100 bytes to DATAFILESIZE / 64 */
+                    rc = cache_access ( td->fixture, td->tid, org, tee, 100, DATAFILESIZE / 64 );
+
+                    /* make random requests in the range of 100 bytes to 1024 */
+                    if ( rc == 0 )
+                        rc = cache_access ( td->fixture, td->tid, org, tee, 10, 1024 );
+                    
                     KFileRelease ( tee );
                 }
                 KFileRelease ( org );
@@ -560,11 +585,7 @@ static rc_t CC thread_func ( const KThread *self, void *data )
     return 0;
 }
 
-const int num_threads = 2;
-// const int num_threads = 4;
-// const int num_threads = 16;
-// const int num_threads = 32;
-// const int num_threads = 64;
+const int num_threads = 32;
 
 FIXTURE_TEST_CASE ( CacheTee3_Multiple_Users_Multiple_Inst, CT3Fixture )
 {
@@ -572,25 +593,27 @@ FIXTURE_TEST_CASE ( CacheTee3_Multiple_Users_Multiple_Inst, CT3Fixture )
     remove_file ( CACHEFILE );
     remove_file ( CACHEFILE1 );
 
-    KThread *t[num_threads];
-    ThreadData td[num_threads];
-    for ( int i = 0; i < num_threads; ++i ) {
-        td[i].tid = i + 1;
-        td[i].num_threads = num_threads;
-        td[i].origfile = NULL;
-        td[i].cacheteefile = NULL;
-        td[i].fixture = this;
-        REQUIRE_RC ( KThreadMake ( &( t[i] ), thread_func, &( td[i] ) ) );
+    KThread *t[ num_threads ];
+    ThreadData td[ num_threads ];
+    for ( int i = 0; i < num_threads; ++i )
+    {
+        td[ i ].tid = i + 1;
+        td[ i ].origfile = NULL;
+        td[ i ].cacheteefile = NULL;
+        td[ i ].fixture = this;
+        REQUIRE_RC ( KThreadMake ( &( t[ i ] ), thread_func, &( td[ i ] ) ) );
     }
 
-    for ( int i = 0; i < num_threads; ++i ) {
+    for ( int i = 0; i < num_threads; ++i )
+    {
         rc_t rc_thread;
-        REQUIRE_RC ( KThreadWait ( t[i], &rc_thread ) );
+        REQUIRE_RC ( KThreadWait ( t[ i ], &rc_thread ) );
         REQUIRE_RC ( rc_thread );
-        REQUIRE_RC ( KThreadRelease ( t[i] ) );
+        REQUIRE_RC ( KThreadRelease ( t[ i ] ) );
     }
 }
 
+#if 0
 TEST_CASE ( CacheTee3_conflict_args )
 {
     KDirectory *dir;
@@ -626,8 +649,7 @@ FIXTURE_TEST_CASE ( CacheTee3_promotion, CT3Fixture )
     KDirectory *dir;
     REQUIRE_RC ( KDirectoryNativeDir ( &dir ) );
     KFile *org;
-    REQUIRE_RC ( KDirectoryOpenFileWrite (
-        dir, &org, true, "%s", DATAFILE ) ); // org.data
+    REQUIRE_RC ( KDirectoryOpenFileWrite ( dir, &org, true, "%s", DATAFILE ) ); // org.data
 
     const KFile *tee;
     uint32_t cluster_factor = 2;
@@ -635,7 +657,8 @@ FIXTURE_TEST_CASE ( CacheTee3_promotion, CT3Fixture )
     REQUIRE_RC ( KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org, BLOCKSIZE,
         cluster_factor, ram_pages, true, false, "%s",
         CACHEFILE ) ); // cache.dat
-    for ( size_t i = 0; i != 200; ++i ) {
+    for ( size_t i = 0; i != 200; ++i )
+    {
         rc_t rc = cache_access ( this, 0, i, org, tee );
         REQUIRE_RC ( rc );
     }
@@ -644,7 +667,7 @@ FIXTURE_TEST_CASE ( CacheTee3_promotion, CT3Fixture )
     KFileRelease ( org );
     KDirectoryRelease ( dir );
 }
-
+#endif
 
 //////////////////////////////////////////// Main
 extern "C" {
@@ -674,8 +697,9 @@ rc_t CC KMain ( int argc, char *argv[] )
     /* we are adding this dummy argument to enable commandline parsing for the
      * verbose flag(s) -vvvvvvvv */
     rc_t rc = ArgsMakeAndHandle ( &args, argc, argv, 1, TestOptions,
-        sizeof TestOptions / sizeof TestOptions[0] );
-    if ( rc == 0 ) {
+                                  sizeof TestOptions / sizeof TestOptions[0] );
+    if ( rc == 0 )
+    {
         srand ( time ( NULL ) );
         KConfigDisableUserSettings ();
         rc = CacheTee3Tests ( argc, argv );
@@ -684,4 +708,5 @@ rc_t CC KMain ( int argc, char *argv[] )
     ArgsWhack ( args );
     return rc;
 }
-}
+
+} /* extern "C" */

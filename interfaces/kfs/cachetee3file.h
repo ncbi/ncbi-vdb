@@ -112,7 +112,6 @@ KFS_EXTERN rc_t CC  KDirectoryVMakeKCacheTeeFile_v3 ( struct KDirectory * self,
     uint32_t page_size, uint32_t cluster_factor, uint32_t ram_pages,
     bool try_promote_on_close, bool remove_on_close, const char * path, va_list args );
 
-#if 0
 /* IsComplete
  *  checks if a given file ( has to be a local file )
  *   a) is a backing cache-file for the CacheTee-file
@@ -122,6 +121,7 @@ KFS_EXTERN rc_t CC  KDirectoryVMakeKCacheTeeFile_v3 ( struct KDirectory * self,
  */
 KFS_EXTERN rc_t CC CacheTee3FileIsComplete ( struct KFile const * self, bool * is_complete );
 
+#if 0
 
 /* Finalize
  *  removes the cache-tee file metadata
@@ -150,12 +150,12 @@ KFS_EXTERN rc_t CC CacheTee3FileGetCompleteness ( struct KFile const * self,
 KFS_EXTERN rc_t CC CacheTee3FileGetOriginalSize ( struct KFile const * self,
     uint64_t * original_size );
 
+#endif
 
 /* IsKCacheTee3File
  *  checks if the given implementation is a CacheTee3File
  */
-KFS_EXTERN bool CC KFileIsKCacheTee3File( struct KFile const * self );
-#endif
+KFS_EXTERN bool CC KFileIsKCacheTeeFile_v3( struct KFile const * self );
 
 #ifdef __cplusplus
 }
