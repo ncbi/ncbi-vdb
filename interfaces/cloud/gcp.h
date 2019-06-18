@@ -48,6 +48,12 @@ typedef struct GCP GCP;
  */
 CLOUD_EXTERN rc_t CC CloudMgrMakeGCP ( const CloudMgr * self, GCP ** gcp );
 
+/* AddRef
+ * Release
+ */
+CLOUD_EXTERN rc_t CC GCPAddRef ( const GCP * self );
+CLOUD_EXTERN rc_t CC GCPRelease ( const GCP * self );
+
 /* Cast
  *  cast from a Cloud to a GCP type or vice versa
  *  allows us to apply cloud-specific interface to cloud object

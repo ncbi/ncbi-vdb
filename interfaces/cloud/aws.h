@@ -49,6 +49,12 @@ typedef struct AWS AWS;
  */
 CLOUD_EXTERN rc_t CC CloudMgrMakeAWS ( const CloudMgr * self, AWS ** aws );
 
+/* AddRef
+ * Release
+ */
+CLOUD_EXTERN rc_t CC AWSAddRef ( const AWS * self );
+CLOUD_EXTERN rc_t CC AWSRelease ( const AWS * self );
+
 /* Cast
  *  cast from a Cloud to an AWS type or vice versa
  *  allows us to apply cloud-specific interface to cloud object

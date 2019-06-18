@@ -95,16 +95,71 @@ LIB_EXPORT rc_t CC CloudMgrMakeGCP ( const CloudMgr * self, GCP ** gcp )
 {
 }
 
+/* AddRef
+ * Release
+ */
+LIB_EXPORT rc_t CC GCPAddRef ( const GCP * self )
+{
+    return CloudAddRef ( & self -> dad );
+}
+
+LIB_EXPORT rc_t CC GCPRelease ( const GCP * self )
+{
+    return CloudRelease ( & self -> dad );
+}
+
 /* Cast
  *  cast from a Cloud to a GCP type or vice versa
  *  allows us to apply cloud-specific interface to cloud object
  *
  *  returns a new reference, meaning the "self" must still be released
  */
-LIB_EXPORT rc_t CC GCPToCloud ( const GCP * self, Cloud ** cloud )
+LIB_EXPORT rc_t CC GCPToCloud ( const GCP * cself, Cloud ** cloud )
 {
+    rc_t rc;
+    GCP * self = ( GCP * ) cself;
+
+    if ( cloud == NULL )
+        rc = RC ( rcCloud, rcProvider, rcCasting, rcParam, rcNull );
+    else
+    {
+        rc = CloudAddRef ( & self -> dad );
+        if ( rc == 0 )
+        {
+            * cloud = & self -> dad;
+            return 0;
+        }
+
+        * cloud = NULL;
+    }
+
+    return rc;
 }
 
 LIB_EXPORT rc_t CC CloudToGCP ( const Cloud * self, GCP ** gcp )
 {
+    rc_t rc;
+
+    if ( gcp == NULL )
+        rc = RC ( rcCloud, rcProvider, rcCasting, rcParam, rcNull );
+    else
+    {
+        if ( self == NULL )
+            rc = 0;
+        else if ( self -> vt != ( const Cloud_vt * ) & GCP_vt_v1 )
+            rc = RC ( rcCloud, rcProvider, rcCasting, rcType, rcIncorrect );
+        else
+        {
+            rc = CloudAddRef ( self );
+            if ( rc == 0 )
+            {
+                * gcp = ( GCP * ) self;
+                return 0;
+            }
+        }
+
+        * gcp = NULL;
+    }
+
+    return rc;
 }

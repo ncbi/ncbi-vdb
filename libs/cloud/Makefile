@@ -70,6 +70,7 @@ clean: stdclean
 $(ILIBDIR)/libcloud: $(addprefix $(ILIBDIR)/libcloud.,$(ILIBEXT))
 
 CLOUD_SRC = \
+	cloud-mgr \
 	aws \
 	gcp \
 	cloud

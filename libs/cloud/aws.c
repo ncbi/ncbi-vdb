@@ -95,16 +95,71 @@ LIB_EXPORT rc_t CC CloudMgrMakeAWS ( const CloudMgr * self, AWS ** aws )
 {
 }
 
+/* AddRef
+ * Release
+ */
+LIB_EXPORT rc_t CC AWSAddRef ( const AWS * self )
+{
+    return CloudAddRef ( & self -> dad );
+}
+
+LIB_EXPORT rc_t CC AWSRelease ( const AWS * self )
+{
+    return CloudRelease ( & self -> dad );
+}
+
 /* Cast
  *  cast from a Cloud to an AWS type or vice versa
  *  allows us to apply cloud-specific interface to cloud object
  *
  *  returns a new reference, meaning the "self" must still be released
  */
-LIB_EXPORT rc_t CC AWSToCloud ( const AWS * self, Cloud ** cloud )
+LIB_EXPORT rc_t CC AWSToCloud ( const AWS * cself, Cloud ** cloud )
 {
+    rc_t rc;
+    AWS * self = ( AWS * ) cself;
+
+    if ( cloud == NULL )
+        rc = RC ( rcCloud, rcProvider, rcCasting, rcParam, rcNull );
+    else
+    {
+        rc = CloudAddRef ( & self -> dad );
+        if ( rc == 0 )
+        {
+            * cloud = & self -> dad;
+            return 0;
+        }
+
+        * cloud = NULL;
+    }
+
+    return rc;
 }
 
 LIB_EXPORT rc_t CC CloudToAWS ( const Cloud * self, AWS ** aws )
 {
+    rc_t rc;
+
+    if ( aws == NULL )
+        rc = RC ( rcCloud, rcProvider, rcCasting, rcParam, rcNull );
+    else
+    {
+        if ( self == NULL )
+            rc = 0;
+        else if ( self -> vt != ( const Cloud_vt * ) & AWS_vt_v1 )
+            rc = RC ( rcCloud, rcProvider, rcCasting, rcType, rcIncorrect );
+        else
+        {
+            rc = CloudAddRef ( self );
+            if ( rc == 0 )
+            {
+                * aws = ( AWS * ) self;
+                return 0;
+            }
+        }
+
+        * aws = NULL;
+    }
+
+    return rc;
 }
