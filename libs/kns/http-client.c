@@ -3273,6 +3273,9 @@ static EUriForm EUriFormGuess ( const String * hostname,
     }
 }
 
+#if OLD_AWS_CODE
+//KNSTODO: the AWS authentication business does not belong here. Move this whole function to the new Cloud API
+
 #define X_AMZ_REQUEST_PAYER "x-amz-request-payer"
 #define REQUESTER "requester"
 
@@ -3489,6 +3492,7 @@ static rc_t KClientHttpRequestAuthenticate(const KClientHttpRequest *cself,
 
     return rc;
 }
+#endif
 
 static rc_t KClientHttpRequestFormatMsgBegin (
     const KClientHttpRequest * self, char * buffer, size_t bsize,
@@ -3582,6 +3586,8 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
     const char *AWSAccessKeyId, const char *YourSecretAccessKeyID,
     size_t *len, uint32_t uriForm )
 {
+//KNSTODO: the AWS authentication business does not belong here. Move to the new Cloud API
+
     rc_t rc;
     rc_t r2 = 0;
     bool have_user_agent = false;
@@ -3607,8 +3613,10 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
     CONST_STRING ( &user_agent_string, "User-Agent" );
     CONST_STRING(&accept_string, "Accept");
 
+#if OLD_AWS_CODE
     rc = KClientHttpRequestAuthenticate(self, method,
         AWSAccessKeyId, YourSecretAccessKeyID);
+#endif
 
     /* start building the buffer that will be sent
        We are inlining the host:port, instead of
@@ -3833,6 +3841,8 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
         size_t len;
         char buffer [ 4096 ];
 
+//KNSTODO: the AWS authentication business does not belong here. Move to the new Cloud API
+#if OLD_AWS_CODE
         bool authenticate = false;
 
         char aws_access_key_id[512] = "";
@@ -3863,10 +3873,16 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
                 rc = 0;
             RELEASE(KConfig, kfg);
         }
-
         /* create message */
         rc = KClientHttpRequestFormatMsgInt ( self, buffer, sizeof buffer,
                 method, AWSAccessKeyId, YourSecretAccessKeyID, & len, uriForm );
+#else
+        /* create message */
+        rc = KClientHttpRequestFormatMsgInt ( self, buffer, sizeof buffer,
+                method, NULL, NULL, & len, uriForm );
+
+#endif
+
         if ( rc != 0 )
             break;
 
@@ -3990,6 +4006,7 @@ rc_t KClientHttpRequestSendReceiveNoBody ( KClientHttpRequest *self, KClientHttp
  */
 LIB_EXPORT rc_t CC KClientHttpRequestHEAD ( KClientHttpRequest *self, KClientHttpResult **rslt )
 {
+    // if payment is required, use GET for 256 bytes
     return KClientHttpRequestSendReceiveNoBody ( self, rslt, "HEAD" );
 }
 

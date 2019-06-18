@@ -127,82 +127,6 @@ rc_t CC KHttpFileSetSize ( KHttpFile *self, uint64_t size )
     return RC ( rcNS, rcFile, rcUpdating, rcFile, rcReadonly );
 }
 
-static
-rc_t CloudRefresh( const KHttpFile * cself, struct timeout_t *tm )
-{
-    KHttpFile * self = (KHttpFile *) cself;
-    /* If we are working with a temporary (cloud) URL, check the expiration time */
-    /* If the expiration time is close, refresh the URL */
-    rc_t rc = 0;
-    if ( self -> need_env_token )
-    {
-        // KTime_t is in seconds
-        const KTime_t now = KTimeStamp();
-        const KTime_t expTime = KTimeMakeTime ( & self -> url_expiration );
-        const KTime_t advance = 60;
-        bool need_refresh;
-        if ( tm == NULL )
-        {
-            need_refresh = expTime < ( now + advance );
-        }
-        else
-        {
-            need_refresh = expTime < ( now + ( tm -> mS / 1000 ) + advance );
-        }
-
-        if ( need_refresh )
-        {
-            //TODO: attach the computing environment identity token
-            //TODO: requester-pays info if required
-            KClientHttpRequest *req;
-            rc_t rc = KClientHttpMakeRequestInt ( self -> http, & req, & self -> block, & self -> orig_url_buffer );
-            if ( rc == 0 )
-            {
-                rc_t rc2;
-                KClientHttpResult * rslt;
-                rc = KClientHttpRequestHEAD ( req, & rslt );
-                if ( rc == 0 )
-                {   /* retrieve expiration time Expires header of rslt -> http. if missing, error out? */
-                    if ( rslt -> expiration != NULL )
-                    {   /* save in self -> url_expiration */
-                        KTimeFromIso8601 ( & self -> url_expiration, rslt -> expiration, string_size ( rslt -> expiration ) );
-                        free ( rslt -> expiration );
-                        rslt -> expiration = NULL;
-                    }
-                    rc2 = KClientHttpResultRelease ( rslt );
-                    if ( rc == 0 )
-                    {
-                        rc = rc2;
-                    }
-                }
-
-                if ( rc == 0 )
-                {   /* Refresh url_buffer with the latest temporary URL */
-                    rc = KDataBufferWhack ( & self -> url_buffer );
-                    if ( rc == 0 )
-                    {
-                        rc = KClientHttpRequestURL ( req, & self -> url_buffer );
-                        if ( rc == 0 )
-                        {
-                            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
-                                    ( "HttpFile.URL updated to '%.*s'\n",
-                                    ( int ) self -> url_buffer . elem_count, self -> url_buffer . base ) );
-                        }
-                    }
-                }
-
-                rc2 = KClientHttpRequestRelease( req );
-                if ( rc == 0 )
-                {
-                    rc = rc2;
-                }
-            }
-        }
-    }
-
-    return rc;
-}
-
 #if SUPPORT_CHUNKED_READ
 static
 rc_t KHttpFileMakeRequest ( const KHttpFile *self, uint64_t pos, size_t req_size,
@@ -213,6 +137,20 @@ rc_t KHttpFileMakeRequest ( const KHttpFile *self, uint64_t pos, size_t req_size
 
     * rslt = NULL;
     * http_status = 0;
+
+    if ( self -> url_is_temporary )
+    {   /* check for expiration of the URL */
+        /* KTime_t is in seconds */
+        const KTime_t now = KTimeStamp();
+        const KTime_t expTime = KTimeMakeTime ( & self -> url_expiration );
+        const KTime_t advance = 60;
+        if ( expTime < ( now + advance ) ) /* expires with 'advance' seconds */
+        {
+            //  replace current URL it with the original URL
+            //  self -> url_is_temporary = false
+            //  Expect the request to be redirected to the new temporary URL, which will be given the payment info if needed
+        }
+    }
 
     rc = KClientHttpMakeRequest ( self -> http, &req, self -> url_buffer . base );
     if ( rc != 0 )
@@ -242,6 +180,7 @@ rc_t KHttpFileMakeRequest ( const KHttpFile *self, uint64_t pos, size_t req_size
 
             if ( rc == 0 )
             {
+//KNSTODO:  attach environment token if needed to req
                 KClientHttpRequestSetPayRequired(req, NULL, self->payRequired);
 
                 /* TBD - there should be a version of GET that takes a timeout */
@@ -259,6 +198,13 @@ rc_t KHttpFileMakeRequest ( const KHttpFile *self, uint64_t pos, size_t req_size
 
                         KClientHttpResultRelease ( * rslt );
                         * rslt = NULL;
+                    }
+                    else
+                    {
+//KNSTODO: if the request was redirected to a temporary URL, record the new expiration.
+// if ! self -> url_is_temporary && the new URL is temporary (i.e. a temp redirect happened, payment info attached if needed)
+//      capture new URL and expiration
+//      self -> url_is_temporary = true
                     }
                 }
             }
@@ -298,10 +244,13 @@ rc_t KHttpFileTimedReadInt ( const KHttpFile * self,
 
     size_t req_size = bsize;
 
-    rc = CloudRefresh( self, tm );
-    if ( rc != 0 )
+    if ( tm != 0 )
     {
-        return rc;
+        rc = TimeoutPrepare ( tm );
+         if ( rc != 0 )
+         {
+             return false;
+         }
     }
 
     * http_status = 0;
@@ -315,6 +264,7 @@ rc_t KHttpFileTimedReadInt ( const KHttpFile * self,
     for ( proxy_retries = 5; rc == 0 && proxy_retries != 0; )
     {
         KClientHttpResult * rslt = NULL;
+
         rc = KHttpFileMakeRequest ( self, pos, req_size, tm, & rslt, http_status );
         if ( rc == 0 )
         {
@@ -1288,14 +1238,23 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                     {
                                         KClientHttpResult *rslt;
 
+//KNSTODO: attach environment token if needed to req
+#if 0
+if ( need_env_token )
+{
+    extern rc_t AddCloudStuff(  KClientHttpRequest *req );
+    AddCloudStuff ( req );
+}
+#endif
                                         KClientHttpRequestSetPayRequired ( req, self, payRequired );
 
+//KNSTODO: convert to GET if payment is required (out here or inside the call)
                                         rc = KClientHttpRequestHEAD ( req, & rslt );
                                         if ( rc == 0 && rslt -> expiration != NULL )
                                         {   /* retrieve and save the URL expiration time */
                                             f -> url_is_temporary = true;
                                             KTimeFromIso8601 ( & f -> url_expiration, rslt -> expiration, string_size ( rslt -> expiration ) );
-                                            //TODO: still, handle the expiration in read methods (find out how AWS/GCP signal expiration)
+//KNSTODO: still, handle the expiration in read methods (find out how AWS/GCP signal expiration)
                                         }
 
                                         /* update url_buffer with the (possibly different and/or temporary) URL*/
