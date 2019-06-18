@@ -414,27 +414,39 @@ FIXTURE_TEST_CASE( CacheTee3_Basic, CT3Fixture )
     REQUIRE_RC( KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org, BLOCKSIZE,
                                           cluster_factor, ram_pages, false, false,
                                           "%s", CACHEFILE ) );
-
-    REQUIRE_RC( KFileRelease( tee ) );
     REQUIRE_RC( KFileRelease( org ) );
+
+    REQUIRE( KFileIsKCacheTeeFile_v3( tee ) );
+    uint64_t org1;
+    REQUIRE_RC( CacheTee3FileGetOriginalSize ( tee, &org1 ) );
+    
+    REQUIRE_RC( KFileRelease( tee ) );
     
     const KFile * cache;
     REQUIRE_RC( KDirectoryOpenFileRead( dir, &cache, "%s.cache", CACHEFILE ) );
     
     KOutMsg( "Test: CacheTee3 file opened\n" );
 
-    /*
+    bool is_valid;
+    REQUIRE_RC( CacheTee3FileIsValid( cache, &is_valid ) );    
+    REQUIRE( is_valid );
+
     bool is_complete;
     REQUIRE_RC( CacheTee3FileIsComplete( cache, &is_complete ) );    
     REQUIRE( !is_complete );
+
+    REQUIRE( !KFileIsKCacheTeeFile_v3( cache ) );
+
+    uint64_t org2;
+    REQUIRE_RC( CacheTee3FileGetOriginalSize ( cache, &org2 ) );
+    REQUIRE( org1 == org2 );
     
-    float percent;
+    double percent;
     uint64_t bytes_in_cache;
     REQUIRE_RC( CacheTee3FileGetCompleteness( cache, &percent, &bytes_in_cache ) );
     REQUIRE( ( percent == 0.0 ) );
     REQUIRE( ( bytes_in_cache == 0 ) );
-    */
-    
+
     REQUIRE_RC( KFileRelease( cache ) );
     KOutMsg( "Test: CacheTee3 file closed\n" );
     
@@ -459,58 +471,84 @@ FIXTURE_TEST_CASE( CacheTee3_Read, CT3Fixture )
                                           cluster_factor, ram_pages, false, false,
                                           "%s", CACHEFILE ) );
 
+    double percent;
+    uint64_t bytes_in_cache;
+                                          
     uint64_t at = 0;
     size_t len = 100;
 
     REQUIRE_RC( compare_file_content_2( org, tee, at, len, "small read at pos zero, not yet chached" ) );
     REQUIRE_RC( compare_file_content_2( org, tee, at, len, "small read at pos zero, now cached" ) );
+    REQUIRE_RC( CacheTee3FileGetCompleteness( tee, &percent, &bytes_in_cache ) );
+    KOutMsg ( "\tcache: %f%% = %lu bytes\n", percent, bytes_in_cache );
     
     at = 10;
     REQUIRE_RC( compare_file_content_2( org, tee, at, len, "small read at pos 10, cached" ) );
     REQUIRE_RC( compare_file_content_2( org, tee, at, len, "again, cached" ) );
-
+    REQUIRE_RC( CacheTee3FileGetCompleteness( tee, &percent, &bytes_in_cache ) );
+    KOutMsg ( "\tcache: %f%% = %lu bytes\n", percent, bytes_in_cache );
+    
     at = 1024L * BLOCKSIZE;
     REQUIRE_RC( compare_file_content_2( org, tee, at, len, "small read at block boundary, not yet cached" ) );
     REQUIRE_RC( compare_file_content_2( org, tee, at, len, "again, now cached" ) );
-
+    REQUIRE_RC( CacheTee3FileGetCompleteness( tee, &percent, &bytes_in_cache ) );
+    KOutMsg ( "\tcache: %f%% = %lu bytes\n", percent, bytes_in_cache );
+    
     at = BLOCKSIZE / 2; len = BLOCKSIZE;
     REQUIRE_RC( compare_file_content_2( org, tee, at, len, "spans 2 blocks, not yet cached" ) );
     REQUIRE_RC( compare_file_content_2( org, tee, at, len, "again, now cached" ) );
-
+    REQUIRE_RC( CacheTee3FileGetCompleteness( tee, &percent, &bytes_in_cache ) );
+    KOutMsg ( "\tcache: %f%% = %lu bytes\n", percent, bytes_in_cache );
+    
     len = BLOCKSIZE * 5 + 100;
     REQUIRE_RC( compare_file_content_2( org, tee, at, len, "spans 5 blocks, partly cached" ) );
     REQUIRE_RC( compare_file_content_2( org, tee, at, len, "again, now cached" ) );
+    REQUIRE_RC( CacheTee3FileGetCompleteness( tee, &percent, &bytes_in_cache ) );
+    KOutMsg ( "\tcache: %f%% = %lu bytes\n", percent, bytes_in_cache );
 
     at = 100; len = 1024 * BLOCKSIZE + 500;
     REQUIRE_RC( compare_file_content_3( org, tee, at, len, "large read crossing block boundary, partly cached" ) );
+    REQUIRE_RC( CacheTee3FileGetCompleteness( tee, &percent, &bytes_in_cache ) );
+    KOutMsg ( "\tcache: %f%% = %lu bytes\n", percent, bytes_in_cache );
 
     at = 200; len = 2048 * BLOCKSIZE;
     REQUIRE_RC( compare_file_content_3( org, tee, at, len, "very large read, partly cached" ) );
+    REQUIRE_RC( CacheTee3FileGetCompleteness( tee, &percent, &bytes_in_cache ) );
+    KOutMsg ( "\tcache: %f%% = %lu bytes\n", percent, bytes_in_cache );
 
     at = 1024 * BLOCKSIZE * 2 + 10; len = 100;
     REQUIRE_RC( compare_file_content_2( org, tee, at, len, "small read after block boundary" ) );
     at = 1024 * BLOCKSIZE * 2 - 10;
     REQUIRE_RC( compare_file_content_2( org, tee, at, len, "small read crossing block boundary" ) );
+    REQUIRE_RC( CacheTee3FileGetCompleteness( tee, &percent, &bytes_in_cache ) );
+    KOutMsg ( "\tcache: %f%% = %lu bytes\n", percent, bytes_in_cache );
 
     at = DATAFILESIZE - 100; len = 300;
     REQUIRE_RC( compare_file_content_1( org, tee, at, len, "small read crossing EOF" ) );
+    REQUIRE_RC( CacheTee3FileGetCompleteness( tee, &percent, &bytes_in_cache ) );
+    KOutMsg ( "\tcache: %f%% = %lu bytes\n", percent, bytes_in_cache );
     
     len = BLOCKSIZE * 10;
     REQUIRE_RC( compare_file_content_1( org, tee, at, len, "large read crossing EOF" ) );
+    REQUIRE_RC( CacheTee3FileGetCompleteness( tee, &percent, &bytes_in_cache ) );
+    KOutMsg ( "\tcache: %f%% = %lu bytes\n", percent, bytes_in_cache );
 
     at = DATAFILESIZE - 10000; len = 10000;
     REQUIRE_RC( compare_file_content_1( org, tee, at, len, "large read at EOF" ) );
+    REQUIRE_RC( CacheTee3FileGetCompleteness( tee, &percent, &bytes_in_cache ) );
+    KOutMsg ( "\tcache: %f%% = %lu bytes\n", percent, bytes_in_cache );
 
     at = DATAFILESIZE + 100; len = 100;
     REQUIRE_RC( compare_file_content_1( org, tee, at, len, "beyond EOF" ) );
+    REQUIRE_RC( CacheTee3FileGetCompleteness( tee, &percent, &bytes_in_cache ) );
+    KOutMsg ( "\tcache: %f%% = %lu bytes\n", percent, bytes_in_cache );
 
     REQUIRE_RC( KFileRelease( tee ) );    
     REQUIRE_RC( KFileRelease( org ) );
     REQUIRE_RC( KDirectoryRelease( dir ) );
 }
 
-/* ------------------- CacheTee2_Multiple_Users_Multiple_Inst
- * -------------------------------- */
+/* ------------------- CacheTee2_Multiple_Users_Multiple_Inst -------------------------------- */
 
 static rc_t cache_access ( CT3Fixture *fixture, int tid, const KFile *origfile,
                            const KFile *cacheteefile, uint32_t min_len, uint32_t max_len )
@@ -638,14 +676,7 @@ FIXTURE_TEST_CASE ( CacheTee3_promotion, CT3Fixture )
     KOutMsg ( "promotion test\n" );
     remove_file ( CACHEFILE );
     remove_file ( CACHEFILE1 );
-    /*
-        ThreadData td;
-        td.tid = 1;
-        td.num_threads = 1;
-        td.origfile = NULL;
-        td.cacheteefile = NULL;
-        td.fixture = this;
-    */
+
     KDirectory *dir;
     REQUIRE_RC ( KDirectoryNativeDir ( &dir ) );
     KFile *org;
@@ -655,8 +686,7 @@ FIXTURE_TEST_CASE ( CacheTee3_promotion, CT3Fixture )
     uint32_t cluster_factor = 2;
     uint32_t ram_pages = 0;
     REQUIRE_RC ( KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org, BLOCKSIZE,
-        cluster_factor, ram_pages, true, false, "%s",
-        CACHEFILE ) ); // cache.dat
+        cluster_factor, ram_pages, true, false, "%s",   CACHEFILE ) ); // cache.dat
     for ( size_t i = 0; i != 200; ++i )
     {
         rc_t rc = cache_access ( this, 0, i, org, tee );

@@ -1995,7 +1995,8 @@ rc_t KCacheTeeFileBindSourceFile ( KCacheTeeFile_v3 * self, const KFile * source
 
 static
 void KCacheTeeFileBindConstants ( KCacheTeeFile_v3 * self,
-    size_t page_size, uint32_t cluster_factor, uint32_t ram_pages, bool try_promote_on_close, bool remove_on_close )
+                size_t page_size, uint32_t cluster_factor, uint32_t ram_pages,
+                bool try_promote_on_close, bool remove_on_close )
 {
     size_t request_size, ram_cache_size;
 
@@ -2091,7 +2092,8 @@ rc_t KDirectoryVMakeKCacheTeeFileInt ( KDirectory * self,
         else
         {
             /* bind the parameters and constants to object */
-            KCacheTeeFileBindConstants ( obj, page_size, cluster_factor, ram_pages, try_promote_on_close, remove_on_close );
+            KCacheTeeFileBindConstants ( obj, page_size, cluster_factor, ram_pages,
+                                         try_promote_on_close, remove_on_close );
 
             /* study the source file */
             rc = KCacheTeeFileBindSourceFile ( obj, source );
@@ -2201,8 +2203,8 @@ LIB_EXPORT rc_t CC KDirectoryVMakeKCacheTeeFile_v3 ( KDirectory * self,
                 else
                 {
                     /* expand cache path */
-                    rc = KDirectoryVResolvePath ( self, true,
-                        new_node -> path, sizeof new_node -> path, fmt, args );
+                    rc = KDirectoryVResolvePath ( self, true, new_node -> path,
+                                                  sizeof new_node -> path, fmt, args );
                     if ( rc != 0 )
                     {
                         PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to resolve cache file path"
@@ -2279,6 +2281,106 @@ LIB_EXPORT rc_t CC KDirectoryMakeKCacheTeeFile_v3 ( KDirectory * self,
     return rc;
 }
 
+/* --- check for invariants --- */
+static rc_t extract_tail( const KFile * self, size_t * over_all_size, KCacheTeeFileTail * tail )
+{
+    rc_t rc = KFileSize ( self, over_all_size );
+    if ( rc != 0 )
+    {
+        PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to obtain file size"
+                         , "func=%s"
+                         , __func__
+                  ) );
+    }
+    else
+    {
+        size_t num_read;
+        uint64_t pos = *over_all_size - sizeof *tail;
+        rc = KFileReadAll_v1 ( self, pos, ( void * )tail, sizeof *tail, &num_read );
+        if ( rc != 0 )
+        {
+            PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to read tail of cachefile"
+                             , "func=%s"
+                             , __func__
+                      ) );
+        }
+        else
+        {
+            if ( num_read != sizeof *tail )
+            {
+                rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcInvalid );
+                PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to read enough bytes of tail of cachefile"
+                                 , "func=%s"
+                                 , __func__
+                          ) );
+            }
+        }
+    }
+    return rc;
+}
+
+static size_t calculate_bitmap_size_in_bytes( const KCacheTeeFileTail * tail )
+{
+    size_t res = 0;
+    size_t num_pages = ( tail -> orig_size + tail -> page_size - 1 ) / tail -> page_size;
+    size_t num_words = ( size_t ) ( num_pages + ( BMWORDSIZE - 1 ) ) >> BMWORDBITS;
+    res = num_words * ( BMWORDSIZE >> 3 );
+    return res;
+}
+
+static bmap_t* extract_bitmap( const KFile * self, size_t orig_size, size_t bitmap_size_in_bytes )
+{
+    bmap_t* res = malloc( bitmap_size_in_bytes );
+    if ( res != NULL )
+    {
+        size_t num_read;
+        rc_t rc = KFileReadAll_v1 ( self, orig_size, ( void * )res, bitmap_size_in_bytes, &num_read );
+        if ( rc != 0 )
+        {
+            PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to read bitmap of cachefile"
+                             , "func=%s"
+                             , __func__
+                      ) );
+        }
+        else if ( num_read != bitmap_size_in_bytes )
+        {
+            rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcInvalid );
+            PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to read enough bytes of bitmap of cachefile"
+                             , "func=%s"
+                             , __func__
+                      ) );
+            free( ( void * ) res );
+            res = NULL;
+        }
+    }
+    return res;
+}
+
+LIB_EXPORT rc_t CC CacheTee3FileIsValid ( struct KFile const * self, bool * is_valid )
+{
+    rc_t rc = 0;
+    if ( self == NULL || is_valid == NULL )
+        rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcNull );
+    else
+    {
+        size_t over_all_size;
+        KCacheTeeFileTail tail;
+        rc = extract_tail( self, &over_all_size, &tail );
+        if ( rc == 0 )
+        {
+            if ( tail . orig_size < over_all_size &&
+                 tail . page_size < tail . orig_size )
+            {
+                size_t bitmap_size_in_bytes = calculate_bitmap_size_in_bytes( &tail );
+                *is_valid = ( tail . orig_size + bitmap_size_in_bytes + sizeof tail == over_all_size );
+            }
+        }
+    }
+    return rc;
+}
+
+/* --- check for completeness --- */
+
 static uint32_t count_set_bits( bmap_t value )
 {
     uint32_t ret = 0;
@@ -2290,26 +2392,64 @@ static uint32_t count_set_bits( bmap_t value )
     return ret;
 }
 
-static bool is_bitmap_complete( const KCacheTeeFile_v3 * self )
+static bool is_bitmap_complete( volatile bmap_t * bitmap, size_t bitmap_size_in_bytes,
+                                uint64_t orig_size, uint32_t page_size )
 {
-    //size_t just_bitmap_bytes = ( self -> bmap_size ) - ( sizeof ( *( self -> tail ) ) );
-    size_t bitmap_words = self -> bmap_size / ( sizeof ( *( self -> bitmap ) ) );
+    size_t bitmap_words = bitmap_size_in_bytes / ( BMWORDSIZE >> 3 );
     size_t num_pages, in_last_word;
     size_t idx;
     /* all but the last word in the bitmap has to be set to 0xFFFFFFFFU */
     for ( idx = 0; idx < ( bitmap_words - 1 ); ++idx )
     {
 #if BMWORDSIZE == 32
-        if ( self -> bitmap[ idx ] != 0xFFFFFFFFU )
+        if ( bitmap[ idx ] != 0xFFFFFFFFU )
             return false;
 #else
     #error "this code does not support this word size"
 #endif
     }
     /* how many bits have to be set in the last word? */
-    num_pages = ( self -> source_size + self -> page_size - 1 ) / self -> page_size;
+    num_pages = ( orig_size + page_size - 1 ) / page_size;
     in_last_word = num_pages - ( ( bitmap_words - 1 ) * BMWORDSIZE );
-    return ( count_set_bits( self -> bitmap[ bitmap_words - 1 ] ) == in_last_word );
+    return ( count_set_bits( bitmap[ bitmap_words - 1 ] ) == in_last_word );
+}
+
+static bool is_bitmap_complete_file( const KFile * self )
+{
+    bool res = false;
+    size_t over_all_size;
+    KCacheTeeFileTail tail;
+    rc_t rc = extract_tail( self, &over_all_size, &tail );
+    if ( rc == 0 )
+    {
+        size_t bitmap_size_in_bytes = calculate_bitmap_size_in_bytes( &tail );
+        if ( tail . orig_size + bitmap_size_in_bytes + sizeof tail != over_all_size )
+        {
+            rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcInvalid );
+            PLOGERR ( klogSys, ( klogSys, rc, "$(func) - invalid internal size-values in cachefile"
+                             , "func=%s"
+                             , __func__
+                      ) );
+        }
+        else
+        {
+            volatile bmap_t * bitmap = extract_bitmap( self, tail . orig_size, bitmap_size_in_bytes );
+            if ( bitmap != NULL )
+            {
+                res = is_bitmap_complete( bitmap, bitmap_size_in_bytes, tail . orig_size, tail . page_size );
+                free( ( void * ) bitmap );
+            }
+        }
+    }
+    return res;
+}
+
+static bool is_bitmap_complete_v3( const KCacheTeeFile_v3 * self )
+{
+    if ( self -> cache_file == NULL )
+        return false;
+    return is_bitmap_complete( self -> bitmap, self -> bmap_size,
+                               self -> source_size, self -> page_size );
 }
 
 LIB_EXPORT rc_t CC CacheTee3FileIsComplete ( struct KFile const * self, bool * is_complete )
@@ -2320,15 +2460,9 @@ LIB_EXPORT rc_t CC CacheTee3FileIsComplete ( struct KFile const * self, bool * i
     else
     {
         if ( &( self -> vt -> v1 ) != &KCacheTeeFile_v3_vt )
-        {
-            /* the given file is NOT a KCacheTeeFile_v3 */
-            /* rc = IsThisCacheFileComplete( self, is_complete ); */
-        }
+            *is_complete = is_bitmap_complete_file( self );
         else
-        {
-            struct KCacheTeeFile_v3 * ctf = ( struct KCacheTeeFile_v3 * )self;
-            *is_complete = is_bitmap_complete( ctf );
-        }
+            *is_complete = is_bitmap_complete_v3( ( struct KCacheTeeFile_v3 * )self );
     }
     return rc;
 }
@@ -2339,4 +2473,212 @@ LIB_EXPORT bool CC KFileIsKCacheTeeFile_v3( const struct KFile * self )
     if ( self != NULL )
         res = ( &( self -> vt -> v1 ) == &KCacheTeeFile_v3_vt );
     return res;
+}
+
+LIB_EXPORT rc_t CC CacheTee3FileGetOriginalSize ( struct KFile const * self, uint64_t * original_size )
+{
+    rc_t rc = 0;
+    if ( self == NULL || original_size == NULL )
+        rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcNull );
+    else
+    {
+        if ( &( self -> vt -> v1 ) != &KCacheTeeFile_v3_vt )
+        {
+            size_t over_all_size;
+            KCacheTeeFileTail tail;
+            rc = extract_tail( self, &over_all_size, &tail );
+            if ( rc == 0 )
+                *original_size = tail . orig_size;
+        }
+        else
+        {
+            KCacheTeeFile_v3 * ctf = ( struct KCacheTeeFile_v3 * )self;
+            *original_size = ctf -> source_size;
+        }
+    }
+    return rc;
+}
+
+static size_t bitmap_completeness( volatile bmap_t * bitmap, size_t bitmap_size_in_bytes )
+{
+    size_t res = 0;
+    size_t bitmap_words = bitmap_size_in_bytes / ( BMWORDSIZE >> 3 );
+    size_t idx;
+    /* all but the last word in the bitmap has to be set to 0xFFFFFFFFU */
+    for ( idx = 0; idx < bitmap_words; ++idx )
+    {
+#if BMWORDSIZE == 32
+        bmap_t w = bitmap[ idx ];
+        if ( w > 0 )
+        {
+            if ( w == 0xFFFFFFFFU )
+                res += BMWORDSIZE;
+            else
+                res += count_set_bits( w );
+        }
+#else
+    #error "this code does not support this word size"
+#endif
+    }
+    return res;
+}
+
+static rc_t get_bitmap_completeness_file( struct KFile const * self, double * percent, uint64_t * bytes_in_cache )
+{
+    size_t over_all_size;
+    KCacheTeeFileTail tail;
+    rc_t rc = extract_tail( self, &over_all_size, &tail );
+    if ( rc == 0 )
+    {
+        size_t bitmap_size_in_bytes = calculate_bitmap_size_in_bytes( &tail );
+        if ( tail . orig_size + bitmap_size_in_bytes + sizeof tail != over_all_size )
+        {
+            rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcInvalid );
+            PLOGERR ( klogSys, ( klogSys, rc, "$(func) - invalid internal size-values in cachefile"
+                             , "func=%s"
+                             , __func__
+                      ) );
+        }
+        else
+        {
+            volatile bmap_t * bitmap = extract_bitmap( self, tail . orig_size, bitmap_size_in_bytes );
+            if ( bitmap != NULL )
+            {
+                size_t pages_in_cache = bitmap_completeness( bitmap, bitmap_size_in_bytes );
+                * bytes_in_cache = ( pages_in_cache * tail . page_size );
+                free( ( void * ) bitmap );
+                if ( * bytes_in_cache > 0 && tail . orig_size > 0 )
+                {
+                    double x = ( float ) * bytes_in_cache;
+                    x *= 100;
+                    x /= tail . orig_size;
+                    *percent = x;
+                }
+            }
+        }
+    }
+    return rc;
+}
+
+static void get_bitmap_completeness_v3( const KCacheTeeFile_v3 * self, double * percent, uint64_t * bytes_in_cache )
+{
+    if ( self -> cache_file == NULL )
+        return;
+    else
+    {
+        size_t pages_in_cache = bitmap_completeness( self -> bitmap, self -> bmap_size );
+        * bytes_in_cache = ( pages_in_cache * self -> page_size );
+        if ( * bytes_in_cache > 0 && self -> tail -> orig_size > 0 )
+        {
+            double x = ( float ) * bytes_in_cache;
+            x *= 100;
+            x /= self -> tail -> orig_size;
+            *percent = x;
+        }
+    }
+}
+
+LIB_EXPORT rc_t CC CacheTee3FileGetCompleteness ( struct KFile const * self,
+                    double * percent, uint64_t * bytes_in_cache )
+{
+    rc_t rc = 0;
+    if ( self == NULL || percent == NULL || bytes_in_cache == NULL )
+        rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcNull );
+    else
+    {
+        *percent = 0.0;
+        *bytes_in_cache = 0;
+        if ( &( self -> vt -> v1 ) != &KCacheTeeFile_v3_vt )
+            rc = get_bitmap_completeness_file( self, percent, bytes_in_cache );
+        else
+            get_bitmap_completeness_v3( ( struct KCacheTeeFile_v3 * )self, percent, bytes_in_cache );
+    }
+    return rc;
+}
+
+/* --- perform promotion --- */
+
+static rc_t finalize_file ( struct KFile * self )
+{
+    return 0;
+}
+
+static rc_t finalize_v3 ( KCacheTeeFile_v3 * self )
+{
+    rc_t rc = 0;
+    if ( self -> cache_file != NULL )
+    {
+        rc = KFileSetSize_v1 ( self -> cache_file, self -> source_size );
+        if ( rc != 0 )
+        {
+            PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to truncate the cache-file"
+                             , "func=%s"
+                             , __func__
+                      ) );
+        }
+        else
+        {
+            // we have to release the cache-file to rename it...
+            rc = KFileRelease ( self -> cache_file );
+            if ( rc != 0 )
+            {
+                PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to release the cache-file"
+                                 , "func=%s"
+                                 , __func__
+                          ) );
+            }
+            else
+            {
+                char buffer[ 4096 ];
+                size_t num_writ;
+                self -> cache_file = NULL;
+                
+                rc = string_printf ( buffer, sizeof buffer, &num_writ, "%s.cache", self -> path );
+                if ( rc != 0 )
+                {
+                    PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed create the cache-file path"
+                                     , "func=%s"
+                                     , __func__
+                              ) );
+                }
+                else
+                {
+                    rc = KDirectoryRename ( self -> dir, true, buffer, self -> path );
+                    if ( rc != 0 )
+                    {
+                        PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to rename the cache-file"
+                                         , "func=%s"
+                                         , __func__
+                                  ) );
+                    }
+                }
+            }
+        }
+    }
+    return rc;
+}
+
+rc_t CC CacheTee3FileFinalize ( struct KFile * self )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+        rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcNull );
+    else
+    {
+        bool is_complete;
+        rc = CacheTee3FileIsComplete ( self, &is_complete );
+        if ( rc == 0 )
+        {
+            if ( !is_complete )
+                rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcIncomplete );
+            else
+            {
+                if ( &( self -> vt -> v1 ) != &KCacheTeeFile_v3_vt )
+                    rc = finalize_file( self );
+                else
+                    rc = finalize_v3( ( struct KCacheTeeFile_v3 * )self );
+            }
+        }
+    }
+    return rc;
 }

@@ -121,7 +121,13 @@ KFS_EXTERN rc_t CC  KDirectoryVMakeKCacheTeeFile_v3 ( struct KDirectory * self,
  */
 KFS_EXTERN rc_t CC CacheTee3FileIsComplete ( struct KFile const * self, bool * is_complete );
 
-#if 0
+/* IsValid
+ *  checks if a given file ( has to be a local file )
+ *  ss a backing cache-file for the CacheTee-file ( right ratio of orig_size / page_size / total_size )
+ *
+ *  "is_complete" [ OUT ] - return value: true when file is complete
+ */
+KFS_EXTERN rc_t CC CacheTee3FileIsValid ( struct KFile const * self, bool * is_valid );
 
 /* Finalize
  *  removes the cache-tee file metadata
@@ -141,7 +147,6 @@ KFS_EXTERN rc_t CC CacheTee3FileFinalize ( struct KFile * self );
 KFS_EXTERN rc_t CC CacheTee3FileGetCompleteness ( struct KFile const * self,
     double * percent, uint64_t * bytes_in_cache );
 
-
 /* GetOriginalSize
  *  examines the file, and reports the size of the original file ( without the cachefile-footer )
  *
@@ -149,8 +154,6 @@ KFS_EXTERN rc_t CC CacheTee3FileGetCompleteness ( struct KFile const * self,
  */
 KFS_EXTERN rc_t CC CacheTee3FileGetOriginalSize ( struct KFile const * self,
     uint64_t * original_size );
-
-#endif
 
 /* IsKCacheTee3File
  *  checks if the given implementation is a CacheTee3File
