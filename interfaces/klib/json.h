@@ -35,12 +35,12 @@
 #include <klib/defs.h>
 #endif
 
-typedef struct VNamelist VNamelist;
-typedef struct KDataBuffer KDataBuffer;
-
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+struct VNamelist;
+struct KDataBuffer;
 
 typedef struct KJsonValue KJsonValue;
 typedef struct KJsonObject KJsonObject;
@@ -78,7 +78,7 @@ KLIB_EXTERN rc_t CC KJsonGetBool ( const KJsonValue * node, bool * value );
 KLIB_EXTERN const KJsonObject * CC  KJsonValueToObject ( const KJsonValue * value );
 KLIB_EXTERN const KJsonValue * CC   KJsonObjectToValue ( const KJsonObject * object );
 
-KLIB_EXTERN rc_t CC KJsonObjectGetNames ( const KJsonObject * node, VNamelist * names );
+KLIB_EXTERN rc_t CC KJsonObjectGetNames ( const KJsonObject * node, struct VNamelist * names );
 KLIB_EXTERN const KJsonValue * CC KJsonObjectGetMember ( const KJsonObject * node, const char * name );
 
 KLIB_EXTERN const KJsonArray * CC KJsonValueToArray ( const KJsonValue * value );

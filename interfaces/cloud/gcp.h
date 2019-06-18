@@ -1,4 +1,7 @@
-/*===========================================================================
+#ifndef _h_cloud_gcp_
+#define _h_cloud_gcp_
+
+/*=====================================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
 *               National Center for Biotechnology Information
@@ -20,30 +23,43 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ===========================================================================
-*
-*/
+* ================================================================================== */
 
-#include <kproc/extern.h>
-#include <kproc/procmgr.h>
 
-#include <pthread.h>
-#include <unistd.h>
+#ifndef _h_cloud_extern_
+#include <cloud/extern.h>
+#endif
 
-/* OnMainThread
- *  returns true if running on main thread
+#ifndef _h_cloud_cloud_
+#include <cloud/cloud.h>
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* GCP
+ *  Google Cloud Platform
  */
-LIB_EXPORT bool CC KProcMgrOnMainThread ( void )
-{
-    return pthread_main_np () != 0;
-}
+typedef struct GCP GCP;
 
-uint32_t sys_GetPID ( void )
-{
-    return getpid ();
-}
+/* MakeGCP
+ *  make an instance of a GCP cloud interface
+ */
+CLOUD_EXTERN rc_t CC CloudMgrMakeGCP ( const CloudMgr * self, GCP ** gcp );
 
-int sys_GetHostName ( char * buffer, size_t buffer_size )
-{
-    return gethostname( buffer, buffer_size );
+/* Cast
+ *  cast from a Cloud to a GCP type or vice versa
+ *  allows us to apply cloud-specific interface to cloud object
+ *
+ *  returns a new reference, meaning the "self" must still be released
+ */
+CLOUD_EXTERN rc_t CC GCPToCloud ( const GCP * self, Cloud ** cloud );
+CLOUD_EXTERN rc_t CC CloudToGCP ( const Cloud * self, GCP ** gcp );
+
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* _h_cloud_gcp_ */
