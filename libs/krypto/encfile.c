@@ -202,7 +202,9 @@ rc_t KEncFileV1BufferWrite (KEncFileV1 * self, uint64_t pos, const void * buffer
  *  The first is a common "NCBI"
  *  The second is the format specific "nenc"
  */
+#if 0
 static const KEncFileSig KEncFileSignature = "NCBInenc";
+#endif
 
 /* -----
  * the common constant used throughout the project to check the byte order 
