@@ -24,14 +24,6 @@
 *
 */
 
-#ifndef USE_TIMEOUT
-#define USE_TIMEOUT false
-#endif
-
-#ifndef USE_NO_TIMEOUT_TTY
-#define USE_NO_TIMEOUT_TTY false
-#endif
-
 #ifndef _h_sysfile_priv_
 #define _h_sysfile_priv_
 
@@ -54,11 +46,6 @@ struct KSysFile_v1
 {
     KFile_v1 dad;
     int fd;
-#if USE_TIMEOUT
-    fd_set fds;
-    struct timeval to;
-    bool use_to;
-#endif
 };
 
 typedef struct KSysFile_v2 KSysFile_v2;
@@ -66,11 +53,6 @@ struct KSysFile_v2
 {
     KFile_v2 dad;
     int fd;
-#if USE_TIMEOUT
-    fd_set fds;
-    struct timeval to;
-    bool use_to;
-#endif
 };
 
 /* KSysFileMake

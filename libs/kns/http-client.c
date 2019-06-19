@@ -1,3 +1,6 @@
+/* TODO: move it to interfaces/klib/strings.h */
+#define MAGIC_PAY_REQUIRED "NCBI_VDB_PAY_REQUIRED"
+
 /*===========================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
@@ -2634,7 +2637,30 @@ struct KClientHttpRequest
 
     KRefcount refcount;
     bool accept_not_modified;
+
+    bool payRequired; /* required to access this URL */
+
+    /* user agrees to accept charges */
+    bool accept_aws_charges;
+    bool accept_gcp_charges;
 };
+
+void KClientHttpRequestSetPayRequired(struct KClientHttpRequest * self,
+    const KNSManager *mgr, bool payRequired)
+{
+    if (self != NULL) {
+        self->payRequired = payRequired;
+
+        if (mgr == NULL && self->http != NULL)
+            mgr = self->http->mgr;
+
+        if (mgr != NULL) {
+            self->accept_aws_charges = mgr->accept_aws_charges;
+            self->accept_gcp_charges = mgr->accept_gcp_charges;
+        }
+    }
+}
+
 
 rc_t KClientHttpRequestURL(KClientHttpRequest const *self, KDataBuffer *rslt)
 {
@@ -3246,12 +3272,16 @@ static EUriForm EUriFormGuess ( const String * hostname,
     }
 }
 
+#define X_AMZ_REQUEST_PAYER "x-amz-request-payer"
+#define REQUESTER "requester"
+
 /* https://docs.aws.amazon.com/AmazonS3/latest/dev/RESTAuthentication.html */
 static rc_t StringToSign(
     const String * HTTPVerb,
     const String * Date,
     const String * hostname,
     const String * HTTPRequestURI,
+    bool requester_payer,
     char * buffer, size_t bsize, size_t * len)
 {
     rc_t rc = 0;
@@ -3259,6 +3289,7 @@ static rc_t StringToSign(
     size_t total = 0;
     size_t skip = 0;
     size_t p_bsize = 0;
+
     String dateString;
     String s3;
     CONST_STRING(&s3, ".s3.amazonaws.com");
@@ -3299,6 +3330,12 @@ static rc_t StringToSign(
         rc = r2;
 
     /* StringToSign += CanonicalizedAmzHeaders */
+    if (requester_payer) {
+        p_bsize = bsize >= total ? bsize - total : 0;
+        r2 = string_printf(
+            &buffer[total], p_bsize, len, X_AMZ_REQUEST_PAYER ":" REQUESTER "\n");
+        total += *len;
+    }
 
     /* StringToSign += CanonicalizedResource */
     skip = hostname->size - s3.size;
@@ -3325,6 +3362,7 @@ static rc_t StringToSign(
     return rc;
 }
 
+/* N.B. Just AWS authentication is implemented now */
 static rc_t KClientHttpRequestAuthenticate(const KClientHttpRequest *cself,
     const char *method,
     const char *AWSAccessKeyId, const char *YourSecretAccessKeyID)
@@ -3338,7 +3376,16 @@ static rc_t KClientHttpRequestAuthenticate(const KClientHttpRequest *cself,
     char authorization[4096] = "";
     const String * sdate = NULL;
     char date[64] = "";
+
     String dates;
+
+    const char * magic = getenv(MAGIC_PAY_REQUIRED);
+    bool requester_payer = magic != NULL ? true : self->payRequired;
+
+    /* don't set requester_payer when user did not agree to accept charges */
+    if (requester_payer & !self->accept_aws_charges)
+        requester_payer = false;
+
     assert(self && self->http);
     http = self->http;
     hostname = &self->url_block.host;
@@ -3425,7 +3472,7 @@ static rc_t KClientHttpRequestAuthenticate(const KClientHttpRequest *cself,
         String HTTPVerb;
         StringInitCString(&HTTPVerb, method);
         rc = StringToSign(&HTTPVerb, sdate, hostname, &self->url_block.path,
-            stringToSign, sizeof stringToSign, &len);
+            requester_payer, stringToSign, sizeof stringToSign, &len);
     }
 
     if (rc == 0)
@@ -3435,7 +3482,10 @@ static rc_t KClientHttpRequestAuthenticate(const KClientHttpRequest *cself,
 
     if (rc == 0)
         rc = KClientHttpAddHeader(&self->hdrs, "Authorization", authorization);
-            
+
+    if (rc == 0 && requester_payer)
+        rc = KClientHttpAddHeader(&self->hdrs, X_AMZ_REQUEST_PAYER, REQUESTER);
+
     return rc;
 }
 

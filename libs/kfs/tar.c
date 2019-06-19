@@ -84,7 +84,10 @@
 #if _DEBUGGING
 static const char * get_bool_string (bool b)
 {
-    switch (b)
+    /* this curiosity comes from an embedded programmer who worried that
+       while false is generally considered 0b00000000, true is usually
+       considered 0b00000001 but sometimes 0b11111111, e.g MC68000. */
+    switch ( ( int ) b )
     {
     case true:
 	return "true";

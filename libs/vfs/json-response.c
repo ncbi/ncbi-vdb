@@ -62,7 +62,7 @@ typedef struct {
 } Stack;
 
 #define MAX_PATHS 6 /* Locations for Element (sra, vdbcache, ???) */
-typedef struct {
+typedef struct Locations {
     ESrvFileFormat type;
     char * cType;
     char * name;
@@ -115,33 +115,6 @@ struct Response4 { /* Response object */
     uint32_t nItems;
     rc_t rc;
 };
-
-typedef enum {
-    eUnknown,
-    eFalse,
-    eTrue
-} EState;
-
-typedef struct Data {
-    const char * acc;
-    int64_t id; /* oldCartObjId */
-    const char * cls; /* itemClass */
-    const char * vsblt;
-    const char * name;
-    const char * fmt; /* format */
-    EState qual; /* hasOrigQuality */
-    int64_t sz; /* size */
-    const char * md5;
-    const char * sha; /* sha256 */
-    int64_t mod; /* modDate */
-    int64_t exp; /* expDate */
-    const char * srv; /* service */
-    const char * reg; /* region */
-    const char * link; /* ??????????????????????????????????????????????????? */
-    const char * tic;
-
-    int64_t code; /* status/code */
-} Data;
 
 struct KSrvRespObj {
     atomic32_t refcount;
@@ -424,7 +397,7 @@ static rc_t LocationsSetHttp(Locations * self, const VPath * path) {
     return rc;
 }
 
-static rc_t LocationsAddVPath ( Locations * self, const VPath * path,
+rc_t LocationsAddVPath ( Locations * self, const VPath * path,
                             const VPath * mapping, bool setHttp, uint64_t osize)
 {
     int i = 0;
@@ -538,7 +511,7 @@ static bool ItemHasLinks ( const Item * self ) {
     return false;
 }
 
-static rc_t ItemAddFormat ( Item * self, const char * cType, const Data * dad,
+rc_t ItemAddFormat ( Item * self, const char * cType, const Data * dad,
                      Locations ** added )
 {
     rc_t rc = 0;
@@ -635,12 +608,12 @@ static rc_t ItemAddFormat ( Item * self, const char * cType, const Data * dad,
                                  rcMemory, rcExhausted);
 	}
 	else if ( type == eSFFVdbcache && dad != NULL && dad -> acc != NULL ) {
-	    uint32_t s = string_measure ( dad -> acc, NULL ) + 1 + 8 + 1;
+	    uint32_t s = string_measure ( dad -> acc, NULL ) + 1 + 4 + 8 + 1;
             elm->name = calloc ( 1, s );
             if ( elm->name == NULL )
                 return RC ( rcVFS, rcQuery, rcExecuting,
                             rcMemory, rcExhausted );
-            rc = string_printf ( elm->name, s, NULL, "%s.vdbcache", dad -> acc );
+            rc = string_printf ( elm->name, s, NULL, "%s.sra.vdbcache", dad -> acc );
 	}
     }
 
@@ -1328,6 +1301,7 @@ static void DataClone ( const Data * self, Data * clone ) {
     clone -> reg  = self -> reg; /* region */
     clone -> link = self -> link; /* ???????????????????????????????????????? */
     clone -> tic  = self -> tic;
+    clone ->objectType = self ->objectType;
 
     clone -> code = self -> code;
 }
@@ -1376,6 +1350,9 @@ static rc_t DataUpdate ( const Data * self, Data * next,
 
     name = "region";
     StrSet ( & next -> reg  , KJsonObjectGetMember ( node, name ), name, path );
+
+    name = "objectType";
+    StrSet(&next->objectType, KJsonObjectGetMember(node, name), name, path);
 
     name = "service";
     StrSet ( & next -> srv  , KJsonObjectGetMember ( node, name ), name, path );
@@ -1458,14 +1435,18 @@ static rc_t LocationsAddLink ( Locations * self, const KJsonValue * node,
     }
 
     if ( dad -> tic == NULL ) {
+        const String * objectType = NULL;
         rc = VPathMakeFromUrl ( & path, & url, NULL, true, & acc, dad -> sz,
-                                dad -> mod, hasMd5 ? md5 : NULL, 0 );
+            dad -> mod, hasMd5 ? md5 : NULL, 0, dad -> srv, objectType,
+            false, false );
     }
     else {
+        const String * objectType = NULL;
         String ticket;
         StringInitCString ( & ticket, dad -> tic );
         rc = VPathMakeFromUrl ( & path, & url, & ticket, true, & acc, dad -> sz,
-                                dad -> mod, hasMd5 ? md5 : NULL, 0 );
+            dad -> mod, hasMd5 ? md5 : NULL, 0, dad -> srv, objectType,
+            false, false );
     }
     if ( rc == 0 )
         VPathMarkHighReliability ( path, true );
@@ -1607,16 +1588,31 @@ static const char * ItemOrLocationGetName(const Item * item,
 }
 
 static /* don't free returned name !!! */
-rc_t LocationsGetVdbcacheName ( const Locations * self, const char ** name )
+rc_t LocationsGetVdbcacheName ( const Locations * cself,
+    const char ** name, const KSrvRespFile * file)
 {
-    assert ( self && name );
+    rc_t rc = 0;
+
+    assert ( cself && name );
 
     * name = NULL;
 
-    if ( self -> type == eSFFVdbcache )
-        * name = self -> name;
+    if (cself->type == eSFFVdbcache) {
+        if (cself->name == NULL
+            && file != NULL && file->item != NULL && file->item->acc != NULL)
+        {
+            Locations * self = (Locations*)cself;
+            uint32_t s = string_measure(file->item->acc, NULL) + 1 + 4 + 8 + 1;
+            self->name = calloc(1, s);
+            if (self->name == NULL)
+                return RC(rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted);
+            rc = string_printf(self->name, s, NULL,
+                "%s.sra.vdbcache", file->item->acc);
+        }
+        *name = cself->name;
+    }
 
-    return 0;
+    return rc;
 }
 
 static
@@ -1668,7 +1664,7 @@ rc_t LocationsInitMapping ( Locations * self, const Item * item )
 /********************************** Item **********************************/
 
 /* We are scanning Item(Run) to find all its Elm-s(Files) -sra, vdbcache, ??? */
-static rc_t ItemAddElms ( Item * self, const KJsonObject * node,
+static rc_t ItemAddElms4 ( Item * self, const KJsonObject * node,
                    const Data * dad, Stack * path )
 {
     rc_t rc = 0;
@@ -1709,7 +1705,7 @@ static rc_t ItemAddElms ( Item * self, const KJsonObject * node,
 
             value = KJsonArrayGetElement ( array, i );
             object = KJsonValueToObject ( value );
-            r2 = ItemAddElms ( self, object, & data, path );
+            r2 = ItemAddElms4 ( self, object, & data, path );
             if ( r2 != 0 && rc == 0 )
                 rc = r2;
 
@@ -1781,7 +1777,7 @@ static rc_t ContainerAddItem ( Container * self, const KJsonObject * node,
                 DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), ("Adding files to '%s' "
                     "item %u...\n", item->itemClass, item->id));
         }
-        rc = ItemAddElms ( item, node, & data, path );
+        rc = ItemAddElms4 ( item, node, & data, path );
     }
 
     if ( rc == 0 && ! ItemHasLinks ( item ) && data . code == 200 ) {
@@ -1793,7 +1789,7 @@ static rc_t ContainerAddItem ( Container * self, const KJsonObject * node,
 }
 
 /* We are inside or above of a Container
-   and are llooking for Items(runs, gdGaP files) to ddd */
+   and are looking for Items(runs, gdGaP files) to ddd */
 static rc_t Response4AddItems ( Response4 * self, Container * aBox,
     const KJsonObject * node, const Data * dad, Stack * path )
 {
@@ -2467,6 +2463,14 @@ rc_t KSrvRespFileGetClass(const KSrvRespFile * self, const char ** itemClass) {
     return 0;
 }
 
+rc_t KSrvRespFileGetType(const KSrvRespFile * self, const char ** type) {
+    assert(self && self->item && type);
+
+    *type = self->file->cType;
+
+    return 0;
+}
+
 rc_t KSrvRespFileGetSize(const KSrvRespFile * self, uint64_t *size) {
     assert(self && self->file && size);
 
@@ -2507,13 +2511,22 @@ rc_t KSrvRespFileGetAccOrName ( const KSrvRespFile * self, const char ** out,
                                                            const char ** tic)
 {
     rc_t rc = 0;
-    assert ( self && self -> item && tic );
+    const char *dummy = NULL;
+    if (tic == NULL)
+        tic = &dummy;
+    *tic = *out = NULL;
+    if (self == NULL || self->item == NULL)
+        return 0;
     * tic = self -> item -> tic;
-    rc = LocationsGetVdbcacheName ( self -> file, out );
+    rc = LocationsGetVdbcacheName ( self -> file, out, self );
     if ( * out != NULL )
         return rc;
     else
         return KSrvRespFileGetAccNoTic ( self, out );
+}
+
+rc_t KSrvRespFileGetName(const KSrvRespFile * self, const char ** name) {
+    return KSrvRespFileGetAccOrName(self, name, NULL);
 }
 
 rc_t KSrvRespFileGetId ( const KSrvRespFile * self, uint64_t * id,

@@ -242,11 +242,18 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
         rc = VFSManagerMakeOidPath ( mgr, & query, oid );
 
     if ( rc == 0 ) {
+        bool isSource = false;
+
         const VPath * local = NULL;
         const VPath * cache = NULL;
 
         rc_t localRc = 0;
         rc_t cacheRc = 0;
+
+        String srapub_files;
+        CONST_STRING(&srapub_files, "srapub_files");
+
+        isSource = StringEqual(&path->objectType, &srapub_files);
 
         if ( outFile != NULL ) {
             bool exists = false;
@@ -264,10 +271,26 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
                                       rcName, rcNotFound );
         }
         else if ( VPathFromUri ( path ) ) {
-            cacheRc = VResolverQueryWithDir ( self, protocols, query,
-                NULL, NULL, & cache, false, outDir, NULL, true, path, mapping);
-            localRc = VResolverQueryWithDir ( self, protocols, query,
-                & local, NULL, NULL, false, outDir, NULL, true, path, mapping);
+            if (isSource) {
+                size_t size = path->path.size;
+                const char * s = string_rchr(path->path.addr, size, '/');
+                if (s != NULL && s > path->path.addr) {
+                    size = path->path.size - (s - path->path.addr - 1);
+                    s = string_rchr(path->path.addr, size, '/');
+                }
+                if (s != NULL)
+                    ++s;
+                if (s == NULL)
+                    s = path->path.addr + path->path.size;
+                size = path->path.size - (s - path->path.addr - 2);
+                cacheRc = VPathMakeFmt((VPath**)&cache, "%.*s", (int)size, s);
+            }
+            else {
+                cacheRc = VResolverQueryWithDir(self, protocols, query, NULL,
+                    NULL, &cache, false, outDir, NULL, true, path, mapping);
+                localRc = VResolverQueryWithDir(self, protocols, query, &local,
+                    NULL, NULL, false, outDir, NULL, true, path, mapping);
+            }
         }
         else {
             cacheRc = VResolverQuery ( self, protocols, query,
@@ -314,13 +337,19 @@ static rc_t _VPathGetId ( const VPath * self, const String ** newId,
     if ( oldId -> size <= https . size )
         return 0;
 
-    if ( ! string_cmp ( oldId -> addr, oldId -> size, https . addr, https. size,
-                      https. size ) == 0  &&
-         ! string_cmp ( oldId -> addr, oldId -> size, fasp  . addr, fasp . size,
-                        fasp . size ) == 0 &&
-         ! string_cmp ( oldId -> addr, oldId -> size, http  . addr, fasp . size,
-                        fasp . size ) == 0 )
+    /* what is being attempted with this code? */
+#if WHAT_IS_GOING_ON_WITH_THIS_CODE
+    if ( ! string_cmp ( oldId -> addr, oldId -> size, https . addr, https. size, https. size ) == 0 &&
+         ! string_cmp ( oldId -> addr, oldId -> size, fasp  . addr, fasp . size, fasp . size ) == 0 &&
+         ! string_cmp ( oldId -> addr, oldId -> size, http  . addr, fasp . size, fasp . size ) == 0 )
     {   return 0; }
+#else
+    /* is this what was intended? */
+    if ( string_cmp ( oldId -> addr, oldId -> size, https . addr, https. size, https. size ) != 0 &&
+         string_cmp ( oldId -> addr, oldId -> size, fasp  . addr, fasp . size, fasp . size ) != 0 &&
+         string_cmp ( oldId -> addr, oldId -> size, http  . addr, fasp . size, fasp . size ) != 0 )
+    {   return 0; }
+#endif
 
     rc = VPathGetId ( self, & id );
     if ( rc == 0 && id . size == 0 ) {
