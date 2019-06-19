@@ -580,7 +580,7 @@ bool CSRA1_PileupPosition ( CSRA1_Pileup * self, ctx_t ctx )
             if ( entry -> zstart > self -> ref_zpos )
                 break;
 
-PRINT ( ">>> adding alignment at refpos %ld, row-id %ld: %ld-%ld ( zero-based, half-closed )\n",
+PRINT ( ">>> adding alignment at refpos %lld, row-id %lld: %lld-%lld ( zero-based, half-closed )\n",
          self -> ref_zpos, entry -> row_id, entry -> zstart, entry -> xend );
 
             prev = entry;
@@ -704,7 +704,7 @@ PRINT ( ">>> flushed %u columns of temporary cell data\n", num_flushed );
 
         if ( entry -> xend == self -> ref_zpos || entry -> status == pileup_entry_status_DONE )
         {
-PRINT ( ">>> dropping alignment at refpos %ld, row-id %ld: %ld-%ld ( zero-based, half-closed )\n",
+PRINT ( ">>> dropping alignment at refpos %lld, row-id %lld: %lld-%lld ( zero-based, half-closed )\n",
          self -> ref_zpos, entry -> row_id, entry -> zstart, entry -> xend );
 
             DLListUnlink ( & self -> align . pileup, & entry -> node );
