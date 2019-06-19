@@ -27,7 +27,7 @@
 CC = @ $(TOP)/build/cc.sh $(OS) 'clang -c' \
 	 $(CHECKSUM) --objx $(OBJX) --cflags "$(CFLAGS)" -MD
 CP = @ $(TOP)/build/cc.sh $(OS) 'clang++ -c' \
-	 $(CHECKSUM) --objx $(OBJX) --cflags "$(CPFLAGS)" -MD
+	 $(CHECKSUM) --objx $(OBJX) -stdlib=libc++ --cflags "$(CPFLAGS)" -MD
 
 # C preprocessor
 PP = gcc -E $(CFLAGS)
