@@ -40,6 +40,7 @@ extern "C" {
 
 /* forwards
  */
+struct String;
 struct KClientHttpRequest;
 
 /* CloudProvider

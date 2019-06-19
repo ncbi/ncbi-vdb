@@ -789,10 +789,7 @@ static void clean_up_buffer_pool( KQueue * buffer_pool )
  */
 static rc_t CC KCacheTeeFileDestroy( KCacheTeeFile * self )
 {
-#if USE_BUFFER_POOL
     rc_t rc;
-    void * pool_page;
-#endif
     bool already_promoted_by_other_instance = file_exist( self -> dir, self -> local_path );
     
 #if( CACHE_STAT > 0 )
@@ -802,7 +799,7 @@ static rc_t CC KCacheTeeFileDestroy( KCacheTeeFile * self )
     if ( !self -> local_read_only && !already_promoted_by_other_instance )
     {
         bool fully_in_cache;
-        rc_t rc = IsCacheFileComplete ( self -> local, &fully_in_cache );
+        rc = IsCacheFileComplete ( self -> local, &fully_in_cache );
         if ( rc == 0 && fully_in_cache && self -> promote )
         {
             promote_cache( self );

@@ -271,6 +271,7 @@ rc_t KHttpFileTimedReadInt ( const KHttpFile * self,
             bool have_size;
             uint64_t start_pos;
             size_t result_size;
+            uint64_t result_size64;
 
             switch ( * http_status )
             {
@@ -279,7 +280,8 @@ rc_t KHttpFileTimedReadInt ( const KHttpFile * self,
                 proxy_retries = 0;
 
                 /* extract stated bytes returned - must be whole file */
-                have_size = KClientHttpResultSize ( rslt, & result_size );
+                have_size = KClientHttpResultSize ( rslt, & result_size64 );
+                result_size = ( size_t ) result_size64;
                 if ( pos != 0 || ! have_size || result_size > bsize )
                 {
                     rc = RC ( rcNS, rcFile, rcReading, rcData, rcUnexpected );
@@ -915,6 +917,7 @@ rc_t KHttpFileTimedReadChunkedInt ( const KHttpFile * self,
             bool have_size;
             uint64_t start_pos;
             size_t result_size;
+            uint64_t result_size64;
 
             switch ( * http_status )
             {
@@ -923,7 +926,8 @@ rc_t KHttpFileTimedReadChunkedInt ( const KHttpFile * self,
                 proxy_retries = 0;
 
                 /* extract stated bytes returned - must be whole file */
-                have_size = KClientHttpResultSize ( rslt, & result_size );
+                have_size = KClientHttpResultSize ( rslt, & result_size64 );
+                result_size = ( size_t ) result_size64;
                 if ( pos != 0 || ! have_size || result_size > bytes )
                 {
                     rc = RC ( rcNS, rcFile, rcReading, rcData, rcUnexpected );

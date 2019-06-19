@@ -65,8 +65,8 @@ struct Cloud
 #define CLOUD_IMPL struct Cloud
 #endif
 
-typedef struct Cloud_vt Cloud_vt;
-struct Cloud_vt
+typedef struct Cloud_vt_v1 Cloud_vt_v1;
+struct Cloud_vt_v1
 {
     /* version == 1.x */
     uint32_t maj;
@@ -87,9 +87,9 @@ union Cloud_vt
 
 
 /* Init
- *  initialize a newly allocated file object
+ *  initialize a newly allocated cloud object
  */
-KFS_EXTERN rc_t CC CloudInit ( Cloud * self, const Cloud_vt * vt, const char *classname );
+CLOUD_EXTERN rc_t CC CloudInit ( Cloud * self, const Cloud_vt * vt, const char * classname );
 
 
 #ifdef __cplusplus

@@ -38,7 +38,9 @@
 #define BLOCKCIPHER_BYTE_IMPL KAESBlockCipherByte
 #include "blockcipher-impl.h"
 
+#if 0
 static const char KAESByteBlockCipherClassName[] = "KAESCipherByte";
+#endif
 
 static
 void KAESBlockCipherByteDestroy (const KAESBlockCipherByte * self)
