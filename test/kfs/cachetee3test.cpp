@@ -666,6 +666,75 @@ FIXTURE_TEST_CASE( CacheTee3_Read_2, CT3Fixture )
     REQUIRE_RC( KDirectoryRelease( dir ) );
 }
 
+FIXTURE_TEST_CASE( CacheTee3_Read_3, CT3Fixture )
+{
+    KOutMsg( "Test: CacheTee3_Read-3 ( backed by RAM and cache-file )\n" );
+    remove_file ( CACHEFILE );
+    remove_file ( CACHEFILE1 );
+            
+    KDirectory * dir;
+    REQUIRE_RC( KDirectoryNativeDir( &dir ) );
+
+    const KFile * org;
+    REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE ) );
+    
+    const KFile * tee;
+    uint32_t cluster_factor = 0;
+    uint32_t ram_pages = 100;
+    REQUIRE_RC( KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org, BLOCKSIZE,
+                                cluster_factor, ram_pages, false, false,
+                                "%s", CACHEFILE ) );
+
+    uint64_t at = 0;
+    size_t len = 100;
+
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "small read at pos zero, not yet chached" ) );
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "small read at pos zero, now cached" ) );
+    
+    at = 10;
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "small read at pos 10, cached" ) );
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "again, cached" ) );
+    
+    at = 1024L * BLOCKSIZE;
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "small read at block boundary, not yet cached" ) );
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "again, now cached" ) );
+    
+    at = BLOCKSIZE / 2; len = BLOCKSIZE;
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "spans 2 blocks, not yet cached" ) );
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "again, now cached" ) );
+    
+    len = BLOCKSIZE * 5 + 100;
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "spans 5 blocks, partly cached" ) );
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "again, now cached" ) );
+
+    at = 100; len = 1024 * BLOCKSIZE + 500;
+    REQUIRE_RC( compare_file_content_3( org, tee, at, len, "large read crossing block boundary, partly cached" ) );
+
+    at = 200; len = 2048 * BLOCKSIZE;
+    REQUIRE_RC( compare_file_content_3( org, tee, at, len, "very large read, partly cached" ) );
+
+    at = 1024 * BLOCKSIZE * 2 + 10; len = 100;
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "small read after block boundary" ) );
+    at = 1024 * BLOCKSIZE * 2 - 10;
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "small read crossing block boundary" ) );
+
+    at = DATAFILESIZE - 100; len = 300;
+    REQUIRE_RC( compare_file_content_1( org, tee, at, len, "small read crossing EOF" ) );
+    
+    len = BLOCKSIZE * 10;
+    REQUIRE_RC( compare_file_content_1( org, tee, at, len, "large read crossing EOF" ) );
+
+    at = DATAFILESIZE - 10000; len = 10000;
+    REQUIRE_RC( compare_file_content_1( org, tee, at, len, "large read at EOF" ) );
+
+    at = DATAFILESIZE + 100; len = 100;
+    REQUIRE_RC( compare_file_content_1( org, tee, at, len, "beyond EOF" ) );
+
+    REQUIRE_RC( KFileRelease( tee ) );    
+    REQUIRE_RC( KFileRelease( org ) );
+    REQUIRE_RC( KDirectoryRelease( dir ) );
+}
+
 /* ------------------- CacheTee2_Multiple_Users_Multiple_Inst -------------------------------- */
 
 static rc_t cache_access ( CT3Fixture *fixture, int tid, const KFile *origfile,

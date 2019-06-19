@@ -291,8 +291,8 @@ rc_t KCacheTeeFileRAMCacheInsert ( KCacheTeeFile_v3 * self,
             /* 9. clear bit in bitmap if cache file not in use */
             if ( self -> cache_file == NULL )
             {
-                STATUS ( STAT_PRG, "BG: %s - clear page %zu present in bitmap\n", __func__, pg_idx );
-                self -> bitmap [ pg_idx >> BMWORDBITS ] &= ~ ( 1U << ( pg_idx & BMWORDMASK ) );
+                STATUS ( STAT_PRG, "BG: %s - clear page %zu present in bitmap\n", __func__, lmru -> pg_idx );
+                self -> bitmap [ lmru -> pg_idx >> BMWORDBITS ] &= ~ ( 1U << ( lmru -> pg_idx & BMWORDMASK ) );
             }
 
             /* 10. reuse node and insert new guy as MRU */
