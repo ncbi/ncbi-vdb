@@ -117,9 +117,10 @@ static const KWGAEncFileMagic ncbi_crypt_magic = "NeCnBcIo";
  */
 #define KWGA_ENC_FILE_HEADER_RADIX      (33)
 
+#if 0
 static
 const char KWGAEncFileHeaderAlphabet[] = "0123456789abcdefghijklmnopqrstuvwxyz";
-
+#endif
 
 /* ----------------------------------------------------------------------
  * KWGAEncFileHeader is extracted from 

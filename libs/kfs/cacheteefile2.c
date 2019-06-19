@@ -1019,7 +1019,7 @@ typedef struct cache_tee_params
 
 
 static rc_t finish_tee( struct KFile const **tee,
-                        const cache_tee_params const * ctp,
+                        const cache_tee_params * ctp,
                         uint64_t block_count,
                         uint64_t bitmap_bytes,
                         atomic32_t * bitmap )

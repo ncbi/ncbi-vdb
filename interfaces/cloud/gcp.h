@@ -1,4 +1,7 @@
-/*===========================================================================
+#ifndef _h_cloud_gcp_
+#define _h_cloud_gcp_
+
+/*=====================================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
 *               National Center for Biotechnology Information
@@ -20,70 +23,49 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ===========================================================================
-*
-*/
+* ================================================================================== */
 
-#ifndef _h_byteswap_
-#define _h_byteswap_
 
-#ifdef _BYTESWAP_H
-#warning "GNU byteswap.h being used"
-#else
-#define _BYTESWAP_H	1234
+#ifndef _h_cloud_extern_
+#include <cloud/extern.h>
+#endif
 
-#include <stdint.h>
+#ifndef _h_cloud_cloud_
+#include <cloud/cloud.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* perform single instruction byte swap */
-static __inline__ uint16_t bswap_16 ( uint16_t i )
-{
-    uint16_t rtn;
-    __asm__
-    (
-        "rorw $8, %w0"
-        : "=r" ( rtn )
-        : "0" ( i )
-        : "cc"
-    );
-    return rtn;
-}
+/* GCP
+ *  Google Cloud Platform
+ */
+typedef struct GCP GCP;
 
-/* perform single instruction byte swap */
-static __inline__ uint32_t bswap_32 ( uint32_t i )
-{
-    uint32_t rtn;
-    __asm__
-    (
-        "bswap %0"
-        : "=r" ( rtn )
-        : "0" ( i )
-        : "cc"
-    );
-    return rtn;
-}
+/* MakeGCP
+ *  make an instance of a GCP cloud interface
+ */
+CLOUD_EXTERN rc_t CC CloudMgrMakeGCP ( const CloudMgr * self, GCP ** gcp );
 
-/* perform multi-instruction byte swap */
-static __inline__ uint64_t bswap_64 ( uint64_t i )
-{
-    uint64_t rtn;
-    __asm__
-    (
-        "bswap %q0"
-        : "=r" ( rtn )
-        : "0" ( i )
-        : "cc"
-    );
-    return rtn;
-}
+/* AddRef
+ * Release
+ */
+CLOUD_EXTERN rc_t CC GCPAddRef ( const GCP * self );
+CLOUD_EXTERN rc_t CC GCPRelease ( const GCP * self );
+
+/* Cast
+ *  cast from a Cloud to a GCP type or vice versa
+ *  allows us to apply cloud-specific interface to cloud object
+ *
+ *  returns a new reference, meaning the "self" must still be released
+ */
+CLOUD_EXTERN rc_t CC GCPToCloud ( const GCP * self, Cloud ** cloud );
+CLOUD_EXTERN rc_t CC CloudToGCP ( const Cloud * self, GCP ** gcp );
 
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _BYTESWAP_H */
-#endif /* _h_byteswap_ */
+#endif /* _h_cloud_gcp_ */
