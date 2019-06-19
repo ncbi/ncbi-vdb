@@ -22,60 +22,66 @@
 #
 # ===========================================================================
 
+default: all
 
-# default compiler
-ifeq (,$(COMP))
-	COMP = clang
-endif
+TOP ?= $(abspath ../..)
+MODULE = libs/cloud
 
-# architecture
-xARCH = $(shell test -f $(TOP)/build/ARCH.mac && cat $(TOP)/build/ARCH.mac)
-ifneq (,$(xARCH))
+INT_LIBS = \
+	libcloud
 
-  # the user has selected an architecture
-  ifeq (i386,$(xARCH))
-    ARCH = i386
-    BITS = 32
-  endif
-  ifeq (x86_64,$(xARCH))
-    ARCH = x86_64
-    BITS = 64
-  endif
+ALL_LIBS = \
+	$(INT_LIBS)
 
-endif
+OBJFILES = \
+	$(CLOUD_OBJ)
 
-# allow the user to override architecture
-i386 x86_64:
-	@ echo $@ > $(TOP)/build/ARCH.mac
+include $(TOP)/build/Makefile.env
 
-.PHONY: i386 x86_64
+#-------------------------------------------------------------------------------
+# outer targets
+#
+all std: makedirs compile
+	@ $(MAKE_CMD) $(TARGDIR)/std
 
+$(INT_LIBS): makedirs
+	@ $(MAKE_CMD) $(ILIBDIR)/$@
 
-# library prefix
-LPFX = lib
+.PHONY: all std $(ALL_LIBS)
 
-# file extensions
-OBJX = o
-LOBX = pic.o
-LIBX = a
-SHLX = dylib
+#-------------------------------------------------------------------------------
+# std
+#
+$(TARGDIR)/std: \
+	$(addprefix $(ILIBDIR)/,$(INT_LIBS))
 
-# compilation defines
-DEFINES	:= -DMAC -DBSD -DUNIX -D_REENTRANT -D_FILE_OFFSET_BITS=64 -DPKGNAME=mac$(BITS) -D_FORTIFY_SOURCE=0
+.PHONY: $(TARGDIR)/std
 
-# Darwin is a Unix variant
-OS_DAD = bsd
-OS_GDAD = unix
+#-------------------------------------------------------------------------------
+# clean
+#
+clean: stdclean
 
-# minimum deployment os
-MIN_DEPLOY_OS = 10.7
-MIN_DEPLOY_OS_OPT = -mmacosx-version-min=$(MIN_DEPLOY_OS)
+.PHONY: clean
 
-LIBXML_LPATH = /usr/lib
+#-------------------------------------------------------------------------------
+# cloud
+#
+$(ILIBDIR)/libcloud: $(addprefix $(ILIBDIR)/libcloud.,$(ILIBEXT))
 
-# flex+bison: on Mac, use source-controlled generated .c/.h files
-YACC = @ true
-LEX = @ true
+CLOUD_SRC = \
+	cloud-mgr \
+	aws \
+	gcp \
+	cloud
 
-# build matrix
-COMPILERS = CLANG GCC
+CLOUD_OBJ = \
+	$(addsuffix .$(LOBX),$(CLOUD_SRC))
+
+CLOUD_LIB = \
+	-lkns \
+    -lkfs \
+	-dklib
+
+$(ILIBDIR)/libcloud.$(LIBX): $(CLOUD_OBJ)
+	$(LD) --slib -o $@ $^ $(CLOUD_LIB)

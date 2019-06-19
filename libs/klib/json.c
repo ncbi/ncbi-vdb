@@ -62,10 +62,14 @@ static rc_t MakeNameValue ( NameValue ** p_val, const char * p_name, size_t p_na
 {
     rc_t rc;
     NameValue * ret = calloc ( 1, sizeof * ret );
-    if ( ret != NULL )
+    if ( ret == NULL )
+        rc = RC ( rcCont, rcNode, rcAllocating, rcMemory, rcExhausted );
+    else
     {
         ret -> name = malloc ( p_name_size + 1 );
-        if ( ret -> name != NULL )
+        if ( ret -> name == NULL )
+            rc = RC ( rcCont, rcNode, rcAllocating, rcMemory, rcExhausted );
+        else
         {
             rc = CopyAndUnescape ( p_name, p_name_size, ret -> name, p_name_size + 1 );
             if ( rc == 0 )
@@ -75,10 +79,6 @@ static rc_t MakeNameValue ( NameValue ** p_val, const char * p_name, size_t p_na
                 return 0;
             }
             free ( ret -> name );
-        }
-        else
-        {
-            rc = RC ( rcCont, rcNode, rcAllocating, rcMemory, rcExhausted );
         }
         free ( ret );
     }

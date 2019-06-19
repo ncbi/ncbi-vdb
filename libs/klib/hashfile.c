@@ -227,7 +227,7 @@ static void hkv_encode( const HKV * in, u8 * out )
     hkv_decode( out, &test );
     if ( test.hash != in->hash )
     {
-        fprintf( stderr, "hash mismatch %lx %lx\n", test.hash, in->hash );
+        fprintf( stderr, "hash mismatch %llx %llx\n", test.hash, in->hash );
         abort();
     }
     if ( test.key_size != in->key_size )
