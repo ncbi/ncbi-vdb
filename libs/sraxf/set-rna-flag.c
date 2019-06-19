@@ -114,7 +114,7 @@ VTRANSFACT_IMPL ( NCBI_SRA_setRnaFlag, 1, 0, 0 ) ( const void *Self, const VXfac
         rslt->u.rf = set_rna_flag;
         rslt->variant = vftRow;
         rslt->self = meta;
-        rslt->whack = KMetadataRelease;
+        rslt->whack = ( void ( * ) ( void * ) ) & KMetadataRelease;
     }
     return rc;
 }

@@ -24,26 +24,18 @@
 *
 */
 
-#include <kproc/extern.h>
-#include <kproc/procmgr.h>
+#ifndef _h_cloud_extern_
+#define _h_cloud_extern_
 
-#include <pthread.h>
-#include <unistd.h>
+#if ! defined EXPORT_LATCH && defined _LIBRARY
+#define CLOUD_EXTERN LIB_EXPORT
+#define EXPORT_LATCH 1
+#else
+#define CLOUD_EXTERN LIB_IMPORT
+#endif
 
-/* OnMainThread
- *  returns true if running on main thread
- */
-LIB_EXPORT bool CC KProcMgrOnMainThread ( void )
-{
-    return pthread_main_np () != 0;
-}
+#ifndef _h_klib_extern_
+#include <klib/extern.h>
+#endif
 
-uint32_t sys_GetPID ( void )
-{
-    return getpid ();
-}
-
-int sys_GetHostName ( char * buffer, size_t buffer_size )
-{
-    return gethostname( buffer, buffer_size );
-}
+#endif /* _h_cloud_extern_ */
