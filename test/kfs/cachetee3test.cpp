@@ -769,6 +769,8 @@ struct ThreadData
     int tid;
     const KFile *origfile;     // optional
     const KFile *cacheteefile; // optional
+    const char * cache_file;
+    uint32_t ram_pages;
     CT3Fixture *fixture;
 };
 
@@ -787,9 +789,12 @@ static rc_t CC thread_func ( const KThread *self, void *data )
             {
                 const KFile *tee;
                 uint32_t cluster_factor = 2;
-                uint32_t ram_pages = 0;
-                rc = KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org, BLOCKSIZE,
-                            cluster_factor, ram_pages, false, false, "%s", CACHEFILE );
+                if ( td -> cache_file != NULL )
+                    rc = KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org, BLOCKSIZE,
+                            cluster_factor, td -> ram_pages, false, false, "%s", td -> cache_file );
+                else
+                    rc = KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org, BLOCKSIZE,
+                            cluster_factor, td -> ram_pages, false, false, NULL );
                 if ( rc == 0 )
                 {
                     /* make random requests in the range of 100 bytes to DATAFILESIZE / 64 */
@@ -812,9 +817,9 @@ static rc_t CC thread_func ( const KThread *self, void *data )
 
 const int num_threads = 32;
 
-FIXTURE_TEST_CASE ( CacheTee3_Multiple_Users_Multiple_Inst, CT3Fixture )
+FIXTURE_TEST_CASE ( CacheTee3_Multiple_Users_Multiple_Inst_1, CT3Fixture )
 {
-    KOutMsg ( "Test: CacheTee3_Multiple_Users_Multiple_Inst\n" );
+    KOutMsg ( "Test: CacheTee3_Multiple_Users_Multiple_Inst-1 ( cach-file backed )\n" );
     remove_file ( CACHEFILE );
     remove_file ( CACHEFILE1 );
 
@@ -825,6 +830,64 @@ FIXTURE_TEST_CASE ( CacheTee3_Multiple_Users_Multiple_Inst, CT3Fixture )
         td[ i ].tid = i + 1;
         td[ i ].origfile = NULL;
         td[ i ].cacheteefile = NULL;
+        td[ i ].cache_file = CACHEFILE;
+        td[ i ].ram_pages = 0;
+        td[ i ].fixture = this;
+        REQUIRE_RC ( KThreadMake ( &( t[ i ] ), thread_func, &( td[ i ] ) ) );
+    }
+
+    for ( int i = 0; i < num_threads; ++i )
+    {
+        rc_t rc_thread;
+        REQUIRE_RC ( KThreadWait ( t[ i ], &rc_thread ) );
+        REQUIRE_RC ( rc_thread );
+        REQUIRE_RC ( KThreadRelease ( t[ i ] ) );
+    }
+}
+
+FIXTURE_TEST_CASE ( CacheTee3_Multiple_Users_Multiple_Inst_2, CT3Fixture )
+{
+    KOutMsg ( "Test: CacheTee3_Multiple_Users_Multiple_Inst-2 ( RAM backed )\n" );
+    remove_file ( CACHEFILE );
+    remove_file ( CACHEFILE1 );
+
+    KThread *t[ num_threads ];
+    ThreadData td[ num_threads ];
+    for ( int i = 0; i < num_threads; ++i )
+    {
+        td[ i ].tid = i + 1;
+        td[ i ].origfile = NULL;
+        td[ i ].cacheteefile = NULL;
+        td[ i ].cache_file = NULL;
+        td[ i ].ram_pages = 1000;
+        td[ i ].fixture = this;
+        REQUIRE_RC ( KThreadMake ( &( t[ i ] ), thread_func, &( td[ i ] ) ) );
+    }
+
+    for ( int i = 0; i < num_threads; ++i )
+    {
+        rc_t rc_thread;
+        REQUIRE_RC ( KThreadWait ( t[ i ], &rc_thread ) );
+        REQUIRE_RC ( rc_thread );
+        REQUIRE_RC ( KThreadRelease ( t[ i ] ) );
+    }
+}
+
+FIXTURE_TEST_CASE ( CacheTee3_Multiple_Users_Multiple_Inst_3, CT3Fixture )
+{
+    KOutMsg ( "Test: CacheTee3_Multiple_Users_Multiple_Inst-3 ( cach_file and RAM backed )\n" );
+    remove_file ( CACHEFILE );
+    remove_file ( CACHEFILE1 );
+
+    KThread *t[ num_threads ];
+    ThreadData td[ num_threads ];
+    for ( int i = 0; i < num_threads; ++i )
+    {
+        td[ i ].tid = i + 1;
+        td[ i ].origfile = NULL;
+        td[ i ].cacheteefile = NULL;
+        td[ i ].cache_file = CACHEFILE;
+        td[ i ].ram_pages = 1000;
         td[ i ].fixture = this;
         REQUIRE_RC ( KThreadMake ( &( t[ i ] ), thread_func, &( td[ i ] ) ) );
     }
