@@ -1,7 +1,7 @@
-#ifndef _h_libs_klib_cloud_
-#define _h_libs_klib_cloud_
+#ifndef _h_cloud_cloud_priv_
+#define _h_cloud_cloud_priv_
 
-/*==============================================================================
+/*=====================================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
 *               National Center for Biotechnology Information
@@ -23,29 +23,22 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ===========================================================================
-*
-*/
+* ================================================================================== */
 
-#include <kfc/defs.h> /* rc_t */
+#ifndef _h_cloud_cloud_
+#include <cloud/cloud.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct Cloud;
-struct KNSManager;
-
-rc_t KNSManagerMakeCloud(struct KNSManager * self, const struct Cloud ** cloud);
-rc_t CloudReleaseOld(const struct Cloud * self);
-
-/* don't release returned char* */
-const char * CloudGetLocation(const struct Cloud * self);
+/* Force a provider for testing
+ */
+void CC CloudMgrSetProvider ( CloudMgr * mgr, CloudProviderId provider );
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _h_libs_klib_cloud_ */
-
-/******************************************************************************/
+#endif /* _h_cloud_cloud_ */

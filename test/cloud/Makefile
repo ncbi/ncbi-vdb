@@ -22,80 +22,67 @@
 #
 # ===========================================================================
 
-by_default: default
 
-TOP ?= $(abspath ..)
-MODULE = libs
+default: runtests
 
-include $(TOP)/build/Makefile.shell
+TOP ?= $(abspath ../..)
+MODULE = test/cloud
 
-include $(TOP)/build/Makefile.config
+TEST_TOOLS = \
+	test-cloud \
 
-#-------------------------------------------------------------------------------
-# default
-#
-MAIN_SUBDIRS = \
-	ext      \
-	kfc      \
-	klib     \
-	kproc    \
-	kfs      \
-	kns      \
-	kfg      \
-	krypto   \
-	vfs      \
-	kapp     \
-	kdb      \
-	vdb      \
-	vxf      \
-	search   \
-	sraxf    \
-	align    \
-	axf      \
-	wgsxf    \
-	ktst     \
-	loader   \
-	blast    \
-	ascp     \
-	schema   \
-	sra      \
-	ngs      \
-	ngs-c++  \
-	ngs-jni  \
-	ngs-py   \
-	kxml     \
-	hdf5     \
-	diagnose \
-	tui		 \
-	cloud
+include $(TOP)/build/Makefile.env
 
-NCBI_VDB_SUBDIRS =   \
-	$(MAIN_SUBDIRS) \
-	ncbi-vdb
-
-SUBDIRS = \
-	$(NCBI_VDB_SUBDIRS) \
-	vdb-sqlite
-
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
-
-$(SUBDIRS):
-	@ $(MAKE) -C $@
-
-ncbi-vdb: $(MAIN_SUBDIRS)
-
-vdb-sqlite: $(NCBI_VDB_SUBDIRS)
-
-test:
-	@true
-
-.PHONY: default $(SUBDIRS) test
+ALL_TOOLS = \
+	$(INT_TOOLS) \
+	$(EXT_TOOLS)
 
 #-------------------------------------------------------------------------------
-# pass-through
+# outer targets
 #
-out debug profile release GCC ICC VC++:
-	@ $(MAKE) TOP=$(TOP) -f $(TOP)/build/Makefile.env $@
+all std: makedirs
+	@ $(MAKE_CMD) $(TARGDIR)/$@
 
-.PHONY: out debug profile release GCC ICC VC++
+$(ALL_TOOLS): makedirs
+	@ $(MAKE_CMD) $(BINDIR)/$@
+
+.PHONY: all std $(ALL_TOOLS)
+
+#-------------------------------------------------------------------------------
+# all
+#
+$(TARGDIR)/all: \
+	$(addprefix $(BINDIR)/,$(ALL_TOOLS))
+
+.PHONY: $(TARGDIR)/all
+
+#-------------------------------------------------------------------------------
+# std
+#
+$(TARGDIR)/std: \
+	$(addprefix $(BINDIR)/,$(EXT_TOOLS))
+
+$(TEST_TOOLS): makedirs
+	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
+
+clean: stdclean
+
+#----------------------------------------------------------------
+# test-cloud
+#
+CLOUD_SRC = \
+	test-cloud
+
+CLOUD_OBJ = \
+	$(addsuffix .$(OBJX),$(CLOUD_SRC))
+
+CLOUD_LIB = \
+	-skapp \
+    -sncbi-vdb \
+    -sktst \
+
+$(TEST_BINDIR)/test-cloud: $(CLOUD_OBJ)
+	$(LP) --exe -o $@ $^ $(CLOUD_LIB)
+
+cloud: test-kns
+	$(TEST_BINDIR)/test-cloud  #-l=all

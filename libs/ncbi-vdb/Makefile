@@ -95,6 +95,7 @@ VDB_LIB_CMN =    \
 	mbedx509     \
 	mbedtls      \
 	mbedcrypto   \
+	cloud        \
 	kns          \
 	kfg          \
 	krypto       \

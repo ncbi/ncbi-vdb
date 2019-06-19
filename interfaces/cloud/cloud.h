@@ -83,14 +83,13 @@ CLOUD_EXTERN rc_t CC CloudAddComputeEnvironmentTokenForSigner ( const Cloud * se
  */
 CLOUD_EXTERN rc_t CC CloudAddUserPaysCredentials ( const Cloud * self, struct KClientHttpRequest * req );
 
-
-
 /* CloudMgr
  *  singleton object to access cloud-related resources
  */
 typedef struct CloudMgr CloudMgr;
 
 /* Make
+*  Discovers the cloud provider
  */
 CLOUD_EXTERN rc_t CC CloudMgrMake ( CloudMgr ** mgr );
 

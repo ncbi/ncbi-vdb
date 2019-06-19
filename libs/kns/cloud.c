@@ -60,7 +60,7 @@ static bool _KDirectory_FileExists(const KDirectory * self,
     return KDirectoryPathType_v1(self, path) != kptNotFound;
 }
 
-rc_t CloudRelease(const Cloud * cself) {
+rc_t CloudReleaseOld(const Cloud * cself) {
     Cloud * self = (Cloud*)cself;
 
     if (self != NULL) {

@@ -51,6 +51,8 @@ struct GCP
 static
 rc_t CC GCPDestroy ( GCP * self )
 {
+    free ( self );
+    return 0;
 }
 
 /* MakeComputeEnvironmentToken
@@ -59,6 +61,7 @@ rc_t CC GCPDestroy ( GCP * self )
 static
 rc_t CC GCPMakeComputeEnvironmentToken ( const GCP * self, const String ** ce_token )
 {
+    return 0; //TODO
 }
 
 /* AddComputeEnvironmentTokenForSigner
@@ -68,6 +71,7 @@ rc_t CC GCPMakeComputeEnvironmentToken ( const GCP * self, const String ** ce_to
 static
 rc_t CC GCPAddComputeEnvironmentTokenForSigner ( const GCP * self, KClientHttpRequest * req )
 {
+    return 0; //TODO
 }
 
 /* AddUserPaysCredentials
@@ -76,6 +80,7 @@ rc_t CC GCPAddComputeEnvironmentTokenForSigner ( const GCP * self, KClientHttpRe
 static
 rc_t CC GCPAddUserPaysCredentials ( const GCP * self, KClientHttpRequest * req )
 {
+    return 0; //TODO
 }
 
 static Cloud_vt_v1 GCP_vt_v1 =
@@ -91,8 +96,30 @@ static Cloud_vt_v1 GCP_vt_v1 =
 /* MakeGCP
  *  make an instance of an GCP cloud interface
  */
-LIB_EXPORT rc_t CC CloudMgrMakeGCP ( const CloudMgr * self, GCP ** gcp )
+LIB_EXPORT rc_t CC CloudMgrMakeGCP ( const CloudMgr * self, GCP ** p_gcp )
 {
+    rc_t rc;
+//TODO: check self, gcp
+    GCP * gcp = calloc ( 1, sizeof * gcp );
+    if ( gcp == NULL )
+    {
+        rc = RC ( rcNS, rcMgr, rcAllocating, rcMemory, rcExhausted );
+    }
+    else
+    {
+        rc = CloudInit ( & gcp -> dad, ( const Cloud_vt * ) & GCP_vt_v1, "GCP" );
+        if ( rc == 0 )
+        {
+            * p_gcp = gcp;
+        }
+        else
+        {
+            free ( gcp );
+        }
+
+    }
+
+    return rc;
 }
 
 /* AddRef
@@ -119,7 +146,9 @@ LIB_EXPORT rc_t CC GCPToCloud ( const GCP * cself, Cloud ** cloud )
     rc_t rc;
     GCP * self = ( GCP * ) cself;
 
-    if ( cloud == NULL )
+    if ( self == NULL )
+        rc = RC ( rcCloud, rcProvider, rcCasting, rcSelf, rcNull );
+    else if ( cloud == NULL )
         rc = RC ( rcCloud, rcProvider, rcCasting, rcParam, rcNull );
     else
     {
@@ -140,7 +169,9 @@ LIB_EXPORT rc_t CC CloudToGCP ( const Cloud * self, GCP ** gcp )
 {
     rc_t rc;
 
-    if ( gcp == NULL )
+    if ( self == NULL )
+        rc = RC ( rcCloud, rcProvider, rcCasting, rcSelf, rcNull );
+    else if ( gcp == NULL )
         rc = RC ( rcCloud, rcProvider, rcCasting, rcParam, rcNull );
     else
     {

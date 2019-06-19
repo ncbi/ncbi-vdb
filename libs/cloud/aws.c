@@ -51,6 +51,8 @@ struct AWS
 static
 rc_t CC AWSDestroy ( AWS * self )
 {
+    free ( self );
+    return 0;
 }
 
 /* MakeComputeEnvironmentToken
@@ -59,6 +61,7 @@ rc_t CC AWSDestroy ( AWS * self )
 static
 rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_token )
 {
+    return 0; //TODO
 }
 
 /* AddComputeEnvironmentTokenForSigner
@@ -68,6 +71,7 @@ rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_to
 static
 rc_t CC AWSAddComputeEnvironmentTokenForSigner ( const AWS * self, KClientHttpRequest * req )
 {
+    return 0; //TODO
 }
 
 /* AddUserPaysCredentials
@@ -76,6 +80,7 @@ rc_t CC AWSAddComputeEnvironmentTokenForSigner ( const AWS * self, KClientHttpRe
 static
 rc_t CC AWSAddUserPaysCredentials ( const AWS * self, KClientHttpRequest * req )
 {
+    return 0; //TODO
 }
 
 static Cloud_vt_v1 AWS_vt_v1 =
@@ -91,8 +96,30 @@ static Cloud_vt_v1 AWS_vt_v1 =
 /* MakeAWS
  *  make an instance of an AWS cloud interface
  */
-LIB_EXPORT rc_t CC CloudMgrMakeAWS ( const CloudMgr * self, AWS ** aws )
+LIB_EXPORT rc_t CC CloudMgrMakeAWS ( const CloudMgr * self, AWS ** p_aws )
 {
+    rc_t rc;
+//TODO: check self, aws
+    AWS * aws = calloc ( 1, sizeof * aws );
+    if ( aws == NULL )
+    {
+        rc = RC ( rcNS, rcMgr, rcAllocating, rcMemory, rcExhausted );
+    }
+    else
+    {
+        rc = CloudInit ( & aws -> dad, ( const Cloud_vt * ) & AWS_vt_v1, "AWS" );
+        if ( rc == 0 )
+        {
+            * p_aws = aws;
+        }
+        else
+        {
+            free ( aws );
+        }
+
+    }
+
+    return rc;
 }
 
 /* AddRef
@@ -119,7 +146,9 @@ LIB_EXPORT rc_t CC AWSToCloud ( const AWS * cself, Cloud ** cloud )
     rc_t rc;
     AWS * self = ( AWS * ) cself;
 
-    if ( cloud == NULL )
+    if ( self == NULL )
+        rc = RC ( rcCloud, rcProvider, rcCasting, rcSelf, rcNull );
+    else if ( cloud == NULL )
         rc = RC ( rcCloud, rcProvider, rcCasting, rcParam, rcNull );
     else
     {
@@ -140,7 +169,9 @@ LIB_EXPORT rc_t CC CloudToAWS ( const Cloud * self, AWS ** aws )
 {
     rc_t rc;
 
-    if ( aws == NULL )
+    if ( self == NULL )
+        rc = RC ( rcCloud, rcProvider, rcCasting, rcSelf, rcNull );
+    else if ( aws == NULL )
         rc = RC ( rcCloud, rcProvider, rcCasting, rcParam, rcNull );
     else
     {

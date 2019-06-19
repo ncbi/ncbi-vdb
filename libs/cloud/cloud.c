@@ -47,7 +47,7 @@ static rc_t CloudDestroy ( Cloud * self )
     case 1:
         return ( * self -> vt -> v1 . destroy ) ( self );
     }
-        
+
     return RC ( rcCloud, rcProvider, rcAccessing, rcInterface, rcBadVersion );
 }
 
@@ -139,7 +139,7 @@ LIB_EXPORT rc_t CC CloudAddComputeEnvironmentTokenForSigner ( const Cloud * self
         case 1:
             return ( * self -> vt -> v1 . add_cet_to_req ) ( self, req );
         }
-        
+
         rc = RC ( rcCloud, rcProvider, rcAccessing, rcInterface, rcBadVersion );
     }
 
@@ -164,7 +164,7 @@ LIB_EXPORT rc_t CC CloudAddUserPaysCredentials ( const Cloud * self, struct KCli
         case 1:
             return ( * self -> vt -> v1 . add_user_pays_to_req ) ( self, req );
         }
-        
+
         rc = RC ( rcCloud, rcProvider, rcAccessing, rcInterface, rcBadVersion );
     }
 
