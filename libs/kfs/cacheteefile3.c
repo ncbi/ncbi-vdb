@@ -38,6 +38,7 @@ struct KCacheTeeChunkReader;
 #include <klib/debug.h>
 #include <klib/log.h>
 #include <klib/text.h>
+#include <klib/printf.h>
 #include <klib/time.h>
 #include <klib/status.h>
 #include <klib/vector.h>
@@ -505,6 +506,10 @@ rc_t KCacheTeeFileMakeChunkReader ( KCacheTeeFile_v3 * self )
     return rc;
 }
 
+/* decl for functions used for promotion */
+static bool is_bitmap_complete_v3( const KCacheTeeFile_v3 * self );
+static rc_t finalize_v3 ( KCacheTeeFile_v3 * self );
+
 static
 rc_t CC KCacheTeeFileDestroy ( KCacheTeeFile_v3 *self )
 {
@@ -606,8 +611,16 @@ rc_t CC KCacheTeeFileDestroy ( KCacheTeeFile_v3 *self )
     STATUS ( STAT_PRG, "%s - releasing chunked reader\n", __func__ );
     KChunkReaderRelease ( self -> chunks );
 
-    /* ? promote cache_file ? */
-    /* TBD */
+    /* promote cache_file */
+    if ( self -> try_promote_on_close )
+    {
+        STATUS ( STAT_PRG, "%s - try to promote on release\n", __func__ );
+        if ( is_bitmap_complete_v3( self ) )
+        {
+            STATUS ( STAT_PRG, "%s - cache is complete, promotion possible\n", __func__ );
+            finalize_v3( self );
+        }
+    }
 
     /* free bitmap */
     STATUS ( STAT_PRG, "%s - freeing bitmap\n", __func__ );
@@ -617,9 +630,13 @@ rc_t CC KCacheTeeFileDestroy ( KCacheTeeFile_v3 *self )
     STATUS ( STAT_PRG, "%s - releasing cache file\n", __func__ );
     KFileRelease ( self -> cache_file );
 
-    /* ? promote Windows file? */
-    /* TBD */
-
+    /* delete cache file */
+    if ( self -> remove_on_close )
+    {
+        STATUS ( STAT_PRG, "%s - removing cache-file on exit\n", __func__ );        
+        KDirectoryRemove ( self -> dir, false, "%s.cache", self -> path );
+    }
+    
     /* release directory */
     STATUS ( STAT_PRG, "%s - releasing cache file directory\n", __func__ );
     KDirectoryRelease ( self -> dir );
@@ -2175,6 +2192,10 @@ LIB_EXPORT rc_t CC KDirectoryVMakeKCacheTeeFile_v3 ( KDirectory * self,
             else
                 rc = RC ( rcFS, rcFile, rcConstructing, rcFile, rcNoPerm );
         }
+        else if ( try_promote_on_close && remove_on_close )
+        {
+            rc = RC ( rcFS, rcFile, rcConstructing, rcParam, rcInvalid );
+        }
         else
         {
             /* detect case where caller wants no physical cache file */
@@ -2598,11 +2619,30 @@ LIB_EXPORT rc_t CC CacheTee3FileGetCompleteness ( struct KFile const * self,
 
 /* --- perform promotion --- */
 
+/* if the given KFile is not of type KCacheTeeFile_v3, we truncate the file to the size of the source
+   but we cannot rename it, because KFile does not store its path */
 static rc_t finalize_file ( struct KFile * self )
 {
-    return 0;
+    size_t over_all_size;
+    KCacheTeeFileTail tail;
+    rc_t rc = extract_tail( self, &over_all_size, &tail );
+    if ( rc == 0 )
+    {
+        rc = KFileSetSize_v1 ( self, tail . orig_size );
+        if ( rc != 0 )
+        {
+            PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to truncate the cache-file"
+                             , "func=%s"
+                             , __func__
+                      ) );
+        }
+
+    }
+    return rc;
 }
 
+/* if the given KFile is of type KCacheTeeFile_v3, we truncate the file to the size of the source
+   and rename it to the path stored in the struct */
 static rc_t finalize_v3 ( KCacheTeeFile_v3 * self )
 {
     rc_t rc = 0;
@@ -2658,7 +2698,7 @@ static rc_t finalize_v3 ( KCacheTeeFile_v3 * self )
     return rc;
 }
 
-rc_t CC CacheTee3FileFinalize ( struct KFile * self )
+LIB_EXPORT rc_t CC CacheTee3FileFinalize ( struct KFile * self )
 {
     rc_t rc = 0;
     if ( self == NULL )

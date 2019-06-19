@@ -139,6 +139,20 @@ public:
         return rc;
     }
 
+    bool file_exists( const char * filename )
+    {
+        bool res = false;
+        KDirectory *dir;
+        rc_t rc = KDirectoryNativeDir ( &dir );
+        if ( rc == 0 )
+        {
+            uint32_t pt = KDirectoryPathType ( dir, "%s", filename );
+            res = ( pt == kptFile );
+            KDirectoryRelease ( dir );
+        }
+        return res;
+    }
+    
     void report_diff ( uint8_t *b1, uint8_t *b2, size_t n, uint32_t max_diffs )
     {
         size_t i, d;
@@ -343,6 +357,28 @@ public:
         }
         return rc;
     }
+    
+    static rc_t read_whole_file( const KFile * src, size_t block_size )
+    {
+        rc_t rc = 0;
+        uint8_t * buffer = ( uint8_t * )malloc( block_size );
+        if ( buffer == NULL )
+            rc = RC ( rcRuntime, rcBuffer, rcConstructing, rcMemory, rcExhausted );
+        else
+        {
+            uint64_t pos = 0;
+            size_t num_read = 1;
+            while ( rc == 0 && num_read > 0 )
+            {
+                rc = KFileReadAll ( src, pos, buffer, block_size, &num_read );
+                if ( rc == 0 )
+                    pos += num_read;
+            }
+            free( buffer );
+        }
+        return rc;
+    }
+    
 
 }; // CT3Fixture
 
@@ -374,33 +410,15 @@ static rc_t read_partial( const KFile * src, size_t block_size, uint64_t to_read
     }
     return rc;
 }
-
-static rc_t read_all( const KFile * src, size_t block_size )
-{
-    rc_t rc = 0;
-    uint8_t * buffer = ( uint8_t * )malloc( block_size );
-    if ( buffer == NULL )
-        rc = RC ( rcRuntime, rcBuffer, rcConstructing, rcMemory, rcExhausted );
-    else
-    {
-        uint64_t pos = 0;
-        size_t num_read = 1;
-        while ( rc == 0 && num_read > 0 )
-        {
-            rc = KFileReadAll ( src, pos, buffer, block_size, &num_read );
-            if ( rc == 0 )    pos += num_read;
-        }
-        free( buffer );
-    }
-    return rc;
-}
 */
 
 //////////////////////////////////////////// Test-cases
 
-FIXTURE_TEST_CASE( CacheTee3_Basic, CT3Fixture )
+FIXTURE_TEST_CASE( CacheTee3_Basic_1, CT3Fixture )
 {
-    KOutMsg( "Test: CacheTee3_Basic\n" );
+    KOutMsg( "Test: CacheTee3_Basic-1 (cache-file based)\n" );
+    remove_file ( CACHEFILE );
+    remove_file ( CACHEFILE1 );
     
     KDirectory * dir;
     REQUIRE_RC( KDirectoryNativeDir( &dir ) );
@@ -432,7 +450,7 @@ FIXTURE_TEST_CASE( CacheTee3_Basic, CT3Fixture )
     REQUIRE( is_valid );
 
     bool is_complete;
-    REQUIRE_RC( CacheTee3FileIsComplete( cache, &is_complete ) );    
+    REQUIRE_RC( CacheTee3FileIsComplete( cache, &is_complete ) );
     REQUIRE( !is_complete );
 
     REQUIRE( !KFileIsKCacheTeeFile_v3( cache ) );
@@ -453,11 +471,12 @@ FIXTURE_TEST_CASE( CacheTee3_Basic, CT3Fixture )
     REQUIRE_RC( KDirectoryRelease( dir ) );
 }                                 
 
-
-FIXTURE_TEST_CASE( CacheTee3_Read, CT3Fixture )
+FIXTURE_TEST_CASE( CacheTee3_Basic_2, CT3Fixture )
 {
-    KOutMsg( "Test: CacheTee3_Read\n" );
-    
+    KOutMsg( "Test: CacheTee3_Basic-2(no cache-file only RAM)\n" );
+    remove_file ( CACHEFILE );
+    remove_file ( CACHEFILE1 );
+
     KDirectory * dir;
     REQUIRE_RC( KDirectoryNativeDir( &dir ) );
 
@@ -468,8 +487,39 @@ FIXTURE_TEST_CASE( CacheTee3_Read, CT3Fixture )
     uint32_t cluster_factor = 0;
     uint32_t ram_pages = 0;
     REQUIRE_RC( KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org, BLOCKSIZE,
-                                          cluster_factor, ram_pages, false, false,
-                                          "%s", CACHEFILE ) );
+                              cluster_factor, ram_pages, false, false, NULL ) );
+    /* creating a CacheTeeFile_v3 with no file-backing and no RAM, returns the
+       org-file with one additional add-ref, because of that tee is not an CacheTeeFile_v3 */
+    REQUIRE( !KFileIsKCacheTeeFile_v3( tee ) );
+    REQUIRE_RC( KFileRelease( tee ) );
+    
+    ram_pages = 100;
+    REQUIRE_RC( KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org, BLOCKSIZE,
+                              cluster_factor, ram_pages, false, false, NULL ) );
+    REQUIRE( KFileIsKCacheTeeFile_v3( tee ) );
+    REQUIRE_RC( KFileRelease( tee ) );
+
+    REQUIRE_RC( KFileRelease( org ) );    
+    REQUIRE_RC( KDirectoryRelease( dir ) );
+}                                 
+
+FIXTURE_TEST_CASE( CacheTee3_Read_1, CT3Fixture )
+{
+    KOutMsg( "Test: CacheTee3_Read-1 ( backed by file )\n" );
+    remove_file ( CACHEFILE );
+    remove_file ( CACHEFILE1 );
+            
+    KDirectory * dir;
+    REQUIRE_RC( KDirectoryNativeDir( &dir ) );
+
+    const KFile * org;
+    REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE ) );
+    
+    const KFile * tee;
+    uint32_t cluster_factor = 0;
+    uint32_t ram_pages = 0;
+    REQUIRE_RC( KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org, BLOCKSIZE,
+                                cluster_factor, ram_pages, false, false, "%s", CACHEFILE ) );
 
     double percent;
     uint64_t bytes_in_cache;
@@ -542,6 +592,74 @@ FIXTURE_TEST_CASE( CacheTee3_Read, CT3Fixture )
     REQUIRE_RC( compare_file_content_1( org, tee, at, len, "beyond EOF" ) );
     REQUIRE_RC( CacheTee3FileGetCompleteness( tee, &percent, &bytes_in_cache ) );
     KOutMsg ( "\tcache: %f%% = %lu bytes\n", percent, bytes_in_cache );
+
+    REQUIRE_RC( KFileRelease( tee ) );    
+    REQUIRE_RC( KFileRelease( org ) );
+    REQUIRE_RC( KDirectoryRelease( dir ) );
+}
+
+FIXTURE_TEST_CASE( CacheTee3_Read_2, CT3Fixture )
+{
+    KOutMsg( "Test: CacheTee3_Read-2 ( backed by RAM )\n" );
+    remove_file ( CACHEFILE );
+    remove_file ( CACHEFILE1 );
+            
+    KDirectory * dir;
+    REQUIRE_RC( KDirectoryNativeDir( &dir ) );
+
+    const KFile * org;
+    REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE ) );
+    
+    const KFile * tee;
+    uint32_t cluster_factor = 0;
+    uint32_t ram_pages = 100;
+    REQUIRE_RC( KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org, BLOCKSIZE,
+                                cluster_factor, ram_pages, false, false, NULL ) );
+
+    uint64_t at = 0;
+    size_t len = 100;
+
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "small read at pos zero, not yet chached" ) );
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "small read at pos zero, now cached" ) );
+    
+    at = 10;
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "small read at pos 10, cached" ) );
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "again, cached" ) );
+    
+    at = 1024L * BLOCKSIZE;
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "small read at block boundary, not yet cached" ) );
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "again, now cached" ) );
+    
+    at = BLOCKSIZE / 2; len = BLOCKSIZE;
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "spans 2 blocks, not yet cached" ) );
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "again, now cached" ) );
+    
+    len = BLOCKSIZE * 5 + 100;
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "spans 5 blocks, partly cached" ) );
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "again, now cached" ) );
+
+    at = 100; len = 1024 * BLOCKSIZE + 500;
+    REQUIRE_RC( compare_file_content_3( org, tee, at, len, "large read crossing block boundary, partly cached" ) );
+
+    at = 200; len = 2048 * BLOCKSIZE;
+    REQUIRE_RC( compare_file_content_3( org, tee, at, len, "very large read, partly cached" ) );
+
+    at = 1024 * BLOCKSIZE * 2 + 10; len = 100;
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "small read after block boundary" ) );
+    at = 1024 * BLOCKSIZE * 2 - 10;
+    REQUIRE_RC( compare_file_content_2( org, tee, at, len, "small read crossing block boundary" ) );
+
+    at = DATAFILESIZE - 100; len = 300;
+    REQUIRE_RC( compare_file_content_1( org, tee, at, len, "small read crossing EOF" ) );
+    
+    len = BLOCKSIZE * 10;
+    REQUIRE_RC( compare_file_content_1( org, tee, at, len, "large read crossing EOF" ) );
+
+    at = DATAFILESIZE - 10000; len = 10000;
+    REQUIRE_RC( compare_file_content_1( org, tee, at, len, "large read at EOF" ) );
+
+    at = DATAFILESIZE + 100; len = 100;
+    REQUIRE_RC( compare_file_content_1( org, tee, at, len, "beyond EOF" ) );
 
     REQUIRE_RC( KFileRelease( tee ) );    
     REQUIRE_RC( KFileRelease( org ) );
@@ -651,9 +769,12 @@ FIXTURE_TEST_CASE ( CacheTee3_Multiple_Users_Multiple_Inst, CT3Fixture )
     }
 }
 
-#if 0
-TEST_CASE ( CacheTee3_conflict_args )
+FIXTURE_TEST_CASE ( CacheTee3_conflict_args, CT3Fixture )
 {
+    KOutMsg ( "test for conflicting args: try-promote-on-close and remove-on-close \n" );
+    remove_file ( CACHEFILE );
+    remove_file ( CACHEFILE1 );
+    
     KDirectory *dir;
     REQUIRE_RC ( KDirectoryNativeDir ( &dir ) );
 
@@ -666,10 +787,11 @@ TEST_CASE ( CacheTee3_conflict_args )
     REQUIRE_RC_FAIL ( KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org,
         BLOCKSIZE, cluster_factor, ram_pages, true, true, "%s", CACHEFILE ) );
 
-    REQUIRE_RC ( KFileRelease ( tee ) );
-    REQUIRE_RC ( KFileRelease ( org ) );
-    REQUIRE_RC ( KDirectoryRelease ( dir ) );
+    KFileRelease ( tee );
+    KFileRelease ( org );
+    KDirectoryRelease ( dir );
 }
+
 
 FIXTURE_TEST_CASE ( CacheTee3_promotion, CT3Fixture )
 {
@@ -686,18 +808,57 @@ FIXTURE_TEST_CASE ( CacheTee3_promotion, CT3Fixture )
     uint32_t cluster_factor = 2;
     uint32_t ram_pages = 0;
     REQUIRE_RC ( KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org, BLOCKSIZE,
-        cluster_factor, ram_pages, true, false, "%s",   CACHEFILE ) ); // cache.dat
-    for ( size_t i = 0; i != 200; ++i )
-    {
-        rc_t rc = cache_access ( this, 0, i, org, tee );
-        REQUIRE_RC ( rc );
-    }
-    KOutMsg ( "promotion test done\n" );
+        cluster_factor, ram_pages, true, false, "%s", CACHEFILE ) ); // cache.dat
+    REQUIRE_RC ( read_whole_file( tee, 1024 * 1024 ) );
+
+    bool is_complete;
+    REQUIRE_RC( CacheTee3FileIsComplete( tee, &is_complete ) );
+    REQUIRE( is_complete );
+    
+    REQUIRE( file_exists( CACHEFILE1 ) );
+    REQUIRE( !file_exists( CACHEFILE ) );
     KFileRelease ( tee );
+    /* after releasing the tee-file there should be no .cache -file*/
+    REQUIRE( !file_exists( CACHEFILE1 ) );
+    REQUIRE( file_exists( CACHEFILE ) );
+    
     KFileRelease ( org );
     KDirectoryRelease ( dir );
+    KOutMsg ( "promotion test done\n" );    
 }
-#endif
+
+FIXTURE_TEST_CASE ( CacheTee3_delete_on_exit, CT3Fixture )
+{
+    KOutMsg ( "delete-on-exit test\n" );
+    remove_file ( CACHEFILE );
+    remove_file ( CACHEFILE1 );
+
+    KDirectory *dir;
+    REQUIRE_RC ( KDirectoryNativeDir ( &dir ) );
+    KFile *org;
+    REQUIRE_RC ( KDirectoryOpenFileWrite ( dir, &org, true, "%s", DATAFILE ) ); // org.data
+
+    const KFile *tee;
+    uint32_t cluster_factor = 2;
+    uint32_t ram_pages = 0;
+    REQUIRE_RC ( KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org, BLOCKSIZE,
+        cluster_factor, ram_pages, false, true, "%s", CACHEFILE ) ); // cache.dat
+
+    bool is_complete;
+    REQUIRE_RC( CacheTee3FileIsComplete( tee, &is_complete ) );
+    REQUIRE( !is_complete );
+    
+    REQUIRE( file_exists( CACHEFILE1 ) );
+    REQUIRE( !file_exists( CACHEFILE ) );
+    KFileRelease ( tee );
+    /* after releasing the tee-file there should be no .cache -file*/
+    REQUIRE( !file_exists( CACHEFILE1 ) );
+    REQUIRE( !file_exists( CACHEFILE ) );
+    
+    KFileRelease ( org );
+    KDirectoryRelease ( dir );
+    KOutMsg ( "delete-on-exit done\n" );    
+}
 
 //////////////////////////////////////////// Main
 extern "C" {
