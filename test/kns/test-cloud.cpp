@@ -58,7 +58,7 @@ TEST_CASE(TestLocation) {
     else
         cout << "Location: outside of cloud\n";
 
-    REQUIRE_RC(CloudRelease(cloud));
+    REQUIRE_RC(CloudReleaseOld(cloud));
 
     REQUIRE_RC(KNSManagerRelease(mgr));
 }

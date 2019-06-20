@@ -40,6 +40,7 @@ MAIN_SUBDIRS = \
 	klib     \
 	kproc    \
 	kfs      \
+	cloud    \
 	kns      \
 	kfg      \
 	krypto   \
@@ -67,7 +68,6 @@ MAIN_SUBDIRS = \
 	hdf5     \
 	diagnose \
 	tui		 \
-	cloud
 
 NCBI_VDB_SUBDIRS =   \
 	$(MAIN_SUBDIRS) \

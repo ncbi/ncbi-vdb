@@ -121,8 +121,8 @@ LIB_EXPORT rc_t CC CloudMgrMake ( CloudMgr ** mgrp )
                 }
                 else
                 {
-                    /*TODO: this code will need to discover where we are operating */
-                    our_mgr -> cur = cloud_provider_none;
+                    /* Set as invalid. We will discover where we are operating in the next call to CloudMgrCurrentProvider */
+                    our_mgr -> cur = cloud_num_providers;
 
                     * mgrp = our_mgr;
                 }
@@ -131,14 +131,6 @@ LIB_EXPORT rc_t CC CloudMgrMake ( CloudMgr ** mgrp )
     }
 
     return rc;
-}
-
-/* Force a provider for testing
- */
-void CC CloudMgrSetProvider ( CloudMgr * mgr, CloudProviderId provider )
-{
-    assert ( mgr != NULL );
-    mgr -> cur = provider;
 }
 
 /* AddRef
@@ -179,12 +171,150 @@ LIB_EXPORT rc_t CC CloudMgrRelease ( const CloudMgr * self )
     return 0;
 }
 
+/* Force a provider for testing
+ */
+void CC CloudMgrSetProvider ( CloudMgr * mgr, CloudProviderId provider )
+{
+    assert ( mgr != NULL );
+    mgr -> cur = provider;
+}
+#if 0
+#define GS "http://metadata.google.internal/computeMetadata/v1/instance/zone"
+#define S3 "http://169.254.169.254/latest/meta-data/placement/availability-zone"
+
+static
+rc_t
+_KNSManager_Read( struct KNSManager * self, bool gs, char * location, size_t locationSize )
+{
+    rc_t rc = 0;
+
+    const char * url = gs ? GS : S3;
+
+    KClientHttpRequest *req = NULL;
+
+    /* save existing timeouts */
+    int32_t cmsec = self -> conn_timeout;
+    int32_t wmsec = self -> http_write_timeout;
+
+    int32_t timeout = 1; /* milliseconds */
+
+    /* minimize timeouts to check cloudy URLs */
+    self->conn_timeout = self->http_write_timeout = timeout;
+
+    rc = KNSManagerMakeClientRequest(self, &req, 0x01010000, NULL, url);
+
+    if (rc == 0) {
+        if (gs)
+            rc = KClientHttpRequestAddHeader(req, "Metadata-Flavor", "Google");
+
+        if (rc == 0) {
+            KClientHttpResult * rslt = NULL;
+            rc = KClientHttpRequestGET(req, &rslt);
+
+            /* restore timeouts in KNSManager; may be not needed here */
+            self->conn_timeout = cmsec;
+            self->http_write_timeout=wmsec;
+
+            if (rc == 0) {
+                KStream * s = NULL;
+                rc = KClientHttpResultGetInputStream(rslt, &s);
+                if (rc == 0) {
+                    size_t num_read = 0;
+                    rc = KStreamRead(s, location, locationSize, &num_read);
+                    if (rc == 0)
+                    {
+                        if ( num_read == locationSize )
+                            --num_read;
+                        buffer[num_read++] = '\0';
+                    }
+                }
+                RELEASE(KStream, s);
+            }
+            RELEASE(KClientHttpResult, rslt);
+        }
+    }
+
+    RELEASE(KClientHttpRequest, req);
+
+    /* restore timeouts in KNSManager */
+    self->conn_timeout = cmsec;
+    self->http_write_timeout = wmsec;
+
+    return rc;
+}
+
+static
+rc_t
+CloudMgrSetProvider ( CloudMgr * self )
+{
+    KDirectory * dir;
+    rc_t rc = KDirectoryNativeDir(&dir);
+    if (rc == 0)
+    {
+        KNSManager * kns; //TODO: init
+        bool gcsFirst = true;
+        char location[99] = "";
+
+        bool log = KNSManagerLogNcbiVdbNetError(kns);
+
+        if (_KDirectory_FileExists(dir, "/usr/bin/gcloud"))
+        {
+            gcsFirst = true;
+        }
+        else if (_KDirectory_FileExists(dir, "/usr/bin/ec2-metadata"))
+        {
+            gcsFirst = false;
+        }
+
+        RELEASE(KDirectory, dir);
+
+        if (log)
+            KNSManagerSetLogNcbiVdbNetError(kns, false);
+
+        rc = _KNSManager_Read ( kns, gcsFirst, location, sizeof location );
+        if ( rc == 0 )
+        {
+            self -> cur = gcsFirst ? cloud_provider_gcp : cloud_provider_aws;
+            //TODO: copy location to self
+        }
+        else
+        {
+            rc = _KNSManager_Read ( kns, ! gcsFirst, location, sizeof location );
+            if ( rc == 0 )
+            {
+                self -> cur = gcsFirst ? cloud_provider_aws : cloud_provider_gcp;
+                //TODO: copy location to self
+            }
+            else
+            {
+                rc = 0;
+                self -> cur = cloud_provider_none;
+            }
+        }
+
+        if (log)
+            KNSManagerSetLogNcbiVdbNetError(kns, true);
+    }
+
+    return rc;
+}
+#endif
+
+static
+rc_t DiscoverCloudProvider( CloudMgr * self )
+{
+    //TODO
+    self -> cur = cloud_provider_none;
+    return 0;
+}
+
 /* CurrentProvider
  *  ask whether we are currently executing within a cloud
  */
-LIB_EXPORT rc_t CC CloudMgrCurrentProvider ( const CloudMgr * self, CloudProviderId * cloud_provider )
+LIB_EXPORT rc_t CC CloudMgrCurrentProvider ( const CloudMgr * cself, CloudProviderId * cloud_provider )
 {
     rc_t rc;
+    CloudMgr * self = (CloudMgr *) cself;
 
     if ( cloud_provider == NULL )
         rc = RC ( rcCloud, rcMgr, rcAccessing, rcParam, rcNull );
@@ -194,6 +324,11 @@ LIB_EXPORT rc_t CC CloudMgrCurrentProvider ( const CloudMgr * self, CloudProvide
             rc = RC ( rcCloud, rcMgr, rcAccessing, rcSelf, rcNull );
         else
         {
+            if ( self -> cur == cloud_num_providers )
+            {
+                rc = DiscoverCloudProvider ( self );
+            }
+
             * cloud_provider = self -> cur;
             return 0;
         }
@@ -209,7 +344,7 @@ LIB_EXPORT rc_t CC CloudMgrCurrentProvider ( const CloudMgr * self, CloudProvide
  */
 LIB_EXPORT rc_t CC CloudMgrMakeCloud ( const CloudMgr * self, Cloud ** cloud, CloudProviderId cloud_provider )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     if ( cloud == NULL )
         rc = RC ( rcCloud, rcMgr, rcAllocating, rcParam, rcNull );

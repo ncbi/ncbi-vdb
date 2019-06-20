@@ -29,6 +29,10 @@
 #include <cloud/cloud.h>
 #endif
 
+#ifndef _h_cloud_impl_
+#include <cloud/impl.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -36,6 +40,17 @@ extern "C" {
 /* Force a provider for testing
  */
 void CC CloudMgrSetProvider ( CloudMgr * mgr, CloudProviderId provider );
+
+/*--------------------------------------------------------------------------
+ * GCP
+ */
+struct GCP
+{
+    Cloud dad;
+
+    char * privateKey;
+    char * client_email;
+};
 
 #ifdef __cplusplus
 }

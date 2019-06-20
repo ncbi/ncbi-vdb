@@ -114,14 +114,16 @@ static rc_t CloudMake(const Cloud ** self,
     if (rc == 0)
         *self = p;
     else
-        CloudRelease(p);
+        CloudReleaseOld(p);
 
     return rc;
 }
 
+//TODO: remove
 #define GS "http://metadata.google.internal/computeMetadata/v1/instance/zone"
 #define S3 "http://169.254.169.254/latest/meta-data/placement/availability-zone"
 
+//TODO: remove (now done in libs/cloud)
 static rc_t _KNSManager_Read(struct KNSManager * self,
     bool gs, const Cloud ** cloud)
 {
@@ -188,6 +190,8 @@ static rc_t _KNSManager_Read(struct KNSManager * self,
 rc_t KNSManagerMakeCloud(struct KNSManager * self,
     const Cloud ** cloud)
 {
+    //KNSTODO: replace with a call to CloudMgrMake() followed by CloudMgrMakeCurrentCloud()
+
     KDirectory * dir = NULL;
 
     rc_t rc = KDirectoryNativeDir(&dir);

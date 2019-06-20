@@ -3611,7 +3611,7 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
     }
 
     CONST_STRING ( &user_agent_string, "User-Agent" );
-    CONST_STRING(&accept_string, "Accept");
+    CONST_STRING ( &accept_string, "Accept" );
 
 #if OLD_AWS_CODE
     rc = KClientHttpRequestAuthenticate(self, method,

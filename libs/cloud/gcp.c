@@ -29,6 +29,7 @@ struct GCP;
 
 #include <cloud/extern.h>
 #include <cloud/impl.h>
+
 #include <cloud/gcp.h>
 
 #include <klib/rc.h>
@@ -38,13 +39,7 @@ struct GCP;
 
 #include <assert.h>
 
-/*--------------------------------------------------------------------------
- * GCP
- */
-struct GCP
-{
-    Cloud dad;
-};
+#include "cloud-priv.h"
 
 /* Destroy
  */

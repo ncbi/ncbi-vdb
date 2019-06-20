@@ -147,7 +147,7 @@ FIXTURE_TEST_CASE(MgrCurrentProvider_MakeCurrentCloud, CloudMgrFixture)
     REQUIRE_NOT_NULL ( aws );
     REQUIRE_RC ( AWSRelease ( aws ) );
 }
-
+#if 0
 //////////////////////////////////////////// AWS
 
 FIXTURE_TEST_CASE(AWS_Make, CloudMgrFixture)
@@ -221,14 +221,8 @@ FIXTURE_TEST_CASE(AWS_ToCloud, AwsFixture)
 // CLOUD_EXTERN rc_t CC CloudMakeComputeEnvironmentToken ( const Cloud * self, struct String const ** ce_token );
 // CLOUD_EXTERN rc_t CC CloudAddComputeEnvironmentTokenForSigner ( const Cloud * self, struct KClientHttpRequest * req );
 // CLOUD_EXTERN rc_t CC CloudAddUserPaysCredentials ( const Cloud * self, struct KClientHttpRequest * req );
-
+#endif
 //////////////////////////////////////////// GCP
-
-FIXTURE_TEST_CASE(GCP_Make, CloudMgrFixture)
-{
-    REQUIRE_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_gcp ) );
-    REQUIRE_NOT_NULL ( m_cloud );
-}
 
 class GcpFixture : public CloudMgrFixture
 {
@@ -236,8 +230,6 @@ public:
     GcpFixture()
     : m_gcp ( nullptr )
     {
-        THROW_ON_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_gcp ) );
-        THROW_ON_FALSE ( nullptr != m_cloud );
     }
     ~GcpFixture()
     {
@@ -247,8 +239,24 @@ public:
         }
     }
 
+    void MakeGCP()
+    {
+        CloudMgrSetProvider( m_mgr, cloud_provider_gcp );
+        THROW_ON_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_gcp ) );
+        THROW_ON_FALSE ( nullptr != m_cloud );
+        THROW_ON_RC ( CloudToGCP ( m_cloud, & m_gcp ) );
+        THROW_ON_FALSE ( nullptr != m_gcp );
+    }
+
     GCP * m_gcp;
 };
+
+FIXTURE_TEST_CASE(GCP_Make, GcpFixture)
+{
+    CloudMgrSetProvider( m_mgr, cloud_provider_gcp );
+    REQUIRE_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_gcp ) );
+    REQUIRE_NOT_NULL ( m_cloud );
+}
 
 FIXTURE_TEST_CASE(GCP_CloudToGcp_NullSelf, GcpFixture)
 {
@@ -260,12 +268,13 @@ FIXTURE_TEST_CASE(GCP_CloudToGcp_NullParam, GcpFixture)
 }
 FIXTURE_TEST_CASE(GCP_CloudToGcp, GcpFixture)
 {
+    MakeGCP();
     REQUIRE_RC ( CloudToGCP ( m_cloud, & m_gcp ) );
     REQUIRE_NOT_NULL ( m_gcp );
 }
 FIXTURE_TEST_CASE(GCP_CloudToGcp_Fail, GcpFixture)
 {
-    CloudMgrSetProvider( m_mgr, cloud_provider_aws );
+    CloudMgrSetProvider( m_mgr, cloud_provider_aws ); // wrong cloud
     REQUIRE_RC ( CloudRelease ( m_cloud ) );
     REQUIRE_RC ( CloudMgrMakeCurrentCloud ( m_mgr, & m_cloud ) );
 
@@ -279,17 +288,41 @@ FIXTURE_TEST_CASE(GCP_ToCloud_NullSelf, GcpFixture)
 }
 FIXTURE_TEST_CASE(GCP_ToCloud_NullParam, GcpFixture)
 {
-    REQUIRE_RC ( CloudToGCP ( m_cloud, & m_gcp ) );
+    MakeGCP();
     REQUIRE_RC_FAIL ( GCPToCloud ( m_gcp, NULL ) );
 }
 FIXTURE_TEST_CASE(GCP_ToCloud, GcpFixture)
 {
-    REQUIRE_RC ( CloudToGCP ( m_cloud, & m_gcp ) );
+    MakeGCP();
 
     Cloud * cloud;
     REQUIRE_RC ( GCPToCloud ( m_gcp, & cloud ) );
     REQUIRE_NOT_NULL ( m_gcp );
     REQUIRE_RC ( CloudRelease ( cloud ) );
+}
+
+FIXTURE_TEST_CASE(GCP_Credentials_Blank, GcpFixture)
+{
+    // block cloud discovery to make sure the credentials are left blank
+    setenv ( "GOOGLE_APPLICATION_CREDENTIALS", "0", 1 );
+    MakeGCP();
+
+    REQUIRE_NULL ( m_gcp -> privateKey );
+    REQUIRE_NULL ( m_gcp -> client_email );
+}
+
+FIXTURE_TEST_CASE(GCP_Credentials, GcpFixture)
+{
+    setenv ( "GOOGLE_APPLICATION_CREDENTIALS", "cloud-kfg/gcp_service.json", 1 );
+    MakeGCP();
+
+    REQUIRE_NOT_NULL ( m_gcp -> privateKey );
+    REQUIRE_NOT_NULL ( m_gcp -> client_email );
+
+    const string private_key = "-----BEGIN NOTPRIVATE KEY";
+    const string client_email = "ncbivdb-compute@developer.gserviceaccount.com";
+    REQUIRE_EQ ( private_key, string ( m_gcp -> privateKey ) . substr ( 0, private_key . size () ) );
+    REQUIRE_EQ ( client_email, string ( m_gcp -> client_email ) );
 }
 
 // CLOUD_EXTERN rc_t CC CloudMakeComputeEnvironmentToken ( const Cloud * self, struct String const ** ce_token );
