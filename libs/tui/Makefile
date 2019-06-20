@@ -85,6 +85,7 @@ TUI_SRC = \
 	tui_widget \
 	tui_widget_label \
 	tui_widget_button \
+	tui_widget_tabhdr \
 	tui_widget_checkbox \
 	tui_widget_inputline \
 	tui_widget_radiobox \

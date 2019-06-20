@@ -40,9 +40,8 @@
 #include <stdlib.h>
 
 /* this is the generic - not platform specific code of KTUI */
-#if 0
+
 static const char tuimanager_classname [] = "TUIManager";
-#endif
 static const char tui_classname [] = "TUI_Implementation";
 
 LIB_EXPORT rc_t CC KTUIMake ( const KTUIMgr * mgr, struct KTUI ** self, uint32_t timeout )
