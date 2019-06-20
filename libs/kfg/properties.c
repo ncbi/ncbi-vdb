@@ -888,3 +888,39 @@ KConfig_Set_Aws_Profile( KConfig *self, const char * value )
     return KConfig_Set_Repository_String( self, value, AWS_PROFILE );
 }
 
+#define CACHE_AMOUNT "/libs/cache_amount"
+LIB_EXPORT rc_t CC KConfig_Get_Cache_Amount ( const KConfig *self, uint32_t * value )
+{
+    rc_t rc;
+    if ( self == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    else if ( value == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcParam, rcNull );
+    else
+    {
+        uint64_t long_value = 0;
+        rc = KConfigReadU64 ( self, CACHE_AMOUNT, &long_value );
+        if ( rc == 0 || GetRCState ( rc ) == rcNotFound )
+        {
+            * value = long_value & 0xFFFFFFFF;
+            rc = 0;
+        }
+    }
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KConfig_Set_Cache_Amount( KConfig *self, uint32_t value )
+{
+    rc_t rc;
+    if ( self == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    else
+    {
+        char buff[ 128 ];
+        size_t num_writ;
+        rc = string_printf ( buff, sizeof buff, &num_writ, "%u", value );
+        if ( rc == 0 )
+            rc = KConfigWriteString( self, CACHE_AMOUNT, buff );
+    }
+    return rc;
+}
