@@ -35,17 +35,24 @@ struct GCP;
 #include <klib/rc.h>
 #include <klib/status.h>
 #include <klib/text.h>
+#include <klib/json.h>
 #include <kns/http.h>
+#include <kfs/directory.h>
+#include <kfs/file.h>
 
 #include <assert.h>
 
 #include "cloud-priv.h"
+
+static rc_t PopulateCredentials ( GCP * self );
 
 /* Destroy
  */
 static
 rc_t CC GCPDestroy ( GCP * self )
 {
+    free ( self ->privateKey );
+    free ( self -> client_email );
     free ( self );
     return 0;
 }
@@ -105,7 +112,15 @@ LIB_EXPORT rc_t CC CloudMgrMakeGCP ( const CloudMgr * self, GCP ** p_gcp )
         rc = CloudInit ( & gcp -> dad, ( const Cloud_vt * ) & GCP_vt_v1, "GCP" );
         if ( rc == 0 )
         {
-            * p_gcp = gcp;
+            rc = PopulateCredentials( gcp );
+            if ( rc == 0 )
+            {
+                * p_gcp = gcp;
+            }
+            else
+            {
+                CloudRelease( & gcp -> dad );
+            }
         }
         else
         {
@@ -190,27 +205,13 @@ LIB_EXPORT rc_t CC CloudToGCP ( const Cloud * self, GCP ** gcp )
     return rc;
 }
 
-#if 0
-static rc_t gcp_KConfigNodeUpdateChild (
-    KConfigNode *self, String *name, String *value )
-{
-    KConfigNode *child;
-
-    rc_t rc = KConfigNodeOpenNodeUpdate ( self, &child, "%S", name );
-    if ( rc == 0 ) {
-        rc = KConfigNodeWrite ( child, value->addr, value->size );
-        KConfigNodeRelease ( child );
-    }
-
-    return rc;
-}
-
-KFG_EXTERN rc_t CC add_gcp_nodes ( KConfig *self )
+static
+rc_t PopulateCredentials ( GCP * self )
 {
     rc_t rc = 0;
 
     const char *pathToJsonFile = getenv ( "GOOGLE_APPLICATION_CREDENTIALS" );
-    if ( pathToJsonFile == NULL ) return 0;
+    if ( pathToJsonFile == NULL || *pathToJsonFile == 0 ) return 0;
 
     KDirectory *dir = NULL;
     rc = KDirectoryNativeDir ( &dir );
@@ -264,11 +265,6 @@ KFG_EXTERN rc_t CC add_gcp_nodes ( KConfig *self )
         ++i;
     }
 
-    /* Build config node */
-    KConfigNode *gcp_node = NULL;
-    rc = KConfigOpenNodeUpdate ( self, &gcp_node, "gcp", NULL );
-    if ( rc ) return rc;
-
     const KJsonValue *v = NULL;
     const char *val = NULL;
 
@@ -284,11 +280,7 @@ KFG_EXTERN rc_t CC add_gcp_nodes ( KConfig *self )
     rc = KJsonGetString ( v, &val );
     if ( rc ) return rc;
 
-    String value;
-    StringInitCString ( &value, val );
-    rc = gcp_KConfigNodeUpdateChild ( gcp_node, &private_key, &value );
-    if ( rc ) return rc;
-
+    self -> privateKey = string_dup( val, string_size( val ) );
 
     String client_email;
     CONST_STRING ( &client_email, "client_email" );
@@ -302,13 +294,10 @@ KFG_EXTERN rc_t CC add_gcp_nodes ( KConfig *self )
 
     rc = KJsonGetString ( v, &val );
     if ( rc ) return rc;
-    StringInitCString ( &value, val );
-    rc = gcp_KConfigNodeUpdateChild ( gcp_node, &client_email, &value );
-    if ( rc ) return rc;
+
+    self -> client_email = string_dup( val, string_size( val ) );
 
     KJsonValueWhack ( root );
-    KConfigNodeRelease ( gcp_node );
+
     return 0;
 }
-
-#endif

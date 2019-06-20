@@ -147,14 +147,8 @@ FIXTURE_TEST_CASE(MgrCurrentProvider_MakeCurrentCloud, CloudMgrFixture)
     REQUIRE_NOT_NULL ( aws );
     REQUIRE_RC ( AWSRelease ( aws ) );
 }
-#if 0
-//////////////////////////////////////////// AWS
 
-FIXTURE_TEST_CASE(AWS_Make, CloudMgrFixture)
-{
-    REQUIRE_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_aws ) );
-    REQUIRE_NOT_NULL ( m_cloud );
-}
+//////////////////////////////////////////// AWS
 
 class AwsFixture : public CloudMgrFixture
 {
@@ -162,8 +156,12 @@ public:
     AwsFixture()
     : m_aws ( nullptr )
     {
-        THROW_ON_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_aws ) );
-        THROW_ON_FALSE ( nullptr != m_cloud );
+        unsetenv ( "AWS_ACCESS_KEY_ID" );
+        unsetenv ( "AWS_SECRET_ACCESS_KEY" );
+        unsetenv ( "AWS_PROFILE" );
+        unsetenv ( "AWS_CONFIG_FILE" );
+        unsetenv ( "AWS_SHARED_CREDENTIAL_FILE" );
+        unsetenv ( "VDB_CONFIG" );
     }
     ~AwsFixture()
     {
@@ -173,8 +171,35 @@ public:
         }
     }
 
+    void CheckKeys ( const char * key, const char * secret_key )
+    {
+        MakeAWS();
+
+        THROW_ON_FALSE ( m_aws -> access_key_id != NULL );
+        THROW_ON_FALSE ( m_aws -> secret_access_key != NULL );
+
+        THROW_ON_FALSE ( string ( key ) == string ( m_aws -> access_key_id ) );
+        THROW_ON_FALSE ( string ( secret_key ) == string ( m_aws -> secret_access_key ) );
+    }
+
+    void MakeAWS()
+    {
+        CloudMgrSetProvider( m_mgr, cloud_provider_aws );
+        THROW_ON_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_aws ) );
+        THROW_ON_FALSE ( nullptr != m_cloud );
+        THROW_ON_RC ( CloudToAWS ( m_cloud, & m_aws ) );
+        THROW_ON_FALSE ( nullptr != m_aws );
+    }
+
     AWS * m_aws;
 };
+
+FIXTURE_TEST_CASE(AWS_Make, CloudMgrFixture)
+{
+    CloudMgrSetProvider( m_mgr, cloud_provider_aws );
+    REQUIRE_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_aws ) );
+    REQUIRE_NOT_NULL ( m_cloud );
+}
 
 FIXTURE_TEST_CASE(AWS_CloudToAws_NullSelf, AwsFixture)
 {
@@ -186,6 +211,9 @@ FIXTURE_TEST_CASE(AWS_CloudToAws_NullParam, AwsFixture)
 }
 FIXTURE_TEST_CASE(AWS_CloudToAws, AwsFixture)
 {
+    CloudMgrSetProvider( m_mgr, cloud_provider_aws );
+    REQUIRE_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_aws ) );
+    REQUIRE_NOT_NULL ( m_cloud );
     REQUIRE_RC ( CloudToAWS ( m_cloud, & m_aws ) );
     REQUIRE_NOT_NULL ( m_aws );
 }
@@ -205,12 +233,12 @@ FIXTURE_TEST_CASE(AWS_ToCloud_NullSelf, AwsFixture)
 }
 FIXTURE_TEST_CASE(AWS_ToCloud_NullParam, AwsFixture)
 {
-    REQUIRE_RC ( CloudToAWS ( m_cloud, & m_aws ) );
+    MakeAWS();
     REQUIRE_RC_FAIL ( AWSToCloud ( m_aws, NULL ) );
 }
 FIXTURE_TEST_CASE(AWS_ToCloud, AwsFixture)
 {
-    REQUIRE_RC ( CloudToAWS ( m_cloud, & m_aws ) );
+    MakeAWS();
 
     Cloud * cloud;
     REQUIRE_RC ( AWSToCloud ( m_aws, & cloud ) );
@@ -218,10 +246,73 @@ FIXTURE_TEST_CASE(AWS_ToCloud, AwsFixture)
     REQUIRE_RC ( CloudRelease ( cloud ) );
 }
 
+FIXTURE_TEST_CASE(AWS_Credentials_Blank, AwsFixture)
+{
+    // block cloud discovery to make sure the credentials are left blank
+    MakeAWS();
+
+    REQUIRE_NULL ( m_aws -> access_key_id );
+    REQUIRE_NULL ( m_aws -> secret_access_key );
+}
+
+FIXTURE_TEST_CASE(AWS_Credentials_Env, AwsFixture)
+{
+    const char *test_key = "ABCDEFH";
+    const char *test_secret = "SECRETSECRET";
+
+    setenv ( "AWS_ACCESS_KEY_ID", test_key, 1 );
+    setenv ( "AWS_SECRET_ACCESS_KEY", test_secret, 1 );
+
+    CheckKeys( test_key, test_secret );
+}
+
+FIXTURE_TEST_CASE(AWS_Credentials_AwsConfigFile_DefaultProfile, AwsFixture)
+{
+    setenv ( "AWS_CONFIG_FILE", "cloud-kfg/aws_other_config", 1 );
+
+    CheckKeys( "ABC123", "SECRET" );
+}
+
+FIXTURE_TEST_CASE(AWS_Credentials_AwsConfigFile_ProfileFromEnv, AwsFixture)
+{
+    setenv ( "AWS_PROFILE", "other_profile", 1 );
+    setenv ( "AWS_CONFIG_FILE", "cloud-kfg/aws_other_config", 1 );
+
+    CheckKeys( "ABC123_OTHER", "SECRET_OTHER" );
+}
+
+FIXTURE_TEST_CASE(AWS_Credentials_AwsConfigFile_ProfileFromKfg, AwsFixture)
+{
+    setenv ( "VDB_CONFIG", "cloud-kfg/aws.kfg", 1 );
+    setenv ( "AWS_CONFIG_FILE", "cloud-kfg/aws_other_config", 1 );
+
+    CheckKeys( "ABC123_OTHER", "SECRET_OTHER" );
+}
+
+FIXTURE_TEST_CASE(AWS_Credentials_AwsConfigFile_ProfileFromKfg_IsEmpty, AwsFixture)
+{
+    setenv ( "VDB_CONFIG", "cloud-kfg/empty", 1 );
+    setenv ( "AWS_CONFIG_FILE", "cloud-kfg/aws_other_config", 1 );
+
+    CheckKeys( "ABC123", "SECRET" );
+}
+
+FIXTURE_TEST_CASE(AWS_Credentials_AwsSharedCredentialFile, AwsFixture)
+{
+    setenv ( "AWS_SHARED_CREDENTIAL_FILE", "cloud-kfg/aws_other_config", 1 );
+    setenv ( "AWS_PROFILE", "other_profile", 1 );
+
+    CheckKeys( "ABC123_OTHER", "SECRET_OTHER" );
+}
+
+//TODO: keys in $HOME/.aws/credentials
+//TODO: keys in $HOME/.aws/config
+//TODO: add region, output
+
 // CLOUD_EXTERN rc_t CC CloudMakeComputeEnvironmentToken ( const Cloud * self, struct String const ** ce_token );
 // CLOUD_EXTERN rc_t CC CloudAddComputeEnvironmentTokenForSigner ( const Cloud * self, struct KClientHttpRequest * req );
 // CLOUD_EXTERN rc_t CC CloudAddUserPaysCredentials ( const Cloud * self, struct KClientHttpRequest * req );
-#endif
+
 //////////////////////////////////////////// GCP
 
 class GcpFixture : public CloudMgrFixture
@@ -268,7 +359,9 @@ FIXTURE_TEST_CASE(GCP_CloudToGcp_NullParam, GcpFixture)
 }
 FIXTURE_TEST_CASE(GCP_CloudToGcp, GcpFixture)
 {
-    MakeGCP();
+    CloudMgrSetProvider( m_mgr, cloud_provider_gcp );
+    REQUIRE_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_gcp ) );
+    REQUIRE_NOT_NULL ( m_cloud );
     REQUIRE_RC ( CloudToGCP ( m_cloud, & m_gcp ) );
     REQUIRE_NOT_NULL ( m_gcp );
 }
@@ -304,7 +397,7 @@ FIXTURE_TEST_CASE(GCP_ToCloud, GcpFixture)
 FIXTURE_TEST_CASE(GCP_Credentials_Blank, GcpFixture)
 {
     // block cloud discovery to make sure the credentials are left blank
-    setenv ( "GOOGLE_APPLICATION_CREDENTIALS", "0", 1 );
+    unsetenv ( "GOOGLE_APPLICATION_CREDENTIALS" );
     MakeGCP();
 
     REQUIRE_NULL ( m_gcp -> privateKey );

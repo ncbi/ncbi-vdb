@@ -52,6 +52,18 @@ struct GCP
     char * client_email;
 };
 
+/*--------------------------------------------------------------------------
+ * AWS
+ */
+struct AWS
+{
+    Cloud dad;
+
+    char * access_key_id;
+    char * secret_access_key;
+    char * profile;
+};
+
 #ifdef __cplusplus
 }
 #endif
