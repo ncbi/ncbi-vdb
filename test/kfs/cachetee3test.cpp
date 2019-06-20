@@ -989,7 +989,109 @@ FIXTURE_TEST_CASE ( CacheTee3_delete_on_exit, CT3Fixture )
     
     KFileRelease ( org );
     KDirectoryRelease ( dir );
-    KOutMsg ( "delete-on-exit done\n" );    
+    KOutMsg ( "delete-on-exit done\n" );
+}
+
+extern "C" {
+/* prototype, impl is in callback_file.c */
+rc_t CC MakeCallBackFile ( struct KFile **callback_file,
+                           struct KFile *to_wrap,
+                           void ( CC * cb ) ( char event, uint64_t pos, uint64_t size, void *data ),
+                           void * data );
+}
+
+struct CallBackCounter
+{
+    uint64_t events;
+    uint64_t bytes;
+    
+    CallBackCounter( void ) : events( 0 ), bytes( 0 ) {}
+    void count( uint64_t n ) { events++; bytes += n; }
+    void clear( void ) { events = 0; bytes = 0; }
+};
+
+void CC count_events( char event, uint64_t pos, uint64_t size, void *data )
+{
+    CallBackCounter * cc = ( CallBackCounter * )data;
+    if ( cc != NULL )
+    {
+        switch( event )
+        {
+            case 'R' :
+            case 'B' :
+            case 'D' :
+            case 'F' : cc -> count( size ); break;
+        }
+    }
+}
+
+FIXTURE_TEST_CASE ( CacheTee3_request_count, CT3Fixture )
+{
+    KOutMsg ( "counting requests\n" );
+    remove_file ( CACHEFILE );
+    remove_file ( CACHEFILE1 );
+
+    KDirectory *dir;
+    REQUIRE_RC ( KDirectoryNativeDir ( &dir ) );
+    KFile *org;
+    REQUIRE_RC ( KDirectoryOpenFileWrite ( dir, &org, true, "%s", DATAFILE ) ); // org.data
+
+    CallBackCounter cbc1;
+    CallBackCounter cbc2;    
+    KFile *org_counted;
+    REQUIRE_RC ( MakeCallBackFile ( &org_counted, org, count_events, &cbc1 ) );
+    KFileRelease ( org );
+    
+    const KFile *tee;
+    uint32_t cluster_factor = 2;
+    uint32_t ram_pages = 0;
+    REQUIRE_RC ( KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org_counted, BLOCKSIZE,
+        cluster_factor, ram_pages, false, false, "%s", CACHEFILE ) ); // cache.dat
+
+    const int num_chunks = 2048;
+    for ( int i = 0; i < num_chunks; ++i )
+    {
+        uint64_t pos = rand_32 ( 0, DATAFILESIZE );
+        size_t   len = rand_32 ( 10, 1000 );
+        cbc2 . count( len );
+        REQUIRE_RC( compare_file_content_3 ( org, tee, pos, len, NULL ) );
+    }
+
+    for ( int i = 0; i < num_chunks; ++i )
+    {
+        uint64_t pos = rand_32 ( 0, DATAFILESIZE );
+        size_t   len = rand_32 ( 10, 10000 );
+        cbc2 . count( len );
+        REQUIRE_RC( compare_file_content_3 ( org, tee, pos, len, NULL ) );
+    }
+    
+    KOutMsg ( "requested  = %lu, bytes = %lu\n", cbc2 . events, cbc2 . bytes );
+    KOutMsg ( "orig. file = %lu, bytes = %lu\n", cbc1 . events, cbc1 . bytes );
+    REQUIRE( cbc1 . events < cbc2 . events );
+    
+    // after reading the whole thing - no read-request should be made via orig...
+    KOutMsg ( "requesting whole file\n" );
+    REQUIRE_RC ( read_whole_file( tee, 1024 * 1024 ) );
+    cbc1.clear();
+    cbc2.clear();
+    for ( int i = 0; i < num_chunks; ++i )
+    {
+        uint64_t pos = rand_32 ( 0, DATAFILESIZE );
+        size_t   len = rand_32 ( 10, 1000 );
+        cbc2 . count( len );
+        REQUIRE_RC( compare_file_content_3 ( org, tee, pos, len, NULL ) );
+    }
+    KOutMsg ( "requested  = %lu, bytes = %lu\n", cbc2 . events, cbc2 . bytes );
+    KOutMsg ( "orig. file = %lu, bytes = %lu\n", cbc1 . events, cbc1 . bytes );
+    REQUIRE( cbc1 . events == 0 );
+    REQUIRE( cbc1 . bytes == 0 );
+    
+    KFileRelease ( tee );
+    KFileRelease ( org_counted );
+    KFileRelease ( org );
+    
+    KDirectoryRelease ( dir );
+    KOutMsg ( "counting requests done\n" );
 }
 
 //////////////////////////////////////////// Main

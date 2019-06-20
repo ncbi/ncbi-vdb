@@ -169,8 +169,7 @@ static KFile_vt_v1 vtCallBackFile =
     /* end minor version == 3 */
 };
 
-LIB_EXPORT rc_t CC MakeCallBackFile ( struct KDirectory * self,
-                                  struct KFile const **callback_file,
+LIB_EXPORT rc_t CC MakeCallBackFile ( struct KFile **callback_file,
                                   struct KFile *to_wrap,
                                   void ( CC * cb ) ( char event, uint64_t pos, uint64_t size, void *data ),
                                   void * data )
@@ -182,9 +181,7 @@ LIB_EXPORT rc_t CC MakeCallBackFile ( struct KDirectory * self,
     else
     {
         *callback_file = NULL;
-        if ( self == NULL )
-            rc = RC ( rcFS, rcFile, rcAllocating, rcSelf, rcNull );
-        else if ( to_wrap == NULL || cb == NULL )
+        if ( to_wrap == NULL || cb == NULL )
             rc = RC ( rcFS, rcFile, rcAllocating, rcParam, rcNull );
     }
 
@@ -211,7 +208,7 @@ LIB_EXPORT rc_t CC MakeCallBackFile ( struct KDirectory * self,
                 if ( rc != 0 )
                     free( ( void * ) lf );
                 else
-                    *callback_file = ( const KFile * ) &lf -> dad;
+                    *callback_file = ( KFile * ) &lf -> dad;
             }
         }
     }
