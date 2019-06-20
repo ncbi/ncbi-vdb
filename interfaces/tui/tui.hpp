@@ -429,6 +429,9 @@ class Dlg
         size_t GetWidgetTextLength( tui_id id ) { return KTUIDlgGetWidgetTextLength( dlg_, id ); };
         bool SetWidgetTextLength( tui_id id, size_t value ) { return ( KTUIDlgSetWidgetTextLength ( dlg_, id, value ) == 0 ); };
 
+        bool SetWidgetCarretPos( tui_id id, size_t value ) { return ( KTUIDlgSetWidgetCarretPos ( dlg_, id, value ) == 0 ); };
+        bool SetWidgetAlphaMode( tui_id id, uint32_t value ) { return ( KTUIDlgSetWidgetAlphaMode ( dlg_, id, value ) == 0 ); };
+        
         bool AddWidgetString( tui_id id, const char * txt ) { return ( KTUIDlgAddWidgetString ( dlg_, id, txt ) == 0 ); };
         bool AddWidgetString( tui_id id, std::string &s ) { return ( KTUIDlgAddWidgetString ( dlg_, id, s.c_str() ) == 0 ); };
         bool AddWidgetStringN( tui_id id, int n, ... );
