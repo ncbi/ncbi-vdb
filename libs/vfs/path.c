@@ -53,14 +53,18 @@
 /* Whack
  */
 static
-void VPathWhack ( VPath * self )
+rc_t VPathWhack ( VPath * self )
 {
+    rc_t rc = VPathRelease(self->vdbcache);
+
     KDataBufferWhack ( & self -> data );
     KRefcountWhack ( & self -> refcount, "VPath" );
     free ( ( void * ) self -> id   . addr );
     free ( ( void * ) self -> tick . addr );
     memset ( self, 0, sizeof * self );
     free ( self );
+
+    return rc;
 }
 
 /* ParseURI
@@ -2417,19 +2421,21 @@ LIB_EXPORT rc_t CC VPathAddRef ( const VPath *self )
 
 LIB_EXPORT rc_t CC VPathRelease ( const VPath *self )
 {
+    rc_t rc = 0;
+
     if ( self != NULL )
     {
         switch ( KRefcountDrop ( & self -> refcount, "VPath" ) )
         {
         case krefWhack:
-            VPathWhack ( ( VPath* ) self );
+            rc = VPathWhack ( ( VPath* ) self );
             break;
         case krefNegative:
             return RC ( rcVFS, rcPath, rcReleasing, rcRange, rcExcessive );
         }
     }
 
-    return 0;
+    return rc;
 }
 
 
@@ -3921,6 +3927,55 @@ rc_t LegacyVPathMakeVFmt ( VPath ** new_path, const char * fmt, va_list args )
 {
     return VPathMakeVFmtExt ( false, new_path, NULL, NULL, 0, 0, NULL, 0, NULL,
         fmt, args );
+}
+
+rc_t VPathAttachVdbcache(VPath * self, const VPath * vdbcache) {
+    rc_t rc = 0;
+
+    if (self != NULL) {
+        if (vdbcache != NULL) {
+            rc = VPathAddRef(vdbcache);
+            if (rc == 0) {
+                rc = VPathRelease(self->vdbcache);
+                self->vdbcache = vdbcache;
+            }
+        }
+
+        if (rc == 0)
+            self->vdbcacheChecked = true;
+    }
+
+    return rc;
+}
+
+/* GetVdbcache
+ *  return attached vdbcahe
+ * and boolian trating that there is no neew to check remove vdbcache URL
+ */
+LIB_EXPORT rc_t CC VPathGetVdbcache(const VPath * self,
+    const VPath ** vdbcache, bool * vdbcacheChecked)
+{
+    rc_t rc = 0;
+
+    bool dummy = true;
+    if (vdbcacheChecked == NULL)
+        vdbcacheChecked = &dummy;
+
+    if (vdbcache == NULL)
+        return RC(rcVFS, rcPath, rcAccessing, rcParam, rcNull);
+    if (self == NULL)
+        return RC(rcVFS, rcPath, rcAccessing, rcSelf, rcNull);
+
+    *vdbcacheChecked = false;
+
+    rc = VPathAddRef(self->vdbcache);
+
+    if (rc == 0) {
+        *vdbcache = self->vdbcache;
+        *vdbcacheChecked = self->vdbcacheChecked;
+    }
+
+    return rc;
 }
 
 LIB_EXPORT rc_t CC LegacyVPathGetScheme_t ( const VPath * self, VPUri_t * uri_type )
