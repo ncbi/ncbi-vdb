@@ -924,3 +924,150 @@ LIB_EXPORT rc_t CC KConfig_Set_Cache_Amount( KConfig *self, uint32_t value )
     }
     return rc;
 }
+
+/* ------------------------------------------------------------------------ */
+static rc_t get_uint32_t_value( const KConfig *self, const char * key, uint32_t * value, uint32_t dflt )
+{
+    rc_t rc;
+    if ( self == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    else if ( value == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcParam, rcNull );
+    else
+    {
+        uint64_t long_value = dflt;
+        rc = KConfigReadU64 ( self, key, &long_value );
+        if ( rc == 0 )
+            * value = ( long_value & 0xFFFFFFFF );
+        rc = 0;
+    }
+    return rc;
+}
+
+static rc_t set_uint32_t_value( KConfig *self, const char * key, uint32_t value )
+{
+    rc_t rc;
+    if ( self == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    else
+    {
+        char buff[ 128 ];
+        size_t num_writ;
+        rc = string_printf ( buff, sizeof buff, &num_writ, "%u", value );
+        if ( rc == 0 )
+            rc = KConfigWriteString( self, key, buff );
+    }
+    return rc;
+}
+
+static rc_t get_bool_value( const KConfig *self, const char * key, bool * value, bool dflt )
+{
+    rc_t rc;
+    if ( self == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    else if ( value == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcParam, rcNull );
+    else
+    {
+        bool res = dflt;
+        rc = KConfigReadBool ( self, key, &res );
+        if ( rc == 0 )
+            * value = res;
+        rc = 0;
+    }
+    return rc;
+}
+
+static rc_t set_bool_value( KConfig *self, const char * key, bool value )
+{
+    rc_t rc;
+    if ( self == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    else
+        rc = KConfigWriteBool( self, key, value );
+    return rc;
+}
+
+#define CACHE_TEE_VERSION "/CACHINGPARAMS/CACHETEEVER"
+LIB_EXPORT rc_t CC KConfig_Get_CacheTeeVersion ( const KConfig *self, uint32_t * value, uint32_t dflt )
+{ return get_uint32_t_value( self, CACHE_TEE_VERSION, value, dflt ); }
+LIB_EXPORT rc_t CC KConfig_Set_CacheTeeVersion( KConfig *self, uint32_t value )
+{ return set_uint32_t_value( self, CACHE_TEE_VERSION, value ); }
+
+#define CACHE_TEE_CLUSTER_FACTOR "/CACHINGPARAMS/CACHETEECLUSTERFACTOR"
+LIB_EXPORT rc_t CC KConfig_Get_CacheClusterFactor( const KConfig *self, uint32_t * value, uint32_t dflt )
+{ return get_uint32_t_value( self, CACHE_TEE_CLUSTER_FACTOR, value, dflt ); }
+LIB_EXPORT rc_t CC KConfig_Set_CacheClusterFactor( KConfig *self, uint32_t value )
+{ return set_uint32_t_value( self, CACHE_TEE_CLUSTER_FACTOR, value ); }
+
+#define CACHE_BLOCKSIZE "/CACHINGPARAMS/BLOCKSIZE"
+LIB_EXPORT rc_t CC KConfig_Get_CacheBlockSize ( const KConfig *self, size_t * value, size_t dflt )
+{
+    rc_t rc;
+    if ( self == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    else if ( value == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcParam, rcNull );
+    else
+    {
+        uint64_t long_value = dflt;
+        rc = KConfigReadU64 ( self, CACHE_BLOCKSIZE, &long_value );
+        if ( rc == 0 )
+            * value = long_value;
+        rc = 0;
+    }
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KConfig_Set_CacheBlockSize( KConfig *self, size_t value )
+{
+    rc_t rc;
+    if ( self == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    else
+    {
+        char buff[ 128 ];
+        size_t num_writ;
+        rc = string_printf ( buff, sizeof buff, &num_writ, "%u", value );
+        if ( rc == 0 )
+            rc = KConfigWriteString( self, CACHE_BLOCKSIZE, buff );
+    }
+    return rc;
+}
+
+#define CACHE_PAGE_COUNT "/CACHINGPARAMS/PAGECOUNT"
+LIB_EXPORT rc_t CC KConfig_Get_CachePageCount( const KConfig *self, uint32_t * value, uint32_t dflt )
+{ return get_uint32_t_value( self, CACHE_PAGE_COUNT, value, dflt ); }
+LIB_EXPORT rc_t CC KConfig_Set_CachePageCount( KConfig *self, uint32_t value )
+{ return set_uint32_t_value( self, CACHE_PAGE_COUNT, value ); }
+
+#define CACHE_LOG_USE_CWD "/CACHINGPARAMS/LOGUSECWD"
+LIB_EXPORT rc_t CC KConfig_Get_CacheLogUseCWD( const KConfig *self, bool * value, bool dflt )
+{ return get_bool_value( self, CACHE_LOG_USE_CWD, value, dflt ); }
+LIB_EXPORT rc_t CC KConfig_Set_CacheLogUseCWD( KConfig *self, bool value )
+{ return set_bool_value( self, CACHE_LOG_USE_CWD, value ); }
+
+#define CACHE_LOG_APPEND "/CACHINGPARAMS/LOGAPPEND"
+LIB_EXPORT rc_t CC KConfig_Get_CacheLogAppend( const KConfig *self, bool * value, bool dflt )
+{ return get_bool_value( self, CACHE_LOG_APPEND, value, dflt ); }
+LIB_EXPORT rc_t CC KConfig_Set_CacheLogAppend( KConfig *self, bool value )
+{ return set_bool_value( self, CACHE_LOG_APPEND, value ); }
+
+#define CACHE_LOG_TIMED "/CACHINGPARAMS/LOGTIMED"
+LIB_EXPORT rc_t CC KConfig_Get_CacheLogTimed( const KConfig *self, bool * value, bool dflt )
+{ return get_bool_value( self, CACHE_LOG_TIMED, value, dflt ); }
+LIB_EXPORT rc_t CC KConfig_Set_CacheLogTimed( KConfig *self, bool value )
+{ return set_bool_value( self, CACHE_LOG_TIMED, value ); }
+
+#define CACHE_LOG_OUTER "/CACHINGPARAMS/LOGOUTER"
+LIB_EXPORT rc_t CC KConfig_Get_CacheLogOuter( const KConfig *self, bool * value, bool dflt )
+{ return get_bool_value( self, CACHE_LOG_OUTER, value, dflt ); }
+LIB_EXPORT rc_t CC KConfig_Set_CacheLogOuter( KConfig *self, bool value )
+{ return set_bool_value( self, CACHE_LOG_OUTER, value ); }
+
+#define CACHE_LOG_INNER "/CACHINGPARAMS/LOGINNER"
+LIB_EXPORT rc_t CC KConfig_Get_CacheLogInner( const KConfig *self, bool * value, bool dflt )
+{ return get_bool_value( self, CACHE_LOG_INNER, value, dflt ); }
+LIB_EXPORT rc_t CC KConfig_Set_CacheLogInner( KConfig *self, bool value )
+{ return set_bool_value( self, CACHE_LOG_INNER, value ); }
+

@@ -44,6 +44,7 @@
 
 #include <kfg/config.h>
 #include <kfg/repository.h>
+#include <kfg/properties.h>
 #include <kfg/keystore.h>
 #include <kfg/keystore-priv.h>
 #include <kfg/kfg-priv.h>
@@ -223,16 +224,17 @@ typedef struct caching_params
     enum cache_version version;
     size_t cache_page_size;
     uint32_t cache_page_count;
-    uint32_t use_cwd;       /* use the current working directory if not cach-location is given */
-    uint32_t append;        /* append to existing recording 0...no - 1...yes */
-    uint32_t timed;         /* record timing 0...no - 1...yes */
-    uint32_t record_inner;  /* record the request made before the cache */    
-    uint32_t record_outer;  /* record the request made after the cache */
-    uint32_t cluster_factor;/* for cachetee_v3 */
-    bool is_refseq;         /* when used for external reference sequences, decrease cache size */
-    bool promote;           /* do we want a promoting cache-tee-file ? */
+    uint32_t cluster_factor; /* for cachetee_v3 */    
+    bool use_cwd;       /* use the current working directory if not cach-location is given */
+    bool append;        /* append to existing recording 0...no - 1...yes */
+    bool timed;         /* record timing 0...no - 1...yes */
+    bool record_inner;  /* record the request made before the cache */    
+    bool record_outer;  /* record the request made after the cache */
+    bool is_refseq;     /* when used for external reference sequences, decrease cache size */
+    bool promote;       /* do we want a promoting cache-tee-file ? */
 } caching_params;
 
+#define DEFAULT_CACHETEE_VERSION cachetee
 #define DEFAULT_CACHE_PAGE_SIZE ( 32 * 1024 )
 #define DEFAULT_CACHE_PAGE_COUNT ( 10 * 1024 )
 #define DEFAULT_CLUSTER_FACTOR 4
@@ -246,52 +248,30 @@ static void get_caching_params( caching_params * params,
     rc_t rc = KConfigMake ( &cfg, NULL );
 
     /* set some default values... */
-    params -> version = 0;
+    params -> version = DEFAULT_CACHETEE_VERSION;
     params -> cache_page_size = dflt_block_size;
     params -> cache_page_count = DEFAULT_CACHE_PAGE_COUNT;
-    params -> use_cwd = 0;
-    params -> append = 0;
-    params -> timed = 0;
-    params -> record_inner = 0;    
-    params -> record_outer = 0;
-    params -> cluster_factor = DEFAULT_CLUSTER_FACTOR;
+    params -> cluster_factor = DEFAULT_CLUSTER_FACTOR;    
+    params -> use_cwd = false;
+    params -> append = false;
+    params -> timed = false;
+    params -> record_inner = false;    
+    params -> record_outer = false;
     params -> is_refseq = is_refseq;
     params -> promote = promote;
     
     if ( rc == 0 )
     {
-        uint64_t value;
-        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/CACHETEEVER", &value );
-        if ( rc == 0 )
-            params -> version = (uint32_t)( value & 0x7 );
-
-        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/BLOCKSIZE", &value );
-        if ( rc == 0 )
-            params -> cache_page_size = (size_t)( value & 0xFFFFFFFF );
-
-        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/PAGECOUNT", &value );
-        if ( rc == 0 )
-            params -> cache_page_count = (uint32_t)( value & 0xFFFFFFFF );
-
-        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/USE_CWD", &value );
-        if ( rc == 0 )
-            params -> use_cwd = (uint32_t)( value & 0x1 );
-
-        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/APPEND", &value );
-        if ( rc == 0 )
-            params -> append = (uint32_t)( value & 0x1 );
-
-        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/TIMED", &value );
-        if ( rc == 0 )
-            params -> timed = (uint32_t)( value & 0x1 );
-
-        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/OUTER", &value );
-        if ( rc == 0 )
-            params -> record_outer = (uint32_t)( value & 0x1 );
-
-        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/INNER", &value );
-        if ( rc == 0 )
-            params -> record_inner = (uint32_t)( value & 0x1 );
+        /* functions in libs/kfg/properties.c */
+        KConfig_Get_CacheTeeVersion( cfg, &( params -> version ), DEFAULT_CACHETEE_VERSION );
+        KConfig_Get_CacheBlockSize( cfg, &( params -> cache_page_size ), dflt_block_size );
+        KConfig_Get_CachePageCount( cfg, &( params -> cache_page_count ), DEFAULT_CACHE_PAGE_COUNT );
+        KConfig_Get_CacheClusterFactor( cfg, &( params -> cluster_factor ), DEFAULT_CLUSTER_FACTOR );
+        KConfig_Get_CacheLogUseCWD( cfg, &( params -> use_cwd ), false );
+        KConfig_Get_CacheLogAppend( cfg, &( params -> append ), false );
+        KConfig_Get_CacheLogTimed ( cfg, &( params -> timed ), false );
+        KConfig_Get_CacheLogOuter( cfg, &( params -> record_outer ), false );
+        KConfig_Get_CacheLogInner( cfg, &( params -> record_inner ), false );
 
         KConfigRelease ( cfg );
     }
