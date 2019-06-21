@@ -35,6 +35,10 @@
 
 #include <../../libs/cloud/cloud-priv.h>
 
+#include <kfg/config.h>
+
+#include <fstream>
+
 static rc_t argsHandler(int argc, char* argv[]);
 TEST_SUITE_WITH_ARGS_HANDLER(CloudTestSuite, argsHandler);
 
@@ -171,7 +175,7 @@ public:
         }
     }
 
-    void CheckKeys ( const char * key, const char * secret_key )
+    void CheckKeys ( const char * key, const char * secret_key, const char * region = nullptr, const char * output = nullptr )
     {
         MakeAWS();
 
@@ -180,6 +184,17 @@ public:
 
         THROW_ON_FALSE ( string ( key ) == string ( m_aws -> access_key_id ) );
         THROW_ON_FALSE ( string ( secret_key ) == string ( m_aws -> secret_access_key ) );
+
+        if ( region != nullptr )
+        {
+            THROW_ON_FALSE ( m_aws -> region != NULL );
+            THROW_ON_FALSE ( string ( region ) == string ( m_aws -> region ) );
+        }
+        if ( output != nullptr )
+        {
+            THROW_ON_FALSE ( m_aws -> output != NULL );
+            THROW_ON_FALSE ( string ( output ) == string ( m_aws -> output ) );
+        }
     }
 
     void MakeAWS()
@@ -190,6 +205,12 @@ public:
         THROW_ON_RC ( CloudToAWS ( m_cloud, & m_aws ) );
         THROW_ON_FALSE ( nullptr != m_aws );
     }
+
+    void CreateFile ( const string& p_name, const string& p_content )
+    {
+        ofstream out( p_name . c_str() );
+        out << p_content;
+    }    
 
     AWS * m_aws;
 };
@@ -253,6 +274,8 @@ FIXTURE_TEST_CASE(AWS_Credentials_Blank, AwsFixture)
 
     REQUIRE_NULL ( m_aws -> access_key_id );
     REQUIRE_NULL ( m_aws -> secret_access_key );
+    REQUIRE_NULL ( m_aws -> region );
+    REQUIRE_NULL ( m_aws -> output );
 }
 
 FIXTURE_TEST_CASE(AWS_Credentials_Env, AwsFixture)
@@ -270,7 +293,7 @@ FIXTURE_TEST_CASE(AWS_Credentials_AwsConfigFile_DefaultProfile, AwsFixture)
 {
     setenv ( "AWS_CONFIG_FILE", "cloud-kfg/aws_other_config", 1 );
 
-    CheckKeys( "ABC123", "SECRET" );
+    CheckKeys( "ABC123", "SECRET", "reg", "out" );
 }
 
 FIXTURE_TEST_CASE(AWS_Credentials_AwsConfigFile_ProfileFromEnv, AwsFixture)
@@ -278,7 +301,7 @@ FIXTURE_TEST_CASE(AWS_Credentials_AwsConfigFile_ProfileFromEnv, AwsFixture)
     setenv ( "AWS_PROFILE", "other_profile", 1 );
     setenv ( "AWS_CONFIG_FILE", "cloud-kfg/aws_other_config", 1 );
 
-    CheckKeys( "ABC123_OTHER", "SECRET_OTHER" );
+    CheckKeys( "ABC123_OTHER", "SECRET_OTHER", "reg_OTHER", "out_OTHER" );
 }
 
 FIXTURE_TEST_CASE(AWS_Credentials_AwsConfigFile_ProfileFromKfg, AwsFixture)
@@ -305,8 +328,44 @@ FIXTURE_TEST_CASE(AWS_Credentials_AwsSharedCredentialFile, AwsFixture)
     CheckKeys( "ABC123_OTHER", "SECRET_OTHER" );
 }
 
-//TODO: keys in $HOME/.aws/credentials
-//TODO: keys in $HOME/.aws/config
+FIXTURE_TEST_CASE(AWS_Credentials_AwsUserHomeCredentials, AwsFixture)
+{
+    setenv ( "HOME", "./cloud-kfg", 1 );
+
+    KConfig * kfg;
+    REQUIRE_RC ( KConfigMake( & kfg, NULL ) );    
+    const KConfigNode * home_node;
+    REQUIRE_RC ( KConfigOpenNodeRead ( kfg, &home_node, "HOME" ) );
+    char path[4096];
+    size_t num_read;
+    REQUIRE_RC ( KConfigNodeRead ( home_node, 0, path, sizeof path, &num_read, NULL ) );
+
+    string home ( path, num_read );
+    CreateFile ( home + "/.aws/credentials", "[default]\naws_access_key_id = ABC123\naws_secret_access_key = SECRET\n" );
+    remove( (home + "/.aws/config") . c_str() ); // otherwise it may override
+
+    CheckKeys( "ABC123", "SECRET" );
+}
+
+FIXTURE_TEST_CASE(AWS_Credentials_AwsUserHomeCredentials_ConfigOverrides, AwsFixture)
+{
+    setenv ( "HOME", "./cloud-kfg", 1 );
+
+    KConfig * kfg;
+    REQUIRE_RC ( KConfigMake( & kfg, NULL ) );    
+    const KConfigNode * home_node;
+    REQUIRE_RC ( KConfigOpenNodeRead ( kfg, &home_node, "HOME" ) );
+    char path[4096];
+    size_t num_read;
+    REQUIRE_RC ( KConfigNodeRead ( home_node, 0, path, sizeof path, &num_read, NULL ) );
+
+    string home ( path, num_read );
+    CreateFile ( home + "/.aws/credentials", "[default]\naws_access_key_id = ABC123\naws_secret_access_key = SECRET\n" );
+    // ~/.aws/config overrides if present
+    CreateFile ( home + "/.aws/config", "[default]\naws_access_key_id = ABC123_CFG\naws_secret_access_key = SECRET_CFG\n" );
+    CheckKeys( "ABC123_CFG", "SECRET_CFG" );
+}
+
 //TODO: add region, output
 
 // CLOUD_EXTERN rc_t CC CloudMakeComputeEnvironmentToken ( const Cloud * self, struct String const ** ce_token );

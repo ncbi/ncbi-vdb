@@ -59,9 +59,13 @@ struct AWS
 {
     Cloud dad;
 
+    char * profile;
+
     char * access_key_id;
     char * secret_access_key;
-    char * profile;
+
+    char * region;
+    char * output;
 };
 
 #ifdef __cplusplus

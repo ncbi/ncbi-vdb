@@ -34,6 +34,7 @@ struct AWS;
 #include <klib/rc.h>
 #include <klib/status.h>
 #include <klib/text.h>
+#include <klib/printf.h>
 #include <kfg/config.h>
 #include <kfg/properties.h>
 #include <kns/http.h>
@@ -51,6 +52,8 @@ static rc_t PopulateCredentials ( AWS * self );
 static
 rc_t CC AWSDestroy ( AWS * self )
 {
+    free ( self -> region );
+    free ( self -> output );
     free ( self -> access_key_id );
     free ( self -> secret_access_key );
     free ( self -> profile );
@@ -206,6 +209,8 @@ LIB_EXPORT rc_t CC CloudToAWS ( const Cloud * self, AWS ** aws )
     return rc;
 }
 
+/*** Finding/loading credentials  */
+
 static rc_t aws_extract_key_value_pair (
     const String *source, String *key, String *val )
 {
@@ -312,28 +317,27 @@ static void aws_parse_file ( AWS * self, const KFile *cred_file )
         CONST_STRING ( &secret_access_key, "aws_secret_access_key" );
 
         if ( StringCaseEqual ( &key, &access_key_id ) ) {
+            free ( self -> access_key_id );
             self -> access_key_id = string_dup ( value . addr, value . size );
         }
 
         if ( StringCaseEqual ( &key, &secret_access_key ) ) {
+            free ( self -> secret_access_key );
             self -> secret_access_key = string_dup ( value . addr, value . size );
         }
 
-#if 0
-//TODO
         String region, output;
         CONST_STRING ( &region, "region" );
         CONST_STRING ( &output, "output" );
 
         if ( StringCaseEqual ( &key, &region ) ) {
-            rc = aws_KConfigNodeUpdateChild ( aws_node, &key, &value );
-            if ( rc != 0 ) return;
+            free ( self -> region );
+            self -> region = string_dup ( value . addr, value . size );
         }
         if ( StringCaseEqual ( &key, &output ) ) {
-            rc = aws_KConfigNodeUpdateChild ( aws_node, &key, &value );
-            if ( rc != 0 ) return;
+            free ( self -> output );
+            self -> output = string_dup ( value . addr, value . size );
         }
-#endif
 
     }
 
@@ -342,94 +346,115 @@ static void aws_parse_file ( AWS * self, const KFile *cred_file )
     free ( buffer );
 }
 
-#if 0
-static rc_t aws_find_nodes (
-    KConfigNode *aws_node, const char *aws_path, const String *profile )
-{
-    bool done = false;
-
-    KDirectory *wd = NULL;
-    rc_t rc = KDirectoryNativeDir ( &wd );
-    if ( rc ) return rc;
-    const KFile *cred_file = NULL;
-
-    const char *conf_env = getenv ( "AWS_CONFIG_FILE" );
-    if ( conf_env ) {
-        rc = KDirectoryOpenFileRead ( wd, &cred_file, "%s", conf_env );
-        if ( rc ) return rc;
-        aws_parse_file ( cred_file, aws_node, profile );
-        KFileRelease ( cred_file );
-        done = true;
-    }
-    const char *cred_env = getenv ( "AWS_SHARED_CREDENTIAL_FILE" );
-    if ( cred_env ) {
-        rc = KDirectoryOpenFileRead ( wd, &cred_file, "%s", cred_env );
-        if ( rc ) return rc;
-
-        aws_parse_file ( cred_file, aws_node, profile );
-        KFileRelease ( cred_file );
-        done = true;
-    }
-    if ( !done ) {
-        rc = KDirectoryOpenFileRead (
-            wd, &cred_file, "%s%s", aws_path, "/credentials" );
-        if ( rc ) return rc;
-
-        aws_parse_file ( cred_file, aws_node, profile );
-        KFileRelease ( cred_file );
-
-        rc = KDirectoryOpenFileRead (
-            wd, &cred_file, "%s%s", aws_path, "/config" );
-        if ( rc ) return rc;
-
-        aws_parse_file ( cred_file, aws_node, profile );
-
-        KFileRelease ( cred_file );
-    }
-
-    KDirectoryRelease ( wd );
-    return 0;
-}
-
-
-static void make_home_node ( const KConfig *self, char *path, size_t path_size )
+static void make_home_node ( char *path, size_t path_size )
 {
     size_t num_read;
     const char *home;
 
-    const KConfigNode *home_node;
+    KConfig * kfg;
+    rc_t rc = KConfigMake( & kfg, NULL );
+    if ( rc == 0 )
+    {
+        const KConfigNode *home_node;
 
-    /* Check to see if home node exists */
-    rc_t rc = KConfigOpenNodeRead ( self, &home_node, "HOME" );
-    if ( home_node == NULL ) {
-        /* just grab the HOME env variable */
-        home = getenv ( "HOME" );
-        if ( home != NULL ) {
-            num_read = string_copy_measure ( path, path_size, home );
-            if ( num_read >= path_size ) path[0] = 0;
-        }
-    } else {
-        /* if it exists check for a path */
-        rc = KConfigNodeRead ( home_node, 0, path, path_size, &num_read, NULL );
-        if ( rc != 0 ) {
+        /* Check to see if home node exists */
+        rc = KConfigOpenNodeRead ( kfg, &home_node, "HOME" );
+        if ( home_node == NULL ) {
+            /* just grab the HOME env variable */
             home = getenv ( "HOME" );
             if ( home != NULL ) {
                 num_read = string_copy_measure ( path, path_size, home );
                 if ( num_read >= path_size ) path[0] = 0;
             }
+        } else {
+            /* if it exists check for a path */
+            rc = KConfigNodeRead ( home_node, 0, path, path_size, &num_read, NULL );
+            if ( rc != 0 ) {
+                home = getenv ( "HOME" );
+                if ( home != NULL ) {
+                    num_read = string_copy_measure ( path, path_size, home );
+                    if ( num_read >= path_size ) path[0] = 0;
+                }
+            }
+
+            KConfigNodeRelease ( home_node );
         }
 
-        rc = KConfigNodeRelease ( home_node );
+        KConfigRelease ( kfg );
     }
 }
-#endif
+
+static rc_t LoadCredentials ( AWS * self  )
+{
+    KDirectory *wd = NULL;
+    rc_t rc = KDirectoryNativeDir ( &wd );
+    if ( rc ) return rc;
+
+    const char *conf_env = getenv ( "AWS_CONFIG_FILE" );
+    if ( conf_env ) 
+    {
+        const KFile *cred_file = NULL;
+        rc = KDirectoryOpenFileRead ( wd, &cred_file, "%s", conf_env );
+        if ( rc == 0 ) 
+        {
+            aws_parse_file ( self, cred_file );
+            KFileRelease ( cred_file );
+        }
+        KDirectoryRelease ( wd );
+        return rc;
+    }
+
+    const char *cred_env = getenv ( "AWS_SHARED_CREDENTIAL_FILE" );
+    if ( cred_env ) 
+    {
+        const KFile *cred_file = NULL;
+        rc = KDirectoryOpenFileRead ( wd, &cred_file, "%s", cred_env );
+        if ( rc == 0 )
+        {
+            aws_parse_file ( self, cred_file );
+            KFileRelease ( cred_file );
+        }
+        KDirectoryRelease ( wd );
+        return rc;
+    }
+
+    {
+        char home[4096] = "";
+        make_home_node ( home, sizeof home );
+
+        if ( home[0] != 0 ) 
+        {
+            char aws_path[4096] = "";
+            size_t num_writ = 0;
+            rc = string_printf ( aws_path, sizeof aws_path, &num_writ, "%s/.aws", home );
+            if ( rc == 0 && num_writ != 0 )
+            {
+                const KFile *cred_file = NULL;
+                rc = KDirectoryOpenFileRead ( wd, &cred_file, "%s%s", aws_path, "/credentials" );
+                if ( rc == 0 ) 
+                {
+                    aws_parse_file ( self, cred_file );
+                    KFileRelease ( cred_file );
+
+                    rc = KDirectoryOpenFileRead ( wd, &cred_file, "%s%s", aws_path, "/config" );
+                    if ( rc == 0 )
+                    {
+                        aws_parse_file ( self, cred_file );
+                        KFileRelease ( cred_file );
+                    }
+                }
+            }
+        }
+    }
+
+    KDirectoryRelease ( wd );
+    return rc;
+}
 
 //TODO: check results of strdups and string_dups
 static
 rc_t PopulateCredentials ( AWS * self )
 {
-    rc_t rc = 0;
-
     /* Check Environment first */
     const char *aws_access_key_id = getenv ( "AWS_ACCESS_KEY_ID" );
     const char *aws_secret_access_key = getenv ( "AWS_SECRET_ACCESS_KEY" );
@@ -452,7 +477,7 @@ rc_t PopulateCredentials ( AWS * self )
     else
     {
         KConfig * kfg;
-        rc = KConfigMake( & kfg, NULL );
+        rc_t rc = KConfigMake( & kfg, NULL );
         if ( rc == 0 )
         {
             char buffer[4096];
@@ -464,13 +489,19 @@ rc_t PopulateCredentials ( AWS * self )
             }
             KConfigRelease( kfg );
         }
-        rc = 0;
     }
 
     if ( self -> profile == NULL )
     {
         self -> profile = strdup ( "default" );
     }
+
+    /* OK if no credentials are found */
+    LoadCredentials ( self );
+    return 0;
+}
+
+#if 0
 
     /* Check AWS_CONFIG_FILE and AWS_SHARED_CREDENTIAL_FILE, if specified check for credentials and/or profile name */
     const char *conf_env = getenv ( "AWS_CONFIG_FILE" );
@@ -508,7 +539,6 @@ rc_t PopulateCredentials ( AWS * self )
         /* proceed to other sources */
     }
 
-#if 0
     /* Check paths and parse */
     char home[4096] = "";
     make_home_node ( self, home, sizeof home );
@@ -530,6 +560,6 @@ rc_t PopulateCredentials ( AWS * self )
     }
 
     KConfigNodeRelease ( aws_node );
-#endif
     return rc;
 }
+#endif
