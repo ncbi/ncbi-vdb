@@ -234,7 +234,7 @@ typedef struct caching_params
     bool promote;       /* do we want a promoting cache-tee-file ? */
 } caching_params;
 
-#define DEFAULT_CACHETEE_VERSION cachetee
+#define DEFAULT_CACHETEE_VERSION cachetee_3
 #define DEFAULT_CACHE_PAGE_SIZE ( 32 * 1024 )
 #define DEFAULT_CACHE_PAGE_COUNT ( 10 * 1024 )
 #define DEFAULT_CLUSTER_FACTOR 4
