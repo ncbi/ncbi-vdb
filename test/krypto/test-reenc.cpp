@@ -97,10 +97,10 @@ TEST_CASE(KReEncryptEncFile)
                 char file_path[1024];
                 char file_path_reenc[1024];
                 
-                sprintf(file_path, enc_file_path_fmt, file_size);
-                sprintf(file_path_reenc, reenc_file_path_fmt, file_size);
+                sprintf(file_path, enc_file_path_fmt, ( long long unsigned int ) file_size);
+                sprintf(file_path_reenc, reenc_file_path_fmt, ( long long unsigned int ) file_size);
                 
-                printf("reencrypting encrypted file %s, size: %llu, i: %zu, j: %zu\n", file_path, file_size, i, j);
+                printf("reencrypting encrypted file %s, size: %llu, i: %zu, j: %zu\n", file_path, ( long long unsigned int ) file_size, i, j);
     
                 // create file
                 REQUIRE_RC ( TCreateEncFile( current_dir, file_path, TFileOpenMode_Write, &key_enc, &enc_file ) );
@@ -192,10 +192,10 @@ TEST_CASE(KReEncryptPtFile)
                 char file_path[1024];
                 char file_path_reenc[1024];
                 
-                sprintf(file_path, file_path_fmt, file_size);
-                sprintf(file_path_reenc, reenc_file_path_fmt, file_size);
+                sprintf(file_path, file_path_fmt, ( long long unsigned int ) file_size);
+                sprintf(file_path_reenc, reenc_file_path_fmt, ( long long unsigned int ) file_size);
                 
-                printf("reencrypting NOT encrypted file %s, size: %llu, i: %zu, j: %zu\n", file_path, file_size, i, j);
+                printf("reencrypting NOT encrypted file %s, size: %llu, i: %zu, j: %zu\n", file_path, ( long long unsigned int ) file_size, i, j);
                 
                 // create file
                 REQUIRE_RC ( TCreatePtFile( current_dir, file_path, TFileOpenMode_Write, &pt_file ) );

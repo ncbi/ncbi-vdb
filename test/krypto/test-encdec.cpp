@@ -90,9 +90,9 @@ TEST_CASE(KEncryptDecrypt)
                 uint64_t file_size = file_sizes_n_32k[i] * BLOCK_32K_SIZE + file_size_variants[j];
                 
                 char file_path[1024];
-                sprintf(file_path, enc_file_path_fmt, file_size);
+                sprintf(file_path, enc_file_path_fmt, ( long long unsigned int ) file_size);
                 
-                printf("encrypting/decrypting file %s, size: %llu, i: %zu, j: %zu\n", file_path, file_size, i, j);
+                printf("encrypting/decrypting file %s, size: %llu, i: %zu, j: %zu\n", file_path, ( long long unsigned int ) file_size, i, j);
                 
                 // create file
                 REQUIRE_RC ( TCreateEncFile( current_dir, file_path, TFileOpenMode_ReadWrite, &key, &enc_file ) );

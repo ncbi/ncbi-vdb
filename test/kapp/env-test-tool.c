@@ -138,6 +138,8 @@ rc_t CC KMain ( int argc, char *argv [] )
                 break;
             }
             if ( paramc ) {
+                long long unsigned int sscanf_param;
+
                 const char* dummy = NULL;
                 rc = ArgsOptionValue(args, OPTION_RAM, 0, (const void **)&dummy);
                 if ( rc ) {
@@ -145,7 +147,8 @@ rc_t CC KMain ( int argc, char *argv [] )
                     break;
                 }
 
-                rc = sscanf(dummy, "%llu", &requireRam);
+                rc = sscanf(dummy, "%llu", &sscanf_param);
+                requireRam = ( uint64_t ) sscanf_param;
                 if ( rc != 1) 
                 {
                     LOGMSG(klogErr, "Failure to parse '" OPTION_RAM "' argument value");
