@@ -1070,4 +1070,3 @@ LIB_EXPORT rc_t CC KConfig_Get_CacheLogInner( const KConfig *self, bool * value,
 { return get_bool_value( self, CACHE_LOG_INNER, value, dflt ); }
 LIB_EXPORT rc_t CC KConfig_Set_CacheLogInner( KConfig *self, bool value )
 { return set_bool_value( self, CACHE_LOG_INNER, value ); }
-

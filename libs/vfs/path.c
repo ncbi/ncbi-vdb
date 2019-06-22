@@ -3990,7 +3990,7 @@ rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
     if ( tick == NULL || tick -> addr == NULL || tick -> size == 0 )
         return VPathMakeFmtExt ( new_path, ext, id, tick, osize, date, md5,
 		    exp_date, service, objectType, ceRequired, payRequired,
-            "%S", url  );
+            "%S", url );
     else {
         const char * fmt = NULL;
         assert(url);

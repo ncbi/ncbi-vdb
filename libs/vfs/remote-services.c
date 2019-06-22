@@ -3135,6 +3135,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
 
     if (rc == 0 && SVersionNeedCloudLocation(request->version, request->sdl))
         rc = SCgiRequestAddLocation( self, helper );
+
     return rc;
 }
 
