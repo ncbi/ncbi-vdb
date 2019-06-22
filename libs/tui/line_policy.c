@@ -49,7 +49,7 @@ static void lp_adjust( lp_context * lp )
 static bool lp_alpha( lp_context * lp, char c )
 {
     bool res = ( lp->len < ( lp->max_len - 1 ) && ( c != 27 ) );
-    if ( res && lp -> alpha_mode > 0 )
+    if ( res && lp -> alpha_mode != NULL && * lp -> alpha_mode > 0 )
             res = ( c >= '0' && c <= '9' );
     if ( res )
     {
