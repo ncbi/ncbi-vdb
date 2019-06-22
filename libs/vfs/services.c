@@ -338,18 +338,10 @@ static rc_t _VPathGetId ( const VPath * self, const String ** newId,
         return 0;
 
     /* what is being attempted with this code? */
-#if WHAT_IS_GOING_ON_WITH_THIS_CODE
-    if ( ! string_cmp ( oldId -> addr, oldId -> size, https . addr, https. size, https. size ) == 0 &&
-         ! string_cmp ( oldId -> addr, oldId -> size, fasp  . addr, fasp . size, fasp . size ) == 0 &&
-         ! string_cmp ( oldId -> addr, oldId -> size, http  . addr, fasp . size, fasp . size ) == 0 )
-    {   return 0; }
-#else
-    /* is this what was intended? */
     if ( string_cmp ( oldId -> addr, oldId -> size, https . addr, https. size, https. size ) != 0 &&
          string_cmp ( oldId -> addr, oldId -> size, fasp  . addr, fasp . size, fasp . size ) != 0 &&
          string_cmp ( oldId -> addr, oldId -> size, http  . addr, fasp . size, fasp . size ) != 0 )
     {   return 0; }
-#endif
 
     rc = VPathGetId ( self, & id );
     if ( rc == 0 && id . size == 0 ) {
