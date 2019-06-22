@@ -2303,7 +2303,7 @@ LIB_EXPORT rc_t CC KDirectoryMakeKCacheTeeFile_v3 ( KDirectory * self,
 }
 
 /* --- check for invariants --- */
-static rc_t extract_tail( const KFile * self, size_t * over_all_size, KCacheTeeFileTail * tail )
+static rc_t extract_tail( const KFile * self, uint64_t * over_all_size, KCacheTeeFileTail * tail )
 {
     rc_t rc = KFileSize ( self, over_all_size );
     if ( rc != 0 )
@@ -2316,7 +2316,7 @@ static rc_t extract_tail( const KFile * self, size_t * over_all_size, KCacheTeeF
     else
     {
         size_t num_read;
-        uint64_t pos = *over_all_size - sizeof *tail;
+        uint64_t pos = * over_all_size - sizeof *tail;
         rc = KFileReadAll_v1 ( self, pos, ( void * )tail, sizeof *tail, &num_read );
         if ( rc != 0 )
         {
@@ -2384,7 +2384,7 @@ LIB_EXPORT rc_t CC CacheTee3FileIsValid ( struct KFile const * self, bool * is_v
         rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcNull );
     else
     {
-        size_t over_all_size;
+        uint64_t over_all_size;
         KCacheTeeFileTail tail;
         rc = extract_tail( self, &over_all_size, &tail );
         if ( rc == 0 )
@@ -2393,7 +2393,7 @@ LIB_EXPORT rc_t CC CacheTee3FileIsValid ( struct KFile const * self, bool * is_v
                  tail . page_size < tail . orig_size )
             {
                 size_t bitmap_size_in_bytes = calculate_bitmap_size_in_bytes( &tail );
-                *is_valid = ( tail . orig_size + bitmap_size_in_bytes + sizeof tail == over_all_size );
+                *is_valid = ( ( tail . orig_size + bitmap_size_in_bytes + sizeof tail ) == over_all_size );
             }
         }
     }
@@ -2438,7 +2438,7 @@ static bool is_bitmap_complete( volatile bmap_t * bitmap, size_t bitmap_size_in_
 static bool is_bitmap_complete_file( const KFile * self )
 {
     bool res = false;
-    size_t over_all_size;
+    uint64_t over_all_size;
     KCacheTeeFileTail tail;
     rc_t rc = extract_tail( self, &over_all_size, &tail );
     if ( rc == 0 )
@@ -2505,7 +2505,7 @@ LIB_EXPORT rc_t CC CacheTee3FileGetOriginalSize ( struct KFile const * self, uin
     {
         if ( &( self -> vt -> v1 ) != &KCacheTeeFile_v3_vt )
         {
-            size_t over_all_size;
+            uint64_t over_all_size;
             KCacheTeeFileTail tail;
             rc = extract_tail( self, &over_all_size, &tail );
             if ( rc == 0 )
@@ -2546,7 +2546,7 @@ static size_t bitmap_completeness( volatile bmap_t * bitmap, size_t bitmap_size_
 
 static rc_t get_bitmap_completeness_file( struct KFile const * self, double * percent, uint64_t * bytes_in_cache )
 {
-    size_t over_all_size;
+    uint64_t over_all_size;
     KCacheTeeFileTail tail;
     rc_t rc = extract_tail( self, &over_all_size, &tail );
     if ( rc == 0 )
@@ -2623,7 +2623,7 @@ LIB_EXPORT rc_t CC CacheTee3FileGetCompleteness ( struct KFile const * self,
    but we cannot rename it, because KFile does not store its path */
 static rc_t finalize_file ( struct KFile * self )
 {
-    size_t over_all_size;
+    uint64_t over_all_size;
     KCacheTeeFileTail tail;
     rc_t rc = extract_tail( self, &over_all_size, &tail );
     if ( rc == 0 )
