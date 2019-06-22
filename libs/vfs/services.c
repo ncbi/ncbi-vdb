@@ -337,12 +337,10 @@ static rc_t _VPathGetId ( const VPath * self, const String ** newId,
     if ( oldId -> size <= https . size )
         return 0;
 
-    if ( ! string_cmp ( oldId -> addr, oldId -> size, https . addr, https. size,
-                      https. size ) == 0  &&
-         ! string_cmp ( oldId -> addr, oldId -> size, fasp  . addr, fasp . size,
-                        fasp . size ) == 0 &&
-         ! string_cmp ( oldId -> addr, oldId -> size, http  . addr, fasp . size,
-                        fasp . size ) == 0 )
+    /* what is being attempted with this code? */
+    if ( string_cmp ( oldId -> addr, oldId -> size, https . addr, https. size, https. size ) != 0 &&
+         string_cmp ( oldId -> addr, oldId -> size, fasp  . addr, fasp . size, fasp . size ) != 0 &&
+         string_cmp ( oldId -> addr, oldId -> size, http  . addr, fasp . size, fasp . size ) != 0 )
     {   return 0; }
 
     rc = VPathGetId ( self, & id );

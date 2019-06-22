@@ -588,8 +588,6 @@ const char *VProdResolvePrintExpr ( const VProdResolve *self, const SExpression 
     return xbuffer;
 }
 
-static const char ispaces [] = "                                                                "
-                               "                                                                ";
 static int indent_level = 0;
 #endif
 

@@ -36,7 +36,6 @@
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
 
-typedef struct Response4 Response4;
 
 struct VPathSet {
     atomic32_t refcount;
