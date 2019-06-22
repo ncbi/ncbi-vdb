@@ -895,11 +895,20 @@ class NumGenFixture
     ~NumGenFixture()
     {
         if (m_it && num_gen_iterator_destroy(m_it))
-            throw logic_error(
-                "NumGenFixture: num_gen_iterator_destroy failed");
+        {
+            std :: cerr
+                << "NumGenFixture: num_gen_iterator_destroy failed"
+                << std :: endl
+                ;
+        }
 
-        if (m_ng && num_gen_destroy(m_ng) != 0)
-            throw logic_error("NumGenFixture: num_gen_destroy failed");
+        else if (m_ng && num_gen_destroy(m_ng) != 0)
+        {
+            std :: cerr
+                << "NumGenFixture: num_gen_destroy failed"
+                << std :: endl
+                ;
+        }
     }
 
     struct num_gen* m_ng;

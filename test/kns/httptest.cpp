@@ -174,13 +174,28 @@ public:
     ~HttpFixture()
     {
         if ( m_mgr && KNSManagerRelease ( m_mgr ) != 0 )
-            throw logic_error ( "HttpFixture::~HttpFixture KNSManagerRelease failed" );
+        {
+            std :: cerr
+                << "HttpFixture::~HttpFixture KNSManagerRelease failed"
+                << std :: endl
+                ;
+        }
+        
+        else if ( m_file && KFileRelease ( m_file ) != 0 )
+        {
+            std :: cerr
+                << "HttpFixture::~HttpFixture KFileRelease failed"
+                << std :: endl
+                ;
+        }
             
-        if ( m_file && KFileRelease ( m_file ) != 0 )
-            throw logic_error ( "HttpFixture::~HttpFixture KFileRelease failed" );
-            
-        if ( ! TestStream::m_responses.empty() )
-            throw logic_error ( "HttpFixture::~HttpFixture not all TestStream::m_responses have been consumed" );
+        else if ( ! TestStream::m_responses.empty() )
+        {
+            std :: cerr
+                << "HttpFixture::~HttpFixture not all TestStream::m_responses have been consumed"
+                << std :: endl
+                ;
+        }
     }
     
     KConfig* MakeConfig( const char* name, const char* contents )
@@ -556,7 +571,12 @@ public:
     ~RetrierFixture()
     {
         if ( KHttpRetrierDestroy ( & m_retrier ) != 0 )
-            throw logic_error ( "RetrierFixture::~RetrierFixture KHttpRetrierDestroy failed" );
+        {
+            std :: cerr
+                << "RetrierFixture::~RetrierFixture KHttpRetrierDestroy failed"
+                << std :: endl
+                ;
+        }
     }
 
     void Configure ( const char* kfg_name, const char* kfg_content, uint8_t max_retries = MaxRetries, uint32_t max_total_wait = MaxTotalWait )
