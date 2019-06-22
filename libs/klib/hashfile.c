@@ -227,7 +227,10 @@ static void hkv_encode( const HKV * in, u8 * out )
     hkv_decode( out, &test );
     if ( test.hash != in->hash )
     {
-        fprintf( stderr, "hash mismatch %llx %llx\n", test.hash, in->hash );
+        /* USE THE DEBUGGING FACILITIES IN KLIB RATHER THAN fprintf(stderr).
+           they handle arguments in a platform and architecture neutral fashion
+           and are way cooler besides. */
+        fprintf( stderr, "hash mismatch %llx %llx\n", ( long long unsigned ) test.hash, ( long long unsigned ) in->hash );
         abort();
     }
     if ( test.key_size != in->key_size )

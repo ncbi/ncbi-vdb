@@ -208,7 +208,25 @@ rc_t KTableMake ( KTable **tblp, const KDirectory *dir, const char *path )
     return 0;
 }
 
-
+static void ad(const KDBManager * self, const char * aPath, char ** path)
+{
+    assert(self);
+    if ((KDirectoryPathType(self->wd, aPath) & ~kptAlias) != kptDir)
+        return;
+    const char *slash = strrchr(aPath, '/');
+    if (slash)
+        ++slash;
+    else
+        slash = aPath;
+    if ((KDirectoryPathType(self->wd, "%s/%s.sra", aPath, slash)
+        & ~kptAlias) != kptFile)
+    {
+        return;
+    }
+    *path = calloc(1, strlen(aPath) + 6 + strlen(slash));
+    if (*path)
+        sprintf(*path, "%s/%s.sra", aPath, slash);
+}
 /* OpenTableRead
  * VOpenTableRead
  *  open a table for read
@@ -224,12 +242,12 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
     const char *path, va_list args )
 {
     rc_t rc;
-
-    char tblpath [ 4096 ];
+    char aTblpath[4096];
+    char * tblpath = aTblpath;
     int z = ( args == NULL ) ?
-        snprintf ( tblpath, sizeof tblpath, "%s", path ):
-        vsnprintf ( tblpath, sizeof tblpath, path, args );
-    if ( z < 0 || ( size_t ) z >= sizeof tblpath )
+        snprintf ( aTblpath, sizeof aTblpath, "%s", path ):
+        vsnprintf ( aTblpath, sizeof aTblpath, path, args );
+    if ( z < 0 || ( size_t ) z >= sizeof aTblpath )
         rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcExcessive );
     else
     {
@@ -237,12 +255,17 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
         const KDirectory *dir;
         bool prerelease = false;
 
+        ad(self, aTblpath, &tblpath);
+
         rc = KDBOpenPathTypeRead ( self, wd, tblpath, &dir, kptTable, NULL, try_srapath );
         if ( rc != 0 )
         {
             prerelease = true;
             rc = KDBOpenPathTypeRead ( self, wd, tblpath, &dir, kptPrereleaseTbl, NULL, try_srapath );
         }
+
+        if (aTblpath != tblpath)
+            free(tblpath);
 
         if ( rc == 0 )
         {

@@ -1605,8 +1605,8 @@ rc_t PTrieMakeNode ( const PTrie *self, PTTrans **transp, uint32_t idx )
 static
 uint32_t PTrieMapChar ( const PTrie *tt, uint32_t ch )
 {
-  if ( ch >= tt -> first_char && ch <= tt -> last_char )
-    return tt -> map [ ch - tt -> first_char ];
+    if ( ch >= tt -> first_char && ch <= tt -> last_char )
+        return tt -> map [ ch - tt -> first_char ];
     return tt -> unmapped_idx;
 }
 
