@@ -27,6 +27,8 @@
 #ifndef _h_resolver_priv_
 #define _h_resolver_priv_
 
+#include <klib/text.h> /* String */
+
 #ifndef _h_vfs_resolver_
 #include <vfs/resolver.h>
 #endif
@@ -170,6 +172,7 @@ typedef enum
 {
     algCGI,
     algFlat,
+    algSRAAD, /* Accession as Directory */
     algSRAFlat,
     algSRA1024,
     algSRA1000,

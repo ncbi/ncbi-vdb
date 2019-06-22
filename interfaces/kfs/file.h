@@ -81,6 +81,8 @@ enum KFileDesc
 #define KFileTimedReadAll NAME_VERS ( KFileTimedReadAll, KFILE_VERS )
 #define KFileReadExactly NAME_VERS ( KFileReadExactly, KFILE_VERS )
 #define KFileTimedReadExactly NAME_VERS ( KFileTimedReadExactly, KFILE_VERS )
+#define KFileReadChunked KFileReadChunked_v1
+#define KFileTimedReadChunked KFileTimedReadChunked_v1
 #define KFileWrite NAME_VERS ( KFileWrite, KFILE_VERS )
 #define KFileTimedWrite NAME_VERS ( KFileTimedWrite, KFILE_VERS )
 #define KFileWriteAll NAME_VERS ( KFileWriteAll, KFILE_VERS )

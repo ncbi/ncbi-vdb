@@ -590,15 +590,51 @@ static void KNSManagerSetNCBI_VDB_NET ( KNSManager * self, const KConfig * kfg )
 } 
 
 
+/* VDB-DESIREMENTS:
+1. to call *[s]/kfg/properties* to read configuration
+2. to create a header file to keep constants (node names) */
+static int32_t KNSManagerPrepareConnTimeout(KConfig* kfg) {
+    int64_t result = 0;
+    rc_t rc = KConfigReadI64(kfg, "/libs/kns/connect/timeout", &result);
+    if (rc != 0 || result < 0)
+        return MAX_CONN_LIMIT;
+    else
+        return result;
+}
+static int32_t KNSManagerPrepareConnReadTimeout(KConfig* kfg) {
+    int64_t result = 0;
+    rc_t rc = KConfigReadI64(kfg, "/libs/kns/connect/timeout/read", &result);
+    if (rc != 0 || result < 0)
+        return MAX_CONN_READ_LIMIT;
+    else
+        return result;
+}
+static int32_t KNSManagerPrepareConnWriteTimeout(KConfig* kfg) {
+    int64_t result = 0;
+    rc_t rc = KConfigReadI64(kfg, "/libs/kns/connect/timeout/write", &result);
+    if (rc != 0 || result < 0)
+        return MAX_CONN_WRITE_LIMIT;
+    else
+        return result;
+}
 static int32_t KNSManagerPrepareHttpReadTimeout(KConfig* kfg) {
     int64_t result = 0;
     rc_t rc = KConfigReadI64(kfg, "/http/timeout/read", &result);
-    if (rc == 0)
-        return result;
-    else
+    if (rc != 0 || result < 0)
         return MAX_HTTP_READ_LIMIT;
+    else
+        return result;
+}
+static int32_t KNSManagerPrepareHttpWriteTimeout(KConfig* kfg) {
+    int64_t result = 0;
+    rc_t rc = KConfigReadI64(kfg, "/http/timeout/write", &result);
+    if (rc != 0 || result < 0)
+        return MAX_HTTP_WRITE_LIMIT;
+    else
+        return result;
 }
 
+#if 0
 static bool KNSManagerPrepareLogTlsErrors(KConfig* kfg) {
     const char * e = getenv("NCBI_VDB_TLS_LOG_ERR");
     if (e != NULL)
@@ -623,6 +659,55 @@ static bool KNSManagerPrepareLogTlsErrors(KConfig* kfg) {
     }
 }
 
+static int KNSManagerPrepareEmulateTldReadErrors(KConfig* kfg) {
+    const char * e = getenv("NCBI_VDB_ERR_MBEDTLS_READ");
+    if (e != NULL)
+        return atoi(e);
+    else {
+        int64_t emult = 0;
+        rc_t rc = KConfigReadI64(kfg, "/tls/NCBI_VDB_ERR_MBEDTLS_READ", &emult);
+        if (rc != 0)
+            return 0;
+        else
+            return emult;
+    }
+}
+#endif
+
+static bool KNSManagerPrepareResolveToCache(KConfig* kfg) {
+    /* VResolverCache resolve to user's cache vs. cwd/AD */
+    bool reslt = true;
+
+    /* TODO: call ncbi-vdb/interfaces/kfg/properties.h for exact key name */
+    rc_t rc = KConfigReadBool(kfg, "/tools/prefetch/download_to_cache", &reslt);
+    if (rc == 0)
+        return reslt;
+    else
+        return true;
+}
+
+static bool KNSManagerPrepareAcceptAwsCharges(KConfig* kfg) {
+    bool reslt = false;
+
+    /* TODO: call ncbi-vdb/interfaces/kfg/properties.h for exact key name */
+    rc_t rc = KConfigReadBool(kfg, "/libs/cloud/accept_aws_charges", &reslt);
+    if (rc == 0)
+        return reslt;
+    else
+        return false;
+}
+
+static bool KNSManagerPrepareAcceptGcpCharges(KConfig* kfg) {
+    bool reslt = false;
+
+    /* TODO: call ncbi-vdb/interfaces/kfg/properties.h for exact key name */
+    rc_t rc = KConfigReadBool(kfg, "/libs/cloud/accept_gcp_charges", &reslt);
+    if (rc == 0)
+        return reslt;
+    else
+        return false;
+}
+
 LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
 {
     rc_t rc;
@@ -637,15 +722,22 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
         else
         {
             KRefcountInit ( & mgr -> refcount, 1, "KNSManager", "init", "kns" );
-            mgr -> conn_timeout = MAX_CONN_LIMIT;
-            mgr -> conn_read_timeout = MAX_CONN_READ_LIMIT;
-            mgr -> conn_write_timeout = MAX_CONN_WRITE_LIMIT;
+            mgr -> conn_timeout = KNSManagerPrepareConnTimeout(kfg);
+            mgr -> conn_read_timeout = KNSManagerPrepareConnReadTimeout(kfg);
+            mgr -> conn_write_timeout = KNSManagerPrepareConnWriteTimeout(kfg);
             mgr -> http_read_timeout = KNSManagerPrepareHttpReadTimeout(kfg);
-            mgr -> http_write_timeout = MAX_HTTP_WRITE_LIMIT;
+            mgr -> http_write_timeout = KNSManagerPrepareHttpWriteTimeout(kfg);
             mgr -> maxTotalWaitForReliableURLs_ms = 10 * 60 * 1000; /* 10 min */
             mgr -> maxNumberOfRetriesOnFailureForReliableURLs = 10;
 
-            mgr->logTlsErrors = KNSManagerPrepareLogTlsErrors(kfg);
+/*          mgr->logTlsErrors = KNSManagerPrepareLogTlsErrors(kfg);
+            mgr->emulateTlsReadErrors
+                = KNSManagerPrepareEmulateTldReadErrors(kfg); */
+
+            mgr->resolveToCache = KNSManagerPrepareResolveToCache(kfg);
+
+            mgr->accept_aws_charges = KNSManagerPrepareAcceptAwsCharges(kfg);
+            mgr->accept_gcp_charges = KNSManagerPrepareAcceptGcpCharges(kfg);
 
             rc = KNSManagerInit (); /* platform specific init in sysmgr.c ( in unix|win etc. subdir ) */
             if ( rc == 0 )
@@ -671,6 +763,14 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
                         KNSManagerSetNCBI_VDB_NET ( mgr, kfg );
 
                         * mgrp = mgr;
+
+/*
+printf("KNSManager.conn_timeout(%d) = %d\n", MAX_CONN_LIMIT, mgr->conn_timeout);
+printf("KNSManager.conn_read_timeout(%d) = %d\n", MAX_CONN_READ_LIMIT, mgr->conn_read_timeout);
+printf("KNSManager.conn_write_timeout(%d) = %d\n", MAX_CONN_WRITE_LIMIT, mgr->conn_write_timeout);
+printf("KNSManager.http_read_timeout(%d) = %d\n", MAX_HTTP_READ_LIMIT, mgr->http_read_timeout);
+printf("KNSManager.http_write_timeout(%d) = %d\n", MAX_HTTP_WRITE_LIMIT, mgr->http_write_timeout);
+*/
 
                         return 0;
                     }
@@ -820,4 +920,11 @@ rc_t KNSManagerGetCloudLocation(const KNSManager * cself,
     }
 
     return rc;
+}
+
+LIB_EXPORT rc_t CC KNSManagerSetAdCaching(struct KNSManager* self, bool enabled)
+{
+    if (self != NULL)
+        self->enabledResolveToAd = enabled;
+    return 0;
 }

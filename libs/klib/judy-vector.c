@@ -306,7 +306,7 @@ LIB_EXPORT rc_t CC KVectorGet ( const KVector *self, uint64_t key,
 
 #if _ARCH_BITS == 64
 
-//#define bstored_bits_t size_t //uint64_t
+typedef uint64_t bstored_bits_t;
 
 #define KVectorBoolGetStoredBits KVectorGetU64
 #define KVectorBoolSetStoredBits KVectorSetU64
@@ -317,7 +317,7 @@ LIB_EXPORT rc_t CC KVectorGet ( const KVector *self, uint64_t key,
 
 #elif _ARCH_BITS == 32
 
-//#define bstored_bits_t size_t //uint32_t
+typedef uint32_t bstored_bits_t;
 
 #define KVectorBoolGetStoredBits KVectorGetU32
 #define KVectorBoolSetStoredBits KVectorSetU32
@@ -344,7 +344,7 @@ LIB_EXPORT rc_t CC KVectorGetBoolOld ( const KVector *self, uint64_t key, bool *
 LIB_EXPORT rc_t CC KVectorGetBool ( const KVector *self, uint64_t key, bool *data )
 {
     rc_t rc = 0;
-    size_t stored_bits;
+    bstored_bits_t stored_bits;
     uint64_t key_qword = key / (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS);
     size_t bit_offset_in_qword = (key % (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS)) * BOOL_VECT_RECORD_SIZE_IN_BITS;
 
@@ -531,10 +531,9 @@ LIB_EXPORT rc_t CC KVectorGetFirstBool ( const KVector *self, uint64_t *first, b
 {
     rc_t rc;
     uint64_t i;
-    size_t stored_bits;
+    bstored_bits_t stored_bits;
     const uint64_t width = sizeof stored_bits * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS;
 
-    /* THIS IS INCORRECT - have to test "self" first to return correct error code */
     if ( data == NULL )
         return RC ( rcCont, rcVector, rcAccessing, rcParam, rcNull );
 
@@ -779,7 +778,7 @@ LIB_EXPORT rc_t CC KVectorGetPrevBool ( const KVector *self,
     uint64_t *prev, uint64_t key, bool *value )
 {
     rc_t rc = 0;
-    size_t stored_bits = 0;
+    bstored_bits_t stored_bits = 0;
     uint64_t key_qword = key / (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS);
     size_t bit_offset_in_qword = (key % (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS)) * BOOL_VECT_RECORD_SIZE_IN_BITS;
 
@@ -1050,7 +1049,7 @@ LIB_EXPORT rc_t CC KVectorGetNextBool ( const KVector *self,
     uint64_t *next, uint64_t key, bool *value )
 {
     rc_t rc = 0;
-    size_t stored_bits = 0;
+    bstored_bits_t stored_bits = 0;
     uint64_t key_qword = key / (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS);
     size_t bit_offset_in_qword = (key % (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS)) * BOOL_VECT_RECORD_SIZE_IN_BITS;
 
@@ -1326,7 +1325,7 @@ LIB_EXPORT rc_t CC KVectorSetBool ( KVector *self, uint64_t key, bool data )
 {
     rc_t rc;
 
-    size_t stored_bits = 0;
+    bstored_bits_t stored_bits = 0;
     uint64_t key_qword = key / (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS);
     size_t bit_offset_in_qword = (key % (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS)) * BOOL_VECT_RECORD_SIZE_IN_BITS;
     size_t new_bit_record;
@@ -1641,7 +1640,7 @@ struct UserDataStoredBitstoBool
     void* user_data;
 };
 
-static rc_t VisitStoredBitstoBoolAdapter ( uint64_t key, size_t value, void *user_data )
+static rc_t VisitStoredBitstoBoolAdapter ( uint64_t key, bstored_bits_t value, void *user_data )
 {
     rc_t ( * bool_callback ) ( uint64_t key, bool value, void *user_data );
 
