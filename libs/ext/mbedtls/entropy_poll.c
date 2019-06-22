@@ -21,6 +21,7 @@
 
 #if defined(__linux__)
 /* Ensure that syscall() is available even when compiling with -std=c99 */
+#undef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
 

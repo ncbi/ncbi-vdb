@@ -47,7 +47,7 @@ namespace ncbi
      *    ncbi::NGS::setAppVersionString ( "pileup-stats.1.0.0" );
      */
     void NGS :: setAppVersionString ( const String & app_version )
-        throw ()
+        /* nothrow */
     {
         // get a KNSManager
         KNSManager * kns;
@@ -66,7 +66,7 @@ namespace ncbi
      *  or may be an id, accession, or URL
      */
     ReadCollection NGS :: openReadCollection ( const String & spec )
-        throw ( ErrorMsg )
+        NGS_THROWS ( ErrorMsg )
     {
         if ( ! have_user_version_string )
             setAppVersionString ( "ncbi-ngs: unknown-application" );
@@ -88,7 +88,7 @@ namespace ncbi
      *  or may be an id, accession, or URL
      */
     ReferenceSequence NGS :: openReferenceSequence ( const String & spec )
-        throw ( ErrorMsg )
+        NGS_THROWS ( ErrorMsg )
     {
         if ( ! have_user_version_string )
             setAppVersionString ( "ncbi-ngs: unknown-application" );

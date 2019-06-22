@@ -69,7 +69,7 @@ namespace ncbi
          */
         static
         void setAppVersionString ( const String & app_version )
-            throw ();
+            /*nothrow*/;
 
         /* openReadCollection
          *  create an object representing a named collection of reads
@@ -78,7 +78,7 @@ namespace ncbi
          */
         static 
         ReadCollection openReadCollection ( const String & spec )
-            throw ( ErrorMsg );
+            NGS_THROWS ( ErrorMsg );
 
         /* openReferenceSequence
          *  create an object representing a named reference
@@ -87,7 +87,7 @@ namespace ncbi
          */
         static 
         ReferenceSequence openReferenceSequence ( const String & spec )
-            throw ( ErrorMsg );
+            NGS_THROWS ( ErrorMsg );
     };
 
 } // ncbi

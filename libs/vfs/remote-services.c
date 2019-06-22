@@ -1789,6 +1789,9 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
                                      rcMemory, rcExhausted );
             }
 
+            if (rc == 0 && self->https != NULL)
+                rc = VPathAttachVdbcache(self->https, self->vcHttps);
+
             self->osize = src->osize;
 
             return rc;
@@ -3132,6 +3135,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
 
     if (rc == 0 && SVersionNeedCloudLocation(request->version, request->sdl))
         rc = SCgiRequestAddLocation( self, helper );
+
     return rc;
 }
 

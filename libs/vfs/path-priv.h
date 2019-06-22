@@ -123,6 +123,11 @@ struct VPath
 
     String     service;      /* s3, gs, sra-ncbi, ftp-ncbi, sra-sos, etc. */
     String     objectType;
+
+    const VPath * vdbcache;
+    bool          vdbcacheChecked; /* no need to check vdbcache URL when
+                                  vdbcacheChecked = true and vdbcache == NULL */
+
     bool       ceRequired;
     bool       payRequired;
 };
@@ -194,6 +199,8 @@ rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
     KTime_t date, const uint8_t md5 [ 16 ], KTime_t exp_date,
     const char * service, const String * objectType,
     bool ceRequired, bool payRequired );
+
+rc_t VPathAttachVdbcache(VPath * self, const VPath * vdbcache);
 
 /* Equal
  *  compares two VPath-s

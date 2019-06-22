@@ -1,3 +1,8 @@
+/* TODO: move them to interfaces/klib/strings.h */
+#define MAGIC_CACHE_VDBCACHE  "VDB_CACHE_VDBCACHE"
+#define MAGIC_LOCAL_VDBCACHE  "VDB_LOCAL_VDBCACHE"
+#define MAGIC_REMOTE_VDBCACHE "VDB_REMOTE_VDBCACHE"
+
 /*===========================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
@@ -50,6 +55,9 @@
 #include <klib/namelist.h>
 #include <klib/log.h>
 #include <sysalloc.h>
+
+#include "../vfs/path-priv.h"     /* VPath */
+#include "../vfs/resolver-priv.h" /* rcResolver */
 
 #include <stdlib.h>
 #include <string.h>
@@ -313,6 +321,250 @@ rc_t VDBManagerVPathOpenRemoteDBRead ( const VDBManager *self,
     return rc;
 }
 
+#include "../kdb/dbmgr-priv.h"
+static void ad(const KDBManager *self, const VPath *aPath, const VPath **path)
+{
+    String spath;
+    assert(self);
+    if (VPathGetPath(aPath, &spath) != 0)
+        return;
+    if ((KDirectoryPathType(self->wd, spath.addr) & ~kptAlias) != kptDir)
+        return;
+    const char *slash = strrchr(spath.addr, '/');
+    if (slash)
+        ++slash;
+    else
+        slash = spath.addr;
+    if ((KDirectoryPathType(self->wd, "%s/%s.sra", spath.addr, slash)
+        & ~kptAlias) != kptFile)
+    {
+        return;
+    }
+    VFSManagerMakePath(self->vfsmgr, (VPath **)path,
+        "%s/%s.sra", spath.addr, slash);
+}
+
+typedef enum {
+    eCheckExistFalse,
+    eCheckExistTrue,
+} ECheckExist;
+
+typedef enum {
+    eCheckFilePathFalse,
+    eCheckFilePathTrue,
+} ECheckFilePath; 
+
+typedef enum {
+    eCheckUrlFalse,
+    eCheckUrlTrue,
+} ECheckUrl;
+
+/* Returned rc != 0: env-var was set but somehow invalid
+                     or it is eet to empty string == query returns not found
+ *  rc == 0:
+ *      * path != NULL: env-var was set and valid: use it!
+ *      * path == NULL:         was not set, keep going the old way
+ */
+static rc_t VFSManagerMagicResolve(const VFSManager *self,
+    VPath ** path, const char * name,
+    ECheckExist checkExist,
+    ECheckFilePath checkPath,
+    ECheckUrl checkUrl)
+{
+    rc_t rc = 0;
+
+    const char * magic = getenv(name);
+
+    assert(path);
+    *path = NULL;
+
+    if (magic == NULL) {
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("'%s' magic not set\n", name));
+        return 0;
+    }
+
+    /* variable set to empty: VResolverQuery returns not found */
+    if (magic[0] == '\0') {
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("'%s' magic empty\n", name));
+        return RC(rcVDB, rcResolver, rcResolving, rcName, rcNotFound);
+    }
+
+    rc = VFSManagerMakePath(self, path, "%s", magic);
+
+    if (rc == 0) {
+        assert(path);
+
+        if (checkUrl == eCheckUrlTrue) {
+            if (!(*path)->from_uri)
+            {
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                    "'%s' magic '%s' is not URL\n", name, magic));
+                rc = RC(rcVDB, rcResolver, rcResolving, rcName, rcInvalid);
+            }
+            else if ((*path)->scheme_type != vpuri_http
+                && (*path)->scheme_type != vpuri_https)
+            {
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                    "'%s' magic '%s' is not HTTP[S] URL\n", name, magic));
+                rc = RC(rcVDB, rcResolver, rcResolving, rcName, rcInvalid);
+            }
+        }
+
+        if (rc != 0) {
+            VPathRelease(*path);
+            *path = NULL;
+            return rc;
+        }
+        else
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                "'%s' magic '%s' found\n", name, magic));
+    }
+
+    else
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+            "'%s' magic '%s' cannot be converted to VPath: %R\n",
+            name, magic, rc));
+
+    return rc;
+}
+
+static rc_t VFSManagerCacheMagicResolve(
+    const VFSManager * self, VPath ** path)
+{
+    return VFSManagerMagicResolve(self, path,
+        MAGIC_CACHE_VDBCACHE,
+        eCheckExistFalse, eCheckFilePathTrue, eCheckUrlFalse);
+}
+
+static rc_t VFSManagerLocalMagicResolve(
+    const VFSManager * self, VPath ** path)
+{
+    return VFSManagerMagicResolve(self, path,
+        MAGIC_LOCAL_VDBCACHE,
+        eCheckExistTrue, eCheckFilePathTrue, eCheckUrlFalse);
+}
+
+static rc_t VFSManagerRemoteMagicResolve(
+    const VFSManager * self, VPath ** path)
+{
+    return VFSManagerMagicResolve(self, path,
+        MAGIC_REMOTE_VDBCACHE,
+        eCheckExistFalse, eCheckFilePathFalse, eCheckUrlTrue);
+}
+
+static rc_t DBManagerOpenVdbcache(const VDBManager *self,
+    const VFSManager * vfs, const VDatabase * db, const VSchema *schema,
+    const VPath * orig, bool is_accession, const VResolver * resolver,
+    const VPath ** pcache,
+    const VPath * plocal, const VPath * premote)
+    /* just one of plocal | premote is set */
+{
+    rc_t rc2 = 0;
+
+    /* CSRA databases may have an associated "vdbcache" */
+    const VDatabase * vdbcache = NULL;
+
+    VPath * clocal = NULL; /* local  VPath to vdbcache DB */
+    VPath * ccache = NULL; /* remote VPath to vdbcache DB */
+    VPath * cremote = NULL;
+
+    /* if principal was local */
+    if (plocal != NULL)
+    {
+        rc2 = VFSManagerLocalMagicResolve(vfs, &clocal);
+        if (rc2 == 0 && clocal == NULL)
+            /* make local path to vdbcache out of DB's path
+               just when magic variable is not set */
+            rc2 = VFSManagerMakePathWithExtension(
+                vfs, &clocal, plocal, ".vdbcache");
+        if (rc2 == 0)
+        {
+            rc2 = VDBManagerVPathOpenLocalDBRead( /* try to open local */
+                self, &vdbcache, schema, clocal); /* vdbcache DB */
+            if (rc2 != 0)
+            {   /* local vdbcache db does not exist */
+                rc2 = 0;
+                if (!is_accession)
+                {
+                    VPath * acc;
+                    rc2 = VFSManagerExtractAccessionOrOID(vfs, &acc, orig);
+                    if (rc2 == 0)
+                    {
+                        VPathRelease(orig);
+                        orig = acc;
+                    }
+                }
+
+                /* was not found locally - try to get one remotely */
+                if (rc2 == 0)
+                {
+                    /* We need suppress error message in the
+                     * case if here any error happened
+                     */
+                    KLogLevel lvl = KLogLevelGet();
+                    KLogLevelSet(klogFatal);
+                    assert(premote == NULL);
+                    assert(pcache && *pcache == NULL);
+                    rc2 = VResolverQuery(
+                        resolver, 0, orig, NULL, &premote, pcache);
+                    assert((rc2 == 0) ||
+                        (rc2 != 0 && premote == NULL));
+
+                    /* Here we are restoring log level
+                     */
+                    KLogLevelSet(lvl);
+                }
+            }
+        }
+    }
+
+    /* if principal was remote, or attempting remote vdbcache */
+    if (premote != NULL)
+    {
+        rc2 = VFSManagerRemoteMagicResolve(vfs, &cremote);
+        if (rc2 == 0 && cremote == NULL) {
+            /* check if names service returned vdbcache */
+            bool vdbcacheChecked = false;
+
+            /* check remote path to vdbcache 
+               just when magic variable is not set */
+            rc2 = VPathGetVdbcache(premote,
+                (const VPath **)& cremote, &vdbcacheChecked);
+
+            /* try to manually build remote vdbcache path
+               just when names service was not able to return vdbcache:
+               should never happen these days */
+            if (rc2 != 0 || vdbcacheChecked == false)
+                rc2 = VFSManagerMakePathWithExtension(
+                    vfs, (VPath**)& cremote, premote, ".vdbcache");
+        }
+
+        if (rc2 == 0) {
+            rc2 = VFSManagerCacheMagicResolve(vfs, &ccache);
+            if (rc2 == 0 && ccache == NULL) {
+                /* manually build cache path to vdbcache
+                   just when magic variable is not set */
+                if (*pcache != NULL)
+                    rc2 = VFSManagerMakePathWithExtension(
+                        vfs, &ccache, *pcache, ".vdbcache");
+            }
+        }
+
+        if (rc2 == 0)
+            rc2 = VDBManagerVPathOpenRemoteDBRead(
+                self, &vdbcache, schema, cremote, ccache);
+    }
+
+    VPathRelease(clocal);
+    VPathRelease(cremote);
+    VPathRelease(ccache);
+
+    /* if "vdbcache" is anything but NULL, we got the cache */
+    ((VDatabase*)db)->cache_db = vdbcache;
+
+    return rc2;
+}
+
 LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
     const VDatabase ** dbp, const VSchema *schema,
     const char * path_fmt, va_list args )
@@ -338,13 +590,16 @@ LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
                 if ( rc == 0 )
                 {
                     /* turn spec in "path_fmt" + "args" into VPath "orig" */
-                    VPath * orig;
-                    rc = VFSManagerVMakePath ( vfs, & orig, path_fmt, args );
+                    VPath * aOrig;
+                    rc = VFSManagerVMakePath ( vfs, &aOrig, path_fmt, args );
                     if ( rc == 0 )
                     {
                         /* the original VPath may get resolved into other paths */
                         const VPath * plocal = NULL, * premote = NULL, * pcache = NULL;
-                        
+
+                        const VPath * orig = aOrig;
+                        ad(self->kmgr, aOrig, &orig);
+
                         /* check whether we were given a path or accession */
                         bool is_accession = VPathIsAccessionOrOID ( orig );
 
@@ -399,14 +654,17 @@ LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
                             }
                             if ( rc == 0 )
                             {
-                                rc_t rc2;
                                 const VDatabase * db = * dbp;
                                 if ( VDatabaseIsCSRA ( db ) )
                                 {
+                                    DBManagerOpenVdbcache(self, vfs, db,
+                                        schema, orig, is_accession, resolver, 
+                                        &pcache, plocal, premote);
+#if 0
                                     /* CSRA databases may have an associated "vdbcache" */
                                     const VDatabase * vdbcache = NULL;
-                                    VPath * clocal = NULL, * cremote = NULL, * ccache = NULL;
-
+                                    VPath * clocal = NULL, * ccache = NULL;
+                                    const VPath * cremote = NULL;
                                     /* if principal was local */
                                     if ( plocal != NULL )
                                     {
@@ -453,7 +711,17 @@ LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
                                     /* if principal was remote, or attempting remote vdbcache */
                                     if ( premote != NULL )
                                     {
-                                        rc2 = VFSManagerMakePathWithExtension ( vfs, & cremote, premote, ".vdbcache" );
+                                        /* check
+                                           if names service returned vdbache */
+                                        bool vdbcacheChecked = false;
+                                        rc2 = VPathGetVdbcache ( premote,
+                                            & cremote, & vdbcacheChecked );
+
+                                        /* try to manually build remote vdbcache path
+                                           just when names service was not able to return vdbcache: shold never happen these days */
+                                        if ( rc2 != 0 || vdbcacheChecked == false )
+                                            rc2 = VFSManagerMakePathWithExtension ( vfs, (VPath**) & cremote, premote, ".vdbcache" );
+
                                         if ( rc2 == 0 && pcache != NULL )
                                             rc2 = VFSManagerMakePathWithExtension ( vfs, & ccache, pcache, ".vdbcache" );
                                         if ( rc2 == 0 )
@@ -466,6 +734,7 @@ LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
 
                                     /* if "vdbcache" is anything but NULL, we got the cache */
                                     ( ( VDatabase* ) db ) -> cache_db = vdbcache;
+#endif
                                 }
                             }
 
@@ -473,7 +742,10 @@ LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
                             VPathRelease ( premote );
                             VPathRelease ( pcache );
                         }
-                        
+
+                        if (aOrig != orig)
+                            VPathRelease(aOrig);
+
                         VPathRelease ( orig );
                     }
 

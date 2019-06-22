@@ -45,6 +45,10 @@
 
 #include "os-native.h"
 
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wpedantic"
+#endif
+
 /* old Sun includes won't define PATH_MAX */
 
 #ifndef __XOPEN_OR_POSIX
