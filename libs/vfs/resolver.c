@@ -1692,20 +1692,42 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
     rc_t rc = 0;
     const char * ticket = NULL;
 
+    char vers[512] = "";
+
     assert ( self && self -> root && acc );
     if ( self -> ticket != NULL ) {
         ticket = self -> ticket -> addr;
     }
 
-    rc = KService1NameWithVersion ( kns, self -> root -> addr,
-        acc -> addr, acc -> len, ticket, protocols, path, mapping,
-        legacy_wgs_refseq, version, self -> protected );
+    if (self->version != 0) { /* Use alg's version after we start using SDL.. */
+        bool version1 = false;
+        if (version != NULL) {
+            if (version[0] == '1' && version[1] == '.')
+                version1 = true;
+            else if (version[0] == '#' &&
+                version[1] == '1' && version[2] == '.')
+            {
+                version1 = true;
+            }
+        }
+        /* ... but use provided version when asked for 1.x
+           (used to query dbGaP OIDs) */
+        if (!version1) {
+            rc = string_printf(vers, sizeof vers, NULL, "%V", self->version);
+            if (rc == 0)
+                version = vers;
+        }
+    }
 
-    assert(*path != NULL || rc != 0);
+    if (rc == 0) {
+        rc = KService1NameWithVersion(kns, self->root->addr,
+            acc->addr, acc->len, ticket, protocols, path, mapping,
+            legacy_wgs_refseq, version, self -> protected);
 
-    if (rc == 0 && *path == NULL)
-    {
-        rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcNull);
+        assert(*path != NULL || rc != 0);
+
+        if (rc == 0 && *path == NULL)
+            rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcNull);
     }
 
     return rc;
@@ -3695,7 +3717,8 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
                         rc = get_query_accession ( query, & accession, oid_str, sizeof oid_str );
                         if ( rc == 0 )
                         {
-                            const VPath * remote2, * remote_mapping = NULL;
+                            const VPath * remote2 = NULL;
+                            const VPath * remote_mapping = NULL;
 /* call CGI with version 1.2 */
                             rc = VResolverRemoteResolve ( self, protocols,
                                 & accession, & remote2, & remote_mapping, NULL,
@@ -5868,8 +5891,12 @@ static rc_t VResolverInitVersion(VResolver * self, const KConfig *kfg) {
             return 0;
     }
 
-    else { /* default version is SDL-2 ( 128(SDL) | 2 ) */
-        self->version = string_dup_measure("130", NULL);
+    else {
+        if (self->ticket == NULL)
+             /* default version for public data is SDL-2 ( 128(SDL) | 2 ) */
+            self->version = string_dup_measure("130", NULL);
+        else /* default version for protected data is 3.0*/
+            self->version = string_dup_measure("3", NULL);
 
         if (self->version == NULL)
             return RC(rcVFS, rcMgr, rcCreating, rcMemory, rcExhausted);

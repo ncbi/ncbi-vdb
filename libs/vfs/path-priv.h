@@ -127,6 +127,7 @@ struct VPath
     const VPath * vdbcache;
     bool          vdbcacheChecked; /* no need to check vdbcache URL when
                                   vdbcacheChecked = true and vdbcache == NULL */
+
     bool       ceRequired;
     bool       payRequired;
 };

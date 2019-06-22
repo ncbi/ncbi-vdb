@@ -71,41 +71,44 @@ VTRANSFACT_IMPL ( vdb_outlier_decode, 1, 0, 0 ) ( const void *Self, const VXfact
     if (info->fdesc.desc.domain != vtdInt || cp->argv[0].count != 1)
         return RC(rcXF, rcFunction, rcConstructing, rcType, rcIncorrect);
         
-        switch (VTypedescSizeof(&cp->argv[0].desc)) {
-        case 8:
-        case 16:
-        case 32:
-        case 64:
-            break;
-        default:
-            return RC(rcXF, rcFunction, rcConstructing, rcType, rcIncorrect);
-            break;
-        }
+    switch (VTypedescSizeof(&cp->argv[0].desc))
+    {
+    case 8:
+    case 16:
+    case 32:
+    case 64:
+        break;
+    default:
+        return RC(rcXF, rcFunction, rcConstructing, rcType, rcIncorrect);
+        break;
+    }
     
     self = malloc(sizeof(uint64_t));
     if (self == NULL)
         return RC(rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted);
         
-        switch (VTypedescSizeof(&cp->argv[0].desc)) {
-        case 8:
-            *(uint8_t *)self = cp->argv[0].data.u8[0];
-            rslt->u.af = DECODER_NAME(uint8_t);
-            break;
-        case 16:
-            *(uint16_t *)self = cp->argv[0].data.u16[0];
-            rslt->u.af = DECODER_NAME(uint16_t);
-            break;
-        case 32:
-            *(uint32_t *)self = cp->argv[0].data.u32[0];
-            rslt->u.af = DECODER_NAME(uint32_t);
-            break;
-        case 64:
-            *(uint64_t *)self = cp->argv[0].data.u64[0];
-            rslt->u.af = DECODER_NAME(uint64_t);
-            break;
-        default:
-            break;
-        }
+    switch (VTypedescSizeof(&cp->argv[0].desc))
+    {
+    case 8:
+        *(uint8_t *)self = cp->argv[0].data.u8[0];
+        rslt->u.af = DECODER_NAME(uint8_t);
+        break;
+    case 16:
+        *(uint16_t *)self = cp->argv[0].data.u16[0];
+        rslt->u.af = DECODER_NAME(uint16_t);
+        break;
+    case 32:
+        *(uint32_t *)self = cp->argv[0].data.u32[0];
+        rslt->u.af = DECODER_NAME(uint32_t);
+        break;
+    case 64:
+        *(uint64_t *)self = cp->argv[0].data.u64[0];
+        rslt->u.af = DECODER_NAME(uint64_t);
+        break;
+    default:
+        break;
+    }
+
     rslt->self = self;
     rslt->whack = free;
     rslt->variant = vftArray;

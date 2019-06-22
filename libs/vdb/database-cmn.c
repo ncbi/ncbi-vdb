@@ -321,6 +321,29 @@ rc_t VDBManagerVPathOpenRemoteDBRead ( const VDBManager *self,
     return rc;
 }
 
+#include "../kdb/dbmgr-priv.h"
+static void ad(const KDBManager *self, const VPath *aPath, const VPath **path)
+{
+    String spath;
+    assert(self);
+    if (VPathGetPath(aPath, &spath) != 0)
+        return;
+    if ((KDirectoryPathType(self->wd, spath.addr) & ~kptAlias) != kptDir)
+        return;
+    const char *slash = strrchr(spath.addr, '/');
+    if (slash)
+        ++slash;
+    else
+        slash = spath.addr;
+    if ((KDirectoryPathType(self->wd, "%s/%s.sra", spath.addr, slash)
+        & ~kptAlias) != kptFile)
+    {
+        return;
+    }
+    VFSManagerMakePath(self->vfsmgr, (VPath **)path,
+        "%s/%s.sra", spath.addr, slash);
+}
+
 typedef enum {
     eCheckExistFalse,
     eCheckExistTrue,
@@ -567,13 +590,16 @@ LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
                 if ( rc == 0 )
                 {
                     /* turn spec in "path_fmt" + "args" into VPath "orig" */
-                    VPath * orig;
-                    rc = VFSManagerVMakePath ( vfs, & orig, path_fmt, args );
+                    VPath * aOrig;
+                    rc = VFSManagerVMakePath ( vfs, &aOrig, path_fmt, args );
                     if ( rc == 0 )
                     {
                         /* the original VPath may get resolved into other paths */
                         const VPath * plocal = NULL, * premote = NULL, * pcache = NULL;
-                        
+
+                        const VPath * orig = aOrig;
+                        ad(self->kmgr, aOrig, &orig);
+
                         /* check whether we were given a path or accession */
                         bool is_accession = VPathIsAccessionOrOID ( orig );
 
@@ -716,7 +742,10 @@ LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
                             VPathRelease ( premote );
                             VPathRelease ( pcache );
                         }
-                        
+
+                        if (aOrig != orig)
+                            VPathRelease(aOrig);
+
                         VPathRelease ( orig );
                     }
 
