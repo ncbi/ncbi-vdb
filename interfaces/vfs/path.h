@@ -268,6 +268,13 @@ VFS_EXTERN rc_t CC VPathMakeSysPath ( const VPath * self,
 VFS_EXTERN rc_t CC VPathMakeString ( const VPath * self,
     struct String const ** str );
 
+/* GetVdbcache
+ *  return attached vdbcahe
+ * and boolian trating that there is no neew to check remove vdbcache URL
+ */
+VFS_EXTERN rc_t CC VPathGetVdbcache(const VPath * self,
+    const VPath ** vdbcache, bool * vdbcacheChecked);
+
     
 /* Get*
  *  retrieves internal parts

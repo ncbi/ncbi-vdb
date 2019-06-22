@@ -268,7 +268,7 @@ rc_t FastqReader_Header(const FastqReader* self, bool* label,
     if( self->dad.options & eOrigFormat ) {
         char tmp[1024];
         if( spotname_sz == 0 ) {
-            ret = snprintf(tmp, sizeof(tmp) - 1, "%s.%lld", self->dad.accession, self->dad.spot);
+            ret = snprintf(tmp, sizeof(tmp) - 1, "%s.%lld", self->dad.accession, ( long long int ) self->dad.spot);
             if ( ret < 0 )
                 return RC ( rcSRA, rcString, rcConstructing, rcData, rcCorrupt );
             spotname = tmp;
@@ -285,22 +285,22 @@ rc_t FastqReader_Header(const FastqReader* self, bool* label,
             sep = spotname_sz ? "_" : "";
             if( self->dad.options & ePrintReadId ) {
                 ret = snprintf(buf, maxlen, "%c%s.%lld.%d %.*s%s%.*s length=%d",
-                    prefix, self->dad.accession, self->dad.spot, readId, spotname_sz, spotname, sep, read_label_sz, read_label, read_len);
+                    prefix, self->dad.accession, ( long long int ) self->dad.spot, readId, spotname_sz, spotname, sep, read_label_sz, read_label, read_len);
             } else {
                 ret = snprintf(buf, maxlen, "%c%s.%lld %.*s%s%.*s length=%d",
-                    prefix, self->dad.accession, self->dad.spot, spotname_sz, spotname, sep, read_label_sz, read_label, read_len);
+                    prefix, self->dad.accession, ( long long int ) self->dad.spot, spotname_sz, spotname, sep, read_label_sz, read_label, read_len);
             }
         } else if( readId > 0 ) {
             if( self->dad.options & ePrintReadId ) {
                 ret = snprintf(buf, maxlen, "%c%s.%lld.%d %.*s%slength=%d",
-                    prefix, self->dad.accession, self->dad.spot, readId, spotname_sz, spotname, sep, read_len);
+                    prefix, self->dad.accession, ( long long int ) self->dad.spot, readId, spotname_sz, spotname, sep, read_len);
             } else {
                 ret = snprintf(buf, maxlen, "%c%s.%lld %.*s%slength=%d",
-                    prefix, self->dad.accession, self->dad.spot, spotname_sz, spotname, sep, read_len);
+                    prefix, self->dad.accession, ( long long int ) self->dad.spot, spotname_sz, spotname, sep, read_len);
             }
         } else {
             ret = snprintf(buf, maxlen, "%c%s.%lld %.*s%slength=%u",
-                prefix, self->dad.accession, self->dad.spot, spotname_sz, spotname, sep, spot_len);
+                prefix, self->dad.accession, ( long long int ) self->dad.spot, spotname_sz, spotname, sep, spot_len);
         }
     }
 
