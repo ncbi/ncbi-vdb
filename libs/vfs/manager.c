@@ -416,15 +416,31 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
         const KFile * temp_file;
         uint32_t ram_pages = cps -> cache_page_count; /* calculate from RAM-amount from properties */
         bool remove_on_close = false;
-        rc = KDirectoryMakeKCacheTeeFile_v3 ( dir,
-                                              &temp_file,
-                                              *cfp,
-                                              cps -> cache_page_size,
-                                              cps -> cluster_factor,
-                                              ram_pages,
-                                              cps -> promote,
-                                              remove_on_close,
-                                              "%s", loc );
+        if ( loc == NULL )
+        {
+            /* TBD - the page count has to be sufficiently high */
+            rc = KDirectoryMakeKCacheTeeFile_v3 ( dir,
+                                                  &temp_file,
+                                                  *cfp,
+                                                  cps -> cache_page_size,
+                                                  cps -> cluster_factor,
+                                                  ram_pages,
+                                                  false,
+                                                  false,
+                                                  "" );
+        }
+        else
+        {
+            rc = KDirectoryMakeKCacheTeeFile_v3 ( dir,
+                                                  &temp_file,
+                                                  *cfp,
+                                                  cps -> cache_page_size,
+                                                  cps -> cluster_factor,
+                                                  ram_pages,
+                                                  cps -> promote,
+                                                  remove_on_close,
+                                                  "%s", loc );
+        }
         if ( rc == 0 )
         {
             KFileRelease ( * cfp );
