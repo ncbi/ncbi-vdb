@@ -204,7 +204,7 @@ checkFileSize ( const char * FileName, uint64_t Size )
     Dir = NULL;
     FileSize = 0;
 
-    printf ( "[SIZ] [%s] [%llu]\n", FileName, Size );
+    printf ( "[SIZ] [%s] [%llu]\n", FileName, ( long long unsigned int ) Size );
 
     RCt = KDirectoryNativeDir ( & Dir );
     if ( RCt == 0 ) {
