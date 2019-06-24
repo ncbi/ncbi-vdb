@@ -29,13 +29,26 @@
 #include <cloud/cloud.h>
 #endif
 
+#ifndef _h_cloud_manager_
+#include <cloud/manager.h>
+#endif
+
 #ifndef _h_cloud_impl_
 #include <cloud/impl.h>
+#endif
+
+#ifndef _h_kfg_config_
+#include <kfg/config.h>
 #endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/* forwards
+ */
+struct AWS;
+struct GCP;
 
 /* Force a provider for testing
  */
@@ -68,8 +81,22 @@ struct AWS
     char * output;
 };
 
+/*--------------------------------------------------------------------------
+ * CloudMgr
+ */
+struct CloudMgr
+{
+    const KConfig * kfg;        /* attached from "make"                   */
+    struct AWS * aws;           /* cached AWS                             */
+    struct GCP * gcp;           /* cached GCP                             */
+    Cloud * cur;                /* pointer ( not reference ) to a Cloud   */
+    KRefcount refcount;
+    CloudProviderId cur_id;     /* id of "cur"                            */
+    bool user_agrees_to_pay;    /* user has agreed to incur cloud charges */
+};
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _h_cloud_cloud_ */
+#endif /* _h_cloud_cloud_priv_ */

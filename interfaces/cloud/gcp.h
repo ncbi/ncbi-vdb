@@ -34,6 +34,10 @@
 #include <cloud/cloud.h>
 #endif
 
+#ifndef _h_cloud_manager_
+#include <cloud/manager.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

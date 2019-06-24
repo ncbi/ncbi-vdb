@@ -113,7 +113,10 @@ LIB_EXPORT rc_t CC CloudMgrMakeAWS ( const CloudMgr * self, AWS ** p_aws )
     }
     else
     {
-        rc = CloudInit ( & aws -> dad, ( const Cloud_vt * ) & AWS_vt_v1, "AWS" );
+        /* capture from self->kfg */
+        bool user_agrees_to_pay = false;
+        
+        rc = CloudInit ( & aws -> dad, ( const Cloud_vt * ) & AWS_vt_v1, "AWS", user_agrees_to_pay );
         if ( rc == 0 )
         {
             rc = PopulateCredentials( aws );

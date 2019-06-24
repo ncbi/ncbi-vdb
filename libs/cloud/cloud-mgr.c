@@ -40,11 +40,6 @@
 /*--------------------------------------------------------------------------
  * CloudMgr
  */
-struct CloudMgr
-{
-    KRefcount refcount;
-    CloudProviderId cur;
-};
 
 static atomic_ptr_t cloud_singleton;
 
@@ -54,12 +49,8 @@ static
 rc_t CloudMgrWhack ( CloudMgr * self )
 {
     CloudMgr * our_mgr = atomic_test_and_set_ptr ( & cloud_singleton, NULL, NULL );
-    if ( self == our_mgr )
-    {
-        atomic_test_and_set_ptr ( & cloud_singleton, NULL, self );
-    }
-
-    free ( self );
+    if ( self != our_mgr )
+        free ( self );
 
     return 0;
 }
@@ -67,66 +58,62 @@ rc_t CloudMgrWhack ( CloudMgr * self )
 /* Make
  *  this is a singleton
  */
-LIB_EXPORT rc_t CC CloudMgrMake ( CloudMgr ** mgrp )
+LIB_EXPORT rc_t CC CloudMgrMake ( CloudMgr ** mgrp, const KConfig * kfg )
 {
     rc_t rc = 0;
 
     if ( mgrp == NULL )
-    {
         rc = RC ( rcCloud, rcMgr, rcAllocating, rcParam, rcNull );
-    }
     else
-    {   /* build or attach reference to singleton */
+    {
         CloudMgr * our_mgr;
 
+        /* prepare for failure */
         * mgrp = NULL;
 
         /* grab single-shot singleton */
+        /* TBD - introduce proper atomic_ptr reader function */
         our_mgr = atomic_test_and_set_ptr ( & cloud_singleton, NULL, NULL );
         if ( our_mgr != NULL )
         {
+        singleton_exists:
+            
             /* add a new reference and return */
             rc = CloudMgrAddRef ( our_mgr );
             if ( rc == 0 )
-            {
                 * mgrp = our_mgr;
-            }
+
             return rc;
         }
+        
+        /* singleton was NULL. make from scratch. */
+        our_mgr = calloc ( 1, sizeof * our_mgr );
+        if ( our_mgr == NULL )
+            rc = RC ( rcCloud, rcMgr, rcAllocating, rcMemory, rcExhausted );
         else
-        {   /* singleton was NULL. make from scratch. */
-            our_mgr = calloc ( 1, sizeof * our_mgr );
-            if ( our_mgr == NULL )
-            {
-                rc = RC ( rcNS, rcMgr, rcAllocating, rcMemory, rcExhausted );
-            }
-            else
-            {
-                KRefcountInit ( & our_mgr -> refcount, 1, "CloudManager", "init", "cloud" );
+        {
+            KRefcountInit ( & our_mgr -> refcount, 1, "CloudManager", "init", "cloud" );
 
+            /* perform OUR initialization */
+            /* read from KConfig */
+            /* examine compute environment for "current-cloud" */
+            /* attach reference to KConfig */
+#warning "initialize mgr"
+
+            /* create scope for "new_mgr" */
+            {
                 /* try to set single-shot ( set once, never reset ) */
                 CloudMgr * new_mgr = atomic_test_and_set_ptr ( & cloud_singleton, our_mgr, NULL );
                 if ( new_mgr != NULL )
                 {
-                    /* somebody else got here first - drop our version */
                     assert ( our_mgr != new_mgr );
                     CloudMgrRelease ( our_mgr );
-
-                    /* use the new manager, just add a reference and return */
-                    rc = CloudMgrAddRef ( new_mgr );
-                    if ( rc == 0 )
-                    {
-                        * mgrp = new_mgr;
-                    }
-                }
-                else
-                {
-                    /* Set as invalid. We will discover where we are operating in the next call to CloudMgrCurrentProvider */
-                    our_mgr -> cur = cloud_num_providers;
-
-                    * mgrp = our_mgr;
+                    our_mgr = new_mgr;
+                    goto singleton_exists;
                 }
             }
+
+            * mgrp = our_mgr;
         }
     }
 
@@ -176,7 +163,7 @@ LIB_EXPORT rc_t CC CloudMgrRelease ( const CloudMgr * self )
 void CC CloudMgrSetProvider ( CloudMgr * mgr, CloudProviderId provider )
 {
     assert ( mgr != NULL );
-    mgr -> cur = provider;
+    mgr -> cur_id = provider;
 }
 #if 0
 #define GS "http://metadata.google.internal/computeMetadata/v1/instance/zone"
@@ -324,12 +311,12 @@ LIB_EXPORT rc_t CC CloudMgrCurrentProvider ( const CloudMgr * cself, CloudProvid
             rc = RC ( rcCloud, rcMgr, rcAccessing, rcSelf, rcNull );
         else
         {
-            if ( self -> cur == cloud_num_providers )
+            if ( self -> cur_id == cloud_num_providers )
             {
                 rc = DiscoverCloudProvider ( self );
             }
 
-            * cloud_provider = self -> cur;
+            * cloud_provider = self -> cur_id;
             return 0;
         }
 
@@ -357,7 +344,7 @@ LIB_EXPORT rc_t CC CloudMgrMakeCloud ( const CloudMgr * self, Cloud ** cloud, Cl
             rc = RC ( rcCloud, rcMgr, rcAllocating, rcParam, rcInvalid );
         else
         {
-            switch ( cloud_provider * cloud_num_providers + self -> cur )
+            switch ( cloud_provider * cloud_num_providers + self -> cur_id )
             {
 #define CASE( a, b ) \
     case ( a ) * cloud_num_providers + ( b )

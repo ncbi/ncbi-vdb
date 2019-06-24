@@ -109,7 +109,10 @@ LIB_EXPORT rc_t CC CloudMgrMakeGCP ( const CloudMgr * self, GCP ** p_gcp )
     }
     else
     {
-        rc = CloudInit ( & gcp -> dad, ( const Cloud_vt * ) & GCP_vt_v1, "GCP" );
+        /* capture from self->kfg */
+        bool user_agrees_to_pay = false;
+        
+        rc = CloudInit ( & gcp -> dad, ( const Cloud_vt * ) & GCP_vt_v1, "GCP", user_agrees_to_pay );
         if ( rc == 0 )
         {
             rc = PopulateCredentials( gcp );
