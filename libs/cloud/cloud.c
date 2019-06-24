@@ -47,7 +47,7 @@ static rc_t CloudDestroy ( Cloud * self )
     case 1:
         return ( * self -> vt -> v1 . destroy ) ( self );
     }
-        
+
     return RC ( rcCloud, rcProvider, rcAccessing, rcInterface, rcBadVersion );
 }
 
@@ -139,7 +139,7 @@ LIB_EXPORT rc_t CC CloudAddComputeEnvironmentTokenForSigner ( const Cloud * self
         case 1:
             return ( * self -> vt -> v1 . add_cet_to_req ) ( self, req );
         }
-        
+
         rc = RC ( rcCloud, rcProvider, rcAccessing, rcInterface, rcBadVersion );
     }
 
@@ -164,7 +164,7 @@ LIB_EXPORT rc_t CC CloudAddUserPaysCredentials ( const Cloud * self, struct KCli
         case 1:
             return ( * self -> vt -> v1 . add_user_pays_to_req ) ( self, req );
         }
-        
+
         rc = RC ( rcCloud, rcProvider, rcAccessing, rcInterface, rcBadVersion );
     }
 
@@ -175,7 +175,7 @@ LIB_EXPORT rc_t CC CloudAddUserPaysCredentials ( const Cloud * self, struct KCli
  *  initialize a newly allocated cloud object
  */
 LIB_EXPORT rc_t CC CloudInit ( Cloud * self, const Cloud_vt * vt,
-    const char * classname )
+    const char * classname, bool user_agrees_to_pay )
 {
     if ( self == NULL )
         return RC ( rcCloud, rcProvider, rcConstructing, rcSelf, rcNull );
@@ -194,6 +194,7 @@ LIB_EXPORT rc_t CC CloudInit ( Cloud * self, const Cloud_vt * vt,
         case 0:
 #if _DEBUGGING
             if ( vt -> v1 . add_user_pays_to_req == NULL ||
+                 vt -> v1 . add_authn == NULL            ||
                  vt -> v1 . add_cet_to_req == NULL       ||
                  vt -> v1 . make_cet == NULL             ||
                  vt -> v1 . destroy == NULL              )
@@ -210,6 +211,7 @@ LIB_EXPORT rc_t CC CloudInit ( Cloud * self, const Cloud_vt * vt,
     }
 
     self -> vt = vt;
+    self -> user_agrees_to_pay = user_agrees_to_pay;
     KRefcountInit ( & self -> refcount, 1, classname, "init", "" );
 
     return 0;

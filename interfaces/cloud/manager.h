@@ -1,5 +1,5 @@
-#ifndef _h_cloud_cloud_
-#define _h_cloud_cloud_
+#ifndef _h_cloud_manager_
+#define _h_cloud_manager_
 
 /*=====================================================================================
 *
@@ -30,8 +30,8 @@
 #include <cloud/extern.h>
 #endif
 
-#ifndef _h_klib_defs_
-#include <klib/defs.h>
+#ifndef _h_cloud_cloud_
+#include <cloud/cloud.h>
 #endif
 
 #ifdef __cplusplus
@@ -40,50 +40,50 @@ extern "C" {
 
 /* forwards
  */
-struct String;
-struct KClientHttpRequest;
+struct KConfig;
 
-/* Cloud
- *  generic cloud interface
+/* CloudProvider
  */
-typedef struct Cloud Cloud;
+typedef uint32_t CloudProviderId;
+enum
+{
+    cloud_provider_none,        /* not within any discernible cloud provider */
+    cloud_provider_aws,         /* Amazon Web Services                       */
+    cloud_provider_gcp,         /* Google Cloud Platform                     */
+    cloud_provider_azure,       /* Microsoft Azure Cloud Computing Platform  */
+
+    cloud_num_providers
+};
+
+/* CloudMgr
+ *  singleton object to access cloud-related resources
+ */
+typedef struct CloudMgr CloudMgr;
+
+/* Make
+*  Discovers the cloud provider
+ */
+CLOUD_EXTERN rc_t CC CloudMgrMake ( CloudMgr ** mgr, struct KConfig const * kfg );
 
 /* AddRef
  * Release
  */
-CLOUD_EXTERN rc_t CC CloudAddRef ( const Cloud * self );
-CLOUD_EXTERN rc_t CC CloudRelease ( const Cloud * self );
+CLOUD_EXTERN rc_t CC CloudMgrAddRef ( const CloudMgr * self );
+CLOUD_EXTERN rc_t CC CloudMgrRelease ( const CloudMgr * self );
 
-/* MakeComputeEnvironmentToken
- *  contact cloud provider to get proof of execution environment in form of a token
+/* CurrentProvider
+ *  ask whether we are currently executing within a cloud
  */
-CLOUD_EXTERN rc_t CC CloudMakeComputeEnvironmentToken ( const Cloud * self,
-    struct String const ** ce_token );
+CLOUD_EXTERN rc_t CC CloudMgrCurrentProvider ( const CloudMgr * self, CloudProviderId * cloud_provider );
 
-/* AddComputeEnvironmentTokenForSigner
- *  prepare a request object with a compute environment token
- *  for use by an SDL-associated "signer" service
+/* MakeCloud
+ * MakeCurrentCloud
  */
-CLOUD_EXTERN rc_t CC CloudAddComputeEnvironmentTokenForSigner ( const Cloud * self,
-    struct KClientHttpRequest * req );
-
-/* AddAuthentication
- *  prepare a request object with credentials for authentication
- */
-CLOUD_EXTERN rc_t CC CloudAddAuthentication ( const Cloud * self,
-    struct KClientHttpRequest * req );
-
-/* AddUserPaysCredentials
- *  prepare a request object with credentials for user-pays
- *
- *  fails if user has not explicitly accepted responsibility to pay
- *  by updating VDB configuration.
- */
-CLOUD_EXTERN rc_t CC CloudAddUserPaysCredentials ( const Cloud * self,
-    struct KClientHttpRequest * req );
+CLOUD_EXTERN rc_t CC CloudMgrMakeCloud ( const CloudMgr * self, Cloud ** cloud, CloudProviderId cloud_provider );
+CLOUD_EXTERN rc_t CC CloudMgrMakeCurrentCloud ( const CloudMgr * self, Cloud ** cloud );
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _h_cloud_cloud_ */
+#endif /* _h_cloud_manager_ */

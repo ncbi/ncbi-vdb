@@ -1,6 +1,3 @@
-#ifndef _h_cloud_gcp_
-#define _h_cloud_gcp_
-
 /*=====================================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
@@ -25,51 +22,72 @@
 *
 * ================================================================================== */
 
+#pragma once
 
-#ifndef _h_cloud_extern_
-#include <cloud/extern.h>
+#ifndef _h_cloud_cloud_priv_
+#include <cloud/cloud-priv.h>
 #endif
 
-#ifndef _h_cloud_cloud_
-#include <cloud/cloud.h>
+#ifndef _h_cloud_impl_
+#include <cloud/impl.h>
 #endif
 
-#ifndef _h_cloud_manager_
-#include <cloud/manager.h>
+#ifndef _h_kfg_config_
+#include <kfg/config.h>
 #endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* GCP
- *  Google Cloud Platform
+/* forwards
  */
-typedef struct GCP GCP;
+struct AWS;
+struct GCP;
 
-/* MakeGCP
- *  make an instance of a GCP cloud interface
+/* Force a provider for testing
  */
-CLOUD_EXTERN rc_t CC CloudMgrMakeGCP ( const CloudMgr * self, GCP ** gcp );
 
-/* AddRef
- * Release
+/*--------------------------------------------------------------------------
+ * GCP
  */
-CLOUD_EXTERN rc_t CC GCPAddRef ( const GCP * self );
-CLOUD_EXTERN rc_t CC GCPRelease ( const GCP * self );
+struct GCP
+{
+    Cloud dad;
 
-/* Cast
- *  cast from a Cloud to a GCP type or vice versa
- *  allows us to apply cloud-specific interface to cloud object
- *
- *  returns a new reference, meaning the "self" must still be released
+    char * privateKey;
+    char * client_email;
+};
+
+/*--------------------------------------------------------------------------
+ * AWS
  */
-CLOUD_EXTERN rc_t CC GCPToCloud ( const GCP * self, Cloud ** cloud );
-CLOUD_EXTERN rc_t CC CloudToGCP ( const Cloud * self, GCP ** gcp );
+struct AWS
+{
+    Cloud dad;
 
+    char * profile;
+
+    char * access_key_id;
+    char * secret_access_key;
+
+    char * region;
+    char * output;
+};
+
+/*--------------------------------------------------------------------------
+ * CloudMgr
+ */
+struct CloudMgr
+{
+    const KConfig * kfg;        /* attached from "make"                   */
+    struct AWS * aws;           /* cached AWS                             */
+    struct GCP * gcp;           /* cached GCP                             */
+    Cloud * cur;                /* pointer ( not reference ) to a Cloud   */
+    KRefcount refcount;
+    CloudProviderId cur_id;     /* id of "cur"                            */
+};
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* _h_cloud_gcp_ */
