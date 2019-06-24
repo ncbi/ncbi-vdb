@@ -3164,6 +3164,59 @@ LIB_EXPORT rc_t CC KClientHttpRequestGetHeader(const KClientHttpRequest *self,
     return rc;
 }
 
+LIB_EXPORT rc_t CC KClientHttpRequestGetHost(const KClientHttpRequest *self,
+    char *buffer, size_t bsize, size_t *num_read)
+{
+    rc_t rc = 0;
+
+    if (num_read == NULL)
+        rc = RC(rcNS, rcNoTarg, rcValidating, rcParam, rcNull);
+    else
+    {
+        *num_read = 0;
+
+        if (self == NULL)
+            rc = RC(rcNS, rcNoTarg, rcValidating, rcSelf, rcNull);
+        else if (buffer == NULL && bsize != 0)
+            rc = RC(rcNS, rcNoTarg, rcValidating, rcParam, rcNull);
+        else if (bsize < self->url_block.host.size + 1)
+            rc = RC(rcNS, rcNoTarg, rcValidating, rcBuffer, rcInsufficient);
+        else {
+            string_copy(buffer, bsize,
+                self->url_block.host.addr, self->url_block.host.size);
+        }
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KClientHttpRequestGetPath(const KClientHttpRequest *self,
+    char *buffer, size_t bsize, size_t *num_read)
+{
+    rc_t rc = 0;
+
+    if (num_read == NULL)
+        rc = RC(rcNS, rcNoTarg, rcValidating, rcParam, rcNull);
+    else
+    {
+        *num_read = 0;
+
+        if (self == NULL)
+            rc = RC(rcNS, rcNoTarg, rcValidating, rcSelf, rcNull);
+        else if (buffer == NULL && bsize != 0)
+            rc = RC(rcNS, rcNoTarg, rcValidating, rcParam, rcNull);
+        else if (bsize < self->url_block.path.size + 1)
+            rc = RC(rcNS, rcNoTarg, rcValidating, rcBuffer, rcInsufficient);
+        else {
+            string_copy(buffer, bsize,
+                self->url_block.path.addr, self->url_block.path.size);
+        }
+    }
+
+    return rc;
+}
+
+
 /* AddPostParam
  *  adds a parameter for POST
  */
