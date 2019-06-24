@@ -39,6 +39,12 @@ rc_t KClientHttpRequest_AddAuthentication(struct KClientHttpRequest * self,
     const char * http_method,
     const char * AWSAccessKeyId, const char * YourSecretAccessKeyID);
 
+rc_t MakeAwsAuthenticationHeader(
+    const char *AWSAccessKeyId,
+    const char *YourSecretAccessKeyID,
+    const char *StringToSign,
+    char *dst, size_t dlen);
+
 #ifdef __cplusplus
 }
 #endif

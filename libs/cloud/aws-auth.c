@@ -123,7 +123,7 @@ static rc_t Signature(const char * YourSecretAccessKeyID,
     return rc;
 }
 
-static rc_t MakeAwsAuthenticationHeader(
+rc_t MakeAwsAuthenticationHeader(
     const char *AWSAccessKeyId,
     const char *YourSecretAccessKeyID,
     const char *StringToSign,
@@ -278,6 +278,7 @@ rc_t KClientHttpRequest_AddAuthentication(KClientHttpRequest * self,
     }
 
     if (rc == 0) {
+        size_t num_read = 0;
         bool requester_payer = false;
         size_t len = 0;
         char host[4096] = "";
@@ -286,15 +287,17 @@ rc_t KClientHttpRequest_AddAuthentication(KClientHttpRequest * self,
         String shost;
         String spath;
         StringInitCString(&HTTPVerb, http_method);
-        StringInitCString(&shost, host);
-        StringInitCString(&spath, path);
-        rc = KClientHttpRequestGetHost(self, host, sizeof host, NULL);
+        rc = KClientHttpRequestGetHost(self, host, sizeof host, &num_read);
         if (rc == 0)
-            rc = KClientHttpRequestGetPath(self, path, sizeof path, NULL);
+            rc = KClientHttpRequestGetPath(self, path, sizeof path, &num_read);
         if (rc == 0) {
+            StringInitCString(&shost, host);
+            StringInitCString(&spath, path);
             assert(sdate);
+            requester_payer = true;
             rc = StringToSign(&HTTPVerb, sdate, &shost, &spath, requester_payer,
                 stringToSign, sizeof stringToSign, &len);
+/*          puts(stringToSign); */
         }
     }
 
@@ -304,6 +307,11 @@ rc_t KClientHttpRequest_AddAuthentication(KClientHttpRequest * self,
 
     if (rc == 0)
         rc = KClientHttpRequestAddHeader(self, "Authorization", authorization);
-
+    /*
+#define X_AMZ_REQUEST_PAYER "x-amz-request-payer"
+#define REQUESTER "requester"
+    if (rc == 0)
+        rc = KClientHttpRequestAddHeader(self, X_AMZ_REQUEST_PAYER, REQUESTER);
+    */
     return rc;
 }
