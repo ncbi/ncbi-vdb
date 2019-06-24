@@ -35,8 +35,9 @@ extern "C" {
 struct AWS;
 struct KClientHttpRequest;
 
-rc_t CC AWSAddAuthentication(const struct AWS * self,
-    struct KClientHttpRequest * req, const char * http_method);
+rc_t KClientHttpRequest_AddAuthentication(struct KClientHttpRequest * self,
+    const char * http_method,
+    const char * AWSAccessKeyId, const char * YourSecretAccessKeyID);
 
 #ifdef __cplusplus
 }

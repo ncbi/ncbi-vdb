@@ -35,7 +35,7 @@
 #include <ext/mbedtls/base64.h> /* vdb_mbedtls_base64_encode */
 #include <ext/mbedtls/md.h> /* vdb_mbedtls_md_hmac */
 
-#include "aws-priv.h" /* AWSAddAuthentication */
+#include "aws-priv.h" /* KClientHttpRequest_AddAuthentication */
 
 /* use mbedtls to generate HMAC_SHA1 */
 static rc_t HMAC_SHA1(
@@ -237,8 +237,9 @@ static rc_t StringToSign(
 /* AddAuthentication
  *  prepare a request object with credentials for authentication
  */
-rc_t CC AWSAddAuthentication(const struct AWS * self,
-    KClientHttpRequest * req, const char * http_method)
+rc_t KClientHttpRequest_AddAuthentication(KClientHttpRequest * self,
+    const char * http_method,
+    const char *AWSAccessKeyId, const char *YourSecretAccessKeyID)
 {
     rc_t rc = 0;
 
@@ -246,44 +247,21 @@ rc_t CC AWSAddAuthentication(const struct AWS * self,
     const String * sdate = NULL;
     char date[64] = "";
     String dates;
+    char stringToSign[4096] = "";
+    char authorization[4096] = "";
 
-    //const KHttpHeader *node = NULL;
-
-    //const BSTree * hdrs = KClientHttpRequestHeaders(req);
-
-    String dateString;
-    String authorizationString;
-    CONST_STRING(&dateString, "Date");
-    CONST_STRING(&authorizationString, "Authorization");
-
-    assert(req);
-
-    rc = KClientHttpRequestGetHeader(req, "Authorization",
+    rc = KClientHttpRequestGetHeader(self, "Authorization",
         buf, sizeof buf, NULL);
     if (rc == 0)
         return 0; /* already has Authorization header */
-    rc = KClientHttpRequestGetHeader(req, "Date", buf, sizeof buf, NULL);
-    if (rc != 0) {
-#if 0
-        for (node = (const KHttpHeader*)BSTreeFirst(hdrs);
-            (rc == 0 ||
-            (GetRCObject(rc) == (enum RCObject) rcBuffer &&
-                GetRCState(rc) == rcInsufficient)) && node != NULL;
-            node = (const KHttpHeader*)BSTNodeNext(&node->dad))
-        {
-            if (node->name.len == 4 &&
-                StringCaseCompare(&node->name, &dateString) == 0)
-            {
-                sdate = &node->value;
-            }
-            else if (node->name.len == 13 &&
-                StringCaseCompare(&node->name, &authorizationString) == 0)
-            {   /* already has Authorization header */
-                return 0;
-            }
-        }
-#endif
-        //if (sdate == NULL) {
+
+    /* To add of get Date header */
+    rc = KClientHttpRequestGetHeader(self, "Date", buf, sizeof buf, NULL);
+    if (rc == 0) {
+        StringInitCString(&dates, buf);
+        sdate = &dates;
+    }
+    else {
         KTime_t t = KTimeStamp();
 
 #if _DEBUGGING
@@ -296,7 +274,7 @@ rc_t CC AWSAddAuthentication(const struct AWS * self,
 
         StringInitCString(&dates, date);
         sdate = &dates;
-        rc = KClientHttpRequestAddHeader(req, "Date", date);
+        rc = KClientHttpRequestAddHeader(self, "Date", date);
     }
 
     if (rc == 0) {
@@ -310,13 +288,22 @@ rc_t CC AWSAddAuthentication(const struct AWS * self,
         StringInitCString(&HTTPVerb, http_method);
         StringInitCString(&shost, host);
         StringInitCString(&spath, path);
-        rc = KClientHttpRequestGetHost(req, host, sizeof host, NULL);
+        rc = KClientHttpRequestGetHost(self, host, sizeof host, NULL);
         if (rc == 0)
-            rc = KClientHttpRequestGetPath(req, path, sizeof path, NULL);
-        if (rc == 0)
-            rc = StringToSign(&HTTPVerb, sdate,
-                &shost, &spath, requester_payer, buf, sizeof buf, &len);
+            rc = KClientHttpRequestGetPath(self, path, sizeof path, NULL);
+        if (rc == 0) {
+            assert(sdate);
+            rc = StringToSign(&HTTPVerb, sdate, &shost, &spath, requester_payer,
+                stringToSign, sizeof stringToSign, &len);
+        }
     }
+
+    if (rc == 0)
+        rc = MakeAwsAuthenticationHeader(AWSAccessKeyId, YourSecretAccessKeyID,
+            stringToSign, authorization, sizeof authorization);
+
+    if (rc == 0)
+        rc = KClientHttpRequestAddHeader(self, "Authorization", authorization);
 
     return rc;
 }

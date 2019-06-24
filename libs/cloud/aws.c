@@ -46,7 +46,7 @@ struct AWS;
 
 #include <assert.h>
 
-#include "aws-priv.h" /* AWSAddAuthentication */
+#include "aws-priv.h" /* AWSAddAuthenticationImpl */
 #include "cloud-priv.h"
 
 static rc_t PopulateCredentials ( AWS * self );
@@ -87,12 +87,15 @@ rc_t CC AWSAddComputeEnvironmentTokenForSigner ( const AWS * self, KClientHttpRe
 /* AddAuthentication
  *  prepare a request object with credentials for authentication
  */
-/* rc_t CC AWSAddAuthentication ( const AWS * self, KClientHttpRequest * req,
-                                  const char * http_method )
+static rc_t CC AWSAddAuthentication ( const AWS * self,
+    KClientHttpRequest * req, const char * http_method )
 {
-    // IN A SEPARATE FILE
+    assert(self);
+    if (self->access_key_id != NULL && self->secret_access_key != NULL)
+        return KClientHttpRequest_AddAuthentication(req, http_method,
+            self->access_key_id, self->secret_access_key);
+    return 0;
 }
-*/
 
 /* AddUserPaysCredentials
  *  prepare a request object with credentials for user-pays
