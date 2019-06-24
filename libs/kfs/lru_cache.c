@@ -255,13 +255,15 @@ static rc_t new_entry_in_lru_cache ( lru_cache * self,
         if ( rc == 0 )
         {
             /* read the whole request from the wrapped file */
+            size_t elem_count;
             uint64_t first_pos = first_block_nr * self -> page_size; 
             rc = KFileTimedReadAll ( self -> wrapped,
                                 first_pos,
                                 data . base,
                                 self -> page_size * blocks,
-                                &data . elem_count,
+                                &elem_count,
                                 tm );
+            data . elem_count = elem_count;
             if ( rc == 0 )
             {
                 /* give the buffer to the caller */
@@ -315,14 +317,16 @@ static rc_t new_entry_in_lru_cache ( lru_cache * self,
         rc = get_a_page( self, &page );
         if ( rc == 0 )
         {
+            size_t elem_count;
             page -> pos = first_block_nr * self -> page_size;
             page -> block_nr = first_block_nr;
             rc = KFileTimedReadAll ( self -> wrapped,
                                      page -> pos,
                                      page -> data . base,
                                      self -> page_size,
-                                     &page -> data . elem_count,
+                                     & elem_count,
                                      tm );
+            page -> data . elem_count = elem_count;
             if ( rc == 0 )
             {
                 if ( read_from_page( page, pos, buffer, bsize, num_read ) )

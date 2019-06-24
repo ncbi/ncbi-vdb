@@ -268,16 +268,19 @@ LIB_EXPORT rc_t CC KTimedLockRelease ( const KTimedLock *cself )
  */
 LIB_EXPORT rc_t CC KTimedLockAcquire ( KTimedLock *self, timeout_t *tm )
 {
+    if ( tm == NULL )
+        return KLockAcquire ( self );
+    
     if ( self == NULL )
         return RC ( rcPS, rcLock, rcLocking, rcSelf, rcNull );
 
-    switch ( WaitForSingleObject( self -> mutex, tm != NULL ? tm -> mS : 0 ) )
+    switch ( WaitForSingleObject( self -> mutex, tm -> mS ) )
     {
     case WAIT_ABANDONED:
     case WAIT_OBJECT_0:
         return 0;
     case WAIT_TIMEOUT:
-        if ( tm == NULL )
+        if ( tm -> mS != 0 )
             return RC ( rcPS, rcLock, rcLocking, rcLock, rcBusy );
         return RC ( rcPS, rcLock, rcLocking, rcTimeout, rcExhausted );
     }

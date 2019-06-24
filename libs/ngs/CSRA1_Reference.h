@@ -57,6 +57,7 @@ enum ReferenceTableColumns
     reference_SECONDARY_ALIGNMENT_IDS,
     reference_OVERLAP_REF_LEN,
     reference_OVERLAP_REF_POS,
+    reference_CMP_READ,
 
     reference_NUM_COLS
 };

@@ -73,10 +73,12 @@ clean: stdclean
 $(ILIBDIR)/libvfs: $(addprefix $(ILIBDIR)/libvfs.,$(ILIBEXT))
 
 VFS_SRC_CMN = \
-	manager  \
+	json-response \
+	manager \
 	remote-services \
 	resolver \
 	resolver-3.0 \
+	sdl-response \
 	services \
 	srv-response \
 	syspath \
@@ -103,3 +105,8 @@ $(ILIBDIR)/libvfs.$(LIBX): $(VFS_OBJ)
 compile: stdcompile
 
 $(TARGDIR)/compile: $(OBJFILES)
+#-------------------------------------------------------------------------------
+# fuzz
+#
+fuzz: std
+	cp $(addsuffix .$(LIBX),$(addprefix $(ILIBDIR)/,$(INT_LIBS))) $(FLIBDIR)/

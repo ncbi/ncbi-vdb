@@ -77,18 +77,36 @@ struct KNSManager
 
     struct KNSProxies * proxies;
 
-    bool verbose;
+    const struct Cloud * cloud;
 
+    bool verbose;
+    bool logTlsErrors;
+
+    /* VResolverCache try to resolve to user's cache before cwd/AD */
+    bool resolveToCache;
+
+    /* VResolverCache ia allowed to resolve to user's cache vs. cwd/AD */
+    bool enabledResolveToAd; 
+
+    bool accept_aws_charges;
+    bool accept_gcp_charges;
+
+    bool NCBI_VDB_NETnoLogError;
     bool NCBI_VDB_NETkfgValueSet;
     bool NCBI_VDB_NETkfgValue;
+
+    bool notSingleton;
 };
 
 bool KNSManagerLogNcbiVdbNetError ( const struct KNSManager * self );
+void KNSManagerSetLogNcbiVdbNetError(struct KNSManager * self, bool set);
 
 /* returns true when we should not try direct internet connection
  * when HttpProxies are set */
 bool KNSManagerHttpProxyOnly ( const struct KNSManager * self );
 
+rc_t KNSManagerGetCloudLocation(const struct KNSManager * self,
+    char * buffer, size_t bsize, size_t * num_read, size_t * remaining);
 
 /******************************** KNSProxies **********************************/
 

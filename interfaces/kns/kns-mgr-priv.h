@@ -70,6 +70,13 @@ bool HttpGetRetryCodes ( const HttpRetrySpecs* self, uint16_t code, uint8_t * ma
  */
 KNS_EXTERN rc_t CC KNSManagerMakeConfig ( struct KNSManager **mgr, struct KConfig* kfg );
 
+/* SetAdCaching
+ *  Enable Caching to Accession as Directory in cwd
+ */
+KNS_EXTERN
+rc_t CC KNSManagerSetAdCaching(struct KNSManager* self, bool enabled);
+
+
 /** MakeReliableHttpFile, KNSManagerMakeReliableClientRequest:
  * Make HTTP file/request from a reliable URL:
  * we will try harder to recover upon any error
@@ -81,6 +88,12 @@ KNS_EXTERN rc_t CC KNSManagerMakeReliableHttpFile(
 KNS_EXTERN rc_t CC KNSManagerMakeReliableClientRequest ( 
     struct KNSManager const *self, struct KClientHttpRequest **req, 
     ver_t version, struct KStream *conn, const char *url, ... );
+KNS_EXTERN rc_t CC KNSManagerMakePaidHttpFile(struct KNSManager const *self,
+    struct KFile const **file, struct KStream *conn, ver_t vers,
+    bool payRequired, const char *url, ...);
+KNS_EXTERN rc_t CC KNSManagerMakePaidReliableHttpFile(
+    struct KNSManager const *self, struct KFile const **file,
+    struct KStream *conn, ver_t vers, bool payRequired, const char *url, ...);
 
 typedef struct {
     const char *url;
@@ -125,6 +138,12 @@ typedef enum
     st_S3
 } SchemeType;
 
+typedef enum
+{
+    ct_NONE,
+    ct_S3,
+} CloudType;
+
 typedef struct URLBlock URLBlock;
 struct URLBlock
 {
@@ -137,6 +156,7 @@ struct URLBlock
     uint32_t port;
 
     SchemeType scheme_type;
+    CloudType cloud_type;
     bool tls;
 
     bool port_dflt;

@@ -2201,7 +2201,7 @@ uint64_t CC VTableCursorGetCacheCapacity(const VCURSOR_IMPL *self)
 const PageMapProcessRequest* VTableCursorPageMapProcessRequest(const struct VCURSOR_IMPL *self)
 {
     assert ( self != NULL );
-    return self->pagemap_thread ? &self->pmpr : NULL;
+    return & self -> pmpr;
 }
 
 const struct VTable * VTableCursorGetTable ( const struct VCURSOR_IMPL * self )

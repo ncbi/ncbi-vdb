@@ -156,7 +156,7 @@ public:
         m_configName = name+".kfg";
         std::ofstream f(m_configName.c_str()); 
         f   << "repository/remote/main/CGI/resolver-cgi "
-                  "= \"https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
+                  "= \"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
             << "repository/user/main/public/root=\"./root\"\n" 
             << "repository/user/main/public/apps/sra/volumes/sraFlat=\"sra\"\n";
         f.close();

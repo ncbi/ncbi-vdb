@@ -31,6 +31,7 @@ MODULE = test/vfs
 TEST_TOOLS = \
 	redirect-rejected-names-cgi-http-to-https \
 	test-resolver-with-log \
+	test-sdl-response \
 	test-services \
 	test-caching \
 	test-names-30 \
@@ -38,6 +39,8 @@ TEST_TOOLS = \
 	test-path-c \
 	test-resolver \
 	test-vfsmanager \
+	test-json-response \
+	test-resolver4 \
 
 include $(TOP)/build/Makefile.env
 
@@ -91,6 +94,42 @@ HTTPS_OBJ = \
 	$(addsuffix .$(OBJX),$(HTTPS_SRC))
 
 $(TEST_BINDIR)/redirect-rejected-names-cgi-http-to-https: $(HTTPS_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+#----------------------------------------------------------------
+# resolver4
+
+R4_SRC = \
+	test-resolver4
+
+R4_OBJ = \
+	$(addsuffix .$(OBJX),$(R4_SRC))
+
+$(TEST_BINDIR)/test-resolver4: $(R4_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+#----------------------------------------------------------------
+# json-response
+
+J_SRC = \
+	test-json-response
+
+J_OBJ = \
+	$(addsuffix .$(OBJX),$(J_SRC))
+
+$(TEST_BINDIR)/test-json-response: $(J_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+#----------------------------------------------------------------
+# sdl-response
+
+S_SRC = \
+	test-sdl-response
+
+S_OBJ = \
+	$(addsuffix .$(OBJX),$(S_SRC))
+
+$(TEST_BINDIR)/test-sdl-response: $(S_OBJ)
 	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
 
 #----------------------------------------------------------------

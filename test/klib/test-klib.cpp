@@ -68,6 +68,14 @@ TEST_CASE(Klib_text_string_len)
     REQUIRE_EQ(length, (uint32_t)(size - 4));
 }
 
+TEST_CASE(Klib_text_string_len_nonUtf8)
+{
+    const char* str = "12\3774567";
+    size_t size = strlen ( str );
+    // stops counting at the first non-UTF8 character
+    REQUIRE_EQ ( 2u, string_len ( str, size ) );
+}
+
 TEST_CASE(Klib_text_string_measure)
 {
     // this is ASCII with a character count of 37, byte count of 37
@@ -84,6 +92,15 @@ TEST_CASE(Klib_text_string_measure)
     length = string_measure(str, &measure);
     REQUIRE_EQ(measure, size);
     REQUIRE_EQ(length, (uint32_t)(size - 4));
+}
+
+TEST_CASE(Klib_text_string_measure_nonUtf8)
+{
+    const char* str = "12\3774567";
+    size_t size;
+    // stops counting at the first non-UTF8 character
+    REQUIRE_EQ ( 2u, string_measure ( str, & size ) );
+    REQUIRE_EQ ( 2, (int)size );
 }
 
 TEST_CASE(Klib_text_string_copy)
@@ -878,11 +895,20 @@ class NumGenFixture
     ~NumGenFixture()
     {
         if (m_it && num_gen_iterator_destroy(m_it))
-            throw logic_error(
-                "NumGenFixture: num_gen_iterator_destroy failed");
+        {
+            std :: cerr
+                << "NumGenFixture: num_gen_iterator_destroy failed"
+                << std :: endl
+                ;
+        }
 
-        if (m_ng && num_gen_destroy(m_ng) != 0)
-            throw logic_error("NumGenFixture: num_gen_destroy failed");
+        else if (m_ng && num_gen_destroy(m_ng) != 0)
+        {
+            std :: cerr
+                << "NumGenFixture: num_gen_destroy failed"
+                << std :: endl
+                ;
+        }
     }
 
     struct num_gen* m_ng;

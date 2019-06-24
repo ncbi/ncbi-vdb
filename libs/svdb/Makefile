@@ -93,3 +93,9 @@ $(LIBDIR)/libsvdb.$(SHLX): $(SVDB_OBJ)
 
 $(LIBDIR)/libsvdb.$(LIBX): $(SVDB_OBJ)
 	$(LD) --slib --vers $(SRCDIR)/../ncbi-vdb/libncbi-vdb.vers -o $@ $^ $(SVDB_LIB)
+
+#-------------------------------------------------------------------------------
+# fuzz
+#
+fuzz: std
+	cp $(addsuffix .$(LIBX),$(addprefix $(ILIBDIR)/,$(INT_LIBS))) $(FLIBDIR)/

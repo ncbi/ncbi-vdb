@@ -199,6 +199,6 @@ table NCBI:var:tbl:hitmap #1
  */
 database NCBI:var:db:varloc #1
 {
-    table NCBI:var:tbl:varloc VARLOC;
-    table NCBI:var:tbl:hitmap HITMAP;
+    table NCBI:var:tbl:varloc #1 VARLOC;
+    table NCBI:var:tbl:hitmap #1 HITMAP;
 };

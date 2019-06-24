@@ -83,6 +83,12 @@ INSTALLED_FILES = \
 
 runtests: test-install
 
+ifeq (, $(shell md5sum --help))
+	HAVE_MD5=''
+else
+	HAVE_MD5=1
+endif
+
 test-install: cleanup
 	@ echo "installing to $(INSTALL_DIR)"
 	@ #
@@ -111,16 +117,16 @@ test-install: cleanup
 	@ # reinstall
 	@ $(SUBMAKE) install
 	@ # verify changed files have been saved
-	@ ( grep newcert  $(KONFIG_DIR)/certs.kfg.orig       >/dev/null ) || ( echo "Error: $(KONFIG_DIR)/certs.kfg.orig has unexpected content" && exit 1 )
-	@ ( grep newdflt  $(KONFIG_DIR)/default.kfg.orig     >/dev/null ) || ( echo "Error: $(KONFIG_DIR)/default.kfg.orig has unexpected content" && exit 1 )
-	@ ( grep newncbi  $(KONFIG_DIR)/ncbi-vdb.kfg.orig    >/dev/null ) || ( echo "Error: $(KONFIG_DIR)/ncbi-vdb.kfg.orig has unexpected content" && exit 1 )
+	@ if [ "$(HAVE_MD5)" != "" ]; then ( grep newcert  $(KONFIG_DIR)/certs.kfg.orig       >/dev/null ) || ( echo "Error: $(KONFIG_DIR)/certs.kfg.orig has unexpected content" && exit 1 ); fi
+	@ if [ "$(HAVE_MD5)" != "" ]; then ( grep newdflt  $(KONFIG_DIR)/default.kfg.orig     >/dev/null ) || ( echo "Error: $(KONFIG_DIR)/default.kfg.orig has unexpected content" && exit 1 ); fi
+	@ if [ "$(HAVE_MD5)" != "" ]; then ( grep newncbi  $(KONFIG_DIR)/ncbi-vdb.kfg.orig    >/dev/null ) || ( echo "Error: $(KONFIG_DIR)/ncbi-vdb.kfg.orig has unexpected content" && exit 1 ); fi
 	@ ( ! test -f $(KONFIG_DIR)/ncbi-vdb.kfg  ) || ( echo "Error: $(KONFIG_DIR)/ncbi-vdb.kfg exists" && exit 1 )  # gone ...
 	@ # verify that further reinstall does not overwrite previously saved files if there is no change
 	@ $(SUBMAKE) install
 	@ # verify saved files are still there
-	@ ( grep newcert  $(KONFIG_DIR)/certs.kfg.orig       >/dev/null ) || ( echo "Error: $(KONFIG_DIR)/certs.kfg.orig has unexpected content after reinstallation" && exit 1 )
-	@ ( grep newdflt  $(KONFIG_DIR)/default.kfg.orig     >/dev/null ) || ( echo "Error: $(KONFIG_DIR)/default.kfg.orig has unexpected content after reinstallation" && exit 1 )
-	@ ( grep newncbi  $(KONFIG_DIR)/ncbi-vdb.kfg.orig    >/dev/null ) || ( echo "Error: $(KONFIG_DIR)/ncbi-vdb.kfg.orig has unexpected content after reinstallation" && exit 1 )
+	@ if [ "$(HAVE_MD5)" != "" ]; then ( grep newcert  $(KONFIG_DIR)/certs.kfg.orig       >/dev/null ) || ( echo "Error: $(KONFIG_DIR)/certs.kfg.orig has unexpected content after reinstallation" && exit 1 ); fi
+	@ if [ "$(HAVE_MD5)" != "" ]; then ( grep newdflt  $(KONFIG_DIR)/default.kfg.orig     >/dev/null ) || ( echo "Error: $(KONFIG_DIR)/default.kfg.orig has unexpected content after reinstallation" && exit 1 ); fi
+	@ if [ "$(HAVE_MD5)" != "" ]; then ( grep newncbi  $(KONFIG_DIR)/ncbi-vdb.kfg.orig    >/dev/null ) || ( echo "Error: $(KONFIG_DIR)/ncbi-vdb.kfg.orig has unexpected content after reinstallation" && exit 1 ); fi
 	@ ! test -f $(KONFIG_DIR)/ncbi-vdb.kfg          # ... and stays gone
 	@ #
 	@ #

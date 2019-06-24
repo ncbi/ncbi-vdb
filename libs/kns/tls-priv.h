@@ -64,6 +64,8 @@ struct KTLSGlobals
     mbedtls_ssl_config config;
 
     bool allow_all_certs;
+
+    bool safe_to_modify_ssl_config; /* needed for SetAllowAllCerts () */
 };
 
 /* Init

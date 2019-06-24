@@ -140,9 +140,9 @@ libbz2.vers: $(BZIP2_TAR_GET)
 	cp bzip2-$(BZIP2_VERS)/*.[ch] .
 	cp bzip2-$(BZIP2_VERS)/*.def .
 	#-rm -rf bzip2-$(BZIP2_VERS)
-ifeq (1.0.6,$(BZIP2_VERS))    
+ifeq (1.0.6,$(BZIP2_VERS))
 	patch < bzip2-1.0.6.diff
-endif     
+endif
 	@ $(ECHO_VERS) > $@
 
 download: libbz2.vers
@@ -152,3 +152,9 @@ download: libbz2.vers
 compile: stdcompile
 
 $(TARGDIR)/compile: $(OBJFILES)
+
+#-------------------------------------------------------------------------------
+# fuzz
+#
+fuzz: std
+	cp $(addsuffix .$(LIBX),$(addprefix $(ILIBDIR)/,$(INT_LIBS))) $(FLIBDIR)/

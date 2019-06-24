@@ -55,6 +55,9 @@
 #include <klib/log.h>
 #include <klib/debug.h>
 #include <klib/rc.h>
+
+#include "../kdb/table-priv.h" /* KTableGetName */
+
 #include <sysalloc.h>
 
 #include <stdlib.h>
@@ -215,8 +218,15 @@ rc_t VTableOpenRead ( VTable *self )
         {
             /* fetch stored schema */
             rc = VTableLoadSchema ( self );
-            if ( rc == 0 && self -> stbl == NULL )
+            if ( rc == 0 && self -> stbl == NULL ) {
+                const char * path = NULL;
+                KTableGetName ( self -> ktbl, & path );
                 rc = RC ( rcVDB, rcTable, rcOpening, rcSchema, rcNotFound );
+                PLOGERR ( klogErr, ( klogErr, rc,
+		    "Format of your Run File is obsolete.\n"
+		    "Please download the latest version of Run '$(path)'",
+		    "path=%s", path ) );
+            }
         }
     }
 

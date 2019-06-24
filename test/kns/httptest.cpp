@@ -38,6 +38,7 @@
 #include <kns/manager.h>
 #include <kns/kns-mgr-priv.h>
 #include <kns/http.h>
+#include <kns/http-priv.h> /* KClientHttpRequestFormatMsg */
 
 #include <../libs/kns/mgr-priv.h>
 #include <../libs/kns/http-priv.h>
@@ -173,13 +174,28 @@ public:
     ~HttpFixture()
     {
         if ( m_mgr && KNSManagerRelease ( m_mgr ) != 0 )
-            throw logic_error ( "HttpFixture::~HttpFixture KNSManagerRelease failed" );
+        {
+            std :: cerr
+                << "HttpFixture::~HttpFixture KNSManagerRelease failed"
+                << std :: endl
+                ;
+        }
+        
+        else if ( m_file && KFileRelease ( m_file ) != 0 )
+        {
+            std :: cerr
+                << "HttpFixture::~HttpFixture KFileRelease failed"
+                << std :: endl
+                ;
+        }
             
-        if ( m_file && KFileRelease ( m_file ) != 0 )
-            throw logic_error ( "HttpFixture::~HttpFixture KFileRelease failed" );
-            
-        if ( ! TestStream::m_responses.empty() )
-            throw logic_error ( "HttpFixture::~HttpFixture not all TestStream::m_responses have been consumed" );
+        else if ( ! TestStream::m_responses.empty() )
+        {
+            std :: cerr
+                << "HttpFixture::~HttpFixture not all TestStream::m_responses have been consumed"
+                << std :: endl
+                ;
+        }
     }
     
     KConfig* MakeConfig( const char* name, const char* contents )
@@ -555,7 +571,12 @@ public:
     ~RetrierFixture()
     {
         if ( KHttpRetrierDestroy ( & m_retrier ) != 0 )
-            throw logic_error ( "RetrierFixture::~RetrierFixture KHttpRetrierDestroy failed" );
+        {
+            std :: cerr
+                << "RetrierFixture::~RetrierFixture KHttpRetrierDestroy failed"
+                << std :: endl
+                ;
+        }
     }
 
     void Configure ( const char* kfg_name, const char* kfg_content, uint8_t max_retries = MaxRetries, uint32_t max_total_wait = MaxTotalWait )
@@ -795,7 +816,7 @@ TEST_CASE(ContentLength) {
 
     /* calling good cgi returns 200 and resolved path */
     REQUIRE_RC ( KNSManagerMakeReliableClientRequest ( kns, & req, 0x01000000,
-        NULL, "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi" ) ); 
+        NULL, "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi" ) ); 
     REQUIRE_RC ( KHttpRequestAddPostParam ( req, "acc=AAAB01" ) );
     REQUIRE_RC ( KHttpRequestAddPostParam ( req, "accept-proto=https" ) );
     REQUIRE_RC ( KHttpRequestAddPostParam ( req, "version=1.2" ) );
@@ -815,7 +836,7 @@ TEST_CASE(ContentLength) {
 
     /* calling non-existing cgi returns 404 */
     REQUIRE_RC ( KNSManagerMakeReliableClientRequest ( kns, & req, 0x01000000,
-        NULL, "https://www.ncbi.nlm.nih.gov/Traces/names/bad.cgi" ) ); 
+        NULL, "https://trace.ncbi.nlm.nih.gov/Traces/names/bad.cgi" ) ); 
     REQUIRE_RC ( KHttpRequestAddPostParam ( req, "acc=AAAB01" ) );
     REQUIRE_RC ( KHttpRequestPOST ( req, & rslt ) );
     REQUIRE_RC ( KClientHttpResultStatus ( rslt, & code, NULL, 0, NULL ) );
@@ -957,6 +978,27 @@ TEST_CASE ( TestKClientHttpResultTestHeaderValue ) {
     RELEASE ( KNSManager, mgr );
 
     REQUIRE_RC ( rc );
+}
+
+TEST_CASE(TestAcceptHeader) {
+    rc_t rc = 0;
+    KNSManager * mgr = NULL;
+    REQUIRE_RC(KNSManagerMake(&mgr));
+    KClientHttp * http = NULL;
+    REQUIRE_RC(KNSManagerMakeHttp(mgr, &http,
+        NULL, 0x01010000, &s_v.host, 80));
+    string url("http://" HOST);
+    KClientHttpRequest * req = NULL;
+    REQUIRE_RC(KClientHttpMakeRequest(http, &req, url.c_str()));
+    REQUIRE_RC(KClientHttpRequestAddHeader(req, "Accept", "text/html"));
+    char buffer[4096] = "";
+    REQUIRE_RC(KClientHttpRequestFormatMsg(req,
+        buffer, sizeof buffer, "HEAD", NULL));
+    REQUIRE(strstr(buffer, "Accept: */*") == NULL);
+    RELEASE(KClientHttpRequest, req);
+    RELEASE(KClientHttp, http);
+    RELEASE(KNSManager, mgr);
+    REQUIRE_RC(rc);
 }
 
 TEST_CASE ( AllowAllCertificates )

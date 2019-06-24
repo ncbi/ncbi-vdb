@@ -129,6 +129,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-vdb-3060", "test-vdb-3
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-bytecode", "test-bytecode.vcxproj", "{FD39F8DB-767B-423F-AA40-7BFDA8F58708}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-json", "test-json.vcxproj", "{2F2E91BD-2F6B-454C-93BD-42E2BB9041EF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -641,6 +643,14 @@ Global
 		{FD39F8DB-767B-423F-AA40-7BFDA8F58708}.Release|Win32.Build.0 = Release|Win32
 		{FD39F8DB-767B-423F-AA40-7BFDA8F58708}.Release|x64.ActiveCfg = Release|x64
 		{FD39F8DB-767B-423F-AA40-7BFDA8F58708}.Release|x64.Build.0 = Release|x64
+		{2F2E91BD-2F6B-454C-93BD-42E2BB9041EF}.Debug|Win32.ActiveCfg = Debug|Win32
+		{2F2E91BD-2F6B-454C-93BD-42E2BB9041EF}.Debug|Win32.Build.0 = Debug|Win32
+		{2F2E91BD-2F6B-454C-93BD-42E2BB9041EF}.Debug|x64.ActiveCfg = Debug|x64
+		{2F2E91BD-2F6B-454C-93BD-42E2BB9041EF}.Debug|x64.Build.0 = Debug|x64
+		{2F2E91BD-2F6B-454C-93BD-42E2BB9041EF}.Release|Win32.ActiveCfg = Release|Win32
+		{2F2E91BD-2F6B-454C-93BD-42E2BB9041EF}.Release|Win32.Build.0 = Release|Win32
+		{2F2E91BD-2F6B-454C-93BD-42E2BB9041EF}.Release|x64.ActiveCfg = Release|x64
+		{2F2E91BD-2F6B-454C-93BD-42E2BB9041EF}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

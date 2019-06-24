@@ -758,6 +758,15 @@ FIXTURE_TEST_CASE(Fasp1G, PathFixture)
     REQUIRE_EQ(string(buffer), e);
 }
 
+FIXTURE_TEST_CASE(Pileup, PathFixture)
+{
+    REQUIRE_RC(VFSManagerMakePath(vfs, &path, "http://s/4.pileup"));
+
+    String str;
+    REQUIRE_RC(VPathGetPath(path, & str));
+    REQUIRE_EQ ( static_cast<size_t> (str.len), str.size  );
+}
+
 //////////////////////////////////////////// Main
 extern "C"
 {

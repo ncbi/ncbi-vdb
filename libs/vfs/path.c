@@ -53,14 +53,19 @@
 /* Whack
  */
 static
-void VPathWhack ( VPath * self )
+rc_t VPathWhack ( VPath * self )
 {
+    rc_t rc = VPathRelease(self->vdbcache);
+
     KDataBufferWhack ( & self -> data );
     KRefcountWhack ( & self -> refcount, "VPath" );
     free ( ( void * ) self -> id   . addr );
     free ( ( void * ) self -> tick . addr );
+    free ( ( void * ) self -> service . addr );
     memset ( self, 0, sizeof * self );
     free ( self );
+
+    return rc;
 }
 
 /* ParseURI
@@ -502,12 +507,37 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
     const char pileup_ext[] = ".pileup";
     size_t pileup_ext_size = sizeof( pileup_ext ) / sizeof( pileup_ext[0] ) - 1;
     
+    bool realign_ext_present = false;
+    const char realign_ext[] = ".realign";
+    size_t realign_ext_size = sizeof(realign_ext) / sizeof(realign_ext[0]) - 1;
+
+    bool vdbcache_ext_present = false;
+    const char vdbcache_ext[] = ".vdbcache";
+    size_t vdbcache_ext_size = sizeof(vdbcache_ext) / sizeof(vdbcache_ext[0]) - 1;
+
     /* remove pileup extension before parsing, so that it won't change parsing results */
     if ( uri_size > pileup_ext_size && memcmp(&uri[uri_size - pileup_ext_size], pileup_ext, pileup_ext_size) == 0)
     {
         uri_size -= pileup_ext_size;
         uri[uri_size] = '\0';
         pileup_ext_present = true;
+    }
+
+    /* remove realign extension before parsing,
+       so that it won't change parsing results */
+    else if (uri_size > realign_ext_size && memcmp
+        (&uri[uri_size - realign_ext_size], realign_ext, realign_ext_size) == 0)
+    {
+        uri_size -= realign_ext_size;
+        uri[uri_size] = '\0';
+        realign_ext_present = true;
+    }
+
+    /* detect vdbcahde extension */
+    else if (uri_size > vdbcache_ext_size && memcmp
+        (&uri[uri_size - vdbcache_ext_size], vdbcache_ext, vdbcache_ext_size) == 0)
+    {
+        vdbcache_ext_present = true;
     }
 
     for ( i = anchor = 0, total = count = 0; i < uri_size; ++ total, ++ count, i += bytes )
@@ -1899,14 +1929,39 @@ rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
     if ( pileup_ext_present )
     {
         uri[uri_size] = '.';
-        if ( i == uri_size )
+        if ( i == uri_size ) {
             i += pileup_ext_size;
+            count += pileup_ext_size;
+        }
         uri_size += pileup_ext_size;
         
         if ( acc_alpha && acc_digit )
             ++acc_ext;
+
+        self->sraClass = eSCpileup;
     }
-    
+
+    /* return realign extension back */
+    else if (realign_ext_present)
+    {
+        uri[uri_size] = '.';
+        if (i == uri_size) {
+            i += realign_ext_size;
+            count += realign_ext_size;
+        }
+        uri_size += realign_ext_size;
+
+        if (acc_alpha && acc_digit)
+            ++acc_ext;
+
+        self->sraClass = eSCrealign;
+    }
+    /* record dbcache type */
+    else if (vdbcache_ext_present)
+    {
+        self->sraClass = eSCvdbcache;
+    }
+
     switch ( state )
     {
     case vppStart:
@@ -2367,19 +2422,21 @@ LIB_EXPORT rc_t CC VPathAddRef ( const VPath *self )
 
 LIB_EXPORT rc_t CC VPathRelease ( const VPath *self )
 {
+    rc_t rc = 0;
+
     if ( self != NULL )
     {
         switch ( KRefcountDrop ( & self -> refcount, "VPath" ) )
         {
         case krefWhack:
-            VPathWhack ( ( VPath* ) self );
+            rc = VPathWhack ( ( VPath* ) self );
             break;
         case krefNegative:
             return RC ( rcVFS, rcPath, rcReleasing, rcRange, rcExcessive );
         }
     }
 
-    return 0;
+    return rc;
 }
 
 
@@ -3284,6 +3341,70 @@ LIB_EXPORT rc_t CC VPathGetTicket ( const VPath * self, String * str )
     return rc;
 }
 
+LIB_EXPORT rc_t CC VPathGetService ( const VPath * self, String * str )
+{
+    rc_t rc;
+
+    if ( str == NULL )
+        rc = RC ( rcVFS, rcPath, rcAccessing, rcParam, rcNull );
+    else
+    {
+        rc = VPathGetTestSelf ( self );
+        if ( rc == 0 )
+        {
+            * str = self -> service;
+            return 0;
+        }
+
+        StringInit ( str, "", 0, 0 );
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC VPathGetCeRequired(const VPath * self, bool * required)
+{
+    rc_t rc;
+
+    if (required == NULL )
+        rc = RC ( rcVFS, rcPath, rcAccessing, rcParam, rcNull );
+    else
+    {
+        rc = VPathGetTestSelf ( self );
+        if ( rc == 0 )
+        {
+            * required = self -> ceRequired;
+            return 0;
+        }
+
+        * required = false;
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC VPathGetPayRequired(const VPath * self, bool * required)
+{
+    rc_t rc;
+
+    if (required == NULL )
+        rc = RC ( rcVFS, rcPath, rcAccessing, rcParam, rcNull );
+    else
+    {
+        rc = VPathGetTestSelf ( self );
+        if ( rc == 0 )
+        {
+            * required = self -> payRequired;
+            return 0;
+        }
+
+        * required = false;
+    }
+
+    return rc;
+}
+
+
 LIB_EXPORT KTime_t CC VPathGetModDate ( const VPath * self  )
 {
     if ( self != NULL )
@@ -3751,7 +3872,8 @@ rc_t LegacyVPathMakeFmt ( VPath ** new_path, const char * fmt, ... )
 static
 rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
     const String * tick, uint64_t osize, KTime_t date, const uint8_t md5 [ 16 ],
-    KTime_t exp_date, const char * fmt, va_list args )
+    KTime_t exp_date, const char * service, const String * objectType,
+    bool ceRequired, bool payRequired, const char * fmt, va_list args )
 {
     rc_t rc;
 
@@ -3808,6 +3930,27 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
                             rcPath, rcAllocating, rcMemory, rcExhausted );
                 }
 
+                if ( service != NULL ) {
+                    size_t size = 0;
+                    char * srv = string_dup_measure ( service, & size );
+                    if ( srv == NULL )
+                        return RC ( rcVFS,
+                            rcPath, rcAllocating, rcMemory, rcExhausted );
+                    StringInit ( & path -> service, srv, size, size );
+                }
+
+                if (objectType != NULL && objectType->size > 0) {
+                    StringInit(&path->objectType,
+                        string_dup(objectType->addr, objectType->size),
+                        objectType->size, objectType->len);
+                    if (path->objectType.addr == NULL)
+                        return RC(rcVFS,
+                            rcPath, rcAllocating, rcMemory, rcExhausted);
+                }
+
+                path->ceRequired = ceRequired;
+                path->payRequired = payRequired;
+
                 return 0;
             }
         }
@@ -3821,7 +3964,8 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
 static
 rc_t VPathMakeFmtExt ( VPath ** new_path, bool ext, const String * id,
 	const String * tick, uint64_t osize, KTime_t date, const uint8_t md5 [ 16 ],
-	KTime_t exp_date, const char * fmt, ... )
+	KTime_t exp_date, const char * service, const String * objectType,
+    bool ceRequired, bool payRequired, const char * fmt, ... )
 {
     EVPathType t = ext ? eVPext : eVPWithId; 
     rc_t rc;
@@ -3830,7 +3974,7 @@ rc_t VPathMakeFmtExt ( VPath ** new_path, bool ext, const String * id,
     va_start ( args, fmt );
 
     rc = VPathMakeVFmtExt ( t, new_path, id, tick, osize, date, md5, exp_date,
-		fmt, args );
+        service, objectType, ceRequired, payRequired, fmt, args );
 
     va_end ( args );
 
@@ -3839,20 +3983,80 @@ rc_t VPathMakeFmtExt ( VPath ** new_path, bool ext, const String * id,
 
 rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
     const String * tick, bool ext, const String * id, uint64_t osize,
-    KTime_t date, const uint8_t md5 [ 16 ], KTime_t exp_date )
+    KTime_t date, const uint8_t md5 [ 16 ], KTime_t exp_date,
+    const char * service, const String * objectType,
+    bool ceRequired, bool payRequired )
 {
     if ( tick == NULL || tick -> addr == NULL || tick -> size == 0 )
         return VPathMakeFmtExt ( new_path, ext, id, tick, osize, date, md5,
-		                         exp_date, "%S", url  );
-    else
-        return VPathMakeFmtExt ( new_path, ext, id, tick, osize, date, md5,
-                                 exp_date, "%S?tic=%S", url, tick );
+		    exp_date, service, objectType, ceRequired, payRequired,
+            "%S", url );
+    else {
+        const char * fmt = NULL;
+        assert(url);
+        if (string_chr(url->addr, url->size, '?') == NULL)
+            fmt = "%S?tic=%S";
+        else
+            fmt = "%S&tic=%S";
+        return VPathMakeFmtExt(new_path, ext, id, tick, osize, date, md5,
+            exp_date, service, objectType, ceRequired, payRequired,
+            fmt, url, tick);
+    }
 }
 
 rc_t LegacyVPathMakeVFmt ( VPath ** new_path, const char * fmt, va_list args )
 {
-    return VPathMakeVFmtExt ( false, new_path, NULL, NULL, 0, 0, NULL, 0, fmt,
-                              args );
+    return VPathMakeVFmtExt ( false, new_path, NULL, NULL, 0, 0, NULL, 0,
+        NULL, NULL, false, false, fmt, args );
+}
+
+rc_t VPathAttachVdbcache(VPath * self, const VPath * vdbcache) {
+    rc_t rc = 0;
+
+    if (self != NULL) {
+        if (vdbcache != NULL) {
+            rc = VPathAddRef(vdbcache);
+            if (rc == 0) {
+                rc = VPathRelease(self->vdbcache);
+                self->vdbcache = vdbcache;
+            }
+        }
+
+        if (rc == 0)
+            self->vdbcacheChecked = true;
+    }
+
+    return rc;
+}
+
+/* GetVdbcache
+ *  return attached vdbcahe
+ * and boolian trating that there is no neew to check remove vdbcache URL
+ */
+LIB_EXPORT rc_t CC VPathGetVdbcache(const VPath * self,
+    const VPath ** vdbcache, bool * vdbcacheChecked)
+{
+    rc_t rc = 0;
+
+    bool dummy = true;
+    if (vdbcacheChecked == NULL)
+        vdbcacheChecked = &dummy;
+
+    if (vdbcache == NULL)
+        return RC(rcVFS, rcPath, rcAccessing, rcParam, rcNull);
+    if (self == NULL)
+        return RC(rcVFS, rcPath, rcAccessing, rcSelf, rcNull);
+
+    *vdbcacheChecked = false;
+
+    rc = VPathAddRef(self->vdbcache);
+
+    if (rc == 0) {
+        *vdbcache = self->vdbcache;
+        *vdbcacheChecked = self->vdbcacheChecked;
+    }
+
+    return rc;
 }
 
 LIB_EXPORT rc_t CC LegacyVPathGetScheme_t ( const VPath * self, VPUri_t * uri_type )

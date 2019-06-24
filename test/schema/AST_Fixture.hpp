@@ -104,6 +104,9 @@ public:
         return static_cast < const STable* > ( VectorGet ( & GetSchema () -> tbl, p_idx ) );
     }
 
+    static void DumpSymbolTable ( const KSymTable & self );
+    static void DumpScope ( const BSTree & scope, const char * title = "" );
+
     // set to true to control debugging output (all false by default)
     bool m_debugParse;
     bool m_printTree;

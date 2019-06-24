@@ -139,7 +139,7 @@ int main2 ( int argc, char *argv [] )
     /* run this guy */
     rc = KMane ( argc, argv );
 
-    return ( rc == 0 ) ? 0 : 3;
+    return ( rc == 0 ) ? 0 : IF_EXITCODE(rc, 3);
 }
 
 static

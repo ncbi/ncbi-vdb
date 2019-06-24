@@ -673,7 +673,7 @@ static rc_t _ReportFinalize
                 }
                 else {
                     rc_t rc2 = 0;
-                    const char name[] = "ncbi_error_report.xml";
+                    const char name[] = "ncbi_error_report.txt";
                     const char* home = getenv("HOME");
                     if (home == NULL) {
                         home = getenv("USERPROFILE");

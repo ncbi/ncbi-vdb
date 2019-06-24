@@ -31,9 +31,16 @@ TOP ?= $(abspath ../..)
 MODULE = test/kns
 
 TEST_TOOLS = \
+	test_allow_all_certificates \
+	test_dis_allow_all_certificates \
+	test-cloud \
+	test-google-proxy \
+	test200for-whole-file \
 	test-kns \
 	test-http-dropconn \
 	KNSManagerSingletonTest \
+	test-VDB-3661 \
+	test-connect
 
 include $(TOP)/build/Makefile.env
 
@@ -127,6 +134,78 @@ kns: test-kns
 	$(TEST_BINDIR)/test-kns  #-l=all
 
 #----------------------------------------------------------------
+# test_allow_all_certificates
+#
+AAA_SRC = \
+	test_allow_all_certificates
+
+AAA_OBJ = \
+	$(addsuffix .$(OBJX),$(AAA_SRC))
+
+$(TEST_BINDIR)/test_allow_all_certificates: $(AAA_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+#----------------------------------------------------------------
+# test_dis_allow_all_certificates
+#
+DAA_SRC = \
+	test_dis_allow_all_certificates
+
+DAA_OBJ = \
+	$(addsuffix .$(OBJX),$(DAA_SRC))
+
+$(TEST_BINDIR)/test_dis_allow_all_certificates: $(DAA_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+#-------------------------------------------------------------------------------
+# test-cloud
+
+CL_SRC = \
+	test-cloud
+
+CL_OBJ = \
+	$(addsuffix .$(OBJX),$(CL_SRC))
+
+$(TEST_BINDIR)/test-cloud: $(CL_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+#----------------------------------------------------------------
+# test-google-proxy
+#
+P_SRC = \
+	test-google-proxy
+
+P_OBJ = \
+	$(addsuffix .$(OBJX),$(P_SRC))
+
+$(TEST_BINDIR)/test-google-proxy: $(P_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+#----------------------------------------------------------------
+# test200for-whole-file
+#
+K2_SRC = \
+	test200for-whole-file \
+
+K2_OBJ = \
+	$(addsuffix .$(OBJX),$(K2_SRC))
+
+$(TEST_BINDIR)/test200for-whole-file: $(K2_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+#----------------------------------------------------------------
+# test-VDB-3661
+#
+VDB_3661_SRC = \
+	test-VDB-3661
+
+VDB_3661_OBJ = \
+	$(addsuffix .$(OBJX),$(VDB_3661_SRC))
+
+$(TEST_BINDIR)/test-VDB-3661: $(VDB_3661_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+#----------------------------------------------------------------
 # test-proxy
 #
 PROXYTEST_SRC = \
@@ -196,6 +275,20 @@ TOOL_OBJ = \
 $(BINDIR)/test-proxy-with-env: $(TOOL_OBJ)
 	$(LP) --exe -o $@ $^ -L$(VDB_LIBDIR) -L$(VDB_LIBDIR)/../ilib $(KNSTEST_LIB)
 
+#----------------------------------------------------------------
+# test-connect
+#
+CONNECT_SRC = \
+	test-connect \
+
+CONNECT_OBJ = \
+	$(addsuffix .$(OBJX),$(CONNECT_SRC))
+
+$(TEST_BINDIR)/test-connect: $(CONNECT_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+connect: test-connect
+	$(TEST_BINDIR)/test-connect
 
 #----------------------------------------------------------------
 

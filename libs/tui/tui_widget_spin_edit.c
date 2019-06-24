@@ -81,7 +81,7 @@ static bool spinedit_set( struct KTUIWidget * w, int64_t v )
 }
 
 
-bool event_spinedit( struct KTUIWidget * w, tui_event * event )
+bool event_spinedit( struct KTUIWidget * w, tui_event * event, bool hotkey )
 {
     bool res = false;
 

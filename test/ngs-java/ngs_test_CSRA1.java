@@ -675,6 +675,18 @@ public class ngs_test_CSRA1 {
         assertEquals ( PrimaryOnly + ".PA.1", getReference () . getAlignment ( PrimaryOnly + ".PA.1" ) . getAlignmentId () );
     }
 
+    @Test
+    public void Reference_getIsLocal_Yes() throws ngs.ErrorMsg
+    {
+        assertTrue ( getReference () . getIsLocal () );
+    }
+    @Test
+    public void Reference_getIsLocal_No() throws ngs.ErrorMsg
+    {
+        assertFalse ( NGS . openReadCollection ( "SRR821492" ) . getReference ( "chrM" ) . getIsLocal () );
+    }
+
+
 //TODO: getPileups
 //TODO: getPileupSlice
 //TODO: getPileupSlice_Filtered

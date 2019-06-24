@@ -30,6 +30,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kapp/args.h> /* Args */
+
 #include <klib/debug.h>
 #include <klib/rc.h>
 
@@ -46,7 +48,14 @@
 #include <cstring>
 #include <list>
 
-TEST_SUITE(HttpTestSuite);
+static rc_t argsHandler(int argc, char* argv[]) {
+    Args* args = NULL;
+    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
+    ArgsWhack(args);
+    return rc;
+}
+
+TEST_SUITE_WITH_ARGS_HANDLER(HttpTestSuite, argsHandler)
 
 using namespace std;
 using namespace ncbi::NK;

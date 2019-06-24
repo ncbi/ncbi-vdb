@@ -52,9 +52,12 @@
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
 
-static int logevp(const char *file, char *const argv[]) {
+static int logevp(const char *file, char *const argv[], bool dryRun) {
     int result = 0;
-    if (STS_INFO > KStsLevelGet()) {
+    KStsLevel lvl = STS_INFO;
+    if (dryRun)
+        lvl = STAT_USR;
+    if (lvl > KStsLevelGet()) {
         return 0;
     }
     result = printf("%s", file);
@@ -232,19 +235,6 @@ rc_t run_ascp(const char *path, const char *key,
         }
     }
 
-    if (pipe(pipeto) != 0) {
-        perror("pipe() to");
-        rc = RC(rcExe, rcFileDesc, rcCreating, rcFileDesc, rcFailed);
-        LOGERR(klogErr, rc, "while pipe");
-        return rc;
-    }
-    if (pipe(pipefrom) != 0) {
-        perror("pipe() from");
-        rc = RC(rcExe, rcFileDesc, rcCreating, rcFileDesc, rcFailed);
-        LOGERR(klogErr, rc, "while pipe");
-        return rc;
-    }
-
     argv[i++] = (char*)path;
     argv[i++] = "-i";
     argv[i++] = (char*)key;
@@ -307,7 +297,23 @@ rc_t run_ascp(const char *path, const char *key,
     argv[i++] = (char*)dest;
     argv[i++] = NULL;
 
-    logevp(path, argv);
+    logevp(path, argv, opt->dryRun);
+
+    if (opt->dryRun)
+        return 0;
+
+    if (pipe(pipeto) != 0) {
+        perror("pipe() to");
+        rc = RC(rcExe, rcFileDesc, rcCreating, rcFileDesc, rcFailed);
+        LOGERR(klogErr, rc, "while pipe");
+        return rc;
+    }
+    if (pipe(pipefrom) != 0) {
+        perror("pipe() from");
+        rc = RC(rcExe, rcFileDesc, rcCreating, rcFileDesc, rcFailed);
+        LOGERR(klogErr, rc, "while pipe");
+        return rc;
+    }
 
     if (quitting) {
         rc = quitting();
@@ -555,7 +561,17 @@ rc_t run_ascp(const char *path, const char *key,
             }
             else {
                 if (rc == 0) {
-                    rc = RC(rcExe, rcProcess, rcWaiting, rcProcess, rcFailed);
+                    switch ( state ) {
+                        case eFailedAuthenticate:
+                        case eFailedInitiation:
+                            rc = RC(rcExe, rcProcess, rcWaiting, rcProcess,
+                                                                  rcIncomplete);
+                            break;
+                        default:
+                            rc = RC(rcExe, rcProcess, rcWaiting, rcProcess,
+                                                                  rcFailed);
+                            break;
+                    }
                 }
                 PLOGERR(klogErr, (klogErr, rc,
                     "ascp failed with $(ret)", "ret=%d", WEXITSTATUS(status)));

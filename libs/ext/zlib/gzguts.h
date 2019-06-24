@@ -12,6 +12,10 @@
 #  endif
 #endif
 
+#ifndef _WIN32
+#include <unistd.h>
+#endif
+
 #ifdef HAVE_HIDDEN
 #  define ZLIB_INTERNAL __attribute__((visibility ("hidden")))
 #else

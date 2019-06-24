@@ -550,7 +550,9 @@ FIXTURE_TEST_CASE( VTableCursor_PageMapProcessRequest, TableCursorFixture )
     // per non-cached cursor (see VTableCreateCachedCursorReadImpl() in cursor-table.c)
     REQUIRE_RC ( VCursorLaunchPagemapThread ( (VCursor*)m_cur ) );
     const PageMapProcessRequest * req = VCursorPageMapProcessRequest ( m_cur );
-    REQUIRE_NULL ( req );
+    // VDB-3652: VCursorPageMapProcessRequest returns a non-NULL value even if the thread is not running
+    REQUIRE_NOT_NULL ( req );
+    REQUIRE_NULL ( req -> pm );
 }
 
 FIXTURE_TEST_CASE( VTableCursor_CacheActive, TableCursorFixture )

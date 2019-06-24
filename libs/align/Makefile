@@ -83,7 +83,7 @@ BAM_SRC = \
 BAM_OBJ = \
 	$(addsuffix .$(LOBX),$(BAM_SRC))
 
-BAM_LIB = 
+BAM_LIB =
 
 $(ILIBDIR)/libncbi-bam.$(LIBX): $(BAM_OBJ)
 	$(LD) --slib -o $@ $^ $(BAM_LIB)
@@ -100,7 +100,7 @@ ALIGN_ACCESS_SRC = \
 ALIGN_ACCESS_OBJ = \
 	$(addsuffix .$(LOBX),$(ALIGN_ACCESS_SRC))
 
-ALIGN_ACCESS_LIB = 
+ALIGN_ACCESS_LIB =
 
 $(ILIBDIR)/libalign-access.$(LIBX): $(ALIGN_ACCESS_OBJ)
 	$(LD) --slib -o $@ $^ $(ALIGN_ACCESS_LIB)
@@ -128,7 +128,7 @@ ALIGN_READER_SRC = \
 ALIGN_READER_OBJ = \
 	$(addsuffix .$(LOBX),$(ALIGN_READER_SRC))
 
-ALIGN_READER_LIB = 
+ALIGN_READER_LIB =
 
 $(ILIBDIR)/libalign-reader.$(LIBX): $(ALIGN_READER_OBJ)
 	$(LD) --slib -o $@ $^ $(ALIGN_READER_LIB)
@@ -155,7 +155,7 @@ ALIGN_WRITER_SRC = \
 ALIGN_WRITER_OBJ = \
 	$(addsuffix .$(LOBX),$(ALIGN_WRITER_SRC))
 
-ALIGN_WRITER_LIB = 
+ALIGN_WRITER_LIB =
 
 $(ILIBDIR)/libalign-writer.$(LIBX): $(ALIGN_WRITER_OBJ)
 	$(LD) --slib -o $@ $^ $(ALIGN_WRITER_LIB)
@@ -185,7 +185,7 @@ bison:
 	bison --no-lines -g -r all -Werror=all \
 		-o $(SRCDIR)/samextract-grammar.c \
 	--defines=$(SRCDIR)/samextract-tokens.h \
-	-v -Wall \
+	-v -Wall --no-lines \
 	$(SRCDIR)/samextract-grammar.y
 
 ifeq (dbg,$(BUILD))
@@ -205,4 +205,8 @@ compile: stdcompile
 
 $(TARGDIR)/compile: $(OBJFILES)
 
-
+#-------------------------------------------------------------------------------
+# fuzz
+#
+fuzz: std
+	cp $(addsuffix .$(LIBX),$(addprefix $(ILIBDIR)/,$(INT_LIBS))) $(FLIBDIR)/

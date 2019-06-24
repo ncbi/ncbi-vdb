@@ -44,7 +44,7 @@
 #endif
 
 #ifndef MAX_HTTP_READ_LIMIT
-#define MAX_HTTP_READ_LIMIT ( 30 * 1000 )
+#define MAX_HTTP_READ_LIMIT ( 5 * 60 * 1000 ) /* 5 minutes */
 #endif
 
 #ifndef MAX_HTTP_WRITE_LIMIT
@@ -130,6 +130,11 @@ void KClientHttpGetRemoteEndpoint ( const struct KClientHttp * self,
 void KClientHttpGetLocalEndpoint ( const struct KClientHttp * self,
                                    struct KEndPoint * ep );
 
+/* if the request followed redirects, the final URL will be different than the initial URL */
+rc_t KClientHttpRequestURL ( struct KClientHttpRequest const *self, KDataBuffer *rslt );
+    
+void KClientHttpRequestSetPayRequired(struct KClientHttpRequest * self,
+    const struct KNSManager * kns, bool payRequired);
 
 /* exported private functions
 */
