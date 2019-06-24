@@ -110,7 +110,7 @@ rc_t KNSManagerWhack ( KNSManager * self )
 #endif
 
     KNSProxiesWhack ( self -> proxies );
-    CloudRelease(self->cloud);
+    KCloudRelease(self->cloud);
 
     if ( self -> aws_access_key_id != NULL )
         StringWhack ( self -> aws_access_key_id );

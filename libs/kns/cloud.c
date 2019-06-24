@@ -60,7 +60,7 @@ static bool _KDirectory_FileExists(const KDirectory * self,
     return KDirectoryPathType_v1(self, path) != kptNotFound;
 }
 
-rc_t CloudRelease(const Cloud * cself) {
+rc_t KCloudRelease(const Cloud * cself) {
     Cloud * self = (Cloud*)cself;
 
     if (self != NULL) {
@@ -114,7 +114,7 @@ static rc_t CloudMake(const Cloud ** self,
     if (rc == 0)
         *self = p;
     else
-        CloudRelease(p);
+        KCloudRelease(p);
 
     return rc;
 }
