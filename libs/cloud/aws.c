@@ -222,6 +222,15 @@ LIB_EXPORT rc_t CC CloudToAWS ( const Cloud * self, AWS ** aws )
     return rc;
 }
 
+/* WithinComputeEnvironment
+ *  answers true if within AWS
+ */
+bool AWSWithinComputeEnvironment ( void )
+{
+    /* TBD */
+    return false;
+}
+
 /*** Finding/loading credentials  */
 
 static rc_t aws_extract_key_value_pair (

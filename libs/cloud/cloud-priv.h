@@ -36,32 +36,52 @@
 #include <kfg/config.h>
 #endif
 
-#ifdef __cplusplus
-extern "C" {
+#ifndef _h_cloud_aws_
+#include <cloud/aws.h>
 #endif
 
-/* forwards
- */
-struct AWS;
-struct GCP;
+#ifndef _h_cloud_gcp_
+#include <cloud/gcp.h>
+#endif
 
-/* Force a provider for testing
- */
+#ifdef __cplusplus
+extern "C" {}
+#endif
+
 
 /*--------------------------------------------------------------------------
- * GCP
+ * CloudMgr
  */
-struct GCP
+struct CloudMgr
 {
-    Cloud dad;
+    /* attached from "make" */
+    const KConfig * kfg;
+#ifdef _h_cloud_aws_
+    /* cached AWS */
+    AWS * aws;
+#endif
+#ifdef _h_cloud_gcp_
+    /* cached GCP */    
+    GCP * gcp;
+#endif
+#ifdef _h_cloud_azure_
+    /* cached AZURE */
+    AZURE * azure;
+#endif
+    /* pointer ( not reference ) to a cached Cloud above */
+    Cloud * cur;
 
-    char * privateKey;
-    char * client_email;
+    /* object is reference-counted */
+    KRefcount refcount;
+
+    /* id of "cur" */
+    CloudProviderId cur_id;
 };
 
 /*--------------------------------------------------------------------------
  * AWS
  */
+#ifdef _h_cloud_aws_
 struct AWS
 {
     Cloud dad;
@@ -75,18 +95,47 @@ struct AWS
     char * output;
 };
 
-/*--------------------------------------------------------------------------
- * CloudMgr
+/* WithinComputeEnvironment
+ *  answers true if within AWS
  */
-struct CloudMgr
+bool AWSWithinComputeEnvironment ( void );
+
+#endif
+
+/*--------------------------------------------------------------------------
+ * GCP
+ */
+#ifdef _h_cloud_gcp_
+struct GCP
 {
-    const KConfig * kfg;        /* attached from "make"                   */
-    struct AWS * aws;           /* cached AWS                             */
-    struct GCP * gcp;           /* cached GCP                             */
-    Cloud * cur;                /* pointer ( not reference ) to a Cloud   */
-    KRefcount refcount;
-    CloudProviderId cur_id;     /* id of "cur"                            */
+    Cloud dad;
+
+    char * privateKey;
+    char * client_email;
 };
+
+/* WithinComputeEnvironment
+ *  answers true if within GCP
+ */
+bool GCPWithinComputeEnvironment ( void );
+
+#endif
+
+/*--------------------------------------------------------------------------
+ * AZURE
+ */
+#ifdef _h_cloud_azure_
+struct AZURE
+{
+    Cloud dad;
+};
+
+/* WithinComputeEnvironment
+ *  answers true if within Azure
+ */
+bool AZUREWithinComputeEnvironment ( void );
+
+#endif
 
 #ifdef __cplusplus
 }

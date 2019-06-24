@@ -56,8 +56,29 @@ rc_t CloudMgrWhack ( CloudMgr * self )
 }
 
 static
-rc_t CloudMgrDetermineCurrentCloud ( CloudMgr * self )
+void CloudMgrDetermineCurrentCloud ( CloudMgr * self )
 {
+#ifdef _h_cloud_aws_
+    if ( AWSWithinComputeEnvironment () )
+    {
+        self -> cur_id = cloud_provider_aws;
+        return;
+    }
+#endif
+
+#ifdef _h_cloud_gcp_
+    if ( GCPWithinComputeEnvironment () )
+    {
+        self -> cur_id = cloud_provider_gcp;
+        return;
+    }
+#endif
+
+#ifdef _h_cloud_azure_
+#error "not implemented"
+#endif
+    
+    self -> cur_id = cloud_provider_none;
 }
 
 /* Make
@@ -109,39 +130,37 @@ LIB_EXPORT rc_t CC CloudMgrMake ( CloudMgr ** mgrp, const KConfig * kfg )
                     our_mgr -> kfg = kfg;
 
                     /* examine environment for current cloud */
-                    rc = CloudMgrDetermineCurrentCloud ( our_mgr );
+                    CloudMgrDetermineCurrentCloud ( our_mgr );
+
+                    /* if within a cloud, initialize */
+                    if ( our_mgr -> cur_id != cloud_provider_none )
+                        rc = CloudMgrMakeCloud ( our_mgr, & our_mgr -> cur, our_mgr -> cur_id );
+
+                    /* if everything looks good... */
                     if ( rc == 0 )
                     {
-                        /* if within a cloud, initialize */
-                        if ( our_mgr -> cur_id != cloud_provider_none )
-                            rc = CloudMgrMakeCloud ( our_mgr, & our_mgr -> cur, our_mgr -> cur_id );
+                        /* try to set single-shot ( set once, never reset ) */
+                        CloudMgr * new_mgr = atomic_test_and_set_ptr ( & cloud_singleton, our_mgr, NULL );
 
-                        /* if everything looks good... */
-                        if ( rc == 0 )
+                        /* if "new_mgr" is not NULL, then some other thread beat us to it */
+                        if ( new_mgr != NULL )
                         {
-                            /* try to set single-shot ( set once, never reset ) */
-                            CloudMgr * new_mgr = atomic_test_and_set_ptr ( & cloud_singleton, our_mgr, NULL );
+                            /* test logic */
+                            assert ( our_mgr != new_mgr );
 
-                            /* if "new_mgr" is not NULL, then some other thread beat us to it */
-                            if ( new_mgr != NULL )
-                            {
-                                /* test logic */
-                                assert ( our_mgr != new_mgr );
+                            /* not an error condition - douse our version */
+                            CloudMgrWhack ( our_mgr );
 
-                                /* not an error condition - douse our version */
-                                CloudMgrWhack ( our_mgr );
+                            /* use the other thread's version */
+                            our_mgr = new_mgr;
 
-                                /* use the other thread's version */
-                                our_mgr = new_mgr;
-
-                                /* use common code, even if it means a goto in this case */
-                                goto singleton_exists;
-                            }
-
-                            /* arriving here means success */
-                            * mgrp = our_mgr;
-                            return rc;
+                            /* use common code, even if it means a goto in this case */
+                            goto singleton_exists;
                         }
+
+                        /* arriving here means success */
+                        * mgrp = our_mgr;
+                        return rc;
                     }
                 }
                     

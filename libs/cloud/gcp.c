@@ -218,6 +218,15 @@ LIB_EXPORT rc_t CC CloudToGCP ( const Cloud * self, GCP ** gcp )
     return rc;
 }
 
+/* WithinComputeEnvironment
+ *  answers true if within GCP
+ */
+bool GCPWithinComputeEnvironment ( void )
+{
+    /* TBD */
+    return false;
+}
+
 static
 rc_t PopulateCredentials ( GCP * self )
 {
