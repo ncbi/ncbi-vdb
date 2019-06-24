@@ -36,6 +36,8 @@ struct GCP;
 #include <klib/status.h>
 #include <klib/text.h>
 #include <klib/json.h>
+#include <kns/endpoint.h>
+#include <kns/socket.h>
 #include <kns/http.h>
 #include <kfs/directory.h>
 #include <kfs/file.h>
@@ -221,9 +223,32 @@ LIB_EXPORT rc_t CC CloudToGCP ( const Cloud * self, GCP ** gcp )
 /* WithinGCP
  *  answers true if within GCP
  */
-bool CloudMgrWithinGCP ( const CloudMgr * self )
+bool CloudMgrWithinGCP ( CloudMgr * self )
 {
-    /* TBD */
+    rc_t rc;
+    KEndPoint ep;
+    String hostname;
+
+    /* describe address "metadata.google.internal" on port 80 */
+    CONST_STRING ( & hostname, "metadata.google.internal" );
+    rc = KNSManagerInitDNSEndpoint ( self -> kns, & ep, & hostname, 80 );
+    if ( rc == 0 )
+    {
+        KSocket * conn;
+        
+        /* we already have a good idea that the environment looks like GCP */
+        rc = KNSManagerMakeTimedConnection ( self -> kns, & conn, 0, 0, NULL, & ep );
+        if ( rc == 0 )
+        {
+            /* TBD - is there any sense in finishing the HTTP transaction?
+               somebody answered our call, so it looks like they're there,
+               if we use the URL to verify a little more, it will confirm... something.
+               But we're not prepared to retain any information, unless it's region */
+            KSocketRelease ( conn );
+            return true;
+        }
+    }
+
     return false;
 }
 
