@@ -3133,6 +3133,37 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddHeader ( KClientHttpRequest *self,
     return rc;
 }
 
+/* GetHeader
+ *  retrieve named header if present
+ *  this can potentially return a comma separated value list
+ */
+LIB_EXPORT rc_t CC KClientHttpRequestGetHeader(const KClientHttpRequest *self,
+    const char *name, char *buffer, size_t bsize, size_t *num_read)
+{
+    rc_t rc = 0;
+
+    if (num_read == NULL)
+        rc = RC(rcNS, rcNoTarg, rcValidating, rcParam, rcNull);
+    else
+    {
+        *num_read = 0;
+
+        if (self == NULL)
+            rc = RC(rcNS, rcNoTarg, rcValidating, rcSelf, rcNull);
+        else if (name == NULL)
+            rc = RC(rcNS, rcNoTarg, rcValidating, rcParam, rcNull);
+        else if (buffer == NULL && bsize != 0)
+            rc = RC(rcNS, rcNoTarg, rcValidating, rcParam, rcNull);
+        else
+        {
+            rc = KClientHttpFindHeader(&self->hdrs, name,
+                buffer, bsize, num_read);
+        }
+    }
+
+    return rc;
+}
+
 /* AddPostParam
  *  adds a parameter for POST
  */
