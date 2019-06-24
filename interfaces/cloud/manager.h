@@ -41,6 +41,7 @@ extern "C" {
 /* forwards
  */
 struct KConfig;
+struct KNSManager;
 
 /* CloudProvider
  */
@@ -63,7 +64,8 @@ typedef struct CloudMgr CloudMgr;
 /* Make
 *  Discovers the cloud provider
  */
-CLOUD_EXTERN rc_t CC CloudMgrMake ( CloudMgr ** mgr, struct KConfig const * kfg );
+CLOUD_EXTERN rc_t CC CloudMgrMake ( CloudMgr ** mgr,
+    struct KConfig const * kfg, struct KNSManager const * kns );
 
 /* AddRef
  * Release

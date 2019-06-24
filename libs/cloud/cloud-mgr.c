@@ -50,8 +50,21 @@ rc_t CloudMgrWhack ( CloudMgr * self )
 {
     CloudMgr * our_mgr = atomic_read_ptr ( & cloud_singleton );
     if ( self != our_mgr )
+    {
+        CloudRelease ( self -> cur );
+#ifdef _h_cloud_aws_
+        AWSRelease ( self -> aws );
+#endif
+#ifdef _h_cloud_gcp_
+        GCPRelease ( self -> gcp );
+#endif
+#ifdef _h_cloud_azure_
+#error "unimplemented"
+#endif
+        KNSManagerRelease ( self -> kns );
+        KConfigRelease ( self -> kfg );
         free ( self );
-
+    }
     return 0;
 }
 
@@ -59,7 +72,7 @@ static
 void CloudMgrDetermineCurrentCloud ( CloudMgr * self )
 {
 #ifdef _h_cloud_aws_
-    if ( AWSWithinComputeEnvironment () )
+    if ( CloudMgrWithinAWS ( self ) )
     {
         self -> cur_id = cloud_provider_aws;
         return;
@@ -67,7 +80,7 @@ void CloudMgrDetermineCurrentCloud ( CloudMgr * self )
 #endif
 
 #ifdef _h_cloud_gcp_
-    if ( GCPWithinComputeEnvironment () )
+    if ( CloudMgrWithinGCP ( self ) )
     {
         self -> cur_id = cloud_provider_gcp;
         return;
@@ -84,7 +97,8 @@ void CloudMgrDetermineCurrentCloud ( CloudMgr * self )
 /* Make
  *  this is a singleton
  */
-LIB_EXPORT rc_t CC CloudMgrMake ( CloudMgr ** mgrp, const KConfig * kfg )
+LIB_EXPORT rc_t CC CloudMgrMake ( CloudMgr ** mgrp,
+    const KConfig * kfg, const KNSManager * kns )
 {
     rc_t rc = 0;
 
@@ -129,38 +143,50 @@ LIB_EXPORT rc_t CC CloudMgrMake ( CloudMgr ** mgrp, const KConfig * kfg )
                 {
                     our_mgr -> kfg = kfg;
 
-                    /* examine environment for current cloud */
-                    CloudMgrDetermineCurrentCloud ( our_mgr );
-
-                    /* if within a cloud, initialize */
-                    if ( our_mgr -> cur_id != cloud_provider_none )
-                        rc = CloudMgrMakeCloud ( our_mgr, & our_mgr -> cur, our_mgr -> cur_id );
-
-                    /* if everything looks good... */
+                    /* attach reference to KNSManager */
+                    if ( kns == NULL )
+                        rc = KNSManagerMake ( ( KNSManager ** ) & our_mgr -> kns );
+                    else
+                    {
+                        rc = KNSManagerAddRef ( kns );
+                        if ( rc == 0 )
+                            our_mgr -> kns = kns;
+                    }
                     if ( rc == 0 )
                     {
-                        /* try to set single-shot ( set once, never reset ) */
-                        CloudMgr * new_mgr = atomic_test_and_set_ptr ( & cloud_singleton, our_mgr, NULL );
+                        /* examine environment for current cloud */
+                        CloudMgrDetermineCurrentCloud ( our_mgr );
 
-                        /* if "new_mgr" is not NULL, then some other thread beat us to it */
-                        if ( new_mgr != NULL )
+                        /* if within a cloud, initialize */
+                        if ( our_mgr -> cur_id != cloud_provider_none )
+                            rc = CloudMgrMakeCloud ( our_mgr, & our_mgr -> cur, our_mgr -> cur_id );
+
+                        /* if everything looks good... */
+                        if ( rc == 0 )
                         {
-                            /* test logic */
-                            assert ( our_mgr != new_mgr );
+                            /* try to set single-shot ( set once, never reset ) */
+                            CloudMgr * new_mgr = atomic_test_and_set_ptr ( & cloud_singleton, our_mgr, NULL );
 
-                            /* not an error condition - douse our version */
-                            CloudMgrWhack ( our_mgr );
+                            /* if "new_mgr" is not NULL, then some other thread beat us to it */
+                            if ( new_mgr != NULL )
+                            {
+                                /* test logic */
+                                assert ( our_mgr != new_mgr );
 
-                            /* use the other thread's version */
-                            our_mgr = new_mgr;
+                                /* not an error condition - douse our version */
+                                CloudMgrWhack ( our_mgr );
 
-                            /* use common code, even if it means a goto in this case */
-                            goto singleton_exists;
+                                /* use the other thread's version */
+                                our_mgr = new_mgr;
+
+                                /* use common code, even if it means a goto in this case */
+                                goto singleton_exists;
+                            }
+
+                            /* arriving here means success */
+                            * mgrp = our_mgr;
+                            return rc;
                         }
-
-                        /* arriving here means success */
-                        * mgrp = our_mgr;
-                        return rc;
                     }
                 }
                     
@@ -221,7 +247,8 @@ void CC CloudMgrSetProvider ( CloudMgr * self, CloudProviderId provider )
     {
         if ( self != NULL && self -> cur_id != provider )
         {
-            /* redo everything based upon provider */
+            CloudRelease ( self -> cur );
+            CloudMgrMakeCloud ( self, & self -> cur, provider );
             self -> cur_id = provider;
         }
     }

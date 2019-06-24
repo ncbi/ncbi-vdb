@@ -218,10 +218,10 @@ LIB_EXPORT rc_t CC CloudToGCP ( const Cloud * self, GCP ** gcp )
     return rc;
 }
 
-/* WithinComputeEnvironment
+/* WithinGCP
  *  answers true if within GCP
  */
-bool GCPWithinComputeEnvironment ( void )
+bool CloudMgrWithinGCP ( const CloudMgr * self )
 {
     /* TBD */
     return false;

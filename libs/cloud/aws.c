@@ -37,6 +37,8 @@ struct AWS;
 #include <klib/printf.h>
 #include <kfg/config.h>
 #include <kfg/properties.h>
+#include <kns/endpoint.h>
+#include <kns/socket.h>
 #include <kns/http.h>
 #include <kfs/directory.h>
 #include <kfs/file.h>
@@ -222,12 +224,21 @@ LIB_EXPORT rc_t CC CloudToAWS ( const Cloud * self, AWS ** aws )
     return rc;
 }
 
-/* WithinComputeEnvironment
+/* WithinAWS
  *  answers true if within AWS
  */
-bool AWSWithinComputeEnvironment ( void )
+bool CloudMgrWithinAWS ( const CloudMgr * self )
 {
-    /* TBD */
+#if 0
+    KEndPoint ep;
+    /* describe address 169.254.169.254 on port 80 */
+    KNSManagerInitIPv4Endpoint ( self -> kns, & ep,
+                                 ( ( 169 << 24 ) |
+                                   ( 254 << 16 ) |
+                                   ( 169 <<  8 ) |
+                                   ( 254 <<  0 ) ), 80 );
+
+#endif
     return false;
 }
 

@@ -36,6 +36,10 @@
 #include <kfg/config.h>
 #endif
 
+#ifndef _h_kns_manager_
+#include <kns/manager.h>
+#endif
+
 #ifndef _h_cloud_aws_
 #include <cloud/aws.h>
 #endif
@@ -45,7 +49,7 @@
 #endif
 
 #ifdef __cplusplus
-extern "C" {}
+extern "C" {
 #endif
 
 
@@ -56,6 +60,7 @@ struct CloudMgr
 {
     /* attached from "make" */
     const KConfig * kfg;
+    const KNSManager * kns;
 #ifdef _h_cloud_aws_
     /* cached AWS */
     AWS * aws;
@@ -68,7 +73,7 @@ struct CloudMgr
     /* cached AZURE */
     AZURE * azure;
 #endif
-    /* pointer ( not reference ) to a cached Cloud above */
+    /* additional reference to a cached Cloud above */
     Cloud * cur;
 
     /* object is reference-counted */
@@ -95,10 +100,10 @@ struct AWS
     char * output;
 };
 
-/* WithinComputeEnvironment
+/* WithinAWS
  *  answers true if within AWS
  */
-bool AWSWithinComputeEnvironment ( void );
+bool CloudMgrWithinAWS ( const CloudMgr * self );
 
 #endif
 
@@ -114,10 +119,10 @@ struct GCP
     char * client_email;
 };
 
-/* WithinComputeEnvironment
+/* WithinGCP
  *  answers true if within GCP
  */
-bool GCPWithinComputeEnvironment ( void );
+bool CloudMgrWithinGCP ( const CloudMgr * self );
 
 #endif
 
@@ -130,10 +135,10 @@ struct AZURE
     Cloud dad;
 };
 
-/* WithinComputeEnvironment
+/* WithinAzure
  *  answers true if within Azure
  */
-bool AZUREWithinComputeEnvironment ( void );
+bool CloudMgrWithinAzure ( const CloudMgr * self );
 
 #endif
 
