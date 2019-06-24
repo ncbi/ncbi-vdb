@@ -80,11 +80,20 @@ rc_t CC AWSAddComputeEnvironmentTokenForSigner ( const AWS * self, KClientHttpRe
     return 0; //TODO
 }
 
+/* AddAuthentication
+ *  prepare a request object with credentials for authentication
+ */
+static
+rc_t CC AWSAddAuthentication ( const AWS * self, KClientHttpRequest * req, const char * http_method )
+{
+    return 0; //TODO
+}
+
 /* AddUserPaysCredentials
  *  prepare a request object with credentials for user-pays
  */
 static
-rc_t CC AWSAddUserPaysCredentials ( const AWS * self, KClientHttpRequest * req )
+rc_t CC AWSAddUserPaysCredentials ( const AWS * self, KClientHttpRequest * req, const char * http_method )
 {
     return 0; //TODO
 }
@@ -96,6 +105,7 @@ static Cloud_vt_v1 AWS_vt_v1 =
     AWSDestroy,
     AWSMakeComputeEnvironmentToken,
     AWSAddComputeEnvironmentTokenForSigner,
+    AWSAddAuthentication,
     AWSAddUserPaysCredentials
 };
 

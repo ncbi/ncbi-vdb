@@ -71,7 +71,7 @@ CLOUD_EXTERN rc_t CC CloudAddComputeEnvironmentTokenForSigner ( const Cloud * se
  *  prepare a request object with credentials for authentication
  */
 CLOUD_EXTERN rc_t CC CloudAddAuthentication ( const Cloud * self,
-    struct KClientHttpRequest * req );
+    struct KClientHttpRequest * req, const char * http_method );
 
 /* AddUserPaysCredentials
  *  prepare a request object with credentials for user-pays
@@ -80,7 +80,7 @@ CLOUD_EXTERN rc_t CC CloudAddAuthentication ( const Cloud * self,
  *  by updating VDB configuration.
  */
 CLOUD_EXTERN rc_t CC CloudAddUserPaysCredentials ( const Cloud * self,
-    struct KClientHttpRequest * req );
+    struct KClientHttpRequest * req, const char * http_method );
 
 #ifdef __cplusplus
 }

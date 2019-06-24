@@ -76,11 +76,20 @@ rc_t CC GCPAddComputeEnvironmentTokenForSigner ( const GCP * self, KClientHttpRe
     return 0; //TODO
 }
 
+/* AddAuthentication
+ *  prepare a request object with credentials for authentication
+ */
+static
+rc_t CC GCPAddAuthentication ( const GCP * self, KClientHttpRequest * req, const char * http_method )
+{
+    return 0; //TODO
+}
+
 /* AddUserPaysCredentials
  *  prepare a request object with credentials for user-pays
  */
 static
-rc_t CC GCPAddUserPaysCredentials ( const GCP * self, KClientHttpRequest * req )
+rc_t CC GCPAddUserPaysCredentials ( const GCP * self, KClientHttpRequest * req, const char * http_method )
 {
     return 0; //TODO
 }
@@ -92,6 +101,7 @@ static Cloud_vt_v1 GCP_vt_v1 =
     GCPDestroy,
     GCPMakeComputeEnvironmentToken,
     GCPAddComputeEnvironmentTokenForSigner,
+    GCPAddAuthentication,
     GCPAddUserPaysCredentials
 };
 

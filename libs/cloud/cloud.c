@@ -146,23 +146,50 @@ LIB_EXPORT rc_t CC CloudAddComputeEnvironmentTokenForSigner ( const Cloud * self
     return rc;
 }
 
-/* AddUserPaysCredentials
+/* AddAuthentication
  *  prepare a request object with credentials for user-pays
  */
-LIB_EXPORT rc_t CC CloudAddUserPaysCredentials ( const Cloud * self, struct KClientHttpRequest * req )
+LIB_EXPORT rc_t CC CloudAddAuthentication ( const Cloud * self,
+    struct KClientHttpRequest * req, const char * http_method )
 {
     rc_t rc;
 
     if ( self == NULL )
         rc = RC ( rcCloud, rcProvider, rcAccessing, rcSelf, rcNull );
-    else if ( req == NULL )
+    else if ( req == NULL || http_method == NULL )
         rc = RC ( rcCloud, rcProvider, rcAccessing, rcParam, rcNull );
     else
     {
         switch ( self -> vt -> v1 . maj )
         {
         case 1:
-            return ( * self -> vt -> v1 . add_user_pays_to_req ) ( self, req );
+            return ( * self -> vt -> v1 . add_authn ) ( self, req, http_method );
+        }
+
+        rc = RC ( rcCloud, rcProvider, rcAccessing, rcInterface, rcBadVersion );
+    }
+
+    return rc;
+}
+
+/* AddUserPaysCredentials
+ *  prepare a request object with credentials for user-pays
+ */
+LIB_EXPORT rc_t CC CloudAddUserPaysCredentials ( const Cloud * self,
+    struct KClientHttpRequest * req, const char * http_method )
+{
+    rc_t rc;
+
+    if ( self == NULL )
+        rc = RC ( rcCloud, rcProvider, rcAccessing, rcSelf, rcNull );
+    else if ( req == NULL || http_method == NULL )
+        rc = RC ( rcCloud, rcProvider, rcAccessing, rcParam, rcNull );
+    else
+    {
+        switch ( self -> vt -> v1 . maj )
+        {
+        case 1:
+            return ( * self -> vt -> v1 . add_user_pays_to_req ) ( self, req, http_method );
         }
 
         rc = RC ( rcCloud, rcProvider, rcAccessing, rcInterface, rcBadVersion );
