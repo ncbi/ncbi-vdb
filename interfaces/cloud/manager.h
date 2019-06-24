@@ -42,6 +42,19 @@ extern "C" {
  */
 struct KConfig;
 
+/* CloudProvider
+ */
+typedef uint32_t CloudProviderId;
+enum
+{
+    cloud_provider_none,        /* not within any discernible cloud provider */
+    cloud_provider_aws,         /* Amazon Web Services                       */
+    cloud_provider_gcp,         /* Google Cloud Platform                     */
+    cloud_provider_azure,       /* Microsoft Azure Cloud Computing Platform  */
+
+    cloud_num_providers
+};
+
 /* CloudMgr
  *  singleton object to access cloud-related resources
  */

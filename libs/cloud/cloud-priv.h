@@ -1,6 +1,3 @@
-#ifndef _h_cloud_cloud_priv_
-#define _h_cloud_cloud_priv_
-
 /*=====================================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
@@ -25,12 +22,10 @@
 *
 * ================================================================================== */
 
-#ifndef _h_cloud_cloud_
-#include <cloud/cloud.h>
-#endif
+#pragma once
 
-#ifndef _h_cloud_manager_
-#include <cloud/manager.h>
+#ifndef _h_cloud_cloud_priv_
+#include <cloud/cloud-priv.h>
 #endif
 
 #ifndef _h_cloud_impl_
@@ -52,7 +47,6 @@ struct GCP;
 
 /* Force a provider for testing
  */
-void CC CloudMgrSetProvider ( CloudMgr * mgr, CloudProviderId provider );
 
 /*--------------------------------------------------------------------------
  * GCP
@@ -92,11 +86,8 @@ struct CloudMgr
     Cloud * cur;                /* pointer ( not reference ) to a Cloud   */
     KRefcount refcount;
     CloudProviderId cur_id;     /* id of "cur"                            */
-    bool user_agrees_to_pay;    /* user has agreed to incur cloud charges */
 };
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* _h_cloud_cloud_priv_ */

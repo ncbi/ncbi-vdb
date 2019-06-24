@@ -1,5 +1,5 @@
-#ifndef _h_cloud_cloud_
-#define _h_cloud_cloud_
+#ifndef _h_cloud_cloud_priv_
+#define _h_cloud_cloud_priv_
 
 /*=====================================================================================
 *
@@ -30,8 +30,8 @@
 #include <cloud/extern.h>
 #endif
 
-#ifndef _h_klib_defs_
-#include <klib/defs.h>
+#ifndef _h_cloud_manager_
+#include <cloud/manager.h>
 #endif
 
 #ifdef __cplusplus
@@ -40,50 +40,14 @@ extern "C" {
 
 /* forwards
  */
-struct String;
-struct KClientHttpRequest;
 
-/* Cloud
- *  generic cloud interface
+/* CloudMgr
+ *  singleton object to access cloud-related resources
  */
-typedef struct Cloud Cloud;
-
-/* AddRef
- * Release
- */
-CLOUD_EXTERN rc_t CC CloudAddRef ( const Cloud * self );
-CLOUD_EXTERN rc_t CC CloudRelease ( const Cloud * self );
-
-/* MakeComputeEnvironmentToken
- *  contact cloud provider to get proof of execution environment in form of a token
- */
-CLOUD_EXTERN rc_t CC CloudMakeComputeEnvironmentToken ( const Cloud * self,
-    struct String const ** ce_token );
-
-/* AddComputeEnvironmentTokenForSigner
- *  prepare a request object with a compute environment token
- *  for use by an SDL-associated "signer" service
- */
-CLOUD_EXTERN rc_t CC CloudAddComputeEnvironmentTokenForSigner ( const Cloud * self,
-    struct KClientHttpRequest * req );
-
-/* AddAuthentication
- *  prepare a request object with credentials for authentication
- */
-CLOUD_EXTERN rc_t CC CloudAddAuthentication ( const Cloud * self,
-    struct KClientHttpRequest * req );
-
-/* AddUserPaysCredentials
- *  prepare a request object with credentials for user-pays
- *
- *  fails if user has not explicitly accepted responsibility to pay
- *  by updating VDB configuration.
- */
-CLOUD_EXTERN rc_t CC CloudAddUserPaysCredentials ( const Cloud * self,
-    struct KClientHttpRequest * req );
+CLOUD_EXTERN void CC CloudMgrSetProvider ( CloudMgr * self, CloudProviderId provider );
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _h_cloud_cloud_ */
+#endif /* _h_cloud_cloud_priv_ */

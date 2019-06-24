@@ -48,11 +48,16 @@ static atomic_ptr_t cloud_singleton;
 static
 rc_t CloudMgrWhack ( CloudMgr * self )
 {
-    CloudMgr * our_mgr = atomic_test_and_set_ptr ( & cloud_singleton, NULL, NULL );
+    CloudMgr * our_mgr = atomic_read_ptr ( & cloud_singleton );
     if ( self != our_mgr )
         free ( self );
 
     return 0;
+}
+
+static
+rc_t CloudMgrDetermineCurrentCloud ( CloudMgr * self )
+{
 }
 
 /* Make
@@ -66,55 +71,85 @@ LIB_EXPORT rc_t CC CloudMgrMake ( CloudMgr ** mgrp, const KConfig * kfg )
         rc = RC ( rcCloud, rcMgr, rcAllocating, rcParam, rcNull );
     else
     {
-        CloudMgr * our_mgr;
-
         /* prepare for failure */
-        * mgrp = NULL;
-
-        /* grab single-shot singleton */
-        /* TBD - introduce proper atomic_ptr reader function */
-        our_mgr = atomic_test_and_set_ptr ( & cloud_singleton, NULL, NULL );
-        if ( our_mgr != NULL )
-        {
-        singleton_exists:
-            
-            /* add a new reference and return */
-            rc = CloudMgrAddRef ( our_mgr );
-            if ( rc == 0 )
-                * mgrp = our_mgr;
-
-            return rc;
-        }
-        
-        /* singleton was NULL. make from scratch. */
-        our_mgr = calloc ( 1, sizeof * our_mgr );
-        if ( our_mgr == NULL )
-            rc = RC ( rcCloud, rcMgr, rcAllocating, rcMemory, rcExhausted );
+        if ( kfg == NULL )
+            rc = RC ( rcCloud, rcMgr, rcAllocating, rcParam, rcNull );
         else
         {
-            KRefcountInit ( & our_mgr -> refcount, 1, "CloudManager", "init", "cloud" );
+            CloudMgr * our_mgr;
 
-            /* perform OUR initialization */
-            /* read from KConfig */
-            /* examine compute environment for "current-cloud" */
-            /* attach reference to KConfig */
-#warning "initialize mgr"
-
-            /* create scope for "new_mgr" */
+            /* grab single-shot singleton */
+            our_mgr = atomic_read_ptr ( & cloud_singleton );
+            if ( our_mgr != NULL )
             {
-                /* try to set single-shot ( set once, never reset ) */
-                CloudMgr * new_mgr = atomic_test_and_set_ptr ( & cloud_singleton, our_mgr, NULL );
-                if ( new_mgr != NULL )
-                {
-                    assert ( our_mgr != new_mgr );
-                    CloudMgrRelease ( our_mgr );
-                    our_mgr = new_mgr;
-                    goto singleton_exists;
-                }
-            }
+            singleton_exists:
+            
+                /* add a new reference and return */
+                rc = CloudMgrAddRef ( our_mgr );
+                if ( rc != 0 )
+                    our_mgr = NULL;
 
-            * mgrp = our_mgr;
+                * mgrp = our_mgr;
+                return rc;
+            }
+        
+            /* singleton was NULL. make from scratch. */
+            our_mgr = calloc ( 1, sizeof * our_mgr );
+            if ( our_mgr == NULL )
+                rc = RC ( rcCloud, rcMgr, rcAllocating, rcMemory, rcExhausted );
+            else
+            {
+                /* convert allocation into a ref-counted object */
+                KRefcountInit ( & our_mgr -> refcount, 1, "CloudMgr", "init", "cloud" );
+
+                /* attach reference to KConfig */
+                rc = KConfigAddRef ( kfg );
+                if ( rc == 0 )
+                {
+                    our_mgr -> kfg = kfg;
+
+                    /* examine environment for current cloud */
+                    rc = CloudMgrDetermineCurrentCloud ( our_mgr );
+                    if ( rc == 0 )
+                    {
+                        /* if within a cloud, initialize */
+                        if ( our_mgr -> cur_id != cloud_provider_none )
+                            rc = CloudMgrMakeCloud ( our_mgr, & our_mgr -> cur, our_mgr -> cur_id );
+
+                        /* if everything looks good... */
+                        if ( rc == 0 )
+                        {
+                            /* try to set single-shot ( set once, never reset ) */
+                            CloudMgr * new_mgr = atomic_test_and_set_ptr ( & cloud_singleton, our_mgr, NULL );
+
+                            /* if "new_mgr" is not NULL, then some other thread beat us to it */
+                            if ( new_mgr != NULL )
+                            {
+                                /* test logic */
+                                assert ( our_mgr != new_mgr );
+
+                                /* not an error condition - douse our version */
+                                CloudMgrWhack ( our_mgr );
+
+                                /* use the other thread's version */
+                                our_mgr = new_mgr;
+
+                                /* use common code, even if it means a goto in this case */
+                                goto singleton_exists;
+                            }
+
+                            /* arriving here means success */
+                            * mgrp = our_mgr;
+                            return rc;
+                        }
+                    }
+                }
+                    
+                CloudMgrWhack ( our_mgr );
+            }
         }
+
+        * mgrp = NULL;
     }
 
     return rc;
@@ -160,11 +195,20 @@ LIB_EXPORT rc_t CC CloudMgrRelease ( const CloudMgr * self )
 
 /* Force a provider for testing
  */
-void CC CloudMgrSetProvider ( CloudMgr * mgr, CloudProviderId provider )
+void CC CloudMgrSetProvider ( CloudMgr * self, CloudProviderId provider )
 {
-    assert ( mgr != NULL );
-    mgr -> cur_id = provider;
+#if _DEBUGGING
+    if ( provider < cloud_num_providers )
+    {
+        if ( self != NULL && self -> cur_id != provider )
+        {
+            /* redo everything based upon provider */
+            self -> cur_id = provider;
+        }
+    }
+#endif
 }
+
 #if 0
 #define GS "http://metadata.google.internal/computeMetadata/v1/instance/zone"
 #define S3 "http://169.254.169.254/latest/meta-data/placement/availability-zone"
