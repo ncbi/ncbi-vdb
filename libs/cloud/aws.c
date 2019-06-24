@@ -34,12 +34,17 @@ struct AWS;
 #include <klib/rc.h>
 #include <klib/status.h>
 #include <klib/text.h>
+#include <klib/time.h> /* KTimeStamp */
 #include <klib/printf.h>
+
 #include <kfg/config.h>
 #include <kfg/properties.h>
 #include <kns/http.h>
 #include <kfs/directory.h>
 #include <kfs/file.h>
+
+#include <ext/mbedtls/base64.h> /* vdb_mbedtls_base64_encode */
+#include <ext/mbedtls/md.h> /* vdb_mbedtls_md_hmac */
 
 #include <assert.h>
 
@@ -82,12 +87,12 @@ rc_t CC AWSAddComputeEnvironmentTokenForSigner ( const AWS * self, KClientHttpRe
 
 /* AddAuthentication
  *  prepare a request object with credentials for authentication
- */
+ *
 static
 rc_t CC AWSAddAuthentication ( const AWS * self, KClientHttpRequest * req, const char * http_method )
 {
     return 0; //TODO
-}
+}*/
 
 /* AddUserPaysCredentials
  *  prepare a request object with credentials for user-pays
@@ -98,6 +103,7 @@ rc_t CC AWSAddUserPaysCredentials ( const AWS * self, KClientHttpRequest * req, 
     return 0; //TODO
 }
 
+# if 0
 static Cloud_vt_v1 AWS_vt_v1 =
 {
     1, 0,
@@ -108,6 +114,7 @@ static Cloud_vt_v1 AWS_vt_v1 =
     AWSAddAuthentication,
     AWSAddUserPaysCredentials
 };
+
 
 /* MakeAWS
  *  make an instance of an AWS cloud interface
@@ -148,7 +155,7 @@ LIB_EXPORT rc_t CC CloudMgrMakeAWS ( const CloudMgr * self, AWS ** p_aws )
 
     return rc;
 }
-
+#endif
 /* AddRef
  * Release
  */
@@ -191,7 +198,7 @@ LIB_EXPORT rc_t CC AWSToCloud ( const AWS * cself, Cloud ** cloud )
 
     return rc;
 }
-
+/*
 LIB_EXPORT rc_t CC CloudToAWS ( const Cloud * self, AWS ** aws )
 {
     rc_t rc;
@@ -221,7 +228,7 @@ LIB_EXPORT rc_t CC CloudToAWS ( const Cloud * self, AWS ** aws )
 
     return rc;
 }
-
+*/
 /* WithinComputeEnvironment
  *  answers true if within AWS
  */
@@ -585,3 +592,358 @@ rc_t PopulateCredentials ( AWS * self )
     return rc;
 }
 #endif
+
+/* use mbedtls to generate HMAC_SHA1 */
+static rc_t HMAC_SHA1(
+    const char *key,
+    const char *input,
+    unsigned char *output)
+{
+    int ret = 0;
+
+    const mbedtls_md_info_t *md_info = vdb_mbedtls_md_info_from_type(MBEDTLS_MD_SHA1);
+
+    size_t keylen = string_measure(key, NULL);
+    size_t ilen = string_measure(input, NULL);
+
+    ret = vdb_mbedtls_md_hmac(md_info, (unsigned char *)key, keylen,
+        (unsigned char *)input, ilen, output);
+
+    return ret == 0 ? 0 : RC(rcVFS, rcUri, rcInitializing, rcEncryption, rcFailed);
+}
+
+/* Encode a buffer into base64 format */
+static rc_t Base64(
+    const unsigned char *src, size_t slen,
+    char *dst, size_t dlen)
+{
+    rc_t rc = 0;
+
+    size_t olen = 0;
+
+#if DEBUGGING
+    puts("vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv");
+    printf("SRC   : ");
+    size_t i = 0;
+    for (i = 0; i < slen; ++i)
+        printf("%x", src[i]);
+    puts("");
+#endif
+
+    if (vdb_mbedtls_base64_encode((unsigned char *)dst, dlen, &olen, src, slen) != 0)
+        rc = RC(rcVFS, rcUri, rcEncoding, rcString, rcInsufficient);
+
+#if DEBUGGING
+    olen = strlen((char*)dst);
+    printf("DST   : ");
+    for (i = 0; i < olen; ++i)
+        printf("%c", dst[i]);
+    puts("");
+    printf("base64: %s\n", dst);
+    puts("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
+#endif
+
+    return rc;
+}
+
+/* Compute AWS authenticating Signature:
+Signature
+= Base64( HMAC-SHA1( YourSecretAccessKeyID, UTF-8-Encoding-Of( StringToSign ) ) ); */
+static rc_t Signature(const char * YourSecretAccessKeyID,
+    const char * StringToSign,
+    char *dst, size_t dlen)
+{
+    unsigned char src[64] = "";
+
+#if DEBUGGING
+    int i = 0;
+    unsigned char pbuf[64] = "";
+#endif
+
+    size_t slen = 20;
+    rc_t rc = HMAC_SHA1(YourSecretAccessKeyID, StringToSign, src);
+
+#if DEBUGGING
+    rc_t r = pHMAC_SHA1(YourSecretAccessKeyID, StringToSign, pbuf, sizeof pbuf, &slen);
+
+    assert(rc == r);
+    assert(slen == 20);
+    for (i = 0; i < slen; ++i) {
+        assert(src[i] == pbuf[i]);
+    }
+#endif
+
+    if (rc == 0)
+        rc = Base64(src, slen, dst, dlen);
+
+    return rc;
+}
+
+static rc_t MakeAwsAuthenticationHeader(
+    const char *AWSAccessKeyId,
+    const char *YourSecretAccessKeyID,
+    const char *StringToSign,
+    char *dst, size_t dlen)
+{
+    size_t num_writ = 0;
+
+    rc_t rc = string_printf(dst, dlen, &num_writ, "AWS %s:", AWSAccessKeyId);
+
+    if (rc == 0) {
+        if (num_writ >= dlen)
+            return RC(rcVFS, rcUri, rcIdentifying, rcString, rcInsufficient);
+
+        rc = Signature(YourSecretAccessKeyID, StringToSign,
+            dst + num_writ, dlen - num_writ);
+    }
+
+    return rc;
+}
+
+#define X_AMZ_REQUEST_PAYER "x-amz-request-payer"
+#define REQUESTER "requester"
+
+/* https://docs.aws.amazon.com/AmazonS3/latest/dev/RESTAuthentication.html */
+static rc_t StringToSign(
+    const String * HTTPVerb,
+    const String * Date,
+    const String * hostname,
+    const String * HTTPRequestURI,
+    bool requester_payer,
+    char * buffer, size_t bsize, size_t * len)
+{
+    rc_t rc = 0;
+    rc_t r2 = 0;
+    size_t total = 0;
+    size_t skip = 0;
+    size_t p_bsize = 0;
+
+    String dateString;
+    String s3;
+    CONST_STRING(&s3, ".s3.amazonaws.com");
+    CONST_STRING(&dateString, "Date");
+    assert(buffer && len);
+
+    /* StringToSign = HTTP-Verb + "\n" */
+    assert(HTTPVerb);
+    rc = string_printf(buffer, bsize, len, "%S\n", HTTPVerb);
+    total += *len;
+
+    /* StringToSign += Content-MD5 + "\n" */
+    {
+        const char ContentMD5[] = "";
+        p_bsize = bsize >= total ? bsize - total : 0;
+        r2 = string_printf(&buffer[total], p_bsize, len, "%s\n", ContentMD5);
+        total += *len;
+        if (rc == 0 && r2 != 0)
+            rc = r2;
+    }
+
+    /* StringToSign += Content-Type + "\n" */
+    {
+        const char ContentType[] = "";
+        p_bsize = bsize >= total ? bsize - total : 0;
+        r2 = string_printf(&buffer[total], p_bsize, len, "%s\n", ContentType);
+        total += *len;
+        if (rc == 0 && r2 != 0)
+            rc = r2;
+    }
+
+    /* StringToSign += Date + "\n" */
+    assert(Date); /* Signed Amazon queries: Date header is required. */
+    p_bsize = bsize >= total ? bsize - total : 0;
+    r2 = string_printf(&buffer[total], p_bsize, len, "%S\n", Date);
+    total += *len;
+    if (rc == 0 && r2 != 0)
+        rc = r2;
+
+    /* StringToSign += CanonicalizedAmzHeaders */
+    if (requester_payer) {
+        p_bsize = bsize >= total ? bsize - total : 0;
+        r2 = string_printf(
+            &buffer[total], p_bsize, len, X_AMZ_REQUEST_PAYER ":" REQUESTER "\n");
+        total += *len;
+    }
+
+    /* StringToSign += CanonicalizedResource */
+    skip = hostname->size - s3.size;
+    if (skip > 0 && hostname->size >= s3.size &&
+        string_cmp(s3.addr, s3.size, hostname->addr + skip,
+            hostname->size - skip, s3.size) == 0)
+    { /* CanonicalizedResource = [ "/" + Bucket ] */
+        String Bucket;
+        StringInit(&Bucket, hostname->addr, skip, skip);
+        p_bsize = bsize >= total ? bsize - total : 0;
+        r2 = string_printf(&buffer[total], p_bsize, len, "/%S", &Bucket);
+        total += *len;
+        if (rc == 0 && r2 != 0)
+            rc = r2;
+    }
+    /* CanonicalizedResource += <HTTP-Request-URI protocol name to the query> */
+    p_bsize = bsize >= total ? bsize - total : 0;
+    assert(HTTPRequestURI);
+    r2 = string_printf(&buffer[total], p_bsize, len, "%S", HTTPRequestURI);
+    total += *len;
+    if (rc == 0 && r2 != 0)
+        rc = r2;
+
+    return rc;
+}
+
+/* AddAuthentication
+ *  prepare a request object with credentials for authentication
+ */
+static
+rc_t CC AWSAddAuthentication(const AWS * self, KClientHttpRequest * req,
+    const char * http_method)
+{
+    rc_t rc = 0;
+
+    char hdate[4096] = "";
+    const String * sdate = NULL;
+    String dates;
+    char date[64] = "";
+
+    //const KHttpHeader *node = NULL;
+
+    //const BSTree * hdrs = KClientHttpRequestHeaders(req);
+
+    String dateString;
+    String authorizationString;
+    CONST_STRING(&dateString, "Date");
+    CONST_STRING(&authorizationString, "Authorization");
+
+    rc = KClientHttpRequestGetHeader(req, "Authorization",
+        hdate, sizeof hdate, NULL);
+    if (rc == 0)
+        return 0; /* already has Authorization header */
+    rc = KClientHttpRequestGetHeader(req, "Date", hdate, sizeof hdate, NULL);
+    if (rc != 0) {
+#if 0
+        for (node = (const KHttpHeader*)BSTreeFirst(hdrs);
+            (rc == 0 ||
+            (GetRCObject(rc) == (enum RCObject) rcBuffer &&
+                GetRCState(rc) == rcInsufficient)) && node != NULL;
+            node = (const KHttpHeader*)BSTNodeNext(&node->dad))
+        {
+            if (node->name.len == 4 &&
+                StringCaseCompare(&node->name, &dateString) == 0)
+            {
+                sdate = &node->value;
+            }
+            else if (node->name.len == 13 &&
+                StringCaseCompare(&node->name, &authorizationString) == 0)
+            {   /* already has Authorization header */
+                return 0;
+            }
+        }
+#endif
+        //if (sdate == NULL) {
+        KTime_t t = KTimeStamp();
+
+#if _DEBUGGING
+        size_t sz =
+#endif
+            KTimeRfc2616(t, date, sizeof date);
+#if _DEBUGGING
+        assert(sz < sizeof date);
+#endif
+
+        StringInitCString(&dates, date);
+        sdate = &dates;
+        rc = KClientHttpRequestAddHeader(req, "Date", date);
+    }
+
+    if (rc == 0) {
+        size_t len = 0;
+        String HTTPVerb;
+        StringInitCString(&HTTPVerb, http_method);
+        /*rc = StringToSign(&HTTPVerb, sdate, hostname, &self->url_block.path,
+            requester_payer, stringToSign, sizeof stringToSign, &len);*/
+    }
+
+    return 0; //TODO
+}
+
+
+static Cloud_vt_v1 AWS_vt_v1 =
+{
+    1, 0,
+
+    AWSDestroy,
+    AWSMakeComputeEnvironmentToken,
+    AWSAddComputeEnvironmentTokenForSigner,
+    AWSAddAuthentication,
+    AWSAddUserPaysCredentials
+};
+
+/* MakeAWS
+ *  make an instance of an AWS cloud interface
+ */
+LIB_EXPORT rc_t CC CloudMgrMakeAWS(
+    const CloudMgr * self, AWS ** p_aws)
+{
+    rc_t rc;
+    //TODO: check self, aws
+    AWS * aws = calloc(1, sizeof * aws);
+    if (aws == NULL)
+    {
+        rc = RC(rcNS, rcMgr, rcAllocating, rcMemory, rcExhausted);
+    }
+    else
+    {
+        /* capture from self->kfg */
+        bool user_agrees_to_pay = false;
+
+        rc = CloudInit(&aws->dad, (const Cloud_vt *)& AWS_vt_v1, "AWS", user_agrees_to_pay);
+        if (rc == 0)
+        {
+            rc = PopulateCredentials(aws);
+            if (rc == 0)
+            {
+                *p_aws = aws;
+            }
+            else
+            {
+                CloudRelease(&aws->dad);
+            }
+        }
+        else
+        {
+            free(aws);
+        }
+
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC CloudToAWS(const Cloud * self, AWS ** aws)
+{
+    rc_t rc;
+
+    if (self == NULL)
+        rc = RC(rcCloud, rcProvider, rcCasting, rcSelf, rcNull);
+    else if (aws == NULL)
+        rc = RC(rcCloud, rcProvider, rcCasting, rcParam, rcNull);
+    else
+    {
+        if (self == NULL)
+            rc = 0;
+        else if (self->vt != (const Cloud_vt *)& AWS_vt_v1)
+            rc = RC(rcCloud, rcProvider, rcCasting, rcType, rcIncorrect);
+        else
+        {
+            rc = CloudAddRef(self);
+            if (rc == 0)
+            {
+                *aws = (AWS *)self;
+                return 0;
+            }
+        }
+
+        *aws = NULL;
+    }
+
+    return rc;
+}
