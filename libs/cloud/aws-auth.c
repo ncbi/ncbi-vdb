@@ -334,3 +334,13 @@ rc_t WrapInIdentityPkcs7(const char *src, char *dst, size_t dlen) {
     return string_printf(dst, dlen, NULL,
         "-----BEGIN PKCS7-----\n%s\n-----END PKCS7-----\n", src);
 }
+
+rc_t Base64InIdentityPkcs7(const char *src, char *dst, size_t dlen) {
+    char wrapped[4096] = "";
+    rc_t rc = WrapInIdentityPkcs7(src, wrapped, sizeof wrapped);
+    if (rc == 0) {
+        size_t slen = string_measure(wrapped, NULL);
+        rc = Base64((unsigned char *)wrapped, slen, dst, dlen);
+    }
+    return rc;
+}
