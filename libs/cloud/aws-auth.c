@@ -344,3 +344,17 @@ rc_t Base64InIdentityPkcs7(const char *src, char *dst, size_t dlen) {
     }
     return rc;
 }
+
+rc_t MakeLocality(const char *pkcs7, const char *document,
+    char *dst, size_t dlen)
+{
+    char bpkcs7[4096] = "";
+    rc_t rc = Base64InIdentityPkcs7(pkcs7, bpkcs7, sizeof bpkcs7);
+    if (rc == 0) {
+        char documnt[4096] = "";
+        rc = Base64InIdentityDocument(document, documnt, sizeof documnt);
+        if (rc == 0)
+            rc = string_printf(dst, dlen, NULL, "%s.%s", bpkcs7, documnt);
+    }
+    return rc;
+}
