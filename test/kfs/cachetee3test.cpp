@@ -32,12 +32,14 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <fstream>
 
 #include <ktst/unit_test.hpp>
 
 #include <klib/out.h>
 #include <klib/rc.h>
 #include <klib/time.h>
+#include <klib/printf.h>
 
 #include <kproc/thread.h>
 
@@ -995,24 +997,28 @@ FIXTURE_TEST_CASE ( CacheTee3_delete_on_exit, CT3Fixture )
 extern "C" {
 /* prototype, impl is in callback_file.c */
 rc_t CC MakeCallBackFile ( struct KFile **callback_file,
-                           struct KFile *to_wrap,
-                           void ( CC * cb ) ( char event, uint64_t pos, uint64_t size, void *data ),
-                           void * data );
+        struct KFile *to_wrap,
+        void ( CC * cb ) ( char event, rc_t rc, uint64_t pos, size_t req_size, size_t done_size,
+                           void *data1, void *data2 ),
+        void * data1,
+        void * data2 );
 }
 
 struct CallBackCounter
 {
     uint64_t events;
     uint64_t bytes;
+    uint64_t pos;
     
-    CallBackCounter( void ) : events( 0 ), bytes( 0 ) {}
-    void count( uint64_t n ) { events++; bytes += n; }
-    void clear( void ) { events = 0; bytes = 0; }
+    CallBackCounter( void ) : events( 0 ), bytes( 0 ), pos( 0 ) {}
+    void count( uint64_t a_pos, uint64_t n ) { events++; bytes += n; pos = a_pos; }
+    void clear( void ) { events = 0; bytes = 0; pos = 0; }
 };
 
-void CC count_events( char event, uint64_t pos, uint64_t size, void *data )
+void CC count_events( char event, rc_t rc, uint64_t pos, size_t req_size, size_t done_size,
+                      void *data1, void *data2 )
 {
-    CallBackCounter * cc = ( CallBackCounter * )data;
+    CallBackCounter * cc = ( CallBackCounter * )data1;
     if ( cc != NULL )
     {
         switch( event )
@@ -1020,7 +1026,7 @@ void CC count_events( char event, uint64_t pos, uint64_t size, void *data )
             case 'R' :
             case 'B' :
             case 'D' :
-            case 'F' : cc -> count( size ); break;
+            case 'F' : cc -> count( pos, req_size ); break;
         }
     }
 }
@@ -1033,62 +1039,173 @@ FIXTURE_TEST_CASE ( CacheTee3_request_count, CT3Fixture )
 
     KDirectory *dir;
     REQUIRE_RC ( KDirectoryNativeDir ( &dir ) );
-    KFile *org;
-    REQUIRE_RC ( KDirectoryOpenFileWrite ( dir, &org, true, "%s", DATAFILE ) ); // org.data
+    const KFile *org1;
+    REQUIRE_RC ( KDirectoryOpenFileRead ( dir, &org1, "%s", DATAFILE ) ); // org.data
+
+    const KFile *org2;
+    REQUIRE_RC ( KDirectoryOpenFileRead ( dir, &org2, "%s", DATAFILE ) ); // org.data
 
     CallBackCounter cbc1;
     CallBackCounter cbc2;    
-    KFile *org_counted;
-    REQUIRE_RC ( MakeCallBackFile ( &org_counted, org, count_events, &cbc1 ) );
-    KFileRelease ( org );
+    KFile *org1_counted;
+    REQUIRE_RC ( MakeCallBackFile ( &org1_counted, (KFile *)org1, count_events, &cbc1, NULL ) );
+    KFileRelease ( org1 );
     
     const KFile *tee;
     uint32_t cluster_factor = 2;
     uint32_t ram_pages = 0;
-    REQUIRE_RC ( KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org_counted, BLOCKSIZE,
+    REQUIRE_RC ( KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org1_counted, BLOCKSIZE,
         cluster_factor, ram_pages, false, false, "%s", CACHEFILE ) ); // cache.dat
-
+    KFileRelease ( org1_counted );
+    
+    KFile *tee_counted;
+    REQUIRE_RC ( MakeCallBackFile ( &tee_counted, (KFile *)tee, count_events, &cbc2, NULL ) );
+    KFileRelease ( tee );
+    
     const int num_chunks = 2048;
     for ( int i = 0; i < num_chunks; ++i )
     {
         uint64_t pos = rand_32 ( 0, DATAFILESIZE );
         size_t   len = rand_32 ( 10, 1000 );
-        cbc2 . count( len );
-        REQUIRE_RC( compare_file_content_3 ( org, tee, pos, len, NULL ) );
+        REQUIRE_RC( compare_file_content_3 ( org2, tee_counted, pos, len, NULL ) );
     }
 
     for ( int i = 0; i < num_chunks; ++i )
     {
         uint64_t pos = rand_32 ( 0, DATAFILESIZE );
         size_t   len = rand_32 ( 10, 10000 );
-        cbc2 . count( len );
-        REQUIRE_RC( compare_file_content_3 ( org, tee, pos, len, NULL ) );
+        REQUIRE_RC( compare_file_content_3 ( org2, tee_counted, pos, len, NULL ) );
     }
     
-    KOutMsg ( "requested  = %lu, bytes = %lu\n", cbc2 . events, cbc2 . bytes );
-    KOutMsg ( "orig. file = %lu, bytes = %lu\n", cbc1 . events, cbc1 . bytes );
+    KOutMsg ( "requested  = %,lu, bytes = %,lu\n", cbc2 . events, cbc2 . bytes );
+    KOutMsg ( "orig. file = %,lu, bytes = %,lu\n", cbc1 . events, cbc1 . bytes );
     REQUIRE( cbc1 . events < cbc2 . events );
     
     // after reading the whole thing - no read-request should be made via orig...
     KOutMsg ( "requesting whole file\n" );
-    REQUIRE_RC ( read_whole_file( tee, 1024 * 1024 ) );
+    REQUIRE_RC ( read_whole_file( tee_counted, 1024 * 1024 ) );
     cbc1.clear();
     cbc2.clear();
+
     for ( int i = 0; i < num_chunks; ++i )
     {
+        size_t   len = rand_32 ( 10, 1000 );        
         uint64_t pos = rand_32 ( 0, DATAFILESIZE );
-        size_t   len = rand_32 ( 10, 1000 );
-        cbc2 . count( len );
-        REQUIRE_RC( compare_file_content_3 ( org, tee, pos, len, NULL ) );
+        REQUIRE_RC( compare_file_content_3 ( org2, tee_counted, pos, len, NULL ) );
     }
-    KOutMsg ( "requested  = %lu, bytes = %lu\n", cbc2 . events, cbc2 . bytes );
-    KOutMsg ( "orig. file = %lu, bytes = %lu\n", cbc1 . events, cbc1 . bytes );
+
+    KOutMsg ( "requested  = %,lu, bytes = %,lu\n", cbc2 . events, cbc2 . bytes );
+    KOutMsg ( "orig. file = %,lu, bytes = %,lu\n", cbc1 . events, cbc1 . bytes );
+    if ( cbc1 . events > 0 )
+        KOutMsg ( "at %,lu of %,lu ( %,ld over )\n", cbc1 . pos, DATAFILESIZE,
+                    ( cbc1 . pos + cbc1 . bytes ) - DATAFILESIZE );
+
     REQUIRE( cbc1 . events == 0 );
     REQUIRE( cbc1 . bytes == 0 );
     
+    KFileRelease ( tee_counted );
+    KFileRelease ( org2 );
+    
+    KDirectoryRelease ( dir );
+    KOutMsg ( "counting requests done\n" );
+}
+
+struct Recorder
+{
+    ofstream f;
+    uint32_t counter;
+    
+    Recorder( const string &filename ) { f.open( filename.c_str() ); counter = 0; }
+    ~Recorder() { f.close(); }
+    
+    void print_rc( rc_t rc )
+    {
+        if ( rc == 0 )
+            f << "OK";
+        else
+        {
+            char buffer[ 256 ];
+            size_t num_writ;
+            string_printf( buffer, sizeof buffer, &num_writ, "%R", rc );
+            f << buffer;
+        }
+    }
+    
+    void record( char src, char event, rc_t rc, uint64_t pos, size_t req_size, size_t done_size )
+    {
+        if ( src == 'O' ) counter++;
+        f << src << " | " << event << " | rc=";
+        print_rc( rc );
+        f << " | pos=" << pos << " | req=" << req_size << " | done = " << done_size << endl; 
+    }
+    
+    void write( const string &txt ) { f << txt << endl; }
+    void clear( void ) { counter = 0; }
+};
+
+void CC record_events( char event, rc_t rc, uint64_t pos, size_t req_size, size_t done_size,
+                      void *data1, void *data2 )
+{
+    Recorder * r = ( Recorder * )data1;
+    if ( r != NULL )
+    {
+        char * src = ( char * )data2;
+        r -> record( *src, event, rc, pos, req_size, done_size );
+    }
+}
+
+FIXTURE_TEST_CASE ( CacheTee3_request_record, CT3Fixture )
+{
+    KOutMsg ( "recording requests\n" );
+    remove_file ( CACHEFILE );
+    remove_file ( CACHEFILE1 );
+
+    KDirectory *dir;
+    REQUIRE_RC ( KDirectoryNativeDir ( &dir ) );
+    const KFile *org1;
+    REQUIRE_RC ( KDirectoryOpenFileRead ( dir, &org1, "%s", DATAFILE ) ); // org.data
+
+    const KFile *org2;
+    REQUIRE_RC ( KDirectoryOpenFileRead ( dir, &org2, "%s", DATAFILE ) ); // org.data
+    
+    Recorder r( "recorded.txt" );
+    char org_tag = 'O';
+    KFile *org1_recorded;
+    REQUIRE_RC ( MakeCallBackFile ( &org1_recorded, (KFile *)org1, record_events, &r, &org_tag ) );
+    KFileRelease ( org1 );
+    
+    const KFile *tee;
+    uint32_t cluster_factor = 2;
+    uint32_t ram_pages = 0;
+    REQUIRE_RC ( KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org1_recorded, BLOCKSIZE,
+                        cluster_factor, ram_pages, false, false, "%s", CACHEFILE ) ); // cache.dat
+    KFileRelease ( org1_recorded );
+    
+    KFile *tee_recorded;
+    char tee_tag = 'T';
+    REQUIRE_RC ( MakeCallBackFile ( &tee_recorded, (KFile *)tee, record_events, &r, &tee_tag ) );
     KFileRelease ( tee );
-    KFileRelease ( org_counted );
-    KFileRelease ( org );
+    
+    // after reading the whole thing - no read-request should be made via orig...
+    KOutMsg ( "requesting whole file\n" );
+    REQUIRE_RC ( read_whole_file( tee_recorded, 1024 * 1024 ) );
+
+    r.write( "------ whole file read ----" );
+    r.clear();
+    
+    for ( int i = 0; i < 1024; ++i )
+    {
+        size_t   len = rand_32 ( 10, 5000 );        
+        uint64_t pos = rand_32 ( 0, DATAFILESIZE );
+        REQUIRE_RC( compare_file_content_3 ( org2, tee_recorded, pos, len, NULL ) );
+    }
+    
+    REQUIRE_RC( compare_file_content_3 ( org2, tee_recorded, DATAFILESIZE - 1000, 2000, NULL ) );
+    
+    REQUIRE( r . counter == 0 );
+    
+    KFileRelease ( tee_recorded );
+    KFileRelease ( org2 );
     
     KDirectoryRelease ( dir );
     KOutMsg ( "counting requests done\n" );

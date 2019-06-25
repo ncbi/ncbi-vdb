@@ -41,8 +41,10 @@ typedef struct CallBackFile
 {
     KFile dad;
     KFile * wrapped;
-    void ( CC * cb ) ( char event, uint64_t pos, uint64_t size, void *data );
-    void * data;
+    void ( CC * cb ) ( char event, rc_t rc, uint64_t pos, size_t req_size, size_t done_size,
+                       void *data1, void *data2 );
+    void * data1;
+    void * data2;
 } CallBackFile;
 
 
@@ -58,28 +60,28 @@ static rc_t CC CallBackFileDestroy ( CallBackFile * self )
 static struct KSysFile* CallBackFileGetSysFile ( const CallBackFile *self, uint64_t *offset )
 {
     * offset = 0;
-    self -> cb( 'Y', 0, 0, self -> data );    
+    self -> cb( 'Y', 0, 0, 0, 0, self -> data1, self -> data2 );    
     return NULL;
 }
 
 static rc_t CallBackFileRandomAccess ( const CallBackFile *self )
 {
     rc_t rc = KFileRandomAccess_v1 ( self -> wrapped );
-    self -> cb( 'A', 0, 0, self -> data );
+    self -> cb( 'A', rc, 0, 0, 0, self -> data1, self -> data2 );
     return rc;
 }
 
 static rc_t CallBackFileSize ( const CallBackFile *self, uint64_t *size )
 {
     rc_t rc = KFileSize ( self -> wrapped, size );
-    self -> cb( 'S', 0, *size, self -> data );
+    self -> cb( 'S', rc, 0, 0, *size, self -> data1, self -> data2 );
     return rc;
 }
 
 static rc_t CallBackFileSetSize ( CallBackFile *self, uint64_t size )
 {
     rc_t rc = KFileSetSize ( self -> wrapped, size );
-    self -> cb( 'E', 0, size, self -> data );
+    self -> cb( 'E', rc, 0, size, size, self -> data1, self -> data2 );
     return rc;
 }
 
@@ -87,7 +89,7 @@ static rc_t CallBackFileRead ( const CallBackFile *cself, uint64_t pos,
                                 void *buffer, size_t bsize, size_t *num_read )
 {
     rc_t rc = KFileRead ( cself -> wrapped, pos,  buffer, bsize, num_read );
-    cself -> cb( 'R', pos, bsize, cself -> data );    
+    cself -> cb( 'R', rc, pos, bsize, *num_read, cself -> data1, cself -> data2 );    
     return rc;
 }
 
@@ -95,14 +97,14 @@ static rc_t CallBackFileWrite ( CallBackFile *self, uint64_t pos,
                                 const void *buffer, size_t size, size_t *num_writ )
 {
     rc_t rc = KFileWrite ( self -> wrapped, pos, buffer, size, num_writ );
-    self -> cb( 'W', pos, size, self -> data );
+    self -> cb( 'W', rc, pos, size, *num_writ, self -> data1, self -> data2 );
     return rc;
 }
 
 static uint32_t CC CallBackFileGetType ( const CallBackFile * self )
 {
     uint32_t res = KFileType ( self -> wrapped );
-    self -> cb( 'T', res, 0, self -> data );
+    self -> cb( 'T', 0, res, 0, 0, self -> data1, self -> data2 );
     return res;
 }
 
@@ -110,7 +112,7 @@ static rc_t CC CallBackFileTimedRead ( const CallBackFile *cself, uint64_t pos,
     void *buffer, size_t bsize, size_t *num_read, struct timeout_t *tm )
 {
     rc_t rc = KFileTimedRead( cself -> wrapped, pos, buffer, bsize, num_read, tm );
-    cself -> cb( 'B', pos, bsize, cself -> data );
+    cself -> cb( 'B', rc, pos, bsize, *num_read, cself -> data1, cself -> data2 );
     return rc;
 }
 
@@ -118,7 +120,7 @@ static rc_t CC CallBackFileTimedWrite ( CallBackFile *self, uint64_t pos,
     const void *buffer, size_t size, size_t *num_writ, struct timeout_t *tm )
 {
     rc_t rc = KFileTimedWrite( self -> wrapped, pos, buffer, size, num_writ, tm );
-    self -> cb( 'C', pos, size, self -> data );
+    self -> cb( 'C', rc, pos, size, *num_writ, self -> data1, self -> data2 );
     return rc;
 }
 
@@ -126,7 +128,7 @@ static rc_t CC CallBackFileReadChunked ( const CallBackFile *self, uint64_t pos,
     KChunkReader * chunks, size_t bsize, size_t * total_read )
 {
     rc_t rc = KFileReadChunked( self -> wrapped, pos, chunks, bsize, total_read );
-    self -> cb( 'D', pos, bsize, self -> data );
+    self -> cb( 'D', rc, pos, bsize, *total_read, self -> data1, self -> data2 );
     return rc;
 }
 
@@ -134,7 +136,7 @@ static rc_t CC CallBackFileTimedReadChunked ( const CallBackFile *self, uint64_t
     KChunkReader * chunks, size_t bsize, size_t * total_read, struct timeout_t * tm )
 {
     rc_t rc = KFileTimedReadChunked( self -> wrapped, pos, chunks, bsize, total_read, tm );
-    self -> cb( 'F', pos, bsize, self -> data );    
+    self -> cb( 'F', rc, pos, bsize, *total_read, self -> data1, self -> data2 );    
     return rc;
 }
 
@@ -170,9 +172,11 @@ static KFile_vt_v1 vtCallBackFile =
 };
 
 LIB_EXPORT rc_t CC MakeCallBackFile ( struct KFile **callback_file,
-                                  struct KFile *to_wrap,
-                                  void ( CC * cb ) ( char event, uint64_t pos, uint64_t size, void *data ),
-                                  void * data )
+                    struct KFile *to_wrap,
+                    void ( CC * cb ) ( char event, rc_t rc, uint64_t pos, size_t req_size, size_t done_size,
+                                       void *data1, void *data2 ),
+                    void * data1,
+                    void * data2 )
 {
     rc_t rc = 0;
         
@@ -198,7 +202,8 @@ LIB_EXPORT rc_t CC MakeCallBackFile ( struct KFile **callback_file,
                 /* now we can enter everything into the rr - struct */
                 lf -> wrapped = to_wrap;
                 lf -> cb = cb;
-                lf -> data = data;
+                lf -> data1 = data1;
+                lf -> data2 = data2;
                 rc = KFileInit ( &lf -> dad,
                                  ( const union KFile_vt * ) &vtCallBackFile,
                                  "CallBackFile",
