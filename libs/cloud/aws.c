@@ -248,20 +248,29 @@ static rc_t aws_extract_key_value_pair (
 /*TODO: improve error handling (at least report) */
 static void aws_parse_file ( AWS * self, const KFile *cred_file )
 {
-    size_t buf_size = 0;
-    size_t num_read = 0;
-    rc_t rc = 0;
+    rc_t rc;
+    size_t buf_size;
+    size_t num_read;
+
+    char * buffer;
+    uint64_t file_size;
 
     assert ( self != NULL );
     assert ( self -> profile != NULL );
 
-    rc = KFileSize ( cred_file, &buf_size );
-    if ( rc ) return;
+    rc = KFileSize ( cred_file, &file_size );
+    if ( rc != 0 )
+        return;
 
-    char *buffer = malloc ( buf_size );
-    rc = KFileReadAll ( cred_file, 0, buffer, (size_t)buf_size, &num_read );
+    buf_size = ( size_t ) file_size;
+    if ( sizeof buf_size < sizeof file_size && ( uint64_t ) buf_size != file_size )
+        return;
 
-    if ( rc ) {
+    buffer = malloc ( buf_size );
+    rc = KFileReadAll ( cred_file, 0, buffer, buf_size, &num_read );
+
+    if ( rc != 0 )
+    {
         free ( buffer );
         return;
     }
