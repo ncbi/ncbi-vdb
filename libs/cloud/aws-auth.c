@@ -239,7 +239,7 @@ static rc_t StringToSign(
 /* AddAuthentication
  *  prepare a request object with credentials for authentication
  */
-rc_t AWSAddAuthenticationI(const struct AWS * self, KClientHttpRequest * req,
+rc_t AWSDoAuthentication(const struct AWS * self, KClientHttpRequest * req,
     const char * http_method, const char * AWSAccessKeyId,
     const char * YourSecretAccessKeyID, bool requester_payer)
 {
