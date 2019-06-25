@@ -44,7 +44,9 @@ extern "C" {
 /* CloudMgr
  *  singleton object to access cloud-related resources
  */
+#if _DEBUGGING
 CLOUD_EXTERN void CC CloudMgrSetProvider ( CloudMgr * self, CloudProviderId provider );
+#endif
 
 #ifdef __cplusplus
 }
