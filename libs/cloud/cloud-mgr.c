@@ -110,10 +110,6 @@ LIB_EXPORT rc_t CC CloudMgrMake ( CloudMgr ** mgrp,
         rc = RC ( rcCloud, rcMgr, rcAllocating, rcParam, rcNull );
     else
     {
-        /* prepare for failure */
-        if ( kfg == NULL )
-            rc = RC ( rcCloud, rcMgr, rcAllocating, rcParam, rcNull );
-        else
         {
             CloudMgr * our_mgr;
 
@@ -141,8 +137,13 @@ LIB_EXPORT rc_t CC CloudMgrMake ( CloudMgr ** mgrp,
                 /* convert allocation into a ref-counted object */
                 KRefcountInit ( & our_mgr -> refcount, 1, "CloudMgr", "init", "cloud" );
 
-                /* attach reference to KConfig */
-                rc = KConfigAddRef ( kfg );
+                if ( kfg == NULL )
+                    /* make KConfig if it was not provided */
+                    rc = KConfigMake ( ( KConfig ** ) & kfg, NULL );
+                else
+                    /* attach reference to KConfig */
+                    rc = KConfigAddRef ( kfg );
+
                 if ( rc == 0 )
                 {
                     our_mgr -> kfg = kfg;
