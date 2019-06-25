@@ -29,6 +29,7 @@ TOP ?= $(abspath ../..)
 MODULE = test/cloud
 
 TEST_TOOLS = \
+	test-aws \
 	test-cloud \
 
 include $(TOP)/build/Makefile.env
@@ -86,3 +87,15 @@ $(TEST_BINDIR)/test-cloud: $(CLOUD_OBJ)
 
 cloud: test-kns
 	$(TEST_BINDIR)/test-cloud  #-l=all
+
+#----------------------------------------------------------------
+# test-aws
+#
+A_SRC = \
+	test-aws
+
+A_OBJ = \
+	$(addsuffix .$(OBJX),$(A_SRC))
+
+$(TEST_BINDIR)/test-aws: $(A_OBJ)
+	$(LP) --exe -o $@ $^ $(CLOUD_LIB)
