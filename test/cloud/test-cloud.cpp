@@ -49,7 +49,7 @@ using namespace ncbi::NK;
 
 TEST_CASE(MgrMake_NullParam)
 {
-    REQUIRE_RC_FAIL ( CloudMgrMake ( NULL ) );
+    REQUIRE_RC_FAIL ( CloudMgrMake ( NULL, NULL, NULL ) );
 }
 
 TEST_CASE(MgrRelease_NullParam)
@@ -60,10 +60,11 @@ TEST_CASE(MgrRelease_NullParam)
 TEST_CASE(MgrMake_Release)
 {
     CloudMgr * mgr;
-    REQUIRE_RC ( CloudMgrMake ( & mgr ) );
+    REQUIRE_RC ( CloudMgrMake ( & mgr, NULL, NULL ) );
     REQUIRE_NOT_NULL ( mgr );
     REQUIRE_RC ( CloudMgrRelease ( mgr ) );
 }
+//TODO: provide KFG, KNS to CloudMgrMake()
 
 TEST_CASE(MgrAddRef_NullParam)
 {
@@ -84,7 +85,7 @@ public:
         m_id ( cloud_num_providers ),
         m_cloud ( nullptr )
     {
-        THROW_ON_RC ( CloudMgrMake ( & m_mgr ) );
+        THROW_ON_RC ( CloudMgrMake ( & m_mgr, NULL, NULL ) );
     }
     ~CloudMgrFixture ()
     {
@@ -107,6 +108,7 @@ FIXTURE_TEST_CASE(MgrCurrentProvider_NullParam, CloudMgrFixture)
 {
     REQUIRE_RC_FAIL ( CloudMgrCurrentProvider ( m_mgr, NULL ) );
 }
+#if BREAKS_OTHERS
 FIXTURE_TEST_CASE(MgrCurrentProvider_Aws, CloudMgrFixture)
 {
     // need to have a predictable providerId in testing, so force it to be AWS here
@@ -114,6 +116,7 @@ FIXTURE_TEST_CASE(MgrCurrentProvider_Aws, CloudMgrFixture)
     REQUIRE_RC ( CloudMgrCurrentProvider ( m_mgr, & m_id ) );
     REQUIRE_EQ ( (int)cloud_provider_aws, (int)m_id );
 }
+#endif
 
 FIXTURE_TEST_CASE(MgrCurrentProvider_MakeCloud_NullSelf, CloudMgrFixture)
 {
@@ -134,24 +137,25 @@ FIXTURE_TEST_CASE(MgrCurrentProvider_MakeCloud_BadParam, CloudMgrFixture)
 
 FIXTURE_TEST_CASE(MgrCurrentProvider_MakeCurrentCloud_NullSelf, CloudMgrFixture)
 {
-    REQUIRE_RC_FAIL ( CloudMgrMakeCurrentCloud ( NULL, & m_cloud ) );
+    REQUIRE_RC_FAIL ( CloudMgrGetCurrentCloud ( NULL, & m_cloud ) );
 }
 FIXTURE_TEST_CASE(MgrCurrentProvider_MakeCurrentCloud_NullParam, CloudMgrFixture)
 {
-    REQUIRE_RC_FAIL ( CloudMgrMakeCurrentCloud ( m_mgr, NULL ) );
+    REQUIRE_RC_FAIL ( CloudMgrGetCurrentCloud ( m_mgr, NULL ) );
 }
+#if BREAKS_OTHERS
 FIXTURE_TEST_CASE(MgrCurrentProvider_MakeCurrentCloud, CloudMgrFixture)
 {
     // need to have a predictable providerId in testing, so force it to be AWS here
     CloudMgrSetProvider( m_mgr, cloud_provider_aws );
-    REQUIRE_RC ( CloudMgrMakeCurrentCloud ( m_mgr, & m_cloud ) );
+    REQUIRE_RC ( CloudMgrGetCurrentCloud ( m_mgr, & m_cloud ) );
     // to verify, try to cast to AWS
     AWS * aws;
     REQUIRE_RC ( CloudToAWS ( m_cloud, & aws ) );
     REQUIRE_NOT_NULL ( aws );
     REQUIRE_RC ( AWSRelease ( aws ) );
 }
-
+#endif
 //////////////////////////////////////////// AWS
 
 class AwsFixture : public CloudMgrFixture
@@ -199,8 +203,11 @@ public:
 
     void MakeAWS()
     {
-        CloudMgrSetProvider( m_mgr, cloud_provider_aws );
-        THROW_ON_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_aws ) );
+        CloudMgrRelease(m_mgr);
+        m_mgr = nullptr;
+        THROW_ON_RC ( CloudMgrMakeWithProvider( & m_mgr, cloud_provider_aws ) );
+        THROW_ON_FALSE ( nullptr != m_mgr );
+        THROW_ON_RC ( CloudMgrGetCurrentCloud ( m_mgr, & m_cloud ) );
         THROW_ON_FALSE ( nullptr != m_cloud );
         THROW_ON_RC ( CloudToAWS ( m_cloud, & m_aws ) );
         THROW_ON_FALSE ( nullptr != m_aws );
@@ -217,7 +224,6 @@ public:
 
 FIXTURE_TEST_CASE(AWS_Make, CloudMgrFixture)
 {
-    CloudMgrSetProvider( m_mgr, cloud_provider_aws );
     REQUIRE_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_aws ) );
     REQUIRE_NOT_NULL ( m_cloud );
 }
@@ -232,7 +238,6 @@ FIXTURE_TEST_CASE(AWS_CloudToAws_NullParam, AwsFixture)
 }
 FIXTURE_TEST_CASE(AWS_CloudToAws, AwsFixture)
 {
-    CloudMgrSetProvider( m_mgr, cloud_provider_aws );
     REQUIRE_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_aws ) );
     REQUIRE_NOT_NULL ( m_cloud );
     REQUIRE_RC ( CloudToAWS ( m_cloud, & m_aws ) );
@@ -240,10 +245,7 @@ FIXTURE_TEST_CASE(AWS_CloudToAws, AwsFixture)
 }
 FIXTURE_TEST_CASE(AWS_CloudToAws_Fail, AwsFixture)
 {
-    CloudMgrSetProvider( m_mgr, cloud_provider_gcp );
-    REQUIRE_RC ( CloudRelease ( m_cloud ) );
-    REQUIRE_RC ( CloudMgrMakeCurrentCloud ( m_mgr, & m_cloud ) );
-
+    REQUIRE_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_gcp ) );
     REQUIRE_RC_FAIL ( CloudToAWS ( m_cloud, & m_aws ) );
 }
 
@@ -332,17 +334,8 @@ FIXTURE_TEST_CASE(AWS_Credentials_AwsUserHomeCredentials, AwsFixture)
 {
     setenv ( "HOME", "./cloud-kfg", 1 );
 
-    KConfig * kfg;
-    REQUIRE_RC ( KConfigMake( & kfg, NULL ) );    
-    const KConfigNode * home_node;
-    REQUIRE_RC ( KConfigOpenNodeRead ( kfg, &home_node, "HOME" ) );
-    char path[4096];
-    size_t num_read;
-    REQUIRE_RC ( KConfigNodeRead ( home_node, 0, path, sizeof path, &num_read, NULL ) );
-
-    string home ( path, num_read );
-    CreateFile ( home + "/.aws/credentials", "[default]\naws_access_key_id = ABC123\naws_secret_access_key = SECRET\n" );
-    remove( (home + "/.aws/config") . c_str() ); // otherwise it may override
+    CreateFile ( "./cloud-kfg/.aws/credentials", "[default]\naws_access_key_id = ABC123\naws_secret_access_key = SECRET\n" );
+    remove( "./cloud-kfg/.aws/config" ); // otherwise it may override
 
     CheckKeys( "ABC123", "SECRET" );
 }
@@ -351,18 +344,9 @@ FIXTURE_TEST_CASE(AWS_Credentials_AwsUserHomeCredentials_ConfigOverrides, AwsFix
 {
     setenv ( "HOME", "./cloud-kfg", 1 );
 
-    KConfig * kfg;
-    REQUIRE_RC ( KConfigMake( & kfg, NULL ) );    
-    const KConfigNode * home_node;
-    REQUIRE_RC ( KConfigOpenNodeRead ( kfg, &home_node, "HOME" ) );
-    char path[4096];
-    size_t num_read;
-    REQUIRE_RC ( KConfigNodeRead ( home_node, 0, path, sizeof path, &num_read, NULL ) );
-
-    string home ( path, num_read );
-    CreateFile ( home + "/.aws/credentials", "[default]\naws_access_key_id = ABC123\naws_secret_access_key = SECRET\n" );
+    CreateFile ( "./cloud-kfg/.aws/credentials", "[default]\naws_access_key_id = ABC123\naws_secret_access_key = SECRET\n" );
     // ~/.aws/config overrides if present
-    CreateFile ( home + "/.aws/config", "[default]\naws_access_key_id = ABC123_CFG\naws_secret_access_key = SECRET_CFG\n" );
+    CreateFile ( "./cloud-kfg/.aws/config", "[default]\naws_access_key_id = ABC123_CFG\naws_secret_access_key = SECRET_CFG\n" );
     CheckKeys( "ABC123_CFG", "SECRET_CFG" );
 }
 
@@ -391,8 +375,10 @@ public:
 
     void MakeGCP()
     {
-        CloudMgrSetProvider( m_mgr, cloud_provider_gcp );
-        THROW_ON_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_gcp ) );
+        CloudMgrRelease(m_mgr);
+        m_mgr = nullptr;
+        THROW_ON_RC ( CloudMgrMakeWithProvider( & m_mgr, cloud_provider_gcp ) );
+        THROW_ON_RC ( CloudMgrGetCurrentCloud ( m_mgr, & m_cloud ) );
         THROW_ON_FALSE ( nullptr != m_cloud );
         THROW_ON_RC ( CloudToGCP ( m_cloud, & m_gcp ) );
         THROW_ON_FALSE ( nullptr != m_gcp );
@@ -403,7 +389,6 @@ public:
 
 FIXTURE_TEST_CASE(GCP_Make, GcpFixture)
 {
-    CloudMgrSetProvider( m_mgr, cloud_provider_gcp );
     REQUIRE_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_gcp ) );
     REQUIRE_NOT_NULL ( m_cloud );
 }
@@ -418,7 +403,6 @@ FIXTURE_TEST_CASE(GCP_CloudToGcp_NullParam, GcpFixture)
 }
 FIXTURE_TEST_CASE(GCP_CloudToGcp, GcpFixture)
 {
-    CloudMgrSetProvider( m_mgr, cloud_provider_gcp );
     REQUIRE_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_gcp ) );
     REQUIRE_NOT_NULL ( m_cloud );
     REQUIRE_RC ( CloudToGCP ( m_cloud, & m_gcp ) );
@@ -426,10 +410,7 @@ FIXTURE_TEST_CASE(GCP_CloudToGcp, GcpFixture)
 }
 FIXTURE_TEST_CASE(GCP_CloudToGcp_Fail, GcpFixture)
 {
-    CloudMgrSetProvider( m_mgr, cloud_provider_aws ); // wrong cloud
-    REQUIRE_RC ( CloudRelease ( m_cloud ) );
-    REQUIRE_RC ( CloudMgrMakeCurrentCloud ( m_mgr, & m_cloud ) );
-
+    REQUIRE_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_aws ) ); // wrong cloud
     REQUIRE_RC_FAIL ( CloudToGCP ( m_cloud, & m_gcp ) );
 }
 

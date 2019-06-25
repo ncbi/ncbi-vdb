@@ -37,6 +37,7 @@ struct AWS;
 #include <klib/printf.h>
 
 #include <kfg/config.h>
+#include <kfg/kfg-priv.h>
 #include <kfg/properties.h>
 #include <kns/endpoint.h>
 #include <kns/socket.h>
@@ -374,7 +375,7 @@ static void make_home_node ( char *path, size_t path_size )
     const char *home;
 
     KConfig * kfg;
-    rc_t rc = KConfigMake( & kfg, NULL );
+    rc_t rc = KConfigMakeLocal( & kfg, NULL );
     if ( rc == 0 )
     {
         const KConfigNode *home_node;
@@ -499,7 +500,7 @@ rc_t PopulateCredentials ( AWS * self )
     else
     {
         KConfig * kfg;
-        rc_t rc = KConfigMake( & kfg, NULL );
+        rc_t rc = KConfigMakeLocal( & kfg, NULL );
         if ( rc == 0 )
         {
             char buffer[4096];

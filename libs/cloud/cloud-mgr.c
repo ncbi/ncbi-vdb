@@ -205,6 +205,35 @@ LIB_EXPORT rc_t CC CloudMgrMake ( CloudMgr ** mgrp,
     return rc;
 }
 
+LIB_EXPORT rc_t CC CloudMgrMakeWithProvider ( CloudMgr ** mgrp, CloudProviderId provider )
+{
+    rc_t rc;
+    CloudMgr * self = calloc ( 1, sizeof * self );
+    if ( self == NULL )
+    {
+        rc = RC ( rcCloud, rcMgr, rcAllocating, rcMemory, rcExhausted );
+    }
+    else
+    {
+        /* convert allocation into a ref-counted object */
+        KRefcountInit ( & self -> refcount, 1, "CloudMgr", "MakeWithProvider", "cloud" );
+
+        self -> cur_id = provider;
+
+        rc = CloudMgrMakeCloud ( self, & self -> cur, provider );
+        if ( rc == 0 )
+        {
+            * mgrp = self;
+            return 0;
+        }
+
+        CloudMgrWhack ( self );
+        * mgrp = NULL;   
+    }
+    return rc;
+}
+
+
 /* AddRef
  * Release
  */
