@@ -28,10 +28,39 @@
 #include <kfg/config.h> /* KConfigDisableUserSettings */
 #include <ktst/unit_test.hpp>
 
+#include "../../libs/cloud/aws-priv.h" /* TestBase64IIdentityDocument */
+
+using std::string;
+
 static rc_t argsHandler(int argc, char* argv[]);
 TEST_SUITE_WITH_ARGS_HANDLER(AwsTestSuite, argsHandler)
 
-TEST_CASE(TODO) {}
+TEST_CASE(TestRealBase64InIdentityDocument) {
+    const char src[] =
+"{\n"
+"  \"accountId\" : \"250813660784\",\n"
+"  \"availabilityZone\" : \"us-east-1a\",\n"
+"  \"ramdiskId\" : null,\n"
+"  \"kernelId\" : null,\n"
+"  \"pendingTime\" : \"2019-06-25T16:52:26Z\",\n"
+"  \"architecture\" : \"x86_64\",\n"
+"  \"privateIp\" : \"172.16.142.228\",\n"
+"  \"version\" : \"2017-09-30\",\n"
+"  \"devpayProductCodes\" : null,\n"
+"  \"marketplaceProductCodes\" : null,\n"
+"  \"imageId\" : \"ami-0565af6e282977273\",\n"
+"  \"billingProducts\" : null,\n"
+"  \"instanceId\" : \"i-06a91ac746b572ef4\",\n"
+"  \"instanceType\" : \"t2.medium\",\n"
+"  \"region\" : \"us-east-1\"\n"
+"}";
+    char dst[999] = "";
+    REQUIRE_RC(Base64InIdentityDocument(src, dst, sizeof dst));
+//  std::cout << dst << "\n";
+    REQUIRE_EQ(string(dst),
+        string("ewogICJhY2NvdW50SWQiIDogIjI1MDgxMzY2MDc4NCIsCiAgImF2YWlsYWJpbGl0eVpvbmUiIDogInVzLWVhc3QtMWEiLAogICJyYW1kaXNrSWQiIDogbnVsbCwKICAia2VybmVsSWQiIDogbnVsbCwKICAicGVuZGluZ1RpbWUiIDogIjIwMTktMDYtMjVUMTY6NTI6MjZaIiwKICAiYXJjaGl0ZWN0dXJlIiA6ICJ4ODZfNjQiLAogICJwcml2YXRlSXAiIDogIjE3Mi4xNi4xNDIuMjI4IiwKICAidmVyc2lvbiIgOiAiMjAxNy0wOS0zMCIsCiAgImRldnBheVByb2R1Y3RDb2RlcyIgOiBudWxsLAogICJtYXJrZXRwbGFjZVByb2R1Y3RDb2RlcyIgOiBudWxsLAogICJpbWFnZUlkIiA6ICJhbWktMDU2NWFmNmUyODI5NzcyNzMiLAogICJiaWxsaW5nUHJvZHVjdHMiIDogbnVsbCwKICAiaW5zdGFuY2VJZCIgOiAiaS0wNmE5MWFjNzQ2YjU3MmVmNCIsCiAgImluc3RhbmNlVHlwZSIgOiAidDIubWVkaXVtIiwKICAicmVnaW9uIiA6ICJ1cy1lYXN0LTEiCn0=")
+    );
+}
 
 //////////////////////////////////////////// Main
 

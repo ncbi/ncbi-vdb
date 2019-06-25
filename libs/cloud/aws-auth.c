@@ -27,7 +27,6 @@
 #include "cloud-priv.h" /* struct AWS */
 
 #include <klib/rc.h>
-
 #include <klib/text.h> /* String */
 #include <klib/time.h> /* KTimeStamp */
 #include <klib/printf.h> /* string_printf */
@@ -93,8 +92,9 @@ static rc_t Base64(
 }
 
 /* Compute AWS authenticating Signature:
-Signature
-= Base64( HMAC-SHA1( YourSecretAccessKeyID, UTF-8-Encoding-Of( StringToSign ) ) ); */
+Signature =
+Base64( HMAC-SHA1( YourSecretAccessKeyID, UTF-8-Encoding-Of( StringToSign ) ) );
+*/
 static rc_t Signature(const char * YourSecretAccessKeyID,
     const char * StringToSign,
     char *dst, size_t dlen)
@@ -315,4 +315,17 @@ rc_t AWSDoAuthentication(const struct AWS * self, KClientHttpRequest * req,
         rc = KClientHttpRequestAddHeader(req, X_AMZ_REQUEST_PAYER, REQUESTER);
 
     return rc;
+}
+
+/* get (allocate?) the following as char * or String (*?):
+- curl -s http://169.254.169.254/latest/dynamic/instance-identity/pkcs7
+- curl -s http://169.254.169.254/latest/dynamic/instance-identity/document
+- base64 on document:
+        curl -s http://169.254.169.254/latest/dynamic/instance-identity/document
+             | base64 -w0
+*/
+
+rc_t Base64InIdentityDocument(const char *src, char *dst, size_t dlen) {
+    size_t slen = string_measure(src, NULL);
+    return Base64((const unsigned char *)src, slen, dst, dlen);
 }

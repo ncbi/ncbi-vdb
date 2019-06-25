@@ -40,11 +40,15 @@ rc_t AWSDoAuthentication(const struct AWS * self,
     const char * AWSAccessKeyId, const char * YourSecretAccessKeyID,
     bool requester_payer);
 
+/* exposed private functions for unit testing */
+
 rc_t MakeAwsAuthenticationHeader(
     const char *AWSAccessKeyId,
     const char *YourSecretAccessKeyID,
     const char *StringToSign,
     char *dst, size_t dlen);
+
+rc_t Base64InIdentityDocument(const char *src, char *dst, size_t dlen);
 
 #ifdef __cplusplus
 }
