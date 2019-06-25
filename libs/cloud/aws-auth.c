@@ -24,6 +24,8 @@
 * AWS Authentication
 */
 
+#include "cloud-priv.h" /* struct AWS */
+
 #include <klib/rc.h>
 
 #include <klib/text.h> /* String */
@@ -237,9 +239,9 @@ static rc_t StringToSign(
 /* AddAuthentication
  *  prepare a request object with credentials for authentication
  */
-rc_t KClientHttpRequest_AddAuthentication(KClientHttpRequest * self,
-    const char * http_method,
-    const char *AWSAccessKeyId, const char *YourSecretAccessKeyID)
+rc_t AWSAddAuthenticationI(const struct AWS * self, KClientHttpRequest * req,
+    const char * http_method, const char * AWSAccessKeyId,
+    const char * YourSecretAccessKeyID, bool requester_payer)
 {
     rc_t rc = 0;
 
@@ -250,13 +252,16 @@ rc_t KClientHttpRequest_AddAuthentication(KClientHttpRequest * self,
     char stringToSign[4096] = "";
     char authorization[4096] = "";
 
-    rc = KClientHttpRequestGetHeader(self, "Authorization",
+    if (self->access_key_id == NULL && self->secret_access_key == NULL)
+        return 0;
+
+    rc = KClientHttpRequestGetHeader(req, "Authorization",
         buf, sizeof buf, NULL);
     if (rc == 0)
         return 0; /* already has Authorization header */
 
     /* To add of get Date header */
-    rc = KClientHttpRequestGetHeader(self, "Date", buf, sizeof buf, NULL);
+    rc = KClientHttpRequestGetHeader(req, "Date", buf, sizeof buf, NULL);
     if (rc == 0) {
         StringInitCString(&dates, buf);
         sdate = &dates;
@@ -274,12 +279,11 @@ rc_t KClientHttpRequest_AddAuthentication(KClientHttpRequest * self,
 
         StringInitCString(&dates, date);
         sdate = &dates;
-        rc = KClientHttpRequestAddHeader(self, "Date", date);
+        rc = KClientHttpRequestAddHeader(req, "Date", date);
     }
 
     if (rc == 0) {
         size_t num_read = 0;
-        bool requester_payer = false;
         size_t len = 0;
         char host[4096] = "";
         char path[4096] = "";
@@ -287,9 +291,9 @@ rc_t KClientHttpRequest_AddAuthentication(KClientHttpRequest * self,
         String shost;
         String spath;
         StringInitCString(&HTTPVerb, http_method);
-        rc = KClientHttpRequestGetHost(self, host, sizeof host, &num_read);
+        rc = KClientHttpRequestGetHost(req, host, sizeof host, &num_read);
         if (rc == 0)
-            rc = KClientHttpRequestGetPath(self, path, sizeof path, &num_read);
+            rc = KClientHttpRequestGetPath(req, path, sizeof path, &num_read);
         if (rc == 0) {
             StringInitCString(&shost, host);
             StringInitCString(&spath, path);
@@ -306,12 +310,12 @@ rc_t KClientHttpRequest_AddAuthentication(KClientHttpRequest * self,
             stringToSign, authorization, sizeof authorization);
 
     if (rc == 0)
-        rc = KClientHttpRequestAddHeader(self, "Authorization", authorization);
+        rc = KClientHttpRequestAddHeader(req, "Authorization", authorization);
     /*
 #define X_AMZ_REQUEST_PAYER "x-amz-request-payer"
 #define REQUESTER "requester"
     if (rc == 0)
-        rc = KClientHttpRequestAddHeader(self, X_AMZ_REQUEST_PAYER, REQUESTER);
+        rc = KClientHttpRequestAddHeader(req, X_AMZ_REQUEST_PAYER, REQUESTER);
     */
     return rc;
 }

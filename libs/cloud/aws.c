@@ -90,11 +90,8 @@ rc_t CC AWSAddComputeEnvironmentTokenForSigner ( const AWS * self, KClientHttpRe
 static rc_t CC AWSAddAuthentication ( const AWS * self,
     KClientHttpRequest * req, const char * http_method )
 {
-    assert(self);
-    if (self->access_key_id != NULL && self->secret_access_key != NULL)
-        return KClientHttpRequest_AddAuthentication(req, http_method,
-            self->access_key_id, self->secret_access_key);
-    return 0;
+    return AWSDoAuthentication(self, req, http_method,
+        self->access_key_id, self->secret_access_key, false);
 }
 
 /* AddUserPaysCredentials
@@ -103,7 +100,13 @@ static rc_t CC AWSAddAuthentication ( const AWS * self,
 static
 rc_t CC AWSAddUserPaysCredentials ( const AWS * self, KClientHttpRequest * req, const char * http_method )
 {
-    return 0; //TODO
+    assert(self);
+
+    if (self->dad.user_agrees_to_pay)
+        return AWSDoAuthentication(self, req, http_method,
+            self->access_key_id, self->secret_access_key, true);
+    else
+        return 0;
 }
 
 static Cloud_vt_v1 AWS_vt_v1 =

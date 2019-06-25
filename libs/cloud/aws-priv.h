@@ -35,9 +35,10 @@ extern "C" {
 struct AWS;
 struct KClientHttpRequest;
 
-rc_t KClientHttpRequest_AddAuthentication(struct KClientHttpRequest * self,
-    const char * http_method,
-    const char * AWSAccessKeyId, const char * YourSecretAccessKeyID);
+rc_t AWSDoAuthentication(const struct AWS * self,
+    struct KClientHttpRequest * req, const char * http_method,
+    const char * AWSAccessKeyId, const char * YourSecretAccessKeyID,
+    bool requester_payer);
 
 rc_t MakeAwsAuthenticationHeader(
     const char *AWSAccessKeyId,
