@@ -206,8 +206,8 @@ static rc_t StringToSign(
     /* StringToSign += CanonicalizedAmzHeaders */
     if (requester_payer) {
         p_bsize = bsize >= total ? bsize - total : 0;
-        r2 = string_printf(
-            &buffer[total], p_bsize, len, X_AMZ_REQUEST_PAYER ":" REQUESTER "\n");
+        r2 = string_printf(&buffer[total], p_bsize, len,
+            X_AMZ_REQUEST_PAYER ":" REQUESTER "\n");
         total += *len;
     }
 
@@ -298,7 +298,6 @@ rc_t AWSAddAuthenticationI(const struct AWS * self, KClientHttpRequest * req,
             StringInitCString(&shost, host);
             StringInitCString(&spath, path);
             assert(sdate);
-            requester_payer = true;
             rc = StringToSign(&HTTPVerb, sdate, &shost, &spath, requester_payer,
                 stringToSign, sizeof stringToSign, &len);
 /*          puts(stringToSign); */
@@ -311,11 +310,9 @@ rc_t AWSAddAuthenticationI(const struct AWS * self, KClientHttpRequest * req,
 
     if (rc == 0)
         rc = KClientHttpRequestAddHeader(req, "Authorization", authorization);
-    /*
-#define X_AMZ_REQUEST_PAYER "x-amz-request-payer"
-#define REQUESTER "requester"
-    if (rc == 0)
+
+    if (rc == 0 && requester_payer)
         rc = KClientHttpRequestAddHeader(req, X_AMZ_REQUEST_PAYER, REQUESTER);
-    */
+
     return rc;
 }
