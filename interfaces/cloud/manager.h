@@ -81,8 +81,8 @@ CLOUD_EXTERN rc_t CC CloudMgrCurrentProvider ( const CloudMgr * self, CloudProvi
 /* MakeCloud
  * MakeCurrentCloud
  */
-CLOUD_EXTERN rc_t CC CloudMgrMakeCloud ( const CloudMgr * self, Cloud ** cloud, CloudProviderId cloud_provider );
-CLOUD_EXTERN rc_t CC CloudMgrMakeCurrentCloud ( const CloudMgr * self, Cloud ** cloud );
+CLOUD_EXTERN rc_t CC CloudMgrMakeCloud ( CloudMgr * self, Cloud ** cloud, CloudProviderId cloud_provider );
+CLOUD_EXTERN rc_t CC CloudMgrGetCurrentCloud ( const CloudMgr * self, Cloud ** cloud );
 
 #ifdef __cplusplus
 }

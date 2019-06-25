@@ -70,8 +70,8 @@ struct CloudMgr
     GCP * gcp;
 #endif
 #ifdef _h_cloud_azure_
-    /* cached AZURE */
-    AZURE * azure;
+    /* cached Azure */
+    Azure * azure;
 #endif
     /* additional reference to a cached Cloud above */
     Cloud * cur;
@@ -127,10 +127,10 @@ bool CloudMgrWithinGCP ( CloudMgr * self );
 #endif
 
 /*--------------------------------------------------------------------------
- * AZURE
+ * Azure
  */
 #ifdef _h_cloud_azure_
-struct AZURE
+struct Azure
 {
     Cloud dad;
 };

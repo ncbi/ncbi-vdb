@@ -59,7 +59,7 @@ rc_t CloudMgrWhack ( CloudMgr * self )
         GCPRelease ( self -> gcp );
 #endif
 #ifdef _h_cloud_azure_
-#error "unimplemented"
+        AzureRelease ( self -> azure );
 #endif
         KNSManagerRelease ( self -> kns );
         KConfigRelease ( self -> kfg );
@@ -88,7 +88,11 @@ void CloudMgrDetermineCurrentCloud ( CloudMgr * self )
 #endif
 
 #ifdef _h_cloud_azure_
-#error "not implemented"
+    if ( CloudMgrWithinAzure ( self ) )
+    {
+        self -> cur_id = cloud_provider_azure;
+        return;
+    }
 #endif
     
     self -> cur_id = cloud_provider_none;
@@ -176,10 +180,10 @@ LIB_EXPORT rc_t CC CloudMgrMake ( CloudMgr ** mgrp,
                                 /* not an error condition - douse our version */
                                 CloudMgrWhack ( our_mgr );
 
-                                /* use the other thread's version */
+                                /* use the other thread's version
+                                   use common code
+                                   even if it means a "goto" in this case */
                                 our_mgr = new_mgr;
-
-                                /* use common code, even if it means a goto in this case */
                                 goto singleton_exists;
                             }
 
@@ -238,6 +242,171 @@ LIB_EXPORT rc_t CC CloudMgrRelease ( const CloudMgr * self )
     return 0;
 }
 
+/* CurrentProvider
+ *  ask whether we are currently executing within a cloud
+ */
+LIB_EXPORT rc_t CC CloudMgrCurrentProvider ( const CloudMgr * self, CloudProviderId * cloud_provider )
+{
+    rc_t rc;
+
+    if ( cloud_provider == NULL )
+        rc = RC ( rcCloud, rcMgr, rcAccessing, rcParam, rcNull );
+    else
+    {
+        if ( self == NULL )
+            rc = RC ( rcCloud, rcMgr, rcAccessing, rcSelf, rcNull );
+        else
+        {
+            * cloud_provider = self -> cur_id;
+            return 0;
+        }
+
+        * cloud_provider = cloud_provider_none;
+    }
+
+    return rc;
+}
+
+/* MakeCloud
+ * MakeCurrentCloud
+ */
+LIB_EXPORT rc_t CC CloudMgrMakeCloud ( CloudMgr * self, Cloud ** cloud, CloudProviderId cloud_provider )
+{
+    rc_t rc = 0;
+
+    /* check return parameter */
+    if ( cloud == NULL )
+        rc = RC ( rcCloud, rcMgr, rcAllocating, rcParam, rcNull );
+    else
+    {
+        /* check input parameters */
+        if ( self == NULL )
+            rc = RC ( rcCloud, rcMgr, rcAllocating, rcSelf, rcNull );
+        else if ( cloud_provider == cloud_provider_none ||
+                  cloud_provider >= cloud_num_providers )
+            rc = RC ( rcCloud, rcMgr, rcAllocating, rcParam, rcInvalid );
+        else
+        {
+            /* look for cached Cloud */
+            switch ( cloud_provider )
+            {
+            case cloud_provider_aws:
+                if ( self -> aws != NULL )
+                    return AWSToCloud ( self -> aws, cloud );
+                break;
+            case cloud_provider_gcp:
+                if ( self -> gcp != NULL )
+                    return GCPToCloud ( self -> gcp, cloud );
+                break;
+            default:
+                break;
+            }
+
+            /* create a Cloud object via selection matrix:
+
+               where\target | aws | gcp | azure
+               -------------+-----+-----+------
+                    outside |  x  |  x  |  x
+                     in aws |  x  |     |
+                     in gcp |     |  x  |
+                   in azure |     |     |  x
+               -------------+-----+-----+------
+
+               this may be relaxed in the future, but for today
+               it's hard coded that from within any cloud there is
+               only access to the same cloud allowed. */
+
+            switch ( cloud_provider * cloud_num_providers + self -> cur_id )
+            {
+#define CASE( a, b ) \
+    case ( a ) * cloud_num_providers + ( b )
+
+#ifdef _h_cloud_aws_
+            /* asking for AWS */
+            CASE ( cloud_provider_aws, cloud_provider_none ):
+            CASE ( cloud_provider_aws, cloud_provider_aws ):
+            {
+                assert ( self -> aws == NULL );
+                rc = CloudMgrMakeAWS ( self, & self -> aws );
+                if ( rc == 0 )
+                    return AWSToCloud ( self -> aws, cloud );
+                break;
+            }
+#if ALLOW_EXT_CLOUD_ACCESS
+            CASE ( cloud_provider_aws, cloud_provider_gcp ):
+            CASE ( cloud_provider_aws, cloud_provider_azure ):
+#error "this should require a special class"
+#endif
+#endif
+
+#ifdef _h_cloud_gcp_
+            /* asking for GCP */
+            CASE ( cloud_provider_gcp, cloud_provider_none ):
+            CASE ( cloud_provider_gcp, cloud_provider_gcp ):
+            {
+                assert ( self -> gcp == NULL );
+                rc = CloudMgrMakeGCP ( self, & self -> gcp );
+                if ( rc == 0 )
+                    return GCPToCloud ( self -> gcp, cloud );
+                break;
+            }
+#if ALLOW_EXT_CLOUD_ACCESS
+            CASE ( cloud_provider_gcp, cloud_provider_aws ):
+            CASE ( cloud_provider_gcp, cloud_provider_azure ):
+#error "this should require a special class"
+#endif
+#endif
+
+#ifdef _h_cloud_azure_
+            /* asking for Azure */
+            CASE ( cloud_provider_azure, cloud_provider_none ):
+            CASE ( cloud_provider_azure, cloud_provider_azure ):
+#error "not implemented"
+#if ALLOW_EXT_CLOUD_ACCESS
+            CASE ( cloud_provider_azure, cloud_provider_aws ):
+            CASE ( cloud_provider_azure, cloud_provider_gcp ):
+#error "this should require a special class"
+#endif
+#endif
+            default:
+                ( void ) 0;
+#undef CASE
+            }
+        }
+
+        * cloud = NULL;
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC CloudMgrGetCurrentCloud ( const CloudMgr * self, Cloud ** cloud )
+{
+    rc_t rc;
+
+    if ( cloud == NULL )
+        rc = RC ( rcCloud, rcMgr, rcAccessing, rcParam, rcNull );
+    else
+    {
+        if ( self == NULL )
+            rc = RC ( rcCloud, rcMgr, rcAccessing, rcSelf, rcNull );
+        else if ( self -> cur_id == cloud_provider_none )
+            rc = RC ( rcCloud, rcMgr, rcAccessing, rcCloudProvider, rcNotFound );
+        else
+        {
+            rc = CloudAddRef ( self -> cur );
+            if ( rc == 0 )
+            {
+                * cloud = self -> cur;
+                return 0;
+            }
+        }
+
+        * cloud = NULL;
+    }
+    return rc;
+}
+
 /* Force a provider for testing
  */
 void CC CloudMgrSetProvider ( CloudMgr * self, CloudProviderId provider )
@@ -248,8 +417,14 @@ void CC CloudMgrSetProvider ( CloudMgr * self, CloudProviderId provider )
         if ( self != NULL && self -> cur_id != provider )
         {
             CloudRelease ( self -> cur );
-            CloudMgrMakeCloud ( self, & self -> cur, provider );
-            self -> cur_id = provider;
+            self -> cur = NULL;
+            self -> cur_id = cloud_provider_none;
+
+            if ( provider != cloud_provider_none )
+            {
+                CloudMgrMakeCloud ( self, & self -> cur, provider );
+                self -> cur_id = provider;
+            }
         }
     }
 #endif
@@ -376,159 +551,3 @@ CloudMgrSetProvider ( CloudMgr * self )
     return rc;
 }
 #endif
-
-static
-rc_t DiscoverCloudProvider( CloudMgr * self )
-{
-    //TODO
-    self -> cur = cloud_provider_none;
-    return 0;
-}
-
-/* CurrentProvider
- *  ask whether we are currently executing within a cloud
- */
-LIB_EXPORT rc_t CC CloudMgrCurrentProvider ( const CloudMgr * cself, CloudProviderId * cloud_provider )
-{
-    rc_t rc;
-    CloudMgr * self = (CloudMgr *) cself;
-
-    if ( cloud_provider == NULL )
-        rc = RC ( rcCloud, rcMgr, rcAccessing, rcParam, rcNull );
-    else
-    {
-        if ( self == NULL )
-            rc = RC ( rcCloud, rcMgr, rcAccessing, rcSelf, rcNull );
-        else
-        {
-            if ( self -> cur_id == cloud_num_providers )
-            {
-                rc = DiscoverCloudProvider ( self );
-            }
-
-            * cloud_provider = self -> cur_id;
-            return 0;
-        }
-
-        * cloud_provider = cloud_provider_none;
-    }
-
-    return rc;
-}
-
-/* MakeCloud
- * MakeCurrentCloud
- */
-LIB_EXPORT rc_t CC CloudMgrMakeCloud ( const CloudMgr * self, Cloud ** cloud, CloudProviderId cloud_provider )
-{
-    rc_t rc = 0;
-
-    if ( cloud == NULL )
-        rc = RC ( rcCloud, rcMgr, rcAllocating, rcParam, rcNull );
-    else
-    {
-        if ( self == NULL )
-            rc = RC ( rcCloud, rcMgr, rcAllocating, rcSelf, rcNull );
-        else if ( cloud_provider == cloud_provider_none ||
-                  cloud_provider >= cloud_num_providers )
-            rc = RC ( rcCloud, rcMgr, rcAllocating, rcParam, rcInvalid );
-        else
-        {
-            switch ( cloud_provider * cloud_num_providers + self -> cur_id )
-            {
-#define CASE( a, b ) \
-    case ( a ) * cloud_num_providers + ( b )
-
-#ifdef _h_cloud_aws_
-                /* asking for AWS */
-            CASE ( cloud_provider_aws, cloud_provider_none ):
-            CASE ( cloud_provider_aws, cloud_provider_aws ):
-            {
-                AWS * aws;
-                rc = CloudMgrMakeAWS ( self, & aws );
-                if ( rc == 0 )
-                {
-                    rc = AWSToCloud ( aws, cloud );
-                    AWSRelease ( aws );
-                    if ( rc == 0 )
-                        return 0;
-
-                }
-                break;
-            }
-#if ALLOW_EXT_CLOUD_ACCESS
-            CASE ( cloud_provider_aws, cloud_provider_gcp ):
-            CASE ( cloud_provider_aws, cloud_provider_azure ):
-#error "this should require a special class"
-#endif
-#endif
-
-#ifdef _h_cloud_gcp_
-                /* asking for GCP */
-            CASE ( cloud_provider_gcp, cloud_provider_none ):
-            CASE ( cloud_provider_gcp, cloud_provider_gcp ):
-            {
-                GCP * gcp;
-                rc = CloudMgrMakeGCP ( self, & gcp );
-                if ( rc == 0 )
-                {
-                    rc = GCPToCloud ( gcp, cloud );
-                    GCPRelease ( gcp );
-                    if ( rc == 0 )
-                        return 0;
-
-                }
-                break;
-            }
-#if ALLOW_EXT_CLOUD_ACCESS
-            CASE ( cloud_provider_gcp, cloud_provider_aws ):
-            CASE ( cloud_provider_gcp, cloud_provider_azure ):
-#error "this should require a special class"
-#endif
-#endif
-
-#ifdef _h_cloud_azure_
-                /* asking for Azure */
-            CASE ( cloud_provider_azure, cloud_provider_none ):
-            CASE ( cloud_provider_azure, cloud_provider_azure ):
-#error "not implemented"
-#if ALLOW_EXT_CLOUD_ACCESS
-            CASE ( cloud_provider_azure, cloud_provider_aws ):
-            CASE ( cloud_provider_azure, cloud_provider_gcp ):
-#error "this should require a special class"
-#endif
-#endif
-
-            default:
-                ( void ) 0;
-#undef CASE
-            }
-        }
-
-        * cloud = NULL;
-    }
-
-    return rc;
-}
-
-LIB_EXPORT rc_t CC CloudMgrMakeCurrentCloud ( const CloudMgr * self, Cloud ** cloud )
-{
-    rc_t rc;
-
-    if ( cloud == NULL )
-        rc = RC ( rcCloud, rcMgr, rcAllocating, rcParam, rcNull );
-    else
-    {
-        CloudProviderId cur;
-        rc = CloudMgrCurrentProvider ( self, & cur );
-        if ( rc == 0 )
-        {
-            rc = CloudMgrMakeCloud ( self, cloud, cur );
-            if ( rc == 0 )
-                return 0;
-        }
-
-        * cloud = NULL;
-    }
-    return rc;
-}
