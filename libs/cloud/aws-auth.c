@@ -329,3 +329,8 @@ rc_t Base64InIdentityDocument(const char *src, char *dst, size_t dlen) {
     size_t slen = string_measure(src, NULL);
     return Base64((const unsigned char *)src, slen, dst, dlen);
 }
+
+rc_t WrapInIdentityPkcs7(const char *src, char *dst, size_t dlen) {
+    return string_printf(dst, dlen, NULL,
+        "-----BEGIN PKCS7-----\n%s\n-----END PKCS7-----\n", src);
+}

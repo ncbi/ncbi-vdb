@@ -49,6 +49,7 @@ rc_t MakeAwsAuthenticationHeader(
     char *dst, size_t dlen);
 
 rc_t Base64InIdentityDocument(const char *src, char *dst, size_t dlen);
+rc_t WrapInIdentityPkcs7(const char *src, char *dst, size_t dlen);
 
 #ifdef __cplusplus
 }
