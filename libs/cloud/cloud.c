@@ -26,6 +26,8 @@
 
 #include <cloud/extern.h>
 #include <cloud/impl.h>
+#include <cloud/manager.h> /* CloudMgrAddRef */
+
 #include <klib/rc.h>
 #include <klib/status.h>
 
@@ -39,13 +41,20 @@
  */
 static rc_t CloudDestroy ( Cloud * self )
 {
+    rc_t rc = 0, r2 = 0;
+
     if ( self == NULL )
         return RC ( rcCloud, rcProvider, rcAccessing, rcSelf, rcNull );
+
+    rc = CloudMgrRelease ( self -> mgr );
 
     switch ( self -> vt -> v1 . maj )
     {
     case 1:
-        return ( * self -> vt -> v1 . destroy ) ( self );
+        r2 = ( * self -> vt -> v1 . destroy ) ( self );
+        if ( rc == 0 && r2 != 0 )
+            rc = r2;
+        return rc;
     }
 
     return RC ( rcCloud, rcProvider, rcAccessing, rcInterface, rcBadVersion );
@@ -205,6 +214,8 @@ LIB_EXPORT rc_t CC CloudInit ( Cloud * self, const Cloud_vt * vt,
     const char * classname,
     const struct CloudMgr * mgr, bool user_agrees_to_pay )
 {
+    rc_t rc = 0;
+
     if ( self == NULL )
         return RC ( rcCloud, rcProvider, rcConstructing, rcSelf, rcNull );
 
@@ -241,8 +252,13 @@ LIB_EXPORT rc_t CC CloudInit ( Cloud * self, const Cloud_vt * vt,
         return RC ( rcCloud, rcProvider, rcConstructing, rcInterface, rcBadVersion );
     }
 
+    rc = CloudMgrAddRef ( mgr );
+    if ( rc == 0 )
+        self -> mgr = mgr;
+    else
+        return rc;
+
     self -> vt = vt;
-    self -> mgr = mgr;
     self -> user_agrees_to_pay = user_agrees_to_pay;
     KRefcountInit ( & self -> refcount, 1, classname, "init", "" );
 
