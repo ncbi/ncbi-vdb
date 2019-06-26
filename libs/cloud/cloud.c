@@ -202,13 +202,17 @@ LIB_EXPORT rc_t CC CloudAddUserPaysCredentials ( const Cloud * self,
  *  initialize a newly allocated cloud object
  */
 LIB_EXPORT rc_t CC CloudInit ( Cloud * self, const Cloud_vt * vt,
-    const char * classname, bool user_agrees_to_pay )
+    const char * classname,
+    const struct CloudMgr * mgr, bool user_agrees_to_pay )
 {
     if ( self == NULL )
         return RC ( rcCloud, rcProvider, rcConstructing, rcSelf, rcNull );
 
     if ( vt == NULL )
         return RC ( rcCloud, rcProvider, rcConstructing, rcInterface, rcNull );
+
+    if (mgr == NULL )
+        return RC ( rcCloud, rcProvider, rcConstructing, rcParam, rcNull );
 
     switch ( vt -> v1 . maj )
     {
@@ -238,6 +242,7 @@ LIB_EXPORT rc_t CC CloudInit ( Cloud * self, const Cloud_vt * vt,
     }
 
     self -> vt = vt;
+    self -> mgr = mgr;
     self -> user_agrees_to_pay = user_agrees_to_pay;
     KRefcountInit ( & self -> refcount, 1, classname, "init", "" );
 

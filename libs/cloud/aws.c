@@ -72,6 +72,9 @@ rc_t CC AWSDestroy ( AWS * self )
 static
 rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_token )
 {
+    const Cloud *p = &self->dad;
+    const struct CloudMgr * mgr = p->mgr;
+    const KNSManager * kns = mgr->kns;
     return 0; //TODO
 }
 
@@ -137,7 +140,7 @@ LIB_EXPORT rc_t CC CloudMgrMakeAWS ( const CloudMgr * self, AWS ** p_aws )
         /* capture from self->kfg */
         bool user_agrees_to_pay = false;
         
-        rc = CloudInit ( & aws -> dad, ( const Cloud_vt * ) & AWS_vt_v1, "AWS", user_agrees_to_pay );
+        rc = CloudInit ( & aws -> dad, ( const Cloud_vt * ) & AWS_vt_v1, "AWS", self, user_agrees_to_pay );
         if ( rc == 0 )
         {
             rc = PopulateCredentials( aws );

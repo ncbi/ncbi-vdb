@@ -59,6 +59,7 @@ struct Cloud
 {
     const Cloud_vt * vt;
     KRefcount refcount;
+    const struct CloudMgr * mgr;
     bool user_agrees_to_pay;
 };
 
@@ -94,7 +95,7 @@ union Cloud_vt
  *  initialize a newly allocated cloud object
  */
 CLOUD_EXTERN rc_t CC CloudInit ( Cloud * self, const Cloud_vt * vt, const char * classname,
-    bool user_agrees_to_pay );
+    const struct CloudMgr * mgr, bool user_agrees_to_pay );
 
 
 #ifdef __cplusplus
