@@ -995,10 +995,16 @@ LIB_EXPORT rc_t CC KConfig_Set_CacheTeeVersion( KConfig *self, uint32_t value )
 { return set_uint32_t_value( self, CACHE_TEE_VERSION, value ); }
 
 #define CACHE_TEE_CLUSTER_FACTOR "/CACHINGPARAMS/CACHETEECLUSTERFACTOR"
-LIB_EXPORT rc_t CC KConfig_Get_CacheClusterFactor( const KConfig *self, uint32_t * value, uint32_t dflt )
+LIB_EXPORT rc_t CC KConfig_Get_CacheClusterFactorBits( const KConfig *self, uint32_t * value, uint32_t dflt )
 { return get_uint32_t_value( self, CACHE_TEE_CLUSTER_FACTOR, value, dflt ); }
-LIB_EXPORT rc_t CC KConfig_Set_CacheClusterFactor( KConfig *self, uint32_t value )
+LIB_EXPORT rc_t CC KConfig_Set_CacheClusterFactorBits( KConfig *self, uint32_t value )
 { return set_uint32_t_value( self, CACHE_TEE_CLUSTER_FACTOR, value ); }
+
+#define CACHE_TEE_PAGE_SIZE "/CACHINGPARAMS/CACHETEEPAGESIZE"
+LIB_EXPORT rc_t CC KConfig_Get_CachePageSizeBits( const KConfig *self, uint32_t * value, uint32_t dflt )
+{ return get_uint32_t_value( self, CACHE_TEE_PAGE_SIZE, value, dflt ); }
+LIB_EXPORT rc_t CC KConfig_Set_CachePageSizeBits( KConfig *self, uint32_t value )
+{ return set_uint32_t_value( self, CACHE_TEE_PAGE_SIZE, value ); }
 
 #define CACHE_BLOCKSIZE "/CACHINGPARAMS/BLOCKSIZE"
 LIB_EXPORT rc_t CC KConfig_Get_CacheBlockSize ( const KConfig *self, size_t * value, size_t dflt )

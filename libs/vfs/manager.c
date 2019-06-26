@@ -224,7 +224,9 @@ typedef struct caching_params
     enum cache_version version;
     size_t cache_page_size;
     uint32_t cache_page_count;
-    uint32_t cluster_factor; /* for cachetee_v3 */    
+    uint32_t cluster_factor_bits; /* for cachetee_v3 dflt = 15, 1 << 15 = 32,768 */
+    uint32_t page_size_bits;      /* for cachetee_v3 dflt = 5,  1 << 5  = 32 */  
+    uint32_t cache_amount_mb;     /* for cachetee_v3 dlft = 32 MB */
     bool use_cwd;       /* use the current working directory if not cach-location is given */
     bool append;        /* append to existing recording 0...no - 1...yes */
     bool timed;         /* record timing 0...no - 1...yes */
@@ -237,7 +239,9 @@ typedef struct caching_params
 #define DEFAULT_CACHETEE_VERSION cachetee_3
 #define DEFAULT_CACHE_PAGE_SIZE ( 32 * 1024 )
 #define DEFAULT_CACHE_PAGE_COUNT ( 10 * 1024 )
-#define DEFAULT_CLUSTER_FACTOR 4
+#define DEFAULT_CLUSTER_FACTOR_BITS 15
+#define DEFAULT_PAGE_SIZE_BITS 5
+#define DEFAULT_CACHE_AMOUNT_MB 32
 
 static void get_caching_params( caching_params * params,
                 uint32_t dflt_block_size,
@@ -251,7 +255,9 @@ static void get_caching_params( caching_params * params,
     params -> version = DEFAULT_CACHETEE_VERSION;
     params -> cache_page_size = dflt_block_size;
     params -> cache_page_count = DEFAULT_CACHE_PAGE_COUNT;
-    params -> cluster_factor = DEFAULT_CLUSTER_FACTOR;    
+    params -> cluster_factor_bits = DEFAULT_CLUSTER_FACTOR_BITS;
+    params -> page_size_bits = DEFAULT_PAGE_SIZE_BITS;
+    params -> cache_amount_mb = DEFAULT_CACHE_AMOUNT_MB;
     params -> use_cwd = false;
     params -> append = false;
     params -> timed = false;
@@ -266,7 +272,11 @@ static void get_caching_params( caching_params * params,
         KConfig_Get_CacheTeeVersion( cfg, &( params -> version ), DEFAULT_CACHETEE_VERSION );
         KConfig_Get_CacheBlockSize( cfg, &( params -> cache_page_size ), dflt_block_size );
         KConfig_Get_CachePageCount( cfg, &( params -> cache_page_count ), DEFAULT_CACHE_PAGE_COUNT );
-        KConfig_Get_CacheClusterFactor( cfg, &( params -> cluster_factor ), DEFAULT_CLUSTER_FACTOR );
+        KConfig_Get_CacheClusterFactorBits( cfg, &( params -> cluster_factor_bits ), DEFAULT_CLUSTER_FACTOR_BITS );
+        KConfig_Get_CachePageSizeBits( cfg, &( params -> page_size_bits ), DEFAULT_PAGE_SIZE_BITS );
+        KConfig_Get_Cache_Amount( cfg, &( params -> cache_amount_mb ) );
+        if ( params -> cache_amount_mb == 0 )
+            params -> cache_amount_mb = DEFAULT_CACHE_AMOUNT_MB;
         KConfig_Get_CacheLogUseCWD( cfg, &( params -> use_cwd ), false );
         KConfig_Get_CacheLogAppend( cfg, &( params -> append ), false );
         KConfig_Get_CacheLogTimed ( cfg, &( params -> timed ), false );
@@ -414,17 +424,19 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
     if ( rc == 0 )
     {
         const KFile * temp_file;
-        uint32_t ram_pages = cps -> cache_page_count; /* calculate from RAM-amount from properties */
+        uint32_t cluster_factor = ( 1 << cps -> cluster_factor_bits );
+        size_t page_size = ( 1 << cps -> page_size_bits );
+        size_t cache_amount = ( ( size_t )cps -> cache_amount_mb * 1024 * 1024 );
+        size_t ram_page_count = ( cache_amount + page_size - 1 ) / page_size;
         bool remove_on_close = false;
         if ( loc == NULL )
         {
-            /* TBD - the page count has to be sufficiently high */
             rc = KDirectoryMakeKCacheTeeFile_v3 ( dir,
                                                   &temp_file,
                                                   *cfp,
-                                                  cps -> cache_page_size,
-                                                  cps -> cluster_factor,
-                                                  ram_pages,
+                                                  page_size,
+                                                  cluster_factor,
+                                                  ram_page_count,
                                                   false,
                                                   false,
                                                   "" );
@@ -434,9 +446,9 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
             rc = KDirectoryMakeKCacheTeeFile_v3 ( dir,
                                                   &temp_file,
                                                   *cfp,
-                                                  cps -> cache_page_size,
-                                                  cps -> cluster_factor,
-                                                  ram_pages,
+                                                  page_size,
+                                                  cluster_factor,
+                                                  ram_page_count,
                                                   cps -> promote,
                                                   remove_on_close,
                                                   "%s", loc );

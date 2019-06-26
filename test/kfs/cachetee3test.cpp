@@ -33,6 +33,10 @@
 #include <cstring>
 #include <ctime>
 #include <fstream>
+#include <locale>
+#include <mutex>
+#include <thread>
+#include <chrono>
 
 #include <ktst/unit_test.hpp>
 
@@ -383,36 +387,6 @@ public:
     
 
 }; // CT3Fixture
-
-/*
-static rc_t read_partial( const KFile * src, size_t block_size, uint64_t to_read
-)
-{
-    rc_t rc = 0;
-    uint8_t * buffer = ( uint8_t * )malloc( block_size );
-    if ( buffer == NULL )
-        rc = RC ( rcRuntime, rcBuffer, rcConstructing, rcMemory, rcExhausted );
-    else
-    {
-        uint64_t pos = 0;
-        uint64_t total_read = 0;
-        while ( rc == 0 && total_read < to_read )
-        {
-            size_t num_read;
-            if ( block_size > ( to_read - total_read ) )
-                rc = KFileReadAll ( src, pos, buffer, to_read - total_read,
-&num_read ); else rc = KFileReadAll ( src, pos, buffer, block_size, &num_read );
-            if ( rc == 0 )
-            {
-                pos += num_read;
-                total_read += num_read;
-            }
-        }
-        free( buffer );
-    }
-    return rc;
-}
-*/
 
 //////////////////////////////////////////// Test-cases
 
@@ -1026,7 +1000,7 @@ void CC count_events( char event, rc_t rc, uint64_t pos, size_t req_size, size_t
             case 'R' :
             case 'B' :
             case 'D' :
-            case 'F' : cc -> count( pos, req_size ); break;
+            case 'F' : cc -> count( pos, done_size ); break;
         }
     }
 }
@@ -1084,21 +1058,23 @@ FIXTURE_TEST_CASE ( CacheTee3_request_count, CT3Fixture )
     // after reading the whole thing - no read-request should be made via orig...
     KOutMsg ( "requesting whole file\n" );
     REQUIRE_RC ( read_whole_file( tee_counted, 1024 * 1024 ) );
+
+    /* to make shure that all outstanding requests on the background-thread are done */
+    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );    
+
     cbc1.clear();
     cbc2.clear();
-
+    
     for ( int i = 0; i < num_chunks; ++i )
     {
-        size_t   len = rand_32 ( 10, 1000 );        
+        size_t   len = rand_32 ( 10, 20000 );        
         uint64_t pos = rand_32 ( 0, DATAFILESIZE );
         REQUIRE_RC( compare_file_content_3 ( org2, tee_counted, pos, len, NULL ) );
     }
-
+    REQUIRE_RC( compare_file_content_3 ( org2, tee_counted, DATAFILESIZE - 1000, 2000, NULL ) );
+    
     KOutMsg ( "requested  = %,lu, bytes = %,lu\n", cbc2 . events, cbc2 . bytes );
     KOutMsg ( "orig. file = %,lu, bytes = %,lu\n", cbc1 . events, cbc1 . bytes );
-    if ( cbc1 . events > 0 )
-        KOutMsg ( "at %,lu of %,lu ( %,ld over )\n", cbc1 . pos, DATAFILESIZE,
-                    ( cbc1 . pos + cbc1 . bytes ) - DATAFILESIZE );
 
     REQUIRE( cbc1 . events == 0 );
     REQUIRE( cbc1 . bytes == 0 );
@@ -1110,12 +1086,19 @@ FIXTURE_TEST_CASE ( CacheTee3_request_count, CT3Fixture )
     KOutMsg ( "counting requests done\n" );
 }
 
+#if 0
 struct Recorder
 {
     ofstream f;
+    mutex mtx;
     uint32_t counter;
     
-    Recorder( const string &filename ) { f.open( filename.c_str() ); counter = 0; }
+    Recorder( const string &filename )
+    {
+        f.open( filename.c_str() );
+        counter = 0;
+    }
+    
     ~Recorder() { f.close(); }
     
     void print_rc( rc_t rc )
@@ -1133,10 +1116,12 @@ struct Recorder
     
     void record( char src, char event, rc_t rc, uint64_t pos, size_t req_size, size_t done_size )
     {
+        mtx.lock();
         if ( src == 'O' ) counter++;
         f << src << " | " << event << " | rc=";
         print_rc( rc );
         f << " | pos=" << pos << " | req=" << req_size << " | done = " << done_size << endl; 
+        mtx.unlock();
     }
     
     void write( const string &txt ) { f << txt << endl; }
@@ -1185,17 +1170,33 @@ FIXTURE_TEST_CASE ( CacheTee3_request_record, CT3Fixture )
     char tee_tag = 'T';
     REQUIRE_RC ( MakeCallBackFile ( &tee_recorded, (KFile *)tee, record_events, &r, &tee_tag ) );
     KFileRelease ( tee );
-    
+
+    const int num_chunks = 2048;
+    for ( int i = 0; i < num_chunks; ++i )
+    {
+        uint64_t pos = rand_32 ( 0, DATAFILESIZE );
+        size_t   len = rand_32 ( 10, 1000 );
+        REQUIRE_RC( compare_file_content_3 ( org2, tee_recorded, pos, len, NULL ) );
+    }
+
+    for ( int i = 0; i < num_chunks; ++i )
+    {
+        uint64_t pos = rand_32 ( 0, DATAFILESIZE );
+        size_t   len = rand_32 ( 10, 10000 );
+        REQUIRE_RC( compare_file_content_3 ( org2, tee_recorded, pos, len, NULL ) );
+    }
+
     // after reading the whole thing - no read-request should be made via orig...
     KOutMsg ( "requesting whole file\n" );
     REQUIRE_RC ( read_whole_file( tee_recorded, 1024 * 1024 ) );
 
     r.write( "------ whole file read ----" );
+    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
     r.clear();
     
     for ( int i = 0; i < 1024; ++i )
     {
-        size_t   len = rand_32 ( 10, 5000 );        
+        size_t   len = rand_32 ( 10, 20000 );        
         uint64_t pos = rand_32 ( 0, DATAFILESIZE );
         REQUIRE_RC( compare_file_content_3 ( org2, tee_recorded, pos, len, NULL ) );
     }
@@ -1208,8 +1209,9 @@ FIXTURE_TEST_CASE ( CacheTee3_request_record, CT3Fixture )
     KFileRelease ( org2 );
     
     KDirectoryRelease ( dir );
-    KOutMsg ( "counting requests done\n" );
+    KOutMsg ( "recording requests done\n" );
 }
+#endif
 
 //////////////////////////////////////////// Main
 extern "C" {

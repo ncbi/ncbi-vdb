@@ -183,8 +183,10 @@ KFG_EXTERN rc_t CC KConfig_Get_CacheBlockSize( const KConfig *self, size_t * val
 KFG_EXTERN rc_t CC KConfig_Set_CacheBlockSize( KConfig *self, size_t value );
 KFG_EXTERN rc_t CC KConfig_Get_CachePageCount( const KConfig *self, uint32_t * value, uint32_t dflt );
 KFG_EXTERN rc_t CC KConfig_Set_CachePageCount( KConfig *self, uint32_t value );
-KFG_EXTERN rc_t CC KConfig_Get_CacheClusterFactor( const KConfig *self, uint32_t * value, uint32_t dflt );
-KFG_EXTERN rc_t CC KConfig_Set_CacheClusterFactor( KConfig *self, uint32_t value );
+KFG_EXTERN rc_t CC KConfig_Get_CacheClusterFactorBits( const KConfig *self, uint32_t * value, uint32_t dflt );
+KFG_EXTERN rc_t CC KConfig_Set_CacheClusterFactorBits( KConfig *self, uint32_t value );
+KFG_EXTERN rc_t CC KConfig_Get_CachePageSizeBits( const KConfig *self, uint32_t * value, uint32_t dflt );
+KFG_EXTERN rc_t CC KConfig_Set_CachePageSizeBits( KConfig *self, uint32_t value );
 KFG_EXTERN rc_t CC KConfig_Get_CacheLogUseCWD( const KConfig *self, bool * value, bool dflt );
 KFG_EXTERN rc_t CC KConfig_Set_CacheLogUseCWD( KConfig *self, bool value );
 KFG_EXTERN rc_t CC KConfig_Get_CacheLogAppend( const KConfig *self, bool * value, bool dflt );
