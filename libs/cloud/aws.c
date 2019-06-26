@@ -62,8 +62,7 @@ rc_t CC AWSDestroy ( AWS * self )
     free ( self -> access_key_id );
     free ( self -> secret_access_key );
     free ( self -> profile );
-    free ( self );
-    return 0;
+    return CloudWhack ( & self -> dad );
 }
 
 /* MakeComputeEnvironmentToken
@@ -79,12 +78,12 @@ rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_to
 
     char locality[4096] = "";
 
-    assert(self && self->dad.mgr);
-    rc = KNSManager_Read(self->dad.mgr->kns, document, sizeof document,
+    assert(self && self->dad.kns);
+    rc = KNSManager_Read(self->dad.kns, document, sizeof document,
         "http://169.254.169.254/latest/dynamic/instance-identity/document");
 
     if (rc == 0)
-        rc = KNSManager_Read(self->dad.mgr->kns, pkcs7, sizeof pkcs7,
+        rc = KNSManager_Read(self->dad.kns, pkcs7, sizeof pkcs7,
             "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7");
 
     if (rc == 0)
@@ -173,7 +172,7 @@ LIB_EXPORT rc_t CC CloudMgrMakeAWS ( const CloudMgr * self, AWS ** p_aws )
         /* capture from self->kfg */
         bool user_agrees_to_pay = false;
         
-        rc = CloudInit ( & aws -> dad, ( const Cloud_vt * ) & AWS_vt_v1, "AWS", self, user_agrees_to_pay );
+        rc = CloudInit ( & aws -> dad, ( const Cloud_vt * ) & AWS_vt_v1, "AWS", self -> kns, user_agrees_to_pay );
         if ( rc == 0 )
         {
             rc = PopulateCredentials( aws );

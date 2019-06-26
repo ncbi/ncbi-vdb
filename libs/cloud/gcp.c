@@ -55,8 +55,7 @@ rc_t CC GCPDestroy ( GCP * self )
 {
     free ( self ->privateKey );
     free ( self -> client_email );
-    free ( self );
-    return 0;
+    return CloudWhack ( & self -> dad );
 }
 
 /* MakeComputeEnvironmentToken
@@ -124,7 +123,7 @@ LIB_EXPORT rc_t CC CloudMgrMakeGCP ( const CloudMgr * self, GCP ** p_gcp )
         /* capture from self->kfg */
         bool user_agrees_to_pay = false;
         
-        rc = CloudInit ( & gcp -> dad, ( const Cloud_vt * ) & GCP_vt_v1, "GCP", self, user_agrees_to_pay );
+        rc = CloudInit ( & gcp -> dad, ( const Cloud_vt * ) & GCP_vt_v1, "GCP", self -> kns, user_agrees_to_pay );
         if ( rc == 0 )
         {
             rc = PopulateCredentials( gcp );

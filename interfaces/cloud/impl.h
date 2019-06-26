@@ -59,7 +59,7 @@ struct Cloud
 {
     const Cloud_vt * vt;
     KRefcount refcount;
-    const struct CloudMgr * mgr;
+    struct KNSManager const * kns;
     bool user_agrees_to_pay;
 };
 
@@ -95,7 +95,12 @@ union Cloud_vt
  *  initialize a newly allocated cloud object
  */
 CLOUD_EXTERN rc_t CC CloudInit ( Cloud * self, const Cloud_vt * vt, const char * classname,
-    const struct CloudMgr * mgr, bool user_agrees_to_pay );
+    struct KNSManager const * kns, bool user_agrees_to_pay );
+
+/* Whack
+ *  run destructor and free object
+ */
+CLOUD_EXTERN rc_t CC CloudWhack ( Cloud * self );
 
 
 #ifdef __cplusplus
