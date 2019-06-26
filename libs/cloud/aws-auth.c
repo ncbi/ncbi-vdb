@@ -391,8 +391,6 @@ rc_t KNSManager_Read(const KNSManager *self, char *buffer, size_t bsize,
                 size_t num_read = 0;
                 rc = KStreamRead(s, buffer, bsize, &num_read);
                 if (rc == 0) {
-                    if (num_read < bsize)
-                        --num_read;
                     if (num_read == bsize)
                         rc = RC(rcCloud,
                             rcUri, rcReading, rcBuffer, rcInsufficient);
