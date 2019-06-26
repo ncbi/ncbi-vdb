@@ -241,7 +241,8 @@ LIB_EXPORT rc_t CC AWSToCloud ( const AWS * cself, Cloud ** cloud )
 /* WithinAWS
  *  answers true if within AWS
  */
-bool CloudMgrWithinAWS ( const CloudMgr * self )
+#include <kns/stream.h> /* KStreamMakeFromBuffer */
+bool CloudMgrWithinAWS ( const CloudMgr * mself )
 {
 #if 0
     KEndPoint ep;
@@ -253,7 +254,44 @@ bool CloudMgrWithinAWS ( const CloudMgr * self )
                                    ( 254 <<  0 ) ), 80 );
 
 #endif
-    return false;
+    {
+        rc_t rc = 0;
+
+        const char * url = "http://169.254.169.254/latest/meta-data/placement/availability-zone";
+
+        KClientHttpRequest *req = NULL;
+
+        const KNSManager * self = mself->kns;
+
+        rc = KNSManagerMakeClientRequest(self, &req, 0x01010000, NULL, url);
+
+        if (rc == 0) {
+            if (rc == 0) {
+                KClientHttpResult * rslt = NULL;
+                rc = KClientHttpRequestGET(req, &rslt);
+
+                if (rc == 0) {
+                    KStream * s = NULL;
+                    rc = KClientHttpResultGetInputStream(rslt, &s);
+                    if (rc == 0) {
+                        size_t num_read = 0;
+                        char buffer[999] = "";
+                        rc = KStreamRead(s, buffer, sizeof buffer, &num_read);
+                        if (rc == 0)
+                        {
+                            buffer[num_read++] = '\0';
+                        }
+                    }
+                    KStreamRelease(s);
+                }
+                KClientHttpResultRelease(rslt);
+            }
+        }
+
+        KClientHttpRequestRelease(req);
+
+        return rc == 0;
+    }
 }
 
 /*** Finding/loading credentials  */
