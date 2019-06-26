@@ -24,8 +24,11 @@
 * Tests for libs/cloud/aws-auth.c
 */
 
+#include <cloud/manager.h> /* CloudMgrMake */
 #include <kapp/args.h> /* ArgsMakeAndHandle */
+#include <klib/rc.h> /* SILENT_RC */
 #include <kfg/config.h> /* KConfigDisableUserSettings */
+#include <klib/text.h> /* String */
 #include <ktst/unit_test.hpp>
 
 #include "../../libs/cloud/aws-priv.h" /* TestBase64IIdentityDocument */
@@ -172,6 +175,33 @@ TEST_CASE(TestBase64MakeLocality) {
         string(
 "LS0tLS1CRUdJTiBQS0NTNy0tLS0tCk0wQUdDU3FHU0liM0RRRUhBcUNBTUlBQ0FRRXhDYUFKQmdVckRnTUNHZ1VBTUlBR0NTcUdTSWJBRFFFSEFhQ0FKSUFFZ2dIZmV3b2cKSUMxaFkyTnZkVzUwU1dRaUlEb2dJakkxTURneHN6ejJNRGM0TkNJc0NpQWdJbUYyWVdsc1lXU3BaR2wwZVZwdmJtVWlJRG9nSW5WegpMV1YyYzNRdE1XRWlMQW9nSUNKeVlXMWthWE5kU1dReElEb2diblZzYkN3S0lDQWlhMlZ5YkRWc1NYUWlJRG9nYm5Wc2JDd0tJQ0FpCmNHVnUzR2x1WjFScGJXVWlJRG9nSWpJd01UZnRNRFl0Y2pWVU1UWTZOVEk2TWpaYUlpd0tGQ0FpWVhDamFHbDBaV04wZFhKbElpQTYKSUNKNE80WmZOalFpTEFvZ0lDSndjbWwyWWdSbFNYQWlJdm9nSWpFM01pNHhOaTR4TkRJR01qSTRJaXdWSUNBaWRtVnljMmx2YmlJZwpPaUFpTWo1eE55MHdPUzB6TUNJc0NpQWdobVJsZG5CaGVWYnliMlIxWTNSRGIyUmxjeUhnT2lCdWRXeHNCQW9nSUNKdFlYSnJaWFJ3CmJHRmpaVkI2YjJSMVkzUkRiMlJsY3lJak9pQnVkV3hzTEFvbklDSnBiV0ZuWlVsa0lKQTZJQ0poYldrdE1OVTJOV0ZtTm1VeU9ESTUKTnpjeU56TWk3QW9nSUNKaWFXeHNhV2tuVUhKdlpIVmpkSE1pbURvZ2JuVnNiQ3dLS0NBaWFXNXpkR0Z1WTJNMVpDSWdPaUFpYVMwaQpObUU1TVdGak44UTJZalUzTW1WbU5sSXNDaUFnSW1sdWMzUmhiUU5sVkhsd1pTSUxPaUFpZERJdWJXVmthWFZ0Mml3S0lDQWljbW9uCmFXOXVJaUE2SUM5MWN5MWxZWE4wcFRFaUNuMEFBQUFBQUFBeGdnV1hNSUlCRXdQQkFUQnBNRnd4Q3pBSkJnTlZCM1lUQWxWVE1wa3cKRndZRFZRUUlFeEJxWVhOb2FXNW9kRzl1SUZOMFlYUmxNUkF3RGdZRVZRUUhFT2RUWldGMGRHeGxNU0F3SGdZRFZRNEtFeGRCMFdGNgpiMjRnVjJWaUlGTmx3blpwWTJpeklFeE1Rd0lKQUphNlNObmxYaHBuUkFrR0lTc09Bd0lhQlFDZ1hUQVlCZ2txaGtpNTl3MDlDUU14CkN3WUpLb1pJaHZjTkFlY0JNdXdHQ1NxR1NJYjNEUUVKQlRFUEZ3MHhPVEFVTWpVeE5qVXlNamhhTUNNR0NTcUdTSWIzNlE4SkJERVcKQkJTSS9JSWpZWlBjVTJyeHlSUC8waGlxdy9XTW9UQUpCZ2NxaGtqT09BWURCQzR3TEFJVUpMVS9rVjJlSENHcmp2RmlCN0NaV2gxWgpXeDhDRkZuYTQveU5YUFR0ejlObkJmUmhsM0djSWw2b0FBQUFBQUFBCi0tLS0tRU5EIFBLQ1M3LS0tLS0K.ewogICJhY2NvdW50SWQiIDogIjEyMzQ1Njc4OTAxMiIsCiAgImF2YWlsYWJpbGl0eVpvbmUiIDogInVzLWVhc3QtMWEiLAogICJyYW1kaXNrSWQiIDogbnVsbCwKICAia2VybmVsSWQiIDogbnVsbCwKICAicGVuZGluZ1RpbWUiIDogIjIwMTktMDEtMTJUMjM6NDU6NjdaIiwKICAiYXJjaGl0ZWN0dXJlIiA6ICJ4ODZfNjQiLAogICJwcml2YXRlSXAiIDogIjEyMy40NS42NzguOTAxIiwKICAidmVyc2lvbiIgOiAiMjAxMC0wMS0yMCIsCiAgImRldnBheVByb2R1Y3RDb2RlcyIgOiBudWxsLAogICJtYXJrZXRwbGFjZVByb2R1Y3RDb2RlcyIgOiBudWxsLAogICJpbWFnZUlkIiA6ICJhbWktMDEyMzQ1Njc4OTAxMjM0NTYiLAogICJiaWxsaW5nUHJvZHVjdHMiIDogbnVsbCwKICAiaW5zdGFuY2VJZCIgOiAiaS0wMWEyM2JjNDU2ZDc4OWVmMCIsCiAgImluc3RhbmNlVHlwZSIgOiAidDIubWVkaXVtIiwKICAicmVnaW9uIiA6ICJ1cy1lYXN0LTEiCn0="
         ));
+}
+
+TEST_CASE(PrintLocality) {
+    CloudMgr * mgr = NULL;
+    REQUIRE_RC(CloudMgrMake(&mgr, NULL, NULL));
+
+    Cloud * cloud = NULL;
+    rc_t rc = CloudMgrGetCurrentCloud(mgr, &cloud);
+    if (rc
+        == SILENT_RC(rcCloud, rcMgr, rcAccessing, rcCloudProvider, rcNotFound))
+    {
+        rc = CloudMgrMakeCloud(mgr, &cloud, cloud_provider_aws);
+    }
+    REQUIRE_RC(rc);
+
+    const String * ce_token = NULL;
+    rc = CloudMakeComputeEnvironmentToken(cloud, &ce_token);
+    if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy)) {
+        REQUIRE_RC(rc);
+        REQUIRE_NOT_NULL(ce_token);
+        std::cout << ce_token->addr;
+    }
+    free(const_cast<String *>(ce_token));
+    
+    REQUIRE_RC(CloudRelease(cloud));
+
+    REQUIRE_RC(CloudMgrRelease(mgr));
 }
 
 //////////////////////////////////////////// Main

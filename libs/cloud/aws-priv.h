@@ -39,6 +39,9 @@ rc_t AWSDoAuthentication(const struct AWS * self,
     struct KClientHttpRequest * req, const char * http_method,
     bool requester_payer);
 
+rc_t KNSManager_Read(const struct KNSManager *self, char *buffer, size_t bsize,
+    const char *url);
+
 /* exposed private functions for unit testing */
 
 rc_t MakeAwsAuthenticationHeader(

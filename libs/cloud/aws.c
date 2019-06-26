@@ -47,7 +47,7 @@ struct AWS;
 
 #include <assert.h>
 
-#include "aws-priv.h" /* AWSAddAuthenticationImpl */
+#include "aws-priv.h" /* AWSDoAuthentication */
 #include "cloud-priv.h"
 
 static rc_t PopulateCredentials ( AWS * self );
@@ -72,10 +72,43 @@ rc_t CC AWSDestroy ( AWS * self )
 static
 rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_token )
 {
-    const Cloud *p = &self->dad;
-    const struct CloudMgr * mgr = p->mgr;
-    const KNSManager * kns = mgr->kns;
-    return 0; //TODO
+    rc_t rc = 0;
+
+    char document[4096] = "";
+    char pkcs7[4096] = "";
+
+    char locality[4096] = "";
+
+    assert(self && self->dad.mgr);
+    rc = KNSManager_Read(self->dad.mgr->kns, document, sizeof document,
+        "http://169.254.169.254/latest/dynamic/instance-identity/document");
+
+    if (rc == 0)
+        rc = KNSManager_Read(self->dad.mgr->kns, pkcs7, sizeof pkcs7,
+            "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7");
+
+    if (rc == 0)
+        rc = MakeLocality(pkcs7, document, locality, sizeof locality);
+
+    if (rc == 0) {
+        uint32_t len = string_measure(locality, NULL) + 1;
+        String * s = calloc(1, sizeof * s + len);
+        if (s == NULL)
+            rc = RC(rcCloud, rcMgr, rcAccessing, rcMemory, rcExhausted);
+        else {
+            char * p = NULL;
+            assert(s && len);
+            p = (char *)s + sizeof * s;
+            rc = string_printf(p, len, NULL, "%s", locality);
+            if (rc == 0) {
+                StringInit(s, p, len, len);
+                assert(ce_token);
+                *ce_token = s;
+            }
+        }
+    }
+
+    return rc;
 }
 
 /* AddComputeEnvironmentTokenForSigner
@@ -133,7 +166,7 @@ LIB_EXPORT rc_t CC CloudMgrMakeAWS ( const CloudMgr * self, AWS ** p_aws )
     AWS * aws = calloc ( 1, sizeof * aws );
     if ( aws == NULL )
     {
-        rc = RC ( rcNS, rcMgr, rcAllocating, rcMemory, rcExhausted );
+        rc = RC ( rcCloud, rcMgr, rcAllocating, rcMemory, rcExhausted );
     }
     else
     {
