@@ -91,8 +91,7 @@ rc_t CC AWSAddComputeEnvironmentTokenForSigner ( const AWS * self, KClientHttpRe
 static rc_t CC AWSAddAuthentication ( const AWS * self,
     KClientHttpRequest * req, const char * http_method )
 {
-    return AWSDoAuthentication(self, req, http_method,
-        self->access_key_id, self->secret_access_key, false);
+    return AWSDoAuthentication(self, req, http_method, false);
 }
 
 /* AddUserPaysCredentials
@@ -104,8 +103,7 @@ rc_t CC AWSAddUserPaysCredentials ( const AWS * self, KClientHttpRequest * req, 
     assert(self);
 
     if (self->dad.user_agrees_to_pay)
-        return AWSDoAuthentication(self, req, http_method,
-            self->access_key_id, self->secret_access_key, true);
+        return AWSDoAuthentication(self, req, http_method, true);
     else
         return 0;
 }

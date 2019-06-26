@@ -37,7 +37,6 @@ struct KClientHttpRequest;
 
 rc_t AWSDoAuthentication(const struct AWS * self,
     struct KClientHttpRequest * req, const char * http_method,
-    const char * AWSAccessKeyId, const char * YourSecretAccessKeyID,
     bool requester_payer);
 
 /* exposed private functions for unit testing */

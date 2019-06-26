@@ -240,8 +240,7 @@ static rc_t StringToSign(
  *  prepare a request object with credentials for authentication
  */
 rc_t AWSDoAuthentication(const struct AWS * self, KClientHttpRequest * req,
-    const char * http_method, const char * AWSAccessKeyId,
-    const char * YourSecretAccessKeyID, bool requester_payer)
+    const char * http_method, bool requester_payer)
 {
     rc_t rc = 0;
 
@@ -305,7 +304,8 @@ rc_t AWSDoAuthentication(const struct AWS * self, KClientHttpRequest * req,
     }
 
     if (rc == 0)
-        rc = MakeAwsAuthenticationHeader(AWSAccessKeyId, YourSecretAccessKeyID,
+        rc = MakeAwsAuthenticationHeader(
+            self->access_key_id, self->secret_access_key,
             stringToSign, authorization, sizeof authorization);
 
     if (rc == 0)
