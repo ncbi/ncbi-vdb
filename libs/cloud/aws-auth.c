@@ -24,6 +24,8 @@
 * AWS Authentication
 */
 
+#include "../kns/mgr-priv.h" /* KNSManager */
+
 #include "cloud-priv.h" /* struct AWS */
 
 #include <klib/rc.h>
@@ -141,7 +143,7 @@ rc_t MakeAwsAuthenticationHeader(
 
     if (rc == 0) {
         if (num_writ >= dlen)
-            return RC(rcVFS, rcUri, rcIdentifying, rcString, rcInsufficient);
+            return RC(rcCloud, rcUri, rcIdentifying, rcString, rcInsufficient);
 
         rc = Signature(YourSecretAccessKeyID, StringToSign,
             dst + num_writ, dlen - num_writ);
@@ -367,7 +369,17 @@ rc_t KNSManager_Read(const KNSManager *self, char *buffer, size_t bsize,
     const char *url)
 {
     rc_t rc = 0;
+
     KClientHttpRequest *req = NULL;
+
+    /* save existing timeouts */
+    int32_t cmsec = self->conn_timeout;
+    int32_t wmsec = self->http_write_timeout;
+
+    /* minimize timeouts to check cloudy URLs */
+    ((KNSManager*)self)->conn_timeout
+        = ((KNSManager*)self)->http_write_timeout = 999;
+
     rc = KNSManagerMakeClientRequest(self, &req, 0x01010000, NULL, url);
     if (rc == 0) {
         KClientHttpResult * rslt = NULL;
@@ -381,13 +393,23 @@ rc_t KNSManager_Read(const KNSManager *self, char *buffer, size_t bsize,
                 if (rc == 0) {
                     if (num_read < bsize)
                         --num_read;
-                    buffer[num_read++] = '\0';
+                    if (num_read == bsize)
+                        rc = RC(rcCloud,
+                            rcUri, rcReading, rcBuffer, rcInsufficient);
+                    else
+                        buffer[num_read++] = '\0';
                 }
             }
             RELEASE(KStream, s);
         }
         RELEASE(KClientHttpResult, rslt);
     }
+
+    /* restore timeouts in KNSManager */
+    ((KNSManager*)self)->conn_timeout = cmsec;
+    ((KNSManager*)self)->http_write_timeout = wmsec;
+
     RELEASE(KClientHttpRequest, req);
+
     return rc;
 }
