@@ -117,7 +117,17 @@ rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_to
 static
 rc_t CC AWSAddComputeEnvironmentTokenForSigner ( const AWS * self, KClientHttpRequest * req )
 {
-    return 0; //TODO
+    const String * ce_token = NULL;
+    rc_t rc = AWSMakeComputeEnvironmentToken(self, &ce_token);
+
+    assert(self && self->dad.kns);
+
+    if (rc == 0)
+        rc = KHttpRequestAddPostParam(req, "ident=%S", ce_token);
+
+    free((void*)ce_token);
+
+    return rc;
 }
 
 /* AddAuthentication
@@ -273,7 +283,7 @@ bool CloudMgrWithinAWS ( const CloudMgr * mself )
         ((KNSManager*)self)->conn_timeout
             = ((KNSManager*)self)->http_write_timeout = 500;
 
-        rc = KNSManagerMakeClientRequest(self, &req, 0x01010000, NULL, url);
+        rc = KNSManagerMakeRequest(self, &req, 0x01010000, NULL, url);
 
         if (rc == 0) {
             if (rc == 0) {
