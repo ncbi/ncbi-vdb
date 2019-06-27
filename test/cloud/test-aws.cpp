@@ -184,7 +184,9 @@ TEST_CASE(GetPkcs7) {
     char pkcs7[2048] = "";
     rc_t rc = KNSManager_Read(kns, pkcs7, sizeof pkcs7,
         "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7");
-    if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout, rcExhausted)) {
+    if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy) &&
+        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout, rcExhausted))
+    {
         REQUIRE_RC(rc);
         REQUIRE_EQ(string_measure(pkcs7, NULL), static_cast<uint32_t>(1118));
     }
@@ -206,7 +208,9 @@ TEST_CASE(PrintLocality) {
 
     const String * ce_token = NULL;
     rc = CloudMakeComputeEnvironmentToken(cloud, &ce_token);
-    if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout, rcExhausted)) {
+    if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy) &&
+        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout, rcExhausted))
+    {
         REQUIRE_RC(rc);
         REQUIRE_NOT_NULL(ce_token);
         std::cout << ce_token->addr;
