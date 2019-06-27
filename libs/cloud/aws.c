@@ -241,7 +241,8 @@ LIB_EXPORT rc_t CC AWSToCloud ( const AWS * cself, Cloud ** cloud )
 /* WithinAWS
  *  answers true if within AWS
  */
-#include <kns/stream.h> /* KStreamMakeFromBuffer */
+#include "../kns/mgr-priv.h" /* KNSManager */
+#include <kns/stream.h> /* KStream */
 bool CloudMgrWithinAWS ( const CloudMgr * mself )
 {
 #if 0
@@ -262,6 +263,15 @@ bool CloudMgrWithinAWS ( const CloudMgr * mself )
         KClientHttpRequest *req = NULL;
 
         const KNSManager * self = mself->kns;
+        assert(mself && self);
+
+        /* save existing timeouts */
+        int32_t cmsec = self->conn_timeout;
+        int32_t wmsec = self->http_write_timeout;
+
+        /* minimize timeouts to check cloudy URLs */
+        ((KNSManager*)self)->conn_timeout
+            = ((KNSManager*)self)->http_write_timeout = 500;
 
         rc = KNSManagerMakeClientRequest(self, &req, 0x01010000, NULL, url);
 
@@ -277,16 +287,16 @@ bool CloudMgrWithinAWS ( const CloudMgr * mself )
                         size_t num_read = 0;
                         char buffer[999] = "";
                         rc = KStreamRead(s, buffer, sizeof buffer, &num_read);
-                        if (rc == 0)
-                        {
-                            buffer[num_read++] = '\0';
-                        }
                     }
                     KStreamRelease(s);
                 }
                 KClientHttpResultRelease(rslt);
             }
         }
+
+        /* restore timeouts in KNSManager */
+        ((KNSManager*)self)->conn_timeout = cmsec;
+        ((KNSManager*)self)->http_write_timeout = wmsec;
 
         KClientHttpRequestRelease(req);
 
@@ -572,6 +582,7 @@ rc_t PopulateCredentials ( AWS * self )
     {
         KConfig * kfg;
         rc_t rc = KConfigMakeLocal( & kfg, NULL );
+/*KConfigPrint(kfg,0);*/
         if ( rc == 0 )
         {
             char buffer[4096];
