@@ -26,10 +26,15 @@
 
 #include <cloud/manager.h> /* CloudMgrMake */
 #include <kapp/args.h> /* ArgsMakeAndHandle */
-#include <klib/rc.h> /* SILENT_RC */
 #include <kfg/config.h> /* KConfigDisableUserSettings */
+
 #include <klib/text.h> /* String */
+#include <klib/rc.h> /* SILENT_RC */
+
+#include <kns/http.h> /* KNSManagerMakeRequest */
+#include <kns/http-priv.h> /* KClientHttpRequestFormatMsg */
 #include <kns/manager.h> /* KNSManagerMake */
+
 #include <ktst/unit_test.hpp>
 
 #include "../../libs/cloud/aws-priv.h" /* TestBase64IIdentityDocument */
@@ -217,6 +222,37 @@ TEST_CASE(PrintLocality) {
     }
     free(const_cast<String *>(ce_token));
     
+    REQUIRE_RC(CloudRelease(cloud));
+
+    REQUIRE_RC(CloudMgrRelease(mgr));
+}
+
+TEST_CASE(PrintComputeEnvironmentTokenForSigner) {
+    CloudMgr * mgr = NULL;
+    REQUIRE_RC(CloudMgrMake(&mgr, NULL, NULL));
+
+    Cloud * cloud = NULL;
+    rc_t rc = CloudMgrGetCurrentCloud(mgr, &cloud);
+    if (rc != 0) {
+        if (rc !=
+            SILENT_RC(rcCloud, rcMgr, rcAccessing, rcCloudProvider, rcNotFound))
+        {
+            REQUIRE_RC(rc);
+        }
+    }
+    else {
+        KNSManager * kns = NULL;
+        REQUIRE_RC(KNSManagerMake(&kns));
+        KClientHttpRequest *req = NULL;
+        REQUIRE_RC(KNSManagerMakeRequest(kns, &req, 0x01010000, NULL, ""));
+        REQUIRE_RC(KHttpRequestAddPostParam(req, "foo=bar"));
+        REQUIRE_RC(CloudAddComputeEnvironmentTokenForSigner(cloud, req));
+        char b[1024] = "";
+        REQUIRE_RC(KClientHttpRequestFormatMsg(req, b, sizeof b, "POST", NULL));
+        std::cout << b;
+        REQUIRE_RC(KClientHttpRequestRelease(req));
+        REQUIRE_RC(KNSManagerRelease(kns));
+    }
     REQUIRE_RC(CloudRelease(cloud));
 
     REQUIRE_RC(CloudMgrRelease(mgr));
