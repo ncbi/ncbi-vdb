@@ -259,6 +259,7 @@ TEST_CASE(CallCloudAddComputeEnvironmentTokenForSigner) {
         KClientHttpRequest *req = NULL;
         REQUIRE_RC(KNSManagerMakeRequest(kns, &req, 0x01010000, NULL,
             "https://www.nlm.nih.gov"));
+        REQUIRE_RC(KHttpRequestAddPostParam(req, "foo=bar"));
         REQUIRE_RC(CloudAddComputeEnvironmentTokenForSigner(cloud, req));
         KClientHttpResult * rslt = NULL;
         REQUIRE_RC(KClientHttpRequestPOST(req, &rslt));
