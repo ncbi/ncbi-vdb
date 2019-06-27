@@ -98,6 +98,63 @@ void CloudMgrDetermineCurrentCloud ( CloudMgr * self )
     self -> cur_id = cloud_provider_none;
 }
 
+static rc_t CloudMgrInit(CloudMgr ** mgrp, const KConfig * kfg,
+    const KNSManager * kns, CloudProviderId provider)
+{
+    rc_t rc = 0;
+
+    CloudMgr * our_mgr = NULL;
+
+    our_mgr = calloc(1, sizeof * our_mgr);
+    if (our_mgr == NULL)
+        rc = RC(rcCloud, rcMgr, rcAllocating, rcMemory, rcExhausted);
+    else
+    {
+        /* convert allocation into a ref-counted object */
+        KRefcountInit(&our_mgr->refcount, 1, "CloudMgr", "init", "cloud");
+
+        if (kfg == NULL)
+            /* make KConfig if it was not provided */
+            rc = KConfigMake((KConfig **)& kfg, NULL);
+        else
+            /* attach reference to KConfig */
+            rc = KConfigAddRef(kfg);
+
+        if (rc == 0)
+        {
+            our_mgr->kfg = kfg;
+
+            /* attach reference to KNSManager */
+            if (kns == NULL)
+                rc = KNSManagerMake((KNSManager **)& kns);
+            else
+                rc = KNSManagerAddRef(kns);
+            if (rc == 0)
+                our_mgr->kns = kns;
+
+            if (rc == 0)
+            {
+                if (provider == cloud_provider_none)
+                /* examine environment for current cloud */
+                    CloudMgrDetermineCurrentCloud(our_mgr);
+                else
+                    our_mgr->cur_id = provider;
+
+                /* if within a cloud, initialize */
+                if (our_mgr->cur_id != cloud_provider_none)
+                    rc = CloudMgrMakeCloud(our_mgr, &our_mgr->cur, our_mgr->cur_id);
+            }
+        }
+
+        if (rc == 0) {
+            assert(mgrp);
+            *mgrp = our_mgr;
+        }
+    }
+
+    return rc;
+}
+
 /* Make
  *  this is a singleton
  */
@@ -111,7 +168,7 @@ LIB_EXPORT rc_t CC CloudMgrMake ( CloudMgr ** mgrp,
     else
     {
         {
-            CloudMgr * our_mgr;
+            CloudMgr * our_mgr = NULL;
 
             /* grab single-shot singleton */
             our_mgr = atomic_read_ptr ( & cloud_singleton );
@@ -128,7 +185,9 @@ LIB_EXPORT rc_t CC CloudMgrMake ( CloudMgr ** mgrp,
                 return rc;
             }
         
-            /* singleton was NULL. make from scratch. */
+            /* singleton was NULL. call CloudMgrInit to make it from scratch. */
+            rc = CloudMgrInit(&our_mgr, kfg, kns, cloud_provider_none);
+#if 0
             our_mgr = calloc ( 1, sizeof * our_mgr );
             if ( our_mgr == NULL )
                 rc = RC ( rcCloud, rcMgr, rcAllocating, rcMemory, rcExhausted );
@@ -165,7 +224,7 @@ LIB_EXPORT rc_t CC CloudMgrMake ( CloudMgr ** mgrp,
                         /* if within a cloud, initialize */
                         if ( our_mgr -> cur_id != cloud_provider_none )
                             rc = CloudMgrMakeCloud ( our_mgr, & our_mgr -> cur, our_mgr -> cur_id );
-
+#endif
                         /* if everything looks good... */
                         if ( rc == 0 )
                         {
@@ -192,11 +251,10 @@ LIB_EXPORT rc_t CC CloudMgrMake ( CloudMgr ** mgrp,
                             * mgrp = our_mgr;
                             return rc;
                         }
-                    }
-                }
+                   /* }
+                }*/
                     
-                CloudMgrWhack ( our_mgr );
-            }
+            CloudMgrWhack ( our_mgr );
         }
 
         * mgrp = NULL;
@@ -207,29 +265,22 @@ LIB_EXPORT rc_t CC CloudMgrMake ( CloudMgr ** mgrp,
 
 LIB_EXPORT rc_t CC CloudMgrMakeWithProvider ( CloudMgr ** mgrp, CloudProviderId provider )
 {
-    rc_t rc;
-    CloudMgr * self = calloc ( 1, sizeof * self );
-    if ( self == NULL )
-    {
-        rc = RC ( rcCloud, rcMgr, rcAllocating, rcMemory, rcExhausted );
-    }
-    else
-    {
-        /* convert allocation into a ref-counted object */
-        KRefcountInit ( & self -> refcount, 1, "CloudMgr", "MakeWithProvider", "cloud" );
-
+    CloudMgr * self = NULL;
+    rc_t rc = CloudMgrInit(&self, NULL, NULL, provider);
+    if ( rc == 0 )
+    {/*
         self -> cur_id = provider;
 
         rc = CloudMgrMakeCloud ( self, & self -> cur, provider );
         if ( rc == 0 )
-        {
+        {*/
             * mgrp = self;
             return 0;
         }
 
         CloudMgrWhack ( self );
         * mgrp = NULL;   
-    }
+    /*}*/
     return rc;
 }
 
