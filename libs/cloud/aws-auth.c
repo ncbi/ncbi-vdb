@@ -24,10 +24,6 @@
 * AWS Authentication
 */
 
-#include "../kns/mgr-priv.h" /* KNSManager */
-
-#include "cloud-priv.h" /* struct AWS */
-
 #include <klib/rc.h>
 #include <klib/text.h> /* String */
 #include <klib/time.h> /* KTimeStamp */
@@ -40,6 +36,8 @@
 #include <ext/mbedtls/md.h> /* vdb_mbedtls_md_hmac */
 
 #include "aws-priv.h" /* KClientHttpRequest_AddAuthentication */
+#include "cloud-priv.h" /* struct AWS */
+#include "../kns/mgr-priv.h" /* KNSManager */
 
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
@@ -378,7 +376,7 @@ rc_t KNSManager_Read(const KNSManager *self, char *buffer, size_t bsize,
 
     /* minimize timeouts to check cloudy URLs */
     ((KNSManager*)self)->conn_timeout
-        = ((KNSManager*)self)->http_write_timeout = 999;
+        = ((KNSManager*)self)->http_write_timeout = 500;
 
     rc = KNSManagerMakeClientRequest(self, &req, 0x01010000, NULL, url);
     if (rc == 0) {
