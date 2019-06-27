@@ -91,6 +91,7 @@ VDB_LIB_CMN =    \
 	align-access \
 	ncbi-bam     \
 	vfs          \
+	cloud                  \
 	$(LIBKXML)   \
 	mbedx509     \
 	mbedtls      \
@@ -110,7 +111,6 @@ VDB_LIB_CMN =    \
 VDB_LIB_RD =              \
 	align-reader          \
 	ascp                  \
-	cloud                  \
 	$(EXT_SCHEMA_MODULES) \
 	srareader             \
 	sradb                 \
