@@ -32,7 +32,6 @@
 #include <klib/rc.h> /* SILENT_RC */
 
 #include <kns/http.h> /* KNSManagerMakeRequest */
-#include <kns/http-priv.h> /* KClientHttpRequestFormatMsg */
 #include <kns/manager.h> /* KNSManagerMake */
 
 #include <ktst/unit_test.hpp>
@@ -227,7 +226,7 @@ TEST_CASE(PrintLocality) {
     REQUIRE_RC(CloudMgrRelease(mgr));
 }
 
-TEST_CASE(PrintComputeEnvironmentTokenForSigner) {
+TEST_CASE(CallCloudAddComputeEnvironmentTokenForSigner) {
     CloudMgr * mgr = NULL;
     REQUIRE_RC(CloudMgrMake(&mgr, NULL, NULL));
 
@@ -245,11 +244,7 @@ TEST_CASE(PrintComputeEnvironmentTokenForSigner) {
         REQUIRE_RC(KNSManagerMake(&kns));
         KClientHttpRequest *req = NULL;
         REQUIRE_RC(KNSManagerMakeRequest(kns, &req, 0x01010000, NULL, ""));
-        REQUIRE_RC(KHttpRequestAddPostParam(req, "foo=bar"));
         REQUIRE_RC(CloudAddComputeEnvironmentTokenForSigner(cloud, req));
-        char b[1024] = "";
-        REQUIRE_RC(KClientHttpRequestFormatMsg(req, b, sizeof b, "POST", NULL));
-        std::cout << b;
         REQUIRE_RC(KClientHttpRequestRelease(req));
         REQUIRE_RC(KNSManagerRelease(kns));
     }
