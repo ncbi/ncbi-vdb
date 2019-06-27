@@ -85,7 +85,7 @@ CLOUD_LIB = \
 $(TEST_BINDIR)/test-cloud: $(CLOUD_OBJ)
 	$(LP) --exe -o $@ $^ $(CLOUD_LIB)
 
-cloud: test-kns
+cloud: test-cloud
 	$(TEST_BINDIR)/test-cloud  #-l=all
 
 #----------------------------------------------------------------
