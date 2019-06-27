@@ -28,6 +28,7 @@
 #include <kapp/args.h> /* ArgsMakeAndHandle */
 #include <kfg/config.h> /* KConfigDisableUserSettings */
 
+#include <klib/debug.h> /* KDbgSetString */
 #include <klib/text.h> /* String */
 #include <klib/rc.h> /* SILENT_RC */
 
@@ -42,6 +43,19 @@ using std::string;
 
 static rc_t argsHandler(int argc, char* argv[]);
 TEST_SUITE_WITH_ARGS_HANDLER(AwsTestSuite, argsHandler)
+
+TEST_CASE(TryPost) {
+    KNSManager * kns = NULL;
+    REQUIRE_RC(KNSManagerMake(&kns));
+    KClientHttpRequest *req = NULL;
+    REQUIRE_RC(KNSManagerMakeRequest(kns, &req, 0x01010000, NULL,
+        "https://www.nlm.nih.gov"));
+    KClientHttpResult * rslt = NULL;
+    REQUIRE_RC(KClientHttpRequestPOST(req, &rslt));
+    REQUIRE_RC(KClientHttpResultRelease(rslt));
+    REQUIRE_RC(KClientHttpRequestRelease(req));
+    REQUIRE_RC(KNSManagerRelease(kns));
+}
 
 TEST_CASE(TestBase64InIdentityDocument) {
     const char src[] =
@@ -243,8 +257,12 @@ TEST_CASE(CallCloudAddComputeEnvironmentTokenForSigner) {
         KNSManager * kns = NULL;
         REQUIRE_RC(KNSManagerMake(&kns));
         KClientHttpRequest *req = NULL;
-        REQUIRE_RC(KNSManagerMakeRequest(kns, &req, 0x01010000, NULL, ""));
+        REQUIRE_RC(KNSManagerMakeRequest(kns, &req, 0x01010000, NULL,
+            "https://www.nlm.nih.gov"));
         REQUIRE_RC(CloudAddComputeEnvironmentTokenForSigner(cloud, req));
+        KClientHttpResult * rslt = NULL;
+        REQUIRE_RC(KClientHttpRequestPOST(req, &rslt));
+        REQUIRE_RC(KClientHttpResultRelease(rslt));
         REQUIRE_RC(KClientHttpRequestRelease(req));
         REQUIRE_RC(KNSManagerRelease(kns));
     }
@@ -287,6 +305,8 @@ rc_t CC KMain ( int argc, char *argv [] )
     // this makes messages from the test code appear
     // (same as running the executable with "-l=message")
     //TestEnv::verbosity = LogLevel::e_message;
+
+    assert(!KDbgSetString("KNS"));
 
     return AwsTestSuite(argc, argv);
 }
