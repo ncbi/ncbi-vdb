@@ -83,11 +83,11 @@ static bool s_disable_user_settings = false;
 static const char default_kfg[] = {
 "/config/default = \"true\"\n"
 "/repository/remote/main/CGI/resolver-cgi = "
-               "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
+             "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
 "/repository/remote/protected/CGI/resolver-cgi = "
-               "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
+             "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
 "/repository/remote/main/SDL.2/resolver-cgi = "
-               "\"https://trace.ncbi.nlm.nih.gov/Traces/sdl/unstable/retrieve\n"
+             "\"https://trace.ncbi.nlm.nih.gov/Traces/sdl/unstable/retrieve\"\n"
 "/tools/ascp/max_rate = \"450m\"\n"
 };
 /*----------------------------------------------------------------------------*/
