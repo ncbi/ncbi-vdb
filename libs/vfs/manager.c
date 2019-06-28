@@ -224,8 +224,8 @@ typedef struct caching_params
     enum cache_version version;
     size_t cache_page_size;
     uint32_t cache_page_count;
-    uint32_t cluster_factor_bits; /* for cachetee_v3 dflt = 15, 1 << 15 = 32,768 */
-    uint32_t page_size_bits;      /* for cachetee_v3 dflt = 5,  1 << 5  = 32 */  
+    uint32_t cluster_factor_bits; /* for cachetee_v3 dflt = 5,  1 << 5  = 32 */
+    uint32_t page_size_bits;      /* for cachetee_v3 dflt = 15, 1 << 15 = 64k */
     uint32_t cache_amount_mb;     /* for cachetee_v3 dlft = 32 MB */
     bool use_cwd;       /* use the current working directory if not cach-location is given */
     bool append;        /* append to existing recording 0...no - 1...yes */
@@ -239,8 +239,8 @@ typedef struct caching_params
 #define DEFAULT_CACHETEE_VERSION cachetee_3
 #define DEFAULT_CACHE_PAGE_SIZE ( 32 * 1024 )
 #define DEFAULT_CACHE_PAGE_COUNT ( 10 * 1024 )
-#define DEFAULT_CLUSTER_FACTOR_BITS 15
-#define DEFAULT_PAGE_SIZE_BITS 5
+#define DEFAULT_CLUSTER_FACTOR_BITS 5
+#define DEFAULT_PAGE_SIZE_BITS 15
 #define DEFAULT_CACHE_AMOUNT_MB 32
 
 static void get_caching_params( caching_params * params,
@@ -424,8 +424,8 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
     if ( rc == 0 )
     {
         const KFile * temp_file;
-        uint32_t cluster_factor = ( 1 << cps -> cluster_factor_bits );
-        size_t page_size = ( 1 << cps -> page_size_bits );
+        uint32_t cluster_factor = ( 1 << ( cps -> cluster_factor_bits - 1 ) );
+        size_t page_size = ( 1 << ( cps -> page_size_bits - 1 ));
         size_t cache_amount = ( ( size_t )cps -> cache_amount_mb * 1024 * 1024 );
         size_t ram_page_count = ( cache_amount + page_size - 1 ) / page_size;
         bool remove_on_close = false;
