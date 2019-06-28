@@ -51,6 +51,7 @@
 #include <byteswap.h>
 
 #include <os-native.h>
+#include <va_copy.h>
 
 
 /*--------------------------------------------------------------------------
@@ -776,8 +777,14 @@ rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *cself,
     const KColumn **colp, const KDirectory *wd,
     const char *path_fmt, va_list args, bool *cached, bool try_srapath )
 {
+    rc_t rc;
+    va_list args2;
     char colpath [ 4096 ];
-    rc_t rc = KDirectoryVResolvePath ( wd, true,
+
+    /* before we destroy "args" in the following call, make a copy */
+    va_copy ( args2, args );
+
+    rc = KDirectoryVResolvePath ( wd, true,
         colpath, sizeof colpath, path_fmt, args );
     if ( rc == 0 )
     {
@@ -837,10 +844,10 @@ rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *cself,
             /* TODO: check if colpath is what we want to pass to KDBOpenPathTypeRead
              * in this case we don't need to vprintf to 'path'
             */
-            size = (args == NULL) ?
-                snprintf  ( path, sizeof path, "%s", path_fmt) :
-                vsnprintf ( path, sizeof path, path_fmt, args );
-            if (size < 0 || size >= (int) sizeof path)
+            size = ( args == NULL ) ?
+                snprintf  ( path, sizeof path, "%s", path_fmt ) :
+                vsnprintf ( path, sizeof path, path_fmt, args2 );
+            if ( size < 0 || ( size_t ) size >=  sizeof path )
                 rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcExcessive );
 
             if (rc == 0)
