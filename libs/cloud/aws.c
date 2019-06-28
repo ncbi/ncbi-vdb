@@ -90,15 +90,15 @@ rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_to
         rc = MakeLocality(pkcs7, document, locality, sizeof locality);
 
     if (rc == 0) {
-        uint32_t len = string_measure(locality, NULL) + 1;
-        String * s = calloc(1, sizeof * s + len);
+        uint32_t len = string_measure(locality, NULL);
+        String * s = calloc(1, sizeof * s + len + 1);
         if (s == NULL)
             rc = RC(rcCloud, rcMgr, rcAccessing, rcMemory, rcExhausted);
         else {
             char * p = NULL;
             assert(s && len);
             p = (char *)s + sizeof * s;
-            rc = string_printf(p, len, NULL, "%s", locality);
+            rc = string_printf(p, len + 1, NULL, "%s", locality);
             if (rc == 0) {
                 StringInit(s, p, len, len);
                 assert(ce_token);
