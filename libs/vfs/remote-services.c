@@ -515,13 +515,26 @@ static bool cgiNotSupportsJson(const char * cgi) {
 
 /* SVersion *******************************************************************/
 static rc_t SVersionInit(SVersion * self, bool * sdl, const char * src,
-    EServiceType serviceType)
+    EServiceType serviceType, SHelper * helper)
 {
     const char * s = src;
+    String * result = NULL;
 
     assert(self);
 
     *self = 0;
+
+    if (helper != NULL && serviceType != eSTsearch) {
+        rc_t rc = SHelperInitKfg(helper);
+        if (rc == 0) {
+            rc = KConfigReadString(
+                helper->kfg, "/repository/remote/version", &result);
+            if (rc == 0) {
+                assert(result);
+                s = result->addr;
+            }
+        }
+    }
 
     if (s == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcMessage, rcBadVersion);
@@ -577,12 +590,14 @@ static rc_t SVersionInit(SVersion * self, bool * sdl, const char * src,
         *self = major << 24 | minor << 16;
     }
 
+    free(result);
+
     return 0;
 }
 
 ver_t InitVersion(const char * src) {
     SVersion self = 0;
-    rc_t rc = SVersionInit(&self, NULL, src, eSTnames);
+    rc_t rc = SVersionInit(&self, NULL, src, eSTnames, NULL);
     if (rc == 0)
         return self;
     else
@@ -615,9 +630,10 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
     char * buffer, size_t bsize, const char * aCgi,
     SRequest * request, bool adjustVersion)
 {
-    const char man [] = "/repository/remote/main/CGI/resolver-cgi";
-    const char prt [] = "/repository/remote/protected/CGI/resolver-cgi";
-    const char cgi [] = "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
+    const char man[] = "/repository/remote/main/CGI/resolver-cgi";
+    const char prt[] = "/repository/remote/protected/CGI/resolver-cgi";
+    const char sdl[] = "/repository/remote/main/SDL.2/resolver-cgi";
+    const char cgi[] = "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
     
     rc_t rc = 0;
     const char * path = aProtected ? prt : man;
@@ -626,16 +642,21 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
     rc = SHelperInitKfg ( self );
     if ( rc == 0 && aCgi == NULL ) {
         size_t num_read = 0;
-        rc = KConfigRead ( self -> kfg, path, 0, buffer, bsize,
-                           & num_read, NULL );
-        if ( rc != 0 ) {
-            if ( buffer == NULL )
-                return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
-            if ( bsize < sizeof cgi )
-                return RC ( rcVFS, rcQuery, rcExecuting, rcBuffer,
-                            rcInsufficient );
-            string_copy ( buffer, bsize, cgi, sizeof cgi );
-            rc = 0;
+        if (request->sdl)
+            rc = KConfigRead(self->kfg, sdl, 0, buffer, bsize,
+                &num_read, NULL);
+        else {
+            rc = KConfigRead(self->kfg, path, 0, buffer, bsize,
+                &num_read, NULL);
+            if (rc != 0) {
+                if (buffer == NULL)
+                    return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
+                if (bsize < sizeof cgi)
+                    return RC(rcVFS, rcQuery, rcExecuting, rcBuffer,
+                        rcInsufficient);
+                string_copy(buffer, bsize, cgi, sizeof cgi);
+                rc = 0;
+            }
         }
     }
     else
@@ -727,7 +748,7 @@ static rc_t SHeaderMake
     rc = SRawAlloc ( & self -> raw, src -> addr, src -> size );
 
     if ( rc == 0 )
-        rc = SVersionInit ( & self -> version, NULL, self -> raw . s, serviceType);
+        rc = SVersionInit ( & self -> version, NULL, self -> raw . s, serviceType, NULL);
 
     return rc;
 }
@@ -2903,7 +2924,8 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( 
         "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n" ) );
 
-    rc = SVersionInit(&request->version, &request->sdl, version, eSTnames);
+    rc = SVersionInit(&request->version, &request->sdl, version, eSTnames,
+        helper);
     if ( rc != 0 )
         return rc;
 
@@ -3148,7 +3170,7 @@ rc_t SRequestInitSearchSCgiRequest ( SRequest * request, const char * cgi,
     rc_t rc = 0;
     const SKV * kv = NULL;
     assert ( request );
-    rc = SVersionInit ( & request -> version, NULL, version, eSTnames);
+    rc = SVersionInit ( & request -> version, NULL, version, eSTnames, NULL);
     if ( rc != 0 )
         return rc;
     self = & request -> cgiReq;
