@@ -231,7 +231,9 @@ TEST_CASE(PrintLocality) {
     {
         REQUIRE_RC(rc);
         REQUIRE_NOT_NULL(ce_token);
+#ifdef TO_SHOW_RESULTS
         std::cout << ce_token->addr;
+#endif
     }
     free(const_cast<String *>(ce_token));
     
@@ -307,7 +309,9 @@ rc_t CC KMain ( int argc, char *argv [] )
     // (same as running the executable with "-l=message")
     //TestEnv::verbosity = LogLevel::e_message;
 
+#ifdef TO_SHOW_RESULTS
     assert(!KDbgSetString("KNS"));
+#endif
 
     return AwsTestSuite(argc, argv);
 }
