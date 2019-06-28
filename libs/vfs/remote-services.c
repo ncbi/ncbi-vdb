@@ -2877,23 +2877,46 @@ static rc_t SObjectCheckUrl ( SObject * self ) {
     return rc;
 }
 
+static bool SCgiRequestAddKfgLocation(SCgiRequest * self, SHelper * helper) {
+    rc_t rc = SHelperInitKfg(helper);
+
+    assert(helper);
+
+    if (rc == 0) {
+        char buffer[99] = "";
+        size_t num_read = 0;
+        rc = KConfigRead(helper->kfg, "/libs/cloud/location", 0,
+            buffer, sizeof buffer, &num_read, NULL);
+        if (rc == 0) {
+            if (num_read == 0)
+                return false;
+            else {
+                const SKV * kv = NULL;
+                const char n[] = "location";
+                rc = SKVMake(&kv, n, buffer);
+                if (rc == 0) {
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
+                        ("  %s=%s\n", n, buffer));
+                    rc = VectorAppend(&self->params, NULL, kv);
+                }
+            }
+        }
+    }
+
+    return rc == 0;
+}
+
 static rc_t SCgiRequestAddLocation (SCgiRequest * self, const SHelper * helper)
 {
     rc_t rc = 0;
 
     char buffer[ 99 ] = "";
-
-    const char * path = NULL;
     size_t num_read = 0;
 
     assert( helper );
 
-    path = "/libs/cloud/location";
-    rc = KConfigRead (helper->kfg, path, 0,
-                      buffer, sizeof buffer, &num_read, NULL);
-    if (rc != 0)
-        rc = KNSManagerGetCloudLocation(helper->kMgr,
-            buffer, sizeof buffer, &num_read, NULL);
+    rc = KNSManagerGetCloudLocation(helper->kMgr,
+        buffer, sizeof buffer, &num_read, NULL);
 
     if (rc != 0)
         rc = 0;
@@ -3237,7 +3260,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
         }
     }
 
-    if (rc == 0) {
+    if (rc == 0 && !SCgiRequestAddKfgLocation(self, helper)) {
         if (SVersionNeedCloudLocation(request->version, request->sdl))
             rc = SCgiRequestAddLocation(self, helper);
         else if (SVersionNeedCloudEnvironment(request->version, request->sdl))
