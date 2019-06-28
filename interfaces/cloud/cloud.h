@@ -43,19 +43,6 @@ extern "C" {
 struct String;
 struct KClientHttpRequest;
 
-/* CloudProvider
- */
-typedef uint32_t CloudProviderId;
-enum
-{
-    cloud_provider_none,
-    cloud_provider_aws,
-    cloud_provider_gcp,
-    cloud_provider_azure,
-
-    cloud_num_providers
-};
-
 /* Cloud
  *  generic cloud interface
  */
@@ -70,46 +57,30 @@ CLOUD_EXTERN rc_t CC CloudRelease ( const Cloud * self );
 /* MakeComputeEnvironmentToken
  *  contact cloud provider to get proof of execution environment in form of a token
  */
-CLOUD_EXTERN rc_t CC CloudMakeComputeEnvironmentToken ( const Cloud * self, struct String const ** ce_token );
+CLOUD_EXTERN rc_t CC CloudMakeComputeEnvironmentToken ( const Cloud * self,
+    struct String const ** ce_token );
 
 /* AddComputeEnvironmentTokenForSigner
  *  prepare a request object with a compute environment token
  *  for use by an SDL-associated "signer" service
  */
-CLOUD_EXTERN rc_t CC CloudAddComputeEnvironmentTokenForSigner ( const Cloud * self, struct KClientHttpRequest * req );
+CLOUD_EXTERN rc_t CC CloudAddComputeEnvironmentTokenForSigner ( const Cloud * self,
+    struct KClientHttpRequest * req );
+
+/* AddAuthentication
+ *  prepare a request object with credentials for authentication
+ */
+CLOUD_EXTERN rc_t CC CloudAddAuthentication ( const Cloud * self,
+    struct KClientHttpRequest * req, const char * http_method );
 
 /* AddUserPaysCredentials
  *  prepare a request object with credentials for user-pays
+ *
+ *  fails if user has not explicitly accepted responsibility to pay
+ *  by updating VDB configuration.
  */
-CLOUD_EXTERN rc_t CC CloudAddUserPaysCredentials ( const Cloud * self, struct KClientHttpRequest * req );
-
-
-
-/* CloudMgr
- *  singleton object to access cloud-related resources
- */
-typedef struct CloudMgr CloudMgr;
-
-/* Make
- */
-CLOUD_EXTERN rc_t CC CloudMgrMake ( CloudMgr ** mgr );
-
-/* AddRef
- * Release
- */
-CLOUD_EXTERN rc_t CC CloudMgrAddRef ( const CloudMgr * self );
-CLOUD_EXTERN rc_t CC CloudMgrRelease ( const CloudMgr * self );
-
-/* CurrentProvider
- *  ask whether we are currently executing within a cloud
- */
-CLOUD_EXTERN rc_t CC CloudMgrCurrentProvider ( const CloudMgr * self, CloudProviderId * cloud_provider );
-
-/* MakeCloud
- * MakeCurrentCloud
- */
-CLOUD_EXTERN rc_t CC CloudMgrMakeCloud ( const CloudMgr * self, Cloud ** cloud, CloudProviderId cloud_provider );
-CLOUD_EXTERN rc_t CC CloudMgrMakeCurrentCloud ( const CloudMgr * self, Cloud ** cloud );
+CLOUD_EXTERN rc_t CC CloudAddUserPaysCredentials ( const Cloud * self,
+    struct KClientHttpRequest * req, const char * http_method );
 
 #ifdef __cplusplus
 }

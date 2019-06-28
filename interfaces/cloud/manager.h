@@ -1,5 +1,5 @@
-#ifndef _h_cloud_gcp_
-#define _h_cloud_gcp_
+#ifndef _h_cloud_manager_
+#define _h_cloud_manager_
 
 /*=====================================================================================
 *
@@ -34,42 +34,58 @@
 #include <cloud/cloud.h>
 #endif
 
-#ifndef _h_cloud_manager_
-#include <cloud/manager.h>
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* GCP
- *  Google Cloud Platform
+/* forwards
  */
-typedef struct GCP GCP;
+struct KConfig;
+struct KNSManager;
 
-/* MakeGCP
- *  make an instance of a GCP cloud interface
+/* CloudProvider
  */
-CLOUD_EXTERN rc_t CC CloudMgrMakeGCP ( const CloudMgr * self, GCP ** gcp );
+typedef uint32_t CloudProviderId;
+enum
+{
+    cloud_provider_none,        /* not within any discernible cloud provider */
+    cloud_provider_aws,         /* Amazon Web Services                       */
+    cloud_provider_gcp,         /* Google Cloud Platform                     */
+    cloud_provider_azure,       /* Microsoft Azure Cloud Computing Platform  */
+
+    cloud_num_providers
+};
+
+/* CloudMgr
+ *  singleton object to access cloud-related resources
+ */
+typedef struct CloudMgr CloudMgr;
+
+/* Make
+*  Discovers the cloud provider
+ */
+CLOUD_EXTERN rc_t CC CloudMgrMake ( CloudMgr ** mgr,
+    struct KConfig const * kfg, struct KNSManager const * kns );
 
 /* AddRef
  * Release
  */
-CLOUD_EXTERN rc_t CC GCPAddRef ( const GCP * self );
-CLOUD_EXTERN rc_t CC GCPRelease ( const GCP * self );
+CLOUD_EXTERN rc_t CC CloudMgrAddRef ( const CloudMgr * self );
+CLOUD_EXTERN rc_t CC CloudMgrRelease ( const CloudMgr * self );
 
-/* Cast
- *  cast from a Cloud to a GCP type or vice versa
- *  allows us to apply cloud-specific interface to cloud object
- *
- *  returns a new reference, meaning the "self" must still be released
+/* CurrentProvider
+ *  ask whether we are currently executing within a cloud
  */
-CLOUD_EXTERN rc_t CC GCPToCloud ( const GCP * self, Cloud ** cloud );
-CLOUD_EXTERN rc_t CC CloudToGCP ( const Cloud * self, GCP ** gcp );
+CLOUD_EXTERN rc_t CC CloudMgrCurrentProvider ( const CloudMgr * self, CloudProviderId * cloud_provider );
 
+/* MakeCloud
+ * MakeCurrentCloud
+ */
+CLOUD_EXTERN rc_t CC CloudMgrMakeCloud ( CloudMgr * self, Cloud ** cloud, CloudProviderId cloud_provider );
+CLOUD_EXTERN rc_t CC CloudMgrGetCurrentCloud ( const CloudMgr * self, Cloud ** cloud );
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _h_cloud_gcp_ */
+#endif /* _h_cloud_manager_ */

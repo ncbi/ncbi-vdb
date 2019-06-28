@@ -1,0 +1,11 @@
+[default]
+aws_access_key_id = ABC123
+aws_secret_access_key = SECRET
+region = reg
+output  =out
+
+[other_profile]
+aws_access_key_id = ABC123_OTHER
+aws_secret_access_key = SECRET_OTHER
+region = reg_OTHER
+output  =out_OTHER

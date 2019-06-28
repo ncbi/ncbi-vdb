@@ -24,6 +24,9 @@
 
 #include <vfs/extern.h>
 
+#include <cloud/cloud.h> /* CloudRelease */
+#include <cloud/manager.h> /* CloudMgrRelease */
+
 #include <klib/container.h> /* BSTree */
 #include <klib/debug.h> /* DBGMSG */
 #include <klib/log.h> /* KLogLevel */
@@ -84,6 +87,9 @@ typedef struct {
     const struct KRepositoryMgr * repoMgr;
                                /* KRepositoryMgrGetProtectedRepository */
 
+    CloudMgr * cloudMgr;
+    Cloud    * cloud;
+
     uint32_t timeoutMs;
 
     char * input;
@@ -101,6 +107,7 @@ typedef struct { char * s; } SRaw;
 #define VERSION_1_1 0x01010000
 #define VERSION_1_2 0x01020000
 
+#define VERSION_2_0 0x02000000
 
 /* version in server request / response */
 typedef ver_t SVersion; 
@@ -142,12 +149,16 @@ static bool SVersionResponseHasTimestamp ( const SVersion  self ) {
     return self >= VERSION_3_0;
 }
 
-static bool SVersionNeedCloudLocation(const SVersion  self, bool sdl) {
-    return self == VERSION_4_0 || sdl;
-}
-
 static bool SVersionResponseInJson ( const SVersion  self, bool sdl ) {
     return self >= VERSION_4_0 || sdl;
+}
+
+static bool SVersionNeedCloudLocation(const SVersion  self, bool sdl) {
+    return !sdl && self == VERSION_4_0;
+}
+
+static bool SVersionNeedCloudEnvironment(const SVersion  self, bool sdl) {
+    return sdl && self >= VERSION_2_0;
 }
 
 /******************************************************************************/
@@ -406,6 +417,8 @@ static rc_t SHelperFini ( SHelper * self) {
 
     assert ( self );
 
+    RELEASE ( Cloud         , self -> cloud );
+    RELEASE ( CloudMgr      , self -> cloudMgr );
     RELEASE ( KConfig       , self -> kfg );
     RELEASE ( KNSManager    , self -> kMgr );
     RELEASE ( KRepositoryMgr, self -> repoMgr );
@@ -2901,6 +2914,75 @@ static rc_t SCgiRequestAddLocation (SCgiRequest * self, const SHelper * helper)
 }
 
 static
+rc_t SCgiRequestAddCloudEnvironment(SCgiRequest * self, SHelper * helper)
+{
+    rc_t rc = 0;
+    CloudProviderId cloud_provider = cloud_provider_none;
+    const String * ce_token = NULL;
+    assert(helper);
+    if (helper->cloud == NULL) {
+        if (helper->cloudMgr == NULL)
+            rc = CloudMgrMake(&helper->cloudMgr, NULL, NULL);
+        if (rc == 0) {
+            rc = CloudMgrGetCurrentCloud(helper->cloudMgr, &helper->cloud);
+            if (rc != 0) {
+                if (rc != SILENT_RC(
+                    rcCloud, rcMgr, rcAccessing, rcCloudProvider, rcNotFound))
+                {
+                    LOGERR(klogInt, rc, "cannot get current cloud provider");
+                }
+                return 0; /* outside of cloud or cannot get cloud */
+            }
+        }
+    }
+    if (rc == 0) {
+        rc = CloudMgrCurrentProvider(helper->cloudMgr, &cloud_provider);
+        if (rc != 0) {
+            LOGERR(klogInt, rc, "cannot get current cloud provider");
+            return 0;
+        }
+    }
+    if (rc == 0) {
+        rc = CloudMakeComputeEnvironmentToken(helper->cloud, &ce_token);
+        if (rc != 0) {
+            LOGERR(klogInt, rc, "cannot Make Compute Environment Token");
+            return 0;
+        }
+    }
+    if (rc == 0) {
+        if (cloud_provider == cloud_provider_aws) {
+            {
+                const SKV * kv = NULL;
+                const char n[] = "locality-type";
+                const char v[] = "aws_pkcs7";
+                rc = SKVMake(&kv, n, v);
+                if (rc == 0) {
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
+                        ("  %s=%s\n", n, v));
+                    rc = VectorAppend(&self->params, NULL, kv);
+                }
+                if (rc != 0)
+                    return rc;
+            }
+            {
+                const SKV * kv = NULL;
+                const char n[] = "locality";
+                assert(ce_token);
+                rc = SKVMake(&kv, n, ce_token->addr);
+                if (rc == 0) {
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
+                        ("  %s=%s\n", n, ce_token->addr));
+                    rc = VectorAppend(&self->params, NULL, kv);
+                }
+                if (rc != 0)
+                    return rc;
+            }
+        }
+    }
+    return rc;
+}
+
+static
 rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     VRemoteProtocols protocols, const char * cgi,
     const char * version, bool aProtected, bool adjustVersion )
@@ -3155,8 +3237,12 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
         }
     }
 
-    if (rc == 0 && SVersionNeedCloudLocation(request->version, request->sdl))
-        rc = SCgiRequestAddLocation( self, helper );
+    if (rc == 0) {
+        if (SVersionNeedCloudLocation(request->version, request->sdl))
+            rc = SCgiRequestAddLocation(self, helper);
+        else if (SVersionNeedCloudEnvironment(request->version, request->sdl))
+            rc = SCgiRequestAddCloudEnvironment(self, helper);
+    }
 
     return rc;
 }

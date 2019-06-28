@@ -26,8 +26,10 @@
 
 #include <cloud/extern.h>
 #include <cloud/impl.h>
+
 #include <klib/rc.h>
 #include <klib/status.h>
+#include <kns/manager.h>
 
 #include <assert.h>
 
@@ -47,7 +49,7 @@ static rc_t CloudDestroy ( Cloud * self )
     case 1:
         return ( * self -> vt -> v1 . destroy ) ( self );
     }
-        
+
     return RC ( rcCloud, rcProvider, rcAccessing, rcInterface, rcBadVersion );
 }
 
@@ -139,7 +141,33 @@ LIB_EXPORT rc_t CC CloudAddComputeEnvironmentTokenForSigner ( const Cloud * self
         case 1:
             return ( * self -> vt -> v1 . add_cet_to_req ) ( self, req );
         }
-        
+
+        rc = RC ( rcCloud, rcProvider, rcAccessing, rcInterface, rcBadVersion );
+    }
+
+    return rc;
+}
+
+/* AddAuthentication
+ *  prepare a request object with credentials for user-pays
+ */
+LIB_EXPORT rc_t CC CloudAddAuthentication ( const Cloud * self,
+    struct KClientHttpRequest * req, const char * http_method )
+{
+    rc_t rc;
+
+    if ( self == NULL )
+        rc = RC ( rcCloud, rcProvider, rcAccessing, rcSelf, rcNull );
+    else if ( req == NULL || http_method == NULL )
+        rc = RC ( rcCloud, rcProvider, rcAccessing, rcParam, rcNull );
+    else
+    {
+        switch ( self -> vt -> v1 . maj )
+        {
+        case 1:
+            return ( * self -> vt -> v1 . add_authn ) ( self, req, http_method );
+        }
+
         rc = RC ( rcCloud, rcProvider, rcAccessing, rcInterface, rcBadVersion );
     }
 
@@ -149,22 +177,23 @@ LIB_EXPORT rc_t CC CloudAddComputeEnvironmentTokenForSigner ( const Cloud * self
 /* AddUserPaysCredentials
  *  prepare a request object with credentials for user-pays
  */
-LIB_EXPORT rc_t CC CloudAddUserPaysCredentials ( const Cloud * self, struct KClientHttpRequest * req )
+LIB_EXPORT rc_t CC CloudAddUserPaysCredentials ( const Cloud * self,
+    struct KClientHttpRequest * req, const char * http_method )
 {
     rc_t rc;
 
     if ( self == NULL )
         rc = RC ( rcCloud, rcProvider, rcAccessing, rcSelf, rcNull );
-    else if ( req == NULL )
+    else if ( req == NULL || http_method == NULL )
         rc = RC ( rcCloud, rcProvider, rcAccessing, rcParam, rcNull );
     else
     {
         switch ( self -> vt -> v1 . maj )
         {
         case 1:
-            return ( * self -> vt -> v1 . add_user_pays_to_req ) ( self, req );
+            return ( * self -> vt -> v1 . add_user_pays_to_req ) ( self, req, http_method );
         }
-        
+
         rc = RC ( rcCloud, rcProvider, rcAccessing, rcInterface, rcBadVersion );
     }
 
@@ -175,13 +204,18 @@ LIB_EXPORT rc_t CC CloudAddUserPaysCredentials ( const Cloud * self, struct KCli
  *  initialize a newly allocated cloud object
  */
 LIB_EXPORT rc_t CC CloudInit ( Cloud * self, const Cloud_vt * vt,
-    const char * classname )
+    const char * classname, const KNSManager * kns, bool user_agrees_to_pay )
 {
+    rc_t rc = 0;
+
     if ( self == NULL )
         return RC ( rcCloud, rcProvider, rcConstructing, rcSelf, rcNull );
 
     if ( vt == NULL )
         return RC ( rcCloud, rcProvider, rcConstructing, rcInterface, rcNull );
+
+    if ( kns == NULL )
+        return RC ( rcCloud, rcProvider, rcConstructing, rcParam, rcNull );
 
     switch ( vt -> v1 . maj )
     {
@@ -194,6 +228,7 @@ LIB_EXPORT rc_t CC CloudInit ( Cloud * self, const Cloud_vt * vt,
         case 0:
 #if _DEBUGGING
             if ( vt -> v1 . add_user_pays_to_req == NULL ||
+                 vt -> v1 . add_authn == NULL            ||
                  vt -> v1 . add_cet_to_req == NULL       ||
                  vt -> v1 . make_cet == NULL             ||
                  vt -> v1 . destroy == NULL              )
@@ -209,8 +244,27 @@ LIB_EXPORT rc_t CC CloudInit ( Cloud * self, const Cloud_vt * vt,
         return RC ( rcCloud, rcProvider, rcConstructing, rcInterface, rcBadVersion );
     }
 
-    self -> vt = vt;
-    KRefcountInit ( & self -> refcount, 1, classname, "init", "" );
+    rc = KNSManagerAddRef ( kns );
+    if ( rc == 0 )
+    {
+        self -> vt = vt;
+        self -> kns = kns;
+        self -> user_agrees_to_pay = user_agrees_to_pay;
+        KRefcountInit ( & self -> refcount, 1, classname, "init", "" );
+    }
 
+    return rc;
+}
+
+/* Whack
+ *  run destructor and free object
+ */
+LIB_EXPORT rc_t CC CloudWhack ( Cloud * self )
+{
+    if ( self != NULL )
+    {
+        KNSManagerRelease ( self -> kns );
+        free ( self );
+    }
     return 0;
 }
