@@ -187,72 +187,34 @@ LIB_EXPORT rc_t CC CloudMgrMake ( CloudMgr ** mgrp,
         
             /* singleton was NULL. call CloudMgrInit to make it from scratch. */
             rc = CloudMgrInit(&our_mgr, kfg, kns, cloud_provider_none);
-#if 0
-            our_mgr = calloc ( 1, sizeof * our_mgr );
-            if ( our_mgr == NULL )
-                rc = RC ( rcCloud, rcMgr, rcAllocating, rcMemory, rcExhausted );
-            else
+            /* if everything looks good... */
+            if ( rc == 0 )
             {
-                /* convert allocation into a ref-counted object */
-                KRefcountInit ( & our_mgr -> refcount, 1, "CloudMgr", "init", "cloud" );
+                /* try to set single-shot ( set once, never reset ) */
+                CloudMgr * new_mgr = atomic_test_and_set_ptr (
+                    & cloud_singleton, our_mgr, NULL );
 
-                if ( kfg == NULL )
-                    /* make KConfig if it was not provided */
-                    rc = KConfigMake ( ( KConfig ** ) & kfg, NULL );
-                else
-                    /* attach reference to KConfig */
-                    rc = KConfigAddRef ( kfg );
-
-                if ( rc == 0 )
+                /* if "new_mgr" is not NULL,
+                   then some other thread beat us to it */
+                if ( new_mgr != NULL )
                 {
-                    our_mgr -> kfg = kfg;
+                    /* test logic */
+                    assert ( our_mgr != new_mgr );
 
-                    /* attach reference to KNSManager */
-                    if ( kns == NULL )
-                        rc = KNSManagerMake ( ( KNSManager ** ) & our_mgr -> kns );
-                    else
-                    {
-                        rc = KNSManagerAddRef ( kns );
-                        if ( rc == 0 )
-                            our_mgr -> kns = kns;
-                    }
-                    if ( rc == 0 )
-                    {
-                        /* examine environment for current cloud */
-                        CloudMgrDetermineCurrentCloud ( our_mgr );
+                    /* not an error condition - douse our version */
+                    CloudMgrWhack ( our_mgr );
 
-                        /* if within a cloud, initialize */
-                        if ( our_mgr -> cur_id != cloud_provider_none )
-                            rc = CloudMgrMakeCloud ( our_mgr, & our_mgr -> cur, our_mgr -> cur_id );
-#endif
-                        /* if everything looks good... */
-                        if ( rc == 0 )
-                        {
-                            /* try to set single-shot ( set once, never reset ) */
-                            CloudMgr * new_mgr = atomic_test_and_set_ptr ( & cloud_singleton, our_mgr, NULL );
+                    /* use the other thread's version
+                       use common code
+                       even if it means a "goto" in this case */
+                    our_mgr = new_mgr;
+                    goto singleton_exists;
+                }
 
-                            /* if "new_mgr" is not NULL, then some other thread beat us to it */
-                            if ( new_mgr != NULL )
-                            {
-                                /* test logic */
-                                assert ( our_mgr != new_mgr );
-
-                                /* not an error condition - douse our version */
-                                CloudMgrWhack ( our_mgr );
-
-                                /* use the other thread's version
-                                   use common code
-                                   even if it means a "goto" in this case */
-                                our_mgr = new_mgr;
-                                goto singleton_exists;
-                            }
-
-                            /* arriving here means success */
-                            * mgrp = our_mgr;
-                            return rc;
-                        }
-                   /* }
-                }*/
+                /* arriving here means success */
+                * mgrp = our_mgr;
+                return rc;
+            }
                     
             CloudMgrWhack ( our_mgr );
         }
@@ -268,19 +230,12 @@ LIB_EXPORT rc_t CC CloudMgrMakeWithProvider ( CloudMgr ** mgrp, CloudProviderId 
     CloudMgr * self = NULL;
     rc_t rc = CloudMgrInit(&self, NULL, NULL, provider);
     if ( rc == 0 )
-    {/*
-        self -> cur_id = provider;
+    {
+        * mgrp = self;
+        return 0;
+    }
 
-        rc = CloudMgrMakeCloud ( self, & self -> cur, provider );
-        if ( rc == 0 )
-        {*/
-            * mgrp = self;
-            return 0;
-        }
-
-        CloudMgrWhack ( self );
-        * mgrp = NULL;   
-    /*}*/
+    * mgrp = NULL;   
     return rc;
 }
 
