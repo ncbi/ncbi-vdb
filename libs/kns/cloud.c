@@ -140,7 +140,7 @@ static rc_t _KNSManager_Read(struct KNSManager * self,
     /* minimize timeouts to check cloudy URLs */
     self->conn_timeout = self->http_write_timeout = timeout;
 
-    rc = KNSManagerMakeClientRequest(self, &req, 0x01010000, NULL, url);
+    rc = KNSManagerMakeRequest(self, &req, 0x01010000, NULL, url);
 
     if (rc == 0) {
         if (gs)

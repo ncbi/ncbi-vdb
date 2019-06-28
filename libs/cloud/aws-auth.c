@@ -378,7 +378,7 @@ rc_t KNSManager_Read(const KNSManager *self, char *buffer, size_t bsize,
     ((KNSManager*)self)->conn_timeout
         = ((KNSManager*)self)->http_write_timeout = 500;
 
-    rc = KNSManagerMakeClientRequest(self, &req, 0x01010000, NULL, url);
+    rc = KNSManagerMakeRequest(self, &req, 0x01010000, NULL, url);
     if (rc == 0) {
         KClientHttpResult * rslt = NULL;
         rc = KClientHttpRequestGET(req, &rslt);
