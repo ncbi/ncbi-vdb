@@ -2399,6 +2399,23 @@ static void SCgiRequestFini ( SCgiRequest * self ) {
     memset ( self, 0, sizeof * self );
 }
 
+static bool SRequestResponseFromEnv(const SRequest * self, KStream ** stream) {
+    const char * e = NULL;
+
+    assert(self);
+
+    if (!self->sdl || self->request.objects != 1)
+        return false;
+
+    e = getenv(self->request.object->objectId);
+    if ( e != NULL ) {
+        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( 
+            "XXXXX NOT sending HTTP POST request; get resp from env XXXX\n" ) );
+        return KStreamMakeFromBuffer ( stream, e, string_size ( e ) ) == 0;
+    }
+
+    return false;
+}
 
 static rc_t SCgiRequestPerform ( const SCgiRequest * self,
     const SHelper * helper, KStream ** stream,
@@ -2418,7 +2435,9 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
         }
 
         if ( rc == 0 ) {
-            if ( expected == NULL ) {
+            if ( SRequestResponseFromEnv ( & service -> req, stream ) )
+                ; /* got response from environment; request was not sent */
+            else if ( expected == NULL ) {
                 KHttpResult * rslt = NULL;
                 DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), (
             ">>>>>>>>>>>>>>>> sending HTTP POST request >>>>>>>>>>>>>>>>\n" ) );
