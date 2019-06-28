@@ -773,18 +773,12 @@ LIB_EXPORT rc_t CC KTableVCreateColumn ( KTable *self, KColumn **colp,
  *  where "." acts as a structure name separator, i.e. struct.member
  */
 static
-rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *cself,
+rc_t KDBManagerVOpenColumnReadInt2 ( const KDBManager *cself,
     const KColumn **colp, const KDirectory *wd,
-    const char *path_fmt, va_list args, bool *cached, bool try_srapath )
+    const char *path_fmt, va_list args, bool *cached, bool try_srapath, va_list args2 )
 {
-    rc_t rc;
-    va_list args2;
     char colpath [ 4096 ];
-
-    /* before we destroy "args" in the following call, make a copy */
-    va_copy ( args2, args );
-
-    rc = KDirectoryVResolvePath ( wd, true,
+    rc_t rc = KDirectoryVResolvePath ( wd, true,
         colpath, sizeof colpath, path_fmt, args );
     if ( rc == 0 )
     {
@@ -875,6 +869,19 @@ rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *cself,
             }
         }
     }
+    return rc;
+}
+
+static
+rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *cself,
+    const KColumn **colp, const KDirectory *wd,
+    const char *path_fmt, va_list args, bool *cached, bool try_srapath )
+{
+    rc_t rc;
+    va_list args2;
+    va_copy ( args2, args );
+    rc = KDBManagerVOpenColumnReadInt2 ( cself, colp, wd, path_fmt, args, cached, try_srapath, args2 );
+    va_end ( args2 );
     return rc;
 }
 
