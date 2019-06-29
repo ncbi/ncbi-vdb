@@ -879,9 +879,14 @@ rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *cself,
 {
     rc_t rc;
     va_list args2;
+
+    if ( args == NULL )
+        return KDBManagerVOpenColumnReadInt2 ( cself, colp, wd, path_fmt, args, cached, try_srapath, NULL );
+
     va_copy ( args2, args );
     rc = KDBManagerVOpenColumnReadInt2 ( cself, colp, wd, path_fmt, args, cached, try_srapath, args2 );
     va_end ( args2 );
+
     return rc;
 }
 
