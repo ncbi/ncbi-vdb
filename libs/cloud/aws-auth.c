@@ -30,17 +30,12 @@
 #include <klib/printf.h> /* string_printf */
 
 #include <kns/http.h> /* KClientHttpRequest */
-#include <kns/stream.h> /* KStreamRelease */
 
 #include <ext/mbedtls/base64.h> /* vdb_mbedtls_base64_encode */
 #include <ext/mbedtls/md.h> /* vdb_mbedtls_md_hmac */
 
-#include "aws-priv.h" /* KClientHttpRequest_AddAuthentication */
+#include "aws-priv.h" /* AWSDoAuthentication */
 #include "cloud-priv.h" /* struct AWS */
-#include "../kns/mgr-priv.h" /* KNSManager */
-
-#define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
-    if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
 
 /* use mbedtls to generate HMAC_SHA1 */
 static rc_t HMAC_SHA1(
@@ -58,7 +53,8 @@ static rc_t HMAC_SHA1(
     ret = vdb_mbedtls_md_hmac(md_info, (unsigned char *)key, keylen,
         (unsigned char *)input, ilen, output);
 
-    return ret == 0 ? 0 : RC(rcVFS, rcUri, rcInitializing, rcEncryption, rcFailed);
+    return ret == 0
+        ? 0 : RC(rcVFS, rcUri, rcInitializing, rcEncryption, rcFailed);
 }
 
 /* Encode a buffer into base64 format */
@@ -360,52 +356,5 @@ rc_t MakeLocality(const char *pkcs7, const char *document,
         if (rc == 0)
             rc = string_printf(dst, dlen, NULL, "%s.%s", bpkcs7, documnt);
     }
-    return rc;
-}
-
-rc_t KNSManager_Read(const KNSManager *self, char *buffer, size_t bsize,
-    const char *url)
-{
-    rc_t rc = 0;
-
-    KClientHttpRequest *req = NULL;
-
-    /* save existing timeouts */
-    int32_t cmsec = self->conn_timeout;
-    int32_t wmsec = self->http_write_timeout;
-
-    /* minimize timeouts to check cloudy URLs */
-    ((KNSManager*)self)->conn_timeout
-        = ((KNSManager*)self)->http_write_timeout = 500;
-
-    rc = KNSManagerMakeRequest(self, &req, 0x01010000, NULL, url);
-    if (rc == 0) {
-        KClientHttpResult * rslt = NULL;
-        rc = KClientHttpRequestGET(req, &rslt);
-        if (rc == 0) {
-            KStream * s = NULL;
-            rc = KClientHttpResultGetInputStream(rslt, &s);
-            if (rc == 0) {
-                size_t num_read = 0;
-                rc = KStreamRead(s, buffer, bsize, &num_read);
-                if (rc == 0) {
-                    if (num_read == bsize)
-                        rc = RC(rcCloud,
-                            rcUri, rcReading, rcBuffer, rcInsufficient);
-                    else
-                        buffer[num_read++] = '\0';
-                }
-            }
-            RELEASE(KStream, s);
-        }
-        RELEASE(KClientHttpResult, rslt);
-    }
-
-    /* restore timeouts in KNSManager */
-    ((KNSManager*)self)->conn_timeout = cmsec;
-    ((KNSManager*)self)->http_write_timeout = wmsec;
-
-    RELEASE(KClientHttpRequest, req);
-
     return rc;
 }

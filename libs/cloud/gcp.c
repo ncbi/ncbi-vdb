@@ -32,10 +32,12 @@ struct GCP;
 
 #include <cloud/gcp.h>
 
+#include <klib/json.h>
+#include <klib/printf.h> /* string_printf */
 #include <klib/rc.h>
 #include <klib/status.h>
 #include <klib/text.h>
-#include <klib/json.h>
+
 #include <kns/endpoint.h>
 #include <kns/socket.h>
 #include <kns/http.h>
@@ -44,6 +46,7 @@ struct GCP;
 
 #include <assert.h>
 
+#include "cloud-cmn.h" /* KNSManager_Read */
 #include "cloud-priv.h"
 
 static rc_t PopulateCredentials ( GCP * self );
@@ -64,7 +67,38 @@ rc_t CC GCPDestroy ( GCP * self )
 static
 rc_t CC GCPMakeComputeEnvironmentToken ( const GCP * self, const String ** ce_token )
 {
-    return 0; //TODO
+    rc_t rc = 0;
+
+    char locality[4096] = "";
+
+    const char url[] =
+        "http://metadata/computeMetadata/v1/instance/service-accounts/"
+        "default/identity?audience=https://www.ncbi.nlm.nih.gov&format=full";
+
+    assert(self);
+
+    rc = KNSManager_Read(self->dad.kns, locality, sizeof locality,
+        url, "Metadata-Flavor", "Google");
+
+    if (rc == 0) {
+        uint32_t len = string_measure(locality, NULL);
+        String * s = calloc(1, sizeof * s + len + 1);
+        if (s == NULL)
+            rc = RC(rcCloud, rcMgr, rcAccessing, rcMemory, rcExhausted);
+        else {
+            char * p = NULL;
+            assert(s && len);
+            p = (char *)s + sizeof * s;
+            rc = string_printf(p, len + 1, NULL, "%s", locality);
+            if (rc == 0) {
+                StringInit(s, p, len, len);
+                assert(ce_token);
+                *ce_token = s;
+            }
+        }
+    }
+
+    return rc;
 }
 
 /* AddComputeEnvironmentTokenForSigner
