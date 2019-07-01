@@ -77,7 +77,7 @@ rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_to
     char document[4096] = "";
     char pkcs7[4096] = "";
 
-    char locality[4096] = "";
+    char location[4096] = "";
 
     assert(self);
 
@@ -91,10 +91,10 @@ rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_to
             NULL, NULL);
 
     if (rc == 0)
-        rc = MakeLocality(pkcs7, document, locality, sizeof locality);
+        rc = MakeLocation(pkcs7, document, location, sizeof location);
 
     if (rc == 0) {
-        uint32_t len = string_measure(locality, NULL);
+        uint32_t len = string_measure(location, NULL);
         String * s = calloc(1, sizeof * s + len + 1);
         if (s == NULL)
             rc = RC(rcCloud, rcMgr, rcAccessing, rcMemory, rcExhausted);
@@ -102,7 +102,7 @@ rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_to
             char * p = NULL;
             assert(s && len);
             p = (char *)s + sizeof * s;
-            rc = string_printf(p, len + 1, NULL, "%s", locality);
+            rc = string_printf(p, len + 1, NULL, "%s", location);
             if (rc == 0) {
                 StringInit(s, p, len, len);
                 assert(ce_token);

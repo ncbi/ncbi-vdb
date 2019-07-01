@@ -153,7 +153,7 @@ TEST_CASE(TestBase64InIdentityPkcs7) {
         ));
 }
 
-TEST_CASE(TestBase64MakeLocality) {
+TEST_CASE(TestBase64MakeLocation) {
     const char pkcs7[] =
 "M0AGCSqGSIb3DQEHAqCAMIACAQExCaAJBgUrDgMCGgUAMIAGCSqGSIbADQEHAaCAJIAEggHfewog\n"
 "IC1hY2NvdW50SWQiIDogIjI1MDgxszz2MDc4NCIsCiAgImF2YWlsYWSpZGl0eVpvbmUiIDogInVz\n"
@@ -189,7 +189,7 @@ TEST_CASE(TestBase64MakeLocality) {
         "  \"region\" : \"us-east-1\"\n"
         "}";
     char dst[4096] = "";
-    REQUIRE_RC(MakeLocality(pkcs7, doc, dst, sizeof dst));
+    REQUIRE_RC(MakeLocation(pkcs7, doc, dst, sizeof dst));
     //  std::cout << dst << "\n";
     REQUIRE_EQ(string(dst),
         string(
@@ -225,7 +225,7 @@ TEST_CASE(GetPkcs7) {
     REQUIRE_RC(KNSManagerRelease(kns));
 }
 
-TEST_CASE(PrintLocality) {
+TEST_CASE(PrintLocation) {
     CloudMgr * mgr = NULL;
     REQUIRE_RC(CloudMgrMake(&mgr, NULL, NULL));
 

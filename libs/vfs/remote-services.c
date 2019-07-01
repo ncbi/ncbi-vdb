@@ -2955,8 +2955,8 @@ static rc_t SCgiRequestAddLocation (SCgiRequest * self, const SHelper * helper)
     return rc;
 }
 
-static
-rc_t SCgiRequestAddCloudEnvironment(SCgiRequest * self, SHelper * helper)
+static rc_t SCgiRequestAddCloudEnvironment(
+    SCgiRequest * self, SHelper * helper)
 {
     rc_t rc = 0;
     CloudProviderId cloud_provider = cloud_provider_none;
@@ -3001,7 +3001,7 @@ rc_t SCgiRequestAddCloudEnvironment(SCgiRequest * self, SHelper * helper)
         if (v != NULL ) {
             {
                 const SKV * kv = NULL;
-                const char n[] = "locality-type";
+                const char n[] = "location-type";
                 rc = SKVMake(&kv, n, v);
                 if (rc == 0) {
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
@@ -3013,7 +3013,7 @@ rc_t SCgiRequestAddCloudEnvironment(SCgiRequest * self, SHelper * helper)
             }
             {
                 const SKV * kv = NULL;
-                const char n[] = "locality";
+                const char n[] = "location";
                 assert(ce_token);
                 rc = SKVMake(&kv, n, ce_token->addr);
                 if (rc == 0) {

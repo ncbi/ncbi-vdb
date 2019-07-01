@@ -69,7 +69,7 @@ rc_t CC GCPMakeComputeEnvironmentToken ( const GCP * self, const String ** ce_to
 {
     rc_t rc = 0;
 
-    char locality[4096] = "";
+    char location[4096] = "";
 
     const char url[] =
         "http://metadata/computeMetadata/v1/instance/service-accounts/"
@@ -77,11 +77,11 @@ rc_t CC GCPMakeComputeEnvironmentToken ( const GCP * self, const String ** ce_to
 
     assert(self);
 
-    rc = KNSManager_Read(self->dad.kns, locality, sizeof locality,
+    rc = KNSManager_Read(self->dad.kns, location, sizeof location,
         url, "Metadata-Flavor", "Google");
 
     if (rc == 0) {
-        uint32_t len = string_measure(locality, NULL);
+        uint32_t len = string_measure(location, NULL);
         String * s = calloc(1, sizeof * s + len + 1);
         if (s == NULL)
             rc = RC(rcCloud, rcMgr, rcAccessing, rcMemory, rcExhausted);
@@ -89,7 +89,7 @@ rc_t CC GCPMakeComputeEnvironmentToken ( const GCP * self, const String ** ce_to
             char * p = NULL;
             assert(s && len);
             p = (char *)s + sizeof * s;
-            rc = string_printf(p, len + 1, NULL, "%s", locality);
+            rc = string_printf(p, len + 1, NULL, "%s", location);
             if (rc == 0) {
                 StringInit(s, p, len, len);
                 assert(ce_token);

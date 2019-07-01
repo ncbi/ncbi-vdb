@@ -50,7 +50,7 @@ rc_t MakeAwsAuthenticationHeader(
 rc_t Base64InIdentityDocument(const char *src, char *dst, size_t dlen);
 rc_t WrapInIdentityPkcs7(const char *src, char *dst, size_t dlen);
 rc_t Base64InIdentityPkcs7(const char *src, char *dst, size_t dlen);
-rc_t MakeLocality(const char *pkcs7, const char *document,
+rc_t MakeLocation(const char *pkcs7, const char *document,
     char *dst, size_t dlen);
 
 #ifdef __cplusplus

@@ -345,7 +345,7 @@ rc_t Base64InIdentityPkcs7(const char *src, char *dst, size_t dlen) {
     return rc;
 }
 
-rc_t MakeLocality(const char *pkcs7, const char *document,
+rc_t MakeLocation(const char *pkcs7, const char *document,
     char *dst, size_t dlen)
 {
     char bpkcs7[4096] = "";
