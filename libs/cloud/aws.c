@@ -251,9 +251,7 @@ LIB_EXPORT rc_t CC AWSToCloud ( const AWS * cself, Cloud ** cloud )
 /* WithinAWS
  *  answers true if within AWS
  */
-#include "../kns/mgr-priv.h" /* KNSManager */
-#include <kns/stream.h> /* KStream */
-bool CloudMgrWithinAWS ( const CloudMgr * mself )
+bool CloudMgrWithinAWS ( const CloudMgr * self )
 {
 #if 0
     KEndPoint ep;
@@ -265,53 +263,14 @@ bool CloudMgrWithinAWS ( const CloudMgr * mself )
                                    ( 254 <<  0 ) ), 80 );
 
 #endif
-    {
-        rc_t rc = 0;
 
-        const char * url = "http://169.254.169.254/latest/meta-data/placement/availability-zone";
+    char buffer[999] = "";
 
-        KClientHttpRequest *req = NULL;
+    assert(self);
 
-        const KNSManager * self = mself->kns;
-        assert(mself && self);
-
-        /* save existing timeouts */
-        int32_t cmsec = self->conn_timeout;
-        int32_t wmsec = self->http_write_timeout;
-
-        /* minimize timeouts to check cloudy URLs */
-        ((KNSManager*)self)->conn_timeout
-            = ((KNSManager*)self)->http_write_timeout = 500;
-
-        rc = KNSManagerMakeRequest(self, &req, 0x01010000, NULL, url);
-
-        if (rc == 0) {
-            if (rc == 0) {
-                KClientHttpResult * rslt = NULL;
-                rc = KClientHttpRequestGET(req, &rslt);
-
-                if (rc == 0) {
-                    KStream * s = NULL;
-                    rc = KClientHttpResultGetInputStream(rslt, &s);
-                    if (rc == 0) {
-                        size_t num_read = 0;
-                        char buffer[999] = "";
-                        rc = KStreamRead(s, buffer, sizeof buffer, &num_read);
-                    }
-                    KStreamRelease(s);
-                }
-                KClientHttpResultRelease(rslt);
-            }
-        }
-
-        /* restore timeouts in KNSManager */
-        ((KNSManager*)self)->conn_timeout = cmsec;
-        ((KNSManager*)self)->http_write_timeout = wmsec;
-
-        KClientHttpRequestRelease(req);
-
-        return rc == 0;
-    }
+    return KNSManager_Read(self->kns, buffer, sizeof buffer,
+        "http://169.254.169.254/latest/meta-data/placement/availability-zone")
+        == 0;
 }
 
 /*** Finding/loading credentials  */
