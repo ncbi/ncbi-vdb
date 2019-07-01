@@ -41,6 +41,7 @@ struct KTLSStream;
 #include <klib/namelist.h>
 #include <kproc/timeout.h>
 #include <kfg/config.h>
+#include <kfs/directory.h>
 
 #include <os-native.h>
 
@@ -217,6 +218,7 @@ static
 rc_t tlsg_init_certs ( KTLSGlobals *self, const KConfig * kfg )
 {
     int ret;
+    bool cert_file_loaded = false;
 
     rc_t rc = 0;
     uint32_t nidx, num_certs = 0;
@@ -375,7 +377,9 @@ rc_t tlsg_init_certs ( KTLSGlobals *self, const KConfig * kfg )
             {
                 STATUS ( STAT_GEEK, "Parsing text from CA root certificate file '%S'\n", ca_crt_path );
                 ret = vdb_mbedtls_x509_crt_parse_file ( &self -> cacert, ca_crt_path -> addr );
-                if ( ret < 0 )
+                if ( ret >= 0 )
+                    cert_file_loaded = true;
+                else
                 {
                     PLOGMSG ( klogWarn, ( klogWarn
                                           , "mbedtls_x509_crt_parse_file ( '$(path)' ) returned $(ret) ( $(expl) )"
@@ -384,14 +388,60 @@ rc_t tlsg_init_certs ( KTLSGlobals *self, const KConfig * kfg )
                                           , mbedtls_strerror2 ( ret )
                                           , ca_crt_path
                                   ) );
-                }                
+                }
                 StringWhack ( ca_crt_path );
             }
             KConfigNodeRelease ( ca_crt );
         }
     }
 #endif
+#if ! WINDOWS
+    if ( ! cert_file_loaded )
+    {
+        const char * root_ca_paths [] =
+        {
+            "/etc/ssl/certs/ca-certificates.crt",                /* Debian/Ubuntu/Gentoo etc */
+            "/etc/pki/tls/certs/ca-bundle.crt",                  /* Fedora/RHEL */
+            "/etc/ssl/ca-bundle.pem",                            /* OpenSUSE */
+            "/etc/pki/tls/cacert.pem",                           /* OpenELEC */
+            "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem", /* CentOS/RHEL 7 */
+            "/etc/ssl/certs",                                    /* SLES10/SLES11, https://golang.org/issue/12139 */
+            "/system/etc/security/cacerts",                      /* Android */
+            "/usr/local/share/certs",                            /* FreeBSD */
+            "/etc/pki/tls/certs",                                /* Fedora/RHEL */
+            "/etc/openssl/certs",                                /* NetBSD */
+            "/etc/ssl/cert.pem"                                  /* MacOSX */
+        };
 
+        KDirectory *n_dir;
+        rc_t rc2 = KDirectoryNativeDir ( & n_dir );
+        if ( rc2 == 0 )
+        {
+            size_t i;
+            for ( i = 0; i < sizeof root_ca_paths / sizeof root_ca_paths [ 0 ]; ++ i )
+            {
+                const char * path = root_ca_paths [ i ];
+                
+                /* no fail, exit immediately if succesful or cycle through all files */
+                switch ( KDirectoryPathType ( n_dir, path ) & ~ kptAlias )
+                {
+                case kptFile:
+                    STATUS ( STAT_GEEK, "Parsing text from CA root certificate file '%s'\n", path);
+                    ret = vdb_mbedtls_x509_crt_parse_file ( &self -> cacert, path );
+                    break;
+                case kptDir:
+                    STATUS ( STAT_GEEK, "Parsing text from CA root certificate directory '%s'\n", path );
+                    ret = vdb_mbedtls_x509_crt_parse_path ( &self -> cacert, path );
+                    break;
+                }
+                
+                if ( ret >= 0 )
+                    cert_file_loaded = true;                
+            }
+        }
+    }
+#endif        
+    
     if ( num_certs == 0 )
     {
         STATUS ( STAT_QA, "Parsing text for default CA root certificates\n" );
@@ -574,6 +624,7 @@ LIB_EXPORT rc_t CC KNSManagerSetAllowAllCerts ( KNSManager *self, bool allow_all
         rc = RC ( rcNS, rcMgr, rcAccessing, rcSelf, rcNull );
     else
     {
+#if IGNORE_ALL_CERTS_ALLOWED
         self -> tlsg . allow_all_certs = allow_all_certs;
             /*
              *  We are acting from supposition that at some particular
@@ -590,8 +641,8 @@ LIB_EXPORT rc_t CC KNSManagerSetAllowAllCerts ( KNSManager *self, bool allow_all
                                 )
                             );
         }
+#endif
     }
-
     return rc;
 }
 
