@@ -200,6 +200,7 @@ rc_t tlsg_seed_rng ( KTLSGlobals *self )
 static
 rc_t tlsg_init_ca ( KTLSGlobals *self, const KConfig * kfg )
 {
+#if IGNORE_ALL_CERTS_ALLOWED
     const KConfigNode * allow_all_certs;
     rc_t rc = KConfigOpenNodeRead ( kfg, & allow_all_certs, "/tls/allow-all-certs" );
     if ( rc == 0 )
@@ -208,7 +209,7 @@ rc_t tlsg_init_ca ( KTLSGlobals *self, const KConfig * kfg )
         KConfigNodeRelease ( allow_all_certs );
         return rc;
     }
-
+#endif
     /* if the node does not exist, it means false */
     self -> allow_all_certs = false;
     return 0;
