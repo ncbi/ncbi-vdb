@@ -38,6 +38,7 @@
 #include <ktst/unit_test.hpp>
 
 #include "../../libs/cloud/aws-priv.h" /* TestBase64IIdentityDocument */
+#include "../../libs/cloud/cloud-cmn.h" /* KNSManager_Read */
 
 using std::string;
 
@@ -201,7 +202,8 @@ TEST_CASE(GetPkcs7) {
     REQUIRE_RC(KNSManagerMake(&kns));
     char pkcs7[2048] = "";
     rc_t rc = KNSManager_Read(kns, pkcs7, sizeof pkcs7,
-        "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7");
+        "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7",
+        NULL, NULL);
     if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy) &&
         rc != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout, rcExhausted))
     {
