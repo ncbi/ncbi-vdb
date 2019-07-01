@@ -71,18 +71,18 @@ rc_t CloudMgrWhack ( CloudMgr * self )
 static
 void CloudMgrDetermineCurrentCloud ( CloudMgr * self )
 {
-#ifdef _h_cloud_aws_
-    if ( CloudMgrWithinAWS ( self ) )
-    {
-        self -> cur_id = cloud_provider_aws;
-        return;
-    }
-#endif
-
 #ifdef _h_cloud_gcp_
     if ( CloudMgrWithinGCP ( self ) )
     {
         self -> cur_id = cloud_provider_gcp;
+        return;
+    }
+#endif
+
+#ifdef _h_cloud_aws_
+    if ( CloudMgrWithinAWS ( self ) )
+    {
+        self -> cur_id = cloud_provider_aws;
         return;
     }
 #endif
