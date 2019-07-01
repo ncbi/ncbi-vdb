@@ -243,10 +243,17 @@ FIXTURE_TEST_CASE(AWS_CloudToAws_NullParam, AwsFixture)
 FIXTURE_TEST_CASE(AWS_CloudToAws, AwsFixture)
 {
     REQUIRE_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_aws ) );
-    REQUIRE_NOT_NULL ( m_cloud );
-    REQUIRE_RC ( CloudToAWS ( m_cloud, & m_aws ) );
-    REQUIRE_NOT_NULL ( m_aws );
+    if (m_cloud != NULL) {
+        REQUIRE_RC(CloudToAWS(m_cloud, &m_aws));
+        REQUIRE_NOT_NULL(m_aws);
+    }
+    else {
+        CloudProviderId cloud_provider = cloud_provider_none;
+        REQUIRE_RC(CloudMgrCurrentProvider(m_mgr, &cloud_provider));
+        REQUIRE_EQ(cloud_provider, static_cast<uint32_t>(cloud_provider_gcp));
+    }
 }
+
 FIXTURE_TEST_CASE(AWS_CloudToAws_Fail, AwsFixture)
 {
     REQUIRE_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_gcp ) );
