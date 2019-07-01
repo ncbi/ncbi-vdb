@@ -126,6 +126,7 @@ KFS_CMN = \
 	rrcachedfile \
 	recorder \
 	logfile \
+	callback_file \
 	poolpages \
 	lru_cache \
 	from_to_namelist \
