@@ -46,6 +46,7 @@ SUBDIRS =       \
     kfg         \
     kapp        \
     vfs         \
+    cloud       \
     kns         \
     kdb         \
     kproc       \

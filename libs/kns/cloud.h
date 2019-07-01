@@ -37,7 +37,7 @@ struct Cloud;
 struct KNSManager;
 
 rc_t KNSManagerMakeCloud(struct KNSManager * self, const struct Cloud ** cloud);
-rc_t CloudRelease(const struct Cloud * self);
+rc_t KCloudRelease(const struct Cloud * self);
 
 /* don't release returned char* */
 const char * CloudGetLocation(const struct Cloud * self);

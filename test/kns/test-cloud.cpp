@@ -58,7 +58,7 @@ TEST_CASE(TestLocation) {
     else
         cout << "Location: outside of cloud\n";
 
-    REQUIRE_RC(CloudRelease(cloud));
+    REQUIRE_RC(KCloudRelease(cloud));
 
     REQUIRE_RC(KNSManagerRelease(mgr));
 }
@@ -77,6 +77,25 @@ TEST_CASE(TestAuthentication) {
         "Tue, 27 Mar 2007 19:36:42 +0000\n"
         "/johnsmith/photos/puppy.jpg";
     REQUIRE_RC(KNSManagerMakeAwsAuthenticationHeader(NULL,
+        AWSAccessKeyId, AWSSecretAccessKey, StringToSign,
+        authentication, sizeof authentication));
+
+    REQUIRE_EQ(string(authentication),
+        string("AWS AKIAIOSFODNN7EXAMPLE:bWq2s1WEIj+Ydj0vQ697zp+IXMU="));
+}
+#include "../../libs/cloud/aws-priv.h"
+TEST_CASE(TestCAuthentication) {
+    char authentication[96] = "";
+
+    const char AWSAccessKeyId[] = "AKIAIOSFODNN7EXAMPLE";
+    const char AWSSecretAccessKey[] = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY";
+    const char StringToSign[] =
+        "GET\n"
+        "\n"
+        "\n"
+        "Tue, 27 Mar 2007 19:36:42 +0000\n"
+        "/johnsmith/photos/puppy.jpg";
+    REQUIRE_RC(MakeAwsAuthenticationHeader(
         AWSAccessKeyId, AWSSecretAccessKey, StringToSign,
         authentication, sizeof authentication));
 

@@ -59,6 +59,8 @@ struct Cloud
 {
     const Cloud_vt * vt;
     KRefcount refcount;
+    struct KNSManager const * kns;
+    bool user_agrees_to_pay;
 };
 
 #ifndef CLOUD_IMPL
@@ -76,7 +78,10 @@ struct Cloud_vt_v1
     rc_t ( CC * destroy ) ( CLOUD_IMPL * self );
     rc_t ( CC * make_cet ) ( const CLOUD_IMPL * self, struct String const ** cet );
     rc_t ( CC * add_cet_to_req ) ( const CLOUD_IMPL * self, struct KClientHttpRequest * req );
-    rc_t ( CC * add_user_pays_to_req ) ( const CLOUD_IMPL * self, struct KClientHttpRequest * req );
+    rc_t ( CC * add_authn ) ( const CLOUD_IMPL * self,
+        struct KClientHttpRequest * req, const char * method );
+    rc_t ( CC * add_user_pays_to_req ) ( const CLOUD_IMPL * self,
+        struct KClientHttpRequest * req, const char * method );
     /* end minor version == 0 */
 };
 
@@ -89,7 +94,13 @@ union Cloud_vt
 /* Init
  *  initialize a newly allocated cloud object
  */
-CLOUD_EXTERN rc_t CC CloudInit ( Cloud * self, const Cloud_vt * vt, const char * classname );
+CLOUD_EXTERN rc_t CC CloudInit ( Cloud * self, const Cloud_vt * vt, const char * classname,
+    struct KNSManager const * kns, bool user_agrees_to_pay );
+
+/* Whack
+ *  run destructor and free object
+ */
+CLOUD_EXTERN rc_t CC CloudWhack ( Cloud * self );
 
 
 #ifdef __cplusplus

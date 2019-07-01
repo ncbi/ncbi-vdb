@@ -60,7 +60,7 @@ static bool _KDirectory_FileExists(const KDirectory * self,
     return KDirectoryPathType_v1(self, path) != kptNotFound;
 }
 
-rc_t CloudRelease(const Cloud * cself) {
+rc_t KCloudRelease(const Cloud * cself) {
     Cloud * self = (Cloud*)cself;
 
     if (self != NULL) {
@@ -114,7 +114,7 @@ static rc_t CloudMake(const Cloud ** self,
     if (rc == 0)
         *self = p;
     else
-        CloudRelease(p);
+        KCloudRelease(p);
 
     return rc;
 }
@@ -140,7 +140,7 @@ static rc_t _KNSManager_Read(struct KNSManager * self,
     /* minimize timeouts to check cloudy URLs */
     self->conn_timeout = self->http_write_timeout = timeout;
 
-    rc = KNSManagerMakeClientRequest(self, &req, 0x01010000, NULL, url);
+    rc = KNSManagerMakeRequest(self, &req, 0x01010000, NULL, url);
 
     if (rc == 0) {
         if (gs)

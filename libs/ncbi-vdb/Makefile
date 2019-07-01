@@ -91,6 +91,7 @@ VDB_LIB_CMN =    \
 	align-access \
 	ncbi-bam     \
 	vfs          \
+	cloud                  \
 	$(LIBKXML)   \
 	mbedx509     \
 	mbedtls      \
