@@ -38,7 +38,7 @@
 #include <stdarg.h>
 
 #ifdef __cplusplus
-extern "C" {}
+extern "C" {
 #endif
 
 
