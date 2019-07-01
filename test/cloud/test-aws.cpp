@@ -207,8 +207,20 @@ TEST_CASE(GetPkcs7) {
     if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy) &&
         rc != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout, rcExhausted))
     {
-        REQUIRE_RC(rc);
-        REQUIRE_EQ(string_measure(pkcs7, NULL), static_cast<uint32_t>(1118));
+#define rcStream rcFile
+        if (rc == SILENT_RC(rcNS, rcStream, rcReading, rcSelf, rcNull)) {
+            CloudMgr * mgr = NULL;
+            REQUIRE_RC(CloudMgrMake(&mgr, NULL, NULL));
+            CloudProviderId cloud_provider = cloud_provider_none;
+            REQUIRE_RC(CloudMgrCurrentProvider(mgr, &cloud_provider));
+            REQUIRE_EQ(cloud_provider,
+                static_cast<uint32_t>(cloud_provider_gcp));
+            REQUIRE_RC(CloudMgrRelease(mgr));
+        }
+        else {
+            REQUIRE_RC(rc);
+            REQUIRE_EQ(string_measure(pkcs7, NULL), (uint32_t)1118);
+        }
     }
     REQUIRE_RC(KNSManagerRelease(kns));
 }
@@ -219,8 +231,8 @@ TEST_CASE(PrintLocality) {
 
     Cloud * cloud = NULL;
     rc_t rc = CloudMgrGetCurrentCloud(mgr, &cloud);
-    if (rc
-        == SILENT_RC(rcCloud, rcMgr, rcAccessing, rcCloudProvider, rcNotFound))
+    if (rc == SILENT_RC(
+        rcCloud, rcMgr, rcAccessing, rcCloudProvider, rcNotFound))
     {
         rc = CloudMgrMakeCloud(mgr, &cloud, cloud_provider_aws);
     }
@@ -229,7 +241,8 @@ TEST_CASE(PrintLocality) {
     const String * ce_token = NULL;
     rc = CloudMakeComputeEnvironmentToken(cloud, &ce_token);
     if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy) &&
-        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout, rcExhausted))
+        rc != SILENT_RC(rcNS, rcFile, rcCreating,
+            rcTimeout, rcExhausted))
     {
         REQUIRE_RC(rc);
         REQUIRE_NOT_NULL(ce_token);
