@@ -3051,18 +3051,6 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
 
     request -> hasQuery = true;
 
-    {
-        const String * ce_token = NULL;
-        if (helper->cloudMgr == NULL)
-            rc = CloudMgrMake(&helper->cloudMgr, NULL, NULL);
-        if (rc == 0)
-            rc = CloudMgrGetCurrentCloud(helper->cloudMgr, &helper->cloud);
-        if (rc == 0)
-            rc = CloudMakeComputeEnvironmentToken(helper->cloud, &ce_token);
-        printf ("LLL\n'%s'\nTTT\n", ce_token->addr);
-        free(ce_token);
-    }
-
     DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( 
         "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n" ) );
 
