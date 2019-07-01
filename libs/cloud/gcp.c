@@ -108,7 +108,17 @@ rc_t CC GCPMakeComputeEnvironmentToken ( const GCP * self, const String ** ce_to
 static
 rc_t CC GCPAddComputeEnvironmentTokenForSigner ( const GCP * self, KClientHttpRequest * req )
 {
-    return 0; //TODO
+    const String * ce_token = NULL;
+    rc_t rc = GCPMakeComputeEnvironmentToken(self, &ce_token);
+
+    assert(self && self->dad.kns);
+
+    if (rc == 0)
+        rc = KHttpRequestAddPostParam(req, "ident=%S", ce_token);
+
+    free((void*)ce_token);
+
+    return rc;
 }
 
 /* AddAuthentication
