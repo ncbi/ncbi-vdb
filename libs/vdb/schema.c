@@ -49,6 +49,7 @@
 #include <klib/printf.h>
 #include <klib/out.h>
 #include <klib/rc.h>
+#include <vdb/vdb-priv.h>
 #include <sysalloc.h>
 
 #include <stdlib.h>
@@ -1837,6 +1838,97 @@ LIB_EXPORT rc_t CC VSchemaRuntimeTableAddUnicodeColumn ( VSchemaRuntimeTable *se
     va_start ( args, name );
     rc = VSchemaRuntimeTableVAddUnicodeColumn ( self, bits, name, args );
     va_end ( args );
+
+    return rc;
+}
+
+/* DumpToKMDataNode
+ *  given a VSchema, an updatable KMDataNode, an object spec string and object type,
+ *  find the typed object within VSchema by name, dump its schema text into the node,
+ *  and set the attribute name to the full object name and version.
+ */
+LIB_EXPORT rc_t CC VSchemaDumpToKMDataNode ( const VSchema * self,
+    KMDataNode * node, const char * spec )
+{
+    rc_t rc = 0;
+
+    /* check parameters */
+    if ( self == NULL )
+        rc = RC ( rcVDB, rcSchema, rcWriting, rcSelf, rcNull );
+    else if ( node == NULL )
+        rc = RC ( rcVDB, rcSchema, rcWriting, rcParam, rcNull );
+    else if ( spec == NULL )
+        rc = RC ( rcVDB, rcSchema, rcWriting, rcString, rcNull );
+    else if ( spec [ 0 ] == 0 )
+        rc = RC ( rcVDB, rcSchema, rcWriting, rcString, rcEmpty );
+    else
+    {
+        size_t num_writ;
+        char expr [ 256 ];
+        const char * type_string = "";
+
+        /* try to find object by spec - typically full name but only major version */
+        uint32_t type;
+        const void * obj = VSchemaFind ( self, NULL, & type, spec, __func__, false );
+        if ( obj == NULL )
+        {
+            /* not found - do nothing */
+            rc = RC ( rcVDB, rcSchema, rcWriting, rcExpression, rcNotFound );
+            PLOGERR ( klogInt,
+                      ( klogInt, rc, "failed to locate schema object '$(expr)'", "expr=%s", spec ));
+        }
+        else
+        {
+            if ( type == eTable )
+            {
+                /* convert spec to full expression, including version */
+                const STable * stbl = obj;
+                rc = VSchemaToText ( self, expr, sizeof expr - 1, & num_writ,
+                    "%N%V", stbl -> name, stbl -> version );
+                if ( rc != 0 )
+                    LOGERR ( klogInt, rc, "failed to determine table schema" );
+                else
+                    type_string = "table";
+            }
+            else if ( type == eDatabase )
+            {
+                const SDatabase * sdb = obj;
+                rc = VSchemaToText ( self, expr, sizeof expr - 1, & num_writ,
+                    "%N%V", sdb -> name, sdb -> version );
+                if ( rc != 0 )
+                    LOGERR ( klogInt, rc, "failed to determine database schema" );
+                else
+                    type_string = "database";
+            }
+            else
+            {
+                rc = RC ( rcVDB, rcSchema, rcWriting, rcType, rcUnsupported );
+                LOGERR ( klogInt, rc, "failed to dump object to metadata" );
+            }
+
+            if ( rc == 0 )
+            {
+                /* record as the node's "name" attribute */
+                expr [ num_writ ] = 0;
+                rc = KMDataNodeWriteAttr ( node, "name", expr );
+                if ( rc != 0 )
+                    PLOGERR ( klogInt, ( klogInt, rc, "failed to write $(type) name '$(expr)'", "expr=%s,type=%s", expr, type_string ));
+                else
+                {
+                    /* truncate existing schema */
+                    rc = KMDataNodeWrite ( node, "", 0 );
+                    if ( rc == 0 )
+                    {
+                        /* write the schema text to the node */
+                        rc = VSchemaDump ( self, sdmCompact, expr,
+                            ( rc_t ( CC * ) ( void*, const void*, size_t ) ) KMDataNodeAppend, node );
+                    }
+                    if ( rc != 0 )
+                        PLOGERR ( klogInt, ( klogInt, rc, "failed to write $(type) schema '$(expr)'", "expr=%s", expr, type_string ));
+                }
+            }
+        }
+    }
 
     return rc;
 }
