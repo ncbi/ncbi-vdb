@@ -225,7 +225,11 @@ public:
 FIXTURE_TEST_CASE(AWS_Make, CloudMgrFixture)
 {
     REQUIRE_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_aws ) );
-    REQUIRE_NOT_NULL ( m_cloud );
+    if (m_cloud == NULL) {
+        CloudProviderId cloud_provider = cloud_provider_none;
+        REQUIRE_RC(CloudMgrCurrentProvider(m_mgr, &cloud_provider));
+        REQUIRE_EQ(cloud_provider, static_cast<uint32_t>(cloud_provider_gcp));
+    }
 }
 
 FIXTURE_TEST_CASE(AWS_CloudToAws_NullSelf, AwsFixture)
