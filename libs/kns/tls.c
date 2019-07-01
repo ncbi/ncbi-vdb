@@ -69,6 +69,10 @@ struct KTLSStream;
 #include <mbedtls/error.h>
 #include <mbedtls/certs.h>
 
+#if WINDOWS
+#define IGNORE_ALL_CERTS_ALLOWED 1
+#endif
+
 static const char ca_crt_ncbi1 [] =
     "-----BEGIN CERTIFICATE-----\r\n"
     "MIIDrzCCApegAwIBAgIQCDvgVpBCRrGhdWrJWZHHSjANBgkqhkiG9w0BAQUFADBh\r\n"
