@@ -81,21 +81,9 @@ rc_t CC GCPMakeComputeEnvironmentToken ( const GCP * self, const String ** ce_to
         url, "Metadata-Flavor", "Google");
 
     if (rc == 0) {
-        uint32_t len = string_measure(location, NULL);
-        String * s = calloc(1, sizeof * s + len + 1);
-        if (s == NULL)
-            rc = RC(rcCloud, rcMgr, rcAccessing, rcMemory, rcExhausted);
-        else {
-            char * p = NULL;
-            assert(s && len);
-            p = (char *)s + sizeof * s;
-            rc = string_printf(p, len + 1, NULL, "%s", location);
-            if (rc == 0) {
-                StringInit(s, p, len, len);
-                assert(ce_token);
-                *ce_token = s;
-            }
-        }
+        String s;
+        StringInitCString(&s, location);
+        rc = StringCopy(ce_token, &s);
     }
 
     return rc;
@@ -111,12 +99,10 @@ rc_t CC GCPAddComputeEnvironmentTokenForSigner ( const GCP * self, KClientHttpRe
     const String * ce_token = NULL;
     rc_t rc = GCPMakeComputeEnvironmentToken(self, &ce_token);
 
-    assert(self && self->dad.kns);
-
-    if (rc == 0)
+    if (rc == 0) {
         rc = KHttpRequestAddPostParam(req, "ident=%S", ce_token);
-
-    free((void*)ce_token);
+        StringWhack(ce_token);
+    }
 
     return rc;
 }
