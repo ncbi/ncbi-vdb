@@ -74,7 +74,8 @@ CLOUD_SRC = \
 	aws \
 	aws-auth \
 	gcp \
-	cloud
+	cloud \
+	cloud-cmn \
 
 CLOUD_OBJ = \
 	$(addsuffix .$(LOBX),$(CLOUD_SRC))

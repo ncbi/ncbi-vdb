@@ -48,6 +48,7 @@ struct AWS;
 #include <assert.h>
 
 #include "aws-priv.h" /* AWSDoAuthentication */
+#include "cloud-cmn.h" /* KNSManager_Read */
 #include "cloud-priv.h"
 
 static rc_t PopulateCredentials ( AWS * self );
@@ -76,21 +77,24 @@ rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_to
     char document[4096] = "";
     char pkcs7[4096] = "";
 
-    char locality[4096] = "";
+    char location[4096] = "";
 
-    assert(self && self->dad.kns);
+    assert(self);
+
     rc = KNSManager_Read(self->dad.kns, document, sizeof document,
-        "http://169.254.169.254/latest/dynamic/instance-identity/document");
+        "http://169.254.169.254/latest/dynamic/instance-identity/document",
+        NULL, NULL);
 
     if (rc == 0)
         rc = KNSManager_Read(self->dad.kns, pkcs7, sizeof pkcs7,
-            "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7");
+            "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7",
+            NULL, NULL);
 
     if (rc == 0)
-        rc = MakeLocality(pkcs7, document, locality, sizeof locality);
+        rc = MakeLocation(pkcs7, document, location, sizeof location);
 
     if (rc == 0) {
-        uint32_t len = string_measure(locality, NULL);
+        uint32_t len = string_measure(location, NULL);
         String * s = calloc(1, sizeof * s + len + 1);
         if (s == NULL)
             rc = RC(rcCloud, rcMgr, rcAccessing, rcMemory, rcExhausted);
@@ -98,7 +102,7 @@ rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_to
             char * p = NULL;
             assert(s && len);
             p = (char *)s + sizeof * s;
-            rc = string_printf(p, len + 1, NULL, "%s", locality);
+            rc = string_printf(p, len + 1, NULL, "%s", location);
             if (rc == 0) {
                 StringInit(s, p, len, len);
                 assert(ce_token);
@@ -269,8 +273,8 @@ bool CloudMgrWithinAWS ( const CloudMgr * self )
     assert(self);
 
     return KNSManager_Read(self->kns, buffer, sizeof buffer,
-        "http://169.254.169.254/latest/meta-data/placement/availability-zone")
-        == 0;
+        "http://169.254.169.254/latest/meta-data/placement/availability-zone",
+        NULL, NULL) == 0;
 }
 
 /*** Finding/loading credentials  */

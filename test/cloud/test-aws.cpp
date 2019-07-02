@@ -38,6 +38,7 @@
 #include <ktst/unit_test.hpp>
 
 #include "../../libs/cloud/aws-priv.h" /* TestBase64IIdentityDocument */
+#include "../../libs/cloud/cloud-cmn.h" /* KNSManager_Read */
 
 using std::string;
 
@@ -152,7 +153,7 @@ TEST_CASE(TestBase64InIdentityPkcs7) {
         ));
 }
 
-TEST_CASE(TestBase64MakeLocality) {
+TEST_CASE(TestBase64MakeLocation) {
     const char pkcs7[] =
 "M0AGCSqGSIb3DQEHAqCAMIACAQExCaAJBgUrDgMCGgUAMIAGCSqGSIbADQEHAaCAJIAEggHfewog\n"
 "IC1hY2NvdW50SWQiIDogIjI1MDgxszz2MDc4NCIsCiAgImF2YWlsYWSpZGl0eVpvbmUiIDogInVz\n"
@@ -188,7 +189,7 @@ TEST_CASE(TestBase64MakeLocality) {
         "  \"region\" : \"us-east-1\"\n"
         "}";
     char dst[4096] = "";
-    REQUIRE_RC(MakeLocality(pkcs7, doc, dst, sizeof dst));
+    REQUIRE_RC(MakeLocation(pkcs7, doc, dst, sizeof dst));
     //  std::cout << dst << "\n";
     REQUIRE_EQ(string(dst),
         string(
@@ -201,24 +202,37 @@ TEST_CASE(GetPkcs7) {
     REQUIRE_RC(KNSManagerMake(&kns));
     char pkcs7[2048] = "";
     rc_t rc = KNSManager_Read(kns, pkcs7, sizeof pkcs7,
-        "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7");
+        "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7",
+        NULL, NULL);
     if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy) &&
         rc != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout, rcExhausted))
     {
-        REQUIRE_RC(rc);
-        REQUIRE_EQ(string_measure(pkcs7, NULL), static_cast<uint32_t>(1118));
+#define rcStream rcFile
+        if (rc == SILENT_RC(rcNS, rcStream, rcReading, rcSelf, rcNull)) {
+            CloudMgr * mgr = NULL;
+            REQUIRE_RC(CloudMgrMake(&mgr, NULL, NULL));
+            CloudProviderId cloud_provider = cloud_provider_none;
+            REQUIRE_RC(CloudMgrCurrentProvider(mgr, &cloud_provider));
+            REQUIRE_EQ(cloud_provider,
+                static_cast<uint32_t>(cloud_provider_gcp));
+            REQUIRE_RC(CloudMgrRelease(mgr));
+        }
+        else {
+            REQUIRE_RC(rc);
+            REQUIRE_EQ(string_measure(pkcs7, NULL), (uint32_t)1118);
+        }
     }
     REQUIRE_RC(KNSManagerRelease(kns));
 }
 
-TEST_CASE(PrintLocality) {
+TEST_CASE(PrintLocation) {
     CloudMgr * mgr = NULL;
     REQUIRE_RC(CloudMgrMake(&mgr, NULL, NULL));
 
     Cloud * cloud = NULL;
     rc_t rc = CloudMgrGetCurrentCloud(mgr, &cloud);
-    if (rc
-        == SILENT_RC(rcCloud, rcMgr, rcAccessing, rcCloudProvider, rcNotFound))
+    if (rc == SILENT_RC(
+        rcCloud, rcMgr, rcAccessing, rcCloudProvider, rcNotFound))
     {
         rc = CloudMgrMakeCloud(mgr, &cloud, cloud_provider_aws);
     }
@@ -227,7 +241,8 @@ TEST_CASE(PrintLocality) {
     const String * ce_token = NULL;
     rc = CloudMakeComputeEnvironmentToken(cloud, &ce_token);
     if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy) &&
-        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout, rcExhausted))
+        rc != SILENT_RC(rcNS, rcFile, rcCreating,
+            rcTimeout, rcExhausted))
     {
         REQUIRE_RC(rc);
         REQUIRE_NOT_NULL(ce_token);
