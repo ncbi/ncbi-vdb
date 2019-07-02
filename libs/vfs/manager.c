@@ -44,6 +44,7 @@
 
 #include <kfg/config.h>
 #include <kfg/repository.h>
+#include <kfg/properties.h>
 #include <kfg/keystore.h>
 #include <kfg/keystore-priv.h>
 #include <kfg/kfg-priv.h>
@@ -59,6 +60,7 @@
 #include <kfs/quickmount.h>
 #include <kfs/cacheteefile.h>
 #include <kfs/cachetee2file.h>
+#include <kfs/cachetee3file.h>
 #include <kfs/rrcachedfile.h>
 #include <kfs/recorder.h>
 #include <kfs/lockfile.h>
@@ -214,26 +216,32 @@ LIB_EXPORT rc_t CC VFSManagerRelease ( const VFSManager *self )
     return rc;
 }
 
+enum cache_version
+{ cachetee = 0, cachetee_2 = 1, cachetee_3 = 2, rrcache = 3, logging = 4 };
+
 typedef struct caching_params
 {
-    uint32_t version;     /* 0 ... use cachetee ( older )
-                             1 ... use cachetee2 ( newer )
-                             2 ... use rrcache ( ram-only )
-                             3 ... use logfile ( just logging )
-                             */
+    enum cache_version version;
     size_t cache_page_size;
     uint32_t cache_page_count;
-    uint32_t use_cwd;       /* use the current working directory if not cach-location is given */
-    uint32_t append;        /* append to existing recording 0...no - 1...yes */
-    uint32_t timed;         /* record timing 0...no - 1...yes */
-    uint32_t record_inner;  /* record the request made before the cache */    
-    uint32_t record_outer;  /* record the request made after the cache */
-    bool is_refseq;         /* when used for external reference sequences, decrease cache size */
-    bool promote;           /* do we want a promoting cache-tee-file ? */
+    uint32_t cluster_factor_bits; /* for cachetee_v3 dflt = 5,  1 << 5  = 32 */
+    uint32_t page_size_bits;      /* for cachetee_v3 dflt = 15, 1 << 15 = 64k */
+    uint32_t cache_amount_mb;     /* for cachetee_v3 dlft = 32 MB */
+    bool use_cwd;       /* use the current working directory if not cach-location is given */
+    bool append;        /* append to existing recording 0...no - 1...yes */
+    bool timed;         /* record timing 0...no - 1...yes */
+    bool record_inner;  /* record the request made before the cache */    
+    bool record_outer;  /* record the request made after the cache */
+    bool is_refseq;     /* when used for external reference sequences, decrease cache size */
+    bool promote;       /* do we want a promoting cache-tee-file ? */
 } caching_params;
 
+#define DEFAULT_CACHETEE_VERSION cachetee_3
 #define DEFAULT_CACHE_PAGE_SIZE ( 32 * 1024 )
 #define DEFAULT_CACHE_PAGE_COUNT ( 10 * 1024 )
+#define DEFAULT_CLUSTER_FACTOR_BITS 5
+#define DEFAULT_PAGE_SIZE_BITS 15
+#define DEFAULT_CACHE_AMOUNT_MB 32
 
 static void get_caching_params( caching_params * params,
                 uint32_t dflt_block_size,
@@ -244,51 +252,36 @@ static void get_caching_params( caching_params * params,
     rc_t rc = KConfigMake ( &cfg, NULL );
 
     /* set some default values... */
-    params -> version = 0;
+    params -> version = DEFAULT_CACHETEE_VERSION;
     params -> cache_page_size = dflt_block_size;
     params -> cache_page_count = DEFAULT_CACHE_PAGE_COUNT;
-    params -> use_cwd = 0;
-    params -> append = 0;
-    params -> timed = 0;
-    params -> record_inner = 0;    
-    params -> record_outer = 0;
+    params -> cluster_factor_bits = DEFAULT_CLUSTER_FACTOR_BITS;
+    params -> page_size_bits = DEFAULT_PAGE_SIZE_BITS;
+    params -> cache_amount_mb = DEFAULT_CACHE_AMOUNT_MB;
+    params -> use_cwd = false;
+    params -> append = false;
+    params -> timed = false;
+    params -> record_inner = false;    
+    params -> record_outer = false;
     params -> is_refseq = is_refseq;
     params -> promote = promote;
     
     if ( rc == 0 )
     {
-        uint64_t value;
-        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/CACHETEEVER", &value );
-        if ( rc == 0 )
-            params -> version = (uint32_t)( value & 0x3 );
-
-        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/BLOCKSIZE", &value );
-        if ( rc == 0 )
-            params -> cache_page_size = (size_t)( value & 0xFFFFFFFF );
-
-        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/PAGECOUNT", &value );
-        if ( rc == 0 )
-            params -> cache_page_count = (uint32_t)( value & 0xFFFFFFFF );
-
-        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/USE_CWD", &value );
-        if ( rc == 0 )
-            params -> use_cwd = (uint32_t)( value & 0x1 );
-
-        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/APPEND", &value );
-        if ( rc == 0 )
-            params -> append = (uint32_t)( value & 0x1 );
-
-        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/TIMED", &value );
-        if ( rc == 0 )
-            params -> timed = (uint32_t)( value & 0x1 );
-
-        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/OUTER", &value );
-        if ( rc == 0 )
-            params -> record_outer = (uint32_t)( value & 0x1 );
-
-        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/INNER", &value );
-        if ( rc == 0 )
-            params -> record_inner = (uint32_t)( value & 0x1 );
+        /* functions in libs/kfg/properties.c */
+        KConfig_Get_CacheTeeVersion( cfg, &( params -> version ), DEFAULT_CACHETEE_VERSION );
+        KConfig_Get_CacheBlockSize( cfg, &( params -> cache_page_size ), dflt_block_size );
+        KConfig_Get_CachePageCount( cfg, &( params -> cache_page_count ), DEFAULT_CACHE_PAGE_COUNT );
+        KConfig_Get_CacheClusterFactorBits( cfg, &( params -> cluster_factor_bits ), DEFAULT_CLUSTER_FACTOR_BITS );
+        KConfig_Get_CachePageSizeBits( cfg, &( params -> page_size_bits ), DEFAULT_PAGE_SIZE_BITS );
+        KConfig_Get_Cache_Amount( cfg, &( params -> cache_amount_mb ) );
+        if ( params -> cache_amount_mb == 0 )
+            params -> cache_amount_mb = DEFAULT_CACHE_AMOUNT_MB;
+        KConfig_Get_CacheLogUseCWD( cfg, &( params -> use_cwd ), false );
+        KConfig_Get_CacheLogAppend( cfg, &( params -> append ), false );
+        KConfig_Get_CacheLogTimed ( cfg, &( params -> timed ), false );
+        KConfig_Get_CacheLogOuter( cfg, &( params -> record_outer ), false );
+        KConfig_Get_CacheLogInner( cfg, &( params -> record_inner ), false );
 
         KConfigRelease ( cfg );
     }
@@ -420,8 +413,65 @@ static rc_t wrap_in_rr_cache( KDirectory * dir,
     return rc;
 }
 
+static rc_t wrap_in_cachetee3( KDirectory * dir,
+                               const KFile **cfp,
+                               const char * loc,
+                               const caching_params * cps )
+{
+    rc_t rc = 0;
+    if ( cps -> record_outer && loc != NULL )
+        rc = wrap_in_logfile( dir, cfp, loc, "%s.outer.rec", cps );
+    if ( rc == 0 )
+    {
+        const KFile * temp_file;
+        uint32_t cluster_factor = ( 1 << ( cps -> cluster_factor_bits - 1 ) );
+        size_t page_size = ( 1 << ( cps -> page_size_bits - 1 ));
+        size_t cache_amount = ( ( size_t )cps -> cache_amount_mb * 1024 * 1024 );
+        size_t ram_page_count = ( cache_amount + page_size - 1 ) / page_size;
+        bool remove_on_close = false;
+        if ( loc == NULL )
+        {
+            rc = KDirectoryMakeKCacheTeeFile_v3 ( dir,
+                                                  &temp_file,
+                                                  *cfp,
+                                                  page_size,
+                                                  cluster_factor,
+                                                  ram_page_count,
+                                                  false,
+                                                  false,
+                                                  "" );
+        }
+        else
+        {
+            rc = KDirectoryMakeKCacheTeeFile_v3 ( dir,
+                                                  &temp_file,
+                                                  *cfp,
+                                                  page_size,
+                                                  cluster_factor,
+                                                  ram_page_count,
+                                                  cps -> promote,
+                                                  remove_on_close,
+                                                  "%s", loc );
+        }
+        if ( rc == 0 )
+        {
+            KFileRelease ( * cfp );
+            * cfp = temp_file;
+            
+            if ( cps -> record_inner && loc != NULL )
+                rc = wrap_in_logfile( dir, cfp, loc, "%s.inner.rec", cps );
+        }
+    }
+    return rc;
+}
+
 /*--------------------------------------------------------------------------
  * VFSManagerMakeHTTPFile
+ 
+ enum cache_version
+ { cachetee = 0, cachetee_2 = 1, cachetee_3 = 2, rrcache = 3, logging = 4 };
+
+
  */
 static
 rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
@@ -447,26 +497,35 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
         /* let's try to get some details about how to do caching from the configuration */    
         caching_params cps;
         get_caching_params( &cps, blocksize, is_refseq, promote );
-        if ( cache_location == NULL )
+        if ( cps . version == cachetee_3 )
         {
-            /* the user has turned off caching... ( we should not make a cache-tee )*/
-            switch( cps . version )
-            {
-                case 0 : ;  /* fall-through into rr-cache !!! */
-                case 1 : ;  /* fall-through into rr-cache !!! */
-                case 2 : rc = wrap_in_rr_cache( self -> cwd, cfp, extract_acc_from_url( url ), &cps ); break;
-                case 3 : rc = wrap_in_logfile( self -> cwd, cfp, extract_acc_from_url( url ), "%s.rec", &cps ); break;
-            }
+            rc = wrap_in_cachetee3( self -> cwd, cfp, cache_location, &cps );
         }
         else
         {
-            /* the user has tunrd on caching... */
-            switch( cps . version )
+            if ( cache_location == NULL )
             {
-                case 0 : rc = wrap_in_cachetee( self -> cwd, cfp, cache_location, &cps ); break;
-                case 1 : rc = wrap_in_cachetee2( self -> cwd, cfp, cache_location, &cps ); break;
-                case 2 : rc = wrap_in_rr_cache( self -> cwd, cfp, cache_location, &cps ); break;
-                case 3 : rc = wrap_in_logfile( self -> cwd, cfp, cache_location, "%s.rec", &cps ); break;
+                /* the user has turned off caching... ( we should not make a cache-tee )*/
+                switch( cps . version )
+                {
+                    case cachetee   : ;  /* fall-through into rr-cache !!! */
+                    case cachetee_2 : ;  /* fall-through into rr-cache !!! */
+                    case rrcache    : rc = wrap_in_rr_cache( self -> cwd, cfp, extract_acc_from_url( url ), &cps ); break;
+                    case logging    : rc = wrap_in_logfile( self -> cwd, cfp, extract_acc_from_url( url ), "%s.rec", &cps ); break;
+                    case cachetee_3 : break; /* in common path above */
+                }
+            }
+            else
+            {
+                /* the user has tunrd on caching... */
+                switch( cps . version )
+                {
+                    case cachetee   : rc = wrap_in_cachetee( self -> cwd, cfp, cache_location, &cps ); break;
+                    case cachetee_2 : rc = wrap_in_cachetee2( self -> cwd, cfp, cache_location, &cps ); break;
+                    case rrcache    : rc = wrap_in_rr_cache( self -> cwd, cfp, cache_location, &cps ); break;
+                    case logging    : rc = wrap_in_logfile( self -> cwd, cfp, cache_location, "%s.rec", &cps ); break;
+                    case cachetee_3 : break; /* in common path above */
+                }
             }
         }
     }
