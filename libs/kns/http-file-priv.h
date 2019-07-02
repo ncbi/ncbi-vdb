@@ -20,48 +20,53 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ===========================================================================
+* ==============================================================================
 *
 */
 
+#ifndef _h_http_file_priv_
+#define _h_http_file_priv_
 
-#ifndef _h_kns_http_priv_
-#define _h_kns_http_priv_
+#define KFILE_IMPL KHttpFile
+typedef struct KHttpFile KHttpFile;
+#include <kfs/impl.h>
 
+#include <kproc/lock.h>
+#include <kns/http.h>
+#include <kns/manager.h>
+#include <kns/kns-mgr-priv.h>
+#include <klib/data-buffer.h>
+#include <klib/time.h>
 
-#ifndef _h_klib_defs_
-#include <klib/defs.h> /* rc_t */
+/*--------------------------------------------------------------------------
+ * KHttpFile
+ */
+struct KHttpFile
+{
+    KFile dad;
+
+    uint64_t file_size;
+
+    const KNSManager * kns;
+
+    KLock * lock;
+    KClientHttp *http;
+
+    KDataBuffer orig_url_buffer;
+    URLBlock block; /* the original URL, parsed */
+
+    KDataBuffer url_buffer;
+
+    bool url_is_temporary; /* The original request received a 307 Temp Redirect */
+    KTime url_expiration; /* if url_is_temporary == true, refresh url_buffer using orig_url_buffer */
+
+    /* if true, add environment token to the URL */
+    bool need_env_token;
+
+    /* if true, add user-account info headers to cloud URLs */
+    bool payRequired;
+
+    bool no_cache;
+};
+
 #endif
-
-#ifndef _h_kns_extern_
-#include <kns/extern.h> /* KNS_EXTERN */
-#endif
-
-
-struct KClientHttpResult;
-
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-
-KNS_EXTERN rc_t CC KClientHttpRequestFormatMsg (
-    const struct KClientHttpRequest * self, char * buffer,
-    size_t bsize, const char * method, size_t * len );
-
-KNS_EXTERN rc_t CC KClientHttpRequestFormatPostMsg(
-    const struct KClientHttpRequest * self, char * buffer,
-    size_t bsize, size_t * len);
-
-KNS_EXTERN rc_t CC KClientHttpResultFormatMsg (
-    const struct KClientHttpResult * self, char * buffer,
-    size_t bsize, size_t * len, const char * bol, const char * eol );
-
-
-#ifdef __cplusplus
-}
-#endif
-
-
-#endif /* _h_kns_http_priv_ */

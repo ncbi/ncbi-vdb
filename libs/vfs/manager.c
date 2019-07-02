@@ -68,7 +68,7 @@
 #include <kfs/defs.h>
 
 #include <kns/http.h>
-#include <kns/http-priv.h> /* KNSManagerMakePaidHttpFile */
+#include <kns/http-priv.h> 
 #include <kns/kns-mgr-priv.h>
 #include <kns/manager.h>
 
@@ -486,10 +486,7 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
 {
     rc_t rc;
     
-    if ( high_reliability )
-        rc = KNSManagerMakePaidReliableHttpFile ( self -> kns, cfp, NULL, 0x01010000, payRequired, url );
-    else
-        rc = KNSManagerMakePaidHttpFile ( self -> kns, cfp, NULL, 0x01010000, payRequired, url );
+    rc = KNSManagerMakeReliableHttpFile ( self -> kns, cfp, NULL, 0x01010000, high_reliability, false, payRequired, url );
 
     /* in case we are not able to open the remote-file : return with error-code */
     if ( rc == 0 )

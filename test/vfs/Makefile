@@ -193,6 +193,9 @@ RESOLVERTEST_LIB = \
 $(TEST_BINDIR)/test-resolver: $(RESOLVERTEST_OBJ)
 	$(LP) --exe -o $@ $^ $(RESOLVERTEST_LIB)
 
+resolver: test-resolver
+	$(TEST_BINDIR)/test-resolver
+
 #----------------------------------------------------------------
 # Test of names service
 #
