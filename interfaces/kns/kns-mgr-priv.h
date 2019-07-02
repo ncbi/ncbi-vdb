@@ -83,10 +83,12 @@ rc_t CC KNSManagerSetAdCaching(struct KNSManager* self, bool enabled);
  * (make more retries)
  */
 KNS_EXTERN rc_t CC KNSManagerMakeReliableHttpFile(
-    struct KNSManager const *self, struct KFile const **file,
-    struct KStream *conn, ver_t vers, const char *url, ...);
-KNS_EXTERN rc_t CC KNSManagerMakeReliableClientRequest ( 
-    struct KNSManager const *self, struct KClientHttpRequest **req, 
+    struct KNSManager const *self, struct KFile const **file, struct KStream *conn, ver_t vers,
+    bool reliable, bool need_env_token, bool payRequired,
+    const char *url, ...);
+
+KNS_EXTERN rc_t CC KNSManagerMakeReliableClientRequest (
+    struct KNSManager const *self, struct KClientHttpRequest **req,
     ver_t version, struct KStream *conn, const char *url, ... );
 KNS_EXTERN rc_t CC KNSManagerMakePaidHttpFile(struct KNSManager const *self,
     struct KFile const **file, struct KStream *conn, ver_t vers,
@@ -97,16 +99,16 @@ KNS_EXTERN rc_t CC KNSManagerMakePaidReliableHttpFile(
 
 typedef struct {
     const char *url;
-    
+
     const struct KNSManager * kns; /* used to retrieve HttpRetrySpecs */
     uint32_t last_sleep;
     uint32_t total_wait_ms;
     uint32_t max_total_wait_ms;
-    
+
     uint32_t last_status;
-    
-    uint8_t max_retries;    
-    uint8_t retries_count;    
+
+    uint8_t max_retries;
+    uint8_t retries_count;
 } KHttpRetrier;
 
 rc_t KHttpRetrierInit ( KHttpRetrier * self, const char * url, const struct KNSManager * kns );

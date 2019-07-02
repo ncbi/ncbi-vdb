@@ -43,6 +43,10 @@
 #include <klib/container.h>
 #endif
 
+#ifndef _h_klib_refcount_
+#include <klib/refcount.h>
+#endif
+
 #ifndef MAX_HTTP_READ_LIMIT
 #define MAX_HTTP_READ_LIMIT ( 5 * 60 * 1000 ) /* 5 minutes */
 #endif
@@ -54,7 +58,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-    
+
 struct KFile;
 struct KNSManager;
 struct KClientHttp;
@@ -76,7 +80,7 @@ struct KHttpHeader
     String value;
     KDataBuffer value_storage;
 };
-    
+
 extern void KHttpHeaderWhack ( BSTNode *n, void *ignore );
 extern int64_t CC KHttpHeaderSort ( const BSTNode *na, const BSTNode *nb );
 extern int64_t CC KHttpHeaderCmp ( const void *item, const BSTNode *n );
@@ -132,17 +136,41 @@ void KClientHttpGetLocalEndpoint ( const struct KClientHttp * self,
 
 /* if the request followed redirects, the final URL will be different than the initial URL */
 rc_t KClientHttpRequestURL ( struct KClientHttpRequest const *self, KDataBuffer *rslt );
-    
-void KClientHttpRequestSetPayRequired(struct KClientHttpRequest * self,
-    const struct KNSManager * kns, bool payRequired);
+
+void KClientHttpRequestSetCloudParams(struct KClientHttpRequest * self,
+    bool ceRequired, bool payRequired);
+
+rc_t KClientHttpRequestAttachEnvironmentToken( struct KClientHttpRequest * self );
 
 /* exported private functions
 */
 
 /* a hook to redefine KClientHttpReopen (for testing,_DEBUG only) */
 #if _DEBUGGING
-extern void SetClientHttpReopenCallback ( struct KStream * (*fn) ( void ) ); 
+extern void SetClientHttpReopenCallback ( struct KStream * (*fn) ( void ) );
 #endif
+
+/*--------------------------------------------------------------------------
+ * KClientHttpResult
+ *  hyper text transfer protocol
+ *  Holds all the headers in a BSTree
+ *  Records the status msg, status code and version of the response
+ */
+struct KClientHttpResult
+{
+    KClientHttp *http;
+
+    BSTree hdrs;
+
+    String msg;
+    uint32_t status;
+    ver_t version;
+
+    KRefcount refcount;
+    bool len_zero;
+
+    char * expiration;
+};
 
 #ifdef __cplusplus
 }

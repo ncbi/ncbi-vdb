@@ -1322,7 +1322,7 @@ static rc_t STestCheckFile ( STest * self, const String * path,
                  "KFile = KNSManagerMakeReliableHttpFile(%S):", path );
 
     rc = KNSManagerMakeReliableHttpFile ( self -> kmgr, & file, NULL,
-                                          HTTP_VERSION, "%S", path );
+                                          HTTP_VERSION, true, false, false, "%S", path );
     if ( rc != 0 )
         STestEnd ( self, eEndFAIL, "%R", rc );
     else {

@@ -37,6 +37,8 @@
 #include <kns/socket.h>
 #include <kns/http.h>
 
+#include <cloud/manager.h>
+
 #include <atomic.h> /* atomic_ptr_t */
 #include <sysalloc.h>
 
@@ -45,7 +47,6 @@
 #include <stdio.h> /* fprintf */
 
 #include "../klib/release-vers.h"
-#include "cloud.h" /* KNSManagerMakeCloud */
 #include "http-priv.h"
 #include "kns_manager-singleton.h" /* USE_SINGLETON */
 #include "mgr-priv.h"
@@ -110,20 +111,8 @@ rc_t KNSManagerWhack ( KNSManager * self )
 #endif
 
     KNSProxiesWhack ( self -> proxies );
-    KCloudRelease(self->cloud);
+    CloudMgrRelease ( self -> cloud );
 
-    if ( self -> aws_access_key_id != NULL )
-        StringWhack ( self -> aws_access_key_id );
-
-    if ( self -> aws_secret_access_key != NULL )
-        StringWhack ( self -> aws_secret_access_key );
-
-    if ( self -> aws_region != NULL )
-        StringWhack ( self -> aws_region );
-
-    if ( self -> aws_output != NULL )
-        StringWhack ( self -> aws_output );
-    
     rc = HttpRetrySpecsDestroy ( & self -> retry_specs );
 
     KTLSGlobalsWhack ( & self -> tlsg );
@@ -164,80 +153,6 @@ LIB_EXPORT rc_t CC KNSManagerRelease ( const KNSManager *self )
         }
     }
     return 0;
-}
-
-static
-void KNSManagerLoadAWS ( struct KNSManager *self, const KConfig * kfg )
-{
-    rc_t rc;
-
-    const KConfigNode *aws_node;
-
-    if ( self == NULL )
-        return;
-
-    rc = KConfigOpenNodeRead ( kfg, &aws_node, "AWS" );
-    if ( rc == 0 )
-    {
-        do
-        {
-            String *access_key_id = NULL, *secret_access_key = NULL, *region = NULL, *output = NULL;
-            const KConfigNode *access_key_id_node, *secret_access_key_node, *region_node, *output_node;
-
-            rc = KConfigNodeOpenNodeRead ( aws_node, &access_key_id_node, "aws_access_key_id" );
-            if ( rc == 0 )
-            {
-                rc = KConfigNodeReadString ( access_key_id_node, &access_key_id );
-
-                KConfigNodeRelease ( access_key_id_node );
-
-                if( rc != 0 )
-                    break;
-            }
-
-
-            rc = KConfigNodeOpenNodeRead ( aws_node, &secret_access_key_node, "aws_secret_access_key" );
-            if ( rc == 0 )
-            {
-                rc = KConfigNodeReadString ( secret_access_key_node, &secret_access_key );
-
-                KConfigNodeRelease ( secret_access_key_node );
-
-                if ( rc != 0 )
-                    break;
-            }
-        
-            rc = KConfigNodeOpenNodeRead ( aws_node, &region_node, "region" );
-            if ( rc == 0 )
-            {
-                rc = KConfigNodeReadString ( region_node, &region );
-
-                KConfigNodeRelease ( region_node );
-
-                if ( rc != 0 )
-                    break;
-            }
-
-            rc = KConfigNodeOpenNodeRead ( aws_node, &output_node, "output" );
-            if ( rc == 0 )
-            {
-                rc = KConfigNodeReadString ( output_node, &output );
-
-                KConfigNodeRelease ( output_node );
-                
-                if ( rc != 0 )
-                    break;
-            }
-
-            self -> aws_access_key_id = access_key_id;
-            self -> aws_secret_access_key = secret_access_key;
-            self -> aws_region = region;
-            self -> aws_output = output;
-
-        } while ( 0 );
-
-        KConfigNodeRelease ( aws_node );
-    }
 }
 
 LIB_EXPORT rc_t CC KNSManagerMake ( KNSManager ** mgrp )
@@ -321,7 +236,7 @@ LIB_EXPORT bool KNSManagerIsVerbose ( const KNSManager *self )
  *
  *  "from" [ IN ] - client endpoint
  *
- *  "to" [ IN ] - server endpoint 
+ *  "to" [ IN ] - server endpoint
  *
  *  both endpoints have to be of type epIP; creates a TCP connection
  */
@@ -342,7 +257,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeConnection ( const KNSManager * self,
 
     TimeoutInit ( & tm, self -> conn_timeout );
 
-    return KNSManagerMakeRetryTimedConnection ( self, conn, 
+    return KNSManagerMakeRetryTimedConnection ( self, conn,
         & tm, self -> conn_read_timeout, self -> conn_write_timeout, from, to );
 }
 /* MakeTimedConnection
@@ -351,7 +266,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeConnection ( const KNSManager * self,
  *  "conn" [ OUT ] - a stream for communication with the server
  *
  *  "retryTimeout" [ IN ] - if connection is refused, retry with 1ms intervals: when negative, retry infinitely,
- *   when 0, do not retry, positive gives maximum wait time in seconds 
+ *   when 0, do not retry, positive gives maximum wait time in seconds
  *
  *  "readMillis" [ IN ] and "writeMillis" - when negative, infinite timeout
  *   when 0, return immediately, positive gives maximum wait time in mS
@@ -359,7 +274,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeConnection ( const KNSManager * self,
  *
  *  "from" [ IN ] - client endpoint
  *
- *  "to" [ IN ] - server endpoint 
+ *  "to" [ IN ] - server endpoint
  *
  *  both endpoints have to be of type epIP; creates a TCP connection
  */
@@ -381,24 +296,24 @@ LIB_EXPORT rc_t CC KNSManagerMakeTimedConnection ( struct KNSManager const * sel
 
     TimeoutInit ( & tm, self -> conn_timeout );
 
-    return KNSManagerMakeRetryTimedConnection ( self, conn, 
+    return KNSManagerMakeRetryTimedConnection ( self, conn,
         & tm, readMillis, writeMillis, from, to );
-}    
-    
+}
+
 /* MakeRetryConnection
  *  create a connection-oriented stream
  *
  *  "conn" [ OUT ] - a stream for communication with the server
  *
  *  "retryTimeout" [ IN ] - if connection is refused, retry with 1ms intervals: when negative, retry infinitely,
- *   when 0, do not retry, positive gives maximum wait time in seconds 
+ *   when 0, do not retry, positive gives maximum wait time in seconds
  *
  *  "from" [ IN ] - client endpoint
  *
- *  "to" [ IN ] - server endpoint 
+ *  "to" [ IN ] - server endpoint
  *
  *  both endpoints have to be of type epIP; creates a TCP connection
- */    
+ */
 LIB_EXPORT rc_t CC KNSManagerMakeRetryConnection ( struct KNSManager const * self,
     struct KSocket ** conn, timeout_t * retryTimeout,
     struct KEndPoint const * from, struct KEndPoint const * to )
@@ -413,9 +328,9 @@ LIB_EXPORT rc_t CC KNSManagerMakeRetryConnection ( struct KNSManager const * sel
         return RC ( rcNS, rcStream, rcConstructing, rcSelf, rcNull );
     }
 
-    return KNSManagerMakeRetryTimedConnection ( self, conn, 
+    return KNSManagerMakeRetryTimedConnection ( self, conn,
         retryTimeout, self -> conn_read_timeout, self -> conn_write_timeout, from, to );
-}    
+}
 
 /* SetConnectionTimeouts
  *  sets default connect/read/write timeouts to supply to sockets
@@ -433,7 +348,7 @@ LIB_EXPORT rc_t CC KNSManagerSetConnectionTimeouts ( KNSManager *self,
     /* limit values */
     if ( connectMillis < 0 || connectMillis > MAX_CONN_LIMIT )
         connectMillis = MAX_CONN_LIMIT;
-        
+
     if ( readMillis < 0 || readMillis > MAX_CONN_READ_LIMIT )
         readMillis = MAX_CONN_READ_LIMIT;
 
@@ -587,7 +502,7 @@ static void KNSManagerSetNCBI_VDB_NET ( KNSManager * self, const KConfig * kfg )
 
     KConfigNodeRelease ( node );
     node = NULL;
-} 
+}
 
 
 /* VDB-DESIREMENTS:
@@ -617,6 +532,7 @@ static int32_t KNSManagerPrepareConnWriteTimeout(KConfig* kfg) {
     else
         return result;
 }
+
 static int32_t KNSManagerPrepareHttpReadTimeout(KConfig* kfg) {
     int64_t result = 0;
     rc_t rc = KConfigReadI64(kfg, "/http/timeout/read", &result);
@@ -759,7 +675,6 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
 
                     if ( rc == 0 )
                     {
-                        KNSManagerLoadAWS ( mgr, kfg );
                         KNSManagerSetNCBI_VDB_NET ( mgr, kfg );
 
                         * mgrp = mgr;
@@ -773,6 +688,7 @@ printf("KNSManager.http_write_timeout(%d) = %d\n", MAX_HTTP_WRITE_LIMIT, mgr->ht
 */
 
                         return 0;
+
                     }
                 }
             }
@@ -870,56 +786,6 @@ bool KNSManagerLogNcbiVdbNetError ( const KNSManager * self ) {
 #endif
         }
     }
-}
-
-rc_t KNSManagerGetCloudLocation(const KNSManager * cself,
-    char * buffer, size_t bsize, size_t * num_read, size_t * remaining)
-{
-    KNSManager * self = (KNSManager *)cself;
-
-    rc_t rc = 0;
-
-    if (buffer == NULL)
-        return RC(rcNS, rcMgr, rcAccessing, rcParam, rcNull);
-
-    if (self == NULL)
-        return RC(rcNS, rcMgr, rcAccessing, rcParam, rcNull);
-
-    if (self->cloud == NULL)
-        rc = KNSManagerMakeCloud(self, &self->cloud);
-
-    if (rc == 0) {
-        const char * location = NULL;
-
-        size_t dummy = 0;
-
-        if (num_read == NULL)
-            num_read = &dummy;
-        if (remaining == NULL)
-            remaining = &dummy;
-
-        assert(self->cloud);
-        location = CloudGetLocation(self->cloud);
-
-        if (location == NULL) {
-            if (bsize > 0)
-                buffer[0] = '\0';
-            *num_read = *remaining = 0;
-        }
-        else {
-            size_t s = string_copy_measure(buffer, bsize, location);
-            if (s <= bsize) {
-                *num_read = s;
-                *remaining = 0;
-            }
-            else {
-                *num_read = bsize;
-                *remaining = s - bsize;
-            }
-        }
-    }
-
-    return rc;
 }
 
 LIB_EXPORT rc_t CC KNSManagerSetAdCaching(struct KNSManager* self, bool enabled)

@@ -33,14 +33,14 @@ MODULE = test/kns
 TEST_TOOLS = \
 	test_allow_all_certificates \
 	test_dis_allow_all_certificates \
-	test-cloud \
 	test-google-proxy \
 	test200for-whole-file \
 	test-kns \
 	test-http-dropconn \
 	KNSManagerSingletonTest \
 	test-VDB-3661 \
-	test-connect
+	test-connect \
+	test-refresh-expired
 
 include $(TOP)/build/Makefile.env
 
@@ -157,18 +157,6 @@ DAA_OBJ = \
 $(TEST_BINDIR)/test_dis_allow_all_certificates: $(DAA_OBJ)
 	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
-#-------------------------------------------------------------------------------
-# test-cloud
-
-CL_SRC = \
-	test-cloud
-
-CL_OBJ = \
-	$(addsuffix .$(OBJX),$(CL_SRC))
-
-$(TEST_BINDIR)/test-cloud: $(CL_OBJ)
-	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
-
 #----------------------------------------------------------------
 # test-google-proxy
 #
@@ -236,6 +224,7 @@ $(BINDIR)/test-proxy-with-scheme: $(PROXYSCH_OBJ)
 # test-http
 #
 HTTPTEST_SRC = \
+	HttpFixture \
 	httptest
 
 HTTPTEST_OBJ = \
@@ -289,6 +278,24 @@ $(TEST_BINDIR)/test-connect: $(CONNECT_OBJ)
 
 connect: test-connect
 	$(TEST_BINDIR)/test-connect
+
+#----------------------------------------------------------------
+
+#----------------------------------------------------------------
+# test-refresh-expired
+#
+REFRESH_SRC = \
+	HttpFixture \
+	test-refresh-expired-url \
+
+REFRESH_OBJ = \
+	$(addsuffix .$(OBJX),$(REFRESH_SRC))
+
+$(TEST_BINDIR)/test-refresh-expired: $(REFRESH_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+refresh: test-refresh-expired
+	$(TEST_BINDIR)/test-refresh-expired
 
 #----------------------------------------------------------------
 

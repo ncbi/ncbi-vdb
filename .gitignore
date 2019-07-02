@@ -5,6 +5,7 @@ vgcore.*
 /build/Makefile.config*
 /build/MSVC/2010/ipch
 /build/MSVC/2010/ncbi-vdb.opensdf
+build/ld.linux.exe_cmd.sh
 /centos
 /ilib64
 /lib64
