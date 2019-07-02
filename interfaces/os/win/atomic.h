@@ -106,7 +106,12 @@ typedef struct ATOMIC_NAME ( t ) atomic_t;
 #define atomic_test_and_set( v, s, t ) \
     ATOMIC_NAME ( test_and_set ) ( v, s, t )
 
-/* THIS FUNCTION IS universal in the case of Windows, it uses the sizeof(ptr) */
+/* THESE FUNCTIONS ARE universal in the case of Windows, it uses the sizeof(ptr) */
+    
+/* int atomic_read_ptr ( const atomic_ptr_t *v ); */
+#define atomic_read_ptr( v ) \
+    ( ( v ) -> ptr )
+
 #define atomic_test_and_set_ptr( v, s, t ) \
     InterlockedCompareExchangePointer( & ( v ) -> ptr, ( s ), ( t ) )
 

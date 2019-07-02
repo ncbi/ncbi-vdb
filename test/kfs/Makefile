@@ -200,8 +200,8 @@ $(TEST_BINDIR)/test-cachetee3: $(TEST_CACHETEE3_OBJ)
 
 cachetee3: $(TEST_BINDIR)/test-cachetee3
 	rm -f cache.dat.cache org.dat
-	$(TEST_BINDIR)/test-cachetee3 -vvv
-	# $(TEST_BINDIR)/test-cachetee3 -vvv
+	$(TEST_BINDIR)/test-cachetee3
+# $(TEST_BINDIR)/test-cachetee3 -vvv
 
 #-------------------------------------------------------------------------------
 # test-lru-cache

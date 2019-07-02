@@ -251,9 +251,14 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
         rc_t cacheRc = 0;
 
         String srapub_files;
+        String remote;
+
         CONST_STRING(&srapub_files, "srapub_files");
+        CONST_STRING(&remote      , "remote"      );
 
         isSource = StringEqual(&path->objectType, &srapub_files);
+        if ( ! isSource )
+            isSource = StringEqual(&path->objectType, &remote);
 
         if ( outFile != NULL ) {
             bool exists = false;
@@ -270,19 +275,28 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
                 localRc = RC ( rcVFS, rcResolver, rcResolving,
                                       rcName, rcNotFound );
         }
+
         else if ( VPathFromUri ( path ) ) {
-            if (isSource) {
+            if (isSource) { /* Getting cache location for source files.
+                            It should be cwd/acc/filename .
+                            Using a hack: filename is the last part of path;
+                                          acc is the last directory name */
+
                 size_t size = path->path.size;
                 const char * s = string_rchr(path->path.addr, size, '/');
+                /* the part after the latest slash is the filename */
+
                 if (s != NULL && s > path->path.addr) {
-                    size = path->path.size - (s - path->path.addr - 1);
+                    /* size of path without filename */
+                    size = s - path->path.addr;
+                    /* rfind the second slash for accesion directory */
                     s = string_rchr(path->path.addr, size, '/');
                 }
                 if (s != NULL)
                     ++s;
                 if (s == NULL)
                     s = path->path.addr + path->path.size;
-                size = path->path.size - (s - path->path.addr - 2);
+                size = path->path.size - (s - path->path.addr);
                 cacheRc = VPathMakeFmt((VPath**)&cache, "%.*s", (int)size, s);
             }
             else {
@@ -292,6 +306,7 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
                     NULL, NULL, false, outDir, NULL, true, path, mapping);
             }
         }
+
         else {
             cacheRc = VResolverQuery ( self, protocols, query,
                                     NULL, NULL, & cache );
@@ -515,8 +530,8 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                                             RELEASE(KSrvError, error);
                                     }
                                     if (vps != NULL) {
-                                        rc = KSrvRespFileAddLocalAndCache
-                                        (file, vps);
+                                        rc = KSrvRespFileAddLocalAndCache(
+                                            file, vps);
                                         RELEASE(VPathSet, vps);
                                     }
                                     RELEASE(VPath, path);

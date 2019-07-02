@@ -24,6 +24,9 @@
 
 #include <vfs/extern.h>
 
+#include <cloud/cloud.h> /* CloudRelease */
+#include <cloud/manager.h> /* CloudMgrRelease */
+
 #include <klib/container.h> /* BSTree */
 #include <klib/debug.h> /* DBGMSG */
 #include <klib/log.h> /* KLogLevel */
@@ -84,6 +87,9 @@ typedef struct {
     const struct KRepositoryMgr * repoMgr;
                                /* KRepositoryMgrGetProtectedRepository */
 
+    CloudMgr * cloudMgr;
+    Cloud    * cloud;
+
     uint32_t timeoutMs;
 
     char * input;
@@ -101,6 +107,7 @@ typedef struct { char * s; } SRaw;
 #define VERSION_1_1 0x01010000
 #define VERSION_1_2 0x01020000
 
+#define VERSION_2_0 0x02000000
 
 /* version in server request / response */
 typedef ver_t SVersion; 
@@ -142,12 +149,16 @@ static bool SVersionResponseHasTimestamp ( const SVersion  self ) {
     return self >= VERSION_3_0;
 }
 
-static bool SVersionNeedCloudLocation(const SVersion  self, bool sdl) {
-    return self == VERSION_4_0 || sdl;
-}
-
 static bool SVersionResponseInJson ( const SVersion  self, bool sdl ) {
     return self >= VERSION_4_0 || sdl;
+}
+
+static bool SVersionNeedCloudLocation(const SVersion  self, bool sdl) {
+    return !sdl && self == VERSION_4_0;
+}
+
+static bool SVersionNeedCloudEnvironment(const SVersion  self, bool sdl) {
+    return sdl && self >= VERSION_2_0;
 }
 
 /******************************************************************************/
@@ -406,6 +417,8 @@ static rc_t SHelperFini ( SHelper * self) {
 
     assert ( self );
 
+    RELEASE ( Cloud         , self -> cloud );
+    RELEASE ( CloudMgr      , self -> cloudMgr );
     RELEASE ( KConfig       , self -> kfg );
     RELEASE ( KNSManager    , self -> kMgr );
     RELEASE ( KRepositoryMgr, self -> repoMgr );
@@ -515,13 +528,26 @@ static bool cgiNotSupportsJson(const char * cgi) {
 
 /* SVersion *******************************************************************/
 static rc_t SVersionInit(SVersion * self, bool * sdl, const char * src,
-    EServiceType serviceType)
+    EServiceType serviceType, SHelper * helper)
 {
     const char * s = src;
+    String * result = NULL;
 
     assert(self);
 
     *self = 0;
+
+    if (helper != NULL && serviceType != eSTsearch) {
+        rc_t rc = SHelperInitKfg(helper);
+        if (rc == 0) {
+            rc = KConfigReadString(
+                helper->kfg, "/repository/remote/version", &result);
+            if (rc == 0) {
+                assert(result);
+                s = result->addr;
+            }
+        }
+    }
 
     if (s == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcMessage, rcBadVersion);
@@ -577,12 +603,14 @@ static rc_t SVersionInit(SVersion * self, bool * sdl, const char * src,
         *self = major << 24 | minor << 16;
     }
 
+    free(result);
+
     return 0;
 }
 
 ver_t InitVersion(const char * src) {
     SVersion self = 0;
-    rc_t rc = SVersionInit(&self, NULL, src, eSTnames);
+    rc_t rc = SVersionInit(&self, NULL, src, eSTnames, NULL);
     if (rc == 0)
         return self;
     else
@@ -615,9 +643,10 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
     char * buffer, size_t bsize, const char * aCgi,
     SRequest * request, bool adjustVersion)
 {
-    const char man [] = "/repository/remote/main/CGI/resolver-cgi";
-    const char prt [] = "/repository/remote/protected/CGI/resolver-cgi";
-    const char cgi [] = "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
+    const char man[] = "/repository/remote/main/CGI/resolver-cgi";
+    const char prt[] = "/repository/remote/protected/CGI/resolver-cgi";
+    const char sdl[] = "/repository/remote/main/SDL.2/resolver-cgi";
+    const char cgi[] = "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
     
     rc_t rc = 0;
     const char * path = aProtected ? prt : man;
@@ -626,16 +655,21 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
     rc = SHelperInitKfg ( self );
     if ( rc == 0 && aCgi == NULL ) {
         size_t num_read = 0;
-        rc = KConfigRead ( self -> kfg, path, 0, buffer, bsize,
-                           & num_read, NULL );
-        if ( rc != 0 ) {
-            if ( buffer == NULL )
-                return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
-            if ( bsize < sizeof cgi )
-                return RC ( rcVFS, rcQuery, rcExecuting, rcBuffer,
-                            rcInsufficient );
-            string_copy ( buffer, bsize, cgi, sizeof cgi );
-            rc = 0;
+        if (request->sdl)
+            rc = KConfigRead(self->kfg, sdl, 0, buffer, bsize,
+                &num_read, NULL);
+        else {
+            rc = KConfigRead(self->kfg, path, 0, buffer, bsize,
+                &num_read, NULL);
+            if (rc != 0) {
+                if (buffer == NULL)
+                    return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
+                if (bsize < sizeof cgi)
+                    return RC(rcVFS, rcQuery, rcExecuting, rcBuffer,
+                        rcInsufficient);
+                string_copy(buffer, bsize, cgi, sizeof cgi);
+                rc = 0;
+            }
         }
     }
     else
@@ -727,7 +761,7 @@ static rc_t SHeaderMake
     rc = SRawAlloc ( & self -> raw, src -> addr, src -> size );
 
     if ( rc == 0 )
-        rc = SVersionInit ( & self -> version, NULL, self -> raw . s, serviceType);
+        rc = SVersionInit ( & self -> version, NULL, self -> raw . s, serviceType, NULL);
 
     return rc;
 }
@@ -2365,6 +2399,23 @@ static void SCgiRequestFini ( SCgiRequest * self ) {
     memset ( self, 0, sizeof * self );
 }
 
+static bool SRequestResponseFromEnv(const SRequest * self, KStream ** stream) {
+    const char * e = NULL;
+
+    assert(self);
+
+    if (!self->sdl || self->request.objects != 1)
+        return false;
+
+    e = getenv(self->request.object->objectId);
+    if ( e != NULL ) {
+        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( 
+            "XXXXX NOT sending HTTP POST request; get resp from env XXXX\n" ) );
+        return KStreamMakeFromBuffer ( stream, e, string_size ( e ) ) == 0;
+    }
+
+    return false;
+}
 
 static rc_t SCgiRequestPerform ( const SCgiRequest * self,
     const SHelper * helper, KStream ** stream,
@@ -2384,7 +2435,9 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
         }
 
         if ( rc == 0 ) {
-            if ( expected == NULL ) {
+            if ( SRequestResponseFromEnv ( & service -> req, stream ) )
+                ; /* got response from environment; request was not sent */
+            else if ( expected == NULL ) {
                 KHttpResult * rslt = NULL;
                 DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), (
             ">>>>>>>>>>>>>>>> sending HTTP POST request >>>>>>>>>>>>>>>>\n" ) );
@@ -2843,23 +2896,46 @@ static rc_t SObjectCheckUrl ( SObject * self ) {
     return rc;
 }
 
+static bool SCgiRequestAddKfgLocation(SCgiRequest * self, SHelper * helper) {
+    rc_t rc = SHelperInitKfg(helper);
+
+    assert(helper);
+
+    if (rc == 0) {
+        char buffer[99] = "";
+        size_t num_read = 0;
+        rc = KConfigRead(helper->kfg, "/libs/cloud/location", 0,
+            buffer, sizeof buffer, &num_read, NULL);
+        if (rc == 0) {
+            if (num_read == 0)
+                return false;
+            else {
+                const SKV * kv = NULL;
+                const char n[] = "location";
+                rc = SKVMake(&kv, n, buffer);
+                if (rc == 0) {
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
+                        ("  %s=%s\n", n, buffer));
+                    rc = VectorAppend(&self->params, NULL, kv);
+                }
+            }
+        }
+    }
+
+    return rc == 0;
+}
+
 static rc_t SCgiRequestAddLocation (SCgiRequest * self, const SHelper * helper)
 {
     rc_t rc = 0;
 
     char buffer[ 99 ] = "";
-
-    const char * path = NULL;
     size_t num_read = 0;
 
     assert( helper );
 
-    path = "/libs/cloud/location";
-    rc = KConfigRead (helper->kfg, path, 0,
-                      buffer, sizeof buffer, &num_read, NULL);
-    if (rc != 0)
-        rc = KNSManagerGetCloudLocation(helper->kMgr,
-            buffer, sizeof buffer, &num_read, NULL);
+    rc = KNSManagerGetCloudLocation(helper->kMgr,
+        buffer, sizeof buffer, &num_read, NULL);
 
     if (rc != 0)
         rc = 0;
@@ -2876,6 +2952,75 @@ static rc_t SCgiRequestAddLocation (SCgiRequest * self, const SHelper * helper)
             return rc;
     }
 
+    return rc;
+}
+
+static
+rc_t SCgiRequestAddCloudEnvironment(SCgiRequest * self, SHelper * helper)
+{
+    rc_t rc = 0;
+    CloudProviderId cloud_provider = cloud_provider_none;
+    const String * ce_token = NULL;
+    assert(helper);
+    if (helper->cloud == NULL) {
+        if (helper->cloudMgr == NULL)
+            rc = CloudMgrMake(&helper->cloudMgr, NULL, NULL);
+        if (rc == 0) {
+            rc = CloudMgrGetCurrentCloud(helper->cloudMgr, &helper->cloud);
+            if (rc != 0) {
+                if (rc != SILENT_RC(
+                    rcCloud, rcMgr, rcAccessing, rcCloudProvider, rcNotFound))
+                {
+                    LOGERR(klogInt, rc, "cannot get current cloud provider");
+                }
+                return 0; /* outside of cloud or cannot get cloud */
+            }
+        }
+    }
+    if (rc == 0) {
+        rc = CloudMgrCurrentProvider(helper->cloudMgr, &cloud_provider);
+        if (rc != 0) {
+            LOGERR(klogInt, rc, "cannot get current cloud provider");
+            return 0;
+        }
+    }
+    if (rc == 0) {
+        rc = CloudMakeComputeEnvironmentToken(helper->cloud, &ce_token);
+        if (rc != 0) {
+            LOGERR(klogInt, rc, "cannot Make Compute Environment Token");
+            return 0;
+        }
+    }
+    if (rc == 0) {
+        if (cloud_provider == cloud_provider_aws) {
+            {
+                const SKV * kv = NULL;
+                const char n[] = "locality-type";
+                const char v[] = "aws_pkcs7";
+                rc = SKVMake(&kv, n, v);
+                if (rc == 0) {
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
+                        ("  %s=%s\n", n, v));
+                    rc = VectorAppend(&self->params, NULL, kv);
+                }
+                if (rc != 0)
+                    return rc;
+            }
+            {
+                const SKV * kv = NULL;
+                const char n[] = "locality";
+                assert(ce_token);
+                rc = SKVMake(&kv, n, ce_token->addr);
+                if (rc == 0) {
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
+                        ("  %s=%s\n", n, ce_token->addr));
+                    rc = VectorAppend(&self->params, NULL, kv);
+                }
+                if (rc != 0)
+                    return rc;
+            }
+        }
+    }
     return rc;
 }
 
@@ -2903,7 +3048,8 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( 
         "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n" ) );
 
-    rc = SVersionInit(&request->version, &request->sdl, version, eSTnames);
+    rc = SVersionInit(&request->version, &request->sdl, version, eSTnames,
+        helper);
     if ( rc != 0 )
         return rc;
 
@@ -3133,8 +3279,12 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
         }
     }
 
-    if (rc == 0 && SVersionNeedCloudLocation(request->version, request->sdl))
-        rc = SCgiRequestAddLocation( self, helper );
+    if (rc == 0 && !SCgiRequestAddKfgLocation(self, helper)) {
+        if (SVersionNeedCloudLocation(request->version, request->sdl))
+            rc = SCgiRequestAddLocation(self, helper);
+        else if (SVersionNeedCloudEnvironment(request->version, request->sdl))
+            rc = SCgiRequestAddCloudEnvironment(self, helper);
+    }
 
     return rc;
 }
@@ -3148,7 +3298,7 @@ rc_t SRequestInitSearchSCgiRequest ( SRequest * request, const char * cgi,
     rc_t rc = 0;
     const SKV * kv = NULL;
     assert ( request );
-    rc = SVersionInit ( & request -> version, NULL, version, eSTnames);
+    rc = SVersionInit ( & request -> version, NULL, version, eSTnames, NULL);
     if ( rc != 0 )
         return rc;
     self = & request -> cgiReq;

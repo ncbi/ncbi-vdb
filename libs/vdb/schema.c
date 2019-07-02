@@ -49,6 +49,7 @@
 #include <klib/printf.h>
 #include <klib/out.h>
 #include <klib/rc.h>
+#include <vdb/vdb-priv.h>
 #include <sysalloc.h>
 
 #include <stdlib.h>

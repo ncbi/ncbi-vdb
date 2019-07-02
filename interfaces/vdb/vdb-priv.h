@@ -48,6 +48,7 @@ extern "C" {
 struct KDatabase;
 struct KTable;
 struct KMetadata;
+struct KMDataNode;
 struct KDBManager;
 struct KDirectory;
 struct VDBManager;
@@ -141,6 +142,14 @@ VDB_EXTERN uint32_t CC VSchemaLastIntrinsicTypeId ( struct VSchema const *self )
  *  return the fully-qualified and versioned name of each legacy SRA table
  */
 VDB_EXTERN rc_t CC VSchemaListLegacyTables ( struct VSchema const *self, struct KNamelist **list );
+
+/* DumpToKMDataNode
+ *  given a VSchema, an updatable KMDataNode, an object spec string and object type,
+ *  find the typed object within VSchema by name, dump its schema text into the node,
+ *  and set the attribute name to the full object name and version.
+ */
+VDB_EXTERN rc_t CC VSchemaDumpToKMDataNode ( struct VSchema const * self,
+    struct KMDataNode * node, const char * spec );
 
 
 /*--------------------------------------------------------------------------

@@ -38,6 +38,7 @@ struct KCacheTeeChunkReader;
 #include <klib/debug.h>
 #include <klib/log.h>
 #include <klib/text.h>
+#include <klib/printf.h>
 #include <klib/time.h>
 #include <klib/status.h>
 #include <klib/vector.h>
@@ -78,632 +79,6 @@ typedef int64_t sbmap_t;
 #else
 #error "bitmap word size neither 32 nor 64 bits"
 #endif
-
-/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*
- * There is another kind of queue
- * << JOJOBA
- *
- * Lyrics:
- * 
- * We have queue ( double linked list), which will contain set of items.
- * Each item contains it's own page index, condition ( semaphore ) and
- * lock ( mutex ). We suppose that that list will be quite short, and
- * it's lenght will not exceed amount of threads in a program.
- * The general pattern is :
- *
- * in reading thread >>
- *    KSQueNewObj ( KSQue, & KSQueObj, Pos, Size, InitialPageIndex );
- *    KSQueObjWait ( KSQueObj );
- *
- * in queue thread >>
- *    KSQueNotify ( KSQue, LastPageIndex );
- *    KSQue -> findObjForPage ( & KSQueObj, LastPageIndex );
- *    KSQueObj -> Signal ( condition );
- *    KSQue -> unLink ( KSQueObj );
- *
- *_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
-typedef struct KSQueObj KSQueObj;
-struct KSQueObj {
-    DLNode dad;
-
-    size_t initial_page_idx;
-    size_t last_page_idx;
-
-    bool ready_to_read;
-
-    atomic32_t refcount;
-
-    KCondition * obj_cond;
-    KLock * obj_lock;
-};
-
-static
-rc_t CC
-KSQueObjDispose_please_do_not_call_that_method ( KSQueObj * self )
-{
-    if ( self != NULL ) {
-        if ( self -> obj_lock != NULL ) {
-            KLockRelease ( self -> obj_lock );
-            self -> obj_lock = NULL;
-        }
-
-        if ( self -> obj_cond != NULL ) {
-            KConditionRelease ( self -> obj_cond );
-            self -> obj_cond = NULL;
-        }
-
-        self -> initial_page_idx = 0;
-        self -> last_page_idx = 0;
-        self -> ready_to_read = false;
-
-        free ( self );
-    }
-
-    return 0;
-}   /* KSQueObjDispose_please_do_not_call_that_method () */
-
-/*  Please, do not call that method directly, use KSQueNewObj() method
- */
-static
-rc_t CC
-KSQueObjMake_please_do_not_call_that_method (
-                                            KSQueObj ** Obj,
-                                            size_t InitialPageIndex,
-                                            size_t LastPageIndex,
-                                            bool ReadyToRead
-)
-{
-    rc_t rc;
-    KSQueObj * Ret;
-
-    rc = 0;
-    Ret = NULL;
-
-        /* We do believe that there wrere provided valid
-         * InitialPageIndex, Pos and Size
-         */
-
-    if ( Obj != NULL ) {
-        * Obj = NULL;
-    }
-
-    if ( Obj == NULL ) {
-        return RC ( rcFS, rcQueue, rcConstructing, rcParam, rcNull );
-    }
-
-    Ret = calloc ( 1, sizeof ( KSQueObj ) );
-    if ( Ret == NULL ) {
-            /* Sorry, I do know that is wrong rcCeQue, but it is still
-             * pew-pew
-             */
-        return RC ( rcFS, rcQueue, rcConstructing, rcMemory, rcExhausted );
-    }
-
-    atomic32_set ( & ( Ret -> refcount ), 1 );
-
-    rc = KLockMake ( & ( Ret -> obj_lock ) );
-    if ( rc == 0 ) {
-        rc = KConditionMake ( & ( Ret -> obj_cond ) );
-        if ( rc == 0 ) {
-            Ret -> initial_page_idx = InitialPageIndex;
-            Ret -> last_page_idx = LastPageIndex;
-            Ret -> ready_to_read = ReadyToRead;
-
-            * Obj = Ret;
-        }
-    }
-
-    if ( rc != 0 ) {
-        * Obj = NULL;
-
-        if ( Ret != NULL ) {
-            KSQueObjDispose_please_do_not_call_that_method ( Ret );
-        }
-    }
-
-    return rc;
-}   /* KSQueObjMake_please_do_not_call_that_method () */
-
-static
-rc_t CC
-KSQueObjAddRef ( KSQueObj * self )
-{
-    if ( self != NULL ) {
-        atomic32_inc ( & ( self -> refcount ) );
-    }
-    return 0;
-}   /* KSQueObjAddRef () */
-
-static
-rc_t CC
-KSQueObjRelease ( KSQueObj * self )
-{
-    if ( self != NULL ) {
-        if ( atomic32_dec_and_test ( & ( self -> refcount ) ) ) {
-            return KSQueObjDispose_please_do_not_call_that_method (
-                                                                    self
-                                                                    );
-        }
-    }
-    return 0;
-}   /* KSQueObjRelease () */
-
-static
-rc_t CC
-KSQueObjWait ( KSQueObj * self, struct timeout_t * Tm )
-{
-    rc_t rc = 0;
-
-    if ( self == NULL ) {
-        return RC ( rcFS, rcQueue, rcWaiting, rcSelf, rcNull );
-    }
-
-    if ( self -> ready_to_read )
-    {
-        STATUS ( STAT_PRG, "%s - sque obj ready to read\n", __func__ );
-    }
-    else {
-        STATUS ( STAT_PRG, "%s - sque obj setting lock\n", __func__ );
-        rc = KLockAcquire ( self -> obj_lock );
-        if ( rc == 0 )
-        {
-            STATUS ( STAT_PRG, "%s - sque obj waiting on condition\n", __func__ );
-            rc = KConditionTimedWait ( self -> obj_cond, self -> obj_lock, Tm );
-            if ( rc != 0 )
-            {
-                STATUS ( STAT_QA, "%s - timed wait failed: %R\n", __func__, rc );
-            }
-
-            STATUS ( STAT_PRG, "%s - sque obj releasing lock\n", __func__ );
-            KLockUnlock ( self -> obj_lock );
-        }
-    }
-
-        /*  Long story short: we are not going to reuse that object
-         */
-    KSQueObjRelease ( self );
-
-    return rc;
-}   /* KSQueObjWait () */
-
-static
-rc_t CC
-KSQueObjNotify ( KSQueObj * self )
-{
-    if ( self == NULL ) {
-        return RC ( rcFS, rcQueue, rcSignaling, rcSelf, rcNull );
-    }
-
-    return KConditionSignal ( self -> obj_cond );
-}   /* KSQueObjNotify () */
-
-typedef struct KSQue KSQue;
-struct KSQue {
-    // KSQueObj ** sque;
-    // size_t sque_qty;
-
-    DLList sque;
-
-    KLock * sque_lock;
-    atomic32_t sealed;
-
-    KLock * read_lock;
-    KCondition * read_cond;
-
-        /* NOTE: that one sets once at the beginning and
-         * does not need to lock to read
-         */
-    size_t pages_qty;
-
-        /* NOTE: these are need to be locked to set
-         */
-    size_t last_available_page_index;
-    size_t last_requested_page_index;
-};
-
-static
-rc_t CC
-KSQueClear ( KSQue * self )
-{
-    rc_t rc;
-    KSQueObj * Obj;
-
-    rc = 0;
-    Obj = NULL;
-
-    if ( self == NULL ) {
-        return RC ( rcFS, rcQueue, rcDestroying, rcSelf, rcNull );
-    }
-
-        /* May be that is maniacal check, but ... if it is null,
-         * we do not know what should we do here
-         */
-    if ( self -> sque_lock == NULL ) {
-        return RC ( rcFS, rcQueue, rcDestroying, rcSelf, rcInvalid );
-    }
-
-    rc = KLockAcquire ( self -> sque_lock );
-    if ( rc == 0 ) {
-        while ( ( Obj = ( KSQueObj * )
-                        DLListPopHead ( & ( self -> sque ) ) ) != NULL )
-        {
-            rc = KSQueObjNotify ( Obj );
-            if ( rc != 0 ) {
-                break;
-            }
-
-            rc = KSQueObjRelease ( Obj );
-            if ( rc != 0 ) {
-                break;
-            }
-        }
-        KLockUnlock ( self -> sque_lock );
-    }
-
-    return 0;
-}   /* KSQueClear () */
-
-#ifdef JOJOBA
-    /* Not sure if we need that one
-     */
-static
-bool CC
-KSQueSealed ( KSQue * self )
-{
-    return self == NULL
-                        ? false
-                        : ( atomic32_read ( & ( self -> sealed )) != 0 )
-                        ;
-}   /* KSQueSealed () */
-#endif /* JOJOBA */
-
-static
-rc_t CC
-KSQueSeal ( KSQue * self )
-{
-    if ( self == NULL ) {
-        return RC ( rcFS, rcQueue, rcFreezing, rcSelf, rcNull );
-    }
-
-        /* prolly, if we need to stop something here we will
-         * call atomic32_test_and_set(), right now we are gucci
-         */
-    atomic32_set ( & ( self -> sealed ), 1 );
-
-    return 0;
-}   /* KSQueSeal () */
-
-static
-rc_t CC
-KSQueDispose ( KSQue * self )
-{
-    if ( self != NULL ) {
-        STATUS ( STAT_PRG, "%s - sealing sque\n", __func__ );
-        KSQueSeal ( self );
-
-        STATUS ( STAT_PRG, "%s - clearing sque\n", __func__ );
-        KSQueClear ( self );
-
-        if ( self -> sque_lock != NULL ) {
-            STATUS ( STAT_PRG, "%s - releasing sque lock\n", __func__ );
-            KLockRelease ( self -> sque_lock );
-            self -> sque_lock = NULL;
-        }
-
-        if ( self -> read_cond != NULL ) {
-            KConditionSignal ( self -> read_cond );
-
-            STATUS ( STAT_PRG, "%s - releasing read condition\n", __func__ );
-            KConditionRelease ( self -> read_cond );
-            self -> read_cond = NULL;
-        }
-
-        if ( self -> read_lock != NULL ) {
-            STATUS ( STAT_PRG, "%s - releasing read lock\n", __func__ );
-            KLockRelease ( self -> read_lock );
-            self -> read_lock = NULL;
-        }
-
-        self -> pages_qty = 0;
-        self -> last_available_page_index = 0;
-        self -> last_requested_page_index = 0;
-
-        free ( self );
-    }
-
-    return 0;
-}   /* KSQueDispose () */
-
-/* NOTE : zero PagesQty value is not an error
- */
-static
-rc_t CC
-KSQueMake ( KSQue ** CeQue, size_t PagesQty )
-{
-    rc_t rc;
-    KSQue * Ret;
-
-    rc = 0;
-    Ret = NULL;
-
-    if ( CeQue != NULL ) {
-        * CeQue = NULL;
-    }
-
-    if ( CeQue == NULL ) {
-        return RC ( rcFS, rcQueue, rcConstructing, rcParam, rcNull );
-    }
-
-    Ret = calloc ( 1, sizeof ( struct KSQue ) );
-    if ( Ret == NULL ) {
-        return RC ( rcFS, rcQueue, rcConstructing, rcMemory, rcExhausted );
-    }
-
-    DLListInit ( & ( Ret -> sque ) );
-
-    rc = KLockMake ( & ( Ret -> sque_lock ) );
-    if ( rc == 0 )
-    {
-        rc = KLockMake ( & ( Ret -> read_lock ) );
-        if ( rc == 0 ) 
-        {
-            rc = KConditionMake ( & ( Ret -> read_cond ) );
-            if ( rc == 0 )
-            {
-                atomic32_set ( & ( Ret -> sealed ), 0 );
-
-                Ret -> pages_qty = PagesQty;
-
-                Ret -> last_available_page_index = 0;
-                Ret -> last_requested_page_index = 0;
-
-                * CeQue = Ret;
-            }
-         }
-    }
-
-    if ( rc != 0 ) {
-        * CeQue = NULL;
-
-        if ( Ret != NULL ) {
-            KSQueDispose ( Ret );
-        }
-    }
-
-    return rc;
-}   /* KSQueMake () */
-
-static
-rc_t CC
-KSQueNewObj (
-                KSQue * self,
-                KSQueObj ** Obj,
-                size_t InitialPageIndex,
-                size_t LastPageIndex
-)
-{
-    rc_t rc;
-    KSQueObj * Ret;
-    bool ReadyToRead;
-
-    rc = 0;
-    Ret = NULL;
-    ReadyToRead = false;
-
-    if ( Obj != NULL ) {
-        * Obj = NULL;
-    }
-
-    if ( self == NULL ) {
-        return RC ( rcFS, rcQueue, rcAllocating, rcSelf, rcNull );
-    }
-
-    if ( Obj == NULL ) {
-        return RC ( rcFS, rcQueue, rcAllocating, rcParam, rcNull );
-    }
-
-    rc = KLockAcquire ( self -> sque_lock );
-    if ( rc == 0 ) {
-        ReadyToRead = LastPageIndex <= self -> last_available_page_index;
-        KLockUnlock ( self -> sque_lock );
-    }
-
-    rc = KSQueObjMake_please_do_not_call_that_method (
-                                                    & Ret,
-                                                    InitialPageIndex,
-                                                    LastPageIndex,
-                                                    ReadyToRead
-                                                    );
-    if ( rc == 0 ) {
-        if ( ReadyToRead ) {
-            * Obj = Ret;
-        }
-        else {
-            rc = KSQueObjAddRef ( Ret );
-            if ( rc == 0 ) {
-                STATUS ( STAT_PRG, "BG: %s - setting lock\n", __func__ );
-                rc = KLockAcquire ( self -> sque_lock );
-                if ( rc == 0 ) {
-                    DLListPushTail (
-                                    & ( self -> sque ),
-                                    & ( Ret -> dad )
-                                    );
-
-                    if ( LastPageIndex < self -> pages_qty
-                        && self -> last_requested_page_index < LastPageIndex
-                    )
-                    {
-                        self -> last_requested_page_index = LastPageIndex;
-                    }
-
-                    * Obj = Ret;
-
-                    STATUS ( STAT_PRG, "BG: %s - signaling resume reading\n", __func__ );
-                    rc = KConditionSignal ( self -> read_cond );
-                    if ( rc != 0 )
-                    {
-                        PLOGERR ( klogSys, ( klogSys, rc, "BG: $(func) - failed to signal resume reading"
-                             , "func=%s"
-                             , __func__
-                        ) );
-
-                            /* the show must go on
-                             */
-                        rc = 0;
-                    }
-
-                    STATUS ( STAT_PRG, "BG: %s - releasing lock\n", __func__ );
-                    KLockUnlock ( self -> sque_lock );
-                }
-                else {
-                    KSQueObjRelease ( Ret );
-                }
-            }
-        }
-    }
-
-    if ( rc != 0 ) {
-        * Obj = NULL;
-
-        if ( Ret != NULL ) {
-            KSQueObjRelease ( Ret );
-        }
-    }
-
-    return rc;
-}   /* KSQueNewObj () */
-
-static
-rc_t CC
-KSQueNotify ( KSQue * self, size_t LastPageIndex )
-{
-    rc_t rc;
-    DLList new_list;
-    KSQueObj * Obj;
-
-    rc = 0;
-    Obj = NULL;
-
-    if ( self == NULL ) {
-        return RC ( rcFS, rcQueue, rcSignaling, rcSelf, rcNull );
-    }
-
-        /* Locking: in real life there should not happen that
-         * situation when we are going to receive two simultaneous
-         * notification, because we are reading in the same single
-         * thread. But ... who knows ... lol
-         */
-    rc = KLockAcquire ( self -> sque_lock );
-    if ( rc == 0 )
-    {
-
-        if ( LastPageIndex <= self -> last_available_page_index )
-        {
-                /* It should not be happen thou
-                 */
-        }
-        else
-        {
-
-            self -> last_available_page_index = LastPageIndex;
-
-            DLListInit ( & new_list );
-
-            while ( ( Obj = ( KSQueObj * )
-                    DLListPopHead ( & ( self -> sque ) ) ) != NULL )
-            {
-/* JOJOBA : to check if we should change objects
- */
-                /*  Here we are checking if thread locked on that object
-                 *  is withing available pages and signal it.
-                 */
-                if ( Obj -> last_page_idx
-                                <= self -> last_available_page_index )
-                {
-                        /* JOJOBA - think about exit codes
-                         */
-                    KSQueObjNotify ( Obj );
-                    KSQueObjRelease ( Obj );
-                }
-                else {
-                    DLListPushTail ( & new_list, & ( Obj -> dad ) );
-                }
-            }
-
-            DLListAppendList ( & ( self -> sque ), & new_list ); 
-
-        }
-        KLockUnlock ( self -> sque_lock );
-    }
-
-    return rc;
-}   /* KSQueNotify () */
-
-static
-rc_t CC
-KSQueWaitForRead ( KSQue * self )
-{
-    rc_t rc = 0;
-
-    if ( self == NULL ) {
-        return RC ( rcFS, rcQueue, rcSignaling, rcSelf, rcNull );
-    }
-
-    STATUS ( STAT_PRG, "%s - acquiring lock\n", __func__ );
-    rc = KLockAcquire ( self -> read_lock );
-    if ( rc == 0 )
-    {
-        STATUS ( STAT_PRG, "BG: %s - suspending background reading\n", __func__ );
-        rc = KConditionWait ( self -> read_cond, self -> read_lock );
-        if ( rc != 0 )
-        {
-            PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to wait on condition signal"
-                                     , "func=%s"
-                                     , __func__
-                              ) );
-        	STATUS ( STAT_PRG, "%s - releasing lock\n", __func__ );
-        	KLockUnlock ( self -> read_lock );
-        }
-		else {
-        	STATUS ( STAT_PRG, "%s - resuming background reading\n", __func__ );
-		}
-    }
-
-    return rc;
-}   /* KSQueWaitForRead () */
-
-static
-rc_t CC
-KSQueLastRequestedPageIndex ( KSQue * self, size_t * Index )
-{
-    rc_t rc = 0;
-
-    if ( Index != NULL ) {
-        * Index = 0;
-    }
-
-    if ( self == NULL ) {
-        return RC ( rcFS, rcQueue, rcAccessing, rcSelf, rcNull );
-    }
-
-    if ( Index == NULL ) {
-        return RC ( rcFS, rcQueue, rcAccessing, rcParam, rcNull );
-    }
-
-    rc = KLockAcquire ( self -> sque_lock );
-    if ( rc == 0 ) {
-        * Index = self -> last_requested_page_index;
-
-        KLockUnlock ( self -> sque_lock );
-    }
-
-    return rc;
-}   /* KSQueLastRequestedPageIndex () */
-
-/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*
- * another kind of queue ends here
- * JOJOBA >>
- *_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 typedef struct KCacheTeeFile_v3 KCacheTeeFile_v3;
 typedef struct KCacheTeeFileTail KCacheTeeFileTail;
@@ -747,12 +122,11 @@ struct KCacheTeeFile_v3
     DLList ram_cache_mru;           /* shared use    */
     volatile bmap_t * bitmap;       /* shared use    */
     const KCacheTeeFileTail * tail; /* constant      */
-    KSQue * sque;                   /* shared use    */
-    KLock * lock;                   /* shared use    */
-                                    /* used in chunk consume */
-                                    /* and in threads start  */
-    KCondition * cond;              /* shared use    */
-                                    /* used in threads start */
+    DLList msgq;                    /* shared use    */
+    KLock * qlock;                  /* shared use    */
+    KLock * cache_lock;             /* shared use    */
+    KCondition * bgcond;            /* shared use    */
+    KCondition * fgcond;            /* shared use    */
     KThread * thread;               /* fg thread use */
     size_t bmap_size;               /* constant      */
     uint32_t page_size;             /* constant      */
@@ -760,6 +134,8 @@ struct KCacheTeeFile_v3
     uint32_t ram_limit;             /* constant      */
     uint32_t ram_pg_count;          /* bg thread use */
     volatile bool quitting;         /* shared use    */
+    bool try_promote_on_close;      /* fg thread use */
+    bool remove_on_close;           /* fg thread use */    
     bool whole_file;                /* constant      */
     char path [ 4098 ];             /* constant      */
 };
@@ -773,10 +149,12 @@ struct KCacheTeeFileTail
 typedef struct KCacheTeeFileMsg KCacheTeeFileMsg;
 struct KCacheTeeFileMsg
 {
+    DLNode dad;
     uint64_t pos;
     uint64_t size;
-    struct timeout_t * tm;
+    struct timeout_t tm;
     size_t initial_page_idx;
+    bool have_tm;
 };
 
 typedef struct KCacheTeeFileTreeNode KCacheTeeFileTreeNode;
@@ -816,6 +194,8 @@ static pthread_mutex_t crit = PTHREAD_MUTEX_INITIALIZER;
     pthread_mutex_lock ( & crit )
 #define EXIT_CRIT_SECTION() \
     pthread_mutex_unlock ( & crit )
+#define CUR_THREAD_ID() \
+    ( uint64_t ) pthread_self ()
 #endif
 static BSTree open_cache_tee_files;
 
@@ -911,8 +291,8 @@ rc_t KCacheTeeFileRAMCacheInsert ( KCacheTeeFile_v3 * self,
             /* 9. clear bit in bitmap if cache file not in use */
             if ( self -> cache_file == NULL )
             {
-                STATUS ( STAT_PRG, "BG: %s - clear page %zu present in bitmap\n", __func__, pg_idx );
-                self -> bitmap [ pg_idx >> BMWORDBITS ] &= ~ ( 1U << ( pg_idx & BMWORDMASK ) );
+                STATUS ( STAT_PRG, "BG: %s - clear page %zu present in bitmap\n", __func__, lmru -> pg_idx );
+                self -> bitmap [ lmru -> pg_idx >> BMWORDBITS ] &= ~ ( 1U << ( lmru -> pg_idx & BMWORDMASK ) );
             }
 
             /* 10. reuse node and insert new guy as MRU */
@@ -1025,10 +405,8 @@ rc_t CC KCacheTeeChunkReaderConsume ( KCacheTeeChunkReader * chunk,
     }
 
     /* mutex around shared structures */
-    /* We do not need here mutex ... but 
-     */
-    STATUS ( STAT_PRG, "BG: %s - acquiring lock\n", __func__ );
-    rc = KLockAcquire ( self -> lock );
+    STATUS ( STAT_PRG, "BG: %s - acquiring cache lock\n", __func__ );
+    rc = KLockAcquire ( self -> cache_lock );
     if ( rc == 0 )
     {
         size_t pg_idx;
@@ -1058,15 +436,15 @@ rc_t CC KCacheTeeChunkReaderConsume ( KCacheTeeChunkReader * chunk,
 
             /* notify any listeners */
             STATUS ( STAT_PRG, "BG: %s - broadcasting event to all waiting readers\n", __func__ );
-            KSQueNotify ( self -> sque, pg_idx );
+            KConditionBroadcast ( self -> fgcond );
         }
         else
         {
             rc = ( self -> ram_limit != 0 ) ? rc2 : rc3;
         }
 
-        STATUS ( STAT_PRG, "BG: %s - releasing lock\n", __func__ );
-        KLockUnlock ( self -> lock );
+        STATUS ( STAT_PRG, "BG: %s - releasing cache lock\n", __func__ );
+        KLockUnlock ( self -> cache_lock );
     }
 
     return rc;
@@ -1128,11 +506,16 @@ rc_t KCacheTeeFileMakeChunkReader ( KCacheTeeFile_v3 * self )
     return rc;
 }
 
+/* decl for functions used for promotion */
+static bool is_bitmap_complete_v3( const KCacheTeeFile_v3 * self );
+static rc_t finalize_v3 ( KCacheTeeFile_v3 * self );
+
 static
 rc_t CC KCacheTeeFileDestroy ( KCacheTeeFile_v3 *self )
 {
     rc_t rc;
 
+    /* remove cache file entry from open-cache-file cache */
     if ( self -> cache_file != NULL )
     {
         int status = ENTER_CRIT_SECTION ();
@@ -1151,13 +534,19 @@ rc_t CC KCacheTeeFileDestroy ( KCacheTeeFile_v3 *self )
 
     ( void ) rc;
 
-    /* this must be done before sealing the queue */
+    /* signal all threads that this cache-tee-file is shutting down
+
+       by definition of the referencing counting system, the executing
+       thread maintains the last reference to this object - no other
+       thread can access it. this signal is therefore only for bg thread.
+
+       this must be done before sealing the queue */
     STATUS ( STAT_PRG, "%s - setting 'quitting' flag\n", __func__ );
     self -> quitting = true;
 
-    /* disposing cache sque */
-    STATUS ( STAT_PRG, "%s - disposing sque\n", __func__ );
-    KSQueDispose ( self -> sque );
+    /* wake the background thread */
+    STATUS ( STAT_PRG, "%s - signaling background thread to exit\n", __func__ );
+    KConditionSignal ( self -> bgcond );
 
     /* stop background thread */
     STATUS ( STAT_PRG, "%s - waiting for bg thread to quit\n", __func__ );
@@ -1167,13 +556,20 @@ rc_t CC KCacheTeeFileDestroy ( KCacheTeeFile_v3 *self )
     STATUS ( STAT_PRG, "%s - releasing bg thread\n", __func__ );
     KThreadRelease ( self -> thread );
 
-    /* release lock */
-    STATUS ( STAT_PRG, "%s - releasing lock object\n", __func__ );
-    KLockRelease ( self -> lock );
+    /* message queue must be empty by design */
+    assert ( DLListPopHead ( & self -> msgq ) == NULL );
+
+    /* release locks */
+    STATUS ( STAT_PRG, "%s - releasing queue lock object\n", __func__ );
+    KLockRelease ( self -> qlock );
+    STATUS ( STAT_PRG, "%s - releasing cache lock object\n", __func__ );
+    KLockRelease ( self -> cache_lock );
 
     /* release condition */
-    STATUS ( STAT_PRG, "%s - releasing condition\n", __func__ );
-    KConditionRelease ( self -> cond );
+    STATUS ( STAT_PRG, "%s - releasing fg condition\n", __func__ );
+    KConditionRelease ( self -> fgcond );
+    STATUS ( STAT_PRG, "%s - releasing bg condition\n", __func__ );
+    KConditionRelease ( self -> bgcond );
 
     /* free ram_cache pages */
     STATUS ( STAT_PRG, "%s - freeing any pages from RAM cache\n", __func__ );
@@ -1215,8 +611,16 @@ rc_t CC KCacheTeeFileDestroy ( KCacheTeeFile_v3 *self )
     STATUS ( STAT_PRG, "%s - releasing chunked reader\n", __func__ );
     KChunkReaderRelease ( self -> chunks );
 
-    /* ? promote cache_file ? */
-    /* TBD */
+    /* promote cache_file */
+    if ( self -> try_promote_on_close )
+    {
+        STATUS ( STAT_PRG, "%s - try to promote on release\n", __func__ );
+        if ( is_bitmap_complete_v3( self ) )
+        {
+            STATUS ( STAT_PRG, "%s - cache is complete, promotion possible\n", __func__ );
+            finalize_v3( self );
+        }
+    }
 
     /* free bitmap */
     STATUS ( STAT_PRG, "%s - freeing bitmap\n", __func__ );
@@ -1226,6 +630,13 @@ rc_t CC KCacheTeeFileDestroy ( KCacheTeeFile_v3 *self )
     STATUS ( STAT_PRG, "%s - releasing cache file\n", __func__ );
     KFileRelease ( self -> cache_file );
 
+    /* delete cache file */
+    if ( self -> remove_on_close )
+    {
+        STATUS ( STAT_PRG, "%s - removing cache-file on exit\n", __func__ );        
+        KDirectoryRemove ( self -> dir, false, "%s.cache", self -> path );
+    }
+    
     /* release directory */
     STATUS ( STAT_PRG, "%s - releasing cache file directory\n", __func__ );
     KDirectoryRelease ( self -> dir );
@@ -1279,14 +690,6 @@ size_t KCacheTeeFileReadFromRAM ( const KCacheTeeFile_v3 *self, uint64_t pos,
     uint32_t num_copied, to_copy = self -> page_size - offset;
 
     size_t i, total;
-
-    if ( self -> ram_limit == 0 )
-    {
-        STATUS ( STAT_PRG, "BG: %s - RAM cache not in use\n", __func__ );
-        return 0;
-    }
-
-    /* 1. retrieve any existing buffer - ignore error */
 
     STATUS ( STAT_PRG, "%s - reading contiguous pages from RAM cache\n", __func__ );
     for ( i = total = 0; total < bsize; total += num_copied, ++ i )
@@ -1591,90 +994,141 @@ rc_t KCacheTeeFileReadFromFile ( const KCacheTeeFile_v3 *self, uint64_t pos,
 }
 
 static
-rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
+rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *cself, uint64_t pos,
     void *buffer, size_t bsize, size_t *num_read, struct timeout_t *tm )
 {
     rc_t rc = 0;
-    size_t count, initial_page_idx, last_page_idx;
+    size_t count, initial_page_idx;
+
+    /* the "msgq" is "mutable" */
+    KCacheTeeFile_v3 * self = ( KCacheTeeFile_v3 * ) cself;
+
+#if _DEBUGGING
+    uint64_t cur_thread_id = CUR_THREAD_ID ();
+#endif
 
     /* 1. limit request to file dimensions */
     if ( pos >= self -> source_size || bsize == 0 )
     {
-        STATUS ( STAT_GEEK, "%s - read starts beyond EOF\n", __func__ );
+        STATUS ( STAT_GEEK, "%lu: %s - read starts beyond EOF\n", cur_thread_id, __func__ );
         * num_read = 0;
         return 0;
     }
     if ( ( pos + bsize ) > self -> source_size )
     {
-        STATUS ( STAT_GEEK, "%s - read ends beyond EOF\n", __func__ );
+        STATUS ( STAT_GEEK, "%lu: %s - read ends beyond EOF\n", cur_thread_id, __func__ );
         bsize = ( size_t ) ( self -> source_size - pos );
     }
 
     /* 2. transform "pos" into initial page index */
     assert ( self -> page_size != 0 );
     initial_page_idx = ( size_t ) ( pos / self -> page_size );
-    STATUS ( STAT_GEEK, "%s - read starts at page %zu\n", __func__, initial_page_idx );
+    STATUS ( STAT_GEEK, "%lu: %s - read starts at page %zu\n", cur_thread_id, __func__, initial_page_idx );
 
-    /* 4. check for existence of initial page in cache */
-    STATUS ( STAT_PRG, "%s - testing for existence of starting page in cache\n", __func__ );
-
-    KSQueObj * Obj = NULL;
-
-    STATUS ( STAT_PRG, "%s - starting page not found in cache\n", __func__ );
-    last_page_idx = ( size_t ) ( (pos + bsize ) / self -> page_size );
-
-
-    /* 5. deliver read request sque object to bg thread */
-    STATUS ( STAT_GEEK, "%s - allocating sque object\n", __func__ );
-    STATUS ( STAT_GEEK, "%s - allocating sque object "
-             "{ pos=%lu, size=%zu, tm=%d%s, initial_page_idx=%zu, last_page_idx=%zu }\n"
-             , __func__
-             , pos
-             , bsize
-             , ( tm != NULL ) ? ( int ) tm -> mS : -1
-             , ( tm != NULL ) ? "mS (present)" : " (infinite)"
-             , initial_page_idx
-             , last_page_idx
-        );
-
-    rc = KSQueNewObj (
-                        self -> sque,
-                        & Obj,
-                        initial_page_idx,
-                        last_page_idx
-                        );
-    if ( rc != 0 ) {
-            /* Apparently if there is error code returned,
-             * the Obj will be NULL ... so just exiting
-             */
-        STATUS ( STAT_QA, "%s - sque object allocation failed: %R\n", __func__, rc );
-        return rc;
-    }
-
-    /* 6. wait for event */
-    STATUS ( STAT_PRG, "%s - waiting on condition\n", __func__ );
-    rc = KSQueObjWait ( Obj, tm );
-    if ( rc != 0 )
+    /* 3. acquire lock */
+    STATUS ( STAT_PRG, "%lu: %s - acquiring cache mutex\n", cur_thread_id, __func__ );
+    rc = KLockAcquire ( self -> cache_lock );
+    if ( rc == 0 )
     {
-        STATUS ( STAT_QA, "%s - timed wait failed: %R\n", __func__, rc );
-        return rc;
-    }
+        /* 4. check for existence of initial page in cache */
+        STATUS ( STAT_PRG, "%lu: %s - testing for existence of starting page in cache\n", cur_thread_id, __func__ );
+        while ( ! KCacheTeeFilePageInCache ( self, initial_page_idx ) )
+        {
+            KCacheTeeFileMsg msg;
+            
+            STATUS ( STAT_PRG, "%lu: %s - starting page not found in cache\n", cur_thread_id, __func__ );
 
-    STATUS ( STAT_PRG, "%s - testing for existence of starting page in cache\n", __func__ );
+            /* 5. deliver read request message to bg thread */
+            msg . pos = pos;
+            msg . size = bsize;
+            msg . initial_page_idx = initial_page_idx;
+            msg . have_tm = false;
+            if ( tm != NULL )
+            {
+                msg . tm = * tm;
+                msg . have_tm = true;
+            }
 
-    STATUS ( STAT_PRG, "%s - starting page found in cache\n", __func__ );
+            STATUS ( STAT_GEEK, "%lu: %s - populated message object "
+                     "{ pos=%lu, size=%zu, tm=%d%s, initial_page_idx=%zu }\n"
+                     , cur_thread_id
+                     , __func__
+                     , msg . pos
+                     , msg . size
+                     , ( msg . have_tm ) ? ( int ) msg . tm . mS : -1
+                     , ( msg . have_tm ) ? "mS (present)" : " (infinite)"
+                     , msg . initial_page_idx
+                );
 
-    /* 7. try to read from RAM */
-    STATUS ( STAT_PRG, "%s - attempt to read from RAM cache\n", __func__ );
-    count = KCacheTeeFileReadFromRAM ( self, pos, buffer, bsize, num_read, initial_page_idx );
-    if ( count == 0 )
-    {
-        STATUS ( STAT_PRG, "%s - page %zu not found in RAM cache\n", __func__, initial_page_idx );
+            STATUS ( STAT_PRG, "%lu: %s - acquiring queue lock\n", cur_thread_id, __func__ );
+            rc = KLockAcquire ( self -> qlock );
+            if ( rc != 0 )
+            {
+                STATUS ( STAT_QA, "%lu: %s - failed to acquire queue lock: %R - releasing cache mutex\n", cur_thread_id, __func__, rc );
+                KLockUnlock ( self -> cache_lock );
+                return rc;
+            }
 
-        /* 8. read from file */
-        STATUS ( STAT_PRG, "%s - attempt to read from cache file\n", __func__ );
-        assert ( self -> cache_file != NULL );
-        rc = KCacheTeeFileReadFromFile ( self, pos, buffer, bsize, num_read, initial_page_idx );
+            STATUS ( STAT_PRG, "%lu: %s - queueing message\n", cur_thread_id, __func__ );
+            DLListPushTail ( & self -> msgq, & msg . dad );
+
+            STATUS ( STAT_PRG, "%lu: %s - signaling bg thread\n", cur_thread_id, __func__ );
+            rc = KConditionSignal ( self -> bgcond );
+
+            STATUS ( STAT_PRG, "%lu: %s - releasing queue lock\n", cur_thread_id, __func__ );
+            KLockUnlock ( self -> qlock );
+
+            if ( rc != 0 )
+            {
+                STATUS ( STAT_QA, "%lu: %s - failed to signal bg thread: %R - releasing cache mutex\n", cur_thread_id, __func__, rc );
+                KLockUnlock ( self -> cache_lock );
+                return rc;
+            }
+            
+            /* 6. wait for event */
+            STATUS ( STAT_PRG, "%lu: %s - waiting on broadcast from bg thread\n", cur_thread_id, __func__ );
+            rc = KConditionTimedWait ( self -> fgcond, self -> cache_lock, tm );
+
+            /* remove msg from queue */
+            STATUS ( STAT_PRG, "%lu: %s - acquiring queue lock\n", cur_thread_id, __func__ );
+            KLockAcquire ( self -> qlock );
+
+            STATUS ( STAT_PRG, "%lu: %s - unlink msg from msg queue if still there\n", cur_thread_id, __func__ );
+            DLListUnlink ( & self -> msgq, & msg . dad );
+
+            STATUS ( STAT_PRG, "%lu: %s - releasing queue lock\n", cur_thread_id, __func__ );
+            KLockUnlock ( self -> qlock );
+
+            /* test result of timed wait */
+            if ( rc != 0 )
+            {
+                STATUS ( STAT_QA, "%lu: %s - timed wait failed: %R - releasing cache mutex\n", cur_thread_id, __func__, rc );
+                KLockUnlock ( self -> cache_lock );
+                return rc;
+            }
+
+            STATUS ( STAT_PRG, "%lu: %s - testing for existence of starting page in cache\n", cur_thread_id, __func__ );
+        }
+        /* end while ( ! in cache ) */
+
+        STATUS ( STAT_PRG, "%lu: %s - starting page found in cache\n", cur_thread_id, __func__ );
+
+        /* 7. try to read from RAM */
+        STATUS ( STAT_PRG, "%lu: %s - attempt to read from RAM cache\n", cur_thread_id, __func__ );
+        count = KCacheTeeFileReadFromRAM ( self, pos, buffer, bsize, num_read, initial_page_idx );
+        if ( count == 0 )
+        {
+            STATUS ( STAT_PRG, "%lu: %s - page %zu not found in RAM cache\n", cur_thread_id, __func__, initial_page_idx );
+
+            /* 8. read from file */
+            STATUS ( STAT_PRG, "%lu: %s - attempt to read from cache file\n", cur_thread_id, __func__ );
+            assert ( self -> cache_file != NULL );
+            rc = KCacheTeeFileReadFromFile ( self, pos, buffer, bsize, num_read, initial_page_idx );
+        }
+
+        /* 9. release lock */
+        STATUS ( STAT_PRG, "%lu: %s - releasing cache mutex\n", cur_thread_id, __func__ );
+        KLockUnlock ( self -> cache_lock );
     }
 
     return rc;
@@ -1737,7 +1191,7 @@ rc_t CC KCacheTeeFileReadChunked ( const KCacheTeeFile_v3 *self, uint64_t pos,
             size_t to_read = chsize;
             if ( total + chsize > bsize )
                 to_read = bsize - total;
-
+            
             STATUS ( STAT_PRG, "%s - reading from file @ %lu\n", __func__, pos + total );
             rc = KFileReadAll_v1 ( & self -> dad, pos + total, chbuf, to_read, & num_read );
             if ( rc == 0 && num_read != 0 )
@@ -1853,54 +1307,155 @@ rc_t KCacheTeeFileBGLoop ( KCacheTeeFile_v3 * self )
        but anything more will still be in whole page increments */
     size_t min_read_amount = self -> page_size * self -> cluster_fact;
 
-    size_t initial_page_index = 0;
-
     STATUS ( STAT_PRG, "BG: %s - entering loop\n", __func__ );
     while ( ! self -> quitting )
     {
-        size_t LastRequestedPage = 0;
-        rc = KSQueLastRequestedPageIndex (
-                                            self -> sque,
-                                            & LastRequestedPage
-                                            );
+        STATUS ( STAT_PRG, "BG: %s - acquiring queue lock\n", __func__ );
+        rc = KLockAcquire ( self -> qlock );
         if ( rc != 0 )
         {
-            STATUS ( STAT_PRG, "BG: %s - can not find last requested page inded.\n", __func__ );
+            /* TBD - insert wait */
         }
         else
         {
-            if ( KCacheTeeFilePageInCache ( self, LastRequestedPage ) ) {
-                STATUS ( STAT_PRG, "BG: %s - waiting for next read\n", __func__ );
-                rc = KSQueWaitForRead ( self -> sque );
+            KCacheTeeFileMsg msg, * dmsg = NULL;
+
+            /* speculatively pop a message */
+            dmsg = ( KCacheTeeFileMsg * )
+                DLListPopHead ( & self -> msgq );
+
+            if ( dmsg == NULL )
+            {
+                struct timeout_t tm;
+                /* TBD - use a 100mS timeout */
+
+                STATUS ( STAT_PRG, "BG: %s - waiting on fg signal\n", __func__ );
+                KConditionTimedWait ( self -> bgcond, self -> qlock, & tm );
+
+                /* pop a message */
+                dmsg = ( KCacheTeeFileMsg * )
+                    DLListPopHead ( & self -> msgq );
             }
-            else {
-                size_t num_read = 0;
-                uint64_t InitialPos = initial_page_index
-                                                    * self -> page_size;
-                size_t SizeRead = ( LastRequestedPage - initial_page_index )
-                                                    * self -> page_size;
-                if ( SizeRead < min_read_amount ) {
-                    SizeRead = min_read_amount;
-                }
-                rc = KFileTimedReadChunked (
-                                            self -> source, 
-                                            InitialPos,
-                                            self -> chunks,
-                                            SizeRead,
-                                            & num_read,
-                                            NULL // size 
-                                            );
-                STATUS ( STAT_PRG, "BG: %s - rc=%R, num_read=%zu\n", __func__, rc, num_read );
-                if ( rc == 0 )
+
+            /* if the message is there, copy it while we still have the lock */
+            if ( dmsg != NULL )
+                msg = * dmsg;
+
+            /* now release the lock - "dmsg" can no longer be safely dereferenced */
+            KLockUnlock ( self -> qlock );
+
+            /* check to see if "msg" has been initialized with a proper message */
+            if ( dmsg != NULL )
+            {
+                size_t num_read;
+                size_t end_page_idx;
+
+                STATUS ( STAT_PRG, "BG: %s - received msg { pos=%lu, size=%zu, tm=%d%s, initial_page_idx=%zu }\n"
+                         , __func__
+                         , msg . pos
+                         , msg . size
+                         , ( msg . have_tm ) ? ( int ) msg . tm . mS : -1
+                         , ( msg . have_tm ) ? "mS (present)" : " (infinite)"
+                         , msg . initial_page_idx
+                    );
+
+                if ( self -> whole_file )
                 {
-                    initial_page_index += ( size_t ) ( num_read + self -> page_size - 1 ) / self -> page_size;
+                    msg . pos = 0;
+                    msg . size = self -> source_size;
+                    msg . initial_page_idx = 0;
+                    STATUS ( STAT_PRG, "BG: %s - mapping request to whole file "
+                             "{ pos=%lu, size=%zu, tm=%s, initial_page_idx=%zu }\n"
+                             , __func__
+                             , msg . pos
+                             , msg . size
+                             , ( msg . have_tm ) ? "present" : "infinite"
+                             , msg . initial_page_idx
+                        );
+                }
+
+                /* we will deal in pages, not bytes */
+                end_page_idx =
+                    ( size_t ) ( ( msg . pos + msg . size + self -> page_size - 1 ) / self -> page_size );
+
+                STATUS ( STAT_GEEK, "BG: %s - calculated end_page_idx=%zu\n"
+                         , __func__
+                         , end_page_idx
+                    );
+
+                /* test if any pages appeared since caller posted message */
+                STATUS ( STAT_PRG, "BG: %s - testing for existence of page %zu\n"
+                         , __func__
+                         , msg . initial_page_idx
+                    );
+                if ( KCacheTeeFilePageInCache ( self, msg . initial_page_idx ) )
+                {
+                    /* check how many were there */
+                    uint32_t num_contig_pages;
+
+                    STATUS ( STAT_PRG, "BG: %s - found. calculating number of pages actually there\n", __func__ );
+                    num_contig_pages =
+                        KCacheTeeFileContigPagesInFileCache ( self, msg . initial_page_idx, end_page_idx );
+
+                    STATUS ( STAT_PRG, "BG: %s - %u contiguous pages found\n", __func__, num_contig_pages );
+                    assert ( num_contig_pages != 0 );
+
+                    /* remove them from the request */
+                    msg . initial_page_idx += num_contig_pages;
+
+                    /* tell callers that something changed since they posted message */
+                    STATUS ( STAT_PRG, "BG: %s - broadcasting event to all waiting readers\n", __func__ );
+                    KConditionBroadcast ( self -> fgcond );
+                }
+                else
+                {
+                    STATUS ( STAT_PRG, "BG: %s - page %zu not found.\n", __func__, msg . initial_page_idx );
+                }
+
+                STATUS ( STAT_PRG, "BG: %s - testing number of pages to read\n", __func__ );
+                if ( msg . initial_page_idx < end_page_idx )
+                {
+                    /* align starting position */
+                    msg . pos &= ~ ( size_t ) ( self -> page_size - 1 );
+
+                    /* determine read amount */
+                    msg . size = ( end_page_idx - msg . initial_page_idx ) * self -> page_size;
+
+                    /* potentially amplify */
+                    if ( msg . size < min_read_amount )
+                        msg . size = min_read_amount;
+
+                    /* issue a chunked read to source file
+                       if the request has unsatisfied starting position */
+                    if ( msg . have_tm == false )
+                    {
+                        STATUS ( STAT_PRG, "BG: %s - chunked read of %zu source bytes @ %lu\n"
+                                 , __func__
+                                 , msg . size
+                                 , msg . pos
+                            );
+                        rc = KFileReadChunked ( self -> source, msg . pos, self -> chunks, msg . size, & num_read );
+                        STATUS ( STAT_PRG, "BG: %s - rc=%R, num_read=%zu\n", __func__, rc, num_read );
+                    }
+                    else
+                    {
+                        STATUS ( STAT_PRG, "BG: %s - timed chunked read of %zu source bytes @ %lu\n"
+                                 , __func__
+                                 , msg . size
+                                 , msg . pos
+                            );
+                        rc = KFileTimedReadChunked ( self -> source, msg . pos,
+                            self -> chunks, msg . size, & num_read, & msg . tm );
+                        STATUS ( STAT_PRG, "BG: %s - rc=%R, num_read=%zu\n", __func__, rc, num_read );
+                    }
+                }
+                else
+                {
+                    STATUS ( STAT_PRG, "BG: %s - no pages to read, message ignored\n", __func__ );
                 }
             }
-        }
-
-        STATUS ( STAT_PRG, "BG: %s - rc=%R, init_idx=%zu, end_idx=%zu\n", __func__, rc, initial_page_index, LastRequestedPage );
+        } /* end if ( KLockAcquire () ) */
     }
-
     STATUS ( STAT_PRG, "BG: %s - exiting loop and background thread\n", __func__ );
 
     return rc;
@@ -1914,11 +1469,11 @@ rc_t CC KCacheTeeFileRunThread ( const KThread * t, void * data )
 
     STATUS ( STAT_PRG, "BG: %s - starting thread\n", __func__ );
 
-    STATUS ( STAT_PRG, "BG: %s - acquiring lock\n", __func__ );
-    rc = KLockAcquire ( self -> lock );
+    STATUS ( STAT_PRG, "BG: %s - acquiring cache_lock\n", __func__ );
+    rc = KLockAcquire ( self -> cache_lock );
     if ( rc != 0 )
     {
-        PLOGERR ( klogSys, ( klogSys, rc, "BG: $(func) - failed to acquire mutex"
+        PLOGERR ( klogSys, ( klogSys, rc, "BG: $(func) - failed to acquire cache mutex"
                              , "func=%s"
                              , __func__
                       ) );
@@ -1927,9 +1482,9 @@ rc_t CC KCacheTeeFileRunThread ( const KThread * t, void * data )
     }
 
     STATUS ( STAT_PRG, "BG: %s - signaling FG to sync\n", __func__ );
-    rc = KConditionSignal ( self -> cond );
-    STATUS ( STAT_PRG, "BG: %s - releasing lock\n", __func__ );
-    KLockUnlock ( self -> lock );
+    rc = KConditionSignal ( self -> fgcond );
+    STATUS ( STAT_PRG, "BG: %s - releasing cache_lock\n", __func__ );
+    KLockUnlock ( self -> cache_lock );
     if ( rc != 0 )
     {
         PLOGERR ( klogSys, ( klogSys, rc, "BG: $(func) - failed to signal foreground"
@@ -1950,11 +1505,11 @@ rc_t KCacheTeeFileStartBgThread ( KCacheTeeFile_v3 * self )
 {
     rc_t rc;
 
-    STATUS ( STAT_PRG, "%s - acquiring lock\n", __func__ );
-    rc = KLockAcquire ( self -> lock );
+    STATUS ( STAT_PRG, "%s - acquiring cache lock\n", __func__ );
+    rc = KLockAcquire ( self -> cache_lock );
     if ( rc != 0 )
     {
-        PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to acquire mutex"
+        PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to acquire cache mutex"
                              , "func=%s"
                              , __func__
                       ) );
@@ -1973,7 +1528,7 @@ rc_t KCacheTeeFileStartBgThread ( KCacheTeeFile_v3 * self )
         else
         {
             STATUS ( STAT_GEEK, "%s - waiting on bg thread\n", __func__ );
-            rc = KConditionWait ( self -> cond, self -> lock );
+            rc = KConditionWait ( self -> fgcond, self -> cache_lock );
             if ( rc != 0 )
             {
                 PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to wait on condition signal"
@@ -1983,13 +1538,8 @@ rc_t KCacheTeeFileStartBgThread ( KCacheTeeFile_v3 * self )
             }
         }
 
-			/* That could be error, if ConditionWait did return '0',
-			 * the lock was unlocked already, and here it is unlocking
-			 * forcely again. That may crash on mac if environment
-			 * variable MallocScribble is set.
-			 */
-        STATUS ( STAT_PRG, "%s - releasing lock\n", __func__ );
-        KLockUnlock ( self -> lock );
+        STATUS ( STAT_PRG, "%s - releasing cache lock\n", __func__ );
+        KLockUnlock ( self -> cache_lock );
     }
 
     return rc;
@@ -2000,38 +1550,49 @@ rc_t KCacheTeeFileInitSync ( KCacheTeeFile_v3 * self )
 {
     rc_t rc;
 
-    size_t end_page_idx = ( size_t ) ( ( self -> source_size + self -> page_size - 1 ) / self -> page_size );
-    STATUS ( STAT_PRG, "%s - allocating fg->bg sque for %ul pages\n", __func__, end_page_idx );
+    STATUS ( STAT_PRG, "%s - initializing fg->bg message queue\n", __func__ );
+    DLListInit ( & self -> msgq );
 
-
-    rc = KSQueMake ( & self -> sque, end_page_idx );
-    if ( rc != 0 ) {
-        PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to allocate sque"
+    STATUS ( STAT_PRG, "%s - allocating mutices\n", __func__ );
+    rc = KLockMake ( & self -> cache_lock );
+    if ( rc != 0 )
+    {
+        PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to create cache mutex"
                              , "func=%s"
                              , __func__
                       ) );
     }
     else
     {
-        STATUS ( STAT_PRG, "%s - allocating mutex\n", __func__ );
-        rc = KLockMake ( & self -> lock );
+        rc = KLockMake ( & self -> qlock );
         if ( rc != 0 )
         {
-            PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to create mutex"
+            PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to create queue mutex"
                                  , "func=%s"
                                  , __func__
                           ) );
         }
         else
         {
-            STATUS ( STAT_PRG, "%s - allocating condition\n", __func__ );
-            rc = KConditionMake ( & self -> cond );
+            STATUS ( STAT_PRG, "%s - allocating conditions\n", __func__ );
+            rc = KConditionMake ( & self -> bgcond );
             if ( rc != 0 )
             {
-                PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to create condition"
+                PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to create bg condition"
                                      , "func=%s"
                                      , __func__
                               ) );
+            }
+            else
+            {
+                rc = KConditionMake ( & self -> fgcond );
+                if ( rc != 0 )
+                {
+                    PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to create fg condition"
+                                         , "func=%s"
+                                         , __func__
+                                  ) );
+                }
             }
         }
     }
@@ -2387,7 +1948,7 @@ rc_t KCacheTeeFileMakeBitmap ( KCacheTeeFile_v3 * self )
 
     self -> bitmap = ( volatile bmap_t * ) bitmap;
     self -> tail = tail;
-    self -> bmap_size = bmsize;
+    self -> bmap_size = bmsize - ( sizeof * tail );
 
     return 0;
 }
@@ -2451,7 +2012,8 @@ rc_t KCacheTeeFileBindSourceFile ( KCacheTeeFile_v3 * self, const KFile * source
 
 static
 void KCacheTeeFileBindConstants ( KCacheTeeFile_v3 * self,
-    size_t page_size, uint32_t cluster_factor, uint32_t ram_pages )
+                size_t page_size, uint32_t cluster_factor, uint32_t ram_pages,
+                bool try_promote_on_close, bool remove_on_close )
 {
     size_t request_size, ram_cache_size;
 
@@ -2497,12 +2059,15 @@ void KCacheTeeFileBindConstants ( KCacheTeeFile_v3 * self,
         ram_pages = MAX_RAM_CACHE_BYTES / self -> page_size;
 
     self -> ram_limit = ram_pages;
+    self -> try_promote_on_close = try_promote_on_close;
+    self -> remove_on_close = remove_on_close;
 }
 
 static
 rc_t KDirectoryVMakeKCacheTeeFileInt ( KDirectory * self,
     const KFile ** tee, const KFile * source,
     size_t page_size, uint32_t cluster_factor, uint32_t ram_pages,
+    bool try_promote_on_close, bool remove_on_close,
     const char * nul_term_cache_path )
 {
     rc_t rc;
@@ -2544,7 +2109,8 @@ rc_t KDirectoryVMakeKCacheTeeFileInt ( KDirectory * self,
         else
         {
             /* bind the parameters and constants to object */
-            KCacheTeeFileBindConstants ( obj, page_size, cluster_factor, ram_pages );
+            KCacheTeeFileBindConstants ( obj, page_size, cluster_factor, ram_pages,
+                                         try_promote_on_close, remove_on_close );
 
             /* study the source file */
             rc = KCacheTeeFileBindSourceFile ( obj, source );
@@ -2604,6 +2170,7 @@ rc_t KDirectoryVMakeKCacheTeeFileInt ( KDirectory * self,
 LIB_EXPORT rc_t CC KDirectoryVMakeKCacheTeeFile_v3 ( KDirectory * self,
     const KFile ** tee, const KFile * source,
     size_t page_size, uint32_t cluster_factor, uint32_t ram_pages,
+    bool try_promote_on_close, bool remove_on_close,
     const char * fmt, va_list args )
 {
     rc_t rc;
@@ -2625,6 +2192,10 @@ LIB_EXPORT rc_t CC KDirectoryVMakeKCacheTeeFile_v3 ( KDirectory * self,
             else
                 rc = RC ( rcFS, rcFile, rcConstructing, rcFile, rcNoPerm );
         }
+        else if ( try_promote_on_close && remove_on_close )
+        {
+            rc = RC ( rcFS, rcFile, rcConstructing, rcParam, rcInvalid );
+        }
         else
         {
             /* detect case where caller wants no physical cache file */
@@ -2634,7 +2205,8 @@ LIB_EXPORT rc_t CC KDirectoryVMakeKCacheTeeFile_v3 ( KDirectory * self,
                 if ( ram_pages == 0 )
                 {
                     /* just return a reference to the input file */
-                    STATUS ( STAT_QA, "%s - no RAM cache or file cache will be used\n", __func__ );
+                    STATUS ( STAT_QA, "%lu: %s - no RAM cache or file cache will be used\n"
+                             , CUR_THREAD_ID (), __func__ );
                     rc = KFileAddRef ( source );
                     if ( rc == 0 )
                         * tee = source;
@@ -2642,7 +2214,7 @@ LIB_EXPORT rc_t CC KDirectoryVMakeKCacheTeeFile_v3 ( KDirectory * self,
                 }
 
                 rc = KDirectoryVMakeKCacheTeeFileInt ( self, tee, source,
-                    page_size, cluster_factor, ram_pages, fmt );
+                    page_size, cluster_factor, ram_pages, try_promote_on_close, remove_on_close, fmt );
             }
             else
             {
@@ -2652,8 +2224,8 @@ LIB_EXPORT rc_t CC KDirectoryVMakeKCacheTeeFile_v3 ( KDirectory * self,
                 else
                 {
                     /* expand cache path */
-                    rc = KDirectoryVResolvePath ( self, true,
-                        new_node -> path, sizeof new_node -> path, fmt, args );
+                    rc = KDirectoryVResolvePath ( self, true, new_node -> path,
+                                                  sizeof new_node -> path, fmt, args );
                     if ( rc != 0 )
                     {
                         PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to resolve cache file path"
@@ -2682,7 +2254,8 @@ LIB_EXPORT rc_t CC KDirectoryVMakeKCacheTeeFile_v3 ( KDirectory * self,
                             else
                             {
                                 rc = KDirectoryVMakeKCacheTeeFileInt ( self, & new_node -> file, source,
-                                    page_size, cluster_factor, ram_pages, new_node -> path );
+                                    page_size, cluster_factor, ram_pages, try_promote_on_close,
+                                    remove_on_close, new_node -> path );
                                 if ( rc != 0 )
                                     free ( new_node );
                                 else
@@ -2713,6 +2286,7 @@ LIB_EXPORT rc_t CC KDirectoryVMakeKCacheTeeFile_v3 ( KDirectory * self,
 LIB_EXPORT rc_t CC KDirectoryMakeKCacheTeeFile_v3 ( KDirectory * self,
     const KFile ** tee, const KFile * source,
     size_t page_size, uint32_t cluster_factor, uint32_t ram_pages,
+    bool try_promote_on_close, bool remove_on_close,
     const char * fmt, ... )
 {
     rc_t rc;
@@ -2720,9 +2294,431 @@ LIB_EXPORT rc_t CC KDirectoryMakeKCacheTeeFile_v3 ( KDirectory * self,
     va_list args;
     va_start ( args, fmt );
 
-    rc = KDirectoryVMakeKCacheTeeFile_v3 ( self, tee, source, page_size, cluster_factor, ram_pages, fmt, args );
+    rc = KDirectoryVMakeKCacheTeeFile_v3 ( self, tee, source, page_size, cluster_factor, ram_pages,
+                                           try_promote_on_close, remove_on_close, fmt, args );
 
     va_end ( args );
 
+    return rc;
+}
+
+/* --- check for invariants --- */
+static rc_t extract_tail( const KFile * self, uint64_t * over_all_size, KCacheTeeFileTail * tail )
+{
+    rc_t rc = KFileSize ( self, over_all_size );
+    if ( rc != 0 )
+    {
+        PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to obtain file size"
+                         , "func=%s"
+                         , __func__
+                  ) );
+    }
+    else
+    {
+        size_t num_read;
+        uint64_t pos = * over_all_size - sizeof *tail;
+        rc = KFileReadAll_v1 ( self, pos, ( void * )tail, sizeof *tail, &num_read );
+        if ( rc != 0 )
+        {
+            PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to read tail of cachefile"
+                             , "func=%s"
+                             , __func__
+                      ) );
+        }
+        else
+        {
+            if ( num_read != sizeof *tail )
+            {
+                rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcInvalid );
+                PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to read enough bytes of tail of cachefile"
+                                 , "func=%s"
+                                 , __func__
+                          ) );
+            }
+        }
+    }
+    return rc;
+}
+
+static size_t calculate_bitmap_size_in_bytes( const KCacheTeeFileTail * tail )
+{
+    size_t res = 0;
+    size_t num_pages = ( tail -> orig_size + tail -> page_size - 1 ) / tail -> page_size;
+    size_t num_words = ( size_t ) ( num_pages + ( BMWORDSIZE - 1 ) ) >> BMWORDBITS;
+    res = num_words * ( BMWORDSIZE >> 3 );
+    return res;
+}
+
+static bmap_t* extract_bitmap( const KFile * self, size_t orig_size, size_t bitmap_size_in_bytes )
+{
+    bmap_t* res = malloc( bitmap_size_in_bytes );
+    if ( res != NULL )
+    {
+        size_t num_read;
+        rc_t rc = KFileReadAll_v1 ( self, orig_size, ( void * )res, bitmap_size_in_bytes, &num_read );
+        if ( rc != 0 )
+        {
+            PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to read bitmap of cachefile"
+                             , "func=%s"
+                             , __func__
+                      ) );
+        }
+        else if ( num_read != bitmap_size_in_bytes )
+        {
+            rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcInvalid );
+            PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to read enough bytes of bitmap of cachefile"
+                             , "func=%s"
+                             , __func__
+                      ) );
+            free( ( void * ) res );
+            res = NULL;
+        }
+    }
+    return res;
+}
+
+LIB_EXPORT rc_t CC CacheTee3FileIsValid ( struct KFile const * self, bool * is_valid )
+{
+    rc_t rc = 0;
+    if ( self == NULL || is_valid == NULL )
+        rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcNull );
+    else
+    {
+        uint64_t over_all_size;
+        KCacheTeeFileTail tail;
+        rc = extract_tail( self, &over_all_size, &tail );
+        if ( rc == 0 )
+        {
+            if ( tail . orig_size < over_all_size &&
+                 tail . page_size < tail . orig_size )
+            {
+                size_t bitmap_size_in_bytes = calculate_bitmap_size_in_bytes( &tail );
+                *is_valid = ( ( tail . orig_size + bitmap_size_in_bytes + sizeof tail ) == over_all_size );
+            }
+        }
+    }
+    return rc;
+}
+
+/* --- check for completeness --- */
+
+static uint32_t count_set_bits( bmap_t value )
+{
+    uint32_t ret = 0;
+    while ( value > 0 )
+    {
+        ret += ( value & 1 );
+        value >>= 1;
+    }
+    return ret;
+}
+
+static bool is_bitmap_complete( volatile bmap_t * bitmap, size_t bitmap_size_in_bytes,
+                                uint64_t orig_size, uint32_t page_size )
+{
+    size_t bitmap_words = bitmap_size_in_bytes / ( BMWORDSIZE >> 3 );
+    size_t num_pages, in_last_word;
+    size_t idx;
+    /* all but the last word in the bitmap has to be set to 0xFFFFFFFFU */
+    for ( idx = 0; idx < ( bitmap_words - 1 ); ++idx )
+    {
+#if BMWORDSIZE == 32
+        if ( bitmap[ idx ] != 0xFFFFFFFFU )
+            return false;
+#else
+    #error "this code does not support this word size"
+#endif
+    }
+    /* how many bits have to be set in the last word? */
+    num_pages = ( orig_size + page_size - 1 ) / page_size;
+    in_last_word = num_pages - ( ( bitmap_words - 1 ) * BMWORDSIZE );
+    return ( count_set_bits( bitmap[ bitmap_words - 1 ] ) == in_last_word );
+}
+
+static bool is_bitmap_complete_file( const KFile * self )
+{
+    bool res = false;
+    uint64_t over_all_size;
+    KCacheTeeFileTail tail;
+    rc_t rc = extract_tail( self, &over_all_size, &tail );
+    if ( rc == 0 )
+    {
+        size_t bitmap_size_in_bytes = calculate_bitmap_size_in_bytes( &tail );
+        if ( tail . orig_size + bitmap_size_in_bytes + sizeof tail != over_all_size )
+        {
+            rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcInvalid );
+            PLOGERR ( klogSys, ( klogSys, rc, "$(func) - invalid internal size-values in cachefile"
+                             , "func=%s"
+                             , __func__
+                      ) );
+        }
+        else
+        {
+            volatile bmap_t * bitmap = extract_bitmap( self, tail . orig_size, bitmap_size_in_bytes );
+            if ( bitmap != NULL )
+            {
+                res = is_bitmap_complete( bitmap, bitmap_size_in_bytes, tail . orig_size, tail . page_size );
+                free( ( void * ) bitmap );
+            }
+        }
+    }
+    return res;
+}
+
+static bool is_bitmap_complete_v3( const KCacheTeeFile_v3 * self )
+{
+    if ( self -> cache_file == NULL )
+        return false;
+    return is_bitmap_complete( self -> bitmap, self -> bmap_size,
+                               self -> source_size, self -> page_size );
+}
+
+LIB_EXPORT rc_t CC CacheTee3FileIsComplete ( struct KFile const * self, bool * is_complete )
+{
+    rc_t rc = 0;
+    if ( self == NULL || is_complete == NULL )
+        rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcNull );
+    else
+    {
+        if ( &( self -> vt -> v1 ) != &KCacheTeeFile_v3_vt )
+            *is_complete = is_bitmap_complete_file( self );
+        else
+            *is_complete = is_bitmap_complete_v3( ( struct KCacheTeeFile_v3 * )self );
+    }
+    return rc;
+}
+
+LIB_EXPORT bool CC KFileIsKCacheTeeFile_v3( const struct KFile * self )
+{
+    bool res = false;
+    if ( self != NULL )
+        res = ( &( self -> vt -> v1 ) == &KCacheTeeFile_v3_vt );
+    return res;
+}
+
+LIB_EXPORT rc_t CC CacheTee3FileGetOriginalSize ( struct KFile const * self, uint64_t * original_size )
+{
+    rc_t rc = 0;
+    if ( self == NULL || original_size == NULL )
+        rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcNull );
+    else
+    {
+        if ( &( self -> vt -> v1 ) != &KCacheTeeFile_v3_vt )
+        {
+            uint64_t over_all_size;
+            KCacheTeeFileTail tail;
+            rc = extract_tail( self, &over_all_size, &tail );
+            if ( rc == 0 )
+                *original_size = tail . orig_size;
+        }
+        else
+        {
+            KCacheTeeFile_v3 * ctf = ( struct KCacheTeeFile_v3 * )self;
+            *original_size = ctf -> source_size;
+        }
+    }
+    return rc;
+}
+
+static size_t bitmap_completeness( volatile bmap_t * bitmap, size_t bitmap_size_in_bytes )
+{
+    size_t res = 0;
+    size_t bitmap_words = bitmap_size_in_bytes / ( BMWORDSIZE >> 3 );
+    size_t idx;
+    /* all but the last word in the bitmap has to be set to 0xFFFFFFFFU */
+    for ( idx = 0; idx < bitmap_words; ++idx )
+    {
+#if BMWORDSIZE == 32
+        bmap_t w = bitmap[ idx ];
+        if ( w > 0 )
+        {
+            if ( w == 0xFFFFFFFFU )
+                res += BMWORDSIZE;
+            else
+                res += count_set_bits( w );
+        }
+#else
+    #error "this code does not support this word size"
+#endif
+    }
+    return res;
+}
+
+static rc_t get_bitmap_completeness_file( struct KFile const * self, double * percent, uint64_t * bytes_in_cache )
+{
+    uint64_t over_all_size;
+    KCacheTeeFileTail tail;
+    rc_t rc = extract_tail( self, &over_all_size, &tail );
+    if ( rc == 0 )
+    {
+        size_t bitmap_size_in_bytes = calculate_bitmap_size_in_bytes( &tail );
+        if ( tail . orig_size + bitmap_size_in_bytes + sizeof tail != over_all_size )
+        {
+            rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcInvalid );
+            PLOGERR ( klogSys, ( klogSys, rc, "$(func) - invalid internal size-values in cachefile"
+                             , "func=%s"
+                             , __func__
+                      ) );
+        }
+        else
+        {
+            volatile bmap_t * bitmap = extract_bitmap( self, tail . orig_size, bitmap_size_in_bytes );
+            if ( bitmap != NULL )
+            {
+                size_t pages_in_cache = bitmap_completeness( bitmap, bitmap_size_in_bytes );
+                * bytes_in_cache = ( pages_in_cache * tail . page_size );
+                free( ( void * ) bitmap );
+                if ( * bytes_in_cache > 0 && tail . orig_size > 0 )
+                {
+                    double x = ( float ) * bytes_in_cache;
+                    x *= 100;
+                    x /= tail . orig_size;
+                    *percent = x;
+                }
+            }
+        }
+    }
+    return rc;
+}
+
+static void get_bitmap_completeness_v3( const KCacheTeeFile_v3 * self, double * percent, uint64_t * bytes_in_cache )
+{
+    if ( self -> cache_file == NULL )
+        return;
+    else
+    {
+        size_t pages_in_cache = bitmap_completeness( self -> bitmap, self -> bmap_size );
+        * bytes_in_cache = ( pages_in_cache * self -> page_size );
+        if ( * bytes_in_cache > 0 && self -> tail -> orig_size > 0 )
+        {
+            double x = ( float ) * bytes_in_cache;
+            x *= 100;
+            x /= self -> tail -> orig_size;
+            *percent = x;
+        }
+    }
+}
+
+LIB_EXPORT rc_t CC CacheTee3FileGetCompleteness ( struct KFile const * self,
+                    double * percent, uint64_t * bytes_in_cache )
+{
+    rc_t rc = 0;
+    if ( self == NULL || percent == NULL || bytes_in_cache == NULL )
+        rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcNull );
+    else
+    {
+        *percent = 0.0;
+        *bytes_in_cache = 0;
+        if ( &( self -> vt -> v1 ) != &KCacheTeeFile_v3_vt )
+            rc = get_bitmap_completeness_file( self, percent, bytes_in_cache );
+        else
+            get_bitmap_completeness_v3( ( struct KCacheTeeFile_v3 * )self, percent, bytes_in_cache );
+    }
+    return rc;
+}
+
+/* --- perform promotion --- */
+
+/* if the given KFile is not of type KCacheTeeFile_v3, we truncate the file to the size of the source
+   but we cannot rename it, because KFile does not store its path */
+static rc_t finalize_file ( struct KFile * self )
+{
+    uint64_t over_all_size;
+    KCacheTeeFileTail tail;
+    rc_t rc = extract_tail( self, &over_all_size, &tail );
+    if ( rc == 0 )
+    {
+        rc = KFileSetSize_v1 ( self, tail . orig_size );
+        if ( rc != 0 )
+        {
+            PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to truncate the cache-file"
+                             , "func=%s"
+                             , __func__
+                      ) );
+        }
+
+    }
+    return rc;
+}
+
+/* if the given KFile is of type KCacheTeeFile_v3, we truncate the file to the size of the source
+   and rename it to the path stored in the struct */
+static rc_t finalize_v3 ( KCacheTeeFile_v3 * self )
+{
+    rc_t rc = 0;
+    if ( self -> cache_file != NULL )
+    {
+        rc = KFileSetSize_v1 ( self -> cache_file, self -> source_size );
+        if ( rc != 0 )
+        {
+            PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to truncate the cache-file"
+                             , "func=%s"
+                             , __func__
+                      ) );
+        }
+        else
+        {
+            // we have to release the cache-file to rename it...
+            rc = KFileRelease ( self -> cache_file );
+            if ( rc != 0 )
+            {
+                PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to release the cache-file"
+                                 , "func=%s"
+                                 , __func__
+                          ) );
+            }
+            else
+            {
+                char buffer[ 4096 ];
+                size_t num_writ;
+                self -> cache_file = NULL;
+                
+                rc = string_printf ( buffer, sizeof buffer, &num_writ, "%s.cache", self -> path );
+                if ( rc != 0 )
+                {
+                    PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed create the cache-file path"
+                                     , "func=%s"
+                                     , __func__
+                              ) );
+                }
+                else
+                {
+                    rc = KDirectoryRename ( self -> dir, true, buffer, self -> path );
+                    if ( rc != 0 )
+                    {
+                        PLOGERR ( klogSys, ( klogSys, rc, "$(func) - failed to rename the cache-file"
+                                         , "func=%s"
+                                         , __func__
+                                  ) );
+                    }
+                }
+            }
+        }
+    }
+    return rc;
+}
+
+LIB_EXPORT rc_t CC CacheTee3FileFinalize ( struct KFile * self )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+        rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcNull );
+    else
+    {
+        bool is_complete;
+        rc = CacheTee3FileIsComplete ( self, &is_complete );
+        if ( rc == 0 )
+        {
+            if ( !is_complete )
+                rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcIncomplete );
+            else
+            {
+                if ( &( self -> vt -> v1 ) != &KCacheTeeFile_v3_vt )
+                    rc = finalize_file( self );
+                else
+                    rc = finalize_v3( ( struct KCacheTeeFile_v3 * )self );
+            }
+        }
+    }
     return rc;
 }
