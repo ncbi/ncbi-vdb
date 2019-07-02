@@ -1003,9 +1003,7 @@ rc_t CC KCacheTeeFileTimedRead ( const KCacheTeeFile_v3 *cself, uint64_t pos,
     /* the "msgq" is "mutable" */
     KCacheTeeFile_v3 * self = ( KCacheTeeFile_v3 * ) cself;
 
-#if _DEBUGGING
     uint64_t cur_thread_id = CUR_THREAD_ID ();
-#endif
 
     /* 1. limit request to file dimensions */
     if ( pos >= self -> source_size || bsize == 0 )
