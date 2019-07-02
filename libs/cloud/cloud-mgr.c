@@ -90,15 +90,14 @@ rc_t CloudMgrWhack ( CloudMgr * self )
 }
 
 static
-void CloudMgrDetermineCurrentCloud ( CloudMgr * self )
+CloudProviderId CloudMgrDetermineCurrentCloud ( const CloudMgr * self )
 {
 #ifdef _h_cloud_gcp_
     TRACE ( "probing operation within GCP" );
     if ( CloudMgrWithinGCP ( self ) )
     {
         TRACE ( "current compute environment is GCP" );
-        self -> cur_id = cloud_provider_gcp;
-        return;
+        return cloud_provider_gcp;
     }
 #endif
 
@@ -107,8 +106,7 @@ void CloudMgrDetermineCurrentCloud ( CloudMgr * self )
     if ( CloudMgrWithinAWS ( self ) )
     {
         TRACE ( "current compute environment is AWS" );
-        self -> cur_id = cloud_provider_aws;
-        return;
+        return cloud_provider_aws;
     }
 #endif
 
@@ -117,13 +115,12 @@ void CloudMgrDetermineCurrentCloud ( CloudMgr * self )
     if ( CloudMgrWithinAzure ( self ) )
     {
         TRACE ( "current compute environment is Azure" );
-        self -> cur_id = cloud_provider_azure;
-        return;
+        return cloud_provider_azure;
     }
 #endif
     
     TRACE ( "no cloud compute environment detected" );
-    self -> cur_id = cloud_provider_none;
+    return cloud_provider_none;
 }
 
 static
@@ -189,18 +186,19 @@ rc_t CloudMgrInit ( CloudMgr ** mgrp, const KConfig * kfg,
                 {
                     /* examine environment for current cloud */
                     TRACE ( "probing current environment" );
-                    CloudMgrDetermineCurrentCloud ( our_mgr );
+                    provider = CloudMgrDetermineCurrentCloud ( our_mgr );
                 }
-                else
+
+        if ( provider != cloud_provider_none )
                 {
-                    TRACE ( "making externally requested environment" );
-                    rc = CloudMgrMakeCloud ( our_mgr, & our_mgr -> cur, provider );
-                    if ( rc == 0 )
+            TRACE ( "making current environment" );
+            rc = CloudMgrMakeCloud ( our_mgr, & our_mgr -> cur, provider );
+            if ( rc == 0 )
                     {
-                        TRACE ( "storing externally requested environment" );
-                        our_mgr -> cur_id = provider;
-                    }
-                }
+                TRACE ( "storing current environment" );
+                our_mgr -> cur_id = provider;
+            }
+        }
 
                 if ( rc == 0 )
                 {
@@ -484,7 +482,7 @@ LIB_EXPORT rc_t CC CloudMgrMakeCloud ( CloudMgr * self, Cloud ** cloud, CloudPro
 #endif
 #endif
             default:
-                ( void ) 0;
+                rc = RC ( rcCloud, rcMgr, rcAllocating, rcCloudProvider, rcUnsupported );
 #undef CASE
             }
         }

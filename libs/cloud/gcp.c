@@ -254,7 +254,7 @@ LIB_EXPORT rc_t CC CloudToGCP ( const Cloud * self, GCP ** gcp )
 /* WithinGCP
  *  answers true if within GCP
  */
-bool CloudMgrWithinGCP ( CloudMgr * self )
+bool CloudMgrWithinGCP ( const CloudMgr * self )
 {
     rc_t rc;
     KEndPoint ep;
