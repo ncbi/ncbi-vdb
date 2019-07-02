@@ -44,22 +44,14 @@
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (0)
 
-typedef struct {
+typedef struct Node {
     const char * name;
     int32_t level;
 } Node;
 
-#define THRESHOLD_NO_DEBUG 0
-#define THRESHOLD_ERROR    1
 #define THRESHOLD_INFO     2
 
-static int THRESHOLD = THRESHOLD_NO_DEBUG;
-
-typedef struct {
-    Node * nodes;
-    size_t i;
-    size_t n;
-} Stack;
+int THRESHOLD = THRESHOLD_NO_DEBUG;
 
 #define MAX_PATHS 6 /* Locations for Element (sra, vdbcache, ???) */
 typedef struct Locations {
@@ -94,7 +86,7 @@ struct Item { /* Run ob dbGaP file */
     uint32_t nElm;
 };
 
-typedef struct {
+typedef struct Status {
     int64_t code;
     char * msg;
 } Status;
@@ -161,7 +153,7 @@ struct KSrvRespFileIterator {
 
 /********************************** Stack *********************************/
 
-static void StackPrintInput ( const char * input ) {
+void StackPrintInput ( const char * input ) {
     if (THRESHOLD > THRESHOLD_ERROR)
         DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
             ( "Parsing \"%s\"\n", input ) );
@@ -230,7 +222,7 @@ static void StackPrintStr
             ("/%s\" = \"%s\"\n", name, val));
 }
 
-static rc_t StackRelease ( Stack * self, bool failed ) {
+rc_t StackRelease ( Stack * self, bool failed ) {
     assert ( self );
 
     assert ( self -> i == 0 );
@@ -245,7 +237,7 @@ static rc_t StackRelease ( Stack * self, bool failed ) {
     return 0;
 }
 
-static rc_t StackInit ( Stack * self ) {
+rc_t StackInit ( Stack * self ) {
     size_t nmemb = 1;
 
     assert ( self );
@@ -263,7 +255,7 @@ static rc_t StackInit ( Stack * self ) {
     return 0;
 }
 
-static void StackPop ( Stack * self ) {
+void StackPop ( Stack * self ) {
     assert ( self );
 
     if ( self -> i == 0 )
@@ -306,11 +298,11 @@ rc_t StackPush ( Stack * self, const char * name, int32_t level )
 static rc_t StackPushObj ( Stack * self, const char * name )
 {   return StackPush ( self, name, -1 ); }
 
-static rc_t StackPushArr ( Stack * self, const char * name ) {
+ rc_t StackPushArr ( Stack * self, const char * name ) {
     return StackPush ( self, name, 0 );
 }
 
-static rc_t StackArrNext ( Stack * self ) {
+rc_t StackArrNext ( Stack * self ) {
     assert ( self && self -> i > 0 );
     assert ( self -> nodes [ self -> i - 1 ] . level >= 0 );
 
@@ -758,9 +750,7 @@ static rc_t ItemAddVbdcache ( Item * self, const VPath * path ) {
 
 /******************************** Status **************************************/
 
-static
-rc_t StatusInit(Status * self, int64_t code, const char * msg)
-{
+rc_t StatusInit(Status * self, int64_t code, const char * msg) {
     assert(self);
 
     self->code = code;
@@ -771,6 +761,11 @@ rc_t StatusInit(Status * self, int64_t code, const char * msg)
     return 0;
 }
 
+rc_t ContainerStatusInit(Container * self, int64_t code, const char * msg) {
+    assert(self);
+    return StatusInit(&self->status, code, msg);
+}
+
 static rc_t StatusFini(Status * self) {
     assert(self);
     free(self->msg);
@@ -778,8 +773,8 @@ static rc_t StatusFini(Status * self) {
     return 0;
 }
 
-static rc_t StatusSet
-(Status * self, const KJsonObject * node, Stack * path)
+static rc_t StatusSet(
+    Status * self, const KJsonObject * node, Stack * path)
 {
     rc_t rc = 0;
 
@@ -1020,7 +1015,7 @@ rc_t ContainerAddId ( Container * self, uint32_t id, Item ** newItem )
 
 /********************************* Response4 **********************************/
 
-static rc_t Response4Fini ( Response4 * self ) {
+rc_t Response4Fini ( Response4 * self ) {
     rc_t rc = 0;
 
     uint32_t i = 0;
@@ -1196,7 +1191,7 @@ static rc_t Response4AddId
 
 /******************************** Data setters ********************************/
 
-static rc_t IntSet ( int64_t * self, const KJsonValue * node,
+rc_t IntSet ( int64_t * self, const KJsonValue * node,
               const char * name, Stack * path )
 {
     rc_t rc = 0;
@@ -1216,7 +1211,7 @@ static rc_t IntSet ( int64_t * self, const KJsonValue * node,
     return rc;
 }
 
-static rc_t BulSet ( EState * self, const KJsonValue * node,
+rc_t BulSet ( EState * self, const KJsonValue * node,
               const char * name, Stack * path )
 {
     rc_t rc = 0;
@@ -1238,7 +1233,7 @@ static rc_t BulSet ( EState * self, const KJsonValue * node,
     return 0;
 }
 
-static rc_t StrSet ( const char ** self, const KJsonValue * node,
+rc_t StrSet ( const char ** self, const KJsonValue * node,
               const char * name, Stack * path )
 {
     rc_t rc = 0;
@@ -1464,6 +1459,15 @@ static rc_t LocationsAddLink ( Locations * self, const KJsonValue * node,
     return rc;
 }
 
+void LocationsLogAddedLink(const Locations * self, const char * url) {
+    assert(self);
+
+    if (THRESHOLD > THRESHOLD_ERROR)
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
+        ("File '%s': added 'link' = '%s'\n",
+            self->cType, url));
+}
+
 /* We detected Item(Run)'s Elm(File)
    and keep scanning it down to find all links */
 static rc_t LocationsAddLinks ( Locations * self, const KJsonObject * node,
@@ -1492,10 +1496,7 @@ static rc_t LocationsAddLinks ( Locations * self, const KJsonObject * node,
         const char * cValue = NULL;
         rc = LocationsAddLink ( self, value, & data, & cValue );
         if ( rc == 0 ) {
-            if (THRESHOLD > THRESHOLD_ERROR)
-                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-                    ( "File '%s': added 'link' = '%s'\n",
-                              self -> cType, cValue ) );
+            LocationsLogAddedLink(self, cValue);
             added = true;
         }
     }
@@ -1746,6 +1747,19 @@ static rc_t ItemAddElms4 ( Item * self, const KJsonObject * node,
     return rc;
 }
 
+void ItemLogAdd(const Item * self) {
+    assert(self);
+
+    if (THRESHOLD > THRESHOLD_ERROR) {
+        if (self->acc != NULL)
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), ("Adding files to '%s' "
+                "item '%s'...\n", self->itemClass, self->acc));
+        else
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), ("Adding files to '%s' "
+                "item %u...\n", self->itemClass, self->id));
+    }
+}
+
 /********************************** Container *********************************/
 
 /* We are inside of Container (corresponds to request object),
@@ -1769,14 +1783,7 @@ static rc_t ContainerAddItem ( Container * self, const KJsonObject * node,
     rc = ContainerAdd ( self, acc, id, & item, & data );
 
     if ( rc == 0 && item != NULL ) {
-        if (THRESHOLD > THRESHOLD_ERROR) {
-            if (item->acc != NULL)
-                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), ("Adding files to '%s' "
-                    "item '%s'...\n", item->itemClass, item->acc));
-            else
-                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), ("Adding files to '%s' "
-                    "item %u...\n", item->itemClass, item->id));
-        }
+        ItemLogAdd(item);
         rc = ItemAddElms4 ( item, node, & data, path );
     }
 
@@ -1788,9 +1795,103 @@ static rc_t ContainerAddItem ( Container * self, const KJsonObject * node,
     return rc;
 }
 
+void ContainerProcessStatus(Container * self, const Data * data) {
+    assert(self && data);
+
+    if (self->status.code != 200) {
+        KLogLevel lvl = klogInt;
+        bool logError = true;
+
+        switch (self->status.code / 100) {
+        case 0:
+            self->rc = RC(rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt);
+            break;
+
+        case 1:
+            /* informational response
+            not much we can do here */
+            self->rc = RC(rcVFS, rcQuery, rcResolving, rcError, rcUnexpected);
+            break;
+
+        case 2:
+            /* but can only handle 200 */
+            self->rc = RC(rcVFS, rcQuery, rcResolving, rcError, rcUnexpected);
+            break;
+
+        case 3:
+            /* redirection
+            currently this is being handled by our request object */
+            self->rc = RC(rcVFS, rcQuery, rcResolving, rcError, rcUnexpected);
+            break;
+
+        case 4:
+            /* client error */
+            lvl = klogErr;
+            switch (self->status.code) {
+            case 400:
+                self->rc = RC(rcVFS, rcQuery, rcResolving,
+                    rcMessage, rcInvalid);
+                break;
+            case 401:
+            case 403:
+                self->rc = RC(rcVFS, rcQuery, rcResolving,
+                    rcQuery, rcUnauthorized);
+                break;
+            case 404: /* 404|no data :
+                      If it is a real response then this assession is not found.
+                      What if it is a DB failure?
+                      Will be retried if configured to do so? */
+                self->rc = RC(rcVFS, rcQuery, rcResolving, rcName, rcNotFound);
+                break;
+            case 410:
+                self->rc = RC(rcVFS, rcQuery, rcResolving, rcName, rcNotFound);
+                break;
+            default:
+                self->rc = RC(rcVFS, rcQuery, rcResolving,
+                    rcError, rcUnexpected);
+            }
+            break;
+
+        case 5:
+            /* server error */
+            lvl = klogSys;
+            switch (self->status.code) {
+            case 503:
+                self->rc = RC(rcVFS, rcQuery, rcResolving,
+                    rcDatabase, rcNotAvailable);
+                break;
+            case 504:
+                self->rc = RC(rcVFS, rcQuery, rcResolving,
+                    rcTimeout, rcExhausted);
+                break;
+            default:
+                self->rc = RC(rcVFS, rcQuery, rcResolving,
+                    rcError, rcUnexpected);
+            }
+            break;
+
+        default:
+            self->rc = RC(rcVFS, rcQuery, rcResolving, rcError, rcUnexpected);
+        }
+
+        /* log message to user */
+        if (logError)
+            PLOGERR(lvl, (lvl, self->rc,
+                "failed to resolve accession '$(acc)' - $(msg) ( $(code) )",
+                "acc=%s,msg=%s,code=%u",
+                data->acc, self->status.msg, self->status.code));
+    }
+}
+
+bool ContainerIs200AndEmpty(const Container * self) {
+    assert(self);
+
+    return self->status.code == 200 && self->nFiles == 0;
+}
+
 /* We are inside or above of a Container
    and are looking for Items(runs, gdGaP files) to ddd */
-static rc_t Response4AddItems ( Response4 * self, Container * aBox,
+static rc_t Response4AddItems4 ( Response4 * self, Container * aBox,
     const KJsonObject * node, const Data * dad, Stack * path )
 {
     rc_t rc = 0;
@@ -1820,86 +1921,8 @@ static rc_t Response4AddItems ( Response4 * self, Container * aBox,
 
     assert ( box );
 
-    if (rc == 0 && box->status.code != 200) {
-        KLogLevel lvl = klogInt;
-        bool logError = true;
-
-        switch (box->status.code / 100) {
-        case 0:
-            box->rc = RC(rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt);
-            break;
-
-        case 1:
-            /* informational response
-            not much we can do here */
-            box->rc = RC(rcVFS, rcQuery, rcResolving, rcError, rcUnexpected);
-            break;
-
-        case 2:
-            /* but can only handle 200 */
-            box->rc = RC(rcVFS, rcQuery, rcResolving, rcError, rcUnexpected);
-            break;
-
-        case 3:
-            /* redirection
-            currently this is being handled by our request object */
-            box->rc = RC(rcVFS, rcQuery, rcResolving, rcError, rcUnexpected);
-            break;
-
-        case 4:
-            /* client error */
-            lvl = klogErr;
-            switch (box->status.code) {
-            case 400:
-                box->rc = RC(rcVFS, rcQuery, rcResolving, rcMessage, rcInvalid);
-                break;
-            case 401:
-            case 403:
-                box->rc = RC(rcVFS, rcQuery, rcResolving,
-                    rcQuery, rcUnauthorized);
-                break;
-            case 404: /* 404|no data :
-                      If it is a real response then this assession is not found.
-                      What if it is a DB failure?
-                      Will be retried if configured to do so? */
-                box->rc = RC(rcVFS, rcQuery, rcResolving, rcName, rcNotFound);
-                break;
-            case 410:
-                box->rc = RC(rcVFS, rcQuery, rcResolving, rcName, rcNotFound);
-                break;
-            default:
-                box->rc = RC(rcVFS, rcQuery, rcResolving, rcError, rcUnexpected);
-            }
-            break;
-
-        case 5:
-            /* server error */
-            lvl = klogSys;
-            switch (box->status.code) {
-            case 503:
-                box->rc = RC(rcVFS, rcQuery, rcResolving,
-                    rcDatabase, rcNotAvailable);
-                break;
-            case 504:
-                box->rc = RC(rcVFS, rcQuery, rcResolving,
-                    rcTimeout, rcExhausted);
-                break;
-            default:
-                box->rc = RC(rcVFS, rcQuery, rcResolving,
-                    rcError, rcUnexpected);
-            }
-            break;
-        default:
-            box->rc = RC(rcVFS, rcQuery, rcResolving, rcError, rcUnexpected);
-        }
-
-        /* log message to user */
-        if (logError)
-            PLOGERR(lvl, (lvl, box->rc,
-                "failed to resolve accession '$(acc)' - $(msg) ( $(code) )",
-                "acc=%s,msg=%s,code=%u",
-                data.acc, box->status.msg, box->status.code));
-    }
+    if (rc == 0)
+        ContainerProcessStatus(box, &data);
 
     value = KJsonObjectGetMember ( node, "link" );
 
@@ -1946,7 +1969,7 @@ static rc_t Response4AddItems ( Response4 * self, Container * aBox,
 
                 value = KJsonArrayGetElement ( array, i );
                 jObject = KJsonValueToObject ( value );
-                r2 = Response4AddItems ( self, box, jObject, & data, path );
+                r2 = Response4AddItems4 ( self, box, jObject, & data, path );
                 if ( r2 != 0 && rc == 0 )
                     rc = r2;
 
@@ -1958,9 +1981,7 @@ static rc_t Response4AddItems ( Response4 * self, Container * aBox,
         }
     }
 
-    if ( aBox == NULL
-      && box -> status . code == 200 && box -> nFiles == 0 )
-    {
+    if ( aBox == NULL && ContainerIs200AndEmpty(box) ) {
         rc = RC ( rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete );
         if (THRESHOLD > THRESHOLD_NO_DEBUG)
             DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
@@ -1971,7 +1992,7 @@ static rc_t Response4AddItems ( Response4 * self, Container * aBox,
 }
 
 /* Add response document */
-static rc_t Response4Init ( Response4 * self, const char * input ) {
+static rc_t Response4Init4 ( Response4 * self, const char * input ) {
     rc_t rc = 0;
     char error [ 99 ] = "";
     rc_t r2 = 0;
@@ -2037,7 +2058,7 @@ static rc_t Response4Init ( Response4 * self, const char * input ) {
 
                     value = KJsonArrayGetElement ( array, i );
                     object = KJsonValueToObject ( value );
-                    r2 = Response4AddItems
+                    r2 = Response4AddItems4
                         ( self, NULL, object, & data, & path );
                     if ( r2 != 0 && rc == 0 )
                         rc = r2;
@@ -2095,7 +2116,7 @@ rc_t Response4MakeEmpty ( Response4 ** self ) {
     return 0;
 }
 
-rc_t Response4Make ( Response4 ** self, const char * input ) {
+rc_t Response4Make4 ( Response4 ** self, const char * input ) {
     rc_t rc = 0;
 
     Response4 * r = NULL;
@@ -2106,7 +2127,7 @@ rc_t Response4Make ( Response4 ** self, const char * input ) {
     if ( rc != 0 )
         return rc;
 
-    rc = Response4Init ( r, input );
+    rc = Response4Init4 ( r, input );
     if ( rc != 0 )
         free ( r );
     else
@@ -2124,7 +2145,7 @@ rc_t Response4Make ( Response4 ** self, const char * input ) {
 
     assert ( self );
 
-    rc = Response4Init ( & r -> r, input );
+    rc = Response4Init4 ( & r -> r, input );
     if ( rc != 0 )
         free ( r );
     else {

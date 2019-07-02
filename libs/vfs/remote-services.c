@@ -532,12 +532,16 @@ static rc_t SVersionInit(SVersion * self, bool * sdl, const char * src,
 {
     const char * s = src;
     String * result = NULL;
+    const char * e = NULL;
 
     assert(self);
 
     *self = 0;
 
-    if (helper != NULL && serviceType != eSTsearch) {
+    e = getenv("NCBI_VDB_REMOTE_VERSION");
+    if (e != NULL)
+        s = e;
+    else if (helper != NULL && serviceType != eSTsearch) {
         rc_t rc = SHelperInitKfg(helper);
         if (rc == 0) {
             rc = KConfigReadString(
@@ -3618,7 +3622,7 @@ static rc_t KServiceProcessJson ( KService * self ) {
     if (self->req.sdl)
         rc = Response4MakeSdl ( & r, self -> helper . input );
     else
-        rc = Response4Make ( & r, self -> helper . input );
+        rc = Response4Make4 ( & r, self -> helper . input );
 
     if ( rc == 0 )
         rc = KSrvResponseSetR4 ( self -> resp . list, r );
