@@ -168,19 +168,23 @@ LIB_EXPORT rc_t CC GCPRelease ( const GCP * self )
 LIB_EXPORT rc_t CC GCPToCloud ( const GCP * cself, Cloud ** cloud )
 {
     rc_t rc;
-    GCP * self = ( GCP * ) cself;
 
-    if ( self == NULL )
-        rc = RC ( rcCloud, rcProvider, rcCasting, rcSelf, rcNull );
-    else if ( cloud == NULL )
+    if ( cloud == NULL )
         rc = RC ( rcCloud, rcProvider, rcCasting, rcParam, rcNull );
     else
     {
-        rc = CloudAddRef ( & self -> dad );
-        if ( rc == 0 )
+        if ( cself == NULL )
+            rc = 0;
+        else
         {
-            * cloud = & self -> dad;
-            return 0;
+            GCP * self = ( GCP * ) cself;
+
+            rc = CloudAddRef ( & self -> dad );
+            if ( rc == 0 )
+            {
+                * cloud = & self -> dad;
+                return 0;
+            }
         }
 
         * cloud = NULL;
@@ -193,9 +197,7 @@ LIB_EXPORT rc_t CC CloudToGCP ( const Cloud * self, GCP ** gcp )
 {
     rc_t rc;
 
-    if ( self == NULL )
-        rc = RC ( rcCloud, rcProvider, rcCasting, rcSelf, rcNull );
-    else if ( gcp == NULL )
+    if ( gcp == NULL )
         rc = RC ( rcCloud, rcProvider, rcCasting, rcParam, rcNull );
     else
     {
