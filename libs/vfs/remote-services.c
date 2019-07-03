@@ -2959,8 +2959,8 @@ static rc_t SCgiRequestAddLocation (SCgiRequest * self, const SHelper * helper)
     return rc;
 }
 
-static
-rc_t SCgiRequestAddCloudEnvironment(SCgiRequest * self, SHelper * helper)
+static rc_t SCgiRequestAddCloudEnvironment(
+    SCgiRequest * self, SHelper * helper)
 {
     rc_t rc = 0;
     CloudProviderId cloud_provider = cloud_provider_none;
@@ -2981,6 +2981,7 @@ rc_t SCgiRequestAddCloudEnvironment(SCgiRequest * self, SHelper * helper)
             }
         }
     }
+
     if (rc == 0) {
         rc = CloudMgrCurrentProvider(helper->cloudMgr, &cloud_provider);
         if (rc != 0) {
@@ -2996,11 +2997,15 @@ rc_t SCgiRequestAddCloudEnvironment(SCgiRequest * self, SHelper * helper)
         }
     }
     if (rc == 0) {
-        if (cloud_provider == cloud_provider_aws) {
+        const char * v = NULL;
+        if (cloud_provider == cloud_provider_aws)
+            v = "aws_pkcs7";
+        else if (cloud_provider == cloud_provider_gcp)
+            v = "gcp_jwt";
+        if (v != NULL ) {
             {
                 const SKV * kv = NULL;
-                const char n[] = "locality-type";
-                const char v[] = "aws_pkcs7";
+                const char n[] = "location-type";
                 rc = SKVMake(&kv, n, v);
                 if (rc == 0) {
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
@@ -3012,7 +3017,7 @@ rc_t SCgiRequestAddCloudEnvironment(SCgiRequest * self, SHelper * helper)
             }
             {
                 const SKV * kv = NULL;
-                const char n[] = "locality";
+                const char n[] = "location";
                 assert(ce_token);
                 rc = SKVMake(&kv, n, ce_token->addr);
                 if (rc == 0) {
@@ -3025,6 +3030,7 @@ rc_t SCgiRequestAddCloudEnvironment(SCgiRequest * self, SHelper * helper)
             }
         }
     }
+
     return rc;
 }
 

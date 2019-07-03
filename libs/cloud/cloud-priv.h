@@ -122,7 +122,7 @@ struct GCP
 /* WithinGCP
  *  answers true if within GCP
  */
-bool CloudMgrWithinGCP ( CloudMgr * self );
+bool CloudMgrWithinGCP ( const CloudMgr * self );
 
 #endif
 

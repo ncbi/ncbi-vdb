@@ -48,6 +48,7 @@ struct AWS;
 #include <assert.h>
 
 #include "aws-priv.h" /* AWSDoAuthentication */
+#include "cloud-cmn.h" /* KNSManager_Read */
 #include "cloud-priv.h"
 
 static rc_t PopulateCredentials ( AWS * self );
@@ -76,35 +77,26 @@ rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_to
     char document[4096] = "";
     char pkcs7[4096] = "";
 
-    char locality[4096] = "";
+    char location[4096] = "";
 
-    assert(self && self->dad.kns);
+    assert(self);
+
     rc = KNSManager_Read(self->dad.kns, document, sizeof document,
-        "http://169.254.169.254/latest/dynamic/instance-identity/document");
+        "http://169.254.169.254/latest/dynamic/instance-identity/document",
+        NULL, NULL);
 
     if (rc == 0)
         rc = KNSManager_Read(self->dad.kns, pkcs7, sizeof pkcs7,
-            "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7");
+            "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7",
+            NULL, NULL);
 
     if (rc == 0)
-        rc = MakeLocality(pkcs7, document, locality, sizeof locality);
+        rc = MakeLocation(pkcs7, document, location, sizeof location);
 
     if (rc == 0) {
-        uint32_t len = string_measure(locality, NULL);
-        String * s = calloc(1, sizeof * s + len + 1);
-        if (s == NULL)
-            rc = RC(rcCloud, rcMgr, rcAccessing, rcMemory, rcExhausted);
-        else {
-            char * p = NULL;
-            assert(s && len);
-            p = (char *)s + sizeof * s;
-            rc = string_printf(p, len + 1, NULL, "%s", locality);
-            if (rc == 0) {
-                StringInit(s, p, len, len);
-                assert(ce_token);
-                *ce_token = s;
-            }
-        }
+        String s;
+        StringInitCString(&s, location);
+        rc = StringCopy(ce_token, &s);
     }
 
     return rc;
@@ -120,12 +112,10 @@ rc_t CC AWSAddComputeEnvironmentTokenForSigner ( const AWS * self, KClientHttpRe
     const String * ce_token = NULL;
     rc_t rc = AWSMakeComputeEnvironmentToken(self, &ce_token);
 
-    assert(self && self->dad.kns);
-
-    if (rc == 0)
+    if (rc == 0) {
         rc = KHttpRequestAddPostParam(req, "ident=%S", ce_token);
-
-    free((void*)ce_token);
+        StringWhack(ce_token);
+    }
 
     return rc;
 }
@@ -227,19 +217,23 @@ LIB_EXPORT rc_t CC AWSRelease ( const AWS * self )
 LIB_EXPORT rc_t CC AWSToCloud ( const AWS * cself, Cloud ** cloud )
 {
     rc_t rc;
-    AWS * self = ( AWS * ) cself;
 
-    if ( self == NULL )
-        rc = RC ( rcCloud, rcProvider, rcCasting, rcSelf, rcNull );
-    else if ( cloud == NULL )
+    if ( cloud == NULL )
         rc = RC ( rcCloud, rcProvider, rcCasting, rcParam, rcNull );
     else
     {
-        rc = CloudAddRef ( & self -> dad );
-        if ( rc == 0 )
+        if ( cself == NULL )
+            rc = 0;
+        else
         {
-            * cloud = & self -> dad;
-            return 0;
+            AWS * self = ( AWS * ) cself;
+
+            rc = CloudAddRef ( & self -> dad );
+            if ( rc == 0 )
+            {
+                * cloud = & self -> dad;
+                return 0;
+            }
         }
 
         * cloud = NULL;
@@ -269,8 +263,8 @@ bool CloudMgrWithinAWS ( const CloudMgr * self )
     assert(self);
 
     return KNSManager_Read(self->kns, buffer, sizeof buffer,
-        "http://169.254.169.254/latest/meta-data/placement/availability-zone")
-        == 0;
+        "http://169.254.169.254/latest/meta-data/placement/availability-zone",
+        NULL, NULL) == 0;
 }
 
 /*** Finding/loading credentials  */
@@ -638,31 +632,29 @@ rc_t PopulateCredentials ( AWS * self )
 }
 #endif
 
-LIB_EXPORT rc_t CC CloudToAWS(const Cloud * self, AWS ** aws)
+LIB_EXPORT rc_t CC CloudToAWS ( const Cloud * self, AWS ** aws )
 {
     rc_t rc;
 
-    if (self == NULL)
-        rc = RC(rcCloud, rcProvider, rcCasting, rcSelf, rcNull);
-    else if (aws == NULL)
-        rc = RC(rcCloud, rcProvider, rcCasting, rcParam, rcNull);
+    if ( aws == NULL )
+        rc = RC ( rcCloud, rcProvider, rcCasting, rcParam, rcNull );
     else
     {
-        if (self == NULL)
+        if ( self == NULL )
             rc = 0;
-        else if (self->vt != (const Cloud_vt *)& AWS_vt_v1)
-            rc = RC(rcCloud, rcProvider, rcCasting, rcType, rcIncorrect);
+        else if ( self -> vt != ( const Cloud_vt * ) & AWS_vt_v1 )
+            rc = RC ( rcCloud, rcProvider, rcCasting, rcType, rcIncorrect );
         else
         {
-            rc = CloudAddRef(self);
-            if (rc == 0)
+            rc = CloudAddRef ( self );
+            if ( rc == 0 )
             {
-                *aws = (AWS *)self;
+                * aws = ( AWS * ) self;
                 return 0;
             }
         }
 
-        *aws = NULL;
+        * aws = NULL;
     }
 
     return rc;

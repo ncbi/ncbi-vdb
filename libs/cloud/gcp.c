@@ -32,10 +32,12 @@ struct GCP;
 
 #include <cloud/gcp.h>
 
+#include <klib/json.h>
+#include <klib/printf.h> /* string_printf */
 #include <klib/rc.h>
 #include <klib/status.h>
 #include <klib/text.h>
-#include <klib/json.h>
+
 #include <kns/endpoint.h>
 #include <kns/socket.h>
 #include <kns/http.h>
@@ -44,6 +46,7 @@ struct GCP;
 
 #include <assert.h>
 
+#include "cloud-cmn.h" /* KNSManager_Read */
 #include "cloud-priv.h"
 
 static rc_t PopulateCredentials ( GCP * self );
@@ -64,7 +67,26 @@ rc_t CC GCPDestroy ( GCP * self )
 static
 rc_t CC GCPMakeComputeEnvironmentToken ( const GCP * self, const String ** ce_token )
 {
-    return 0; //TODO
+    rc_t rc = 0;
+
+    char location[4096] = "";
+
+    const char url[] =
+        "http://metadata/computeMetadata/v1/instance/service-accounts/"
+        "default/identity?audience=https://www.ncbi.nlm.nih.gov&format=full";
+
+    assert(self);
+
+    rc = KNSManager_Read(self->dad.kns, location, sizeof location,
+        url, "Metadata-Flavor", "Google");
+
+    if (rc == 0) {
+        String s;
+        StringInitCString(&s, location);
+        rc = StringCopy(ce_token, &s);
+    }
+
+    return rc;
 }
 
 /* AddComputeEnvironmentTokenForSigner
@@ -74,7 +96,15 @@ rc_t CC GCPMakeComputeEnvironmentToken ( const GCP * self, const String ** ce_to
 static
 rc_t CC GCPAddComputeEnvironmentTokenForSigner ( const GCP * self, KClientHttpRequest * req )
 {
-    return 0; //TODO
+    const String * ce_token = NULL;
+    rc_t rc = GCPMakeComputeEnvironmentToken(self, &ce_token);
+
+    if (rc == 0) {
+        rc = KHttpRequestAddPostParam(req, "ident=%S", ce_token);
+        StringWhack(ce_token);
+    }
+
+    return rc;
 }
 
 /* AddAuthentication
@@ -168,19 +198,23 @@ LIB_EXPORT rc_t CC GCPRelease ( const GCP * self )
 LIB_EXPORT rc_t CC GCPToCloud ( const GCP * cself, Cloud ** cloud )
 {
     rc_t rc;
-    GCP * self = ( GCP * ) cself;
 
-    if ( self == NULL )
-        rc = RC ( rcCloud, rcProvider, rcCasting, rcSelf, rcNull );
-    else if ( cloud == NULL )
+    if ( cloud == NULL )
         rc = RC ( rcCloud, rcProvider, rcCasting, rcParam, rcNull );
     else
     {
-        rc = CloudAddRef ( & self -> dad );
-        if ( rc == 0 )
+        if ( cself == NULL )
+            rc = 0;
+        else
         {
-            * cloud = & self -> dad;
-            return 0;
+            GCP * self = ( GCP * ) cself;
+
+            rc = CloudAddRef ( & self -> dad );
+            if ( rc == 0 )
+            {
+                * cloud = & self -> dad;
+                return 0;
+            }
         }
 
         * cloud = NULL;
@@ -193,9 +227,7 @@ LIB_EXPORT rc_t CC CloudToGCP ( const Cloud * self, GCP ** gcp )
 {
     rc_t rc;
 
-    if ( self == NULL )
-        rc = RC ( rcCloud, rcProvider, rcCasting, rcSelf, rcNull );
-    else if ( gcp == NULL )
+    if ( gcp == NULL )
         rc = RC ( rcCloud, rcProvider, rcCasting, rcParam, rcNull );
     else
     {
@@ -222,7 +254,7 @@ LIB_EXPORT rc_t CC CloudToGCP ( const Cloud * self, GCP ** gcp )
 /* WithinGCP
  *  answers true if within GCP
  */
-bool CloudMgrWithinGCP ( CloudMgr * self )
+bool CloudMgrWithinGCP ( const CloudMgr * self )
 {
     rc_t rc;
     KEndPoint ep;

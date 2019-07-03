@@ -35,6 +35,7 @@
 
 #include <../../libs/cloud/cloud-priv.h>
 
+#include <klib/rc.h>
 #include <kfg/config.h>
 
 #include <fstream>
@@ -121,6 +122,7 @@ FIXTURE_TEST_CASE(MgrCurrentProvider_Aws, CloudMgrFixture)
 FIXTURE_TEST_CASE(MgrCurrentProvider_MakeCloud_NullSelf, CloudMgrFixture)
 {
     REQUIRE_RC_FAIL ( CloudMgrMakeCloud ( NULL, & m_cloud, cloud_provider_aws ) );
+    REQUIRE_NULL ( m_cloud );
 }
 FIXTURE_TEST_CASE(MgrCurrentProvider_MakeCloud_NullParam, CloudMgrFixture)
 {
@@ -129,15 +131,18 @@ FIXTURE_TEST_CASE(MgrCurrentProvider_MakeCloud_NullParam, CloudMgrFixture)
 FIXTURE_TEST_CASE(MgrCurrentProvider_MakeCloud_BadParam_NoCloud, CloudMgrFixture)
 {
     REQUIRE_RC_FAIL ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_none ) );
+    REQUIRE_NULL ( m_cloud );
 }
 FIXTURE_TEST_CASE(MgrCurrentProvider_MakeCloud_BadParam, CloudMgrFixture)
 {
     REQUIRE_RC_FAIL ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_num_providers ) );
+    REQUIRE_NULL ( m_cloud );
 }
 
 FIXTURE_TEST_CASE(MgrCurrentProvider_MakeCurrentCloud_NullSelf, CloudMgrFixture)
 {
     REQUIRE_RC_FAIL ( CloudMgrGetCurrentCloud ( NULL, & m_cloud ) );
+    REQUIRE_NULL ( m_cloud );
 }
 FIXTURE_TEST_CASE(MgrCurrentProvider_MakeCurrentCloud_NullParam, CloudMgrFixture)
 {
@@ -225,12 +230,17 @@ public:
 FIXTURE_TEST_CASE(AWS_Make, CloudMgrFixture)
 {
     REQUIRE_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_aws ) );
-    REQUIRE_NOT_NULL ( m_cloud );
+    if (m_cloud == NULL) {
+        CloudProviderId cloud_provider = cloud_provider_none;
+        REQUIRE_RC(CloudMgrCurrentProvider(m_mgr, &cloud_provider));
+        REQUIRE_EQ(cloud_provider, static_cast<uint32_t>(cloud_provider_gcp));
+    }
 }
 
 FIXTURE_TEST_CASE(AWS_CloudToAws_NullSelf, AwsFixture)
 {
-    REQUIRE_RC_FAIL ( CloudToAWS ( NULL, & m_aws ) );
+    REQUIRE_RC ( CloudToAWS ( NULL, & m_aws ) );
+    REQUIRE_NULL ( m_aws );
 }
 FIXTURE_TEST_CASE(AWS_CloudToAws_NullParam, AwsFixture)
 {
@@ -239,20 +249,44 @@ FIXTURE_TEST_CASE(AWS_CloudToAws_NullParam, AwsFixture)
 FIXTURE_TEST_CASE(AWS_CloudToAws, AwsFixture)
 {
     REQUIRE_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_aws ) );
-    REQUIRE_NOT_NULL ( m_cloud );
-    REQUIRE_RC ( CloudToAWS ( m_cloud, & m_aws ) );
-    REQUIRE_NOT_NULL ( m_aws );
+#if 1
+    REQUIRE_NOT_NULL(m_cloud);
+    REQUIRE_RC(CloudToAWS(m_cloud, &m_aws));
+    REQUIRE_NOT_NULL(m_aws);
+#else
+    if (m_cloud != NULL) {
+        REQUIRE_RC(CloudToAWS(m_cloud, &m_aws));
+        REQUIRE_NOT_NULL(m_aws);
+    }
+    else {
+      // ?? this makes no sense to me...
+        CloudProviderId cloud_provider = cloud_provider_none;
+        REQUIRE_RC(CloudMgrCurrentProvider(m_mgr, &cloud_provider));
+        REQUIRE_EQ(cloud_provider, static_cast<uint32_t>(cloud_provider_gcp));
+    }
+#endif
 }
+
 FIXTURE_TEST_CASE(AWS_CloudToAws_Fail, AwsFixture)
 {
-    REQUIRE_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_gcp ) );
-    REQUIRE_RC_FAIL ( CloudToAWS ( m_cloud, & m_aws ) );
+    rc_t rc = CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_gcp );
+    if ( rc == 0 )
+    {
+        REQUIRE_NOT_NULL ( m_cloud );
+        REQUIRE_RC_FAIL ( CloudToAWS ( m_cloud, & m_aws ) );
+    }
+    else
+    {
+        REQUIRE_NULL ( m_cloud );
+        REQUIRE_EQ ( ( uint32_t ) GetRCState ( rc ), ( uint32_t ) rcUnsupported );
+    }
 }
 
 FIXTURE_TEST_CASE(AWS_ToCloud_NullSelf, AwsFixture)
 {
     Cloud * cloud;
-    REQUIRE_RC_FAIL ( AWSToCloud ( NULL, & cloud ) );
+    REQUIRE_RC ( AWSToCloud ( NULL, & cloud ) );
+    REQUIRE_NULL(cloud);
 }
 FIXTURE_TEST_CASE(AWS_ToCloud_NullParam, AwsFixture)
 {
@@ -262,10 +296,11 @@ FIXTURE_TEST_CASE(AWS_ToCloud_NullParam, AwsFixture)
 FIXTURE_TEST_CASE(AWS_ToCloud, AwsFixture)
 {
     MakeAWS();
+    REQUIRE_NOT_NULL ( m_aws );
 
     Cloud * cloud;
     REQUIRE_RC ( AWSToCloud ( m_aws, & cloud ) );
-    REQUIRE_NOT_NULL ( m_aws );
+    REQUIRE_NOT_NULL ( cloud );
     REQUIRE_RC ( CloudRelease ( cloud ) );
 }
 
@@ -392,13 +427,21 @@ public:
 
 FIXTURE_TEST_CASE(GCP_Make, GcpFixture)
 {
-    REQUIRE_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_gcp ) );
-    REQUIRE_NOT_NULL ( m_cloud );
+    rc_t rc = CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_gcp );
+    if ( rc == 0 )
+        REQUIRE_NOT_NULL ( m_cloud );
+
+    else
+    {
+        REQUIRE_NULL ( m_cloud );
+        REQUIRE_EQ ( ( uint32_t ) GetRCState ( rc ), ( uint32_t ) rcUnsupported );
+    }
 }
 
 FIXTURE_TEST_CASE(GCP_CloudToGcp_NullSelf, GcpFixture)
 {
-    REQUIRE_RC_FAIL ( CloudToGCP ( NULL, & m_gcp ) );
+    REQUIRE_RC ( CloudToGCP ( NULL, & m_gcp ) );
+    REQUIRE_NULL ( m_gcp );
 }
 FIXTURE_TEST_CASE(GCP_CloudToGcp_NullParam, GcpFixture)
 {
@@ -406,10 +449,19 @@ FIXTURE_TEST_CASE(GCP_CloudToGcp_NullParam, GcpFixture)
 }
 FIXTURE_TEST_CASE(GCP_CloudToGcp, GcpFixture)
 {
-    REQUIRE_RC ( CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_gcp ) );
-    REQUIRE_NOT_NULL ( m_cloud );
-    REQUIRE_RC ( CloudToGCP ( m_cloud, & m_gcp ) );
-    REQUIRE_NOT_NULL ( m_gcp );
+    rc_t rc = CloudMgrMakeCloud ( m_mgr, & m_cloud, cloud_provider_gcp );
+    if ( rc == 0 )
+    {
+        REQUIRE_NOT_NULL ( m_cloud );
+	REQUIRE_RC ( CloudToGCP ( m_cloud, & m_gcp ) );
+	REQUIRE_NOT_NULL ( m_gcp );
+    }
+
+    else
+    {
+        REQUIRE_NULL ( m_cloud );
+        REQUIRE_EQ ( ( uint32_t ) GetRCState ( rc ), ( uint32_t ) rcUnsupported );
+    }
 }
 FIXTURE_TEST_CASE(GCP_CloudToGcp_Fail, GcpFixture)
 {
@@ -420,7 +472,8 @@ FIXTURE_TEST_CASE(GCP_CloudToGcp_Fail, GcpFixture)
 FIXTURE_TEST_CASE(GCP_ToCloud_NullSelf, GcpFixture)
 {
     Cloud * cloud;
-    REQUIRE_RC_FAIL ( GCPToCloud ( NULL, & cloud ) );
+    REQUIRE_RC ( GCPToCloud ( NULL, & cloud ) );
+    REQUIRE_NULL ( cloud );
 }
 FIXTURE_TEST_CASE(GCP_ToCloud_NullParam, GcpFixture)
 {
@@ -430,10 +483,11 @@ FIXTURE_TEST_CASE(GCP_ToCloud_NullParam, GcpFixture)
 FIXTURE_TEST_CASE(GCP_ToCloud, GcpFixture)
 {
     MakeGCP();
+    REQUIRE_NOT_NULL ( m_gcp );
 
     Cloud * cloud;
     REQUIRE_RC ( GCPToCloud ( m_gcp, & cloud ) );
-    REQUIRE_NOT_NULL ( m_gcp );
+    REQUIRE_NOT_NULL ( cloud );
     REQUIRE_RC ( CloudRelease ( cloud ) );
 }
 
