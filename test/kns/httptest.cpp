@@ -801,7 +801,7 @@ TEST_CASE(TestAcceptHeader) {
 }
 
 TEST_CASE ( AllowAllCertificates )
-{
+{   // as of 
     rc_t rc = 0;
 
     KNSManager * mgr = NULL;
@@ -812,30 +812,23 @@ TEST_CASE ( AllowAllCertificates )
     REQUIRE_RC ( KNSManagerGetAllowAllCerts ( mgr, & allow_all_certs ) );
 
     // ensure that manager is NOT allowing, i.e. default behavior
+    // as of 7-01-2019, this function is a no-op, so the connection will succeed with
+    // or without this call
     REQUIRE_RC ( KNSManagerSetAllowAllCerts ( mgr, false ) );
 
     // create a connection to something that normally fails; it should fail
     String host;
     CONST_STRING ( & host, "www.google.com" );
 
-    // capture log level
-    KLogLevel log_level = KLogLevelGet ();
-
-    // set log level to practically silent
-    KLogLevelSet ( 0 );
-
     KClientHttp * https = NULL;
     REQUIRE ( KNSManagerMakeClientHttps
-              ( mgr, & https, NULL, 0x01010000, & host, 443 ) != 0 );
+              ( mgr, & https, NULL, 0x01010000, & host, 443 ) == 0 ); // success!
     RELEASE ( KClientHttp, https );
-
-    // restore log level
-    KLogLevelSet ( log_level );
 
     // tell manager to allow all certs
     REQUIRE_RC ( KNSManagerSetAllowAllCerts ( mgr, true ) );
 
-    // repeat connection to something that normally fails; it should succeed
+    // repeat connection to something that used to fail; it should succeed
     REQUIRE_RC ( KNSManagerMakeClientHttps
               ( mgr, & https, NULL, 0x01010000, & host, 443 ) );
     RELEASE ( KClientHttp, https );

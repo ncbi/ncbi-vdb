@@ -144,6 +144,9 @@ CACHING_OBJ = \
 $(TEST_BINDIR)/test-caching: $(CACHING_OBJ)
 	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
 
+caching: test-caching
+	$(TEST_BINDIR)/test-caching
+
 #----------------------------------------------------------------
 # test-names-30
 
