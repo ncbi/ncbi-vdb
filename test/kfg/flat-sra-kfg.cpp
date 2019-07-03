@@ -124,13 +124,21 @@ static const char goodCgi[]
     = "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
 static const char badCgi[]
     = "https://XXX.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
+
+static bool WITHIN_NCBI = true;
+
 #ifdef ALL
 TEST_CASE(test_sra) {
-    const string newShort
-     ("https://sra-download.ncbi.nlm.nih.gov/traces/sra27/SRR/000000/SRR000001");
-    const string newLong
-("https://sra-download.ncbi.nlm.nih.gov/sos/sra-pub-run-2/SRR1000254/SRR1000254.1");
-//  ("https://sra-download-internal.ncbi.nlm.nih.gov/traces/sra14/SRR/000976/SRR1000254");
+    string newShort("https://sra-download");
+    if (WITHIN_NCBI)
+        newShort += "-internal";
+    newShort += ".ncbi.nlm.nih.gov/traces/sra27/SRR/000000/SRR000001";
+
+    string newLong("https://sra-download");
+    if (WITHIN_NCBI)
+        newLong += "-internal";
+    newLong += ".ncbi.nlm.nih.gov/sos/sra-pub-run-2/SRR1000254/SRR1000254.1";
+
     const string oldShort("https://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/"
                 "reads/ByRun/sra/SRR/SRR000/SRR000001/SRR000001.sra");
 
@@ -417,16 +425,35 @@ const char UsageDefaultName [] = "flat-sra-kfg";
 rc_t CC UsageSummary ( const char * prog_name ) { return 0; }
 extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
+
+#include <kns/endpoint.h> /* KEndPoint */
+    static bool WithinNCBI(const KNSManager * kns) {
+        String hostname;
+        CONST_STRING(&hostname, "intranet");
+
+        KEndPoint ep;
+        return KNSManagerInitDNSEndpoint(kns, &ep, &hostname, 80) == 0;
+    }
+
     rc_t CC KMain ( int argc, char *argv [] ) {
-const char * p = getenv("http_proxy");
-//cerr << "http_proxy = '" << ( p == NULL ? "NULL" : p ) << "'\n";
+#if 0
+ const char * p = getenv("http_proxy");
+ cerr << "http_proxy = '" << ( p == NULL ? "NULL" : p ) << "'\n";
+#endif
+
 if ( 1 ) assert ( ! KDbgSetString ( "VFS" ) );
+
         KConfigDisableUserSettings();
+
         rc_t rc = KNSManagerMake(&kns);
+
         if (rc == 0) {
+            WITHIN_NCBI = WithinNCBI(kns);
             rc = flatSraKfgTestSuite(argc, argv);
         }
+
         RELEASE(KNSManager, kns);
+
         return rc;
     }
 }
