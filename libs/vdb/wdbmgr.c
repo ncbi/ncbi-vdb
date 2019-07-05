@@ -300,7 +300,8 @@ LIB_EXPORT rc_t CC VSchemaDumpToKMDataNode ( const VSchema * self,
 
         /* try to find object by spec - typically full name but only major version */
         uint32_t type;
-        const void * obj = VSchemaFind ( self, NULL, & type, spec, __func__, false );
+        const SNameOverload *name;
+        const void * obj = VSchemaFind ( self, &name, & type, spec, __func__, false );
         if ( obj == NULL )
         {
             /* not found - do nothing */
