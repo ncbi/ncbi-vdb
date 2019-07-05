@@ -129,16 +129,20 @@ static bool SVersionAccInRequest ( const SVersion  self ) {
     return self < VERSION_3_0;
 }
 
+static bool SVersionSingleUrl ( const SVersion  self ) {
+    return self < VERSION_3_0;
+}
+
 static bool SVersionTypInRequest ( const SVersion  self ) {
+    return self == VERSION_3_0;
+}
+
+static bool SVersionUseObjidAsAcc ( const SVersion  self ) {
     return self == VERSION_3_0;
 }
 
 static bool SVersionHasMultpileObjects ( const SVersion  self ) {
     return self >= VERSION_3_0;
-}
-
-static bool SVersionSingleUrl ( const SVersion  self ) {
-    return self < VERSION_3_0;
 }
 
 static bool SVersionResponseHasMultipeUrls ( const SVersion  self ) {
@@ -1987,19 +1991,22 @@ static rc_t SRowMake ( SRow ** self, const String * src, const SRequest * req,
                         req -> request . object [ 0 ] . objectId, l, l );
             assert ( acc . size == 0 || acc . addr != NULL );
             if ( acc . size > 2 && acc . addr [1] == 'R'
-                                && acc . addr [2] == 'R' &&
-                 ! StringEqual ( & p -> typed . accession, & acc ) &&
-                 ! StringEqual ( & p -> typed . objectId , & acc ) )
+                                && acc . addr [2] == 'R' )
             {
-                return RC ( rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt );
+                if (SVersionUseObjidAsAcc ( version ) ) {
+                    if  ( ! StringEqual ( & p -> typed . objectId , & acc ) )
+                        return RC ( rcVFS, rcQuery, rcResolving,
+                                    rcMessage, rcCorrupt );
+                }
+                else if ( ! StringEqual ( & p -> typed . accession, & acc ) )
+                    return     RC ( rcVFS, rcQuery, rcResolving,
+                                    rcMessage, rcCorrupt );
             }
-            else {
-                p -> reqId = string_dup
-                    ( req -> request . object [ 0 ] . objectId, l );
-                if ( p -> reqId == NULL )
-                    return RC ( rcVFS, rcQuery, rcExecuting,
-                                       rcMemory, rcExhausted );
-            }
+            p -> reqId = string_dup
+                ( req -> request . object [ 0 ] . objectId, l );
+            if ( p -> reqId == NULL )
+                return RC ( rcVFS, rcQuery, rcExecuting,
+                                    rcMemory, rcExhausted );
         }
         else {
             uint32_t i = 0;
@@ -2022,9 +2029,10 @@ static rc_t SRowMake ( SRow ** self, const String * src, const SRequest * req,
         }
     }
     if ( rc == 0 ) {
-        char * acc = string_dup ( p -> typed . objectId . addr,
-                                        p -> typed . objectId . size );
-        if ( p -> typed . objectId . size != 0 && acc == NULL )
+        String * s = SVersionUseObjidAsAcc ( version )
+            ? & p -> typed . objectId : & p -> typed . accession;
+        char * acc = string_dup ( s -> addr, s -> size );
+        if ( s -> size != 0 && acc == NULL )
             return RC ( rcVFS, rcQuery, rcResolving, rcMemory, rcExhausted );
         rc = EVPathInit ( & p -> path, & p -> typed, req, & r2, p -> reqId,
                                                                 acc );
