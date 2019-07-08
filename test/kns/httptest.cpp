@@ -1026,8 +1026,14 @@ TEST_CASE ( AllowAllCertificates )
     KLogLevelSet ( 0 );
     
     KClientHttp * https = NULL;
+    // KNSManagerSetAllowAllCerts is inert
+#if WINDOWS
     REQUIRE ( KNSManagerMakeClientHttps
               ( mgr, & https, NULL, 0x01010000, & host, 443 ) != 0 );
+#else
+    REQUIRE ( KNSManagerMakeClientHttps
+              ( mgr, & https, NULL, 0x01010000, & host, 443 ) == 0 );
+#endif
     RELEASE ( KClientHttp, https );
 
     // restore log level

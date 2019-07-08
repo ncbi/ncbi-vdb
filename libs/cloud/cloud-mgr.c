@@ -29,46 +29,274 @@
 
 #include <klib/rc.h>
 #include <klib/status.h>
-#include <cloud/cloud.h>
 #include <cloud/aws.h>
 #include <cloud/gcp.h>
 
+#include "cloud-priv.h"
+
+#include <atomic.h>
 #include <assert.h>
+
+#if 0
+#include <stdio.h>
+#define TRACE( ... )                                              \
+    do { fprintf ( stderr, "%s:%d - ", __func__, __LINE__ );      \
+         fprintf ( stderr, __VA_ARGS__ );                         \
+         fputc ( '\n', stderr ); } while ( 0 )
+#else
+#define TRACE( ... ) \
+    ( ( void ) 0 )
+#endif
 
 /*--------------------------------------------------------------------------
  * CloudMgr
  */
-struct CloudMgr
-{
-    KRefcount refcount;
-    CloudProviderId cur;
-};
+
+static atomic_ptr_t cloud_singleton;
 
 /* Whack
  */
 static
 rc_t CloudMgrWhack ( CloudMgr * self )
 {
-    /* do whatever to tear down */
+    CloudMgr * our_mgr;
+
+    TRACE ( "accessing CloudMgr singleton" );
+    our_mgr = atomic_read_ptr ( & cloud_singleton );
+    if ( self != our_mgr )
+    {
+        TRACE ( "releasing current cloud" );
+        CloudRelease ( self -> cur );
+#ifdef _h_cloud_aws_
+        TRACE ( "releasing current AWS cloud" );
+        AWSRelease ( self -> aws );
+#endif
+#ifdef _h_cloud_gcp_
+        TRACE ( "releasing current GCP cloud" );
+        GCPRelease ( self -> gcp );
+#endif
+#ifdef _h_cloud_azure_
+        TRACE ( "releasing current Azure cloud" );
+        AzureRelease ( self -> azure );
+#endif
+        TRACE ( "releasing KNSManager reference" );
+        KNSManagerRelease ( self -> kns );
+        TRACE ( "releasing KConfig reference" );
+        KConfigRelease ( self -> kfg );
+        TRACE ( "freeing CloudMgr" );
+        free ( self );
+    }
+    return 0;
 }
 
-/* Make
- *  is this a singleton
- */
-LIB_EXPORT rc_t CC CloudMgrMake ( CloudMgr ** mgr )
+static
+CloudProviderId CloudMgrDetermineCurrentCloud ( const CloudMgr * self )
 {
-    rc_t rc;
+#ifdef _h_cloud_gcp_
+    TRACE ( "probing operation within GCP" );
+    if ( CloudMgrWithinGCP ( self ) )
+    {
+        TRACE ( "current compute environment is GCP" );
+        return cloud_provider_gcp;
+    }
+#endif
 
-    if ( mgr == NULL )
-        rc = RC ( rcCloud, rcMgr, rcAllocating, rcParam, rcNull );
+#ifdef _h_cloud_aws_
+    TRACE ( "probing operation within AWS" );
+    if ( CloudMgrWithinAWS ( self ) )
+    {
+        TRACE ( "current compute environment is AWS" );
+        return cloud_provider_aws;
+    }
+#endif
+
+#ifdef _h_cloud_azure_
+    TRACE ( "probing operation within Azure" );
+    if ( CloudMgrWithinAzure ( self ) )
+    {
+        TRACE ( "current compute environment is Azure" );
+        return cloud_provider_azure;
+    }
+#endif
+    
+    TRACE ( "no cloud compute environment detected" );
+    return cloud_provider_none;
+}
+
+static
+rc_t CloudMgrInit ( CloudMgr ** mgrp, const KConfig * kfg,
+    const KNSManager * kns, CloudProviderId provider )
+{
+    rc_t rc = 0;
+
+    CloudMgr * our_mgr;
+
+    TRACE ( "allocating CloudMgr object" );
+    our_mgr = calloc ( 1, sizeof * our_mgr );
+    if ( our_mgr == NULL )
+    {
+        TRACE ( "failed to allocate %zu bytes", sizeof * our_mgr );
+        rc = RC ( rcCloud, rcMgr, rcAllocating, rcMemory, rcExhausted );
+    }
     else
     {
-        /* build or attach reference to singleton */
-        /* this code will need to discover where we are operating */
+        /* convert allocation into a ref-counted object */
+        TRACE ( "initializing KRefcount to 1" );
+        KRefcountInit ( & our_mgr -> refcount, 1, "CloudMgr", "init", "cloud" );
+
+        if ( kfg == NULL )
+        {
+            /* make KConfig if it was not provided */
+            TRACE ( "making KConfig" );
+            rc = KConfigMake ( ( KConfig ** ) & kfg, NULL );
+        }
+        else
+        {
+            /* attach reference to KConfig */
+            TRACE ( "attaching to KConfig" );
+            rc = KConfigAddRef ( kfg );
+        }
+
+        if ( rc == 0 )
+        {
+            TRACE ( "storing reference to KConfig" );
+            our_mgr -> kfg = kfg;
+
+            /* attach reference to KNSManager */
+            if ( kns == NULL )
+            {
+                TRACE ( "making KNSManager" );
+                rc = KNSManagerMake ( ( KNSManager ** ) & kns );
+            }
+            else
+            {
+                TRACE ( "attaching to KNSManager" );
+                rc = KNSManagerAddRef ( kns );
+            }
+
+            if ( rc == 0 )
+            {
+                TRACE ( "storing reference to KNSManager" );
+                our_mgr -> kns = kns;
+
+                TRACE ( "initial cloud provider id is 'none'" );
+                our_mgr -> cur_id = cloud_provider_none;
+
+                if ( provider == cloud_provider_none )
+                {
+                    /* examine environment for current cloud */
+                    TRACE ( "probing current environment" );
+                    provider = CloudMgrDetermineCurrentCloud ( our_mgr );
+                }
+
+        if ( provider != cloud_provider_none )
+                {
+            TRACE ( "making current environment" );
+            rc = CloudMgrMakeCloud ( our_mgr, & our_mgr -> cur, provider );
+            if ( rc == 0 )
+                    {
+                TRACE ( "storing current environment" );
+                our_mgr -> cur_id = provider;
+            }
+        }
+
+                if ( rc == 0 )
+                {
+                    TRACE ( "returning CloudMgr reference" );
+                    assert ( mgrp != NULL );
+                    * mgrp = our_mgr;
+                }
+            }
+        }
     }
 
     return rc;
 }
+
+/* Make
+ *  this is a singleton
+ */
+LIB_EXPORT rc_t CC CloudMgrMake ( CloudMgr ** mgrp,
+    const KConfig * kfg, const KNSManager * kns )
+{
+    rc_t rc = 0;
+
+    TRACE ( "testing return parameter" );
+    if ( mgrp == NULL )
+        rc = RC ( rcCloud, rcMgr, rcAllocating, rcParam, rcNull );
+    else
+    {
+        CloudMgr * our_mgr;
+
+        /* grab single-shot singleton */
+        TRACE ( "testing for existing CloudMgr" );
+        our_mgr = atomic_read_ptr ( & cloud_singleton );
+        if ( our_mgr == NULL )
+        {
+            /* singleton was NULL. call CloudMgrInit to make it from scratch. */
+            TRACE ( "creating new CloudMgr" );
+            rc = CloudMgrInit ( & our_mgr, kfg, kns, cloud_provider_none );
+            if ( rc == 0 )
+            {
+                CloudMgr * new_mgr;
+
+                /* try to set single-shot ( set once, never reset ) */
+                TRACE ( "attempting to set CloudMgr singleton" );
+                new_mgr = atomic_test_and_set_ptr ( & cloud_singleton, our_mgr, NULL );
+
+                /* if "new_mgr" is NULL, then our thread won the race */
+                if ( new_mgr == NULL )
+                {
+                    TRACE ( "CloudMgr singleton was set - returning CloudMgr" );
+                    * mgrp = our_mgr;
+                    return 0;
+                }
+
+                /* some other thread beat us to creating the CloudMgr */
+                TRACE ( "failed to set CloudMgr singleton" );
+                assert ( our_mgr != new_mgr );
+                CloudMgrWhack ( our_mgr );
+                our_mgr = new_mgr;
+            }
+        }
+
+        /* add a new reference and return */
+        if ( our_mgr != NULL )
+            TRACE ( "attaching reference to CloudMgr singleton" );
+        rc = CloudMgrAddRef ( our_mgr );
+        if ( rc != 0 )
+            our_mgr = NULL;
+
+        * mgrp = our_mgr;
+    }
+    return rc;
+}
+
+LIB_EXPORT rc_t CC CloudMgrMakeWithProvider ( CloudMgr ** mgrp, CloudProviderId provider )
+{
+    rc_t rc;
+
+    TRACE ( "testing return parameter" );
+    if ( mgrp == NULL )
+        rc = RC ( rcCloud, rcMgr, rcAllocating, rcParam, rcNull );
+    else
+    {
+        CloudMgr * our_mgr;
+        TRACE ( "creating new CloudMgr with specific provider" );
+        rc = CloudMgrInit ( & our_mgr, NULL, NULL, provider );
+        if ( rc == 0 )
+        {
+            TRACE ( "CloudMgr was created - returning CloudMgr" );
+            * mgrp = our_mgr;
+            return 0;
+        }
+
+        * mgrp = NULL;
+    }
+
+    return rc;
+}
+
 
 /* AddRef
  * Release
@@ -123,7 +351,7 @@ LIB_EXPORT rc_t CC CloudMgrCurrentProvider ( const CloudMgr * self, CloudProvide
             rc = RC ( rcCloud, rcMgr, rcAccessing, rcSelf, rcNull );
         else
         {
-            * cloud_provider = self -> cur;
+            * cloud_provider = self -> cur_id;
             return 0;
         }
 
@@ -136,14 +364,18 @@ LIB_EXPORT rc_t CC CloudMgrCurrentProvider ( const CloudMgr * self, CloudProvide
 /* MakeCloud
  * MakeCurrentCloud
  */
-LIB_EXPORT rc_t CC CloudMgrMakeCloud ( const CloudMgr * self, Cloud ** cloud, CloudProviderId cloud_provider )
+LIB_EXPORT rc_t CC CloudMgrMakeCloud ( CloudMgr * self, Cloud ** cloud, CloudProviderId cloud_provider )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
+    /* check return parameter */
+    TRACE ( "checking return parameter" );
     if ( cloud == NULL )
         rc = RC ( rcCloud, rcMgr, rcAllocating, rcParam, rcNull );
     else
     {
+        /* check input parameters */
+        TRACE ( "checking input parameters" );
         if ( self == NULL )
             rc = RC ( rcCloud, rcMgr, rcAllocating, rcSelf, rcNull );
         else if ( cloud_provider == cloud_provider_none ||
@@ -151,25 +383,61 @@ LIB_EXPORT rc_t CC CloudMgrMakeCloud ( const CloudMgr * self, Cloud ** cloud, Cl
             rc = RC ( rcCloud, rcMgr, rcAllocating, rcParam, rcInvalid );
         else
         {
-            switch ( cloud_provider * cloud_num_providers + self -> cur )
+            /* look for cached Cloud */
+            TRACE ( "looking for previously cached Cloud reference" );
+            switch ( cloud_provider )
+            {
+            case cloud_provider_aws:
+                if ( self -> aws != NULL )
+                {
+                    TRACE ( "found previously cached AWS" );
+                    return AWSToCloud ( self -> aws, cloud );
+                }
+                break;
+            case cloud_provider_gcp:
+                if ( self -> gcp != NULL )
+                {
+                    TRACE ( "found previously cached GCP" );
+                    return GCPToCloud ( self -> gcp, cloud );
+                }
+                break;
+            default:
+                TRACE ( "requesting unsupported cloud... will fail later" );
+                break;
+            }
+
+            /* create a Cloud object via selection matrix:
+
+               where\target | aws | gcp | azure
+               -------------+-----+-----+------
+                    outside |  x  |  x  |  x
+                     in aws |  x  |     |
+                     in gcp |     |  x  |
+                   in azure |     |     |  x
+               -------------+-----+-----+------
+
+               this may be relaxed in the future, but for today
+               it's hard coded that from within any cloud there is
+               only access to the same cloud allowed. */
+
+            TRACE ( "checking matrix to go from provider id %u to requested %u", self -> cur_id, cloud_provider );
+            switch ( cloud_provider * cloud_num_providers + self -> cur_id )
             {
 #define CASE( a, b ) \
     case ( a ) * cloud_num_providers + ( b )
 
 #ifdef _h_cloud_aws_
-                /* asking for AWS */
+            /* asking for AWS */
             CASE ( cloud_provider_aws, cloud_provider_none ):
             CASE ( cloud_provider_aws, cloud_provider_aws ):
             {
-                AWS * aws;
-                rc = CloudMgrMakeAWS ( self, & aws );
+                assert ( self -> aws == NULL );
+                TRACE ( "making AWS" );
+                rc = CloudMgrMakeAWS ( self, & self -> aws );
                 if ( rc == 0 )
                 {
-                    rc = AWSToCloud ( aws, cloud );
-                    AWSRelease ( aws );
-                    if ( rc == 0 )
-                        return 0;
-
+                    TRACE ( "casting AWS to Cloud" );
+                    return AWSToCloud ( self -> aws, cloud );
                 }
                 break;
             }
@@ -181,19 +449,17 @@ LIB_EXPORT rc_t CC CloudMgrMakeCloud ( const CloudMgr * self, Cloud ** cloud, Cl
 #endif
 
 #ifdef _h_cloud_gcp_
-                /* asking for GCP */
+            /* asking for GCP */
             CASE ( cloud_provider_gcp, cloud_provider_none ):
             CASE ( cloud_provider_gcp, cloud_provider_gcp ):
             {
-                GCP * gcp;
-                rc = CloudMgrMakeGCP ( self, & gcp );
+                assert ( self -> gcp == NULL );
+                TRACE ( "making GCP" );
+                rc = CloudMgrMakeGCP ( self, & self -> gcp );
                 if ( rc == 0 )
                 {
-                    rc = GCPToCloud ( gcp, cloud );
-                    GCPRelease ( gcp );
-                    if ( rc == 0 )
-                        return 0;
-
+                    TRACE ( "casting GCP to Cloud" );
+                    return GCPToCloud ( self -> gcp, cloud );
                 }
                 break;
             }
@@ -205,7 +471,7 @@ LIB_EXPORT rc_t CC CloudMgrMakeCloud ( const CloudMgr * self, Cloud ** cloud, Cl
 #endif
 
 #ifdef _h_cloud_azure_
-                /* asking for Azure */
+            /* asking for Azure */
             CASE ( cloud_provider_azure, cloud_provider_none ):
             CASE ( cloud_provider_azure, cloud_provider_azure ):
 #error "not implemented"
@@ -215,9 +481,8 @@ LIB_EXPORT rc_t CC CloudMgrMakeCloud ( const CloudMgr * self, Cloud ** cloud, Cl
 #error "this should require a special class"
 #endif
 #endif
-
             default:
-                ( void ) 0;
+                rc = RC ( rcCloud, rcMgr, rcAllocating, rcCloudProvider, rcUnsupported );
 #undef CASE
             }
         }
@@ -228,24 +493,173 @@ LIB_EXPORT rc_t CC CloudMgrMakeCloud ( const CloudMgr * self, Cloud ** cloud, Cl
     return rc;
 }
 
-LIB_EXPORT rc_t CC CloudMgrMakeCurrentCloud ( const CloudMgr * self, Cloud ** cloud )
+LIB_EXPORT rc_t CC CloudMgrGetCurrentCloud ( const CloudMgr * self, Cloud ** cloud )
 {
     rc_t rc;
 
     if ( cloud == NULL )
-        rc = RC ( rcCloud, rcMgr, rcAllocating, rcParam, rcNull );
+        rc = RC ( rcCloud, rcMgr, rcAccessing, rcParam, rcNull );
     else
     {
-        CloudProviderId cur;
-        rc = CloudMgrCurrentProvider ( self, & cur );
-        if ( rc == 0 )
+        if ( self == NULL )
+            rc = RC ( rcCloud, rcMgr, rcAccessing, rcSelf, rcNull );
+        else if ( self -> cur_id == cloud_provider_none )
+            rc = RC ( rcCloud, rcMgr, rcAccessing, rcCloudProvider, rcNotFound );
+        else
         {
-            rc = CloudMgrMakeCloud ( self, cloud, cur );
+            rc = CloudAddRef ( self -> cur );
             if ( rc == 0 )
+            {
+                * cloud = self -> cur;
                 return 0;
+            }
         }
 
         * cloud = NULL;
     }
     return rc;
 }
+
+/* Force a provider for testing
+ */
+void CC CloudMgrSetProvider ( CloudMgr * self, CloudProviderId provider )
+{
+#if _DEBUGGING
+    if ( provider < cloud_num_providers )
+    {
+        if ( self != NULL && self -> cur_id != provider )
+        {
+            CloudRelease ( self -> cur );
+            self -> cur = NULL;
+            self -> cur_id = cloud_provider_none;
+
+            if ( provider != cloud_provider_none )
+            {
+                CloudMgrMakeCloud ( self, & self -> cur, provider );
+                self -> cur_id = provider;
+            }
+        }
+    }
+#endif
+}
+
+#if 0
+#define GS "http://metadata.google.internal/computeMetadata/v1/instance/zone"
+#define S3 "http://169.254.169.254/latest/meta-data/placement/availability-zone"
+
+static
+rc_t
+_KNSManager_Read( struct KNSManager * self, bool gs, char * location, size_t locationSize )
+{
+    rc_t rc = 0;
+
+    const char * url = gs ? GS : S3;
+
+    KClientHttpRequest *req = NULL;
+
+    /* save existing timeouts */
+    int32_t cmsec = self -> conn_timeout;
+    int32_t wmsec = self -> http_write_timeout;
+
+    int32_t timeout = 1; /* milliseconds */
+
+    /* minimize timeouts to check cloudy URLs */
+    self->conn_timeout = self->http_write_timeout = timeout;
+
+    rc = KNSManagerMakeRequest(self, &req, 0x01010000, NULL, url);
+
+    if (rc == 0) {
+        if (gs)
+            rc = KClientHttpRequestAddHeader(req, "Metadata-Flavor", "Google");
+
+        if (rc == 0) {
+            KClientHttpResult * rslt = NULL;
+            rc = KClientHttpRequestGET(req, &rslt);
+
+            /* restore timeouts in KNSManager; may be not needed here */
+            self->conn_timeout = cmsec;
+            self->http_write_timeout=wmsec;
+
+            if (rc == 0) {
+                KStream * s = NULL;
+                rc = KClientHttpResultGetInputStream(rslt, &s);
+                if (rc == 0) {
+                    size_t num_read = 0;
+                    rc = KStreamRead(s, location, locationSize, &num_read);
+                    if (rc == 0)
+                    {
+                        if ( num_read == locationSize )
+                            --num_read;
+                        buffer[num_read++] = '\0';
+                    }
+                }
+                RELEASE(KStream, s);
+            }
+            RELEASE(KClientHttpResult, rslt);
+        }
+    }
+
+    RELEASE(KClientHttpRequest, req);
+
+    /* restore timeouts in KNSManager */
+    self->conn_timeout = cmsec;
+    self->http_write_timeout = wmsec;
+
+    return rc;
+}
+
+static
+rc_t CloudMgrSetProvider ( CloudMgr * self )
+{
+    KDirectory * dir;
+    rc_t rc = KDirectoryNativeDir(&dir);
+    if (rc == 0)
+    {
+        KNSManager * kns; //TODO: init
+        bool gcsFirst = true;
+        char location[99] = "";
+
+        bool log = KNSManagerLogNcbiVdbNetError(kns);
+
+        if (_KDirectory_FileExists(dir, "/usr/bin/gcloud"))
+        {
+            gcsFirst = true;
+        }
+        else if (_KDirectory_FileExists(dir, "/usr/bin/ec2-metadata"))
+        {
+            gcsFirst = false;
+        }
+
+        RELEASE(KDirectory, dir);
+
+        if (log)
+            KNSManagerSetLogNcbiVdbNetError(kns, false);
+
+        rc = _KNSManager_Read ( kns, gcsFirst, location, sizeof location );
+        if ( rc == 0 )
+        {
+            self -> cur = gcsFirst ? cloud_provider_gcp : cloud_provider_aws;
+            //TODO: copy location to self
+        }
+        else
+        {
+            rc = _KNSManager_Read ( kns, ! gcsFirst, location, sizeof location );
+            if ( rc == 0 )
+            {
+                self -> cur = gcsFirst ? cloud_provider_aws : cloud_provider_gcp;
+                //TODO: copy location to self
+            }
+            else
+            {
+                rc = 0;
+                self -> cur = cloud_provider_none;
+            }
+        }
+
+        if (log)
+            KNSManagerSetLogNcbiVdbNetError(kns, true);
+    }
+
+    return rc;
+}
+#endif

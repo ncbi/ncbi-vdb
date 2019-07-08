@@ -91,7 +91,12 @@ struct atomic_ptr_t
 #define atomic_test_and_set( v, s, t ) \
     atomic32_test_and_set ( v, s, t )
 
-/* N.B. - THIS FUNCTION IS FOR 32 BIT PTRS ONLY */
+/* N.B. - THESE FUNCTIONS ARE FOR 32 BIT PTRS ONLY */
+    
+/* int atomic_read_ptr ( const atomic_ptr_t *v ); */
+#define atomic_read_ptr( v ) \
+    ( ( v ) -> ptr )
+
 static __inline__
 void *atomic_test_and_set_ptr ( atomic_ptr_t *v, void *s, void *t )
 {

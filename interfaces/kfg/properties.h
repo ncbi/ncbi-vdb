@@ -176,6 +176,29 @@ KFG_EXTERN rc_t KConfig_Set_Aws_Profile ( KConfig *self, const char * value );
 KFG_EXTERN rc_t CC KConfig_Get_Cache_Amount ( const KConfig *self, uint32_t * value );
 KFG_EXTERN rc_t CC KConfig_Set_Cache_Amount( KConfig *self, uint32_t value );
 
+/* getters/setters for cachetee-integration into vfs-manager */
+KFG_EXTERN rc_t CC KConfig_Get_CacheTeeVersion( const KConfig *self, uint32_t * value, uint32_t dflt );
+KFG_EXTERN rc_t CC KConfig_Set_CacheTeeVersion( KConfig *self, uint32_t value );
+KFG_EXTERN rc_t CC KConfig_Get_CacheBlockSize( const KConfig *self, size_t * value, size_t dflt );
+KFG_EXTERN rc_t CC KConfig_Set_CacheBlockSize( KConfig *self, size_t value );
+KFG_EXTERN rc_t CC KConfig_Get_CachePageCount( const KConfig *self, uint32_t * value, uint32_t dflt );
+KFG_EXTERN rc_t CC KConfig_Set_CachePageCount( KConfig *self, uint32_t value );
+KFG_EXTERN rc_t CC KConfig_Get_CacheClusterFactorBits( const KConfig *self, uint32_t * value, uint32_t dflt );
+KFG_EXTERN rc_t CC KConfig_Set_CacheClusterFactorBits( KConfig *self, uint32_t value );
+KFG_EXTERN rc_t CC KConfig_Get_CachePageSizeBits( const KConfig *self, uint32_t * value, uint32_t dflt );
+KFG_EXTERN rc_t CC KConfig_Set_CachePageSizeBits( KConfig *self, uint32_t value );
+KFG_EXTERN rc_t CC KConfig_Get_CacheLogUseCWD( const KConfig *self, bool * value, bool dflt );
+KFG_EXTERN rc_t CC KConfig_Set_CacheLogUseCWD( KConfig *self, bool value );
+KFG_EXTERN rc_t CC KConfig_Get_CacheLogAppend( const KConfig *self, bool * value, bool dflt );
+KFG_EXTERN rc_t CC KConfig_Set_CacheLogAppend( KConfig *self, bool value );
+KFG_EXTERN rc_t CC KConfig_Get_CacheLogTimed( const KConfig *self, bool * value, bool dflt );
+KFG_EXTERN rc_t CC KConfig_Set_CacheLogTimed( KConfig *self, bool value );
+KFG_EXTERN rc_t CC KConfig_Get_CacheLogOuter( const KConfig *self, bool * value, bool dflt );
+KFG_EXTERN rc_t CC KConfig_Set_CacheLogOuter( KConfig *self, bool value );
+KFG_EXTERN rc_t CC KConfig_Get_CacheLogInner( const KConfig *self, bool * value, bool dflt );
+KFG_EXTERN rc_t CC KConfig_Set_CacheLogInner( KConfig *self, bool value );
+
+
 #ifdef __cplusplus
 }
 #endif

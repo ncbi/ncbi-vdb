@@ -72,8 +72,10 @@ $(ILIBDIR)/libcloud: $(addprefix $(ILIBDIR)/libcloud.,$(ILIBEXT))
 CLOUD_SRC = \
 	cloud-mgr \
 	aws \
+	aws-auth \
 	gcp \
-	cloud
+	cloud \
+	cloud-cmn \
 
 CLOUD_OBJ = \
 	$(addsuffix .$(LOBX),$(CLOUD_SRC))

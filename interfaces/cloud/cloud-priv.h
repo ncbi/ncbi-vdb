@@ -1,5 +1,5 @@
-#ifndef _h_cloud_gcp_
-#define _h_cloud_gcp_
+#ifndef _h_cloud_cloud_priv_
+#define _h_cloud_cloud_priv_
 
 /*=====================================================================================
 *
@@ -30,10 +30,6 @@
 #include <cloud/extern.h>
 #endif
 
-#ifndef _h_cloud_cloud_
-#include <cloud/cloud.h>
-#endif
-
 #ifndef _h_cloud_manager_
 #include <cloud/manager.h>
 #endif
@@ -42,34 +38,17 @@
 extern "C" {
 #endif
 
-/* GCP
- *  Google Cloud Platform
+/* CloudMgrMakeWithProvider
+ *  Create a non-singleton, object to access cloud-related resources, with a set provider
  */
-typedef struct GCP GCP;
+CLOUD_EXTERN rc_t CC CloudMgrMakeWithProvider ( CloudMgr ** mgrp, CloudProviderId provider );
 
-/* MakeGCP
- *  make an instance of a GCP cloud interface
- */
-CLOUD_EXTERN rc_t CC CloudMgrMakeGCP ( const CloudMgr * self, GCP ** gcp );
-
-/* AddRef
- * Release
- */
-CLOUD_EXTERN rc_t CC GCPAddRef ( const GCP * self );
-CLOUD_EXTERN rc_t CC GCPRelease ( const GCP * self );
-
-/* Cast
- *  cast from a Cloud to a GCP type or vice versa
- *  allows us to apply cloud-specific interface to cloud object
- *
- *  returns a new reference, meaning the "self" must still be released
- */
-CLOUD_EXTERN rc_t CC GCPToCloud ( const GCP * self, Cloud ** cloud );
-CLOUD_EXTERN rc_t CC CloudToGCP ( const Cloud * self, GCP ** gcp );
-
+#if _DEBUGGING
+CLOUD_EXTERN void CC CloudMgrSetProvider ( CloudMgr * self, CloudProviderId provider );
+#endif
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _h_cloud_gcp_ */
+#endif /* _h_cloud_cloud_priv_ */

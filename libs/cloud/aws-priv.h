@@ -1,7 +1,4 @@
-#ifndef _h_cloud_gcp_
-#define _h_cloud_gcp_
-
-/*=====================================================================================
+/*==============================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
 *               National Center for Biotechnology Information
@@ -23,53 +20,39 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ================================================================================== */
+* =========================================================================== */
 
+#pragma once
 
-#ifndef _h_cloud_extern_
-#include <cloud/extern.h>
-#endif
-
-#ifndef _h_cloud_cloud_
-#include <cloud/cloud.h>
-#endif
-
-#ifndef _h_cloud_manager_
-#include <cloud/manager.h>
+#ifndef _h_kfc_defs_
+#include <kfc/defs.h> /* rc_t */
 #endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* GCP
- *  Google Cloud Platform
- */
-typedef struct GCP GCP;
+struct AWS;
+struct KClientHttpRequest;
 
-/* MakeGCP
- *  make an instance of a GCP cloud interface
- */
-CLOUD_EXTERN rc_t CC CloudMgrMakeGCP ( const CloudMgr * self, GCP ** gcp );
+rc_t AWSDoAuthentication(const struct AWS * self,
+    struct KClientHttpRequest * req, const char * http_method,
+    bool requester_payer);
 
-/* AddRef
- * Release
- */
-CLOUD_EXTERN rc_t CC GCPAddRef ( const GCP * self );
-CLOUD_EXTERN rc_t CC GCPRelease ( const GCP * self );
+/* exposed private functions for unit testing */
 
-/* Cast
- *  cast from a Cloud to a GCP type or vice versa
- *  allows us to apply cloud-specific interface to cloud object
- *
- *  returns a new reference, meaning the "self" must still be released
- */
-CLOUD_EXTERN rc_t CC GCPToCloud ( const GCP * self, Cloud ** cloud );
-CLOUD_EXTERN rc_t CC CloudToGCP ( const Cloud * self, GCP ** gcp );
+rc_t MakeAwsAuthenticationHeader(
+    const char *AWSAccessKeyId,
+    const char *YourSecretAccessKeyID,
+    const char *StringToSign,
+    char *dst, size_t dlen);
 
+rc_t Base64InIdentityDocument(const char *src, char *dst, size_t dlen);
+rc_t WrapInIdentityPkcs7(const char *src, char *dst, size_t dlen);
+rc_t Base64InIdentityPkcs7(const char *src, char *dst, size_t dlen);
+rc_t MakeLocation(const char *pkcs7, const char *document,
+    char *dst, size_t dlen);
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* _h_cloud_gcp_ */
