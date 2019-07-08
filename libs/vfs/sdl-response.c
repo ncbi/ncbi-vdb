@@ -260,6 +260,7 @@ rc_t ItemAddElmsSdl(Item * self, const KJsonObject * node, const Data * dad)
 
             String id;
             String objectType;
+            String type;
 
             String url;
             StringInitCString(&url, ldata.link);
@@ -267,6 +268,7 @@ rc_t ItemAddElmsSdl(Item * self, const KJsonObject * node, const Data * dad)
             StringInitCString(&id, ldata.acc);
 
             memset(&objectType, 0, sizeof objectType);
+            memset(&type, 0, sizeof type);
 
             if (ldata.md5 != NULL) {
                 int i = 0;
@@ -305,8 +307,14 @@ rc_t ItemAddElmsSdl(Item * self, const KJsonObject * node, const Data * dad)
                 if (c != NULL)
                     size = len = c - data.object;
                 else
-                    size = len = strlen(data.object);
+                    len = string_measure(data.object, &size);;
                 StringInit(&objectType, ldata.object, size, len);
+            }
+
+            if (ldata.type != NULL) {
+                size_t size = 0;
+                uint32_t len = string_measure(data.type, &size);;
+                StringInit(&type, ldata.type, size, len);
             }
 
             if (ldata.ceRequired == eTrue)
@@ -315,7 +323,7 @@ rc_t ItemAddElmsSdl(Item * self, const KJsonObject * node, const Data * dad)
                 payRequired = true;
 
             rc = VPathMakeFromUrl(&path, &url, NULL, true, &id, ldata.sz,
-                mod, hasMd5 ? md5 : NULL, 0, ldata.srv, &objectType,
+                mod, hasMd5 ? md5 : NULL, 0, ldata.srv, &objectType, &type,
                 ceRequired, payRequired);
 
             if (rc == 0)
