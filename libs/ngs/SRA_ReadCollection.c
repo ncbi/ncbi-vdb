@@ -237,7 +237,7 @@ struct NGS_Read * SRA_ReadCollectionGetReads ( SRA_ReadCollection * self, ctx_t 
     {   /* iterators get their own cursors */
         TRY ( const NGS_Cursor * curs = NGS_CursorMake ( ctx, self -> tbl, sequence_col_specs, seq_NUM_COLS ) )
         {
-            NGS_Read * ret = SRA_ReadIteratorMake ( ctx, curs, self -> run_name, wants_full, wants_partial, wants_unaligned );
+            NGS_Read * ret = SRA_ReadIteratorMake ( ctx, curs, self -> run_name, /*wants_full, wants_partial*/ true, true, wants_unaligned );
             NGS_CursorRelease ( curs, ctx );
             return ret;
         }
@@ -304,7 +304,7 @@ NGS_Read * SRA_ReadCollectionGetReadRange ( SRA_ReadCollection * self, ctx_t ctx
     /* iterators get their own cursors */
     TRY ( const NGS_Cursor * curs = NGS_CursorMake ( ctx, self -> tbl, sequence_col_specs, seq_NUM_COLS ) )
     {
-        NGS_Read * ret = SRA_ReadIteratorMakeRange ( ctx, curs, self -> run_name, first, count, wants_full, wants_partial, wants_unaligned );
+        NGS_Read * ret = SRA_ReadIteratorMakeRange ( ctx, curs, self -> run_name, first, count, /*wants_full, wants_partial*/ true, true, wants_unaligned );
         NGS_CursorRelease ( curs, ctx );
         return ret;
     }

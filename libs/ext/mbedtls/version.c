@@ -30,7 +30,7 @@
 #include "mbedtls/version.h"
 #include <string.h>
 
-unsigned int vdb_mbedtls_version_get_number()
+unsigned int vdb_mbedtls_version_get_number( void )
 {
     return( MBEDTLS_VERSION_NUMBER );
 }

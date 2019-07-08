@@ -32,3 +32,7 @@ user.status
 .\#*
 core
 *.pyc
+.gdb_history
+.vscode
+*.cache
+

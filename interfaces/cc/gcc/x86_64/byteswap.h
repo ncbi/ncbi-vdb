@@ -41,7 +41,7 @@ extern "C" {
 /* perform single instruction byte swap */
 static __inline__ uint16_t bswap_16 ( uint16_t i )
 {
-    register uint16_t rtn;
+    uint16_t rtn;
     __asm__
     (
         "rorw $8, %w0"
@@ -55,7 +55,7 @@ static __inline__ uint16_t bswap_16 ( uint16_t i )
 /* perform single instruction byte swap */
 static __inline__ uint32_t bswap_32 ( uint32_t i )
 {
-    register uint32_t rtn;
+    uint32_t rtn;
     __asm__
     (
         "bswap %0"
@@ -69,7 +69,7 @@ static __inline__ uint32_t bswap_32 ( uint32_t i )
 /* perform multi-instruction byte swap */
 static __inline__ uint64_t bswap_64 ( uint64_t i )
 {
-    register uint64_t rtn;
+    uint64_t rtn;
     __asm__
     (
         "bswap %q0"

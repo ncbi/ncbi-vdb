@@ -159,7 +159,6 @@ int64_t CC SDatabaseSort ( const void *item, const void *n )
     return ( int64_t ) ( a -> version >> 24 ) - ( int64_t ) ( b -> version >> 24 );
 }
 
-static
 rc_t SDatabaseCompare ( const SDatabase *a, const SDatabase *b, const SDatabase **newer, bool exhaustive )
 {
     assert ( ( a -> version >> 24 ) == ( b -> version >> 24 ) );
@@ -220,7 +219,6 @@ void CC VectorTranslate ( Vector *v, const Vector *dad )
     VectorInit ( v, start, block );
 }
 
-static
 rc_t CC SDatabaseExtend ( SDatabase *self, const SDatabase *dad )
 {
     self -> dad = dad;

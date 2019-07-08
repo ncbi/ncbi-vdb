@@ -84,7 +84,7 @@ NGS_ReferenceBlobIteratorMake ( ctx_t ctx, const struct NGS_Cursor* p_curs, int6
         else
         {
             TRY ( NGS_RefcountInit ( ctx, & ret -> dad, & ITF_Refcount_vt . dad, & NGS_ReferenceBlobIterator_vt, "NGS_ReferenceBlobIterator", "" ) )
-            {
+            {   /* set up iteration boundaries */
                 TRY ( ret -> curs = NGS_CursorDuplicate ( p_curs, ctx ) )
                 {
                     ret -> ref_start = p_refStartId;
@@ -156,7 +156,7 @@ NGS_ReferenceBlobIteratorNext ( NGS_ReferenceBlobIterator * self, ctx_t ctx )
         INTERNAL_ERROR ( xcSelfNull, "NULL ReferenceBlobIterator accessed" );
     }
     else if ( self -> next_row <= self -> last_row )
-    {
+    {   /* advance to the next non-NULL row in the READ column, retrieve its blob */
         int64_t nextRow;
         rc_t rc = VCursorFindNextRowIdDirect ( NGS_CursorGetVCursor ( self -> curs ),
                                                NGS_CursorGetColumnIndex ( self -> curs, ctx, seq_READ ),

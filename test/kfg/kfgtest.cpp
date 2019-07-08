@@ -33,6 +33,7 @@
 #include <kapp/args.h> /* Args */
 
 #include <kfg/config.h>
+#include <kfg/kfg-priv.h>
 #include <kfg/extern.h>
 #include <kfg/repository.h> /* KConfigImportNgc */
 
@@ -45,7 +46,6 @@
 #include <vfs/manager.h>
 #include <vfs/path.h>
 
-#include <kfs/directory.h>
 #include <kfs/dyload.h>
 #include <kfs/impl.h>
 
@@ -55,10 +55,10 @@
 #include <klib/text.h>
 #include <klib/writer.h>
 
-#include <stdexcept>
-
 #include <cstdlib>
 #include <cstring>
+
+#include "kfg-fixture.hpp"
 
 using namespace std;
 
@@ -67,191 +67,10 @@ using namespace std;
 static rc_t argsHandler(int argc, char* argv[]);
 TEST_SUITE_WITH_ARGS_HANDLER(KfgTestSuite, argsHandler);
 
-// test fixture for creation and lookup of kfg files
-class KfgFixture
+FIXTURE_TEST_CASE(testKConfigPrint, KfgFixture)
 {
-public:
-    KfgFixture() : wd(0), kfg(0), file(0), path(0), node(0)
-    {
-        if ( KDirectoryNativeDir ( & wd ) != 0 )
-            throw logic_error("KfgFixture: KDirectoryNativeDir failed");
-            
-        if (KConfigMake ( & kfg, NULL ) != 0)
-            throw logic_error("KfgFixture: KConfigMake failed");
-            
-        if (apppath.length() == 0) // first call
-        {
-            if (!GetValue("APPPATH", apppath))
-                throw logic_error("KfgFixture: GetValue failed");
-        }
-    }
-    ~KfgFixture() 
-    {
-        if ( node != 0 && KConfigNodeRelease(node) )
-            throw logic_error("~KfgFixture: KConfigNodeRelease failed");
-        
-        if ( KConfigRelease ( kfg ) != 0 )
-            throw logic_error("~KfgFixture: KConfigRelease failed");
-            
-        if ( KDirectoryRelease ( wd ) != 0 )
-            throw logic_error("~KfgFixture: KDirectoryRelease failed");
-            
-        if ( KFileRelease( file ) != 0 )
-            throw logic_error("~KfgFixture: KFileRelease failed");
-            
-        if ( path && VPathRelease ( path) != 0 )
-            throw logic_error("~KfgFixture: VPathRelease failed");
-    }
-    void CreateFile(const char* name, const char* contents)
-    {
-        if (KDirectoryCreateFile(wd, &file, true, 0664, kcmInit, name) != 0)
-            throw logic_error("CreateFile: KDirectoryCreateFile failed");
-
-        size_t num_writ=0;
-        if (KFileWrite(file, 0, contents, strlen(contents), &num_writ) != 0)
-            throw logic_error("CreateFile: KFileWrite failed");
-
-        if (KFileRelease(file) != 0)
-            throw logic_error("CreateFile: KFileRelease failed");
-        
-        file=0;
-    }
-    
-    void LoadFile(const char* name)
-    {
-        if (KDirectoryOpenFileRead(wd, (const KFile**)&file, name) != 0)
-            throw logic_error("LoadFile: KDirectoryOpenFileRead failed");
-            
-        if (KConfigLoadFile ( kfg, name, file) != 0)
-            throw logic_error("LoadFile: KConfigLoadFile failed");
-
-        if (KFileRelease(file) != 0)
-            throw logic_error("LoadFile: KFileRelease failed");
-            
-        file=0;
-    }
-
-    void CreateAndLoad(const string & sname, const char* contents)
-    {
-        const char * name = sname . c_str ();
-#ifdef DBG_KFG
-        cout << "26 CreateAndLoad(" << name << ")\n";
-#endif
-        CreateFile(name, contents);
-        LoadFile(name);
-        // the .kfg is not needed anymore
-        if (KDirectoryRemove(wd, true, name) != 0)
-            throw logic_error("CreateAndLoad: KDirectoryRemove failed");
-#ifdef DBG_KFG
-        cout << "32 CreateAndLoad(" << name << ")\n";
-#endif
-    }
-
-    bool GetValue(const char* path, string& value)
-    {
-        const KConfigNode *node;
-        rc_t rc=KConfigOpenNodeRead(kfg, &node, "%.*s", strlen(path), path);
-        if (rc == 0) 
-        {
-            rc = KConfigNodeRead(node, 0, buf, BufSize, &num_read, NULL);
-            if (rc != 0)
-                throw logic_error("GetValue: KConfigNodeRead failed");
-            buf[num_read]=0;
-            value=buf;
-            return KConfigNodeRelease(node) == 0;
-        }
-        return false;
-    }
-    bool ValueMatches(const char* path, const char* value, bool nullAsEmpty=false)
-    {
-        if (nullAsEmpty && value == 0)
-        {
-            value="";
-        }
-        string v;
-        if (GetValue(path, v))
-        {
-            bool ret=true;
-            if (v != string(value, strlen(value)))
-            {
-                cerr << "ValueMatches mismatch: expected='" << value << "', actual='" << v << "'" << endl;
-                ret=false;
-            }
-            return ret;
-        }
-        return false;
-    }
-    void UpdateNode(const char* key, const char* value)
-    {
-        KConfigNode *node;
-        if (KConfigOpenNodeUpdate(kfg, &node, key) != 0)
-            throw logic_error("UpdateNode: KConfigOpenNodeUpdate failed");
-        if (KConfigNodeWrite(node, value, strlen(value)) != 0)
-            throw logic_error("UpdateNode: KConfigNodeWrite failed");
-        if (KConfigNodeRelease(node) != 0)
-            throw logic_error("UpdateNode: KConfigNodeRelease failed");
-    }
-
-    string DirPath(const KDirectory* dir)
-    {
-        char resolved[4097];
-        if (KDirectoryResolvePath(dir, true, resolved, sizeof resolved, ".") == 0)
-        {
-            return string(resolved);
-        }
-        else
-        {
-            return "??";
-        }
-    }
-    string GetHomeDirectory()
-    {   
-        string ret;
-        if (getenv("HOME") != NULL)
-            ret = getenv("HOME");
-        else if (getenv("USERPROFILE") != NULL) // on Windows the value is taken from USERPROFILE
-            ret = getenv("USERPROFILE");
-        
-        if (KDirectoryResolvePath(wd, true, buf, sizeof(buf), ret.c_str()) != 0)
-            throw logic_error("GetHomeDirectory: KDirectoryResolvePath failed");
-        
-        return string(buf);
-    }
-    const KConfigNode* GetNode(const char* path) 
-    {
-        if ( node != 0 && KConfigNodeRelease(node) )
-            throw logic_error("GetNode: KConfigNodeRelease failed");
-        if (KConfigOpenNodeRead(kfg, (const KConfigNode**)&node, path) != 0)
-            throw logic_error("GetNode: KConfigOpenNodeRead failed");
-        return node;
-    }
-    string ReadContent(const string& fileName)
-    {
-        KFile* f;
-        KDirectoryOpenFileRead(wd, (const KFile**)&f, fileName.c_str());
-    
-        if (KFileReadAll ( f, 0, buf, BufSize, &num_read ) != 0)
-           throw logic_error("ReadContent: KFileReadAll failed");   
-           
-        KFileRelease(f);
-        return string(buf, num_read);
-    }    
-    
-    KDirectory* wd;
-    KConfig* kfg;
-    KFile* file;
-    VPath* path;
-    
-    KConfigNode* node;
-    
-    static const int BufSize = 8192;
-    char buf[BufSize];
-    size_t num_read;
-    size_t num_writ;
-
-    static string apppath; // only gets set for the 1st instance of KConfig; save it here for the corresponding test case
-};
-string KfgFixture::apppath; 
+	REQUIRE_RC(KConfigPrint(kfg, 0));
+}
 
 ///////////////////////////////////////////////// KFG parser test cases
 
@@ -276,7 +95,7 @@ FIXTURE_TEST_CASE(one_pathname_value_single_quotes, KfgFixture)
 }
 
 FIXTURE_TEST_CASE(numeric_pathnames, KfgFixture)
-{   
+{
     CreateAndLoad(GetName(), " root1/1 = 'val1'\n");
     REQUIRE(ValueMatches("root1/1", "val1"));
 }
@@ -312,13 +131,13 @@ FIXTURE_TEST_CASE(comments, KfgFixture)
 }
 
 FIXTURE_TEST_CASE(unescaping_escapes, KfgFixture)
-{   
+{
     CreateAndLoad(GetName(), "name='\\a'\n");
     REQUIRE(ValueMatches("name", "\a"));
 }
 
 FIXTURE_TEST_CASE(dots_in_pathnames, KfgFixture)
-{   
+{
     CreateAndLoad(GetName(), "root.1./subname1.ext='val100'\n");
     REQUIRE(ValueMatches("root.1./subname1.ext", "val100"));
 }
@@ -362,7 +181,7 @@ FIXTURE_TEST_CASE(in_string_variable_expansion_path, KfgFixture)
 }
 
 FIXTURE_TEST_CASE(can_reference_keys_across_files, KfgFixture)
-{  
+{
     const char* contents1="root/var='Value'\n";
     CreateAndLoad((string(GetName())+"1").c_str(), contents1);
     const char* contents2="ref=$(root/var)\n";
@@ -388,11 +207,29 @@ FIXTURE_TEST_CASE(long_path, KfgFixture)
     REQUIRE(ValueMatches("k", path.c_str()));
 }
 
+FIXTURE_TEST_CASE(KConfigParse_SelfNull, KfgFixture)
+{
+    REQUIRE_RC_FAIL ( KConfigParse (NULL, "", "") );
+}
+FIXTURE_TEST_CASE(KConfigParse_NullPath, KfgFixture)
+{   // not a problem
+    REQUIRE_RC ( KConfigParse ( kfg, NULL, "" ) );
+}
+FIXTURE_TEST_CASE(KConfigParse_NullString, KfgFixture)
+{
+    REQUIRE_RC_FAIL ( KConfigParse ( kfg, NULL, NULL ) );
+}
+FIXTURE_TEST_CASE(KConfigParse_Parse, KfgFixture)
+{
+    REQUIRE_RC ( KConfigParse ( kfg, "", "root/var='Value'\n" ) );
+    REQUIRE ( ValueMatches ( "root/var", "Value" ) );
+}
+
 ///////////////////////////////////////////////// predefined variables
 FIXTURE_TEST_CASE(predef_LIBPATH, KfgFixture)
 {
 #if WINDOWS && !_STATIC
-    // since this program and libkfg.dll live in different directories, they contain separate copies of KConfigMake under Windows, 
+    // since this program and libkfg.dll live in different directories, they contain separate copies of KConfigMake under Windows,
     // so we cannot compare them
 #else
     const char* contents="var=$(vdb/lib/paths/kfg)\n";
@@ -444,8 +281,8 @@ FIXTURE_TEST_CASE(predef_OS, KfgFixture)
     #if LINUX
         #define OS "linux"
     #elif SUN
-        #define OS "sun"    
-    #elif MAC 
+        #define OS "sun"
+    #elif MAC
         #define OS "mac"
     #elif WINDOWS
         #define OS "win"
@@ -476,7 +313,7 @@ FIXTURE_TEST_CASE(predef_BUILD, KfgFixture)
     #else
         #if _DEBUGGING
             #define BUILD "DEBUG"
-        #else 
+        #else
             #define BUILD "RELEASE"
         #endif
     #endif
@@ -487,8 +324,8 @@ FIXTURE_TEST_CASE(predef_BUILD, KfgFixture)
 #if 0 // only appropriate when invoked by a canonical path ?
 FIXTURE_TEST_CASE(predef_APPPATH, KfgFixture)
 {
-    // REQUIRE_RC(CreateAndLoad(GetName(), "var=$(APPPATH)\n")); 
-    // APPPATH is only set correctly for the 1st instance of KConfig, so we saved it off in the first call to fixture's 
+    // REQUIRE_RC(CreateAndLoad(GetName(), "var=$(APPPATH)\n"));
+    // APPPATH is only set correctly for the 1st instance of KConfig, so we saved it off in the first call to fixture's
     // constructor, test here
     string path(ncbi::NK::GetTestSuite()->argv[0]);
     string::size_type lastSlash=path.find_last_of("/");
@@ -500,9 +337,9 @@ FIXTURE_TEST_CASE(predef_APPPATH, KfgFixture)
     {
         path.erase(lastSlash);
     }
-    REQUIRE_EQ(strcase_cmp(apppath.c_str(), apppath.length(), 
-                           path.c_str(), path.length(), 
-                           max(apppath.length(), path.length())), 
+    REQUIRE_EQ(strcase_cmp(apppath.c_str(), apppath.length(),
+                           path.c_str(), path.length(),
+                           max(apppath.length(), path.length())),
                0);
 }
 #endif
@@ -562,16 +399,16 @@ FIXTURE_TEST_CASE(predef_ENV_direct, KfgFixture)
 
 #if 0
 FIXTURE_TEST_CASE(include_files, KfgFixture)
-{  
+{
 #define includeName "include_file"
     const char* contents1="root/var='Value'\n";
-    CreateFile((GetName()+"1").c_str(), contents1);
+    MakeFile((GetName()+"1").c_str(), contents1);
     const char* contents2="include ./" includeName "\n"
                           "ref=$(root/var)\n";
     CreateAndLoad((GetName()+"2").c_str(), contents2);
 
     REQUIRE(ValueMatches("ref", "Value"));
-    REQUIRE_RC(KDirectoryRemove(wd, true, includeName)); 
+    REQUIRE_RC(KDirectoryRemove(wd, true, includeName));
 }
 #endif
 #endif
@@ -586,28 +423,28 @@ FIXTURE_TEST_CASE(ChangeCommit, KfgFixture)
         "one/two=\"2\"\n"
         "one/two/three=\"3\"\n"
         ;
-    // override NCBI_SETTINGS 
+    // override NCBI_SETTINGS
     const char* LocalSettingsFile = "settings.mkfg";
     string FullMagicPath = DirPath(wd) + "/" + LocalSettingsFile;
     CreateAndLoad( GetName(), (string(contents) + "NCBI_SETTINGS=\"" + FullMagicPath + "\"\n").c_str() );
-    
+
     // make, commit changes
     UpdateNode("one", "1+0");
     UpdateNode("one/two", "0+2");
     REQUIRE_RC(KConfigCommit(kfg));
     REQUIRE_RC(KConfigRelease(kfg));
-    
+
     // load the changes from the new location
     REQUIRE_RC(KConfigMake(&kfg,wd));
     LoadFile(FullMagicPath.c_str());
-    
+
     // verify changes
     REQUIRE(ValueMatches("one", "1+0"));
     REQUIRE(ValueMatches("one/two", "0+2"));
     string s;
     REQUIRE(! GetValue("one/two/three", s)); // unchanged values are not saved
-    
-    REQUIRE_RC(KDirectoryRemove(wd, true, LocalSettingsFile));     
+
+    REQUIRE_RC(KDirectoryRemove(wd, true, LocalSettingsFile));
 }
 
 FIXTURE_TEST_CASE(ChangeCommitEscapes, KfgFixture)
@@ -615,22 +452,22 @@ FIXTURE_TEST_CASE(ChangeCommitEscapes, KfgFixture)
     const char* LocalSettingsFile = "settings.mkfg";
     string FullMagicPath = DirPath(wd) + "/" + LocalSettingsFile;
     CreateAndLoad( GetName(), (string() + "NCBI_SETTINGS=\"" + FullMagicPath + "\"\n").c_str() );
-    
+
     // make, commit changes
     UpdateNode("double/quote", "\"");
     UpdateNode("escaped/hex", "\x0a");
     REQUIRE_RC(KConfigCommit(kfg));
     REQUIRE_RC(KConfigRelease(kfg));
-    
+
     // load the changes from the new location
     REQUIRE_RC(KConfigMake(&kfg,wd));
     LoadFile(FullMagicPath.c_str());
-    
+
     // verify changes
     REQUIRE(ValueMatches("double/quote", "\""));
     REQUIRE(ValueMatches("escaped/hex", "\x0a"));
-    
-    REQUIRE_RC(KDirectoryRemove(wd, true, LocalSettingsFile));     
+
+    REQUIRE_RC(KDirectoryRemove(wd, true, LocalSettingsFile));
 }
 
 FIXTURE_TEST_CASE(DropAllChildren, KfgFixture)
@@ -653,19 +490,19 @@ FIXTURE_TEST_CASE(DropAllChildren, KfgFixture)
 
 FIXTURE_TEST_CASE(FixUserSettings, KfgFixture)
 {   // fix spelling of nodes dbGap-<number> to dbGaP-<number>
-    
-    // read values from a local .mkfg file; 
+
+    // read values from a local .mkfg file;
     // if anything is changed the new values will be saved in the user's "global" .mkfg
 
     string mkfgFilename = "./user-settings.mkfg";
     // fake global settings since we do not want to modify the real ~/.ncbi/user-settings.mkfg
-    string globalMkfgFilename = "./global-settings.mkfg"; 
+    string globalMkfgFilename = "./global-settings.mkfg";
 
     REQUIRE_RC(KConfigRelease(kfg));
     // create the local .mkfg with the old spelling of dbGap;
-    CreateFile(mkfgFilename.c_str(), 
+    MakeFile(mkfgFilename.c_str(),
                     (string("NCBI_SETTINGS=\"") + globalMkfgFilename + "\"\n"
-                     "/repository/user/protected/dbGap-123=\"qq\"\n").c_str());    
+                     "/repository/user/protected/dbGap-123=\"qq\"\n").c_str());
     REQUIRE_RC(KConfigMake ( & kfg, wd )); // this should load the local .mkfg, replace "dbGap" with "dbGaP" and update the global .mkfg
 
     // verify corrected value in memory
@@ -680,6 +517,20 @@ FIXTURE_TEST_CASE(FixUserSettings, KfgFixture)
 }
 
 //////////////////////////////////////////// KConfig Accessors
+
+FIXTURE_TEST_CASE(ConfigAccess_NullPath, KfgFixture)
+{   // NULL is ok
+    const char* contents="bool/f=\"FALSE\"\n";
+    CreateAndLoad(GetName(), contents);
+    REQUIRE_RC ( KConfigOpenNodeRead ( kfg, (const KConfigNode**)&node, NULL) );
+}
+
+FIXTURE_TEST_CASE(ConfigAccess_NonUtf8_Comment_InPath, KfgFixture)
+{
+    const char* contents="bool/f=\"FALSE\"\n";
+    CreateAndLoad(GetName(), contents);
+    REQUIRE_RC ( KConfigRead ( kfg, "#\377", 0, buf, sizeof buf, & num_read, & num_writ ) );
+}
 
 FIXTURE_TEST_CASE(ConfigAccessBool, KfgFixture)
 {
@@ -744,11 +595,11 @@ FIXTURE_TEST_CASE(ConfigAccessVPath, KfgFixture)
     // example from vfs/path.h
     // don't know where this comes from...
     #define VPATH "ncbi-file:///c/scanned-data/0001/file.sra?enc&pwd-file=/c/Users/JamesMcCoy/ncbi.pwd"
-    
+
     const char* contents=
-        "vpath/i1=\"" VPATH "\"\n" 
+        "vpath/i1=\"" VPATH "\"\n"
         ;
-        
+
     CreateAndLoad(GetName(), contents);
     REQUIRE_RC(KConfigReadVPath(kfg, "vpath/i1", &path));
     VPathReadUri(path, buf, sizeof(buf), &num_read);
@@ -761,9 +612,9 @@ FIXTURE_TEST_CASE(ConfigAccessString, KfgFixture)
     // also, can't have multiple '?' in query
     #define STRING "ncbi-file:///c/scanned-data/0001/file.sra?enc&pwd-file=/c/Users/JamesMcCoy/ncbi.pwd"
     const char* contents=
-        "string/i1=\"" STRING "\"\n" 
+        "string/i1=\"" STRING "\"\n"
         ;
-        
+
     CreateAndLoad(GetName(), contents);
     String* str;
     REQUIRE_RC(KConfigReadString(kfg, "string/i1", &str));
@@ -823,11 +674,11 @@ FIXTURE_TEST_CASE(ConfigNodeAccessVPath, KfgFixture)
     // example from vfs/path.h
     // changing
     #define VPATH "ncbi-file:///c/scanned-data/0001/file.sra?enc&pwd-file=/c/Users/JamesMcCoy/ncbi.pwd"
-    
+
     const char* contents=
-        "vpath/i1=\"" VPATH "\"\n" 
+        "vpath/i1=\"" VPATH "\"\n"
         ;
-        
+
     CreateAndLoad(GetName(), contents);
     REQUIRE_RC(KConfigNodeReadVPath(GetNode("vpath/i1"), &path));
     VPathReadUri(path, buf, sizeof(buf), &num_read);
@@ -838,9 +689,9 @@ FIXTURE_TEST_CASE(ConfigNodeAccessString, KfgFixture)
 {
     #define STRING "ncbi-file:///c/scanned-data/0001/file.sra?enc&pwd-file=/c/Users/JamesMcCoy/ncbi.pwd"
     const char* contents=
-        "string/i1=\"" STRING "\"\n" 
+        "string/i1=\"" STRING "\"\n"
         ;
-     
+
     CreateAndLoad(GetName(), contents);
     String* str;
     REQUIRE_RC(KConfigNodeReadString(GetNode("string/i1"), &str));
@@ -921,13 +772,13 @@ FIXTURE_TEST_CASE(KConfigImportNgc_Basic, KfgFixture)
     // .../encryption-key-path = "$(NCBI_HOME)/dbGaP-2956.enc_key"   (creates the file, writes the key into it with \n appended)
     // .../apps/sra/volumes/sraFlat="sra"
     // .../cache-enabled = "true"
-    // .../root = "repos/ngc/" ; creates the dir 
+    // .../root = "repos/ngc/" ; creates the dir
     //
     // also, creates the following node if it is not present
-    // /repository/remote/protected/CGI/resolver-cgi="https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi"
+    // /repository/remote/protected/CGI/resolver-cgi="https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi"
     {
-        REQUIRE_RC(KConfigNodeReadVPath(GetNode("/repository/user/protected/dbGaP-2956/encryption-key-path"), &path));    
-        VPathReadPath(path, buf, sizeof(buf), &num_read);    
+        REQUIRE_RC(KConfigNodeReadVPath(GetNode("/repository/user/protected/dbGaP-2956/encryption-key-path"), &path));
+        VPathReadPath(path, buf, sizeof(buf), &num_read);
         string encFileName = "/dbGaP-2956.enc_key";
         REQUIRE_EQ(string(buf).rfind(encFileName), num_read - encFileName.size()); // string(buf) ends with encFileName
         VPathRelease(path);
@@ -935,10 +786,10 @@ FIXTURE_TEST_CASE(KConfigImportNgc_Basic, KfgFixture)
 
         REQUIRE_EQ(ReadContent(buf), string("12\n"));
     }
-    
+
     {
         String* str;
-        REQUIRE_RC(KConfigNodeReadString(GetNode("/repository/user/protected/dbGaP-2956/apps/sra/volumes/sraFlat"), &str));    
+        REQUIRE_RC(KConfigNodeReadString(GetNode("/repository/user/protected/dbGaP-2956/apps/sra/volumes/sraFlat"), &str));
         REQUIRE_EQ(string(str->addr), string("sra"));
         StringWhack(str);
     }
@@ -947,31 +798,32 @@ FIXTURE_TEST_CASE(KConfigImportNgc_Basic, KfgFixture)
         bool b = true;
         REQUIRE_RC(KConfigNodeReadBool(GetNode("/repository/user/protected/dbGaP-2956/cache-enabled"), &b));
         REQUIRE(b);
-    }        
-    
+    }
+
     {
-        REQUIRE_RC(KConfigNodeReadVPath(GetNode("/repository/user/protected/dbGaP-2956/root"), &path));    
-        VPathReadPath(path, buf, sizeof(buf), &num_read);    
+        REQUIRE_RC(KConfigNodeReadVPath(GetNode("/repository/user/protected/dbGaP-2956/root"), &path));
+        VPathReadPath(path, buf, sizeof(buf), &num_read);
         REQUIRE_EQ(string(buf), string("repos/ngc/"));
         VPathRelease(path);
         path = 0;
-        
+
         const KDirectory *sub;
         REQUIRE_RC(KDirectoryOpenDirRead(wd, &sub, false, buf));
         REQUIRE_RC(KDirectoryRelease(sub));
         REQUIRE_RC(KDirectoryRemove(wd, true, buf));
     }
-    
+
     {
         const String* str;
-        REQUIRE_RC(KConfigNodeReadVPath(GetNode("/repository/remote/protected/CGI/resolver-cgi"), &path));    
-        REQUIRE_RC(VPathMakeString(path, &str));    
-        REQUIRE_EQ(string(str->addr), string("https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi"));
+        REQUIRE_RC(KConfigNodeReadVPath(GetNode("/repository/remote/protected/CGI/resolver-cgi"), &path));
+        REQUIRE_RC(VPathMakeString(path, &str));
+        REQUIRE_EQ(string(str->addr),
+            string("https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi"));
         StringWhack(str);
     }
-    
+
     REQUIRE_EQ(string(newRepo), string("repos/ngc/"));
-    
+
     REQUIRE_RC(KDirectoryRemove(wd, true, "repos"));
 }
 #endif

@@ -264,6 +264,25 @@ KNS_EXTERN rc_t CC KClientHttpRequestByteRange ( KClientHttpRequest *self, uint6
 KNS_EXTERN rc_t CC KClientHttpRequestAddHeader ( KClientHttpRequest *self,
     const char *name, const char *val, ... );
 
+/* GetHeader
+ *  retrieve named header if present
+ *  this can potentially return a comma separated value list
+ */
+KNS_EXTERN rc_t CC KClientHttpRequestGetHeader ( const KClientHttpRequest *self, const char *name,
+    char *buffer, size_t bsize, size_t *num_read );
+
+/* GetHost
+ *  retrieve host
+ */
+KNS_EXTERN rc_t CC KClientHttpRequestGetHost(const KClientHttpRequest *self,
+    char *buffer, size_t bsize, size_t *num_read);
+
+/* GetPath
+ *  retrieve path
+ */
+KNS_EXTERN rc_t CC KClientHttpRequestGetPath(const KClientHttpRequest *self,
+    char *buffer, size_t bsize, size_t *num_read);
+
 
 /* AddPostParam
  *  adds a parameter for POST
@@ -367,10 +386,19 @@ KNS_EXTERN rc_t CC KClientHttpResultAddHeader ( KClientHttpResult *self,
 
 /* GetHeader
  *  retrieve named header if present
- *  this cand potentially return a comma separated value list
+ *  this can potentially return a comma separated value list
  */
 KNS_EXTERN rc_t CC KClientHttpResultGetHeader ( const KClientHttpResult *self, const char *name,
     char *buffer, size_t bsize, size_t *num_read );
+
+
+/* TestHeaderValue
+ *  test for existence of header and a particular value
+ *  if the header exists and has a comma-separated list of values,
+ *  test each value individually, i.e. splits on comma before comparison
+ */
+KNS_EXTERN bool CC KClientHttpResultTestHeaderValue ( const KClientHttpResult *self,
+    const char *name, const char *value );
 
 
 /* GetInputStream

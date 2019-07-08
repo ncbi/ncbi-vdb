@@ -52,7 +52,7 @@
 
 #include <sysalloc.h>
 
-#include "cursor-priv.h"
+#include "cursor-table.h"
 
 /* missing macros/function from klib/rc.h
  */
@@ -869,7 +869,9 @@ rc_t CC VDatabaseDependencies(const VDatabase *self, BSTree* tr,
         }
     }
     if (rc == 0) {
-        rc = VTableCreateCursorReadInternal(tbl, &curs);
+        const VTableCursor * tcurs;
+        rc = VTableCreateCursorReadInternal(tbl, &tcurs);
+        curs = ( const VCursor * )tcurs;
     }
 
     rc = AddColumn(rc, curs, &CIRCULAR);

@@ -50,19 +50,20 @@ extern "C" {
 struct String;
 struct KConfig;
 struct HttpRetrySpecs;
+struct KNSProxies;
 
 struct KNSManager
 {
-    KRefcount refcount;
-    
     struct String const *aws_access_key_id;
     struct String const *aws_secret_access_key;
     struct String const *aws_region;
     struct String const *aws_output;
-    
+
     struct HttpRetrySpecs retry_specs;
 
     KTLSGlobals tlsg;
+
+    KRefcount refcount;
 
     int32_t conn_timeout;
     int32_t conn_read_timeout;
@@ -74,14 +75,64 @@ struct KNSManager
 
     uint8_t  maxNumberOfRetriesOnFailureForReliableURLs;
 
-    bool http_proxy_enabled; /* TBD - does this need to be static today? */
-    bool http_proxy_only; /* no direct connection - proxy only */
-    HttpProxy * http_proxy;
+    struct KNSProxies * proxies;
+
+    const struct Cloud * cloud;
 
     bool verbose;
+    bool logTlsErrors;
+
+    /* VResolverCache try to resolve to user's cache before cwd/AD */
+    bool resolveToCache;
+
+    /* VResolverCache ia allowed to resolve to user's cache vs. cwd/AD */
+    bool enabledResolveToAd; 
+
+    bool accept_aws_charges;
+    bool accept_gcp_charges;
+
+    bool NCBI_VDB_NETnoLogError;
+    bool NCBI_VDB_NETkfgValueSet;
+    bool NCBI_VDB_NETkfgValue;
+
+    bool notSingleton;
 };
 
-/* test */
+bool KNSManagerLogNcbiVdbNetError ( const struct KNSManager * self );
+void KNSManagerSetLogNcbiVdbNetError(struct KNSManager * self, bool set);
+
+/* returns true when we should not try direct internet connection
+ * when HttpProxies are set */
+bool KNSManagerHttpProxyOnly ( const struct KNSManager * self );
+
+rc_t KNSManagerGetCloudLocation(const struct KNSManager * self,
+    char * buffer, size_t bsize, size_t * num_read, size_t * remaining);
+
+/******************************** KNSProxies **********************************/
+
+struct KNSProxies * KNSManagerKNSProxiesMake ( struct KNSManager * mgr,
+                                               const struct KConfig * kfg );
+
+rc_t KNSProxiesWhack ( struct KNSProxies * self );
+
+bool KNSProxiesGetHTTPProxyEnabled ( const struct KNSProxies * self );
+
+bool KNSProxiesSetHTTPProxyEnabled ( struct KNSProxies * self, bool enabled );
+
+bool KNSProxiesHttpProxyOnly ( const struct KNSProxies * self );
+
+rc_t KNSProxiesVSetHTTPProxyPath ( struct KNSProxies * self,
+    const char * fmt, va_list args, bool clear );
+
+struct KNSProxies * KNSProxiesGetHttpProxy ( struct KNSProxies * self,
+                                             size_t * cnt );
+
+/* DEPRECATED */
+rc_t KNSProxiesGetHttpProxyPath ( const struct KNSProxies* self,
+                                  const String ** proxy );
+
+
+/************************************ test ************************************/
 struct KStream;
 void KStreamForceSocketClose ( struct KStream const * self );
 

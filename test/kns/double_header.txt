@@ -1,0 +1,24 @@
+HTTP/1.1 200 OK
+Accept-Ranges: bytes
+Server: Apache
+Accept-Ranges: bytes
+Via: 1.0 fred
+Via: 1.1 example.com (Apache/1.1)
+
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head xmlns:xi="http://www.w3.org/2001/XInclude">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <!-- meta -->
+    <meta name="robots" content="index,nofollow,noarchive" />
+    <meta name="ncbi_app" content="entrez" />
+    <meta name="ncbi_db" content="biosample" />
+    <meta name="ncbi_op" content="page_view" />
+    <meta name="ncbi_pdid" content="home" />
+    <meta name="ncbi_sessionid" content="CE8903371880D4E1_0008SID" />
+    <meta name="ncbi_stat" content="false" />
+    <meta name="ncbi_hitstat" content="false" />
+    <title>Home - BioSample - NCBI</title>
+</html>

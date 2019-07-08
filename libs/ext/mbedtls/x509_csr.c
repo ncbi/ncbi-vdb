@@ -39,6 +39,7 @@
 
 #include "mbedtls/x509_csr.h"
 #include "mbedtls/oid.h"
+#include "mbedtls/platform_util.h"
 
 #include <string.h>
 
@@ -59,11 +60,6 @@
 #if defined(MBEDTLS_FS_IO) || defined(EFIX64) || defined(EFI32)
 #include <stdio.h>
 #endif
-
-/* Implementation that should never be optimized out by the compiler */
-static void mbedtls_zeroize( void *v, size_t n ) {
-    volatile unsigned char *p = v; while( n-- ) *p++ = 0;
-}
 
 /*
  *  Version  ::=  INTEGER  {  v1(0)  }
@@ -168,13 +164,13 @@ int vdb_mbedtls_x509_csr_parse_der( mbedtls_x509_csr *csr,
         return( ret );
     }
 
-    csr->version++;
-
-    if( csr->version != 1 )
+    if( csr->version != 0 )
     {
         vdb_mbedtls_x509_csr_free( csr );
         return( MBEDTLS_ERR_X509_UNKNOWN_VERSION );
     }
+
+    csr->version++;
 
     /*
      *  subject               Name
@@ -278,34 +274,25 @@ int vdb_mbedtls_x509_csr_parse( mbedtls_x509_csr *csr, const unsigned char *buf,
         return( MBEDTLS_ERR_X509_BAD_INPUT_DATA );
 
 #if defined(MBEDTLS_PEM_PARSE_C)
-    vdb_mbedtls_pem_init( &pem );
-
     /* Avoid calling vdb_mbedtls_pem_read_buffer() on non-null-terminated string */
-    if( buf[buflen - 1] != '\0' )
-        ret = MBEDTLS_ERR_PEM_NO_HEADER_FOOTER_PRESENT;
-    else
+    if( buf[buflen - 1] == '\0' )
+    {
+        vdb_mbedtls_pem_init( &pem );
         ret = vdb_mbedtls_pem_read_buffer( &pem,
                                "-----BEGIN CERTIFICATE REQUEST-----",
                                "-----END CERTIFICATE REQUEST-----",
                                buf, NULL, 0, &use_len );
 
-    if( ret == 0 )
-    {
-        /*
-         * Was PEM encoded, parse the result
-         */
-        if( ( ret = vdb_mbedtls_x509_csr_parse_der( csr, pem.buf, pem.buflen ) ) != 0 )
-            return( ret );
+        if( ret == 0 )
+            /*
+             * Was PEM encoded, parse the result
+             */
+            ret = vdb_mbedtls_x509_csr_parse_der( csr, pem.buf, pem.buflen );
 
         vdb_mbedtls_pem_free( &pem );
-        return( 0 );
+        if( ret != MBEDTLS_ERR_PEM_NO_HEADER_FOOTER_PRESENT )
+            return( ret );
     }
-    else if( ret != MBEDTLS_ERR_PEM_NO_HEADER_FOOTER_PRESENT )
-    {
-        vdb_mbedtls_pem_free( &pem );
-        return( ret );
-    }
-    else
 #endif /* MBEDTLS_PEM_PARSE_C */
     return( vdb_mbedtls_x509_csr_parse_der( csr, buf, buflen ) );
 }
@@ -325,7 +312,7 @@ int vdb_mbedtls_x509_csr_parse_file( mbedtls_x509_csr *csr, const char *path )
 
     ret = vdb_mbedtls_x509_csr_parse( csr, buf, n );
 
-    mbedtls_zeroize( buf, n );
+    vdb_mbedtls_platform_zeroize( buf, n );
     vdb_mbedtls_free( buf );
 
     return( ret );
@@ -407,17 +394,17 @@ void vdb_mbedtls_x509_csr_free( mbedtls_x509_csr *csr )
     {
         name_prv = name_cur;
         name_cur = name_cur->next;
-        mbedtls_zeroize( name_prv, sizeof( mbedtls_x509_name ) );
+        vdb_mbedtls_platform_zeroize( name_prv, sizeof( mbedtls_x509_name ) );
         vdb_mbedtls_free( name_prv );
     }
 
     if( csr->raw.p != NULL )
     {
-        mbedtls_zeroize( csr->raw.p, csr->raw.len );
+        vdb_mbedtls_platform_zeroize( csr->raw.p, csr->raw.len );
         vdb_mbedtls_free( csr->raw.p );
     }
 
-    mbedtls_zeroize( csr, sizeof( mbedtls_x509_csr ) );
+    vdb_mbedtls_platform_zeroize( csr, sizeof( mbedtls_x509_csr ) );
 }
 
 #endif /* MBEDTLS_X509_CSR_PARSE_C */

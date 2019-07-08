@@ -27,6 +27,7 @@
 #include <vdb/extern.h>
 #include "table-priv.h"
 #include "cursor-priv.h"
+#include "cursor-table.h"
 #include "dbmgr-priv.h"
 #include "schema-priv.h"
 #include "schema-parse.h"
@@ -496,7 +497,7 @@ LIB_EXPORT rc_t CC VDBManagerOpenTableUpdate ( VDBManager *self,
 
 LIB_EXPORT rc_t CC VDatabaseVOpenTableUpdate ( VDatabase *self,
     VTable **tblp, const char *name, va_list args )
-{ 
+{
     rc_t rc;
 
     if ( tblp == NULL )
@@ -738,7 +739,7 @@ static
 rc_t list_writable_columns ( VTable *self )
 {
     rc_t rc;
-    VCursor *curs;
+    VTableCursor *curs;
 
     if ( self -> read_only )
     {
@@ -749,11 +750,12 @@ rc_t list_writable_columns ( VTable *self )
     rc = VTableCreateCursorWriteInt ( self, & curs, kcmInsert, false );
     if (  rc == 0 )
     {
-	/* no need for schema-based triggers to fire **/
-	VCursorSuspendTriggers ( curs );
+	    /* no need for schema-based triggers to fire **/
+	    VTableCursorSuspendTriggers ( curs );
         /* let this private VCursor-function list the columns */
         rc = VCursorListWritableColumns ( curs, & self -> write_col_cache );
-        VCursorRelease ( curs );
+        VTableCursorRelease ( curs );
+
         if ( rc == 0 )
             self -> write_col_cache_valid = true;
     }
@@ -809,13 +811,13 @@ LIB_EXPORT rc_t CC VTableListSeededWritableColumns ( VTable *self,
 
             if ( ! self -> read_only )
             {
-                VCursor *curs;
+                VTableCursor *curs;
                 rc = VTableCreateCursorWriteInt ( self, & curs, kcmInsert, false );
                 if (  rc == 0 )
                 {
                     /* let this private VCursor-function list the columns */
                     rc = VCursorListSeededWritableColumns ( curs, & cache, seed );
-                    VCursorRelease ( curs );
+                    VTableCursorRelease ( curs );
                 }
             }
 
@@ -846,7 +848,7 @@ LIB_EXPORT rc_t CC VTableListWritableDatatypes ( VTable *self,
     const char *col, KNamelist **typedecls )
 {
     rc_t rc;
-    
+
     if ( typedecls == NULL )
         rc = RC ( rcVDB, rcTable, rcListing, rcParam, rcNull );
     else

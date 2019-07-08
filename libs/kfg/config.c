@@ -82,18 +82,13 @@ static bool s_disable_user_settings = false;
 /*----------------------------------------------------------------------------*/
 static const char default_kfg[] = {
 "/config/default = \"true\"\n"
-"/repository/user/main/public/apps/file/volumes/flat = \"files\"\n"
-"/repository/user/main/public/apps/nakmer/volumes/nakmerFlat = \"nannot\"\n"
-"/repository/user/main/public/apps/nannot/volumes/nannotFlat = \"nannot\"\n"
-"/repository/user/main/public/apps/refseq/volumes/refseq = \"refseq\"\n"
-"/repository/user/main/public/apps/sra/volumes/sraFlat = \"sra\"\n"
-"/repository/user/main/public/apps/wgs/volumes/wgsFlat = \"wgs\"\n"
-"/repository/user/main/public/root = \"$(HOME)/ncbi/public\"\n"
 "/repository/remote/main/CGI/resolver-cgi = "
-                      "\"https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi\"\n"
+             "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
 "/repository/remote/protected/CGI/resolver-cgi = "
-                      "\"https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi\"\n"
-"/tools/ascp/max_rate = \"1000m\"\n"
+             "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
+"/repository/remote/main/SDL.2/resolver-cgi = "
+             "\"https://trace.ncbi.nlm.nih.gov/Traces/sdl/unstable/retrieve\"\n"
+"/tools/ascp/max_rate = \"450m\"\n"
 };
 /*----------------------------------------------------------------------------*/
 
@@ -1308,7 +1303,7 @@ rc_t write_nvp(void* pself, const char* name, size_t nameLen, VNamelist* values)
         /* some old config files may have "dbGaP" in their repository keys misspelled as "dbGap" - fix if seen */
         const char* oldGaPprefix = "/repository/user/protected/dbGap-";
         size_t size = sizeof("/repository/user/protected/dbGap-") - 1;
-        bool needsFix = string_cmp(name, string_measure(name, NULL), oldGaPprefix, size, (uint32_t)size) == 0;
+        bool needsFix = string_cmp(name, string_size(name), oldGaPprefix, size, (uint32_t)size) == 0;
 
         String tmp;
         StringInit(&tmp, name, nameLen, (uint32_t)nameLen);
@@ -1844,6 +1839,21 @@ rc_t parse_file ( KConfig * self, const char* path, const char * src )
     return 0;
 }
 
+LIB_EXPORT rc_t CC
+KConfigParse ( KConfig * self, const char* path, const char * src )
+{
+    if ( self == NULL )
+        return RC ( rcKFG, rcMgr, rcLoading, rcSelf, rcNull );
+    else if ( src == NULL )
+        return RC ( rcKFG, rcMgr, rcLoading, rcParam, rcNull );
+
+    if ( path == NULL )
+    {
+        path = "UNSPECIFIED";
+    }
+    return parse_file ( self, path, src );
+}
+
 /* LoadFile
  * loads a configuration file
  */
@@ -2224,7 +2234,7 @@ rc_t path_to_magic_file ( const KConfig *self, char *path, size_t buffer_size, s
 LIB_EXPORT rc_t CC KConfigCommit ( KConfig *self )
 {
     rc_t rc;
-    size_t path_size;
+    size_t path_size = 0;
     char magic_file_path [ 4096 ];
 
     if ( self == NULL )
@@ -2564,10 +2574,19 @@ bool load_from_std_location ( KConfig *self, const KDirectory *dir )
 #endif
     };
 
-    /* rc_t rc = 0; */
-
     int i;
     bool loaded = false;
+
+    const char* NCBI_VDB_NO_ETC_NCBI_KFG = getenv("NCBI_VDB_NO_ETC_NCBI_KFG");
+    if (NCBI_VDB_NO_ETC_NCBI_KFG != NULL &&
+        NCBI_VDB_NO_ETC_NCBI_KFG[0] != '\0')
+    {
+        DBGMSG(DBG_KFG, DBG_FLAG(DBG_KFG),
+            ("KFG: load from std. location /etc/ncbi is disabled. "
+                "NCBI_VDB_NO_ETC_NCBI_KFG='%s'\n", NCBI_VDB_NO_ETC_NCBI_KFG));
+        return loaded;
+    }
+
     for ( i = 0; ! loaded && i < sizeof std_locs / sizeof std_locs [ 0 ]; ++ i )
     {
         DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG), ( "KFG: try to load from std. location '%s'\n", std_locs[ i ] ) );
@@ -2581,7 +2600,7 @@ bool load_from_std_location ( KConfig *self, const KDirectory *dir )
 }
 
 static
-bool load_from_fs_location ( KConfig *self )
+bool load_from_fs_location ( KConfig *self, const char *confdir )
 {
     bool loaded = false;
     KDyld *dyld;
@@ -2593,16 +2612,20 @@ bool load_from_fs_location ( KConfig *self )
         if ( rc == 0 )
         {
             char resolved[PATH_MAX + 1];
-            DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG), ( "KFG: try to load from dyn. loader\n" ) );
+            assert ( confdir );
+            DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG),
+                ( "KFG: try to load from dyn. loader %s\n", confdir ) );
 
 /* N.B. Duplication of ResolvePath here and in load_from_dir_path ? */
             if (KDirectoryResolvePath
-                    (dir, true, resolved, sizeof resolved, "ncbi") == 0)
+                    (dir, true, resolved, sizeof resolved, confdir) == 0)
             {
                 rc = KConfigAppendToLoadPath(self, resolved);
             }
-            if ((loaded = load_from_dir_path(self, dir, "ncbi", 4)))
-                DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG), ( "KFG: found from dyn. loader\n" ) );
+            if ((loaded = load_from_dir_path(self, dir, confdir,
+                                       string_measure ( confdir, NULL ))))
+                DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG),
+                    ( "KFG: found from dyn. loader %s\n", confdir ) );
             KDirectoryRelease ( dir );
         }
         KDyldRelease ( dyld );
@@ -2738,7 +2761,9 @@ rc_t load_config_files ( KConfig * self,
     /* check for config as the result of a user install
        i.e. not an admin installation */
     if ( ! loaded )
-        loaded = load_from_fs_location ( self );
+        loaded = load_from_fs_location ( self, "../etc/ncbi" );
+    if ( ! loaded )
+        loaded = load_from_fs_location ( self, "ncbi" );
 
     if ( ! loaded )
         loaded = load_from_default_string ( self );
@@ -3019,7 +3044,7 @@ static rc_t _KConfigFixRepeatedDrives(KConfig *self,
     const KDirectory *pdir, bool *updated)
 {
     rc_t rc = 0;
-    const KDirectory *dir = pdir;
+    KDirectory * dir = ( KDirectory * ) pdir;
     KConfigNode *user = NULL;
     if (dir == NULL) {
         rc = KDirectoryNativeDir(&dir);
@@ -3073,6 +3098,112 @@ static rc_t _KConfigFixRepeatedDrives(KConfig *self,
 }
 
 #endif
+
+static rc_t _KConfigUpdateDefault( KConfig * self, bool * updated,
+    const char * node_name, 
+    const char * node2_name,
+    const char * old_value,
+    const char * new_value,
+    const char * updated_name )
+{
+    rc_t rc = 0;
+
+    String * result = NULL;
+
+    String sOldValue;
+
+    bool update1 = false, update2 = false;
+
+    assert(node_name && old_value && new_value && updated_name);
+
+    StringInitCString(&sOldValue, old_value);
+
+    assert ( updated );
+    * updated = false;
+
+    rc = KConfigReadString ( self, updated_name, & result );
+    if ( rc == 0 ) { /* was updated already */
+        free ( result );
+        return rc;
+    }
+
+    rc = KConfigReadString ( self, node_name, & result );
+    if ( rc == 0 ) { /* when found: update just value = old-value */
+        if ( StringEqual ( & sOldValue, result ) )
+            update1 = * updated = true;
+        free ( result );
+        result = NULL;
+    }
+    else /* don't update when node did not exist */
+        rc = 0;
+
+    if (node2_name != NULL) {
+        rc = KConfigReadString(self, node2_name, &result);
+        if (rc == 0) { /* when found: update just value = old-value */
+            if (StringEqual(&sOldValue, result))
+                update2 = * updated = true;
+            free(result);
+            result = NULL;
+        }
+        else /* don't update when node did not exist */
+            rc = 0;
+    }
+
+    if ( * updated ) {
+        assert ( rc == 0 );
+        if (update1)
+            rc = KConfigWriteString ( self, node_name, new_value);
+        if (rc == 0 && update2)
+            rc = KConfigWriteString(self, node2_name, new_value);
+        if ( rc == 0 )
+            rc = KConfigWriteString ( self, updated_name, "updated" );
+    }
+
+    return rc;
+}
+
+static rc_t _KConfigLowerAscpRate ( KConfig * self, bool * updated ) {
+    return _KConfigUpdateDefault(self, updated,
+        "/tools/ascp/max_rate", NULL, "1000m", "450m",
+        "/tools/ascp/max_rate/450m");
+}
+
+static rc_t _KConfigUseTraceCgi(KConfig * self, bool * updated) {
+    return _KConfigUpdateDefault(self, updated,
+        "/repository/remote/main/CGI/resolver-cgi",
+        "/repository/remote/protected/CGI/resolver-cgi",
+        "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi",
+        "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi",
+        "/repository_remote/CGI/resolver-cgi/trace");
+}
+
+/* create Accession as Directory repository when it does not exist */
+static rc_t _KConfigCheckAd(KConfig * self) {
+    const KConfigNode * kfg = NULL;
+    rc_t rc = KConfigOpenNodeRead(self, &kfg, "/repository/user/ad");
+    if (rc != 0) {
+        /* create Accession as Directory repository
+           when it does not exist */
+        rc = KConfigWriteString(self,
+            "/repository/user/ad/public/apps/file/volumes/flat", ".");
+        if (rc == 0)
+            rc = KConfigWriteString(self,
+                "/repository/user/ad/public/apps/sra/volumes/sraAd", ".");
+        if (rc == 0)
+            rc = KConfigWriteString(self,
+                "/repository/user/ad/public/apps/sraPileup/volumes/sraAd", ".");
+        if (rc == 0)
+            rc = KConfigWriteString(self,
+                "/repository/user/ad/public/apps/sraRealign/volumes/sraAd",
+                ".");
+        if (rc == 0)
+            rc = KConfigWriteString(self,
+                "/repository/user/ad/public/root", ".");
+    }
+    else
+        rc = KConfigNodeRelease(kfg);
+    return rc;
+}
 
 static
 rc_t KConfigFill ( KConfig * self, const KDirectory * cfgdir,
@@ -3140,7 +3271,7 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
         KConfig * mgr = NULL;
 
         if ( cfgdir != NULL ) {
-            /* local = true; 
+            /* local = true;
             ALWAYS create and/or return a singleton object. */
         }
 
@@ -3165,15 +3296,33 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
             mgr -> initialized = true;
 
 
-#if WINDOWS /* VDB-1554: fix incorrect posix paths in configuration nodes */
             if ( rc == 0 ) {
+                rc_t rc = 0;
+
                 bool updated = false;
-                rc_t rc = _KConfigFixRepeatedDrives ( mgr, cfgdir, & updated );
-                if ( rc == 0 && updated ) {
-                    rc = KConfigCommit ( mgr );
+
+                if ( ! s_disable_user_settings ) {
+                    rc = _KConfigLowerAscpRate ( mgr,  & updated );
+                    if (rc == 0) {
+                        bool updated2 = false;
+                        rc = _KConfigUseTraceCgi(mgr, &updated2);
+                        updated |= updated2;
+                    }
+                    if ( rc == 0 && updated ) {
+                        rc = KConfigCommit ( mgr );
+                        updated = false;
+                    }
                 }
-            }
+
+#if WINDOWS /* VDB-1554: fix incorrect posix paths in configuration nodes */
+                rc = _KConfigFixRepeatedDrives ( mgr, cfgdir, & updated );
+                if ( rc == 0 && updated )
+                    rc = KConfigCommit ( mgr );
 #endif
+
+                if ( rc == 0 )
+                    _KConfigCheckAd ( mgr );
+            }
 
             DBGMSG ( DBG_KFG, DBG_FLAG ( DBG_KFG ), ( "\n" ) );
 
@@ -4029,7 +4178,7 @@ LIB_EXPORT rc_t KConfigFixMainResolverCgiNode ( KConfig * self ) {
         assert(result);
         if ( result->size == 0 || StringEqual ( & http, result ) ) {
             const char https []
-                = "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi";
+                = "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
             rc = KConfigNodeWrite ( node, https, sizeof https );
         }
     }
@@ -4064,7 +4213,7 @@ LIB_EXPORT rc_t KConfigFixProtectedResolverCgiNode ( KConfig * self ) {
         assert(result);
         if ( result->size == 0 || StringEqual ( & http, result ) ) {
             const char https []
-                = "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi";
+                = "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
             rc = KConfigNodeWrite ( node, https, sizeof https );
         }
     }

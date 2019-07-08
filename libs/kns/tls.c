@@ -28,6 +28,7 @@ struct KTLSStream;
 #define KSTREAM_IMPL struct KTLSStream
 
 #include <kns/extern.h>
+#include <kns/endpoint.h> /* KEndPoint */
 #include <kns/manager.h>
 #include <kns/tls.h>
 #include <kns/impl.h>
@@ -40,6 +41,7 @@ struct KTLSStream;
 #include <klib/namelist.h>
 #include <kproc/timeout.h>
 #include <kfg/config.h>
+#include <kfs/directory.h>
 
 #include <os-native.h>
 
@@ -66,6 +68,10 @@ struct KTLSStream;
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/error.h>
 #include <mbedtls/certs.h>
+
+#if WINDOWS
+#define IGNORE_ALL_CERTS_ALLOWED 1
+#endif
 
 static const char ca_crt_ncbi1 [] =
     "-----BEGIN CERTIFICATE-----\r\n"
@@ -136,6 +142,39 @@ const char * mbedtls_strerror2 ( int err )
  */
 
 static
+void ktls_ssl_dbg_print ( void * obj, int level, const char * file, int line, const char * msg )
+{
+    KLogLevel l = klogDebug;
+    switch ( level ) {
+        case 0: /* No debug */
+            l = klogFatal;
+            break;
+        case 1: /* Error */
+            l = klogErr;
+            break;
+        case 2: /* State change */
+            l = klogWarn;
+            break;
+        case 3: /* Informational */
+            l = klogInfo;
+            break;
+        case 4: /* Verbose */
+        default:
+            l = klogDebug;
+            break;
+    }
+
+    if ( file == NULL )
+        file = "mbedtls-file-unknown";
+    if ( msg == NULL )
+        msg = "<missing message>";
+
+    PLOGMSG ( l, ( l, "[$(level)]:$(file):$(line) - $(msg)",
+                         "level=%d,file=%s,line=%d,msg=%s",
+                          level, file, line, msg ) );
+}
+
+static
 rc_t tlsg_seed_rng ( KTLSGlobals *self )
 {
     int ret;
@@ -162,10 +201,29 @@ rc_t tlsg_seed_rng ( KTLSGlobals *self )
     return 0;
 }
 
+static
+rc_t tlsg_init_ca ( KTLSGlobals *self, const KConfig * kfg )
+{
+#if IGNORE_ALL_CERTS_ALLOWED
+    const KConfigNode * allow_all_certs;
+    rc_t rc = KConfigOpenNodeRead ( kfg, & allow_all_certs, "/tls/allow-all-certs" );
+    if ( rc == 0 )
+    {
+        rc = KConfigNodeReadBool ( allow_all_certs, & self -> allow_all_certs );
+        KConfigNodeRelease ( allow_all_certs );
+        return rc;
+    }
+#endif
+    /* if the node does not exist, it means false */
+    self -> allow_all_certs = false;
+    return 0;
+}
+
 static 
 rc_t tlsg_init_certs ( KTLSGlobals *self, const KConfig * kfg )
 {
     int ret;
+    bool cert_file_loaded = false;
 
     rc_t rc = 0;
     uint32_t nidx, num_certs = 0;
@@ -304,6 +362,13 @@ rc_t tlsg_init_certs ( KTLSGlobals *self, const KConfig * kfg )
         }
     }
 
+    if ( rc == 0 )
+    {
+        rc = tlsg_init_ca ( self, kfg );
+        if ( rc != 0 )
+            return rc;
+    }
+
 #if _DEBUGGING
     {
         const KConfigNode * ca_crt;
@@ -317,7 +382,9 @@ rc_t tlsg_init_certs ( KTLSGlobals *self, const KConfig * kfg )
             {
                 STATUS ( STAT_GEEK, "Parsing text from CA root certificate file '%S'\n", ca_crt_path );
                 ret = vdb_mbedtls_x509_crt_parse_file ( &self -> cacert, ca_crt_path -> addr );
-                if ( ret < 0 )
+                if ( ret >= 0 )
+                    cert_file_loaded = true;
+                else
                 {
                     PLOGMSG ( klogWarn, ( klogWarn
                                           , "mbedtls_x509_crt_parse_file ( '$(path)' ) returned $(ret) ( $(expl) )"
@@ -326,14 +393,60 @@ rc_t tlsg_init_certs ( KTLSGlobals *self, const KConfig * kfg )
                                           , mbedtls_strerror2 ( ret )
                                           , ca_crt_path
                                   ) );
-                }                
+                }
                 StringWhack ( ca_crt_path );
             }
             KConfigNodeRelease ( ca_crt );
         }
     }
 #endif
+#if ! WINDOWS
+    if ( ! cert_file_loaded )
+    {
+        const char * root_ca_paths [] =
+        {
+            "/etc/ssl/certs/ca-certificates.crt",                /* Debian/Ubuntu/Gentoo etc */
+            "/etc/pki/tls/certs/ca-bundle.crt",                  /* Fedora/RHEL */
+            "/etc/ssl/ca-bundle.pem",                            /* OpenSUSE */
+            "/etc/pki/tls/cacert.pem",                           /* OpenELEC */
+            "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem", /* CentOS/RHEL 7 */
+            "/etc/ssl/certs",                                    /* SLES10/SLES11, https://golang.org/issue/12139 */
+            "/system/etc/security/cacerts",                      /* Android */
+            "/usr/local/share/certs",                            /* FreeBSD */
+            "/etc/pki/tls/certs",                                /* Fedora/RHEL */
+            "/etc/openssl/certs",                                /* NetBSD */
+            "/etc/ssl/cert.pem"                                  /* MacOSX */
+        };
 
+        KDirectory *n_dir;
+        rc_t rc2 = KDirectoryNativeDir ( & n_dir );
+        if ( rc2 == 0 )
+        {
+            size_t i;
+            for ( i = 0; i < sizeof root_ca_paths / sizeof root_ca_paths [ 0 ]; ++ i )
+            {
+                const char * path = root_ca_paths [ i ];
+                
+                /* no fail, exit immediately if succesful or cycle through all files */
+                switch ( KDirectoryPathType ( n_dir, path ) & ~ kptAlias )
+                {
+                case kptFile:
+                    STATUS ( STAT_GEEK, "Parsing text from CA root certificate file '%s'\n", path);
+                    ret = vdb_mbedtls_x509_crt_parse_file ( &self -> cacert, path );
+                    break;
+                case kptDir:
+                    STATUS ( STAT_GEEK, "Parsing text from CA root certificate directory '%s'\n", path );
+                    ret = vdb_mbedtls_x509_crt_parse_path ( &self -> cacert, path );
+                    break;
+                }
+                
+                if ( ret >= 0 )
+                    cert_file_loaded = true;                
+            }
+        }
+    }
+#endif        
+    
     if ( num_certs == 0 )
     {
         STATUS ( STAT_QA, "Parsing text for default CA root certificates\n" );
@@ -399,11 +512,68 @@ rc_t tlsg_setup ( KTLSGlobals * self )
         return rc;
     }
 
-    vdb_mbedtls_ssl_conf_authmode( &self -> config, MBEDTLS_SSL_VERIFY_REQUIRED );
+    /* turn off certificate validation when self -> allow_all_certs == true */
+    vdb_mbedtls_ssl_conf_authmode( &self -> config,
+        self -> allow_all_certs ? MBEDTLS_SSL_VERIFY_OPTIONAL
+                                : MBEDTLS_SSL_VERIFY_REQUIRED );
+
     vdb_mbedtls_ssl_conf_ca_chain( &self -> config, &self -> cacert, NULL );
     vdb_mbedtls_ssl_conf_rng( &self -> config, vdb_mbedtls_ctr_drbg_random, &self -> ctr_drbg );
 
+        /*  We need that to be sure that we are free to call 
+         *  vdb_mbedtls_ssl_conf_authmode () next time when 
+         *  KNSManagerSetAllowAllCerts () will be called
+         *  
+         *  Because smart special design we do not need to add
+         *  special code to deinitialize that variable. 
+         */ 
+    self -> safe_to_modify_ssl_config = true;
+
     return 0;
+}
+
+/* threshold
+   theshold level of messages to filter on.
+   Messages at a higher level will be discarded.
+  Debug levels
+	0 No debug
+	1 Error
+	2 State change
+	3 Informational
+	4 Verbose */
+static int set_threshold ( const KConfig * kfg ) {
+    bool set = false;
+
+    int64_t threshold = 0;
+    
+    const char * env = NULL;
+
+    rc_t rc = KConfigReadI64 ( kfg, "/tls/NCBI_VDB_TLS", & threshold );
+    if ( rc == 0 )
+        set = true;
+
+    env = getenv ( "NCBI_VDB_TLS" );
+
+    if ( env != NULL ) {
+        int NCBI_VDB_TLS = 0;
+
+        for  ( ; * env != '\0'; ++ env ) {
+            char c = * env;
+            if ( c < '0' || c > '9' )
+                break;
+
+            NCBI_VDB_TLS = NCBI_VDB_TLS * 10 + c - '0';
+            set = true;
+        }
+
+        if ( NCBI_VDB_TLS > threshold )
+            threshold = NCBI_VDB_TLS;
+    }
+
+    if ( set )
+        vdb_mbedtls_debug_set_threshold ( ( int ) threshold );
+
+    return ( int ) threshold;
 }
 
 /* Init
@@ -412,10 +582,16 @@ rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg, const KConfig * kfg )
 {
     rc_t rc;
 
+    assert ( tlsg != NULL );
+    assert ( kfg != NULL );
+
     vdb_mbedtls_x509_crt_init ( &tlsg -> cacert );
     vdb_mbedtls_ctr_drbg_init ( &tlsg -> ctr_drbg );
     vdb_mbedtls_entropy_init ( &tlsg -> entropy );
     vdb_mbedtls_ssl_config_init ( &tlsg -> config );
+
+    if ( set_threshold ( kfg ) > 0 )
+        vdb_mbedtls_ssl_conf_dbg ( &tlsg -> config, ktls_ssl_dbg_print, tlsg );
 
     rc = tlsg_seed_rng ( tlsg );
     if ( rc == 0 )
@@ -432,12 +608,69 @@ rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg, const KConfig * kfg )
  */
 void KTLSGlobalsWhack ( KTLSGlobals * self )
 {
+    assert ( self != NULL );
+    
     vdb_mbedtls_ssl_config_free ( &self -> config );
     vdb_mbedtls_entropy_free ( &self -> entropy );
     vdb_mbedtls_ctr_drbg_free ( &self -> ctr_drbg );
     vdb_mbedtls_x509_crt_free ( &self -> cacert );
 
     memset ( self, 0, sizeof * self );
+}
+
+/* Set/Get AllowAllCerts
+ *  modify behavior of TLS certificate validation
+ */
+LIB_EXPORT rc_t CC KNSManagerSetAllowAllCerts ( KNSManager *self, bool allow_all_certs )
+{
+    rc_t rc = 0;
+    
+    if ( self == NULL )
+        rc = RC ( rcNS, rcMgr, rcAccessing, rcSelf, rcNull );
+    else
+    {
+#if IGNORE_ALL_CERTS_ALLOWED
+        self -> tlsg . allow_all_certs = allow_all_certs;
+            /*
+             *  We are acting from supposition that at some particular
+             *  moments there should be called initlialisation of 
+             *  TLS configurations, which will be reflected at next 
+             *  handshake
+             */
+        if ( self -> tlsg . safe_to_modify_ssl_config ) {
+            vdb_mbedtls_ssl_conf_authmode(
+                            &self -> tlsg . config,
+                                ( self -> tlsg . allow_all_certs
+                                        ? MBEDTLS_SSL_VERIFY_OPTIONAL
+                                        : MBEDTLS_SSL_VERIFY_REQUIRED
+                                )
+                            );
+        }
+#endif
+    }
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KNSManagerGetAllowAllCerts ( const KNSManager *self, bool * allow_all_certs )
+{
+    rc_t rc;
+
+    if ( allow_all_certs == NULL )
+        rc = RC ( rcNS, rcMgr, rcAccessing, rcParam, rcNull );
+    else
+    {
+        if ( self == NULL )
+            rc = RC ( rcNS, rcMgr, rcAccessing, rcSelf, rcNull );
+        else
+        {
+            * allow_all_certs = self -> tlsg . allow_all_certs;
+            return 0;
+        }
+        
+        * allow_all_certs = false;
+    }
+
+    return rc;
 }
 
 /*--------------------------------------------------------------------------
@@ -511,8 +744,34 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
 
     while ( 1 )
     {
+        static bool inited = false;
+        static int m = 0;
+        static int e = 0;
+
         /* read through TLS library */
         ret = vdb_mbedtls_ssl_read( &self -> ssl, buffer, bsize );
+
+        if (!inited) { /* simulate mbedtls read timeout */
+            const char * v = getenv("NCBI_VDB_ERR_MBEDTLS_READ");
+            if (v != NULL) {
+                m = atoi(v);
+                if (m < 0)
+                    m = 0;
+            }
+            e = m;
+            inited = true;
+        }
+        if (m > 0) {
+            if (!e) {
+                e = m;
+                if (ret >= 0) {
+                    ret = -76;
+                    self->rd_rc
+                        = RC(rcNS, rcStream, rcReading, rcTimeout, rcExhausted);
+                }
+            }
+            --e;
+        }
 
         /* no error */
         if ( ret >= 0 )
@@ -525,7 +784,8 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
         if ( self -> rd_rc != 0 )
         {
             rc = self -> rd_rc;
-            PLOGERR ( klogSys, ( klogSys, rc
+            if (self->mgr->logTlsErrors)
+              PLOGERR ( klogSys, ( klogSys, rc
                                  , "mbedtls_ssl_read returned $(ret) ( $(expl) )"
                                  , "ret=%d,expl=%s"
                                  , ret
@@ -845,39 +1105,85 @@ rc_t ktls_ssl_setup ( KTLSStream *self, const String *host )
 static 
 rc_t ktls_handshake ( KTLSStream *self )
 {
+    static bool inited = false;
+    static int m = 0;
+    static int e = 0;
+
     int ret;
 
     STATUS ( STAT_QA, "Performing SSL/TLS handshake...\n" );
 
+    assert(self && self->mgr);
+
     ret = vdb_mbedtls_ssl_handshake( &self -> ssl );
+
+    if (!inited) { /* simulate mbedtls handshake timeout */
+        const char * v = getenv("NCBI_VDB_ERR_MBEDTLS_HANDSHAKE");
+        if (v != NULL) {
+            m = atoi(v);
+            if (m < 0)
+                m = 0;
+        }
+        e = m;
+        inited = true;
+    }
+    if (m > 0) {
+        if (!e) {
+            e = m;
+            if (ret >= 0) {
+                ret = -76;
+                self->rd_rc
+                    = RC(rcKrypto, rcFile, rcOpening, rcConnection, rcFailed);
+            }
+        }
+        --e;
+    }
+
     while ( ret != 0 )
     {
         if ( ret != MBEDTLS_ERR_SSL_WANT_READ && 
              ret != MBEDTLS_ERR_SSL_WANT_WRITE )
         {
-            rc_t rc = RC ( rcKrypto, rcSocket, rcOpening, rcConnection, rcFailed );
+            rc_t rc;
 
-            PLOGERR ( klogSys, ( klogSys, rc
-                                 , "mbedtls_ssl_handshake returned $(ret) ( $(expl) )"
-                                 , "ret=%d,expl=%s"
-                                 , ret
-                                 , mbedtls_strerror2 ( ret )
-                          ) );
-
-            if ( ret == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED )
+            /* check configuration to see if we are ignoring
+               unrecognized certificates (ones that use a CA
+               for signing that we don't recognize) */
+            if ( self -> mgr -> tlsg . allow_all_certs &&
+                 ret == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED )
             {
-                uint32_t flags = vdb_mbedtls_ssl_get_verify_result( &self -> ssl );
-                if ( flags != 0 )
-                {
-                    char buf [ 4096 ];
-                    vdb_mbedtls_x509_crt_verify_info ( buf, sizeof( buf ), " !! ", flags );
+                /* ignore this case */
+                rc = 0;
+            }
+            else
+            {
+                /* either we're forcing all certificates to be validated,
+                   or the error is something other than a validation error */
+                rc = RC ( rcKrypto, rcSocket, rcOpening, rcConnection, rcFailed );
 
-                    PLOGMSG ( klogSys, ( klogSys
-                                         , "mbedtls_ssl_get_verify_result returned $(flags) ( $(info) )"
-                                         , "flags=0x%X,info=%s"
-                                         , flags
-                                         , buf
-                                  ) );
+                if (self->mgr->logTlsErrors)
+                  PLOGERR ( klogSys, ( klogSys, rc
+                                     , "mbedtls_ssl_handshake returned $(ret) ( $(expl) )"
+                                     , "ret=%d,expl=%s"
+                                     , ret
+                                     , mbedtls_strerror2 ( ret )
+                              ) );
+
+                if ( ret == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED )
+                {
+                    uint32_t flags = vdb_mbedtls_ssl_get_verify_result( &self -> ssl );
+                    if ( flags != 0 )
+                    {
+                        char buf [ 4096 ];
+                        vdb_mbedtls_x509_crt_verify_info ( buf, sizeof( buf ), " !! ", flags );
+                        
+                        PLOGMSG ( klogSys, ( klogSys
+                                             , "mbedtls_ssl_get_verify_result returned $(flags) ( $(info) )"
+                                             , "flags=0x%X,info=%s"
+                                             , flags
+                                             , buf
+                                      ) );
+                    }
                 }
             }
 
@@ -983,6 +1289,41 @@ LIB_EXPORT rc_t CC KNSManagerMakeTLSStream ( const KNSManager * self,
                         *plaintext = ktls;
                         return 0;
                     }
+                    else {
+                        if ( KNSManagerLogNcbiVdbNetError ( self ) ) {
+                            KEndPoint ep, local_ep;
+                            rc_t rr = KSocketGetRemoteEndpoint ( ciphertext,
+                                                                 & ep );
+                            rc_t rl = KSocketGetLocalEndpoint ( ciphertext,
+                                                                 & local_ep );
+                            if ( rr != 0 )
+                                LOGERR ( klogInt, rr
+                                    , "cannot KSocketGetRemoteEndpoint"
+                                );
+                            if ( rl != 0 )
+                                LOGERR ( klogInt, rl
+                                    , "cannot KSocketGetLocalEndpoint"
+                                );
+                            if ( rr == 0 || rl == 0 ) {
+                                if ( rr == 0 )
+                                    if ( rl == 0 )
+                                        PLOGERR ( klogSys, ( klogSys, rc,
+                                            "ktls_handshake failed while accessing '$(ip)' from '$(local)'"
+                                            , "ip=%s,local=%s", ep . ip_address, local_ep . ip_address
+                                        ) );
+                                    else
+                                        PLOGERR ( klogSys, ( klogSys, rc,
+                                            "ktls_handshake failed while accessing '$(ip)'"
+                                            , "ip=%s", ep . ip_address
+                                        ) );
+                                else
+                                    PLOGERR ( klogSys, ( klogSys, rc,
+                                        "ktls_handshake failed while accessing unknown IP from '$(local)'"
+                                        , "local=%s", local_ep . ip_address
+                                    ) );
+                            }
+                        }
+                    }
                 }
 
                 KTLSStreamWhack ( ktls );
@@ -1024,7 +1365,7 @@ LIB_EXPORT rc_t CC KTLSStreamVerifyCACert ( const KTLSStream * self )
    
    if ( self == NULL )
        rc = RC ( rcKrypto, rcToken, rcValidating, rcSelf, rcNull );
-   else
+   else if ( ! self -> mgr -> tlsg . allow_all_certs )
    {
        uint32_t flags = vdb_mbedtls_ssl_get_verify_result( &self -> ssl );
        if ( flags != 0 )

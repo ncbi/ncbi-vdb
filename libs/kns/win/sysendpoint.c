@@ -28,6 +28,7 @@
 #include <kns/endpoint.h>
 #include <klib/text.h>
 #include <klib/printf.h>
+#include <klib/status.h> /* STATUS */
 #include <klib/rc.h>
 #include <klib/data-buffer.h>
 
@@ -95,6 +96,14 @@ rc_t CC KNSManagerInitDNSEndpoint ( struct KNSManager const *self,
                     struct hostent *remote = gethostbyname ( hostname );
                     if ( remote != NULL )
                     { 
+                        struct in_addr ** addr_list
+                            = ( struct in_addr ** ) remote -> h_addr_list;
+                        string_copy_measure ( ep -> ip_address,
+                            sizeof ep -> ip_address,
+                            inet_ntoa ( * addr_list [ 0 ] ));
+                        STATUS ( STAT_PRG, "%s resolved to %s\n",
+                                           hostname , ep -> ip_address );
+
                         ep -> type = epIPV4;
                         memmove ( & ep -> u . ipv4 . addr, remote -> h_addr_list [ 0 ], sizeof ep -> u . ipv4 . addr );
                         ep -> u . ipv4 . addr = htonl ( ep -> u . ipv4 . addr );

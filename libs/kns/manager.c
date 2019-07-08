@@ -26,16 +26,9 @@
 
 #include <kns/extern.h>
 
-#include "http-priv.h"
-#include "mgr-priv.h"
-#include "stream-priv.h"
-#include "sysmgr.h"
-#include "../klib/release-vers.h"
-
 #include <kfg/config.h>
 
 #include <klib/printf.h>
-#include <klib/refcount.h>
 #include <klib/rc.h>
 
 #include <kproc/timeout.h>
@@ -44,17 +37,20 @@
 #include <kns/socket.h>
 #include <kns/http.h>
 
-#include <vfs/manager.h>
-#include <vfs/path.h>
-
-#include <atomic.h>
+#include <atomic.h> /* atomic_ptr_t */
 #include <sysalloc.h>
 
 #include <assert.h>
-#include <stdlib.h>
-#include <string.h>
 
 #include <stdio.h> /* fprintf */
+
+#include "../klib/release-vers.h"
+#include "cloud.h" /* KNSManagerMakeCloud */
+#include "http-priv.h"
+#include "kns_manager-singleton.h" /* USE_SINGLETON */
+#include "mgr-priv.h"
+#include "stream-priv.h"
+#include "sysmgr.h"
 
 #ifndef MAX_CONN_LIMIT
 #define MAX_CONN_LIMIT ( 60 * 1000 )
@@ -70,8 +66,6 @@
 
 static char kns_manager_user_agent [ 128 ] = "ncbi-vdb";
 
-#define USE_SINGLETON 1
-
 #if USE_SINGLETON
 static atomic_ptr_t kns_singleton;
 #endif
@@ -79,167 +73,24 @@ static atomic_ptr_t kns_singleton;
 #define RELEASE( type, obj ) do { rc_t rc2 = type##Release ( obj ); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while ( false )
 
-struct HttpProxy {
-    const struct String * http_proxy;
-    uint16_t http_proxy_port;
-    struct HttpProxy * next;
-};
-
-const HttpProxy * HttpProxyGetNextHttpProxy ( const HttpProxy * self ) {
-    if ( self == NULL ) {
-        return NULL;
-    }
-    while ( self -> next != NULL ) {
-        self = self -> next;
-        if ( self -> http_proxy != NULL ) {
-            return self;
-        }
-    }
-    return NULL;
-}
-
-/* N.B.: DO NOT WHACK THE RETURNED http_proxy String !!! */
-void HttpProxyGet ( const HttpProxy * self,
-    const String ** http_proxy, uint16_t * http_proxy_port )
-{
-    assert ( http_proxy && http_proxy_port );
-    if ( self != NULL ) {
-        * http_proxy = self -> http_proxy;
-        * http_proxy_port = self -> http_proxy_port;
-    }
-    else {
-        * http_proxy = NULL;
-        * http_proxy_port = 0;
-    }
-}
-
-static HttpProxy * HttpProxyClear ( HttpProxy * self ) {
-    assert ( self );
-
-    StringWhack ( self -> http_proxy );
-
-    self -> http_proxy = NULL;
-    self -> http_proxy_port = 0;
-
-    return self -> next;
-}
-
-static rc_t HttpProxyWhack ( HttpProxy * self, HttpProxy ** next ) {
-    assert ( next );
-    * next = HttpProxyClear ( self );
-
-    memset ( self, 0, sizeof *self );
-
-    free (self );
-
-    return 0;
-}
-
-static
-rc_t HttpProxyGetHttpProxyPath
-    ( const HttpProxy * self, const String ** proxy )
-{
-    rc_t rc = 0;
-
-    if ( proxy == NULL )
-        rc = RC ( rcNS, rcMgr, rcAccessing, rcParam, rcNull );
+bool KNSManagerHttpProxyOnly ( const KNSManager * self ) {
+    if ( self == NULL )
+        return false;
     else
-    {
-        if ( self == NULL )
-            rc = RC ( rcNS, rcMgr, rcAccessing, rcSelf, rcNull );
-        else if ( self -> http_proxy != NULL )
-        {
-            return StringCopy ( proxy, self -> http_proxy );
-        }
-
-        * proxy = NULL;
-    }
-
-    return rc;
+        return KNSProxiesHttpProxyOnly ( self -> proxies );
 }
 
-static
-rc_t HttpProxyAddHttpProxyPath ( HttpProxy * self,
-    const String * proxy, uint16_t proxy_port, KNSManager * mgr )
+struct KNSProxies * KNSManagerGetProxies ( const KNSManager * self,
+                                           size_t * cnt )
 {
-    assert ( self );
-
-    if ( proxy == NULL ) {
-        return 0;
-    }
-
-    while ( self -> http_proxy != NULL ) {
-        if ( self -> next == NULL ) {
-            self -> next = calloc ( 1, sizeof * self -> next );
-            if ( self -> next == NULL ) {
-                return RC ( rcNS, rcMgr, rcAllocating, rcMemory, rcExhausted );
-            }
-        }
-        self = self -> next;
-    }
-
-    self -> http_proxy = proxy;
-    self -> http_proxy_port = proxy_port;
-
-    if ( ! mgr -> http_proxy_enabled ) {
-        mgr -> http_proxy_enabled = ( proxy != NULL );
-    }
-
-    return 0;
-}
-
-
-static rc_t KNSManagerHttpProxyClear ( KNSManager * self ) {
-    HttpProxy * p = self -> http_proxy;
-    while ( p ) {
-        p = HttpProxyClear ( p );
-    }
-    return 0;
-}
-
-static rc_t KNSManagerHttpProxyWhack ( const KNSManager * self ) {
-    HttpProxy * p = self -> http_proxy;
-    while ( p ) {
-        HttpProxy * next = NULL;
-        HttpProxyWhack ( p, & next );
-        p = next;
-    }
-    return 0;
-}
-
-static
-rc_t KNSManagerAddHTTPProxyPathImpl ( KNSManager * self,
-    const String * proxy, uint16_t proxy_port )
-{
-    if ( self -> http_proxy == NULL ) {
-        self -> http_proxy = calloc ( 1, sizeof * self -> http_proxy );
-        if ( self -> http_proxy == NULL ) {
-            return RC ( rcNS, rcMgr, rcAllocating, rcMemory, rcExhausted );
-        }
-    }
-
-    return
-     HttpProxyAddHttpProxyPath ( self -> http_proxy, proxy, proxy_port, self );
-}
-
-
-void HttpProxyGetHTTPProxy ( const HttpProxy * self,
-    const struct String ** http_proxy, uint16_t * http_proxy_port )
-{
-    assert ( self && http_proxy && http_proxy_port);
-
-    * http_proxy = self -> http_proxy;
-    * http_proxy_port = self -> http_proxy_port;
-}
-
-const HttpProxy * KNSManagerGetHttpProxy ( const KNSManager * self ) {
-    if ( self == NULL) {
+    if ( self == NULL)
         return NULL;
+    else {
+        size_t dummy;
+        if ( cnt == NULL )
+            cnt = & dummy;
+        return KNSProxiesGetHttpProxy ( self -> proxies, cnt );
     }
-    if ( self -> http_proxy != NULL ) {
-        return self -> http_proxy;
-    }
-    return HttpProxyGetNextHttpProxy ( self -> http_proxy );
 }
 
 
@@ -250,11 +101,16 @@ rc_t KNSManagerWhack ( KNSManager * self )
 
 #if USE_SINGLETON
     KNSManager * our_mgr = atomic_test_and_set_ptr ( & kns_singleton, NULL, NULL );
-    if ( self == our_mgr )
-        return 0;
+    if ( self == our_mgr ) {
+        if ( ! self -> notSingleton )
+            return 0;
+        else
+            atomic_test_and_set_ptr ( & kns_singleton, NULL, self );
+    }
 #endif
 
-    KNSManagerHttpProxyWhack ( self );
+    KNSProxiesWhack ( self -> proxies );
+    KCloudRelease(self->cloud);
 
     if ( self -> aws_access_key_id != NULL )
         StringWhack ( self -> aws_access_key_id );
@@ -618,8 +474,8 @@ LIB_EXPORT rc_t CC KNSManagerSetHTTPTimeouts ( KNSManager *self,
     return 0;
 }
 
-
 /* GetHTTPProxyPath
+ * DEPRECATED
  *  returns path to HTTP proxy server ( if set ) or NULL.
  *  return status is 0 if the path is valid, non-zero otherwise
  */
@@ -627,7 +483,7 @@ LIB_EXPORT rc_t CC KNSManagerGetHTTPProxyPath ( const KNSManager * self, const S
 {
     fprintf ( stderr,
 "WARNING : KNSManagerGetHTTPProxyPath IS DEPRECATED AND SHOULD NOT BE USED\n" );
-    return HttpProxyGetHttpProxyPath ( self -> http_proxy, proxy );
+    return KNSProxiesGetHttpProxyPath ( self -> proxies, proxy );
 }
 
 
@@ -650,295 +506,39 @@ LIB_EXPORT rc_t CC KNSManagerSetHTTPProxyPath ( KNSManager * self, const char * 
     return rc;
 }
 
-static rc_t CC KNSManagerVSetHTTPProxyPathImpl
-    ( KNSManager * self, const char * fmt, va_list args, bool clear )
+LIB_EXPORT rc_t CC KNSManagerVSetHTTPProxyPath ( KNSManager * self,
+    const char * fmt, va_list args )
 {
-    rc_t rc = 0;
-
     if ( self == NULL )
-        rc = RC ( rcNS, rcMgr, rcUpdating, rcSelf, rcNull );
+        return RC ( rcNS, rcMgr, rcUpdating, rcSelf, rcNull );
     else
-    {
-        if ( clear ) {
-            rc = KNSManagerHttpProxyClear ( self );
-        }
-
-        if ( rc == 0 && fmt != NULL && fmt [ 0 ] != 0 )
-        {
-            size_t psize;
-            char path [ 4096 * 2 ];
-            const char * p = path;
-            rc = string_vprintf ( path, sizeof path, & psize, fmt, args );
-            if ( rc == 0 ) {
-              while ( psize != 0 ) {
-                size_t s = psize;
-                uint16_t proxy_port = 0;
-                const String * proxy = NULL;
-                const char * colon = NULL;
-                const char * comma = string_chr ( p, psize, ',' );
-                if ( comma != NULL ) {
-#ifdef MULTIPLE_PROXIES
-                    s = comma - p;
-#else
-                    rc = RC ( rcNS, rcMgr, rcUpdating, rcPath, rcInvalid );
-                    break;
-#endif
-                }
-
-                colon = string_chr ( p, s, ':' );
-                if ( colon != NULL ) {
-                    char * end = NULL;
-                    const char * port_spec = NULL;
-                    long port_num = 0;
-
-                    int have = colon - p;
-                    int remains = s - have;
-                    if ( remains > 2 ) {
-                        assert ( colon [ 0 ] == ':' );
-                        if ( colon [ 1 ] == '/' && colon [ 2 ] == '/' ) {
-          /* strip off the scheme from proxy specification: it is ignored now */
-                            psize -= have + 3;
-                            p = colon + 3;
-                            if ( psize == 0 )
-                                return RC ( rcNS, rcMgr, rcUpdating,
-                                            rcPath, rcInvalid );
-                            continue;
-                        }
-                    }
-
-                    port_spec = colon + 1;
-             /* it is true that some day we might read symbolic port names... */
-                    port_num = strtol ( port_spec, & end, 10 );
-                    if ( port_num <= 0 || port_num >= 0x10000 ||
-                         ( end [ 0 ] != 0 && comma == NULL ) )
-                        rc = RC ( rcNS, rcMgr, rcUpdating, rcPath, rcInvalid );
-                    else
-                    {
-                        proxy_port = ( uint64_t ) port_num;
-                        s = colon - p;
-                    }
-                }
-
-                if ( rc == 0 )
-                {
-                    String tmp;
-                    StringInit ( & tmp, p, s, string_len ( p, s ) );
-                    rc = StringCopy ( & proxy, & tmp );
-                }
-
-                if ( rc == 0 ) {
-                    rc =
-                     KNSManagerAddHTTPProxyPathImpl ( self, proxy, proxy_port );
-                }
-                if ( comma == NULL) {
-                    psize = 0;
-                }
-                else {
-                    s = comma - p + 1;
-                    if ( s > psize ) {
-                        psize = 0;
-                    }
-                    else {
-                        psize -= s;
-                        p += s;
-                    }
-                }
-              }
-            }
-        }
-    }
-
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KNSManagerVSetHTTPProxyPath ( KNSManager * self, const char * fmt, va_list args )
-{   return KNSManagerVSetHTTPProxyPathImpl (self, fmt, args, true); }
-
-static
-rc_t CC KNSManagerAddHTTPProxyPath ( KNSManager * self, const char * fmt, ... )
-{
-    rc_t rc;
-
-    va_list args;
-    va_start ( args, fmt );
-    rc = KNSManagerVSetHTTPProxyPathImpl ( self, fmt, args, false );
-    va_end ( args );
-
-    return rc;
+        return KNSProxiesVSetHTTPProxyPath (self -> proxies,
+                                            fmt, args, true);
 }
 
 static
-bool KNSManagerHttpProxyInitFromEnvVar ( KNSManager * self, const char * name )
+rc_t KNSManagerHttpProxyInit ( KNSManager * self, const KConfig * kfg )
 {
-    const char * path = getenv ( name );
-    if ( path != NULL ) {
-        if ( KNSManagerAddHTTPProxyPath ( self, path ) != 0 ) {
-            return false;
-        }
-
-        assert ( self -> http_proxy_enabled );
-        return true;
-    }
-
-    return false;
-}
-
-static bool KNSManagerHttpProxyInitFromEnv ( KNSManager * self ) {
-    bool loaded = false;
-
-    const char * env_list [] = {
-        "https_proxy",
-        "HTTPS_PROXY",
-        "all_proxy",
-        "ALL_PROXY",
-        "http_proxy",
-        "HTTP_PROXY",
-    };
-
-    int i = 0;
-    for ( i = 0; i < sizeof env_list / sizeof env_list [ 0 ]; ++ i ) {
-        loaded |= KNSManagerHttpProxyInitFromEnvVar ( self, env_list [i] );
-    }
-
-    return loaded;
-}
-
-static
-bool KNSManagerHttpProxyInitFromKfg ( KNSManager * self, const KConfig * kfg )
-{
-    bool fromKfg = false;
-
-    const KConfigNode * proxy;
-    rc_t rc = KConfigOpenNodeRead ( kfg, & proxy, "/http/proxy" );
-    if ( rc == 0 )
-    {
-        const KConfigNode * proxy_path;
-        rc = KConfigNodeOpenNodeRead ( proxy, & proxy_path, "path" );
-        if ( rc == 0 )
-        {
-            String * path;
-            rc = KConfigNodeReadString ( proxy_path, & path );
-            if ( rc == 0 )
-            {
-                rc = KNSManagerAddHTTPProxyPath ( self, "%S", path );
-                if ( rc == 0 ) {
-                    fromKfg = true;
-                }
-
-                StringWhack ( path );
-            }
-
-            KConfigNodeRelease ( proxy_path );
-        }
-
-        KConfigNodeRelease ( proxy );
-    }
-
-    return fromKfg;
-}
-
-static bool StringCmp ( const String * self, const char * val )
-{
-    String v;
-    StringInitCString ( & v, val );
-    return StringEqual ( self, & v );
-}
-
-static rc_t StringRelease ( String * self )
-{
-    StringWhack ( self );
-    return 0;
-}
-
-static
-void KNSManagerHttpProxyInit ( KNSManager * self, const KConfig * kfg )
-{
-    int i = 0;
-
-    int n = 2;
-
-    typedef enum {
-        eEnv,
-        eKfg,
-    } EType;
-
-    EType type [ 2 ] = { eKfg, eEnv };
-
-    rc_t rc = KConfigReadBool
-        ( kfg, "/http/proxy/enabled", & self -> http_proxy_enabled );
-    if ( rc != 0 ) {
-        if ( GetRCState ( rc ) == rcNotFound ) {
-            rc = 0;
-        } else {
-            KNSManagerSetHTTPProxyPath ( self, NULL );
-            assert ( self -> http_proxy_enabled == false );
-        }
-    } else {
-        if ( ! self -> http_proxy_enabled ) {
-            return;
-        }
-    }
-
-    {
-        bool proxy_only = false;
-        rc_t rc = KConfigReadBool ( kfg, "/http/proxy/only",  & proxy_only );
-        if ( rc == 0 && proxy_only ) {
-            self -> http_proxy_only = true;
-        }
-    }
-
-    {
-        String * result = NULL;
-        rc = KConfigReadString ( kfg, "/http/proxy/use", & result );
-        if ( rc == 0 ) {
-            if ( StringCmp ( result, "env") ) {
-                n = 1;
-                type [ 0 ] = eEnv;
-            } else if ( StringCmp ( result, "kfg") ) {
-                n = 1;
-                type [ 0 ] = eKfg;
-            } else if ( StringCmp ( result, "none") ) {
-                n = 0;
-            } else if ( StringCmp ( result, "env,kfg") ) {
-                n = 2;
-                type [ 0 ] = eEnv;
-                type [ 1 ] = eKfg;
-            } else if ( StringCmp ( result, "kfg,env") ) {
-                n = 2;
-                type [ 0 ] = eKfg;
-                type [ 1 ] = eEnv;
-            }
-        }
-        RELEASE ( String, result );
-    }
-
-    for ( i = 0; i < n; ++i ) {
-        switch ( type [ i] ) {
-            case eEnv:
-                KNSManagerHttpProxyInitFromEnv ( self );
-                break;
-            case eKfg:
-                KNSManagerHttpProxyInitFromKfg ( self, kfg );
-                break;
-            default:
-                assert ( 0 );
-                break;
-        }
-    }
+    assert ( self );
+    self -> proxies = KNSManagerKNSProxiesMake ( self, kfg );
+    if ( self -> proxies == NULL )
+        return RC ( rcNS, rcMgr, rcAllocating, rcMemory, rcExhausted );
+    else
+        return 0;
 }
 
 /* GetHTTPProxyEnabled
  *  returns true if a non-NULL proxy path exists and user wants to use it
- *  users indicate desire to use proxy through configuration or SetHTTPProxyEnabled
+ *  users indicate desire to use proxy through configuration
+ *  or SetHTTPProxyEnabled
  */
 LIB_EXPORT bool CC KNSManagerGetHTTPProxyEnabled ( const KNSManager * self )
 {
     if ( self != NULL )
-        return self -> http_proxy_enabled;
-
-    return false;
+        return KNSProxiesGetHTTPProxyEnabled ( self -> proxies );
+    else
+        return false;
 }
-
 
 /* SetHTTPProxyEnabled
  *  sets http-proxy enabled state to supplied value
@@ -948,19 +548,171 @@ LIB_EXPORT bool CC KNSManagerSetHTTPProxyEnabled ( KNSManager * self, bool enabl
 {
     bool prior = false;
     if ( self != NULL )
-    {
-        prior = self -> http_proxy_enabled;
-        self -> http_proxy_enabled = enabled;
-    }
+       prior = KNSProxiesSetHTTPProxyEnabled ( self -> proxies, enabled );
     return prior;
 }
 
+
+static void KNSManagerSetNCBI_VDB_NET ( KNSManager * self, const KConfig * kfg )
+{
+    rc_t rc = 0;
+
+    const KConfigNode * node = NULL;
+
+    if ( self == NULL || kfg == NULL )
+        return;
+
+    rc = KConfigOpenNodeRead ( kfg, & node, "/libs/kns/NCBI_VDB_NET" );
+    if ( rc != 0 ) {
+        self -> NCBI_VDB_NETkfgValueSet = self -> NCBI_VDB_NETkfgValue = false;
+        return;
+    }
+    else {
+        char buffer [ 1 ] = "";
+        size_t num_read = 0;
+        self -> NCBI_VDB_NETkfgValueSet = true;
+        rc = KConfigNodeRead ( node, 0, buffer, sizeof buffer, & num_read, 0 );
+        if ( num_read == 0 )
+            self -> NCBI_VDB_NETkfgValue = false;
+        else switch ( buffer [ 0 ] ) {
+            case '0':
+            case 'f': /* false */
+                self -> NCBI_VDB_NETkfgValue = false;
+                break;
+            default:
+                self -> NCBI_VDB_NETkfgValue = true;
+                break;
+        }
+    }
+
+    KConfigNodeRelease ( node );
+    node = NULL;
+} 
+
+
+/* VDB-DESIREMENTS:
+1. to call *[s]/kfg/properties* to read configuration
+2. to create a header file to keep constants (node names) */
+static int32_t KNSManagerPrepareConnTimeout(KConfig* kfg) {
+    int64_t result = 0;
+    rc_t rc = KConfigReadI64(kfg, "/libs/kns/connect/timeout", &result);
+    if (rc != 0 || result < 0)
+        return MAX_CONN_LIMIT;
+    else
+        return result;
+}
+static int32_t KNSManagerPrepareConnReadTimeout(KConfig* kfg) {
+    int64_t result = 0;
+    rc_t rc = KConfigReadI64(kfg, "/libs/kns/connect/timeout/read", &result);
+    if (rc != 0 || result < 0)
+        return MAX_CONN_READ_LIMIT;
+    else
+        return result;
+}
+static int32_t KNSManagerPrepareConnWriteTimeout(KConfig* kfg) {
+    int64_t result = 0;
+    rc_t rc = KConfigReadI64(kfg, "/libs/kns/connect/timeout/write", &result);
+    if (rc != 0 || result < 0)
+        return MAX_CONN_WRITE_LIMIT;
+    else
+        return result;
+}
+static int32_t KNSManagerPrepareHttpReadTimeout(KConfig* kfg) {
+    int64_t result = 0;
+    rc_t rc = KConfigReadI64(kfg, "/http/timeout/read", &result);
+    if (rc != 0 || result < 0)
+        return MAX_HTTP_READ_LIMIT;
+    else
+        return result;
+}
+static int32_t KNSManagerPrepareHttpWriteTimeout(KConfig* kfg) {
+    int64_t result = 0;
+    rc_t rc = KConfigReadI64(kfg, "/http/timeout/write", &result);
+    if (rc != 0 || result < 0)
+        return MAX_HTTP_WRITE_LIMIT;
+    else
+        return result;
+}
+
+#if 0
+static bool KNSManagerPrepareLogTlsErrors(KConfig* kfg) {
+    const char * e = getenv("NCBI_VDB_TLS_LOG_ERR");
+    if (e != NULL)
+        if (e[0] == '\0')
+            return true;
+        else {
+            if (e[0] == '0' ||
+                e[0] == 'f') /* false */
+            {
+                return false;
+            }
+            else
+                return true;
+        }
+    else {
+        bool log = false;
+        rc_t rc = KConfigReadBool(kfg, "/tls/NCBI_VDB_TLS_LOG_ERR", &log);
+        if (rc != 0)
+            return false;
+        else
+            return log;
+    }
+}
+
+static int KNSManagerPrepareEmulateTldReadErrors(KConfig* kfg) {
+    const char * e = getenv("NCBI_VDB_ERR_MBEDTLS_READ");
+    if (e != NULL)
+        return atoi(e);
+    else {
+        int64_t emult = 0;
+        rc_t rc = KConfigReadI64(kfg, "/tls/NCBI_VDB_ERR_MBEDTLS_READ", &emult);
+        if (rc != 0)
+            return 0;
+        else
+            return emult;
+    }
+}
+#endif
+
+static bool KNSManagerPrepareResolveToCache(KConfig* kfg) {
+    /* VResolverCache resolve to user's cache vs. cwd/AD */
+    bool reslt = true;
+
+    /* TODO: call ncbi-vdb/interfaces/kfg/properties.h for exact key name */
+    rc_t rc = KConfigReadBool(kfg, "/tools/prefetch/download_to_cache", &reslt);
+    if (rc == 0)
+        return reslt;
+    else
+        return true;
+}
+
+static bool KNSManagerPrepareAcceptAwsCharges(KConfig* kfg) {
+    bool reslt = false;
+
+    /* TODO: call ncbi-vdb/interfaces/kfg/properties.h for exact key name */
+    rc_t rc = KConfigReadBool(kfg, "/libs/cloud/accept_aws_charges", &reslt);
+    if (rc == 0)
+        return reslt;
+    else
+        return false;
+}
+
+static bool KNSManagerPrepareAcceptGcpCharges(KConfig* kfg) {
+    bool reslt = false;
+
+    /* TODO: call ncbi-vdb/interfaces/kfg/properties.h for exact key name */
+    rc_t rc = KConfigReadBool(kfg, "/libs/cloud/accept_gcp_charges", &reslt);
+    if (rc == 0)
+        return reslt;
+    else
+        return false;
+}
 
 LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
 {
     rc_t rc;
 
-    if ( mgrp == NULL )
+    if ( mgrp == NULL || kfg == NULL)
         rc = RC ( rcNS, rcMgr, rcAllocating, rcParam, rcNull );
     else
     {
@@ -970,14 +722,22 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
         else
         {
             KRefcountInit ( & mgr -> refcount, 1, "KNSManager", "init", "kns" );
-            mgr -> conn_timeout = MAX_CONN_LIMIT;
-            mgr -> conn_read_timeout = MAX_CONN_READ_LIMIT;
-            mgr -> conn_write_timeout = MAX_CONN_WRITE_LIMIT;
-            mgr -> http_read_timeout = MAX_HTTP_READ_LIMIT;
-            mgr -> http_write_timeout = MAX_HTTP_WRITE_LIMIT;
+            mgr -> conn_timeout = KNSManagerPrepareConnTimeout(kfg);
+            mgr -> conn_read_timeout = KNSManagerPrepareConnReadTimeout(kfg);
+            mgr -> conn_write_timeout = KNSManagerPrepareConnWriteTimeout(kfg);
+            mgr -> http_read_timeout = KNSManagerPrepareHttpReadTimeout(kfg);
+            mgr -> http_write_timeout = KNSManagerPrepareHttpWriteTimeout(kfg);
             mgr -> maxTotalWaitForReliableURLs_ms = 10 * 60 * 1000; /* 10 min */
             mgr -> maxNumberOfRetriesOnFailureForReliableURLs = 10;
-            mgr -> verbose = false;
+
+/*          mgr->logTlsErrors = KNSManagerPrepareLogTlsErrors(kfg);
+            mgr->emulateTlsReadErrors
+                = KNSManagerPrepareEmulateTldReadErrors(kfg); */
+
+            mgr->resolveToCache = KNSManagerPrepareResolveToCache(kfg);
+
+            mgr->accept_aws_charges = KNSManagerPrepareAcceptAwsCharges(kfg);
+            mgr->accept_gcp_charges = KNSManagerPrepareAcceptGcpCharges(kfg);
 
             rc = KNSManagerInit (); /* platform specific init in sysmgr.c ( in unix|win etc. subdir ) */
             if ( rc == 0 )
@@ -993,11 +753,25 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
                 if ( rc == 0 )
                 {
                     rc = KTLSGlobalsInit ( & mgr -> tlsg, kfg );
+
+                    if ( rc == 0 )
+                        rc = KNSManagerHttpProxyInit ( mgr, kfg );
+
                     if ( rc == 0 )
                     {
                         KNSManagerLoadAWS ( mgr, kfg );
-                        KNSManagerHttpProxyInit ( mgr, kfg );
+                        KNSManagerSetNCBI_VDB_NET ( mgr, kfg );
+
                         * mgrp = mgr;
+
+/*
+printf("KNSManager.conn_timeout(%d) = %d\n", MAX_CONN_LIMIT, mgr->conn_timeout);
+printf("KNSManager.conn_read_timeout(%d) = %d\n", MAX_CONN_READ_LIMIT, mgr->conn_read_timeout);
+printf("KNSManager.conn_write_timeout(%d) = %d\n", MAX_CONN_WRITE_LIMIT, mgr->conn_write_timeout);
+printf("KNSManager.http_read_timeout(%d) = %d\n", MAX_HTTP_READ_LIMIT, mgr->http_read_timeout);
+printf("KNSManager.http_write_timeout(%d) = %d\n", MAX_HTTP_WRITE_LIMIT, mgr->http_write_timeout);
+*/
+
                         return 0;
                     }
                 }
@@ -1048,4 +822,109 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char ** user_agent )
         ( *user_agent ) = kns_manager_user_agent;
     }
     return rc;
+}
+
+
+/******************************************************************************/
+
+#define NCBI_VDB_NET 1 /* VDB-3399 : temporarily enable for internal testing */
+
+void KNSManagerSetLogNcbiVdbNetError(KNSManager * self, bool set) {
+    if (self)
+        self->NCBI_VDB_NETnoLogError = ! set;
+}
+
+bool KNSManagerLogNcbiVdbNetError ( const KNSManager * self ) {
+    if ( self == NULL )
+#ifdef NCBI_VDB_NET
+    return true;
+#else
+    return false;
+#endif
+    else {
+        if (!self->logTlsErrors)
+            return false;
+
+        if (self->NCBI_VDB_NETnoLogError)
+            return false;
+        else {
+            const char * e = getenv("NCBI_VDB_NET");
+            if (e != NULL) {
+                if (e[0] == '0' ||
+                    e[0] == 'f') /* false */
+                {
+                    return false;
+                }
+                else
+                    return true;
+            }
+            else {
+                if (self->NCBI_VDB_NETkfgValueSet)
+                    return self->NCBI_VDB_NETkfgValue;
+            }
+
+#ifdef NCBI_VDB_NET
+            return true;
+#else
+            return false;
+#endif
+        }
+    }
+}
+
+rc_t KNSManagerGetCloudLocation(const KNSManager * cself,
+    char * buffer, size_t bsize, size_t * num_read, size_t * remaining)
+{
+    KNSManager * self = (KNSManager *)cself;
+
+    rc_t rc = 0;
+
+    if (buffer == NULL)
+        return RC(rcNS, rcMgr, rcAccessing, rcParam, rcNull);
+
+    if (self == NULL)
+        return RC(rcNS, rcMgr, rcAccessing, rcParam, rcNull);
+
+    if (self->cloud == NULL)
+        rc = KNSManagerMakeCloud(self, &self->cloud);
+
+    if (rc == 0) {
+        const char * location = NULL;
+
+        size_t dummy = 0;
+
+        if (num_read == NULL)
+            num_read = &dummy;
+        if (remaining == NULL)
+            remaining = &dummy;
+
+        assert(self->cloud);
+        location = CloudGetLocation(self->cloud);
+
+        if (location == NULL) {
+            if (bsize > 0)
+                buffer[0] = '\0';
+            *num_read = *remaining = 0;
+        }
+        else {
+            size_t s = string_copy_measure(buffer, bsize, location);
+            if (s <= bsize) {
+                *num_read = s;
+                *remaining = 0;
+            }
+            else {
+                *num_read = bsize;
+                *remaining = s - bsize;
+            }
+        }
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KNSManagerSetAdCaching(struct KNSManager* self, bool enabled)
+{
+    if (self != NULL)
+        self->enabledResolveToAd = enabled;
+    return 0;
 }

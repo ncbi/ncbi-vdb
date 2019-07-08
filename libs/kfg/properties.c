@@ -137,6 +137,14 @@ static rc_t KConfig_Get_Repository_String( const KConfig *self,
                 rc = string_printf( buffer, buffer_size, written, "%S", res );
                 StringWhack ( res );
             }
+            else
+            {
+                * buffer = 0;
+                if ( written != NULL )
+                {
+                    * written = 0;
+                }
+            }
         }
     }
     return rc;
@@ -323,6 +331,11 @@ LIB_EXPORT rc_t CC KConfig_Get_User_Access_Enabled( const KConfig *self, bool * 
 LIB_EXPORT rc_t CC KConfig_Set_User_Access_Enabled( KConfig *self, bool enabled )
 {   return KConfig_Set_Repository_State( self, enabled, true, PATH_REPOSITORY_USER_DISABLED ); }
 
+#define PATH_ALLOW_ALL_CERTS "/tls/allow-all-certs"
+LIB_EXPORT rc_t CC KConfig_Get_Allow_All_Certs( const KConfig *self, bool * enabled )
+{   return KConfig_Get_Repository_State( self, enabled, false, false, PATH_ALLOW_ALL_CERTS ); }
+LIB_EXPORT rc_t CC KConfig_Set_Allow_All_Certs( KConfig *self, bool enabled )
+{   return KConfig_Set_Repository_State( self, enabled, false, PATH_ALLOW_ALL_CERTS ); }
 
 #define PATH_REPOSITORY_USER_PUBLIC_DISABLED "/repository/user/main/public/disabled"
 LIB_EXPORT rc_t CC KConfig_Get_User_Public_Enabled( const KConfig *self, bool * enabled )
@@ -766,3 +779,300 @@ LIB_EXPORT rc_t CC KConfigSetProtectedRepositoryCachedById( KConfig *self, uint3
         rc = KConfig_Set_Repository_State( self, enabled, false, "/repository/user/protected/%s/cache-enabled", repo_name );
     return rc;
 }
+
+/* ---------------------------------------------------------------------------------------------------- */
+
+#define PREFETCH_DOWNLOAD_TO_CACHE "/tools/prefetch/download_to_cache"
+LIB_EXPORT rc_t CC KConfig_Get_Prefetch_Download_To_Cache ( const KConfig *self, bool * value )
+{
+    rc_t rc = KConfigReadBool ( self, PREFETCH_DOWNLOAD_TO_CACHE, value );
+    if ( GetRCState ( rc ) == rcNotFound)
+    {
+        * value = true;
+        rc = 0;
+    }
+    return rc;
+}
+LIB_EXPORT rc_t CC KConfig_Set_Prefetch_Download_To_Cache ( KConfig *self, bool value )
+{
+    return KConfigWriteBool( self, PREFETCH_DOWNLOAD_TO_CACHE, value );
+}
+
+#define USER_ACCEPT_AWS_CHARGES "/libs/cloud/accept_aws_charges"
+LIB_EXPORT rc_t CC KConfig_Get_User_Accept_Aws_Charges ( const KConfig *self, bool * value )
+{
+    rc_t rc = KConfigReadBool ( self, USER_ACCEPT_AWS_CHARGES, value );
+    if ( GetRCState ( rc ) == rcNotFound)
+    {
+        * value = false;
+        rc = 0;
+    }
+    return rc;
+}
+LIB_EXPORT rc_t CC KConfig_Set_User_Accept_Aws_Charges ( KConfig *self, bool value )
+{
+    return KConfigWriteBool( self, USER_ACCEPT_AWS_CHARGES, value );
+}
+
+#define USER_ACCEPT_GCP_CHARGES "/libs/cloud/accept_gcp_charges"
+LIB_EXPORT rc_t CC KConfig_Get_User_Accept_Gcp_Charges ( const KConfig *self, bool * value )
+{
+    rc_t rc = KConfigReadBool ( self, USER_ACCEPT_GCP_CHARGES, value );
+    if ( GetRCState ( rc ) == rcNotFound)
+    {
+        * value = false;
+        rc = 0;
+    }
+    return rc;
+}
+LIB_EXPORT rc_t CC KConfig_Set_User_Accept_Gcp_Charges ( KConfig *self, bool value )
+{
+    return KConfigWriteBool( self, USER_ACCEPT_GCP_CHARGES, value );
+}
+
+#define TEMP_CACHE "/libs/temp_cache"
+LIB_EXPORT rc_t CC
+KConfig_Get_Temp_Cache( const KConfig *self,
+    char * value, size_t value_size, size_t * written )
+{
+    return KConfig_Get_Repository_String( self, value, value_size, written, TEMP_CACHE );
+}
+LIB_EXPORT rc_t CC
+KConfig_Set_Temp_Cache( KConfig *self, const char * value )
+{
+    return KConfig_Set_Repository_String( self, value, TEMP_CACHE );
+}
+
+#define GCP_CREDENTIAL_FILE "/gcp/credential_file"
+LIB_EXPORT rc_t CC
+KConfig_Get_Gcp_Credential_File( const KConfig *self,
+    char * value, size_t value_size, size_t * written )
+{
+    return KConfig_Get_Repository_String( self, value, value_size, written, GCP_CREDENTIAL_FILE );
+}
+LIB_EXPORT rc_t CC
+KConfig_Set_Gcp_Credential_File( KConfig *self, const char * value )
+{
+    return KConfig_Set_Repository_String( self, value, GCP_CREDENTIAL_FILE );
+}
+
+#define AWS_CREDENTIAL_FILE "/aws/credential_file"
+LIB_EXPORT rc_t CC
+KConfig_Get_Aws_Credential_File( const KConfig *self,
+    char * value, size_t value_size, size_t * written )
+{
+    return KConfig_Get_Repository_String( self, value, value_size, written, AWS_CREDENTIAL_FILE );
+}
+LIB_EXPORT rc_t CC
+KConfig_Set_Aws_Credential_File( KConfig *self, const char * value )
+{
+    return KConfig_Set_Repository_String( self, value, AWS_CREDENTIAL_FILE );
+}
+
+#define AWS_PROFILE "/aws/profile"
+LIB_EXPORT rc_t CC
+KConfig_Get_Aws_Profile( const KConfig *self,
+    char * value, size_t value_size, size_t * written )
+{
+    rc_t rc = KConfig_Get_Repository_String( self, value, value_size, written, AWS_PROFILE );
+    if ( GetRCState ( rc ) == rcNotFound || ( rc == 0 && * written == 0 ) )
+    {
+        * written = string_copy_measure ( value, value_size, "default" );
+        rc = 0;
+    }
+    return rc;
+}
+LIB_EXPORT rc_t CC
+KConfig_Set_Aws_Profile( KConfig *self, const char * value )
+{
+    return KConfig_Set_Repository_String( self, value, AWS_PROFILE );
+}
+
+#define CACHE_AMOUNT "/libs/cache_amount"
+LIB_EXPORT rc_t CC KConfig_Get_Cache_Amount ( const KConfig *self, uint32_t * value )
+{
+    rc_t rc;
+    if ( self == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    else if ( value == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcParam, rcNull );
+    else
+    {
+        uint64_t long_value = 0;
+        rc = KConfigReadU64 ( self, CACHE_AMOUNT, &long_value );
+        if ( rc == 0 || GetRCState ( rc ) == rcNotFound )
+        {
+            * value = long_value & 0xFFFFFFFF;
+            rc = 0;
+        }
+    }
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KConfig_Set_Cache_Amount( KConfig *self, uint32_t value )
+{
+    rc_t rc;
+    if ( self == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    else
+    {
+        char buff[ 128 ];
+        size_t num_writ;
+        rc = string_printf ( buff, sizeof buff, &num_writ, "%u", value );
+        if ( rc == 0 )
+            rc = KConfigWriteString( self, CACHE_AMOUNT, buff );
+    }
+    return rc;
+}
+
+/* ------------------------------------------------------------------------ */
+static rc_t get_uint32_t_value( const KConfig *self, const char * key, uint32_t * value, uint32_t dflt )
+{
+    rc_t rc;
+    if ( self == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    else if ( value == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcParam, rcNull );
+    else
+    {
+        uint64_t long_value = dflt;
+        rc = KConfigReadU64 ( self, key, &long_value );
+        if ( rc == 0 )
+            * value = ( long_value & 0xFFFFFFFF );
+        rc = 0;
+    }
+    return rc;
+}
+
+static rc_t set_uint32_t_value( KConfig *self, const char * key, uint32_t value )
+{
+    rc_t rc;
+    if ( self == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    else
+    {
+        char buff[ 128 ];
+        size_t num_writ;
+        rc = string_printf ( buff, sizeof buff, &num_writ, "%u", value );
+        if ( rc == 0 )
+            rc = KConfigWriteString( self, key, buff );
+    }
+    return rc;
+}
+
+static rc_t get_bool_value( const KConfig *self, const char * key, bool * value, bool dflt )
+{
+    rc_t rc;
+    if ( self == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    else if ( value == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcParam, rcNull );
+    else
+    {
+        bool res = dflt;
+        rc = KConfigReadBool ( self, key, &res );
+        if ( rc == 0 )
+            * value = res;
+        rc = 0;
+    }
+    return rc;
+}
+
+static rc_t set_bool_value( KConfig *self, const char * key, bool value )
+{
+    rc_t rc;
+    if ( self == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    else
+        rc = KConfigWriteBool( self, key, value );
+    return rc;
+}
+
+#define CACHE_TEE_VERSION "/CACHINGPARAMS/CACHETEEVER"
+LIB_EXPORT rc_t CC KConfig_Get_CacheTeeVersion ( const KConfig *self, uint32_t * value, uint32_t dflt )
+{ return get_uint32_t_value( self, CACHE_TEE_VERSION, value, dflt ); }
+LIB_EXPORT rc_t CC KConfig_Set_CacheTeeVersion( KConfig *self, uint32_t value )
+{ return set_uint32_t_value( self, CACHE_TEE_VERSION, value ); }
+
+#define CACHE_TEE_CLUSTER_FACTOR "/CACHINGPARAMS/CACHETEECLUSTERFACTOR"
+LIB_EXPORT rc_t CC KConfig_Get_CacheClusterFactorBits( const KConfig *self, uint32_t * value, uint32_t dflt )
+{ return get_uint32_t_value( self, CACHE_TEE_CLUSTER_FACTOR, value, dflt ); }
+LIB_EXPORT rc_t CC KConfig_Set_CacheClusterFactorBits( KConfig *self, uint32_t value )
+{ return set_uint32_t_value( self, CACHE_TEE_CLUSTER_FACTOR, value ); }
+
+#define CACHE_TEE_PAGE_SIZE "/CACHINGPARAMS/CACHETEEPAGESIZE"
+LIB_EXPORT rc_t CC KConfig_Get_CachePageSizeBits( const KConfig *self, uint32_t * value, uint32_t dflt )
+{ return get_uint32_t_value( self, CACHE_TEE_PAGE_SIZE, value, dflt ); }
+LIB_EXPORT rc_t CC KConfig_Set_CachePageSizeBits( KConfig *self, uint32_t value )
+{ return set_uint32_t_value( self, CACHE_TEE_PAGE_SIZE, value ); }
+
+#define CACHE_BLOCKSIZE "/CACHINGPARAMS/BLOCKSIZE"
+LIB_EXPORT rc_t CC KConfig_Get_CacheBlockSize ( const KConfig *self, size_t * value, size_t dflt )
+{
+    rc_t rc;
+    if ( self == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    else if ( value == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcParam, rcNull );
+    else
+    {
+        uint64_t long_value = dflt;
+        rc = KConfigReadU64 ( self, CACHE_BLOCKSIZE, &long_value );
+        if ( rc == 0 )
+            * value = long_value;
+        rc = 0;
+    }
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KConfig_Set_CacheBlockSize( KConfig *self, size_t value )
+{
+    rc_t rc;
+    if ( self == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    else
+    {
+        char buff[ 128 ];
+        size_t num_writ;
+        rc = string_printf ( buff, sizeof buff, &num_writ, "%u", value );
+        if ( rc == 0 )
+            rc = KConfigWriteString( self, CACHE_BLOCKSIZE, buff );
+    }
+    return rc;
+}
+
+#define CACHE_PAGE_COUNT "/CACHINGPARAMS/PAGECOUNT"
+LIB_EXPORT rc_t CC KConfig_Get_CachePageCount( const KConfig *self, uint32_t * value, uint32_t dflt )
+{ return get_uint32_t_value( self, CACHE_PAGE_COUNT, value, dflt ); }
+LIB_EXPORT rc_t CC KConfig_Set_CachePageCount( KConfig *self, uint32_t value )
+{ return set_uint32_t_value( self, CACHE_PAGE_COUNT, value ); }
+
+#define CACHE_LOG_USE_CWD "/CACHINGPARAMS/LOGUSECWD"
+LIB_EXPORT rc_t CC KConfig_Get_CacheLogUseCWD( const KConfig *self, bool * value, bool dflt )
+{ return get_bool_value( self, CACHE_LOG_USE_CWD, value, dflt ); }
+LIB_EXPORT rc_t CC KConfig_Set_CacheLogUseCWD( KConfig *self, bool value )
+{ return set_bool_value( self, CACHE_LOG_USE_CWD, value ); }
+
+#define CACHE_LOG_APPEND "/CACHINGPARAMS/LOGAPPEND"
+LIB_EXPORT rc_t CC KConfig_Get_CacheLogAppend( const KConfig *self, bool * value, bool dflt )
+{ return get_bool_value( self, CACHE_LOG_APPEND, value, dflt ); }
+LIB_EXPORT rc_t CC KConfig_Set_CacheLogAppend( KConfig *self, bool value )
+{ return set_bool_value( self, CACHE_LOG_APPEND, value ); }
+
+#define CACHE_LOG_TIMED "/CACHINGPARAMS/LOGTIMED"
+LIB_EXPORT rc_t CC KConfig_Get_CacheLogTimed( const KConfig *self, bool * value, bool dflt )
+{ return get_bool_value( self, CACHE_LOG_TIMED, value, dflt ); }
+LIB_EXPORT rc_t CC KConfig_Set_CacheLogTimed( KConfig *self, bool value )
+{ return set_bool_value( self, CACHE_LOG_TIMED, value ); }
+
+#define CACHE_LOG_OUTER "/CACHINGPARAMS/LOGOUTER"
+LIB_EXPORT rc_t CC KConfig_Get_CacheLogOuter( const KConfig *self, bool * value, bool dflt )
+{ return get_bool_value( self, CACHE_LOG_OUTER, value, dflt ); }
+LIB_EXPORT rc_t CC KConfig_Set_CacheLogOuter( KConfig *self, bool value )
+{ return set_bool_value( self, CACHE_LOG_OUTER, value ); }
+
+#define CACHE_LOG_INNER "/CACHINGPARAMS/LOGINNER"
+LIB_EXPORT rc_t CC KConfig_Get_CacheLogInner( const KConfig *self, bool * value, bool dflt )
+{ return get_bool_value( self, CACHE_LOG_INNER, value, dflt ); }
+LIB_EXPORT rc_t CC KConfig_Set_CacheLogInner( KConfig *self, bool value )
+{ return set_bool_value( self, CACHE_LOG_INNER, value ); }

@@ -55,48 +55,55 @@ void SExpressionWhack ( const SExpression *cself )
     {
         switch ( self -> var )
         {
-        case eTypeExpr:
-        {
-            STypeExpr *x = ( STypeExpr* ) self;
-            SExpressionWhack ( x -> dim );
-            break;
+            case eTypeExpr:
+            {
+                STypeExpr *x = ( STypeExpr* ) self;
+                SExpressionWhack ( x -> dim );
+                break;
+            }
+            case eFuncExpr:
+            case eScriptExpr:
+            {
+                SFuncExpr *x = ( SFuncExpr* ) self;
+                VectorWhack ( & x -> schem, SExpressionVWhack, NULL );
+                VectorWhack ( & x -> pfact, SExpressionVWhack, NULL );
+                VectorWhack ( & x -> pfunc, SExpressionVWhack, NULL );
+                break;
+            }
+            case ePhysEncExpr:
+            {
+                SPhysEncExpr *x = ( SPhysEncExpr* ) self;
+                VectorWhack ( & x -> schem, SExpressionVWhack, NULL );
+                VectorWhack ( & x -> pfact, SExpressionVWhack, NULL );
+                break;
+            }
+            case eNegateExpr:
+            {
+                SUnaryExpr *x = ( SUnaryExpr* ) self;
+                SExpressionWhack ( x -> expr );
+                break;
+            }
+            case eCastExpr:
+            case eCondExpr:
+            {
+                SBinExpr *x = ( SBinExpr* ) self;
+                SExpressionWhack ( x -> left );
+                SExpressionWhack ( x -> right );
+                break;
+            }
+            case eVectorExpr:
+            {
+                SVectExpr *x = ( SVectExpr* ) self;
+                VectorWhack ( & x -> expr, SExpressionVWhack, NULL );
+                break;
+            }
+            case eMembExpr:
+            {
+                SMembExpr *x = ( SMembExpr* ) self;
+                SExpressionWhack ( x -> rowId );
+                break;
+            }
         }
-        case eFuncExpr:
-        case eScriptExpr:
-        {
-            SFuncExpr *x = ( SFuncExpr* ) self;
-            VectorWhack ( & x -> schem, SExpressionVWhack, NULL );
-            VectorWhack ( & x -> pfact, SExpressionVWhack, NULL );
-            VectorWhack ( & x -> pfunc, SExpressionVWhack, NULL );
-            break;
-        }
-        case ePhysEncExpr:
-        {
-            SPhysEncExpr *x = ( SPhysEncExpr* ) self;
-            VectorWhack ( & x -> schem, SExpressionVWhack, NULL );
-            VectorWhack ( & x -> pfact, SExpressionVWhack, NULL );
-            break;
-        }
-        case eNegateExpr:
-        {
-            SUnaryExpr *x = ( SUnaryExpr* ) self;
-            SExpressionWhack ( x -> expr );
-            break;
-        }
-        case eCastExpr:
-        case eCondExpr:
-        {
-            SBinExpr *x = ( SBinExpr* ) self;
-            SExpressionWhack ( x -> left );
-            SExpressionWhack ( x -> right );
-            break;
-        }
-        case eVectorExpr:
-        {
-            SVectExpr *x = ( SVectExpr* ) self;
-            VectorWhack ( & x -> expr, SExpressionVWhack, NULL );
-            break;
-        }}
 
         free ( self );
     }
@@ -151,6 +158,9 @@ void CC SExpressionMark ( void * item, void * data )
     case eVectorExpr:
         VectorForEach ( & ( ( const SVectExpr* ) self ) -> expr, false,
                         SExpressionMark, data );
+        break;
+    case eMembExpr:
+        assert (false); //TODO SMembExprMark
         break;
     }
 }
@@ -226,7 +236,7 @@ rc_t STypeExprDump ( const STypeExpr *self, SDumper *b )
                 rc = SDumperPrint ( b, " [ * ]" );
         }
     }
-    
+
     return rc;
 }
 
@@ -601,7 +611,11 @@ rc_t SExpressionDump ( const SExpression *self, SDumper *b )
         if ( compact )
             return SExpressionBracketListDump ( & x -> expr, b, "[", "]" );
         return SExpressionBracketListDump ( & x -> expr, b, "[ ", " ]" );
-    }}
+    }
+    case eMembExpr:
+        assert (false); //TODO: SMembExprDump
+        break;
+    }
 
     return SDumperPrint ( b, "EXPR-UNKNOWN" );
 
@@ -1241,7 +1255,7 @@ rc_t type_expr_impl ( const KSymTable *tbl, KTokenSource *src, KToken *t,
             return rc;
         }
     }
-    
+
     * fd = & x -> dad;
     return 0;
 }
@@ -1376,7 +1390,7 @@ rc_t sym_expr ( KSymTable *tbl, KTokenSource *src, KToken *t,
 
 /*
  * param-expr         = <func-param>
- * 
+ *
  */
 #if SLVL >= 4
 
@@ -1388,7 +1402,7 @@ rc_t sym_expr ( KSymTable *tbl, KTokenSource *src, KToken *t,
 
 /*
  * prod-expr          = <production>
- * 
+ *
  */
 #if SLVL >= 4
 
@@ -1507,7 +1521,7 @@ rc_t schema_value ( KSymTable *tbl, KTokenSource *src, KToken *t,
 
 /*
  * fact-parms         = <fact-param> [ ',' <fact-parms> ]
- * fact-param         = [ ID '=' ] <fact-value>
+ * fact-param         = [ ID '=' ] <fact-value>         ( "ID =" not implemented )
  * fact-value         = <func-name>
  *                    | '[' <fact-const-list> ']'
  */
@@ -2141,7 +2155,7 @@ rc_t phys_encoding_expr ( KSymTable *tbl, KTokenSource *src, KToken *t,
         }
 
         /* evaluate type expression */
-        if ( td != NULL )
+        if ( x -> phys != NULL && td != NULL )
         {
             /* bind schema parameters */
             Vector prior, cx_bind;

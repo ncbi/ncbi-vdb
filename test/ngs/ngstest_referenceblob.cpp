@@ -33,6 +33,8 @@
 
 #include "ngs_c_fixture.hpp"
 
+#include <kfg/config.h> /* KConfigDisableUserSettings */
+
 #include <vdb/database.h>
 
 #include <NGS_Cursor.h>
@@ -765,6 +767,7 @@ const char UsageDefaultName[] = "test-ngs_referenceblob";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    KConfigDisableUserSettings();
     rc_t m_coll=NgsReferenceBlobTestSuite(argc, argv);
     return m_coll;
 }

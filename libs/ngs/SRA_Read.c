@@ -66,6 +66,7 @@ const char * sequence_col_specs [] =
     "SPOT_GROUP",
     "PRIMARY_ALIGNMENT_ID",
     "(U64)SPOT_COUNT",
+    "(INSDC:dna:text)CMP_READ",
 };
 
 static NGS_Read_vt NGS_Read_vt_inst =

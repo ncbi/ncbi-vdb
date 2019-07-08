@@ -75,9 +75,12 @@ clean: stdclean
 $(ILIBDIR)/libkns: $(addprefix $(ILIBDIR)/libkns.,$(ILIBEXT))
 
 KNS_NO_HTTP_SRC = \
+	stream-from-buffer \
 	kns_manager-ext \
 	manager \
+	proxy \
 	buffered-stream \
+	cloud \
 	stream \
 	stream-from-files \
 	stream-from-streams \
@@ -95,6 +98,7 @@ endif
 
 KNS_SRC = \
 	$(KNS_NO_HTTP_SRC) \
+	cloud              \
 	http-file          \
 	http-client        \
 	http-retrier       \
@@ -114,3 +118,9 @@ $(ILIBDIR)/libkns.$(LIBX): $(KNS_OBJ)
 compile: stdcompile
 
 $(TARGDIR)/compile: $(OBJFILES)
+
+#-------------------------------------------------------------------------------
+# fuzz
+#
+fuzz: std
+	cp $(addsuffix .$(LIBX),$(addprefix $(ILIBDIR)/,$(INT_LIBS))) $(FLIBDIR)/

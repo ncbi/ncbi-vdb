@@ -31,9 +31,9 @@ MODULE = test/ngs
 TEST_TOOLS = \
     test-ngs \
     test-ngs_sra \
- 	test-ngs_sradb \
- 	test-ngs_csra1 \
- 	test-ngs_csra1_readcollection \
+    test-ngs_sradb \
+    test-ngs_csra1 \
+    test-ngs_csra1_readcollection \
     test-ngs_csra1_refwin \
     test-ngs_csra1_pileup \
     test-ngs_reference \
@@ -159,6 +159,9 @@ TEST_NGS_CSRA1_READCOLLECTION_OBJ = \
 
 $(TEST_BINDIR)/test-ngs_csra1_readcollection: $(TEST_NGS_CSRA1_READCOLLECTION_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
+
+csra1rc: test-ngs_csra1_readcollection
+	$(TEST_BINDIR)/$^
 
 #-------------------------------------------------------------------------------
 # test-ngs_csra1_refwin

@@ -106,6 +106,8 @@ struct KSocket
         struct sockaddr_in6 v6;     /* for ipv6 */
     } remote_addr;
     bool remote_addr_valid;
+
+    char ip_address [ 256 ];
 };
 
 LIB_EXPORT rc_t CC KSocketAddRef( const KSocket *self )
@@ -153,8 +155,8 @@ rc_t CC KSocketWhack ( KSocket *self )
     assert ( self != NULL );
 
     shutdown ( self -> fd, SHUT_WR );
-    
-    while ( 1 ) 
+
+    while ( 1 )
     {
         char buffer [ 1024 ];
         ssize_t result = recv ( self -> fd, buffer, sizeof buffer, MSG_DONTWAIT );
@@ -171,7 +173,7 @@ rc_t CC KSocketWhack ( KSocket *self )
         unlink ( self -> path );
         free ( ( void* ) self -> path );
     }
-        
+
     free ( self );
 
     return 0;
@@ -397,6 +399,8 @@ static rc_t KSocketGetEndpointV4 ( const KSocket * self, KEndPoint * ep, bool re
         ep->u.ipv4.addr = ntohl( addr.sin_addr.s_addr );
         ep->u.ipv4.port = ntohs( addr.sin_port );
         ep->type = epIPV4;
+        string_copy_measure ( ep -> ip_address, sizeof ep -> ip_address,
+                              inet_ntoa ( addr . sin_addr ) );
         return 0;
     }
 
@@ -415,6 +419,8 @@ static rc_t KSocketGetEndpoint ( const KSocket * self, KEndPoint * ep, bool remo
         rc = RC ( rcNS, rcSocket, rcEvaluating, rcParam, rcNull );
     else
     {
+        memset ( ep, 0, sizeof * ep );
+
         ep -> type = epInvalid;
 
         if ( self == NULL )
@@ -423,13 +429,13 @@ static rc_t KSocketGetEndpoint ( const KSocket * self, KEndPoint * ep, bool remo
         {
             switch( self->type )
             {
-            case epIPV4: 
-                rc = KSocketGetEndpointV4( self, ep, remote ); 
+            case epIPV4:
+                rc = KSocketGetEndpointV4( self, ep, remote );
                 break;
-            case epIPV6: 
-                rc = KSocketGetEndpointV6( self, ep, remote ); 
+            case epIPV6:
+                rc = KSocketGetEndpointV6( self, ep, remote );
                 break;
-            default: 
+            default:
                 rc = RC ( rcNS, rcSocket, rcEvaluating, rcFunction, rcUnsupported );
                 break;
             }
@@ -457,12 +463,12 @@ rc_t CC KSocketTimedRead ( const KSocket *self,
 {
     rc_t rc;
     int revents;
-    
+
     assert ( self != NULL );
     assert ( num_read != NULL );
 
     DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead(%d, %d)...\n", self, bsize, tm == NULL ? -1 : tm -> mS ) );
-    
+
     /* wait for socket to become readable */
     revents = socket_wait ( self -> fd
                             , POLLIN
@@ -506,7 +512,7 @@ rc_t CC KSocketTimedRead ( const KSocket *self,
             if ( ( getsockopt ( self -> fd, SOL_SOCKET, SO_ERROR, & optval, & optlen ) == 0 ) && optval > 0 )
             {
                 errno = optval;
-                DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead socket_wait/getsockopt returned '%!'\n", 
+                DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead socket_wait/getsockopt returned '%!'\n",
                                                             self, optval ) );
                 switch ( errno )
                 {
@@ -830,7 +836,63 @@ rc_t KSocketMakePath ( const char * name, char * buf, size_t buf_size )
 }
 
 static
-rc_t KSocketConnectIPv4 ( KSocket *self, const KEndPoint *from, const KEndPoint *to )
+rc_t
+TimedConnect( int socketFd, const struct sockaddr* ss, size_t ss_size, int32_t timeoutMs )
+{
+    int res;
+    /* set non-blocking mode */
+    int flag = fcntl ( socketFd, F_GETFL );
+    if ( flag == -1 )
+    {
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "TimedConnect(%d): fcntl(F_GETFL) failed\n", socketFd ) );
+        return KSocketHandleConnectCall ( errno );
+    }
+    if ( fcntl ( socketFd, F_SETFL, flag | O_NONBLOCK ) == -1 )
+    {
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "TimedConnect(%d): fcnl(F_SETFL) failed\n", socketFd ) );
+        return KSocketHandleConnectCall ( errno );
+    }
+
+    res = connect ( socketFd, ss, ss_size );
+    if ( res == 0 )
+    {
+        return 0;
+    }
+
+    if ( errno == EINPROGRESS )
+    {
+        int res = connect_wait( socketFd, timeoutMs );
+        if ( res > 0 )
+        {
+            return 0;
+        }
+
+        if ( res == 0 ) /* timed out */
+        {
+            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "TimedConnect(%d): connect_wait() timed out\n", socketFd ) );
+            return KSocketHandleConnectCall ( ETIMEDOUT );
+        }
+
+        if ( errno == EINTR )
+        {
+            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "TimedConnect(%d): connect_wait() interrupted\n", socketFd ) );
+            return RC ( rcNS, rcSocket, rcCreating, rcConnection, rcInterrupted );
+        }
+        else
+        {
+            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "TimedConnect(%d): connect_wait() failed\n", socketFd ) );
+            return KSocketHandleConnectCall ( errno );
+        }
+    }
+    else
+    {
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "TimedConnect(%d): connect() failed\n", socketFd ) );
+        return KSocketHandleConnectCall ( errno );
+    }
+}
+
+static
+rc_t KSocketConnectIPv4 ( KSocket *self, const KEndPoint *from, const KEndPoint *to, int32_t timeoutMs )
 {
     rc_t rc = 0;
 
@@ -856,21 +918,18 @@ rc_t KSocketConnectIPv4 ( KSocket *self, const KEndPoint *from, const KEndPoint 
         /* bind */
         if ( bind ( self -> fd, ( struct sockaddr* ) & ss, sizeof ss ) != 0 )
             rc = KSocketHandleBindCall ( errno );
-                
+
         if ( rc == 0 )
         {
             ss . sin_port = htons ( to -> u . ipv4 . port );
             ss . sin_addr . s_addr = htonl ( to -> u . ipv4 . addr );
 
-            /* connect */
-            if ( connect ( self -> fd, ( struct sockaddr* ) & ss, sizeof ss ) != 0 )
-#warning "have an issue with EINTR here and other places"
-                rc = KSocketHandleConnectCall ( errno );
-            else
+            rc = TimedConnect ( self -> fd, ( struct sockaddr* ) & ss, sizeof ss, timeoutMs );
+            if ( rc == 0 )
             {
-                /* set non-blocking mode */
-                flag = fcntl ( self -> fd, F_GETFL );
-                fcntl ( self -> fd, F_SETFL, flag | O_NONBLOCK );
+                string_copy_measure ( self -> ip_address,
+                    sizeof self -> ip_address, to -> ip_address );
+
                 return 0;
             }
         }
@@ -887,7 +946,7 @@ rc_t KSocketConnectIPv4 ( KSocket *self, const KEndPoint *from, const KEndPoint 
 
 
 static
-rc_t KSocketConnectIPv6 ( KSocket *self, const KEndPoint *from, const KEndPoint *to )
+rc_t KSocketConnectIPv6 ( KSocket *self, const KEndPoint *from, const KEndPoint *to, int32_t timeoutMs )
 {
     rc_t rc = 0;
     struct sockaddr_in6 ss_from, ss_to;
@@ -925,14 +984,9 @@ rc_t KSocketConnectIPv6 ( KSocket *self, const KEndPoint *from, const KEndPoint 
 
         if ( rc == 0 )
         {
-            /* connect */
-            if ( connect ( self -> fd, ( struct sockaddr* ) & ss_to, sizeof ss_to ) != 0 )
-                rc = KSocketHandleConnectCall ( errno );
-            else
+            rc = TimedConnect ( self -> fd, ( struct sockaddr* ) & ss_to, sizeof ss_to, timeoutMs );
+            if ( rc == 0 )
             {
-                /* set non-blocking mode */
-                flag = fcntl ( self -> fd, F_GETFL );
-                fcntl ( self -> fd, F_SETFL, flag | O_NONBLOCK );
                 return 0;
             }
         }
@@ -941,7 +995,7 @@ rc_t KSocketConnectIPv6 ( KSocket *self, const KEndPoint *from, const KEndPoint 
         close ( self -> fd );
         self -> fd = -1;
     }
-    
+
     DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketConnectIPv6 failed - %R\n", self, rc ) );
 
     return rc;
@@ -969,7 +1023,7 @@ rc_t KSocketConnectIPC ( KSocket *self, const KEndPoint *to )
             rc = KSocketHandleConnectCall ( errno );
         else
             return 0;
-            
+
         /* dump socket */
         close ( self -> fd );
         self -> fd = -1;
@@ -1036,11 +1090,11 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
                             switch ( to -> type )
                             {
                             case epIPV4:
-                                rc = KSocketConnectIPv4 ( conn, from, to );
+                                rc = KSocketConnectIPv4 ( conn, from, to, retryTimeout -> mS );
                                 break;
 
                             case epIPV6:
-                                rc = KSocketConnectIPv6 ( conn, from, to );
+                                rc = KSocketConnectIPv6 ( conn, from, to, retryTimeout -> mS );
                                 break;
 
                             case epIPC:
@@ -1053,6 +1107,11 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
                             {
                                 * out = conn;
                                 return 0;
+                            }
+                            /* if was interrupted by Ctrl-C, return immediately */
+                            if ( rcConnection == GetRCObject ( rc ) && rcInterrupted == GetRCState ( rc ) )
+                            {
+                                return rc;
                             }
 
                             /* check time remaining on timeout ( if any ) */
@@ -1087,7 +1146,7 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
                         }
 
                         DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET),
-                               ( "%p: KSocketConnect timed out\n", self ) ); 
+                               ( "%p: KSocketConnect timed out\n", self ) );
                        break;
 
                     default:
@@ -1137,7 +1196,7 @@ rc_t KNSManagerMakeIPv6Listener ( KSocket *listener, const KEndPoint * ep )
            rc = KSocketHandleBindCall ( errno );
         else
             return 0;
-        
+
         close ( listener -> fd );
         listener -> fd = -1;
     }
@@ -1221,7 +1280,7 @@ rc_t KNSManagerMakeIPCListener ( KSocket *listener, const KEndPoint * ep )
 
 LIB_EXPORT rc_t CC KNSManagerMakeListener ( const KNSManager *self,
     KListener ** out, const KEndPoint * ep )
-{   
+{
     rc_t rc;
 
     if ( out == NULL )
@@ -1297,7 +1356,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeListener ( const KNSManager *self,
                                 break;
                             }
                         }
-                        
+
                         if ( listener -> path != NULL )
                             free ( ( void* ) listener -> path );
                     }
@@ -1422,7 +1481,7 @@ LIB_EXPORT rc_t CC KListenerAccept ( KListener *iself, struct KSocket **out )
                         * out = new_socket;
                         return 0;
                     }
-                    
+
                     free ( new_socket );
                 }
             }

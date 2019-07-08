@@ -91,6 +91,8 @@ CRYPTO_SRC =            \
     blowfish            \
     camellia            \
     ccm                 \
+    chacha20            \
+    chachapoly          \
     cipher              \
     cipher_wrap         \
     ctr_drbg            \
@@ -123,8 +125,11 @@ CRYPTO_SRC =            \
     pkparse             \
     pkwrite             \
     platform            \
+    platform_util       \
+    poly1305            \
     ripemd160           \
     rsa                 \
+    rsa_internal        \
     sha1                \
     sha256              \
     sha512              \
@@ -171,7 +176,6 @@ $(ILIBDIR)/libmbedtls: $(addprefix $(ILIBDIR)/libmbedtls.,$(LIBX))
 
 TLS_SRC =            \
 	debug            \
-	net              \
 	ssl_cache        \
 	ssl_ciphersuites \
 	ssl_cli          \
@@ -179,6 +183,8 @@ TLS_SRC =            \
 	ssl_srv          \
 	ssl_ticket       \
 	ssl_tls
+
+#	net              \
 
 TLS_OBJ = \
 	$(addsuffix .$(LOBX),$(TLS_SRC))
@@ -190,3 +196,9 @@ $(ILIBDIR)/libmbedtls.$(LIBX): $(TLS_OBJ)
 compile: stdcompile
 
 $(TARGDIR)/compile: $(OBJFILES)
+
+#-------------------------------------------------------------------------------
+# fuzz
+#
+fuzz: std
+	cp $(addsuffix .$(LIBX),$(addprefix $(ILIBDIR)/,$(INT_LIBS))) $(FLIBDIR)/

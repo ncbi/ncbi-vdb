@@ -84,19 +84,25 @@ enum
 {
     /* version 1.1 protocols */
       eProtocolNone  = 0
+    , eProtocolDefault = eProtocolNone
     , eProtocolHttp  = 1
     , eProtocolFasp  = 2
 
       /* version 1.2 protocols */
     , eProtocolHttps = 3
 
-      /* values 3..7 are available for future */
+      /* version 3.0 protocols */
+    , eProtocolFile  = 4
+    , eProtocolS3    = 5 /* Amazon Simple Storage Service */
+    , eProtocolGS    = 6 /* Google Cloud Storage */
+
+      /* value 7 are available for future */
 
     , eProtocolLast
     , eProtocolMax   = eProtocolLast - 1
     , eProtocolMask  = 7
 
-    , eProtocolMaxPref = 3
+    , eProtocolMaxPref = 6
 
       /* macros for building multi-protocol constants
          ordered by preference from least to most significant bits */
@@ -107,6 +113,10 @@ enum
 #define VRemoteProtocolsMake3( p1, p2, p3 )                                 \
       ( VRemoteProtocolsMake2 ( p1, p2 ) |                                  \
         ( ( ( VRemoteProtocols ) ( p3 ) & eProtocolMask ) << ( 3 * 2 ) ) )
+
+#define VRemoteProtocolsMake4( p1, p2, p3, p4 )                                 \
+      ( VRemoteProtocolsMake3 ( p1, p2, p3 ) |                                  \
+        ( ( ( VRemoteProtocols ) ( p4 ) & eProtocolMask ) << ( 3 * 3 ) ) )
 
     , eProtocolFaspHttp         = VRemoteProtocolsMake2 ( eProtocolFasp,  eProtocolHttp  )
     , eProtocolHttpFasp         = VRemoteProtocolsMake2 ( eProtocolHttp,  eProtocolFasp  )
@@ -120,6 +130,7 @@ enum
     , eProtocolHttpHttpsFasp    = VRemoteProtocolsMake3 ( eProtocolHttp,  eProtocolHttps, eProtocolFasp  )
     , eProtocolHttpsFaspHttp    = VRemoteProtocolsMake3 ( eProtocolHttps, eProtocolFasp,  eProtocolHttp  )
     , eProtocolHttpsHttpFasp    = VRemoteProtocolsMake3 ( eProtocolHttps, eProtocolHttp,  eProtocolFasp  )
+    , eProtocolFileFaspHttpHttps= VRemoteProtocolsMake4 ( eProtocolFile,  eProtocolFasp,  eProtocolHttp, eProtocolHttps  )
 };
 
 /* Parse
@@ -177,7 +188,6 @@ VFS_EXTERN rc_t CC VResolverQuery ( const VResolver * self,
     VRemoteProtocols protocols, struct VPath const * query,
     struct VPath const ** local, struct VPath const ** remote,
     struct VPath const ** cache );
-
 
 /* Local - DEPRECATED
  *  Find an existing local file/directory that is named by the accession.

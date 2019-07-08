@@ -174,6 +174,11 @@ rc_t ReadEncKey(const KFile* file, char* buf, size_t bufsize)
 
     if (rc == 0)
     {
+        char * pc;
+
+        /* ensure buffer is NUL terminated */
+        buf [ readNum ] = 0;
+        
         /* -----
          * trim back the contents of the file to
          * a single ASCII/UTF-8 text line
@@ -181,17 +186,20 @@ rc_t ReadEncKey(const KFile* file, char* buf, size_t bufsize)
          * end of line characters so it could have other
          * control characters...
          */
-        char* pc = string_chr (buf, readNum, '\r');
-        if (pc == NULL)
-            pc = string_chr (buf, readNum, '\n');
-
+        pc = memchr ( buf, '\r', readNum );
+        if ( pc == NULL )
+            pc = memchr ( buf, '\n', readNum );
         if (pc != NULL)
             *pc = 0;
-        else
-            buf[readNum]=0;
-            
-        if (string_measure(buf, NULL) == 0)
+
+        /* disallow a length of 0 */
+        if ( buf [ 0 ] == 0 )
             rc = RC (rcKFG, rcEncryptionKey, rcRetrieving, rcSize, rcTooShort);
+        else if ( memcmp ( buf, "n/a", 4 ) == 0 )
+        {
+            /* download-only NGC file */
+            rc = RC ( rcKFG, rcEncryptionKey, rcRetrieving, rcEncryptionKey, rcNoPerm );
+        }
     }
     return rc;
 }
@@ -382,7 +390,10 @@ static rc_t KEncryptionKeyMakeInt(const char* value, KEncryptionKey** self)
         return RC ( rcKFG, rcEncryptionKey, rcCreating, rcMemory, rcExhausted );
     else
     {
-        size_t size = string_measure(value, NULL);
+/* VDB-3590: Encryption key is a sequence of bytes.
+        It is not a string and can represent an invalid UNICODE sequence */
+        size_t size = string_size   (value);
+
         char* data = malloc(size+1);/*TODO: place in protected memory*/
         if (data == NULL)
         {
@@ -390,7 +401,8 @@ static rc_t KEncryptionKeyMakeInt(const char* value, KEncryptionKey** self)
             return RC ( rcKFG, rcEncryptionKey, rcCreating, rcMemory, rcExhausted );
         }
 
-        string_copy(data, size + 1, value, size);    
+        memmove(data, value, size);    
+
         StringInit( & ret -> value, data, size, (uint32_t)size ); /* do not include the 0-terminator */
         
         KRefcountInit ( & ret -> refcount, 1, "KEncryptionKey", "init", "" );

@@ -50,7 +50,9 @@ double round( double value_in )
 
 typedef double double_t;
 
+#ifndef isnan
 #define isnan( x ) _isnan ( x )
+#endif
 
 static __inline
 float truncf( float value_in )

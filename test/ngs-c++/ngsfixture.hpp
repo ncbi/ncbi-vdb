@@ -31,6 +31,8 @@
 * Unit tests for NGS C++ interface, common definitions
 */
 
+#include <kfg/config.h> /* KConfigDisableUserSettings */
+
 #include <ngs/ncbi/NGS.hpp>
 
 #include <ktst/unit_test.hpp>

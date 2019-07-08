@@ -22,9 +22,6 @@
 *
 * ===========================================================================
 *
-*/
-
-/**
 * Unit tests for HTTP interfaces
 */
 
@@ -37,9 +34,11 @@
 #include <klib/rc.h>
 #include <kfg/config.h>
 
+#include <kns/adapt.h> /* KStreamFromKFilePair */
 #include <kns/manager.h>
 #include <kns/kns-mgr-priv.h>
 #include <kns/http.h>
+#include <kns/http-priv.h> /* KClientHttpRequestFormatMsg */
 
 #include <../libs/kns/mgr-priv.h>
 #include <../libs/kns/http-priv.h>
@@ -56,6 +55,8 @@
 #include <list>
 #include <sstream>
 
+#define ALL
+
 static rc_t argsHandler ( int argc, char * argv [] );
 TEST_SUITE_WITH_ARGS_HANDLER ( HttpTestSuite, argsHandler );
 
@@ -69,7 +70,6 @@ class TestStream;
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
 
-#define ALL
 
 class TestStream
 {
@@ -174,13 +174,28 @@ public:
     ~HttpFixture()
     {
         if ( m_mgr && KNSManagerRelease ( m_mgr ) != 0 )
-            throw logic_error ( "HttpFixture::~HttpFixture KNSManagerRelease failed" );
+        {
+            std :: cerr
+                << "HttpFixture::~HttpFixture KNSManagerRelease failed"
+                << std :: endl
+                ;
+        }
+        
+        else if ( m_file && KFileRelease ( m_file ) != 0 )
+        {
+            std :: cerr
+                << "HttpFixture::~HttpFixture KFileRelease failed"
+                << std :: endl
+                ;
+        }
             
-        if ( m_file && KFileRelease ( m_file ) != 0 )
-            throw logic_error ( "HttpFixture::~HttpFixture KFileRelease failed" );
-            
-        if ( ! TestStream::m_responses.empty() )
-            throw logic_error ( "HttpFixture::~HttpFixture not all TestStream::m_responses have been consumed" );
+        else if ( ! TestStream::m_responses.empty() )
+        {
+            std :: cerr
+                << "HttpFixture::~HttpFixture not all TestStream::m_responses have been consumed"
+                << std :: endl
+                ;
+        }
     }
     
     KConfig* MakeConfig( const char* name, const char* contents )
@@ -556,7 +571,12 @@ public:
     ~RetrierFixture()
     {
         if ( KHttpRetrierDestroy ( & m_retrier ) != 0 )
-            throw logic_error ( "RetrierFixture::~RetrierFixture KHttpRetrierDestroy failed" );
+        {
+            std :: cerr
+                << "RetrierFixture::~RetrierFixture KHttpRetrierDestroy failed"
+                << std :: endl
+                ;
+        }
     }
 
     void Configure ( const char* kfg_name, const char* kfg_content, uint8_t max_retries = MaxRetries, uint32_t max_total_wait = MaxTotalWait )
@@ -781,6 +801,7 @@ FIXTURE_TEST_CASE(HttpReliableRequest_POST_5xx_retry, HttpFixture)
 
 #endif
 
+#ifdef ALL
 /* VDB-3059: KHttpRequestPOST generates incorrect Content-Length after retry :
  it makes web server to return 400 Bad Request */
 TEST_CASE(ContentLength) {
@@ -795,7 +816,7 @@ TEST_CASE(ContentLength) {
 
     /* calling good cgi returns 200 and resolved path */
     REQUIRE_RC ( KNSManagerMakeReliableClientRequest ( kns, & req, 0x01000000,
-        NULL, "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" ) ); 
+        NULL, "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi" ) ); 
     REQUIRE_RC ( KHttpRequestAddPostParam ( req, "acc=AAAB01" ) );
     REQUIRE_RC ( KHttpRequestAddPostParam ( req, "accept-proto=https" ) );
     REQUIRE_RC ( KHttpRequestAddPostParam ( req, "version=1.2" ) );
@@ -815,7 +836,7 @@ TEST_CASE(ContentLength) {
 
     /* calling non-existing cgi returns 404 */
     REQUIRE_RC ( KNSManagerMakeReliableClientRequest ( kns, & req, 0x01000000,
-        NULL, "https://www.ncbi.nlm.nih.gov/Traces/names/bad.cgi" ) ); 
+        NULL, "https://trace.ncbi.nlm.nih.gov/Traces/names/bad.cgi" ) ); 
     REQUIRE_RC ( KHttpRequestAddPostParam ( req, "acc=AAAB01" ) );
     REQUIRE_RC ( KHttpRequestPOST ( req, & rslt ) );
     REQUIRE_RC ( KClientHttpResultStatus ( rslt, & code, NULL, 0, NULL ) );
@@ -825,6 +846,209 @@ TEST_CASE(ContentLength) {
 
     RELEASE ( KNSManager, kns );
     REQUIRE_RC ( rc );
+}
+#endif
+
+struct NV {
+    String AcceptRanges;
+    const string bytes;
+
+    String host;
+
+    NV ( void ) : bytes ( "bytes"  ) {
+        CONST_STRING ( & AcceptRanges, "Accept-Ranges" );
+
+#define HOST "www.ncbi.nlm.nih.gov"
+        CONST_STRING ( & host, HOST );
+    }
+};
+static const NV s_v;
+
+TEST_CASE ( RepeatedHeader ) {
+    rc_t rc = 0;
+    KDirectory * dir = NULL;
+    REQUIRE_RC ( KDirectoryNativeDir ( & dir ) );
+
+    const KFile * f = NULL;
+    REQUIRE_RC ( KDirectoryOpenFileRead ( dir, & f, "double_header.txt" ) );
+
+    KNSManager * mgr = NULL;
+    REQUIRE_RC ( KNSManagerMake ( & mgr ) );
+    KStream * sock = NULL;
+    REQUIRE_RC ( KStreamFromKFilePair ( & sock, f, NULL ) );
+
+    KClientHttp * http = NULL;
+    REQUIRE_RC ( KNSManagerMakeHttp
+                 ( mgr, & http, sock, 0x01010000, & s_v . host, 80 ) );
+
+    String msg;
+    uint32_t status = 0;
+    ver_t version = 0;;
+    REQUIRE_RC ( KClientHttpGetStatusLine
+                 ( http, NULL, & msg, & status, & version ) );
+
+    BSTree hdrs;
+    BSTreeInit ( & hdrs );
+    for ( bool blank = false, close_connection = false, len_zero = false;
+         ! blank; )
+    {
+        REQUIRE_RC ( KClientHttpGetHeaderLine
+            ( http, NULL, & hdrs, & blank, & len_zero, & close_connection ) );
+    }
+
+    bool doubleChecked   = false;
+    bool repeatedChecked = false;
+    bool singleChecked   = false;
+
+    String Server;
+    CONST_STRING ( & Server, "Server" );
+    string Apache ( "Apache" );
+
+    String Via;
+    CONST_STRING ( & Via, "Via" );
+    string via ( "1.0 fred,1.1 example.com (Apache/1.1)" );
+
+    for ( const KHttpHeader * hdr = reinterpret_cast
+                < const KHttpHeader * > ( BSTreeFirst ( & hdrs ) ); 
+          hdr != NULL;
+          hdr = reinterpret_cast
+                < const KHttpHeader * > ( BSTNodeNext ( & hdr -> dad ) )
+        )
+    {
+        if ( StringEqual ( & hdr -> name, & s_v . AcceptRanges ) )  {
+            REQUIRE_EQ ( string ( hdr -> value . addr, hdr -> value . size ),
+                         s_v . bytes );
+            repeatedChecked = true;
+        }
+        else if ( StringEqual ( & hdr -> name, & Server ) )  {
+            REQUIRE_EQ ( string ( hdr -> value . addr, hdr -> value . size ),
+                         Apache );
+            singleChecked = true;
+        }
+        else if ( StringEqual ( & hdr -> name, & Via ) ) {
+            REQUIRE_EQ ( string ( hdr -> value . addr, hdr -> value . size ),
+                         via );
+            doubleChecked = true;
+        }
+    }
+
+    REQUIRE ( doubleChecked && repeatedChecked && singleChecked );
+
+    BSTreeWhack ( & hdrs, KHttpHeaderWhack, NULL );
+
+    RELEASE ( KClientHttp, http );
+    RELEASE ( KStream, sock );
+    RELEASE ( KNSManager, mgr );
+
+    RELEASE ( KFile, f );
+
+    RELEASE ( KDirectory, dir );
+    REQUIRE_RC ( rc );
+}
+
+// this test relies on real server responses
+TEST_CASE ( TestKClientHttpResultTestHeaderValue ) {
+    rc_t rc = 0;
+
+    KNSManager * mgr = NULL;
+    REQUIRE_RC ( KNSManagerMake ( & mgr ) );
+
+    KClientHttp * http = NULL;
+    REQUIRE_RC ( KNSManagerMakeHttp
+                 ( mgr, & http, NULL, 0x01010000, & s_v . host, 80 ) );
+
+    string url ( "http://" HOST );
+    KClientHttpRequest * req = NULL;
+    REQUIRE_RC ( KClientHttpMakeRequest ( http, & req, url . c_str () ) );
+
+    KClientHttpResult * rslt = NULL;
+    REQUIRE_RC ( KClientHttpRequestHEAD ( req, & rslt ) );
+
+    REQUIRE ( KClientHttpResultTestHeaderValue ( rslt,
+                s_v . AcceptRanges . addr, s_v . bytes . c_str () ) );
+
+    REQUIRE ( ! KClientHttpResultTestHeaderValue ( rslt, "foo", "bar" ) );
+
+    RELEASE ( KClientHttpResult, rslt );
+
+    RELEASE ( KClientHttpRequest, req );
+
+    RELEASE ( KClientHttp, http );
+
+    RELEASE ( KNSManager, mgr );
+
+    REQUIRE_RC ( rc );
+}
+
+TEST_CASE(TestAcceptHeader) {
+    rc_t rc = 0;
+    KNSManager * mgr = NULL;
+    REQUIRE_RC(KNSManagerMake(&mgr));
+    KClientHttp * http = NULL;
+    REQUIRE_RC(KNSManagerMakeHttp(mgr, &http,
+        NULL, 0x01010000, &s_v.host, 80));
+    string url("http://" HOST);
+    KClientHttpRequest * req = NULL;
+    REQUIRE_RC(KClientHttpMakeRequest(http, &req, url.c_str()));
+    REQUIRE_RC(KClientHttpRequestAddHeader(req, "Accept", "text/html"));
+    char buffer[4096] = "";
+    REQUIRE_RC(KClientHttpRequestFormatMsg(req,
+        buffer, sizeof buffer, "HEAD", NULL));
+    REQUIRE(strstr(buffer, "Accept: */*") == NULL);
+    RELEASE(KClientHttpRequest, req);
+    RELEASE(KClientHttp, http);
+    RELEASE(KNSManager, mgr);
+    REQUIRE_RC(rc);
+}
+
+TEST_CASE ( AllowAllCertificates )
+{
+    rc_t rc = 0;
+    
+    KNSManager * mgr = NULL;
+    REQUIRE_RC ( KNSManagerMake ( & mgr ) );
+
+    // capture prior settings
+    bool allow_all_certs = false;
+    REQUIRE_RC ( KNSManagerGetAllowAllCerts ( mgr, & allow_all_certs ) );
+
+    // ensure that manager is NOT allowing, i.e. default behavior
+    REQUIRE_RC ( KNSManagerSetAllowAllCerts ( mgr, false ) );
+
+    // create a connection to something that normally fails; it should fail
+    String host;
+    CONST_STRING ( & host, "www.google.com" );
+
+    // capture log level
+    KLogLevel log_level = KLogLevelGet ();
+    
+    // set log level to practically silent
+    KLogLevelSet ( 0 );
+    
+    KClientHttp * https = NULL;
+    // KNSManagerSetAllowAllCerts is inert
+#if WINDOWS
+    REQUIRE ( KNSManagerMakeClientHttps
+              ( mgr, & https, NULL, 0x01010000, & host, 443 ) != 0 );
+#else
+    REQUIRE ( KNSManagerMakeClientHttps
+              ( mgr, & https, NULL, 0x01010000, & host, 443 ) == 0 );
+#endif
+    RELEASE ( KClientHttp, https );
+
+    // restore log level
+    KLogLevelSet ( log_level );
+
+    // tell manager to allow all certs
+    REQUIRE_RC ( KNSManagerSetAllowAllCerts ( mgr, true ) );
+
+    // repeat connection to something that normally fails; it should succeed
+    REQUIRE_RC ( KNSManagerMakeClientHttps
+              ( mgr, & https, NULL, 0x01010000, & host, 443 ) );
+    RELEASE ( KClientHttp, https );
+
+    // restore prior settings
+    REQUIRE_RC ( KNSManagerSetAllowAllCerts ( mgr, allow_all_certs ) );
 }
 
 //////////////////////////////////////////// Main
@@ -860,6 +1084,7 @@ const char UsageDefaultName[] = "test-http";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    if ( 0 ) assert ( ! KDbgSetString ( "KNS" ) );
     if ( 0 ) assert ( ! KDbgSetString ( "VFS" ) );
 
     KConfigDisableUserSettings();

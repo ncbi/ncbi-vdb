@@ -77,6 +77,11 @@ const void* NGS_FragmentBlobData ( const struct NGS_FragmentBlob * self, ctx_t c
  */
 uint64_t NGS_FragmentBlobSize ( const struct NGS_FragmentBlob * self, ctx_t ctx );
 
+/* Run
+ * Returns the name of the run containing the blob
+ */
+const struct NGS_String * NGS_FragmentBlobRun ( const struct NGS_FragmentBlob * self, ctx_t ctx );
+
 /* InfoByOffset
  *  retrieve fragment info by offset in the blob
  *  offsetInBases - an offset into the blob
@@ -115,6 +120,7 @@ void NGS_FragmentBlobInfoByRowId ( const struct NGS_FragmentBlob * self, ctx_t c
  *  fragmentNumber  - 0-based biological fragment number inside the read
  *
  *  returns the ID string of the specified fragment
+ * DEPRECATED. Call NGS_FragmentBlobInfoByRowId(..., rowId, fragNumber, ...) and NGS_IdMakeFragment ( ctx, NGS_FragmentBlobRun(...), false, rowId, fragNumber );
  */
 struct NGS_String* NGS_FragmentBlobMakeFragmentId ( const struct NGS_FragmentBlob * self, ctx_t ctx,  int64_t rowId, uint32_t fragNumber );
 

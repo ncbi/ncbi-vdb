@@ -86,6 +86,7 @@ KFS_CMN = \
 	directory \
 	arrayfile \
 	file \
+	chunk-reader \
 	sysdir \
 	sysfile \
 	sysmmap \
@@ -120,8 +121,17 @@ KFS_CMN = \
 	lockfile \
 	syslockfile \
 	cacheteefile \
+	cacheteefile2 \
+	cacheteefile3 \
+	rrcachedfile \
+	recorder \
+	logfile \
+	callback_file \
+	poolpages \
+	lru_cache \
 	from_to_namelist \
-	limitfile
+	limitfile   \
+	appendfile
 
 KFS_SRC = \
 	mmap \
@@ -167,7 +177,7 @@ KFS2_SRC = \
 	$(KFS_SRC) \
 	file-v2 \
 	directory-v2 \
-	sysfile-v2 
+	sysfile-v2
 #	sysdir-v2
 
 KFS2_OBJ = \
@@ -220,3 +230,16 @@ endif
 compile: stdcompile
 
 $(TARGDIR)/compile: $(OBJFILES)
+
+
+#-------------------------------------------------------------------------------
+# fuzz
+#
+ifneq (1,$(HAVE_MAGIC))
+INT_LIBS = \
+	libkfs \
+	libkfs-nommap
+endif
+
+fuzz: std
+	cp $(addsuffix .$(LIBX),$(addprefix $(ILIBDIR)/,$(INT_LIBS))) $(FLIBDIR)/

@@ -83,6 +83,27 @@ KLIB_EXTERN const KTime* CC KTimeLocal ( KTime *kt, KTime_t ts );
 KLIB_EXTERN const KTime* CC KTimeGlobal ( KTime *kt, KTime_t ts );
 
 
+/* Iso8601
+ *  populate "s" from "ts" according to ISO-8601:
+ *         YYYY-MM-DDThh:mm:ssTZD
+ */
+KLIB_EXTERN size_t CC KTimeIso8601 ( KTime_t ts, char * s, size_t size );
+
+
+/* FromIso8601
+ *  populate "kt" from "s" accoring to ISO-8601:
+ *         YYYY-MM-DDThh:mm:ssTZD
+ *      or YYYY-MM-DDThh:mm:ss
+ */
+KLIB_EXTERN const KTime* CC KTimeFromIso8601 ( KTime *kt, const char * s,
+                                           size_t size );
+
+/* Iso8601
+ *  populate "s" from "ks" according to RFC 2616:
+ *         Sun Nov 6 08:49:37 1994 +0000 ; ANSI C's asctime() format
+ */
+KLIB_EXTERN size_t CC KTimeRfc2616(KTime_t ts, char * s, size_t size);
+
 /* MakeTime
  *  make a KTime_t from KTime
  */

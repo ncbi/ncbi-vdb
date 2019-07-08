@@ -49,7 +49,7 @@
 #define MAX_BIT64 (~((uint64_t)-1 >> 1))
 
 static bool _is_set_read_id_reference_bit(uint64_t read_id) {
-    return read_id & MAX_BIT64;
+    return ( read_id & MAX_BIT64 ) == 0 ? false : true;
 }
 
 static
@@ -185,7 +185,8 @@ static VdbBlastStatus _VdbBlastRefSetCounts(VdbBlastRef *self, uint64_t cur_row,
             return eVdbBlastErr;
         }
         else {
-            self->base_count = (self->count - 1) * MAX_SEQ_LEN + read_len;
+            self->base_count
+                = ( size_t ) ( (self->count - 1) * MAX_SEQ_LEN + read_len );
         }
 
     }

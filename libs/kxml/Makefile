@@ -94,7 +94,7 @@ XML_OBJ = \
 	$(addsuffix .$(LOBX),$(XML_SRC))
 
 XML_LIB = \
-    
+
 $(ILIBDIR)/libkxml.$(LIBX): $(XML_OBJ)
 	$(LD) --slib -o $@ $^ $(XML_LIB)
 
@@ -115,3 +115,11 @@ KXFS_LIB = \
 $(ILIBDIR)/libkxfs.$(LIBX): $(KXFS_OBJ)
 	$(LD) --slib -o $@ $^ $(KXFS_LIB)
 
+
+#-------------------------------------------------------------------------------
+# fuzz
+#
+ifeq (1,$(HAVE_XML2))
+fuzz: std
+	cp $(addsuffix .$(LIBX),$(addprefix $(ILIBDIR)/,$(INT_LIBS))) $(FLIBDIR)/
+endif

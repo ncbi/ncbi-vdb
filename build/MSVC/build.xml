@@ -57,7 +57,6 @@ Options:
     
     <target name="runtests" depends="build">
         <sequential>
-<!-->
             <exec executable="msbuild.exe" failonerror="true">
                 <arg value="${MSVS}\test-ncbi-vdb.sln"/>
                 <arg value="/p:Platform=${Platform}"/>
@@ -65,7 +64,6 @@ Options:
                 <arg value="/p:NGS_OUTDIR=${Output}"/>
                 <arg value="/p:Autorun=true"/>
                 </exec>
-</-->            
             <!-->Java/Python tests are run directly, not through msbuild</-->
 
             <subant target="runtests">

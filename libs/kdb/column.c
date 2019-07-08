@@ -961,7 +961,7 @@ LIB_EXPORT rc_t CC KColumnBlobRead ( const KColumnBlob *self,
                 {
                     size_t nread = 0;
 
-                    rc = KColumnDataRead ( & col -> df, & self -> pmorig, offset - *num_read,
+                    rc = KColumnDataRead ( & col -> df, & self -> pmorig, offset + *num_read,
                         & ( ( char * ) buffer ) [ * num_read ], to_read - * num_read, & nread );
                     if ( rc != 0 )
                         break;

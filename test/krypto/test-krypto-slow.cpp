@@ -87,7 +87,8 @@ TEST_CASE(KReencryptBigSparseFile)
     REQUIRE_RC ( TCreatePtFile( current_dir, file_path_reenc, TFileOpenMode_Write, &reenc_pt_file ) );
     
     rc = TCopyFile( reenc_pt_file, reenc_file );
-    if (rc != 0 && GetRCObject(rc) == rcStorage && GetRCState(rc) == rcExhausted)
+    if (rc != 0 && GetRCObject(rc) == static_cast <RCObject> ( rcStorage )
+                && GetRCState(rc) == rcExhausted)
     {
         space_exhausted = true;
         printf("WARNING! Test failed due to absence of free FS space - SKIPPING\n");
@@ -158,7 +159,8 @@ TEST_CASE(KReencrypt4GbMarginsSparseFiles)
         
         REQUIRE_RC ( TCreatePtFile( current_dir, file_path_reenc, TFileOpenMode_Write, &reenc_pt_file ) );
         rc = TCopyFile( reenc_pt_file, reenc_file );
-        if (rc != 0 && GetRCObject(rc) == rcStorage && GetRCState(rc) == rcExhausted)
+        if (rc != 0 && GetRCObject(rc) == static_cast <RCObject> ( rcStorage )
+	            && GetRCState(rc) == rcExhausted)
         {
             space_exhausted = true;
             printf("WARNING! Test failed due to absence of free FS space - SKIPPING\n");
@@ -193,6 +195,11 @@ TEST_CASE(KReencrypt4GbMarginsSparseFiles)
 
 TEST_CASE(KEncDecBigFile)
 {
+    if ( getenv ( "NOT_VERY_SLOW" ) ) {
+        TEST_MESSAGE ( "SKIPPING VERY SLOW " << GetName () );
+        return;
+    }
+
     rc_t rc;
     bool space_exhausted = false;
     
@@ -217,7 +224,8 @@ TEST_CASE(KEncDecBigFile)
     
     // write file
     rc = TFillFile( enc_file, (const uint8_t *)"\1\5", 2, file_size );
-    if (rc != 0 && GetRCObject(rc) == rcStorage && GetRCState(rc) == rcExhausted)
+    if (rc != 0 && GetRCObject(rc) == static_cast <RCObject> ( rcStorage )
+                && GetRCState(rc) == rcExhausted)
     {
         space_exhausted = true;
         printf("WARNING! Test failed due to absence of free FS space - SKIPPING\n");
@@ -239,7 +247,8 @@ TEST_CASE(KEncDecBigFile)
     if (!space_exhausted )
     {
         // we write file footer when closing file, which may fail too
-        if (rc != 0 && GetRCObject(rc) == rcStorage && GetRCState(rc) == rcExhausted)
+        if (rc != 0 && GetRCObject(rc) == static_cast <RCObject> ( rcStorage )
+	            && GetRCState(rc) == rcExhausted)
         {
             space_exhausted = true;
             printf("WARNING! Test failed due to absence of free FS space - SKIPPING\n");
@@ -277,6 +286,11 @@ TEST_CASE(KEncDecBigFile)
 
 TEST_CASE(KEncDec4GbMarginsFiles)
 {
+    if ( getenv ( "NOT_VERY_SLOW" ) ) { 
+        TEST_MESSAGE ( "SKIPPING VERY SLOW " << GetName () );
+        return;
+    }
+
     rc_t rc;
     bool space_exhausted = false;
  
@@ -304,7 +318,8 @@ TEST_CASE(KEncDec4GbMarginsFiles)
         
         // write file
         rc = TFillFile( enc_file, (const uint8_t *)"\4\3", 2, file_size );
-        if (rc != 0 && GetRCObject(rc) == rcStorage && GetRCState(rc) == rcExhausted)
+        if (rc != 0 && GetRCObject(rc) == static_cast <RCObject> ( rcStorage )
+	            && GetRCState(rc) == rcExhausted)
         {
             space_exhausted = true;
             printf("WARNING! Test failed due to absence of free FS space - SKIPPING\n");
@@ -325,7 +340,9 @@ TEST_CASE(KEncDec4GbMarginsFiles)
         rc = KFileRelease ( enc_file );
         if ( !space_exhausted )
         {
-            if (rc != 0 && GetRCObject(rc) == rcStorage && GetRCState(rc) == rcExhausted)
+            if (rc != 0 &&
+	        GetRCObject(rc) == static_cast <RCObject> ( rcStorage ) &&
+		GetRCState(rc) == rcExhausted)
             {
                 // we write file footer when closing file, which may fail too
                 space_exhausted = true;

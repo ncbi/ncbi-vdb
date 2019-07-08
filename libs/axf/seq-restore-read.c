@@ -305,17 +305,19 @@ rc_t open_RR_cursor( Read_Restorer * obj, const VTable *tbl, const VCursor* nati
                 /* rc = VTableCreateCursorRead( patbl, &obj->curs ); */
                 VTableRelease ( patbl );
                 if ( rc == 0 )
-                {
-                    /* add columns to cursor */
-                    rc = VCursorAddColumn ( obj -> curs, & obj -> read_idx, "( INSDC:4na:bin ) READ" );
-                    if ( rc == 0 )
-                    {
-                        rc = VCursorOpen ( obj -> curs );
-                        if ( rc == 0 )
-                            rc = VCursorLinkedCursorSet( native_curs, tablename, obj->curs );
-                    }
-                }
+                    rc = VCursorLinkedCursorSet( native_curs, tablename, obj->curs );
             }
+        }
+    }
+    if ( rc == 0 )
+    {
+        /* add columns to cursor */
+        rc = VCursorAddColumn ( obj -> curs, & obj -> read_idx, "( INSDC:4na:bin ) READ" );
+        if ( GetRCState(rc) == rcExists )
+            rc = 0;
+        if ( rc == 0 )
+        {
+            rc = VCursorOpen ( obj -> curs );
         }
     }
     return rc;

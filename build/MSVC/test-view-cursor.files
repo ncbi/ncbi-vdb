@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\..\..\test\vdb\test-view-cursor.cpp" />
+    <ClCompile Include="..\..\..\libs\schema\schema-grammar.cpp" />
+    <ClCompile Include="..\..\..\libs\schema\schema-lex.c" />
+    <ClCompile Include="..\..\..\libs\schema\Token.cpp" />
+    <ClCompile Include="..\..\..\libs\schema\SchemaScanner.cpp" />
+    <ClCompile Include="..\..\..\libs\schema\SchemaParser.cpp" />
+    <ClCompile Include="..\..\..\libs\schema\ParseTree.cpp" />
+    <ClCompile Include="..\..\..\libs\schema\schema-ast.cpp" />
+    <ClCompile Include="..\..\..\libs\schema\ErrorReport.cpp" />
+    <ClCompile Include="..\..\..\libs\schema\AST.cpp" />
+    <ClCompile Include="..\..\..\libs\schema\ASTBuilder.cpp" />
+    <ClCompile Include="..\..\..\libs\schema\ASTBuilder-type.cpp" />
+    <ClCompile Include="..\..\..\libs\schema\ASTBuilder-func.cpp" />
+    <ClCompile Include="..\..\..\libs\schema\ASTBuilder-phys.cpp" />
+    <ClCompile Include="..\..\..\libs\schema\ASTBuilder-tbl.cpp" />
+    <ClCompile Include="..\..\..\libs\schema\ASTBuilder-db.cpp" />
+    <ClCompile Include="..\..\..\libs\schema\ASTBuilder-view.cpp" />
+  </ItemGroup>
+</Project>

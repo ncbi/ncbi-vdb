@@ -44,7 +44,7 @@
 #endif
 
 #ifndef MAX_HTTP_READ_LIMIT
-#define MAX_HTTP_READ_LIMIT ( 30 * 1000 )
+#define MAX_HTTP_READ_LIMIT ( 5 * 60 * 1000 ) /* 5 minutes */
 #endif
 
 #ifndef MAX_HTTP_WRITE_LIMIT
@@ -59,6 +59,7 @@ struct KFile;
 struct KNSManager;
 struct KClientHttp;
 struct KClientHttpRequest;
+struct KEndPoint;
 struct KStream;
 struct timeout_t;
 struct URLBlock;
@@ -90,6 +91,13 @@ extern rc_t KClientHttpGetStatusLine ( struct KClientHttp *self, struct timeout_
 #define KHttpGetStatusLine KClientHttpGetStatusLine
 
 
+rc_t KClientHttpGetHeaderLine ( struct KClientHttp * self,
+    struct timeout_t * tm, BSTree * hdrs, bool * blank, bool *  len_zero,
+    bool * close_connection );
+rc_t KClientHttpGetStatusLine ( struct KClientHttp * self,
+    struct timeout_t * tm, String * msg, uint32_t * status, ver_t * version );
+
+
 /*--------------------------------------------------------------------------
  * KClientHttp
  */
@@ -116,6 +124,17 @@ void KClientHttpForceSocketClose(const struct KClientHttp *self);
 rc_t KClientHttpMakeRequestInt ( struct KClientHttp const *self,
     struct KClientHttpRequest **req, const struct URLBlock *block, const KDataBuffer *buf );
 
+
+void KClientHttpGetRemoteEndpoint ( const struct KClientHttp * self,
+                                    struct KEndPoint * ep );
+void KClientHttpGetLocalEndpoint ( const struct KClientHttp * self,
+                                   struct KEndPoint * ep );
+
+/* if the request followed redirects, the final URL will be different than the initial URL */
+rc_t KClientHttpRequestURL ( struct KClientHttpRequest const *self, KDataBuffer *rslt );
+    
+void KClientHttpRequestSetPayRequired(struct KClientHttpRequest * self,
+    const struct KNSManager * kns, bool payRequired);
 
 /* exported private functions
 */

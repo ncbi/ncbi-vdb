@@ -673,7 +673,7 @@ static rc_t _ReportFinalize
                 }
                 else {
                     rc_t rc2 = 0;
-                    const char name[] = "ncbi_error_report.xml";
+                    const char name[] = "ncbi_error_report.txt";
                     const char* home = getenv("HOME");
                     if (home == NULL) {
                         home = getenv("USERPROFILE");
@@ -699,7 +699,7 @@ static rc_t _ReportFinalize
 "=============================================================\n"
 "An error occurred during processing.\n"
 "If the problem persists, you may consider sending the following XML document\n"
-"to 'sra@ncbi.nlm.nih.gov' for assistance.\n"
+"to 'sra-tools@ncbi.nlm.nih.gov' for assistance.\n"
 "=============================================================\n\n"));
                 }
 
@@ -759,7 +759,7 @@ static rc_t _ReportFinalize
 "An error occurred during processing.\n"
 "A report was generated into the file '%s'.\n"
 "If the problem persists, you may consider sending the file\n"
-"to 'sra@ncbi.nlm.nih.gov' for assistance.\n"
+"to 'sra-tools@ncbi.nlm.nih.gov' for assistance.\n"
 "=============================================================\n\n", path));
                 }
             }

@@ -51,6 +51,10 @@
 #include <klib/refcount.h>
 #endif
 
+#ifndef _h_klib_data_buffer
+#include <klib/data-buffer.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -112,7 +116,10 @@ struct SDatabase;
 struct VDBManager;
 struct SExpression;
 struct SDumper;
-
+struct KSymTable;
+struct SchemaEnv;
+struct KFile;
+struct KDirectory;
 
 /*--------------------------------------------------------------------------
  * VCtxId
@@ -142,7 +149,7 @@ struct VCtxId
  *  deep copy a single symbol
  */
 rc_t KSymbolCopy ( BSTree *scope,
-    struct KSymbol **cp, struct KSymbol const *orig );
+    const struct KSymbol **cp, struct KSymbol const *orig );
 
 /* CopyScope
  *  deep copy all symbols within a scope
@@ -196,7 +203,7 @@ bool VFormatdeclCommonAncestor ( const VFormatdecl *self, const VSchema *schema,
 /*--------------------------------------------------------------------------
  * SNameOverload
  *  describes an overloaded name
- *  used to implement versioning 
+ *  used to implement versioning
  */
 typedef struct SNameOverload SNameOverload;
 struct SNameOverload
@@ -285,6 +292,10 @@ struct VSchema
     /* databases */
     Vector db;
     Vector dname;
+
+    /* views */
+    Vector view;
+    Vector vname;
 
     KRefcount refcount;
 
@@ -975,13 +986,19 @@ void CC STableWhack ( void *self, void *ignore );
  *  creates an initially transparent table extension
  *  used by cursor to permit addition of implicit productions
  */
-rc_t STableCloneExtend ( const STable *self, STable **clone, VSchema *schema );
+rc_t CC STableCloneExtend ( const STable *self, STable **clone, VSchema *schema );
 
 /* Cmp
  * Sort
  */
 int64_t CC STableCmp ( const void *item, const void *n );
 int64_t CC STableSort ( const void *item, const void *n );
+
+/*
+ * Deep comparison of 2 tables, taking versions into account
+ * exhaustive: if false, stop at first mismatch
+ */
+rc_t CC STableCompare ( const STable *a, const STable *b, const STable **newer, bool exhaustive );
 
 /* Find
  *  generic object find within table scope
@@ -1004,7 +1021,7 @@ int64_t CC STableSort ( const void *item, const void *n );
  *  returns principal object identified. if NULL but "name" is not
  *  NULL, then the object was only partially identified.
  */
-const void *STableFind ( const STable *self,
+const void * CC STableFind ( const STable *self,
     const VSchema *schema, VTypedecl *td, const SNameOverload **name,
     uint32_t *type, const char *expr, const char *ctx, bool dflt );
 
@@ -1012,12 +1029,12 @@ const void *STableFind ( const STable *self,
 /* FindOverride
  *  finds an inherited or introduced overridden symbol
  */
-struct KSymbol *STableFindOverride ( const STable *self, const VCtxId *cid );
+struct KSymbol * CC STableFindOverride ( const STable *self, const VCtxId *cid );
 
 /* FindOrdAncestor
  *  finds a parent or grandparent by order
  */
-const STable *STableFindOrdAncestor ( const STable *self, uint32_t i );
+const STable * CC STableFindOrdAncestor ( const STable *self, uint32_t i );
 
 /* Mark
  */
@@ -1025,7 +1042,7 @@ void CC STableClearMark ( void *self, void *ignore );
 /*
 void CC STableMark ( const STable *self, const VSchema *schema );
 */
-void STableNameMark ( const SNameOverload *self, const VSchema *schema );
+void CC STableNameMark ( const SNameOverload *self, const VSchema *schema );
 
 /* Dump
  *  dump "table" { }
@@ -1033,11 +1050,67 @@ void STableNameMark ( const SNameOverload *self, const VSchema *schema );
 bool CC STableDefDump ( void *self, void *dumper );
 rc_t STableDump ( const STable *self, struct SDumper *d );
 
-rc_t VSchemaDumpTableName ( const VSchema *self, uint32_t mode, const STable *stbl,
-    rc_t ( CC * flush ) ( void *dst, const void *buffer, size_t bsize ), void *dst );
-rc_t VSchemaDumpTableDecl ( const VSchema *self, uint32_t mode, const STable *stbl,
-    rc_t ( CC * flush ) ( void *dst, const void *buffer, size_t bsize ), void *dst );
+/* Extend
+ * records a parent table
+ */
+rc_t CC STableExtend ( struct KSymTable *tbl, STable *self, const STable *dad );
 
+/* schema_update_tbl_ref
+ * updates references to a table's ancestor with the ancestor's newer version
+ */
+rc_t CC schema_update_tbl_ref ( VSchema *self, const STable *exist, const STable *table );
+
+/* table_fwd_scan
+ *  converts unresolved column references to virtual columns
+ */
+typedef struct STableScanData STableScanData;
+struct STableScanData
+{
+    STable *self;
+    rc_t rc;
+};
+bool CC table_fwd_scan ( BSTNode *n, void *data );
+
+/* table_set_context
+ * set context id on all table members
+ */
+void CC table_set_context ( STable *self, uint32_t p_ctxId );
+
+/* ScanVirtuals
+ * scan override tables for virtual symbols
+ */
+bool CC STableScanVirtuals ( void *item, void *data );
+
+/* table_fix_forward_refs
+ * fix forward references to newly resolved productions
+ */
+rc_t CC table_fix_forward_refs ( const STable *table );
+
+/* OverloadTestForTypeCollision
+ * used for tables and views
+*/
+bool CC SOverloadTestForTypeCollision ( const SNameOverload *a, const SNameOverload *b );
+
+/*--------------------------------------------------------------------------
+ * STableOverrides
+ *  describes extended parent
+ */
+
+typedef struct STableOverrides STableOverrides;
+struct STableOverrides
+{
+    const STable *dad;
+    Vector by_parent;
+    uint32_t ctx;
+};
+
+/* Cmp
+ */
+int64_t CC STableOverridesCmp ( const void *item, const void *n );
+
+/* Make
+ */
+rc_t STableOverridesMake ( Vector *parents, const STable *dad, const Vector *overrides );
 
 /*--------------------------------------------------------------------------
  * SColumn
@@ -1106,6 +1179,10 @@ rc_t STableImplicitColMember ( STable *self,
 bool CC SColumnDefDump ( void *item, void *dumper );
 rc_t SColumnDump ( const SColumn *self, struct SDumper *d );
 
+/* Create an implicit physical member for a simple column
+ */
+rc_t implicit_physical_member ( struct KSymTable *tbl, const struct SchemaEnv *env,
+    struct STable *table, struct SColumn *c, struct KSymbol *sym );
 
 /*--------------------------------------------------------------------------
  * SPhysMember
@@ -1238,6 +1315,14 @@ void CC SDatabaseNameMark ( const SNameOverload *self, const VSchema *schema );
 bool CC SDatabaseDefDump ( void *self, void *dumper );
 rc_t SDatabaseDump ( const SDatabase *self, struct SDumper *d );
 
+/* Extend
+ * records a parent database
+ */
+rc_t CC SDatabaseExtend ( SDatabase *self, const SDatabase *dad );
+
+/* Compare
+*/
+rc_t SDatabaseCompare ( const SDatabase *a, const SDatabase *b, const SDatabase **newer, bool exhaustive );
 
 /*--------------------------------------------------------------------------
  * STblMember
@@ -1300,6 +1385,183 @@ struct SDBMember
 bool CC SDBMemberDefDump ( void *item, void *dumper );
 rc_t SDBMemberDump ( const SDBMember *self, struct SDumper *d );
 
+/*--------------------------------------------------------------------------
+ * Include files
+ */
+
+/* OpenFile
+ *  opens a file, using include paths
+ */
+rc_t CC VSchemaTryOpenFile ( const VSchema *self, const struct KDirectory *dir, const struct KFile **fp,
+    char *path, size_t path_max, const char *name, va_list args );
+
+/* OpenFile
+ */
+rc_t CC VSchemaOpenFile ( const VSchema *self, const struct KFile **fp,
+    char *path, size_t path_max, const char *name, va_list args );
+
+/* Make
+ */
+rc_t CC VIncludedPathMake ( BSTree *paths, uint32_t *count, const char *path );
+
+/*--------------------------------------------------------------------------
+ * SView
+ *  view declaration
+ */
+typedef struct SView SView;
+struct SView
+{
+    /* symbolic name */
+    struct KSymbol const *name;
+
+    /* required version */
+    uint32_t version;
+
+    /* view id */
+    uint32_t id;
+
+    /* view parameters - const KSymbol (a table or a view) */
+    Vector params;
+
+    /* scope */
+    BSTree scope;
+
+    /* instantiated parents - SViewInstance */
+    Vector parents;
+
+    /* overrides ( inherited virtual productions )
+       contents are grouped by introducing parent */
+    Vector overrides;
+
+    /* columns */
+    Vector col;
+    Vector cname;
+
+    /* assignment statements */
+    Vector prod;
+
+    /* introduced virtual ( undefined ) productions
+       contents are unowned KSymbol pointers */
+    Vector vprods;
+
+    /* owned KSymbols that are not in scope */
+    Vector syms;
+
+#if NOT_NEEDED_YET
+
+    /* source file & line */
+    String src_file;
+    uint32_t src_line;
+
+    /* marking */
+    bool marked;
+#endif
+};
+
+/* Extend
+ * records a parent view
+ */
+rc_t SViewExtend ( struct KSymTable *tbl, SView *self, const SView *dad );
+
+/* Whack
+ */
+void SViewWhack ( void *self, void *ignore );
+
+/* Cmp
+ * Sort
+ */
+int64_t SViewCmp ( const void *item, const void *n );
+int64_t SViewSort ( const void *item, const void *n );
+
+/* push/pop view scope
+ *
+ */
+void pop_view_scope ( struct KSymTable * tbl, const SView * view );
+rc_t push_view_scope ( struct KSymTable * tbl, const SView * view );
+
+/* view_fwd_scan
+ *  converts unresolved column references to virtual columns
+ */
+typedef struct SViewScanData SViewScanData;
+struct SViewScanData
+{
+    SView *self;
+    rc_t rc;
+};
+
+bool view_fwd_scan ( BSTNode *n, void *data );
+
+/* view_set_context
+ * set context id on all view members
+ */
+void view_set_context ( SView *self, uint32_t p_ctxId );
+
+/* view_fix_forward_refs
+ * fix forward references to newly resolved productions
+ */
+
+rc_t view_fix_forward_refs ( const SView *table );
+
+/* SViewOverrides
+*/
+typedef struct SViewOverrides SViewOverrides;
+struct SViewOverrides
+{
+    const SView *dad;
+    Vector by_parent;
+    uint32_t ctx;
+};
+
+rc_t SViewOverridesMake ( Vector *parents, const SView *dad, const Vector *overrides );
+
+int64_t SViewOverridesCmp ( const void *item, const void *n );
+
+/* SViewInstance
+ * A view with specified parameters
+*/
+typedef struct SViewInstance SViewInstance;
+struct SViewInstance
+{
+    const SView * dad;
+    Vector params; /* const KSymbol* */
+};
+
+void SViewInstanceWhack ( void *item, void *ignore );
+
+/* Find
+ *  generic object find within view scope
+ *
+ *  "td" [ OUT, NULL OKAY ] - returns cast type expression
+ *  if given or "any" if not
+ *
+ *  "name" [ OUT ] - returns list of overloaded objects if found
+ *
+ *  "type" [ OUT ] - returns object type id, e.g.:
+ *    eDatatype, eTypeset, eFormat, eFunction, ePhysical, eTable, ...
+ *
+ *  "expr" [ IN ] - NUL terminated name expression identifying object
+ *
+ *  "ctx" [ IN ] - NUL terminated context string for evaluation,
+ *  substitutes for filename in logging reports
+ *
+ *  "dflt" [ IN ] - if true, resolve default value
+ *
+ *  returns principal object identified. if NULL but "name" is not
+ *  NULL, then the object was only partially identified.
+ */
+const void * SViewFind ( const SView *           self,
+                         const VSchema *         schema,
+                         VTypedecl *             td,
+                         const SNameOverload **  name,
+                         uint32_t *              type,
+                         const char *            expr,
+                         const char *            ctx,
+                         bool                    dflt );
+
+/* FindOverride
+ *  finds an inherited or introduced overridden symbol
+ */
+const struct KSymbol * SViewFindOverride ( const SView * self, const VCtxId * cid );
 
 #ifdef __cplusplus
 }

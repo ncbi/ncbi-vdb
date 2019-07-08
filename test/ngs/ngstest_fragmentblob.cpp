@@ -38,6 +38,8 @@
 #include <NGS_FragmentBlob.h>
 #include <NGS_FragmentBlobIterator.h>
 
+#include <kfg/config.h> /* KConfigDisableUserSettings */
+
 #include <vdb/table.h>
 #include <vdb/database.h>
 
@@ -222,6 +224,17 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlob_Size, FragmentBlobFixture )
     MakeBlob ( SRA_Accession, 1 );
 
     REQUIRE_EQ ( (uint64_t)1080, NGS_FragmentBlobSize ( m_blob, m_ctx ) );
+
+    EXIT;
+}
+
+FIXTURE_TEST_CASE ( NGS_FragmentBlob_Run, FragmentBlobFixture )
+{
+    ENTRY;
+    MakeBlob ( SRA_Accession, 1 );
+
+    const NGS_String * run = NGS_FragmentBlobRun ( m_blob, m_ctx );
+    REQUIRE_EQ ( string ( SRA_Accession ), string ( NGS_StringData ( run, m_ctx ) , NGS_StringSize ( run, m_ctx ) ) );
 
     EXIT;
 }
@@ -589,6 +602,7 @@ const char UsageDefaultName[] = "test-ngs";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    KConfigDisableUserSettings();
     rc_t m_coll=NgsFragmentBlobTestSuite(argc, argv);
     return m_coll;
 }

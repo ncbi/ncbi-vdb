@@ -102,6 +102,12 @@ KFG_EXTERN rc_t CC KConfigPrintDebug ( const KConfig *self,
 KFG_EXTERN rc_t CC KConfigPrintPartial
     ( const KConfig *self, int indent, uint32_t skipCount, va_list args );
 
+/* Parse configuration from a string
+ *  path - path to the corresponding kfg file (used in error reporting )
+ *  src - string to parse, NUL-terminated
+*/
+KFG_EXTERN rc_t CC
+KConfigParse ( KConfig * self, const char* path, const char * src );
 
 #ifdef __cplusplus
 }

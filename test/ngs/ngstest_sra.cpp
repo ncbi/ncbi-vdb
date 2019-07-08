@@ -39,6 +39,8 @@
 
 #include <kdb/manager.h>
 
+#include <kfg/config.h> /* KConfigDisableUserSettings */
+
 #include <vdb/manager.h>
 #include <vdb/vdb-priv.h>
 
@@ -1063,6 +1065,7 @@ rc_t CC KMain ( int argc, char *argv [] )
 {
     //assert(!KDbgSetString("KFG"));
     //assert(!KDbgSetString("VFS"));
+    KConfigDisableUserSettings();
     rc_t m_coll=NgsSraTestSuite(argc, argv);
     return m_coll;
 }

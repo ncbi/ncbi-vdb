@@ -92,8 +92,8 @@
 #define OCTAL_PREFIX_COUNTS_TOWARD_PRECISION  STDC_COMPATIBILITY
 #define HEX_PREFIX_FOLLOWS_CASE               STDC_COMPATIBILITY
 /* Present in 2.3.3 (from SLES 9.3), absent in 2.5 (from CentOS 5.6) */
-#define EMULATE_SMALLINT_EXTENSION_BUG      ( STDC_COMPATIBILITY && defined(__GLIBC__) && (__GLIBC__ < 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 5) ) )
-#define ZERO_PAD_ONLY_NUMBERS               ( !STDC_COMPATIBILITY || defined(__GLIBC__) )
+#define EMULATE_SMALLINT_EXTENSION_BUG      ( STDC_COMPATIBILITY && __GLIBC__ != 0 && (__GLIBC__ < 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 5) ) )
+#define ZERO_PAD_ONLY_NUMBERS               ( !STDC_COMPATIBILITY || __GLIBC__ != 0 )
 
 #define USE_LIB_FLOAT 1
 
@@ -1407,6 +1407,9 @@ rc_t parse_format_string ( const char *fmt_str, va_list vargs,
 
     PrintFmt *fmt = * fmtp;
     PrintArg *args = * argp;
+
+    if ( fmt_str == NULL )
+        return RC ( rcText, rcString, rcFormatting, rcParam, rcNull );
 
     /* loop over format string */
     for ( rc = 0, i = str_idx = fmt_idx = arg_idx = 0; fmt_str [ i ] != 0; ++ i )
@@ -3512,6 +3515,8 @@ LIB_EXPORT rc_t CC KDataBufferVPrintf ( KDataBuffer * buf, const char * fmt, va_
             rc = KDataBufferResize ( buf, bsize );
             if ( rc == 0 )
             {
+                buffer = buf -> base;       /* fix for VDB-3505 */
+
                 /* try again with the newly sized buffer */
                 rc = string_vprintf ( &buffer [ content ], bsize - content, & num_writ, fmt, args_copy );
             }

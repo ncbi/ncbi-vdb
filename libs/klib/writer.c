@@ -145,6 +145,18 @@ LIB_EXPORT rc_t CC KWrtInit( const char* appname, uint32_t vers )
     return rc;
 }
 
+LIB_EXPORT size_t CC simple_write( int fd, const void * buf, size_t count )
+{
+    /* calls the platform-specific implementation ( $PLATFORM/syswriter.c ) */
+    return sys_simple_write( fd, buf, count );
+}
+
+LIB_EXPORT int CC is_a_tty( int fd )
+{
+    /* calls the platform-specific implementation ( $PLATFORM/syswriter.c ) */
+    return sys_is_a_tty( fd );
+}
+
 /*--------------------------------------------------------------------------
  * nvp - name/value pair
  */
@@ -325,7 +337,7 @@ LIB_EXPORT rc_t CC RCExplain2 ( rc_t rc, char *buffer, size_t bsize, size_t *num
  */
 const char *GetRCModuleText ( enum RCModule mod )
 {
-    if ( ( int ) mod < 0 || ( int ) mod >= ( int ) rcLastModule_v1_1 )
+    if ( ( int ) mod < 0 || ( int ) mod >= ( int ) rcLastModule_v1_2 )
         return "<INVALID-MODULE>";
     return gRCModule_str [ ( int ) mod ];
 }
@@ -334,7 +346,7 @@ const char *GetRCModuleText ( enum RCModule mod )
  */
 const char *GetRCModuleIdxText ( enum RCModule mod )
 {
-    if ( ( int ) mod < 0 || ( int ) mod >= ( int ) rcLastModule_v1_1 )
+    if ( ( int ) mod < 0 || ( int ) mod >= ( int ) rcLastModule_v1_2 )
         return "<INVALID-MODULE>";
     return gRCModuleIdx_str [ ( int ) mod ];
 }
@@ -343,7 +355,7 @@ const char *GetRCModuleIdxText ( enum RCModule mod )
  */
 const char *GetRCTargetText ( enum RCTarget targ )
 {
-    if ( ( int ) targ < 0 || ( int ) targ >= ( int ) rcLastTarget_v1_1 )
+    if ( ( int ) targ < 0 || ( int ) targ >= ( int ) rcLastTarget_v1_2 )
         return "<INVALID-TARGET>";
     return gRCTarget_str [ ( int ) targ ];
 }
@@ -352,7 +364,7 @@ const char *GetRCTargetText ( enum RCTarget targ )
  */
 const char *GetRCTargetIdxText ( enum RCTarget targ )
 {
-    if ( ( int ) targ < 0 || ( int ) targ >= ( int ) rcLastTarget_v1_1 )
+    if ( ( int ) targ < 0 || ( int ) targ >= ( int ) rcLastTarget_v1_2 )
         return "<INVALID-TARGET>";
     return gRCTargetIdx_str [ ( int ) targ ];
 }
@@ -379,7 +391,7 @@ const char *GetRCContextIdxText ( enum RCContext ctx )
  */
 const char *GetRCObjectText ( int obj )
 {
-    if ( ( int ) obj < 0 || ( int ) obj >= ( int ) rcLastObject_v1_1 )
+    if ( ( int ) obj < 0 || ( int ) obj >= ( int ) rcLastObject_v1_2 )
         return "<INVALID-OBJECT>";
     if ( ( int ) obj < ( int ) rcLastTarget_v1_1 )
         return gRCTarget_str [ ( int ) obj ];
@@ -390,7 +402,7 @@ const char *GetRCObjectText ( int obj )
  */
 const char *GetRCObjectIdxText ( int obj )
 {
-    if ( ( int ) obj < 0 || ( int ) obj >= ( int ) rcLastObject_v1_1 )
+    if ( ( int ) obj < 0 || ( int ) obj >= ( int ) rcLastObject_v1_2 )
         return "<INVALID-OBJECT>";
     if ( ( int ) obj < ( int ) rcLastTarget_v1_1 )
         return gRCTargetIdx_str [ ( int ) obj ];

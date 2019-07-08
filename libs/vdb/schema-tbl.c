@@ -135,16 +135,17 @@ rc_t SColumnDumpExpr ( SDumper *d, const SExpression *e )
 
     if ( ! compact )
         SDumperIncIndentLevel ( d );
-    rc = SDumperPrint ( d, compact ? "=%E" : "\n\t= %E\n", c -> left );
+
+    rc = SDumperPrint ( d, compact ? "=%E" : "\n\t= %E", c -> left );
     while ( rc == 0 )
     {
         if ( c -> right -> var != eCondExpr )
             break;
         c = ( const SBinExpr* ) c -> right;
-        rc = SDumperPrint ( d, compact ? "|%E" : "\n\t| %E\n", c -> left );
+        rc = SDumperPrint ( d, compact ? "|%E" : "\n\t| %E", c -> left );
     }
 
-    rc = SDumperPrint ( d, compact ? "|%E" : "\n\t| %E\n", c -> right );
+    rc = SDumperPrint ( d, compact ? "|%E;" : "\n\t| %E\n\t;\n", c -> right );
     if ( ! compact )
         SDumperDecIndentLevel ( d );
     return rc;
@@ -342,18 +343,10 @@ bool CC SPhysMemberDefDump ( void *item, void *data )
  */
 
 #if SLVL >= 6
-typedef struct STableOverrides STableOverrides;
-struct STableOverrides
-{
-    const STable *dad;
-    Vector overrides;
-    uint32_t ctx;
-};
 
 /* Cmp
  * Sort
  */
-static
 int64_t CC STableOverridesCmp ( const void *item, const void *n )
 {
     const uint32_t *a = item;
@@ -383,13 +376,12 @@ static
 void CC STableOverridesWhack ( void *item, void *ignore )
 {
     STableOverrides *self = item;
-    VectorWhack ( & self -> overrides, NULL, NULL );
+    VectorWhack ( & self -> by_parent, NULL, NULL );
     free ( self );
 }
 
 /* Make
  */
-static
 rc_t STableOverridesMake ( Vector *parents, const STable *dad, const Vector *overrides )
 {
     rc_t rc;
@@ -405,7 +397,7 @@ rc_t STableOverridesMake ( Vector *parents, const STable *dad, const Vector *ove
         return RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted );
 
     /* shallow clone */
-    rc = VectorCopy ( overrides, & to -> overrides );
+    rc = VectorCopy ( overrides, & to -> by_parent );
     if ( rc != 0 )
     {
         free ( to );
@@ -429,7 +421,7 @@ static
 bool CC STableOverridesClone ( void *item, void *data )
 {
     const STableOverrides *self = ( const void* ) item;
-    rc_t rc = STableOverridesMake ( data, self -> dad, & self -> overrides );
+    rc_t rc = STableOverridesMake ( data, self -> dad, & self -> by_parent );
     return ( rc != 0 && GetRCState ( rc ) != rcExists ) ? true : false;
 }
 
@@ -515,7 +507,7 @@ int64_t CC STableSort ( const void *item, const void *n )
  *  returns principal object identified. if NULL but "name" is not
  *  NULL, then the object was only partially identified.
  */
-const void *STableFind ( const STable *self,
+const void * CC STableFind ( const STable *self,
     const VSchema *schema, VTypedecl *td, const SNameOverload **name,
     uint32_t *type, const char *expr, const char *ctx, bool dflt )
 {
@@ -542,7 +534,7 @@ const void *STableFind ( const STable *self,
 /* FindOverride
  *  finds an inherited or introduced overridden symbol
  */
-KSymbol *STableFindOverride ( const STable *self, const VCtxId *cid )
+KSymbol * CC STableFindOverride ( const STable *self, const VCtxId *cid )
 {
     const STableOverrides *to;
 
@@ -555,13 +547,13 @@ KSymbol *STableFindOverride ( const STable *self, const VCtxId *cid )
     if ( to == NULL )
         return NULL;
 
-    return VectorGet ( & to -> overrides, cid -> id );
+    return VectorGet ( & to -> by_parent, cid -> id );
 }
 
 /* FindOrdAncestor
  *  finds a parent or grandparent by order
  */
-const STable *STableFindOrdAncestor ( const STable *self, uint32_t i )
+const STable * CC STableFindOrdAncestor ( const STable *self, uint32_t i )
 {
     const STableOverrides *to = ( const void* ) VectorGet ( & self -> overrides, i );
     if ( to == NULL )
@@ -580,8 +572,10 @@ bool CC STableHasDad ( void *item, void *data )
     return false;
 }
 
-static
-bool STableTestForTypeCollision ( const SNameOverload *a, const SNameOverload *b )
+/* OverloadTestForTypeCollision
+ * used for tables and views
+*/
+bool CC SOverloadTestForTypeCollision ( const SNameOverload *a, const SNameOverload *b )
 {
     uint32_t ax, bx, ctx;
 
@@ -660,7 +654,7 @@ bool STableTestForSymCollision ( const KSymbol *sym, void *data )
             found_col = found -> u . obj;
             assert ( sym_col != NULL && found_col != NULL );
             if ( sym_col -> cid . ctx == found_col -> cid . ctx )
-                return STableTestForTypeCollision ( sym_col, found_col );
+                return SOverloadTestForTypeCollision ( sym_col, found_col );
         }
     case eProduction:
     case ePhysMember:
@@ -750,17 +744,16 @@ bool CC STableCopyColumnNames ( void *item, void *data )
     return ( rc != 0 ) ? true : false;
 }
 
-static
 bool CC STableScanVirtuals ( void *item, void *data )
 {
     KSymTable *tbl = data;
     STableOverrides *to = item;
     BSTree *scope = VectorLast ( & tbl -> stack );
-    uint32_t i = VectorStart ( & to -> overrides );
-    uint32_t end = VectorLength ( & to -> overrides );
+    uint32_t i = VectorStart ( & to -> by_parent );
+    uint32_t end = VectorLength ( & to -> by_parent );
     for ( end += i; i < end; ++ i )
     {
-        const KSymbol *orig = ( const void* ) VectorGet ( & to -> overrides, i );
+        const KSymbol *orig = ( const void* ) VectorGet ( & to -> by_parent, i );
         assert ( orig != NULL );
         if ( orig -> type == eVirtual )
         {
@@ -770,25 +763,37 @@ bool CC STableScanVirtuals ( void *item, void *data )
                defined by another parent, test for the possibility */
             const KSymbol *def = KSymTableFindSymbol ( tbl, orig );
             if ( def != NULL )
-                VectorSwap ( & to -> overrides, i, def, & ignore );
+            {
+                if ( def -> type == eProduction || def -> type == eVirtual )
+                {
+                    VectorSwap ( & to -> by_parent, i, def, & ignore );
+                }
+                else
+                {
+                    PLOGMSG ( klogErr, ( klogErr, "a virtual production from one parent defined as non-production in another: '$(sym)'"
+                        , "sym=%S"
+                        , & def -> name
+                    ));
+                    return true;
+                }
+            }
             else
             {
                 /* copy the original */
-                KSymbol *copy;
+                const KSymbol *copy;
                 rc_t rc = KSymbolCopy ( scope, & copy, orig );
                 if ( rc != 0 )
                     return true;
 
                 /* replace the parent virtual with an updatable copy */
-                VectorSwap ( & to -> overrides, i, copy, & ignore );
+                VectorSwap ( & to -> by_parent, i, copy, & ignore );
             }
         }
     }
     return false;
 }
 
-static
-rc_t STableExtend ( KSymTable *tbl, STable *self, const STable *dad )
+rc_t CC STableExtend ( KSymTable *tbl, STable *self, const STable *dad )
 {
     rc_t rc;
 
@@ -844,7 +849,7 @@ rc_t STableExtend ( KSymTable *tbl, STable *self, const STable *dad )
  *  creates an initially transparent table extension
  *  used by cursor to permit addition of implicit productions
  */
-rc_t STableCloneExtend ( const STable *self, STable **clone, VSchema *schema )
+rc_t CC STableCloneExtend ( const STable *self, STable **clone, VSchema *schema )
 {
     rc_t rc;
     KSymTable tbl;
@@ -1142,8 +1147,7 @@ enum
     stbl_cmp_older     = 1 << 4
 };
 
-static
-rc_t STableCompare ( const STable *a, const STable *b, const STable **newer, bool exhaustive )
+rc_t CC STableCompare ( const STable *a, const STable *b, const STable **newer, bool exhaustive )
 {
     rc_t stage_rc, cmp_rc = 0;
     uint32_t stage_bits, cmp_bits = 0;
@@ -1336,7 +1340,7 @@ void CC STableMark ( void * item, void * data )
     }
 }
 
-void STableNameMark ( const SNameOverload *self, const VSchema *schema )
+void CC STableNameMark ( const SNameOverload *self, const VSchema *schema )
 {
     if ( self != NULL )
     {
@@ -1397,13 +1401,13 @@ bool CC SProductionDumpOverrides ( void *item, void *data )
 {
     SDumper *b = data;
     const STableOverrides *to = ( const void* ) item;
-    if ( VectorLength ( & to -> overrides ) == 0 )
+    if ( VectorLength ( & to -> by_parent ) == 0 )
         return false;
 
     b -> rc = SDumperPrint ( b, "\n\t/* %N inherited virtual productions\n", to -> dad -> name );
     if ( b -> rc != 0 )
         return true;
-    if ( VectorDoUntil ( & to -> overrides, false, SProductionDumpVirtuals, b ) )
+    if ( VectorDoUntil ( & to -> by_parent, false, SProductionDumpVirtuals, b ) )
         return true;
     b -> rc = SDumperPrint ( b, "\t */\n" );
 
@@ -1589,7 +1593,7 @@ rc_t physical_mbr ( KSymTable *tbl, KTokenSource *src, KToken *t,
         {
             /* column is probably based upon a physical structure */
             if ( t -> id == ePhysical )
-                rc = phys_encoding_expr ( tbl, src, t, env, self, & m -> td, & m -> type );            
+                rc = phys_encoding_expr ( tbl, src, t, env, self, & m -> td, & m -> type );
             else if ( t -> id != eDatatype )
                 return KTokenExpected ( t, klogErr, "typename or physical column type" );
             else
@@ -1658,7 +1662,6 @@ rc_t physical_member ( KSymTable *tbl, KTokenSource *src, KToken *t,
     return rc;
 }
 
-static
 rc_t implicit_physical_member ( KSymTable *tbl, const SchemaEnv *env,
     STable *table, SColumn *c, KSymbol *sym )
 {
@@ -1863,7 +1866,7 @@ rc_t typed_column_decl ( KSymTable *tbl, KTokenSource *src, KToken *t,
     rc_t rc = 0;
 
     /* if column was forwarded, give it a type */
-    if ( t -> id == eForward || t -> id == eVirtual )
+    if ( t -> id == eForward /*|| t -> id == eVirtual */ ) /* a virtual production cannot be resolved into a column */
     {
         c -> name = t -> sym;
         t -> sym -> type = eColumn;
@@ -2303,14 +2306,7 @@ rc_t table_local_decl ( KSymTable *tbl, KTokenSource *src, KToken *t,
  *
  * table-decl-list    = <tbl-local-decl> ';' [ <table-decl-list> ]
  */
-typedef struct STableScanData STableScanData;
-struct STableScanData
-{
-    STable *self;
-    rc_t rc;
-};
 
-static
 bool CC table_fwd_scan ( BSTNode *n, void *data )
 {
     STableScanData *pb = data;
@@ -2449,6 +2445,20 @@ rc_t table_physical_syntax ( const STable *table )
 }
 #endif
 
+rc_t
+table_fix_forward_refs ( const STable *table )
+{
+    rc_t rc = table_stmt_syntax ( table );
+#if SLVL >= 8
+    if ( rc == 0 )
+        rc = table_column_syntax ( table );
+#endif
+#if SLVL >= 7
+    if ( rc == 0 )
+        rc = table_physical_syntax ( table );
+#endif
+    return rc;
+}
 
 /*
  * push-tbl-scope
@@ -2620,15 +2630,7 @@ rc_t table_decl ( KSymTable *tbl, KTokenSource *src, KToken *t,
     /* fix forward references */
     if ( rc == 0 )
     {
-        rc = table_stmt_syntax ( table );
-#if SLVL >= 8
-        if ( rc == 0 )
-            rc = table_column_syntax ( table );
-#endif
-#if SLVL >= 7
-        if ( rc == 0 )
-            rc = table_physical_syntax ( table );
-#endif
+        rc = table_fix_forward_refs ( table );
     }
 
     return rc;
@@ -2670,19 +2672,20 @@ void CC symbol_set_context ( void *item, void *data )
     self -> u . fwd . ctx = * ( const uint32_t* ) data;
 }
 
-static
-void table_set_context ( STable *self )
+void CC table_set_context ( STable *self, uint32_t p_ctxId )
 {
-    VectorForEach ( & self -> col, false, column_set_context, & self -> id );
-    VectorForEach ( & self -> cname, false, name_set_context, & self -> id );
-    VectorForEach ( & self -> phys, false, physical_set_context, & self -> id );
-    VectorForEach ( & self -> prod, false, production_set_context, & self -> id );
-    VectorForEach ( & self -> vprods, false, symbol_set_context, & self -> id );
+    VectorForEach ( & self -> col, false, column_set_context, & p_ctxId );
+    VectorForEach ( & self -> cname, false, name_set_context, & p_ctxId );
+    VectorForEach ( & self -> phys, false, physical_set_context, & p_ctxId );
+    VectorForEach ( & self -> prod, false, production_set_context, & p_ctxId );
+    VectorForEach ( & self -> vprods, false, symbol_set_context, & p_ctxId );
 }
 
 #if NO_UPDATE_TBL_REF || 0
-#define schema_update_tbl_ref( self, exist, table ) \
-    0
+rc_t CC schema_update_tbl_ref ( VSchema *, const STable *, const STable * )
+{
+    return 0;
+}
 #else
 typedef struct update_tbl_ref_data update_tbl_ref_data;
 struct update_tbl_ref_data
@@ -2729,8 +2732,8 @@ bool CC table_update_tbl_ref ( void *item, void *data )
             is_ancestor = true;
 
             /* rewrite overrides to have updated parent */
-            VectorWhack ( & to -> overrides, NULL, NULL );
-            pb -> rc = VectorCopy ( & pb -> table -> vprods, & to -> overrides );
+            VectorWhack ( & to -> by_parent, NULL, NULL );
+            pb -> rc = VectorCopy ( & pb -> table -> vprods, & to -> by_parent );
             if ( pb -> rc != 0 )
                 return true;
             to -> dad = pb -> table;
@@ -2835,7 +2838,6 @@ bool CC db_update_tbl_ref ( void *item, void *data )
     return VectorDoUntil ( & self -> db, false, db_update_tbl_ref, data );
 }
 
-static
 rc_t schema_update_tbl_ref ( VSchema *self, const STable *exist, const STable *table )
 {
     update_tbl_ref_data pb;
@@ -2885,8 +2887,8 @@ rc_t table_declaration ( KSymTable *tbl, KTokenSource *src, KToken *t,
             {
                 uint32_t idx;
 
-                /* set the table id on all members */
-                table_set_context ( table );
+                /* set the table context id on all members */
+                table_set_context ( table, table -> id );
 
                 /* add to named table overrides */
                 rc = VectorInsertUnique ( & name -> items, table, & idx, STableSort );

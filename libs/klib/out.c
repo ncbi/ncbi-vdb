@@ -96,12 +96,9 @@ rc_t KOutMsgCharFmt ( uint32_t u32 )
     return rc;
 }
 
-LIB_EXPORT rc_t CC KOutMsg ( const char * fmt, ... )
+LIB_EXPORT rc_t CC KOutVMsg ( const char * fmt, va_list args )
 {
-    rc_t rc;
-
-    va_list args;
-    va_start ( args, fmt );
+    rc_t rc = 0;
 
 #define MATCH_FORMAT(format, literal) \
     ( ( const void* ) ( format ) == ( const void* ) ( literal ) )
@@ -134,6 +131,18 @@ LIB_EXPORT rc_t CC KOutMsg ( const char * fmt, ... )
         kfprintf(KOutHandlerGet(), NULL, "outmsg failure: %R in '%s'\n", rc, fmt);
     }
 #undef MATCH_FORMAT
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KOutMsg ( const char * fmt, ... )
+{
+    rc_t rc;
+
+    va_list args;
+    va_start ( args, fmt );
+
+    rc = KOutVMsg ( fmt, args );
 
     va_end ( args );
 

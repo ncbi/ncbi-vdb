@@ -351,6 +351,22 @@ KFS_EXTERN rc_t CC KDirectoryOpenFileWrite_v1 ( KDirectory_v1 *self,
 KFS_EXTERN rc_t CC KDirectoryVOpenFileWrite ( KDirectory_v1 *self,
     struct KFile **f, bool update, const char *path, va_list args );
 
+/* OpenFileSharedWrite ( v1.4 )
+ *  opens an existing file with shared write access
+ *
+ *  "f" [ OUT ] - return parameter for newly opened file
+ *
+ *  "update" [ IN ] - if true, open in read/write mode
+ *  otherwise, open in write-only mode
+ *
+ *  "path" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting target file
+ */
+KFS_EXTERN rc_t CC KDirectoryOpenFileSharedWrite_v1 ( KDirectory_v1 *self,
+    struct KFile **f, bool update, const char *path, ... );
+KFS_EXTERN rc_t CC KDirectoryVOpenFileSharedWrite ( KDirectory_v1 *self,
+    struct KFile **f, bool update, const char *path, va_list args );
+
 /* CreateFile
  *  opens a file with write access
  *
@@ -572,6 +588,7 @@ typedef struct NAME_VERS ( KDirectory, KDIRECTORY_VERS ) KDirectory;
 #define KDirectoryCreateAlias NAME_VERS ( KDirectoryCreateAlias , KDIRECTORY_VERS )
 #define KDirectoryOpenFileRead NAME_VERS ( KDirectoryOpenFileRead , KDIRECTORY_VERS )
 #define KDirectoryOpenFileWrite NAME_VERS ( KDirectoryOpenFileWrite , KDIRECTORY_VERS ) 
+#define KDirectoryOpenFileSharedWrite NAME_VERS ( KDirectoryOpenFileSharedWrite , KDIRECTORY_VERS ) 
 #define KDirectoryCreateFile NAME_VERS ( KDirectoryCreateFile , KDIRECTORY_VERS )
 #define KDirectoryFileSize NAME_VERS ( KDirectoryFileSize , KDIRECTORY_VERS ) 
 #define KDirectoryFilePhysicalSize NAME_VERS ( KDirectoryFilePhysicalSize , KDIRECTORY_VERS ) 

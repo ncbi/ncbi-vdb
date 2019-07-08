@@ -794,6 +794,7 @@ TEST_CASE(NGS_FailedToOpen)
     }
     REQUIRE_FAILED ();
     REQUIRE_RC ( KRepositoryMgrRelease ( repoMgr ) );
+    REQUIRE_RC ( KConfigRelease ( kfg ) );
 }
 
 //////////////////////////////////////////// Open read collection using system path
@@ -948,6 +949,7 @@ const char UsageDefaultName[] = "test-ngs";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    KConfigDisableUserSettings();
     rc_t m_coll=NgsTestSuite(argc, argv);
     return m_coll;
 }

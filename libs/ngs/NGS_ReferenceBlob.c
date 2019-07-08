@@ -104,26 +104,20 @@ struct NGS_ReferenceBlob * NGS_ReferenceBlobMake ( ctx_t ctx, const NGS_Cursor* 
                 {
                     ret -> refFirst = p_refFirstRowId;
                     ret -> rowId = p_firstRowId;
-                    TRY ( VByteBlob_ContiguousChunk ( ret -> blob, ctx, ret -> rowId, p_refLastRowId - p_firstRowId + 1, &ret -> data, &ret -> size, false ) )
+                    TRY ( VByteBlob_ContiguousChunk ( ret -> blob,
+                                                      ctx,
+                                                      ret -> rowId,
+                                                      p_refLastRowId - p_firstRowId + 1,
+                                                      false,
+                                                      & ret -> data,
+                                                      & ret -> size,
+                                                      & ret -> count ) )
                     {
-                        int64_t first;
-                        uint64_t count;
-                        rc_t rc = VBlobIdRange ( ret -> blob, & first, & count );
-                        if ( rc == 0  )
+                        TRY ( VByteBlob_IdRange ( ret -> blob, ctx, & ret -> first, NULL ) )
                         {
-                            assert ( first <= ret -> rowId );
-                            ret -> first = first;
-                            if ( p_refLastRowId != 0 && first + count > p_refLastRowId )
-                            {   /* cut off rows beyound p_refLastRowId */
-                                ret -> count = p_refLastRowId + 1 - first;
-                            }
-                            else
-                            {
-                                ret -> count = count - ( ret -> rowId - first );
-                            }
+                            assert ( ret -> first <= ret -> rowId );
                             return ret;
                         }
-                        INTERNAL_ERROR ( xcUnexpected, "VBlobIdRange() rc = %R", rc );
                     }
                     VBlobRelease ( ( VBlob * ) ret -> blob );
                 }
@@ -215,12 +209,7 @@ uint64_t NGS_ReferenceBlobUnpackedSize ( const struct NGS_ReferenceBlob * self, 
     else
     {
         PageMapIterator pmIt;
-        rc_t rc = PageMapNewIterator ( (const PageMap*)self->blob->pm, &pmIt, self -> rowId - self -> first, self -> count );
-        if ( rc != 0 )
-        {
-            INTERNAL_ERROR ( xcUnexpected, "PageMapNewIterator() rc = %R", rc );
-        }
-        else
+        TRY ( VByteBlob_PageMapNewIterator ( self->blob, ctx, & pmIt, self -> rowId - self -> first, self -> count ) )
         {
             row_count_t  repeat;
             do
@@ -250,14 +239,10 @@ void NGS_ReferenceBlobResolveOffset ( const struct NGS_ReferenceBlob * self, ctx
         INTERNAL_ERROR ( xcParamNull, "NULL return parameter" );
     }
     else
-    {
+    {   /* Iterate through the blob's page map to locate the chuink containing position p_inBlob. Once found, translate */
+        /* the offset inside the blob into offset on the reference. */
         PageMapIterator pmIt;
-        rc_t rc = PageMapNewIterator ( (const PageMap*)self->blob->pm, &pmIt, self -> rowId - self -> first, self -> count );
-        if ( rc != 0 )
-        {
-            INTERNAL_ERROR ( xcUnexpected, "PageMapNewIterator() rc = %R", rc );
-        }
-        else
+        TRY ( VByteBlob_PageMapNewIterator ( self->blob, ctx, &pmIt, self -> rowId - self -> first, self -> count ) )
         {
             uint64_t inUnrolledBlob = 0; /* offset from the starting position of self->rowId if all repetitions in the blob were unrolled */
             while ( true )
@@ -279,7 +264,8 @@ void NGS_ReferenceBlobResolveOffset ( const struct NGS_ReferenceBlob * self, ctx
                         * p_repeatCount = repeat;
                     }
                     if ( p_increment != NULL )
-                    {
+                    {   /* p_increment is only used when there is a repetition, specifies how much to increase p_inBlob by */
+                        /* in order to start the next call to NGS_ReferenceBlobResolveOffset() past the repeated rows */
                         * p_increment = repeat > 1 ? size : 0;
                     }
                     return;

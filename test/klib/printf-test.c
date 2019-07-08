@@ -134,7 +134,7 @@ rc_t final ( const char *flags, int32_t *field_width, int32_t *precision,
              char size_modifier, char storage_class, va_list args )
 {
     rc_t rc;
-    uint32_t i, j, len;
+    uint32_t i, j;
     va_list arg_copy;
     char stdcfmt [ 32 ], fmt [ 32 ], expected [ 4096 ];
 
@@ -205,7 +205,7 @@ rc_t final ( const char *flags, int32_t *field_width, int32_t *precision,
 
     /* generate expected string */
     va_copy ( arg_copy, args );
-    len = vsnprintf ( expected, sizeof expected, stdcfmt, arg_copy );
+    vsnprintf ( expected, sizeof expected, stdcfmt, arg_copy );
     va_end ( arg_copy );
 
     /* execute test */

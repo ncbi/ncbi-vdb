@@ -1835,21 +1835,21 @@ rc_t CC KArcFileSetSize (KArcFile *self, uint64_t size)
  * archive.
  */
 static
-rc_t KArcFileReadContiguous (const KArcFile *self, uint64_t pos,
-			     void *buffer, size_t bsize, size_t *num_read)
+rc_t KArcFileReadContiguous ( const KArcFile * self, uint64_t pos,
+                              void * buffer, size_t bsize, size_t * num_read )
 {
     rc_t	rc;
     uint64_t	offset;
 
-    assert (self != NULL);
-    assert (buffer != NULL);
-    assert (num_read != NULL);
-    assert (bsize != 0);
+    assert ( self != NULL );
+    assert ( buffer != NULL );
+    assert ( num_read != NULL );
+    assert ( bsize != 0 );
 
-    rc = KTocEntryGetFileOffset (self->node, &offset);
-    if (rc == 0)
+    rc = KTocEntryGetFileOffset ( self->node, &offset );
+    if ( rc == 0 )
     {
-	rc = KFileRead (self->archive, pos + offset, buffer, bsize, num_read);
+        rc = KFileRead ( self->archive, pos + offset, buffer, bsize, num_read );
     }
     return rc;
 }

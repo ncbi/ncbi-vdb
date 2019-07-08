@@ -73,18 +73,24 @@
 #define THROW_ON_RC(call) \
     do { \
         if ( ( rc_t ) ( call ) != ( rc_t ) 0 ) \
-            throw std::logic_error ( std::string ( __func__ ) + #call + " failed" ); \
+            throw std::logic_error ( std::string ( __func__ ) + ": " + #call + " failed" ); \
     } while (0)
-   
+
+#define THROW_ON_FALSE(call) \
+    do { \
+        if ( ! ( call ) ) \
+            throw std::logic_error ( std::string ( __func__ ) + ": " + #call + " == false" ); \
+    } while (0)
+
 ////////////////////////////////////////////////////////////////////////////////
 
 #if ALLOW_TESTING_CODE_TO_RELY_UPON_CODE_BEING_TESTED
 struct Args;
 #endif
 
-namespace ncbi { namespace NK { 
+namespace ncbi { namespace NK {
 
-typedef int counter_t; 
+typedef int counter_t;
 
 class Empty {};
 
@@ -126,11 +132,11 @@ public:
     bool catch_system_errors;
 
     static int RunProcessTestCase(TestCase&, void(TestCase::*)(), int);
-    
+
     // Sleep functions return false if sleep was interrupted
     static bool Sleep(unsigned int seconds);
     static bool SleepMs(unsigned int milliseconds);
-    
+
     static const int TEST_CASE_TIMED_OUT=14;
     static const int TEST_CASE_FAILED=255;
 
@@ -147,7 +153,7 @@ public:
 
     static bool in_child_process;
     static std::string GetPidString();
-    
+
     static std::string FormatLocation(const std::string& p_file, uint64_t p_line);
 
     static void SetVerbosity(LogLevel::E v)
@@ -178,7 +184,7 @@ public:
 protected:
     TestCase(const std::string &name) { Init(name); }
 
-public:    
+public:
     // explicit destruction, to be used before calling exit() in out-of-process test runner
     virtual void clear() {}
 
@@ -510,7 +516,7 @@ ncbi::NK::counter_t Main(int argc, char* argv[],
     LOG(ncbi::NK::LogLevel::e_test_suite,
         "Leaving test suite \"" << suite_name << "\"\n");
 
-    switch (ec) 
+    switch (ec)
     {
         case 0:
           LOG(ncbi::NK::LogLevel::e_nothing, "\n*** No errors detected\n");

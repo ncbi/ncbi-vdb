@@ -140,7 +140,7 @@ enum
     align_iter_first      = ( 1 << 12 ),
     align_iter_last       = ( 1 << 13 ),
 
-    align_iter_invalid    = ( 1 << 31 )
+    align_iter_invalid    = ( int ) ( 1U << 31 )
 };
 
 ALIGN_EXTERN int32_t CC AlignmentIteratorState ( const AlignmentIterator *self,

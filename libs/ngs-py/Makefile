@@ -85,3 +85,9 @@ NGS_PY_OBJ = \
 $(ILIBDIR)/libngs-py.$(LIBX): $(NGS_PY_OBJ)
 	$(LD) --slib -o $@ $^
 
+
+#-------------------------------------------------------------------------------
+# fuzz
+#
+fuzz: std
+	cp $(addsuffix .$(LIBX),$(addprefix $(ILIBDIR)/,$(INT_LIBS))) $(FLIBDIR)/

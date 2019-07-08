@@ -107,3 +107,9 @@ JNI_OBJ = \
 
 $(ILIBDIR)/libngs-jni.$(LIBX): $(JNI_OBJ)
 	$(LD) --slib -o $@ $^
+
+#-------------------------------------------------------------------------------
+# fuzz
+#
+fuzz: std
+	cp $(addsuffix .$(LIBX),$(addprefix $(ILIBDIR)/,$(INT_LIBS))) $(FLIBDIR)/

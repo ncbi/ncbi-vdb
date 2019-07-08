@@ -36,6 +36,8 @@
 
 #include <kfc/xc.h>
 
+#include <kfg/config.h> /* KConfigDisableUserSettings */
+
 #include "NGS_Pileup.h"
 #include "NGS_ReferenceSequence.h"
 #include "NGS_String.h"
@@ -207,7 +209,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetAlignments_WithSecondary_Secondary, CSRA
 }
 
 
-// ReferenceGetAlignments on circular references
+// ReferenceGetFilteredAlignments on circular references
 FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetAlignments_Circular_Wraparound, CSRA1_ReferenceFixture)
 {
     ENTRY_GET_REF( CSRA1_WithCircularReference, "NC_012920.1" );
@@ -503,6 +505,48 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetBlobs, CSRA1_ReferenceFixture)
     EXIT;
 }
 
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceIsLocal_Yes, CSRA1_ReferenceFixture)
+{
+    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
+    REQUIRE ( NGS_ReferenceGetIsLocal ( m_ref, ctx ) );
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceIsLocal_No, CSRA1_ReferenceFixture)
+{
+    ENTRY_GET_REF( "SRR821492", "chrM" );
+    REQUIRE ( ! NGS_ReferenceGetIsLocal ( m_ref, ctx ) );
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceIsLocalSRR619505, CSRA1_ReferenceFixture)
+{
+    ENTRY_GET_REF("SRR619505", "NC_000005.8");
+    REQUIRE(!NGS_ReferenceGetIsLocal(m_ref, ctx));
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceIsLocalSRR413283, CSRA1_ReferenceFixture)
+{
+    ENTRY_GET_REF("SRR413283", "FLT3_NM_004119.2");
+    REQUIRE(NGS_ReferenceGetIsLocal(m_ref, ctx));
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceNotLocalSRR413283, CSRA1_ReferenceFixture)
+{
+    ENTRY_GET_REF("SRR496123", "NC_007112.5");
+    REQUIRE(!NGS_ReferenceGetIsLocal(m_ref, ctx));
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceLocalSRR413283, CSRA1_ReferenceFixture)
+{
+    ENTRY_GET_REF("SRR496123", "NC_002333.2");
+    REQUIRE(NGS_ReferenceGetIsLocal(m_ref, ctx));
+    EXIT;
+}
+
 // Iteration over References
 FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceIterator_GetLength_1, CSRA1_ReferenceFixture)
 {
@@ -655,9 +699,6 @@ and this test is expected to fail */
     ENTRY;
     const char* EBI_Accession = "ffd6aeffb54ade3d28ec7644afada2e9";
 
-    if ( CALL_TO_EBI_RESOLVER_FAILS ) {
-    }
-
     NGS_ReferenceSequence * ref = NGS_ReferenceSequenceMake ( ctx, EBI_Accession );
 
     if ( CALL_TO_EBI_RESOLVER_FAILS ) {
@@ -728,8 +769,21 @@ const char UsageDefaultName[] = "test-ngs_reference";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
-    rc_t m_coll=NgsReferenceTestSuite(argc, argv);
-    return m_coll;
+    KConfigDisableUserSettings();
+
+    KConfig * kfg = NULL;
+    rc_t rc = KConfigMake(&kfg, NULL);
+
+    // turn off certificate validation to download EBI reference
+    if (rc == 0)
+        rc = KConfigWriteString(kfg, "/tls/allow-all-certs", "true");
+
+    if (rc == 0)
+        rc = NgsReferenceTestSuite(argc, argv);
+
+    KConfigRelease(kfg);
+
+    return rc;
 }
 
 }

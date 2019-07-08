@@ -243,8 +243,9 @@ rc_t KEncFileBufferWrite (KEncFile * self, uint64_t offset, const void * buffer,
  *  The first is a common "NCBI"
  *  The second is the format specific "nenc"
  */
+#if 0
 static const KEncFileSig KEncFileSignature = "NCBInenc";
-
+#endif
 
 /* -----
  * the common constant used throughout the project to check the byte order 
@@ -276,10 +277,11 @@ const KEncFileHeader const_header_sra
 = { "NCBIsenc", eEncFileByteOrderTag, eCurrentVersion };
 
 
+#if 0
 static
 const KEncFileHeader const_bswap_header_sra
 = { "NCBIsenc", eEncFileByteOrderReverse, eCurrentVersionReverse };
-
+#endif
     
 /* ----------
  * HeaderRead

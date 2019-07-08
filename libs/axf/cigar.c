@@ -1670,88 +1670,97 @@ rc_t CC clipped_cigar_impl ( void *data, const VXformInfo *info, int64_t row_id,
     return rc;
 }
 
+
+static int remove_left_soft_clip(int const length, char const cigar[ /* length */ ])
+{
+    int i;
+    for (i = 0; i < length; ++i) {
+        int const ch = cigar[i];
+        if (ch < '0' || ch > '9')
+            break;
+    }
+    if (i < length && cigar[i] == 'S')
+        return i + 1;
+    else
+        return 0;
+}
+
+static int remove_right_soft_clip(int const length, char const cigar[ /* length */ ])
+{
+    if (length > 0 && cigar[length - 1] == 'S') {
+        int i = length - 1;
+        while (i > 0) {
+            int const ch = cigar[i - 1];
+            if (ch < '0' || ch > '9')
+                break;
+            --i;
+        }
+        return i;
+    }
+    return length;
+}
+
 static
 rc_t CC clipped_cigar_impl_v2 ( void *data, const VXformInfo *info, int64_t row_id,
                                 VRowResult *rslt, uint32_t argc, const VRowData argv [] )
 {
+    VRowData const *const argCigar = &argv[0];
+    VRowData const *const argCigLen = &argv[1];
+    char const* cigar = argCigar->u.data.base;
+    INSDC_coord_len const *cigLen = argCigLen->u.data.base;
+    int const N = (int)argCigLen->u.data.elem_count;
     rc_t rc = 0;
-    const char* cigar = argv[ 0 ].u.data.base;
-    const INSDC_coord_len* cigar_len = argv[ 1 ].u.data.base;
-    const uint32_t nreads = ( const uint32_t )argv[ 1 ].u.data.elem_count;
-    INSDC_coord_len * new_cigar_len;
-    uint32_t n;
-    INSDC_coord_zero rstart;
-    
-    assert( argv[ 0 ].u.data.elem_bits == sizeof( *cigar ) * 8 );
-    assert( argv[ 1 ].u.data.elem_bits == sizeof( *cigar_len ) * 8 );
 
-    if ( argv[ 0 ].u.data.elem_count == 0 )
-    {
-        return KDataBufferResize( rslt->data, rslt->elem_count = 0 );
+    assert(argCigar->u.data.elem_bits == sizeof(cigar[0]) * 8);
+    assert(argCigLen->u.data.elem_bits == sizeof(cigLen[0]) * 8);
+
+    if (argCigar->u.data.elem_count == 0) {
+        rslt->elem_count = 0;
+        return KDataBufferResize(rslt->data, 0);
     }
-    
-    cigar += argv[ 0 ].u.data.first_elem;
-    cigar_len += argv[ 1 ].u.data.first_elem;
 
-    if ( data != NULL )
-    {
-        rslt->data->elem_bits = sizeof( *cigar_len ) * 8;
-        rslt->elem_count = nreads;
-        rc = KDataBufferResize( rslt->data, rslt->elem_count );
-        new_cigar_len = rslt->data->base;
+    cigar += argCigar->u.data.first_elem;
+    cigLen += argCigLen->u.data.first_elem;
+
+    if (data != NULL)
+    { /* outputting the lengths */
+        rslt->data->elem_bits = sizeof(cigLen[0]) * 8;
+        rslt->elem_count = N;
+        rc = KDataBufferResize(rslt->data, rslt->elem_count);
+        if (rc == 0) {
+            INSDC_coord_len *const out = rslt->data->base;
+            int i;
+
+            for (i = 0; i < N; ++i) {
+                int const len = cigLen[i];
+                int const rlsc = remove_left_soft_clip(len, cigar);
+                int const rrsc = remove_right_soft_clip(len, cigar);
+
+                out[i] = (INSDC_coord_len)(rrsc > rlsc ? (rrsc - rlsc) : 0);
+                cigar += len;
+            }
+        }
     }
     else
-    {
+    { /* outputting the strings */
+        int i;
+        
+        rslt->data->elem_bits = sizeof(cigar[0]) * 8;
         rslt->elem_count = 0;
-        rslt->data->elem_bits = sizeof( *cigar ) * 8;
-    }
 
-    for ( n = rstart = 0; n < nreads; rstart += cigar_len[ n++ ] )
-    {
-        INSDC_coord_zero i = rstart, start = rstart;
-        INSDC_coord_zero end = start + cigar_len[ n ];
+        for (i = 0; i < N; ++i) {
+            int const len = cigLen[i];
+            int const rlsc = remove_left_soft_clip(len, cigar);
+            int const rrsc = remove_right_soft_clip(len, cigar);
+            int const newLen = rrsc > rlsc ? (rrsc - rlsc) : 0;
+            char *out;
 
-        /* drop all \d+S groups at head */
-        while ( i < end )
-        {
-            if ( cigar[ i ] == 'S' )
-            {
-                start = i + 1;
-            }
-            else if ( !isdigit( cigar[ i ] ) )
-            {
-                break;
-            }
-            i++;
-        }
-
-        /* drop all \d+S groups at tail */
-        while ( end > start )
-        {
-            end--;
-            if ( cigar[ end ] != 'S' && !isdigit( cigar[ end ] ) )
-            {
-                break;
-            }
-        }
-
-        if ( data == NULL )
-        {
-            int64_t x = end - start + 1;
-            if ( x > 0 )
-            {
-                rc = KDataBufferResize( rslt->data, rslt->elem_count + x );
-                if ( rc == 0 )
-                {
-                    char* b = rslt->data->base;
-                    memmove( &b[ rslt->elem_count ], &cigar[ start ], ( size_t )x );
-                    rslt->elem_count += x;
-                }
-            }
-        }
-        else
-        {
-            new_cigar_len[ n ] = end - start + 1;
+            rc = KDataBufferResize(rslt->data, rslt->elem_count + newLen);
+            if (rc) return rc;
+            out = rslt->data->base;
+            memmove(&out[rslt->elem_count], &cigar[rlsc], (size_t)newLen);
+            rslt->elem_count += newLen;
+            cigar += len;
         }
     }
     return rc;
@@ -2229,8 +2238,7 @@ rc_t CC get_ref_insert_impl ( void *data, const VXformInfo *info, int64_t row_id
     rslt->data->elem_bits = sizeof( bool ) * 8;
     rslt->elem_count = ref_len[ argv[ 3 ].u.data.first_elem ];
     rc = KDataBufferResize( rslt->data, rslt->elem_count );
-    if ( rc == 0 )
-    {
+    if (rc == 0 && rslt->elem_count > 0) {
         bool *result = ( bool* )rslt->data->base;
         unsigned j;
         unsigned ri;

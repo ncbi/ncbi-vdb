@@ -283,6 +283,7 @@ LIB_EXPORT rc_t CC AlignAccessRefSeqEnumeratorGetLength ( const AlignAccessRefSe
     return 0;
 }
 
+#define ENUMERATOR_IS_NOT_FILTERED_BY_INDEX 1
 LIB_EXPORT rc_t CC AlignAccessRefSeqEnumeratorNext(const AlignAccessRefSeqEnumerator *cself) {
     AlignAccessRefSeqEnumerator *self = (AlignAccessRefSeqEnumerator *)cself;
     
@@ -290,19 +291,23 @@ LIB_EXPORT rc_t CC AlignAccessRefSeqEnumeratorNext(const AlignAccessRefSeqEnumer
         return AlignAccessRefSeqEnumeratorEOFCode;
     
     ++self->cur;
+#if ENUMERATOR_IS_NOT_FILTERED_BY_INDEX
+    return 0;
+#else
     if (!BAMFileIsIndexed(cself->parent->innerSelf))
     	return 0;
 	if (BAMFileIndexHasRefSeqId(cself->parent->innerSelf, cself->cur))
 		return 0;
 	return AlignAccessRefSeqEnumeratorNext(cself);
+#endif
 }
 
 struct AlignAccessAlignmentEnumerator {
     const AlignAccessDB *parent;
     const BAMAlignment *innerSelf;
+    BAMFileSlice *slice;
     uint64_t endpos;
     uint64_t startpos;
-    BAMFilePosition pos;
     atomic32_t refcount;
     int atend;
     int refSeqID;
@@ -341,16 +346,18 @@ LIB_EXPORT rc_t CC AlignAccessDBEnumerateAlignments(const AlignAccessDB *self, A
     return AlignAccessAlignmentEnumeratorNext(*align_enum);
 }
 
-LIB_EXPORT rc_t CC AlignAccessDBWindowedAlignments(
-                                     const AlignAccessDB *self,
-                                     AlignAccessAlignmentEnumerator **align_enum,
-                                     const char *refSeqName, uint64_t pos, uint64_t wsize
-) {
+LIB_EXPORT
+rc_t CC AlignAccessDBWindowedAlignments(const AlignAccessDB *self,
+                                        AlignAccessAlignmentEnumerator **align_enum,
+                                        const char *refSeqName, uint64_t pos, uint64_t wsize
+                                        )
+{
     AlignAccessAlignmentEnumerator *lhs;
     unsigned i, n;
     const BAMRefSeq *rs;
     uint64_t endpos = pos + wsize;
     rc_t rc;
+    BAMFileSlice *slice;
     
     *align_enum = NULL;
 
@@ -364,10 +371,12 @@ LIB_EXPORT rc_t CC AlignAccessDBWindowedAlignments(
         return RC(rcAlign, rcTable, rcConstructing, rcParam, rcInvalid);
     }
 
-    if (wsize == 0 || endpos > rs->length)
+    if (endpos > rs->length || wsize == 0)
         endpos = rs->length;
 
-    rc = BAMFileSeek(self->innerSelf, i, pos, endpos);
+    rc = BAMFileMakeSlice(self->innerSelf, &slice, i, pos, endpos);
+    if (rc == 0 && slice == NULL)
+        return RC(rcAlign, rcTable, rcConstructing, rcMemory, rcExhausted);
     if ( rc != 0 )
     {
         if ( GetRCState( rc ) == rcNotFound && GetRCObject( rc ) == (enum RCObject)rcData )
@@ -381,6 +390,7 @@ LIB_EXPORT rc_t CC AlignAccessDBWindowedAlignments(
     lhs->refSeqID = i;
     lhs->endpos = endpos;
     lhs->startpos = pos;
+    lhs->slice = slice;
 
     *align_enum = lhs;
     return AlignAccessAlignmentEnumeratorNext(*align_enum);
@@ -399,8 +409,17 @@ AGAIN:
     if (self->atend != 0)
         return AlignAccessAlignmentEnumeratorEOFCode;
     
-    BAMFileGetPosition(self->parent->innerSelf, &self->pos);
-    rc = BAMFileRead2(self->parent->innerSelf, &self->innerSelf);
+    if (self->slice == NULL) {
+        rc = BAMFileRead2(self->parent->innerSelf, &self->innerSelf);
+        if (rc) {
+            if (GetRCState(rc) == rcNotFound && GetRCObject(rc) == rcRow) {
+                self->atend = 1;
+                rc = AlignAccessAlignmentEnumeratorEOFCode;
+            }
+        }
+        return rc;
+    }
+    rc = BAMFileReadSlice(self->parent->innerSelf, &self->innerSelf, self->slice);
     if (rc) {
         if (GetRCState(rc) == rcNotFound && GetRCObject(rc) == rcRow) {
             self->atend = 1;
@@ -408,9 +427,9 @@ AGAIN:
         }
         return rc;
     }
-    if (self->refSeqID == -1)
-        return 0;
-    
+    if (!BAMAlignmentIsMapped(self->innerSelf))
+        goto AGAIN;
+
     BAMAlignmentGetRefSeqId(self->innerSelf, &refSeqID);
     if (self->refSeqID != refSeqID) {
         self->atend = 1;
@@ -419,15 +438,14 @@ AGAIN:
     else if (self->endpos != 0) {
         int64_t pos;
         uint32_t length;
-        uint64_t endpos;
-        
+
         BAMAlignmentGetPosition2(self->innerSelf, &pos, &length);
-        if (pos < 0 || pos >= (int64_t)self->endpos) {
+        if (pos >= (int64_t)self->endpos) {
             self->atend = 1;
             rc = AlignAccessAlignmentEnumeratorEOFCode;
         }
         else {
-            endpos = (uint64_t)pos + length;
+            int64_t const endpos = pos + length;
             if (endpos <= self->startpos)
                 goto AGAIN;
         }
@@ -443,6 +461,7 @@ LIB_EXPORT rc_t CC AlignAccessAlignmentEnumeratorAddRef ( const AlignAccessAlign
 
 static
 rc_t CC AlignAccessAlignmentEnumeratorWhack(AlignAccessAlignmentEnumerator *self) {
+    free(self->slice);
     if (self->innerSelf)
         BAMAlignmentRelease(self->innerSelf);
     AlignAccessDBRelease(self->parent);
@@ -801,7 +820,7 @@ LIB_EXPORT rc_t CC AlignAccessAlignmentEnumeratorGetRecordID(const AlignAccessAl
     if (self == NULL)
         return 0;
     
-    *(BAMFilePosition *)result = self->pos;
+    *(BAMFilePosition *)result = BAMAlignmentGetFilePos(self->innerSelf);
     return 0;
 }
 
@@ -809,4 +828,9 @@ LIB_EXPORT rc_t CC AlignAccessAlignmentEnumeratorGetBAMAlignment(const AlignAcce
 {
     *result = self->innerSelf;
     return BAMAlignmentAddRef(self->innerSelf);
+}
+
+LIB_EXPORT rc_t CC AlignAccessAlignmentEnumeratorGetSAM(const AlignAccessAlignmentEnumerator *self, size_t *const actSize, size_t const maxsize, char *const buffer)
+{
+    return BAMAlignmentFormatSAM(self->innerSelf, actSize, maxsize, buffer);
 }

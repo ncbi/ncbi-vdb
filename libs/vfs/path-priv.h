@@ -47,13 +47,34 @@
 #include <vfs/path.h>
 #endif
 
+#ifndef _h_vfs_resolver_
+#include <vfs/resolver.h> /* VRemoteProtocols */
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/*--------------------------------------------------------------------------
- * VPath
+struct KSrvError;
+
+/* VPath Type: -----------------------------------------------------------------
+ * how many extended properties ( from name resolver response ) are initialized
  */
+typedef enum {
+    eVPnoExt,  /* does not have extended part */
+    eVPWithId, /* has object-id */
+    eVPext,    /* has all extanded properties */
+} EVPathType;
+typedef enum {
+    eSCundefined,
+    eSCrun,
+    eSCpileup,
+    eSCrealign,
+    eSCvdbcache,
+} ESraClass;
+/*
+* VPath
+*/
 struct VPath
 {
     KDataBuffer data;
@@ -82,6 +103,33 @@ struct VPath
     bool from_uri;
     bool missing_port;
     bool highly_reliable;
+
+    ESraClass sraClass; /* type of SRA file: undefined, run, pileup etc */
+
+    /* how many extended properties ( from name resolver response )
+       are initialized */
+    EVPathType ext;
+
+    String     id;           /* object-id */
+
+    String     tick;         /* dbGaP download ticket */
+    uint64_t   osize;        /* object's un-encrypted size in bytes */
+    KTime_t    modification; /* object's modification date. 0 if unknown */
+    KTime_t    expiration;   /* expiration date of this VPath object.
+                                0 if infinite */
+
+    uint8_t    md5 [ 16 ];  /* md5 checksum object's un-encrypted if known */
+    bool       has_md5;
+
+    String     service;      /* s3, gs, sra-ncbi, ftp-ncbi, sra-sos, etc. */
+    String     objectType;
+
+    const VPath * vdbcache;
+    bool          vdbcacheChecked; /* no need to check vdbcache URL when
+                                  vdbcacheChecked = true and vdbcache == NULL */
+
+    bool       ceRequired;
+    bool       payRequired;
 };
 
 enum VPathVariant
@@ -131,6 +179,11 @@ typedef enum eVPUri_t
     vpuri_ncbi_legrefseq,
     vpuri_ncbi_obj,     /* for dbGaP objects */
     vpuri_fasp,         /* for Aspera downloads */
+    vpuri_s3,
+    vpuri_azure,
+    vpuri_google,
+    vpuri_scp,
+    vpuri_sftp,
     vpuri_count
 } VPUri_t;
 
@@ -141,8 +194,73 @@ VFS_EXTERN rc_t CC VPathGetScheme_t ( const VPath * self, VPUri_t * uri_type );
 VPUri_t VPathGetUri_t (const VPath * self);
 
 
+rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
+    const String * tick, bool ext, const String * id, uint64_t osize,
+    KTime_t date, const uint8_t md5 [ 16 ], KTime_t exp_date,
+    const char * service, const String * objectType,
+    bool ceRequired, bool payRequired );
+
+rc_t VPathAttachVdbcache(VPath * self, const VPath * vdbcache);
+
+/* Equal
+ *  compares two VPath-s
+ *
+ * "notequal" [ OUT ] - is set
+ *  to union of bits corresponding to difference in different VPath properties
+ *
+ *  returns non-0 rc after a failed call to get property from any of VPath-s
+ */
+rc_t VPathEqual ( const VPath * l, const VPath * r, int * notequal );
+/* Close
+ *  compares two VPath-s
+ *  difference between expirations should be withing expirationRange */
+rc_t VPathClose ( const VPath * l, const VPath * r, int * notequal,
+                  KTime_t expirationRange );
+
+
+/***** VPathSet - set of VPath's - genetated from name resolver response ******/
+
+typedef struct VPathSet VPathSet;
+
+rc_t VPathSetRelease ( const VPathSet * self );
+rc_t VPathSetGet ( const VPathSet * self, VRemoteProtocols protocols,
+    const struct VPath ** path, const struct VPath ** vdbcache );
+rc_t VPathSetGetCache ( const VPathSet * self, const struct VPath ** path );
+rc_t VPathSetGetLocal ( const VPathSet * self, const struct VPath ** path );
+
+/* name resolver response row converted into VDB objects */
+typedef struct {          /*       vdbcache */
+    struct VPath * fasp ; struct VPath * vcFasp;
+    struct VPath * file ; struct VPath * vcFile;
+    struct VPath * http ; struct VPath * vcHttp;
+    struct VPath * https; struct VPath * vcHttps;
+    struct VPath * s3   ; struct VPath * vcS3;
+    struct VPath * mapping;
+    const struct KSrvError * error;
+    char * reqId;
+    char * respId;
+    uint64_t osize; /*size of VPath object */
+} EVPath;
+
+rc_t VPathSetMake
+    ( VPathSet ** self, const EVPath * src, bool singleUrl );
+
+rc_t VPathSetMakeQuery ( VPathSet ** self, const VPath * local, rc_t localRc,
+                         const VPath * cache, rc_t cacheRc );
+
+rc_t KSrvErrorMake4(const struct KSrvError ** self,
+                    rc_t rc, uint32_t code, const char * msg);
+
+
 #ifdef __cplusplus
 }
 #endif
 
 #endif /* _h_path_priv_ */
+
+#if 0
+/******************************** KSrvResponse ********************************/
+rc_t KSrvResponseRelease ( const KSrvResponse * self );
+uint32_t KSrvResponseLength ( const KSrvResponse * self );
+/******************************************************************************/
+#endif

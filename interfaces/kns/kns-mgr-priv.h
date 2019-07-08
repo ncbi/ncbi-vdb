@@ -70,6 +70,13 @@ bool HttpGetRetryCodes ( const HttpRetrySpecs* self, uint16_t code, uint8_t * ma
  */
 KNS_EXTERN rc_t CC KNSManagerMakeConfig ( struct KNSManager **mgr, struct KConfig* kfg );
 
+/* SetAdCaching
+ *  Enable Caching to Accession as Directory in cwd
+ */
+KNS_EXTERN
+rc_t CC KNSManagerSetAdCaching(struct KNSManager* self, bool enabled);
+
+
 /** MakeReliableHttpFile, KNSManagerMakeReliableClientRequest:
  * Make HTTP file/request from a reliable URL:
  * we will try harder to recover upon any error
@@ -81,6 +88,12 @@ KNS_EXTERN rc_t CC KNSManagerMakeReliableHttpFile(
 KNS_EXTERN rc_t CC KNSManagerMakeReliableClientRequest ( 
     struct KNSManager const *self, struct KClientHttpRequest **req, 
     ver_t version, struct KStream *conn, const char *url, ... );
+KNS_EXTERN rc_t CC KNSManagerMakePaidHttpFile(struct KNSManager const *self,
+    struct KFile const **file, struct KStream *conn, ver_t vers,
+    bool payRequired, const char *url, ...);
+KNS_EXTERN rc_t CC KNSManagerMakePaidReliableHttpFile(
+    struct KNSManager const *self, struct KFile const **file,
+    struct KStream *conn, ver_t vers, bool payRequired, const char *url, ...);
 
 typedef struct {
     const char *url;
@@ -100,15 +113,18 @@ rc_t KHttpRetrierInit ( KHttpRetrier * self, const char * url, const struct KNSM
 bool KHttpRetrierWait ( KHttpRetrier * self, uint32_t status );
 rc_t KHttpRetrierDestroy ( KHttpRetrier * self );
 
+/*----------------------------------------------------------------------------*/
 
-typedef struct HttpProxy HttpProxy;
-const HttpProxy * KNSManagerGetHttpProxy ( const struct KNSManager * self );
-const HttpProxy * HttpProxyGetNextHttpProxy ( const HttpProxy * self );
+//typedef struct HttpProxy HttpProxy;
+struct KNSProxies * KNSManagerGetProxies ( const struct KNSManager * self,
+                                           size_t * cnt );
 
 /* N.B.: DO NOT WHACK THE RETURNED http_proxy String !!! */
-void HttpProxyGet ( const HttpProxy * self,
-    const String ** http_proxy, uint16_t * http_proxy_port );
+bool KNSProxiesGet ( struct KNSProxies * self, const String ** http_proxy,
+    uint16_t * http_proxy_port, size_t * cnt, bool * last );
 
+/* allow to have multiple comma-separated proxies in a spec */
+#define MULTIPLE_PROXIES 1
 
 /*--------------------------------------------------------------------------
  * URLBlock
@@ -122,6 +138,12 @@ typedef enum
     st_S3
 } SchemeType;
 
+typedef enum
+{
+    ct_NONE,
+    ct_S3,
+} CloudType;
+
 typedef struct URLBlock URLBlock;
 struct URLBlock
 {
@@ -134,13 +156,13 @@ struct URLBlock
     uint32_t port;
 
     SchemeType scheme_type;
+    CloudType cloud_type;
     bool tls;
 
     bool port_dflt;
 };
 extern void URLBlockInit ( URLBlock *self );
 extern rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size );
-
 
 #ifdef __cplusplus
 }

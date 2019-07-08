@@ -57,7 +57,7 @@ TEST_CASE ( test ) {
     REQUIRE_RC ( KConfigMakeEmpty ( & kfg ) );
     REQUIRE_RC ( KConfigWriteString ( kfg,
                     "/repository/remote/main/CGI/resolver-cgi",
-                    "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" ) );
+                    "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi" ) );
 
     if ( PROXY != NULL )
         REQUIRE_RC ( KConfigWriteString ( kfg, "/http/proxy/path", PROXY ) );
@@ -134,10 +134,13 @@ static rc_t argsHandler ( int argc, char * argv [] ) {
             PROXY = strdup ( & argv [ 1 ] [ 1 ] );
 
     switch ( argc ) {
+        case 1:
+            EXPECTED_FAILURE = true;
+            break;
         case 2:
             EXPECTED_FAILURE = PROXY != NULL;
             break;
-        case 3:
+        default:
             EXPECTED_FAILURE = false;
             break;
     }

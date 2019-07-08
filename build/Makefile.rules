@@ -22,7 +22,6 @@
 #
 # ===========================================================================
 
-
 ## build rules
 LOC_INFO = -D__mod_name__=$(MODULE) -D__file_name__=$*
 
@@ -109,3 +108,33 @@ LOC_INFO = -D__mod_name__=$(MODULE) -D__file_name__=$*
 # version include generation
 %.vers.h: %.vers
 	$(TOP)/build/make-vers-inc.sh $^ > $@
+
+# instrumented for fuzzing
+#	clang -c $^ -o $@ $(DEBUG) $(DBG) $(CARCH) $(PROF) $(DEFINES) $(ARCHDEFS) $(MIN_DEPLOY_OS_OPT) $(INCDIRS) $(LOC_INFO) -D__file_ext__=cpp  -fsanitize=fuzzer,address,signed-integer-overflow
+FUZZ_OPT = -fsanitize=fuzzer,address,signed-integer-overflow -fprofile-instr-generate -fcoverage-mapping
+$(OBJDIR)/%.fuzz.$(OBJX): %.c
+	clang -c $< -o $@ $(CFLAGS) $(FUZZ_OPT)
+$(OBJDIR)/%.fuzz.$(LOBX): %.c
+	clang -c $< -o $@ $(CFLAGS) $(FUZZ_OPT)
+$(OBJDIR)/%.fuzz.$(OBJX): %.cpp
+	clang++ -c $< -o $@ $(CPFLAGS) $(FUZZ_OPT)
+$(OBJDIR)/%.fuzz.$(LOBX): %.cpp
+	clang++ -c $< -o $@ $(CPFLAGS) $(FUZZ_OPT)
+
+$(OBJDIR)/%.nopt.fuzz.$(OBJX): %.c
+	clang -c $< -o $@ $(CFLAGS) $(FUZZ_OPT)
+$(OBJDIR)/%.nopt.fuzz.$(LOBX): %.c
+	clang -c $< -o $@ $(CFLAGS) $(FUZZ_OPT)
+$(OBJDIR)/%.nopt.fuzz.$(OBJX): %.cpp
+	clang++ -c $< -o $@ $(CPFLAGS) $(FUZZ_OPT)
+$(OBJDIR)/%.nopt.fuzz.$(LOBX): %.cpp
+	clang++ -c $< -o $@ $(CPFLAGS) $(FUZZ_OPT)
+
+$(OBJDIR)/%.swap.nopt.fuzz.$(OBJX): %.c
+	clang -c $< -o $@ $(CFLAGS) $(FUZZ_OPT)
+$(OBJDIR)/%.swap.nopt.fuzz.$(LOBX): %.c
+	clang -c $< -o $@ $(CFLAGS) $(FUZZ_OPT)
+$(OBJDIR)/%.swap.nopt.fuzz.$(OBJX): %.cpp
+	clang++ -c $< -o $@ $(CPFLAGS) $(FUZZ_OPT)
+$(OBJDIR)/%.swap.nopt.fuzz.$(LOBX): %.cpp
+	clang++ -c $< -o $@ $(CPFLAGS) $(FUZZ_OPT)

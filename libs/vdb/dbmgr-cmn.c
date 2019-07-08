@@ -833,6 +833,30 @@ LIB_EXPORT int CC VDBManagerVPathType ( const VDBManager * self,
     return kptBadPath;
 }
 
+static int CC VDBManagerVPathTypeUnreliable ( const VDBManager * self,
+    const char *path, va_list args )
+{
+    if ( self != NULL )
+        return KDBManagerVPathTypeUnreliable ( self -> kmgr, path, args );
+
+    return kptBadPath;
+}
+
+LIB_EXPORT int CC VDBManagerPathTypeUnreliable ( const VDBManager * self,
+    const char *path, ... )
+{
+    int type;
+
+    va_list args;
+    va_start ( args, path );
+
+    type = VDBManagerVPathTypeUnreliable ( self, path, args );
+
+    va_end ( args );
+
+    return type;
+}
+
 /** Reset VResolver to set protected repository context */
 LIB_EXPORT rc_t CC VDBManagerSetResolver
     ( const VDBManager * self, struct VResolver * resolver )
