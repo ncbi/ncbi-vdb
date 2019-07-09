@@ -180,6 +180,10 @@ static rc_t DataUpdate(const Data * self,
     name = "payRequired";
     BulSet(&next->payRequired, KJsonObjectGetMember(node, name), name);
 
+    if ( ! next -> payRequired ) {
+        name = "paymentRequired";
+        BulSet(&next->payRequired, KJsonObjectGetMember(node, name), name);
+    }
     name = "service";
     StrSet(&next->srv, KJsonObjectGetMember(node, name), name);
 
