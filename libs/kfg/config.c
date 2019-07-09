@@ -1047,6 +1047,7 @@ LIB_EXPORT rc_t CC KConfigNodeWrite ( KConfigNode *self, const char *buffer, siz
     {
         free ( self -> val_buffer ), self -> val_buffer = NULL;
         StringInit ( & self -> value, "", 0, 0 );
+        KConfigNodeSetDirty ( self );
         rc = 0;
     }
     else if ( buffer == NULL )
