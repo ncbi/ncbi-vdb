@@ -54,7 +54,7 @@ static rc_t HMAC_SHA1(
         (unsigned char *)input, ilen, output);
 
     return ret == 0
-        ? 0 : RC(rcVFS, rcUri, rcInitializing, rcEncryption, rcFailed);
+        ? 0 : RC(rcCloud, rcUri, rcInitializing, rcEncryption, rcFailed);
 }
 
 /* Encode a buffer into base64 format */
@@ -76,7 +76,7 @@ static rc_t Base64(
 #endif
 
     if (vdb_mbedtls_base64_encode((unsigned char *)dst, dlen, &olen, src, slen) != 0)
-        rc = RC(rcVFS, rcUri, rcEncoding, rcString, rcInsufficient);
+        rc = RC(rcCloud, rcUri, rcEncoding, rcString, rcInsufficient);
 
 #if DEBUGGING
     olen = strlen((char*)dst);
@@ -252,7 +252,8 @@ rc_t AWSDoAuthentication(const struct AWS * self, KClientHttpRequest * req,
     char authorization[4096] = "";
 
     if (self->access_key_id == NULL && self->secret_access_key == NULL)
-        return 0;
+        return RC(
+            rcCloud, rcMessage, rcIdentifying, rcEncryptionKey, rcNotFound);
 
     rc = KClientHttpRequestGetHeader(req, "Authorization",
         buf, sizeof buf, NULL);
