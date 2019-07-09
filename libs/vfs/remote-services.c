@@ -129,16 +129,20 @@ static bool SVersionAccInRequest ( const SVersion  self ) {
     return self < VERSION_3_0;
 }
 
+static bool SVersionSingleUrl ( const SVersion  self ) {
+    return self < VERSION_3_0;
+}
+
 static bool SVersionTypInRequest ( const SVersion  self ) {
+    return self == VERSION_3_0;
+}
+
+static bool SVersionUseObjidAsAcc ( const SVersion  self ) {
     return self == VERSION_3_0;
 }
 
 static bool SVersionHasMultpileObjects ( const SVersion  self ) {
     return self >= VERSION_3_0;
-}
-
-static bool SVersionSingleUrl ( const SVersion  self ) {
-    return self < VERSION_3_0;
 }
 
 static bool SVersionResponseHasMultipeUrls ( const SVersion  self ) {
@@ -1665,7 +1669,8 @@ static bool VPathMakeOrNot ( VPath ** new_path, const String * src,
             typed -> osize,
             useDates ? typed -> date : 0,
             typed -> md5 . has_md5 ? typed -> md5 . md5 : NULL,
-            useDates ? typed -> expiration : 0, NULL, NULL, false, false );
+            useDates ? typed -> expiration : 0, NULL, NULL, NULL,
+            false, false );
         if ( * rc == 0 )
             VPathMarkHighReliability ( * new_path, true );
 
@@ -1987,19 +1992,22 @@ static rc_t SRowMake ( SRow ** self, const String * src, const SRequest * req,
                         req -> request . object [ 0 ] . objectId, l, l );
             assert ( acc . size == 0 || acc . addr != NULL );
             if ( acc . size > 2 && acc . addr [1] == 'R'
-                                && acc . addr [2] == 'R' &&
-                 ! StringEqual ( & p -> typed . accession, & acc ) &&
-                 ! StringEqual ( & p -> typed . objectId , & acc ) )
+                                && acc . addr [2] == 'R' )
             {
-                return RC ( rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt );
+                if (SVersionUseObjidAsAcc ( version ) ) {
+                    if  ( ! StringEqual ( & p -> typed . objectId , & acc ) )
+                        return RC ( rcVFS, rcQuery, rcResolving,
+                                    rcMessage, rcCorrupt );
+                }
+                else if ( ! StringEqual ( & p -> typed . accession, & acc ) )
+                    return     RC ( rcVFS, rcQuery, rcResolving,
+                                    rcMessage, rcCorrupt );
             }
-            else {
-                p -> reqId = string_dup
-                    ( req -> request . object [ 0 ] . objectId, l );
-                if ( p -> reqId == NULL )
-                    return RC ( rcVFS, rcQuery, rcExecuting,
-                                       rcMemory, rcExhausted );
-            }
+            p -> reqId = string_dup
+                ( req -> request . object [ 0 ] . objectId, l );
+            if ( p -> reqId == NULL )
+                return RC ( rcVFS, rcQuery, rcExecuting,
+                                    rcMemory, rcExhausted );
         }
         else {
             uint32_t i = 0;
@@ -2022,9 +2030,10 @@ static rc_t SRowMake ( SRow ** self, const String * src, const SRequest * req,
         }
     }
     if ( rc == 0 ) {
-        char * acc = string_dup ( p -> typed . objectId . addr,
-                                        p -> typed . objectId . size );
-        if ( p -> typed . objectId . size != 0 && acc == NULL )
+        String * s = SVersionUseObjidAsAcc ( version )
+            ? & p -> typed . objectId : & p -> typed . accession;
+        char * acc = string_dup ( s -> addr, s -> size );
+        if ( s -> size != 0 && acc == NULL )
             return RC ( rcVFS, rcQuery, rcResolving, rcMemory, rcExhausted );
         rc = EVPathInit ( & p -> path, & p -> typed, req, & r2, p -> reqId,
                                                                 acc );
@@ -3001,6 +3010,35 @@ static rc_t SCgiRequestAddCloudEnvironment(
 }
 
 static
+rc_t SCgiRequestAddAcceptCharges(SCgiRequest * self, SHelper * helper)
+{
+    rc_t rc = SHelperInitKfg(helper);
+
+    if (rc == 0) {
+        bool result = false;
+        rc = KConfigReadBool(
+            helper->kfg, "/libs/cloud/accept_aws_charges", &result);
+        if (rc != 0)
+            return 0;
+        else if (result) {
+            const SKV * kv = NULL;
+            const char n[] = "accept-charges";
+            const char v[] = "aws";
+            rc = SKVMake(&kv, n, v);
+            if (rc == 0) {
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
+                    ("  %s=%s\n", n, v));
+                rc = VectorAppend(&self->params, NULL, kv);
+            }
+            if (rc != 0)
+                return rc;
+        }
+    }
+
+    return rc;
+}
+
+static
 rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     VRemoteProtocols protocols, const char * cgi,
     const char * version, bool aProtected, bool adjustVersion )
@@ -3236,7 +3274,9 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
         }
     }
 
-    if (rc == 0 && SVersionResponseInJson(request->version, request->sdl)) {
+    if (rc == 0 &&
+        SVersionResponseInJson(request->version, request->sdl))
+    {
         if (request->request.appRc != 0)
             /* different query items require to add
             and at the same time not to add filetype=run */
@@ -3259,6 +3299,9 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
         if (SVersionNeedCloudEnvironment(request->version, request->sdl))
             rc = SCgiRequestAddCloudEnvironment(self, helper);
     }
+
+    if (rc == 0 && SVersionResponseInJson(request->version, request->sdl))
+        rc = SCgiRequestAddAcceptCharges(self, helper);
 
     return rc;
 }
@@ -4256,6 +4299,11 @@ static rc_t KService1NameWithVersionAndType ( const KNSManager * mgr,
             KSrvRespObjIterator * it = NULL;
             KSrvRespFile * file = NULL;
             KSrvRespFileIterator * fi = NULL;
+            bool ok = false;
+            String vdbcache;
+            CONST_STRING(&vdbcache, "vdbcache");
+            assert(remote);
+            *remote = NULL;
             rc = KServiceGetResponse ( & service, & response );
             if ( rc == 0 ) {
                 n = KSrvResponseLength  ( response );
@@ -4266,12 +4314,31 @@ static rc_t KService1NameWithVersionAndType ( const KNSManager * mgr,
                 rc = KSrvResponseGetObjByIdx ( response, 0, & obj );
             if ( rc == 0 )
                 rc = KSrvRespObjMakeIterator ( obj, & it );
-            if ( rc == 0 )
-                rc = KSrvRespObjIteratorNextFile ( it, & file );
-            if ( rc == 0 )
-                rc = KSrvRespFileMakeIterator ( file, & fi );
-            if ( rc == 0 )
-                rc = KSrvRespFileIteratorNextPath ( fi, remote );
+            while (rc == 0 && !ok) {
+                rc = KSrvRespObjIteratorNextFile(it, &file);
+                if (rc == 0 && file != NULL)
+                    rc = KSrvRespFileMakeIterator(file, &fi);
+                if (rc == 0) {
+                    const VPath * tmp = NULL;
+                    String type;
+                    rc = KSrvRespFileIteratorNextPath(fi, &tmp);
+                    if (rc == 0 && tmp != NULL) {
+                        rc = VPathGetType(tmp, &type);
+                        if (rc == 0)
+                            if (!StringEqual(&type, &vdbcache))
+                                ok = true;
+                    }
+                    if (*remote == NULL)
+                        *remote = tmp;
+                    else if (ok) {
+                        if (*remote != tmp)
+                            RELEASE(VPath, *remote);
+                        *remote = tmp;
+                    }
+                    else
+                        RELEASE(VPath, tmp);
+                }
+            }
             if ( rc == 0 && mapping != NULL )
                 rc = KSrvRespFileGetMapping ( file, mapping );
             RELEASE ( KSrvRespFileIterator, fi );

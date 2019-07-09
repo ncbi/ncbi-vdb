@@ -38,15 +38,12 @@
 extern "C" {
 #endif
 
-/* forwards
- */
-
-#if _DEBUGGING
 /* CloudMgrMakeWithProvider
  *  Create a non-singleton, object to access cloud-related resources, with a set provider
  */
 CLOUD_EXTERN rc_t CC CloudMgrMakeWithProvider ( CloudMgr ** mgrp, CloudProviderId provider );
 
+#if _DEBUGGING
 CLOUD_EXTERN void CC CloudMgrSetProvider ( CloudMgr * self, CloudProviderId provider );
 #endif
 

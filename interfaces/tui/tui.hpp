@@ -429,6 +429,9 @@ class Dlg
         size_t GetWidgetTextLength( tui_id id ) { return KTUIDlgGetWidgetTextLength( dlg_, id ); };
         bool SetWidgetTextLength( tui_id id, size_t value ) { return ( KTUIDlgSetWidgetTextLength ( dlg_, id, value ) == 0 ); };
 
+        bool SetWidgetCarretPos( tui_id id, size_t value ) { return ( KTUIDlgSetWidgetCarretPos ( dlg_, id, value ) == 0 ); };
+        bool SetWidgetAlphaMode( tui_id id, uint32_t value ) { return ( KTUIDlgSetWidgetAlphaMode ( dlg_, id, value ) == 0 ); };
+        
         bool AddWidgetString( tui_id id, const char * txt ) { return ( KTUIDlgAddWidgetString ( dlg_, id, txt ) == 0 ); };
         bool AddWidgetString( tui_id id, std::string &s ) { return ( KTUIDlgAddWidgetString ( dlg_, id, s.c_str() ) == 0 ); };
         bool AddWidgetStringN( tui_id id, int n, ... );
@@ -478,6 +481,8 @@ class Dlg
         void PopulateGrid( Tui_Rect const &r, bool resize, uint32_t id, Grid &grid_model,
                             KTUI_color bg, KTUI_color fg, uint32_t page_id = 0 );
         void PopulateList( Tui_Rect const &r, bool resize, uint32_t id,
+                            KTUI_color bg, KTUI_color fg, uint32_t page_id = 0 );
+        void PopulateRadioBox( Tui_Rect const &r, bool resize, uint32_t id,
                             KTUI_color bg, KTUI_color fg, uint32_t page_id = 0 );
 
         bool HasWidget( tui_id id ) { return KTUIDlgHasWidget ( dlg_, id ); };

@@ -68,8 +68,8 @@ namespace ncbi
          *    ncbi::NGS::setAppVersionString ( "pileup-stats.1.0.0" );
          */
         static
-        void setAppVersionString ( const String & app_version )
-            /*nothrow*/;
+        void setAppVersionString ( const String & app_version );
+            /*nothrow*/
 
         /* openReadCollection
          *  create an object representing a named collection of reads
@@ -77,8 +77,8 @@ namespace ncbi
          *  or may be an id, accession, or URL
          */
         static 
-        ReadCollection openReadCollection ( const String & spec )
-            NGS_THROWS ( ErrorMsg );
+        ReadCollection openReadCollection ( const String & spec );
+            /*NGS_THROWS ( ErrorMsg );*/
 
         /* openReferenceSequence
          *  create an object representing a named reference
@@ -86,8 +86,8 @@ namespace ncbi
          *  or may be an id, accession, or URL
          */
         static 
-        ReferenceSequence openReferenceSequence ( const String & spec )
-            NGS_THROWS ( ErrorMsg );
+        ReferenceSequence openReferenceSequence ( const String & spec );
+            /*NGS_THROWS ( ErrorMsg );*/
     };
 
 } // ncbi

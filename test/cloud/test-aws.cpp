@@ -250,7 +250,7 @@ TEST_CASE(PrintLocation) {
         std::cout << ce_token->addr;
 #endif
     }
-    free(const_cast<String *>(ce_token));
+    StringWhack(ce_token);
     
     REQUIRE_RC(CloudRelease(cloud));
 

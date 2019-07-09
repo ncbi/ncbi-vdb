@@ -49,11 +49,13 @@ static void lp_adjust( lp_context * lp )
 static bool lp_alpha( lp_context * lp, char c )
 {
     bool res = ( lp->len < ( lp->max_len - 1 ) && ( c != 27 ) );
+    if ( res && lp -> alpha_mode != NULL && * lp -> alpha_mode > 0 )
+            res = ( c >= '0' && c <= '9' );
     if ( res )
     {
         if ( *lp->cur_pos < lp->len )
         {
-            if ( *lp->mode == 0 )
+            if ( *lp->ins_mode == 0 )
             {
                 uint64_t idx;
                 lp->line[ lp->len + 1 ] = 0;
@@ -161,10 +163,10 @@ static bool lp_del( lp_context * lp )
 
 static bool lp_ins( lp_context * lp )
 {
-    if ( *lp->mode == 0 )
-        *lp->mode = 1;
+    if ( *lp->ins_mode == 0 )
+        *lp->ins_mode = 1;
     else
-        *lp->mode = 0;
+        *lp->ins_mode = 0;
     return true;
 }
 
@@ -190,6 +192,8 @@ bool lp_handle_event( lp_context * lp, tui_event * event )
     else if ( event->event_type == ktui_event_mouse )
     {
         *lp->cur_pos = *lp->offset + event->data.mouse_data.x - 1;
+        if ( *lp->cur_pos > lp->len )
+            *lp->cur_pos = lp->len;
         lp_adjust( lp );
         res = true;
     }

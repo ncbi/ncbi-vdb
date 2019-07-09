@@ -1437,7 +1437,7 @@ static rc_t LocationsAddLink ( Locations * self, const KJsonValue * node,
     if ( dad -> tic == NULL ) {
         const String * objectType = NULL;
         rc = VPathMakeFromUrl ( & path, & url, NULL, true, & acc, dad -> sz,
-            dad -> mod, hasMd5 ? md5 : NULL, 0, dad -> srv, objectType,
+            dad -> mod, hasMd5 ? md5 : NULL, 0, dad -> srv, objectType, NULL,
             false, false );
     }
     else {
@@ -1445,7 +1445,7 @@ static rc_t LocationsAddLink ( Locations * self, const KJsonValue * node,
         String ticket;
         StringInitCString ( & ticket, dad -> tic );
         rc = VPathMakeFromUrl ( & path, & url, & ticket, true, & acc, dad -> sz,
-            dad -> mod, hasMd5 ? md5 : NULL, 0, dad -> srv, objectType,
+            dad -> mod, hasMd5 ? md5 : NULL, 0, dad -> srv, objectType, NULL,
             false, false );
     }
     if ( rc == 0 )

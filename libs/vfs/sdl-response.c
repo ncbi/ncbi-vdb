@@ -180,6 +180,10 @@ static rc_t DataUpdate(const Data * self,
     name = "payRequired";
     BulSet(&next->payRequired, KJsonObjectGetMember(node, name), name);
 
+    if ( ! next -> payRequired ) {
+        name = "paymentRequired";
+        BulSet(&next->payRequired, KJsonObjectGetMember(node, name), name);
+    }
     name = "service";
     StrSet(&next->srv, KJsonObjectGetMember(node, name), name);
 
@@ -260,6 +264,7 @@ rc_t ItemAddElmsSdl(Item * self, const KJsonObject * node, const Data * dad)
 
             String id;
             String objectType;
+            String type;
 
             String url;
             StringInitCString(&url, ldata.link);
@@ -267,6 +272,39 @@ rc_t ItemAddElmsSdl(Item * self, const KJsonObject * node, const Data * dad)
             StringInitCString(&id, ldata.acc);
 
             memset(&objectType, 0, sizeof objectType);
+            memset(&type, 0, sizeof type);
+
+            if (ldata.modificationDate != NULL) {
+                KTime        modT; /* modificationDate */
+                const KTime* t = KTimeFromIso8601(&modT, ldata.modificationDate,
+                    string_measure(ldata.modificationDate, NULL));
+                if (t == NULL)
+                    return RC(rcVFS, rcQuery, rcExecuting, rcItem, rcIncorrect);
+                else
+                    mod = KTimeMakeTime(&modT);
+            }
+
+            if (ldata.object != NULL) {
+                size_t size = 0;
+                uint32_t len = 0;
+                const char * c = strchr(ldata.object, '|');
+                if (c != NULL)
+                    size = len = c - data.object;
+                else
+                    len = string_measure(data.object, &size);;
+                StringInit(&objectType, ldata.object, size, len);
+            }
+
+            if (ldata.type != NULL) {
+                size_t size = 0;
+                uint32_t len = string_measure(data.type, &size);;
+                StringInit(&type, ldata.type, size, len);
+            }
+
+            if (ldata.ceRequired == eTrue)
+                ceRequired = true;
+            if (ldata.payRequired == eTrue)
+                payRequired = true;
 
             if (ldata.md5 != NULL) {
                 int i = 0;
@@ -288,34 +326,8 @@ rc_t ItemAddElmsSdl(Item * self, const KJsonObject * node, const Data * dad)
                     hasMd5 = true;
             }
 
-            if (ldata.modificationDate != NULL) {
-                KTime        modT; /* modificationDate */
-                const KTime* t = KTimeFromIso8601(&modT, ldata.modificationDate,
-                    string_measure(ldata.modificationDate, NULL));
-                if (t == NULL)
-                    return RC(rcVFS, rcQuery, rcExecuting, rcItem, rcIncorrect);
-                else
-                    mod = KTimeMakeTime(&modT);
-            }
-
-            if (ldata.object != NULL) {
-                size_t size = 0;
-                uint32_t len = 0;
-                const char * c = strchr(ldata.object, '|');
-                if (c != NULL)
-                    size = len = c - data.object;
-                else
-                    size = len = strlen(data.object);
-                StringInit(&objectType, ldata.object, size, len);
-            }
-
-            if (ldata.ceRequired == eTrue)
-                ceRequired = true;
-            if (ldata.payRequired == eTrue)
-                payRequired = true;
-
             rc = VPathMakeFromUrl(&path, &url, NULL, true, &id, ldata.sz,
-                mod, hasMd5 ? md5 : NULL, 0, ldata.srv, &objectType,
+                mod, hasMd5 ? md5 : NULL, 0, ldata.srv, &objectType, &type,
                 ceRequired, payRequired);
 
             if (rc == 0)

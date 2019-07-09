@@ -676,7 +676,8 @@ LIB_EXPORT rc_t CC KTUIDlgAddCheckBox ( struct KTUIDlg * self, uint32_t id, cons
 }
 
 
-LIB_EXPORT rc_t CC KTUIDlgAddInput ( struct KTUIDlg * self, uint32_t id, const tui_rect * r, const char * txt, size_t length )
+LIB_EXPORT rc_t CC KTUIDlgAddInput ( struct KTUIDlg * self, uint32_t id, const tui_rect * r,
+                                     const char * txt, size_t length )
 {
     rc_t rc = KTUIDlgAddWidget( self, id, KTUIW_input, r, draw_inputline, event_inputline, init_inputline );
     if ( rc == 0 )
@@ -1052,6 +1053,10 @@ LIB_EXPORT size_t CC KTUIDlgGetWidgetTextLenght( struct KTUIDlg * self, uint32_t
 LIB_EXPORT rc_t CC KTUIDlgSetWidgetTextLength ( struct KTUIDlg * self, uint32_t id, size_t value )
 {   return SetWidgetTextLength ( KTUIDlgGetWidgetById( self, id ), value ); }
 
+LIB_EXPORT rc_t CC KTUIDlgSetWidgetCarretPos ( struct KTUIDlg * self, uint32_t id, size_t value )
+{   return SetWidgetCarretPos ( KTUIDlgGetWidgetById( self, id ), value ); }
+LIB_EXPORT rc_t CC KTUIDlgSetWidgetAlphaMode ( struct KTUIDlg * self, uint32_t id, uint32_t value )
+{   return SetWidgetAlphaMode ( KTUIDlgGetWidgetById( self, id ), value ); }
 
 LIB_EXPORT rc_t CC KTUIDlgAddWidgetString ( struct KTUIDlg * self, uint32_t id, const char * txt )
 {   return AddWidgetString ( KTUIDlgGetWidgetById( self, id ), txt );  }
@@ -1305,7 +1310,7 @@ static rc_t DlgEventHandler( struct KTUIDlg * self, tui_event * event )
         {
             if ( w -> can_focus )
                 rc = KTUIDlgSetFocusTo( self, w );
-            if ( rc == 0 && w->on_event != 0 )
+            if ( rc == 0 && w->on_event != NULL )
             {
                 /* now send the mouse-event with coordinates relative to the widget
                    to this widget */

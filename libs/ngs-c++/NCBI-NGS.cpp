@@ -66,7 +66,7 @@ namespace ncbi
      *  or may be an id, accession, or URL
      */
     ReadCollection NGS :: openReadCollection ( const String & spec )
-        NGS_THROWS ( ErrorMsg )
+        /*NGS_THROWS ( ErrorMsg )*/
     {
         if ( ! have_user_version_string )
             setAppVersionString ( "ncbi-ngs: unknown-application" );
@@ -88,7 +88,7 @@ namespace ncbi
      *  or may be an id, accession, or URL
      */
     ReferenceSequence NGS :: openReferenceSequence ( const String & spec )
-        NGS_THROWS ( ErrorMsg )
+        /*NGS_THROWS ( ErrorMsg )*/
     {
         if ( ! have_user_version_string )
             setAppVersionString ( "ncbi-ngs: unknown-application" );

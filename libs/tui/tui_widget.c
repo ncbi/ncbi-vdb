@@ -913,6 +913,25 @@ rc_t SetWidgetTextLength ( struct KTUIWidget * self, size_t new_length )
     return rc;
 }
 
+/* code is in tui_widget_inputline.c */
+void set_carret_pos_input_line( struct KTUIWidget * w, size_t pos );
+
+rc_t SetWidgetCarretPos ( struct KTUIWidget * self, size_t new_pos )
+{
+    if ( self != NULL && self -> wtype == KTUIW_input )
+        set_carret_pos_input_line( self, new_pos );
+    return 0;
+}
+
+/* code is in tui_widget_inputline.c */
+void set_inputline_alpha_mode( struct KTUIWidget * w, uint32_t alpha_mode );
+
+rc_t SetWidgetAlphaMode ( struct KTUIWidget * self, uint32_t alpha_mode )
+{
+    if ( self != NULL && self -> wtype == KTUIW_input )
+        set_inputline_alpha_mode( self, alpha_mode );
+    return 0;
+}
 
 /* ---------------------------------------------------------------------------------------------- */
 
