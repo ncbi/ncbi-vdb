@@ -171,7 +171,10 @@ LIB_EXPORT rc_t CC CloudMgrMakeAWS ( const CloudMgr * self, AWS ** p_aws )
     {
         /* capture from self->kfg */
         bool user_agrees_to_pay = false;
-        
+        if (self != NULL)
+            KConfigReadBool((self->kfg, "/libs/cloud/accept_aws_charges",
+                &user_agrees_to_pay);
+
         rc = CloudInit ( & aws -> dad, ( const Cloud_vt * ) & AWS_vt_v1, "AWS", self -> kns, user_agrees_to_pay );
         if ( rc == 0 )
         {
@@ -278,7 +281,7 @@ static rc_t aws_extract_key_value_pair (
 
     char *eql = string_chr ( start, source->size, '=' );
     if ( eql == NULL )
-        return RC ( rcKFG, rcChar, rcSearching, rcFormat, rcInvalid );
+        return RC (rcCloud, rcChar, rcSearching, rcFormat, rcInvalid );
 
     /* key */
     StringInit ( &k, start, eql - start, string_len ( start, eql - start ) );
