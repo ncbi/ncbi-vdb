@@ -30,6 +30,7 @@ MODULE = test/cloud
 
 TEST_TOOLS = \
 	test-aws \
+	test-gcp \
 	test-cloud \
 
 include $(TOP)/build/Makefile.env
@@ -98,4 +99,16 @@ A_OBJ = \
 	$(addsuffix .$(OBJX),$(A_SRC))
 
 $(TEST_BINDIR)/test-aws: $(A_OBJ)
+	$(LP) --exe -o $@ $^ $(CLOUD_LIB)
+
+#----------------------------------------------------------------
+# test-gcp
+#
+G_SRC = \
+	test-gcp
+
+G_OBJ = \
+	$(addsuffix .$(OBJX),$(G_SRC))
+
+$(TEST_BINDIR)/test-gcp: $(G_OBJ)
 	$(LP) --exe -o $@ $^ $(CLOUD_LIB)
