@@ -290,6 +290,9 @@ KNS_EXTERN rc_t CC KClientHttpRequestGetPath(const KClientHttpRequest *self,
 KNS_EXTERN rc_t CC KClientHttpRequestAddPostParam ( KClientHttpRequest *self, const char *fmt, ... );
 KNS_EXTERN rc_t CC KClientHttpRequestVAddPostParam ( KClientHttpRequest *self, const char *fmt, va_list args );
 
+KNS_EXTERN rc_t CC KClientHttpRequestSetCloudParams(KClientHttpRequest * self,
+    bool ceRequired, bool payRequired);
+
 /* compatibility for existing code */
 #define KHttpMakeRequest KClientHttpMakeRequest
 #define KNSManagerMakeRequest KNSManagerMakeClientRequest
@@ -300,6 +303,7 @@ KNS_EXTERN rc_t CC KClientHttpRequestVAddPostParam ( KClientHttpRequest *self, c
 #define KHttpRequestAddHeader KClientHttpRequestAddHeader
 #define KHttpRequestAddPostParam KClientHttpRequestAddPostParam
 #define KHttpRequestVAddPostParam KClientHttpRequestVAddPostParam
+#define KHttpRequestSetCloudParams KClientHttpRequestSetCloudParams
 
 /*--------------------------------------------------------------------------
  * KClientHttpResult

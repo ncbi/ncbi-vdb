@@ -2668,14 +2668,16 @@ struct KClientHttpRequest
     bool payRequired; /* payment info required to access this URL */
 };
 
-void KClientHttpRequestSetCloudParams(struct KClientHttpRequest * self,
-    bool ceRequired, bool payRequired)
+LIB_EXPORT rc_t CC KClientHttpRequestSetCloudParams(
+    KClientHttpRequest * self, bool ceRequired, bool payRequired)
 {
     if (self != NULL)
     {
         self->ceRequired = ceRequired;
         self->payRequired = payRequired;
     }
+
+    return 0;
 }
 
 rc_t
@@ -3532,7 +3534,6 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
                     rc = CloudMgrMakeCloud ( cloudMgr, & cloud, cpId );
                     if ( rc == 0 )
                     {
-/*                        rc = CloudAddAuthentication ( cloud, self, method );*/
                         if ( rc == 0 && cself ->payRequired )
                         {
                             rc = CloudAddUserPaysCredentials( cloud, self, method );

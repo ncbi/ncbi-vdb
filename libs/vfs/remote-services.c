@@ -2547,7 +2547,7 @@ static rc_t SRequestDataInit ( SRequestData * self ) {
 
     self -> allocated = 512;
 
-    self -> object = (SObject *) calloc ( self -> allocated, sizeof * self -> object );
+    self->object = (SObject *)calloc(self->allocated, sizeof * self->object);
     if ( self -> object == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
 
@@ -4205,7 +4205,7 @@ rc_t KServiceNamesExecuteExtImpl ( KService * self, VRemoteProtocols protocols,
          return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
 
     if ( version == NULL )
-        version = "4";
+        version = "130";
 
     rc = KServiceInitNamesRequestWithVersion ( self, protocols, cgi, version,
         false, expected == NULL );

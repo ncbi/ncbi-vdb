@@ -137,9 +137,6 @@ void KClientHttpGetLocalEndpoint ( const struct KClientHttp * self,
 /* if the request followed redirects, the final URL will be different than the initial URL */
 rc_t KClientHttpRequestURL ( struct KClientHttpRequest const *self, KDataBuffer *rslt );
 
-void KClientHttpRequestSetCloudParams(struct KClientHttpRequest * self,
-    bool ceRequired, bool payRequired);
-
 rc_t KClientHttpRequestAttachEnvironmentToken( struct KClientHttpRequest * self );
 
 /* exported private functions
