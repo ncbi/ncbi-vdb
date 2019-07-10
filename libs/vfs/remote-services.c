@@ -659,9 +659,21 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
     rc = SHelperInitKfg ( self );
     if ( rc == 0 && aCgi == NULL ) {
         size_t num_read = 0;
-        if (request->sdl)
+        if (request->sdl) {
             rc = KConfigRead(self->kfg, sdl, 0, buffer, bsize,
                 &num_read, NULL);
+            if (rc != 0) {
+                const char cgi[] =
+                  "https://trace.ncbi.nlm.nih.gov/Traces/sdl/unstable/retrieve";
+                if (buffer == NULL)
+                    return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
+                if (bsize < sizeof cgi)
+                    return RC(rcVFS, rcQuery, rcExecuting, rcBuffer,
+                        rcInsufficient);
+                string_copy(buffer, bsize, cgi, sizeof cgi);
+                rc = 0;
+            }
+        }
         else {
             rc = KConfigRead(self->kfg, path, 0, buffer, bsize,
                 &num_read, NULL);
