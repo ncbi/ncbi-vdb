@@ -222,7 +222,7 @@ rc_t tlsg_init_ca ( KTLSGlobals *self, const KConfig * kfg )
 static 
 rc_t tlsg_init_certs ( KTLSGlobals *self, const KConfig * kfg )
 {
-    int ret;
+    int ret = 0;
     bool cert_file_loaded = false;
 
     rc_t rc = 0;
