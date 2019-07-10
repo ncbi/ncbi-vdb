@@ -144,6 +144,9 @@ CACHING_OBJ = \
 $(TEST_BINDIR)/test-caching: $(CACHING_OBJ)
 	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
 
+caching: test-caching
+	$(TEST_BINDIR)/test-caching
+
 #----------------------------------------------------------------
 # test-names-30
 
@@ -192,6 +195,9 @@ RESOLVERTEST_LIB = \
 
 $(TEST_BINDIR)/test-resolver: $(RESOLVERTEST_OBJ)
 	$(LP) --exe -o $@ $^ $(RESOLVERTEST_LIB)
+
+resolver: test-resolver
+	$(TEST_BINDIR)/test-resolver
 
 #----------------------------------------------------------------
 # Test of names service

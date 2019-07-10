@@ -1894,7 +1894,7 @@ rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
             }
             else
             {
-                rc = KNSManagerMakeReliableHttpFile ( kns, opt_file_rtn, NULL, 0x01010000, "%S", s );
+                rc = KNSManagerMakeReliableHttpFile ( kns, opt_file_rtn, NULL, 0x01010000, true, false, false, "%S", s );
                 if (rc != 0)
                 {
                     PLOGERR(klogInt, (klogInt, rc,

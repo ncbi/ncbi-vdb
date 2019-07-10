@@ -157,9 +157,9 @@ static bool SVersionResponseInJson ( const SVersion  self, bool sdl ) {
     return self >= VERSION_4_0 || sdl;
 }
 
-static bool SVersionNeedCloudLocation(const SVersion  self, bool sdl) {
+/*static bool SVersionNeedCloudLocation(const SVersion  self, bool sdl) {
     return !sdl && self == VERSION_4_0;
-}
+}*/
 
 static bool SVersionNeedCloudEnvironment(const SVersion  self, bool sdl) {
     return sdl && self >= VERSION_2_0;
@@ -2435,18 +2435,17 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
     assert ( self && helper && stream && service);
 
     if ( rc == 0 ) {
-        SHttpRequestHelper h;
-        rc = SHttpRequestHelperInit ( & h, helper -> kMgr, self-> cgi );
-        if ( rc == 0 ) {
-            VectorForEach (
-                & self -> params, false, SHttpRequestHelperAddPostParam, & h );
-            rc = h . rc;
-        }
-
-        if ( rc == 0 ) {
-            if ( SRequestResponseFromEnv ( & service -> req, stream ) )
-                ; /* got response from environment; request was not sent */
-            else if ( expected == NULL ) {
+        if ( SRequestResponseFromEnv ( & service -> req, stream ) )
+            ; /* got response from environment; request was not sent */
+        else if ( expected == NULL ) {
+            SHttpRequestHelper h;
+            rc = SHttpRequestHelperInit(&h, helper->kMgr, self->cgi);
+            if (rc == 0) {
+                VectorForEach(
+                    &self->params, false, SHttpRequestHelperAddPostParam, &h);
+                rc = h.rc;
+            }
+            if (rc == 0) {
                 KHttpResult * rslt = NULL;
                 DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), (
             ">>>>>>>>>>>>>>>> sending HTTP POST request >>>>>>>>>>>>>>>>\n" ) );
@@ -2495,21 +2494,20 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
                 }
                 RELEASE ( KHttpResult, rslt );
             }
-            else {
-                KStream * strm = NULL;
-                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( 
-            "XXXXXXXXXXXX NOT sending HTTP POST request XXXXXXXXXXXXXXXX\n" ) );
-                rc = KStreamMakeFromBuffer ( &strm, expected,
-                                         string_size ( expected ) );
-                if ( rc == 0 )
-                    * stream = strm;
+            {
+                rc_t r2 = SHttpRequestHelperFini(&h);
+                if (rc == 0)
+                    rc = r2;
             }
         }
-
-        {
-            rc_t r2 = SHttpRequestHelperFini ( & h );
+        else {
+            KStream * strm = NULL;
+            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( 
+        "XXXXXXXXXXXX NOT sending HTTP POST request XXXXXXXXXXXXXXXX\n" ) );
+            rc = KStreamMakeFromBuffer ( &strm, expected,
+                                        string_size ( expected ) );
             if ( rc == 0 )
-                rc = r2;
+                * stream = strm;
         }
     }
 
@@ -2547,7 +2545,7 @@ static rc_t SRequestDataInit ( SRequestData * self ) {
 
     self -> allocated = 512;
 
-    self -> object = (SObject *) calloc ( self -> allocated, sizeof * self -> object );
+    self->object = (SObject *)calloc(self->allocated, sizeof * self->object);
     if ( self -> object == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
 
@@ -2934,36 +2932,6 @@ static bool SCgiRequestAddKfgLocation(SCgiRequest * self, SHelper * helper) {
     return rc == 0;
 }
 
-static rc_t SCgiRequestAddLocation (SCgiRequest * self, const SHelper * helper)
-{
-    rc_t rc = 0;
-
-    char buffer[ 99 ] = "";
-    size_t num_read = 0;
-
-    assert( helper );
-
-    rc = KNSManagerGetCloudLocation(helper->kMgr,
-        buffer, sizeof buffer, &num_read, NULL);
-
-    if (rc != 0)
-        rc = 0;
-    else if (num_read > 0) {
-        const SKV * kv = NULL;
-        const char n[] = "location";
-        rc = SKVMake(&kv, n, buffer);
-        if (rc == 0) {
-            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
-                ("  %s=%s\n", n, buffer));
-            rc = VectorAppend(&self->params, NULL, kv);
-        }
-        if (rc != 0)
-            return rc;
-    }
-
-    return rc;
-}
-
 static rc_t SCgiRequestAddCloudEnvironment(
     SCgiRequest * self, SHelper * helper)
 {
@@ -3326,9 +3294,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     }
 
     if (rc == 0 && !SCgiRequestAddKfgLocation(self, helper)) {
-        if (SVersionNeedCloudLocation(request->version, request->sdl))
-            rc = SCgiRequestAddLocation(self, helper);
-        else if (SVersionNeedCloudEnvironment(request->version, request->sdl))
+        if (SVersionNeedCloudEnvironment(request->version, request->sdl))
             rc = SCgiRequestAddCloudEnvironment(self, helper);
     }
 
@@ -4237,7 +4203,7 @@ rc_t KServiceNamesExecuteExtImpl ( KService * self, VRemoteProtocols protocols,
          return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
 
     if ( version == NULL )
-        version = "4";
+        version = "130";
 
     rc = KServiceInitNamesRequestWithVersion ( self, protocols, cgi, version,
         false, expected == NULL );

@@ -35,6 +35,7 @@
 #include <ktst/unit_test.hpp>
 
 #include <kfg/config.h>
+#include <kfg/kfg-priv.h>
 #include <kfs/file.h>
 #include <kfs/directory.h>
 
@@ -247,8 +248,8 @@ public:
             throw logic_error ( "ResolverFixtureCustomConfig::Configure: KDirectoryNativeDir failed" );
 
         KConfig *cfg;
-        if (KConfigMake(&cfg, wd))
-            throw logic_error ( "ResolverFixtureCustomConfig::Configure: KConfigMake failed" );
+        if (KConfigMakeLocal(&cfg, wd))
+            throw logic_error ( "ResolverFixtureCustomConfig::Configure: KConfigMakeLocal failed" );
 
         if (KConfigWriteString ( cfg,
                 "repository/remote/main/CGI/resolver-cgi", RESOLVER_CGI))

@@ -86,7 +86,7 @@ public:
             compare ( remote, expectedShort );
             RELEASE ( VPath, remote );
             REQUIRE_RC ( KNSManagerMakeReliableHttpFile
-                ( kns, & f, NULL, 0x01010000, expectedShort . c_str () ) );
+                ( kns, & f, NULL, 0x01010000, true, false, false, expectedShort . c_str () ) );
             RELEASE ( KFile, f );
         } else {
             REQUIRE_RC_FAIL ( VResolverQuery
@@ -99,7 +99,7 @@ public:
             compare ( remote, expectedLong );
             RELEASE ( VPath, remote );
             REQUIRE_RC ( KNSManagerMakeReliableHttpFile
-                ( kns, & f, NULL, 0x01010000, expectedLong . c_str () ) );
+                ( kns, & f, NULL, 0x01010000, true, false, false, expectedLong . c_str () ) );
             RELEASE ( KFile, f );
         } else {
             REQUIRE_RC_FAIL ( VResolverQuery
@@ -176,7 +176,7 @@ TEST_CASE(test_sra) {
     REQUIRE_RC ( KConfigWriteString ( cfg, cgiPath, badCgi ) );
     Test(this, mgr, cfg, queryShort, queryLong, "bad cgi-old");
 
-/* aux repositories are ignored : VDB-3090 
+/* aux repositories are ignored : VDB-3090
     // old aux configuration cannot resolve long accession
     const char oldRoot  []  = "https://ftp-trace.ncbi.nlm.nih.gov/sra";
     REQUIRE_RC ( KConfigWriteString ( cfg, rootPath, oldRoot ) );
@@ -203,7 +203,7 @@ TEST_CASE(test_sra) {
     REQUIRE_RC ( KConfigWriteString ( cfg, cgiPath, badCgi ) );
     Test(this, mgr, cfg, queryShort, queryLong, "bad cgi-new");
 
-/* aux repositories are ignored : VDB-3090 
+/* aux repositories are ignored : VDB-3090
     // resolve using new aux configuration
     REQUIRE_RC ( KConfigWriteString ( cfg, rootPath, newRoot ) );
     Test(this, mgr, cfg, queryShort, queryLong, "aux-new", newShort, newLong);
@@ -317,7 +317,7 @@ if ((string(acc) != "AAAB01" || string(value) != "refseq")
         REQUIRE_EQ ( num_read, num_readC );
         const KFile * f = NULL;
         REQUIRE_RC
-            (KNSManagerMakeReliableHttpFile(kns, &f, NULL, 0x01010000, buffer));
+            (KNSManagerMakeReliableHttpFile(kns, &f, NULL, 0x01010000, true, false, false, buffer));
         RELEASE ( KFile, f );
         if ( string (acc) == "AAAB01.1"
           && expected && expected [ 0 ] && string ( expected ) != buffer)
@@ -356,7 +356,7 @@ cerr << "\nTO FIX !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! :\n "
         _dad->ErrorCounterAdd(GetErrorCounter());
     }
 };
-/* aux repositories are ignored : VDB-3090 
+/* aux repositories are ignored : VDB-3090
 #ifdef ALL
 TEST_CASE(test_nakmer) {
     Fixture fixture(this, "nakmer", "GCA_000391885.1_R",

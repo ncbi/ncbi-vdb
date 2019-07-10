@@ -68,7 +68,7 @@
 #include <kfs/defs.h>
 
 #include <kns/http.h>
-#include <kns/http-priv.h> /* KNSManagerMakePaidHttpFile */
+#include <kns/http-priv.h> 
 #include <kns/kns-mgr-priv.h>
 #include <kns/manager.h>
 
@@ -609,14 +609,12 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
                              bool high_reliability,
                              bool is_refseq,
                              bool promote,
+                             bool ceRequired,
                              bool payRequired )
 {
     rc_t rc;
     
-    if ( high_reliability )
-        rc = KNSManagerMakePaidReliableHttpFile ( self -> kns, cfp, NULL, 0x01010000, payRequired, url );
-    else
-        rc = KNSManagerMakePaidHttpFile ( self -> kns, cfp, NULL, 0x01010000, payRequired, url );
+    rc = KNSManagerMakeReliableHttpFile ( self -> kns, cfp, NULL, 0x01010000, high_reliability, ceRequired, payRequired, url );
 
     /* in case we are not able to open the remote-file : return with error-code */
     if ( rc == 0 )
@@ -1560,6 +1558,7 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
                                              high_reliability,
                                              is_refseq,
                                              promote,
+                                             path ->ceRequired,
                                              path ->payRequired );
                 {
                     rc_t rc2 = VPathRelease ( local_cache );
@@ -1580,6 +1579,7 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
                                              high_reliability,
                                              is_refseq,
                                              promote,
+                                             path -> ceRequired,
                                              path -> payRequired );
             }
         }
@@ -1594,6 +1594,7 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
                                          high_reliability,
                                          is_refseq,
                                          promote,
+                                         path ->ceRequired,
                                          path -> payRequired );
         }
         free( ( void * )uri );
@@ -2000,6 +2001,7 @@ rc_t VFSManagerOpenDirectoryReadHttpResolved (const VFSManager *self,
                                      high_reliability,
                                      is_refseq,
                                      promote,
+                                     path -> ceRequired,
                                      path -> payRequired );
         if ( rc != 0 )
         {

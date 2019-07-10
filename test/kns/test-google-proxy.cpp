@@ -181,7 +181,7 @@ extern "C" {
 
     rc_t CC KMain ( int argc, char * argv [] ) { if (
 0 ) assert ( ! KDbgSetString ( "KNS-DNS"   ) );   if (
-1 ) assert ( ! KDbgSetString ( "KNS-HTTP"  ) );   if (
+0 ) assert ( ! KDbgSetString ( "KNS-HTTP"  ) );   if (
 0 ) assert ( ! KDbgSetString ( "KNS-PROXY" ) );
 
         rc_t rc = KConfigMakeEmpty ( & KFG );
