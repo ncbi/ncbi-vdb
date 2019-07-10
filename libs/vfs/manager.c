@@ -240,6 +240,7 @@ typedef struct caching_params
     bool record_outer;  /* record the request made after the cache */
     bool is_refseq;     /* when used for external reference sequences, decrease cache size */
     bool promote;       /* do we want a promoting cache-tee-file ? */
+    bool debug;         /* print cache-debug-messages */
 } caching_params;
 
 #define DEFAULT_CACHETEE_VERSION cachetee_3
@@ -274,6 +275,7 @@ static void get_caching_params( caching_params * params,
     params -> record_outer = false;
     params -> is_refseq = is_refseq;
     params -> promote = promote;
+    params -> debug = false;
     
     if ( rc == 0 )
     {
@@ -340,6 +342,10 @@ static void get_caching_params( caching_params * params,
         rc = KConfig_Get_CacheLogInner( cfg, &( params -> record_inner ), false );
         if ( rc != 0 )
             params -> record_inner = false;
+
+        rc = KConfig_Get_CacheDebug( cfg, &( params -> debug ), false );
+        if ( rc != 0 )
+            params -> debug = false;
 
         KConfigRelease ( cfg );
     }
@@ -498,6 +504,13 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
     size_t cache_amount = ( ( size_t )cps -> cache_amount_mb * 1024 * 1024 );
     size_t ram_page_count = ( cache_amount + page_size - 1 ) / page_size;
 
+    if ( cps -> debug )
+    {
+        KOutMsg( "cache.cluster-factor ... %ld bytes\n", cluster_factor );        
+        KOutMsg( "cache.page_size ........ %ld bytes\n", page_size );
+        KOutMsg( "cache.page_count ....... %ld\n", ram_page_count );        
+    }
+    
     if ( cps -> use_file_cache )
     {
         char location[ 4096 ];
@@ -505,7 +518,9 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
         bool promote = cps -> promote;
         location[ 0 ] = 0;
         
-        KOutMsg( "use file-cache\n" );
+        if ( cps -> debug )
+            KOutMsg( "use file-cache\n" );
+
         if ( cps -> repo_cache[ 0 ] != 0 )
         {
             /* we have a repository - location ( try promotion, do not remove-on-close */
@@ -532,7 +547,10 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
             remove_on_close = true;
             promote = false;                
         }
-        KOutMsg( "cache location: '%s', rc = %R\n", location, rc );
+        
+        if ( cps -> debug )
+            KOutMsg( "cache location: '%s', rc = %R\n", location, rc );
+
         if ( rc == 0 )
             /* check if location is writable... */
             rc = KDirectoryMakeKCacheTeeFile_v3 ( dir,
@@ -547,7 +565,9 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
     }
     else
     {
-        KOutMsg( "use no file-cache\n" );
+        if ( cps -> debug )
+            KOutMsg( "use no file-cache\n" );
+
         rc = KDirectoryMakeKCacheTeeFile_v3 ( dir,
                                               &temp_file,
                                               *cfp,

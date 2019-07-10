@@ -203,6 +203,8 @@ KFG_EXTERN rc_t CC KConfig_Set_CacheLogOuter( KConfig *self, bool value );
 KFG_EXTERN rc_t CC KConfig_Get_CacheLogInner( const KConfig *self, bool * value, bool dflt );
 KFG_EXTERN rc_t CC KConfig_Set_CacheLogInner( KConfig *self, bool value );
 
+KFG_EXTERN rc_t CC KConfig_Get_CacheDebug( const KConfig *self, bool * value, bool dflt );
+KFG_EXTERN rc_t CC KConfig_Set_CacheDebug( KConfig *self, bool value );
 
 #ifdef __cplusplus
 }
