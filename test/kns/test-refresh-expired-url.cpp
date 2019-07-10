@@ -184,6 +184,7 @@ FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_NotCloud, CloudFixture
     REQUIRE ( ! StringPresent ( redirReq, "x-amz-request-payer" ) );
 }
 
+/* for AWS, autorization is only added with the payer info
 FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_AWS_NoToken_NoPayer, CloudFixture )
 {
     setenv ( "AWS_ACCESS_KEY_ID", "access_key_id", 1 );
@@ -202,6 +203,7 @@ FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_AWS_NoToken_NoPayer, C
     REQUIRE ( StringPresent ( redirReq, "Date: " ) );
     REQUIRE ( ! StringPresent ( redirReq, "x-amz-request-payer: requester" ) );
 }
+*/
 
 #if NOT_IMPLEMENTED
 

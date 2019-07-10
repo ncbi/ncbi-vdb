@@ -3532,7 +3532,7 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
                     rc = CloudMgrMakeCloud ( cloudMgr, & cloud, cpId );
                     if ( rc == 0 )
                     {
-                        rc = CloudAddAuthentication ( cloud, self, method );
+/*                        rc = CloudAddAuthentication ( cloud, self, method );*/
                         if ( rc == 0 && cself ->payRequired )
                         {
                             rc = CloudAddUserPaysCredentials( cloud, self, method );
