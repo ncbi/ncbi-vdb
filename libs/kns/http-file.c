@@ -162,7 +162,7 @@ rc_t KHttpFileMakeRequest ( const KHttpFile *cself, uint64_t pos, size_t req_siz
         }
     }
 
-    rc = KClientHttpMakeRequest ( cself -> http, &req, cself -> url_buffer . base );
+    rc = KClientHttpMakeRequest ( cself -> http, &req, "%s", cself -> url_buffer . base );
     if ( rc != 0 )
     {
         TRACE ( "KClientHttpMakeRequest ( http, & req, url=\"%s\" ); failed: rc=%u\n",

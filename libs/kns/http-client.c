@@ -3757,6 +3757,7 @@ rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, const char 
                     rc = KClientHttpRequestInit ( self, &b, &uri );
                     if ( rc == 0 )
                     {
+                        self -> ceRequired = false; /* once redirected, CE token is not needed */
                         rc = FormatForCloud ( self, method );
                         KClientHttpResultRelease ( rslt );
                     }
@@ -3995,6 +3996,7 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
     const uint32_t max_redirect = 5;
 
     char * expiration = NULL;
+    const char * method = "POST";
 
     /* TBD comment - add debugging test to ensure "Content-Length" header not present */
 
@@ -4035,7 +4037,7 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
 
         /* create message */
         rc = KClientHttpRequestFormatMsgInt ( self, buffer, sizeof buffer,
-                                           "POST", & len, 0 );
+                                           method, & len, 0 );
         if ( rc != 0 )
             break;
 
@@ -4081,8 +4083,11 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
         {
             /* TBD - Add RFC rules about POST */
         case 301: /* "moved permanently" */
-        case 307: /* "moved temporarily" */
         case 308: /* "permanent redirect" */
+            break;
+        case 307: /* "moved temporarily" */
+            method = "GET";
+            rc = KDataBufferResize ( & self -> body , 0 ); /* drop POST parameters */
             break;
 
         case 505: /* HTTP Version Not Supported */
@@ -4110,7 +4115,7 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
         }
 
         /* reset connection, reset request */
-        rc = KClientHttpRequestHandleRedirection ( self, "POST", rslt, & expiration );
+        rc = KClientHttpRequestHandleRedirection ( self, method, rslt, & expiration );
         if ( rc != 0 )
             break;
     }
