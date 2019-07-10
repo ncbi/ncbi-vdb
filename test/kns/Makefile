@@ -33,7 +33,7 @@ MODULE = test/kns
 TEST_TOOLS = \
 	test_allow_all_certificates \
 	test_dis_allow_all_certificates \
-	test-cloud \
+	test-kns-cloud \
 	test-google-proxy \
 	test200for-whole-file \
 	test-kns \
@@ -166,7 +166,7 @@ CL_SRC = \
 CL_OBJ = \
 	$(addsuffix .$(OBJX),$(CL_SRC))
 
-$(TEST_BINDIR)/test-cloud: $(CL_OBJ)
+$(TEST_BINDIR)/test-kns-cloud: $(CL_OBJ)
 	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
 #----------------------------------------------------------------

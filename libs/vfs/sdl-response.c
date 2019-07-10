@@ -180,6 +180,10 @@ static rc_t DataUpdate(const Data * self,
     name = "payRequired";
     BulSet(&next->payRequired, KJsonObjectGetMember(node, name), name);
 
+    if ( ! next -> payRequired ) {
+        name = "paymentRequired";
+        BulSet(&next->payRequired, KJsonObjectGetMember(node, name), name);
+    }
     name = "service";
     StrSet(&next->srv, KJsonObjectGetMember(node, name), name);
 
@@ -270,26 +274,6 @@ rc_t ItemAddElmsSdl(Item * self, const KJsonObject * node, const Data * dad)
             memset(&objectType, 0, sizeof objectType);
             memset(&type, 0, sizeof type);
 
-            if (ldata.md5 != NULL) {
-                int i = 0;
-                for (i = 0; i < 16; ++i) {
-                    if (ldata.md5[2 * i] == '\0')
-                        break;
-                    if (isdigit(ldata.md5[2 * i]))
-                        md5[i] = (ldata.md5[2 * i] - '0') * 16;
-                    else
-                        md5[i] = (ldata.md5[2 * i] - 'a' + 10) * 16;
-                    if (ldata.md5[2 * i + 1] == '\0')
-                        break;
-                    if (isdigit(ldata.md5[2 * i + 1]))
-                        md5[i] += ldata.md5[2 * i + 1] - '0';
-                    else
-                        md5[i] += ldata.md5[2 * i + 1] - 'a' + 10;
-                }
-                if (i == 16)
-                    hasMd5 = true;
-            }
-
             if (ldata.modificationDate != NULL) {
                 KTime        modT; /* modificationDate */
                 const KTime* t = KTimeFromIso8601(&modT, ldata.modificationDate,
@@ -321,6 +305,26 @@ rc_t ItemAddElmsSdl(Item * self, const KJsonObject * node, const Data * dad)
                 ceRequired = true;
             if (ldata.payRequired == eTrue)
                 payRequired = true;
+
+            if (ldata.md5 != NULL) {
+                int i = 0;
+                for (i = 0; i < 16; ++i) {
+                    if (ldata.md5[2 * i] == '\0')
+                        break;
+                    if (isdigit(ldata.md5[2 * i]))
+                        md5[i] = (ldata.md5[2 * i] - '0') * 16;
+                    else
+                        md5[i] = (ldata.md5[2 * i] - 'a' + 10) * 16;
+                    if (ldata.md5[2 * i + 1] == '\0')
+                        break;
+                    if (isdigit(ldata.md5[2 * i + 1]))
+                        md5[i] += ldata.md5[2 * i + 1] - '0';
+                    else
+                        md5[i] += ldata.md5[2 * i + 1] - 'a' + 10;
+                }
+                if (i == 16)
+                    hasMd5 = true;
+            }
 
             rc = VPathMakeFromUrl(&path, &url, NULL, true, &id, ldata.sz,
                 mod, hasMd5 ? md5 : NULL, 0, ldata.srv, &objectType, &type,
