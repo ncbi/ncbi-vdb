@@ -247,7 +247,7 @@ typedef struct caching_params
 #define DEFAULT_CACHE_PAGE_COUNT ( 10 * 1024 )
 #define DEFAULT_CLUSTER_FACTOR_BITS 5
 #define DEFAULT_PAGE_SIZE_BITS 15
-#define DEFAULT_CACHE_AMOUNT_MB 32
+#define DEFAULT_CACHE_AMOUNT_MB 256
 
 static void get_caching_params( caching_params * params,
                 uint32_t dflt_block_size,
@@ -303,7 +303,7 @@ static void get_caching_params( caching_params * params,
         rc = KConfig_Get_Cache_Amount( cfg, &( params -> cache_amount_mb ) );
         if ( rc == 0 )
         {
-            if ( params -> cache_amount_mb == 0 )
+            if ( params -> cache_amount_mb == 0 || params -> cache_amount_mb < DEFAULT_CACHE_AMOUNT_MB )
                 params -> cache_amount_mb = DEFAULT_CACHE_AMOUNT_MB;
         }
         else
@@ -471,7 +471,15 @@ static rc_t wrap_in_rr_cache( KDirectory * dir,
     return rc;
 }
 
-static const char * fallback_cache_location = "/var/tmp";
+#if WINDOWS
+
+#else
+    static const char * fallback_cache_location = "/var/tmp";
+    const char * get_fallback_cache_location( void )
+    {
+        return fallback_cache_location;
+    }
+#endif
 
 static rc_t wrap_in_cachetee3( KDirectory * dir,
                                const KFile **cfp,
@@ -480,82 +488,77 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
                                const char * url )
 {
     rc_t rc = 0;
-    if ( cps -> record_outer && cache_loc != NULL )
-        rc = wrap_in_logfile( dir, cfp, cache_loc, "%s.outer.rec", cps );
-    if ( rc == 0 )
-    {
-        const KFile * temp_file;
-        uint32_t cluster_factor = ( 1 << ( cps -> cluster_factor_bits - 1 ) );
-        size_t page_size = ( 1 << ( cps -> page_size_bits - 1 ));
-        size_t cache_amount = ( ( size_t )cps -> cache_amount_mb * 1024 * 1024 );
-        size_t ram_page_count = ( cache_amount + page_size - 1 ) / page_size;
+    const KFile * temp_file;
+    uint32_t cluster_factor = ( 1 << ( cps -> cluster_factor_bits - 1 ) );
+    size_t page_size = ( 1 << ( cps -> page_size_bits - 1 ));
+    size_t cache_amount = ( ( size_t )cps -> cache_amount_mb * 1024 * 1024 );
+    size_t ram_page_count = ( cache_amount + page_size - 1 ) / page_size;
 
-        if ( cps -> use_file_cache )
+    if ( cps -> use_file_cache )
+    {
+        char location[ 4096 ];
+        bool remove_on_close = false;
+        bool promote = cps -> promote;
+        location[ 0 ] = 0;
+        
+        KOutMsg( "use file-cache\n" );
+        if ( cps -> repo_cache[ 0 ] != 0 )
         {
-            char location[ 4096 ];
-            bool remove_on_close = false;
-            bool promote = cps -> promote;
-            location[ 0 ] = 0;
-            
-            KOutMsg( "use file-cache\n" );
-            if ( cps -> repo_cache[ 0 ] != 0 )
-            {
-                rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
-                                             "%s", cache_loc );
-            }
-            else if ( cps -> temp_cache[ 0 ] != 0 )
-            {
-                rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
-                                             "%s/%s.sra",
-                                             cps -> temp_cache,
-                                             extract_acc_from_url( url ) );
-                remove_on_close = true;
-                promote = false;
-            }
-            else
-            {
-                // fallback to hardcoded path ... 
-                rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
-                                             "%s/%s.sra",
-                                             fallback_cache_location,
-                                             extract_acc_from_url( url ) );
-                remove_on_close = true;
-                promote = false;                
-            }
-            KOutMsg( "cache location: '%s', rc = %R\n", location, rc );
-            if ( rc == 0 )
-                // check if location is writable...
-                rc = KDirectoryMakeKCacheTeeFile_v3 ( dir,
-                                                      &temp_file,
-                                                      *cfp,
-                                                      page_size,
-                                                      cluster_factor,
-                                                      ram_page_count,
-                                                      promote,
-                                                      remove_on_close,
-                                                      "%s", location );
+            /* we have a repository - location ( try promotion, do not remove-on-close */
+            rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
+                                         "%s", cache_loc );
+        }
+        else if ( cps -> temp_cache[ 0 ] != 0 )
+        {
+            /* we have user given temp cache - location ( do not try promotion, remove-on-close */
+            rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
+                                         "%s/%s.sra",
+                                         cps -> temp_cache,
+                                         extract_acc_from_url( url ) );
+            remove_on_close = true;
+            promote = false;
         }
         else
         {
-            KOutMsg( "use no file-cache\n" );
+            /* fallback to hardcoded path location ( do not try promotion, remove-on-close */
+            rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
+                                         "%s/%s.sra",
+                                         get_fallback_cache_location(),
+                                         extract_acc_from_url( url ) );
+            remove_on_close = true;
+            promote = false;                
+        }
+        KOutMsg( "cache location: '%s', rc = %R\n", location, rc );
+        if ( rc == 0 )
+            /* check if location is writable... */
             rc = KDirectoryMakeKCacheTeeFile_v3 ( dir,
                                                   &temp_file,
                                                   *cfp,
                                                   page_size,
                                                   cluster_factor,
                                                   ram_page_count,
-                                                  false,
-                                                  false,
-                                                  "" );
-        }
-        if ( rc == 0 )
-        {
-            KFileRelease ( * cfp );
-            * cfp = temp_file;
-            
-            if ( cps -> record_inner && cache_loc != NULL )
-                rc = wrap_in_logfile( dir, cfp, cache_loc, "%s.inner.rec", cps );
-        }
+                                                  promote,
+                                                  remove_on_close,
+                                                  "%s", location );
+    }
+    else
+    {
+        KOutMsg( "use no file-cache\n" );
+        rc = KDirectoryMakeKCacheTeeFile_v3 ( dir,
+                                              &temp_file,
+                                              *cfp,
+                                              page_size,
+                                              cluster_factor,
+                                              ram_page_count,
+                                              false,
+                                              false,
+                                              "" );
+    }
+
+    if ( rc == 0 )
+    {
+        KFileRelease ( * cfp );
+        * cfp = temp_file;
     }
     return rc;
 }

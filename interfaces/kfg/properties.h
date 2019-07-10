@@ -156,6 +156,11 @@ KFG_EXTERN rc_t CC KConfig_Set_User_Accept_Aws_Charges ( KConfig *self, bool acc
 KFG_EXTERN rc_t CC KConfig_Get_User_Accept_Gcp_Charges ( const KConfig *self, bool * accepts_charges );
 KFG_EXTERN rc_t CC KConfig_Set_User_Accept_Gcp_Charges ( KConfig *self, bool accepts_charges );
 
+/* reads /libs/cloud/report_instance_identity
+   returns false if not found  */
+KFG_EXTERN rc_t CC KConfig_Get_Report_Cloud_Instance_Identity ( const KConfig *self, bool * value );
+KFG_EXTERN rc_t CC KConfig_Set_Report_Cloud_Instance_Identity ( KConfig *self, bool value );
+
 /* reads /libs/temp_cache */
 KFG_EXTERN rc_t CC KConfig_Get_Temp_Cache ( const KConfig *self, char * buffer, size_t buffer_size, size_t * written );
 KFG_EXTERN rc_t CC KConfig_Set_Temp_Cache ( KConfig *self, const char * value );

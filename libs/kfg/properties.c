@@ -830,6 +830,22 @@ LIB_EXPORT rc_t CC KConfig_Set_User_Accept_Gcp_Charges ( KConfig *self, bool val
     return KConfigWriteBool( self, USER_ACCEPT_GCP_CHARGES, value );
 }
 
+#define REPORT_CLOUD_INSTANCE_IDENTITY "/libs/cloud/report_instance_identity"
+LIB_EXPORT rc_t CC KConfig_Get_Report_Cloud_Instance_Identity ( const KConfig *self, bool * value )
+{
+    rc_t rc = KConfigReadBool ( self, REPORT_CLOUD_INSTANCE_IDENTITY, value );
+    if ( GetRCState ( rc ) == rcNotFound)
+    {
+        * value = false;
+        rc = 0;
+    }
+    return rc;
+}
+LIB_EXPORT rc_t CC KConfig_Set_Report_Cloud_Instance_Identity ( KConfig *self, bool value )
+{
+    return KConfigWriteBool( self, REPORT_CLOUD_INSTANCE_IDENTITY, value );
+}
+
 #define TEMP_CACHE "/libs/temp_cache"
 LIB_EXPORT rc_t CC
 KConfig_Get_Temp_Cache( const KConfig *self,
