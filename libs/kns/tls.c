@@ -423,7 +423,7 @@ rc_t tlsg_init_certs ( KTLSGlobals *self, const KConfig * kfg )
         if ( rc2 == 0 )
         {
             size_t i;
-            for ( i = 0; i < sizeof root_ca_paths / sizeof root_ca_paths [ 0 ]; ++ i )
+            for ( ret = -1, i = 0; i < sizeof root_ca_paths / sizeof root_ca_paths [ 0 ]; ++ i )
             {
                 const char * path = root_ca_paths [ i ];
                 
