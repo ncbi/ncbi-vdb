@@ -506,9 +506,10 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
 
     if ( cps -> debug )
     {
-        KOutMsg( "cache.cluster-factor ... %ld bytes\n", cluster_factor );        
-        KOutMsg( "cache.page_size ........ %ld bytes\n", page_size );
-        KOutMsg( "cache.page_count ....... %ld\n", ram_page_count );        
+        KOutMsg( "cache.cluster-factor ... %d\n", cluster_factor );        
+        KOutMsg( "cache.page_size ........ %d bytes\n", page_size );
+        KOutMsg( "cache.amount ........... %d MB\n", cps -> cache_amount_mb );        
+        KOutMsg( "cache.page_count ....... %d\n", ram_page_count );        
     }
     
     if ( cps -> use_file_cache )
@@ -549,8 +550,12 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
         }
         
         if ( cps -> debug )
+        {
+            KOutMsg( "cache.remove-on-close ... %s\n", remove_on_close ? "Yes" : "No" );
+            KOutMsg( "cache.try-promote ....... %s\n", promote ? "Yes" : "No" );            
             KOutMsg( "cache location: '%s', rc = %R\n", location, rc );
-
+        }
+        
         if ( rc == 0 )
             /* check if location is writable... */
             rc = KDirectoryMakeKCacheTeeFile_v3 ( dir,
