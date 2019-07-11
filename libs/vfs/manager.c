@@ -614,7 +614,8 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
 {
     rc_t rc= KNSManagerMakeReliableHttpFile ( self -> kns, cfp, NULL, 0x01010000, high_reliability, 
                                               ceRequired || getenv("VDB_REMOTE_NEED_CE") != NULL, 
-                                              payRequired || getenv("VDB_REMOTE_NEED_PMT"), url );
+                                              payRequired || getenv("VDB_REMOTE_NEED_PMT") != NULL, 
+                                              url );
 
     /* in case we are not able to open the remote-file : return with error-code */
     if ( rc == 0 )
