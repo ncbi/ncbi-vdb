@@ -3491,7 +3491,24 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
     const String * hostname = & cself->url_block.host;
     CloudProviderId cpId = cloud_provider_none;
 
+    CloudMgr * cloudMgr = cself->http->mgr->cloud;
+
     String stor31;
+
+    String aws;
+    String gcp;
+    CONST_STRING(&aws, "169.254.169.254");
+    CONST_STRING(&gcp, "metadata.google.internal");
+
+    if ( StringEqual(hostname, &aws) == 0 || StringEqual(hostname, &gcp) == 0)
+        return 0;
+
+    if ( cloudMgr == NULL )
+        rc = CloudMgrMake ( & cloudMgr, NULL, cself->http->mgr );
+
+    if ( rc != 0 )
+        return rc;
+
     CONST_STRING(&stor31, "s3-stor31.st-va.ncbi.nlm.nih.gov");
     skip = hostname->size - stor31.size;
     if (hostname->size >= stor31.size &&
@@ -3514,6 +3531,9 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
         }
     }
 
+    if ( cpId == cloud_provider_none ) 
+        CloudMgrCurrentProvider ( cloudMgr, & cpId );
+
     {
         const char * e = getenv("NCBI_VDB_PROVIDER");
         if (e != NULL && e[0] != '\0') {
@@ -3528,12 +3548,8 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
 
     if (cself->ceRequired || cself->payRequired)
     {   /* add cloud authentication informantion if required */
-        CloudMgr * cloudMgr = cself->http->mgr->cloud;
-        if ( cloudMgr == NULL )
-        {   
-            rc = CloudMgrMake ( & cloudMgr, NULL, cself->http->mgr );
-            if ( rc == 0 )
-            {
+        if ( rc == 0 )
+        {
                 /* create a cloud object based on the target URL */
                 Cloud * cloud ;
                 KClientHttpRequest * self = (KClientHttpRequest *)cself;
@@ -3547,7 +3563,6 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
                     CloudRelease ( cloud );
                 }
                 CloudMgrRelease ( cloudMgr );
-            }
         }
     }
     return rc;
