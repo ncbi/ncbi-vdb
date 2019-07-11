@@ -343,11 +343,11 @@ LIB_EXPORT rc_t CC KConfig_Get_User_Public_Enabled( const KConfig *self, bool * 
 LIB_EXPORT rc_t CC KConfig_Set_User_Public_Enabled( KConfig *self, bool enabled )
 {   return KConfig_Set_Repository_State( self, enabled, true, PATH_REPOSITORY_USER_PUBLIC_DISABLED ); }
 
-#define PATH_REPOSITORY_USER_PUBLIC_CACHE_ENABLED "/repository/user/main/public/cache-enabled"
+#define PATH_REPOSITORY_USER_PUBLIC_CACHE_DISABLED "/repository/user/main/public/cache-disabled"
 LIB_EXPORT rc_t CC KConfig_Get_User_Public_Cached( const KConfig *self, bool * enabled )
-{   return KConfig_Get_Repository_State( self, enabled, false, false, PATH_REPOSITORY_USER_PUBLIC_CACHE_ENABLED ); }
+{   return KConfig_Get_Repository_State( self, enabled, true, true, PATH_REPOSITORY_USER_PUBLIC_CACHE_DISABLED ); }
 LIB_EXPORT rc_t CC KConfig_Set_User_Public_Cached( KConfig *self, bool enabled )
-{   return KConfig_Set_Repository_State( self, enabled, false, PATH_REPOSITORY_USER_PUBLIC_CACHE_ENABLED ); }
+{   return KConfig_Set_Repository_State( self, enabled, true, PATH_REPOSITORY_USER_PUBLIC_CACHE_DISABLED ); }
 
 #define PATH_REPOSITORY_USER_PROTECTED_CACHE_ENABLED "/repository/user/protected/%s/cache-enabled"
 LIB_EXPORT rc_t CC KConfig_Get_User_Protected_Cached( const KConfig *self, bool * enabled, const char * name )
