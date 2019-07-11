@@ -3514,34 +3514,39 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
         }
     }
 
+    {
+        const char * e = getenv("NCBI_VDB_PROVIDER");
+        if (e != NULL && e[0] != '\0') {
+            CloudProviderId i = cloud_provider_none;
+            i = atoi(e);
+            if (i != cloud_provider_none)
+                cpId = i;
+        }
+    }
+
     /*TODO: GCP */
 
-    if ( cpId != cloud_provider_none )
+    if (cself->ceRequired || cself->payRequired)
     {   /* add cloud authentication informantion if required */
         CloudMgr * cloudMgr = cself->http->mgr->cloud;
         if ( cloudMgr == NULL )
         {   
-            KConfig * cfg;
-            rc = KConfigMake ( & cfg, NULL );
+            rc = CloudMgrMake ( & cloudMgr, NULL, cself->http->mgr );
             if ( rc == 0 )
             {
-                rc = CloudMgrMake ( & cloudMgr, cfg, cself->http->mgr );
-                if ( rc == 0 )
-                {
-                    /* create a cloud object based on the target URL */
-                    Cloud * cloud ;
-                    KClientHttpRequest * self = (KClientHttpRequest *)cself;
-                    rc = CloudMgrMakeCloud ( cloudMgr, & cloud, cpId );
-                    if ( rc == 0 )
-                    {
-                        if ( rc == 0 && cself ->payRequired )
-                        {
-                            rc = CloudAddUserPaysCredentials( cloud, self, method );
-                        }
-                        CloudRelease ( cloud );
-                    }
-                    CloudMgrRelease ( cloudMgr );
+                /* create a cloud object based on the target URL */
+                Cloud * cloud ;
+                KClientHttpRequest * self = (KClientHttpRequest *)cself;
+                rc = CloudMgrMakeCloud ( cloudMgr, & cloud, cpId );
+                if (rc == 0) {
+                    if (cself->payRequired)
+                        rc = CloudAddUserPaysCredentials(cloud, self, method);
+                    else if (cself->ceRequired)
+                        rc = CloudAddComputeEnvironmentTokenForSigner(
+                            cloud, self);
+                    CloudRelease ( cloud );
                 }
+                CloudMgrRelease ( cloudMgr );
             }
         }
     }
@@ -3578,10 +3583,12 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
     CONST_STRING ( &user_agent_string, "User-Agent" );
     CONST_STRING ( &accept_string, "Accept" );
 
-    rc = FormatForCloud ( self, method );
-    if ( rc != 0 )
-    {
-        return rc;
+    assert(method);
+    if (method[0] != 'P') {
+        /* POST is formatted for cloud inside of KClientHttpRequestPOST_Int */
+        rc = FormatForCloud(self, method);
+        if (rc != 0)
+            return rc;
     }
 
     /* start building the buffer that will be sent
@@ -3998,7 +4005,9 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
     char * expiration = NULL;
     const char * method = "POST";
 
-    /* TBD comment - add debugging test to ensure "Content-Length" header not present */
+    rc = FormatForCloud(self, method);
+    if (rc != 0)
+        return rc;
 
     /* fix headers for POST params */
     if ( self -> body . elem_count > 1 )
