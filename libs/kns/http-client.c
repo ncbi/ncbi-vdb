@@ -4112,7 +4112,25 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
         case 307: /* "moved temporarily" */
             method = "GET";
             rc = KDataBufferResize ( & self -> body , 0 ); /* drop POST parameters */
-            break;
+            if (rc == 0 )
+            {
+                rc = KClientHttpReplaceHeader ( & self -> hdrs, "Content-Length", "0" );
+                if ( rc == 0 )
+                {
+                   String Content_Type;
+                   BSTNode *node;
+
+                   CONST_STRING ( & Content_Type, "Content-Type" );
+
+                   node = BSTreeFind ( & self -> hdrs, & Content_Type, KHttpHeaderCmp );
+                   if ( node != NULL )
+                   {
+                      BSTreeUnlink(&self->hdrs, node);
+                      /*TODO: free (node) ? */
+                   }
+                }
+             }
+             break;
 
         case 505: /* HTTP Version Not Supported */
             if ( self -> http -> vers > 0x01000000 )
