@@ -552,15 +552,15 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
                 {
                     /* we have user given temp cache - location ( do not try promotion, remove-on-close ) */
                     rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
-                                                 "%s/%S.sra", cps -> temp_cache, &id );
+                                                 "%s/%s.sra", cps -> temp_cache, id . addr );
                 }
                 else
                 {
                     /* fallback to hardcoded path location ( do not try promotion, remove-on-close */
                     rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
-                                                 "%s/%S.sra",
+                                                 "%s/%s.sra",
                                                  get_fallback_cache_location(),
-                                                 &id );
+                                                 id . addr );
                 }
             }
             
