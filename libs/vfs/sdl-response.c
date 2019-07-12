@@ -200,8 +200,8 @@ rc_t ItemAddFormat(Item * self, const char * cType, const Data * dad,
     struct Locations ** added);
 
 /* We are scanning Item(Run) to find all its Elm-s(Files) -sra, vdbcache, ??? */
-static
-rc_t ItemAddElmsSdl(Item * self, const KJsonObject * node, const Data * dad)
+static rc_t ItemAddElmsSdl(Item * self,
+    const KJsonObject * node, const Data * dad)
 {
     rc_t rc = 0;
 
@@ -346,7 +346,8 @@ rc_t ItemAddElmsSdl(Item * self, const KJsonObject * node, const Data * dad)
 
 /* We are inside or above of a Container
    and are looking for Items(runs, gdGaP files) to add */
-static rc_t Response4AddItems(Response4 * self, const KJsonObject * node)
+static
+rc_t Response4AddItems(Response4 * self, const KJsonObject * node)
 {
     rc_t rc = 0;
 
