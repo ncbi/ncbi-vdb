@@ -121,7 +121,8 @@ static rc_t DataUpdate(const Data * self,
 
     if ( ! next -> payRequired ) {
         name = "paymentRequired";
-        BulSet(&next->payRequired, KJsonObjectGetMember(node, name), name);
+        BulSet(&next->payRequired, KJsonObjectGetMember(node, name), name,
+            path);
     }
     name = "service";
     StrSet(&next->srv, KJsonObjectGetMember(node, name), name, path);
