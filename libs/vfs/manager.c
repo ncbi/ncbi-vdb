@@ -229,7 +229,6 @@ typedef struct caching_params
     uint32_t page_size_bits;      /* for cachetee_v3 dflt = 15, 1 << 15 = 64k */
     uint32_t cache_amount_mb;     /* for cachetee_v3 dlft = 32 MB */
     
-    char repo_cache[ 4096 ];
     char temp_cache[ 4096 ];
     
     bool use_file_cache;    /* is caching turned on */
@@ -265,7 +264,6 @@ static void get_caching_params( caching_params * params,
     params -> cluster_factor_bits = DEFAULT_CLUSTER_FACTOR_BITS;
     params -> page_size_bits = DEFAULT_PAGE_SIZE_BITS;
     params -> cache_amount_mb = DEFAULT_CACHE_AMOUNT_MB;
-    params -> repo_cache[ 0 ] = 0;
     params -> temp_cache[ 0 ] = 0;
     params -> use_file_cache = false;
     params -> use_cwd = false;
@@ -310,10 +308,6 @@ static void get_caching_params( caching_params * params,
         }
         else
             params -> cache_amount_mb = DEFAULT_CACHE_AMOUNT_MB;
-        
-        rc = KConfig_Get_User_Public_Cache_Location( cfg, params -> repo_cache, sizeof( params -> repo_cache ), &written );
-        if ( rc != 0 )
-            params -> repo_cache[ 0 ] = 0;
         
         rc = KConfig_Get_Temp_Cache( cfg, params -> temp_cache, sizeof( params -> temp_cache ), &written );
         if ( rc != 0 )
@@ -503,7 +497,7 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
     size_t page_size = ( 1 << ( cps -> page_size_bits - 1 ));
     size_t cache_amount = ( ( size_t )cps -> cache_amount_mb * 1024 * 1024 );
     size_t ram_page_count = ( cache_amount + page_size - 1 ) / page_size;
-    bool ram_only = false;
+    bool ram_only = true;
 
     if ( cps -> debug )
     {
@@ -521,7 +515,6 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
         {
             if ( cps -> debug )
                 KOutMsg( "VPathGetId() -> %R\n", rc );
-            ram_only = true;
         }
         else
         {
@@ -533,15 +526,10 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
             if ( cps -> debug )
                 KOutMsg( "use file-cache ( id = '%S' )\n", &id );
 
-            if ( cps -> repo_cache[ 0 ] != 0 && cache_loc != NULL )
+            if ( cache_loc != NULL )
             {
-                if ( cache_loc[ 0 ] == 0 )
-                    /* we have a repository - location ( try promotion, do not remove-on-close */
-                    rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
-                                                 "%s", cps -> repo_cache );
-                else
-                    rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
-                                                 "%s", cache_loc );
+                rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
+                                             "%s", cache_loc );
             }
             else
             {
@@ -582,12 +570,9 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
                                                       promote,
                                                       remove_on_close,
                                                       "%s", location );
-            if ( rc != 0 )
-                ram_only = true;
+            ram_only = ( rc != 0 );
         }
     }
-    else
-        ram_only = true;
     
     if ( ram_only )
     {
