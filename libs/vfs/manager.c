@@ -485,6 +485,35 @@ static rc_t wrap_in_rr_cache( KDirectory * dir,
     }
 #endif
 
+
+static const String * make_id( const VPath * path )
+{
+    const String * res = NULL;
+    
+    /* first try to extract a id from the path */
+    String path_id = { 0, 0, 0 };
+    rc_t rc = VPathGetId ( path, &path_id );
+    if ( rc == 0 && path_id . len > 0 )
+    {
+        rc = StringCopy ( &res, &path_id );
+    }
+    /* if we have no id now, as a last resort use a timestamp */
+    if ( res == NULL )
+    {
+        KTime_t t = KTimeStamp();
+        char buffer[ 32 ];
+        size_t num_writ;
+        rc = string_printf ( buffer, sizeof buffer, &num_writ, "t_%lu", t );
+        if ( rc == 0 )
+        {
+            String S;
+            StringInitCString( &S, buffer );
+            rc = StringCopy ( &res, &path_id );    
+        }
+    }
+    return res;
+}
+
 static rc_t wrap_in_cachetee3( KDirectory * dir,
                                const KFile **cfp,
                                const char * cache_loc,
@@ -509,29 +538,23 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
     
     if ( cps -> use_file_cache )
     {
-        String id = { 0, 0, 0 };
-        rc = VPathGetId ( path, &id );
-        if ( rc != 0 )
+        char location[ 4096 ];
+        location[ 0 ] = 0;
+        bool remove_on_close = false;
+        bool promote = cps -> promote;
+    
+        if ( cps -> debug )
+            KOutMsg( "use file-cache\n" );
+
+        if ( cache_loc != NULL )
         {
-            if ( cps -> debug )
-                KOutMsg( "VPathGetId() -> %R\n", rc );
+            rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
+                                         "%s", cache_loc );
         }
         else
         {
-            char location[ 4096 ];
-            location[ 0 ] = 0;
-            bool remove_on_close = false;
-            bool promote = cps -> promote;
-        
-            if ( cps -> debug )
-                KOutMsg( "use file-cache ( id = '%S' )\n", &id );
-
-            if ( cache_loc != NULL )
-            {
-                rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
-                                             "%s", cache_loc );
-            }
-            else
+            const String * id = make_id( path );
+            if ( id != NULL )
             {
                 remove_on_close = true;
                 promote = false;
@@ -540,7 +563,7 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
                 {
                     /* we have user given temp cache - location ( do not try promotion, remove-on-close ) */
                     rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
-                                                 "%s/%s.sra", cps -> temp_cache, id . addr );
+                                                 "%s/%s.sra", cps -> temp_cache, id -> addr );
                 }
                 else
                 {
@@ -548,30 +571,33 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
                     rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
                                                  "%s/%s.sra",
                                                  get_fallback_cache_location(),
-                                                 id . addr );
+                                                 id -> addr );
                 }
+                StringWhack ( id );
             }
-            
-            if ( cps -> debug )
-            {
-                KOutMsg( "cache.remove-on-close ... %s\n", remove_on_close ? "Yes" : "No" );
-                KOutMsg( "cache.try-promote ....... %s\n", promote ? "Yes" : "No" );            
-                KOutMsg( "cache location: '%s', rc = %R\n", location, rc );
-            }
-            
-            if ( rc == 0 )
-                /* check if location is writable... */
-                rc = KDirectoryMakeKCacheTeeFile_v3 ( dir,
-                                                      &temp_file,
-                                                      *cfp,
-                                                      page_size,
-                                                      cluster_factor,
-                                                      ram_page_count,
-                                                      promote,
-                                                      remove_on_close,
-                                                      "%s", location );
-            ram_only = ( rc != 0 );
+            else
+                rc = SILENT_RC( rcVFS, rcPath, rcReading, rcFormat, rcInvalid );
         }
+        
+        if ( cps -> debug )
+        {
+            KOutMsg( "cache.remove-on-close ... %s\n", remove_on_close ? "Yes" : "No" );
+            KOutMsg( "cache.try-promote ....... %s\n", promote ? "Yes" : "No" );            
+            KOutMsg( "cache location: '%s', rc = %R\n", location, rc );
+        }
+        
+        if ( rc == 0 )
+            /* check if location is writable... */
+            rc = KDirectoryMakeKCacheTeeFile_v3 ( dir,
+                                                  &temp_file,
+                                                  *cfp,
+                                                  page_size,
+                                                  cluster_factor,
+                                                  ram_page_count,
+                                                  promote,
+                                                  remove_on_close,
+                                                  "%s", location );
+        ram_only = ( rc != 0 );
     }
     
     if ( ram_only )
@@ -643,33 +669,33 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
             }
             else
             {
-                String id = { 0, 0, 0 };
-                rc = VPathGetId ( path, &id );
-                if ( rc == 0 )
+                if ( cache_location == NULL )
                 {
-                    if ( cache_location == NULL )
+                    const String * id = make_id( path );
+                    if ( id != NULL )
                     {
                         /* the user has turned off caching... ( we should not make a cache-tee )*/
                         switch( cps . version )
                         {
                             case cachetee   : ;  /* fall-through into rr-cache !!! */
                             case cachetee_2 : ;  /* fall-through into rr-cache !!! */
-                            case rrcache    : rc = wrap_in_rr_cache( self -> cwd, cfp, id . addr, &cps ); break;
-                            case logging    : rc = wrap_in_logfile( self -> cwd, cfp, id . addr, "%s.rec", &cps ); break;
+                            case rrcache    : rc = wrap_in_rr_cache( self -> cwd, cfp, id -> addr, &cps ); break;
+                            case logging    : rc = wrap_in_logfile( self -> cwd, cfp, id -> addr, "%s.rec", &cps ); break;
                             case cachetee_3 : break; /* in common path above */
                         }
+                        StringWhack ( id );
                     }
-                    else
+                }
+                else
+                {
+                    /* the user has turned on caching... */
+                    switch( cps . version )
                     {
-                        /* the user has turned on caching... */
-                        switch( cps . version )
-                        {
-                            case cachetee   : rc = wrap_in_cachetee( self -> cwd, cfp, cache_location, &cps ); break;
-                            case cachetee_2 : rc = wrap_in_cachetee2( self -> cwd, cfp, cache_location, &cps ); break;
-                            case rrcache    : rc = wrap_in_rr_cache( self -> cwd, cfp, cache_location, &cps ); break;
-                            case logging    : rc = wrap_in_logfile( self -> cwd, cfp, cache_location, "%s.rec", &cps ); break;
-                            case cachetee_3 : break; /* in common path above */
-                        }
+                        case cachetee   : rc = wrap_in_cachetee( self -> cwd, cfp, cache_location, &cps ); break;
+                        case cachetee_2 : rc = wrap_in_cachetee2( self -> cwd, cfp, cache_location, &cps ); break;
+                        case rrcache    : rc = wrap_in_rr_cache( self -> cwd, cfp, cache_location, &cps ); break;
+                        case logging    : rc = wrap_in_logfile( self -> cwd, cfp, cache_location, "%s.rec", &cps ); break;
+                        case cachetee_3 : break; /* in common path above */
                     }
                 }
             }
