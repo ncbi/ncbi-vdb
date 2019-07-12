@@ -79,23 +79,27 @@ rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_to
 
     char location[4096] = "";
 
-    assert(self);
+    const char * env = getenv("VDB_CE_TOKEN");
 
-    rc = KNSManager_Read(self->dad.kns, document, sizeof document,
-        "http://169.254.169.254/latest/dynamic/instance-identity/document",
-        NULL, NULL);
+    if (env == NULL) {
+        assert(self);
 
-    if (rc == 0)
-        rc = KNSManager_Read(self->dad.kns, pkcs7, sizeof pkcs7,
-            "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7",
+        rc = KNSManager_Read(self->dad.kns, document, sizeof document,
+            "http://169.254.169.254/latest/dynamic/instance-identity/document",
             NULL, NULL);
 
-    if (rc == 0)
-        rc = MakeLocation(pkcs7, document, location, sizeof location);
+        if (rc == 0)
+            rc = KNSManager_Read(self->dad.kns, pkcs7, sizeof pkcs7,
+                "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7",
+                NULL, NULL);
+
+        if (rc == 0)
+            rc = MakeLocation(pkcs7, document, location, sizeof location);
+    }
 
     if (rc == 0) {
         String s;
-        StringInitCString(&s, location);
+        StringInitCString(&s, env != NULL ? env : location);
         rc = StringCopy(ce_token, &s);
     }
 
