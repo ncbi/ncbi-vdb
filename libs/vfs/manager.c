@@ -515,8 +515,8 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
     
     if ( cps -> use_file_cache )
     {
-        String * id = NULL;
-        rc = VPathGetId ( path, id );
+        String id = { 0, 0, 0 };
+        rc = VPathGetId ( path, &id );
         if ( rc != 0 )
         {
             if ( cps -> debug )
@@ -531,7 +531,7 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
             bool promote = cps -> promote;
         
             if ( cps -> debug )
-                KOutMsg( "use file-cache ( id = '%S' )\n", id );
+                KOutMsg( "use file-cache ( id = '%S' )\n", &id );
 
             if ( cps -> repo_cache[ 0 ] != 0 && cache_loc != NULL )
             {
@@ -548,7 +548,7 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
                 {
                     /* we have user given temp cache - location ( do not try promotion, remove-on-close ) */
                     rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
-                                                 "%s/%S.sra", cps -> temp_cache, id );
+                                                 "%s/%S.sra", cps -> temp_cache, &id );
                 }
                 else
                 {
@@ -556,7 +556,7 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
                     rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
                                                  "%s/%S.sra",
                                                  get_fallback_cache_location(),
-                                                 id );
+                                                 &id );
                 }
             }
             
@@ -654,8 +654,8 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
             }
             else
             {
-                String * id = NULL;
-                rc = VPathGetId ( path, id );
+                String id = { 0, 0, 0 };
+                rc = VPathGetId ( path, &id );
                 if ( rc == 0 )
                 {
                     if ( cache_location == NULL )
@@ -665,8 +665,8 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
                         {
                             case cachetee   : ;  /* fall-through into rr-cache !!! */
                             case cachetee_2 : ;  /* fall-through into rr-cache !!! */
-                            case rrcache    : rc = wrap_in_rr_cache( self -> cwd, cfp, id -> addr, &cps ); break;
-                            case logging    : rc = wrap_in_logfile( self -> cwd, cfp, id -> addr, "%s.rec", &cps ); break;
+                            case rrcache    : rc = wrap_in_rr_cache( self -> cwd, cfp, id . addr, &cps ); break;
+                            case logging    : rc = wrap_in_logfile( self -> cwd, cfp, id . addr, "%s.rec", &cps ); break;
                             case cachetee_3 : break; /* in common path above */
                         }
                     }
