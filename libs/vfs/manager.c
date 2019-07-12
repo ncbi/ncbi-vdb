@@ -491,6 +491,13 @@ static rc_t wrap_in_rr_cache( KDirectory * dir,
     }
 #endif
 
+static rc_t make_temp_filename( char * buffer, size_t buffer_size )
+{
+    KTimeMs_t t = KTimeMsStamp();
+    size_t num_writ;
+    return string_printf ( buffer, buffer_size, &num_writ, "tmp_%lu", t );
+}
+
 static rc_t wrap_in_cachetee3( KDirectory * dir,
                                const KFile **cfp,
                                const char * cache_loc,
@@ -528,25 +535,30 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
             rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
                                          "%s", cache_loc );
         }
-        else if ( cps -> temp_cache[ 0 ] != 0 )
-        {
-            /* we have user given temp cache - location ( do not try promotion, remove-on-close */
-            rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
-                                         "%s/%s.sra",
-                                         cps -> temp_cache,
-                                         extract_acc_from_url( url ) );
-            remove_on_close = true;
-            promote = false;
-        }
         else
         {
-            /* fallback to hardcoded path location ( do not try promotion, remove-on-close */
-            rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
-                                         "%s/%s.sra",
-                                         get_fallback_cache_location(),
-                                         extract_acc_from_url( url ) );
+            char temp_name[ 64 ];
             remove_on_close = true;
-            promote = false;                
+            promote = false;
+            
+            rc = make_temp_filename( temp_name, sizeof temp_name );
+            if ( rc == 0 )
+            {
+                if ( cps -> temp_cache[ 0 ] != 0 )
+                {
+                    /* we have user given temp cache - location ( do not try promotion, remove-on-close ) */
+                    rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
+                                                 "%s/%s.sra", cps -> temp_cache, temp_name );
+                }
+                else
+                {
+                    /* fallback to hardcoded path location ( do not try promotion, remove-on-close */
+                    rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
+                                                 "%s/%s.sra",
+                                                 get_fallback_cache_location(),
+                                                 temp_name );
+                }
+            }
         }
         
         if ( cps -> debug )
