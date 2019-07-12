@@ -529,7 +529,7 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
         if ( cps -> debug )
             KOutMsg( "use file-cache\n" );
 
-        if ( cps -> repo_cache[ 0 ] != 0 )
+        if ( cps -> repo_cache[ 0 ] != 0 && cache_loc != NULL )
         {
             /* we have a repository - location ( try promotion, do not remove-on-close */
             rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
