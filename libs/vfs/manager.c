@@ -518,7 +518,11 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
         String * id = NULL;
         rc = VPathGetId ( path, id );
         if ( rc != 0 )
+        {
+            if ( cps -> debug )
+                KOutMsg( "VPathGetId() -> %R\n", rc );
             ram_only = true;
+        }
         else
         {
             char location[ 4096 ];
@@ -527,7 +531,7 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
             bool promote = cps -> promote;
         
             if ( cps -> debug )
-                KOutMsg( "use file-cache\n" );
+                KOutMsg( "use file-cache ( id = '%S' )\n", id );
 
             if ( cps -> repo_cache[ 0 ] != 0 && cache_loc != NULL )
             {
