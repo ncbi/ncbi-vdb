@@ -535,9 +535,13 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
 
             if ( cps -> repo_cache[ 0 ] != 0 && cache_loc != NULL )
             {
-                /* we have a repository - location ( try promotion, do not remove-on-close */
-                rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
-                                             "%s", cache_loc );
+                if ( cache_loc[ 0 ] == 0 )
+                    /* we have a repository - location ( try promotion, do not remove-on-close */
+                    rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
+                                                 "%s", cps -> repo_cache );
+                else
+                    rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
+                                                 "%s", cache_loc );
             }
             else
             {
