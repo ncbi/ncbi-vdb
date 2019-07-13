@@ -217,6 +217,9 @@ size_t CC KCacheTeeChunkReaderBufferSize ( const KCacheTeeChunkReader * self )
 static
 rc_t CC KCacheTeeChunkReaderNext ( KCacheTeeChunkReader * self, void ** buf, size_t * size )
 {
+    if ( self -> ctf -> quitting )
+        return RC ( rcFS, rcBuffer, rcAllocating, rcTransfer, rcCanceled );
+
     STATUS ( STAT_PRG, "BG: %s - allocating page buffer of %zu bytes\n", __func__, self -> ctf -> page_size );
     * buf = malloc ( * size = self -> ctf -> page_size );
     if ( * buf == NULL )
