@@ -720,6 +720,7 @@ rc_t CC KTLSStreamWhack ( KTLSStream *self )
     self -> mgr = NULL;
 
     /* done */
+    KStreamWhack ( & self -> dad, "KTLSStream" );
     free ( self );
     return 0;
 }
