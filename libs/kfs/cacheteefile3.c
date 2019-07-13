@@ -1325,7 +1325,12 @@ rc_t KCacheTeeFileBGLoop ( KCacheTeeFile_v3 * self )
             if ( dmsg == NULL )
             {
                 struct timeout_t tm;
-                /* TBD - use a 100mS timeout */
+#if _DEBUGGING
+memset ( & tm, -1, sizeof tm );
+#endif
+                TimeoutInit ( & tm, 100 );
+                assert ( tm . mS == 100 );
+                assert ( tm . prepared == false );
 
                 STATUS ( STAT_PRG, "BG: %s - waiting on fg signal\n", __func__ );
                 KConditionTimedWait ( self -> bgcond, self -> qlock, & tm );
