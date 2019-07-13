@@ -917,7 +917,6 @@ rc_t KHttpFileReadResponseInChunks ( KStream * response,
 
     * num_read = total;
 
-    KStreamRelease ( response );
     return ( total == 0 ) ? rc : 0;
 }
 
