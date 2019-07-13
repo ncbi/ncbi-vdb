@@ -262,7 +262,7 @@ LIB_EXPORT rc_t CC KDirectoryVCreateLockFile ( KDirectory *self,
         else
         {
             char full [ 4096 ];
-            rc = KDirectoryVResolvePath ( self, false, full, sizeof full, path, args );
+            rc = KDirectoryVResolvePath ( self, true, full, sizeof full, path, args );
             if ( rc == 0 )
             {
                 KFile *lock_file;
