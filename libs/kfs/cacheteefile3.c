@@ -51,6 +51,11 @@ struct KCacheTeeChunkReader;
 #include <kfs/chunk-reader.h>
 #include <kfs/lockfile.h>
 
+/* for Windows */
+#include <kproc/task.h>
+#include <kproc/procmgr.h>
+#include <kfs/remove-file-task.h>
+
 #include <arch-impl.h>
 
 #define DEFAULT_PAGE_SIZE ( 32U * 1024U )
@@ -112,10 +117,12 @@ struct KCacheTeeFileLMRUPage
 struct KCacheTeeFile_v3
 {
     KFile_v1 dad;                   /* constant      */
+    KTaskTicket rm_file_tkt;        /* constant      */
     uint64_t source_size;           /* constant      */
     const KFile * source;           /* bg thread use */
     KChunkReader * chunks;          /* bg thread use */
     KDirectory * dir;               /* fg thread use */
+    KProcMgr * procmgr;             /* fg thread use */
     KFile * cache_file;             /* shared use    */
     KVector * ram_cache;            /* shared use    */
     KVector * ram_cache_mru_idx;    /* shared use    */
@@ -638,6 +645,13 @@ rc_t CC KCacheTeeFileDestroy ( KCacheTeeFile_v3 *self )
     {
         STATUS ( STAT_PRG, "%s - removing cache-file on exit\n", __func__ );        
         KDirectoryRemove ( self -> dir, false, "%s.cache", self -> path );
+    }
+
+    /* remove any file removal task */
+    if ( self -> procmgr != NULL )
+    {
+        KProcMgrRemoveCleanupTask ( self -> procmgr, & self -> rm_file_tkt );
+        KProcMgrRelease ( self -> procmgr );
     }
     
     /* release directory */
@@ -1613,9 +1627,54 @@ rc_t KCacheTeeFileInitNew ( KCacheTeeFile_v3 * self )
     bool unlinked = false;
     uint64_t calculated_eof;
 
-#if ! WINDOWS
     if ( self -> remove_on_close )
     {
+#if WINDOWS
+        KProcMgr * procmgr;
+        rc = KProcMgrMakeSingleton ( & procmgr );
+        if ( rc != 0 )
+        {
+            PLOGERR ( klogSys, ( klogWarn, rc, "$(func) - failed to access process manager for '%s.cache'. Cannot guarantee cache cleanup."
+                                 , "func=%s,path=%s"
+                                 , __func__
+                                 , self -> path
+                          ) );
+        }
+        else
+        {
+            KTask * t;
+            rc = KRemoveFileTaskMake ( & t, self -> dir, "%s", self -> path );
+            if ( rc != 0 )
+            {
+                PLOGERR ( klogSys, ( klogWarn, rc, "$(func) - failed to create cleanup task for '%s.cache'. Cannot guarantee cache cleanup."
+                                     , "func=%s,path=%s"
+                                     , __func__
+                                     , self -> path
+                              ) );
+            }
+            else
+            {
+                rc = KProcMgrAddCleanupTask ( procmgr, & self -> rm_file_tkt, t );
+                if ( rc != 0 )
+                {
+                    PLOGERR ( klogSys, ( klogWarn, rc, "$(func) - failed to set cleanup task for '%s.cache'. Cannot guarantee cache cleanup."
+                                         , "func=%s,path=%s"
+                                         , __func__
+                                         , self -> path
+                                  ) );
+                }
+                else
+                {
+                    self -> procmgr = procmgr;
+                    procmgr = NULL;
+                }
+
+                KTaskRelease ( t );
+            }
+
+            KProcMgrRelease ( procmgr );
+        }
+#else
         STATUS ( STAT_PRG, "%s - removing cache-file '%s.cache' after creation\n", __func__, self -> path );        
         rc = KDirectoryRemove ( self -> dir, false, "%s.cache", self -> path );
         if ( rc != 0 )
@@ -1631,8 +1690,8 @@ rc_t KCacheTeeFileInitNew ( KCacheTeeFile_v3 * self )
             self -> remove_on_close = false;
             unlinked = true;
         }
-    }
 #endif
+    }
 
     STATUS ( STAT_PRG, "%s - initializing new cache file '%s.cache'\n", __func__, self -> path );
 
