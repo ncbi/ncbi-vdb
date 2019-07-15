@@ -38,7 +38,7 @@
  *  'c' - release candidate
  *  'r' - final
  */
-#define RELEASE_TYPE 'd'
+#define RELEASE_TYPE 'a'
 
 /* Revision of Version of current SRA Toolkit Release */
 #define RELEASE_REVISION 0
