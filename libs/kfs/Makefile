@@ -119,6 +119,7 @@ KFS_CMN = \
 	quickmount \
 	report \
 	lockfile \
+	remove-file-task \
 	syslockfile \
 	cacheteefile \
 	cacheteefile2 \
