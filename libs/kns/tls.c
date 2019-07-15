@@ -443,6 +443,7 @@ rc_t tlsg_init_certs ( KTLSGlobals *self, const KConfig * kfg )
                 if ( ret >= 0 )
                     cert_file_loaded = true;                
             }
+            KDirectoryRelease ( n_dir );
         }
     }
 #endif        
@@ -720,6 +721,7 @@ rc_t CC KTLSStreamWhack ( KTLSStream *self )
     self -> mgr = NULL;
 
     /* done */
+    KStreamWhack ( & self -> dad, "KTLSStream" );
     free ( self );
     return 0;
 }
