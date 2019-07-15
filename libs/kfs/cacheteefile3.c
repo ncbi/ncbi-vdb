@@ -1610,7 +1610,29 @@ static
 rc_t KCacheTeeFileInitNew ( KCacheTeeFile_v3 * self )
 {
     rc_t rc;
+    bool unlinked = false;
     uint64_t calculated_eof;
+
+#if ! WINDOWS
+    if ( self -> remove_on_close )
+    {
+        STATUS ( STAT_PRG, "%s - removing cache-file '%s.cache' after creation\n", __func__, self -> path );        
+        rc = KDirectoryRemove ( self -> dir, false, "%s.cache", self -> path );
+        if ( rc != 0 )
+        {
+            PLOGERR ( klogSys, ( klogWarn, rc, "$(func) - failed to unlink '$(path).cache' after creation. Will try again on close."
+                                 , "func=%s,path=%s"
+                                 , __func__
+                                 , self -> path
+                          ) );
+        }
+        else
+        {
+            self -> remove_on_close = false;
+            unlinked = true;
+        }
+    }
+#endif
 
     STATUS ( STAT_PRG, "%s - initializing new cache file '%s.cache'\n", __func__, self -> path );
 
@@ -1642,6 +1664,12 @@ rc_t KCacheTeeFileInitNew ( KCacheTeeFile_v3 * self )
                                  , self -> path
                       ) );
         }
+    }
+
+    if ( rc != 0 && ! unlinked && ! self -> remove_on_close )
+    {
+        STATUS ( STAT_QA, "%s - marking cache-file '%s.cache' for removal\n", __func__, self -> path );        
+        self -> remove_on_close = true;
     }
 
     return rc;
