@@ -531,9 +531,45 @@ static bool cgiNotSupportsJson(const char * cgi) {
 }
 
 /* SVersion *******************************************************************/
+static rc_t SVersionInitFromStr(SVersion * self, bool * sdl, const char * s) {
+    uint8_t major = 0;
+    uint8_t minor = 0;
+
+    char * end = NULL;
+    uint64_t l = strtoul(s, &end, 10);
+    if (end == NULL || (*end != '.' && *end != '\0'))
+        return RC(rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt);
+    major = (uint8_t)l;
+
+    if (*end != '\0') {
+        s = ++end;
+
+        l = strtoul(s, &end, 10);
+        if (end == NULL || *end != '\0')
+            return RC(rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt);
+        minor = (uint8_t)l;
+    }
+
+    if (sdl != NULL) {
+        *sdl = false;
+
+        /* NB. I SET THE UPPER BIT(128) OF MAJOR VERSION TO 1
+            TO MARK IT AS SDL VERSION */
+        if (major & 128) {
+            major &= ~128;
+            *sdl = true;
+        }
+    }
+
+    *self = major << 24 | minor << 16;
+
+    return 0;
+}
+
 static rc_t SVersionInit(SVersion * self, bool * sdl, const char * src,
-    EServiceType serviceType, SHelper * helper)
+    EServiceType serviceType, SHelper * helper, SRequest * request)
 {
+    rc_t rc = 0;
     const char * s = src;
     String * result = NULL;
     const char * e = NULL;
@@ -578,47 +614,22 @@ static rc_t SVersionInit(SVersion * self, bool * sdl, const char * src,
     if (*s == '\0')
         return RC(rcVFS, rcQuery, rcExecuting, rcMessage, rcBadVersion);
 
-    {
-        uint8_t major = 0;
-        uint8_t minor = 0;
+    rc = SVersionInitFromStr(self, sdl, s);
 
-        char * end = NULL;
-        uint64_t l = strtoul(s, &end, 10);
-        if (end == NULL || (*end != '.' && *end != '\0'))
-            return RC(rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt);
-        major = (uint8_t)l;
-
-        if (*end != '\0') {
-            s = ++end;
-
-            l = strtoul(s, &end, 10);
-            if (end == NULL || *end != '\0')
-                return RC(rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt);
-            minor = (uint8_t)l;
-        }
-
-        if (sdl != NULL) {
-            *sdl = false;
-
-            /* NB. I SET THE UPPER BIT(128) OF MAJOR VERSION TO 1
-               TO MARK IT AS SDL VERSION */
-            if (major & 128) {
-                major &= ~128;
-                *sdl = true;
-            }
-        }
-
-        *self = major << 24 | minor << 16;
+    if (rc == 0 && request != NULL && VectorLength(&request->tickets.tickets) > 0
+        && sdl != NULL && *sdl)
+    {   /* use version 3 when getting dbGaP data */
+        rc = SVersionInitFromStr(self, sdl, "3");
     }
 
     free(result);
 
-    return 0;
+    return rc;
 }
 
 ver_t InitVersion(const char * src) {
     SVersion self = 0;
-    rc_t rc = SVersionInit(&self, NULL, src, eSTnames, NULL);
+    rc_t rc = SVersionInit(&self, NULL, src, eSTnames, NULL, NULL);
     if (rc == 0)
         return self;
     else
@@ -781,7 +792,7 @@ static rc_t SHeaderMake
     rc = SRawAlloc ( & self -> raw, src -> addr, src -> size );
 
     if ( rc == 0 )
-        rc = SVersionInit ( & self -> version, NULL, self -> raw . s, serviceType, NULL);
+        rc = SVersionInit ( & self -> version, NULL, self -> raw . s, serviceType, NULL, NULL);
 
     return rc;
 }
@@ -3077,7 +3088,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
         "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n" ) );
 
     rc = SVersionInit(&request->version, &request->sdl, version, eSTnames,
-        helper);
+        helper, request);
     if ( rc != 0 )
         return rc;
 
@@ -3329,7 +3340,7 @@ rc_t SRequestInitSearchSCgiRequest ( SRequest * request, const char * cgi,
     rc_t rc = 0;
     const SKV * kv = NULL;
     assert ( request );
-    rc = SVersionInit ( & request -> version, NULL, version, eSTnames, NULL);
+    rc = SVersionInit(&request->version, NULL, version, eSTnames, NULL, NULL);
     if ( rc != 0 )
         return rc;
     self = & request -> cgiReq;
