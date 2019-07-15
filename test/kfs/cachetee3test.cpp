@@ -955,12 +955,16 @@ FIXTURE_TEST_CASE ( CacheTee3_delete_on_exit, CT3Fixture )
     bool is_complete;
     REQUIRE_RC( CacheTee3FileIsComplete( tee, &is_complete ) );
     REQUIRE( !is_complete );
-    
+
+#if WINDOWS    
     REQUIRE( file_exists( CACHEFILE1 ) );
+#else
+    REQUIRE( !file_exists( CACHEFILE1 ) ); // this is NOT a requirement
+#endif
     REQUIRE( !file_exists( CACHEFILE ) );
     KFileRelease ( tee );
     /* after releasing the tee-file there should be no .cache -file*/
-    REQUIRE( !file_exists( CACHEFILE1 ) );
+    REQUIRE( !file_exists( CACHEFILE1 ) ); // this is actually the ONLY requirement
     REQUIRE( !file_exists( CACHEFILE ) );
     
     KFileRelease ( org );
