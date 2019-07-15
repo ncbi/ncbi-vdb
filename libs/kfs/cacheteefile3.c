@@ -217,6 +217,9 @@ size_t CC KCacheTeeChunkReaderBufferSize ( const KCacheTeeChunkReader * self )
 static
 rc_t CC KCacheTeeChunkReaderNext ( KCacheTeeChunkReader * self, void ** buf, size_t * size )
 {
+    if ( self -> ctf -> quitting )
+        return RC ( rcFS, rcBuffer, rcAllocating, rcTransfer, rcCanceled );
+
     STATUS ( STAT_PRG, "BG: %s - allocating page buffer of %zu bytes\n", __func__, self -> ctf -> page_size );
     * buf = malloc ( * size = self -> ctf -> page_size );
     if ( * buf == NULL )
@@ -1325,7 +1328,12 @@ rc_t KCacheTeeFileBGLoop ( KCacheTeeFile_v3 * self )
             if ( dmsg == NULL )
             {
                 struct timeout_t tm;
-                /* TBD - use a 100mS timeout */
+#if _DEBUGGING
+memset ( & tm, -1, sizeof tm );
+#endif
+                TimeoutInit ( & tm, 100 );
+                assert ( tm . mS == 100 );
+                assert ( tm . prepared == false );
 
                 STATUS ( STAT_PRG, "BG: %s - waiting on fg signal\n", __func__ );
                 KConditionTimedWait ( self -> bgcond, self -> qlock, & tm );

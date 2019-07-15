@@ -1555,6 +1555,7 @@ static
 rc_t CC KClientHttpStreamWhack ( KClientHttpStream *self )
 {
     KClientHttpRelease ( self -> http );
+    KStreamWhack ( & self -> dad, "KClientHttpStream" );
     free ( self );
     return 0;
 }

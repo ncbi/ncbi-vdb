@@ -174,6 +174,7 @@ rc_t CC KSocketWhack ( KSocket *self )
         free ( ( void* ) self -> path );
     }
 
+    KStreamWhack ( & self -> dad, "KSocket" );
     free ( self );
 
     return 0;
@@ -1062,97 +1063,101 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
                 conn -> write_timeout = writeMillis;
 
                 rc = KStreamInit ( & conn -> dad, ( const KStream_vt* ) & vtKSocket,
-                                   "KSocket", "", true, true );
-
-                /* prepare the timeout */
-                if ( rc == 0 )
-                    rc = TimeoutPrepare ( retryTimeout );
-
+                    "KSocket - RetryTimedConnection", to -> ip_address, true, true );
                 if ( rc == 0 )
                 {
-                    uint32_t retry;
-
-                    switch ( to -> type )
+                    /* prepare the timeout */
+                    rc = TimeoutPrepare ( retryTimeout );
+                    if ( rc == 0 )
                     {
+                        uint32_t retry;
 
-                    /* ensure the type is correct */
-                    case epIPV4:
-                    case epIPV6:
-                    case epIPC:
-
-                        /* a retry loop - retry upon a schedule for the alloted time */
-                        for ( retry = 0; ; ++ retry )
+                        switch ( to -> type )
                         {
-                            uint32_t remaining, delay;
 
-                            /* try to connect using appropriate protocol */
-                            conn -> type = to -> type;
-                            switch ( to -> type )
+                            /* ensure the type is correct */
+                        case epIPV4:
+                        case epIPV6:
+                        case epIPC:
+
+                            /* a retry loop - retry upon a schedule for the alloted time */
+                            for ( retry = 0; ; ++ retry )
                             {
-                            case epIPV4:
-                                rc = KSocketConnectIPv4 ( conn, from, to, retryTimeout -> mS );
-                                break;
+                                uint32_t remaining, delay;
 
-                            case epIPV6:
-                                rc = KSocketConnectIPv6 ( conn, from, to, retryTimeout -> mS );
-                                break;
+                                /* try to connect using appropriate protocol */
+                                conn -> type = to -> type;
+                                switch ( to -> type )
+                                {
+                                case epIPV4:
+                                    rc = KSocketConnectIPv4 ( conn, from, to, retryTimeout -> mS );
+                                    break;
 
-                            case epIPC:
-                                rc = KSocketConnectIPC ( conn, to );
-                                break;
+                                case epIPV6:
+                                    rc = KSocketConnectIPv6 ( conn, from, to, retryTimeout -> mS );
+                                    break;
+
+                                case epIPC:
+                                    rc = KSocketConnectIPC ( conn, to );
+                                    break;
+                                }
+
+                                /* if connection was successful, return socket */
+                                if ( rc == 0 )
+                                {
+                                    * out = conn;
+                                    return 0;
+                                }
+                                /* if was interrupted by Ctrl-C, return immediately */
+                                if ( rcConnection == GetRCObject ( rc ) && rcInterrupted == GetRCState ( rc ) )
+                                {
+                                    return rc;
+                                }
+
+                                /* check time remaining on timeout ( if any ) */
+                                remaining = TimeoutRemaining ( retryTimeout );
+
+                                /* break out of loop if no time left */
+                                if ( remaining == 0 )
+                                    break;
+
+                                /* apply delay schedule */
+                                switch ( retry )
+                                {
+                                case 0:
+                                    /* try immediately */
+                                    continue;
+                                case 1:
+                                case 2:
+                                case 3:
+                                    /* wait for 100mS between tries */
+                                    delay = 100;
+                                    break;
+                                default:
+                                    /* wait for 250mS between tries */
+                                    delay = 250;
+                                }
+
+                                /* never wait for more than the remaining timeout */
+                                if ( delay > remaining )
+                                    delay = remaining;
+
+                                KSleepMs ( delay );
                             }
 
-                            /* if connection was successful, return socket */
-                            if ( rc == 0 )
-                            {
-                                * out = conn;
-                                return 0;
-                            }
-                            /* if was interrupted by Ctrl-C, return immediately */
-                            if ( rcConnection == GetRCObject ( rc ) && rcInterrupted == GetRCState ( rc ) )
-                            {
-                                return rc;
-                            }
+                            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET),
+                                   ( "%p: KSocketConnect timed out\n", self ) );
+                            break;
 
-                            /* check time remaining on timeout ( if any ) */
-                            remaining = TimeoutRemaining ( retryTimeout );
-
-                            /* break out of loop if no time left */
-                            if ( remaining == 0 )
-                                break;
-
-                            /* apply delay schedule */
-                            switch ( retry )
-                            {
-                            case 0:
-                                /* try immediately */
-                                continue;
-                            case 1:
-                            case 2:
-                            case 3:
-                                /* wait for 100mS between tries */
-                                delay = 100;
-                                break;
-                            default:
-                                /* wait for 250mS between tries */
-                                delay = 250;
-                            }
-
-                            /* never wait for more than the remaining timeout */
-                            if ( delay > remaining )
-                                delay = remaining;
-
-                            KSleepMs ( delay );
+                        default:
+                            rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcIncorrect );
                         }
 
-                        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET),
-                               ( "%p: KSocketConnect timed out\n", self ) );
-                       break;
+                    } /* if TimeoutPrepare () == 0 */
 
-                    default:
-                        rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcIncorrect );
-                    }
-                }
+                    KStreamWhack ( & conn -> dad, "KSocket" );
+
+                } /* if KStreamInit () == 0 */
 
                 free ( conn );
             }
@@ -1305,7 +1310,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeListener ( const KNSManager *self,
                 listener -> write_timeout = self -> conn_write_timeout;
 
                 rc = KStreamInit ( & listener -> dad, ( const KStream_vt* ) & vtKSocket,
-                                   "KSocket", "", true, true );
+                    "KSocket - Listener", ep -> ip_address, true, true );
                 if ( rc == 0 )
                 {
                     listener -> type = ep -> type;
@@ -1475,7 +1480,7 @@ LIB_EXPORT rc_t CC KListenerAccept ( KListener *iself, struct KSocket **out )
                     new_socket -> remote_addr_valid = true;
 
                     rc = KStreamInit ( & new_socket -> dad, ( const KStream_vt* ) & vtKSocket,
-                                       "KSocket", "", true, true );
+                        "KSocket - Accept", "", true, true );
                     if ( rc == 0 )
                     {
                         * out = new_socket;
