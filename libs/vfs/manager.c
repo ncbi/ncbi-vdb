@@ -548,10 +548,14 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
 
         if ( cache_loc != NULL )
         {
-            rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
-                                         "%s", cache_loc );
+            uint32_t pt = KDirectoryPathType ( dir, "%s", cache_loc );
+            if ( pt == kptDir )
+            {
+                rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
+                                             "%s", cache_loc );
+            }
         }
-        else
+        if ( location[ 0 ] == 0 )
         {
             const String * id = make_id( path );
             if ( id != NULL )
