@@ -548,13 +548,32 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
 
         if ( cache_loc != NULL )
         {
-            uint32_t pt = KDirectoryPathType ( dir, "%s", cache_loc );
-            if ( pt == kptDir )
+            size_t cache_loc_size = string_size( cache_loc );
+            char * sep = string_rchr ( cache_loc, cache_loc_size, '/' );
+            if ( sep != NULL )
             {
-                rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
-                                             "%s", cache_loc );
+                size_t l = ( sep - cache_loc );
+                uint32_t pt = KDirectoryPathType ( dir, "%.*s", l, cache_loc );
+                if ( pt == kptDir )
+                {
+                    /* make shure we have read/write access there */
+                    uint32_t access;
+                    rc = KDirectoryAccess ( dir, &access, "%.*s", l, cache_loc );
+                    if ( rc == 0 )
+                    {
+                        /* dr wxrw xrwx
+                           11 1... .... = 0x380 */
+                        if ( ( access & 0x380 ) == 0x380 )
+                        {
+                            rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
+                                                         "%s", cache_loc );
+                        }
+                    }
+                }
             }
         }
+        
+        /* if we have no given location or it does not exist or it is not read/writable for us */
         if ( location[ 0 ] == 0 )
         {
             const String * id = make_id( path );
