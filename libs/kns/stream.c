@@ -793,4 +793,5 @@ LIB_EXPORT rc_t CC KStreamWhack ( KStream * self, const char * classname )
         self -> read_enabled = false;
         self -> write_enabled = false;
     }
+    return 0;
 }
