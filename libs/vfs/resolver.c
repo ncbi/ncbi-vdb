@@ -5112,11 +5112,12 @@ rc_t VResolverLoadRepo ( VResolver *self, Vector *algs, const KConfigNode *repo,
     else if ( rc == 0 )
     {
         /* read root as String */
-        String *root;
+        String *root = NULL;
         rc = KConfigNodeReadString ( node, & root );
         KConfigNodeRelease ( node );
         if ( GetRCState ( rc ) == rcNotFound )
             rc = 0;
+        else if (root->size == 0); /* ignore repository with empty root node */
         else if ( rc == 0 )
         {
             /* perform a bit of cleanup on root */
