@@ -112,3 +112,6 @@ G_OBJ = \
 
 $(TEST_BINDIR)/test-gcp: $(G_OBJ)
 	$(LP) --exe -o $@ $^ $(CLOUD_LIB)
+
+gcp: test-gcp
+	$(TEST_BINDIR)/test-gcp  #-l=all

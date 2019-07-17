@@ -509,7 +509,7 @@ FIXTURE_TEST_CASE(GCP_Credentials, GcpFixture)
     REQUIRE_NOT_NULL ( m_gcp -> privateKey );
     REQUIRE_NOT_NULL ( m_gcp -> client_email );
 
-    const string private_key = "-----BEGIN NOTPRIVATE KEY";
+    const string private_key = "-----BEGIN PRIVATE KEY-----\nMIICdwIBADANBgkqhkiG9w0BAQEFAASCAmEwggJdAgEAAoGBANoWq8DqARNncY/f";
     const string client_email = "ncbivdb-compute@developer.gserviceaccount.com";
     REQUIRE_EQ ( private_key, string ( m_gcp -> privateKey ) . substr ( 0, private_key . size () ) );
     REQUIRE_EQ ( client_email, string ( m_gcp -> client_email ) );
