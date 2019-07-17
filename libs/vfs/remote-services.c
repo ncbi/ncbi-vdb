@@ -4039,6 +4039,244 @@ static rc_t KServiceProcessStreamByParts ( KService * self,
     return rc;
 }
 
+static rc_t KServiceGetResponse(const KService * self,
+    const KSrvResponse ** response)
+{
+    if (self == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
+
+    if (response == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
+    else
+        return SResponseGetResponse(&self->resp, response);
+}
+
+
+static rc_t StringRelease(const String *self) {
+    StringWhack(self);
+    return 0;
+}
+
+static rc_t VPathAttachVdbcacheIfEmpty(VPath * self, const VPath * vdbcache) {
+    if (self == NULL || vdbcache == NULL)
+        return 0;
+
+    else {
+        const VPath * old = NULL;
+        rc_t rc = VPathGetVdbcache(self, &old, NULL);
+        if (rc == 0) {
+            if (old == NULL)
+                rc = VPathAttachVdbcache(self, vdbcache);
+            else
+                RELEASE(VPath, old);
+        }
+
+        return rc;
+    }
+}
+
+typedef enum { eNcbi, eS3, eGs, eMaxCloud } EService;
+
+static rc_t VPathGetServiceId(const VPath * self,
+    EService * rService, String * service)
+{
+    rc_t rc = 0;
+
+    EService aService = eNcbi;
+
+    String dummy;
+
+    static String gs;
+    static String s3;
+    static bool initialized = false;
+    if (!initialized) {
+        CONST_STRING(&gs, "gs");
+        CONST_STRING(&s3, "s3");
+        initialized = true;
+    }
+
+    if (service == NULL)
+        service = &dummy;
+
+    rc = VPathGetService(self, service);
+    if (rc == 0) {
+        if (StringCompare(service, &s3) == 0)
+            aService = eS3;
+        else if (StringCompare(service, &gs) == 0)
+            aService = eGs;
+    }
+
+    assert(rService);
+    *rService = aService;
+
+    return rc;
+}
+
+static rc_t KSrvRespObj_AttachVdbcaches(const KSrvRespObj * self) {
+    rc_t rc = 0;
+
+    KSrvRespObjIterator * it = NULL;
+    int i = 0, nSrrr = 0, nVdbc = 0;
+    const String * acc = NULL;
+    VPath * aSrr = NULL;
+    const VPath * aVdbc = NULL;
+    EService aService = eNcbi;
+
+    String sra, vdbcache;
+
+    VPath * srr[eMaxCloud];
+    const VPath * vdbc[eMaxCloud];
+    for (i = 0; i < sizeof srr / sizeof srr[0]; ++i)
+        srr[i] = NULL;
+    for (i = 0; i < sizeof vdbc / sizeof vdbc[0]; ++i)
+        vdbc[i] = NULL;
+
+    CONST_STRING(&sra, "sra");
+    CONST_STRING(&vdbcache, "vdbcache");
+
+    if (rc == 0)
+        rc = KSrvRespObjMakeIterator(self, &it);
+
+    if (rc != 0) /* error in names service response for this KSrvRespObj: skipping */
+        rc = 0;
+
+    else while (rc == 0) {
+        KSrvRespFile * file = NULL;
+        KSrvRespFileIterator * fi = NULL;
+
+        rc = KSrvRespObjIteratorNextFile(it, &file);
+        if (rc != 0 || file == NULL)
+            break;
+
+        rc = KSrvRespFileMakeIterator(file, &fi);
+
+        while (rc == 0) {
+            enum { eOther, eSra, eVdbcache } aType = eOther;
+
+            String id, service, type;
+
+            VPath * next = NULL;
+            rc = KSrvRespFileIteratorNextPath(fi, (const VPath **)& next);
+            if (rc != 0 || next == NULL)
+                break;
+
+            rc = VPathGetId(next, &id);
+            if (rc == 0)
+                rc = VPathGetType(next, &type);
+            if (rc == 0)
+                rc = VPathGetServiceId(next, &aService, &service);
+
+            if (rc == 0) {
+                if (acc == NULL)
+                    rc = StringCopy(&acc, &id);
+                else if (StringCompare(acc, &id) != 0)
+                    PLOGERR(klogFatal, (klogFatal,
+                        RC(rcVFS, rcQuery, rcExecuting, rcString, rcUnexpected),
+                        "multiple accessions for the same bundle: '$(acc1), $(acc2)",
+                        "acc1=%S,acc2=%S", acc, &id));
+            }
+
+            if (rc == 0) {
+                if (StringCompare(&type, &sra) == 0)
+                    aType = eSra;
+                else if (StringCompare(&type, &vdbcache) == 0)
+                    aType = eVdbcache;
+            }
+
+            switch (aType) {
+            case eSra:
+                ++nSrrr;
+                if (aSrr == NULL)
+                    aSrr = next;
+                if (srr[aService] == NULL)
+                    srr[aService] = next;
+                else
+                    PLOGERR(klogFatal, (klogFatal,
+                        RC(rcVFS, rcQuery, rcExecuting, rcString, rcUnexpected),
+                        "multiple response SRR URLs for the same service '$(service)",
+                        "service=%S", &service));
+                break;
+            case eVdbcache:
+                ++nVdbc;
+                if (aVdbc == NULL)
+                    aVdbc = next;
+                if (vdbc[aService] == NULL)
+                    vdbc[aService] = next;
+                else
+                    PLOGERR(klogFatal, (klogFatal,
+                        RC(rcVFS, rcQuery, rcExecuting, rcString, rcUnexpected),
+                        "multiple response VDBCACHE URLs for the same service "
+                        "'$(service)", "service=%S", &service));
+                break;
+            case eOther:
+                break;
+            default:
+                assert(0);
+                break;
+            }
+        }
+
+        RELEASE(KSrvRespFile, file);
+        RELEASE(KSrvRespFileIterator, fi);
+    }
+    RELEASE(String, acc);
+
+    if (nVdbc > 0) {
+        if (nVdbc == 1) {
+            if (nSrrr == 1)
+                rc = VPathAttachVdbcacheIfEmpty(aSrr, aVdbc);
+            else
+                for (i = 0; rc == 0 && i < sizeof srr / sizeof srr[0]; ++i)
+                    rc = VPathAttachVdbcacheIfEmpty(srr[i], aVdbc);
+        }
+        else if (nSrrr == 1)
+            for (i = 0; rc == 0 && i < sizeof vdbc / sizeof vdbc[0]; ++i)
+                rc = VPathAttachVdbcacheIfEmpty(aSrr, vdbc[i]);
+        else
+            for (i = 0; rc == 0 && i < sizeof srr / sizeof srr[0]; ++i)
+                if (srr[i] != NULL) {
+                    const VPath * v = NULL;
+                    switch (i) {
+                    case eNcbi:
+                        if (vdbc[eNcbi] != NULL)
+                            v = vdbc[eNcbi];
+                        else if (vdbc[eS3] != NULL)
+                            v = vdbc[eS3];
+                        else
+                            v = vdbc[eGs];
+                        break;
+                    case eS3:
+                        if (vdbc[eS3] != NULL)
+                            v = vdbc[eS3];
+                        else if (vdbc[eNcbi] != NULL)
+                            v = vdbc[eNcbi];
+                        else
+                            v = vdbc[eGs];
+                        break;
+                    case eGs:
+                        if (vdbc[eGs] != NULL)
+                            v = vdbc[eGs];
+                        else if (vdbc[eNcbi] != NULL)
+                            v = vdbc[eNcbi];
+                        else
+                            v = vdbc[eS3];
+                        break;
+                    default:
+                        assert(0);
+                        break;
+                    }
+                    rc = VPathAttachVdbcacheIfEmpty(srr[i], v);
+                }
+    }
+
+    for (i = 0; i < sizeof srr / sizeof srr[0]; ++i)
+        RELEASE(VPath, srr[i]);
+    for (i = 0; i < sizeof vdbc / sizeof vdbc[0]; ++i)
+        RELEASE(VPath, vdbc[i]);
+
+    return rc;
+}
+
 static
 rc_t KServiceProcessStream ( KService * self, KStream * stream )
 {
@@ -4072,60 +4310,78 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
             rc = Response4AppendUrl ( r4,
                 self -> req . request . object [ i ] . objectId );
 
-    if ( rc == 0 &&
-        ! SVersionResponseInJson ( self -> req . version, self -> req . sdl ) )
-    {
-        uint32_t l = KSrvResponseLength  ( self -> resp .list );
+    if (rc == 0) {
         uint32_t i = 0;
-        for ( i = 0; rc == 0 && i < l; ++ i ) {
-            Container * box = NULL;
-            Item * file = NULL;
-            const char * reqId = NULL;
-            const char * respId = NULL;
-            VRemoteProtocols pp []
-                = { eProtocolHttp, eProtocolFasp, eProtocolHttps };
-            uint32_t p = 0;
-            rc = KSrvResponseGetIds ( self -> resp . list, i, & reqId,
-                                                              & respId );
-            if ( rc == 0 )
-                rc = Response4AddAccOrId ( r4, reqId, -1, & box );
-            if ( rc == 0 )
-                ContainerAdd ( box, respId, -1, & file, NULL );
-            if ( rc != 0 )
-                break;
-            for ( p = 0; rc == 0 && p < sizeof pp / sizeof pp [ 0 ]; ++ p ) {
-                const VPath * path = NULL;
-                const VPath * vdbcache = NULL;
-                const KSrvError * error = NULL;
-                const VPath * mapping = NULL;
-                uint64_t osize = 0;
-                rc = KSrvResponseGetPath ( self -> resp .list, i, pp [ p ],
-                                           & path, & vdbcache, & error );
+        if (SVersionResponseInJson(self->req.version, self->req.sdl)) {
+            uint32_t l = 0;
+            /* attach vdbcache */
+            const KSrvResponse * response = NULL;
+            if (rc == 0)
+                rc = KServiceGetResponse(self, &response);
+            if (rc == 0)
+                l = KSrvResponseLength(response);
+            for (i = 0; rc == 0 && i < l; ++i) {
+                const KSrvRespObj * obj = NULL;
+                rc = KSrvResponseGetObjByIdx(response, i, &obj);
                 if (rc == 0)
-                    rc = KSrvResponseGetMapping(self->resp.list, i, &mapping);
+                    rc = KSrvRespObj_AttachVdbcaches(obj);
+                RELEASE(KSrvRespObj, obj);
+            }
+            RELEASE(KSrvResponse, response);
+        }
+
+        else {
+            uint32_t l = KSrvResponseLength(self->resp.list);
+            for (i = 0; rc == 0 && i < l; ++i) {
+                Container * box = NULL;
+                Item * file = NULL;
+                const char * reqId = NULL;
+                const char * respId = NULL;
+                VRemoteProtocols pp[]
+                    = { eProtocolHttp, eProtocolFasp, eProtocolHttps };
+                uint32_t p = 0;
+                rc = KSrvResponseGetIds(self->resp.list, i, &reqId,
+                    &respId);
                 if (rc == 0)
-                    rc = KSrvResponseGetOSize(self->resp.list, i, &osize);
-                if (rc == 0) {
-                    if (path != NULL) {
-                        String ticket;
-                        rc_t r = 0;
-                        memset(&ticket, 0, sizeof ticket);
-                        r = VPathGetTicket(path, &ticket);
-                        if (r == 0)
-                            rc = ItemSetTicket(file, &ticket);
-                        if (rc == 0)
-                            rc = ItemAddVPath(file, "sra", path, mapping,
-                                true, osize);
-                        RELEASE(VPath, path);
-                        if (rc != 0)
-                            break;
-                    }
-                    if (vdbcache != NULL) {
-                        rc = ItemAddVPath(file, "vdbcache", vdbcache, NULL,
-                            true, 0);
-                        RELEASE(VPath, vdbcache);
-                        if (rc != 0)
-                            break;
+                    rc = Response4AddAccOrId(r4, reqId, -1, &box);
+                if (rc == 0)
+                    ContainerAdd(box, respId, -1, &file, NULL);
+                if (rc != 0)
+                    break;
+                for (p = 0; rc == 0 && p < sizeof pp / sizeof pp[0]; ++p) {
+                    const VPath * path = NULL;
+                    const VPath * vdbcache = NULL;
+                    const KSrvError * error = NULL;
+                    const VPath * mapping = NULL;
+                    uint64_t osize = 0;
+                    rc = KSrvResponseGetPath(self->resp.list, i, pp[p],
+                        &path, &vdbcache, &error);
+                    if (rc == 0)
+                        rc = KSrvResponseGetMapping(self->resp.list, i, &mapping);
+                    if (rc == 0)
+                        rc = KSrvResponseGetOSize(self->resp.list, i, &osize);
+                    if (rc == 0) {
+                        if (path != NULL) {
+                            String ticket;
+                            rc_t r = 0;
+                            memset(&ticket, 0, sizeof ticket);
+                            r = VPathGetTicket(path, &ticket);
+                            if (r == 0)
+                                rc = ItemSetTicket(file, &ticket);
+                            if (rc == 0)
+                                rc = ItemAddVPath(file, "sra", path, mapping,
+                                    true, osize);
+                            RELEASE(VPath, path);
+                            if (rc != 0)
+                                break;
+                        }
+                        if (vdbcache != NULL) {
+                            rc = ItemAddVPath(file, "vdbcache", vdbcache, NULL,
+                                true, 0);
+                            RELEASE(VPath, vdbcache);
+                            if (rc != 0)
+                                break;
+                        }
                     }
                 }
             }
@@ -4138,20 +4394,6 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
     RELEASE(Response4, r4);
 
     return rc;
-}
-
-
-static
-rc_t KServiceGetResponse
-    ( const KService * self, const KSrvResponse ** response )
-{
-    if ( self == NULL )
-        return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
-
-    if ( response == NULL )
-        return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
-    else
-        return SResponseGetResponse ( & self -> resp, response );
 }
 
 
