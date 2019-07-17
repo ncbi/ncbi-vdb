@@ -1090,6 +1090,39 @@ FIXTURE_TEST_CASE ( CacheTee3_request_count, CT3Fixture )
     KOutMsg ( "counting requests done\n" );
 }
 
+FIXTURE_TEST_CASE ( CacheTee3_invalid_path, CT3Fixture )
+{
+    KOutMsg ( "invalid path\n" );
+    remove_file ( CACHEFILE );
+    remove_file ( CACHEFILE1 );
+
+    KDirectory *dir;
+    REQUIRE_RC ( KDirectoryNativeDir ( &dir ) );
+    const KFile *org;
+    REQUIRE_RC ( KDirectoryOpenFileRead ( dir, &org, "%s", DATAFILE ) ); // org.data
+
+    const KFile *tee;
+    uint32_t cluster_factor = 4;
+    uint32_t ram_pages = 1024;
+
+    REQUIRE_RC ( KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee, org, BLOCKSIZE,
+        cluster_factor, ram_pages, false, true, "%s", "/sra/invalid.sra" ) ); // cache.dat
+
+    const int num_chunks = 1024;
+    for ( int i = 0; i < num_chunks; ++i )
+    {
+        uint64_t pos = rand_32 ( 0, DATAFILESIZE );
+        size_t   len = rand_32 ( 10, 1000 );
+        REQUIRE_RC( compare_file_content_3 ( org, tee, pos, len, NULL ) );
+    }
+
+    KFileRelease ( tee );
+    KFileRelease ( org );
+    
+    KDirectoryRelease ( dir );
+    KOutMsg ( "invalid path done\n" );
+}
+
 #if 0
 struct Recorder
 {

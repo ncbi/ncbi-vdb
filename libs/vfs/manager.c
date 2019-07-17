@@ -539,15 +539,16 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
     if ( cps -> use_file_cache )
     {
         char location[ 4096 ];
-        location[ 0 ] = 0;
         bool remove_on_close = false;
         bool promote = cps -> promote;
-    
+        location[ 0 ] = 0;
+        
         if ( cps -> debug )
             KOutMsg( "use file-cache\n" );
 
         if ( cache_loc != NULL )
         {
+#if 0
             size_t cache_loc_size = string_size( cache_loc );
             char * sep = string_rchr ( cache_loc, cache_loc_size, '/' );
             if ( sep != NULL )
@@ -571,6 +572,9 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
                     }
                 }
             }
+#endif
+            rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
+                                         "%s", cache_loc );
         }
         
         /* if we have no given location or it does not exist or it is not read/writable for us */
