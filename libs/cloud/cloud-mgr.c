@@ -37,6 +37,10 @@
 #include <atomic.h>
 #include <assert.h>
 
+#ifndef ALLOW_EXT_CLOUD_ACCESS
+#define ALLOW_EXT_CLOUD_ACCESS 1
+#endif
+
 #if 0
 #include <stdio.h>
 #define TRACE( ... )                                              \
@@ -411,10 +415,14 @@ LIB_EXPORT rc_t CC CloudMgrMakeCloud ( CloudMgr * self, Cloud ** cloud, CloudPro
                where\target | aws | gcp | azure
                -------------+-----+-----+------
                     outside |  x  |  x  |  x
-                     in aws |  x  |     |
-                     in gcp |     |  x  |
-                   in azure |     |     |  x
+                     in aws |  x  |  +  |  +
+                     in gcp |  +  |  x  |  +
+                   in azure |  +  |  +  |  x
                -------------+-----+-----+------
+
+               an 'x' indicates that an operation is allowed.
+               the matrix was modified with '+' to indicate if
+               allwed when ALLOW_EXT_CLOUD_ACCESS is not zero.
 
                this may be relaxed in the future, but for today
                it's hard coded that from within any cloud there is
@@ -430,6 +438,12 @@ LIB_EXPORT rc_t CC CloudMgrMakeCloud ( CloudMgr * self, Cloud ** cloud, CloudPro
             /* asking for AWS */
             CASE ( cloud_provider_aws, cloud_provider_none ):
             CASE ( cloud_provider_aws, cloud_provider_aws ):
+#if defined _h_cloud_gcp_ && ALLOW_EXT_CLOUD_ACCESS
+            CASE ( cloud_provider_aws, cloud_provider_gcp ):
+#endif
+#if defined _h_cloud_azure_ && ALLOW_EXT_CLOUD_ACCESS
+            CASE ( cloud_provider_aws, cloud_provider_azure ):
+#endif
             {
                 assert ( self -> aws == NULL );
                 TRACE ( "making AWS" );
@@ -441,17 +455,18 @@ LIB_EXPORT rc_t CC CloudMgrMakeCloud ( CloudMgr * self, Cloud ** cloud, CloudPro
                 }
                 break;
             }
-#if ALLOW_EXT_CLOUD_ACCESS
-            CASE ( cloud_provider_aws, cloud_provider_gcp ):
-            CASE ( cloud_provider_aws, cloud_provider_azure ):
-#error "this should require a special class"
-#endif
-#endif
+#endif /* _h_cloud_aws_ */
 
 #ifdef _h_cloud_gcp_
             /* asking for GCP */
             CASE ( cloud_provider_gcp, cloud_provider_none ):
+#if defined _h_cloud_aws_ && ALLOW_EXT_CLOUD_ACCESS
+            CASE ( cloud_provider_gcp, cloud_provider_aws ):
+#endif
             CASE ( cloud_provider_gcp, cloud_provider_gcp ):
+#if defined _h_cloud_azure_ && ALLOW_EXT_CLOUD_ACCESS
+            CASE ( cloud_provider_gcp, cloud_provider_azure ):
+#endif
             {
                 assert ( self -> gcp == NULL );
                 TRACE ( "making GCP" );
@@ -463,26 +478,26 @@ LIB_EXPORT rc_t CC CloudMgrMakeCloud ( CloudMgr * self, Cloud ** cloud, CloudPro
                 }
                 break;
             }
-#if ALLOW_EXT_CLOUD_ACCESS
-            CASE ( cloud_provider_gcp, cloud_provider_aws ):
-            CASE ( cloud_provider_gcp, cloud_provider_azure ):
-#error "this should require a special class"
-#endif
-#endif
+#endif /* _h_cloud_gcp */
 
 #ifdef _h_cloud_azure_
             /* asking for Azure */
             CASE ( cloud_provider_azure, cloud_provider_none ):
-            CASE ( cloud_provider_azure, cloud_provider_azure ):
-#error "not implemented"
-#if ALLOW_EXT_CLOUD_ACCESS
+#if defined _h_cloud_aws_ && ALLOW_EXT_CLOUD_ACCESS
             CASE ( cloud_provider_azure, cloud_provider_aws ):
+#endif
+#if defined _h_cloud_gcp_ && ALLOW_EXT_CLOUD_ACCESS
             CASE ( cloud_provider_azure, cloud_provider_gcp ):
-#error "this should require a special class"
 #endif
-#endif
+            CASE ( cloud_provider_azure, cloud_provider_azure ):
+            {
+#error "not implemented"
+            }
+#endif /* _h_cloud_gcp */
+
             default:
                 rc = RC ( rcCloud, rcMgr, rcAllocating, rcCloudProvider, rcUnsupported );
+
 #undef CASE
             }
         }
