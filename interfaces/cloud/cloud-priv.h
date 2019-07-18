@@ -38,14 +38,17 @@
 extern "C" {
 #endif
 
+struct KStream;
+
 /* CloudMgrMakeWithProvider
  *  Create a non-singleton, object to access cloud-related resources, with a set provider
  */
 CLOUD_EXTERN rc_t CC CloudMgrMakeWithProvider ( CloudMgr ** mgrp, CloudProviderId provider );
 
-#if _DEBUGGING
-CLOUD_EXTERN void CC CloudMgrSetProvider ( CloudMgr * self, CloudProviderId provider );
-#endif
+/* Set a pre-opened HTTP connection, for testing (NULL OK)
+ * TODO: remove when mocked connection becomes a regular feature of KNS
+ */
+CLOUD_EXTERN void CC CloudSetHttpConnection ( Cloud  * cloud, struct KStream * conn );
 
 #ifdef __cplusplus
 }

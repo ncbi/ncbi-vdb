@@ -105,7 +105,7 @@ $(TEST_BINDIR)/test-aws: $(A_OBJ)
 # test-gcp
 #
 G_SRC = \
-	test-gcp
+	test-gcp TestStream
 
 G_OBJ = \
 	$(addsuffix .$(OBJX),$(G_SRC))
