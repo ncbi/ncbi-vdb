@@ -4113,7 +4113,7 @@ static rc_t VPathGetServiceId(const VPath * self,
 }
 
 static rc_t KSrvRespObj_AttachVdbcaches(const KSrvRespObj * self) {
-    rc_t rc = 0;
+    rc_t rc = 0, rx = 0;
 
     KSrvRespObjIterator * it = NULL;
     int i = 0, nSrrr = 0, nVdbc = 0;
@@ -4134,13 +4134,12 @@ static rc_t KSrvRespObj_AttachVdbcaches(const KSrvRespObj * self) {
     CONST_STRING(&sra, "sra");
     CONST_STRING(&vdbcache, "vdbcache");
 
-    if (rc == 0)
+    rc = KSrvRespObjGetError(self, &rx, NULL, NULL);
+
+    if (rx == 0) /* error in names service response for this KSrvRespObj: skipping */
         rc = KSrvRespObjMakeIterator(self, &it);
 
-    if (rc != 0) /* error in names service response for this KSrvRespObj: skipping */
-        rc = 0;
-
-    else while (rc == 0) {
+    while (rx == 0 && rc == 0) {
         KSrvRespFile * file = NULL;
         KSrvRespFileIterator * fi = NULL;
 
