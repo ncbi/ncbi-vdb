@@ -88,7 +88,7 @@ rc_t CC extract_spot_name ( void *self, const VXformInfo *info, int64_t row_id,
         if ( rc != 0 )
             return rc;
 
-        memcpy ( rslt -> data -> base, name += argv [ NAM ] . u . data . first_elem, name_len );
+        memmove ( rslt -> data -> base, name += argv [ NAM ] . u . data . first_elem, name_len );
         rslt -> elem_count = name_len;
     }
 

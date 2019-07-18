@@ -163,7 +163,7 @@ LIB_EXPORT rc_t CC SFFReaderHeader(const SFFReader* self, spotid_t spots, char* 
         return rc;
     }
     memset(&h, 0, sizeof(SFFCommonHeader));
-    memcpy(&h, ".sff\0\0\0\1", 8);
+    memmove(&h, ".sff\0\0\0\1", 8);
     h.number_of_reads = spots != 0 ? spots : (self->dad.maxSpotId - me->dad.minSpotId + 1);
     h.key_length = (uint16_t)self->key_seq->size;
     h.num_flows_per_read = (uint16_t)self->flow_chars->size;
@@ -186,9 +186,9 @@ LIB_EXPORT rc_t CC SFFReaderHeader(const SFFReader* self, spotid_t spots, char* 
         h.num_flows_per_read = bswap_16( h.num_flows_per_read );
 
         memset(data, 0, len);
-        memcpy(data, &h, SFFCommonHeader_size);
-        memcpy(&data[SFFCommonHeader_size], self->flow_chars->base, self->flow_chars->size);
-        memcpy(&data[SFFCommonHeader_size + self->flow_chars->size], self->key_seq->base, self->key_seq->size);
+        memmove(data, &h, SFFCommonHeader_size);
+        memmove(&data[SFFCommonHeader_size], self->flow_chars->base, self->flow_chars->size);
+        memmove(&data[SFFCommonHeader_size + self->flow_chars->size], self->key_seq->base, self->key_seq->size);
     }
     return rc;
 }
@@ -247,8 +247,8 @@ LIB_EXPORT rc_t CC SFFReaderReadHeader(const SFFReader* self, char* data, size_t
         h.clip_adapter_right = bswap_16(h.clip_adapter_right);
 
         memset(data, 0, len);
-        memcpy(data, &h, SFFReadHeader_size);
-        memcpy(&data[SFFReadHeader_size], spotname, spotname_sz);
+        memmove(data, &h, SFFReadHeader_size);
+        memmove(&data[SFFReadHeader_size], spotname, spotname_sz);
     }
     return rc;
 }
@@ -316,14 +316,14 @@ LIB_EXPORT rc_t CC SFFReaderReadData(const SFFReader* self, char* data, size_t d
         data += spot_len;
 
         /* this are guaranteed above to be same length */
-        memcpy(data, self->read->base, spot_len);
+        memmove(data, self->read->base, spot_len);
         data += spot_len;
 
         qty = self->qual1->size / sizeof(INSDC_quality_phred);
         if( qty > spot_len ) {
             qty = spot_len;
         }
-        memcpy(data, self->qual1->base, qty);
+        memmove(data, self->qual1->base, qty);
         if( qty < spot_len ) {
             memset(&data[qty], 0, (spot_len - qty) * sizeof(sff_quality));
         }

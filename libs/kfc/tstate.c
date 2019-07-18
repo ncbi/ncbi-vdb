@@ -390,7 +390,7 @@ KThreadEvent * KThreadEventMake ( ctx_t ctx,
     evt -> lineno = lineno;
 
     c = ( char* ) ( evt + 1 );
-    memcpy ( c, msg_buffer, num_writ + 1 );
+    memmove ( c, msg_buffer, num_writ + 1 );
     StringInit ( & evt -> message, c, num_writ, string_len ( c, num_writ ) );
 
     return evt;

@@ -110,14 +110,14 @@ LIB_EXPORT rc_t CC TableReaderRefSeq_MakeTable(const TableReaderRefSeq** cself, 
                 }
                 self->circular = static_cols[3].base.buul[0];
                 if( static_cols[4].base.var != NULL ) {
-                    memcpy(self->md5, static_cols[4].base.var, sizeof(self->md5));
+                    memmove(self->md5, static_cols[4].base.var, sizeof(self->md5));
                     self->has_md5 = true;
                 }
             }
             TableReader_Whack(tmp);
         }
 
-        memcpy(self->cols, TableReaderRefSeq_cols, sizeof(TableReaderRefSeq_cols));
+        memmove(self->cols, TableReaderRefSeq_cols, sizeof(TableReaderRefSeq_cols));
         if( options & errefseq_4NA) {
             self->cols[0].flags |= ercol_Skip;
             self->cols[1].flags &= ~ercol_Skip;
@@ -256,7 +256,7 @@ LIB_EXPORT rc_t CC TableReaderRefSeq_Read(const TableReaderRefSeq* cself, INSDC_
 					{
 						q = len;
 					}
-					memcpy( &buffer[*written], cself->read->base.str + s, q );
+					memmove( &buffer[*written], cself->read->base.str + s, q );
 					*written += q;
 					offset += q;
 					len -= q;

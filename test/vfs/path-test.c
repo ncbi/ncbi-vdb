@@ -126,6 +126,7 @@ const char *VPathGetSchemeTypeStr ( const VPath * self )
     CASE ( vpuri_file );
     CASE ( vpuri_ncbi_acc );
     CASE ( vpuri_http );
+    CASE ( vpuri_https );
     CASE ( vpuri_ftp );
     CASE ( vpuri_ncbi_legrefseq );
     CASE ( vpuri_ncbi_obj );
@@ -303,6 +304,8 @@ rc_t ParseUrlTest ( const VFSManager * vfs )
 
         /* <scheme>://<host>[:<port>]*/
         /*9*/ "http://www.abc.com",
+        /*9.5*/ "https://www.abc.com",
+        /*9.5*/ "Https://www.abc.com",
         /*10*/ "http://www.abc.com:80",
 
         /* /<path>[#fragment]*/
@@ -352,7 +355,9 @@ rc_t ParseUrlTest ( const VFSManager * vfs )
         /*7*/ "www.abc.com:80",
 
         /* <scheme>://<host>[:<port>]*/
-        /*8*/ "ftp://www.abc.com"
+        /*8*/ "ftp://www.abc.com",
+
+        /*9*/ "https:#bad",
         
             
     };
@@ -480,6 +485,8 @@ rc_t ModifyPathTest ( const VFSManager * vfs )
 
         /* urls */
         "http://www.abc.com/library/index.html",
+        "https://www.abc.com/library/index.html",
+        "HTTPS://www.abc.com/library/index.html",
         "http://www.abc.com/library/index.html?x&y=123&z=test#ignore-me",
 
         /* having auth portion */
@@ -499,7 +506,8 @@ rc_t ModifyPathTest ( const VFSManager * vfs )
     {
         /* host */
         "http://www.abc.com",
-        "http://www.abc.com:80"
+        "http://www.abc.com:80",
+        "https://www.abc.com"
     };
     const size_t num_fail_urls = sizeof fail_url / sizeof fail_url [ 0 ];
 
@@ -629,6 +637,7 @@ rc_t ExtractAccessionTest ( const VFSManager * vfs )
         /* host */
         "http://www.abc.com",
         "http://www.abc.com:80",
+        "https://www.abc.com:80",
 
         /* degenerate fs paths */
         "123456",

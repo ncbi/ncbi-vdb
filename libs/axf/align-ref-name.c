@@ -166,7 +166,7 @@ rc_t CC align_ref_name ( void *data, const VXformInfo *info,
     if ( rc != 0 )
         return rc;
     
-    memcpy( rslt->data->base, name, sizeof( name[ 0 ] ) * name_len );
+    memmove( rslt->data->base, name, sizeof( name[ 0 ] ) * name_len );
     rslt->elem_count = name_len;
     rslt->elem_bits = sizeof( name[ 0 ] ) * 8;
 

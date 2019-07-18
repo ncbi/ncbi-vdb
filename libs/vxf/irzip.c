@@ -89,9 +89,9 @@ static rc_t zlib_compress(szbuf *dst, const void *src, size_t ssize, int32_t str
         break;
     }
     zr = deflateEnd(&s);
-    if (zr != Z_OK)
+    if ( zr != Z_OK && s.total_out != 0 )
         rc = RC(rcVDB, rcFunction, rcExecuting, rcSelf, rcUnexpected);
-    if (rc == 0) {
+    if ( rc == 0 ) {
         dst->used = (uint32_t)s.total_out;
     }
     return rc;

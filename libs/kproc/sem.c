@@ -190,7 +190,8 @@ LIB_EXPORT rc_t CC KSemaphoreWait ( KSemaphore *self, struct KLock *lock )
  *  "lock" [ IN ] - externally acquired lock
  *
  *  "tm" [ IN, NULL OKAY ] - optional timeout where
- *  NULL means timeout value of 0
+ *  NULL means infinite timeout. a non-NULL timeout
+ *  pointer with a value of 0 means non-blocking.
  */
 LIB_EXPORT rc_t CC KSemaphoreTimedWait ( KSemaphore *self,
     struct KLock *lock, struct timeout_t *tm )
@@ -198,14 +199,12 @@ LIB_EXPORT rc_t CC KSemaphoreTimedWait ( KSemaphore *self,
     if ( self == NULL )
         return RC ( rcPS, rcSemaphore, rcWaiting, rcSelf, rcNull );
 
+    if ( tm == NULL )
+        return KSemaphoreWait ( self, lock );
+
     if ( self -> avail == 0 )
     {
         SMSG ( "%s[%p]: avail == 0\n", __func__, self );
-        if ( tm == NULL )
-        {
-            SMSG ( "%s[%p]: non-blocking mode - return timeout exhausted\n", __func__, self );
-            return RC ( rcPS, rcSemaphore, rcWaiting, rcTimeout, rcExhausted );
-        }
 
         if ( ++ self -> waiting == 1 )
         {
@@ -282,12 +281,20 @@ LIB_EXPORT rc_t CC KSemaphoreCancel ( KSemaphore *self )
 LIB_EXPORT rc_t CC KSemaphoreSignal ( KSemaphore *self )
 {
     if ( self == NULL )
+    {
+        SMSG ( "%s[%p]: self is NULL\n", __func__, self );
         return RC ( rcPS, rcSemaphore, rcSignaling, rcSelf, rcNull );
+    }
 
     if ( self -> canceled )
+    {
+        SMSG ( "%s[%p]: semaphore is canceled\n", __func__, self );
         return RC ( rcPS, rcSemaphore, rcSignaling, rcSemaphore, rcCanceled );
+    }
 
     ++ self -> avail;
+    SMSG ( "%s[%p]: signal setting avail to %u\n", __func__, self, self -> avail );
+
     if ( self -> waiting != 0 && self -> avail >= self -> min_requested )
     {
         /* whacky logic
@@ -295,8 +302,17 @@ LIB_EXPORT rc_t CC KSemaphoreSignal ( KSemaphore *self )
            - and only one request can be satisfied
            - then signal. otherwise, broadcast */
         if ( self -> uniform && self -> avail / self -> min_requested == 1 )
+        {
+            SMSG ( "%s[%p]: sending simple signal to condition\n", __func__, self );
             return KConditionSignal ( self -> cond );
+        }
+
+        SMSG ( "%s[%p]: sending broadcast signal to condition\n", __func__, self );
         return KConditionBroadcast ( self -> cond );
+    }
+    else
+    {
+        SMSG ( "%s[%p]: skipping signaling: self->waiting = %u, self->avail = %u, self->min_requested = %u\n", __func__, self, self -> waiting, self -> avail, self -> min_requested );
     }
 
     return 0;
@@ -366,7 +382,8 @@ LIB_EXPORT rc_t CC KSemaphoreAlloc ( KSemaphore *self,
  *  "count" [ IN ] - the resource count
  *
  *  "tm" [ IN, NULL OKAY ] - optional timeout where
- *  NULL means timeout value of 0
+ *  NULL means infinite timeout. a non-NULL timeout
+ *  pointer with a value of 0 means non-blocking.
  */
 LIB_EXPORT rc_t CC KSemaphoreTimedAlloc ( KSemaphore *self,
     struct KLock *lock, uint64_t count, struct timeout_t *tm )
@@ -374,11 +391,11 @@ LIB_EXPORT rc_t CC KSemaphoreTimedAlloc ( KSemaphore *self,
     if ( self == NULL )
         return RC ( rcPS, rcSemaphore, rcWaiting, rcSelf, rcNull );
 
+    if ( tm == NULL )
+        return KSemaphoreAlloc ( self, lock, count );
+
     if ( self -> avail < count )
     {
-        if ( tm == NULL )
-            return RC ( rcPS, rcSemaphore, rcWaiting, rcTimeout, rcExhausted );
-
         if ( ++ self -> waiting == 1 )
         {
             self -> requested = self -> min_requested = count;

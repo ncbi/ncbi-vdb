@@ -120,7 +120,7 @@ rc_t CC simple_sub_select ( void *data, const VXformInfo *info,
                 bitcpy ( rslt -> data -> base, 0, base, boff, bits );
             else{
                 assert((boff&7)==0);
-                memcpy ( rslt -> data -> base, cbase, bits>>3 );
+                memmove ( rslt -> data -> base, cbase, bits>>3 );
             }	
 
             rslt -> elem_count = row_len;
@@ -229,7 +229,7 @@ rc_t open_sub_cursor ( SubSelect **fself, const VXfactInfo *info, const VFactory
                             self->first_time  = true;
                             self->col_name_len  = cp->argv[1].count;
                             self->col_name = malloc(self->col_name_len);
-                            memcpy(self->col_name,cp->argv[1].data.ascii,self->col_name_len);
+                            memmove(self->col_name,cp->argv[1].data.ascii,self->col_name_len);
                             * fself = self;
                             if ( ftbl != NULL )
                                 VTableRelease ( ftbl );

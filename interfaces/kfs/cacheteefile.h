@@ -54,6 +54,7 @@ struct KDirectory;
  */
 
 /* MakeCacheTee
+ * MakeCacheTeePromote
  *  takes a KFile as source
  *
  *  "tee" [ OUT ] - return parameter for tee file
@@ -104,6 +105,18 @@ KFS_EXTERN rc_t CC KDirectoryMakeCacheTee ( struct KDirectory *self,
     struct KFile const **tee, struct KFile const *remote,
     uint32_t blocksize, const char *path, ... );
 KFS_EXTERN rc_t CC KDirectoryVMakeCacheTee ( struct KDirectory *self,
+    struct KFile const **tee, struct KFile const *remote,
+    uint32_t blocksize, const char *path, va_list args );
+
+
+/* "promote" the cache file to a normal form and name when complete
+ * by removing the ".cache" extension and truncating bitmap
+ * and leaving the file within the cache
+ */
+KFS_EXTERN rc_t CC KDirectoryMakeCacheTeePromote ( struct KDirectory *self,
+    struct KFile const **tee, struct KFile const *remote,
+    uint32_t blocksize, const char *path, ... );
+KFS_EXTERN rc_t CC KDirectoryVMakeCacheTeePromote ( struct KDirectory *self,
     struct KFile const **tee, struct KFile const *remote,
     uint32_t blocksize, const char *path, va_list args );
 

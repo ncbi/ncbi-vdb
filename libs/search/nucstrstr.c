@@ -412,7 +412,7 @@ void PARSE_2NA_PATTERN ( const char *fasta, size_t size,
     nucreg_t nm = _mm_loadu_si128 ( ( const __m128i* ) mask . b );
 
     assert ( size < sizeof str );
-    memcpy ( str, fasta, size );
+    memmove ( str, fasta, size );
     str [ size ] = 0;
 
     printf ( "  %s - original FASTA\n", str );
@@ -429,7 +429,7 @@ void PARSE_4NA_PATTERN ( const char *fasta, size_t size,
     nucreg_t nm = _mm_loadu_si128 ( ( const __m128i* ) mask . b );
 
     assert ( size < sizeof str );
-    memcpy ( str, fasta, size );
+    memmove ( str, fasta, size );
     str [ size ] = 0;
 
     printf ( "  %s - original FASTA\n", str );
@@ -1479,7 +1479,7 @@ __m128i prime_buffer_2na ( const uint8_t *src, const uint8_t *end )
         /* currently only seen for 454 */
         else
         {
-            memcpy ( tmp . b, src, bytes );
+            memmove ( tmp . b, src, bytes );
             memset ( & tmp . b [ bytes ], 0, sizeof tmp . b - bytes );
         }
 

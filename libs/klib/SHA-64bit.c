@@ -142,9 +142,9 @@ static void SHA_stage(uint64_t Ho[8], const uint64_t Hi[8], uint64_t W[16])
 static __inline__ void SHA_64b_Init(struct SHA64bitState *ctx, int which)
 {
     if (which == 0)
-        memcpy(ctx->H, H0_384, sizeof(H0_384));
+        memmove(ctx->H, H0_384, sizeof(H0_384));
     else
-        memcpy(ctx->H, H0_512, sizeof(H0_512));
+        memmove(ctx->H, H0_512, sizeof(H0_512));
     ctx->len = 0;
     ctx->cur = 0;
 }
@@ -160,7 +160,7 @@ static __inline__ void SHA_64b_Append(struct SHA64bitState *ctx, const uint8_t d
         n = length - i > 128 ? 128 : (unsigned)(length - i);
         if (ctx->cur + n > 128)
             n = 128 - ctx->cur;
-        memcpy(&ctx->W[ctx->cur], &data[i], n);
+        memmove(&ctx->W[ctx->cur], &data[i], n);
         ctx->cur += n;
         if (ctx->cur == 128) {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
@@ -237,7 +237,7 @@ void CC SHA384StateFinish(SHA384State *ctx, uint8_t hash[48])
         H[5] = bswap_64(H[5]);
     }
 #endif
-    memcpy(hash, H, 48);
+    memmove(hash, H, 48);
 }
 
 void CC SHA512StateInit(SHA512State *ctx)
@@ -267,5 +267,5 @@ void CC SHA512StateFinish(SHA512State *ctx, uint8_t hash[64])
         H[7] = bswap_64(H[7]);
     }
 #endif
-    memcpy(hash, H, 64);
+    memmove(hash, H, 64);
 }

@@ -145,7 +145,7 @@ rc_t RefPosMake ( RefPos **objp, const VTable *tbl, const VCursor *native_curs )
                 if ( rc == 0 )
                 {
                     assert( row_len == 1 );
-                    memcpy( &obj->max_seq_len, base, 4 );
+                    memmove( &obj->max_seq_len, base, 4 );
                 }
             }
 
@@ -255,7 +255,7 @@ rc_t CC align_ref_pos ( void *data, const VXformInfo *info,
             }
             else
             {
-                memcpy( &brr->rr, new_rr, sizeof( *new_rr ) );
+                memmove( &brr->rr, new_rr, sizeof( *new_rr ) );
                 BSTreeInsert( ( BSTree* )&self->tr_range, ( BSTNode* )brr, row_range_sort );
             }
         }

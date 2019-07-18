@@ -112,10 +112,10 @@ ifdef HDF5_LIBDIR
 endif
 
 $(LIBDIR)/libkdf5.$(SHLX): $(KDF5_OBJ)
-	$(LD) --dlib --vers $(SRCDIR) -o $@ $^ $(KDF5_LIB)
+	$(LD) --dlib --vers $(SRCDIR)/../ncbi-vdb/libncbi-vdb.vers -o $@ $^ $(KDF5_LIB)
 
 $(LIBDIR)/libkdf5.$(LIBX): $(KDF5_OBJ)
-	$(LD) --slib --vers $(SRCDIR) -o $@ $^ $(KDF5_LIB)
+	$(LD) --slib --vers $(SRCDIR)/../ncbi-vdb/libncbi-vdb.vers -o $@ $^ $(KDF5_LIB)
 
 compile: stdcompile
 

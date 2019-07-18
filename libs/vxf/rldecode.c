@@ -97,7 +97,7 @@ static int decode(uint8_t *dst, unsigned dsize, const uint8_t src[], unsigned ss
                 size = ssize - i - 1;
                 if (j + size > dsize)
                     return 1;
-                memcpy(dst + j, src + i + 1, size);
+                memmove(dst + j, src + i + 1, size);
                 return 0;
             }
             st = 4;

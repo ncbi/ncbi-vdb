@@ -243,8 +243,9 @@ rc_t KEncFileBufferWrite (KEncFile * self, uint64_t offset, const void * buffer,
  *  The first is a common "NCBI"
  *  The second is the format specific "nenc"
  */
+#if 0
 static const KEncFileSig KEncFileSignature = "NCBInenc";
-
+#endif
 
 /* -----
  * the common constant used throughout the project to check the byte order 
@@ -276,10 +277,11 @@ const KEncFileHeader const_header_sra
 = { "NCBIsenc", eEncFileByteOrderTag, eCurrentVersion };
 
 
+#if 0
 static
 const KEncFileHeader const_bswap_header_sra
 = { "NCBIsenc", eEncFileByteOrderReverse, eCurrentVersionReverse };
-
+#endif
     
 /* ----------
  * HeaderRead
@@ -478,6 +480,7 @@ void KEncFileFooterSwap (const KEncFile * self, KEncFileFooter * foot)
  * Read
  * If we know where the footer is we can read it specifically
  */
+#if 0
 static
 rc_t KEncFileFooterRead (KEncFile * self, const uint64_t pos,
                          const bool validate)
@@ -526,7 +529,7 @@ rc_t KEncFileFooterRead (KEncFile * self, const uint64_t pos,
 
     return rc;
 }
-
+#endif
 
 /* ----------
  * Write
@@ -549,7 +552,7 @@ rc_t KEncFileFooterWrite (KEncFile * self)
     }
     else
     {
-        memcpy ( & foot, & self -> foot, sizeof foot );
+        memmove ( & foot, & self -> foot, sizeof foot );
     }
 
     KEncFileFooterSwap (self, &foot);
@@ -1078,7 +1081,7 @@ rc_t KEncFileBlockRead (KEncFile * self, KEncFileBlock * block,
                         rc = RC (rcKrypto, rcFile, rcReading, rcData, rcIncomplete);
                     else
                     {
-                        memcpy (block, &u.b, sizeof u.b);
+                        memmove (block, &u.b, sizeof u.b);
                         rc = 0;
                     }
                 }
@@ -2542,7 +2545,7 @@ LIB_EXPORT rc_t CC KFileIsEnc_v2 (const char * buffer, size_t buffer_size)
     
     count = buffer_size > sizeof header ? sizeof header : buffer_size;
 
-    memcpy (&header, buffer, count);
+    memmove (&header, buffer, count);
 
     if (header.byte_order == const_header.byte_order)
         byte_swapped = false;
@@ -2591,7 +2594,7 @@ LIB_EXPORT rc_t CC KFileIsSraEnc (const char * buffer, size_t buffer_size)
     
     count = buffer_size > sizeof header ? sizeof header : buffer_size;
 
-    memcpy (&header, buffer, count);
+    memmove (&header, buffer, count);
 
     if (header.byte_order == const_header.byte_order)
         byte_swapped = false;

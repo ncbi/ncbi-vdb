@@ -92,8 +92,8 @@
 #define OCTAL_PREFIX_COUNTS_TOWARD_PRECISION  STDC_COMPATIBILITY
 #define HEX_PREFIX_FOLLOWS_CASE               STDC_COMPATIBILITY
 /* Present in 2.3.3 (from SLES 9.3), absent in 2.5 (from CentOS 5.6) */
-#define EMULATE_SMALLINT_EXTENSION_BUG      ( STDC_COMPATIBILITY && defined(__GLIBC__) && (__GLIBC__ < 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 5) ) )
-#define ZERO_PAD_ONLY_NUMBERS               ( !STDC_COMPATIBILITY || defined(__GLIBC__) )
+#define EMULATE_SMALLINT_EXTENSION_BUG      ( STDC_COMPATIBILITY && __GLIBC__ != 0 && (__GLIBC__ < 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 5) ) )
+#define ZERO_PAD_ONLY_NUMBERS               ( !STDC_COMPATIBILITY || __GLIBC__ != 0 )
 
 #define USE_LIB_FLOAT 1
 
@@ -1363,9 +1363,9 @@ rc_t create_overflow ( KDataBuffer *overflow, const char *fmt_str,
         PrintArg *dargs = ( void* ) ( dfmt + fmt_str_size );
 
         /* copy existing data */
-        memcpy ( dstr, str, str_idx * sizeof * dstr );
-        memcpy ( dfmt, fmt, fmt_idx * sizeof * dfmt );
-        memcpy ( dargs, args, arg_idx * sizeof * dargs );
+        memmove ( dstr, str, str_idx * sizeof * dstr );
+        memmove ( dfmt, fmt, fmt_idx * sizeof * dfmt );
+        memmove ( dargs, args, arg_idx * sizeof * dargs );
 
         /* if there are any pointers into "str", relocate them */
         if ( str_idx != 0 )
@@ -1407,6 +1407,9 @@ rc_t parse_format_string ( const char *fmt_str, va_list vargs,
 
     PrintFmt *fmt = * fmtp;
     PrintArg *args = * argp;
+
+    if ( fmt_str == NULL )
+        return RC ( rcText, rcString, rcFormatting, rcParam, rcNull );
 
     /* loop over format string */
     for ( rc = 0, i = str_idx = fmt_idx = arg_idx = 0; fmt_str [ i ] != 0; ++ i )
@@ -2271,7 +2274,7 @@ rc_t write_buffer ( KBufferedWrtHandler *out, const char *data, size_t bytes )
             num_writ = out -> bsize - out -> cur;
             if ( total + num_writ > bytes )
                 num_writ = bytes - total;
-            memcpy ( & out -> buff [ out -> cur ], & data [ total ], num_writ );
+            memmove ( & out -> buff [ out -> cur ], & data [ total ], num_writ );
         }
     }
     return 0;
@@ -2834,10 +2837,10 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
                     switch ( f . radix )
                     {
                     case 2:
-                        memcpy ( prefix, "0b", prefix_len = 2 );
+                        memmove ( prefix, "0b", prefix_len = 2 );
                         break;
                     case 8:
-                        memcpy ( prefix, "0", prefix_len = prefix_contribution = 1 );
+                        memmove ( prefix, "0", prefix_len = prefix_contribution = 1 );
 #if OCTAL_PREFIX_COUNTS_TOWARD_PRECISION
                         if ( f . add_prefix && f . u . f . precision != 0 )
                             -- f . u . f . precision;
@@ -2846,10 +2849,10 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
                     case 16:
 #if HEX_PREFIX_FOLLOWS_CASE
                         if ( to_numeral [ 10 ] == 'A' )
-                            memcpy ( prefix, "0X", prefix_len = 2 );
+                            memmove ( prefix, "0X", prefix_len = 2 );
                         else
 #endif
-                            memcpy ( prefix, "0x", prefix_len = 2 );
+                            memmove ( prefix, "0x", prefix_len = 2 );
                         break;
                     }
                 }
@@ -3512,6 +3515,8 @@ LIB_EXPORT rc_t CC KDataBufferVPrintf ( KDataBuffer * buf, const char * fmt, va_
             rc = KDataBufferResize ( buf, bsize );
             if ( rc == 0 )
             {
+                buffer = buf -> base;       /* fix for VDB-3505 */
+
                 /* try again with the newly sized buffer */
                 rc = string_vprintf ( &buffer [ content ], bsize - content, & num_writ, fmt, args_copy );
             }

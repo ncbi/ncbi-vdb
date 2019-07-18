@@ -46,10 +46,10 @@ RWORKDIR = $(TOP)/$(MODULE)
 #
 
 # we are building it on all platforms now, because dependency on libcurl is removed
-all std: makedirs vers-includes compile
+all std: makedirs compile
 	@ $(MAKE_CMD) $(TARGDIR)/std
 
-$(INT_LIBS): makedirs vers-includes
+$(INT_LIBS): makedirs
 	@ $(MAKE_CMD) $(ILIBDIR)/$@
 
 .PHONY: all std $(ALL_LIBS)
@@ -70,26 +70,15 @@ clean: stdclean
 .PHONY: clean
 
 #-------------------------------------------------------------------------------
-# vers-includes
-#
-vers-includes: $(addsuffix .vers.h,$(INT_LIBS))
-
-.PHONY: $(TARGDIR)/vers-includes
-
-#-------------------------------------------------------------------------------
-# version
-#
-libkns.vers: $(SRCDIR)/../ncbi-vdb/libncbi-vdb.vers
-	cp $^ $(SRCDIR)/$@
-
-#-------------------------------------------------------------------------------
 # kns
 #
 $(ILIBDIR)/libkns: $(addprefix $(ILIBDIR)/libkns.,$(ILIBEXT))
 
 KNS_NO_HTTP_SRC = \
+	stream-from-buffer \
 	kns_manager-ext \
 	manager \
+	proxy \
 	buffered-stream \
 	stream \
 	stream-from-files \
@@ -98,7 +87,8 @@ KNS_NO_HTTP_SRC = \
 	sysendpoint \
 	syssock \
 	sysstream \
-    sysmgr
+	sysmgr \
+	tls
 
 ifneq (win,$(OS))
 KNS_NO_HTTP_SRC += \
@@ -126,3 +116,9 @@ $(ILIBDIR)/libkns.$(LIBX): $(KNS_OBJ)
 compile: stdcompile
 
 $(TARGDIR)/compile: $(OBJFILES)
+
+#-------------------------------------------------------------------------------
+# fuzz
+#
+fuzz: std
+	cp $(addsuffix .$(LIBX),$(addprefix $(ILIBDIR)/,$(INT_LIBS))) $(FLIBDIR)/

@@ -102,7 +102,7 @@ rc_t CC align_restore_read_impl ( void *data, const VXformInfo *info, int64_t ro
         {
             if ( roi >= (int)ref_offset_len )
                 return RC( rcXF, rcFunction, rcExecuting, rcData, rcInconsistent );
-            memcpy ( & bi, ref_offset + roi, sizeof bi );
+            memmove ( & bi, ref_offset + roi, sizeof bi );
             rri += bi; /** can lead to negative rri ***/                
             roi++;
         }

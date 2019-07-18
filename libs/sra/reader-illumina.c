@@ -219,7 +219,7 @@ int kludge_snprintf ( char *buff, size_t bsize, const char *fmt, ... )
             status = vsnprintf ( kludge, kludge_size, fmt, args2 );
             if ( status >= 0 )
             {
-                memcpy ( buff, kludge, ( size_t ) status > bsize ? bsize : ( size_t ) status );
+                memmove ( buff, kludge, ( size_t ) status > bsize ? bsize : ( size_t ) status );
                 if ( ( size_t ) status < bsize )
                     buff [ status ] = 0;
             }

@@ -67,7 +67,7 @@ static unsigned uniq_list( unsigned dst[], void **list, unsigned N ) {
             ++n;
         }
     }
-    memcpy(list, uniq, n * sizeof(list[0]));
+    memmove(list, uniq, n * sizeof(list[0]));
     if (on_heap)
         free(on_heap);
     return n;
@@ -165,7 +165,7 @@ rc_t CC VBlobCreateMerged( VBlob **lhs, uint32_t num_inputs, const VBlob *input[
         if (rc == 0) {
             rc = KDataBufferResize(&buffer, bsize + sz);
             if (rc == 0) {
-                memcpy((uint8_t *)buffer.base + bsize, o->data.base, sz);
+                memmove((uint8_t *)buffer.base + bsize, o->data.base, sz);
                 bsize += sz;
             }
         }

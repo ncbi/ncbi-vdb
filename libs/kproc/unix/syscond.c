@@ -211,12 +211,13 @@ LIB_EXPORT rc_t CC KConditionTimedWait ( KCondition *self, struct KLock *lock, t
 {
     int status;
 
+    if ( tm == NULL )
+        return KConditionWait ( self, lock );
+
     if ( self == NULL )
         return RC ( rcPS, rcCondition, rcWaiting, rcSelf, rcNull );
     if ( lock == NULL )
         return RC ( rcPS, rcCondition, rcWaiting, rcLock, rcNull );
-    if ( tm == NULL )
-        return RC ( rcPS, rcCondition, rcWaiting, rcTimeout, rcNull );
 
     CMSG ( "%s[%p]: testing timeout structure\n", __func__, self );
     if ( ! tm -> prepared )
@@ -283,6 +284,9 @@ LIB_EXPORT rc_t CC KConditionSignal ( KCondition *self )
     if ( self == NULL )
         return RC ( rcPS, rcCondition, rcSignaling, rcSelf, rcNull );
 
+    CMSG ( "%s[%p]: calling 'pthread_cond_signal ( cond = %p )'...\n"
+           , __func__, self, & self -> cond
+        );
     status = pthread_cond_signal ( & self -> cond );
     switch ( status )
     {
@@ -307,6 +311,9 @@ LIB_EXPORT rc_t CC KConditionBroadcast ( KCondition *self )
     if ( self == NULL )
         return RC ( rcPS, rcCondition, rcSignaling, rcSelf, rcNull );
 
+    CMSG ( "%s[%p]: calling 'pthread_cond_broadcast ( cond = %p )'...\n"
+           , __func__, self, & self -> cond
+        );
     status = pthread_cond_broadcast ( & self -> cond );
     switch ( status )
     {

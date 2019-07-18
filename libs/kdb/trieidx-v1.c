@@ -179,7 +179,7 @@ rc_t KTrieIndexFind_v1 ( const KTrieIndex_v1 *self, const char *str, uint32_t *i
         if ( nid != 0 )
         {
             assert ( n . data . size == sizeof * id );
-            memcpy ( id, n . data . addr, sizeof * id );
+            memmove ( id, n . data . addr, sizeof * id );
             return 0;
         }
     }

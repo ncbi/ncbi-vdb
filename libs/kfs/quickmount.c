@@ -189,7 +189,7 @@ rc_t KQuickMountDirRelativePath (const KQuickMountDir *self, enum RCContext ctx,
 
     /* insert backup sequences */
     for ( bsize = 0; backup > 0; bsize += 3, -- backup )
-        memcpy ( & path [ bsize ], "../", 3 );
+        memmove ( & path [ bsize ], "../", 3 );
 
     /* close gap */
     if ( (size_t) (p - path) > bsize )
@@ -229,7 +229,7 @@ rc_t KQuickMountDirVMakePath (const KQuickMountDir * self, enum RCContext ctx,
                 return RC ( rcFS, rcDirectory, ctx, rcPath, rcExcessive );
             memmove ( buffer + bsize, buffer, psize + 1 );
             assert ( self -> path [ bsize - 1 ] == '/' );
-            memcpy ( buffer, self -> path, bsize );
+            memmove ( buffer, self -> path, bsize );
         }
         else if ( ( bsize = self -> root ) != 0 )
         {
@@ -237,7 +237,7 @@ rc_t KQuickMountDirVMakePath (const KQuickMountDir * self, enum RCContext ctx,
                 return RC ( rcFS, rcDirectory, ctx, rcPath, rcExcessive );
             memmove ( buffer + bsize, buffer, psize + 1 );
             assert ( self -> path [ bsize - 1 ] != '/' );
-            memcpy ( buffer, self -> path, bsize );
+            memmove ( buffer, self -> path, bsize );
         }
     }
     else
@@ -245,12 +245,12 @@ rc_t KQuickMountDirVMakePath (const KQuickMountDir * self, enum RCContext ctx,
         if ( path [ 0 ] != '/' )
         {
 /*             assert ( self -> path [ self -> size - 1 ] == '/' ); */
-            memcpy ( buffer, self -> path, bsize = (self->mount - self->path) - 1 );
+            memmove ( buffer, self -> path, bsize = (self->mount - self->path) - 1 );
         }
         else if ( ( bsize = self -> root ) != 0 )
         {
             assert ( self -> path [ bsize - 1 ] != '/' );
-            memcpy ( buffer, self -> path, bsize );
+            memmove ( buffer, self -> path, bsize );
         }
 
 
@@ -922,7 +922,7 @@ KFS_EXTERN rc_t KQuickMountDirMake (const KDirectory * self,
     if (sizeof tbuff - 1 < mount_size)
         return RC (rcFS, rcDirectory, rcCreating, rcBuffer, rcInsufficient);
 
-    memcpy (tbuff, mount, mount_size);
+    memmove (tbuff, mount, mount_size);
     tbuff[mount_size] = '\0';
 
     while ((pc = strpbrk (tbuff, "\"\\/")) != NULL)

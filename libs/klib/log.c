@@ -95,7 +95,7 @@ LIB_EXPORT rc_t CC KLogLevelSet(KLogLevel lvl)
 /*
  * These need to be kept in sync with type LogLevel
  */
-static const char * logLevelParamStrings [] = 
+static const char * logLevelParamStrings [] =
 {
     "fatal",
     "sys",
@@ -160,7 +160,7 @@ rc_t CC KLogDefaultFormatter( void* self, KWrtHandler* writer,
                               size_t envc, const wrt_nvp_t envs[] )
 {
     rc_t rc = 0;
-    size_t num_writ, nsize, msize;
+    size_t num_writ, nsize;
     uint64_t mlen;
     char buffer[8192], *nbuffer;
     const char* msg, *rc_msg;
@@ -172,7 +172,7 @@ rc_t CC KLogDefaultFormatter( void* self, KWrtHandler* writer,
     msg = wrt_nvp_find_value(envc, envs, "message");
     rc_msg = wrt_nvp_find_value(envc, envs, "reason");
     if( msg != NULL ) {
-        const char* mend = msg + string_measure(msg, &msize);
+        const char* mend = msg + string_size(msg);
         /* strip trailing newlines */
         while( mend != msg && (*mend == '\n' || *mend == '\r') ) {
             --mend;
@@ -218,7 +218,6 @@ rc_t CC KLogDefaultFormatter( void* self, KWrtHandler* writer,
     }
     return rc;
 }
-
 
 /* Init
  *  initialize the logging module with executable identity and version,
@@ -353,10 +352,8 @@ rc_t logsubstituteparams ( const char* msg, uint32_t argc, const wrt_nvp_t argv[
                 }
             }
             /* substitute param value */
-            for(value = arg->value; *value != 0; value++, sz++) {
-                if( sz < bsize ) {
+            for(value = arg->value; *value != 0 && sz < bsize; value++, sz++) {
                     buffer[sz] = *value;
-                }
             }
             /* compensate for outer loop's increment */
             --sz;
@@ -469,7 +466,24 @@ static
 rc_t prep_v_args( uint32_t* argc, wrt_nvp_t argv[], size_t max_argc,
                   char* pbuffer, size_t pbsize, const char* fmt, va_list args )
 {
-    rc_t rc = string_vprintf ( pbuffer, pbsize, NULL, fmt, args );
+    size_t num_writ = 0;
+    rc_t rc = string_vprintf ( pbuffer, pbsize, & num_writ, fmt, args );
+    if ( rc == SILENT_RC ( rcText, rcString, rcConverting, rcBuffer,
+                           rcInsufficient ) )
+    {
+        size_t pos = num_writ;
+        char truncated [] = "... [ truncated ]";
+        size_t required = num_writ + sizeof truncated;
+        if ( required > pbsize ) {
+            assert ( pbsize > sizeof truncated );
+            pos = pbsize - sizeof truncated;
+        }
+        {
+            size_t c = string_copy_measure ( pbuffer + pos, pbsize, truncated );
+            assert ( c + 1 == sizeof truncated );
+            rc = 0;
+        }
+    }
     if ( rc == 0 )
     {
         /* tokenize the parameters into name/value pairs */
@@ -480,7 +494,7 @@ rc_t prep_v_args( uint32_t* argc, wrt_nvp_t argv[], size_t max_argc,
 
 static
 rc_t log_print( KFmtHandler* formatter, const KLogFmtFlags flags, KWrtHandler* writer,
-                KLogLevel lvl, bool use_rc, rc_t status, 
+                KLogLevel lvl, bool use_rc, rc_t status,
                 const char* msg, const char* fmt, va_list args )
 {
     rc_t rc = 0;
@@ -495,7 +509,7 @@ rc_t log_print( KFmtHandler* formatter, const KLogFmtFlags flags, KWrtHandler* w
     char pbuffer[4096];
     char abuffer[4096];
     KFmtWriter fmtwrt;
-    
+
     assert(formatter != NULL);
     assert(writer != NULL);
 
@@ -625,6 +639,7 @@ rc_t log_print( KFmtHandler* formatter, const KLogFmtFlags flags, KWrtHandler* w
             rc = prep_v_args(&argc, argv, sizeof(argv)/sizeof(argv[0]) - 1, pbuffer, sizeof(pbuffer), fmt, args);
         }
         if( rc == 0 && (flags & klogFmtMessage) ) {
+            int retries = 0;
             if( msg == NULL || msg[0] == '\0' ) {
                 msg = "empty log message";
             }
@@ -649,7 +664,9 @@ rc_t log_print( KFmtHandler* formatter, const KLogFmtFlags flags, KWrtHandler* w
                     }
                     break;
                 }
-            } while(rc == 0);
+                if ( retries ++ > 9 ) /* something is wrong: too many retries */
+                    break;
+            } while(rc != 0);
         }
     }
     if( rc != 0 ) {
@@ -695,7 +712,7 @@ LIB_EXPORT rc_t CC LogLibMsg ( KLogLevel lvl, const char *msg )
     if ( lvl > KLogLevelGet() )
         return 0;
 
-    return log_print(KLogLibFmtHandlerGet(), G_log_lib_formatter_flags, 
+    return log_print(KLogLibFmtHandlerGet(), G_log_lib_formatter_flags,
                      KLogLibHandlerGet(), lvl, false, 0, msg, NULL, NULL );
 }
 

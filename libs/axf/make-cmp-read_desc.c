@@ -50,7 +50,7 @@ static void copy( void * dst, size_t doff, void const * src, size_t soff, size_t
 {
     if ( ( doff & 7 ) == 0 && ( soff & 7 ) == 0 && ( bits & 7 ) == 0 )
     {
-        memcpy( &( ( char * )dst )[ doff >> 3 ], &( ( char const * )src )[ soff >> 3 ], bits >> 3 );
+        memmove( &( ( char * )dst )[ doff >> 3 ], &( ( char const * )src )[ soff >> 3 ], bits >> 3 );
     }
     else
     {

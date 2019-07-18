@@ -308,9 +308,9 @@ rc_t KTocParseKDirRecur	(KToc * self,
 			char * recur_path;
                         size_t recur_path_z;
 
-			memcpy (new_path, path, pathlen);
+			memmove (new_path, path, pathlen);
 			new_path[pathlen] = '/';
-			memcpy (new_path + pathlen + 1, name, namelen);
+			memmove (new_path + pathlen + 1, name, namelen);
 			new_path[pathlen+1+namelen] = '\0';
 
 #if 1

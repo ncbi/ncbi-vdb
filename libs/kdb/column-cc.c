@@ -159,7 +159,7 @@ rc_t KColumnCheckBlobs(const KColumn *self,
         
         rc = KColumnOpenBlobRead(self, &blob, row + start);
         if (rc) {
-            if (GetRCObject(rc) == rcBlob && GetRCState(rc) == rcNotFound) {
+            if (GetRCObject(rc) == (enum RCObject)rcBlob && GetRCState(rc) == rcNotFound) {
                 rc = 0;
                 ++row; /* try with the next row; linear scan seems wrong */
                 continue;

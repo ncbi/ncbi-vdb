@@ -214,7 +214,7 @@ void CC Unpack8From2(uint8_t *dst,const uint8_t *src,int32_t count)
 	if(count > 0){
 		int i;
 		for(i=0;i<count/4;i++,dst+=4,src++){
-			memcpy(dst,unpack_8_from_2_arr[*src],4);
+			memmove(dst,unpack_8_from_2_arr[*src],4);
 		}
 		for(i=0;i< (count&3);i++){
 			dst[i] = unpack_8_from_2_arr[*src][i];
@@ -227,7 +227,7 @@ void CC Unpack8From1(uint8_t *dst,const uint8_t *src,int32_t count)
 	if(count > 0){
 		int i;
 		for(i=0;i<count/8;i++,dst+=8,src++){
-			memcpy(dst,unpack_8_from_1_arr[*src],8);
+			memmove(dst,unpack_8_from_1_arr[*src],8);
 		}
 		for(i=0;i< (count&7);i++){
 			dst[i] = unpack_8_from_1_arr[*src][i];
@@ -802,7 +802,7 @@ LIB_EXPORT rc_t CC Unpack ( uint32_t packed, uint32_t unpacked,
     if ( unpacked == 8 && packed == 8 && src_off == 0 )
     {
         if ( ( const void* ) dst != src )
-            memcpy ( dst, src, ssize >> 3 );
+            memmove ( dst, src, ssize >> 3 );
         return 0;
     }
 

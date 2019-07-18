@@ -56,7 +56,7 @@
 extern "C" {
 #endif
 
-    
+
 #if _DEBUGGING
 #define VBLOG_HAS_NAME 1
 #endif
@@ -96,7 +96,7 @@ struct VBlob
 {
     int64_t start_id;
     int64_t stop_id;
-    
+
     struct PageMap *pm;
     struct BlobHeaders *headers;
     struct VBlobPageMapCache *spmc; /* cache for split */
@@ -162,8 +162,8 @@ rc_t VBlobCreateFromSingleRow(
                               VByteOrder byte_order
 );
 /*** VBlob as a new array; meaning fixed len,data_run(..)=1 **/
-rc_t VBlobNewAsArray(struct VBlob **lhs, int64_t start_id, int64_t stop_id, uint32_t rowlen, uint32_t elem_bits); 
-    
+rc_t VBlobNewAsArray(struct VBlob **lhs, int64_t start_id, int64_t stop_id, uint32_t rowlen, uint32_t elem_bits);
+
 rc_t VBlobSerialize( const VBlob *self, KDataBuffer *result );
 
 bool VBlobIsSingleRow( const VBlob *self );

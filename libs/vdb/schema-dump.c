@@ -123,7 +123,7 @@ rc_t SDumperWrite ( SDumper *self, const char *buffer, size_t size )
         if ( num_writ > sizeof self -> buffer - self -> total )
             num_writ = sizeof self -> buffer - self -> total;
 
-        memcpy ( & self -> buffer [ self -> total ], & buffer [ total ], num_writ );
+        memmove ( & self -> buffer [ self -> total ], & buffer [ total ], num_writ );
         self -> total += num_writ;
     }
 
@@ -648,7 +648,7 @@ rc_t CC flush_to_text ( void *data, const void *buffer, size_t size )
         if ( pb -> total + size >= pb -> bsize )
             return RC ( rcVDB, rcSchema, rcWriting, rcBuffer, rcInsufficient );
 
-        memcpy ( & pb -> buff [ pb -> total ], buffer, size );
+        memmove ( & pb -> buff [ pb -> total ], buffer, size );
         pb -> total += size;
     }
     return 0;

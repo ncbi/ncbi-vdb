@@ -48,6 +48,7 @@
  */
 struct VDatabase;
 struct VSchema;
+struct VPath;
 
 /*--------------------------------------------------------------------------
  * VDBManager
@@ -359,6 +360,20 @@ struct VDBManager
     inline rc_t SetUserData ( void *data,
         void ( CC * destroy ) ( void *data ) = 0 ) const throw()
     { return VDBManagerSetUserData ( this, data, destroy ); }
+
+    /* GetCacheRoot
+     * SetCacheRoot
+     * get/set CacheRoot ( location for user-repo/dbgap-repo )
+     *
+     * "path" [ OUT ] - VPath pointing to current location
+     * "path" [ IN ]  - VPath of new location
+     *
+     */
+    inline rc_t GetCacheRoot ( struct VPath const ** path ) const throw()
+    { return VDBManagerGetCacheRoot ( this, path ); }
+
+    inline rc_t SetCacheRoot ( struct VPath const * path ) const throw()
+    { return VDBManagerSetCacheRoot ( this, path ); }
 
 
 private:

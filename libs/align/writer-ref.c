@@ -97,8 +97,8 @@ rc_t CC TableWriterRef_Make(const TableWriterRef** cself, VDatabase* db, const u
         if( self == NULL ) {
             rc = RC(rcAlign, rcFormatter, rcConstructing, rcMemory, rcExhausted);
         } else {
-            memcpy(self->cols_data, TableWriterRefData_cols, sizeof(TableWriterRefData_cols));
-            memcpy(self->cols_coverage, TableWriterRefCoverage_cols, sizeof(TableWriterRefCoverage_cols));
+            memmove(self->cols_data, TableWriterRefData_cols, sizeof(TableWriterRefData_cols));
+            memmove(self->cols_coverage, TableWriterRefCoverage_cols, sizeof(TableWriterRefCoverage_cols));
             if( !(options & ewref_co_QUALITY) ) {
                 self->cols_data[ewrefd_cn_QUALITY].flags |= ewcol_Ignore;
             }
@@ -250,7 +250,7 @@ rc_t CC TableWriterRef_Write(const TableWriterRef* cself, const TableWriterRefDa
             /* new seq_id: reset counters and mem it */
             TableWriterRef* self = (TableWriterRef*)cself;
             self->last_seq_id_len = data->seq_id.elements;
-            memcpy(self->last_seq_id, data->seq_id.buffer, cself->last_seq_id_len);
+            memmove(self->last_seq_id, data->seq_id.buffer, cself->last_seq_id_len);
             self->seq_start_last = 1;
             self->last_cs_key = 'T';
         }
@@ -353,7 +353,7 @@ rc_t CC TableWriterRefCoverage_MakeCoverage(const TableWriterRefCoverage** cself
         if( self == NULL ) {
             rc = RC(rcAlign, rcFormatter, rcConstructing, rcMemory, rcExhausted);
         } else {
-            memcpy(self->cols, TableWriterRefCoverage_cols, sizeof(self->cols));
+            memmove(self->cols, TableWriterRefCoverage_cols, sizeof(self->cols));
             if( (rc = TableWriter_MakeUpdate(&self->base, db, "REFERENCE")) == 0 ) {
                 rc = TableWriter_AddCursor(self->base, self->cols,
                         sizeof(self->cols) / sizeof(self->cols[0]), &self->cursor_id);

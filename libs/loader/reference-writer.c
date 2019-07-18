@@ -246,7 +246,7 @@ rc_t ReferenceSetFile(Reference *self, const char id[],
 
     self->rseq = rseq;
     
-    memcpy(self->last_id, id, n + 1);
+    memmove(self->last_id, id, n + 1);
     self->curPos = self->endPos = 0;
     self->length = length;
     self->lastOffset = 0;

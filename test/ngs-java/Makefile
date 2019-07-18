@@ -118,8 +118,10 @@ test: $(NGS_CLS)
 	@ export VDB_CONFIG=$(VDB_CONFIG) ; \
 		java $(JAVABITS) -cp $(CLASSDIR):$(CLASSPATH) -Dvdb.System.loadLibrary=1 -Djava.library.path=$(NGS_LIBDIR):$(LIBDIR) org.junit.runner.JUnitCore gov.nih.nlm.ncbi.ngs.ngs_test_lib_load
 	@ echo java $(JAVABITS) -cp $(CLASSDIR):$(CLASSPATH) -Dvdb.System.loadLibrary=1 -Djava.library.path=$(NGS_LIBDIR):$(LIBDIR) org.junit.runner.JUnitCore ngs_test_CSRA1
-	@ export VDB_CONFIG=$(VDB_CONFIG) ; \
-		java $(JAVABITS) -cp $(CLASSDIR):$(CLASSPATH) -Dvdb.System.loadLibrary=1 -Djava.library.path=$(NGS_LIBDIR):$(LIBDIR) org.junit.runner.JUnitCore ngs_test_CSRA1  
+	@ export VDB_CONFIG=$(VDB_CONFIG) ; NCBI_SETTINGS=/ \
+	  java $(JAVABITS) -cp $(CLASSDIR):$(CLASSPATH) -Dvdb.System.loadLibrary=1 \
+	    -Djava.library.path=$(NGS_LIBDIR):$(LIBDIR) org.junit.runner.JUnitCore \
+	    ngs_test_CSRA1  
 
 endif    
 endif

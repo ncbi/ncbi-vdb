@@ -101,6 +101,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-kfs_ramfile", "test-kf
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-kfs_resolve", "test-kfs_resolve.vcxproj", "{21D56532-7504-DE71-AFDF-388C7D69B64B}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-VDB-3061", "test-VDB-3061.vcxproj", "{E825E82D-069E-16B3-F35E-4FA7C37CD757}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -509,6 +511,14 @@ Global
 		{21D56532-7504-DE71-AFDF-388C7D69B64B}.Release|Win32.Build.0 = Release|Win32
 		{21D56532-7504-DE71-AFDF-388C7D69B64B}.Release|x64.ActiveCfg = Release|x64
 		{21D56532-7504-DE71-AFDF-388C7D69B64B}.Release|x64.Build.0 = Release|x64
+		{E825E82D-069E-16B3-F35E-4FA7C37CD757}.Debug|Win32.ActiveCfg = Debug|Win32
+		{E825E82D-069E-16B3-F35E-4FA7C37CD757}.Debug|Win32.Build.0 = Debug|Win32
+		{E825E82D-069E-16B3-F35E-4FA7C37CD757}.Debug|x64.ActiveCfg = Debug|x64
+		{E825E82D-069E-16B3-F35E-4FA7C37CD757}.Debug|x64.Build.0 = Debug|x64
+		{E825E82D-069E-16B3-F35E-4FA7C37CD757}.Release|Win32.ActiveCfg = Release|Win32
+		{E825E82D-069E-16B3-F35E-4FA7C37CD757}.Release|Win32.Build.0 = Release|Win32
+		{E825E82D-069E-16B3-F35E-4FA7C37CD757}.Release|x64.ActiveCfg = Release|x64
+		{E825E82D-069E-16B3-F35E-4FA7C37CD757}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

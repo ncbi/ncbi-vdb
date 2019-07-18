@@ -90,12 +90,12 @@ rc_t CC seq_construct_read ( void *data, const VXformInfo *info, int64_t row_id,
         /* give preference to unaligned */
         if ( unaligned_len [ i ] != 0 )
         {
-            memcpy ( & dst [ seqlen ], & unaligned [ unaligned_seqlen ], unaligned_len [ i ] );
+            memmove ( & dst [ seqlen ], & unaligned [ unaligned_seqlen ], unaligned_len [ i ] );
             seqlen += unaligned_len [ i ];
         }
         else
         {
-            memcpy ( & dst [ seqlen ], & aligned [ aligned_seqlen ], aligned_len [ i ] );
+            memmove ( & dst [ seqlen ], & aligned [ aligned_seqlen ], aligned_len [ i ] );
             seqlen += aligned_len [ i ];
         }
 

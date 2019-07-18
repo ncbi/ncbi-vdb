@@ -28,12 +28,14 @@
 * Unit tests for VResolver interface
 */
 
+#include <kapp/args.h> /* ArgsMakeAndHandle */
 
 #include <klib/text.h>
 
 #include <ktst/unit_test.hpp>
 
 #include <kfg/config.h>
+#include <kfg/kfg-priv.h>
 #include <kfs/file.h>
 #include <kfs/directory.h>
 
@@ -41,6 +43,8 @@
 #include <vfs/manager-priv.h> /* VFSManagerMakeFromKfg */
 #include <vfs/resolver.h>
 #include <vfs/path.h>
+
+#include "resolver-cgi.h" /* RESOLVER_CGI */
 
 #include <cstdlib>
 #include <fstream>
@@ -50,7 +54,14 @@
 
 #include <sysalloc.h>
 
-TEST_SUITE(VResolverTestSuite);
+#define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
+    if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
+
+static rc_t argsHandler(int argc, char* argv[]) {
+    return ArgsMakeAndHandle ( NULL, argc, argv, 0, NULL, 0 );
+}
+
+TEST_SUITE_WITH_ARGS_HANDLER(VResolverTestSuite, argsHandler);
 
 using namespace std;
 
@@ -181,6 +192,26 @@ FIXTURE_TEST_CASE ( VDB_2936_resolve_local_WGS_with_version, ResolverFixture )
     VPathRelease ( query ); query = 0;
 }
 
+FIXTURE_TEST_CASE(WGS_with_6letter_prefix, ResolverFixture)
+{
+    REQUIRE_RC(VFSManagerMakePath(vfs, &query, "AAAAAA01"));
+    REQUIRE_RC(VResolverQuery(resolver, 0, query, &local, &remote, 0));
+    REQUIRE(local || remote);
+    VPathRelease(query); query = 0;
+    VPathRelease(local); local = 0;
+    VPathRelease(remote); remote = 0;
+}
+
+FIXTURE_TEST_CASE(WGS_with_6letter_prefix_and_version, ResolverFixture)
+{
+    REQUIRE_RC(VFSManagerMakePath(vfs, &query, "AAAAAA01.1"));
+    REQUIRE_RC(VResolverQuery(resolver, 0, query, &local, &remote, 0));
+    REQUIRE(local || remote);
+    VPathRelease(query); query = 0;
+    VPathRelease(local); local = 0;
+    VPathRelease(remote); remote = 0;
+}
+
 class ResolverFixtureCustomConfig
 {
 public:
@@ -192,11 +223,15 @@ public:
 
     ~ResolverFixtureCustomConfig()
     {
-        if (vfs && VFSManagerRelease(vfs) != 0)
-            throw logic_error ( "~ResolverFixtureCustomConfig: VFSManagerRelease failed" );
+        rc_t rc = VFSManagerRelease(vfs);
+        if ( rc != 0 )
+            fprintf ( stderr, "~ResolverFixtureCustomConfig: VFSManagerRelease()=%u\n", rc );
+        vfs = NULL;
 
-        if (resolver && VResolverRelease(resolver) != 0)
-            throw logic_error ( "~ResolverFixtureCustomConfig: VResolverRelease failed" );
+        rc = VResolverRelease(resolver);
+        if ( rc != 0 )
+            fprintf ( stderr, "~ResolverFixtureCustomConfig: VResolverRelease()=%u\n", rc );
+        resolver = NULL;
 
         remove(m_configName.c_str());
     }
@@ -213,8 +248,15 @@ public:
             throw logic_error ( "ResolverFixtureCustomConfig::Configure: KDirectoryNativeDir failed" );
 
         KConfig *cfg;
-        if (KConfigMake(&cfg, wd))
-            throw logic_error ( "ResolverFixtureCustomConfig::Configure: KConfigMake failed" );
+        if (KConfigMakeLocal(&cfg, wd))
+            throw logic_error ( "ResolverFixtureCustomConfig::Configure: KConfigMakeLocal failed" );
+
+        if (KConfigWriteString ( cfg,
+                "repository/remote/main/CGI/resolver-cgi", RESOLVER_CGI))
+        {
+            throw logic_error ( "ResolverFixtureCustomConfig::Configure:"
+                " KConfigWriteString failed" );
+        }
 
         if (VFSManagerMakeFromKfg(&vfs, cfg))
             throw logic_error ( "ResolverFixtureCustomConfig::Configure: VFSManagerMakeFromKfg failed" );
@@ -300,6 +342,7 @@ FIXTURE_TEST_CASE(VDB_2963_resolve_local_no_new_wgs, ResolverFixtureCustomConfig
 }
 
 //////////////////////////////////////////// Main
+
 extern "C"
 {
 
@@ -336,8 +379,12 @@ extern "C"
 
     rc_t CC KMain ( int argc, char *argv [] )
     {
+        KConfigDisableUserSettings ();
+
         rc_t rc = VResolverTestSuite ( argc, argv );
+
         clear_recorded_errors();
+
         return rc;
     }
 

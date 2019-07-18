@@ -216,7 +216,7 @@ static void set_kb_raw_mode( struct termios * stored_settings )
 {
     struct termios new_settings;
     ioctl( STDIN_FILENO, TIOCGETA, stored_settings );
-    memcpy ( &new_settings, stored_settings, sizeof new_settings );
+    memmove ( &new_settings, stored_settings, sizeof new_settings );
     new_settings.c_lflag &= ( ~ICANON );    /* exit canonical mode, enter raw mode */
     new_settings.c_lflag &= ( ~ECHO );      /* don't echo the character */
     new_settings.c_lflag &= ( ~IEXTEN );    /* don't enable extended input character processing */

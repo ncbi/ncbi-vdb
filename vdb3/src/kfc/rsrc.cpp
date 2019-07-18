@@ -29,6 +29,7 @@
 #include <kfc/except.hpp>
 #include <kfc/caps.hpp>
 #include <kfc/array.hpp>
+#include <kfc/string.hpp>
 #include "pmemmgr.hpp"
 #include "ptimemgr.hpp"
 #include "pfdmgr.hpp"

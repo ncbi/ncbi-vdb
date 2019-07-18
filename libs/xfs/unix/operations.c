@@ -658,10 +658,10 @@ XFS_FUSE_getattr ( const char * ThePath, struct stat * TheStat )
     Node = NULL;
     Type = kxfsNotFound;
 
-    pLogMsg ( klogDebug, "POLL(!): [$(path)]", "path=%s", ThePath );
     pLogMsg ( klogDebug, "GETATTR(Fuse): [$(path)]", "path=%s", ThePath );
 
     if ( ThePath == NULL || TheStat == NULL ) {
+pLogMsg ( klogDebug, "GETATTR(Fuse,cont): [$(path)] [INVALID]", "path=%s", ThePath );
         return EINVAL * - 1;
     }
     memset ( TheStat, 0, sizeof ( struct stat ) );
@@ -671,6 +671,7 @@ XFS_FUSE_getattr ( const char * ThePath, struct stat * TheStat )
         if ( Type == kxfsNotFound ) {
             XFSNodeRelease ( Node );
 
+pLogMsg ( klogDebug, "GETATTR(Fuse,cont): [$(path)] [NotFound]", "path=%s", ThePath );
             return ENOENT * - 1;
         }
 
@@ -678,6 +679,8 @@ XFS_FUSE_getattr ( const char * ThePath, struct stat * TheStat )
 
         XFSNodeRelease ( Node );
     }
+
+    pLogMsg ( klogDebug, "GETATTR(Fuse,cont): [$(path)] [$(rc)]", "path=%s,rc=%d", ThePath, RCt );
 
     return XFS_FUSE_rc_to_errno ( RCt ) * - 1;
 }   /* XFS_FUSE_getattr() */
@@ -1709,6 +1712,8 @@ XFS_FUSE_access ( const char * ThePath, int Access )
         XFSNodeRelease ( Node );
     }
 
+    pLogMsg ( klogDebug, "ACCESS(Fuse,cont): [$(path)] RC[$(rc)]", "path=%s,rc=%d", ThePath, RCt );
+
     return RCt == 0 ? 0 : - 1;
 }   /* XFS_FUSE_access() */
 
@@ -1970,7 +1975,7 @@ XFS_FUSE_poll (
             unsigned * TheReventsp
 )
 {
-    pLogMsg ( klogDebug, "POLL(!): [$(path)]", "path=%s", ThePath );
+    pLogMsg ( klogDebug, "POLL(*): [$(path)]", "path=%s", ThePath );
 
     return -EPERM;
 }   /* XFS_FUSE_poll() */

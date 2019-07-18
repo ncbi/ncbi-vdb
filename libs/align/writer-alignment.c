@@ -111,7 +111,7 @@ LIB_EXPORT rc_t CC TableWriterAlgn_Make(const TableWriterAlgn** cself, VDatabase
             rc = RC(rcAlign, rcFormatter, rcConstructing, rcMemory, rcExhausted);
         } else {
             self->ref_table_name = "REFERENCE";
-            memcpy(self->cols, TableWriterAlgn_cols, sizeof(TableWriterAlgn_cols));
+            memmove(self->cols, TableWriterAlgn_cols, sizeof(TableWriterAlgn_cols));
             switch(type) {
             case ewalgn_tabletype_PrimaryAlignment:
                 tbl_nm = "PRIMARY_ALIGNMENT";
@@ -307,7 +307,7 @@ LIB_EXPORT rc_t CC TableWriterAlgn_TmpKeyStart(const TableWriterAlgn* cself)
         TableWriterAlgn* self = (TableWriterAlgn*)cself;
         VTable* vtbl = NULL;
         
-        memcpy(&self->cols_read_tmpkey, &TableAlgnReadTmpKey_cols, sizeof(TableAlgnReadTmpKey_cols));
+        memmove(&self->cols_read_tmpkey, &TableAlgnReadTmpKey_cols, sizeof(TableAlgnReadTmpKey_cols));
         if (self->cols[ewalgn_cn_GLOBAL_REF_START].flags & ewcol_Ignore) {
             self->cols_read_tmpkey[2].flags = 0;
             self->cols_read_tmpkey[3].flags = 0;
@@ -319,11 +319,11 @@ LIB_EXPORT rc_t CC TableWriterAlgn_TmpKeyStart(const TableWriterAlgn* cself)
             (rc = TableReader_Make(&self->tmpkey_reader, vtbl, self->cols_read_tmpkey, 50 * 1024 * 1024)) == 0 ) {
             int64_t v = 0;
             
-            memcpy(self->cols_spotid + 0, &TableWriterAlgn_cols[ewalgn_cn_SEQ_SPOT_ID], sizeof(self->cols_spotid[0]));
-            memcpy(self->cols_spotid + 1, &TableWriterAlgn_cols[ewalgn_cn_MATE_GLOBAL_REF_START], sizeof(self->cols_spotid[0]));
-            memcpy(self->cols_spotid + 2, &TableWriterAlgn_cols[ewalgn_cn_MATE_REF_ID], sizeof(self->cols_spotid[0]));
-            memcpy(self->cols_spotid + 3, &TableWriterAlgn_cols[ewalgn_cn_MATE_REF_START], sizeof(self->cols_spotid[0]));
-            memcpy(self->cols_spotid + 4, &TableWriterAlgn_cols[ewalgn_cn_MATE_ALIGN_ID], sizeof(self->cols_spotid[0]));
+            memmove(self->cols_spotid + 0, &TableWriterAlgn_cols[ewalgn_cn_SEQ_SPOT_ID], sizeof(self->cols_spotid[0]));
+            memmove(self->cols_spotid + 1, &TableWriterAlgn_cols[ewalgn_cn_MATE_GLOBAL_REF_START], sizeof(self->cols_spotid[0]));
+            memmove(self->cols_spotid + 2, &TableWriterAlgn_cols[ewalgn_cn_MATE_REF_ID], sizeof(self->cols_spotid[0]));
+            memmove(self->cols_spotid + 3, &TableWriterAlgn_cols[ewalgn_cn_MATE_REF_START], sizeof(self->cols_spotid[0]));
+            memmove(self->cols_spotid + 4, &TableWriterAlgn_cols[ewalgn_cn_MATE_ALIGN_ID], sizeof(self->cols_spotid[0]));
             
             self->cols_spotid[0].flags &= ~ewcol_Ignore;
             if (self->options & ewalgn_co_MATE_POSITION) {
@@ -366,7 +366,7 @@ LIB_EXPORT rc_t CC TableWriterAlgn_TmpKey(const TableWriterAlgn* cself, int64_t 
         rc = RC( rcAlign, rcType, rcReading, rcMode, rcNotOpen);
         ALIGN_DBGERR(rc);
     } else if( (rc = TableReader_ReadRow(cself->tmpkey_reader, rowid)) == 0 ) {
-        memcpy(key_id, cself->cols_read_tmpkey[0].base.var, sizeof(*key_id));
+        memmove(key_id, cself->cols_read_tmpkey[0].base.var, sizeof(*key_id));
     }
     return rc;
 }
@@ -383,11 +383,11 @@ LIB_EXPORT rc_t CC TableWriterAlgn_RefStart(const TableWriterAlgn* cself, int64_
         ALIGN_DBGERR(rc);
     } else if( (rc = TableReader_ReadRow(cself->tmpkey_reader, rowid)) == 0 ) {
         if (cself->cols_read_tmpkey[1].flags & ewcol_Ignore) {
-            memcpy(&rslt->local.ref_id, cself->cols_read_tmpkey[2].base.var, sizeof(rslt->local.ref_id));
-            memcpy(&rslt->local.ref_start, cself->cols_read_tmpkey[3].base.var, sizeof(rslt->local.ref_start));
+            memmove(&rslt->local.ref_id, cself->cols_read_tmpkey[2].base.var, sizeof(rslt->local.ref_id));
+            memmove(&rslt->local.ref_start, cself->cols_read_tmpkey[3].base.var, sizeof(rslt->local.ref_start));
         }
         else
-            memcpy(&rslt->global_ref_start, cself->cols_read_tmpkey[1].base.var, sizeof(rslt->global_ref_start));
+            memmove(&rslt->global_ref_start, cself->cols_read_tmpkey[1].base.var, sizeof(rslt->global_ref_start));
     }
     return rc;
 }

@@ -531,12 +531,12 @@ size_t regerror ( int errcode, const regex_t *__restrict preg,
 #if defined HAVE_MEMPCPY || defined _LIBC
 	  *((char *) __mempcpy (errbuf, msg, errbuf_size - 1)) = '\0';
 #else
-	  memcpy (errbuf, msg, errbuf_size - 1);
+	  memmove (errbuf, msg, errbuf_size - 1);
 	  errbuf[errbuf_size - 1] = 0;
 #endif
 	}
       else
-	memcpy (errbuf, msg, msg_size);
+	memmove (errbuf, msg, msg_size);
     }
 
   return msg_size;

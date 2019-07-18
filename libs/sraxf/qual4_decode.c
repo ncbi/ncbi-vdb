@@ -73,9 +73,9 @@ static size_t qual4_decode(
                 st = 1;
             }
             else if (src[i] == known_bad)
-                memcpy(&dst[j][0], all_bad, 4);
+                memmove(&dst[j][0], all_bad, 4);
             else if (src[i] == known_good)
-                memcpy(&dst[j][0], is_good, 4);
+                memmove(&dst[j][0], is_good, 4);
             else {
                 st2 = src[i];
                 st = 4;

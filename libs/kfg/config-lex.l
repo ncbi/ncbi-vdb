@@ -23,29 +23,30 @@
 * ===========================================================================
 *
 */
- 
-%{ 
+
+%{
     #include "kfg-lex.h"
     #include <sysalloc.h>
-    #include "config-tokens.h"    
-    
+    #include "kfg-parse.h"
+    #include "config-tokens.h"
+
     #define YYSTYPE KFGToken
-    
+
     /* code to populate token with internal values */
     #define YY_USER_ACTION              \
         yylval -> tokenText     = yytext;   \
         yylval -> tokenLength   = yyleng;   \
         yylval -> line_no       = yylineno; \
         yylval -> column_no     = yycolumn; \
-        yycolumn += yyleng; 
-        
+        yycolumn += yyleng;
+
     #define REM_LQUOTE \
         ++ yylval -> tokenText; \
         -- yylval -> tokenLength; \
         ++ yylval -> column_no;
-        
+
     #define REM_RQUOTE \
-        -- yylval -> tokenLength; 
+        -- yylval -> tokenLength;
 %}
 
 %option never-interactive nounistd yylineno
@@ -74,7 +75,7 @@
 
  /* in-string variable reference */
 %x IN_VAR_REF
- 
+
  /* node/name in a path */
 path_node                       [A-Za-z_0-9][-.A-Za-z_0-9]*
 
@@ -114,7 +115,7 @@ dstr_char   ([^\\"\f\r\n$]|$[^(\\])
  /* variable references inside strings */
 <IN_VAR_REF>{var_ref}                   { yy_pop_state ( yyscanner ); return kfgVAR_REF; }
 <IN_VAR_REF>[^)\n]*                     { yy_pop_state ( yyscanner ); return kfgUNTERM_VAR_REF; }
-<IN_VAR_REF><<EOF>>                     { yy_pop_state ( yyscanner ); return kfgUNTERM_VAR_REF; } 
+<IN_VAR_REF><<EOF>>                     { yy_pop_state ( yyscanner ); return kfgUNTERM_VAR_REF; }
 
  /* single quoted strings */
 '{sstr_char}*'                          { REM_LQUOTE; REM_RQUOTE; return kfgSTRING; }
@@ -128,7 +129,7 @@ dstr_char   ([^\\"\f\r\n$]|$[^(\\])
 
 <IN_SNG_STRING>{ref_start}              { yy_push_state ( IN_VAR_REF, yyscanner ); yyless(0); }
 <IN_SNG_STRING>{sstr_char}+/{ref_start} { yy_push_state ( IN_VAR_REF, yyscanner ); return kfgSTRING; }
-<IN_SNG_STRING>{sstr_char}*'            { REM_RQUOTE; yy_pop_state ( yyscanner ); return kfgSTRING; } 
+<IN_SNG_STRING>{sstr_char}*'            { REM_RQUOTE; yy_pop_state ( yyscanner ); return kfgSTRING; }
 
  /* double quoted strings */
 \"{dstr_char}*\"                        { REM_LQUOTE; REM_RQUOTE; return kfgSTRING; }
@@ -142,7 +143,7 @@ dstr_char   ([^\\"\f\r\n$]|$[^(\\])
 
 <IN_DBL_STRING>{ref_start}              { yy_push_state ( IN_VAR_REF, yyscanner ); yyless(0); }
 <IN_DBL_STRING>{dstr_char}+/{ref_start} { yy_push_state ( IN_VAR_REF, yyscanner ); return kfgSTRING; }
-<IN_DBL_STRING>{dstr_char}*\"           { REM_RQUOTE; yy_pop_state ( yyscanner ); return kfgSTRING; } 
+<IN_DBL_STRING>{dstr_char}*\"           { REM_RQUOTE; yy_pop_state ( yyscanner ); return kfgSTRING; }
 
  /* literals */
 =                                       { return kfgASSIGN; }
@@ -150,35 +151,35 @@ dstr_char   ([^\\"\f\r\n$]|$[^(\\])
 {var_ref}                               { return kfgVAR_REF; }
 
  /* unrecognized input */
-.                                       { return kfgUNRECOGNIZED; }
+<*>.|\n                                 { return kfgUNRECOGNIZED; }
 
 %%
 
 bool KFGScan_yylex_init(KFGScanBlock* sb, const char *str)
 {
     if (yylex_init(&sb->scanner) != 0)
-    {   
+    {
         return false; /*RC ( rcKFG, rcMgr, rcParsing, rcMemory, rcExhausted );*/
-    }       
-    sb->buffer=yy_scan_string((yyconst char*)str, sb->scanner); 
-    
+    }
+    sb->buffer=yy_scan_string((yyconst char*)str, sb->scanner);
+
     {   /* initialize line/col counters */
         /* yylineno and yycolumn are macros using variable yyg, so we have to prepare it for them */
         struct yyguts_t * yyg = (struct yyguts_t*)sb->scanner;
         yylineno=1;
         yycolumn=1;
     }
-    
+
     return true;
 }
 
 void KFGScan_yylex_destroy(KFGScanBlock* sb)
 {
-    yy_delete_buffer(sb->buffer, sb->scanner); 
+    yy_delete_buffer(sb->buffer, sb->scanner);
     if (sb->scanner)
     {
         yylex_destroy(sb->scanner);
-    }       
+    }
     sb->scanner=0;
     sb->buffer=0;
 }
@@ -188,25 +189,25 @@ void KFGScan_set_debug(bool on, KFGScanBlock* sb)
     yyset_debug(on ? 1 : 0, sb->scanner);
 }
 
-int KFGScan_yylex(KFGSymbol* sym, KFGScanBlock* sb) 
-{ 
-    sym->pb.tokenId=yylex(&sym->pb, sb->scanner); 
+int KFGScan_yylex(KFGSymbol* sym, KFGScanBlock* sb)
+{
+    sym->pb.tokenId=yylex(&sym->pb, sb->scanner);
     sb->lastToken= &sym->pb;
-    
+
     switch (sym->pb.tokenId)
     {
     case kfgVAR_REF:
-        if (!sb->look_up_var(sb->self, &sym->pb)) 
+        if (!sb->look_up_var(sb->self, &sym->pb))
         {
             /* undefined variable reference is handled silently, to behave like a shell script */
             /* sb->report_error(sb, "variable not found");*/
-            sym->pb.tokenLength = 0; 
+            sym->pb.tokenLength = 0;
         }
         sym->pb.tokenId = kfgSTRING;
         break;
-    case kfgUNTERM_VAR_REF: /* convert bad var ref into a string */ 
+    case kfgUNTERM_VAR_REF: /* convert bad var ref into a string */
         sb->report_error(sb, "unterminated variable reference inside a string (use '\\$(' to avoid this message)");
-        sym->pb.tokenId = kfgSTRING; 
+        sym->pb.tokenId = kfgSTRING;
         break;
     case kfgUNTERM_STRING:
     case kfgUNTERM_ESCAPED_STRING:
@@ -215,7 +216,7 @@ int KFGScan_yylex(KFGSymbol* sym, KFGScanBlock* sb)
     default:
         break;
     }
-    
-    return sym->pb.tokenId; 
+
+    return sym->pb.tokenId;
 }
 

@@ -456,7 +456,7 @@ rc_t create_overflow ( ParseData *pd, uint32_t fmt_idx )
         pd -> fmt = pd -> overflow . base;
 
         /* copy existing data */
-        memcpy ( pd -> fmt, fmt, fmt_idx * sizeof pd -> fmt [ 0 ] );
+        memmove ( pd -> fmt, fmt, fmt_idx * sizeof pd -> fmt [ 0 ] );
    }
 
     pd -> fmt_idx = fmt_idx;
@@ -1243,7 +1243,7 @@ VTRANSFACT_IMPL ( vdb_sprintf, 1, 0, 0 ) ( const void *self, const VXfactInfo *i
                 {
                     /* copy over literal data */
                     dfmt [ i ] . u . l . text = & lit [ lit_size ];
-                    memcpy ( & lit [ lit_size ],
+                    memmove ( & lit [ lit_size ],
                         pd . fmt [ i ] . u . l . text,
                         pd . fmt [ i ] . u . l . size );
                     lit_size += pd . fmt [ i ] . u . l . size;

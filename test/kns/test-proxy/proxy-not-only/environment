@@ -1,0 +1,4 @@
+http_proxy=no-port.http.proxy
+HTTP_PROXY=port.HTTP.proxy:567
+all_proxy=port.all.proxy:89
+ALL_PROXY=no-port.ALL.proxy

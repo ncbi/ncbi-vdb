@@ -171,8 +171,8 @@ rc_t KExtNodeMake (KExtNode ** kmmp, const KFFTables * tables,
 		    self->kfflen = kfflen;
 		    self->extlen = extlen;
 		    self->extdescr = self->kffdescr + kfflen + 1;
-		    memcpy (self->kffdescr, kffdescr, kfflen);
-		    memcpy (self->extdescr, extdescr, extlen);
+		    memmove (self->kffdescr, kffdescr, kfflen);
+		    memmove (self->extdescr, extdescr, extlen);
 		    self->kffdescr[self->kfflen] = '\0';
 		    self->extdescr[self->extlen] = '\0';
 		    *kmmp = self;
@@ -345,7 +345,7 @@ rc_t KExtTableFindKFFDescr (KExtTable * self, const char * str, char * kff, size
 	LOGERR (klogErr, rc, "KExtTableFindKFFDecr: found storage is NULL");
 	return rc;
     }
-    memcpy (kff, np->kffdescr, np->kfflen);
+    memmove (kff, np->kffdescr, np->kfflen);
     kff[np->kfflen] = '\0';
     return rc;
 }

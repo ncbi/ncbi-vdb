@@ -208,7 +208,7 @@ static
 rc_t CC no_diff ( void *data, const VXformInfo *info,
     void *dst, const void *src, uint64_t elem_count )
 {
-    memcpy ( dst, src, (size_t)elem_count * VTypedescSizeof ( & info -> fdesc . desc ) >> 3 );
+    memmove ( dst, src, (size_t)elem_count * VTypedescSizeof ( & info -> fdesc . desc ) >> 3 );
     return 0;
 }
 

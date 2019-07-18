@@ -75,7 +75,7 @@ uint64_t add_filler (uint64_t z, KSRAFileAlignment a)
 
 static void	SraHeaderInit (KSraHeader * self, size_t treesize, KSRAFileAlignment alignment)
 {
-    memcpy (self, &ksraheader_v1, sizeof ksraheader_v1);
+    memmove (self, &ksraheader_v1, sizeof ksraheader_v1);
     self->u.v1.file_offset = add_filler (sizeof * self + treesize, alignment);
 }
 

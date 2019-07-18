@@ -92,7 +92,7 @@ rc_t CC bit_or_impl(
 	dst = rslt -> data -> base;
 
 	if(b_size == 0){/*** trivial shortcut ***/
-		memcpy(dst,a,a_size);
+		memmove(dst,a,a_size);
 		return 0;
 	}
 	if(self -> align == 1){ /*** left side align ***/

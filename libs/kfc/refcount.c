@@ -160,6 +160,7 @@ LIB_EXPORT void CC KRefcountInit_v1 ( KRefcount_v1 *self, ctx_t ctx,
             }
 
             KRefcountInit ( & self -> refcount, 1, kvt -> name, "init", instance_name ? instance_name : "" );
+            self -> vt = kvt;
 #if _DEBUGGING && _ARCH_BITS > 32
             memset ( & self -> align, 0, sizeof self -> align );
 #endif

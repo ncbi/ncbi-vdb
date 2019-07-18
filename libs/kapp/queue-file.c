@@ -466,7 +466,7 @@ rc_t CC KQueueFileRead ( const KQueueFile *cself, uint64_t pos,
         to_read = bsize;
 
     QFMSG ( "%s: copying %zu bytes from buffer at local offset %lu\n", __func__, to_read, pos );
-    memcpy ( buffer, & b -> data [ pos ], to_read );
+    memmove ( buffer, & b -> data [ pos ], to_read );
 
     QFMSG ( "%s: successful read\n", __func__ );
     * num_read = to_read;
@@ -620,7 +620,7 @@ rc_t CC KQueueFileWrite ( KQueueFile *self, uint64_t pos,
         if ( b -> bytes + to_write > self -> bsize )
             to_write = self -> bsize - b -> bytes;
 
-        memcpy ( & b -> data [ b -> bytes ], & ( ( const uint8_t* ) buffer ) [ total ], to_write );
+        memmove ( & b -> data [ b -> bytes ], & ( ( const uint8_t* ) buffer ) [ total ], to_write );
         b -> bytes += to_write;
     }
 

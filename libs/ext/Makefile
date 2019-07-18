@@ -35,6 +35,7 @@ SUBDIRS = \
 	zlib \
 	bzip2 \
     magic \
+	mbedtls
 
 include $(TOP)/build/Makefile.targets
 

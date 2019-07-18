@@ -210,7 +210,7 @@ rc_t CC KRamFileRead	(const KRamFile *self,
         if (pos + bsize > self->pos + self->bsize)
             bsize = (self->pos + self->bsize) - pos;
 
-        memcpy (buffer, self->buffer + (pos - self->pos), bsize);
+        memmove (buffer, self->buffer + (pos - self->pos), bsize);
     }
     *num_read = bsize;
     return 0;
@@ -286,7 +286,7 @@ rc_t CC KRamFileWrite (KRamFile *self, uint64_t pos,
             size_t m = poff + bsize - self->max;
             if (self->bsize < self->max)
                 memset (self->buffer + bsize, 0, self->max = self->bsize);
-            /* must use memmove not memcpy */
+            /* must use memmove not memmove */
             memmove (self->buffer, self->buffer + poff, self->max - pos);
 
             poff -= m;
@@ -315,7 +315,7 @@ rc_t CC KRamFileWrite (KRamFile *self, uint64_t pos,
             self->bsize = self->max;
         to = self->buffer;
     }
-    memcpy (to, buffer, bsize);
+    memmove (to, buffer, bsize);
     *num_writ = bsize;
 
     return 0;

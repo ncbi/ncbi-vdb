@@ -51,6 +51,7 @@
 #include <byteswap.h>
 
 #include <os-native.h>
+#include <va_copy.h>
 
 
 /*--------------------------------------------------------------------------
@@ -772,9 +773,9 @@ LIB_EXPORT rc_t CC KTableVCreateColumn ( KTable *self, KColumn **colp,
  *  where "." acts as a structure name separator, i.e. struct.member
  */
 static
-rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *cself,
+rc_t KDBManagerVOpenColumnReadInt2 ( const KDBManager *cself,
     const KColumn **colp, const KDirectory *wd,
-    const char *path_fmt, va_list args, bool *cached, bool try_srapath )
+    const char *path_fmt, va_list args, bool *cached, bool try_srapath, va_list args2 )
 {
     char colpath [ 4096 ];
     rc_t rc = KDirectoryVResolvePath ( wd, true,
@@ -837,10 +838,10 @@ rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *cself,
             /* TODO: check if colpath is what we want to pass to KDBOpenPathTypeRead
              * in this case we don't need to vprintf to 'path'
             */
-            size = (args == NULL) ?
-                snprintf  ( path, sizeof path, "%s", path_fmt) :
-                vsnprintf ( path, sizeof path, path_fmt, args );
-            if (size < 0 || size >= (int) sizeof path)
+            size = ( args == NULL ) ?
+                snprintf  ( path, sizeof path, "%s", path_fmt ) :
+                vsnprintf ( path, sizeof path, path_fmt, args2 );
+            if ( size < 0 || ( size_t ) size >=  sizeof path )
                 rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcExcessive );
 
             if (rc == 0)
@@ -868,6 +869,24 @@ rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *cself,
             }
         }
     }
+    return rc;
+}
+
+static
+rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *cself,
+    const KColumn **colp, const KDirectory *wd,
+    const char *path_fmt, va_list args, bool *cached, bool try_srapath )
+{
+    rc_t rc;
+    va_list args2;
+
+    if ( args == NULL )
+        return KDBManagerVOpenColumnReadInt2 ( cself, colp, wd, path_fmt, args, cached, try_srapath, NULL );
+
+    va_copy ( args2, args );
+    rc = KDBManagerVOpenColumnReadInt2 ( cself, colp, wd, path_fmt, args, cached, try_srapath, args2 );
+    va_end ( args2 );
+
     return rc;
 }
 
@@ -2213,7 +2232,6 @@ LIB_EXPORT rc_t CC KColumnBlobRead ( const KColumnBlob *self,
     size_t *num_read, size_t *remaining )
 {
     rc_t rc;
-    const KColumnPageMap *pm;
 
     size_t ignore;
     if ( remaining == NULL )
@@ -2230,13 +2248,8 @@ LIB_EXPORT rc_t CC KColumnBlobRead ( const KColumnBlob *self,
             size_t size = self -> num_writ;
             const KColumn *col = self -> col;
 
-            if ( size != 0 )
-                pm = & self -> pmnew;
-            else
-            {
-                pm = & self -> pmorig;
+            if ( size == 0 )
                 size = self -> loc . u . blob . size;
-            }
 
             if ( offset > size )
                 offset = size;
@@ -2252,15 +2265,20 @@ LIB_EXPORT rc_t CC KColumnBlobRead ( const KColumnBlob *self,
                     to_read = bsize;
 
                 *num_read = 0;
-                while (*num_read < to_read) {
+                while (*num_read < to_read)
+		{
                     size_t nread = 0;
 
-                    rc = KColumnDataRead ( & col -> df, pm, offset - *num_read, (void *)((char *)buffer + *num_read), to_read - *num_read, &nread );
-                    if (rc) break;
-                    if (nread == 0) {
+                    rc = KColumnDataRead ( & col -> df, & self -> pmorig, offset + *num_read,
+                        & ( ( char * ) buffer ) [ * num_read ], to_read - * num_read, & nread );
+                    if ( rc != 0 )
+                        break;
+                    if (nread == 0)
+                    {
                         rc = RC ( rcDB, rcBlob, rcReading, rcFile, rcInsufficient );
                         break;
                     }
+
                     *num_read += nread;
                 }
 

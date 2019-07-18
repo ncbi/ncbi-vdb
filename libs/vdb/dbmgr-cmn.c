@@ -833,6 +833,30 @@ LIB_EXPORT int CC VDBManagerVPathType ( const VDBManager * self,
     return kptBadPath;
 }
 
+static int CC VDBManagerVPathTypeUnreliable ( const VDBManager * self,
+    const char *path, va_list args )
+{
+    if ( self != NULL )
+        return KDBManagerVPathTypeUnreliable ( self -> kmgr, path, args );
+
+    return kptBadPath;
+}
+
+LIB_EXPORT int CC VDBManagerPathTypeUnreliable ( const VDBManager * self,
+    const char *path, ... )
+{
+    int type;
+
+    va_list args;
+    va_start ( args, path );
+
+    type = VDBManagerVPathTypeUnreliable ( self, path, args );
+
+    va_end ( args );
+
+    return type;
+}
+
 /** Reset VResolver to set protected repository context */
 LIB_EXPORT rc_t CC VDBManagerSetResolver
     ( const VDBManager * self, struct VResolver * resolver )
@@ -853,5 +877,91 @@ LIB_EXPORT rc_t CC VDBManagerSetResolver
         kbd = NULL;
     }
 
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC VDBManagerGetCacheRoot ( const struct VDBManager * self,
+    struct VPath const ** path )
+{
+    rc_t rc;
+    if ( path == NULL )
+        rc = RC ( rcVDB, rcMgr, rcListing, rcParam, rcNull );
+    else
+    {
+        * path = NULL;
+        if ( self == NULL )
+            rc = RC ( rcVDB, rcMgr, rcListing, rcSelf, rcNull );
+        else
+        {
+            const KDBManager * kbd = NULL;
+            rc = VDBManagerGetKDBManagerRead ( self, & kbd );
+            if ( rc == 0 )
+            {
+                VFSManager * vfs = NULL;
+                rc = KDBManagerGetVFSManager ( kbd, & vfs );
+                if ( rc == 0 )
+                {
+                    rc = VFSManagerGetCacheRoot ( vfs, path );
+                    VFSManagerRelease ( vfs );
+                }
+                KDBManagerRelease ( kbd );
+            }
+        }
+    }
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC VDBManagerSetCacheRoot ( const struct VDBManager * self,
+    struct VPath const * path )
+{
+    rc_t rc;
+    if ( path == NULL )
+        rc = RC ( rcVDB, rcMgr, rcSelecting, rcParam, rcNull );
+    else if ( self == NULL )
+        rc = RC ( rcVDB, rcMgr, rcSelecting, rcSelf, rcNull );
+    else
+    {
+        const KDBManager * kbd = NULL;
+        rc = VDBManagerGetKDBManagerRead ( self, & kbd );
+        if ( rc == 0 )
+        {
+            VFSManager * vfs = NULL;
+            rc = KDBManagerGetVFSManager ( kbd, & vfs );
+            if ( rc == 0 )
+            {
+                rc = VFSManagerSetCacheRoot ( vfs, path );
+                VFSManagerRelease ( vfs );
+            }
+            KDBManagerRelease ( kbd );
+        }
+    }
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC VDBManagerDeleteCacheOlderThan ( const VDBManager * self,
+    uint32_t days )
+{
+    rc_t rc;
+    if ( self == NULL )
+        rc = RC ( rcVDB, rcMgr, rcSelecting, rcSelf, rcNull );
+    else
+    {
+        const KDBManager * kbd = NULL;
+        rc = VDBManagerGetKDBManagerRead ( self, & kbd );
+        if ( rc == 0 )
+        {
+            VFSManager * vfs = NULL;
+            rc = KDBManagerGetVFSManager ( kbd, & vfs );
+            if ( rc == 0 )
+            {
+                rc = VFSManagerDeleteCacheOlderThan ( vfs, days );
+                VFSManagerRelease ( vfs );
+            }
+            KDBManagerRelease ( kbd );
+        }
+    }
     return rc;
 }

@@ -390,7 +390,7 @@ rc_t KTocEntryNewChunked ( KTocEntry ** new_entry,
     (*new_entry)->u.chunked_file.file_size = size;
     (*new_entry)->u.chunked_file.chunks = chunkp;
     (*new_entry)->u.chunked_file.num_chunks = num_chunks;
-    memcpy(chunkp, chunks, csize);
+    memmove(chunkp, chunks, csize);
     ksort (chunkp, num_chunks, sizeof(KTocChunk), chunkcmp, NULL);
     /* -----
      * TODO: We currently do no validation of the chunks.
@@ -970,7 +970,7 @@ LIB_EXPORT rc_t CC KTocEntryPersistWriteFunc ( void * param,
 	}
 	else
 	    to_write = size;
-	memcpy (data->buffptr, buffer, to_write);
+	memmove (data->buffptr, buffer, to_write);
 	data->buffptr += to_write;
 	*num_writ = to_write;
 #if 0
@@ -1380,11 +1380,11 @@ bool check_limit (const void * ptr, const void * limit, size_t size)
 	if (rev)							\
 	{								\
 	    T t;							\
-	    memcpy (&t, ptr, sizeof (T));				\
+	    memmove (&t, ptr, sizeof (T));				\
 	    *pout = S (t);						\
 	}								\
 	else								\
-	    memcpy (pout, ptr, sizeof (T));                             \
+	    memmove (pout, ptr, sizeof (T));                             \
 	*_ptr = ++ptr;							\
 	return 0;							\
     }
@@ -1434,7 +1434,7 @@ rc_t KTocEntryInflateNodeCommon (const void ** ptr,
 	{
 	    return RC (rcFS, rcTocEntry, rcInflating, rcMemory, rcExhausted);
 	}
-	memcpy (common->name, *ptr, nlen);
+	memmove (common->name, *ptr, nlen);
 	common->name[nlen] = '\0';
     }
     else
@@ -1444,9 +1444,9 @@ rc_t KTocEntryInflateNodeCommon (const void ** ptr,
 	{
 	    return RC (rcFS, rcTocEntry, rcInflating, rcMemory, rcExhausted);
 	}
-	memcpy (common->name, path, plen);
+	memmove (common->name, path, plen);
 	common->name[plen] = '/';
-	memcpy (common->name+plen+1, *ptr, nlen);
+	memmove (common->name+plen+1, *ptr, nlen);
 	common->name[plen + nlen + 1] = '\0';
     }
 
@@ -1618,7 +1618,7 @@ rc_t KTocEntryInflateNodeHardLink (KToc * toc, const KTocEntryInflateCommon * co
     if (link == NULL)
 	return RC (rcFS, rcTocEntry, rcParsing, rcMemory, rcExhausted);
 
-    memcpy (link, ptr, llen);
+    memmove (link, ptr, llen);
     link[llen] = '\0';
 
     rc = KTocCreateHardLink (toc, 
@@ -1651,7 +1651,7 @@ rc_t KTocEntryInflateNodeSoftLink (KToc * toc, const KTocEntryInflateCommon * co
     if (link == NULL)
 	return RC (rcFS, rcTocEntry, rcParsing, rcMemory, rcExhausted);
 
-    memcpy (link, *ptr, llen);
+    memmove (link, *ptr, llen);
     link[llen] = '\0';
 
     rc = KTocCreateSoftLink (toc, 

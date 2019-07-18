@@ -29,12 +29,18 @@ TOP ?= $(abspath ../..)
 MODULE = test/vfs
 
 TEST_TOOLS = \
-    test-caching \
-    test-vfsmanager \
-    test-path-c \
-    test-path \
-    test-resolver
-
+	redirect-rejected-names-cgi-http-to-https \
+	test-resolver-with-log \
+	test-sdl-response \
+	test-services \
+	test-caching \
+	test-names-30 \
+	test-path \
+	test-path-c \
+	test-resolver \
+	test-vfsmanager \
+	test-json-response \
+	test-resolver4 \
 
 include $(TOP)/build/Makefile.env
 
@@ -81,6 +87,52 @@ $(TEST_BINDIR)/test-path: $(PATHTEST_OBJ)
 	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
 
 #----------------------------------------------------------------
+HTTPS_SRC = \
+	redirect-rejected-names-cgi-http-to-https
+
+HTTPS_OBJ = \
+	$(addsuffix .$(OBJX),$(HTTPS_SRC))
+
+$(TEST_BINDIR)/redirect-rejected-names-cgi-http-to-https: $(HTTPS_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+#----------------------------------------------------------------
+# resolver4
+
+R4_SRC = \
+	test-resolver4
+
+R4_OBJ = \
+	$(addsuffix .$(OBJX),$(R4_SRC))
+
+$(TEST_BINDIR)/test-resolver4: $(R4_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+#----------------------------------------------------------------
+# json-response
+
+J_SRC = \
+	test-json-response
+
+J_OBJ = \
+	$(addsuffix .$(OBJX),$(J_SRC))
+
+$(TEST_BINDIR)/test-json-response: $(J_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+#----------------------------------------------------------------
+# sdl-response
+
+S_SRC = \
+	test-sdl-response
+
+S_OBJ = \
+	$(addsuffix .$(OBJX),$(S_SRC))
+
+$(TEST_BINDIR)/test-sdl-response: $(S_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+#----------------------------------------------------------------
 # test-caching
 
 CACHING_SRC = \
@@ -90,6 +142,21 @@ CACHING_OBJ = \
 	$(addsuffix .$(OBJX),$(CACHING_SRC))
 
 $(TEST_BINDIR)/test-caching: $(CACHING_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+caching: test-caching
+	$(TEST_BINDIR)/test-caching
+
+#----------------------------------------------------------------
+# test-names-30
+
+N30_SRC = \
+	test-names-30
+
+N30_OBJ = \
+	$(addsuffix .$(OBJX),$(N30_SRC))
+
+$(TEST_BINDIR)/test-names-30: $(N30_OBJ)
 	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
 
 #----------------------------------------------------------------
@@ -127,4 +194,32 @@ RESOLVERTEST_LIB = \
 	-sncbi-vdb \
 
 $(TEST_BINDIR)/test-resolver: $(RESOLVERTEST_OBJ)
+	$(LP) --exe -o $@ $^ $(RESOLVERTEST_LIB)
+
+resolver: test-resolver
+	$(TEST_BINDIR)/test-resolver
+
+#----------------------------------------------------------------
+# Test of names service
+#
+
+RESOLVERTESTLOG_SRC = \
+	test-resolver-with-log
+
+RESOLVERTESTLOG_OBJ = \
+	$(addsuffix .$(OBJX),$(RESOLVERTESTLOG_SRC))
+
+$(TEST_BINDIR)/test-resolver-with-log: $(RESOLVERTESTLOG_OBJ)
+	$(LP) --exe -o $@ $^ $(RESOLVERTEST_LIB)
+
+#----------------------------------------------------------------
+# Test of names service
+#
+SERVICES_SRC = \
+	test-services
+
+SERVICES_OBJ = \
+	$(addsuffix .$(OBJX),$(SERVICES_SRC))
+
+$(TEST_BINDIR)/test-services: $(SERVICES_OBJ)
 	$(LP) --exe -o $@ $^ $(RESOLVERTEST_LIB)

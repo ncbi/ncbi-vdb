@@ -72,7 +72,7 @@ extern struct NGS_Reference_v1_vt ITF_Reference_vt;
  */
 #define NGS_ReferenceDuplicate( self, ctx ) \
     ( ( NGS_Reference* ) NGS_RefcountDuplicate ( NGS_ReferenceToRefcount ( self ), ctx ) )
-    
+
 /* GetCommonName
  */
 struct NGS_String * NGS_ReferenceGetCommonName ( NGS_Reference * self, ctx_t ctx );
@@ -146,22 +146,29 @@ struct NGS_Pileup* NGS_ReferenceGetFilteredPileupSlice ( NGS_Reference * self, c
  */
 struct NGS_Statistics* NGS_ReferenceGetStatistics ( const NGS_Reference * self, ctx_t ctx );
 
+/* GetIsLocal
+ */
+bool NGS_ReferenceGetIsLocal ( const NGS_Reference * self, ctx_t ctx );
 
 /*--------------------------------------------------------------------------
  * NGS_ReferenceIterator
  */
- 
+
 /* Next
  */
 bool NGS_ReferenceIteratorNext ( NGS_Reference * self, ctx_t ctx );
- 
+
+/* FRAGMENT BLOBS
+ */
+struct NGS_ReferenceBlobIterator* NGS_ReferenceGetBlobs ( NGS_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size );
+
 /*--------------------------------------------------------------------------
  * implementation details
  */
 struct NGS_Reference
 {
     NGS_Refcount dad;
-    
+
     struct NGS_ReadCollection * coll;
 };
 
@@ -169,7 +176,7 @@ typedef struct NGS_Reference_vt NGS_Reference_vt;
 struct NGS_Reference_vt
 {
     NGS_Refcount_vt dad;
-    
+
     struct NGS_String *     ( * get_common_name    ) ( NGS_REFERENCE * self, ctx_t ctx );
     struct NGS_String *     ( * get_canonical_name ) ( NGS_REFERENCE * self, ctx_t ctx );
     bool                    ( * get_is_circular    ) ( const NGS_REFERENCE * self, ctx_t ctx );
@@ -186,22 +193,24 @@ struct NGS_Reference_vt
     struct NGS_Pileup*      ( * get_pileup_slice   ) ( NGS_REFERENCE * self, ctx_t ctx, uint64_t offset, uint64_t size,
         bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
     struct NGS_Statistics*  ( * get_statistics     ) ( const NGS_REFERENCE * self, ctx_t ctx );
+    bool                    ( * get_is_local       ) ( const NGS_REFERENCE * self, ctx_t ctx );
+    struct NGS_ReferenceBlobIterator* ( * get_blobs ) ( const NGS_REFERENCE * self, ctx_t ctx, uint64_t offset, uint64_t size );
     bool                    ( * next               ) ( NGS_REFERENCE * self, ctx_t ctx );
 };
 
 /* Init
 */
-void NGS_ReferenceInit ( ctx_t ctx, 
-                         struct NGS_Reference * self, 
-                         NGS_Reference_vt * vt, 
-                         const char *clsname, 
-                         const char *instname, 
+void NGS_ReferenceInit ( ctx_t ctx,
+                         struct NGS_Reference * self,
+                         NGS_Reference_vt * vt,
+                         const char *clsname,
+                         const char *instname,
                          struct NGS_ReadCollection * coll );
-                         
+
 /* Whack
-*/                         
+*/
 void NGS_ReferenceWhack ( NGS_Reference * self, ctx_t ctx );
-                         
+
 /* NullReference
  * will error out on any call
  */

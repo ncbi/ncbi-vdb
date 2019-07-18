@@ -61,14 +61,14 @@ LIBX = a
 SHLX = dylib
 
 # compilation defines
-DEFINES	:= -DMAC -DBSD -DUNIX -D_REENTRANT -D_FILE_OFFSET_BITS=64 -DPKGNAME=mac$(BITS)
+DEFINES	:= -DMAC -DBSD -DUNIX -D_REENTRANT -D_FILE_OFFSET_BITS=64 -DPKGNAME=mac$(BITS) -D_FORTIFY_SOURCE=0
 
 # Darwin is a Unix variant
 OS_DAD = bsd
 OS_GDAD = unix
 
 # minimum deployment os
-MIN_DEPLOY_OS = 10.6
+MIN_DEPLOY_OS = 10.7
 MIN_DEPLOY_OS_OPT = -mmacosx-version-min=$(MIN_DEPLOY_OS)
 
 LIBXML_LPATH = /usr/lib

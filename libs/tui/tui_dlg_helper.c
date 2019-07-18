@@ -30,6 +30,7 @@
 #include <klib/text.h>
 #include <klib/printf.h>
 #include <kfs/directory.h>
+#include <kfs/filetools.h>
 
 #include <vfs/manager.h>
 #include <vfs/path.h>
@@ -137,32 +138,6 @@ static rc_t add_str_to_listbox( dir_callback_ctx * dctx, const char * name )
 }
 
 
-static rc_t CC on_dir_entry( const KDirectory *dir, uint32_t type, const char * name, void * data )
-{
-    rc_t rc = 0;
-    if ( name != NULL && data != NULL && name[ 0 ] != 0 && name[ 0 ] != '.' )
-    {
-        dir_callback_ctx * dctx = data;
-        if ( ( type & ~kptAlias ) == kptDir )
-		{
-			rc = add_str_to_listbox( dctx, name );
-			if ( rc == 0 )
-			{
-				if ( dctx->str_to_focus != NULL )
-				{
-					int cmp = string_cmp ( name, string_size( name ),
-										   dctx->str_to_focus, string_size( dctx->str_to_focus ), 4096 );
-					if ( cmp == 0 )
-						dctx->to_focus = dctx->string_id;
-				}
-				dctx->string_id++;
-			}
-		}
-    }
-    return rc;
-}
-
-
 rc_t fill_widget_with_dirs( struct KTUIDlg * dlg, KDirectory * dir, uint32_t id, const char * path, const char * to_focus )
 {
 	rc_t rc;
@@ -172,6 +147,8 @@ rc_t fill_widget_with_dirs( struct KTUIDlg * dlg, KDirectory * dir, uint32_t id,
 	dctx.to_focus = 0;
 	dctx.str_to_focus = to_focus;
 	dctx.in_root = ( ( path[ 0 ] == '/' )&&( path[ 1 ] == 0 ) );
+    dctx.dlg = dlg;
+    dctx.widget_id = id;
 
 	rc = KTUIDlgRemoveAllWidgetStrings ( dlg, id );
 	if ( rc == 0 )
@@ -185,52 +162,40 @@ rc_t fill_widget_with_dirs( struct KTUIDlg * dlg, KDirectory * dir, uint32_t id,
 
 	if ( rc == 0 )
 	{
-		dctx.dlg = dlg;
-		dctx.widget_id = id;
+        VNamelist * dir_list;
+        rc = ReadDirEntriesIntoToNamelist( &dir_list, dir, true, false, true, path );
+        if ( rc == 0 )
+        {
+            uint32_t idx, count;
+            rc = VNameListCount( dir_list, &count );
+            for ( idx = 0; rc == 0 && idx < count; ++idx )
+            {
+                const char * name = NULL;
+                rc = VNameListGet( dir_list, idx, &name );
+                if ( rc == 0 && name != NULL )
+                {
+                    rc = add_str_to_listbox( &dctx, name );
+                    if ( rc == 0 )
+                    {
+                        if ( dctx.str_to_focus != NULL )
+                        {
+                            int cmp = string_cmp ( name, string_size( name ),
+                                                   dctx.str_to_focus, string_size( dctx.str_to_focus ), 4096 );
+                            if ( cmp == 0 )
+                                dctx.to_focus = dctx.string_id;
+                        }
+                        dctx.string_id++;
+                    }
+                }
+            }
+            VNamelistRelease( dir_list );
+        }
 
-		/* we allow it to fail... */
-		KDirectoryVisit ( dir, false, on_dir_entry, &dctx, "%s", path );
 	}
-
+    
 	if ( rc == 0 && dctx.to_focus > 0 )
 		rc = KTUIDlgSetWidgetSelectedString ( dlg, id, dctx.to_focus );
 
-    return rc;
-}
-
-
-typedef struct file_callback_ctx
-{
-    struct KTUIDlg * dlg;
-    const char * extension;
-	uint32_t id;
-} file_callback_ctx;
-
-
-static rc_t CC on_file_entry( const KDirectory *dir, uint32_t type, const char * name, void * data )
-{
-    rc_t rc = 0;
-    if ( name != NULL && data != NULL && name[ 0 ] != 0 && name[ 0 ] != '.' )
-    {
-        file_callback_ctx * fctx = data;
-        if ( ( type & ~kptAlias ) == kptFile )
-        {
-            bool add = ( fctx->extension == NULL );
-            if ( !add )
-            {
-                size_t name_size = string_size ( name );
-                size_t ext_size = string_size ( fctx->extension );
-                if ( name_size > ext_size )
-                {
-                    int cmp = string_cmp ( &name[ name_size - ext_size ], ext_size,
-                                           fctx->extension, ext_size, (uint32_t)ext_size );
-                    add = ( cmp == 0 );
-                }
-            }
-            if ( add )
-				rc = KTUIDlgAddWidgetString ( fctx->dlg, fctx->id, name );
-        }
-    }
     return rc;
 }
 
@@ -240,11 +205,36 @@ rc_t fill_widget_with_files( struct KTUIDlg * dlg, KDirectory * dir, uint32_t id
 	rc_t rc = KTUIDlgRemoveAllWidgetStrings ( dlg, id );
 	if ( rc == 0 )
     {
-        file_callback_ctx fctx;
-        fctx.extension = extension;
-		fctx.dlg = dlg;
-		fctx.id = id;
-        rc = KDirectoryVisit ( dir, false, on_file_entry, &fctx, "%s", path );
+        VNamelist * file_list;
+        rc = ReadDirEntriesIntoToNamelist( &file_list, dir, true, true, false, path );
+        if ( rc == 0 )
+        {
+            uint32_t idx, count;
+            rc = VNameListCount( file_list, &count );
+            for ( idx = 0; rc == 0 && idx < count; ++idx )
+            {
+                const char * name = NULL;
+                rc = VNameListGet( file_list, idx, &name );
+                if ( rc == 0 && name != NULL && name[ 0 ] != 0 && name[ 0 ] != '.' )
+                {
+                    bool add = ( extension == NULL );
+                    if ( !add )
+                    {
+                        size_t name_size = string_size ( name );
+                        size_t ext_size = string_size ( extension );
+                        if ( name_size > ext_size )
+                        {
+                            int cmp = string_cmp ( &name[ name_size - ext_size ], ext_size,
+                                                   extension, ext_size, (uint32_t)ext_size );
+                            add = ( cmp == 0 );
+                        }
+                    }
+                    if ( add )
+                        rc = KTUIDlgAddWidgetString( dlg, id, name );
+                }
+            }
+            VNamelistRelease( file_list );
+        }
     }
     return rc;
 }

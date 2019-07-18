@@ -24,6 +24,10 @@
 
 use strict;
 
+use Cwd 'abs_path';
+use File::Basename 'dirname';
+use lib dirname( abs_path $0 );
+
 sub println  { print @_; print "\n" }
 
 my ($filename, $directories, $suffix) = fileparse($0);
@@ -292,10 +296,6 @@ $INS_MAKEFILE = File::Spec->catdir(CONFIG_OUT(), "$INS_MAKEFILE.$OS.$ARCH.prl");
 my $TOOLS = "";
 $TOOLS = "jdk" if ($PKG{LNG} eq 'JAVA');
 
-print "checking $PACKAGE_NAME version... " unless ($AUTORUN);
-my $FULL_VERSION = VERSION();
-println $FULL_VERSION unless ($AUTORUN);
-
 # determine architecture
 
 print "checking for supported architecture... " unless ($AUTORUN);
@@ -371,7 +371,7 @@ if ($TOOLS =~ /gcc$/) {
 } elsif ($TOOLS eq 'clang') {
     $CPP  = 'clang++' unless ($CPP);
     $CC   = 'clang -c';
-    my $versionMin = '-mmacosx-version-min=10.6';
+    my $versionMin = '-mmacosx-version-min=10.7';
     $CP   = "$CPP -c $versionMin";
     if ($BITS ne '32_64') {
         $ARCH_FL = '-arch i386' if ($BITS == 32);
@@ -437,12 +437,22 @@ if ($TOOLS =~ /gcc$/) {
     $STATIC_LIBSTDCPP = check_static_libstdcpp();
 }
 
+if ( $PKG{REQ} ) {
+    foreach ( @{ $PKG{REQ} } ) {
+        unless (check_tool__h($_)) {
+            println "configure: error: '$_' cannot be found";
+            exit 1;
+        }
+    }
+}
+
 my @dependencies;
 
 my %DEPEND_OPTIONS;
 foreach my $href (DEPENDS()) {
     $_ = $href->{name};
-    my ($I, $L) = ($href->{Include});
+    my $I = $href->{Include};
+    my @L;
     my $o = "with-$_-prefix";
     ++$DEPEND_OPTIONS{$o};
     if ($OPT{$o}) {
@@ -452,9 +462,10 @@ foreach my $href (DEPENDS()) {
             my $t = File::Spec->catdir($I, 'libxml2');
             $I = $t if (-e $t);
         }
-        $L = File::Spec->catdir($OPT{$o}, 'lib');
+        push ( @L, File::Spec->catdir($OPT{$o}, 'lib') );
+        push ( @L, File::Spec->catdir($OPT{$o}, 'lib64') );
     }
-    my ($i, $l) = find_lib($_, $I, $L);
+    my ($i, $l) = find_lib($_, $I, @L);
     if (defined $i || $l) {
         my $d = 'HAVE_' . uc($_) . ' = 1';
         push @dependencies, $d;
@@ -489,6 +500,7 @@ foreach my $href (@REQ) {
     my $need_build = $a{type} =~ /B/;
     my $need_lib = $a{type} =~ /L|D/;
     my $need_itf = ! ($a{type} =~ /D/ || $a{type} =~ /E/ || $a{type} =~ /J/);
+    $need_itf = 1 if ($a{type} =~ /I/);
     my $need_jar = $a{type} =~ /J/;
 
     my ($bin, $inc, $lib, $ilib, $src)
@@ -534,12 +546,13 @@ foreach my $href (@REQ) {
                     undef $il;
                     ++$has_option{sources};
                 }
-                my ($fi, $fl, $fil)
+                my ($fi, $fl, $fil, $fs)
                     = find_in_dir($try, $i, $l, $il, undef, undef, $src);
                 if ($fi || $fl || $fil) {
                     $found_itf  = $fi  if (! $found_itf  && $fi);
                     $found_lib  = $fl  if (! $found_lib  && $fl);
                     $found_ilib = $fil if (! $found_ilib && $fil);
+                    $found_src  = $fs  if (! $found_src  && $fs);
                 } elsif (! ($try =~ /$a{name}$/)) {
                     $try = File::Spec->catdir($try, $a{name});
                     ($fi, $fl, $fil) = find_in_dir($try, $i, $l, $il);
@@ -656,6 +669,9 @@ foreach my $href (@REQ) {
         } elsif ($quasi_optional && $found_itf && ($need_lib && ! $found_lib)) {
             println "configure: $a{name} package: "
                 . "found interface files but not libraries.";
+            $found_itf = abs_path($found_itf);
+            push(@dependencies, "$a{aname}_INCDIR = $found_itf");
+            println "includes: $found_itf";
         } else {
             if ($OPT{'debug'}) {
                 $_ = "$a{name}: includes: ";
@@ -720,8 +736,8 @@ foreach my $href (@REQ) {
     }
 }
 
-my ($E_BINDIR, $E_LIBDIR, $VERSION, $MAJVERS, $E_VERSION_LIBX, $E_MAJVERS_LIBX,
-                                              $E_VERSION_EXEX, $E_MAJVERS_EXEX)
+my ($E_BINDIR, $E_LIBDIR, $E_VERSION_LIBX, $E_MAJVERS_LIBX,
+                          $E_VERSION_EXEX, $E_MAJVERS_EXEX)
     = (''    , '');
 
 println unless ($AUTORUN);
@@ -896,23 +912,16 @@ EndText
     L($F, "NO_ARRAY_BOUNDS_WARNING = $NO_ARRAY_BOUNDS_WARNING");
     L($F);
 
-    # version information
-
-    my $MAJMIN;
-
-    if ($FULL_VERSION =~ /(\d+)\.(\d+)\.(\d+)-?\w*\d*/) {
-        $VERSION = "$1.$2.$3";
-        $MAJMIN = "$1.$2";
-        $MAJVERS = $1;
-    } else {
-        die $VERSION;
-    }
+# $PACKAGE_NAME and library version
+# \$(VERSION) is defined in a separate file which is updated every release
+    L($F, "include \$(TOP)/" . CONFIG_OUT() . "/Makefile.vers" );
 
     print $F <<EndText;
-# $PACKAGE_NAME and library version
-VERSION = $VERSION
-MAJMIN  = $MAJMIN
-MAJVERS = $MAJVERS
+
+empty :=
+space := \$(empty) \$(empty)
+MAJMIN  = \$(subst \$(space),.,\$(wordlist 1,2,\$(subst .,\$(space),\$(VERSION))))
+MAJVERS = \$(firstword \$(subst .,\$(space),\$(VERSION)))
 
 # output path
 BUILD_PREFIX = $BUILD_PREFIX
@@ -1078,50 +1087,54 @@ EndText
     }
     close $F;
 
-    # create Makefile.config.install
-    println "configure: creating '$INS_MAKEFILE'" unless ($AUTORUN);
-    open $F, ">$INS_MAKEFILE" or die "cannot open $INS_MAKEFILE to write";
-
-    $OPT{'javadir' } = '' unless ($OPT{'javadir' });
-    $OPT{'sharedir'} = '' unless ($OPT{'sharedir'});
-
-    print $F "sub CONFIGURE {\n";
-    print $F "    \$_{PACKAGE_NAME } = '$PACKAGE_NAME';\n";
-    print $F "    \$_{VERSION      } = '$VERSION';\n";
-    print $F "    \$_{LNG          } = '$PKG{LNG}';\n";
-    print $F "    \$_{OS           } = '$OS';\n";
-    print $F "    \$_{BITS         } =  $BITS;\n";
-    print $F "    \$_{MAJVERS      } =  $MAJVERS;\n";
-    print $F "    \$_{LPFX         } = '$LPFX';\n";
-    print $F "    \$_{LIBX         } = '$LIBX';\n";
-    print $F "    \$_{MAJVERS_LIBX } = '" . expand($E_MAJVERS_LIBX) . "';\n";
-    print $F "    \$_{VERSION_LIBX } = '" . expand($E_VERSION_LIBX) . "';\n";
-    print $F "    \$_{SHLX         } = '$SHLX';\n";
-    print $F "    \$_{MAJVERS_SHLX } = '" . expand($E_MAJVERS_SHLX) . "';\n";
-    print $F "    \$_{VERSION_SHLX } = '" . expand($E_VERSION_SHLX) . "';\n";
-    print $F "    \$_{VERSION_EXEX } = '" . expand($E_VERSION_EXEX) . "';\n";
-    print $F "    \$_{MAJVERS_EXEX } = '" . expand($E_MAJVERS_EXEX) . "';\n";
-    print $F "    \$_{INCDIR       } = '" . expand("$Bin/.."      ) . "';\n";
-    if ($PKG{LNG} ne 'PYTHON') {
-        print $F "  \$_{BINDIR$BITS} = '" . expand($E_BINDIR      ) . "';\n";
-        print $F "  \$_{LIBDIR$BITS} = '" . expand($E_LIBDIR      ) . "';\n";
-    } elsif ($OPT{PYTHON_LIB_PATH}) {
-        print $F "  \$_{LIBDIR$BITS} = '$OPT{PYTHON_LIB_PATH}';\n";
+	# creation of Makefile.config.install is disabled, since nobody uses it now 
+	# and I need to remove versions from prl scripts
+	if (0) {
+	    # create Makefile.config.install
+	    println "configure: creating '$INS_MAKEFILE'" unless ($AUTORUN);
+	    open $F, ">$INS_MAKEFILE" or die "cannot open $INS_MAKEFILE to write";
+	
+	    $OPT{'javadir' } = '' unless ($OPT{'javadir' });
+	    $OPT{'sharedir'} = '' unless ($OPT{'sharedir'});
+	
+	    print $F "sub CONFIGURE {\n";
+	    print $F "    \$_{PACKAGE_NAME } = '$PACKAGE_NAME';\n";
+	    print $F "    \$_{VERSION      } = '\$VERSION';\n";
+	    print $F "    \$_{LNG          } = '$PKG{LNG}';\n";
+	    print $F "    \$_{OS           } = '$OS';\n";
+	    print $F "    \$_{BITS         } =  $BITS;\n";
+	    print $F "    \$_{MAJVERS      } =  \$MAJVERS;\n";
+	    print $F "    \$_{LPFX         } = '$LPFX';\n";
+	    print $F "    \$_{LIBX         } = '$LIBX';\n";
+	    print $F "    \$_{MAJVERS_LIBX } = '" . expand($E_MAJVERS_LIBX) . "';\n";
+	    print $F "    \$_{VERSION_LIBX } = '" . expand($E_VERSION_LIBX) . "';\n";
+	    print $F "    \$_{SHLX         } = '$SHLX';\n";
+	    print $F "    \$_{MAJVERS_SHLX } = '" . expand($E_MAJVERS_SHLX) . "';\n";
+	    print $F "    \$_{VERSION_SHLX } = '" . expand($E_VERSION_SHLX) . "';\n";
+	    print $F "    \$_{VERSION_EXEX } = '" . expand($E_VERSION_EXEX) . "';\n";
+	    print $F "    \$_{MAJVERS_EXEX } = '" . expand($E_MAJVERS_EXEX) . "';\n";
+	    print $F "    \$_{INCDIR       } = '" . expand("$Bin/.."      ) . "';\n";
+	    if ($PKG{LNG} ne 'PYTHON') {
+	        print $F "  \$_{BINDIR$BITS} = '" . expand($E_BINDIR      ) . "';\n";
+	        print $F "  \$_{LIBDIR$BITS} = '" . expand($E_LIBDIR      ) . "';\n";
+	    } elsif ($OPT{PYTHON_LIB_PATH}) {
+	        print $F "  \$_{LIBDIR$BITS} = '$OPT{PYTHON_LIB_PATH}';\n";
+	    }
+	    print $F "    \$_{OTHER_PREFIX } = '$PKG{UPATH}';\n";
+	    print $F "    \$_{PREFIX       } = '$OPT{'prefix'}';\n";
+	    print $F "    \$_{INST_INCDIR  } = '$OPT{'includedir'}';\n";
+	    print $F "    \$_{INST_BINDIR  } = '$OPT{'bindir'}';\n";
+	    print $F "    \$_{INST_LIBDIR  } = '$OPT{'libdir'}';\n";
+	    print $F "    \$_{INST_JARDIR  } = '$OPT{'javadir'}';\n";
+	    print $F "    \$_{INST_SHAREDIR} = '$OPT{'sharedir'}';\n";
+	    print $F "\n";
+	    print $F "    \@_\n";
+	    print $F "}\n";
+	    print $F "\n";
+	    print $F "1\n";
+	
+	    close $F;
     }
-    print $F "    \$_{OTHER_PREFIX } = '$PKG{UPATH}';\n";
-    print $F "    \$_{PREFIX       } = '$OPT{'prefix'}';\n";
-    print $F "    \$_{INST_INCDIR  } = '$OPT{'includedir'}';\n";
-    print $F "    \$_{INST_BINDIR  } = '$OPT{'bindir'}';\n";
-    print $F "    \$_{INST_LIBDIR  } = '$OPT{'libdir'}';\n";
-    print $F "    \$_{INST_JARDIR  } = '$OPT{'javadir'}';\n";
-    print $F "    \$_{INST_SHAREDIR} = '$OPT{'sharedir'}';\n";
-    print $F "\n";
-    print $F "    \@_\n";
-    print $F "}\n";
-    print $F "\n";
-    print $F "1\n";
-
-    close $F;
 }
 
 if (! $OPT{'status'} ) {
@@ -1448,17 +1461,33 @@ sub check_tool {
     }
 }
 
-sub check_no_array_bounds {
-    check_compiler('O', '-Wno-array-bounds');
-}
-
 sub check_static_libstdcpp {
     my $option = '-static-libstdc++';
-    my $save = $TOOLS;
-    $TOOLS = $CPP;
-    $_ = check_compiler('O', $option);
-    $TOOLS = $save;
-    $_ ? $option : ''
+
+    print "checking whether $CPP accepts $option... ";
+
+    my $log = 'int main() {}\n';
+    my $cmd = $log;
+    $cmd =~ s/\\n/\n/g;
+    my $gcc = "echo -e '$log' | $CPP -xc $option - 2>&1";
+    print "\n\t\trunning $gcc\n" if ($OPT{'debug'});
+    my $out = `$gcc`;
+    my $ok = $? == 0;
+    if ( $ok && $out ) {
+        $ok = 0 if ( $out =~ /unrecognized option '-static-libstdc\+\+'/ );
+    }
+    print "$out\t" if ($OPT{'debug'});
+    println $ok ? 'yes' : 'no';
+
+    unlink 'a.out';
+
+    return '' if (!$ok);
+
+    return $option;
+}
+
+sub check_no_array_bounds {
+    check_compiler('O', '-Wno-array-bounds');
 }
 
 sub find_lib {
@@ -1466,7 +1495,7 @@ sub find_lib {
 }
 
 sub check_compiler {
-    my ($t, $n, $i, $l) = @_;
+    my ($t, $n, $I, @l) = @_;
     my $tool = $TOOLS;
 
     if ($t eq 'L') {
@@ -1493,7 +1522,7 @@ sub check_compiler {
             $flags = $n;
             $log = '                      int main() {                     }\n'
         } elsif ($n eq 'hdf5') {
-            $library = '-lhdf5';
+            $library = '-Wl,-Bstatic -lhdf5 -Wl,-Bdynamic -ldl -lm -lz';
             $log = '#include <hdf5.h>  \n int main() { H5close         (); }\n'
         } elsif ($n eq 'fuse') {
             $flags = '-D_FILE_OFFSET_BITS=64';
@@ -1512,37 +1541,61 @@ sub check_compiler {
             return;
         }
 
-        if ($i && ! -d $i) {
-            print "'$i': " if ($OPT{'debug'});
+        if ($I && ! -d $I) {
+            print "'$I': " if ($OPT{'debug'});
             println 'no';
             return;
         }
-        if ($l && ! -d $l) {
-            print "'$l': " if ($OPT{'debug'});            println 'no';
-            return;
+
+        for ( my $i = 0; $i <= $#l; ++ $i ) {
+            print "'$l[$i]': " if ($OPT{'debug'});
+            if ( $l [ $i ] ) {
+                if ( -d $l [ $i ] ) {
+                    last;
+                } elsif ( $i ==  $#l ) {
+                    println 'no';
+                    return;
+                }
+            }
         }
 
         my $cmd = $log;
         $cmd =~ s/\\n/\n/g;
 
-        my $gcc = "| $tool -xc $flags " . ($i ? "-I$i " : ' ')
+        push ( @l, '' ) unless ( @l );
+        for my $i ( 0 .. $#l ) {
+            my $l = $l [ $i ];
+            if ( $l && ! -d $l ) {
+                if ( $i == $#l ) {
+                    println 'no';
+                    return;
+                } else {
+                    next;
+                }
+            }
+            my $gcc = "| $tool -xc $flags " . ($I ? "-I$I " : ' ')
                                       . ($l ? "-L$l " : ' ') . "- $library";
-        $gcc .= ' 2> /dev/null' unless ($OPT{'debug'});
+            $gcc .= ' 2> /dev/null' unless ($OPT{'debug'});
 
-        open GCC, $gcc or last;
-        print "\n\t\trunning echo -e '$log' $gcc\n" if ($OPT{'debug'});
-        print GCC "$cmd" or last;
-        my $ok = close GCC;
-        print "\t" if ($OPT{'debug'});
-        println $ok ? 'yes' : 'no';
+            open GCC, $gcc or last;
+            print "\n\t\trunning echo -e '$log' $gcc\n" if ($OPT{'debug'});
+            print GCC "$cmd" or last;
+            my $ok = close GCC;
+            print "\t" if ($OPT{'debug'});
+            if ( $ok ) {
+                println 'yes';
+            } else {
+                println 'no' if ( $i == $#l );
+            }
 
-        unlink 'a.out';
+            unlink 'a.out';
 
-        return if (!$ok);
+            return if ( ! $ok && ( $i == $#l ) );
 
-        return 1 if ($t eq 'O');
+            return 1 if ($t eq 'O');
 
-        return ($i, $l);
+            return ($I, $l) if ( $ok) ;
+        }
     }
 
     println "cannot run $tool: skipped";
@@ -1556,7 +1609,6 @@ sub check {
     die "No PACKAGE_NAME" unless PACKAGE_NAME();
     die "No PACKAGE_NAMW" unless PACKAGE_NAMW();
     die "No PACKAGE_TYPE" unless PACKAGE_TYPE();
-    die "No VERSION"      unless VERSION();
 
     my %PKG = PKG();
 
@@ -1699,9 +1751,12 @@ EndText
         foreach my $href (@REQ) {
             next unless (optional($href->{type}));
             my %a = %$href;
-            if ($a{option} =~ /-sources$/) {
+            if ($a{option} && $a{option} =~ /-sources$/) {
                 println "  --$a{option}=DIR    search for $a{name} package";
                 println "                                source files in DIR";
+            } elsif ($a{boption} && $a{boption} =~ /-build$/) {
+                println "  --$a{boption}=DIR     search for $a{name} package";
+                println "                                 build output in DIR";
             } else {
                 println "  --$a{option}=DIR    search for $a{name} files in DIR"
             }

@@ -136,7 +136,7 @@ struct BAM_ReadCollection
     unsigned namestart;
     unsigned namelen;
     unsigned bam_cur;               /* current offset in bambuffer */
-    
+
     uint8_t bambuffer[BAM_BLK_MAX];
 };
 
@@ -168,7 +168,7 @@ static void BAM_ReferenceInfoWhack(BAM_ReferenceInfo *);
 
 static void BAM_ReadCollectionWhack(void *const object, ctx_t ctx) {
     BAM_ReadCollection *const self = (BAM_ReadCollection *)object;
-    
+
     if (self->references) {
         BAM_ReferenceInfoWhack(self->references);
         free(self->references);
@@ -204,7 +204,7 @@ static NGS_String *BAM_ReferenceGetCommonName(NGS_Reference *const base, ctx_t c
 {
     BAM_Reference *const self = (BAM_Reference *)base;
     char const *name = self->parent->references->ref[self->cur].name;
-    
+
     return NGS_StringMakeCopy(ctx, name, strlen(name));
 }
 
@@ -225,7 +225,7 @@ static bool BAM_ReferenceGetIsCircular(NGS_Reference const *const base, ctx_t ct
 static uint64_t BAM_ReferenceGetLength(NGS_Reference *const base, ctx_t ctx)
 {
     BAM_Reference *const self = (BAM_Reference *)base;
-    
+
     return self->parent->references->ref[self->cur].length;
 }
 
@@ -254,7 +254,7 @@ static NGS_Alignment *BAM_ReferenceGetAlignments(NGS_Reference *const base, ctx_
 {
     BAM_Reference *const self = (BAM_Reference *)base;
     HeaderRefInfo const *const ref = &self->parent->references->ref[self->cur];
-    
+
     if (!wants_primary || !wants_secondary || ref->index == NULL) {
         USER_ERROR(xcFunctionUnsupported, "not supported for unindexed BAM");
         return 0;
@@ -267,7 +267,7 @@ static uint64_t BAM_ReferenceGetAlignmentCount(NGS_Reference const *const base, 
 {
     BAM_Reference const *const self = (BAM_Reference *)base;
     HeaderRefInfo const *const ref = &self->parent->references->ref[self->cur];
-    
+
     if (!wants_primary || !wants_secondary || ref->index == NULL) {
         USER_ERROR(xcFunctionUnsupported, "not supported for unindexed BAM");
         return 0;
@@ -285,7 +285,7 @@ static BAM_Record *BAM_GetRecordSliced(NGS_Refcount *const self, ctx_t ctx);
 static void BAM_RefIndexSliceWhack(void *const object, ctx_t ctx)
 {
     BAM_RefIndexSlice *const self = (BAM_RefIndexSlice *)object;
-    
+
     NGS_RefcountRelease(&self->parent->dad.dad, ctx);
 }
 
@@ -317,7 +317,7 @@ EMPTY_ITERATOR: {
         }
         uint64_t *chunk;
         int const chunks = IndexSlice(ref->index, &chunk, (uint32_t)offset, (uint32_t)(offset + size));
-        
+
         if (chunks >= 0) {
             BAM_RefIndexSlice *const slice = calloc(1, ((uint8_t const *)&((BAM_RefIndexSlice const *)NULL)->chunk[chunks]) - ((uint8_t const *)NULL));
 
@@ -325,7 +325,7 @@ EMPTY_ITERATOR: {
                 static NGS_Refcount_vt const vt = {
                     BAM_RefIndexSliceWhack
                 };
-                
+
                 NGS_RefcountInit(ctx, &slice->dad, &vt, "BAM_RefIndexSlice", ref->name);
                 slice->parent = NGS_RefcountDuplicate(&self->parent->dad.dad, ctx);
                 slice->start = offset;
@@ -333,14 +333,14 @@ EMPTY_ITERATOR: {
                 slice->chunks = chunks;
                 slice->refID = self->cur;
                 if (chunks)
-                    memcpy(slice->chunk, chunk, chunks * sizeof(*chunk));
+                    memmove(slice->chunk, chunk, chunks * sizeof(*chunk));
 
                 free(slice);
-                
+
                 NGS_Alignment *const rslt = BAM_AlignmentMake(ctx, wants_primary, wants_secondary, BAM_GetRecordSliced,
                                                               NGS_RefcountDuplicate(&self->dad.dad, ctx),
                                                               self->parent->path + self->parent->namestart);
-                
+
                 return rslt;
             }
         }
@@ -358,14 +358,14 @@ static struct NGS_Pileup *BAM_ReferenceGetPileups(NGS_Reference *const base, ctx
 static void BAM_ReferenceWhack(void *const base, ctx_t ctx)
 {
     BAM_Reference *const self = (BAM_Reference *)base;
-    
+
     NGS_RefcountRelease(&self->parent->dad.dad, ctx);
 }
 
 bool BAM_ReferenceIteratorNext(NGS_Reference *const base, ctx_t ctx)
 {
     BAM_Reference *const self = (BAM_Reference *)base;
-    
+
     switch (self->state) {
         case 0:
             self->state = 1;
@@ -389,7 +389,7 @@ BAM_Reference *BAM_ReferenceMake(BAM_ReadCollection *parent, ctx_t ctx, char con
     {
         /* NGS_Refcount */
         { BAM_ReferenceWhack },
-        
+
         /* NGS_Reference */
         BAM_ReferenceGetCommonName,
         BAM_ReferenceGetCanonicalName,
@@ -402,12 +402,12 @@ BAM_Reference *BAM_ReferenceMake(BAM_ReadCollection *parent, ctx_t ctx, char con
         BAM_ReferenceGetAlignmentCount,
         BAM_ReferenceGetAlignmentSlice,
         BAM_ReferenceGetPileups,
-        
+
         /* NGS_ReferenceIterator */
         BAM_ReferenceIteratorNext,
     };
     FUNC_ENTRY(ctx, rcSRA, rcCursor, rcConstructing);
-    
+
     BAM_Reference *const rslt = calloc(1, sizeof(*rslt));
     if (rslt) {
         NGS_RefcountInit(ctx, &rslt->dad.dad, &vt.dad, "BAM_Reference", name);
@@ -422,7 +422,7 @@ BAM_Reference *BAM_ReferenceMake(BAM_ReadCollection *parent, ctx_t ctx, char con
 static NGS_Reference * BAM_ReadCollectionReferences(NGS_ReadCollection *const vp, ctx_t ctx) {
     FUNC_ENTRY(ctx, rcSRA, rcFile, rcAccessing);
     BAM_ReadCollection *const self = (BAM_ReadCollection *)vp;
-    
+
     BAM_Reference *const rslt = BAM_ReferenceMake(self, ctx, self->path + self->namestart);
 
     return &rslt->dad;
@@ -433,11 +433,11 @@ static int32_t FindReference(BAM_ReadCollection const *const self, char const na
     int32_t i;
     int32_t const n = self->references->count;
     size_t const nlen = strlen(name);
-    
+
     for (i = 0; i < n; ++i) {
         char const *const fnd = self->references->ref[i].name;
         size_t const flen = strlen(fnd);
-        
+
         if (flen == nlen && strcase_cmp(name, nlen, fnd, nlen, (uint32_t)nlen) == 0)
             return i;
     }
@@ -447,7 +447,7 @@ static int32_t FindReference(BAM_ReadCollection const *const self, char const na
 static NGS_Reference * BAM_ReadCollectionReference(NGS_ReadCollection *const vp, ctx_t ctx, char const spec[]) {
     FUNC_ENTRY(ctx, rcSRA, rcFile, rcAccessing);
     BAM_ReadCollection *const self = (BAM_ReadCollection *)vp;
-    
+
     int32_t const fnd = FindReference(self, spec);
     if (fnd >= 0) {
         BAM_Reference *const rslt = BAM_ReferenceMake(self, ctx, self->path + self->namestart);
@@ -467,13 +467,13 @@ static NGS_Reference * BAM_ReadCollectionReference(NGS_ReadCollection *const vp,
 static NGS_Alignment * BAM_ReadCollectionAlignments(NGS_ReadCollection *const vp, ctx_t ctx, bool const wants_primary, bool const wants_secondary) {
     FUNC_ENTRY(ctx, rcSRA, rcFile, rcAccessing);
     BAM_ReadCollection *const self = (BAM_ReadCollection *)vp;
-    
+
     if (!wants_primary && !wants_secondary) {
         return NGS_AlignmentMakeNull(ctx, self->path + self->namestart, self->namelen);
     }
     else {
         NGS_Alignment *const rslt = BAM_AlignmentMake(ctx, wants_primary, wants_secondary, BAM_GetRecord, NGS_RefcountDuplicate(&self->dad.dad, ctx), self->path + self->namestart);
-        
+
         return rslt;
     }
 }
@@ -530,7 +530,7 @@ static struct NGS_Read * BAM_ReadCollectionReadRange(NGS_ReadCollection *const v
 static void *Alloc(ctx_t ctx, size_t const size, bool const clear)
 {
     void *const rslt = clear ? calloc(1, size) : malloc(size);
-    
+
     if (rslt == NULL) {
         SYSTEM_ABORT(xcNoMemory, "allocating %u bytes", size);
     }
@@ -544,13 +544,13 @@ static bool FillBuffer(BAM_ReadCollection *const self, ctx_t ctx, uint64_t const
     rc_t const rc = KFileRead(self->fp, fpos,
                               self->iobuffer,
                               IO_BLK_SIZE, &nread);
-    
+
     if (rc == 0) {
         self->cpos = fpos;
         self->fpos = fpos + nread;
         self->zs.avail_in = (uInt)nread;
         self->zs.next_in = (Bytef *)self->iobuffer;
-        
+
         return true;
     }
 
@@ -579,7 +579,7 @@ FILL_BUFFER:
     if (zrc == Z_STREAM_END) {
         /* inflateReset clobbers this value but we want it */
         uLong const total_out = self->zs.total_out;
-        
+
         zrc = inflateReset(&self->zs);
         assert(zrc == Z_OK);
         self->zs.total_out = total_out;
@@ -599,10 +599,10 @@ static void Seek(BAM_ReadCollection *self, ctx_t ctx, uint64_t const ipos)
 {
     uint64_t const fpos = (uint64_t)(ipos / BAM_BLK_MAX);
     unsigned const bpos = (unsigned)(ipos % BAM_BLK_MAX);
-    
+
     if (fpos < self->cpos || fpos >= self->fpos || self->zs.next_in == NULL) {
         uint64_t const fudg = fpos % IO_BLK_SIZE;
-        
+
         FillBuffer(self, ctx, fpos - fudg);
         if ((unsigned)self->zs.avail_in < fudg)
             return;
@@ -620,15 +620,14 @@ static size_t ReadN(BAM_ReadCollection *self, ctx_t ctx, size_t const N, void *D
 {
     uint8_t *const dst = Dst;
     size_t n = 0;
-    
+
     while (n < N) {
         size_t const avail_out = N - n;
         size_t const avail_in = self->zs.total_out - self->bam_cur;
 
         if (avail_in) {
             size_t const copy = avail_out < avail_in ? avail_out : avail_in;
-            
-            memcpy(dst + n, self->bambuffer + self->bam_cur, copy);
+            memmove(dst + n, self->bambuffer + self->bam_cur, copy);
             self->bam_cur += copy;
             n += copy;
             if (n == N)
@@ -647,7 +646,7 @@ static uint16_t LE2UInt16(void const *src)
         uint8_t ch[2];
         uint16_t u16;
     } u;
-    memcpy(&u, src, 2);
+    memmove(&u, src, 2);
     return u.u16;
 #else
     return ((uint16_t)((uint8_t const *)src)[0]) | (((uint16_t)((uint8_t const *)src)[1]) << 8);
@@ -661,7 +660,7 @@ static uint32_t LE2UInt32(void const *src)
         uint8_t ch[4];
         uint32_t u32;
     } u;
-    memcpy(&u, src, 4);
+    memmove(&u, src, 4);
     return u.u32;
 #else
     return (uint32_t)(LE2UInt16(src)) || (((uint32_t)(LE2UInt16(((uint8_t const *)src) + 2))) << 16);
@@ -675,7 +674,7 @@ static uint64_t LE2UInt64(void const *src)
         uint8_t ch[8];
         uint64_t u64;
     } u;
-    memcpy(&u, src, 8);
+    memmove(&u, src, 8);
     return u.u64;
 #else
     return (uint64_t)(LE2UInt32(src)) || (((uint64_t)(LE2UInt32(((uint8_t const *)src) + 4))) << 32);
@@ -696,16 +695,16 @@ static int32_t ReadI32(BAM_ReadCollection *self, ctx_t ctx)
 {
     int8_t ch[4];
     size_t const n = ReadN(self, ctx, 4, ch);
-    
+
     if (FAILED())
         return 0;
-    
+
     if (n == 4)
         return LE2Int32(ch);
-    
+
     if (n)
         USER_ERROR(xcUnexpected, "reading '%s'; premature end of file", self->path);
-    
+
     return 0;
 }
 
@@ -804,10 +803,10 @@ static bool ReadBAMRecord(BAM_ReadCollection *const self, ctx_t ctx, BAM_rec out
 static void CopyCIGAR(uint32_t dst[], uint32_t const src[], unsigned const count)
 {
     unsigned i;
-    
+
     for (i = 0; i < count; ++i) {
         uint32_t const value = LE2Int32(src + i);
-        
+
         dst[i] = value;
     }
 }
@@ -817,19 +816,19 @@ static void CopySEQ(char dst[], uint8_t const src[], unsigned const count)
     static char const tr[16] = "=ACMGRSVTWYHKDBN";
     unsigned i;
     unsigned const n = count >> 1;
-    
+
     for (i = 0; i < n; ++i) {
         uint8_t const value = src[i];
         uint8_t const lo = value & 0x0F;
         uint8_t const hi = value >> 4;
-        
+
         dst[2 * i + 0] = tr[hi];
         dst[2 * i + 1] = tr[lo];
     }
     if (count & 1) {
         uint8_t const value = src[n];
         uint8_t const hi = value >> 4;
-        
+
         dst[count - 1] = tr[hi];
     }
 }
@@ -837,10 +836,10 @@ static void CopySEQ(char dst[], uint8_t const src[], unsigned const count)
 static void CopyQUAL(char dst[], uint8_t const src[], unsigned const n)
 {
     unsigned i;
-    
+
     for (i = 0; i < n; ++i) {
         int const ch = src[i] + 33;
-        
+
         dst[i] = ch < 0xFF ? ch : -1;
     }
 }
@@ -850,7 +849,7 @@ BAM_Record *BAM_GetRecord(NGS_Refcount *const object, ctx_t ctx)
     FUNC_ENTRY(ctx, rcSRA, rcFile, rcOpening);
     BAM_ReadCollection *const self = (BAM_ReadCollection *)object;
     BAM_rec raw;
-    
+
     if (ReadBAMRecord(self, ctx, &raw)) {
         BAM_Record *rslt = NULL;
         bool self_unmapped = false;
@@ -861,7 +860,7 @@ BAM_Record *BAM_GetRecord(NGS_Refcount *const object, ctx_t ctx)
         int32_t const pos = get_pos(&raw);
         int32_t const next_refID = get_next_refID(&raw);
         int32_t const next_pos = get_next_pos(&raw);
-        
+
         if ((flag & 0x0004) != 0 || 0 > refID || refID >= self->references->count || pos < 0 || raw_nc == 0)
             self_unmapped = true;
         if ((flag & 0x0001) == 0 || (flag & 0x0008) != 0 || 0 > next_refID || next_refID >= self->references->count || next_pos < 0)
@@ -889,7 +888,7 @@ BAM_Record *BAM_GetRecord(NGS_Refcount *const object, ctx_t ctx)
             rslt->extra    = (void const *)&rslt->QNAME[nl];
             if (nl == 0)
                 rslt->QNAME = NULL;
-            
+
             rslt->TLEN = get_tlen(&raw);
             rslt->FLAG = flag;
             rslt->MAPQ = get_mq(&raw);
@@ -912,12 +911,12 @@ BAM_Record *BAM_GetRecord(NGS_Refcount *const object, ctx_t ctx)
                 rslt->RNEXT = self->references->ref[next_refID].name;
             }
 
-            memcpy((void *)rslt->extra, extra, extralen);
+            memmove((void *)rslt->extra, extra, extralen);
             CopySEQ((void *)rslt->SEQ, seq, sl);
             CopyQUAL((void *)rslt->QUAL, qual, sl);
-            
+
             if (nl)
-                memcpy((void *)rslt->QNAME, read_name, nl);
+                memmove((void *)rslt->QNAME, read_name, nl);
 
             if (!self_unmapped)
                 CopyCIGAR((void *)rslt->cigar, cigar, nc);
@@ -932,12 +931,12 @@ static unsigned ComputeRefLen(size_t const count, uint32_t const cigar[])
 {
     unsigned rslt = 0;
     unsigned i;
-    
+
     for (i = 0; i < count; ++i) {
         uint32_t const op = cigar[i];
         unsigned const len = op >> 4;
         int const code = op & 0x0F;
-        
+
         switch (code) {
             case 0: /* M */
             case 2: /* D */
@@ -954,7 +953,7 @@ static unsigned ComputeRefLen(size_t const count, uint32_t const cigar[])
 static BAM_Record *BAM_GetRecordSliced(NGS_Refcount *const object, ctx_t ctx)
 {
     BAM_RefIndexSlice *const self = (BAM_RefIndexSlice *)object;
-    
+
     if (self->chunk == NULL || self->chunks == self->cur)
         return NULL;
     for ( ; ; ) {
@@ -965,7 +964,7 @@ static BAM_Record *BAM_GetRecordSliced(NGS_Refcount *const object, ctx_t ctx)
             if (rec->POS > 0) {
                 if (rec->REFID != self->refID)
                     break;
-                
+
                 uint64_t const pos = rec->POS - 1;
                 if (pos >= self->end)
                     break;
@@ -976,7 +975,7 @@ static BAM_Record *BAM_GetRecordSliced(NGS_Refcount *const object, ctx_t ctx)
 
                 if (self->cur + 1 >= self->chunks)
                     break;
-                
+
                 Seek(self->parent, ctx, self->chunk[++self->cur]);
             }
             done = false;
@@ -994,7 +993,7 @@ static unsigned CountWhereLess(uint64_t const max,
     if (max) {
         unsigned count = 0;
         unsigned i;
-        
+
         for (i = 0; i < N; ++i) {
             if (chunk[i].first < max)
                 ++count;
@@ -1011,10 +1010,10 @@ static unsigned CopyWhereLess(uint64_t rslt[], uint64_t const max,
     if (max) {
         unsigned count = 0;
         unsigned i;
-        
+
         for (i = 0; i < N; ++i) {
             uint64_t const first = chunk[i].first;
-            
+
             if (first < max) {
                 rslt[count] = first;
                 ++count;
@@ -1024,10 +1023,10 @@ static unsigned CopyWhereLess(uint64_t rslt[], uint64_t const max,
     }
     else {
         unsigned i;
-        
+
         for (i = 0; i < N; ++i)
             rslt[i] = chunk[i].first;
-        
+
         return N;
     }
 }
@@ -1059,10 +1058,10 @@ static int IndexSlice(RefIndex const *const self,
     unsigned i;
     unsigned count = CountWhereLess(maxpos, self->bins[0].count,
                                     &self->chunk[self->bins[0].offset]);
-    
+
     for (i = 0; i < 5; ++i) {
         unsigned const shift = 14 + 3 * (4 - i);
-        
+
         int_beg[i] = (beg >> shift) + first[i];
         int_cnt[i] = (cnt >> shift) + 1;
     }
@@ -1070,10 +1069,10 @@ static int IndexSlice(RefIndex const *const self,
         unsigned const beg = int_beg[i];
         unsigned const N = int_cnt[i];
         unsigned j;
-        
+
         for (j = 0; j < N; ++j) {
             RefIndexBinInfo const bin = self->bins[beg + j];
-            
+
             count += CountWhereLess(maxpos, bin.count, &self->chunk[bin.offset]);
         }
     }
@@ -1088,13 +1087,13 @@ static int IndexSlice(RefIndex const *const self,
             unsigned const beg = int_beg[i];
             unsigned const N = int_cnt[i];
             unsigned ii;
-            
+
             for (ii = 0; ii < N; ++ii) {
                 RefIndexBinInfo const bin = self->bins[beg + ii];
                 unsigned const copied = CopyWhereLess(&array[j], maxpos,
                                                       bin.count,
                                                       &self->chunk[bin.offset]);
-                
+
                 j += copied;
             }
         }
@@ -1103,7 +1102,7 @@ static int IndexSlice(RefIndex const *const self,
         if ((*rslt = malloc(count * sizeof(array[0]))) == NULL)
             return -1;
 
-        memcpy(*rslt, array, count * sizeof(array[0]));
+        memmove(*rslt, array, count * sizeof(array[0]));
         return count;
     }
 }
@@ -1114,17 +1113,17 @@ static void LoadIndex_Bins(RefIndex *const self,
     unsigned i;
     unsigned j = 0;
     size_t offset = 0;
-    
+
     for (i = 0; i < N; ++i) {
         uint32_t const bin    = LE2UInt32(data + offset + 0);
         int32_t  const n_chunk = LE2Int32(data + offset + 4);
-        
+
         if (bin == MAX_BIN && n_chunk == 2) {
             uint64_t const off_beg    = LE2UInt64(data + offset +  8);
             uint64_t const off_end    = LE2UInt64(data + offset + 16);
             uint64_t const n_mapped   = LE2UInt64(data + offset + 24);
             uint64_t const n_unmapped = LE2UInt64(data + offset + 32);
-            
+
             self->off_beg    = off_beg;
             self->off_end    = off_end;
             self->n_mapped   = n_mapped;
@@ -1132,13 +1131,13 @@ static void LoadIndex_Bins(RefIndex *const self,
         }
         else if (bin < MAX_BIN) {
             unsigned ii;
-            
+
             self->bins[bin].count = n_chunk;
             self->bins[bin].offset = j;
             for (ii = 0; ii < n_chunk; ++ii) {
                 uint64_t const beg = LE2UInt64(data + offset + 16 * ii +  8);
              /* uint64_t const end = LE2UInt64(data + offset + 16 * ii + 16); */
-                
+
                 self->chunk[j + ii].first = beg;
              /* self->chunk[j + ii].last  = end; */
             }
@@ -1154,10 +1153,10 @@ static void LoadIndex_Intervals(RefIndex *const self,
 {
     uint64_t last = 0;
     unsigned i;
-    
+
     for (i = 0; i < N; ++i) {
         uint64_t const intvl = LE2UInt64(data + 8 * i);
-        
+
         self->interval[i] = intvl == last ? 0 : intvl;
         last = intvl;
     }
@@ -1174,17 +1173,17 @@ static size_t LoadIndex_3(HeaderRefInfo *const self, char const data[],
         unsigned chunks = 0;
         size_t offset = 4;
         unsigned i;
-        
+
         if (n_bin < 0)
             return 0;
-        
+
         for (i = 0; i < n_bin; ++i) {
             if ((void const *)(data + offset + 8) < endp) {
                 int32_t const n_chunk = LE2Int32(data + offset + 4);
-                
+
                 if (n_chunk < 0)
                     return 0;
-                
+
                 chunks += n_chunk;
                 offset += 8 + 16 * n_chunk;
                 continue;
@@ -1193,7 +1192,7 @@ static size_t LoadIndex_3(HeaderRefInfo *const self, char const data[],
         }
         if ((void const *)(data + offset + 4) < endp) {
             int32_t const n_intv = LE2Int32(data + offset);
-            
+
             if ((void const *)(data + offset + 4 + n_intv * 8) <= endp) {
                 self->index = calloc(1, ((uint8_t const *)&((RefIndex const *)NULL)->chunk[chunks])-((uint8_t const *)NULL));
                 if (self->index) {
@@ -1212,30 +1211,30 @@ static void LoadIndex_2(BAM_ReadCollection *const self, ctx_t ctx,
                         size_t const datasize, char const data[])
 {
     void const *const endp = data + datasize;
-    
+
     if (datasize >= 8 && memcmp(data, "BAI\1", 4) == 0) {
         int32_t const n_ref = LE2Int32(data + 4);
-        
+
         if (n_ref == self->references->count) {
             size_t offset = 8;
             unsigned i;
-            
+
             for (i = 0; i < n_ref; ++i) {
                 size_t const size = LoadIndex_3(&self->references->ref[i], data + offset, endp);
-                
+
                 if (size == 0)
                     goto BAD;
-                
+
                 offset += size;
             }
         }
     }
     return;
-    
+
 BAD:
     {
         unsigned i;
-    
+
         for (i = 0; i < self->references->count; ++i) {
             free(self->references->ref[i].index);
             self->references->ref[i].index = NULL;
@@ -1247,7 +1246,7 @@ static rc_t OpenIndex(KFile const **const rslt, char const basename[])
 {
     KDirectory *dir;
     rc_t rc = KDirectoryNativeDir(&dir);
-    
+
     if (rc == 0) {
         rc = KDirectoryOpenFileRead(dir, rslt, "%s.bai", basename);
         KDirectoryRelease(dir);
@@ -1259,12 +1258,12 @@ static void LoadIndex(BAM_ReadCollection *const self, ctx_t ctx)
 {
     KFile const *fp;
     rc_t rc = OpenIndex(&fp, self->path);
-    
+
     if (rc == 0) {
         uint64_t fsize;
         size_t nread;
         char *data;
-        
+
         rc = KFileSize(fp, &fsize);
         data = malloc(fsize);
         if (data) {
@@ -1272,9 +1271,15 @@ static void LoadIndex(BAM_ReadCollection *const self, ctx_t ctx)
             if (rc == 0 && nread == fsize) {
                 LoadIndex_2(self, ctx, fsize, data);
             }
+            else {
+                INTERNAL_ERROR ( xcUnexpected, "KFileReadAll(%lu) rc = %R nread = %lu", fsize, rc, (uint64_t)nread );
+            }
             free(data);
         }
         KFileRelease(fp);
+    }
+    else {
+        INTERNAL_ERROR ( xcUnexpected, "OpenIndex(%s) rc = %R", self->path, rc );
     }
 }
 
@@ -1294,7 +1299,7 @@ static void LoadHeaderRefs(BAM_ReadCollection *const self, ctx_t ctx)
     unsigned i;
     unsigned const nrefs = self->references->count;
     HeaderRefInfo *const ref = &self->references->ref[0];
-    
+
     for (i = 0; i < nrefs; ++i) {
         TRY(uint32_t const namelen = ReadU32(self, ctx)) {
             if (namelen > INT32_MAX) {
@@ -1359,7 +1364,7 @@ static bool HeaderCheckSignature(BAM_ReadCollection *const self, ctx_t ctx)
     FUNC_ENTRY(ctx, rcSRA, rcFile, rcOpening);
     static char const sig[4] = "BAM\1";
     char act[4];
-    
+
     if (ReadN(self, ctx, 4, act) == 4)
         return memcmp(sig, act, 4) == 0;
     return false;
@@ -1398,7 +1403,7 @@ static KFile const *OpenRead(ctx_t ctx, char const path[])
     TRY(KDirectory *const dir = GetCWD(ctx))
     {
         rc_t const rc = KDirectoryOpenFileRead(dir, &fp, path);
-        
+
         KDirectoryRelease(dir);
         if (rc) {
             USER_ERROR(xcUnexpected, "'%s' failed to open for read rc = %R", path, rc);
@@ -1416,7 +1421,7 @@ static void *AllocIOBuffer(ctx_t ctx)
 static char *DuplicatePath(ctx_t ctx, char const path[], size_t const n)
 {
     TRY(void *const rslt = Alloc(ctx, n + 1, false)) {
-        memcpy(rslt, path, n + 1);
+        memmove(rslt, path, n + 1);
         return rslt;
     }
     return NULL;
@@ -1425,11 +1430,11 @@ static char *DuplicatePath(ctx_t ctx, char const path[], size_t const n)
 static size_t LastPathElement(size_t const length, char const path[/* length */])
 {
     size_t i = length;
-    
+
     while (i) {
         size_t const j = i - 1;
         int const ch = path[j];
-        
+
         if (ch == '/')
             return i;
 
@@ -1441,7 +1446,7 @@ static size_t LastPathElement(size_t const length, char const path[/* length */]
 static void InflateInit(BAM_ReadCollection *const self, ctx_t ctx)
 {
     int const zrc = inflateInit2(&self->zs, MAX_WBITS + 16);
-    
+
     switch (zrc) {
     case Z_OK:
         break;
@@ -1459,14 +1464,14 @@ BAM_ReadCollection *BAM_ReadCollectionInit(BAM_ReadCollection *const self, ctx_t
 {
     FUNC_ENTRY(ctx, rcSRA, rcFile, rcOpening);
     size_t const namelen = strlen(path);
-    
+
     TRY(char *const pathcopy = DuplicatePath(ctx, path, namelen)) {
         size_t const namestart = LastPathElement(namelen, pathcopy);
-        
+
         self->path = pathcopy;
         self->namelen = (unsigned)(namelen - namestart);
         self->namestart = (unsigned)namestart;
-        
+
         TRY(self->fp = OpenRead(ctx, path)) {
             TRY(self->iobuffer = AllocIOBuffer(ctx)) {
                 TRY(InflateInit(self, ctx)) {
@@ -1489,7 +1494,7 @@ NGS_ReadCollection * NGS_ReadCollectionMakeBAM(ctx_t ctx, char const path[])
         {
             /* NGS_Refcount */
             { BAM_ReadCollectionWhack },
-            
+
             /* NGS_ReadCollection */
             BAM_ReadCollectionName,
             BAM_ReadCollectionReadGroups,

@@ -33,6 +33,7 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <atomic.h>
 #include <atomic32.h>
 #include <arch-impl.h>
 
@@ -428,6 +429,20 @@ TEST_CASE(a64_read_and_add_even_false)
     atomic64_set ( & v, 1 );
     REQUIRE_EQ ( ( int64_t ) atomic64_read_and_add_even ( & v, 3 ), ( int64_t ) 1 );
     REQUIRE_EQ ( ( int64_t ) atomic64_read ( & v ), ( int64_t ) 1 );
+}
+
+TEST_CASE(a64_test_and_set_ptr_success)
+{
+    atomic_ptr_t v = { (void*)0 };
+    REQUIRE_EQ ( (void*)0, (void*) atomic_test_and_set_ptr ( & v, (void*)1, (void*)0 ) ); // v.ptr == 0; replace and return the old value
+    REQUIRE_EQ ( (void*)1, (void*) v . ptr );
+}
+
+TEST_CASE(a64_test_and_set_ptr_failure)
+{
+    atomic_ptr_t v = { (void*)0 };
+    REQUIRE_EQ ( (void*)0, (void*) atomic_test_and_set_ptr ( & v, (void*)1, (void*)2 ) ); // v.ptr != 2, not changed
+    REQUIRE_EQ ( (void*)0, (void*) v . ptr ); // did not change
 }
 
 #endif

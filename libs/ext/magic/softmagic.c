@@ -345,7 +345,7 @@ strndup(const char *str, size_t n)
 		continue;
 	if ((copy = malloc(len + 1)) == NULL)
 		return NULL;
-	(void)memcpy(copy, str, len);
+	(void)memmove(copy, str, len);
 	copy[len] = '\0';
 	return copy;
 }
@@ -1011,7 +1011,7 @@ mcopy(struct magic_set *ms, union VALUETYPE *p, int type, int indir,
 	else
 		nbytes = sizeof(*p);
 
-	(void)memcpy(p, s + offset, nbytes);
+	(void)memmove(p, s + offset, nbytes);
 
 	/*
 	 * the usefulness of padding with zeroes eludes me, it

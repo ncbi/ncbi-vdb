@@ -76,7 +76,7 @@
  * VColumn
  */
 
-static 
+static
 void WColumnDestroy ( WColumn * self )
 {
 #if PROD_REFCOUNT && ! PROD_ALL_IN_CURSOR
@@ -99,8 +99,8 @@ void CC VColumnWhack ( void *item, void *data )
     /* remove from cursor */
     if ( curs != NULL )
     {
-        VectorSwap ( & curs -> row, self -> ord, NULL, & item );
-        VCursorCacheSwap ( & curs -> col, & self -> scol -> cid, NULL, & item );
+        VectorSwap ( VCursorGetRow ( curs ), self -> ord, NULL, & item );
+        VCursorCacheSwap ( VCursorColumns ( curs ), & self -> scol -> cid, NULL, & item );
     }
 
     if ( ! self -> read_only )
@@ -260,7 +260,7 @@ rc_t WColumnSetDefault ( VColumn *vcol,
     rc = KDataBufferCast ( & self -> dflt, & self -> dflt, elem_bits, false );
     if ( rc != 0 )
         return rc;
-        
+
     /* allow NULL setting */
     if ( buffer == NULL )
     {
@@ -281,7 +281,7 @@ rc_t WColumnSetDefault ( VColumn *vcol,
     if ( ( ( boff | to_copy ) & 7 ) != 0 )
         bitcpy ( self -> dflt . base, 0, buffer, boff, to_copy );
     else
-        memcpy ( self -> dflt . base, & ( ( const uint8_t* ) buffer ) [ boff >> 3 ], to_copy >> 3 );
+        memmove ( self -> dflt . base, & ( ( const uint8_t* ) buffer ) [ boff >> 3 ], to_copy >> 3 );
 
     self -> have_dflt = true;
     return 0;
@@ -398,7 +398,7 @@ rc_t WColumnWrite ( VColumn *cself,
         bitcpy ( self -> data . base, doff, buffer, boff, num_bits );
     else
     {
-        memcpy ( & ( ( uint8_t* ) self -> data . base ) [ doff >> 3 ],
+        memmove ( & ( ( uint8_t* ) self -> data . base ) [ doff >> 3 ],
                  & ( ( const uint8_t* ) buffer ) [ boff >> 3 ], num_bits >> 3 );
     }
 
@@ -439,7 +439,7 @@ bool CC WColumnRowDefaults ( void *item, void *data )
             );
         return true;
     }
-        
+
     /* detect NULL row as default */
     if ( self -> dflt . elem_bits == 0 )
     {
@@ -467,7 +467,7 @@ bool CC WColumnRowDefaults ( void *item, void *data )
         self -> dflt . base, 0, self -> dflt . elem_count );
     if ( * rc != 0 )
         return true;
-    
+
     /* record the fact that this was default */
     self -> dflt_last = true;
     return false;
@@ -594,7 +594,7 @@ bool WColumnCommitRowData ( WColumn *self, int64_t *end_id )
     cur_size = ( size_t ) ( self -> bits_in_buffer + 7 ) >> 3;
     if ( cur_size >= self -> trigger )
     {
-        /* if size just crossed the trigger boundary and 
+        /* if size just crossed the trigger boundary and
          * cutoff_id has not been advanced yet */
         if ( self -> cutoff_id == self -> start_id )
         {
@@ -658,7 +658,7 @@ bool CC WColumnCommitRow ( void *item, void *data )
         /* if the row range is too great */
         if ( ( self -> end_id - self -> start_id ) >= MAX_ROW_COUNT )
         {
-            /* if row range has just crossed the boundary and 
+            /* if row range has just crossed the boundary and
              * cutoff_id has not been advanced yet */
             if ( self -> cutoff_id == self -> start_id )
             {
@@ -901,7 +901,7 @@ bool WColumnSplitBuffer ( WColumn *self, int64_t end_id, size_t rm_idx )
         if ( ( ( boff | to_copy ) & 7 ) != 0 )
             bitcpy ( data . base, 0, self -> data . base, boff, to_copy );
         else
-            memcpy ( data . base, & ( ( const uint8_t* ) self -> data . base ) [ boff >> 3 ], to_copy >> 3 );
+            memmove ( data . base, & ( ( const uint8_t* ) self -> data . base ) [ boff >> 3 ], to_copy >> 3 );
 
         self -> data = data;
         self -> bits_in_buffer = to_copy;

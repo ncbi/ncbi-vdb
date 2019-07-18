@@ -571,7 +571,7 @@ LIB_EXPORT rc_t CC eval_numeric_expr ( const VSchema *self, const VTypedecl *td,
 
 	alloc_size=(((size_t)dbits * sdim + 7) >> 3);
 	if(alloc_size < sizeof(x->u)){ /** don't go below size of union ***/
-		alloc_size=sizeof(*x);	
+		alloc_size=sizeof(*x);
 	} else { /** overallocate here ***/
 		alloc_size+=sizeof(*x)-sizeof(x->u);
 	}
@@ -751,7 +751,7 @@ LIB_EXPORT rc_t CC eval_text_expr ( const VSchema *self, const VTypedecl *td,
     case ddAscii:
         /* only ascii casts to ascii */
         if ( sdt -> domain != ddAscii )
-            return RC ( rcVDB, rcExpression, rcEvaluating, rcType, rcIncorrect ); 
+            return RC ( rcVDB, rcExpression, rcEvaluating, rcType, rcIncorrect );
         break;
     case ddUnicode:
         if ( sdt -> domain < ddAscii || sdt -> domain > ddt -> domain )
@@ -833,7 +833,7 @@ LIB_EXPORT rc_t CC eval_text_expr ( const VSchema *self, const VTypedecl *td,
 
 	alloc_size=size;
 	if(alloc_size < sizeof(x->u)){ /** don't go below size of union ***/
-		alloc_size=sizeof(*x);	
+		alloc_size=sizeof(*x);
 	} else { /** overallocate here ***/
 		alloc_size+=sizeof(*x)-sizeof(x->u);
 	}
@@ -843,7 +843,7 @@ LIB_EXPORT rc_t CC eval_text_expr ( const VSchema *self, const VTypedecl *td,
 		return RC ( rcVDB, rcExpression, rcEvaluating, rcMemory, rcExhausted );
 	memset(x,0,alloc_size);
     }
-   
+
 
     /* copy, and perform type conversion */
     src = expr -> u . utf8;
@@ -1113,7 +1113,7 @@ bool CC do_eval_vector_param_expr ( void *item, void *data )
 {
     struct eval_vector_param_expr_pb *pb = data;
     SExpression *rslt = NULL;
-    
+
     pb -> rc = eval_const_expr ( pb -> self, pb -> td, item, & rslt, pb -> cx_bind );
     if ( pb -> rc != 0 )
         return true;
@@ -1144,13 +1144,13 @@ rc_t eval_vector_param_expr ( const VSchema *self, const VTypedecl *td,
     struct eval_vector_param_expr_pb pb;
 
     *xp = NULL;
-    
+
     pb . rc = 0;
     pb . self = self;
     pb . td = td;
     pb . cx_bind = cx_bind;
     VectorInit ( & pb . v, 0, 32 );
-    
+
     VectorDoUntil ( & expr -> expr, 0, do_eval_vector_param_expr, & pb );
     if ( pb . rc == 0 )
     {
@@ -1158,7 +1158,7 @@ rc_t eval_vector_param_expr ( const VSchema *self, const VTypedecl *td,
         uint32_t elem_count = VectorLength ( & pb . v );
         uint32_t elem_bits;
         size_t alloc_size;
-        
+
         {
             const SDatatype *dt = VSchemaFindTypeid ( self, td -> type_id );
             elem_bits = dt -> size;
@@ -1168,7 +1168,7 @@ rc_t eval_vector_param_expr ( const VSchema *self, const VTypedecl *td,
 
         /** don't go below size of union ***/
         if ( alloc_size < sizeof rslt -> u )
-            alloc_size = sizeof * rslt;	
+            alloc_size = sizeof * rslt;
         /** overallocate here ***/
         else
             alloc_size += sizeof * rslt - sizeof rslt -> u ;
@@ -1186,7 +1186,7 @@ rc_t eval_vector_param_expr ( const VSchema *self, const VTypedecl *td,
             atomic32_set ( & rslt -> dad . refcount, 1 );
             rslt -> td = *td;
             rslt -> td . dim = elem_count;
-            
+
             for ( i = 0; i != elem_count; ++i )
             {
                 const SConstExpr *y = VectorGet ( & pb . v, i );

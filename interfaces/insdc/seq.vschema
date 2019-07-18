@@ -95,7 +95,6 @@ table INSDC:tbl:sequence #1.0.1
     extern column INSDC:2na:packed READ = out_2na_packed;
 
 
-
     /* CSREAD
      *  native or converted color-space sequence
      */
@@ -139,15 +138,21 @@ table INSDC:tbl:sequence #1.0.1
      */
 
     // PHRED is default
-    extern default column INSDC:quality:phred QUALITY = out_qual_phred;
+    extern default column INSDC:quality:phred QUALITY
+    {
+        read = out_qual_phred;
+        validate = < INSDC:quality:phred > compare ( in_qual_phred, phys_qual_phred );
+    }
 
     // textual encodings
     extern column INSDC:quality:text:phred_33 QUALITY
         = out_qual_text_phred_33
-        | ( INSDC:quality:text:phred_33 ) < B8 > sum < 33 > ( out_qual_phred );
+        | ( INSDC:quality:text:phred_33 ) < B8 > sum < 33 > ( out_qual_phred )
+        ;
     extern column INSDC:quality:text:phred_64 QUALITY
         = out_qual_text_phred_64
-        | ( INSDC:quality:text:phred_64 ) < B8 > sum < 64 > ( out_qual_phred );
+        | ( INSDC:quality:text:phred_64 ) < B8 > sum < 64 > ( out_qual_phred )
+        ;
 
 
     /* SIGNAL
@@ -155,10 +160,11 @@ table INSDC:tbl:sequence #1.0.1
      */
     INSDC:coord:len signal_len
         = ( INSDC:coord:len ) row_len ( out_signal )
-        | < INSDC:coord:len > echo < 0 > ();
-    
+        | < INSDC:coord:len > echo < 0 > ()
+        ;
 
-	/* VIRTUAL PRODUCTIONS
+
+	/* INSDC:tbl:sequence virtual productions
 	 *  cs_native
 	 *  in_cs_key
 	 *  out_cs_key

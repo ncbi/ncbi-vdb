@@ -122,6 +122,7 @@ NGS_String_v1 * NGS_Statistics_v1_next_path ( const NGS_Statistics_v1 * self, NG
     ON_FAIL ( bool more = NGS_StatisticsNextPath( Self ( self ), ctx, path, & new_path ) )
     {
         NGS_ErrBlockThrow ( err, ctx );
+        return NULL;
     }
     
     if ( more )

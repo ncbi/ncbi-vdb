@@ -890,7 +890,7 @@ rc_t KDBVMakeSubPath ( struct KDirectory const *dir,
     if ( ns_size != 0 )
     {
         subpath -= ns_size + 1;
-        memcpy ( subpath, ns, ns_size );
+        memmove ( subpath, ns, ns_size );
         subpath [ ns_size ] = '/';
     }
     return rc;

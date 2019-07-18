@@ -1,0 +1,2 @@
+/vdb/schema/paths="$(PWD)/../../interfaces"
+/repository/remote/main/CGI/resolver-cgi = "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi"

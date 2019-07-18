@@ -80,8 +80,8 @@ rc_t TestArgConvAppender(const Args * args, uint32_t arg_index, const char * arg
     char * res = (char *)malloc(arg_len + arg_append_string_len + 1);
     assert(res);
     
-    memcpy(res, arg, arg_len);
-    memcpy(res + arg_len, arg_append_string, arg_append_string_len);
+    memmove(res, arg, arg_len);
+    memmove(res + arg_len, arg_append_string, arg_append_string_len);
     res[arg_len + arg_append_string_len] = 0;
     
     *result = res;
@@ -119,6 +119,7 @@ rc_t TestArgConvFileCreator(const Args * args, uint32_t arg_index, const char * 
                 
                 *result = file;
                 *whack = WhackArgFile;
+                KDirectoryRelease( dir );
                 return 0;
             }
             
@@ -328,7 +329,7 @@ struct SleepyReader
 
     static rc_t MakeFileRead(KFile const** f)
     {
-        KFile* ret=(KFile*)malloc(sizeof(KFile));
+        KFile* ret=(KFile*)calloc(1, sizeof(KFile));
         ret-> vt = (const KFile_vt*)&vt;
         ret-> dir = NULL;
         atomic32_set ( & ret-> refcount, 1 );

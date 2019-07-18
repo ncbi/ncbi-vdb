@@ -508,7 +508,7 @@ rc_t CC TrieAutoExpand ( Trie *tt, uint32_t ch )
             if ( map == NULL )
                 return RC ( rcCont, rcTrie, rcInserting, rcMemory, rcExhausted );
             memset ( map, 0, ( tt -> first_char - ch ) * sizeof * map );
-            memcpy ( & map [ tt -> first_char - ch ], tt -> map,
+            memmove ( & map [ tt -> first_char - ch ], tt -> map,
                 ( tt -> last_char - tt -> first_char + 1 ) * sizeof * map );
             free ( ( void* ) tt -> map );
             tt -> first_char = ch;

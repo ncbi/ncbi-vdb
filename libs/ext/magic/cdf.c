@@ -126,9 +126,9 @@ cdf_tole8(uint64_t sv)
 }
 
 #define CDF_UNPACK(a)	\
-    (void)memcpy(&(a), &buf[len], sizeof(a)), len += sizeof(a)
+    (void)memmove(&(a), &buf[len], sizeof(a)), len += sizeof(a)
 #define CDF_UNPACKA(a)	\
-    (void)memcpy((a), &buf[len], sizeof(a)), len += sizeof(a)
+    (void)memmove((a), &buf[len], sizeof(a)), len += sizeof(a)
 
 void
 cdf_swap_header(cdf_header_t *h)
@@ -257,7 +257,7 @@ cdf_read(const cdf_info_t *info, off_t off, void *buf, size_t len)
 	}
 
 	if (info->i_buf != NULL && info->i_len >= siz) {
-		(void)memcpy(buf, &info->i_buf[off], len);
+		(void)memmove(buf, &info->i_buf[off], len);
 		return (ssize_t)len;
 	}
 
@@ -278,7 +278,7 @@ cdf_read_header(const cdf_info_t *info, cdf_header_t *h)
 {
 	char buf[512];
 
-	(void)memcpy(cdf_bo.s, "\01\02\03\04", 4);
+	(void)memmove(cdf_bo.s, "\01\02\03\04", 4);
 	if (cdf_read(info, (off_t)0, buf, sizeof(buf)) == -1)
 		return -1;
 	cdf_unpack_header(h, buf);
@@ -319,7 +319,7 @@ cdf_read_short_sector(const cdf_stream_t *sst, void *buf, size_t offs,
     size_t len, const cdf_header_t *h, cdf_secid_t id)
 {
 	assert((size_t)CDF_SHORT_SEC_SIZE(h) == len);
-	(void)memcpy(((char *)buf) + offs,
+	(void)memmove(((char *)buf) + offs,
 	    ((const char *)sst->sst_tab) + CDF_SHORT_SEC_POS(h, id), len);
 	return len;
 }
@@ -779,32 +779,32 @@ cdf_read_property_info(const cdf_stream_t *sst, uint32_t offs,
 		case CDF_SIGNED16:
 			if (inp[i].pi_type & CDF_VECTOR)
 				goto unknown;
-			(void)memcpy(&s16, &q[o], sizeof(s16));
+			(void)memmove(&s16, &q[o], sizeof(s16));
 			inp[i].pi_s16 = CDF_TOLE2(s16);
 			break;
 		case CDF_SIGNED32:
 			if (inp[i].pi_type & CDF_VECTOR)
 				goto unknown;
-			(void)memcpy(&s32, &q[o], sizeof(s32));
+			(void)memmove(&s32, &q[o], sizeof(s32));
 			inp[i].pi_s32 = CDF_TOLE4((uint32_t)s32);
 			break;
 		case CDF_BOOL:
 		case CDF_UNSIGNED32:
 			if (inp[i].pi_type & CDF_VECTOR)
 				goto unknown;
-			(void)memcpy(&u32, &q[o], sizeof(u32));
+			(void)memmove(&u32, &q[o], sizeof(u32));
 			inp[i].pi_u32 = CDF_TOLE4(u32);
 			break;
 		case CDF_SIGNED64:
 			if (inp[i].pi_type & CDF_VECTOR)
 				goto unknown;
-			(void)memcpy(&s64, &q[o], sizeof(s64));
+			(void)memmove(&s64, &q[o], sizeof(s64));
 			inp[i].pi_s64 = CDF_TOLE8((uint64_t)s64);
 			break;
 		case CDF_UNSIGNED64:
 			if (inp[i].pi_type & CDF_VECTOR)
 				goto unknown;
-			(void)memcpy(&u64, &q[o], sizeof(u64));
+			(void)memmove(&u64, &q[o], sizeof(u64));
 			inp[i].pi_u64 = CDF_TOLE8((uint64_t)u64);
 			break;
 		case CDF_LENGTH32_STRING:
@@ -839,7 +839,7 @@ cdf_read_property_info(const cdf_stream_t *sst, uint32_t offs,
 		case CDF_FILETIME:
 			if (inp[i].pi_type & CDF_VECTOR)
 				goto unknown;
-			(void)memcpy(&tp, &q[o], sizeof(tp));
+			(void)memmove(&tp, &q[o], sizeof(tp));
 			inp[i].pi_tp = CDF_TOLE8((uint64_t)tp);
 			break;
 		case CDF_CLIPBOARD:

@@ -288,6 +288,17 @@ static void addToHashTable(ReferenceMgr *const self, ReferenceSeq const *const r
         addToHashBucket(&self->ht[hash0(rs->seqId)], index);
 }
 
+static void freeHashTableEntries(ReferenceMgr *const self)
+{
+    unsigned i;
+    for (i = 0; i < BUCKETS; ++i) {
+        if (self->ht[i].count > 0)
+            free(self->ht[i].index);
+        if (self->used[i].count > 0)
+            free(self->used[i].index);
+    }
+}
+
 static
 void CC ReferenceSeq_Whack(ReferenceSeq *self)
 {
@@ -1067,8 +1078,8 @@ rc_t OpenFastaFile(KFile const **const kf,
         else
             return RC(rcAlign, rcFile, rcOpening, rcMemory, rcExhausted);
     }
-    memcpy(fname, base, len);
-    memcpy(fname + len, ".fasta", 7);
+    memmove(fname, base, len);
+    memmove(fname + len, ".fasta", 7);
     
     ALIGN_CF_DBGF(("trying to open fasta file: %.s\n", fname));
     rc = KDirectoryOpenFileRead(dir, kf, "%s", fname);
@@ -1147,22 +1158,6 @@ LIB_EXPORT void ReferenceMgr_DumpConfig(ReferenceMgr const *const self)
 #endif
 
 static
-rc_t ReferenceMgr_TryFasta(ReferenceMgr *const self, ReferenceSeq *const seq,
-                           char const id[], unsigned const idLen)
-{
-    KFile const *kf = NULL;
-    rc_t rc;
-    
-    rc = OpenFastaFile(&kf, self->dir, id, idLen);
-    
-    if (rc == 0) {
-        rc = ImportFastaFile(self, kf, seq);
-        KFileRelease(kf);
-    }
-    return rc;
-}
-
-static
 rc_t ReferenceSeq_GetRefSeqInfo(ReferenceSeq *const self)
 {
     rc_t rc;
@@ -1179,7 +1174,7 @@ rc_t ReferenceSeq_GetRefSeqInfo(ReferenceSeq *const self)
         return rc;
     
     if (md5)
-        memcpy(self->md5, md5, 16);
+        memmove(self->md5, md5, 16);
     else
         memset(self->md5, 0, 16);
     return 0;
@@ -1243,45 +1238,6 @@ rc_t ReferenceSeq_Attach(ReferenceMgr *const self, ReferenceSeq *const rs)
         return rc;
     }
     return 0;
-}
-
-static int ReferenceMgr_FindBestFasta(ReferenceMgr const *const self,
-                                      char const name[],
-                                      unsigned const seq_len,
-                                      uint8_t const md5[16],
-                                      unsigned const exclude)
-{
-    int best = -1;
-
-    if (name != NULL) {
-        unsigned const n = (unsigned)self->refSeqs.elem_count;
-        unsigned const len = (unsigned)string_size(name);
-        unsigned best_wt = 0;
-        unsigned i;
-        
-        for (i = 0; i != n; ++i) {
-            ReferenceSeq const *const rs = &self->refSeq[i];
-
-            if (i == exclude)
-                continue;
-            
-            if (rs->fastaSeqId) {
-                unsigned wt = str_weight(rs->fastaSeqId, name, len);
-                
-                if (wt != no_match) {
-                    if (seq_len && rs->seq_len == seq_len)
-                        wt |= seq_len_match;
-                    if (md5 && memcmp(rs->md5, md5, 16) == 0)
-                        wt |= md5_match;
-                }
-                if (best_wt < wt) {
-                    best_wt = wt;
-                    best = (int)i;
-                }
-            }
-        }
-    }
-    return best;
 }
 
 struct Candidate {
@@ -1520,7 +1476,7 @@ static rc_t findSeq(ReferenceMgr *const self,
         bool tryAgain = false;
         rc_t const rc = tryFastaOrRefSeq(self, rslt, idLen, id, &tryAgain);
 
-        if (rc != 0 || !tryAgain)
+        if (rc != 0 && !tryAgain)
             return rc;
 
         return findSeq(self, rslt, id, seq_len, md5, allowMultiMapping, wasRenamed);
@@ -1573,208 +1529,12 @@ static rc_t findSeq(ReferenceMgr *const self,
         chosen->type = rst_dead;
     addToIndex(self, id, chosen);
     return rc;
-#if 0
-    unsigned const n = (unsigned)self->refSeqs.elem_count;
-    unsigned i;
-    ReferenceSeq *seq = findHashTable(self, id);
-    rc_t rc = 0;
-    
-    if (seq == NULL) {
-        /* try to find by id; this should work most of the time */
-        for (i = 0; i != n; ++i) {
-            ReferenceSeq *const rs = &self->refSeq[i];
+}
 
-            if (rs->type == rst_dead)
-                continue;
-            
-            if (rs->id && strcmp(rs->id, id) == 0) {
-                seq = rs;
-                break;
-            }
-        }
-    }
-    if (seq == NULL) {
-        /* try to find by seqId */
-        for (i = 0; i != n; ++i) {
-            ReferenceSeq *const rs = &self->refSeq[i];
-            
-            if (rs->type == rst_dead)
-                continue;
-            
-            if (rs->seqId && strcasecmp(rs->seqId, id) == 0) {
-                seq = rs;
-                break;
-            }
-        }
-    }
-    if (seq == NULL) {
-        /* try to find id within fasta seqIds */
-        int const best = ReferenceMgr_FindBestFasta(self, id, seq_len, md5, n);
-        if (best >= 0)
-            seq = &self->refSeq[best];
-    }
-    if (seq == NULL) {
-        /* try id.fasta or id.fa */
-        rc = ReferenceMgr_NewReferenceSeq(self, &seq);
-        if (rc) return rc;
-        rc = ReferenceMgr_TryFasta(self, seq, id, idLen);
-        if (GetRCState(rc) == rcNotFound && GetRCObject(rc) == (enum RCObject)rcPath) {
-            rc = 0;
-            seq->id = string_dup(id, idLen); /* needed for call to Attach */
-            if (seq->id == NULL)
-                return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
-        }
-        else if (rc)
-            return rc;
-    }
-    if (seq->type == rst_unattached) {
-        /* expect to get here most of the time
-         *
-         * ReferenceSeq_Attach tries to get reference:
-         *  from RefSeqMgr:
-         *   by seqId
-         *   by id
-         *  from self->dir (data directory)
-         *   id.fasta
-         *   id.fa
-         *   seqId.fasta
-         *   seqId.fa
-         */
-        
-        rc = ReferenceSeq_Attach(self, seq);
-        if (rc) return rc;
-        
-        if (seq->type == rst_unattached) {
-            /* try to find seqId within fasta seqIds */
-            int const best = ReferenceMgr_FindBestFasta(self, seq->seqId, seq_len, md5, n);
-            if (best >= 0) {
-                char *const tmp_id = seq->id;
-                char *const tmp_seqId = seq->seqId;
-                bool const tmp_circ = seq->circular;
-                
-                seq->type = rst_dead;
-                seq->id = NULL;         /* prevent possible double-free */
-                seq->seqId = NULL;      /* prevent possible double-free */
-                
-                *seq = self->refSeq[best];
-                seq->id = tmp_id;
-                seq->seqId = tmp_seqId;
-                seq->fastaSeqId = NULL;
-                seq->circular = tmp_circ;
-                
-                /* add another reference to the data buffer */
-                rc = KDataBufferSub(&self->refSeq[best].u.local.buf, &seq->u.local.buf, 0, 0);
-                if (rc) return rc;
-            }
-        }
-    }
-    assert(seq != NULL);
-    if (seq->type == rst_unattached) {
-        /* nothing has worked and nothing left to try */
-        seq->type = rst_dead;
-        rc = RC(rcAlign, rcFile, rcConstructing, rcId, rcNotFound);
-    }
-    else {
-        ReferenceSeq *alt = NULL;
-
-        if (!allowMultiMapping && seq->seqId != NULL) {
-            /* The old behavior was to allow multiple name to SEQID mappings
-             * but this causes some troubles with other tools.
-             * This loop is to re-use any open reference with the same
-             * SEQID.
-             */
-            for (i = 0; i != n; ++i) {
-                ReferenceSeq *const rs = &self->refSeq[i];
-                
-                if (   rs->type != rst_dead
-                    && rs->type != rst_unattached
-                    && rs != seq
-                    && rs->seqId != NULL
-                    && strcasecmp(seq->seqId, rs->seqId) == 0)
-                {
-                    *rslt = rs;
-                    wasRenamed[0] = true;
-                    return 0;
-                }
-            }
-        }
-        /* perform ambiguity check
-         *
-         * This search follows the same pattern as the main search but has
-         * more stringent conditions.  One hopes that it fails to find
-         * anything.
-         */
-        
-        /* This loop checks to see if there are any open references with
-         * the same ID and sequence length
-         */
-        for (i = 0; i != n; ++i) {
-            ReferenceSeq *const rs = &self->refSeq[i];
-            
-            if (   rs->type != rst_dead
-                && rs->type != rst_unattached
-                && rs != seq
-                && rs->id != NULL
-                && strcmp(id, rs->id) == 0
-                && (seq_len == 0 || seq_len == rs->seq_len))
-            {
-                alt = rs;
-                break;
-            }
-        }
-        if (alt == NULL) {
-            /* This loop checks to see if there are any open references with
-             * the same SEQID and sequence length
-             */
-            for (i = 0; i != n; ++i) {
-                ReferenceSeq *const rs = &self->refSeq[i];
-                
-                if (   rs->type != rst_dead
-                    && rs->type != rst_unattached
-                    && rs != seq
-                    && rs->seqId != NULL
-                    && strcasecmp(id, rs->seqId) == 0
-                    && (seq_len == 0 || seq_len == rs->seq_len))
-                {
-                    alt = rs;
-                    break;
-                }
-            }
-        }
-        if (alt == NULL) {
-            int const best = ReferenceMgr_FindBestFasta(self, id, seq_len, md5, (unsigned)(seq - self->refSeq));
-            if (best >= 0)
-                alt = &self->refSeq[best];
-        }
-        /* try to knock the alternative out of consideration
-         * if it survives length and md5 tests, it is *really* likely to be
-         * a duplicate.
-         */
-        if (alt != NULL && seq_len != 0 && seq_len != alt->seq_len)
-            alt = NULL;
-        if (alt != NULL && md5 != NULL && memcmp(md5, alt->md5, 16) != 0)
-            alt = NULL;
-        if (alt != NULL) {
-            seq->type = rst_dead;
-            rc = RC(rcAlign, rcFile, rcConstructing, rcId, rcAmbiguous);
-        }
-    }
-    if (seq->id == NULL)
-    {
-        seq->id = string_dup(id, string_size(id));
-        if (seq->id == NULL)
-            return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
-    }
-    /* finally, associate the id with the object and put it in the index */
-    {{
-        rc_t rc2 = ReferenceMgr_AddId(self, id, seq);
-        if (rc == 0)
-            rc = rc2;
-    }}
-    if (rc == 0)
-        *rslt = seq;
-    return rc;
-#endif
+static ReferenceSeq *ReferenceMgr_FindSeq(ReferenceMgr const *const self, char const id[])
+{
+    int const fnd = findId(self, id);
+    return (fnd >= 0) ? &self->refSeq[fnd] : NULL;
 }
 
 static
@@ -1786,13 +1546,10 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
                           bool const allowMultiMapping,
                           bool wasRenamed[])
 {
-    int const fnd = findId(self, id);
-    
-    assert(rslt != NULL);
-    *rslt = NULL;
-    if (fnd >= 0) {
-        ReferenceSeq *const obj = &self->refSeq[fnd];
-        
+    ReferenceSeq *const obj = ReferenceMgr_FindSeq(self, id);
+    if (obj) {
+        assert(rslt != NULL);
+        *rslt = NULL;
         if (obj->type == rst_dead)
             return RC(rcAlign, rcIndex, rcSearching, rcItem, rcInvalid);
         if (obj->type == rst_renamed) {
@@ -1801,9 +1558,10 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
             *wasRenamed = true;
             return ReferenceMgr_OpenSeq(self, rslt, obj->id, seq_len, md5, allowMultiMapping, &dummy);
         }
-        if (obj->type == rst_refSeqBySeqId) {
-            RefSeq const *dummy;
-            rc_t const rc = RefSeqMgr_GetSeq(self->rmgr, &dummy, obj->seqId, (unsigned)string_size(obj->seqId));
+        if (obj->type == rst_refSeqBySeqId || obj->type == rst_refSeqById) {
+            RefSeq const *dummy = NULL;
+            char const *const key = (obj->type == rst_refSeqById) ? obj->id : obj->seqId;
+            rc_t const rc = RefSeqMgr_GetSeq(self->rmgr, &dummy, key, (unsigned)string_size(key));
             
             assert(rc == 0);
             assert(dummy == obj->u.refseq);
@@ -2343,6 +2101,8 @@ LIB_EXPORT rc_t CC ReferenceMgr_Release(const ReferenceMgr *cself,
         uint64_t rows = 0;
         unsigned i;
 
+        freeHashTableEntries(self);
+        
         rc = TableWriterRef_Whack(self->writer, commit, &rows);
         if (Rows) *Rows = rows;
         KDirectoryRelease(self->dir);
@@ -2407,7 +2167,7 @@ rc_t ReferenceSeq_ReadDirect(ReferenceSeq *self,
             unsigned const readable = self->seq_len - offset;
             unsigned const to_write = readable < writable ? readable : writable;
             
-            memcpy(&buffer[dst_off], &src[offset], to_write);
+            memmove(&buffer[dst_off], &src[offset], to_write);
             *written += to_write;
             if (!self->circular)
                 break;
@@ -2556,6 +2316,22 @@ LIB_EXPORT rc_t CC ReferenceMgr_Verify(ReferenceMgr const *const cself,
         }
         return rc;
     }
+}
+
+LIB_EXPORT rc_t CC ReferenceMgr_Get1stRow(const ReferenceMgr* cself, int64_t* row_id, char const id[])
+{
+    rc_t rc = 0;
+    ReferenceSeq *seq;
+
+    if (cself == NULL || row_id == NULL) {
+        rc = RC(rcAlign, rcFile, rcReading, rcParam, rcNull);
+    }
+    else if ((seq = ReferenceMgr_FindSeq(cself, id)) == NULL)
+        rc = RC(rcAlign, rcFile, rcReading, rcId, rcNotFound);
+    else {
+        *row_id = seq->start_rowid;
+    }
+    return rc;
 }
 
 LIB_EXPORT rc_t CC ReferenceMgr_FastaPath(const ReferenceMgr* cself, const char* fasta_path)
@@ -2713,7 +2489,7 @@ rc_t cigar_bin(cigar_bin_t cigar[],
     for (i = 0; i < cigar_len; ++i) {
         uint32_t c;
         
-        memcpy(&c, cigar_bin + i, 4);
+        memmove(&c, cigar_bin + i, 4);
         {
             int const op = c & 0x0F;
             int const len = c >> 4;
@@ -2957,7 +2733,7 @@ rc_t cigar2offset(int const options,
                                 cigar[i].type = NCBI_align_ro_intron_unknown;
                                 cigar[i].code = 'N';
                             }
-                            memcpy(cigar + i - 1, cigar + i, (opcount - i) * sizeof(cigar[0]));
+                            memmove(cigar + i - 1, cigar + i, (opcount - i) * sizeof(cigar[0]));
                             --opcount;
                         }
                         else
@@ -2974,7 +2750,7 @@ rc_t cigar2offset(int const options,
                     cigar_bin_t const op = cigar[--i];
                     
                     if (op.gentype == gen_ignore_type) {
-                        memcpy(cigar + i, cigar + oi, (opcount - oi) * sizeof(cigar[0]));
+                        memmove(cigar + i, cigar + oi, (opcount - oi) * sizeof(cigar[0]));
                         --opcount;
                     }
                 }
@@ -3068,6 +2844,11 @@ LIB_EXPORT rc_t CC ReferenceMgr_Compress(const ReferenceMgr* cself,
     }
     ALIGN_C_DBGERR(rc);
     return rc;
+}
+
+static bool isMatchingBase(int const refBase, int const seqBase)
+{
+    return (refBase == seqBase || seqBase == '=' || (refBase == 'T' && seqBase == 'U'));
 }
 
 LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
@@ -3226,14 +3007,14 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
                         }
                     }
                     if(rc == 0 && allele_len < (max_rl - rl)) {
-                        memcpy(&ref_buf[rl], allele, allele_len);
+                        memmove(&ref_buf[rl], allele, allele_len);
                         rl += allele_len;
                         /* append tail of actual reference */
                         rc = ReferenceSeq_ReadDirect(self, allele_ref_end, max_rl - rl, true, &ref_buf[rl], &i, false);
                         rl += i;
                     } else if(rc == 0) {
                         /* allele is longer than needed */
-                        memcpy(&ref_buf[rl], allele, max_rl - rl);
+                        memmove(&ref_buf[rl], allele, max_rl - rl);
                         rl = max_rl;
                     }
                 }
@@ -3265,8 +3046,8 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
                             ref_pos += length;
                             ++ro;
                         }
-                        if (ref_pos < 0 || ref_pos >= max_rl ||
-                            ((toupper(ref_buf[ref_pos]) != toupper(seq[seq_pos])) && (seq[seq_pos] != '=')))
+                        if (ref_pos < 0 || ref_pos >= max_rl
+                            || !isMatchingBase(toupper(ref_buf[ref_pos]), toupper(seq[seq_pos])))
                         {
                             has_mismatch[seq_pos] = 1;
                             mismatch[data->mismatch.elements++] = seq[seq_pos];

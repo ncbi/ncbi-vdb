@@ -37,21 +37,19 @@
 #define DERIV_NAME( T )  deriv_ ## T
 #define DERIV( T )                                                       \
 static                                                                   \
-rc_t CC DERIV_NAME ( T ) ( void *data,                                      \
+rc_t CC DERIV_NAME ( T ) ( void *data,                                   \
     const VXformInfo *info, int64_t row_id, const VFixedRowResult *rslt, \
     uint32_t argc, const VRowData argv [] )                              \
 {                                                                        \
     uint32_t i;                                                          \
-                                                                         \
-    T *dst       = rslt -> base;                                         \
-    const T *src = argv [ 0 ] . u . data . base;                         \
-    if(rslt -> elem_count == 0) return 0;				 \
-    dst += rslt -> first_elem;						 \
-    src += argv [ 0 ] . u . data . first_elem;				 \
-    dst [ 0 ] = src [ 0 ];						 \
-                                                                         \
-    for ( i = 1; i < rslt -> elem_count; ++ i ) {                        \
-        dst [ i ] = src [ i ] - src [ i - 1 ];                           \
+    T prior, * dst = rslt -> base;                                       \
+    const T * src = argv [ 0 ] . u . data . base;                        \
+    dst += rslt -> first_elem;						                     \
+    src += argv [ 0 ] . u . data . first_elem;				             \
+    for ( prior = 0, i = 0; i < rslt -> elem_count; ++ i )               \
+    {                                                                    \
+        dst [ i ] = src [ i ] - prior;                                   \
+        prior = src [ i ];                                               \
     }                                                                    \
     return 0;                                                            \
 }
@@ -78,7 +76,7 @@ static VFixedRowFunc deriv_func [] =
  *
  *
  * SYNOPSIS:
- *  return 1st derivative for every row with 1st element unmodified
+ *  return 1st derivative for every row with initial element unmodified
  *
  * USAGE:
  *    I32 pos_1st_d = < I32 > deriv ( position );

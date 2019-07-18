@@ -99,7 +99,7 @@ rc_t KColumnIdxCreate ( KColumnIdx *self, KDirectory *dir,
 
             KColumnIdx0Whack ( & self -> idx0 );
         }
-   
+
         KColumnIdx1Whack ( & self -> idx1 );
     }
 
@@ -178,7 +178,7 @@ rc_t KColumnIdxOpenUpdate ( KColumnIdx *self, KDirectory *dir,
 
 /* Whack
  */
-rc_t KColumnIdxWhack ( KColumnIdx *self, 
+rc_t KColumnIdxWhack ( KColumnIdx *self,
     uint64_t data_eof, size_t pgsize, int32_t checksum )
 {
     rc_t rc;
@@ -261,18 +261,28 @@ rc_t KColumnIdxFindFirstRowId ( const KColumnIdx * self,
     }
 
     /* look in main index */
+    /* KColumnIdx1LocateFirstRowIdBlob returns the blob containing 'start', if such blob exists, otherwise the next blob (or RC if there's no next) */
     rc1 = KColumnIdx1LocateFirstRowIdBlob ( & self -> idx1, & bloc, start );
     if ( rc1 != 0 )
+    {
         return rc0;
+    }
+    if ( start >= bloc . start_id )
+    {   /* found inside a blob */
+        best1 = start;
+    }
+    else
+    {   /* not found; pick the start of the next blob */
+        best1 = bloc . start_id;
+    }
 
     if ( rc0 != 0 )
     {
-        * found = bloc . start_id;
+        * found = best1;
         return 0;
     }
 
     /* found in both - return lesser */
-    best1 = bloc . start_id;
 
     /* "found" already contains 'best0" */
     assert ( * found == best0 );

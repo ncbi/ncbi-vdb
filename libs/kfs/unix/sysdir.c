@@ -71,6 +71,7 @@ struct KSysDirListing;
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/statvfs.h> /* statvfs */
 #include <utime.h>
 #include <assert.h>
 
@@ -452,7 +453,7 @@ rc_t KSysDirMakePath_v1 ( const KSysDir_v1 * self, enum RCContext ctx, bool cano
                 return RC ( rcFS, rcDirectory, ctx, rcPath, rcExcessive );
             memmove ( buffer + bsize, buffer, psize + 1 );
             assert ( self -> path [ bsize - 1 ] == '/' );
-            memcpy ( buffer, self -> path, bsize );
+            memmove ( buffer, self -> path, bsize );
         }
         else if ( ( bsize = self -> root ) != 0 )
         {
@@ -460,7 +461,7 @@ rc_t KSysDirMakePath_v1 ( const KSysDir_v1 * self, enum RCContext ctx, bool cano
                 return RC ( rcFS, rcDirectory, ctx, rcPath, rcExcessive );
             memmove ( buffer + bsize, buffer, psize + 1 );
             assert ( self -> path [ bsize - 1 ] != '/' );
-            memcpy ( buffer, self -> path, bsize );
+            memmove ( buffer, self -> path, bsize );
         }
     }
     else
@@ -468,12 +469,12 @@ rc_t KSysDirMakePath_v1 ( const KSysDir_v1 * self, enum RCContext ctx, bool cano
         if ( path [ 0 ] != '/' )
         {
             assert ( self -> path [ self -> size - 1 ] == '/' );
-            memcpy ( buffer, self -> path, bsize = self -> size );
+            memmove ( buffer, self -> path, bsize = self -> size );
         }
         else if ( ( bsize = self -> root ) != 0 )
         {
             assert ( self -> path [ bsize - 1 ] != '/' );
-            memcpy ( buffer, self -> path, bsize );
+            memmove ( buffer, self -> path, bsize );
         }
 
         if ( args == NULL )
@@ -819,7 +820,7 @@ rc_t KSysDirRelativePath_v1 ( const KSysDir_v1 * self, enum RCContext ctx,
 
     /* insert backup sequences */
     for ( bsize = 0; backup > 0; bsize += 3, -- backup )
-        memcpy ( & path [ bsize ], "../", 3 );
+        memmove ( & path [ bsize ], "../", 3 );
 
     /* close gap */
     if ( p - path > bsize )
@@ -2275,6 +2276,68 @@ rc_t KSysDirCreateDir_v1 ( KSysDir_v1 * self,
     return rc;
 }
 
+
+/* FileLocator
+ *  returns a 64-bit key pertinent only to the particular file
+ *  system device holding that file.
+ *
+ *  It can be used as a form of sort key except that it is not 
+ *  guaranteed to be unique.
+ *
+ *  "locator" [ OUT ] - return parameter for file locator
+ *
+ *  "path" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting target file
+ */
+static
+rc_t CC KSysDirFileLocator_v1 ( const KSysDir_v1 *self,
+    uint64_t *locator, const char *path, va_list args )
+{
+    /* TBD - could return an inode */
+    assert ( locator != NULL );
+    * locator = 0;
+    return RC ( rcFS, rcDirectory, rcAccessing, rcFunction, rcUnsupported );
+}
+
+/* FilePhysicalSize
+ *  returns physical allocated size in bytes of target file.  It might
+ * or might not differ from FileSize
+ *
+ *  "size" [ OUT ] - return parameter for file size
+ *
+ *  "path" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting target file
+ */
+static
+rc_t CC KSysDirFilePhysicalSize_v1 ( const KSysDir_v1 *self,
+    uint64_t *size, const char *path, va_list args )
+{
+    /* TBD - can be completed */
+    assert ( size != NULL );
+    * size = 0;
+    return RC ( rcFS, rcDirectory, rcAccessing, rcFunction, rcUnsupported );
+}
+
+/* FileContiguous
+ *  returns true if the file is "contiguous".  Chunked or sparse files are not
+ *  contiguous while most data files are.  Virtual generated files would likely
+ *  not be contiguous.  
+ *
+ *  "contiguous" [ OUT ] - return parameter for file contiguous
+ *
+ *  "path" [ IN ] - NUL terminated string in directory-native
+ *  character set denoting target file
+ */
+static
+rc_t CC KSysDirFileContiguous_v1 ( const KSysDir_v1 *self,
+    bool *contiguous, const char *path, va_list args )
+{
+    assert ( contiguous != NULL );
+    * contiguous = true;
+    return 0;
+}
+
+
 /* KDirectoryNativeDir
  *  returns a native file-system directory node reference
  *  the directory root will be "/" and set to the native
@@ -2289,10 +2352,10 @@ rc_t KSysDirCreateDir_v1 ( KSysDir_v1 * self,
 
 static KDirectory_vt_v1 vtKSysDir =
 {
-    /* version 1.1 */
-    1, 1,
+    /* version 1.4 */
+    1, 4,
 
-    /* start minor version 0 methods*/
+    /* start minor version 0*/
     KSysDirDestroy_v1,
     KSysDirList_v1,
 
@@ -2322,13 +2385,26 @@ static KDirectory_vt_v1 vtKSysDir =
     KSysDirOpenDirUpdate_v1,
     KSysDirCreateDir_v1,
     NULL, /* we don't track files*/
-    /* end minor version 0 methods*/
+    /* end minor version 0*/
 
-    /* start minor version 1 methods*/
+    /* start minor version 1*/
     KSysDirVDate,
     KSysDirVSetDate,
-    KSysDirGetSysdir_v1
-    /* end minor version 1 methods*/
+    KSysDirGetSysdir_v1,
+    /* end minor version 1*/
+
+    /* start minor version 2 */
+    KSysDirFileLocator_v1,
+    /* end minor version 2 */
+
+    /* start minor version 3 */
+    KSysDirFilePhysicalSize_v1,
+    KSysDirFileContiguous_v1,
+    /* end minor version 3 */
+
+    /* start minor version 4 */
+    KSysDirOpenFileWrite_v1
+    /* end minor version 4 */
 };
 
 /* KSysDirInit
@@ -2345,7 +2421,7 @@ rc_t KSysDirInit_v1 ( KSysDir_v1 * self, enum RCContext ctx, uint32_t dad_root,
         return ResetRCContext ( rc, rcFS, rcDirectory, ctx );
 
     if ( path != NULL )
-        memcpy ( self -> path, path, path_size );
+        memmove ( self -> path, path, path_size );
     self -> root = chroot ? path_size : dad_root;
     self -> size = path_size + 1;
     self -> path [ path_size ] = '/';
@@ -2411,4 +2487,27 @@ LIB_EXPORT rc_t CC KDirectoryNativeDir_v1 ( KDirectory_v1 **dirp )
     }
 
     return rc;
+}
+
+LIB_EXPORT rc_t CC KDirectoryGetDiskFreeSpace_v1 ( const KDirectory * self,
+    uint64_t * free_bytes_available, uint64_t * total_number_of_bytes )
+{
+    if ( self == NULL )
+        return RC ( rcFS, rcDirectory, rcAccessing, rcSelf, rcNull );
+    else {
+        KSysDir_v1 * dir = ( KSysDir_v1 * ) self;
+        struct statvfs buf;
+        memset ( & buf, 0, sizeof buf );
+        if ( statvfs ( dir -> path, & buf) == 0 ) {
+            if ( free_bytes_available != NULL ) {
+                * free_bytes_available  = buf . f_bavail * buf . f_frsize;
+            }
+            if ( total_number_of_bytes != NULL ) {
+                * total_number_of_bytes = buf . f_blocks * buf . f_frsize;
+            }
+            return 0;
+        }
+
+        return RC ( rcFS, rcDirectory, rcAccessing, rcError, rcUnknown );
+    }
 }

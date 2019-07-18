@@ -190,7 +190,7 @@ rc_t CC KBufWriteFileWrite ( KBufWriteFile *self, uint64_t pos,
         if ( dpos <= spos && spos <= dend && spos < dlim )
         {
             partial = ( size_t ) ( ( dlim < send ? dlim : send ) - spos );
-            memcpy ( & self -> buff [ spos - dpos ], & bbuff [ boff ], partial );
+            memmove ( & self -> buff [ spos - dpos ], & bbuff [ boff ], partial );
             if ( spos + partial > dend )
             {
                 dend = spos + partial;
@@ -202,7 +202,7 @@ rc_t CC KBufWriteFileWrite ( KBufWriteFile *self, uint64_t pos,
         else if ( spos < dpos && dpos < send && send <= dlim )
         {
             partial = ( size_t ) ( send - dpos );
-            memcpy ( & self -> buff [ spos - dpos ], & bbuff [ boff ], partial );
+            memmove ( & self -> buff [ spos - dpos ], & bbuff [ boff ], partial );
             if ( send > dend )
             {
                 dend = send;
@@ -230,7 +230,7 @@ rc_t CC KBufWriteFileWrite ( KBufWriteFile *self, uint64_t pos,
             partial = size - total;
             if ( partial < self -> bsize )
             {
-                memcpy ( self -> buff, & bbuff [ boff ], partial );
+                memmove ( self -> buff, & bbuff [ boff ], partial );
                 self -> num_valid = partial;
             }
             else

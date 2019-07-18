@@ -921,7 +921,7 @@ rc_t KArcDirMakePath (const KArcDir *self,
             /* fail if the kDirectory path doesn't end in /? (inherited) */
             assert (self->path[bsize-1] == '/');
             /* prepend self's path */
-            memcpy (buffer, self->path, bsize);
+            memmove (buffer, self->path, bsize);
 	    }
 
 	    /* -----
@@ -940,7 +940,7 @@ rc_t KArcDirMakePath (const KArcDir *self,
             }
             memmove (buffer + self->size, buffer, psize+1);
             assert (self->path [bsize-1] != '/');
-            memcpy (buffer, self -> path, bsize);
+            memmove (buffer, self -> path, bsize);
 	    }
 	    /* -----
 	     * or maybe the new path is cool as is.  unlikely?
@@ -955,7 +955,7 @@ rc_t KArcDirMakePath (const KArcDir *self,
 	    if (path[0] != '/')
 	    {
             assert (self->path[self->size - 1] == '/');
-            memcpy (buffer, self->path, bsize = self->size);
+            memmove (buffer, self->path, bsize = self->size);
 	    }
 	    /* -----
 	     * copy the pre-root portion of the self's path into the buffer
@@ -963,7 +963,7 @@ rc_t KArcDirMakePath (const KArcDir *self,
 	    else if ((bsize = self->root) != 0)
 	    {
             assert (self->path[bsize-1] != '/');
-            memcpy (buffer, self->path, bsize);
+            memmove (buffer, self->path, bsize);
 	    }
 
 	    /* -----
@@ -1259,8 +1259,8 @@ rc_t KArcDirVisitDir(KArcDirVisitData *pb)
                 /* -----
                 * build up the path from the base and the name
                 */
-                memcpy(full_name, base, size);
-                memcpy(full_name+size, name, len);
+                memmove(full_name, base, size);
+                memmove(full_name+size, name, len);
                 full_name[size+len] = 0;
 
                 rc = KArcDirResolvePathNode(pb->dir, rcVisiting, full_name,
@@ -1375,7 +1375,7 @@ rc_t KArcDirRelativePath (const KArcDir *self, enum RCContext ctx,
 
     /* insert backup sequences */
     for (bsize = 0; backup > 0; bsize += 3, -- backup)
-        memcpy (& path [ bsize ], "../", 3);
+        memmove (& path [ bsize ], "../", 3);
 
     /* close gap */
     if ( (size_t)( p - path ) > bsize )
@@ -1602,13 +1602,13 @@ rc_t	KArcDirResolvePathNode	(const KArcDir *	self,
                                      * and that a final NUL is added add extra buffer
                                      * space as needed to asize
                                      */
-                                    memcpy (allocated_path, abpath, fsize);
+                                    memmove (allocated_path, abpath, fsize);
                                     pc = allocated_path + fsize;
-                                    memcpy (pc, symlink_path, ssize);
+                                    memmove (pc, symlink_path, ssize);
                                     pc += ssize;
                                     if (*(pc-1) == '/')
                                         --pc;
-                                    memcpy (pc, left, lsize+1);
+                                    memmove (pc, left, lsize+1);
                                     temp_path = allocated_path;
                                     continue;
 
@@ -1835,21 +1835,21 @@ rc_t CC KArcFileSetSize (KArcFile *self, uint64_t size)
  * archive.
  */
 static
-rc_t KArcFileReadContiguous (const KArcFile *self, uint64_t pos,
-			     void *buffer, size_t bsize, size_t *num_read)
+rc_t KArcFileReadContiguous ( const KArcFile * self, uint64_t pos,
+                              void * buffer, size_t bsize, size_t * num_read )
 {
     rc_t	rc;
     uint64_t	offset;
 
-    assert (self != NULL);
-    assert (buffer != NULL);
-    assert (num_read != NULL);
-    assert (bsize != 0);
+    assert ( self != NULL );
+    assert ( buffer != NULL );
+    assert ( num_read != NULL );
+    assert ( bsize != 0 );
 
-    rc = KTocEntryGetFileOffset (self->node, &offset);
-    if (rc == 0)
+    rc = KTocEntryGetFileOffset ( self->node, &offset );
+    if ( rc == 0 )
     {
-	rc = KFileRead (self->archive, pos + offset, buffer, bsize, num_read);
+        rc = KFileRead ( self->archive, pos + offset, buffer, bsize, num_read );
     }
     return rc;
 }
@@ -3434,7 +3434,7 @@ rc_t	KArcDirMake	(KArcDir ** self,
         KDirectoryAddRef (archive);
         break;
     }
-    memcpy (dir->path, path, path_size);
+    memmove (dir->path, path, path_size);
     dir->root = chroot ? path_size : dad_root;
     dir->size = path_size+1; /* make space for the next two operations */
     dir->path [path_size] = '/';

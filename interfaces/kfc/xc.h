@@ -109,6 +109,8 @@ XSTATE ( xsInconsistent, "inconsistent", rcInconsistent );
 XSTATE ( xsUnsupported, "unsupported", rcUnsupported );
 XSTATE_EXT ( xsInitFailed, xsFailed, "init failed", rcFailed );
 XSTATE ( xsNoPrimary, "missing primary", rcInvalid );
+XSTATE ( xsBadVersion, "bad version", rcBadVersion );
+XSTATE ( xsViolated, "violated", rcViolated );
 
 /*--------------------------------------------------------------------------
  * XC
@@ -178,6 +180,10 @@ XC ( xcFileAccessFailed, xoFile, xsAccessFailed );
 XC ( xcZlibInitFailed, xoZlib, xsInitFailed );
 XC ( xcZlibDataInvalid, xoZlib, xsInvalid );
 XC ( xcSecondaryAlignmentMissingPrimary, xoAlignment, xsNoPrimary );
+XC ( xcInterfaceBadVersion, xoInterface, xsBadVersion );
+XC ( xcRefcountViolated, xoRefcount, xsViolated );
+XC ( xcSelfInvalid, xoSelf, xsInvalid );
+XC ( xcParamIncorrect, xoParam, xsIncorrect );
 
 #ifdef __cplusplus
 }

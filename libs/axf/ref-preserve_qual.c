@@ -311,7 +311,7 @@ rc_t NodeMake( Node **rslt, VTable const *tbl, String const *refName, INSDC_coor
     if ( self == NULL )
         return RC( rcXF, rcNode, rcConstructing, rcMemory, rcExhausted );
     
-    memcpy( &self[ 1 ], refName->addr, self->namelen = refName->len );
+    memmove( &self[ 1 ], refName->addr, self->namelen = refName->len );
     self->name = ( char const * )&self[ 1 ];
     self->bitmap = ( uint8_t * )&self->name[ refName->len ];
     self->row_count = data[ 1 ] - ( self->first_row = data[ 0 ] ) + 1;

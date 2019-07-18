@@ -94,7 +94,7 @@ rc_t CC meta_attr_write_ascii(
         return rc;
     
     value = rslt->data->base;
-    memcpy(value, & src [ argv[0].u.data.first_elem ], length);
+    memmove(value, & src [ argv[0].u.data.first_elem ], length);
     value[length] = '\0';
 
     rc = KMDataNodeWriteAttr(self->node, self->name, value);

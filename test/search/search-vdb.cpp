@@ -186,7 +186,7 @@ namespace VDBSearchTest
         if (nTrimmedLen + nExtendBufSize > nReadTrimmedSize)
             nExtendBufSize = nReadTrimmedSize - nTrimmedLen;
 
-        memcpy(pszReadTrimmed + nTrimmedLen, pszReadTrimmed, nExtendBufSize - 1);
+        memmove(pszReadTrimmed + nTrimmedLen, pszReadTrimmed, nExtendBufSize - 1);
         pszReadTrimmed[nTrimmedLen + nExtendBufSize - 1] = '\0';
         return pszReadTrimmed;
     }

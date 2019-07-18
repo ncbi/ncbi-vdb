@@ -67,7 +67,7 @@ static void BAM_AlignmentWhack(void * const vp, ctx_t ctx)
 {
     FUNC_ENTRY(ctx, rcSRA, rcFile, rcAccessing);
     BAM_Alignment *const self = (BAM_Alignment *)vp;
-    
+
     free(self->cur);
     NGS_RefcountRelease(&self->provider->dad, ctx);
 }
@@ -125,7 +125,7 @@ static bool FindRG(void *const vp, ctx_t ctx, unsigned const ord, BAM_Record_Ext
 
     if (fld->tag[0] == 'R' && fld->tag[1] == 'G' && fld->val_type == 'Z') {
         NGS_String **const prslt = vp;
-        
+
         *prslt = NGS_StringMakeCopy(ctx, fld->value->string, fld->elemcount);
         return false; /* done */
     }
@@ -139,7 +139,7 @@ static NGS_String * BAM_AlignmentReadGroup(void *const vp, ctx_t ctx)
 
     if (self->cur) {
         NGS_String *rslt = NULL;
-        
+
         BAM_Record_ForEachExtra(self->cur, ctx, FindRG, &rslt);
         return rslt;
     }
@@ -169,16 +169,16 @@ typedef struct {
 static clipped_t const get_clipping(BAM_Record const *rec)
 {
     clipped_t rslt = { 0, rec->seqlen };
-    
+
     if (rec->ncigar > 0 && (rec->cigar[0] & 0x0F) == 4) {
         unsigned const length = rec->cigar[0] >> 4;
-        
+
         rslt.start += length;
         rslt.length -= length;
     }
     if (rec->ncigar > 1 && (rec->cigar[rec->ncigar - 1] & 0x0F) == 4) {
         unsigned const length = rec->cigar[rec->ncigar - 1] >> 4;
-        
+
         rslt.length -= length;
     }
     return rslt;
@@ -225,7 +225,7 @@ static bool BAM_AlignmentIsPrimary(void *const vp, ctx_t ctx)
 
     if (self->cur)
         return (self->cur->FLAG & 0x0900) == 0 ? true : false;
-    
+
     USER_ERROR(xcRowNotFound, "no current row");
     return false;
 }
@@ -238,7 +238,7 @@ static int64_t BAM_AlignmentAlignmentPosition(void *const vp, ctx_t ctx)
 
     if (self->cur)
         return self->cur->POS - 1;
-    
+
     USER_ERROR(xcRowNotFound, "no current row");
     return -1;
 }
@@ -248,12 +248,12 @@ static unsigned ComputeRefLen(size_t const count, uint32_t const cigar[])
 {
     unsigned rslt = 0;
     unsigned i;
-    
+
     for (i = 0; i < count; ++i) {
         uint32_t const op = cigar[i];
         unsigned const len = op >> 4;
         int const code = op & 0x0F;
-        
+
         switch (code) {
         case 0: /* M */
         case 2: /* D */
@@ -274,7 +274,7 @@ static uint64_t BAM_AlignmentAlignmentLength(void *const vp, ctx_t ctx)
 
     if (self->cur)
         return ComputeRefLen(self->cur->ncigar, self->cur->cigar);
-    
+
     USER_ERROR(xcRowNotFound, "no current row");
     return 0;
 }
@@ -287,7 +287,7 @@ static bool BAM_AlignmentIsReversedOrientation(void *const vp, ctx_t ctx)
 
     if (self->cur)
         return (self->cur->FLAG & 0x0010) == 0 ? false : true;
-    
+
     USER_ERROR(xcRowNotFound, "no current row");
     return false;
 }
@@ -318,7 +318,7 @@ static uint64_t BAM_AlignmentTemplateLength(void *const vp, ctx_t ctx)
 
     if (self->cur)
         return self->cur->TLEN;
-    
+
     USER_ERROR(xcRowNotFound, "no current row");
     return 0;
 }
@@ -331,14 +331,14 @@ static char const *FormatCIGAR(char *dst, char const OPCODE[], size_t const coun
     char *last_out;
     char last_code = 0;
     uint32_t last_len = 0;
-    
+
     last_out = dst;
     for (i = 0; i < count; ++i) {
         uint32_t const op = *--src;
         char const code = OPCODE[op & 0x0F];
         uint32_t const len1 = op >> 4;
         uint32_t len = code == last_code ? ((dst = last_out), last_len + len1) : len1;
-        
+
         last_len = len;
         last_code = code;
         last_out = dst;
@@ -364,7 +364,7 @@ static NGS_String *CIGAR(ctx_t ctx, char const OPCODE[], size_t const count, uin
     char *const endp = buffer + max;
     char const *const rslt = FormatCIGAR(endp, OPCODE, count, cigar);
     size_t const len = endp - rslt;
-    
+
     return NGS_StringMakeCopy(ctx, rslt, len);
 }
 
@@ -377,7 +377,7 @@ static NGS_String *CIGAR_clipped(ctx_t ctx, char const OPCODE[], bool const clip
         char const last  = cigar[count - 1] & 0x0F;
         unsigned const cfirst = (first == 4 || first == 5) ? 1 : 0;
         unsigned const clast  = (last  == 4 || last  == 5) ? 1 : 0;
-        
+
         return CIGAR(ctx, OPCODE, count - cfirst - clast, &cigar[cfirst]);
     }
 }
@@ -415,7 +415,7 @@ static bool BAM_AlignmentHasMate(void *const vp, ctx_t ctx)
 
     if (self->cur)
         return (self->cur->FLAG & 0x0001) == 0 ? false : true;
-    
+
     USER_ERROR(xcRowNotFound, "no current row");
     return false;
 }
@@ -450,7 +450,7 @@ static NGS_String * BAM_AlignmentMateReferenceSpec(void *const vp, ctx_t ctx)
 
     if (self->cur)
         return self->cur->RNEXT ? NGS_StringMake(ctx, self->cur->RNEXT, strlen(self->cur->RNEXT)) : NULL;
-    
+
     USER_ERROR(xcRowNotFound, "no current row");
     return NULL;
 }
@@ -463,7 +463,22 @@ static bool BAM_AlignmentMateIsReversedOrientation(void *const vp, ctx_t ctx)
 
     if (self->cur)
         return (self->cur->FLAG & 0x0020) == 0 ? false : true;
-    
+
+    USER_ERROR(xcRowNotFound, "no current row");
+    return false;
+}
+
+static bool BAM_AlignmentIsFirst(void *const vp, ctx_t ctx)
+{
+    FUNC_ENTRY(ctx, rcSRA, rcFile, rcAccessing);
+    BAM_Alignment *const self = (BAM_Alignment *)vp;
+
+    if (self->cur) {
+        bool const isMated = (self->cur->FLAG & 0x001) == 0 ? false : true;
+        bool const isFirst = (self->cur->FLAG & 0x040) == 0 ? false : true;
+        bool const isLast  = (self->cur->FLAG & 0x080) == 0 ? false : true;
+        return (isMated && isFirst && !isLast);
+    }
     USER_ERROR(xcRowNotFound, "no current row");
     return false;
 }
@@ -477,13 +492,13 @@ static bool ShouldSkip(BAM_Alignment const *const self)
 {
     if (!self->cur->RNAME) /* not aligned */
         return true;
-    
+
     if ((self->cur->FLAG & 0x0900) == 0 && !self->primary) /* is primary and don't want primary */
         return true;
-    
+
     if ((self->cur->FLAG & 0x0900) != 0 && !self->secondary) /* is secondary and don't want secondary */
         return true;
-    
+
     return false;
 }
 
@@ -579,7 +594,7 @@ static NGS_Alignment_vt const vt =
         BAM_AlignmentFragmentGetQualities,
         BAM_AlignmentFragmentNext
     },
-    
+
     BAM_AlignmentAlignmentId,
     BAM_AlignmentReferenceSpec,
     BAM_AlignmentMappingQuality,
@@ -602,6 +617,7 @@ static NGS_Alignment_vt const vt =
     BAM_AlignmentMateAlignment,
     BAM_AlignmentMateReferenceSpec,
     BAM_AlignmentMateIsReversedOrientation,
+    BAM_AlignmentIsFirst,
 
     /* Iterator */
     BAM_AlignmentIteratorNext
@@ -626,7 +642,7 @@ struct NGS_Alignment *BAM_AlignmentMake(ctx_t ctx, bool const primary, bool cons
     void *self = calloc(1, sizeof(BAM_Alignment));
     if (self) {
         NGS_Alignment *const super = &((BAM_Alignment *)self)->super;
-        
+
         TRY(NGS_AlignmentInit(ctx, super, &vt, "BAM_Alignment", name)) {
             TRY(BAM_AlignmentInit(self, ctx, primary, secondary, provider_f, provider)) {
                 return self;

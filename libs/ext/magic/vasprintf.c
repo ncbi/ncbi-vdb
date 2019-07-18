@@ -186,7 +186,7 @@ static int usual_char(xprintf_struct * s)
   if (realloc_buff(s,len) == EOF)
     return EOF;
 
-  memcpy(s->dest_string, s->src_string, len);
+  memmove(s->dest_string, s->src_string, len);
   s->src_string += len;
   s->dest_string += len;
   s->real_len += len;
@@ -625,7 +625,7 @@ int vasprintf(char **ptr, const char *format_string, va_list vargs)
 #ifdef __va_copy
   __va_copy (s.vargs, vargs);
 #else
-  memcpy (&s.vargs, vargs, sizeof (va_list));
+  memmove (&s.vargs, vargs, sizeof (va_list));
 #endif /* __va_copy */
 #endif /* va_copy */
   s.maxlen = (size_t)INT_MAX;

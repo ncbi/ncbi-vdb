@@ -158,7 +158,7 @@ typedef const bitset_word_t *re_const_bitset_ptr_t;
   (set[i / BITSET_WORD_BITS] & ((bitset_word_t) 1 << i % BITSET_WORD_BITS))
 #define bitset_empty(set) memset (set, '\0', sizeof (bitset_t))
 #define bitset_set_all(set) memset (set, '\xff', sizeof (bitset_t))
-#define bitset_copy(dest,src) memcpy (dest, src, sizeof (bitset_t))
+#define bitset_copy(dest,src) memmove (dest, src, sizeof (bitset_t))
 
 #define PREV_WORD_CONSTRAINT 0x0001
 #define PREV_NOTWORD_CONSTRAINT 0x0002

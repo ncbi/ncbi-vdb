@@ -170,14 +170,14 @@ LIB_EXPORT rc_t CC KFileFormatGetClassDescr ( const KFileFormat *self, KFileForm
     {
     error:
 	max = (sizeof (ERROR) > descriptionmax-1) ? descriptionmax-1 : sizeof (ERROR)-1;
-	memcpy (description, ERROR, max);
+	memmove (description, ERROR, max);
 	description[max] = '\0';
 	return 0;
     }
     else if (c == kffcNotFound)
     {
 	max = (sizeof (NOT_FOUND) > descriptionmax-1) ? descriptionmax-1 : sizeof (NOT_FOUND)-1;
-	memcpy (description, NOT_FOUND, max);
+	memmove (description, NOT_FOUND, max);
 	description[max] = '\0';
 	return 0;
     }
@@ -190,7 +190,7 @@ LIB_EXPORT rc_t CC KFileFormatGetClassDescr ( const KFileFormat *self, KFileForm
 	if (rc)
 	    goto error;
 	max = (z > descriptionmax-1) ? descriptionmax-1 : z;
-	memcpy (description, cp, max);
+	memmove (description, cp, max);
 	description[max] = '\0';
 	return 0;
     }

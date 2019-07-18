@@ -161,7 +161,7 @@ LIB_EXPORT int32_t CC agrep ( AgrepFlags alg, char const* pattern, FILE* fp, int
 
         /* Make szBuf somewhat circular to be able to find pattern cut in between */
         nExtendBufSize = nPatternSize <= len ? nPatternSize : len;
-        memcpy(szBuf+len, szBuf, nExtendBufSize - 1);
+        memmove(szBuf+len, szBuf, nExtendBufSize - 1);
         szBuf[len + nExtendBufSize - 1] = '\0';
 
         if (simulate)

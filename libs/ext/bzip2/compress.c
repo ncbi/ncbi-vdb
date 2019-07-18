@@ -28,7 +28,6 @@
 
 #include "bzlib_private.h"
 
-#include <assert.h>
 
 /*---------------------------------------------------*/
 /*--- Bit stream I/O                              ---*/
@@ -354,8 +353,7 @@ void sendMTFValues ( EState* s )
             Calculate the cost of this group as coded
             by each of the coding tables.
          --*/
-         assert(nGroups <= BZ_N_GROUPS);
-         for (t = 0; t < BZ_N_GROUPS; t++) cost[t] = 0;
+         for (t = 0; t < nGroups; t++) cost[t] = 0;
 
          if (nGroups == 6 && 50 == ge-gs+1) {
             /*--- fast track the common case ---*/

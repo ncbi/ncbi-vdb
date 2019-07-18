@@ -33,12 +33,12 @@
 #    define GET_UNALIGNED( type, swap, dest, src )                  \
         do {                                                        \
             type tmp##__LINE__;                                     \
-            memcpy ( & tmp##__LINE__, & ( src ), sizeof ( type ) ); \
+            memmove ( & tmp##__LINE__, & ( src ), sizeof ( type ) ); \
             dest = swap ( tmp##__LINE__ );                          \
         } while (0)
 #  else
 #    define GET_UNALIGNED( type, swap, dest, src ) \
-        memcpy ( & ( dest ), & ( src ), sizeof ( type ) )
+        memmove ( & ( dest ), & ( src ), sizeof ( type ) )
 #  endif
 #elif SWAP_PERSISTED
 #  define GET_UNALIGNED( type, swap, dest, src ) dest = swap ( src )

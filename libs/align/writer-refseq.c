@@ -76,7 +76,7 @@ LIB_EXPORT rc_t CC TableWriterRefSeq_Make(const TableWriterRefSeq** cself, VDBMa
         if( self == NULL ) {
             rc = RC(rcAlign, rcFormatter, rcConstructing, rcMemory, rcExhausted);
         } else {
-            memcpy(self->cols, TableWriterRefSeq_cols, sizeof(TableWriterRefSeq_cols));
+            memmove(self->cols, TableWriterRefSeq_cols, sizeof(TableWriterRefSeq_cols));
             if( !(options & ewrefseq_co_QUALITY) ) {
                 self->cols[ewrefseq_cn_QUALITY].flags |= ewcol_Ignore;
             }

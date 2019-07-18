@@ -113,7 +113,7 @@ bool CC KPTrieIndexCCVisit_v1 ( PTNode *n, void *data )
     /* payload of v1 PTNode is a 32-bit spot id */
     uint32_t id;
     assert ( n -> data . size == sizeof id );
-    memcpy ( & id, n -> data . addr, sizeof id );
+    memmove ( & id, n -> data . addr, sizeof id );
     if ( self -> byteswap )
         id = bswap_32 ( id );
 

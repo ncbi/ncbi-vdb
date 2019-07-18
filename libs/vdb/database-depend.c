@@ -52,7 +52,7 @@
 
 #include <sysalloc.h>
 
-#include "cursor-priv.h"
+#include "cursor-table.h"
 
 /* missing macros/function from klib/rc.h
  */
@@ -533,7 +533,7 @@ static rc_t FindRef(Ctx* ctx, const char* seqId, Resolved* resolved,
         }
 
         if (rc == 0) {
-            rc = VResolverRemote(ctx->resolver, eProtocolHttp, acc, &remote);
+            rc = VResolverRemote(ctx->resolver, 0, acc, &remote);
             if (rc == 0) {
                 rc = VPathMakeString(remote, &resolved->remote);
                 if (rc == 0) {
@@ -869,7 +869,9 @@ rc_t CC VDatabaseDependencies(const VDatabase *self, BSTree* tr,
         }
     }
     if (rc == 0) {
-        rc = VTableCreateCursorReadInternal(tbl, &curs);
+        const VTableCursor * tcurs;
+        rc = VTableCreateCursorReadInternal(tbl, &tcurs);
+        curs = ( const VCursor * )tcurs;
     }
 
     rc = AddColumn(rc, curs, &CIRCULAR);

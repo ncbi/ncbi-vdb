@@ -40,8 +40,8 @@ include $(TOP)/build/Makefile.env
 ifeq (,$(NGS_LIBDIR))
 
 $(TEST_TOOLS):
-	@true 
-	
+	@true
+
 runtests:
 	@ echo "NGS C++ tests are not run since NGS library does not appear to be installed"
 
@@ -59,12 +59,12 @@ endif
 $(TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
-.PHONY: $(TEST_TOOLS) 
+.PHONY: $(TEST_TOOLS)
 
 clean: stdclean
 
 #-------------------------------------------------------------------------------
-# common defs 
+# common defs
 #
 INCDIRS += -I$(NGS_INCDIR)
 
@@ -85,8 +85,11 @@ TEST_NGS_SRA_CPP_SRC = \
 TEST_NGS_SRA_CPP_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_SRA_CPP_SRC))
 
-$(TEST_BINDIR)/test-ngs_sra-c++: $(TEST_NGS_SRA_CPP_OBJ) 
+$(TEST_BINDIR)/test-ngs_sra-c++: $(TEST_NGS_SRA_CPP_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_CPP_LIB)
+
+sra: test-ngs_sra-c++
+	$(TEST_BINDIR)/$^
 
 #-------------------------------------------------------------------------------
 # test-ngs_sradb-c++
@@ -97,8 +100,11 @@ TEST_NGS_SRADB_CPP_SRC = \
 TEST_NGS_SRADB_CPP_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_SRADB_CPP_SRC))
 
-$(TEST_BINDIR)/test-ngs_sradb-c++: $(TEST_NGS_SRADB_CPP_OBJ) 
+$(TEST_BINDIR)/test-ngs_sradb-c++: $(TEST_NGS_SRADB_CPP_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_CPP_LIB)
+
+sradb: test-ngs_sradb-c++
+	$(TEST_BINDIR)/$^
 
 #-------------------------------------------------------------------------------
 # test-ngs_csra1-c++
@@ -109,8 +115,11 @@ TEST_NGS_CSRA1_CPP_SRC = \
 TEST_NGS_CSRA1_CPP_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_CSRA1_CPP_SRC))
 
-$(TEST_BINDIR)/test-ngs_csra1-c++: $(TEST_NGS_CSRA1_CPP_OBJ) 
+$(TEST_BINDIR)/test-ngs_csra1-c++: $(TEST_NGS_CSRA1_CPP_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_CPP_LIB)
+
+csra1: test-ngs_csra1-c++
+	$(TEST_BINDIR)/$^
 
 #-------------------------------------------------------------------------------
 # test-ngs_csra1pileup-c++
@@ -121,7 +130,10 @@ TEST_NGS_CSRA1PILEUP_CPP_SRC = \
 TEST_NGS_CSRA1PILEUP_CPP_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_CSRA1PILEUP_CPP_SRC))
 
-$(TEST_BINDIR)/test-ngs_csra1pileup-c++: $(TEST_NGS_CSRA1PILEUP_CPP_OBJ) 
+$(TEST_BINDIR)/test-ngs_csra1pileup-c++: $(TEST_NGS_CSRA1PILEUP_CPP_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_CPP_LIB)
+
+pileup: test-ngs_csra1pileup-c++
+	$(TEST_BINDIR)/$^
 
 endif

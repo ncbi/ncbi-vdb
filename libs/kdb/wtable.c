@@ -200,6 +200,16 @@ rc_t KTableSever ( const KTable *self )
 }
 
 
+void KTableGetName(KTable const *self, char const **rslt)
+{
+    char *sep;
+    
+    *rslt = self->path;
+    sep = strrchr(self->path, '/');
+    if (sep != NULL)
+        *rslt = sep + 1;
+}
+
 /* Make
  *  make an initialized structure
  *  NB - does NOT attach reference to dir, but steals it
@@ -759,6 +769,9 @@ LIB_EXPORT rc_t CC KDatabaseVOpenTableRead ( const KDatabase *self,
 
     if ( self == NULL )
         return RC ( rcDB, rcDatabase, rcOpening, rcSelf, rcNull );
+
+    if ( name == NULL )
+        return RC ( rcDB, rcDatabase, rcOpening, rcParam, rcNull );
 
     rc = KDBVMakeSubPath ( self -> dir,
         path, sizeof path, "tbl", 3, name, args );

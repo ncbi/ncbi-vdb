@@ -56,25 +56,15 @@
   || Lyrics:
   || That file contains interface to SRA archive at
   ||
-  ||     http://ftp-trace.ncbi.nlm.nih.gov/sra
-  ||
-  || That archive contains folders and files. For example, that
-  || directory contains 'DRR000001' subdirectory :
-  ||
-  || (http://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByRun/sra/DRR/DRR000)
-  ||
-  ||     DRR000001/              26-May-2014 07:22    -   
-  ||     DRR000002/              26-May-2014 08:00    -   
-  ||     DRR000003/              26-May-2014 08:07    -   
-  ||     DRR000004/              26-May-2014 08:07    -  
+  ||     https://sra-download.ncbi.nlm.nih.gov/sra
   ||
   || If we will enter 'DRR000001' subdirectory, we will file here :
   ||
-  || (http://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByRun/sra/DRR/DRR000/DRR000001/)
+  || (https://sra-download.ncbi.nlm.nih.gov/srapub/DRR000001/)
   || 
   ||     DRR000001.sra           26-May-2014 07:22  569M  
   ||
-  || So, code could looks little weird, parsing and servint that format
+  || So, code could looks little weird, parsing and serving that format
   ||
 \*||*/
 

@@ -311,12 +311,13 @@ rc_t CC TableWriter_Whack(const TableWriter* cself, bool commit, uint64_t* rows)
                 self->curr = &self->cursors[i];
                 for(j = 0; j < self->curr->col_qty; j++) {
                     if( self->curr->cols[j].idx != 0 && (self->curr->cols[j].flags & ewcol_Temporary) ) {
-                        rc_t rc1;
-                        if( (rc1 = VTableDropColumn(self->vtbl, "%s", self->curr->cols[j].name)) != 0 ) {
-                            (void)PLOGERR(klogWarn, (klogWarn, rc1,
+                        rc_t rc1 = VTableDropColumn(self->vtbl, "%s", self->curr->cols[j].name);
+                        if (rc1 != 0) {
+                            (void)PLOGERR(klogDebug, (klogDebug, rc1,
                                 "table $(table) failed to drop temporary column '$(column)'",
                                 "table=%s,column=%s", self->table, self->curr->cols[j].name));
-                        } else {
+                        }
+                        else {
                             ALIGN_DBG("table %s dropped tmp col %s", self->table, self->curr->cols[j].name);
                         }
                     }

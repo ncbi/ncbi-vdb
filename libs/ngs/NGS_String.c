@@ -357,7 +357,7 @@ NGS_String * NGS_StringMakeCopy ( ctx_t ctx, const char * temp_data, size_t size
             SYSTEM_ERROR ( xcNoMemory, "allocating %zu bytes", size + 1 );
         else
         {
-            memcpy ( owned_data, temp_data, size );
+            memmove ( owned_data, temp_data, size );
             owned_data [ size ] = 0;
             {
                 TRY ( NGS_String * ref = NGS_StringMakeOwned ( ctx, owned_data, size ) )

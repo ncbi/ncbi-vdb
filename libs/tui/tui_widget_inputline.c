@@ -32,10 +32,10 @@
 #include "tui_widget.h"
 #include "line_policy.h"
 
-#define  IL_CUR_POS 0
-#define  IL_OFFSET 1
-#define  IL_MODE 2
-
+#define  IL_CUR_POS 0       /* cursor-position */
+#define  IL_OFFSET 1        /* offset in case string is longer than visible windows */
+#define  IL_INS_MODE 2      /* 0...insert-mode, 1...overwrite-mode */
+#define  IL_ALPHA_MODE 3    /* 0...alpha/num-mode, 1...num-mode */
 
 void init_inputline( struct KTUIWidget * w )
 {
@@ -47,12 +47,17 @@ void init_inputline( struct KTUIWidget * w )
         else
             w->ints[ IL_OFFSET ] = 0;
     }
-    w->ints[ IL_MODE ] = 0;
+    w -> ints[ IL_INS_MODE ] = 0;
+    w -> ints[ IL_ALPHA_MODE ] = 0;
 }
 
+void set_inputline_alpha_mode( struct KTUIWidget * w, uint32_t alpha_mode )
+{
+    w->ints[ IL_ALPHA_MODE ] = alpha_mode;
+}
 
 static rc_t draw_inputline_focused( struct KTUI * tui, tui_rect * r, const tui_ac * ac, const tui_ac * hint_ac,
-                                    const char * s, uint32_t cursor_pos, uint32_t offset, uint32_t mode )
+                                    const char * s, uint32_t cursor_pos, uint32_t offset, uint32_t ins_mode )
 {
     const char * txt = &( s[ offset ] );
     uint32_t l = string_measure ( s, NULL );
@@ -75,7 +80,7 @@ static rc_t draw_inputline_focused( struct KTUI * tui, tui_rect * r, const tui_a
                 tmp[ 1 ] = 0;
                 copy_ac( &ac2, ac );
                 ac2.attr |= KTUI_a_underline;
-                if ( mode != 0 )
+                if ( ins_mode != 0 )
                     ac2.attr |= KTUI_a_inverse;
                 rc = DlgWrite( tui, x, r->top_left.y, &ac2, tmp, 1 );
             }
@@ -121,7 +126,7 @@ void draw_inputline( struct KTUIWidget * w )
                     rc = draw_inputline_focused( w->tui, &r, &ac, ac_hint, w->txt,
                                             (uint32_t) w->ints[ IL_CUR_POS ],
                                             (uint32_t) w->ints[ IL_OFFSET ],
-                                            (uint32_t) w->ints[ IL_MODE ] );
+                                            (uint32_t) w->ints[ IL_INS_MODE ] );
                 }
                 else
                     rc = draw_inputline_normal( w->tui, &r, &ac, w->txt, (uint32_t) w->ints[ IL_OFFSET ] );
@@ -131,42 +136,49 @@ void draw_inputline( struct KTUIWidget * w )
 }
 
 
-static bool always_handle_these_keys( tui_event * event )
+static bool always_handle_these_keys( tui_event * event, uint32_t h )
 {
 	bool res = false;
 	if ( event->event_type == ktui_event_kb )
 	{
 		switch( event->data.kb_data.code )
 		{
-			case ktui_left : ;
-			case ktui_right : ;
-			case ktui_up : ;
-			case ktui_down : res = true; break;
+			case ktui_left  :
+			case ktui_right : res = true; break;
+			case ktui_up    :
+			case ktui_down  : res = ( h > 1 ); break;
 		}
 	}
 	return res;
 }
 
+static void clip_cursor_pos( struct KTUIWidget * w )
+{
+    uint32_t txt_len = string_measure ( w -> txt, NULL );
+    if ( w -> ints[ IL_CUR_POS ] > txt_len )
+        w -> ints[ IL_CUR_POS ] = txt_len;
+}
 
-bool event_inputline( struct KTUIWidget * w, tui_event * event )
+bool event_inputline( struct KTUIWidget * w, tui_event * event, bool hotkey )
 {
     bool res;
 
     lp_context lp;
-    lp.line = w->txt;
-    lp.max_len = w->txt_length;
-    lp.visible = ( w->r.w - 2 );
-    lp.cur_pos = &w->ints[ IL_CUR_POS ];
-    lp.offset = &w->ints[ IL_OFFSET ];
-    lp.mode = &w->ints[ IL_MODE ];
-    lp.content_changed = false;
+    lp . line = w -> txt;
+    lp . max_len = w -> txt_length;
+    lp . visible = ( w -> r . w - 2 );
+    lp . cur_pos = &( w -> ints[ IL_CUR_POS ] );
+    lp . offset = &( w -> ints[ IL_OFFSET ] );
+    lp . ins_mode = &( w -> ints[ IL_INS_MODE ] );
+    lp . alpha_mode = &( w -> ints[ IL_ALPHA_MODE ] );
+    lp . content_changed = false;
     res = lp_handle_event( &lp, event );
 
     if ( res )
     {
-        if ( lp.content_changed )
+        if ( lp . content_changed )
             SetWidgetChanged ( w, true );
-        RedrawWidgetAndPushEvent( w, ktuidlg_event_changed, w->ints[ IL_CUR_POS ], 0, NULL );
+        RedrawWidgetAndPushEvent( w, ktuidlg_event_changed, w -> ints[ IL_CUR_POS ], 0, NULL );
     }
     else if ( event->event_type == ktui_event_kb && event->data.kb_data.code == ktui_enter )
     {
@@ -175,7 +187,14 @@ bool event_inputline( struct KTUIWidget * w, tui_event * event )
     }
 
 	if ( !res )
-		res = always_handle_these_keys( event );
+		res = always_handle_these_keys( event, w->r.h );
 
     return res;
+}
+
+void set_carret_pos_input_line( struct KTUIWidget * w, size_t pos )
+{
+    w -> ints[ IL_CUR_POS ] = pos;
+    clip_cursor_pos( w );
+    draw_inputline( w );
 }

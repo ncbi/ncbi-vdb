@@ -59,7 +59,7 @@
 
 #define Self( obj ) \
     ( ( NGS_ReadCollection* ) ( obj ) )
-    
+
 static NGS_String_v1 * NGS_ReadCollection_v1_get_name ( const NGS_ReadCollection_v1 * self, NGS_ErrBlock_v1 * err )
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
@@ -363,9 +363,9 @@ bool NGS_ReadCollectionHasReference ( NGS_ReadCollection * self, ctx_t ctx, cons
     if ( self == NULL )
         INTERNAL_WARNING ( xcSelfNull, "failed to get reference '%.128s'", spec );
     else if ( spec == NULL )
-        INTERNAL_WARNING ( xcParamNull, "reference spec" );
+        INTERNAL_WARNING ( xcParamNull, "NULL reference spec" );
     else if ( spec [ 0 ] == 0 )
-        INTERNAL_WARNING ( xcStringEmpty, "reference spec" );
+        INTERNAL_WARNING ( xcStringEmpty, "empty reference spec" );
     else
     {
         POP_CTX ( ctx );
@@ -381,9 +381,9 @@ struct NGS_Reference * NGS_ReadCollectionGetReference ( NGS_ReadCollection * sel
     if ( self == NULL )
         INTERNAL_ERROR ( xcSelfNull, "failed to get reference '%.128s'", spec );
     else if ( spec == NULL )
-        INTERNAL_ERROR ( xcParamNull, "reference spec" );
+        INTERNAL_ERROR ( xcParamNull, "NULL reference spec" );
     else if ( spec [ 0 ] == 0 )
-        INTERNAL_ERROR ( xcStringEmpty, "reference spec" );
+        INTERNAL_ERROR ( xcStringEmpty, "empty reference spec" );
     else
     {
         POP_CTX ( ctx );
@@ -442,7 +442,7 @@ uint64_t NGS_ReadCollectionGetAlignmentCount ( NGS_ReadCollection * self, ctx_t 
     }
 
     return 0;
-}    
+}
 
 struct NGS_Alignment * NGS_ReadCollectionGetAlignmentRange ( NGS_ReadCollection * self, ctx_t ctx, uint64_t first, uint64_t count,
     bool wants_primary, bool wants_secondary )
@@ -542,6 +542,21 @@ struct NGS_Statistics* NGS_ReadCollectionGetStatistics ( NGS_ReadCollection * se
     return NULL;
 }
 
+struct NGS_FragmentBlobIterator* NGS_ReadCollectionGetFragmentBlobs ( NGS_ReadCollection * self, ctx_t ctx )
+{
+    if ( self == NULL )
+    {
+        FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get fragment blobs" );
+    }
+    else
+    {
+        return VT ( self, get_frag_blobs ) ( self, ctx );
+    }
+
+    return NULL;
+}
+
 
 /* Make
  *  use provided specification to create an object
@@ -603,22 +618,22 @@ NGS_ReadCollection * NGS_ReadCollectionMake ( ctx_t ctx, const char * spec )
                     {
                         return NGS_ReadCollectionMakeVTable ( ctx, tbl, spec );
                     }
-                    INTERNAL_ERROR ( xcUnimplemented, "Cannot open accession '%s' as an SRA table.", spec );
+                    USER_ERROR ( xcTableOpenFailed, "Cannot open accession '%s' as an SRA table.", spec );
                 }
             }
             else
             {
                 KConfig* kfg = NULL;
                 const KRepositoryMgr* repoMgr = NULL;
-                if ( KConfigMakeLocal ( & kfg, NULL ) != 0 || 
+                if ( KConfigMakeLocal ( & kfg, NULL ) != 0 ||
                      KConfigMakeRepositoryMgrRead ( kfg, & repoMgr ) != 0 ||
                      KRepositoryMgrHasRemoteAccess ( repoMgr ) )
                 {
-                    INTERNAL_ERROR ( xcUnimplemented, "Cannot open accession '%s'.", spec );
+                    USER_ERROR ( xcTableOpenFailed, "Cannot open accession '%s', rc = %R", spec, rc );
                 }
                 else
                 {
-                    INTERNAL_ERROR ( xcUnimplemented, "Cannot open accession '%s'. Note: remote access is disabled in the configuration.", spec );
+                    USER_ERROR ( xcTableOpenFailed, "Cannot open accession '%s', rc = %R. Note: remote access is disabled in the configuration.", spec, rc );
                 }
                 KRepositoryMgrRelease ( repoMgr );
                 KConfigRelease ( kfg );
@@ -654,5 +669,6 @@ void NGS_ReadCollectionInit ( ctx_t ctx, NGS_ReadCollection * ref,
         assert ( vt -> get_read_range != NULL );
         assert ( vt -> get_read_count != NULL );
         assert ( vt -> get_statistics != NULL );
+        assert ( vt -> get_frag_blobs != NULL );
     }
 }

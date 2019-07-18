@@ -3,5 +3,5 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\test\vdb\test-vdb.cpp" />
   </ItemGroup>
-  
+
 </Project>

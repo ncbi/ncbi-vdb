@@ -111,7 +111,12 @@ NGS_SRC =                 \
 	NGS_Refcount          \
 	NGS_String            \
 	NGS_Id                \
-	NGS_ErrBlock
+	NGS_ErrBlock          \
+	NGS_FragmentBlob      \
+	NGS_FragmentBlobIterator    \
+    NGS_ReferenceBlob       \
+    NGS_ReferenceBlobIterator   \
+    VByteBlob               \
 
 NGS_OBJ = \
 	$(addsuffix .$(LOBX),$(NGS_SRC))
@@ -124,3 +129,9 @@ $(ILIBDIR)/libngs.$(LIBX): $(NGS_OBJ)
 compile: stdcompile
 
 $(TARGDIR)/compile: $(OBJFILES)
+
+#-------------------------------------------------------------------------------
+# fuzz
+#
+fuzz: std
+	cp $(addsuffix .$(LIBX),$(addprefix $(ILIBDIR)/,$(INT_LIBS))) $(FLIBDIR)/

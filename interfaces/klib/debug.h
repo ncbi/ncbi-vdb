@@ -108,7 +108,7 @@ extern "C" {
     _module(LEGREF) _module(LOADLIB) \
     _module(REF)    _module(SEARCH)  _module(SRA) \
     _module(VDB)    _module(VFS)     _module(XARC) _module(XML)  \
-    
+    _module(TLS)
 
 #define APP_CONDITIONS() \
     _condition(APP,0)  _condition(APP,1)  _condition(APP,2)  _condition(APP,3)  \
@@ -146,13 +146,16 @@ extern "C" {
     _condition(KFS,ARCENTRY) _condition(KFS,ARC) _condition(KFS,TOCENTRY) _condition(KFS,TOC)  \
     _condition(KFS,TARENTRY) _condition(KFS,TAR) _condition(KFS,SRASORT)  _condition(KFS,GZIP) \
     _condition(KFS,DIR)  _condition(KFS,COUNTER) _condition(KFS,BZIP)     _condition(KFS,SYS) \
-    _condition(KFS,POS)  _condition(KFS,PAGE)
+    _condition(KFS,POS)  _condition(KFS,PAGE) _condition(KFS,FILE)
 
 #define KNS_CONDITIONS() \
-    _condition(KNS,ERR) _condition(KNS,HTTP) _condition(KNS,MGR) _condition(KNS,SOCKET)
+    _condition(KNS,DNS) _condition(KNS,ERR)   _condition(KNS,HTTP) \
+    _condition(KNS,MGR) _condition(KNS,PROXY) _condition(KNS,SOCKET) \
+    _condition(KNS,TLS)
 
 #define VFS_CONDITIONS() \
-    _condition(VFS,MGR)     _condition(VFS,PATH)
+    _condition(VFS,JSON)     _condition(VFS,KFG)     _condition(VFS,MGR) \
+    _condition(VFS,PATH)     _condition(VFS,SERVICE)
 
 #define XML_CONDITIONS() \
     _condition(XML,XML)
@@ -199,6 +202,9 @@ extern "C" {
 #define ARGS_CONDITIONS() \
     _condition(ARGS,WRITER)
 
+#define TLS_CONDITIONS() \
+    _condition(TLS,TLS)
+    
 /*
  * Nothing below here needs to be changed when just adding new modules
  * and/or conditions

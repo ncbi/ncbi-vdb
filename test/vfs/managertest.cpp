@@ -51,20 +51,24 @@
 
 #include <sysalloc.h>
 
+#include "../../libs/vfs/path-priv.h" /* vpNameOrOID */
+
 TEST_SUITE(VManagerTestSuite);
 
 using namespace std;
 
+#define ALL
+
 const char* pwFileName="pwfile";
 const char* password = "password";
 
-class MgrFixture
+class BaseMgrFixture
 {
 public:
     static const int BufSize = 1024;
 
-public:
-    MgrFixture()
+protected:
+    BaseMgrFixture(const char* password)
         : wd ( 0 )
         , mgr ( 0 )
         , vpath(0)
@@ -95,7 +99,7 @@ public:
         // make sure pwfile contains the correct password (some tests might update it)
         CreateFile(pwFileName, password);
     }
-    ~MgrFixture()
+    ~BaseMgrFixture()
     {
         if (KDirectoryRemove(wd, true, pwFileName))
            throw logic_error("~MgrFixture: KDirectoryRemove failed");   
@@ -113,6 +117,8 @@ public:
         if (KDirectoryCreateFile(wd, &f, false, 0660, kcmInit, name.c_str()) != 0)
            throw logic_error("CreateFile: KDirectoryCreateFile failed");   
         if (KFileWrite(f, 0, content.c_str(), content.size(), &num_writ) != 0 || num_writ != content.size())
+           throw logic_error("CreateFile: KDirectoryOpenFileWrite failed");   
+        if (KFileWrite(f, content.size(), "\n", 1, &num_writ) != 0 || num_writ != 1)
            throw logic_error("CreateFile: KDirectoryOpenFileWrite failed");   
         if (KFileRelease(f) != 0)
            throw logic_error("CreateFile: KFileRelease failed");   
@@ -133,6 +139,29 @@ public:
     size_t num_read;
     size_t num_writ;
 };
+
+class MgrFixture : protected BaseMgrFixture {
+protected:
+    MgrFixture () : BaseMgrFixture ( password ) {}
+};
+
+class NonAsciiInvalidUnicodeMgrFixture : protected BaseMgrFixture {
+static const char* s_password;
+protected:
+    static string getPassword ( void ) { return s_password; }
+    NonAsciiInvalidUnicodeMgrFixture () : BaseMgrFixture ( s_password ) {}
+};
+const char* NonAsciiInvalidUnicodeMgrFixture::s_password("a\243cdefghtjklm");
+
+class NonAsciiValidUnicodeMgrFixture : protected BaseMgrFixture {
+static const char* s_password;
+protected:
+    static string getPassword ( void ) { return s_password; }
+    NonAsciiValidUnicodeMgrFixture () : BaseMgrFixture ( s_password ) {}
+};
+const char* NonAsciiValidUnicodeMgrFixture::s_password("a\xC2\243cdefghtjklm");
+
+#ifdef ALL
 
 TEST_CASE(Make_Basic)
 {
@@ -209,6 +238,8 @@ FIXTURE_TEST_CASE(OpenFileWriteFile_Encrypt_NotEncrypted, MgrFixture)
     // open as encrypted - fail
     KFile* f;
     // this will output an error message from KEncFileMakeIntValidSize:
+    LOG(ncbi::NK::LogLevel::e_error,
+        "Expecting an err. message from KEncFileMakeIntValidSize...\n");
     REQUIRE_RC_FAIL(VFSManagerOpenFileWrite(mgr, &f, false, vpath)); 
     REQUIRE_RC(KFileRelease(f));
 
@@ -254,7 +285,23 @@ FIXTURE_TEST_CASE(GetKryptoPassword, MgrFixture)
     REQUIRE_RC(VFSManagerGetKryptoPassword(mgr, buf, BufSize, &num_read));
     REQUIRE_EQ(string("password"), string(buf, num_read));
 }
+#endif
 
+/* VDB-3590 */
+/* Non-Ascii encryption key - invalid UNICODE : see s_password in fixture */
+FIXTURE_TEST_CASE(GetNonAscii1KryptoPassword, NonAsciiInvalidUnicodeMgrFixture)
+{
+    REQUIRE_RC(VFSManagerGetKryptoPassword(mgr, buf, BufSize, &num_read));
+    REQUIRE_EQ(getPassword(), string(buf, num_read));
+}
+/* Non-Ascii encryption key - valid UNICODE : see s_password in fixture */
+FIXTURE_TEST_CASE(GetNonAscii2KryptoPassword, NonAsciiValidUnicodeMgrFixture)
+{
+    REQUIRE_RC(VFSManagerGetKryptoPassword(mgr, buf, BufSize, &num_read));
+    REQUIRE_EQ(getPassword(), string(buf, num_read));
+}
+
+#ifdef ALL
 FIXTURE_TEST_CASE(UpdateKryptoPassword_NoOutput, MgrFixture)
 {
     string newPwd("new_pwd1");
@@ -316,15 +363,19 @@ public:
         VFSManagerSetBindingsFile(mgr, bindings);
         KDirectoryRemove(wd, true, bindings);
     }
-    rc_t Register(uint32_t id, const char* uri)
+    rc_t Register(uint32_t id, VPath* p) const
     {
-        VPath* p;
-        if (VFSManagerMakePath(mgr, &p, uri) != 0)
-           throw logic_error("ObjIdBindingFixture::Register: VFSManagerMakePath failed");   
         rc_t rc = VFSManagerRegisterObject(mgr, id, p);
         if (VPathRelease(p) != 0)
            throw logic_error("ObjIdBindingFixture::Register: VPathRelease failed");   
         return rc;
+    }
+    rc_t Register(uint32_t id, const char* uri)
+    {
+        VPath* p;
+        if (VFSManagerMakePath(mgr, &p, uri) != 0)
+           throw logic_error("ObjIdBindingFixture::Register: VFSManagerMakePath failed");
+        return Register(id, p);
     }
     rc_t GetById(uint32_t id, string& uri)
     {
@@ -365,50 +416,51 @@ FIXTURE_TEST_CASE(ObjIdRegister, ObjIdBindingFixture)
 {
     SetUp(GetName());
     
-    REQUIRE_RC(Register(1, "ncbi-acc:acc1"));
-    REQUIRE_RC(Register(2, "ncbi-file:acc2"));
+//  REQUIRE_RC(Register(1, "ncbi-acc:acc1"));
+    REQUIRE_RC(Register(1, "ncbi-acc:acc1?tic=1"));
+    REQUIRE_RC(Register(2, "ncbi-file:acc2?tic=22"));
 }
 FIXTURE_TEST_CASE(ObjIdRegister_Found_Same, ObjIdBindingFixture)
 {
     SetUp(GetName());
     
-    REQUIRE_RC(Register(1, "ncbi-acc:acc1"));
-    REQUIRE_RC(Register(2, "ncbi-file:acc2"));
-    REQUIRE_RC(Register(1, "ncbi-acc:acc1")); // same name, no problem
+    REQUIRE_RC(Register(1, "ncbi-acc:acc1?tic=1"));
+    REQUIRE_RC(Register(2, "ncbi-file:acc2?tic=22"));
+    REQUIRE_RC(Register(1, "ncbi-acc:acc1?tic=1")); // same name, no problem
 }
 FIXTURE_TEST_CASE(ObjIdRegister_Found_Different, ObjIdBindingFixture)
 {
     SetUp(GetName());
     
-    REQUIRE_RC(Register(1, "ncbi-acc:acc1"));
-    REQUIRE_RC(Register(2, "ncbi-file:acc2"));
-    REQUIRE_RC_FAIL(Register(1, "ncbi-acc:acc11")); // name differs
+    REQUIRE_RC(Register(1, "ncbi-acc:acc1?tic=1"));
+    REQUIRE_RC(Register(2, "ncbi-file:acc2?tic=22"));
+    REQUIRE_RC_FAIL(Register(1, "ncbi-acc:acc11?tic=1")); // name differs
 }
 FIXTURE_TEST_CASE(ObjIdById_Found, ObjIdBindingFixture)
 {
     SetUp(GetName());
     
-    REQUIRE_RC(Register(123, "ncbi-file:acc123"));
-    REQUIRE_RC(Register(12, "ncbi-acc:acc12"));
-    REQUIRE_RC(Register(1, "ncbi-acc:acc1"));
+    REQUIRE_RC(Register(123, "ncbi-file:acc123?tic=3"));
+    REQUIRE_RC(Register(12, "ncbi-acc:acc12?tic=2"));
+    REQUIRE_RC(Register(1, "ncbi-acc:acc1?tic=1"));
     
     string uri;
     
     REQUIRE_RC(GetById(123, uri));
-    REQUIRE_EQ(uri, string("ncbi-file:acc123"));
+    REQUIRE_EQ(uri, string("ncbi-file:acc123?tic=3"));
     
     REQUIRE_RC(GetById(12, uri));
-    REQUIRE_EQ(uri, string("ncbi-acc:acc12"));
+    REQUIRE_EQ(uri, string("ncbi-acc:acc12?tic=2"));
     
     REQUIRE_RC(GetById(1, uri));
-    REQUIRE_EQ(uri, string("ncbi-acc:acc1"));
+    REQUIRE_EQ(uri, string("ncbi-acc:acc1?tic=1"));
 }
 FIXTURE_TEST_CASE(ObjIdById_NotFound, ObjIdBindingFixture)
 {
     SetUp(GetName());
     
-    REQUIRE_RC(Register(100, "ncbi-acc:acc1"));
-    REQUIRE_RC(Register(200, "ncbi-file:acc2"));
+    REQUIRE_RC(Register(100, "ncbi-acc:acc1?tic=1"));
+    REQUIRE_RC(Register(200, "ncbi-file:acc2?tic=1"));
     
     string uri;
     
@@ -433,31 +485,115 @@ FIXTURE_TEST_CASE(ObjIdByName_Found, ObjIdBindingFixture)
 {
     SetUp(GetName());
     
-    REQUIRE_RC(Register(11, "ncbi-acc:acc11"));
-    REQUIRE_RC(Register(21, "ncbi-file:acc21"));
-    REQUIRE_RC(Register(1, "ncbi-acc:acc1"));
+    REQUIRE_RC(Register(11, "ncbi-acc:acc11?tic=3"));
+    REQUIRE_RC(Register(21, "ncbi-file:acc21?tic=22"));
+    REQUIRE_RC(Register(1, "ncbi-acc:acc1?tic=1"));
     
     uint32_t id;
     
-    REQUIRE_RC(GetByUri(string("ncbi-acc:acc11"), id));
+    REQUIRE_RC(GetByUri(string("ncbi-acc:acc11?tic=3"), id));
     REQUIRE_EQ((uint32_t)11, id);
 
-    REQUIRE_RC(GetByUri(string("ncbi-file:acc21"), id));
+    REQUIRE_RC(GetByUri(string("ncbi-file:acc21?tic=22"), id));
     REQUIRE_EQ((uint32_t)21, id);
     
-    REQUIRE_RC(GetByUri(string("ncbi-acc:acc1"), id));
+    REQUIRE_RC(GetByUri(string("ncbi-acc:acc1?tic=1"), id));
     REQUIRE_EQ((uint32_t)1, id);
 }
 FIXTURE_TEST_CASE(ObjIdByName_NotFound, ObjIdBindingFixture)
 {
     SetUp(GetName());
     
-    REQUIRE_RC(Register(1, "ncbi-acc:acc1"));
-    REQUIRE_RC(Register(2, "ncbi-file:acc2"));
+    REQUIRE_RC(Register(1, "ncbi-acc:acc1?tic=1"));
+    REQUIRE_RC(Register(2, "ncbi-file:acc2?tic=2"));
     
     uint32_t id;
-    REQUIRE_RC_FAIL(GetByUri(string("ncbi-acc:acc2"), id));
+    REQUIRE_RC_FAIL(GetByUri(string("ncbi-acc:acc2?tic=1"), id));
 }
+
+FIXTURE_TEST_CASE(DontRegistrer_vpNameOrOID, ObjIdBindingFixture) {
+    SetUp(GetName());
+
+    String id;
+    CONST_STRING(&id, "1154149");
+
+    String tick;
+    CONST_STRING(&tick, "D2BE86BF-CCD4-4114-9C60-FCB5422C64F5");
+
+    VPath* p = NULL;
+    REQUIRE_RC(VFSManagerMakePath(mgr, &p, "ncbi-file:%S?tic=%S", &id, &tick));
+
+    REQUIRE(p);
+    REQUIRE(p-> path_type == vpNameOrOID);
+
+    REQUIRE_RC_FAIL(Register(1154149, p));
+}
+
+FIXTURE_TEST_CASE(RegistrerGoodPath, ObjIdBindingFixture) {
+    SetUp(GetName());
+
+    String id;
+    CONST_STRING(&id, "name.ext");
+
+    String tick;
+    CONST_STRING(&tick, "D2BE86BF-CCD4-4114-9C60-FCB5422C64F5");
+
+    VPath* p = NULL;
+    REQUIRE_RC(VFSManagerMakePath(mgr, &p, "ncbi-file:%S?tic=%S", &id, &tick));
+
+    REQUIRE(p);
+
+    REQUIRE_RC(Register(1154149, p));
+}
+
+FIXTURE_TEST_CASE(DontRegistrer_BadScheme, ObjIdBindingFixture) {
+    SetUp(GetName());
+
+    String id;
+    CONST_STRING(&id, "name.ext");
+
+    String tick;
+    CONST_STRING(&tick, "D2BE86BF-CCD4-4114-9C60-FCB5422C64F5");
+
+    VPath* p = NULL;
+    REQUIRE_RC(VFSManagerMakePath(mgr, &p, "file:%S?tic=%S", &id, &tick));
+
+    REQUIRE(p);
+
+    REQUIRE_RC_FAIL(Register(1154149, p));
+}
+
+FIXTURE_TEST_CASE(DontRegistrer_NoQuery, ObjIdBindingFixture) {
+    SetUp(GetName());
+
+    String id;
+    CONST_STRING(&id, "name.ext");
+
+    VPath* p = NULL;
+    REQUIRE_RC(VFSManagerMakePath(mgr, &p, "ncbi-file:%S", &id));
+
+    REQUIRE(p);
+
+    REQUIRE_RC_FAIL(Register(1154149, p));
+}
+
+FIXTURE_TEST_CASE(RegistrerGoodAccPath, ObjIdBindingFixture) {
+    SetUp(GetName());
+
+    String id;
+    CONST_STRING(&id, "ACC123");
+
+    String tick;
+    CONST_STRING(&tick, "D2BE86BF-CCD4-4114-9C60-FCB5422C64F5");
+
+    VPath* p = NULL;
+    REQUIRE_RC(VFSManagerMakePath(mgr, &p, "ncbi-acc:%S?tic=%S", &id, &tick));
+
+    REQUIRE(p);
+
+    REQUIRE_RC(Register(1154149, p));
+}
+#endif
 
 //////////////////////////////////////////// Main
 extern "C"

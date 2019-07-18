@@ -58,6 +58,7 @@ struct SFuncExpr;
 struct SPhysEncExpr;
 struct VLinker;
 struct VPhysical;
+struct VTable;
 
 
 /*--------------------------------------------------------------------------
@@ -92,8 +93,14 @@ struct VProdResolve
     struct VLinker *ld;
     struct KDlset const *libs;
 
-    /* schema of table being resolved */
-    struct STable const *stbl;
+    /* name of table/view */
+    const String * name;
+
+    /* the table whose rowId space we are currently in */
+    const struct VTable * primary_table;
+
+    /* the view we are in; NULL if not in a view */
+    const struct VView * view;
 
     /* cursor containing columns, physicals, productions, triggers */
     struct VCursor *curs;

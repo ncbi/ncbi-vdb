@@ -108,7 +108,7 @@ rc_t CC KNSManagerInitIPv6Endpoint ( struct KNSManager const *self,
             if ( ipv6 == NULL )
                 memset ( ep -> u . ipv6 . addr, 0, sizeof ( ep -> u . ipv6 . addr ) );
             else
-                memcpy ( ep -> u . ipv6 . addr, ipv6, sizeof ( ep -> u . ipv6 . addr ) );
+                memmove ( ep -> u . ipv6 . addr, ipv6, sizeof ( ep -> u . ipv6 . addr ) );
             ep -> u. ipv6 . port = port;
             return 0;
         }

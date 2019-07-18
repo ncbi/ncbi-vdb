@@ -249,7 +249,7 @@ rc_t build_scaffold_read_impl(self_t const *const self, void *const Dst,
                             }
                         }
                         else
-                            memcpy(&dst[j], &src[start], length);
+                            memmove(&dst[j], &src[start], length);
                     }
                 }
             }
@@ -322,7 +322,7 @@ rc_t build_scaffold_qual_impl(self_t const *const self, void *const Dst,
                             }
                         }
                         else
-                            memcpy(&dst[j], &src[start], length);
+                            memmove(&dst[j], &src[start], length);
                     }
                 }
             }

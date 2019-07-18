@@ -283,7 +283,7 @@ LIB_EXPORT rc_t CC AbsolidReaderHeader(const AbsolidReader* self, uint32_t readI
     if( self->dad.options & eOrigFormat ) {
         char tmp[1024];
         if( spotname_sz == 0 ) {
-            spotname_sz = snprintf(tmp, sizeof(tmp) - 1, "%s.%ld", self->dad.accession, self->dad.spot);
+            spotname_sz = snprintf(tmp, sizeof(tmp) - 1, "%s.%lld", self->dad.accession, ( long long int ) self->dad.spot);
             if ( spotname_sz < 0 )
                 return RC ( rcSRA, rcString, rcConstructing, rcData, rcCorrupt );
             spotname = tmp;
@@ -295,11 +295,11 @@ LIB_EXPORT rc_t CC AbsolidReaderHeader(const AbsolidReader* self, uint32_t readI
         }
     } else {
         if( readId > 0 && read_label_sz > 0 ) {
-            ret = snprintf(data, dsize, ">%s.%ld %.*s%s%.*s",
-                self->dad.accession, self->dad.spot, spotname_sz, spotname, spotname_sz ? "_" : "", read_label_sz, read_label);
+            ret = snprintf(data, dsize, ">%s.%lld %.*s%s%.*s",
+                self->dad.accession, ( long long int ) self->dad.spot, spotname_sz, spotname, spotname_sz ? "_" : "", read_label_sz, read_label);
         } else {
-            ret = snprintf(data, dsize, ">%s.%ld %.*s",
-                           self->dad.accession, self->dad.spot, spotname_sz, spotname);
+            ret = snprintf(data, dsize, ">%s.%lld %.*s",
+                           self->dad.accession, ( long long int ) self->dad.spot, spotname_sz, spotname);
         }
     }
 #if SNPRINTF_ACTUALLY_WORKED_THE_WAY_YOU_THINK
@@ -347,7 +347,7 @@ LIB_EXPORT rc_t CC AbsolidReaderBase(const AbsolidReader* self, uint32_t readId,
     } else {
         const char* b = self->csread->base;
         data[0] = (*me->cs_key)[readId];
-        memcpy(&data[1], &b[read_start], read_len - 1);
+        memmove(&data[1], &b[read_start], read_len - 1);
     }
     data[read_len] = '\0';
     return rc;

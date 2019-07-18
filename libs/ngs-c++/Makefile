@@ -90,7 +90,7 @@ NGS_OBJ = \
 NGS_LIB = \
 
 $(LIBDIR)/libncbi-ngs-c++.$(LIBX): $(NGS_OBJ)
-	$(LP) --slib --vers $(SRCDIR) -o $@ $^ $(NGS_LIB)
+	$(LP) --slib --vers $(SRCDIR)/../ncbi-vdb/libncbi-vdb.vers -o $@ $^ $(NGS_LIB)
 
 
 testy-the-bear: $(TEST_BINDIR)/testy-the-ngs-bear

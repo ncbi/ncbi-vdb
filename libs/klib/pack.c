@@ -486,7 +486,7 @@ LIB_EXPORT rc_t CC Pack ( uint32_t unpacked, uint32_t packed,
     if ( unpacked == 8 && packed == 8 && dst_off == 0 )
     {
         if ( ( const void* ) dst != src )
-            memcpy ( dst, src, ssize );
+            memmove ( dst, src, ssize );
         return 0;
     }
 

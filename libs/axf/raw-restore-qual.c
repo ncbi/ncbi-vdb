@@ -71,7 +71,7 @@ rc_t CC raw_restore_read_impl ( void *data, const VXformInfo *info, int64_t row_
     /**** MAIN RESTORATION LOOP ***/
     if ( strand[ 0 ] == false ) /*** nothing to do **/
     {
-        memcpy( dst, qual, read_len );
+        memmove( dst, qual, read_len );
     } else for ( i = 0, j = read_len - 1; i < (int)read_len; i++, j-- )
     {
         dst[ i ] = qual[ j ];

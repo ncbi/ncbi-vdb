@@ -523,6 +523,117 @@ TEST_CASE( KCondition_MakeRelease )
     REQUIRE_RC(KConditionRelease(cond));
 }
 
+class KConditionFixture
+{
+public:
+    KConditionFixture()
+    :   threadRc(0),
+        thread(0),
+        lock(0),
+        is_signaled(false),
+        do_broadcast(false)
+    {
+        if (KLockMake(&lock) != 0)
+            throw logic_error("KConditionFixture: KLockMake failed");
+        if (KConditionMake(&cond) != 0)
+            throw logic_error("KConditionFixture: KConditionMake failed");
+    }
+    ~KConditionFixture()
+    {
+        if (thread != 0)
+        {
+            if (KThreadWait(thread, NULL) != 0)
+                throw logic_error("~KConditionFixture: KThreadWait failed");
+            if (threadRc != 0)
+                throw logic_error("~KConditionFixture: thread failed, threadRc != 0");
+            if (KThreadRelease(thread) != 0)
+                throw logic_error("~KConditionFixture: KThreadRelease failed");
+        }
+        if (KLockRelease((const KLock*)lock) != 0)
+            throw logic_error("~KConditionFixture: KLockRelease failed");
+        if (KConditionRelease(cond) != 0)
+            throw logic_error("~KConditionFixture: KConditionRelease failed");
+    }
+
+protected:
+    class Thread {
+    public:
+        // danger - this should be an extern "C" function
+        // with CC calling convention on Windows
+        static rc_t KCondition_ThreadFn ( const KThread *thread, void *data )
+        {
+            KConditionFixture* self = (KConditionFixture*)data;
+
+            LOG(LogLevel::e_message, "KCondition_ThreadFn: sleeping" << endl);
+            TestEnv::SleepMs(300);
+            LOG(LogLevel::e_message, "KCondition_ThreadFn: signaling condition" << endl);
+            self->is_signaled = true;
+            if (!self->do_broadcast)
+                self->threadRc = KConditionSignal(self->cond);
+            else
+                self->threadRc = KConditionBroadcast(self->cond);
+
+            LOG(LogLevel::e_message, "KCondition_ThreadFn: exiting" << endl);
+            return 0;
+        }
+    };
+
+    rc_t StartThread()
+    {
+        LOG(LogLevel::e_message, "StartThread: starting thread" << endl);
+
+        threadRc = 0;
+        rc_t rc = KThreadMake(&thread, Thread::KCondition_ThreadFn, this);
+        return rc;
+    }
+
+public:
+    rc_t threadRc;
+    KThread* thread;
+    timeout_t tm;
+    KLock* lock;
+    KCondition* cond;
+    bool is_signaled;
+    bool do_broadcast;
+};
+
+FIXTURE_TEST_CASE( KCondition_TimedWait_Timeout, KConditionFixture )
+{
+    REQUIRE_RC(KLockAcquire(lock));
+    REQUIRE_RC(TimeoutInit(&tm, 100));
+    REQUIRE_RC(KConditionSignal(cond)); // signaling before waiting should not do anything
+    REQUIRE_EQ(KConditionTimedWait(cond, lock, &tm), RC ( rcPS, rcCondition, rcWaiting, rcTimeout, rcExhausted )); // timed out
+
+    REQUIRE_RC(KLockUnlock(lock));
+}
+
+FIXTURE_TEST_CASE( KCondition_TimedWait_Signaled, KConditionFixture )
+{
+    is_signaled = false;
+
+    REQUIRE_RC(KLockAcquire(lock));
+
+    REQUIRE_RC(StartThread());
+    REQUIRE_RC(KConditionWait(cond, lock));
+    REQUIRE(is_signaled == true);
+
+    REQUIRE_RC(KLockUnlock(lock));
+}
+
+FIXTURE_TEST_CASE( KCondition_TimedWait_Signaled_Broadcast, KConditionFixture )
+{
+    is_signaled = false;
+    do_broadcast = true;
+
+    REQUIRE_RC(KLockAcquire(lock));
+
+    REQUIRE_RC(StartThread());
+    REQUIRE_RC(KConditionWait(cond, lock));
+    REQUIRE(is_signaled == true);
+
+    REQUIRE_RC(KLockUnlock(lock));
+}
+
 ///////////////////////// KQueue
 TEST_CASE( KQueue_NULL )
 {
@@ -533,15 +644,16 @@ TEST_CASE(KQueueSimpleTest) {
     KQueue * queue = NULL;
     REQUIRE_RC(KQueueMake(&queue, 2));
 
+    timeout_t tm = { 0 };
     void *item = NULL;
     {   // pushed 2 - popped 2 = ok
         for (uint64_t i = 1; i < 3; ++i) {
             item = (void*)i;
-            REQUIRE_RC(KQueuePush(queue, item, NULL));
+            REQUIRE_RC(KQueuePush(queue, item, & tm));
         }
         for (uint64_t i = 1; i < 3; ++i) {
             uint64_t j = 0;
-            REQUIRE_RC(KQueuePop(queue, &item, NULL));
+            REQUIRE_RC(KQueuePop(queue, &item, & tm));
             j = (uint64_t)item;
             REQUIRE_EQ(i, j);
         }
@@ -550,13 +662,13 @@ TEST_CASE(KQueueSimpleTest) {
     {   // pushed 3 > capacity (failure) - popped 2 (ok)
         for (uint64_t i = 1; i < 3; ++i) {
             void *item = (void*)i;
-            REQUIRE_RC(KQueuePush(queue, item, NULL));
+            REQUIRE_RC(KQueuePush(queue, item, & tm));
         }
-        REQUIRE_RC_FAIL(KQueuePush(queue, item, NULL));
+        REQUIRE_RC_FAIL(KQueuePush(queue, item, & tm));
         for (uint64_t i = 1; i < 3; ++i) {
             uint64_t j = 0;
             void *item = 0;
-            REQUIRE_RC(KQueuePop(queue, &item, NULL));
+            REQUIRE_RC(KQueuePop(queue, &item, & tm));
             j = (uint64_t)item;
             REQUIRE_EQ(i, j);
         }
@@ -565,16 +677,16 @@ TEST_CASE(KQueueSimpleTest) {
     {   // pushed 2 = capacity (ok) - popped 3 >capacity (failure)
         for (uint64_t i = 1; i < 3; ++i) {
             void *item = (void*)i;
-            REQUIRE_RC(KQueuePush(queue, item, NULL));
+            REQUIRE_RC(KQueuePush(queue, item, & tm));
         }
         for (uint64_t i = 1; i < 3; ++i) {
             uint64_t j = 0;
             void *item = 0;
-            REQUIRE_RC(KQueuePop(queue, &item, NULL));
+            REQUIRE_RC(KQueuePop(queue, &item, & tm));
             j = (uint64_t)item;
             REQUIRE_EQ(i, j);
         }
-        REQUIRE_RC_FAIL(KQueuePop(queue, &item, NULL));
+        REQUIRE_RC_FAIL(KQueuePop(queue, &item, & tm));
     }
 
     REQUIRE_RC(KQueueRelease(queue));
@@ -644,11 +756,11 @@ protected:
 
             for (int i = 0; i < numOps; ++i)
             {
-                timeout_t tm;
-                timeout_t* tm_p = td->timeout_ms == 0 ? NULL : &tm;
+                timeout_t tm = { 0 };
+                timeout_t* tm_p = &tm;
                 void * item;
                 if (tm_p != NULL)
-                rc = TimeoutInit(tm_p, td->timeout_ms);
+                    rc = TimeoutInit(tm_p, td->timeout_ms);
                 if (rc != 0)
                 {
                     LOG(LogLevel::e_fatal_error, "KQueue_ThreadFn: TimeoutInit failed\n");

@@ -26,9 +26,7 @@
 
 #include <vdb/extern.h>
 
-#define TRACK_REFERENCES 0
-
-#include "cursor-priv.h"
+#include "cursor-table.h"
 #include "dbmgr-priv.h"
 #include "linker-priv.h"
 #include "schema-priv.h"
@@ -70,10 +68,77 @@
 
 static bool s_disable_flush_thread = false;
 
+/* VTableCursor vtable, write side */
+
+static rc_t VTableWriteCursorWhack ( const VTableCursor *self );
+static rc_t VTableWriteCursorOpen ( const VTableCursor *cself );
+static rc_t VTableWriteCursorSetRowId ( const VTableCursor *cself, int64_t row_id );
+static rc_t VTableWriteCursorOpenRow ( const VTableCursor *cself );
+static rc_t VTableWriteCursorWrite ( VTableCursor *self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t count );
+static rc_t VTableWriteCursorCommitRow ( VTableCursor *self );
+static rc_t VTableWriteCursorCloseRow ( const VTableCursor *cself );
+static rc_t VTableWriteCursorRepeatRow ( VTableCursor *self, uint64_t count );
+static rc_t VTableWriteCursorFlushPage ( VTableCursor *self );
+static rc_t VTableWriteCursorDefault ( VTableCursor *self, uint32_t col_idx, bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t row_len );
+static rc_t VTableWriteCursorCommit ( VTableCursor *self );
+static rc_t VTableWriteCursorOpenParentUpdate ( VTableCursor *self, VTable **tbl );
+static rc_t VTableWriteCursorMakeColumn ( VTableCursor *self, VColumn **col, const SColumn *scol, Vector *cx_bind );
+static rc_t VTableWriteCursorInstallTrigger ( struct VTableCursor * self, struct VProduction * prod );
+
+static VCursor_vt VTableCursor_write_vt =
+{
+    VTableWriteCursorWhack,
+    VTableCursorVAddColumn,
+    VTableCursorVGetColumnIdx,
+    VTableWriteCursorOpen,
+    VTableWriteCursorSetRowId,
+    VTableWriteCursorOpenRow,
+    VTableWriteCursorWrite,
+    VTableWriteCursorCommitRow,
+    VTableWriteCursorCloseRow,
+    VTableWriteCursorRepeatRow,
+    VTableWriteCursorFlushPage,
+    VTableCursorGetBlob,
+    VTableCursorGetBlobDirect,
+    VTableCursorRead,
+    VTableCursorReadDirect,
+    VTableCursorReadBits,
+    VTableCursorReadBitsDirect,
+    VTableCursorCellData,
+    VTableCursorCellDataDirect,
+    VTableCursorDataPrefetch,
+    VTableWriteCursorDefault,
+    VTableWriteCursorCommit,
+    VTableCursorOpenParentRead,
+    VTableWriteCursorOpenParentUpdate,
+    VTableCursorPermitPostOpenAdd,
+    VTableCursorSuspendTriggers,
+    VTableCursorGetSchema,
+    VTableCursorLinkedCursorGet,
+    VTableCursorLinkedCursorSet,
+    VTableCursorSetCacheCapacity,
+    VTableCursorGetCacheCapacity,
+    VTableWriteCursorMakeColumn,
+    VTableCursorGetTable,
+    VTableCursorIsReadOnly,
+    VTableCursorGetBlobMruCache,
+    VTableCursorIncrementPhysicalProductionCount,
+    VTableCursorFindOverride,
+    VTableCursorLaunchPagemapThread,
+    VTableCursorPageMapProcessRequest,
+    VTableCursorCacheActive,
+    VTableWriteCursorInstallTrigger
+};
+
 /*--------------------------------------------------------------------------
- * VCursor
+ * VTableCursor
  *  a row cursor onto a VTable
  */
+
+rc_t VCursorMakeFromTable ( VTableCursor **cursp, const struct VTable *tbl )
+{
+    return VTableCursorMake ( cursp, tbl, & VTableCursor_write_vt );
+}
 
 LIB_EXPORT rc_t CC VDBManagerDisableFlushThread(VDBManager *self)
 {
@@ -85,13 +150,14 @@ LIB_EXPORT rc_t CC VDBManagerDisableFlushThread(VDBManager *self)
  *  to avoid reordering whole page
  */
 static
-rc_t VCursorFlushPageInt ( VCursor *self, bool sync );
-
+rc_t VCursorFlushPageInt ( VTableCursor *self, bool sync );
 
 /* Whack
  */
-rc_t VCursorWhack ( VCursor *self )
+static
+rc_t VTableWriteCursorWhack ( const VTableCursor * p_self )
 {
+    VTableCursor * self = ( VTableCursor * ) p_self;
 #if VCURSOR_FLUSH_THREAD
     if ( self -> flush_thread != NULL )
     {
@@ -100,7 +166,7 @@ rc_t VCursorWhack ( VCursor *self )
         {
             while ( self -> flush_state == vfBusy )
             {
-                MTCURSOR_DBG (( "VCursorWhack: waiting for thread to process\n" ));
+                MTCURSOR_DBG (( "VTableWriteCursorWhack: waiting for thread to process\n" ));
                 KConditionWait ( self -> flush_cond, self -> flush_lock );
             }
             self -> flush_state = vfExit;
@@ -108,19 +174,18 @@ rc_t VCursorWhack ( VCursor *self )
             KLockUnlock ( self -> flush_lock );
         }
 
-        MTCURSOR_DBG (( "VCursorWhack: waiting on thread to exit\n" ));
+        MTCURSOR_DBG (( "VTableWriteCursorWhack: waiting on thread to exit\n" ));
         KThreadWait ( self -> flush_thread, NULL );
     }
 
-    MTCURSOR_DBG (( "VCursorWhack: finishing\n" ));
+    MTCURSOR_DBG (( "VTableWriteCursorWhack: finishing\n" ));
     KThreadRelease ( self -> flush_thread );
     KConditionRelease ( self -> flush_cond );
     KLockRelease ( self -> flush_lock );
 #endif
-    VCursorTerminatePagemapThread(self);
-    return VCursorDestroy ( self );
+    VTableCursorTerminatePagemapThread ( self );
+    return VTableCursorWhack ( self );
 }
-
 
 /* CreateCursor
  *  creates a cursor object onto table
@@ -138,7 +203,7 @@ rc_t VCursorWhack ( VCursor *self )
 static rc_t CC run_flush_thread ( const KThread *t, void *data );
 #endif
 
-rc_t VTableCreateCursorWriteInt ( VTable *self, VCursor **cursp, KCreateMode mode, bool create_thread )
+rc_t VTableCreateCursorWriteInt ( VTable *self, VTableCursor **cursp, KCreateMode mode, bool create_thread )
 {
     rc_t rc;
 
@@ -158,13 +223,13 @@ rc_t VTableCreateCursorWriteInt ( VTable *self, VCursor **cursp, KCreateMode mod
 #endif
         else
         {
-            VCursor *curs;
+            VTableCursor *curs;
 
 #if LAZY_OPEN_COL_NODE
             if ( self -> col_node == NULL )
                 KMetadataOpenNodeUpdate ( self -> meta, & self -> col_node, "col" );
 #endif
-            rc = VCursorMake ( & curs, self );
+            rc = VTableCursorMake ( & curs, self,&  VTableCursor_write_vt );
             if ( rc == 0 )
             {
                 rc = VCursorSupplementSchema ( curs );
@@ -184,7 +249,7 @@ rc_t VTableCreateCursorWriteInt ( VTable *self, VCursor **cursp, KCreateMode mod
                     return 0;
                 }
 
-                VCursorRelease ( curs );
+                VCursorRelease ( & curs -> dad );
             }
         }
 
@@ -196,13 +261,13 @@ rc_t VTableCreateCursorWriteInt ( VTable *self, VCursor **cursp, KCreateMode mod
 
 LIB_EXPORT rc_t CC VTableCreateCursorWrite ( VTable *self, VCursor **cursp, KCreateMode mode )
 {
-    return VTableCreateCursorWriteInt ( self, cursp, mode, !s_disable_flush_thread );
+    return VTableCreateCursorWriteInt ( self, (VTableCursor**)cursp, mode, !s_disable_flush_thread );
 }
 
 
 /* MakeColumn
  */
-rc_t VCursorMakeColumn ( VCursor *self, VColumn **col, const SColumn *scol, Vector *cx_bind )
+rc_t VTableWriteCursorMakeColumn ( VTableCursor *self, VColumn **col, const SColumn *scol, Vector *cx_bind )
 {
     VTable *vtbl;
 
@@ -217,13 +282,13 @@ rc_t VCursorMakeColumn ( VCursor *self, VColumn **col, const SColumn *scol, Vect
 /* PostOpenAdd
  *  handle opening of a column after the cursor is opened
  */
-rc_t VCursorPostOpenAdd ( VCursor *self, VColumn *col )
+rc_t VCursorPostOpenAdd ( VTableCursor *self, VColumn *col )
 {
     rc_t rc = VCursorPostOpenAddRead ( self, col );
 
-    if ( ! self -> read_only && rc == 0 && self -> state == vcRowOpen )
+    if ( ! self -> read_only && rc == 0 && self -> dad . state == vcRowOpen )
     {
-        int64_t row_id = self -> row_id;
+        int64_t row_id = self -> dad . row_id;
         WColumnOpenRow ( col, & row_id );
     }
 
@@ -241,11 +306,11 @@ static
 rc_t VProdResolveAddShallowTriggers ( const VProdResolve *self, const STable *stbl )
 {
     rc_t rc;
-    VCursor *curs;
+    VTableCursor *curs;
     uint32_t i = VectorStart ( & stbl -> prod );
     uint32_t end = i + VectorLength ( & stbl -> prod );
 
-    for ( rc = 0, curs = self -> curs; ( rc == 0 || self -> ignore_column_errors ) && i < end; ++ i )
+    for ( rc = 0, curs = ( VTableCursor *) ( self -> curs ); ( rc == 0 || self -> ignore_column_errors ) && i < end; ++ i )
     {
         SProduction *sprod = VectorGet ( & stbl -> prod, i );
         if ( sprod != NULL && sprod -> trigger )
@@ -278,10 +343,10 @@ rc_t VProdResolveAddTriggers ( const VProdResolve *self, const STable *stbl )
     return VProdResolveAddShallowTriggers ( self, stbl );
 }
 
-LIB_EXPORT rc_t CC VCursorOpen ( const VCursor *cself )
+rc_t VTableWriteCursorOpen ( const VTableCursor *cself )
 {
     rc_t rc;
-    VCursor *self = ( VCursor* ) cself;
+    VTableCursor *self = ( VTableCursor* ) cself;
 
     if ( self == NULL )
         rc = RC ( rcVDB, rcCursor, rcOpening, rcSelf, rcNull );
@@ -303,10 +368,10 @@ LIB_EXPORT rc_t CC VCursorOpen ( const VCursor *cself )
                     pr . schema = self -> schema;
                     pr . ld = ld;
                     pr . libs = libs;
-                    pr . stbl = self -> stbl;
-                    pr . curs = self;
-                    pr . cache = & self -> prod;
-                    pr . owned = & self -> owned;
+                    pr . name = & self -> stbl -> name -> name;
+                    pr . curs = & self -> dad;
+                    pr . cache = & self -> dad . prod;
+                    pr . owned = & self -> dad . owned;
                     pr . cx_bind = & cx_bind;
                     pr . chain = chainEncoding;
                     pr . blobbing = false;
@@ -327,8 +392,8 @@ LIB_EXPORT rc_t CC VCursorOpen ( const VCursor *cself )
 
                     int64_t first;
                     uint64_t count;
-                    
-                    rc = VCursorIdRange ( self, 0, & first, & count );
+
+                    rc = VCursorIdRange ( & self -> dad, 0, & first, & count );
                     if ( rc != 0 )
                     {
                         if ( GetRCState ( rc ) == rcEmpty )
@@ -338,7 +403,7 @@ LIB_EXPORT rc_t CC VCursorOpen ( const VCursor *cself )
                                  /* permit empty open when run from sradb */
                                  ( GetRCObject ( rc ) == rcRange &&
                                    self -> permit_add_column &&
-                                   VectorLength ( & self -> row ) == 0 ) )
+                                   VectorLength ( & self -> dad . row ) == 0 ) )
                             {
                                 rc = 0;
                             }
@@ -349,18 +414,22 @@ LIB_EXPORT rc_t CC VCursorOpen ( const VCursor *cself )
                         if ( self -> read_only )
                         {
                             /* set initial row id to starting row */
-                            self -> start_id = self -> end_id = self -> row_id = first;
+                            self -> dad . start_id =
+                            self -> dad . end_id =
+                            self -> dad . row_id = first;
                         }
                         else
                         {
                             /* set initial row id to append */
-                            self -> start_id = self -> end_id = self -> row_id = first + count;
+                            self -> dad . start_id =
+                            self -> dad . end_id =
+                            self -> dad . row_id = first + count;
                         }
                     }
                 }
 
                 if ( rc != 0 )
-                    self -> state = vcFailed;
+                    self -> dad . state = vcFailed;
             }
 
             KDlsetRelease ( libs );
@@ -426,7 +495,8 @@ void CC resolve_writable_sphys ( void *item, void *data )
 static
 void VProdResolveWritableColumns ( struct resolve_phys_data *pb, bool suspend_triggers )
 {
-    const STable *dad, *stbl = pb -> pr . stbl;
+    const STable *dad;
+    const STable *stbl = ( ( const VTableCursor * ) ( pb -> pr . curs ) )-> stbl;
 
     /* walk table schema looking for parents */
     uint32_t i = VectorStart ( & stbl -> overrides );
@@ -448,7 +518,7 @@ void VProdResolveWritableColumns ( struct resolve_phys_data *pb, bool suspend_tr
     }
 }
 
-rc_t VCursorListSeededWritableColumns ( VCursor *self, BSTree *columns, const KNamelist *seed )
+rc_t VCursorListSeededWritableColumns ( VTableCursor *self, BSTree *columns, const KNamelist *seed )
 {
     rc_t rc;
     KDlset *libs;
@@ -457,10 +527,10 @@ rc_t VCursorListSeededWritableColumns ( VCursor *self, BSTree *columns, const KN
     struct resolve_phys_data pb;
     pb . pr . schema = self -> schema;
     pb . pr . ld = self -> tbl -> linker;
-    pb . pr . stbl = self -> stbl;
-    pb . pr . curs = self;
-    pb . pr . cache = & self -> prod;
-    pb . pr . owned = & self -> owned;
+    pb . pr . name = & self -> stbl -> name -> name;
+    pb . pr . curs = & self -> dad;
+    pb . pr . cache = & self -> dad . prod;
+    pb . pr . owned = & self -> dad . owned;
     pb . pr . cx_bind = & cx_bind;
     pb . pr . chain = chainEncoding;
     pb . pr . blobbing = false;
@@ -490,12 +560,12 @@ rc_t VCursorListSeededWritableColumns ( VCursor *self, BSTree *columns, const KN
         if ( rc == 0 )
         {
             /* add columns to list */
-            uint32_t idx = VectorStart ( & self -> row );
-            uint32_t end = VectorLength ( & self -> row );
+            uint32_t idx = VectorStart ( & self -> dad . row );
+            uint32_t end = VectorLength ( & self -> dad . row );
 
             for ( end += idx; idx < end; ++idx )
             {
-                const VColumn* vcol = ( const VColumn* ) VectorGet ( & self -> row, idx );
+                const VColumn* vcol = ( const VColumn* ) VectorGet ( & self -> dad . row, idx );
                 if ( vcol != NULL )
                 {
                     VColumnRef *cref;
@@ -513,7 +583,7 @@ rc_t VCursorListSeededWritableColumns ( VCursor *self, BSTree *columns, const KN
     return rc;
 }
 
-rc_t VCursorListWritableColumns ( VCursor *self, BSTree *columns )
+rc_t VCursorListWritableColumns ( VTableCursor *self, BSTree *columns )
 {
     return VCursorListSeededWritableColumns ( self, columns, NULL );
 }
@@ -523,24 +593,26 @@ rc_t VCursorListWritableColumns ( VCursor *self, BSTree *columns )
  *
  *  "row_id" [ IN ] - row id to select
  */
-LIB_EXPORT rc_t CC VCursorSetRowId ( const VCursor *cself, int64_t row_id )
+rc_t VTableWriteCursorSetRowId ( const VTableCursor *cself, int64_t row_id )
 {
     rc_t rc;
-    VCursor *self = ( VCursor* ) cself;
+    VTableCursor *self = ( VTableCursor* ) cself;
 
     if ( self == NULL )
         rc = RC ( rcVDB, rcCursor, rcPositioning, rcSelf, rcNull );
-    else if ( self -> state == vcFailed )
+    else if ( self -> dad . state == vcFailed )
         rc = RC ( rcVDB, rcCursor, rcPositioning, rcCursor, rcInvalid );
-    else if ( self -> state > vcReady || self -> start_id < self -> end_id )
+    else if ( self -> dad . state > vcReady || self -> dad . start_id < self -> dad . end_id )
         rc = RC ( rcVDB, rcCursor, rcPositioning, rcCursor, rcBusy );
     else if ( self -> read_only )
-        rc = VCursorSetRowIdRead ( self, row_id );
+        rc = VCursorSetRowIdRead ( & self -> dad, row_id );
     else
     {
         /* the test of start/end range above tells us that
            no rows are buffered, so the row id can be simply set */
-        self -> start_id = self -> end_id = self -> row_id = row_id;
+        self -> dad . start_id =
+        self -> dad . end_id =
+        self -> dad . row_id = row_id;
         rc = 0;
     }
 
@@ -551,16 +623,16 @@ LIB_EXPORT rc_t CC VCursorSetRowId ( const VCursor *cself, int64_t row_id )
 /* OpenRow
  *  open currently closed row indicated by row id
  */
-LIB_EXPORT rc_t CC VCursorOpenRow ( const VCursor *cself )
+rc_t VTableWriteCursorOpenRow ( const VTableCursor *cself )
 {
     rc_t rc;
-    VCursor *self = ( VCursor* ) cself;
+    VTableCursor *self = ( VTableCursor* ) cself;
 
     if ( self == NULL )
         rc = RC ( rcVDB, rcCursor, rcOpening, rcSelf, rcNull );
-    else if ( self -> state != vcReady )
+    else if ( self -> dad . state != vcReady )
     {
-        switch ( self -> state )
+        switch ( self -> dad . state )
         {
         case vcConstruct:
             rc = RC ( rcVDB, rcCursor, rcOpening, rcRow, rcIncomplete );
@@ -576,14 +648,14 @@ LIB_EXPORT rc_t CC VCursorOpenRow ( const VCursor *cself )
         }
     }
     else if ( self -> read_only )
-        rc = VCursorOpenRowRead ( self );
+        rc = VCursorOpenRowRead ( & self -> dad );
     else
     {
         /* validate that all columns have the same starting row_id */
-        int64_t row_id = self -> row_id;
-        VectorForEach ( & self -> row, false, WColumnOpenRow, & row_id );
-        assert ( row_id == self -> row_id );
-        self -> state = vcRowOpen;
+        int64_t row_id = self -> dad . row_id;
+        VectorForEach ( & self -> dad . row, false, WColumnOpenRow, & row_id );
+        assert ( row_id == self -> dad . row_id );
+        self -> dad . state = vcRowOpen;
         rc = 0;
     }
 
@@ -594,7 +666,7 @@ LIB_EXPORT rc_t CC VCursorOpenRow ( const VCursor *cself )
  *  commit row after writing
  *  prevents further writes
  */
-LIB_EXPORT rc_t CC VCursorCommitRow ( VCursor *self )
+rc_t VTableWriteCursorCommitRow ( VTableCursor *self )
 {
     rc_t rc;
 
@@ -602,11 +674,11 @@ LIB_EXPORT rc_t CC VCursorCommitRow ( VCursor *self )
         rc = RC ( rcVDB, rcCursor, rcCommitting, rcSelf, rcNull );
     else if ( self -> read_only )
         rc = RC ( rcVDB, rcCursor, rcCommitting, rcCursor, rcReadonly );
-    else if ( self -> state == vcFailed )
+    else if ( self -> dad . state == vcFailed )
         rc = RC ( rcVDB, rcCursor, rcCommitting, rcCursor, rcInvalid );
-    else if ( self -> state < vcRowOpen )
+    else if ( self -> dad . state < vcRowOpen )
         rc = RC ( rcVDB, rcCursor, rcCommitting, rcRow, rcNotOpen );
-    else if ( self -> state >= vcRowCommitted )
+    else if ( self -> dad . state >= vcRowCommitted )
         rc = 0;
     else
     {
@@ -614,26 +686,26 @@ LIB_EXPORT rc_t CC VCursorCommitRow ( VCursor *self )
 
         /* tell columns to slam in any default values */
         rc = 0;
-        if ( VectorDoUntil ( & self -> row, false, WColumnRowDefaults, & rc ) )
+        if ( VectorDoUntil ( & self -> dad . row, false, WColumnRowDefaults, & rc ) )
             return rc;
 
         /* account for row just written */
-        self -> end_id = self -> row_id + 1;
+        self -> dad . end_id = self -> dad . row_id + 1;
 
         /* tell columns to commit the row, and allow
            each to return an earlier cutoff id ( half-closed ) */
-        if ( VectorDoUntil ( & self -> row, false, WColumnCommitRow, & self -> end_id ) )
+        if ( VectorDoUntil ( & self -> dad . row, false, WColumnCommitRow, & self -> dad . end_id ) )
         {
-            self -> state = vcFailed;
+            self -> dad . state = vcFailed;
             return RC ( rcVDB, rcCursor, rcCommitting, rcMemory, rcExhausted );
         }
 
         /* returned result should never be <= start id */
-        assert ( self -> end_id > self -> start_id );
+        assert ( self -> dad . end_id > self -> dad . start_id );
 
         /* if returned result dips down into the range of buffered rows
            then one or more columns has requested an automatic page commit */
-        self -> state = ( self -> end_id <= self -> row_id ) ? vcPageCommit : vcRowCommitted;
+        self -> dad . state = ( self -> dad . end_id <= self -> dad . row_id ) ? vcPageCommit : vcRowCommitted;
     }
 
     return rc;
@@ -648,7 +720,7 @@ LIB_EXPORT rc_t CC VCursorCommitRow ( VCursor *self )
  *  "count" [ IN ] - the number of times to repeat
  *  the current row.
  */
-LIB_EXPORT rc_t CC VCursorRepeatRow ( VCursor *self, uint64_t count )
+rc_t VTableWriteCursorRepeatRow ( VTableCursor *self, uint64_t count )
 {
     rc_t rc = 0;
 
@@ -656,37 +728,37 @@ LIB_EXPORT rc_t CC VCursorRepeatRow ( VCursor *self, uint64_t count )
         rc = RC ( rcVDB, rcCursor, rcUpdating, rcSelf, rcNull );
     else if ( self -> read_only )
         rc = RC ( rcVDB, rcCursor, rcUpdating, rcCursor, rcReadonly );
-    else if ( self -> state == vcFailed )
+    else if ( self -> dad . state == vcFailed )
         rc = RC ( rcVDB, rcCursor, rcUpdating, rcCursor, rcInvalid );
-    else if ( self -> state < vcRowOpen )
+    else if ( self -> dad . state < vcRowOpen )
         rc = RC ( rcVDB, rcCursor, rcUpdating, rcRow, rcNotOpen );
-    else if ( self -> state < vcRowCommitted )
+    else if ( self -> dad . state < vcRowCommitted )
         rc = RC ( rcVDB, rcCursor, rcUpdating, rcRow, rcInvalid );
     else if ( count > 0xFFFFFFFFU )
         rc = RC ( rcVDB, rcCursor, rcUpdating, rcParam, rcExcessive );
     else if ( count != 0 )
     {
         /* check the number of rows that would result */
-        uint64_t total = ( self -> row_id - self -> start_id ) + count;
+        uint64_t total = ( self -> dad . row_id - self -> dad . start_id ) + count;
         if ( total > 0xFFFFFFFFU )
             rc = RC ( rcVDB, rcCursor, rcUpdating, rcParam, rcExcessive );
         else
         {
             WColumnRepeatRowData pb;
             pb . count = count;
-            pb . row_id = self -> row_id;
-            pb . end_id = self -> end_id;
+            pb . row_id = self -> dad . row_id;
+            pb . end_id = self -> dad . end_id;
 
             /* tell columns to commit the row, and allow
                each to return an earlier cutoff id ( half-closed ) */
-            VectorForEach ( & self -> row, false, WColumnRepeatRow, & pb );
+            VectorForEach ( & self -> dad . row, false, WColumnRepeatRow, & pb );
 
             /* extend the current row-id, dragging end_id along with it */
-            if ( self -> end_id >= self -> row_id )
-                self -> end_id += count;
+            if ( self -> dad . end_id >= self -> dad . row_id )
+                self -> dad . end_id += count;
 
             /* move the current row id ahead */
-            self -> row_id += count;
+            self -> dad . row_id += count;
         }
     }
 
@@ -699,44 +771,44 @@ LIB_EXPORT rc_t CC VCursorRepeatRow ( VCursor *self, uint64_t count )
  *  discard all changes. otherwise,
  *  advance to next row
  */
-LIB_EXPORT rc_t CC VCursorCloseRow ( const VCursor *cself )
+rc_t VTableWriteCursorCloseRow ( const VTableCursor *cself )
 {
     rc_t rc = 0;        /* needed in case FlushPage isn't called */
-    VCursor *self = ( VCursor* ) cself;
+    VTableCursor *self = ( VTableCursor* ) cself;
 
     if ( self == NULL )
         rc = RC ( rcVDB, rcCursor, rcClosing, rcSelf, rcNull );
-    else if ( self -> state == vcFailed )
+    else if ( self -> dad . state == vcFailed )
         rc = RC ( rcVDB, rcCursor, rcClosing, rcCursor, rcInvalid );
-    else if ( self -> state < vcRowOpen )
+    else if ( self -> dad . state < vcRowOpen )
         rc = 0;
     else if ( self -> read_only )
-        rc = VCursorCloseRowRead ( self );
+        rc = VCursorCloseRowRead ( & self -> dad);
     else
     {
         /* tell each of the columns that no further data may be written
            and to abandon any uncommitted writes */
-        VectorForEach ( & self -> row, false, WColumnCloseRow, NULL );
+        VectorForEach ( & self -> dad . row, false, WColumnCloseRow, NULL );
 
         /* if the row was committed... */
-        if ( self -> state >= vcRowCommitted )
+        if ( self -> dad . state >= vcRowCommitted )
         {
             /* close off the page if so requested */
-            if ( self -> state == vcPageCommit )
+            if ( self -> dad . state == vcPageCommit )
             {
                 rc = VCursorFlushPageInt(self, false);
                 if ( rc )
                 {
-                    self -> state = vcFailed;
+                    self -> dad . state = vcFailed;
                     return rc;
                 }
             }
 
             /* advance to next id */
-            ++ self -> row_id;
+            ++ self -> dad . row_id;
         }
 
-        self -> state = vcReady;
+        self -> dad . state = vcReady;
         rc = 0;
     }
 
@@ -757,7 +829,7 @@ LIB_EXPORT rc_t CC VCursorCloseRow ( const VCursor *cself )
  *
  *  "row_len" [ IN ] - the number of elements in default row
  */
-LIB_EXPORT rc_t CC VCursorDefault ( VCursor *self, uint32_t col_idx,
+rc_t VTableWriteCursorDefault ( VTableCursor *self, uint32_t col_idx,
     bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t row_len )
 {
     rc_t rc;
@@ -772,7 +844,7 @@ LIB_EXPORT rc_t CC VCursorDefault ( VCursor *self, uint32_t col_idx,
         rc = RC ( rcVDB, rcCursor, rcWriting, rcParam, rcInvalid );
     else
     {
-        VColumn *col = VectorGet ( & self -> row, col_idx );
+        VColumn *col = VectorGet ( & self -> dad . row, col_idx );
         if ( col == NULL )
             rc = RC ( rcVDB, rcCursor, rcWriting, rcColumn, rcInvalid );
         else
@@ -796,7 +868,7 @@ LIB_EXPORT rc_t CC VCursorDefault ( VCursor *self, uint32_t col_idx,
  *
  *  "count" [ IN ] - the number of elements to append
  */
-LIB_EXPORT rc_t CC VCursorWrite ( VCursor *self, uint32_t col_idx,
+rc_t VTableWriteCursorWrite ( VTableCursor *self, uint32_t col_idx,
     bitsz_t elem_bits, const void *buffer, bitsz_t boff, uint64_t count )
 {
     rc_t rc;
@@ -807,9 +879,9 @@ LIB_EXPORT rc_t CC VCursorWrite ( VCursor *self, uint32_t col_idx,
         rc = RC ( rcVDB, rcCursor, rcWriting, rcParam, rcNull );
     else if ( self -> read_only )
         rc = RC ( rcVDB, rcCursor, rcWriting, rcCursor, rcReadonly );
-    else if ( self -> state != vcRowOpen )
+    else if ( self -> dad . state != vcRowOpen )
     {
-        switch ( self -> state )
+        switch ( self -> dad . state )
         {
         case vcConstruct:
             rc = RC ( rcVDB, rcCursor, rcAccessing, rcCursor, rcNotOpen );
@@ -826,7 +898,7 @@ LIB_EXPORT rc_t CC VCursorWrite ( VCursor *self, uint32_t col_idx,
     }
     else
     {
-        VColumn *col = VectorGet ( & self -> row, col_idx );
+        VColumn *col = VectorGet ( & self -> dad . row, col_idx );
         if ( col == NULL )
             rc = RC ( rcVDB, rcCursor, rcWriting, rcColumn, rcInvalid );
         else
@@ -859,7 +931,8 @@ bool CC run_trigger_prods ( void *item, void *data )
     VProduction *prod = item;
 
     VBlob *blob;
-    pb -> rc = VProductionReadBlob ( prod, & blob, pb -> id , pb -> cnt, NULL);
+    int64_t rowId = pb -> id;
+    pb -> rc = VProductionReadBlob ( prod, & blob, & rowId, pb -> cnt, NULL);
     if ( pb -> rc != 0 )
         return true;
     if ( blob != NULL )
@@ -873,7 +946,7 @@ static
 rc_t CC run_flush_thread ( const KThread *t, void *data )
 {
     rc_t rc;
-    VCursor *self = data;
+    VTableCursor *self = data;
 
     /* acquire lock */
     MTCURSOR_DBG (( "run_flush_thread: acquiring lock\n" ));
@@ -914,7 +987,7 @@ rc_t CC run_flush_thread ( const KThread *t, void *data )
 
             /* drop page buffers */
             MTCURSOR_DBG (( "run_flush_thread: dropping page buffers\n" ));
-            VectorForEach ( & self -> row, false, WColumnDropPage, NULL );
+            VectorForEach ( & self -> dad . row, false, WColumnDropPage, NULL );
 
             /* reacquire lock */
             MTCURSOR_DBG (( "run_flush_thread: re-acquiring lock" ));
@@ -965,14 +1038,14 @@ rc_t CC run_flush_thread ( const KThread *t, void *data )
 #endif
 
 static
-rc_t VCursorFlushPageNoThread ( VCursor *self )
+rc_t VCursorFlushPageNoThread ( VTableCursor *self )
 {
-    int64_t end_id = self->end_id;
+    int64_t end_id = self -> dad . end_id;
 
     /* first, tell all columns to bundle up their pages into buffers */
-    if ( VectorDoUntil ( & self -> row, false, WColumnBufferPage, & end_id ) )
+    if ( VectorDoUntil ( & self -> dad . row, false, WColumnBufferPage, & end_id ) )
     {
-        VectorForEach ( & self -> row, false, WColumnDropPage, NULL );
+        VectorForEach ( & self -> dad . row, false, WColumnDropPage, NULL );
         return RC ( rcVDB, rcCursor, rcFlushing, rcMemory, rcExhausted );
     }
     else
@@ -980,30 +1053,30 @@ rc_t VCursorFlushPageNoThread ( VCursor *self )
         run_trigger_prod_data pb;
 
         /* supposed to be constant */
-        assert ( end_id == self -> end_id );
+        assert ( end_id == self -> dad . end_id );
         /* run all validation and trigger productions */
-        pb . id = self -> start_id;
-        pb . cnt = self -> end_id - self -> start_id;
+        pb . id = self -> dad . start_id;
+        pb . cnt = self -> dad . end_id - self -> dad . start_id;
         pb . rc = 0;
         if ( ! VectorDoUntil ( & self -> trig, false, run_trigger_prods, & pb ) )
         {
-            self -> start_id = self -> end_id;
-            self -> end_id = self -> row_id + 1;
-            self -> state = vcReady;
+            self -> dad . start_id = self -> dad . end_id;
+            self -> dad . end_id = self -> dad . row_id + 1;
+            self -> dad . state = vcReady;
         }
 
         /* drop page buffers */
-        VectorForEach ( & self -> row, false, WColumnDropPage, NULL );
+        VectorForEach ( & self -> dad . row, false, WColumnDropPage, NULL );
 
         return pb . rc;
     }
 }
 
 static
-rc_t VCursorFlushPageThread ( VCursor *self, bool sync )
+rc_t VCursorFlushPageThread ( VTableCursor *self, bool sync )
 {
     rc_t rc = 0;
-    int64_t end_id = self->end_id;
+    int64_t end_id = self -> dad . end_id;
 
 #if VCURSOR_FLUSH_THREAD
     MTCURSOR_DBG (( "VCursorFlushPageInt: going to acquire lock\n" ));
@@ -1053,24 +1126,24 @@ rc_t VCursorFlushPageThread ( VCursor *self, bool sync )
     MTCURSOR_DBG (( "VCursorFlushPageInt: running buffer page\n" ));
 
     /* first, tell all columns to bundle up their pages into buffers */
-    if ( VectorDoUntil ( & self -> row, false, WColumnBufferPage, & end_id ) )
+    if ( VectorDoUntil ( & self -> dad . row, false, WColumnBufferPage, & end_id ) )
     {
-        VectorForEach ( & self -> row, false, WColumnDropPage, NULL );
+        VectorForEach ( & self -> dad . row, false, WColumnDropPage, NULL );
         self -> flush_state = vfFgErr;
         rc = RC ( rcVDB, rcCursor, rcFlushing, rcMemory, rcExhausted );
     }
     else
     {
         /* supposed to be constant */
-        assert ( end_id == self -> end_id );
+        assert ( end_id == self -> dad . end_id );
 
         MTCURSOR_DBG (( "VCursorFlushPageInt: pages buffered - capturing id and count\n" ));
-        self -> flush_id = self -> start_id;
-        self -> flush_cnt = self -> end_id - self -> start_id;
+        self -> flush_id = self -> dad . start_id;
+        self -> flush_cnt = self -> dad . end_id - self -> dad . start_id;
 
-        self -> start_id = self -> end_id;
-        self -> end_id = self -> row_id + 1;
-        self -> state = vcReady;
+        self -> dad . start_id = self -> dad . end_id;
+        self -> dad . end_id = self -> dad . row_id + 1;
+        self -> dad . state = vcReady;
 
         MTCURSOR_DBG (( "VCursorFlushPageInt: state set to busy - signaling bg thread\n" ));
         self -> flush_state = vfBusy;
@@ -1137,9 +1210,9 @@ rc_t VCursorFlushPageThread ( VCursor *self, bool sync )
 }
 
 static
-rc_t VCursorFlushPageInt ( VCursor *self, bool sync )
+rc_t VCursorFlushPageInt ( VTableCursor *self, bool sync )
 {
-    switch ( self -> state )
+    switch ( self -> dad . state )
     {
         case vcConstruct:
             return RC ( rcVDB, rcCursor, rcFlushing, rcCursor, rcNotOpen );
@@ -1150,12 +1223,12 @@ rc_t VCursorFlushPageInt ( VCursor *self, bool sync )
         default:
             break;
     }
-    if ( self -> start_id == self -> end_id )
+    if ( self -> dad . start_id == self -> dad . end_id )
     {
         /* the cursor should be in unwritten state,
            where the row_id can be reset but drags
            along the other markers. */
-        assert ( self -> end_id == self -> row_id );
+        assert ( self -> dad . end_id == self -> dad . row_id );
         return 0;
     }
     if (self->flush_thread)
@@ -1164,7 +1237,7 @@ rc_t VCursorFlushPageInt ( VCursor *self, bool sync )
         return VCursorFlushPageNoThread(self);
 }
 
-LIB_EXPORT rc_t CC VCursorFlushPage ( VCursor *self )
+rc_t VTableWriteCursorFlushPage ( VTableCursor *self )
 {
     rc_t rc;
 
@@ -1177,16 +1250,16 @@ LIB_EXPORT rc_t CC VCursorFlushPage ( VCursor *self )
 
     if ( rc == 0 )
     {
-        assert ( self -> row_id == self -> start_id );
-        self -> end_id = self -> row_id;
+        assert ( self -> dad . row_id == self -> dad . start_id );
+        self -> dad . end_id = self -> dad . row_id;
     }
 
     return rc;
 }
 
-LIB_EXPORT rc_t CC VCursorCommit ( VCursor *self )
+rc_t VTableWriteCursorCommit ( VTableCursor *self )
 {
-    rc_t rc = VCursorFlushPage ( self );
+    rc_t rc = VCursorFlushPage ( (VCursor*)self );
     if ( rc == 0 )
     {
         VTable *tbl = self -> tbl;
@@ -1209,7 +1282,7 @@ LIB_EXPORT rc_t CC VCursorCommit ( VCursor *self )
  *  duplicate reference to parent table
  *  NB - returned reference must be released
  */
-LIB_EXPORT rc_t CC VCursorOpenParentUpdate ( VCursor *self, VTable **tbl )
+rc_t VTableWriteCursorOpenParentUpdate ( VTableCursor *self, VTable **tbl )
 {
     rc_t rc;
 
@@ -1235,4 +1308,9 @@ LIB_EXPORT rc_t CC VCursorOpenParentUpdate ( VCursor *self, VTable **tbl )
     }
 
     return rc;
+}
+
+rc_t VTableWriteCursorInstallTrigger ( struct VTableCursor * self, struct VProduction * prod )
+{
+    return VectorAppend ( & self -> trig, NULL, prod );
 }

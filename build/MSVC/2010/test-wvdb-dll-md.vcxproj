@@ -18,11 +18,11 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-  
+
     <PropertyGroup>
         <WorkingDirectory>vdb</WorkingDirectory>
-    </PropertyGroup>    
-    
+    </PropertyGroup>
+
     <Import Project=".\test-project.props" />
 
     <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
@@ -46,13 +46,6 @@
             <AdditionalDependencies>$(VDB_TARGET)bin\ncbi-wvdb-md.lib;%(AdditionalDependencies)</AdditionalDependencies>
         </Link>
     </ItemDefinitionGroup>
-  
-  <Import Project="..\test-wvdb.files" />  
 
-  
-    <Target Name="AfterBuild" Condition="'$(Autorun)'=='true'">
-        <MakeDir Directories="$(WorkingDirectory)\db"/>       
-        <Exec Command="$(OutDir)$(TargetName)$(TargetExt)" WorkingDirectory="$(WorkingDirectory)\"/>
-    </Target>
-  
+  <Import Project="..\test-wvdb.files" />
 </Project>

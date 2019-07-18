@@ -46,7 +46,7 @@ LP = @ $(TOP)/build/ld.sh $(OS) $(ARCH) g++ \
 	-MD --srcdir $(SRCDIR) --bindir $(BINDIR) -L$(LIBDIR):$(ILIBDIR)
 
 # tool options
-WARN = -Wall -Wno-long-long 
+WARN = -Wall -Wno-long-long
 ifneq (sun,$(OS))
     WARN += -Wno-variadic-macros
 endif
@@ -55,10 +55,10 @@ ifeq (64,$(BITS))
 	CARCH = -m64
 else
 ifeq (32_64,$(BITS))
-	CARCH = -arch i386 -arch x86_64  
-else    
+	CARCH = -arch i386 -arch x86_64
+else
 	CARCH = -m32
-endif    
+endif
 endif
 
 ifeq (prof, $(BUILD))
@@ -67,19 +67,15 @@ endif
 
 ifeq (dbg, $(BUILD))
 	DBG = -g
-	OPT = $(WARN)
-	NOPT = $(WARN)
+	OPT = $(WARN) -Wno-variadic-macros -fno-strict-aliasing -fstack-protector -Wa,--noexecstack -Wall
+	NOPT = $(WARN) -Wno-variadic-macros -fno-strict-aliasing -fstack-protector -Wa,--noexecstack -Wall
 	# GCC seems unable to use c99 without ansi, which
 	# basically clobbers features back to c89. the options
 	# must be specified in the order shown.
-	PED = -std=gnu99 -pedantic # -fdiagnostics-show-option
+	PED = -std=gnu11 -pedantic # -fdiagnostics-show-option
 else
-
-OPT = -O3 -Wno-variadic-macros -fno-strict-aliasing -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1
-ifeq (x86_64, $(ARCH))
-	OPT += -Wall
-endif
-
+	# TODO: use -fstack-protector-strong for gcc >= 4.9
+	OPT = -O3 -Wno-variadic-macros -fno-strict-aliasing -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1 -fstack-protector -Wa,--noexecstack -Wall -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-c++11-extensions
 endif
 
 ifeq (mac,$(OS))

@@ -134,7 +134,7 @@ void CC KPTrieIndexExtractV1Range_v2 ( PTNode *n, void *data )
     /* capture node id */
     uint32_t id;
     assert ( n -> data . size == sizeof id );
-    memcpy ( & id, n -> data . addr, sizeof id );
+    memmove ( & id, n -> data . addr, sizeof id );
 
     /* perform min/max */
     if ( self -> count == 0 )
@@ -862,7 +862,7 @@ rc_t KPTrieIndexFind_v2 ( const KPTrieIndex_v2 *self,
                 /* v1 stored tree will have just a 32-bit spot id as data */
                 uint32_t id;
                 assert ( pnode . data . size == sizeof id );
-                memcpy ( & id, pnode . data . addr, sizeof id );
+                memmove ( & id, pnode . data . addr, sizeof id );
                 * start_id = id;
                 rc = 0;
             }

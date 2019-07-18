@@ -152,10 +152,13 @@ uint32_t KVTableDepth ( KVTable * self /*, ctx_t ctx */ )
     assert ( self -> itf != NULL );
     idx = self -> itf -> idx;
 
-    if ( idx == 0 && self -> parent != NULL )
+    if ( idx == 0 )
     {
         KItfTok * itf = ( KItfTok * ) self -> itf;
-        idx = KVTableDepth ( ( KVTable* ) self -> parent /*, ctx */ ) + 1;
+        if ( self -> parent != NULL )
+            idx = KVTableDepth ( ( KVTable* ) self -> parent /*, ctx */ ) + 1;
+        else
+            idx = 1;
         itf -> idx = idx;
     }
 
@@ -178,7 +181,7 @@ void KVTableResolve ( const KVTable * cself, ctx_t ctx )
         uint32_t idx = KVTableDepth ( self /*, ctx */ );
 
         KHierCache * cache;
-        size_t bytes = sizeof * cache - sizeof cache -> parent + idx + sizeof cache -> parent [ 0 ];
+        size_t bytes = sizeof * cache - sizeof cache -> parent + idx * sizeof cache -> parent [ 0 ];
 
         cache = malloc ( bytes );
         if ( cache == NULL )

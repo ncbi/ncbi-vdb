@@ -394,6 +394,21 @@ rc_t TestEnv::process_args(int argc, char* argv[], ArgsHandler* argsHandler)
                 pch = strtok(NULL, " ");
             }
         }
+        else {
+            if ( argc2 >= arg2 ) {
+                arg2 *= 2;
+                char ** tmp = static_cast < char ** > (
+                    realloc ( argv2, arg2 * sizeof *argv2 ) );
+                if ( tmp == NULL )
+                    return RC (
+                        rcApp, rcArgv, rcAccessing, rcMemory, rcExhausted );
+                argv2 = tmp;
+            }
+            argv2 [ argc2 ] = strdup ( argv [ i ] );
+            if ( argv2 [ argc2 ] == NULL )
+                return RC ( rcApp, rcArgv, rcAccessing, rcMemory, rcExhausted );
+            ++ argc2;
+        }
     }
 
     if (verbosity == LogLevel::e_undefined)

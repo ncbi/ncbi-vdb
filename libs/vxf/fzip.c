@@ -81,7 +81,7 @@ static rc_t invoke_zlib(void *dst, uint64_t *dsize, const void *src, uint32_t ss
             break;
     }
     zr = deflateEnd(&s);
-    if (zr != Z_OK)
+    if ( zr != Z_OK && s.total_out != 0 )
         rc = RC(rcXF, rcFunction, rcExecuting, rcSelf, rcUnexpected);
     if (rc == 0) {
         assert(s.total_out <= UINT32_MAX);

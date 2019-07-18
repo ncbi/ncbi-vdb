@@ -34,6 +34,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <stdarg.h>
+#include <io.h>
 
 #include <os-native.h>
 
@@ -182,4 +183,16 @@ void print_char_fixup ( char * fmt, size_t * len, size_t max )
      * Only Windows does it "wrong".
      */
     return;
+}
+
+size_t CC sys_simple_write( int fd, const void * buf, size_t count )
+{
+    /* from <io.h> */
+    return write( fd, buf, count );
+}
+
+int CC sys_is_a_tty( int fd )
+{
+    /* from <io.h> */
+    return _isatty( _fileno( fd ) );
 }

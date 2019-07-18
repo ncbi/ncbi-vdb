@@ -126,6 +126,40 @@ VFS_EXTERN rc_t CC VFSManagerSetResolver
     ( struct VFSManager * self, struct VResolver * resolver );
 
 
+/* GetCacheRoot
+ *  query the cache-root
+ *
+ *  path [ OUT ] - VPath of location of current cache-root
+ */
+VFS_EXTERN rc_t CC VFSManagerGetCacheRoot ( const struct VFSManager * self,
+    struct VPath const ** path );
+
+
+/* SetCacheRoot
+ *  set a new cache-root
+ *
+ *  path [ IN ] - VPath of new location of cache-root
+ */
+
+VFS_EXTERN rc_t CC VFSManagerSetCacheRoot ( const struct VFSManager * self,
+    struct VPath const * path );
+    
+/* DeleteCacheOlderThan
+ *  delete old cached files
+ *
+ *  days [ IN ] - files older than this will be deleted
+ *  
+ */
+VFS_EXTERN rc_t CC VFSManagerDeleteCacheOlderThan ( const struct VFSManager * self,
+    uint32_t days );
+
+
+/** Unreliable object: do not report occured erros */
+VFS_EXTERN rc_t CC VFSManagerOpenDirectoryReadDecryptUnreliable (
+    const struct VFSManager *self, struct KDirectory const **d,
+    const struct VPath * object );
+
+
 #ifdef __cplusplus
 }
 #endif

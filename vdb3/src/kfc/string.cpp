@@ -1320,5 +1320,83 @@ namespace vdb3
             buffer . resize ( rounded_size, true );
         }
     }
-    
+
+    /*
+     * NULTermString
+     *  create a string that is NUL-terminated,
+     *  and sports a cast to const char *
+     *  for use with native OS
+     */
+
+    // supports nasty cast to NUL-terminated string
+    NULTermString :: operator const char * () const
+    {
+        // attempt access to the raw memory
+        const Ptr < char > p = rgn;
+
+        // the memory block must not be empty
+        // or addressing the array will fail
+        if ( len != 0 )
+        {
+            assert ( rgn . size () != ( U64 ) 0 );
+            return & p [ 0 ];
+        }
+
+        // for empty strings, just return an empty C string
+        return "";
+    }
+
+    NULTermString :: NULTermString ( const String & str )
+        : String ( StringBuffer ( "%sz", & str ) . toString () )
+    {
+        // the current value is a copy of input
+        // with an additional character added - space for NUL
+        bytes_t cur_size = rgn . size ();
+        if ( ascii_size == cur_size )
+            -- ascii_size;
+        -- len;
+        -- cur_size;
+
+        // change last character to NUL
+        // access mem as a read-only array
+        // because capabilities have been reduced
+        Ptr < ascii > ptr = rgn;
+        const ascii * p = & ptr [ cur_size ];
+
+        // having stolen a pointer,
+        // use C to hack our own system
+        * ( ascii * ) p = 0;
+
+        // drop size of memory without losing
+        // the guaranteed trailing NUL byte
+        Region r = rgn . subRegion ( 0, cur_size );
+
+        // forget the initial copy
+        rgn = r;
+    }
+
+
+    void NULTermString :: operator = ( const String & str )
+    {
+        // copy the string with an additional character
+        {
+            StringBuffer buf ( "%sz", & str );
+            String :: operator = ( buf . toString () );
+        }
+
+        // see constructor above for comments
+        bytes_t cur_size = rgn . size ();
+        if ( ascii_size == cur_size )
+            -- ascii_size;
+        -- len;
+        -- cur_size;
+
+        Ptr < ascii > a = rgn;
+        const ascii * p = & a [ cur_size ];
+        * ( U8 * ) p = 0;
+
+        Region r = rgn . subRegion ( 0, cur_size );
+        rgn = r;
+    }
+
 }

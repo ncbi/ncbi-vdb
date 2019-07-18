@@ -312,7 +312,7 @@ build_wcs_upper_buffer (re_string_t *pstr)
 		  wcu = towupper (wc);
 		  mbcdlen = wcrtomb (buf, wcu, &prev_st);
 		  if (BE (mbclen == mbcdlen, 1))
-		    memcpy (pstr->mbs + byte_idx, buf, mbclen);
+		    memmove (pstr->mbs + byte_idx, buf, mbclen);
 		  else
 		    {
 		      src_idx = byte_idx;
@@ -320,7 +320,7 @@ build_wcs_upper_buffer (re_string_t *pstr)
 		    }
 		}
 	      else
-		memcpy (pstr->mbs + byte_idx,
+		memmove (pstr->mbs + byte_idx,
 			pstr->raw_mbs + pstr->raw_mbs_idx + byte_idx, mbclen);
 	      pstr->wcs[byte_idx++] = wcu;
 	      /* Write paddings.  */
@@ -380,7 +380,7 @@ build_wcs_upper_buffer (re_string_t *pstr)
 		wcu = towupper (wc);
 		mbcdlen = wcrtomb ((char *) buf, wcu, &prev_st);
 		if (BE (mbclen == mbcdlen, 1))
-		  memcpy (pstr->mbs + byte_idx, buf, mbclen);
+		  memmove (pstr->mbs + byte_idx, buf, mbclen);
 		else if (mbcdlen != (size_t) -1)
 		  {
 		    size_t i;
@@ -405,7 +405,7 @@ build_wcs_upper_buffer (re_string_t *pstr)
 			pstr->offsets_needed = 1;
 		      }
 
-		    memcpy (pstr->mbs + byte_idx, buf, mbcdlen);
+		    memmove (pstr->mbs + byte_idx, buf, mbcdlen);
 		    pstr->wcs[byte_idx] = wcu;
 		    pstr->offsets[byte_idx] = src_idx;
 		    for (i = 1; i < mbcdlen; ++i)
@@ -424,10 +424,10 @@ build_wcs_upper_buffer (re_string_t *pstr)
 		    continue;
 		  }
                 else
-                  memcpy (pstr->mbs + byte_idx, p, mbclen);
+                  memmove (pstr->mbs + byte_idx, p, mbclen);
 	      }
 	    else
-	      memcpy (pstr->mbs + byte_idx, p, mbclen);
+	      memmove (pstr->mbs + byte_idx, p, mbclen);
 
 	    if (BE (pstr->offsets_needed != 0, 0))
 	      {
@@ -1022,7 +1022,7 @@ re_node_set_init_copy (re_node_set *dest, const re_node_set *src)
 	  dest->alloc = dest->nelem = 0;
 	  return REG_ESPACE;
 	}
-      memcpy (dest->elems, src->elems, src->nelem * sizeof (int));
+      memmove (dest->elems, src->elems, src->nelem * sizeof (int));
     }
   else
     re_node_set_init_empty (dest);
@@ -1116,7 +1116,7 @@ re_node_set_add_intersect (re_node_set *dest, const re_node_set *src1,
       }
 
   /* Copy remaining SRC elements.  */
-  memcpy (dest->elems, dest->elems + sbase, delta * sizeof (int));
+  memmove (dest->elems, dest->elems + sbase, delta * sizeof (int));
 
   return REG_NOERROR;
 }
@@ -1160,13 +1160,13 @@ re_node_set_init_union (re_node_set *dest, const re_node_set *src1,
     }
   if (i1 < src1->nelem)
     {
-      memcpy (dest->elems + id, src1->elems + i1,
+      memmove (dest->elems + id, src1->elems + i1,
 	     (src1->nelem - i1) * sizeof (int));
       id += src1->nelem - i1;
     }
   else if (i2 < src2->nelem)
     {
-      memcpy (dest->elems + id, src2->elems + i2,
+      memmove (dest->elems + id, src2->elems + i2,
 	     (src2->nelem - i2) * sizeof (int));
       id += src2->nelem - i2;
     }
@@ -1197,7 +1197,7 @@ re_node_set_merge (re_node_set *dest, const re_node_set *src)
   if (BE (dest->nelem == 0, 0))
     {
       dest->nelem = src->nelem;
-      memcpy (dest->elems, src->elems, src->nelem * sizeof (int));
+      memmove (dest->elems, src->elems, src->nelem * sizeof (int));
       return REG_NOERROR;
     }
 
@@ -1218,7 +1218,7 @@ re_node_set_merge (re_node_set *dest, const re_node_set *src)
     {
       /* If DEST is exhausted, the remaining items of SRC must be unique.  */
       sbase -= is + 1;
-      memcpy (dest->elems + sbase, src->elems, (is + 1) * sizeof (int));
+      memmove (dest->elems + sbase, src->elems, (is + 1) * sizeof (int));
     }
 
   id = dest->nelem - 1;
@@ -1246,7 +1246,7 @@ re_node_set_merge (re_node_set *dest, const re_node_set *src)
 	  if (--id < 0)
 	    {
 	      /* Copy remaining SRC elements.  */
-	      memcpy (dest->elems, dest->elems + sbase,
+	      memmove (dest->elems, dest->elems + sbase,
 	              delta * sizeof (int));
 	      break;
 	    }

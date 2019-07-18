@@ -82,7 +82,7 @@ TEST_CASE (SRADB_ReadCollection_GetName)
 {
     ngs::String name1, name2;
     {
-        ngs::ReadCollection run = ncbi::NGS::openReadCollection ("./SRR600096");
+        ngs::ReadCollection run = ncbi::NGS::openReadCollection ("data/SRR600096");
         name1 = run.getName();
         char const* pNoSlash = string_rchr( name1.c_str(), name1.length(), '/' );
         REQUIRE ( pNoSlash == NULL );
@@ -527,6 +527,7 @@ const char UsageDefaultName[] = "test-ngs_sradb-c++";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    KConfigDisableUserSettings();
     rc_t rc=NgsSradbCppTestSuite(argc, argv);
     return rc;
 }

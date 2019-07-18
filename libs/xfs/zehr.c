@@ -1052,7 +1052,7 @@ XFS_CopyKKey_ZHR ( const struct KKey * Src, struct KKey * Dst )
     XFS_CAN ( Src )
     XFS_CAN ( Dst )
 
-    memcpy ( Dst, Src, sizeof ( struct KKey ) );
+    memmove ( Dst, Src, sizeof ( struct KKey ) );
 
     return 0;
 }   /* XFS_CopyKKey_ZHR () */

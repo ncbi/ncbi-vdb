@@ -107,7 +107,7 @@ rc_t CC index_lookup_impl(
         }
         switch (self->case_sensitivity) {
             case CASE_SENSITIVE:
-                memcpy(query, query_buf->base, query_buf->elem_count);
+                memmove(query, query_buf->base, query_buf->elem_count);
                 break;
             case CASE_INSENSITIVE_LOWER:
                 tolower_copy(query, sizeof squery, query_buf->base, query_buf->elem_count);
@@ -169,7 +169,7 @@ VTRANSFACT_BUILTIN_IMPL(idx_text_lookup, 1, 1, 0) (
             if (self) {
                 self->ndx = ndx;
                 self->elem_bits = VTypedescSizeof(&info->fdesc.desc);
-                memcpy(self->query_key,cp->argv[1].data.ascii,cp->argv[1].count);
+                memmove(self->query_key,cp->argv[1].data.ascii,cp->argv[1].count);
                 self->query_key_len = cp->argv[1].count;
                 self->query_key[self->query_key_len] = '\0';
                 self->parms = info->parms;

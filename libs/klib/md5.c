@@ -182,7 +182,7 @@ void MD5StateProcess ( MD5State *md5, const uint8_t *data /* [ 64 ] */ )
     {
         /* use buffer instead */
         X = xbuf;
-        memcpy ( xbuf, data, 64 );
+        memmove ( xbuf, data, 64 );
     }
 
 #elif __BYTE_ORDER == __BIG_ENDIAN
@@ -363,7 +363,7 @@ LIB_EXPORT void CC MD5StateAppend ( MD5State *md5, const void *data, size_t size
         {
             /* bytes to copy from input data are from offset up to 64 */
             size_t copy = ( offset + size > 64 ? 64 - offset : size );
-            memcpy ( md5 -> buf + offset, p, copy );
+            memmove ( md5 -> buf + offset, p, copy );
 
             /* don't process a tiny partial block */
             if ( offset + copy < 64 ) 
@@ -383,7 +383,7 @@ LIB_EXPORT void CC MD5StateAppend ( MD5State *md5, const void *data, size_t size
 
         /* buffer any remainder */
         if ( left ) 
-            memcpy ( md5 -> buf, p, left );
+            memmove ( md5 -> buf, p, left );
     }
 }
 

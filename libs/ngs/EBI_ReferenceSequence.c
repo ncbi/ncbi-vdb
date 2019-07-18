@@ -68,7 +68,7 @@ static NGS_ReferenceSequence_vt EBI_ReferenceSequence_vt_inst =
 {
     /* NGS_Refcount */
     { EBI_ReferenceSequenceWhack }
-    
+
     /* NGS_ReferenceSequence */
     ,EBI_ReferenceSequenceGetCanonicalName
     ,EBI_ReferenceSequenceGetIsCircular
@@ -107,9 +107,9 @@ void EBI_ReferenceSequenceWhack ( EBI_ReferenceSequence * self, ctx_t ctx )
 /* Init
  */
 static
-void EBI_ReferenceSequenceInit ( ctx_t ctx, 
+void EBI_ReferenceSequenceInit ( ctx_t ctx,
                            EBI_ReferenceSequence * ref,
-                           const char *clsname, 
+                           const char *clsname,
                            const char *instname )
 {
     FUNC_ENTRY ( ctx, rcNS, rcTable, rcOpening );
@@ -142,10 +142,14 @@ static bool is_md5 ( const char * spec )
     return i == char_count;
 }
 
+/* TBD - WHAT IS THIS? IT TAKES A CONTEXT AND RETURNS AN RC!!
+   THIS CODE CAN'T WORK AS INTENDED.
+*/
 static rc_t NGS_ReferenceSequenceComposeEBIUrl ( ctx_t ctx, const char * spec, bool ismd5, char* url, size_t url_size )
 {
+    /* TBD - obtain these from configuration */
     char const url_templ_md5[] = "http://www.ebi.ac.uk/ena/cram/md5/%s";
-    char const url_templ_acc[] = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&rettype=fasta&id=%s";
+    char const url_templ_acc[] = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&rettype=fasta&id=%s";
 
     size_t num_written = 0;
     rc_t rc = string_printf ( url, url_size, & num_written, ismd5 ? url_templ_md5 : url_templ_acc, spec );
@@ -169,7 +173,7 @@ static rc_t NGS_ReferenceSequenceEBIInitReference (
 
     if ( ismd5 )
     {
-        memcpy ( ref->buf_ref_data, ebi_data, ebi_data_size );
+        memmove ( ref->buf_ref_data, ebi_data, ebi_data_size );
         ref -> cur_length = ebi_data_size;
     }
     else
@@ -340,9 +344,9 @@ NGS_ReferenceSequence * NGS_ReferenceSequenceMakeEBI ( ctx_t ctx, const char * s
 NGS_String * EBI_ReferenceSequenceGetCanonicalName ( EBI_ReferenceSequence * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcNS, rcDoc, rcReading );
-    
+
     assert ( self != NULL );
-    
+
     return NGS_StringDuplicate ( self -> ebi_ref_spec, ctx );
 }
 
@@ -351,7 +355,7 @@ bool EBI_ReferenceSequenceGetIsCircular ( const EBI_ReferenceSequence * self, ct
     FUNC_ENTRY ( ctx, rcNS, rcDoc, rcReading );
 
     assert ( self );
-   
+
     return false;
 }
 
@@ -365,11 +369,11 @@ uint64_t EBI_ReferenceSequenceGetLength ( EBI_ReferenceSequence * self, ctx_t ct
 }
 
 struct NGS_String * EBI_ReferenceSequenceGetBases ( EBI_ReferenceSequence * self, ctx_t ctx, uint64_t offset, uint64_t size )
-{   
+{
     FUNC_ENTRY ( ctx, rcNS, rcDoc, rcReading );
 
     assert ( self );
-    
+
     {
         uint64_t totalBases = EBI_ReferenceSequenceGetLength ( self, ctx );
         if ( offset >= totalBases )
@@ -377,29 +381,19 @@ struct NGS_String * EBI_ReferenceSequenceGetBases ( EBI_ReferenceSequence * self
             return NGS_StringMake ( ctx, "", 0 );
         }
         else
-        {   
+        {
             uint64_t basesToReturn = totalBases - offset;
-            char* data;
-            
+
             if (size != (size_t)-1 && basesToReturn > size)
                 basesToReturn = size;
-                
-            data = (char*) malloc ( basesToReturn );
-            if ( data == NULL )
-            {
-                SYSTEM_ERROR ( xcNoMemory, "allocating %lu bases", basesToReturn );
-                return NGS_StringMake ( ctx, "", 0 );
-            }
-            else
-            {
-                return NGS_StringMakeCopy ( ctx, (const char*) self -> buf_ref_data + offset, basesToReturn );
-            }
+
+            return NGS_StringMakeCopy ( ctx, (const char*) self -> buf_ref_data + offset, basesToReturn );
         }
     }
 }
 
 struct NGS_String * EBI_ReferenceSequenceGetChunk ( EBI_ReferenceSequence * self, ctx_t ctx, uint64_t offset, uint64_t size )
-{   
+{
     FUNC_ENTRY ( ctx, rcNS, rcDoc, rcReading );
 
     assert ( self );

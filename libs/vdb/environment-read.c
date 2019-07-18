@@ -59,7 +59,7 @@ rc_t CC environment_read_func(
     rslt->data->elem_count = 0;
     rc = KDataBufferResize(rslt->data, value->elem_count);
     if (rc == 0) {
-        memcpy(rslt->data->base, value->base, KDataBufferBytes(value));
+        memmove(rslt->data->base, value->base, KDataBufferBytes(value));
         rc = KDataBufferCast(rslt->data, rslt->data, rslt->elem_bits, true);
         if (rc == 0)
             rslt->elem_count = rslt->data->elem_count;
@@ -75,14 +75,14 @@ static rc_t CC get_databuffer( KDataBuffer **rslt, const char *Name, size_t len 
     if (len >= sizeof(name))
         return RC(rcVDB, rcFunction, rcConstructing, rcName, rcTooLong);
     
-    memcpy(name, Name, len);
+    memmove(name, Name, len);
     name[len] = '\0';
     
     x = getenv(name);
     rc = KDataBufferMake( *rslt, 8, (uint32_t)( len = strlen( x ) ) );
     if (rc)
         return rc;
-    memcpy((**rslt).base, x, len);
+    memmove((**rslt).base, x, len);
     return 0;
 }
 

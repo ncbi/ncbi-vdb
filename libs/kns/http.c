@@ -39,9 +39,9 @@
 #undef ERR
 #endif
 
-#include <klib/debug.h> /* DBGMSG */
 #include <klib/text.h>
 #include <klib/container.h>
+#include <klib/debug.h> /* DBGMSG */
 #include <klib/out.h>
 #include <klib/log.h>
 #include <klib/refcount.h>
@@ -83,9 +83,14 @@ void URLBlockInit ( URLBlock *self )
     CONST_STRING ( & self -> query, "" );
     CONST_STRING ( & self -> fragment, "" );
 
-    self -> port = 0; /* 0 = DEFAULT 80 for http */
+    self -> port = 0; /* 0 = DEFAULT 80 for http, 443 for https */
 
     self -> scheme_type = st_NONE;
+    self -> tls = false;
+
+    self -> port_dflt = true;
+
+    self->cloud_type = ct_NONE;
 }
 
 /* ParseUrl
@@ -131,27 +136,39 @@ rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size )
             String http;
             CONST_STRING ( & http, "http" );
 
-            /* here we assume the scheme will be http */
-            b -> scheme_type = st_HTTP;
-
             /* assign scheme to the url_block */
             StringInit ( & b -> scheme, buf, sep - buf, ( uint32_t ) ( sep - buf ) );
 
-            /* check to make sure it is 'http' */
+            /* here we assume the scheme will be http */
+            b -> port = 80;
+            b -> scheme_type = st_HTTP;
             if ( ! StringCaseEqual ( & b -> scheme, & http ) )
             {
-                /* it is not http, check for s3 */
-                String s3;
-                CONST_STRING ( & s3, "s3" );
-                
-                if ( ! StringCaseEqual ( & b -> scheme, & s3 ) )
+                String https;
+                CONST_STRING ( & https, "https" );
+
+                /* check for https */
+                b -> port = 443;
+                b -> scheme_type = st_HTTPS;
+                b -> tls = true;
+                if ( ! StringCaseEqual ( & b -> scheme, & https ) )
                 {
-                    b -> scheme_type = st_NONE;
-                    rc = RC ( rcNS, rcUrl, rcEvaluating, rcName, rcIncorrect );
-                    PLOGERR ( klogErr ,( klogErr, rc, "Scheme is '$(scheme)'", "scheme=%S", & b -> scheme ) );
-                    return rc;
+                    String s3;
+                    CONST_STRING ( & s3, "s3" );
+                
+                    /* it is not http, check for s3 */
+                    b -> port = 80;
+                    b -> scheme_type = st_S3;
+                    b -> tls = false;
+                    if ( ! StringCaseEqual ( & b -> scheme, & s3 ) )
+                    {
+                        b -> port = 0;
+                        b -> scheme_type = st_NONE;
+                        rc = RC ( rcNS, rcUrl, rcEvaluating, rcName, rcIncorrect );
+                        PLOGERR ( klogErr ,( klogErr, rc, "Scheme is '$(scheme)'", "scheme=%S", & b -> scheme ) );
+                        return rc;
+                    }
                 }
-                b -> scheme_type = st_S3;
             }
 
             /* accept scheme - skip past */
@@ -224,11 +241,35 @@ rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size )
     /* capture host ( could be empty - just given a file system path ) */
     if ( have_host )
     {
+        String amazonaws;
+        String stor31;
+
+        CONST_STRING(&amazonaws, "amazonaws.com");
+        CONST_STRING(&stor31, "s3-stor31.st-va.ncbi.nlm.nih.gov");
+
         /* assign host to url_block */
         StringInit ( & b -> host, buf, sep - buf, ( uint32_t ) ( sep - buf ) );
 
         /* advance to path */
         buf = sep;
+
+        /* detect "cloudy host" */
+        if (b->host.size >= stor31.size) {
+            size_t skip = b->host.size - stor31.size;
+            if (string_cmp(stor31.addr, stor31.size, b->host.addr + skip,
+                b->host.size - skip, stor31.size) == 0)
+            {
+                b->cloud_type = ct_S3;
+            }
+        }
+        if (b->host.size >= amazonaws.size) {
+            size_t skip = b->host.size - amazonaws.size;
+            if (string_cmp(amazonaws.addr, amazonaws.size, b->host.addr + skip,
+                b->host.size - skip, amazonaws.size) == 0)
+            {
+                b->cloud_type = ct_S3;
+            }
+        }
     }
 
     /* detect relative path 
@@ -287,11 +328,17 @@ rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size )
                 return rc;
             }
 
+            b -> port_dflt = false;
+
             /* assign host to url_block */
             StringInit ( & b -> host, buf, sep - buf, ( uint32_t ) ( sep - buf ) );
         }
     }
-    
+
+/*  DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
+        ( " ParseUrl (%.*s) = (path:%S)\n", ( int ) url_size, url,
+                                                  & b -> path ) ); */
+
     return 0;
 }
 

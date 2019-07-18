@@ -82,6 +82,7 @@ VDBCMN_SRC = \
 	schema-expr \
 	schema-eval \
 	schema-tbl \
+	schema-view \
 	schema-db \
 	schema-dump \
 	schema-int \
@@ -120,7 +121,11 @@ VDBCMN_SRC = \
 	index_lookup \
 	transpose \
 	delta_average \
-	report-vdb
+	report-vdb \
+	bytecode \
+	view \
+	cursor-view \
+	cursor-table \
 
 VDB_SRC = \
 	$(VDBCMN_SRC) \
@@ -186,3 +191,9 @@ $(ILIBDIR)/libwvdb.$(LIBX): $(WVDB_OBJ)
 compile: stdcompile
 
 $(TARGDIR)/compile: $(OBJFILES)
+
+#-------------------------------------------------------------------------------
+# fuzz
+#
+fuzz: std
+	cp $(addsuffix .$(LIBX),$(addprefix $(ILIBDIR)/,$(INT_LIBS))) $(FLIBDIR)/

@@ -63,7 +63,7 @@ extern "C" {
  *  [ 1, 2, 3 ] will yield a single byte of 0b01101100 ( 0x6C ).
  *
  *  a pack or unpack operation with identical bit sizes ( e.g. 16=>16 )
- *  will act like a memcpy on big-endian architectures and a byte-swap
+ *  will act like a _memcpy_ on big-endian architectures and a byte-swap
  *  on little-endian architectures.
  */
 

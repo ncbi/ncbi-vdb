@@ -256,7 +256,7 @@ rc_t KReencFileReadHeaderOut (KReencFile * self, size_t offset, void * buffer,
     if (offset + bsize > sizeof (KEncFileHeader))
         bsize = sizeof (KEncFileHeader) - offset;
 
-    memcpy (buffer, self->block.text + offset, bsize);
+    memmove (buffer, self->block.text + offset, bsize);
     self->block_id = NO_CURRENT_BLOCK;
     *num_read = bsize;
     
@@ -277,7 +277,7 @@ rc_t KReencFileReadBlockOut (KReencFile * self, size_t offset, void * buffer,
     if (offset + bsize > sizeof self->block)
         bsize = sizeof self->block - offset;
 
-    memcpy (buffer, self->block.text + offset, bsize);
+    memmove (buffer, self->block.text + offset, bsize);
     *num_read = bsize;
 
     return 0;
@@ -300,7 +300,7 @@ rc_t KReencFileReadFooterOut (KReencFile * self, size_t offset,
     if (offset + bsize > sizeof self->foot)
         bsize = sizeof self->foot - offset;
 
-    memcpy (buffer, self->foot.text + offset, bsize);
+    memmove (buffer, self->foot.text + offset, bsize);
     self->block_id = NO_CURRENT_BLOCK;
     *num_read = bsize;
 
@@ -687,6 +687,7 @@ rc_t KReencFileReadHandleBlock (KReencFile *self,
  *  "num_read" [ OUT, NULL OKAY ] - optional return parameter
  *  giving number of bytes actually read
  */
+#if 0
 static
 rc_t CC KReencFileReadUnsupported (const KReencFile *self,
                                    uint64_t pos,
@@ -701,7 +702,7 @@ rc_t CC KReencFileReadUnsupported (const KReencFile *self,
 
     return RC ( rcFS, rcFile, rcReading, rcFunction, rcUnsupported );
 }
-
+#endif
 
 /*
  * Read will often return only a partial read.
@@ -797,6 +798,7 @@ rc_t CC KReencFileWriteUnsupported (KReencFile *self, uint64_t pos,
     return rc;
 }
 
+#if 0
 static
 rc_t CC KReencFileWrite (KReencFile *self, uint64_t pos,
                          const void *buffer, size_t bsize,
@@ -813,6 +815,7 @@ rc_t CC KReencFileWrite (KReencFile *self, uint64_t pos,
 
     return KReencFileWriteUnsupported (self, pos, buffer, bsize, num_writ);
 }
+#endif
 
 
 /* ----------------------------------------------------------------------
@@ -1190,6 +1193,7 @@ LIB_EXPORT rc_t CC KEncryptFileMakeRead (const KFile ** pself,
 /* ----------
  * Write mode re-encrypted file 
  */
+#if 0
 static const KFile_vt_v1 vtKReencFileWrite =
 {
     /* version */
@@ -1207,7 +1211,7 @@ static const KFile_vt_v1 vtKReencFileWrite =
     /* 1.1 */
     KReencFileType
 };
-
+#endif
 
 LIB_EXPORT rc_t CC KReencFileMakeWrite (KFile ** pself, 
                                         KFile * encrypted,

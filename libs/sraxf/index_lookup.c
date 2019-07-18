@@ -182,7 +182,7 @@ rc_t CC index_lookup_impl(
             if(plen > 0) rc = RC ( rcVDB,rcIndex,rcSearching,rcData,rcNotFound);
         }
         if( rc == 0){
-            memcpy(query,qptr,qlen);
+            memmove(query,qptr,qlen);
             query[query_buf->elem_count]='\0';
             if( self -> name_fmt_version == 1){ /*** this is a strange slx format name - very first implementation ***/
                 int lane=-1,tile=-1,x=-1,y=-1;
@@ -208,7 +208,7 @@ rc_t CC index_lookup_impl(
                         out.id_count = id_count;
                         out.x        = fxdata.x;
                         out.y        = fxdata.y;
-                        memcpy(dst -> base,&out,sizeof(out));
+                        memmove(dst -> base,&out,sizeof(out));
                         rslt -> elem_count = 1;
                         rslt -> no_cache = 1; /***** This row should never be cached **/
                     }
@@ -247,7 +247,7 @@ VTRANSFACT_IMPL(NCBI_SRA_lookup, 1, 0, 0) (
             if (self) {
                 self->ndx = ndx;
                 self->elem_bits = VTypedescSizeof(&info->fdesc.desc);
-		memcpy(self->query_key,cp->argv[1].data.ascii,cp->argv[1].count);
+		memmove(self->query_key,cp->argv[1].data.ascii,cp->argv[1].count);
 		self->query_key_len = cp->argv[1].count;
 		self->query_key[self->query_key_len]='\0';
 		self->parms=info->parms;

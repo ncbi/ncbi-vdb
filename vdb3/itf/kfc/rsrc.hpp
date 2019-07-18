@@ -27,25 +27,12 @@
 #ifndef _hpp_vdb3_kfc_rsrc_
 #define _hpp_vdb3_kfc_rsrc_
 
-#ifndef _hpp_vdb3_kfc_memmgr_
+#include <kfc/except.hpp>
 #include <kfc/memmgr.hpp>
-#endif
-
-#ifndef _hpp_vdb3_kfc_timemgr_
 #include <kfc/timemgr.hpp>
-#endif
-
-#ifndef _hpp_vdb3_kfc_fdmgr_
 #include <kfc/fdmgr.hpp>
-#endif
-
-#ifndef _hpp_vdb3_kfc_log_
 #include <kfc/log.hpp>
-#endif
-
-#ifndef _hpp_vdb3_kfc_stream_
 #include <kfc/stream.hpp>
-#endif
 
 namespace vdb3
 {

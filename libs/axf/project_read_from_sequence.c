@@ -238,7 +238,7 @@ rc_t CC project_from_sequence_impl ( void *data, const VXformInfo *info,
         rc = KDataBufferResize( rslt->data, 1 );
         if ( rc == 0 )
         {
-            memcpy( rslt->data->base,
+            memmove( rslt->data->base,
                     &( ( char const * )src )[ ( read_id * src_bits ) >> 3 ],
                     src_bits >> 3 );
         }
@@ -251,7 +251,7 @@ rc_t CC project_from_sequence_impl ( void *data, const VXformInfo *info,
         rc = KDataBufferResize( rslt->data, rslt->elem_count );
         if ( rc == 0 )
         {
-            memcpy( rslt->data->base,
+            memmove( rslt->data->base,
                     &( ( char const * )src )[ ( read_start[ read_id ] * src_bits ) >> 3 ],
                     ( size_t )( ( src_bits * rslt->elem_count ) >> 3 ) );
         }

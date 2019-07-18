@@ -30,6 +30,7 @@
 #define STRINGIFY(a) #a
 #define RC_ENUM(type) const char * PASTE2(type,Strings)[] =
 #define RC_ENTRY(a,b) STRINGIFY(a),
+#define RC_VFIRST(a,b)
 #define RC_VLAST(a)
 #define RC_LAST(a) "INVALID"
 

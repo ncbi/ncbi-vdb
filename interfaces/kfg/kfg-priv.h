@@ -72,11 +72,23 @@ KFG_EXTERN rc_t CC KConfigListIncluded ( const KConfig *self,
 KFG_EXTERN rc_t CC KConfigGetLoadPath ( const KConfig *self,
     const char **path );
 
+/* MakeEmpty
+ *  make a KConfig object that does not load any configuration file
+ *  during initialization except user settings ( optionally )
+ */
+KFG_EXTERN rc_t CC KConfigMakeEmpty ( KConfig ** cfg );
+
 /* MakeLocal
- *  make a KConfig object that avoids singleton
+ *  make a KConfig object that avoids initializing singleton
  */
 KFG_EXTERN rc_t CC KConfigMakeLocal ( KConfig **cfg,
     struct KDirectory const * cfgdir );
+
+
+/* make sure ResolverCgiNode is https */
+KFG_EXTERN rc_t KConfigFixMainResolverCgiNode ( KConfig * self );
+KFG_EXTERN rc_t KConfigFixProtectedResolverCgiNode ( KConfig * self );
+
 
 /* PrintDebug
  *  print configuration including some internal nodes information
@@ -90,6 +102,12 @@ KFG_EXTERN rc_t CC KConfigPrintDebug ( const KConfig *self,
 KFG_EXTERN rc_t CC KConfigPrintPartial
     ( const KConfig *self, int indent, uint32_t skipCount, va_list args );
 
+/* Parse configuration from a string
+ *  path - path to the corresponding kfg file (used in error reporting )
+ *  src - string to parse, NUL-terminated
+*/
+KFG_EXTERN rc_t CC
+KConfigParse ( KConfig * self, const char* path, const char * src );
 
 #ifdef __cplusplus
 }

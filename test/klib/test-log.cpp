@@ -293,6 +293,42 @@ TEST_CASE(UninitailizedCrachTest) {
         PLOGMSG(klogWarn, (klogWarn, "Now you see $(a)", "a=%s", "a warning")));
 }
 
+TEST_CASE ( rcBufferrcInsufficientAfterprep_v_args ) {
+    REQUIRE_RC ( KWrtInit ( "fastq-dump", 0x02070000 ) );
+    REQUIRE_RC ( KLogLibHandlerSetStdErr () );
+
+    rc_t rc = SILENT_RC ( rcNS, rcFile, rcOpening, rcFunction, rcUnsupported );
+
+    size_t s ( 1969 );
+    string u ( s + 1, '<' );
+    u += "0123456789ABCDEFGHIJKLMNOPQRST";
+    string v ( s, '>' );
+    v += "56789ABCDEFGHIJKLMNOPRSTUVWXYZ";
+
+    REQUIRE_RC ( pLogLibErr ( klogErr, rc, "This message "
+        "used to produce a log failure after error prep_v_args call: "
+        "error with http open '$(U) * $(V)'",
+        "U=%s,V=%s", u.c_str (), v.c_str () ) );
+}
+
+TEST_CASE ( rcBufferrcInsufficientInprep_v_argsstring_vprintf ) {
+    REQUIRE_RC ( KWrtInit ( "fastq-dump", 0x02070000 ) );
+    REQUIRE_RC ( KLogLibHandlerSetStdErr () );
+
+    rc_t rc = SILENT_RC ( rcNS, rcFile, rcOpening, rcFunction, rcUnsupported );
+
+    size_t s ( 2025 );
+    string u ( s + 1, '<' );
+    u += "0123456789ABCDEFGHIJ";
+    string v ( s, '>' );
+    v += "FGHIJKLMNOPRSTUVWXYZ";
+
+    REQUIRE_RC ( pLogLibErr ( klogErr, rc, "This message "
+        "used to produce a log failure inside of prep_v_args call: "
+        "error with http open '$(U) * $(V)'",
+        "U=%s,V=%s", u.c_str (), v.c_str () ) );
+}
+
 //TODO:
 // KLogFmtFlagsSet    
 // KLogLibFmtFlagsSet 

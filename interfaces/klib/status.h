@@ -68,7 +68,7 @@ KLIB_EXTERN void* CC KStsLibDataGet (void);
 
 /*
  * Init()
- * Initialize the debug messages module to a known state
+ * Initialize the status messages module to a known state
  */
 KLIB_EXTERN rc_t CC KStsInit (void);
 

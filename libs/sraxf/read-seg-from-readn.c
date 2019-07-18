@@ -123,7 +123,7 @@ rc_t CC read_seg_from_meta ( void *data, const VXformInfo *info, int64_t row_id,
 
     rd_dst = dst->base;
 
-    memcpy(rd_dst,rd_src,nreads*sizeof(*rd_dst));
+    memmove(rd_dst,rd_src,nreads*sizeof(*rd_dst));
 
     /*** if not covered by equal_reads_from_spot() - valid for illumina consisting of bio reads only **/
     if ( rd_dst[nreads-1].read_start+rd_dst[nreads-1].read_len==0)
@@ -310,7 +310,7 @@ VTRANSFACT_IMPL ( NCBI_SRA_read_seg_from_readn, 1, 0, 0 ) ( const void *self,
             rc = KDataBufferMake ( fself, sizeof rd [ 0 ] * 8, ++ last );
             if ( rc == 0 )
             {
-                memcpy ( fself -> base, rd, last * sizeof rd [ 0 ] );
+                memmove ( fself -> base, rd, last * sizeof rd [ 0 ] );
                 rslt -> self = fself;
                 rslt -> whack = whack_data_buffer;
                 rslt -> u . ndf = read_seg_from_meta;

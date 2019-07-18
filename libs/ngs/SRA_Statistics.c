@@ -166,21 +166,24 @@ uint32_t SRA_StatisticsGetValueType ( const SRA_Statistics * self, ctx_t ctx, co
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
 	
     assert ( self );
-    assert ( path );
-	
+
+    if ( path == NULL )
+        INTERNAL_ERROR ( xcParamNull, "path is NULL" );
+    else
 	{
 		DictionaryEntry * node = ( DictionaryEntry * ) 
 			BSTreeFind ( & self -> dictionary, ( const void * ) path, DictionaryEntryFind );
         if ( node == NULL )
         {
             INTERNAL_ERROR ( xcUnexpected, "dictionary item '%s' is not found", path );
-			return NGS_StatisticValueType_Undefined;
         }
         else
         {
 			return node -> type;
 		}
 	}
+
+    return NGS_StatisticValueType_Undefined;
 }
 
 NGS_String* SRA_StatisticsGetAsString ( const SRA_Statistics * self, ctx_t ctx, const char * path )
@@ -188,8 +191,10 @@ NGS_String* SRA_StatisticsGetAsString ( const SRA_Statistics * self, ctx_t ctx, 
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
     
     assert ( self );
-    assert ( path );
     
+    if ( path == NULL )
+        INTERNAL_ERROR ( xcParamNull, "path is NULL" );
+    else
     {
         DictionaryEntry * node = ( DictionaryEntry * ) 
             BSTreeFind ( & self -> dictionary, ( const void * ) path, DictionaryEntryFind );
@@ -236,7 +241,7 @@ NGS_String* SRA_StatisticsGetAsString ( const SRA_Statistics * self, ctx_t ctx, 
         }
     }
     
-    return 0;
+    return NULL;
 }
 
 static int64_t NGS_StringToI64( const NGS_String * str, ctx_t ctx )
@@ -280,8 +285,10 @@ int64_t SRA_StatisticsGetAsI64 ( const SRA_Statistics * self, ctx_t ctx, const c
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
 
     assert ( self );
-    assert ( path );
     
+    if ( path == NULL )
+        INTERNAL_ERROR ( xcParamNull, "path is NULL" );
+    else
     {
         DictionaryEntry * node = ( DictionaryEntry * ) 
             BSTreeFind ( & self -> dictionary, ( const void * ) path, DictionaryEntryFind );
@@ -372,8 +379,10 @@ uint64_t SRA_StatisticsGetAsU64 ( const SRA_Statistics * self, ctx_t ctx, const 
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
     
     assert ( self );
-    assert ( path );
     
+    if ( path == NULL )
+        INTERNAL_ERROR ( xcParamNull, "path is NULL" );
+    else
     {
         DictionaryEntry * node = ( DictionaryEntry * ) 
             BSTreeFind ( & self -> dictionary, ( const void * ) path, DictionaryEntryFind );
@@ -451,8 +460,10 @@ double SRA_StatisticsGetAsDouble ( const SRA_Statistics * self, ctx_t ctx, const
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
     
     assert ( self );
-    assert ( path );
     
+    if ( path == NULL )
+        INTERNAL_ERROR ( xcParamNull, "path is NULL" );
+    else
     {
         DictionaryEntry * node = ( DictionaryEntry * ) 
             BSTreeFind ( & self -> dictionary, ( const void * ) path, DictionaryEntryFind );
@@ -490,12 +501,13 @@ double SRA_StatisticsGetAsDouble ( const SRA_Statistics * self, ctx_t ctx, const
 bool SRA_StatisticsNextPath ( const SRA_Statistics * self, ctx_t ctx, const char * path, const char** next )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
-    const DictionaryEntry * node;
+    const DictionaryEntry * node = NULL;
     
     assert ( self );
-    assert ( path );
     
-    if ( path[0] == 0 ) 
+    if ( path == NULL )
+        INTERNAL_ERROR ( xcParamNull, "path is NULL" );
+    else if ( path[0] == 0 )
     {
         node = ( const DictionaryEntry * ) BSTreeFirst ( & self -> dictionary );
     }
@@ -555,8 +567,10 @@ void SRA_StatisticsAddString ( SRA_Statistics * self, ctx_t ctx, const char * pa
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
     
     assert ( self );
-    assert ( path );
     
+    if ( path == NULL )
+        INTERNAL_ERROR ( xcParamNull, "path is NULL" );
+    else
     {
         TRY ( DictionaryEntry * node = MakeNode ( self, ctx, path ) )
         {
@@ -571,8 +585,10 @@ void SRA_StatisticsAddI64 ( SRA_Statistics * self, ctx_t ctx, const char * path,
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
     
     assert ( self );
-    assert ( path );
     
+    if ( path == NULL )
+        INTERNAL_ERROR ( xcParamNull, "path is NULL" );
+    else
     {
         TRY ( DictionaryEntry * node = MakeNode ( self, ctx, path ) )
         {
@@ -587,8 +603,10 @@ void SRA_StatisticsAddU64 ( SRA_Statistics * self, ctx_t ctx, const char * path,
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
     
     assert ( self );
-    assert ( path );
     
+    if ( path == NULL )
+        INTERNAL_ERROR ( xcParamNull, "path is NULL" );
+    else
     {
         TRY ( DictionaryEntry * node = MakeNode ( self, ctx, path ) )
         {
@@ -603,9 +621,10 @@ void SRA_StatisticsAddDouble ( SRA_Statistics * self, ctx_t ctx, const char * pa
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
     
     assert ( self );
-    assert ( path );
     
-    if ( isnan ( value ) ) 
+    if ( path == NULL )
+        INTERNAL_ERROR ( xcParamNull, "path is NULL" );
+    else if ( isnan ( value ) )
     {
         INTERNAL_ERROR ( xcUnexpected, "NAN is not supported" );
     }

@@ -65,13 +65,15 @@ LIB_EXPORT uint32_t CC string_len ( const char * str, size_t size )
             if ( str [ i ] == 0 )
                 break;
 
-            /* str [ i ] was < 0 */
-            assert ( c > 0 && c <= 0x7F );
+            /* str [ i ] was < 0, illegal */
+            /*assert ( c > 0 && c <= 0x7F );*/
+            if ( c <= 0 || c > 0x7F )
+                break;
 
             /* if original code was 0b10xxxxxx, illegal */
             if ( c >= 0x40 )
                 break;
-	
+
             /* original code 0b110xxxxx = 2 byte */
             if ( c >= 0x20 )
                 i += 2;
@@ -126,12 +128,14 @@ LIB_EXPORT uint32_t CC string_measure ( const char * str, size_t * size )
                 break;
 
             /* str [ i ] was < 0 */
-            assert ( c > 0 && c <= 0x7F );
+            /*assert ( c > 0 && c <= 0x7F );*/
+            if ( c <= 0 || c > 0x7F )
+                break;
 
             /* if original code was 0b10xxxxxx, illegal */
             if ( c >= 0x40 )
                 break;
-	
+
             /* original code 0b110xxxxx = 2 byte */
             if ( c >= 0x20 )
                 i += 2;

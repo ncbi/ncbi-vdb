@@ -158,7 +158,8 @@ typedef struct {
                            Base count for circular references is doubled. */
 
     BSTree tRuns;       /* rundesc-s */
-    BSTree tExtRefs;    /* SEQ_ID-s */
+    BSTree tExtRefs;    /* SEQ_ID-s of external references */
+    BSTree tIntRefs;    /* SEQ_ID-s of external references */
 } RefSet;
 
 void _RefSetFini(RefSet *self);

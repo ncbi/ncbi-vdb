@@ -33,8 +33,7 @@
 #include <ngs/itf/ReadCollectionItf.h>
 #include <ngs/itf/ReferenceSequenceItf.h>
 #include "NCBI-NGS.h"
-
-#include "../kns/libkns.vers.h"
+#include "../klib/release-vers.h"
 
 namespace ncbi
 {
@@ -48,7 +47,7 @@ namespace ncbi
      *    ncbi::NGS::setAppVersionString ( "pileup-stats.1.0.0" );
      */
     void NGS :: setAppVersionString ( const String & app_version )
-        throw ()
+        /* nothrow */
     {
         // get a KNSManager
         KNSManager * kns;
@@ -56,7 +55,7 @@ namespace ncbi
         if ( rc == 0 )
         {
             have_user_version_string = true;
-            KNSManagerSetUserAgent ( kns, "ncbi-ngs.%V %.*s", LIBKNS_VERS, ( uint32_t ) app_version . size (), app_version . data () );
+            KNSManagerSetUserAgent ( kns, "ncbi-ngs.%V %.*s", RELEASE_VERS, ( uint32_t ) app_version . size (), app_version . data () );
             KNSManagerRelease ( kns );
         }
     }
@@ -67,7 +66,7 @@ namespace ncbi
      *  or may be an id, accession, or URL
      */
     ReadCollection NGS :: openReadCollection ( const String & spec )
-        throw ( ErrorMsg )
+        /*NGS_THROWS ( ErrorMsg )*/
     {
         if ( ! have_user_version_string )
             setAppVersionString ( "ncbi-ngs: unknown-application" );
@@ -89,7 +88,7 @@ namespace ncbi
      *  or may be an id, accession, or URL
      */
     ReferenceSequence NGS :: openReferenceSequence ( const String & spec )
-        throw ( ErrorMsg )
+        /*NGS_THROWS ( ErrorMsg )*/
     {
         if ( ! have_user_version_string )
             setAppVersionString ( "ncbi-ngs: unknown-application" );

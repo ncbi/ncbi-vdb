@@ -401,7 +401,7 @@ _LaInRealloc ( struct _LaIn * self, uint32_t Qty )
 
     if ( self -> a != NULL ) {
         if ( self -> q != 0 ) {
-            memcpy ( NewA, self -> a, sizeof ( uint32_t ) * self -> q );
+            memmove ( NewA, self -> a, sizeof ( uint32_t ) * self -> q );
         }
 
         free ( self -> a );

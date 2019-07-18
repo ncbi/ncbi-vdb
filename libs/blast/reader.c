@@ -303,7 +303,7 @@ uint32_t _VCursorAddReaderCols(const VCursor *self,
 }
 
 static uint32_t _VCursorReadReaderCols(const VCursor *self,
-    const ReadDesc *desc, ReaderCols *cols)
+    const ReadDesc *desc, ReaderCols *cols, bool * empty)
 {
     uint32_t status = eVdbBlastNoErr;
     rc_t rc = 0;
@@ -311,7 +311,9 @@ static uint32_t _VCursorReadReaderCols(const VCursor *self,
     int64_t row_id = 0;
     uint8_t nReads = 0;
 
-    assert(desc && cols && desc->run);
+    assert(desc && cols && desc->run && empty);
+
+    * empty = false;
 
     row_id = desc->spot;
     nReads = desc->run->rd.nReads;
@@ -334,7 +336,11 @@ static uint32_t _VCursorReadReaderCols(const VCursor *self,
         (void **)&cols->read_len, sizeof *cols->read_len, nReads,
         "READ_LEN");
     if (status != eVdbBlastNoErr)
-    {   return status; }
+        return status;
+    if ( nReads == 1 && cols->read_len[0] == 0 ) {
+        * empty = true;
+        return status;
+    }
 
     status = _VCursorReadArray(self, row_id, cols->col_READ_FILTER,
         (void **)&cols->read_filter, sizeof *cols->read_filter, nReads,
@@ -519,9 +525,9 @@ bool _Reader2naEor(const Reader2na *self)
     return self->eor;
 }
 
-static uint32_t _Reader2naReadReaderCols(Reader2na *self) {
+static uint32_t _Reader2naReadReaderCols(Reader2na *self, bool * empty) {
     assert(self);
-    return _VCursorReadReaderCols(self->curs, &self->desc, &self->cols);
+    return _VCursorReadReaderCols(self->curs, &self->desc, &self->cols, empty);
 }
 
 static
@@ -695,15 +701,18 @@ bool _Reader2naNextData(Reader2na *self,
     uint32_t start = 0;
     uint32_t to_read = 0;
     const ReadDesc *desc = NULL;
+    bool empty = false;
     assert(self && status && out && self->curs);
     desc = &self->desc;
     memset(out, 0, sizeof *out);
 
-    *status = _Reader2naReadReaderCols(self);
+    *status = _Reader2naReadReaderCols(self, &empty);
     if (*status != eVdbBlastNoErr) {
         S
         return false;
     }
+    if (empty)
+        return true;
     if (!self->curs || !desc->run) {
         S
         *status = eVdbBlastErr;
@@ -860,6 +869,7 @@ uint64_t _Reader2naRead(Reader2na *self,
     uint32_t start = 0;
     uint32_t remaining = 0;
     rc_t rc = 0;
+    bool empty = false;
     assert(self && status && read_id && starting_base);
     desc = &self->desc;
     *read_id = desc->read_id;
@@ -871,41 +881,44 @@ uint64_t _Reader2naRead(Reader2na *self,
         return 0;
     }
 
-    *status = _Reader2naReadReaderCols(self);
+    *status = _Reader2naReadReaderCols(self, &empty);
     if (*status != eVdbBlastNoErr) {
         S
         return 0;
     }
 
-    *status = eVdbBlastErr;
-    if (!self->curs || !desc->run) {
-        S
-        return 0;
+    if (!empty) {
+        *status = eVdbBlastErr;
+        if (!self->curs || !desc->run) {
+            S
+            return 0;
+        }
+
+        assert(desc->run->path);
+
+        *status = eVdbBlastNoErr;
+        if (!_VdbBlastRunVarReadNum(desc->run) && desc->run->rd.nBioReads == 0) {
+            S
+            return 0;
+        }
+
+        to_read = _Reader2naCalcReadReaderColsParams(&self->desc, &self->cols,
+            &start, min_read_length);
+        if (to_read <= self->starting_base) {
+            S
+            DBGMSG(DBG_BLAST, DBG_FLAG(DBG_BLAST_BLAST), (
+                "%s: %s:%d:%d(%d): READ_LEN=%d: TOO SHORT (starting_base=%d)\n",
+                __func__, desc->run->path, desc->spot, desc->read,
+                desc->read_id, self->cols.read_len[desc->read - 1],
+                self->starting_base));
+            to_read = 0;
+        }
+        else {
+            to_read -= (uint32_t)self->starting_base;
+            start   += (uint32_t)self->starting_base;
+        }
     }
 
-    assert(desc->run->path);
-
-    *status = eVdbBlastNoErr;
-    if (!_VdbBlastRunVarReadNum(desc->run) && desc->run->rd.nBioReads == 0) {
-        S
-        return 0;
-    }
-
-    to_read = _Reader2naCalcReadReaderColsParams(&self->desc, &self->cols,
-        &start, min_read_length);
-    if (to_read <= self->starting_base) {
-        S
-        DBGMSG(DBG_BLAST, DBG_FLAG(DBG_BLAST_BLAST), (
-        "%s: %s:%d:%d(%d): READ_LEN=%d: TOO SHORT (starting_base=%d)\n",
-            __func__, desc->run->path, desc->spot, desc->read,
-            desc->read_id, self->cols.read_len[desc->read - 1],
-            self->starting_base));
-        to_read = 0;
-    }
-    else {
-        to_read -= (uint32_t)self->starting_base;
-        start   += (uint32_t)self->starting_base;
-    }
     if (to_read > 0) {
         S
         rc = VCursorReadBitsDirect(self->curs, desc->spot, self->col_READ, 2,
@@ -1292,14 +1305,17 @@ static size_t _Core4naReadSeq(Core4na *self, const RunSet *runs,
             uint32_t remaining = 0;
             uint32_t start = 0;
             uint32_t to_read = 0;
+            bool empty = false;
             assert(desc->run && desc->read <= desc->run->rd.nReads
                 && desc->run->path);
             *status = _VCursorReadReaderCols(self->curs,
-                desc, &((Core4na*)self)->cols);
+                desc, &((Core4na*)self)->cols, &empty);
             if (*status == eVdbBlastNoErr) {
-                assert(self->cols.read_len && self->cols.read_filter);
-                to_read = _Reader2naCalcReadReaderColsParams(&self->desc,
-                    &self->cols, &start, self->min_read_length);
+                if (!empty) {
+                    assert(self->cols.read_len && self->cols.read_filter);
+                    to_read = _Reader2naCalcReadReaderColsParams(&self->desc,
+                        &self->cols, &start, self->min_read_length);
+                }
                 if (to_read == 0) {
                     /* When _Reader2naCalcReadReaderColsParams returns 0
                     then this read is skipped by 2na reader (usually filtered)
@@ -1372,6 +1388,7 @@ static const uint8_t* _Core4naDataSeq(Core4na *self, const RunSet *runs,
     {   S }
     else {
         rc_t rc = 0;
+        bool empty = false;
         const uint8_t *base = NULL;
         if (!_ReadDescSameRun(desc)) {
             S
@@ -1385,11 +1402,18 @@ static const uint8_t* _Core4naDataSeq(Core4na *self, const RunSet *runs,
         }
 
         if (*status == eVdbBlastNoErr) {
-            *status = _VCursorReadReaderCols(self->curs, desc, &self->cols);
+            *status = _VCursorReadReaderCols(self->curs, desc, &self->cols, &empty);
             S
         }
 
         if (rc == 0 && *status == eVdbBlastNoErr) {
+            if (empty) {
+                /* empty (read_len=0) reads are skipped by 2na reader
+                   and should not be accessed by 4na reader */
+                *status = eVdbBlastInvalidId;
+                return NULL;
+            }
+
             assert(self->cols.read_len && self->cols.read_filter
                 && desc->run->path);
 
@@ -1446,8 +1470,11 @@ static const uint8_t* _Core4naDataSeq(Core4na *self, const RunSet *runs,
                                 = self->cols.read_len[desc->read - 1];
 
                             if (to_read < self->min_read_length) {
+                        /* Read with read_len < min is not returned by 2naReader
+                           - it should not be accessed by 4na reader */
                                 S
-                                /* NOP */
+                                * status = eVdbBlastInvalidId;
+                                base = NULL;
                             }
                             else {
                                 uint32_t start = 0;
@@ -1464,7 +1491,15 @@ static const uint8_t* _Core4naDataSeq(Core4na *self, const RunSet *runs,
                                     else {
                                         S
                                         *length = to_read;
-                                        *status = eVdbBlastNoErr;
+                                        if (to_read > 0)
+                                            *status = eVdbBlastNoErr;
+                                        else {
+                     /* Returned read with len == 0 is not returned by 2naReader
+                        Here to_read can be 0 because read is trimmed
+                        - this read should not be accessed by 4na reader */
+                                            * status = eVdbBlastInvalidId;
+                                            base = NULL;
+                                        }
                                     }
                                 }
                                 else {

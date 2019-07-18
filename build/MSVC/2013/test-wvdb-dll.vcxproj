@@ -31,8 +31,4 @@
     </Link>
   </ItemDefinitionGroup>
   <Import Project="..\test-wvdb.files" />
-  <Target Name="AfterBuild" Condition="'$(Autorun)'=='true'">
-    <MakeDir Directories="$(WorkingDirectory)\db" />
-    <Exec Command="$(OutDir)$(TargetName)$(TargetExt)" WorkingDirectory="$(WorkingDirectory)\" />
-  </Target>
 </Project>

@@ -891,9 +891,9 @@ rc_t CC KCRC32FileWhackAppend ( KCRC32File *self )
 
         /* create a closing tag with current checksum */
         uint8_t closer [ sizeof CRCTAG + sizeof ENDIANTAG + sizeof self -> crc32 ];
-        memcpy ( closer, CRCTAG, sizeof CRCTAG );
-        memcpy ( & closer [ sizeof CRCTAG ], ENDIANTAG, sizeof ENDIANTAG );
-        memcpy ( & closer [ sizeof CRCTAG + sizeof ENDIANTAG ], & self -> crc32, sizeof self -> crc32 );
+        memmove ( closer, CRCTAG, sizeof CRCTAG );
+        memmove ( & closer [ sizeof CRCTAG ], ENDIANTAG, sizeof ENDIANTAG );
+        memmove ( & closer [ sizeof CRCTAG + sizeof ENDIANTAG ], & self -> crc32, sizeof self -> crc32 );
             
         /* append this to the file */
         rc = KCRC32FileWrite ( self, self -> position, closer, sizeof closer, & num_writ );
@@ -1651,7 +1651,7 @@ LIB_EXPORT rc_t CC KCRC32FileMakeAppend ( KCRC32File **fp, KFile *out, KCRC32Sum
                                     {
                                         /* forget about the CRC state */
                                         f -> position -= sizeof buffer;
-                                        memcpy ( & f -> crc32, & buffer [ sizeof CRCTAG + sizeof ENDIANTAG ], sizeof f -> crc32 );
+                                        memmove ( & f -> crc32, & buffer [ sizeof CRCTAG + sizeof ENDIANTAG ], sizeof f -> crc32 );
                                         
                                         /* check for proper byte order */
                                         if ( memcmp ( & buffer [ sizeof CRCTAG ], ENDIANTAG, sizeof ENDIANTAG ) == 0 )

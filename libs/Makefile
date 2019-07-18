@@ -34,12 +34,13 @@ include $(TOP)/build/Makefile.config
 #-------------------------------------------------------------------------------
 # default
 #
-SUBDIRS =    \
+MAIN_SUBDIRS = \
 	ext      \
 	kfc      \
 	klib     \
 	kproc    \
 	kfs      \
+	cloud    \
 	kns      \
 	kfg      \
 	krypto   \
@@ -57,6 +58,7 @@ SUBDIRS =    \
 	loader   \
 	blast    \
 	ascp     \
+	schema   \
 	sra      \
 	ngs      \
 	ngs-c++  \
@@ -64,20 +66,30 @@ SUBDIRS =    \
 	ngs-py   \
 	kxml     \
 	hdf5     \
-	ncbi-vdb \
-	tui
+	diagnose \
+	tui		 \
+
+NCBI_VDB_SUBDIRS =   \
+	$(MAIN_SUBDIRS) \
+	ncbi-vdb
+
+SUBDIRS = \
+	$(NCBI_VDB_SUBDIRS) \
+	vdb-sqlite
 
 # common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
 include $(TOP)/build/Makefile.targets
 
 $(SUBDIRS):
 	@ $(MAKE) -C $@
-	
-ncbi-vdb: $(patsubst ncbi-vdb,,$(SUBDIRS))	
+
+ncbi-vdb: $(MAIN_SUBDIRS)
+
+vdb-sqlite: $(NCBI_VDB_SUBDIRS)
 
 test:
 	@true
-    
+
 .PHONY: default $(SUBDIRS) test
 
 #-------------------------------------------------------------------------------

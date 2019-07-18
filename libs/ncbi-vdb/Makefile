@@ -59,7 +59,7 @@ $(TARGDIR)/std: \
 #-------------------------------------------------------------------------------
 # clean
 #
-clean: stdclean
+clean: stdclean cleanfuzz
 
 .PHONY: clean
 
@@ -91,7 +91,11 @@ VDB_LIB_CMN =    \
 	align-access \
 	ncbi-bam     \
 	vfs          \
+	cloud                  \
 	$(LIBKXML)   \
+	mbedx509     \
+	mbedtls      \
+	mbedcrypto   \
 	kns          \
 	kfg          \
 	krypto       \
@@ -125,10 +129,11 @@ VDB_LIB = \
 	$(addprefix -s,$(VDB_LIB_RD))
 
 $(LIBDIR)/libncbi-vdb.$(SHLX): $(VDB_OBJ)
-	$(LD) --dlib --vers $(SRCDIR) -o $@ $(VDB_LIB)
+	echo $(SRCDIR)
+	$(LD) --dlib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(VDB_LIB)
 
 $(LIBDIR)/libncbi-vdb.$(LIBX): $(VDB_OBJ)
-	$(LD) --slib --vers $(SRCDIR) -o $@ $(VDB_LIB)
+	$(LD) --slib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(VDB_LIB)
 
 #-------------------------------------------------------------------------------
 # update version
@@ -150,7 +155,16 @@ WVDB_LIB = \
 	$(addprefix -s,$(VDB_LIB_RDWR))
 
 $(LIBDIR)/libncbi-wvdb.$(SHLX): $(WVDB_OBJ)
-	$(LD) --dlib --vers $(SRCDIR) -o $@ $(WVDB_LIB)
+	$(LD) --dlib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(WVDB_LIB)
 
 $(LIBDIR)/libncbi-wvdb.$(LIBX): $(WVDB_OBJ)
-	$(LD) --slib --vers $(SRCDIR) -o $@ $(WVDB_LIB)
+	$(LD) --slib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(WVDB_LIB)
+
+#-------------------------------------------------------------------------------
+# fuzz
+#
+fuzz:
+	$(TOP)/build/ld.sh linux x86_64 gcc --build dbg --ldflags "-g  -m64" --objx o --shlx so --libx a --srcdir $(SRCDIR) --bindir $(BINDIR) --slib -o $(FLIBDIR)/libncbi-vdb.$(LIBX) -L$(FLIBDIR) $(VDB_LIB)
+
+cleanfuzz:
+	rm -rf $(FLIBDIR)/*

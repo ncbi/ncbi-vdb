@@ -202,7 +202,9 @@ rc_t KEncFileV1BufferWrite (KEncFileV1 * self, uint64_t pos, const void * buffer
  *  The first is a common "NCBI"
  *  The second is the format specific "nenc"
  */
+#if 0
 static const KEncFileSig KEncFileSignature = "NCBInenc";
+#endif
 
 /* -----
  * the common constant used throughout the project to check the byte order 
@@ -428,7 +430,7 @@ rc_t KEncFileV1FooterWrite (KEncFileV1 * self)
     size_t num_writ;
     rc_t rc;
 
-    memcpy (&foot, &self->foot, sizeof (foot));
+    memmove (&foot, &self->foot, sizeof (foot));
     if (self->bswap)
     {
         foot.block_count = bswap_64 (foot.block_count);
@@ -777,7 +779,7 @@ rc_t KEncFileV1BlockRead (const KEncFileV1 * cself, uint64_t block_id,
 /* Byte Endian problem! */
                 self->foot.crc_checksum += e.crc;
             }
-            memcpy (block, &e, sizeof e);
+            memmove (block, &e, sizeof e);
             self->eof = false;
             break;
 
@@ -1290,7 +1292,7 @@ rc_t KEncFileV1WriteInt (KEncFileV1 *self, uint64_t block_id, uint32_t block_off
     /* now loop through complete blocks to write */
     for (; bsize >= sizeof self->block.data; bsize -= sizeof self->block.data)
     {
-        memcpy (self->block.data, pb, sizeof self->block.data);
+        memmove (self->block.data, pb, sizeof self->block.data);
 
         self->block.u.valid = sizeof self->block.data;
         self->block.id = block_id;
