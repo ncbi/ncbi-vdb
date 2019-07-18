@@ -530,10 +530,11 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
 
     if ( cps -> debug )
     {
-        KOutMsg( "cache.cluster-factor ... %d\n", cluster_factor );        
+        KOutMsg( "{\n " );
+        KOutMsg( "cache.cluster-factor ... %d\n", cluster_factor );
         KOutMsg( "cache.page_size ........ %d bytes\n", page_size );
-        KOutMsg( "cache.amount ........... %d MB\n", cps -> cache_amount_mb );        
-        KOutMsg( "cache.page_count ....... %d\n", ram_page_count );  
+        KOutMsg( "cache.amount ........... %d MB\n", cps -> cache_amount_mb );
+        KOutMsg( "cache.page_count ....... %d\n", ram_page_count );
         KOutMsg( "cache_loc (resolver) ... %s\n", cache_loc == NULL ? "NULL" : cache_loc );
     }
     
@@ -620,6 +621,9 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
                                               "" );
     }
 
+    if ( cps -> debug )
+        KOutMsg( "}\n" );
+    
     if ( rc == 0 )
     {
         KFileRelease ( * cfp );
