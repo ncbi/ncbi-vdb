@@ -1090,6 +1090,52 @@ FIXTURE_TEST_CASE ( CacheTee3_request_count, CT3Fixture )
     KOutMsg ( "counting requests done\n" );
 }
 
+FIXTURE_TEST_CASE ( CacheTee3_invalid_path, CT3Fixture )
+{
+    KOutMsg ( "invalid path\n" );
+    remove_file ( CACHEFILE );
+    remove_file ( CACHEFILE1 );
+
+    KDirectory *dir;
+    REQUIRE_RC ( KDirectoryNativeDir ( &dir ) );
+    const KFile *org;
+    REQUIRE_RC ( KDirectoryOpenFileRead ( dir, &org, "%s", DATAFILE ) ); // org.data
+
+    uint32_t cluster_factor = 4;
+    uint32_t ram_pages = 1024;
+    const int num_chunks = 1024;
+    
+    /* open and use cacheteev3 with an invalid path for the first time */
+    const KFile *tee1;
+    REQUIRE_RC ( KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee1, org, BLOCKSIZE,
+        cluster_factor, ram_pages, false, true, "%s", "/sra/invalid.sra" ) ); // cache.dat
+    for ( int i = 0; i < num_chunks; ++i )
+    {
+        uint64_t pos = rand_32 ( 0, DATAFILESIZE );
+        size_t   len = rand_32 ( 10, 1000 );
+        REQUIRE_RC( compare_file_content_3 ( org, tee1, pos, len, NULL ) );
+    }
+    KFileRelease ( tee1 );
+
+    /* open and use cacheteev3 with an invalid path for the second time */
+    const KFile *tee2;
+    REQUIRE_RC ( KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee2, org, BLOCKSIZE,
+        cluster_factor, ram_pages, false, true, "%s", "/sra/invalid.sra" ) ); // cache.dat
+    for ( int i = 0; i < num_chunks; ++i )
+    {
+        uint64_t pos = rand_32 ( 0, DATAFILESIZE );
+        size_t   len = rand_32 ( 10, 1000 );
+        REQUIRE_RC( compare_file_content_3 ( org, tee2, pos, len, NULL ) );
+    }
+    KFileRelease ( tee1 );
+    
+    KFileRelease ( org );
+    
+    KDirectoryRelease ( dir );
+    KOutMsg ( "invalid path done\n" );
+}
+
+
 #if 0
 struct Recorder
 {
