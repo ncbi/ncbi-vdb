@@ -533,7 +533,8 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
         KOutMsg( "cache.cluster-factor ... %d\n", cluster_factor );        
         KOutMsg( "cache.page_size ........ %d bytes\n", page_size );
         KOutMsg( "cache.amount ........... %d MB\n", cps -> cache_amount_mb );        
-        KOutMsg( "cache.page_count ....... %d\n", ram_page_count );        
+        KOutMsg( "cache.page_count ....... %d\n", ram_page_count );  
+        KOutMsg( "cache_loc (resolver) ... %s\n", cache_loc == NULL ? "NULL" : cache_loc );
     }
     
     if ( cps -> use_file_cache )
@@ -546,31 +547,11 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
         if ( cps -> debug )
             KOutMsg( "use file-cache\n" );
 
+        /* if we have been given a location, we use it. CacheTeeV3 can deal with invalid/unreachable ones! */
         if ( cache_loc != NULL )
         {
-            size_t cache_loc_size = string_size( cache_loc );
-            char * sep = string_rchr ( cache_loc, cache_loc_size, '/' );
-            if ( sep != NULL )
-            {
-                size_t l = ( sep - cache_loc );
-                uint32_t pt = KDirectoryPathType ( dir, "%.*s", l, cache_loc );
-                if ( pt == kptDir )
-                {
-                    /* make shure we have read/write access there */
-                    uint32_t access;
-                    rc = KDirectoryAccess ( dir, &access, "%.*s", l, cache_loc );
-                    if ( rc == 0 )
-                    {
-                        /* dr wxrw xrwx
-                           11 1... .... = 0x380 */
-                        if ( ( access & 0x380 ) == 0x380 )
-                        {
-                            rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
-                                                         "%s", cache_loc );
-                        }
-                    }
-                }
-            }
+            rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
+                                         "%s", cache_loc );
         }
         
         /* if we have no given location or it does not exist or it is not read/writable for us */
