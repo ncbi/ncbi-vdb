@@ -50,7 +50,7 @@ using namespace std;
 static rc_t argsHandler(int argc, char* argv[]);
 TEST_SUITE_WITH_ARGS_HANDLER(GcpTestSuite, argsHandler)
 
-TEST_CASE(GCP_AddUserPays_NoCredentials) 
+TEST_CASE(GCP_AddUserPays_NoCredentials)
 {
     CloudMgr * mgr;
     REQUIRE_RC ( CloudMgrMakeWithProvider ( & mgr, cloud_provider_gcp ) );
@@ -58,7 +58,7 @@ TEST_CASE(GCP_AddUserPays_NoCredentials)
     // no user credentials
     char env[1024];
     strcpy(env, "GOOGLE_APPLICATION_CREDENTIALS=" );
-    REQUIRE_EQ ( 0, putenv ( env ) ); 
+    REQUIRE_EQ ( 0, putenv ( env ) );
 
     Cloud * cloud;
     REQUIRE_RC ( CloudMgrMakeCloud ( mgr, &cloud, cloud_provider_gcp ) );
@@ -68,12 +68,12 @@ TEST_CASE(GCP_AddUserPays_NoCredentials)
         REQUIRE_RC ( KNSManagerMake ( & kns ) );
         String host;
         CONST_STRING( &host, "www.googleapis.com" );
-        REQUIRE_RC ( KNSManagerMakeClientHttps ( kns, &client, NULL, 0x01010000, & host, 443 ) );    
+        REQUIRE_RC ( KNSManagerMakeClientHttps ( kns, &client, NULL, 0x01010000, & host, 443 ) );
         REQUIRE_RC ( KNSManagerRelease ( kns ) );
     }
 
     KClientHttpRequest * req;
-    REQUIRE_RC ( KClientHttpMakeRequest ( client, & req, "https://www.googleapis.com/oauth2/v4/token" ) );    
+    REQUIRE_RC ( KClientHttpMakeRequest ( client, & req, "https://www.googleapis.com/oauth2/v4/token" ) );
 
     REQUIRE_RC_FAIL ( CloudAddUserPaysCredentials ( cloud, req, "POST" ) );
 
@@ -83,10 +83,10 @@ TEST_CASE(GCP_AddUserPays_NoCredentials)
     REQUIRE_RC ( CloudMgrRelease ( mgr ) );
 }
 
-TEST_CASE(GCP_Sign_RSA_SHA256) 
+TEST_CASE(GCP_Sign_RSA_SHA256)
 {
     // same (throwaway) private key as in cloud-kfg/gcp-service.json
-    const char * key = 
+    const char * key =
 "-----BEGIN PRIVATE KEY-----\n"
 "MIICdwIBADANBgkqhkiG9w0BAQEFAASCAmEwggJdAgEAAoGBANoWq8DqARNncY/f\n"
 "PFcRKhZ4MueoAPwsfFsrDaifNSW0wfemzAz/N8kkHqyqX2ZdGOaszKI3qBqZ2qxJ\n"
@@ -109,22 +109,22 @@ TEST_CASE(GCP_Sign_RSA_SHA256)
     REQUIRE_NOT_NULL ( output );
 
     // verify output
-    unsigned char expected[128] = { 
-        55, 81, 6, 159, 56, 117, 47, 203, 
-        134, 12, 141, 35, 129, 71, 28, 25, 
-        156, 54, 124, 188, 4, 160, 157, 122, 
-        158, 25, 70, 41, 36, 46, 206, 172, 
-        170, 184, 74, 21, 166, 255, 100, 68, 
-        118, 171, 6, 154, 50, 6, 35, 135, 
-        74, 247, 87, 197, 175, 52, 144, 60, 
-        51, 176, 195, 26, 255, 198, 14, 247, 
-        187, 172, 38, 162, 108, 112, 145, 237, 
-        99, 177, 171, 44, 33, 213, 130, 18, 
-        57, 42, 229, 64, 164, 129, 130, 189, 
-        205, 204, 1, 245, 89, 113, 50, 2, 
-        246, 164, 53, 155, 69, 202, 201, 117, 
-        204, 147, 57, 128, 136, 233, 121, 17, 
-        80, 220, 239, 243, 236, 156, 59, 64, 
+    unsigned char expected[128] = {
+        55, 81, 6, 159, 56, 117, 47, 203,
+        134, 12, 141, 35, 129, 71, 28, 25,
+        156, 54, 124, 188, 4, 160, 157, 122,
+        158, 25, 70, 41, 36, 46, 206, 172,
+        170, 184, 74, 21, 166, 255, 100, 68,
+        118, 171, 6, 154, 50, 6, 35, 135,
+        74, 247, 87, 197, 175, 52, 144, 60,
+        51, 176, 195, 26, 255, 198, 14, 247,
+        187, 172, 38, 162, 108, 112, 145, 237,
+        99, 177, 171, 44, 33, 213, 130, 18,
+        57, 42, 229, 64, 164, 129, 130, 189,
+        205, 204, 1, 245, 89, 113, 50, 2,
+        246, 164, 53, 155, 69, 202, 201, 117,
+        204, 147, 57, 128, 136, 233, 121, 17,
+        80, 220, 239, 243, 236, 156, 59, 64,
         3, 222, 238, 31, 146, 4, 43, 71
     };
     REQUIRE_EQ ( sizeof ( expected ), output -> size );
@@ -132,13 +132,13 @@ TEST_CASE(GCP_Sign_RSA_SHA256)
     StringWhack ( output );
 }
 
-TEST_CASE(GCP_AddUserPays) 
+TEST_CASE(GCP_AddUserPays)
 {
     // prepare user credentials
     char env[1024];
     strcpy(env, "GOOGLE_APPLICATION_CREDENTIALS=./cloud-kfg/gcp_service.json" );
-    REQUIRE_EQ ( 0, putenv ( env ) ); 
-    
+    REQUIRE_EQ ( 0, putenv ( env ) );
+
     CloudMgr * mgr;
     REQUIRE_RC ( CloudMgrMakeWithProvider ( & mgr, cloud_provider_gcp ) );
 
@@ -151,17 +151,17 @@ TEST_CASE(GCP_AddUserPays)
         REQUIRE_RC ( KNSManagerMake ( & kns ) );
         String host;
         CONST_STRING( &host, "storage.googleapis.com" );
-        REQUIRE_RC ( KNSManagerMakeClientHttps ( kns, &client, NULL, 0x01010000, & host, 443 ) );    
+        REQUIRE_RC ( KNSManagerMakeClientHttps ( kns, &client, NULL, 0x01010000, & host, 443 ) );
         REQUIRE_RC ( KNSManagerRelease ( kns ) );
     }
 
     KClientHttpRequest * req;
-    REQUIRE_RC ( KClientHttpMakeRequest ( client, & req, "https://storage.googleapis.com/sra-pub-run-1/DRR000711/DRR000711.1" ) );    
+    REQUIRE_RC ( KClientHttpMakeRequest ( client, & req, "https://storage.googleapis.com/sra-pub-run-1/DRR000711/DRR000711.1" ) );
 
     static KStream m_stream;
     REQUIRE_RC ( KStreamInit ( & m_stream, ( const KStream_vt* ) & TestStream::vt, "TestStream", "", true, true ) );
-    string json = 
-        "{\"access_token\" : \"1/8xbJqaOZXSUZbHLl5EOtu1pxz3fmmetKx9W8CV4t79M\","
+    string json =
+        "{\"access_token\" : \"bogustokenmadefortesting\","
         "  \"token_type\" : \"Bearer\","
         "   \"expires_in\" : 3600"
         "}";
@@ -171,6 +171,8 @@ TEST_CASE(GCP_AddUserPays)
         "Content-Length: " << json.size() << "\r\n"
         "\r\n" << json << "\r\n";
     TestStream::m_responses.push_back(ostr.str());
+    // to have GCP contact Google authorization server for real, comment out this line:
+    // and copy a user credentials file to ./cloud-kfg/gcp_service.json (do not check in!)
     CloudSetHttpConnection( cloud, & m_stream );
 
     REQUIRE_RC ( CloudAddUserPaysCredentials ( cloud, req, "POST" ) );
@@ -179,8 +181,10 @@ TEST_CASE(GCP_AddUserPays)
     char msg[4096];
     size_t len;
     REQUIRE_RC ( KClientHttpRequestFormatPostMsg( req, msg, sizeof ( msg ), & len ) );
-//cout << msg << endl;
-    REQUIRE_NE ( string::npos, string( msg ).find( "Authorization: Bearer 1/8xbJqaOZXSUZbHLl5EOtu1pxz3fmmetKx9W8CV4t79M" ) );
+// this will show the access token, either bogusfortesting or the real one
+cout << msg << endl;
+// if the token is real, the following check will fail. please do not "fix".
+    REQUIRE_NE ( string::npos, string( msg ).find( "Authorization: Bearer bogustokenmadefortesting" ) );
 
     REQUIRE_RC ( KClientHttpRelease ( client ) );
     REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
