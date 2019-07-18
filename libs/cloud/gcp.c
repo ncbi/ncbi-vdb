@@ -142,7 +142,7 @@ rc_t CC GCPAddAuthentication ( const GCP * self, KClientHttpRequest * req, const
 /* use mbedtls to sign using RSA SHA-256 algorithm
  (also known as RSASSA-PKCS1-V1_5-SIGN with the SHA-256 hash function)
  */
-rc_t 
+rc_t
 Sign_RSA_SHA256(
     const char * key_PEM,
     const char * input,
@@ -152,7 +152,7 @@ Sign_RSA_SHA256(
     int ret;
 
     /* 0. Initialize (TODO: do only once, attach data to the GCP object) */
-    mbedtls_entropy_context ent_ctx;        
+    mbedtls_entropy_context ent_ctx;
     mbedtls_ctr_drbg_context ctr_drbg;
     const mbedtls_md_type_t md_type = MBEDTLS_MD_SHA256;
     char pers [ 4096 ];
@@ -167,10 +167,10 @@ Sign_RSA_SHA256(
 
     vdb_mbedtls_ctr_drbg_init ( & ctr_drbg );
     ret = vdb_mbedtls_ctr_drbg_seed (
-        & ctr_drbg, 
-        vdb_mbedtls_entropy_func, 
-        & ent_ctx, 
-        ( const unsigned char * ) pers, 
+        & ctr_drbg,
+        vdb_mbedtls_entropy_func,
+        & ent_ctx,
+        ( const unsigned char * ) pers,
         ( size_t ) pers_size
     );
     if ( ret == 0 )
@@ -178,9 +178,9 @@ Sign_RSA_SHA256(
         /* 1. parse key_PEM */
         mbedtls_pk_context pk;
         vdb_mbedtls_pk_init ( & pk );
-        ret = vdb_mbedtls_pk_parse_key ( & pk, 
-                                         (unsigned char *) key_PEM, 
-                                         string_measure ( key_PEM, NULL ) + 1, 
+        ret = vdb_mbedtls_pk_parse_key ( & pk,
+                                         (unsigned char *) key_PEM,
+                                         string_measure ( key_PEM, NULL ) + 1,
                                          NULL, 0 );
         if ( ret == 0 )
         {
@@ -190,9 +190,9 @@ Sign_RSA_SHA256(
 
             unsigned char checksum [ 512 / 8 ];
             assert ( sizeof checksum >= dsize );
-            ret = vdb_mbedtls_md ( info, 
-                                ( const unsigned char * ) input, 
-                                string_measure ( input, NULL ), 
+            ret = vdb_mbedtls_md ( info,
+                                ( const unsigned char * ) input,
+                                string_measure ( input, NULL ),
                                 checksum );
             if ( ret == 0 )
             {
@@ -206,13 +206,13 @@ Sign_RSA_SHA256(
                     StringInit( out, (char*)out + sizeof ( String ), ctx -> len, ctx -> len );
 
                     ret = vdb_mbedtls_rsa_rsassa_pkcs1_v15_sign (
-                        ctx, 
-                        vdb_mbedtls_ctr_drbg_random, 
-                        ( void * ) & ctr_drbg, 
-                        MBEDTLS_RSA_PRIVATE, 
-                        md_type, 
-                        ( unsigned int ) dsize, 
-                        checksum, 
+                        ctx,
+                        vdb_mbedtls_ctr_drbg_random,
+                        ( void * ) & ctr_drbg,
+                        MBEDTLS_RSA_PRIVATE,
+                        md_type,
+                        ( unsigned int ) dsize,
+                        checksum,
                         ( unsigned char * ) out -> addr
                     );
                     if ( ret == 0 )
@@ -220,25 +220,25 @@ Sign_RSA_SHA256(
 #ifdef _DEBUGGING
                         /* 4. verify the signature */
                         ret = vdb_mbedtls_rsa_rsassa_pkcs1_v15_verify (
-                            vdb_mbedtls_pk_rsa ( pk ), 
-                            NULL, 
-                            NULL, 
+                            vdb_mbedtls_pk_rsa ( pk ),
+                            NULL,
+                            NULL,
                             MBEDTLS_RSA_PUBLIC,
-                            md_type, 
-                            ( unsigned int ) dsize, 
-                            checksum, 
+                            md_type,
+                            ( unsigned int ) dsize,
+                            checksum,
                             ( const unsigned char * ) out -> addr
                         );
                         if ( ret != 0 )
                         {
-                            TRACE("vdb_mbedtls_rsa_rsassa_pkcs1_v15_verify = -%#.4X\n", - ret);        
+                            TRACE("vdb_mbedtls_rsa_rsassa_pkcs1_v15_verify = -%#.4X\n", - ret);
                             rc = RC(rcCloud, rcUri, rcInitializing, rcEncryption, rcFailed);
                         }
 #endif
                     }
                     else
                     {
-                        TRACE("vdb_mbedtls_rsa_rsassa_pkcs1_v15_sign = -%#.4X\n", - ret);        
+                        TRACE("vdb_mbedtls_rsa_rsassa_pkcs1_v15_sign = -%#.4X\n", - ret);
                         rc = RC(rcCloud, rcUri, rcInitializing, rcEncryption, rcFailed);
                     }
 
@@ -258,13 +258,13 @@ Sign_RSA_SHA256(
             }
             else
             {
-                TRACE("vdb_mbedtls_md = -%#.4X\n", - ret);        
+                TRACE("vdb_mbedtls_md = -%#.4X\n", - ret);
                 rc = RC(rcCloud, rcUri, rcInitializing, rcEncryption, rcFailed);
             }
         }
         else
         {
-            TRACE("vdb_mbedtls_pk_parse_key = -%#.4X\n", - ret);        
+            TRACE("vdb_mbedtls_pk_parse_key = -%#.4X\n", - ret);
             rc = RC(rcCloud, rcUri, rcInitializing, rcEncryption, rcFailed);
         }
 
@@ -272,17 +272,17 @@ Sign_RSA_SHA256(
     }
     else
     {
-        TRACE("vdb_mbedtls_ctr_drbg_seed = -%#.4X\n", - ret);        
+        TRACE("vdb_mbedtls_ctr_drbg_seed = -%#.4X\n", - ret);
         rc = RC(rcCloud, rcUri, rcInitializing, rcEncryption, rcFailed);
     }
 
     vdb_mbedtls_entropy_free ( & ent_ctx );
-    vdb_mbedtls_ctr_drbg_free ( & ctr_drbg );    
+    vdb_mbedtls_ctr_drbg_free ( & ctr_drbg );
 
     return rc;
 }
 
-static 
+static
 rc_t
 GetJsonStringMember( const KJsonObject *obj, const char * name, const char ** value )
 {
@@ -292,11 +292,11 @@ GetJsonStringMember( const KJsonObject *obj, const char * name, const char ** va
     assert ( value != NULL );
 
     member = KJsonObjectGetMember ( obj, name );
-    if ( member == NULL ) 
+    if ( member == NULL )
     {
         return RC ( rcKFG, rcFile, rcParsing, rcParam, rcInvalid );
     }
-    if ( KJsonGetValueType ( member ) != jsString ) 
+    if ( KJsonGetValueType ( member ) != jsString )
     {
         return RC ( rcKFG, rcFile, rcParsing, rcParam, rcInvalid );
     }
@@ -304,8 +304,8 @@ GetJsonStringMember( const KJsonObject *obj, const char * name, const char ** va
     return KJsonGetString ( member, value );
 }
 
-static 
-rc_t GetAccessToken ( const GCP * self, const String * jwt_base64url, struct KStream * opt_conn, const String ** token )
+static
+rc_t GetAccessToken ( const GCP * self, const char * jwt, struct KStream * opt_conn, const String ** token )
 {
 /*      5. Https POST
 POST /oauth2/v4/token HTTP/1.1
@@ -325,10 +325,10 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=<JWT>
 
     * token = NULL;
 
-    rc = KNSManagerMakeClientHttps ( self -> dad . kns, &client, opt_conn, 0x01010000, & host, 443 );    
+    rc = KNSManagerMakeClientHttps ( self -> dad . kns, &client, opt_conn, 0x01010000, & host, 443 );
     if ( rc == 0 )
     {
-        rc = KClientHttpMakeRequest ( client, & req, "https://www.googleapis.com/oauth2/v4/token" );    
+        rc = KClientHttpMakeRequest ( client, & req, "https://www.googleapis.com/oauth2/v4/token" );
     }
 
     if ( rc == 0 )
@@ -343,7 +343,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=<JWT>
 
     if ( rc == 0 )
     {
-        rc = KHttpRequestAddPostParam( req, "assertion=%S", jwt_base64url );
+        rc = KHttpRequestAddPostParam( req, "assertion=%s", jwt );
     }
 
     if ( rc == 0 )
@@ -352,14 +352,14 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=<JWT>
         KClientHttpResult * rslt = NULL;
 
         rc = KClientHttpRequestPOST(req, &rslt);
-        if (rc == 0) 
+        if (rc == 0)
         {
             KStream * s = NULL;
             rc = KClientHttpResultGetInputStream(rslt, &s);
-            if (rc == 0) 
+            if (rc == 0)
             {
                 rc = KStreamRead(s, jsonResponse, sizeof ( jsonResponse ), &num_read);
-                if (rc == 0) 
+                if (rc == 0)
                 {
                     if (num_read == sizeof ( jsonResponse ))
                     {
@@ -368,7 +368,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=<JWT>
                     else
                     {
                         jsonResponse[num_read++] = '\0';
-                        TRACE( "Json received: '%s'", jsonResponse ); 
+                        TRACE( "Json received: '%s'", jsonResponse );
                     }
                 }
 
@@ -397,7 +397,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=<JWT>
     {
         rc = rc2;
     }
-   
+
     if ( rc == 0 )
     {
         /* 5. Response:
@@ -405,11 +405,11 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=<JWT>
         "access_token" : "1/8xbJqaOZXSUZbHLl5EOtu1pxz3fmmetKx9W8CV4t79M",
         "token_type" : "Bearer",
         "expires_in" : 3600
-        }        
+        }
         */
         KJsonValue * root;
         char error[1024];
-        rc = KJsonValueMake ( & root, jsonResponse, error, sizeof ( error ) );    
+        rc = KJsonValueMake ( & root, jsonResponse, error, sizeof ( error ) );
         if ( rc == 0 )
         {
             const KJsonObject *obj = KJsonValueToObject ( root );
@@ -450,14 +450,14 @@ rc_t CC GCPAddUserPaysCredentials ( const GCP * self, KClientHttpRequest * req, 
         /* Obtain and insert access token */
 
         /* From https://developers.google.com/identity/protocols/OAuth2ServiceAccount#authorizingrequests */
-        /*  
-            1. JWT header: 
-    {"alg":"RS256","typ":"JWT"}, 
+        /*
+            1. JWT header:
+    {"alg":"RS256","typ":"JWT"},
     Base64url encoded: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9
         */
     const char * jwtHeader_base64url = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9";
 
-    /* 
+    /*
             2. JWT claim set:
     {
     "iss":"<self->client_email>",
@@ -465,22 +465,22 @@ rc_t CC GCPAddUserPaysCredentials ( const GCP * self, KClientHttpRequest * req, 
     "aud":"https://www.googleapis.com/oauth2/v4/token",
     "exp":<claim expiration minimum now+1hour, seconds since 00:00:00 UTC, January 1, 1970.>,
     "iat":<claim issue time, seconds since 00:00:00 UTC, January 1, 1970.>
-    }    
+    }
                 Base64url encoded
         */
         char claimSet[4096];
         size_t num_writ;
         const KTime_t issued_at = KTimeStamp ();
         const KTime_t expiration = issued_at + 60 * 60; /* 1 hour later */
-        rc_t rc = string_printf( claimSet, sizeof ( claimSet ) - 1, & num_writ, 
+        rc_t rc = string_printf( claimSet, sizeof ( claimSet ) - 1, & num_writ,
             "{"
                 "\"iss\":\"%s\","
-                "\"scope\":\"https://www.googleapis.com/auth/devstorage.readonly\","
+                "\"scope\":\"https://www.googleapis.com/auth/devstorage.read_only\","
                 "\"aud\":\"https://www.googleapis.com/oauth2/v4/token\","
                 "\"exp\":%li,"
                 "\"iat\":%li"
-            "}", 
-            self -> client_email, 
+            "}",
+            self -> client_email,
             expiration,
             issued_at
         );
@@ -491,18 +491,18 @@ rc_t CC GCPAddUserPaysCredentials ( const GCP * self, KClientHttpRequest * req, 
         TRACE("claimSet='%s'\n\n", claimSet);
         /* base64url encode claimSet */
         const String * claimSet_base64url;
-        rc = encodeBase64URL ( & claimSet_base64url, claimSet, num_writ );  
+        rc = encodeBase64URL ( & claimSet_base64url, claimSet, num_writ );
         if ( rc != 0 )
         {
             return rc;
         }
         TRACE("claimSet_base64url='%.*s'\n\n", (int)claimSet_base64url->size, claimSet_base64url->addr);
 
-    /*    
+    /*
             3. JSW :
-    {Base64url encoded header}.{Base64url encoded claim set} 
-                signed with self->privateKey 
-                Base64url encode 
+    {Base64url encoded header}.{Base64url encoded claim set}
+                signed with self->privateKey
+                Base64url encode
     */
         char to_sign[4096];
         rc = string_printf( to_sign, sizeof ( to_sign ) - 1, & num_writ, "%s.%S", jwtHeader_base64url, claimSet_base64url );
@@ -515,7 +515,7 @@ rc_t CC GCPAddUserPaysCredentials ( const GCP * self, KClientHttpRequest * req, 
 
         /* sign header_dot_claim with self->privateKey */
         const String * signature;
-        rc = Sign_RSA_SHA256( self -> privateKey, to_sign, &signature); 
+        rc = Sign_RSA_SHA256( self -> privateKey, to_sign, &signature);
         if ( rc != 0 )
         {
             StringWhack ( claimSet_base64url );
@@ -523,7 +523,7 @@ rc_t CC GCPAddUserPaysCredentials ( const GCP * self, KClientHttpRequest * req, 
         }
         /* base64url encode signature */
         const String * signature_base64url;
-        rc = encodeBase64URL ( & signature_base64url, signature->addr, signature->size ); 
+        rc = encodeBase64URL ( & signature_base64url, signature->addr, signature->size );
         StringWhack ( signature );
         if ( rc != 0 )
         {
@@ -533,7 +533,7 @@ rc_t CC GCPAddUserPaysCredentials ( const GCP * self, KClientHttpRequest * req, 
         TRACE("signature_base64url='%.*s'\n\n", (int)signature_base64url->size, signature_base64url->addr);
 
     /*      4. Base64url encode "header.claims.signature" into JWT
-    */    
+    */
         char jwt[4096];
         rc = string_printf( jwt, sizeof ( jwt ) - 1, & num_writ, "%s.%S.%S", jwtHeader_base64url, claimSet_base64url, signature_base64url );
         StringWhack ( claimSet_base64url );
@@ -544,15 +544,6 @@ rc_t CC GCPAddUserPaysCredentials ( const GCP * self, KClientHttpRequest * req, 
         }
         TRACE("jwt='%s'\n\n", jwt);
 
-        /* base64url encode jwt */
-        const String * jwt_base64url;
-        rc = encodeBase64URL ( & jwt_base64url, jwt, num_writ ); 
-        if ( rc != 0 )
-        {
-            return rc;
-        }
-        TRACE("jwt_base64url='%.*s'\n\n", (int)jwt_base64url->size, jwt_base64url->addr);
-
     /*      5. Https POST
     POST /oauth2/v4/token HTTP/1.1
     Host: www.googleapis.com
@@ -561,8 +552,7 @@ rc_t CC GCPAddUserPaysCredentials ( const GCP * self, KClientHttpRequest * req, 
     grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=<JWT>
     */
         const String * token;
-        rc = GetAccessToken ( self, jwt_base64url, self -> dad . conn, & token );
-        StringWhack ( jwt_base64url );
+        rc = GetAccessToken ( self, jwt, self -> dad . conn, & token );
         if ( rc != 0 )
         {
             return rc;
@@ -571,7 +561,7 @@ rc_t CC GCPAddUserPaysCredentials ( const GCP * self, KClientHttpRequest * req, 
         rc = KClientHttpRequestAddHeader( req, "Authorization", "Bearer %S", token );
         StringWhack ( token );
     }
-    return rc;    
+    return rc;
 }
 
 static Cloud_vt_v1 GCP_vt_v1 =
@@ -610,7 +600,7 @@ LIB_EXPORT rc_t CC CloudMgrMakeGCP ( const CloudMgr * self, GCP ** p_gcp )
     {
         /* capture from self->kfg */
         bool user_agrees_to_pay = false;
-        
+
         rc = CloudInit ( & gcp -> dad, ( const Cloud_vt * ) & GCP_vt_v1, "GCP", self -> kns, user_agrees_to_pay );
         if ( rc == 0 )
         {
@@ -724,7 +714,7 @@ bool CloudMgrWithinGCP ( const CloudMgr * self )
     if ( rc == 0 )
     {
         KSocket * conn;
-        
+
         /* we already have a good idea that the environment looks like GCP */
         rc = KNSManagerMakeTimedConnection ( self -> kns, & conn, 0, 0, NULL, & ep );
         if ( rc == 0 )
@@ -748,7 +738,7 @@ rc_t PopulateCredentials ( GCP * self )
     char *jsonCredentials;
 
     const char *pathToJsonFile = getenv ( "GOOGLE_APPLICATION_CREDENTIALS" );
-    if ( pathToJsonFile == NULL || *pathToJsonFile == 0 ) 
+    if ( pathToJsonFile == NULL || *pathToJsonFile == 0 )
     {
         rc = 0;
     }
@@ -764,12 +754,12 @@ rc_t PopulateCredentials ( GCP * self )
             rc = KDirectoryOpenFileRead ( dir, &cred_file, "%s", pathToJsonFile );
         }
 
-        if ( rc == 0 ) 
+        if ( rc == 0 )
         {
             rc = KFileSize ( cred_file, &json_size );
         }
 
-        if ( rc == 0 ) 
+        if ( rc == 0 )
         {
             jsonCredentials = (char *)calloc ( json_size + 1, 1 );
             if ( jsonCredentials == NULL )
@@ -790,7 +780,7 @@ rc_t PopulateCredentials ( GCP * self )
         {   /*extract the credentials */
             KJsonValue *root = NULL;
             rc = KJsonValueMake ( &root, jsonCredentials, NULL, 0 );
-            if ( rc == 0 ) 
+            if ( rc == 0 )
             {
                 const KJsonObject *obj = KJsonValueToObject ( root );
 
@@ -802,7 +792,7 @@ rc_t PopulateCredentials ( GCP * self )
 
                 /* check thst all required members are present */
                 size_t i = 0;
-                while ( rc == 0 && required[i] != NULL ) 
+                while ( rc == 0 && required[i] != NULL )
                 {
                     const char * value;
                     rc = GetJsonStringMember( obj, required[i], & value );
