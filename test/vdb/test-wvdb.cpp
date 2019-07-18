@@ -446,31 +446,17 @@ FIXTURE_TEST_CASE ( VCursorCommit_without_VCursorCloseRow, WVDB_Fixture )
     m_databaseName = ScratchDir + GetName();
     RemoveDatabase();
 
-    string schemaText = "table table1 #1.0.0 { column ascii column1; };"
-                        "database root_database #1 { table table1 #1 TABLE1; } ;";
+    string schemaText =
+        "table table1 #1.0.0 { column ascii column1; };"
+        "database root_database #1 { table table1 #1 TABLE1; } ;";
 
     const char* TableName = "TABLE1";
     const char* ColumnName1 = "column1";
 
-    VDatabase* db;
+    MakeDatabase ( schemaText, "root_database" );
     {
-        VSchema* schema;
-        REQUIRE_RC ( VDBManagerMakeSchema ( m_mgr, & schema ) );
-        REQUIRE_RC ( VSchemaParseText ( schema, NULL, schemaText . c_str (), schemaText . size () ) );
+        VCursor* cursor = CreateTable ( TableName );
 
-        REQUIRE_RC ( VDBManagerCreateDB ( m_mgr,
-                                          & db,
-                                          schema,
-                                          "root_database",
-                                          kcmInit + kcmMD5,
-                                          "%s",
-                                          m_databaseName . c_str () ) );
-
-        VTable* table;
-        REQUIRE_RC ( VDatabaseCreateTable ( db , & table, TableName, kcmInit + kcmMD5, TableName ) );
-
-        VCursor* cursor;
-        REQUIRE_RC ( VTableCreateCursorWrite ( table, & cursor, kcmInsert ) );
         uint32_t column_idx1;
         REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx1, ColumnName1 ) );
         REQUIRE_RC ( VCursorOpen ( cursor ) );
@@ -479,13 +465,10 @@ FIXTURE_TEST_CASE ( VCursorCommit_without_VCursorCloseRow, WVDB_Fixture )
         REQUIRE_RC ( VCursorWrite ( cursor, column_idx1, 8, "blah", 0, 4 ) );
         REQUIRE_RC ( VCursorCommitRow ( cursor ) );
         //REQUIRE_RC ( VCursorCloseRow ( cursor ) ); //VDB-3077: skip this and see the call to VCursorCommit() assert:
-        REQUIRE_RC_FAIL ( VCursorCommit ( cursor ) );
+        REQUIRE_RC ( VCursorCommit ( cursor ) );
 
         REQUIRE_RC ( VCursorRelease ( cursor ) );
-        REQUIRE_RC ( VTableRelease ( table ) );
-        REQUIRE_RC ( VSchemaRelease ( schema ) );
     }
-    REQUIRE_RC ( VDatabaseRelease ( db ) );
 }
 
 //////////////////////////////////////////// Main
