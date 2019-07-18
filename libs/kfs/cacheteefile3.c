@@ -2351,7 +2351,7 @@ LIB_EXPORT rc_t CC KDirectoryVMakeKCacheTeeFile_v3 ( KDirectory * self,
                                     remove_on_close, new_node -> path );
                                 if ( rc != 0 )
                                     free ( new_node );
-                                else
+                                else if ( ( ( const KCacheTeeFile_v3 * ) new_node -> file ) -> cache_file != NULL )
                                 {
                                     rc = BSTreeInsertUnique ( & open_cache_tee_files,
                                         & new_node -> dad, NULL, KCacheTeeFileTreeNodeSort );
@@ -2362,6 +2362,11 @@ LIB_EXPORT rc_t CC KDirectoryVMakeKCacheTeeFile_v3 ( KDirectory * self,
                                         KFileRelease ( new_node -> file );
                                         free ( new_node );
                                     }
+                                }
+                                else
+                                {
+                                    * tee = new_node -> file;
+                                    free ( new_node );
                                 }
                             }
                         }
