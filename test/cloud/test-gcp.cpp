@@ -39,15 +39,18 @@
 #include <ktst/unit_test.hpp>
 
 #include <iostream>
+#include <sstream>
 
 #include <../libs/cloud/gcp-priv.h>
+
+#include "../kns/HttpFixture.hpp" //TODO: mobe TestStream to a better place
 
 using namespace std;
 
 static rc_t argsHandler(int argc, char* argv[]);
-TEST_SUITE_WITH_ARGS_HANDLER(AwsTestSuite, argsHandler)
+TEST_SUITE_WITH_ARGS_HANDLER(GcpTestSuite, argsHandler)
 
-TEST_CASE(GCP_AddUserPays_NoCreadentials) 
+TEST_CASE(GCP_AddUserPays_NoCredentials) 
 {
     CloudMgr * mgr;
     REQUIRE_RC ( CloudMgrMakeWithProvider ( & mgr, cloud_provider_gcp ) );
@@ -155,14 +158,29 @@ TEST_CASE(GCP_AddUserPays)
     KClientHttpRequest * req;
     REQUIRE_RC ( KClientHttpMakeRequest ( client, & req, "https://storage.googleapis.com/sra-pub-run-1/DRR000711/DRR000711.1" ) );    
 
+    static KStream m_stream;
+    REQUIRE_RC ( KStreamInit ( & m_stream, ( const KStream_vt* ) & TestStream::vt, "TestStream", "", true, true ) );
+    string json = 
+        "{\"access_token\" : \"1/8xbJqaOZXSUZbHLl5EOtu1pxz3fmmetKx9W8CV4t79M\","
+        "  \"token_type\" : \"Bearer\","
+        "   \"expires_in\" : 3600"
+        "}";
+    ostringstream ostr;
+    ostr << "HTTP/1.1 200 OK\r\n"
+        "Content-Type: application/json\r\n"
+        "Content-Length: " << json.size() << "\r\n"
+        "\r\n" << json << "\r\n";
+    TestStream::m_responses.push_back(ostr.str());
+    CloudSetHttpConnection( cloud, & m_stream );
+
     REQUIRE_RC ( CloudAddUserPaysCredentials ( cloud, req, "POST" ) );
     // adds header:
     // Authorization: Bearer <access_token>
     char msg[4096];
     size_t len;
     REQUIRE_RC ( KClientHttpRequestFormatPostMsg( req, msg, sizeof ( msg ), & len ) );
-cout << msg << endl;
-    REQUIRE_NE ( string::npos, string( msg ).find( "Authorization: Bearer " ) );
+//cout << msg << endl;
+    REQUIRE_NE ( string::npos, string( msg ).find( "Authorization: Bearer 1/8xbJqaOZXSUZbHLl5EOtu1pxz3fmmetKx9W8CV4t79M" ) );
 
     REQUIRE_RC ( KClientHttpRelease ( client ) );
     REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
@@ -209,7 +227,7 @@ rc_t CC KMain ( int argc, char *argv [] )
     assert(!KDbgSetString("KNS"));
 #endif
 
-    return AwsTestSuite(argc, argv);
+    return GcpTestSuite(argc, argv);
 }
 
 }

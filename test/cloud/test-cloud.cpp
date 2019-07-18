@@ -109,15 +109,6 @@ FIXTURE_TEST_CASE(MgrCurrentProvider_NullParam, CloudMgrFixture)
 {
     REQUIRE_RC_FAIL ( CloudMgrCurrentProvider ( m_mgr, NULL ) );
 }
-#if BREAKS_OTHERS
-FIXTURE_TEST_CASE(MgrCurrentProvider_Aws, CloudMgrFixture)
-{
-    // need to have a predictable providerId in testing, so force it to be AWS here
-    CloudMgrSetProvider( m_mgr, cloud_provider_aws );
-    REQUIRE_RC ( CloudMgrCurrentProvider ( m_mgr, & m_id ) );
-    REQUIRE_EQ ( (int)cloud_provider_aws, (int)m_id );
-}
-#endif
 
 FIXTURE_TEST_CASE(MgrCurrentProvider_MakeCloud_NullSelf, CloudMgrFixture)
 {
@@ -148,19 +139,7 @@ FIXTURE_TEST_CASE(MgrCurrentProvider_MakeCurrentCloud_NullParam, CloudMgrFixture
 {
     REQUIRE_RC_FAIL ( CloudMgrGetCurrentCloud ( m_mgr, NULL ) );
 }
-#if BREAKS_OTHERS
-FIXTURE_TEST_CASE(MgrCurrentProvider_MakeCurrentCloud, CloudMgrFixture)
-{
-    // need to have a predictable providerId in testing, so force it to be AWS here
-    CloudMgrSetProvider( m_mgr, cloud_provider_aws );
-    REQUIRE_RC ( CloudMgrGetCurrentCloud ( m_mgr, & m_cloud ) );
-    // to verify, try to cast to AWS
-    AWS * aws;
-    REQUIRE_RC ( CloudToAWS ( m_cloud, & aws ) );
-    REQUIRE_NOT_NULL ( aws );
-    REQUIRE_RC ( AWSRelease ( aws ) );
-}
-#endif
+
 //////////////////////////////////////////// AWS
 
 class AwsFixture : public CloudMgrFixture
