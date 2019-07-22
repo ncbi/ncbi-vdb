@@ -3501,7 +3501,7 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
     CONST_STRING(&aws, "169.254.169.254");
     CONST_STRING(&gcp, "metadata.google.internal");
 
-    if ( StringEqual(hostname, &aws) == 0 || StringEqual(hostname, &gcp) == 0)
+    if ( StringEqual(hostname, &aws) || StringEqual(hostname, &gcp))
         return 0;
 
     if ( cloudMgr == NULL )
