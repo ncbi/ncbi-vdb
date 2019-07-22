@@ -410,7 +410,7 @@ LIB_EXPORT void CC XMLLogger_Release(const XMLLogger* cself)
         /* make log valid XML */
         if( self->file.file != NULL ) {
             if( self->file.pos > 0 ) {
-                KFileWriteAll(self->file.file, self->file.pos, "</Log>\n", 7, NULL);
+                KFileWriteExactly(self->file.file, self->file.pos, "</Log>\n", 7 );
             }
             KFileRelease(self->file.file);
         }

@@ -232,7 +232,7 @@ static
 rc_t CC KU64Index_WriteFunc( void *param, const void *buffer, size_t size, size_t *num_writ )
 {
     KU64Index_PersistData* pd = param;
-    rc_t rc = KFileWrite(pd->file, pd->pos, buffer, size, num_writ);
+    rc_t rc = KFileWriteAll(pd->file, pd->pos, buffer, size, num_writ);
     pd->pos += *num_writ;
     return rc;
 }
@@ -313,9 +313,9 @@ rc_t KU64IndexPersist_v3(KU64Index_v3* self, bool proj, KDirectory *dir, const c
 
             KDBHdrInit(&head.h, 3);
             head.index_type = kitU64;
-            self->rc = KFileWriteExactly(pd.file, pd.pos, &head, sizeof head);
+            self->rc = KFileWriteExactly(pd.file, pd.pos, &head, sizeof(struct KIndexFileHeader_v3));
             if( self->rc == 0 ) {
-                pd.pos += sizeof head;
+                pd.pos += sizeof(struct KIndexFileHeader_v3);
                 if( use_md5 ) {
                     KMD5FileBeginTransaction(pd.file_md5);
                 }

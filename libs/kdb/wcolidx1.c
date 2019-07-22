@@ -238,6 +238,7 @@ rc_t KColumnIdx1Create ( KColumnIdx1 *self, KDirectory *dir,
         {
 #endif
             KColumnHdr hdr;
+            size_t num_bytes;
 
             memset ( & hdr, 0, sizeof hdr );
             hdr . dad . endian = eByteOrderTag;
@@ -257,29 +258,33 @@ rc_t KColumnIdx1Create ( KColumnIdx1 *self, KDirectory *dir,
             * data_eof = 0;
             * idx0_count = 0;
             * idx2_eof = 0;
-
 #if KCOL_CURRENT_VERSION == 1
-            rc = KFileWriteExactly ( self -> f, 0, & hdr, KColumnHdrOffset ( hdr, vCUR ) );
+            rc = KFileWriteAll ( self -> f, 0, & hdr,
+                KColumnHdrOffset ( hdr, vCUR ),  & num_bytes );
 #else
-            rc = KFileWriteExactly ( self -> f, 0, & hdr, sizeof hdr . dad );
+            rc = KFileWriteAll ( self -> f, 0, & hdr, sizeof hdr . dad, & num_bytes );
             if ( rc == 0 )
             {
-                rc = KFileWriteExactly ( self -> fidx, 0, & hdr, KColumnHdrOffset ( hdr, vCUR ) );
+                rc = KFileWrite ( self -> fidx, 0, & hdr,
+                    KColumnHdrOffset ( hdr, vCUR ),  & num_bytes );
 #endif
                 if ( rc == 0 )
                 {
-                    self -> vers = KCOL_CURRENT_VERSION;
-                    /* Here is the exit with two new files */
-                    return 0;
+                    if ( num_bytes == KColumnHdrOffset ( hdr, vCUR ) )
+                    {
+                        self -> vers = KCOL_CURRENT_VERSION;
+                        /* Here is the exit with two new files */
+                        return 0;
+                    }
                 }
 #if KCOL_CURRENT_VERSION != 1
-            }
 
-            KFileRelease ( self -> fidx );
-        }
+                KFileRelease ( self -> fidx );
+            }
 #endif
 
-        KFileRelease ( self -> f );
+            KFileRelease ( self -> f );
+        }
     }
 
     return rc;
@@ -741,7 +746,7 @@ rc_t KColumnIdx1WriteHeader ( KColumnIdx1 *self,
     rc_t rc = 0;
     KColumnHdr hdr;
     bool write_idx1 = false;
-    size_t off, off1;
+    size_t off, off1, num_writ, num_writ1;
 
     off1 = sizeof hdr . dad;
 
@@ -789,7 +794,7 @@ rc_t KColumnIdx1WriteHeader ( KColumnIdx1 *self,
         rc = KMD5FileReset ( self -> fidxmd5 );
     if ( rc == 0 )
     {
-        rc = KFileWriteExactly ( self -> fidx, 0, & hdr, off );
+        rc = KFileWriteAll ( self -> fidx, 0, & hdr, off, & num_writ );
         if ( rc == 0 )
         {
             /* don't have a failsafe recover here - no undoing write to idx figured out */
@@ -799,12 +804,17 @@ rc_t KColumnIdx1WriteHeader ( KColumnIdx1 *self,
                 if ( self -> fmd5 != NULL )
                     rc = KMD5FileReset ( self -> fmd5 );
                 if ( rc == 0 )
-                    rc = KFileWriteExactly ( self -> f, 0, & hdr, off1 );
+                    rc = KFileWriteAll ( self -> f, 0, & hdr, off1, & num_writ1 );
 #if KCOL_CURRENT_VERSION != 1
             }
         }
     }
 #endif
+    if ( rc == 0 )
+    {
+        if ( write_idx1 && num_writ1 != off1 )
+            rc = RC ( rcDB, rcIndex, rcWriting, rcTransfer, rcIncomplete );
+    }
 
     return rc;
 }
@@ -838,7 +848,7 @@ rc_t KColumnIdx1Commit ( KColumnIdx1 *self, const KColBlockLoc *bloc )
         {
             n -> loc = * bloc;
             if ( BSTreeInsertUnique ( & self -> bst,
-                     & n -> n, ( BSTNode** ) & exist, KColumnIdx1NodeSort ) )
+                 & n -> n, ( BSTNode** ) & exist, KColumnIdx1NodeSort ) )
             {
                 free ( n );
                 rc = RC ( rcDB, rcIndex, rcCommitting, rcRange, rcExists );

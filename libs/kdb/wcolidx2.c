@@ -207,8 +207,7 @@ rc_t KColumnIdx2Write ( KColumnIdx2 *self,
 {
     * pos = self -> eof;
 
-    return KFileWriteExactly ( self -> f,
-        self -> eof, buffer, bytes );
+    return KFileWriteExactly ( self -> f, self -> eof, buffer, bytes );
 }
 
 /* Commit
