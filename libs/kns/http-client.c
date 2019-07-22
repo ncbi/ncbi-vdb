@@ -3530,6 +3530,18 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
         {
             cpId = cloud_provider_aws;
         }
+        else {
+            String google;
+            CONST_STRING(&google, "storage.cloud.google.com");
+            skip = 0;
+            if (hostname->size >= google.size &&
+                string_cmp(google.addr, google.size,
+                    hostname->addr + skip, hostname->size - skip,
+                    google.size) == 0)
+            {
+                cpId = cloud_provider_gcp;
+            }
+        }
     }
 
     if ( cpId == cloud_provider_none ) 
