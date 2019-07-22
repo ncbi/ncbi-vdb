@@ -1341,8 +1341,10 @@ rc_t KTrieIndexPersistTrie_v2 ( const KTrieIndex_v2 *self, PersistTrieData *pb )
     if ( rc == 0 && pb -> marker != 0 )
     {
         size_t num_writ;
-        rc = KFileWriteAll ( pb -> f, pb -> pos,
+        rc = KFileWrite ( pb -> f, pb -> pos,
             pb -> buffer, pb -> marker, & num_writ );
+        if ( rc == 0 && num_writ != pb -> marker )
+            rc = RC ( rcDB, rcIndex, rcPersisting, rcTransfer, rcIncomplete );
     }
 
     return rc;
@@ -1559,8 +1561,10 @@ rc_t KTrieIndexPersistProj_v2 ( const KTrieIndex_v2 *self, PersistTrieData *pb )
             /* done with pttree */
             PTrieWhack ( tt );
         }
-        rc = KFileWriteAll ( pb -> f, file_size, 
+        rc = KFileWrite ( pb -> f, file_size, 
 			  (uint8_t*)addr + num_to_read,  map_size - num_to_read, & num_writ );
+        if ( rc == 0  &&  num_writ != map_size - num_to_read )
+            rc = RC ( rcDB, rcIndex, rcPersisting, rcHeader, rcInsufficient );
         free ( addr );
     }
 
@@ -1688,8 +1692,11 @@ rc_t KTrieIndexPersistProj_v3 ( const KTrieIndex_v2 *self, PersistTrieData *pb )
 
             if ( rc == 0 )
             {
-                rc = KFileWriteAll ( pb -> f, file_size, 
+                rc = KFileWrite ( pb -> f, file_size, 
                      ( uint8_t* ) addr + num_to_read,  map_size - num_to_read, & num_writ );
+
+                if ( rc == 0  &&  num_writ != map_size - num_to_read )
+                    rc = RC ( rcDB, rcIndex, rcPersisting, rcHeader, rcInsufficient );
             }
         }
 

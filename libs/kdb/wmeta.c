@@ -2326,8 +2326,11 @@ rc_t KMetadataFlush ( KMetadata *self )
                 KMDWriteFunc, & pb, KMDataNodeAuxFunc, NULL );
             if ( rc == 0 && pb . marker != 0 )
             {
-                rc = KFileWriteAll ( pb . f, pb . pos,
-                                  pb . buffer, pb . marker, NULL );
+                size_t num_flushed;
+                rc = KFileWrite ( pb . f, pb . pos,
+                                  pb . buffer, pb . marker, & num_flushed );
+                if ( rc == 0 && num_flushed != pb . marker )
+                    rc = RC ( rcDB, rcMetadata, rcPersisting, rcTransfer, rcIncomplete );
             }
             pb . rc = KFileRelease ( pb . f );
             if ( pb . rc  ==  0 )

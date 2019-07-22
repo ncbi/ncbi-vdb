@@ -493,6 +493,7 @@ rc_t KColumnIdx0Commit ( KColumnIdx0 *self,
     const KColBlobLoc *loc, KColBlobLoc *prior, bool bswap )
 {
     rc_t rc = 0;
+    size_t num_writ;
     KColumnIdx0Node *n;
 
     assert ( self != NULL );
@@ -536,7 +537,7 @@ rc_t KColumnIdx0Commit ( KColumnIdx0 *self,
 
     /* journal index to idx0 */
     if ( ! bswap )
-        rc = KFileWriteExactly ( self -> f, self -> eof, loc, sizeof * loc );
+        rc = KFileWrite ( self -> f, self -> eof, loc, sizeof * loc, & num_writ );
     else
     {
         KColBlobLoc loc_copy;
@@ -545,42 +546,49 @@ rc_t KColumnIdx0Commit ( KColumnIdx0 *self,
         loc_copy . id_range = bswap_32 ( loc -> id_range );
         loc_copy . start_id = bswap_64 ( loc -> start_id );
 
-        rc = KFileWriteExactly ( self -> f, self -> eof,
-            & loc_copy, sizeof loc_copy );
+        rc = KFileWrite ( self -> f, self -> eof,
+            & loc_copy, sizeof loc_copy, & num_writ );
     }
     if ( rc == 0 )
     {
-        self -> eof += sizeof * loc;
-
-        /* detect insert/overwrite */
-        if ( n != NULL )
+        /* detect complete write */
+        if ( num_writ == sizeof * loc )
         {
-            /* if deleting, "n" is prior value */
-            if ( loc -> u . blob . remove )
+            self -> eof += sizeof * loc;
+
+            /* detect insert/overwrite */
+            if ( n != NULL )
             {
-                /* perform a delete */
-                assert ( self -> count > 0 );
-                BSTreeUnlink ( & self -> bst, & n -> n );
-                -- self -> count;
-                free ( n );
-            }
-            else
-            {
-                /* insert new or overwrite old */
-                n -> loc . pg = loc -> pg;
-                n -> loc . u . blob . size = loc -> u . blob . size;
-                if ( prior -> u . blob . size == 0 )
+                /* if deleting, "n" is prior value */
+                if ( loc -> u . blob . remove )
                 {
-                    /* complete insertion */
-                    BSTreeInsert ( & self -> bst, & n -> n, KColumnIdx0NodeSort );
-                    if ( ++ self -> count >= 64 * 1024 )
-                        return kdbReindex;
+                    /* perform a delete */
+                    assert ( self -> count > 0 );
+                    BSTreeUnlink ( & self -> bst, & n -> n );
+                    -- self -> count;
+                    free ( n );
+                }
+                else
+                {
+                    /* insert new or overwrite old */
+                    n -> loc . pg = loc -> pg;
+                    n -> loc . u . blob . size = loc -> u . blob . size;
+                    if ( prior -> u . blob . size == 0 )
+                    {
+                        /* complete insertion */
+                        BSTreeInsert ( & self -> bst, & n -> n, KColumnIdx0NodeSort );
+                        if ( ++ self -> count >= 64 * 1024 )
+                            return kdbReindex;
+                    }
                 }
             }
+
+            /* done */
+            return 0;
         }
 
-        /* done */
-        return 0;
+        /* got here due to incomplete write to idx0 */
+        rc = RC ( rcDB, rcBlob, rcCommitting, rcTransfer, rcIncomplete );
     }
 
     /* free allocated insertion block */
