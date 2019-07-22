@@ -282,7 +282,7 @@ rc_t ItemAddElmsSdl(Item * self, const KJsonObject * node,
 
             rc = VPathMakeFromUrl(&path, &url, NULL, true, &id, ldata.sz,
                 mod, hasMd5 ? md5 : NULL, 0, ldata.srv, &objectType, &type,
-                ceRequired, payRequired);
+                ceRequired, payRequired, ldata.name);
 
             if (rc == 0)
                 VPathMarkHighReliability(path, true);

@@ -277,27 +277,44 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
         }
 
         else if ( VPathFromUri ( path ) ) {
-            if (isSource) { /* Getting cache location for source files.
-                            It should be cwd/acc/filename .
-                            Using a hack: filename is the last part of path;
-                                          acc is the last directory name */
+            if (isSource) {
+                String acc;
+                String name;
+
+                /* Getting cache location for source files.
+                   When acc & name (come from SDL) are unknown:
+                    it should be cwd/acc/filename.
+                    Using a hack: filename is the last part of path;
+                    acc is the last directory name
+                   Otherwise cache location is acc/name */
 
                 size_t size = path->path.size;
                 const char * s = string_rchr(path->path.addr, size, '/');
                 /* the part after the latest slash is the filename */
 
-                if (s != NULL && s > path->path.addr) {
-                    /* size of path without filename */
-                    size = s - path->path.addr;
-                    /* rfind the second slash for accesion directory */
-                    s = string_rchr(path->path.addr, size, '/');
+                rc = VPathGetId(path, &acc);
+                if (rc == 0)
+                    rc = VPathGetName(path, &name);
+
+                if (rc == 0 && acc.size > 0 && name.size > 0)
+                    /* acc & name (come from SDL) are known */
+                    cacheRc = VPathMakeFmt((VPath**)&cache, "%S/%S", &acc, &name);
+
+                else {
+                    /* acc & name (come from SDL) are unknown */
+                    if (s != NULL && s > path->path.addr) {
+                        /* size of path without filename */
+                        size = s - path->path.addr;
+                        /* rfind the second slash for accesion directory */
+                        s = string_rchr(path->path.addr, size, '/');
+                    }
+                    if (s != NULL)
+                        ++s;
+                    if (s == NULL)
+                        s = path->path.addr + path->path.size;
+                    size = path->path.size - (s - path->path.addr);
+                    cacheRc = VPathMakeFmt((VPath**)&cache, "%.*s", (int)size, s);
                 }
-                if (s != NULL)
-                    ++s;
-                if (s == NULL)
-                    s = path->path.addr + path->path.size;
-                size = path->path.size - (s - path->path.addr);
-                cacheRc = VPathMakeFmt((VPath**)&cache, "%.*s", (int)size, s);
             }
             else {
                 cacheRc = VResolverQueryWithDir(self, protocols, query, NULL,

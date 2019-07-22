@@ -1699,7 +1699,7 @@ static bool VPathMakeOrNot ( VPath ** new_path, const String * src,
             useDates ? typed -> date : 0,
             typed -> md5 . has_md5 ? typed -> md5 . md5 : NULL,
             useDates ? typed -> expiration : 0, NULL, NULL, NULL,
-            false, false );
+            false, false, NULL );
         if ( * rc == 0 )
             VPathMarkHighReliability ( * new_path, true );
 

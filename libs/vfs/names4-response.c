@@ -1449,7 +1449,7 @@ static rc_t LocationsAddLink ( Locations * self, const KJsonValue * node,
         const String * objectType = NULL;
         rc = VPathMakeFromUrl ( & path, & url, NULL, true, & acc, dad -> sz,
             dad -> mod, hasMd5 ? md5 : NULL, 0, dad -> srv, objectType, NULL,
-            false, false );
+            false, false, NULL );
     }
     else {
         const String * objectType = NULL;
@@ -1457,14 +1457,17 @@ static rc_t LocationsAddLink ( Locations * self, const KJsonValue * node,
         StringInitCString ( & ticket, dad -> tic );
         rc = VPathMakeFromUrl ( & path, & url, & ticket, true, & acc, dad -> sz,
             dad -> mod, hasMd5 ? md5 : NULL, 0, dad -> srv, objectType, NULL,
-            false, false );
+            false, false, NULL );
     }
+
     if ( rc == 0 )
         VPathMarkHighReliability ( path, true );
+
     if ( rc != 0 ) {
         if (THRESHOLD > THRESHOLD_NO_DEBUG)
             DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
                 ( "... error: invalid 'link': '%s'\n", * value ) );
+
         return rc;
     }
 
