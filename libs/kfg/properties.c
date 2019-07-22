@@ -24,11 +24,12 @@
  *
  */
 
-#include <klib/rc.h>
-#include <klib/vector.h>
-#include <klib/text.h>
-#include <klib/printf.h>
 #include <klib/namelist.h>
+#include <klib/printf.h>
+#include <klib/strings.h> /* KFG_USER_ACCEPT_GCP_CHARGES etc */
+#include <klib/rc.h>
+#include <klib/text.h>
+#include <klib/vector.h>
 
 #include <kfs/directory.h>
 #include <kfs/file.h>
@@ -798,10 +799,9 @@ LIB_EXPORT rc_t CC KConfig_Set_Prefetch_Download_To_Cache ( KConfig *self, bool 
     return KConfigWriteBool( self, PREFETCH_DOWNLOAD_TO_CACHE, value );
 }
 
-#define USER_ACCEPT_AWS_CHARGES "/libs/cloud/accept_aws_charges"
 LIB_EXPORT rc_t CC KConfig_Get_User_Accept_Aws_Charges ( const KConfig *self, bool * value )
 {
-    rc_t rc = KConfigReadBool ( self, USER_ACCEPT_AWS_CHARGES, value );
+    rc_t rc = KConfigReadBool ( self, KFG_USER_ACCEPT_AWS_CHARGES, value );
     if ( GetRCState ( rc ) == rcNotFound)
     {
         * value = false;
@@ -811,13 +811,12 @@ LIB_EXPORT rc_t CC KConfig_Get_User_Accept_Aws_Charges ( const KConfig *self, bo
 }
 LIB_EXPORT rc_t CC KConfig_Set_User_Accept_Aws_Charges ( KConfig *self, bool value )
 {
-    return KConfigWriteBool( self, USER_ACCEPT_AWS_CHARGES, value );
+    return KConfigWriteBool( self, KFG_USER_ACCEPT_AWS_CHARGES, value );
 }
 
-#define USER_ACCEPT_GCP_CHARGES "/libs/cloud/accept_gcp_charges"
 LIB_EXPORT rc_t CC KConfig_Get_User_Accept_Gcp_Charges ( const KConfig *self, bool * value )
 {
-    rc_t rc = KConfigReadBool ( self, USER_ACCEPT_GCP_CHARGES, value );
+    rc_t rc = KConfigReadBool ( self, KFG_USER_ACCEPT_GCP_CHARGES, value );
     if ( GetRCState ( rc ) == rcNotFound)
     {
         * value = false;
@@ -827,7 +826,7 @@ LIB_EXPORT rc_t CC KConfig_Get_User_Accept_Gcp_Charges ( const KConfig *self, bo
 }
 LIB_EXPORT rc_t CC KConfig_Set_User_Accept_Gcp_Charges ( KConfig *self, bool value )
 {
-    return KConfigWriteBool( self, USER_ACCEPT_GCP_CHARGES, value );
+    return KConfigWriteBool( self, KFG_USER_ACCEPT_GCP_CHARGES, value );
 }
 
 #define REPORT_CLOUD_INSTANCE_IDENTITY "/libs/cloud/report_instance_identity"

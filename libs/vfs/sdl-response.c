@@ -92,7 +92,6 @@ static rc_t DataUpdate(const Data * self,
     name = "bundle";
     StrSet(&next->acc, KJsonObjectGetMember(node, name), name, path);
     StrSet(&next->bundle, KJsonObjectGetMember(node, name), name, path);
-    StrSet(&next->name, KJsonObjectGetMember(node, name), name, path);
 
     name = "ceRequired";
     BulSet(&next->ceRequired, KJsonObjectGetMember(node, name), name, path);
@@ -109,6 +108,9 @@ static rc_t DataUpdate(const Data * self,
 
     name = "msg";
     StrSet(&next->msg, KJsonObjectGetMember(node, name), name, path);
+
+    name = "name";
+    StrSet(&next->name, KJsonObjectGetMember(node, name), name, path);
 
     name = "object";
     StrSet(&next->object, KJsonObjectGetMember(node, name), name, path);

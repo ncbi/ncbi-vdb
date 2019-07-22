@@ -419,6 +419,20 @@ rc_t LocationsAddVPath ( Locations * self, const VPath * path,
                 self->size = osize;
                 rc = LocationsSetHttp(self, path);
             }
+            else {
+                uint64_t size = VPathGetSize(path);
+                if (size > 0) {
+                    if (self->size < 0)
+                        self->size = size;
+                    else if (self->size != size)
+                        PLOGERR(klogFatal, (klogFatal,
+                            RC(rcVFS, rcQuery, rcExecuting, rcString, rcUnexpected),
+                            "different sizes for the same file '$name$type': $s1:$s2"
+                            "name=%s,type=%s,s1=%lu,s2=%lu",
+                            self->name, self->cType, self->size, size));
+                }
+                rc = LocationsSetHttp(self, path);
+            }
 
             return rc;
         }
@@ -540,6 +554,7 @@ rc_t ItemAddFormat ( Item * self, const char * cType, const Data * dad,
         self -> elm = ( Locations * ) calloc ( n, sizeof * self -> elm );
         if ( self -> elm == NULL )
             return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
+        self->elm->size = -1; /* unknown */
         self -> nElm = n;
     }
     else {
@@ -572,6 +587,7 @@ rc_t ItemAddFormat ( Item * self, const char * cType, const Data * dad,
             idx = self -> nElm ++;
             elm = & self -> elm [ idx ];
             memset ( elm, 0, sizeof * elm );
+            elm->size = -1; /* unknown */
         }
 /*              break;
             }

@@ -73,6 +73,9 @@ rc_t KServiceAddId     ( KService * self, const char * id );
 /* Add a dbGaP Project to service request */
 rc_t KServiceAddProject ( KService * self, uint32_t id );
 
+/* Set location of data in service request */
+rc_t KServiceSetLocation(KService * self, const char * location );
+
 /* Set accept-format-in of service request */
 rc_t KServiceSetFormat(KService * self, const char * format);
 

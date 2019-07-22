@@ -3501,7 +3501,7 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
     CONST_STRING(&aws, "169.254.169.254");
     CONST_STRING(&gcp, "metadata.google.internal");
 
-    if ( StringEqual(hostname, &aws) == 0 || StringEqual(hostname, &gcp) == 0)
+    if ( StringEqual(hostname, &aws) || StringEqual(hostname, &gcp))
         return 0;
 
     if ( cloudMgr == NULL )
@@ -3529,6 +3529,18 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
                 amazonaws.size) == 0)
         {
             cpId = cloud_provider_aws;
+        }
+        else {
+            String google;
+            CONST_STRING(&google, "storage.cloud.google.com");
+            skip = 0;
+            if (hostname->size >= google.size &&
+                string_cmp(google.addr, google.size,
+                    hostname->addr + skip, hostname->size - skip,
+                    google.size) == 0)
+            {
+                cpId = cloud_provider_gcp;
+            }
         }
     }
 
