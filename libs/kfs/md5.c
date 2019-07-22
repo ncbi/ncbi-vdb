@@ -109,7 +109,7 @@ bool CC KMD5SumEntryFlush ( SLNode *n, void *data )
         return true;
     }
 
-    pb -> rc = KFileWrite ( pb -> f, pb -> pos, line, total, & num_writ );
+    pb -> rc = KFileWriteAll ( pb -> f, pb -> pos, line, total, & num_writ );
     if ( pb -> rc != 0 )
         return true;
 

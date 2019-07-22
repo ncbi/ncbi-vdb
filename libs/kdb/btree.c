@@ -196,7 +196,7 @@ rc_t KBTreeWhack ( KBTree *self )
         KPageFileRelease ( self -> pgfile.pager );
 
         /* write header to tail */        
-        rc = KFileWrite ( self -> file, eof, & self -> hdr, sizeof self -> hdr, & num_writ );
+        rc = KFileWriteAll ( self -> file, eof, & self -> hdr, sizeof self -> hdr, & num_writ );
         if ( rc == 0 && num_writ != sizeof self -> hdr )
             rc = RC ( rcDB, rcTree, rcPersisting, rcTransfer, rcIncomplete );
         if ( rc == 0 )

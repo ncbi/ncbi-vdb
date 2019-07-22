@@ -95,7 +95,7 @@ bool CC KCRC32SumEntryFlush ( SLNode *n, void *data )
         return true;
     }
 
-    pb -> rc = KFileWrite ( pb -> f, pb -> pos, line, len, & num_writ );
+    pb -> rc = KFileWriteAll ( pb -> f, pb -> pos, line, len, & num_writ );
     if ( pb -> rc != 0 )
         return true;
 

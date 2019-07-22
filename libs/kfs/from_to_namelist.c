@@ -243,12 +243,13 @@ static rc_t SaveToFile( struct KFile * f, const VNamelist * nl, const char * del
             rc = VNameListGet ( nl, idx, &s );
             if ( rc == 0 && s != NULL )
             {
-                size_t num_writ;
-                rc = KFileWriteAll ( f, pos, s, string_size ( s ), &num_writ );
+                size_t num_writ = string_size ( s );
+                rc = KFileWriteExactly ( f, pos, s, num_writ );
                 if ( rc == 0 )
                 {
                     pos += num_writ;
-                    rc = KFileWriteAll ( f, pos, delim, string_size ( delim ), &num_writ );
+                    num_writ = string_size ( delim );
+                    rc = KFileWriteExactly ( f, pos, delim, num_writ );
                     if ( rc == 0 )
                         pos += num_writ;
                 }

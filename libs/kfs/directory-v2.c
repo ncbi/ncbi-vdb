@@ -1032,8 +1032,7 @@ static rc_t copy_loop( const KFile *src, KFile *dst, size_t bsize )
         rc = KFileRead ( src, pos, buffer, bsize, &num_read );
         if ( rc == 0 && num_read > 0 )
         {
-            size_t num_writ;
-            rc = KFileWrite ( dst, pos, buffer, num_read, &num_writ );
+            rc = KFileWriteExactly ( dst, pos, buffer, num_read );
             pos += num_read;
         }
     }

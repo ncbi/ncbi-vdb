@@ -489,7 +489,7 @@ LIB_EXPORT rc_t CC KFileTimedReadAll_v1 ( const KFile_v1 *self, uint64_t pos,
 LIB_EXPORT rc_t CC KFileReadExactly_v1 ( const KFile_v1 *self,
     uint64_t pos, void *buffer, size_t bytes )
 {
-    rc_t rc;
+    rc_t rc = 0;
     uint8_t *b;
     size_t total, count;
 
@@ -515,6 +515,7 @@ LIB_EXPORT rc_t CC KFileReadExactly_v1 ( const KFile_v1 *self,
             {
                 if ( GetRCObject ( rc ) != ( enum RCObject ) rcTimeout || GetRCState ( rc ) != rcExhausted )
                     break;
+                count = 0;
             }
             else if ( count == 0 )
             {
@@ -533,7 +534,7 @@ LIB_EXPORT rc_t CC KFileReadExactly_v1 ( const KFile_v1 *self,
 LIB_EXPORT rc_t CC KFileTimedReadExactly_v1 ( const KFile_v1 *self,
     uint64_t pos, void *buffer, size_t bytes, struct timeout_t *tm )
 {
-    rc_t rc;
+    rc_t rc = 0;
     uint8_t *b;
     size_t total, count;
 
@@ -563,6 +564,7 @@ LIB_EXPORT rc_t CC KFileTimedReadExactly_v1 ( const KFile_v1 *self,
                         break;
                     if ( GetRCObject ( rc ) != ( enum RCObject ) rcTimeout || GetRCState ( rc ) != rcExhausted )
                         break;
+                    count = 0;
                 }
                 else if ( count == 0 )
                 {
@@ -583,6 +585,7 @@ LIB_EXPORT rc_t CC KFileTimedReadExactly_v1 ( const KFile_v1 *self,
                 {
                     if ( GetRCObject ( rc ) != ( enum RCObject ) rcTimeout || GetRCState ( rc ) != rcExhausted )
                         break;
+                    count = 0;
                 }
                 else if ( count == 0 )
                 {
@@ -755,7 +758,7 @@ LIB_EXPORT rc_t CC KFileTimedWrite_v1 ( KFile_v1 *self, uint64_t pos,
 LIB_EXPORT rc_t CC KFileWriteAll_v1 ( KFile_v1 *self, uint64_t pos,
     const void *buffer, size_t size, size_t *num_writ )
 {
-    rc_t rc;
+    rc_t rc = 0;
     const uint8_t *b;
     size_t total, count;
 
@@ -829,7 +832,7 @@ LIB_EXPORT rc_t CC KFileWriteAll_v1 ( KFile_v1 *self, uint64_t pos,
 LIB_EXPORT rc_t CC KFileTimedWriteAll_v1 ( KFile_v1 *self, uint64_t pos,
     const void *buffer, size_t size, size_t *num_writ, struct timeout_t *tm )
 {
-    rc_t rc;
+    rc_t rc = 0;
     const uint8_t *b;
     size_t total, count;
 
@@ -896,126 +899,30 @@ LIB_EXPORT rc_t CC KFileTimedWriteAll_v1 ( KFile_v1 *self, uint64_t pos,
 }
 
 /* WriteExactly
- *  write from file until "size" bytes have been transferred
+ *  write to file until "bytes" have been transferred
+ *  or return incomplete transfer error
  *
  *  "pos" [ IN ] - starting position within file
  *
- *  "buffer" [ IN ] and "size" [ IN ] - data to be written
+ *  "buffer" [ IN ] and "bytes" [ IN ] - data to be written
+ *
+ *  "tm" [ IN/OUT, NULL OKAY ] - an optional indicator of
+ *  blocking behavior. not all implementations will support
+ *  timed writes. a NULL timeout will block indefinitely,
+ *  a value of "tm->mS == 0" will have non-blocking behavior
+ *  if supported by implementation, and "tm->mS > 0" will indicate
+ *  a maximum wait timeout.
  */
 LIB_EXPORT rc_t CC KFileWriteExactly_v1 ( KFile_v1 *self, uint64_t pos,
     const void *buffer, size_t size )
 {
-    rc_t rc;
-    const uint8_t *b;
-    size_t total, count;
-
-    if ( self == NULL )
-        return RC ( rcFS, rcFile, rcWriting, rcSelf, rcNull );
-
-    if ( ! self -> write_enabled )
-        return RC ( rcFS, rcFile, rcWriting, rcFile, rcNoPerm );
-
-    if ( size == 0 )
-        return 0;
-    if ( buffer == NULL )
-        return RC ( rcFS, rcFile, rcWriting, rcBuffer, rcNull );
-
-    switch ( self -> vt -> v1 . maj )
-    {
-    case 1:
-        for ( b = buffer, total = 0; total < size; total += count )
-        {
-            count = 0;
-            rc = ( * self -> vt -> v1 . write ) ( self, pos + total, b + total, size - total, & count );
-            if ( rc != 0 )
-            {
-                if ( GetRCObject ( rc ) != ( enum RCObject ) rcTimeout || GetRCState ( rc ) != rcExhausted )
-                    break;
-            }
-            else if ( count == 0 )
-            {
-                rc = RC ( rcFS, rcFile, rcWriting, rcTransfer, rcIncomplete );
-                break;
-            }
-        }
-        break;
-    default:
-        rc = RC ( rcFS, rcFile, rcWriting, rcInterface, rcBadVersion );
-    }
-
-    return rc;
+    return KFileWriteAll_v1 ( self, pos, buffer, size, NULL );
 }
 
 LIB_EXPORT rc_t CC KFileTimedWriteExactly_v1 ( KFile_v1 *self, uint64_t pos,
     const void *buffer, size_t size, struct timeout_t *tm )
 {
-    rc_t rc;
-    const uint8_t *b;
-    size_t total, count;
-
-    if ( self == NULL )
-        return RC ( rcFS, rcFile, rcWriting, rcSelf, rcNull );
-
-    if ( ! self -> write_enabled )
-        return RC ( rcFS, rcFile, rcWriting, rcFile, rcNoPerm );
-
-    if ( size == 0 )
-        return 0;
-    if ( buffer == NULL )
-        return RC ( rcFS, rcFile, rcWriting, rcBuffer, rcNull );
-
-    switch ( self -> vt -> v1 . maj )
-    {
-    case 1:
-        if ( self -> vt -> v1 . min >= 2 )
-        {
-            for ( b = buffer, total = 0; total < size; total += count )
-            {
-                count = 0;
-                rc = ( * self -> vt -> v1 . timed_write ) ( self, pos + total, b + total, size - total, & count, tm );
-                if ( rc != 0 )
-                {
-                    if ( tm != NULL )
-                        break;
-                    if ( GetRCObject ( rc ) != ( enum RCObject ) rcTimeout || GetRCState ( rc ) != rcExhausted )
-                        break;
-                }
-                else if ( count == 0 )
-                {
-                    rc = RC ( rcFS, rcFile, rcWriting, rcTransfer, rcIncomplete );
-                    break;
-                }
-            }
-            break;
-        }
-
-        if ( tm == NULL )
-        {
-            for ( b = buffer, total = 0; total < size; total += count )
-            {
-                count = 0;
-                rc = ( * self -> vt -> v1 . write ) ( self, pos + total, b + total, size - total, & count );
-                if ( rc != 0 )
-                {
-                    if ( GetRCObject ( rc ) != ( enum RCObject ) rcTimeout || GetRCState ( rc ) != rcExhausted )
-                        break;
-                }
-                else if ( count == 0 )
-                {
-                    rc = RC ( rcFS, rcFile, rcWriting, rcTransfer, rcIncomplete );
-                    break;
-                }
-            }
-            break;
-        }
-
-        /* no break */
-
-    default:
-        rc = RC ( rcFS, rcFile, rcWriting, rcInterface, rcBadVersion );
-    }
-
-    return rc;
+    return KFileTimedWriteAll_v1 ( self, pos, buffer, size, NULL, tm );
 }
 
 /* Init

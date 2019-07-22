@@ -277,36 +277,6 @@ rc_t KPageBackingRead ( const KPageBacking *self, void **ppage, uint32_t pg_id )
 /* Write
  *  write a page to backing store
  */
-#if 0
-static
-rc_t KFileWriteAll ( KFile *self, uint64_t pos, const uint8_t *buff, size_t size, size_t *num_writ )
-{
-    rc_t rc;
-    size_t total, partial;
-
-    for ( rc = 0, total = 0; total < size; total += partial )
-    {
-        rc = KFileWrite ( self, pos + total, & buff [ total ], size - total, & partial );
-        if ( rc != 0 )
-            break;
-        if ( partial == 0 )
-        {
-            rc = RC ( rcFS, rcBlob, rcWriting, rcTransfer, rcIncomplete );
-            break;
-        }
-    }
-
-    if ( total != 0 )
-    {
-        * num_writ = total;
-        return 0;
-    }
-
-    * num_writ = 0;
-    return rc;
-}
-#endif
-
 static
 rc_t KPageBackingWrite ( KPageBacking *self, const void *page, uint32_t pg_id )
 {

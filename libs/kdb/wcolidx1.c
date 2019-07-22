@@ -238,7 +238,6 @@ rc_t KColumnIdx1Create ( KColumnIdx1 *self, KDirectory *dir,
         {
 #endif
             KColumnHdr hdr;
-            size_t num_bytes;
 
             memset ( & hdr, 0, sizeof hdr );
             hdr . dad . endian = eByteOrderTag;
@@ -258,38 +257,29 @@ rc_t KColumnIdx1Create ( KColumnIdx1 *self, KDirectory *dir,
             * data_eof = 0;
             * idx0_count = 0;
             * idx2_eof = 0;
+
 #if KCOL_CURRENT_VERSION == 1
-            rc = KFileWrite ( self -> f, 0, & hdr,
-              KColumnHdrOffset ( hdr, vCUR ),  & num_bytes );
+            rc = KFileWriteExactly ( self -> f, 0, & hdr, KColumnHdrOffset ( hdr, vCUR ) );
 #else
-            rc = KFileWrite ( self -> f, 0, & hdr, sizeof hdr . dad, & num_bytes );
+            rc = KFileWriteExactly ( self -> f, 0, & hdr, sizeof hdr . dad );
             if ( rc == 0 )
             {
-                if ( num_bytes != sizeof hdr . dad )
-                    rc = RC ( rcDB, rcIndex, rcConstructing, rcTransfer, rcIncomplete );
-                else
+                rc = KFileWriteExactly ( self -> fidx, 0, & hdr, KColumnHdrOffset ( hdr, vCUR ) );
+#endif
+                if ( rc == 0 )
                 {
-                    rc = KFileWrite ( self -> fidx, 0, & hdr,
-                        KColumnHdrOffset ( hdr, vCUR ),  & num_bytes );
-#endif
-                    if ( rc == 0 )
-                    {
-                        if ( num_bytes == KColumnHdrOffset ( hdr, vCUR ) )
-                        {
-                            self -> vers = KCOL_CURRENT_VERSION;
-                            /* Here is the exit with two new files */
-                            return 0;
-                        }
-                    }
-#if KCOL_CURRENT_VERSION != 1
+                    self -> vers = KCOL_CURRENT_VERSION;
+                    /* Here is the exit with two new files */
+                    return 0;
                 }
-
-                KFileRelease ( self -> fidx );
+#if KCOL_CURRENT_VERSION != 1
             }
+
+            KFileRelease ( self -> fidx );
+        }
 #endif
 
-            KFileRelease ( self -> f );
-        }
+        KFileRelease ( self -> f );
     }
 
     return rc;
@@ -751,7 +741,7 @@ rc_t KColumnIdx1WriteHeader ( KColumnIdx1 *self,
     rc_t rc = 0;
     KColumnHdr hdr;
     bool write_idx1 = false;
-    size_t off, off1, num_writ, num_writ1;
+    size_t off, off1;
 
     off1 = sizeof hdr . dad;
 
@@ -799,7 +789,7 @@ rc_t KColumnIdx1WriteHeader ( KColumnIdx1 *self,
         rc = KMD5FileReset ( self -> fidxmd5 );
     if ( rc == 0 )
     {
-        rc = KFileWrite ( self -> fidx, 0, & hdr, off, & num_writ );
+        rc = KFileWriteExactly ( self -> fidx, 0, & hdr, off );
         if ( rc == 0 )
         {
             /* don't have a failsafe recover here - no undoing write to idx figured out */
@@ -809,22 +799,12 @@ rc_t KColumnIdx1WriteHeader ( KColumnIdx1 *self,
                 if ( self -> fmd5 != NULL )
                     rc = KMD5FileReset ( self -> fmd5 );
                 if ( rc == 0 )
-                    rc = KFileWrite ( self -> f, 0, & hdr, off1, & num_writ1 );
+                    rc = KFileWriteExactly ( self -> f, 0, & hdr, off1 );
 #if KCOL_CURRENT_VERSION != 1
             }
         }
     }
 #endif
-    if ( rc == 0 )
-    {
-#if KCOL_CURRENT_VERSION != 1
-        if ( num_writ != off )
-            rc = RC ( rcDB, rcIndex, rcWriting, rcTransfer, rcIncomplete );
-        else
-#endif
-        if ( write_idx1 && num_writ1 != off1 )
-            rc = RC ( rcDB, rcIndex, rcWriting, rcTransfer, rcIncomplete );
-    }
 
     return rc;
 }
@@ -836,7 +816,6 @@ rc_t KColumnIdx1Commit ( KColumnIdx1 *self, const KColBlockLoc *bloc )
 {
     rc_t rc;
     uint64_t pos;
-    size_t num_writ;
 
     switch ( self -> vers )
     {
@@ -848,30 +827,25 @@ rc_t KColumnIdx1Commit ( KColumnIdx1 *self, const KColBlockLoc *bloc )
     }
 
     pos += self -> count * sizeof * bloc;
-    rc = KFileWrite ( self -> f, pos, bloc, sizeof * bloc, & num_writ );
+    rc = KFileWriteExactly ( self -> f, pos, bloc, sizeof * bloc );
     if ( rc == 0 )
     {
-        if ( num_writ != sizeof * bloc )
-            rc = RC ( rcDB, rcIndex, rcCommitting, rcTransfer, rcIncomplete );
+        KColumnIdx1Node *n, *exist;
+        n = malloc ( sizeof * n );
+        if ( n == NULL )
+            rc = RC ( rcDB, rcIndex, rcCommitting, rcMemory, rcExhausted );
         else
         {
-            KColumnIdx1Node *n, *exist;
-            n = malloc ( sizeof * n );
-            if ( n == NULL )
-                rc = RC ( rcDB, rcIndex, rcCommitting, rcMemory, rcExhausted );
+            n -> loc = * bloc;
+            if ( BSTreeInsertUnique ( & self -> bst,
+                     & n -> n, ( BSTNode** ) & exist, KColumnIdx1NodeSort ) )
+            {
+                free ( n );
+                rc = RC ( rcDB, rcIndex, rcCommitting, rcRange, rcExists );
+            }
             else
             {
-                n -> loc = * bloc;
-                if ( BSTreeInsertUnique ( & self -> bst,
-                     & n -> n, ( BSTNode** ) & exist, KColumnIdx1NodeSort ) )
-                {
-                    free ( n );
-                    rc = RC ( rcDB, rcIndex, rcCommitting, rcRange, rcExists );
-                }
-                else
-                {
-                    ++ self -> count;
-                }
+                ++ self -> count;
             }
         }
     }

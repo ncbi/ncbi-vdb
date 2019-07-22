@@ -398,12 +398,11 @@ LIB_EXPORT rc_t CC KNgcObjWriteToFile ( const KNgcObj *self, struct KFile * dst 
         rc = string_printf( hdr, sizeof hdr, &written_to_hdr, "ncbi_gap" );
         if ( rc == 0 )
         {
-            size_t written_to_file;
-            rc = KFileWriteAll ( dst, 0, hdr, written_to_hdr, &written_to_file );
-            if ( rc == 0 && written_to_hdr == written_to_file )
+            rc = KFileWriteExactly ( dst, 0, hdr, written_to_hdr );
+            if ( rc == 0 )
             {
                 struct KFile * sub;
-                rc = KFileMakeSubUpdate ( &sub, dst, written_to_file, 4096 );
+                rc = KFileMakeSubUpdate ( &sub, dst, written_to_hdr, 4096 );
                 if ( rc == 0 )
                 {
                     struct KFile * gzip;
@@ -418,8 +417,7 @@ LIB_EXPORT rc_t CC KNgcObjWriteToFile ( const KNgcObj *self, struct KFile * dst 
                                             &self -> downloadTicket, &self -> description );
                         if ( rc == 0 )
                         {
-                            size_t written_to_gzip;
-                            rc = KFileWriteAll ( gzip, 0, buffer, written_to_buffer, &written_to_gzip );
+                            rc = KFileWriteExactly ( gzip, 0, buffer, written_to_buffer );
                         }
                         KFileRelease ( gzip );
                     }
@@ -443,8 +441,7 @@ LIB_EXPORT rc_t CC KNgcObjWriteKeyToFile ( const KNgcObj *self, struct KFile * d
         rc = RC ( rcKFG, rcFile, rcWriting, rcParam, rcInvalid );
     else
     {
-        size_t written_to_file;
-        rc = KFileWriteAll ( dst, 0, self -> encryptionKey . addr, self -> encryptionKey . len, &written_to_file );
+        rc = KFileWriteExactly ( dst, 0, self -> encryptionKey . addr, self -> encryptionKey . len );
     }
     return rc;
 }

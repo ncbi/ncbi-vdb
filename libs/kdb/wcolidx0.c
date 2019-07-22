@@ -537,7 +537,7 @@ rc_t KColumnIdx0Commit ( KColumnIdx0 *self,
 
     /* journal index to idx0 */
     if ( ! bswap )
-        rc = KFileWrite ( self -> f, self -> eof, loc, sizeof * loc, & num_writ );
+        rc = KFileWriteAll ( self -> f, self -> eof, loc, sizeof * loc, & num_writ );
     else
     {
         KColBlobLoc loc_copy;
@@ -546,7 +546,7 @@ rc_t KColumnIdx0Commit ( KColumnIdx0 *self,
         loc_copy . id_range = bswap_32 ( loc -> id_range );
         loc_copy . start_id = bswap_64 ( loc -> start_id );
 
-        rc = KFileWrite ( self -> f, self -> eof,
+        rc = KFileWriteAll ( self -> f, self -> eof,
             & loc_copy, sizeof loc_copy, & num_writ );
     }
     if ( rc == 0 )

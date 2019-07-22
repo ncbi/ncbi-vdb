@@ -124,9 +124,9 @@ rc_t KCounterFileMake (KCounterFile ** pself,
 		       uint64_t * linecounter,
                        bool force)
 {
-    uint64_t		fsize;
-    rc_t		rc;
-    KCounterFile *	self;
+    rc_t rc;
+    uint64_t fsize;
+    KCounterFile * self;
 
     /* -----
      * we can not accept any of the three pointer parameters as NULL
@@ -138,21 +138,21 @@ rc_t KCounterFileMake (KCounterFile ** pself,
     /* -----
      * get space for the object
      */
-    self = malloc (sizeof (KCounterFile));
+    self = malloc (sizeof * self);
     if (self == NULL)	/* allocation failed */
     {
-	/* fail */
-	rc = RC (rcFS, rcFile, rcConstructing, rcMemory, rcExhausted);
+        /* fail */
+        rc = RC (rcFS, rcFile, rcConstructing, rcMemory, rcExhausted);
     }
     else
     {
-	rc = KFileInit (&self->dad,			/* initialize base class */
-			(const KFile_vt*)&vtKCounterFile,/* VTable for KCounterFile */
-            "KCounterFile", "no-name",
-			original->read_enabled,
-			original->write_enabled);
-	if (rc == 0)
-	{
+        rc = KFileInit (&self->dad,			/* initialize base class */
+                        (const KFile_vt*)&vtKCounterFile,/* VTable for KCounterFile */
+                        "KCounterFile", "no-name",
+                        original->read_enabled,
+                        original->write_enabled);
+        if (rc == 0)
+        {
             for (;;)
             {
                 if (force) /* all sizes come from actual reads */
@@ -191,9 +191,9 @@ rc_t KCounterFileMake (KCounterFile ** pself,
                 *pself = self;
                 return 0;
             }
-	}
-	/* fail */
-	free (self);
+        }
+        /* fail */
+        free (self);
     }
     *pself = NULL;
     return rc;
@@ -505,8 +505,8 @@ rc_t CC KCounterFileSize (const KCounterFile *self, uint64_t *size)
 
     if (rc == 0)
     {
-	/* success: refreshing the value */
-	*size = ((KCounterFile *)self)->max_position = fsize;
+        /* success: refreshing the value */
+        *size = ((KCounterFile *)self)->max_position = fsize;
     }
     /* pass along RC value */
     return rc;
@@ -525,7 +525,7 @@ rc_t CC KCounterFileSetSize (KCounterFile *self, uint64_t size)
 
     rc = KFileSetSize (self->original, size);
     if (rc == 0)
-	self->max_position = size;
+        self->max_position = size;
     return rc;
 }
 
@@ -570,9 +570,9 @@ rc_t CC KCounterFileRead	(const KCounterFile *cself,
 
     if ((pos > max_position) && (! self->size_allowed))
     {
-	rc = KCounterFileSeek (self, pos);
-	if (rc != 0)
-	    return rc;
+        rc = KCounterFileSeek (self, pos);
+        if (rc != 0)
+            return rc;
         /* if seek failed */
         if (pos > self->max_position)
         {
@@ -588,7 +588,7 @@ rc_t CC KCounterFileRead	(const KCounterFile *cself,
 
         check_state (self, ((char *)buffer) + (*num_read) - new_bytes, new_bytes);
 
-	*self->bytecounter = self->max_position = temp_max_position;
+        *self->bytecounter = self->max_position = temp_max_position;
     }
     return rc;
 }
@@ -632,17 +632,17 @@ rc_t CC KCounterFileWrite (KCounterFile *self, uint64_t pos,
 
     if ((self->dad.read_enabled) && (pos > max_position) && (! self->size_allowed))
     {
-	rc = KCounterFileSeek (self, pos);
-	if (rc != 0)
-	    return rc;
+        rc = KCounterFileSeek (self, pos);
+        if (rc != 0)
+            return rc;
     }
-
+    
     rc = KFileWrite (self->original, pos, buffer, bsize, num_writ);
     temp_max_position = pos + *num_writ;
-
+    
     if (temp_max_position > max_position)
     {
-	*self->bytecounter = self->max_position = temp_max_position;
+        *self->bytecounter = self->max_position = temp_max_position;
     }
     return rc;
 }

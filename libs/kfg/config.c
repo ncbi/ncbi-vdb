@@ -4263,7 +4263,6 @@ static rc_t _KConfigMkPwdFileAndNode(KConfig *self,
     char encryptionKeyPath[PATH_MAX];
     KDirectory *dir = NULL;
     KFile *encryptionKeyFile = NULL;
-    size_t num_writ = 0;
 
     assert(self && kgc && rep);
 
@@ -4301,19 +4300,13 @@ static rc_t _KConfigMkPwdFileAndNode(KConfig *self,
 
     if (rc == 0) {
         assert(kgc->encryptionKey);
-        rc = KFileWrite(encryptionKeyFile, 0,
-            kgc->encryptionKey, string_size(kgc->encryptionKey), &num_writ);
-        if (rc == 0) {
-            assert(num_writ == string_size(kgc->encryptionKey));
-        }
+        rc = KFileWriteExactly(encryptionKeyFile, 0,
+            kgc->encryptionKey, string_size(kgc->encryptionKey));
     }
 
     if (rc == 0) {
-        rc = KFileWrite(encryptionKeyFile, string_size(kgc->encryptionKey),
-            "\n", 1, &num_writ);
-        if (rc == 0) {
-            assert(num_writ == 1);
-        }
+        rc = KFileWriteExactly(encryptionKeyFile, string_size(kgc->encryptionKey),
+            "\n", 1);
     }
 
     {

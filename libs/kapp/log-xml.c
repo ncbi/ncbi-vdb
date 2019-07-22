@@ -260,8 +260,10 @@ rc_t CC LoaderXMLFormatter( void* data, KWrtHandler* writer,
             rc = string_printf(pbuffer, remaining, & num_writ, "<error severity=\"err\" message=\"XML log failed: %R\"/>\n", rc);
             pbuffer += num_writ <= remaining ? num_writ : 0;
         }
-        rc = KFileWrite(self->file->file, self->file->pos, buffer, pbuffer - buffer, &num_writ);
-        self->file->pos += num_writ;
+        num_writ = pbuffer - buffer;
+        rc = KFileWriteExactly(self->file->file, self->file->pos, buffer, num_writ);
+        if ( rc == 0 )
+            self->file->pos += num_writ;
     }
     rc = self->fmt.formatter(self->fmt.data, &self->wrt, argc, args, envc, envs);
     return rc;
@@ -361,9 +363,10 @@ LIB_EXPORT rc_t CC XMLLogger_Make2(const XMLLogger** self, KDirectory* dir, cons
             (rc = KStsLibFmtHandlerSet(LoaderXMLFormatter, sopt, &obj->stslib)) == 0 ) {
             /* make log valid XML */
             if( obj->file.file != NULL ) {
-                size_t num_writ = 0;
-                rc = KFileWrite(obj->file.file, obj->file.pos, "<Log>\n", 6, &num_writ);
-                obj->file.pos += num_writ;
+                size_t num_writ = 6;
+                rc = KFileWriteExactly(obj->file.file, obj->file.pos, "<Log>\n", num_writ);
+                if ( rc == 0 )
+                    obj->file.pos += num_writ;
             }
         }
     }
@@ -407,7 +410,7 @@ LIB_EXPORT void CC XMLLogger_Release(const XMLLogger* cself)
         /* make log valid XML */
         if( self->file.file != NULL ) {
             if( self->file.pos > 0 ) {
-                KFileWrite(self->file.file, self->file.pos, "</Log>\n", 7, NULL);
+                KFileWriteAll(self->file.file, self->file.pos, "</Log>\n", 7, NULL);
             }
             KFileRelease(self->file.file);
         }

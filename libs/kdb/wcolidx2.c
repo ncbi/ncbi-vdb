@@ -205,20 +205,10 @@ rc_t KColumnIdx2LocateBlob ( const KColumnIdx2 *self,
 rc_t KColumnIdx2Write ( KColumnIdx2 *self,
     uint64_t *pos, const void *buffer, size_t bytes )
 {
-    rc_t rc;
-    size_t num_writ;
-
     * pos = self -> eof;
 
-    rc = KFileWrite ( self -> f,
-        self -> eof, buffer, bytes, & num_writ );
-    if ( rc == 0 )
-    {
-        if ( num_writ != bytes )
-            rc = RC ( rcDB, rcIndex, rcWriting, rcTransfer, rcIncomplete );
-    }
-
-    return rc;
+    return KFileWriteExactly ( self -> f,
+        self -> eof, buffer, bytes );
 }
 
 /* Commit

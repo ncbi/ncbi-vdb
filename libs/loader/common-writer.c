@@ -744,7 +744,7 @@ void RecordNoMatch(const CommonWriterSettings* settings, char const readName[], 
         size_t len;
         
         if (string_printf(logbuf, sizeof(logbuf), &len, "%s\t%s\t%u\n", readName, refName, refPos) == 0) {
-            KFileWrite(settings->noMatchLog, lpos, logbuf, len, NULL);
+            KFileWriteAll(settings->noMatchLog, lpos, logbuf, len, NULL);
             lpos += len;
         }
     }
