@@ -33,6 +33,7 @@
 #include <klib/out.h> /* KOutMsg */
 #include <klib/printf.h> /* string_printf */
 #include <klib/rc.h> /* RC */
+#include <klib/strings.h> /* KFG_USER_ACCEPT_GCP_CHARGES etc */
 #include <klib/text.h> /* String */
 #include <klib/time.h> /* KTime */
 #include <klib/vector.h> /* Vector */
@@ -365,6 +366,7 @@ typedef struct {
     int errorsToIgnore;
     VRemoteProtocols protocols;
     char * format;
+    char * forced; /* forced SDL>=2 location  */
     bool hasQuery;
 } SRequest;
 
@@ -3035,28 +3037,41 @@ static rc_t SCgiRequestAddCloudEnvironment(
 }
 
 static
-rc_t SCgiRequestAddAcceptCharges(SCgiRequest * self, SHelper * helper)
-{
+rc_t SCgiRequestAddAcceptCharges(SCgiRequest * self, SHelper * helper) {
+    bool aws = false;
+    bool gcp = false;
+
     rc_t rc = SHelperInitKfg(helper);
 
     if (rc == 0) {
-        bool result = false;
         rc = KConfigReadBool(
-            helper->kfg, "/libs/cloud/accept_aws_charges", &result);
+            helper->kfg, KFG_USER_ACCEPT_AWS_CHARGES, &aws);
         if (rc != 0)
-            return 0;
-        else if (result) {
+            rc = 0;
+
+        rc = KConfigReadBool(
+            helper->kfg, KFG_USER_ACCEPT_GCP_CHARGES, &gcp);
+        if (rc != 0)
+            rc = 0;
+    }
+
+    if (rc == 0) {
+        const char n[] = "accept-charges";
+        const char * v = NULL;
+        if (aws && gcp)
+            v = "aws,gcp";
+        else if (aws)
+            v = "aws";
+        else if (gcp)
+            v = "gcp";
+        if (v != NULL) {
             const SKV * kv = NULL;
-            const char n[] = "accept-charges";
-            const char v[] = "aws";
             rc = SKVMake(&kv, n, v);
             if (rc == 0) {
                 DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
                     ("  %s=%s\n", n, v));
                 rc = VectorAppend(&self->params, NULL, kv);
             }
-            if (rc != 0)
-                return rc;
         }
     }
 
@@ -3277,7 +3292,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
             return rc;
         }
     }
-    if ( request ->format != NULL ) {
+    if ( request -> format != NULL ) {
         const char n [] = "type";
         const char * v = request->format;
         if (request->format[0] == 'a' &&
@@ -3320,9 +3335,29 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
         }
     }
 
-    if (rc == 0 && !SCgiRequestAddKfgLocation(self, helper)) {
-        if (SVersionNeedCloudEnvironment(request->version, request->sdl))
-            rc = SCgiRequestAddCloudEnvironment(self, helper);
+    if (rc == 0) {
+        if (request->sdl && request->forced != NULL) {
+            const char name[] = "location";
+            rc = SKVMake(&kv, name, request->forced);
+            if (rc == 0) {
+                rc = VectorAppend(&self->params, NULL, kv);
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
+                    ("  %s=%s\n", name, request->forced));
+            }
+            if (rc == 0) {
+                const char name[] = "location-type";
+                const char v[] = "forced";
+                    rc = SKVMake(&kv, name, v);
+                if (rc == 0) {
+                    rc = VectorAppend(&self->params, NULL, kv);
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
+                        ("  %s=%s\n", name, v));
+                }
+            }
+        }
+        else if (!SCgiRequestAddKfgLocation(self, helper))
+            if (SVersionNeedCloudEnvironment(request->version, request->sdl))
+                rc = SCgiRequestAddCloudEnvironment(self, helper);
     }
 
     if (rc == 0 && SVersionResponseInJson(request->version, request->sdl))
@@ -3489,6 +3524,21 @@ rc_t KServiceSetFormat(KService * self, const char * format) {
 
     self->req.format = string_dup_measure(format, NULL);
     if (self->req.format == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted);
+    else
+        return 0;
+}
+
+/* Set location of data in service request */
+rc_t KServiceSetLocation(KService * self, const char * location) {
+    assert(self && location);
+
+    free(self->req.forced);
+
+    self->req.forced = NULL;
+
+    self->req.forced = string_dup_measure(location, NULL);
+    if (self->req.forced == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted);
     else
         return 0;
