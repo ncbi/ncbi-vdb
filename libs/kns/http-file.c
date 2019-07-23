@@ -23,9 +23,9 @@
 * ==============================================================================
 *
 */
-#include "http-file-priv.h"
-
 #include <kns/extern.h>
+
+#include "http-file-priv.h"
 
 #include "http-priv.h"
 #include "mgr-priv.h"

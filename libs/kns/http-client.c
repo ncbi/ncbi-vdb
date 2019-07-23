@@ -3965,7 +3965,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestHEAD ( KClientHttpRequest *self, KClientHtt
             char * user_agent_saved = string_dup ( user_agent, string_size( user_agent ) );
             if ( user_agent_saved != NULL )
             {
-                const size_t HeadSize = 256;
+                #define HeadSize 256
                 KNSManagerSetUserAgent ( (KNSManager*)self->http->mgr, "%s-head", user_agent );
 
                 /* add header "Range bytes = 0,HeadSize" */
@@ -3998,6 +3998,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestHEAD ( KClientHttpRequest *self, KClientHtt
                 }
 
                 KNSManagerSetUserAgent ( (KNSManager*)self->http->mgr, "%s", user_agent_saved );
+                #undef HeadSize
             }
             else
             {
