@@ -3998,6 +3998,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestHEAD ( KClientHttpRequest *self, KClientHtt
                 }
 
                 KNSManagerSetUserAgent ( (KNSManager*)self->http->mgr, "%s", user_agent_saved );
+                free ( user_agent_saved );
             }
             else
             {

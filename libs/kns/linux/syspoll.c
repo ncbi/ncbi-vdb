@@ -125,6 +125,7 @@ int connect_wait ( int socketFd, int32_t timeoutMs )
 
         if ( epoll_ctl( epollFD, EPOLL_CTL_ADD, socketFd, & newPeerConnectionEvent ) < 0 )
         {
+            close ( epollFD );
             return -1;
         }
         else
@@ -137,15 +138,18 @@ int connect_wait ( int socketFd, int32_t timeoutMs )
                 socklen_t retValLen = sizeof (retVal);
                 if ( getsockopt( socketFd, SOL_SOCKET, SO_ERROR, & retVal, & retValLen ) < 0 )
                 {
+                    close ( epollFD );
                     return -1;
                 }
                 else if ( retVal != 0 )
                 {
+                    close ( epollFD );
                     return -1;
                 }
+                close ( epollFD );
                 return 1;
             }
-
+            close ( epollFD );
             /* timed out or error */
             return fdCount == 0 ? 0 : -1;
         }
