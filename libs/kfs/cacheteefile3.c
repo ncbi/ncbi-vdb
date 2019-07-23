@@ -1951,13 +1951,14 @@ rc_t KCacheTeeFileOpen ( KCacheTeeFile_v3 * self, KDirectory * dir, const KFile 
                          , self -> path
                     );
                 rc = KDirectoryOpenFileSharedWrite ( dir, & self -> cache_file, true, "%s.cache", self -> path );
-                /*No fd on Windows
+#if ! WINDOWS
                 STATUS ( STAT_GEEK
                          , "%s - open shared file attempt: fd = %d, rc = %R\n"
                          , __func__
                          , ( rc == 0 ) ? KFileGetSysFile ( self -> cache_file, & dummy ) -> fd : -1
                          , rc
-                    );*/
+                    );
+#endif
                 if ( rc == 0 )
                     rc = KCacheTeeFileInitShared ( self );
                 else if ( GetRCState ( rc ) == rcNotFound )
@@ -1970,13 +1971,14 @@ rc_t KCacheTeeFileOpen ( KCacheTeeFile_v3 * self, KDirectory * dir, const KFile 
                     /* TBD - if this fails, go back to open-shared-write */
                     rc = KDirectoryCreateFile ( dir, & self -> cache_file,
                         true, 0666, kcmCreate | kcmParents, "%s.cache", self -> path );
-                    /*No fd on Windows
+#if ! WINDOWS
                     STATUS ( STAT_GEEK
                              , "%s - create file attempt: fd = %d, rc = %R\n"
                              , __func__
                              , KFileGetSysFile ( self -> cache_file, & dummy ) -> fd
                              , rc
-                        );*/
+                        );
+#endif
                     if ( rc == 0 )
                         rc = KCacheTeeFileInitNew ( self );
                 }
@@ -1990,13 +1992,14 @@ rc_t KCacheTeeFileOpen ( KCacheTeeFile_v3 * self, KDirectory * dir, const KFile 
                         );
                     rc = KDirectoryOpenFileRead ( dir,
                         ( const KFile ** ) & self -> cache_file, "%s.cache", self -> path );
-                    /*No fd on Windows
+#if ! WINDOWS
                     STATUS ( STAT_GEEK
                              , "%s - open read-only file attempt: fd = %d, rc = $R\n"
                              , __func__
                              , KFileGetSysFile ( self -> cache_file, & dummy ) -> fd
                              , rc
-                        );*/
+                        );
+#endif
                     if ( rc == 0 )
                         rc = KCacheTeeFileInitExisting ( self );
                 }
