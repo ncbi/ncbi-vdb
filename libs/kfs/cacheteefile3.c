@@ -191,9 +191,26 @@ int64_t CC KCacheTeeFileTreeNodeSort ( const BSTNode *item, const BSTNode *n )
 }
 
 #if WINDOWS
-#error "declare a critical section here"
-#error "declare ENTER_CRIT_SECTION() here"
-#error "declare EXIT_CRIT_SECTION() here"
+#include <synchapi.h>
+#include <processthreadsapi.h>
+static CRITICAL_SECTION crit;
+static
+void enter_crit_section ( void )
+{
+    static bool crit_init;
+    if ( ! crit_init )
+    {
+        InitializeCriticalSection ( & crit );
+        crit_init = true;
+    }
+    EnterCriticalSection ( & crit );
+}
+#declare ENTER_CRIT_SECTION() \
+    enter_crit_section ()
+#declare EXIT_CRIT_SECTION() \
+    LeaveCriticalSection ( & crit )
+#define CUR_THREAD_ID() \
+    ( uint64_t ) GetCurrentThreadId ()
 #else
 #include <pthread.h>
 static pthread_mutex_t crit = PTHREAD_MUTEX_INITIALIZER;
