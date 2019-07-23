@@ -3027,6 +3027,7 @@ static rc_t SCgiRequestAddCloudEnvironment(
                         ("  %s=%s\n", n, ce_token->addr));
                     rc = VectorAppend(&self->params, NULL, kv);
                 }
+                StringWhack ( ce_token );
                 if (rc != 0)
                     return rc;
             }
