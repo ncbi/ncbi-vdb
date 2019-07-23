@@ -195,7 +195,7 @@ int64_t CC KCacheTeeFileTreeNodeSort ( const BSTNode *item, const BSTNode *n )
 #include <processthreadsapi.h>
 static CRITICAL_SECTION crit;
 static
-void enter_crit_section ( void )
+int enter_crit_section ( void )
 {
     static bool crit_init;
     if ( ! crit_init )
@@ -204,11 +204,12 @@ void enter_crit_section ( void )
         crit_init = true;
     }
     EnterCriticalSection ( & crit );
+    return 0;
 }
-#declare ENTER_CRIT_SECTION() \
+#define ENTER_CRIT_SECTION() \
     enter_crit_section ()
-#declare EXIT_CRIT_SECTION() \
-    LeaveCriticalSection ( & crit )
+#define EXIT_CRIT_SECTION() \
+    ( LeaveCriticalSection ( & crit ), 0 )
 #define CUR_THREAD_ID() \
     ( uint64_t ) GetCurrentThreadId ()
 #else
@@ -1950,12 +1951,13 @@ rc_t KCacheTeeFileOpen ( KCacheTeeFile_v3 * self, KDirectory * dir, const KFile 
                          , self -> path
                     );
                 rc = KDirectoryOpenFileSharedWrite ( dir, & self -> cache_file, true, "%s.cache", self -> path );
+                /*No fd on Windows
                 STATUS ( STAT_GEEK
                          , "%s - open shared file attempt: fd = %d, rc = %R\n"
                          , __func__
                          , ( rc == 0 ) ? KFileGetSysFile ( self -> cache_file, & dummy ) -> fd : -1
                          , rc
-                    );
+                    );*/
                 if ( rc == 0 )
                     rc = KCacheTeeFileInitShared ( self );
                 else if ( GetRCState ( rc ) == rcNotFound )
@@ -1968,12 +1970,13 @@ rc_t KCacheTeeFileOpen ( KCacheTeeFile_v3 * self, KDirectory * dir, const KFile 
                     /* TBD - if this fails, go back to open-shared-write */
                     rc = KDirectoryCreateFile ( dir, & self -> cache_file,
                         true, 0666, kcmCreate | kcmParents, "%s.cache", self -> path );
+                    /*No fd on Windows
                     STATUS ( STAT_GEEK
                              , "%s - create file attempt: fd = %d, rc = %R\n"
                              , __func__
                              , KFileGetSysFile ( self -> cache_file, & dummy ) -> fd
                              , rc
-                        );
+                        );*/
                     if ( rc == 0 )
                         rc = KCacheTeeFileInitNew ( self );
                 }
@@ -1987,12 +1990,13 @@ rc_t KCacheTeeFileOpen ( KCacheTeeFile_v3 * self, KDirectory * dir, const KFile 
                         );
                     rc = KDirectoryOpenFileRead ( dir,
                         ( const KFile ** ) & self -> cache_file, "%s.cache", self -> path );
+                    /*No fd on Windows
                     STATUS ( STAT_GEEK
                              , "%s - open read-only file attempt: fd = %d, rc = $R\n"
                              , __func__
                              , KFileGetSysFile ( self -> cache_file, & dummy ) -> fd
                              , rc
-                        );
+                        );*/
                     if ( rc == 0 )
                         rc = KCacheTeeFileInitExisting ( self );
                 }
