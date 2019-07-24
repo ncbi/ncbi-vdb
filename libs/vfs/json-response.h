@@ -45,7 +45,7 @@ struct VPath;
 
 typedef struct Container Container;
 typedef struct Item Item;
-struct Locations;
+struct File;
 typedef struct Response4 Response4;
 
 typedef enum {
@@ -98,12 +98,14 @@ bool ContainerIs200AndEmpty(const Container * self);
 void ContainerProcessStatus(Container * self, const Data * data);
 rc_t ContainerAdd ( Container * self, const char * acc, int64_t id,
                     Item ** newItem, const struct Data * data );
+rc_t ItemAddFormat(Item * self, const char * cType, const Data * dad,
+    struct File ** added, bool checkSameType);
 rc_t ItemAddVPath(Item * self, const char * type, const struct VPath * path,
                     const struct VPath * mapping, bool setHttp, uint64_t osize);
 rc_t ItemSetTicket ( Item * self, const struct String * ticket );
 void ItemLogAdd(const Item * self);
-void LocationsLogAddedLink(const struct Locations * self, const char * url);
-rc_t LocationsAddVPath(struct Locations * self, const struct VPath * path,
+void FileLogAddedLink(const struct File * self, const char * url);
+rc_t FileAddVPath(struct File * self, const struct VPath * path,
     const struct VPath * mapping, bool setHttp, uint64_t osize);
 rc_t Response4GetKSrvRespObjCount ( const Response4 * self, uint32_t * n );
 rc_t Response4GetKSrvRespObjByIdx ( const Response4 * self, uint32_t i,

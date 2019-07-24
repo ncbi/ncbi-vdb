@@ -141,67 +141,51 @@ static rc_t DataUpdate(const Data * self,
     return 0;
 }
 
-rc_t ItemAddFormat(Item * self, const char * cType, const Data * dad,
-    struct Locations ** added);
-
-/* We are scanning Item(Run) to find all its Elm-s(Files) -sra, vdbcache, ??? */
+/* We are adding a location to file */
 static
-rc_t ItemAddElmsSdl(Item * self, const KJsonObject * node,
+rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
     const Data * dad, Stack * path)
 {
     rc_t rc = 0;
 
     const KJsonValue * value = NULL;
 
-    struct Locations * elm = NULL;
-
     const char * name = "locations";
 
     Data data;
     DataUpdate(dad, &data, node, path);
 
-    value = KJsonObjectGetMember ( node, name );
+    value = KJsonObjectGetMember(node, name);
 
-    if ( value != NULL ) {
-        uint32_t i = 0;
+    assert(!value);
+    /*if (value != NULL) {
+          uint32_t i = 0;
 
-        const KJsonArray * array = KJsonValueToArray ( value );
-        uint32_t n = KJsonArrayGetLength ( array );
-        rc = StackPushArr(path, name);
-        if (rc != 0)
-            return rc;
-        for ( i = 0; i < n; ++ i ) {
-            rc_t r2 = 0;
+          const KJsonArray * array = KJsonValueToArray(value);
+          uint32_t n = KJsonArrayGetLength(array);
+          rc = StackPushArr(path, name);
+          if (rc != 0)
+              return rc;
+          for (i = 0; i < n; ++i) {
+              rc_t r2 = 0;
 
-            const KJsonObject * object = NULL;
+              const KJsonObject * object = NULL;
 
-            value = KJsonArrayGetElement ( array, i );
-            object = KJsonValueToObject ( value );
-            r2 = ItemAddElmsSdl ( self, object, & data, path );
-            if ( r2 != 0 && rc == 0 )
-                rc = r2;
+              value = KJsonArrayGetElement(array, i);
+              object = KJsonValueToObject(value);
+              r2 = ItemAddElmsSdl(self, object, &data, path);
+              if (r2 != 0 && rc == 0)
+                  rc = r2;
 
-            if ( i + 1 < n )
-                StackArrNext ( path );
-        }
+              if (i + 1 < n)
+                  StackArrNext(path);
+          }
 
-        StackPop(path);
-    }
+          StackPop(path);
+      }*/
 
     value = KJsonObjectGetMember(node, "link");
-    if (/*data.type != NULL ||*/ value != NULL) {
-        rc = ItemAddFormat(self, data.type, &data, &elm);
-        if (elm == NULL || rc != 0)
-            return rc;
-        else
-            if (THRESHOLD > THRESHOLD_ERROR)
-                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
-                ("Adding links to a file...\n"));
-    }
-
-    value = KJsonObjectGetMember ( node, "link" );
-    if (value != NULL)
-    {
+    if (value != NULL) {
         Data ldata;
         DataUpdate(&data, &ldata, node, path);
 
@@ -291,12 +275,182 @@ rc_t ItemAddElmsSdl(Item * self, const KJsonObject * node,
                 return rc;
             }
 
-            rc = LocationsAddVPath(elm, path, NULL, false, 0);
+            rc = FileAddVPath(file, path, NULL, false, 0);
 
             RELEASE(VPath, path);
 
             if (rc == 0)
-                LocationsLogAddedLink(elm, ldata.link);
+                FileLogAddedLink(file, ldata.link);
+        }
+    }
+
+    return rc;
+}
+
+/* We are scanning files(Item(Run)) to find all its locations */
+static
+rc_t ItemAddSdlFile(Item * self, const KJsonObject * node,
+    const Data * dad, Stack * path)
+{
+    rc_t rc = 0;
+
+    const KJsonValue * value = NULL;
+
+    struct File * file = NULL;
+
+    const char * name = "locations";
+
+    Data data;
+    DataUpdate(dad, &data, node, path);
+
+    rc = ItemAddFormat(self, data.type, &data, &file, false);
+    if (file == NULL || rc != 0)
+        return rc;
+    else
+        if (THRESHOLD > THRESHOLD_ERROR)
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
+            ("Adding links to a file...\n"));
+
+    value = KJsonObjectGetMember ( node, name );
+
+    if ( value != NULL ) {
+        uint32_t i = 0;
+
+        const KJsonArray * array = KJsonValueToArray ( value );
+        uint32_t n = KJsonArrayGetLength ( array );
+        rc = StackPushArr(path, name);
+        if (rc != 0)
+            return rc;
+        for ( i = 0; i < n; ++ i ) {
+            rc_t r2 = 0;
+
+            const KJsonObject * object = NULL;
+
+            value = KJsonArrayGetElement ( array, i );
+            object = KJsonValueToObject ( value );
+            r2 = FileAddSdlLocation( file, object, & data, path );
+            if ( r2 != 0 && rc == 0 )
+                rc = r2;
+
+            if ( i + 1 < n )
+                StackArrNext ( path );
+        }
+
+        StackPop(path);
+    }
+
+    value = KJsonObjectGetMember(node, "link");
+    if (/*data.type != NULL ||*/ value != NULL) {
+        assert(0);
+        rc = ItemAddFormat(self, data.type, &data, &file, false);
+        if (file == NULL || rc != 0)
+            return rc;
+        else
+            if (THRESHOLD > THRESHOLD_ERROR)
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
+                ("Adding links to a file...\n"));
+    }
+
+    value = KJsonObjectGetMember ( node, "link" );
+    if (value != NULL)
+    {
+        Data ldata;
+        DataUpdate(&data, &ldata, node, path);
+
+        assert(0);
+
+        if (ldata.link != NULL) {
+            bool ceRequired = false;
+            bool payRequired = false;
+
+            int64_t mod = 0;  /* modDate */
+
+            uint8_t md5[16];
+            bool    hasMd5 = false;
+
+            VPath * path = NULL;
+
+            String id;
+            String objectType;
+            String type;
+
+            String url;
+            StringInitCString(&url, ldata.link);
+
+            StringInitCString(&id, ldata.acc);
+
+            memset(&objectType, 0, sizeof objectType);
+            memset(&type, 0, sizeof type);
+
+            if (ldata.modificationDate != NULL) {
+                KTime        modT; /* modificationDate */
+                const KTime* t = KTimeFromIso8601(&modT, ldata.modificationDate,
+                    string_measure(ldata.modificationDate, NULL));
+                if (t == NULL)
+                    return RC(rcVFS, rcQuery, rcExecuting, rcItem, rcIncorrect);
+                else
+                    mod = KTimeMakeTime(&modT);
+            }
+
+            if (ldata.object != NULL) {
+                size_t size = 0;
+                uint32_t len = 0;
+                const char * c = strchr(ldata.object, '|');
+                if (c != NULL)
+                    size = len = c - data.object;
+                else
+                    len = string_measure(data.object, &size);;
+                StringInit(&objectType, ldata.object, size, len);
+            }
+
+            if (ldata.type != NULL) {
+                size_t size = 0;
+                uint32_t len = string_measure(data.type, &size);;
+                StringInit(&type, ldata.type, size, len);
+            }
+
+            if (ldata.ceRequired == eTrue)
+                ceRequired = true;
+            if (ldata.payRequired == eTrue)
+                payRequired = true;
+
+            if (ldata.md5 != NULL) {
+                int i = 0;
+                for (i = 0; i < 16; ++i) {
+                    if (ldata.md5[2 * i] == '\0')
+                        break;
+                    if (isdigit(ldata.md5[2 * i]))
+                        md5[i] = (ldata.md5[2 * i] - '0') * 16;
+                    else
+                        md5[i] = (ldata.md5[2 * i] - 'a' + 10) * 16;
+                    if (ldata.md5[2 * i + 1] == '\0')
+                        break;
+                    if (isdigit(ldata.md5[2 * i + 1]))
+                        md5[i] += ldata.md5[2 * i + 1] - '0';
+                    else
+                        md5[i] += ldata.md5[2 * i + 1] - 'a' + 10;
+                }
+                if (i == 16)
+                    hasMd5 = true;
+            }
+
+            rc = VPathMakeFromUrl(&path, &url, NULL, true, &id, ldata.sz,
+                mod, hasMd5 ? md5 : NULL, 0, ldata.srv, &objectType, &type,
+                ceRequired, payRequired, ldata.name);
+
+            if (rc == 0)
+                VPathMarkHighReliability(path, true);
+
+            if (rc != 0) {
+                return rc;
+            }
+
+            rc = FileAddVPath(file, path, NULL, false, 0);
+
+            RELEASE(VPath, path);
+
+            if (rc == 0)
+                FileLogAddedLink(file, ldata.link);
         }
     }
 
@@ -359,7 +513,7 @@ static rc_t Response4AddItemsSdl(Response4 * self,
 
                 value = KJsonArrayGetElement(array, i);
                 object = KJsonValueToObject(value);
-                r2 = ItemAddElmsSdl(item, object, &data, path);
+                r2 = ItemAddSdlFile(item, object, &data, path);
                 if (r2 != 0 && rc == 0)
                     rc = r2;
 
