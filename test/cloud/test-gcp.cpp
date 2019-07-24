@@ -208,20 +208,21 @@ TEST_CASE(GCP_AddUserPays)
     // and copy a user credentials file to ./cloud-kfg/gcp_service.json (do not check in!)
     CloudSetHttpConnection( cloud, & m_stream );
 
-    REQUIRE_RC ( CloudAddUserPaysCredentials ( cloud, req, "POST" ) );
+    REQUIRE_RC ( CloudAddUserPaysCredentials ( cloud, req, "GET" ) );
     // adds header:
     // Authorization: Bearer <access_token>
-    char msg[4096];
-    size_t len;
-    REQUIRE_RC ( KClientHttpRequestFormatPostMsg( req, msg, sizeof ( msg ), & len ) );
 // this will show the access token, either bogusfortesting or the real one
-cout << msg << endl;
+
 // if the token is real, the following check will fail. please do not "fix".
-    REQUIRE_NE ( string::npos, string( msg ).find( "Authorization: Bearer bogustokenmadefortesting" ) );
-    // URL needs contain "alt=media&userProject=<project_id>" as parameters"
-    const char  * body = KClientHttpRequestGetBody ( req );
-    REQUIRE_NE ( string::npos, string( body ).find( "alt=media" ) );
-    REQUIRE_NE ( string::npos, string( body ).find( "userProject=test" ) );
+    char buffer[1024];
+    size_t num_read;
+    REQUIRE_RC ( KClientHttpRequestGetHeader( req, "Authorization", buffer, sizeof ( buffer ), & num_read) );
+    REQUIRE_EQ ( string(buffer, num_read), string( "Bearer bogustokenmadefortesting" ) );
+
+    // Adds parameters required for user-pays are added to the URL
+    string query ( (const char *)req -> url_block . query . addr, (size_t)req -> url_block . query . size  );
+    REQUIRE_NE ( string::npos, string( query ).find( "alt=media" ) );
+    REQUIRE_NE ( string::npos, string( query ).find( "userProject=test" ) );
 
     REQUIRE_RC ( KClientHttpRelease ( client ) );
     REQUIRE_RC ( KClientHttpRequestRelease ( req ) );

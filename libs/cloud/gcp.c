@@ -39,6 +39,7 @@ struct GCP;
 #include <klib/text.h>
 #include <klib/base64.h>
 #include <klib/time.h>
+#include <klib/data-buffer.h>
 
 #include <kns/endpoint.h>
 #include <kns/socket.h>
@@ -46,6 +47,8 @@ struct GCP;
 #include <kfs/directory.h>
 #include <kfs/file.h>
 #include <kns/stream.h> /* KStreamRelease */
+#include <kns/kns-mgr-priv.h> 
+#include <kns/http-priv.h>
 
 #include <ext/mbedtls/md.h> /* vdb_mbedtls_md_hmac */
 #include <ext/mbedtls/pk.h>
@@ -562,13 +565,52 @@ rc_t CC GCPAddUserPaysCredentials ( const GCP * self, KClientHttpRequest * req, 
         rc = KClientHttpRequestAddHeader( req, "Authorization", "Bearer %S", token );
         StringWhack ( token );
 
+    /* 6. Add  alt=media&userProject=<project_id> to the URL*/
         if ( rc == 0 )
         {
-            rc = KClientHttpRequestAddPostParam( req, "alt=media" );
-        }
-        if ( rc == 0 )
-        {
-            rc = KClientHttpRequestAddPostParam( req, "userProject=%s", self -> project_id );
+            rc_t rc2;
+            KDataBuffer url;
+            rc = KDataBufferMakeBytes( & url, 0 );
+            if ( rc == 0 )
+            {
+                rc = KClientHttpRequestURL( req, & url);
+                if ( rc == 0 )
+                {
+                    KDataBuffer newUrl;
+                    rc = KDataBufferMakeBytes( & newUrl, 0 ); 
+                    if ( rc == 0 )
+                    {
+                        rc = KDataBufferPrintf ( & newUrl, "%.*s?alt=media&userProject=%s", 
+                                                (int) url . elem_count, (const char*) url . base, 
+                                                self -> project_id );
+                        if ( rc == 0 )
+                        {
+                            rc = KClientHttpRequestClear ( req );
+                        }
+                        if ( rc == 0 )
+                        {
+                            URLBlock urlBlock;
+                            URLBlockInit ( & urlBlock );
+                            rc = ParseUrl ( & urlBlock, newUrl . base, newUrl . elem_count - 1 );
+                            if ( rc == 0 )
+                            {
+                                rc = KClientHttpRequestInit ( req, & urlBlock, & url );
+                            }
+                        }
+
+                        // rc2 = KDataBufferWhack ( & newUrl );
+                        // if ( rc == 0 )
+                        // {
+                        //     rc = rc2;
+                        // }
+                    }
+                }
+                rc2 = KDataBufferWhack ( & url );
+                if ( rc == 0 )
+                {
+                    rc = rc2;
+                }
+            }
         }
     }
     return rc;

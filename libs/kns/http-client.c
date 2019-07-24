@@ -2651,24 +2651,6 @@ LIB_EXPORT rc_t CC KClientHttpResultGetInputStream ( KClientHttpResult *self, KS
  *  hyper text transfer protocol
  */
 
-struct KClientHttpRequest
-{
-    KClientHttp * http;
-
-    URLBlock url_block;
-    KDataBuffer url_buffer;
-
-    KDataBuffer body;
-
-    BSTree hdrs;
-
-    KRefcount refcount;
-    bool accept_not_modified;
-
-    bool ceRequired; /* computing environment token required to access this URL */
-    bool payRequired; /* payment info required to access this URL */
-};
-
 LIB_EXPORT rc_t CC KClientHttpRequestSetCloudParams(
     KClientHttpRequest * self, bool ceRequired, bool payRequired)
 {
@@ -2706,7 +2688,6 @@ rc_t KClientHttpRequestURL(KClientHttpRequest const *self, KDataBuffer *rslt)
     return KDataBufferSub(&self->url_buffer, rslt, 0, self->url_buffer.elem_count);
 }
 
-static
 rc_t KClientHttpRequestClear ( KClientHttpRequest *self )
 {
     KDataBufferWhack ( & self -> url_buffer );
@@ -2735,7 +2716,6 @@ rc_t KClientHttpRequestWhack ( KClientHttpRequest * self )
     return 0;
 }
 
-static
 rc_t KClientHttpRequestInit ( KClientHttpRequest * req,
     const URLBlock *b, const KDataBuffer *buf )
 {
@@ -3539,7 +3519,7 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
         }
         else {
             String google;
-            CONST_STRING(&google, "storage.cloud.google.com");
+            CONST_STRING(&google, "storage.googleapis.com");
             skip = 0;
             if (hostname->size >= google.size &&
                 string_cmp(google.addr, google.size,
@@ -3564,25 +3544,23 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
         }
     }
 
-    /*TODO: GCP */
-
     if (cself->ceRequired || cself->payRequired)
     {   /* add cloud authentication informantion if required */
         if ( rc == 0 )
         {
-                /* create a cloud object based on the target URL */
-                Cloud * cloud ;
-                KClientHttpRequest * self = (KClientHttpRequest *)cself;
-                rc = CloudMgrMakeCloud ( cloudMgr, & cloud, cpId );
-                if (rc == 0) {
-                    if (cself->payRequired)
-                        rc = CloudAddUserPaysCredentials(cloud, self, method);
-                    else if (cself->ceRequired)
-                        rc = CloudAddComputeEnvironmentTokenForSigner(
-                            cloud, self);
-                    CloudRelease ( cloud );
-                }
-                CloudMgrRelease ( cloudMgr );
+            /* create a cloud object based on the target URL */
+            Cloud * cloud ;
+            KClientHttpRequest * self = (KClientHttpRequest *)cself;
+            rc = CloudMgrMakeCloud ( cloudMgr, & cloud, cpId );
+            if (rc == 0) {
+                if (cself->payRequired)
+                    rc = CloudAddUserPaysCredentials(cloud, self, method);
+                else if (cself->ceRequired)
+                    rc = CloudAddComputeEnvironmentTokenForSigner(
+                        cloud, self);
+                CloudRelease ( cloud );
+            }
+            CloudMgrRelease ( cloudMgr );
         }
     }
     return rc;

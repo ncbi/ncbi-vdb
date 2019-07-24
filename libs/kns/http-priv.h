@@ -47,6 +47,10 @@
 #include <klib/refcount.h>
 #endif
 
+#ifndef _h_kns_mgr_priv_
+#include <kns/kns-mgr-priv.h>
+#endif
+
 #ifndef MAX_HTTP_READ_LIMIT
 #define MAX_HTTP_READ_LIMIT ( 5 * 60 * 1000 ) /* 5 minutes */
 #endif
@@ -125,17 +129,29 @@ void KClientHttpForceSocketClose(const struct KClientHttp *self);
 /*--------------------------------------------------------------------------
  * KClientHttpRequest
  */
-rc_t KClientHttpMakeRequestInt ( struct KClientHttp const *self,
-    struct KClientHttpRequest **req, const struct URLBlock *block, const KDataBuffer *buf );
 
+struct KClientHttpRequest
+{
+    struct KClientHttp * http;
+
+    URLBlock url_block;
+    KDataBuffer url_buffer;
+
+    KDataBuffer body;
+
+    BSTree hdrs;
+
+    KRefcount refcount;
+    bool accept_not_modified;
+
+    bool ceRequired; /* computing environment token required to access this URL */
+    bool payRequired; /* payment info required to access this URL */
+};
 
 void KClientHttpGetRemoteEndpoint ( const struct KClientHttp * self,
                                     struct KEndPoint * ep );
 void KClientHttpGetLocalEndpoint ( const struct KClientHttp * self,
                                    struct KEndPoint * ep );
-
-/* if the request followed redirects, the final URL will be different than the initial URL */
-rc_t KClientHttpRequestURL ( struct KClientHttpRequest const *self, KDataBuffer *rslt );
 
 rc_t KClientHttpRequestAttachEnvironmentToken( struct KClientHttpRequest * self );
 
