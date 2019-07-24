@@ -81,6 +81,7 @@ rc_t CC GCPDestroy ( GCP * self )
 {
     free ( self -> privateKey );
     free ( self -> client_email );
+    free ( self -> project_id );
     return CloudWhack ( & self -> dad );
 }
 
@@ -441,7 +442,7 @@ static
 rc_t CC GCPAddUserPaysCredentials ( const GCP * self, KClientHttpRequest * req, const char * http_method )
 {
     rc_t rc = 0;
-    if ( self -> client_email == NULL || self -> privateKey == NULL )
+    if ( self -> client_email == NULL || self -> privateKey == NULL || self -> project_id == NULL )
     {
         rc = RC ( rcCloud, rcProvider, rcAccessing, rcParam, rcNull );
     }
@@ -560,6 +561,15 @@ rc_t CC GCPAddUserPaysCredentials ( const GCP * self, KClientHttpRequest * req, 
 
         rc = KClientHttpRequestAddHeader( req, "Authorization", "Bearer %S", token );
         StringWhack ( token );
+
+        if ( rc == 0 )
+        {
+            rc = KClientHttpRequestAddPostParam( req, "alt=media" );
+        }
+        if ( rc == 0 )
+        {
+            rc = KClientHttpRequestAddPostParam( req, "userProject=%s", self -> project_id );
+        }
     }
     return rc;
 }
@@ -790,26 +800,37 @@ rc_t PopulateCredentials ( GCP * self )
                     "auth_provider_x509_cert_url", "client_x509_cert_url", NULL
                 };
 
-                /* check thst all required members are present */
+                /* check that all required members are present */
                 size_t i = 0;
                 while ( rc == 0 && required[i] != NULL )
                 {
                     const char * value;
                     rc = GetJsonStringMember( obj, required[i], & value );
-                    if ( strcmp ( "private_key", required[i] ) == 0 )
-                    {
-                        self -> privateKey = string_dup( value, string_size( value ) );
-                        if ( self -> privateKey == NULL )
+                    if ( rc == 0 )
+                    { /*TODO: extract a helper */
+                        if ( strcmp ( "private_key", required[i] ) == 0 )
                         {
-                            rc = RC ( rcNS, rcMgr, rcAllocating, rcMemory, rcExhausted );
+                            self -> privateKey = string_dup( value, string_size( value ) );
+                            if ( self -> privateKey == NULL )
+                            {
+                                rc = RC ( rcNS, rcMgr, rcAllocating, rcMemory, rcExhausted );
+                            }
                         }
-                    }
-                    else if ( strcmp ( "client_email", required[i] ) == 0 )
-                    {
-                        self -> client_email = string_dup( value, string_size( value ) );
-                        if ( self -> client_email == NULL )
+                        else if ( strcmp ( "client_email", required[i] ) == 0 )
                         {
-                            rc = RC ( rcNS, rcMgr, rcAllocating, rcMemory, rcExhausted );
+                            self -> client_email = string_dup( value, string_size( value ) );
+                            if ( self -> client_email == NULL )
+                            {
+                                rc = RC ( rcNS, rcMgr, rcAllocating, rcMemory, rcExhausted );
+                            }
+                        }
+                        else if ( strcmp ( "project_id", required[i] ) == 0 )
+                        {
+                            self -> project_id = string_dup( value, string_size( value ) );
+                            if ( self -> project_id == NULL )
+                            {
+                                rc = RC ( rcNS, rcMgr, rcAllocating, rcMemory, rcExhausted );
+                            }
                         }
                     }
                     ++i;

@@ -2714,6 +2714,13 @@ rc_t KClientHttpRequestClear ( KClientHttpRequest *self )
     return 0;
 }
 
+const char * 
+KClientHttpRequestGetBody( struct KClientHttpRequest * self )
+{
+    assert ( self );
+    return ( const char * ) ( self -> body . base );
+}
+
 static
 rc_t KClientHttpRequestWhack ( KClientHttpRequest * self )
 {

@@ -117,6 +117,7 @@ struct GCP
 
     char * privateKey;
     char * client_email;
+    char * project_id;
 };
 
 /* WithinGCP

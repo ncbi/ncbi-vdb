@@ -32,6 +32,7 @@
 #include <kns/http-priv.h>
 
 #include <klib/text.h>
+#include <klib/data-buffer.h>
 
 #include <kapp/args.h> /* ArgsMakeAndHandle */
 #include <kfg/config.h> /* KConfigDisableUserSettings */
@@ -42,6 +43,8 @@
 #include <sstream>
 
 #include <../libs/cloud/gcp-priv.h>
+#include <../libs/cloud/cloud-priv.h>
+#include <../libs/kns/http-priv.h>
 
 #include "../kns/HttpFixture.hpp" //TODO: mobe TestStream to a better place
 
@@ -82,6 +85,36 @@ TEST_CASE(GCP_AddUserPays_NoCredentials)
     REQUIRE_RC ( CloudRelease ( cloud ) );
     REQUIRE_RC ( CloudMgrRelease ( mgr ) );
 }
+
+TEST_CASE(GCP_AddUserPays_Credentials)
+{
+    char env[1024];
+    strcpy(env, "GOOGLE_APPLICATION_CREDENTIALS=./cloud-kfg/gcp_service.json" );
+    REQUIRE_EQ ( 0, putenv ( env ) );
+
+    CloudMgr * mgr;
+    REQUIRE_RC ( CloudMgrMakeWithProvider ( & mgr, cloud_provider_gcp ) );
+
+    Cloud * cloud;
+    REQUIRE_RC ( CloudMgrMakeCloud ( mgr, &cloud, cloud_provider_gcp ) );
+
+    GCP * gcp;
+    REQUIRE_RC ( CloudToGCP ( cloud, & gcp ) );
+    REQUIRE_NOT_NULL ( gcp );
+    string PK = "-----BEGIN PRIVATE KEY-----\nMIICdwIBADANBgkqhkiG9w0BAQEFA";
+    REQUIRE_NOT_NULL ( gcp -> privateKey );
+    REQUIRE_EQ ( PK, string( gcp -> privateKey ) . substr( 0, PK . size() ) );
+    REQUIRE_NOT_NULL ( gcp -> client_email );
+    REQUIRE_EQ ( string("ncbivdb-compute@developer.gserviceaccount.com"), string( gcp -> client_email ) );
+    REQUIRE_NOT_NULL ( gcp -> project_id );
+    REQUIRE_EQ ( string("test"), string( gcp -> project_id ) );
+
+    REQUIRE_RC ( GCPRelease ( gcp ) );
+    REQUIRE_RC ( CloudRelease ( cloud ) );
+    REQUIRE_RC ( CloudMgrRelease ( mgr ) );
+}
+
+
 
 TEST_CASE(GCP_Sign_RSA_SHA256)
 {
@@ -185,6 +218,10 @@ TEST_CASE(GCP_AddUserPays)
 cout << msg << endl;
 // if the token is real, the following check will fail. please do not "fix".
     REQUIRE_NE ( string::npos, string( msg ).find( "Authorization: Bearer bogustokenmadefortesting" ) );
+    // URL needs contain "alt=media&userProject=<project_id>" as parameters"
+    const char  * body = KClientHttpRequestGetBody ( req );
+    REQUIRE_NE ( string::npos, string( body ).find( "alt=media" ) );
+    REQUIRE_NE ( string::npos, string( body ).find( "userProject=test" ) );
 
     REQUIRE_RC ( KClientHttpRelease ( client ) );
     REQUIRE_RC ( KClientHttpRequestRelease ( req ) );

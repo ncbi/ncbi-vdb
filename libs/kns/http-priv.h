@@ -142,6 +142,11 @@ rc_t KClientHttpRequestAttachEnvironmentToken( struct KClientHttpRequest * self 
 /* exported private functions
 */
 
+const char * KClientHttpRequestGetBody( struct KClientHttpRequest * self );
+
+/* exported private functions
+*/
+
 /* a hook to redefine KClientHttpReopen (for testing,_DEBUG only) */
 #if _DEBUGGING
 extern void SetClientHttpReopenCallback ( struct KStream * (*fn) ( void ) );
