@@ -340,17 +340,18 @@ rc_t ItemAddSdlFile(Item * self, const KJsonObject * node,
     }
 
     value = KJsonObjectGetMember(node, "link");
-    if (/*data.type != NULL ||*/ value != NULL) {
-        assert(0);
-        rc = ItemAddFormat(self, data.type, &data, &file, false);
+    if (value != NULL) {
+        rc = FileAddSdlLocation(file, node, &data, path);
+        /*rc = ItemAddFormat(self, data.type, &data, &file, false);
         if (file == NULL || rc != 0)
             return rc;
         else
             if (THRESHOLD > THRESHOLD_ERROR)
                 DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
-                ("Adding links to a file...\n"));
+                ("Adding links to a file...\n"));*/
     }
 
+#if 0
     value = KJsonObjectGetMember ( node, "link" );
     if (value != NULL)
     {
@@ -453,6 +454,7 @@ rc_t ItemAddSdlFile(Item * self, const KJsonObject * node,
                 FileLogAddedLink(file, ldata.link);
         }
     }
+#endif
 
     return rc;
 }
