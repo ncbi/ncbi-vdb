@@ -37,6 +37,7 @@
 #include <kns/kns-mgr-priv.h> /* KHttpRetrier */
 #include <kns/socket.h>
 #include <kns/stream.h>
+#include <kns/http-priv.h>
 
 #include <kfs/file.h>
 #include <kfs/directory.h>

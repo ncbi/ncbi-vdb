@@ -22,15 +22,13 @@
 *
 * ===========================================================================
 *
-* Test fixture for HTTP unit tests
+* Test stream for mocking HTTP connection for unit testing
 */
+
+#pragma once
 
 #include <string>
 #include <list>
-
-struct KConfig;
-struct KNSManager;
-struct KFile;
 
 class TestStream;
 #define KSTREAM_IMPL TestStream
@@ -51,22 +49,3 @@ public:
     static std :: list < std :: string > m_requests;
     static std :: list < std :: string > m_responses;
 };
-
-class HttpFixture
-{
-public:
-    HttpFixture();
-    ~HttpFixture();
-
-    struct KConfig* MakeConfig( const char* name, const char* contents );
-
-    static struct KStream * Reconnect ();
-
-    static std :: string MakeURL(const std :: string & base);
-
-    struct KNSManager* m_mgr;
-    static KStream m_stream;
-    struct KFile* m_file;
-    struct KClientHttpRequest * m_req;
-};
-
