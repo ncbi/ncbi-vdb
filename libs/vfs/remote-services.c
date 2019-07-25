@@ -3001,12 +3001,16 @@ static rc_t SCgiRequestAddCloudEnvironment(
     }
     if (rc == 0) {
         const char * v = NULL;
-        if (cloud_provider == cloud_provider_aws)
-            v = "aws_pkcs7";
-        else if (cloud_provider == cloud_provider_gcp)
-            v = "gcp_jwt";
-        if (v != NULL ) {
-            {
+        bool isSigned = false;
+        rc = CloudIsComputeEnvironmentTokenSigned(helper->cloud, ce_token, &isSigned);
+        if (rc == 0 && isSigned) {
+            if (cloud_provider == cloud_provider_aws)
+                v = "aws_pkcs7";
+            else if (cloud_provider == cloud_provider_gcp)
+                v = "gcp_jwt";
+        }
+        if (rc == 0 && ce_token != NULL) {
+            if (v != NULL) {
                 const SKV * kv = NULL;
                 const char n[] = "location-type";
                 rc = SKVMake(&kv, n, v);
