@@ -69,10 +69,10 @@ rc_t CC GCPDestroy ( GCP * self )
 static
 rc_t CC GCPMakeComputeEnvironmentToken ( const GCP * self, const String ** ce_token )
 {
-    static const char identity[] =
+    static const char identityUrl[] =
         "http://metadata/computeMetadata/v1/instance/service-accounts/"
         "default/identity?audience=https://www.ncbi.nlm.nih.gov&format=full";
-    static const char zone[]
+    static const char zoneUrl[]
         = "http://metadata.google.internal/computeMetadata/v1/instance/zone";
 
     rc_t rc = 0;
@@ -81,9 +81,26 @@ rc_t CC GCPMakeComputeEnvironmentToken ( const GCP * self, const String ** ce_to
 
     assert(self);
 
-    rc = KNSManager_Read(self->dad.kns, location, sizeof location,
-        self->dad.user_agrees_to_reveal_instance_identity ? identity : zone,
-        "Metadata-Flavor", "Google");
+    if (self->dad.user_agrees_to_reveal_instance_identity)
+        rc = KNSManager_Read(self->dad.kns, location, sizeof location,
+            identityUrl, "Metadata-Flavor", "Google");
+
+    else {
+        const char* slash = NULL;
+
+        char b[99] = "";
+        const char * zone = b;
+        rc = KNSManager_Read(self->dad.kns, b, sizeof b,
+            zoneUrl, "Metadata-Flavor", "Google");
+
+        if (rc == 0)
+            slash = string_rchr(b, sizeof b, '/');
+        if (slash != NULL)
+            zone = slash + 1;
+
+        if (rc == 0)
+            rc = string_printf(location, sizeof location, NULL, "gs.%s", zone);
+    }
 
     if (rc == 0) {
         String s;

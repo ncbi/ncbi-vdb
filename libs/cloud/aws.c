@@ -109,8 +109,12 @@ rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_to
             if (rc == 0)
                 rc = MakeLocation(pkcs7, document, location, sizeof location);
         }
-        else
-            rc = KNSManager_GetAWSLocation(mgr, location, sizeof location);
+        else {
+            char zone[99] = "";
+            rc = KNSManager_GetAWSLocation(mgr, zone, sizeof zone);
+            if (rc == 0)
+                rc = string_printf(location, sizeof location, NULL, "s3.%s", zone);
+        }
     }
 
     if (rc == 0) {
