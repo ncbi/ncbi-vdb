@@ -38,7 +38,6 @@ struct GCP;
 #include <klib/status.h>
 #include <klib/text.h>
 #include <klib/base64.h>
-#include <klib/time.h>
 #include <klib/data-buffer.h>
 
 #include <kns/endpoint.h>
@@ -85,6 +84,8 @@ rc_t CC GCPDestroy ( GCP * self )
     free ( self -> privateKey );
     free ( self -> client_email );
     free ( self -> project_id );
+    free ( self -> access_token );
+    free ( self -> jwt );
     return CloudWhack ( & self -> dad );
 }
 
@@ -287,6 +288,109 @@ Sign_RSA_SHA256(
 }
 
 static
+rc_t 
+MakeJWT ( const GCP * self, char ** jwt )
+{
+    /* From https://developers.google.com/identity/protocols/OAuth2ServiceAccount#authorizingrequests */
+    /*
+        1. JWT header:
+{"alg":"RS256","typ":"JWT"},
+Base64url encoded: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9
+    */
+    const char * jwtHeader_base64url = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9";
+
+/*
+        2. JWT claim set:
+{
+"iss":"<self->client_email>",
+"scope":"https://www.googleapis.com/auth/devstorage.readonly",
+"aud":"https://www.googleapis.com/oauth2/v4/token",
+"exp":<claim expiration minimum now+1hour, seconds since 00:00:00 UTC, January 1, 1970.>,
+"iat":<claim issue time, seconds since 00:00:00 UTC, January 1, 1970.>
+}
+            Base64url encoded
+    */
+    char claimSet[4096];
+    size_t num_writ;
+    const KTime_t issued_at = KTimeStamp ();
+    const KTime_t expiration = issued_at + 60 * 60; /* 1 hour later */
+    rc_t rc = string_printf( claimSet, sizeof ( claimSet ) - 1, & num_writ,
+        "{"
+            "\"iss\":\"%s\","
+            "\"scope\":\"https://www.googleapis.com/auth/devstorage.read_only\","
+            "\"aud\":\"https://www.googleapis.com/oauth2/v4/token\","
+            "\"exp\":%li,"
+            "\"iat\":%li"
+        "}",
+        self -> client_email,
+        expiration,
+        issued_at
+    );
+    if ( rc != 0 )
+    {
+        return rc;
+    }
+    TRACE("claimSet='%s'\n\n", claimSet);
+    /* base64url encode claimSet */
+    const String * claimSet_base64url;
+    rc = encodeBase64URL ( & claimSet_base64url, claimSet, num_writ );
+    if ( rc != 0 )
+    {
+        return rc;
+    }
+    TRACE("claimSet_base64url='%.*s'\n\n", (int)claimSet_base64url->size, claimSet_base64url->addr);
+
+/*
+        3. JSW :
+{Base64url encoded header}.{Base64url encoded claim set}
+            signed with self->privateKey
+            Base64url encode
+*/
+    char to_sign[4096];
+    rc = string_printf( to_sign, sizeof ( to_sign ) - 1, & num_writ, "%s.%S", jwtHeader_base64url, claimSet_base64url );
+    if ( rc != 0 )
+    {
+        StringWhack ( claimSet_base64url );
+        return rc;
+    }
+    TRACE("to_sign='%s'\n\n", to_sign);
+
+    /* sign header_dot_claim with self->privateKey */
+    const String * signature;
+    rc = Sign_RSA_SHA256( self -> privateKey, to_sign, &signature);
+    if ( rc != 0 )
+    {
+        StringWhack ( claimSet_base64url );
+        return rc;
+    }
+    /* base64url encode signature */
+    const String * signature_base64url;
+    rc = encodeBase64URL ( & signature_base64url, signature->addr, signature->size );
+    StringWhack ( signature );
+    if ( rc != 0 )
+    {
+        StringWhack ( claimSet_base64url );
+        return rc;
+    }
+    TRACE("signature_base64url='%.*s'\n\n", (int)signature_base64url->size, signature_base64url->addr);
+
+/*      4. Base64url encode "header.claims.signature" into JWT
+*/
+    size_t jwt_size = string_measure ( jwtHeader_base64url, NULL ) + claimSet_base64url -> size + signature_base64url -> size + 3;
+    * jwt = malloc ( jwt_size );
+    rc = string_printf( * jwt, jwt_size, & num_writ, "%s.%S.%S", jwtHeader_base64url, claimSet_base64url, signature_base64url );
+    StringWhack ( claimSet_base64url );
+    StringWhack ( signature_base64url );
+    if ( rc != 0 )
+    {
+        return rc;
+    }
+    TRACE("jwt='%s'\n\n", jwt);
+   
+    return 0;
+}   
+
+static
 rc_t
 GetJsonStringMember( const KJsonObject *obj, const char * name, const char ** value )
 {
@@ -309,7 +413,29 @@ GetJsonStringMember( const KJsonObject *obj, const char * name, const char ** va
 }
 
 static
-rc_t GetAccessToken ( const GCP * self, const char * jwt, struct KStream * opt_conn, const String ** token )
+rc_t
+GetJsonNumMember( const KJsonObject *obj, const char * name, int64_t * value )
+{
+    const KJsonValue * member = NULL;
+    assert ( obj != NULL );
+    assert ( name != NULL );
+    assert ( value != NULL );
+
+    member = KJsonObjectGetMember ( obj, name );
+    if ( member == NULL )
+    {
+        return RC ( rcKFG, rcFile, rcParsing, rcParam, rcInvalid );
+    }
+    if ( KJsonGetValueType ( member ) != jsNumber )
+    {
+        return RC ( rcKFG, rcFile, rcParsing, rcParam, rcInvalid );
+    }
+
+    return KJsonGetNumber ( member, value );
+}
+
+static
+rc_t GetAccessToken ( const GCP * self, const char * jwt, struct KStream * opt_conn, char ** token, KTime_t * expiration )
 {
 /*      5. Https POST
 POST /oauth2/v4/token HTTP/1.1
@@ -327,7 +453,10 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=<JWT>
     String host;
     CONST_STRING( &host, "www.googleapis.com" );
 
-    * token = NULL;
+    assert ( self );
+    assert ( jwt );
+    assert ( token );
+    assert ( expiration );
 
     rc = KNSManagerMakeClientHttps ( self -> dad . kns, &client, opt_conn, 0x01010000, & host, 443 );
     if ( rc == 0 )
@@ -423,9 +552,20 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=<JWT>
                 rc = GetJsonStringMember( obj, "access_token", & value )            ;
                 if ( rc == 0 )
                 {
-                    String t;
-                    StringInitCString( & t, value );
-                    rc = StringCopy ( token , & t );
+                    * token = string_dup( value , string_measure ( value, NULL ) );
+                    if ( * token == NULL )
+                    {
+                        rc = RC ( rcNS, rcMgr, rcAllocating, rcMemory, rcExhausted );
+                    }
+                }
+                if ( rc == 0 )
+                {
+                    int64_t expires;
+                    rc = GetJsonNumMember( obj, "expires_in", & expires );
+                    if ( rc == 0 )
+                    {
+                        * expiration = KTimeStamp() + expires;
+                    }
                 }
             }
         }
@@ -442,8 +582,10 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=<JWT>
  *  prepare a request object with credentials for user-pays
  */
 static
-rc_t CC GCPAddUserPaysCredentials ( const GCP * self, KClientHttpRequest * req, const char * http_method )
+rc_t CC GCPAddUserPaysCredentials ( const GCP * cself, KClientHttpRequest * req, const char * http_method )
 {
+    /* Obtain GCP access token and add it to the URL with the project Id */
+    GCP * self = ( GCP * ) cself;
     rc_t rc = 0;
     if ( self -> client_email == NULL || self -> privateKey == NULL || self -> project_id == NULL )
     {
@@ -451,166 +593,36 @@ rc_t CC GCPAddUserPaysCredentials ( const GCP * self, KClientHttpRequest * req, 
     }
     else
     {
-        /* Obtain and insert access token */
-
-        /* From https://developers.google.com/identity/protocols/OAuth2ServiceAccount#authorizingrequests */
-        /*
-            1. JWT header:
-    {"alg":"RS256","typ":"JWT"},
-    Base64url encoded: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9
-        */
-    const char * jwtHeader_base64url = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9";
-
-    /*
-            2. JWT claim set:
-    {
-    "iss":"<self->client_email>",
-    "scope":"https://www.googleapis.com/auth/devstorage.readonly",
-    "aud":"https://www.googleapis.com/oauth2/v4/token",
-    "exp":<claim expiration minimum now+1hour, seconds since 00:00:00 UTC, January 1, 1970.>,
-    "iat":<claim issue time, seconds since 00:00:00 UTC, January 1, 1970.>
-    }
-                Base64url encoded
-        */
-        char claimSet[4096];
-        size_t num_writ;
-        const KTime_t issued_at = KTimeStamp ();
-        const KTime_t expiration = issued_at + 60 * 60; /* 1 hour later */
-        rc_t rc = string_printf( claimSet, sizeof ( claimSet ) - 1, & num_writ,
-            "{"
-                "\"iss\":\"%s\","
-                "\"scope\":\"https://www.googleapis.com/auth/devstorage.read_only\","
-                "\"aud\":\"https://www.googleapis.com/oauth2/v4/token\","
-                "\"exp\":%li,"
-                "\"iat\":%li"
-            "}",
-            self -> client_email,
-            expiration,
-            issued_at
-        );
-        if ( rc != 0 )
+        /* see if cached access_token has to be generated/refreshed */
+        if ( self -> access_token == NULL ||
+             self -> access_token_expiration < KTimeStamp() + 60 ) /* expires in less than a minute */
         {
-            return rc;
-        }
-        TRACE("claimSet='%s'\n\n", claimSet);
-        /* base64url encode claimSet */
-        const String * claimSet_base64url;
-        rc = encodeBase64URL ( & claimSet_base64url, claimSet, num_writ );
-        if ( rc != 0 )
-        {
-            return rc;
-        }
-        TRACE("claimSet_base64url='%.*s'\n\n", (int)claimSet_base64url->size, claimSet_base64url->addr);
+            free( self -> access_token );
+            self -> access_token = NULL;
 
-    /*
-            3. JSW :
-    {Base64url encoded header}.{Base64url encoded claim set}
-                signed with self->privateKey
-                Base64url encode
-    */
-        char to_sign[4096];
-        rc = string_printf( to_sign, sizeof ( to_sign ) - 1, & num_writ, "%s.%S", jwtHeader_base64url, claimSet_base64url );
-        if ( rc != 0 )
-        {
-            StringWhack ( claimSet_base64url );
-            return rc;
-        }
-        TRACE("to_sign='%s'\n\n", to_sign);
-
-        /* sign header_dot_claim with self->privateKey */
-        const String * signature;
-        rc = Sign_RSA_SHA256( self -> privateKey, to_sign, &signature);
-        if ( rc != 0 )
-        {
-            StringWhack ( claimSet_base64url );
-            return rc;
-        }
-        /* base64url encode signature */
-        const String * signature_base64url;
-        rc = encodeBase64URL ( & signature_base64url, signature->addr, signature->size );
-        StringWhack ( signature );
-        if ( rc != 0 )
-        {
-            StringWhack ( claimSet_base64url );
-            return rc;
-        }
-        TRACE("signature_base64url='%.*s'\n\n", (int)signature_base64url->size, signature_base64url->addr);
-
-    /*      4. Base64url encode "header.claims.signature" into JWT
-    */
-        char jwt[4096];
-        rc = string_printf( jwt, sizeof ( jwt ) - 1, & num_writ, "%s.%S.%S", jwtHeader_base64url, claimSet_base64url, signature_base64url );
-        StringWhack ( claimSet_base64url );
-        StringWhack ( signature_base64url );
-        if ( rc != 0 )
-        {
-            return rc;
-        }
-        TRACE("jwt='%s'\n\n", jwt);
-
-    /*      5. Https POST
-    POST /oauth2/v4/token HTTP/1.1
-    Host: www.googleapis.com
-    Content-Type: application/x-www-form-urlencoded
-
-    grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=<JWT>
-    */
-        const String * token;
-        rc = GetAccessToken ( self, jwt, self -> dad . conn, & token );
-        if ( rc != 0 )
-        {
-            return rc;
-        }
-
-        rc = KClientHttpRequestAddHeader( req, "Authorization", "Bearer %S", token );
-        StringWhack ( token );
-
-    /* 6. Add  alt=media&userProject=<project_id> to the URL*/
-        if ( rc == 0 )
-        {
-            rc_t rc2;
-            KDataBuffer url;
-            rc = KDataBufferMakeBytes( & url, 0 );
+            if ( self -> jwt == NULL )
+            {   /* first time here, create the JWT and hold on to it */
+                rc = MakeJWT( self, & self -> jwt );
+            }
             if ( rc == 0 )
             {
-                rc = KClientHttpRequestURL( req, & url);
-                if ( rc == 0 )
-                {
-                    KDataBuffer newUrl;
-                    rc = KDataBufferMakeBytes( & newUrl, 0 ); 
-                    if ( rc == 0 )
-                    {
-                        rc = KDataBufferPrintf ( & newUrl, "%.*s?alt=media&userProject=%s", 
-                                                (int) url . elem_count, (const char*) url . base, 
-                                                self -> project_id );
-                        if ( rc == 0 )
-                        {
-                            rc = KClientHttpRequestClear ( req );
-                        }
-                        if ( rc == 0 )
-                        {
-                            URLBlock urlBlock;
-                            URLBlockInit ( & urlBlock );
-                            rc = ParseUrl ( & urlBlock, newUrl . base, newUrl . elem_count - 1 );
-                            if ( rc == 0 )
-                            {
-                                rc = KClientHttpRequestInit ( req, & urlBlock, & url );
-                            }
-                        }
-
-                        // rc2 = KDataBufferWhack ( & newUrl );
-                        // if ( rc == 0 )
-                        // {
-                        //     rc = rc2;
-                        // }
-                    }
-                }
-                rc2 = KDataBufferWhack ( & url );
-                if ( rc == 0 )
-                {
-                    rc = rc2;
-                }
+                rc = GetAccessToken( self, self -> jwt, self -> dad . conn, & self -> access_token, & self -> access_token_expiration );
             }
+        }
+
+        if ( rc == 0 )
+        {
+            rc = KClientHttpRequestAddHeader( req, "Authorization", "Bearer %s", self -> access_token );
+        }
+
+        /* 6. Add  alt=media&userProject=<project_id> to the URL*/
+        if ( rc == 0 )
+        {
+            rc = KClientHttpRequestAddQueryParam( req, "alt", "media");
+        }
+        if ( rc == 0 )
+        {
+            rc = KClientHttpRequestAddQueryParam( req, "userProject", "%s", self -> project_id);
         }
     }
     return rc;

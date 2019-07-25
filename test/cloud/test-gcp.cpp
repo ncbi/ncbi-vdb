@@ -32,6 +32,7 @@
 #include <kns/http-priv.h>
 
 #include <klib/text.h>
+#include <klib/printf.h>
 #include <klib/data-buffer.h>
 
 #include <kapp/args.h> /* ArgsMakeAndHandle */
@@ -46,75 +47,12 @@
 #include <../libs/cloud/cloud-priv.h>
 #include <../libs/kns/http-priv.h>
 
-#include "../kns/HttpFixture.hpp" //TODO: mobe TestStream to a better place
+#include "../kns/HttpFixture.hpp" //TODO: move TestStream to a better place
 
 using namespace std;
 
 static rc_t argsHandler(int argc, char* argv[]);
 TEST_SUITE_WITH_ARGS_HANDLER(GcpTestSuite, argsHandler)
-
-TEST_CASE(GCP_AddUserPays_NoCredentials)
-{
-    CloudMgr * mgr;
-    REQUIRE_RC ( CloudMgrMakeWithProvider ( & mgr, cloud_provider_gcp ) );
-
-    // no user credentials
-    char env[1024];
-    strcpy(env, "GOOGLE_APPLICATION_CREDENTIALS=" );
-    REQUIRE_EQ ( 0, putenv ( env ) );
-
-    Cloud * cloud;
-    REQUIRE_RC ( CloudMgrMakeCloud ( mgr, &cloud, cloud_provider_gcp ) );
-    KClientHttp * client;
-    {
-        KNSManager * kns;
-        REQUIRE_RC ( KNSManagerMake ( & kns ) );
-        String host;
-        CONST_STRING( &host, "www.googleapis.com" );
-        REQUIRE_RC ( KNSManagerMakeClientHttps ( kns, &client, NULL, 0x01010000, & host, 443 ) );
-        REQUIRE_RC ( KNSManagerRelease ( kns ) );
-    }
-
-    KClientHttpRequest * req;
-    REQUIRE_RC ( KClientHttpMakeRequest ( client, & req, "https://www.googleapis.com/oauth2/v4/token" ) );
-
-    REQUIRE_RC_FAIL ( CloudAddUserPaysCredentials ( cloud, req, "POST" ) );
-
-    REQUIRE_RC ( KClientHttpRelease ( client ) );
-    REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
-    REQUIRE_RC ( CloudRelease ( cloud ) );
-    REQUIRE_RC ( CloudMgrRelease ( mgr ) );
-}
-
-TEST_CASE(GCP_AddUserPays_Credentials)
-{
-    char env[1024];
-    strcpy(env, "GOOGLE_APPLICATION_CREDENTIALS=./cloud-kfg/gcp_service.json" );
-    REQUIRE_EQ ( 0, putenv ( env ) );
-
-    CloudMgr * mgr;
-    REQUIRE_RC ( CloudMgrMakeWithProvider ( & mgr, cloud_provider_gcp ) );
-
-    Cloud * cloud;
-    REQUIRE_RC ( CloudMgrMakeCloud ( mgr, &cloud, cloud_provider_gcp ) );
-
-    GCP * gcp;
-    REQUIRE_RC ( CloudToGCP ( cloud, & gcp ) );
-    REQUIRE_NOT_NULL ( gcp );
-    string PK = "-----BEGIN PRIVATE KEY-----\nMIICdwIBADANBgkqhkiG9w0BAQEFA";
-    REQUIRE_NOT_NULL ( gcp -> privateKey );
-    REQUIRE_EQ ( PK, string( gcp -> privateKey ) . substr( 0, PK . size() ) );
-    REQUIRE_NOT_NULL ( gcp -> client_email );
-    REQUIRE_EQ ( string("ncbivdb-compute@developer.gserviceaccount.com"), string( gcp -> client_email ) );
-    REQUIRE_NOT_NULL ( gcp -> project_id );
-    REQUIRE_EQ ( string("test"), string( gcp -> project_id ) );
-
-    REQUIRE_RC ( GCPRelease ( gcp ) );
-    REQUIRE_RC ( CloudRelease ( cloud ) );
-    REQUIRE_RC ( CloudMgrRelease ( mgr ) );
-}
-
-
 
 TEST_CASE(GCP_Sign_RSA_SHA256)
 {
@@ -165,58 +103,138 @@ TEST_CASE(GCP_Sign_RSA_SHA256)
     StringWhack ( output );
 }
 
-TEST_CASE(GCP_AddUserPays)
+class GCP_Fixture
 {
-    // prepare user credentials
-    char env[1024];
-    strcpy(env, "GOOGLE_APPLICATION_CREDENTIALS=./cloud-kfg/gcp_service.json" );
-    REQUIRE_EQ ( 0, putenv ( env ) );
+public:
+    GCP_Fixture()
+    :   mgr ( nullptr ),
+        cloud ( nullptr ),
+        client ( nullptr )
+    {
+    }
+    ~GCP_Fixture()
+    {
+        if ( KClientHttpRelease ( client ) != 0 )
+        {
+            cout << "GcpFixture::~GcpFixture: KClientHttpRelease() failed" << endl;
+        }
+        if ( CloudRelease ( cloud  ) != 0 )
+        {
+            cout << "GcpFixture::~GcpFixture: GCPRelease() failed" << endl;
+        }
+        if ( CloudMgrRelease ( mgr ) != 0 )
+        {
+            cout << "GcpFixture::~GcpFixture: GCPRelease() failed" << endl;
+        }
+    }
 
-    CloudMgr * mgr;
-    REQUIRE_RC ( CloudMgrMakeWithProvider ( & mgr, cloud_provider_gcp ) );
+    void MakeCloud( const char * credFile )
+    {
+        char env[1024];
+        size_t num_writ;
+        THROW_ON_RC ( string_printf ( env, sizeof( env ), &num_writ, "GOOGLE_APPLICATION_CREDENTIALS=%s", credFile ) );
+        THROW_ON_FALSE ( 0 == putenv ( env ) );
 
-    Cloud * cloud;
-    REQUIRE_RC ( CloudMgrMakeCloud ( mgr, &cloud, cloud_provider_gcp ) );
+        THROW_ON_RC ( CloudMgrMakeWithProvider ( & mgr, cloud_provider_gcp ) );
 
-    KClientHttp * client;
+        THROW_ON_RC ( CloudMgrMakeCloud ( mgr, & cloud, cloud_provider_gcp ) );        
+    }
+
+    void MakeClient()
     {
         KNSManager * kns;
-        REQUIRE_RC ( KNSManagerMake ( & kns ) );
+        THROW_ON_RC ( KNSManagerMake ( & kns ) );
         String host;
-        CONST_STRING( &host, "storage.googleapis.com" );
-        REQUIRE_RC ( KNSManagerMakeClientHttps ( kns, &client, NULL, 0x01010000, & host, 443 ) );
-        REQUIRE_RC ( KNSManagerRelease ( kns ) );
+        CONST_STRING( &host, "www.googleapis.com" );
+        THROW_ON_RC ( KNSManagerMakeClientHttps ( kns, &client, NULL, 0x01010000, & host, 443 ) );
+        THROW_ON_RC ( KNSManagerRelease ( kns ) );
     }
+
+    void AddResponse( const string & json )
+    {
+        ostringstream ostr;
+        ostr << "HTTP/1.1 200 OK\r\n"
+            "Content-Type: application/json\r\n"
+            "Content-Length: " << json.size() << "\r\n"
+            "\r\n" << json << "\r\n";
+        TestStream::m_responses.push_back(ostr.str());
+    }
+    void SetupStream ()
+    {
+        THROW_ON_RC ( KStreamInit ( & m_stream, ( const KStream_vt* ) & TestStream::vt, "TestStream", "", true, true ) );
+        AddResponse ( 
+            "{\"access_token\" : \"bogustokenmadefortesting\","
+            "  \"token_type\" : \"Bearer\","
+            "   \"expires_in\" : 3600"
+            "}" 
+        );
+    }
+
+    CloudMgr * mgr;
+    Cloud * cloud;
+    KClientHttp * client;
+    KStream m_stream;
+};
+
+FIXTURE_TEST_CASE(GCP_AddUserPays_Credentials, GCP_Fixture)
+{
+    MakeCloud( "./cloud-kfg/gcp_service.json" );
+
+    GCP * gcp;
+    REQUIRE_RC ( CloudToGCP ( cloud, & gcp ) );
+    REQUIRE_NOT_NULL ( gcp );
+    string PK = "-----BEGIN PRIVATE KEY-----\nMIICdwIBADANBgkqhkiG9w0BAQEFA";
+    REQUIRE_NOT_NULL ( gcp -> privateKey );
+    REQUIRE_EQ ( PK, string( gcp -> privateKey ) . substr( 0, PK . size() ) );
+    REQUIRE_NOT_NULL ( gcp -> client_email );
+    REQUIRE_EQ ( string("ncbivdb-compute@developer.gserviceaccount.com"), string( gcp -> client_email ) );
+    REQUIRE_NOT_NULL ( gcp -> project_id );
+    REQUIRE_EQ ( string("test"), string( gcp -> project_id ) );
+    REQUIRE_NULL ( gcp -> jwt );
+    REQUIRE_EQ ( (KTime_t)0, gcp -> access_token_expiration );
+    REQUIRE_NULL ( gcp -> access_token );
+
+    REQUIRE_RC ( GCPRelease ( gcp ) );
+    REQUIRE_RC ( CloudRelease ( cloud ) );
+}
+
+FIXTURE_TEST_CASE(GCP_AddUserPays_NoCredentials, GCP_Fixture)
+{
+    // no user credentials
+    MakeCloud( "" );
+    MakeClient();
+
+    KClientHttpRequest * req;
+    REQUIRE_RC ( KClientHttpMakeRequest ( client, & req, "https://www.googleapis.com/oauth2/v4/token" ) );
+
+    REQUIRE_RC_FAIL ( CloudAddUserPaysCredentials ( cloud, req, "POST" ) );
+
+    REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
+}
+
+FIXTURE_TEST_CASE(GCP_AddUserPays, GCP_Fixture)
+{
+    MakeCloud( "./cloud-kfg/gcp_service.json" );
+    MakeClient();
+    SetupStream();
 
     KClientHttpRequest * req;
     REQUIRE_RC ( KClientHttpMakeRequest ( client, & req, "https://storage.googleapis.com/sra-pub-run-1/DRR000711/DRR000711.1" ) );
-
-    static KStream m_stream;
-    REQUIRE_RC ( KStreamInit ( & m_stream, ( const KStream_vt* ) & TestStream::vt, "TestStream", "", true, true ) );
-    string json =
-        "{\"access_token\" : \"bogustokenmadefortesting\","
-        "  \"token_type\" : \"Bearer\","
-        "   \"expires_in\" : 3600"
-        "}";
-    ostringstream ostr;
-    ostr << "HTTP/1.1 200 OK\r\n"
-        "Content-Type: application/json\r\n"
-        "Content-Length: " << json.size() << "\r\n"
-        "\r\n" << json << "\r\n";
-    TestStream::m_responses.push_back(ostr.str());
+        
     // to have GCP contact Google authorization server for real, comment out this line:
     // and copy a user credentials file to ./cloud-kfg/gcp_service.json (do not check in!)
     CloudSetHttpConnection( cloud, & m_stream );
 
     REQUIRE_RC ( CloudAddUserPaysCredentials ( cloud, req, "GET" ) );
+// uncomment if want to see the access token, either "bogustokenmadefortesting" or the real one
+//    GCP * gcp; REQUIRE_RC ( CloudToGCP ( cloud, & gcp ) ); cout << gcp -> access_token << endl;
+
     // adds header:
     // Authorization: Bearer <access_token>
-// this will show the access token, either bogusfortesting or the real one
-
-// if the token is real, the following check will fail. please do not "fix".
     char buffer[1024];
     size_t num_read;
     REQUIRE_RC ( KClientHttpRequestGetHeader( req, "Authorization", buffer, sizeof ( buffer ), & num_read) );
+// if the token is real, the following check will fail. please do not "fix".
     REQUIRE_EQ ( string(buffer, num_read), string( "Bearer bogustokenmadefortesting" ) );
 
     // Adds parameters required for user-pays are added to the URL
@@ -224,10 +242,66 @@ TEST_CASE(GCP_AddUserPays)
     REQUIRE_NE ( string::npos, string( query ).find( "alt=media" ) );
     REQUIRE_NE ( string::npos, string( query ).find( "userProject=test" ) );
 
-    REQUIRE_RC ( KClientHttpRelease ( client ) );
     REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
-    REQUIRE_RC ( CloudRelease ( cloud ) );
-    REQUIRE_RC ( CloudMgrRelease ( mgr ) );
+}
+
+FIXTURE_TEST_CASE(GCP_AddUserPays_NoAccessTokenRefresh, GCP_Fixture)
+{
+    MakeCloud( "./cloud-kfg/gcp_service.json" );
+    MakeClient();
+    SetupStream();
+
+    KClientHttpRequest * req;
+    REQUIRE_RC ( KClientHttpMakeRequest ( client, & req, "https://storage.googleapis.com/sra-pub-run-1/DRR000711/DRR000711.1" ) );
+        
+    // this will only return access token once
+    CloudSetHttpConnection( cloud, & m_stream );
+
+    REQUIRE_RC ( CloudAddUserPaysCredentials ( cloud, req, "GET" ) );
+    // if cloud attempts to refresh the access token, this will fail
+    REQUIRE_RC ( CloudAddUserPaysCredentials ( cloud, req, "GET" ) ); 
+
+    REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
+}
+
+FIXTURE_TEST_CASE(GCP_AddUserPays_AccessTokenRefreshCloseToExpiration, GCP_Fixture)
+{
+    MakeCloud( "./cloud-kfg/gcp_service.json" );
+    MakeClient();
+
+    // Set up the stream to respond to access token request twice, first time with immediate expiration
+    REQUIRE_RC ( KStreamInit ( & m_stream, ( const KStream_vt* ) & TestStream::vt, "TestStream", "", true, true ) );
+    AddResponse ( 
+        "{\"access_token\" : \"bogustokenmadefortesting\","
+        "  \"token_type\" : \"Bearer\","
+        "   \"expires_in\" : 0"
+        "}" 
+    );
+    AddResponse ( 
+        "{\"access_token\" : \"anotherbogustokenmadefortesting\","
+        "  \"token_type\" : \"Bearer\","
+        "   \"expires_in\" : 3600"
+        "}" 
+    );
+
+
+    KClientHttpRequest * req;
+    REQUIRE_RC ( KClientHttpMakeRequest ( client, & req, "https://storage.googleapis.com/sra-pub-run-1/DRR000711/DRR000711.1" ) );
+        
+    CloudSetHttpConnection( cloud, & m_stream );
+
+    GCP * gcp; 
+    REQUIRE_RC ( CloudToGCP ( cloud, & gcp ) ); 
+
+    REQUIRE_RC ( CloudAddUserPaysCredentials ( cloud, req, "GET" ) );
+    REQUIRE_EQ ( string( "bogustokenmadefortesting" ), string ( gcp -> access_token ) );
+    // since the first access token expires immediately, this will refresh it
+    REQUIRE_RC ( CloudAddUserPaysCredentials ( cloud, req, "GET" ) ); 
+    REQUIRE_EQ ( string( "anotherbogustokenmadefortesting" ), string ( gcp -> access_token ) );
+
+    REQUIRE_RC ( GCPRelease ( gcp ) );
+
+    REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
 }
 
 //////////////////////////////////////////// Main
