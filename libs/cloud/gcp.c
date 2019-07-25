@@ -32,6 +32,8 @@ struct GCP;
 
 #include <cloud/gcp.h>
 
+#include <kfg/properties.h> /* KConfig_Get_User_Accept_Gcp_Charges */
+
 #include <klib/json.h>
 #include <klib/printf.h> /* string_printf */
 #include <klib/rc.h>
@@ -67,18 +69,21 @@ rc_t CC GCPDestroy ( GCP * self )
 static
 rc_t CC GCPMakeComputeEnvironmentToken ( const GCP * self, const String ** ce_token )
 {
+    static const char identity[] =
+        "http://metadata/computeMetadata/v1/instance/service-accounts/"
+        "default/identity?audience=https://www.ncbi.nlm.nih.gov&format=full";
+    static const char zone[]
+        = "http://metadata.google.internal/computeMetadata/v1/instance/zone";
+
     rc_t rc = 0;
 
     char location[4096] = "";
 
-    const char url[] =
-        "http://metadata/computeMetadata/v1/instance/service-accounts/"
-        "default/identity?audience=https://www.ncbi.nlm.nih.gov&format=full";
-
     assert(self);
 
     rc = KNSManager_Read(self->dad.kns, location, sizeof location,
-        url, "Metadata-Flavor", "Google");
+        self->dad.user_agrees_to_reveal_instance_identity ? identity : zone,
+        "Metadata-Flavor", "Google");
 
     if (rc == 0) {
         String s;
@@ -89,6 +94,18 @@ rc_t CC GCPMakeComputeEnvironmentToken ( const GCP * self, const String ** ce_to
     return rc;
 }
 
+/* IsComputeEnvironmentTokenSigned
+ */
+static rc_t CC GCPIsComputeEnvironmentTokenSigned (
+    const GCP * self, const String * ce_token, bool * is_signed )
+{
+    assert(ce_token);
+
+    *is_signed = ce_token->size > 32;
+
+    return 0;
+}
+
 /* AddComputeEnvironmentTokenForSigner
  *  prepare a request object with a compute environment token
  *  for use by an SDL-associated "signer" service
@@ -96,13 +113,22 @@ rc_t CC GCPMakeComputeEnvironmentToken ( const GCP * self, const String ** ce_to
 static
 rc_t CC GCPAddComputeEnvironmentTokenForSigner ( const GCP * self, KClientHttpRequest * req )
 {
+    bool is_signed = false;
+    
     const String * ce_token = NULL;
     rc_t rc = GCPMakeComputeEnvironmentToken(self, &ce_token);
 
+    if (rc == 0)
+        rc = GCPIsComputeEnvironmentTokenSigned(self, ce_token, &is_signed);
+        
     if (rc == 0) {
-        rc = KHttpRequestAddPostParam(req, "ident=%S", ce_token);
-        StringWhack(ce_token);
+        if (is_signed)
+            rc = KHttpRequestAddPostParam(req, "ident=%S", ce_token);
+        else
+            rc = RC(rcCloud, rcProvider, rcIdentifying, rcCondition, rcUnauthorized);
     }
+        
+    StringWhack(ce_token);
 
     return rc;
 }
@@ -131,6 +157,7 @@ static Cloud_vt_v1 GCP_vt_v1 =
 
     GCPDestroy,
     GCPMakeComputeEnvironmentToken,
+    GCPIsComputeEnvironmentTokenSigned,
     GCPAddComputeEnvironmentTokenForSigner,
     GCPAddAuthentication,
     GCPAddUserPaysCredentials
@@ -152,8 +179,16 @@ LIB_EXPORT rc_t CC CloudMgrMakeGCP ( const CloudMgr * self, GCP ** p_gcp )
     {
         /* capture from self->kfg */
         bool user_agrees_to_pay = false;
-        
-        rc = CloudInit ( & gcp -> dad, ( const Cloud_vt * ) & GCP_vt_v1, "GCP", self -> kns, user_agrees_to_pay );
+        bool user_agrees_to_reveal_instance_identity = false;
+        if (self != NULL) {
+            KConfig_Get_User_Accept_Gcp_Charges(self->kfg,
+                &user_agrees_to_pay);
+            KConfig_Get_Report_Cloud_Instance_Identity(self->kfg,
+                &user_agrees_to_reveal_instance_identity);
+        }
+
+        rc = CloudInit ( & gcp -> dad, ( const Cloud_vt * ) & GCP_vt_v1, "GCP", self -> kns, user_agrees_to_pay,
+            user_agrees_to_reveal_instance_identity );
         if ( rc == 0 )
         {
             rc = PopulateCredentials( gcp );

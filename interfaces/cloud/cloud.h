@@ -60,6 +60,11 @@ CLOUD_EXTERN rc_t CC CloudRelease ( const Cloud * self );
 CLOUD_EXTERN rc_t CC CloudMakeComputeEnvironmentToken ( const Cloud * self,
     struct String const ** ce_token );
 
+/* IsComputeEnvironmentTokenSigned
+ */
+CLOUD_EXTERN rc_t CC CloudIsComputeEnvironmentTokenSigned ( const Cloud * self,
+    struct String const * ce_token, bool * is_signed );
+
 /* AddComputeEnvironmentTokenForSigner
  *  prepare a request object with a compute environment token
  *  for use by an SDL-associated "signer" service

@@ -66,6 +66,14 @@ rc_t CC AWSDestroy ( AWS * self )
     return CloudWhack ( & self -> dad );
 }
 
+static rc_t KNSManager_GetAWSLocation(
+    const KNSManager * self, char *buffer, size_t bsize)
+{
+    return KNSManager_Read(self, buffer, bsize,
+        "http://169.254.169.254/latest/meta-data/placement/availability-zone",
+        NULL, NULL);
+}
+
 /* MakeComputeEnvironmentToken
  *  contact cloud provider to get proof of execution environment in form of a token
  */
@@ -82,19 +90,27 @@ rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_to
     const char * env = getenv("VDB_CE_TOKEN");
 
     if (env == NULL) {
+        const KNSManager * mgr = NULL;
+
         assert(self);
 
-        rc = KNSManager_Read(self->dad.kns, document, sizeof document,
-            "http://169.254.169.254/latest/dynamic/instance-identity/document",
-            NULL, NULL);
+        mgr = self->dad.kns;
 
-        if (rc == 0)
-            rc = KNSManager_Read(self->dad.kns, pkcs7, sizeof pkcs7,
-                "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7",
+        if (self->dad.user_agrees_to_reveal_instance_identity) {
+            rc = KNSManager_Read(mgr, document, sizeof document,
+                "http://169.254.169.254/latest/dynamic/instance-identity/document",
                 NULL, NULL);
 
-        if (rc == 0)
-            rc = MakeLocation(pkcs7, document, location, sizeof location);
+            if (rc == 0)
+                rc = KNSManager_Read(mgr, pkcs7, sizeof pkcs7,
+                    "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7",
+                    NULL, NULL);
+
+            if (rc == 0)
+                rc = MakeLocation(pkcs7, document, location, sizeof location);
+        }
+        else
+            rc = KNSManager_GetAWSLocation(mgr, location, sizeof location);
     }
 
     if (rc == 0) {
@@ -106,6 +122,20 @@ rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_to
     return rc;
 }
 
+/* IsComputeEnvironmentTokenSigned
+ */
+static rc_t CC AwsIsComputeEnvironmentTokenSigned (
+    const AWS * self, const String * ce_token, bool * is_signed )
+{
+    assert(ce_token);
+
+    *is_signed = ce_token->size > 32;
+
+    return 0;
+}
+
+
+
 /* AddComputeEnvironmentTokenForSigner
  *  prepare a request object with a compute environment token
  *  for use by an SDL-associated "signer" service
@@ -113,11 +143,20 @@ rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_to
 static
 rc_t CC AWSAddComputeEnvironmentTokenForSigner ( const AWS * self, KClientHttpRequest * req )
 {
+    bool is_signed = false;
+
     const String * ce_token = NULL;
     rc_t rc = AWSMakeComputeEnvironmentToken(self, &ce_token);
 
+    if (rc == 0)
+        rc = AwsIsComputeEnvironmentTokenSigned(self, ce_token, &is_signed);
+
     if (rc == 0) {
-        rc = KHttpRequestAddPostParam(req, "ident=%S", ce_token);
+        if (is_signed)
+            rc = KHttpRequestAddPostParam(req, "ident=%S", ce_token);
+        else
+            rc = RC(rcCloud, rcProvider, rcIdentifying, rcCondition, rcUnauthorized);
+        
         StringWhack(ce_token);
     }
 
@@ -153,6 +192,7 @@ static Cloud_vt_v1 AWS_vt_v1 =
 
     AWSDestroy,
     AWSMakeComputeEnvironmentToken,
+    AwsIsComputeEnvironmentTokenSigned,
     AWSAddComputeEnvironmentTokenForSigner,
     AWSAddAuthentication,
     AWSAddUserPaysCredentials
@@ -175,11 +215,16 @@ LIB_EXPORT rc_t CC CloudMgrMakeAWS ( const CloudMgr * self, AWS ** p_aws )
     {
         /* capture from self->kfg */
         bool user_agrees_to_pay = false;
-        if (self != NULL)
-            KConfigReadBool(self->kfg, "/libs/cloud/accept_aws_charges",
+        bool user_agrees_to_reveal_instance_identity = false;
+        if (self != NULL) {
+            KConfig_Get_User_Accept_Aws_Charges(self->kfg,
                 &user_agrees_to_pay);
+            KConfig_Get_Report_Cloud_Instance_Identity(self->kfg,
+                &user_agrees_to_reveal_instance_identity);
+        }
 
-        rc = CloudInit ( & aws -> dad, ( const Cloud_vt * ) & AWS_vt_v1, "AWS", self -> kns, user_agrees_to_pay );
+        rc = CloudInit ( & aws -> dad, ( const Cloud_vt * ) & AWS_vt_v1, "AWS", self -> kns, user_agrees_to_pay,
+            user_agrees_to_reveal_instance_identity );
         if ( rc == 0 )
         {
             rc = PopulateCredentials( aws );
@@ -269,9 +314,7 @@ bool CloudMgrWithinAWS ( const CloudMgr * self )
 
     assert(self);
 
-    return KNSManager_Read(self->kns, buffer, sizeof buffer,
-        "http://169.254.169.254/latest/meta-data/placement/availability-zone",
-        NULL, NULL) == 0;
+    return KNSManager_GetAWSLocation(self->kns, buffer, sizeof buffer) == 0;
 }
 
 /*** Finding/loading credentials  */
