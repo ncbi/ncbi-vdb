@@ -28,8 +28,6 @@
 #define _h_klib_strings_
 
 
-#define KFG_USER_ACCEPT_AWS_CHARGES "/libs/cloud/accept_aws_charges"
-#define KFG_USER_ACCEPT_GCP_CHARGES "/libs/cloud/accept_gcp_charges"
 
 
 #ifdef __cplusplus

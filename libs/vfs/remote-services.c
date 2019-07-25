@@ -40,6 +40,7 @@
 
 #include <kfg/config.h> /* KConfigRelease */
 #include <kfg/kart-priv.h> /* KartItemMake2 */
+#include <kfg/properties.h> /* KConfig_Get_User_Accept_Aws_Charges */
 #include <kfg/repository.h> /* KRepositoryMgrRelease */
 
 #include <kns/http.h> /* KHttpRequest */
@@ -3045,13 +3046,11 @@ rc_t SCgiRequestAddAcceptCharges(SCgiRequest * self, SHelper * helper) {
     rc_t rc = SHelperInitKfg(helper);
 
     if (rc == 0) {
-        rc = KConfigReadBool(
-            helper->kfg, KFG_USER_ACCEPT_AWS_CHARGES, &aws);
+        rc = KConfig_Get_User_Accept_Aws_Charges(helper->kfg, &aws);
         if (rc != 0)
             rc = 0;
 
-        rc = KConfigReadBool(
-            helper->kfg, KFG_USER_ACCEPT_GCP_CHARGES, &gcp);
+        rc = KConfig_Get_User_Accept_Gcp_Charges(helper->kfg, &gcp);
         if (rc != 0)
             rc = 0;
     }
