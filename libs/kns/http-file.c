@@ -1122,6 +1122,10 @@ rc_t CC KHttpFileTimedReadChunked ( const KHttpFile * self, uint64_t pos,
             /* ALWAYS account for chunks already read */
             pos += * num_read;
             bytes -= * num_read;
+            if ( bytes == 0 )
+            {
+                break;
+            }
 
             if ( rc != 0 )
             {
@@ -1135,6 +1139,10 @@ rc_t CC KHttpFileTimedReadChunked ( const KHttpFile * self, uint64_t pos,
                     /* ALWAYS account for chunks already read */
                     pos += * num_read;
                     bytes -= * num_read;
+                    if ( bytes == 0 )
+                    {
+                        break;
+                    }
 
                     if ( rc2 == 0 )
                     {
