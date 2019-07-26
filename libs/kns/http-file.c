@@ -1280,6 +1280,8 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                     if ( rc == 0 )
                                     {
                                         KClientHttpResult *rslt;
+/*TODO the next line is a very temporary hak for VDB-3867, please remove when fixed properly */
+                                        if ( strstr( (const char*)buf -> base, "refseq") != 0 ) need_env_token = false;
 
                                         if ( need_env_token )
                                         {
