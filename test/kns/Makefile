@@ -300,7 +300,7 @@ refresh: test-refresh-expired
 #----------------------------------------------------------------
 
 run-tests:
-	unset http_proxy ; $(BINDIR)/test-http
+	unset http_proxy ; $(TEST_BINDIR)/test-http
 	unset http_proxy ; $(BINDIR)/test-proxy
 
 # test-proxy-with-scheme never does direct internet connection

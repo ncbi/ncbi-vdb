@@ -2695,7 +2695,7 @@ rc_t KClientHttpRequestClear ( KClientHttpRequest *self )
     return 0;
 }
 
-const char * 
+const char *
 KClientHttpRequestGetBody( struct KClientHttpRequest * self )
 {
     assert ( self );
@@ -3331,7 +3331,7 @@ UrlEncode( const char * source, size_t size, char ** res )
             UrlEncodeChar ( ch, cur );
             cur += 3;
         }
-        else 
+        else
         {
             switch ( ch )
             {
@@ -3377,7 +3377,7 @@ UrlEncode( const char * source, size_t size, char ** res )
     return 0;
 }
 
-LIB_EXPORT rc_t CC KClientHttpRequestVAddQueryParam ( KClientHttpRequest *self, 
+LIB_EXPORT rc_t CC KClientHttpRequestVAddQueryParam ( KClientHttpRequest *self,
                                 const char * name, const char *fmt, va_list args )
 {
     rc_t rc;
@@ -3398,8 +3398,8 @@ LIB_EXPORT rc_t CC KClientHttpRequestVAddQueryParam ( KClientHttpRequest *self,
             if ( rc == 0 )
             {
                 char * encValue;
-                rc = UrlEncode( (const char *) valueBuf.base, 
-                                valueBuf.elem_count - 1, 
+                rc = UrlEncode( (const char *) valueBuf.base,
+                                valueBuf.elem_count - 1,
                                 & encValue );
                 if ( rc == 0 )
                 {
@@ -3407,11 +3407,11 @@ LIB_EXPORT rc_t CC KClientHttpRequestVAddQueryParam ( KClientHttpRequest *self,
                     rc = KDataBufferMakeBytes( & newBuf, 0 );
                     if ( rc == 0 )
                     {
-                        rc = KDataBufferPrintf ( & newBuf, "%.*s%c%s%s%s", 
-                                                (int) self -> url_buffer . elem_count, 
-                                                (const char*) self -> url_buffer . base, 
+                        rc = KDataBufferPrintf ( & newBuf, "%.*s%c%s%s%s",
+                                                (int) self -> url_buffer . elem_count,
+                                                (const char*) self -> url_buffer . base,
                                                 first ? '?' : '&',
-                                                hasName ? name : "", 
+                                                hasName ? name : "",
                                                 hasName ? "=" : "",
                                                 encValue);
                         if ( rc == 0 )
@@ -3625,7 +3625,7 @@ static rc_t KClientHttpRequestFormatMsgBegin (
 static
 rc_t
 FormatForCloud( const KClientHttpRequest *cself, const char *method )
-{   /* Discover whether the target URL is in a cloud and 
+{   /* Discover whether the target URL is in a cloud and
         if it is, apply the corresponding cloud's formatting */
     rc_t rc = 0;
 
@@ -3685,7 +3685,7 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
         }
     }
 
-    if ( cpId == cloud_provider_none ) 
+    if ( cpId == cloud_provider_none )
         CloudMgrCurrentProvider ( cloudMgr, & cpId );
 
     {
@@ -3698,7 +3698,7 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
         }
     }
 
-    if (cself->ceRequired || cself->payRequired)
+    if ( cpId != cloud_provider_none && ( cself->ceRequired || cself->payRequired ) )
     {   /* add cloud authentication informantion if required */
         if ( rc == 0 )
         {
