@@ -664,10 +664,22 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
 {
     const String * uri = NULL;
     rc_t rc = VPathMakeString ( path, &uri );
+
+    if (rc == 0) {
+        String objectType;
+        String refseq;
+        CONST_STRING(&refseq, "refseq");
+        rc = VPathGetObjectType(path, &objectType);
+        if (rc == 0 && !is_refseq)
+            is_refseq = StringEqual(&objectType, &refseq);
+    }
+
     if ( rc == 0 )
     {
-        bool ceRequired  = path -> ceRequired || getenv( "VDB_REMOTE_NEED_CE" ) != NULL;
-        bool payRequired = path -> payRequired || getenv( "VDB_REMOTE_NEED_PMT" ) != NULL;
+        bool ceRequired = is_refseq ? false :
+            path -> ceRequired || getenv( "VDB_REMOTE_NEED_CE" ) != NULL;
+        bool payRequired = is_refseq ? false :
+            path -> payRequired || getenv( "VDB_REMOTE_NEED_PMT" ) != NULL;
         rc = KNSManagerMakeReliableHttpFile ( self -> kns,
                                               cfp,
                                               NULL,
