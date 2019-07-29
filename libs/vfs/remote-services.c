@@ -356,6 +356,8 @@ typedef struct {
 
 /* service request */
 typedef struct {
+    bool disabled;
+
     EServiceType serviceType;
 
     SVersion version;
@@ -3078,6 +3080,19 @@ rc_t SCgiRequestAddAcceptCharges(SCgiRequest * self, SHelper * helper) {
     return rc;
 }
 
+static rc_t SRequestSetDisabled(SRequest * self, SHelper * helper) {
+    rc_t rc = 0;
+
+    assert(self && helper);
+
+    rc = SHelperInitKfg(helper);
+
+    if (rc == 0)
+        KConfigReadBool(helper->kfg, "/repository/remote/disabled", &self->disabled);
+
+    return rc;
+}
+
 static
 rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     VRemoteProtocols protocols, const char * cgi,
@@ -3101,6 +3116,14 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
 
     DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( 
         "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n" ) );
+
+    rc = SRequestSetDisabled(request, helper);
+    if (rc != 0)
+        return rc;
+    if (request->disabled) {
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), ("remote repo disabled in config\n"));
+        return rc;
+    }
 
     rc = SVersionInit(&request->version, &request->sdl, version, eSTnames,
         helper, request);
@@ -4515,16 +4538,22 @@ rc_t KServiceNamesExecuteExtImpl ( KService * self, VRemoteProtocols protocols,
     KStream * stream = NULL;
 
     if ( self == NULL )
-         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+        return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
 
     if ( response == NULL )
-         return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
+        return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
 
     if ( version == NULL )
         version = "130";
 
     rc = KServiceInitNamesRequestWithVersion ( self, protocols, cgi, version,
         false, expected == NULL );
+
+    if (rc == 0 && self->req.disabled) {
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), (
+            "XXXXXXXXXXXX NOT sending HTTP request XXXXXXXXXXXXXXXXXXXXX\n"));
+        return RC(rcVFS, rcQuery, rcResolving, rcName, rcNotFound);
+    }
 
     if (rc == 0 && self->req.hasQuery)
         rc = SCgiRequestPerform(&self->req.cgiReq, &self->helper,
