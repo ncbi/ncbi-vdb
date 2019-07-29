@@ -685,11 +685,12 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
         bool ceRequired = false;
         bool payRequired = false;
         {
-            const char * magic = getenv(ENV_VDB_REMOTE_NEED_CE);
+            const char name[] = ENV_VDB_REMOTE_NEED_CE;
+            const char * magic = getenv(name);
             if (is_refseq) {
                 if (magic != NULL)
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-                        "'%s' needCe magic ignored for refseq\n"));
+                        "'%s' needCe magic ignored for refseq\n", name));
             }
             else
                 if (magic != NULL)
@@ -698,11 +699,12 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
                     ceRequired = path->ceRequired;
         }
         {
-            const char * magic = getenv(ENV_VDB_REMOTE_NEED_PMT);
+            const char name[] = ENV_VDB_REMOTE_NEED_PMT;
+            const char * magic = getenv(name);
             if (is_refseq) {
                 if (magic != NULL)
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-                        "'%s' pmtReq magic ignored for refseq\n"));
+                        "'%s' pmtReq magic ignored for refseq\n", name));
             }
             if (magic != NULL)
                 payRequired = true;
