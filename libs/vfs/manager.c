@@ -670,8 +670,14 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
         String refseq;
         CONST_STRING(&refseq, "refseq");
         rc = VPathGetObjectType(path, &objectType);
-        if (rc == 0 && !is_refseq)
-            is_refseq = StringEqual(&objectType, &refseq);
+        if (rc == 0) {
+            if (!is_refseq)
+                is_refseq = StringEqual(&objectType, &refseq);
+            if (!is_refseq) {
+                assert(uri);
+                is_refseq = strstr(uri->addr, refseq.addr) != NULL;
+            }
+        }
     }
 
     if ( rc == 0 )
