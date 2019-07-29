@@ -76,13 +76,14 @@
 
 #include <klib/debug.h>
 #include <klib/log.h>
+#include <klib/namelist.h>
+#include <klib/out.h>
 #include <klib/printf.h>
 #include <klib/rc.h>
 #include <klib/refcount.h>
-#include <klib/namelist.h>
-#include <klib/vector.h>
+#include <klib/strings.h> /* ENV_VDB_REMOTE_NEED_CE */
 #include <klib/time.h> 
-#include <klib/out.h> 
+#include <klib/vector.h>
 
 #include <strtol.h>
 
@@ -680,12 +681,34 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
         }
     }
 
-    if ( rc == 0 )
-    {
-        bool ceRequired = is_refseq ? false :
-            path -> ceRequired || getenv( "VDB_REMOTE_NEED_CE" ) != NULL;
-        bool payRequired = is_refseq ? false :
-            path -> payRequired || getenv( "VDB_REMOTE_NEED_PMT" ) != NULL;
+    if ( rc == 0 ) {
+        bool ceRequired = false;
+        bool payRequired = false;
+        {
+            const char * magic = getenv(ENV_VDB_REMOTE_NEED_CE);
+            if (is_refseq) {
+                if (magic != NULL)
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                        "'%s' needCe magic ignored for refseq\n"));
+            }
+            else
+                if (magic != NULL)
+                    ceRequired = true;
+                else
+                    ceRequired = path->ceRequired;
+        }
+        {
+            const char * magic = getenv(ENV_VDB_REMOTE_NEED_PMT);
+            if (is_refseq) {
+                if (magic != NULL)
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                        "'%s' pmtReq magic ignored for refseq\n"));
+            }
+            if (magic != NULL)
+                payRequired = true;
+            else
+                payRequired = path->payRequired;
+        }
         rc = KNSManagerMakeReliableHttpFile ( self -> kns,
                                               cfp,
                                               NULL,
