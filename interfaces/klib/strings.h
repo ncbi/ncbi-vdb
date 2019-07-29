@@ -28,6 +28,8 @@
 #define _h_klib_strings_
 
 
+#define ENV_VDB_REMOTE_NEED_CE "VDB_REMOTE_NEED_CE"
+#define ENV_VDB_REMOTE_NEED_PMT "VDB_REMOTE_NEED_PMT"
 
 
 #ifdef __cplusplus
