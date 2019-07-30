@@ -200,15 +200,15 @@ public:
     : mgr(0), curs(0)
     {
         if ( VDBManagerMakeRead(&mgr, NULL) != 0 )
-            throw logic_error ( "VdbFixture: VDBManagerMakeRead failed" );
+            cout << "VdbFixture: VDBManagerMakeRead failed" << endl;
     }
 
     ~VdbFixture()
     {
         if ( mgr && VDBManagerRelease ( mgr ) != 0 )
-            throw logic_error ( "~VdbFixture: VDBManagerRelease failed" );
+            cout << "~VdbFixture: VDBManagerRelease failed" << endl;
         if ( curs && VCursorRelease ( curs ) != 0 )
-            throw logic_error ( "~VdbFixture: VCursorRelease failed" );
+            cout << "~VdbFixture: VCursorRelease failed" << endl;
     }
 
     rc_t Setup( const char * acc, const char* column[], bool open = true )
