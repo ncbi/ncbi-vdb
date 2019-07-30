@@ -2394,7 +2394,6 @@ rc_t KSrvRespObjMakeIterator
 
 rc_t KSrvRespObjIteratorRelease ( const KSrvRespObjIterator * cself ) {
     rc_t rc = 0;
-    rc_t rc2;
 
     KSrvRespObjIterator * self = ( KSrvRespObjIterator * ) cself;
 
@@ -2405,14 +2404,6 @@ rc_t KSrvRespObjIteratorRelease ( const KSrvRespObjIterator * cself ) {
         return 0;
 
     rc = Response4Release ( self -> dad );
-
-    rc2 = ContainerRelease ( (Container*) self -> obj );
-    if ( rc == 0 )
-    {
-        rc = rc2;
-    }
-
-    free ( (Container*) self -> obj );
 
     memset ( self, 0, sizeof * self );
 

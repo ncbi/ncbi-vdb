@@ -2167,9 +2167,6 @@ rc_t VResolverWhack ( VResolver *self )
     /* drop local volume sets */
     VectorWhack ( & self -> local, VResolverAlgWhack, NULL );
 
-    /* drop local volume sets */
-    VectorWhack ( & self -> ad, VResolverAlgWhack, NULL );
-
     /* drop download ticket */
     if ( self -> ticket != NULL )
         StringWhack ( ( String* ) self -> ticket );
