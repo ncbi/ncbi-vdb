@@ -146,7 +146,7 @@ LIB_EXPORT rc_t CC CloudMgrMakeGCP ( const CloudMgr * self, GCP ** p_gcp )
     GCP * gcp = calloc ( 1, sizeof * gcp );
     if ( gcp == NULL )
     {
-        rc = RC ( rcNS, rcMgr, rcAllocating, rcMemory, rcExhausted );
+        rc = RC ( rcCloud, rcMgr, rcAllocating, rcMemory, rcExhausted );
     }
     else
     {
@@ -335,10 +335,10 @@ rc_t PopulateCredentials ( GCP * self )
     while ( required[i] != NULL ) {
         const KJsonValue *v = KJsonObjectGetMember ( obj, required[i] );
         if ( v == NULL ) {
-            return RC ( rcKFG, rcFile, rcParsing, rcParam, rcInvalid );
+            return RC ( rcCloud, rcFile, rcParsing, rcParam, rcInvalid );
         }
         if ( KJsonGetValueType ( v ) != jsString ) {
-            return RC ( rcKFG, rcFile, rcParsing, rcParam, rcInvalid );
+            return RC ( rcCloud, rcFile, rcParsing, rcParam, rcInvalid );
         }
         ++i;
     }
@@ -350,10 +350,10 @@ rc_t PopulateCredentials ( GCP * self )
     CONST_STRING ( &private_key, "private_key" );
     v = KJsonObjectGetMember ( obj, "private_key" );
     if ( v == NULL ) {
-        return RC ( rcKFG, rcFile, rcParsing, rcParam, rcInvalid );
+        return RC ( rcCloud, rcFile, rcParsing, rcParam, rcInvalid );
     }
     if ( KJsonGetValueType ( v ) != jsString ) {
-        return RC ( rcKFG, rcFile, rcParsing, rcParam, rcInvalid );
+        return RC ( rcCloud, rcFile, rcParsing, rcParam, rcInvalid );
     }
     rc = KJsonGetString ( v, &val );
     if ( rc ) return rc;
@@ -364,10 +364,10 @@ rc_t PopulateCredentials ( GCP * self )
     CONST_STRING ( &client_email, "client_email" );
     v = KJsonObjectGetMember ( obj, "client_email" );
     if ( v == NULL ) {
-        return RC ( rcKFG, rcFile, rcParsing, rcParam, rcInvalid );
+        return RC ( rcCloud, rcFile, rcParsing, rcParam, rcInvalid );
     }
     if ( KJsonGetValueType ( v ) != jsString ) {
-        return RC ( rcKFG, rcFile, rcParsing, rcParam, rcInvalid );
+        return RC ( rcCloud, rcFile, rcParsing, rcParam, rcInvalid );
     }
 
     rc = KJsonGetString ( v, &val );
