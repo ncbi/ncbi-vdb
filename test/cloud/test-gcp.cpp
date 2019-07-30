@@ -239,8 +239,33 @@ FIXTURE_TEST_CASE(GCP_AddUserPays, GCP_Fixture)
 
     // Adds parameters required for user-pays are added to the URL
     string query ( (const char *)req -> url_block . query . addr, (size_t)req -> url_block . query . size  );
-    REQUIRE_NE ( string::npos, string( query ).find( "alt=media" ) );
-    REQUIRE_NE ( string::npos, string( query ).find( "userProject=test" ) );
+    REQUIRE_NE ( string::npos, query . find( "alt=media" ) );
+    REQUIRE_NE ( string::npos, query . find( "userProject=test" ) );
+
+    REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
+}
+
+FIXTURE_TEST_CASE(GCP_AddUserPays_ProjectAddedOnlyOnce, GCP_Fixture)
+{
+    MakeCloud( "./cloud-kfg/gcp_service.json" );
+    MakeClient();
+    SetupStream();
+
+    KClientHttpRequest * req;
+    REQUIRE_RC ( KClientHttpMakeRequest ( client, & req, "https://storage.googleapis.com/sra-pub-run-1/DRR000711/DRR000711.1" ) );
+    CloudSetHttpConnection( cloud, & m_stream );
+
+    REQUIRE_RC ( CloudAddUserPaysCredentials ( cloud, req, "GET" ) );
+    REQUIRE_RC ( CloudAddUserPaysCredentials ( cloud, req, "GET" ) );
+
+    // Adds parameters required for user-pays are added to the URL only once
+    string query ( (const char *)req -> url_block . query . addr, (size_t)req -> url_block . query . size  );
+    size_t pos = query.find( "alt=media" );
+    REQUIRE_NE ( string::npos, pos );
+    REQUIRE_EQ ( string::npos, query . substr(pos+1).find( "alt=media" ) );
+    pos = query.find( "userProject=test" );
+    REQUIRE_NE ( string::npos, pos );
+    REQUIRE_EQ ( string::npos, query . substr(pos+1).find( "userProject=test" ) );
 
     REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
 }

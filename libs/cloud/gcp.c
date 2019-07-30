@@ -622,8 +622,10 @@ rc_t CC GCPAddUserPaysCredentials(const GCP * cself, KClientHttpRequest * req, c
     }
     else
     {
+        bool fresh_url = self->access_token == NULL;
+        bool new_token = false;
         /* see if cached access_token has to be generated/refreshed */
-        if (self->access_token == NULL ||
+        if (fresh_url ||
             self->access_token_expiration < KTimeStamp() + 60) /* expires in less than a minute */
         {
             free(self->access_token);
@@ -637,21 +639,25 @@ rc_t CC GCPAddUserPaysCredentials(const GCP * cself, KClientHttpRequest * req, c
             {
                 rc = GetAccessToken(self, self->jwt, self->dad.conn, &self->access_token, &self->access_token_expiration);
             }
+            new_token = true;
         }
 
-        if (rc == 0)
-        {
+        if (rc == 0 && new_token)
+        {   /* only update the URL if we have not done so yet, or if we have just refreshed the token (in which case only update the token) */
             rc = KClientHttpRequestAddHeader(req, "Authorization", "Bearer %s", self->access_token);
-        }
 
-        /* 6. Add  alt=media&userProject=<project_id> to the URL*/
-        if (rc == 0)
-        {
-            rc = KClientHttpRequestAddQueryParam(req, "alt", "media");
-        }
-        if (rc == 0)
-        {
-            rc = KClientHttpRequestAddQueryParam(req, "userProject", "%s", self->project_id);
+            /* Add  alt=media&userProject=<project_id> to the URL if not already there */
+            if ( fresh_url )
+            {
+                if (rc == 0)
+                {
+                    rc = KClientHttpRequestAddQueryParam(req, "alt", "media");
+                }
+                if (rc == 0)
+                {
+                    rc = KClientHttpRequestAddQueryParam(req, "userProject", "%s", self->project_id);
+                }
+            }
         }
     }
     return rc;
