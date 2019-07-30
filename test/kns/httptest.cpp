@@ -241,17 +241,89 @@ FIXTURE_TEST_CASE(Http_Read_Multi_User, HttpFixture)
 
 FIXTURE_TEST_CASE(HttpRequest_POST_NoParams, HttpFixture)
 {   // Bug: KClientHttpRequestPOST crashed if request had no parameters
-    KClientHttpRequest *req;
-    KNSManagerMakeClientRequest ( m_mgr, &req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
+    REQUIRE_RC ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, MakeURL(GetName()).c_str() ) );
 
     KClientHttpResult *rslt;
     TestStream::AddResponse("HTTP/1.1 200 OK\r\n");
-    REQUIRE_RC ( KClientHttpRequestPOST ( req, & rslt ) );
+    REQUIRE_RC ( KClientHttpRequestPOST ( m_req, & rslt ) );
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
-
-    REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
 }
 
+// KClientHttpRequestAddQueryParam
+
+class HttpRequestTest : public SharedTest
+{
+public:
+    HttpRequestTest( TestCase * dad, KClientHttpRequest * req, string expectedUrl )
+    : SharedTest ( dad, "" )
+    {
+        string url = GetName();
+        KDataBuffer rslt;
+        REQUIRE_RC ( KDataBufferMakeBytes( & rslt, 0 ) );
+        REQUIRE_RC ( KClientHttpRequestURL ( req, & rslt ) );
+        string s2 = string ( (const char*)rslt.base, (size_t)rslt.elem_count - 1); // 0 terminator is included in elem_count
+        REQUIRE_EQ ( expectedUrl, s2 );
+        KDataBufferWhack( & rslt );
+    }
+};
+
+FIXTURE_TEST_CASE(HttpRequestAddQueryParam_SelfNull, HttpFixture)
+{   
+    REQUIRE_RC ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, MakeURL(GetName()).c_str() ) );
+    REQUIRE_RC_FAIL ( KClientHttpRequestAddQueryParam ( NULL, "name", "fmt" ) );
+}
+FIXTURE_TEST_CASE(HttpRequestAddQueryParam_FmtNull, HttpFixture)
+{   
+    REQUIRE_RC ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, MakeURL(GetName()).c_str() ) );
+    REQUIRE_RC_FAIL ( KClientHttpRequestAddQueryParam ( m_req, "name", NULL ) );
+}
+FIXTURE_TEST_CASE(HttpRequestAddQueryParam_FmtEmpty, HttpFixture)
+{   
+    REQUIRE_RC ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, MakeURL(GetName()).c_str() ) );
+    REQUIRE_RC_FAIL ( KClientHttpRequestAddQueryParam ( m_req, "name", "" ) );
+}
+FIXTURE_TEST_CASE(HttpRequestAddQueryParam_First, HttpFixture)
+{   
+    string url = MakeURL( GetName() );
+    REQUIRE_RC ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, url.c_str() ) );
+    REQUIRE_RC ( KClientHttpRequestAddQueryParam ( m_req, "name", "value" ) );
+
+    HttpRequestTest ( this, m_req, url + "?name=value" );
+}
+FIXTURE_TEST_CASE(HttpRequestAddQueryParam_Second, HttpFixture)
+{   
+    string url = MakeURL( GetName() );
+    REQUIRE_RC ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, url.c_str() ) );
+    REQUIRE_RC ( KClientHttpRequestAddQueryParam ( m_req, "name1", "value1" ) );
+    REQUIRE_RC ( KClientHttpRequestAddQueryParam ( m_req, "name2", "value2" ) );
+
+    HttpRequestTest ( this, m_req, url + "?name1=value1&name2=value2" );
+}
+FIXTURE_TEST_CASE(HttpRequestAddQueryParam_NameNull, HttpFixture)
+{   
+    string url = MakeURL( GetName() );
+    REQUIRE_RC ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, url.c_str() ) );
+    REQUIRE_RC ( KClientHttpRequestAddQueryParam ( m_req, NULL, "value" ) );
+
+    HttpRequestTest ( this, m_req, url + "?value" );
+}
+FIXTURE_TEST_CASE(HttpRequestAddQueryParam_NameEmpty, HttpFixture)
+{   
+    string url = MakeURL( GetName() );
+    REQUIRE_RC ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, url.c_str() ) );
+    REQUIRE_RC ( KClientHttpRequestAddQueryParam ( m_req, "", "value" ) );
+
+    HttpRequestTest ( this, m_req, url + "?value" );
+}
+FIXTURE_TEST_CASE(HttpRequestAddQueryParam_URL_encoding, HttpFixture)
+{   
+    string url = MakeURL( GetName() );
+    REQUIRE_RC ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, url.c_str() ) );
+    REQUIRE_RC ( KClientHttpRequestAddQueryParam ( m_req, "", 
+        "value & \x1f" "a" "\x7f space \x81" ) );
+
+    HttpRequestTest ( this, m_req, url + "?value%20%26%20%1fa%7f%20space%20%81" );
+}
 
 //////////////////////////
 // HttpRetrySpecs
@@ -577,25 +649,21 @@ FIXTURE_TEST_CASE(HttpReliable_Read_Retry, HttpFixture)
 // Reliable HTTP request
 FIXTURE_TEST_CASE(HttpReliableRequest_Make, HttpFixture)
 {
-    KClientHttpRequest *req;
-    KNSManagerMakeReliableClientRequest ( m_mgr, &req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
-    REQUIRE_NOT_NULL ( req ) ;
-    REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
+    KNSManagerMakeReliableClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
+    REQUIRE_NOT_NULL ( m_req ) ;
 }
 
 FIXTURE_TEST_CASE(HttpReliableRequest_POST_5xx_retry, HttpFixture)
 {   // use default configuration for 5xx to be retried
-    KClientHttpRequest *req;
-    KNSManagerMakeReliableClientRequest ( m_mgr, &req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
+    KNSManagerMakeReliableClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
 
     TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n"); // response to GET
     TestStream::AddResponse("HTTP/1.1 200 OK\r\n");
 
     KClientHttpResult *rslt;
-    REQUIRE_RC ( KClientHttpRequestPOST ( req, & rslt ) );
+    REQUIRE_RC ( KClientHttpRequestPOST ( m_req, & rslt ) );
 
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
-    REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
 }
 
 #endif
@@ -841,8 +909,7 @@ TEST_CASE ( AllowAllCertificates )
 
 FIXTURE_TEST_CASE( KClientHttpResult_Size_HEAD, HttpFixture)
 {
-    KClientHttpRequest *req;
-    KNSManagerMakeClientRequest ( m_mgr, &req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
+    KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
 
     TestStream::AddResponse(
         "HTTP/1.1 200 \r\n"
@@ -850,20 +917,18 @@ FIXTURE_TEST_CASE( KClientHttpResult_Size_HEAD, HttpFixture)
         "\r\n");
 
     KClientHttpResult *rslt;
-    REQUIRE_RC ( KClientHttpRequestHEAD ( req, & rslt ) );
+    REQUIRE_RC ( KClientHttpRequestHEAD ( m_req, & rslt ) );
     uint64_t size = 0;
     REQUIRE ( KClientHttpResultSize ( rslt, &size ) );
     REQUIRE_EQ ( (uint64_t)2975717, size );
 
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
-    REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
 }
 
 FIXTURE_TEST_CASE( KClientHttpResult_Size_RangedGET, HttpFixture)
 {
-    KClientHttpRequest *req;
-    KNSManagerMakeClientRequest ( m_mgr, &req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
-    REQUIRE_RC ( KClientHttpRequestByteRange ( req, 0, 2 ) );
+    KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
+    REQUIRE_RC ( KClientHttpRequestByteRange ( m_req, 0, 2 ) );
 
     TestStream::AddResponse(
         "HTTP/1.1 206 \r\n"
@@ -872,20 +937,18 @@ FIXTURE_TEST_CASE( KClientHttpResult_Size_RangedGET, HttpFixture)
         "\r\n");
 
     KClientHttpResult *rslt;
-    REQUIRE_RC ( KClientHttpRequestGET ( req, & rslt ) );
+    REQUIRE_RC ( KClientHttpRequestGET ( m_req, & rslt ) );
     uint64_t size = 0;
     REQUIRE ( KClientHttpResultSize ( rslt, &size ) );
     REQUIRE_EQ ( (uint64_t)2975717, size );
 
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
-    REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
 }
 
 FIXTURE_TEST_CASE( KClientHttpResult_Size_RangedPOST, HttpFixture)
 {
-    KClientHttpRequest *req;
-    KNSManagerMakeClientRequest ( m_mgr, &req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
-    REQUIRE_RC ( KClientHttpRequestByteRange ( req, 0, 2 ) );
+    KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
+    REQUIRE_RC ( KClientHttpRequestByteRange ( m_req, 0, 2 ) );
 
     TestStream::AddResponse(
         "HTTP/1.1 206 \r\n"
@@ -894,13 +957,12 @@ FIXTURE_TEST_CASE( KClientHttpResult_Size_RangedPOST, HttpFixture)
         "\r\n");
 
     KClientHttpResult *rslt;
-    REQUIRE_RC ( KClientHttpRequestPOST ( req, & rslt ) );
+    REQUIRE_RC ( KClientHttpRequestPOST ( m_req, & rslt ) );
     uint64_t size = 0;
     REQUIRE ( KClientHttpResultSize ( rslt, &size ) );
     REQUIRE_EQ ( (uint64_t)2975717, size );
 
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
-    REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
 }
 
 //////////////////////////////////////////// Main

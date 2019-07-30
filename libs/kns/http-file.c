@@ -37,6 +37,7 @@
 #include <kns/kns-mgr-priv.h> /* KHttpRetrier */
 #include <kns/socket.h>
 #include <kns/stream.h>
+#include <kns/http-priv.h>
 
 #include <kfs/file.h>
 #include <kfs/directory.h>
@@ -1121,6 +1122,10 @@ rc_t CC KHttpFileTimedReadChunked ( const KHttpFile * self, uint64_t pos,
             /* ALWAYS account for chunks already read */
             pos += * num_read;
             bytes -= * num_read;
+            if ( bytes == 0 )
+            {
+                break;
+            }
 
             if ( rc != 0 )
             {
@@ -1134,6 +1139,10 @@ rc_t CC KHttpFileTimedReadChunked ( const KHttpFile * self, uint64_t pos,
                     /* ALWAYS account for chunks already read */
                     pos += * num_read;
                     bytes -= * num_read;
+                    if ( bytes == 0 )
+                    {
+                        break;
+                    }
 
                     if ( rc2 == 0 )
                     {
@@ -1271,6 +1280,8 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                     if ( rc == 0 )
                                     {
                                         KClientHttpResult *rslt;
+/*TODO the next line is a very temporary hak for VDB-3867, please remove when fixed properly */
+                                        if ( strstr( (const char*)buf -> base, "refseq") != 0 ) need_env_token = false;
 
                                         if ( need_env_token )
                                         {

@@ -2687,7 +2687,7 @@ static rc_t VResolverMagicResolve(const VResolver * self,
         when retrieving reference objects */
     if (app == appREFSEQ) {
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
-            ("'%s' magic ignored for refseq", name));
+            ("'%s' magic ignored for refseq\n", name));
         return 0;
     }
 

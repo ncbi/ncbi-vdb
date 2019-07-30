@@ -2651,24 +2651,6 @@ LIB_EXPORT rc_t CC KClientHttpResultGetInputStream ( KClientHttpResult *self, KS
  *  hyper text transfer protocol
  */
 
-struct KClientHttpRequest
-{
-    KClientHttp * http;
-
-    URLBlock url_block;
-    KDataBuffer url_buffer;
-
-    KDataBuffer body;
-
-    BSTree hdrs;
-
-    KRefcount refcount;
-    bool accept_not_modified;
-
-    bool ceRequired; /* computing environment token required to access this URL */
-    bool payRequired; /* payment info required to access this URL */
-};
-
 LIB_EXPORT rc_t CC KClientHttpRequestSetCloudParams(
     KClientHttpRequest * self, bool ceRequired, bool payRequired)
 {
@@ -2706,12 +2688,18 @@ rc_t KClientHttpRequestURL(KClientHttpRequest const *self, KDataBuffer *rslt)
     return KDataBufferSub(&self->url_buffer, rslt, 0, self->url_buffer.elem_count);
 }
 
-static
 rc_t KClientHttpRequestClear ( KClientHttpRequest *self )
 {
     KDataBufferWhack ( & self -> url_buffer );
 
     return 0;
+}
+
+const char *
+KClientHttpRequestGetBody( struct KClientHttpRequest * self )
+{
+    assert ( self );
+    return ( const char * ) ( self -> body . base );
 }
 
 static
@@ -2728,7 +2716,6 @@ rc_t KClientHttpRequestWhack ( KClientHttpRequest * self )
     return 0;
 }
 
-static
 rc_t KClientHttpRequestInit ( KClientHttpRequest * req,
     const URLBlock *b, const KDataBuffer *buf )
 {
@@ -3302,6 +3289,160 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddPostParam ( KClientHttpRequest *self, co
     return rc;
 }
 
+static
+unsigned char ToHex ( char ch )
+{
+    assert ( ch <= 16 );
+    if ( ch < 10 )
+    {
+        return '0' + ch;
+    }
+    return 'a' + ch - 10;
+}
+
+static
+void UrlEncodeChar ( unsigned char ch, char * target )
+{
+    target [ 0 ] = '%';
+    target [ 1 ] = ToHex ( ch >> 4 );
+    target [ 2 ] = ToHex ( ch & 0x0f );
+}
+
+static
+rc_t
+UrlEncode( const char * source, size_t size, char ** res )
+{   /* source: https://www.tutorialspoint.com/html/html_url_encoding.htm */
+    char * cur;
+    int i;
+    assert ( source != NULL );
+    assert ( res != NULL );
+
+    * res = ( char * ) malloc ( size * 3 + 1 );
+    if ( * res == NULL )
+    {
+        return RC ( rcNS, rcString, rcAllocating, rcMemory, rcExhausted );
+    }
+    cur = * res;
+    for ( i = 0; i < size; ++i )
+    {
+        unsigned char ch = source [ i ];
+        if ( ch < 32 || ch >= 127 )
+        {   /* control and non-ASCII characters */
+            UrlEncodeChar ( ch, cur );
+            cur += 3;
+        }
+        else
+        {
+            switch ( ch )
+            {
+                /* reserved characters */
+            case '$':
+            case '&':
+            case '+':
+            case ',':
+            case '/':
+            case ':':
+            case ';':
+            case '=':
+            case '?':
+            case '@':
+                /* unsafe characters */
+            case ' ':
+            case '"':
+            case '<':
+            case '>':
+            case '#':
+            case '%':
+            case '{':
+            case '}':
+            case '|':
+            case '\\':
+            case '^':
+            case '~':
+            case '[':
+            case ']':
+            case '`':
+                UrlEncodeChar ( ch, cur );
+                cur += 3;
+                break;
+            default:
+                * cur = ch;
+                ++ cur;
+                break;
+            }
+        }
+    }
+
+    * cur = 0;
+    return 0;
+}
+
+LIB_EXPORT rc_t CC KClientHttpRequestVAddQueryParam ( KClientHttpRequest *self,
+                                const char * name, const char *fmt, va_list args )
+{
+    rc_t rc;
+
+    if ( self == NULL )
+        rc = RC ( rcNS, rcNoTarg, rcValidating, rcSelf, rcNull );
+    else if ( fmt == NULL || fmt [ 0 ] == 0 )
+        rc = RC ( rcNS, rcNoTarg, rcValidating, rcParam, rcNull );
+    else
+    {
+        KDataBuffer valueBuf;
+        bool first = self -> url_block.query.size == 0;
+        bool hasName = ( name != NULL && name [ 0 ] != 0 );
+        rc = KDataBufferMakeBytes( & valueBuf, 0 );
+        if ( rc == 0 )
+        {
+            rc = KDataBufferVPrintf ( & valueBuf, fmt, args );
+            if ( rc == 0 )
+            {
+                char * encValue;
+                rc = UrlEncode( (const char *) valueBuf.base,
+                                valueBuf.elem_count - 1,
+                                & encValue );
+                if ( rc == 0 )
+                {
+                    KDataBuffer newBuf;
+                    rc = KDataBufferMakeBytes( & newBuf, 0 );
+                    if ( rc == 0 )
+                    {
+                        rc = KDataBufferPrintf ( & newBuf, "%.*s%c%s%s%s",
+                                                (int) self -> url_buffer . elem_count,
+                                                (const char*) self -> url_buffer . base,
+                                                first ? '?' : '&',
+                                                hasName ? name : "",
+                                                hasName ? "=" : "",
+                                                encValue);
+                        if ( rc == 0 )
+                        {
+                            KDataBufferWhack( & self -> url_buffer );
+                            self -> url_buffer = newBuf;
+                            /* re-parse the new URL */
+                            rc = ParseUrl ( & self -> url_block, self -> url_buffer . base, self -> url_buffer . elem_count - 1 );
+                        }
+                    }
+                    free ( encValue );
+                }
+            }
+            KDataBufferWhack( & valueBuf );
+        }
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KClientHttpRequestAddQueryParam ( KClientHttpRequest *self, const char * name, const char *fmt, ... )
+{
+    rc_t rc;
+
+    va_list args;
+    va_start ( args, fmt );
+    rc = KClientHttpRequestVAddQueryParam ( self, name, fmt, args );
+    va_end ( args );
+
+    return rc;
+}
 
 LIB_EXPORT rc_t CC KClientHttpResultFormatMsg (
     const struct KClientHttpResult * self, char * buffer,
@@ -3484,7 +3625,7 @@ static rc_t KClientHttpRequestFormatMsgBegin (
 static
 rc_t
 FormatForCloud( const KClientHttpRequest *cself, const char *method )
-{   /* Discover whether the target URL is in a cloud and 
+{   /* Discover whether the target URL is in a cloud and
         if it is, apply the corresponding cloud's formatting */
     rc_t rc = 0;
 
@@ -3532,7 +3673,7 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
         }
         else {
             String google;
-            CONST_STRING(&google, "storage.cloud.google.com");
+            CONST_STRING(&google, "storage.googleapis.com");
             skip = 0;
             if (hostname->size >= google.size &&
                 string_cmp(google.addr, google.size,
@@ -3544,7 +3685,7 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
         }
     }
 
-    if ( cpId == cloud_provider_none ) 
+    if ( cpId == cloud_provider_none )
         CloudMgrCurrentProvider ( cloudMgr, & cpId );
 
     {
@@ -3557,25 +3698,23 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
         }
     }
 
-    /*TODO: GCP */
-
-    if (cself->ceRequired || cself->payRequired)
+    if ( cpId != cloud_provider_none && ( cself->ceRequired || cself->payRequired ) )
     {   /* add cloud authentication informantion if required */
         if ( rc == 0 )
         {
-                /* create a cloud object based on the target URL */
-                Cloud * cloud ;
-                KClientHttpRequest * self = (KClientHttpRequest *)cself;
-                rc = CloudMgrMakeCloud ( cloudMgr, & cloud, cpId );
-                if (rc == 0) {
-                    if (cself->payRequired)
-                        rc = CloudAddUserPaysCredentials(cloud, self, method);
-                    else if (cself->ceRequired)
-                        rc = CloudAddComputeEnvironmentTokenForSigner(
-                            cloud, self);
-                    CloudRelease ( cloud );
-                }
-                CloudMgrRelease ( cloudMgr );
+            /* create a cloud object based on the target URL */
+            Cloud * cloud ;
+            KClientHttpRequest * self = (KClientHttpRequest *)cself;
+            rc = CloudMgrMakeCloud ( cloudMgr, & cloud, cpId );
+            if (rc == 0) {
+                if (cself->payRequired)
+                    rc = CloudAddUserPaysCredentials(cloud, self, method);
+                else if (cself->ceRequired)
+                    rc = CloudAddComputeEnvironmentTokenForSigner(
+                        cloud, self);
+                CloudRelease ( cloud );
+            }
+            CloudMgrRelease ( cloudMgr );
         }
     }
     return rc;

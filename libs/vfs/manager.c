@@ -76,13 +76,14 @@
 
 #include <klib/debug.h>
 #include <klib/log.h>
+#include <klib/namelist.h>
+#include <klib/out.h>
 #include <klib/printf.h>
 #include <klib/rc.h>
 #include <klib/refcount.h>
-#include <klib/namelist.h>
-#include <klib/vector.h>
+#include <klib/strings.h> /* ENV_VDB_REMOTE_NEED_CE */
 #include <klib/time.h> 
-#include <klib/out.h> 
+#include <klib/vector.h>
 
 #include <strtol.h>
 
@@ -664,10 +665,52 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
 {
     const String * uri = NULL;
     rc_t rc = VPathMakeString ( path, &uri );
-    if ( rc == 0 )
-    {
-        bool ceRequired  = path -> ceRequired || getenv( "VDB_REMOTE_NEED_CE" ) != NULL;
-        bool payRequired = path -> payRequired || getenv( "VDB_REMOTE_NEED_PMT" ) != NULL;
+
+    if (rc == 0) {
+        String objectType;
+        String refseq;
+        CONST_STRING(&refseq, "refseq");
+        rc = VPathGetObjectType(path, &objectType);
+        if (rc == 0) {
+            if (!is_refseq)
+                is_refseq = StringEqual(&objectType, &refseq);
+            if (!is_refseq) {
+                assert(uri);
+                is_refseq = strstr(uri->addr, refseq.addr) != NULL;
+            }
+        }
+    }
+
+    if ( rc == 0 ) {
+        bool ceRequired = false;
+        bool payRequired = false;
+        {
+            const char name[] = ENV_VDB_REMOTE_NEED_CE;
+            const char * magic = getenv(name);
+            if (is_refseq) {
+                if (magic != NULL)
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                        "'%s' needCe magic ignored for refseq\n", name));
+            }
+            else
+                if (magic != NULL)
+                    ceRequired = true;
+                else
+                    ceRequired = path->ceRequired;
+        }
+        {
+            const char name[] = ENV_VDB_REMOTE_NEED_PMT;
+            const char * magic = getenv(name);
+            if (is_refseq) {
+                if (magic != NULL)
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                        "'%s' pmtReq magic ignored for refseq\n", name));
+            }
+            if (magic != NULL)
+                payRequired = true;
+            else
+                payRequired = path->payRequired;
+        }
         rc = KNSManagerMakeReliableHttpFile ( self -> kns,
                                               cfp,
                                               NULL,

@@ -10,7 +10,7 @@
 #include <vdb/dependencies.h> /* VDBDependencies */
 #include <vdb/schema.h> /* VSchema */
 
-#include <kfg/config.h> // KConfigDisableUserSettings
+#include <kfg/kfg-priv.h> /* KConfigMakeLocal */
 
 #include <vfs/manager.h> // VFSManager
 #include <vfs/manager-priv.h> // VFSManagerGetConfig
@@ -55,7 +55,7 @@ protected:
         if (KDirectoryOpenDirRead(wd, &dir, false, path)) {
             FAIL("failed to KDirectoryOpenDirRead()");
         }
-        if (KConfigMake(&cfg, dir)) {
+        if (KConfigMakeLocal(&cfg, dir)) {
             FAIL("failed to KConfigMake()");
         }
         RELEASE(KDirectory, dir);

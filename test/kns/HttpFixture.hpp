@@ -67,5 +67,6 @@ public:
     struct KNSManager* m_mgr;
     static KStream m_stream;
     struct KFile* m_file;
+    struct KClientHttpRequest * m_req;
 };
 

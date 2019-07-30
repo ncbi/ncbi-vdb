@@ -3383,6 +3383,27 @@ LIB_EXPORT rc_t CC VPathGetType(const VPath * self, String * str)
     return rc;
 }
 
+LIB_EXPORT rc_t CC VPathGetObjectType(const VPath * self, String * str)
+{
+    rc_t rc;
+
+    if (str == NULL)
+        rc = RC(rcVFS, rcPath, rcAccessing, rcParam, rcNull);
+    else
+    {
+        rc = VPathGetTestSelf(self);
+        if (rc == 0)
+        {
+            *str = self->objectType;
+            return 0;
+        }
+
+        StringInit(str, "", 0, 0);
+    }
+
+    return rc;
+}
+
 LIB_EXPORT rc_t CC VPathGetName(const VPath * self, String * str)
 {
     rc_t rc;
