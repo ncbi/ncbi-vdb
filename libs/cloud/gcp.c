@@ -622,11 +622,10 @@ rc_t CC GCPAddUserPaysCredentials(const GCP * cself, KClientHttpRequest * req, c
     }
     else
     {
-        bool fresh_url = self->access_token == NULL;
         bool new_token = false;
         /* see if cached access_token has to be generated/refreshed */
-        if (fresh_url ||
-            self->access_token_expiration < KTimeStamp() + 60) /* expires in less than a minute */
+        if ( self->access_token == NULL ||
+             self->access_token_expiration < KTimeStamp() + 60 ) /* expires in less than a minute */
         {
             free(self->access_token);
             self->access_token = NULL;
@@ -642,21 +641,41 @@ rc_t CC GCPAddUserPaysCredentials(const GCP * cself, KClientHttpRequest * req, c
             new_token = true;
         }
 
-        if (rc == 0 && new_token)
-        {   /* only update the URL if we have not done so yet, or if we have just refreshed the token (in which case only update the token) */
-            rc = KClientHttpRequestAddHeader(req, "Authorization", "Bearer %s", self->access_token);
-
-            /* Add  alt=media&userProject=<project_id> to the URL if not already there */
-            if ( fresh_url )
+        if ( rc == 0 )
+        {   /* only update the URL if we have not done so yet, or if we have just refreshed the token */
+            if ( ! new_token )
             {
-                if (rc == 0)
+                char buffer[4096];
+                size_t num_read;
+                rc = KClientHttpRequestGetHeader ( req, "Authorization", buffer, sizeof ( buffer ), &num_read );
+                if ( GetRCState ( rc ) == rcNotFound )
+                {
+                    new_token = true;
+                    rc = 0;
+                }
+            }
+
+            if ( rc == 0 && new_token )
+            {
+                rc = KClientHttpRequestAddHeader(req, "Authorization", "Bearer %s", self->access_token);
+            }
+
+            /* Add alt=media&userProject=<project_id> to the URL if not already there */
+            if ( rc == 0 )
+            {
+                const String * query;
+                char * nulterm; /* to use strstr, need a 0-terminated string */
+                KClientHttpRequestGetQuery( req, & query );
+                nulterm = string_dup( query -> addr, query -> size );
+                if ( strstr(nulterm, "alt=media" ) == NULL )
                 {
                     rc = KClientHttpRequestAddQueryParam(req, "alt", "media");
                 }
-                if (rc == 0)
+                if (rc == 0 && strstr(nulterm, "userProject=" ) == NULL)
                 {
                     rc = KClientHttpRequestAddQueryParam(req, "userProject", "%s", self->project_id);
                 }
+                free (nulterm);
             }
         }
     }
