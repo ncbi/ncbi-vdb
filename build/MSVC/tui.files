@@ -22,7 +22,8 @@
     <ClCompile Include="..\..\..\libs\tui\tui_widget_radiobox.c" />
     <ClCompile Include="..\..\..\libs\tui\tui_widget_spin_edit.c" />
     <ClCompile Include="..\..\..\libs\tui\tui_widget_string_list.c" />
-	<ClCompile Include="..\..\..\libs\tui\tui_dlg_helper.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_widget_tabhdr.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_dlg_helper.c" />
     <ClCompile Include="..\..\..\libs\tui\win\systui.c" />
   </ItemGroup>
 </Project>
