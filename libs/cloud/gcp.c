@@ -622,9 +622,10 @@ rc_t CC GCPAddUserPaysCredentials(const GCP * cself, KClientHttpRequest * req, c
     }
     else
     {
+        bool new_token = false;
         /* see if cached access_token has to be generated/refreshed */
-        if (self->access_token == NULL ||
-            self->access_token_expiration < KTimeStamp() + 60) /* expires in less than a minute */
+        if ( self->access_token == NULL ||
+             self->access_token_expiration < KTimeStamp() + 60 ) /* expires in less than a minute */
         {
             free(self->access_token);
             self->access_token = NULL;
@@ -637,21 +638,45 @@ rc_t CC GCPAddUserPaysCredentials(const GCP * cself, KClientHttpRequest * req, c
             {
                 rc = GetAccessToken(self, self->jwt, self->dad.conn, &self->access_token, &self->access_token_expiration);
             }
+            new_token = true;
         }
 
-        if (rc == 0)
-        {
-            rc = KClientHttpRequestAddHeader(req, "Authorization", "Bearer %s", self->access_token);
-        }
+        if ( rc == 0 )
+        {   /* only update the URL if we have not done so yet, or if we have just refreshed the token */
+            if ( ! new_token )
+            {
+                char buffer[4096];
+                size_t num_read;
+                rc = KClientHttpRequestGetHeader ( req, "Authorization", buffer, sizeof ( buffer ), &num_read );
+                if ( GetRCState ( rc ) == rcNotFound )
+                {
+                    new_token = true;
+                    rc = 0;
+                }
+            }
 
-        /* 6. Add  alt=media&userProject=<project_id> to the URL*/
-        if (rc == 0)
-        {
-            rc = KClientHttpRequestAddQueryParam(req, "alt", "media");
-        }
-        if (rc == 0)
-        {
-            rc = KClientHttpRequestAddQueryParam(req, "userProject", "%s", self->project_id);
+            if ( rc == 0 && new_token )
+            {
+                rc = KClientHttpRequestAddHeader(req, "Authorization", "Bearer %s", self->access_token);
+            }
+
+            /* Add alt=media&userProject=<project_id> to the URL if not already there */
+            if ( rc == 0 )
+            {
+                const String * query;
+                char * nulterm; /* to use strstr, need a 0-terminated string */
+                KClientHttpRequestGetQuery( req, & query );
+                nulterm = string_dup( query -> addr, query -> size );
+                if ( strstr(nulterm, "alt=media" ) == NULL )
+                {
+                    rc = KClientHttpRequestAddQueryParam(req, "alt", "media");
+                }
+                if (rc == 0 && strstr(nulterm, "userProject=" ) == NULL)
+                {
+                    rc = KClientHttpRequestAddQueryParam(req, "userProject", "%s", self->project_id);
+                }
+                free (nulterm);
+            }
         }
     }
     return rc;

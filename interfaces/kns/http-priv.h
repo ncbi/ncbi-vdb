@@ -69,6 +69,8 @@ rc_t KClientHttpRequestClear ( struct KClientHttpRequest *self );
 
 rc_t KClientHttpRequestInit ( struct KClientHttpRequest * req, const struct URLBlock *b, const struct KDataBuffer *buf );
 
+rc_t KClientHttpRequestGetQuery( struct KClientHttpRequest * req, const struct String ** query );
+
 #ifdef __cplusplus
 }
 #endif

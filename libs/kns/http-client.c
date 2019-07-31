@@ -2728,6 +2728,16 @@ rc_t KClientHttpRequestInit ( KClientHttpRequest * req,
     return rc;
 }
 
+rc_t KClientHttpRequestGetQuery( struct KClientHttpRequest * self, const struct String ** query )
+{
+    if ( self == NULL )
+        return RC ( rcNS, rcNoTarg, rcReading, rcSelf, rcNull );
+    if ( query == NULL )
+        return RC ( rcNS, rcNoTarg, rcReading, rcParam, rcNull );
+        
+    * query = & self -> url_block . query;
+    return 0;
+}
 
 /* MakeRequestInt[ernal]
  */
