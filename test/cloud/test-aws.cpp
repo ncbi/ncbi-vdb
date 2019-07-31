@@ -242,7 +242,8 @@ TEST_CASE(PrintLocation) {
     rc = CloudMakeComputeEnvironmentToken(cloud, &ce_token);
     if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy) &&
         rc != SILENT_RC(rcNS, rcFile, rcCreating,
-            rcTimeout, rcExhausted))
+            rcTimeout, rcExhausted) &&
+        rc != SILENT_RC(rcNS, rcFile, rcReading, rcSelf, rcNull))
     {
         REQUIRE_RC(rc);
         REQUIRE_NOT_NULL(ce_token);
