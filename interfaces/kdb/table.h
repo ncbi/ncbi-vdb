@@ -45,6 +45,7 @@ extern "C" {
  */
 struct KDatabase;
 struct KDBManager;
+struct VPath;
 
 
 /*--------------------------------------------------------------------------
@@ -105,6 +106,7 @@ KDB_EXTERN rc_t CC KDatabaseVCreateTable ( struct KDatabase *self,
 
 /* OpenTableRead
  * VOpenTableRead
+ * OpenTableReadVPath
  *  open a table for read
  *
  *  "tbl" [ OUT ] - return parameter for newly opened table
@@ -121,6 +123,8 @@ KDB_EXTERN rc_t CC KDBManagerVOpenTableRead ( struct KDBManager const *self,
     const KTable **tbl, const char *path, va_list args );
 KDB_EXTERN rc_t CC KDatabaseVOpenTableRead ( struct KDatabase const *self,
     const KTable **tbl, const char *name, va_list args );
+KDB_EXTERN rc_t CC KDBManagerOpenTableReadVPath ( struct KDBManager const *self,
+    const KTable **tbl, const struct VPath *path );
 
 
 /* OpenTableUpdate
