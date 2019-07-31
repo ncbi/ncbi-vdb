@@ -31,14 +31,21 @@
 #include <klib/text.h>
 #include <klib/printf.h>
 #include <klib/log.h>
+
+#include <kdb/kdb-priv.h> /* KDBManagerGetVFSManager */
 #include <kdb/manager.h>
 #include <kdb/meta.h>
+
 #include <kfg/config.h>
 #include <insdc/insdc.h>
-#include <vdb/database.h>
-#include <vdb/vdb-priv.h>
 #include <vdb/cursor.h>
+#include <vdb/database.h>
+#include <vdb/table.h> /* VDBManagerOpenTableReadVPath */
 #include <vdb/vdb-priv.h>
+
+#include <vfs/manager.h> /* VFSManagerRelease */
+#include <vfs/path-priv.h> /* VPathSetAccOfParentDb */
+
 #include <align/refseq-mgr.h>
 #include <sysalloc.h>
 
@@ -578,18 +585,36 @@ static rc_t RefSeq_WGS_open(RefSeq *const super, RefSeqMgr const *const mgr)
 
 static int AccessionType(VDBManager const *const mgr,
                          unsigned const N, char const accession[],
-                         rc_t *const rc)
+                         rc_t *const rc,
+                         const String * accOfParentDb)
 {
     char scheme[1024];
     bool isOdd = false;
+
+    assert(rc);
 
     scheme[0] = '\0';
     {
         KMetadata const *meta = NULL;
         {
+            const KDBManager * kmgr = NULL;
+            /* need VFS manager to make a path */
+            VFSManager * vfs;
             VDatabase const *db = NULL;
+            VPath * aOrig = NULL;
+            *rc = VDBManagerGetKDBManagerRead(mgr, &kmgr);
+            if (*rc == 0)
+                *rc = KDBManagerGetVFSManager(kmgr, &vfs);
+            if (*rc == 0)
+                *rc = VFSManagerMakePath(vfs, &aOrig, "%.*s", (int)N, accession);
+            if (*rc == 0)
+                VPathSetAccOfParentDb(aOrig, accOfParentDb);
 
-            *rc = VDBManagerOpenDBRead(mgr, &db, NULL, "%.*s", (int)N, accession);
+            if (*rc == 0)
+                *rc = VDBManagerOpenDBReadVPath(mgr, &db, NULL, aOrig);
+            else
+                *rc = VDBManagerOpenDBRead(mgr, &db, NULL, "%.*s", (int)N, accession);
+
             if (db) {
                 *rc = VDatabaseOpenMetadataRead(db, &meta);
                 VDatabaseRelease(db);
@@ -597,20 +622,27 @@ static int AccessionType(VDBManager const *const mgr,
             else {
                 VTable const *tbl = NULL;
 
-                *rc = VDBManagerOpenTableRead(mgr, &tbl, NULL, "%.*s", (int)N, accession);
+                *rc = VDBManagerOpenTableReadVPath(mgr, &tbl, NULL, aOrig);
                 if (tbl) {
                     *rc = VTableOpenMetadataRead(tbl, &meta);
                     VTableRelease(tbl);
                 }
                 else {
                     isOdd = true;
-                    *rc = VDBManagerOpenTableRead(mgr, &tbl, NULL, "ncbi-acc:%.*s?vdb-ctx=refseq", (int)N, accession);
+                    if (aOrig == NULL)
+                        *rc = VDBManagerOpenTableRead(mgr, &tbl, NULL,
+                            "ncbi-acc:%.*s?vdb-ctx=refseq", (int)N, accession);
+                    else
+                        *rc = VDBManagerOpenTableReadVPath(mgr, &tbl, NULL, aOrig);
                     if (tbl) {
                         *rc = VTableOpenMetadataRead(tbl, &meta);
                         VTableRelease(tbl);
                     }
                 }
             }
+            VPathRelease(aOrig);
+            VFSManagerRelease(vfs);
+            KDBManagerRelease(kmgr);
         }
         if (meta) {
             KMDataNode const *node = NULL;
@@ -775,7 +807,7 @@ static rc_t exists(RefSeqMgr *const self, unsigned const N, char const accession
     if (matched)
         return 0;
     {
-        int const type = AccessionType(self->vmgr, N, accession, &rc);
+        int const type = AccessionType(self->vmgr, N, accession, &rc, NULL);
         if (type)
             rc = 0;
         else if (rc == 0)
@@ -816,7 +848,7 @@ static void MakeNewest(RefSeqMgr *const self, RefSeq *const rs)
 }
 
 static rc_t GetSeq(RefSeqMgr *const self, RefSeq **result,
-                               unsigned const N, char const accession[])
+            unsigned const N, char const accession[], const String * accOfParentDb)
 {
     rc_t rc = 0;
     bool matched = false;
@@ -825,7 +857,7 @@ static rc_t GetSeq(RefSeqMgr *const self, RefSeq **result,
                                       N, accession, &matched);
     
     if (!matched) {
-        int const type = AccessionType(self->vmgr, N, accession, &rc);
+        int const type = AccessionType(self->vmgr, N, accession, &rc, accOfParentDb);
         if (type)
             rc = 0;
         else if (rc == 0)
@@ -857,18 +889,32 @@ LIB_EXPORT rc_t RefSeqMgr_Exists(const RefSeqMgr* cself, const char* accession, 
     }
 }
 
-LIB_EXPORT rc_t CC RefSeqMgr_Read(const RefSeqMgr* cself, const char* seq_id, uint32_t seq_id_sz,
-                                  INSDC_coord_zero offset, INSDC_coord_len len,
-                                  uint8_t* buffer, INSDC_coord_len* written)
+static rc_t RefSeqMgr_GetSeqForDb(RefSeqMgr const *const cmgr,
+    RefSeq const **result, char const *seq_id, uint32_t seq_id_sz,
+    const String * accOfParentDb);
+
+LIB_EXPORT rc_t CC RefSeqMgr_ReadForDb(const RefSeqMgr* cself, const char* seq_id,
+    uint32_t seq_id_sz, INSDC_coord_zero offset, INSDC_coord_len len,
+    uint8_t* buffer, INSDC_coord_len* written, const String * accOfParentDb)
 {
     RefSeq const *obj;
     rc_t rc = 0;
 
-    if( (rc = RefSeqMgr_GetSeq(cself, &obj, seq_id, seq_id_sz)) == 0 ) {
+    if( (rc = RefSeqMgr_GetSeqForDb(cself, &obj, seq_id, seq_id_sz, accOfParentDb))
+        == 0 )
+    {
         rc = RefSeq_Read(obj, offset, len, buffer, written);
         RefSeq_Release(obj);
     }
     return rc;
+}
+
+LIB_EXPORT rc_t CC RefSeqMgr_Read(const RefSeqMgr* cself, const char* seq_id, uint32_t seq_id_sz,
+                                  INSDC_coord_zero offset, INSDC_coord_len len,
+                                  uint8_t* buffer, INSDC_coord_len* written)
+{
+    return RefSeqMgr_ReadForDb(cself, seq_id,
+        seq_id_sz, offset, len, buffer, written, NULL);
 }
 
 static void WhackAllReaders(RefSeqMgr *const self)
@@ -921,12 +967,13 @@ static rc_t GetReader(RefSeqMgr *const self, RefSeq *const obj)
 static rc_t GetSeqInternal(RefSeqMgr *const self,
                               RefSeq const **const result,
                               unsigned const seq_id_sz,
-                              char const seq_id[])
+                              char const seq_id[],
+                              const String * accOfParentDb)
 {
     RefSeq *obj = NULL;
     
     if (self->mru == NULL || self->mru->vt->compare(self->mru, seq_id_sz, seq_id) != 0) {
-        rc_t const rc = GetSeq(self, &obj, seq_id_sz, seq_id);
+        rc_t const rc = GetSeq(self, &obj, seq_id_sz, seq_id, accOfParentDb);
         if (rc)
             return rc;
     }
@@ -942,22 +989,32 @@ static rc_t GetSeqInternal(RefSeqMgr *const self,
     return 0;
 }
 
-LIB_EXPORT rc_t CC RefSeqMgr_GetSeq(RefSeqMgr const *const cmgr,
+static rc_t RefSeqMgr_GetSeqForDb  (RefSeqMgr const *const cmgr,
                                     RefSeq const **result,
                                     char const *seq_id,
-                                    uint32_t seq_id_sz)
+                                    uint32_t seq_id_sz,
+                                    const String * accOfParentDb)
 {
     rc_t rc;
 
     if (cmgr == NULL || result == NULL || seq_id == NULL)
         rc = RC(rcAlign, rcIndex, rcConstructing, rcParam, rcNull);
     else
-        rc = GetSeqInternal((RefSeqMgr *)cmgr, result, seq_id_sz, seq_id);
+        rc = GetSeqInternal((RefSeqMgr *)cmgr, result, seq_id_sz, seq_id,
+            accOfParentDb);
 
     if (rc)
         ALIGN_DBGERRP("SEQ_ID: '%.*s'", rc, seq_id_sz, seq_id);
 
     return rc;
+}
+
+LIB_EXPORT rc_t CC RefSeqMgr_GetSeq(RefSeqMgr const *const cmgr,
+                                    RefSeq const **result,
+                                    char const *seq_id,
+                                    uint32_t seq_id_sz)
+{
+    return RefSeqMgr_GetSeqForDb(cmgr, result, seq_id, seq_id_sz, NULL);
 }
 
 LIB_EXPORT rc_t CC RefSeq_Read(const RefSeq* cself, INSDC_coord_zero offset, INSDC_coord_len len,
