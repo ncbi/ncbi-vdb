@@ -57,6 +57,8 @@ rc_t VPathWhack ( VPath * self )
 {
     rc_t rc = VPathRelease(self->vdbcache);
 
+    StringWhack(self->parentAcc);
+
     KDataBufferWhack ( & self -> data );
     KRefcountWhack ( & self -> refcount, "VPath" );
     free ( ( void * ) self -> id   . addr );
@@ -3383,27 +3385,6 @@ LIB_EXPORT rc_t CC VPathGetType(const VPath * self, String * str)
     return rc;
 }
 
-LIB_EXPORT rc_t CC VPathGetObjectType(const VPath * self, String * str)
-{
-    rc_t rc;
-
-    if (str == NULL)
-        rc = RC(rcVFS, rcPath, rcAccessing, rcParam, rcNull);
-    else
-    {
-        rc = VPathGetTestSelf(self);
-        if (rc == 0)
-        {
-            *str = self->objectType;
-            return 0;
-        }
-
-        StringInit(str, "", 0, 0);
-    }
-
-    return rc;
-}
-
 LIB_EXPORT rc_t CC VPathGetName(const VPath * self, String * str)
 {
     rc_t rc;
@@ -3416,6 +3397,27 @@ LIB_EXPORT rc_t CC VPathGetName(const VPath * self, String * str)
         if (rc == 0)
         {
             *str = self->name;
+            return 0;
+        }
+
+        StringInit(str, "", 0, 0);
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC VPathGetObjectType(const VPath * self, String * str)
+{
+    rc_t rc;
+
+    if (str == NULL)
+        rc = RC(rcVFS, rcPath, rcAccessing, rcParam, rcNull);
+    else
+    {
+        rc = VPathGetTestSelf(self);
+        if (rc == 0)
+        {
+            *str = self->objectType;
             return 0;
         }
 
@@ -3764,10 +3766,10 @@ rc_t LegacyVPathMakeKDirRelative ( VPath ** new_path, const KDirectory * dir, co
     return rc;
 }
 
-LIB_EXPORT rc_t CC LegacyVPathMakeDirectoryRelative ( VPath ** new_path,
-    const KDirectory * dir, const char * posix_path )
+LIB_EXPORT rc_t CC VPathMakeDirectoryRelativeVPath ( VPath ** new_path,
+    const KDirectory * dir, const char * posix_path, const VPath * vpath )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     if ( new_path == NULL )
         rc = RC ( rcVFS, rcMgr, rcConstructing, rcParam, rcNull );
@@ -3777,8 +3779,11 @@ LIB_EXPORT rc_t CC LegacyVPathMakeDirectoryRelative ( VPath ** new_path,
             rc = RC ( rcVFS, rcMgr, rcResolving, rcDirectory, rcNull );
         else
         {
-            /* first, try to get a VPath from "posix_path" */
-            rc = LegacyVPathMakeFmt ( new_path, posix_path );
+            if ( vpath == NULL )
+                /* first, try to get a VPath from "posix_path" */
+                rc = LegacyVPathMakeFmt ( new_path, posix_path );
+            else
+                * new_path = ( VPath * ) vpath;
             if ( rc == 0 )
             {
                 VPath * path = * new_path;
@@ -3851,7 +3856,8 @@ LIB_EXPORT rc_t CC LegacyVPathMakeDirectoryRelative ( VPath ** new_path,
 
                 /* clean up path */
                 assert ( * new_path != path );
-                VPathRelease ( path );
+                if ( vpath == NULL )
+                    VPathRelease ( path );
                 return rc;
             }
         }
@@ -3862,6 +3868,11 @@ LIB_EXPORT rc_t CC LegacyVPathMakeDirectoryRelative ( VPath ** new_path,
     return rc;
 }
 
+LIB_EXPORT rc_t CC LegacyVPathMakeDirectoryRelative ( VPath ** new_path,
+    const KDirectory * dir, const char * posix_path )
+{
+    return VPathMakeDirectoryRelativeVPath(new_path, dir, posix_path, NULL);
+}
 
 /* Option
  *  rc == 0 if the option has been specified
@@ -4327,4 +4338,13 @@ rc_t VPathClose ( const VPath * l, const VPath * r, int * notequal,
 
 rc_t VPathEqual ( const VPath * l, const VPath * r, int * notequal ) {
     return VPathClose ( l, r, notequal, 0 );
+}
+
+rc_t VPathSetAccOfParentDb(VPath * self, const String * acc) {
+    rc_t rc = 0;
+
+    if (self != NULL && acc != NULL)
+        rc = StringCopy(&self->parentAcc, acc);
+
+    return rc;
 }
