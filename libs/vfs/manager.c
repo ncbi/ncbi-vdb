@@ -473,7 +473,7 @@ static rc_t wrap_in_rr_cache( KDirectory * dir,
 }
 
 #if WINDOWS
-    static const char * fallback_cache_location = "c:\temp";
+    static const char * fallback_cache_location = "c:\\temp";
     const char * get_fallback_cache_location( void )
     {
         return fallback_cache_location;
