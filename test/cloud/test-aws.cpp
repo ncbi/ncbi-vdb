@@ -213,8 +213,8 @@ TEST_CASE(GetPkcs7) {
             REQUIRE_RC(CloudMgrMake(&mgr, NULL, NULL));
             CloudProviderId cloud_provider = cloud_provider_none;
             REQUIRE_RC(CloudMgrCurrentProvider(mgr, &cloud_provider));
-            REQUIRE_EQ(cloud_provider,
-                static_cast<uint32_t>(cloud_provider_gcp));
+            REQUIRE(cloud_provider == cloud_provider_gcp
+                 || cloud_provider == cloud_provider_none);
             REQUIRE_RC(CloudMgrRelease(mgr));
         }
         else {
