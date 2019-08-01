@@ -3207,6 +3207,10 @@ static rc_t _KConfigCheckAd(KConfig * self) {
                 ".");
         if (rc == 0)
             rc = KConfigWriteString(self,
+                "/repository/user/ad/public/apps/refseq/volumes/refseqAd",
+                ".");
+        if (rc == 0)
+            rc = KConfigWriteString(self,
                 "/repository/user/ad/public/root", ".");
     }
     else
