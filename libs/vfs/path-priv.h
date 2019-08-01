@@ -133,7 +133,7 @@ struct VPath
     bool       ceRequired;
     bool       payRequired;
 
-    const String * parentAcc; /* accession of parent DB for refseqs */
+    const String * accOfParentDb; /* for refseqs */
 };
 
 enum VPathVariant
