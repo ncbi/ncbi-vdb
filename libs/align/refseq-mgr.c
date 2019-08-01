@@ -105,6 +105,7 @@ struct RefSeq {
         struct RefSeq_RefSeq refSeq;
         struct RefSeq_WGS wgs;
     } u;
+    const String * accOfParentDb;
 };
 
 struct RefSeq_VT {
@@ -513,9 +514,24 @@ static rc_t get_db_schema_info(VDatabase const *db,
 
 static rc_t RefSeq_RefSeq_open(RefSeq *const super, RefSeqMgr const *const mgr)
 {
+    rc_t rc = 0;
+
     struct RefSeq_RefSeq *const self = &super->u.refSeq;
-    VTable const *tbl;
-    rc_t rc = VDBManagerOpenTableRead(mgr->vmgr, &tbl, NULL, self->name);
+
+    VTable const *tbl = NULL;
+    const KDBManager * kmgr = NULL;
+    VFSManager * vfs;
+    VPath * aOrig = NULL;
+
+    rc = VDBManagerGetKDBManagerRead(mgr->vmgr, &kmgr);
+    if (rc == 0)
+        rc = KDBManagerGetVFSManager(kmgr, &vfs);
+    if (rc == 0)
+        rc = VFSManagerMakePath(vfs, &aOrig, "%s", self->name);
+    if (rc == 0)
+        VPathSetAccOfParentDb(aOrig, super->accOfParentDb);
+    if (rc == 0)
+        rc = VDBManagerOpenTableReadVPath(mgr->vmgr, &tbl, NULL, aOrig);
     
     if (tbl) {
         char scheme[1024];
@@ -530,6 +546,11 @@ static rc_t RefSeq_RefSeq_open(RefSeq *const super, RefSeqMgr const *const mgr)
         }
         VTableRelease(tbl);
     }
+
+    VPathRelease(aOrig);
+    VFSManagerRelease(vfs);
+    KDBManagerRelease(kmgr);
+
     return rc;
 }
 
@@ -734,6 +755,15 @@ LIB_EXPORT rc_t CC RefSeqMgr_Make( const RefSeqMgr** cself, const VDBManager* vm
     return rc;
 }
 
+void RefseqWhack(RefSeq * self) {
+    assert(self);
+
+    StringWhack(self->accOfParentDb);
+    free(self);
+
+    memset(self, 0, sizeof *self);
+}
+
 LIB_EXPORT rc_t CC RefSeqMgr_Release(const RefSeqMgr* cself)
 {
     if( cself != NULL ) {
@@ -742,7 +772,7 @@ LIB_EXPORT rc_t CC RefSeqMgr_Release(const RefSeqMgr* cself)
 
         WhackAllReaders(self);
         for (i = 0; i < self->nRefSeqs; ++i)
-            free(self->refSeq[i]);
+            RefseqWhack(self->refSeq[i]);
         free(self->refSeq);
         VDBManagerRelease(self->vmgr);
         KConfigRelease(self->kfg);
@@ -755,8 +785,11 @@ static rc_t NewRefSeq(RefSeqMgr *const self,
                                 int const type,
                                 unsigned const at,
                                 unsigned const N,
-                                char const accession[])
+                                char const accession[],
+                                const String * accOfParentDb)
 {
+    rc_t rc = 0;
+
     if (self->nRefSeqs + 1 > self->maxRefSeqs) {
         unsigned const maxRefSeqs = (self->maxRefSeqs == 0) ? 32 : (self->maxRefSeqs << 1);
         void *tmp = realloc(self->refSeq, maxRefSeqs * sizeof(self->refSeq[0]));
@@ -793,8 +826,11 @@ static rc_t NewRefSeq(RefSeqMgr *const self,
             return RC(rcAlign, rcTable, rcAccessing, rcMemory, rcExhausted);
 
         rs->vt->init(rs, self, N, accession);
+        if (accOfParentDb != NULL)
+            rc = StringCopy(&rs->accOfParentDb, accOfParentDb);
     }
-    return 0;
+
+    return rc;
 }
 
 static rc_t exists(RefSeqMgr *const self, unsigned const N, char const accession[])
@@ -813,7 +849,7 @@ static rc_t exists(RefSeqMgr *const self, unsigned const N, char const accession
         else if (rc == 0)
             rc = RC(rcAlign, rcTable, rcAccessing, rcType, rcUnexpected);
         if (rc == 0)
-            rc = NewRefSeq(self, type, at, N, accession);
+            rc = NewRefSeq(self, type, at, N, accession, NULL);
         else {
             ALIGN_CF_DBG("failed to open %.*s", N, accession);
             ALIGN_DBGERR(rc);
@@ -863,7 +899,7 @@ static rc_t GetSeq(RefSeqMgr *const self, RefSeq **result,
         else if (rc == 0)
             rc = RC(rcAlign, rcTable, rcAccessing, rcType, rcUnexpected);
         if (rc == 0)
-            rc = NewRefSeq(self, type, at, N, accession);
+            rc = NewRefSeq(self, type, at, N, accession, accOfParentDb);
         else {
             ALIGN_CF_DBG("failed to open %.*s", N, accession);
             ALIGN_DBGERR(rc);
