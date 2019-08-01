@@ -505,6 +505,10 @@ static rc_t DBManagerOpenVdbcache(const VDBManager *self,
                     KLogLevelSet(klogFatal);
                     assert(premote == NULL);
                     assert(pcache && *pcache == NULL);
+     /* YES, DBG_VFS should be used here to be printed along with other VFS messages */
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
+                        (">>>>>>>>>>>>>> calling VResolverQuery to locate vdbcache..."
+                            "\n"));
                     rc2 = VResolverQuery(
                         resolver, 0, orig, NULL, &premote, pcache);
                     assert((rc2 == 0) ||
