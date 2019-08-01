@@ -47,11 +47,14 @@ rc_t KNSManager_Read(const struct KNSManager *cself, char *buffer, size_t bsize,
 
     KClientHttpRequest *req = NULL;
 
+    int32_t cmsec;
+    int32_t wmsec;
+
     assert(self);
 
     /* save existing timeouts */
-    int32_t cmsec = self->conn_timeout;
-    int32_t wmsec = self->http_write_timeout;
+    cmsec = self->conn_timeout;
+    wmsec = self->http_write_timeout;
 
     /* minimize timeouts to check cloudy URLs */
     self->conn_timeout = self->http_write_timeout = 500;

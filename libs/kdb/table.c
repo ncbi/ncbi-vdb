@@ -210,10 +210,11 @@ rc_t KTableMake ( KTable **tblp, const KDirectory *dir, const char *path )
 
 static void ad(const KDBManager * self, const char * aPath, char ** path)
 {
+    const char *slash;
     assert(self);
     if ((KDirectoryPathType(self->wd, aPath) & ~kptAlias) != kptDir)
         return;
-    const char *slash = strrchr(aPath, '/');
+    slash = strrchr(aPath, '/');
     if (slash)
         ++slash;
     else

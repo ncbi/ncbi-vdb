@@ -343,6 +343,12 @@ MakeJWT(const GCP * self, char ** jwt)
     size_t num_writ;
     const KTime_t issued_at = KTimeStamp();
     const KTime_t expiration = issued_at + 60 * 60; /* 1 hour later */
+    const String * claimSet_base64url;
+    char to_sign[4096];
+    const String * signature;
+    const String * signature_base64url;
+    size_t jwt_size;
+
     rc_t rc = string_printf(claimSet, sizeof(claimSet) - 1, &num_writ,
         "{"
         "\"iss\":\"%s\","
@@ -361,7 +367,6 @@ MakeJWT(const GCP * self, char ** jwt)
     }
     TRACE("claimSet='%s'\n\n", claimSet);
     /* base64url encode claimSet */
-    const String * claimSet_base64url;
     rc = encodeBase64URL(&claimSet_base64url, claimSet, num_writ);
     if (rc != 0)
     {
@@ -375,7 +380,6 @@ MakeJWT(const GCP * self, char ** jwt)
     signed with self->privateKey
     Base64url encode
     */
-    char to_sign[4096];
     rc = string_printf(to_sign, sizeof(to_sign) - 1, &num_writ, "%s.%S", jwtHeader_base64url, claimSet_base64url);
     if (rc != 0)
     {
@@ -385,7 +389,6 @@ MakeJWT(const GCP * self, char ** jwt)
     TRACE("to_sign='%s'\n\n", to_sign);
 
     /* sign header_dot_claim with self->privateKey */
-    const String * signature;
     rc = Sign_RSA_SHA256(self->privateKey, to_sign, &signature);
     if (rc != 0)
     {
@@ -393,7 +396,6 @@ MakeJWT(const GCP * self, char ** jwt)
         return rc;
     }
     /* base64url encode signature */
-    const String * signature_base64url;
     rc = encodeBase64URL(&signature_base64url, signature->addr, signature->size);
     StringWhack(signature);
     if (rc != 0)
@@ -405,7 +407,7 @@ MakeJWT(const GCP * self, char ** jwt)
 
     /*      4. Base64url encode "header.claims.signature" into JWT
     */
-    size_t jwt_size = string_measure(jwtHeader_base64url, NULL) + claimSet_base64url->size + signature_base64url->size + 3;
+    jwt_size = string_measure(jwtHeader_base64url, NULL) + claimSet_base64url->size + signature_base64url->size + 3;
     *jwt = malloc(jwt_size);
     rc = string_printf(*jwt, jwt_size, &num_writ, "%s.%S.%S", jwtHeader_base64url, claimSet_base64url, signature_base64url);
     StringWhack(claimSet_base64url);
@@ -699,6 +701,7 @@ static Cloud_vt_v1 GCP_vt_v1 =
 LIB_EXPORT rc_t CC CloudMgrMakeGCP(const CloudMgr * self, GCP ** p_gcp)
 {
     rc_t rc;
+    GCP * gcp;
 
     if (self == NULL)
     {
@@ -709,7 +712,7 @@ LIB_EXPORT rc_t CC CloudMgrMakeGCP(const CloudMgr * self, GCP ** p_gcp)
         return RC(rcCloud, rcProvider, rcCasting, rcParam, rcNull);
     }
 
-    GCP * gcp = calloc(1, sizeof * gcp);
+    gcp = calloc(1, sizeof * gcp);
     if (gcp == NULL)
     {
         rc = RC(rcCloud, rcMgr, rcAllocating, rcMemory, rcExhausted);
