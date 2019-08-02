@@ -3203,7 +3203,7 @@ static rc_t _KConfigCheckAd(KConfig * self) {
                 "/repository/user/ad/public/apps/sraPileup/volumes/sraAd", ".");
         if (rc == 0)
             rc = KConfigWriteString(self,
-                "/repository/user/ad/public/apps/sraRealign/volumes/sraAd",
+                "/repository/user/ad/public/apps/sraRealign/volumes/ad",
                 ".");
         if (rc == 0)
             rc = KConfigWriteString(self,
