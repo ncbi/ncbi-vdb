@@ -4795,7 +4795,8 @@ rc_t VResolverLoadVolumes ( Vector *algs, const String *root,
                     /* stored in a flat directory as-is */
                     else if ( strcmp ( algname, "flat" ) == 0 )
                         alg_id = algFlat;
-                    /* sra in Accesion as Directory */
+                    /* stored in Accesion as Directory
+                       with ".sra" or ".sra.vdbcache" extension */
                     else if ( strcmp ( algname, "sraAd" ) == 0 )
                         alg_id = algSRAAD;
                     /* stored in a flat directory with ".sra" extension */
@@ -4831,7 +4832,7 @@ rc_t VResolverLoadVolumes ( Vector *algs, const String *root,
                     else if ( strcmp ( algname, "ebi" ) == 0 )
                         alg_id = algSRA_EBI;
 
-                    /* non-sra files in in Accesion as Directory */
+                    /* store files under their names in Accesion as Directory */
                     else if ( strcmp ( algname, "ad" ) == 0 )
                         alg_id = algAD;
 
