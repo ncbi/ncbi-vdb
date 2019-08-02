@@ -34,10 +34,13 @@
 #undef KONST
 
 #include <kdb/extern.h>
-#include <klib/namelist.h>
+
+#include <klib/debug.h> /* DBGMSG */
 #include <klib/log.h>
-#include <klib/rc.h>
+#include <klib/namelist.h>
 #include <klib/printf.h>
+#include <klib/rc.h>
+
 #include <kfs/arc.h>
 #include <os-native.h>
 #include <sysalloc.h>
@@ -210,23 +213,33 @@ rc_t KTableMake ( KTable **tblp, const KDirectory *dir, const char *path )
 
 static void ad(const KDBManager * self, const char * aPath, char ** path)
 {
-    assert(self);
+    assert(self && path);
+
     if ((KDirectoryPathType(self->wd, aPath) & ~kptAlias) != kptDir)
         return;
+
     const char *slash = strrchr(aPath, '/');
     if (slash)
         ++slash;
     else
         slash = aPath;
+
     if ((KDirectoryPathType(self->wd, "%s/%s.sra", aPath, slash)
         & ~kptAlias) != kptFile)
     {
         return;
     }
+
     *path = calloc(1, strlen(aPath) + 6 + strlen(slash));
+
     if (*path)
         sprintf(*path, "%s/%s.sra", aPath, slash);
+
+    /* YES, DBG_VFS should be used here to be printed along with other VFS messages */
+    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
+        ("'%s' was sesolved to '%s'\n", aPath, *path ));
 }
+
 /* OpenTableRead
  * VOpenTableRead
  *  open a table for read
