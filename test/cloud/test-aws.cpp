@@ -213,8 +213,8 @@ TEST_CASE(GetPkcs7) {
             REQUIRE_RC(CloudMgrMake(&mgr, NULL, NULL));
             CloudProviderId cloud_provider = cloud_provider_none;
             REQUIRE_RC(CloudMgrCurrentProvider(mgr, &cloud_provider));
-            REQUIRE_EQ(cloud_provider,
-                static_cast<uint32_t>(cloud_provider_gcp));
+            REQUIRE(cloud_provider == cloud_provider_gcp
+                 || cloud_provider == cloud_provider_none);
             REQUIRE_RC(CloudMgrRelease(mgr));
         }
         else {
@@ -242,7 +242,8 @@ TEST_CASE(PrintLocation) {
     rc = CloudMakeComputeEnvironmentToken(cloud, &ce_token);
     if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy) &&
         rc != SILENT_RC(rcNS, rcFile, rcCreating,
-            rcTimeout, rcExhausted))
+            rcTimeout, rcExhausted) &&
+        rc != SILENT_RC(rcNS, rcFile, rcReading, rcSelf, rcNull))
     {
         REQUIRE_RC(rc);
         REQUIRE_NOT_NULL(ce_token);

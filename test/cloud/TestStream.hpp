@@ -22,21 +22,30 @@
 *
 * ===========================================================================
 *
+* Test stream for mocking HTTP connection for unit testing
 */
 
-#ifndef _h_klib_strings_
-#define _h_klib_strings_
+#pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <string>
+#include <list>
 
-#define ENV_VDB_REMOTE_NEED_CE "VDB_REMOTE_NEED_CE"
-#define ENV_VDB_REMOTE_NEED_PMT "VDB_REMOTE_NEED_PMT"
+class TestStream;
+#define KSTREAM_IMPL TestStream
+#include <kns/impl.h>
 
+class TestStream
+{
+public:
+    static KStream_vt_v1 vt;
 
-#ifdef __cplusplus
-}
-#endif
+    static rc_t CC Whack ( KSTREAM_IMPL *self );
+    static rc_t CC Read ( const KSTREAM_IMPL *self, void *buffer, size_t bsize, size_t *num_read );
+    static rc_t CC Write ( KSTREAM_IMPL *self, const void *buffer, size_t size, size_t *num_writ );
+    static rc_t CC TimedRead ( const KSTREAM_IMPL *self, void *buffer, size_t bsize, size_t *num_read, struct timeout_t *tm );
+    static rc_t CC TimedWrite ( KSTREAM_IMPL *self, const void *buffer, size_t size, size_t *num_writ, struct timeout_t *tm );
+    static void AddResponse ( const std :: string& p_str, bool end_binary = false );
 
-#endif /*  _h_klib_strings_ */
+    static std :: list < std :: string > m_requests;
+    static std :: list < std :: string > m_responses;
+};

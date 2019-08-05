@@ -283,6 +283,14 @@ KNS_EXTERN rc_t CC KClientHttpRequestGetHost(const KClientHttpRequest *self,
 KNS_EXTERN rc_t CC KClientHttpRequestGetPath(const KClientHttpRequest *self,
     char *buffer, size_t bsize, size_t *num_read);
 
+/* AddQueryParam
+ *  adds a parameter to the query part of the URL, as "[opt_name=]value" (value is the result of formatting)
+ *  inserts ? before the first parameter and & between parameters
+ *  if opt_name is NULL or empty, there will be no '=' before the value
+ *  URL-encodes the formatted value
+ */
+KNS_EXTERN rc_t CC KClientHttpRequestAddQueryParam ( KClientHttpRequest *self, const char * opt_name, const char *fmt, ... );
+KNS_EXTERN rc_t CC KClientHttpRequestVAddQueryParam ( KClientHttpRequest *self, const char * opt_name, const char *fmt, va_list args );
 
 /* AddPostParam
  *  adds a parameter for POST

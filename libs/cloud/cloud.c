@@ -30,6 +30,7 @@
 #include <klib/rc.h>
 #include <klib/status.h>
 #include <kns/manager.h>
+#include <kns/stream.h>
 
 #include <assert.h>
 
@@ -302,7 +303,30 @@ LIB_EXPORT rc_t CC CloudWhack ( Cloud * self )
     if ( self != NULL )
     {
         KNSManagerRelease ( self -> kns );
+        KStreamRelease( self -> conn );
+
         free ( self );
     }
     return 0;
 }
+
+/* Set a pre-opened HTTP connection, for testing (NULL OK)
+ * TODO: remove when mocked connection becomes a regular feature of KNS
+ */
+LIB_EXPORT rc_t CC CloudSetHttpConnection ( Cloud  * self, struct KStream * conn )
+{
+    if ( self != NULL )
+    {
+        if ( self -> conn != NULL )
+        {
+            KStreamRelease( self -> conn );
+        }
+        self -> conn = conn;
+        if ( self -> conn != NULL )
+        {
+            KStreamAddRef ( self -> conn );
+        }
+    }
+    return 0;
+}
+

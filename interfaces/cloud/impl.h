@@ -62,6 +62,10 @@ struct Cloud
     struct KNSManager const * kns;
     bool user_agrees_to_pay;
     bool user_agrees_to_reveal_instance_identity;
+
+    /* bypass Http connection for testing, normally NULL */
+    /*TODO: remove when mocked connection becomes a regular feature of KNS */
+    struct KStream * conn; 
 };
 
 #ifndef CLOUD_IMPL

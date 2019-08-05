@@ -355,6 +355,12 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
     case algFlat:
         rc = string_printf ( expanded, bsize, size, "%S", & tok -> acc );
         break;
+    case algAD:
+        rc = string_printf ( expanded, bsize, size,
+            "%S%S/%S%S.%S", & tok -> alpha, & tok -> digits,
+            & tok -> alpha, & tok -> digits,
+            & tok -> ext1 );
+        break;
     case algSRAAD:
         rc = string_printf ( expanded, bsize, size,
             "%S%S/%S%S.%s", & tok -> alpha, & tok -> digits,
@@ -2687,7 +2693,7 @@ static rc_t VResolverMagicResolve(const VResolver * self,
         when retrieving reference objects */
     if (app == appREFSEQ) {
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
-            ("'%s' magic ignored for refseq", name));
+            ("'%s' magic ignored for refseq\n", name));
         return 0;
     }
 
@@ -4786,11 +4792,13 @@ rc_t VResolverLoadVolumes ( Vector *algs, const String *root,
                     /* if using CGI for resolution */
                     if ( resolver_cgi || strcmp ( algname, "cgi" ) == 0 )
                         alg_id = algCGI;
-                    else if ( strcmp ( algname, "sraAd" ) == 0 )
-                        alg_id = algSRAAD;
                     /* stored in a flat directory as-is */
                     else if ( strcmp ( algname, "flat" ) == 0 )
                         alg_id = algFlat;
+                    /* stored in Accesion as Directory
+                       with ".sra" or ".sra.vdbcache" extension */
+                    else if ( strcmp ( algname, "sraAd" ) == 0 )
+                        alg_id = algSRAAD;
                     /* stored in a flat directory with ".sra" extension */
                     else if ( strcmp ( algname, "sraFlat" ) == 0 )
                         alg_id = algSRAFlat;
@@ -4823,6 +4831,10 @@ rc_t VResolverLoadVolumes ( Vector *algs, const String *root,
                     /* stored in a three-level directory with 1000 banks and no extension */
                     else if ( strcmp ( algname, "ebi" ) == 0 )
                         alg_id = algSRA_EBI;
+
+                    /* store files under their names in Accesion as Directory */
+                    else if ( strcmp ( algname, "ad" ) == 0 )
+                        alg_id = algAD;
 
                     /* new named annotation */
                     else if ( strcmp ( algname, "nannotFlat" ) == 0 )

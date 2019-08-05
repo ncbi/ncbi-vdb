@@ -39,7 +39,8 @@
 
 
 struct KClientHttpResult;
-
+struct KDataBuffer;
+struct URLBlock;
 
 #ifdef __cplusplus
 extern "C" {
@@ -58,6 +59,17 @@ KNS_EXTERN rc_t CC KClientHttpResultFormatMsg (
     const struct KClientHttpResult * self, char * buffer,
     size_t bsize, size_t * len, const char * bol, const char * eol );
 
+rc_t KClientHttpMakeRequestInt ( struct KClientHttp const *self,
+    struct KClientHttpRequest **req, const struct URLBlock *block, const struct KDataBuffer *buf );
+
+/* if the request followed redirects, the final URL will be different than the initial URL */
+rc_t KClientHttpRequestURL ( struct KClientHttpRequest const *self, struct KDataBuffer *rslt );
+
+rc_t KClientHttpRequestClear ( struct KClientHttpRequest *self );
+
+rc_t KClientHttpRequestInit ( struct KClientHttpRequest * req, const struct URLBlock *b, const struct KDataBuffer *buf );
+
+rc_t KClientHttpRequestGetQuery( struct KClientHttpRequest * req, const struct String ** query );
 
 #ifdef __cplusplus
 }

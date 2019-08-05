@@ -36,6 +36,7 @@ TEST_TOOLS = \
 	test-google-proxy \
 	test200for-whole-file \
 	test-kns \
+	test-http \
 	test-http-dropconn \
 	KNSManagerSingletonTest \
 	test-VDB-3661 \
@@ -45,7 +46,6 @@ TEST_TOOLS = \
 include $(TOP)/build/Makefile.env
 
 EXT_TOOLS = \
-	test-http \
 	test-proxy \
 	test-proxy-with-env \
 	test-proxy-with-scheme \
@@ -230,11 +230,11 @@ HTTPTEST_SRC = \
 HTTPTEST_OBJ = \
 	$(addsuffix .$(OBJX),$(HTTPTEST_SRC))
 
-$(BINDIR)/test-http: $(HTTPTEST_OBJ)
+$(TEST_BINDIR)/test-http: $(HTTPTEST_OBJ)
 	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
 http: test-http
-	unset http_proxy ; $(BINDIR)/test-http  # -l=all
+	unset http_proxy ; $(TEST_BINDIR)/test-http  # -l=all
 
 #----------------------------------------------------------------
 # test-http-dropconn
@@ -300,7 +300,7 @@ refresh: test-refresh-expired
 #----------------------------------------------------------------
 
 run-tests:
-	unset http_proxy ; $(BINDIR)/test-http
+	unset http_proxy ; $(TEST_BINDIR)/test-http
 	unset http_proxy ; $(BINDIR)/test-proxy
 
 # test-proxy-with-scheme never does direct internet connection

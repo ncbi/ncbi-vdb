@@ -32,6 +32,10 @@
 #include <cloud/impl.h>
 #endif
 
+#ifndef _h_klib_time_
+#include <klib/time.h>
+#endif
+
 #ifndef _h_kfg_config_
 #include <kfg/config.h>
 #endif
@@ -117,6 +121,11 @@ struct GCP
 
     char * privateKey;
     char * client_email;
+    char * project_id;
+
+    char * jwt; /* JWT for requesting access tokens (reusable) */
+    char * access_token;
+    KTime_t access_token_expiration;
 };
 
 /* WithinGCP

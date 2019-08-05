@@ -82,6 +82,14 @@ static bool s_disable_user_settings = false;
 /*----------------------------------------------------------------------------*/
 static const char default_kfg[] = {
 "/config/default = \"true\"\n"
+"/repository/user/main/public/apps/file/volumes/flat = \"files\"\n"
+"/repository/user/main/public/apps/nakmer/volumes/nakmerFlat = \"nannot\"\n"
+"/repository/user/main/public/apps/nannot/volumes/nannotFlat = \"nannot\"\n"
+"/repository/user/main/public/apps/refseq/volumes/refseq = \"refseq\"\n"
+"/repository/user/main/public/apps/sra/volumes/sraFlat = \"sra\"\n"
+"/repository/user/main/public/apps/sraPileup/volumes/flat = \"sra\"\n"
+"/repository/user/main/public/apps/sraRealign/volumes/flat = \"sra\"\n"
+"/repository/user/main/public/apps/wgs/volumes/wgsFlat = \"wgs\"\n"
 "/repository/remote/main/CGI/resolver-cgi = "
              "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
 "/repository/remote/protected/CGI/resolver-cgi = "
@@ -3192,11 +3200,10 @@ static rc_t _KConfigCheckAd(KConfig * self) {
                 "/repository/user/ad/public/apps/sra/volumes/sraAd", ".");
         if (rc == 0)
             rc = KConfigWriteString(self,
-                "/repository/user/ad/public/apps/sraPileup/volumes/sraAd", ".");
+                "/repository/user/ad/public/apps/sraPileup/volumes/ad", ".");
         if (rc == 0)
             rc = KConfigWriteString(self,
-                "/repository/user/ad/public/apps/sraRealign/volumes/sraAd",
-                ".");
+                "/repository/user/ad/public/apps/sraRealign/volumes/ad", ".");
         if (rc == 0)
             rc = KConfigWriteString(self,
                 "/repository/user/ad/public/root", ".");
