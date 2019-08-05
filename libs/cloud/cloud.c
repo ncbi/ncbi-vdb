@@ -136,7 +136,7 @@ LIB_EXPORT rc_t CC CloudIsComputeEnvironmentTokenSigned ( const Cloud * self,
     else
     {
 
-        * is_signed = NULL;
+        * is_signed = false;
 
         if ( self == NULL )
             rc = RC ( rcCloud, rcProvider, rcAccessing, rcSelf, rcNull );
