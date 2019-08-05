@@ -1,7 +1,7 @@
 #ifndef _h_cloud_manager_
 #define _h_cloud_manager_
 
-/*=====================================================================================
+/*==============================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
 *               National Center for Biotechnology Information
@@ -23,7 +23,7 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ================================================================================== */
+* =========================================================================== */
 
 
 #ifndef _h_cloud_extern_
@@ -55,6 +55,9 @@ enum
 
     cloud_num_providers
 };
+
+CLOUD_EXTERN
+const char * CC CloudProviderAsString(CloudProviderId cloud_provider);
 
 /* CloudMgr
  *  singleton object to access cloud-related resources

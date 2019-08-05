@@ -93,6 +93,17 @@ rc_t CloudMgrWhack ( CloudMgr * self )
     return 0;
 }
 
+LIB_EXPORT const char * CC CloudProviderAsString(CloudProviderId cloud_provider)
+{
+    switch (cloud_provider) {
+    case cloud_provider_none: return "outside of cloud";
+    case cloud_provider_aws: return "AWS";
+    case cloud_provider_gcp: return "Google";
+    case cloud_provider_azure: return "Azure";
+    default: assert(0); return "UNEXPECTED";
+    }
+}
+
 static
 CloudProviderId CloudMgrDetermineCurrentCloud ( const CloudMgr * self )
 {
