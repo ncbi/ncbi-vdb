@@ -130,7 +130,7 @@ LIB_EXPORT rc_t CC CloudIsComputeEnvironmentTokenSigned ( const Cloud * self,
 {
     rc_t rc;
 
-    if ( ce_token == NULL || is_signed == NULL )
+    if ( is_signed == NULL )
         rc = RC ( rcCloud, rcProvider, rcAccessing, rcParam, rcNull );
     else
     {
@@ -139,6 +139,8 @@ LIB_EXPORT rc_t CC CloudIsComputeEnvironmentTokenSigned ( const Cloud * self,
 
         if ( self == NULL )
             rc = RC ( rcCloud, rcProvider, rcAccessing, rcSelf, rcNull );
+        else if ( ce_token == NULL )
+            rc = RC ( rcCloud, rcProvider, rcAccessing, rcParam, rcNull );
         else
         {
             switch ( self -> vt -> v1 . maj )
