@@ -3193,8 +3193,9 @@ static rc_t _KConfigCheckAd(KConfig * self) {
     if (rc != 0) {
         /* create Accession as Directory repository
            when it does not exist */
-        rc = KConfigWriteString(self,
-            "/repository/user/ad/public/apps/file/volumes/flat", ".");
+        if (rc == 0)
+            rc = KConfigWriteString(self,
+                "/repository/user/ad/public/apps/file/volumes/flat", ".");
         if (rc == 0)
             rc = KConfigWriteString(self,
                 "/repository/user/ad/public/apps/sra/volumes/sraAd", ".");
