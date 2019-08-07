@@ -468,9 +468,9 @@ static rc_t DBManagerOpenVdbcache(const VDBManager *self,
     /* CSRA databases may have an associated "vdbcache" */
     const VDatabase * vdbcache = NULL;
 
-    VPath * clocal = NULL; /* local  VPath to vdbcache DB */
-    VPath * ccache = NULL; /* remote VPath to vdbcache DB */
-    VPath * cremote = NULL;
+    VPath * clocal = NULL;  /* local  VPath to vdbcache DB */
+    VPath * ccache = NULL;  /* cache  VPath to vdbcache DB - for remote */
+    VPath * cremote = NULL; /* remote VPath to vdbcache DB */
 
     bool magicWasSet = false;
 
