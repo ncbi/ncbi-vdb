@@ -32,6 +32,8 @@ struct GCP;
 
 #include <cloud/gcp.h>
 
+#include <kfg/properties.h> /* KConfig_Get_Gcp_Credential_File */
+
 #include <klib/json.h>
 #include <klib/printf.h> /* string_printf */
 #include <klib/rc.h>
@@ -856,14 +858,37 @@ static
 rc_t PopulateCredentials(GCP * self)
 {
     rc_t rc = 0;
+
+    char buffer[PATH_MAX] = "";
+
     char *jsonCredentials;
 
     const char *pathToJsonFile = getenv("GOOGLE_APPLICATION_CREDENTIALS");
+
+    assert(self);
+
     if (pathToJsonFile == NULL || *pathToJsonFile == 0)
     {
-        rc = 0;
+        KConfig * cfg = NULL;
+        rc = KConfigMake(&cfg, NULL);
+
+        if (rc == 0)
+            rc = KConfig_Get_Gcp_Credential_File(
+                cfg, buffer, sizeof buffer, NULL);
+
+        if (rc == 0)
+            pathToJsonFile = buffer;
+        else
+            rc = 0;
+
+        {
+            rc_t r2 = KConfigRelease(cfg);
+            if (rc == 0 && r2 != 0)
+                rc = r2;
+        }
     }
-    else
+
+    if (pathToJsonFile != NULL && *pathToJsonFile != 0)
     {   /* read the credentials file */
         const KFile *cred_file = NULL;
         uint64_t json_size = 0;
