@@ -101,55 +101,66 @@ rc_t CC GCPMakeComputeEnvironmentToken ( const GCP * self, const String ** ce_to
     static const char identityUrl[] =
         "http://metadata/computeMetadata/v1/instance/service-accounts/"
         "default/identity?audience=https://www.ncbi.nlm.nih.gov&format=full";
-    static const char zoneUrl[]
-        = "http://metadata.google.internal/computeMetadata/v1/instance/zone";
 
     rc_t rc = 0;
 
     char location[4096] = "";
 
+    const char * env = getenv("VDB_CE_TOKEN");
+
     assert(self);
 
-    if (self->dad.user_agrees_to_reveal_instance_identity)
+    if (!self->dad.user_agrees_to_reveal_instance_identity)
+        return RC(rcCloud, rcProvider, rcIdentifying,
+            rcCondition, rcUnauthorized);
+
+    if (env == NULL)
         rc = KNSManager_Read(self->dad.kns, location, sizeof location,
             identityUrl, "Metadata-Flavor", "Google");
 
-    else {
-        const char* slash = NULL;
-
-        char b[99] = "";
-        const char * zone = b;
-        rc = KNSManager_Read(self->dad.kns, b, sizeof b,
-            zoneUrl, "Metadata-Flavor", "Google");
-
-        if (rc == 0)
-            slash = string_rchr(b, sizeof b, '/');
-        if (slash != NULL)
-            zone = slash + 1;
-
-        if (rc == 0)
-            rc = string_printf(location, sizeof location, NULL, "gs.%s", zone);
-    }
-
     if (rc == 0) {
         String s;
-        StringInitCString(&s, location);
+        StringInitCString(&s, env != NULL ? env : location);
         rc = StringCopy(ce_token, &s);
     }
 
     return rc;
 }
 
-/* IsComputeEnvironmentTokenSigned
+/* GetLocation
  */
-static rc_t CC GCPIsComputeEnvironmentTokenSigned (
-    const GCP * self, const String * ce_token, bool * is_signed )
-{
-    assert(ce_token);
+static rc_t GCPGetLocation(const GCP * self, const String ** location) {
+    rc_t rc = 0;
 
-    *is_signed = ce_token->size > 32;
+    static const char zoneUrl[]
+        = "http://metadata.google.internal/computeMetadata/v1/instance/zone";
 
-    return 0;
+    char buffer[64] = "";
+    const char * slash = NULL;
+
+    char b[99] = "";
+    const char * zone = b;
+
+    assert(self);
+
+    rc = KNSManager_Read(self->dad.kns, b, sizeof b,
+        zoneUrl, "Metadata-Flavor", "Google");
+
+    if (rc == 0)
+        slash = string_rchr(b, sizeof b, '/');
+    if (slash != NULL)
+        zone = slash + 1;
+
+    if (rc == 0)
+        rc = string_printf(buffer, sizeof buffer, NULL, "gs.%s", zone);
+
+    if (rc == 0) {
+        String s;
+        StringInitCString(&s, buffer);
+        rc = StringCopy(location, &s);
+    }
+
+    return rc;
 }
 
 /* AddComputeEnvironmentTokenForSigner
@@ -159,22 +170,13 @@ static rc_t CC GCPIsComputeEnvironmentTokenSigned (
 static
 rc_t CC GCPAddComputeEnvironmentTokenForSigner ( const GCP * self, KClientHttpRequest * req )
 {
-    bool is_signed = false;
-    
     const String * ce_token = NULL;
     rc_t rc = GCPMakeComputeEnvironmentToken(self, &ce_token);
 
-    if (rc == 0)
-        rc = GCPIsComputeEnvironmentTokenSigned(self, ce_token, &is_signed);
-        
     if (rc == 0) {
-        if (is_signed)
-            rc = KHttpRequestAddPostParam(req, "ident=%S", ce_token);
-        else
-            rc = RC(rcCloud, rcProvider, rcIdentifying, rcCondition, rcUnauthorized);
+        rc = KHttpRequestAddPostParam(req, "ident=%S", ce_token);
+        StringWhack(ce_token);
     }
-        
-    StringWhack(ce_token);
 
     return rc;
 }
@@ -733,7 +735,7 @@ static Cloud_vt_v1 GCP_vt_v1 =
 
     GCPDestroy,
     GCPMakeComputeEnvironmentToken,
-    GCPIsComputeEnvironmentTokenSigned,
+    GCPGetLocation,
     GCPAddComputeEnvironmentTokenForSigner,
     GCPAddAuthentication,
     GCPAddUserPaysCredentials

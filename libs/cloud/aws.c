@@ -29,6 +29,7 @@ struct AWS;
 
 #include <cloud/extern.h>
 #include <cloud/impl.h>
+
 #include <cloud/aws.h>
 
 #include <klib/rc.h>
@@ -89,32 +90,28 @@ rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_to
 
     const char * env = getenv("VDB_CE_TOKEN");
 
+    assert(self);
+
+    if (!self->dad.user_agrees_to_reveal_instance_identity)
+        return RC(rcCloud, rcProvider, rcIdentifying,
+            rcCondition, rcUnauthorized);
+
     if (env == NULL) {
         const KNSManager * mgr = NULL;
 
-        assert(self);
-
         mgr = self->dad.kns;
 
-        if (self->dad.user_agrees_to_reveal_instance_identity) {
-            rc = KNSManager_Read(mgr, document, sizeof document,
-                "http://169.254.169.254/latest/dynamic/instance-identity/document",
+        rc = KNSManager_Read(mgr, document, sizeof document,
+            "http://169.254.169.254/latest/dynamic/instance-identity/document",
+            NULL, NULL);
+
+        if (rc == 0)
+            rc = KNSManager_Read(mgr, pkcs7, sizeof pkcs7,
+                "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7",
                 NULL, NULL);
 
-            if (rc == 0)
-                rc = KNSManager_Read(mgr, pkcs7, sizeof pkcs7,
-                    "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7",
-                    NULL, NULL);
-
-            if (rc == 0)
-                rc = MakeLocation(pkcs7, document, location, sizeof location);
-        }
-        else {
-            char zone[99] = "";
-            rc = KNSManager_GetAWSLocation(mgr, zone, sizeof zone);
-            if (rc == 0)
-                rc = string_printf(location, sizeof location, NULL, "s3.%s", zone);
-        }
+        if (rc == 0)
+            rc = MakeLocation(pkcs7, document, location, sizeof location);
     }
 
     if (rc == 0) {
@@ -126,18 +123,30 @@ rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_to
     return rc;
 }
 
-/* IsComputeEnvironmentTokenSigned
+/* AwsGetLocation
  */
-static rc_t CC AwsIsComputeEnvironmentTokenSigned (
-    const AWS * self, const String * ce_token, bool * is_signed )
+static rc_t AwsGetLocation(const AWS * self, const String ** location)
 {
-    assert(ce_token);
+    rc_t rc = 0;
 
-    *is_signed = ce_token->size > 32;
+    char zone[64] = "";
+    char buffer[64] = "";
 
-    return 0;
+    assert(self);
+
+    rc = KNSManager_GetAWSLocation(self->dad.kns, zone, sizeof zone);
+
+    if (rc == 0)
+        rc = string_printf(buffer, sizeof buffer, NULL, "s3.%s", zone);
+
+    if (rc == 0) {
+        String s;
+        StringInitCString(&s, buffer);
+        rc = StringCopy(location, &s);
+    }
+
+    return rc;
 }
-
 
 
 /* AddComputeEnvironmentTokenForSigner
@@ -147,20 +156,11 @@ static rc_t CC AwsIsComputeEnvironmentTokenSigned (
 static
 rc_t CC AWSAddComputeEnvironmentTokenForSigner ( const AWS * self, KClientHttpRequest * req )
 {
-    bool is_signed = false;
-
     const String * ce_token = NULL;
     rc_t rc = AWSMakeComputeEnvironmentToken(self, &ce_token);
 
-    if (rc == 0)
-        rc = AwsIsComputeEnvironmentTokenSigned(self, ce_token, &is_signed);
-
     if (rc == 0) {
-        if (is_signed)
-            rc = KHttpRequestAddPostParam(req, "ident=%S", ce_token);
-        else
-            rc = RC(rcCloud, rcProvider, rcIdentifying, rcCondition, rcUnauthorized);
-        
+        rc = KHttpRequestAddPostParam(req, "ident=%S", ce_token);
         StringWhack(ce_token);
     }
 
@@ -196,7 +196,7 @@ static Cloud_vt_v1 AWS_vt_v1 =
 
     AWSDestroy,
     AWSMakeComputeEnvironmentToken,
-    AwsIsComputeEnvironmentTokenSigned,
+    AwsGetLocation,
     AWSAddComputeEnvironmentTokenForSigner,
     AWSAddAuthentication,
     AWSAddUserPaysCredentials

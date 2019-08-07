@@ -2969,6 +2969,7 @@ static rc_t SCgiRequestAddCloudEnvironment(
 {
     rc_t rc = 0;
     CloudProviderId cloud_provider = cloud_provider_none;
+    bool user_agrees_to_reveal_instance_identity = false;
     const String * ce_token = NULL;
     assert(helper);
     if (helper->cloud == NULL) {
@@ -2995,23 +2996,36 @@ static rc_t SCgiRequestAddCloudEnvironment(
         }
     }
     if (rc == 0) {
-        rc = CloudMakeComputeEnvironmentToken(helper->cloud, &ce_token);
-        if (rc != 0) {
-            LOGERR(klogInt, rc, "cannot Make Compute Environment Token");
-            return 0;
+        rc = SHelperInitKfg(helper);
+        if (rc == 0)
+            KConfig_Get_Report_Cloud_Instance_Identity(helper->kfg,
+                &user_agrees_to_reveal_instance_identity);
+    }
+    if (rc == 0) {
+        if (user_agrees_to_reveal_instance_identity) {
+            rc = CloudMakeComputeEnvironmentToken(helper->cloud, &ce_token);
+            if (rc != 0) {
+                LOGERR(klogInt, rc, "cannot Make Compute Environment Token");
+                return 0;
+            }
+        }
+        else {
+            rc = CloudGetLocation(helper->cloud, &ce_token);
+            if (rc != 0) {
+                LOGERR(klogInt, rc, "cannot Get Cloud Location");
+                return 0;
+            }
         }
     }
     if (rc == 0) {
         const char * v = NULL;
-        bool isSigned = false;
-        rc = CloudIsComputeEnvironmentTokenSigned(helper->cloud, ce_token, &isSigned);
-        if (rc == 0 && isSigned) {
+        if (user_agrees_to_reveal_instance_identity) {
             if (cloud_provider == cloud_provider_aws)
                 v = "aws_pkcs7";
             else if (cloud_provider == cloud_provider_gcp)
                 v = "gcp_jwt";
         }
-        if (rc == 0 && ce_token != NULL) {
+        if (ce_token != NULL) {
             if (v != NULL) {
                 const SKV * kv = NULL;
                 const char n[] = "location-type";

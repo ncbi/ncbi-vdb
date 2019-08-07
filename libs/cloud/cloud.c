@@ -123,31 +123,29 @@ LIB_EXPORT rc_t CC CloudMakeComputeEnvironmentToken ( const Cloud * self, struct
     return rc;
 }
 
-/* IsComputeEnvironmentTokenSigned
- *  contact cloud provider to get proof of execution environment in form of a token
+/* GetLocation
+ *  get cloud location in form proovider.zone
  */
-LIB_EXPORT rc_t CC CloudIsComputeEnvironmentTokenSigned ( const Cloud * self,
-    struct String const * ce_token, bool * is_signed )
+LIB_EXPORT rc_t CC CloudGetLocation( const Cloud * self,
+    struct String const ** location )
 {
     rc_t rc;
 
-    if ( is_signed == NULL )
+    if (location == NULL )
         rc = RC ( rcCloud, rcProvider, rcAccessing, rcParam, rcNull );
     else
     {
 
-        * is_signed = false;
+        *location = NULL;
 
         if ( self == NULL )
             rc = RC ( rcCloud, rcProvider, rcAccessing, rcSelf, rcNull );
-        else if ( ce_token == NULL )
-            rc = RC ( rcCloud, rcProvider, rcAccessing, rcParam, rcNull );
         else
         {
             switch ( self -> vt -> v1 . maj )
             {
             case 1:
-                return (*self -> vt -> v1 . is_cet_signed) (self, ce_token, is_signed);
+                return (*self -> vt -> v1 . get_location) (self, location);
             }
 
             rc = RC ( rcCloud, rcProvider, rcAccessing, rcInterface, rcBadVersion );
@@ -266,7 +264,7 @@ LIB_EXPORT rc_t CC CloudInit ( Cloud * self, const Cloud_vt * vt,
             if ( vt -> v1 . add_user_pays_to_req == NULL ||
                  vt -> v1 . add_authn == NULL            ||
                  vt -> v1 . add_cet_to_req == NULL       ||
-                 vt -> v1 . is_cet_signed == NULL        ||
+                 vt -> v1 . get_location == NULL        ||
                  vt -> v1 . make_cet == NULL             ||
                  vt -> v1 . destroy == NULL              )
                 return RC ( rcCloud, rcProvider, rcConstructing, rcInterface, rcNull );
@@ -330,3 +328,9 @@ LIB_EXPORT rc_t CC CloudSetHttpConnection ( Cloud  * self, struct KStream * conn
     return 0;
 }
 
+void CloudSetUserAgreesToRevealInstanceIdentity(Cloud  * self,
+    bool value)
+{
+    if (self != NULL)
+        self->user_agrees_to_reveal_instance_identity = value;
+}

@@ -1,7 +1,7 @@
 #ifndef _h_cloud_cloud_
 #define _h_cloud_cloud_
 
-/*=====================================================================================
+/*==============================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
 *               National Center for Biotechnology Information
@@ -23,7 +23,7 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ================================================================================== */
+* =========================================================================== */
 
 
 #ifndef _h_cloud_extern_
@@ -60,10 +60,11 @@ CLOUD_EXTERN rc_t CC CloudRelease ( const Cloud * self );
 CLOUD_EXTERN rc_t CC CloudMakeComputeEnvironmentToken ( const Cloud * self,
     struct String const ** ce_token );
 
-/* IsComputeEnvironmentTokenSigned
+/* GetLocation
+ *  get cloud location in form proovider.zone
  */
-CLOUD_EXTERN rc_t CC CloudIsComputeEnvironmentTokenSigned ( const Cloud * self,
-    struct String const * ce_token, bool * is_signed );
+CLOUD_EXTERN rc_t CC CloudGetLocation ( const Cloud * self,
+    struct String const ** location );
 
 /* AddComputeEnvironmentTokenForSigner
  *  prepare a request object with a compute environment token
