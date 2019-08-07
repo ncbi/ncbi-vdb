@@ -31,6 +31,7 @@ struct AWS;
 #include <cloud/impl.h>
 #include <cloud/aws.h>
 
+#include <klib/debug.h> /* DBGMSG */
 #include <klib/rc.h>
 #include <klib/status.h>
 #include <klib/text.h>
@@ -79,9 +80,13 @@ rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_to
 
     char location[4096] = "";
 
-    const char * env = getenv("VDB_CE_TOKEN");
+    const char name[] = "VDB_CE_TOKEN";
+    const char * env = getenv(name);
 
-    if (env == NULL) {
+    if (env != NULL)
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+            "'%s' magic found\n", name));
+    else {
         assert(self);
 
         rc = KNSManager_Read(self->dad.kns, document, sizeof document,

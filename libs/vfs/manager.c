@@ -694,8 +694,11 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
                         "'%s' needCe magic ignored for refseq\n", name));
             }
             else
-                if (magic != NULL)
+                if (magic != NULL) {
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                        "'%s' needCe magic found\n", name));
                     ceRequired = true;
+                }
                 else
                     ceRequired = path->ceRequired;
         }
@@ -708,8 +711,11 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
                         "'%s' pmtReq magic ignored for refseq\n", name));
             }
-            if (magic != NULL)
+            if (magic != NULL) {
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                    "'%s' pmtReq magic found\n", name));
                 payRequired = true;
+            }
             else
                 payRequired = path->payRequired;
         }
