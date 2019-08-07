@@ -394,7 +394,9 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
     case algREFSEQAD:
         if (!legacy_wgs_refseq)
             rc = string_printf(expanded, bsize, size,
-                "%S/%S", &tok->accOfParentDb, &tok->acc);
+                "%S%s%S", &tok->accOfParentDb,
+                tok->accOfParentDb.size == 0 ? "" : "/",
+                &tok->acc);
         else
             rc = string_printf(expanded, bsize, size,
                 "%S/%S%.2S", &tok->accOfParentDb, &tok->alpha, &tok->digits);
