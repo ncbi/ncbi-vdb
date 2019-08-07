@@ -369,7 +369,8 @@ static rc_t VFSManagerMagicResolve(const VFSManager *self,
     VPath ** path, const char * name,
     ECheckExist checkExist,
     ECheckFilePath checkPath,
-    ECheckUrl checkUrl)
+    ECheckUrl checkUrl,
+    bool * envVarWasSet)
 {
     rc_t rc = 0;
 
@@ -382,6 +383,9 @@ static rc_t VFSManagerMagicResolve(const VFSManager *self,
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("'%s' magic not set\n", name));
         return 0;
     }
+
+    assert(envVarWasSet);
+    *envVarWasSet = true;
 
     /* variable set to empty: VResolverQuery returns not found */
     if (magic[0] == '\0') {
@@ -429,27 +433,27 @@ static rc_t VFSManagerMagicResolve(const VFSManager *self,
 }
 
 static rc_t VFSManagerCacheMagicResolve(
-    const VFSManager * self, VPath ** path)
+    const VFSManager * self, VPath ** path, bool * envVarWasSet)
 {
     return VFSManagerMagicResolve(self, path,
         MAGIC_CACHE_VDBCACHE,
-        eCheckExistFalse, eCheckFilePathTrue, eCheckUrlFalse);
+        eCheckExistFalse, eCheckFilePathTrue, eCheckUrlFalse, envVarWasSet);
 }
 
 static rc_t VFSManagerLocalMagicResolve(
-    const VFSManager * self, VPath ** path)
+    const VFSManager * self, VPath ** path, bool * envVarWasSet)
 {
     return VFSManagerMagicResolve(self, path,
         MAGIC_LOCAL_VDBCACHE,
-        eCheckExistTrue, eCheckFilePathTrue, eCheckUrlFalse);
+        eCheckExistTrue, eCheckFilePathTrue, eCheckUrlFalse, envVarWasSet);
 }
 
 static rc_t VFSManagerRemoteMagicResolve(
-    const VFSManager * self, VPath ** path)
+    const VFSManager * self, VPath ** path, bool * envVarWasSet)
 {
     return VFSManagerMagicResolve(self, path,
         MAGIC_REMOTE_VDBCACHE,
-        eCheckExistFalse, eCheckFilePathFalse, eCheckUrlTrue);
+        eCheckExistFalse, eCheckFilePathFalse, eCheckUrlTrue, envVarWasSet);
 }
 
 static rc_t DBManagerOpenVdbcache(const VDBManager *self,
@@ -468,10 +472,12 @@ static rc_t DBManagerOpenVdbcache(const VDBManager *self,
     VPath * ccache = NULL; /* remote VPath to vdbcache DB */
     VPath * cremote = NULL;
 
+    bool magicWasSet = false;
+
     /* if principal was local */
     if (plocal != NULL)
     {
-        rc2 = VFSManagerLocalMagicResolve(vfs, &clocal);
+        rc2 = VFSManagerLocalMagicResolve(vfs, &clocal, &magicWasSet);
         if (rc2 == 0 && clocal == NULL)
             /* make local path to vdbcache out of DB's path
                just when magic variable is not set */
@@ -496,8 +502,9 @@ static rc_t DBManagerOpenVdbcache(const VDBManager *self,
                 }
 
                 /* was not found locally - try to get one remotely */
-                if (rc2 == 0)
-                {
+                if (rc2 == 0
+                    && !magicWasSet) /* check it remotely just when not */
+                {                    /* called by driver tool: it sets EnvVar */
                     /* We need suppress error message in the
                      * case if here any error happened
                      */
@@ -505,9 +512,10 @@ static rc_t DBManagerOpenVdbcache(const VDBManager *self,
                     KLogLevelSet(klogFatal);
                     assert(premote == NULL);
                     assert(pcache && *pcache == NULL);
-     /* YES, DBG_VFS should be used here to be printed along with other VFS messages */
+     /* YES,
+      DBG_VFS should be used here to be printed along with other VFS messages */
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
-                        (">>>>>>>>>>>>>> calling VResolverQuery to locate vdbcache..."
+                (">>>>>>>>>>>>>> calling VResolverQuery to locate vdbcache..."
                             "\n"));
                     rc2 = VResolverQuery(
                         resolver, 0, orig, NULL, &premote, pcache);
@@ -525,7 +533,7 @@ static rc_t DBManagerOpenVdbcache(const VDBManager *self,
     /* if principal was remote, or attempting remote vdbcache */
     if (premote != NULL)
     {
-        rc2 = VFSManagerRemoteMagicResolve(vfs, &cremote);
+        rc2 = VFSManagerRemoteMagicResolve(vfs, &cremote, &magicWasSet);
         if (rc2 == 0 && cremote == NULL) {
             /* check if names service returned vdbcache */
             bool vdbcacheChecked = false;
@@ -544,7 +552,7 @@ static rc_t DBManagerOpenVdbcache(const VDBManager *self,
         }
 
         if (rc2 == 0) {
-            rc2 = VFSManagerCacheMagicResolve(vfs, &ccache);
+            rc2 = VFSManagerCacheMagicResolve(vfs, &ccache, &magicWasSet);
             if (rc2 == 0 && ccache == NULL) {
                 /* manually build cache path to vdbcache
                    just when magic variable is not set */
