@@ -685,7 +685,8 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
         bool ceRequired = false;
         bool payRequired = false;
         {
-            const char name[] = ENV_VDB_REMOTE_NEED_CE;
+            const char * name = path->sraClass == eSCvdbcache ?
+                ENV_VDB_CACHE_NEED_CE : ENV_VDB_REMOTE_NEED_CE;
             const char * magic = getenv(name);
             if (is_refseq) {
                 if (magic != NULL)
@@ -699,7 +700,8 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
                     ceRequired = path->ceRequired;
         }
         {
-            const char name[] = ENV_VDB_REMOTE_NEED_PMT;
+            const char * name = path->sraClass == eSCvdbcache ?
+                ENV_VDB_CACHE_NEED_PMT : ENV_VDB_REMOTE_NEED_PMT;
             const char * magic = getenv(name);
             if (is_refseq) {
                 if (magic != NULL)
