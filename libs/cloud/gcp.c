@@ -34,13 +34,15 @@ struct GCP;
 
 #include <kfg/properties.h> /* KConfig_Get_User_Accept_Gcp_Charges */
 
+#include <klib/base64.h>
+#include <klib/data-buffer.h>
+#include <klib/debug.h> /* DBGMSG */
 #include <klib/json.h>
 #include <klib/printf.h> /* string_printf */
 #include <klib/rc.h>
 #include <klib/status.h>
+#include <klib/strings.h> /* ENV_VDB_CE_TOKEN */
 #include <klib/text.h>
-#include <klib/base64.h>
-#include <klib/data-buffer.h>
 
 #include <kns/endpoint.h>
 #include <kns/socket.h>
@@ -102,11 +104,18 @@ rc_t CC GCPMakeComputeEnvironmentToken ( const GCP * self, const String ** ce_to
         "http://metadata/computeMetadata/v1/instance/service-accounts/"
         "default/identity?audience=https://www.ncbi.nlm.nih.gov&format=full";
 
+    static bool envInited = false;
+    static const char * env = NULL;
+    static const char name[] = ENV_VDB_CE_TOKEN;
+
+    if (!envInited) {
+        env = getenv(name);
+        envInited = true;
+    }
+
     rc_t rc = 0;
 
     char location[4096] = "";
-
-    const char * env = getenv("VDB_CE_TOKEN");
 
     assert(self);
 
@@ -114,7 +123,10 @@ rc_t CC GCPMakeComputeEnvironmentToken ( const GCP * self, const String ** ce_to
         return RC(rcCloud, rcProvider, rcIdentifying,
             rcCondition, rcUnauthorized);
 
-    if (env == NULL)
+    if (env != NULL)
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+            "'%s' magic found\n", name));
+    else
         rc = KNSManager_Read(self->dad.kns, location, sizeof location,
             identityUrl, "Metadata-Flavor", "Google");
 
@@ -123,6 +135,9 @@ rc_t CC GCPMakeComputeEnvironmentToken ( const GCP * self, const String ** ce_to
         StringInitCString(&s, env != NULL ? env : location);
         rc = StringCopy(ce_token, &s);
     }
+
+    if (rc == 0 && env != NULL)
+        env = NULL;
 
     return rc;
 }
