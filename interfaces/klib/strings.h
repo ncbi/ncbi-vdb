@@ -34,6 +34,7 @@ extern "C" {
 #define ENV_VDB_REMOTE_NEED_CE "VDB_REMOTE_NEED_CE"
 #define ENV_VDB_REMOTE_NEED_PMT "VDB_REMOTE_NEED_PMT"
 
+#define ENV_VDB_CE_TOKEN "VDB_CE_TOKEN"
 
 #ifdef __cplusplus
 }
