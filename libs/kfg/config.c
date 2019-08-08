@@ -3191,6 +3191,7 @@ static rc_t _KConfigCheckAd(KConfig * self) {
     const KConfigNode * kfg = NULL;
     rc_t rc = KConfigOpenNodeRead(self, &kfg, "/repository/user/ad");
     if (rc != 0) {
+        rc = 0;
         /* create Accession as Directory repository
            when it does not exist */
         if (rc == 0)
