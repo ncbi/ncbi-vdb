@@ -1,8 +1,3 @@
-/* TODO: move them to interfaces/klib/strings.h */
-#define MAGIC_CACHE  "VDB_CACHE_URL"
-#define MAGIC_LOCAL  "VDB_LOCAL_URL"
-#define MAGIC_REMOTE "VDB_REMOTE_URL"
-
 /*===========================================================================
  *
  *                            PUBLIC DOMAIN NOTICE
@@ -33,10 +28,6 @@
 
 #include <klib/time.h> /* KTime */
 
-#include "services-priv.h"
-#include "path-priv.h"
-#include "resolver-priv.h"
-
 #include <vfs/manager.h>
 #include <vfs/path.h>
 #include <vfs/resolver-priv.h> /* VResolverQueryWithDir */
@@ -55,15 +46,20 @@
 #undef ERR
 #endif
 
-#include <klib/text.h>
-#include <klib/vector.h>
-#include <klib/refcount.h>
-#include <klib/namelist.h>
-#include <klib/printf.h>
 #include <klib/data-buffer.h>
 #include <klib/debug.h>
 #include <klib/log.h>
+#include <klib/namelist.h>
+#include <klib/printf.h>
 #include <klib/rc.h>
+#include <klib/refcount.h>
+#include <klib/strings.h> /* ENV_MAGIC_REMOTE */
+#include <klib/text.h>
+#include <klib/vector.h>
+
+#include "services-priv.h"
+#include "path-priv.h"
+#include "resolver-priv.h"
 
 #include <sysalloc.h>
 
@@ -2807,21 +2803,21 @@ static rc_t VResolverCacheMagicResolve(
     const VResolver * self, const VPath ** path, VResolverAppID app)
 {
     return VResolverMagicResolve(self, path, app,
-        MAGIC_CACHE, eCheckExistFalse, eCheckFilePathTrue, eCheckUrlFalse);
+        ENV_MAGIC_CACHE, eCheckExistFalse, eCheckFilePathTrue, eCheckUrlFalse);
 }
 
 static rc_t VResolverLocalMagicResolve(
     const VResolver * self, const VPath ** path, VResolverAppID app)
 {
     return VResolverMagicResolve(self, path, app,
-        MAGIC_LOCAL, eCheckExistTrue, eCheckFilePathTrue, eCheckUrlFalse);
+        ENV_MAGIC_LOCAL, eCheckExistTrue, eCheckFilePathTrue, eCheckUrlFalse);
 }
 
 static rc_t VResolverRemoteMagicResolve(
     const VResolver * self, const VPath ** path, VResolverAppID app)
 {
     return VResolverMagicResolve(self, path, app,
-        MAGIC_REMOTE, eCheckExistFalse, eCheckFilePathFalse, eCheckUrlTrue);
+        ENV_MAGIC_REMOTE, eCheckExistFalse, eCheckFilePathFalse, eCheckUrlTrue);
 }
 
 /* LocalResolve

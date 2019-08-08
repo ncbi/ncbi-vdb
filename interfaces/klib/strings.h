@@ -20,7 +20,7 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ===========================================================================
+* ==============================================================================
 *
 */
 
@@ -31,11 +31,15 @@
 extern "C" {
 #endif
 
-#define ENV_VDB_REMOTE_NEED_CE  "VDB_REMOTE_NEED_CE"
-#define ENV_VDB_REMOTE_NEED_PMT "VDB_REMOTE_NEED_PMT"
+#define ENV_MAGIC_CACHE  "VDB_CACHE_URL"
+#define ENV_MAGIC_LOCAL  "VDB_LOCAL_URL"
+#define ENV_MAGIC_REMOTE "VDB_REMOTE_URL"
 
-#define ENV_VDB_CACHE_NEED_CE  "VDB_CACHE_NEED_CE"
-#define ENV_VDB_CACHE_NEED_PMT "VDB_CACHE_NEED_PMT"
+#define ENV_MAGIC_REMOTE_NEED_CE  "VDB_REMOTE_NEED_CE"
+#define ENV_MAGIC_REMOTE_NEED_PMT "VDB_REMOTE_NEED_PMT"
+
+#define ENV_MAGIC_CACHE_NEED_CE  "VDB_CACHE_NEED_CE"
+#define ENV_MAGIC_CACHE_NEED_PMT "VDB_CACHE_NEED_PMT"
 
 #ifdef __cplusplus
 }
