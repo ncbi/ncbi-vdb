@@ -1613,21 +1613,21 @@ rc_t VTableCursorCellDataDirect ( const VCURSOR_IMPL *self, int64_t row_id, uint
     if ( elem_bits == NULL )
         elem_bits = & dummy [ 2 ];
 
+    * elem_bits = 0;
+    * boff = 0;
+    * row_len = 0;
+    
     if ( base == NULL )
         rc = RC ( rcVDB, rcCursor, rcReading, rcParam, rcNull );
     else
     {
+        * base = NULL;
+
         rc = VCursorReadColumnDirect ( self, row_id, col_idx,
                 elem_bits, base, boff, row_len );
         if ( rc == 0 )
             return 0;
-
-        * base = NULL;
     }
-
-    * elem_bits = 0;
-    * boff = 0;
-    * row_len = 0;
 
     return rc;
 }
