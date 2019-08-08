@@ -126,9 +126,13 @@ rc_t CC GCPMakeComputeEnvironmentToken ( const GCP * self, const String ** ce_to
     if (env != NULL)
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
             "'%s' magic found\n", name));
-    else
+    else {
+        if (getenv(name) != NULL)
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                "'%s' magic ignored\n", name));
         rc = KNSManager_Read(self->dad.kns, location, sizeof location,
             identityUrl, "Metadata-Flavor", "Google");
+    }
 
     if (rc == 0) {
         String s;
