@@ -3742,6 +3742,7 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
     String user_agent_string;
     String accept_string;
     size_t total;
+    char * buf_end = buffer;
     size_t p_bsize = 0;
     const KHttpHeader *node;
     size_t dummy;
@@ -3777,6 +3778,10 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
 
     /* print all headers remaining into buffer */
     total = * len;
+    if ( rc == 0 )
+    {
+        buf_end += * len;
+    }
     for ( node = ( const KHttpHeader* ) BSTreeFirst ( & self -> hdrs );
           ( rc == 0  ||
             ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
@@ -3799,11 +3804,15 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
         p_bsize = bsize >= total ? bsize - total : 0;
 
         /* add header line */
-        r2 = string_printf ( & buffer [ total ], p_bsize, len,
+        r2 = string_printf ( buf_end, p_bsize, len,
                              "%S: %S\r\n"
                              , & node -> name
                              , & node -> value );
         total += * len;
+        if ( r2 == 0 )
+        {
+            buf_end += * len;
+        }
         if ( rc == 0 ) {
             rc = r2;
         }
@@ -3817,18 +3826,27 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
         if ( r3 == 0 )
         {
             p_bsize = bsize >= total ? bsize - total : 0;
-            r2 = string_printf ( & buffer [ total ],
+            r2 = string_printf ( buf_end,
                 p_bsize, len, "User-Agent: %s\r\n", ua );
             total += * len;
-            if ( rc == 0 ) {
+            if ( r2 == 0 )
+            {
+                buf_end += * len;
+            }
+            if ( rc == 0 ) 
+            {
                 rc = r2;
             }
         }
     }
 
     if (!have_accept) {
-        r2 = string_printf(&buffer[total], p_bsize, len, "Accept: */*\r\n");
-        total += *len;
+        r2 = string_printf(buf_end, p_bsize, len, "Accept: */*\r\n");
+        total += * len;
+        if ( r2 == 0 )
+        {
+            buf_end += * len;
+        }
         if (rc == 0 && r2 != 0)
             rc = r2;
     }
@@ -3839,9 +3857,14 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
           GetRCState ( rc ) == rcInsufficient ) )
     {
         p_bsize = bsize >= total ? bsize - total : 0;
-        r2 = string_printf ( & buffer [ total ], p_bsize, len, "\r\n" );
+        r2 = string_printf ( buf_end, p_bsize, len, "\r\n" );
         total += * len;
-        if ( rc == 0 ) {
+        if ( r2 == 0 )
+        {
+            buf_end += * len;
+        }
+        if ( rc == 0 ) 
+        {
             rc = r2;
         }
     }

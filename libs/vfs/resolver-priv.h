@@ -173,12 +173,13 @@ typedef enum
     algCGI,
     algFlat,
     algAD,    /* Accession as Directory */
-    algSRAAD, /* sra in Accession as Directory */
+    algSRAAD,    /* Accession as Directory for SRA */
     algSRAFlat,
     algSRA1024,
     algSRA1000,
     algFUSE1000,
     algREFSEQ,
+    algREFSEQAD, /* Accession as Directory for Refseq*/
     algWGS2,                /* ordered to be of higher precedence than algWGS */
     algWGS,
     algWGSFlat,
@@ -256,7 +257,7 @@ void KConfigReadRemoteProtocols ( struct KConfig const * self, VRemoteProtocols 
 
 VResolverAppID get_accession_app(const String * accession, bool refseq_ctx,
     struct VResolverAccToken *tok, bool *legacy_wgs_refseq,
-    bool resolveAllAccToCache, bool * forDirAdjusted);
+    bool resolveAllAccToCache, bool * forDirAdjusted, const String * parentAcc);
 
 #ifdef __cplusplus
 }

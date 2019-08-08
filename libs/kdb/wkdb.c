@@ -680,7 +680,8 @@ static rc_t KDBOpenPathTypeReadInt ( const KDBManager * mgr, const KDirectory * 
 }
 
 rc_t KDBOpenPathTypeRead ( const KDBManager * mgr, const KDirectory * dir, const char * path, 
-    const KDirectory ** pdir, int pathtype, int * ppathtype, bool try_srapath )
+    const KDirectory ** pdir, int pathtype, int * ppathtype, bool try_srapath,
+    const VPath * vpath )
 {
     const KDirectory *ldir;
     rc_t rc = 0;
@@ -1212,7 +1213,7 @@ rc_t KDBVDrop ( KDirectory *dir, const KDBManager * mgr,
         case kptFile | kptAlias:
         case kptFile:
 	    /* can we get here?  Will we have needed to open for update to get here? */
-	    rc = KDBOpenPathTypeRead ( mgr, dir, path, NULL, type, NULL, false );
+	    rc = KDBOpenPathTypeRead ( mgr, dir, path, NULL, type, NULL, false, NULL );
 	    if ( rc == 0 )
                 return RC ( rcDB, rcDirectory, rcRemoving, rcPath, rcReadonly );
             /* fall through */

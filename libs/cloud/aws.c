@@ -35,7 +35,7 @@ struct AWS;
 #include <klib/debug.h> /* DBGMSG */
 #include <klib/rc.h>
 #include <klib/status.h>
-#include <klib/strings.h> /* ENV_VDB_CE_TOKEN */
+#include <klib/strings.h> /* ENV_MAGIC_CE_TOKEN */
 #include <klib/text.h>
 #include <klib/printf.h>
 
@@ -90,7 +90,7 @@ rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_to
 
     char location[4096] = "";
 
-    const char name[] = ENV_VDB_CE_TOKEN;
+    const char name[] = ENV_MAGIC_CE_TOKEN;
     const char * env = getenv(name);
 
     assert(self);
@@ -98,14 +98,11 @@ rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_to
     if (!self->dad.user_agrees_to_reveal_instance_identity)
         return RC(rcCloud, rcProvider, rcIdentifying,
             rcCondition, rcUnauthorized);
-
-    if (env != NULL)
+    else if (env != NULL)
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
             "'%s' magic found\n", name));
     else {
-        const KNSManager * mgr = NULL;
-
-        mgr = self->dad.kns;
+        const KNSManager * mgr = self->dad.kns;
 
         rc = KNSManager_Read(mgr, document, sizeof document,
             "http://169.254.169.254/latest/dynamic/instance-identity/document",

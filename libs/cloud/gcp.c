@@ -41,7 +41,7 @@ struct GCP;
 #include <klib/printf.h> /* string_printf */
 #include <klib/rc.h>
 #include <klib/status.h>
-#include <klib/strings.h> /* ENV_VDB_CE_TOKEN */
+#include <klib/strings.h> /* ENV_MAGIC_CE_TOKEN */
 #include <klib/text.h>
 
 #include <kns/endpoint.h>
@@ -106,7 +106,7 @@ rc_t CC GCPMakeComputeEnvironmentToken ( const GCP * self, const String ** ce_to
 
     static bool envInited = false;
     static const char * env = NULL;
-    static const char name[] = ENV_VDB_CE_TOKEN;
+    static const char name[] = ENV_MAGIC_CE_TOKEN;
 
     if (!envInited) {
         env = getenv(name);
@@ -925,14 +925,37 @@ static
 rc_t PopulateCredentials(GCP * self)
 {
     rc_t rc = 0;
+
+    char buffer[PATH_MAX] = "";
+
     char *jsonCredentials;
 
     const char *pathToJsonFile = getenv("GOOGLE_APPLICATION_CREDENTIALS");
+
+    assert(self);
+
     if (pathToJsonFile == NULL || *pathToJsonFile == 0)
     {
-        rc = 0;
+        KConfig * cfg = NULL;
+        rc = KConfigMake(&cfg, NULL);
+
+        if (rc == 0)
+            rc = KConfig_Get_Gcp_Credential_File(
+                cfg, buffer, sizeof buffer, NULL);
+
+        if (rc == 0)
+            pathToJsonFile = buffer;
+        else
+            rc = 0;
+
+        {
+            rc_t r2 = KConfigRelease(cfg);
+            if (rc == 0 && r2 != 0)
+                rc = r2;
+        }
     }
-    else
+
+    if (pathToJsonFile != NULL && *pathToJsonFile != 0)
     {   /* read the credentials file */
         const KFile *cred_file = NULL;
         uint64_t json_size = 0;

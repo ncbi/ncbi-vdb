@@ -84,7 +84,8 @@ int KDBPathType ( const struct KDirectory *dir, bool *zombies, const char *path 
  * but reshut if dpdir is NULL.
  */ 
 rc_t KDBOpenPathTypeRead ( const struct KDBManager * mgr, const struct KDirectory * dir, const char * path, 
-    const struct KDirectory ** dpdir, int pathtype, int * realpathtype, bool try_srapath );
+    const struct KDirectory ** dpdir, int pathtype, int * realpathtype,
+    bool try_srapath, const struct VPath * vpath );
 
 /* Writable
  *  examines a directory structure for any "lock" files
