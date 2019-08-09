@@ -94,56 +94,57 @@ rc_t CC GCPDestroy(GCP * self)
     return CloudWhack(&self->dad);
 }
 
+/* envCE
+ * Get Compute Environment Token from environment variable
+ *
+ * NB. this is a one-shot function, but atomic is not important
+ */
+static char const *envCE()
+{
+    static bool firstTime = true;
+    char const *const env = firstTime ? getenv(ENV_MAGIC_CE_TOKEN) : NULL;
+    firstTime = false;
+    if (env != NULL)
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("Got location from environment"));
+    return env;
+}
+
+/* readCE
+ * Get Compute Environment Token by reading from provider network
+ */
+static rc_t readCE(GCP const *const self, size_t size, char location[])
+{
+    char const *const identityUrl =
+        "http://metadata/computeMetadata/v1/instance/service-accounts/"
+        "default/identity?audience=https://www.ncbi.nlm.nih.gov&format=full";
+
+    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("Reading location from provider"));
+    return KNSManager_Read(self->dad.kns, location, size,
+                         identityUrl, "Metadata-Flavor", "Google");
+}
+
 /* MakeComputeEnvironmentToken
  *  contact cloud provider to get proof of execution environment in form of a token
 */
 static
 rc_t CC GCPMakeComputeEnvironmentToken ( const GCP * self, const String ** ce_token )
 {
-    static const char identityUrl[] =
-        "http://metadata/computeMetadata/v1/instance/service-accounts/"
-        "default/identity?audience=https://www.ncbi.nlm.nih.gov&format=full";
-
-    static bool envInited = false;
-    static const char * env = NULL;
-    static const char name[] = ENV_MAGIC_CE_TOKEN;
-
-    if (!envInited) {
-        env = getenv(name);
-        envInited = true;
-    }
-
-    rc_t rc = 0;
-
-    char location[4096] = "";
-
     assert(self);
-
+    
     if (!self->dad.user_agrees_to_reveal_instance_identity)
         return RC(rcCloud, rcProvider, rcIdentifying,
-            rcCondition, rcUnauthorized);
-
-    if (env != NULL)
-        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-            "'%s' magic found\n", name));
+                  rcCondition, rcUnauthorized);
     else {
-        if (getenv(name) != NULL)
-            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-                "'%s' magic ignored\n", name));
-        rc = KNSManager_Read(self->dad.kns, location, sizeof location,
-            identityUrl, "Metadata-Flavor", "Google");
+        char const *const env = envCE();
+        char location[4096] = "";
+        rc_t const rc = env == NULL ? readCE(self, sizeof(location), location) : 0;
+        if (rc == 0) {
+            String s;
+            StringInitCString(&s, env != NULL ? env : location);
+            return StringCopy(ce_token, &s);
+        }
+        return rc;
     }
-
-    if (rc == 0) {
-        String s;
-        StringInitCString(&s, env != NULL ? env : location);
-        rc = StringCopy(ce_token, &s);
-    }
-
-    if (rc == 0 && env != NULL)
-        env = NULL;
-
-    return rc;
 }
 
 /* GetLocation

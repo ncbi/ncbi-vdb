@@ -77,53 +77,66 @@ static rc_t KNSManager_GetAWSLocation(
         NULL, NULL);
 }
 
+/* envCE
+ * Get Compute Environment Token from environment variable
+ *
+ * NB. this is a one-shot function, but atomic is not important
+ */
+static char const *envCE()
+{
+    static bool firstTime = true;
+    char const *const env = firstTime ? getenv(ENV_MAGIC_CE_TOKEN) : NULL;
+    firstTime = false;
+    if (env != NULL)
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("Got location from environment"));
+    return env;
+}
+
+/* readCE
+ * Get Compute Environment Token by reading from provider network
+ */
+static rc_t readCE(AWS const *const self, size_t size, char location[])
+{
+    char document[4096] = "";
+    char pkcs7[4096] = "";
+    rc_t rc;
+    
+    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("Reading location from provider"));
+    rc = KNSManager_Read(self->dad.kns, document, sizeof document,
+                 "http://169.254.169.254/latest/dynamic/instance-identity/document",
+                 NULL, NULL);
+    if (rc) return rc;
+
+    rc = KNSManager_Read(self->dad.kns, pkcs7, sizeof pkcs7,
+                 "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7",
+                 NULL, NULL);
+    if (rc) return rc;
+
+    return MakeLocation(pkcs7, document, location, size);
+}
+
 /* MakeComputeEnvironmentToken
  *  contact cloud provider to get proof of execution environment in form of a token
  */
 static
 rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_token )
 {
-    rc_t rc = 0;
-
-    char document[4096] = "";
-    char pkcs7[4096] = "";
-
-    char location[4096] = "";
-
-    const char name[] = ENV_MAGIC_CE_TOKEN;
-    const char * env = getenv(name);
-
     assert(self);
-
+    
     if (!self->dad.user_agrees_to_reveal_instance_identity)
         return RC(rcCloud, rcProvider, rcIdentifying,
-            rcCondition, rcUnauthorized);
-    else if (env != NULL)
-        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-            "'%s' magic found\n", name));
+                  rcCondition, rcUnauthorized);
     else {
-        const KNSManager * mgr = self->dad.kns;
-
-        rc = KNSManager_Read(mgr, document, sizeof document,
-            "http://169.254.169.254/latest/dynamic/instance-identity/document",
-            NULL, NULL);
-
-        if (rc == 0)
-            rc = KNSManager_Read(mgr, pkcs7, sizeof pkcs7,
-                "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7",
-                NULL, NULL);
-
-        if (rc == 0)
-            rc = MakeLocation(pkcs7, document, location, sizeof location);
+        char const *const env = envCE();
+        char location[4096] = "";
+        rc_t const rc = env == NULL ? readCE(self, sizeof(location), location) : 0;
+        if (rc == 0) {
+            String s;
+            StringInitCString(&s, env != NULL ? env : location);
+            return StringCopy(ce_token, &s);
+        }
+        return rc;
     }
-
-    if (rc == 0) {
-        String s;
-        StringInitCString(&s, env != NULL ? env : location);
-        rc = StringCopy(ce_token, &s);
-    }
-
-    return rc;
 }
 
 /* AwsGetLocation
