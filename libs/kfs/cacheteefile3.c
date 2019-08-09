@@ -1187,7 +1187,7 @@ rc_t CC KCacheTeeFileRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
 {
     struct timeout_t tm;
     /* TBD - need a default timeout on the manager object */
-    TimeoutInit ( & tm, 10 * 1000 );
+    TimeoutInit ( & tm, 100 * 1000 );
     return KCacheTeeFileTimedRead ( self, pos, buffer, bsize, num_read, & tm );
 }
 
