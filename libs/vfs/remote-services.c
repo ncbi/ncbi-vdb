@@ -684,7 +684,7 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
                 &num_read, NULL);
             if (rc != 0) {
                 const char cgi[] =
-                  "https://trace.ncbi.nlm.nih.gov/Traces/sdl/unstable/retrieve";
+                    "https://trace.ncbi.nlm.nih.gov/Traces/sdl/2/retrieve";
                 if (buffer == NULL)
                     return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
                 if (bsize < sizeof cgi)
