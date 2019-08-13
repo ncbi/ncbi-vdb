@@ -44,30 +44,26 @@
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (0)
 
-typedef struct {
+typedef struct Node {
     const char * name;
     int32_t level;
 } Node;
 
-#define THRESHOLD_NO_DEBUG 0
-#define THRESHOLD_ERROR    1
 #define THRESHOLD_INFO     2
 
-static int THRESHOLD = THRESHOLD_NO_DEBUG;
+int THRESHOLD = THRESHOLD_NO_DEBUG;
 
-typedef struct {
-    Node * nodes;
-    size_t i;
-    size_t n;
-} Stack;
-
-#define MAX_PATHS 6 /* Locations for Element (sra, vdbcache, ???) */
-typedef struct {
+#define MAX_PATHS 6 /* Locations for File (sra, vdbcache, ???) */
+typedef struct File {
     ESrvFileFormat type;
     char * cType;
     char * name;
 
     int64_t size;
+
+    const VPath * http; /* http path from path[]
+when all path[] are alternative ways to get the same acc by different protocols:
+data received by names protocol-3.0 */
 
     const VPath * path [ MAX_PATHS ];
 
@@ -78,7 +74,7 @@ typedef struct {
     rc_t cacheRc;
 
     VPath * mapping;
-} Locations;
+} File;
 
 struct Item { /* Run ob dbGaP file */
     char * acc;
@@ -86,11 +82,11 @@ struct Item { /* Run ob dbGaP file */
     char * name;
     char * itemClass;
     char * tic;
-    Locations * elm;
+    File * elm;
     uint32_t nElm;
 };
 
-typedef struct {
+typedef struct Status {
     int64_t code;
     char * msg;
 } Status;
@@ -112,33 +108,6 @@ struct Response4 { /* Response object */
     rc_t rc;
 };
 
-typedef enum {
-    eUnknown,
-    eFalse,
-    eTrue
-} EState;
-
-typedef struct Data {
-    const char * acc;
-    int64_t id; /* oldCartObjId */
-    const char * cls; /* itemClass */
-    const char * vsblt;
-    const char * name;
-    const char * fmt; /* format */
-    EState qual; /* hasOrigQuality */
-    int64_t sz; /* size */
-    const char * md5;
-    const char * sha; /* sha256 */
-    int64_t mod; /* modDate */
-    int64_t exp; /* expDate */
-    const char * srv; /* service */
-    const char * reg; /* region */
-    const char * link; /* ??????????????????????????????????????????????????? */
-    const char * tic;
-
-    int64_t code; /* status/code */
-} Data;
-
 struct KSrvRespObj {
     atomic32_t refcount;
     const Response4 * dad;
@@ -157,7 +126,7 @@ struct KSrvRespFile {
     atomic32_t refcount;
     const Response4 * dad;
     const Item * item;
-    Locations * file;
+    File * file;
 };
 
 struct KSrvRespFileIterator {
@@ -184,7 +153,7 @@ struct KSrvRespFileIterator {
 
 /********************************** Stack *********************************/
 
-static void StackPrintInput ( const char * input ) {
+void StackPrintInput ( const char * input ) {
     if (THRESHOLD > THRESHOLD_ERROR)
         DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
             ( "Parsing \"%s\"\n", input ) );
@@ -253,7 +222,7 @@ static void StackPrintStr
             ("/%s\" = \"%s\"\n", name, val));
 }
 
-static rc_t StackRelease ( Stack * self, bool failed ) {
+rc_t StackRelease ( Stack * self, bool failed ) {
     assert ( self );
 
     assert ( self -> i == 0 );
@@ -268,7 +237,7 @@ static rc_t StackRelease ( Stack * self, bool failed ) {
     return 0;
 }
 
-static rc_t StackInit ( Stack * self ) {
+rc_t StackInit ( Stack * self ) {
     size_t nmemb = 1;
 
     assert ( self );
@@ -286,7 +255,7 @@ static rc_t StackInit ( Stack * self ) {
     return 0;
 }
 
-static void StackPop ( Stack * self ) {
+void StackPop ( Stack * self ) {
     assert ( self );
 
     if ( self -> i == 0 )
@@ -329,11 +298,11 @@ rc_t StackPush ( Stack * self, const char * name, int32_t level )
 static rc_t StackPushObj ( Stack * self, const char * name )
 {   return StackPush ( self, name, -1 ); }
 
-static rc_t StackPushArr ( Stack * self, const char * name ) {
+ rc_t StackPushArr ( Stack * self, const char * name ) {
     return StackPush ( self, name, 0 );
 }
 
-static rc_t StackArrNext ( Stack * self ) {
+rc_t StackArrNext ( Stack * self ) {
     assert ( self && self -> i > 0 );
     assert ( self -> nodes [ self -> i - 1 ] . level >= 0 );
 
@@ -344,9 +313,9 @@ static rc_t StackArrNext ( Stack * self ) {
     return 0;
 }
 
-/********************************** Locations *********************************/
+/********************************** File *********************************/
 
-static rc_t LocationsRelease ( Locations * self ) {
+static rc_t FileRelease ( File * self ) {
 
 #define TYPES_OF_SCHEMAS 1
 
@@ -366,6 +335,7 @@ static rc_t LocationsRelease ( Locations * self ) {
     RELEASE ( VPath, self -> local );
     RELEASE ( VPath, self -> cache );
     RELEASE ( VPath, self -> mapping );
+    RELEASE(VPath, self->http);
     free(self->cType);
     free ( self -> name );
 
@@ -374,7 +344,7 @@ static rc_t LocationsRelease ( Locations * self ) {
     return rc;
 }
 
-static bool LocationsEmpty ( const Locations * self ) {
+static bool FileEmpty ( const File * self ) {
     int i = 0;
 
     if ( self == NULL )
@@ -389,23 +359,46 @@ static bool LocationsEmpty ( const Locations * self ) {
     return true;
 }
 
-static rc_t LocationsAddVPath ( Locations * self, const VPath * path,
-                                const VPath * mapping )
-{
+static rc_t FileSetHttp(File * self, const VPath * path) {
     rc_t rc = 0;
 
+    char scheme[6] = "";
+
+    assert( self );
+
+    if (self->http != NULL)
+        return 0;
+
+    rc = VPathReadScheme(path, scheme, sizeof scheme, NULL);
+    if (rc != 0)
+        return rc;
+
+    if (scheme[0] != 'h' ||
+        scheme[1] != 't' ||
+        scheme[2] != 't' ||
+        scheme[3] != 'p')
+    {
+        return 0;
+    }
+
+    rc = VPathAddRef(path);
+    if (rc != 0)
+        return rc;
+
+    self->http = path;
+    return rc;
+}
+
+rc_t FileAddVPath ( File * self, const VPath * path,
+                            const VPath * mapping, bool setHttp, uint64_t osize)
+{
     int i = 0;
-    char scheme [ 6 ] = "";
 
     if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
 
     if ( path == NULL )
         return 0;
-
-    rc = VPathReadScheme ( path, scheme, sizeof scheme, NULL );
-    if ( rc != 0 )
-        return rc;
 
     for ( i = 0; i < MAX_PATHS; ++ i ) {
         if ( self -> path [ i ] == NULL ) {
@@ -422,15 +415,34 @@ static rc_t LocationsAddVPath ( Locations * self, const VPath * path,
                 self->mapping = (VPath *) mapping;
             }
 
-            return 0;
+            if (setHttp) {
+                self->size = osize;
+                rc = FileSetHttp(self, path);
+            }
+            else {
+                uint64_t size = VPathGetSize(path);
+                if (size > 0) {
+                    if (self->size < 0)
+                        self->size = size;
+                    else if (self->size != size)
+                        PLOGERR(klogFatal, (klogFatal,
+                            RC(rcVFS, rcQuery, rcExecuting, rcString, rcUnexpected),
+                            "different sizes for the same file '$name$type': $s1:$s2"
+                            "name=%s,type=%s,s1=%lu,s2=%lu",
+                            self->name, self->cType, self->size, size));
+                }
+                rc = FileSetHttp(self, path);
+            }
+
+            return rc;
         }
     }
 
     return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcInsufficient );
 }
 
-static rc_t LocationsAddCache
-    ( Locations * self, const VPath * path, rc_t aRc )
+static rc_t FileAddCache
+    ( File * self, const VPath * path, rc_t aRc )
 {
     rc_t rc = 0;
 
@@ -447,8 +459,8 @@ static rc_t LocationsAddCache
     return rc;
 }
 
-static rc_t LocationsAddLocal
-    ( Locations * self, const VPath * path, rc_t aRc )
+static rc_t FileAddLocal
+    ( File * self, const VPath * path, rc_t aRc )
 {
     rc_t rc = 0;
 
@@ -476,7 +488,7 @@ static rc_t ItemRelease ( Item * self ) {
         return 0;
 
     for ( i = 0; i < self -> nElm; ++ i ) {
-        rc_t r2 = LocationsRelease ( & self -> elm [ i ] );
+        rc_t r2 = FileRelease ( & self -> elm [ i ] );
         if ( r2 != 0 && rc == 0 )
             rc = r2;
     }
@@ -499,19 +511,19 @@ static bool ItemHasLinks ( const Item * self ) {
         return false;
 
     for ( i = 0; i < self -> nElm; ++ i )
-        if ( ! LocationsEmpty ( & self -> elm [ i ] ) )
+        if ( ! FileEmpty ( & self -> elm [ i ] ) )
             return true;
 
     return false;
 }
 
-static rc_t ItemAddFormat ( Item * self, const char * cType, const Data * dad,
-                     Locations ** added )
+rc_t ItemAddFormat ( Item * self, const char * cType, const Data * dad,
+                     File ** added, bool checkSameType )
 {
     rc_t rc = 0;
     ESrvFileFormat type = eSFFInvalid;
     int idx = -1;
-    Locations * elm = NULL;
+    File * elm = NULL;
     const char * name = dad == NULL ? NULL : dad -> name;
     if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
@@ -539,9 +551,10 @@ static rc_t ItemAddFormat ( Item * self, const char * cType, const Data * dad,
             case eSFFMax     : idx = 0; n = 1; break;
             default         :  assert ( 0 );
         }
-        self -> elm = ( Locations * ) calloc ( n, sizeof * self -> elm );
+        self -> elm = ( File * ) calloc ( n, sizeof * self -> elm );
         if ( self -> elm == NULL )
             return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
+        self->elm->size = -1; /* unknown */
         self -> nElm = n;
     }
     else {
@@ -550,7 +563,7 @@ static rc_t ItemAddFormat ( Item * self, const char * cType, const Data * dad,
             case eSFFVdbcache: idx = 0; break;
             case eSFFMax     : {*/
         uint32_t i =0 ;
-        for ( i = 0; i < self -> nElm; ++ i ) {
+        for ( i = 0; checkSameType && i < self -> nElm; ++ i ) {
             assert ( ( cType && self -> elm [ i ] . cType )
                     || type == eSFFSkipped );
             if ( ( cType != NULL && self -> elm [ i ] . cType != NULL &&
@@ -570,10 +583,11 @@ static rc_t ItemAddFormat ( Item * self, const char * cType, const Data * dad,
             if ( tmp == NULL )
                 return RC ( rcVFS, rcQuery, rcExecuting,
                             rcMemory, rcExhausted );
-            self -> elm = ( Locations * ) tmp;
+            self -> elm = ( File * ) tmp;
             idx = self -> nElm ++;
             elm = & self -> elm [ idx ];
             memset ( elm, 0, sizeof * elm );
+            elm->size = -1; /* unknown */
         }
 /*              break;
             }
@@ -602,12 +616,12 @@ static rc_t ItemAddFormat ( Item * self, const char * cType, const Data * dad,
                                  rcMemory, rcExhausted);
 	}
 	else if ( type == eSFFVdbcache && dad != NULL && dad -> acc != NULL ) {
-	    uint32_t s = string_measure ( dad -> acc, NULL ) + 1 + 8 + 1;
+	    uint32_t s = string_measure ( dad -> acc, NULL ) + 1 + 4 + 8 + 1;
             elm->name = calloc ( 1, s );
             if ( elm->name == NULL )
                 return RC ( rcVFS, rcQuery, rcExecuting,
                             rcMemory, rcExhausted );
-            rc = string_printf ( elm->name, s, NULL, "%s.vdbcache", dad -> acc );
+            rc = string_printf ( elm->name, s, NULL, "%s.sra.vdbcache", dad -> acc );
 	}
     }
 
@@ -628,13 +642,13 @@ static rc_t ItemAddFormat ( Item * self, const char * cType, const Data * dad,
 }
 
 rc_t ItemAddVPath ( Item * self, const char * type,
-                    const VPath * path, const VPath * mapping )
+    const VPath * path, const VPath * mapping, bool setHttp, uint64_t osize )
 {
     rc_t rc = 0;
-    Locations * l = NULL;
-    rc = ItemAddFormat ( self, type, NULL, & l );
+    File * l = NULL;
+    rc = ItemAddFormat ( self, type, NULL, & l, true );
     if ( rc == 0 )
-        rc = LocationsAddVPath ( l, path, mapping);
+        rc = FileAddVPath ( l, path, mapping, setHttp, osize);
     return rc;
 }
 
@@ -664,7 +678,7 @@ static rc_t ItemAdd ( Item * self, const VPath * path,
                EType type, const char * cType)
 {
     int idx = -1;
-    Locations * elm = NULL;
+    File * elm = NULL;
     if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
     if ( path == NULL )
@@ -691,7 +705,7 @@ static rc_t ItemAdd ( Item * self, const VPath * path,
             case eMax     : idx = 2; n = 3; break;
             default       :  assert ( 0 );
         }
-        self -> elm = ( Locations * ) calloc ( n, sizeof * self -> elm );
+        self -> elm = ( File * ) calloc ( n, sizeof * self -> elm );
         if ( self -> elm == NULL )
             return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
         self -> nElm = n;
@@ -715,7 +729,7 @@ static rc_t ItemAdd ( Item * self, const VPath * path,
                     if ( tmp == NULL )
                         return RC ( rcVFS, rcQuery, rcExecuting,
                                     rcMemory, rcExhausted );
-                    self -> elm = ( Locations * ) tmp;
+                    self -> elm = ( File * ) tmp;
                     idx = self -> nElm ++;
                     elm = & self -> elm [ idx ];
                     memset ( elm, 0, sizeof * elm );
@@ -733,7 +747,7 @@ static rc_t ItemAdd ( Item * self, const VPath * path,
             return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
         elm -> type = type;
     }
-    return LocationsAddVCache ( & self -> elm [ idx ], path );
+    return FileAddVCache ( & self -> elm [ idx ], path );
 }
 
 static rc_t ItemAddVPath ( Item * self, const VPath * path ) {
@@ -752,9 +766,7 @@ static rc_t ItemAddVbdcache ( Item * self, const VPath * path ) {
 
 /******************************** Status **************************************/
 
-static
-rc_t StatusInit(Status * self, int64_t code, const char * msg)
-{
+rc_t StatusInit(Status * self, int64_t code, const char * msg) {
     assert(self);
 
     self->code = code;
@@ -765,6 +777,11 @@ rc_t StatusInit(Status * self, int64_t code, const char * msg)
     return 0;
 }
 
+rc_t ContainerStatusInit(Container * self, int64_t code, const char * msg) {
+    assert(self);
+    return StatusInit(&self->status, code, msg);
+}
+
 static rc_t StatusFini(Status * self) {
     assert(self);
     free(self->msg);
@@ -772,8 +789,8 @@ static rc_t StatusFini(Status * self) {
     return 0;
 }
 
-static rc_t StatusSet
-(Status * self, const KJsonObject * node, Stack * path)
+static rc_t StatusSet(
+    Status * self, const KJsonObject * node, Stack * path)
 {
     rc_t rc = 0;
 
@@ -1014,7 +1031,7 @@ rc_t ContainerAddId ( Container * self, uint32_t id, Item ** newItem )
 
 /********************************* Response4 **********************************/
 
-static rc_t Response4Fini ( Response4 * self ) {
+rc_t Response4Fini ( Response4 * self ) {
     rc_t rc = 0;
 
     uint32_t i = 0;
@@ -1136,7 +1153,7 @@ rc_t Response4AppendUrl ( Response4 * self, const char * url ) {
 
     Container * box = NULL;
     Item * item = NULL;
-    Locations * l = NULL;
+    File * l = NULL;
 
     rc = VPathMake ( & path, url );
     if ( rc != 0 )
@@ -1148,10 +1165,10 @@ rc_t Response4AppendUrl ( Response4 * self, const char * url ) {
         rc = ContainerAdd ( box, url, -1, & item, NULL );
 
     if ( rc == 0 )
-        rc = ItemAddFormat ( item, "", NULL, & l );
+        rc = ItemAddFormat ( item, "", NULL, & l, true );
 
     if ( rc == 0 )
-        rc = LocationsAddVPath ( l, path, NULL );
+        rc = FileAddVPath ( l, path, NULL, false, 0 );
 
     RELEASE ( VPath, path );
 
@@ -1190,7 +1207,7 @@ static rc_t Response4AddId
 
 /******************************** Data setters ********************************/
 
-static rc_t IntSet ( int64_t * self, const KJsonValue * node,
+rc_t IntSet ( int64_t * self, const KJsonValue * node,
               const char * name, Stack * path )
 {
     rc_t rc = 0;
@@ -1210,7 +1227,7 @@ static rc_t IntSet ( int64_t * self, const KJsonValue * node,
     return rc;
 }
 
-static rc_t BulSet ( EState * self, const KJsonValue * node,
+rc_t BulSet ( EState * self, const KJsonValue * node,
               const char * name, Stack * path )
 {
     rc_t rc = 0;
@@ -1232,7 +1249,7 @@ static rc_t BulSet ( EState * self, const KJsonValue * node,
     return 0;
 }
 
-static rc_t StrSet ( const char ** self, const KJsonValue * node,
+rc_t StrSet ( const char ** self, const KJsonValue * node,
               const char * name, Stack * path )
 {
     rc_t rc = 0;
@@ -1295,6 +1312,7 @@ static void DataClone ( const Data * self, Data * clone ) {
     clone -> reg  = self -> reg; /* region */
     clone -> link = self -> link; /* ???????????????????????????????????????? */
     clone -> tic  = self -> tic;
+    clone ->objectType = self ->objectType;
 
     clone -> code = self -> code;
 }
@@ -1344,6 +1362,9 @@ static rc_t DataUpdate ( const Data * self, Data * next,
     name = "region";
     StrSet ( & next -> reg  , KJsonObjectGetMember ( node, name ), name, path );
 
+    name = "objectType";
+    StrSet(&next->objectType, KJsonObjectGetMember(node, name), name, path);
+
     name = "service";
     StrSet ( & next -> srv  , KJsonObjectGetMember ( node, name ), name, path );
 
@@ -1372,10 +1393,10 @@ static rc_t DataGetFormat ( const Data * data, const char ** format ) {
     return 0;
 }
 
-/********************************** Locations *********************************/
+/********************************** File *********************************/
 
 /* "link" is found in JSON: add "link" to Elm (File) using Data from dad */
-static rc_t LocationsAddLink ( Locations * self, const KJsonValue * node,
+static rc_t FileAddLink ( File * self, const KJsonValue * node,
                                const Data * dad, const char ** value )
 {
     rc_t rc = 0;
@@ -1425,34 +1446,50 @@ static rc_t LocationsAddLink ( Locations * self, const KJsonValue * node,
     }
 
     if ( dad -> tic == NULL ) {
+        const String * objectType = NULL;
         rc = VPathMakeFromUrl ( & path, & url, NULL, true, & acc, dad -> sz,
-                                dad -> mod, hasMd5 ? md5 : NULL, 0 );
+            dad -> mod, hasMd5 ? md5 : NULL, 0, dad -> srv, objectType, NULL,
+            false, false, NULL );
     }
     else {
+        const String * objectType = NULL;
         String ticket;
         StringInitCString ( & ticket, dad -> tic );
         rc = VPathMakeFromUrl ( & path, & url, & ticket, true, & acc, dad -> sz,
-                                dad -> mod, hasMd5 ? md5 : NULL, 0 );
+            dad -> mod, hasMd5 ? md5 : NULL, 0, dad -> srv, objectType, NULL,
+            false, false, NULL );
     }
+
     if ( rc == 0 )
         VPathMarkHighReliability ( path, true );
+
     if ( rc != 0 ) {
         if (THRESHOLD > THRESHOLD_NO_DEBUG)
             DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
                 ( "... error: invalid 'link': '%s'\n", * value ) );
+
         return rc;
     }
 
-    rc = LocationsAddVPath ( self, path, NULL );
+    rc = FileAddVPath ( self, path, NULL, false, 0);
 
     RELEASE ( VPath, path );
 
     return rc;
 }
 
+void FileLogAddedLink(const File * self, const char * url) {
+    assert(self);
+
+    if (THRESHOLD > THRESHOLD_ERROR)
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
+        ("File '%s': added 'link' = '%s'\n",
+            self->cType, url));
+}
+
 /* We detected Item(Run)'s Elm(File)
    and keep scanning it down to find all links */
-static rc_t LocationsAddLinks ( Locations * self, const KJsonObject * node,
+static rc_t FileAddLinks ( File * self, const KJsonObject * node,
                          const Data * dad, Stack * path )
 {
     rc_t rc = 0;
@@ -1476,12 +1513,9 @@ static rc_t LocationsAddLinks ( Locations * self, const KJsonObject * node,
     value = KJsonObjectGetMember ( node, "link" );
     if ( value != NULL ) {
         const char * cValue = NULL;
-        rc = LocationsAddLink ( self, value, & data, & cValue );
+        rc = FileAddLink ( self, value, & data, & cValue );
         if ( rc == 0 ) {
-            if (THRESHOLD > THRESHOLD_ERROR)
-                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
-                    ( "File '%s': added 'link' = '%s'\n",
-                              self -> cType, cValue ) );
+            FileLogAddedLink(self, cValue);
             added = true;
         }
     }
@@ -1514,7 +1548,7 @@ static rc_t LocationsAddLinks ( Locations * self, const KJsonObject * node,
             value = KJsonArrayGetElement ( array, i );
             object = KJsonValueToObject ( value );
 
-            r2 = LocationsAddLinks ( self, object, & data, path );
+            r2 = FileAddLinks ( self, object, & data, path );
             if ( r2 != 0 && rc == 0 )
                 rc = r2;
 
@@ -1566,7 +1600,7 @@ static rc_t ItemMappingByAcc(const Item * self) {
 }
 
 static const char * ItemOrLocationGetName(const Item * item,
-                                          const Locations * file)
+                                          const File * file)
 {
     assert(item && file);
 
@@ -1574,20 +1608,35 @@ static const char * ItemOrLocationGetName(const Item * item,
 }
 
 static /* don't free returned name !!! */
-rc_t LocationsGetVdbcacheName ( const Locations * self, const char ** name )
+rc_t FileGetVdbcacheName ( const File * cself,
+    const char ** name, const KSrvRespFile * file)
 {
-    assert ( self && name );
+    rc_t rc = 0;
+
+    assert ( cself && name );
 
     * name = NULL;
 
-    if ( self -> type == eSFFVdbcache )
-        * name = self -> name;
+    if (cself->type == eSFFVdbcache) {
+        if (cself->name == NULL
+            && file != NULL && file->item != NULL && file->item->acc != NULL)
+        {
+            File * self = (File*)cself;
+            uint32_t s = string_measure(file->item->acc, NULL) + 1 + 4 + 8 + 1;
+            self->name = calloc(1, s);
+            if (self->name == NULL)
+                return RC(rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted);
+            rc = string_printf(self->name, s, NULL,
+                "%s.sra.vdbcache", file->item->acc);
+        }
+        *name = cself->name;
+    }
 
-    return 0;
+    return rc;
 }
 
 static
-rc_t LocationsInitMapping ( Locations * self, const Item * item )
+rc_t FileInitMapping ( File * self, const Item * item )
 {
     rc_t rc = 0;
 
@@ -1635,7 +1684,7 @@ rc_t LocationsInitMapping ( Locations * self, const Item * item )
 /********************************** Item **********************************/
 
 /* We are scanning Item(Run) to find all its Elm-s(Files) -sra, vdbcache, ??? */
-static rc_t ItemAddElms ( Item * self, const KJsonObject * node,
+static rc_t ItemAddElms4 ( Item * self, const KJsonObject * node,
                    const Data * dad, Stack * path )
 {
     rc_t rc = 0;
@@ -1676,7 +1725,7 @@ static rc_t ItemAddElms ( Item * self, const KJsonObject * node,
 
             value = KJsonArrayGetElement ( array, i );
             object = KJsonValueToObject ( value );
-            r2 = ItemAddElms ( self, object, & data, path );
+            r2 = ItemAddElms4 ( self, object, & data, path );
             if ( r2 != 0 && rc == 0 )
                 rc = r2;
 
@@ -1690,13 +1739,13 @@ static rc_t ItemAddElms ( Item * self, const KJsonObject * node,
         value = KJsonObjectGetMember ( node, "link" );
 
         if ( format != NULL || value != NULL ) {
-            Locations * elm = NULL;
-            rc = ItemAddFormat ( self, format, & data, & elm );
+            File * elm = NULL;
+            rc = ItemAddFormat ( self, format, & data, & elm, true );
             if ( rc == 0 && elm != NULL ) {
                 if (THRESHOLD > THRESHOLD_ERROR)
                     DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
                         ( "Adding links to a file...\n" ) );
-                rc = LocationsAddLinks ( elm, node, & data, path );
+                rc = FileAddLinks ( elm, node, & data, path );
             }
         }
 
@@ -1711,10 +1760,23 @@ static rc_t ItemAddElms ( Item * self, const KJsonObject * node,
     {
         uint32_t i = 0;
         for ( i = 0; rc == 0 && i < self -> nElm; ++ i )
-            rc = LocationsInitMapping ( & self -> elm [ i ], self );
+            rc = FileInitMapping ( & self -> elm [ i ], self );
     }
 
     return rc;
+}
+
+void ItemLogAdd(const Item * self) {
+    assert(self);
+
+    if (THRESHOLD > THRESHOLD_ERROR) {
+        if (self->acc != NULL)
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), ("Adding files to '%s' "
+                "item '%s'...\n", self->itemClass, self->acc));
+        else
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), ("Adding files to '%s' "
+                "item %u...\n", self->itemClass, self->id));
+    }
 }
 
 /********************************** Container *********************************/
@@ -1740,15 +1802,8 @@ static rc_t ContainerAddItem ( Container * self, const KJsonObject * node,
     rc = ContainerAdd ( self, acc, id, & item, & data );
 
     if ( rc == 0 && item != NULL ) {
-        if (THRESHOLD > THRESHOLD_ERROR) {
-            if (item->acc != NULL)
-                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), ("Adding files to '%s' "
-                    "item '%s'...\n", item->itemClass, item->acc));
-            else
-                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), ("Adding files to '%s' "
-                    "item %u...\n", item->itemClass, item->id));
-        }
-        rc = ItemAddElms ( item, node, & data, path );
+        ItemLogAdd(item);
+        rc = ItemAddElms4 ( item, node, & data, path );
     }
 
     if ( rc == 0 && ! ItemHasLinks ( item ) && data . code == 200 ) {
@@ -1759,9 +1814,103 @@ static rc_t ContainerAddItem ( Container * self, const KJsonObject * node,
     return rc;
 }
 
+void ContainerProcessStatus(Container * self, const Data * data) {
+    assert(self && data);
+
+    if (self->status.code != 200) {
+        KLogLevel lvl = klogInt;
+        bool logError = true;
+
+        switch (self->status.code / 100) {
+        case 0:
+            self->rc = RC(rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt);
+            break;
+
+        case 1:
+            /* informational response
+            not much we can do here */
+            self->rc = RC(rcVFS, rcQuery, rcResolving, rcError, rcUnexpected);
+            break;
+
+        case 2:
+            /* but can only handle 200 */
+            self->rc = RC(rcVFS, rcQuery, rcResolving, rcError, rcUnexpected);
+            break;
+
+        case 3:
+            /* redirection
+            currently this is being handled by our request object */
+            self->rc = RC(rcVFS, rcQuery, rcResolving, rcError, rcUnexpected);
+            break;
+
+        case 4:
+            /* client error */
+            lvl = klogErr;
+            switch (self->status.code) {
+            case 400:
+                self->rc = RC(rcVFS, rcQuery, rcResolving,
+                    rcMessage, rcInvalid);
+                break;
+            case 401:
+            case 403:
+                self->rc = RC(rcVFS, rcQuery, rcResolving,
+                    rcQuery, rcUnauthorized);
+                break;
+            case 404: /* 404|no data :
+                      If it is a real response then this assession is not found.
+                      What if it is a DB failure?
+                      Will be retried if configured to do so? */
+                self->rc = RC(rcVFS, rcQuery, rcResolving, rcName, rcNotFound);
+                break;
+            case 410:
+                self->rc = RC(rcVFS, rcQuery, rcResolving, rcName, rcNotFound);
+                break;
+            default:
+                self->rc = RC(rcVFS, rcQuery, rcResolving,
+                    rcError, rcUnexpected);
+            }
+            break;
+
+        case 5:
+            /* server error */
+            lvl = klogSys;
+            switch (self->status.code) {
+            case 503:
+                self->rc = RC(rcVFS, rcQuery, rcResolving,
+                    rcDatabase, rcNotAvailable);
+                break;
+            case 504:
+                self->rc = RC(rcVFS, rcQuery, rcResolving,
+                    rcTimeout, rcExhausted);
+                break;
+            default:
+                self->rc = RC(rcVFS, rcQuery, rcResolving,
+                    rcError, rcUnexpected);
+            }
+            break;
+
+        default:
+            self->rc = RC(rcVFS, rcQuery, rcResolving, rcError, rcUnexpected);
+        }
+
+        /* log message to user */
+        if (logError)
+            PLOGERR(lvl, (lvl, self->rc,
+                "failed to resolve accession '$(acc)' - $(msg) ( $(code) )",
+                "acc=%s,msg=%s,code=%u",
+                data->acc, self->status.msg, self->status.code));
+    }
+}
+
+bool ContainerIs200AndEmpty(const Container * self) {
+    assert(self);
+
+    return self->status.code == 200 && self->nFiles == 0;
+}
+
 /* We are inside or above of a Container
-   and are llooking for Items(runs, gdGaP files) to ddd */
-static rc_t Response4AddItems ( Response4 * self, Container * aBox,
+   and are looking for Items(runs, gdGaP files) to ddd */
+static rc_t Response4AddItems4 ( Response4 * self, Container * aBox,
     const KJsonObject * node, const Data * dad, Stack * path )
 {
     rc_t rc = 0;
@@ -1791,86 +1940,8 @@ static rc_t Response4AddItems ( Response4 * self, Container * aBox,
 
     assert ( box );
 
-    if (rc == 0 && box->status.code != 200) {
-        KLogLevel lvl = klogInt;
-        bool logError = true;
-
-        switch (box->status.code / 100) {
-        case 0:
-            box->rc = RC(rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt);
-            break;
-
-        case 1:
-            /* informational response
-            not much we can do here */
-            box->rc = RC(rcVFS, rcQuery, rcResolving, rcError, rcUnexpected);
-            break;
-
-        case 2:
-            /* but can only handle 200 */
-            box->rc = RC(rcVFS, rcQuery, rcResolving, rcError, rcUnexpected);
-            break;
-
-        case 3:
-            /* redirection
-            currently this is being handled by our request object */
-            box->rc = RC(rcVFS, rcQuery, rcResolving, rcError, rcUnexpected);
-            break;
-
-        case 4:
-            /* client error */
-            lvl = klogErr;
-            switch (box->status.code) {
-            case 400:
-                box->rc = RC(rcVFS, rcQuery, rcResolving, rcMessage, rcInvalid);
-                break;
-            case 401:
-            case 403:
-                box->rc = RC(rcVFS, rcQuery, rcResolving,
-                    rcQuery, rcUnauthorized);
-                break;
-            case 404: /* 404|no data :
-                      If it is a real response then this assession is not found.
-                      What if it is a DB failure?
-                      Will be retried if configured to do so? */
-                box->rc = RC(rcVFS, rcQuery, rcResolving, rcName, rcNotFound);
-                break;
-            case 410:
-                box->rc = RC(rcVFS, rcQuery, rcResolving, rcName, rcNotFound);
-                break;
-            default:
-                box->rc = RC(rcVFS, rcQuery, rcResolving, rcError, rcUnexpected);
-            }
-            break;
-
-        case 5:
-            /* server error */
-            lvl = klogSys;
-            switch (box->status.code) {
-            case 503:
-                box->rc = RC(rcVFS, rcQuery, rcResolving,
-                    rcDatabase, rcNotAvailable);
-                break;
-            case 504:
-                box->rc = RC(rcVFS, rcQuery, rcResolving,
-                    rcTimeout, rcExhausted);
-                break;
-            default:
-                box->rc = RC(rcVFS, rcQuery, rcResolving,
-                    rcError, rcUnexpected);
-            }
-            break;
-        default:
-            box->rc = RC(rcVFS, rcQuery, rcResolving, rcError, rcUnexpected);
-        }
-
-        /* log message to user */
-        if (logError)
-            PLOGERR(lvl, (lvl, box->rc,
-                "failed to resolve accession '$(acc)' - $(msg) ( $(code) )",
-                "acc=%s,msg=%s,code=%u",
-                data.acc, box->status.msg, box->status.code));
-    }
+    if (rc == 0)
+        ContainerProcessStatus(box, &data);
 
     value = KJsonObjectGetMember ( node, "link" );
 
@@ -1917,7 +1988,7 @@ static rc_t Response4AddItems ( Response4 * self, Container * aBox,
 
                 value = KJsonArrayGetElement ( array, i );
                 jObject = KJsonValueToObject ( value );
-                r2 = Response4AddItems ( self, box, jObject, & data, path );
+                r2 = Response4AddItems4 ( self, box, jObject, & data, path );
                 if ( r2 != 0 && rc == 0 )
                     rc = r2;
 
@@ -1929,9 +2000,7 @@ static rc_t Response4AddItems ( Response4 * self, Container * aBox,
         }
     }
 
-    if ( aBox == NULL
-      && box -> status . code == 200 && box -> nFiles == 0 )
-    {
+    if ( aBox == NULL && ContainerIs200AndEmpty(box) ) {
         rc = RC ( rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete );
         if (THRESHOLD > THRESHOLD_NO_DEBUG)
             DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_JSON ),
@@ -1942,7 +2011,7 @@ static rc_t Response4AddItems ( Response4 * self, Container * aBox,
 }
 
 /* Add response document */
-static rc_t Response4Init ( Response4 * self, const char * input ) {
+static rc_t Response4Init4 ( Response4 * self, const char * input ) {
     rc_t rc = 0;
     char error [ 99 ] = "";
     rc_t r2 = 0;
@@ -2008,7 +2077,7 @@ static rc_t Response4Init ( Response4 * self, const char * input ) {
 
                     value = KJsonArrayGetElement ( array, i );
                     object = KJsonValueToObject ( value );
-                    r2 = Response4AddItems
+                    r2 = Response4AddItems4
                         ( self, NULL, object, & data, & path );
                     if ( r2 != 0 && rc == 0 )
                         rc = r2;
@@ -2066,7 +2135,7 @@ rc_t Response4MakeEmpty ( Response4 ** self ) {
     return 0;
 }
 
-rc_t Response4Make ( Response4 ** self, const char * input ) {
+rc_t Response4Make4 ( Response4 ** self, const char * input ) {
     rc_t rc = 0;
 
     Response4 * r = NULL;
@@ -2077,7 +2146,7 @@ rc_t Response4Make ( Response4 ** self, const char * input ) {
     if ( rc != 0 )
         return rc;
 
-    rc = Response4Init ( r, input );
+    rc = Response4Init4 ( r, input );
     if ( rc != 0 )
         free ( r );
     else
@@ -2095,7 +2164,7 @@ rc_t Response4Make ( Response4 ** self, const char * input ) {
 
     assert ( self );
 
-    rc = Response4Init ( & r -> r, input );
+    rc = Response4Init4 ( & r -> r, input );
     if ( rc != 0 )
         free ( r );
     else {
@@ -2434,6 +2503,14 @@ rc_t KSrvRespFileGetClass(const KSrvRespFile * self, const char ** itemClass) {
     return 0;
 }
 
+rc_t KSrvRespFileGetType(const KSrvRespFile * self, const char ** type) {
+    assert(self && self->item && type);
+
+    *type = self->file->cType;
+
+    return 0;
+}
+
 rc_t KSrvRespFileGetSize(const KSrvRespFile * self, uint64_t *size) {
     assert(self && self->file && size);
 
@@ -2474,13 +2551,22 @@ rc_t KSrvRespFileGetAccOrName ( const KSrvRespFile * self, const char ** out,
                                                            const char ** tic)
 {
     rc_t rc = 0;
-    assert ( self && self -> item && tic );
+    const char *dummy = NULL;
+    if (tic == NULL)
+        tic = &dummy;
+    *tic = *out = NULL;
+    if (self == NULL || self->item == NULL)
+        return 0;
     * tic = self -> item -> tic;
-    rc = LocationsGetVdbcacheName ( self -> file, out );
+    rc = FileGetVdbcacheName ( self -> file, out, self );
     if ( * out != NULL )
         return rc;
     else
         return KSrvRespFileGetAccNoTic ( self, out );
+}
+
+rc_t KSrvRespFileGetName(const KSrvRespFile * self, const char ** name) {
+    return KSrvRespFileGetAccOrName(self, name, NULL);
 }
 
 rc_t KSrvRespFileGetId ( const KSrvRespFile * self, uint64_t * id,
@@ -2494,6 +2580,23 @@ rc_t KSrvRespFileGetId ( const KSrvRespFile * self, uint64_t * id,
     return 0;
 }
                                                            
+rc_t KSrvRespFileGetHttp ( const KSrvRespFile * self,
+                            const VPath ** path )
+{
+    rc_t rc = 0;
+
+    assert ( self && self -> file && path );
+
+    * path = NULL;
+
+    rc = VPathAddRef ( self -> file -> http );
+
+    if ( rc == 0 )
+        * path = self -> file -> http;
+
+    return rc;
+}
+
 rc_t KSrvRespFileGetCache ( const KSrvRespFile * self,
                             const VPath ** path )
 {
@@ -2551,11 +2654,11 @@ rc_t KSrvRespFileAddLocalAndCache ( KSrvRespFile * self,
         return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
 
     aRc = VPathSetGetCache ( localAndCache, & path );
-    rc = LocationsAddCache ( self -> file, path, aRc );
+    rc = FileAddCache ( self -> file, path, aRc );
     RELEASE ( VPath, path );
 
     aRc = VPathSetGetLocal ( localAndCache, & path );
-    r2 = LocationsAddLocal ( self -> file, path, aRc );
+    r2 = FileAddLocal ( self -> file, path, aRc );
     if ( r2 != 0 && rc == 0 )
         rc = r2;
     RELEASE ( VPath, path );

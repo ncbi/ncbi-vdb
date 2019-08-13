@@ -27,6 +27,8 @@
 #ifndef _h_resolver_priv_
 #define _h_resolver_priv_
 
+#include <klib/text.h> /* String */
+
 #ifndef _h_vfs_resolver_
 #include <vfs/resolver.h>
 #endif
@@ -170,11 +172,14 @@ typedef enum
 {
     algCGI,
     algFlat,
+    algAD,    /* Accession as Directory */
+    algSRAAD,    /* Accession as Directory for SRA */
     algSRAFlat,
     algSRA1024,
     algSRA1000,
     algFUSE1000,
     algREFSEQ,
+    algREFSEQAD, /* Accession as Directory for Refseq*/
     algWGS2,                /* ordered to be of higher precedence than algWGS */
     algWGS,
     algWGSFlat,
@@ -252,7 +257,7 @@ void KConfigReadRemoteProtocols ( struct KConfig const * self, VRemoteProtocols 
 
 VResolverAppID get_accession_app(const String * accession, bool refseq_ctx,
     struct VResolverAccToken *tok, bool *legacy_wgs_refseq,
-    bool resolveAllAccToCache, bool * forDirAdjusted);
+    bool resolveAllAccToCache, bool * forDirAdjusted, const String * parentAcc);
 
 #ifdef __cplusplus
 }

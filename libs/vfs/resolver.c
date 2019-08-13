@@ -28,10 +28,6 @@
 
 #include <klib/time.h> /* KTime */
 
-#include "services-priv.h"
-#include "path-priv.h"
-#include "resolver-priv.h"
-
 #include <vfs/manager.h>
 #include <vfs/path.h>
 #include <vfs/resolver-priv.h> /* VResolverQueryWithDir */
@@ -50,19 +46,26 @@
 #undef ERR
 #endif
 
-#include <klib/text.h>
-#include <klib/vector.h>
-#include <klib/refcount.h>
-#include <klib/namelist.h>
-#include <klib/printf.h>
 #include <klib/data-buffer.h>
 #include <klib/debug.h>
 #include <klib/log.h>
+#include <klib/namelist.h>
+#include <klib/printf.h>
 #include <klib/rc.h>
+#include <klib/refcount.h>
+#include <klib/strings.h> /* ENV_MAGIC_REMOTE */
+#include <klib/text.h>
+#include <klib/vector.h>
+
+#include "services-priv.h"
+#include "path-priv.h"
+#include "resolver-priv.h"
 
 #include <sysalloc.h>
 
 #include <vfs/path-priv.h>
+
+#include "../kns/mgr-priv.h" /* KNSManager */
 
 #include <stdlib.h>
 #include <string.h>
@@ -140,6 +143,7 @@ struct VResolverAccToken
     String ext2;
     String suffix;
     bool   vdbcache;
+    String accOfParentDb;  /* accession of parent DB for refseqs */
 };
 
 static
@@ -195,6 +199,8 @@ struct VResolverAlg
 #if 0
     VRemoteProtocols protocols;
 #endif
+
+    uint32_t version; /* 3.0 or SDL ... */
 };
 
 
@@ -288,11 +294,26 @@ rc_t VResolverAlgMakeRemotePath ( const VResolverAlg *self,
  */
 static
 rc_t VResolverAlgMakeLocalPath ( const VResolverAlg *self,
-    const String *vol, const String *exp, const VPath ** path )
+    const String *vol, const String *exp, const VPath ** path,
+    const KDirectory * wd )
 {
     if ( self -> root == NULL )
         return VPathMakeFmt ( ( VPath** ) path, "%S/%S", vol, exp );
-    return VPathMakeFmt ( ( VPath** ) path, "%S/%S/%S", self -> root, vol, exp );
+
+    if (wd == NULL)
+        return VPathMakeFmt ( ( VPath** ) path, "%S/%S/%S",
+            self -> root, vol, exp );
+    else {
+        char resolved [ PATH_MAX ] = "";
+        rc_t rc = KDirectoryResolvePath (wd, true, resolved, sizeof resolved,
+            "%.*s/%.*s/%.*s", (int)self->root->size, self->root->addr,
+            (int)vol->size, vol->addr, (int)exp->size, exp->addr );
+        if ( rc != 0 )
+            return VPathMakeFmt ( ( VPath** ) path, "%S/%S/%S",
+                self -> root, vol, exp );
+        else
+            return VPathMakeFmt ( ( VPath** ) path, "%s", resolved );
+    }
 }
 
 static rc_t VResolverMakeAbsPath ( const String * dir, const String * exp,
@@ -331,34 +352,56 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
     case algFlat:
         rc = string_printf ( expanded, bsize, size, "%S", & tok -> acc );
         break;
+    case algAD:
+        rc = string_printf ( expanded, bsize, size,
+            "%S%S/%S%S.%S", & tok -> alpha, & tok -> digits,
+            & tok -> alpha, & tok -> digits,
+            & tok -> ext1 );
+        break;
+    case algSRAAD:
+        rc = string_printf ( expanded, bsize, size,
+            "%S%S/%S%S.%s", & tok -> alpha, & tok -> digits,
+            & tok -> alpha, & tok -> digits,
+            tok -> vdbcache ? "sra.vdbcache" : "sra" );
+        break;
     case algSRAFlat:
         rc = string_printf ( expanded, bsize, size,
-            "%S%S.%s", & tok -> alpha, & tok -> digits, tok -> vdbcache ? "vdbcache" : "sra" );
+            "%S%S.%s", & tok -> alpha, & tok -> digits, tok -> vdbcache ? "sra.vdbcache" : "sra" );
         break;
     case algSRA1024:
         num = ( uint32_t ) strtoul ( tok -> digits . addr, NULL, 10 );
         rc = string_printf ( expanded, bsize, size,
             "%S/%06u/%S%S.%s", & tok -> alpha, num >> 10, & tok -> alpha, & tok -> digits,
-                               tok -> vdbcache ? "vdbcache" : "sra" );
+                               tok -> vdbcache ? "sra.vdbcache" : "sra" );
         break;
     case algSRA1000:
         num = ( uint32_t ) ( tok -> alpha . size + tok -> digits . size - 3 );
         rc = string_printf ( expanded, bsize, size,
             "%S/%.*S/%S%S.%s", & tok -> alpha, num, & tok -> acc, & tok -> alpha, & tok -> digits,
-                               tok -> vdbcache ? "vdbcache" : "sra" );
+                               tok -> vdbcache ? "sra.vdbcache" : "sra" );
         break;
     case algFUSE1000:
         num = ( uint32_t ) ( tok -> alpha . size + tok -> digits . size - 3 );
         rc = string_printf ( expanded, bsize, size,
             "%S/%.*S/%S%S/%S%S.%s", & tok -> alpha, num, & tok -> acc, 
             & tok -> alpha, & tok -> digits, & tok -> alpha, & tok -> digits,
-            tok -> vdbcache ? "vdbcache" : "sra" );
+            tok -> vdbcache ? "sra.vdbcache" : "sra" );
         break;
     case algREFSEQ:
         if ( ! legacy_wgs_refseq )
             rc = string_printf ( expanded, bsize, size, "%S", & tok -> acc );
         else
             rc = string_printf ( expanded, bsize, size, "%S%.2S", & tok -> alpha, & tok -> digits );
+        break;
+    case algREFSEQAD:
+        if (!legacy_wgs_refseq)
+            rc = string_printf(expanded, bsize, size,
+                "%S%s%S", &tok->accOfParentDb,
+                tok->accOfParentDb.size == 0 ? "" : "/",
+                &tok->acc);
+        else
+            rc = string_printf(expanded, bsize, size,
+                "%S/%S%.2S", &tok->accOfParentDb, &tok->alpha, &tok->digits);
         break;
     case algWGSFlat:
         num = ( uint32_t ) ( tok -> alpha . size + 2 );
@@ -481,7 +524,7 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
 static
 rc_t VResolverAlgLocalResolve ( const VResolverAlg *self,
     const KDirectory *wd, const VResolverAccToken *tok, const VPath ** path,
-    bool legacy_wgs_refseq, bool for_cache, const char * dir )
+    bool legacy_wgs_refseq, bool for_cache, const char * dir, bool ad )
 {
     KPathType kpt;
     uint32_t i, count;
@@ -500,6 +543,8 @@ rc_t VResolverAlgLocalResolve ( const VResolverAlg *self,
     /* should never have a problem here... */
     if ( rc != 0 )
         return rc;
+
+    assert(tok);
 
     /* if this is to detect a cache file, append extension */
     if ( for_cache )
@@ -558,7 +603,8 @@ rc_t VResolverAlgLocalResolve ( const VResolverAlg *self,
             case kptDir:
                 if ( legacy_wgs_refseq )
                     return VResolverAlgMakeLocalWGSRefseqURI ( self, vol, & exp, & tok -> acc, path );
-                return VResolverAlgMakeLocalPath ( self, vol, & exp, path );
+                return VResolverAlgMakeLocalPath ( self, vol, & exp, path,
+                    NULL );
             default:
                 break;
             }
@@ -579,7 +625,15 @@ rc_t VResolverAlgLocalResolve ( const VResolverAlg *self,
             case kptDir:
                 if ( legacy_wgs_refseq )
                     return VResolverAlgMakeLocalWGSRefseqURI ( self, vol, & exp, & tok -> acc, path );
-                return VResolverAlgMakeLocalPath ( self, vol, & exp, path );
+                rc = VResolverAlgMakeLocalPath ( self, vol, & exp, path,
+                    ad ? wd : NULL );
+                if (rc == 0) {
+                    assert(path);
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
+                        "VResolverAlgLocalResolve: '%S' found in '%S'\n",
+                        &tok->acc, &(*path)->path));
+                }
+                return rc;
             default:
                 break;
             }
@@ -1200,7 +1254,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
                     id = & obj_id;
                 rc = VPathMakeFromUrl ( ( VPath** ) path, & url,
                     & download_ticket, true, id, osize, date,
-                    has_md5 ? ud5 : NULL, 0 );
+                    has_md5 ? ud5 : NULL, 0, NULL, NULL, NULL, false, false, NULL );
             }
             /*else
             {
@@ -1660,20 +1714,42 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
     rc_t rc = 0;
     const char * ticket = NULL;
 
+    char vers[512] = "";
+
     assert ( self && self -> root && acc );
     if ( self -> ticket != NULL ) {
         ticket = self -> ticket -> addr;
     }
 
-    rc = KService1NameWithVersion ( kns, self -> root -> addr,
-        acc -> addr, acc -> len, ticket, protocols, path, mapping,
-        legacy_wgs_refseq, version, self -> protected );
+    if (self->version != 0) { /* Use alg's version after we start using SDL.. */
+        bool version1 = false;
+        if (version != NULL) {
+            if (version[0] == '1' && version[1] == '.')
+                version1 = true;
+            else if (version[0] == '#' &&
+                version[1] == '1' && version[2] == '.')
+            {
+                version1 = true;
+            }
+        }
+        /* ... but use provided version when asked for 1.x
+           (used to query dbGaP OIDs) */
+        if (!version1) {
+            rc = string_printf(vers, sizeof vers, NULL, "%V", self->version);
+            if (rc == 0)
+                version = vers;
+        }
+    }
 
-    assert(*path != NULL || rc != 0);
+    if (rc == 0) {
+        rc = KService1NameWithVersion(kns, self->root->addr,
+            acc->addr, acc->len, ticket, protocols, path, mapping,
+            legacy_wgs_refseq, version, self -> protected);
 
-    if (rc == 0 && *path == NULL) 
-    {
-        rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcNull);
+        assert(*path != NULL || rc != 0);
+
+        if (rc == 0 && *path == NULL)
+            rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcNull);
     }
 
     return rc;
@@ -1840,7 +1916,7 @@ rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
             }
             else
             {
-                rc = KNSManagerMakeReliableHttpFile ( kns, opt_file_rtn, NULL, 0x01010000, "%S", s );
+                rc = KNSManagerMakeReliableHttpFile ( kns, opt_file_rtn, NULL, 0x01010000, true, false, false, "%S", s );
                 if (rc != 0)
                 {
                     PLOGERR(klogInt, (klogInt, rc,
@@ -1951,7 +2027,7 @@ rc_t VResolverAlgCacheResolve ( const VResolverAlg *self,
 {
     /* see if the cache file already exists */
     const bool for_cache = true;
-    rc_t rc = VResolverAlgLocalResolve ( self, wd, tok, path, legacy_wgs_refseq, for_cache, NULL );
+    rc_t rc = VResolverAlgLocalResolve ( self, wd, tok, path, legacy_wgs_refseq, for_cache, NULL, false );
     if ( rc == 0 )
         return 0;
 
@@ -1987,7 +2063,8 @@ rc_t VResolverAlgCacheFile ( const VResolverAlg *self,
  */
 static
 rc_t VResolverAlgMakeCachePath ( const VResolverAlg *self,
-    const VResolverAccToken *tok, const VPath ** path, bool legacy_wgs_refseq )
+    const VResolverAccToken *tok, const VPath ** path, bool legacy_wgs_refseq,
+    const KDirectory * wd )
 {
     uint32_t i, count;
 
@@ -2015,7 +2092,7 @@ rc_t VResolverAlgMakeCachePath ( const VResolverAlg *self,
     for ( i = 0; i < count; ++ i )
     {
         vol = VectorGet ( & self -> vols, i );
-        return VResolverAlgMakeLocalPath ( self, vol, & exp, path );
+        return VResolverAlgMakeLocalPath ( self, vol, & exp, path, wd );
     }
     
     return RC ( rcVFS, rcResolver, rcResolving, rcPath, rcNotFound );
@@ -2059,6 +2136,7 @@ struct VResolver
     /* volume algorithms - stored as VResolverAlg* */
     Vector local;
     Vector remote;
+    Vector ad; /* vector having 1 dummy alg to implement AccessionAsDirectory */
 
     /* working directory for testing local paths */
     const KDirectory *wd;
@@ -2320,6 +2398,11 @@ uint32_t get_accession_code ( const String * accession, VResolverAccToken *tok )
         tok -> vdbcache = true;
         return code;
     }
+    else if (string_cmp(acc, size, "sra.vdbcache", 12, size + 8) == 0)
+    {   /* vdbcache uses the same code as its accession */
+        tok->vdbcache = true;
+        return code;
+    }
     else
     {
         /* scan numeric extension */
@@ -2395,7 +2478,7 @@ uint32_t get_accession_code ( const String * accession, VResolverAccToken *tok )
  */
 VResolverAppID get_accession_app ( const String * accession, bool refseq_ctx,
     VResolverAccToken *tok, bool *legacy_wgs_refseq,
-    bool resolveAllAccToCache, bool * forDirAdjusted )
+    bool resolveAllAccToCache, bool * forDirAdjusted, const String * parentAcc )
 {
     VResolverAppID app;
     uint32_t code = 0;
@@ -2409,6 +2492,8 @@ VResolverAppID get_accession_app ( const String * accession, bool refseq_ctx,
 
     if (tok == NULL)
         tok = &tummy;
+
+    memset(tok, 0, sizeof *tok);
 
     code = get_accession_code(accession, tok);
 
@@ -2546,6 +2631,10 @@ VResolverAppID get_accession_app ( const String * accession, bool refseq_ctx,
         }
     }
 
+    if (app == appREFSEQ && parentAcc != NULL)
+        StringInit(
+            &tok->accOfParentDb, parentAcc->addr, parentAcc->size, parentAcc->len);
+
     return app;
 }
 
@@ -2597,6 +2686,140 @@ rc_t VResolverFuseMountedResolve ( const VResolver * self,
     return rc;
 }
 
+typedef enum {
+    eCheckExistFalse,
+    eCheckExistTrue,
+} ECheckExist;
+
+typedef enum {
+    eCheckFilePathFalse,
+    eCheckFilePathTrue,
+} ECheckFilePath;
+
+typedef enum {
+    eCheckUrlFalse,
+    eCheckUrlTrue,
+} ECheckUrl;
+
+static rc_t VResolverMagicResolve(const VResolver * self,
+    const VPath ** path, VResolverAppID app, const char * name,
+    ECheckExist checkExist,
+    ECheckFilePath checkPath,
+    ECheckUrl checkUrl)
+{
+    rc_t rc = 0;
+
+    KPathType kpt = kptNotFound;
+
+    /* resolver is not confused by shell variables
+        when retrieving reference objects */
+    if (app == appREFSEQ) {
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+            ("'%s' magic ignored for refseq\n", name));
+        return 0;
+    }
+
+    const char * magic = getenv(name);
+    if (magic == NULL) {
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("'%s' magic not set\n", name));
+        return 0;
+    }
+
+    /* variable set to empty: VResilverQuery returns not found */
+    if (magic[0] == '\0') {
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("'%s' magic empty\n", name));
+        return RC(rcVFS, rcResolver, rcResolving, rcName, rcNotFound);
+    }
+
+    if (checkExist == eCheckExistTrue) {
+        assert(self->wd);
+        kpt = KDirectoryPathType(self->wd, magic) & ~kptAlias;
+        if (kpt != kptFile && kpt != kptDir) {
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                "'%s' magic '%s' not found\n", name, magic));
+            return RC(rcVFS, rcResolver, rcResolving, rcName, rcNotFound);
+        }
+    }
+
+    rc = LegacyVPathMakeFmt((VPath**)path, "%s", magic);
+
+    if (rc == 0) {
+        assert(path);
+
+        assert(checkPath == eCheckFilePathTrue || checkUrl == eCheckUrlTrue);
+
+        if (checkPath == eCheckFilePathTrue) {
+            if ((*path)->from_uri)
+            {
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                    "'%s' magic '%s' is URL\n", name, magic));
+                rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcInvalid);
+            }
+            else if ((*path)->path_type != vpFullPath
+                  && (*path)->path_type != vpRelPath
+                  && (*path)->path_type != vpUNCPath)
+            {
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                    "'%s' magic '%s' is not path\n", name, magic));
+                rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcInvalid);
+            }
+        }
+
+        if (checkUrl == eCheckUrlTrue) {
+            if (!(*path)->from_uri)
+            {
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                    "'%s' magic '%s' is not URL\n", name, magic));
+                rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcInvalid);
+            }
+            else if ((*path)->scheme_type != vpuri_http
+                  && (*path)->scheme_type != vpuri_https)
+            {
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                    "'%s' magic '%s' is not HTTP[S] URL\n", name, magic));
+                rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcInvalid);
+            }
+        }
+
+        if (rc != 0) {
+            VPathRelease(*path);
+            *path = NULL;
+            return rc;
+        }
+        else
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                "'%s' magic '%s' found\n", name, magic));
+    }
+
+    else
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+            "'%s' magic '%s' cannot be converted to VPath: %R\n",
+            name, magic, rc));
+
+    return rc;
+}
+
+static rc_t VResolverCacheMagicResolve(
+    const VResolver * self, const VPath ** path, VResolverAppID app)
+{
+    return VResolverMagicResolve(self, path, app,
+        ENV_MAGIC_CACHE, eCheckExistFalse, eCheckFilePathTrue, eCheckUrlFalse);
+}
+
+static rc_t VResolverLocalMagicResolve(
+    const VResolver * self, const VPath ** path, VResolverAppID app)
+{
+    return VResolverMagicResolve(self, path, app,
+        ENV_MAGIC_LOCAL, eCheckExistTrue, eCheckFilePathTrue, eCheckUrlFalse);
+}
+
+static rc_t VResolverRemoteMagicResolve(
+    const VResolver * self, const VPath ** path, VResolverAppID app)
+{
+    return VResolverMagicResolve(self, path, app,
+        ENV_MAGIC_REMOTE, eCheckExistFalse, eCheckFilePathFalse, eCheckUrlTrue);
+}
+
 /* LocalResolve
  *  resolve an accession into a VPath or not found
  *
@@ -2606,27 +2829,50 @@ rc_t VResolverFuseMountedResolve ( const VResolver * self,
  */
 static
 rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
-    const VPath ** path, bool refseq_ctx, const char * dir )
+    const VPath ** path, bool refseq_ctx, const char * dir, const String * parentAcc )
 {
+    rc_t rc = 0;
+
     uint32_t i, count;
 
     VResolverAccToken tok;
     bool legacy_wgs_refseq = false;
+
     VResolverAppID app;
 
     bool resolveAllAccToCache = true;
     if ( dir != NULL )
         resolveAllAccToCache = false;
 
+    assert(path);
+
     if ( VResolverFuseMountedResolve ( self, accession, path ) == 0 ) {
         return 0;
     }
 
     app = get_accession_app ( accession, refseq_ctx, & tok,
-                              & legacy_wgs_refseq, resolveAllAccToCache, NULL );
+                        & legacy_wgs_refseq, resolveAllAccToCache, NULL, parentAcc );
+
+    rc = VResolverLocalMagicResolve(self, path, app);
+    if (rc != 0 || *path != NULL)
+        return rc;
+
+    /* check AD */
+    count = VectorLength ( & self -> ad );
+    for ( i = 0; i < count; ++ i )
+    {
+        const VResolverAlg *alg = VectorGet ( & self ->ad, i );
+        if ( alg -> app_id == app )
+        {
+            const bool for_cache = false;
+            rc_t rc = VResolverAlgLocalResolve ( alg, self -> wd,
+                & tok, path, legacy_wgs_refseq, for_cache, dir, true );
+            if ( rc == 0 )
+                return 0;
+        }
+    }
 
     /* search all local volumes by app and accession algorithm expansion */
-
 
     count = VectorLength ( & self -> local );
     for ( i = 0; i < count; ++ i )
@@ -2636,7 +2882,7 @@ rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
         {
             const bool for_cache = false;
             rc_t rc = VResolverAlgLocalResolve ( alg, self -> wd,
-                & tok, path, legacy_wgs_refseq, for_cache, dir );
+                & tok, path, legacy_wgs_refseq, for_cache, dir, false );
             if ( rc == 0 )
                 return 0;
         }
@@ -2883,12 +3129,16 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
     /* subject the accession to pattern recognition */
     if ( ! is_oid )
         app = get_accession_app ( accession, refseq_ctx, & tok,
-                                  & legacy_wgs_refseq, true, NULL );
+                                  & legacy_wgs_refseq, true, NULL, NULL );
     else
     {
         app = appAny;
         VResolverAccTokenInitFromOID ( & tok, accession );
     }
+
+    rc = VResolverRemoteMagicResolve(self, path, app);
+    if (rc != 0 || *path != NULL)
+        return rc;
 
     assert(self);
 
@@ -2928,17 +3178,58 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
     }
     else
     {
+        const VResolverAlg * alg4 = NULL;
+        ver_t v = InitVersion(version);
         for ( i = 0; i < count; ++ i )
         {
             const VResolverAlg *alg = VectorGet ( & self -> remote, i );
+            assert(alg);
             if ( ( alg -> app_id == app || alg -> app_id == wildCard ) && ! alg -> disabled )
             {
-                try_rc = VResolverAlgRemoteResolve ( alg, self -> kns, protocols,
-                    & tok, path, mapping, opt_file_rtn, legacy_wgs_refseq, version );
-                if ( try_rc == 0 )
+                bool ok = false;
+                if (v == 0);
+                else if (v <= VERSION_4_0) {
+                    if (alg->version == VERSION_3_0 ||
+                        alg->version == VERSION_4_0)
+                    {
+                        ok = true;
+                    }
+                }
+                else if (v == alg->version)
+                    ok = true;
+                if (ok) {
+                    try_rc = VResolverAlgRemoteResolve(alg, self->kns,
+                        protocols, &tok, path, mapping, opt_file_rtn,
+                        legacy_wgs_refseq, version);
+                    if (try_rc == 0)
+                        return 0;
+                    if (rc == 0)
+                        rc = try_rc;
+                }
+                else if (alg->version == VERSION_3_0 ||
+                    alg->version == VERSION_4_0)
+                {
+                    alg4 = alg;
+                }
+            }
+        }
+        if (rc == 0 && count > 0) {
+            if (v > VERSION_4_0 && alg4 != NULL) {
+                /* fallback to old names service */
+                try_rc = VResolverAlgRemoteResolve(alg4, self->kns,
+                    protocols, &tok, path, mapping, opt_file_rtn,
+                    legacy_wgs_refseq, "4");
+                if (try_rc == 0)
                     return 0;
-                if ( rc == 0 )
+                if (rc == 0)
                     rc = try_rc;
+            }
+            else {
+                rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcNotFound);
+                PLOGERR(klogErr, (klogErr, rc,
+                    "cannot find names service version $(vers). "
+                    "Hint: run \"vdb-config --restore-defaults\"",
+                    "vers=%V", v));
             }
         }
     }
@@ -2984,6 +3275,8 @@ VResolverAppID VResolverExtractAccessionApp ( const VResolver *self,
 {
     bool refseq_ctx = has_fragment;
 
+    assert(query);
+
     * accession = query -> path;
 
     if ( query -> fragment . size > 1 )
@@ -2992,7 +3285,7 @@ VResolverAppID VResolverExtractAccessionApp ( const VResolver *self,
     /* should have something looking like an accession.
        determine its app to see if we were successful */
     return get_accession_app ( accession, refseq_ctx, tok, legacy_wgs_refseq,
-                               resolveAllAccToCache, forDirAdjusted );
+                        resolveAllAccToCache, forDirAdjusted, query->accOfParentDb);
 }
 
 static
@@ -3011,8 +3304,12 @@ rc_t VPathExtractAcc ( const VPath * url, VPath ** acc )
     String accession;
 
     /* locate last path or accession guy */
-    const char * start = string_rchr ( url -> path . addr, url -> path . size, '/' );
-    const char * sep, * end = url -> path . addr + url -> path . size;
+    const char * start, * sep, * end;
+
+    assert(url);
+
+    start = string_rchr ( url -> path . addr, url -> path . size, '/' );
+    end = url -> path . addr + url -> path . size;
     if ( start ++ == NULL )
         start = url -> path . addr;
 
@@ -3054,6 +3351,8 @@ rc_t VPathExtractAcc ( const VPath * url, VPath ** acc )
         /* fix up case where we said accession but it was really a name */
         if ( ap -> acc_code == 0 || ap -> path_type != vpAccession )
             CONST_STRING ( & ap -> scheme, "ncbi-file" );
+
+        rc = VPathSetAccOfParentDb(ap, url->accOfParentDb);
     }
 
     return rc;
@@ -3092,6 +3391,12 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
 
     VResolverEnableState cache_state = atomic32_read ( & enable_cache );
 
+    bool ad = false;
+
+    rc = VResolverCacheMagicResolve(self, cache, app);
+    if (rc != 0 || *cache != NULL)
+        return rc;
+
     if ( dir != NULL )
         forDirAdjusted = true;
 
@@ -3100,32 +3405,71 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
     {
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
                ("VResolverCacheResolve: app = %d\n", app));
-        for ( i = 0; i < count; ++ i )
-        {
-            alg = VectorGet ( & self -> local, i );
+        assert(self->kns);
+        if (self->kns->resolveToCache) {
+            for (i = 0; i < count; ++i)
+            {
+                alg = VectorGet(&self->local, i);
 
-            if ( alg -> cache_capable && alg -> protected == protected &&
-                 ( alg -> app_id == app || alg -> app_id == appAny ) )
+                if (alg->cache_capable && alg -> protected == protected &&
+                    (alg->app_id == app || alg->app_id == appAny))
+                {
+                    /* try to find an existing cache file
+                       NB - race condition exists unless
+                       we do something with lock files */
+                    if (forDirAdjusted)
+                        rc = VResolverAlgCacheResolveDir(alg, self->wd, &tok,
+                            cache, legacy_wgs_refseq, dir, resolvedToDir);
+                    else
+                        rc = VResolverAlgCacheResolve(alg, self->wd, &tok,
+                            cache, legacy_wgs_refseq);
+                    if (rc == 0)
+                        return 0;
+
+                    /* just remember the first as best for now */
+                    if (alg->app_id == app) {
+                        if (best == NULL)
+                            best = alg;
+                    }
+                    else {
+                        assert(alg->app_id == appAny);
+                        if (better == NULL)
+                            better = alg;
+                    }
+                }
+            }
+        }
+
+        /* check AD */
+        count = self->kns->enabledResolveToAd ? VectorLength(&self->ad) : 0;
+        for (i = 0; i < count; ++i)
+        {
+            const VResolverAlg *alg = VectorGet(&self->ad, i);
+            if (alg->cache_capable && alg -> protected == protected &&
+                (alg->app_id == app || alg->app_id == appAny))
             {
                 /* try to find an existing cache file
                    NB - race condition exists unless
                    we do something with lock files */
-                if ( forDirAdjusted )
-                    rc = VResolverAlgCacheResolveDir ( alg, self -> wd, & tok,
-                        cache, legacy_wgs_refseq, dir, resolvedToDir );
+                if (forDirAdjusted)
+                    rc = VResolverAlgCacheResolveDir(alg, self->wd, &tok,
+                        cache, legacy_wgs_refseq, dir, resolvedToDir);
                 else
-                    rc = VResolverAlgCacheResolve ( alg, self -> wd, & tok,
-                        cache, legacy_wgs_refseq );
-                if ( rc == 0 )
+                    rc = VResolverAlgCacheResolve(alg, self->wd, &tok,
+                        cache, legacy_wgs_refseq);
+                if (rc == 0)
                     return 0;
 
                 /* just remember the first as best for now */
-                if ( alg -> app_id == app ) {
-                    if ( best == NULL )
+                if (alg->app_id == app) {
+                    if (best == NULL) {
                         best = alg;
-                } else {
-                    assert ( alg -> app_id == appAny );
-                    if ( better == NULL )
+                        ad = true;
+                    }
+                }
+                else {
+                    assert(alg->app_id == appAny);
+                    if (better == NULL)
                         better = alg;
                 }
             }
@@ -3133,28 +3477,78 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
     }
     else
     {
-        for ( i = 0; i < count; ++ i )
-        {
-            alg = VectorGet ( & self -> local, i );
+        /* we use user cache when it is allowed by kns manager */
+        bool useCache = self->kns->resolveToCache;
 
-            if ( alg -> cache_enabled && alg -> protected == protected &&
-                 ( alg -> app_id == app || alg -> app_id == appAny ) )
+        /* check AD */
+        bool useAd = false;
+        if (self->kns->enabledResolveToAd) /* resolving to AD is enabled */
+            useAd = true;                  /*     in KnsMgr [by prefetch]*/
+        if (dir != NULL)    /* out-dir is provided */
+            useAd = true;   /* [when prefetch downloads to out-dir]
+                                - use AD, too */
+
+        /* we don't use user cache but AD
+           when we can use AD and: */
+        if (useAd && dir != NULL && /* downloading to dir */
+            (app == appSRA ||      /* and downloading SRA */
+                app == appFILE))   /*                 or FILE */
+            useCache = false;
+
+        assert(self->kns);
+
+        if (useCache) {
+            for (i = 0; i < count; ++i)
+            {
+                alg = VectorGet(&self->local, i);
+
+                if (alg->cache_enabled && alg -> protected == protected &&
+                    (alg->app_id == app || alg->app_id == appAny))
+                {
+                    /* try to find an existing cache file
+                       NB - race condition exists unless
+                       we do something with lock files */
+                    if (forDirAdjusted)
+                        rc = VResolverAlgCacheResolveDir(alg, self->wd, &tok,
+                            cache, legacy_wgs_refseq, dir, resolvedToDir);
+                    else
+                        rc = VResolverAlgCacheResolve(alg, self->wd, &tok,
+                            cache, legacy_wgs_refseq);
+                    if (rc == 0)
+                        return 0;
+
+                    /* just remember the first as best for now */
+                    if (best == NULL)
+                        best = alg;
+                }
+            }
+        }
+
+        /* use AD when allowed */
+        count = useAd ? VectorLength(&self->ad) : 0;
+        for (i = 0; i < count; ++i)
+        {
+            const VResolverAlg *alg = VectorGet(&self->ad, i);
+            if (alg->cache_enabled && alg -> protected == protected &&
+                (alg->app_id == app || alg->app_id == appAny))
             {
                 /* try to find an existing cache file
                    NB - race condition exists unless
                    we do something with lock files */
-                if ( forDirAdjusted )
-                    rc = VResolverAlgCacheResolveDir ( alg, self -> wd, & tok,
-                        cache, legacy_wgs_refseq, dir, resolvedToDir );
+                if (forDirAdjusted)
+                    rc = VResolverAlgCacheResolveDir(alg, self->wd, &tok,
+                        cache, legacy_wgs_refseq, dir, resolvedToDir);
                 else
-                    rc = VResolverAlgCacheResolve ( alg, self -> wd, & tok,
-                        cache, legacy_wgs_refseq );
-                if ( rc == 0 )
+                    rc = VResolverAlgCacheResolve(alg, self->wd, &tok,
+                        cache, legacy_wgs_refseq);
+                if (rc == 0)
                     return 0;
 
                 /* just remember the first as best for now */
-                if ( best == NULL )
+                if (best == NULL) {
                     best = alg;
+                    ad = true;
+                }
             }
         }
     }
@@ -3167,7 +3561,8 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
     else {
         alg = best == NULL ? better : best;
         assert ( alg );
-        rc = VResolverAlgMakeCachePath ( alg, & tok, cache, legacy_wgs_refseq );
+        rc = VResolverAlgMakeCachePath ( alg, & tok, cache, legacy_wgs_refseq,
+            ad ? self -> wd : NULL );
     }
 
     return rc;
@@ -3303,6 +3698,8 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
 {
     rc_t rc;
 
+    assert(query);
+
     /* require non-zero oid */
     if ( query -> obj_id == 0 )
         rc = RC ( rcVFS, rcResolver, rcResolving, rcPath, rcCorrupt );
@@ -3358,7 +3755,8 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
                         rc = get_query_accession ( query, & accession, oid_str, sizeof oid_str );
                         if ( rc == 0 )
                         {
-                            const VPath * remote2, * remote_mapping = NULL;
+                            const VPath * remote2 = NULL;
+                            const VPath * remote_mapping = NULL;
 /* call CGI with version 1.2 */
                             rc = VResolverRemoteResolve ( self, protocols,
                                 & accession, & remote2, & remote_mapping, NULL,
@@ -3413,7 +3811,7 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
                     /* resolve from accession to local path
                        will NOT find partial cache files */
                     rc = VResolverLocalResolve ( self, & accession, local,
-                                                 refseq_ctx, NULL );
+                                            refseq_ctx, NULL, query->accOfParentDb);
                 }
 
                 if ( rc == 0 && remote != NULL && * remote != NULL )
@@ -3528,7 +3926,8 @@ rc_t VResolverQueryAcc ( const VResolver * self, VRemoteProtocols protocols,
 
     /* LOCAL RESOLUTION */
     if ( local != NULL )
-        rc = VResolverLocalResolve ( self, accession, local, refseq_ctx, dir );
+        rc = VResolverLocalResolve ( self, accession, local, refseq_ctx, dir,
+            query->accOfParentDb);
 
     if ( local == NULL || * local == NULL )
     {
@@ -3711,6 +4110,29 @@ rc_t VResolverQueryURL ( const VResolver * self, VRemoteProtocols protocols,
     return rc;
 }
 
+
+static rc_t VPaths_SetParentAcc(const VPath * query,
+    const VPath ** local, const VPath ** remote, const VPath ** cache)
+{
+    rc_t rc = 0;
+
+    if (query != NULL) {
+        const String * parentAcc = query->accOfParentDb;
+
+        if (parentAcc != NULL) {
+            if (rc == 0 && local != NULL && * local != NULL)
+                rc = VPathSetAccOfParentDb((VPath *)* local, parentAcc);
+
+            if (rc == 0 && remote != NULL && * remote != NULL)
+                rc = VPathSetAccOfParentDb((VPath *)* remote, parentAcc);
+
+            if (rc == 0 && cache != NULL && * cache != NULL)
+                rc = VPathSetAccOfParentDb((VPath *)* cache, parentAcc);
+        }
+    }
+
+    return rc;
+}
 
 /* Query
  *  resolve object location to either an existing local path,
@@ -3932,6 +4354,9 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
             }
         }
     }
+
+    if (rc == 0)
+        rc = VPaths_SetParentAcc(query, local, remote, cache);
 
     return rc;
 }
@@ -4287,6 +4712,10 @@ rc_t VResolverAlgLoadVolume ( VResolverAlg *self, uint32_t *num_vols, const char
 {
     rc_t rc = 0;
 
+    uint32_t dummy = 0;
+    if (num_vols == NULL)
+        num_vols = &dummy;
+
 #if 0
     /* trim volume whitespace */
     while ( size != 0 && isspace ( start [ 0 ] ) )
@@ -4422,9 +4851,16 @@ rc_t VResolverLoadVolumes ( Vector *algs, const String *root,
                     /* if using CGI for resolution */
                     if ( resolver_cgi || strcmp ( algname, "cgi" ) == 0 )
                         alg_id = algCGI;
+                    /* SRA "Accession Directory": acc/acc.sra */
+                    else if ( strcmp ( algname, "sraAd" ) == 0 )
+                        alg_id = algSRAAD;
                     /* stored in a flat directory as-is */
                     else if ( strcmp ( algname, "flat" ) == 0 )
                         alg_id = algFlat;
+                    /* stored in Accesion as Directory
+                       with ".sra" or ".sra.vdbcache" extension */
+                    else if ( strcmp ( algname, "sraAd" ) == 0 )
+                        alg_id = algSRAAD;
                     /* stored in a flat directory with ".sra" extension */
                     else if ( strcmp ( algname, "sraFlat" ) == 0 )
                         alg_id = algSRAFlat;
@@ -4440,6 +4876,9 @@ rc_t VResolverLoadVolumes ( Vector *algs, const String *root,
                     /* stored in a flat directory with no extension */
                     else if ( strcmp ( algname, "refseq" ) == 0 )
                         alg_id = algREFSEQ;
+                    /* Refseq "Accession Directory": acc/refseq */
+                    else if (strcmp(algname, "refseqAd") == 0)
+                        alg_id = algREFSEQAD;
                     /* stored in a flat directory with no extension */
                     else if ( strcmp ( algname, "wgsFlat" ) == 0 )
                         alg_id = algWGSFlat;
@@ -4457,6 +4896,10 @@ rc_t VResolverLoadVolumes ( Vector *algs, const String *root,
                     /* stored in a three-level directory with 1000 banks and no extension */
                     else if ( strcmp ( algname, "ebi" ) == 0 )
                         alg_id = algSRA_EBI;
+
+                    /* store files under their names in Accesion as Directory */
+                    else if ( strcmp ( algname, "ad" ) == 0 )
+                        alg_id = algAD;
 
                     /* new named annotation */
                     else if ( strcmp ( algname, "nannotFlat" ) == 0 )
@@ -4538,7 +4981,9 @@ rc_t VResolverLoadApp ( VResolver *self, Vector *algs, const String *root,
         bool app_disabled = false;
         rc = KConfigNodeReadBool ( node, & app_disabled );
         KConfigNodeRelease ( node );
-        if ( rc == 0 && app_disabled && algs == & self -> local )
+        if ( rc == 0 && app_disabled && (
+            algs == & self -> local || /* allow to disable user app */
+            algs == & self -> ad ) )   /* or AD app */
             return 0;
         disabled |= app_disabled;
     }
@@ -4584,7 +5029,8 @@ rc_t VResolverLoadApp ( VResolver *self, Vector *algs, const String *root,
 static
 rc_t VResolverLoadApps ( VResolver *self, Vector *algs, const String *root,
     const String *ticket, bool cache_capable, const KConfigNode *apps,
-    bool resolver_cgi, bool protected, bool disabled, bool cacheEnabled )
+    bool resolver_cgi, bool protected, bool disabled, bool cacheEnabled,
+    bool noRegister )
 {
     KNamelist *appnames;
     rc_t rc = KConfigNodeListChildren ( apps, & appnames );
@@ -4636,7 +5082,8 @@ rc_t VResolverLoadApps ( VResolver *self, Vector *algs, const String *root,
 
                     rc = VResolverLoadApp ( self, algs, root, ticket,
                         cache_capable, app_id,
-                        & self -> num_app_vols [ app_id ], app, resolver_cgi,
+                        noRegister ? NULL : & self -> num_app_vols [ app_id ],
+                        app, resolver_cgi,
                         protected, disabled, cacheEnabled );
 
                     KConfigNodeRelease ( app );
@@ -4674,8 +5121,8 @@ enum {
  */
 static
 rc_t VResolverLoadRepo ( VResolver *self, Vector *algs, const KConfigNode *repo,
-    const String *ticket, bool cache_capable, bool protected,
-    EDisabled isDisabled, bool cacheEnabled )
+    const String *ticket, const char *name, bool cache_capable, bool protected,
+    EDisabled isDisabled, bool cacheEnabled, bool noRegister )
 {
     rc_t rc = 0;
     const KConfigNode *node;
@@ -4742,11 +5189,12 @@ rc_t VResolverLoadRepo ( VResolver *self, Vector *algs, const KConfigNode *repo,
     else if ( rc == 0 )
     {
         /* read root as String */
-        String *root;
+        String *root = NULL;
         rc = KConfigNodeReadString ( node, & root );
         KConfigNodeRelease ( node );
         if ( GetRCState ( rc ) == rcNotFound )
             rc = 0;
+        else if (root->size == 0); /* ignore repository with empty root node */
         else if ( rc == 0 )
         {
             /* perform a bit of cleanup on root */
@@ -4770,7 +5218,7 @@ rc_t VResolverLoadRepo ( VResolver *self, Vector *algs, const KConfigNode *repo,
                 {
                     rc = VResolverLoadApps ( self, algs, root, ticket,
                         cache_capable, node, resolver_cgi,
-                        protected, disabled, cacheEnabled );
+                        protected, disabled, cacheEnabled, noRegister );
                     KConfigNodeRelease ( node );
                 }
                 else if ( GetRCState ( rc ) == rcNotFound )
@@ -4782,7 +5230,26 @@ rc_t VResolverLoadRepo ( VResolver *self, Vector *algs, const KConfigNode *repo,
                         rc = VResolverAlgMake ( & cgi, root, appAny, algCGI, protected, disabled );
                         if ( rc == 0 )
                         {
+                            assert(cgi);
+
                             cgi -> ticket = ticket;
+
+                            if (name != NULL) {
+                                if (strcmp(name, "CGI") == 0)
+                                    cgi->version = 0x03000000;
+                                else if (strcmp(name, "CGI.4") == 0)
+                                    cgi->version = 0x04000000;
+                                else if (strcmp(name, "SDL.1") == 0)
+                                    cgi->version = 0x81000000;
+                                else if (strcmp(name, "SDL.2") == 0)
+                                    cgi->version = 0x82000000;
+                            }
+
+                            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_KFG),
+                                ("VResolverAlg(%s.%V, %S)\n",
+                                    cgi->protected
+                                    ? " PROTECTED" : "!protected",
+                                    cgi->version, cgi->root));
 
                             rc = VectorAppend ( algs, NULL, cgi );
                             if ( rc == 0 )
@@ -4810,7 +5277,8 @@ rc_t VResolverLoadRepo ( VResolver *self, Vector *algs, const KConfigNode *repo,
 static
 rc_t VResolverLoadNamedRepo ( VResolver *self, Vector *algs,
     const KConfigNode *sub, const String *ticket, const char *name,
-    bool cache_capable, bool protected, EDisabled disabled, bool cacheEnabled )
+    bool cache_capable, bool protected, EDisabled disabled, bool cacheEnabled,
+    bool noRegister )
 {
     const KConfigNode *repo;
     rc_t rc = KConfigNodeOpenNodeRead ( sub, & repo, "%s", name );
@@ -4818,8 +5286,8 @@ rc_t VResolverLoadNamedRepo ( VResolver *self, Vector *algs,
         rc = 0;
     else if ( rc == 0 )
     {
-        rc = VResolverLoadRepo ( self, algs, repo,
-            ticket, cache_capable, protected, disabled, cacheEnabled );
+        rc = VResolverLoadRepo ( self, algs, repo, ticket, name,
+            cache_capable, protected, disabled, cacheEnabled, noRegister );
         KConfigNodeRelease ( repo );
     }
     return rc;
@@ -4839,7 +5307,8 @@ rc_t VResolverLoadNamedRepo ( VResolver *self, Vector *algs,
 static
 rc_t VResolverLoadSubCategory ( VResolver *self, Vector *algs,
     const KConfigNode *kfg, const String *ticket, const char *sub_path,
-    bool cache_capable, bool protected, EDisabled disabled, bool cacheEnabled )
+    bool cache_capable, bool protected, EDisabled disabled, bool cacheEnabled,
+    bool noRegister )
 {
     const KConfigNode *sub;
     rc_t rc = KConfigNodeOpenNodeRead ( kfg, & sub, "%s", sub_path );
@@ -4859,7 +5328,8 @@ rc_t VResolverLoadSubCategory ( VResolver *self, Vector *algs,
                 rc = KNamelistGet ( children, i, & name );
                 if ( rc == 0 )
                     rc = VResolverLoadNamedRepo ( self, algs, sub, ticket, name,
-                        cache_capable, protected, disabled, cacheEnabled );
+                        cache_capable, protected, disabled, cacheEnabled,
+                        noRegister );
             }
 
             KNamelistRelease ( children );
@@ -4883,8 +5353,8 @@ rc_t VResolverLoadProtected ( VResolver *self, const KConfigNode *kfg,
         rc = 0;
     else if ( rc == 0 )
     {
-        rc = VResolverLoadRepo ( self, & self -> local,
-            repo, NULL, cache_capable, true, disabled, cacheEnabled );
+        rc = VResolverLoadRepo ( self, & self -> local, repo,
+            NULL, NULL, cache_capable, true, disabled, cacheEnabled, false );
         KConfigNodeRelease ( repo );
     }
     return rc;
@@ -5297,21 +5767,32 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
         /* now load user public repositories */
         if ( rc == 0 )
             rc = VResolverLoadSubCategory ( self, & self -> local, kfg, NULL,
-                "user/main", true, false, userDisabled, userCacheEnabled );
+                "user/main", true, false, userDisabled, userCacheEnabled,
+                false );
 #if ALLOW_AUX_REPOSITORIES
         if ( rc == 0 )
             rc = VResolverLoadSubCategory ( self, & self -> local, kfg, NULL,
-                "user/aux", true, false, userDisabled, userCacheEnabled );
+                "user/aux", true, false, userDisabled, userCacheEnabled,
+                false );
 #endif
+
+        /* load Accession as Directory repository */
+        if (rc == 0) {
+            rc = VResolverLoadSubCategory(self, &self->ad, kfg, NULL,
+                "user/ad", true, false, eDisabledNotSet, true, true);
+        }
+        /* TODO:
+        Add ad to embedded configuration. 
+        Add ad to default.kfg */
 
         /* load any site repositories */
         if ( rc == 0 )
             rc = VResolverLoadSubCategory ( self, & self -> local, kfg, NULL,
-                "site/main", false, false, siteDisabled, false );
+                "site/main", false, false, siteDisabled, false, false );
 #if ALLOW_AUX_REPOSITORIES
         if ( rc == 0 )
             rc = VResolverLoadSubCategory ( self, & self -> local, kfg, NULL,
-                "site/aux", false, false, siteDisabled, false );
+                "site/aux", false, false, siteDisabled, false, false);
 #endif
 
         /* if within a protected workspace, load protected remote repositories */
@@ -5331,7 +5812,7 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
                 uint32_t entry_vols = VectorLength ( & self -> remote );
                 rc = VResolverLoadSubCategory ( self, & self -> remote, kfg,
                     self -> ticket, "remote/protected", false, true,
-                    remoteDisabled, false );
+                    remoteDisabled, false, false );
                 have_remote_protected = VectorLength ( & self -> remote ) > entry_vols;
             }
         }
@@ -5339,11 +5820,11 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
         /* load any remote repositories */
         if ( rc == 0 )
             rc = VResolverLoadSubCategory ( self, & self -> remote, kfg, NULL,
-                "remote/main", false, false, remoteDisabled, false );
+                "remote/main", false, false, remoteDisabled, false, false );
 #if ALLOW_AUX_REPOSITORIES
         if ( rc == 0 )
             rc = VResolverLoadSubCategory ( self, & self -> remote, kfg, NULL,
-                "remote/aux", false, false, remoteDisabled, false );
+                "remote/aux", false, false, remoteDisabled, false, false );
 #endif
 
         KConfigNodeRelease ( kfg );
@@ -5466,6 +5947,41 @@ LIB_EXPORT rc_t CC VResolverGetProject ( const VResolver * self,
     return 0;
 }
 
+static rc_t VResolverInitVersion(VResolver * self, const KConfig *kfg) {
+    rc_t rc = 0;
+
+    String * result = NULL;
+
+    assert(self);
+
+    rc = KConfigReadString(kfg, "/repository/remote/version", &result);
+
+    if (rc == 0) {
+        assert(result);
+
+        self->version = string_dup_measure(result->addr, NULL);
+
+        free(result);
+
+        if (self->version == NULL)
+            return RC(rcVFS, rcMgr, rcCreating, rcMemory, rcExhausted);
+        else
+            return 0;
+    }
+
+    else {
+        if (self->ticket == NULL)
+             /* default version for public data is SDL-2 ( 128(SDL) | 2 ) */
+            self->version = string_dup_measure("130", NULL);
+        else /* default version for protected data is 3.0*/
+            self->version = string_dup_measure("3", NULL);
+
+        if (self->version == NULL)
+            return RC(rcVFS, rcMgr, rcCreating, rcMemory, rcExhausted);
+        else
+            return 0;
+    }
+}
 
 /* Make
  *  internal factory function
@@ -5498,7 +6014,14 @@ rc_t VResolverMake ( VResolver ** objp, const KDirectory *wd,
                 kns = NULL;
             }
         }
-
+        else {
+            rc_t rc = KNSManagerMake ( & kns );
+            if ( rc != 0 )
+            {
+                rc = 0;
+                kns = NULL;
+            }
+        }
 
         /* set up protocols */
         obj -> dflt_protocols = DEFAULT_PROTOCOLS;
@@ -5509,14 +6032,13 @@ rc_t VResolverMake ( VResolver ** objp, const KDirectory *wd,
 
         rc = VResolverLoad ( obj, protected, kfg, kns );
 
-        KNSManagerRelease ( kns );
+        obj->kns = kns;
         kns = NULL;
 
         KRepositoryProjectId ( protected, & obj -> projectId );
 
-        obj -> version = string_dup_measure ( "#4.", NULL );
-        if ( obj -> version == NULL )
-            rc = RC ( rcVFS, rcMgr, rcCreating, rcMemory, rcExhausted );
+        if (rc == 0)
+            rc = VResolverInitVersion(obj, kfg);
 
         obj -> resoveOidName = DEFAULT_RESOVE_OID_NAME; /* just in case */
 

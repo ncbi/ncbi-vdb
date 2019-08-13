@@ -471,9 +471,9 @@ bool CC KMDataNodeInflate ( PBSTNode *n, void *data )
     b -> vsize = n -> data . size - size - 1;
     BSTreeInit ( & b -> attr );
     BSTreeInit ( & b -> child );
-    KRefcountInit ( & b -> refcount, 0, "KMDataNode", "inflate", b -> name );
     memmove ( b -> name, name, size );
     b -> name [ size ] = 0;
+    KRefcountInit ( & b -> refcount, 0, "KMDataNode", "inflate", b -> name );
 
     pb -> rc = ( bits & 1 ) != 0 ? KMDataNodeInflateAttr ( b, pb -> byteswap ) : 0;
     if ( pb -> rc == 0 )

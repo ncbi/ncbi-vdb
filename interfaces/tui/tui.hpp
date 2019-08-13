@@ -325,7 +325,7 @@ class Dlg
 {
     private :
         struct KTUIDlg * dlg_;  // opaque struct from interfaces/tui/tui_dlg.h
-
+        
     public :
         Dlg( void )
         {
@@ -333,33 +333,24 @@ class Dlg
             KTUIDlgMake ( instance->tui_, &dlg_, /*parent*/ NULL, /*palette*/ NULL, /*rect*/ NULL );
         };
 
+        Dlg( Dlg &parent )
+        {
+            KTUIDlgMake ( KTUIDlgGetTui ( parent . dlg_ ), &dlg_, parent . dlg_, /*palette*/ NULL, /*rect*/ NULL );
+        };
+        
+        Dlg( Dlg &parent, Tui_Rect &r )
+        {
+            KTUIDlgMake ( KTUIDlgGetTui ( parent . dlg_ ), &dlg_, parent . dlg_, /*palette*/ NULL, & r.r_ );
+        };
+        
         ~Dlg( void ) { KTUIDlgRelease ( dlg_ ); };
 
         bool SetCaption( const char * s ) { return ( KTUIDlgSetCaption ( dlg_, s ) == 0 ); };
         bool SetCaption( std::string &s ) { return ( KTUIDlgSetCaption ( dlg_, s.c_str() ) == 0 ); };
         bool SetCaptionF( const char * fmt, ... );
 
-        Tui_Rect center( uint32_t x_margin, uint32_t y_margin )
-        {
-            Tui_Rect r;
-            GetRect( r );
-            r.set_w( r.get_w() - ( 2 * x_margin ) );
-            r.set_x( r.get_x() + x_margin );
-            r.set_h( r.get_h() - ( 2 * y_margin ) );
-            r.set_y( r.get_y() + y_margin );
-            return r;
-        };
-
-        void center( Tui_Rect &r )
-        {
-            Tui_Rect rd;
-            GetRect( rd );
-            if ( r.get_w() > ( rd.get_w() - 2 ) ) r.set_w( rd.get_w() - 2 );
-            if ( r.get_h() > ( rd.get_h() -2 ) ) r.set_h( rd.get_h() - 2 );
-            r.set_x( rd.get_x() + ( ( rd.get_w() - r.get_w() ) / 2 ) );
-            r.set_y( rd.get_y() + ( ( rd.get_h() - r.get_h() ) / 2 ) );
-        };
-
+        Tui_Rect center( uint32_t x_margin, uint32_t y_margin );
+        void center( Tui_Rect &r );
 
         void SetData( void * data ) { KTUIDlgSetData ( dlg_, data ); };
         void * GetData( void ) { return KTUIDlgGetData ( dlg_ ); };
@@ -376,6 +367,11 @@ class Dlg
         bool SetRect( Tui_Rect const &r, bool redraw ) { return ( KTUIDlgSetRect ( dlg_, &( r.r_ ), redraw ) == 0 ); };
         virtual bool Resize( Tui_Rect const &r );
 
+        virtual void onPageChanged( uint32_t old_page, uint32_t new_page ) {};
+        
+        uint32_t GetActivePage( void ) { uint32_t id; KTUIDlgGetActivePage ( dlg_, &id ); return id; };
+        bool SetActivePage( uint32_t id );
+        
         bool IsMenuActive( void ) { return KTUIDlgGetMenuActive ( dlg_ ); };
         bool SetMenuActive( bool active ) { return ( KTUIDlgSetMenuActive ( dlg_, active ) == 0 ); };
         bool SetMenu( Tui_Menu &menu ) { return ( KTUIDlgSetMenu ( dlg_, menu.get( true ) ) == 0 ); };
@@ -384,9 +380,13 @@ class Dlg
         bool SetWidgetCaption( tui_id id, const char * caption ) { return ( KTUIDlgSetWidgetCaption ( dlg_, id, caption ) == 0 ); };
         bool SetWidgetCaption( tui_id id, std::string caption ) { return ( KTUIDlgSetWidgetCaption ( dlg_, id, caption.c_str() ) == 0 ); };
         bool SetWidgetCaptionF( tui_id id, const char * fmt, ... );
+
         bool GetWidgetRect( tui_id id, Tui_Rect &r ) { return ( KTUIDlgGetWidgetRect ( dlg_, id, &( r.r_ ) ) == 0 ); };
         bool SetWidgetRect( tui_id id, Tui_Rect const &r, bool redraw ) { return ( KTUIDlgSetWidgetRect ( dlg_, id, &( r.r_ ), redraw ) == 0 ); };
 
+        bool GetWidgetPageId( tui_id id, uint32_t * pg_id ) { return ( KTUIDlgGetWidgetPageId ( dlg_, id, pg_id ) == 0 ); };
+        bool SetWidgetPageId( tui_id id, uint32_t pg_id ) { return ( KTUIDlgSetWidgetPageId ( dlg_, id, pg_id ) == 0 ); };
+        
         bool SetWidgetCanFocus( tui_id id, bool can_focus ) { return ( KTUIDlgSetWidgetCanFocus ( dlg_, id, can_focus ) == 0 ); };
 
         bool IsWidgetVisisble( tui_id id ) { return KTUIDlgGetWidgetVisible ( dlg_, id ); };
@@ -397,7 +397,8 @@ class Dlg
 
         bool GetWidgetBoolValue( tui_id id ) { return KTUIDlgGetWidgetBoolValue ( dlg_, id ); };
         bool SetWidgetBoolValue( tui_id id, bool value ) { return ( KTUIDlgSetWidgetBoolValue ( dlg_, id, value ) == 0 ); };
-
+        bool ToggleWidgetBoolValue( tui_id id ) { return SetWidgetBoolValue( id, !GetWidgetBoolValue( id ) ); };
+        
         bool SetWidgetBackground( tui_id id, KTUI_color value ) { return ( KTUIDlgSetWidgetBg ( dlg_, id, value ) == 0 ); };
         bool ReleaseWidgetBackground( tui_id id ) { return ( KTUIDlgReleaseWidgetBg ( dlg_, id ) == 0 ); };
 
@@ -428,6 +429,9 @@ class Dlg
         size_t GetWidgetTextLength( tui_id id ) { return KTUIDlgGetWidgetTextLength( dlg_, id ); };
         bool SetWidgetTextLength( tui_id id, size_t value ) { return ( KTUIDlgSetWidgetTextLength ( dlg_, id, value ) == 0 ); };
 
+        bool SetWidgetCarretPos( tui_id id, size_t value ) { return ( KTUIDlgSetWidgetCarretPos ( dlg_, id, value ) == 0 ); };
+        bool SetWidgetAlphaMode( tui_id id, uint32_t value ) { return ( KTUIDlgSetWidgetAlphaMode ( dlg_, id, value ) == 0 ); };
+        
         bool AddWidgetString( tui_id id, const char * txt ) { return ( KTUIDlgAddWidgetString ( dlg_, id, txt ) == 0 ); };
         bool AddWidgetString( tui_id id, std::string &s ) { return ( KTUIDlgAddWidgetString ( dlg_, id, s.c_str() ) == 0 ); };
         bool AddWidgetStringN( tui_id id, int n, ... );
@@ -443,6 +447,7 @@ class Dlg
         bool SetWidgetSelectedString( tui_id id, tui_id idx ) { return ( KTUIDlgSetWidgetSelectedString ( dlg_, id, idx ) == 0 ); };
 
         bool AddLabel( tui_id id, Tui_Rect const &r, const char * s ) { return ( KTUIDlgAddLabel( dlg_, id, &( r.r_ ), s ) == 0 ); };
+        bool AddTabHdr( tui_id id, Tui_Rect const &r, const char * s ) { return ( KTUIDlgAddTabHdr( dlg_, id, &( r.r_ ), s ) == 0 ); };        
         bool AddButton( tui_id id, Tui_Rect const &r, const char * s ) { return ( KTUIDlgAddBtn ( dlg_, id, &( r.r_ ), s ) == 0 ); };
 
         bool AddCheckBox( tui_id id, Tui_Rect const &r, const char * s, bool enabled )
@@ -459,6 +464,26 @@ class Dlg
         bool AddProgress( tui_id id, Tui_Rect const &r, int percent, int precision ) { return ( KTUIDlgAddProgress ( dlg_, id, &( r.r_ ), percent, precision ) == 0 ); };
         bool AddSpinEdit( tui_id id, Tui_Rect const &r, tui_long value, tui_long min, tui_long max ) { return ( KTUIDlgAddSpinEdit ( dlg_, id, &( r.r_ ), value, min, max ) == 0 ); };
         bool AddGrid( tui_id id, Tui_Rect const &r, Grid &grid, bool cached ) { return( KTUIDlgAddGrid ( dlg_, id, &( r.r_ ), grid.get_ptr(), cached ) == 0 ); };
+
+        void Populate_common( uint32_t id, KTUI_color bg, KTUI_color fg, uint32_t page_id );
+        void PopulateLabel( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
+                            KTUI_color bg, KTUI_color fg, uint32_t page_id = 0 );
+        void PopulateTabHdr( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
+                            KTUI_color bg, KTUI_color fg, uint32_t page_id = 0 );
+        void PopulateButton( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
+                            KTUI_color bg, KTUI_color fg, uint32_t page_id = 0 );
+        void PopulateCheckbox( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
+                            bool checked, KTUI_color bg, KTUI_color fg, uint32_t page_id );
+        void PopulateInput( Tui_Rect const &r, bool resize, uint32_t id, const char * txt,
+            size_t length, KTUI_color bg, KTUI_color fg, uint32_t page_id = 0 );
+        void PopulateSpinEdit( Tui_Rect const &r, bool resize, uint32_t id, tui_long value, tui_long min,
+            tui_long max, KTUI_color bg, KTUI_color fg, uint32_t page_id = 0 );
+        void PopulateGrid( Tui_Rect const &r, bool resize, uint32_t id, Grid &grid_model,
+                            KTUI_color bg, KTUI_color fg, uint32_t page_id = 0 );
+        void PopulateList( Tui_Rect const &r, bool resize, uint32_t id,
+                            KTUI_color bg, KTUI_color fg, uint32_t page_id = 0 );
+        void PopulateRadioBox( Tui_Rect const &r, bool resize, uint32_t id,
+                            KTUI_color bg, KTUI_color fg, uint32_t page_id = 0 );
 
         bool HasWidget( tui_id id ) { return KTUIDlgHasWidget ( dlg_, id ); };
 
@@ -480,6 +505,32 @@ class Dlg
         bool HandleEvent( Tui_Event &ev ) { return ( KTUIDlgHandleEvent( dlg_, &( ev.ev_ ) ) == 0 ); };
         bool GetDlgEvent( tuidlg_event * event ) { return ( KTUIDlgGet ( dlg_, event ) == 0 ); };
 
+        void SetHighLightColor( KTUI_color value );
+        void SetHighLightAttr( KTUI_attrib value );
+        void EnableCursorNavigation( bool enabled ) { KTUIDlgEnableCursorNavigation( dlg_, enabled ); }
+        
+        KTUI_color GetDlgBg( void )
+        {
+            KTUI_color c = KTUI_c_gray;
+            KTUIPalette * p = KTUIDlgGetPalette ( dlg_ );
+            if ( p != NULL )
+            {
+                const tui_ac * ac = KTUIPaletteGet ( p, ktuipa_dlg );
+                if ( ac != NULL ) c = ac -> bg;
+            }
+            return c;
+        }
+        
+        void SetDlgBg( KTUI_color value )
+        {
+            KTUIPalette * p = KTUIDlgGetPalette ( dlg_ );
+            if ( p != NULL )
+            {
+                KTUIPaletteSet_bg ( p, ktuipa_dlg, value );
+                Draw();
+            }
+        }
+        
         friend class Std_Dlg_Base;
 };
 
@@ -734,6 +785,282 @@ class Std_Dlg_Dir_Pick : public Std_Dlg_Base
         bool execute( void ) { return execute_int(); };
 };
 
+class widget_colors
+{
+    public :
+        KTUI_color bg, fg;
+        
+        widget_colors( KTUI_color a_bg, KTUI_color a_fg ) : bg( a_bg ), fg( a_fg ) {}
+};
+
+class msg_colors
+{
+    public :
+        KTUI_color bg;
+        widget_colors label, button;
+        
+        msg_colors( KTUI_color a_bg, const widget_colors &a_label, const widget_colors &a_button )
+            : bg( a_bg ), label( a_label ), button( a_button ) {}
+};
+
+class dflt_msg_colors : public msg_colors
+{
+    public :
+        dflt_msg_colors( void ) : msg_colors( KTUI_c_light_gray, 
+                                              widget_colors( KTUI_c_gray, KTUI_c_white ),
+                                              widget_colors( KTUI_c_cyan, KTUI_c_black ) ) {}
+};
+
+class input_colors
+{
+    public :
+        KTUI_color bg;    
+        widget_colors label, input, button;
+
+        input_colors( KTUI_color a_bg, const widget_colors &a_label,
+                      const widget_colors &a_input, const widget_colors &a_button )
+            : bg( a_bg ), label( a_label ), input( a_input ), button( a_button ) {}
+};
+
+class dflt_input_colors : public input_colors
+{
+    public :
+        dflt_input_colors( void ) : input_colors( KTUI_c_light_gray,
+                                                  widget_colors( KTUI_c_gray, KTUI_c_white ),
+                                                  widget_colors( KTUI_c_white, KTUI_c_black ),
+                                                  widget_colors( KTUI_c_cyan, KTUI_c_black ) ) {}
+};
+
+/* ==== message sub-dialog =================================================================== */
+class msg_ctrl : public Dlg_Runner
+{
+    private :
+        virtual bool on_select( Dlg &dlg, void * data, Tui_Dlg_Event &dev )
+        { dlg.SetDone( dev.get_widget_id() == 101 ); return true; }
+
+    class msg_view : public Dlg
+    {
+        public :
+            msg_view( Dlg &parent, Tui_Rect &r, const std::string &msg, const msg_colors &colors )
+                : Dlg( parent, r )
+            {
+                SetDlgBg( colors.bg );
+                Tui_Rect r1( 1, 1, r.get_w() -2, 1 );
+                PopulateLabel( r1, false, 100, msg.c_str(), colors.label.bg, colors.label.fg );
+                Tui_Rect r2( 1, 3, 12, 1 );
+                PopulateButton( r2, false, 101, "&ok", colors.button.bg, colors.button.fg );
+            }
+    };
+        
+    public :
+        msg_ctrl( Dlg &dlg ) : Dlg_Runner( dlg, NULL ) { dlg.SetFocus( 101 ); }
+
+        static bool show_msg( Dlg & parent, const std::string &msg, Tui_Rect r,
+                              msg_colors colors = dflt_msg_colors() )
+        {
+            KTUI_color c = parent.GetDlgBg();
+            parent.center( r );
+            msg_view view( parent, r, msg, colors );
+            msg_ctrl ctrl( view );
+            ctrl.run();
+            parent.SetDlgBg( c );
+            return true;
+        }
+        
+        static bool show_msg( Dlg & parent, const std::string &msg, tui_coord w = 80,
+                              msg_colors colors = dflt_msg_colors() )
+        {
+            return show_msg( parent, msg, Tui_Rect( 0, 0, w, 5 ), colors );
+        }
+};
+
+/* ==== question sub-dialog =================================================================== */
+class question_ctrl : public Dlg_Runner
+{
+    private :
+        bool answer;
+
+        class question_view : public Dlg
+        {
+            public :
+                question_view( Dlg &parent, Tui_Rect r, const std::string &msg, const msg_colors &colors ) 
+                    : Dlg( parent, r )
+                {
+                    SetDlgBg( colors.bg );
+                    Tui_Rect r1( 1, 1, r.get_w() -2, 1 );
+                    PopulateLabel( r1, false, 100, msg.c_str(), colors.label.bg, colors.label.fg );
+                    Tui_Rect r2( 1, 3, 12, 1 );
+                    PopulateButton( r2, false, 101, "&yes", colors.button.bg, colors.button.fg );
+                    Tui_Rect r3( 14, 3, 12, 1 );
+                    PopulateButton( r3, false, 102, "&no", colors.button.bg, colors.button.fg );
+                }
+        };
+        
+        virtual bool on_select( Dlg &dlg, void * data, Tui_Dlg_Event &dev )
+        {
+            switch ( dev.get_widget_id() )
+            {
+                case 101 : answer = true; dlg.SetDone( true ); break;
+                case 102 : answer = false; dlg.SetDone( true ); break;
+            }
+            return true;
+        }
+
+    public :
+        question_ctrl( Dlg &dlg ) : Dlg_Runner( dlg, NULL ), answer( false ) { dlg.SetFocus( 101 ); }
+
+        static bool question( Dlg &parent, const std::string &msg, Tui_Rect r,
+                              msg_colors colors = dflt_msg_colors() )
+        {
+            KTUI_color c = parent.GetDlgBg();
+            parent.center( r );
+            question_view view( parent, r, msg, colors );
+            question_ctrl ctrl( view );
+            ctrl.run();
+            parent.SetDlgBg( c );
+            return ctrl . answer;
+        }
+        
+        static bool question( Dlg &parent, const std::string &msg, tui_coord w = 80,
+                              msg_colors colors = dflt_msg_colors() )
+        {
+            return question( parent, msg, Tui_Rect( 0, 0, w, 5 ), colors );
+        }
+};
+
+/* ==== input sub-dialog =================================================================== */
+class input_ctrl : public Dlg_Runner
+{
+    private :
+        std::string &txt;
+        bool ok;
+
+        class input_view : public Dlg
+        {
+            public :
+                input_view( Dlg &parent, Tui_Rect r,
+                            const std::string &caption, const std::string &txt,
+                            uint32_t txt_len, input_colors &colors ) : Dlg( parent, r )
+                {
+                    SetDlgBg( colors.bg );
+                    Tui_Rect r1( 1, 1, r.get_w() - 2, 1 );
+                    PopulateLabel( r1, false, 100, caption.c_str(), colors.label.bg, colors.label.fg );
+                    Tui_Rect r2( 1, 2, r.get_w() - 2, 1 );
+                    PopulateInput( r2, false, 101, txt.c_str(), txt_len, colors.input.bg, colors.input.fg );
+                    Tui_Rect r3( 1, 4, 12, 1 );
+                    PopulateButton( r3, false, 102, "&ok", colors.button.bg, colors.button.fg );
+                    Tui_Rect r4( 14, 4, 12, 1 );
+                    PopulateButton( r4, false, 103, "&cancel", colors.button.bg, colors.button.fg );
+                }
+        };
+
+        virtual bool on_changed( Dlg &dlg, void * data, Tui_Dlg_Event &dev )
+        {
+            tui_id id = dev.get_widget_id();
+            if ( id == 101 ) txt = dlg.GetWidgetText( id );
+            return true;
+        }
+
+        virtual bool on_select( Dlg &dlg, void * data, Tui_Dlg_Event &dev )
+        {
+            switch ( dev.get_widget_id() )
+            {
+                case 102 : ok = true; dlg.SetDone( true ); break;
+                case 103 : ok = false; dlg.SetDone( true ); break;
+            }
+            return true;
+        }
+
+    public :
+        input_ctrl( Dlg &dlg, std::string &a_txt ) : Dlg_Runner( dlg, NULL ), txt( a_txt ), ok( false )
+        { dlg.SetFocus( 101 ); }
+
+        static bool input( Dlg &parent, const std::string &caption, std::string &txt, uint32_t txt_len,
+                           Tui_Rect r, input_colors colors = dflt_input_colors() )
+        {
+            KTUI_color c = parent.GetDlgBg();
+            parent.center( r );
+            input_view view( parent, r, caption, txt, txt_len, colors );
+            input_ctrl ctrl( view, txt );
+            ctrl.run();
+            parent.SetDlgBg( c );
+            return ctrl . ok;
+        }
+
+        static bool input( Dlg &parent, const std::string &caption, std::string &txt, uint32_t txt_len,
+                           tui_coord w = 80, input_colors colors = dflt_input_colors() )
+        {
+            return input( parent, caption, txt, txt_len, Tui_Rect( 0, 0, w, 6 ), colors );
+        }
+
+};
+
+/* ==== pick path sub-dialog =================================================================== */
+class pick_path_ctrl : public Dlg_Runner
+{
+    private :
+        std::string path;
+        bool ok;
+
+        class pick_path_view : public Dlg
+        {
+            public :
+                pick_path_view( Dlg &parent, Tui_Rect r, const std::string &caption,
+                                const std::string &path, input_colors &colors ) : Dlg( parent, r )
+                {
+                    SetDlgBg( colors.bg );
+                    
+                    Tui_Rect r1( 0, 0, r.get_w(), 1 );
+                    PopulateLabel( r1, false, 100, caption.c_str(), colors.label.bg, colors.label.fg );
+
+                    Tui_Rect r2( 1, 2, r.get_w() - 2, 1 );
+                    PopulateLabel( r2, false, 101, path.c_str(), colors.label.bg, colors.label.fg );
+                    
+                    Tui_Rect r3( 1, 4, r.get_w() - 2, r.get_h() - 7 );
+                    PopulateList( r3, false, 102, colors.label.bg, colors.label.fg );
+                    
+                    Tui_Rect r4( 1, r.get_h() - 2, 12, 1 );
+                    PopulateButton( r4, false, 103, "&ok", colors.button.bg, colors.button.fg );
+                    Tui_Rect r5( 14, r.get_h() - 2, 12, 1 );
+                    PopulateButton( r5, false, 104, "&cancel", colors.button.bg, colors.button.fg );
+                   
+                }
+        };
+
+        virtual bool on_select( Dlg &dlg, void * data, Tui_Dlg_Event &dev )
+        {
+            switch ( dev.get_widget_id() )
+            {
+                case 103 : ok = true; dlg.SetDone( true ); break;
+                case 104 : ok = false; dlg.SetDone( true ); break;
+            }
+            return true;
+        }
+
+    public :
+        pick_path_ctrl( Dlg &dlg, const std::string &a_path ) : Dlg_Runner( dlg, NULL ),
+                path( a_path ), ok( false ) { dlg.SetFocus( 102 ); }
+        
+        static bool pick( Dlg &parent, const std::string &caption, std::string &path,
+                          Tui_Rect r, input_colors colors = dflt_input_colors() )
+        {
+            KTUI_color c = parent.GetDlgBg();
+            pick_path_view view( parent, r, caption, path, colors );
+            pick_path_ctrl ctrl( view, caption );
+            ctrl.run();
+            parent.SetDlgBg( c );
+            if ( ctrl . ok ) path = ctrl.path;
+            return ctrl . ok;
+        }
+
+        static bool pick( Dlg &parent, const std::string &caption, std::string &path,
+                          input_colors colors = dflt_input_colors() )
+        {
+            Tui_Rect r;
+            parent.GetRect( r );
+            return pick( parent, caption, path, r, colors );
+        }
+};
 
 } // namespace tui
 

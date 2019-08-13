@@ -88,6 +88,8 @@ VFS_EXTERN rc_t CC VFSManagerOpenDirectoryUpdateDirectoryRelative ( const struct
 #define VPathMakeDirectoryRelative LegacyVPathMakeDirectoryRelative
 VFS_EXTERN rc_t CC VPathMakeDirectoryRelative ( struct VPath ** new_path,
     struct KDirectory const * dir, const char * posix_path);
+VFS_EXTERN rc_t CC VPathMakeDirectoryRelativeVPath ( struct VPath ** new_path,
+    struct KDirectory const * dir, const char * posix_path, const struct VPath * vpath );
 
 
 VFS_EXTERN rc_t CC VFSManagerOpenFileReadDecrypt (const struct VFSManager *self,

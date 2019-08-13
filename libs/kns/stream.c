@@ -780,3 +780,18 @@ LIB_EXPORT rc_t CC KStreamInit ( KStream *self, const KStream_vt *vt,
 
     return 0;
 }
+
+/* Whack
+ *  does anything necessary to tear down KStream
+ *  but does not delete memory
+ */
+LIB_EXPORT rc_t CC KStreamWhack ( KStream * self, const char * classname )
+{
+    if ( self != NULL )
+    {
+        KRefcountWhack ( & self -> refcount, classname ? classname : "KStream" );
+        self -> read_enabled = false;
+        self -> write_enabled = false;
+    }
+    return 0;
+}

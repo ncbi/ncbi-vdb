@@ -24,8 +24,8 @@
 *
 */
 
-#ifndef _h_table_priv_
-#define _h_table_priv_
+#ifndef _h_kdb_table_priv_
+#define _h_kdb_table_priv_
 
 #ifndef _h_kdb_table_
 #include <kdb/table.h>
@@ -73,9 +73,10 @@ struct KTable
 KTable *KTableAttach ( const KTable *self );
 rc_t KTableSever ( const KTable *self );
 
+void KTableGetName(KTable const *self, char const **rslt);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _h_table_priv_ */
+#endif /* _h_kdb_table_priv_ */

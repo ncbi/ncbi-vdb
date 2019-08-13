@@ -90,11 +90,12 @@ static const char default_kfg[] = {
 "/repository/user/main/public/apps/sraPileup/volumes/flat = \"sra\"\n"
 "/repository/user/main/public/apps/sraRealign/volumes/flat = \"sra\"\n"
 "/repository/user/main/public/apps/wgs/volumes/wgsFlat = \"wgs\"\n"
-"/repository/user/main/public/root = \"$(HOME)/ncbi/public\"\n"
 "/repository/remote/main/CGI/resolver-cgi = "
-                  "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
+             "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
 "/repository/remote/protected/CGI/resolver-cgi = "
-                  "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
+             "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
+"/repository/remote/main/SDL.2/resolver-cgi = "
+             "\"https://trace.ncbi.nlm.nih.gov/Traces/sdl/2/retrieve\"\n"
 "/tools/ascp/max_rate = \"450m\"\n"
 };
 /*----------------------------------------------------------------------------*/
@@ -1054,6 +1055,7 @@ LIB_EXPORT rc_t CC KConfigNodeWrite ( KConfigNode *self, const char *buffer, siz
     {
         free ( self -> val_buffer ), self -> val_buffer = NULL;
         StringInit ( & self -> value, "", 0, 0 );
+        KConfigNodeSetDirty ( self );
         rc = 0;
     }
     else if ( buffer == NULL )
@@ -3184,6 +3186,39 @@ static rc_t _KConfigUseTraceCgi(KConfig * self, bool * updated) {
         "/repository_remote/CGI/resolver-cgi/trace");
 }
 
+/* create Accession as Directory repository when it does not exist */
+static rc_t _KConfigCheckAd(KConfig * self) {
+    const KConfigNode * kfg = NULL;
+    rc_t rc = KConfigOpenNodeRead(self, &kfg, "/repository/user/ad");
+    if (rc != 0) {
+        rc = 0;
+        /* create Accession as Directory repository
+           when it does not exist */
+        if (rc == 0)
+            rc = KConfigWriteString(self,
+                "/repository/user/ad/public/apps/file/volumes/flat", ".");
+        if (rc == 0)
+            rc = KConfigWriteString(self,
+                "/repository/user/ad/public/apps/sra/volumes/sraAd", ".");
+        if (rc == 0)
+            rc = KConfigWriteString(self,
+                "/repository/user/ad/public/apps/sraPileup/volumes/ad", ".");
+        if (rc == 0)
+            rc = KConfigWriteString(self,
+                "/repository/user/ad/public/apps/sraRealign/volumes/ad", ".");
+        if (rc == 0)
+            rc = KConfigWriteString(self,
+                "/repository/user/ad/public/apps/refseq/volumes/refseqAd",
+                ".");
+        if (rc == 0)
+            rc = KConfigWriteString(self,
+                "/repository/user/ad/public/root", ".");
+    }
+    else
+        rc = KConfigNodeRelease(kfg);
+    return rc;
+}
+
 static
 rc_t KConfigFill ( KConfig * self, const KDirectory * cfgdir,
     const char * appname, bool local )
@@ -3298,6 +3333,9 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
                 if ( rc == 0 && updated )
                     rc = KConfigCommit ( mgr );
 #endif
+
+                if ( rc == 0 )
+                    _KConfigCheckAd ( mgr );
             }
 
             DBGMSG ( DBG_KFG, DBG_FLAG ( DBG_KFG ), ( "\n" ) );

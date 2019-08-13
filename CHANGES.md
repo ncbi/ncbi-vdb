@@ -1,6 +1,12 @@
 # NCBI External Developer Release:
 
 
+## NCBI VDB 2.9.6
+**March 18, 2019**
+
+  **prefetch, **vfs**: fixed regression that prevented re-download of incomplete files  
+
+
 ## NCBI VDB 2.9.4-1
 **March 4, 2019**
 

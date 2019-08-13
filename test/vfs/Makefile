@@ -31,6 +31,7 @@ MODULE = test/vfs
 TEST_TOOLS = \
 	redirect-rejected-names-cgi-http-to-https \
 	test-resolver-with-log \
+	test-sdl-response \
 	test-services \
 	test-caching \
 	test-names-30 \
@@ -120,6 +121,18 @@ $(TEST_BINDIR)/test-json-response: $(J_OBJ)
 	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
 
 #----------------------------------------------------------------
+# sdl-response
+
+S_SRC = \
+	test-sdl-response
+
+S_OBJ = \
+	$(addsuffix .$(OBJX),$(S_SRC))
+
+$(TEST_BINDIR)/test-sdl-response: $(S_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+#----------------------------------------------------------------
 # test-caching
 
 CACHING_SRC = \
@@ -130,6 +143,9 @@ CACHING_OBJ = \
 
 $(TEST_BINDIR)/test-caching: $(CACHING_OBJ)
 	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+caching: test-caching
+	$(TEST_BINDIR)/test-caching
 
 #----------------------------------------------------------------
 # test-names-30
@@ -179,6 +195,9 @@ RESOLVERTEST_LIB = \
 
 $(TEST_BINDIR)/test-resolver: $(RESOLVERTEST_OBJ)
 	$(LP) --exe -o $@ $^ $(RESOLVERTEST_LIB)
+
+resolver: test-resolver
+	$(TEST_BINDIR)/test-resolver
 
 #----------------------------------------------------------------
 # Test of names service

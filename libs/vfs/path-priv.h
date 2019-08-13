@@ -120,6 +120,22 @@ struct VPath
 
     uint8_t    md5 [ 16 ];  /* md5 checksum object's un-encrypted if known */
     bool       has_md5;
+
+    String     service;      /* s3, gs, sra-ncbi, ftp-ncbi, sra-sos, etc. */
+    String     objectType;
+    String     type;
+
+    String     name;
+    String     nameExtension; /* file extension in name */
+
+    const VPath * vdbcache;
+    bool          vdbcacheChecked; /* no need to check vdbcache URL when
+                                  vdbcacheChecked = true and vdbcache == NULL */
+
+    bool       ceRequired;
+    bool       payRequired;
+
+    const String * accOfParentDb; /* for refseqs */
 };
 
 enum VPathVariant
@@ -186,7 +202,11 @@ VPUri_t VPathGetUri_t (const VPath * self);
 
 rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
     const String * tick, bool ext, const String * id, uint64_t osize,
-    KTime_t date, const uint8_t md5 [ 16 ], KTime_t exp_date );
+    KTime_t date, const uint8_t md5 [ 16 ], KTime_t exp_date,
+    const char * service, const String * objectType, const String * type,
+    bool ceRequired, bool payRequired, const char * name );
+
+rc_t VPathAttachVdbcache(VPath * self, const VPath * vdbcache);
 
 /* Equal
  *  compares two VPath-s
@@ -215,7 +235,7 @@ rc_t VPathSetGetCache ( const VPathSet * self, const struct VPath ** path );
 rc_t VPathSetGetLocal ( const VPathSet * self, const struct VPath ** path );
 
 /* name resolver response row converted into VDB objects */
-typedef struct {
+typedef struct {          /*       vdbcache */
     struct VPath * fasp ; struct VPath * vcFasp;
     struct VPath * file ; struct VPath * vcFile;
     struct VPath * http ; struct VPath * vcHttp;
@@ -225,6 +245,7 @@ typedef struct {
     const struct KSrvError * error;
     char * reqId;
     char * respId;
+    uint64_t osize; /*size of VPath object */
 } EVPath;
 
 rc_t VPathSetMake

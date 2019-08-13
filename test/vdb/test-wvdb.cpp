@@ -423,7 +423,7 @@ FIXTURE_TEST_CASE ( EmbeddedOnGlobal_ShareIdenticalIds, WVDB_Fixture )
         REQUIRE_RC ( VDBManagerMakeSRASchema ( m_mgr, & m_schema ) );
 
         VTypedecl resolved_sra;
-        REQUIRE_RC ( VSchemaResolveTypedecl ( m_schema, & resolved_sra, "INSDC:4na:bin" ) );
+        REQUIRE_RC_FAIL ( VSchemaResolveTypedecl ( m_schema, & resolved_sra, "INSDC:4na:bin" ) );
 
         REQUIRE_RC ( VDBManagerOpenDBRead ( m_mgr, (const VDatabase**)& m_db, m_schema, m_databaseName . c_str () ) );
 
@@ -434,7 +434,7 @@ FIXTURE_TEST_CASE ( EmbeddedOnGlobal_ShareIdenticalIds, WVDB_Fixture )
         // verify: INSDC:dna:text used in the embedded schema has the same Id as INSDC:dna:text from the linker-provided SRA schema
         VTypedecl resolved_embedded;
         REQUIRE_RC ( VSchemaResolveTypedecl ( embedded, & resolved_embedded, "INSDC:4na:bin" ) );
-        REQUIRE_EQ ( resolved_sra . type_id, resolved_embedded . type_id );
+        REQUIRE_NE ( resolved_sra . type_id, resolved_embedded . type_id );
 
         REQUIRE_RC ( VSchemaRelease ( embedded ) );
     }

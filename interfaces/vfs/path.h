@@ -268,6 +268,13 @@ VFS_EXTERN rc_t CC VPathMakeSysPath ( const VPath * self,
 VFS_EXTERN rc_t CC VPathMakeString ( const VPath * self,
     struct String const ** str );
 
+/* GetVdbcache
+ *  return attached vdbcahe
+ * and boolian trating that there is no neew to check remove vdbcache URL
+ */
+VFS_EXTERN rc_t CC VPathGetVdbcache(const VPath * self,
+    const VPath ** vdbcache, bool * vdbcacheChecked);
+
     
 /* Get*
  *  retrieves internal parts
@@ -291,6 +298,22 @@ VFS_EXTERN uint32_t CC VPathGetOid ( const VPath * self );
 /* GetId: retrieve object-id returned by name resolver */
 VFS_EXTERN rc_t CC VPathGetId ( const VPath * self, struct String * str );
 VFS_EXTERN rc_t CC VPathGetTicket ( const VPath * self, struct String * str );
+
+/* s3, gs, sra-ncbi, ftp-ncbi, sra-sos, etc. */
+VFS_EXTERN rc_t CC VPathGetService(const VPath * self, struct String * str);
+
+/* sra, vdbcache, ... */
+VFS_EXTERN rc_t CC VPathGetType(const VPath * self, struct String * str);
+
+/* refseq, ... */
+VFS_EXTERN rc_t CC VPathGetObjectType(const VPath * self, struct String * str);
+
+VFS_EXTERN rc_t CC VPathGetName(const VPath * self, struct String * str);
+VFS_EXTERN rc_t CC VPathGetNameExt(const VPath * self, struct String * str);
+
+VFS_EXTERN rc_t CC VPathGetCeRequired ( const VPath * self, bool * required );
+VFS_EXTERN rc_t CC VPathGetPayRequired ( const VPath * self, bool * required );
+
 VFS_EXTERN KTime_t CC VPathGetModDate ( const VPath * self );
 VFS_EXTERN uint64_t CC VPathGetSize ( const VPath * self );
 VFS_EXTERN const uint8_t * CC VPathGetMd5 ( const VPath * self );

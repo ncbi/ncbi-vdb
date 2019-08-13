@@ -62,6 +62,11 @@ ALIGN_EXTERN rc_t CC RefSeqMgr_Read(const RefSeqMgr* cself, const char* seq_id, 
                                     INSDC_coord_zero offset, INSDC_coord_len len,
                                     uint8_t* buffer, INSDC_coord_len* written);
 
+/* db: path to parents's database: is used to resolve refseq in Accession Directory */
+ALIGN_EXTERN rc_t CC RefSeqMgr_ReadForDb(const RefSeqMgr* cself, const char* seq_id,
+    uint32_t seq_id_sz, INSDC_coord_zero offset, INSDC_coord_len len,
+    uint8_t* buffer, INSDC_coord_len* written, const String * accOfParentDb);
+
 typedef struct RefSeq RefSeq;
 
 ALIGN_EXTERN rc_t CC RefSeqMgr_GetSeq(const RefSeqMgr* cmgr, const RefSeq** cself, const char* seq_id, uint32_t seq_id_sz);

@@ -242,11 +242,23 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
         rc = VFSManagerMakeOidPath ( mgr, & query, oid );
 
     if ( rc == 0 ) {
+        bool isSource = false;
+
         const VPath * local = NULL;
         const VPath * cache = NULL;
 
         rc_t localRc = 0;
         rc_t cacheRc = 0;
+
+        String srapub_files;
+        String remote;
+
+        CONST_STRING(&srapub_files, "srapub_files");
+        CONST_STRING(&remote      , "remote"      );
+
+        isSource = StringEqual(&path->objectType, &srapub_files);
+        if ( ! isSource )
+            isSource = StringEqual(&path->objectType, &remote);
 
         if ( outFile != NULL ) {
             bool exists = false;
@@ -263,12 +275,55 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
                 localRc = RC ( rcVFS, rcResolver, rcResolving,
                                       rcName, rcNotFound );
         }
+
         else if ( VPathFromUri ( path ) ) {
-            cacheRc = VResolverQueryWithDir ( self, protocols, query,
-                NULL, NULL, & cache, false, outDir, NULL, true, path, mapping);
-            localRc = VResolverQueryWithDir ( self, protocols, query,
-                & local, NULL, NULL, false, outDir, NULL, true, path, mapping);
+            if (isSource) {
+                String acc;
+                String name;
+
+                /* Getting cache location for source files.
+                   When acc & name (come from SDL) are unknown:
+                    it should be cwd/acc/filename.
+                    Using a hack: filename is the last part of path;
+                    acc is the last directory name
+                   Otherwise cache location is acc/name */
+
+                size_t size = path->path.size;
+                const char * s = string_rchr(path->path.addr, size, '/');
+                /* the part after the latest slash is the filename */
+
+                rc = VPathGetId(path, &acc);
+                if (rc == 0)
+                    rc = VPathGetName(path, &name);
+
+                if (rc == 0 && acc.size > 0 && name.size > 0)
+                    /* acc & name (come from SDL) are known */
+                    cacheRc = VPathMakeFmt((VPath**)&cache, "%S/%S", &acc, &name);
+
+                else {
+                    /* acc & name (come from SDL) are unknown */
+                    if (s != NULL && s > path->path.addr) {
+                        /* size of path without filename */
+                        size = s - path->path.addr;
+                        /* rfind the second slash for accesion directory */
+                        s = string_rchr(path->path.addr, size, '/');
+                    }
+                    if (s != NULL)
+                        ++s;
+                    if (s == NULL)
+                        s = path->path.addr + path->path.size;
+                    size = path->path.size - (s - path->path.addr);
+                    cacheRc = VPathMakeFmt((VPath**)&cache, "%.*s", (int)size, s);
+                }
+            }
+            else {
+                cacheRc = VResolverQueryWithDir(self, protocols, query, NULL,
+                    NULL, &cache, false, outDir, NULL, true, path, mapping);
+                localRc = VResolverQueryWithDir(self, protocols, query, &local,
+                    NULL, NULL, false, outDir, NULL, true, path, mapping);
+            }
         }
+
         else {
             cacheRc = VResolverQuery ( self, protocols, query,
                                     NULL, NULL, & cache );
@@ -314,12 +369,10 @@ static rc_t _VPathGetId ( const VPath * self, const String ** newId,
     if ( oldId -> size <= https . size )
         return 0;
 
-    if ( ! string_cmp ( oldId -> addr, oldId -> size, https . addr, https. size,
-                      https. size ) == 0  &&
-         ! string_cmp ( oldId -> addr, oldId -> size, fasp  . addr, fasp . size,
-                        fasp . size ) == 0 &&
-         ! string_cmp ( oldId -> addr, oldId -> size, http  . addr, fasp . size,
-                        fasp . size ) == 0 )
+    /* what is being attempted with this code? */
+    if ( string_cmp ( oldId -> addr, oldId -> size, https . addr, https. size, https. size ) != 0 &&
+         string_cmp ( oldId -> addr, oldId -> size, fasp  . addr, fasp . size, fasp . size ) != 0 &&
+         string_cmp ( oldId -> addr, oldId -> size, http  . addr, fasp . size, fasp . size ) != 0 )
     {   return 0; }
 
     rc = VPathGetId ( self, & id );
@@ -494,8 +547,8 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                                             RELEASE(KSrvError, error);
                                     }
                                     if (vps != NULL) {
-                                        rc = KSrvRespFileAddLocalAndCache
-                                        (file, vps);
+                                        rc = KSrvRespFileAddLocalAndCache(
+                                            file, vps);
                                         RELEASE(VPathSet, vps);
                                     }
                                     RELEASE(VPath, path);
