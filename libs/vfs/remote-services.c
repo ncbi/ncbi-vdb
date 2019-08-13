@@ -4227,8 +4227,9 @@ static rc_t KSrvRespObj_AttachVdbcaches(const KSrvRespObj * self) {
 
     rc = KSrvRespObjGetError(self, &rx, NULL, NULL);
 
-    if (rx == 0) /* error in names service response for this KSrvRespObj: skipping */
+    if (rx == 0)
         rc = KSrvRespObjMakeIterator(self, &it);
+ /* else  error in names service response for this KSrvRespObj: skipping */
 
     while (rx == 0 && rc == 0) {
         KSrvRespFile * file = NULL;
@@ -4243,7 +4244,7 @@ static rc_t KSrvRespObj_AttachVdbcaches(const KSrvRespObj * self) {
         while (rc == 0) {
             enum { eOther, eSra, eVdbcache } aType = eOther;
 
-            String id, service, type;
+            String id, nameExt, service, type;
 
             VPath * next = NULL;
             rc = KSrvRespFileIteratorNextPath(fi, (const VPath **)& next);
@@ -4262,13 +4263,16 @@ static rc_t KSrvRespObj_AttachVdbcaches(const KSrvRespObj * self) {
                 else if (StringCompare(acc, &id) != 0)
                     PLOGERR(klogFatal, (klogFatal,
                         RC(rcVFS, rcQuery, rcExecuting, rcString, rcUnexpected),
-                        "multiple accessions for the same bundle: '$(acc1), $(acc2)",
-                        "acc1=%S,acc2=%S", acc, &id));
+                        "multiple accessions for the same bundle: "
+                        "'$(acc1), $(acc2)", "acc1=%S,acc2=%S", acc, &id));
             }
 
             if (rc == 0) {
-                if (StringCompare(&type, &sra) == 0)
-                    aType = eSra;
+                if (StringCompare(&type, &sra) == 0) {
+                    rc = VPathGetNameExt(next, &nameExt);
+                    if (rc == 0 && nameExt.size == 0)
+                        aType = eSra;
+                }
                 else if (StringCompare(&type, &vdbcache) == 0)
                     aType = eVdbcache;
             }
@@ -4283,8 +4287,8 @@ static rc_t KSrvRespObj_AttachVdbcaches(const KSrvRespObj * self) {
                 else
                     PLOGERR(klogFatal, (klogFatal,
                         RC(rcVFS, rcQuery, rcExecuting, rcString, rcUnexpected),
-                        "multiple response SRR URLs for the same service '$(service)",
-                        "service=%S", &service));
+                        "multiple response SRR URLs for the same service "
+                        "'$(service)'", "service=%S", &service));
                 break;
             case eVdbcache:
                 ++nVdbc;
