@@ -124,7 +124,9 @@ struct VPath
     String     service;      /* s3, gs, sra-ncbi, ftp-ncbi, sra-sos, etc. */
     String     objectType;
     String     type;
+
     String     name;
+    String     nameExtension; /* file extension in name */
 
     const VPath * vdbcache;
     bool          vdbcacheChecked; /* no need to check vdbcache URL when

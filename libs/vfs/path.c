@@ -3406,6 +3406,27 @@ LIB_EXPORT rc_t CC VPathGetName(const VPath * self, String * str)
     return rc;
 }
 
+LIB_EXPORT rc_t CC VPathGetNameExt(const VPath * self, String * str)
+{
+    rc_t rc;
+
+    if (str == NULL)
+        rc = RC(rcVFS, rcPath, rcAccessing, rcParam, rcNull);
+    else
+    {
+        rc = VPathGetTestSelf(self);
+        if (rc == 0)
+        {
+            *str = self->nameExtension;
+            return 0;
+        }
+
+        StringInit(str, "", 0, 0);
+    }
+
+    return rc;
+}
+
 LIB_EXPORT rc_t CC VPathGetObjectType(const VPath * self, String * str)
 {
     rc_t rc;
@@ -4039,6 +4060,13 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
                         return RC(rcVFS,
                             rcPath, rcAllocating, rcMemory, rcExhausted);
                     StringInit(&path->name, c, size, size);
+
+                    c = string_chr(path->name.addr, path->name.size, '.');
+                    if (c == NULL)
+                        size = 0;
+                    else
+                        size = path->name.size - (++c - path->name.addr);
+                    StringInit(&path->nameExtension, c, size, size);
                 }
 
                 path->ceRequired = ceRequired;
