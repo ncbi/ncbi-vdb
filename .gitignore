@@ -13,7 +13,6 @@ vgcore.*
 /reconfigure
 /schema
 /test-bin64
-user.status
 /win
 *.opensdf
 *.sdf
@@ -35,3 +34,6 @@ core
 .gdb_history
 .vscode
 *.cache
+*.user
+actual/
+.vs

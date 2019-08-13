@@ -136,13 +136,16 @@ int pthread_cond_destroy (pthread_cond_t *cv) {
     return 0;
 }
 
+#if _MSC_VER < 1900
 #ifndef timespec
-typedef struct timespec
+struct timespec
   {
     time_t tv_sec;            /* Seconds.  */
     long int tv_nsec;           /* Nanoseconds.  */
-  } timespec;
+  };
 #endif
+#endif
+typedef struct timespec timespec;
 
 int pthread_cond_waitImpl (pthread_cond_t *cv, 
                    pthread_mutex_t *external_mutex,
