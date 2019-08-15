@@ -250,7 +250,8 @@ TEST_CASE(PrintLocation) {
     CloudSetUserAgreesToRevealInstanceIdentity(cloud, true);
 
     rc = CloudMakeComputeEnvironmentToken(cloud, &ce_token);
-    if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy) &&
+    if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy  ) &&
+        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcError     ,rcUnknown) &&
         rc != SILENT_RC(rcNS, rcFile, rcCreating,
             rcTimeout, rcExhausted) &&
         rc != SILENT_RC(rcNS, rcFile, rcReading, rcSelf, rcNull))
