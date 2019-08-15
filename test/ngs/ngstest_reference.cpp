@@ -696,12 +696,12 @@ static bool expectToFail() {
     char name[512] ="";
     gethostname(name, sizeof name);
     std::cerr << "GETHOSTNAME = '" << name << "': ";
-    const char bad[]="tcmac01";
+    const char bad[]="tcmac0";
     if (strncmp(name,bad, sizeof bad - 1) == 0) {
-      std::cerr << "bad host";
+      std::cerr << "bad host\n";
       return true;
     }
-    std::cerr << "good host";
+    std::cerr << "good host\n";
     return false;
 }
 
