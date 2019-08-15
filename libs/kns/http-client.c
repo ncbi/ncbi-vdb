@@ -429,6 +429,7 @@ rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint
         self -> port = pport;
 
         /* format CONNECT request */
+printf("string_printf 1\n");abort();
         rc = string_printf ( buffer, sizeof buffer, & len,
                              "CONNECT %S:%u HTTP/1.1\r\n"
                              "Host: %S:%u\r\n\r\n"
@@ -1155,17 +1156,12 @@ rc_t KClientHttpAddHeaderString
                 rc = RC ( rcNS, rcNoTarg, rcAllocating, rcMemory, rcNull );
             else
             {
-                /* size of the KDataBuffer to store string data */
-                size_t bsize = name -> size + value ->  size + 1;
-                rc = KDataBufferMakeBytes ( & node -> value_storage, bsize );
+                rc = KDataBufferMakeBytes ( & node -> value_storage, 0 );
                 if ( rc == 0 )
                 {
                     /* copy the string data into storage */
-                    rc = string_printf ( ( char *) node -> value_storage . base,
-                                         bsize, NULL,
-                                         "%S%S"
-                                         , name
-                                         , value );
+                    rc = KDataBufferPrintf ( & node -> value_storage, 
+                                             "%S%S", name, value );
                     if ( rc == 0 )
                     {
                         /* initialize the Strings to point into KHttpHeader node */
@@ -1191,21 +1187,11 @@ rc_t KClientHttpAddHeaderString
            check that value param has data */
         else if ( value -> size != 0 )
         {
-          /* find the current size of the data in the node */
-          size_t cursize = node -> name . size + node -> value . size;
           if ( add ) { /* add value to node -> value
                           do not add value if node -> value == value */
-           if ( ! StringEqual ( & node -> value, value ) ) {
-         /* resize databuffer to hold the additional value data + comma + nul */
-            rc = KDataBufferResize ( & node -> value_storage, cursize + value -> size + 1 + 1 );
-            if ( rc == 0 )
+            if ( ! StringEqual ( & node -> value, value ) )
             {
-                char * buffer = ( char * ) node -> value_storage . base;
-
-                /* copy string data into buffer */
-                rc = string_printf ( & buffer [ cursize ], value -> size + 2, NULL,
-                                     ",%S"
-                                     , value );
+                rc = KDataBufferPrintf( & node -> value_storage, ",%S", value );
                 if ( rc == 0 )
                 {
                     /* update size and len of value in the node */
@@ -1213,12 +1199,7 @@ rc_t KClientHttpAddHeaderString
                     node -> value . len += value -> len + 1;
                     return 0;
                 }
-
-                /* In case of almost impossible error
-                   restore values to what they were */
-                KDataBufferResize ( & node -> value_storage, cursize + 1 );
             }
-           }
           } else { /* replace value with node -> value */
             if ( ! StringEqual ( & node -> value, value ) )
             /* values are not equal - need to replace */
@@ -1231,6 +1212,7 @@ rc_t KClientHttpAddHeaderString
                     KDataBufferResize ( & node -> value_storage, bsize );
                 }
                 /* copy the string data into storage */
+printf("string_printf 4\n");abort();
                 rc = string_printf ( ( char * ) node -> value_storage . base,
                     bsize, NULL, "%S%S", name, value );
                 if ( rc == 0 )
@@ -3454,12 +3436,32 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddQueryParam ( KClientHttpRequest *self, c
     return rc;
 }
 
+static
+rc_t 
+DataBufferToStringBuffer( KDataBuffer * dataBuf, char * buffer, 
+                          size_t bsize, size_t * len )
+{
+    size_t size = KDataBufferBytes( dataBuf );
+    if ( len != NULL )
+    {
+        * len = size - 1; /* reported length does not include 0-terminator */
+    }
+    if ( size > bsize )
+    {
+        return RC ( rcNS, rcNoTarg, rcFormatting, rcParam, rcInsufficient );
+    }
+
+    memmove( buffer, dataBuf -> base, size ); /* include 0-terminator */
+
+    return 0;
+}
+
 LIB_EXPORT rc_t CC KClientHttpResultFormatMsg (
     const struct KClientHttpResult * self, char * buffer,
     size_t bsize, size_t * len, const char * bol, const char * eol )
 {
     rc_t rc = 0;
-    size_t total = 0;
+    KDataBuffer dataBuffer;
 
     if ( self == NULL ) {
         return RC ( rcNS, rcNoTarg, rcReading, rcSelf, rcNull );
@@ -3469,47 +3471,44 @@ LIB_EXPORT rc_t CC KClientHttpResultFormatMsg (
         return RC ( rcNS, rcNoTarg, rcReading, rcParam, rcNull );
     }
 
-    rc = string_printf ( buffer, bsize, len,
-            "%sHTTP/%.2V %d %S%s", bol
-            , self -> version
-            , self -> status
-            , & self -> msg, eol
-        );
-    total = * len;
-
-    if ( rc == 0 ||
-        ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
-          GetRCState ( rc ) == rcInsufficient ) )
+    rc = KDataBufferMakeBytes( & dataBuffer, 0 );
+    if ( rc == 0 )
     {
-        const KHttpHeader * node = NULL;
-        for ( node = ( const KHttpHeader* ) BSTreeFirst ( & self -> hdrs );
-              node != NULL;
-              node = ( const KHttpHeader* ) BSTNodeNext ( & node -> dad ) )
+        rc_t rc2;
+        rc = KDataBufferPrintf ( & dataBuffer, 
+                "%sHTTP/%.2V %d %S%s", bol
+                , self -> version
+                , self -> status
+                , & self -> msg, eol
+            );
+        if ( rc == 0 )
         {
-            size_t p_bsize
-                = rc == 0
-                    ? bsize >= total ? bsize - total : 0
-                    : 0;
-            /* add header line */
-            rc_t r2 = string_printf ( & buffer [ total ], p_bsize, len,
-                             "%s%S: %S\r%s", bol
-                             , & node -> name
-                             , & node -> value, eol );
-            total += * len;
-            if ( rc == 0 ) {
-                rc = r2;
+            const KHttpHeader * node = NULL;
+            for ( node = ( const KHttpHeader* ) BSTreeFirst ( & self -> hdrs );
+                node != NULL;
+                node = ( const KHttpHeader* ) BSTNodeNext ( & node -> dad ) )
+            {
+                /* add header line */
+                rc2 = KDataBufferPrintf ( & dataBuffer, 
+                                "%s%S: %S\r%s", bol
+                                , & node -> name
+                                , & node -> value, eol );
+                if ( rc == 0 ) {
+                    rc = rc2;
+                }
             }
         }
+        if ( rc == 0 )
+        {
+            rc = DataBufferToStringBuffer ( & dataBuffer, buffer, bsize, len );
+        }
+        
+        rc2 = KDataBufferWhack( & dataBuffer );
+        if ( rc == 0 )
+        {
+            rc = rc2;
+        }
     }
-
-    if ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
-        GetRCState ( rc ) == rcInsufficient )
-    {
-        ++ total;
-    }
-
-
-    * len = total;
 
     return rc;
 }
@@ -3547,8 +3546,8 @@ static EUriForm EUriFormGuess ( const String * hostname,
 }
 
 static rc_t KClientHttpRequestFormatMsgBegin (
-    const KClientHttpRequest * self, char * buffer, size_t bsize,
-    const char * method, size_t * len, uint32_t uriForm )
+    const KClientHttpRequest * self, KDataBuffer * buffer,
+    const char * method, uint32_t uriForm )
 {
     rc_t rc = 0;
     const char * has_query = NULL;
@@ -3575,7 +3574,7 @@ static rc_t KClientHttpRequestFormatMsgBegin (
     }
     if ( ! http -> proxy_ep )
     {   /* direct connection */
-        rc = string_printf ( buffer, bsize, len,
+        rc = KDataBufferPrintf ( buffer, 
                              "%s %S%s%S HTTP/%.2V\r\nHost: %S\r\n"
                              , method
                              , & self -> url_block . path
@@ -3589,7 +3588,8 @@ static rc_t KClientHttpRequestFormatMsgBegin (
         http -> uf = EUriFormGuess ( & hostname, uriForm, http -> uf );
         if ( http -> uf == eUFOrigin ) {
         /* the host does not like absoluteURI: use abs_path ( origin-form ) */
-            rc = string_printf ( buffer, bsize, len,
+printf("buffer_printf 9-1\n");
+            rc = KDataBufferPrintf ( buffer,    
                          "%s %S%s%S HTTP/%.2V\r\nHost: %S:%u\r\n"
                              , method
                              , & self -> url_block . path
@@ -3601,7 +3601,8 @@ static rc_t KClientHttpRequestFormatMsgBegin (
                 );
         }
         else if ( http -> port != 80 ) { /* absoluteURI: non-default port */
-            rc = string_printf ( buffer, bsize, len,
+printf("buffer_printf 10-1\n");
+            rc = KDataBufferPrintf ( buffer, 
                              "%s %S://%S:%u%S%s%S HTTP/%.2V\r\nHost: %S\r\n"
                              , method
                              , & self -> url_block . scheme
@@ -3615,7 +3616,8 @@ static rc_t KClientHttpRequestFormatMsgBegin (
                 );
         }
         else {                           /* absoluteURI: default port */
-            rc = string_printf ( buffer, bsize, len,
+printf("buffer_printf 11-1\n");
+            rc = KDataBufferPrintf ( buffer, 
                              "%s %S://%S%S%s%S HTTP/%.2V\r\nHost: %S\r\n"
                              , method
                              , & self -> url_block . scheme
@@ -3732,30 +3734,20 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
 
 static
 rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
-    char *buffer, size_t bsize, const char *method,
-    size_t *len, uint32_t uriForm )
+    KDataBuffer * buffer, const char *method, uint32_t uriForm )
 {
     rc_t rc;
-    rc_t r2 = 0;
     bool have_user_agent = false;
     bool have_accept = false;
     String user_agent_string;
     String accept_string;
-    size_t total;
-    char * buf_end = buffer;
-    size_t p_bsize = 0;
     const KHttpHeader *node;
-    size_t dummy;
 
     if ( self == NULL ) {
          return RC ( rcNS, rcNoTarg, rcReading, rcSelf, rcNull );
     }
     if ( buffer == NULL ) {
          return RC ( rcNS, rcNoTarg, rcReading, rcParam, rcNull );
-    }
-
-    if ( len == NULL ) {
-        len = & dummy;
     }
 
     CONST_STRING ( &user_agent_string, "User-Agent" );
@@ -3773,20 +3765,11 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
        We are inlining the host:port, instead of
        sending it in its own header */
 
-    rc = KClientHttpRequestFormatMsgBegin
-        ( self, buffer, bsize, method, len, uriForm );
+    rc = KClientHttpRequestFormatMsgBegin( self, buffer, method, uriForm );
 
     /* print all headers remaining into buffer */
-    total = * len;
-    if ( rc == 0 )
-    {
-        buf_end += * len;
-    }
     for ( node = ( const KHttpHeader* ) BSTreeFirst ( & self -> hdrs );
-          ( rc == 0  ||
-            ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
-              GetRCState ( rc ) == rcInsufficient )
-          ) && node != NULL;
+          rc == 0 && node != NULL;
           node = ( const KHttpHeader* ) BSTNodeNext ( & node -> dad ) )
     {
         /* look for "User-Agent" */
@@ -3801,67 +3784,21 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
                 have_accept = true;
         }
 
-        p_bsize = bsize >= total ? bsize - total : 0;
-
         /* add header line */
-        r2 = string_printf ( buf_end, p_bsize, len,
+        rc = KDataBufferPrintf ( buffer, 
                              "%S: %S\r\n"
                              , & node -> name
                              , & node -> value );
-        total += * len;
-        if ( r2 == 0 )
-        {
-            buf_end += * len;
-        }
-        if ( rc == 0 ) {
-            rc = r2;
-        }
     }
 
     /* add an User-Agent header from the kns-manager if we did not find one already in the header tree */
     if ( !have_user_agent )
     {
         const char * ua = NULL;
-        rc_t r3 = KNSManagerGetUserAgent ( &ua );
-        if ( r3 == 0 )
-        {
-            p_bsize = bsize >= total ? bsize - total : 0;
-            r2 = string_printf ( buf_end,
-                p_bsize, len, "User-Agent: %s\r\n", ua );
-            total += * len;
-            if ( r2 == 0 )
-            {
-                buf_end += * len;
-            }
-            if ( rc == 0 ) 
-            {
-                rc = r2;
-            }
-        }
-    }
-
-    if (!have_accept) {
-        r2 = string_printf(buf_end, p_bsize, len, "Accept: */*\r\n");
-        total += * len;
+        rc_t r2 = KNSManagerGetUserAgent ( &ua );
         if ( r2 == 0 )
         {
-            buf_end += * len;
-        }
-        if (rc == 0 && r2 != 0)
-            rc = r2;
-    }
-
-    /* add terminating empty header line */
-    if ( rc == 0 ||
-        ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
-          GetRCState ( rc ) == rcInsufficient ) )
-    {
-        p_bsize = bsize >= total ? bsize - total : 0;
-        r2 = string_printf ( buf_end, p_bsize, len, "\r\n" );
-        total += * len;
-        if ( r2 == 0 )
-        {
-            buf_end += * len;
+            r2 = KDataBufferPrintf ( buffer, "User-Agent: %s\r\n", ua );
         }
         if ( rc == 0 ) 
         {
@@ -3869,13 +3806,19 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
         }
     }
 
-    if ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
-        GetRCState ( rc ) == rcInsufficient )
-    {
-        ++ total;
+    if (!have_accept) {
+        rc_t r2 = KDataBufferPrintf ( buffer, "Accept: */*\r\n");
+        if ( rc == 0 )
+        {
+            rc = r2;
+        }
     }
 
-    * len = total;
+    /* add terminating empty header line */
+    if ( rc == 0 )
+    {
+        rc = KDataBufferPrintf ( buffer, "\r\n" );
+    }
 
     return rc;
 }
@@ -3884,16 +3827,71 @@ LIB_EXPORT
 rc_t CC KClientHttpRequestFormatMsg(const KClientHttpRequest *self,
     char *buffer, size_t bsize, const char *method, size_t *len)
 {
-    return KClientHttpRequestFormatMsgInt(self,
-        buffer, bsize, method, len, 1);
+    KDataBuffer buf;
+    rc_t rc = KDataBufferMakeBytes( & buf, 0 );
+    if ( rc == 0 )
+    {
+        rc_t rc2;
+        rc = KClientHttpRequestFormatMsgInt( self, & buf, method, 1 );
+        if ( rc == 0 )
+        {
+            size_t size = KDataBufferBytes( & buf );
+            if ( len != NULL )
+            {
+                * len = size;
+            }
+            if ( size > bsize )
+            {
+                rc = RC ( rcNS, rcNoTarg, rcFormatting, rcParam, rcInsufficient );
+            }
+            else
+            {
+                memmove( buffer, buf.base, size );
+            }
+        }
+        rc2 = KDataBufferWhack( & buf );
+        if ( rc == 0 )
+        {
+            rc = rc2;
+        }
+    }
+    return rc;
 }
 
 LIB_EXPORT
 rc_t CC KClientHttpRequestFormatPostMsg(const KClientHttpRequest *self,
     char *buffer, size_t bsize, size_t *len)
 {
-    return KClientHttpRequestFormatMsgInt(self,
-        buffer, bsize, "POST", len, 0);
+    KDataBuffer buf;
+    rc_t rc2;
+    rc_t rc = KDataBufferMakeBytes( & buf, 0 );
+    if ( rc == 0 )
+    {
+        rc = KClientHttpRequestFormatMsgInt( self, & buf, "POST", 0 );
+        if ( rc == 0 )
+        {
+            size_t size = KDataBufferBytes( & buf );
+            if ( len != NULL )
+            {
+                * len = size;
+            }
+            if ( size > bsize )
+            {
+                rc = RC ( rcNS, rcNoTarg, rcFormatting, rcParam, rcInsufficient );
+            }
+            else
+            {
+                memmove( buffer, buf.base, size );
+            }
+        }
+        rc2 = KDataBufferWhack( & buf );
+        if ( rc == 0 )
+        {
+            rc = rc2;
+        }
+    }
+printf("KClientHttpRequestFormatPostMsg\n");
+    return rc;
 }
 
 static
@@ -3998,23 +3996,29 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
 
         KClientHttpResult *rslt;
 
-        size_t len;
-        char buffer [ 4096 ];
-
-        /* create message */
-        rc = KClientHttpRequestFormatMsgInt ( self, buffer, sizeof buffer,
-                method, & len, uriForm );
-        if ( rc != 0 )
-            break;
-
-        /* send the message and create a response */
-        rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer, len, NULL, self -> url_buffer . base );
+        KDataBuffer buffer;
+        rc = KDataBufferMakeBytes( & buffer, 0 );
         if ( rc != 0 )
         {
-            KClientHttpClose ( self -> http );
-            rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer, len, NULL, self -> url_buffer . base );
+            break;
+        }
+
+        /* create message */
+        rc = KClientHttpRequestFormatMsgInt ( self, & buffer, method, uriForm );
+        if ( rc == 0 )
+        {
+            /* send the message and create a response */
+            rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, (const char*)buffer.base, buffer.elem_count, NULL, self -> url_buffer . base );
             if ( rc != 0 )
-                break;
+            {
+                KClientHttpClose ( self -> http );
+                rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, (const char*)buffer.base, buffer.elem_count, NULL, self -> url_buffer . base );
+            }
+        }
+        KDataBufferWhack( & buffer );
+        if ( rc != 0 )
+        {
+            break;
         }
 
         rslt = * _rslt;
@@ -4242,34 +4246,42 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
 
     for ( i = 0; i < max_redirect; ++ i )
     {
-        const KDataBuffer *body = & self -> body;
-        size_t len;
-        char buffer [ 4096 ];
-
+        KDataBuffer buffer;
+        rc = KDataBufferMakeBytes ( & buffer, 0 );
+        if ( rc == 0 )
+        {
         /* create message */
-        rc = KClientHttpRequestFormatMsgInt ( self, buffer, sizeof buffer,
-                                           method, & len, 0 );
-        if ( rc != 0 )
+            rc = KClientHttpRequestFormatMsgInt ( self, & buffer, method, 0 );
+            if ( rc == 0 )
+            {
+                const KDataBuffer * body = & self -> body;
+                /* Add body to buffer to avoid double socket write */
+                if ( body != NULL && body -> base != NULL && body -> elem_count > 0 )
+                {
+                    size_t len = buffer.elem_count;
+                    rc_t rc2 = KDataBufferResize ( & buffer, buffer.elem_count + body->elem_count - 1 );
+                    if ( rc2 == 0 )
+                    {
+                        memmove( ((char*)buffer.base) + len - 1, body -> base, body -> elem_count );
+                        body = NULL;
+                    }
+                }
+
+                /* send the message and create a response */
+                rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, (const char *)buffer.base, buffer.elem_count, body, self -> url_buffer . base );
+                if ( rc != 0 )
+                {
+                    KClientHttpClose ( self -> http );
+                    rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, (const char *)buffer.base, buffer.elem_count, body, self -> url_buffer . base );
+                }
+            }
+            KDataBufferWhack ( & buffer );
+        }
+
+         if ( rc != 0 )
+         {
             break;
-
-        /* Try to add body to buffer to avoid double socket write */
-        if (body != NULL && body -> base != NULL && body -> elem_count > 0 &&
-                len + body -> elem_count - 1 <= sizeof buffer)
-        {
-            memmove(buffer + len, body -> base, body -> elem_count - 1);
-            len += body -> elem_count - 1;
-            body = NULL;
-        }
-
-        /* send the message and create a response */
-        rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer, len, body, self -> url_buffer . base );
-        if ( rc != 0 )
-        {
-            KClientHttpClose ( self -> http );
-            rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer, len, NULL, self -> url_buffer . base );
-            if ( rc != 0 )
-                break;
-        }
+         }
 
         rslt = * _rslt;
         rslt -> expiration = expiration; /* expiration has to reach the caller */

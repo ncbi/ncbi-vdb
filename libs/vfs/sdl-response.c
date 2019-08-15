@@ -571,7 +571,6 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
         if (THRESHOLD > THRESHOLD_NO_DEBUG)
             DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
             ("... error: cannot find '%s'\n", name));
-        KJsonValueWhack(root);
     }
     else {
         const KJsonArray * array = KJsonValueToArray(value);
