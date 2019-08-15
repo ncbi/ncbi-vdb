@@ -67,6 +67,10 @@ struct GCP;
 #include "cloud-cmn.h" /* KNSManager_Read */
 #include "cloud-priv.h"
 
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
 /*TODO: use log.h instead, or promote to cloud-priv.h (there is a copy in cloud-mgr.c) */
 #if 0
 #include <stdio.h>
