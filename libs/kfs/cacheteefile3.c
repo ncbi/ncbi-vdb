@@ -193,8 +193,8 @@ int64_t CC KCacheTeeFileTreeNodeSort ( const BSTNode *item, const BSTNode *n )
 
 #if WINDOWS
 //#include <synchapi.h>
+//#include <processthreadsapi.h>
 #include <windows.h>
-#include <processthreadsapi.h>
 static CRITICAL_SECTION crit;
 static
 int enter_crit_section ( void )
