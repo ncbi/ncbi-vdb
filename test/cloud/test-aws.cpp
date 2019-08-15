@@ -207,8 +207,9 @@ TEST_CASE(GetPkcs7) {
     rc_t rc = KNSManager_Read(kns, pkcs7, sizeof pkcs7,
         "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7",
         NULL, NULL);
-    if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy) &&
-        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout, rcExhausted))
+    if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy  ) &&
+        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcError     ,rcUnknown) &&
+        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout   , rcExhausted))
     {
 #define rcStream rcFile
         if (rc == SILENT_RC(rcNS, rcStream, rcReading, rcSelf, rcNull)) {
