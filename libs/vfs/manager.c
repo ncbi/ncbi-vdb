@@ -557,9 +557,9 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
     if ( cps -> use_file_cache )
     {
         char location[ 4096 ];
-        location[ 0 ] = 0;
         bool remove_on_close = false;
         bool promote = cps -> promote;
+        location[ 0 ] = 0;
     
         if ( cps -> debug )
             KOutMsg( "use file-cache\n" );

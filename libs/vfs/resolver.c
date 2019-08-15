@@ -2710,6 +2710,7 @@ static rc_t VResolverMagicResolve(const VResolver * self,
     rc_t rc = 0;
 
     KPathType kpt = kptNotFound;
+    const char * magic;
 
     /* resolver is not confused by shell variables
         when retrieving reference objects */
@@ -2719,7 +2720,7 @@ static rc_t VResolverMagicResolve(const VResolver * self,
         return 0;
     }
 
-    const char * magic = getenv(name);
+    magic = getenv(name);
     if (magic == NULL) {
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("'%s' magic not set\n", name));
         return 0;
