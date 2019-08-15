@@ -3557,8 +3557,13 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
     /* no existing cache file was found,
        so create a new one using the best
        TBD - this should remember a volume path */
-    if ( best == NULL && better == NULL )
+    if ( best == NULL && better == NULL ) {
         rc = RC ( rcVFS, rcResolver, rcResolving, rcPath, rcNotFound );
+        assert(query);
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
+            "VResolverCacheResolve: cache location of '%S' not found\n",
+            &query->path));
+    }
     else {
         alg = best == NULL ? better : best;
         assert ( alg );
