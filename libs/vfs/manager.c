@@ -482,6 +482,9 @@ static rc_t wrap_in_rr_cache( KDirectory * dir,
     static const char * fallback_cache_location = "/var/tmp";
     const char * get_fallback_cache_location( void )
     {
+        const char * c = getenv ( "TMPDIR" );
+        if ( c != NULL )
+            return c;
         return fallback_cache_location;
     }
 #endif
