@@ -1228,6 +1228,47 @@ static KFile_vt_v1 vtKHttpFile =
 #endif
 };
 
+static
+rc_t KHttpFileMake( KHttpFile ** self, const char *url, va_list args )
+{
+    rc_t rc;
+    KHttpFile * f = calloc ( 1, sizeof *f );
+    if ( f == NULL )
+    {
+        rc = RC ( rcNS, rcFile, rcConstructing, rcMemory, rcExhausted );
+    }
+    else
+    {
+        rc = KFileInit ( &f -> dad, ( const KFile_vt * ) &vtKHttpFile, "KHttpFile", url, true, false );
+        if ( rc == 0 )
+        {
+            rc = KLockMake ( & f -> lock );
+            if ( rc == 0 )
+            {
+                KDataBuffer * buf = & f -> orig_url_buffer;
+                rc = KDataBufferMake( buf, 8, 0 );
+                if ( rc == 0 )
+                {
+                    rc = KDataBufferVPrintf ( buf, url, args );
+                    if ( rc == 0 )
+                    {
+                        rc = ParseUrl ( & f -> block, buf -> base, buf -> elem_count - 1 );
+                        if ( rc == 0 )
+                        {
+                            *self = f;
+                            return 0;
+                        }
+                    }
+                    KDataBufferWhack( & f -> orig_url_buffer );
+                }
+                KLockRelease ( f -> lock );
+            }
+        }
+        free ( f );
+    }
+    return rc;
+}
+
 static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
     const KFile **file, KStream *conn, ver_t vers, bool reliable, bool need_env_token, bool payRequired,
     const char *url, va_list args )
@@ -1246,200 +1287,173 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
             rc = RC ( rcNS, rcFile, rcConstructing, rcPath, rcInvalid );
         else
         {
-            KHttpFile *f;
-
-            f = calloc ( 1, sizeof *f );
-            if ( f == NULL )
-                rc = RC ( rcNS, rcFile, rcConstructing, rcMemory, rcExhausted );
-            else
+            KHttpFile * f;
+            rc = KHttpFileMake ( &f, url, args );
+            if ( rc == 0 )
             {
-                rc = KFileInit ( &f -> dad, ( const KFile_vt * ) &vtKHttpFile, "KHttpFile", url, true, false );
+                KDataBuffer * buf = & f -> orig_url_buffer;
+                KClientHttp *http;
+                rc = KNSManagerMakeClientHttpInt ( self, & http, buf, conn, vers,
+                    self -> http_read_timeout, self -> http_write_timeout, & f -> block . host, f -> block . port, reliable, f -> block . tls );
                 if ( rc == 0 )
                 {
-                    rc = KLockMake ( & f -> lock );
+                    KClientHttpRequest *req;
+
+                    rc = KClientHttpMakeRequestInt ( http, & req, & f -> block, buf );
                     if ( rc == 0 )
                     {
-                        KDataBuffer *const buf = & f -> orig_url_buffer;
+                        KClientHttpResult *rslt;
 
-                        memset(buf, 0, sizeof(*buf));
-                        buf -> elem_bits = 8;
-                        rc = KDataBufferVPrintf ( buf, url, args );
-                        if ( rc == 0 )
+                        if ( need_env_token )
                         {
-                            rc = ParseUrl ( & f -> block, buf -> base, buf -> elem_count - 1 );
+                            KClientHttpRequestAttachEnvironmentToken ( req );
+                        }
+                        KClientHttpRequestSetCloudParams ( req, need_env_token, payRequired );
+
+                        rc = KClientHttpRequestHEAD ( req, & rslt );
+                        if ( rc == 0 && rslt -> expiration != NULL )
+                        {   /* retrieve and save the URL expiration time */
+                            f -> url_is_temporary = true;
+                            KTimeFromIso8601 ( & f -> url_expiration, rslt -> expiration, string_size ( rslt -> expiration ) );
+//TODO: still, handle the expiration in read methods (find out how AWS/GCP signal expiration)
+                        }
+
+                        /* update url_buffer with the (possibly different and/or temporary) URL*/
+                        KClientHttpRequestURL ( req, & f -> url_buffer ); /* NB. f -> url_buffer is not valid until this point */
+                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
+                            ( "HttpFile.URL updated to '%.*s'\n",
+                                ( int ) f -> url_buffer . elem_count, f -> url_buffer . base ) );
+                        KClientHttpRequestRelease ( req );
+
+                        if ( rc != 0 ) {
+                            if ( KNSManagerLogNcbiVdbNetError ( self ) )
+                            {
+                                KEndPoint ep, local_ep;
+                                KClientHttpGetLocalEndpoint  ( http, & local_ep );
+                                KClientHttpGetRemoteEndpoint ( http, & ep );
+                                PLOGERR ( klogErr, ( klogErr, rc,
+                                    "Failed to KClientHttpRequestHEAD("
+                                    "'$(path)' ($(ip))) from '$(local)'",
+                                    "path=%.*s,ip=%s,local=%s",
+                                    buf -> elem_count - 1, buf -> base,
+                                    ep . ip_address, local_ep . ip_address ) );
+                            }
+                        }
+                        else
+                        {
+                            uint64_t size;
+                            uint32_t status;
+
+                            /* get the file size */
+                            bool have_size = KClientHttpResultSize ( rslt, & size );
+
+                            /* see if the server accepts partial content range requests */
+                            char buffer[1024];
+                            size_t num_read;
+                            bool accept_ranges = KClientHttpResultGetHeader ( rslt, "Content-Range", buffer, sizeof buffer, &num_read ) == 0 ||
+                                                KClientHttpResultTestHeaderValue ( rslt, "Accept-Ranges", "bytes" );
+
+                            /* check the result status */
+                            rc = KClientHttpResultStatus ( rslt, & status, NULL, 0, NULL );
+
+                            /* done with result */
+                            KClientHttpResultRelease ( rslt );
+
+                            /* check for error status */
                             if ( rc == 0 )
                             {
-                                KClientHttp *http;
-                                rc = KNSManagerMakeClientHttpInt ( self, & http, buf, conn, vers,
-                                    self -> http_read_timeout, self -> http_write_timeout, & f -> block . host, f -> block . port, reliable, f -> block . tls );
+                                switch ( status )
+                                {
+                                case 200:
+                                case 206: /* can happen on the cloud if HEAD is simulated with a short GET */
+                                    if ( ! have_size )
+                                        rc = RC ( rcNS, rcFile, rcOpening, rcSize, rcUnknown );
+                                    else if ( ! accept_ranges )
+                                        rc = RC ( rcNS, rcFile, rcOpening, rcFunction, rcUnsupported );
+                                    break;
+                                case 403:
+                                    rc = RC ( rcNS, rcFile, rcOpening, rcFile, rcUnauthorized );
+                                    break;
+                                case 404:
+                                    rc = RC ( rcNS, rcFile, rcOpening, rcFile, rcNotFound );
+                                    break;
+                                default:
+                                    rc = RC ( rcNS, rcFile, rcValidating, rcNoObj, rcEmpty );
+                                }
+
                                 if ( rc == 0 )
                                 {
-                                    KClientHttpRequest *req;
-
-                                    rc = KClientHttpMakeRequestInt ( http, & req, & f -> block, buf );
+                                    rc = KNSManagerAddRef ( self );
                                     if ( rc == 0 )
                                     {
-                                        KClientHttpResult *rslt;
-/*TODO the next line is a very temporary hak for VDB-3867, please remove when fixed properly */
-                                        if ( strstr( (const char*)buf -> base, "refseq") != 0 ) need_env_token = false;
+                                        f -> kns = self;
+                                        f -> file_size = size;
+                                        f -> http = http;
+                                        f -> no_cache = size >= NO_CACHE_LIMIT;
+                                        f -> need_env_token = need_env_token;
+                                        f -> payRequired = payRequired;
 
-                                        if ( need_env_token )
-                                        {
-                                            KClientHttpRequestAttachEnvironmentToken ( req );
-                                        }
-                                        KClientHttpRequestSetCloudParams ( req, need_env_token, payRequired );
-
-                                        rc = KClientHttpRequestHEAD ( req, & rslt );
-                                        if ( rc == 0 && rslt -> expiration != NULL )
-                                        {   /* retrieve and save the URL expiration time */
-                                            f -> url_is_temporary = true;
-                                            KTimeFromIso8601 ( & f -> url_expiration, rslt -> expiration, string_size ( rslt -> expiration ) );
-//TODO: still, handle the expiration in read methods (find out how AWS/GCP signal expiration)
-                                        }
-
-                                        /* update url_buffer with the (possibly different and/or temporary) URL*/
-                                        KClientHttpRequestURL ( req, & f -> url_buffer ); /* NB. f -> url_buffer is not valid until this point */
-                                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
-                                            ( "HttpFile.URL updated to '%.*s'\n",
-                                                ( int ) f -> url_buffer . elem_count, f -> url_buffer . base ) );
-                                        KClientHttpRequestRelease ( req );
-
-                                        if ( rc != 0 ) {
-                                            if ( KNSManagerLogNcbiVdbNetError ( self ) )
+                                        * file = & f -> dad;
+                                        return 0;
+                                    }
+                                }
+                                else {
+                                    KEndPoint ep, local_ep;
+                                    KClientHttpGetLocalEndpoint  ( http, & local_ep );
+                                    KClientHttpGetRemoteEndpoint ( http, & ep );
+                                    if ( KNSManagerLogNcbiVdbNetError ( self ) ) {
+                                        char * base = buf -> base;
+                                        bool print = true;
+                                        char * query = string_chr ( base, buf -> elem_count, '?' );
+                                        String vdbcache;
+                                        CONST_STRING ( & vdbcache, ".vdbcache" );
+                                        if ( buf -> elem_count > vdbcache . size ) {
+                                            String ext;
+                                            StringInit ( & ext,
+                                                    base + buf -> elem_count - vdbcache . size - 1,
+                                                    vdbcache . size, vdbcache . size );
+                                            if ( ext . addr [ ext . size ] == '\0' &&
+                                                StringEqual ( & vdbcache, & ext ) )
                                             {
-                                                KEndPoint ep, local_ep;
-                                                KClientHttpGetLocalEndpoint  ( http, & local_ep );
-                                                KClientHttpGetRemoteEndpoint ( http, & ep );
-                                                PLOGERR ( klogErr, ( klogErr, rc,
-                                                    "Failed to KClientHttpRequestHEAD("
-                                                    "'$(path)' ($(ip))) from '$(local)'",
-                                                    "path=%.*s,ip=%s,local=%s",
-                                                    buf -> elem_count - 1, buf -> base,
-                                                    ep . ip_address, local_ep . ip_address ) );
+                                                print = false;
+                                            }
+                                            else if ( query != NULL ) {
+                                                size_t size = query - base;
+                                                StringInit ( & ext,
+                                                    base + size - vdbcache . size,
+                                                    vdbcache . size, vdbcache . size );
+                                                if ( ext . addr [ ext . size ] == '?' &&
+                                                    StringEqual ( & vdbcache, & ext ) )
+                                                {
+                                                    print = false;
+                                                }
                                             }
                                         }
-                                        else
-                                        {
-                                            uint64_t size;
-                                            uint32_t status;
-
-                                            /* get the file size */
-                                            bool have_size = KClientHttpResultSize ( rslt, & size );
-
-                                            /* see if the server accepts partial content range requests */
-                                            char buffer[1024];
-                                            size_t num_read;
-                                            bool accept_ranges = KClientHttpResultGetHeader ( rslt, "Content-Range", buffer, sizeof buffer, &num_read ) == 0 ||
-                                                                 KClientHttpResultTestHeaderValue ( rslt, "Accept-Ranges", "bytes" );
-
-                                            /* check the result status */
-                                            rc = KClientHttpResultStatus ( rslt, & status, NULL, 0, NULL );
-
-                                            /* done with result */
-                                            KClientHttpResultRelease ( rslt );
-
-                                            /* check for error status */
-                                            if ( rc == 0 )
-                                            {
-                                                switch ( status )
-                                                {
-                                                case 200:
-                                                case 206: /* can happen on the cloud if HEAD is simulated with a short GET */
-                                                    if ( ! have_size )
-                                                        rc = RC ( rcNS, rcFile, rcOpening, rcSize, rcUnknown );
-                                                    else if ( ! accept_ranges )
-                                                        rc = RC ( rcNS, rcFile, rcOpening, rcFunction, rcUnsupported );
-                                                    break;
-                                                case 403:
-                                                    rc = RC ( rcNS, rcFile, rcOpening, rcFile, rcUnauthorized );
-                                                    break;
-                                                case 404:
-                                                    rc = RC ( rcNS, rcFile, rcOpening, rcFile, rcNotFound );
-                                                    break;
-                                                default:
-                                                    rc = RC ( rcNS, rcFile, rcValidating, rcNoObj, rcEmpty );
-                                                }
-
-                                                if ( rc == 0 )
-                                                {
-                                                    rc = KNSManagerAddRef ( self );
-                                                    if ( rc == 0 )
-                                                    {
-                                                        f -> kns = self;
-                                                        f -> file_size = size;
-                                                        f -> http = http;
-                                                        f -> no_cache = size >= NO_CACHE_LIMIT;
-                                                        f -> need_env_token = need_env_token;
-                                                        f -> payRequired = payRequired;
-
-                                                        * file = & f -> dad;
-                                                        return 0;
-                                                    }
-                                                }
-                                                else {
-                                                    KEndPoint ep, local_ep;
-                                                    KClientHttpGetLocalEndpoint  ( http, & local_ep );
-                                                    KClientHttpGetRemoteEndpoint ( http, & ep );
-                                                    if ( KNSManagerLogNcbiVdbNetError ( self ) ) {
-                                                        char * base = buf -> base;
-                                                        bool print = true;
-                                                        char * query = string_chr ( base, buf -> elem_count, '?' );
-                                                        String vdbcache;
-                                                        CONST_STRING ( & vdbcache, ".vdbcache" );
-                                                        if ( buf -> elem_count > vdbcache . size ) {
-                                                            String ext;
-                                                            StringInit ( & ext,
-                                                                       base + buf -> elem_count - vdbcache . size - 1,
-                                                                       vdbcache . size, vdbcache . size );
-                                                            if ( ext . addr [ ext . size ] == '\0' &&
-                                                                 StringEqual ( & vdbcache, & ext ) )
-                                                            {
-                                                                print = false;
-                                                            }
-                                                            else if ( query != NULL ) {
-                                                                size_t size = query - base;
-                                                                StringInit ( & ext,
-                                                                       base + size - vdbcache . size,
-                                                                       vdbcache . size, vdbcache . size );
-                                                                if ( ext . addr [ ext . size ] == '?' &&
-                                                                     StringEqual ( & vdbcache, & ext ) )
-                                                                {
-                                                                    print = false;
-                                                                }
-                                                            }
-                                                        }
-                                                        if ( ! reliable )
-                                                            print = false;
-                                                        if ( print ) {
-                                                          assert ( buf );
-                                                          PLOGERR ( klogErr,
-                                                            ( klogErr, rc,
-                                                             "Failed to KNSManagerVMakeHttpFileInt('$(path)' ($(ip)))"
-                                                             " from '$(local)'", "path=%.*s,ip=%s,local=%s",
-                                                             ( int ) buf -> elem_count, buf -> base,
-                                                             ep . ip_address, local_ep . ip_address
-                                                            ) );
-                                                        }
-                                                    }
-                                                    else
-                                                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
-                                                            ( "Failed to KNSManagerVMakeHttpFileInt('%.*s' (%s))\n",
-                                                              ( int ) buf -> elem_count, buf -> base,
-                                                              ep . ip_address ) );
-                                                }
-                                            }
+                                        if ( ! reliable )
+                                            print = false;
+                                        if ( print ) {
+                                        assert ( buf );
+                                        PLOGERR ( klogErr,
+                                            ( klogErr, rc,
+                                            "Failed to KNSManagerVMakeHttpFileInt('$(path)' ($(ip)))"
+                                            " from '$(local)'", "path=%.*s,ip=%s,local=%s",
+                                            ( int ) buf -> elem_count, buf -> base,
+                                            ep . ip_address, local_ep . ip_address
+                                            ) );
                                         }
                                     }
-                                    KClientHttpRelease ( http );
+                                    else
+                                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
+                                            ( "Failed to KNSManagerVMakeHttpFileInt('%.*s' (%s))\n",
+                                            ( int ) buf -> elem_count, buf -> base,
+                                            ep . ip_address ) );
                                 }
                             }
                         }
-                        KDataBufferWhack( & f -> url_buffer );
-                        KDataBufferWhack ( & f -> orig_url_buffer );
-                        KLockRelease ( f -> lock );
                     }
+                    KClientHttpRelease ( http );
                 }
-                free ( f );
+                KHttpFileDestroy(f);
             }
         }
 

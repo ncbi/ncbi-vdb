@@ -965,6 +965,29 @@ FIXTURE_TEST_CASE( KClientHttpResult_Size_RangedPOST, HttpFixture)
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
 }
 
+FIXTURE_TEST_CASE( KClientHttpResult_FormatMsg, HttpFixture)
+{
+    KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
+    REQUIRE_RC ( KClientHttpRequestByteRange ( m_req, 0, 2 ) );
+
+    TestStream::AddResponse(
+        "HTTP/1.1 206 \r\n"
+        "content-length: 2\r\n"
+        "\r\n");
+    string expected =
+        "->HTTP/1.1 206 \n" // \r is gone
+        "->content-length: 2\r\n";
+
+    KClientHttpResult *rslt;
+    REQUIRE_RC ( KClientHttpRequestPOST ( m_req, & rslt ) );
+    char buffer[4096];
+    size_t len;
+    REQUIRE_RC ( KClientHttpResultFormatMsg ( rslt, buffer, sizeof buffer, & len, "->", "\n" ) );
+    REQUIRE_EQ ( expected, string (buffer, len) );
+    REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
+}
+
+
 //////////////////////////////////////////// Main
 
 static rc_t argsHandler ( int argc, char * argv [] ) {

@@ -272,7 +272,7 @@ rc_t buffer_impl_check_integrity (buffer_impl_t const *self, uint8_t const *base
  *  "capacity" [ IN ] - the number of bytes to be allocated
  */
 LIB_EXPORT rc_t CC KDataBufferMake(KDataBuffer *target, uint64_t elem_bits, uint64_t elem_count) {
-    rc_t rc;
+    rc_t rc = 0;
     size_t bytes;
     buffer_impl_t **impp;
     
@@ -286,12 +286,15 @@ LIB_EXPORT rc_t CC KDataBufferMake(KDataBuffer *target, uint64_t elem_bits, uint
     	return RC(rcRuntime, rcBuffer, rcConstructing, rcParam, rcTooBig);
     
     memset (target, 0, sizeof(*target));
+    target->elem_bits = elem_bits;
 
-    rc = allocate(impp, bytes);
-    if (rc == 0) {
-        target->base = (void *)get_data(*impp);
-        target->elem_bits = elem_bits;
-        target->elem_count = elem_count;
+    if ( bytes > 0 )
+    {
+        rc = allocate(impp, bytes);
+        if (rc == 0) {
+            target->base = (void *)get_data(*impp);
+            target->elem_count = elem_count;
+        }
     }
 
     cc ( target );
@@ -636,8 +639,10 @@ LIB_EXPORT rc_t CC KDataBufferWhack (KDataBuffer *self)
 LIB_EXPORT bool CC KDataBufferWritable(const KDataBuffer *cself)
 {
     cc ( cself );
-    return (cself != NULL && cself->ignore != NULL &&
-            atomic32_read(&((buffer_impl_t *)cself->ignore)->refcount) == 1) ? true : false;
+    return (cself != NULL && 
+            ( cself->ignore == NULL ||
+              atomic32_read(&((buffer_impl_t *)cself->ignore)->refcount) == 1 ) )
+        ? true : false;
 }
 
 LIB_EXPORT rc_t CC KDataBufferShrink(KDataBuffer *self)
