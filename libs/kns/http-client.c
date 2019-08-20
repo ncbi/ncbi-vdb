@@ -97,12 +97,7 @@ typedef struct KClientHttpStream KClientHttpStream;
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
 
-static
-void  KDataBufferClear ( KDataBuffer *buf )
-{
-    memset ( buf, 0, sizeof *buf );
-    buf -> elem_bits = 8;
-}
+#define KDataBufferClear(buf) KDataBufferMakeBytes(buf, 0)
 
 #if _DEBUGGING
 static
@@ -1204,26 +1199,20 @@ rc_t KClientHttpAddHeaderString
             if ( ! StringEqual ( & node -> value, value ) )
             /* values are not equal - need to replace */
             {
-                /* size of the KDataBuffer to store string data */
-                size_t bsize = name -> size + value ->  size + 1;
-                if ( value -> size > node -> value . size
-                  || value -> len > node -> value . len )
-                {   /* new value is longer */
-                    KDataBufferResize ( & node -> value_storage, bsize );
-                }
-                /* copy the string data into storage */
-printf("string_printf 4\n");abort();
-                rc = string_printf ( ( char * ) node -> value_storage . base,
-                    bsize, NULL, "%S%S", name, value );
+                rc = KDataBufferWhack ( & node -> value_storage );
                 if ( rc == 0 )
                 {
-                    /* initialize the Strings to point into KHttpHeader node */
-                    StringInit ( & node -> name,
-                        ( const char * ) node -> value_storage . base,
-                        name -> size, name -> len );
-                    StringInit ( & node -> value,
-                        node -> name . addr + name -> size,
-                        value -> size, value -> len );
+                    rc = KDataBufferPrintf( & node -> value_storage, "%S%S", name, value );
+                    if ( rc == 0 )
+                    {
+                        /* initialize the Strings to point into KHttpHeader node */
+                        StringInit ( & node -> name,
+                            ( const char * ) node -> value_storage . base,
+                            name -> size, name -> len );
+                        StringInit ( & node -> value,
+                            node -> name . addr + name -> size,
+                            value -> size, value -> len );
+                    }
                 }
             }
           }
@@ -4064,6 +4053,7 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
         case 400:
             if ( uriForm == 1 ) {
                 ++ uriForm; /* got 400; try to use different Request-URI form */
+                KClientHttpResultRelease ( rslt );
                 continue;
             }
 /*          else no break here: tried both Request-URI forms */
