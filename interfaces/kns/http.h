@@ -264,12 +264,42 @@ KNS_EXTERN rc_t CC KClientHttpRequestByteRange ( KClientHttpRequest *self, uint6
 KNS_EXTERN rc_t CC KClientHttpRequestAddHeader ( KClientHttpRequest *self,
     const char *name, const char *val, ... );
 
+/* GetHeader
+ *  retrieve named header if present
+ *  this can potentially return a comma separated value list
+ */
+KNS_EXTERN rc_t CC KClientHttpRequestGetHeader ( const KClientHttpRequest *self, const char *name,
+    char *buffer, size_t bsize, size_t *num_read );
+
+/* GetHost
+ *  retrieve host
+ */
+KNS_EXTERN rc_t CC KClientHttpRequestGetHost(const KClientHttpRequest *self,
+    char *buffer, size_t bsize, size_t *num_read);
+
+/* GetPath
+ *  retrieve path
+ */
+KNS_EXTERN rc_t CC KClientHttpRequestGetPath(const KClientHttpRequest *self,
+    char *buffer, size_t bsize, size_t *num_read);
+
+/* AddQueryParam
+ *  adds a parameter to the query part of the URL, as "[opt_name=]value" (value is the result of formatting)
+ *  inserts ? before the first parameter and & between parameters
+ *  if opt_name is NULL or empty, there will be no '=' before the value
+ *  URL-encodes the formatted value
+ */
+KNS_EXTERN rc_t CC KClientHttpRequestAddQueryParam ( KClientHttpRequest *self, const char * opt_name, const char *fmt, ... );
+KNS_EXTERN rc_t CC KClientHttpRequestVAddQueryParam ( KClientHttpRequest *self, const char * opt_name, const char *fmt, va_list args );
 
 /* AddPostParam
  *  adds a parameter for POST
  */
 KNS_EXTERN rc_t CC KClientHttpRequestAddPostParam ( KClientHttpRequest *self, const char *fmt, ... );
 KNS_EXTERN rc_t CC KClientHttpRequestVAddPostParam ( KClientHttpRequest *self, const char *fmt, va_list args );
+
+KNS_EXTERN rc_t CC KClientHttpRequestSetCloudParams(KClientHttpRequest * self,
+    bool ceRequired, bool payRequired);
 
 /* compatibility for existing code */
 #define KHttpMakeRequest KClientHttpMakeRequest
@@ -281,6 +311,7 @@ KNS_EXTERN rc_t CC KClientHttpRequestVAddPostParam ( KClientHttpRequest *self, c
 #define KHttpRequestAddHeader KClientHttpRequestAddHeader
 #define KHttpRequestAddPostParam KClientHttpRequestAddPostParam
 #define KHttpRequestVAddPostParam KClientHttpRequestVAddPostParam
+#define KHttpRequestSetCloudParams KClientHttpRequestSetCloudParams
 
 /*--------------------------------------------------------------------------
  * KClientHttpResult
@@ -367,7 +398,7 @@ KNS_EXTERN rc_t CC KClientHttpResultAddHeader ( KClientHttpResult *self,
 
 /* GetHeader
  *  retrieve named header if present
- *  this cand potentially return a comma separated value list
+ *  this can potentially return a comma separated value list
  */
 KNS_EXTERN rc_t CC KClientHttpResultGetHeader ( const KClientHttpResult *self, const char *name,
     char *buffer, size_t bsize, size_t *num_read );

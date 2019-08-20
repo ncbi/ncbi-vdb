@@ -55,6 +55,9 @@
 #include <klib/log.h>
 #include <klib/debug.h>
 #include <klib/rc.h>
+
+#include "../kdb/table-priv.h" /* KTableGetName */
+
 #include <sysalloc.h>
 
 #include <stdlib.h>
@@ -215,8 +218,15 @@ rc_t VTableOpenRead ( VTable *self )
         {
             /* fetch stored schema */
             rc = VTableLoadSchema ( self );
-            if ( rc == 0 && self -> stbl == NULL )
+            if ( rc == 0 && self -> stbl == NULL ) {
+                const char * path = NULL;
+                KTableGetName ( self -> ktbl, & path );
                 rc = RC ( rcVDB, rcTable, rcOpening, rcSchema, rcNotFound );
+                PLOGERR ( klogErr, ( klogErr, rc,
+		    "Format of your Run File is obsolete.\n"
+		    "Please download the latest version of Run '$(path)'",
+		    "path=%s", path ) );
+            }
         }
     }
 
@@ -235,6 +245,56 @@ rc_t VTableOpenRead ( VTable *self )
  *  "path" [ IN ] - NUL terminated string in
  *  wd-native character set giving path to table
  */
+LIB_EXPORT rc_t CC VDBManagerOpenTableReadVPath ( const VDBManager *self,
+    const VTable **tblp, const VSchema *schema,
+    const struct VPath *path )
+{
+    rc_t rc;
+
+    if ( tblp == NULL )
+        rc = RC ( rcVDB, rcMgr, rcOpening, rcParam, rcNull );
+    else
+    {
+        if ( self == NULL )
+            rc = RC ( rcVDB, rcMgr, rcOpening, rcSelf, rcNull );
+        else
+        {
+            VTable *tbl;
+
+            /* if no schema is given, always pass intrinsic */
+            if ( schema == NULL )
+                schema = self -> schema;
+
+            rc = VTableMake ( & tbl, self, NULL, schema );
+            if ( rc == 0 )
+            {
+                tbl -> read_only = true;
+                rc = KDBManagerOpenTableReadVPath( self -> kmgr, & tbl -> ktbl, path );
+                if ( rc == 0 )
+                {
+                    tbl -> blob_validation = KTableHasRemoteData ( tbl -> ktbl );
+                    rc = VTableOpenRead ( tbl );
+                    if ( rc == 0 )
+                    {
+#if LAZY_OPEN_COL_NODE
+                        KMDataNodeRelease ( tbl -> col_node );
+                        tbl -> col_node = NULL;
+#endif
+                        * tblp = tbl;
+                        return 0;
+                    }
+                }
+                VTableWhack ( tbl );
+            }
+        }
+
+        * tblp = NULL;
+    }
+
+    return rc;
+}
+
+
 LIB_EXPORT rc_t CC VDBManagerVOpenTableRead ( const VDBManager *self,
     const VTable **tblp, const VSchema *schema,
     const char *path, va_list args )

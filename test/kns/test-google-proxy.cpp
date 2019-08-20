@@ -147,10 +147,10 @@ TEST_CASE ( KClientHttpRequestPOSTTest ) {
     KHttpRequest * req = NULL;
     if (http_proxy != NULL)
         REQUIRE_RC ( KNSManagerMakeClientRequest ( mgr, & req, 0x01000000,
-            NULL, "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi" ) ); 
+            NULL, "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi" ) ); 
     else
         REQUIRE_RC_FAIL(KNSManagerMakeClientRequest(mgr, &req, 0x01000000,
-            NULL, "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi"));
+            NULL, "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi"));
 
     if (http_proxy != NULL) {
         REQUIRE_RC(KHttpRequestAddPostParam(req, "acc=AAAB01"));
@@ -181,7 +181,7 @@ extern "C" {
 
     rc_t CC KMain ( int argc, char * argv [] ) { if (
 0 ) assert ( ! KDbgSetString ( "KNS-DNS"   ) );   if (
-1 ) assert ( ! KDbgSetString ( "KNS-HTTP"  ) );   if (
+0 ) assert ( ! KDbgSetString ( "KNS-HTTP"  ) );   if (
 0 ) assert ( ! KDbgSetString ( "KNS-PROXY" ) );
 
         rc_t rc = KConfigMakeEmpty ( & KFG );

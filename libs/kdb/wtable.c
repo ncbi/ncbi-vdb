@@ -200,6 +200,16 @@ rc_t KTableSever ( const KTable *self )
 }
 
 
+void KTableGetName(KTable const *self, char const **rslt)
+{
+    char *sep;
+    
+    *rslt = self->path;
+    sep = strrchr(self->path, '/');
+    if (sep != NULL)
+        *rslt = sep + 1;
+}
+
 /* Make
  *  make an initialized structure
  *  NB - does NOT attach reference to dir, but steals it
@@ -418,8 +428,10 @@ rc_t KDBManagerVCreateTableInt ( KDBManager *self,
         case kptFile | kptAlias:
             /* if we find a file, vary the failure if it is an archive that is a table
              * or a non related file */
-            if (( KDBOpenPathTypeRead ( self, wd, tblpath, NULL, kptTable, NULL, false ) == 0 ) ||
-                ( KDBOpenPathTypeRead ( self, wd, tblpath, NULL, kptPrereleaseTbl, NULL, false ) == 0 ) )
+            if (( KDBOpenPathTypeRead ( self, wd, tblpath, NULL, kptTable, NULL,
+                                        false, NULL ) == 0 ) ||
+                ( KDBOpenPathTypeRead ( self, wd, tblpath, NULL, kptPrereleaseTbl, NULL,
+                                        false, NULL ) == 0 ) )
                 return RC ( rcDB, rcMgr, rcCreating, rcTable, rcReadonly );
             /* fall through */
         default:
@@ -604,7 +616,7 @@ LIB_EXPORT rc_t CC KDatabaseVCreateTableByMask ( KDatabase *self,
     return rc;
 }
 
-
+#include <vfs/path.h> /* VPathMakeString */
 /* OpenTableRead
  * VOpenTableRead
  *  open a table for read
@@ -617,13 +629,30 @@ LIB_EXPORT rc_t CC KDatabaseVCreateTableByMask ( KDatabase *self,
 static
 rc_t KDBManagerVOpenTableReadInt ( const KDBManager *cself,
     const KTable **tblp, const KDirectory *wd, bool try_srapath,
-    const char *path, va_list args )
+    const char *path, va_list args, const struct VPath *vpath )
 {
+    const String * str = NULL;
     char key_path[ 4096 ];
     char short_path[ 4096 ];
-	size_t z;
-	rc_t rc = string_vprintf( short_path, sizeof short_path, &z, path, args );
-	if ( rc == 0 )
+    size_t z;
+    rc_t rc = 0;
+
+    if (vpath != NULL) {
+        assert(path == NULL);
+        rc = VPathMakeString(vpath, &str);
+        if (rc == 0)
+            path = str->addr;
+    }
+
+    rc = string_vprintf(short_path, sizeof short_path, &z, path, args);
+
+    if (str != NULL) {
+        StringWhack(str);
+        str = NULL;
+        path = NULL;
+    }
+
+    if ( rc == 0 )
 		rc = KDirectoryResolvePath ( wd, true, key_path, sizeof key_path, short_path );
     if ( rc == 0 )
     {
@@ -676,11 +705,11 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *cself,
 			const KDirectory *dir;
 			bool prerelease = false;
 
-			rc = KDBOpenPathTypeRead ( cself, wd, short_path, &dir, kptTable, NULL, try_srapath );
+			rc = KDBOpenPathTypeRead ( cself, wd, short_path, &dir, kptTable, NULL, try_srapath, vpath );
 			if ( rc != 0 )
 			{
 				prerelease = true;
-				rc = KDBOpenPathTypeRead ( cself, wd, short_path, &dir, kptPrereleaseTbl, NULL, try_srapath );
+				rc = KDBOpenPathTypeRead ( cself, wd, short_path, &dir, kptPrereleaseTbl, NULL, try_srapath, vpath );
 			}        
 			if ( rc == 0 )
 			{
@@ -730,7 +759,21 @@ LIB_EXPORT rc_t CC KDBManagerVOpenTableRead ( const KDBManager *self,
     if ( self == NULL )
         return RC ( rcDB, rcMgr, rcOpening, rcSelf, rcNull );
 
-    return KDBManagerVOpenTableReadInt ( self, tbl, self -> wd, true, path, args );
+    return KDBManagerVOpenTableReadInt ( self, tbl, self -> wd, true, path, args, NULL );
+}
+
+LIB_EXPORT rc_t CC KDBManagerOpenTableReadVPath(const KDBManager *self,
+    const KTable **tbl, const struct VPath *path)
+{
+    if (tbl == NULL)
+        return RC(rcDB, rcMgr, rcOpening, rcParam, rcNull);
+
+    *tbl = NULL;
+
+    if (self == NULL)
+        return RC(rcDB, rcMgr, rcOpening, rcSelf, rcNull);
+
+    return KDBManagerVOpenTableReadInt(self, tbl, self->wd, true, NULL, NULL, path);
 }
 
 LIB_EXPORT rc_t CC KDatabaseOpenTableRead ( const KDatabase *self,
@@ -768,7 +811,7 @@ LIB_EXPORT rc_t CC KDatabaseVOpenTableRead ( const KDatabase *self,
     if ( rc == 0 )
     {
         rc = KDBManagerVOpenTableReadInt ( self -> mgr, tblp,
-                                           self -> dir, false, path, NULL );
+                                           self -> dir, false, path, NULL, NULL );
         if ( rc == 0 )
         {
             KTable *tbl = ( KTable* ) * tblp;
@@ -843,8 +886,10 @@ rc_t KDBManagerVOpenTableUpdateInt ( KDBManager *self,
         case kptFile | kptAlias:
             /* if we find a file, vary the failure if it is an archive that is a table
              * or a non related file */
-            if (( KDBOpenPathTypeRead ( self, wd, tblpath, NULL, kptTable, NULL, false ) == 0 ) ||
-                ( KDBOpenPathTypeRead ( self, wd, tblpath, NULL, kptPrereleaseTbl, NULL, false ) == 0 ) )
+            if (( KDBOpenPathTypeRead ( self, wd, tblpath, NULL, kptTable, NULL,
+                                        false, NULL ) == 0 ) ||
+                ( KDBOpenPathTypeRead ( self, wd, tblpath, NULL, kptPrereleaseTbl, NULL,
+                                        false, NULL ) == 0 ) )
                 return RC ( rcDB, rcMgr, rcCreating, rcTable, rcUnauthorized );
             /* fall through */
         default:
@@ -1572,7 +1617,8 @@ bool CC KDatabaseListFilter ( const KDirectory *dir, const char *name, void *dat
 {
     struct FilterData * data = data_;
 
-    return KDBOpenPathTypeRead(data->mgr, dir, name, NULL, data->type, NULL, false) == 0;
+    return KDBOpenPathTypeRead(data->mgr, dir, name, NULL, data->type, NULL, false,
+        NULL ) == 0;
 }
 
 LIB_EXPORT rc_t CC KTableListCol ( const KTable *self, KNamelist **names )

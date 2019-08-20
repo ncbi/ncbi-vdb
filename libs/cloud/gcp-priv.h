@@ -1,6 +1,3 @@
-#ifndef _h_libs_klib_cloud_
-#define _h_libs_klib_cloud_
-
 /*==============================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
@@ -23,29 +20,26 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ===========================================================================
-*
-*/
+* =========================================================================== */
 
+#pragma once
+
+#ifndef _h_kfc_defs_
 #include <kfc/defs.h> /* rc_t */
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct Cloud;
-struct KNSManager;
+struct String;
 
-rc_t KNSManagerMakeCloud(struct KNSManager * self, const struct Cloud ** cloud);
-rc_t CloudRelease(const struct Cloud * self);
-
-/* don't release returned char* */
-const char * CloudGetLocation(const struct Cloud * self);
+rc_t 
+Sign_RSA_SHA256(
+    const char * key,
+    const char * input,
+    const struct String ** output);
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* _h_libs_klib_cloud_ */
-
-/******************************************************************************/

@@ -1684,6 +1684,12 @@ static
 const char * no_user_settings_usage[] = 
 { "Turn off user-specific configuration.", NULL };
 
+    /*  We need dat here
+     */
+static
+const char * append_usage[] =
+        { "Append program output to a file if it does exist. Otherwise new file will be created", NULL };
+
 static
 void CC gen_log_usage (const char ** _buffers)
 {
@@ -2346,6 +2352,12 @@ void CC HelpParamLine (const char * param, const char * const * msgs)
 	    OUTMSG (("%*s%s\n", MSG_INDENT, " ", msg));
 }
 
+    /*  Actually it is better to use
+     *  BSTreeFind ( Args -> names, OPTION_APPEND_OUTPUT ... )
+     *  but HelpOptionsStandart () does not accept args as arg lol
+     */
+bool CC ArgsAppendModeWasSet ( void );
+
 void CC HelpOptionsStandard(void){
     HelpOptionLine(ALIAS_HELP1    ,OPTION_HELP     , NULL    , help_usage);
 
@@ -2361,9 +2373,15 @@ void CC HelpOptionsStandard(void){
 #endif
 #if _DEBUGGING
     HelpOptionLine(ALIAS_DEBUG    ,OPTION_DEBUG, "Module[-Flag]", debug_usage); 
+        /* Dat is spooky place, we will print 'standard' append mode
+         * help only it is necessary and only in debugging mode
+         */
+    if ( ArgsAppendModeWasSet () )
+    {
+        HelpOptionLine(NULL, OPTION_APPEND_OUTPUT, NULL, append_usage);
+    }
 #endif
 }
-
 
 void CC HelpOptionsReport (void)
 {
@@ -2403,3 +2421,64 @@ bool CC Is32BitAndDisplayMessage( void )
     return false;
 #endif
 }
+
+/* ==========
+ * AppendMode option lives here
+ */
+OptDef AppenddModeOptions []  =
+{
+    {
+        OPTION_APPEND_OUTPUT,  /* option name */
+        NULL,   /* option alias */
+        NULL,           /* helper function */
+        append_usage,     /* array of strings used as a helper */
+        1,              /* "There can be only one" (c) Highlander */
+        false,          /* it is a flag, so no argument value */
+        false           /* that is not required parameter */
+    }
+};
+
+static bool G_append_mode_was_set = false;
+
+bool CC ArgsAppendModeWasSet ( void )
+{
+    return G_append_mode_was_set;
+}   /* ArgsIsAppendModeWasSet () */
+
+
+rc_t CC ArgsAddAppendModeOption ( Args * self )
+{
+    G_append_mode_was_set = true;
+    return ArgsAddOptionArray (
+                        self,
+                        AppenddModeOptions,
+                        sizeof ( AppenddModeOptions ) / sizeof (OptDef)
+                        /*, NULL, NULL */
+                        );
+}   /* ArgsAddAppendModeOption () */
+
+rc_t CC ArgsHandleAppendMode (const Args * self)
+{
+    uint32_t count;
+    rc_t rc;
+
+    rc = ArgsOptionCount ( self, OPTION_APPEND_OUTPUT, & count);
+    if (rc == 0)
+    {
+        ArgsAppendModeSet ( count != 0 );
+    }
+
+    return rc;
+}   /* ArgsHandleAppendMode () */
+
+static bool G_append_mode = false;
+
+bool CC ArgsIsAppendModeSet ( void )
+{
+    return G_append_mode;
+}   /* ArgsIsAppendModeSet () */
+
+void CC ArgsAppendModeSet ( bool AppendMode )
+{
+    G_append_mode = AppendMode;
+}   /* ArgsAppendModeSet () */

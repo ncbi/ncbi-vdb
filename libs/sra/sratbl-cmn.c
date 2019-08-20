@@ -65,6 +65,10 @@
 #include <assert.h>
 #include <va_copy.h>
 
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wpedantic"
+#endif
+
 /* Destroy
  */
 static

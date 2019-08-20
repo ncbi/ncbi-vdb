@@ -51,6 +51,7 @@
 #include <byteswap.h>
 
 #include <os-native.h>
+#include <va_copy.h>
 
 
 /*--------------------------------------------------------------------------
@@ -613,7 +614,8 @@ rc_t KDBManagerVCreateColumnInt ( KDBManager *self,
 	case kptFile | kptAlias:
 	    /* if we find a file, vary the failure if it is an archive that is a column
 	     * or a non related file */
-	    if ( KDBOpenPathTypeRead ( self, wd, colpath, NULL, kptColumn, NULL, false ) == 0 )
+	    if ( KDBOpenPathTypeRead ( self, wd, colpath, NULL, kptColumn, NULL, false,
+            NULL ) == 0 )
 		return RC ( rcDB, rcMgr, rcCreating, rcDirectory, rcUnauthorized );
 	    /* fall through */
         default:
@@ -772,9 +774,9 @@ LIB_EXPORT rc_t CC KTableVCreateColumn ( KTable *self, KColumn **colp,
  *  where "." acts as a structure name separator, i.e. struct.member
  */
 static
-rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *cself,
+rc_t KDBManagerVOpenColumnReadInt2 ( const KDBManager *cself,
     const KColumn **colp, const KDirectory *wd,
-    const char *path_fmt, va_list args, bool *cached, bool try_srapath )
+    const char *path_fmt, va_list args, bool *cached, bool try_srapath, va_list args2 )
 {
     char colpath [ 4096 ];
     rc_t rc = KDirectoryVResolvePath ( wd, true,
@@ -837,14 +839,15 @@ rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *cself,
             /* TODO: check if colpath is what we want to pass to KDBOpenPathTypeRead
              * in this case we don't need to vprintf to 'path'
             */
-            size = (args == NULL) ?
-                snprintf  ( path, sizeof path, "%s", path_fmt) :
-                vsnprintf ( path, sizeof path, path_fmt, args );
-            if (size < 0 || size >= (int) sizeof path)
+            size = ( args == NULL ) ?
+                snprintf  ( path, sizeof path, "%s", path_fmt ) :
+                vsnprintf ( path, sizeof path, path_fmt, args2 );
+            if ( size < 0 || ( size_t ) size >=  sizeof path )
                 rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcExcessive );
 
             if (rc == 0)
-                rc = KDBOpenPathTypeRead ( cself, wd, path, &dir, kptColumn, NULL, try_srapath );
+                rc = KDBOpenPathTypeRead ( cself, wd, path, &dir, kptColumn, NULL,
+                    try_srapath, NULL );
 
             if ( rc == 0 )
             { 
@@ -868,6 +871,24 @@ rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *cself,
             }
         }
     }
+    return rc;
+}
+
+static
+rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *cself,
+    const KColumn **colp, const KDirectory *wd,
+    const char *path_fmt, va_list args, bool *cached, bool try_srapath )
+{
+    rc_t rc;
+    va_list args2;
+
+    if ( args == NULL )
+        return KDBManagerVOpenColumnReadInt2 ( cself, colp, wd, path_fmt, args, cached, try_srapath, NULL );
+
+    va_copy ( args2, args );
+    rc = KDBManagerVOpenColumnReadInt2 ( cself, colp, wd, path_fmt, args, cached, try_srapath, args2 );
+    va_end ( args2 );
+
     return rc;
 }
 
@@ -1016,7 +1037,8 @@ rc_t KDBManagerVOpenColumnUpdateInt ( KDBManager *self,
 	     * this should be changed to a readonly as it is not possible not 
 	     * disallowed.  rcReadonly not rcUnauthorized
 	     */
-	    if ( KDBOpenPathTypeRead ( self, wd, colpath, NULL, kptColumn, NULL, try_srapath ) == 0 )
+	    if ( KDBOpenPathTypeRead ( self, wd, colpath, NULL, kptColumn, NULL,
+            try_srapath, NULL ) == 0 )
 		return RC ( rcDB, rcMgr, rcOpening, rcDirectory, rcUnauthorized );
 	    /* fall through */
         default:

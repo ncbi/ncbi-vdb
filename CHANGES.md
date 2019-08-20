@@ -1,6 +1,34 @@
 # NCBI External Developer Release:
 
 
+## NCBI VDB 2.10.0
+**August 19, 2019**
+
+  **cloud**: added support for user-pays access to GCP  
+  **cloud**: cloud-related code was moved to new module  
+  **cloud, vfs**: send cloud instance identity just when user allows it  
+  **kfg, sra-tools**: use trace.ncbi.nlm.nih.gov to call names service  
+  **kfg, vdb-config**: alternative remote repository URL was added to default configuration   
+  **kfs**: introduced readahead strategy for cloud storage  
+  **klib, vdb**: error report is saved to ncbi_error_report.txt  
+  **kns**: Don't log mdebtls error messages. Added possibility to enable them.  
+  **kns**: We now use system root CA certs on Unix   
+  **kns**: increased default value of HTTP read to 5 minutes; made it configurable  
+  **kns**: introduced configurable controls over network timeouts  
+  **kns**: special support for handling SDL interaction  
+  **prefetch, vdb**: adjustments for latest name resolution service  
+  **prefetch, vfs**: added support of "run accession as directory"  
+  **prefetch, vfs**: added support of download of reference sequences in "run accession as directory"  
+  **prefetch, vfs**: fixed regression when prefetch does not download vdbcache  
+  **sratools**: VDB can get URLs- for local/remote/cache locations of accession from environment  
+  **tui, vdb-config**: new look and cloud specific options in 'vdb-config -i'  
+  **vdb**: VDBManagerMakeSRASchema() was deprecated  
+  **vdb**: make greater use of data returned by latest name resolver  
+  **vfs**: added possibility to have multiple remote repositories for backward compatibility  
+  **vfs**: added possibility to set resolver version from configuration  
+  **vfs**: allow to use SDL as remote service  
+
+
 ## NCBI VDB 2.9.6
 **March 18, 2019**
 

@@ -123,6 +123,9 @@ static const char tuipa_classname [] = "KTUIPalette";
 #define DFL_MENU_HI_FG KTUI_c_cyan
 #define DFL_MENU_HI_BG KTUI_c_dark_blue
 
+#define DFL_HL_ATTR KTUI_a_bold | KTUI_a_underline
+#define DFL_HL_FG KTUI_c_red
+#define DFL_HL_BG KTUI_c_white
 
 static void write_default_values ( struct KTUIPalette * self )
 {
@@ -148,6 +151,8 @@ static void write_default_values ( struct KTUIPalette * self )
     set_ac( &self->entry[ ktuipa_menu ], DFL_MENU_ATTR, DFL_MENU_FG, DFL_MENU_BG );
     set_ac( &self->entry[ ktuipa_menu_sel ], DFL_MENU_SEL_ATTR, DFL_MENU_SEL_FG, DFL_MENU_SEL_BG );
     set_ac( &self->entry[ ktuipa_menu_hi ], DFL_MENU_HI_ATTR, DFL_MENU_HI_FG, DFL_MENU_HI_BG );
+
+    set_ac( &self->entry[ ktuipa_hl ], DFL_HL_ATTR, DFL_HL_FG, DFL_HL_BG );
 }
 
 

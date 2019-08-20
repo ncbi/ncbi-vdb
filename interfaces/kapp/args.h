@@ -403,6 +403,32 @@ uint32_t CC ArgsGetGlobalTries(bool *isSet);
 
 bool CC Is32BitAndDisplayMessage( void );
 
+
+/*
+ * VDB-3772 - all dumpers suppose to support append mode output
+ * so it is flag <--append|-A>
+ * We use it as non-documented option
+ * To add 'append' option, user should call ArgsAddAppendModeOption ()
+ * fucntion
+ */
+#define OPTION_APPEND_OUTPUT    "append_output"
+
+/*
+ * Adding append mode option to arguments
+ */
+rc_t CC ArgsAddAppendModeOption ( Args * self );
+
+/*
+ * Handling append mode option from argument
+ */
+rc_t CC ArgsHandleAppendMode ( const Args * self );
+
+/*
+ * Checking/Setting ( if ) append mode ... lool
+ */
+bool CC ArgsIsAppendModeSet ( void );
+void CC ArgsAppendModeSet ( bool AppendMode );
+
 #ifdef __cplusplus
 }
 #endif

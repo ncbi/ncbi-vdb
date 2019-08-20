@@ -24,14 +24,12 @@
 *
 */
 
-struct KRemoveLockFileTask;
-#define KTASK_IMPL struct KRemoveLockFileTask
-
 #include <kfs/extern.h>
 #include <kfs/lockfile.h>
 #include <kfs/impl.h>
 #include <kfs/file.h>
 #include <kfs/directory.h>
+#include <kfs/remove-file-task.h>
 #include <kproc/task.h>
 #include <kproc/impl.h>
 #include <kproc/procmgr.h>
@@ -52,63 +50,10 @@ struct KRemoveLockFileTask;
 /*--------------------------------------------------------------------------
  * KRemoveLockFileTask
  */
-typedef struct KRemoveLockFileTask KRemoveLockFileTask;
-struct KRemoveLockFileTask
-{
-    KTask dad;
-    KDirectory *dir;
-    char path [ 1 ];
-};
-
-static
-rc_t CC KRemoveLockFileTaskWhack ( KRemoveLockFileTask *self )
-{
-    rc_t rc = KDirectoryRelease ( self -> dir );
-    KTaskDestroy ( & self -> dad, "KRemoveLockFileTask" );
-    free ( self );
-    return rc;
-}
-
-static
-rc_t CC KRemoveLockFileTaskExecute ( KRemoveLockFileTask *self )
-{
-    return KDirectoryRemove ( self -> dir, true, "%s", self -> path );
-}
-
-static
-KTask_vt_v1 KRemoveLockFileTask_vt =
-{
-    1, 0,
-    KRemoveLockFileTaskWhack,
-    KRemoveLockFileTaskExecute
-};
-
 static
 rc_t KRemoveLockFileTaskMake ( KTask **task, KDirectory *dir, const char *path )
 {
-    rc_t rc;
-    size_t path_size = string_size ( path );
-    KRemoveLockFileTask *t = malloc ( sizeof * t + path_size );
-    if ( t == NULL )
-        rc = RC ( rcFS, rcLock, rcConstructing, rcMemory, rcExhausted );
-    else
-    {
-        rc = KTaskInit ( & t -> dad, ( const KTask_vt* ) & KRemoveLockFileTask_vt, "KRemoveLockFileTask", path );
-        if ( rc == 0 )
-        {
-            rc = KDirectoryAddRef ( t -> dir = dir );
-            if ( rc == 0 )
-            {
-                strcpy ( t -> path, path );
-                * task = & t -> dad;
-                return 0;
-            }
-        }
-
-        free ( t );
-    }
-
-    return rc;
+    return KRemoveFileTaskMake ( task, dir, "%s", path );
 }
 
 
@@ -262,7 +207,7 @@ LIB_EXPORT rc_t CC KDirectoryVCreateLockFile ( KDirectory *self,
         else
         {
             char full [ 4096 ];
-            rc = KDirectoryVResolvePath ( self, false, full, sizeof full, path, args );
+            rc = KDirectoryVResolvePath ( self, true, full, sizeof full, path, args );
             if ( rc == 0 )
             {
                 KFile *lock_file;

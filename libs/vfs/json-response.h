@@ -28,39 +28,114 @@
 #define _h_vfs_json_response_
 
 #include <kfc/defs.h> /* rc_t */
+#include <klib/time.h> /* KTime */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 struct Data;
+struct KJsonValue;
 struct KSrvRespFile;
 struct KSrvRespObj;
+struct Node;
+struct Status;
 struct String;
 struct VPath;
 
 typedef struct Container Container;
 typedef struct Item Item;
+struct File;
 typedef struct Response4 Response4;
 
+typedef enum {
+    eUnknown,
+    eFalse,
+    eTrue
+} EState;
+
+typedef struct Data {
+    const char * acc;
+    const char * bundle;
+    int64_t      code; /* status/code */
+    EState       ceRequired;
+    int64_t      exp;  /* expDate */
+    const char * fmt;  /* format */
+    EState       qual; /* hasOrigQuality */
+    const char * cls;  /* itemClass */
+    const char * link; /* ??????????????????????????????????????????????????? */
+    const char * md5;
+
+    const char * modificationDate;
+    int64_t      mod;  /* modDate */
+
+    const char * msg;
+    const char * name;
+    const char * object;
+    const char * objectType;
+    EState       payRequired;
+    int64_t      id;   /* oldCartObjId */
+    const char * reg;  /* region */
+    const char * sha;  /* sha256 */
+    const char * srv;  /* service */
+    const char * tic;
+    int64_t      sz;   /* size */
+    const char * type;
+    const char * vsblt;
+} Data;
+
 rc_t Response4MakeEmpty  (       Response4 ** self );
-rc_t Response4Make       (       Response4 ** self, const char * input );
+rc_t Response4Make4      (       Response4 ** self, const char * input );
+rc_t Response4MakeSdl    (       Response4 ** self, const char * input );
 rc_t Response4AddRef     ( const Response4  * self );
 rc_t Response4Release    ( const Response4  * self );
 rc_t Response4AppendUrl  (       Response4  * self, const char * url );
 rc_t Response4AddAccOrId (       Response4 * self, const char * acc,
                                  int64_t id, Container ** newItem );
 rc_t Response4GetRc      ( const Response4 * self, rc_t * rc );
+rc_t ContainerStatusInit(Container * self, int64_t code, const char * msg);
+bool ContainerIs200AndEmpty(const Container * self);
+void ContainerProcessStatus(Container * self, const Data * data);
 rc_t ContainerAdd ( Container * self, const char * acc, int64_t id,
                     Item ** newItem, const struct Data * data );
+rc_t ItemAddFormat(Item * self, const char * cType, const Data * dad,
+    struct File ** added, bool checkSameType);
 rc_t ItemAddVPath(Item * self, const char * type, const struct VPath * path,
                     const struct VPath * mapping, bool setHttp, uint64_t osize);
 rc_t ItemSetTicket ( Item * self, const struct String * ticket );
+void ItemLogAdd(const Item * self);
+void FileLogAddedLink(const struct File * self, const char * url);
+rc_t FileAddVPath(struct File * self, const struct VPath * path,
+    const struct VPath * mapping, bool setHttp, uint64_t osize);
 rc_t Response4GetKSrvRespObjCount ( const Response4 * self, uint32_t * n );
 rc_t Response4GetKSrvRespObjByIdx ( const Response4 * self, uint32_t i,
                                     const struct KSrvRespObj ** box );
 rc_t Response4GetKSrvRespObjByAcc ( const Response4 * self, const char * acc,
                                     const struct KSrvRespObj ** box );
+rc_t Response4Fini(Response4 * self);
+
+typedef struct Stack {
+    struct Node * nodes;
+    size_t i;
+    size_t n;
+} Stack;
+
+rc_t IntSet(int64_t * self, const struct KJsonValue * node,
+    const char * name, Stack * path);
+rc_t BulSet(EState * self, const struct KJsonValue * node,
+    const char * name, Stack * path);
+rc_t StrSet(const char ** self, const struct KJsonValue * node,
+    const char * name, Stack * path);
+
+#define THRESHOLD_NO_DEBUG 0
+#define THRESHOLD_ERROR    1
+extern int THRESHOLD;
+void StackPrintInput(const char * input);
+rc_t StackRelease(Stack * self, bool failed);
+rc_t StackInit(Stack * self);
+void StackPop(Stack * self);
+rc_t StackPushArr(Stack * self, const char * name);
+rc_t StackArrNext(Stack * self);
 
 #ifdef __cplusplus
 }

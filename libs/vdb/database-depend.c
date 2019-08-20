@@ -37,8 +37,9 @@
 #include <kdb/manager.h>
 
 #include <vfs/manager.h> /* VFSManager */
-#include <vfs/resolver.h> /* VResolver */
 #include <vfs/path.h>
+#include <vfs/path-priv.h> /* VPathSetAccOfParentDb */
+#include <vfs/resolver.h> /* VResolver */
 
 #include <kfg/config.h>
 
@@ -81,13 +82,21 @@ typedef struct {
     char ref[PATH_MAX + 1];
 
     /* new way */
-    const String *local;
-    const String *remote;
     const String *cache;
+    const VPath *cacheP;
+    rc_t cacheRc;
+
+    const String *local;
+    const VPath *localP;
+
+    const String *remote;
+    const VPath *remoteP;
+    rc_t remoteRc;
 
     uint32_t count;
     rc_t rc;
 } Resolved;
+
 typedef struct {
     BSTNode n;
 
@@ -99,14 +108,19 @@ typedef struct {
 
     Resolved resolved;
 } RefNode;
+
 static rc_t _ResolvedRelease(Resolved *self) {
     rc_t rc = 0;
 
     assert(self);
 
-    free((void*)self->local);
-    free((void*)self->cache);
-    free((void*)self->remote);
+    StringWhack(self->cache);
+    StringWhack(self->local);
+    StringWhack(self->remote);
+
+    RELEASE(VPath, self->cacheP);
+    RELEASE(VPath, self->localP);
+    RELEASE(VPath, self->remoteP);
 
     memset(self, 0, sizeof *self);
 
@@ -237,35 +251,6 @@ rc_t CursorRead(rc_t rc, const VCursor* curs, int64_t row_id,
     return rc;
 }
 
-#if 0
-/* Read a String from Configuration into "value" buffer */
-static rc_t ReadCfgStr
-(const KConfig* kfg, const char* path, char* value, size_t value_sz)
-{
-    rc_t rc = 0;
-    const KConfigNode *node = NULL;
-
-    rc = KConfigOpenNodeRead(kfg, &node, "%s", path);
-    if (rc == 0) {
-        size_t num_read = 0;
-        size_t remaining = 0;
-        rc = KConfigNodeRead
-            (node, 0, value, value_sz - 1, &num_read, &remaining);
-        if (rc == 0) {
-            if (remaining != 0)
-            {   rc = RC(rcVDB, rcString, rcReading, rcSize, rcExcessive); }
-/* TODO: make sure check value[num_read] assignment is valid
-         when remaining == 0 */
-            else { value[num_read] = '\0'; }
-        }
-    }
-
-    RELEASE(KConfigNode, node);
-
-    return rc;
-}
-#endif
-
 #define SIZE 4096
 
 /* Ctx struct is used to find a file using KConfig "refseq" parameters */
@@ -278,9 +263,12 @@ typedef struct {
 
     VResolver* resolver;
 
+    const String * dbAcc; /* accession of the database */
+
     const Resolved* last;
     bool hasDuplicates;
 } Ctx;
+
 static rc_t CtxInit(Ctx* self, const VDatabase *db) {
     rc_t rc = 0;
     KConfig* cfg = NULL;
@@ -307,42 +295,6 @@ static rc_t CtxInit(Ctx* self, const VDatabase *db) {
         }
     }
 
-#if 0
-    if (OLD) {
-        if (self->dir != NULL) {
-            return rc;
-        }
-
-        rc = KDirectoryNativeDir(&self->dir);
-
-        if (rc == 0) {
-            const char path[] = "refseq/servers";
-            rc = ReadCfgStr(cfg, path, self->servers, sizeof self->servers);
-            if (rc != 0) {
-                if (GetRCState(rc) == rcNotFound)
-                {   rc = 0; }
-            }
-            else {
-                const char path[] = "refseq/volumes";
-                rc = ReadCfgStr(cfg, path, self->volumes, sizeof self->volumes);
-                if (rc != 0) {
-                    if (GetRCState(rc) == rcNotFound)
-                    {   rc = 0; }
-                }
-            }
-
-            if (rc == 0) {
-                const char path[] = "refseq/paths";
-                rc = ReadCfgStr(cfg, path, self->paths, sizeof self->paths);
-                if (rc != 0) {
-                    if (GetRCState(rc) == rcNotFound)
-                    {   rc = 0; }
-                }
-            }
-        }
-    }
-    else
-#endif
     {
         VFSManager* vfsmgr = NULL;
         const KDBManager* kmgr = NULL;
@@ -364,6 +316,9 @@ static rc_t CtxInit(Ctx* self, const VDatabase *db) {
             rc = VFSManagerGetResolver(vfsmgr, &self->resolver);
         }
 
+        if (rc == 0)
+            rc = VDatabaseGetAccession(db, &self->dbAcc);
+
         RELEASE(VFSManager, vfsmgr);
         RELEASE(KDBManager, kmgr);
         RELEASE(VDBManager, mgr);
@@ -374,6 +329,11 @@ static rc_t CtxInit(Ctx* self, const VDatabase *db) {
     return rc;
 }
 
+static rc_t StringRelease(const String *self) {
+    StringWhack(self);
+    return 0;
+}
+
 static rc_t CtxDestroy(Ctx* self) {
     rc_t rc = 0;
 
@@ -381,6 +341,7 @@ static rc_t CtxDestroy(Ctx* self) {
 
     RELEASE(KDirectory, self->dir);
     RELEASE(VResolver, self->resolver);
+    RELEASE(String, self->dbAcc);
 
     memset(self, 0, sizeof *self);
 
@@ -391,85 +352,7 @@ typedef struct {
     const char* file;
     bool found;
 } FindRefseq;
-#if 0
-static rc_t CC is_file_in_dir(const KDirectory* dir,
-    uint32_t type, const char* name, void* data)
-{
-    rc_t rc = 0;
 
-    FindRefseq* t = data;
-
-    assert(dir && name && data && t->file);
-
-    if (strcmp(t->file, name) == 0) {
-        uint64_t size = 0;
-        rc = KDirectoryFileSize(dir, &size, "%s", name);
-        if (rc == 0 && size > 0) {
-            /* compensate configuration-assistant.perl behavior:
-               it used to create an empty refseq file
-               when failed to download it */
-            t->found = true;
-        }
-    }
-
-    return rc;
-}
-/* Find file within srv/vol. If found then copy complete path to buf.
- * Return true if found
- */
-static bool FindInDir(rc_t* aRc, const KDirectory* native, const char* srv,
-    const char* vol, const char* file, char* buf, size_t blen)
-{
-    rc_t rc = 0;
-
-    const KDirectory* dir = NULL;
-
-    FindRefseq t;
-
-    assert(aRc && native && srv && file && buf && blen);
-
-    rc = *aRc;
-
-    if (rc != 0)
-    {   return false; }
-
-    if (vol)
-    {   rc = KDirectoryOpenDirRead(native, &dir, false, "%s/%s", srv, vol); }
-    else
-    {   rc = KDirectoryOpenDirRead(native, &dir, false, "%s", srv); }
-
-    if (rc == 0) {
-        memset(&t, 0, sizeof t);
-        t.file = file;
-        rc = KDirectoryVVisit(dir, false, is_file_in_dir, &t, ".", NULL);
-        if (GetRCObject(rc) == rcDirectory && GetRCState(rc) == rcUnauthorized)
-        {   rc = 0; }
-
-        if (rc == 0 && t.found) {
-            if (vol) {
-                rc = KDirectoryResolvePath(native,
-                    true, buf, blen, "%s/%s/%s", srv, vol, file);
-            }
-            else {
-                rc = KDirectoryResolvePath(native,
-                    true, buf, blen, "%s/%s", srv, file);
-            }
-        }
-    }
-    else if (rc == SILENT_RC(rcFS,
-        rcDirectory, rcOpening, rcPath, rcIncorrect))
-    {
-        /* ignored nonexistent directory */
-        rc = 0;
-    }
-
-    RELEASE(KDirectory, dir);
-
-    *aRc = rc;
-
-    return t.found;
-}
-#endif
 #define rcResolver   rcTree
 static bool NotFoundByResolver(rc_t rc) {
     if (GetRCModule(rc) == rcVFS) {
@@ -491,7 +374,6 @@ static rc_t FindRef(Ctx* ctx, const char* seqId, Resolved* resolved,
     rc_t rc = 0;
 
     VPath* acc = NULL;
-    const VPath *remote = NULL;
     size_t num_writ = 0;
     char ncbiAcc[512] = "";
 
@@ -516,26 +398,26 @@ static rc_t FindRef(Ctx* ctx, const char* seqId, Resolved* resolved,
         if ( rc == 0 )
         {
             rc = VFSManagerMakePath ( mgr, &acc, "%s", ncbiAcc);
-            VFSManagerRelease ( mgr );
+            RELEASE(VFSManager, mgr);
+
+            if (rc == 0)
+                rc = VPathSetAccOfParentDb(acc, ctx->dbAcc);
         }
     }
 
     if (rc == 0) {
-        bool remoteNotFound = false;
-        const VPath *local = NULL;
-        rc = VResolverLocal(ctx->resolver, acc, &local);
-        if (rc == 0) {
-            rc = VPathMakeString(local, &resolved->local);
-            RELEASE(VPath, local);
-        }
+        rc = VResolverLocal(ctx->resolver, acc, &resolved->localP);
+        if (rc == 0)
+            rc = VPathMakeString(resolved->localP, &resolved->local);
         else if (NotFoundByResolver(rc)) {
             rc = 0;
         }
 
         if (rc == 0) {
-            rc = VResolverRemote(ctx->resolver, 0, acc, &remote);
-            if (rc == 0) {
-                rc = VPathMakeString(remote, &resolved->remote);
+            resolved->remoteRc = VResolverRemote(
+                ctx->resolver, 0, acc, &resolved->remoteP);
+            if (resolved->remoteRc == 0) {
+                rc = VPathMakeString(resolved->remoteP, &resolved->remote);
                 if (rc == 0) {
                     char *fragment = string_chr(resolved->remote->addr,
                         resolved->remote->size, '#');
@@ -544,23 +426,14 @@ static rc_t FindRef(Ctx* ctx, const char* seqId, Resolved* resolved,
                     }
                 }
             }
-            else if (NotFoundByResolver(rc)) {
-                remoteNotFound = true;
-                rc = 0;
-            }
         }
 
-        if (rc == 0 && !remoteNotFound) {
+        if (rc == 0 && resolved->remoteRc == 0) {
             uint64_t file_size = 0;
-            const VPath *cache = NULL;
-            rc = VResolverCache(ctx->resolver, remote, &cache, file_size);
-            if (rc == 0) {
-                rc = VPathMakeString(cache, &resolved->cache);
-            }
-            else if (NotFoundByResolver(rc)) {
-                rc = 0;
-            }
-            RELEASE(VPath, cache);
+            resolved->cacheRc = VResolverCache(
+                ctx->resolver, resolved->remoteP, &resolved->cacheP, file_size);
+            if (resolved->cacheRc == 0)
+                rc = VPathMakeString(resolved->cacheP, &resolved->cache);
         }
 
         if (rc == 0) {
@@ -582,7 +455,6 @@ static rc_t FindRef(Ctx* ctx, const char* seqId, Resolved* resolved,
         }
     }
 
-    RELEASE(VPath, remote);
     RELEASE(VPath, acc);
 
     if (cacheState != -1) {
@@ -591,101 +463,7 @@ static rc_t FindRef(Ctx* ctx, const char* seqId, Resolved* resolved,
 
     return rc;
 }
-#if 0
-/* find remote reference using KConfig values */
-static
-rc_t DeprecatedFindRef(Ctx* ctx, const char* seqId, Resolved* resolved)
-{
-    rc_t rc = 0;
-    bool found = false;
 
-    int i = ~0;
-
-    char* buf = NULL;
-    size_t blen = 0;
-
-    assert(ctx && seqId && resolved);
-
-    memset(resolved, 0, sizeof *resolved);
-    buf = resolved->ref;
-    blen = sizeof resolved->ref;
-
-    for (i = 0; i < 2 && !found; ++i) {
-        char prefix[7] = "";
-        if (i > 0) {
-            if (strlen(seqId) > 6) {
-                strncpy(prefix, seqId, 6);
-                prefix[6] = '\0';
-                seqId = prefix;
-            }
-            else {
-                break;
-            }
-        }
-        if (rc == 0 && ctx->dir != NULL) {
-            if (FindInDir(&rc, ctx->dir, ".", NULL, seqId, buf, blen)) {
-                found = true;
-            }
-            else {
-                if (ctx->paths[0]) {
-                    char paths[SIZE];
-                    char* path_rem = paths;
-                    char* path_sep = NULL;
-                    strcpy(paths, ctx->paths);
-                    do {
-                        char const* path = path_rem;
-                        path_sep = strchr(path, ':');
-                        if (path_sep) {
-                            path_rem = path_sep + 1;
-                            *path_sep = 0;
-                        }
-                        if (FindInDir(&rc, ctx->dir, path, NULL,
-                            seqId, buf, blen))
-                        {
-                            found = true;
-                            break;
-                        }
-                    } while(path_sep && rc == 0);
-                }
-                if (!found && ctx->servers[0] && ctx->volumes[0]) {
-                    char server[SIZE];
-                    char vol[SIZE];
-                    char* srv_sep = NULL;
-                    char* srv_rem = server;
-                    strcpy(server, ctx->servers);
-    /* TODO check for multiple servers/volumes */
-                    do {
-                        char* vol_rem = vol;
-                        char* vol_sep = NULL;
-                        strcpy(vol, ctx->volumes);
-                        srv_sep = strchr(server, ':');
-                        if (srv_sep) {
-                            srv_rem = srv_sep + 1;
-                            *srv_sep = '\0';
-                        }
-                        do {
-                            char const* volume = vol_rem;
-                            vol_sep = strchr(volume, ':');
-                            if (vol_sep) {
-                                vol_rem = vol_sep + 1;
-                                *vol_sep = 0;
-                            }
-                            if (FindInDir(&rc, ctx->dir, server, volume,
-                                seqId, buf, blen))
-                            {
-                                found = true;
-                                break;
-                            }
-                        } while (vol_sep && rc == 0);
-                    } while (!found && srv_sep && rc == 0);
-                }
-            }
-        }
-    }
-
-    return rc;
-}
-#endif
 typedef struct {
 /* row values */
     uint32_t readLen;
@@ -747,12 +525,7 @@ rc_t AddRow(BSTree* tr, Row* data, Ctx* ctx, int cacheState)
     }
 
     if (rc == 0 && newRemote) {
-/*      if (OLD) {
-            rc = DeprecatedFindRef(ctx, sn->seqId, &sn->resolved);
-        }
-        else { */
-            rc = FindRef(ctx, sn->seqId, &sn->resolved, cacheState);
-/*      } */
+        rc = FindRef(ctx, sn->seqId, &sn->resolved, cacheState);
     }
 
     return rc;
@@ -767,6 +540,7 @@ struct VDBDependencies {
     /* open references */
     KRefcount refcount;
 };
+
 typedef struct Initializer {
     bool all;            /* IN: when false: process just missed */
     bool fill;           /* IN:
@@ -776,6 +550,7 @@ typedef struct Initializer {
     uint32_t i;          /* PRIVATE: index in dep */
     rc_t rc;             /* OUT */
 } Initializer;
+
 /* Work function to process dependencies tree
  * Input parameters are in Initializer:
  *  all (true: all dependencies, false: just missing)
@@ -1083,7 +858,9 @@ LIB_EXPORT rc_t CC VDBDependenciesName(const VDBDependencies* self,
     return rc;
 }
 
-static rc_t VDBDependencyGetPath(const String* from, const char** to) {
+static rc_t VDBDependencyGetPath(const String* from, const char** to,
+    const VPath* fromP, const VPath** toP)
+{
     assert(to);
 
     *to = NULL;
@@ -1107,17 +884,8 @@ static rc_t VDBDependencyGetPath(const String* from, const char** to) {
     return 0;
 }
 
-/* Path
- *  for remote dependencies: returns:
- *                              path for resolved dependency,
- *                              NULL for missing dependency.
- *  returns NULL for local dependencies
- *
- * "path" [ OUT ] - returned pointed should not be released.
- *                  it becomes invalid after VDBDependenciesRelease
- */
-LIB_EXPORT rc_t CC VDBDependenciesPath(const VDBDependencies* self,
-    const char** path, uint32_t idx)
+static rc_t VDBDependenciesPathImpl(const VDBDependencies* self,
+    const char** path, const VPath** vpath, uint32_t idx)
 {
     rc_t rc = 0;
     RefNode* dep = NULL;
@@ -1137,12 +905,42 @@ LIB_EXPORT rc_t CC VDBDependenciesPath(const VDBDependencies* self,
                 *path = dep->resolved.ref;
             }
             else {
-                rc = VDBDependencyGetPath(dep->resolved.local, path);
+                rc = VDBDependencyGetPath(dep->resolved.local, path,
+                    dep->resolved.localP, vpath);
             }
         }
     }
 
     return rc;
+}
+
+/* Path
+ *  for remote dependencies: returns:
+ *                              path for resolved dependency,
+ *                              NULL for missing dependency.
+ *  returns NULL for local dependencies
+ *
+ * "path" [ OUT ] - returned pointed should not be released.
+ *                  it becomes invalid after VDBDependenciesRelease
+ */
+LIB_EXPORT rc_t CC VDBDependenciesPath(const VDBDependencies* self,
+    const char** path, uint32_t idx)
+{
+    return VDBDependenciesPathImpl(self, path, NULL, idx);
+}
+
+/* VPath
+ *  returns [Local] path for resolved dependency,
+ *  returns NULL for local and missing dependency.
+ *
+ *  "path" [ OUT ]
+ *
+ *  "idx" [ IN ] - zero-based index of dependency
+ */
+LIB_EXPORT rc_t CC VDBDependenciesVPath(const VDBDependencies *self,
+    const VPath **path, uint32_t idx)
+{
+    return VDBDependenciesPathImpl(self, NULL, path, idx);
 }
 
 LIB_EXPORT rc_t CC VDBDependenciesPathRemote(const VDBDependencies* self,
@@ -1158,7 +956,7 @@ LIB_EXPORT rc_t CC VDBDependenciesPathRemote(const VDBDependencies* self,
     rc = VDBDependenciesGet(self, &dep, idx);
 
     if (rc == 0) {
-        rc = VDBDependencyGetPath(dep->resolved.remote, path);
+        rc = VDBDependencyGetPath(dep->resolved.remote, path, NULL, NULL);
     }
 
     return rc;
@@ -1177,11 +975,50 @@ LIB_EXPORT rc_t CC VDBDependenciesPathCache(const VDBDependencies* self,
     rc = VDBDependenciesGet(self, &dep, idx);
 
     if (rc == 0) {
-        rc = VDBDependencyGetPath(dep->resolved.cache, path);
+        rc = VDBDependencyGetPath(dep->resolved.cache, path, NULL, NULL);
     }
 
     return rc;
 }
+
+/* RemoteAndCache
+ *  returns Cache and remote path and rc_t for dependency.
+ *
+ *  "idx" [ IN ] - zero-based index of dependency
+ */
+LIB_EXPORT rc_t CC VDBDependenciesRemoteAndCache(const VDBDependencies *self,
+    uint32_t idx,
+    rc_t *remoteRc, const VPath **remote, rc_t *cacheRc, const VPath **cache)
+{
+    rc_t rc = 0;
+    RefNode* dep = NULL;
+
+    if (remoteRc == NULL || cacheRc == NULL || cache == NULL || remote == NULL)
+        return RC(rcVDB, rcDatabase, rcAccessing, rcParam, rcNull);
+
+    rc = VDBDependenciesGet(self, &dep, idx);
+
+    if (rc == 0) {
+        *remoteRc = dep->resolved.remoteRc;
+        if (*remoteRc == 0) {
+            rc = VPathAddRef(dep->resolved.remoteP);
+            if (rc == 0)
+                * remote = dep->resolved.remoteP;
+        }
+    }
+
+    if (rc == 0) {
+        *cacheRc = dep->resolved.cacheRc;
+        if (*cacheRc == 0) {
+            rc = VPathAddRef(dep->resolved.cacheP);
+            if (rc == 0)
+                * cache = dep->resolved.cacheP;
+        }
+    }
+
+    return rc;
+}
+
 
 /* SeqId
  *
@@ -1284,6 +1121,7 @@ typedef struct {
     int count;
     bool all;
 } SBstCopy;
+
 static void CC bstCopy(BSTNode* n, void* data) {
     RefNode* sn = NULL;
     RefNode* elm = (RefNode*) n;
@@ -1605,6 +1443,7 @@ typedef enum ErrType {
     eBadPwdFile,
     eBadEncKey
 } ErrType;
+
 static ErrType DependenciesType(rc_t rc) {
     if (GetRCTarget(rc) == rcEncryptionKey)
     {

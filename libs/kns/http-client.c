@@ -1,3 +1,6 @@
+/* TODO: move it to interfaces/klib/strings.h */
+#define MAGIC_PAY_REQUIRED "NCBI_VDB_PAY_REQUIRED"
+
 /*===========================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
@@ -56,11 +59,12 @@ typedef struct KClientHttpStream KClientHttpStream;
 #include <klib/out.h>
 #include <klib/log.h>
 #include <klib/status.h>
-#include <klib/refcount.h>
 #include <klib/rc.h>
 #include <klib/printf.h>
 #include <klib/vector.h>
 #include <kproc/timeout.h>
+
+#include <cloud/manager.h>
 
 #include <strtol.h>
 #include <va_copy.h>
@@ -93,7 +97,7 @@ typedef struct KClientHttpStream KClientHttpStream;
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
 
-static 
+static
 void  KDataBufferClear ( KDataBuffer *buf )
 {
     memset ( buf, 0, sizeof *buf );
@@ -124,13 +128,14 @@ typedef enum {
 
 /*--------------------------------------------------------------------------
  * KClientHttp
- *  hyper text transfer protocol 
+ *  hyper text transfer protocol
  *  structure that will act as the 'client' for networking tasks
  */
 struct KClientHttp
 {
     const KNSManager *mgr;
     KStream * sock;
+    KStream * test_sock; /* if not NULL, use to communicate with a mocked server in testing, do not reopen on redirects */
 
     /* buffer for accumulating response data from "sock" */
     KDataBuffer block_buffer;
@@ -142,7 +147,7 @@ struct KClientHttp
     size_t line_valid;
 
     KDataBuffer hostname_buffer;
-    String hostname; 
+    String hostname;
     uint32_t port;
 
     ver_t vers;
@@ -157,7 +162,7 @@ struct KClientHttp
     bool ep_valid;
     bool proxy_ep;
     bool proxy_default_port;
-    
+
     KEndPoint local_ep; /* Local EndPoint */
 
     bool reliable;
@@ -177,7 +182,7 @@ struct KClientHttp
 
 #define KClientHttpLineBufferReset( self ) \
     ( ( void ) ( ( self ) -> line_valid = 0 ) )
-    
+
 void KClientHttpClose ( KClientHttp *self )
 {
     KStreamRelease ( self -> sock );
@@ -216,7 +221,10 @@ rc_t KClientHttpWhack ( KClientHttp * self )
     }
 
     KClientHttpClear ( self );
-    
+
+    KStreamRelease ( self -> test_sock );
+    self -> test_sock = NULL;
+
     KDataBufferWhack ( & self -> block_buffer );
     KDataBufferWhack ( & self -> line_buffer );
     KNSManagerRelease ( self -> mgr );
@@ -509,6 +517,13 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
     mgr = self -> mgr;
     assert ( mgr );
 
+    if ( self -> sock == NULL && self -> test_sock != NULL ) /* protect mocked stream from overwriting */
+    {
+        self -> sock = self -> test_sock;
+        KStreamAddRef ( self -> test_sock );
+        return 0;
+    }
+
     KEndPointArgsIteratorMake ( & it, mgr, aHostname, aPort, NULL );
     while ( KEndPointArgsIteratorNext ( & it, & hostname, & port,
         & proxy_default_port, & proxy_ep, NULL, NULL ) )
@@ -654,16 +669,16 @@ rc_t KClientHttpReopen ( KClientHttp * self )
         return 0;
     }
 #endif
-    
+
     KClientHttpClose ( self );
     return KClientHttpOpen ( self, & self -> hostname, self -> port );
 }
 
 /* Initialize KClientHttp object */
 static
-rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, KStream * conn, ver_t _vers, const String * _host, uint32_t port, bool tls )
+rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, ver_t _vers, const String * _host, uint32_t port, bool tls )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     if ( port == 0 )
         rc = RC ( rcNS, rcNoTarg, rcInitializing, rcParam, rcInvalid );
@@ -671,16 +686,7 @@ rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, K
     /* early setting of TLS property */
     http -> tls = tls;
 
-    /* we accept a NULL connection ( from ) */
-    if ( conn == NULL )
-        rc = KClientHttpOpen ( http, _host, port );
-    else
-    {
-        rc = KStreamAddRef ( conn );
-        if ( rc == 0 )
-            http -> sock = conn;
-    }
-
+    rc = KClientHttpOpen ( http, _host, port );
     if ( rc == 0 )
     {
         http -> port = port;
@@ -701,9 +707,9 @@ rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, K
             http -> hostname = * _host;
         }
     }
-    
+
     return rc;
-} 
+}
 
 
 /* MakeHttp
@@ -756,30 +762,40 @@ rc_t KNSManagerMakeClientHttpInt ( const KNSManager *self, KClientHttp **_http,
             assert ( KDataBufferContainsString ( hostname_buffer, host ) );
 
             /* SET TEXT TO POINT TO THE HOST NAME AND NUL TERMINATE IT FOR DEBUGGING
-             Its safe to modify the const char array because we allocated the buffer*/ 
+             Its safe to modify the const char array because we allocated the buffer*/
             text = ( char* ) ( host -> addr );
             save = text [ host -> size ];
             text [ host -> size ] = 0;
-        
+
             /* initialize reference counter on object to 1 - text is now nul-terminated */
             KRefcountInit ( & http -> refcount, 1, "KClientHttp", "make", text );
 
             text [ host -> size ] = save;
 
             /* init the KClientHttp object */
-            rc = KClientHttpInit ( http, hostname_buffer, opt_conn, vers, host, port, tls );
+            if ( opt_conn != NULL )
+            {
+                http -> test_sock = opt_conn;
+                rc = KStreamAddRef ( http -> test_sock );
+            }
+
             if ( rc == 0 )
             {
-                http -> reliable = reliable;
+                rc = KClientHttpInit ( http, hostname_buffer, vers, host, port, tls );
+                if ( rc == 0 )
+                {
+                    http -> reliable = reliable;
 
-                /* assign to OUT http param */
-                * _http = http;
-                return 0;
+                    /* assign to OUT http param */
+                    * _http = http;
+                    return 0;
+                }
+                KStreamRelease ( http->test_sock );
             }
 
             KNSManagerRelease ( self );
         }
-                
+
         free ( http );
     }
 
@@ -792,7 +808,7 @@ rc_t KNSManagerMakeTimedClientHttpInt ( const KNSManager *self,
     const String *host, uint32_t port, uint32_t dflt_port, bool tls )
 {
     rc_t rc;
-    
+
     /* check return parameters */
     if ( _http == NULL )
         rc = RC ( rcNS, rcMgr, rcConstructing, rcParam, rcNull );
@@ -856,7 +872,7 @@ rc_t KNSManagerMakeTimedClientHttpInt ( const KNSManager *self,
 
         * _http = NULL;
     }
-    
+
     return rc;
 }
 
@@ -928,7 +944,7 @@ LIB_EXPORT rc_t CC KClientHttpAddRef ( const KClientHttp *self )
             break;
         }
     }
-    
+
     return 0;
 }
 
@@ -946,7 +962,7 @@ LIB_EXPORT rc_t CC KClientHttpRelease ( const KClientHttp *self )
             break;
         }
     }
-    
+
     return 0;
 }
 
@@ -1002,8 +1018,8 @@ rc_t KClientHttpGetCharFromResponse ( KClientHttp *self, char *ch, struct timeou
 
         /* read from the stream into the buffer, and record the bytes read
            into block_valid */
-        /* NB - do NOT use KStreamReadAll or it will block with http 1.1 
-           because http/1.1 uses keep alive and the read will block until the server 
+        /* NB - do NOT use KStreamReadAll or it will block with http 1.1
+           because http/1.1 uses keep alive and the read will block until the server
            drops the connection */
         rc = KStreamTimedRead ( self -> sock, buffer, bsize, & self -> block_valid, tm );
         if ( rc != 0 )
@@ -1080,7 +1096,7 @@ rc_t KClientHttpGetLine ( KClientHttp *self, struct timeout_t *tm )
 
         /* buffer is not full, insert char into the buffer */
         buffer [ self -> line_valid ] = ch;
-        
+
         /* get out of loop if end of line */
         if ( ch == 0 )
         {
@@ -1157,20 +1173,20 @@ rc_t KClientHttpAddHeaderString
                             ( const char * ) node -> value_storage . base,
                             name -> size, name -> len );
                         StringInit ( & node -> value, node -> name . addr + name -> size, value -> size, value -> len );
-                        
+
                         /* insert into tree, sorted by alphabetical order */
                         BSTreeInsert ( hdrs, & node -> dad, KHttpHeaderSort );
-                        
+
                         return 0;
                     }
-                    
+
                     KDataBufferWhack ( & node -> value_storage );
                 }
-                
+
                 free ( node );
             }
         }
-        
+
         /* node exists
            check that value param has data */
         else if ( value -> size != 0 )
@@ -1189,7 +1205,7 @@ rc_t KClientHttpAddHeaderString
                 /* copy string data into buffer */
                 rc = string_printf ( & buffer [ cursize ], value -> size + 2, NULL,
                                      ",%S"
-                                     , value ); 
+                                     , value );
                 if ( rc == 0 )
                 {
                     /* update size and len of value in the node */
@@ -1197,7 +1213,7 @@ rc_t KClientHttpAddHeaderString
                     node -> value . len += value -> len + 1;
                     return 0;
                 }
-                
+
                 /* In case of almost impossible error
                    restore values to what they were */
                 KDataBufferResize ( & node -> value_storage, cursize + 1 );
@@ -1323,7 +1339,7 @@ rc_t KClientHttpGetHeaderLine ( KClientHttp *self, timeout_t *tm, BSTree *hdrs,
             {
                 String name, value;
                 const char * last = sep;
-                
+
                 /* trim white space around name */
                 while ( buffer < last && isspace ( buffer [ 0 ] ) )
                     ++ buffer;
@@ -1332,11 +1348,11 @@ rc_t KClientHttpGetHeaderLine ( KClientHttp *self, timeout_t *tm, BSTree *hdrs,
 
                 /* assign the name data into the name string */
                 StringInit ( & name, buffer, last - buffer, ( uint32_t ) ( last - buffer ) );
-                
+
                 /* move the buffer forward to value */
                 buffer = sep + 1;
                 last = end;
-                
+
                 /* trim white space around value */
                 while ( buffer < last && isspace ( buffer [ 0 ] ) )
                     ++ buffer;
@@ -1376,7 +1392,7 @@ rc_t KClientHttpGetHeaderLine ( KClientHttp *self, timeout_t *tm, BSTree *hdrs,
                     }
                     break;
                 }
-                
+
                 rc = KClientHttpAddHeaderString
                     ( hdrs, true, & name, & value );
             }
@@ -1409,10 +1425,10 @@ rc_t KClientHttpFindHeader ( const BSTree *hdrs, const char *_name, char *buffer
         {
             /* return the amount needed */
             * num_read = node -> value . size;
-            
+
             return RC ( rcNS, rcNoTarg, rcParsing, rcBuffer, rcInsufficient );
         }
-        
+
         /* copy data and return the num_read */
         * num_read = string_copy ( buffer, bsize, node -> value . addr, node -> value . size );
     }
@@ -1477,11 +1493,11 @@ rc_t KClientHttpGetStatusLine ( KClientHttp *self, timeout_t *tm, String *msg, u
                     {
                         /* which version was returned? */
                         * version = string_cmp ( "1.0", 3, buffer, sep - buffer, -1 ) == 0 ? 0x01000000 : 0x01010000;
-                        
+
                         /* move up to status code */
                         buffer = sep + 1;
 
-                        /* record status as uint32 
+                        /* record status as uint32
                          sep should point to 1 byte after end of status text */
                         * status = strtou32 ( buffer, & sep, 10 );
 
@@ -1514,7 +1530,7 @@ rc_t KClientHttpGetStatusLine ( KClientHttp *self, timeout_t *tm, String *msg, u
 struct KClientHttpStream
 {
     KStream dad;
-    
+
     /* content_length is the size of the chunk
        total_read is the number of read from the chunk */
     uint64_t content_length;
@@ -1526,7 +1542,7 @@ struct KClientHttpStream
     bool size_unknown; /* for HTTP/1.0 dynamic */
 };
 
-enum 
+enum
 {
     end_chunk,
     new_chunk,
@@ -1539,6 +1555,7 @@ static
 rc_t CC KClientHttpStreamWhack ( KClientHttpStream *self )
 {
     KClientHttpRelease ( self -> http );
+    KStreamWhack ( & self -> dad, "KClientHttpStream" );
     free ( self );
     return 0;
 }
@@ -1566,7 +1583,7 @@ rc_t CC KClientHttpStreamTimedRead ( const KClientHttpStream *cself,
     if ( num_to_read == 0 )
         return 0;
 
-    /* read directly from stream 
+    /* read directly from stream
        check if the buffer is empty */
     if ( KClientHttpBlockBufferIsEmpty ( http ) )
     {
@@ -1678,9 +1695,9 @@ rc_t CC KClientHttpStreamTimedReadChunked ( const KClientHttpStream *cself,
             break;
         }
 
-        /* convert the hex number containing chunk size to uint64 
+        /* convert the hex number containing chunk size to uint64
            sep should be pointing at nul byte */
-        self -> content_length 
+        self -> content_length
           = strtou64 ( ( const char * ) http -> line_buffer . base, & sep, 16 );
 
         /* TBD - eat spaces here? */
@@ -1708,7 +1725,7 @@ rc_t CC KClientHttpStreamTimedReadChunked ( const KClientHttpStream *cself,
 
         /* NO BREAK */
 
-    case within_chunk: 
+    case within_chunk:
         /* start reading */
         rc = KClientHttpStreamRead ( self, buffer, bsize, num_read );
         if ( rc != 0 )
@@ -1762,7 +1779,7 @@ rc_t CC KClientHttpStreamWrite ( KClientHttpStream *self,
     return RC ( rcNS, rcNoTarg, rcWriting, rcFunction, rcUnsupported );
 }
 
-static KStream_vt_v1 vtKClientHttpStream = 
+static KStream_vt_v1 vtKClientHttpStream =
 {
     1, 1,
     KClientHttpStreamWhack,
@@ -1792,10 +1809,10 @@ rc_t KClientHttpStreamMake ( KClientHttp *self, KStream **sp, const char *strnam
         rc = RC ( rcNS, rcNoTarg, rcConstructing, rcMemory, rcExhausted );
     else
     {
-        rc = KStreamInit ( & s -> dad, ( const KStream_vt * ) & vtKClientHttpStream, 
+        rc = KStreamInit ( & s -> dad, ( const KStream_vt * ) & vtKClientHttpStream,
                            "KClientHttpStream", strname, true, false );
         if ( rc == 0 )
-        {                                       
+        {
             rc = KClientHttpAddRef ( self );
             if ( rc == 0 )
             {
@@ -1822,7 +1839,7 @@ rc_t KClientHttpStreamMakeChunked ( KClientHttp *self, KStream **sp, const char 
         rc = RC ( rcNS, rcNoTarg, rcConstructing, rcMemory, rcExhausted );
     else
     {
-        rc = KStreamInit ( & s -> dad, ( const KStream_vt * ) & vtKClientHttpStreamChunked, 
+        rc = KStreamInit ( & s -> dad, ( const KStream_vt * ) & vtKClientHttpStreamChunked,
                            "KClientHttpStreamChunked", strname, true, false );
         if ( rc == 0 )
         {
@@ -1849,21 +1866,8 @@ rc_t KClientHttpStreamMakeChunked ( KClientHttp *self, KStream **sp, const char 
  * KClientHttpResult
  *  hyper text transfer protocol
  *  Holds all the headers in a BSTree
- *  Records the status msg, status code and version of the response 
+ *  Records the status msg, status code and version of the response
  */
-struct KClientHttpResult
-{
-    KClientHttp *http;
-    
-    BSTree hdrs;
-    
-    String msg;
-    uint32_t status;
-    ver_t version;
-
-    KRefcount refcount;
-    bool len_zero;
-};
 
 static
 rc_t KClientHttpResultWhack ( KClientHttpResult * self )
@@ -1874,6 +1878,8 @@ rc_t KClientHttpResultWhack ( KClientHttpResult * self )
 
     KRefcountWhack ( & self -> refcount, "KClientHttpResult" );
 
+    free ( self -> expiration );
+
     free ( self );
 
     return 0;
@@ -1881,7 +1887,7 @@ rc_t KClientHttpResultWhack ( KClientHttpResult * self )
 
 
 /* Sends the request and receives the response into a KClientHttpResult obj */
-static 
+static
 rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
     const char *buffer, size_t len, const KDataBuffer *body, const char *url )
 {
@@ -1906,7 +1912,7 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
     if ( rc == 0 )
     {
         TimeoutInit ( & tm, self -> write_timeout );
-        rc = KStreamTimedWriteAll ( self -> sock, buffer, len, & sent, & tm ); 
+        rc = KStreamTimedWriteAll ( self -> sock, buffer, len, & sent, & tm );
         if ( rc != 0 )
         {
             rc_t rc2 = KClientHttpReopen ( self );
@@ -1946,7 +1952,7 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
         /* reinitialize the timeout for reading */
         TimeoutInit ( & tm, self -> read_timeout );
 
-        /* we have now received a response 
+        /* we have now received a response
            start reading the header lines */
         rc = KClientHttpGetStatusLine ( self, & tm, & msg, & status, & version );
         if ( rc == 0 )
@@ -1960,7 +1966,7 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
             {
                 /* zero out */
                 memset ( result, 0, sizeof * result );
-                
+
                 rc = KClientHttpAddRef ( self );
                 if ( rc == 0 )
                 {
@@ -1978,6 +1984,7 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
                     result -> http = self;
                     result -> status = status;
                     result -> version = version;
+                    result -> expiration = NULL;
 
                     /* correlate msg string in result to the text space */
                     StringInit ( & result -> msg, text, msg . size, msg . len );
@@ -1985,7 +1992,7 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
                     /* TBD - pass in URL as instance identifier */
                     KRefcountInit ( & result -> refcount, 1, "KClientHttpResult", "sending-msg", url );
 
-                    /* receive and parse all header lines 
+                    /* receive and parse all header lines
                        blank = end of headers */
                     for ( blank = false; ! blank && rc == 0; )
                     {
@@ -1997,7 +2004,7 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
                     {
                         /* assign to OUT result obj */
                         * rslt = result;
-                        return 0; 
+                        return 0;
                     }
 
                     BSTreeWhack ( & result -> hdrs, KHttpHeaderWhack, NULL );
@@ -2166,18 +2173,20 @@ LIB_EXPORT bool CC KClientHttpResultKeepAlive ( const KClientHttpResult *self )
 
 
 /* Range
- *  retrieves position and partial size for partial requests
+ *  retrieves position, partial size and total size for partial requests
  *
  *  "pos" [ OUT ] - offset to beginning portion of response
  *
  *  "bytes" [ OUT ] - size of range
+ *
+ *  "_total" [ OUT, NULL OK ] - total size of file
  *
  *  HERE WE NEED TO HAVE PASSED THE RANGE REQUEST TO THE RESULT ON CREATION,
  *  AND WE WILL RESPOND TO THE HTTP "PARTIAL RESULT" OR WHATEVER RETURN CODE,
  *  AND BASICALLY UPDATE WHAT THE RANGE WAS.
  */
 static
-rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64_t *pos, size_t *bytes )
+rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64_t *pos, size_t *bytes, size_t *_total )
 {
     rc_t rc;
     size_t num_read;
@@ -2204,11 +2213,11 @@ rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64
         else
         {
             uint64_t start_pos;
-                        
+
             /* buf now points to value */
             buf = sep + 1;
 
-            /* capture starting position 
+            /* capture starting position
                sep should land on '-' */
             start_pos = strtou64 ( buf, & sep, 10 );
 
@@ -2262,31 +2271,35 @@ rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64
                         else
                         {
                             uint64_t length;
-                                        
+
                             /* get content-length to confirm bytes sent */
                             rc = KClientHttpResultGetHeader ( self, "Content-Length", buffer, bsize, & num_read );
                             if ( rc != 0 )
                             {
-                                            
+
                                 /* remember that we can have chunked encoding,
                                    so "Content-Length" may not exist. */
                                 * pos = start_pos;
-                                * bytes = end_pos - start_pos + 1; 
-                                            
+                                * bytes = end_pos - start_pos + 1;
+                                if ( _total != NULL )
+                                {
+                                    * _total = total;
+                                }
+
                                 return 0;
                             }
 
                             buf = buffer;
                             end = & buffer [ num_read ];
-                                            
+
                             /* capture the length */
                             length  = strtou64 ( buf, & sep, 10 );
                             if ( sep == buf || * sep != 0 )
                             {
                                 rc =  RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
                                 TRACE ( "badly formed Content-Length header: '%.*s': numeral ends on '%c'\n", ( int ) ( end - buffer ), buffer, ( sep == buffer ) ? 0 : * sep );
-                            }                                
-                            else 
+                            }
+                            else
                             {
                                 /* finally check all the acquired information */
                                 if ( ( length != ( ( end_pos - start_pos ) + 1 ) ) ||
@@ -2305,8 +2318,12 @@ rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64
                                 {
                                     /* assign to OUT params */
                                     * pos = start_pos;
-                                    * bytes = length; 
-                                                    
+                                    * bytes = length;
+                                    if ( _total != NULL )
+                                    {
+                                        * _total = total;
+                                    }
+
                                     return 0;
                                 }
                             }
@@ -2334,7 +2351,7 @@ LIB_EXPORT rc_t CC KClientHttpResultRange ( const KClientHttpResult *self, uint6
         {
         case 206:
             /* partial content */
-            rc = KClientHttpResultHandleContentRange ( self, pos, bytes );
+            rc = KClientHttpResultHandleContentRange ( self, pos, bytes, NULL );
             if ( rc == 0 )
                 return 0;
 
@@ -2373,13 +2390,26 @@ LIB_EXPORT bool CC KClientHttpResultSize ( const KClientHttpResult *self, uint64
         size_t num_read;
         char buffer [ 1024 ];
         const size_t bsize = sizeof buffer;
-        
+
+        /* check for content-range */
+        {
+            uint64_t pos;
+            size_t bytes;
+            size_t total;
+            rc = KClientHttpResultHandleContentRange ( self, & pos, & bytes, & total );
+            if ( rc == 0 )
+            {
+                * size = total;
+                return true;
+            }
+        }
+
         /* check for content-length */
         rc = KClientHttpResultGetHeader ( self, "Content-Length", buffer, bsize, & num_read );
         if ( rc == 0 )
         {
             char * sep;
-            
+
             /* capture length as uint64 */
             uint64_t length = strtou64 ( buffer, & sep, 10 );
             if ( sep == buffer || * sep != 0 )
@@ -2424,9 +2454,9 @@ LIB_EXPORT rc_t CC KClientHttpResultAddHeader ( KClientHttpResult *self,
     {
         va_list args;
         va_start ( args, val );
-        
+
         rc = KClientHttpVAddHeader ( & self -> hdrs, false, name, val, args );
-        
+
         va_end ( args );
     }
     return rc;
@@ -2560,7 +2590,7 @@ LIB_EXPORT bool CC KClientHttpResultTestHeaderValue ( const KClientHttpResult *s
 LIB_EXPORT rc_t CC KClientHttpResultGetInputStream ( KClientHttpResult *self, KStream ** s )
 {
     rc_t rc;
-    
+
     if ( s == NULL )
         rc = RC ( rcNS, rcNoTarg, rcValidating, rcParam, rcNull );
     else
@@ -2573,7 +2603,7 @@ LIB_EXPORT rc_t CC KClientHttpResultGetInputStream ( KClientHttpResult *self, KS
             size_t num_read = 0;
             uint64_t content_length = 0;
 
-            /* find header to check for type of data being received 
+            /* find header to check for type of data being received
                assign bytes read from value to num_read */
             rc = KClientHttpResultGetHeader ( self, "Transfer-Encoding", buffer, sizeof buffer, & num_read );
             if ( rc == 0 && num_read > 0 )
@@ -2602,16 +2632,16 @@ LIB_EXPORT rc_t CC KClientHttpResultGetInputStream ( KClientHttpResult *self, KS
 #if _DEBUGGING
             KOutMsg ( "HTTP/%.2V %03u %S\n", self -> version, self -> status, & self -> msg );
             BSTreeForEach ( & self -> hdrs, false, PrintHeaders, NULL );
-#endif            
+#endif
 
             rc = RC ( rcNS, rcNoTarg, rcValidating, rcMessage, rcUnsupported );
-            LOGERR ( klogInt, rc, "HTTP response does not give content length" ); 
+            LOGERR ( klogInt, rc, "HTTP response does not give content length" );
 
         }
     }
-    
+
     * s = NULL;
-    
+
     return rc;
 }
 
@@ -2621,32 +2651,55 @@ LIB_EXPORT rc_t CC KClientHttpResultGetInputStream ( KClientHttpResult *self, KS
  *  hyper text transfer protocol
  */
 
-struct KClientHttpRequest
+LIB_EXPORT rc_t CC KClientHttpRequestSetCloudParams(
+    KClientHttpRequest * self, bool ceRequired, bool payRequired)
 {
-    KClientHttp * http;
+    if (self != NULL)
+    {
+        self->ceRequired = ceRequired;
+        self->payRequired = payRequired;
+    }
 
-    URLBlock url_block;
-    KDataBuffer url_buffer;
+    return 0;
+}
 
-    KDataBuffer body;
-    
-    BSTree hdrs;
-
-    KRefcount refcount;
-    bool accept_not_modified;
-};
+rc_t
+KClientHttpRequestAttachEnvironmentToken( KClientHttpRequest * self )
+{
+    CloudMgr * cloudMgr;
+    rc_t rc = CloudMgrMake ( & cloudMgr, NULL, NULL );
+    if ( rc == 0 )
+    {
+        Cloud * cloud;
+        rc = CloudMgrGetCurrentCloud ( cloudMgr, & cloud );
+        if ( rc == 0 )
+        {
+            rc = CloudAddComputeEnvironmentTokenForSigner ( cloud, self );
+            CloudRelease ( cloud );
+        }
+        CloudMgrRelease ( cloudMgr );
+    }
+    return rc;
+}
 
 rc_t KClientHttpRequestURL(KClientHttpRequest const *self, KDataBuffer *rslt)
 {
+    KDataBufferWhack ( rslt );
     return KDataBufferSub(&self->url_buffer, rslt, 0, self->url_buffer.elem_count);
 }
 
-static
 rc_t KClientHttpRequestClear ( KClientHttpRequest *self )
 {
     KDataBufferWhack ( & self -> url_buffer );
 
     return 0;
+}
+
+const char *
+KClientHttpRequestGetBody( struct KClientHttpRequest * self )
+{
+    assert ( self );
+    return ( const char * ) ( self -> body . base );
 }
 
 static
@@ -2656,14 +2709,13 @@ rc_t KClientHttpRequestWhack ( KClientHttpRequest * self )
 
     KClientHttpRelease ( self -> http );
     KDataBufferWhack ( & self -> body );
-    
+
     BSTreeWhack  ( & self -> hdrs, KHttpHeaderWhack, NULL );
     KRefcountWhack ( & self -> refcount, "KClientHttpRequest" );
     free ( self );
     return 0;
 }
 
-static 
 rc_t KClientHttpRequestInit ( KClientHttpRequest * req,
     const URLBlock *b, const KDataBuffer *buf )
 {
@@ -2675,7 +2727,17 @@ rc_t KClientHttpRequestInit ( KClientHttpRequest * req,
     }
     return rc;
 }
+
+rc_t KClientHttpRequestGetQuery( struct KClientHttpRequest * self, const struct String ** query )
+{
+    if ( self == NULL )
+        return RC ( rcNS, rcNoTarg, rcReading, rcSelf, rcNull );
+    if ( query == NULL )
+        return RC ( rcNS, rcNoTarg, rcReading, rcParam, rcNull );
         
+    * query = & self -> url_block . query;
+    return 0;
+}
 
 /* MakeRequestInt[ernal]
  */
@@ -2694,12 +2756,12 @@ rc_t KClientHttpMakeRequestInt ( const KClientHttp *self,
         if ( rc == 0 )
         {
             /* assign http */
-            req -> http = ( KClientHttp* ) self; 
+            req -> http = ( KClientHttp* ) self;
 
             /* initialize body to zero size */
             KDataBufferClear ( & req -> body );
-                
-            KRefcountInit ( & req -> refcount, 1, "KClientHttpRequest", "make", buf -> base ); 
+
+            KRefcountInit ( & req -> refcount, 1, "KClientHttpRequest", "make", buf -> base );
 
             /* fill out url_buffer with URL */
             rc = KClientHttpRequestInit ( req, block, buf );
@@ -2715,7 +2777,7 @@ rc_t KClientHttpMakeRequestInt ( const KClientHttp *self,
             KClientHttpRelease ( self );
         }
     }
-    
+
     free ( req );
 
     return rc;
@@ -2737,7 +2799,7 @@ LIB_EXPORT rc_t CC KClientHttpVMakeRequest ( const KClientHttp *self,
     KClientHttpRequest **_req, const char *url, va_list args )
 {
     rc_t rc;
-    
+
     if ( _req == NULL )
         rc = RC ( rcNS, rcNoTarg, rcValidating, rcParam, rcNull );
     else
@@ -2757,7 +2819,7 @@ LIB_EXPORT rc_t CC KClientHttpVMakeRequest ( const KClientHttp *self,
             /* make a KDataBuffer and copy in url with the va_lis */
             /* rc = KDataBufferMakeBytes ( & buf, 4096 );*/
             KDataBufferClear ( &buf );
-            
+
             rc = KDataBufferVPrintf ( &buf, url, args );
             if ( rc == 0 )
             {
@@ -2844,7 +2906,7 @@ rc_t CC KNSManagerMakeClientRequestInt ( const KNSManager *self,
         else
         {
             KDataBuffer buf;
-            
+
             KDataBufferClear ( &buf );
                 /* convert var-arg "url" to a full string */
             rc = KDataBufferVPrintf ( & buf, url, args );
@@ -2856,7 +2918,7 @@ rc_t CC KNSManagerMakeClientRequestInt ( const KNSManager *self,
                 if ( rc == 0 )
                 {
                     KClientHttp * http;
-                    
+
                     rc = KNSManagerMakeClientHttpInt ( self, & http, & buf, conn, vers,
                         self -> http_read_timeout, self -> http_write_timeout, & block . host, block . port, reliable, block . tls );
                     if ( rc == 0 )
@@ -2954,7 +3016,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestConnection ( KClientHttpRequest *self, bool
     else
     {
         String name, value;
-        
+
         CONST_STRING ( & name, "Connection" );
         /* if version is 1.1 and close is true, add 'close' to Connection header value. */
         /* if version if 1.1 default is false - no action needed */
@@ -2966,7 +3028,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestConnection ( KClientHttpRequest *self, bool
             return 0;
 
         rc = KClientHttpRequestAddHeader ( self,  name . addr, value . addr );
-            
+
     }
     return rc;
 }
@@ -3013,7 +3075,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestByteRange ( KClientHttpRequest *self, uint6
         char  range [ 256 ];
         size_t num_writ;
         String name, value;
-        
+
         CONST_STRING ( & name, "Range" );
         rc = string_printf ( range, sizeof range, & num_writ, "bytes=%lu-%lu"
                              , pos
@@ -3069,7 +3131,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddHeader ( KClientHttpRequest *self,
 
             rc = 0;
             accept_not_modified = false;
-            
+
             switch ( name_size )
             {
             case CSTRLEN ( "Host" ):
@@ -3106,6 +3168,90 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddHeader ( KClientHttpRequest *self,
     }
     return rc;
 }
+
+/* GetHeader
+ *  retrieve named header if present
+ *  this can potentially return a comma separated value list
+ */
+LIB_EXPORT rc_t CC KClientHttpRequestGetHeader(const KClientHttpRequest *self,
+    const char *name, char *buffer, size_t bsize, size_t *num_read)
+{
+    rc_t rc = 0;
+
+    if (num_read == NULL)
+        rc = RC(rcNS, rcNoTarg, rcValidating, rcParam, rcNull);
+    else
+    {
+        *num_read = 0;
+
+        if (self == NULL)
+            rc = RC(rcNS, rcNoTarg, rcValidating, rcSelf, rcNull);
+        else if (name == NULL)
+            rc = RC(rcNS, rcNoTarg, rcValidating, rcParam, rcNull);
+        else if (buffer == NULL && bsize != 0)
+            rc = RC(rcNS, rcNoTarg, rcValidating, rcParam, rcNull);
+        else
+        {
+            rc = KClientHttpFindHeader(&self->hdrs, name,
+                buffer, bsize, num_read);
+        }
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KClientHttpRequestGetHost(const KClientHttpRequest *self,
+    char *buffer, size_t bsize, size_t *num_read)
+{
+    rc_t rc = 0;
+
+    if (num_read == NULL)
+        rc = RC(rcNS, rcNoTarg, rcValidating, rcParam, rcNull);
+    else
+    {
+        *num_read = 0;
+
+        if (self == NULL)
+            rc = RC(rcNS, rcNoTarg, rcValidating, rcSelf, rcNull);
+        else if (buffer == NULL && bsize != 0)
+            rc = RC(rcNS, rcNoTarg, rcValidating, rcParam, rcNull);
+        else if (bsize < self->url_block.host.size + 1)
+            rc = RC(rcNS, rcNoTarg, rcValidating, rcBuffer, rcInsufficient);
+        else {
+            string_copy(buffer, bsize,
+                self->url_block.host.addr, self->url_block.host.size);
+        }
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KClientHttpRequestGetPath(const KClientHttpRequest *self,
+    char *buffer, size_t bsize, size_t *num_read)
+{
+    rc_t rc = 0;
+
+    if (num_read == NULL)
+        rc = RC(rcNS, rcNoTarg, rcValidating, rcParam, rcNull);
+    else
+    {
+        *num_read = 0;
+
+        if (self == NULL)
+            rc = RC(rcNS, rcNoTarg, rcValidating, rcSelf, rcNull);
+        else if (buffer == NULL && bsize != 0)
+            rc = RC(rcNS, rcNoTarg, rcValidating, rcParam, rcNull);
+        else if (bsize < self->url_block.path.size + 1)
+            rc = RC(rcNS, rcNoTarg, rcValidating, rcBuffer, rcInsufficient);
+        else {
+            string_copy(buffer, bsize,
+                self->url_block.path.addr, self->url_block.path.size);
+        }
+    }
+
+    return rc;
+}
+
 
 /* AddPostParam
  *  adds a parameter for POST
@@ -3153,6 +3299,160 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddPostParam ( KClientHttpRequest *self, co
     return rc;
 }
 
+static
+unsigned char ToHex ( char ch )
+{
+    assert ( ch <= 16 );
+    if ( ch < 10 )
+    {
+        return '0' + ch;
+    }
+    return 'a' + ch - 10;
+}
+
+static
+void UrlEncodeChar ( unsigned char ch, char * target )
+{
+    target [ 0 ] = '%';
+    target [ 1 ] = ToHex ( ch >> 4 );
+    target [ 2 ] = ToHex ( ch & 0x0f );
+}
+
+static
+rc_t
+UrlEncode( const char * source, size_t size, char ** res )
+{   /* source: https://www.tutorialspoint.com/html/html_url_encoding.htm */
+    char * cur;
+    int i;
+    assert ( source != NULL );
+    assert ( res != NULL );
+
+    * res = ( char * ) malloc ( size * 3 + 1 );
+    if ( * res == NULL )
+    {
+        return RC ( rcNS, rcString, rcAllocating, rcMemory, rcExhausted );
+    }
+    cur = * res;
+    for ( i = 0; i < size; ++i )
+    {
+        unsigned char ch = source [ i ];
+        if ( ch < 32 || ch >= 127 )
+        {   /* control and non-ASCII characters */
+            UrlEncodeChar ( ch, cur );
+            cur += 3;
+        }
+        else
+        {
+            switch ( ch )
+            {
+                /* reserved characters */
+            case '$':
+            case '&':
+            case '+':
+            case ',':
+            case '/':
+            case ':':
+            case ';':
+            case '=':
+            case '?':
+            case '@':
+                /* unsafe characters */
+            case ' ':
+            case '"':
+            case '<':
+            case '>':
+            case '#':
+            case '%':
+            case '{':
+            case '}':
+            case '|':
+            case '\\':
+            case '^':
+            case '~':
+            case '[':
+            case ']':
+            case '`':
+                UrlEncodeChar ( ch, cur );
+                cur += 3;
+                break;
+            default:
+                * cur = ch;
+                ++ cur;
+                break;
+            }
+        }
+    }
+
+    * cur = 0;
+    return 0;
+}
+
+LIB_EXPORT rc_t CC KClientHttpRequestVAddQueryParam ( KClientHttpRequest *self,
+                                const char * name, const char *fmt, va_list args )
+{
+    rc_t rc;
+
+    if ( self == NULL )
+        rc = RC ( rcNS, rcNoTarg, rcValidating, rcSelf, rcNull );
+    else if ( fmt == NULL || fmt [ 0 ] == 0 )
+        rc = RC ( rcNS, rcNoTarg, rcValidating, rcParam, rcNull );
+    else
+    {
+        KDataBuffer valueBuf;
+        bool first = self -> url_block.query.size == 0;
+        bool hasName = ( name != NULL && name [ 0 ] != 0 );
+        rc = KDataBufferMakeBytes( & valueBuf, 0 );
+        if ( rc == 0 )
+        {
+            rc = KDataBufferVPrintf ( & valueBuf, fmt, args );
+            if ( rc == 0 )
+            {
+                char * encValue;
+                rc = UrlEncode( (const char *) valueBuf.base,
+                                valueBuf.elem_count - 1,
+                                & encValue );
+                if ( rc == 0 )
+                {
+                    KDataBuffer newBuf;
+                    rc = KDataBufferMakeBytes( & newBuf, 0 );
+                    if ( rc == 0 )
+                    {
+                        rc = KDataBufferPrintf ( & newBuf, "%.*s%c%s%s%s",
+                                                (int) self -> url_buffer . elem_count,
+                                                (const char*) self -> url_buffer . base,
+                                                first ? '?' : '&',
+                                                hasName ? name : "",
+                                                hasName ? "=" : "",
+                                                encValue);
+                        if ( rc == 0 )
+                        {
+                            KDataBufferWhack( & self -> url_buffer );
+                            self -> url_buffer = newBuf;
+                            /* re-parse the new URL */
+                            rc = ParseUrl ( & self -> url_block, self -> url_buffer . base, self -> url_buffer . elem_count - 1 );
+                        }
+                    }
+                    free ( encValue );
+                }
+            }
+            KDataBufferWhack( & valueBuf );
+        }
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KClientHttpRequestAddQueryParam ( KClientHttpRequest *self, const char * name, const char *fmt, ... )
+{
+    rc_t rc;
+
+    va_list args;
+    va_start ( args, fmt );
+    rc = KClientHttpRequestVAddQueryParam ( self, name, fmt, args );
+    va_end ( args );
+
+    return rc;
+}
 
 LIB_EXPORT rc_t CC KClientHttpResultFormatMsg (
     const struct KClientHttpResult * self, char * buffer,
@@ -3169,7 +3469,7 @@ LIB_EXPORT rc_t CC KClientHttpResultFormatMsg (
         return RC ( rcNS, rcNoTarg, rcReading, rcParam, rcNull );
     }
 
-    rc = string_printf ( buffer, bsize, len, 
+    rc = string_printf ( buffer, bsize, len,
             "%sHTTP/%.2V %d %S%s", bol
             , self -> version
             , self -> status
@@ -3246,192 +3546,6 @@ static EUriForm EUriFormGuess ( const String * hostname,
     }
 }
 
-/* https://docs.aws.amazon.com/AmazonS3/latest/dev/RESTAuthentication.html */
-static rc_t StringToSign(
-    const String * HTTPVerb,
-    const String * Date,
-    const String * hostname,
-    const String * HTTPRequestURI,
-    char * buffer, size_t bsize, size_t * len)
-{
-    rc_t rc = 0;
-    rc_t r2 = 0;
-    size_t total = 0;
-    size_t skip = 0;
-    size_t p_bsize = 0;
-    String dateString;
-    String s3;
-    CONST_STRING(&s3, ".s3.amazonaws.com");
-    CONST_STRING(&dateString, "Date");
-    assert(buffer && len);
-
-    /* StringToSign = HTTP-Verb + "\n" */
-    assert(HTTPVerb);
-    rc = string_printf(buffer, bsize, len, "%S\n", HTTPVerb);
-    total += *len;
-
-    /* StringToSign += Content-MD5 + "\n" */
-    {
-        const char ContentMD5[] = "";
-        p_bsize = bsize >= total ? bsize - total : 0;
-        r2 = string_printf(&buffer[total], p_bsize, len, "%s\n", ContentMD5);
-        total += *len;
-        if (rc == 0 && r2 != 0)
-            rc = r2;
-    }
-
-    /* StringToSign += Content-Type + "\n" */
-    {
-        const char ContentType[] = "";
-        p_bsize = bsize >= total ? bsize - total : 0;
-        r2 = string_printf(&buffer[total], p_bsize, len, "%s\n", ContentType);
-        total += *len;
-        if (rc == 0 && r2 != 0)
-            rc = r2;
-    }
-
-    /* StringToSign += Date + "\n" */
-    assert(Date); /* Signed Amazon queries: Date header is required. */
-    p_bsize = bsize >= total ? bsize - total : 0;
-    r2 = string_printf(&buffer[total], p_bsize, len, "%S\n", Date);
-    total += *len;
-    if (rc == 0 && r2 != 0)
-        rc = r2;
-
-    /* StringToSign += CanonicalizedAmzHeaders */
-
-    /* StringToSign += CanonicalizedResource */
-    skip = hostname->size - s3.size;
-    if (skip > 0 && hostname->size >= s3.size &&
-        string_cmp(s3.addr, s3.size, hostname->addr + skip,
-            hostname->size - skip, s3.size) == 0)
-    { /* CanonicalizedResource = [ "/" + Bucket ] */
-        String Bucket;
-        StringInit(&Bucket, hostname->addr, skip, skip);
-        p_bsize = bsize >= total ? bsize - total : 0;
-        r2 = string_printf(&buffer[total], p_bsize, len, "/%S", &Bucket);
-        total += *len;
-        if (rc == 0 && r2 != 0)
-            rc = r2;
-    }
-    /* CanonicalizedResource += <HTTP-Request-URI protocol name to the query> */
-    p_bsize = bsize >= total ? bsize - total : 0;
-    assert(HTTPRequestURI);
-    r2 = string_printf(&buffer[total], p_bsize, len, "%S", HTTPRequestURI);
-    total += *len;
-    if (rc == 0 && r2 != 0)
-        rc = r2;
-
-    return rc;
-}
-
-static rc_t KClientHttpRequestAuthenticate(const KClientHttpRequest *cself,
-    const char *method,
-    const char *AWSAccessKeyId, const char *YourSecretAccessKeyID)
-{
-    rc_t rc = 0;
-    KClientHttpRequest *self = (KClientHttpRequest *)cself;
-    KClientHttp * http = NULL;
-    const String * hostname = NULL;
-    bool authenticate = false;
-    char stringToSign[4096] = "";
-    char authorization[4096] = "";
-    const String * sdate = NULL;
-    char date[64] = "";
-    String dates;
-    assert(self && self->http);
-    http = self->http;
-    hostname = &self->url_block.host;
-    if (hostname->size == 0) {
-        hostname = &http->hostname;
-        if (hostname->size == 0)
-            return RC(rcNS, rcNoTarg, rcValidating, rcName, rcEmpty);
-    }
-
-    authenticate =
-        AWSAccessKeyId != NULL && YourSecretAccessKeyID != NULL;
-    if (authenticate) {
-        size_t skip = 0;
-        String stor31;
-        CONST_STRING(&stor31, "s3-stor31.st-va.ncbi.nlm.nih.gov");
-        skip = hostname->size - stor31.size;
-        if (hostname->size >= stor31.size &&
-            string_cmp(stor31.addr, stor31.size, hostname->addr + skip,
-                hostname->size - skip, stor31.size) == 0);
-        else {
-            String amazonaws;
-            CONST_STRING(&amazonaws, "amazonaws.com");
-            skip = hostname->size - amazonaws.size;
-            if (hostname->size >= amazonaws.size &&
-                string_cmp(amazonaws.addr, amazonaws.size,
-                    hostname->addr + skip, hostname->size - skip,
-                    amazonaws.size) == 0);
-            else
-                authenticate = false;
-        }
-    }
-
-    if (authenticate) {
-        rc_t rc = 0;
-        const KHttpHeader *node = NULL;
-
-        String dateString;
-        String authorizationString;
-        CONST_STRING(&dateString, "Date");
-        CONST_STRING(&authorizationString, "Authorization");
-
-        for (node = (const KHttpHeader*)BSTreeFirst(&self->hdrs);
-            (rc == 0 ||
-            (GetRCObject(rc) == (enum RCObject) rcBuffer &&
-                GetRCState(rc) == rcInsufficient)) && node != NULL;
-            node = (const KHttpHeader*)BSTNodeNext(&node->dad))
-        {
-            if (node->name.len == 4 &&
-                StringCaseCompare(&node->name, &dateString) == 0)
-            {
-                sdate = &node->value;
-            }
-            else if (node->name.len == 13 &&
-                StringCaseCompare(&node->name, &authorizationString) == 0)
-            {   /* already has Authorization header */
-                authenticate = false;
-            }
-        }
-
-        if (!authenticate)
-            return 0;
-
-        if (sdate == NULL) {
-            KTime_t t = KTimeStamp();
-            size_t sz = KTimeRfc2616(t, date, sizeof date);
-            assert(sz < sizeof date);
-            StringInitCString(&dates, date);
-            sdate = &dates;
-            rc = KClientHttpRequestAddHeader(self, "Date", date);
-        }
-    }
-    else /* not connecting to s3 or AccessKeyId/SecretAccessKeyID are unknown */
-        return 0;
-
-    if (rc == 0) {
-        size_t len = 0;
-        String HTTPVerb;
-        StringInitCString(&HTTPVerb, method);
-        rc = StringToSign(&HTTPVerb, sdate, hostname, &self->url_block.path,
-            stringToSign, sizeof stringToSign, &len);
-    }
-
-    if (rc == 0)
-        rc = KNSManagerMakeAwsAuthenticationHeader(NULL,
-            AWSAccessKeyId, YourSecretAccessKeyID, stringToSign,
-            authorization, sizeof authorization);
-
-    if (rc == 0)
-        rc = KClientHttpAddHeader(&self->hdrs, "Authorization", authorization);
-            
-    return rc;
-}
-
 static rc_t KClientHttpRequestFormatMsgBegin (
     const KClientHttpRequest * self, char * buffer, size_t bsize,
     const char * method, size_t * len, uint32_t uriForm )
@@ -3461,7 +3575,7 @@ static rc_t KClientHttpRequestFormatMsgBegin (
     }
     if ( ! http -> proxy_ep )
     {   /* direct connection */
-        rc = string_printf ( buffer, bsize, len, 
+        rc = string_printf ( buffer, bsize, len,
                              "%s %S%s%S HTTP/%.2V\r\nHost: %S\r\n"
                              , method
                              , & self -> url_block . path
@@ -3475,7 +3589,7 @@ static rc_t KClientHttpRequestFormatMsgBegin (
         http -> uf = EUriFormGuess ( & hostname, uriForm, http -> uf );
         if ( http -> uf == eUFOrigin ) {
         /* the host does not like absoluteURI: use abs_path ( origin-form ) */
-            rc = string_printf ( buffer, bsize, len, 
+            rc = string_printf ( buffer, bsize, len,
                          "%s %S%s%S HTTP/%.2V\r\nHost: %S:%u\r\n"
                              , method
                              , & self -> url_block . path
@@ -3487,7 +3601,7 @@ static rc_t KClientHttpRequestFormatMsgBegin (
                 );
         }
         else if ( http -> port != 80 ) { /* absoluteURI: non-default port */
-            rc = string_printf ( buffer, bsize, len, 
+            rc = string_printf ( buffer, bsize, len,
                              "%s %S://%S:%u%S%s%S HTTP/%.2V\r\nHost: %S\r\n"
                              , method
                              , & self -> url_block . scheme
@@ -3501,7 +3615,7 @@ static rc_t KClientHttpRequestFormatMsgBegin (
                 );
         }
         else {                           /* absoluteURI: default port */
-            rc = string_printf ( buffer, bsize, len, 
+            rc = string_printf ( buffer, bsize, len,
                              "%s %S://%S%S%s%S HTTP/%.2V\r\nHost: %S\r\n"
                              , method
                              , & self -> url_block . scheme
@@ -3519,9 +3633,106 @@ static rc_t KClientHttpRequestFormatMsgBegin (
 }
 
 static
+rc_t
+FormatForCloud( const KClientHttpRequest *cself, const char *method )
+{   /* Discover whether the target URL is in a cloud and
+        if it is, apply the corresponding cloud's formatting */
+    rc_t rc = 0;
+
+    size_t skip = 0;
+    const String * hostname = & cself->url_block.host;
+    CloudProviderId cpId = cloud_provider_none;
+
+    CloudMgr * cloudMgr = cself->http->mgr->cloud;
+
+    String stor31;
+
+    String aws;
+    String gcp;
+    CONST_STRING(&aws, "169.254.169.254");
+    CONST_STRING(&gcp, "metadata.google.internal");
+
+    if ( StringEqual(hostname, &aws) || StringEqual(hostname, &gcp))
+        return 0;
+
+    if ( cloudMgr == NULL )
+        rc = CloudMgrMake ( & cloudMgr, NULL, cself->http->mgr );
+
+    if ( rc != 0 )
+        return rc;
+
+    CONST_STRING(&stor31, "s3-stor31.st-va.ncbi.nlm.nih.gov");
+    skip = hostname->size - stor31.size;
+    if (hostname->size >= stor31.size &&
+        string_cmp(stor31.addr, stor31.size, hostname->addr + skip,
+            hostname->size - skip, stor31.size) == 0)
+    {
+        cpId = cloud_provider_aws;
+    }
+    else
+    {
+        String amazonaws;
+        CONST_STRING(&amazonaws, "amazonaws.com");
+        skip = hostname->size - amazonaws.size;
+        if (hostname->size >= amazonaws.size &&
+            string_cmp(amazonaws.addr, amazonaws.size,
+                hostname->addr + skip, hostname->size - skip,
+                amazonaws.size) == 0)
+        {
+            cpId = cloud_provider_aws;
+        }
+        else {
+            String google;
+            CONST_STRING(&google, "storage.googleapis.com");
+            skip = 0;
+            if (hostname->size >= google.size &&
+                string_cmp(google.addr, google.size,
+                    hostname->addr + skip, hostname->size - skip,
+                    google.size) == 0)
+            {
+                cpId = cloud_provider_gcp;
+            }
+        }
+    }
+
+    if ( cpId == cloud_provider_none )
+        CloudMgrCurrentProvider ( cloudMgr, & cpId );
+
+    {
+        const char * e = getenv("NCBI_VDB_PROVIDER");
+        if (e != NULL && e[0] != '\0') {
+            CloudProviderId i = cloud_provider_none;
+            i = atoi(e);
+            if (i != cloud_provider_none)
+                cpId = i;
+        }
+    }
+
+    if ( cpId != cloud_provider_none && ( cself->ceRequired || cself->payRequired ) )
+    {   /* add cloud authentication informantion if required */
+        if ( rc == 0 )
+        {
+            /* create a cloud object based on the target URL */
+            Cloud * cloud ;
+            KClientHttpRequest * self = (KClientHttpRequest *)cself;
+            rc = CloudMgrMakeCloud ( cloudMgr, & cloud, cpId );
+            if (rc == 0) {
+                if (cself->payRequired)
+                    rc = CloudAddUserPaysCredentials(cloud, self, method);
+                else if (cself->ceRequired)
+                    rc = CloudAddComputeEnvironmentTokenForSigner(
+                        cloud, self);
+                CloudRelease ( cloud );
+            }
+            CloudMgrRelease ( cloudMgr );
+        }
+    }
+    return rc;
+}
+
+static
 rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
     char *buffer, size_t bsize, const char *method,
-    const char *AWSAccessKeyId, const char *YourSecretAccessKeyID,
     size_t *len, uint32_t uriForm )
 {
     rc_t rc;
@@ -3531,6 +3742,7 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
     String user_agent_string;
     String accept_string;
     size_t total;
+    char * buf_end = buffer;
     size_t p_bsize = 0;
     const KHttpHeader *node;
     size_t dummy;
@@ -3547,12 +3759,17 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
     }
 
     CONST_STRING ( &user_agent_string, "User-Agent" );
-    CONST_STRING(&accept_string, "Accept");
+    CONST_STRING ( &accept_string, "Accept" );
 
-    rc = KClientHttpRequestAuthenticate(self, method,
-        AWSAccessKeyId, YourSecretAccessKeyID);
+    assert(method);
+    if (method[0] != 'P') {
+        /* POST is formatted for cloud inside of KClientHttpRequestPOST_Int */
+        rc = FormatForCloud(self, method);
+        if (rc != 0)
+            return rc;
+    }
 
-    /* start building the buffer that will be sent 
+    /* start building the buffer that will be sent
        We are inlining the host:port, instead of
        sending it in its own header */
 
@@ -3561,6 +3778,10 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
 
     /* print all headers remaining into buffer */
     total = * len;
+    if ( rc == 0 )
+    {
+        buf_end += * len;
+    }
     for ( node = ( const KHttpHeader* ) BSTreeFirst ( & self -> hdrs );
           ( rc == 0  ||
             ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
@@ -3583,11 +3804,15 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
         p_bsize = bsize >= total ? bsize - total : 0;
 
         /* add header line */
-        r2 = string_printf ( & buffer [ total ], p_bsize, len,
+        r2 = string_printf ( buf_end, p_bsize, len,
                              "%S: %S\r\n"
                              , & node -> name
                              , & node -> value );
         total += * len;
+        if ( r2 == 0 )
+        {
+            buf_end += * len;
+        }
         if ( rc == 0 ) {
             rc = r2;
         }
@@ -3601,18 +3826,27 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
         if ( r3 == 0 )
         {
             p_bsize = bsize >= total ? bsize - total : 0;
-            r2 = string_printf ( & buffer [ total ],
+            r2 = string_printf ( buf_end,
                 p_bsize, len, "User-Agent: %s\r\n", ua );
             total += * len;
-            if ( rc == 0 ) {
+            if ( r2 == 0 )
+            {
+                buf_end += * len;
+            }
+            if ( rc == 0 ) 
+            {
                 rc = r2;
             }
         }
     }
 
     if (!have_accept) {
-        r2 = string_printf(&buffer[total], p_bsize, len, "Accept: */*\r\n");
-        total += *len;
+        r2 = string_printf(buf_end, p_bsize, len, "Accept: */*\r\n");
+        total += * len;
+        if ( r2 == 0 )
+        {
+            buf_end += * len;
+        }
         if (rc == 0 && r2 != 0)
             rc = r2;
     }
@@ -3623,13 +3857,18 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
           GetRCState ( rc ) == rcInsufficient ) )
     {
         p_bsize = bsize >= total ? bsize - total : 0;
-        r2 = string_printf ( & buffer [ total ], p_bsize, len, "\r\n" );
+        r2 = string_printf ( buf_end, p_bsize, len, "\r\n" );
         total += * len;
-        if ( rc == 0 ) {
+        if ( r2 == 0 )
+        {
+            buf_end += * len;
+        }
+        if ( rc == 0 ) 
+        {
             rc = r2;
         }
     }
-    
+
     if ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
         GetRCState ( rc ) == rcInsufficient )
     {
@@ -3646,7 +3885,7 @@ rc_t CC KClientHttpRequestFormatMsg(const KClientHttpRequest *self,
     char *buffer, size_t bsize, const char *method, size_t *len)
 {
     return KClientHttpRequestFormatMsgInt(self,
-        buffer, bsize, method, NULL, NULL, len, 1);
+        buffer, bsize, method, len, 1);
 }
 
 LIB_EXPORT
@@ -3654,33 +3893,32 @@ rc_t CC KClientHttpRequestFormatPostMsg(const KClientHttpRequest *self,
     char *buffer, size_t bsize, size_t *len)
 {
     return KClientHttpRequestFormatMsgInt(self,
-        buffer, bsize, "POST", NULL, NULL, len, 0);
-}
-
-LIB_EXPORT
-rc_t CC KClientHttpRequestFormatCloudMsg(const KClientHttpRequest *self,
-    char *buffer, size_t bsize, const char *method,
-    const char *AWSAccessKeyId, const char *YourSecretAccessKeyID,
-    size_t *len)
-{
-    return KClientHttpRequestFormatMsgInt(self, buffer, bsize,
-        method, AWSAccessKeyId, YourSecretAccessKeyID, len, 1);
+        buffer, bsize, "POST", len, 0);
 }
 
 static
-rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, KClientHttpResult const *const rslt )
+rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, const char *method, KClientHttpResult const *const rslt, char ** expiration )
 {
     rc_t rc = 0;
-    String Location;
     KHttpHeader *loc;
+    KHttpHeader *exp;
 
-    /* find relocation URI */
-    CONST_STRING ( & Location, "Location" );
-    loc = ( KHttpHeader* ) BSTreeFind ( & rslt -> hdrs, & Location, KHttpHeaderCmp );
-    if ( loc == NULL )
+    { /* find relocation URI */
+        String Location;
+        CONST_STRING ( & Location, "Location" );
+        loc = ( KHttpHeader* ) BSTreeFind ( & rslt -> hdrs, & Location, KHttpHeaderCmp );
+        if ( loc == NULL )
+        {
+            LOGERR ( klogSys, rc, "Location header not found on relocate msg" );
+            return RC ( rcNS, rcNoTarg, rcValidating, rcNode, rcNull );
+        }
+    }
+
     {
-        LOGERR ( klogSys, rc, "Location header not found on relocate msg" );
-        return RC ( rcNS, rcNoTarg, rcValidating, rcNode, rcNull );
+        /* find expiration time if any */
+        String Expiration;
+        CONST_STRING ( & Expiration, "Expires" );
+        exp = ( KHttpHeader* ) BSTreeFind ( & rslt -> hdrs, & Expiration, KHttpHeaderCmp );
     }
 
     /* capture the new URI in loc -> value_storage */
@@ -3693,6 +3931,15 @@ rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, KClientHttp
     {
         URLBlock b;
         KDataBuffer uri;
+
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP), ("Redirected from '%s'\n", (const char*) self -> url_buffer . base ) );
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP), ("Redirected to '%S'\n", & loc -> value ) );
+        if ( exp != NULL )
+        {
+            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP), ("'To' URL expires at '%S'\n", & exp -> value ) );
+            * expiration = string_dup( exp -> value . addr, exp -> value . size );
+        }
+
         /* pull out uri */
         rc = KDataBufferSub ( &loc -> value_storage, &uri, loc -> name . size, loc -> value . size + 1 );
         if ( rc == 0 )
@@ -3710,66 +3957,35 @@ rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, KClientHttp
                 http -> ep_valid = false;
 
                 /* reinitialize the http from uri */
-                rc = KClientHttpInit ( http, &uri, NULL, http -> vers , &b . host, b . port, b . tls );
+                rc = KClientHttpInit ( http, &uri, http -> vers , &b . host, b . port, b . tls );
                 if ( rc == 0 )
                 {
                     KClientHttpRequestClear ( self );
                     rc = KClientHttpRequestInit ( self, &b, &uri );
                     if ( rc == 0 )
+                    {
+                        self -> ceRequired = false; /* once redirected, CE token is not needed */
+                        rc = FormatForCloud ( self, method );
                         KClientHttpResultRelease ( rslt );
+                    }
                 }
             }
 
             KDataBufferWhack ( & uri );
         }
-        
-    } 
+
+    }
 
     return rc;
 }
 
 static
 rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientHttpResult **_rslt, const char *method )
-{   
+{
     rc_t rc = 0;
-
-    uint32_t uriForm = 1;
-
-    KClientHttpResult *rslt;
-
     uint32_t i;
     const uint32_t max_redirect = 5;
-
-    bool authenticate = false;
-
-    char aws_access_key_id[512] = "";
-    char aws_secret_access_key[512] = "";
-
-    const char *AWSAccessKeyId = NULL;
-    const char *YourSecretAccessKeyID = NULL;
-
-    authenticate = self->url_block.cloud_type == ct_S3;
-
-    if (authenticate) {
-        size_t num_read = 0;
-        KConfig * kfg = NULL;
-        rc = KConfigMake(&kfg, NULL);
-        if (rc != 0)
-            return rc;
-        rc = KConfigRead(kfg, "/AWS/aws_access_key_id", 0,
-            aws_access_key_id, sizeof aws_access_key_id, &num_read, NULL);
-        if (rc == 0)
-            rc = KConfigRead(kfg, "/AWS/aws_secret_access_key", 0,
-                aws_secret_access_key, sizeof aws_secret_access_key,
-                &num_read, NULL);
-        if (rc == 0) {
-            AWSAccessKeyId = aws_access_key_id;
-            YourSecretAccessKeyID = aws_secret_access_key;
-        }
-        else
-            rc = 0;
-        RELEASE(KConfig, kfg);
-    }
+    char * expiration = NULL;
 
     /* TBD - may want to prevent a Content-Type or other headers here */
 
@@ -3778,12 +3994,16 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
 
     for ( i = 0; i < max_redirect; ++ i )
     {
+        uint32_t uriForm = 1;
+
+        KClientHttpResult *rslt;
+
         size_t len;
         char buffer [ 4096 ];
 
         /* create message */
         rc = KClientHttpRequestFormatMsgInt ( self, buffer, sizeof buffer,
-                method, AWSAccessKeyId, YourSecretAccessKeyID, & len, uriForm );
+                method, & len, uriForm );
         if ( rc != 0 )
             break;
 
@@ -3797,8 +4017,11 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
                 break;
         }
 
-        /* look at status code */
         rslt = * _rslt;
+        rslt -> expiration = expiration; /* expiration has to reach the caller */
+        expiration = NULL;
+
+        /* look at status code */
         switch ( rslt -> status )
         {
         case 200:
@@ -3812,15 +4035,15 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
         }
 
         TRACE ( "unusual status code: %d\n", ( int ) rslt -> status );
-        
+
         switch ( rslt -> status )
         {
             /* TBD - need to include RFC rule for handling codes for HEAD and GET */
         case 301: /* "moved permanently" */
         case 302: /* "found" - okay to reissue for HEAD and GET, but not for POST */
         case 303: /* "see other" - the response to the request can be found under another URI using a GET method */
-        case 307: /* "moved temporarily" */
         case 308: /* "permanent redirect" */
+        case 307: /* "moved temporarily" */
             break;
 
         case 505: /* HTTP Version Not Supported */
@@ -3848,35 +4071,34 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
                 /* the connection is no good */
                 KClientHttpClose ( self -> http );
             }
-            
+
             /* rslt -> status may be looked at by the caller to determine actual success */
             return 0;
         }
 
-        /* reset connection, reset request */
-        rc = KClientHttpRequestHandleRedirection ( self, rslt );
+        rc = KClientHttpRequestHandleRedirection ( self, method, rslt, & expiration );
         if ( rc != 0 )
             break;
     }
 
     if ( rc != 0 )
         KClientHttpClose ( self -> http );
-    
+
     return rc;
 }
 
 static
 rc_t KClientHttpRequestSendReceiveNoBody ( KClientHttpRequest *self, KClientHttpResult **_rslt, const char *method )
-{   
+{
     KHttpRetrier retrier;
-    rc_t rc = KHttpRetrierInit ( & retrier, self -> url_buffer . base, self -> http -> mgr ); 
-    
+    rc_t rc = KHttpRetrierInit ( & retrier, self -> url_buffer . base, self -> http -> mgr );
+
     if ( rc == 0 )
     {
-        while ( rc == 0 ) 
+        while ( rc == 0 )
         {
             rc = KClientHttpRequestSendReceiveNoBodyInt ( self, _rslt, method );
-            if ( rc != 0 ) 
+            if ( rc != 0 )
             {   /* a non-HTTP problem */
                 break;
             }
@@ -3888,14 +4110,14 @@ rc_t KClientHttpRequestSendReceiveNoBody ( KClientHttpRequest *self, KClientHttp
             }
             KClientHttpResultRelease ( * _rslt );
         }
-        
+
         {
             rc_t rc2 = KHttpRetrierDestroy ( & retrier );
             if ( rc == 0 )
                 rc = rc2;
         }
     }
-    
+
     return rc;
 }
 
@@ -3904,8 +4126,65 @@ rc_t KClientHttpRequestSendReceiveNoBody ( KClientHttpRequest *self, KClientHttp
  */
 LIB_EXPORT rc_t CC KClientHttpRequestHEAD ( KClientHttpRequest *self, KClientHttpResult **rslt )
 {
-    return KClientHttpRequestSendReceiveNoBody ( self, rslt, "HEAD" );
-} 
+    if ( self -> ceRequired || self -> payRequired )
+    {   /* use POST or GET for 256 bytes */
+
+        /* update UserAgent with -head */
+        const char * user_agent;
+        rc_t rc = KNSManagerGetUserAgent ( & user_agent );
+        if ( rc == 0 )
+        {
+            char * user_agent_saved = string_dup ( user_agent, string_size( user_agent ) );
+            if ( user_agent_saved != NULL )
+            {
+                #define HeadSize 256
+                KNSManagerSetUserAgent ( (KNSManager*)self->http->mgr, "%s-head", user_agent );
+
+                /* add header "Range bytes = 0,HeadSize" */
+                rc = KClientHttpRequestByteRange ( self, 0, HeadSize );
+                if ( rc == 0 )
+                {
+                    rc = self -> ceRequired ? KClientHttpRequestPOST ( self, rslt ) : KClientHttpRequestGET ( self, rslt );
+                    if ( rc == 0 )
+                    {
+                        char buf [ HeadSize ];
+                        uint64_t result_size64 = sizeof buf;
+                        KStream * response;
+
+                        /* extractSize */
+                        KClientHttpResultSize ( *rslt, & result_size64 );
+
+                        if ( result_size64 > sizeof buf ) /* unlikely but would be very unpleasant */
+                        {
+                            result_size64 = sizeof buf;
+                        }
+
+                        /* consume and discard result_size64 bytes */
+                        rc = KClientHttpResultGetInputStream ( *rslt, & response );
+                        if ( rc == 0 )
+                        {
+                            rc = KStreamTimedReadExactly ( response, buf, result_size64, NULL );
+                            KStreamRelease ( response );
+                        }
+                    }
+                }
+
+                KNSManagerSetUserAgent ( (KNSManager*)self->http->mgr, "%s", user_agent_saved );
+                #undef HeadSize
+                free ( user_agent_saved );
+            }
+            else
+            {
+                rc = RC ( rcNS, rcString, rcAllocating, rcMemory, rcExhausted );
+            }
+        }
+        return rc;
+    }
+    else
+    {
+        return KClientHttpRequestSendReceiveNoBody ( self, rslt, "HEAD" );
+    }
+}
 
 /* GET
  *  send GET message
@@ -3917,7 +4196,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestGET ( KClientHttpRequest *self, KClientHttp
 }
 
 rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult **_rslt )
-{   
+{
     rc_t rc = 0;
 
     KClientHttpResult *rslt;
@@ -3925,7 +4204,12 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
     uint32_t i;
     const uint32_t max_redirect = 5;
 
-    /* TBD comment - add debugging test to ensure "Content-Length" header not present */
+    char * expiration = NULL;
+    const char * method = "POST";
+
+    rc = FormatForCloud(self, method);
+    if (rc != 0)
+        return rc;
 
     /* fix headers for POST params */
     if ( self -> body . elem_count > 1 )
@@ -3964,13 +4248,13 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
 
         /* create message */
         rc = KClientHttpRequestFormatMsgInt ( self, buffer, sizeof buffer,
-                                           "POST", NULL, NULL, & len, 0 );
+                                           method, & len, 0 );
         if ( rc != 0 )
             break;
 
         /* Try to add body to buffer to avoid double socket write */
-        if (body != NULL && body -> base != NULL && body -> elem_count > 0 && 
-                len + body -> elem_count - 1 <= sizeof buffer) 
+        if (body != NULL && body -> base != NULL && body -> elem_count > 0 &&
+                len + body -> elem_count - 1 <= sizeof buffer)
         {
             memmove(buffer + len, body -> base, body -> elem_count - 1);
             len += body -> elem_count - 1;
@@ -3987,8 +4271,11 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
                 break;
         }
 
-        /* look at status code */
         rslt = * _rslt;
+        rslt -> expiration = expiration; /* expiration has to reach the caller */
+        expiration = NULL;
+
+        /* look at status code */
         switch ( rslt -> status )
         {
         case 200:
@@ -4002,14 +4289,35 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
         }
 
         TRACE ( "unusual status code: %d\n", ( int ) rslt -> status );
-        
+
         switch ( rslt -> status )
         {
             /* TBD - Add RFC rules about POST */
         case 301: /* "moved permanently" */
-        case 307: /* "moved temporarily" */
         case 308: /* "permanent redirect" */
             break;
+        case 307: /* "moved temporarily" */
+            method = "GET";
+            rc = KDataBufferResize ( & self -> body , 0 ); /* drop POST parameters */
+            if (rc == 0 )
+            {
+                rc = KClientHttpReplaceHeader ( & self -> hdrs, "Content-Length", "0" );
+                if ( rc == 0 )
+                {
+                   String Content_Type;
+                   BSTNode *node;
+
+                   CONST_STRING ( & Content_Type, "Content-Type" );
+
+                   node = BSTreeFind ( & self -> hdrs, & Content_Type, KHttpHeaderCmp );
+                   if ( node != NULL )
+                   {
+                      BSTreeUnlink(&self->hdrs, node);
+                      /*TODO: free (node) ? */
+                   }
+                }
+             }
+             break;
 
         case 505: /* HTTP Version Not Supported */
             if ( self -> http -> vers > 0x01000000 )
@@ -4036,7 +4344,7 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
         }
 
         /* reset connection, reset request */
-        rc = KClientHttpRequestHandleRedirection ( self, rslt );
+        rc = KClientHttpRequestHandleRedirection ( self, method, rslt, & expiration );
         if ( rc != 0 )
             break;
     }
@@ -4120,14 +4428,14 @@ LIB_EXPORT rc_t CC KClientHttpRequestPOST ( KClientHttpRequest *self, KClientHtt
         return RC ( rcNS, rcNoTarg, rcUpdating, rcParam, rcNull );
     }
 
-    rc = KHttpRetrierInit ( & retrier, self -> url_buffer . base, self -> http -> mgr ); 
-    
+    rc = KHttpRetrierInit ( & retrier, self -> url_buffer . base, self -> http -> mgr );
+
     if ( rc == 0 )
     {
-        while ( rc == 0 ) 
+        while ( rc == 0 )
         {
             rc = KClientHttpRequestPOST_Int ( self, _rslt );
-            if ( rc != 0 ) 
+            if ( rc != 0 )
             {   /* a non-HTTP problem */
                 break;
             }
@@ -4149,12 +4457,12 @@ LIB_EXPORT rc_t CC KClientHttpRequestPOST ( KClientHttpRequest *self, KClientHtt
 
             KClientHttpResultRelease ( * _rslt );
         }
-        
+
         {
             rc_t rc2 = KHttpRetrierDestroy ( & retrier );
             if ( rc == 0 ) rc = rc2;
         }
     }
-    
+
     return rc;
 }

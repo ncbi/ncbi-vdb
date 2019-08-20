@@ -358,3 +358,53 @@ AST_Fixture :: CreateFile ( const char * p_name, const char * p_content )
     ofstream out( p_name );
     out << p_content;
 }
+
+static
+void
+DumpSymbol ( BSTNode *n, void *data )
+{
+    const KSymbol * sym = (const KSymbol*) n;
+    int indent = *(int*)data;
+    for (auto i = 0; i < indent; ++i ) printf ( "\t" );
+    if ( sym->type == eDatatype )
+        printf ( "%.*s eDatatype id = %u\n", sym -> name . len, sym -> name . addr, ( (SDatatype*)sym -> u . obj ) -> id );
+    else
+        printf ( "%.*s type=%i\n", sym -> name . len, sym -> name . addr, sym -> type );
+    if ( sym -> type == eNamespace )
+    {
+        ++ indent;
+        BSTreeForEach ( & sym -> u . scope, false, DumpSymbol, &indent );
+        -- indent;
+    }
+}
+
+void
+AST_Fixture :: DumpSymbolTable ( const KSymTable & self )
+{
+    uint32_t i = 0 ;
+    uint32_t count = VectorLength ( & self . stack );
+    for ( i = 0 ; i < count; ++ i )
+    {
+        BSTree *scope = (BSTree*) VectorGet ( & self . stack, i );
+        int indent = 0;
+        BSTreeForEach ( scope, false, DumpSymbol, &indent );
+    }
+}
+
+void
+AST_Fixture :: DumpScope ( const BSTree & scope, const char * title )
+{
+    KSymTable tbl;
+    printf("\n\nScope %s:\n\n", title);
+    if ( KSymTableInit ( & tbl, NULL ) != 0 )
+    {
+        throw std :: logic_error ( "AST_Fixture::DumpScope : KSymTableInit failed" );
+    }
+    if ( KSymTablePushScope ( & tbl, (BSTree*) & scope ) != 0 )
+    {
+        throw std :: logic_error ( "AST_Fixture::DumpScope : KSymTablePushScope failed" );
+    }
+    DumpSymbolTable ( tbl );
+    KSymTablePopScope ( & tbl );
+    KSymTableWhack ( & tbl );
+}

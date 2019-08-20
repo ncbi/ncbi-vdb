@@ -557,14 +557,14 @@ rc_t vlen_decodeU1_imp ( uint64_t *dst, const void *Src,
     if (ssize > 10)
         ssize = 10;
     
-	c = src[0];
-	if ((c & 0x80) == 0) {
-		*dst = c;
-		*consumed = 1;
-		return 0;
-	}
-	if (ssize != 1) {
-		y = c & 0x7F;
+    c = src[0];
+    if ((c & 0x80) == 0) {
+        *dst = c;
+        *consumed = 1;
+        return 0;
+    }
+    if (ssize != 1) {
+        y = c & 0x7F;
         c = src[1];
         if ((c & 0x80) == 0) {
             *dst = (y << 7) | c;

@@ -149,7 +149,7 @@ struct VCtxId
  *  deep copy a single symbol
  */
 rc_t KSymbolCopy ( BSTree *scope,
-    struct KSymbol **cp, struct KSymbol const *orig );
+    const struct KSymbol **cp, struct KSymbol const *orig );
 
 /* CopyScope
  *  deep copy all symbols within a scope

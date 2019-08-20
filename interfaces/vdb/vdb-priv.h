@@ -48,6 +48,7 @@ extern "C" {
 struct KDatabase;
 struct KTable;
 struct KMetadata;
+struct KMDataNode;
 struct KDBManager;
 struct KDirectory;
 struct VDBManager;
@@ -62,6 +63,7 @@ struct VCursorParams;
 struct VXformInfo;
 struct KDataBuffer;
 struct KNamelist;
+struct String;
 
 
 /*--------------------------------------------------------------------------
@@ -142,6 +144,14 @@ VDB_EXTERN uint32_t CC VSchemaLastIntrinsicTypeId ( struct VSchema const *self )
  */
 VDB_EXTERN rc_t CC VSchemaListLegacyTables ( struct VSchema const *self, struct KNamelist **list );
 
+/* DumpToKMDataNode
+ *  given a VSchema, an updatable KMDataNode, an object spec string and object type,
+ *  find the typed object within VSchema by name, dump its schema text into the node,
+ *  and set the attribute name to the full object name and version.
+ */
+VDB_EXTERN rc_t CC VSchemaDumpToKMDataNode ( struct VSchema const * self,
+    struct KMDataNode * node, const char * spec );
+
 
 /*--------------------------------------------------------------------------
  * VDatabase
@@ -159,6 +169,11 @@ VDB_EXTERN rc_t CC VDatabaseOpenKDatabaseUpdate ( struct VDatabase *self, struct
  */
 VDB_EXTERN bool CC VDatabaseIsCSRA ( struct VDatabase const *self );
 
+/* Get accession of database (is avalibable)
+ *  acc needs to be released
+ */
+VDB_EXTERN rc_t CC
+VDatabaseGetAccession(const struct VDatabase * self, const struct String ** acc);
 
 /*--------------------------------------------------------------------------
  * VTable

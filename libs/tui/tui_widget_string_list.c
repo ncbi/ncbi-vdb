@@ -125,7 +125,7 @@ static bool always_handle_these_keys( tui_event * event )
 }
 
 
-bool event_list( struct KTUIWidget * w, tui_event * event )
+bool event_list( struct KTUIWidget * w, tui_event * event, bool hotkey )
 {
     bool res = false;
     if ( w->strings != NULL )

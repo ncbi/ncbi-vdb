@@ -258,7 +258,8 @@ rc_t KDBManagerVOpenColumnReadInt ( const KDBManager *self,
         const KDirectory *dir;
 
         /* open table directory */
-        rc = KDBOpenPathTypeRead ( self, wd, colpath, &dir, kptColumn, NULL, try_srapath );
+        rc = KDBOpenPathTypeRead ( self, wd, colpath, &dir, kptColumn, NULL,
+            try_srapath, NULL );
         if ( rc == 0 )
         {
             rc = KColumnMakeRead ( & col, dir, colpath );

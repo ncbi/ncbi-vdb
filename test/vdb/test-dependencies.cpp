@@ -10,7 +10,7 @@
 #include <vdb/dependencies.h> /* VDBDependencies */
 #include <vdb/schema.h> /* VSchema */
 
-#include <kfg/config.h> // KConfigDisableUserSettings
+#include <kfg/kfg-priv.h> /* KConfigMakeLocal */
 
 #include <vfs/manager.h> // VFSManager
 #include <vfs/manager-priv.h> // VFSManagerGetConfig
@@ -55,7 +55,7 @@ protected:
         if (KDirectoryOpenDirRead(wd, &dir, false, path)) {
             FAIL("failed to KDirectoryOpenDirRead()");
         }
-        if (KConfigMake(&cfg, dir)) {
+        if (KConfigMakeLocal(&cfg, dir)) {
             FAIL("failed to KConfigMake()");
         }
         RELEASE(KDirectory, dir);
@@ -374,7 +374,11 @@ FIXTURE_TEST_CASE(Test1YesDep, RefseqFixture) {
     VPath* acc = NULL;
     REQUIRE_RC(VFSManagerMakePath(vmgr, &acc, SRR619505));
     const VPath *local = NULL;
-    REQUIRE_RC(VResolverLocal(resolver, acc, &local));
+
+//  REQUIRE_RC(VResolverLocal(resolver, acc, &local));
+    REQUIRE_RC(VResolverRemote(resolver, eProtocolHttps, acc, &local));
+
+
     RELEASE(VPath, acc);
     const String *s = NULL;
     REQUIRE_RC(VPathMakeString(local, &s));

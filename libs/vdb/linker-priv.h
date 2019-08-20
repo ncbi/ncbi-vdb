@@ -268,5 +268,8 @@ struct LSpecial
  */
 void CC LSpecialWhack ( void *item, void *ignore );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _h_linker_priv_ */

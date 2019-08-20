@@ -35,9 +35,9 @@ TEST_TOOLS = \
 	wb-test-schema-ast \
 
 INT_TOOLS = \
-    test-schema-scan \
-    test-schema-parse \
-    test-schema-diff \
+	test-schema-scan \
+	test-schema-parse \
+	test-schema-diff \
 
 ALL_TOOLS = $(TEST_TOOLS) $(INT_TOOLS)
 
@@ -165,7 +165,7 @@ mv:test-schema-diff
 
 difftest: test-schema-diff
 	mkdir -p $(OBJDIR)/data
-	-$(TEST_BINDIR)/test-schema-diff -I$(TOP)/interfaces -o$(OBJDIR)/data \
+	VDB_CONFIG=$(SRCDIR)/local.kfg $(TEST_BINDIR)/test-schema-diff -I$(TOP)/interfaces -o$(OBJDIR)/data \
 	$(addprefix	$(TOP)/interfaces/, \
 		insdc/insdc.vschema \
 		insdc/seq.vschema \

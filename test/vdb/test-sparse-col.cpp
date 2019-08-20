@@ -322,6 +322,7 @@ FIXTURE_TEST_CASE ( SparseColEmpty, VDB_Fixture)
     rc = VCursorFindNextRowId ( rcursor, 0, &row_id );
     if ( rc == 0 || GetRCState ( rc ) != rcEmpty || GetRCObject ( rc ) != (int)rcCursor )
         FAIL("expected to fail with rcCursor rcNotFound");
+    ReleaseDatabase(rcursor);
 }
 
 

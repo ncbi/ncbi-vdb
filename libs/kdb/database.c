@@ -247,7 +247,8 @@ rc_t KDBManagerVOpenDBReadInt ( const KDBManager *self, const KDatabase **dbp,
         const KDirectory *dir;
 
         /* open the directory if its a database */
-        rc = KDBOpenPathTypeRead ( self, wd, dbpath, &dir, kptDatabase, NULL, try_srapath );
+        rc = KDBOpenPathTypeRead ( self, wd, dbpath, &dir, kptDatabase, NULL,
+            try_srapath, NULL );
         if ( rc == 0 )
         {
             KDatabase *db;
@@ -670,7 +671,8 @@ static
 bool CC KDatabaseListFilter ( const KDirectory *dir, const char *name, void *data_ )
 {
     struct FilterData * data = data_;
-    return ( KDBOpenPathTypeRead ( data->mgr, dir, name, NULL, data->type, NULL, false ) == 0 );
+    return ( KDBOpenPathTypeRead ( data->mgr, dir, name,
+        NULL, data->type, NULL, false, NULL ) == 0 );
 }
 
 LIB_EXPORT rc_t CC KDatabaseListDB ( const KDatabase *self, KNamelist **names )

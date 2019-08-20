@@ -26,9 +26,6 @@
 
 #include <vfs/extern.h>
 
-#include "path-priv.h"
-#include "resolver-priv.h"
-
 #include <sra/srapath.h>
 
 #include <vfs/manager.h>
@@ -44,6 +41,7 @@
 
 #include <kfg/config.h>
 #include <kfg/repository.h>
+#include <kfg/properties.h>
 #include <kfg/keystore.h>
 #include <kfg/keystore-priv.h>
 #include <kfg/kfg-priv.h>
@@ -59,6 +57,7 @@
 #include <kfs/quickmount.h>
 #include <kfs/cacheteefile.h>
 #include <kfs/cachetee2file.h>
+#include <kfs/cachetee3file.h>
 #include <kfs/rrcachedfile.h>
 #include <kfs/recorder.h>
 #include <kfs/lockfile.h>
@@ -66,6 +65,7 @@
 #include <kfs/defs.h>
 
 #include <kns/http.h>
+#include <kns/http-priv.h> 
 #include <kns/kns-mgr-priv.h>
 #include <kns/manager.h>
 
@@ -73,12 +73,17 @@
 
 #include <klib/debug.h>
 #include <klib/log.h>
+#include <klib/namelist.h>
+#include <klib/out.h>
 #include <klib/printf.h>
 #include <klib/rc.h>
 #include <klib/refcount.h>
-#include <klib/namelist.h>
-#include <klib/vector.h>
+#include <klib/strings.h> /* ENV_VDB_REMOTE_NEED_CE */
 #include <klib/time.h> 
+#include <klib/vector.h>
+
+#include "path-priv.h"
+#include "resolver-priv.h"
 
 #include <strtol.h>
 
@@ -213,26 +218,37 @@ LIB_EXPORT rc_t CC VFSManagerRelease ( const VFSManager *self )
     return rc;
 }
 
+enum cache_version
+{ cachetee = 0, cachetee_2 = 1, cachetee_3 = 2, rrcache = 3, logging = 4 };
+
 typedef struct caching_params
 {
-    uint32_t version;     /* 0 ... use cachetee ( older )
-                             1 ... use cachetee2 ( newer )
-                             2 ... use rrcache ( ram-only )
-                             3 ... use logfile ( just logging )
-                             */
+    enum cache_version version;
     size_t cache_page_size;
     uint32_t cache_page_count;
-    uint32_t use_cwd;       /* use the current working directory if not cach-location is given */
-    uint32_t append;        /* append to existing recording 0...no - 1...yes */
-    uint32_t timed;         /* record timing 0...no - 1...yes */
-    uint32_t record_inner;  /* record the request made before the cache */    
-    uint32_t record_outer;  /* record the request made after the cache */
-    bool is_refseq;         /* when used for external reference sequences, decrease cache size */
-    bool promote;           /* do we want a promoting cache-tee-file ? */
+    uint32_t cluster_factor_bits; /* for cachetee_v3 dflt = 5,  1 << 5  = 32 */
+    uint32_t page_size_bits;      /* for cachetee_v3 dflt = 15, 1 << 15 = 64k */
+    uint32_t cache_amount_mb;     /* for cachetee_v3 dlft = 32 MB */
+    
+    char temp_cache[ 4096 ];
+    
+    bool use_file_cache;    /* is caching turned on */
+    bool use_cwd;       /* use the current working directory if not cach-location is given */
+    bool append;        /* append to existing recording 0...no - 1...yes */
+    bool timed;         /* record timing 0...no - 1...yes */
+    bool record_inner;  /* record the request made before the cache */    
+    bool record_outer;  /* record the request made after the cache */
+    bool is_refseq;     /* when used for external reference sequences, decrease cache size */
+    bool promote;       /* do we want a promoting cache-tee-file ? */
+    bool debug;         /* print cache-debug-messages */
 } caching_params;
 
+#define DEFAULT_CACHETEE_VERSION cachetee_3
 #define DEFAULT_CACHE_PAGE_SIZE ( 32 * 1024 )
 #define DEFAULT_CACHE_PAGE_COUNT ( 10 * 1024 )
+#define DEFAULT_CLUSTER_FACTOR_BITS 5
+#define DEFAULT_PAGE_SIZE_BITS 15
+#define DEFAULT_CACHE_AMOUNT_MB 256
 
 static void get_caching_params( caching_params * params,
                 uint32_t dflt_block_size,
@@ -243,51 +259,88 @@ static void get_caching_params( caching_params * params,
     rc_t rc = KConfigMake ( &cfg, NULL );
 
     /* set some default values... */
-    params -> version = 0;
+    params -> version = DEFAULT_CACHETEE_VERSION;
     params -> cache_page_size = dflt_block_size;
     params -> cache_page_count = DEFAULT_CACHE_PAGE_COUNT;
-    params -> use_cwd = 0;
-    params -> append = 0;
-    params -> timed = 0;
-    params -> record_inner = 0;    
-    params -> record_outer = 0;
+    params -> cluster_factor_bits = DEFAULT_CLUSTER_FACTOR_BITS;
+    params -> page_size_bits = DEFAULT_PAGE_SIZE_BITS;
+    params -> cache_amount_mb = DEFAULT_CACHE_AMOUNT_MB;
+    params -> temp_cache[ 0 ] = 0;
+    params -> use_file_cache = false;
+    params -> use_cwd = false;
+    params -> append = false;
+    params -> timed = false;
+    params -> record_inner = false;    
+    params -> record_outer = false;
     params -> is_refseq = is_refseq;
     params -> promote = promote;
+    params -> debug = false;
     
     if ( rc == 0 )
     {
-        uint64_t value;
-        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/CACHETEEVER", &value );
-        if ( rc == 0 )
-            params -> version = (uint32_t)( value & 0x3 );
+        size_t written;
+        
+        /* functions in libs/kfg/properties.c */
+        rc = KConfig_Get_CacheTeeVersion( cfg, &( params -> version ), DEFAULT_CACHETEE_VERSION );
+        if ( rc != 0 )
+            params -> version = DEFAULT_CACHETEE_VERSION;
+        
+        rc = KConfig_Get_CacheBlockSize( cfg, &( params -> cache_page_size ), dflt_block_size );
+        if ( rc != 0 )
+            params -> cache_page_size = dflt_block_size;
+        
+        rc = KConfig_Get_CachePageCount( cfg, &( params -> cache_page_count ), DEFAULT_CACHE_PAGE_COUNT );
+        if ( rc != 0 )
+            params -> cache_page_count = DEFAULT_CACHE_PAGE_COUNT;
+        
+        rc = KConfig_Get_CacheClusterFactorBits( cfg, &( params -> cluster_factor_bits ), DEFAULT_CLUSTER_FACTOR_BITS );
+        if ( rc != 0 )
+            params -> cluster_factor_bits = DEFAULT_CLUSTER_FACTOR_BITS;        
 
-        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/BLOCKSIZE", &value );
+        rc = KConfig_Get_CachePageSizeBits( cfg, &( params -> page_size_bits ), DEFAULT_PAGE_SIZE_BITS );
+        if ( rc != 0 )
+            params -> page_size_bits = DEFAULT_PAGE_SIZE_BITS;
+        
+        rc = KConfig_Get_Cache_Amount( cfg, &( params -> cache_amount_mb ) );
         if ( rc == 0 )
-            params -> cache_page_size = (size_t)( value & 0xFFFFFFFF );
+        {
+            if ( params -> cache_amount_mb == 0 || params -> cache_amount_mb < DEFAULT_CACHE_AMOUNT_MB )
+                params -> cache_amount_mb = DEFAULT_CACHE_AMOUNT_MB;
+        }
+        else
+            params -> cache_amount_mb = DEFAULT_CACHE_AMOUNT_MB;
+        
+        rc = KConfig_Get_Temp_Cache( cfg, params -> temp_cache, sizeof( params -> temp_cache ), &written );
+        if ( rc != 0 )
+            params -> temp_cache[ 0 ] = 0;
 
-        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/PAGECOUNT", &value );
-        if ( rc == 0 )
-            params -> cache_page_count = (uint32_t)( value & 0xFFFFFFFF );
+        rc = KConfig_Get_User_Public_Cached( cfg, &( params -> use_file_cache ) );
+        if ( rc != 0 )
+            params -> use_file_cache = false;
+        
+        rc = KConfig_Get_CacheLogUseCWD( cfg, &( params -> use_cwd ), false );
+        if ( rc != 0 )
+            params -> use_cwd = false;
+        
+        rc = KConfig_Get_CacheLogAppend( cfg, &( params -> append ), false );
+        if ( rc != 0 )
+            params -> append = false;
+        
+        rc = KConfig_Get_CacheLogTimed ( cfg, &( params -> timed ), false );
+        if ( rc != 0 )
+            params -> timed = 0;
+        
+        rc = KConfig_Get_CacheLogOuter( cfg, &( params -> record_outer ), false );
+        if ( rc != 0 )
+            params -> record_outer = false;
+        
+        rc = KConfig_Get_CacheLogInner( cfg, &( params -> record_inner ), false );
+        if ( rc != 0 )
+            params -> record_inner = false;
 
-        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/USE_CWD", &value );
-        if ( rc == 0 )
-            params -> use_cwd = (uint32_t)( value & 0x1 );
-
-        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/APPEND", &value );
-        if ( rc == 0 )
-            params -> append = (uint32_t)( value & 0x1 );
-
-        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/TIMED", &value );
-        if ( rc == 0 )
-            params -> timed = (uint32_t)( value & 0x1 );
-
-        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/OUTER", &value );
-        if ( rc == 0 )
-            params -> record_outer = (uint32_t)( value & 0x1 );
-
-        rc = KConfigReadU64 ( cfg, "/CACHINGPARAMS/INNER", &value );
-        if ( rc == 0 )
-            params -> record_inner = (uint32_t)( value & 0x1 );
+        rc = KConfig_Get_CacheDebug( cfg, &( params -> debug ), false );
+        if ( rc != 0 )
+            params -> debug = false;
 
         KConfigRelease ( cfg );
     }
@@ -419,54 +472,315 @@ static rc_t wrap_in_rr_cache( KDirectory * dir,
     return rc;
 }
 
+#if WINDOWS
+    static const char * fallback_cache_location = "c:\temp";
+    const char * get_fallback_cache_location( void )
+    {
+        return fallback_cache_location;
+    }
+#else
+    static const char * fallback_cache_location = "/var/tmp";
+    const char * get_fallback_cache_location( void )
+    {
+        return fallback_cache_location;
+    }
+#endif
+
+
+static const String * make_id( const VPath * path )
+{
+    const String * res = NULL;
+    
+    /* first try to extract a id from the path */
+    String path_id = { 0, 0, 0 };
+    rc_t rc = VPathGetId ( path, &path_id );
+    if ( rc == 0 && path_id . len > 0 )
+    {
+        rc = StringCopy ( &res, &path_id );
+    }
+    /* if we have no id now, as a last resort use a timestamp */
+    if ( res == NULL )
+    {
+        KTime_t t = KTimeStamp();
+        char buffer[ 32 ];
+        size_t num_writ;
+        rc = string_printf ( buffer, sizeof buffer, &num_writ, "t_%lu", t );
+        if ( rc == 0 )
+        {
+            String S;
+            StringInitCString( &S, buffer );
+            rc = StringCopy ( &res, &path_id );    
+        }
+    }
+    return res;
+}
+
+static rc_t wrap_in_cachetee3( KDirectory * dir,
+                               const KFile **cfp,
+                               const char * cache_loc,
+                               const caching_params * cps,
+                               const VPath * path )
+{
+    rc_t rc = 0;
+    const KFile * temp_file;
+    uint32_t cluster_factor = ( 1 << ( cps -> cluster_factor_bits - 1 ) );
+    size_t page_size = ( 1 << ( cps -> page_size_bits - 1 ));
+    size_t cache_amount = ( ( size_t )cps -> cache_amount_mb * 1024 * 1024 );
+    size_t ram_page_count = ( cache_amount + page_size - 1 ) / page_size;
+    bool ram_only = true;
+
+    if ( cps -> debug )
+    {
+        const String * uri = NULL;
+        rc_t rc1 = VPathMakeUri ( path, &uri );
+        
+        KOutMsg( "{\n " );
+        KOutMsg( "cache.cluster-factor ... %d\n", cluster_factor );
+        KOutMsg( "cache.page_size ........ %d bytes\n", page_size );
+        KOutMsg( "cache.amount ........... %d MB\n", cps -> cache_amount_mb );
+        KOutMsg( "cache.page_count ....... %d\n", ram_page_count );
+        KOutMsg( "cache_loc (resolver) ... %s\n", cache_loc == NULL ? "NULL" : cache_loc );
+        if ( rc1 == 0 )
+        {
+            if ( uri != NULL )
+                KOutMsg( "uri : %S\n", uri );
+            else
+                KOutMsg( "uri : NULL\n" );
+            
+            StringWhack( uri );
+        }
+    }
+    
+    if ( cps -> use_file_cache )
+    {
+        char location[ 4096 ];
+        location[ 0 ] = 0;
+        bool remove_on_close = false;
+        bool promote = cps -> promote;
+    
+        if ( cps -> debug )
+            KOutMsg( "use file-cache\n" );
+
+        /* if we have been given a location, we use it. CacheTeeV3 can deal with invalid/unreachable ones! */
+        if ( cache_loc != NULL )
+        {
+            rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
+                                         "%s", cache_loc );
+        }
+        
+        /* if we have no given location or it does not exist or it is not read/writable for us */
+        if ( location[ 0 ] == 0 )
+        {
+            const String * id = make_id( path );
+            if ( id != NULL )
+            {
+                remove_on_close = true;
+                promote = false;
+                
+                if ( cps -> temp_cache[ 0 ] != 0 )
+                {
+                    /* we have user given temp cache - location ( do not try promotion, remove-on-close ) */
+                    rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
+                                                 "%s/%s.sra", cps -> temp_cache, id -> addr );
+                }
+                else
+                {
+                    /* fallback to hardcoded path location ( do not try promotion, remove-on-close */
+                    rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
+                                                 "%s/%s.sra",
+                                                 get_fallback_cache_location(),
+                                                 id -> addr );
+                }
+                StringWhack ( id );
+            }
+            else
+                rc = SILENT_RC( rcVFS, rcPath, rcReading, rcFormat, rcInvalid );
+        }
+        
+        if ( cps -> debug )
+        {
+            KOutMsg( "cache.remove-on-close ... %s\n", remove_on_close ? "Yes" : "No" );
+            KOutMsg( "cache.try-promote ....... %s\n", promote ? "Yes" : "No" );            
+            KOutMsg( "cache location: '%s', rc = %R\n", location, rc );
+        }
+        
+        if ( rc == 0 )
+            /* check if location is writable... */
+            rc = KDirectoryMakeKCacheTeeFile_v3 ( dir,
+                                                  &temp_file,
+                                                  *cfp,
+                                                  page_size,
+                                                  cluster_factor,
+                                                  ram_page_count,
+                                                  promote,
+                                                  remove_on_close,
+                                                  "%s", location );
+        ram_only = ( rc != 0 );
+    }
+    
+    if ( ram_only )
+    {
+        if ( cps -> debug )
+            KOutMsg( "use no file-cache\n" );
+
+        rc = KDirectoryMakeKCacheTeeFile_v3 ( dir,
+                                              &temp_file,
+                                              *cfp,
+                                              page_size,
+                                              cluster_factor,
+                                              ram_page_count,
+                                              false,
+                                              false,
+                                              "" );
+    }
+
+    if ( cps -> debug )
+        KOutMsg( "}\n" );
+    
+    if ( rc == 0 )
+    {
+        KFileRelease ( * cfp );
+        * cfp = temp_file;
+    }
+    return rc;
+}
+
 /*--------------------------------------------------------------------------
  * VFSManagerMakeHTTPFile
+ 
+ enum cache_version
+ { cachetee = 0, cachetee_2 = 1, cachetee_3 = 2, rrcache = 3, logging = 4 };
+
+
  */
 static
 rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
                              const KFile **cfp,
-                             const char * url,
+                             const VPath * path,
                              const char * cache_location,
                              uint32_t blocksize,
                              bool high_reliability,
                              bool is_refseq,
                              bool promote )
 {
-    rc_t rc;
-    
-    if ( high_reliability )
-        rc = KNSManagerMakeReliableHttpFile ( self -> kns, cfp, NULL, 0x01010000, url );
-    else
-        rc = KNSManagerMakeHttpFile ( self -> kns, cfp, NULL, 0x01010000, url );
+    const String * uri = NULL;
+    rc_t rc = VPathMakeString ( path, &uri );
 
-    /* in case we are not able to open the remote-file : return with error-code */
-    if ( rc == 0 )
-    {
-        /* let's try to get some details about how to do caching from the configuration */    
-        caching_params cps;
-        get_caching_params( &cps, blocksize, is_refseq, promote );
-        if ( cache_location == NULL )
-        {
-            /* the user has turned off caching... ( we should not make a cache-tee )*/
-            switch( cps . version )
-            {
-                case 0 : ;  /* fall-through into rr-cache !!! */
-                case 1 : ;  /* fall-through into rr-cache !!! */
-                case 2 : rc = wrap_in_rr_cache( self -> cwd, cfp, extract_acc_from_url( url ), &cps ); break;
-                case 3 : rc = wrap_in_logfile( self -> cwd, cfp, extract_acc_from_url( url ), "%s.rec", &cps ); break;
+    if (rc == 0) {
+        String objectType;
+        String refseq;
+        CONST_STRING(&refseq, "refseq");
+        rc = VPathGetObjectType(path, &objectType);
+        if (rc == 0) {
+            if (!is_refseq)
+                is_refseq = StringEqual(&objectType, &refseq);
+            if (!is_refseq) {
+                assert(uri);
+                is_refseq = strstr(uri->addr, refseq.addr) != NULL;
             }
         }
-        else
+    }
+
+    if ( rc == 0 ) {
+        bool hasMagic = getenv(ENV_MAGIC_LOCAL);
+        bool ceRequired = false;
+        bool payRequired = false;
         {
-            /* the user has tunrd on caching... */
-            switch( cps . version )
-            {
-                case 0 : rc = wrap_in_cachetee( self -> cwd, cfp, cache_location, &cps ); break;
-                case 1 : rc = wrap_in_cachetee2( self -> cwd, cfp, cache_location, &cps ); break;
-                case 2 : rc = wrap_in_rr_cache( self -> cwd, cfp, cache_location, &cps ); break;
-                case 3 : rc = wrap_in_logfile( self -> cwd, cfp, cache_location, "%s.rec", &cps ); break;
+            const char * name = path->sraClass == eSCvdbcache ?
+                ENV_MAGIC_CACHE_NEED_CE : ENV_MAGIC_REMOTE_NEED_CE;
+            const char * magic = getenv(name);
+            if (is_refseq) {
+                if (magic != NULL)
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                        "'%s' magic ignored for refseq\n", name));
+            }
+            else
+                if (magic != NULL) {
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                        "'%s' magic found\n", name));
+                    ceRequired = true;
+                }
+                else {
+                    ceRequired = path->ceRequired;
+                    if (hasMagic)
+                        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                            "'%s' magic not set\n", name));
+                }
+        }
+        {
+            const char * name = path->sraClass == eSCvdbcache ?
+                ENV_MAGIC_CACHE_NEED_PMT : ENV_MAGIC_REMOTE_NEED_PMT;
+            const char * magic = getenv(name);
+            if (is_refseq) {
+                if (magic != NULL)
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                        "'%s' pmtReq magic ignored for refseq\n", name));
+            }
+            if (magic != NULL) {
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                    "'%s' magic found\n", name));
+                payRequired = true;
+            }
+            else {
+                payRequired = path->payRequired;
+                if (hasMagic)
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                        "'%s' magic not set\n", name));
             }
         }
+        rc = KNSManagerMakeReliableHttpFile ( self -> kns,
+                                              cfp,
+                                              NULL,
+                                              0x01010000,
+                                              high_reliability, 
+                                              ceRequired,
+                                              payRequired,
+                                              uri -> addr );
+
+        /* in case we are not able to open the remote-file : return with error-code */
+        if ( rc == 0 )
+        {
+            /* let's try to get some details about how to do caching from the configuration */    
+            caching_params cps;
+            get_caching_params( &cps, blocksize, is_refseq, promote );
+            if ( cps . version == cachetee_3 )
+            {
+                rc = wrap_in_cachetee3( self -> cwd, cfp, cache_location, &cps, path );
+            }
+            else
+            {
+                if ( cache_location == NULL )
+                {
+                    const String * id = make_id( path );
+                    if ( id != NULL )
+                    {
+                        /* the user has turned off caching... ( we should not make a cache-tee )*/
+                        switch( cps . version )
+                        {
+                            case cachetee   : ;  /* fall-through into rr-cache !!! */
+                            case cachetee_2 : ;  /* fall-through into rr-cache !!! */
+                            case rrcache    : rc = wrap_in_rr_cache( self -> cwd, cfp, id -> addr, &cps ); break;
+                            case logging    : rc = wrap_in_logfile( self -> cwd, cfp, id -> addr, "%s.rec", &cps ); break;
+                            case cachetee_3 : break; /* in common path above */
+                        }
+                        StringWhack ( id );
+                    }
+                }
+                else
+                {
+                    /* the user has turned on caching... */
+                    switch( cps . version )
+                    {
+                        case cachetee   : rc = wrap_in_cachetee( self -> cwd, cfp, cache_location, &cps ); break;
+                        case cachetee_2 : rc = wrap_in_cachetee2( self -> cwd, cfp, cache_location, &cps ); break;
+                        case rrcache    : rc = wrap_in_rr_cache( self -> cwd, cfp, cache_location, &cps ); break;
+                        case logging    : rc = wrap_in_logfile( self -> cwd, cfp, cache_location, "%s.rec", &cps ); break;
+                        case cachetee_3 : break; /* in common path above */
+                    }
+                }
+            }
+        }
+        free( ( void * )uri );
     }
     return rc;
 }
@@ -1340,7 +1654,7 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
                                      bool promote )
 {
     rc_t rc;
-    const String * uri = NULL;
+    bool high_reliability, is_refseq;
 
     if ( f == NULL )
         return RC( rcVFS, rcMgr, rcOpening, rcParam, rcNull );
@@ -1350,62 +1664,57 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
     if ( path == NULL )
         return RC( rcVFS, rcMgr, rcOpening, rcParam, rcNull );
 
-    rc = VPathMakeString ( path, &uri );
-    if ( rc == 0 )
+    high_reliability = VPathIsHighlyReliable ( path );
+    is_refseq = VPathHasRefseqContext ( path );
+    if ( self->resolver != NULL )
     {
-        bool high_reliability = VPathIsHighlyReliable ( path );
-        bool is_refseq = VPathHasRefseqContext ( path );
-        if ( self->resolver != NULL )
-        {
-            const VPath * local_cache;
+        const VPath * local_cache;
 
-            /* find cache - vresolver call */
-            rc = VResolverCache ( self->resolver, path, &local_cache, 0 );
-            if ( rc == 0 )
+        /* find cache - vresolver call */
+        rc = VResolverCache ( self->resolver, path, &local_cache, 0 );
+        if ( rc == 0 )
+        {
+            /* we did find a place for local cache --> use it! */
+            rc = VFSManagerMakeHTTPFile( self,
+                                         f,
+                                         path,
+                                         local_cache -> path.addr,
+                                         blocksize,
+                                         high_reliability,
+                                         is_refseq,
+                                         promote );
             {
-                /* we did find a place for local cache --> use it! */
-                rc = VFSManagerMakeHTTPFile( self,
-                                             f,
-                                             uri -> addr,
-                                             local_cache -> path.addr,
-                                             blocksize,
-                                             high_reliability,
-                                             is_refseq,
-                                             promote );
+                rc_t rc2 = VPathRelease ( local_cache );
+                if ( rc == 0 )
                 {
-                    rc_t rc2 = VPathRelease ( local_cache );
-                    if ( rc == 0 )
-                    {
-                        rc = rc2;
-                    }
+                    rc = rc2;
                 }
-            }
-            else
-            {
-                /* we did NOT find a place for local cache --> we are not caching! */
-                rc = VFSManagerMakeHTTPFile( self,
-                                             f,
-                                             uri -> addr,
-                                             NULL,
-                                             blocksize,
-                                             high_reliability,
-                                             is_refseq,
-                                             promote );
             }
         }
         else
         {
-            /* no resolver has been found ---> we cannot do caching! */
+            /* we did NOT find a place for local cache --> we are not caching! */
             rc = VFSManagerMakeHTTPFile( self,
                                          f,
-                                         uri -> addr,
+                                         path,
                                          NULL,
                                          blocksize,
                                          high_reliability,
                                          is_refseq,
                                          promote );
         }
-        free( ( void * )uri );
+    }
+    else
+    {
+        /* no resolver has been found ---> we cannot do caching! */
+        rc = VFSManagerMakeHTTPFile( self,
+                                     f,
+                                     path,
+                                     NULL,
+                                     blocksize,
+                                     high_reliability,
+                                     is_refseq,
+                                     promote );
     }
     return rc;
 }
@@ -1803,7 +2112,7 @@ rc_t VFSManagerOpenDirectoryReadHttpResolved (const VFSManager *self,
         const KFile * file = NULL;
         rc = VFSManagerMakeHTTPFile( self,
                                      &file,
-                                     uri -> addr,
+                                     path,
                                      cache == NULL ? NULL : cache -> path . addr,
                                      DEFAULT_CACHE_PAGE_SIZE,
                                      high_reliability,
@@ -2730,17 +3039,17 @@ LIB_EXPORT rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
                         rc = KKeyStoreMake ( & obj -> keystore, obj -> cfg );
                         if ( rc == 0 )
                         {
-                            rc = VFSManagerMakeResolver ( obj, & obj -> resolver, obj -> cfg );
-                            if ( rc != 0 )
-                            {
-                                LOGERR ( klogWarn, rc, "could not build vfs-resolver" );
-                                rc = 0;
-                            }
-
                             rc = KNSManagerMake ( & obj -> kns );
                             if ( rc != 0 )
                             {
                                 LOGERR ( klogWarn, rc, "could not build network manager" );
+                                rc = 0;
+                            }
+
+                            rc = VFSManagerMakeResolver ( obj, & obj -> resolver, obj -> cfg );
+                            if ( rc != 0 )
+                            {
+                                LOGERR ( klogWarn, rc, "could not build vfs-resolver" );
                                 rc = 0;
                             }
 
@@ -3872,4 +4181,10 @@ LIB_EXPORT rc_t CC VFSManagerDeleteCacheOlderThan ( const VFSManager * self,
         }
     }
     return rc;
+}
+
+LIB_EXPORT rc_t CC VFSManagerSetAdCaching(VFSManager * self, bool enabled) {
+    if (self != NULL)
+        return KNSManagerSetAdCaching(self->kns, enabled);
+    return 0;
 }
