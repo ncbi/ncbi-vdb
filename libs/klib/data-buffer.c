@@ -416,7 +416,7 @@ static rc_t KDataBufferSubInt (const KDataBuffer *self,
     	return RC(rcRuntime, rcBuffer, rcConstructing, rcParam, rcNull);
     
     if (self->ignore == NULL) {
-        if (start > 0 || count < UINT64_MAX)
+        if (start > 0 || ( count != 0 && count < UINT64_MAX) )
             return RC(rcRuntime, rcBuffer, rcConstructing, rcParam, rcNull);
         *target = *self;
         return 0;
