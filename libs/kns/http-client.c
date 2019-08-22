@@ -408,8 +408,7 @@ rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint
         uint32_t port_save;
         String hostname_save, hostname_copy;
 
-        size_t len;
-        char buffer [ 4096 ];
+        KDataBuffer buffer;
 
         STATUS ( STAT_GEEK, "%s - saving hostname and port\n", __func__ );
         hostname_save = self -> hostname;
@@ -424,63 +423,66 @@ rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint
         self -> port = pport;
 
         /* format CONNECT request */
-printf("string_printf 1\n");abort();
-        rc = string_printf ( buffer, sizeof buffer, & len,
-                             "CONNECT %S:%u HTTP/1.1\r\n"
-                             "Host: %S:%u\r\n\r\n"
-                             , & hostname_copy
-                             , port
-                             , & hostname_copy
-                             , port
-            );
+		rc = KDataBufferClear( & buffer );
+		if (rc == 0)
+		{
+			rc = KDataBufferPrintf( & buffer,
+				"CONNECT %S:%u HTTP/1.1\r\n"
+				"Host: %S:%u\r\n\r\n"
+				, &hostname_copy
+				, port
+				, &hostname_copy
+				, port
+			);
 
-        if ( rc != 0 )
-            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to create proxy request: %R\n", rc ) );
-        else
-        {
-            size_t sent;
-            timeout_t tm;
+			if (rc != 0)
+				DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("Failed to create proxy request: %R\n", rc));
+			else
+			{
+				size_t sent;
+				timeout_t tm;
 
-            STATUS ( STAT_QA, "%s - created proxy request '%.*s'\n", __func__, ( uint32_t ) len, buffer );
+				STATUS(STAT_QA, "%s - created proxy request '%.*s'\n", __func__, (uint32_t)buffer.elem_count, buffer);
 
-            /* send request and receive a response */
-            STATUS ( STAT_PRG, "%s - sending proxy request\n", __func__ );
-            TimeoutInit ( & tm, self -> write_timeout );
-            rc = KStreamTimedWriteAll ( self -> sock, buffer, len, & sent, & tm );
-            if ( rc != 0 )
-                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to send proxy request: %R\n", rc ) );
-            else
-            {
-                String msg;
-                ver_t version;
-                uint32_t status;
+				/* send request and receive a response */
+				STATUS(STAT_PRG, "%s - sending proxy request\n", __func__);
+				TimeoutInit(&tm, self->write_timeout);
+				rc = KStreamTimedWriteAll(self->sock, buffer.base, buffer.elem_count, &sent, &tm);
+				if (rc != 0)
+					DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("Failed to send proxy request: %R\n", rc));
+				else
+				{
+					String msg;
+					ver_t version;
+					uint32_t status;
 
-                assert ( sent == len );
+					assert(sent == buffer.elem_count);
 
-                STATUS ( STAT_PRG, "%s - reading proxy response status line\n", __func__ );
-                TimeoutInit ( & tm, self -> read_timeout );
-                rc = KClientHttpGetStatusLine ( self, & tm, & msg, & status, & version );
-                if ( rc != 0 )
-                    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to read proxy response: %R\n", rc ) );
-                else
-                {
-                    if ( ( status / 100 ) != 2 )
-                    {
-                        rc = RC ( rcNS, rcNoTarg, rcOpening, rcConnection, rcFailed );
-                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to create proxy tunnel: %03u '%S'\n", status, & msg ) );
-                        KClientHttpBlockBufferReset ( self );
-                        KClientHttpLineBufferReset ( self );
-                    }
-                    else
-                    {
-                        STATUS ( STAT_QA, "%s - read proxy response status line: %03u '%S'\n", __func__, status, & msg );
-                        do
-                            rc = KClientHttpGetLine ( self, & tm );
-                        while ( self -> line_valid != 0 );
-                    }
-                }
-            }
-        }
+					STATUS(STAT_PRG, "%s - reading proxy response status line\n", __func__);
+					TimeoutInit(&tm, self->read_timeout);
+					rc = KClientHttpGetStatusLine(self, &tm, &msg, &status, &version);
+					if (rc != 0)
+						DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("Failed to read proxy response: %R\n", rc));
+					else
+					{
+						if ((status / 100) != 2)
+						{
+							rc = RC(rcNS, rcNoTarg, rcOpening, rcConnection, rcFailed);
+							DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("Failed to create proxy tunnel: %03u '%S'\n", status, &msg));
+							KClientHttpBlockBufferReset(self);
+							KClientHttpLineBufferReset(self);
+						}
+						else
+						{
+							STATUS(STAT_QA, "%s - read proxy response status line: %03u '%S'\n", __func__, status, &msg);
+							do
+								rc = KClientHttpGetLine(self, &tm);
+							while (self->line_valid != 0);
+						}
+					}
+				}
+			}
+		}
 
         STATUS ( STAT_GEEK, "%s - restoring hostname and port\n", __func__ );
         self -> hostname = hostname_save;
@@ -513,17 +515,23 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
     mgr = self -> mgr;
     assert ( mgr );
 
-    if ( self -> sock == NULL && self -> test_sock != NULL ) /* protect mocked stream from overwriting */
-    {
-        self -> sock = self -> test_sock;
-        KStreamAddRef ( self -> test_sock );
-        return 0;
-    }
-
     KEndPointArgsIteratorMake ( & it, mgr, aHostname, aPort, NULL );
     while ( KEndPointArgsIteratorNext ( & it, & hostname, & port,
         & proxy_default_port, & proxy_ep, NULL, NULL ) )
     {
+		/* for an externally provied (likely mocked) stream, 
+		   protect the stream from overwriting and pretend 
+		   the first endpoint was connected to successfully */
+		if (self->sock == NULL && self->test_sock != NULL) 
+		{
+			self->sock = self->test_sock;
+			KStreamAddRef(self->test_sock);
+			self->proxy_default_port = proxy_default_port;
+			self->proxy_ep = proxy_ep;
+			self->ep_valid = true;
+			return 0;
+		}
+
         rc = KNSManagerInitDNSEndpoint ( mgr, & self -> ep, hostname, port );
         DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_DNS ),
             ( "KNSManagerInitDNSEndpoint(%S:%d)=%R\n", hostname, port, rc ) );
@@ -534,13 +542,13 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
         }
         if ( rc == 0 )
         {
-            /* try to establish a connection */
-            rc = KNSManagerMakeTimedConnection ( mgr, & sock,
-              self -> read_timeout, self -> write_timeout, NULL, & self -> ep );
+			/* try to establish a connection */
+			rc = KNSManagerMakeTimedConnection(mgr, &sock,
+				self->read_timeout, self->write_timeout, NULL, &self->ep);
 
-            /* if we connected to a proxy, try to follow-through to server */
-            if ( proxy_ep && self -> tls && rc == 0 )
-                rc = KClientHttpProxyConnect ( self, aHostname, aPort, sock, hostname, port );
+			/* if we connected to a proxy, try to follow-through to server */
+			if (proxy_ep && self->tls && rc == 0)
+				rc = KClientHttpProxyConnect(self, aHostname, aPort, sock, hostname, port);
 
             if ( rc == 0 )
             {
@@ -3563,7 +3571,7 @@ static rc_t KClientHttpRequestFormatMsgBegin (
     }
     if ( ! http -> proxy_ep )
     {   /* direct connection */
-        rc = KDataBufferPrintf ( buffer, 
+		rc = KDataBufferPrintf ( buffer,
                              "%s %S%s%S HTTP/%.2V\r\nHost: %S\r\n"
                              , method
                              , & self -> url_block . path
@@ -3577,7 +3585,6 @@ static rc_t KClientHttpRequestFormatMsgBegin (
         http -> uf = EUriFormGuess ( & hostname, uriForm, http -> uf );
         if ( http -> uf == eUFOrigin ) {
         /* the host does not like absoluteURI: use abs_path ( origin-form ) */
-printf("buffer_printf 9-1\n");
             rc = KDataBufferPrintf ( buffer,    
                          "%s %S%s%S HTTP/%.2V\r\nHost: %S:%u\r\n"
                              , method
@@ -3590,8 +3597,7 @@ printf("buffer_printf 9-1\n");
                 );
         }
         else if ( http -> port != 80 ) { /* absoluteURI: non-default port */
-printf("buffer_printf 10-1\n");
-            rc = KDataBufferPrintf ( buffer, 
+			rc = KDataBufferPrintf ( buffer,
                              "%s %S://%S:%u%S%s%S HTTP/%.2V\r\nHost: %S\r\n"
                              , method
                              , & self -> url_block . scheme
@@ -3605,8 +3611,7 @@ printf("buffer_printf 10-1\n");
                 );
         }
         else {                           /* absoluteURI: default port */
-printf("buffer_printf 11-1\n");
-            rc = KDataBufferPrintf ( buffer, 
+			rc = KDataBufferPrintf ( buffer,
                              "%s %S://%S%S%s%S HTTP/%.2V\r\nHost: %S\r\n"
                              , method
                              , & self -> url_block . scheme
@@ -3879,7 +3884,7 @@ rc_t CC KClientHttpRequestFormatPostMsg(const KClientHttpRequest *self,
             rc = rc2;
         }
     }
-printf("KClientHttpRequestFormatPostMsg\n");
+
     return rc;
 }
 

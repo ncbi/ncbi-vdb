@@ -34,6 +34,7 @@
 #include <klib/log.h>
 #include <klib/rc.h>
 #include <kfg/config.h>
+#include <kfg/kfg-priv.h>
 
 #include <kns/adapt.h> /* KStreamFromKFilePair */
 #include <kns/manager.h>
@@ -46,6 +47,9 @@
 
 #include <kfs/directory.h>
 #include <kfs/file.h>
+
+#include <vfs/manager.h>
+#include <vfs/manager-priv.h>
 
 #include <kproc/thread.h>
 
@@ -62,7 +66,6 @@ using namespace ncbi::NK;
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
 
-#ifdef ALL
 //////////////////////////
 // Regular HTTP
 FIXTURE_TEST_CASE(Http_Make, HttpFixture)
@@ -72,7 +75,6 @@ FIXTURE_TEST_CASE(Http_Make, HttpFixture)
     REQUIRE_NOT_NULL ( m_file ) ;
 }
 
-#if 1
 /*FIXME: 100 used to be retried regardless of whether URL is reliable, now it is not, so the test fails */
 FIXTURE_TEST_CASE(Http_Make_Continue_100_Retry, HttpFixture)
 {
@@ -82,7 +84,6 @@ FIXTURE_TEST_CASE(Http_Make_Continue_100_Retry, HttpFixture)
     REQUIRE_RC ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) );
     REQUIRE_NOT_NULL ( m_file ) ;
 }
-#endif
 
 FIXTURE_TEST_CASE(Http_Make_500_Fail, HttpFixture)
 {   // a regular Http client does not retry
@@ -247,6 +248,80 @@ FIXTURE_TEST_CASE(HttpRequest_POST_NoParams, HttpFixture)
     TestStream::AddResponse("HTTP/1.1 200 OK\r\n");
     REQUIRE_RC ( KClientHttpRequestPOST ( m_req, & rslt ) );
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
+}
+
+FIXTURE_TEST_CASE(KClientHttpRequest_FormatPostMsg, HttpFixture)
+{	// basic coverage of the function
+	REQUIRE_RC(KNSManagerMakeClientRequest(m_mgr, &m_req, 0x01010000, &m_stream, MakeURL(GetName()).c_str()));
+	char buffer[1024];
+	size_t len;
+	REQUIRE_RC( KClientHttpRequestFormatPostMsg(m_req, buffer, sizeof buffer, &len) );
+}
+
+// coverage of the proxy-related request formatting
+class ProxyFixture : public HttpFixture
+{
+public:
+	ProxyFixture() : m_kns(nullptr)
+	{
+	}
+	~ProxyFixture()
+	{
+		if (KNSManagerRelease(m_kns) != 0)
+        {
+            cerr << "ProxyFixture::~ProxyFixture: KNSManagerRelease failed" << endl;
+        }
+	}
+	void Setup( const char * proxyPath )
+	{
+		KConfig * kfg;
+		THROW_ON_RC(KConfigMakeEmpty(&kfg));
+
+		THROW_ON_RC(KConfigWriteString(kfg, "/http/proxy/path", proxyPath));
+		THROW_ON_RC(KConfigWriteString(kfg, "/http/proxy/only", "true"));
+		THROW_ON_RC(KConfigWriteString(kfg, "/http/proxy/", "true"));
+
+		THROW_ON_FALSE(kfg != nullptr);
+
+		THROW_ON_RC(KNSManagerMakeConfig(&m_kns, kfg));
+		THROW_ON_RC(KConfigRelease(kfg));
+	}
+	string FormatRequest( const char * p_host, uint32_t p_port )
+	{
+        KClientHttp *http;
+        String host;
+        StringInitCString( & host, p_host );
+        THROW_ON_RC( KNSManagerMakeClientHttps(m_kns, &http, &m_stream, 0x01010000, &host, p_port ) );
+        THROW_ON_RC( KClientHttpMakeRequest( http, &m_req, "/url" ) );
+        char buffer[1024];
+        size_t len;
+        THROW_ON_RC( KClientHttpRequestFormatMsg( m_req, buffer, sizeof buffer, "GET", &len ) );
+
+        THROW_ON_RC( KClientHttpRelease( http ) );
+        return string ( buffer, len );
+	}
+	KNSManager * m_kns;
+};
+
+FIXTURE_TEST_CASE(KClientHttpRequest_FormatMsg, ProxyFixture)
+{	// coverage of the proxy-related parts
+    Setup( "webproxy.ncbi.nlm.nih.gov" );
+    const string ExpectedStart = "GET http://webproxy.ncbi.nlm.nih.gov/url HTTP/1.1";
+    REQUIRE_EQ( ExpectedStart, FormatRequest( "webproxy.ncbi.nlm.nih.gov", 80 ).substr( 0, ExpectedStart.size() ) );
+}
+
+FIXTURE_TEST_CASE(KClientHttpRequest_FormatMsg_OddPort, ProxyFixture)
+{	// coverage of the proxy-related parts
+    Setup( "webproxy.ncbi.nlm.nih.gov:31");
+    const string ExpectedStart = "GET http://webproxy.ncbi.nlm.nih.gov:31/url";
+    REQUIRE_EQ( ExpectedStart, FormatRequest( "webproxy.ncbi.nlm.nih.gov", 31 ).substr( 0, ExpectedStart.size() ) );
+}
+
+FIXTURE_TEST_CASE(KClientHttpRequest_FormatMsg_OriginForm, ProxyFixture)
+{	// coverage of the proxy-related parts
+    Setup( "webproxy.ncbi.nlm.nih.gov" );
+    const string ExpectedStart = "GET /url HTTP/1.1";
+    REQUIRE_EQ( ExpectedStart, FormatRequest( "storage.googleapis.com", 3128 ).substr( 0, ExpectedStart.size() ) );
 }
 
 // KClientHttpRequestAddQueryParam
@@ -576,6 +651,7 @@ FIXTURE_TEST_CASE(HttpReliable_Make, HttpFixture)
     REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, true, false, false, MakeURL(GetName()).c_str() ) );
     REQUIRE_NOT_NULL ( m_file ) ;
 }
+
 #if 0
 /* 100 used to be retried regardless, now it is not, so the test fails */
 FIXTURE_TEST_CASE(HttpReliable_Make_Continue_100_Retry, HttpFixture)
@@ -666,9 +742,6 @@ FIXTURE_TEST_CASE(HttpReliableRequest_POST_5xx_retry, HttpFixture)
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
 }
 
-#endif
-
-#ifdef ALL
 /* VDB-3059: KHttpRequestPOST generates incorrect Content-Length after retry :
  it makes web server to return 400 Bad Request */
 TEST_CASE(ContentLength) {
@@ -714,7 +787,6 @@ TEST_CASE(ContentLength) {
     RELEASE ( KNSManager, kns );
     REQUIRE_RC ( rc );
 }
-#endif
 
 struct NV {
     String AcceptRanges;
@@ -986,7 +1058,6 @@ FIXTURE_TEST_CASE( KClientHttpResult_FormatMsg, HttpFixture)
     REQUIRE_EQ ( expected, string (buffer, len) );
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
 }
-
 
 //////////////////////////////////////////// Main
 
