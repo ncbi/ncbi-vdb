@@ -24,7 +24,7 @@
 *
 */
 
-//#include <klib/debug.h> /* KDbgSetString */
+#include <klib/debug.h> /* KDbgSetString */
 #include <ktst/unit_test.hpp> // TEST_SUITE
 
 #include "../../libs/vfs/json-response.h" /* Response4MakeSdl */
@@ -120,7 +120,8 @@ TEST_SUITE ( TestResolverSdl )
 extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
     rc_t CC KMain ( int argc, char * argv [] ) {
-//if ( 0 ) assert ( ! KDbgSetString ( "VFS-JSON" ) );
+if (
+0 ) assert ( ! KDbgSetString ( "VFS-JSON" ) );
     return TestSdlResolver( argc, argv );
     }
 }

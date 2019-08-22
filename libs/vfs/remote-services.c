@@ -684,7 +684,7 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
                 &num_read, NULL);
             if (rc != 0) {
                 const char cgi[] =
-                  "https://trace.ncbi.nlm.nih.gov/Traces/sdl/unstable/retrieve";
+                    "https://trace.ncbi.nlm.nih.gov/Traces/sdl/2/retrieve";
                 if (buffer == NULL)
                     return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
                 if (bsize < sizeof cgi)
@@ -2631,7 +2631,7 @@ rc_t SRequestDataAppendObject ( SRequestData * self, const char * id,
         id_sz = string_measure ( id, NULL );
 
     StringInitCString(&accession, id);
-    app = get_accession_app(&accession, false, NULL, NULL, false, NULL);
+    app = get_accession_app(&accession, false, NULL, NULL, false, NULL, NULL);
     if (self->objects == 0)
         self->app = app;
     else if (self->app != app && (self->app == appSRA || app == appSRA))
@@ -2969,6 +2969,7 @@ static rc_t SCgiRequestAddCloudEnvironment(
 {
     rc_t rc = 0;
     CloudProviderId cloud_provider = cloud_provider_none;
+    bool user_agrees_to_reveal_instance_identity = false;
     const String * ce_token = NULL;
     assert(helper);
     if (helper->cloud == NULL) {
@@ -2995,20 +2996,37 @@ static rc_t SCgiRequestAddCloudEnvironment(
         }
     }
     if (rc == 0) {
-        rc = CloudMakeComputeEnvironmentToken(helper->cloud, &ce_token);
-        if (rc != 0) {
-            LOGERR(klogInt, rc, "cannot Make Compute Environment Token");
-            return 0;
+        rc = SHelperInitKfg(helper);
+        if (rc == 0)
+            KConfig_Get_Report_Cloud_Instance_Identity(helper->kfg,
+                &user_agrees_to_reveal_instance_identity);
+    }
+    if (rc == 0) {
+        if (user_agrees_to_reveal_instance_identity) {
+            rc = CloudMakeComputeEnvironmentToken(helper->cloud, &ce_token);
+            if (rc != 0) {
+                LOGERR(klogInt, rc, "cannot Make Compute Environment Token");
+                return 0;
+            }
+        }
+        else {
+            rc = CloudGetLocation(helper->cloud, &ce_token);
+            if (rc != 0) {
+                LOGERR(klogInt, rc, "cannot Get Cloud Location");
+                return 0;
+            }
         }
     }
     if (rc == 0) {
         const char * v = NULL;
-        if (cloud_provider == cloud_provider_aws)
-            v = "aws_pkcs7";
-        else if (cloud_provider == cloud_provider_gcp)
-            v = "gcp_jwt";
-        if (v != NULL ) {
-            {
+        if (user_agrees_to_reveal_instance_identity) {
+            if (cloud_provider == cloud_provider_aws)
+                v = "aws_pkcs7";
+            else if (cloud_provider == cloud_provider_gcp)
+                v = "gcp_jwt";
+        }
+        if (ce_token != NULL) {
+            if (v != NULL) {
                 const SKV * kv = NULL;
                 const char n[] = "location-type";
                 rc = SKVMake(&kv, n, v);
@@ -4209,8 +4227,9 @@ static rc_t KSrvRespObj_AttachVdbcaches(const KSrvRespObj * self) {
 
     rc = KSrvRespObjGetError(self, &rx, NULL, NULL);
 
-    if (rx == 0) /* error in names service response for this KSrvRespObj: skipping */
+    if (rx == 0)
         rc = KSrvRespObjMakeIterator(self, &it);
+ /* else  error in names service response for this KSrvRespObj: skipping */
 
     while (rx == 0 && rc == 0) {
         KSrvRespFile * file = NULL;
@@ -4225,7 +4244,7 @@ static rc_t KSrvRespObj_AttachVdbcaches(const KSrvRespObj * self) {
         while (rc == 0) {
             enum { eOther, eSra, eVdbcache } aType = eOther;
 
-            String id, service, type;
+            String id, nameExt, service, type;
 
             VPath * next = NULL;
             rc = KSrvRespFileIteratorNextPath(fi, (const VPath **)& next);
@@ -4244,13 +4263,16 @@ static rc_t KSrvRespObj_AttachVdbcaches(const KSrvRespObj * self) {
                 else if (StringCompare(acc, &id) != 0)
                     PLOGERR(klogFatal, (klogFatal,
                         RC(rcVFS, rcQuery, rcExecuting, rcString, rcUnexpected),
-                        "multiple accessions for the same bundle: '$(acc1), $(acc2)",
-                        "acc1=%S,acc2=%S", acc, &id));
+                        "multiple accessions for the same bundle: "
+                        "'$(acc1), $(acc2)", "acc1=%S,acc2=%S", acc, &id));
             }
 
             if (rc == 0) {
-                if (StringCompare(&type, &sra) == 0)
-                    aType = eSra;
+                if (StringCompare(&type, &sra) == 0) {
+                    rc = VPathGetNameExt(next, &nameExt);
+                    if (rc == 0 && nameExt.size == 0)
+                        aType = eSra;
+                }
                 else if (StringCompare(&type, &vdbcache) == 0)
                     aType = eVdbcache;
             }
@@ -4265,8 +4287,8 @@ static rc_t KSrvRespObj_AttachVdbcaches(const KSrvRespObj * self) {
                 else
                     PLOGERR(klogFatal, (klogFatal,
                         RC(rcVFS, rcQuery, rcExecuting, rcString, rcUnexpected),
-                        "multiple response SRR URLs for the same service '$(service)",
-                        "service=%S", &service));
+                        "multiple response SRR URLs for the same service "
+                        "'$(service)'", "service=%S", &service));
                 break;
             case eVdbcache:
                 ++nVdbc;

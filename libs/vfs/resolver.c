@@ -1,8 +1,3 @@
-/* TODO: move them to interfaces/klib/strings.h */
-#define MAGIC_CACHE  "VDB_CACHE_URL"
-#define MAGIC_LOCAL  "VDB_LOCAL_URL"
-#define MAGIC_REMOTE "VDB_REMOTE_URL"
-
 /*===========================================================================
  *
  *                            PUBLIC DOMAIN NOTICE
@@ -33,10 +28,6 @@
 
 #include <klib/time.h> /* KTime */
 
-#include "services-priv.h"
-#include "path-priv.h"
-#include "resolver-priv.h"
-
 #include <vfs/manager.h>
 #include <vfs/path.h>
 #include <vfs/resolver-priv.h> /* VResolverQueryWithDir */
@@ -55,15 +46,20 @@
 #undef ERR
 #endif
 
-#include <klib/text.h>
-#include <klib/vector.h>
-#include <klib/refcount.h>
-#include <klib/namelist.h>
-#include <klib/printf.h>
 #include <klib/data-buffer.h>
 #include <klib/debug.h>
 #include <klib/log.h>
+#include <klib/namelist.h>
+#include <klib/printf.h>
 #include <klib/rc.h>
+#include <klib/refcount.h>
+#include <klib/strings.h> /* ENV_MAGIC_REMOTE */
+#include <klib/text.h>
+#include <klib/vector.h>
+
+#include "services-priv.h"
+#include "path-priv.h"
+#include "resolver-priv.h"
 
 #include <sysalloc.h>
 
@@ -147,6 +143,7 @@ struct VResolverAccToken
     String ext2;
     String suffix;
     bool   vdbcache;
+    String accOfParentDb;  /* accession of parent DB for refseqs */
 };
 
 static
@@ -355,6 +352,12 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
     case algFlat:
         rc = string_printf ( expanded, bsize, size, "%S", & tok -> acc );
         break;
+    case algAD:
+        rc = string_printf ( expanded, bsize, size,
+            "%S%S/%S%S.%S", & tok -> alpha, & tok -> digits,
+            & tok -> alpha, & tok -> digits,
+            & tok -> ext1 );
+        break;
     case algSRAAD:
         rc = string_printf ( expanded, bsize, size,
             "%S%S/%S%S.%s", & tok -> alpha, & tok -> digits,
@@ -389,6 +392,16 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
             rc = string_printf ( expanded, bsize, size, "%S", & tok -> acc );
         else
             rc = string_printf ( expanded, bsize, size, "%S%.2S", & tok -> alpha, & tok -> digits );
+        break;
+    case algREFSEQAD:
+        if (!legacy_wgs_refseq)
+            rc = string_printf(expanded, bsize, size,
+                "%S%s%S", &tok->accOfParentDb,
+                tok->accOfParentDb.size == 0 ? "" : "/",
+                &tok->acc);
+        else
+            rc = string_printf(expanded, bsize, size,
+                "%S/%S%.2S", &tok->accOfParentDb, &tok->alpha, &tok->digits);
         break;
     case algWGSFlat:
         num = ( uint32_t ) ( tok -> alpha . size + 2 );
@@ -531,6 +544,8 @@ rc_t VResolverAlgLocalResolve ( const VResolverAlg *self,
     if ( rc != 0 )
         return rc;
 
+    assert(tok);
+
     /* if this is to detect a cache file, append extension */
     if ( for_cache )
     {
@@ -610,8 +625,15 @@ rc_t VResolverAlgLocalResolve ( const VResolverAlg *self,
             case kptDir:
                 if ( legacy_wgs_refseq )
                     return VResolverAlgMakeLocalWGSRefseqURI ( self, vol, & exp, & tok -> acc, path );
-                return VResolverAlgMakeLocalPath ( self, vol, & exp, path,
+                rc = VResolverAlgMakeLocalPath ( self, vol, & exp, path,
                     ad ? wd : NULL );
+                if (rc == 0) {
+                    assert(path);
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
+                        "VResolverAlgLocalResolve: '%S' found in '%S'\n",
+                        &tok->acc, &(*path)->path));
+                }
+                return rc;
             default:
                 break;
             }
@@ -2456,7 +2478,7 @@ uint32_t get_accession_code ( const String * accession, VResolverAccToken *tok )
  */
 VResolverAppID get_accession_app ( const String * accession, bool refseq_ctx,
     VResolverAccToken *tok, bool *legacy_wgs_refseq,
-    bool resolveAllAccToCache, bool * forDirAdjusted )
+    bool resolveAllAccToCache, bool * forDirAdjusted, const String * parentAcc )
 {
     VResolverAppID app;
     uint32_t code = 0;
@@ -2470,6 +2492,8 @@ VResolverAppID get_accession_app ( const String * accession, bool refseq_ctx,
 
     if (tok == NULL)
         tok = &tummy;
+
+    memset(tok, 0, sizeof *tok);
 
     code = get_accession_code(accession, tok);
 
@@ -2607,6 +2631,10 @@ VResolverAppID get_accession_app ( const String * accession, bool refseq_ctx,
         }
     }
 
+    if (app == appREFSEQ && parentAcc != NULL)
+        StringInit(
+            &tok->accOfParentDb, parentAcc->addr, parentAcc->size, parentAcc->len);
+
     return app;
 }
 
@@ -2682,6 +2710,7 @@ static rc_t VResolverMagicResolve(const VResolver * self,
     rc_t rc = 0;
 
     KPathType kpt = kptNotFound;
+    const char * magic;
 
     /* resolver is not confused by shell variables
         when retrieving reference objects */
@@ -2691,7 +2720,7 @@ static rc_t VResolverMagicResolve(const VResolver * self,
         return 0;
     }
 
-    const char * magic = getenv(name);
+    magic = getenv(name);
     if (magic == NULL) {
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("'%s' magic not set\n", name));
         return 0;
@@ -2775,21 +2804,21 @@ static rc_t VResolverCacheMagicResolve(
     const VResolver * self, const VPath ** path, VResolverAppID app)
 {
     return VResolverMagicResolve(self, path, app,
-        MAGIC_CACHE, eCheckExistFalse, eCheckFilePathTrue, eCheckUrlFalse);
+        ENV_MAGIC_CACHE, eCheckExistFalse, eCheckFilePathTrue, eCheckUrlFalse);
 }
 
 static rc_t VResolverLocalMagicResolve(
     const VResolver * self, const VPath ** path, VResolverAppID app)
 {
     return VResolverMagicResolve(self, path, app,
-        MAGIC_LOCAL, eCheckExistTrue, eCheckFilePathTrue, eCheckUrlFalse);
+        ENV_MAGIC_LOCAL, eCheckExistTrue, eCheckFilePathTrue, eCheckUrlFalse);
 }
 
 static rc_t VResolverRemoteMagicResolve(
     const VResolver * self, const VPath ** path, VResolverAppID app)
 {
     return VResolverMagicResolve(self, path, app,
-        MAGIC_REMOTE, eCheckExistFalse, eCheckFilePathFalse, eCheckUrlTrue);
+        ENV_MAGIC_REMOTE, eCheckExistFalse, eCheckFilePathFalse, eCheckUrlTrue);
 }
 
 /* LocalResolve
@@ -2801,7 +2830,7 @@ static rc_t VResolverRemoteMagicResolve(
  */
 static
 rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
-    const VPath ** path, bool refseq_ctx, const char * dir )
+    const VPath ** path, bool refseq_ctx, const char * dir, const String * parentAcc )
 {
     rc_t rc = 0;
 
@@ -2823,7 +2852,7 @@ rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
     }
 
     app = get_accession_app ( accession, refseq_ctx, & tok,
-                              & legacy_wgs_refseq, resolveAllAccToCache, NULL );
+                        & legacy_wgs_refseq, resolveAllAccToCache, NULL, parentAcc );
 
     rc = VResolverLocalMagicResolve(self, path, app);
     if (rc != 0 || *path != NULL)
@@ -3101,7 +3130,7 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
     /* subject the accession to pattern recognition */
     if ( ! is_oid )
         app = get_accession_app ( accession, refseq_ctx, & tok,
-                                  & legacy_wgs_refseq, true, NULL );
+                                  & legacy_wgs_refseq, true, NULL, NULL );
     else
     {
         app = appAny;
@@ -3247,6 +3276,8 @@ VResolverAppID VResolverExtractAccessionApp ( const VResolver *self,
 {
     bool refseq_ctx = has_fragment;
 
+    assert(query);
+
     * accession = query -> path;
 
     if ( query -> fragment . size > 1 )
@@ -3255,7 +3286,7 @@ VResolverAppID VResolverExtractAccessionApp ( const VResolver *self,
     /* should have something looking like an accession.
        determine its app to see if we were successful */
     return get_accession_app ( accession, refseq_ctx, tok, legacy_wgs_refseq,
-                               resolveAllAccToCache, forDirAdjusted );
+                        resolveAllAccToCache, forDirAdjusted, query->accOfParentDb);
 }
 
 static
@@ -3274,8 +3305,12 @@ rc_t VPathExtractAcc ( const VPath * url, VPath ** acc )
     String accession;
 
     /* locate last path or accession guy */
-    const char * start = string_rchr ( url -> path . addr, url -> path . size, '/' );
-    const char * sep, * end = url -> path . addr + url -> path . size;
+    const char * start, * sep, * end;
+
+    assert(url);
+
+    start = string_rchr ( url -> path . addr, url -> path . size, '/' );
+    end = url -> path . addr + url -> path . size;
     if ( start ++ == NULL )
         start = url -> path . addr;
 
@@ -3317,6 +3352,8 @@ rc_t VPathExtractAcc ( const VPath * url, VPath ** acc )
         /* fix up case where we said accession but it was really a name */
         if ( ap -> acc_code == 0 || ap -> path_type != vpAccession )
             CONST_STRING ( & ap -> scheme, "ncbi-file" );
+
+        rc = VPathSetAccOfParentDb(ap, url->accOfParentDb);
     }
 
     return rc;
@@ -3520,8 +3557,13 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
     /* no existing cache file was found,
        so create a new one using the best
        TBD - this should remember a volume path */
-    if ( best == NULL && better == NULL )
+    if ( best == NULL && better == NULL ) {
         rc = RC ( rcVFS, rcResolver, rcResolving, rcPath, rcNotFound );
+        assert(query);
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
+            "VResolverCacheResolve: cache location of '%S' not found\n",
+            &query->path));
+    }
     else {
         alg = best == NULL ? better : best;
         assert ( alg );
@@ -3662,6 +3704,8 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
 {
     rc_t rc;
 
+    assert(query);
+
     /* require non-zero oid */
     if ( query -> obj_id == 0 )
         rc = RC ( rcVFS, rcResolver, rcResolving, rcPath, rcCorrupt );
@@ -3773,7 +3817,7 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
                     /* resolve from accession to local path
                        will NOT find partial cache files */
                     rc = VResolverLocalResolve ( self, & accession, local,
-                                                 refseq_ctx, NULL );
+                                            refseq_ctx, NULL, query->accOfParentDb);
                 }
 
                 if ( rc == 0 && remote != NULL && * remote != NULL )
@@ -3888,7 +3932,8 @@ rc_t VResolverQueryAcc ( const VResolver * self, VRemoteProtocols protocols,
 
     /* LOCAL RESOLUTION */
     if ( local != NULL )
-        rc = VResolverLocalResolve ( self, accession, local, refseq_ctx, dir );
+        rc = VResolverLocalResolve ( self, accession, local, refseq_ctx, dir,
+            query->accOfParentDb);
 
     if ( local == NULL || * local == NULL )
     {
@@ -4071,6 +4116,29 @@ rc_t VResolverQueryURL ( const VResolver * self, VRemoteProtocols protocols,
     return rc;
 }
 
+
+static rc_t VPaths_SetParentAcc(const VPath * query,
+    const VPath ** local, const VPath ** remote, const VPath ** cache)
+{
+    rc_t rc = 0;
+
+    if (query != NULL) {
+        const String * parentAcc = query->accOfParentDb;
+
+        if (parentAcc != NULL) {
+            if (rc == 0 && local != NULL && * local != NULL)
+                rc = VPathSetAccOfParentDb((VPath *)* local, parentAcc);
+
+            if (rc == 0 && remote != NULL && * remote != NULL)
+                rc = VPathSetAccOfParentDb((VPath *)* remote, parentAcc);
+
+            if (rc == 0 && cache != NULL && * cache != NULL)
+                rc = VPathSetAccOfParentDb((VPath *)* cache, parentAcc);
+        }
+    }
+
+    return rc;
+}
 
 /* Query
  *  resolve object location to either an existing local path,
@@ -4292,6 +4360,9 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
             }
         }
     }
+
+    if (rc == 0)
+        rc = VPaths_SetParentAcc(query, local, remote, cache);
 
     return rc;
 }
@@ -4786,11 +4857,16 @@ rc_t VResolverLoadVolumes ( Vector *algs, const String *root,
                     /* if using CGI for resolution */
                     if ( resolver_cgi || strcmp ( algname, "cgi" ) == 0 )
                         alg_id = algCGI;
+                    /* SRA "Accession Directory": acc/acc.sra */
                     else if ( strcmp ( algname, "sraAd" ) == 0 )
                         alg_id = algSRAAD;
                     /* stored in a flat directory as-is */
                     else if ( strcmp ( algname, "flat" ) == 0 )
                         alg_id = algFlat;
+                    /* stored in Accesion as Directory
+                       with ".sra" or ".sra.vdbcache" extension */
+                    else if ( strcmp ( algname, "sraAd" ) == 0 )
+                        alg_id = algSRAAD;
                     /* stored in a flat directory with ".sra" extension */
                     else if ( strcmp ( algname, "sraFlat" ) == 0 )
                         alg_id = algSRAFlat;
@@ -4806,6 +4882,9 @@ rc_t VResolverLoadVolumes ( Vector *algs, const String *root,
                     /* stored in a flat directory with no extension */
                     else if ( strcmp ( algname, "refseq" ) == 0 )
                         alg_id = algREFSEQ;
+                    /* Refseq "Accession Directory": acc/refseq */
+                    else if (strcmp(algname, "refseqAd") == 0)
+                        alg_id = algREFSEQAD;
                     /* stored in a flat directory with no extension */
                     else if ( strcmp ( algname, "wgsFlat" ) == 0 )
                         alg_id = algWGSFlat;
@@ -4823,6 +4902,10 @@ rc_t VResolverLoadVolumes ( Vector *algs, const String *root,
                     /* stored in a three-level directory with 1000 banks and no extension */
                     else if ( strcmp ( algname, "ebi" ) == 0 )
                         alg_id = algSRA_EBI;
+
+                    /* store files under their names in Accesion as Directory */
+                    else if ( strcmp ( algname, "ad" ) == 0 )
+                        alg_id = algAD;
 
                     /* new named annotation */
                     else if ( strcmp ( algname, "nannotFlat" ) == 0 )

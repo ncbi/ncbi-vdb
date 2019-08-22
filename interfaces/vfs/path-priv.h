@@ -111,6 +111,10 @@ VFS_EXTERN rc_t CC VPathOption ( const VPath * self, VPOption_t option,
                                 char * buffer, size_t buffer_size,
                                 size_t * num_read);
 
+/* SetParentAcc
+ * set accession of parent DB for refseqs
+ */
+rc_t VPathSetAccOfParentDb(VPath * self, const struct String * acc);
 
 #ifdef __cplusplus
 }

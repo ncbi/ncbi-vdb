@@ -32,13 +32,17 @@ struct GCP;
 
 #include <cloud/gcp.h>
 
+#include <kfg/properties.h> /* KConfig_Get_User_Accept_Gcp_Charges */
+
+#include <klib/base64.h>
+#include <klib/data-buffer.h>
+#include <klib/debug.h> /* DBGMSG */
 #include <klib/json.h>
 #include <klib/printf.h> /* string_printf */
 #include <klib/rc.h>
 #include <klib/status.h>
+#include <klib/strings.h> /* ENV_MAGIC_CE_TOKEN */
 #include <klib/text.h>
-#include <klib/base64.h>
-#include <klib/data-buffer.h>
 
 #include <kns/endpoint.h>
 #include <kns/socket.h>
@@ -62,6 +66,10 @@ struct GCP;
 
 #include "cloud-cmn.h" /* KNSManager_Read */
 #include "cloud-priv.h"
+
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
 
 /*TODO: use log.h instead, or promote to cloud-priv.h (there is a copy in cloud-mgr.c) */
 #if 0
@@ -90,40 +98,101 @@ rc_t CC GCPDestroy(GCP * self)
     return CloudWhack(&self->dad);
 }
 
-/* MakeComputeEnvironmentToken
-*  contact cloud provider to get proof of execution environment in form of a token
-*/
-static
-rc_t CC GCPMakeComputeEnvironmentToken(const GCP * self, const String ** ce_token)
+/* envCE
+ * Get Compute Environment Token from environment variable
+ *
+ * NB. this is a one-shot function, but atomic is not important
+ */
+static char const *envCE()
 {
-    rc_t rc = 0;
+    static bool firstTime = true;
+    char const *const env = firstTime ? getenv(ENV_MAGIC_CE_TOKEN) : NULL;
+    firstTime = false;
+    if (env != NULL)
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("Got location from environment"));
+    return env;
+}
 
-    char location[4096] = "";
-
-    const char url[] =
+/* readCE
+ * Get Compute Environment Token by reading from provider network
+ */
+static rc_t readCE(GCP const *const self, size_t size, char location[])
+{
+    char const *const identityUrl =
         "http://metadata/computeMetadata/v1/instance/service-accounts/"
         "default/identity?audience=https://www.ncbi.nlm.nih.gov&format=full";
 
+    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("Reading location from provider"));
+    return KNSManager_Read(self->dad.kns, location, size,
+                         identityUrl, "Metadata-Flavor", "Google");
+}
+
+/* MakeComputeEnvironmentToken
+ *  contact cloud provider to get proof of execution environment in form of a token
+*/
+static
+rc_t CC GCPMakeComputeEnvironmentToken ( const GCP * self, const String ** ce_token )
+{
+    assert(self);
+    
+    if (!self->dad.user_agrees_to_reveal_instance_identity)
+        return RC(rcCloud, rcProvider, rcIdentifying,
+                  rcCondition, rcUnauthorized);
+    else {
+        char const *const env = envCE();
+        char location[4096] = "";
+        rc_t const rc = env == NULL ? readCE(self, sizeof(location), location) : 0;
+        if (rc == 0) {
+            String s;
+            StringInitCString(&s, env != NULL ? env : location);
+            return StringCopy(ce_token, &s);
+        }
+        return rc;
+    }
+}
+
+/* GetLocation
+ */
+static rc_t GCPGetLocation(const GCP * self, const String ** location) {
+    rc_t rc = 0;
+
+    static const char zoneUrl[]
+        = "http://metadata.google.internal/computeMetadata/v1/instance/zone";
+
+    char buffer[64] = "";
+    const char * slash = NULL;
+
+    char b[99] = "";
+    const char * zone = b;
+
     assert(self);
 
-    rc = KNSManager_Read(self->dad.kns, location, sizeof location,
-        url, "Metadata-Flavor", "Google");
+    rc = KNSManager_Read(self->dad.kns, b, sizeof b,
+        zoneUrl, "Metadata-Flavor", "Google");
+
+    if (rc == 0)
+        slash = string_rchr(b, sizeof b, '/');
+    if (slash != NULL)
+        zone = slash + 1;
+
+    if (rc == 0)
+        rc = string_printf(buffer, sizeof buffer, NULL, "gs.%s", zone);
 
     if (rc == 0) {
         String s;
-        StringInitCString(&s, location);
-        rc = StringCopy(ce_token, &s);
+        StringInitCString(&s, buffer);
+        rc = StringCopy(location, &s);
     }
 
     return rc;
 }
 
 /* AddComputeEnvironmentTokenForSigner
-*  prepare a request object with a compute environment token
-*  for use by an SDL-associated "signer" service
-*/
+ *  prepare a request object with a compute environment token
+ *  for use by an SDL-associated "signer" service
+ */
 static
-rc_t CC GCPAddComputeEnvironmentTokenForSigner(const GCP * self, KClientHttpRequest * req)
+rc_t CC GCPAddComputeEnvironmentTokenForSigner ( const GCP * self, KClientHttpRequest * req )
 {
     const String * ce_token = NULL;
     rc_t rc = GCPMakeComputeEnvironmentToken(self, &ce_token);
@@ -343,6 +412,12 @@ MakeJWT(const GCP * self, char ** jwt)
     size_t num_writ;
     const KTime_t issued_at = KTimeStamp();
     const KTime_t expiration = issued_at + 60 * 60; /* 1 hour later */
+    const String * claimSet_base64url;
+    char to_sign[4096];
+    const String * signature;
+    const String * signature_base64url;
+    size_t jwt_size;
+
     rc_t rc = string_printf(claimSet, sizeof(claimSet) - 1, &num_writ,
         "{"
         "\"iss\":\"%s\","
@@ -361,7 +436,6 @@ MakeJWT(const GCP * self, char ** jwt)
     }
     TRACE("claimSet='%s'\n\n", claimSet);
     /* base64url encode claimSet */
-    const String * claimSet_base64url;
     rc = encodeBase64URL(&claimSet_base64url, claimSet, num_writ);
     if (rc != 0)
     {
@@ -375,7 +449,6 @@ MakeJWT(const GCP * self, char ** jwt)
     signed with self->privateKey
     Base64url encode
     */
-    char to_sign[4096];
     rc = string_printf(to_sign, sizeof(to_sign) - 1, &num_writ, "%s.%S", jwtHeader_base64url, claimSet_base64url);
     if (rc != 0)
     {
@@ -385,7 +458,6 @@ MakeJWT(const GCP * self, char ** jwt)
     TRACE("to_sign='%s'\n\n", to_sign);
 
     /* sign header_dot_claim with self->privateKey */
-    const String * signature;
     rc = Sign_RSA_SHA256(self->privateKey, to_sign, &signature);
     if (rc != 0)
     {
@@ -393,7 +465,6 @@ MakeJWT(const GCP * self, char ** jwt)
         return rc;
     }
     /* base64url encode signature */
-    const String * signature_base64url;
     rc = encodeBase64URL(&signature_base64url, signature->addr, signature->size);
     StringWhack(signature);
     if (rc != 0)
@@ -405,7 +476,7 @@ MakeJWT(const GCP * self, char ** jwt)
 
     /*      4. Base64url encode "header.claims.signature" into JWT
     */
-    size_t jwt_size = string_measure(jwtHeader_base64url, NULL) + claimSet_base64url->size + signature_base64url->size + 3;
+    jwt_size = string_measure(jwtHeader_base64url, NULL) + claimSet_base64url->size + signature_base64url->size + 3;
     *jwt = malloc(jwt_size);
     rc = string_printf(*jwt, jwt_size, &num_writ, "%s.%S.%S", jwtHeader_base64url, claimSet_base64url, signature_base64url);
     StringWhack(claimSet_base64url);
@@ -622,9 +693,10 @@ rc_t CC GCPAddUserPaysCredentials(const GCP * cself, KClientHttpRequest * req, c
     }
     else
     {
+        bool new_token = false;
         /* see if cached access_token has to be generated/refreshed */
-        if (self->access_token == NULL ||
-            self->access_token_expiration < KTimeStamp() + 60) /* expires in less than a minute */
+        if ( self->access_token == NULL ||
+             self->access_token_expiration < KTimeStamp() + 60 ) /* expires in less than a minute */
         {
             free(self->access_token);
             self->access_token = NULL;
@@ -637,21 +709,45 @@ rc_t CC GCPAddUserPaysCredentials(const GCP * cself, KClientHttpRequest * req, c
             {
                 rc = GetAccessToken(self, self->jwt, self->dad.conn, &self->access_token, &self->access_token_expiration);
             }
+            new_token = true;
         }
 
-        if (rc == 0)
-        {
-            rc = KClientHttpRequestAddHeader(req, "Authorization", "Bearer %s", self->access_token);
-        }
+        if ( rc == 0 )
+        {   /* only update the URL if we have not done so yet, or if we have just refreshed the token */
+            if ( ! new_token )
+            {
+                char buffer[4096];
+                size_t num_read;
+                rc = KClientHttpRequestGetHeader ( req, "Authorization", buffer, sizeof ( buffer ), &num_read );
+                if ( GetRCState ( rc ) == rcNotFound )
+                {
+                    new_token = true;
+                    rc = 0;
+                }
+            }
 
-        /* 6. Add  alt=media&userProject=<project_id> to the URL*/
-        if (rc == 0)
-        {
-            rc = KClientHttpRequestAddQueryParam(req, "alt", "media");
-        }
-        if (rc == 0)
-        {
-            rc = KClientHttpRequestAddQueryParam(req, "userProject", "%s", self->project_id);
+            if ( rc == 0 && new_token )
+            {
+                rc = KClientHttpRequestAddHeader(req, "Authorization", "Bearer %s", self->access_token);
+            }
+
+            /* Add alt=media&userProject=<project_id> to the URL if not already there */
+            if ( rc == 0 )
+            {
+                const String * query;
+                char * nulterm; /* to use strstr, need a 0-terminated string */
+                KClientHttpRequestGetQuery( req, & query );
+                nulterm = string_dup( query -> addr, query -> size );
+                if ( strstr(nulterm, "alt=media" ) == NULL )
+                {
+                    rc = KClientHttpRequestAddQueryParam(req, "alt", "media");
+                }
+                if (rc == 0 && strstr(nulterm, "userProject=" ) == NULL)
+                {
+                    rc = KClientHttpRequestAddQueryParam(req, "userProject", "%s", self->project_id);
+                }
+                free (nulterm);
+            }
         }
     }
     return rc;
@@ -663,6 +759,7 @@ static Cloud_vt_v1 GCP_vt_v1 =
 
     GCPDestroy,
     GCPMakeComputeEnvironmentToken,
+    GCPGetLocation,
     GCPAddComputeEnvironmentTokenForSigner,
     GCPAddAuthentication,
     GCPAddUserPaysCredentials
@@ -674,6 +771,7 @@ static Cloud_vt_v1 GCP_vt_v1 =
 LIB_EXPORT rc_t CC CloudMgrMakeGCP(const CloudMgr * self, GCP ** p_gcp)
 {
     rc_t rc;
+    GCP * gcp;
 
     if (self == NULL)
     {
@@ -684,7 +782,7 @@ LIB_EXPORT rc_t CC CloudMgrMakeGCP(const CloudMgr * self, GCP ** p_gcp)
         return RC(rcCloud, rcProvider, rcCasting, rcParam, rcNull);
     }
 
-    GCP * gcp = calloc(1, sizeof * gcp);
+    gcp = calloc(1, sizeof * gcp);
     if (gcp == NULL)
     {
         rc = RC(rcCloud, rcMgr, rcAllocating, rcMemory, rcExhausted);
@@ -693,9 +791,17 @@ LIB_EXPORT rc_t CC CloudMgrMakeGCP(const CloudMgr * self, GCP ** p_gcp)
     {
         /* capture from self->kfg */
         bool user_agrees_to_pay = false;
+        bool user_agrees_to_reveal_instance_identity = false;
+        if (self != NULL) {
+            KConfig_Get_User_Accept_Gcp_Charges(self->kfg,
+                &user_agrees_to_pay);
+            KConfig_Get_Report_Cloud_Instance_Identity(self->kfg,
+                &user_agrees_to_reveal_instance_identity);
+        }
 
-        rc = CloudInit(&gcp->dad, (const Cloud_vt *)& GCP_vt_v1, "GCP", self->kns, user_agrees_to_pay);
-        if (rc == 0)
+        rc = CloudInit ( & gcp -> dad, ( const Cloud_vt * ) & GCP_vt_v1, "GCP", self -> kns, user_agrees_to_pay,
+            user_agrees_to_reveal_instance_identity );
+        if ( rc == 0 )
         {
             rc = PopulateCredentials(gcp);
             if (rc == 0)
@@ -828,14 +934,37 @@ static
 rc_t PopulateCredentials(GCP * self)
 {
     rc_t rc = 0;
+
+    char buffer[PATH_MAX] = "";
+
     char *jsonCredentials;
 
     const char *pathToJsonFile = getenv("GOOGLE_APPLICATION_CREDENTIALS");
+
+    assert(self);
+
     if (pathToJsonFile == NULL || *pathToJsonFile == 0)
     {
-        rc = 0;
+        KConfig * cfg = NULL;
+        rc = KConfigMake(&cfg, NULL);
+
+        if (rc == 0)
+            rc = KConfig_Get_Gcp_Credential_File(
+                cfg, buffer, sizeof buffer, NULL);
+
+        if (rc == 0)
+            pathToJsonFile = buffer;
+        else
+            rc = 0;
+
+        {
+            rc_t r2 = KConfigRelease(cfg);
+            if (rc == 0 && r2 != 0)
+                rc = r2;
+        }
     }
-    else
+
+    if (pathToJsonFile != NULL && *pathToJsonFile != 0)
     {   /* read the credentials file */
         const KFile *cred_file = NULL;
         uint64_t json_size = 0;

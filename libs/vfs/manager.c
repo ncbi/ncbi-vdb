@@ -26,9 +26,6 @@
 
 #include <vfs/extern.h>
 
-#include "path-priv.h"
-#include "resolver-priv.h"
-
 #include <sra/srapath.h>
 
 #include <vfs/manager.h>
@@ -84,6 +81,9 @@
 #include <klib/strings.h> /* ENV_VDB_REMOTE_NEED_CE */
 #include <klib/time.h> 
 #include <klib/vector.h>
+
+#include "path-priv.h"
+#include "resolver-priv.h"
 
 #include <strtol.h>
 
@@ -482,6 +482,9 @@ static rc_t wrap_in_rr_cache( KDirectory * dir,
     static const char * fallback_cache_location = "/var/tmp";
     const char * get_fallback_cache_location( void )
     {
+        const char * c = getenv ( "TMPDIR" );
+        if ( c != NULL )
+            return c;
         return fallback_cache_location;
     }
 #endif
@@ -554,9 +557,9 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
     if ( cps -> use_file_cache )
     {
         char location[ 4096 ];
-        location[ 0 ] = 0;
         bool remove_on_close = false;
         bool promote = cps -> promote;
+        location[ 0 ] = 0;
     
         if ( cps -> debug )
             KOutMsg( "use file-cache\n" );
@@ -682,34 +685,51 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
     }
 
     if ( rc == 0 ) {
+        bool hasMagic = getenv(ENV_MAGIC_LOCAL);
         bool ceRequired = false;
         bool payRequired = false;
         {
-            const char name[] = ENV_VDB_REMOTE_NEED_CE;
+            const char * name = path->sraClass == eSCvdbcache ?
+                ENV_MAGIC_CACHE_NEED_CE : ENV_MAGIC_REMOTE_NEED_CE;
             const char * magic = getenv(name);
             if (is_refseq) {
                 if (magic != NULL)
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-                        "'%s' needCe magic ignored for refseq\n", name));
+                        "'%s' magic ignored for refseq\n", name));
             }
             else
-                if (magic != NULL)
+                if (magic != NULL) {
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                        "'%s' magic found\n", name));
                     ceRequired = true;
-                else
+                }
+                else {
                     ceRequired = path->ceRequired;
+                    if (hasMagic)
+                        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                            "'%s' magic not set\n", name));
+                }
         }
         {
-            const char name[] = ENV_VDB_REMOTE_NEED_PMT;
+            const char * name = path->sraClass == eSCvdbcache ?
+                ENV_MAGIC_CACHE_NEED_PMT : ENV_MAGIC_REMOTE_NEED_PMT;
             const char * magic = getenv(name);
             if (is_refseq) {
                 if (magic != NULL)
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
                         "'%s' pmtReq magic ignored for refseq\n", name));
             }
-            if (magic != NULL)
+            if (magic != NULL) {
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                    "'%s' magic found\n", name));
                 payRequired = true;
-            else
+            }
+            else {
                 payRequired = path->payRequired;
+                if (hasMagic)
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                        "'%s' magic not set\n", name));
+            }
         }
         rc = KNSManagerMakeReliableHttpFile ( self -> kns,
                                               cfp,

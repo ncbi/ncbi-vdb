@@ -82,12 +82,20 @@ static bool s_disable_user_settings = false;
 /*----------------------------------------------------------------------------*/
 static const char default_kfg[] = {
 "/config/default = \"true\"\n"
+"/repository/user/main/public/apps/file/volumes/flat = \"files\"\n"
+"/repository/user/main/public/apps/nakmer/volumes/nakmerFlat = \"nannot\"\n"
+"/repository/user/main/public/apps/nannot/volumes/nannotFlat = \"nannot\"\n"
+"/repository/user/main/public/apps/refseq/volumes/refseq = \"refseq\"\n"
+"/repository/user/main/public/apps/sra/volumes/sraFlat = \"sra\"\n"
+"/repository/user/main/public/apps/sraPileup/volumes/flat = \"sra\"\n"
+"/repository/user/main/public/apps/sraRealign/volumes/flat = \"sra\"\n"
+"/repository/user/main/public/apps/wgs/volumes/wgsFlat = \"wgs\"\n"
 "/repository/remote/main/CGI/resolver-cgi = "
              "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
 "/repository/remote/protected/CGI/resolver-cgi = "
              "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
 "/repository/remote/main/SDL.2/resolver-cgi = "
-             "\"https://trace.ncbi.nlm.nih.gov/Traces/sdl/unstable/retrieve\"\n"
+             "\"https://trace.ncbi.nlm.nih.gov/Traces/sdl/2/retrieve\"\n"
 "/tools/ascp/max_rate = \"450m\"\n"
 };
 /*----------------------------------------------------------------------------*/
@@ -3183,19 +3191,24 @@ static rc_t _KConfigCheckAd(KConfig * self) {
     const KConfigNode * kfg = NULL;
     rc_t rc = KConfigOpenNodeRead(self, &kfg, "/repository/user/ad");
     if (rc != 0) {
+        rc = 0;
         /* create Accession as Directory repository
            when it does not exist */
-        rc = KConfigWriteString(self,
-            "/repository/user/ad/public/apps/file/volumes/flat", ".");
+        if (rc == 0)
+            rc = KConfigWriteString(self,
+                "/repository/user/ad/public/apps/file/volumes/flat", ".");
         if (rc == 0)
             rc = KConfigWriteString(self,
                 "/repository/user/ad/public/apps/sra/volumes/sraAd", ".");
         if (rc == 0)
             rc = KConfigWriteString(self,
-                "/repository/user/ad/public/apps/sraPileup/volumes/sraAd", ".");
+                "/repository/user/ad/public/apps/sraPileup/volumes/ad", ".");
         if (rc == 0)
             rc = KConfigWriteString(self,
-                "/repository/user/ad/public/apps/sraRealign/volumes/sraAd",
+                "/repository/user/ad/public/apps/sraRealign/volumes/ad", ".");
+        if (rc == 0)
+            rc = KConfigWriteString(self,
+                "/repository/user/ad/public/apps/refseq/volumes/refseqAd",
                 ".");
         if (rc == 0)
             rc = KConfigWriteString(self,
