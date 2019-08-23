@@ -251,12 +251,12 @@ FIXTURE_TEST_CASE(KTimedLock_Acquire, KTimedLockFixture)
 
     LOG(LogLevel::e_message, "TEST_KLock_TimedAcquire: done" << endl);    
 }
-FIXTURE_TEST_CASE(KTimedLock_Acquire_Timeout, KTimedLockFixture)
+FIXTURE_TEST_CASE(KTimedLock_Acquire_Busy, KTimedLockFixture)
 {
     // lock 
     REQUIRE_RC(KTimedLockAcquire(lock, NULL));
     
-    // start a thread that tries to lock, see it time out
+    // start a thread that tries to lock, see it error out
     REQUIRE_RC(StartThread(100));// makes sure threadWaiting == 1
     
     // do not unlock, wait for the thread to finish
@@ -264,7 +264,7 @@ FIXTURE_TEST_CASE(KTimedLock_Acquire_Timeout, KTimedLockFixture)
     {
         TestEnv::SleepMs(1);
     }
-    REQUIRE_EQ(threadRc, RC ( rcPS, rcLock, rcLocking, rcTimeout, rcExhausted )); // timed out
+    REQUIRE_EQ(threadRc, RC(rcPS, rcLock, rcLocking, rcLock, rcBusy)); 
     
     REQUIRE_RC(KTimedLockUnlock(lock));
 }

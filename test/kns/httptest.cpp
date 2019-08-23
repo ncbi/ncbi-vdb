@@ -881,7 +881,7 @@ TEST_CASE ( AllowAllCertificates )
 
     // ensure that manager is NOT allowing, i.e. default behavior
     // as of 7-01-2019, this function is a no-op, so the connection will succeed with
-    // or without this call
+    // or without this call. NOTE: on WINDOWS, it still works as before!
     REQUIRE_RC ( KNSManagerSetAllowAllCerts ( mgr, false ) );
 
     // create a connection to something that normally fails; it should fail
@@ -889,9 +889,12 @@ TEST_CASE ( AllowAllCertificates )
     CONST_STRING ( & host, "www.google.com" );
 
     KClientHttp * https = NULL;
-    REQUIRE ( KNSManagerMakeClientHttps
-              ( mgr, & https, NULL, 0x01010000, & host, 443 ) == 0 ); // success!
-    RELEASE ( KClientHttp, https );
+#if WINDOWS
+    REQUIRE_RC_FAIL( KNSManagerMakeClientHttps( mgr, &https, NULL, 0x01010000, &host, 443 ) );
+#else    
+    REQUIRE_RC ( KNSManagerMakeClientHttps( mgr, &https, NULL, 0x01010000, &host, 443 ) ); 
+#endif
+    RELEASE(KClientHttp, https);
 
     // tell manager to allow all certs
     REQUIRE_RC ( KNSManagerSetAllowAllCerts ( mgr, true ) );
