@@ -38,6 +38,9 @@ TEST_SUITE(TestSdlResolver)
     return rc;
 }*/
 
+#define ALL
+
+#ifdef ALL
 TEST_CASE(testArrayExample) {
     Response4 * response = NULL;
 
@@ -72,7 +75,7 @@ TEST_CASE(testArrayExample) {
 ) );
     REQUIRE_RC      ( Response4Release ( response ) );
 }
-
+#endif
 TEST_CASE(testExample) {
     Response4 * response = NULL;
 
@@ -114,6 +117,14 @@ TEST_CASE(testExample) {
 ) );
     REQUIRE_RC      ( Response4Release ( response ) );
 }
+
+#ifdef ALL
+TEST_CASE(doubleWhack) {
+    Response4 * response = NULL;
+    REQUIRE_RC_FAIL(Response4MakeSdl(&response, "{}"));
+    REQUIRE_RC(Response4Release(response));
+}
+#endif
 
 TEST_SUITE ( TestResolverSdl )
 
