@@ -61,9 +61,14 @@ rc_t VPathWhack ( VPath * self )
 
     KDataBufferWhack ( & self -> data );
     KRefcountWhack ( & self -> refcount, "VPath" );
+
     free ( ( void * ) self -> id   . addr );
-    free ( ( void * ) self -> tick . addr );
+    free ( ( void * ) self -> name . addr );
+    free ( ( void * ) self -> objectType . addr );
     free ( ( void * ) self -> service . addr );
+    free ( ( void * ) self -> tick . addr );
+    free ( ( void * ) self -> type . addr );
+
     memset ( self, 0, sizeof * self );
     free ( self );
 
