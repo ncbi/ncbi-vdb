@@ -251,6 +251,8 @@ FIXTURE_TEST_CASE(KTimedLock_Acquire, KTimedLockFixture)
 
     LOG(LogLevel::e_message, "TEST_KLock_TimedAcquire: done" << endl);    
 }
+
+#ifdef WINDOWS
 FIXTURE_TEST_CASE(KTimedLock_Acquire_Busy, KTimedLockFixture)
 {
     // lock 
@@ -268,6 +270,25 @@ FIXTURE_TEST_CASE(KTimedLock_Acquire_Busy, KTimedLockFixture)
     
     REQUIRE_RC(KTimedLockUnlock(lock));
 }
+#else
+FIXTURE_TEST_CASE(KTimedLock_Acquire_Timeout, KTimedLockFixture)
+{
+    // lock 
+    REQUIRE_RC(KTimedLockAcquire(lock, NULL));
+
+    // start a thread that tries to lock, see it time out
+    REQUIRE_RC(StartThread(100));// makes sure threadWaiting == 1
+
+    // do not unlock, wait for the thread to finish
+    while (atomic32_read(&threadWaiting))
+    {
+        TestEnv::SleepMs(1);
+    }
+    REQUIRE_EQ(threadRc, RC(rcPS, rcLock, rcLocking, rcTimeout, rcExhausted)); // timed out
+
+    REQUIRE_RC(KTimedLockUnlock(lock));
+}
+#endif
 
 ///////////////////////// KRWLock
 TEST_CASE( KRWLock_NULL )
