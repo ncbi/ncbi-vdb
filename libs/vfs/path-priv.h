@@ -126,7 +126,7 @@ struct VPath
     String     type;
 
     String     name;
-    String     nameExtension; /* file extension in name */
+    String     nameExtension; /* file extension in name. don't free */
 
     const VPath * vdbcache;
     bool          vdbcacheChecked; /* no need to check vdbcache URL when
