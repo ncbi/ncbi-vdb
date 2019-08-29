@@ -1748,8 +1748,14 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
 
         assert(*path != NULL || rc != 0);
 
-        if (rc == 0 && *path == NULL)
-            rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcNull);
+        if (rc == 0) {
+            if (*path == NULL)
+                rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcNull);
+            else
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
+                    "VResolverAlgRemoteProtectedResolve: "
+                    "'%S' resolved to '%s'\n", acc, (*path)->scheme.addr));
+        }
     }
 
     return rc;
