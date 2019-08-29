@@ -630,8 +630,8 @@ rc_t VResolverAlgLocalResolve ( const VResolverAlg *self,
                 if (rc == 0) {
                     assert(path);
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
-                        "VResolverAlgLocalResolve: '%S' found in '%S'\n",
-                        &tok->acc, &(*path)->path));
+                        "VResolverAlgLocalResolve: '%S' found in '%S%s'\n",
+                        &tok->acc, &(*path)->path, for_cache ? ".cache" : ""));
                 }
                 return rc;
             default:
