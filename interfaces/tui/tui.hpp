@@ -797,16 +797,18 @@ class msg_colors
 {
     public :
         KTUI_color bg;
-        widget_colors label, button;
+        widget_colors hdr, label, button;
         
-        msg_colors( KTUI_color a_bg, const widget_colors &a_label, const widget_colors &a_button )
-            : bg( a_bg ), label( a_label ), button( a_button ) {}
+        msg_colors( KTUI_color a_bg, const widget_colors &a_hdr,
+                    const widget_colors &a_label, const widget_colors &a_button )
+            : bg( a_bg ), hdr( a_hdr ), label( a_label ), button( a_button ) {}
 };
 
 class dflt_msg_colors : public msg_colors
 {
     public :
         dflt_msg_colors( void ) : msg_colors( KTUI_c_light_gray, 
+                                              widget_colors( KTUI_c_gray, KTUI_c_white ),
                                               widget_colors( KTUI_c_gray, KTUI_c_white ),
                                               widget_colors( KTUI_c_cyan, KTUI_c_black ) ) {}
 };
@@ -850,6 +852,23 @@ class msg_ctrl : public Dlg_Runner
                 Tui_Rect r2( 1, 3, 12, 1 );
                 PopulateButton( r2, false, 101, "&ok", colors.button.bg, colors.button.fg );
             }
+            
+            msg_view( Dlg &parent, Tui_Rect &r, const std::string &hdr, const std::string &msg, 
+                      const msg_colors &colors )
+                : Dlg( parent, r )
+            {
+                SetDlgBg( colors.bg );
+                
+                Tui_Rect r1( 1, 1, r.get_w() -3, 1 );
+                PopulateLabel( r1, false, 99, hdr.c_str(), colors.hdr.bg, colors.hdr.fg );
+                
+                Tui_Rect r2( 1, 3, r.get_w() -3, 1 );
+                PopulateLabel( r2, false, 100, msg.c_str(), colors.label.bg, colors.label.fg );
+                
+                Tui_Rect r3( 1, 5, 12, 1 );
+                PopulateButton( r3, false, 101, "&ok", colors.button.bg, colors.button.fg );
+            }
+            
     };
         
     public :
@@ -872,6 +891,32 @@ class msg_ctrl : public Dlg_Runner
         {
             return show_msg( parent, msg, Tui_Rect( 0, 0, w, 5 ), colors );
         }
+        
+        static bool show_msg2( Dlg & parent, const std::string &hdr, const std::string &msg,
+                               Tui_Rect r, msg_colors colors = dflt_msg_colors() )
+        {
+            KTUI_color c = parent.GetDlgBg();
+            parent.center( r );
+            msg_view view( parent, r, hdr, msg, colors );
+            msg_ctrl ctrl( view );
+            ctrl.run();
+            parent.SetDlgBg( c );
+            return true;
+        }
+        
+        static bool show_msg2( Dlg & parent, const std::string &hdr, const std::string &msg,
+                               tui_coord w = 80, msg_colors colors = dflt_msg_colors() )
+        {
+            return show_msg2( parent, hdr, msg, Tui_Rect( 0, 0, w, 7 ), colors );
+        }
+
+        static bool show_err( Dlg & parent, const std::string &hdr, const std::string &msg,
+                              tui_coord w = 80, msg_colors colors = dflt_msg_colors() )
+        {
+            colors . hdr . fg = KTUI_c_red;
+            return show_msg2( parent, hdr, msg, Tui_Rect( 0, 0, w, 7 ), colors );
+        }
+        
 };
 
 /* ==== question sub-dialog =================================================================== */
