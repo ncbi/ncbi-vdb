@@ -27,6 +27,8 @@
 #include <cloud/cloud.h> /* CloudRelease */
 #include <cloud/manager.h> /* CloudMgrRelease */
 
+#include <kfs/directory.h> /* KDirectory */
+
 #include <klib/container.h> /* BSTree */
 #include <klib/debug.h> /* DBGMSG */
 #include <klib/log.h> /* KLogLevel */
@@ -312,6 +314,10 @@ typedef struct {
 typedef struct {
     bool inited;
     char * cgi;
+
+    const char * fileKey; /* don't free */
+    const char * fileVal; /* don't free */
+
     Vector params;
 } SCgiRequest;
 
@@ -370,6 +376,8 @@ typedef struct {
     VRemoteProtocols protocols;
     char * format;
     char * forced; /* forced SDL>=2 location  */
+    char * jwtKartFile;
+    char * ngcFile;
     bool hasQuery;
 } SRequest;
 
@@ -2479,6 +2487,11 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
                     &self->params, false, SHttpRequestHelperAddPostParam, &h);
                 rc = h.rc;
             }
+
+            if (rc == 0 && self->fileKey != NULL && self->fileVal != NULL)
+                rc = KClientHttpRequestAddPostFileParam(h.httpReq,
+                    self->fileKey, self->fileVal);
+
             if (rc == 0) {
                 KHttpResult * rslt = NULL;
                 DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), (
@@ -2546,6 +2559,12 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
     }
 
     return rc;
+}
+
+rc_t CC KClientHttpRequestAddPostFileParam(KClientHttpRequest *self,
+    const char *name, const char *path)
+{   /* temporary stub waiting for VDB-3911 to complete */
+    return 0;
 }
 
 
@@ -2902,8 +2921,10 @@ static rc_t SRequestFini ( SRequest * self ) {
 
     assert ( self );
 
+    free(self->jwtKartFile);
     free(self->forced);
     free(self->format);
+    free(self->ngcFile);
 
     r2 = STicketsFini ( & self -> tickets );
     if ( rc == 0 )
@@ -2940,7 +2961,9 @@ static rc_t SObjectCheckUrl ( SObject * self ) {
     return rc;
 }
 
-static bool SCgiRequestAddKfgLocation(SCgiRequest * self, SHelper * helper) {
+static
+bool SCgiRequestAddKfgLocation(SCgiRequest * self, SHelper * helper)
+{
     rc_t rc = SHelperInitKfg(helper);
 
     assert(helper);
@@ -3116,6 +3139,31 @@ static rc_t SRequestSetDisabled(SRequest * self, SHelper * helper) {
     return rc;
 }
 
+static rc_t SCgiRequestAddFile(SCgiRequest * self,
+    const char * key, const char * path)
+{
+    KDirectory * dir = NULL;
+    rc_t rc = KDirectoryNativeDir(&dir);
+
+    if (rc == 0) {
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), ("  %s=%s\n", key, path));
+
+        if ((KDirectoryPathType(dir, "%s", path) & ~kptAlias) != kptFile)
+            rc = RC(rcVFS, rcQuery, rcExecuting, rcFile, rcNotFound);
+    }
+
+    if (rc == 0) {
+        assert(self);
+
+        self->fileKey = key;
+        self->fileVal = path;
+    }
+
+    RELEASE(KDirectory, dir);
+
+    return rc;
+}
+
 static
 rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     VRemoteProtocols protocols, const char * cgi,
@@ -3144,7 +3192,8 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     if (rc != 0)
         return rc;
     if (request->disabled) {
-        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), ("remote repo disabled in config\n"));
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
+            ("remote repo disabled in config\n"));
         return rc;
     }
 
@@ -3190,7 +3239,9 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
                 return rc;
         }
     }
-    if ( ! SVersionHasMultpileObjects ( request -> version, request -> sdl ) ) {
+    if ( ! SVersionHasMultpileObjects ( request -> version,
+        request -> sdl ) )
+    {
         if ( request -> request . object [ 0 ] . objectId == NULL )
             return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
         else {
@@ -3393,7 +3444,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
             if (rc == 0) {
                 const char name[] = "location-type";
                 const char v[] = "forced";
-                    rc = SKVMake(&kv, name, v);
+                rc = SKVMake(&kv, name, v);
                 if (rc == 0) {
                     rc = VectorAppend(&self->params, NULL, kv);
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
@@ -3408,6 +3459,12 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
 
     if (rc == 0 && SVersionResponseInJson(request->version, request->sdl))
         rc = SCgiRequestAddAcceptCharges(self, helper);
+
+    if (rc == 0 && request->sdl && request->ngcFile != NULL)
+        rc = SCgiRequestAddFile(self, "ngc", request->ngcFile);
+
+    if (rc == 0 && request->sdl && request->jwtKartFile != NULL)
+        rc = SCgiRequestAddFile(self, "cart", request->jwtKartFile);
 
     return rc;
 }
@@ -3574,6 +3631,37 @@ rc_t KServiceSetFormat(KService * self, const char * format) {
     else
         return 0;
 }
+
+/* Set jwt kart argument in service request */
+rc_t KServiceSetJwtKartFile(KService * self, const char * path) {
+    assert(self && path);
+
+    free(self->req.jwtKartFile);
+
+    self->req.jwtKartFile = NULL;
+
+    self->req.jwtKartFile = string_dup_measure(path, NULL);
+    if (self->req.jwtKartFile == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted);
+    else
+        return 0;
+}
+
+/* Set ngc file argument in service request */
+rc_t KServiceSetNgcFile(KService * self, const char * path) {
+    assert(self && path);
+
+    free(self->req.ngcFile);
+
+    self->req.ngcFile = NULL;
+
+    self->req.ngcFile = string_dup_measure(path, NULL);
+    if (self->req.ngcFile == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted);
+    else
+        return 0;
+}
+
 
 /* Set location of data in service request */
 rc_t KServiceSetLocation(KService * self, const char * location) {

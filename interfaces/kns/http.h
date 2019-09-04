@@ -301,7 +301,7 @@ KNS_EXTERN rc_t CC KClientHttpRequestVAddPostParam ( KClientHttpRequest *self, c
 /* AddPostFileParam
  *  adds a file to be transimmiet with POST using multipart/form-data
 */
-KNS_EXTERN rc_t CC KClientHttpRequestAddPostFileParam ( KClientHttpRequest *self, const char *path );
+KNS_EXTERN rc_t CC KClientHttpRequestAddPostFileParam ( KClientHttpRequest *self, const char *name, const char *path );
 
 KNS_EXTERN rc_t CC KClientHttpRequestSetCloudParams(KClientHttpRequest * self,
     bool ceRequired, bool payRequired);
