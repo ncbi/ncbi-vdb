@@ -621,10 +621,10 @@ static rc_t SVersionInit(SVersion * self, bool * sdl, const char * src,
 
     rc = SVersionInitFromStr(self, sdl, s);
 
-    if (rc == 0 && request != NULL && VectorLength(&request->tickets.tickets) > 0
-        && sdl != NULL && *sdl)
+    if (rc == 0 && request != NULL
+        && VectorLength(&request->tickets.tickets) > 0 && sdl != NULL && *sdl)
     {   /* use version 3 when getting dbGaP data */
-        rc = SVersionInitFromStr(self, sdl, "3");
+        /* rc = SVersionInitFromStr(self, sdl, "3") */; 
     }
 
     free(result);
