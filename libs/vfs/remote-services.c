@@ -3619,7 +3619,11 @@ rc_t KServiceAddProject ( KService * self, uint32_t project ) {
 
 /* Set accept-format-in of service request */
 rc_t KServiceSetFormat(KService * self, const char * format) {
-    assert(self && format);
+    if (self == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
+
+    if (format == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
 
     free( self -> req . format );
 
@@ -3634,7 +3638,11 @@ rc_t KServiceSetFormat(KService * self, const char * format) {
 
 /* Set jwt kart argument in service request */
 rc_t KServiceSetJwtKartFile(KService * self, const char * path) {
-    assert(self && path);
+    if (self == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
+
+    if (path == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
 
     free(self->req.jwtKartFile);
 
@@ -3649,7 +3657,11 @@ rc_t KServiceSetJwtKartFile(KService * self, const char * path) {
 
 /* Set ngc file argument in service request */
 rc_t KServiceSetNgcFile(KService * self, const char * path) {
-    assert(self && path);
+    if (self == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
+
+    if (path == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
 
     free(self->req.ngcFile);
 
@@ -3665,7 +3677,11 @@ rc_t KServiceSetNgcFile(KService * self, const char * path) {
 
 /* Set location of data in service request */
 rc_t KServiceSetLocation(KService * self, const char * location) {
-    assert(self && location);
+    if (self == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
+
+    if (location == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
 
     free(self->req.forced);
 
