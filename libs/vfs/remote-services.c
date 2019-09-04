@@ -2440,7 +2440,9 @@ static void SCgiRequestFini ( SCgiRequest * self ) {
     memset ( self, 0, sizeof * self );
 }
 
-static bool SRequestResponseFromEnv(const SRequest * self, KStream ** stream) {
+static
+bool SRequestResponseFromEnv(const SRequest * self, KStream ** stream)
+{
     const char * e = NULL;
 
     assert(self);
@@ -2899,6 +2901,9 @@ static rc_t SRequestFini ( SRequest * self ) {
     rc_t rc = SRequestReset ( self );
 
     assert ( self );
+
+    free(self->forced);
+    free(self->format);
 
     r2 = STicketsFini ( & self -> tickets );
     if ( rc == 0 )
