@@ -2451,14 +2451,23 @@ static void SCgiRequestFini ( SCgiRequest * self ) {
 static
 bool SRequestResponseFromEnv(const SRequest * self, KStream ** stream)
 {
+    const char * name = NULL;
     const char * e = NULL;
 
     assert(self);
 
-    if (!self->sdl || self->request.objects != 1)
+    if (!self->sdl)
         return false;
 
-    e = getenv(self->request.object->objectId);
+    if (self->request.objects == 1)
+        name = self->request.object->objectId;
+    else
+        name = self->jwtKartFile;
+
+    if (name == NULL)
+        return false;
+
+    e = getenv(name);
     if ( e != NULL ) {
         DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( 
             "XXXXX NOT sending HTTP POST request; get resp from env XXXX\n" ) );
@@ -4493,7 +4502,7 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
 
     assert ( self );
 
-    if ( self -> req . request. objects == 0 )
+    if ( self -> req . request. objects == 0 && self->req.jwtKartFile == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcString, rcInsufficient );
     else if ( self -> req . hasQuery
            || self -> req . serviceType == eSTsearch)
