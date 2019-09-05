@@ -28,6 +28,7 @@
 #include <cloud/manager.h> /* CloudMgrRelease */
 
 #include <kfs/directory.h> /* KDirectory */
+#include <kfs/file.h> /* KFileRead */
 
 #include <klib/container.h> /* BSTree */
 #include <klib/debug.h> /* DBGMSG */
@@ -2469,9 +2470,43 @@ bool SRequestResponseFromEnv(const SRequest * self, KStream ** stream)
 
     e = getenv(name);
     if ( e != NULL ) {
-        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( 
-            "XXXXX NOT sending HTTP POST request; get resp from env XXXX\n" ) );
-        return KStreamMakeFromBuffer ( stream, e, string_size ( e ) ) == 0;
+        KDirectory * dir = NULL;
+        const KFile * f = NULL;
+        uint64_t size = 0;
+        static char b[20000] = ""; /* static for KStreamMakeFromBuffer */
+        size_t num_read = string_size(e);
+        char * buffer = b;
+
+        rc_t rc = KDirectoryNativeDir(&dir);
+
+        if (rc == 0)
+            rc = KDirectoryOpenFileRead(dir, &f, "%s", e);
+
+        if (rc == 0)
+            rc = KFileSize(f, &size);
+
+        if (rc == 0 && size > sizeof b) {
+            buffer = calloc(1, size); /* leak */
+            if (buffer == NULL)
+                rc = RC(rcVFS, rcStorage, rcAllocating, rcMemory, rcExhausted);
+        }
+
+        if (rc == 0)
+            rc = KFileRead(f, 0, buffer, size, &num_read);
+
+        if (rc == 0) {
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), (
+              "XXXXX NOT sending HTTP POST request; env file -> resp  XXXX\n"));
+            e = buffer;
+        }
+        else
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), (
+              "XXXXX NOT sending HTTP POST request; get resp from env XXXX\n"));
+
+        RELEASE(KFile, f);
+        RELEASE(KDirectory, dir);
+
+        return KStreamMakeFromBuffer ( stream, e, num_read ) == 0;
     }
 
     return false;
