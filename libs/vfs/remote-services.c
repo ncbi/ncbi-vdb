@@ -3139,7 +3139,7 @@ static rc_t SRequestSetDisabled(SRequest * self, SHelper * helper) {
     return rc;
 }
 
-static rc_t SCgiRequestAddFile(SCgiRequest * self,
+static rc_t SRequestAddFile(SRequest * self,
     const char * key, const char * path)
 {
     KDirectory * dir = NULL;
@@ -3152,11 +3152,13 @@ static rc_t SCgiRequestAddFile(SCgiRequest * self,
             rc = RC(rcVFS, rcQuery, rcExecuting, rcFile, rcNotFound);
     }
 
-    if (rc == 0) {
+    if (rc == 0 && key != NULL && path != NULL) {
         assert(self);
 
-        self->fileKey = key;
-        self->fileVal = path;
+        self->cgiReq.fileKey = key;
+        self->cgiReq.fileVal = path;
+
+        self->hasQuery = true;
     }
 
     RELEASE(KDirectory, dir);
@@ -3461,10 +3463,10 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
         rc = SCgiRequestAddAcceptCharges(self, helper);
 
     if (rc == 0 && request->sdl && request->ngcFile != NULL)
-        rc = SCgiRequestAddFile(self, "ngc", request->ngcFile);
+        rc = SRequestAddFile(request, "ngc", request->ngcFile);
 
     if (rc == 0 && request->sdl && request->jwtKartFile != NULL)
-        rc = SCgiRequestAddFile(self, "cart", request->jwtKartFile);
+        rc = SRequestAddFile(request, "cart", request->jwtKartFile);
 
     return rc;
 }
