@@ -37,6 +37,10 @@
 #include <kns/manager.h>
 #include <kns/stream.h>
 
+#include <kfs/directory.h>
+#include <kfs/file.h>
+#include <kfs/mmap.h>
+
 #include "http-priv.h"
 #include "mgr-priv.h"
 
@@ -851,6 +855,154 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddQueryParam ( KClientHttpRequest *self, c
     return rc;
 }
 
+LIB_EXPORT rc_t CC KClientHttpRequestAddPostFileParam ( KClientHttpRequest * self, const char * name, const char * path )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+    {
+        rc = RC ( rcNS, rcNoTarg, rcValidating, rcSelf, rcNull );
+    }
+    else if ( name == NULL )
+    {
+        rc = RC ( rcNS, rcNoTarg, rcValidating, rcParam, rcNull );
+    }
+    else if ( path == NULL || path [ 0 ] == 0 )
+    {
+        rc = RC ( rcNS, rcNoTarg, rcValidating, rcParam, rcNull );
+    }
+    else
+    {
+        KDirectory *wd;
+        rc = KDirectoryNativeDir ( & wd );
+        if ( rc == 0 )
+        {
+            rc_t rc2;
+            const KFile * file = NULL;
+            rc = KDirectoryOpenFileRead( wd, & file, path);
+            if ( rc == 0 )
+            {
+                uint64_t fileSize;
+                rc = KFileSize( file, & fileSize );
+                if ( rc == 0 )
+                {
+                    KDataBuffer bodyText;
+                    /* this value will be preceded by "--" when inserted before and after the file's contents */
+                    char boundary[100];
+                    /*TODO: generate boundary string, make sure "--"boundary"--" does not occur in the file  */
+                    strcpy ( boundary, "0000000000000000");
+
+                    /* wrap file contents */
+                    rc = KDataBufferMakeBytes( & bodyText, 0 );
+                    if ( rc == 0 )
+                    {
+                        size_t contentLength;
+
+                        /* extract fileName from the path */
+                        const char * fileName = strrchr ( path, '/' );
+                        if ( fileName == NULL )
+                        {
+                            fileName = path;
+                        }
+                        else
+                        {
+                            ++ fileName;
+                        }
+
+                        contentLength = 108; /* the constant portion of the body */
+                        contentLength += strlen( boundary ) * 2;
+                        contentLength += strlen( name );
+                        contentLength += strlen( fileName );
+                        contentLength += fileSize;
+
+                        rc = KDataBufferPrintf( &bodyText,
+                                "--%s\r\n"
+                                "Content-Disposition: form-data; name=\"%s\"; filename=\"%s\"\r\n"
+                                "Content-Type: application/octet-stream\r\n"
+                                "\r\n",
+                                boundary,
+                                name,
+                                fileName );
+
+                        if ( rc == 0 && fileSize > 0 )
+                        {   /* append the file contents */
+                            const void * fileStart;
+                            const KMMap * mm;
+                            rc = KMMapMakeRead( & mm, file );
+                            if ( rc == 0 )
+                            {
+                                rc = KMMapAddrRead( mm, & fileStart );
+                            }
+
+                            size_t oldSize = bodyText.elem_count - 1; /* overwrite 0-terminator */
+                            rc = KDataBufferResize( & bodyText, oldSize + fileSize  + 1);
+                            if ( rc == 0 )
+                            {
+                                memmove( (char*)bodyText.base + oldSize, fileStart, fileSize );
+                                ((char*)bodyText.base) [ bodyText.elem_count - 1 ] = 0; /* for the subsequent KDataBufferPrintf */
+                            }
+                            rc2 = KMMapRelease( mm );
+                            if ( rc == 0 )
+                            {
+                                rc = rc2;
+                            }
+                        }
+
+                        if ( rc == 0 )
+                        {
+                            rc = KDataBufferPrintf( &bodyText,
+                                    "\r\n"
+                                    "--%s--\r\n",
+                                    boundary );
+                        }
+
+                        if ( rc == 0 )
+                        {   /* append bodyText to self->body */
+                            size_t origSize = self -> body . elem_count;
+                            /* origSize may include 0-terminator */
+                            if ( origSize > 0 && ((char*)self -> body . base) [ origSize - 1 ] == 0 )
+                            {
+                                -- origSize;
+                            }
+                            rc = KDataBufferResize ( & self -> body, origSize + bodyText . elem_count );
+                            if ( rc == 0 )
+                            {
+                                memmove( (char*)self -> body . base + origSize, bodyText . base, bodyText . elem_count );
+                            }
+                        }
+
+                        rc2 = KDataBufferWhack ( & bodyText );
+                        if ( rc == 0 )
+                        {
+                            rc = rc2;
+                        }
+
+                        /* set expected header */
+                        if ( rc == 0 )
+                        {
+                            rc = KClientHttpReplaceHeader ( & self -> hdrs,
+                                                            "Content-Type",
+                                                            "multipart/form-data; boundary=%s", boundary );
+                        }
+                    }
+                }
+
+
+                rc2 = KFileRelease( file );
+                if ( rc == 0 )
+                {
+                    rc = rc2;
+                }
+            }
+            rc2 = KDirectoryRelease( wd );
+            if ( rc == 0 )
+            {
+                rc = rc2;
+            }
+        }
+    }
+
+    return rc;
+}
 
 static EUriForm EUriFormGuess ( const String * hostname,
                                 uint32_t uriForm,
@@ -873,7 +1025,7 @@ static EUriForm EUriFormGuess ( const String * hostname,
         case 1:
             if ( uf != eUFUndefined )
                 return uf; /* reuse cached uriForm */
-            else { /* first call; guess uriForm by hostname */
+            else { /* first call; guess uriForm by hostnae */
                 String googleapis;
                 CONST_STRING ( & googleapis, "storage.googleapis.com" );
                 if ( StringEqual ( & googleapis, hostname ) )
@@ -1806,3 +1958,4 @@ LIB_EXPORT rc_t CC KClientHttpRequestPOST ( KClientHttpRequest *self, KClientHtt
 
     return rc;
 }
+
