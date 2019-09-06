@@ -88,7 +88,8 @@ static char const *envCE()
     char const *const env = firstTime ? getenv(ENV_MAGIC_CE_TOKEN) : NULL;
     firstTime = false;
     if (env != NULL)
-        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("Got location from environment"));
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+               ("Got location from environment\n"));
     return env;
 }
 
@@ -101,7 +102,8 @@ static rc_t readCE(AWS const *const self, size_t size, char location[])
     char pkcs7[4096] = "";
     rc_t rc;
     
-    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("Reading location from provider"));
+    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+           ("Reading location from provider\n"));
     rc = KNSManager_Read(self->dad.kns, document, sizeof document,
                  "http://169.254.169.254/latest/dynamic/instance-identity/document",
                  NULL, NULL);

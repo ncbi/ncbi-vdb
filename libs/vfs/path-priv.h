@@ -136,6 +136,8 @@ struct VPath
     bool       payRequired;
 
     const String * accOfParentDb; /* for refseqs */
+
+    bool magic; /* was created from magic env.var. */
 };
 
 enum VPathVariant
@@ -207,6 +209,9 @@ rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
     bool ceRequired, bool payRequired, const char * name );
 
 rc_t VPathAttachVdbcache(VPath * self, const VPath * vdbcache);
+
+rc_t VPathSetId(VPath * self, const String * id);
+rc_t VPathSetMagic(VPath * self, bool magic);
 
 /* Equal
  *  compares two VPath-s
