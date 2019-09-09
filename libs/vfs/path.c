@@ -2098,6 +2098,8 @@ rc_t VPathMakeFromVText ( VPath ** ppath, const char * path_fmt, va_list args )
             rc = VPathParse ( path, buffer . base, ( size_t ) buffer . elem_count - 1 );
             if ( rc == 0 )
             {
+                path->projectId = -1; /* public by default; 0 is valid id */
+
                 KRefcountInit ( & path -> refcount, 1, "VPath", "make-from-text", buffer . base );
                 * ppath = path;
                 return 0;
@@ -3938,6 +3940,9 @@ LIB_EXPORT rc_t CC VPathOption ( const VPath * self, VPOption_t option,
         case vpopt_gap_ticket: 
             param1 = "tic";
             break;
+        case vpopt_gap_prjId:
+            param1 = "pId";
+            break;
         default:
             return RC ( rcVFS, rcPath, rcReading, rcToken, rcUnrecognized );
         }
@@ -3974,7 +3979,7 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
     const String * tick, uint64_t osize, KTime_t date, const uint8_t md5 [ 16 ],
     KTime_t exp_date, const char * service, const String * objectType,
     const String * type, bool ceRequired, bool payRequired, const char * name,
-    const char * fmt, va_list args )
+    int64_t projectId, const char * fmt, va_list args )
 {
     rc_t rc;
 
@@ -4003,6 +4008,7 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
 
                 path -> ext = ext;
                 path -> osize = osize;
+                path -> projectId = projectId;
                 path -> modification = date;
                 path -> expiration = exp_date;
 
@@ -4115,7 +4121,7 @@ rc_t VPathMakeFmtExt ( VPath ** new_path, bool ext, const String * id,
 	const String * tick, uint64_t osize, KTime_t date, const uint8_t md5 [ 16 ],
 	KTime_t exp_date, const char * service, const String * objectType,
     const String * type, bool ceRequired, bool payRequired, const char * name,
-    const char * fmt, ... )
+    int64_t projectId, const char * fmt, ... )
 {
     EVPathType t = ext ? eVPext : eVPWithId; 
     rc_t rc;
@@ -4124,7 +4130,8 @@ rc_t VPathMakeFmtExt ( VPath ** new_path, bool ext, const String * id,
     va_start ( args, fmt );
 
     rc = VPathMakeVFmtExt ( t, new_path, id, tick, osize, date, md5, exp_date,
-        service, objectType, type, ceRequired, payRequired, name, fmt, args );
+        service, objectType, type, ceRequired, payRequired, name, projectId,
+        fmt, args );
 
     va_end ( args );
 
@@ -4135,12 +4142,13 @@ rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
     const String * tick, bool ext, const String * id, uint64_t osize,
     KTime_t date, const uint8_t md5 [ 16 ], KTime_t exp_date,
     const char * service, const String * objectType, const String * type,
-    bool ceRequired, bool payRequired, const char * name )
+    bool ceRequired, bool payRequired,
+    const char * name, int64_t projectId )
 {
     if ( tick == NULL || tick -> addr == NULL || tick -> size == 0 )
         return VPathMakeFmtExt ( new_path, ext, id, tick, osize, date, md5,
 		    exp_date, service, objectType, type, ceRequired, payRequired, name,
-            "%S", url );
+            projectId, "%S", url );
     else {
         const char * fmt = NULL;
         assert(url);
@@ -4150,14 +4158,14 @@ rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
             fmt = "%S&tic=%S";
         return VPathMakeFmtExt(new_path, ext, id, tick, osize, date, md5,
             exp_date, service, objectType, type, ceRequired, payRequired, name,
-            fmt, url, tick);
+            projectId, fmt, url, tick);
     }
 }
 
 rc_t LegacyVPathMakeVFmt ( VPath ** new_path, const char * fmt, va_list args )
 {
     return VPathMakeVFmtExt ( false, new_path, NULL, NULL, 0, 0, NULL, 0,
-        NULL, NULL, NULL, false, false, NULL, fmt, args );
+        NULL, NULL, NULL, false, false, NULL, -1, fmt, args );
 }
 
 rc_t VPathAttachVdbcache(VPath * self, const VPath * vdbcache) {
@@ -4243,6 +4251,22 @@ VPUri_t LegacyVPathGetUri_t ( const VPath * self )
     VPUri_t uri_type;
     LegacyVPathGetScheme_t ( self, & uri_type );
     return uri_type;
+}
+
+bool VPathGetProjectId(const VPath * self, uint32_t * projectId) {
+    uint32_t dummy = 0;
+    if (projectId == NULL)
+        projectId = &dummy;
+
+    assert(self);
+
+    *projectId = 0;
+
+    if (self->projectId < 0)
+        return false;
+
+    *projectId = self->projectId;
+    return true;
 }
 
 rc_t VPathClose ( const VPath * l, const VPath * r, int * notequal,

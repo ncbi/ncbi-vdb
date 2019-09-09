@@ -59,6 +59,8 @@ typedef struct Data {
     const char * bundle;
     int64_t      code; /* status/code */
     EState       ceRequired;
+    int64_t      encryptedForProjectId;
+    const char * sEncryptedForProjectId;
     int64_t      exp;  /* expDate */
     const char * fmt;  /* format */
     EState       qual; /* hasOrigQuality */
@@ -107,6 +109,7 @@ void ItemLogAdd(const Item * self);
 void FileLogAddedLink(const struct File * self, const char * url);
 rc_t FileAddVPath(struct File * self, const struct VPath * path,
     const struct VPath * mapping, bool setHttp, uint64_t osize);
+rc_t ItemInitMapping(Item * self);
 rc_t Response4GetKSrvRespObjCount ( const Response4 * self, uint32_t * n );
 rc_t Response4GetKSrvRespObjByIdx ( const Response4 * self, uint32_t i,
                                     const struct KSrvRespObj ** box );

@@ -41,11 +41,13 @@ extern "C" {
 
 struct KSrvRespObj;
 struct KNSManager;
+struct KRepositoryMgr;
 struct KService;
 struct KSrvRespFile;
 struct KSrvResponse;
 struct Locations;
 struct Response4;
+struct VPath;
 struct VPathSet;
 
 #define VERSION_3_0 0x03000000
@@ -79,15 +81,14 @@ rc_t KSrvResponseGetIds ( const struct KSrvResponse * self, uint32_t idx,
                           const char ** reqId, const char ** respId );
 
 rc_t KSrvResponseGetMapping(const KSrvResponse * self, uint32_t idx,
-                            const struct VPath ** mapping);
+        const struct VPath ** mapping, const struct VPath ** vdbcacheMapping);
 
 rc_t KSrvResponseGetOSize(const KSrvResponse * self, uint32_t idx,
     uint64_t * osize);
 
 rc_t KSrvResponseGetR4 ( const struct KSrvResponse * self,
                          struct Response4 ** r );
-rc_t KSrvResponseSetR4 ( struct KSrvResponse * self,
-                         const struct Response4 * r );
+rc_t KSrvResponseSetR4 ( struct KSrvResponse * self, struct Response4 * r );
 
 rc_t KSrvRespFileAddLocalAndCache ( struct KSrvRespFile * file,
                                     const struct VPathSet * localAndCache );
@@ -130,6 +131,9 @@ rc_t KServiceGetConfig ( struct KService * self, const struct KConfig ** kfg);
 rc_t KServiceGetResolver ( struct KService * self, const String * ticket,
                            VResolver ** resolver );
 int KServiceGetResolveName ( const struct KService * self );
+
+/* don't release returned mgr */
+rc_t KServiceGetRepoMgr(KService * self, const struct KRepositoryMgr ** mgr);
 /******************************** TESTS ********************************/
 typedef struct {
     const char * id;

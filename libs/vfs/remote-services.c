@@ -477,6 +477,20 @@ static rc_t SHelperInitRepoMgr ( SHelper * self ) {
     return rc;
 }
 
+rc_t KServiceGetRepoMgr(KService * self, const KRepositoryMgr ** mgr) {
+    rc_t rc = 0;
+
+    assert(mgr && self);
+
+    *mgr = NULL;
+
+    rc = SHelperInitRepoMgr(&self->helper);
+
+    if (rc == 0)
+        *mgr = self->helper.repoMgr;
+
+    return rc;
+}
 
 /* get from kfg, otherwise use hardcoded */
 static VRemoteProtocols SHelperDefaultProtocols ( SHelper * self ) {
@@ -1711,7 +1725,7 @@ static bool VPathMakeOrNot ( VPath ** new_path, const String * src,
             useDates ? typed -> date : 0,
             typed -> md5 . has_md5 ? typed -> md5 . md5 : NULL,
             useDates ? typed -> expiration : 0, NULL, NULL, NULL,
-            false, false, NULL );
+            false, false, NULL, -1 );
         if ( * rc == 0 )
             VPathMarkHighReliability ( * new_path, true );
 
@@ -1719,73 +1733,99 @@ static bool VPathMakeOrNot ( VPath ** new_path, const String * src,
     }
 }
 
+static rc_t STypedMakeMapping(const STyped * self,
+    const SVersion version, bool isVdbcache, VPath ** mapping)
+{
+    rc_t rc = 0;
+
+    String empty;
+    String vdbcache;
+    memset(&empty, 0, sizeof empty);
+    CONST_STRING(&vdbcache, ".vdbcache");
+
+    assert(self);
+
+    if (SVersionBefore3_0(version)) {
+        if (self->ticket.size != 0) {
+            if (self->accession.size != 0)
+                rc = VPathMakeFmt(mapping, "ncbi-acc:%S?tic=%S",
+                    &self->accession, &self->ticket);
+            else if (self->name.size == 0)
+                return 0;
+            else
+                rc = VPathMakeFmt(mapping,
+                    "ncbi-file:%S?tic=%S", &self->name, &self->ticket);
+        }
+        else if (self->accession.size != 0)
+            rc = VPathMakeFmt(mapping, "ncbi-acc:%S%S", &self->accession,
+                isVdbcache ? &vdbcache : &empty);
+        else if (self->name.size == 0)
+            return 0;
+        else
+            rc = VPathMakeFmt(mapping, "ncbi-file:%S%S", &self->name,
+                isVdbcache ? &vdbcache : &empty);
+    }
+    else {
+        if (self->ticket.size != 0) {
+            if (self->objectId.size != 0 &&
+                self->objectType == eOT_sragap)
+            {
+                rc = VPathMakeFmt(mapping, "ncbi-acc:%S%S?tic=%S",
+                    &self->objectId,
+                    isVdbcache ? &vdbcache : &empty,
+                    &self->ticket);
+            }
+            else {
+                if (self->objectId.size == 0)
+                    return 0;
+                else
+                    rc = VPathMakeFmt(mapping, "ncbi-file:%S%S?tic=%S",
+                        &self->objectId,
+                        isVdbcache ? &vdbcache : &empty,
+                        &self->ticket);
+            }
+        }
+        else
+            if (self->objectId.size != 0 && self->objectType == eOT_sragap)
+                rc = VPathMakeFmt(mapping, "ncbi-acc:%S%S", &self->objectId,
+                    isVdbcache ? &vdbcache : &empty);
+            else {
+                if (self->objectId.size == 0)
+                    return 0;
+                else
+                    rc = VPathMakeFmt(mapping, "ncbi-file:%S%S",
+                        &self->objectId,
+                        isVdbcache ? &vdbcache : &empty);
+            }
+    }
+
+    return rc;
+}
 
 static rc_t EVPathInitMapping
     ( EVPath * self, const STyped * src, const SVersion  version )
 {
     rc_t rc = 0;
+
     const VPath * vsrc = NULL;
+
     assert ( self && src );
+
     if ( self -> https == NULL && self -> http == NULL && self -> fasp == NULL )
         return 0;
+
     vsrc = self -> http ? self -> http 
         : ( self -> https ? self -> https : self -> fasp );
     rc = VPathCheckFromNamesCGI ( vsrc, & src -> ticket,
         ( const struct VPath ** ) ( & self -> mapping ) );
+
     if ( rc == 0) {
-        if ( SVersionBefore3_0 ( version ) ) {
-            if ( src -> ticket . size != 0 ) {
-                if ( src -> accession . size != 0 )
-                    rc = VPathMakeFmt ( & self -> mapping, "ncbi-acc:%S?tic=%S",
-                        & src -> accession, & src -> ticket );
-                else if ( src -> name . size == 0 )
-                    return 0;
-                else
-                    rc = VPathMakeFmt ( & self -> mapping,
-                        "ncbi-file:%S?tic=%S", & src -> name, & src -> ticket );
-            }
-            else if ( src -> accession . size != 0 )
-                rc = VPathMakeFmt
-                    ( & self -> mapping, "ncbi-acc:%S", & src -> accession );
-            else if ( src -> name . size == 0 )
-                return 0;
-            else
-                rc = VPathMakeFmt
-                    ( & self -> mapping, "ncbi-file:%S", & src -> name );
-        }
-        else {
-            if ( src -> ticket . size != 0 ) {
-                if ( src -> objectId . size != 0 &&
-                     src -> objectType == eOT_sragap )
-                {
-                    rc = VPathMakeFmt ( & self -> mapping, "ncbi-acc:%S?tic=%S",
-                        & src -> objectId, & src -> ticket );
-                }
-                else {
-                    if ( src -> objectId . size == 0) {
-                        return 0;
-                    }
-                    else {
-                        rc = VPathMakeFmt ( & self -> mapping,
-                            "ncbi-file:%S?tic=%S",
-                            & src -> objectId, & src -> ticket );
-                    }
-                }
-            }
-            else
-            if ( src -> objectId . size != 0 &&
-                 src -> objectType == eOT_sragap )
-            {
-                rc = VPathMakeFmt
-                    ( & self -> mapping, "ncbi-acc:%S", & src -> objectId );
-            }
-            else {
-                if ( src -> objectId . size == 0 )
-                    return 0;
-                else
-                    rc = VPathMakeFmt (
-                        & self -> mapping, "ncbi-file:%S", & src -> objectId );
-            }
+        rc = STypedMakeMapping(src, version, false, &self->mapping);
+
+        if (rc == 0 && (self->vcHttps != NULL || self->vcHttp != NULL ||
+            self->vcFasp != NULL))
+        {
+            rc = STypedMakeMapping(src, version, true, &self->vcMapping);
         }
 
         if ( rc == 0 )
@@ -1960,6 +2000,7 @@ static rc_t EVPathFini ( EVPath * self ) {
     assert ( self );
 
     RELEASE ( VPath, self -> mapping );
+    RELEASE ( VPath, self ->vcMapping);
     RELEASE ( VPath, self ->   http  );
     RELEASE ( VPath, self ->   fasp  );
     RELEASE ( VPath, self ->   https );
@@ -4589,6 +4630,8 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                 VRemoteProtocols pp[]
                     = { eProtocolHttp, eProtocolFasp, eProtocolHttps };
                 uint32_t p = 0;
+                const VPath * mapping = NULL;
+                const VPath * vdbcacheMapping = NULL;
                 rc = KSrvResponseGetIds(self->resp.list, i, &reqId,
                     &respId);
                 if (rc == 0)
@@ -4597,16 +4640,16 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                     ContainerAdd(box, respId, -1, &file, NULL);
                 if (rc != 0)
                     break;
+                if (rc == 0)
+                    rc = KSrvResponseGetMapping(
+                        self->resp.list, i, &mapping, &vdbcacheMapping);
                 for (p = 0; rc == 0 && p < sizeof pp / sizeof pp[0]; ++p) {
                     const VPath * path = NULL;
                     const VPath * vdbcache = NULL;
                     const KSrvError * error = NULL;
-                    const VPath * mapping = NULL;
                     uint64_t osize = 0;
                     rc = KSrvResponseGetPath(self->resp.list, i, pp[p],
                         &path, &vdbcache, &error);
-                    if (rc == 0)
-                        rc = KSrvResponseGetMapping(self->resp.list, i, &mapping);
                     if (rc == 0)
                         rc = KSrvResponseGetOSize(self->resp.list, i, &osize);
                     if (rc == 0) {
@@ -4618,21 +4661,23 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                             if (r == 0)
                                 rc = ItemSetTicket(file, &ticket);
                             if (rc == 0)
-                                rc = ItemAddVPath(file, "sra", path, mapping,
-                                    true, osize);
+                                rc = ItemAddVPath(file, "sra", path,
+                                    mapping, true, osize);
                             RELEASE(VPath, path);
                             if (rc != 0)
                                 break;
                         }
                         if (vdbcache != NULL) {
-                            rc = ItemAddVPath(file, "vdbcache", vdbcache, NULL,
-                                true, 0);
+                            rc = ItemAddVPath(file, "vdbcache", vdbcache,
+                                vdbcacheMapping, true, 0);
                             RELEASE(VPath, vdbcache);
                             if (rc != 0)
                                 break;
                         }
                     }
                 }
+                RELEASE(VPath, mapping);
+                RELEASE(VPath, vdbcacheMapping);
             }
         }
     }

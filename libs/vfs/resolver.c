@@ -1254,7 +1254,8 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
                     id = & obj_id;
                 rc = VPathMakeFromUrl ( ( VPath** ) path, & url,
                     & download_ticket, true, id, osize, date,
-                    has_md5 ? ud5 : NULL, 0, NULL, NULL, NULL, false, false, NULL );
+                    has_md5 ? ud5 : NULL, 0, NULL, NULL, NULL, false, false,
+                    NULL, -1 );
             }
             /*else
             {
@@ -3309,7 +3310,13 @@ bool VPathHasDownloadTicket ( const VPath * url )
 {
     size_t num_read;
     char option [ 64 ];
+
     rc_t rc = VPathOption ( url, vpopt_gap_ticket, option, sizeof option, & num_read );
+
+    if (rc != 0)
+        rc = VPathOption(url, vpopt_gap_prjId, option, sizeof option,
+            &num_read);
+
     return rc == 0;
 }
 
@@ -3375,6 +3382,7 @@ rc_t VPathExtractAcc ( const VPath * url, VPath ** acc )
         if ( ap -> acc_code == 0 || ap -> path_type != vpAccession )
             CONST_STRING ( & ap -> scheme, "ncbi-file" );
 
+        ap->projectId = url->projectId;
         rc = VPathSetAccOfParentDb(ap, url->accOfParentDb);
     }
 
@@ -3510,6 +3518,10 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
         if (dir != NULL)    /* out-dir is provided */
             useAd = true;   /* [when prefetch downloads to out-dir]
                                 - use AD, too */
+        if (!protected && VPathGetProjectId(query, NULL)) {
+            useAd = true;     /* resolving protected URL returned by SDL */
+            useCache = false; /* here resolve only to AD, not to cache */
+        }
 
         /* we don't use user cache but AD
            when we can use AD and: */
@@ -3591,6 +3603,10 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
         assert ( alg );
         rc = VResolverAlgMakeCachePath ( alg, & tok, cache, legacy_wgs_refseq,
             ad ? self -> wd : NULL );
+        assert(cache);
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("VResolverCacheResolve: "
+            "cache location of '%S' resolved to '%S' with %R\n",
+            &query->path, &(*cache)->path, rc));
     }
 
     return rc;
