@@ -758,7 +758,8 @@ rc_t VResolverAlgLocalFile ( const VResolverAlg *self,
     return RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
 }
 
-rc_t VPathCheckFromNamesCGI ( const VPath * path, const String *ticket, const VPath ** mapping )
+rc_t VPathCheckFromNamesCGI ( const VPath * path,
+    const String *ticket, int64_t projectId, const VPath ** mapping )
 {
     size_t i, size;
     const char * start;
@@ -861,13 +862,33 @@ rc_t VPathCheckFromNamesCGI ( const VPath * path, const String *ticket, const VP
 
             StringSubstr(&path->query, &name, 0, 5);
             StringSubstr(&path->query, &val, 5, 0);
-            if (!StringEqual(&val, ticket))
-                return RC(rcVFS, rcResolver, rcResolving,
-                    rcMessage, rcCorrupt);
+
             CONST_STRING(&req, "?tic=");
-            if (!StringEqual(&name, &req))
-                return RC(rcVFS, rcResolver, rcResolving,
-                    rcMessage, rcCorrupt);
+            if (StringEqual(&name, &req)) {
+                if (!StringEqual(&val, ticket))
+                    return RC(rcVFS, rcResolver, rcResolving,
+                        rcMessage, rcCorrupt);
+            }
+            else {
+                CONST_STRING(&req, "?pId=");
+                if (!StringEqual(&name, &req))
+                    return RC(rcVFS, rcResolver, rcResolving,
+                        rcMessage, rcCorrupt);
+                else if (projectId < 0)
+                    return RC(rcVFS, rcResolver, rcResolving,
+                        rcMessage, rcCorrupt);
+                else {
+                    String s;
+                    char b[256] = "";
+                    rc_t rc = string_printf(b, sizeof b, NULL, "%d", projectId);
+                    if (rc != 0)
+                        return rc;
+                    StringInitCString(&s, b);
+                    if (!StringEqual(&val, &s))
+                        return RC(rcVFS, rcResolver, rcResolving,
+                            rcMessage, rcCorrupt);
+                }
+            }
         }
     }
 
@@ -990,7 +1011,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_0 ( const char *start, size_t size,
 
             if ( rc == 0 )
             {
-                rc = VPathCheckFromNamesCGI ( * path, ticket, NULL );
+                rc = VPathCheckFromNamesCGI ( * path, ticket, -1, NULL );
                 if ( rc == 0 )
                     return 0;
 
@@ -1255,7 +1276,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
                 rc = VPathMakeFromUrl ( ( VPath** ) path, & url,
                     & download_ticket, true, id, osize, date,
                     has_md5 ? ud5 : NULL, 0, NULL, NULL, NULL, false, false,
-                    NULL, -1 );
+                    NULL, -1, 0 );
             }
             /*else
             {
@@ -1266,7 +1287,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
 
             if ( rc == 0 )
             {
-                rc = VPathCheckFromNamesCGI ( * path, ticket, mapping );
+                rc = VPathCheckFromNamesCGI ( * path, ticket, -1, mapping );
                 if ( rc == 0 )
                 {
                     if ( mapping == NULL )

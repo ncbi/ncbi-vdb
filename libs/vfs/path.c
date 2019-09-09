@@ -3979,7 +3979,7 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
     const String * tick, uint64_t osize, KTime_t date, const uint8_t md5 [ 16 ],
     KTime_t exp_date, const char * service, const String * objectType,
     const String * type, bool ceRequired, bool payRequired, const char * name,
-    int64_t projectId, const char * fmt, va_list args )
+    int64_t projectId, uint32_t version, const char * fmt, va_list args )
 {
     rc_t rc;
 
@@ -4009,6 +4009,7 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
                 path -> ext = ext;
                 path -> osize = osize;
                 path -> projectId = projectId;
+                path -> version = version;
                 path -> modification = date;
                 path -> expiration = exp_date;
 
@@ -4121,7 +4122,7 @@ rc_t VPathMakeFmtExt ( VPath ** new_path, bool ext, const String * id,
 	const String * tick, uint64_t osize, KTime_t date, const uint8_t md5 [ 16 ],
 	KTime_t exp_date, const char * service, const String * objectType,
     const String * type, bool ceRequired, bool payRequired, const char * name,
-    int64_t projectId, const char * fmt, ... )
+    int64_t projectId, uint32_t version, const char * fmt, ... )
 {
     EVPathType t = ext ? eVPext : eVPWithId; 
     rc_t rc;
@@ -4131,7 +4132,7 @@ rc_t VPathMakeFmtExt ( VPath ** new_path, bool ext, const String * id,
 
     rc = VPathMakeVFmtExt ( t, new_path, id, tick, osize, date, md5, exp_date,
         service, objectType, type, ceRequired, payRequired, name, projectId,
-        fmt, args );
+        version, fmt, args );
 
     va_end ( args );
 
@@ -4142,14 +4143,10 @@ rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
     const String * tick, bool ext, const String * id, uint64_t osize,
     KTime_t date, const uint8_t md5 [ 16 ], KTime_t exp_date,
     const char * service, const String * objectType, const String * type,
-    bool ceRequired, bool payRequired,
-    const char * name, int64_t projectId )
+    bool ceRequired, bool payRequired, const char * name,
+    int64_t projectId, uint32_t version)
 {
-    if ( tick == NULL || tick -> addr == NULL || tick -> size == 0 )
-        return VPathMakeFmtExt ( new_path, ext, id, tick, osize, date, md5,
-		    exp_date, service, objectType, type, ceRequired, payRequired, name,
-            projectId, "%S", url );
-    else {
+    if ( tick != NULL && tick -> addr != NULL && tick -> size != 0 ) {
         const char * fmt = NULL;
         assert(url);
         if (string_chr(url->addr, url->size, '?') == NULL)
@@ -4158,14 +4155,29 @@ rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
             fmt = "%S&tic=%S";
         return VPathMakeFmtExt(new_path, ext, id, tick, osize, date, md5,
             exp_date, service, objectType, type, ceRequired, payRequired, name,
-            projectId, fmt, url, tick);
+            projectId, version, fmt, url, tick);
     }
+    else if (projectId >= 0) {
+        const char * fmt = NULL;
+        assert(url);
+        if (string_chr(url->addr, url->size, '?') == NULL)
+            fmt = "%S?pId=%d";
+        else
+            fmt = "%S&pId=%d";
+        return VPathMakeFmtExt(new_path, ext, id, tick, osize, date, md5,
+            exp_date, service, objectType, type, ceRequired, payRequired, name,
+            projectId, version, fmt, url, projectId);
+    }
+    else
+        return VPathMakeFmtExt ( new_path, ext, id, tick, osize, date, md5,
+		    exp_date, service, objectType, type, ceRequired, payRequired, name,
+            projectId, version, "%S", url );
 }
 
 rc_t LegacyVPathMakeVFmt ( VPath ** new_path, const char * fmt, va_list args )
 {
     return VPathMakeVFmtExt ( false, new_path, NULL, NULL, 0, 0, NULL, 0,
-        NULL, NULL, NULL, false, false, NULL, -1, fmt, args );
+        NULL, NULL, NULL, false, false, NULL, -1, 0, fmt, args );
 }
 
 rc_t VPathAttachVdbcache(VPath * self, const VPath * vdbcache) {

@@ -144,8 +144,10 @@ struct String;
 struct VResolverAccToken;
 struct VResolverAlg;
 
+
 rc_t VPathCheckFromNamesCGI(const struct VPath *path,
-    const struct String *ticket, const struct VPath **mapping);
+    const struct String *ticket, int64_t projectId,
+    const struct VPath **mapping);
 
 
 /*--------------------------------------------------------------------------

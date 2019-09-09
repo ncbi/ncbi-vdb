@@ -277,7 +277,7 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
 
             rc = VPathMakeFromUrl(&path, &url, NULL, true, &id, ldata.sz,
                 mod, hasMd5 ? md5 : NULL, 0, ldata.srv, &objectType, &type,
-                ceRequired, payRequired, ldata.name, projectId);
+                ceRequired, payRequired, ldata.name, projectId, 128);
 
             if (rc == 0)
                 VPathMarkHighReliability(path, true);

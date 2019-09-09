@@ -1449,7 +1449,7 @@ static rc_t FileAddLink ( File * self, const KJsonValue * node,
         const String * objectType = NULL;
         rc = VPathMakeFromUrl ( & path, & url, NULL, true, & acc, dad -> sz,
             dad -> mod, hasMd5 ? md5 : NULL, 0, dad -> srv, objectType, NULL,
-            false, false, NULL, -1 );
+            false, false, NULL, -1, 0 );
     }
     else {
         const String * objectType = NULL;
@@ -1457,7 +1457,7 @@ static rc_t FileAddLink ( File * self, const KJsonValue * node,
         StringInitCString ( & ticket, dad -> tic );
         rc = VPathMakeFromUrl ( & path, & url, & ticket, true, & acc, dad -> sz,
             dad -> mod, hasMd5 ? md5 : NULL, 0, dad -> srv, objectType, NULL,
-            false, false, NULL, -1 );
+            false, false, NULL, -1, 0 );
     }
 
     if ( rc == 0 )
@@ -1660,7 +1660,7 @@ static rc_t FileInitMapping ( File * self, const Item * item ) {
     if ( item -> tic != NULL )
         StringInitCString ( & ticket, item -> tic );
 
-    rc = VPathCheckFromNamesCGI ( path, & ticket, NULL );
+    rc = VPathCheckFromNamesCGI ( path, & ticket, projectId, NULL );
 
     if ( rc == 0 ) {
         const char * name = ItemOrLocationGetName(item, self);

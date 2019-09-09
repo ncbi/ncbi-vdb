@@ -645,9 +645,12 @@ static rc_t SVersionInit(SVersion * self, bool * sdl, const char * src,
     rc = SVersionInitFromStr(self, sdl, s);
 
     if (rc == 0 && request != NULL
-        && VectorLength(&request->tickets.tickets) > 0 && sdl != NULL && *sdl)
-    {   /* use version 3 when getting dbGaP data */
-        /* rc = SVersionInitFromStr(self, sdl, "3") */; 
+        && VectorLength(&request->tickets.tickets) > 0 && sdl != NULL && *sdl
+        && request->request.objects > 0
+        && request->request.object->objectId != NULL
+        && isdigit(request->request.object->objectId[0]) )
+    {   /* use version 3 when getting numeric dbGaP data (objectIds) */
+        rc = SVersionInitFromStr(self, sdl, "3");
     }
 
     free(result);
@@ -1725,7 +1728,7 @@ static bool VPathMakeOrNot ( VPath ** new_path, const String * src,
             useDates ? typed -> date : 0,
             typed -> md5 . has_md5 ? typed -> md5 . md5 : NULL,
             useDates ? typed -> expiration : 0, NULL, NULL, NULL,
-            false, false, NULL, -1 );
+            false, false, NULL, -1, 0 );
         if ( * rc == 0 )
             VPathMarkHighReliability ( * new_path, true );
 
@@ -1816,7 +1819,7 @@ static rc_t EVPathInitMapping
 
     vsrc = self -> http ? self -> http 
         : ( self -> https ? self -> https : self -> fasp );
-    rc = VPathCheckFromNamesCGI ( vsrc, & src -> ticket,
+    rc = VPathCheckFromNamesCGI ( vsrc, & src -> ticket, -1,
         ( const struct VPath ** ) ( & self -> mapping ) );
 
     if ( rc == 0) {

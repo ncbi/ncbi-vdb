@@ -143,6 +143,9 @@ struct VPath
     const String * accOfParentDb; /* for refseqs */
 
     bool magic; /* was created from magic env.var. */
+
+    /* version of names service returned this VPath: 3.0 or SDL ... */
+    uint32_t version; 
 };
 
 enum VPathVariant
@@ -213,12 +216,15 @@ bool VPathGetProjectId(const VPath * self, uint32_t * projectId);
  *  <0  : pubkic URL
  *  >=0 : protected URL
  *      N.B. 0 is a valid protected project Id
+ *
+ * version: version of names service that returned this URL
  */
 rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
     const String * tick, bool ext, const String * id, uint64_t osize,
     KTime_t date, const uint8_t md5 [ 16 ], KTime_t exp_date,
     const char * service, const String * objectType, const String * type,
-    bool ceRequired, bool payRequired, const char * name, int64_t projectId );
+    bool ceRequired, bool payRequired, const char * name,
+    int64_t projectId, uint32_t version );
 
 rc_t VPathAttachVdbcache(VPath * self, const VPath * vdbcache);
 
