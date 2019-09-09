@@ -34,6 +34,8 @@
 #include <kns/manager.h>
 #include <kns/kns-mgr-priv.h>
 
+#include <../libs/kns/http-priv.h>
+
 #include <kapp/args.h> // Args
 
 #include <ktst/unit_test.hpp>
@@ -46,9 +48,35 @@ using namespace ncbi::NK;
 
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
 
-FIXTURE_TEST_CASE(HttpRequest_POST_NoParams, HttpFixture)
+class HttpRequestFixture : public HttpFixture
+{
+public:
+    void MakeRequest(const char * p_urlBase)
+    {
+        m_url = MakeURL( p_urlBase );
+        if ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, m_url.c_str() ) != 0 )
+        {
+            throw logic_error( "HttpRequestFixture::MakeRequest(): KNSManagerMakeClientRequest() failed" );
+        }
+    }
+
+    string FormatRequest()
+    {
+        char buffer[4096] = "";
+        size_t len;
+        if ( KClientHttpRequestFormatPostMsg(m_req, buffer, sizeof buffer, & len) != 0 )
+        {
+            throw logic_error( "HttpRequestFixture::FormatRequest(): KClientHttpRequestFormatPostMsg() failed" );
+        }
+        return string ( buffer, len );
+    }
+
+    string m_url;
+};
+
+FIXTURE_TEST_CASE(HttpRequest_POST_NoParams, HttpRequestFixture)
 {   // Bug: KClientHttpRequestPOST crashed if request had no parameters
-    REQUIRE_RC ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, MakeURL(GetName()).c_str() ) );
+    MakeRequest( GetName() );
 
     KClientHttpResult *rslt;
     TestStream::AddResponse("HTTP/1.1 200 OK\r\n");
@@ -64,7 +92,6 @@ public:
     HttpRequestTest( TestCase * dad, KClientHttpRequest * req, string expectedUrl )
     : SharedTest ( dad, "" )
     {
-        string url = GetName();
         KDataBuffer rslt;
         REQUIRE_RC ( KDataBufferMakeBytes( & rslt, 0 ) );
         REQUIRE_RC ( KClientHttpRequestURL ( req, & rslt ) );
@@ -74,69 +101,190 @@ public:
     }
 };
 
-FIXTURE_TEST_CASE(HttpRequestAddQueryParam_SelfNull, HttpFixture)
+FIXTURE_TEST_CASE(HttpRequestAddQueryParam_SelfNull, HttpRequestFixture)
 {
-    REQUIRE_RC ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, MakeURL(GetName()).c_str() ) );
+    MakeRequest( GetName() );
     REQUIRE_RC_FAIL ( KClientHttpRequestAddQueryParam ( NULL, "name", "fmt" ) );
 }
-FIXTURE_TEST_CASE(HttpRequestAddQueryParam_FmtNull, HttpFixture)
+FIXTURE_TEST_CASE(HttpRequestAddQueryParam_FmtNull, HttpRequestFixture)
 {
-    REQUIRE_RC ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, MakeURL(GetName()).c_str() ) );
+    MakeRequest( GetName() );
     REQUIRE_RC_FAIL ( KClientHttpRequestAddQueryParam ( m_req, "name", NULL ) );
 }
-FIXTURE_TEST_CASE(HttpRequestAddQueryParam_FmtEmpty, HttpFixture)
+FIXTURE_TEST_CASE(HttpRequestAddQueryParam_FmtEmpty, HttpRequestFixture)
 {
-    REQUIRE_RC ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, MakeURL(GetName()).c_str() ) );
+    MakeRequest( GetName() );
     REQUIRE_RC_FAIL ( KClientHttpRequestAddQueryParam ( m_req, "name", "" ) );
 }
-FIXTURE_TEST_CASE(HttpRequestAddQueryParam_First, HttpFixture)
+FIXTURE_TEST_CASE(HttpRequestAddQueryParam_First, HttpRequestFixture)
 {
-    string url = MakeURL( GetName() );
-    REQUIRE_RC ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, url.c_str() ) );
+    MakeRequest( GetName() );
     REQUIRE_RC ( KClientHttpRequestAddQueryParam ( m_req, "name", "value" ) );
 
-    HttpRequestTest ( this, m_req, url + "?name=value" );
+    HttpRequestTest ( this, m_req, m_url + "?name=value" );
 }
-FIXTURE_TEST_CASE(HttpRequestAddQueryParam_Second, HttpFixture)
+FIXTURE_TEST_CASE(HttpRequestAddQueryParam_Second, HttpRequestFixture)
 {
-    string url = MakeURL( GetName() );
-    REQUIRE_RC ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, url.c_str() ) );
+    MakeRequest( GetName() );
     REQUIRE_RC ( KClientHttpRequestAddQueryParam ( m_req, "name1", "value1" ) );
     REQUIRE_RC ( KClientHttpRequestAddQueryParam ( m_req, "name2", "value2" ) );
 
-    HttpRequestTest ( this, m_req, url + "?name1=value1&name2=value2" );
+    HttpRequestTest ( this, m_req, m_url + "?name1=value1&name2=value2" );
 }
-FIXTURE_TEST_CASE(HttpRequestAddQueryParam_NameNull, HttpFixture)
+FIXTURE_TEST_CASE(HttpRequestAddQueryParam_NameNull, HttpRequestFixture)
 {
-    string url = MakeURL( GetName() );
-    REQUIRE_RC ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, url.c_str() ) );
+    MakeRequest( GetName() );
     REQUIRE_RC ( KClientHttpRequestAddQueryParam ( m_req, NULL, "value" ) );
 
-    HttpRequestTest ( this, m_req, url + "?value" );
+    HttpRequestTest ( this, m_req, m_url + "?value" );
 }
-FIXTURE_TEST_CASE(HttpRequestAddQueryParam_NameEmpty, HttpFixture)
+FIXTURE_TEST_CASE(HttpRequestAddQueryParam_NameEmpty, HttpRequestFixture)
 {
-    string url = MakeURL( GetName() );
-    REQUIRE_RC ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, url.c_str() ) );
+    MakeRequest( GetName() );
     REQUIRE_RC ( KClientHttpRequestAddQueryParam ( m_req, "", "value" ) );
 
-    HttpRequestTest ( this, m_req, url + "?value" );
+    HttpRequestTest ( this, m_req, m_url + "?value" );
 }
-FIXTURE_TEST_CASE(HttpRequestAddQueryParam_URL_encoding, HttpFixture)
+FIXTURE_TEST_CASE(HttpRequestAddQueryParam_URL_encoding, HttpRequestFixture)
 {
-    string url = MakeURL( GetName() );
-    REQUIRE_RC ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, url.c_str() ) );
-    REQUIRE_RC ( KClientHttpRequestAddQueryParam ( m_req, "",
-        "value & \x1f" "a" "\x7f space \x81" ) );
+    MakeRequest( GetName() );
+    REQUIRE_RC ( KClientHttpRequestAddQueryParam ( m_req, "", "value & \x1f" "a" "\x7f space \x81" ) );
 
-    HttpRequestTest ( this, m_req, url + "?value%20%26%20%1fa%7f%20space%20%81" );
+    HttpRequestTest ( this, m_req, m_url + "?value%20%26%20%1fa%7f%20space%20%81" );
 }
 
-FIXTURE_TEST_CASE(KClientHttpRequestAddPostFileParam_SelfNull, HttpFixture)
+FIXTURE_TEST_CASE(HttpRequestAddHeader, HttpRequestFixture)
 {
-//    REQUIRE_RC_FAIL ( KClientHttpRequestAddPostFileParam ( nullptr, "data/fileToPost" ) );
+    MakeRequest( GetName() );
+    REQUIRE_RC( KClientHttpRequestAddHeader(m_req, "Accept", "text/html") );
+    char buffer[4096] = "";
+    REQUIRE_RC( KClientHttpRequestFormatMsg(m_req, buffer, sizeof buffer, "HEAD", NULL) );
+    REQUIRE( strstr(buffer, "Accept: */*") == NULL) ;
 }
 
+// KClientHttpRequestAddPostFileParam
+
+FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_SelfNull, HttpRequestFixture)
+{
+    REQUIRE_RC_FAIL ( KClientHttpRequestAddPostFileParam ( nullptr, "name", "data/fileToPost" ) );
+}
+FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_NameParamNull, HttpRequestFixture)
+{
+    MakeRequest( GetName() );
+    REQUIRE_RC_FAIL ( KClientHttpRequestAddPostFileParam ( m_req, nullptr, "data/fileToPost" ) );
+}
+FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_PathParamNull, HttpRequestFixture)
+{
+    MakeRequest( GetName() );
+    REQUIRE_RC_FAIL ( KClientHttpRequestAddPostFileParam ( m_req, "name", nullptr ) );
+}
+FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_PathParamEmpty, HttpRequestFixture)
+{
+    MakeRequest( GetName() );
+    REQUIRE_RC_FAIL ( KClientHttpRequestAddPostFileParam ( m_req, "name", "" ) );
+}
+
+FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_FileMissing, HttpRequestFixture)
+{
+    MakeRequest( GetName() );
+    REQUIRE_RC_FAIL ( KClientHttpRequestAddPostFileParam ( m_req, "name", "not-there.txt" ) );
+}
+
+FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_EmptyFile, HttpRequestFixture)
+{
+    MakeRequest( GetName() );
+    REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name", "data/empty-file-to-post.txt" ) );
+
+    // boundaries contain random numbers, so we do not try to match them
+    const char * expectedReq = "Content-Type: multipart/form-data; boundary=";
+    const string req = FormatRequest();
+
+//cout << "req=\"" << req << "\"" << endl;
+    REQUIRE_NE( string::npos, req.find( expectedReq ) ) ;
+
+    const string body = KClientHttpRequestGetBody( m_req );
+//cout << "body=\"" << body << "\"" << endl;
+
+    const char * expectedBody =
+        "\r\n"
+        "Content-Disposition: form-data; name=\"name\"; filename=\"empty-file-to-post.txt\"\r\n"
+        "Content-Type: application/octet-stream\r\n"
+        "\r\n"
+        "\r\n"
+        "--";
+
+    REQUIRE_NE( string::npos, body.find( expectedBody ) ) ;
+}
+
+FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_NonEmptyFile, HttpRequestFixture)
+{
+    MakeRequest( GetName() );
+    REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name", "data/file-to-post.txt" ) );
+
+    // boundaries contain random numbers, so we do not try to match them
+    const char * expectedReq = "Content-Type: multipart/form-data; boundary=";
+    const string req = FormatRequest();
+
+//cout << "req=\"" << req << "\"" << endl;
+    REQUIRE_NE( string::npos, req.find( expectedReq ) ) ;
+
+    const string body = KClientHttpRequestGetBody( m_req );
+//cout << "body=\"" << body << "\"" << endl;
+
+    const char * expectedBody =
+        "Content-Disposition: form-data; name=\"name\"; filename=\"file-to-post.txt\"\r\n"
+        "Content-Type: application/octet-stream\r\n"
+        "\r\n"
+        "contents of the file\n\n"
+        "\r\n"
+        "--";
+
+    REQUIRE_NE( string::npos, body.find( expectedBody ) ) ;
+}
+
+FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_SendReceive, HttpRequestFixture)
+{
+    const char * Server = "https://trace.ncbi.nlm.nih.gov/Traces/sdl/unstable/retrieve";
+
+    REQUIRE_RC ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, NULL, Server ) );
+
+    REQUIRE_RC ( KClientHttpRequestAddQueryParam ( m_req, "acc", "SRR2043623" ) );
+    REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "ngc", "data/prj_phs710EA_test.ngc" ) );
+
+// cout << "req=\"" << FormatRequest() << "\"" << endl;
+
+// cout << "body=\"" ;
+// for (auto i=0u; i < m_req->body.elem_count; ++i)
+// {
+//     unsigned char ch = ((unsigned char*)(m_req->body.base))[i];
+//     if ( ch < 32u || ch >127u )
+//         cout << ".";
+//     else
+//         cout << ch;
+// }
+// cout << "\"" << endl;
+
+    KClientHttpResult *rslt;
+    REQUIRE_RC ( KClientHttpRequestPOST ( m_req, & rslt ) );
+    uint32_t code;
+    char buf[1024];
+    size_t msg_size;
+    REQUIRE_RC ( KClientHttpResultStatus ( rslt, & code, buf, sizeof buf, & msg_size ) );
+//cout << "buf=\"" << buf << "\"" << endl;
+
+    REQUIRE_EQ ( 200u, code );
+
+//     struct KStream  * s;
+//     REQUIRE_RC ( KClientHttpResultGetInputStream ( rslt, & s ) );
+//     char b[4096];
+//     size_t num_read;
+//     REQUIRE_RC ( KStreamReadAll ( s, b, sizeof b, &num_read ) );
+// cout << "data=\"" << string(b, num_read) << "\"" << endl;
+
+    REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
+}
+
+//TODO: multiple files in POST (not supported yet!)
 
 //////////////////////////
 // Reliable HTTP request
@@ -161,25 +309,22 @@ FIXTURE_TEST_CASE(HttpReliableRequest_POST_5xx_retry, HttpFixture)
 
 /* VDB-3059: KHttpRequestPOST generates incorrect Content-Length after retry :
  it makes web server to return 400 Bad Request */
-TEST_CASE(ContentLength) {
-    rc_t rc = 0;
-    KNSManager * kns = NULL;
-    REQUIRE_RC ( KNSManagerMake ( & kns ) );
-
-    uint32_t code = 0;
-    KHttpRequest * req = NULL;
-    KHttpResult * rslt = NULL;
-    KStream * response = NULL;
-
+FIXTURE_TEST_CASE(HttpReliableRequest_ContentLength, HttpFixture)
+{
     /* calling good cgi returns 200 and resolved path */
-    REQUIRE_RC ( KNSManagerMakeReliableClientRequest ( kns, & req, 0x01000000,
-        NULL, "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi" ) );
-    REQUIRE_RC ( KHttpRequestAddPostParam ( req, "acc=AAAB01" ) );
-    REQUIRE_RC ( KHttpRequestAddPostParam ( req, "accept-proto=https" ) );
-    REQUIRE_RC ( KHttpRequestAddPostParam ( req, "version=1.2" ) );
-    REQUIRE_RC ( KHttpRequestPOST ( req, & rslt ) );
+    REQUIRE_RC ( KNSManagerMakeReliableClientRequest ( m_mgr, &m_req, 0x01010000, NULL,
+        "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi" ) );
+    REQUIRE_RC ( KHttpRequestAddPostParam ( m_req, "acc=AAAB01" ) );
+    REQUIRE_RC ( KHttpRequestAddPostParam ( m_req, "accept-proto=https" ) );
+    REQUIRE_RC ( KHttpRequestAddPostParam ( m_req, "version=1.2" ) );
+
+    KHttpResult * rslt;
+    REQUIRE_RC ( KHttpRequestPOST ( m_req, & rslt ) );
+    uint32_t code = 0;
     REQUIRE_RC ( KClientHttpResultStatus ( rslt, & code, NULL, 0, NULL ) );
     REQUIRE_EQ ( code, 200u );
+
+    KStream * response;
     REQUIRE_RC ( KHttpResultGetInputStream ( rslt, & response ) );
     char buffer [ 512 ] = "";
     size_t num_read = 0;
@@ -187,46 +332,24 @@ TEST_CASE(ContentLength) {
     REQUIRE_LT ( num_read, sizeof buffer );
     buffer [ num_read ] = '\0';
     REQUIRE_EQ ( string ( buffer + num_read - 7 ), string ( "200|ok\n" ) );
-    RELEASE ( KStream, response );
-    RELEASE ( KHttpResult, rslt );
-    RELEASE ( KHttpRequest, req );
+    REQUIRE_RC ( KStreamRelease ( response ) );
 
-    /* calling non-existing cgi returns 404 */
-    REQUIRE_RC ( KNSManagerMakeReliableClientRequest ( kns, & req, 0x01000000,
-        NULL, "https://trace.ncbi.nlm.nih.gov/Traces/names/bad.cgi" ) );
-    REQUIRE_RC ( KHttpRequestAddPostParam ( req, "acc=AAAB01" ) );
-    REQUIRE_RC ( KHttpRequestPOST ( req, & rslt ) );
-    REQUIRE_RC ( KClientHttpResultStatus ( rslt, & code, NULL, 0, NULL ) );
-    REQUIRE_EQ ( code, 404u );
-    RELEASE ( KHttpResult, rslt );
-    RELEASE ( KHttpRequest, req );
-
-    RELEASE ( KNSManager, kns );
-    REQUIRE_RC ( rc );
+    REQUIRE_RC ( KHttpResultRelease( rslt ) );
 }
 
-TEST_CASE(TestAcceptHeader)
+FIXTURE_TEST_CASE(HttpReliableRequest_BadCgi, HttpFixture)
 {
-#define HOST "www.ncbi.nlm.nih.gov"
-    String host;
-    CONST_STRING ( & host, HOST );
+    /* calling non-existing cgi returns 404 */
+    REQUIRE_RC ( KNSManagerMakeReliableClientRequest ( m_mgr, & m_req, 0x01000000,
+        NULL, "https://trace.ncbi.nlm.nih.gov/Traces/names/bad.cgi" ) );
+    REQUIRE_RC ( KHttpRequestAddPostParam ( m_req, "acc=AAAB01" ) );
 
-    rc_t rc = 0;
-    KNSManager * mgr = NULL;
-    REQUIRE_RC(KNSManagerMake(&mgr));
-    KClientHttp * http = NULL;
-    REQUIRE_RC(KNSManagerMakeHttp(mgr, &http, NULL, 0x01010000, &host, 80));
-    string url("http://" HOST);
-    KClientHttpRequest * req = NULL;
-    REQUIRE_RC(KClientHttpMakeRequest(http, &req, url.c_str()));
-    REQUIRE_RC(KClientHttpRequestAddHeader(req, "Accept", "text/html"));
-    char buffer[4096] = "";
-    REQUIRE_RC(KClientHttpRequestFormatMsg(req, buffer, sizeof buffer, "HEAD", NULL));
-    REQUIRE(strstr(buffer, "Accept: */*") == NULL);
-    RELEASE(KClientHttpRequest, req);
-    RELEASE(KClientHttp, http);
-    RELEASE(KNSManager, mgr);
-    REQUIRE_RC(rc);
+    KHttpResult * rslt;
+    REQUIRE_RC ( KHttpRequestPOST ( m_req, & rslt ) );
+    uint32_t code = 0;
+    REQUIRE_RC ( KClientHttpResultStatus ( rslt, & code, NULL, 0, NULL ) );
+    REQUIRE_EQ ( code, 404u );
+    REQUIRE_RC ( KHttpResultRelease( rslt ) );
 }
 
 //////////////////////////////////////////// Main
