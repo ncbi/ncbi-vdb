@@ -2646,12 +2646,6 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
     return rc;
 }
 
-rc_t CC KClientHttpRequestAddPostFileParam(KClientHttpRequest *self,
-    const char *name, const char *path)
-{   /* temporary stub waiting for VDB-3911 to complete */
-    return 0;
-}
-
 
 /* SObject ********************************************************************/
 static rc_t SObjectInit ( SObject * self,
