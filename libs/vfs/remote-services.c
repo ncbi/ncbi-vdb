@@ -301,6 +301,7 @@ typedef struct {
 typedef struct {
     String k;
     String v;
+    char n[256];
 } SKV;
 
 
@@ -2348,6 +2349,7 @@ rc_t SKVMake ( const SKV ** self, const char * k, const char * v )
             else {
                 StringInit ( & kv -> k, p, sk, sk );
                 StringInit ( & kv -> v, p + sk + 1, sv, sv );
+                rc = string_printf(kv ->n, sizeof kv->n, &num_writ, "%s", k);
                 * self = kv;
             }
         }
@@ -2462,6 +2464,21 @@ void SHttpRequestHelperAddPostParam ( void * item, void * data )
         p -> rc = rc;
 }
 
+static
+void SHttpRequestHelperAddQueryParam(void * item, void * data)
+{
+    const SKV          * kv = (SKV                *)item;
+    SHttpRequestHelper * p = (SHttpRequestHelper *)data;
+
+    rc_t rc = 0;
+
+    assert(kv && p);
+
+    rc = KClientHttpRequestAddQueryParam(p->httpReq, kv->n, "%S", &kv->v);
+    if (p->rc == 0)
+        p->rc = rc;
+}
+
 
 /* SCgiRequest ****************************************************************/
 static
@@ -2570,15 +2587,23 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
         else if ( expected == NULL ) {
             SHttpRequestHelper h;
             rc = SHttpRequestHelperInit(&h, helper->kMgr, self->cgi);
-            if (rc == 0) {
-                VectorForEach(
-                    &self->params, false, SHttpRequestHelperAddPostParam, &h);
-                rc = h.rc;
-            }
 
-            if (rc == 0 && self->fileKey != NULL && self->fileVal != NULL)
-                rc = KClientHttpRequestAddPostFileParam(h.httpReq,
-                    self->fileKey, self->fileVal);
+            if (rc == 0) {
+                if (self->fileKey != NULL && self->fileVal != NULL) {
+                    rc = KClientHttpRequestAddPostFileParam(h.httpReq,
+                        self->fileKey, self->fileVal);
+                    if (rc == 0) {
+                        VectorForEach(&self->params, false,
+                            SHttpRequestHelperAddQueryParam, &h);
+                        rc = h.rc;
+                    }
+                }
+                else {
+                    VectorForEach(&self->params, false,
+                        SHttpRequestHelperAddPostParam, &h);
+                    rc = h.rc;
+                }
+            }
 
             if (rc == 0) {
                 KHttpResult * rslt = NULL;
@@ -3640,7 +3665,6 @@ rc_t SRequestInitSearchSCgiRequest ( SRequest * request, const char * cgi,
     }
     return rc;
 }
-
 
 /* KService *******************************************************************/
 static void KServiceExpectErrors ( KService * self, int n ) {
