@@ -1574,6 +1574,34 @@ static rc_t FileAddLinks ( File * self, const KJsonObject * node,
     return rc;
 }
 
+static rc_t FileMappingByAcc(const File * self) {
+    const char sra[] = "sra";
+    const char vdbcache[] = "vdbcache";
+    const char pileup[] = "pileup";
+    const char realign[] = "realign";
+
+    uint32_t l = 0;
+
+    assert(self);
+
+    l = string_measure(self->cType, NULL);
+
+    if (string_cmp(self->cType, l, sra, sizeof sra - 1, 99) == 0
+        ||
+        string_cmp(self->cType, l, vdbcache, sizeof vdbcache - 1, 9) == 0
+        ||
+        string_cmp(self->cType, l, pileup, sizeof pileup - 1, 99) == 0
+        ||
+        string_cmp(self->cType, l, realign, sizeof realign - 1, 99) == 0
+        )
+    {
+        return false;
+    }
+
+    return true;
+}
+
+/*
 static rc_t ItemMappingByAcc(const Item * self) {
     const char sra[] = "sra";
     const char vdbcache[] = "vdbcache";
@@ -1598,6 +1626,7 @@ static rc_t ItemMappingByAcc(const Item * self) {
 
     return false;
 }
+*/
 
 static const char * ItemOrLocationGetName(const Item * item,
                                           const File * file)
@@ -1666,14 +1695,14 @@ static rc_t FileInitMapping ( File * self, const Item * item ) {
         const char * name = ItemOrLocationGetName(item, self);
 
         if ( item -> tic != NULL )
-            if ( ItemMappingByAcc( item ) || name == NULL )
+            if (FileMappingByAcc( self ) || name == NULL )
                 rc = VPathMakeFmt ( & self -> mapping, "ncbi-acc:%s?tic=%s",
                                                     item -> acc, item -> tic );
             else
                 rc = VPathMakeFmt ( & self -> mapping, "ncbi-file:%s?tic=%s",
                                                     name, item -> tic );
         else
-            if (ItemMappingByAcc(item) || name == NULL) {
+            if (FileMappingByAcc(self) || name == NULL) {
                 if (projectId < 0)
                     rc = VPathMakeFmt(&self->mapping, "ncbi-acc:%s", item->acc);
                 else
@@ -1685,7 +1714,7 @@ static rc_t FileInitMapping ( File * self, const Item * item ) {
                     rc = VPathMakeFmt(&self->mapping, "ncbi-file:%s", name);
                 else
                     rc = VPathMakeFmt(&self->mapping, "ncbi-file:%s?pId=%d",
-                        item->acc, projectId);
+                        name, projectId);
             }
     }
 
