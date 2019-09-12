@@ -28,6 +28,8 @@
 
 #include <kfs/directory.h> /* KDirectoryNativeDir */
 #include <kfs/file.h> /* KFileRelease */
+#include <kfg/kfg-priv.h> /* KConfigMakeEmpty */
+#include <kfg/ngc.h> /* KNgcObjGetProjectId */
 #include <kfg/repository.h> /* KRepositoryMgrGetProtectedRepository */
 
 #include <klib/container.h> /* BSTree */
@@ -132,70 +134,149 @@ static rc_t HFini ( H * self ) {
     return rc;
 }
 
-static rc_t HResolver ( H * self, const String * ticket,
-                        VResolver ** resolver, const VPath * path )
+static rc_t HResolver(H * self, const KService * service,
+    const String * aTicket, VResolver ** resolver, const VPath * path)
 {
     rc_t rc = 0;
-
+    const String * ticket = aTicket;
+    const KNgcObj * ngc = NULL;
     uint32_t projectId = 0;
     bool isProtected = VPathGetProjectId(path, &projectId);
-
-    assert (resolver && self && self->service);
-
+    assert(resolver && self && self->service);
+    *resolver = NULL;
     if (isProtected) {
-        const struct KRepositoryMgr * mgr = NULL;
-        const struct KRepository * r = NULL;
-        rc = KServiceGetRepoMgr(self->service, &mgr);
-        if (rc == 0) {
-            rc = KRepositoryMgrGetProtectedRepository(mgr, projectId, &r);
-            if (rc == 0)
-                rc = KRepositoryMakeResolver(r, resolver, self->kfg);
-            else
-                rc = VFSManagerMakeResolver(self->mgr, resolver, self->kfg);
-        }
-        return rc;
-    }
-
-    if ( ticket && ticket -> addr && ticket -> size ) {
-        BSTItem * i = ( BSTItem * ) BSTreeFind
-            ( & self -> ticketsToResolvers, ticket, BSTItemCmp );
-
-        if ( i != NULL )
-            * resolver = i -> resolver;
-        else {
-            VResolver * resolver = NULL;
-            rc = KServiceGetResolver ( self -> service, ticket, & resolver );
-            if ( rc != 0 )
-                return rc;
-            else if ( resolver != NULL ) {
-                i = calloc ( 1, sizeof * i );
-                if ( i == NULL )
-                    return RC (
-                        rcVFS, rcStorage, rcAllocating, rcMemory, rcExhausted );
-
-                rc = StringCopy ( & i -> ticket, ticket );
-                if ( rc != 0 )
-                    return rc;
-
-                i -> resolver = resolver;
-                rc = BSTreeInsert ( & self -> ticketsToResolvers,
-                    ( BSTNode * ) i, BSTreeSort );
+        bool isProtected = false;
+        ngc = KServiceGetNgcFile(service, &isProtected);
+        if (isProtected) {
+            if (ticket == NULL || ticket->addr == NULL || ticket->size == 0) {
+                char tic[256] = "";
+                rc = KNgcObjGetTicket(ngc, tic, sizeof tic, NULL);
+                if (rc == 0) {
+                    String s;
+                    StringInitCString(&s, tic);
+                    rc = StringCopy(&ticket, &s);
+                }
             }
         }
+    }
+    if (ticket && ticket->addr != NULL && ticket->size > 0) {
+        BSTItem * i = (BSTItem *)BSTreeFind(
+            &self->ticketsToResolvers, ticket, BSTItemCmp);
 
-        assert ( i );
-        
-        if ( i -> resolver != NULL )
-            * resolver = i -> resolver;
+        if (i != NULL)
+            * resolver = i->resolver;
+        else {
+            if (isProtected) {
+                const struct KRepositoryMgr * mgr = NULL;
+                const struct KRepository * r = NULL;
+                rc = KServiceGetRepoMgr(self->service, &mgr);
+                if (rc == 0) {
+                    rc = KRepositoryMgrGetProtectedRepository(
+                        mgr, projectId, &r);
+                    if (rc == 0) {
+                        rc = KRepositoryMakeResolver(r, resolver, self->kfg);
+                        if (rc == 0) {
+                            i = calloc(1, sizeof * i);
+                            if (i == NULL)
+                                return RC(rcVFS,
+                                    rcStorage, rcAllocating,
+                                    rcMemory, rcExhausted);
+                            rc = StringCopy(&i->ticket, ticket);
+                            if (rc != 0)
+                                return rc;
+                            i->resolver = *resolver;
+                            rc = BSTreeInsert(&self->ticketsToResolvers,
+                                (BSTNode *)i, BSTreeSort);
+                        }
+                    }
+                    else if (ticket != NULL &&
+                        ticket->addr != NULL && ticket->size != 0)
+                    {
+                        char cwd[PATH_MAX] = "";
+                        char n[512] = "";
+                        char v[PATH_MAX] = "";
+                        KConfig * kfg = NULL;
+                        KDirectory * dir = NULL;
+                        uint32_t id = 0;
+                        rc = KNgcObjGetProjectId(ngc, &id);
+                        if (rc == 0)
+                            rc = KDirectoryNativeDir(&dir);
+                        if (rc == 0)
+                            rc = KDirectoryResolvePath(dir, true,
+                                cwd, sizeof cwd, ".");
+                        if (rc == 0)
+                            rc = KConfigMakeEmpty(&kfg);
+                        if (rc == 0)
+                            rc = string_printf(n, sizeof n, NULL,
+                                "/repository/user/protected/dbGaP-%d/"
+                                "root", id);
+                        if (rc == 0)
+                            rc = string_printf(v, sizeof v, NULL,
+                                "%s/%S_dbGaP-%d", cwd, &path->id, id);
+                        if (rc == 0)
+                            rc = KConfigWriteString(kfg, n, v);
+                        if (rc == 0)
+                            rc = string_printf(n, sizeof n, NULL,
+                                "/repository/user/protected/dbGaP-%d/"
+                                "apps/sra/volumes/sraFlat", id);
+                        if (rc == 0)
+                            rc = KConfigWriteString(kfg, n, ".");
+                        if (rc == 0)
+                            rc = VFSManagerMakeDbgapResolver(self->mgr,
+                                resolver, kfg, ngc);
+                        RELEASE(KConfig, kfg);
+                        RELEASE(KDirectory, dir);
+                        if (rc == 0) {
+                            i = calloc(1, sizeof * i);
+                            if (i == NULL)
+                                return RC(rcVFS,
+                                    rcStorage, rcAllocating,
+                                    rcMemory, rcExhausted);
+                            rc = StringCopy(&i->ticket, ticket);
+                            if (rc != 0)
+                                return rc;
+                            i->resolver = *resolver;
+                            rc = BSTreeInsert(&self->ticketsToResolvers,
+                                (BSTNode *)i, BSTreeSort);
+                        }
+                    }
+                    else
+                        rc = 0;
+                }
+            }
+            else {
+                rc = KServiceGetResolver(self->service, ticket, resolver);
+                if (rc != 0)
+                    return rc;
+                else if (*resolver != NULL) {
+                    i = calloc(1, sizeof * i);
+                    if (i == NULL)
+                        return RC(rcVFS, rcStorage, rcAllocating,
+                            rcMemory, rcExhausted);
 
-        return rc;
+                    rc = StringCopy(&i->ticket, ticket);
+                    if (rc != 0)
+                        return rc;
+
+                    i->resolver = *resolver;
+                    rc = BSTreeInsert(&self->ticketsToResolvers,
+                        (BSTNode *)i, BSTreeSort);
+                }
+            }
+        }
     }
 
-    if ( self -> resolver == NULL )
-        rc = VFSManagerMakeResolver ( self -> mgr, & self -> resolver,
-                                        self -> kfg );
+    if (rc == 0 && *resolver == NULL) {
+        if (self->resolver == NULL)
+            rc = VFSManagerMakeResolver(self->mgr, &self->resolver,
+                self->kfg);
+        *resolver = self->resolver;
+    }
 
-    * resolver = self -> resolver;
+    if (ticket != aTicket)
+        StringWhack(ticket);
+
+    RELEASE(KNgcObj, ngc);
 
     return rc;
 }
@@ -544,7 +625,7 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                                                 StringInitCString(&ticket,
                                                     tic);
                                             if (rc == 0)
-                                                rc = HResolver(&h,
+                                                rc = HResolver(&h, self,
                                                     &ticket, &resolver, path);
                                             if (rc == 0)
                                                 rc = _VPathGetId(path, &pId,
@@ -598,7 +679,8 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                             if ( rc == 0 )
                                 rc = VPathGetTicket ( path, & ticket );
                             if ( rc == 0 )
-                                rc = HResolver ( &h, &ticket, &resolver, NULL );
+                                rc = HResolver ( &h, self, &ticket, &resolver,
+                                    NULL );
                             if ( rc == 0 ) {
                                 assert ( resolver );
                                 VResolverResolveName ( resolver,
