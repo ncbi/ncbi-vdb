@@ -139,6 +139,7 @@ extern "C" {
 #define rcResolver   rcTree
 
 struct KDataBuffer;
+struct KNgcObj;
 struct KNSManager;
 struct String;
 struct VResolverAccToken;
@@ -251,6 +252,10 @@ rc_t VResolverSetVersion ( VResolver *self, const char * version );
    1: resolve
    2: don't resolve */
 rc_t VResolverResolveName ( VResolver *self, int resolve );
+
+rc_t VFSManagerMakeDbgapResolver(const struct VFSManager * self,
+    VResolver ** new_resolver, const struct KConfig * cfg,
+    const struct KNgcObj * ngc);
 
 /* default behavior to resolve oid->file mapping inside of VFS */
 #define DEFAULT_RESOVE_OID_NAME true

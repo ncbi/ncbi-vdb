@@ -26,16 +26,7 @@
 
 #include <vfs/extern.h>
 
-#include <klib/time.h> /* KTime */
-
-#include <vfs/manager.h>
-#include <vfs/path.h>
-#include <vfs/resolver-priv.h> /* VResolverQueryWithDir */
-
-#include <kns/http.h>
-#include <kns/kns-mgr-priv.h> /* KNSManagerMakeReliableHttpFile */
-#include <kns/manager.h>
-#include <kns/stream.h>
+#include <kfg/ngc.h> /* KNgcObjGetTicket */
 
 #include <kfs/file.h>
 #include <kfs/directory.h>
@@ -55,15 +46,24 @@
 #include <klib/refcount.h>
 #include <klib/strings.h> /* ENV_MAGIC_REMOTE */
 #include <klib/text.h>
+#include <klib/time.h> /* KTime */
 #include <klib/vector.h>
+
+#include <kns/http.h>
+#include <kns/kns-mgr-priv.h> /* KNSManagerMakeReliableHttpFile */
+#include <kns/manager.h>
+#include <kns/stream.h>
+
+#include <vfs/manager.h>
+#include <vfs/path.h>
+#include <vfs/path-priv.h>
+#include <vfs/resolver-priv.h> /* VResolverQueryWithDir */
 
 #include "services-priv.h"
 #include "path-priv.h"
 #include "resolver-priv.h"
 
 #include <sysalloc.h>
-
-#include <vfs/path-priv.h>
 
 #include "../kns/mgr-priv.h" /* KNSManager */
 
@@ -3443,7 +3443,7 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
 
     VResolverEnableState cache_state = atomic32_read ( & enable_cache );
 
-    bool ad = false;
+ /* bool ad = false; */
 
     rc = VResolverCacheMagicResolve(self, cache, app);
     if (rc != 0 || *cache != NULL)
@@ -3516,7 +3516,7 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
                 if (alg->app_id == app) {
                     if (best == NULL) {
                         best = alg;
-                        ad = true;
+                     /* ad = true; */
                     }
                 }
                 else {
@@ -3603,7 +3603,7 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
                 /* just remember the first as best for now */
                 if (best == NULL) {
                     best = alg;
-                    ad = true;
+                 /* ad = true; */
                 }
             }
         }
@@ -3623,7 +3623,7 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
         alg = best == NULL ? better : best;
         assert ( alg );
         rc = VResolverAlgMakeCachePath ( alg, & tok, cache, legacy_wgs_refseq,
-            ad ? self -> wd : NULL );
+            self -> wd /* ad ? self -> wd : NULL*/ );
         assert(cache);
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("VResolverCacheResolve: "
             "cache location of '%S' resolved to '%S' with %R\n",
@@ -5781,8 +5781,8 @@ static EDisabled _KConfigNodeRepoDisabled(
     return isDisabled;
 }
 
-static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
-    const KConfig *cfg, const KNSManager *kns)
+static rc_t VResolverLoad(VResolver *self, const KRepository *protectedRepo,
+    const KConfig *cfg, const KNSManager *kns, const KNgcObj * ngc)
 {
     bool have_remote_protected = false;
 
@@ -5799,10 +5799,28 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
         EDisabled userDisabled = _KConfigNodeRepoDisabled(kfg, "user");
 
         /* check to see what the current directory is */
-        char buffer [ 256 ];
-        self -> ticket = VResolverGetDownloadTicket ( self, protected, buffer, sizeof buffer );
+        char buffer [ 256 ] = "";
+        self->ticket = NULL;
+        if (protectedRepo != NULL)
+            self -> ticket = VResolverGetDownloadTicket ( self, protectedRepo,
+                buffer, sizeof buffer );
+        else if (ngc != NULL) {
+            char b[512] = "";
+            rc = KNgcObjGetTicket(ngc, b, sizeof b, NULL);
+            if (rc == 0) {
+                String s;
+                StringInitCString(&s, b);
+                rc = StringCopy(&self->ticket, &s);
+            }
+            if (rc == 0) {
+                uint32_t projectId = 0;
+                rc = KNgcObjGetProjectId(ngc, &projectId);
+                rc = string_printf(buffer, sizeof buffer, NULL,
+                    "dbGaP-%d", projectId);
+            }
+        }
 
-        {
+        if (rc == 0) {
             const KConfigNode * node = NULL;
             rc_t rc =
                 KConfigNodeOpenNodeRead ( kfg, & node, "user/cache-disabled" );
@@ -5811,14 +5829,15 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
                 rc = KConfigNodeReadBool ( node, & disabled );
                 KConfigNodeRelease ( node );
  
-                if ( rc == 0 && disabled ) {
+                if (rc == 0 && disabled)
                     userCacheEnabled = false;
-                }
             }
+            rc = 0;
         }
 
         /* allow user to specify leaf paths in current directory */
-        rc = VResolverDetectSRALeafPath ( self );
+        if (rc == 0)
+            rc = VResolverDetectSRALeafPath ( self );
 
         /* if the user is inside of a protected workspace, load it now */
         if ( rc == 0 && self -> ticket != NULL )
@@ -6053,9 +6072,10 @@ static rc_t VResolverInitVersion(VResolver * self, const KConfig *kfg) {
  */
 static
 rc_t VResolverMake ( VResolver ** objp, const KDirectory *wd,
-    const KRepository *protected, const KConfig *kfg, const VFSManager *mgr )
+    const KRepository *protected, const KConfig *kfg, const VFSManager *mgr,
+    const KNgcObj * ngc )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     VResolver *obj = calloc ( 1, sizeof * obj );
     if ( obj == NULL )
@@ -6095,7 +6115,7 @@ rc_t VResolverMake ( VResolver ** objp, const KDirectory *wd,
 
         obj -> protocols = obj -> dflt_protocols;
 
-        rc = VResolverLoad ( obj, protected, kfg, kns );
+        rc = VResolverLoad ( obj, protected, kfg, kns, ngc );
 
         obj->kns = kns;
         kns = NULL;
@@ -6162,7 +6182,7 @@ rc_t CC VFSManagerMakeResolver ( const VFSManager * self,
                     if ( rc == 0 || GetRCState ( rc ) == rcNotFound )
                     {
                         rc = VResolverMake(new_resolver,
-                            wd, protected, cfg, self);
+                            wd, protected, cfg, self, NULL);
                         KRepositoryRelease ( protected );
 
                         if ( rc == 0 )
@@ -6176,6 +6196,47 @@ rc_t CC VFSManagerMakeResolver ( const VFSManager * self,
                 }
 
                 KDirectoryRelease ( wd );
+            }
+        }
+
+        *new_resolver = NULL;
+    }
+
+    return rc;
+}
+
+rc_t VFSManagerMakeDbgapResolver(const VFSManager * self,
+    VResolver ** new_resolver,
+    const KConfig * cfg, const struct KNgcObj * ngc)
+{
+    rc_t rc = 0;
+
+    if (new_resolver == NULL)
+        rc = RC(rcVFS, rcMgr, rcCreating, rcParam, rcNull);
+    else {
+        if (self == NULL)
+            rc = RC(rcVFS, rcMgr, rcCreating, rcSelf, rcNull);
+        else if (cfg == NULL)
+            rc = RC(rcVFS, rcMgr, rcCreating, rcParam, rcNull);
+        else {
+            KDirectory *wd = NULL;
+            rc = VFSManagerGetCWD(self, &wd);
+
+            if (rc == 0) {
+                if (rc == 0)
+                    rc = VResolverMake(new_resolver, wd, NULL, cfg, NULL, ngc);
+
+                if (rc == 0) {
+                    uint32_t projectId = 0;
+                    rc = KNgcObjGetProjectId(ngc, &projectId);
+
+                    assert(*new_resolver);
+                    (*new_resolver)->projectId = projectId;
+
+                    return rc;
+                }
+
+                KDirectoryRelease(wd);
             }
         }
 
@@ -6205,7 +6266,7 @@ rc_t CC KRepositoryMakeResolver ( const KRepository *self,
             rc = KDirectoryNativeDir ( & wd );
             if ( rc == 0 )
             {
-                rc = VResolverMake ( new_resolver, wd, self, cfg, NULL );
+                rc = VResolverMake ( new_resolver, wd, self, cfg, NULL, NULL );
                 if ( rc == 0 )
                     return 0;
 
