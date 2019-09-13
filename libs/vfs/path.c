@@ -4013,15 +4013,6 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
                     path -> has_md5 = true;
                 }
 
-                if ( id != NULL && id -> size > 0 ) {
-                    StringInit ( & path -> id,
-                        string_dup ( id -> addr, id -> size ),
-                        id -> size, id -> len );
-                    if ( path -> id . addr == NULL )
-                        return RC ( rcVFS,
-                            rcPath, rcAllocating, rcMemory, rcExhausted );
-                }
-
                 if ( tick != NULL && tick -> size > 0 ) {
                     StringInit ( & path -> tick,
                         string_dup ( tick -> addr, tick -> size ),
@@ -4074,6 +4065,10 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
                     StringInit(&path->nameExtension, c, size, size);
                 }
 
+                rc = VPathSetId(path, id);
+                if ( rc != 0 )
+                    return rc;
+
                 path->ceRequired = ceRequired;
                 path->payRequired = payRequired;
 
@@ -4085,6 +4080,34 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
     }
 
     return rc;
+}
+
+rc_t VPathSetId(VPath * self, const String * id) {
+    assert(self);
+
+    if (self->id.addr != NULL) {
+        free((void*)self->id.addr);
+        memset(&self->id, 0, sizeof self->id);
+    }
+
+    if (id != NULL && id->size > 0) {
+        StringInit(&self->id,
+            string_dup(id->addr, id->size),
+            id->size, id->len);
+        if (self->id.addr == NULL)
+            return RC(rcVFS,
+                rcPath, rcAllocating, rcMemory, rcExhausted);
+    }
+
+    return 0;
+}
+
+rc_t VPathSetMagic(VPath * self, bool magic) {
+    assert(self);
+
+    self->magic = magic;
+
+    return 0;
 }
 
 static
