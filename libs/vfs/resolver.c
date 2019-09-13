@@ -1748,8 +1748,14 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
 
         assert(*path != NULL || rc != 0);
 
-        if (rc == 0 && *path == NULL)
-            rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcNull);
+        if (rc == 0) {
+            if (*path == NULL)
+                rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcNull);
+            else
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
+                    "VResolverAlgRemoteProtectedResolve: "
+                    "'%S' resolved to '%s'\n", acc, (*path)->scheme.addr));
+        }
     }
 
     return rc;
@@ -2701,8 +2707,8 @@ typedef enum {
     eCheckUrlTrue,
 } ECheckUrl;
 
-static rc_t VResolverMagicResolve(const VResolver * self,
-    const VPath ** path, VResolverAppID app, const char * name,
+static rc_t VResolverMagicResolve(const VResolver * self, const VPath ** path,
+    const String * accession, VResolverAppID app, const char * name,
     ECheckExist checkExist,
     ECheckFilePath checkPath,
     ECheckUrl checkUrl)
@@ -2743,6 +2749,15 @@ static rc_t VResolverMagicResolve(const VResolver * self,
     }
 
     rc = LegacyVPathMakeFmt((VPath**)path, "%s", magic);
+
+    if (rc == 0)
+        assert(*path);
+
+    if (rc == 0)
+        VPathSetMagic((VPath*)*path, true);
+
+    if (rc == 0 && accession != NULL)
+        rc = VPathSetId((VPath*)*path, accession);
 
     if (rc == 0) {
         assert(path);
@@ -2803,21 +2818,21 @@ static rc_t VResolverMagicResolve(const VResolver * self,
 static rc_t VResolverCacheMagicResolve(
     const VResolver * self, const VPath ** path, VResolverAppID app)
 {
-    return VResolverMagicResolve(self, path, app,
+    return VResolverMagicResolve(self, path, NULL, app,
         ENV_MAGIC_CACHE, eCheckExistFalse, eCheckFilePathTrue, eCheckUrlFalse);
 }
 
 static rc_t VResolverLocalMagicResolve(
     const VResolver * self, const VPath ** path, VResolverAppID app)
 {
-    return VResolverMagicResolve(self, path, app,
+    return VResolverMagicResolve(self, path, NULL, app,
         ENV_MAGIC_LOCAL, eCheckExistTrue, eCheckFilePathTrue, eCheckUrlFalse);
 }
 
-static rc_t VResolverRemoteMagicResolve(
-    const VResolver * self, const VPath ** path, VResolverAppID app)
+static rc_t VResolverRemoteMagicResolve(const VResolver * self,
+    const VPath ** path, const String * accession, VResolverAppID app)
 {
-    return VResolverMagicResolve(self, path, app,
+    return VResolverMagicResolve(self, path, accession, app,
         ENV_MAGIC_REMOTE, eCheckExistFalse, eCheckFilePathFalse, eCheckUrlTrue);
 }
 
@@ -3137,7 +3152,7 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
         VResolverAccTokenInitFromOID ( & tok, accession );
     }
 
-    rc = VResolverRemoteMagicResolve(self, path, app);
+    rc = VResolverRemoteMagicResolve(self, path, accession, app);
     if (rc != 0 || *path != NULL)
         return rc;
 
@@ -3307,6 +3322,9 @@ rc_t VPathExtractAcc ( const VPath * url, VPath ** acc )
     /* locate last path or accession guy */
     const char * start, * sep, * end;
 
+    String empty;
+    memset(&empty, 0, sizeof empty);
+
     assert(url);
 
     start = string_rchr ( url -> path . addr, url -> path . size, '/' );
@@ -3339,12 +3357,16 @@ rc_t VPathExtractAcc ( const VPath * url, VPath ** acc )
         break;
     }
 
-    /* this is the string */
-    StringInit ( & accession, start, end - start, string_len ( start, end - start ) );
+    if (url -> id . addr != NULL && url -> id . size != 0)
+        StringInit(&accession, url->id.addr, url->id.size, url->id.len);
+    else
+        /* this is the string */
+        StringInit ( & accession, start, end - start,
+            string_len ( start, end - start ) );
 
     /* now extract the mapping */
-    rc = LegacyVPathMakeFmt ( acc, "ncbi-acc:%S%S%S",
-        & accession, & url -> query, & url -> fragment );
+    rc = LegacyVPathMakeFmt ( acc, "ncbi-acc:%S%S%S", & accession,
+        url -> magic ? &empty : & url -> query, & url -> fragment );
     if ( rc == 0 )
     {
         VPath * ap = * acc;
