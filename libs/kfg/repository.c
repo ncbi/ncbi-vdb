@@ -1355,6 +1355,8 @@ static rc_t KRepositoryCurrentProtectedRepositoryForNgc(
         const KRepositoryMgr * mgr = NULL;
         KRepositoryVector vc;
         uint32_t id = 0;
+        char name[512] = "";
+        size_t nameLen = 0;
         char n[512] = "";
         char v[512] = "";
 
@@ -1370,8 +1372,10 @@ static rc_t KRepositoryCurrentProtectedRepositoryForNgc(
         if (rc == 0)
             rc = KNgcObjGetEncryptionKey(ngc, v, sizeof v, NULL);
         if (rc == 0)
+            rc = string_printf(name, sizeof name, &nameLen, "dbGaP-%d", id);
+        if (rc == 0)
             rc = string_printf(n, sizeof n, NULL,
-                "/repository/user/protected/dbGaP-%d/encryption-key", id);
+                "/repository/user/protected/%s/encryption-key", name);
         if (rc == 0)
             rc = KConfigWriteString(kfg, n, v);
         if (rc == 0)
@@ -1380,14 +1384,28 @@ static rc_t KRepositoryCurrentProtectedRepositoryForNgc(
             rc = KRepositoryMgrUserRepositories(mgr, &vc);
 
         assert(self);
+        *self = NULL;
 
         if (rc == 0) {
-            uint32_t count = VectorLength(&vc);
             uint32_t i = 0;
+            uint32_t count = VectorLength(&vc);
             for (i = 0; i < count; ++i) {
-                const KRepository * r =
-                    (const void*)VectorGet(&vc, i);
+                bool found = false;
+                const KRepository * r = (const void*)VectorGet(&vc, i);
                 if (r->subcategory == krepProtectedSubCategory) {
+                    char lclName[512] = "";
+                    size_t lNumWrit = 0;
+                    rc = KRepositoryName(r, lclName, sizeof lclName, &lNumWrit);
+                    if (rc == 0) {
+                        assert(lNumWrit < sizeof lclName);
+                        if (strcase_cmp(lclName, lNumWrit,
+                            name, nameLen, sizeof name) == 0)
+                        {
+                            found = true;
+                        }
+                    }
+                }
+                if (found) {
                     rc = KRepositoryAddRef(r);
                     if (rc == 0) {
                         *self = r;
