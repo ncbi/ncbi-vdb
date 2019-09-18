@@ -38,7 +38,7 @@ extern "C" {
 
 struct KNSManager;
 
-rc_t KServiceMakeWithMgr(KService ** self,
+rc_t KServiceMakeWithMgr(KService ** self, const struct VFSManager * vMgr,
     const struct KNSManager * mgr, struct KConfig * kfg);
 
 rc_t KServiceNamesQueryExt ( KService * self, VRemoteProtocols protocols, 

@@ -253,9 +253,11 @@ rc_t VResolverSetVersion ( VResolver *self, const char * version );
    2: don't resolve */
 rc_t VResolverResolveName ( VResolver *self, int resolve );
 
-rc_t VFSManagerMakeDbgapResolver(const struct VFSManager * self,
+bool VResolverResolveToAd(const VResolver *self);
+
+/*rc_t VFSManagerMakeDbgapResolver(const struct VFSManager * self,
     VResolver ** new_resolver, const struct KConfig * cfg,
-    const struct KNgcObj * ngc);
+    const struct KNgcObj * ngc);*/
 
 /* default behavior to resolve oid->file mapping inside of VFS */
 #define DEFAULT_RESOVE_OID_NAME true
