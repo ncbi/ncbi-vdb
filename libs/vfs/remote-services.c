@@ -383,7 +383,7 @@ typedef struct {
     char * format;
     char * forced; /* forced SDL>=2 location  */
     char * jwtKartFile;
-    SNgc ngc;
+    SNgc _ngc;
     bool hasQuery;
 } SRequest;
 
@@ -3031,8 +3031,8 @@ static rc_t SNgcInit(SNgc * self, const char * path) {
 }
 
 const char * SRequestNgcFile(const SRequest * self) {
-    if (self != NULL && self->ngc.ngcFile != NULL)
-        return self->ngc.ngcFile;
+    if (self != NULL && self->_ngc.ngcFile != NULL)
+        return self->_ngc.ngcFile;
 
     return NULL;
 }
@@ -3042,17 +3042,29 @@ const KNgcObj * KServiceGetNgcFile(const KService * self, bool * isProtected) {
 
     *isProtected = false;
 
-    if (self != NULL && self->req.ngc.ngc != NULL) {
-        rc_t rc = KNgcObjAddRef(self->req.ngc.ngc);
+    if (self != NULL && self->req._ngc.ngc != NULL) {
+        rc_t rc = KNgcObjAddRef(self->req._ngc.ngc);
         if (rc != 0)
             return 0;
 
         *isProtected = true;
-        return self->req.ngc.ngc;
+        return self->req._ngc.ngc;
     }
 
     return NULL;
 }
+
+/* Set ngc file argument in service request */
+rc_t KServiceSetNgcFile(KService * self, const char * path) {
+    if (self == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
+
+    if (path == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
+
+    return SNgcInit(&self->req._ngc, path);
+}
+
 
 /* SRequest *******************************************************************/
 static rc_t SRequestInit ( SRequest * self ) {
@@ -3098,7 +3110,7 @@ static rc_t SRequestFini ( SRequest * self ) {
     free(self->forced);
     free(self->format);
 
-    r2 = SNgcFini(&self->ngc);
+    r2 = SNgcFini(&self->_ngc);
     if (rc == 0)
         rc = r2;
 
@@ -3820,17 +3832,6 @@ rc_t KServiceSetJwtKartFile(KService * self, const char * path) {
         return RC(rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted);
     else
         return 0;
-}
-
-/* Set ngc file argument in service request */
-rc_t KServiceSetNgcFile(KService * self, const char * path) {
-    if (self == NULL)
-        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
-
-    if (path == NULL)
-        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
-
-    return SNgcInit(&self->req.ngc, path);
 }
 
 
