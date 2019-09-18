@@ -499,3 +499,19 @@ LIB_EXPORT rc_t CC KNgcObjGetTicket(const KNgcObj *self,
 
     return rc;
 }
+
+rc_t KNgcObjGetEncryptionKey(const KNgcObj *self,
+    char * buffer, size_t buffer_size, size_t * written)
+{
+    rc_t rc = 0;
+
+    if (self == NULL)
+        rc = RC(rcKFG, rcFile, rcFormatting, rcSelf, rcNull);
+    else if (buffer == NULL)
+        rc = RC(rcKFG, rcFile, rcFormatting, rcParam, rcNull);
+    else
+        rc = string_printf(buffer, buffer_size, written, "%S",
+            &self->encryptionKey);
+
+    return rc;
+}
