@@ -1369,15 +1369,26 @@ static rc_t KRepositoryCurrentProtectedRepositoryForNgc(
             rc = KNgcObjGetProjectId(ngc, &id);
         if (rc == 0)
             rc = KConfigMakeLocal(&kfg, NULL);
-        if (rc == 0)
-            rc = KNgcObjGetEncryptionKey(ngc, v, sizeof v, NULL);
+
         if (rc == 0)
             rc = string_printf(name, sizeof name, &nameLen, "dbGaP-%d", id);
+
+        if (rc == 0)
+            rc = KNgcObjGetEncryptionKey(ngc, v, sizeof v, NULL);
         if (rc == 0)
             rc = string_printf(n, sizeof n, NULL,
                 "/repository/user/protected/%s/encryption-key", name);
         if (rc == 0)
             rc = KConfigWriteString(kfg, n, v);
+
+        if (rc == 0)
+            rc = KNgcObjGetTicket(ngc, v, sizeof v, NULL);
+        if (rc == 0)
+            rc = string_printf(n, sizeof n, NULL,
+                "/repository/user/protected/%s/download-ticket", name);
+        if (rc == 0)
+            rc = KConfigWriteString(kfg, n, v);
+
         if (rc == 0)
             rc = KConfigMakeRepositoryMgrRead(kfg, &mgr);
         if (rc == 0)
