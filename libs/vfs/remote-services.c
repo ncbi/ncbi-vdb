@@ -739,7 +739,7 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
     const char prt[] = "/repository/remote/protected/CGI/resolver-cgi";
     const char sdl[] = "/repository/remote/main/SDL.2/resolver-cgi";
     const char cgi[] = RESOLVER_CGI;
-    
+
     rc_t rc = 0;
     const char * path = aProtected ? prt : man;
     assert( request );
@@ -1856,7 +1856,10 @@ static rc_t EVPathInitMapping
 
     if ( self -> https == NULL && self -> http == NULL && self -> fasp == NULL )
         return 0;
+<<<<<<< HEAD
 
+=======
+>>>>>>> VDB-3879 done, removed some memory leaks in VFS
     vsrc = self -> http ? self -> http
         : ( self -> https ? self -> https : self -> fasp );
     rc = VPathCheckFromNamesCGI ( vsrc, & src -> ticket, -1,
@@ -2862,7 +2865,7 @@ static rc_t STicketsAppend ( STickets * self, uint32_t project,
         return 0;
 
     /* && project>0: dbGaP projectId can be 0*/
-    if ( rc == 0 && ticket [ 0 ] != '\0' ) { 
+    if ( rc == 0 && ticket [ 0 ] != '\0' ) {
         BSTItem * i = NULL;
 
         String str;
@@ -4833,16 +4836,10 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                             if (rc == 0)
                                 rc = ItemAddVPath(file, "sra", path,
                                     mapping, true, osize);
-                            RELEASE(VPath, path);
-                            if (rc != 0)
-                                break;
                         }
                         if (rc == 0 && vdbcache != NULL) {
                             rc = ItemAddVPath(file, "vdbcache", vdbcache,
                                 vdbcacheMapping, true, 0);
-                            RELEASE(VPath, vdbcache);
-                            if (rc != 0)
-                                break;
                         }
                     }
 

@@ -1614,7 +1614,7 @@ rc_t oldVResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("names.cgi = %S\n", self -> root));
     if(((self)->root)->addr[self->root->size - 1] == 'i')
         rc = KNSManagerMakeReliableClientRequest ( kns, & req, 0x01010000, NULL,
-            self -> root -> addr ); 
+            self -> root -> addr );
     else if (((self)->root)->addr[4] == 's')
         rc = KNSManagerMakeReliableClientRequest ( kns, & req, 0x01010000, NULL,
             RESOLVER_CGI);
