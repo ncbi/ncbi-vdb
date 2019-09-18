@@ -78,6 +78,8 @@ struct KfgConfigNamelist;
 
 static bool s_disable_user_settings = false;
 
+static const char * s_ngc_file = NULL;
+
 
 /*----------------------------------------------------------------------------*/
 static const char default_kfg[] = {
@@ -3976,6 +3978,9 @@ LIB_EXPORT void CC KConfigDisableUserSettings ( void )
 {
     s_disable_user_settings = true;
 }
+
+LIB_EXPORT void CC KConfigSetNgcFile(const char * path) { s_ngc_file = path; }
+const char * KConfigGetNgcFile(void) { return s_ngc_file; }
 
 static
 rc_t open_file ( const KFile **f, const char *path )
