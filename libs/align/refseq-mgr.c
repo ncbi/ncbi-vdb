@@ -244,11 +244,11 @@ static RefSeq *RefSeq_RefSeq_init(RefSeq *const super,
                                    char const name[])
 {
     struct RefSeq_RefSeq *const self = &super->u.refSeq;
-    
+
     memmove(self->name, name, namelen);
     self->name[namelen] = '\0';
     super->mgr = mgr;
-    
+
     return super;
 }
 
@@ -260,7 +260,7 @@ static RefSeq *RefSeq_WGS_init(RefSeq *const super,
     struct RefSeq_WGS *const self = &super->u.wgs;
     unsigned prefixLen = 0;
     unsigned digits = 0;
-    
+
     while (prefixLen < namelen && digits < 2) {
         int const ch = name[prefixLen];
         if (isdigit(ch))
@@ -304,7 +304,7 @@ static bool RefSeq_WGS_isopen(RefSeq const *const super)
 static void RefSeq_RefSeq_close(RefSeq *const super)
 {
     TableReaderRefSeq const *const reader = super->u.refSeq.reader;
-    
+
     super->u.refSeq.reader = NULL;
     TableReaderRefSeq_Whack(reader);
 }
@@ -312,7 +312,7 @@ static void RefSeq_RefSeq_close(RefSeq *const super)
 static void RefSeq_WGS_close(RefSeq *const super)
 {
     TableReaderWGS const *const reader = super->u.wgs.reader;
-    
+
     super->u.wgs.reader = NULL;
     TableReaderWGS_Whack(reader);
 }
@@ -333,7 +333,7 @@ static rc_t RefSeq_WGS_setRow(RefSeq *const super,
     assert(strncmp(name, self->name, self->prefixLen) == 0);
     for (i = self->prefixLen; i < N; ++i) {
         int const ch = name[i];
-        
+
         if (isdigit(ch))
             row = (row * 10) + (ch - '0');
         else if (ch == '.')
@@ -403,17 +403,17 @@ static int RefSeq_RefSeq_compare(RefSeq const *super,
 {
     char const *const fnd = super->u.refSeq.name;
     unsigned i;
-    
+
     for (i = 0; ; ++i) {
         int const a = i == qlen ? '\0' : qry[i];
         int const b = fnd[i];
-        
+
         if (a < b)
             return -1;
-        
+
         if (b < a)
             return 1;
-        
+
         if (a == 0)
             break;
     }
@@ -445,7 +445,7 @@ static unsigned FindAccession(unsigned const N,
 {
     unsigned f = 0;
     unsigned e = N;
-    
+
     while (f < e) {
         unsigned const m = f + ((e - f) >> 1);
         int const diff = refSeq[m]->vt->compare(refSeq[m], qlen, qry);
@@ -468,10 +468,10 @@ static rc_t get_schema_info(KMetadata const *const meta,
 {
     KMDataNode const *node;
     rc_t rc = KMetadataOpenNodeRead(meta, &node, "schema");
-    
+
     if (rc == 0) {
         size_t sz;
-        
+
         rc = KMDataNodeReadAttr(node, "name", buffer, bsz - 1, &sz);
         KMDataNodeRelease(node);
         if (rc == 0) {
@@ -493,7 +493,7 @@ static rc_t get_tbl_schema_info(VTable const *const tbl,
 {
     KMetadata const *meta;
     rc_t rc = VTableOpenMetadataRead(tbl, &meta);
-    
+
     buffer[0] = '\0';
     if (rc == 0) rc = get_schema_info(meta, bsz, buffer);
     KMetadataRelease(meta);
@@ -505,7 +505,7 @@ static rc_t get_db_schema_info(VDatabase const *db,
 {
     KMetadata const *meta;
     rc_t rc = VDatabaseOpenMetadataRead(db, &meta);
-    
+
     buffer[0] = '\0';
     if (rc == 0) rc = get_schema_info(meta, bsz, buffer);
     KMetadataRelease(meta);
@@ -532,10 +532,10 @@ static rc_t RefSeq_RefSeq_open(RefSeq *const super, RefSeqMgr const *const mgr)
         VPathSetAccOfParentDb(aOrig, super->accOfParentDb);
     if (rc == 0)
         rc = VDBManagerOpenTableReadVPath(mgr->vmgr, &tbl, NULL, aOrig);
-    
+
     if (tbl) {
         char scheme[1024];
-        
+
         get_tbl_schema_info(tbl, sizeof(scheme), scheme);
         if (strcmp(scheme, "NCBI:refseq:tbl:reference") == 0) {
             rc = TableReaderRefSeq_MakeTable(&self->reader, mgr->vmgr, tbl,
@@ -559,10 +559,10 @@ static rc_t RefSeq_RefSeq_odd_open(RefSeq *const super, RefSeqMgr const *const m
     struct RefSeq_RefSeq *const self = &super->u.refSeq;
     VTable const *tbl;
     rc_t rc = VDBManagerOpenTableRead(mgr->vmgr, &tbl, NULL, "ncbi-acc:%s?vdb-ctx=refseq", self->name);
-    
+
     if (tbl) {
         char scheme[1024];
-        
+
         get_tbl_schema_info(tbl, sizeof(scheme), scheme);
         if (strcmp(scheme, "NCBI:refseq:tbl:reference") == 0) {
             rc = TableReaderRefSeq_MakeTable(&self->reader, mgr->vmgr, tbl,
@@ -584,11 +584,11 @@ static rc_t RefSeq_WGS_open(RefSeq *const super, RefSeqMgr const *const mgr)
 
     if (db) {
         char scheme[1024];
-        
+
         get_db_schema_info(db, sizeof(scheme), scheme);
         if (strcmp(scheme, "NCBI:WGS:db:contig") == 0) {
             VTable const *tbl;
-            
+
             rc = VDatabaseOpenTableRead(db, &tbl, "SEQUENCE");
             if (tbl) {
                 rc = TableReaderWGS_MakeTable(&self->reader, mgr->vmgr, tbl,
@@ -699,7 +699,7 @@ LIB_EXPORT rc_t CC RefSeqMgr_SetCache(RefSeqMgr const *const cself, size_t cache
 {
     if (cself) {
         RefSeqMgr *const self = (RefSeqMgr *)cself;
-        
+
         WhackAllReaders(self);
         assert(self->num_open == 0);
         self->cache = cache;
@@ -713,7 +713,7 @@ LIB_EXPORT rc_t CC RefSeqMgr_Make( const RefSeqMgr** cself, const VDBManager* vm
 {
     rc_t rc = 0;
     RefSeqMgr* obj = NULL;
-    
+
     if ( cself == NULL || vmgr == NULL )
     {
         rc = RC( rcAlign, rcIndex, rcConstructing, rcParam, rcNull );
@@ -759,9 +759,9 @@ void RefseqWhack(RefSeq * self) {
     assert(self);
 
     StringWhack(self->accOfParentDb);
-    free(self);
-
     memset(self, 0, sizeof *self);
+
+    free(self);
 }
 
 LIB_EXPORT rc_t CC RefSeqMgr_Release(const RefSeqMgr* cself)
@@ -793,10 +793,10 @@ static rc_t NewRefSeq(RefSeqMgr *const self,
     if (self->nRefSeqs + 1 > self->maxRefSeqs) {
         unsigned const maxRefSeqs = (self->maxRefSeqs == 0) ? 32 : (self->maxRefSeqs << 1);
         void *tmp = realloc(self->refSeq, maxRefSeqs * sizeof(self->refSeq[0]));
-        
+
         if (tmp == NULL)
             return RC(rcAlign, rcTable, rcAccessing, rcMemory, rcExhausted);
-        
+
         self->maxRefSeqs = maxRefSeqs;
         self->refSeq = tmp;
     }
@@ -805,7 +805,7 @@ static rc_t NewRefSeq(RefSeqMgr *const self,
     ++self->nRefSeqs;
     {
         RefSeq *rs = NULL;
-    
+
         switch (type) {
         case refSeqType_RefSeq:
             rs = RefSeq_RefSeq_alloc(N);
@@ -821,7 +821,7 @@ static rc_t NewRefSeq(RefSeqMgr *const self,
             break;
         }
         self->refSeq[at] = rs;
-    
+
         if (rs == NULL)
             return RC(rcAlign, rcTable, rcAccessing, rcMemory, rcExhausted);
 
@@ -854,7 +854,7 @@ static rc_t exists(RefSeqMgr *const self, unsigned const N, char const accession
             ALIGN_CF_DBG("failed to open %.*s", N, accession);
             ALIGN_DBGERR(rc);
         }
-    }    
+    }
     return rc;
 }
 
@@ -891,7 +891,7 @@ static rc_t GetSeq(RefSeqMgr *const self, RefSeq **result,
     unsigned const at = FindAccession(self->nRefSeqs,
                                       (RefSeq const **)self->refSeq,
                                       N, accession, &matched);
-    
+
     if (!matched) {
         int const type = AccessionType(self->vmgr, N, accession, &rc, accOfParentDb);
         if (type)
@@ -956,7 +956,7 @@ LIB_EXPORT rc_t CC RefSeqMgr_Read(const RefSeqMgr* cself, const char* seq_id, ui
 static void WhackAllReaders(RefSeqMgr *const self)
 {
     unsigned i;
-    
+
     for (i = 0; i < self->nRefSeqs; ++i) {
         RefSeq *const rs = self->refSeq[i];
 
@@ -1007,7 +1007,7 @@ static rc_t GetSeqInternal(RefSeqMgr *const self,
                               const String * accOfParentDb)
 {
     RefSeq *obj = NULL;
-    
+
     if (self->mru == NULL || self->mru->vt->compare(self->mru, seq_id_sz, seq_id) != 0) {
         rc_t const rc = GetSeq(self, &obj, seq_id_sz, seq_id, accOfParentDb);
         if (rc)
@@ -1063,7 +1063,7 @@ LIB_EXPORT rc_t CC RefSeq_Read(const RefSeq* cself, INSDC_coord_zero offset, INS
     else {
         RefSeq *const self = (RefSeq *)cself;
         RefSeqMgr *const mgr = (RefSeqMgr *)self->mgr;
-        
+
         rc = GetReader(mgr, self);
         if (rc == 0)
             rc = self->vt->read(self, offset, len, buffer, written);
@@ -1080,7 +1080,7 @@ LIB_EXPORT rc_t CC RefSeq_Circular(const RefSeq* cself, bool* circular)
         rc = RC(rcAlign, rcFile, rcReading, rcParam, rcNull);
     else {
         RefSeq const *const self = (RefSeq *)cself;
-        
+
         rc = self->vt->circular(self, circular);
     }
     ALIGN_DBGERR(rc);
@@ -1095,7 +1095,7 @@ LIB_EXPORT rc_t CC RefSeq_SeqLength(const RefSeq* cself, INSDC_coord_len* len)
         rc = RC(rcAlign, rcFile, rcReading, rcParam, rcNull);
     else {
         RefSeq const *const self = (RefSeq *)cself;
-        
+
         rc = self->vt->length(self, len);
     }
     ALIGN_DBGERR(rc);
@@ -1110,7 +1110,7 @@ LIB_EXPORT rc_t CC RefSeq_MD5(const RefSeq* cself, const uint8_t** md5)
         rc = RC(rcAlign, rcFile, rcReading, rcParam, rcNull);
     else {
         RefSeq const *const self = (RefSeq *)cself;
-        
+
         rc = self->vt->checksum(self, md5);
     }
     ALIGN_DBGERR(rc);
@@ -1120,12 +1120,12 @@ LIB_EXPORT rc_t CC RefSeq_MD5(const RefSeq* cself, const uint8_t** md5)
 LIB_EXPORT rc_t CC RefSeq_Name(const RefSeq* cself, const char** name)
 {
     rc_t rc = 0;
-    
+
     if (cself == NULL)
         rc = RC(rcAlign, rcFile, rcReading, rcParam, rcNull);
     else {
         RefSeq const *const self = (RefSeq *)cself;
-        
+
         *name = self->vt->name(self);
     }
     ALIGN_DBGERR(rc);
@@ -1153,7 +1153,7 @@ rc_t RefSeqMgr_ConfigValue ( const KConfig *kfg, const char *node_path, char *va
             else
                 value [ num_read ] = 0;
         }
-        
+
         KConfigNodeRelease ( node );
     }
     return rc;
@@ -1165,12 +1165,12 @@ rc_t RefSeqMgr_KfgReadRepositories(const KConfig* kfg, char* paths, size_t paths
     /* servers are children of refseq/repository, e.g.:             /refseq/repository/main="..." */
     /* volumes are in refseq/repository/<serverName>/volumes, e.g.: /refseq/repository/main/volumes="..." */
     /* all server/volume combinations are returned in paths separated by ':' */
-    
+
     rc_t rc = 0;
     const KConfigNode *node;
 #define KFG_PATH "/refseq/repository/"
     paths[0] = 0;
-    
+
     rc = KConfigOpenNodeRead ( kfg, & node, KFG_PATH );
     if ( rc == 0 )
     {
@@ -1193,7 +1193,7 @@ rc_t RefSeqMgr_KfgReadRepositories(const KConfig* kfg, char* paths, size_t paths
                         char server[ BufSize ];
                         char buf[ BufSize ];
                         size_t num_writ;
-                        
+
                         rc = string_printf(buf, BufSize, &num_writ, KFG_PATH "%s", name);
                         if (rc == 0)
                         {
@@ -1209,7 +1209,7 @@ rc_t RefSeqMgr_KfgReadRepositories(const KConfig* kfg, char* paths, size_t paths
                                     {   /* create a server/volume pair for every combination, append to paths, ':' - separate */
                                         char *vol_rem = volumes;
                                         char *vol_sep;
-                                        
+
                                         do {
                                             char const *volume = vol_rem;
                                             vol_sep = string_chr(volume, string_size(volume), ':');
@@ -1239,7 +1239,7 @@ rc_t RefSeqMgr_KfgReadRepositories(const KConfig* kfg, char* paths, size_t paths
             }
             KNamelistRelease ( children );
         }
-        
+
         KConfigNodeRelease ( node );
     }
     if (GetRCState(rc) == rcNotFound)
@@ -1255,7 +1255,7 @@ rc_t RefSeqMgr_KfgReadStr(const KConfig* kfg, const char* path, char* value, siz
 {
     rc_t rc = 0;
     const KConfigNode *node;
-    
+
     if ( (rc = KConfigOpenNodeRead(kfg, &node, "%s", path)) == 0 ) {
         size_t num_read, remaining;
         if( (rc = KConfigNodeRead(node, 0, value, value_sz - 1, &num_read, &remaining)) == 0 ) {
@@ -1278,7 +1278,7 @@ rc_t RefSeqMgr_ForEachVolume(const RefSeqMgr* cself, RefSeqMgr_ForEachVolume_cal
     rc_t rc = 0;
     char servers[4096];
     char volumes[4096];
-    
+
     if( cself == NULL || cb == NULL ) {
         rc = RC(rcAlign, rcType, rcConstructing, rcParam, rcNull);
     } else if( cb(".", NULL, data) ) {
@@ -1292,7 +1292,7 @@ rc_t RefSeqMgr_ForEachVolume(const RefSeqMgr* cself, RefSeqMgr_ForEachVolume_cal
             char *srv_rem = servers;
             do {
                 char const* server = srv_rem;
-                
+
                 srv_sep = strchr(server, ':');
                 if(srv_sep) {
                     srv_rem = srv_sep + 1;
@@ -1314,7 +1314,7 @@ rc_t RefSeqMgr_ForEachVolume(const RefSeqMgr* cself, RefSeqMgr_ForEachVolume_cal
                 char *srv_rem = servers;
                 do {
                     char const* server = srv_rem;
-                    
+
                     srv_sep = strchr(server, ':');
                     if(srv_sep) {
                         srv_rem = srv_sep + 1;
@@ -1341,7 +1341,7 @@ rc_t RefSeqMgr_ForEachVolume(const RefSeqMgr* cself, RefSeqMgr_ForEachVolume_cal
                     char const *server = srv_rem;
                     char *vol_rem = vol;
                     char *vol_sep;
-                    
+
                     string_copy ( vol, sizeof vol, volumes, string_size( volumes ) );
                     srv_sep = strchr(server, ':');
                     if(srv_sep) {
@@ -1350,7 +1350,7 @@ rc_t RefSeqMgr_ForEachVolume(const RefSeqMgr* cself, RefSeqMgr_ForEachVolume_cal
                     }
                     do {
                         char const *volume = vol_rem;
-                        
+
                         vol_sep = strchr(volume, ':');
                         if(vol_sep) {
                             vol_rem = vol_sep + 1;
