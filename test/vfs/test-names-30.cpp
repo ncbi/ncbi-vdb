@@ -114,7 +114,7 @@ public:
 
         VPath * p = NULL;
         rc_t rc = VPathMakeFromUrl ( & p, & url, & _tick, true, & _id, _size, t,
-                            pd5, expiration, NULL, NULL, NULL, false, false, NULL );
+                pd5, expiration, NULL, NULL, NULL, false, false, NULL, -1, 0 );
 
         if ( rc == 0 )
             rc = VPathMarkHighReliability ( p, true );

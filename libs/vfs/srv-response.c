@@ -32,6 +32,7 @@
 #include "json-response.h" /* struct Response4 */
 #include "path-priv.h" /* VPathGetScheme_t */
 #include "resolver-priv.h" /* DEFAULT_PROTOCOLS */
+#include "services-priv.h" /* KSrvResponseGetMapping */
 
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
@@ -60,6 +61,7 @@ struct VPathSet {
     const struct KSrvError * error;
 
     const VPath * mapping;
+    const VPath * cacheMapping; /* vdbcache */
 
     const VPath * local;
     const VPath * cache;
@@ -100,6 +102,7 @@ rc_t VPathSetWhack ( VPathSet * self ) {
         RELEASE ( VPath, self -> cacheS3 );
 
         RELEASE(VPath, self->mapping);
+        RELEASE(VPath, self->cacheMapping);
 
         RELEASE ( VPath, self -> local );
         RELEASE ( VPath, self -> cache );
@@ -349,6 +352,12 @@ rc_t VPathSetMake ( VPathSet ** self, const EVPath * src,
         r2 = VPathAddRef(src->mapping);
         if (r2 == 0)
             p->mapping = src->mapping;
+        else if (rc == 0)
+            rc = r2;
+
+        r2 = VPathAddRef(src->vcMapping);
+        if (r2 == 0)
+            p->cacheMapping = src->vcMapping;
         else if (rc == 0)
             rc = r2;
     }
@@ -652,23 +661,39 @@ rc_t KSrvResponseGet
 }
 
 rc_t KSrvResponseGetMapping(const KSrvResponse * self, uint32_t idx,
-    const VPath ** mapping)
+    const VPath ** mapping, const VPath ** vdbcacheMapping)
 {
     rc_t rc = 0;
+
     const VPathSet * s = NULL;
-    if (mapping == NULL)
+
+    if (mapping == NULL || vdbcacheMapping == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
+
     *mapping = NULL;
+
     if (self == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
+
     s = (VPathSet *)VectorGet(&self->list, idx);
+
     if (s != NULL) {
         if (s->error != NULL)
             return 0;
-        rc = VPathAddRef(s->mapping);
-        if ( rc == 0 )
-            * mapping = s->mapping;
+
+        if (rc == 0) {
+            rc = VPathAddRef(s->mapping);
+            if (rc == 0)
+                * mapping = s->mapping;
+        }
+
+        if (rc == 0) {
+            rc = VPathAddRef(s->cacheMapping);
+            if (rc == 0)
+                * vdbcacheMapping = s->cacheMapping;
+        }
     }
+
     return rc;
 }
 

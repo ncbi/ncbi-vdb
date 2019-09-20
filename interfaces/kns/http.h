@@ -303,7 +303,7 @@ KNS_EXTERN rc_t CC KClientHttpRequestVAddPostParam ( KClientHttpRequest *self, c
  *  name - field name identifying this file in the resulting HTML form. An empty name is OK
  *  "path" [ IN ] - NUL terminated string in directory-native character set denoting target file
 */
-KNS_EXTERN rc_t CC KClientHttpRequestAddPostFileParam ( KClientHttpRequest *self, const char * name, const char *path );
+KNS_EXTERN rc_t CC KClientHttpRequestAddPostFileParam ( KClientHttpRequest *self, const char *name, const char *path );
 
 KNS_EXTERN rc_t CC KClientHttpRequestSetCloudParams(KClientHttpRequest * self,
     bool ceRequired, bool payRequired);

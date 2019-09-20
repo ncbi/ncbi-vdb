@@ -27,6 +27,9 @@
 #include <cloud/cloud.h> /* CloudRelease */
 #include <cloud/manager.h> /* CloudMgrRelease */
 
+#include <kfs/directory.h> /* KDirectory */
+#include <kfs/file.h> /* KFileRead */
+
 #include <klib/container.h> /* BSTree */
 #include <klib/debug.h> /* DBGMSG */
 #include <klib/log.h> /* KLogLevel */
@@ -298,6 +301,7 @@ typedef struct {
 typedef struct {
     String k;
     String v;
+    char n[256];
 } SKV;
 
 
@@ -312,6 +316,10 @@ typedef struct {
 typedef struct {
     bool inited;
     char * cgi;
+
+    const char * fileKey; /* don't free */
+    const char * fileVal; /* don't free */
+
     Vector params;
 } SCgiRequest;
 
@@ -370,6 +378,8 @@ typedef struct {
     VRemoteProtocols protocols;
     char * format;
     char * forced; /* forced SDL>=2 location  */
+    char * jwtKartFile;
+    char * ngcFile;
     bool hasQuery;
 } SRequest;
 
@@ -468,6 +478,20 @@ static rc_t SHelperInitRepoMgr ( SHelper * self ) {
     return rc;
 }
 
+rc_t KServiceGetRepoMgr(KService * self, const KRepositoryMgr ** mgr) {
+    rc_t rc = 0;
+
+    assert(mgr && self);
+
+    *mgr = NULL;
+
+    rc = SHelperInitRepoMgr(&self->helper);
+
+    if (rc == 0)
+        *mgr = self->helper.repoMgr;
+
+    return rc;
+}
 
 /* get from kfg, otherwise use hardcoded */
 static VRemoteProtocols SHelperDefaultProtocols ( SHelper * self ) {
@@ -621,9 +645,12 @@ static rc_t SVersionInit(SVersion * self, bool * sdl, const char * src,
 
     rc = SVersionInitFromStr(self, sdl, s);
 
-    if (rc == 0 && request != NULL && VectorLength(&request->tickets.tickets) > 0
-        && sdl != NULL && *sdl)
-    {   /* use version 3 when getting dbGaP data */
+    if (rc == 0 && request != NULL
+        && VectorLength(&request->tickets.tickets) > 0 && sdl != NULL && *sdl
+        && request->request.objects > 0
+        && request->request.object->objectId != NULL
+        && isdigit(request->request.object->objectId[0]) )
+    {   /* use version 3 when getting numeric dbGaP data (objectIds) */
         rc = SVersionInitFromStr(self, sdl, "3");
     }
 
@@ -1702,7 +1729,7 @@ static bool VPathMakeOrNot ( VPath ** new_path, const String * src,
             useDates ? typed -> date : 0,
             typed -> md5 . has_md5 ? typed -> md5 . md5 : NULL,
             useDates ? typed -> expiration : 0, NULL, NULL, NULL,
-            false, false, NULL );
+            false, false, NULL, -1, 0 );
         if ( * rc == 0 )
             VPathMarkHighReliability ( * new_path, true );
 
@@ -1710,73 +1737,99 @@ static bool VPathMakeOrNot ( VPath ** new_path, const String * src,
     }
 }
 
+static rc_t STypedMakeMapping(const STyped * self,
+    const SVersion version, bool isVdbcache, VPath ** mapping)
+{
+    rc_t rc = 0;
+
+    String empty;
+    String vdbcache;
+    memset(&empty, 0, sizeof empty);
+    CONST_STRING(&vdbcache, ".vdbcache");
+
+    assert(self);
+
+    if (SVersionBefore3_0(version)) {
+        if (self->ticket.size != 0) {
+            if (self->accession.size != 0)
+                rc = VPathMakeFmt(mapping, "ncbi-acc:%S?tic=%S",
+                    &self->accession, &self->ticket);
+            else if (self->name.size == 0)
+                return 0;
+            else
+                rc = VPathMakeFmt(mapping,
+                    "ncbi-file:%S?tic=%S", &self->name, &self->ticket);
+        }
+        else if (self->accession.size != 0)
+            rc = VPathMakeFmt(mapping, "ncbi-acc:%S%S", &self->accession,
+                isVdbcache ? &vdbcache : &empty);
+        else if (self->name.size == 0)
+            return 0;
+        else
+            rc = VPathMakeFmt(mapping, "ncbi-file:%S%S", &self->name,
+                isVdbcache ? &vdbcache : &empty);
+    }
+    else {
+        if (self->ticket.size != 0) {
+            if (self->objectId.size != 0 &&
+                self->objectType == eOT_sragap)
+            {
+                rc = VPathMakeFmt(mapping, "ncbi-acc:%S%S?tic=%S",
+                    &self->objectId,
+                    isVdbcache ? &vdbcache : &empty,
+                    &self->ticket);
+            }
+            else {
+                if (self->objectId.size == 0)
+                    return 0;
+                else
+                    rc = VPathMakeFmt(mapping, "ncbi-file:%S%S?tic=%S",
+                        &self->objectId,
+                        isVdbcache ? &vdbcache : &empty,
+                        &self->ticket);
+            }
+        }
+        else
+            if (self->objectId.size != 0 && self->objectType == eOT_sragap)
+                rc = VPathMakeFmt(mapping, "ncbi-acc:%S%S", &self->objectId,
+                    isVdbcache ? &vdbcache : &empty);
+            else {
+                if (self->objectId.size == 0)
+                    return 0;
+                else
+                    rc = VPathMakeFmt(mapping, "ncbi-file:%S%S",
+                        &self->objectId,
+                        isVdbcache ? &vdbcache : &empty);
+            }
+    }
+
+    return rc;
+}
 
 static rc_t EVPathInitMapping
     ( EVPath * self, const STyped * src, const SVersion  version )
 {
     rc_t rc = 0;
+
     const VPath * vsrc = NULL;
+
     assert ( self && src );
+
     if ( self -> https == NULL && self -> http == NULL && self -> fasp == NULL )
         return 0;
+
     vsrc = self -> http ? self -> http 
         : ( self -> https ? self -> https : self -> fasp );
-    rc = VPathCheckFromNamesCGI ( vsrc, & src -> ticket,
+    rc = VPathCheckFromNamesCGI ( vsrc, & src -> ticket, -1,
         ( const struct VPath ** ) ( & self -> mapping ) );
+
     if ( rc == 0) {
-        if ( SVersionBefore3_0 ( version ) ) {
-            if ( src -> ticket . size != 0 ) {
-                if ( src -> accession . size != 0 )
-                    rc = VPathMakeFmt ( & self -> mapping, "ncbi-acc:%S?tic=%S",
-                        & src -> accession, & src -> ticket );
-                else if ( src -> name . size == 0 )
-                    return 0;
-                else
-                    rc = VPathMakeFmt ( & self -> mapping,
-                        "ncbi-file:%S?tic=%S", & src -> name, & src -> ticket );
-            }
-            else if ( src -> accession . size != 0 )
-                rc = VPathMakeFmt
-                    ( & self -> mapping, "ncbi-acc:%S", & src -> accession );
-            else if ( src -> name . size == 0 )
-                return 0;
-            else
-                rc = VPathMakeFmt
-                    ( & self -> mapping, "ncbi-file:%S", & src -> name );
-        }
-        else {
-            if ( src -> ticket . size != 0 ) {
-                if ( src -> objectId . size != 0 &&
-                     src -> objectType == eOT_sragap )
-                {
-                    rc = VPathMakeFmt ( & self -> mapping, "ncbi-acc:%S?tic=%S",
-                        & src -> objectId, & src -> ticket );
-                }
-                else {
-                    if ( src -> objectId . size == 0) {
-                        return 0;
-                    }
-                    else {
-                        rc = VPathMakeFmt ( & self -> mapping,
-                            "ncbi-file:%S?tic=%S",
-                            & src -> objectId, & src -> ticket );
-                    }
-                }
-            }
-            else
-            if ( src -> objectId . size != 0 &&
-                 src -> objectType == eOT_sragap )
-            {
-                rc = VPathMakeFmt
-                    ( & self -> mapping, "ncbi-acc:%S", & src -> objectId );
-            }
-            else {
-                if ( src -> objectId . size == 0 )
-                    return 0;
-                else
-                    rc = VPathMakeFmt (
-                        & self -> mapping, "ncbi-file:%S", & src -> objectId );
-            }
+        rc = STypedMakeMapping(src, version, false, &self->mapping);
+
+        if (rc == 0 && (self->vcHttps != NULL || self->vcHttp != NULL ||
+            self->vcFasp != NULL))
+        {
+            rc = STypedMakeMapping(src, version, true, &self->vcMapping);
         }
 
         if ( rc == 0 )
@@ -1951,6 +2004,7 @@ static rc_t EVPathFini ( EVPath * self ) {
     assert ( self );
 
     RELEASE ( VPath, self -> mapping );
+    RELEASE ( VPath, self ->vcMapping);
     RELEASE ( VPath, self ->   http  );
     RELEASE ( VPath, self ->   fasp  );
     RELEASE ( VPath, self ->   https );
@@ -2295,6 +2349,7 @@ rc_t SKVMake ( const SKV ** self, const char * k, const char * v )
             else {
                 StringInit ( & kv -> k, p, sk, sk );
                 StringInit ( & kv -> v, p + sk + 1, sv, sv );
+                rc = string_printf(kv ->n, sizeof kv->n, &num_writ, "%s", k);
                 * self = kv;
             }
         }
@@ -2409,6 +2464,21 @@ void SHttpRequestHelperAddPostParam ( void * item, void * data )
         p -> rc = rc;
 }
 
+static
+void SHttpRequestHelperAddQueryParam(void * item, void * data)
+{
+    const SKV          * kv = (SKV                *)item;
+    SHttpRequestHelper * p = (SHttpRequestHelper *)data;
+
+    rc_t rc = 0;
+
+    assert(kv && p);
+
+    rc = KClientHttpRequestAddQueryParam(p->httpReq, kv->n, "%S", &kv->v);
+    if (p->rc == 0)
+        p->rc = rc;
+}
+
 
 /* SCgiRequest ****************************************************************/
 static
@@ -2440,19 +2510,64 @@ static void SCgiRequestFini ( SCgiRequest * self ) {
     memset ( self, 0, sizeof * self );
 }
 
-static bool SRequestResponseFromEnv(const SRequest * self, KStream ** stream) {
+static
+bool SRequestResponseFromEnv(const SRequest * self, KStream ** stream)
+{
+    const char * name = NULL;
     const char * e = NULL;
 
     assert(self);
 
-    if (!self->sdl || self->request.objects != 1)
+    if (!self->sdl)
         return false;
 
-    e = getenv(self->request.object->objectId);
+    if (self->request.objects == 1)
+        name = self->request.object->objectId;
+    else
+        name = self->jwtKartFile;
+
+    if (name == NULL)
+        return false;
+
+    e = getenv(name);
     if ( e != NULL ) {
-        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( 
-            "XXXXX NOT sending HTTP POST request; get resp from env XXXX\n" ) );
-        return KStreamMakeFromBuffer ( stream, e, string_size ( e ) ) == 0;
+        KDirectory * dir = NULL;
+        const KFile * f = NULL;
+        uint64_t size = 0;
+        static char b[20000] = ""; /* static for KStreamMakeFromBuffer */
+        size_t num_read = string_size(e);
+        char * buffer = b;
+
+        rc_t rc = KDirectoryNativeDir(&dir);
+
+        if (rc == 0)
+            rc = KDirectoryOpenFileRead(dir, &f, "%s", e);
+
+        if (rc == 0)
+            rc = KFileSize(f, &size);
+
+        if (rc == 0 && size > sizeof b) {
+            buffer = calloc(1, size); /* leak */
+            if (buffer == NULL)
+                rc = RC(rcVFS, rcStorage, rcAllocating, rcMemory, rcExhausted);
+        }
+
+        if (rc == 0)
+            rc = KFileRead(f, 0, buffer, size, &num_read);
+
+        if (rc == 0) {
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), (
+              "XXXXX NOT sending HTTP POST request; env file -> resp  XXXX\n"));
+            e = buffer;
+        }
+        else
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), (
+              "XXXXX NOT sending HTTP POST request; get resp from env XXXX\n"));
+
+        RELEASE(KFile, f);
+        RELEASE(KDirectory, dir);
+
+        return KStreamMakeFromBuffer ( stream, e, num_read ) == 0;
     }
 
     return false;
@@ -2472,11 +2587,24 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
         else if ( expected == NULL ) {
             SHttpRequestHelper h;
             rc = SHttpRequestHelperInit(&h, helper->kMgr, self->cgi);
+
             if (rc == 0) {
-                VectorForEach(
-                    &self->params, false, SHttpRequestHelperAddPostParam, &h);
-                rc = h.rc;
+                if (self->fileKey != NULL && self->fileVal != NULL) {
+                    rc = KClientHttpRequestAddPostFileParam(h.httpReq,
+                        self->fileKey, self->fileVal);
+                    if (rc == 0) {
+                        VectorForEach(&self->params, false,
+                            SHttpRequestHelperAddQueryParam, &h);
+                        rc = h.rc;
+                    }
+                }
+                else {
+                    VectorForEach(&self->params, false,
+                        SHttpRequestHelperAddPostParam, &h);
+                    rc = h.rc;
+                }
             }
+
             if (rc == 0) {
                 KHttpResult * rslt = NULL;
                 DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), (
@@ -2900,6 +3028,11 @@ static rc_t SRequestFini ( SRequest * self ) {
 
     assert ( self );
 
+    free(self->jwtKartFile);
+    free(self->forced);
+    free(self->format);
+    free(self->ngcFile);
+
     r2 = STicketsFini ( & self -> tickets );
     if ( rc == 0 )
         rc = r2;
@@ -2935,7 +3068,9 @@ static rc_t SObjectCheckUrl ( SObject * self ) {
     return rc;
 }
 
-static bool SCgiRequestAddKfgLocation(SCgiRequest * self, SHelper * helper) {
+static
+bool SCgiRequestAddKfgLocation(SCgiRequest * self, SHelper * helper)
+{
     rc_t rc = SHelperInitKfg(helper);
 
     assert(helper);
@@ -3111,6 +3246,33 @@ static rc_t SRequestSetDisabled(SRequest * self, SHelper * helper) {
     return rc;
 }
 
+static rc_t SRequestAddFile(SRequest * self,
+    const char * key, const char * path)
+{
+    KDirectory * dir = NULL;
+    rc_t rc = KDirectoryNativeDir(&dir);
+
+    if (rc == 0) {
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), ("  %s=%s\n", key, path));
+
+        if ((KDirectoryPathType(dir, "%s", path) & ~kptAlias) != kptFile)
+            rc = RC(rcVFS, rcQuery, rcExecuting, rcFile, rcNotFound);
+    }
+
+    if (rc == 0 && key != NULL && path != NULL) {
+        assert(self);
+
+        self->cgiReq.fileKey = key;
+        self->cgiReq.fileVal = path;
+
+        self->hasQuery = true;
+    }
+
+    RELEASE(KDirectory, dir);
+
+    return rc;
+}
+
 static
 rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     VRemoteProtocols protocols, const char * cgi,
@@ -3139,7 +3301,8 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     if (rc != 0)
         return rc;
     if (request->disabled) {
-        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), ("remote repo disabled in config\n"));
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
+            ("remote repo disabled in config\n"));
         return rc;
     }
 
@@ -3185,7 +3348,9 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
                 return rc;
         }
     }
-    if ( ! SVersionHasMultpileObjects ( request -> version, request -> sdl ) ) {
+    if ( ! SVersionHasMultpileObjects ( request -> version,
+        request -> sdl ) )
+    {
         if ( request -> request . object [ 0 ] . objectId == NULL )
             return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
         else {
@@ -3388,7 +3553,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
             if (rc == 0) {
                 const char name[] = "location-type";
                 const char v[] = "forced";
-                    rc = SKVMake(&kv, name, v);
+                rc = SKVMake(&kv, name, v);
                 if (rc == 0) {
                     rc = VectorAppend(&self->params, NULL, kv);
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
@@ -3403,6 +3568,12 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
 
     if (rc == 0 && SVersionResponseInJson(request->version, request->sdl))
         rc = SCgiRequestAddAcceptCharges(self, helper);
+
+    if (rc == 0 && request->sdl && request->ngcFile != NULL)
+        rc = SRequestAddFile(request, "ngc", request->ngcFile);
+
+    if (rc == 0 && request->sdl && request->jwtKartFile != NULL)
+        rc = SRequestAddFile(request, "cart", request->jwtKartFile);
 
     return rc;
 }
@@ -3495,7 +3666,6 @@ rc_t SRequestInitSearchSCgiRequest ( SRequest * request, const char * cgi,
     return rc;
 }
 
-
 /* KService *******************************************************************/
 static void KServiceExpectErrors ( KService * self, int n ) {
     assert ( self );
@@ -3557,7 +3727,11 @@ rc_t KServiceAddProject ( KService * self, uint32_t project ) {
 
 /* Set accept-format-in of service request */
 rc_t KServiceSetFormat(KService * self, const char * format) {
-    assert(self && format);
+    if (self == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
+
+    if (format == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
 
     free( self -> req . format );
 
@@ -3570,9 +3744,52 @@ rc_t KServiceSetFormat(KService * self, const char * format) {
         return 0;
 }
 
+/* Set jwt kart argument in service request */
+rc_t KServiceSetJwtKartFile(KService * self, const char * path) {
+    if (self == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
+
+    if (path == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
+
+    free(self->req.jwtKartFile);
+
+    self->req.jwtKartFile = NULL;
+
+    self->req.jwtKartFile = string_dup_measure(path, NULL);
+    if (self->req.jwtKartFile == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted);
+    else
+        return 0;
+}
+
+/* Set ngc file argument in service request */
+rc_t KServiceSetNgcFile(KService * self, const char * path) {
+    if (self == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
+
+    if (path == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
+
+    free(self->req.ngcFile);
+
+    self->req.ngcFile = NULL;
+
+    self->req.ngcFile = string_dup_measure(path, NULL);
+    if (self->req.ngcFile == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted);
+    else
+        return 0;
+}
+
+
 /* Set location of data in service request */
 rc_t KServiceSetLocation(KService * self, const char * location) {
-    assert(self && location);
+    if (self == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
+
+    if (location == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
 
     free(self->req.forced);
 
@@ -4382,7 +4599,7 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
 
     assert ( self );
 
-    if ( self -> req . request. objects == 0 )
+    if ( self -> req . request. objects == 0 && self->req.jwtKartFile == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcString, rcInsufficient );
     else if ( self -> req . hasQuery
            || self -> req . serviceType == eSTsearch)
@@ -4434,6 +4651,8 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                 VRemoteProtocols pp[]
                     = { eProtocolHttp, eProtocolFasp, eProtocolHttps };
                 uint32_t p = 0;
+                const VPath * mapping = NULL;
+                const VPath * vdbcacheMapping = NULL;
                 rc = KSrvResponseGetIds(self->resp.list, i, &reqId,
                     &respId);
                 if (rc == 0)
@@ -4442,16 +4661,16 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                     ContainerAdd(box, respId, -1, &file, NULL);
                 if (rc != 0)
                     break;
+                if (rc == 0)
+                    rc = KSrvResponseGetMapping(
+                        self->resp.list, i, &mapping, &vdbcacheMapping);
                 for (p = 0; rc == 0 && p < sizeof pp / sizeof pp[0]; ++p) {
                     const VPath * path = NULL;
                     const VPath * vdbcache = NULL;
                     const KSrvError * error = NULL;
-                    const VPath * mapping = NULL;
                     uint64_t osize = 0;
                     rc = KSrvResponseGetPath(self->resp.list, i, pp[p],
                         &path, &vdbcache, &error);
-                    if (rc == 0)
-                        rc = KSrvResponseGetMapping(self->resp.list, i, &mapping);
                     if (rc == 0)
                         rc = KSrvResponseGetOSize(self->resp.list, i, &osize);
                     if (rc == 0) {
@@ -4463,21 +4682,23 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                             if (r == 0)
                                 rc = ItemSetTicket(file, &ticket);
                             if (rc == 0)
-                                rc = ItemAddVPath(file, "sra", path, mapping,
-                                    true, osize);
+                                rc = ItemAddVPath(file, "sra", path,
+                                    mapping, true, osize);
                             RELEASE(VPath, path);
                             if (rc != 0)
                                 break;
                         }
                         if (vdbcache != NULL) {
-                            rc = ItemAddVPath(file, "vdbcache", vdbcache, NULL,
-                                true, 0);
+                            rc = ItemAddVPath(file, "vdbcache", vdbcache,
+                                vdbcacheMapping, true, 0);
                             RELEASE(VPath, vdbcache);
                             if (rc != 0)
                                 break;
                         }
                     }
                 }
+                RELEASE(VPath, mapping);
+                RELEASE(VPath, vdbcacheMapping);
             }
         }
     }

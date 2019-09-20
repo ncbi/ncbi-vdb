@@ -28,6 +28,7 @@
 
 #include <kfs/directory.h> /* KDirectoryNativeDir */
 #include <kfs/file.h> /* KFileRelease */
+#include <kfg/repository.h> /* KRepositoryMgrGetProtectedRepository */
 
 #include <klib/container.h> /* BSTree */
 #include <klib/printf.h> /* string_printf */
@@ -132,11 +133,28 @@ static rc_t HFini ( H * self ) {
 }
 
 static rc_t HResolver ( H * self, const String * ticket,
-                        VResolver ** resolver )
+                        VResolver ** resolver, const VPath * path )
 {
     rc_t rc = 0;
 
-    assert ( self && resolver );
+    uint32_t projectId = 0;
+    bool isProtected = VPathGetProjectId(path, &projectId);
+
+    assert (resolver && self && self->service);
+
+    if (isProtected) {
+        const struct KRepositoryMgr * mgr = NULL;
+        const struct KRepository * r = NULL;
+        rc = KServiceGetRepoMgr(self->service, &mgr);
+        if (rc == 0) {
+            rc = KRepositoryMgrGetProtectedRepository(mgr, projectId, &r);
+            if (rc == 0)
+                rc = KRepositoryMakeResolver(r, resolver, self->kfg);
+            else
+                rc = VFSManagerMakeResolver(self->mgr, resolver, self->kfg);
+        }
+        return rc;
+    }
 
     if ( ticket && ticket -> addr && ticket -> size ) {
         BSTItem * i = ( BSTItem * ) BSTreeFind
@@ -527,7 +545,7 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                                                     tic);
                                             if (rc == 0)
                                                 rc = HResolver(&h,
-                                                    &ticket, &resolver);
+                                                    &ticket, &resolver, path);
                                             if (rc == 0)
                                                 rc = _VPathGetId(path, &pId,
                                                     &id, mgr);
@@ -580,7 +598,7 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                             if ( rc == 0 )
                                 rc = VPathGetTicket ( path, & ticket );
                             if ( rc == 0 )
-                                rc = HResolver ( & h, & ticket, & resolver );
+                                rc = HResolver ( &h, &ticket, &resolver, NULL );
                             if ( rc == 0 ) {
                                 assert ( resolver );
                                 VResolverResolveName ( resolver,

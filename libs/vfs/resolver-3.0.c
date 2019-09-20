@@ -182,7 +182,7 @@ static rc_t _ProcessCode(EObjectType objectType, const String *object_id,
                         ((VPath**) path, "%S?tic=%S", url, download_ticket);
                 }
                 if ( rc == 0 ) {
-                    rc = VPathCheckFromNamesCGI ( * path, ticket, mapping );
+                    rc = VPathCheckFromNamesCGI ( * path, ticket, -1, mapping );
                     if ( rc == 0 ) {
                         if ( mapping == NULL )
                             return 0;

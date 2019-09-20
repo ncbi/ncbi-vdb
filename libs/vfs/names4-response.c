@@ -1449,7 +1449,7 @@ static rc_t FileAddLink ( File * self, const KJsonValue * node,
         const String * objectType = NULL;
         rc = VPathMakeFromUrl ( & path, & url, NULL, true, & acc, dad -> sz,
             dad -> mod, hasMd5 ? md5 : NULL, 0, dad -> srv, objectType, NULL,
-            false, false, NULL );
+            false, false, NULL, -1, 0 );
     }
     else {
         const String * objectType = NULL;
@@ -1457,7 +1457,7 @@ static rc_t FileAddLink ( File * self, const KJsonValue * node,
         StringInitCString ( & ticket, dad -> tic );
         rc = VPathMakeFromUrl ( & path, & url, & ticket, true, & acc, dad -> sz,
             dad -> mod, hasMd5 ? md5 : NULL, 0, dad -> srv, objectType, NULL,
-            false, false, NULL );
+            false, false, NULL, -1, 0 );
     }
 
     if ( rc == 0 )
@@ -1635,12 +1635,12 @@ rc_t FileGetVdbcacheName ( const File * cself,
     return rc;
 }
 
-static
-rc_t FileInitMapping ( File * self, const Item * item )
-{
+static rc_t FileInitMapping ( File * self, const Item * item ) {
     rc_t rc = 0;
 
     const VPath * path = NULL;
+    int64_t projectId = -1;
+
     String ticket;
 
     assert ( self && item );
@@ -1653,12 +1653,14 @@ rc_t FileInitMapping ( File * self, const Item * item )
     else
         return 0;
 
+    projectId = path->projectId;
+
     memset ( & ticket, 0, sizeof ticket );
 
     if ( item -> tic != NULL )
         StringInitCString ( & ticket, item -> tic );
 
-    rc = VPathCheckFromNamesCGI ( path, & ticket, NULL );
+    rc = VPathCheckFromNamesCGI ( path, & ticket, projectId, NULL );
 
     if ( rc == 0 ) {
         const char * name = ItemOrLocationGetName(item, self);
@@ -1671,11 +1673,20 @@ rc_t FileInitMapping ( File * self, const Item * item )
                 rc = VPathMakeFmt ( & self -> mapping, "ncbi-file:%s?tic=%s",
                                                     name, item -> tic );
         else
-            if (ItemMappingByAcc(item) || name == NULL)
-                rc = VPathMakeFmt ( & self -> mapping, "ncbi-acc:%s",
-                                                                 item -> acc );
-            else
-                rc = VPathMakeFmt ( & self -> mapping, "ncbi-file:%s", name );
+            if (ItemMappingByAcc(item) || name == NULL) {
+                if (projectId < 0)
+                    rc = VPathMakeFmt(&self->mapping, "ncbi-acc:%s", item->acc);
+                else
+                    rc = VPathMakeFmt(&self->mapping, "ncbi-acc:%s?pId=%d",
+                        item->acc, projectId);
+            }
+            else {
+                if (projectId < 0)
+                    rc = VPathMakeFmt(&self->mapping, "ncbi-file:%s", name);
+                else
+                    rc = VPathMakeFmt(&self->mapping, "ncbi-file:%s?pId=%d",
+                        item->acc, projectId);
+            }
     }
 
     return rc;
@@ -1757,14 +1768,22 @@ static rc_t ItemAddElms4 ( Item * self, const KJsonObject * node,
         }
     }
 
-    {
-        uint32_t i = 0;
-        for ( i = 0; rc == 0 && i < self -> nElm; ++ i )
-            rc = FileInitMapping ( & self -> elm [ i ], self );
-    }
+    if (rc == 0)
+        rc = ItemInitMapping(self);
 
     return rc;
 }
+
+rc_t ItemInitMapping(Item * self) {
+    rc_t rc = 0;
+    uint32_t i = 0;
+
+    for (i = 0; rc == 0 && i < self->nElm; ++i)
+        rc = FileInitMapping(&self->elm[i], self);
+
+    return rc;
+}
+
 
 void ItemLogAdd(const Item * self) {
     assert(self);

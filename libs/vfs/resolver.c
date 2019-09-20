@@ -758,7 +758,8 @@ rc_t VResolverAlgLocalFile ( const VResolverAlg *self,
     return RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
 }
 
-rc_t VPathCheckFromNamesCGI ( const VPath * path, const String *ticket, const VPath ** mapping )
+rc_t VPathCheckFromNamesCGI ( const VPath * path,
+    const String *ticket, int64_t projectId, const VPath ** mapping )
 {
     size_t i, size;
     const char * start;
@@ -861,13 +862,33 @@ rc_t VPathCheckFromNamesCGI ( const VPath * path, const String *ticket, const VP
 
             StringSubstr(&path->query, &name, 0, 5);
             StringSubstr(&path->query, &val, 5, 0);
-            if (!StringEqual(&val, ticket))
-                return RC(rcVFS, rcResolver, rcResolving,
-                    rcMessage, rcCorrupt);
+
             CONST_STRING(&req, "?tic=");
-            if (!StringEqual(&name, &req))
-                return RC(rcVFS, rcResolver, rcResolving,
-                    rcMessage, rcCorrupt);
+            if (StringEqual(&name, &req)) {
+                if (!StringEqual(&val, ticket))
+                    return RC(rcVFS, rcResolver, rcResolving,
+                        rcMessage, rcCorrupt);
+            }
+            else {
+                CONST_STRING(&req, "?pId=");
+                if (!StringEqual(&name, &req))
+                    return RC(rcVFS, rcResolver, rcResolving,
+                        rcMessage, rcCorrupt);
+                else if (projectId < 0)
+                    return RC(rcVFS, rcResolver, rcResolving,
+                        rcMessage, rcCorrupt);
+                else {
+                    String s;
+                    char b[256] = "";
+                    rc_t rc = string_printf(b, sizeof b, NULL, "%d", projectId);
+                    if (rc != 0)
+                        return rc;
+                    StringInitCString(&s, b);
+                    if (!StringEqual(&val, &s))
+                        return RC(rcVFS, rcResolver, rcResolving,
+                            rcMessage, rcCorrupt);
+                }
+            }
         }
     }
 
@@ -990,7 +1011,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_0 ( const char *start, size_t size,
 
             if ( rc == 0 )
             {
-                rc = VPathCheckFromNamesCGI ( * path, ticket, NULL );
+                rc = VPathCheckFromNamesCGI ( * path, ticket, -1, NULL );
                 if ( rc == 0 )
                     return 0;
 
@@ -1254,7 +1275,8 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
                     id = & obj_id;
                 rc = VPathMakeFromUrl ( ( VPath** ) path, & url,
                     & download_ticket, true, id, osize, date,
-                    has_md5 ? ud5 : NULL, 0, NULL, NULL, NULL, false, false, NULL );
+                    has_md5 ? ud5 : NULL, 0, NULL, NULL, NULL, false, false,
+                    NULL, -1, 0 );
             }
             /*else
             {
@@ -1265,7 +1287,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
 
             if ( rc == 0 )
             {
-                rc = VPathCheckFromNamesCGI ( * path, ticket, mapping );
+                rc = VPathCheckFromNamesCGI ( * path, ticket, -1, mapping );
                 if ( rc == 0 )
                 {
                     if ( mapping == NULL )
@@ -3309,7 +3331,13 @@ bool VPathHasDownloadTicket ( const VPath * url )
 {
     size_t num_read;
     char option [ 64 ];
+
     rc_t rc = VPathOption ( url, vpopt_gap_ticket, option, sizeof option, & num_read );
+
+    if (rc != 0)
+        rc = VPathOption(url, vpopt_gap_prjId, option, sizeof option,
+            &num_read);
+
     return rc == 0;
 }
 
@@ -3375,6 +3403,7 @@ rc_t VPathExtractAcc ( const VPath * url, VPath ** acc )
         if ( ap -> acc_code == 0 || ap -> path_type != vpAccession )
             CONST_STRING ( & ap -> scheme, "ncbi-file" );
 
+        ap->projectId = url->projectId;
         rc = VPathSetAccOfParentDb(ap, url->accOfParentDb);
     }
 
@@ -3510,6 +3539,10 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
         if (dir != NULL)    /* out-dir is provided */
             useAd = true;   /* [when prefetch downloads to out-dir]
                                 - use AD, too */
+        if (!protected && VPathGetProjectId(query, NULL)) {
+            useAd = true;     /* resolving protected URL returned by SDL */
+            useCache = false; /* here resolve only to AD, not to cache */
+        }
 
         /* we don't use user cache but AD
            when we can use AD and: */
@@ -3591,6 +3624,10 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
         assert ( alg );
         rc = VResolverAlgMakeCachePath ( alg, & tok, cache, legacy_wgs_refseq,
             ad ? self -> wd : NULL );
+        assert(cache);
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("VResolverCacheResolve: "
+            "cache location of '%S' resolved to '%S' with %R\n",
+            &query->path, &(*cache)->path, rc));
     }
 
     return rc;

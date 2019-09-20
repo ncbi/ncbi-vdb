@@ -79,6 +79,12 @@ rc_t KServiceSetLocation(KService * self, const char * location );
 /* Set accept-format-in of service request */
 rc_t KServiceSetFormat(KService * self, const char * format);
 
+/* Set jwt kart argument in service request */
+rc_t KServiceSetJwtKartFile(KService * self, const char * path);
+
+/* Set ngc file argument in service request */
+rc_t KServiceSetNgcFile(KService * self, const char * path);
+
 /************************** name service - version 3 **************************/
 /* Execute Names Service Call using current default protocol version;
  * get KSrvResponse - it contains:
