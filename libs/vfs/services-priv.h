@@ -134,7 +134,10 @@ int KServiceGetResolveName ( const struct KService * self );
 
 /* don't release returned mgr */
 rc_t KServiceGetRepoMgr(KService * self, const struct KRepositoryMgr ** mgr);
-/******************************** TESTS ********************************/
+
+const struct KNgcObj * KServiceGetNgcFile(const KService * self,
+    bool * isProtected);
+/******************************** TESTS ***************************************/
 typedef struct {
     const char * id;
     EObjectType type;

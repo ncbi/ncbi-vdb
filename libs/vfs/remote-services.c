@@ -361,6 +361,10 @@ typedef struct {
     rc_t rc;
 } STickets;
 
+typedef struct {
+    char * ngcFile;
+    const KNgcObj * ngc;
+} SNgc;
 
 /* service request */
 typedef struct {
@@ -379,10 +383,9 @@ typedef struct {
     char * format;
     char * forced; /* forced SDL>=2 location  */
     char * jwtKartFile;
-    char * ngcFile;
+    SNgc ngc;
     bool hasQuery;
 } SRequest;
-
 
 /* service object */
 struct KService {
@@ -2987,6 +2990,69 @@ static void TicketsAppendTicket ( void * item, void * data ) {
     }
 }
 
+/* SNgc ***********************************************************************/
+
+static rc_t SNgcFini(SNgc * self) {
+    rc_t rc = 0;
+
+    assert(self);
+
+    free(self->ngcFile);
+
+    rc = KNgcObjRelease(self->ngc);
+
+    memset(self, 0, sizeof * self);
+
+    return rc;
+}
+
+static rc_t SNgcInit(SNgc * self, const char * path) {
+    KDirectory * dir = NULL;
+    rc_t rc = KDirectoryNativeDir(&dir);
+    const KFile * f = NULL;
+    rc = KDirectoryOpenFileRead(dir, &f, "%s", path);
+
+    SNgcFini(self);
+
+    if (rc == 0) {
+        assert(self);
+
+        self->ngcFile = string_dup_measure(path, NULL);
+        if (self->ngcFile == NULL)
+            return RC(rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted);
+
+        rc = KNgcObjMakeFromFile(&self->ngc, f);
+    }
+
+    RELEASE(KFile, f);
+    RELEASE(KDirectory, dir);
+
+    return rc;
+}
+
+const char * SRequestNgcFile(const SRequest * self) {
+    if (self != NULL && self->ngc.ngcFile != NULL)
+        return self->ngc.ngcFile;
+
+    return NULL;
+}
+
+const KNgcObj * KServiceGetNgcFile(const KService * self, bool * isProtected) {
+    assert(isProtected);
+
+    *isProtected = false;
+
+    if (self != NULL && self->req.ngc.ngc != NULL) {
+        rc_t rc = KNgcObjAddRef(self->req.ngc.ngc);
+        if (rc != 0)
+            return 0;
+
+        *isProtected = true;
+        return self->req.ngc.ngc;
+    }
+
+    return NULL;
+}
 
 /* SRequest *******************************************************************/
 static rc_t SRequestInit ( SRequest * self ) {
@@ -3031,7 +3097,10 @@ static rc_t SRequestFini ( SRequest * self ) {
     free(self->jwtKartFile);
     free(self->forced);
     free(self->format);
-    free(self->ngcFile);
+
+    r2 = SNgcFini(&self->ngc);
+    if (rc == 0)
+        rc = r2;
 
     r2 = STicketsFini ( & self -> tickets );
     if ( rc == 0 )
@@ -3249,17 +3318,9 @@ static rc_t SRequestSetDisabled(SRequest * self, SHelper * helper) {
 static rc_t SRequestAddFile(SRequest * self,
     const char * key, const char * path)
 {
-    KDirectory * dir = NULL;
-    rc_t rc = KDirectoryNativeDir(&dir);
+    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), ("  %s=%s\n", key, path));
 
-    if (rc == 0) {
-        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), ("  %s=%s\n", key, path));
-
-        if ((KDirectoryPathType(dir, "%s", path) & ~kptAlias) != kptFile)
-            rc = RC(rcVFS, rcQuery, rcExecuting, rcFile, rcNotFound);
-    }
-
-    if (rc == 0 && key != NULL && path != NULL) {
+    if (key != NULL && path != NULL) {
         assert(self);
 
         self->cgiReq.fileKey = key;
@@ -3268,9 +3329,7 @@ static rc_t SRequestAddFile(SRequest * self,
         self->hasQuery = true;
     }
 
-    RELEASE(KDirectory, dir);
-
-    return rc;
+    return 0;
 }
 
 static
@@ -3569,8 +3628,8 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     if (rc == 0 && SVersionResponseInJson(request->version, request->sdl))
         rc = SCgiRequestAddAcceptCharges(self, helper);
 
-    if (rc == 0 && request->sdl && request->ngcFile != NULL)
-        rc = SRequestAddFile(request, "ngc", request->ngcFile);
+    if (rc == 0 && request->sdl && SRequestNgcFile(request) != NULL)
+        rc = SRequestAddFile(request, "ngc", SRequestNgcFile(request));
 
     if (rc == 0 && request->sdl && request->jwtKartFile != NULL)
         rc = SRequestAddFile(request, "cart", request->jwtKartFile);
@@ -3771,15 +3830,7 @@ rc_t KServiceSetNgcFile(KService * self, const char * path) {
     if (path == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
 
-    free(self->req.ngcFile);
-
-    self->req.ngcFile = NULL;
-
-    self->req.ngcFile = string_dup_measure(path, NULL);
-    if (self->req.ngcFile == NULL)
-        return RC(rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted);
-    else
-        return 0;
+    return SNgcInit(&self->req.ngc, path);
 }
 
 
