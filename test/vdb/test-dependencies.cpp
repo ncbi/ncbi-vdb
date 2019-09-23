@@ -1,3 +1,27 @@
+/*===========================================================================
+ *
+ *                            PUBLIC DOMAIN NOTICE
+ *               National Center for Biotechnology Information
+ *
+ *  This software/database is a "United States Government Work" under the
+ *  terms of the United States Copyright Act.  It was written as part of
+ *  the author's official duties as a United States Government employee and
+ *  thus cannot be copyrighted.  This software/database is freely available
+ *  to the public for use. The National Library of Medicine and the U.S.
+ *  Government have not placed any restriction on its use or reproduction.
+ *
+ *  Although all reasonable efforts have been taken to ensure the accuracy
+ *  and reliability of the software and data, the NLM and the U.S.
+ *  Government do not and cannot warrant the performance or results that
+ *  may be obtained by using this software or data. The NLM and the U.S.
+ *  Government disclaim all warranties, express or implied, including
+ *  warranties of performance, merchantability or fitness for any particular
+ *  purpose.
+ *
+ *  Please cite the author in any work or product based on this material.
+ *
+ * =========================================================================== */
+
 #include <ktst/unit_test.hpp> // TEST_SUITE
 
 #include <kapp/args.h> // KAppVersion
@@ -281,12 +305,12 @@ FIXTURE_TEST_CASE(TestDoubleYesDep, RefseqFixture) {
     rc_t rc = 0;
 
     const VDatabase *db = NULL;
-    const char SRR353827[] = "SRR353827";
-    REQUIRE_RC(VDBManagerOpenDBRead(mgr, &db, NULL, SRR353827));
+    const char ACC[] = "SRR618409";
+    REQUIRE_RC(VDBManagerOpenDBRead(mgr, &db, NULL, ACC));
     RELEASE(VDatabase, db);
 
     VPath* acc = NULL;
-    REQUIRE_RC(VFSManagerMakePath(vmgr, &acc, SRR353827));
+    REQUIRE_RC(VFSManagerMakePath(vmgr, &acc, ACC));
     const VPath *local = NULL;
     REQUIRE_RC(VResolverLocal(resolver, acc, &local));
     RELEASE(VPath, acc);
@@ -307,7 +331,7 @@ FIXTURE_TEST_CASE(TestDoubleYesDep, RefseqFixture) {
 
     REQUIRE_RC(VDatabaseListDependencies(db, &dep, false));
     REQUIRE_RC(VDBDependenciesCount(dep, &count));
-    CHECK_EQUAL(count, (uint32_t)2);
+    CHECK_EQUAL(count, (uint32_t)1);
     RELEASE(VDBDependencies, dep);
 
     RELEASE(VDatabase, db);
@@ -451,6 +475,8 @@ extern "C" {
     rc_t CC Usage(const Args *args) { return 0; }
     rc_t CC KMain(int argc, char *argv[]) {
         KConfigDisableUserSettings();
+if(
+0)      assert(!KDbgSetString("VFS"));
         return TestDependenciesSuite(argc, argv);
     }
 }
