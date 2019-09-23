@@ -57,10 +57,10 @@
 #include <vfs/manager.h> /* VFSManager */
 #include <vfs/services.h> /* KServiceMake */
 
-#include "../kfg/kfg-priv.h" /* KConfigGetNgcFile */
 #include "../kns/mgr-priv.h" /* KNSManagerGetCloudLocation */
 #include "json-response.h" /* Response4 */
 #include "path-priv.h" /* VPathMakeFmt */
+#include "resolver-cgi.h" /* RESOLVER_CGI */
 #include "resolver-priv.h" /* VPathCheckFromNamesCGI */
 #include "services-priv.h"
 
@@ -701,7 +701,7 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
     const char man[] = "/repository/remote/main/CGI/resolver-cgi";
     const char prt[] = "/repository/remote/protected/CGI/resolver-cgi";
     const char sdl[] = "/repository/remote/main/SDL.2/resolver-cgi";
-    const char cgi[] = "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
+    const char cgi[] = RESOLVER_CGI;
     
     rc_t rc = 0;
     const char * path = aProtected ? prt : man;
@@ -714,8 +714,7 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
             rc = KConfigRead(self->kfg, sdl, 0, buffer, bsize,
                 &num_read, NULL);
             if (rc != 0) {
-                const char cgi[] =
-                    "https://trace.ncbi.nlm.nih.gov/Traces/sdl/2/retrieve";
+                const char cgi[] = SDL_CGI;
                 if (buffer == NULL)
                     return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
                 if (bsize < sizeof cgi)
@@ -3655,14 +3654,14 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
                 char buffer[256] = "";
                 rc = SRequestNgcTicket(request, buffer, sizeof buffer, NULL);
                 if (rc == 0) {
-                    Tickets t = { &self->params, & request ->tickets, 0 };
+                    Tickets t = { & self->params, & request -> tickets, 0 };
                     String ticket;
                     StringInitCString(&ticket, buffer);
                     rc = TicketsDoAppendTicket(&ticket, &t);
                 }
             }
         else if ( request -> tickets . size != 0 ) { /* optional */
-            Tickets t = { &self->params, & request ->tickets, 0 };
+            Tickets t = { & self->params, & request -> tickets, 0 };
             VectorForEach ( & request -> tickets .tickets , false,
                 TicketsAppendTicket, & t );
             rc = t . rc;
