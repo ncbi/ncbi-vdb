@@ -43,6 +43,7 @@ typedef struct KClientHttpStream KClientHttpStream;
 #include <klib/log.h>
 #include <klib/rc.h>
 #include <klib/printf.h>
+#include <klib/status.h>
 #include <klib/data-buffer.h>
 #include <kproc/timeout.h>
 
