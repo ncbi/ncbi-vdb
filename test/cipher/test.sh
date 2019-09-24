@@ -7,6 +7,12 @@ fi
 
 #installing cipher module into newly created virtual env
 tmp_py_env=$(pwd)/temp_env
+echo python3 -V
+python3 -V
+echo python2 -V
+python2 -V
+echo python -V
+python -V
 python_bin=$(which python3)
 #if [ "$python_bin" = "" ]; then    python_bin=$(which python2) fi
 if [ "$python_bin" = "" ]; then
