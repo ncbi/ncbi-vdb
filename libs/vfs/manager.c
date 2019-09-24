@@ -825,7 +825,10 @@ static rc_t CC VFSManagerGetConfigPWFile (const VFSManager * self, char * b, siz
             rc = KRepositoryMgrCurrentProtectedRepository ( repoMgr, &prot );
             if (rc == 0)
             {
-                rc = KRepositoryEncryptionKeyFile ( prot, b, bz, pz);            
+                rc = KRepositoryEncryptionKeyFile (prot, b, bz, pz);
+                if (rc != 0 || b[0] == '\0')
+                    rc = KRepositoryEncryptionKey (prot, b, bz, pz);
+
                 KRepositoryRelease(prot);
             }
             KRepositoryMgrRelease(repoMgr);
