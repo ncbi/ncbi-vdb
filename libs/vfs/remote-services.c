@@ -57,6 +57,7 @@
 #include <vfs/manager.h> /* VFSManager */
 #include <vfs/services.h> /* KServiceMake */
 
+#include "../kfg/kfg-priv.h" /* KConfigGetNgcFile */
 #include "../kns/mgr-priv.h" /* KNSManagerGetCloudLocation */
 #include "json-response.h" /* Response4 */
 #include "path-priv.h" /* VPathMakeFmt */

@@ -662,11 +662,21 @@ LIB_EXPORT rc_t CC KClientHttpRequestVAddPostParam ( KClientHttpRequest *self, c
     rc_t rc;
 
     if ( self == NULL )
+    {
         rc = RC ( rcNS, rcNoTarg, rcValidating, rcSelf, rcNull );
+    }
     else if ( fmt == NULL )
+    {
         rc = RC ( rcNS, rcNoTarg, rcValidating, rcParam, rcNull );
+    }
     else if ( fmt [ 0 ] == 0 )
+    {
         rc = RC ( rcNS, rcNoTarg, rcValidating, rcParam, rcNull );
+    }
+    else if ( self -> file_attached )
+    {   /* not yet supported: mixing name/value and file parameters */
+        rc = RC ( rcNS, rcNoTarg, rcValidating, rcParam, rcUnsupported );
+    }
     else
     {
 
@@ -855,6 +865,36 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddQueryParam ( KClientHttpRequest *self, c
     return rc;
 }
 
+static
+void
+GenerateBoundary( const void * memStart, uint64_t memSize, char * boundary, size_t boundarySize )
+{
+    /* generate a random alphabetical string, make sure "--"boundary"--" does not occur in the memory region  */
+    const char * mem = (const char *)memStart;
+    srand( time ( NULL ) );
+    while ( true )
+    {
+        int64_t i;
+        for ( i = 0; i < boundarySize; ++i)
+        {
+            boundary [ i ] = 'a' + rand() % 26; /* a to z */
+        }
+        /* make sure --boundary-- is not occurring in the given memory region*/
+        for ( i = 0; i < memSize - boundarySize - 4 + 1; ++i )
+        {
+            if ( mem [ i ]      == '-' &&
+                 mem [ i + 1 ]  == '-' &&
+                 mem [ i + 2 + boundarySize ]       == '-' &&
+                 mem [ i + 2 + boundarySize + 1 ]   == '-' &&
+                 memcmp( mem + i + 2, boundary, boundarySize ) == 0 )
+            {   /* however unlikely, it happened, so try again*/
+                continue;
+            }
+        }
+        break;
+    }
+}
+
 LIB_EXPORT rc_t CC KClientHttpRequestAddPostFileParam ( KClientHttpRequest * self, const char * name, const char * path )
 {
     rc_t rc = 0;
@@ -869,6 +909,10 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddPostFileParam ( KClientHttpRequest * sel
     else if ( path == NULL || path [ 0 ] == 0 )
     {
         rc = RC ( rcNS, rcNoTarg, rcValidating, rcParam, rcNull );
+    }
+    else if ( self -> body . elem_count > 0 )
+    {   /* not yet supported: mixing name/value and file parameters, or having multiple files */
+        rc = RC ( rcNS, rcNoTarg, rcValidating, rcParam, rcUnsupported );
     }
     else
     {
@@ -887,9 +931,8 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddPostFileParam ( KClientHttpRequest * sel
                 {
                     KDataBuffer bodyText;
                     /* this value will be preceded by "--" when inserted before and after the file's contents */
+                    const size_t BoundarySize = 16;
                     char boundary[100];
-                    /*TODO: generate boundary string, make sure "--"boundary"--" does not occur in the file  */
-                    strcpy ( boundary, "0000000000000000");
 
                     /* wrap file contents */
                     rc = KDataBufferMakeBytes( & bodyText, 0 );
@@ -909,55 +952,86 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddPostFileParam ( KClientHttpRequest * sel
                         }
 
                         contentLength = 108; /* the constant portion of the body */
-                        contentLength += strlen( boundary ) * 2;
+                        contentLength += BoundarySize * 2;
                         contentLength += strlen( name );
                         contentLength += strlen( fileName );
                         contentLength += fileSize;
 
-                        rc = KDataBufferPrintf( &bodyText,
-                                "--%s\r\n"
-                                "Content-Disposition: form-data; name=\"%s\"; filename=\"%s\"\r\n"
-                                "Content-Type: application/octet-stream\r\n"
-                                "\r\n",
-                                boundary,
-                                name,
-                                fileName );
-
-                        if ( rc == 0 && fileSize > 0 )
-                        {   /* append the file contents */
-                            const void * fileStart;
-                            const KMMap * mm;
-                            rc = KMMapMakeRead( & mm, file );
-                            if ( rc == 0 )
-                            {
-                                rc = KMMapAddrRead( mm, & fileStart );
-                            }
-
-                            size_t oldSize = bodyText.elem_count - 1; /* overwrite 0-terminator */
-                            rc = KDataBufferResize( & bodyText, oldSize + fileSize  + 1);
-                            if ( rc == 0 )
-                            {
-                                memmove( (char*)bodyText.base + oldSize, fileStart, fileSize );
-                                ((char*)bodyText.base) [ bodyText.elem_count - 1 ] = 0; /* for the subsequent KDataBufferPrintf */
-                            }
-                            rc2 = KMMapRelease( mm );
-                            if ( rc == 0 )
-                            {
-                                rc = rc2;
-                            }
-                        }
-
                         if ( rc == 0 )
-                        {
-                            rc = KDataBufferPrintf( &bodyText,
-                                    "\r\n"
-                                    "--%s--\r\n",
-                                    boundary );
+                        {   /* append the file contents */
+                            if ( fileSize > 0 )
+                            {
+                                const void * fileStart;
+                                const KMMap * mm;
+                                rc = KMMapMakeRead( & mm, file );
+                                if ( rc == 0 )
+                                {
+                                    rc = KMMapAddrRead( mm, & fileStart );
+                                    GenerateBoundary( fileStart, fileSize, boundary, BoundarySize );
+
+                                    if ( rc == 0 )
+                                    {
+                                        rc = KDataBufferPrintf( &bodyText,
+                                                "--%.*s\r\n"
+                                                "Content-Disposition: form-data; name=\"%s\"; filename=\"%s\"\r\n"
+                                                "Content-Type: application/octet-stream\r\n"
+                                                "\r\n",
+                                                BoundarySize, boundary,
+                                                name,
+                                                fileName );
+                                    }
+
+                                    if ( rc == 0 )
+                                    {
+                                        size_t oldSize = bodyText.elem_count - 1; /* overwrite 0-terminator */
+                                        rc = KDataBufferResize( & bodyText, oldSize + fileSize  + 1);
+                                        if ( rc == 0 )
+                                        {
+                                            memmove( (char*)bodyText.base + oldSize, fileStart, fileSize );
+                                            ((char*)bodyText.base) [ bodyText.elem_count - 1 ] = 0; /* for the subsequent KDataBufferPrintf */
+                                        }
+                                    }
+                                    if ( rc == 0 )
+                                    {
+                                        rc = KDataBufferPrintf( &bodyText,
+                                                "\r\n"
+                                                "--%.*s--\r\n",
+                                                BoundarySize, boundary );
+                                    }
+
+                                    rc2 = KMMapRelease( mm );
+                                    if ( rc == 0 )
+                                    {
+                                        rc = rc2;
+                                    }
+                                }
+                            }
+                            else
+                            {   /* fileSize == 0 */
+                                strncpy ( boundary, "0000000000000000", BoundarySize );
+                                rc = KDataBufferPrintf( &bodyText,
+                                        "--%.*s\r\n"
+                                        "Content-Disposition: form-data; name=\"%s\"; filename=\"%s\"\r\n"
+                                        "Content-Type: application/octet-stream\r\n"
+                                        "\r\n"
+                                        "\r\n"
+                                        "--%.*s--\r\n",
+                                        BoundarySize, boundary,
+                                        name,
+                                        fileName,
+                                        BoundarySize, boundary );
+                            }
                         }
+
 
                         if ( rc == 0 )
                         {   /* append bodyText to self->body */
                             size_t origSize = self -> body . elem_count;
+                            if ( origSize > 0 )
+                            {   /* add separator */
+                                rc = KDataBufferPrintf ( & self -> body, "&" );
+                            }
+
                             /* origSize may include 0-terminator */
                             if ( origSize > 0 && ((char*)self -> body . base) [ origSize - 1 ] == 0 )
                             {
@@ -981,7 +1055,12 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddPostFileParam ( KClientHttpRequest * sel
                         {
                             rc = KClientHttpReplaceHeader ( & self -> hdrs,
                                                             "Content-Type",
-                                                            "multipart/form-data; boundary=%s", boundary );
+                                                            "multipart/form-data; boundary=%.*s", BoundarySize, boundary );
+                        }
+
+                        if ( rc == 0 )
+                        {
+                            self -> file_attached = true;
                         }
                     }
                 }
