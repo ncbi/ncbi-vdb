@@ -284,7 +284,29 @@ FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_SendReceive, HttpRequestFixture)
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
 }
 
-//TODO: multiple files in POST (not supported yet!)
+// temporarily disallow mixing name/value and file paramaters for POST requests
+FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_MixedPOSTparams_1, HttpRequestFixture)
+{
+    MakeRequest( GetName() );
+
+    REQUIRE_RC ( KClientHttpRequestAddPostParam ( m_req, "acc", "SRR2043623" ) );
+    REQUIRE_RC_FAIL ( KClientHttpRequestAddPostFileParam ( m_req, "name", "data/file-to-post.txt" ) );
+}
+FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_MixedPOSTparams_2, HttpRequestFixture)
+{
+    MakeRequest( GetName() );
+
+    REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name", "data/file-to-post.txt" ) );
+    REQUIRE_RC_FAIL ( KClientHttpRequestAddPostParam ( m_req, "acc", "SRR2043623" ) );
+}
+
+FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_POSTmultipleFiles, HttpRequestFixture)
+{   // not yet suporting multiple file parameters for POST requests
+    MakeRequest( GetName() );
+
+    REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name", "data/file-to-post.txt" ) );
+    REQUIRE_RC_FAIL ( KClientHttpRequestAddPostFileParam ( m_req, "name", "data/empty-file-to-post.txt" ) );
+}
 
 //////////////////////////
 // Reliable HTTP request
