@@ -3248,7 +3248,7 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
     else
     {
         const VResolverAlg * alg4 = NULL;
-        ver_t v = InitVersion(version);
+        ver_t v = InitVersion(version, self->ticket);
         for ( i = 0; i < count; ++ i )
         {
             const VResolverAlg *alg = VectorGet ( & self -> remote, i );
