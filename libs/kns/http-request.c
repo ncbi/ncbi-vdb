@@ -903,7 +903,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddPostFileParam ( KClientHttpRequest * sel
                             rc = KMMapAddrRead( mm, & fileStart );
                             if ( rc == 0 )
                             {
-                                rc = encodeBase64( & base64encoded, fileStart, fileSize );
+                                rc = encodeBase64URL( & base64encoded, fileStart, fileSize );
                                 if ( rc == 0 )
                                 {
                                     rc = KClientHttpRequestAddQueryParam( self, name, "%S", base64encoded );

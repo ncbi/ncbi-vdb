@@ -221,7 +221,7 @@ FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_SendReceive, HttpRequestFixture)
     REQUIRE_RC ( KClientHttpRequestAddQueryParam ( m_req, "filetype", "run" ) );
     REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "ngc", "data/prj_phs710EA_test.ngc" ) );
 
-cout << "req=\"" << FormatRequest() << "\"" << endl;
+//cout << "req=\"" << FormatRequest() << "\"" << endl;
 
     KClientHttpResult *rslt;
     REQUIRE_RC ( KClientHttpRequestPOST ( m_req, & rslt ) );
