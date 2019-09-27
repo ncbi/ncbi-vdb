@@ -206,6 +206,7 @@ static rc_t HResolver(H * self, const KService * service,
                                 cwd, sizeof cwd, ".");
                         if (rc == 0)
                             rc = KConfigMakeEmpty(&kfg);
+
                         if (rc == 0)
                             rc = string_printf(n, sizeof n, NULL,
                                 "/repository/user/protected/dbGaP-%d/"
@@ -215,17 +216,28 @@ static rc_t HResolver(H * self, const KService * service,
                                 "%s/%S_dbGaP-%d", cwd, &path->id, id);
                         if (rc == 0)
                             rc = KConfigWriteString(kfg, n, v);
+
                         if (rc == 0)
                             rc = string_printf(n, sizeof n, NULL,
                                 "/repository/user/protected/dbGaP-%d/"
                                 "apps/sra/volumes/sraFlat", id);
                         if (rc == 0)
                             rc = KConfigWriteString(kfg, n, ".");
+
+                        if (rc == 0)
+                            rc = string_printf(n, sizeof n, NULL,
+                                "/repository/user/protected/dbGaP-%d/"
+                                "apps/sraPileup/volumes/flat", id);
+                        if (rc == 0)
+                            rc = KConfigWriteString(kfg, n, ".");
+
                         if (rc == 0)
                             rc = VFSManagerMakeDbgapResolver(self->mgr,
                                 resolver, kfg, ngc);
+
                         RELEASE(KConfig, kfg);
                         RELEASE(KDirectory, dir);
+
                         if (rc == 0) {
                             i = calloc(1, sizeof * i);
                             if (i == NULL)
