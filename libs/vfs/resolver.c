@@ -61,6 +61,7 @@
 
 #include "services-priv.h"
 #include "path-priv.h"
+#include "resolver-cgi.h" /* RESOLVER_CGI */
 #include "resolver-priv.h"
 
 #include <sysalloc.h>
@@ -240,6 +241,33 @@ rc_t VResolverAlgMake ( VResolverAlg **algp, const String *root,
 
     assert ( algp != NULL );
     * algp = alg;
+    return rc;
+}
+
+static rc_t VResolverAlgMakeCgi(VResolverAlg **algp, const String *root,
+    bool isProtected, bool disabled,
+    const String *ticket, const char *name)
+{
+    rc_t rc = VResolverAlgMake(algp, root, appAny, algCGI,
+        isProtected, disabled);
+
+    if (rc == 0) {
+        assert(algp && *algp);
+
+        (*algp)->ticket = ticket;
+
+        if (name != NULL) {
+            if (strcmp(name, "SDL.2") == 0)
+                (*algp)->version = 0x82000000;
+            else if (strcmp(name, "CGI") == 0)
+                (*algp)->version = 0x03000000;
+            else if (strcmp(name, "CGI.4") == 0)
+                (*algp)->version = 0x04000000;
+            else if (strcmp(name, "SDL.1") == 0)
+                (*algp)->version = 0x81000000;
+        }
+    }
+
     return rc;
 }
 
@@ -1544,12 +1572,15 @@ rc_t oldVResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
     assert(path);
 
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("names.cgi = %S\n", self -> root));
-if(((self)->root)->addr[self->root->size - 1] == 'i')
-    rc = KNSManagerMakeReliableClientRequest ( kns, & req, 0x01010000, NULL, self -> root -> addr ); 
-else if (((self)->root)->addr[4] == 's')
-rc = KNSManagerMakeReliableClientRequest(kns, &req, 0x01010000, NULL, "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi");
-else
-rc = KNSManagerMakeReliableClientRequest(kns, &req, 0x01010000, NULL, "http://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi");
+    if(((self)->root)->addr[self->root->size - 1] == 'i')
+        rc = KNSManagerMakeReliableClientRequest ( kns, & req, 0x01010000, NULL,
+            self -> root -> addr ); 
+    else if (((self)->root)->addr[4] == 's')
+        rc = KNSManagerMakeReliableClientRequest ( kns, & req, 0x01010000, NULL,
+            RESOLVER_CGI);
+    else
+        rc = KNSManagerMakeReliableClientRequest ( kns, & req, 0x01010000, NULL,
+            RESOLVER_CGI_HTTP);
 
     if ( rc == 0 )
     {
@@ -3217,7 +3248,7 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
     else
     {
         const VResolverAlg * alg4 = NULL;
-        ver_t v = InitVersion(version);
+        ver_t v = InitVersion(version, self->ticket);
         for ( i = 0; i < count; ++ i )
         {
             const VResolverAlg *alg = VectorGet ( & self -> remote, i );
@@ -5292,23 +5323,11 @@ rc_t VResolverLoadRepo ( VResolver *self, Vector *algs, const KConfigNode *repo,
                     if ( resolver_cgi )
                     {
                         VResolverAlg *cgi;
-                        rc = VResolverAlgMake ( & cgi, root, appAny, algCGI, protected, disabled );
+                        rc = VResolverAlgMakeCgi( & cgi, root,
+                            protected, disabled, ticket, name );
                         if ( rc == 0 )
                         {
                             assert(cgi);
-
-                            cgi -> ticket = ticket;
-
-                            if (name != NULL) {
-                                if (strcmp(name, "CGI") == 0)
-                                    cgi->version = 0x03000000;
-                                else if (strcmp(name, "CGI.4") == 0)
-                                    cgi->version = 0x04000000;
-                                else if (strcmp(name, "SDL.1") == 0)
-                                    cgi->version = 0x81000000;
-                                else if (strcmp(name, "SDL.2") == 0)
-                                    cgi->version = 0x82000000;
-                            }
 
                             DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_KFG),
                                 ("VResolverAlg(%s.%V, %S)\n",
@@ -5577,9 +5596,8 @@ rc_t VResolverForceRemoteProtected ( VResolver *self )
 
     /* create one from hard-coded constants */
     String cgi_root;
-    StringInitCString ( & cgi_root,
-        "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi" );
-    rc = StringCopy ( & root, & cgi_root );    
+    StringInitCString ( & cgi_root, SDL_CGI );
+    rc = StringCopy ( & root, & cgi_root );
     if ( rc == 0 )
     {
         rc = VectorAppend ( & self -> roots, NULL, root );
@@ -5590,12 +5608,11 @@ rc_t VResolverForceRemoteProtected ( VResolver *self )
             const bool protected = true;
             const bool disabled = false;
 
-            VResolverAlg *cgi;
-            rc = VResolverAlgMake ( & cgi, root, appAny, algCGI, protected, disabled );
+            VResolverAlg *cgi = NULL;
+            rc = VResolverAlgMakeCgi( & cgi, root, protected, disabled,
+                self->ticket, "SDL.2");
             if ( rc == 0 )
             {
-                cgi -> ticket = self -> ticket;
-
                 /* Remote Protected algorythm should come first: see VDB-2679 */
                 if ( VectorLength ( & self -> remote ) > 0 ) {
                     void *prior = NULL;
@@ -6057,8 +6074,9 @@ static rc_t VResolverInitVersion(VResolver * self, const KConfig *kfg) {
         if (self->ticket == NULL)
              /* default version for public data is SDL-2 ( 128(SDL) | 2 ) */
             self->version = string_dup_measure("130", NULL);
-        else /* default version for protected data is 3.0*/
-            self->version = string_dup_measure("3", NULL);
+        else /* default version for protected data is SDL-2 */
+            /* self->version = string_dup_measure("3", NULL); */
+            self->version = string_dup_measure("130", NULL);
 
         if (self->version == NULL)
             return RC(rcVFS, rcMgr, rcCreating, rcMemory, rcExhausted);

@@ -47,5 +47,8 @@
 # Remote access to SDL-2
 /repository/remote/main/SDL.2/resolver-cgi = "https://trace.ncbi.nlm.nih.gov/Traces/sdl/2/retrieve"
 
+# Remote access to protected SDL-2
+/repository/remote/protected/SDL.2/resolver-cgi = "https://trace.ncbi.nlm.nih.gov/Traces/sdl/2/retrieve"
+
 # Aspera configuration
 /tools/ascp/max_rate = "450m"

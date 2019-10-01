@@ -61,6 +61,7 @@
 #include "../kns/mgr-priv.h" /* KNSManagerGetCloudLocation */
 #include "json-response.h" /* Response4 */
 #include "path-priv.h" /* VPathMakeFmt */
+#include "resolver-cgi.h" /* RESOLVER_CGI */
 #include "resolver-priv.h" /* VPathCheckFromNamesCGI */
 #include "services-priv.h"
 
@@ -600,12 +601,17 @@ static rc_t SVersionInitFromStr(SVersion * self, bool * sdl, const char * s) {
 }
 
 static rc_t SVersionInit(SVersion * self, bool * sdl, const char * src,
-    EServiceType serviceType, SHelper * helper, SRequest * request)
+    EServiceType serviceType, const String * ticket,
+    SHelper * helper, SRequest * request)
 {
     rc_t rc = 0;
     const char * s = src;
     String * result = NULL;
     const char * e = NULL;
+
+    bool dummy;
+    if (sdl == NULL)
+        sdl = &dummy;
 
     assert(self);
 
@@ -649,13 +655,20 @@ static rc_t SVersionInit(SVersion * self, bool * sdl, const char * src,
 
     rc = SVersionInitFromStr(self, sdl, s);
 
-    if (rc == 0 && request != NULL
-        && VectorLength(&request->tickets.tickets) > 0 && sdl != NULL && *sdl
-        && request->request.objects > 0
-        && request->request.object->objectId != NULL
-        && isdigit(request->request.object->objectId[0]) )
-    {   /* use version 3 when getting numeric dbGaP data (objectIds) */
-        rc = SVersionInitFromStr(self, sdl, "3");
+    if (rc == 0 && *sdl) {
+        if (ticket != NULL) {
+            if (KConfigGetNgcFile() == NULL)
+                /* use version 3 when getting dbGaP data without ngc file */
+                rc = SVersionInitFromStr(self, sdl, "3");
+        }
+        else if (request != NULL
+            && VectorLength(&request->tickets.tickets) > 0
+            && request->request.objects > 0
+            && request->request.object->objectId != NULL
+            && isdigit(request->request.object->objectId[0]))
+        {   /* use version 3 when getting numeric dbGaP data (objectIds) */
+            rc = SVersionInitFromStr(self, sdl, "3");
+        }
     }
 
     free(result);
@@ -663,9 +676,9 @@ static rc_t SVersionInit(SVersion * self, bool * sdl, const char * src,
     return rc;
 }
 
-ver_t InitVersion(const char * src) {
+ver_t InitVersion(const char * src, const String * ticket) {
     SVersion self = 0;
-    rc_t rc = SVersionInit(&self, NULL, src, eSTnames, NULL, NULL);
+    rc_t rc = SVersionInit(&self, NULL, src, eSTnames, ticket, NULL, NULL);
     if (rc == 0)
         return self;
     else
@@ -701,7 +714,7 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
     const char man[] = "/repository/remote/main/CGI/resolver-cgi";
     const char prt[] = "/repository/remote/protected/CGI/resolver-cgi";
     const char sdl[] = "/repository/remote/main/SDL.2/resolver-cgi";
-    const char cgi[] = "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
+    const char cgi[] = RESOLVER_CGI;
     
     rc_t rc = 0;
     const char * path = aProtected ? prt : man;
@@ -714,8 +727,7 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
             rc = KConfigRead(self->kfg, sdl, 0, buffer, bsize,
                 &num_read, NULL);
             if (rc != 0) {
-                const char cgi[] =
-                    "https://trace.ncbi.nlm.nih.gov/Traces/sdl/2/retrieve";
+                const char cgi[] = SDL_CGI;
                 if (buffer == NULL)
                     return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
                 if (bsize < sizeof cgi)
@@ -828,7 +840,7 @@ static rc_t SHeaderMake
     rc = SRawAlloc ( & self -> raw, src -> addr, src -> size );
 
     if ( rc == 0 )
-        rc = SVersionInit ( & self -> version, NULL, self -> raw . s, serviceType, NULL, NULL);
+        rc = SVersionInit ( & self -> version, NULL, self -> raw . s, serviceType, NULL, NULL, NULL);
 
     return rc;
 }
@@ -3393,7 +3405,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     }
 
     rc = SVersionInit(&request->version, &request->sdl, version, eSTnames,
-        helper, request);
+        NULL, helper, request);
     if ( rc != 0 )
         return rc;
 
@@ -3655,14 +3667,14 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
                 char buffer[256] = "";
                 rc = SRequestNgcTicket(request, buffer, sizeof buffer, NULL);
                 if (rc == 0) {
-                    Tickets t = { &self->params, & request ->tickets, 0 };
+                    Tickets t = { & self->params, & request -> tickets, 0 };
                     String ticket;
                     StringInitCString(&ticket, buffer);
                     rc = TicketsDoAppendTicket(&ticket, &t);
                 }
             }
         else if ( request -> tickets . size != 0 ) { /* optional */
-            Tickets t = { &self->params, & request ->tickets, 0 };
+            Tickets t = { & self->params, & request -> tickets, 0 };
             VectorForEach ( & request -> tickets .tickets , false,
                 TicketsAppendTicket, & t );
             rc = t . rc;
@@ -3686,7 +3698,8 @@ rc_t SRequestInitSearchSCgiRequest ( SRequest * request, const char * cgi,
     rc_t rc = 0;
     const SKV * kv = NULL;
     assert ( request );
-    rc = SVersionInit(&request->version, NULL, version, eSTnames, NULL, NULL);
+    rc = SVersionInit(
+        &request->version, NULL, version, eSTnames, NULL, NULL, NULL);
     if ( rc != 0 )
         return rc;
     self = & request -> cgiReq;

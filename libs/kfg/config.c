@@ -68,6 +68,8 @@ struct KfgConfigNamelist;
 #include "kfg-parse.h"
 #include "config-tokens.h"
 
+#include "../vfs/resolver-cgi.h" /* RESOLVER_CGI */
+
 #ifndef PATH_MAX
 #define PATH_MAX 4096
 #endif
@@ -97,6 +99,8 @@ static const char default_kfg[] = {
 "/repository/remote/protected/CGI/resolver-cgi = "
              "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
 "/repository/remote/main/SDL.2/resolver-cgi = "
+             "\"https://trace.ncbi.nlm.nih.gov/Traces/sdl/2/retrieve\"\n"
+"/repository/remote/protected/SDL.2/resolver-cgi = "
              "\"https://trace.ncbi.nlm.nih.gov/Traces/sdl/2/retrieve\"\n"
 "/tools/ascp/max_rate = \"450m\"\n"
 };
@@ -3184,7 +3188,7 @@ static rc_t _KConfigUseTraceCgi(KConfig * self, bool * updated) {
         "/repository/remote/main/CGI/resolver-cgi",
         "/repository/remote/protected/CGI/resolver-cgi",
         "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi",
-        "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi",
+        RESOLVER_CGI,
         "/repository_remote/CGI/resolver-cgi/trace");
 }
 
@@ -4196,8 +4200,7 @@ LIB_EXPORT rc_t KConfigFixMainResolverCgiNode ( KConfig * self ) {
                    "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
         assert(result);
         if ( result->size == 0 || StringEqual ( & http, result ) ) {
-            const char https []
-                = "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
+            const char https[] = RESOLVER_CGI;
             rc = KConfigNodeWrite ( node, https, sizeof https );
         }
     }
@@ -4208,6 +4211,39 @@ LIB_EXPORT rc_t KConfigFixMainResolverCgiNode ( KConfig * self ) {
 
     return rc;
 }
+
+/* We need to call it from KConfigFixProtectedResolverCgiNode:
+ * otherwise we call names.cgi, not SDL for dbGaP resolution. */
+static rc_t KConfigFixProtectedSdlCgiNode(KConfig * self) {
+    rc_t rc = 0;
+
+    KConfigNode *node = NULL;
+    struct String *result = NULL;
+
+    assert(self);
+
+    if (rc == 0)
+        rc = KConfigOpenNodeUpdate(self, &node,
+            "/repository/remote/protected/SDL.2/resolver-cgi");
+
+    if (rc == 0)
+        rc = KConfigNodeReadString(node, &result);
+
+    if (rc == 0) {
+        assert(result);
+        if (result->size == 0) {
+            const char https[] = SDL_CGI;
+            rc = KConfigNodeWrite(node, https, sizeof https);
+        }
+    }
+
+    free(result);
+
+    KConfigNodeRelease(node);
+
+    return rc;
+}
+
 LIB_EXPORT rc_t KConfigFixProtectedResolverCgiNode ( KConfig * self ) {
     rc_t rc = 0;
 
@@ -4231,8 +4267,7 @@ LIB_EXPORT rc_t KConfigFixProtectedResolverCgiNode ( KConfig * self ) {
                    "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
         assert(result);
         if ( result->size == 0 || StringEqual ( & http, result ) ) {
-            const char https []
-                = "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
+            const char https[] = RESOLVER_CGI;
             rc = KConfigNodeWrite ( node, https, sizeof https );
         }
     }
@@ -4240,6 +4275,9 @@ LIB_EXPORT rc_t KConfigFixProtectedResolverCgiNode ( KConfig * self ) {
     free(result);
 
     KConfigNodeRelease(node);
+
+    if (rc == 0)
+        rc = KConfigFixProtectedSdlCgiNode(self);
 
     return rc;
 }

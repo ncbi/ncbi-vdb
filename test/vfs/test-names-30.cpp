@@ -38,7 +38,7 @@
 #include <vfs/services.h> /* KSrvResponse */
 #include <vfs/services-priv.h> /* KServiceTestNamesExecuteExt */
 
-#include "resolver-cgi.h" /* RESOLVER_CGI */
+#include "../../libs/vfs/resolver-cgi.h" /* RESOLVER_CGI */
 
 //#include <cstdio> // printf
 
