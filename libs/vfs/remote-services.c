@@ -57,6 +57,7 @@
 #include <vfs/manager.h> /* VFSManager */
 #include <vfs/services.h> /* KServiceMake */
 
+#include "../kfg/kfg-priv.h" /* KConfigGetNgcFile */
 #include "../kns/mgr-priv.h" /* KNSManagerGetCloudLocation */
 #include "json-response.h" /* Response4 */
 #include "path-priv.h" /* VPathMakeFmt */
@@ -363,7 +364,7 @@ typedef struct {
 
 typedef struct {
     char * ngcFile;
-    const KNgcObj * ngc;
+    const KNgcObj * ngcObj;
 } SNgc;
 
 /* service request */
@@ -383,7 +384,7 @@ typedef struct {
     char * format;
     char * forced; /* forced SDL>=2 location  */
     char * jwtKartFile;
-    SNgc ngc;
+    SNgc _ngc;
     bool hasQuery;
 } SRequest;
 
@@ -2938,8 +2939,8 @@ typedef struct {
 } Tickets;
 
 
-static void TicketsAppendTicket ( void * item, void * data ) {
-    const String * ticket = ( String    * ) item;
+static rc_t TicketsDoAppendTicket ( void * item, void * data ) {
+    const String * ticket = ( String * ) item;
     Tickets * t = (Tickets * ) data;
     const STickets * r = NULL;
     Vector * v = NULL;
@@ -2951,7 +2952,7 @@ static void TicketsAppendTicket ( void * item, void * data ) {
     v = t->v;
     if ( c == NULL ) {
         t -> rc = RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
-        return;
+        return t -> rc;
     }
     DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( "  %s=%s\n",
         k, c ) );
@@ -2988,6 +2989,13 @@ static void TicketsAppendTicket ( void * item, void * data ) {
             }
         }
     }
+
+    return t -> rc;
+}
+
+static void TicketsAppendTicket(void * item, void * data)
+{
+    TicketsDoAppendTicket(item, data);
 }
 
 /* SNgc ***********************************************************************/
@@ -2999,7 +3007,7 @@ static rc_t SNgcFini(SNgc * self) {
 
     free(self->ngcFile);
 
-    rc = KNgcObjRelease(self->ngc);
+    rc = KNgcObjRelease(self->ngcObj);
 
     memset(self, 0, sizeof * self);
 
@@ -3021,7 +3029,7 @@ static rc_t SNgcInit(SNgc * self, const char * path) {
         if (self->ngcFile == NULL)
             return RC(rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted);
 
-        rc = KNgcObjMakeFromFile(&self->ngc, f);
+        rc = KNgcObjMakeFromFile(&self->ngcObj, f);
     }
 
     RELEASE(KFile, f);
@@ -3030,9 +3038,16 @@ static rc_t SNgcInit(SNgc * self, const char * path) {
     return rc;
 }
 
+static rc_t SRequestNgcTicket(const SRequest * self,
+    char * buffer, size_t buffer_size, size_t * written)
+{
+    assert(self);
+    return KNgcObjGetTicket(self->_ngc.ngcObj, buffer, buffer_size, written);
+}
+
 const char * SRequestNgcFile(const SRequest * self) {
-    if (self != NULL && self->ngc.ngcFile != NULL)
-        return self->ngc.ngcFile;
+    if (self != NULL && self->_ngc.ngcFile != NULL)
+        return self->_ngc.ngcFile;
 
     return NULL;
 }
@@ -3042,17 +3057,29 @@ const KNgcObj * KServiceGetNgcFile(const KService * self, bool * isProtected) {
 
     *isProtected = false;
 
-    if (self != NULL && self->req.ngc.ngc != NULL) {
-        rc_t rc = KNgcObjAddRef(self->req.ngc.ngc);
+    if (self != NULL && self->req._ngc.ngcObj != NULL) {
+        rc_t rc = KNgcObjAddRef(self->req._ngc.ngcObj);
         if (rc != 0)
             return 0;
 
         *isProtected = true;
-        return self->req.ngc.ngc;
+        return self->req._ngc.ngcObj;
     }
 
     return NULL;
 }
+
+/* Set ngc file argument in service request */
+rc_t KServiceSetNgcFile(KService * self, const char * path) {
+    if (self == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
+
+    if (path == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
+
+    return SNgcInit(&self->req._ngc, path);
+}
+
 
 /* SRequest *******************************************************************/
 static rc_t SRequestInit ( SRequest * self ) {
@@ -3098,7 +3125,7 @@ static rc_t SRequestFini ( SRequest * self ) {
     free(self->forced);
     free(self->format);
 
-    r2 = SNgcFini(&self->ngc);
+    r2 = SNgcFini(&self->_ngc);
     if (rc == 0)
         rc = r2;
 
@@ -3457,14 +3484,6 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
         if ( rc != 0 )
             return rc;
     }
-    if ( request -> tickets . size != 0 ) { /* optional */
-        Tickets t = { &self->params, & request ->tickets, 0 };
-        VectorForEach ( & request -> tickets .tickets , false,
-            TicketsAppendTicket, & t );
-        rc = t . rc;
-        if ( rc != 0 )
-            return rc;
-    }
     {
         uint32_t i = 0;
         const char * prefs [ eProtocolMaxPref ];
@@ -3628,8 +3647,29 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     if (rc == 0 && SVersionResponseInJson(request->version, request->sdl))
         rc = SCgiRequestAddAcceptCharges(self, helper);
 
-    if (rc == 0 && request->sdl && SRequestNgcFile(request) != NULL)
-        rc = SRequestAddFile(request, "ngc", SRequestNgcFile(request));
+    if (rc == 0) {
+        if (SRequestNgcFile(request) != NULL)
+            if (request->sdl)
+                rc = SRequestAddFile(request, "ngc", SRequestNgcFile(request));
+            else {
+                char buffer[256] = "";
+                rc = SRequestNgcTicket(request, buffer, sizeof buffer, NULL);
+                if (rc == 0) {
+                    Tickets t = { &self->params, & request ->tickets, 0 };
+                    String ticket;
+                    StringInitCString(&ticket, buffer);
+                    rc = TicketsDoAppendTicket(&ticket, &t);
+                }
+            }
+        else if ( request -> tickets . size != 0 ) { /* optional */
+            Tickets t = { &self->params, & request ->tickets, 0 };
+            VectorForEach ( & request -> tickets .tickets , false,
+                TicketsAppendTicket, & t );
+            rc = t . rc;
+            if ( rc != 0 )
+                return rc;
+        }
+    }
 
     if (rc == 0 && request->sdl && request->jwtKartFile != NULL)
         rc = SRequestAddFile(request, "cart", request->jwtKartFile);
@@ -3822,17 +3862,6 @@ rc_t KServiceSetJwtKartFile(KService * self, const char * path) {
         return 0;
 }
 
-/* Set ngc file argument in service request */
-rc_t KServiceSetNgcFile(KService * self, const char * path) {
-    if (self == NULL)
-        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
-
-    if (path == NULL)
-        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
-
-    return SNgcInit(&self->req.ngc, path);
-}
-
 
 /* Set location of data in service request */
 rc_t KServiceSetLocation(KService * self, const char * location) {
@@ -3924,6 +3953,12 @@ static rc_t KServiceInitNames1 ( KService * self, const KNSManager * mgr,
         rc = SRequestAddTicket ( & self -> req, 0, ticket );
     if ( rc == 0 )
         self -> req . request . refseq_ctx = refseq_ctx;
+
+    if (rc == 0 && SRequestNgcFile(&self->req) == NULL) {
+        const char * ngc = KConfigGetNgcFile();
+        if (ngc != NULL)
+            rc = KServiceSetNgcFile(self, ngc);
+    }
 
     if ( rc == 0 )
         rc = KServiceInitNamesRequestWithVersion
