@@ -145,6 +145,7 @@ struct VResolverAccToken
     String suffix;
     bool   vdbcache;
     String accOfParentDb;  /* accession of parent DB for refseqs */
+    int64_t projectId; /* < 0 : not set; >= 0: set (dbGaP projectId can be 0) */
 };
 
 static
@@ -373,7 +374,9 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
     rc_t rc;
     uint32_t num;
 
-   switch ( self -> alg_id )
+    assert(tok);
+
+    switch ( self -> alg_id )
     {
     case algCGI:
         return RC ( rcVFS, rcResolver, rcResolving, rcType, rcIncorrect );
@@ -387,14 +390,27 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
             & tok -> ext1 );
         break;
     case algSRAAD:
-        rc = string_printf ( expanded, bsize, size,
-            "%S%S/%S%S.%s", & tok -> alpha, & tok -> digits,
-            & tok -> alpha, & tok -> digits,
-            tok -> vdbcache ? "sra.vdbcache" : "sra" );
+        if (tok->projectId < 0)
+            rc = string_printf ( expanded, bsize, size,
+                "%S%S/%S%S.%s", & tok -> alpha, & tok -> digits,
+                & tok -> alpha, & tok -> digits,
+                tok -> vdbcache ? "sra.vdbcache" : "sra" );
+        else
+            rc = string_printf ( expanded, bsize, size,
+                "%S%S/%S%S_dbGaP-%d.%s", & tok -> alpha, & tok -> digits,
+                & tok -> alpha, & tok -> digits, tok -> projectId,
+                tok -> vdbcache ? "sra.vdbcache" : "sra" );
         break;
     case algSRAFlat:
-        rc = string_printf ( expanded, bsize, size,
-            "%S%S.%s", & tok -> alpha, & tok -> digits, tok -> vdbcache ? "sra.vdbcache" : "sra" );
+        if (tok->projectId < 0)
+            rc = string_printf ( expanded, bsize, size,
+                "%S%S.%s", & tok -> alpha, & tok -> digits,
+                tok -> vdbcache ? "sra.vdbcache" : "sra" );
+        else
+            rc = string_printf ( expanded, bsize, size,
+                "%S%S_dbGaP-%d.%s", & tok -> alpha, & tok -> digits,
+                tok -> projectId,
+                tok -> vdbcache ? "sra.vdbcache" : "sra" );
         break;
     case algSRA1024:
         num = ( uint32_t ) strtoul ( tok -> digits . addr, NULL, 10 );
@@ -871,13 +887,21 @@ rc_t VPathCheckFromNamesCGI ( const VPath * path,
 
         String name, val, req, host;
 
-        CONST_STRING(&host, "storage.googleapis.com");
-        /* googleapis URLs han have query */
-        if (StringEqual(&path->host, &host))
-            skip = true;
-        else {
+        if (!skip) {
+            CONST_STRING(&host, "trace.ncbi.nlm.nih.gov");
+            /* redirector URLs have query */
+            if (StringEqual(&path->host, &host))
+                skip = true;
+        }
+        if (!skip) {
             CONST_STRING(&host, "nih-nhlbi-datacommons.s3.amazonaws.com");
             /* amazonaws URLs han have query */
+            if (StringEqual(&path->host, &host))
+                skip = true;
+        }
+        if (!skip) {
+            CONST_STRING(&host, "storage.googleapis.com");
+            /* googleapis URLs han have query */
             if (StringEqual(&path->host, &host))
                 skip = true;
         }
@@ -2537,7 +2561,8 @@ uint32_t get_accession_code ( const String * accession, VResolverAccToken *tok )
  */
 VResolverAppID get_accession_app ( const String * accession, bool refseq_ctx,
     VResolverAccToken *tok, bool *legacy_wgs_refseq,
-    bool resolveAllAccToCache, bool * forDirAdjusted, const String * parentAcc )
+    bool resolveAllAccToCache, bool * forDirAdjusted, const String * parentAcc,
+    int64_t projectId )
 {
     VResolverAppID app;
     uint32_t code = 0;
@@ -2553,6 +2578,7 @@ VResolverAppID get_accession_app ( const String * accession, bool refseq_ctx,
         tok = &tummy;
 
     memset(tok, 0, sizeof *tok);
+    tok->projectId = projectId;
 
     code = get_accession_code(accession, tok);
 
@@ -2898,7 +2924,8 @@ static rc_t VResolverRemoteMagicResolve(const VResolver * self,
  */
 static
 rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
-    const VPath ** path, bool refseq_ctx, const char * dir, const String * parentAcc )
+    const VPath ** path, bool refseq_ctx, const char * dir,
+    const String * parentAcc, int64_t projectId )
 {
     rc_t rc = 0;
 
@@ -2920,7 +2947,7 @@ rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
     }
 
     app = get_accession_app ( accession, refseq_ctx, & tok,
-                        & legacy_wgs_refseq, resolveAllAccToCache, NULL, parentAcc );
+        & legacy_wgs_refseq, resolveAllAccToCache, NULL, parentAcc, projectId );
 
     rc = VResolverLocalMagicResolve(self, path, app);
     if (rc != 0 || *path != NULL)
@@ -3198,7 +3225,7 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
     /* subject the accession to pattern recognition */
     if ( ! is_oid )
         app = get_accession_app ( accession, refseq_ctx, & tok,
-                                  & legacy_wgs_refseq, true, NULL, NULL );
+                                  & legacy_wgs_refseq, true, NULL, NULL, -1 );
     else
     {
         app = appAny;
@@ -3354,7 +3381,8 @@ VResolverAppID VResolverExtractAccessionApp ( const VResolver *self,
     /* should have something looking like an accession.
        determine its app to see if we were successful */
     return get_accession_app ( accession, refseq_ctx, tok, legacy_wgs_refseq,
-                        resolveAllAccToCache, forDirAdjusted, query->accOfParentDb);
+        resolveAllAccToCache, forDirAdjusted,
+        query->accOfParentDb, query->projectId );
 }
 
 static
@@ -3570,10 +3598,12 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
         if (dir != NULL)    /* out-dir is provided */
             useAd = true;   /* [when prefetch downloads to out-dir]
                                 - use AD, too */
+#if 0
         if (!protected && VPathGetProjectId(query, NULL)) {
             useAd = true;     /* resolving protected URL returned by SDL */
             useCache = false; /* here resolve only to AD, not to cache */
         }
+#endif
 
         /* we don't use user cache but AD
            when we can use AD and: */
@@ -3907,7 +3937,8 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
                     /* resolve from accession to local path
                        will NOT find partial cache files */
                     rc = VResolverLocalResolve ( self, & accession, local,
-                                            refseq_ctx, NULL, query->accOfParentDb);
+                        refseq_ctx, NULL,
+                        query -> accOfParentDb, query -> projectId );
                 }
 
                 if ( rc == 0 && remote != NULL && * remote != NULL )
@@ -4023,7 +4054,7 @@ rc_t VResolverQueryAcc ( const VResolver * self, VRemoteProtocols protocols,
     /* LOCAL RESOLUTION */
     if ( local != NULL )
         rc = VResolverLocalResolve ( self, accession, local, refseq_ctx, dir,
-            query->accOfParentDb);
+            query -> accOfParentDb, query -> projectId );
 
     if ( local == NULL || * local == NULL )
     {

@@ -264,7 +264,8 @@ void KConfigReadRemoteProtocols ( struct KConfig const * self, VRemoteProtocols 
 
 VResolverAppID get_accession_app(const String * accession, bool refseq_ctx,
     struct VResolverAccToken *tok, bool *legacy_wgs_refseq,
-    bool resolveAllAccToCache, bool * forDirAdjusted, const String * parentAcc);
+    bool resolveAllAccToCache, bool * forDirAdjusted,
+    const String * parentAcc, int64_t projectId);
 
 #ifdef __cplusplus
 }

@@ -403,7 +403,9 @@ struct KService {
 
 
 /* SHelper ********************************************************************/
-static rc_t SHelperInit ( SHelper * self, const KNSManager * kMgr ) {
+static rc_t SHelperInit ( SHelper * self,
+    const KNSManager * kMgr, KConfig * kfg )
+{
     rc_t rc = 0;
 
     assert ( self );
@@ -424,6 +426,12 @@ static rc_t SHelperInit ( SHelper * self, const KNSManager * kMgr ) {
     }
     else {
         rc = KNSManagerAddRef ( kMgr );
+    }
+
+    if (rc == 0 && kfg != NULL) {
+        rc = KConfigAddRef(kfg);
+        if (rc == 0)
+            self->kfg = kfg;
     }
 
     if ( rc == 0) {
@@ -2775,7 +2783,8 @@ rc_t SRequestDataAppendObject ( SRequestData * self, const char * id,
         id_sz = string_measure ( id, NULL );
 
     StringInitCString(&accession, id);
-    app = get_accession_app(&accession, false, NULL, NULL, false, NULL, NULL);
+    app = get_accession_app(&accession, false, NULL, NULL, false, NULL,
+        NULL, -1);
     if (self->objects == 0)
         self->app = app;
     else if (self->app != app && (self->app == appSRA || app == appSRA))
@@ -3927,14 +3936,16 @@ rc_t KServiceInitSearchRequestWithVersion ( KService * self, const char * cgi,
 }
 
 
-static rc_t KServiceInit ( KService * self, const KNSManager * mgr ) {
+static rc_t KServiceInit ( KService * self,
+    const KNSManager * mgr, KConfig * kfg )
+{
     rc_t rc = 0;
 
     assert ( self );
     memset ( self, 0, sizeof * self );
 
     if ( rc == 0 )
-        rc = SHelperInit ( & self -> helper, mgr );
+        rc = SHelperInit ( & self -> helper, mgr, kfg );
 
     if ( rc == 0 )
         rc = SResponseInit ( & self ->  resp, 0 );
@@ -3958,7 +3969,7 @@ static rc_t KServiceInitNames1 ( KService * self, const KNSManager * mgr,
     rc_t rc = 0;
 
     if ( rc == 0 )
-        rc = KServiceInit ( self, mgr );
+        rc = KServiceInit ( self, mgr, NULL );
 
     if ( rc == 0 )
         rc = KServiceAddObject ( self, acc, acc_sz, objectType );
@@ -3981,8 +3992,8 @@ static rc_t KServiceInitNames1 ( KService * self, const KNSManager * mgr,
 }
 
 
-static
-rc_t KServiceMakeWithMgr ( KService ** self, const KNSManager * mgr )
+rc_t KServiceMakeWithMgr ( KService ** self,
+    const KNSManager * mgr, KConfig * kfg )
 {
     rc_t rc = 0;
 
@@ -3995,7 +4006,7 @@ rc_t KServiceMakeWithMgr ( KService ** self, const KNSManager * mgr )
     if ( p == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
 
-    rc = KServiceInit ( p, mgr );
+    rc = KServiceInit ( p, mgr, kfg );
     if ( rc == 0)
         * self = p;
     else
@@ -4007,7 +4018,7 @@ rc_t KServiceMakeWithMgr ( KService ** self, const KNSManager * mgr )
 
 /* Make KService object */
 rc_t KServiceMake ( KService ** self) {
-    return KServiceMakeWithMgr ( self, NULL );
+    return KServiceMakeWithMgr ( self, NULL, NULL );
 }
 
 
@@ -5213,7 +5224,7 @@ rc_t KService1Search ( const KNSManager * mgr, const char * cgi,
 
     KService service;
 
-    rc = KServiceInit ( & service, mgr );
+    rc = KServiceInit ( & service, mgr, NULL );
 
     if ( rc == 0 )
         rc = KServiceAddId ( & service, acc );
@@ -5308,7 +5319,7 @@ rc_t KServiceNamesRequestTest ( const KNSManager * mgr, const char * b,
     va_list args;
     KService * service = NULL;
     KStream * stream = NULL;
-    rc_t rc = KServiceMakeWithMgr ( & service, mgr);
+    rc_t rc = KServiceMakeWithMgr ( & service, mgr, NULL );
     va_start ( args, d );
     while ( rc == 0 && d != NULL ) {
         if ( d -> id != NULL ) {
@@ -5491,7 +5502,7 @@ rc_t KServiceNames3_0StreamTestMany ( const char * buffer,
     KService service;
 
     if ( rc == 0 )
-        rc = KServiceInit ( & service, NULL );
+        rc = KServiceInit ( & service, NULL, NULL );
     if ( rc == 0 )
         KServiceExpectErrors ( & service, errorsToIgnore );
 
@@ -5564,7 +5575,7 @@ rc_t KServiceSearchTest1
     rc_t rc = 0;
     KService service;
     const Kart * result = NULL;
-    rc = KServiceInit ( & service, mgr );
+    rc = KServiceInit ( & service, mgr, NULL );
     if ( rc == 0 ) {
         rc = KServiceAddId ( & service, acc );
     }
@@ -5587,7 +5598,7 @@ rc_t KServiceSearchTest (
     KStream * stream = NULL;
     const Kart * result = NULL;
     KService service;
-    rc = KServiceInit ( & service, mgr );
+    rc = KServiceInit ( & service, mgr, NULL );
     va_start ( args, acc );
     while ( rc == 0 && acc != NULL ) {
         rc = KServiceAddObject ( & service, acc, 0, eOT_undefined);
