@@ -142,8 +142,11 @@ static rc_t HResolver(H * self, const KService * service,
     const KNgcObj * ngc = NULL;
     uint32_t projectId = 0;
     bool isProtected = VPathGetProjectId(path, &projectId);
+
     assert(resolver && self && self->service);
+
     *resolver = NULL;
+
     if (isProtected) {
         bool isProtected = false;
         ngc = KServiceGetNgcFile(service, &isProtected);
@@ -165,103 +168,23 @@ static rc_t HResolver(H * self, const KService * service,
 
         if (i != NULL)
             * resolver = i->resolver;
-        else {
-            if (isProtected) {
-                const struct KRepositoryMgr * mgr = NULL;
-                const struct KRepository * r = NULL;
-                rc = KServiceGetRepoMgr(self->service, &mgr);
-                if (rc == 0) {
-                    rc = KRepositoryMgrGetProtectedRepository(
-                        mgr, projectId, &r);
-                    if (rc == 0) {
-                        rc = KRepositoryMakeResolver(r, resolver, self->kfg);
-                        if (rc == 0) {
-                            i = calloc(1, sizeof * i);
-                            if (i == NULL)
-                                return RC(rcVFS,
-                                    rcStorage, rcAllocating,
-                                    rcMemory, rcExhausted);
-                            rc = StringCopy(&i->ticket, ticket);
-                            if (rc != 0)
-                                return rc;
-                            i->resolver = *resolver;
-                            rc = BSTreeInsert(&self->ticketsToResolvers,
-                                (BSTNode *)i, BSTreeSort);
-                        }
-                    }
-                    else if (ticket != NULL &&
-                        ticket->addr != NULL && ticket->size != 0)
-                    {
-                        char cwd[PATH_MAX] = "";
-                        char n[512] = "";
-                        char v[PATH_MAX] = "";
-                        KConfig * kfg = NULL;
-                        KDirectory * dir = NULL;
-                        uint32_t id = 0;
-                        rc = KNgcObjGetProjectId(ngc, &id);
-                        if (rc == 0)
-                            rc = KDirectoryNativeDir(&dir);
-                        if (rc == 0)
-                            rc = KDirectoryResolvePath(dir, true,
-                                cwd, sizeof cwd, ".");
-                        if (rc == 0)
-                            rc = KConfigMakeEmpty(&kfg);
-                        if (rc == 0)
-                            rc = string_printf(n, sizeof n, NULL,
-                                "/repository/user/protected/dbGaP-%d/"
-                                "root", id);
-                        if (rc == 0)
-                            rc = string_printf(v, sizeof v, NULL,
-                                "%s/%S_dbGaP-%d", cwd, &path->id, id);
-                        if (rc == 0)
-                            rc = KConfigWriteString(kfg, n, v);
-                        if (rc == 0)
-                            rc = string_printf(n, sizeof n, NULL,
-                                "/repository/user/protected/dbGaP-%d/"
-                                "apps/sra/volumes/sraFlat", id);
-                        if (rc == 0)
-                            rc = KConfigWriteString(kfg, n, ".");
-                        if (rc == 0)
-                            rc = VFSManagerMakeDbgapResolver(self->mgr,
-                                resolver, kfg, ngc);
-                        RELEASE(KConfig, kfg);
-                        RELEASE(KDirectory, dir);
-                        if (rc == 0) {
-                            i = calloc(1, sizeof * i);
-                            if (i == NULL)
-                                return RC(rcVFS,
-                                    rcStorage, rcAllocating,
-                                    rcMemory, rcExhausted);
-                            rc = StringCopy(&i->ticket, ticket);
-                            if (rc != 0)
-                                return rc;
-                            i->resolver = *resolver;
-                            rc = BSTreeInsert(&self->ticketsToResolvers,
-                                (BSTNode *)i, BSTreeSort);
-                        }
-                    }
-                    else
-                        rc = 0;
-                }
-            }
-            else {
-                rc = KServiceGetResolver(self->service, ticket, resolver);
+        else if (!isProtected) {
+            rc = KServiceGetResolver(self->service, ticket, resolver);
+            if (rc != 0)
+                return rc;
+            else if (*resolver != NULL) {
+                i = calloc(1, sizeof * i);
+                if (i == NULL)
+                    return RC(rcVFS, rcStorage, rcAllocating,
+                        rcMemory, rcExhausted);
+
+                rc = StringCopy(&i->ticket, ticket);
                 if (rc != 0)
                     return rc;
-                else if (*resolver != NULL) {
-                    i = calloc(1, sizeof * i);
-                    if (i == NULL)
-                        return RC(rcVFS, rcStorage, rcAllocating,
-                            rcMemory, rcExhausted);
 
-                    rc = StringCopy(&i->ticket, ticket);
-                    if (rc != 0)
-                        return rc;
-
-                    i->resolver = *resolver;
-                    rc = BSTreeInsert(&self->ticketsToResolvers,
-                        (BSTNode *)i, BSTreeSort);
-                }
+                i->resolver = *resolver;
+                rc = BSTreeInsert(&self->ticketsToResolvers,
+                    (BSTNode *)i, BSTreeSort);
             }
         }
     }
@@ -335,8 +258,13 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
     else
         oid = id;
 
-    if ( oid == 0 )
+    if ( oid == 0 ) {
         rc = VFSManagerMakePath ( mgr, & query, "%S", acc );
+        if (rc == 0 && path != NULL && path->projectId >= 0) {
+            assert(query);
+            query->projectId = path->projectId;
+        }
+    }
     else
         rc = VFSManagerMakeOidPath ( mgr, & query, oid );
 
