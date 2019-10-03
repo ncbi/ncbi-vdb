@@ -101,11 +101,11 @@ struct RefSeq {
     RefSeqMgr const *mgr;
     struct RefSeq *newer;
     struct RefSeq *older;
+    const String * accOfParentDb;
     union {
         struct RefSeq_RefSeq refSeq;
         struct RefSeq_WGS wgs;
     } u;
-    const String * accOfParentDb;
 };
 
 struct RefSeq_VT {

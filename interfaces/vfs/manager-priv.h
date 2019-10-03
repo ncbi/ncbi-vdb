@@ -114,6 +114,11 @@ VFS_EXTERN const struct KConfig* CC VFSManagerGetConfig(const struct VFSManager 
 VFS_EXTERN rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
     struct KConfig * cfg );
 
+/* Make non-singleton version
+ */
+VFS_EXTERN rc_t CC VFSManagerMakeLocal ( struct VFSManager ** pmanager,
+    struct KConfig * cfg );
+
 /*
  * Set/get pathname of the object_id/object_name bindings file (used for testing; should go away when the functionality
  *  is rolled into KeyRing server)

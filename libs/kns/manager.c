@@ -155,55 +155,69 @@ LIB_EXPORT rc_t CC KNSManagerRelease ( const KNSManager *self )
     return 0;
 }
 
-LIB_EXPORT rc_t CC KNSManagerMake ( KNSManager ** mgrp )
+static rc_t CC KNSManagerMakeConfigImpl(KNSManager **mgrp, KConfig *kfg);
+
+
+static rc_t CC KNSManagerMakeSingleton ( KNSManager ** mgrp, KConfig * aKfg,
+    bool local )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     if ( mgrp == NULL )
         rc = RC ( rcNS, rcMgr, rcAllocating, rcParam, rcNull );
     else
     {
-        KConfig * kfg;
+        KConfig * kfg = aKfg;
         KNSManager * our_mgr;
 
         * mgrp = NULL;
 
 #if USE_SINGLETON
-        /* grab single-shot singleton */
-        our_mgr = atomic_test_and_set_ptr ( & kns_singleton, NULL, NULL );
-        if ( our_mgr != NULL )
-        {
-            /* add a new reference and return */
-            rc = KNSManagerAddRef ( our_mgr );
-            if ( rc == 0 )
-                * mgrp = our_mgr;
-            return rc;
+        if ( ! local ) {
+            /* grab single-shot singleton */
+            our_mgr = atomic_test_and_set_ptr ( & kns_singleton, NULL, NULL );
+            if ( our_mgr != NULL )
+            {
+                /* add a new reference and return */
+                rc = KNSManagerAddRef ( our_mgr );
+                if ( rc == 0 )
+                    * mgrp = our_mgr;
+                return rc;
+            }
         }
 #endif
 
-        /* singleton was NULL. make from scratch. */
-        rc = KConfigMake ( & kfg, NULL );
+        /* singleton was NULL. Make from scratch. */
+        if ( kfg == NULL )
+            rc = KConfigMake ( & kfg, NULL );
+
         if ( rc == 0 )
         {
-            rc = KNSManagerMakeConfig ( & our_mgr, kfg );
-            KConfigRelease ( kfg );
+            rc = KNSManagerMakeConfigImpl ( & our_mgr, kfg );
+
+            if ( aKfg == NULL )
+                KConfigRelease ( kfg );
 
             if ( rc == 0 )
             {
 #if USE_SINGLETON
-                /* try to set single-shot ( set once, never reset ) */
-                KNSManager * new_mgr = atomic_test_and_set_ptr ( & kns_singleton, our_mgr, NULL );
-                if ( new_mgr != NULL )
-                {
-                    /* somebody else got here first - drop our version */
-                    assert ( our_mgr != new_mgr );
-                    KNSManagerRelease ( our_mgr );
+                if (!local) {
+                    /* try to set single-shot ( set once, never reset ) */
+                    KNSManager * new_mgr = atomic_test_and_set_ptr (
+                        & kns_singleton, our_mgr, NULL );
+                    if ( new_mgr != NULL )
+                    {
+                        /* somebody else got here first - drop our version */
+                        assert ( our_mgr != new_mgr );
+                        KNSManagerRelease ( our_mgr );
 
-                    /* use the new manager, just add a reference and return */
-                    rc = KNSManagerAddRef ( new_mgr );
-                    if ( rc == 0 )
-                        * mgrp = new_mgr;
-                    return rc;
+                        /* use the new manager,
+                           just add a reference and return */
+                        rc = KNSManagerAddRef ( new_mgr );
+                        if ( rc == 0 )
+                            * mgrp = new_mgr;
+                        return rc;
+                    }
                 }
 #endif
 
@@ -214,6 +228,10 @@ LIB_EXPORT rc_t CC KNSManagerMake ( KNSManager ** mgrp )
     }
 
     return rc;
+}
+
+LIB_EXPORT rc_t CC KNSManagerMake ( KNSManager ** mgrp ) {
+    return KNSManagerMakeSingleton ( mgrp, NULL, false );
 }
 
 LIB_EXPORT void KNSManagerSetVerbose ( KNSManager *self, bool verbosity )
@@ -624,7 +642,8 @@ static bool KNSManagerPrepareAcceptGcpCharges(KConfig* kfg) {
         return false;
 }
 
-LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
+static rc_t CC KNSManagerMakeConfigImpl ( KNSManager **mgrp,
+    KConfig *kfg )
 {
     rc_t rc;
 
@@ -702,6 +721,23 @@ printf("KNSManager.http_write_timeout(%d) = %d\n", MAX_HTTP_WRITE_LIMIT, mgr->ht
     return rc;
 }
 
+LIB_EXPORT rc_t CC KNSManagerMakeWithConfig ( KNSManager ** mgrp,
+    KConfig * kfg )
+{
+    return KNSManagerMakeSingleton ( mgrp, kfg, false );
+}
+
+LIB_EXPORT rc_t CC KNSManagerMakeLocal ( KNSManager ** mgrp,
+    KConfig * kfg )
+{
+    return KNSManagerMakeSingleton ( mgrp, kfg, true );
+}
+
+LIB_EXPORT rc_t CC KNSManagerMakeConfig(KNSManager ** mgrp,
+    KConfig * kfg)
+{
+    return KNSManagerMakeLocal ( mgrp, kfg );
+}
 
 LIB_EXPORT rc_t CC KNSManagerSetUserAgent ( KNSManager * self, const char * fmt, ... )
 {
