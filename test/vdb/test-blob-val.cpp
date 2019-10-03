@@ -22,6 +22,8 @@
 //
 // ===========================================================================
 
+#include <cmath>
+
 #include <vdb/manager.h> // VDBManager
 #include <vdb/database.h> 
 #include <vdb/table.h> 

@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{57236A02-8B0E-F68C-093F-144AB6DC0AFD}</ProjectGuid>
+  </PropertyGroup>
+  <PropertyGroup>
+    <WorkingDirectory>ngs-c++</WorkingDirectory>
+  </PropertyGroup>
+  <Import Project=".\test-project.props" />
+  <ItemDefinitionGroup>
+    <Link>
+      <AdditionalDependencies>$(VDB_TARGET)lib\ncbi-vdb.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(VDB_TARGET)lib\ngs-c++.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(NGS_TARGET)lib\libngs-bind-c++.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(NGS_TARGET)lib\libngs-disp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="..\test-ngs_csra1-c++.files" />
+</Project>

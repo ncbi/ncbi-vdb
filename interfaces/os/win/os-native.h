@@ -120,7 +120,10 @@ static __inline int isblank(int x)
     return (((x) == ' ') || ((x) == '\t'));
 }
 
+#if _MSC_VER < 1900
 KLIB_EXTERN int CC snprintf ( char * buffer, size_t bufsize, const char * format, ... );
+#endif
+/* MSC 1900 (2017) and on, snprintf is defined as an inline */
 
 static __inline
 void *memrchr ( const void *s, int c, size_t n )
