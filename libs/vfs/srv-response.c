@@ -101,13 +101,16 @@ rc_t VPathSetWhack ( VPathSet * self ) {
         RELEASE ( VPath, self -> cacheHttps );
         RELEASE ( VPath, self -> cacheS3 );
 
-        RELEASE(VPath, self->mapping);
-        RELEASE(VPath, self->cacheMapping);
+        RELEASE ( VPath, self -> mapping );
+        RELEASE ( VPath, self -> cacheMapping );
 
         RELEASE ( VPath, self -> local );
         RELEASE ( VPath, self -> cache );
 
         RELEASE ( KSrvError, self -> error );
+
+        free ( self -> reqId  );    self -> reqId  = NULL;
+        free ( self -> respId );    self -> respId = NULL;
 
         free ( self );
     }
@@ -388,8 +391,8 @@ rc_t VPathSetMake ( VPathSet ** self, const EVPath * src,
             String message;
             rc = KSrvErrorMessage ( p -> error, & message );
             if ( rc == 0 ) {
-                p -> reqId = string_dup ( message. addr, message. size );
-                if ( p -> reqId == NULL )
+                p -> respId = string_dup ( message. addr, message. size );
+                if ( p -> respId == NULL )
                     rc = RC ( rcVFS, rcPath, rcAllocating,
                                      rcMemory, rcExhausted );
             }
