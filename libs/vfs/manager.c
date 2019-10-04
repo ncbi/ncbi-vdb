@@ -2993,16 +2993,18 @@ LIB_EXPORT rc_t CC VFSManagerMake ( VFSManager ** pmanager )
 
 /* Make
  */
-LIB_EXPORT rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
-    struct KConfig * cfg)
+static rc_t CC VFSManagerMakeFromKfgImpl ( struct VFSManager ** pmanager,
+    struct KConfig * cfg, bool local )
 {
     rc_t rc;
 
     if (pmanager == NULL)
         return RC (rcVFS, rcMgr, rcConstructing, rcParam, rcNull);
 
-    *pmanager = singleton;
-    if ( singleton != NULL )
+    *pmanager = NULL;
+    if (!local)
+        *pmanager = singleton;
+    if ( *pmanager != NULL )
     {
         rc = VFSManagerAddRef ( singleton );
         if ( rc != 0 )
@@ -3045,7 +3047,11 @@ LIB_EXPORT rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
                         rc = KKeyStoreMake ( & obj -> keystore, obj -> cfg );
                         if ( rc == 0 )
                         {
-                            rc = KNSManagerMake ( & obj -> kns );
+                            if (local)
+                                rc = KNSManagerMakeLocal ( & obj -> kns, cfg );
+                            else
+                                rc = KNSManagerMakeWithConfig
+                                                         ( & obj -> kns, cfg );
                             if ( rc != 0 )
                             {
                                 LOGERR ( klogWarn, rc, "could not build network manager" );
@@ -3059,7 +3065,9 @@ LIB_EXPORT rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
                                 rc = 0;
                             }
 
-                            *pmanager = singleton = obj;
+                            *pmanager = obj;
+                            if (!local)
+                                singleton = obj;
                             DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_MGR),  ("%s(%p)\n", __func__, cfg));
                             return 0;
                         }
@@ -3073,6 +3081,17 @@ LIB_EXPORT rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
     return rc;
 }
 
+LIB_EXPORT rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
+    struct KConfig * cfg)
+{
+    return VFSManagerMakeFromKfgImpl(pmanager, cfg, false);
+}
+
+LIB_EXPORT rc_t CC VFSManagerMakeLocal ( struct VFSManager ** pmanager,
+    struct KConfig * cfg)
+{
+    return VFSManagerMakeFromKfgImpl(pmanager, cfg, true);
+}
 
 LIB_EXPORT rc_t CC VFSManagerGetCWD (const VFSManager * self, KDirectory ** cwd)
 {

@@ -2650,12 +2650,15 @@ rc_t KSrvRespFileGetCache ( const KSrvRespFile * self,
 {
     rc_t rc = 0;
 
+    if (path == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
+
+    * path = NULL;
+
     if (self == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
 
-    assert ( self -> file && path );
-
-    * path = NULL;
+    assert ( self -> file );
 
     if ( self -> file -> cacheRc != 0 )
         return self -> file -> cacheRc;
@@ -2673,9 +2676,12 @@ rc_t KSrvRespFileGetLocal ( const KSrvRespFile * self,
 {
     rc_t rc = 0;
 
-    assert ( self && self -> file && path );
+    if (path == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
 
     * path = NULL;
+
+    assert ( self && self -> file );
 
     if ( self -> file -> localRc != 0 )
         return self -> file -> localRc;
