@@ -5010,8 +5010,8 @@ rc_t VResolverLoadVolumes ( Vector *algs, const String *root,
                     else if ( strcmp ( algname, "flat" ) == 0 )
                         alg_id = algFlat;
                     /* file with extensions stored in a flat directory:
-                     as-is for public files,
-                     with project-id injected befor extension for protected ones
+                    as-is for public files,
+                    with project-id injected before extension for protected ones
                      */
                     else if (strcmp(algname, "withExtFlat") == 0)
                         alg_id = algWithExtFlat;
