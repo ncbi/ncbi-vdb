@@ -3348,11 +3348,32 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
 
             if ( rc == 0 )
             {
-                if ( ! local ) {
-                    atomic_test_and_set_ptr ( & G_kfg, mgr, NULL );
+                if ( local )
+                {
+                    * cfg = mgr;
                 }
-                * cfg = mgr;
-                return 0;
+                else
+                {
+                    KConfig * prev = atomic_test_and_set_ptr ( & G_kfg, mgr, NULL );
+                    if ( prev != NULL )
+                    {
+                        /* the global singleton was already instantiated: hand out that one */
+                        rc = KConfigAddRef ( G_kfg.ptr );
+                        if ( rc == 0 )
+                        {
+                            * cfg = G_kfg . ptr;
+                        }
+                        /* and we have to deallocate the object we just made! */
+                        KConfigEmpty ( mgr );
+                        free( ( void * ) mgr);
+                    }
+                    else
+                    {
+                        * cfg = mgr;
+                    }
+                        
+                }
+                return rc;
             }
 
             KConfigWhack ( mgr );
