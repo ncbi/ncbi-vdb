@@ -3002,6 +3002,9 @@ rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
         }
     }
 
+    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
+        "VResolverLocalResolve: local location of '%S' not found\n",
+        accession));
     return RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
 }
 
