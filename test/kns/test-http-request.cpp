@@ -213,7 +213,7 @@ FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_NonEmptyFile, HttpRequestFixture)
 
 FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_SendReceive, HttpRequestFixture)
 {
-    const char * Server = "https://trace.ncbi.nlm.nih.gov/Traces/sdl/2/retrieve";
+    const char * Server = "https://trace.ncbi.nlm.nih.gov/Traces/sdl/unstable/retrieve";
 
     REQUIRE_RC ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, NULL, Server ) );
 
@@ -229,7 +229,7 @@ FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_SendReceive, HttpRequestFixture)
     char buf[1024];
     size_t msg_size;
     REQUIRE_RC ( KClientHttpResultStatus ( rslt, & code, buf, sizeof buf, & msg_size ) );
-//    REQUIRE_EQ ( 200u, code );
+    REQUIRE_EQ ( 200u, code );
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
 }
 
