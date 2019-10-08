@@ -430,7 +430,7 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
                             DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
                                 ("VResolversQuery: local location "
                                     "of '%S' resolved to '%S' with %R\n",
-                                    acc, tmp->path, rc));
+                                    acc, &(tmp->path), rc));
                         }
                         else {
                             localRc = RC(rcVFS, rcResolver, rcResolving,
@@ -448,7 +448,7 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
                         }
                         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("VResolversQuery: "
                             "cache location of '%S' resolved to '%S' with %R\n",
-                            acc, tmp->path, rc));
+                            acc, &(tmp->path), rc));
 
                     }
                     else {
