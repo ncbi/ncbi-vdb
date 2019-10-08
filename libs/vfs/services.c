@@ -33,6 +33,7 @@
 #include <kfg/repository.h> /* KRepositoryMgrGetProtectedRepository */
 
 #include <klib/container.h> /* BSTree */
+#include <klib/debug.h> /* DBGMSG */
 #include <klib/printf.h> /* string_printf */
 #include <klib/rc.h> /* RC */
 
@@ -426,10 +427,18 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
                                 local = tmp;
                                 localRc = 0;
                             }
+                            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
+                                ("VResolversQuery: local location "
+                                    "of '%S' resolved to '%S' with %R\n",
+                                    &acc, tmp->path, rc));
                         }
-                        else
+                        else {
                             localRc = RC(rcVFS, rcResolver, rcResolving,
                                 rcName, rcNotFound);
+                            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
+                                ("VResolversQuery: "
+                                    "local location of '%S' not found\n", acc));
+                        }
                     }
                     if (VResolverResolveToAd(self)) {
                         rc = VPathAddRef(tmp);
@@ -437,10 +446,18 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
                             cache = tmp;
                             cacheRc = 0;
                         }
+                        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("VResolversQuery: "
+                            "cache location of '%S' resolved to '%S' with %R\n",
+                            &acc, tmp->path, rc));
+
                     }
-                    else
+                    else {
                         cacheRc = RC(rcVFS, rcResolver, rcResolving,
                             rcName, rcNotFound);
+                        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
+                            ("VResolversQuery: "
+                                "cache location of '%S' not found\n", acc));
+                    }
                 }
                 RELEASE(VPath, tmp);
                 RELEASE(KDirectory, dir);
