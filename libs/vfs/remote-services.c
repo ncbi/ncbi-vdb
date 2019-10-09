@@ -3646,7 +3646,12 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
             /* different query items require to add
             and at the same time not to add filetype=run */
             return request->request.appRc;
-        else if (request->request.app == appSRA && fileTypeRun) {
+        else if (fileTypeRun &&              /* don't add filetype=run
+                                                when it was specified already */
+            ( request->request.app == appSRA /* add it for sra items */
+                || ( request->request.app == appUnknown
+                    && request->jwtKartFile != NULL) )) /* and for jwt carts */
+        {
             const char n[] = "filetype";
             const char v[] = "run";
             rc = SKVMake(&kv, n, v);
