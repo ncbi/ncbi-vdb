@@ -44,6 +44,7 @@ TEST_TOOLS = \
     test-symtab \
 	test-json \
 	test-base64 \
+	test-guid \
 
 ifeq (linux,$(OS))
 TEST_TOOLS += test-hashfile
@@ -342,3 +343,20 @@ base64: test-base64
 	$(TEST_BINDIR)/test-base64
 
 .phony: base64
+
+#-------------------------------------------------------------------------------
+# test-guid
+#
+TEST_GUID_SRC = \
+	test-guid
+
+TEST_GUID_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_GUID_SRC))
+
+$(TEST_BINDIR)/test-guid: $(TEST_GUID_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
+
+guid: test-guid
+	$(TEST_BINDIR)/test-guid
+
+.phony: guid
