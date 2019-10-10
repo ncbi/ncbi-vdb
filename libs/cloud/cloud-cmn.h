@@ -32,10 +32,14 @@
 extern "C" {
 #endif
 
+struct Cloud;
 struct KNSManager;
 
 rc_t KNSManager_Read(const struct KNSManager *self, char *buffer, size_t bsize,
     const char *url, const char *hdrName, const char *hdrValue);
+
+void CloudSetUserAgreesToRevealInstanceIdentity(struct Cloud  * cloud,
+    bool value);
 
 #ifdef __cplusplus
 }

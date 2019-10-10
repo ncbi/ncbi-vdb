@@ -26,7 +26,8 @@
 
 #include <cloud/manager.h> /* CloudMgrMake */
 #include <kapp/args.h> /* ArgsMakeAndHandle */
-#include <kfg/config.h> /* KConfigDisableUserSettings */
+#include <kfg/kfg-priv.h> /* KConfigMakeEmpty */
+#include <kfg/properties.h> /* KConfig_Set_Report_Cloud_Instance_Identity */
 
 #include <klib/debug.h> /* KDbgSetString */
 #include <klib/text.h> /* String */
@@ -197,6 +198,8 @@ TEST_CASE(TestBase64MakeLocation) {
         ));
 }
 
+static KConfig * KFG = NULL;
+
 TEST_CASE(GetPkcs7) {
     KNSManager * kns = NULL;
     REQUIRE_RC(KNSManagerMake(&kns));
@@ -204,13 +207,14 @@ TEST_CASE(GetPkcs7) {
     rc_t rc = KNSManager_Read(kns, pkcs7, sizeof pkcs7,
         "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7",
         NULL, NULL);
-    if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy) &&
-        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout, rcExhausted))
+    if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy  ) &&
+        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcError     ,rcUnknown) &&
+        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout   , rcExhausted))
     {
 #define rcStream rcFile
         if (rc == SILENT_RC(rcNS, rcStream, rcReading, rcSelf, rcNull)) {
             CloudMgr * mgr = NULL;
-            REQUIRE_RC(CloudMgrMake(&mgr, NULL, NULL));
+            REQUIRE_RC(CloudMgrMake(&mgr, KFG, NULL));
             CloudProviderId cloud_provider = cloud_provider_none;
             REQUIRE_RC(CloudMgrCurrentProvider(mgr, &cloud_provider));
             REQUIRE(cloud_provider == cloud_provider_gcp
@@ -226,8 +230,10 @@ TEST_CASE(GetPkcs7) {
 }
 
 TEST_CASE(PrintLocation) {
+    REQUIRE_RC(KConfig_Set_Report_Cloud_Instance_Identity(KFG, false));
+
     CloudMgr * mgr = NULL;
-    REQUIRE_RC(CloudMgrMake(&mgr, NULL, NULL));
+    REQUIRE_RC(CloudMgrMake(&mgr, KFG, NULL));
 
     Cloud * cloud = NULL;
     rc_t rc = CloudMgrGetCurrentCloud(mgr, &cloud);
@@ -239,8 +245,13 @@ TEST_CASE(PrintLocation) {
     REQUIRE_RC(rc);
 
     const String * ce_token = NULL;
+    REQUIRE_RC_FAIL(CloudMakeComputeEnvironmentToken(cloud, &ce_token));
+
+    CloudSetUserAgreesToRevealInstanceIdentity(cloud, true);
+
     rc = CloudMakeComputeEnvironmentToken(cloud, &ce_token);
-    if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy) &&
+    if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy  ) &&
+        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcError     ,rcUnknown) &&
         rc != SILENT_RC(rcNS, rcFile, rcCreating,
             rcTimeout, rcExhausted) &&
         rc != SILENT_RC(rcNS, rcFile, rcReading, rcSelf, rcNull))
@@ -260,7 +271,7 @@ TEST_CASE(PrintLocation) {
 
 TEST_CASE(CallCloudAddComputeEnvironmentTokenForSigner) {
     CloudMgr * mgr = NULL;
-    REQUIRE_RC(CloudMgrMake(&mgr, NULL, NULL));
+    REQUIRE_RC(CloudMgrMake(&mgr, KFG, NULL));
 
     Cloud * cloud = NULL;
     rc_t rc = CloudMgrGetCurrentCloud(mgr, &cloud);
@@ -321,6 +332,8 @@ rc_t CC KMain ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
 
+    rc_t rc = KConfigMakeEmpty(&KFG);
+
     // this makes messages from the test code appear
     // (same as running the executable with "-l=message")
     //TestEnv::verbosity = LogLevel::e_message;
@@ -329,7 +342,16 @@ rc_t CC KMain ( int argc, char *argv [] )
     assert(!KDbgSetString("KNS"));
 #endif
 
-    return AwsTestSuite(argc, argv);
+    if (rc == 0)
+        rc = AwsTestSuite(argc, argv);
+
+    {
+        rc_t r = KConfigRelease(KFG);
+        if (r != 0 && rc == 0)
+            rc = r;
+    }
+
+    return rc;
 }
 
 }

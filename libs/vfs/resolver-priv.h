@@ -139,13 +139,16 @@ extern "C" {
 #define rcResolver   rcTree
 
 struct KDataBuffer;
+struct KNgcObj;
 struct KNSManager;
 struct String;
 struct VResolverAccToken;
 struct VResolverAlg;
 
+
 rc_t VPathCheckFromNamesCGI(const struct VPath *path,
-    const struct String *ticket, const struct VPath **mapping);
+    const struct String *ticket, int64_t projectId,
+    const struct VPath **mapping);
 
 
 /*--------------------------------------------------------------------------
@@ -172,13 +175,15 @@ typedef enum
 {
     algCGI,
     algFlat,
+    algWithExtFlat,
     algAD,    /* Accession as Directory */
-    algSRAAD, /* sra in Accession as Directory */
+    algSRAAD,    /* Accession as Directory for SRA */
     algSRAFlat,
     algSRA1024,
     algSRA1000,
     algFUSE1000,
     algREFSEQ,
+    algREFSEQAD, /* Accession as Directory for Refseq*/
     algWGS2,                /* ordered to be of higher precedence than algWGS */
     algWGS,
     algWGSFlat,
@@ -249,6 +254,12 @@ rc_t VResolverSetVersion ( VResolver *self, const char * version );
    2: don't resolve */
 rc_t VResolverResolveName ( VResolver *self, int resolve );
 
+bool VResolverResolveToAd(const VResolver *self);
+
+/*rc_t VFSManagerMakeDbgapResolver(const struct VFSManager * self,
+    VResolver ** new_resolver, const struct KConfig * cfg,
+    const struct KNgcObj * ngc);*/
+
 /* default behavior to resolve oid->file mapping inside of VFS */
 #define DEFAULT_RESOVE_OID_NAME true
 
@@ -256,7 +267,8 @@ void KConfigReadRemoteProtocols ( struct KConfig const * self, VRemoteProtocols 
 
 VResolverAppID get_accession_app(const String * accession, bool refseq_ctx,
     struct VResolverAccToken *tok, bool *legacy_wgs_refseq,
-    bool resolveAllAccToCache, bool * forDirAdjusted);
+    bool resolveAllAccToCache, bool * forDirAdjusted,
+    const String * parentAcc, int64_t projectId);
 
 #ifdef __cplusplus
 }

@@ -41,17 +41,19 @@ extern "C" {
 
 struct KSrvRespObj;
 struct KNSManager;
+struct KRepositoryMgr;
 struct KService;
 struct KSrvRespFile;
 struct KSrvResponse;
 struct Locations;
 struct Response4;
+struct VPath;
 struct VPathSet;
 
 #define VERSION_3_0 0x03000000
 #define VERSION_4_0 0x04000000
 
-ver_t InitVersion(const char * src);
+ver_t InitVersion(const char * src, const String * ticket);
 
 /* make name service call : request: 1 object, response: 1 object */
 VFS_EXTERN
@@ -79,15 +81,14 @@ rc_t KSrvResponseGetIds ( const struct KSrvResponse * self, uint32_t idx,
                           const char ** reqId, const char ** respId );
 
 rc_t KSrvResponseGetMapping(const KSrvResponse * self, uint32_t idx,
-                            const struct VPath ** mapping);
+        const struct VPath ** mapping, const struct VPath ** vdbcacheMapping);
 
 rc_t KSrvResponseGetOSize(const KSrvResponse * self, uint32_t idx,
     uint64_t * osize);
 
 rc_t KSrvResponseGetR4 ( const struct KSrvResponse * self,
                          struct Response4 ** r );
-rc_t KSrvResponseSetR4 ( struct KSrvResponse * self,
-                         const struct Response4 * r );
+rc_t KSrvResponseSetR4 ( struct KSrvResponse * self, struct Response4 * r );
 
 rc_t KSrvRespFileAddLocalAndCache ( struct KSrvRespFile * file,
                                     const struct VPathSet * localAndCache );
@@ -115,6 +116,12 @@ rc_t LocationsAddLocal ( struct Locations * self,
    2: don't resolve */
 rc_t KServiceResolveName ( struct KService * service, int resolve );
 
+/* call to set VResolverCacheEnable to vrAlwaysEnable
+   to simulate prefetch mode
+void KServiceSetCacheEnable(struct KService * self,
+    VResolverEnableState enable);
+VResolverEnableState KServiceGetCacheEnable(const struct KService * self);*/
+
 /**************************** KServiceNamesExecute ****************************/
 /* Execute Names Service Call using current default protocol version;
    get KSrvResponse (remote-only resolution) */
@@ -127,10 +134,20 @@ rc_t KServiceNamesExecuteExtImpl ( struct KService * self,
 
 /***************** Interface services.c -> remote-services.c  *****************/
 rc_t KServiceGetConfig ( struct KService * self, const struct KConfig ** kfg);
+rc_t KServiceGetVFSManager ( const KService * self,
+    const struct VFSManager ** mgr );
 rc_t KServiceGetResolver ( struct KService * self, const String * ticket,
                            VResolver ** resolver );
+rc_t KServiceGetResolverForProject(struct KService * self, uint32_t project,
+    VResolver ** resolver);
 int KServiceGetResolveName ( const struct KService * self );
-/******************************** TESTS ********************************/
+
+/* don't release returned mgr */
+rc_t KServiceGetRepoMgr(KService * self, const struct KRepositoryMgr ** mgr);
+
+const struct KNgcObj * KServiceGetNgcFile(const KService * self,
+    bool * isProtected);
+/******************************** TESTS ***************************************/
 typedef struct {
     const char * id;
     EObjectType type;

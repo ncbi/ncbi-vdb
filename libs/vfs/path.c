@@ -57,11 +57,18 @@ rc_t VPathWhack ( VPath * self )
 {
     rc_t rc = VPathRelease(self->vdbcache);
 
+    StringWhack(self->accOfParentDb);
+
     KDataBufferWhack ( & self -> data );
     KRefcountWhack ( & self -> refcount, "VPath" );
+
     free ( ( void * ) self -> id   . addr );
-    free ( ( void * ) self -> tick . addr );
+    free ( ( void * ) self -> name . addr );
+    free ( ( void * ) self -> objectType . addr );
     free ( ( void * ) self -> service . addr );
+    free ( ( void * ) self -> tick . addr );
+    free ( ( void * ) self -> type . addr );
+
     memset ( self, 0, sizeof * self );
     free ( self );
 
@@ -2091,6 +2098,8 @@ rc_t VPathMakeFromVText ( VPath ** ppath, const char * path_fmt, va_list args )
             rc = VPathParse ( path, buffer . base, ( size_t ) buffer . elem_count - 1 );
             if ( rc == 0 )
             {
+                path->projectId = -1; /* public by default; 0 is valid id */
+
                 KRefcountInit ( & path -> refcount, 1, "VPath", "make-from-text", buffer . base );
                 * ppath = path;
                 return 0;
@@ -3383,27 +3392,6 @@ LIB_EXPORT rc_t CC VPathGetType(const VPath * self, String * str)
     return rc;
 }
 
-LIB_EXPORT rc_t CC VPathGetObjectType(const VPath * self, String * str)
-{
-    rc_t rc;
-
-    if (str == NULL)
-        rc = RC(rcVFS, rcPath, rcAccessing, rcParam, rcNull);
-    else
-    {
-        rc = VPathGetTestSelf(self);
-        if (rc == 0)
-        {
-            *str = self->objectType;
-            return 0;
-        }
-
-        StringInit(str, "", 0, 0);
-    }
-
-    return rc;
-}
-
 LIB_EXPORT rc_t CC VPathGetName(const VPath * self, String * str)
 {
     rc_t rc;
@@ -3416,6 +3404,48 @@ LIB_EXPORT rc_t CC VPathGetName(const VPath * self, String * str)
         if (rc == 0)
         {
             *str = self->name;
+            return 0;
+        }
+
+        StringInit(str, "", 0, 0);
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC VPathGetNameExt(const VPath * self, String * str)
+{
+    rc_t rc;
+
+    if (str == NULL)
+        rc = RC(rcVFS, rcPath, rcAccessing, rcParam, rcNull);
+    else
+    {
+        rc = VPathGetTestSelf(self);
+        if (rc == 0)
+        {
+            *str = self->nameExtension;
+            return 0;
+        }
+
+        StringInit(str, "", 0, 0);
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC VPathGetObjectType(const VPath * self, String * str)
+{
+    rc_t rc;
+
+    if (str == NULL)
+        rc = RC(rcVFS, rcPath, rcAccessing, rcParam, rcNull);
+    else
+    {
+        rc = VPathGetTestSelf(self);
+        if (rc == 0)
+        {
+            *str = self->objectType;
             return 0;
         }
 
@@ -3764,10 +3794,10 @@ rc_t LegacyVPathMakeKDirRelative ( VPath ** new_path, const KDirectory * dir, co
     return rc;
 }
 
-LIB_EXPORT rc_t CC LegacyVPathMakeDirectoryRelative ( VPath ** new_path,
-    const KDirectory * dir, const char * posix_path )
+LIB_EXPORT rc_t CC VPathMakeDirectoryRelativeVPath ( VPath ** new_path,
+    const KDirectory * dir, const char * posix_path, const VPath * vpath )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     if ( new_path == NULL )
         rc = RC ( rcVFS, rcMgr, rcConstructing, rcParam, rcNull );
@@ -3777,8 +3807,11 @@ LIB_EXPORT rc_t CC LegacyVPathMakeDirectoryRelative ( VPath ** new_path,
             rc = RC ( rcVFS, rcMgr, rcResolving, rcDirectory, rcNull );
         else
         {
-            /* first, try to get a VPath from "posix_path" */
-            rc = LegacyVPathMakeFmt ( new_path, posix_path );
+            if ( vpath == NULL )
+                /* first, try to get a VPath from "posix_path" */
+                rc = LegacyVPathMakeFmt ( new_path, posix_path );
+            else
+                * new_path = ( VPath * ) vpath;
             if ( rc == 0 )
             {
                 VPath * path = * new_path;
@@ -3851,7 +3884,8 @@ LIB_EXPORT rc_t CC LegacyVPathMakeDirectoryRelative ( VPath ** new_path,
 
                 /* clean up path */
                 assert ( * new_path != path );
-                VPathRelease ( path );
+                if ( vpath == NULL )
+                    VPathRelease ( path );
                 return rc;
             }
         }
@@ -3862,6 +3896,11 @@ LIB_EXPORT rc_t CC LegacyVPathMakeDirectoryRelative ( VPath ** new_path,
     return rc;
 }
 
+LIB_EXPORT rc_t CC LegacyVPathMakeDirectoryRelative ( VPath ** new_path,
+    const KDirectory * dir, const char * posix_path )
+{
+    return VPathMakeDirectoryRelativeVPath(new_path, dir, posix_path, NULL);
+}
 
 /* Option
  *  rc == 0 if the option has been specified
@@ -3901,6 +3940,9 @@ LIB_EXPORT rc_t CC VPathOption ( const VPath * self, VPOption_t option,
         case vpopt_gap_ticket: 
             param1 = "tic";
             break;
+        case vpopt_gap_prjId:
+            param1 = "pId";
+            break;
         default:
             return RC ( rcVFS, rcPath, rcReading, rcToken, rcUnrecognized );
         }
@@ -3937,7 +3979,7 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
     const String * tick, uint64_t osize, KTime_t date, const uint8_t md5 [ 16 ],
     KTime_t exp_date, const char * service, const String * objectType,
     const String * type, bool ceRequired, bool payRequired, const char * name,
-    const char * fmt, va_list args )
+    int64_t projectId, uint32_t version, const char * fmt, va_list args )
 {
     rc_t rc;
 
@@ -3966,6 +4008,8 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
 
                 path -> ext = ext;
                 path -> osize = osize;
+                path -> projectId = projectId;
+                path -> version = version;
                 path -> modification = date;
                 path -> expiration = exp_date;
 
@@ -3974,15 +4018,6 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
                     for ( i = 0; i < 16; ++ i )
                         path -> md5 [ i ] = md5 [ i ];
                     path -> has_md5 = true;
-                }
-
-                if ( id != NULL && id -> size > 0 ) {
-                    StringInit ( & path -> id,
-                        string_dup ( id -> addr, id -> size ),
-                        id -> size, id -> len );
-                    if ( path -> id . addr == NULL )
-                        return RC ( rcVFS,
-                            rcPath, rcAllocating, rcMemory, rcExhausted );
                 }
 
                 if ( tick != NULL && tick -> size > 0 ) {
@@ -4028,7 +4063,18 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
                         return RC(rcVFS,
                             rcPath, rcAllocating, rcMemory, rcExhausted);
                     StringInit(&path->name, c, size, size);
+
+                    c = string_chr(path->name.addr, path->name.size, '.');
+                    if (c == NULL)
+                        size = 0;
+                    else
+                        size = path->name.size - (++c - path->name.addr);
+                    StringInit(&path->nameExtension, c, size, size);
                 }
+
+                rc = VPathSetId(path, id);
+                if ( rc != 0 )
+                    return rc;
 
                 path->ceRequired = ceRequired;
                 path->payRequired = payRequired;
@@ -4043,12 +4089,40 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
     return rc;
 }
 
+rc_t VPathSetId(VPath * self, const String * id) {
+    assert(self);
+
+    if (self->id.addr != NULL) {
+        free((void*)self->id.addr);
+        memset(&self->id, 0, sizeof self->id);
+    }
+
+    if (id != NULL && id->size > 0) {
+        StringInit(&self->id,
+            string_dup(id->addr, id->size),
+            id->size, id->len);
+        if (self->id.addr == NULL)
+            return RC(rcVFS,
+                rcPath, rcAllocating, rcMemory, rcExhausted);
+    }
+
+    return 0;
+}
+
+rc_t VPathSetMagic(VPath * self, bool magic) {
+    assert(self);
+
+    self->magic = magic;
+
+    return 0;
+}
+
 static
 rc_t VPathMakeFmtExt ( VPath ** new_path, bool ext, const String * id,
 	const String * tick, uint64_t osize, KTime_t date, const uint8_t md5 [ 16 ],
 	KTime_t exp_date, const char * service, const String * objectType,
     const String * type, bool ceRequired, bool payRequired, const char * name,
-    const char * fmt, ... )
+    int64_t projectId, uint32_t version, const char * fmt, ... )
 {
     EVPathType t = ext ? eVPext : eVPWithId; 
     rc_t rc;
@@ -4057,7 +4131,8 @@ rc_t VPathMakeFmtExt ( VPath ** new_path, bool ext, const String * id,
     va_start ( args, fmt );
 
     rc = VPathMakeVFmtExt ( t, new_path, id, tick, osize, date, md5, exp_date,
-        service, objectType, type, ceRequired, payRequired, name, fmt, args );
+        service, objectType, type, ceRequired, payRequired, name, projectId,
+        version, fmt, args );
 
     va_end ( args );
 
@@ -4068,13 +4143,10 @@ rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
     const String * tick, bool ext, const String * id, uint64_t osize,
     KTime_t date, const uint8_t md5 [ 16 ], KTime_t exp_date,
     const char * service, const String * objectType, const String * type,
-    bool ceRequired, bool payRequired, const char * name )
+    bool ceRequired, bool payRequired, const char * name,
+    int64_t projectId, uint32_t version)
 {
-    if ( tick == NULL || tick -> addr == NULL || tick -> size == 0 )
-        return VPathMakeFmtExt ( new_path, ext, id, tick, osize, date, md5,
-		    exp_date, service, objectType, type, ceRequired, payRequired, name,
-            "%S", url );
-    else {
+    if ( tick != NULL && tick -> addr != NULL && tick -> size != 0 ) {
         const char * fmt = NULL;
         assert(url);
         if (string_chr(url->addr, url->size, '?') == NULL)
@@ -4083,14 +4155,29 @@ rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
             fmt = "%S&tic=%S";
         return VPathMakeFmtExt(new_path, ext, id, tick, osize, date, md5,
             exp_date, service, objectType, type, ceRequired, payRequired, name,
-            fmt, url, tick);
+            projectId, version, fmt, url, tick);
     }
+    else if (projectId >= 0) {
+        const char * fmt = NULL;
+        assert(url);
+        if (string_chr(url->addr, url->size, '?') == NULL)
+            fmt = "%S?pId=%d";
+        else
+            fmt = "%S&pId=%d";
+        return VPathMakeFmtExt(new_path, ext, id, tick, osize, date, md5,
+            exp_date, service, objectType, type, ceRequired, payRequired, name,
+            projectId, version, fmt, url, projectId);
+    }
+    else
+        return VPathMakeFmtExt ( new_path, ext, id, tick, osize, date, md5,
+		    exp_date, service, objectType, type, ceRequired, payRequired, name,
+            projectId, version, "%S", url );
 }
 
 rc_t LegacyVPathMakeVFmt ( VPath ** new_path, const char * fmt, va_list args )
 {
     return VPathMakeVFmtExt ( false, new_path, NULL, NULL, 0, 0, NULL, 0,
-        NULL, NULL, NULL, false, false, NULL, fmt, args );
+        NULL, NULL, NULL, false, false, NULL, -1, 0, fmt, args );
 }
 
 rc_t VPathAttachVdbcache(VPath * self, const VPath * vdbcache) {
@@ -4176,6 +4263,22 @@ VPUri_t LegacyVPathGetUri_t ( const VPath * self )
     VPUri_t uri_type;
     LegacyVPathGetScheme_t ( self, & uri_type );
     return uri_type;
+}
+
+bool VPathGetProjectId(const VPath * self, uint32_t * projectId) {
+    uint32_t dummy = 0;
+    if (projectId == NULL)
+        projectId = &dummy;
+
+    assert(self);
+
+    *projectId = 0;
+
+    if (self->projectId < 0)
+        return false;
+
+    *projectId = self->projectId;
+    return true;
 }
 
 rc_t VPathClose ( const VPath * l, const VPath * r, int * notequal,
@@ -4327,4 +4430,13 @@ rc_t VPathClose ( const VPath * l, const VPath * r, int * notequal,
 
 rc_t VPathEqual ( const VPath * l, const VPath * r, int * notequal ) {
     return VPathClose ( l, r, notequal, 0 );
+}
+
+rc_t VPathSetAccOfParentDb(VPath * self, const String * acc) {
+    rc_t rc = 0;
+
+    if (self != NULL && acc != NULL)
+        rc = StringCopy(&self->accOfParentDb, acc);
+
+    return rc;
 }

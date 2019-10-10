@@ -1127,7 +1127,7 @@ FIXTURE_TEST_CASE ( CacheTee3_invalid_path, CT3Fixture )
         size_t   len = rand_32 ( 10, 1000 );
         REQUIRE_RC( compare_file_content_3 ( org, tee2, pos, len, NULL ) );
     }
-    KFileRelease ( tee1 );
+    KFileRelease ( tee2 );
     
     KFileRelease ( org );
     
@@ -1284,10 +1284,11 @@ static const char *dummy_usage[] = {"dummy argument", NULL};
 
 OptDef TestOptions[]
     = {{OPTION_DUMMY, ALIAS_DUMMY, NULL, dummy_usage, 1, false, false}};
-
+    
 rc_t CC KMain ( int argc, char *argv[] )
 {
     Args *args;
+    
     /* we are adding this dummy argument to enable commandline parsing for the
      * verbose flag(s) -vvvvvvvv */
     rc_t rc = ArgsMakeAndHandle ( &args, argc, argv, 1, TestOptions,
@@ -1298,8 +1299,8 @@ rc_t CC KMain ( int argc, char *argv[] )
         KConfigDisableUserSettings ();
         rc = CacheTee3Tests ( argc, argv );
         KOutMsg ( "and the result is: %R\n", rc );
+        ArgsWhack ( args );
     }
-    ArgsWhack ( args );
     return rc;
 }
 

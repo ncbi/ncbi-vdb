@@ -1449,7 +1449,7 @@ static rc_t FileAddLink ( File * self, const KJsonValue * node,
         const String * objectType = NULL;
         rc = VPathMakeFromUrl ( & path, & url, NULL, true, & acc, dad -> sz,
             dad -> mod, hasMd5 ? md5 : NULL, 0, dad -> srv, objectType, NULL,
-            false, false, NULL );
+            false, false, NULL, -1, 0 );
     }
     else {
         const String * objectType = NULL;
@@ -1457,7 +1457,7 @@ static rc_t FileAddLink ( File * self, const KJsonValue * node,
         StringInitCString ( & ticket, dad -> tic );
         rc = VPathMakeFromUrl ( & path, & url, & ticket, true, & acc, dad -> sz,
             dad -> mod, hasMd5 ? md5 : NULL, 0, dad -> srv, objectType, NULL,
-            false, false, NULL );
+            false, false, NULL, -1, 0 );
     }
 
     if ( rc == 0 )
@@ -1574,6 +1574,34 @@ static rc_t FileAddLinks ( File * self, const KJsonObject * node,
     return rc;
 }
 
+static rc_t FileMappingByAcc(const File * self) {
+    const char sra[] = "sra";
+    const char vdbcache[] = "vdbcache";
+    const char pileup[] = "pileup";
+    const char realign[] = "realign";
+
+    uint32_t l = 0;
+
+    assert(self);
+
+    l = string_measure(self->cType, NULL);
+
+    if (string_cmp(self->cType, l, sra, sizeof sra - 1, 99) == 0
+        ||
+        string_cmp(self->cType, l, vdbcache, sizeof vdbcache - 1, 9) == 0
+        ||
+        string_cmp(self->cType, l, pileup, sizeof pileup - 1, 99) == 0
+        ||
+        string_cmp(self->cType, l, realign, sizeof realign - 1, 99) == 0
+        )
+    {
+        return false;
+    }
+
+    return true;
+}
+
+/*
 static rc_t ItemMappingByAcc(const Item * self) {
     const char sra[] = "sra";
     const char vdbcache[] = "vdbcache";
@@ -1598,6 +1626,7 @@ static rc_t ItemMappingByAcc(const Item * self) {
 
     return false;
 }
+*/
 
 static const char * ItemOrLocationGetName(const Item * item,
                                           const File * file)
@@ -1635,12 +1664,12 @@ rc_t FileGetVdbcacheName ( const File * cself,
     return rc;
 }
 
-static
-rc_t FileInitMapping ( File * self, const Item * item )
-{
+static rc_t FileInitMapping ( File * self, const Item * item ) {
     rc_t rc = 0;
 
     const VPath * path = NULL;
+    int64_t projectId = -1;
+
     String ticket;
 
     assert ( self && item );
@@ -1653,29 +1682,40 @@ rc_t FileInitMapping ( File * self, const Item * item )
     else
         return 0;
 
+    projectId = path->projectId;
+
     memset ( & ticket, 0, sizeof ticket );
 
     if ( item -> tic != NULL )
         StringInitCString ( & ticket, item -> tic );
 
-    rc = VPathCheckFromNamesCGI ( path, & ticket, NULL );
+    rc = VPathCheckFromNamesCGI ( path, & ticket, projectId, NULL );
 
     if ( rc == 0 ) {
         const char * name = ItemOrLocationGetName(item, self);
 
         if ( item -> tic != NULL )
-            if ( ItemMappingByAcc( item ) || name == NULL )
+            if (FileMappingByAcc( self ) || name == NULL )
                 rc = VPathMakeFmt ( & self -> mapping, "ncbi-acc:%s?tic=%s",
                                                     item -> acc, item -> tic );
             else
                 rc = VPathMakeFmt ( & self -> mapping, "ncbi-file:%s?tic=%s",
                                                     name, item -> tic );
         else
-            if (ItemMappingByAcc(item) || name == NULL)
-                rc = VPathMakeFmt ( & self -> mapping, "ncbi-acc:%s",
-                                                                 item -> acc );
-            else
-                rc = VPathMakeFmt ( & self -> mapping, "ncbi-file:%s", name );
+            if (FileMappingByAcc(self) || name == NULL) {
+                if (projectId < 0)
+                    rc = VPathMakeFmt(&self->mapping, "ncbi-acc:%s", item->acc);
+                else
+                    rc = VPathMakeFmt(&self->mapping, "ncbi-acc:%s?pId=%d",
+                        item->acc, projectId);
+            }
+            else {
+                if (projectId < 0)
+                    rc = VPathMakeFmt(&self->mapping, "ncbi-file:%s", name);
+                else
+                    rc = VPathMakeFmt(&self->mapping, "ncbi-file:%s?pId=%d",
+                        name, projectId);
+            }
     }
 
     return rc;
@@ -1757,14 +1797,22 @@ static rc_t ItemAddElms4 ( Item * self, const KJsonObject * node,
         }
     }
 
-    {
-        uint32_t i = 0;
-        for ( i = 0; rc == 0 && i < self -> nElm; ++ i )
-            rc = FileInitMapping ( & self -> elm [ i ], self );
-    }
+    if (rc == 0)
+        rc = ItemInitMapping(self);
 
     return rc;
 }
+
+rc_t ItemInitMapping(Item * self) {
+    rc_t rc = 0;
+    uint32_t i = 0;
+
+    for (i = 0; rc == 0 && i < self->nElm; ++i)
+        rc = FileInitMapping(&self->elm[i], self);
+
+    return rc;
+}
+
 
 void ItemLogAdd(const Item * self) {
     assert(self);
@@ -2602,12 +2650,15 @@ rc_t KSrvRespFileGetCache ( const KSrvRespFile * self,
 {
     rc_t rc = 0;
 
+    if (path == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
+
+    * path = NULL;
+
     if (self == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
 
-    assert ( self -> file && path );
-
-    * path = NULL;
+    assert ( self -> file );
 
     if ( self -> file -> cacheRc != 0 )
         return self -> file -> cacheRc;
@@ -2625,9 +2676,12 @@ rc_t KSrvRespFileGetLocal ( const KSrvRespFile * self,
 {
     rc_t rc = 0;
 
-    assert ( self && self -> file && path );
+    if (path == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
 
     * path = NULL;
+
+    assert ( self && self -> file );
 
     if ( self -> file -> localRc != 0 )
         return self -> file -> localRc;

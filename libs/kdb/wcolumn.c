@@ -614,7 +614,8 @@ rc_t KDBManagerVCreateColumnInt ( KDBManager *self,
 	case kptFile | kptAlias:
 	    /* if we find a file, vary the failure if it is an archive that is a column
 	     * or a non related file */
-	    if ( KDBOpenPathTypeRead ( self, wd, colpath, NULL, kptColumn, NULL, false ) == 0 )
+	    if ( KDBOpenPathTypeRead ( self, wd, colpath, NULL, kptColumn, NULL, false,
+            NULL ) == 0 )
 		return RC ( rcDB, rcMgr, rcCreating, rcDirectory, rcUnauthorized );
 	    /* fall through */
         default:
@@ -845,7 +846,8 @@ rc_t KDBManagerVOpenColumnReadInt2 ( const KDBManager *cself,
                 rc = RC ( rcDB, rcMgr, rcOpening, rcPath, rcExcessive );
 
             if (rc == 0)
-                rc = KDBOpenPathTypeRead ( cself, wd, path, &dir, kptColumn, NULL, try_srapath );
+                rc = KDBOpenPathTypeRead ( cself, wd, path, &dir, kptColumn, NULL,
+                    try_srapath, NULL );
 
             if ( rc == 0 )
             { 
@@ -1035,7 +1037,8 @@ rc_t KDBManagerVOpenColumnUpdateInt ( KDBManager *self,
 	     * this should be changed to a readonly as it is not possible not 
 	     * disallowed.  rcReadonly not rcUnauthorized
 	     */
-	    if ( KDBOpenPathTypeRead ( self, wd, colpath, NULL, kptColumn, NULL, try_srapath ) == 0 )
+	    if ( KDBOpenPathTypeRead ( self, wd, colpath, NULL, kptColumn, NULL,
+            try_srapath, NULL ) == 0 )
 		return RC ( rcDB, rcMgr, rcOpening, rcDirectory, rcUnauthorized );
 	    /* fall through */
         default:

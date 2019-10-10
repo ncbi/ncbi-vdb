@@ -29,11 +29,14 @@
 #include <klib/rc.h>
 #include <klib/debug.h>
 
-#include <vdb/table.h>
-#include <vdb/xform.h>
-#include <vdb/schema.h>
 #include <vdb/cursor.h>
+#include <vdb/database.h> /* VDatabaseRelease */
 #include <vdb/manager.h>
+#include <vdb/schema.h>
+#include <vdb/table.h>
+#include <vdb/vdb-priv.h> /* VDatabaseGetAccession */
+#include <vdb/xform.h>
+
 #include <kdb/meta.h>
 #include <klib/data-buffer.h>
 #include <insdc/insdc.h>
@@ -105,7 +108,6 @@ rc_t RestoreReadMake ( RestoreRead **objp, const VDBManager *mgr )
 	return rc;
 }
 
-
 static
 rc_t CC ref_restore_read_impl ( void *data, const VXformInfo *info, int64_t row_id,
                                 VRowResult *rslt, uint32_t argc, const VRowData argv [] )
@@ -164,9 +166,19 @@ rc_t CC ref_restore_read_impl ( void *data, const VXformInfo *info, int64_t row_
                 {
                     INSDC_coord_len read = 0;
 
+                    /* path to parent DB */
+                    const String * accOfParentDb = NULL;
+                    if (info != NULL && info->tbl != NULL) {
+                        const VDatabase * db = NULL;
+                        rc_t r2 = VTableOpenParentRead(info->tbl, &db);
+                        if (r2 == 0)
+                            r2 = VDatabaseGetAccession(db, &accOfParentDb);
+                        VDatabaseRelease(db);
+                    }
+
                     SUB_DEBUG( ( "SUB.Rd in 'ref_restore_read.c' at: %.*s at %u.%u\n", seqid_len, seqid, seq_start, seq_len ) );
 
-                    rc = RefSeqMgr_Read( self->rmgr, seqid, seqid_len, seq_start - 1, seq_len, dst, &read );
+                    rc = RefSeqMgr_ReadForDb( self->rmgr, seqid, seqid_len, seq_start - 1, seq_len, dst, &read, accOfParentDb);
                     if ( rc == 0 )
                     {
                         if ( read != seq_len )
@@ -174,6 +186,8 @@ rc_t CC ref_restore_read_impl ( void *data, const VXformInfo *info, int64_t row_
                             rc = RC( rcXF, rcFunction, rcExecuting, rcData, read < seq_len ? rcTooShort : rcTooLong );
                         }
                     }
+
+                    StringWhack(accOfParentDb);
                 }
             }
         }

@@ -132,7 +132,7 @@ TEST_CASE(test_sra) {
     string newShort("https://sra-download");
     if (WITHIN_NCBI)
         newShort += "-internal";
-    newShort += ".ncbi.nlm.nih.gov/traces/sra27/SRR/000000/SRR000001";
+    newShort += ".ncbi.nlm.nih.gov/sos/sra-pub-run-5/SRR000001/SRR000001.4";
 
     string newLong("https://sra-download");
     if (WITHIN_NCBI)

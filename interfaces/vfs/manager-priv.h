@@ -88,6 +88,8 @@ VFS_EXTERN rc_t CC VFSManagerOpenDirectoryUpdateDirectoryRelative ( const struct
 #define VPathMakeDirectoryRelative LegacyVPathMakeDirectoryRelative
 VFS_EXTERN rc_t CC VPathMakeDirectoryRelative ( struct VPath ** new_path,
     struct KDirectory const * dir, const char * posix_path);
+VFS_EXTERN rc_t CC VPathMakeDirectoryRelativeVPath ( struct VPath ** new_path,
+    struct KDirectory const * dir, const char * posix_path, const struct VPath * vpath );
 
 
 VFS_EXTERN rc_t CC VFSManagerOpenFileReadDecrypt (const struct VFSManager *self,
@@ -110,6 +112,11 @@ VFS_EXTERN const struct KConfig* CC VFSManagerGetConfig(const struct VFSManager 
 /* Make using a custom KConfig
  */
 VFS_EXTERN rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
+    struct KConfig * cfg );
+
+/* Make non-singleton version
+ */
+VFS_EXTERN rc_t CC VFSManagerMakeLocal ( struct VFSManager ** pmanager,
     struct KConfig * cfg );
 
 /*

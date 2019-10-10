@@ -29,10 +29,13 @@ struct AWS;
 
 #include <cloud/extern.h>
 #include <cloud/impl.h>
+
 #include <cloud/aws.h>
 
+#include <klib/debug.h> /* DBGMSG */
 #include <klib/rc.h>
 #include <klib/status.h>
+#include <klib/strings.h> /* ENV_MAGIC_CE_TOKEN */
 #include <klib/text.h>
 #include <klib/printf.h>
 
@@ -66,45 +69,103 @@ rc_t CC AWSDestroy ( AWS * self )
     return CloudWhack ( & self -> dad );
 }
 
+static rc_t KNSManager_GetAWSLocation(
+    const KNSManager * self, char *buffer, size_t bsize)
+{
+    return KNSManager_Read(self, buffer, bsize,
+        "http://169.254.169.254/latest/meta-data/placement/availability-zone",
+        NULL, NULL);
+}
+
+/* envCE
+ * Get Compute Environment Token from environment variable
+ *
+ * NB. this is a one-shot function, but atomic is not important
+ */
+static char const *envCE()
+{
+    static bool firstTime = true;
+    char const *const env = firstTime ? getenv(ENV_MAGIC_CE_TOKEN) : NULL;
+    firstTime = false;
+    if (env != NULL)
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+               ("Got location from environment\n"));
+    return env;
+}
+
+/* readCE
+ * Get Compute Environment Token by reading from provider network
+ */
+static rc_t readCE(AWS const *const self, size_t size, char location[])
+{
+    char document[4096] = "";
+    char pkcs7[4096] = "";
+    rc_t rc;
+    
+    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+           ("Reading location from provider\n"));
+    rc = KNSManager_Read(self->dad.kns, document, sizeof document,
+                 "http://169.254.169.254/latest/dynamic/instance-identity/document",
+                 NULL, NULL);
+    if (rc) return rc;
+
+    rc = KNSManager_Read(self->dad.kns, pkcs7, sizeof pkcs7,
+                 "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7",
+                 NULL, NULL);
+    if (rc) return rc;
+
+    return MakeLocation(pkcs7, document, location, size);
+}
+
 /* MakeComputeEnvironmentToken
  *  contact cloud provider to get proof of execution environment in form of a token
  */
 static
 rc_t CC AWSMakeComputeEnvironmentToken ( const AWS * self, const String ** ce_token )
 {
+    assert(self);
+    
+    if (!self->dad.user_agrees_to_reveal_instance_identity)
+        return RC(rcCloud, rcProvider, rcIdentifying,
+                  rcCondition, rcUnauthorized);
+    else {
+        char const *const env = envCE();
+        char location[4096] = "";
+        rc_t const rc = env == NULL ? readCE(self, sizeof(location), location) : 0;
+        if (rc == 0) {
+            String s;
+            StringInitCString(&s, env != NULL ? env : location);
+            return StringCopy(ce_token, &s);
+        }
+        return rc;
+    }
+}
+
+/* AwsGetLocation
+ */
+static rc_t AwsGetLocation(const AWS * self, const String ** location)
+{
     rc_t rc = 0;
 
-    char document[4096] = "";
-    char pkcs7[4096] = "";
+    char zone[64] = "";
+    char buffer[64] = "";
 
-    char location[4096] = "";
+    assert(self);
 
-    const char * env = getenv("VDB_CE_TOKEN");
+    rc = KNSManager_GetAWSLocation(self->dad.kns, zone, sizeof zone);
 
-    if (env == NULL) {
-        assert(self);
-
-        rc = KNSManager_Read(self->dad.kns, document, sizeof document,
-            "http://169.254.169.254/latest/dynamic/instance-identity/document",
-            NULL, NULL);
-
-        if (rc == 0)
-            rc = KNSManager_Read(self->dad.kns, pkcs7, sizeof pkcs7,
-                "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7",
-                NULL, NULL);
-
-        if (rc == 0)
-            rc = MakeLocation(pkcs7, document, location, sizeof location);
-    }
+    if (rc == 0)
+        rc = string_printf(buffer, sizeof buffer, NULL, "s3.%s", zone);
 
     if (rc == 0) {
         String s;
-        StringInitCString(&s, env != NULL ? env : location);
-        rc = StringCopy(ce_token, &s);
+        StringInitCString(&s, buffer);
+        rc = StringCopy(location, &s);
     }
 
     return rc;
 }
+
 
 /* AddComputeEnvironmentTokenForSigner
  *  prepare a request object with a compute environment token
@@ -153,6 +214,7 @@ static Cloud_vt_v1 AWS_vt_v1 =
 
     AWSDestroy,
     AWSMakeComputeEnvironmentToken,
+    AwsGetLocation,
     AWSAddComputeEnvironmentTokenForSigner,
     AWSAddAuthentication,
     AWSAddUserPaysCredentials
@@ -175,11 +237,16 @@ LIB_EXPORT rc_t CC CloudMgrMakeAWS ( const CloudMgr * self, AWS ** p_aws )
     {
         /* capture from self->kfg */
         bool user_agrees_to_pay = false;
-        if (self != NULL)
-            KConfigReadBool(self->kfg, "/libs/cloud/accept_aws_charges",
+        bool user_agrees_to_reveal_instance_identity = false;
+        if (self != NULL) {
+            KConfig_Get_User_Accept_Aws_Charges(self->kfg,
                 &user_agrees_to_pay);
+            KConfig_Get_Report_Cloud_Instance_Identity(self->kfg,
+                &user_agrees_to_reveal_instance_identity);
+        }
 
-        rc = CloudInit ( & aws -> dad, ( const Cloud_vt * ) & AWS_vt_v1, "AWS", self -> kns, user_agrees_to_pay );
+        rc = CloudInit ( & aws -> dad, ( const Cloud_vt * ) & AWS_vt_v1, "AWS", self -> kns, user_agrees_to_pay,
+            user_agrees_to_reveal_instance_identity );
         if ( rc == 0 )
         {
             rc = PopulateCredentials( aws );
@@ -269,9 +336,7 @@ bool CloudMgrWithinAWS ( const CloudMgr * self )
 
     assert(self);
 
-    return KNSManager_Read(self->kns, buffer, sizeof buffer,
-        "http://169.254.169.254/latest/meta-data/placement/availability-zone",
-        NULL, NULL) == 0;
+    return KNSManager_GetAWSLocation(self->kns, buffer, sizeof buffer) == 0;
 }
 
 /*** Finding/loading credentials  */

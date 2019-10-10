@@ -141,6 +141,7 @@ struct KCacheTeeFile_v3
     uint32_t ram_limit;             /* constant      */
     uint32_t ram_pg_count;          /* bg thread use */
     volatile bool quitting;         /* shared use    */
+    bool buffer_was_cached;         /* bg thread use */
     bool try_promote_on_close;      /* fg thread use */
     bool remove_on_close;           /* fg thread use */    
     bool whole_file;                /* constant      */
@@ -191,8 +192,9 @@ int64_t CC KCacheTeeFileTreeNodeSort ( const BSTNode *item, const BSTNode *n )
 }
 
 #if WINDOWS
-#include <synchapi.h>
-#include <processthreadsapi.h>
+//#include <synchapi.h>
+//#include <processthreadsapi.h>
+#include <windows.h>
 static CRITICAL_SECTION crit;
 static
 int enter_crit_section ( void )
@@ -243,12 +245,18 @@ static
 rc_t CC KCacheTeeChunkReaderNext ( KCacheTeeChunkReader * self, void ** buf, size_t * size )
 {
     if ( self -> ctf -> quitting )
+    {
+        STATUS ( STAT_PRG, "BG: %s - refusing request due to quitting\n", __func__ );
+        * buf = NULL;
+        * size = 0;
         return RC ( rcFS, rcBuffer, rcAllocating, rcTransfer, rcCanceled );
+    }
 
     STATUS ( STAT_PRG, "BG: %s - allocating page buffer of %zu bytes\n", __func__, self -> ctf -> page_size );
     * buf = malloc ( * size = self -> ctf -> page_size );
     if ( * buf == NULL )
         return RC ( rcFS, rcBuffer, rcAllocating, rcMemory, rcExhausted );
+
     return 0;
 }
 
@@ -277,6 +285,9 @@ rc_t KCacheTeeFileRAMCacheInsert ( KCacheTeeFile_v3 * self,
     STATUS ( STAT_GEEK, "BG: %s - store result: %R\n", __func__, rc );
     if ( rc == 0 )
     {
+        /* record this bit of information for later */
+        self -> buffer_was_cached = true;
+
         /* 3. delete any buffer that was there before */
         if ( existing != NULL )
         {
@@ -447,12 +458,6 @@ rc_t CC KCacheTeeChunkReaderConsume ( KCacheTeeChunkReader * chunk,
         STATUS ( STAT_PRG, "BG: %s - write buffer to cache file\n", __func__ );
         rc3 = KCacheTeeFileCacheInsert ( self, pos, buf, size );
 
-        if ( rc2 != 0 )
-        {
-            STATUS ( STAT_PRG, "BG: %s - buffer not inserted into RAM cache - freeing\n", __func__ );
-            free ( ( void * ) buf );
-        }
-
         if ( rc2 == 0 || rc3 == 0 )
         {
             /* set the "present" bit in bitmap */
@@ -481,7 +486,17 @@ rc_t CC KCacheTeeChunkReaderConsume ( KCacheTeeChunkReader * chunk,
 static
 rc_t CC KCacheTeeChunkReaderReturn ( KCacheTeeChunkReader * self, void * buf, size_t size )
 {
-    STATUS ( STAT_PRG, "BG: %s - ignoring buffer return message\n", __func__ );
+    if ( self -> ctf -> buffer_was_cached )
+    {
+        STATUS ( STAT_PRG, "BG: %s - ignoring buffer return message\n", __func__ );
+        self -> ctf -> buffer_was_cached = false;
+    }
+    else
+    {
+        STATUS ( STAT_PRG, "BG: %s - deleting buffer that was not cached\n", __func__ );
+        free ( buf );
+    }
+
     return 0;
 }
 
@@ -1173,7 +1188,7 @@ rc_t CC KCacheTeeFileRead ( const KCacheTeeFile_v3 *self, uint64_t pos,
 {
     struct timeout_t tm;
     /* TBD - need a default timeout on the manager object */
-    TimeoutInit ( & tm, 10 * 1000 );
+    TimeoutInit ( & tm, 100 * 1000 );
     return KCacheTeeFileTimedRead ( self, pos, buffer, bsize, num_read, & tm );
 }
 

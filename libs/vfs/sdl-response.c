@@ -44,6 +44,7 @@ static void DataInit(Data * self) {
 
     self->id = -1;
     self->exp = -1;
+    self->encryptedForProjectId = -1;
 }
 
 static void DataClone(const Data * self, Data * clone) {
@@ -57,6 +58,7 @@ static void DataClone(const Data * self, Data * clone) {
     clone->ceRequired = self->ceRequired;
     clone->cls = self->cls; /* itemClass */
     clone->code = self->code;
+    clone->encryptedForProjectId = self->encryptedForProjectId;
     clone->exp = self->exp; /* expDate */
     clone->fmt = self->fmt; /* format */
     clone->id = self->id; /* oldCartObjId */
@@ -95,6 +97,12 @@ static rc_t DataUpdate(const Data * self,
 
     name = "ceRequired";
     BulSet(&next->ceRequired, KJsonObjectGetMember(node, name), name, path);
+
+    name = "encryptedForProjectId";
+    StrSet(&next->sEncryptedForProjectId, KJsonObjectGetMember(node, name),
+        name, path);
+    if (next->sEncryptedForProjectId != NULL)
+        next->encryptedForProjectId = atoi(next->sEncryptedForProjectId);
 
     name = "link";
     StrSet(&next->link, KJsonObjectGetMember(node, name), name, path);
@@ -195,6 +203,8 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
 
             int64_t mod = 0;  /* modDate */
 
+            int64_t projectId = -1;
+
             uint8_t md5[16];
             bool    hasMd5 = false;
 
@@ -243,6 +253,7 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
                 ceRequired = true;
             if (ldata.payRequired == eTrue)
                 payRequired = true;
+            projectId = ldata.encryptedForProjectId;
 
             if (ldata.md5 != NULL) {
                 int i = 0;
@@ -266,14 +277,13 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
 
             rc = VPathMakeFromUrl(&path, &url, NULL, true, &id, ldata.sz,
                 mod, hasMd5 ? md5 : NULL, 0, ldata.srv, &objectType, &type,
-                ceRequired, payRequired, ldata.name);
+                ceRequired, payRequired, ldata.name, projectId, 128);
 
             if (rc == 0)
                 VPathMarkHighReliability(path, true);
 
-            if (rc != 0) {
+            if (rc != 0)
                 return rc;
-            }
 
             rc = FileAddVPath(file, path, NULL, false, 0);
 
@@ -456,6 +466,9 @@ rc_t ItemAddSdlFile(Item * self, const KJsonObject * node,
     }
 #endif
 
+    if (rc == 0)
+        rc = ItemInitMapping(self);
+
     return rc;
 }
 
@@ -571,7 +584,6 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
         if (THRESHOLD > THRESHOLD_NO_DEBUG)
             DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
             ("... error: cannot find '%s'\n", name));
-        KJsonValueWhack(root);
     }
     else {
         const KJsonArray * array = KJsonValueToArray(value);
