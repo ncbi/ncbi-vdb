@@ -24,6 +24,123 @@
 *
 */
 
-#include "jwt.h" /* JwtKartValidate */
+#include <kfs/directory.h> /* KDirectoryRelease */
+#include <kfs/file.h> /* KFileRelease */
+#include <klib/rc.h> /* RC */
+#include "jwt.h" /* JwtKartValidateFile */
 
-rc_t JwtKartValidate(const char * path) { return 0; }
+#define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
+    if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
+
+#define MIN_SIZE 5
+#define MAX_SIZE 20000000
+
+static rc_t JwtKartValidateSize(uint64_t size) {
+    if (size == 0)
+        return RC(rcVFS, rcQuery, rcValidating, rcFile, rcEmpty);
+    else if (size < MIN_SIZE)
+        return RC(rcVFS, rcQuery, rcValidating, rcFile, rcInsufficient);
+    else if (size > MAX_SIZE)
+        return RC(rcVFS, rcQuery, rcValidating, rcFile, rcExcessive);
+    else
+        return 0;
+}
+
+#define VALID(c) ( ( (c) >= 'a' && (c) <= 'z' ) || \
+                   ( (c) >= 'A' && (c) <= 'Z' ) || \
+                   ( (c) >= '0' && (c) <= '9' ) || (c) == '-' || (c) == '_' )
+
+rc_t JwtKartValidateString(const String * cart) {
+    rc_t rc = 0;
+
+    if (cart == NULL || cart->addr == NULL)
+        return RC(rcVFS, rcQuery, rcValidating, rcParam, rcNull);
+
+    rc = JwtKartValidateSize(cart->size);
+
+    if (rc == 0) {
+        size_t i = 0;
+        /* section I before first '.' */
+        for (i = 0; i < cart->size; ++i)
+            if (!VALID(cart->addr[i])) {
+                if (cart->addr[i] != '.')
+                    return RC(rcVFS, rcQuery, rcValidating, rcChar, rcInvalid);
+                else
+                    break;
+            }
+
+        /* section II after first '.' */
+        for (++i; i < cart->size; ++i)
+            if (!VALID(cart->addr[i])) {
+                if (cart->addr[i] != '.')
+                    return RC(rcVFS, rcQuery, rcValidating, rcChar, rcInvalid);
+                else
+                    break;
+            }
+
+        /* section III after third '.' */
+        for (++i; i < cart->size; ++i)
+            if (!VALID(cart->addr[i]))
+                break;
+        /* trailing EOL-s */
+
+        for (; i < cart->size; ++i)
+            if (cart->addr[i] != '\r' && cart->addr[i] != '\n')
+                return RC(rcVFS, rcQuery, rcValidating, rcChar, rcInvalid);
+    }
+
+    return rc;
+}
+
+rc_t JwtKartValidateFile(const char * path) {
+    rc_t rc = 0;
+
+    KDirectory * dir = NULL;
+
+    const KFile * f = NULL;
+
+    char * buffer = NULL;
+
+    uint64_t size = ~0;
+
+    if (path == NULL)
+        return RC(rcVFS, rcQuery, rcValidating, rcParam, rcNull);
+
+    rc = KDirectoryNativeDir(&dir);
+
+    if (rc == 0)
+        if ((KDirectoryPathType(dir, "%s", path) & ~kptAlias) != kptFile)
+            rc = RC(rcVFS, rcQuery, rcValidating, rcFile, rcIncorrect);
+
+    if (rc == 0)
+        rc = KDirectoryOpenFileRead(dir, &f, "%s", path);
+
+    if (rc == 0)
+        rc = KFileSize(f, &size);
+
+    if (rc == 0)
+        rc = JwtKartValidateSize(size);
+
+    if (rc == 0) {
+        buffer = malloc(size);
+        if (buffer == NULL)
+            rc = RC(rcVFS, rcQuery, rcValidating, rcMemory, rcExhausted);
+    }
+
+    if (rc == 0)
+        rc = KFileReadExactly(f, 0, buffer, size);
+
+    if (rc == 0) {
+        String s;
+        StringInit(&s, buffer, size, size);
+        rc = JwtKartValidateString(&s);
+    }
+
+    free(buffer);
+
+    RELEASE(KFile, f);
+
+    RELEASE(KDirectory, dir);
+
+    return rc;
+}

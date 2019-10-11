@@ -60,7 +60,7 @@
 #include "../kfg/kfg-priv.h" /* KConfigGetNgcFile */
 #include "../kns/mgr-priv.h" /* KNSManagerGetCloudLocation */
 #include "json-response.h" /* Response4 */
-#include "jwt.h" /* JwtKartValidate */
+#include "jwt.h" /* JwtKartValidateFile */
 #include "path-priv.h" /* VPathMakeFmt */
 #include "resolver-cgi.h" /* RESOLVER_CGI */
 #include "resolver-priv.h" /* VPathCheckFromNamesCGI */
@@ -3900,7 +3900,7 @@ rc_t KServiceSetJwtKartFile(KService * self, const char * path) {
     if (path == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
 
-    rc = JwtKartValidate(path);
+    rc = JwtKartValidateFile(path);
     if (rc != 0)
         return rc;
 

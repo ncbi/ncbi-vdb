@@ -37,6 +37,7 @@ TEST_TOOLS = \
 	test-names-30 \
 	test-path \
 	test-path-c \
+	test-perm \
 	test-resolver \
 	test-vfsmanager \
 	test-json-response \
@@ -159,6 +160,18 @@ N30_OBJ = \
 	$(addsuffix .$(OBJX),$(N30_SRC))
 
 $(TEST_BINDIR)/test-names-30: $(N30_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+#----------------------------------------------------------------
+# test-perm
+
+TP_SRC = \
+	test-perm
+
+TP_OBJ = \
+	$(addsuffix .$(OBJX),$(TP_SRC))
+
+$(TEST_BINDIR)/test-perm: $(TP_OBJ)
 	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
 
 #----------------------------------------------------------------

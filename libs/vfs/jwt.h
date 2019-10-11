@@ -35,7 +35,10 @@
 extern "C" {
 #endif
 
-    rc_t JwtKartValidate(const char * path);
+    struct String;
+
+    rc_t JwtKartValidateFile(const char * path);
+    rc_t JwtKartValidateString(const struct String * cart);
 
 #ifdef __cplusplus
 }
