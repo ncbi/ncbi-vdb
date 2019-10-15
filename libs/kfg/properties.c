@@ -1107,3 +1107,22 @@ LIB_EXPORT rc_t CC KConfig_Get_CacheDebug( const KConfig *self, bool * value, bo
 { return get_bool_value( self, DEBUG_CACHEING, value, dflt ); }
 LIB_EXPORT rc_t CC KConfig_Set_CacheDebug( KConfig *self, bool value )
 { return set_bool_value( self, DEBUG_CACHEING, value ); }
+
+#define GUID_KEY "LIBS/GUID"
+LIB_EXPORT rc_t CC KConfig_Get_GUID( const KConfig *self, char * value, size_t value_size, size_t * written )
+{
+    size_t local_written;
+    rc_t rc = KConfig_Get_Repository_String( self, value, value_size, &local_written, GUID_KEY );
+    if ( rc == 0 )
+    {
+        if ( written != NULL )
+            *written = local_written;
+    }
+    return rc;
+
+}
+
+LIB_EXPORT rc_t CC KConfig_Set_GUID( KConfig *self, const char * value )
+{
+    return KConfig_Set_Repository_String( self, value, GUID_KEY );
+}
