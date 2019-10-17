@@ -53,6 +53,12 @@ static rc_t JwtKartValidateSize(uint64_t size) {
 rc_t JwtKartValidateString(const String * cart) {
     rc_t rc = 0;
 
+    int MIN1 = 1, MIN2 = 1, MIN3 = 1;
+
+    int dots = 0;
+
+    size_t j = 0;
+
     if (cart == NULL || cart->addr == NULL)
         return RC(rcVFS, rcQuery, rcValidating, rcParam, rcNull);
 
@@ -61,33 +67,50 @@ rc_t JwtKartValidateString(const String * cart) {
     if (rc == 0) {
         size_t i = 0;
         /* section I before first '.' */
-        for (i = 0; i < cart->size; ++i)
+        for (i = 0, j = 0; i < cart->size; ++i, ++j)
             if (!VALID(cart->addr[i])) {
-                if (cart->addr[i] != '.')
-                    return RC(rcVFS, rcQuery, rcValidating, rcChar, rcInvalid);
-                else
+                if (cart->addr[i] == '.') {
+                    if (j < MIN1)
+                        return RC(rcVFS,
+                            rcQuery, rcValidating, rcChar, rcUnexpected);
+                    ++dots;
                     break;
+                }
+                else
+                    return RC(rcVFS, rcQuery, rcValidating, rcChar, rcInvalid);
             }
 
         /* section II after first '.' */
-        for (++i; i < cart->size; ++i)
+        for (j = 0, ++i; i < cart->size; ++i, ++j)
             if (!VALID(cart->addr[i])) {
-                if (cart->addr[i] != '.')
-                    return RC(rcVFS, rcQuery, rcValidating, rcChar, rcInvalid);
-                else
+                if (cart->addr[i] == '.') {
+                    if (j < MIN2)
+                        return RC(rcVFS,
+                            rcQuery, rcValidating, rcChar, rcUnexpected);
+                    ++dots;
                     break;
+                }
+                else
+                    return RC(rcVFS, rcQuery, rcValidating, rcChar, rcInvalid);
             }
 
         /* section III after third '.' */
-        for (++i; i < cart->size; ++i)
+        for (j = 0, ++i; i < cart->size; ++i, ++j)
             if (!VALID(cart->addr[i]))
                 break;
         /* trailing EOL-s */
+
+        if (j < MIN3)
+            return RC(rcVFS,
+                rcQuery, rcValidating, rcChar, rcUnexpected);
 
         for (; i < cart->size; ++i)
             if (cart->addr[i] != '\r' && cart->addr[i] != '\n')
                 return RC(rcVFS, rcQuery, rcValidating, rcChar, rcInvalid);
     }
+
+    if (dots != 2)
+        return RC(rcVFS, rcQuery, rcValidating, rcChar, rcNotFound);
 
     return rc;
 }
@@ -144,3 +167,5 @@ rc_t JwtKartValidateFile(const char * path) {
 
     return rc;
 }
+
+/******************************************************************************/
