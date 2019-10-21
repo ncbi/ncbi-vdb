@@ -27,9 +27,11 @@
 #include <kns/extern.h>
 
 #include <kfg/config.h>
+#include <kfg/properties.h>
 
 #include <klib/printf.h>
 #include <klib/rc.h>
+#include <klib/strings.h>
 
 #include <kproc/timeout.h>
 
@@ -746,20 +748,66 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent ( KNSManager * self, const char * fmt,
 
     rc_t rc = 0;
     if ( fmt == NULL )
-        rc = RC( rcNS, rcMgr, rcUpdating, rcParam, rcNull );
-    else
     {
-        size_t bytes;
-        char scratch [ sizeof kns_manager_user_agent ];
-
-        va_list args;
-        va_start ( args, fmt );
-        rc = string_vprintf ( scratch, sizeof scratch, & bytes, fmt, args );
-        va_end ( args );
-
-        if ( rc == 0 )
-            string_copy ( kns_manager_user_agent, sizeof kns_manager_user_agent, scratch, bytes );
+        rc = RC( rcNS, rcMgr, rcUpdating, rcParam, rcNull );
+        return rc;
     }
+
+    size_t bytes=0;
+    char scratch [ sizeof kns_manager_user_agent ];
+
+    va_list args;
+    va_start ( args, fmt );
+    rc = string_vprintf ( scratch, sizeof scratch, & bytes, fmt, args );
+    va_end ( args );
+
+    if ( rc ==0 )
+    {
+        string_copy ( kns_manager_user_agent,
+                      sizeof kns_manager_user_agent,
+                      scratch, bytes );
+
+        char cloudtrunc[64];
+        const char * cloudid = getenv(ENV_MAGIC_CE_TOKEN);
+        if (cloudid && strlen(cloudid) > 8)
+        {
+            /* AWS access keys should always begin with AKIA,
+             * suffixes seems non-random */
+            strcpy(cloudtrunc, cloudid + 4);
+            cloudtrunc[3]='\0';
+        } else
+        {
+            strcpy(cloudtrunc, "noc");
+        }
+
+        /* Defined in sra-tools/tools/driver-tool/env_vars.h */
+        const char * sessid = getenv("VDB_SESSION_ID");
+        if (sessid==NULL) sessid="nos";
+
+        KConfig *kfg=NULL;
+        rc = KConfigMake( & kfg, NULL);
+        if (rc == 0)
+        {
+            char guid[64];
+            size_t written;
+            rc=KConfig_Get_GUID(kfg, guid, sizeof guid, &written);
+            if (rc !=0 ) sprintf(guid,"nog");
+
+
+            char scratch2 [ sizeof scratch + 32 ];
+            rc = string_printf(scratch2,  sizeof scratch2, & bytes,
+                               "%s (phid=%.3s%.3s%.3s)",
+                               scratch, cloudtrunc, guid, sessid);
+
+            if ( rc ==0 )
+                string_copy ( kns_manager_user_agent,
+                              sizeof kns_manager_user_agent,
+                              scratch2, bytes );
+        }
+
+        if (kfg) KConfigRelease(kfg);
+    }
+
     return rc;
 }
 
