@@ -796,7 +796,7 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent ( KNSManager * self, const char * fmt,
 
             char scratch2 [ sizeof scratch + 32 ];
             rc = string_printf(scratch2,  sizeof scratch2, & bytes,
-                               "%s (phid=%.3s%.3s%.3s)",
+                               "%s (phid=%.3s%.4s%.3s)",
                                scratch, cloudtrunc, guid, sessid);
 
             if ( rc ==0 )
