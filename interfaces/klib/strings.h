@@ -43,6 +43,8 @@ extern "C" {
 
 #define ENV_MAGIC_CE_TOKEN "VDB_CE_TOKEN"
 
+#define ENV_VAR_SESSION_ID "VDB_SESSION_ID"
+
 #ifdef __cplusplus
 }
 #endif

@@ -785,8 +785,7 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent ( KNSManager * self, const char * fmt,
             strcpy(cloudtrunc, "noc");
         }
 
-        /* Defined in sra-tools/tools/driver-tool/env_vars.h */
-        const char * sessid = getenv("VDB_SESSION_ID");
+        const char * sessid = getenv(ENV_VAR_SESSION_ID);
         if (sessid==NULL)
         {
             sessid="nos";
