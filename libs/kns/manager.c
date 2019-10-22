@@ -35,9 +35,9 @@
 
 #include <kproc/timeout.h>
 
+#include <kns/http.h>
 #include <kns/manager.h>
 #include <kns/socket.h>
-#include <kns/http.h>
 
 #include <cloud/manager.h>
 
@@ -73,8 +73,10 @@ static char kns_manager_user_agent [ 128 ] = "ncbi-vdb";
 static atomic_ptr_t kns_singleton;
 #endif
 
+/*
 #define RELEASE( type, obj ) do { rc_t rc2 = type##Release ( obj ); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while ( false )
+*/
 
 bool KNSManagerHttpProxyOnly ( const KNSManager * self ) {
     if ( self == NULL )
@@ -170,7 +172,7 @@ static rc_t CC KNSManagerMakeSingleton ( KNSManager ** mgrp, KConfig * aKfg,
     else
     {
         KConfig * kfg = aKfg;
-        KNSManager * our_mgr;
+        KNSManager * our_mgr=NULL;
 
         * mgrp = NULL;
 
@@ -744,7 +746,10 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig(KNSManager ** mgrp,
 LIB_EXPORT rc_t CC KNSManagerSetUserAgent ( KNSManager * self, const char * fmt, ... )
 {
     /* 6/18/14 - don't check "self", since the current implementation
-       is actually static. Later implementations will not be... */
+       is actually static. Later implementations will not be...
+       Cast silences warning
+       */
+    (void)(self);
 
     rc_t rc = 0;
     if ( fmt == NULL )
@@ -773,7 +778,7 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent ( KNSManager * self, const char * fmt,
         {
             /* AWS access keys should always begin with AKIA,
              * suffixes seems non-random */
-            strcpy(cloudtrunc, cloudid + 4);
+            strncpy(cloudtrunc, cloudid + 4, sizeof cloudtrunc);
             cloudtrunc[3]='\0';
         } else
         {
@@ -782,7 +787,10 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent ( KNSManager * self, const char * fmt,
 
         /* Defined in sra-tools/tools/driver-tool/env_vars.h */
         const char * sessid = getenv("VDB_SESSION_ID");
-        if (sessid==NULL) sessid="nos";
+        if (sessid==NULL)
+        {
+            sessid="nos";
+        }
 
         KConfig *kfg=NULL;
         rc = KConfigMake( & kfg, NULL);
@@ -791,7 +799,10 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent ( KNSManager * self, const char * fmt,
             char guid[64];
             size_t written;
             rc=KConfig_Get_GUID(kfg, guid, sizeof guid, &written);
-            if (rc !=0 ) sprintf(guid,"nog");
+            if (rc !=0 )
+            {
+                sprintf(guid,"nog");
+            }
 
 
             char scratch2 [ sizeof scratch + 32 ];
@@ -800,12 +811,17 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent ( KNSManager * self, const char * fmt,
                                scratch, cloudtrunc, guid, sessid);
 
             if ( rc ==0 )
+            {
                 string_copy ( kns_manager_user_agent,
                               sizeof kns_manager_user_agent,
                               scratch2, bytes );
+            }
         }
 
-        if (kfg) KConfigRelease(kfg);
+        if (kfg)
+        {
+            KConfigRelease(kfg);
+        }
     }
 
     return rc;
