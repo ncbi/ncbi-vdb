@@ -24,13 +24,49 @@
 *
 */
 
-#ifndef _h_kfg_priv_
-#define _h_kfg_priv_
+#ifndef _h_klib_guid_
+#define _h_klib_guid_
 
-struct KConfig;
+#ifndef _h_klib_extern_
+#include <klib/extern.h>
+#endif
 
-extern void add_aws_nodes ( struct KConfig *self );
+#ifndef _h_klib_defs_
+#include <klib/defs.h>
+#endif
 
-const char * KConfigGetNgcFile(void);
+#ifndef _h_klib_rc_
+#include <klib/rc.h>
+#endif
 
-#endif /* _h_kfg_priv_ */
+#ifndef _h_klib_text_
+#include <klib/text.h>
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * KGUIDMake
+ * generate a GUID and place it in the provided String buffer.
+ *
+ * The format is version 4 variant 1, according to
+ * [https://en.wikipedia.org/wiki/Universally_unique_identifier#Implementations]
+ *
+ *  xxxxxxxx-xxxx-4xxx-Nxxx-xxxxxxxxxxxx
+ *
+ * where
+ *   x represents a randomly generated hexadecimal digit from 0 to f
+ *   the 2 most significant bits of N are 10, the other 2 bits are randomly generated
+ *
+ * "buf"/"buf_size" [ OUT ] The output buffer, must be at least 37 characters long (includes 1 byte for 0-terminator)
+ */
+
+KLIB_EXTERN rc_t CC KGUIDMake( char * buf, size_t bufSize );
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* _h_klib_guid_ */

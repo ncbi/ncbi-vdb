@@ -891,12 +891,20 @@ LIB_EXPORT rc_t CC
 KConfig_Get_Aws_Profile( const KConfig *self,
     char * value, size_t value_size, size_t * written )
 {
-    rc_t rc = KConfig_Get_Repository_String( self, value, value_size, written, AWS_PROFILE );
+    rc_t rc = 0;
+
+    size_t dummy = 0;
+    if (written == NULL)
+        written = &dummy;
+
+    rc = KConfig_Get_Repository_String( self, value, value_size, written,
+        AWS_PROFILE );
     if ( GetRCState ( rc ) == rcNotFound || ( rc == 0 && * written == 0 ) )
     {
         * written = string_copy_measure ( value, value_size, "default" );
         rc = 0;
     }
+
     return rc;
 }
 LIB_EXPORT rc_t CC

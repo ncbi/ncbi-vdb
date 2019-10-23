@@ -44,7 +44,7 @@
 #include <vfs/resolver.h>
 #include <vfs/path.h>
 
-#include "resolver-cgi.h" /* RESOLVER_CGI */
+#include "../../libs/vfs/resolver-cgi.h" /* RESOLVER_CGI */
 
 #include <cstdlib>
 #include <fstream>

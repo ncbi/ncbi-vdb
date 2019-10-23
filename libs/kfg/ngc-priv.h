@@ -52,6 +52,10 @@ struct KNgcObj
 };
 
 
+rc_t KNgcObjGetEncryptionKey(const KNgcObj *self,
+    char * buffer, size_t buffer_size, size_t * written);
+
+
 #ifdef __cplusplus
 }
 #endif

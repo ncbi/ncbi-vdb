@@ -175,6 +175,7 @@ typedef enum
 {
     algCGI,
     algFlat,
+    algWithExtFlat,
     algAD,    /* Accession as Directory */
     algSRAAD,    /* Accession as Directory for SRA */
     algSRAFlat,
@@ -253,9 +254,11 @@ rc_t VResolverSetVersion ( VResolver *self, const char * version );
    2: don't resolve */
 rc_t VResolverResolveName ( VResolver *self, int resolve );
 
-rc_t VFSManagerMakeDbgapResolver(const struct VFSManager * self,
+bool VResolverResolveToAd(const VResolver *self);
+
+/*rc_t VFSManagerMakeDbgapResolver(const struct VFSManager * self,
     VResolver ** new_resolver, const struct KConfig * cfg,
-    const struct KNgcObj * ngc);
+    const struct KNgcObj * ngc);*/
 
 /* default behavior to resolve oid->file mapping inside of VFS */
 #define DEFAULT_RESOVE_OID_NAME true
@@ -264,7 +267,8 @@ void KConfigReadRemoteProtocols ( struct KConfig const * self, VRemoteProtocols 
 
 VResolverAppID get_accession_app(const String * accession, bool refseq_ctx,
     struct VResolverAccToken *tok, bool *legacy_wgs_refseq,
-    bool resolveAllAccToCache, bool * forDirAdjusted, const String * parentAcc);
+    bool resolveAllAccToCache, bool * forDirAdjusted,
+    const String * parentAcc, int64_t projectId);
 
 #ifdef __cplusplus
 }

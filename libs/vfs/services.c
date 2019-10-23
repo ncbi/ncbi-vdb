@@ -33,6 +33,7 @@
 #include <kfg/repository.h> /* KRepositoryMgrGetProtectedRepository */
 
 #include <klib/container.h> /* BSTree */
+#include <klib/debug.h> /* DBGMSG */
 #include <klib/printf.h> /* string_printf */
 #include <klib/rc.h> /* RC */
 
@@ -96,7 +97,7 @@ int64_t CC BSTreeSort ( const BSTNode * item, const BSTNode * n )
 
 typedef struct {
     KService * service; /* DO NOT RELEASE */
-    VFSManager * mgr;
+    const VFSManager * mgr;
     const KConfig * kfg;
     VResolver * resolver;
     BSTree ticketsToResolvers;
@@ -112,7 +113,7 @@ static rc_t HInit ( H * self, KService * s ) {
     self -> service = s;
 
     if ( rc == 0 )
-        rc = VFSManagerMake ( & self -> mgr );
+        rc = KServiceGetVFSManager ( s, & self -> mgr );
 
     if ( rc == 0 )
         rc = KServiceGetConfig ( s, & self -> kfg );
@@ -138,12 +139,16 @@ static rc_t HResolver(H * self, const KService * service,
     const String * aTicket, VResolver ** resolver, const VPath * path)
 {
     rc_t rc = 0;
+    bool found = false;
     const String * ticket = aTicket;
     const KNgcObj * ngc = NULL;
     uint32_t projectId = 0;
     bool isProtected = VPathGetProjectId(path, &projectId);
+
     assert(resolver && self && self->service);
+
     *resolver = NULL;
+
     if (isProtected) {
         bool isProtected = false;
         ngc = KServiceGetNgcFile(service, &isProtected);
@@ -159,109 +164,69 @@ static rc_t HResolver(H * self, const KService * service,
             }
         }
     }
+
     if (ticket && ticket->addr != NULL && ticket->size > 0) {
         BSTItem * i = (BSTItem *)BSTreeFind(
             &self->ticketsToResolvers, ticket, BSTItemCmp);
 
+        if (i != NULL) {
+            found = true;
+            *resolver = i->resolver;
+        }
+        else if (!isProtected) {
+            /* here find resolver in configuration by ticket 
+               ( when ngc file was not provided) */
+            rc = KServiceGetResolver(self->service, ticket, resolver);
+            if (rc == 0 && *resolver != NULL) {
+                found = true;
+                i = calloc(1, sizeof * i);
+                if (i == NULL)
+                    return RC(rcVFS, rcStorage, rcAllocating,
+                        rcMemory, rcExhausted);
+
+                rc = StringCopy(&i->ticket, ticket);
+                if (rc != 0)
+                    return rc;
+
+                i->resolver = *resolver;
+                rc = BSTreeInsert(&self->ticketsToResolvers,
+                    (BSTNode *)i, BSTreeSort);
+            }
+        }
+    }
+
+    if (isProtected && !found) {
+        char buffer[256] = "";
+        String s;
+        rc = string_printf(buffer, sizeof buffer, NULL, "dbGaP-%d", projectId);
+        if (rc != 0)
+            return rc;
+        StringInitCString(&s, buffer);
+        BSTItem * i = (BSTItem *)BSTreeFind(
+            &self->ticketsToResolvers, &s, BSTItemCmp);
+
         if (i != NULL)
             * resolver = i->resolver;
         else {
-            if (isProtected) {
-                const struct KRepositoryMgr * mgr = NULL;
-                const struct KRepository * r = NULL;
-                rc = KServiceGetRepoMgr(self->service, &mgr);
-                if (rc == 0) {
-                    rc = KRepositoryMgrGetProtectedRepository(
-                        mgr, projectId, &r);
-                    if (rc == 0) {
-                        rc = KRepositoryMakeResolver(r, resolver, self->kfg);
-                        if (rc == 0) {
-                            i = calloc(1, sizeof * i);
-                            if (i == NULL)
-                                return RC(rcVFS,
-                                    rcStorage, rcAllocating,
-                                    rcMemory, rcExhausted);
-                            rc = StringCopy(&i->ticket, ticket);
-                            if (rc != 0)
-                                return rc;
-                            i->resolver = *resolver;
-                            rc = BSTreeInsert(&self->ticketsToResolvers,
-                                (BSTNode *)i, BSTreeSort);
-                        }
-                    }
-                    else if (ticket != NULL &&
-                        ticket->addr != NULL && ticket->size != 0)
-                    {
-                        char cwd[PATH_MAX] = "";
-                        char n[512] = "";
-                        char v[PATH_MAX] = "";
-                        KConfig * kfg = NULL;
-                        KDirectory * dir = NULL;
-                        uint32_t id = 0;
-                        rc = KNgcObjGetProjectId(ngc, &id);
-                        if (rc == 0)
-                            rc = KDirectoryNativeDir(&dir);
-                        if (rc == 0)
-                            rc = KDirectoryResolvePath(dir, true,
-                                cwd, sizeof cwd, ".");
-                        if (rc == 0)
-                            rc = KConfigMakeEmpty(&kfg);
-                        if (rc == 0)
-                            rc = string_printf(n, sizeof n, NULL,
-                                "/repository/user/protected/dbGaP-%d/"
-                                "root", id);
-                        if (rc == 0)
-                            rc = string_printf(v, sizeof v, NULL,
-                                "%s/%S_dbGaP-%d", cwd, &path->id, id);
-                        if (rc == 0)
-                            rc = KConfigWriteString(kfg, n, v);
-                        if (rc == 0)
-                            rc = string_printf(n, sizeof n, NULL,
-                                "/repository/user/protected/dbGaP-%d/"
-                                "apps/sra/volumes/sraFlat", id);
-                        if (rc == 0)
-                            rc = KConfigWriteString(kfg, n, ".");
-                        if (rc == 0)
-                            rc = VFSManagerMakeDbgapResolver(self->mgr,
-                                resolver, kfg, ngc);
-                        RELEASE(KConfig, kfg);
-                        RELEASE(KDirectory, dir);
-                        if (rc == 0) {
-                            i = calloc(1, sizeof * i);
-                            if (i == NULL)
-                                return RC(rcVFS,
-                                    rcStorage, rcAllocating,
-                                    rcMemory, rcExhausted);
-                            rc = StringCopy(&i->ticket, ticket);
-                            if (rc != 0)
-                                return rc;
-                            i->resolver = *resolver;
-                            rc = BSTreeInsert(&self->ticketsToResolvers,
-                                (BSTNode *)i, BSTreeSort);
-                        }
-                    }
-                    else
-                        rc = 0;
-                }
-            }
-            else {
-                rc = KServiceGetResolver(self->service, ticket, resolver);
+            rc = KServiceGetResolverForProject(
+                self->service, projectId, resolver);
+            if (rc != 0)
+                /* cannot find resolver in configuration by projectId:
+                   ngc file was provided but not imported:
+                   use non-protected resolver */
+                rc = 0;
+            else if (*resolver != NULL) {
+                found = true;
+                i = calloc(1, sizeof * i);
+                if (i == NULL)
+                    return RC(rcVFS, rcStorage, rcAllocating,
+                        rcMemory, rcExhausted);
+                rc = StringCopy(&i->ticket, &s);
                 if (rc != 0)
                     return rc;
-                else if (*resolver != NULL) {
-                    i = calloc(1, sizeof * i);
-                    if (i == NULL)
-                        return RC(rcVFS, rcStorage, rcAllocating,
-                            rcMemory, rcExhausted);
-
-                    rc = StringCopy(&i->ticket, ticket);
-                    if (rc != 0)
-                        return rc;
-
-                    i->resolver = *resolver;
-                    rc = BSTreeInsert(&self->ticketsToResolvers,
-                        (BSTNode *)i, BSTreeSort);
-                }
+                i->resolver = *resolver;
+                rc = BSTreeInsert(&self->ticketsToResolvers,
+                    (BSTNode *)i, BSTreeSort);
             }
         }
     }
@@ -272,6 +237,9 @@ static rc_t HResolver(H * self, const KService * service,
                 self->kfg);
         *resolver = self->resolver;
     }
+
+/*  if (rc == 0 && *resolver != NULL)
+        VResolverCacheEnable(*resolver, KServiceGetCacheEnable(service)); */
 
     if (ticket != aTicket)
         StringWhack(ticket);
@@ -309,6 +277,64 @@ static rc_t _VFSManagerVPathMakeAndTest ( const VFSManager * self,
     return rc;
 }
 
+static rc_t VPathCacheLocationForSource(
+    const VPath * self, const KDirectory * dir, VPath ** path, rc_t *rcOut)
+{
+    rc_t rc = 0;
+
+    String acc;
+    String name;
+
+    char sPath[PATH_MAX] = "";
+
+    /* Getting cache location for source files.
+       When acc & name (come from SDL) are unknown:
+        it should be cwd/acc/filename.
+        Using a hack: filename is the last part of path;
+        acc is the last directory name
+       Otherwise cache location is acc/name */
+
+    size_t size = 0;
+    const char * s = NULL;
+
+    assert(self && rcOut);
+
+    size = self->path.size;
+    s = string_rchr(self->path.addr, size, '/');
+    /* the part after the latest slash is the filename */
+
+    rc = VPathGetId(self, &acc);
+    if (rc == 0)
+        rc = VPathGetName(self, &name);
+
+    if (rc == 0 && acc.size > 0 && name.size > 0)
+        /* acc & name (come from SDL) are known */
+        rc = KDirectoryResolvePath(dir, true, sPath, sizeof sPath,
+            "%.*s/%.*s", acc.size, acc.addr, name.size, name.addr);
+
+    else {
+        /* acc & name (come from SDL) are unknown */
+        if (s != NULL && s > self->path.addr) {
+            /* size of path without filename */
+            size = s - self->path.addr;
+            /* rfind the second slash for accesion directory */
+            s = string_rchr(self->path.addr, size, '/');
+        }
+        if (s != NULL)
+            ++s;
+        if (s == NULL)
+            s = self->path.addr + self->path.size;
+        size = self->path.size - (s - self->path.addr);
+        rc = KDirectoryResolvePath(dir, true, sPath, sizeof sPath,
+            "%.*s", (int)size, s);
+    }
+
+    if (rc == 0)
+        *rcOut = VPathMakeFmt(path, "%s", sPath);
+
+    return rc;
+}
+
 static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
     VRemoteProtocols protocols, const VPath * path, const String * acc,
     uint64_t id, VPathSet ** result, ESrvFileFormat ff,
@@ -321,7 +347,7 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
     uint32_t oid = 0;
     uint32_t i = 0;
 
-    assert ( result );
+    assert ( self && result );
 
     if ( id == 0 )
         for ( i = 0; i < acc -> size; ++i ) {
@@ -335,8 +361,13 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
     else
         oid = id;
 
-    if ( oid == 0 )
+    if ( oid == 0 ) {
         rc = VFSManagerMakePath ( mgr, & query, "%S", acc );
+        if (rc == 0 && path != NULL && path->projectId >= 0) {
+            assert(query);
+            query->projectId = path->projectId;
+        }
+    }
     else
         rc = VFSManagerMakeOidPath ( mgr, & query, oid );
 
@@ -377,43 +408,59 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
 
         else if ( VPathFromUri ( path ) ) {
             if (isSource) {
-                String acc;
-                String name;
-
-                /* Getting cache location for source files.
-                   When acc & name (come from SDL) are unknown:
-                    it should be cwd/acc/filename.
-                    Using a hack: filename is the last part of path;
-                    acc is the last directory name
-                   Otherwise cache location is acc/name */
-
-                size_t size = path->path.size;
-                const char * s = string_rchr(path->path.addr, size, '/');
-                /* the part after the latest slash is the filename */
-
-                rc = VPathGetId(path, &acc);
+                KDirectory * dir = NULL;
+                VPath * tmp = NULL;
+                rc_t rcOut = 0;
                 if (rc == 0)
-                    rc = VPathGetName(path, &name);
-
-                if (rc == 0 && acc.size > 0 && name.size > 0)
-                    /* acc & name (come from SDL) are known */
-                    cacheRc = VPathMakeFmt((VPath**)&cache, "%S/%S", &acc, &name);
-
-                else {
-                    /* acc & name (come from SDL) are unknown */
-                    if (s != NULL && s > path->path.addr) {
-                        /* size of path without filename */
-                        size = s - path->path.addr;
-                        /* rfind the second slash for accesion directory */
-                        s = string_rchr(path->path.addr, size, '/');
+                    rc = KDirectoryNativeDir(&dir);
+                if (rc == 0)
+                    rc = VPathCacheLocationForSource(path, dir, &tmp, &rcOut);
+                if (rc == 0) {
+                    char sPath[PATH_MAX] = "";
+                    rc = VPathReadPath(tmp, sPath, sizeof sPath, NULL);
+                    if (rc == 0) {
+                        if ((KDirectoryPathType(dir, sPath) & ~kptAlias)
+                            != kptNotFound)
+                        {
+                            rc = VPathAddRef(tmp);
+                            if (rc == 0) {
+                                local = tmp;
+                                localRc = 0;
+                            }
+                            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
+                                ("VResolversQuery: local location "
+                                    "of '%S' resolved to '%S' with %R\n",
+                                    acc, &(tmp->path), rc));
+                        }
+                        else {
+                            localRc = RC(rcVFS, rcResolver, rcResolving,
+                                rcName, rcNotFound);
+                            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
+                                ("VResolversQuery: "
+                                    "local location of '%S' not found\n", acc));
+                        }
                     }
-                    if (s != NULL)
-                        ++s;
-                    if (s == NULL)
-                        s = path->path.addr + path->path.size;
-                    size = path->path.size - (s - path->path.addr);
-                    cacheRc = VPathMakeFmt((VPath**)&cache, "%.*s", (int)size, s);
+                    if (VResolverResolveToAd(self)) {
+                        rc = VPathAddRef(tmp);
+                        if (rc == 0) {
+                            cache = tmp;
+                            cacheRc = 0;
+                        }
+                        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("VResolversQuery: "
+                            "cache location of '%S' resolved to '%S' with %R\n",
+                            acc, &(tmp->path), rc));
+
+                    }
+                    else {
+                        cacheRc = RC(rcVFS, rcResolver, rcResolving,
+                            rcName, rcNotFound);
+                        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
+                            ("VResolversQuery: "
+                                "cache location of '%S' not found\n", acc));
+                    }
                 }
+                RELEASE(VPath, tmp);
+                RELEASE(KDirectory, dir);
             }
             else {
                 cacheRc = VResolverQueryWithDir(self, protocols, query, NULL,
@@ -553,14 +600,7 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
     
     if ( rc == 0 ) {
         H h;
-        VFSManager * mgr = NULL;
         rc = HInit ( & h, self );
-
-        if ( rc == 0 ) {
-            rc = VFSManagerMake ( & mgr );
-            if ( rc != 0 )
-                return rc;
-        }
 
         if ( protocols == eProtocolDefault )
              protocols = DEFAULT_PROTOCOLS;
@@ -629,7 +669,7 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                                                     &ticket, &resolver, path);
                                             if (rc == 0)
                                                 rc = _VPathGetId(path, &pId,
-                                                    &id, mgr);
+                                                    &id, h.mgr);
                                             if (rc == 0) {
                                                 assert(resolver);
                                                 VResolverResolveName(resolver,
@@ -671,7 +711,7 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                             String ticket;
                             rc = VPathGetId ( path, & id );
                             if ( rc == 0 && id . size == 0) {
-                                rc = VFSManagerExtractAccessionOrOID ( mgr,
+                                rc = VFSManagerExtractAccessionOrOID (h . mgr,
                                         & acc_or_oid, path );
                                 if ( rc == 0 )
                                     rc = VPathGetPath ( acc_or_oid, & id );
@@ -709,8 +749,6 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
             if ( rc == 0 )
                 rc = r2;
         }
-
-        RELEASE ( VFSManager, mgr );
     }
 
     return rc;
