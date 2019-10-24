@@ -29,7 +29,7 @@ TOP ?= $(abspath ../..)
 MODULE = test/vfs
 
 TEST_TOOLS = \
-	redirect-rejected-names-cgi-http-to-https \
+	test-redirect-rejected-names-cgi-http-to-https \
 	test-resolver-with-log \
 	test-sdl-response \
 	test-services \
@@ -37,6 +37,7 @@ TEST_TOOLS = \
 	test-names-30 \
 	test-path \
 	test-path-c \
+	test-perm \
 	test-resolver \
 	test-vfsmanager \
 	test-json-response \
@@ -48,6 +49,8 @@ $(TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
 .PHONY: $(TEST_TOOLS)
+
+vg: $(addprefix vg-,$(TEST_TOOLS))
 
 clean: stdclean
 
@@ -73,7 +76,7 @@ $(TEST_BINDIR)/test-path-c: $(TEST_OBJ)
 #
 
 PATHTEST_SRC = \
-	pathtest 
+	pathtest
 
 PATHTEST_OBJ = \
 	$(addsuffix .$(OBJX),$(PATHTEST_SRC))
@@ -93,7 +96,7 @@ HTTPS_SRC = \
 HTTPS_OBJ = \
 	$(addsuffix .$(OBJX),$(HTTPS_SRC))
 
-$(TEST_BINDIR)/redirect-rejected-names-cgi-http-to-https: $(HTTPS_OBJ)
+$(TEST_BINDIR)/test-redirect-rejected-names-cgi-http-to-https: $(HTTPS_OBJ)
 	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
 
 #----------------------------------------------------------------
@@ -160,11 +163,23 @@ $(TEST_BINDIR)/test-names-30: $(N30_OBJ)
 	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
 
 #----------------------------------------------------------------
+# test-perm
+
+TP_SRC = \
+	test-perm
+
+TP_OBJ = \
+	$(addsuffix .$(OBJX),$(TP_SRC))
+
+$(TEST_BINDIR)/test-perm: $(TP_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+#----------------------------------------------------------------
 # C++ test on VFSManager
 #
 
 MANAGERTEST_SRC = \
-	managertest 
+	managertest
 
 MANAGERTEST_OBJ = \
 	$(addsuffix .$(OBJX),$(MANAGERTEST_SRC))
@@ -183,7 +198,7 @@ $(TEST_BINDIR)/test-vfsmanager: $(MANAGERTEST_OBJ)
 #
 
 RESOLVERTEST_SRC = \
-	resolvertest 
+	resolvertest
 
 RESOLVERTEST_OBJ = \
 	$(addsuffix .$(OBJX),$(RESOLVERTEST_SRC))

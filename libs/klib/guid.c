@@ -24,13 +24,50 @@
 *
 */
 
-#ifndef _h_kfg_priv_
-#define _h_kfg_priv_
+#include <klib/guid.h>
 
-struct KConfig;
+#include <time.h>
 
-extern void add_aws_nodes ( struct KConfig *self );
+const size_t GuidSize = 36;
+const char * Uint4ToHex = "0123456789abcdef";
 
-const char * KConfigGetNgcFile(void);
+LIB_EXPORT rc_t CC KGUIDMake( char * buf, size_t bufSize )
+{
+    if ( buf == NULL )
+    {
+        return RC ( rcRuntime, rcString, rcCreating, rcParam, rcNull );
+    }
+    if ( bufSize < GuidSize + 1 ) /* includes the 0 terminator */
+    {
+        return RC ( rcRuntime, rcString, rcCreating, rcParam, rcTooShort );
+    }
 
-#endif /* _h_kfg_priv_ */
+    srand ( time ( NULL ) );
+
+    for (unsigned int i=0; i < GuidSize + 1; ++i)
+    {
+        switch ( i )
+        {
+        case 8:
+        case 13:
+        case 18:
+        case 23:
+            buf[ i ] = '-';
+            break;
+        case 14:
+            buf[ i ] = '4';
+            break;
+        case 19:
+            /* variant 10 in the 2 most significant bits*/
+            buf[ i ] =  Uint4ToHex [ 8 | ( rand () % 4 ) ];
+            break;
+        default:
+            buf[ i ] =  Uint4ToHex [ rand () % 16 ];
+            break;
+        }
+    }
+    buf[ GuidSize ] = 0;
+
+    return 0;
+}
+

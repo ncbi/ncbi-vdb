@@ -196,6 +196,9 @@ KFG_EXTERN rc_t CC KConfigToFile ( const KConfig * self, struct KFile * file );
  */
 KFG_EXTERN void CC KConfigDisableUserSettings ( void );
 
+/* SetNgcFile
+ */
+KFG_EXTERN void CC KConfigSetNgcFile(const char * path);
 
 /*--------------------------------------------------------------------------
  * KConfigNode

@@ -34,8 +34,8 @@
 /repository/user/main/public/apps/nannot/volumes/nannotFlat = "nannot"
 /repository/user/main/public/apps/refseq/volumes/refseq = "refseq"
 /repository/user/main/public/apps/sra/volumes/sraFlat = "sra"
-/repository/user/main/public/apps/sraPileup/volumes/flat = "sra"
-/repository/user/main/public/apps/sraRealign/volumes/flat = "sra"
+/repository/user/main/public/apps/sraPileup/volumes/withExtFlat = "sra"
+/repository/user/main/public/apps/sraRealign/volumes/withExtFlat = "sra"
 /repository/user/main/public/apps/wgs/volumes/wgsFlat = "wgs"
 
 # Remote access to NCBI's public repository
@@ -46,6 +46,9 @@
 
 # Remote access to SDL-2
 /repository/remote/main/SDL.2/resolver-cgi = "https://trace.ncbi.nlm.nih.gov/Traces/sdl/2/retrieve"
+
+# Remote access to protected SDL-2
+/repository/remote/protected/SDL.2/resolver-cgi = "https://trace.ncbi.nlm.nih.gov/Traces/sdl/2/retrieve"
 
 # Aspera configuration
 /tools/ascp/max_rate = "450m"

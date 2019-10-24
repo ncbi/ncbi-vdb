@@ -1,3 +1,6 @@
+#ifndef _h_vfs_jwt_
+#define _h_vfs_jwt_
+
 /*===========================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
@@ -24,13 +27,21 @@
 *
 */
 
-#ifndef _h_kfg_priv_
-#define _h_kfg_priv_
+#ifndef _h_klib_defs_
+#include <klib/defs.h> /* rc_t */
+#endif
 
-struct KConfig;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-extern void add_aws_nodes ( struct KConfig *self );
+    struct String;
 
-const char * KConfigGetNgcFile(void);
+    rc_t JwtKartValidateFile(const char * path);
+    rc_t JwtKartValidateString(const struct String * cart);
 
-#endif /* _h_kfg_priv_ */
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* _h_vfs_jwt_ */
