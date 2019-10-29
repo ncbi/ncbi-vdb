@@ -284,7 +284,7 @@ table NCBI:sra:tbl:trace #1                     // declare the table
 
     // *
     // attempt
-    extern column < U8 > izip_encoding ATTEMPT;
+    extern column < U8 > zip_encoding ATTEMPT;
 
     // *
     // svector_code
@@ -410,17 +410,14 @@ table NCBI:sra:tbl:trace #1                     // declare the table
     // smalldatetime
     extern column < U64 > izip_encoding UPDATE_DATE;
 
-    /* JOJOBA ... added that cuz needed */
     // *
     // clone_id_list
     extern column < ascii > zip_encoding CLONE_ID_LIST;
 
-    /* JOJOBA ... added that cuz needed */
     // *
     // extended_data
     extern column < ascii > zip_encoding EXTENDED_DATA;
 
-    /* JOJOBA ... added that cuz needed */
     // *
     // comments
     extern column < ascii > zip_encoding COMMENTS;
@@ -565,31 +562,31 @@ table NCBI:sra:tbl:trace #1                     // declare the table
 
     // *
     // depth
-    extern column < F64 > izip_encoding DEPTH;
+    extern column F64 DEPTH;
 
     // *
     // elevation
-    extern column < F64 > izip_encoding ELEVATION;
+    extern column F64 ELEVATION;
 
     // *
     // latitude
-    extern column < F64 > izip_encoding LATITUDE;
+    extern column F64 LATITUDE;
 
     // *
     // longitude
-    extern column < F64 > izip_encoding LONGITUDE;
+    extern column F64 LONGITUDE;
 
     // *
     // ph
-    extern column < F64 > izip_encoding PH;
+    extern column F64 PH;
 
     // *
     // salinity
-    extern column < F64 > izip_encoding SALINITY;
+    extern column F64 SALINITY;
 
     // *
     // temperature
-    extern column < F64 > izip_encoding TEMPERATURE;
+    extern column F64 TEMPERATURE;
 
     // *
     // population_id
