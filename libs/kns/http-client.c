@@ -442,7 +442,7 @@ rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint
 				size_t sent;
 				timeout_t tm;
 
-				STATUS(STAT_QA, "%s - created proxy request '%.*s'\n", __func__, (uint32_t)buffer.elem_count, buffer);
+				STATUS(STAT_QA, "%s - created proxy request '%.*s'\n", __func__, (uint32_t)buffer.elem_count, (char*)buffer.base);
 
 				/* send request and receive a response */
 				STATUS(STAT_PRG, "%s - sending proxy request\n", __func__);
@@ -519,10 +519,10 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
     while ( KEndPointArgsIteratorNext ( & it, & hostname, & port,
         & proxy_default_port, & proxy_ep, NULL, NULL ) )
     {
-		/* for an externally provied (likely mocked) stream, 
-		   protect the stream from overwriting and pretend 
+		/* for an externally provied (likely mocked) stream,
+		   protect the stream from overwriting and pretend
 		   the first endpoint was connected to successfully */
-		if (self->sock == NULL && self->test_sock != NULL) 
+		if (self->sock == NULL && self->test_sock != NULL)
 		{
 			self->sock = self->test_sock;
 			KStreamAddRef(self->test_sock);
@@ -1163,7 +1163,7 @@ rc_t KClientHttpAddHeaderString
                 if ( rc == 0 )
                 {
                     /* copy the string data into storage */
-                    rc = KDataBufferPrintf ( & node -> value_storage, 
+                    rc = KDataBufferPrintf ( & node -> value_storage,
                                              "%S%S", name, value );
                     if ( rc == 0 )
                     {
@@ -2713,7 +2713,7 @@ rc_t KClientHttpRequestGetQuery( struct KClientHttpRequest * self, const struct 
         return RC ( rcNS, rcNoTarg, rcReading, rcSelf, rcNull );
     if ( query == NULL )
         return RC ( rcNS, rcNoTarg, rcReading, rcParam, rcNull );
-        
+
     * query = & self -> url_block . query;
     return 0;
 }
@@ -3434,8 +3434,8 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddQueryParam ( KClientHttpRequest *self, c
 }
 
 static
-rc_t 
-DataBufferToStringBuffer( KDataBuffer * dataBuf, char * buffer, 
+rc_t
+DataBufferToStringBuffer( KDataBuffer * dataBuf, char * buffer,
                           size_t bsize, size_t * len )
 {
     size_t size = KDataBufferBytes( dataBuf );
@@ -3472,7 +3472,7 @@ LIB_EXPORT rc_t CC KClientHttpResultFormatMsg (
     if ( rc == 0 )
     {
         rc_t rc2;
-        rc = KDataBufferPrintf ( & dataBuffer, 
+        rc = KDataBufferPrintf ( & dataBuffer,
                 "%sHTTP/%.2V %d %S%s", bol
                 , self -> version
                 , self -> status
@@ -3486,7 +3486,7 @@ LIB_EXPORT rc_t CC KClientHttpResultFormatMsg (
                 node = ( const KHttpHeader* ) BSTNodeNext ( & node -> dad ) )
             {
                 /* add header line */
-                rc2 = KDataBufferPrintf ( & dataBuffer, 
+                rc2 = KDataBufferPrintf ( & dataBuffer,
                                 "%s%S: %S\r%s", bol
                                 , & node -> name
                                 , & node -> value, eol );
@@ -3499,7 +3499,7 @@ LIB_EXPORT rc_t CC KClientHttpResultFormatMsg (
         {
             rc = DataBufferToStringBuffer ( & dataBuffer, buffer, bsize, len );
         }
-        
+
         rc2 = KDataBufferWhack( & dataBuffer );
         if ( rc == 0 )
         {
@@ -3585,7 +3585,7 @@ static rc_t KClientHttpRequestFormatMsgBegin (
         http -> uf = EUriFormGuess ( & hostname, uriForm, http -> uf );
         if ( http -> uf == eUFOrigin ) {
         /* the host does not like absoluteURI: use abs_path ( origin-form ) */
-            rc = KDataBufferPrintf ( buffer,    
+            rc = KDataBufferPrintf ( buffer,
                          "%s %S%s%S HTTP/%.2V\r\nHost: %S:%u\r\n"
                              , method
                              , & self -> url_block . path
@@ -3779,7 +3779,7 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
         }
 
         /* add header line */
-        rc = KDataBufferPrintf ( buffer, 
+        rc = KDataBufferPrintf ( buffer,
                              "%S: %S\r\n"
                              , & node -> name
                              , & node -> value );
@@ -3794,7 +3794,7 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
         {
             r2 = KDataBufferPrintf ( buffer, "User-Agent: %s\r\n", ua );
         }
-        if ( rc == 0 ) 
+        if ( rc == 0 )
         {
             rc = r2;
         }
