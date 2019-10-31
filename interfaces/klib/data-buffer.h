@@ -62,6 +62,9 @@ extern "C" {
  *              ...
  *            6  |  1
  *            7  |  0
+ *
+ * NB - there may be limits to the total number of bits within the buffer
+ *      that may be determined by architecture or runtime environment.
  */
 typedef struct KDataBuffer KDataBuffer;
 struct KDataBuffer

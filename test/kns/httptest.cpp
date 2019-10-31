@@ -33,18 +33,23 @@
 
 #include <klib/rc.h>
 #include <kfg/config.h>
+#include <kfg/kfg-priv.h>
 
 #include <kns/adapt.h> /* KStreamFromKFilePair */
 #include <kns/manager.h>
 #include <kns/kns-mgr-priv.h>
 #include <kns/http.h>
 #include <kns/stream.h>
+#include <kns/http-priv.h>
 
 #include <../libs/kns/mgr-priv.h>
 #include <../libs/kns/http-priv.h>
 
 #include <kfs/directory.h>
 #include <kfs/file.h>
+
+#include <vfs/manager.h>
+#include <vfs/manager-priv.h>
 
 #include <kproc/thread.h>
 
@@ -68,7 +73,6 @@ FIXTURE_TEST_CASE(Http_Make, HttpFixture)
     REQUIRE_NOT_NULL ( m_file ) ;
 }
 
-#if 1
 /*FIXME: 100 used to be retried regardless of whether URL is reliable, now it is not, so the test fails */
 FIXTURE_TEST_CASE(Http_Make_Continue_100_Retry, HttpFixture)
 {
@@ -78,7 +82,6 @@ FIXTURE_TEST_CASE(Http_Make_Continue_100_Retry, HttpFixture)
     REQUIRE_RC ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) );
     REQUIRE_NOT_NULL ( m_file ) ;
 }
-#endif
 
 FIXTURE_TEST_CASE(Http_Make_500_Fail, HttpFixture)
 {   // a regular Http client does not retry
@@ -512,6 +515,7 @@ FIXTURE_TEST_CASE(HttpReliable_Make, HttpFixture)
     REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, true, false, false, MakeURL(GetName()).c_str() ) );
     REQUIRE_NOT_NULL ( m_file ) ;
 }
+
 #if 0
 /* 100 used to be retried regardless, now it is not, so the test fails */
 FIXTURE_TEST_CASE(HttpReliable_Make_Continue_100_Retry, HttpFixture)
@@ -809,6 +813,28 @@ FIXTURE_TEST_CASE( KClientHttpResult_Size_RangedPOST, HttpFixture)
     REQUIRE ( KClientHttpResultSize ( rslt, &size ) );
     REQUIRE_EQ ( (uint64_t)2975717, size );
 
+    REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
+}
+
+FIXTURE_TEST_CASE( KClientHttpResult_FormatMsg, HttpFixture)
+{
+    KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
+    REQUIRE_RC ( KClientHttpRequestByteRange ( m_req, 0, 2 ) );
+
+    TestStream::AddResponse(
+        "HTTP/1.1 206 \r\n"
+        "content-length: 2\r\n"
+        "\r\n");
+    string expected =
+        "->HTTP/1.1 206 \n" // \r is gone
+        "->content-length: 2\r\n";
+
+    KClientHttpResult *rslt;
+    REQUIRE_RC ( KClientHttpRequestPOST ( m_req, & rslt ) );
+    char buffer[4096];
+    size_t len;
+    REQUIRE_RC ( KClientHttpResultFormatMsg ( rslt, buffer, sizeof buffer, & len, "->", "\n" ) );
+    REQUIRE_EQ ( expected, string (buffer, len) );
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
 }
 

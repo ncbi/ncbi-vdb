@@ -742,6 +742,26 @@ TEST_CASE(KDataBuffer_MakeWritable1)
     KDataBufferWhack(&copy);
 }
 
+TEST_CASE(KDataBuffer_EmptyBufferIsWriteable)
+{
+    KDataBuffer src;
+    REQUIRE_RC ( KDataBufferMake( & src, 8, 0 ) );
+    REQUIRE ( KDataBufferWritable( & src ) );
+
+    KDataBufferWhack(&src);
+}
+
+TEST_CASE(KDataBuffer_ZeroCountMake_DoesNotAllocate)
+{
+    KDataBuffer src;
+    REQUIRE_RC ( KDataBufferMake( & src, 8, 0) );
+
+    REQUIRE_NULL ( src.base );
+    REQUIRE_NULL ( src.ignore );
+
+    KDataBufferWhack(&src);
+}
+
 TEST_CASE(KDataBuffer_Resize)
 {
     KDataBuffer src;
@@ -780,7 +800,7 @@ TEST_CASE(KDataBuffer_Cast_W32Assert)
     KDataBuffer src;
     REQUIRE_RC(KDataBufferMake(&src, 64, 1));
     REQUIRE_RC(KDataBufferCast(&src, &src, 64,
-                               true)); /* used to throw am assert on Win32 */
+                               true)); /* used to throw an assert on Win32 */
     KDataBufferWhack(&src);
 }
 

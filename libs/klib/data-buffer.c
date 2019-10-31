@@ -43,6 +43,11 @@
 
 #define DEBUG_ALIGNMENT 0
 
+#define MAX_BUFFER_BITS 35
+#define MIN_ELEM_BITS 1
+#define MAX_ELEM_COUNT_BITS ( MAX_BUFFER_BITS / MIN_ELEM_BITS )
+#define MAX_ELEM_BITS_BITS ( 64 - MAX_ELEM_COUNT_BITS )
+
 #if _DEBUGGING
 #define DEBUG_MALLOC_FREE 1
 #include <stdio.h>
@@ -267,7 +272,7 @@ rc_t buffer_impl_check_integrity (buffer_impl_t const *self, uint8_t const *base
  *  "capacity" [ IN ] - the number of bytes to be allocated
  */
 LIB_EXPORT rc_t CC KDataBufferMake(KDataBuffer *target, uint64_t elem_bits, uint64_t elem_count) {
-    rc_t rc;
+    rc_t rc = 0;
     size_t bytes;
     buffer_impl_t **impp;
     
@@ -281,12 +286,15 @@ LIB_EXPORT rc_t CC KDataBufferMake(KDataBuffer *target, uint64_t elem_bits, uint
     	return RC(rcRuntime, rcBuffer, rcConstructing, rcParam, rcTooBig);
     
     memset (target, 0, sizeof(*target));
+    target->elem_bits = elem_bits;
 
-    rc = allocate(impp, bytes);
-    if (rc == 0) {
-        target->base = (void *)get_data(*impp);
-        target->elem_bits = elem_bits;
-        target->elem_count = elem_count;
+    if ( bytes > 0 )
+    {
+        rc = allocate(impp, bytes);
+        if (rc == 0) {
+            target->base = (void *)get_data(*impp);
+            target->elem_count = elem_count;
+        }
     }
 
     cc ( target );
@@ -302,28 +310,60 @@ static rc_t KDataBufferResizeInt(KDataBuffer *self, uint64_t new_count) {
     uint64_t bits;
     const uint8_t *new_end;
     const uint8_t *cur_end;
+    const KDataBuffer * cself = self;
     
-    if (self == NULL)
-    	return RC(rcRuntime, rcBuffer, rcResizing, rcParam, rcNull);
+    if ( self == NULL )
+    	return RC ( rcRuntime, rcBuffer, rcResizing, rcParam, rcNull );
 
-    if (new_count == 0) {
-        self->elem_count = 0;
+    /* early test for deleting buffer that should not fail
+       even if existing buffer was partially initialized */
+    if ( new_count == 0 )
+    {
+        if ( ! KDataBufferWritable ( cself ) )
+            return RC ( rcRuntime, rcBuffer, rcResizing, rcSelf, rcReadonly );
+
+        self -> elem_count = 0;
         return 0; /*** no change for empty data ***/
     }
 
-    if (self->elem_bits == 0) {
-	    return RC (rcRuntime, rcBuffer, rcResizing, rcSelf, rcCorrupt);
-    }
+    /* there is an unwritten law that the content size of a KDataBuffer
+       is 4G, i.e. 32 bits worth of bytes or 35 bits worth of bits */
+    if ( ( ( new_count + 7 ) >> MAX_ELEM_COUNT_BITS ) != 0 )
+        return RC ( rcRuntime, rcBuffer, rcConstructing, rcParam, rcTooBig );
 
-    bits = self->elem_bits * new_count;
-    if (((bits + 7) >> 35) != 0)
-    	return RC(rcRuntime, rcBuffer, rcConstructing, rcParam, rcTooBig);
+    /* detect partially initialized object that was zeroed but not fully initialized */
+    if ( cself -> elem_bits == 0 )
+	    return RC ( rcRuntime, rcBuffer, rcResizing, rcSelf, rcCorrupt );
+
+    /* we should never have a huge element size.
+       but since it's an open structure, check it now. */
+    if ( ( cself -> elem_bits + 7 ) >> MAX_ELEM_BITS_BITS != 0 )
+	    return RC ( rcRuntime, rcBuffer, rcResizing, rcSelf, rcCorrupt );
+
+    /* object has been lightly examined.
+       at this point there can be no change unless the new count differs */
+    if ( cself -> elem_count == new_count )
+         return 0;
+
+    /* calculate a total bit count, which must fit into a 64-bit unsigned integer.
+       since new_count can be represented in MAX_ELEM_COUNT_BITS or less, and
+       since self->elem_bits can be represented in MAX_ELEM_BITS_BITS or less, and
+       since MAX_ELEM_COUNT_BITS + MAX_ELEM_BITS_BITS == 64, we should be okay. */
+    bits = cself -> elem_bits * new_count;
+    if ( ( ( bits + 7 ) >> MAX_BUFFER_BITS ) != 0 )
+    	return RC ( rcRuntime, rcBuffer, rcConstructing, rcParam, rcTooBig );
     
-    imp = (buffer_impl_t *)self->ignore;
-    if (imp == NULL) {
-        /* new buffer */
+    /* at this point, we intend to modify */
+    if ( ! KDataBufferWritable ( cself ) )
+        return RC ( rcRuntime, rcBuffer, rcResizing, rcSelf, rcReadonly );
+
+    imp = (buffer_impl_t *) self -> ignore;
+    if ( imp == NULL )
+    {
+        /* new buffer - writable by definition */
         rc = allocate(&imp, roundup((bits + 7) / 8, 12));
-        if (rc == 0) {
+        if (rc == 0)
+        {
             self->ignore = imp;
             self->base = (void *)get_data(imp);
             self->elem_count = new_count;
@@ -338,9 +378,6 @@ static rc_t KDataBufferResizeInt(KDataBuffer *self, uint64_t new_count) {
         self->elem_count = new_count;
         return 0;
     }
-
-    if (!KDataBufferWritable(self))
-        return RC(rcRuntime, rcBuffer, rcResizing, rcSelf, rcReadonly);
     
     new_size = roundup((bits + 7) / 8, 12);
     if (self->base == get_data(imp) && self->bit_offset == 0) {
@@ -379,7 +416,7 @@ static rc_t KDataBufferSubInt (const KDataBuffer *self,
     	return RC(rcRuntime, rcBuffer, rcConstructing, rcParam, rcNull);
     
     if (self->ignore == NULL) {
-        if (start > 0 || count < UINT64_MAX)
+        if (start > 0 || ( count != 0 && count < UINT64_MAX) )
             return RC(rcRuntime, rcBuffer, rcConstructing, rcParam, rcNull);
         *target = *self;
         return 0;
@@ -602,8 +639,10 @@ LIB_EXPORT rc_t CC KDataBufferWhack (KDataBuffer *self)
 LIB_EXPORT bool CC KDataBufferWritable(const KDataBuffer *cself)
 {
     cc ( cself );
-    return (cself != NULL && cself->ignore != NULL &&
-            atomic32_read(&((buffer_impl_t *)cself->ignore)->refcount) == 1) ? true : false;
+    return (cself != NULL && 
+            ( cself->ignore == NULL ||
+              atomic32_read(&((buffer_impl_t *)cself->ignore)->refcount) == 1 ) )
+        ? true : false;
 }
 
 LIB_EXPORT rc_t CC KDataBufferShrink(KDataBuffer *self)

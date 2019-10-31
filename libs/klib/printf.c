@@ -3472,59 +3472,95 @@ LIB_EXPORT rc_t CC KDataBufferVPrintf ( KDataBuffer * buf, const char * fmt, va_
     else
     {
         size_t bsize;
-        char *buffer;
+        char * buffer;
         size_t content;
         size_t num_writ;
+        uint64_t orig_size;
 
         /* the C library ruins a va_list upon use
            in case we ever need to use it a second time,
            make a copy first */
         va_list args_copy;
-        va_copy ( args_copy, args );
 
         /* begin to calculate content and bsize */
-        content = ( size_t ) buf -> elem_count;
+        content = ( size_t ) ( orig_size = buf -> elem_count );
 
         /* check for an empty buffer */
         if ( content == 0 )
         {
-            /* detect buffers initialized by memset */
+            /* detect buffers initialized by memset to zero */
             if ( buf -> elem_bits == 0 )
                 buf -> elem_bits = 8;
 
+            /* size to 4K */
             rc = KDataBufferResize ( buf, bsize = 4096 );
             if ( rc != 0 )
+            {
+                buf -> elem_count = 0;
                 return rc;
+            }
+        }
+        else if ( buf -> elem_bits != 8 )
+        {
+            return RC ( rcText, rcString, rcFormatting, rcParam, rcIncorrect );
         }
         else
         {
-            /* generate even multiple of 4K */
+            /* recover actual size of buffer, assuming 4K increments */
             bsize = ( content + 4095 ) & ~ ( size_t ) 4095;
 
             /* discount NUL byte */
             content -= 1;
         }
+
+        /* prepare for a second attempt after a resize */
+        va_copy ( args_copy, args );
             
-        /* convert the 2-part url into a flat string */
+        /* nothing has yet been written, buffer pointer is stable */
+        num_writ = 0;
         buffer = buf -> base;
-        rc = string_vprintf ( &buffer [ content ], bsize - content, & num_writ, fmt, args );
-        /* Make sure there is enough room to store data including NUL */
-        if ( rc != 0 || ( content + num_writ ) == bsize )
+
+        /* try to print into the buffer and ALWAYS leave room for a NUL byte */
+        rc = string_vprintf ( & buffer [ content ], bsize - 1 - content, & num_writ, fmt, args );
+
+        /* the error we are EXPECTING and can fix is where the buffer was too small */
+        if ( GetRCState ( rc ) == rcInsufficient && GetRCObject ( rc ) == rcBuffer )
         {
-            bsize = ( content + num_writ + 4095 + 1 ) & ~ ( size_t ) 4095;
-            rc = KDataBufferResize ( buf, bsize );
+            /* calculate a new needed size */
+            size_t new_size = ( content + num_writ + 4095 + 1 ) & ~ ( size_t ) 4095;
+
+            /* mark that nothing has yet been successfully written */
+            num_writ = 0;
+
+            /* resize the buffer */
+            rc = KDataBufferResize ( buf, new_size );
             if ( rc == 0 )
             {
-                buffer = buf -> base;       /* fix for VDB-3505 */
+                /* assume reallocation took place */
+                buffer = buf -> base;
+                bsize = new_size;
 
                 /* try again with the newly sized buffer */
-                rc = string_vprintf ( &buffer [ content ], bsize - content, & num_writ, fmt, args_copy );
+                rc = string_vprintf ( & buffer [ content ], bsize - 1 - content, & num_writ, fmt, args_copy );
+
+                /* any error means nothing was printed */
+                if ( rc != 0 )
+                    num_writ = 0;
             }
         }
+
+        /* destroy copy */
         va_end ( args_copy );
+
+        /* NUL terminate even if redundant */
+        assert ( content + num_writ < bsize );
+        assert ( num_writ + 1 == bsize || rc != 0 || buffer [ content + num_writ ] == 0 );
+        buffer [ content + num_writ ] = 0;
     
         /* size down to bsize + NUL */
-        if ( rc == 0 )
+        if ( rc != 0 )
+            KDataBufferResize ( buf, orig_size );
+        else
             KDataBufferResize ( buf, content + num_writ + 1 );
     }
 

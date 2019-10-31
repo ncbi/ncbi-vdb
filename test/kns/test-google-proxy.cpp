@@ -154,9 +154,9 @@ TEST_CASE ( KClientHttpRequestPOSTTest )
     REQUIRE_RC(KHttpRequestAddPostParam(req, "version=1.2"));
 
     KHttpResult * rslt = NULL;
-    /* POST: format HTTP request in KClientHttpRequestFormatMsgBegin using
-       absoluteURI form of Request-URI
-       ( https://tools.ietf.org/html/rfc2616#section-5.1.2 ) */
+/* POST: format HTTP request in KClientHttpRequestFormatMsgBegin using
+    absoluteURI form of Request-URI
+    ( https://tools.ietf.org/html/rfc2616#section-5.1.2 ) */
     REQUIRE_RC ( KHttpRequestPOST ( req, & rslt ) );
 
     REQUIRE_RC ( KHttpResultRelease ( rslt ) );
