@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.28307.489
@@ -134,6 +134,10 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-json", "test-json.vcxproj", "{5A97A172-AAF1-4FD0-A798-3E6A9095B017}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-cloud", "test-cloud.vcxproj", "{8162030F-42C5-4C2D-AE87-7B68238CB2DA}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-cloud-aws", "test-cloud-aws.vcxproj", "{B417C683-A2EA-4986-A6B5-00818A8A93AC}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-cloud-gcp", "test-cloud-gcp.vcxproj", "{AFA39CFB-660F-47C8-927D-EE3A1B116859}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -405,6 +409,14 @@ Global
 		{8162030F-42C5-4C2D-AE87-7B68238CB2DA}.Debug|x64.Build.0 = Debug|x64
 		{8162030F-42C5-4C2D-AE87-7B68238CB2DA}.Release|x64.ActiveCfg = Release|x64
 		{8162030F-42C5-4C2D-AE87-7B68238CB2DA}.Release|x64.Build.0 = Release|x64
+		{B417C683-A2EA-4986-A6B5-00818A8A93AC}.Debug|x64.ActiveCfg = Debug|x64
+		{B417C683-A2EA-4986-A6B5-00818A8A93AC}.Debug|x64.Build.0 = Debug|x64
+		{B417C683-A2EA-4986-A6B5-00818A8A93AC}.Release|x64.ActiveCfg = Release|x64
+		{B417C683-A2EA-4986-A6B5-00818A8A93AC}.Release|x64.Build.0 = Release|x64
+		{AFA39CFB-660F-47C8-927D-EE3A1B116859}.Debug|x64.ActiveCfg = Debug|x64
+		{AFA39CFB-660F-47C8-927D-EE3A1B116859}.Debug|x64.Build.0 = Debug|x64
+		{AFA39CFB-660F-47C8-927D-EE3A1B116859}.Release|x64.ActiveCfg = Release|x64
+		{AFA39CFB-660F-47C8-927D-EE3A1B116859}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

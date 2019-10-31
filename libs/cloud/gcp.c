@@ -938,7 +938,7 @@ rc_t PopulateCredentials(GCP * self)
 
     char buffer[PATH_MAX] = "";
 
-    char *jsonCredentials;
+    char *jsonCredentials = NULL;
 
     const char *pathToJsonFile = getenv("GOOGLE_APPLICATION_CREDENTIALS");
 
