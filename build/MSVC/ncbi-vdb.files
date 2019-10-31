@@ -736,6 +736,9 @@
       <ObjectFileName>$(IntDir)kfs-%(Filename).obj</ObjectFileName>
       <AdditionalIncludeDirectories>$(ProjectDir)../../../libs/kfs/win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\callback_file.c">
+      <ObjectFileName>$(IntDir)kfs-%(Filename).obj</ObjectFileName>
+    </ClCompile>
 
     <ClCompile Include="..\..\..\libs\klib\base64.c">
         <ObjectFileName>$(IntDir)klib-%(Filename).obj</ObjectFileName>

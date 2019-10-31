@@ -1,4 +1,3 @@
-
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.28307.489
@@ -138,6 +137,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-cloud-aws", "test-cloud-aws.vcxproj", "{B417C683-A2EA-4986-A6B5-00818A8A93AC}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-cloud-gcp", "test-cloud-gcp.vcxproj", "{AFA39CFB-660F-47C8-927D-EE3A1B116859}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-kfs_cache3", "test-kfs_cache3.vcxproj", "{25A47FAA-3711-4ADD-A8AD-A63308490A9A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -417,6 +418,10 @@ Global
 		{AFA39CFB-660F-47C8-927D-EE3A1B116859}.Debug|x64.Build.0 = Debug|x64
 		{AFA39CFB-660F-47C8-927D-EE3A1B116859}.Release|x64.ActiveCfg = Release|x64
 		{AFA39CFB-660F-47C8-927D-EE3A1B116859}.Release|x64.Build.0 = Release|x64
+		{25A47FAA-3711-4ADD-A8AD-A63308490A9A}.Debug|x64.ActiveCfg = Debug|x64
+		{25A47FAA-3711-4ADD-A8AD-A63308490A9A}.Debug|x64.Build.0 = Debug|x64
+		{25A47FAA-3711-4ADD-A8AD-A63308490A9A}.Release|x64.ActiveCfg = Release|x64
+		{25A47FAA-3711-4ADD-A8AD-A63308490A9A}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
