@@ -140,6 +140,22 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-cloud-gcp", "test-clou
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-kfs_cache3", "test-kfs_cache3.vcxproj", "{25A47FAA-3711-4ADD-A8AD-A63308490A9A}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-klib_base64", "test-klib_base64.vcxproj", "{5A78BB41-D1EE-4BDB-A83F-2B5EF524DCA3}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-kns_allow_all_certificates", "test-kns_allow_all_certificates.vcxproj", "{2BA468D7-DB80-40ED-9DB6-18C2A2FD8BFC}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-kns_dis_allow_all_certificates", "test-kns_dis_allow_all_certificates.vcxproj", "{5E1593FD-9D54-4DBD-BC6E-2F7413C39F29}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-kns_googleproxy", "test-kns_googleproxy.vcxproj", "{FB7B7CC6-3CAA-49BA-B419-9DD958A6B712}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-kns_200for-whole-file", "test-kns_200for-whole-file.vcxproj", "{277A2E16-CBFB-4699-8D42-5D3C9A9402D7}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-kns_http-request", "test-kns_http-request.vcxproj", "{C7CB70A7-5685-4F4C-8F5D-54D7542E1E39}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-kns_connect", "test-kns_connect.vcxproj", "{87EF31A5-2448-4F09-AB62-BC2D77125181}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-kns_refresh-expired", "test-kns_refresh-expired.vcxproj", "{E0248BFA-274D-4271-94FC-EE67335E6CEE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -422,6 +438,38 @@ Global
 		{25A47FAA-3711-4ADD-A8AD-A63308490A9A}.Debug|x64.Build.0 = Debug|x64
 		{25A47FAA-3711-4ADD-A8AD-A63308490A9A}.Release|x64.ActiveCfg = Release|x64
 		{25A47FAA-3711-4ADD-A8AD-A63308490A9A}.Release|x64.Build.0 = Release|x64
+		{5A78BB41-D1EE-4BDB-A83F-2B5EF524DCA3}.Debug|x64.ActiveCfg = Debug|x64
+		{5A78BB41-D1EE-4BDB-A83F-2B5EF524DCA3}.Debug|x64.Build.0 = Debug|x64
+		{5A78BB41-D1EE-4BDB-A83F-2B5EF524DCA3}.Release|x64.ActiveCfg = Release|x64
+		{5A78BB41-D1EE-4BDB-A83F-2B5EF524DCA3}.Release|x64.Build.0 = Release|x64
+		{2BA468D7-DB80-40ED-9DB6-18C2A2FD8BFC}.Debug|x64.ActiveCfg = Debug|x64
+		{2BA468D7-DB80-40ED-9DB6-18C2A2FD8BFC}.Debug|x64.Build.0 = Debug|x64
+		{2BA468D7-DB80-40ED-9DB6-18C2A2FD8BFC}.Release|x64.ActiveCfg = Release|x64
+		{2BA468D7-DB80-40ED-9DB6-18C2A2FD8BFC}.Release|x64.Build.0 = Release|x64
+		{5E1593FD-9D54-4DBD-BC6E-2F7413C39F29}.Debug|x64.ActiveCfg = Debug|x64
+		{5E1593FD-9D54-4DBD-BC6E-2F7413C39F29}.Debug|x64.Build.0 = Debug|x64
+		{5E1593FD-9D54-4DBD-BC6E-2F7413C39F29}.Release|x64.ActiveCfg = Release|x64
+		{5E1593FD-9D54-4DBD-BC6E-2F7413C39F29}.Release|x64.Build.0 = Release|x64
+		{FB7B7CC6-3CAA-49BA-B419-9DD958A6B712}.Debug|x64.ActiveCfg = Debug|x64
+		{FB7B7CC6-3CAA-49BA-B419-9DD958A6B712}.Debug|x64.Build.0 = Debug|x64
+		{FB7B7CC6-3CAA-49BA-B419-9DD958A6B712}.Release|x64.ActiveCfg = Release|x64
+		{FB7B7CC6-3CAA-49BA-B419-9DD958A6B712}.Release|x64.Build.0 = Release|x64
+		{277A2E16-CBFB-4699-8D42-5D3C9A9402D7}.Debug|x64.ActiveCfg = Debug|x64
+		{277A2E16-CBFB-4699-8D42-5D3C9A9402D7}.Debug|x64.Build.0 = Debug|x64
+		{277A2E16-CBFB-4699-8D42-5D3C9A9402D7}.Release|x64.ActiveCfg = Release|x64
+		{277A2E16-CBFB-4699-8D42-5D3C9A9402D7}.Release|x64.Build.0 = Release|x64
+		{C7CB70A7-5685-4F4C-8F5D-54D7542E1E39}.Debug|x64.ActiveCfg = Debug|x64
+		{C7CB70A7-5685-4F4C-8F5D-54D7542E1E39}.Debug|x64.Build.0 = Debug|x64
+		{C7CB70A7-5685-4F4C-8F5D-54D7542E1E39}.Release|x64.ActiveCfg = Release|x64
+		{C7CB70A7-5685-4F4C-8F5D-54D7542E1E39}.Release|x64.Build.0 = Release|x64
+		{87EF31A5-2448-4F09-AB62-BC2D77125181}.Debug|x64.ActiveCfg = Debug|x64
+		{87EF31A5-2448-4F09-AB62-BC2D77125181}.Debug|x64.Build.0 = Debug|x64
+		{87EF31A5-2448-4F09-AB62-BC2D77125181}.Release|x64.ActiveCfg = Release|x64
+		{87EF31A5-2448-4F09-AB62-BC2D77125181}.Release|x64.Build.0 = Release|x64
+		{E0248BFA-274D-4271-94FC-EE67335E6CEE}.Debug|x64.ActiveCfg = Debug|x64
+		{E0248BFA-274D-4271-94FC-EE67335E6CEE}.Debug|x64.Build.0 = Debug|x64
+		{E0248BFA-274D-4271-94FC-EE67335E6CEE}.Release|x64.ActiveCfg = Release|x64
+		{E0248BFA-274D-4271-94FC-EE67335E6CEE}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
