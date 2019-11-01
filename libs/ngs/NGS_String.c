@@ -293,7 +293,7 @@ NGS_String * NGS_StringMake ( ctx_t ctx, const char * data, size_t size )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcString, rcConstructing );
 
-    if ( data == NULL )
+    if ( data == NULL && size > 0 ) /* string(NULL, 0) is a valid string */
         USER_ERROR ( xcParamNull, "bad input" );
     else
     {
