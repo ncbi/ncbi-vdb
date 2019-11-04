@@ -60,6 +60,7 @@
 #include "../kfg/kfg-priv.h" /* KConfigGetNgcFile */
 #include "../kns/mgr-priv.h" /* KNSManagerGetCloudLocation */
 #include "json-response.h" /* Response4 */
+#include "jwt.h" /* JwtKartValidateFile */
 #include "path-priv.h" /* VPathMakeFmt */
 #include "resolver-cgi.h" /* RESOLVER_CGI */
 #include "resolver-priv.h" /* VPathCheckFromNamesCGI */
@@ -3404,7 +3405,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     rc_t rc = 0;
     const SKV * kv = NULL;
 
-    bool anytype = false;
+    bool fileTypeRun = true;
 
     assert ( request );
 
@@ -3612,17 +3613,20 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
             return rc;
         }
     }
+
     if ( request -> format != NULL ) {
-        const char n [] = "type";
+        const char * n = "type";
+        n              = "filetype";
         const char * v = request->format;
-        if (request->format[0] == 'a' &&
-            request->format[1] == 'n' &&
-            request->format[2] == 'y' &&
-            request->format[3] == '\0')
-        {
-            anytype = true;
-        }
-        else {
+
+        String all;
+        String any;
+        String format;
+        CONST_STRING(&all, "all");
+        CONST_STRING(&any, "any");
+        StringInitCString(&format, request->format);
+
+        if (!StringEqual(&format, &all) && !StringEqual(&format, &any)) {
             rc = SKVMake(&kv, n, v);
             if (rc == 0) {
                 DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
@@ -3632,6 +3636,8 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
             if (rc != 0)
                 return rc;
         }
+
+        fileTypeRun = false;
     }
 
     if (rc == 0 &&
@@ -3641,7 +3647,12 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
             /* different query items require to add
             and at the same time not to add filetype=run */
             return request->request.appRc;
-        else if (request->request.app == appSRA && !anytype) {
+        else if (fileTypeRun &&              /* don't add filetype=run
+                                                when it was specified already */
+            ( request->request.app == appSRA /* add it for sra items */
+                || ( request->request.app == appUnknown
+                    && request->jwtKartFile != NULL) )) /* and for jwt carts */
+        {
             const char n[] = "filetype";
             const char v[] = "run";
             rc = SKVMake(&kv, n, v);
@@ -3881,11 +3892,17 @@ rc_t KServiceSetFormat(KService * self, const char * format) {
 
 /* Set jwt kart argument in service request */
 rc_t KServiceSetJwtKartFile(KService * self, const char * path) {
+    rc_t rc = 0;
+
     if (self == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
 
     if (path == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
+
+    rc = JwtKartValidateFile(path);
+    if (rc != 0)
+        return rc;
 
     free(self->req.jwtKartFile);
 

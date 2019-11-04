@@ -175,6 +175,7 @@ typedef enum
 {
     algCGI,
     algFlat,
+    algWithExtFlat,
     algAD,    /* Accession as Directory */
     algSRAAD,    /* Accession as Directory for SRA */
     algSRAFlat,

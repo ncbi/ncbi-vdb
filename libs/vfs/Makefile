@@ -73,6 +73,7 @@ clean: stdclean
 $(ILIBDIR)/libvfs: $(addprefix $(ILIBDIR)/libvfs.,$(ILIBEXT))
 
 VFS_SRC_CMN = \
+	jwt \
 	names4-response \
 	manager \
 	remote-services \

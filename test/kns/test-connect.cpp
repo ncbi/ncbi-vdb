@@ -68,7 +68,8 @@ public:
 
     ~ConnectFixture()
     {
-        KNSManagerRelease(mgr);
+        KSocketRelease( socket );
+        KNSManagerRelease( mgr );
     }
 
     KNSManager* mgr;

@@ -91,8 +91,8 @@ static const char default_kfg[] = {
 "/repository/user/main/public/apps/nannot/volumes/nannotFlat = \"nannot\"\n"
 "/repository/user/main/public/apps/refseq/volumes/refseq = \"refseq\"\n"
 "/repository/user/main/public/apps/sra/volumes/sraFlat = \"sra\"\n"
-"/repository/user/main/public/apps/sraPileup/volumes/flat = \"sra\"\n"
-"/repository/user/main/public/apps/sraRealign/volumes/flat = \"sra\"\n"
+"/repository/user/main/public/apps/sraPileup/volumes/withExtFlat = \"sra\"\n"
+"/repository/user/main/public/apps/sraRealign/volumes/withExtFlat = \"sra\"\n"
 "/repository/user/main/public/apps/wgs/volumes/wgsFlat = \"wgs\"\n"
 "/repository/remote/main/CGI/resolver-cgi = "
              "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
@@ -3114,6 +3114,82 @@ static rc_t _KConfigFixRepeatedDrives(KConfig *self,
 
 #endif
 
+static rc_t StringRelease(const String *self) {
+    StringWhack(self);
+    return 0;
+}
+
+static rc_t _KConfigUseWithExtFlatAlg(KConfig * self, bool * updated,
+    const char * old_name,
+    const char * new_name,
+    const char * updated_name)
+{
+    rc_t rc = 0;
+
+    String * result = NULL;
+    size_t size = 0;
+    bool newExists = false;
+
+    assert(updated);
+    *updated = false;
+
+    rc = KConfigReadString(self, updated_name, &result);
+    if (rc == 0) { /* was updated already */
+        RELEASE(String, result);
+        return rc;
+    }
+
+    rc = KConfigReadString(self, old_name, &result);
+    if (rc != 0) /* Bad node was not found. Nothing to do. */
+        return 0;
+    assert(result);
+    size = result->size;
+    RELEASE(String, result);
+    if (size == 0) /* Bad node is already empty. Nothing to do. */
+        return 0;
+
+    rc = KConfigReadString(self, new_name, &result);
+    if (rc == 0) { /* Good node was found. */
+        RELEASE(String, result);
+        newExists = true;
+    }
+
+    /* Need to create new node. */
+    if (!newExists)
+        rc = KConfigWriteString(self, new_name, "sra");
+
+    if (rc == 0) {
+        /* Clear old node */
+        rc = KConfigWriteString(self, old_name, "");
+
+        if (rc == 0)
+            rc = KConfigWriteString(self, updated_name, "updated");
+
+        if (rc == 0)
+            *updated = true;
+    }
+
+    return rc;
+}
+
+static rc_t _KConfigUsePileupAppWithExtFlatAlg(KConfig * self,
+    bool * updated)
+{
+    return _KConfigUseWithExtFlatAlg(self, updated,
+        "/repository/user/main/public/apps/sraPileup/volumes/flat",
+        "/repository/user/main/public/apps/sraPileup/volumes/withExtFlat",
+        "/repository/user/main/public/apps/sraPileup/withExtFlat");
+}
+
+static rc_t _KConfigUseRealignAppWithExtFlatAlg(KConfig * self,
+    bool * updated)
+{
+    return _KConfigUseWithExtFlatAlg(self, updated,
+        "/repository/user/main/public/apps/sraRealign/volumes/flat",
+        "/repository/user/main/public/apps/sraRealign/volumes/withExtFlat",
+        "/repository/user/main/public/apps/sraRealign/withExtFlat");
+}
+
 static rc_t _KConfigUpdateDefault( KConfig * self, bool * updated,
     const char * node_name, 
     const char * node2_name,
@@ -3322,12 +3398,24 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
                 bool updated = false;
 
                 if ( ! s_disable_user_settings ) {
+                    bool updatd2 = false;
+
                     rc = _KConfigLowerAscpRate ( mgr,  & updated );
                     if (rc == 0) {
-                        bool updated2 = false;
-                        rc = _KConfigUseTraceCgi(mgr, &updated2);
-                        updated |= updated2;
+                        rc = _KConfigUseTraceCgi(mgr, &updatd2);
+                        updated |= updatd2;
                     }
+
+                    if (rc == 0) {
+                        rc = _KConfigUsePileupAppWithExtFlatAlg(mgr, &updatd2);
+                        updated |= updatd2;
+                    }
+
+                    if (rc == 0) {
+                        rc = _KConfigUseRealignAppWithExtFlatAlg(mgr, &updatd2);
+                        updated |= updatd2;
+                    }
+
                     if ( rc == 0 && updated ) {
                         rc = KConfigCommit ( mgr );
                         updated = false;

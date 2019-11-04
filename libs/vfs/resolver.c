@@ -383,6 +383,16 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
     case algFlat:
         rc = string_printf ( expanded, bsize, size, "%S", & tok -> acc );
         break;
+    case algWithExtFlat:
+        if (tok->projectId < 0)
+            rc = string_printf ( expanded, bsize, size,
+                "%S%S.%S", & tok -> alpha, & tok -> digits,
+                & tok -> ext1 );
+        else
+            rc = string_printf ( expanded, bsize, size,
+                "%S%S_dbGaP-%d.%S", & tok -> alpha, & tok -> digits,
+                tok -> projectId, & tok -> ext1 );
+        break;
     case algAD:
         if (tok->projectId < 0)
             rc = string_printf ( expanded, bsize, size,
@@ -2992,6 +3002,9 @@ rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
         }
     }
 
+    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
+        "VResolverLocalResolve: local location of '%S' not found\n",
+        accession));
     return RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
 }
 
@@ -4999,6 +5012,12 @@ rc_t VResolverLoadVolumes ( Vector *algs, const String *root,
                     /* stored in a flat directory as-is */
                     else if ( strcmp ( algname, "flat" ) == 0 )
                         alg_id = algFlat;
+                    /* file with extensions stored in a flat directory:
+                    as-is for public files,
+                    with project-id injected before extension for protected ones
+                     */
+                    else if (strcmp(algname, "withExtFlat") == 0)
+                        alg_id = algWithExtFlat;
                     /* stored in Accesion as Directory
                        with ".sra" or ".sra.vdbcache" extension */
                     else if ( strcmp ( algname, "sraAd" ) == 0 )

@@ -135,7 +135,8 @@ KLIB_SRC = \
 	json \
 	json-grammar \
 	json-lex \
-	base64
+	base64 \
+	guid
 #	path
 
 ifeq (win,$(OS))
