@@ -739,7 +739,7 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
     const char prt[] = "/repository/remote/protected/CGI/resolver-cgi";
     const char sdl[] = "/repository/remote/main/SDL.2/resolver-cgi";
     const char cgi[] = RESOLVER_CGI;
-    
+
     rc_t rc = 0;
     const char * path = aProtected ? prt : man;
     assert( request );
@@ -2630,7 +2630,7 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
             if (rc == 0) {
                 if (self->fileKey != NULL && self->fileVal != NULL) {
                     rc = KClientHttpRequestAddPostFileParam(h.httpReq,
-                        self->fileKey, self->fileVal);
+                        self->fileKey, self->fileVal, true);
                     if (rc == 0) {
                         VectorForEach(&self->params, false,
                             SHttpRequestHelperAddQueryParam, &h);
@@ -2862,7 +2862,7 @@ static rc_t STicketsAppend ( STickets * self, uint32_t project,
         return 0;
 
     /* && project>0: dbGaP projectId can be 0*/
-    if ( rc == 0 && ticket [ 0 ] != '\0' ) { 
+    if ( rc == 0 && ticket [ 0 ] != '\0' ) {
         BSTItem * i = NULL;
 
         String str;
