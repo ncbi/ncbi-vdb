@@ -1151,9 +1151,12 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
                         cloud, self);
                 CloudRelease ( cloud );
             }
-            CloudMgrRelease ( cloudMgr );
         }
     }
+
+    if ( cloudMgr != cself->http->mgr->cloud )
+        CloudMgrRelease ( cloudMgr );
+
     return rc;
 }
 
