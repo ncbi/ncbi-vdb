@@ -27,15 +27,17 @@
 #include <kns/extern.h>
 
 #include <kfg/config.h>
+#include <kfg/properties.h>
 
 #include <klib/printf.h>
 #include <klib/rc.h>
+#include <klib/strings.h>
 
 #include <kproc/timeout.h>
 
+#include <kns/http.h>
 #include <kns/manager.h>
 #include <kns/socket.h>
-#include <kns/http.h>
 
 #include <cloud/manager.h>
 
@@ -71,8 +73,10 @@ static char kns_manager_user_agent [ 128 ] = "ncbi-vdb";
 static atomic_ptr_t kns_singleton;
 #endif
 
+/*
 #define RELEASE( type, obj ) do { rc_t rc2 = type##Release ( obj ); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while ( false )
+*/
 
 bool KNSManagerHttpProxyOnly ( const KNSManager * self ) {
     if ( self == NULL )
@@ -168,7 +172,7 @@ static rc_t CC KNSManagerMakeSingleton ( KNSManager ** mgrp, KConfig * aKfg,
     else
     {
         KConfig * kfg = aKfg;
-        KNSManager * our_mgr;
+        KNSManager * our_mgr=NULL;
 
         * mgrp = NULL;
 
@@ -742,24 +746,83 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig(KNSManager ** mgrp,
 LIB_EXPORT rc_t CC KNSManagerSetUserAgent ( KNSManager * self, const char * fmt, ... )
 {
     /* 6/18/14 - don't check "self", since the current implementation
-       is actually static. Later implementations will not be... */
+       is actually static. Later implementations will not be...
+       Cast silences warning
+       */
+    (void)(self);
 
     rc_t rc = 0;
     if ( fmt == NULL )
-        rc = RC( rcNS, rcMgr, rcUpdating, rcParam, rcNull );
-    else
     {
-        size_t bytes;
-        char scratch [ sizeof kns_manager_user_agent ];
-
-        va_list args;
-        va_start ( args, fmt );
-        rc = string_vprintf ( scratch, sizeof scratch, & bytes, fmt, args );
-        va_end ( args );
-
-        if ( rc == 0 )
-            string_copy ( kns_manager_user_agent, sizeof kns_manager_user_agent, scratch, bytes );
+        rc = RC( rcNS, rcMgr, rcUpdating, rcParam, rcNull );
+        return rc;
     }
+
+    size_t bytes=0;
+    char scratch [ sizeof kns_manager_user_agent ];
+
+    va_list args;
+    va_start ( args, fmt );
+    rc = string_vprintf ( scratch, sizeof scratch, & bytes, fmt, args );
+    va_end ( args );
+
+    if ( rc ==0 )
+    {
+        string_copy ( kns_manager_user_agent,
+                      sizeof kns_manager_user_agent,
+                      scratch, bytes );
+
+        char cloudtrunc[64];
+        const char * cloudid = getenv(ENV_MAGIC_CE_TOKEN);
+        if (cloudid && strlen(cloudid) > 8)
+        {
+            /* AWS access keys should always begin with AKIA,
+             * suffixes seems non-random */
+            strncpy(cloudtrunc, cloudid + 4, sizeof cloudtrunc);
+            cloudtrunc[3]='\0';
+        } else
+        {
+            strcpy(cloudtrunc, "noc");
+        }
+
+        const char * sessid = getenv(ENV_VAR_SESSION_ID);
+        if (sessid==NULL)
+        {
+            sessid="nos";
+        }
+
+        KConfig *kfg=NULL;
+        rc = KConfigMake( & kfg, NULL);
+        if (rc == 0)
+        {
+            char guid[64];
+            size_t written;
+            rc=KConfig_Get_GUID(kfg, guid, sizeof guid, &written);
+            if (rc !=0 )
+            {
+                sprintf(guid,"nog");
+            }
+
+
+            char scratch2 [ sizeof scratch + 32 ];
+            rc = string_printf(scratch2,  sizeof scratch2, & bytes,
+                               "%s (phid=%.3s%.4s%.3s)",
+                               scratch, cloudtrunc, guid, sessid);
+
+            if ( rc ==0 )
+            {
+                string_copy ( kns_manager_user_agent,
+                              sizeof kns_manager_user_agent,
+                              scratch2, bytes );
+            }
+        }
+
+        if (kfg)
+        {
+            KConfigRelease(kfg);
+        }
+    }
+
     return rc;
 }
 
