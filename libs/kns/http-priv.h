@@ -212,8 +212,6 @@ struct KClientHttpRequest
 
     bool ceRequired; /* computing environment token required to access this URL */
     bool payRequired; /* payment info required to access this URL */
-
-    bool file_attached; /* true if this is a POST request with a file attached */
 };
 
 void KClientHttpGetRemoteEndpoint ( const struct KClientHttp * self,

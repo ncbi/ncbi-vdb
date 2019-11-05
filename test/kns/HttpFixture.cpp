@@ -132,8 +132,8 @@ KStream_vt_v1 TestStream::vt =
 };
 
 HttpFixture :: HttpFixture()
-:   m_mgr ( nullptr ), 
-    m_file ( nullptr ), 
+:   m_mgr ( nullptr ),
+    m_file ( nullptr ),
     m_req ( nullptr )
 {
     if ( KNSManagerMake ( & m_mgr ) != 0 )
@@ -214,7 +214,7 @@ HttpFixture :: Reconnect ()
 string
 HttpFixture :: MakeURL(const string & base)
 {
-    return string("http://") + base + ".com/";
+    return string("http://") + base + ".com/blah";
 }
 
 KStream HttpFixture :: m_stream;
