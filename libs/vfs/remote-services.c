@@ -1856,10 +1856,6 @@ static rc_t EVPathInitMapping
 
     if ( self -> https == NULL && self -> http == NULL && self -> fasp == NULL )
         return 0;
-<<<<<<< HEAD
-
-=======
->>>>>>> VDB-3879 done, removed some memory leaks in VFS
     vsrc = self -> http ? self -> http
         : ( self -> https ? self -> https : self -> fasp );
     rc = VPathCheckFromNamesCGI ( vsrc, & src -> ticket, -1,
@@ -4846,7 +4842,6 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                     RELEASE(VPath, path);
                     RELEASE(VPath, vdbcache);
                     RELEASE(KSrvError, error);
-                    RELEASE(VPath, mapping);
 
                     if (rc != 0)
                     {
