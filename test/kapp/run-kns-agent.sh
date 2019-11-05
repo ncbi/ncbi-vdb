@@ -52,7 +52,7 @@ if [ "$?" != "0" ] ; then
     echo "tool execution failed"
     exit 3
 fi
-ACTUAL_TOOL_NAME=$(eval "echo $USER_AGENT | awk '{print \$3}'")
+ACTUAL_TOOL_NAME=$(echo "$USER_AGENT" | cut -d' ' -f 3)
 
 if [ "$EXPECTED_TOOL_NAME" != "$ACTUAL_TOOL_NAME" ] ; then
     echo "Agent tool name '$ACTUAL_TOOL_NAME' does not match expected '$EXPECTED_TOOL_NAME'"
