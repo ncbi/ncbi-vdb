@@ -241,7 +241,7 @@ FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_SendReceiveEncoded, HttpRequestFix
 }
 
 // FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_SendReceiveNotEncoded, HttpRequestFixture)
-// {    // this test resides in the priovate repo since it uses a real JWT cart file
+// {    // this test resides in the private repo since it uses a real JWT cart file
 //     const char * Server = "https://trace.ncbi.nlm.nih.gov/Traces/sdl/unstable/retrieve";
 
 //     REQUIRE_RC ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, NULL, Server ) );
