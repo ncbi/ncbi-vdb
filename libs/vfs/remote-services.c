@@ -324,6 +324,7 @@ typedef struct {
 
     const char * fileKey; /* don't free */
     const char * fileVal; /* don't free */
+    bool         fileBase64encode;
 
     Vector params;
 } SCgiRequest;
@@ -2630,7 +2631,7 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
             if (rc == 0) {
                 if (self->fileKey != NULL && self->fileVal != NULL) {
                     rc = KClientHttpRequestAddPostFileParam(h.httpReq,
-                        self->fileKey, self->fileVal, true);
+                        self->fileKey, self->fileVal, self->fileBase64encode);
                     if (rc == 0) {
                         VectorForEach(&self->params, false,
                             SHttpRequestHelperAddQueryParam, &h);
@@ -3380,7 +3381,7 @@ static rc_t SRequestSetDisabled(SRequest * self, SHelper * helper) {
 }
 
 static rc_t SRequestAddFile(SRequest * self,
-    const char * key, const char * path)
+    const char * key, const char * path, bool base64encode)
 {
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), ("  %s=%s\n", key, path));
 
@@ -3389,6 +3390,7 @@ static rc_t SRequestAddFile(SRequest * self,
 
         self->cgiReq.fileKey = key;
         self->cgiReq.fileVal = path;
+        self->cgiReq.fileBase64encode = base64encode;
 
         self->hasQuery = true;
     }
@@ -3697,7 +3699,8 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     if (rc == 0) {
         if (SRequestNgcFile(request) != NULL)
             if (request->sdl)
-                rc = SRequestAddFile(request, "ngc", SRequestNgcFile(request));
+                rc = SRequestAddFile(request, "ngc", SRequestNgcFile(request),
+                    true);
             else {
                 char buffer[256] = "";
                 rc = SRequestNgcTicket(request, buffer, sizeof buffer, NULL);
@@ -3719,7 +3722,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     }
 
     if (rc == 0 && request->sdl && request->jwtKartFile != NULL)
-        rc = SRequestAddFile(request, "cart", request->jwtKartFile);
+        rc = SRequestAddFile(request, "cart", request->jwtKartFile, false);
 
     return rc;
 }
