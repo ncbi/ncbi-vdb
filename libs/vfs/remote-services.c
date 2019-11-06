@@ -3383,7 +3383,7 @@ static rc_t SRequestSetDisabled(SRequest * self, SHelper * helper) {
 static rc_t SRequestAddFile(SRequest * self,
     const char * key, const char * path, bool base64encode)
 {
-    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), ("  %s=%s\n", key, path));
+    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), ("  %s=@%s\n", key, path));
 
     if (key != NULL && path != NULL) {
         assert(self);
