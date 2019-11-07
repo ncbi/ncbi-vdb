@@ -183,10 +183,12 @@ FIXTURE_TEST_CASE(GCP_AddUserPays_Credentials, GCP_Fixture)
     GCP * gcp;
     REQUIRE_RC ( CloudToGCP ( cloud, & gcp ) );
     REQUIRE_NOT_NULL ( gcp );
-    string PK = "-----BEGIN PRIVATE KEY-----\nMIICdwIBADANBgkqhkiG9w0BAQEFA";
+	string PK1 = "-----BEGIN PRIVATE KEY-----"; // here comes \n or \r\n based on Git settings
+	string PK2 = "MIICdwIBADANBgkqhkiG9w0BAQEFA";
     REQUIRE_NOT_NULL ( gcp -> privateKey );
-    REQUIRE_EQ ( PK, string( gcp -> privateKey ) . substr( 0, PK . size() ) );
-    REQUIRE_NOT_NULL ( gcp -> client_email );
+    REQUIRE_EQ ( PK1, string( gcp -> privateKey ) . substr( 0, PK1 . size() ) );
+	REQUIRE_NE ( string::npos, string(gcp->privateKey).find( PK2 ) );
+	REQUIRE_NOT_NULL ( gcp -> client_email );
     REQUIRE_EQ ( string("ncbivdb-compute@developer.gserviceaccount.com"), string( gcp -> client_email ) );
     REQUIRE_NOT_NULL ( gcp -> project_id );
     REQUIRE_EQ ( string("test"), string( gcp -> project_id ) );

@@ -501,10 +501,13 @@ FIXTURE_TEST_CASE(GCP_Credentials, GcpFixture)
     REQUIRE_NOT_NULL ( m_gcp -> privateKey );
     REQUIRE_NOT_NULL ( m_gcp -> client_email );
 
-    const string private_key = "-----BEGIN PRIVATE KEY-----\nMIICdwIBADANBgkqhkiG9w0BAQEFAASCAmEwggJdAgEAAoGBANoWq8DqARNncY/f";
-    const string client_email = "ncbivdb-compute@developer.gserviceaccount.com";
-    REQUIRE_EQ ( private_key, string ( m_gcp -> privateKey ) . substr ( 0, private_key . size () ) );
-    REQUIRE_EQ ( client_email, string ( m_gcp -> client_email ) );
+	const string private_key_1 = "-----BEGIN PRIVATE KEY-----"; // skip EOL which can be \n or \r\n depending on Git settings
+	const string private_key_2 = "MIICdwIBADANBgkqhkiG9w0BAQEFAASCAmEwggJdAgEAAoGBANoWq8DqARNncY/f";
+    REQUIRE_EQ ( private_key_1, string ( m_gcp -> privateKey ) . substr ( 0, private_key_1 . size () ) );
+	REQUIRE_NE ( string::npos, string ( m_gcp->privateKey ) . find( private_key_2 ) );
+
+	const string client_email = "ncbivdb-compute@developer.gserviceaccount.com";
+	REQUIRE_EQ ( client_email, string ( m_gcp -> client_email ) );
 }
 
 // CLOUD_EXTERN rc_t CC CloudMakeComputeEnvironmentToken ( const Cloud * self, struct String const ** ce_token );
