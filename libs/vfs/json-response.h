@@ -94,6 +94,8 @@ rc_t Response4Release    ( const Response4  * self );
 rc_t Response4AppendUrl  (       Response4  * self, const char * url );
 rc_t Response4AddAccOrId (       Response4 * self, const char * acc,
                                  int64_t id, Container ** newItem );
+rc_t Response4SetNextToken(Response4 * self, const char * nextToken);
+rc_t Response4GetNextToken(const Response4 * self, const char ** nextToken);
 rc_t Response4GetRc      ( const Response4 * self, rc_t * rc );
 rc_t ContainerStatusInit(Container * self, int64_t code, const char * msg);
 bool ContainerIs200AndEmpty(const Container * self);

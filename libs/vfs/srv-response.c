@@ -618,6 +618,15 @@ uint32_t KSrvResponseLength ( const KSrvResponse * self ) {
     return VectorLength ( & self -> list );
 }
 
+rc_t KSrvResponseGetNextToken(const KSrvResponse * self,
+    const char ** nextToken)
+{
+    if (self == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
+    else
+        return Response4GetNextToken(self->r4, nextToken);
+}
+
 rc_t KSrvResponseGetObjByIdx ( const KSrvResponse * self, uint32_t idx,
                                const KSrvRespObj ** box )
 {

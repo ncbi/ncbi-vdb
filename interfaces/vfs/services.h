@@ -127,6 +127,16 @@ rc_t KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
 rc_t KSrvResponseGetCache(const KSrvResponse * self, uint32_t idx,
     const struct VPath ** path);
 
+/* GetNextToken:
+ * is returned in case user need to ask for next page.
+ * Do not release returned value.
+ *
+ * When returned rc == RC(rcVFS, rcQuery, rcExecuting, rcToken, rcUnexpected):
+ *  the server returned nextToken but its processing is not implemented yet.
+ */
+rc_t KSrvResponseGetNextToken(const KSrvResponse * self,
+    const char ** nextToken);
+
 /************************** KSrvError ******************************
  * KSrvError is generated for Id-s from request that produced an error response
  */
