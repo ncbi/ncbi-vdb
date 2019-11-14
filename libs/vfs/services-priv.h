@@ -92,8 +92,6 @@ rc_t KSrvResponseSetR4 ( struct KSrvResponse * self, struct Response4 * r );
 
 rc_t KSrvRespFileAddLocalAndCache ( struct KSrvRespFile * file,
                                     const struct VPathSet * localAndCache );
-rc_t KSrvRespFileGetFormat ( const struct KSrvRespFile * self,
-                             ESrvFileFormat * ff );
 
 /* DON'T FREE RETURNED STRINGS !!! */
 rc_t KSrvRespFileGetAccOrName ( const struct KSrvRespFile * self,

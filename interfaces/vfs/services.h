@@ -181,6 +181,8 @@ rc_t KSrvRespFileGetClass(const KSrvRespFile * self, const char ** itemClass);
 
 /* type: sra, vdbcache, etc. */
 rc_t KSrvRespFileGetType(const KSrvRespFile * self, const char ** type);
+rc_t KSrvRespFileGetFormat(const struct KSrvRespFile * self,
+    ESrvFileFormat * ff);
 
 rc_t KSrvRespFileGetSize(const KSrvRespFile * self, uint64_t *size);
 rc_t KSrvRespFileGetCache ( const KSrvRespFile * self,
