@@ -3459,6 +3459,25 @@ LIB_EXPORT rc_t CC new_kfprintf ( const KWrtHandler *out,
     return rc;
 }
 
+#define USE_SMARTER_BUFFER_PRINT 1
+#if USE_SMARTER_BUFFER_PRINT
+static rc_t KDataBufferWriter(void *vself, char const *content, size_t size, size_t *num_writ)
+{
+    KDataBuffer *const self = vself;
+    size_t const orig_size = (size_t)self->elem_count; /* includes nul */
+    rc_t rc = KDataBufferResize(self, orig_size + size);
+    if (rc == 0) {
+        char *const base = self->base;
+        
+        memmove(base + orig_size - 1 /* overwrite nul */, content, size);
+        *num_writ = size;
+
+        base[orig_size + size - 1] = '\0'; /* add nul */
+    }
+    return rc;
+}
+#endif
+
 LIB_EXPORT rc_t CC KDataBufferVPrintf ( KDataBuffer * buf, const char * fmt, va_list args )
 {
     rc_t rc;
@@ -3471,6 +3490,34 @@ LIB_EXPORT rc_t CC KDataBufferVPrintf ( KDataBuffer * buf, const char * fmt, va_
         rc = RC ( rcText, rcString, rcFormatting, rcParam, rcEmpty );
     else
     {
+#if USE_SMARTER_BUFFER_PRINT
+        KWrtHandler handler;
+        uint64_t const orig_size = buf->elem_count;
+        
+        handler.writer = KDataBufferWriter;
+        handler.data = buf;
+        
+        if (orig_size == 0) {
+            if (buf->elem_bits == 0)
+                buf->elem_bits = 8;
+            if (buf->elem_bits == 8) {
+                rc = KDataBufferResize(buf, 1);
+                if (rc)
+                    return rc;
+                ((char *)buf->base)[0] = '\0';
+            }
+        }
+        if (buf->elem_bits != 8)
+            return RC ( rcText, rcString, rcFormatting, rcParam, rcIncorrect );
+
+        /* nul terminator is required */
+        if (((char const *)buf->base)[buf->elem_count - 1] != '\0')
+            return RC ( rcText, rcString, rcFormatting, rcParam, rcIncorrect );
+
+        rc = vkfprintf(&handler, NULL, fmt, args);
+        if (rc)
+            (void)KDataBufferResize(buf, orig_size);
+#else
         size_t bsize;
         char * buffer;
         size_t content;
@@ -3562,6 +3609,7 @@ LIB_EXPORT rc_t CC KDataBufferVPrintf ( KDataBuffer * buf, const char * fmt, va_
             KDataBufferResize ( buf, orig_size );
         else
             KDataBufferResize ( buf, content + num_writ + 1 );
+#endif
     }
 
     return rc;
