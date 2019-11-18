@@ -102,6 +102,12 @@ rc_t KServiceNamesQueryTo ( KService * self, VRemoteProtocols protocols,
 rc_t KServiceSearchExecute ( KService * self,
                              const struct Kart ** response );
 
+/******************************************************************************/
+/* GetResponseCStr
+ * Returns a pointer to an array that contains a null-terminated sequence
+ * of characters representing the current server response.
+ */
+const char * KServiceGetResponseCStr(const struct KService * self);
 
 /************************** KSrvResponse **************************/
 /* Release:

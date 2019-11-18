@@ -31,6 +31,8 @@
 
 #include "../../libs/vfs/json-response.h" /* Response4MakeSdl */
 
+using std::string;
+
 TEST_SUITE(TestSdlResolver)
 
 /*static rc_t validate ( const char * input ) {
@@ -207,6 +209,11 @@ TEST_CASE(testNoNextToken) {
     REQUIRE_NULL(nextToken);
 
     REQUIRE_RC(KSrvResponseRelease(rspn));
+
+    const char * json = KServiceGetResponseCStr(service);
+    REQUIRE_NOT_NULL(json);
+    REQUIRE_EQ(string(resl), string(json));
+
     REQUIRE_RC(KServiceRelease(service));
 }
 #endif
@@ -289,6 +296,11 @@ TEST_CASE(testNextToken) {
     REQUIRE_NOT_NULL(nextToken);
 
     REQUIRE_RC(KSrvResponseRelease(rspn));
+
+    const char * json = KServiceGetResponseCStr(service);
+    REQUIRE_NOT_NULL(json);
+    REQUIRE_EQ(string(resl), string(json));
+
     REQUIRE_RC(KServiceRelease(service));
 }
 #endif
