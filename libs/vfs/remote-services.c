@@ -634,9 +634,7 @@ static rc_t SVersionInit(SVersion * self, bool * sdl, const char * src,
     String * result = NULL;
     const char * e = NULL;
 
-    bool dummy;
-    if (sdl == NULL)
-        sdl = &dummy;
+/* TODO: needs investigation: using it makes impossibe to call SDL; names.cgi is always called instead: bool dummy; if (sdl == NULL) sdl = &dummy; */
 
     assert(self);
 
@@ -680,7 +678,7 @@ static rc_t SVersionInit(SVersion * self, bool * sdl, const char * src,
 
     rc = SVersionInitFromStr(self, sdl, s);
 
-    if (rc == 0 && *sdl) {
+    if (rc == 0 && sdl != NULL && *sdl) {
         if (ticket != NULL) {
             if (KConfigGetNgcFile() == NULL)
                 /* use version 3 when getting dbGaP data without ngc file */
