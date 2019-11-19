@@ -773,7 +773,7 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent ( KNSManager * self, const char * fmt,
                       scratch, bytes );
 
         /* VDB-4029: Only append once */
-        if (!strstr(kns_manager_user_agent, " phid="))
+        if (!strstr(kns_manager_user_agent, " (phid="))
         {
             char cloudtrunc[64];
             const char * cloudid = getenv(ENV_MAGIC_CE_TOKEN);
