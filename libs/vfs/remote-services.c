@@ -4503,6 +4503,13 @@ static rc_t KServiceGetResponse(const KService * self,
 }
 
 
+const char * KServiceGetResponseCStr(const KService * self) {
+    if (self == NULL)
+        return NULL;
+    return self->helper.input;
+}
+
+
 static rc_t StringRelease(const String *self) {
     StringWhack(self);
     return 0;

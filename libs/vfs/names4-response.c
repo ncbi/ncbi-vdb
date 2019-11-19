@@ -105,6 +105,7 @@ struct Response4 { /* Response object */
     atomic32_t refcount; 
     Container * items;
     uint32_t nItems;
+    char * nextToken;
     rc_t rc;
 };
 
@@ -216,10 +217,15 @@ static void StackPrintBul
 static void StackPrintStr
     (const Stack * self, const char * name, const char * val)
 {
-    StackPrint(self, NULL, false);
-    if (THRESHOLD > THRESHOLD_ERROR)
+    bool first = self->i == 0;
+    if (!first)
+        StackPrint(self, NULL, false);
+    if (THRESHOLD > THRESHOLD_ERROR) {
+        if (first)
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), ("\""));
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
             ("/%s\" = \"%s\"\n", name, val));
+    }
 }
 
 rc_t StackRelease ( Stack * self, bool failed ) {
@@ -1046,6 +1052,7 @@ rc_t Response4Fini ( Response4 * self ) {
     }
 
     free ( self -> items );
+    free(self->nextToken);
 
     memset ( self, 0, sizeof * self );
 
@@ -1068,6 +1075,14 @@ rc_t Response4Release ( const Response4 * cself ) {
     free ( self );
 
     return rc;
+}
+
+rc_t Response4SetNextToken(Response4 * self, const char * nextToken) {
+    assert(self);
+    self->nextToken = string_dup_measure(nextToken, NULL);
+    if (self->nextToken == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted);
+    return 0;
 }
 
 rc_t Response4AddAccOrId ( Response4 * self, const char * acc,
@@ -2256,6 +2271,20 @@ rc_t Response4GetRc ( const Response4 * self, rc_t * rc ) {
     * rc = self -> rc;
 
     return 0;
+}
+
+rc_t Response4GetNextToken(const Response4 * self, const char ** nextToken) {
+    const char * dummy = NULL;
+    if (nextToken == NULL)
+        nextToken = &dummy;
+
+    if (self != NULL)
+        *nextToken = self->nextToken;
+    else
+        *nextToken = NULL;
+
+    return *nextToken == NULL
+        ? 0 : RC(rcVFS, rcQuery, rcExecuting, rcToken, rcUnexpected);
 }
 
 rc_t Response4GetKSrvRespObjCount ( const Response4 * self,

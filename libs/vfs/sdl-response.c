@@ -599,15 +599,15 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
             if (n == 0) {
                 rc = RC(rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete);
                 if (THRESHOLD > THRESHOLD_NO_DEBUG)
-                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
-                    ("... error: '%s' is empty\n", name));
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), (
+                        "... error: '%s' is empty\n", name));
             }
             else {
                 uint32_t i = 0;
                 for (i = 0; i < n; ++i) {
                     rc_t r2 = 0;
                     value = KJsonArrayGetElement(array, i);
-                    object = KJsonValueToObject(value);
+                    const KJsonObject * object = KJsonValueToObject(value);
                     r2 = Response4AddItemsSdl(self, object, &path);
                     if (r2 != 0 && rc == 0)
                         rc = r2;
@@ -616,6 +616,17 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
                 }
             }
             StackPop(&path);
+        }
+    }
+
+    {
+        const char name[] = "nextToken";
+        value = KJsonObjectGetMember(object, name);
+        if (value != NULL) {
+            const char * nextToken = NULL;
+            rc = StrSet(&nextToken, value, name, &path);
+            if (rc == 0)
+                rc = Response4SetNextToken(self, nextToken);
         }
     }
 
