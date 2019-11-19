@@ -772,54 +772,58 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent ( KNSManager * self, const char * fmt,
                       sizeof kns_manager_user_agent,
                       scratch, bytes );
 
-        char cloudtrunc[64];
-        const char * cloudid = getenv(ENV_MAGIC_CE_TOKEN);
-        if (cloudid && strlen(cloudid) > 8)
+        /* VDB-4029: Only append once */
+        if (!strstr(kns_manager_user_agent, " (phid="))
         {
-            /* AWS access keys should always begin with AKIA,
-             * suffixes seems non-random */
-            strncpy(cloudtrunc, cloudid + 4, sizeof cloudtrunc);
-            cloudtrunc[3]='\0';
-        } else
-        {
-            strcpy(cloudtrunc, "noc");
-        }
-
-        const char * sessid = getenv(ENV_VAR_SESSION_ID);
-        if (sessid==NULL)
-        {
-            sessid="nos";
-        }
-
-        KConfig *kfg=NULL;
-        rc = KConfigMake( & kfg, NULL);
-        if (rc == 0)
-        {
-            char guid[64];
-            size_t written;
-            rc=KConfig_Get_GUID(kfg, guid, sizeof guid, &written);
-            if (rc !=0 )
+            char cloudtrunc[64];
+            const char * cloudid = getenv(ENV_MAGIC_CE_TOKEN);
+            if (cloudid && strlen(cloudid) > 8)
             {
-                sprintf(guid,"nog");
+                /* AWS access keys should always begin with AKIA,
+                * suffixes seems non-random */
+                strncpy(cloudtrunc, cloudid + 4, sizeof cloudtrunc);
+                cloudtrunc[3]='\0';
+            } else
+            {
+                strcpy(cloudtrunc, "noc");
             }
 
-
-            char scratch2 [ sizeof scratch + 32 ];
-            rc = string_printf(scratch2,  sizeof scratch2, & bytes,
-                               "%s (phid=%.3s%.4s%.3s)",
-                               scratch, cloudtrunc, guid, sessid);
-
-            if ( rc ==0 )
+            const char * sessid = getenv(ENV_VAR_SESSION_ID);
+            if (sessid==NULL)
             {
-                string_copy ( kns_manager_user_agent,
-                              sizeof kns_manager_user_agent,
-                              scratch2, bytes );
+                sessid="nos";
             }
-        }
 
-        if (kfg)
-        {
-            KConfigRelease(kfg);
+            KConfig *kfg=NULL;
+            rc = KConfigMake( & kfg, NULL);
+            if (rc == 0)
+            {
+                char guid[64];
+                size_t written;
+                rc=KConfig_Get_GUID(kfg, guid, sizeof guid, &written);
+                if (rc !=0 )
+                {
+                    sprintf(guid,"nog");
+                }
+
+
+                char scratch2 [ sizeof scratch + 32 ];
+                rc = string_printf(scratch2,  sizeof scratch2, & bytes,
+                                "%s (phid=%.3s%.4s%.3s)",
+                                scratch, cloudtrunc, guid, sessid);
+
+                if ( rc ==0 )
+                {
+                    string_copy ( kns_manager_user_agent,
+                                sizeof kns_manager_user_agent,
+                                scratch2, bytes );
+                }
+            }
+
+            if (kfg)
+            {
+                KConfigRelease(kfg);
+            }
         }
     }
 

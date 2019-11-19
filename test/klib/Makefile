@@ -33,6 +33,7 @@ MODULE = test/klib
 TEST_TOOLS = \
 	test-asm \
 	test-printf \
+	test-data-buffer-print \
 	test-log \
 	test-out \
 	test-SraReleaseVersion \
@@ -101,6 +102,18 @@ TEST_PRINTF_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_PRINTF_SRC))
 
 $(TEST_BINDIR)/test-printf: $(TEST_PRINTF_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
+
+#-------------------------------------------------------------------------------
+# test-printf
+#
+TEST_BUF_PRINT_SRC = \
+	test-data-buffer-print
+
+TEST_BUF_PRINT_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_BUF_PRINT_SRC))
+
+$(TEST_BINDIR)/test-data-buffer-print: $(TEST_BUF_PRINT_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
 
 #-------------------------------------------------------------------------------
