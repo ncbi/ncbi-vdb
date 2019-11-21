@@ -370,7 +370,8 @@ rc_t CC KMain ( int argc, char *argv [] )
     assert(!KDbgSetString("KNS"));
 #endif
 
-    return GcpTestSuite(argc, argv);
+    rc_t rc = GcpTestSuite(argc, argv);
+    return rc;
 }
 
 }
