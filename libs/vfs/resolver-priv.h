@@ -206,6 +206,9 @@ typedef enum
     algUnknown
 } VResolverAlgID;
 
+#define versSDL2 1
+typedef uint8_t VERSNS;
+
 rc_t VResolverAlgMake(struct VResolverAlg **alg, const struct String *root,
      VResolverAppID app_id, VResolverAlgID alg_id, bool protctd, bool disabled);
 

@@ -247,7 +247,7 @@ rc_t VResolverAlgMake ( VResolverAlg **algp, const String *root,
 
 static rc_t VResolverAlgMakeCgi(VResolverAlg **algp, const String *root,
     bool isProtected, bool disabled,
-    const String *ticket, const char *name)
+    const String *ticket, const char *name, VERSNS *versions)
 {
     rc_t rc = VResolverAlgMake(algp, root, appAny, algCGI,
         isProtected, disabled);
@@ -258,8 +258,11 @@ static rc_t VResolverAlgMakeCgi(VResolverAlg **algp, const String *root,
         (*algp)->ticket = ticket;
 
         if (name != NULL) {
-            if (strcmp(name, "SDL.2") == 0)
+            assert(versions);
+            if (strcmp(name, "SDL.2") == 0) {
                 (*algp)->version = 0x82000000;
+                *versions |= versSDL2;
+            }
             else if (strcmp(name, "CGI") == 0)
                 (*algp)->version = 0x03000000;
             else if (strcmp(name, "CGI.4") == 0)
@@ -2261,6 +2264,7 @@ struct VResolver
     uint32_t projectId;
 
     char *version;
+    VERSNS versions;
     bool resoveOidName;
 };
 
@@ -5308,6 +5312,8 @@ rc_t VResolverLoadRepo ( VResolver *self, Vector *algs, const KConfigNode *repo,
             break;
     }
 
+    assert(self);
+
     /* don't bother recording local, disabled repositories */
     if ( rc == 0 && disabled && algs == & self -> local )
         return 0;
@@ -5388,8 +5394,8 @@ rc_t VResolverLoadRepo ( VResolver *self, Vector *algs, const KConfigNode *repo,
                     if ( resolver_cgi )
                     {
                         VResolverAlg *cgi;
-                        rc = VResolverAlgMakeCgi( & cgi, root,
-                            protected, disabled, ticket, name );
+                        rc = VResolverAlgMakeCgi( & cgi, root, protected,
+                            disabled, ticket, name, &self->versions );
                         if ( rc == 0 )
                         {
                             assert(cgi);
@@ -5662,6 +5668,9 @@ rc_t VResolverForceRemoteProtected ( VResolver *self )
     /* create one from hard-coded constants */
     String cgi_root;
     StringInitCString ( & cgi_root, SDL_CGI );
+
+    assert(self);
+
     rc = StringCopy ( & root, & cgi_root );
     if ( rc == 0 )
     {
@@ -5675,7 +5684,7 @@ rc_t VResolverForceRemoteProtected ( VResolver *self )
 
             VResolverAlg *cgi = NULL;
             rc = VResolverAlgMakeCgi( & cgi, root, protected, disabled,
-                self->ticket, "SDL.2");
+                self->ticket, "SDL.2", &self->versions );
             if ( rc == 0 )
             {
                 /* Remote Protected algorythm should come first: see VDB-2679 */
@@ -6138,8 +6147,11 @@ static rc_t VResolverInitVersion(VResolver * self, const KConfig *kfg) {
         if (self->ticket == NULL)
              /* default version for public data is SDL-2 ( 128(SDL) | 2 ) */
             self->version = string_dup_measure("130", NULL);
-        else /* default version for protected data is SDL-2 */
-            /* self->version = string_dup_measure("3", NULL); */
+        else if (self->versions == 0)
+            /* default version for protected data is 3.0 when calling names.cgi */
+            self->version = string_dup_measure("3", NULL);
+        else
+            /* default version for protected data is SDL-2 when calling sdl */
             self->version = string_dup_measure("130", NULL);
 
         if (self->version == NULL)
