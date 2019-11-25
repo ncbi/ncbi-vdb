@@ -95,6 +95,13 @@ KNS_EXTERN rc_t CC KNSManagerSetConnectionTimeouts ( KNSManager *self,
 KNS_EXTERN rc_t CC KNSManagerSetUserAgent ( KNSManager *self, const char * fmt, ... );
 KNS_EXTERN rc_t CC KNSManagerGetUserAgent ( const char ** user_agent );
 
+/* Sets for https connections */
+/* Note that the passed in strings must not contain any punctuation or control
+ * characters */
+KNS_EXTERN rc_t CC KNSManagerSetClientIP  ( KNSManager *self, const char * clientip );
+KNS_EXTERN rc_t CC KNSManagerSetSessionID ( KNSManager *self, const char * sessionid );
+KNS_EXTERN rc_t CC KNSManagerSetPageHitID ( KNSManager *self, const char * pagehitid );
+
 
 #ifdef __cplusplus
 }
