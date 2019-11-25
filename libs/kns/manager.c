@@ -42,9 +42,14 @@
 #include <cloud/manager.h>
 
 #include <atomic.h> /* atomic_ptr_t */
+#include <ctype.h>
 #include <sysalloc.h>
 
 #include <assert.h>
+
+#if LINUX
+#include <gnu/libc-version.h>
+#endif
 
 #include <stdio.h> /* fprintf */
 
@@ -67,7 +72,10 @@
 #define MAX_CONN_WRITE_LIMIT ( 10 * 60 * 1000 )
 #endif
 
-static char kns_manager_user_agent [ 128 ] = "ncbi-vdb";
+static char kns_manager_user_agent [ 256 ] = "ncbi-vdb";
+static char kns_manager_clientip [ 256 ] = "";
+static char kns_manager_sessionid [ 256 ] = "";
+static char kns_manager_pagehitid [ 256 ] = "";
 
 #if USE_SINGLETON
 static atomic_ptr_t kns_singleton;
@@ -806,11 +814,21 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent ( KNSManager * self, const char * fmt,
                     sprintf(guid,"nog");
                 }
 
+                const char * libc_version="";
+#if LINUX
+                libc_version=gnu_get_libc_version();
+#endif
 
-                char scratch2 [ sizeof scratch + 32 ];
+                char scratch2 [ sizeof scratch + 256 ];
                 rc = string_printf(scratch2,  sizeof scratch2, & bytes,
-                                "%s (phid=%.3s%.4s%.3s)",
-                                scratch, cloudtrunc, guid, sessid);
+                                "%s "
+                                "(phid=%.3s%.4s%.3s,"
+                                "clientip=%s,sessionid=%s,pagehitid=%s,libc=%s)",
+                                scratch, cloudtrunc, guid, sessid,
+                                kns_manager_clientip,
+                                kns_manager_sessionid,
+                                kns_manager_pagehitid,
+                                libc_version);
 
                 if ( rc ==0 )
                 {
@@ -897,3 +915,57 @@ LIB_EXPORT rc_t CC KNSManagerSetAdCaching(struct KNSManager* self, bool enabled)
         self->enabledResolveToAd = enabled;
     return 0;
 }
+
+static bool validkvchars(const char * str)
+{
+    size_t l=strlen(str);
+    for (size_t i=0; i!=l; ++i)
+    {
+        if (str[i]!='.' && !isalnum(str[i])) return false;
+    }
+
+    return true;
+}
+
+LIB_EXPORT rc_t CC KNSManagerSetClientIP  ( KNSManager *self, const char * clientip )
+{
+    if (self==NULL || clientip==NULL || !validkvchars(clientip) )
+    {
+        return RC ( rcNS, rcMgr, rcAttaching, rcRefcount, rcInvalid );
+    }
+
+    string_copy ( kns_manager_clientip,
+                      sizeof kns_manager_clientip,
+                      clientip, strlen(clientip));
+
+    return 0;
+}
+
+LIB_EXPORT rc_t CC KNSManagerSetSessionID ( KNSManager *self, const char * sessionid )
+{
+    if (self==NULL || sessionid==NULL || !validkvchars(sessionid) )
+    {
+        return RC ( rcNS, rcMgr, rcAttaching, rcRefcount, rcInvalid );
+    }
+
+    string_copy ( kns_manager_sessionid,
+                      sizeof kns_manager_sessionid,
+                      sessionid, strlen(sessionid));
+
+    return 0;
+}
+
+LIB_EXPORT rc_t CC KNSManagerSetPageHitID ( KNSManager *self, const char * pagehitid )
+{
+    if (self==NULL || pagehitid==NULL || !validkvchars(pagehitid) )
+    {
+        return RC ( rcNS, rcMgr, rcAttaching, rcRefcount, rcInvalid );
+    }
+
+    string_copy ( kns_manager_pagehitid,
+                      sizeof kns_manager_pagehitid,
+                      pagehitid, strlen(pagehitid));
+
+    return 0;
+}
+
