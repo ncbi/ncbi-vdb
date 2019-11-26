@@ -29,6 +29,7 @@
 #include <kfg/config.h>
 #include <kfg/properties.h>
 
+#include <klib/base64.h>
 #include <klib/printf.h>
 #include <klib/rc.h>
 #include <klib/strings.h>
@@ -52,6 +53,8 @@
 #include <gnu/libc-version.h>
 #endif
 
+#include <arpa/inet.h>
+#include <netinet/in.h>
 #include <stdio.h> /* fprintf */
 
 #include "../klib/release-vers.h"
@@ -75,7 +78,7 @@
 
 static char kns_manager_user_agent[256] = "ncbi-vdb";
 static KLock *kns_manager_lock = NULL; /* Protects below */
-static char kns_manager_clientip[256] = "";
+static char kns_manager_clientip[64] = "";
 static char kns_manager_sessionid[256] = "";
 static char kns_manager_pagehitid[256] = "";
 
@@ -770,16 +773,16 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent (
     }
 
     size_t bytes = 0;
-    char scratch[sizeof kns_manager_user_agent];
+    char ua[sizeof kns_manager_user_agent];
 
     va_list args;
     va_start ( args, fmt );
-    rc = string_vprintf ( scratch, sizeof scratch, &bytes, fmt, args );
+    rc = string_vprintf ( ua, sizeof ua, &bytes, fmt, args );
     va_end ( args );
 
     if ( rc == 0 ) {
-        string_copy ( kns_manager_user_agent, sizeof kns_manager_user_agent,
-            scratch, bytes );
+        string_copy (
+            kns_manager_user_agent, sizeof kns_manager_user_agent, ua, bytes );
 
         /* VDB-4029: Only append once */
         if ( !strstr ( kns_manager_user_agent, " (phid=" ) ) {
@@ -803,34 +806,43 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent (
                 char guid[64];
                 size_t written;
                 rc = KConfig_Get_GUID ( kfg, guid, sizeof guid, &written );
-                if ( rc != 0 ) { sprintf ( guid, "nog" ); }
+                if ( rc != 0 ) { strcpy ( guid, "nog" ); }
 
                 const char *libc_version = "";
 #if LINUX
                 libc_version = gnu_get_libc_version ();
 #endif
 
-                char scratch2[sizeof scratch + 256];
+                char scratch[sizeof ua];
 
                 if ( kns_manager_lock ) {
                     rc_t rc = KLockAcquire ( kns_manager_lock );
                     if ( rc ) { return rc; }
                 }
 
-                rc = string_printf ( scratch2, sizeof scratch2, &bytes,
-                    "%s "
-                    "(phid=%.3s%.4s%.3s,"
-                    "cip=%s,sid=%s,pagehit=%s,libc=%s)",
-                    scratch, cloudtrunc, guid, sessid, kns_manager_clientip,
+                rc = string_printf ( scratch, sizeof scratch, &bytes,
+                    "%.3s%.4s%.3s,"
+                    "cip=%s,sid=%s,pagehit=%s,libc=%s",
+                    cloudtrunc, guid, sessid, kns_manager_clientip,
                     kns_manager_sessionid, kns_manager_pagehitid,
                     libc_version );
 
                 if ( kns_manager_lock ) { KLockUnlock ( kns_manager_lock ); }
 
+                const String *b64;
+                rc = encodeBase64 ( &b64, scratch, strlen ( scratch ) );
+
+                char scratch2[sizeof ua];
+                rc = string_printf ( scratch2, sizeof scratch2, &bytes,
+                    "%s (phid=%s)", ua, b64->addr );
+                StringWhack ( b64 );
+
                 if ( rc == 0 ) {
                     string_copy ( kns_manager_user_agent,
                         sizeof kns_manager_user_agent, scratch2, bytes );
                 }
+
+                /* fprintf ( stderr, "UA is '%s'\n", kns_manager_user_agent ); */
             }
 
             if ( kfg ) { KConfigRelease ( kfg ); }
@@ -901,21 +913,64 @@ LIB_EXPORT rc_t CC KNSManagerSetAdCaching (
     if ( self != NULL ) { self->enabledResolveToAd = enabled; }
     return 0;
 }
-
-static bool validkvchars ( const char *str )
+/*
+LIB_EXPORT rc_t CC KNSManagerSetClientIPv4 (
+    KNSManager *self, uint32_t client_ipv4_addr)
 {
-    size_t l = strlen ( str );
-    for ( size_t i = 0; i != l; ++i ) {
-        if ( str[i] != '.' && !isalnum ( str[i] ) ) { return false; }
+    if ( self == NULL )
+        return RC ( rcNS, rcMgr, rcAttaching, rcRefcount, rcInvalid );
     }
 
-    return true;
+    char str[INET6_ADDRSTRLEN];
+    struct in_addr ina;
+
+    ina.s_addr=client_ipv4_addr;
+
+    if (inet_ntop(AF_INET, &ina, str, sizeof str)==NULL)
+        return RC ( rcNS, rcMgr, rcAttaching, rcRefcount, rcInvalid );
+
+    if ( kns_manager_lock ) {
+        rc_t rc = KLockAcquire ( kns_manager_lock );
+        if ( rc ) { return rc; }
+    }
+    string_copy ( kns_manager_clientip, sizeof kns_manager_clientip, ipv4,
+        strlen ( ipv4 ) );
+
+    if ( kns_manager_lock ) { KLockUnlock ( kns_manager_lock ); }
+    return 0;
 }
 
+LIB_EXPORT rc_t CC KNSManagerSetClientIPv6 (
+    KNSManager *self, uint16_t client_ipv6_addr[])
+{
+    if ( self == NULL )
+        return RC ( rcNS, rcMgr, rcAttaching, rcRefcount, rcInvalid );
+    }
+
+    char str[INET6_ADDSTRLEN];
+    struct in6_addr ina;
+
+    memcpy(&ina.s6_addr,client_ipv6_addr, 16);
+    ina.s_addr=client_ipv6_addr;
+
+    if (inet_ntop(AF_INET6, &ina, str, sizeof str)==NULL)
+        return RC ( rcNS, rcMgr, rcAttaching, rcRefcount, rcInvalid );
+
+    if ( kns_manager_lock ) {
+        rc_t rc = KLockAcquire ( kns_manager_lock );
+        if ( rc ) { return rc; }
+    }
+    string_copy ( kns_manager_clientip, sizeof kns_manager_clientip, ipv4,
+        strlen ( ipv4 ) );
+
+    if ( kns_manager_lock ) { KLockUnlock ( kns_manager_lock ); }
+    return 0;
+}
+*/
 LIB_EXPORT rc_t CC KNSManagerSetClientIP (
     KNSManager *self, const char *clientip )
 {
-    if ( self == NULL || clientip == NULL || !validkvchars ( clientip ) ) {
+    if ( self == NULL || clientip == NULL ) {
         return RC ( rcNS, rcMgr, rcAttaching, rcRefcount, rcInvalid );
     }
 
@@ -933,7 +988,7 @@ LIB_EXPORT rc_t CC KNSManagerSetClientIP (
 LIB_EXPORT rc_t CC KNSManagerSetSessionID (
     KNSManager *self, const char *sessionid )
 {
-    if ( self == NULL || sessionid == NULL || !validkvchars ( sessionid ) ) {
+    if ( self == NULL || sessionid == NULL ) {
         return RC ( rcNS, rcMgr, rcAttaching, rcRefcount, rcInvalid );
     }
 
@@ -948,10 +1003,11 @@ LIB_EXPORT rc_t CC KNSManagerSetSessionID (
     return 0;
 }
 
+
 LIB_EXPORT rc_t CC KNSManagerSetPageHitID (
     KNSManager *self, const char *pagehitid )
 {
-    if ( self == NULL || pagehitid == NULL || !validkvchars ( pagehitid ) ) {
+    if ( self == NULL || pagehitid == NULL ) {
         return RC ( rcNS, rcMgr, rcAttaching, rcRefcount, rcInvalid );
     }
 

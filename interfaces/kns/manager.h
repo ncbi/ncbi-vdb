@@ -96,9 +96,15 @@ KNS_EXTERN rc_t CC KNSManagerSetUserAgent ( KNSManager *self, const char * fmt, 
 KNS_EXTERN rc_t CC KNSManagerGetUserAgent ( const char ** user_agent );
 
 /* Setters for https connections */
-/* Note that the passed in strings must be NULL terminated, and
- * should be reasonably short (< 32 characters), and
- * must not contain any control characters or punctuation, excluding "."
+
+/* IP addresses are in network byte order */
+/*
+KNS_EXTERN rc_t CC KNSManagerSetClientIPv4  ( KNSManager *self, uint32_t client_ipv4_addr);
+KNS_EXTERN rc_t CC KNSManagerSetClientIPv6  ( KNSManager *self, const uint16_t client_ipv6_addr[]);
+*/
+
+/* Note that the passed in strings must be NUL terminated, and
+ * should be reasonably short (< 100 characters).
  * */
 KNS_EXTERN rc_t CC KNSManagerSetClientIP  ( KNSManager *self, const char * clientip );
 KNS_EXTERN rc_t CC KNSManagerSetSessionID ( KNSManager *self, const char * sessionid );
