@@ -825,7 +825,7 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent (
                     kns_manager_sessionid, kns_manager_pagehitid,
                     libc_version );
 
-                if ( kns_manager_lock ) KLockUnlock ( kns_manager_lock );
+                if ( kns_manager_lock ) { KLockUnlock ( kns_manager_lock ); }
 
                 if ( rc == 0 ) {
                     string_copy ( kns_manager_user_agent,
@@ -926,7 +926,7 @@ LIB_EXPORT rc_t CC KNSManagerSetClientIP (
     string_copy ( kns_manager_clientip, sizeof kns_manager_clientip, clientip,
         strlen ( clientip ) );
 
-    if ( kns_manager_lock ) KLockUnlock ( kns_manager_lock );
+    if ( kns_manager_lock ) { KLockUnlock ( kns_manager_lock ); }
     return 0;
 }
 
@@ -944,7 +944,7 @@ LIB_EXPORT rc_t CC KNSManagerSetSessionID (
     string_copy ( kns_manager_sessionid, sizeof kns_manager_sessionid,
         sessionid, strlen ( sessionid ) );
 
-    if ( kns_manager_lock ) KLockUnlock ( kns_manager_lock );
+    if ( kns_manager_lock ) { KLockUnlock ( kns_manager_lock ); }
     return 0;
 }
 
@@ -962,6 +962,6 @@ LIB_EXPORT rc_t CC KNSManagerSetPageHitID (
     string_copy ( kns_manager_pagehitid, sizeof kns_manager_pagehitid,
         pagehitid, strlen ( pagehitid ) );
 
-    if ( kns_manager_lock ) KLockUnlock ( kns_manager_lock );
+    if ( kns_manager_lock ) { KLockUnlock ( kns_manager_lock ); }
     return 0;
 }
