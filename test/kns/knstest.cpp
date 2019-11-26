@@ -154,7 +154,7 @@ TEST_CASE(KnsManagerSets)
 
     REQUIRE_RC_FAIL(KNSManagerSetClientIP(NULL, NULL));
     REQUIRE_RC_FAIL(KNSManagerSetClientIP(mgr, NULL));
-    REQUIRE_RC_FAIL(KNSManagerSetClientIP(mgr, "foo=bar"));
+    REQUIRE_RC(KNSManagerSetClientIP(mgr, "foo=bar"));
 
     REQUIRE_RC(KNSManagerRelease(mgr));
 }

@@ -76,7 +76,8 @@
 #define MAX_CONN_WRITE_LIMIT ( 10 * 60 * 1000 )
 #endif
 
-static char kns_manager_user_agent[256] = "ncbi-vdb";
+static char kns_manager_user_agent[512] = "ncbi-vdb";
+static char kns_manager_user_agent_append[512] = "ncbi-vdb";
 static KLock *kns_manager_lock = NULL; /* Protects below */
 static char kns_manager_clientip[64] = "";
 static char kns_manager_sessionid[256] = "";
@@ -783,70 +784,6 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent (
     if ( rc == 0 ) {
         string_copy (
             kns_manager_user_agent, sizeof kns_manager_user_agent, ua, bytes );
-
-        /* VDB-4029: Only append once */
-        if ( !strstr ( kns_manager_user_agent, " (phid=" ) ) {
-            char cloudtrunc[64];
-            const char *cloudid = getenv ( ENV_MAGIC_CE_TOKEN );
-            if ( cloudid && strlen ( cloudid ) > 8 ) {
-                /* AWS access keys should always begin with AKIA,
-                 * suffixes seems non-random */
-                strncpy ( cloudtrunc, cloudid + 4, sizeof cloudtrunc );
-                cloudtrunc[3] = '\0';
-            } else {
-                strcpy ( cloudtrunc, "noc" );
-            }
-
-            const char *sessid = getenv ( ENV_VAR_SESSION_ID );
-            if ( sessid == NULL ) { sessid = "nos"; }
-
-            KConfig *kfg = NULL;
-            rc = KConfigMake ( &kfg, NULL );
-            if ( rc == 0 ) {
-                char guid[64];
-                size_t written;
-                rc = KConfig_Get_GUID ( kfg, guid, sizeof guid, &written );
-                if ( rc != 0 ) { strcpy ( guid, "nog" ); }
-
-                const char *libc_version = "";
-#if LINUX
-                libc_version = gnu_get_libc_version ();
-#endif
-
-                char scratch[sizeof ua];
-
-                if ( kns_manager_lock ) {
-                    rc_t rc = KLockAcquire ( kns_manager_lock );
-                    if ( rc ) { return rc; }
-                }
-
-                rc = string_printf ( scratch, sizeof scratch, &bytes,
-                    "%.3s%.4s%.3s,"
-                    "cip=%s,sid=%s,pagehit=%s,libc=%s",
-                    cloudtrunc, guid, sessid, kns_manager_clientip,
-                    kns_manager_sessionid, kns_manager_pagehitid,
-                    libc_version );
-
-                if ( kns_manager_lock ) { KLockUnlock ( kns_manager_lock ); }
-
-                const String *b64;
-                rc = encodeBase64 ( &b64, scratch, strlen ( scratch ) );
-
-                char scratch2[sizeof ua];
-                rc = string_printf ( scratch2, sizeof scratch2, &bytes,
-                    "%s (phid=%s)", ua, b64->addr );
-                StringWhack ( b64 );
-
-                if ( rc == 0 ) {
-                    string_copy ( kns_manager_user_agent,
-                        sizeof kns_manager_user_agent, scratch2, bytes );
-                }
-
-                /* fprintf ( stderr, "UA is '%s'\n", kns_manager_user_agent ); */
-            }
-
-            if ( kfg ) { KConfigRelease ( kfg ); }
-        }
     }
 
     return rc;
@@ -858,9 +795,72 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
     rc_t rc = 0;
     if ( user_agent == NULL ) {
         rc = RC ( rcNS, rcMgr, rcAccessing, rcParam, rcNull );
-    } else {
-        ( *user_agent ) = kns_manager_user_agent;
+        return rc;
     }
+
+    size_t bytes = 0;
+    char cloudtrunc[64];
+    const char *cloudid = getenv ( ENV_MAGIC_CE_TOKEN );
+    if ( cloudid && strlen ( cloudid ) > 8 ) {
+        /* AWS access keys should always begin with AKIA,
+         * suffixes seems non-random */
+        strncpy ( cloudtrunc, cloudid + 4, sizeof cloudtrunc );
+        cloudtrunc[3] = '\0';
+    } else {
+        strcpy ( cloudtrunc, "noc" );
+    }
+
+    const char *sessid = getenv ( ENV_VAR_SESSION_ID );
+    if ( sessid == NULL ) { sessid = "nos"; }
+
+    KConfig *kfg = NULL;
+    rc = KConfigMake ( &kfg, NULL );
+    if ( rc == 0 ) {
+        char guid[64];
+        size_t written;
+        rc = KConfig_Get_GUID ( kfg, guid, sizeof guid, &written );
+        if ( rc != 0 ) { strcpy ( guid, "nog" ); }
+
+        const char *libc_version = "";
+#if LINUX
+        libc_version = gnu_get_libc_version ();
+#endif
+
+        char scratch[sizeof kns_manager_user_agent];
+
+        if ( kns_manager_lock ) {
+            rc_t rc = KLockAcquire ( kns_manager_lock );
+            if ( rc ) { return rc; }
+        }
+
+        rc = string_printf ( scratch, sizeof scratch, &bytes,
+            "%.3s%.4s%.3s,"
+            "cip=%s,sid=%s,pagehit=%s,libc=%s",
+            cloudtrunc, guid, sessid, kns_manager_clientip,
+            kns_manager_sessionid, kns_manager_pagehitid, libc_version );
+
+        if ( kns_manager_lock ) { KLockUnlock ( kns_manager_lock ); }
+
+        const String *b64;
+        rc = encodeBase64 ( &b64, scratch, strlen ( scratch ) );
+
+        char scratch2[sizeof kns_manager_user_agent];
+        rc = string_printf ( scratch2, sizeof scratch2, &bytes, "%s (phid=%s)",
+            kns_manager_user_agent, b64->addr );
+        StringWhack ( b64 );
+
+        if ( rc == 0 ) {
+            string_copy ( kns_manager_user_agent_append,
+                sizeof kns_manager_user_agent_append, scratch2, bytes );
+        }
+
+        /* fprintf ( stderr, "UA is '%s'\n", kns_manager_user_agent_append ); */
+    }
+
+    if ( kfg ) { KConfigRelease ( kfg ); }
+
+    ( *user_agent ) = kns_manager_user_agent_append;
+
     return rc;
 }
 
