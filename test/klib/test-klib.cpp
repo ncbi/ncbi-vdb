@@ -38,6 +38,7 @@
 #include <klib/sort.h>
 #include <klib/text.h>
 #include <klib/vector.h>
+#include <klib/time.h>
 
 #include <cstdlib>
 #include <cstring>
@@ -1052,6 +1053,20 @@ TEST_CASE(GetUnreadRCInfo_LogRC)
     REQUIRE(GetUnreadRCInfo(&rc, &filename, &function, &lineno));
 }
 #endif
+
+TEST_CASE(TimeRoundTrip)
+{ 
+    KTime_t t1 = KTimeStamp(); // UTC
+    char str1[100];
+    KTimeIso8601(t1, str1, sizeof str1);
+    KTime time;
+    KTimeFromIso8601(&time, str1, string_size(str1));
+    KTime_t t2 = KTimeMakeTime(&time);
+    char str2[100];
+    KTimeIso8601(t2, str2, sizeof str2);
+    REQUIRE_EQ( t1, t2 );
+    REQUIRE_EQ( string(str1), string(str2) );
+}
 
 //////////////////////////////////////////////////// Main
 extern "C" {
