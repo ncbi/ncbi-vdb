@@ -127,7 +127,10 @@ static rc_t KNSManagerWhack ( KNSManager *self )
     free ( self );
 
     KNSManagerCleanup ();
-    if ( kns_manager_lock ) { KLockRelease ( kns_manager_lock ); }
+    if ( kns_manager_lock ) {
+        KLockRelease ( kns_manager_lock );
+        kns_manager_lock = NULL;
+    }
 
     return rc;
 }
@@ -809,8 +812,10 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent (
 
                 char scratch2[sizeof scratch + 256];
 
-                rc_t rc = KLockAcquire ( kns_manager_lock );
-                if ( rc ) { return rc; }
+                if ( kns_manager_lock ) {
+                    rc_t rc = KLockAcquire ( kns_manager_lock );
+                    if ( rc ) { return rc; }
+                }
 
                 rc = string_printf ( scratch2, sizeof scratch2, &bytes,
                     "%s "
@@ -820,7 +825,7 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent (
                     kns_manager_sessionid, kns_manager_pagehitid,
                     libc_version );
 
-                KLockUnlock ( kns_manager_lock );
+                if ( kns_manager_lock ) KLockUnlock ( kns_manager_lock );
 
                 if ( rc == 0 ) {
                     string_copy ( kns_manager_user_agent,
@@ -914,12 +919,14 @@ LIB_EXPORT rc_t CC KNSManagerSetClientIP (
         return RC ( rcNS, rcMgr, rcAttaching, rcRefcount, rcInvalid );
     }
 
-    rc_t rc = KLockAcquire ( kns_manager_lock );
-    if ( rc ) { return rc; }
+    if ( kns_manager_lock ) {
+        rc_t rc = KLockAcquire ( kns_manager_lock );
+        if ( rc ) { return rc; }
+    }
     string_copy ( kns_manager_clientip, sizeof kns_manager_clientip, clientip,
         strlen ( clientip ) );
 
-    KLockUnlock ( kns_manager_lock );
+    if ( kns_manager_lock ) KLockUnlock ( kns_manager_lock );
     return 0;
 }
 
@@ -930,12 +937,14 @@ LIB_EXPORT rc_t CC KNSManagerSetSessionID (
         return RC ( rcNS, rcMgr, rcAttaching, rcRefcount, rcInvalid );
     }
 
-    rc_t rc = KLockAcquire ( kns_manager_lock );
-    if ( rc ) { return rc; }
+    if ( kns_manager_lock ) {
+        rc_t rc = KLockAcquire ( kns_manager_lock );
+        if ( rc ) { return rc; }
+    }
     string_copy ( kns_manager_sessionid, sizeof kns_manager_sessionid,
         sessionid, strlen ( sessionid ) );
 
-    KLockUnlock ( kns_manager_lock );
+    if ( kns_manager_lock ) KLockUnlock ( kns_manager_lock );
     return 0;
 }
 
@@ -946,11 +955,13 @@ LIB_EXPORT rc_t CC KNSManagerSetPageHitID (
         return RC ( rcNS, rcMgr, rcAttaching, rcRefcount, rcInvalid );
     }
 
-    rc_t rc = KLockAcquire ( kns_manager_lock );
-    if ( rc ) { return rc; }
+    if ( kns_manager_lock ) {
+        rc_t rc = KLockAcquire ( kns_manager_lock );
+        if ( rc ) { return rc; }
+    }
     string_copy ( kns_manager_pagehitid, sizeof kns_manager_pagehitid,
         pagehitid, strlen ( pagehitid ) );
 
-    KLockUnlock ( kns_manager_lock );
+    if ( kns_manager_lock ) KLockUnlock ( kns_manager_lock );
     return 0;
 }
