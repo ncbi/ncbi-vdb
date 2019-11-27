@@ -95,6 +95,7 @@ KNS_EXTERN rc_t CC KNSManagerSetConnectionTimeouts ( KNSManager *self,
 KNS_EXTERN rc_t CC KNSManagerSetUserAgent ( KNSManager *self, const char * fmt, ... );
 KNS_EXTERN rc_t CC KNSManagerGetUserAgent ( const char ** user_agent );
 
+KNS_EXTERN rc_t CC KNSManagerSetUserAgentSuffix ( const char * suffix );
 /* Setters for https connections */
 
 /* IP addresses are in network byte order */

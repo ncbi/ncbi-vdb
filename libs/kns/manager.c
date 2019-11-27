@@ -76,12 +76,13 @@
 #define MAX_CONN_WRITE_LIMIT ( 10 * 60 * 1000 )
 #endif
 
-static char kns_manager_user_agent[512] = "ncbi-vdb";
-static char kns_manager_user_agent_append[512] = "ncbi-vdb";
+static char kns_manager_user_agent[512] = "";
+static char kns_manager_user_agent_append[512] = "";
 static KLock *kns_manager_lock = NULL; /* Protects below */
 static char kns_manager_clientip[64] = "";
 static char kns_manager_sessionid[256] = "";
 static char kns_manager_pagehitid[256] = "";
+static char kns_manager_ua_suffix[250] = "";
 
 #if USE_SINGLETON
 static atomic_ptr_t kns_singleton;
@@ -826,37 +827,45 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
         libc_version = gnu_get_libc_version ();
 #endif
 
-        char scratch[sizeof kns_manager_user_agent];
+        char phid[sizeof kns_manager_user_agent];
+        rc = string_printf ( phid, sizeof phid, &bytes, "%.3s%.4s%.3s,libc=%s",
+            cloudtrunc, guid, sessid, libc_version );
+
+        char sessids[sizeof kns_manager_user_agent] = "";
 
         if ( kns_manager_lock ) {
             rc_t rc = KLockAcquire ( kns_manager_lock );
             if ( rc ) { return rc; }
         }
 
-        rc = string_printf ( scratch, sizeof scratch, &bytes,
-            "%.3s%.4s%.3s,"
-            "cip=%s,sid=%s,pagehit=%s,libc=%s",
-            cloudtrunc, guid, sessid, kns_manager_clientip,
-            kns_manager_sessionid, kns_manager_pagehitid, libc_version );
+        if ( strlen ( kns_manager_clientip ) || strlen ( kns_manager_sessionid )
+            || strlen ( kns_manager_pagehitid ) ) {
+            rc = string_printf ( sessids, sizeof sessids, &bytes,
+                "cip=%s,sid=%s,pagehit=%s", kns_manager_clientip,
+                kns_manager_sessionid, kns_manager_pagehitid );
+        }
 
         if ( kns_manager_lock ) { KLockUnlock ( kns_manager_lock ); }
 
-        const String *b64;
-        rc = encodeBase64 ( &b64, scratch, strlen ( scratch ) );
+        char scratch[sizeof kns_manager_user_agent];
 
-        char scratch2[sizeof kns_manager_user_agent];
-        rc = string_printf ( scratch2, sizeof scratch2, &bytes, "%s (phid=%s)",
-            kns_manager_user_agent, b64->addr );
-        StringWhack ( b64 );
+        if ( strlen ( sessids ) ) {
+            const String *b64;
+            encodeBase64 ( &b64, sessids, strlen ( sessids ) );
+            rc = string_printf ( scratch, sizeof scratch, &bytes,
+                "%s%s (phid=%s,%s)", kns_manager_user_agent,
+                kns_manager_ua_suffix, phid, b64->addr );
+            StringWhack ( b64 );
+        } else {
+            string_printf ( scratch, sizeof scratch, &bytes, "%s%s (phid=%s)",
+                kns_manager_user_agent, kns_manager_ua_suffix, phid );
+        }
 
         if ( rc == 0 ) {
             string_copy ( kns_manager_user_agent_append,
-                sizeof kns_manager_user_agent_append, scratch2, bytes );
+                sizeof kns_manager_user_agent_append, scratch, bytes );
         }
-
-        /* fprintf ( stderr, "UA is '%s'\n", kns_manager_user_agent_append ); */
     }
-
     if ( kfg ) { KConfigRelease ( kfg ); }
 
     ( *user_agent ) = kns_manager_user_agent_append;
@@ -967,6 +976,16 @@ LIB_EXPORT rc_t CC KNSManagerSetClientIPv6 (
     return 0;
 }
 */
+LIB_EXPORT rc_t CC KNSManagerSetUserAgentSuffix ( const char *suffix )
+{
+    if ( suffix == NULL ) {
+        return RC ( rcNS, rcMgr, rcAttaching, rcRefcount, rcInvalid );
+    }
+    string_copy ( kns_manager_ua_suffix, sizeof kns_manager_ua_suffix, suffix,
+        strlen ( suffix ) );
+    return 0;
+}
+
 LIB_EXPORT rc_t CC KNSManagerSetClientIP (
     KNSManager *self, const char *clientip )
 {
