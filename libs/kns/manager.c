@@ -33,6 +33,7 @@
 #include <klib/printf.h>
 #include <klib/rc.h>
 #include <klib/strings.h>
+#include <klib/writer.h>
 
 #include <kproc/lock.h>
 #include <kproc/timeout.h>
@@ -83,6 +84,7 @@ static char kns_manager_clientip[64] = "";
 static char kns_manager_sessionid[256] = "";
 static char kns_manager_pagehitid[256] = "";
 static char kns_manager_ua_suffix[250] = "";
+static char kns_manager_guid[256] = "";
 
 #if USE_SINGLETON
 static atomic_ptr_t kns_singleton;
@@ -694,6 +696,12 @@ static rc_t CC KNSManagerMakeConfigImpl ( KNSManager **mgrp, KConfig *kfg )
             mgr->accept_aws_charges = KNSManagerPrepareAcceptAwsCharges ( kfg );
             mgr->accept_gcp_charges = KNSManagerPrepareAcceptGcpCharges ( kfg );
 
+            if ( !strlen ( kns_manager_guid ) ) {
+                size_t written = 0;
+                KConfig_Get_GUID (
+                    kfg, kns_manager_guid, sizeof kns_manager_guid, &written );
+            }
+
             rc = KNSManagerInit (); /* platform specific init in sysmgr.c ( in
                                        unix|win etc. subdir ) */
             if ( rc == 0 ) {
@@ -814,59 +822,69 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
     const char *sessid = getenv ( ENV_VAR_SESSION_ID );
     if ( sessid == NULL ) { sessid = "nos"; }
 
-    KConfig *kfg = NULL;
-    rc = KConfigMake ( &kfg, NULL );
-    if ( rc == 0 ) {
-        char guid[64];
-        size_t written;
-        rc = KConfig_Get_GUID ( kfg, guid, sizeof guid, &written );
-        if ( rc != 0 ) { strcpy ( guid, "nog" ); }
-
-        const char *libc_version = "";
+    const char *libc_version = "";
 #if LINUX
-        libc_version = gnu_get_libc_version ();
+    libc_version = gnu_get_libc_version ();
 #endif
 
-        char phid[sizeof kns_manager_user_agent];
-        rc = string_printf ( phid, sizeof phid, &bytes, "%.3s%.4s%.3s,libc=%s",
-            cloudtrunc, guid, sessid, libc_version );
+    if ( !strlen ( kns_manager_guid ) ) {
+        KConfig *kfg = NULL;
+        KConfigMake ( &kfg, NULL );
 
-        char sessids[sizeof kns_manager_user_agent] = "";
+        size_t written = 0;
+        KConfig_Get_GUID (
+            kfg, kns_manager_guid, sizeof kns_manager_guid, &written );
 
-        if ( kns_manager_lock ) {
-            rc_t rc = KLockAcquire ( kns_manager_lock );
-            if ( rc ) { return rc; }
-        }
-
-        if ( strlen ( kns_manager_clientip ) || strlen ( kns_manager_sessionid )
-            || strlen ( kns_manager_pagehitid ) ) {
-            rc = string_printf ( sessids, sizeof sessids, &bytes,
-                "cip=%s,sid=%s,pagehit=%s", kns_manager_clientip,
-                kns_manager_sessionid, kns_manager_pagehitid );
-        }
-
-        if ( kns_manager_lock ) { KLockUnlock ( kns_manager_lock ); }
-
-        char scratch[sizeof kns_manager_user_agent];
-
-        if ( strlen ( sessids ) ) {
-            const String *b64;
-            encodeBase64 ( &b64, sessids, strlen ( sessids ) );
-            rc = string_printf ( scratch, sizeof scratch, &bytes,
-                "%s%s (phid=%s,%s)", kns_manager_user_agent,
-                kns_manager_ua_suffix, phid, b64->addr );
-            StringWhack ( b64 );
-        } else {
-            string_printf ( scratch, sizeof scratch, &bytes, "%s%s (phid=%s)",
-                kns_manager_user_agent, kns_manager_ua_suffix, phid );
-        }
-
-        if ( rc == 0 ) {
-            string_copy ( kns_manager_user_agent_append,
-                sizeof kns_manager_user_agent_append, scratch, bytes );
-        }
+        if ( kfg ) KConfigRelease ( kfg );
     }
-    if ( kfg ) { KConfigRelease ( kfg ); }
+
+    const char *guid;
+    if ( strlen ( kns_manager_guid ) )
+        guid = kns_manager_guid;
+    else
+        guid = "nog";
+
+    char phid[sizeof kns_manager_user_agent];
+    rc = string_printf ( phid, sizeof phid, &bytes, "%.3s%.4s%.3s,libc=%s",
+        cloudtrunc, guid, sessid, libc_version );
+    if ( rc ) { return rc; }
+
+    char sessids[sizeof kns_manager_user_agent] = "";
+
+    if ( kns_manager_lock ) {
+        rc_t rc = KLockAcquire ( kns_manager_lock );
+        if ( rc ) { return rc; }
+    }
+
+    if ( strlen ( kns_manager_clientip ) || strlen ( kns_manager_sessionid )
+        || strlen ( kns_manager_pagehitid ) ) {
+        rc = string_printf ( sessids, sizeof sessids, &bytes,
+            "cip=%s,sid=%s,pagehit=%s", kns_manager_clientip,
+            kns_manager_sessionid, kns_manager_pagehitid );
+    }
+
+    if ( kns_manager_lock ) { KLockUnlock ( kns_manager_lock ); }
+
+    if ( rc ) { return rc; }
+
+    char scratch[sizeof kns_manager_user_agent];
+
+    if ( strlen ( sessids ) ) {
+        const String *b64;
+        encodeBase64 ( &b64, sessids, strlen ( sessids ) );
+        rc = string_printf ( scratch, sizeof scratch, &bytes,
+            "%s%s (phid=%s,%s)", kns_manager_user_agent, kns_manager_ua_suffix,
+            phid, b64->addr );
+        StringWhack ( b64 );
+    } else {
+        string_printf ( scratch, sizeof scratch, &bytes, "%s%s (phid=%s)",
+            kns_manager_user_agent, kns_manager_ua_suffix, phid );
+    }
+
+    if ( rc == 0 ) {
+        string_copy ( kns_manager_user_agent_append,
+            sizeof kns_manager_user_agent_append, scratch, bytes );
+    }
 
     ( *user_agent ) = kns_manager_user_agent_append;
 

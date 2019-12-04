@@ -149,17 +149,20 @@ TEST_CASE(KnsManagerSets)
     REQUIRE_NOT_NULL(mgr);
 
     const char * ua=NULL;
+    KNSManagerGetUserAgent(&ua);
+    fprintf ( stderr, "UA #1 is '%s'\n", ua);
+
     REQUIRE_RC(KNSManagerSetClientIP(mgr,"1.2.3.4"));
     REQUIRE_RC(KNSManagerSetSessionID(mgr,"0x123"));
     REQUIRE_RC(KNSManagerSetPageHitID(mgr,"abcd"));
     KNSManagerGetUserAgent(&ua);
-    fprintf ( stderr, "UA is '%s'\n", ua);
+    fprintf ( stderr, "UA #2 is '%s'\n", ua);
 
     REQUIRE_RC_FAIL(KNSManagerSetClientIP(NULL, NULL));
     REQUIRE_RC_FAIL(KNSManagerSetClientIP(mgr, NULL));
     REQUIRE_RC(KNSManagerSetClientIP(mgr, "5.67.89.12"));
     KNSManagerGetUserAgent(&ua);
-    fprintf ( stderr, "UA is '%s'\n", ua);
+    fprintf ( stderr, "UA #3 is '%s'\n", ua);
 
     REQUIRE_RC(KNSManagerRelease(mgr));
 }
