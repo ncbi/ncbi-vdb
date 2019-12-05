@@ -269,6 +269,66 @@ TEST_CASE(TestKSrvResponseGetLocationLocalInUserRepo) {
 }
 #endif
 
+#ifdef ALL
+TEST_CASE(TestKSrvResponseGetLocationCacheInAD) {
+    KDirectory * dr = NULL;
+    REQUIRE_RC(KDirectoryNativeDir(&dr));
+    const char * acc = "SRR850901";
+    char p[PATH_MAX] = "";
+    REQUIRE_RC(KDirectoryResolvePath(dr, true, p, sizeof p, "%s", acc));
+    REQUIRE_RC(KDirectoryCreateDir(dr, 0775, kcmOpen | kcmInit | kcmCreate, p));
+
+    KFile * f = NULL;
+    REQUIRE_RC(KDirectoryCreateFile(dr, &f, false,
+        0664, kcmOpen | kcmInit | kcmCreate, "%s/%s.sra", p, acc));
+    REQUIRE_RC(KFileRelease(f));
+
+    VFSManager * mgr = NULL;
+    REQUIRE_RC(VFSManagerMakeLocal(&mgr, NULL));
+
+    /* the same call is done by prefetch to enable caching to AD */
+    REQUIRE_RC(VFSManagerSetAdCaching(mgr, true));
+
+    KService * s = NULL;
+    REQUIRE_RC(KServiceMakeWithMgr(&s, mgr, NULL, NULL));
+    REQUIRE_RC(KServiceAddId(s, acc));
+
+    const KSrvResponse * r = NULL;
+    REQUIRE_RC(KServiceNamesQuery(s, 0, &r));
+
+    const VPath * local = NULL;
+    rc_t rcLocal = 0;
+    const VPath * cache = NULL;
+    rc_t rcCache = 0;
+
+    REQUIRE_RC(KSrvResponseGetLocation(r, acc, acc,
+        &local, &rcLocal, &cache, &rcCache));
+
+    REQUIRE_RC(rcLocal);
+    REQUIRE_NOT_NULL(local);
+    char u[PATH_MAX] = "";
+    REQUIRE_RC(VPathReadPath(local, u, sizeof u, 0));
+    REQUIRE_RC(KDirectoryResolvePath(dr, true, p, sizeof p,
+        "%s/%s.sra", acc, acc));
+    REQUIRE_EQ(string(p), string(u));
+    REQUIRE_RC(VPathRelease(local));
+
+    REQUIRE_RC(rcCache);
+    REQUIRE_NOT_NULL(cache);
+    REQUIRE_RC(KDirectoryResolvePath(dr, true, p, sizeof p,
+        "%s/%s.sra", acc, acc));
+    REQUIRE_EQ(string(p), string(u));
+    REQUIRE_RC(VPathRelease(cache));
+
+    REQUIRE_RC(KSrvResponseRelease(r));
+
+    REQUIRE_RC(KServiceRelease(s));
+
+    REQUIRE_RC(KDirectoryRemove(dr, true, acc));
+    REQUIRE_RC(KDirectoryRelease(dr));
+}
+#endif
+
 extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
 
