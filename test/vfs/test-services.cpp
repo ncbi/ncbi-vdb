@@ -260,6 +260,7 @@ TEST_CASE(TestKSrvResponseGetLocationLocalInUserRepo) {
     REQUIRE_NOT_NULL(cache);
     REQUIRE_RC(VPathReadPath(cache, u, sizeof u, 0));
     REQUIRE_EQ(string(p), string(u));
+    REQUIRE_RC(VPathRelease(cache));
     REQUIRE_RC(KSrvResponseRelease(r));
     REQUIRE_RC(KServiceRelease(s));
     REQUIRE_RC(VFSManagerRelease(mgr));
@@ -324,8 +325,15 @@ TEST_CASE(TestKSrvResponseGetLocationCacheInAD) {
 
     REQUIRE_RC(KServiceRelease(s));
 
+    REQUIRE_RC(VFSManagerRelease(mgr));
+
     REQUIRE_RC(KDirectoryRemove(dr, true, acc));
     REQUIRE_RC(KDirectoryRelease(dr));
+}
+#endif
+
+#ifndef ALL
+TEST_CASE(TestKSrvResponseGetLocationCacheInADLeak) {
 }
 #endif
 
