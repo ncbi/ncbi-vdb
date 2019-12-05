@@ -99,9 +99,9 @@ static const char default_kfg[] = {
 "/repository/remote/protected/CGI/resolver-cgi = "
              "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
 "/repository/remote/main/SDL.2/resolver-cgi = "
-             "\"https://trace.ncbi.nlm.nih.gov/Traces/sdl/2/retrieve\"\n"
+             "\"https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve\"\n"
 "/repository/remote/protected/SDL.2/resolver-cgi = "
-             "\"https://trace.ncbi.nlm.nih.gov/Traces/sdl/2/retrieve\"\n"
+             "\"https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve\"\n"
 "/tools/ascp/max_rate = \"450m\"\n"
 };
 /*----------------------------------------------------------------------------*/

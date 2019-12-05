@@ -35,6 +35,7 @@
 #include <kns/kns-mgr-priv.h>
 
 #include <../libs/kns/http-priv.h>
+#include <../libs/vfs/resolver-cgi.h> /* SDL_CGI */
 
 #include <kapp/args.h> // Args
 
@@ -220,7 +221,7 @@ FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_NonEmptyFile_NotEncoded, HttpReque
 
 FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_SendReceiveEncoded, HttpRequestFixture)
 {
-    const char * Server = "https://trace.ncbi.nlm.nih.gov/Traces/sdl/unstable/retrieve";
+    const char * Server = SDL_CGI;
 
     REQUIRE_RC ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, NULL, Server ) );
 
@@ -242,7 +243,7 @@ FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_SendReceiveEncoded, HttpRequestFix
 
 // FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_SendReceiveNotEncoded, HttpRequestFixture)
 // {    // this test resides in the private repo since it uses a real JWT cart file
-//     const char * Server = "https://trace.ncbi.nlm.nih.gov/Traces/sdl/unstable/retrieve";
+//     const char * Server = SDL_CGI;
 
 //     REQUIRE_RC ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, NULL, Server ) );
 
