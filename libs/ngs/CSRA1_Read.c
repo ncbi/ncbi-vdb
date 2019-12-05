@@ -507,10 +507,13 @@ CSRA1_ReadIteratorNext ( CSRA1_Read * cself, ctx_t ctx )
     {
         enum NGS_ReadCategory cat;
         NGS_String * read;
+        bool aligned;
         ON_FAIL ( read = NGS_CursorGetString ( self -> curs, ctx, self -> cur_row, seq_CMP_READ ) )
             return false;
 
-        if ( NGS_StringSize ( read, ctx ) == 0 )
+        aligned = NGS_StringSize ( read, ctx ) == 0;
+        NGS_StringRelease( read, ctx );
+        if ( aligned )
         {   // aligned read - skip
             ++ self -> cur_row;
             continue;

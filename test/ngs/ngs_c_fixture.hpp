@@ -37,6 +37,7 @@
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <map>
 
 #include <ktst/unit_test.hpp>
 
@@ -45,6 +46,9 @@
 
 #include <kfc/ctx.h>
 #include <kfc/rsrc.h>
+
+#include <vdb/database.h>
+#include <vdb/table.h>
 
 #include "NGS_ReadCollection.h"
 #include "NGS_Read.h"
@@ -59,12 +63,12 @@
 
 #define ENTRY \
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing ); \
-    m_ctx = ctx; \
+    m_ctx = ctx;
 
 #define ENTRY_ACC(acc) \
     ENTRY; \
     m_acc = acc; \
-    ON_FAIL ( m_coll = NGS_ReadCollectionMake ( ctx, acc ) ) { throw std :: logic_error ( string ( "NGS_ReadCollectionMake(" ) + m_acc + ") failed" ); } \
+    m_coll = open ( ctx, acc );
 
 #define ENTRY_GET_READ(acc, readNo) \
     ENTRY_ACC(acc); \
@@ -110,12 +114,55 @@ toString ( const NGS_String* str, ctx_t ctx, bool release_source = false )
 class NGS_C_Fixture
 {
 public:
+    typedef std :: map< std :: string, NGS_ReadCollection * > Collections;
+    typedef std :: map< std :: string, const VDatabase* > Databases;
+    typedef std :: map< std :: string, const VTable* > Tables;
+
+public:
     NGS_C_Fixture()
     : m_ctx(0), m_coll(0), m_read(0), m_readGroup (0), m_ref (0)
     {
+        if ( colls == nullptr )
+        {
+            colls = new Collections();
+        }
+        if ( dbs == nullptr )
+        {
+            dbs = new Databases();
+        }
+        if ( tbls == nullptr )
+        {
+            tbls = new Tables();
+        }
     }
     ~NGS_C_Fixture()
     {
+    }
+
+    // call once per process
+    static void ReleaseCache()
+    {
+        HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
+        for (auto c : *colls )
+        {
+            NGS_RefcountRelease ( ( NGS_Refcount* ) c.second, ctx );
+        }
+        delete colls;
+        colls = nullptr;
+
+        for (auto d : *dbs )
+        {
+            VDatabaseRelease ( d.second );
+        }
+        delete dbs;
+        dbs = nullptr;
+
+        for (auto t : *tbls )
+        {
+            VTableRelease ( t.second );
+        }
+        delete tbls;
+        tbls = nullptr;
     }
 
     virtual void Release()
@@ -140,6 +187,67 @@ public:
             }
             m_ctx = 0; // a pointer into the caller's local memory
         }
+    }
+
+    NGS_ReadCollection * open ( ctx_t ctx, const char* acc )
+    {
+        FUNC_ENTRY ( ctx, rcSRA, rcRow, rcAccessing );
+
+        std :: string ac(acc);
+        auto c = colls->find(ac);
+        if ( c != colls->end() )
+        {
+            NGS_ReadCollectionDuplicate( c->second, ctx );
+            return c -> second;
+        }
+
+        ON_FAIL ( NGS_ReadCollection * ret = NGS_ReadCollectionMake ( ctx, acc ) )
+        {
+            throw std :: logic_error ( std::string ( "NGS_ReadCollectionMake(" ) + ac + ") failed" );
+        }
+        colls->insert( Collections::value_type(ac, ret) );
+        NGS_ReadCollectionDuplicate( ret, ctx ); // wil be released by ReleaseCache()
+        return ret;
+    }
+
+    const VDatabase * openDB( const char* p_acc )
+    {
+        const VDatabase *db;
+
+        std :: string ac( p_acc );
+        auto d = dbs->find( ac );
+        if ( d != dbs->end() )
+        {
+            db = d->second;
+            THROW_ON_RC ( VDatabaseAddRef( db ) );
+        }
+        else
+        {
+            THROW_ON_RC ( VDBManagerOpenDBRead ( m_ctx -> rsrc -> vdb, & db, NULL, p_acc ) );
+            dbs->insert( Databases::value_type( ac, db) );
+            THROW_ON_RC ( VDatabaseAddRef( db ) );
+        }
+        return db;
+    }
+
+    const VTable * openTable( const char* p_acc )
+    {
+        const VTable *tbl;
+
+        std :: string ac( p_acc );
+        auto t =tbls->find( ac );
+        if ( t != tbls->end() )
+        {
+            tbl = t->second;
+            THROW_ON_RC ( VTableAddRef( tbl ) );
+        }
+        else
+        {
+            THROW_ON_RC ( VDBManagerOpenTableRead ( m_ctx -> rsrc -> vdb, & tbl, NULL, p_acc ) );
+            tbls->insert( Tables::value_type( ac, tbl) );
+            THROW_ON_RC ( VTableAddRef( tbl ) );
+        }
+        return tbl;
     }
 
     std::string ReadId(int64_t id) const
@@ -174,7 +282,15 @@ public:
     NGS_Read*           m_read;
     NGS_ReadGroup*      m_readGroup;
     NGS_Reference*      m_ref;
+
+    static Collections *    colls;
+    static Databases *      dbs;
+    static Tables *         tbls;
 };
+
+NGS_C_Fixture::Collections *    NGS_C_Fixture::colls    = nullptr;
+NGS_C_Fixture::Databases *      NGS_C_Fixture::dbs      = nullptr;
+NGS_C_Fixture::Tables *         NGS_C_Fixture::tbls      = nullptr;
 
 #endif
 

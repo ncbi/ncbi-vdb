@@ -804,7 +804,7 @@ rc_t CC KMain ( int argc, char *argv [] )
         rc = NgsReferenceTestSuite(argc, argv);
 
     KConfigRelease(kfg);
-
+    NGS_C_Fixture::ReleaseCache();
     return rc;
 }
 
