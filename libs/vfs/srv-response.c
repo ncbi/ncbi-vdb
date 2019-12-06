@@ -676,6 +676,7 @@ rc_t KSrvResponseGetLocation(const KSrvResponse * self,
                     *cacheRc = rc;
             }
         }
+        LocalAndCacheFini(&lnc);
     }
 
     return rc;
