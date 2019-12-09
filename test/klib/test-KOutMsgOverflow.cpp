@@ -27,8 +27,7 @@
 #include <ktst/unit_test.hpp>
 
 #include <klib/out.h>
-//#include <klib/rc.h>
-//#include <klib/text.h>
+#include <klib/writer.h> /* KWrtInit */
 
 #include <cstring>
 
@@ -61,6 +60,7 @@ extern "C" {
 #endif
     int main(int argc, char *argv[])
     {
+        KWrtInit(argv[0], 0);
         return KOutTestSuite(argc, argv);
     }
 }
