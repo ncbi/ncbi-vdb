@@ -1300,33 +1300,56 @@ TEST_CASE( concurrent_reads_from_different_files )
 
     const size_t NUM_PASSES = 2;
     const size_t NUM_THREADS = 8;
+    size_t thread_errors[ NUM_THREADS ];
+    for ( size_t i = 0; i < NUM_THREADS; ++i )
+        thread_errors[ i ] = 0;
+    
     for ( size_t pass = 0; pass < NUM_PASSES; ++pass )
     {
         vector< thread > tt( NUM_THREADS );
         for ( size_t i = 0; i < NUM_THREADS; ++i )
         {
             size_t url_index = ( i % URL_COUNT );
-            tt[i] = thread( [&]( const string& url, uint64_t exp_size, uint32_t exp_magic )
+            tt[i] = thread( [&]( const string& url, uint64_t exp_size, uint32_t exp_magic, size_t  * num_errors )
                 {
-                   VPath* path = 0;
-                   const KFile* file = 0;
-                   uint64_t size = 0;
-                   uint32_t magic = 0;
-                   char buffer[ 20 * 1024 ];
+                    VPath* path = 0;
+                    const KFile* file = 0;
+                    uint64_t size = 0;
+                    char buffer[ 20 * 1024 ];
 
-                   REQUIRE_RC( VFSManagerMakePath( mgr, &path, url.c_str() ) );
-                   REQUIRE_RC( VFSManagerOpenFileRead( mgr, &file, path ) );
+                    if ( 0 != VFSManagerMakePath( mgr, &path, url.c_str() ) )
+                       (*num_errors)++;
+                    else
+                    {
+                        if ( 0 != VFSManagerOpenFileRead( mgr, &file, path ) )
+                            (*num_errors)++;
+                        else
+                        {
+                            if ( 0 != KFileSize( file, &size ) )
+                               (*num_errors)++;
+                            else
+                            {
+                                if ( 0 != KFileReadExactly( file, 0, &buffer, sizeof( buffer ) ) )
+                                    (*num_errors)++;
+                                else
+                                {
+                                    uint32_t magic = 0;
+                                    memcpy( &magic, buffer, sizeof( magic ) );
 
-                   REQUIRE_RC( KFileSize( file, &size ) );
-                   REQUIRE_RC( KFileReadExactly( file, 0, &buffer, sizeof( buffer ) ) );
-                   memcpy( &magic, buffer, sizeof( magic ) );
+                                    if ( size != exp_size )
+                                        (*num_errors)++;
+                                    if ( magic != exp_magic )
+                                        (*num_errors)++;
+                                }
+                            }
 
-                   REQUIRE( size == exp_size );
-                   REQUIRE( magic == exp_magic );
-                   
-                   REQUIRE_RC( KFileRelease( file ) );
-                   REQUIRE_RC( VPathRelease( path ) );
-                }, urls[ url_index ], sizes[ url_index ], magics[ url_index ] );
+                            if ( 0 != KFileRelease( file ) )
+                                (*num_errors)++;
+                        }
+                        if ( 0 != VPathRelease( path ) )
+                            (*num_errors)++;
+                   }
+                }, urls[ url_index ], sizes[ url_index ], magics[ url_index ], &thread_errors[ i ] );
         }
         for ( size_t i = 0; i < NUM_THREADS; ++i )
         {
@@ -1334,6 +1357,11 @@ TEST_CASE( concurrent_reads_from_different_files )
         }
     }
 
+    size_t all_errors = 0;
+    for ( size_t i = 0; i < NUM_THREADS; ++i )
+        all_errors += thread_errors[ i ];
+    REQUIRE( all_errors == 0  );
+    
     REQUIRE_RC( VFSManagerRelease( mgr ) );
  
     KOutMsg ( "concurrent reads from different files done\n" );
