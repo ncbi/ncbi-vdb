@@ -40,6 +40,7 @@ TEST_TOOLS = \
 	test-time \
 	test-rcenum \
 	test-klib \
+	test-KOutMsgOverflow \
 	test-vnamelist \
 	test-progressbar \
     test-symtab \
@@ -200,6 +201,17 @@ $(TEST_BINDIR)/test-klib: $(TEST_KLIB_OBJ)
 
 klib: test-klib
 	$(TEST_BINDIR)/test-klib
+
+#-------------------------------------------------------------------------------
+# test-KOutMsgOverflow
+TEST_OMO_SRC = \
+	test-KOutMsgOverflow
+TEST_OMO_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_OMO_SRC))
+$(TEST_BINDIR)/test-KOutMsgOverflow: $(TEST_OMO_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
+KOutMsgOverflow: test-klib
+	$(TEST_BINDIR)/KOutMsgOverflow
 
 #-------------------------------------------------------------------------------
 # test-hashfile
