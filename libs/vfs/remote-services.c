@@ -429,11 +429,8 @@ static rc_t SHelperInit ( SHelper * self,
             rc = KNSManagerMake(&kns);
             kMgr = kns;
         }
-        else {
+        else
             rc = VFSManagerGetKNSMgr(vMgr, (KNSManager **)(&kMgr));
-            if (rc == 0)
-                rc = KNSManagerAddRef(kMgr);
-        }
     }
     else {
         rc = KNSManagerAddRef ( kMgr );
@@ -3241,7 +3238,7 @@ static rc_t SCgiRequestAddCloudEnvironment(
     assert(helper);
     if (helper->cloud == NULL) {
         if (helper->cloudMgr == NULL)
-            rc = CloudMgrMake(&helper->cloudMgr, NULL, NULL);
+            rc = CloudMgrMake(&helper->cloudMgr, helper->kfg, helper->kMgr);
         if (rc == 0) {
             rc = CloudMgrGetCurrentCloud(helper->cloudMgr, &helper->cloud);
             if (rc != 0) {

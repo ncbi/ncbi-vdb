@@ -24,6 +24,8 @@
  *
  */
 
+#include <klib/container.h> /* BSTree */
+#include <klib/log.h> /* PLOGERR */
 #include <klib/rc.h> /* RC */
 #include <klib/vector.h> /* Vector */
 
@@ -76,7 +78,10 @@ struct KSrvResponse {
     Vector list;
 
     Response4 * r4;
+
+    BSTree locations;
 };
+
 
 /* VPathSet */
 rc_t VPathSetAddRef ( const VPathSet * self ) {
@@ -452,7 +457,230 @@ rc_t VPathSetMakeQuery ( VPathSet ** self, const VPath * local, rc_t localRc,
     return rc;
 }
 
+typedef struct {
+    const String * acc;
+    const String * name;
+
+    const KSrvRespFile * file;
+} LocalAndCache;
+
+static int LocalAndCacheCmp(const LocalAndCache * lhs,
+    const LocalAndCache * rhs)
+{
+    int c = 0;
+
+    assert(lhs && rhs);
+
+    c = StringCompare(lhs->acc, rhs->acc);
+
+    if (c == 0)
+        c = StringCompare(lhs->name, rhs->name);
+
+    return c;
+}
+
+static rc_t LocalAndCacheFini(LocalAndCache * self) {
+    rc_t rc = 0;
+
+    assert(self);
+
+    StringWhack(self->acc);
+    StringWhack(self->name);
+
+    rc = KSrvRespFileRelease(self->file);
+
+    memset(self, 0, sizeof *self);
+
+    return rc;
+}
+
+static rc_t LocalAndCacheRelease(LocalAndCache * self) {
+    if (self != NULL) {
+        LocalAndCacheFini(self);
+        free(self);
+    }
+
+    return 0;
+}
+
+typedef struct {
+    BSTNode n;
+    LocalAndCache * lnc;
+} BSTItem;
+
+static int64_t CC BSTItemCmp(const void * item, const BSTNode * n) {
+    const LocalAndCache * lnc = item;
+
+    const BSTItem * i = (BSTItem *)n;
+
+    assert(i);
+
+    return LocalAndCacheCmp(lnc, i->lnc);
+}
+
+static void BSTItemWhack(BSTNode * n, void * ignore) {
+    BSTItem * i = (BSTItem *)n;
+
+    assert(i);
+
+    LocalAndCacheRelease(i->lnc);
+
+    memset(i, 0, sizeof * i);
+
+    free(i);
+}
+
+static int64_t CC BSTreeSort(const BSTNode * item, const BSTNode * n) {
+    const BSTItem * i = (BSTItem *)item;
+
+    assert(i);
+
+    return BSTItemCmp(i->lnc, n);
+}
+
+static rc_t LocalAndCacheInit(LocalAndCache * self,
+    const char * acc, const char * name)
+{
+    rc_t rc = 0;
+
+    String tmp;
+
+    assert(self);
+
+    memset(self, 0, sizeof(*self));
+
+    if (acc != NULL) {
+        StringInitCString(&tmp, acc);
+        rc = StringCopy(&self->acc, &tmp);
+    }
+
+    if (rc == 0 && name != NULL) {
+        StringInitCString(&tmp, name);
+        rc = StringCopy(&self->name, &tmp);
+    }
+
+    if (rc != 0)
+        LocalAndCacheFini(self);
+
+    return rc;
+}
+
+rc_t KSrvResponseAddLocalAndCacheToTree(
+    KSrvResponse * self, const KSrvRespFile * file)
+{
+    rc_t rc = 0;
+
+    const char * acc = NULL;
+    const char * name = NULL;
+    LocalAndCache * lnc = NULL;
+    String tmp;
+
+    assert(self);
+
+    lnc = calloc(1, sizeof * lnc);
+    if (lnc == NULL)
+        rc = RC(rcVFS, rcStorage, rcAllocating, rcMemory, rcExhausted);
+
+    if (rc == 0)
+        rc = KSrvRespFileGetAccOrId(file, &acc, NULL);
+    if (rc == 0)
+        KSrvRespFileGetAccOrName(file, &name, NULL);
+
+    if (rc == 0 && acc != NULL) {
+        StringInitCString(&tmp, acc);
+        rc = StringCopy(&lnc->acc, &tmp);
+    }
+    if (rc == 0 && name != NULL) {
+        StringInitCString(&tmp, name);
+        rc = StringCopy(&lnc->name, &tmp);
+    }
+
+    if (rc == 0) {
+        rc = KSrvRespFileAddRef(file);
+        if (rc == 0)
+            lnc->file = file;
+    }
+
+    if (rc == 0) {
+        BSTItem * i = (BSTItem *)BSTreeFind(&self->locations, lnc, BSTItemCmp);
+        if (i != NULL) {
+            BSTreeWhack(&self->locations, BSTItemWhack, NULL);
+            PLOGERR(klogFatal, (klogFatal,
+                RC(rcVFS, rcQuery, rcExecuting, rcString, rcUnexpected),
+                "duplicate names in the same bundle: "
+                "'$acc'/'$(name)'", "acc=%c,name=%c", acc, name));
+            RELEASE(LocalAndCache, lnc);
+        }
+        else {
+            i = calloc(1, sizeof * i);
+            if (i == NULL)
+                rc = RC(rcVFS, rcStorage, rcAllocating, rcMemory, rcExhausted);
+            else {
+                i->lnc = lnc;
+                rc = BSTreeInsert(&self->locations, (BSTNode *)i, BSTreeSort);
+            }
+        }
+    }
+
+    if (rc != 0)
+        LocalAndCacheRelease(lnc);
+
+    return rc;
+}
+
 /* KSrvResponse */
+
+rc_t KSrvResponseGetLocation(const KSrvResponse * self,
+    const char * acc, const char * name,
+    const struct VPath ** local, rc_t * localRc,
+    const struct VPath ** cache, rc_t * cacheRc)
+{
+    rc_t rc = 0;
+
+    LocalAndCache lnc;
+
+    if (local == NULL && localRc != NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
+    if (cache == NULL && cacheRc != NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
+
+    if (local != NULL)
+        * local = NULL;
+    if (localRc != NULL)
+        * localRc = 0;
+    if (cache != NULL)
+        * cache = NULL;
+    if (cacheRc != NULL)
+        * cacheRc = 0;
+
+    if (self == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
+
+    rc = LocalAndCacheInit(&lnc, acc, name);
+    if (rc == 0) {
+        BSTItem * i = (BSTItem *)BSTreeFind(&self->locations, &lnc, BSTItemCmp);
+        if (i == NULL)
+            rc = RC(rcVFS, rcQuery, rcResolving, rcName, rcNotFound);
+        else {
+            if (local != NULL) {
+                const KSrvRespFile * f = i->lnc->file;
+                rc_t rc = KSrvRespFileGetLocal(f, local);
+                if (localRc != NULL)
+                    *localRc = rc;
+            }
+
+            if (cache != NULL) {
+                const KSrvRespFile * f = i->lnc->file;
+                rc_t rc = KSrvRespFileGetCache(f, cache);
+                if (cacheRc != NULL)
+                    *cacheRc = rc;
+            }
+        }
+        LocalAndCacheFini(&lnc);
+    }
+
+    return rc;
+}
 
 rc_t KSrvResponseGetR4 ( const KSrvResponse * self, Response4 ** r ) {
 
@@ -515,6 +743,8 @@ rc_t KSrvResponseRelease ( const KSrvResponse * cself ) {
         VectorWhack ( & self -> list, whackVPathSet, NULL );
 
         RELEASE ( Response4, self -> r4 );
+
+        BSTreeWhack(&self->locations, BSTItemWhack, NULL);
 
         memset ( self, 0, sizeof * self );
         free ( self );

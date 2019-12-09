@@ -1,4 +1,4 @@
-/*===========================================================================
+/*==============================================================================
 *
 *                            Public Domain Notice
 *               National Center for Biotechnology Information
@@ -579,6 +579,45 @@ static rc_t _VPathGetId ( const VPath * self, const String ** newId,
     return rc;
 }
 
+typedef struct {
+    char * acc;
+    char * name;
+
+    const KSrvRespFile * file; /* don't release */
+} LocalAndCache;
+
+static rc_t LocalAndCacheRelease(LocalAndCache * self) {
+    if (self != NULL) {
+        free(self->acc);
+        free(self->name);
+
+        memset(self, 0, sizeof *self);
+
+        free(self);
+    }
+
+    return 0;
+}
+
+static rc_t KSrvResponseRegisterLocalAndCache(KSrvResponse * self,
+    rc_t rc, KSrvRespFile * file, const VPathSet * localAndCache)
+{
+    LocalAndCache * lnc = NULL;
+
+    if (rc != 0)
+        return rc;
+
+    if (localAndCache != NULL)
+        rc = KSrvRespFileAddLocalAndCache(file, localAndCache);
+
+    if (rc == 0)
+        rc = KSrvResponseAddLocalAndCacheToTree(self, file);
+
+    RELEASE(LocalAndCache, lnc);
+
+    return rc;
+}
+
 static
 rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols, 
     const char * cgi, const char * version, const KSrvResponse ** aResponse,
@@ -685,11 +724,9 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
                                         else
                                             RELEASE(KSrvError, error);
                                     }
-                                    if (vps != NULL) {
-                                        rc = KSrvRespFileAddLocalAndCache(
-                                            file, vps);
-                                        RELEASE(VPathSet, vps);
-                                    }
+                                    rc = KSrvResponseRegisterLocalAndCache(
+                                        response, rc, file, vps);
+                                    RELEASE(VPathSet, vps);
                                     RELEASE(VPath, path);
                                 }
                                 RELEASE(KSrvRespFileIterator, fi);
