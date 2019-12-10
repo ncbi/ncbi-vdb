@@ -143,6 +143,11 @@ rc_t KSrvResponseGetCache(const KSrvResponse * self, uint32_t idx,
 rc_t KSrvResponseGetNextToken(const KSrvResponse * self,
     const char ** nextToken);
 
+rc_t KSrvResponseGetLocation(const KSrvResponse * self,
+    const char * acc, const char * name,
+    const struct VPath ** local, rc_t * localRc,
+    const struct VPath ** cache, rc_t * cacheRc);
+
 /************************** KSrvError ******************************
  * KSrvError is generated for Id-s from request that produced an error response
  */

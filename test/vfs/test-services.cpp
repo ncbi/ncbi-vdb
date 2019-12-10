@@ -25,12 +25,32 @@
 * tests of names service
 */
 
+#include <kfg/kfg-priv.h> /* KConfigMakeLocal */
+
+#include <kfs/directory.h> /* KDirectoryRelease */
+#include <kfs/file.h> /* KFileRelease */
+
+#include <klib/debug.h> /* KDbgSetString */
+
 #include <ktst/unit_test.hpp> /* KMain */
 
-#include <vfs/services.h> /* KServiceRelease */
+#include <vfs/manager.h> /* VFSManagerRelease */
+#include <vfs/manager-priv.h> /* VFSManagerMakeLocal */
+#include <vfs/path.h> /* VPathRelease */
+#include <vfs/services-priv.h> /* KServiceMakeWithMgr */
+
+#include <climits> /* PATH_MAX */
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
+using std::string;
 
 TEST_SUITE ( TestServices );
 
+#define ALL
+
+#ifdef ALL
 TEST_CASE ( TestKServiceAddId ) {
     KService * s = NULL;
 
@@ -49,11 +69,283 @@ TEST_CASE ( TestKServiceAddId ) {
 
     REQUIRE_RC ( KServiceRelease ( s ) );
 }
+#endif
+
+#ifdef ALL
+TEST_CASE(TestKSrvResponseGetLocation) {
+    KService * s = NULL;
+    REQUIRE_RC(KServiceMake(&s));
+    REQUIRE_RC(KServiceAddId(s, "SRR850901"));
+    REQUIRE_RC(KServiceSetFormat(s, "all"));
+    const KSrvResponse * r = NULL;
+    REQUIRE_RC(KServiceNamesQuery(s, 0, &r));
+    REQUIRE_RC_FAIL(KSrvResponseGetLocation(0, 0, 0, 0, 0, 0, 0));
+    REQUIRE_RC_FAIL(KSrvResponseGetLocation(r, 0, 0, 0, 0, 0, 0));
+    REQUIRE_RC_FAIL(KSrvResponseGetLocation(r, "SRR850901", 0, 0, 0, 0, 0));
+    REQUIRE_RC_FAIL(KSrvResponseGetLocation(r, 0, "SRR850901", 0, 0, 0, 0));
+    REQUIRE_RC(KSrvResponseGetLocation(r, "SRR850901", "SRR850901",
+        0, 0, 0, 0));
+
+    const VPath * local = NULL;
+    REQUIRE_RC(KSrvResponseGetLocation(r, "SRR850901", "SRR850901",
+        &local, 0, 0, 0));
+    REQUIRE_NULL(local);
+
+    rc_t rcLocal = 0;
+    REQUIRE_RC_FAIL(KSrvResponseGetLocation(r, "SRR850901", "SRR850901",
+        0, &rcLocal, 0, 0));
+    REQUIRE_RC(KSrvResponseGetLocation(r, "SRR850901", "SRR850901",
+        &local, &rcLocal, 0, 0));
+    REQUIRE_NULL(local);
+    REQUIRE_RC_FAIL(rcLocal);
+
+    REQUIRE_RC(KSrvResponseGetLocation(r, "SRR850901", "SRR850901.vdbcache",
+        &local, &rcLocal, 0, 0));
+    REQUIRE_RC(rcLocal);
+    char buffer[PATH_MAX] = "";
+    REQUIRE_RC(VPathReadPath(local, buffer, sizeof buffer, NULL));
+    REQUIRE_EQ(string(buffer),
+        string("/netmnt/traces04/sra11/SRR/000830/SRR850901.vdbcache"));
+    REQUIRE_RC(VPathRelease(local));
+
+    const VPath * cache = NULL;
+    rc_t rcCache = 0;
+
+    REQUIRE_RC_FAIL(KSrvResponseGetLocation(r, "SRR850901", "SRR850901.qq",
+        &local, &rcLocal, &cache, &rcCache));
+    REQUIRE_NULL(local);
+    REQUIRE_NULL(cache);
+    REQUIRE_RC(rcLocal);
+    REQUIRE_RC(rcCache);
+
+    REQUIRE_RC_FAIL(KSrvResponseGetLocation(r, "SRR000001", "SRR000001",
+        &local, &rcLocal, &cache, &rcCache));
+    REQUIRE_NULL(local);
+    REQUIRE_NULL(cache);
+    REQUIRE_RC(rcLocal);
+    REQUIRE_RC(rcCache);
+
+    REQUIRE_RC(KSrvResponseRelease(r));
+    REQUIRE_RC(KServiceRelease(s));
+}
+#endif
+
+#ifdef ALL
+TEST_CASE(TestKSrvResponseGetLocationCache) {
+    KService * s = NULL;
+    REQUIRE_RC(KServiceMake(&s));
+    REQUIRE_RC(KServiceAddId(s, "SRR850901"));
+
+    const KSrvResponse * r = NULL;
+    REQUIRE_RC(KServiceNamesQuery(s, 0, &r));
+
+    const VPath * local = NULL;
+    rc_t rcLocal = 0;
+    const VPath * cache = NULL;
+    rc_t rcCache = 0;
+
+    REQUIRE_RC(KSrvResponseGetLocation(r, "SRR850901", "SRR850901.vdbcache",
+        &local, &rcLocal, &cache, &rcCache));
+
+    REQUIRE_RC(rcLocal);
+    
+    char buffer[PATH_MAX] = "";
+
+    REQUIRE_RC(VPathReadPath(local, buffer, sizeof buffer, NULL));
+    REQUIRE_EQ(string(buffer),
+        string("/netmnt/traces04/sra11/SRR/000830/SRR850901.vdbcache"));
+    
+    REQUIRE_RC(VPathRelease(local));
+
+    REQUIRE_RC_FAIL(rcCache);
+    REQUIRE_NULL(cache);
+
+    REQUIRE_RC(KSrvResponseRelease(r));
+
+    REQUIRE_RC(KServiceRelease(s));
+}
+#endif
+
+#ifdef ALL
+TEST_CASE(TestKSrvResponseGetLocationLocalInAD) {
+    KDirectory * dr = NULL;
+    REQUIRE_RC(KDirectoryNativeDir(&dr));
+    const char * acc = "SRR850901";
+    char p[PATH_MAX] = "";
+    REQUIRE_RC(KDirectoryResolvePath(dr, true, p, sizeof p, "%s", acc));
+    REQUIRE_RC(KDirectoryCreateDir(dr, 0775, kcmOpen | kcmInit | kcmCreate, p));
+
+    KFile * f = NULL;
+    REQUIRE_RC(KDirectoryCreateFile(dr, &f, false,
+        0664, kcmOpen | kcmInit | kcmCreate, "%s/%s.sra", p, acc));
+    REQUIRE_RC(KFileRelease(f));
+
+    KService * s = NULL;
+    REQUIRE_RC(KServiceMakeWithMgr(&s, NULL, NULL, NULL));
+    REQUIRE_RC(KServiceAddId(s, acc));
+
+    const KSrvResponse * r = NULL;
+    REQUIRE_RC(KServiceNamesQuery(s, 0, &r));
+
+    const VPath * local = NULL;
+    rc_t rcLocal = 0;
+    const VPath * cache = NULL;
+    rc_t rcCache = 0;
+
+    REQUIRE_RC(KSrvResponseGetLocation(r, acc, acc,
+        &local, &rcLocal, &cache, &rcCache));
+
+    REQUIRE_RC(rcLocal);
+    REQUIRE_NOT_NULL(local);
+    char u[PATH_MAX] = "";
+    REQUIRE_RC(VPathReadPath(local, u, sizeof u, 0));
+    REQUIRE_RC(KDirectoryResolvePath(dr, true, p, sizeof p,
+        "%s/%s.sra", acc, acc));
+    REQUIRE_EQ(string(p), string(u));
+    REQUIRE_RC(VPathRelease(local));
+
+    REQUIRE_NULL(cache);
+    REQUIRE_RC_FAIL(rcCache);
+
+    REQUIRE_RC(KSrvResponseRelease(r));
+
+    REQUIRE_RC(KServiceRelease(s));
+
+    REQUIRE_RC(KDirectoryRemove(dr, true, acc));
+    REQUIRE_RC(KDirectoryRelease(dr));
+}
+#endif
+
+#ifdef ALL
+TEST_CASE(TestKSrvResponseGetLocationLocalInUserRepo) {
+    KDirectory * dr = NULL;
+    REQUIRE_RC(KDirectoryNativeDir(&dr));
+    const char * acc = "SRR850901";
+    char p[PATH_MAX] = "";
+    REQUIRE_RC(KDirectoryResolvePath(dr, true, p, sizeof p, "tmp"));
+    REQUIRE_RC(KDirectoryCreateDir(dr, 0775,
+        kcmOpen | kcmInit | kcmCreate | kcmParents, "tmp/sra"));
+    KFile * f = NULL;
+    REQUIRE_RC(KDirectoryCreateFile(dr, &f, false,
+        0664, kcmOpen | kcmInit | kcmCreate, "tmp/sra/%s.sra", acc));
+    REQUIRE_RC(KFileRelease(f));
+    KConfig * kfg = NULL;
+    REQUIRE_RC(KConfigMakeLocal(&kfg, NULL));
+    REQUIRE_RC(KConfigWriteString(kfg, "/repository/user/main/public/root", p));
+    REQUIRE_RC(KConfigWriteString(kfg,
+        "/repository/user/main/public/apps/sra/volumes/sraFlat", "sra"));
+//KConfigPrint(kfg,0);
+    VFSManager * mgr = NULL;
+    REQUIRE_RC(VFSManagerMakeLocal(&mgr, kfg));
+    KService * s = NULL;
+    REQUIRE_RC(KServiceMakeWithMgr(&s, mgr, NULL, kfg));
+    REQUIRE_RC(KServiceAddId(s, acc));
+    const KSrvResponse * r = NULL;
+    REQUIRE_RC(KServiceNamesQuery(s, 0, &r));
+    const VPath * local = NULL;
+    rc_t rcLocal = 0;
+    const VPath * cache = NULL;
+    rc_t rcCache = 0;
+    REQUIRE_RC(KSrvResponseGetLocation(r, acc, acc,
+        &local, &rcLocal, &cache, &rcCache));
+    REQUIRE_RC(rcLocal);
+    REQUIRE_NOT_NULL(local);
+    REQUIRE_RC(KDirectoryResolvePath(dr, true, p, sizeof p,
+        "tmp/sra/%s.sra", acc));
+    char u[PATH_MAX] = "";
+    REQUIRE_RC(VPathReadPath(local, u, sizeof u, 0));
+    REQUIRE_EQ(string(p), string(u));
+    REQUIRE_RC(VPathRelease(local));
+    REQUIRE_RC(rcCache);
+    REQUIRE_NOT_NULL(cache);
+    REQUIRE_RC(VPathReadPath(cache, u, sizeof u, 0));
+    REQUIRE_EQ(string(p), string(u));
+    REQUIRE_RC(VPathRelease(cache));
+    REQUIRE_RC(KSrvResponseRelease(r));
+    REQUIRE_RC(KServiceRelease(s));
+    REQUIRE_RC(VFSManagerRelease(mgr));
+    REQUIRE_RC(KConfigRelease(kfg));
+    REQUIRE_RC(KDirectoryRemove(dr, true, "tmp"));
+    REQUIRE_RC(KDirectoryRelease(dr));
+}
+#endif
+
+#ifdef ALL
+TEST_CASE(TestKSrvResponseGetLocationCacheInAD) {
+    KDirectory * dr = NULL;
+    REQUIRE_RC(KDirectoryNativeDir(&dr));
+    const char * acc = "SRR850901";
+    char p[PATH_MAX] = "";
+    REQUIRE_RC(KDirectoryResolvePath(dr, true, p, sizeof p, "%s", acc));
+    REQUIRE_RC(KDirectoryCreateDir(dr, 0775, kcmOpen | kcmInit | kcmCreate, p));
+
+    KFile * f = NULL;
+    REQUIRE_RC(KDirectoryCreateFile(dr, &f, false,
+        0664, kcmOpen | kcmInit | kcmCreate, "%s/%s.sra", p, acc));
+    REQUIRE_RC(KFileRelease(f));
+
+    VFSManager * mgr = NULL;
+    REQUIRE_RC(VFSManagerMakeLocal(&mgr, NULL));
+
+    /* the same call is done by prefetch to enable caching to AD */
+    REQUIRE_RC(VFSManagerSetAdCaching(mgr, true));
+
+    KService * s = NULL;
+    REQUIRE_RC(KServiceMakeWithMgr(&s, mgr, NULL, NULL));
+    REQUIRE_RC(KServiceAddId(s, acc));
+
+    const KSrvResponse * r = NULL;
+    REQUIRE_RC(KServiceNamesQuery(s, 0, &r));
+
+    const VPath * local = NULL;
+    rc_t rcLocal = 0;
+    const VPath * cache = NULL;
+    rc_t rcCache = 0;
+
+    REQUIRE_RC(KSrvResponseGetLocation(r, acc, acc,
+        &local, &rcLocal, &cache, &rcCache));
+
+    REQUIRE_RC(rcLocal);
+    REQUIRE_NOT_NULL(local);
+    char u[PATH_MAX] = "";
+    REQUIRE_RC(VPathReadPath(local, u, sizeof u, 0));
+    REQUIRE_RC(KDirectoryResolvePath(dr, true, p, sizeof p,
+        "%s/%s.sra", acc, acc));
+    REQUIRE_EQ(string(p), string(u));
+    REQUIRE_RC(VPathRelease(local));
+
+    REQUIRE_RC(rcCache);
+    REQUIRE_NOT_NULL(cache);
+    REQUIRE_RC(KDirectoryResolvePath(dr, true, p, sizeof p,
+        "%s/%s.sra", acc, acc));
+    REQUIRE_EQ(string(p), string(u));
+    REQUIRE_RC(VPathRelease(cache));
+
+    REQUIRE_RC(KSrvResponseRelease(r));
+
+    REQUIRE_RC(KServiceRelease(s));
+
+    REQUIRE_RC(VFSManagerRelease(mgr));
+
+    REQUIRE_RC(KDirectoryRemove(dr, true, acc));
+    REQUIRE_RC(KDirectoryRelease(dr));
+}
+#endif
+
+#ifndef ALL
+TEST_CASE(TestKSrvResponseGetLocationCacheInADLeak) {
+}
+#endif
 
 extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
 
     rc_t CC KMain ( int argc, char * argv [] ) {
+        KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg
+
+        if (
+0) assert(!KDbgSetString("VFS"));
+
         return TestServices ( argc, argv );
     }
 }
