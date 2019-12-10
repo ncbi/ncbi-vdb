@@ -50,6 +50,14 @@ TEST_SUITE ( TestServices );
 
 #define ALL
 
+const string Netmnt = 
+#ifdef MAC
+   "/net"
+#else
+   "/netmnt"
+#endif
+;
+
 #ifdef ALL
 TEST_CASE ( TestKServiceAddId ) {
     KService * s = NULL;
@@ -105,7 +113,7 @@ TEST_CASE(TestKSrvResponseGetLocation) {
     char buffer[PATH_MAX] = "";
     REQUIRE_RC(VPathReadPath(local, buffer, sizeof buffer, NULL));
     REQUIRE_EQ(string(buffer),
-        string("/netmnt/traces04/sra11/SRR/000830/SRR850901.vdbcache"));
+        Netmnt + "/traces04/sra11/SRR/000830/SRR850901.vdbcache");
     REQUIRE_RC(VPathRelease(local));
 
     const VPath * cache = NULL;
@@ -153,7 +161,7 @@ TEST_CASE(TestKSrvResponseGetLocationCache) {
 
     REQUIRE_RC(VPathReadPath(local, buffer, sizeof buffer, NULL));
     REQUIRE_EQ(string(buffer),
-        string("/netmnt/traces04/sra11/SRR/000830/SRR850901.vdbcache"));
+        Netmnt + "/traces04/sra11/SRR/000830/SRR850901.vdbcache");
     
     REQUIRE_RC(VPathRelease(local));
 
