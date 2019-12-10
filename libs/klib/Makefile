@@ -174,6 +174,8 @@ FUZZ_OBJ = \
 fuzz: std $(FUZZ_OBJ)
 	$(AR) $(FLIBDIR)/libklib.$(LIBX) $(FUZZ_OBJ)
 
+ifeq (linux,$(OS))
+
 #-------------------------------------------------------------------------------
 #
 # flex/bison for the Json parser
@@ -193,3 +195,5 @@ $(SRCDIR)/json-lex.c: $(SRCDIR)/json-lex.l $(SRCDIR)/json-tokens.h
 	flex --noline -d -t $(SRCDIR)/json-lex.l > $(SRCDIR)/json-lex.c
 
 flex: $(SRCDIR)/json-lex.c
+
+endif

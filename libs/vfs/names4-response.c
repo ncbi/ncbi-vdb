@@ -2542,6 +2542,12 @@ rc_t KSrvRespObjIteratorNextFile ( KSrvRespObjIterator * self,
     return 1;
 }
 
+rc_t KSrvRespFileAddRef(const KSrvRespFile * self) {
+    if (self != NULL)
+        atomic32_inc(&((KSrvRespFile *)self)->refcount);
+    return 0;
+}
+
 rc_t KSrvRespFileRelease ( const KSrvRespFile * cself ) {
     rc_t rc = 0;
 
@@ -2599,7 +2605,11 @@ rc_t KSrvRespFileGetSize(const KSrvRespFile * self, uint64_t *size) {
 rc_t KSrvRespFileGetAccOrId(const KSrvRespFile * self,
     const char ** acc, uint32_t * id)
 {
-    assert(self && self -> item && acc && id);
+    uint32_t iDummy = 0;
+    if (id == NULL)
+        id = &iDummy;
+
+    assert(self && self -> item && acc);
 
     *acc = self->item->acc;
     *id = self->item->id;

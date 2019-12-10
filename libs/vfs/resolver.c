@@ -6211,8 +6211,10 @@ rc_t VResolverMake ( VResolver ** objp, const KDirectory *wd,
 
         rc = VResolverLoad ( obj, protected, kfg, kns, ngc );
 
-        obj->kns = kns;
-        kns = NULL;
+        if (obj->kns == NULL)
+            obj->kns = kns;
+        else
+            RELEASE(KNSManager, kns);
 
         KRepositoryProjectId ( protected, & obj -> projectId );
 

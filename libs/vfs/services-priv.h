@@ -73,6 +73,8 @@ rc_t KSrvResponseAppend ( struct KSrvResponse * self,
                           const struct VPathSet * set );
 rc_t KSrvResponseAddLocalAndCache ( struct KSrvResponse * self, uint32_t idx,
                                     const struct VPathSet * localAndCache );
+rc_t KSrvResponseAddLocalAndCacheToTree(
+    struct KSrvResponse * self, const struct KSrvRespFile * file);
 rc_t KSrvResponseGet ( const struct KSrvResponse * self, uint32_t idx,
                        const struct VPathSet ** set );
 
@@ -90,6 +92,7 @@ rc_t KSrvResponseGetR4 ( const struct KSrvResponse * self,
                          struct Response4 ** r );
 rc_t KSrvResponseSetR4 ( struct KSrvResponse * self, struct Response4 * r );
 
+rc_t KSrvRespFileAddRef(const struct KSrvRespFile * self);
 rc_t KSrvRespFileAddLocalAndCache ( struct KSrvRespFile * file,
                                     const struct VPathSet * localAndCache );
 
