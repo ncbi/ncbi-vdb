@@ -831,10 +831,10 @@ FIXTURE_TEST_CASE( KClientHttpResult_FormatMsg, HttpFixture)
 
     KClientHttpResult *rslt;
     REQUIRE_RC ( KClientHttpRequestPOST ( m_req, & rslt ) );
-    char buffer[4096];
-    size_t len;
-    REQUIRE_RC ( KClientHttpResultFormatMsg ( rslt, buffer, sizeof buffer, & len, "->", "\n" ) );
-    REQUIRE_EQ ( expected, string (buffer, len) );
+    KDataBuffer buffer;
+    REQUIRE_RC ( KDataBufferMake( & buffer, 8, 0 ) );
+    REQUIRE_RC ( KClientHttpResultFormatMsg ( rslt, & buffer, "->", "\n" ) );
+    REQUIRE_EQ ( expected, string ((char*)buffer.base) );
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
 }
 
