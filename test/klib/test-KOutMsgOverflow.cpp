@@ -37,53 +37,113 @@
 * in KOutVMsg when sizeof ( format ) < sizeof ( literal )
 */
 
-#define ALL
+#include <klib/out.h>
+#include <klib/text.h> /* String */
+#include <klib/writer.h> /* KWrtInit */
 
 #include <ktst/unit_test.hpp>
 
-#include <klib/out.h>
-#include <klib/writer.h> /* KWrtInit */
-
-#include <cstring>
+using std::string;
 
 TEST_SUITE(KOutTestSuite);
 
+#define ALL
+
+// short-circuit formats in KMsgOut
+rc_t CC writerFn(void * self,
+    const char * buffer, size_t bufsize, size_t * num_writ)
+{
+    string & res = *(string *)self;
+    res += string(buffer, bufsize);
+    *num_writ = bufsize;
+    return 0;
+}
+
 #ifdef ALL
-TEST_CASE(TestOUTMSGNull)
-{
-    OUTMSG((NULL));
+TEST_CASE(TestOUTMSGNull) {
+    string output;
+    REQUIRE_RC(KOutHandlerSet(writerFn, &output));
+    REQUIRE_RC_FAIL(KOutMsg(NULL));
+    REQUIRE_EQ(output.find("outmsg failure"), (std::size_t)0);
 }
-TEST_CASE(TestOUTMSG1)
-{
-    OUTMSG((""));
+
+TEST_CASE(TestOUTMSG1) {
+    string output;
+    REQUIRE_RC(KOutHandlerSet(writerFn, &output));
+    REQUIRE_RC(KOutMsg(""));
+    REQUIRE_EQ(output, string(""));
 }
-TEST_CASE(TestOUTMSG2)
-{
-    OUTMSG(("1"));
+
+TEST_CASE(TestOUTMSG2) {
+    string output;
+    REQUIRE_RC(KOutHandlerSet(writerFn, &output));
+    REQUIRE_RC(KOutMsg("1"));
+    REQUIRE_EQ(output, string("1"));
 }
-TEST_CASE(TestOUTMSG2Eol)
-{
-    OUTMSG(("\n"));
+
+TEST_CASE(TestOUTMSG2Eol) {
+    string output;
+    REQUIRE_RC(KOutHandlerSet(writerFn, &output));
+    REQUIRE_RC(KOutMsg("\n"));
+    REQUIRE_EQ(output, string("\n"));
 }
-TEST_CASE(TestOUTMSG3)
-{
-    OUTMSG(("12"));
+
+TEST_CASE(TestOUTMSG3) {
+    string output;
+    REQUIRE_RC(KOutHandlerSet(writerFn, &output));
+    REQUIRE_RC(KOutMsg("12"));
+    REQUIRE_EQ(output, string("12"));
 }
-TEST_CASE(TestOUTMSG4)
-{
-	    OUTMSG(("123"));
+
+TEST_CASE(TestOUTMSG4) {
+    string output;
+    REQUIRE_RC(KOutHandlerSet(writerFn, &output));
+    REQUIRE_RC(KOutMsg("123"));
+    REQUIRE_EQ(output, string("123"));
 }
 #endif
-TEST_CASE(TestOUTMSG5)
-{
-	            OUTMSG(("1233"));
+
+TEST_CASE(TestOUTMSG5) {
+    string output;
+    REQUIRE_RC(KOutHandlerSet(writerFn, &output));
+    REQUIRE_RC(KOutMsg("1234"));
+    REQUIRE_EQ(output, string("1234"));
 }
+
+TEST_CASE(TestOUTMSGs) {
+    string output;
+    REQUIRE_RC(KOutHandlerSet(writerFn, &output));
+    REQUIRE_RC(KOutMsg("%s", "string"));
+    REQUIRE_EQ(output, string("string"));
+}
+
+TEST_CASE(TestOUTMSGss) {
+    string output;
+    REQUIRE_RC(KOutHandlerSet(writerFn, &output));
+    REQUIRE_RC(KOutMsg("%.*s", 6, "STRING"));
+    REQUIRE_EQ(output, string("STRING"));
+}
+
+TEST_CASE(TestOUTMSGS) {
+    string output;
+    REQUIRE_RC(KOutHandlerSet(writerFn, &output));
+    String s;
+    CONST_STRING(&s, "String");
+    REQUIRE_RC(KOutMsg("%S", &s));
+    REQUIRE_EQ(output, string("String"));
+}
+
+TEST_CASE(TestOUTMSGc) {
+    string output;
+    REQUIRE_RC(KOutHandlerSet(writerFn, &output));
+    REQUIRE_RC(KOutMsg("%c", 'c'));
+}
+
 extern "C" {
 #ifdef WINDOWS
     #define main wmain
 #endif
-    int main(int argc, char *argv[])
-    {
+    int main(int argc, char *argv[]) {
         KWrtInit(argv[0], 0);
         return KOutTestSuite(argc, argv);
     }
