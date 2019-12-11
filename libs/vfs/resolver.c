@@ -907,20 +907,26 @@ rc_t VPathCheckFromNamesCGI ( const VPath * path,
         String name, val, req, host;
 
         if (!skip) {
-            CONST_STRING(&host, "trace.ncbi.nlm.nih.gov");
+            CONST_STRING(&host, "locate.ncbi.nlm.nih.gov");
             /* redirector URLs have query */
             if (StringEqual(&path->host, &host))
                 skip = true;
         }
         if (!skip) {
             CONST_STRING(&host, "nih-nhlbi-datacommons.s3.amazonaws.com");
-            /* amazonaws URLs han have query */
+            /* amazonaws URLs can have query */
             if (StringEqual(&path->host, &host))
                 skip = true;
         }
         if (!skip) {
             CONST_STRING(&host, "storage.googleapis.com");
-            /* googleapis URLs han have query */
+            /* googleapis URLs can have query */
+            if (StringEqual(&path->host, &host))
+                skip = true;
+        }
+        if (!skip) {
+            CONST_STRING(&host, "trace.ncbi.nlm.nih.gov");
+            /* redirector URLs have query */
             if (StringEqual(&path->host, &host))
                 skip = true;
         }
