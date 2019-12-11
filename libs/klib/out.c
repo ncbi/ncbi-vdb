@@ -96,6 +96,7 @@ rc_t KOutMsgCharFmt ( uint32_t u32 )
     return rc;
 }
 
+/* Prevent calling memcmp(s1, s2, n) when sizeof (s1) < n */
 static
 bool match_format(const char * format, const char * literal, size_t s)
 {
