@@ -98,14 +98,18 @@ rc_t KOutMsgCharFmt ( uint32_t u32 )
 
 /* Prevent calling memcmp(s1, s2, n) when sizeof (s1) < n */
 static
-bool match_format(const char * format, const char * literal, size_t s)
+int match_format(const char * format, const char * literal, size_t s)
 {
+    static const size_t MAX = 5;
+
+    assert(s <= MAX);
+
     if (format == NULL)
         return 1;
     else {
         size_t x = 0;
 
-        for (x = 0; x < 4; ++x)
+        for (x = 0; x < MAX - 1; ++x)
             if (format[x] == '\0')
                 break;
         ++x;
