@@ -63,13 +63,15 @@ public:
 
     string FormatRequest()
     {
-        char buffer[4096] = "";
-        size_t len;
-        if ( KClientHttpRequestFormatPostMsg(m_req, buffer, sizeof buffer, & len) != 0 )
+        KDataBuffer buffer;
+        THROW_ON_RC( KDataBufferMake( & buffer, 8, 0 ) );
+        if ( KClientHttpRequestFormatPostMsg(m_req, & buffer) != 0 )
         {
             throw logic_error( "HttpRequestFixture::FormatRequest(): KClientHttpRequestFormatPostMsg() failed" );
         }
-        return string ( buffer, len );
+        string ret = string ( (char*)buffer.base, buffer.elem_count );
+        THROW_ON_RC( KDataBufferWhack( &buffer ) );
+        return ret;
     }
 
     string m_url;
@@ -158,9 +160,11 @@ FIXTURE_TEST_CASE(HttpRequestAddHeader, HttpRequestFixture)
 {
     MakeRequest( GetName() );
     REQUIRE_RC( KClientHttpRequestAddHeader(m_req, "Accept", "text/html") );
-    char buffer[4096] = "";
-    REQUIRE_RC( KClientHttpRequestFormatMsg(m_req, buffer, sizeof buffer, "HEAD", NULL) );
-    REQUIRE( strstr(buffer, "Accept: */*") == NULL) ;
+    KDataBuffer buffer;
+    THROW_ON_RC( KDataBufferMake( & buffer, 8, 0 ) );
+    REQUIRE_RC( KClientHttpRequestFormatMsg(m_req, & buffer, "HEAD") );
+    REQUIRE( strstr((char*)buffer.base, "Accept: */*") == NULL) ;
+    REQUIRE_RC ( KDataBufferWhack( &buffer ) );
 }
 
 // KClientHttpRequestAddPostParam

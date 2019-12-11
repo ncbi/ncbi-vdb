@@ -2550,61 +2550,40 @@ void KClientHttpGetLocalEndpoint ( const KClientHttp * self, KEndPoint * ep )
 {   KClientHttpGetEndpoint ( self, ep, false ); }
 
 LIB_EXPORT rc_t CC KClientHttpResultFormatMsg (
-    const struct KClientHttpResult * self, char * buffer,
-    size_t bsize, size_t * len, const char * bol, const char * eol )
+    const struct KClientHttpResult * self, struct KDataBuffer * buffer, const char * bol, const char * eol )
 {
     rc_t rc = 0;
-    size_t total = 0;
 
     if ( self == NULL ) {
         return RC ( rcNS, rcNoTarg, rcReading, rcSelf, rcNull );
     }
 
-    if ( len == NULL || bol == NULL || eol == NULL ) {
+    if ( bol == NULL || eol == NULL ) {
         return RC ( rcNS, rcNoTarg, rcReading, rcParam, rcNull );
     }
 
-    rc = string_printf ( buffer, bsize, len,
-            "%sHTTP/%.2V %d %S%s", bol
+    rc = KDataBufferPrintf ( buffer, "%sHTTP/%.2V %d %S%s"
+            , bol
             , self -> version
             , self -> status
             , & self -> msg, eol
         );
-    total = * len;
 
-    if ( rc == 0 ||
-        ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
-          GetRCState ( rc ) == rcInsufficient ) )
+    if ( rc == 0 )
     {
         const KHttpHeader * node = NULL;
         for ( node = ( const KHttpHeader* ) BSTreeFirst ( & self -> hdrs );
               node != NULL;
               node = ( const KHttpHeader* ) BSTNodeNext ( & node -> dad ) )
         {
-            size_t p_bsize
-                = rc == 0
-                    ? bsize >= total ? bsize - total : 0
-                    : 0;
             /* add header line */
-            rc_t r2 = string_printf ( & buffer [ total ], p_bsize, len,
-                             "%s%S: %S\r%s", bol
-                             , & node -> name
-                             , & node -> value, eol );
-            total += * len;
-            if ( rc == 0 ) {
-                rc = r2;
-            }
+            rc = KDataBufferPrintf ( buffer, "%s%S: %S\r%s"
+                                            , bol
+                                            , & node -> name
+                                            , & node -> value
+                                            , eol );
         }
     }
-
-    if ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
-        GetRCState ( rc ) == rcInsufficient )
-    {
-        ++ total;
-    }
-
-
-    * len = total;
 
     return rc;
 }
