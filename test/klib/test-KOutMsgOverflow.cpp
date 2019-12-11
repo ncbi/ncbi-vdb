@@ -137,6 +137,37 @@ TEST_CASE(TestOUTMSGc) {
     string output;
     REQUIRE_RC(KOutHandlerSet(writerFn, &output));
     REQUIRE_RC(KOutMsg("%c", 'c'));
+    REQUIRE_EQ(output, string("c"));
+}
+
+TEST_CASE(TestOUTMSG_s) {
+    string output;
+    REQUIRE_RC(KOutHandlerSet(writerFn, &output));
+    REQUIRE_RC(KOutMsg("%s.", "string"));
+    REQUIRE_EQ(output, string("string."));
+}
+
+TEST_CASE(TestOUTMSG_ss) {
+    string output;
+    REQUIRE_RC(KOutHandlerSet(writerFn, &output));
+    REQUIRE_RC(KOutMsg("%.*s.", 6, "STRING"));
+    REQUIRE_EQ(output, string("STRING."));
+}
+
+TEST_CASE(TestOUTMS_GS) {
+    string output;
+    REQUIRE_RC(KOutHandlerSet(writerFn, &output));
+    String s;
+    CONST_STRING(&s, "String");
+    REQUIRE_RC(KOutMsg("%S.", &s));
+    REQUIRE_EQ(output, string("String."));
+}
+
+TEST_CASE(TestOUTMSG_c) {
+    string output;
+    REQUIRE_RC(KOutHandlerSet(writerFn, &output));
+    REQUIRE_RC(KOutMsg("%c.", 'c'));
+    REQUIRE_EQ(output, string("c."));
 }
 
 extern "C" {
