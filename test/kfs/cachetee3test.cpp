@@ -1096,6 +1096,12 @@ FIXTURE_TEST_CASE ( CacheTee3_invalid_path, CT3Fixture )
     remove_file ( CACHEFILE );
     remove_file ( CACHEFILE1 );
 
+#if WINDOWS
+    const char * InvalidPath = "\\sra\\invalid.sra";
+#else
+    const char * InvalidPath = "/sra/invalid.sra";
+#endif
+
     KDirectory *dir;
     REQUIRE_RC ( KDirectoryNativeDir ( &dir ) );
     const KFile *org;
@@ -1108,7 +1114,7 @@ FIXTURE_TEST_CASE ( CacheTee3_invalid_path, CT3Fixture )
     /* open and use cacheteev3 with an invalid path for the first time */
     const KFile *tee1;
     REQUIRE_RC ( KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee1, org, BLOCKSIZE,
-        cluster_factor, ram_pages, false, true, "%s", "/sra/invalid.sra" ) ); // cache.dat
+        cluster_factor, ram_pages, false, true, "%s", InvalidPath) ); // cache.dat
     for ( int i = 0; i < num_chunks; ++i )
     {
         uint64_t pos = rand_32 ( 0, DATAFILESIZE );
@@ -1120,7 +1126,7 @@ FIXTURE_TEST_CASE ( CacheTee3_invalid_path, CT3Fixture )
     /* open and use cacheteev3 with an invalid path for the second time */
     const KFile *tee2;
     REQUIRE_RC ( KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee2, org, BLOCKSIZE,
-        cluster_factor, ram_pages, false, true, "%s", "/sra/invalid.sra" ) ); // cache.dat
+        cluster_factor, ram_pages, false, true, "%s", InvalidPath) ); // cache.dat
     for ( int i = 0; i < num_chunks; ++i )
     {
         uint64_t pos = rand_32 ( 0, DATAFILESIZE );
