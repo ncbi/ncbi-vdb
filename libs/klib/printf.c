@@ -3298,7 +3298,7 @@ LIB_EXPORT rc_t CC structured_printf ( const KWrtHandler *handler,
     if ( handler != NULL )
     {
         rc_t rc;
-        char buff [ 4096 ];
+        char buff [ 16 * 1024 ];
 
         KBufferedWrtHandler out;
         out . handler = handler;
