@@ -1152,25 +1152,31 @@ rc_t KClientHttpVAddHeader ( BSTree *hdrs, bool add,
 {
     rc_t rc;
 
-    size_t bsize;
+    KDataBuffer buf;
     String name, value;
-    char buf [ 4096 ];
+
+    /* initialize data buffer */
+    KDataBufferMakeBytes ( & buf, 0 );
 
     /* initialize name string from param */
     StringInitCString ( & name, _name );
 
     /* copy data into buf, using va_list for value format */
-    rc = string_vprintf ( buf, sizeof buf, &bsize, _val, args );
-    if ( rc == 0 )
+    rc = KDataBufferVPrintf ( & buf, _val, args );
+    if ( rc == 0 && buf . elem_count != 0 )
     {
+        size_t bsize = ( size_t ) buf . elem_count - 1;
+      
         /* get length of buf */
-        size_t blen = string_len ( buf, bsize );
+        size_t blen = string_len ( buf . base, bsize );
 
         /* init value */
-        StringInit ( & value, buf, bsize, ( uint32_t ) blen );
+        StringInit ( & value, buf . base, bsize, ( uint32_t ) blen );
 
         rc = KClientHttpAddHeaderString ( hdrs, add, & name, & value );
     }
+
+    KDataBufferWhack ( & buf );
 
     return rc;
 }

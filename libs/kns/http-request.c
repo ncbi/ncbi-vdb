@@ -478,7 +478,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestByteRange ( KClientHttpRequest *self, uint6
         String name, value;
 
         CONST_STRING ( & name, "Range" );
-        rc = string_printf ( range, sizeof range, & num_writ, "bytes=%lu-%lu"
+        rc = string_printf /* USE IS OKAY */ ( range, sizeof range, & num_writ, "bytes=%lu-%lu"
                              , pos
                              , pos + bytes - 1);
         if ( rc == 0 )
