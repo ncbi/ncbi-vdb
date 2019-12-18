@@ -213,14 +213,16 @@ FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_NonEmptyFile_Encoded, HttpRequestF
 {
     MakeRequest( GetName() );
     REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name", "data/file-to-post.txt", true ) );
-    HttpRequestVerifyURL ( this, m_req, m_url + "?name=Y29udGVudHMgb2YgdGhlIGZpbGUKCg%3d%3d" );
+    REQUIRE_EQ ( string ("name=Y29udGVudHMgb2YgdGhlIGZpbGUKCg=="),
+                 string ( KClientHttpRequestGetBody( m_req ) ) );
 }
 
 FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_NonEmptyFile_NotEncoded, HttpRequestFixture)
 {
     MakeRequest( GetName() );
     REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name", "data/file-to-post.txt", false ) );
-    HttpRequestVerifyURL ( this, m_req, m_url + "?name=contents%20of%20the%20file%0a%0a" );
+    REQUIRE_EQ ( string ("name=contents of the file\n\n"),
+                 string ( KClientHttpRequestGetBody( m_req ) ) );
 }
 
 FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_SendReceiveEncoded, HttpRequestFixture)
@@ -272,9 +274,9 @@ FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_MixedPOSTparams, HttpRequestFixtur
 
     REQUIRE_RC ( KClientHttpRequestAddPostParam ( m_req, "acc=%s", "SRR2043623" ) );
     REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name", "data/file-to-post.txt", true ) );
-    HttpRequestVerifyURL ( this, m_req, m_url + "?name=Y29udGVudHMgb2YgdGhlIGZpbGUKCg%3d%3d" );
-    // "acc=SRR2043623" goes into the body
-    REQUIRE_EQ ( string ("acc=SRR2043623"),  string ( KClientHttpRequestGetBody( m_req ) ) );
+    // the file goes into the body
+    REQUIRE_EQ ( string ("acc=SRR2043623&name=Y29udGVudHMgb2YgdGhlIGZpbGUKCg=="),
+                 string ( KClientHttpRequestGetBody( m_req ) ) );
 }
 
 FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_POSTmultipleFiles, HttpRequestFixture)
@@ -283,7 +285,7 @@ FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_POSTmultipleFiles, HttpRequestFixt
 
     REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name1", "data/file-to-post.txt", false ) );
     REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name2", "data/prj_phs710EA_test.ngc", true ) );
-    //TODO: verify URL
+    //TODO: verify body
 }
 
 //////////////////////////
