@@ -22,7 +22,7 @@ TEST_SUITE_WITH_ARGS_HANDLER(TestPermSuite, argsHandler)
 
 TEST_CASE(TestService) {
     /* service is NULL */
-    REQUIRE_RC_FAIL(JwtKartValidateFile(NULL));
+    REQUIRE_RC_FAIL(JwtKartValidateFile(NULL, NULL));
     REQUIRE_RC_FAIL(KServiceSetNgcFile(NULL, NULL));
     REQUIRE_RC_FAIL(KServiceSetJwtKartFile(NULL, NULL));
 
@@ -81,7 +81,9 @@ TEST_CASE(TestService) {
 TEST_CASE(TestJwtKartValidateString) {
     String s;
     memset(&s, 0, sizeof s);
-    REQUIRE_RC_FAIL(JwtKartValidateString(&s));
+    REQUIRE_RC_FAIL(JwtKartValidateString(&s, NULL));
+
+    size_t os = ~0;
 
     /* too big cart is invalid */
     size_t size = 20 * 1024 * 1024;
@@ -90,7 +92,8 @@ TEST_CASE(TestJwtKartValidateString) {
     REQUIRE_NOT_NULL(memset(buffer, 'a', size));
     buffer[5] = buffer[9] = '.';
     StringInit(&s, buffer, size, size);
-    REQUIRE_RC_FAIL(JwtKartValidateString(&s));
+    REQUIRE_RC_FAIL(JwtKartValidateString(&s, &os));
+    REQUIRE_EQ(os, (size_t)0);
     free(buffer);
 
     /* good enough */
@@ -100,7 +103,7 @@ TEST_CASE(TestJwtKartValidateString) {
     REQUIRE_NOT_NULL(memset(buffer, 'A', size));
     buffer[5] = buffer[9] = '.';
     StringInit(&s, buffer, size, size);
-    REQUIRE_RC(JwtKartValidateString(&s));
+    REQUIRE_RC(JwtKartValidateString(&s, NULL));
     free(buffer);
 
     /* a real jwt cart */
@@ -114,7 +117,7 @@ TEST_CASE(TestJwtKartValidateString) {
         "bk6gOAiiF5AL8eC8-SOLGrxqmdF8AU52_L31_pwA";
     size = strlen(b);
     StringInit(&s, b, size, size);
-    REQUIRE_RC(JwtKartValidateString(&s));
+    REQUIRE_RC(JwtKartValidateString(&s, NULL));
 }
 
 TEST_CASE(TestJwtKartValidateStringWhite) {
@@ -127,7 +130,7 @@ TEST_CASE(TestJwtKartValidateStringWhite) {
     size_t size = sizeof b1 - 1;
     String s;
     StringInit(&s, b1, size, size);
-    REQUIRE_RC(JwtKartValidateString(&s));
+    REQUIRE_RC(JwtKartValidateString(&s, NULL));
 
     /* check valid characters */
     for (int i = 0; i < 256; ++i) {
@@ -135,81 +138,90 @@ TEST_CASE(TestJwtKartValidateStringWhite) {
         if ((i >= 'a' && i <= 'z') || (i >= 'A' && i <= 'Z') ||
             (i >= '0' && i <= '9') || i == '-' || i == '_')
         {
-            REQUIRE_RC(JwtKartValidateString(&s));
+            REQUIRE_RC(JwtKartValidateString(&s, NULL));
         }
         else
-            REQUIRE_RC_FAIL(JwtKartValidateString(&s));
+            REQUIRE_RC_FAIL(JwtKartValidateString(&s, NULL));
     }
 
     /* check second section */
     const char * b = "abcdefghijklmnopqrstuvwxyz."
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ.0123456789-_\n\r\n\n\r\r";
     StringInit(&s, b, size, size);
-    REQUIRE_RC(JwtKartValidateString(&s));
+    REQUIRE_RC(JwtKartValidateString(&s, NULL));
 
     b = "abcdefghijklmnopqrstuvwxyz."
         "ABCDEFGHIJKL NOPQRSTUVWXYZ.0123456789-_\n\r\n\n\r\r";
     StringInit(&s, b, size, size);
-    REQUIRE_RC_FAIL(JwtKartValidateString(&s));
+    REQUIRE_RC_FAIL(JwtKartValidateString(&s, NULL));
 
     /* check third section */
+    const char p[] = "abcdefghijklmnopqrstuvwxyz."
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ.0123456789-_";
+    size_t es = sizeof p - 1;
+
     b = "abcdefghijklmnopqrstuvwxyz."
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ.0123456789-_\n\r\n\n\r\r";
     StringInit(&s, b, size, size);
-    REQUIRE_RC(JwtKartValidateString(&s));
+    size_t os = ~0;
+    REQUIRE_RC(JwtKartValidateString(&s, &os));
+    REQUIRE_EQ(os, es);
 
     b = "abcdefghijklmnopqrstuvwxyz."
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ.01234 6789-_\n\r\n\n\r\r";
     StringInit(&s, b, size, size);
-    REQUIRE_RC_FAIL(JwtKartValidateString(&s));
+    REQUIRE_RC_FAIL(JwtKartValidateString(&s, NULL));
 }
 
 TEST_CASE(TestJwtKartValidateStringWhiteSections) {
+    size_t os = 0;
+
     const char * b = "1234567810123.567820123456.8301234567840";
     size_t size = strlen(b);
     String s;
     StringInit(&s, b, size, size);
-    REQUIRE_RC(JwtKartValidateString(&s));
+    REQUIRE_RC(JwtKartValidateString(&s, &os));
+    REQUIRE_EQ(os, size);
 
     /* 1 dot */
     b = "12345678101234567820123456.8301234567840";
     StringInit(&s, b, size, size);
-    REQUIRE_RC_FAIL(JwtKartValidateString(&s));
+    REQUIRE_RC_FAIL(JwtKartValidateString(&s, NULL));
 
     /* 3 dots */
     b = "1234567810123.567820123456.830123.567840";
     StringInit(&s, b, size, size);
-    REQUIRE_RC_FAIL(JwtKartValidateString(&s));
+    REQUIRE_RC_FAIL(JwtKartValidateString(&s, NULL));
 
     /* first section empty */
     b = ".2345678101234567820123456.8301234567840";
     StringInit(&s, b, size, size);
-    REQUIRE_RC_FAIL(JwtKartValidateString(&s));
+    REQUIRE_RC_FAIL(JwtKartValidateString(&s, NULL));
 
     /* first section size is min */
     b = "1.345678101234567820123456.8301234567840";
     StringInit(&s, b, size, size);
-    REQUIRE_RC(JwtKartValidateString(&s));
+    REQUIRE_RC(JwtKartValidateString(&s, NULL));
 
     /* second section empty */
     b = "1234567810123456782012345..8301234567840";
     StringInit(&s, b, size, size);
-    REQUIRE_RC_FAIL(JwtKartValidateString(&s));
+    REQUIRE_RC_FAIL(JwtKartValidateString(&s, NULL));
 
     /* second section size is min */
     b = "123456781012345678201234.6.8301234567840";
     StringInit(&s, b, size, size);
-    REQUIRE_RC(JwtKartValidateString(&s));
+    REQUIRE_RC(JwtKartValidateString(&s, NULL));
 
     /* third section empty */
     b = "1234567810123.5678201234567830123456784.";
     StringInit(&s, b, size, size);
-    REQUIRE_RC_FAIL(JwtKartValidateString(&s));
+    REQUIRE_RC_FAIL(JwtKartValidateString(&s, NULL));
 
     /* third section size is min */
     b = "1234567810123.567820123456783012345678.0";
     StringInit(&s, b, size, size);
-    REQUIRE_RC(JwtKartValidateString(&s));
+    REQUIRE_RC(JwtKartValidateString(&s, NULL));
 }
 
 const char UsageDefaultName[] = "test";

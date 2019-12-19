@@ -388,7 +388,7 @@ typedef struct {
     VRemoteProtocols protocols;
     char * format;
     char * forced; /* forced SDL>=2 location  */
-    char * jwtKartFile;
+    String * jwtKartFile;
     SNgc _ngc;
     bool hasQuery;
 } SRequest;
@@ -2559,7 +2559,8 @@ bool SRequestResponseFromEnv(const SRequest * self, KStream ** stream)
     if (self->request.objects == 1)
         name = self->request.object->objectId;
     else
-        name = self->jwtKartFile;
+        name = self->jwtKartFile == NULL ? NULL : self->jwtKartFile->addr;
+
 
     if (name == NULL)
         return false;
@@ -2639,6 +2640,10 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
                     rc = h.rc;
                 }
             }
+
+            if (rc == 0 && service->req.sdl && service->req.jwtKartFile != NULL)
+                rc = KHttpRequestAddPostParam(h.httpReq,
+                    "cart=%S", service->req.jwtKartFile);
 
             if (rc == 0) {
                 KHttpResult * rslt = NULL;
@@ -3154,7 +3159,7 @@ static rc_t SRequestFini ( SRequest * self ) {
 
     assert ( self );
 
-    free(self->jwtKartFile);
+    StringWhack(self->jwtKartFile);
     free(self->forced);
     free(self->format);
 
@@ -3717,9 +3722,6 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
         }
     }
 
-    if (rc == 0 && request->sdl && request->jwtKartFile != NULL)
-        rc = SRequestAddFile(request, "cart", request->jwtKartFile, false);
-
     return rc;
 }
 
@@ -3892,6 +3894,9 @@ rc_t KServiceSetFormat(KService * self, const char * format) {
 /* Set jwt kart argument in service request */
 rc_t KServiceSetJwtKartFile(KService * self, const char * path) {
     rc_t rc = 0;
+    size_t size = 0;
+
+    String dummy;
 
     if (self == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
@@ -3899,19 +3904,22 @@ rc_t KServiceSetJwtKartFile(KService * self, const char * path) {
     if (path == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
 
-    rc = JwtKartValidateFile(path);
+    rc = JwtKartValidateFile(path, &size);
     if (rc != 0)
         return rc;
 
-    free(self->req.jwtKartFile);
+    StringWhack(self->req.jwtKartFile);
 
     self->req.jwtKartFile = NULL;
 
-    self->req.jwtKartFile = string_dup_measure(path, NULL);
+    StringInitCString(&dummy, path);
+    StringCopy((const String **)&self->req.jwtKartFile, &dummy);
     if (self->req.jwtKartFile == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted);
-    else
+    else {
+        self->req.jwtKartFile->len = self->req.jwtKartFile->size = size;
         return 0;
+    }
 }
 
 
