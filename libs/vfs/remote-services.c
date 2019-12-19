@@ -3915,9 +3915,12 @@ rc_t KServiceSetJwtKartFile(KService * self, const char * path) {
     self->req.jwtKartFile = NULL;
 
     rc = JwtKartValidateFile(path, (const String **)&self->req.jwtKartFile);
-    /* remove trailing EOLs; make zero-terminated string */
-    assert(self->req.jwtKartFile && self->req.jwtKartFile->addr);
-    ((char*)(self->req.jwtKartFile->addr))[self->req.jwtKartFile->size] = '\0';
+    if (rc == 0) {
+        /* remove trailing EOLs; make zero-terminated string */
+        assert(self->req.jwtKartFile && self->req.jwtKartFile->addr);
+        ((char*)(self->req.jwtKartFile->addr))[self->req.jwtKartFile->size]
+            = '\0';
+    }
     return rc;
 }
 
