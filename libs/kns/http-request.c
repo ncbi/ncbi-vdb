@@ -862,7 +862,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddQueryParam ( KClientHttpRequest *self, c
     return rc;
 }
 
-LIB_EXPORT rc_t CC KClientHttpRequestAddPostFileParam ( KClientHttpRequest * self, const char * name, const char * path, bool base64Encode )
+LIB_EXPORT rc_t CC KClientHttpRequestAddPostFileParam ( KClientHttpRequest * self, const char * name, const char * path )
 {
     rc_t rc = 0;
     if ( self == NULL )
@@ -902,16 +902,12 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddPostFileParam ( KClientHttpRequest * sel
                             rc = KMMapAddrRead( mm, & fileStart );
                             if ( rc == 0 )
                             {
-                                if ( base64Encode )
+                                const String * encoded;
+                                rc = encodeBase64( & encoded, fileStart, fileSize );
+                                if ( rc == 0 )
                                 {
-                                    const String * encoded;
-                                    rc = encodeBase64( & encoded, fileStart, fileSize );
                                     rc = KClientHttpRequestAddPostParam( self, "%s=%S", name, encoded );
                                     StringWhack ( encoded );
-                                }
-                                else
-                                {
-                                    rc = KClientHttpRequestAddPostParam( self, "%s=%.*s", name, (int)fileSize, (const char*)fileStart );
                                 }
                             }
 
