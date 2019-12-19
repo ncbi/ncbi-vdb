@@ -111,11 +111,19 @@ TEST_CASE(TestKSrvResponseGetLocation) {
 
     REQUIRE_RC(KSrvResponseGetLocation(r, "SRR850901", "SRR850901.vdbcache",
         &local, &rcLocal, 0, 0));
-    REQUIRE_RC(rcLocal);
+    if (hasLocal)
+        REQUIRE_RC(rcLocal);
+    else
+        REQUIRE_RC_FAIL(rcLocal);
+
     char buffer[PATH_MAX] = "";
-    REQUIRE_RC(VPathReadPath(local, buffer, sizeof buffer, NULL));
-    REQUIRE_EQ(string(buffer),
-        Netmnt + "/traces04/sra11/SRR/000830/SRR850901.vdbcache");
+    if (hasLocal) {
+        REQUIRE_RC(VPathReadPath(local, buffer, sizeof buffer, NULL));
+        REQUIRE_EQ(string(buffer),
+            Netmnt + "/traces04/sra11/SRR/000830/SRR850901.vdbcache");
+    } else
+        REQUIRE_RC_FAIL(VPathReadPath(local, buffer, sizeof buffer, NULL));
+
     REQUIRE_RC(VPathRelease(local));
 
     const VPath * cache = NULL;
@@ -157,13 +165,19 @@ TEST_CASE(TestKSrvResponseGetLocationCache) {
     REQUIRE_RC(KSrvResponseGetLocation(r, "SRR850901", "SRR850901.vdbcache",
         &local, &rcLocal, &cache, &rcCache));
 
-    REQUIRE_RC(rcLocal);
+    if (hasLocal)
+        REQUIRE_RC(rcLocal);
+    else
+	REQUIRE_RC_FAIL(rcLocal);
     
     char buffer[PATH_MAX] = "";
 
-    REQUIRE_RC(VPathReadPath(local, buffer, sizeof buffer, NULL));
-    REQUIRE_EQ(string(buffer),
-        Netmnt + "/traces04/sra11/SRR/000830/SRR850901.vdbcache");
+    if (hasLocal) {
+        REQUIRE_RC(VPathReadPath(local, buffer, sizeof buffer, NULL));
+        REQUIRE_EQ(string(buffer),
+            Netmnt + "/traces04/sra11/SRR/000830/SRR850901.vdbcache");
+    } else
+	REQUIRE_RC_FAIL(VPathReadPath(local, buffer, sizeof buffer, NULL));
     
     REQUIRE_RC(VPathRelease(local));
 
