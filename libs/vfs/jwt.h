@@ -38,7 +38,7 @@ extern "C" {
     struct String;
 
     /* size: size of JWT string */
-    rc_t JwtKartValidateFile(const char * path, size_t * size);
+    rc_t JwtKartValidateFile(const char * path, const String ** jwt);
     rc_t JwtKartValidateString(const struct String * cart, size_t * size);
 
 #ifdef __cplusplus

@@ -2641,10 +2641,6 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
                 }
             }
 
-            if (rc == 0 && service->req.sdl && service->req.jwtKartFile != NULL)
-                rc = KHttpRequestAddPostParam(h.httpReq,
-                    "cart=%S", service->req.jwtKartFile);
-
             if (rc == 0) {
                 KHttpResult * rslt = NULL;
                 DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), (
@@ -3722,6 +3718,20 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
         }
     }
 
+    if (rc == 0 && request->sdl && request->jwtKartFile != NULL) {
+        const char n[] = "cart";
+        const char * v = request->jwtKartFile->addr;
+        rc = SKVMake(&kv, n, v);
+        if (rc == 0) {
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
+                ("  %s=%s\n", n, v));
+            rc = VectorAppend(&self->params, NULL, kv);
+        }
+        if (rc != 0)
+            return rc;
+        request->hasQuery = true;
+    }
+
     return rc;
 }
 
@@ -3894,9 +3904,6 @@ rc_t KServiceSetFormat(KService * self, const char * format) {
 /* Set jwt kart argument in service request */
 rc_t KServiceSetJwtKartFile(KService * self, const char * path) {
     rc_t rc = 0;
-    size_t size = 0;
-
-    String dummy;
 
     if (self == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcSelf, rcNull);
@@ -3904,22 +3911,14 @@ rc_t KServiceSetJwtKartFile(KService * self, const char * path) {
     if (path == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
 
-    rc = JwtKartValidateFile(path, &size);
-    if (rc != 0)
-        return rc;
-
     StringWhack(self->req.jwtKartFile);
-
     self->req.jwtKartFile = NULL;
 
-    StringInitCString(&dummy, path);
-    StringCopy((const String **)&self->req.jwtKartFile, &dummy);
-    if (self->req.jwtKartFile == NULL)
-        return RC(rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted);
-    else {
-        self->req.jwtKartFile->len = self->req.jwtKartFile->size = size;
-        return 0;
-    }
+    rc = JwtKartValidateFile(path, (const String **)&self->req.jwtKartFile);
+    /* remove trailing EOLs; make zero-terminated string */
+    assert(self->req.jwtKartFile && self->req.jwtKartFile->addr);
+    ((char*)(self->req.jwtKartFile->addr))[self->req.jwtKartFile->size] = '\0';
+    return rc;
 }
 
 

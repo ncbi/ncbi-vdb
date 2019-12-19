@@ -122,7 +122,10 @@ rc_t JwtKartValidateString(const String * cart, size_t * size) {
     return rc;
 }
 
-rc_t JwtKartValidateFile(const char * path, size_t * osize) {
+rc_t JwtKartValidateFile(const char * path, const String ** aJwt) {
+    String s;
+    size_t osize = 0;
+
     rc_t rc = 0;
 
     KDirectory * dir = NULL;
@@ -161,12 +164,19 @@ rc_t JwtKartValidateFile(const char * path, size_t * osize) {
         rc = KFileReadExactly(f, 0, buffer, size);
 
     if (rc == 0) {
-        String s;
         StringInit(&s, buffer, size, size);
-        rc = JwtKartValidateString(&s, osize);
+        rc = JwtKartValidateString(&s, &osize);
     }
 
-    free(buffer);
+    if (rc == 0 && aJwt != NULL) {
+        String * jwt = NULL;
+        rc = StringCopy(aJwt, &s);
+        if (rc == 0) {
+            assert(*aJwt);
+            jwt = (String *)(*aJwt);
+            jwt->len = jwt->size = osize;
+        }
+    }
 
     RELEASE(KFile, f);
 
