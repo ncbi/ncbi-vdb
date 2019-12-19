@@ -50,13 +50,15 @@ TEST_SUITE ( TestServices );
 
 #define ALL
 
-const string Netmnt = 
 #ifdef MAC
-   "/net"
+    #define NETMNT "/net"
 #else
-   "/netmnt"
+    #define NETMNT "/netmnt"
 #endif
-;
+
+const string Netmnt(NETMNT);
+
+static bool hasLocal = true;
 
 #ifdef ALL
 TEST_CASE ( TestKServiceAddId ) {
@@ -353,6 +355,19 @@ extern "C" {
 
         if (
 0) assert(!KDbgSetString("VFS"));
+
+        KDirectory * dir = NULL;
+        rc_t rc = KDirectoryNativeDir(&dir);
+        if (rc != 0)
+            return rc;
+        if ((KDirectoryPathType(dir,
+            NETMNT "/traces04") & ~kptAlias) == kptNotFound)
+        {
+            hasLocal = false;
+        }
+        rc = KDirectoryRelease(dir);
+        if (rc != 0)
+            return rc;
 
         return TestServices ( argc, argv );
     }
