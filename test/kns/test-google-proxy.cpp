@@ -186,7 +186,8 @@ extern "C" {
 1 ) assert ( ! KDbgSetString ( "KNS-DNS"   ) );   if (
 1 ) assert ( ! KDbgSetString ( "KNS-HTTP"  ) );   if (
 1 ) assert ( ! KDbgSetString ( "KNS-PROXY" ) );   if (
-1)     KStsLevelSet ( 5 );
+1)     KStsLevelSet ( 5 );                        if (
+1)     ncbi::NK::TestEnv::verbosity = ncbi::NK::LogLevel::E::e_all;
 
         rc_t rc = KConfigMakeEmpty ( & KFG );
 
