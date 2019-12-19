@@ -179,53 +179,45 @@ FIXTURE_TEST_CASE(RequestAddPostParam, HttpRequestFixture)
 
 FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_SelfNull, HttpRequestFixture)
 {
-    REQUIRE_RC_FAIL ( KClientHttpRequestAddPostFileParam ( nullptr, "name", "data/fileToPost", false ) );
+    REQUIRE_RC_FAIL ( KClientHttpRequestAddPostFileParam ( nullptr, "name", "data/fileToPost" ) );
 }
 FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_NameParamNull, HttpRequestFixture)
 {
     MakeRequest( GetName() );
-    REQUIRE_RC_FAIL ( KClientHttpRequestAddPostFileParam ( m_req, nullptr, "data/fileToPost", false ) );
+    REQUIRE_RC_FAIL ( KClientHttpRequestAddPostFileParam ( m_req, nullptr, "data/fileToPost" ) );
 }
 FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_PathParamNull, HttpRequestFixture)
 {
     MakeRequest( GetName() );
-    REQUIRE_RC_FAIL ( KClientHttpRequestAddPostFileParam ( m_req, "name", nullptr, false ) );
+    REQUIRE_RC_FAIL ( KClientHttpRequestAddPostFileParam ( m_req, "name", nullptr ) );
 }
 FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_PathParamEmpty, HttpRequestFixture)
 {
     MakeRequest( GetName() );
-    REQUIRE_RC_FAIL ( KClientHttpRequestAddPostFileParam ( m_req, "name", "", false ) );
+    REQUIRE_RC_FAIL ( KClientHttpRequestAddPostFileParam ( m_req, "name", "" ) );
 }
 
 FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_FileMissing, HttpRequestFixture)
 {
     MakeRequest( GetName() );
-    REQUIRE_RC_FAIL ( KClientHttpRequestAddPostFileParam ( m_req, "name", "not-there.txt", false ) );
+    REQUIRE_RC_FAIL ( KClientHttpRequestAddPostFileParam ( m_req, "name", "not-there.txt" ) );
 }
 
 FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_EmptyFile, HttpRequestFixture)
 {
     MakeRequest( GetName() );
-    REQUIRE_RC_FAIL ( KClientHttpRequestAddPostFileParam ( m_req, "name", "data/empty-file-to-post.txt", false ) );
+    REQUIRE_RC_FAIL ( KClientHttpRequestAddPostFileParam ( m_req, "name", "data/empty-file-to-post.txt" ) );
 }
 
-FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_NonEmptyFile_Encoded, HttpRequestFixture)
+FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_NonEmptyFile, HttpRequestFixture)
 {
     MakeRequest( GetName() );
-    REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name", "data/file-to-post.txt", true ) );
+    REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name", "data/file-to-post.txt" ) );
     REQUIRE_EQ ( string ("name=Y29udGVudHMgb2YgdGhlIGZpbGUKCg=="),
                  string ( KClientHttpRequestGetBody( m_req ) ) );
 }
 
-FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_NonEmptyFile_NotEncoded, HttpRequestFixture)
-{
-    MakeRequest( GetName() );
-    REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name", "data/file-to-post.txt", false ) );
-    REQUIRE_EQ ( string ("name=contents of the file\n\n"),
-                 string ( KClientHttpRequestGetBody( m_req ) ) );
-}
-
-FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_SendReceiveEncoded, HttpRequestFixture)
+FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_SendReceive, HttpRequestFixture)
 {
     const char * Server = SDL_CGI;
 
@@ -233,7 +225,7 @@ FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_SendReceiveEncoded, HttpRequestFix
 
     REQUIRE_RC ( KClientHttpRequestAddQueryParam ( m_req, "acc", "SRR2043623" ) );
     REQUIRE_RC ( KClientHttpRequestAddQueryParam ( m_req, "filetype", "run" ) );
-    REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "ngc", "data/prj_phs710EA_test.ngc", true ) );
+    REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "ngc", "data/prj_phs710EA_test.ngc" ) );
 
 //cout << "req=\"" << FormatRequest() << "\"" << endl;
 
@@ -247,33 +239,12 @@ FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_SendReceiveEncoded, HttpRequestFix
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
 }
 
-// FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_SendReceiveNotEncoded, HttpRequestFixture)
-// {    // this test resides in the private repo since it uses a real JWT cart file
-//     const char * Server = SDL_CGI;
-
-//     REQUIRE_RC ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, NULL, Server ) );
-
-//     REQUIRE_RC ( KClientHttpRequestAddQueryParam ( m_req, "filetype", "run" ) );
-//     REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "ngc", "data/jwt-cart", false ) );
-
-// //cout << "req=\"" << FormatRequest() << "\"" << endl;
-
-//     KClientHttpResult *rslt;
-//     REQUIRE_RC ( KClientHttpRequestPOST ( m_req, & rslt ) );
-//     uint32_t code;
-//     char buf[1024];
-//     size_t msg_size;
-//     REQUIRE_RC ( KClientHttpResultStatus ( rslt, & code, buf, sizeof buf, & msg_size ) );
-//     REQUIRE_EQ ( 200u, code );
-//     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
-// }
-
 FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_MixedPOSTparams, HttpRequestFixture)
 {
     MakeRequest( GetName() );
 
     REQUIRE_RC ( KClientHttpRequestAddPostParam ( m_req, "acc=%s", "SRR2043623" ) );
-    REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name", "data/file-to-post.txt", true ) );
+    REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name", "data/file-to-post.txt" ) );
     // the file goes into the body
     REQUIRE_EQ ( string ("acc=SRR2043623&name=Y29udGVudHMgb2YgdGhlIGZpbGUKCg=="),
                  string ( KClientHttpRequestGetBody( m_req ) ) );
@@ -283,8 +254,8 @@ FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_POSTmultipleFiles, HttpRequestFixt
 {
     MakeRequest( GetName() );
 
-    REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name1", "data/file-to-post.txt", false ) );
-    REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name2", "data/prj_phs710EA_test.ngc", true ) );
+    REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name1", "data/file-to-post.txt" ) );
+    REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name2", "data/prj_phs710EA_test.ngc" ) );
     //TODO: verify body
 }
 

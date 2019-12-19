@@ -2627,7 +2627,7 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
             if (rc == 0) {
                 if (self->fileKey != NULL && self->fileVal != NULL) {
                     rc = KClientHttpRequestAddPostFileParam(h.httpReq,
-                        self->fileKey, self->fileVal, self->fileBase64encode);
+                        self->fileKey, self->fileVal);
                     if (rc == 0) {
                         VectorForEach(&self->params, false,
                             SHttpRequestHelperAddQueryParam, &h);
