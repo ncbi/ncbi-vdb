@@ -396,7 +396,7 @@ static rc_t FileSetHttp(File * self, const VPath * path) {
 }
 
 rc_t FileAddVPath ( File * self, const VPath * path,
-                            const VPath * mapping, bool setHttp, uint64_t osize)
+                const VPath * mapping, bool setHttp, uint64_t osize)
 {
     int i = 0;
 
