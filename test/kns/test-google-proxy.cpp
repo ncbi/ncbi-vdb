@@ -38,7 +38,8 @@
 
 #include <../../libs/kns/mgr-priv.h> /* KNSManager */
 
-TEST_SUITE ( GoogleProxyTestSuite )
+static rc_t argsHandler(int argc, char * argv[]);
+TEST_SUITE_WITH_ARGS_HANDLER(GoogleProxyTestSuite, argsHandler)
 
 static KConfig * KFG = NULL;
 
@@ -166,13 +167,26 @@ TEST_CASE ( KClientHttpRequestPOSTTest )
     REQUIRE_RC ( KNSManagerRelease ( mgr ) );
 }
 
+#include <kapp/args.h> // Args
+static rc_t argsHandler(int argc, char * argv[]) {
+    Args * args = NULL;
+    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
+    ArgsWhack(args);
+    return rc;
+}
+
 extern "C" {
+    const char UsageDefaultName[] = "test-google-proxy";
+    rc_t CC UsageSummary(const char     * progname) { return 0; }
+    rc_t CC Usage(const struct Args * args) { return 0; }
+
     ver_t CC KAppVersion ( void ) { return 0; }
 
     rc_t CC KMain ( int argc, char * argv [] ) { if (
-0 ) assert ( ! KDbgSetString ( "KNS-DNS"   ) );   if (
-0 ) assert ( ! KDbgSetString ( "KNS-HTTP"  ) );   if (
-0 ) assert ( ! KDbgSetString ( "KNS-PROXY" ) );
+1 ) assert ( ! KDbgSetString ( "KNS-DNS"   ) );   if (
+1 ) assert ( ! KDbgSetString ( "KNS-HTTP"  ) );   if (
+1 ) assert ( ! KDbgSetString ( "KNS-PROXY" ) );   if (
+1)     KStsLevelSet ( 5 );
 
         rc_t rc = KConfigMakeEmpty ( & KFG );
 
