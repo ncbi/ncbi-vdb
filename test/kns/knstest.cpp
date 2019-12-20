@@ -164,6 +164,13 @@ TEST_CASE(KnsManagerSets)
     KNSManagerGetUserAgent(&ua);
     fprintf ( stderr, "UA #3 is '%s'\n", ua);
 
+    char toobig[8192];
+    memset(toobig,'X',sizeof toobig);
+    toobig[sizeof toobig-1]='\0';
+    REQUIRE_RC_FAIL(KNSManagerSetClientIP(mgr, toobig));
+    REQUIRE_RC_FAIL(KNSManagerSetSessionID(mgr, toobig));
+    REQUIRE_RC_FAIL(KNSManagerSetPageHitID(mgr, toobig));
+
     REQUIRE_RC(KNSManagerRelease(mgr));
 }
 

@@ -791,8 +791,11 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent (
     va_end ( args );
 
     if ( rc == 0 ) {
-        string_copy (
+        size_t copy_size = string_copy (
             kns_manager_user_agent, sizeof kns_manager_user_agent, ua, bytes );
+
+        if ( copy_size >= sizeof kns_manager_user_agent )
+            rc = RC ( rcNS, rcMgr, rcUpdating, rcBuffer, rcInsufficient );
     }
 
     return rc;
@@ -882,8 +885,11 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
     }
 
     if ( rc == 0 ) {
-        string_copy ( kns_manager_user_agent_append,
+        size_t copy_size = string_copy ( kns_manager_user_agent_append,
             sizeof kns_manager_user_agent_append, scratch, bytes );
+
+        if ( copy_size >= sizeof kns_manager_user_agent_append )
+            rc = RC ( rcNS, rcMgr, rcUpdating, rcBuffer, rcInsufficient );
     }
 
     ( *user_agent ) = kns_manager_user_agent_append;
@@ -999,8 +1005,13 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgentSuffix ( const char *suffix )
     if ( suffix == NULL ) {
         return RC ( rcNS, rcMgr, rcAttaching, rcRefcount, rcInvalid );
     }
-    string_copy ( kns_manager_ua_suffix, sizeof kns_manager_ua_suffix, suffix,
-        strlen ( suffix ) );
+
+    size_t copy_size = string_copy ( kns_manager_ua_suffix,
+        sizeof kns_manager_ua_suffix, suffix, strlen ( suffix ) );
+
+    if ( copy_size >= sizeof kns_manager_ua_suffix )
+        return RC ( rcNS, rcMgr, rcUpdating, rcBuffer, rcInsufficient );
+
     return 0;
 }
 
@@ -1011,15 +1022,20 @@ LIB_EXPORT rc_t CC KNSManagerSetClientIP (
         return RC ( rcNS, rcMgr, rcAttaching, rcRefcount, rcInvalid );
     }
 
+    rc_t rc = 0;
     if ( kns_manager_lock ) {
-        rc_t rc = KLockAcquire ( kns_manager_lock );
+        rc = KLockAcquire ( kns_manager_lock );
         if ( rc ) { return rc; }
     }
-    string_copy ( kns_manager_clientip, sizeof kns_manager_clientip, clientip,
-        strlen ( clientip ) );
+    size_t copy_size = string_copy ( kns_manager_clientip,
+        sizeof kns_manager_clientip, clientip, strlen ( clientip ) );
+
+    if ( copy_size >= sizeof kns_manager_clientip)
+        rc = RC ( rcNS, rcMgr, rcUpdating, rcBuffer, rcInsufficient );
 
     if ( kns_manager_lock ) { KLockUnlock ( kns_manager_lock ); }
-    return 0;
+
+    return rc;
 }
 
 LIB_EXPORT rc_t CC KNSManagerSetSessionID (
@@ -1029,15 +1045,21 @@ LIB_EXPORT rc_t CC KNSManagerSetSessionID (
         return RC ( rcNS, rcMgr, rcAttaching, rcRefcount, rcInvalid );
     }
 
+    rc_t rc = 0;
     if ( kns_manager_lock ) {
-        rc_t rc = KLockAcquire ( kns_manager_lock );
+        rc = KLockAcquire ( kns_manager_lock );
         if ( rc ) { return rc; }
     }
-    string_copy ( kns_manager_sessionid, sizeof kns_manager_sessionid,
-        sessionid, strlen ( sessionid ) );
+
+    size_t copy_size = string_copy ( kns_manager_sessionid,
+        sizeof kns_manager_sessionid, sessionid, strlen ( sessionid ) );
+
+    if ( copy_size >= sizeof kns_manager_sessionid )
+        rc = RC ( rcNS, rcMgr, rcUpdating, rcBuffer, rcInsufficient );
 
     if ( kns_manager_lock ) { KLockUnlock ( kns_manager_lock ); }
-    return 0;
+
+    return rc;
 }
 
 
@@ -1048,13 +1070,19 @@ LIB_EXPORT rc_t CC KNSManagerSetPageHitID (
         return RC ( rcNS, rcMgr, rcAttaching, rcRefcount, rcInvalid );
     }
 
+    rc_t rc = 0;
     if ( kns_manager_lock ) {
-        rc_t rc = KLockAcquire ( kns_manager_lock );
+        rc = KLockAcquire ( kns_manager_lock );
         if ( rc ) { return rc; }
     }
-    string_copy ( kns_manager_pagehitid, sizeof kns_manager_pagehitid,
-        pagehitid, strlen ( pagehitid ) );
+
+    size_t copy_size = string_copy ( kns_manager_pagehitid,
+        sizeof kns_manager_pagehitid, pagehitid, strlen ( pagehitid ) );
+
+    if ( copy_size >= sizeof kns_manager_pagehitid )
+        rc = RC ( rcNS, rcMgr, rcUpdating, rcBuffer, rcInsufficient );
 
     if ( kns_manager_lock ) { KLockUnlock ( kns_manager_lock ); }
-    return 0;
+
+    return rc;
 }
