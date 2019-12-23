@@ -30,6 +30,7 @@
 #include <kfg/properties.h>
 
 #include <klib/base64.h>
+#include <klib/data-buffer.h>
 #include <klib/printf.h>
 #include <klib/rc.h>
 #include <klib/strings.h>
@@ -77,14 +78,15 @@
 #define MAX_CONN_WRITE_LIMIT ( 10 * 60 * 1000 )
 #endif
 
-static char kns_manager_user_agent[512] = "";
-static char kns_manager_user_agent_append[512] = "";
+static KDataBuffer kns_manager_user_agent;
+static KDataBuffer kns_manager_user_agent_append;
+
 static KLock *kns_manager_lock = NULL; /* Protects below */
-static char kns_manager_clientip[64] = "";
-static char kns_manager_sessionid[256] = "";
-static char kns_manager_pagehitid[256] = "";
-static char kns_manager_ua_suffix[250] = "";
-static char kns_manager_guid[256] = "";
+static KDataBuffer kns_manager_clientip;
+static KDataBuffer kns_manager_sessionid;
+static KDataBuffer kns_manager_pagehitid;
+static KDataBuffer kns_manager_ua_suffix;
+static KDataBuffer kns_manager_guid;
 
 #if USE_SINGLETON
 static atomic_ptr_t kns_singleton;
@@ -138,6 +140,14 @@ static rc_t KNSManagerWhack ( KNSManager *self )
         KLockRelease ( kns_manager_lock );
         kns_manager_lock = NULL;
     }
+
+    if ( !rc ) rc = KDataBufferWhack ( &kns_manager_user_agent );
+    if ( !rc ) rc = KDataBufferWhack ( &kns_manager_user_agent_append );
+    if ( !rc ) rc = KDataBufferWhack ( &kns_manager_clientip );
+    if ( !rc ) rc = KDataBufferWhack ( &kns_manager_sessionid );
+    if ( !rc ) rc = KDataBufferWhack ( &kns_manager_pagehitid );
+    if ( !rc ) rc = KDataBufferWhack ( &kns_manager_ua_suffix );
+    if ( !rc ) rc = KDataBufferWhack ( &kns_manager_guid );
 
     return rc;
 }
@@ -201,6 +211,26 @@ static rc_t CC KNSManagerMakeSingleton (
         if ( kfg == NULL ) { rc = KConfigMake ( &kfg, NULL ); }
 
         if ( rc == 0 ) {
+            if ( !kns_manager_lock ) {
+                rc = KLockMake ( &kns_manager_lock );
+                if ( rc ) { return rc; }
+            }
+            rc = KDataBufferMakeBytes ( &kns_manager_user_agent, 0 );
+            if ( rc ) { return rc; }
+            rc = KDataBufferMakeBytes ( &kns_manager_user_agent_append, 0 );
+            if ( rc ) { return rc; }
+
+            rc = KDataBufferMakeBytes ( &kns_manager_clientip, 0 );
+            if ( rc ) { return rc; }
+            rc = KDataBufferMakeBytes ( &kns_manager_sessionid, 0 );
+            if ( rc ) { return rc; }
+            rc = KDataBufferMakeBytes ( &kns_manager_pagehitid, 0 );
+            if ( rc ) { return rc; }
+            rc = KDataBufferMakeBytes ( &kns_manager_ua_suffix, 0 );
+            if ( rc ) { return rc; }
+            rc = KDataBufferMakeBytes ( &kns_manager_guid, 0 );
+            if ( rc ) { return rc; }
+
             rc = KNSManagerMakeConfigImpl ( &our_mgr, kfg );
 
             if ( aKfg == NULL ) { KConfigRelease ( kfg ); }
@@ -224,11 +254,6 @@ static rc_t CC KNSManagerMakeSingleton (
                     }
                 }
 #endif
-
-                if ( !kns_manager_lock ) {
-                    rc = KLockMake ( &kns_manager_lock );
-                    if ( rc ) { return rc; }
-                }
                 /* return parameter */
                 *mgrp = our_mgr;
             }
@@ -696,17 +721,19 @@ static rc_t CC KNSManagerMakeConfigImpl ( KNSManager **mgrp, KConfig *kfg )
             mgr->accept_aws_charges = KNSManagerPrepareAcceptAwsCharges ( kfg );
             mgr->accept_gcp_charges = KNSManagerPrepareAcceptGcpCharges ( kfg );
 
-            if ( !strlen ( kns_manager_guid ) ) {
+            if ( KDataBufferBytes ( &kns_manager_guid ) == 0 ) {
+                rc = KDataBufferResize ( &kns_manager_guid, 40 );
                 size_t written = 0;
-                KConfig_Get_GUID (
-                    kfg, kns_manager_guid, sizeof kns_manager_guid, &written );
+                KConfig_Get_GUID ( kfg, kns_manager_guid.base,
+                    KDataBufferBytes ( &kns_manager_guid ), &written );
+                assert ( written < 40 );
             }
 
             rc = KNSManagerInit (); /* platform specific init in sysmgr.c ( in
                                        unix|win etc. subdir ) */
             if ( rc == 0 ) {
                 /* the manager is not a proper singleton */
-                if ( kns_manager_user_agent[0] == 0 ) {
+                if ( KDataBufferBytes ( &kns_manager_user_agent ) == 0 ) {
                     ver_t version = RELEASE_VERS;
                     KNSManagerSetUserAgent (
                         mgr, PKGNAMESTR " ncbi-vdb.%V", version );
@@ -782,21 +809,11 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent (
         return rc;
     }
 
-    size_t bytes = 0;
-    char ua[sizeof kns_manager_user_agent];
-
+    KDataBufferResize ( &kns_manager_user_agent, 0 );
     va_list args;
     va_start ( args, fmt );
-    rc = string_vprintf ( ua, sizeof ua, &bytes, fmt, args );
+    rc = KDataBufferVPrintf ( &kns_manager_user_agent, fmt, args );
     va_end ( args );
-
-    if ( rc == 0 ) {
-        size_t copy_size = string_copy (
-            kns_manager_user_agent, sizeof kns_manager_user_agent, ua, bytes );
-
-        if ( copy_size >= sizeof kns_manager_user_agent )
-            rc = RC ( rcNS, rcMgr, rcUpdating, rcBuffer, rcInsufficient );
-    }
 
     return rc;
 }
@@ -810,7 +827,6 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
         return rc;
     }
 
-    size_t bytes = 0;
     char cloudtrunc[64];
     const char *cloudid = getenv ( ENV_MAGIC_CE_TOKEN );
     if ( cloudid && strlen ( cloudid ) > 8 ) {
@@ -818,6 +834,7 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
          * suffixes seems non-random */
         strncpy ( cloudtrunc, cloudid + 4, sizeof cloudtrunc );
         cloudtrunc[3] = '\0';
+        assert ( strlen ( cloudtrunc ) < ( sizeof cloudtrunc - 1 ) );
     } else {
         strcpy ( cloudtrunc, "noc" );
     }
@@ -830,69 +847,77 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
     libc_version = gnu_get_libc_version ();
 #endif
 
-    if ( !strlen ( kns_manager_guid ) ) {
+    if ( KDataBufferBytes ( &kns_manager_guid ) == 0 ) {
         KConfig *kfg = NULL;
         KConfigMake ( &kfg, NULL );
-
         size_t written = 0;
-        KConfig_Get_GUID (
-            kfg, kns_manager_guid, sizeof kns_manager_guid, &written );
+
+        rc = KDataBufferResize ( &kns_manager_guid, 40 );
+        if ( rc ) {
+            /* Some tests whack guid */
+            rc = KDataBufferMakeBytes ( &kns_manager_guid, 40 );
+            if ( rc ) { return rc; }
+        }
+
+        KConfig_Get_GUID ( kfg, kns_manager_guid.base,
+            KDataBufferBytes ( &kns_manager_guid ), &written );
+
 
         if ( kfg ) KConfigRelease ( kfg );
     }
 
     const char *guid;
-    if ( strlen ( kns_manager_guid ) )
-        guid = kns_manager_guid;
+    if ( kns_manager_guid.base && strlen ( kns_manager_guid.base ) )
+        guid = kns_manager_guid.base;
     else
         guid = "nog";
 
-    char phid[sizeof kns_manager_user_agent];
-    rc = string_printf ( phid, sizeof phid, &bytes, "%.3s%.4s%.3s,libc=%s",
-        cloudtrunc, guid, sessid, libc_version );
-    if ( rc ) { return rc; }
 
-    char sessids[sizeof kns_manager_user_agent] = "";
+    KDataBuffer phid;
+    KDataBufferMakeBytes ( &phid, 0 );
+    rc = KDataBufferPrintf (
+        &phid, "%.3s%.4s%.3s,libc=%s", cloudtrunc, guid, sessid, libc_version );
+    if ( rc ) { return rc; }
 
     if ( kns_manager_lock ) {
         rc_t rc = KLockAcquire ( kns_manager_lock );
         if ( rc ) { return rc; }
     }
 
-    if ( strlen ( kns_manager_clientip ) || strlen ( kns_manager_sessionid )
-        || strlen ( kns_manager_pagehitid ) ) {
-        rc = string_printf ( sessids, sizeof sessids, &bytes,
-            "cip=%s,sid=%s,pagehit=%s", kns_manager_clientip,
-            kns_manager_sessionid, kns_manager_pagehitid );
+    KDataBuffer sessids;
+    KDataBufferMakeBytes ( &sessids, 0 );
+
+    if ( KDataBufferBytes ( &kns_manager_clientip )
+        || KDataBufferBytes ( &kns_manager_sessionid )
+        || KDataBufferBytes ( &kns_manager_pagehitid ) ) {
+        rc = KDataBufferPrintf ( &sessids, "cip=%s,sid=%s,pagehit=%s",
+            kns_manager_clientip.base, kns_manager_sessionid.base,
+            kns_manager_pagehitid.base );
     }
 
     if ( kns_manager_lock ) { KLockUnlock ( kns_manager_lock ); }
 
     if ( rc ) { return rc; }
 
-    char scratch[sizeof kns_manager_user_agent];
+    KDataBufferResize ( &kns_manager_user_agent_append, 0 );
 
-    if ( strlen ( sessids ) ) {
+    if ( KDataBufferBytes ( &sessids ) ) {
         const String *b64;
-        encodeBase64 ( &b64, sessids, strlen ( sessids ) );
-        rc = string_printf ( scratch, sizeof scratch, &bytes,
-            "%s%s (phid=%s,%s)", kns_manager_user_agent, kns_manager_ua_suffix,
-            phid, b64->addr );
+        encodeBase64 ( &b64, sessids.base, strlen ( sessids.base ) );
+        rc = KDataBufferPrintf ( &kns_manager_user_agent_append,
+            "%s%s (phid=%s,%s)", kns_manager_user_agent.base,
+            kns_manager_ua_suffix.base, phid.base, b64->addr );
         StringWhack ( b64 );
     } else {
-        string_printf ( scratch, sizeof scratch, &bytes, "%s%s (phid=%s)",
-            kns_manager_user_agent, kns_manager_ua_suffix, phid );
+        KDataBufferPrintf ( &kns_manager_user_agent_append, "%s%s (phid=%s)",
+            kns_manager_user_agent.base, kns_manager_ua_suffix.base,
+            phid.base );
     }
 
-    if ( rc == 0 ) {
-        size_t copy_size = string_copy ( kns_manager_user_agent_append,
-            sizeof kns_manager_user_agent_append, scratch, bytes );
+    KDataBufferWhack ( &phid );
+    KDataBufferWhack ( &sessids );
 
-        if ( copy_size >= sizeof kns_manager_user_agent_append )
-            rc = RC ( rcNS, rcMgr, rcUpdating, rcBuffer, rcInsufficient );
-    }
-
-    ( *user_agent ) = kns_manager_user_agent_append;
+    ( *user_agent ) = kns_manager_user_agent_append.base;
 
     return rc;
 }
@@ -1006,13 +1031,8 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgentSuffix ( const char *suffix )
         return RC ( rcNS, rcMgr, rcAttaching, rcRefcount, rcInvalid );
     }
 
-    size_t copy_size = string_copy ( kns_manager_ua_suffix,
-        sizeof kns_manager_ua_suffix, suffix, strlen ( suffix ) );
-
-    if ( copy_size >= sizeof kns_manager_ua_suffix )
-        return RC ( rcNS, rcMgr, rcUpdating, rcBuffer, rcInsufficient );
-
-    return 0;
+    KDataBufferResize ( &kns_manager_ua_suffix, 0 );
+    return KDataBufferPrintf ( &kns_manager_ua_suffix, "%s", suffix );
 }
 
 LIB_EXPORT rc_t CC KNSManagerSetClientIP (
@@ -1027,11 +1047,9 @@ LIB_EXPORT rc_t CC KNSManagerSetClientIP (
         rc = KLockAcquire ( kns_manager_lock );
         if ( rc ) { return rc; }
     }
-    size_t copy_size = string_copy ( kns_manager_clientip,
-        sizeof kns_manager_clientip, clientip, strlen ( clientip ) );
 
-    if ( copy_size >= sizeof kns_manager_clientip)
-        rc = RC ( rcNS, rcMgr, rcUpdating, rcBuffer, rcInsufficient );
+    KDataBufferResize ( &kns_manager_clientip, 0 );
+    rc = KDataBufferPrintf ( &kns_manager_clientip, "%s", clientip );
 
     if ( kns_manager_lock ) { KLockUnlock ( kns_manager_lock ); }
 
@@ -1051,11 +1069,8 @@ LIB_EXPORT rc_t CC KNSManagerSetSessionID (
         if ( rc ) { return rc; }
     }
 
-    size_t copy_size = string_copy ( kns_manager_sessionid,
-        sizeof kns_manager_sessionid, sessionid, strlen ( sessionid ) );
-
-    if ( copy_size >= sizeof kns_manager_sessionid )
-        rc = RC ( rcNS, rcMgr, rcUpdating, rcBuffer, rcInsufficient );
+    KDataBufferResize ( &kns_manager_sessionid, 0 );
+    rc = KDataBufferPrintf ( &kns_manager_sessionid, "%s", sessionid );
 
     if ( kns_manager_lock ) { KLockUnlock ( kns_manager_lock ); }
 
@@ -1076,11 +1091,8 @@ LIB_EXPORT rc_t CC KNSManagerSetPageHitID (
         if ( rc ) { return rc; }
     }
 
-    size_t copy_size = string_copy ( kns_manager_pagehitid,
-        sizeof kns_manager_pagehitid, pagehitid, strlen ( pagehitid ) );
-
-    if ( copy_size >= sizeof kns_manager_pagehitid )
-        rc = RC ( rcNS, rcMgr, rcUpdating, rcBuffer, rcInsufficient );
+    KDataBufferResize ( &kns_manager_pagehitid, 0 );
+    rc = KDataBufferPrintf ( &kns_manager_pagehitid, "%s", pagehitid );
 
     if ( kns_manager_lock ) { KLockUnlock ( kns_manager_lock ); }
 
