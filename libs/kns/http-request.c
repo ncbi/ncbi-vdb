@@ -1497,58 +1497,49 @@ rc_t KClientHttpRequestSendReceiveNoBody ( KClientHttpRequest *self, KClientHttp
  */
 LIB_EXPORT rc_t CC KClientHttpRequestHEAD ( KClientHttpRequest *self, KClientHttpResult **rslt )
 {
+    rc_t rc=0;
+
     if ( self -> ceRequired || self -> payRequired )
     {   /* use POST or GET for 256 bytes */
-
         /* update UserAgent with -head */
-        const char * user_agent;
-        rc_t rc = KNSManagerGetUserAgent ( & user_agent );
+        KNSManagerSetUserAgentSuffix("-head");
+
+        char buf [ 256 ];
+
+        /* add header "Range bytes = 0,HeadSize" */
+        rc = KClientHttpRequestByteRange ( self, 0, sizeof buf );
         if ( rc == 0 )
         {
-            char * user_agent_saved = string_dup ( user_agent, string_size( user_agent ) );
-            if ( user_agent_saved != NULL )
+            rc = self -> ceRequired ? KClientHttpRequestPOST ( self, rslt ) : KClientHttpRequestGET ( self, rslt );
+            if ( rc == 0 )
             {
-                #define HeadSize 256
-                KNSManagerSetUserAgent ( (KNSManager*)self->http->mgr, "%s-head", user_agent );
+                uint64_t result_size64 = sizeof buf;
+                KStream * response;
 
-                /* add header "Range bytes = 0,HeadSize" */
-                rc = KClientHttpRequestByteRange ( self, 0, HeadSize );
-                if ( rc == 0 )
+                /* extractSize */
+                KClientHttpResultSize ( *rslt, & result_size64 );
+
+                if ( result_size64 > sizeof buf ) /* unlikely but would be very unpleasant */
                 {
-                    rc = self -> ceRequired ? KClientHttpRequestPOST ( self, rslt ) : KClientHttpRequestGET ( self, rslt );
-                    if ( rc == 0 )
-                    {
-                        char buf [ HeadSize ];
-                        uint64_t result_size64 = sizeof buf;
-                        KStream * response;
-
-                        /* extractSize */
-                        KClientHttpResultSize ( *rslt, & result_size64 );
-
-                        if ( result_size64 > sizeof buf ) /* unlikely but would be very unpleasant */
-                        {
-                            result_size64 = sizeof buf;
-                        }
-
-                        /* consume and discard result_size64 bytes */
-                        rc = KClientHttpResultGetInputStream ( *rslt, & response );
-                        if ( rc == 0 )
-                        {
-                            rc = KStreamTimedReadExactly ( response, buf, result_size64, NULL );
-                            KStreamRelease ( response );
-                        }
-                    }
+                    result_size64 = sizeof buf;
                 }
 
-                KNSManagerSetUserAgent ( (KNSManager*)self->http->mgr, "%s", user_agent_saved );
-                #undef HeadSize
-                free ( user_agent_saved );
-            }
-            else
-            {
-                rc = RC ( rcNS, rcString, rcAllocating, rcMemory, rcExhausted );
+                /* consume and discard result_size64 bytes */
+                rc = KClientHttpResultGetInputStream ( *rslt, & response );
+                if ( rc == 0 )
+                {
+                    rc = KStreamTimedReadExactly ( response, buf, result_size64, NULL );
+                    KStreamRelease ( response );
+                }
             }
         }
+        else
+        {
+            rc = RC ( rcNS, rcString, rcAllocating, rcMemory, rcExhausted );
+        }
+
+        /* Restore UserAgent */
+        KNSManagerSetUserAgentSuffix("");
         return rc;
     }
     else
