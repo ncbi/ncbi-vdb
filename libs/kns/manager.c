@@ -740,11 +740,11 @@ static rc_t CC KNSManagerMakeConfigImpl ( KNSManager **mgrp, KConfig *kfg )
             mgr->accept_gcp_charges = KNSManagerPrepareAcceptGcpCharges ( kfg );
 
             if ( strlen ( kns_manager_guid.base ) == 0 ) {
-                rc = KDataBufferResize ( &kns_manager_guid, 40 );
+                rc = KDataBufferResize ( &kns_manager_guid, 37 );
                 size_t written = 0;
                 KConfig_Get_GUID ( kfg, kns_manager_guid.base,
                     KDataBufferBytes ( &kns_manager_guid ), &written );
-                assert ( written < 40 );
+                assert ( written <= 37 );
             }
 
             rc = KNSManagerInit (); /* platform specific init in sysmgr.c ( in
@@ -874,16 +874,16 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
         KConfigMake ( &kfg, NULL );
         size_t written = 0;
 
-        rc = KDataBufferResize ( &kns_manager_guid, 40 );
+        rc = KDataBufferResize ( &kns_manager_guid, 37 );
         if ( rc ) {
             /* Some tests whack guid */
-            rc = KDataBufferMakeBytes ( &kns_manager_guid, 40 );
+            rc = KDataBufferMakeBytes ( &kns_manager_guid, 37 );
             if ( rc ) { return rc; }
         }
 
         KConfig_Get_GUID ( kfg, kns_manager_guid.base,
             KDataBufferBytes ( &kns_manager_guid ), &written );
-        assert ( written < 40 );
+        assert ( written <= 37 );
 
         if ( kfg ) KConfigRelease ( kfg );
     }
@@ -948,7 +948,6 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char **user_agent )
     KDataBufferWhack ( &sessids );
 
     ( *user_agent ) = kns_manager_user_agent_append.base;
-
     return rc;
 }
 
