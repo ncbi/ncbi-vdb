@@ -111,13 +111,13 @@ TEST_CASE(TestKSrvResponseGetLocation) {
 
     REQUIRE_RC(KSrvResponseGetLocation(r, "SRR850901", "SRR850901.vdbcache",
         &local, &rcLocal, 0, 0));
-    if (hasLocal)
+    if (false && hasLocal) // SRR850901.vdbcache was moved out
         REQUIRE_RC(rcLocal);
     else
         REQUIRE_RC_FAIL(rcLocal);
 
     char buffer[PATH_MAX] = "";
-    if (hasLocal) {
+    if (false && hasLocal) { // SRR850901.vdbcache was moved out
         REQUIRE_RC(VPathReadPath(local, buffer, sizeof buffer, NULL));
         REQUIRE_EQ(string(buffer),
             Netmnt + "/traces04/sra11/SRR/000830/SRR850901.vdbcache");
@@ -165,14 +165,14 @@ TEST_CASE(TestKSrvResponseGetLocationCache) {
     REQUIRE_RC(KSrvResponseGetLocation(r, "SRR850901", "SRR850901.vdbcache",
         &local, &rcLocal, &cache, &rcCache));
 
-    if (hasLocal)
+    if (false && hasLocal) // SRR850901.vdbcache was moved out
         REQUIRE_RC(rcLocal);
     else
 	REQUIRE_RC_FAIL(rcLocal);
     
     char buffer[PATH_MAX] = "";
 
-    if (hasLocal) {
+    if (false && hasLocal) { // SRR850901.vdbcache was moved out
         REQUIRE_RC(VPathReadPath(local, buffer, sizeof buffer, NULL));
         REQUIRE_EQ(string(buffer),
             Netmnt + "/traces04/sra11/SRR/000830/SRR850901.vdbcache");
