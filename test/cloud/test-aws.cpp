@@ -223,7 +223,9 @@ TEST_CASE(GetPkcs7) {
         }
         else {
             REQUIRE_RC(rc);
-            REQUIRE_EQ(string_measure(pkcs7, NULL), (uint32_t)1118);
+            uint32_t len = string_measure(pkcs7, NULL);
+            REQUIRE_LT( 1000u, len);
+            REQUIRE_GT( 3000u, len);            
         }
     }
     REQUIRE_RC(KNSManagerRelease(kns));
