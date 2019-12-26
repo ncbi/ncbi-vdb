@@ -28,6 +28,8 @@
 * Unit tests for NGS Pileup interface, CSRA1 based implementation
 */
 
+#include "ngsfixture.hpp"
+
 #include <kfg/config.h> /* KConfigDisableUserSettings */
 
 #include <ngs/ncbi/NGS.hpp>
@@ -45,7 +47,7 @@ using namespace ncbi::NK;
 
 TEST_SUITE(NgsCsra1PileupCppTestSuite);
 
-TEST_CASE(CSRA1_PileupIterator_GetDepth)
+FIXTURE_TEST_CASE(CSRA1_PileupIterator_GetDepth, NgsFixture)
 {
     char const db_path[] = "SRR341578";
 
@@ -61,7 +63,7 @@ TEST_CASE(CSRA1_PileupIterator_GetDepth)
     vecRef.push_back(3); // 20021
 
     {
-        ngs::ReadCollection run = ncbi::NGS::openReadCollection (db_path);
+        ngs::ReadCollection run = open (db_path);
         ngs::ReferenceIterator ri = run.getReferences ();
 
         ri.nextReference ();
@@ -77,7 +79,7 @@ TEST_CASE(CSRA1_PileupIterator_GetDepth)
         }
     }
     {
-        ngs::ReadCollection run = ncbi::NGS::openReadCollection (db_path);
+        ngs::ReadCollection run = open (db_path);
         ngs::ReferenceIterator ri = run.getReferences ();
 
         ri.nextReference ();
@@ -103,15 +105,14 @@ TEST_CASE(CSRA1_PileupIterator_GetDepth)
     }
 }
 
-
-TEST_CASE(CSRA1_PileupEventIterator_GetType)
+FIXTURE_TEST_CASE(CSRA1_PileupEventIterator_GetType, NgsFixture)
 {
     char const db_path[] = "SRR341578";
 
     int64_t const pos_start = 20022;
     uint64_t const len = 1;
 
-    ngs::ReadCollection run = ncbi::NGS::openReadCollection (db_path);
+    ngs::ReadCollection run = open (db_path);
     ngs::ReferenceIterator ri = run.getReferences ();
 
     ri.nextReference ();
@@ -268,13 +269,12 @@ void mark_line_as_starting_insertion ( PileupLine& line, ngs::String const& inse
 }
 
 void mimic_sra_pileup (
-            char const* db_path,
+            ngs::ReadCollection run,
             char const* ref_name,
             ngs::Alignment::AlignmentCategory category,
             int64_t const pos_start, uint64_t const len,
             std::ostream& os)
 {
-    ngs::ReadCollection run = ncbi::NGS::openReadCollection (db_path);
     ngs::Reference r = run.getReference ( ref_name );
     ngs::String const& canonical_name = r.getCanonicalName ();
 
@@ -378,7 +378,7 @@ void mimic_sra_pileup (
     print_line ( line_prev, canonical_name.c_str(), pos_start, pos - 1, strRefSlice, os );
 }
 
-TEST_CASE(CSRA1_PileupEventIterator_AdjacentIndels)
+FIXTURE_TEST_CASE(CSRA1_PileupEventIterator_AdjacentIndels, NgsFixture)
 {
     // This test crashed in CSRA1_PileupEvent.c because of
     // insertion followed by deletion (see vdb-dump SRR1164787 -T PRIMARY_ALIGNMENT -R 209167)
@@ -393,10 +393,10 @@ TEST_CASE(CSRA1_PileupEventIterator_AdjacentIndels)
 
     std::ostringstream sstream;
 
-    mimic_sra_pileup ( db_path, ref_name, ngs::Alignment::primaryAlignment, pos_start, len, sstream );
+    mimic_sra_pileup ( open(db_path), ref_name, ngs::Alignment::primaryAlignment, pos_start, len, sstream );
 }
 
-TEST_CASE(CSRA1_PileupEventIterator_DeletionAndEnding)
+FIXTURE_TEST_CASE(CSRA1_PileupEventIterator_DeletionAndEnding, NgsFixture)
 {
 
     //sra-pileup SRR497541 -r "Contig307.Contig78.Contig363_2872688_2872915.Contig307.Contig78.Contig363_1_2872687":106436-106438 -s -n
@@ -416,12 +416,12 @@ TEST_CASE(CSRA1_PileupEventIterator_DeletionAndEnding)
     sstream_ref << ref_name << "\t106437\tT\t92\tC$>><>>>><><<><<><<<<>><><><c<><<><>>>><>>>>>>><><<<><>>>><<<><<><<>>><>>>><<><>>><<<<<<>><<," << std::endl;
     sstream_ref << ref_name << "\t106438\tA\t91\t>><>>>><><<><<><<<<>><><><g$<><<><>>>><>>>>>>><><<<><>>>><<<><<><<>>><>>>><<><>>><<<<<<>><<," << std::endl;
 
-    mimic_sra_pileup ( db_path, ref_name, ngs::Alignment::primaryAlignment, pos_start, len, sstream );
+    mimic_sra_pileup ( open(db_path), ref_name, ngs::Alignment::primaryAlignment, pos_start, len, sstream );
 
     REQUIRE_EQ ( sstream.str (), sstream_ref.str () );
 }
 
-TEST_CASE(CSRA1_PileupEventIterator_LongDeletions)
+FIXTURE_TEST_CASE(CSRA1_PileupEventIterator_LongDeletions, NgsFixture)
 {
 
     //SRR1113221 "chr4" 10204 10208
@@ -444,13 +444,12 @@ TEST_CASE(CSRA1_PileupEventIterator_LongDeletions)
     sstream_ref << "NC_000004.11\t10207\tC\t40\t,$,$.$.$.....,..,..>>>.,..>t-6ggctgc...+2TC.,......^$.^$.^$.^$.^A." << std::endl;
     sstream_ref << "NC_000004.11\t10208\tG\t39\t.....,..,..>>>.,..><....,...........^$,^M.^$." << std::endl;
 
-    mimic_sra_pileup ( db_path, "chr4", ngs::Alignment::primaryAlignment, pos_start, len, sstream );
+    mimic_sra_pileup ( open(db_path), "chr4", ngs::Alignment::primaryAlignment, pos_start, len, sstream );
 
     REQUIRE_EQ ( sstream.str (), sstream_ref.str () );
 }
 
-
-TEST_CASE(CSRA1_PileupEventIterator_Deletion)
+FIXTURE_TEST_CASE(CSRA1_PileupEventIterator_Deletion, NgsFixture)
 {
     // deletions
     char const db_path[] = "SRR341578";
@@ -466,12 +465,12 @@ TEST_CASE(CSRA1_PileupEventIterator_Deletion)
     sstream_ref << "NC_011752.1\t2428\tG\t34\t..,.,.-1A.-1A.-1A.-1A.-1A.-1A,-1a,-1a.-1A,-1a,-1a.-1A.-1A.-1A,-1a,-1a,-1a,-1a.-1A,-1a,-1a.-1A,-1a.-1A.-1A,-1a.^F,^F," << std::endl;
     sstream_ref << "NC_011752.1\t2429\tA\t34\t.$.$,$.,>>>>>><<><<>>><<<<><<><>><Ggg" << std::endl;
 
-    mimic_sra_pileup ( db_path, "gi|218511148|ref|NC_011752.1|", ngs::Alignment::all, pos_start, len, sstream );
+    mimic_sra_pileup ( open(db_path), "gi|218511148|ref|NC_011752.1|", ngs::Alignment::all, pos_start, len, sstream );
 
     REQUIRE_EQ ( sstream.str (), sstream_ref.str () );
 }
 
-TEST_CASE(CSRA1_PileupEventIterator_Insertion)
+FIXTURE_TEST_CASE(CSRA1_PileupEventIterator_Insertion, NgsFixture)
 {
     // simple matches, mismatch, insertion, mapping quality
     char const db_path[] = "SRR341578";
@@ -487,12 +486,12 @@ TEST_CASE(CSRA1_PileupEventIterator_Insertion)
     sstream_ref << "NC_011752.1\t2018\tT\t17\t.....,,A,,..+2CA..^F.^F.^:N" << std::endl;
     sstream_ref << "NC_011752.1\t2019\tC\t19\t.....,,.,,.......^F.^F," << std::endl;
 
-    mimic_sra_pileup ( db_path, "gi|218511148|ref|NC_011752.1|", ngs::Alignment::all, pos_start, len, sstream );
+    mimic_sra_pileup ( open(db_path), "gi|218511148|ref|NC_011752.1|", ngs::Alignment::all, pos_start, len, sstream );
 
     REQUIRE_EQ ( sstream.str (), sstream_ref.str () );
 }
 
-TEST_CASE(CSRA1_PileupEventIterator_TrickyInsertion)
+FIXTURE_TEST_CASE(CSRA1_PileupEventIterator_TrickyInsertion, NgsFixture)
 {
     // the insertion occurs in 1 or more previous chunks but not the current
 
@@ -509,13 +508,12 @@ TEST_CASE(CSRA1_PileupEventIterator_TrickyInsertion)
     sstream_ref << "NC_011748.1\t380001\tT\t61\t....,,...,......,,...,,.....,,..,.,,,,...,,,,,,,+2tc.,.....G....," << std::endl;
     sstream_ref << "NC_011748.1\t380002\tT\t61\t.$.$.$.$,$,$...,......,,...,,.....,,A.,.,,,,...,,,,,,,.,.....G....," << std::endl;
 
-    mimic_sra_pileup ( db_path, "gi|218693476|ref|NC_011748.1|", ngs::Alignment::primaryAlignment, pos_start, len, sstream );
+    mimic_sra_pileup ( open(db_path), "gi|218693476|ref|NC_011748.1|", ngs::Alignment::primaryAlignment, pos_start, len, sstream );
 
     REQUIRE_EQ ( sstream.str (), sstream_ref.str () );
 }
 
-
-TEST_CASE(CSRA1_PileupIterator_StartingZeros)
+FIXTURE_TEST_CASE(CSRA1_PileupIterator_StartingZeros, NgsFixture)
 {
     // this is transition from depth == 0 to depth == 1
     // initial code had different output for primaryAlignments vs all
@@ -534,12 +532,12 @@ TEST_CASE(CSRA1_PileupIterator_StartingZeros)
     sstream_ref << "gi|169794206|ref|NC_010410.1|\t19375\tC\t0\t" << std::endl;
     sstream_ref << "gi|169794206|ref|NC_010410.1|\t19376\tA\t1\t^!." << std::endl;
 
-    mimic_sra_pileup ( "SRR833251", "gi|169794206|ref|NC_010410.1|", ngs::Alignment::all, pos_start, len, sstream );
+    mimic_sra_pileup ( open("SRR833251"), "gi|169794206|ref|NC_010410.1|", ngs::Alignment::all, pos_start, len, sstream );
 
     REQUIRE_EQ ( sstream.str (), sstream_ref.str () );
 }
 
-TEST_CASE(CSRA1_PileupIterator_MapQuality)
+FIXTURE_TEST_CASE(CSRA1_PileupIterator_MapQuality, NgsFixture)
 {
     // different mapping quality
     // there was a bug caused by usage of char c instead int32_t c
@@ -554,12 +552,12 @@ TEST_CASE(CSRA1_PileupIterator_MapQuality)
 
     sstream_ref << "gi|169794206|ref|NC_010410.1|\t183830\tA\t1\t^~," << std::endl;
 
-    mimic_sra_pileup ( "SRR833251", "gi|169794206|ref|NC_010410.1|", ngs::Alignment::all, pos_start, len, sstream );
+    mimic_sra_pileup ( open("SRR833251"), "gi|169794206|ref|NC_010410.1|", ngs::Alignment::all, pos_start, len, sstream );
 
     REQUIRE_EQ ( sstream.str (), sstream_ref.str () );
 }
 
-TEST_CASE(CSRA1_PileupIterator_Depth)
+FIXTURE_TEST_CASE(CSRA1_PileupIterator_Depth, NgsFixture)
 {
     // if ngs::Alignment::all is used here
     // there will be discrepancy with sra-pileup
@@ -573,12 +571,12 @@ TEST_CASE(CSRA1_PileupIterator_Depth)
 
     sstream_ref << "gi|169794206|ref|NC_010410.1|\t519533\tC\t1\t," << std::endl;
 
-    mimic_sra_pileup ( "SRR833251", "gi|169794206|ref|NC_010410.1|", ngs::Alignment::primaryAlignment, pos_start, len, sstream );
+    mimic_sra_pileup ( open("SRR833251"), "gi|169794206|ref|NC_010410.1|", ngs::Alignment::primaryAlignment, pos_start, len, sstream );
 
     REQUIRE_EQ ( sstream.str (), sstream_ref.str () );
 }
 
-TEST_CASE(CSRA1_PileupIterator_TrailingInsertion)
+FIXTURE_TEST_CASE(CSRA1_PileupIterator_TrailingInsertion, NgsFixture)
 {
     // Loaders sometimes fail and produce a run with trailing insertions
     // Like now (2015-06-29) SRR1652532 for SRR1652532.PA.97028
@@ -599,7 +597,7 @@ TEST_CASE(CSRA1_PileupIterator_TrailingInsertion)
     //sstream_ref << "gi|169794206|ref|NC_010410.1|\t19375\tC\t0\t" << std::endl;
     //sstream_ref << "gi|169794206|ref|NC_010410.1|\t19376\tA\t1\t^!." << std::endl;
 
-    mimic_sra_pileup ( "SRR1652532", "CM000671.1", ngs::Alignment::all, pos_start, len, sstream );
+    mimic_sra_pileup ( open("SRR1652532"), "CM000671.1", ngs::Alignment::all, pos_start, len, sstream );
 
     //std::cout << sstream.str() << std::endl;
 
@@ -607,7 +605,7 @@ TEST_CASE(CSRA1_PileupIterator_TrailingInsertion)
 }
 
 #if 0 /* TODO: this test needs to be investigated later */
-TEST_CASE(CSRA1_PileupIterator_FalseMismatch)
+FIXTURE_TEST_CASE(CSRA1_PileupIterator_FalseMismatch, NgsFixture)
 {
     // here is two problems:
     // 1. at the position 19726231 GetEventType returns "mismatch"
@@ -644,14 +642,13 @@ TEST_CASE(CSRA1_PileupIterator_FalseMismatch)
 #endif
 
 uint64_t pileup_test_all_functions (
-            char const* db_path,
+            ncbi::ReadCollection run,
             char const* ref_name,
             ngs::Alignment::AlignmentCategory category,
             int64_t const pos_start, uint64_t const len)
 {
     uint64_t ret = 0;
 
-    ngs::ReadCollection run = ncbi::NGS::openReadCollection (db_path);
     ngs::Reference r = run.getReference ( ref_name );
 
     // in strRefSlice we want to have bases to report current base and deletions
@@ -702,10 +699,10 @@ uint64_t pileup_test_all_functions (
     return ret;
 }
 
-TEST_CASE(CSRA1_PileupIterator_TestAllFunctions)
+FIXTURE_TEST_CASE(CSRA1_PileupIterator_TestAllFunctions, NgsFixture)
 {
     uint64_t ret = 0;
-    ret = pileup_test_all_functions ( "SRR822962", "chr2"/*"NC_000002.11"*/, ngs::Alignment::all, 0, 20000 );
+    ret = pileup_test_all_functions ( open ("SRR822962"), "chr2"/*"NC_000002.11"*/, ngs::Alignment::all, 0, 20000 );
     // this magic sum was taken from an observed result,
     // but due to a bug in "resetPileupEvent()", is likely to be wrong
     // resetting the magic sum to what is being returned now.
@@ -738,6 +735,8 @@ rc_t CC KMain ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     rc_t rc=NgsCsra1PileupCppTestSuite(argc, argv);
+
+    NgsFixture::ReleaseCache();
     return rc;
 }
 
