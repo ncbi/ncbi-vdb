@@ -105,7 +105,8 @@ TEST_CASE ( GoogleProxyTest ) {
     if (http_proxy != NULL)
     {
         REQUIRE_RC ( KNSManagerMakeHttpFile ( mgr, & file, NULL, 0x01010000,
-            "http://www.baidu.com/" ) );
+            "http://sra-download-nfs.be-md.ncbi.nlm.nih.gov"
+                "/traces/sra57/SRR/000052/SRR053325" ) );
 
         char buffer [ 256 ] = "";
         size_t num_read = 0;
@@ -183,11 +184,11 @@ extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
 
     rc_t CC KMain ( int argc, char * argv [] ) { if (
-1 ) assert ( ! KDbgSetString ( "KNS-DNS"   ) );   if (
-1 ) assert ( ! KDbgSetString ( "KNS-HTTP"  ) );   if (
-1 ) assert ( ! KDbgSetString ( "KNS-PROXY" ) );   if (
-1)     KStsLevelSet ( 5 );                        if (
-1)     ncbi::NK::TestEnv::verbosity = ncbi::NK::LogLevel::E::e_all;
+0 ) assert ( ! KDbgSetString ( "KNS-DNS"   ) );   if (
+0 ) assert ( ! KDbgSetString ( "KNS-HTTP"  ) );   if (
+0 ) assert ( ! KDbgSetString ( "KNS-PROXY" ) );   if (
+0 )     KStsLevelSet ( 5 );                       if (
+0 )     ncbi::NK::TestEnv::verbosity = ncbi::NK::LogLevel::E::e_all;
 
         rc_t rc = KConfigMakeEmpty ( & KFG );
 
