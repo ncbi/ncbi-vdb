@@ -46,7 +46,6 @@ SUBDIRS =       \
     kapp        \
     vfs         \
     cloud       \
-    kns         \
     kdb         \
     kproc       \
     vdb         \
@@ -60,8 +59,9 @@ SUBDIRS =       \
     ngs-c++     \
     ngs-python  \
     ngs-java    \
-    schema	    \
+    schema      \
     install     \
+    kns         \
 
 # common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
 include $(TOP)/build/Makefile.targets
