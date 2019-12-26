@@ -105,7 +105,8 @@ TEST_CASE ( GoogleProxyTest ) {
     if (http_proxy != NULL)
     {
         REQUIRE_RC ( KNSManagerMakeHttpFile ( mgr, & file, NULL, 0x01010000,
-            "http://www.baidu.com/" ) );
+            "http://sra-download-nfs.be-md.ncbi.nlm.nih.gov"
+                "/traces/sra57/SRR/000052/SRR053325" ) );
 
         char buffer [ 256 ] = "";
         size_t num_read = 0;
