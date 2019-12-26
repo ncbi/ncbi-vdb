@@ -40,27 +40,55 @@
 #include <sysalloc.h>
 #include <assert.h>
 
+#include <map>
+
 #define SHOW_UNIMPLEMENTED 0
 
 class NgsFixture
 {
 public:
-    NgsFixture()
-    : suppress_errors(false)
+    typedef std :: map< std :: string, ncbi::ReadCollection > Collections;
+
+public:
+    NgsFixture() :
+        suppress_errors(false)
     {
+        if ( colls == nullptr )
+        {
+            colls = new NgsFixture::Collections();
+        }
     }
-    
+
     ~NgsFixture()
     {
     }
 
+    static void ReleaseCache()
+    {
+        delete colls;
+        colls = nullptr;
+    }
+
+    ncbi::ReadCollection open ( const char* acc )
+    {
+        std :: string ac(acc);
+        auto c = colls->find(ac);
+        if ( c != colls->end() )
+        {
+            return c -> second;
+        }
+        ncbi::ReadCollection ret = ncbi :: NGS :: openReadCollection ( acc );
+        colls->insert( Collections::value_type(ac, ret) );
+        return ret;
+    }
+
     ngs :: ReadIterator getReads ( const char* acc, ngs :: Read :: ReadCategory cat )
     {
-        return ncbi :: NGS :: openReadCollection ( acc ) . getReads ( cat ); 
+        return open ( acc ) . getReads ( cat );
     }
     ngs :: Read getRead (const char* acc, const ngs :: String& p_id)
     {
-        return ncbi :: NGS :: openReadCollection ( acc ). getRead ( p_id ); 
+        return open ( acc ). getRead ( p_id );
     }
     ngs :: Read getFragment (const char* acc, const ngs :: String& p_readId, uint32_t p_fragIdx)
     {
@@ -71,25 +99,29 @@ public:
             read . nextFragment ();
             -- p_fragIdx;
         }
-    
+
         return read;
     }
 
     ngs :: Reference getReference ( const char* acc, const char* spec )
     {
-        return ncbi :: NGS :: openReadCollection ( acc ) . getReference ( spec ); 
+        return open ( acc ) . getReference ( spec );
     }
     bool hasReference ( const char* acc, const char* spec )
     {
-        return ncbi :: NGS :: openReadCollection ( acc ) . hasReference ( spec ); 
+        return open ( acc ) . hasReference ( spec );
     }
     ngs :: ReferenceIterator getReferences ( const char* acc )
     {
-        return ncbi :: NGS :: openReadCollection ( acc ) . getReferences (); 
+        return open ( acc ) . getReferences ();
     }
-    
+
     bool suppress_errors;
+
+    static Collections * colls;
 };
+
+NgsFixture::Collections * NgsFixture::colls = nullptr;
 
 #endif
 
