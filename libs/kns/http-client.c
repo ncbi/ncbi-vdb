@@ -359,13 +359,15 @@ rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint
 			{
 				size_t sent;
 				timeout_t tm;
+                                size_t size = buffer.elem_count - 1;
 
-				STATUS(STAT_QA, "%s - created proxy request '%.*s'\n", __func__, (uint32_t)buffer.elem_count, (char*)buffer.base);
+				STATUS(STAT_QA, "%s - created proxy request '%.*s'\n", __func__,
+                                    (uint32_t)size, (char*)buffer.base);
 
 				/* send request and receive a response */
 				STATUS(STAT_PRG, "%s - sending proxy request\n", __func__);
 				TimeoutInit(&tm, self->write_timeout);
-				rc = KStreamTimedWriteAll(self->sock, buffer.base, buffer.elem_count, &sent, &tm);
+				rc = KStreamTimedWriteAll(self->sock, buffer.base, size, &sent, &tm);
 				if (rc != 0)
 					DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("Failed to send proxy request: %R\n", rc));
 				else
@@ -374,7 +376,7 @@ rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint
 					ver_t version;
 					uint32_t status;
 
-					assert(sent == buffer.elem_count);
+					assert(sent == size);
 
 					STATUS(STAT_PRG, "%s - reading proxy response status line\n", __func__);
 					TimeoutInit(&tm, self->read_timeout);
