@@ -21,8 +21,10 @@
 *  Please cite the author in any work or product based on this material.
 *
 * ===========================================================================
-* Tests for libs/cloud/aws-auth.c
+* Tests for libs/cloud/aws.c
 */
+
+#include <cmath>
 
 #include <cloud/manager.h> /* CloudMgrMake */
 #include <kapp/args.h> /* ArgsMakeAndHandle */

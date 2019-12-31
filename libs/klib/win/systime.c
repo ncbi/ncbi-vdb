@@ -370,7 +370,7 @@ LIB_EXPORT size_t CC KTimeIso8601 ( KTime_t ts, char * s, size_t size )
     if ( r == NULL )
         return 0;
 
-    rc = string_printf ( s, size, & num_writ, "%04d-02d-02dT02d:%02d:%02dZ",
+    rc = string_printf ( s, size, & num_writ, "%04d-%02d-%02dT%02d:%02d:%02dZ",
         ktime . year, ktime . month + 1, ktime . day + 1,
         ktime . hour, ktime . minute, ktime . second );
     if ( rc == 0 )

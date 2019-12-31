@@ -28,9 +28,9 @@
 * Unit tests for GUID generation
 */
 
-#include <klib/guid.h>
-
 #include <ktst/unit_test.hpp>
+
+#include <klib/guid.h>
 
 using namespace std;
 

@@ -62,7 +62,7 @@ struct KCacheTeeChunkReader;
 #define DEFAULT_CLUSTER_FACT 4U
 #define MAX_REQUEST_SIZE ( 256U * 1024U * 1024U )
 #define MAX_PAGE_SIZE ( 256U * 1024U * 1024U )
-#define MAX_RAM_CACHE_BYTES ( 64UL * 1024UL * 1024UL * 1024UL )
+#define MAX_RAM_CACHE_BYTES ( 64ULL * 1024ULL * 1024ULL * 1024ULL )
 #if _DEBUGGING
 #define MIN_PAGE_SIZE ( 256U )
 #else
@@ -2187,8 +2187,10 @@ void KCacheTeeFileBindConstants ( KCacheTeeFile_v3 * self,
     /* set up ram cache page limit */
     ram_cache_size = ( size_t ) self -> page_size * ram_pages;
 
+    STATUS(STAT_GEEK, "%s - ram_cache_size=%lu MAX_RAM_CACHE_BYTES=%lu\n", __func__, ram_cache_size, MAX_RAM_CACHE_BYTES);
+
     if ( ram_cache_size > MAX_RAM_CACHE_BYTES )
-        ram_pages = MAX_RAM_CACHE_BYTES / self -> page_size;
+        ram_pages = (uint32_t) ( MAX_RAM_CACHE_BYTES / self -> page_size );
 
     self -> ram_limit = ram_pages;
     self -> try_promote_on_close = try_promote_on_close;

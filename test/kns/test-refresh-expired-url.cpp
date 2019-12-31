@@ -187,8 +187,8 @@ FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_NotCloud, CloudFixture
 // for AWS, autorization is only added with the payer info
 FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_AWS_NoToken_NoPayer, CloudFixture )
 {
-    setenv ( "AWS_ACCESS_KEY_ID", "access_key_id", 1 );
-    setenv ( "AWS_SECRET_ACCESS_KEY", "secret_access_key", 1 );
+    putenv ( "AWS_ACCESS_KEY_ID=access_key_id" );
+    putenv ( "AWS_SECRET_ACCESS_KEY=secret_access_key" );
 
     RespondWithRedirect ( AwsUrl, KTimeStamp () + 65 );
     RespondToHEAD ( string( 256, 'q' ) );

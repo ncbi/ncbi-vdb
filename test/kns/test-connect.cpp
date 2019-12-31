@@ -30,7 +30,6 @@
 
 #include <ktst/unit_test.hpp>
 
-#include <unistd.h>
 #include <errno.h>
 
 #include <klib/rc.h>
