@@ -1108,7 +1108,8 @@ static rc_t VFSManagerResolvePathResolver (const VFSManager * self,
          */
         if ((flags & vfsmgr_rflag_no_acc_local) == 0)
         {
-            rc = VResolverLocal (self->resolver, in_path, (const VPath **)out_path);
+            rc = VResolverQuery(self->resolver, 0, in_path,
+                (const VPath **)out_path, NULL, NULL);
             if (rc == 0)
                 not_done = false;
         }
