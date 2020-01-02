@@ -24,6 +24,7 @@
 
 #include <klib/debug.h> /* DBGMSG */
 #include <klib/json.h> /* KJsonValue */
+#include <klib/log.h> /* PLOGERR */
 #include <klib/rc.h> /* RC */
 #include <klib/text.h> /* String */
 
@@ -561,7 +562,7 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
     const KJsonValue * value = NULL;
     char error[99] = "";
 
-    const char name[] = "result";
+    const char * name = "status";
 
     StackPrintInput(input);
 
@@ -578,6 +579,71 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
         return rc;
 
     object = KJsonValueToObject(root);
+
+    name = "status";
+    value = KJsonObjectGetMember(object, name);
+    if (value != NULL) {
+        const char * message = NULL;
+        bool ok = true;
+
+        int64_t status = 0;
+        rc = KJsonGetNumber(value, &status);
+        if (rc != 0) {
+            if (THRESHOLD > THRESHOLD_NO_DEBUG)
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), (
+                    "... error: cannot get '%s'\n", name));
+            return rc;
+        }
+        if (THRESHOLD > THRESHOLD_ERROR)
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), (
+                "\"/%s\" = %ld\n", name, status));
+
+        name = "msg";
+        value = KJsonObjectGetMember(object, name);
+
+        if (value == NULL) {
+            name = "message";
+            value = KJsonObjectGetMember(object, name);
+        }
+
+        if (value != NULL) {
+            rc = KJsonGetString(value, &message);
+            if (rc != 0) {
+                if (THRESHOLD > THRESHOLD_NO_DEBUG)
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), (
+                        "... error: cannot get '%s'\n", name));
+                return rc;
+            }
+            if (THRESHOLD > THRESHOLD_ERROR)
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), (
+                    "\"/%s\" = \"%s\"\n", name, message));
+        }
+
+        if (status != 200)
+            ok = false;
+        else if (message != NULL
+            && (message[0] != 'o' || message[1] != 'k' || message[2] != '\0'))
+        {
+            ok = false;
+        }
+
+        if (!ok) {
+            rc_t r = rc;
+            if (message == NULL)
+                message = "External service returned an error";
+            rc = Response4StatusInit(self, status, message, true);
+            if (rc == 0) {
+                rc = Response4GetRc(self, &r);
+                if (rc != 0)
+                    rc = r;
+            }
+            PLOGERR(klogErr, (klogErr, r, "$(msg) ( $(code) )",
+                "msg=%s,code=%lu", message, status));
+            return rc;
+        }
+    }
+
+    name = "result";
     value = KJsonObjectGetMember(object, name);
     if (value == NULL) {
         rc = RC(rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete);
