@@ -4854,7 +4854,7 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
     const VPath ** cache )
 {
     return VResolverQueryImpl ( self, protocols, query, local, remote, cache,
-                                true, NULL, NULL, false, NULL, NULL );
+                               false, NULL, NULL, false, NULL, NULL );
 }
 
 LIB_EXPORT
