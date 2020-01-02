@@ -305,6 +305,131 @@ TEST_CASE(testNextToken) {
 }
 #endif
 
+#ifdef ALL
+TEST_CASE(nullMsg) {
+    Response4 * response = NULL;
+
+    REQUIRE_RC_FAIL(Response4MakeSdl(&response,
+        "{"
+        "    \"status\": 200"
+        "}"));
+
+    REQUIRE_RC(Response4Release(response));
+}
+#endif
+
+#ifdef ALL
+TEST_CASE(noMsg) {
+    Response4 * response = NULL;
+
+    std::cerr << "vvvvvvvvvvvvvv expect to see error message vvvvvvvvvvvvvvv\n";
+    REQUIRE_RC(Response4MakeSdl(&response,
+        "{"
+        "    \"status\": 200,"
+        "    \"message\" : \"\""
+        "}"));
+
+    rc_t rc = 0;
+    REQUIRE_RC(Response4GetRc(response, &rc));
+    REQUIRE_RC_FAIL(rc);
+
+    REQUIRE_RC(Response4Release(response));
+}
+#endif
+
+#ifdef ALL
+TEST_CASE(noMsgWithRes) {
+    Response4 * response = NULL;
+
+    REQUIRE_RC(Response4MakeSdl(&response,
+        "{"
+        "  \"status\": 200,"
+        "  \"result\": ["
+        "    {"
+        "    }"
+        "  ]"
+        "}"));
+
+    REQUIRE_RC(Response4Release(response));
+}
+#endif
+
+#ifdef ALL
+TEST_CASE(invalidExpiration) {
+    Response4 * response = NULL;
+
+    std::cerr << "vvvvvvvvvvvvvv expect to see error message vvvvvvvvvvvvvvv\n";
+    REQUIRE_RC(Response4MakeSdl(&response,
+        "{"
+        "    \"status\": 200,"
+        "    \"message\" : \"Claims have expired\""
+        "}"));
+
+    rc_t rc = 0;
+    REQUIRE_RC(Response4GetRc(response, &rc));
+    REQUIRE_RC_FAIL(rc);
+
+    REQUIRE_RC(Response4Release(response));
+}
+#endif
+
+#ifdef ALL
+TEST_CASE(invalidMsg) {
+    Response4 * response = NULL;
+
+    std::cerr << "vvvvvvvvvvvvvv expect to see error message vvvvvvvvvvvvvvv\n";
+    REQUIRE_RC(Response4MakeSdl(&response,
+        "{"
+        "    \"status\": 200,"
+        "    \"msg\" : \"Signature not recognized\""
+        "}"));
+
+    rc_t rc = 0;
+    REQUIRE_RC(Response4GetRc(response, &rc));
+    REQUIRE_RC_FAIL(rc);
+
+    REQUIRE_RC(Response4Release(response));
+}
+#endif
+
+#ifdef ALL
+TEST_CASE(expired) {
+    Response4 * response = NULL;
+    
+    std::cerr << "vvvvvvvvvvvvvv expect to see error message vvvvvvvvvvvvvvv\n";
+    REQUIRE_RC(Response4MakeSdl(&response,
+        "{"
+        "    \"status\": 440,"
+        "    \"message\" : \"Claims have expired\""
+        "}"));
+    
+    rc_t rc = 0;
+    REQUIRE_RC(Response4GetRc(response, &rc));
+    REQUIRE_RC_FAIL(rc);
+
+    REQUIRE_RC(Response4Release(response));
+}
+#endif
+
+#ifdef ALL
+TEST_CASE(expiredNsg) {
+    Response4 * response = NULL;
+
+    std::cerr << "vvvvvvvvvvvvvv expect to see error message vvvvvvvvvvvvvvv\n";
+    REQUIRE_RC(Response4MakeSdl(&response,
+        "{"
+        "    \"status\": 440,"
+        "    \"msg\" : \"Claims have expired\""
+        "}"));
+
+    rc_t rc = 0;
+    REQUIRE_RC(Response4GetRc(response, &rc));
+    REQUIRE_RC_FAIL(rc);
+
+    REQUIRE_RC(Response4Release(response));
+}
+#endif
+
 TEST_SUITE ( TestResolverSdl )
 
 extern "C" {
