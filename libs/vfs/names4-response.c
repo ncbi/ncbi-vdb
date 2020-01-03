@@ -103,6 +103,7 @@ struct Container {
 
 struct Response4 { /* Response object */
     atomic32_t refcount; 
+    Status status;
     Container * items;
     uint32_t nItems;
     char * nextToken;
@@ -1050,6 +1051,8 @@ rc_t Response4Fini ( Response4 * self ) {
         assert ( item );
         RELEASE ( Container, item );
     }
+
+    StatusFini(&self->status);
 
     free ( self -> items );
     free(self->nextToken);
@@ -2263,6 +2266,24 @@ rc_t Response4AddRef ( const Response4 * self ) {
         atomic32_inc ( & ( ( Response4 * ) self ) -> refcount );
 
     return 0;
+}
+
+rc_t Response4StatusInit(Response4 * self, int64_t code, const char * msg,
+    bool error)
+{
+    rc_t rc = 0;
+    assert(self);
+    rc = StatusInit(&self->status, code, msg);
+    if (rc == 0) {
+        if (code != 200 || error) {
+            if (code == 440)
+                self->rc = RC(rcVFS, rcQuery, rcResolving, rcDoc, rcCanceled);
+            else
+                self->rc = RC(
+                    rcVFS, rcQuery, rcResolving, rcError, rcUnexpected);
+        }
+    }
+    return rc;
 }
 
 rc_t Response4GetRc ( const Response4 * self, rc_t * rc ) {
