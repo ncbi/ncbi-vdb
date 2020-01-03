@@ -1,4 +1,4 @@
-/*===========================================================================
+/*==============================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
 *               National Center for Biotechnology Information
@@ -119,28 +119,28 @@ rc_t Response4GetKSrvRespObjByAcc ( const Response4 * self, const char * acc,
                                     const struct KSrvRespObj ** box );
 rc_t Response4Fini(Response4 * self);
 
-typedef struct Stack {
+typedef struct {
     struct Node * nodes;
     size_t i;
     size_t n;
-} Stack;
+} JsonStack;
 
 rc_t IntSet(int64_t * self, const struct KJsonValue * node,
-    const char * name, Stack * path);
+    const char * name, JsonStack * path);
 rc_t BulSet(EState * self, const struct KJsonValue * node,
-    const char * name, Stack * path);
+    const char * name, JsonStack * path);
 rc_t StrSet(const char ** self, const struct KJsonValue * node,
-    const char * name, Stack * path);
+    const char * name, JsonStack * path);
 
 #define THRESHOLD_NO_DEBUG 0
 #define THRESHOLD_ERROR    1
 extern int THRESHOLD;
-void StackPrintInput(const char * input);
-rc_t StackRelease(Stack * self, bool failed);
-rc_t StackInit(Stack * self);
-void StackPop(Stack * self);
-rc_t StackPushArr(Stack * self, const char * name);
-rc_t StackArrNext(Stack * self);
+void JsonStackPrintInput(const char * input);
+rc_t JsonStackRelease(JsonStack * self, bool failed);
+rc_t JsonStackInit(JsonStack * self);
+void JsonStackPop(JsonStack * self);
+rc_t JsonStackPushArr(JsonStack * self, const char * name);
+rc_t JsonStackArrNext(JsonStack * self);
 
 #ifdef __cplusplus
 }

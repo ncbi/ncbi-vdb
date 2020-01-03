@@ -80,7 +80,7 @@ static void DataClone(const Data * self, Data * clone) {
 }
 
 static rc_t DataUpdate(const Data * self,
-    Data * next, const KJsonObject * node, Stack * path)
+    Data * next, const KJsonObject * node, JsonStack * path)
 {
     const char * name = NULL;
 
@@ -152,7 +152,7 @@ static rc_t DataUpdate(const Data * self,
 /* We are adding a location to file */
 static
 rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
-    const Data * dad, Stack * path)
+    const Data * dad, JsonStack * path)
 {
     rc_t rc = 0;
 
@@ -171,7 +171,7 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
 
           const KJsonArray * array = KJsonValueToArray(value);
           uint32_t n = KJsonArrayGetLength(array);
-          rc = StackPushArr(path, name);
+          rc = JsonStackPushArr(path, name);
           if (rc != 0)
               return rc;
           for (i = 0; i < n; ++i) {
@@ -186,10 +186,10 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
                   rc = r2;
 
               if (i + 1 < n)
-                  StackArrNext(path);
+                  JsonStackArrNext(path);
           }
 
-          StackPop(path);
+          JsonStackPop(path);
       }*/
 
     value = KJsonObjectGetMember(node, "link");
@@ -300,7 +300,7 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
 /* We are scanning files(Item(Run)) to find all its locations */
 static
 rc_t ItemAddSdlFile(Item * self, const KJsonObject * node,
-    const Data * dad, Stack * path)
+    const Data * dad, JsonStack * path)
 {
     rc_t rc = 0;
 
@@ -328,7 +328,7 @@ rc_t ItemAddSdlFile(Item * self, const KJsonObject * node,
 
         const KJsonArray * array = KJsonValueToArray ( value );
         uint32_t n = KJsonArrayGetLength ( array );
-        rc = StackPushArr(path, name);
+        rc = JsonStackPushArr(path, name);
         if (rc != 0)
             return rc;
         for ( i = 0; i < n; ++ i ) {
@@ -343,10 +343,10 @@ rc_t ItemAddSdlFile(Item * self, const KJsonObject * node,
                 rc = r2;
 
             if ( i + 1 < n )
-                StackArrNext ( path );
+                JsonStackArrNext ( path );
         }
 
-        StackPop(path);
+        JsonStackPop(path);
     }
 
     value = KJsonObjectGetMember(node, "link");
@@ -475,7 +475,7 @@ rc_t ItemAddSdlFile(Item * self, const KJsonObject * node,
 /* We are inside or above of a Container
    and are looking for Items(runs, gdGaP files) to add */
 static rc_t Response4AddItemsSdl(Response4 * self,
-    const KJsonObject * node, Stack * path)
+    const KJsonObject * node, JsonStack * path)
 {
     rc_t rc = 0;
 
@@ -518,7 +518,7 @@ static rc_t Response4AddItemsSdl(Response4 * self,
 
             const KJsonArray * array = KJsonValueToArray(value);
             uint32_t n = KJsonArrayGetLength(array);
-            rc = StackPushArr(path, name);
+            rc = JsonStackPushArr(path, name);
             if (rc != 0)
                 return rc;
             for (i = 0; i < n; ++i) {
@@ -533,10 +533,10 @@ static rc_t Response4AddItemsSdl(Response4 * self,
                     rc = r2;
 
                 if (i + 1 < n)
-                    StackArrNext(path);
+                    JsonStackArrNext(path);
             }
 
-            StackPop(path);
+            JsonStackPop(path);
         }
     }
 
@@ -554,7 +554,7 @@ static rc_t Response4AddItemsSdl(Response4 * self,
 static rc_t Response4InitSdl(Response4 * self, const char * input) {
     rc_t rc = 0;
 
-    Stack path;
+    JsonStack path;
 
     KJsonValue * root = NULL;
     const KJsonObject * object = NULL;
@@ -563,7 +563,7 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
 
     const char name[] = "result";
 
-    StackPrintInput(input);
+    JsonStackPrintInput(input);
 
     rc = KJsonValueMake(&root, input, error, sizeof error);
     if (rc != 0) {
@@ -573,7 +573,7 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
         return rc;
     }
 
-    rc = StackInit(&path);
+    rc = JsonStackInit(&path);
     if (rc != 0)
         return rc;
 
@@ -592,7 +592,7 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
         else {
             uint32_t n = KJsonArrayGetLength(array);
 
-            rc = StackPushArr(&path, name);
+            rc = JsonStackPushArr(&path, name);
             if (rc != 0)
                 return rc;
 
@@ -612,10 +612,10 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
                     if (r2 != 0 && rc == 0)
                         rc = r2;
                     if (i + 1 < n)
-                        StackArrNext(&path);
+                        JsonStackArrNext(&path);
                 }
             }
-            StackPop(&path);
+            JsonStackPop(&path);
         }
     }
 
@@ -636,7 +636,7 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
         Response4Fini(self);
 
     {
-        rc_t r2 = StackRelease(&path, rc != 0);
+        rc_t r2 = JsonStackRelease(&path, rc != 0);
         if (r2 != 0 && rc == 0)
             rc = r2;
     }
