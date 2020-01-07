@@ -894,18 +894,26 @@ rc_t CC VSchemaTryOpenFile ( const VSchema *self, const KDirectory *dir, const K
     rc_t rc;
     va_list cpy_args;
 
+    PARSE_DEBUG( ("VSchemaTryOpenFile: KDirectoryVResolvePath\n", path) );
+
     va_copy ( cpy_args, args );
     rc = KDirectoryVResolvePath ( dir, true, path, path_max, name, cpy_args );
     va_end ( cpy_args );
 
     if ( rc == 0 )
     {
+        PARSE_DEBUG( ("VSchemaTryOpenFile: path = '%s'\n", path) );
         /* try to find file in already opened list */
         if ( BSTreeFind ( & self -> paths, path, VIncludedPathCmp ) != NULL )
         {
+            PARSE_DEBUG( ("VSchemaTryOpenFile: '%s' already open\n", path) );
             * fp = NULL;
             return 0;
         }
+    }
+    else
+    {
+        PARSE_DEBUG( ("VSchemaTryOpenFile:  failed\n", path) );
     }
 
     if ( rc == 0 )
