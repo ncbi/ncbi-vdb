@@ -845,6 +845,8 @@ LIB_EXPORT rc_t CC VSchemaParseText ( VSchema *self, const char *name,
 {
     rc_t rc;
 
+    PARSE_DEBUG( ("VSchemaParseText %s\n", name) );
+
     if ( self == NULL )
         rc = RC ( rcVDB, rcSchema, rcParsing, rcSelf, rcNull );
     else if ( bytes == 0 )
@@ -989,7 +991,10 @@ LIB_EXPORT rc_t CC VSchemaVParseFile ( VSchema *self, const char *name, va_list 
                 {
                     rc = VIncludedPathMake ( & self -> paths, & self -> file_count, path );
                     if ( rc == 0 )
+                    {
+                        PARSE_DEBUG( ("VSchemaVParseFile %s\n", path) );
                         rc = VSchemaParseTextInt ( self, path, addr, size );
+                    }
                 }
 
                 KMMapRelease ( mm );
