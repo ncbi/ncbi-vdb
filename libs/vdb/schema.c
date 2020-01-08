@@ -777,6 +777,18 @@ LIB_EXPORT rc_t CC VSchemaVAddIncludePath ( VSchema *self, const char *path, va_
     if ( rc == 0 )
     {
         const KDirectory *dir;
+#if _DEBUGGING
+        {
+            char full_name [4096];
+            size_t num_writ;
+            va_list cargs;
+            va_copy ( cargs, args );
+            string_vprintf ( full_name, sizeof( full_name ), &num_writ, path, cargs );
+            PARSE_DEBUG( ("VSchemaVAddIncludePath(%s)\n", full_name) );
+            va_end ( cargs );
+        }
+#endif
+
         rc = KDirectoryVOpenDirRead ( wd, & dir, false, path, args );
         if ( rc == 0 )
         {
