@@ -852,7 +852,7 @@ rc_t KSysDirResolvePath_v1 ( const KSysDir_v1 * self, bool absolute,
     if ( rc == 0 )
     {
         uint32_t path_size = strlen ( full );
-        PLOGMSG(klogDebug, (klogDebug, "KSysDirResolvePath_v1 = '$(res)'", "path=%s", full));
+        PLOGMSG(klogDebug, (klogDebug, "KSysDirResolvePath_v1 = '$(res)'", "res=%s", full));
 
         if ( absolute )
         {
