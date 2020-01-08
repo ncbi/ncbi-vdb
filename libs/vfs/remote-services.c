@@ -4744,6 +4744,13 @@ static rc_t KSrvRespObj_AttachVdbcaches(const KSrvRespObj * self) {
                     rc = VPathAttachVdbcacheIfEmpty(srr[i], v);
                 }
     }
+    else
+        if (nSrrr == 1)
+            rc = VPathAttachVdbcache(aSrr, NULL);
+        else
+            for (i = 0; rc == 0 && i < sizeof srr / sizeof srr[0]; ++i)
+                if (srr[i] != NULL)
+                    rc = VPathAttachVdbcache(srr[i], NULL);
 
     for (i = 0; i < sizeof srr / sizeof srr[0]; ++i)
         RELEASE(VPath, srr[i]);
