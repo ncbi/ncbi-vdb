@@ -210,7 +210,8 @@ ALL_LIB_SRC = \
 	aes-byte \
 	cipher-byte \
 	key \
-	reencfile
+	reencfile \
+	rsa-aes-hmac
 
 LIB_SRC = \
 	no-null-ncbi
