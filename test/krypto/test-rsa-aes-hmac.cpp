@@ -38,6 +38,11 @@
 #include <string.h>
 #include <stdio.h>
 
+size_t min ( size_t a, size_t b )
+{
+    return ( a < b ) ? a : b;
+}
+
 /*
 
   RSA PEM key pair created just for this test using:
@@ -70,11 +75,11 @@ const char PEK_base64 [] =
     "WE9NY3picUg3bGNyWVd3NGkKbndJREFRQUIKLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==";
 
 static
-rc_t PEK ( char * pek_buffer, size_t pek_buffer_size )
+rc_t PEK ( char * pek_buffer, size_t pek_buffer_size, const char * pek_base64 )
 {
     // capture base64-encoded public encryption key as a String
     String pek;
-    CONST_STRING ( & pek, PEK_base64 );
+    StringInitCString ( & pek, pek_base64 );
 
     // decode into a KDataBuffer
     KDataBuffer decoded;
@@ -105,6 +110,12 @@ rc_t PEK ( char * pek_buffer, size_t pek_buffer_size )
     }
 
     return rc;
+}
+
+static
+rc_t PEK ( char * pek_buffer, size_t pek_buffer_size )
+{
+    return PEK ( pek_buffer, pek_buffer_size, PEK_base64 );
 }
 
 // the private decryption key material for this test
@@ -144,11 +155,11 @@ const char PDK_base64 [] =
 const char PDK_password [] = "test-rsa-aes-hmac";
 
 static
-rc_t makePDK ( const char * path )
+rc_t makePDK ( const char * path, const char * pdk_base64 )
 {
     // capture base64-encoded private decryption key as a String
     String pdk;
-    CONST_STRING ( & pdk, PDK_base64 );
+    StringInitCString ( & pdk, pdk_base64 );
 
     // decode into a KDataBuffer
     KDataBuffer decoded;
@@ -185,6 +196,12 @@ rc_t makePDK ( const char * path )
     }
 
     return rc;
+}
+
+static
+rc_t makePDK ( const char * path )
+{
+    return makePDK ( path, PDK_base64 );
 }
 
 static
@@ -308,208 +325,575 @@ TEST_CASE ( KEncryptOneWayForNCBI )
     KDataBufferWhack ( & out );
 }
 
-#if 0
-TEST_CASE(KReEncryptPtFile)
+TEST_CASE ( KEncryptAlteredPubKeyDecryptRoundTrip )
 {
-    const char pw2 [] = "second pw";
-    KKey key_reenc;
-    REQUIRE_RC (KKeyInitUpdate (&key_reenc, kkeyAES256, pw2, strlen (pw2)));
-    
-    const char file_path_fmt [] = TMP_FOLDER "/file%llu";
+    // prepare the parameters
+    KDataBuffer ct;
+    :: memset ( & ct, 0, sizeof ct );
 
-    const char reenc_file_path_fmt [] = TMP_FOLDER "/file_reenc%llu";
+    const char pt_orig [] = "this is really some super-secret text. I hope nobody can read it...";
+    const size_t pt_size = sizeof pt_orig - 1;
 
-    KFile * pt_file, *reenc_file, * reenc_pt_file;
-    
-    uint64_t pt_size, reenc_size;
-    
-    struct KDirectory * current_dir;
-    REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
-    
-    // just in case if it still there
-    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
-    
-    uint64_t file_sizes_n_32k[] = { 0, 1, 2, 10, 46, 51 };
-    int8_t file_size_variants[] = { -2, -1, 0, 1, 2 };
-    
-    const uint8_t* file_fillers[] = { (const uint8_t *)"\1\5\3\7" };
-    size_t file_fillers_sizes[] = { 4 };
-    
-    assert( sizeof file_fillers / sizeof file_fillers[0] == sizeof file_fillers_sizes / sizeof file_fillers_sizes[0] );
-    
-    for (size_t filler_index = 0; filler_index < sizeof file_fillers / sizeof file_fillers[0]; ++filler_index )
+    char zpek [ 1024 ];
+    REQUIRE_RC ( PEK ( zpek, sizeof zpek ) );
+
+    // as a twist, alter the public encryption key by a single bit
+    char old = zpek [ 250 ];
+    if ( :: isupper ( old ) )
+        old = :: tolower ( old );
+    else if ( :: islower ( old ) )
+        old = :: toupper ( old );
+    else if ( :: isdigit ( old ) )
     {
-        printf("filler pattern: ");
-        for (size_t i = 0; i < file_fillers_sizes[filler_index]; ++i)
-        {
-            printf("0x%X ", file_fillers[filler_index][i]);
-        }
-        printf("\n");
-        for (size_t i = 0; i < sizeof file_sizes_n_32k / sizeof file_sizes_n_32k[0]; ++i)
-        {
-            for (size_t j = 0; j < sizeof file_size_variants / sizeof file_size_variants[0]; ++j)
-            {
-                if (file_sizes_n_32k[i] == 0 && file_size_variants[j] <= 0)
-                {
-                    continue;
-                }
-                
-                uint64_t file_size = file_sizes_n_32k[i] * BLOCK_32K_SIZE + file_size_variants[j];
-                
-                char file_path[1024];
-                char file_path_reenc[1024];
-                
-                sprintf(file_path, file_path_fmt, ( long long unsigned int ) file_size);
-                sprintf(file_path_reenc, reenc_file_path_fmt, ( long long unsigned int ) file_size);
-                
-                printf("reencrypting NOT encrypted file %s, size: %llu, i: %zu, j: %zu\n", file_path, ( long long unsigned int ) file_size, i, j);
-                
-                // create file
-                REQUIRE_RC ( TCreatePtFile( current_dir, file_path, TFileOpenMode_Write, &pt_file ) );
-                REQUIRE_RC ( TFillFile( pt_file, file_fillers[filler_index], file_fillers_sizes[filler_index], file_size ) );
-                REQUIRE_RC ( KFileRelease ( pt_file ) );
-                
-                REQUIRE_RC ( TOpenPtFile( current_dir, file_path, TFileOpenMode_Read, &pt_file ) );
-                REQUIRE_RC ( KEncryptFileMakeRead( (const KFile **)&reenc_file, (const KFile *)pt_file, &key_reenc ) );
-                
-                REQUIRE_RC ( KFileSize ( pt_file, &pt_size ) );
-                REQUIRE_RC ( KFileSize ( reenc_file, &reenc_size ) );
-                
-                REQUIRE ( file_size == pt_size );
-                REQUIRE ( reenc_size == TEncSizeFromPtSize(pt_size) );
-                
-                REQUIRE_RC ( TCreatePtFile( current_dir, file_path_reenc, TFileOpenMode_Write, &reenc_pt_file ) );
-                REQUIRE_RC ( TCopyFile( reenc_pt_file, reenc_file ) );
-                
-                REQUIRE_RC ( KFileRelease ( reenc_pt_file ) );
-                REQUIRE_RC ( KFileRelease ( reenc_file ) );
-                REQUIRE_RC ( KFileRelease ( pt_file ) );
-                
-                // check file content
-                REQUIRE_RC ( TOpenEncFile( current_dir, file_path_reenc, TFileOpenMode_Read, &key_reenc, &reenc_file ) );
-                
-                REQUIRE_RC ( TCheckFileContent( reenc_file, file_fillers[filler_index], file_fillers_sizes[filler_index] ) );
-                
-                REQUIRE_RC ( KFileRelease ( reenc_file ) );
-                
-            }
-        }
+        old -= '0';
+        old ^= 4;
+        old += '0';
     }
-    
-    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
+    else if ( old == '+' )
+        old = '/';
+    else
+    {
+        REQUIRE_EQ ( old, '/' );
+        old = '+';
+    }
+    zpek [ 250 ] = old;
 
-    REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
+    // give it a try - should work
+    REQUIRE_RC ( RsaAesHmacEncrypt ( & ct
+                                     , pt_orig, pt_size
+                                     , zpek
+                     ) );
+
+    // okay! now prepare to decrypt it
+
+    KDataBuffer pt_prime;
+    :: memset ( & pt_prime, 0, sizeof pt_prime );
+
+    const char zpdk [] = "./test-rsa-aes-hmac.pdk";
+    REQUIRE_RC ( makePDK ( zpdk ) );
+
+    char zpwd [ 256 ];
+    :: strcpy ( zpwd, PDK_password );
+
+    // decrypt - should fail
+    REQUIRE_RC_FAIL ( RsaAesHmacDecrypt ( & pt_prime
+                                          , ct . base, ( size_t ) ct . elem_count
+                                          , zpdk
+                                          , zpwd, sizeof zpwd
+                          ) );
+
+    // finally, require that pt_orig and pt_prime differ
+    // or failed to decrypt, producing an empty output
+    REQUIRE_NE ( pt_size, ( size_t ) pt_prime . elem_count );
+    if ( pt_prime . elem_count != 0 )
+    {
+        size_t min_size = ( size_t ) pt_prime . elem_count;
+        if ( min_size > pt_size )
+            min_size = pt_size;
+        
+        REQUIRE_NE ( :: memcmp ( ( const void * ) pt_orig,
+            pt_prime . base, min_size ), 0 );
+    }
+
+    // clean up
+    KDataBufferWhack ( & pt_prime );
+    KDataBufferWhack ( & ct );
+    whackPDK ( zpdk );
 }
-TEST_CASE(KReencryptZeroContentSizeEncFile)
+
+TEST_CASE ( KEncryptAlteredPrivKeyDecryptRoundTrip )
 {
-    const char pw1 [] = "first pw";
-    const char pw2 [] = "second pw";
-    KKey key_enc, key_reenc;
-    REQUIRE_RC (KKeyInitUpdate (&key_enc, kkeyAES128, pw1, strlen (pw1)));
-    REQUIRE_RC (KKeyInitUpdate (&key_reenc, kkeyAES256, pw2, strlen (pw2)));
+    // prepare the parameters
     
-    const char enc_file_path [] = TMP_FOLDER "/zero_content_file_to_reenc";
+    KDataBuffer ct;
+    :: memset ( & ct, 0, sizeof ct );
 
-    const char reenc_file_path [] = TMP_FOLDER "/reenc_zero_content_file";
+    const char pt_orig [] = "this is really some super-secret text. I hope nobody can read it...";
+    const size_t pt_size = sizeof pt_orig - 1;
 
-    KFile * enc_file, * enc_pt_file, * reenc_file, * reenc_pt_file;
+    char zpek [ 1024 ];
+    REQUIRE_RC ( PEK ( zpek, sizeof zpek ) );
+
+    // give it a try - should work
+    REQUIRE_RC ( RsaAesHmacEncrypt ( & ct
+                                     , pt_orig, pt_size
+                                     , zpek
+                     ) );
+
+    // okay! now prepare to decrypt it
+
+    KDataBuffer pt_prime;
+    :: memset ( & pt_prime, 0, sizeof pt_prime );
+
+    char pdk_base64 [ 4096 ];
+    string_copy ( pdk_base64, sizeof pdk_base64, PDK_base64, sizeof PDK_base64 - 1 );
+
+    // as a twist, alter the private decryption key by a single bit
+    // this is probably not a useful test, as it is unlikely to get
+    // past the PEM encryption. but still...
+    char old = pdk_base64 [ 250 ];
+    if ( :: isupper ( old ) )
+        old = :: tolower ( old );
+    else if ( :: islower ( old ) )
+        old = :: toupper ( old );
+    else if ( :: isdigit ( old ) )
+    {
+        old -= '0';
+        old ^= 4;
+        old += '0';
+    }
+    else if ( old == '+' )
+        old = '/';
+    else
+    {
+        REQUIRE_EQ ( old, '/' );
+        old = '+';
+    }
+    pdk_base64 [ 250 ] = old;
     
-    uint64_t enc_pt_size, reenc_size;
-    
-    struct KDirectory * current_dir;
-    REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
-    
-    // just in case if it still there
-    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
-    
-    // create file
-    REQUIRE_RC ( TCreateEncFile( current_dir, enc_file_path, TFileOpenMode_Write, &key_enc, &enc_file ) );
-    REQUIRE_RC ( KFileRelease ( enc_file ) );
-    
-    REQUIRE_RC ( TOpenPtFile( current_dir, enc_file_path, TFileOpenMode_Read, &enc_pt_file ) );
-    REQUIRE_RC ( KReencFileMakeRead( (const KFile **)&reenc_file, (const KFile *)enc_pt_file, &key_enc, &key_reenc ) );
-    
-    REQUIRE_RC ( KFileSize ( enc_pt_file, &enc_pt_size ) );
-    REQUIRE_RC ( KFileSize ( reenc_file, &reenc_size ) );
-    
-    REQUIRE ( reenc_size == enc_pt_size ) ;
-    
-    REQUIRE_RC ( TCreatePtFile( current_dir, reenc_file_path, TFileOpenMode_Write, &reenc_pt_file ) );
-    REQUIRE_RC ( TCopyFile( reenc_pt_file, reenc_file ) );
-    
-    REQUIRE_RC ( KFileRelease ( reenc_pt_file ) );
-    REQUIRE_RC ( KFileRelease ( reenc_file ) );
-    REQUIRE_RC ( KFileRelease ( enc_pt_file ) );
-    
-    REQUIRE_RC ( TOpenPtFile( current_dir, reenc_file_path, TFileOpenMode_Read, &reenc_pt_file ) );
-    REQUIRE_RC ( KEncFileValidate( reenc_pt_file ) );
-    REQUIRE_RC ( KFileRelease ( reenc_pt_file ) );
-    
-    // check file content
-    REQUIRE_RC ( TOpenEncFile( current_dir, reenc_file_path, TFileOpenMode_Read, &key_reenc, &reenc_file ) );
-    REQUIRE_RC ( KFileSize ( reenc_file, &reenc_size ) );
-    REQUIRE ( reenc_size == 0 );
-    REQUIRE_RC ( KFileRelease ( reenc_file ) );
-    
-    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
-    
-    REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
+    const char zpdk [] = "./test-rsa-aes-hmac.pdk";
+    REQUIRE_RC ( makePDK ( zpdk, pdk_base64 ) );
+
+    char zpwd [ 256 ];
+    :: strcpy ( zpwd, PDK_password );
+
+    // decrypt - should fail
+    REQUIRE_RC_FAIL ( RsaAesHmacDecrypt ( & pt_prime
+                                          , ct . base, ( size_t ) ct . elem_count
+                                          , zpdk
+                                          , zpwd, sizeof zpwd
+                          ) );
+
+    // finally, require that pt_orig and pt_prime differs
+    REQUIRE_NE ( pt_size, ( size_t ) pt_prime . elem_count );
+    if ( pt_prime . elem_count != 0 )
+    {
+        size_t min_size = ( size_t ) pt_prime . elem_count;
+        if ( min_size > pt_size )
+            min_size = pt_size;
+        
+        REQUIRE_NE ( :: memcmp ( ( const void * ) pt_orig,
+            pt_prime . base, min_size ), 0 );
+    }
+
+    // clean up
+    KDataBufferWhack ( & pt_prime );
+    KDataBufferWhack ( & ct );
+    whackPDK ( zpdk );
 }
 
-TEST_CASE(KReencryptZeroContentSizePtFile)
+TEST_CASE ( KEncryptAlteredAESKeyDecryptRoundTrip )
 {
-    const char pw2 [] = "second pw";
-    KKey key_reenc;
-    REQUIRE_RC (KKeyInitUpdate (&key_reenc, kkeyAES256, pw2, strlen (pw2)));
+    // prepare the parameters
     
-    const char pt_file_path [] = TMP_FOLDER "/zero_content_file_to_reenc_pt";
+    KDataBuffer ct;
+    :: memset ( & ct, 0, sizeof ct );
 
-    const char reenc_file_path [] = TMP_FOLDER "/reenc_zero_content_file_pt";
+    const char pt_orig [] = "this is really some super-secret text. I hope nobody can read it...";
+    const size_t pt_size = sizeof pt_orig - 1;
 
-    KFile * pt_file, * reenc_file, * reenc_pt_file;
-    
-    uint64_t pt_size, reenc_size;
-    
-    struct KDirectory * current_dir;
-    REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
-    
-    // just in case if it still there
-    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
-    
-    // create file
-    REQUIRE_RC ( TCreatePtFile( current_dir, pt_file_path, TFileOpenMode_Write, &pt_file ) );
-    REQUIRE_RC ( KFileRelease ( pt_file ) );
-    
-    REQUIRE_RC ( TOpenPtFile( current_dir, pt_file_path, TFileOpenMode_Read, &pt_file ) );
-    REQUIRE_RC ( KEncryptFileMakeRead( (const KFile **)&reenc_file, (const KFile *)pt_file, &key_reenc ) );
-    
-    REQUIRE_RC ( KFileSize ( pt_file, &pt_size ) );
-    REQUIRE_RC ( KFileSize ( reenc_file, &reenc_size ) );
-    
-    REQUIRE ( reenc_size == pt_size + sizeof(KEncFileHeader) + sizeof(KEncFileFooter) ) ;
-    
-    REQUIRE_RC ( TCreatePtFile( current_dir, reenc_file_path, TFileOpenMode_Write, &reenc_pt_file ) );
-    REQUIRE_RC ( TCopyFile( reenc_pt_file, reenc_file ) );
-    
-    REQUIRE_RC ( KFileRelease ( reenc_pt_file ) );
-    REQUIRE_RC ( KFileRelease ( reenc_file ) );
-    REQUIRE_RC ( KFileRelease ( pt_file ) );
-    
-    REQUIRE_RC ( TOpenPtFile( current_dir, reenc_file_path, TFileOpenMode_Read, &reenc_pt_file ) );
-    REQUIRE_RC ( KEncFileValidate( reenc_pt_file ) );
-    REQUIRE_RC ( KFileRelease ( reenc_pt_file ) );
-    
-    // check file content
-    REQUIRE_RC ( TOpenEncFile( current_dir, reenc_file_path, TFileOpenMode_Read, &key_reenc, &reenc_file ) );
-    REQUIRE_RC ( KFileSize ( reenc_file, &reenc_size ) );
-    REQUIRE ( reenc_size == 0 );
-    REQUIRE_RC ( KFileRelease ( reenc_file ) );
-    
-    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
-    
-    REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
-}
+    char zpek [ 1024 ];
+    REQUIRE_RC ( PEK ( zpek, sizeof zpek ) );
+
+    // give it a try - should work
+    REQUIRE_RC ( RsaAesHmacEncrypt ( & ct
+                                     , pt_orig, pt_size
+                                     , zpek
+                     ) );
+#if 1
+    // alter the RSA-encrypted AES key by a single bit
+    if ( ct . elem_count != 0 )
+    {
+        // constants of section sizes based upon keys used
+        const size_t rsa_aes_size = 256;
+
+        // limit offset into the ct
+        size_t offset = 0;
+        offset = min ( offset, ( size_t ) ct . elem_count );
+
+        // isolate desired block within ct
+        size_t block_size = min ( rsa_aes_size, ( size_t ) ct . elem_count - offset );
+
+        // flip a bit half-way within the block
+        ( ( uint8_t * ) ct . base ) [ offset + block_size / 2 ] ^= 4;
+    }
 #endif
+    // okay! now prepare to decrypt it
+
+    KDataBuffer pt_prime;
+    :: memset ( & pt_prime, 0, sizeof pt_prime );
+    
+    const char zpdk [] = "./test-rsa-aes-hmac.pdk";
+    REQUIRE_RC ( makePDK ( zpdk ) );
+
+    char zpwd [ 256 ];
+    :: strcpy ( zpwd, PDK_password );
+
+    // decrypt - should fail
+    REQUIRE_RC_FAIL ( RsaAesHmacDecrypt ( & pt_prime
+                                          , ct . base, ( size_t ) ct . elem_count
+                                          , zpdk
+                                          , zpwd, sizeof zpwd
+                          ) );
+
+    // finally, require that pt_orig and pt_prime differs
+    REQUIRE_NE ( pt_size, ( size_t ) pt_prime . elem_count );
+    if ( pt_prime . elem_count != 0 )
+    {
+        size_t min_size = ( size_t ) pt_prime . elem_count;
+        if ( min_size > pt_size )
+            min_size = pt_size;
+        
+        REQUIRE_NE ( :: memcmp ( ( const void * ) pt_orig,
+            pt_prime . base, min_size ), 0 );
+    }
+
+    // clean up
+    KDataBufferWhack ( & pt_prime );
+    KDataBufferWhack ( & ct );
+    whackPDK ( zpdk );
+}
+
+TEST_CASE ( KEncryptAlteredIVDecryptRoundTrip )
+{
+    // prepare the parameters
+    
+    KDataBuffer ct;
+    :: memset ( & ct, 0, sizeof ct );
+
+    const char pt_orig [] = "this is really some super-secret text. I hope nobody can read it...";
+    const size_t pt_size = sizeof pt_orig - 1;
+
+    char zpek [ 1024 ];
+    REQUIRE_RC ( PEK ( zpek, sizeof zpek ) );
+
+    // give it a try - should work
+    REQUIRE_RC ( RsaAesHmacEncrypt ( & ct
+                                     , pt_orig, pt_size
+                                     , zpek
+                     ) );
+#if 1
+    // alter the unencrypted IV by a single bit
+    if ( ct . elem_count != 0 )
+    {
+        // constants of section sizes based upon keys used
+        const size_t rsa_aes_size = 256;
+        const size_t iv_size = 16;
+
+        // limit offset into the ct
+        size_t offset = rsa_aes_size;
+        offset = min ( offset, ( size_t ) ct . elem_count );
+
+        // isolate desired block within ct
+        size_t block_size = min ( iv_size, ( size_t ) ct . elem_count - offset );
+
+        // flip a bit half-way within the block
+        ( ( uint8_t * ) ct . base ) [ offset + block_size / 2 ] ^= 4;
+    }
+#endif
+    // okay! now prepare to decrypt it
+
+    KDataBuffer pt_prime;
+    :: memset ( & pt_prime, 0, sizeof pt_prime );
+    
+    const char zpdk [] = "./test-rsa-aes-hmac.pdk";
+    REQUIRE_RC ( makePDK ( zpdk ) );
+
+    char zpwd [ 256 ];
+    :: strcpy ( zpwd, PDK_password );
+
+    // decrypt - should fail
+    REQUIRE_RC_FAIL ( RsaAesHmacDecrypt ( & pt_prime
+                                          , ct . base, ( size_t ) ct . elem_count
+                                          , zpdk
+                                          , zpwd, sizeof zpwd
+                          ) );
+
+    // finally, require that pt_orig and pt_prime differs
+    REQUIRE_NE ( pt_size, ( size_t ) pt_prime . elem_count );
+    if ( pt_prime . elem_count != 0 )
+    {
+        size_t min_size = ( size_t ) pt_prime . elem_count;
+        if ( min_size > pt_size )
+            min_size = pt_size;
+        
+        REQUIRE_NE ( :: memcmp ( ( const void * ) pt_orig,
+            pt_prime . base, min_size ), 0 );
+    }
+
+    // clean up
+    KDataBufferWhack ( & pt_prime );
+    KDataBufferWhack ( & ct );
+    whackPDK ( zpdk );
+}
+
+TEST_CASE ( KEncryptAlteredHMACDecryptRoundTrip )
+{
+    // prepare the parameters
+    
+    KDataBuffer ct;
+    :: memset ( & ct, 0, sizeof ct );
+
+    const char pt_orig [] = "this is really some super-secret text. I hope nobody can read it...";
+    const size_t pt_size = sizeof pt_orig - 1;
+
+    char zpek [ 1024 ];
+    REQUIRE_RC ( PEK ( zpek, sizeof zpek ) );
+
+    // give it a try - should work
+    REQUIRE_RC ( RsaAesHmacEncrypt ( & ct
+                                     , pt_orig, pt_size
+                                     , zpek
+                     ) );
+#if 1
+    // alter the HMAC by a single bit
+    if ( ct . elem_count != 0 )
+    {
+        // constants of section sizes based upon keys used
+        const size_t hmac_size = 32;
+
+        // limit offset into the ct
+        size_t offset = min ( hmac_size, ( size_t ) ct . elem_count );
+        offset = ( size_t ) ct . elem_count - offset;
+
+        // isolate desired block within ct
+        size_t block_size = min ( hmac_size, ( size_t ) ct . elem_count - offset );
+
+        // flip a bit half-way within the block
+        ( ( uint8_t * ) ct . base ) [ offset + block_size / 2 ] ^= 4;
+    }
+#endif
+    // okay! now prepare to decrypt it
+
+    KDataBuffer pt_prime;
+    :: memset ( & pt_prime, 0, sizeof pt_prime );
+    
+    const char zpdk [] = "./test-rsa-aes-hmac.pdk";
+    REQUIRE_RC ( makePDK ( zpdk ) );
+
+    char zpwd [ 256 ];
+    :: strcpy ( zpwd, PDK_password );
+
+    // decrypt - should fail
+    REQUIRE_RC_FAIL ( RsaAesHmacDecrypt ( & pt_prime
+                                          , ct . base, ( size_t ) ct . elem_count
+                                          , zpdk
+                                          , zpwd, sizeof zpwd
+                          ) );
+
+    // finally, require that pt_orig and pt_prime differs
+    REQUIRE_NE ( pt_size, ( size_t ) pt_prime . elem_count );
+    if ( pt_prime . elem_count != 0 )
+    {
+        size_t min_size = ( size_t ) pt_prime . elem_count;
+        if ( min_size > pt_size )
+            min_size = pt_size;
+        
+        REQUIRE_NE ( :: memcmp ( ( const void * ) pt_orig,
+            pt_prime . base, min_size ), 0 );
+    }
+
+    // clean up
+    KDataBufferWhack ( & pt_prime );
+    KDataBufferWhack ( & ct );
+    whackPDK ( zpdk );
+}
+
+TEST_CASE ( KEncryptAlteredCTDecryptRoundTrip )
+{
+    // prepare the parameters
+    
+    KDataBuffer ct;
+    :: memset ( & ct, 0, sizeof ct );
+
+    const char pt_orig [] = "this is really some super-secret text. I hope nobody can read it...";
+    const size_t pt_size = sizeof pt_orig - 1;
+
+    char zpek [ 1024 ];
+    REQUIRE_RC ( PEK ( zpek, sizeof zpek ) );
+
+    // give it a try - should work
+    REQUIRE_RC ( RsaAesHmacEncrypt ( & ct
+                                     , pt_orig, pt_size
+                                     , zpek
+                     ) );
+#if 1
+    // alter the ciphertext by a single bit
+    if ( ct . elem_count != 0 )
+    {
+        // constants of section sizes based upon keys used
+        const size_t rsa_aes_size = 256;
+        const size_t iv_size = 16;
+        const size_t hmac_size = 32;
+
+        // remove hmac
+        size_t ct_size = min ( hmac_size, ( size_t ) ct . elem_count );
+        ct_size = ( size_t ) ct . elem_count - ct_size;
+
+        // limit offset into the ct
+        size_t offset = rsa_aes_size + iv_size;
+        offset = min ( offset, ct_size );
+        
+        // isolate desired block within ct
+        size_t block_size = ct_size - offset;
+
+        // flip a bit half-way within the block
+        ( ( uint8_t * ) ct . base ) [ offset + block_size / 2 ] ^= 4;
+    }
+#endif
+    // okay! now prepare to decrypt it
+
+    KDataBuffer pt_prime;
+    :: memset ( & pt_prime, 0, sizeof pt_prime );
+    
+    const char zpdk [] = "./test-rsa-aes-hmac.pdk";
+    REQUIRE_RC ( makePDK ( zpdk ) );
+
+    char zpwd [ 256 ];
+    :: strcpy ( zpwd, PDK_password );
+
+    // decrypt - should fail
+    REQUIRE_RC_FAIL ( RsaAesHmacDecrypt ( & pt_prime
+                                          , ct . base, ( size_t ) ct . elem_count
+                                          , zpdk
+                                          , zpwd, sizeof zpwd
+                          ) );
+
+    // finally, require that pt_orig and pt_prime differs
+    REQUIRE_NE ( pt_size, ( size_t ) pt_prime . elem_count );
+    if ( pt_prime . elem_count != 0 )
+    {
+        size_t min_size = ( size_t ) pt_prime . elem_count;
+        if ( min_size > pt_size )
+            min_size = pt_size;
+        
+        REQUIRE_NE ( :: memcmp ( ( const void * ) pt_orig,
+            pt_prime . base, min_size ), 0 );
+    }
+
+    // clean up
+    KDataBufferWhack ( & pt_prime );
+    KDataBufferWhack ( & ct );
+    whackPDK ( zpdk );
+}
+
+TEST_CASE ( KEncryptTruncatedResultDecryptRoundTrip )
+{
+    // prepare the parameters
+    
+    KDataBuffer ct;
+    :: memset ( & ct, 0, sizeof ct );
+
+    const char pt_orig [] = "this is really some super-secret text. I hope nobody can read it...";
+    const size_t pt_size = sizeof pt_orig - 1;
+
+    char zpek [ 1024 ];
+    REQUIRE_RC ( PEK ( zpek, sizeof zpek ) );
+
+    // give it a try - should work
+    REQUIRE_RC ( RsaAesHmacEncrypt ( & ct
+                                     , pt_orig, pt_size
+                                     , zpek
+                     ) );
+
+    // truncate the result
+    if ( ct . elem_count != 0 )
+        KDataBufferResize ( & ct, ct . elem_count - 1 );
+
+    // okay! now prepare to decrypt it
+
+    KDataBuffer pt_prime;
+    :: memset ( & pt_prime, 0, sizeof pt_prime );
+    
+    const char zpdk [] = "./test-rsa-aes-hmac.pdk";
+    REQUIRE_RC ( makePDK ( zpdk ) );
+
+    char zpwd [ 256 ];
+    :: strcpy ( zpwd, PDK_password );
+
+    // decrypt - should fail due to truncated result
+    REQUIRE_RC_FAIL ( RsaAesHmacDecrypt ( & pt_prime
+                                          , ct . base, ( size_t ) ct . elem_count
+                                          , zpdk
+                                          , zpwd, sizeof zpwd
+                          ) );
+
+    // finally, require that pt_orig and pt_prime differs
+    REQUIRE_NE ( pt_size, ( size_t ) pt_prime . elem_count );
+    if ( pt_prime . elem_count != 0 )
+    {
+        size_t min_size = ( size_t ) pt_prime . elem_count;
+        if ( min_size > pt_size )
+            min_size = pt_size;
+        
+        REQUIRE_NE ( :: memcmp ( ( const void * ) pt_orig,
+            pt_prime . base, min_size ), 0 );
+    }
+
+    // clean up
+    KDataBufferWhack ( & pt_prime );
+    KDataBufferWhack ( & ct );
+    whackPDK ( zpdk );
+}
+
+TEST_CASE ( KEncryptExtendedResultDecryptRoundTrip )
+{
+    // prepare the parameters
+    
+    KDataBuffer ct;
+    :: memset ( & ct, 0, sizeof ct );
+
+    const char pt_orig [] = "this is really some super-secret text. I hope nobody can read it...";
+    const size_t pt_size = sizeof pt_orig - 1;
+
+    char zpek [ 1024 ];
+    REQUIRE_RC ( PEK ( zpek, sizeof zpek ) );
+
+    // give it a try - should work
+    REQUIRE_RC ( RsaAesHmacEncrypt ( & ct
+                                     , pt_orig, pt_size
+                                     , zpek
+                     ) );
+
+    // extend the result
+    if ( ct . elem_count != 0 )
+        KDataBufferResize ( & ct, ct . elem_count + 1 );
+
+    // okay! now prepare to decrypt it
+
+    KDataBuffer pt_prime;
+    :: memset ( & pt_prime, 0, sizeof pt_prime );
+    
+    const char zpdk [] = "./test-rsa-aes-hmac.pdk";
+    REQUIRE_RC ( makePDK ( zpdk ) );
+
+    char zpwd [ 256 ];
+    :: strcpy ( zpwd, PDK_password );
+
+    // decrypt - should fail due to truncated result
+    REQUIRE_RC_FAIL ( RsaAesHmacDecrypt ( & pt_prime
+                                          , ct . base, ( size_t ) ct . elem_count
+                                          , zpdk
+                                          , zpwd, sizeof zpwd
+                          ) );
+
+    // finally, require that pt_orig and pt_prime differs
+    REQUIRE_NE ( pt_size, ( size_t ) pt_prime . elem_count );
+    if ( pt_prime . elem_count != 0 )
+    {
+        size_t min_size = ( size_t ) pt_prime . elem_count;
+        if ( min_size > pt_size )
+            min_size = pt_size;
+        
+        REQUIRE_NE ( :: memcmp ( ( const void * ) pt_orig,
+            pt_prime . base, min_size ), 0 );
+    }
+
+    // clean up
+    KDataBufferWhack ( & pt_prime );
+    KDataBufferWhack ( & ct );
+    whackPDK ( zpdk );
+}
 
 //////////////////////////////////////////// Main
 
