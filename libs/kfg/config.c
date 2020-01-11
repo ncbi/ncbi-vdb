@@ -3278,7 +3278,7 @@ static rc_t _KConfigCheckAd(KConfig * self) {
            when it does not exist */
         if (rc == 0)
             rc = KConfigWriteString(self,
-                "/repository/user/ad/public/apps/file/volumes/flat", ".");
+                "/repository/user/ad/public/apps/file/volumes/flatAd", ".");
         if (rc == 0)
             rc = KConfigWriteString(self,
                 "/repository/user/ad/public/apps/sra/volumes/sraAd", ".");
