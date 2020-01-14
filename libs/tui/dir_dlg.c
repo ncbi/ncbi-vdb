@@ -166,7 +166,7 @@ static rc_t PopulateDirDlg ( struct KTUIDlg * dlg, dir_dlg_data * data )
 		rc = set_native_caption( dlg, data->vfs_mgr, ID_CURR, data->current_dir_internal );
 		
     if ( rc == 0 )
-        rc = fill_widget_with_dirs( dlg, data->dir, ID_DIRS, data->current_dir_internal, data->parent_dir_internal );
+        rc = fill_widget_with_dirs( dlg, data->dir, ID_DIRS, data->current_dir_internal, data->parent_dir_internal, true );
 
     if ( rc == 0 )
         rc = KTUIDlgSetFocus( dlg, ID_DIRS );
@@ -235,7 +235,7 @@ static rc_t DirDlgDirectoryChanged ( struct KTUIDlg * dlg, dir_dlg_data * data, 
         rc = set_native_caption( dlg, data->vfs_mgr, ID_CURR, data->current_dir_internal ); 
     
     if ( rc == 0 )
-        rc = fill_widget_with_dirs( dlg, data->dir, ID_DIRS, data->current_dir_internal, data->parent_dir_internal );
+        rc = fill_widget_with_dirs( dlg, data->dir, ID_DIRS, data->current_dir_internal, data->parent_dir_internal, true );
 
     if ( rc == 0 )
         rc = KTUIDlgSetWidgetVisible ( dlg, ID_B_CREATE, create_allowed( data ) );
@@ -285,7 +285,7 @@ static rc_t DirDlgCreate ( struct KTUIDlg * dlg, dir_dlg_data * data )
                 rc = KDirectoryCreateDir ( data->dir, 0775, kcmCreate | kcmParents,
                                            "%s/%s", data->current_dir_internal, leafname );
                 if ( rc == 0 )
-                    rc = fill_widget_with_dirs( dlg, data->dir, ID_DIRS, data->current_dir_internal, leafname );
+                    rc = fill_widget_with_dirs( dlg, data->dir, ID_DIRS, data->current_dir_internal, leafname, true );
                 if ( rc == 0 )
                     rc = KTUIDlgDraw( dlg, false );
             }
@@ -311,7 +311,7 @@ static rc_t DirDlgGotoDir ( struct KTUIDlg * dlg, dir_dlg_data * data )
             rc = native_to_internal( data->vfs_mgr, new_path, data->current_dir_internal,
                                      sizeof data->current_dir_internal, &written );
             if ( rc == 0 )
-                rc = fill_widget_with_dirs( dlg, data->dir, ID_DIRS, data->current_dir_internal, NULL );
+                rc = fill_widget_with_dirs( dlg, data->dir, ID_DIRS, data->current_dir_internal, NULL, true );
             if ( rc == 0 )
                 rc = set_native_caption( dlg, data->vfs_mgr, ID_CURR, data->current_dir_internal );	
 

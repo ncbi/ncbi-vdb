@@ -63,6 +63,7 @@ struct VCursorParams;
 struct VXformInfo;
 struct KDataBuffer;
 struct KNamelist;
+struct String;
 
 
 /*--------------------------------------------------------------------------
@@ -168,6 +169,11 @@ VDB_EXTERN rc_t CC VDatabaseOpenKDatabaseUpdate ( struct VDatabase *self, struct
  */
 VDB_EXTERN bool CC VDatabaseIsCSRA ( struct VDatabase const *self );
 
+/* Get accession of database (is avalibable)
+ *  acc needs to be released
+ */
+VDB_EXTERN rc_t CC
+VDatabaseGetAccession(const struct VDatabase * self, const struct String ** acc);
 
 /*--------------------------------------------------------------------------
  * VTable

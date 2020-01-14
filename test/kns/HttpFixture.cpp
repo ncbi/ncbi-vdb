@@ -30,6 +30,7 @@
 #include <ktst/unit_test.hpp>
 #include <kfg/config.h>
 #include <kns/manager.h>
+#include <kns/http.h>
 #include <kfs/directory.h>
 #include <kfs/file.h>
 
@@ -131,7 +132,9 @@ KStream_vt_v1 TestStream::vt =
 };
 
 HttpFixture :: HttpFixture()
-: m_mgr(0), m_file(0)
+:   m_mgr ( nullptr ),
+    m_file ( nullptr ),
+    m_req ( nullptr )
 {
     if ( KNSManagerMake ( & m_mgr ) != 0 )
         throw logic_error ( "HttpFixture: KNSManagerMake failed" );
@@ -145,11 +148,14 @@ HttpFixture :: HttpFixture()
 
 HttpFixture :: ~HttpFixture()
 {
-    if ( m_mgr && KNSManagerRelease ( m_mgr ) != 0 )
+    if ( KNSManagerRelease ( m_mgr ) != 0 )
         cerr << "HttpFixture::~HttpFixture KNSManagerRelease failed" << endl;
 
-    if ( m_file && KFileRelease ( m_file ) != 0 )
+    if ( KFileRelease ( m_file ) != 0 )
         cerr << "HttpFixture::~HttpFixture KFileRelease failed" << endl;
+
+    if ( KClientHttpRequestRelease ( m_req ) != 0 )
+        cerr << "HttpFixture::~HttpFixture KClientHttpRequestRelease failed" << endl;
 
     if ( ! TestStream::m_responses.empty() )
         cerr << "HttpFixture::~HttpFixture not all TestStream::m_responses have been consumed" << endl;
@@ -208,7 +214,7 @@ HttpFixture :: Reconnect ()
 string
 HttpFixture :: MakeURL(const string & base)
 {
-    return string("http://") + base + ".com/";
+    return string("http://") + base + ".com/blah";
 }
 
 KStream HttpFixture :: m_stream;

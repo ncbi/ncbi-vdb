@@ -283,12 +283,27 @@ KNS_EXTERN rc_t CC KClientHttpRequestGetHost(const KClientHttpRequest *self,
 KNS_EXTERN rc_t CC KClientHttpRequestGetPath(const KClientHttpRequest *self,
     char *buffer, size_t bsize, size_t *num_read);
 
+/* AddQueryParam
+ *  adds a parameter to the query part of the URL, as "[opt_name=]value" (value is the result of formatting)
+ *  inserts ? before the first parameter and & between parameters
+ *  if opt_name is NULL or empty, there will be no '=' before the value
+ *  URL-encodes the formatted value
+ */
+KNS_EXTERN rc_t CC KClientHttpRequestAddQueryParam ( KClientHttpRequest *self, const char * opt_name, const char *fmt, ... );
+KNS_EXTERN rc_t CC KClientHttpRequestVAddQueryParam ( KClientHttpRequest *self, const char * opt_name, const char *fmt, va_list args );
 
 /* AddPostParam
  *  adds a parameter for POST
  */
 KNS_EXTERN rc_t CC KClientHttpRequestAddPostParam ( KClientHttpRequest *self, const char *fmt, ... );
 KNS_EXTERN rc_t CC KClientHttpRequestVAddPostParam ( KClientHttpRequest *self, const char *fmt, va_list args );
+
+/* AddPostFileParam
+ *  adds a file to be transmitted with POST on the URL in the form "name=<base64encodedContentsOfTheFile>"
+ *  "name" [ IN ] - field name identifying this file in the resulting HTML form. An empty name is OK
+ *  "path" [ IN ] - NUL terminated string in directory-native character set denoting target file
+**/
+KNS_EXTERN rc_t CC KClientHttpRequestAddPostFileParam ( KClientHttpRequest *self, const char *name, const char *path );
 
 KNS_EXTERN rc_t CC KClientHttpRequestSetCloudParams(KClientHttpRequest * self,
     bool ceRequired, bool payRequired);
@@ -323,20 +338,20 @@ KNS_EXTERN rc_t CC KClientHttpResultRelease ( const KClientHttpResult *self );
 /* HEAD
  *  send HEAD message
  */
-KNS_EXTERN rc_t CC KClientHttpRequestHEAD ( KClientHttpRequest *self, KClientHttpResult **rslt ); 
+KNS_EXTERN rc_t CC KClientHttpRequestHEAD ( KClientHttpRequest *self, KClientHttpResult **rslt );
 
 /* GET
  *  send GET message
  *  all query AND post parameters are combined in URL
  */
-KNS_EXTERN rc_t CC KClientHttpRequestGET ( KClientHttpRequest *self, KClientHttpResult **rslt ); 
+KNS_EXTERN rc_t CC KClientHttpRequestGET ( KClientHttpRequest *self, KClientHttpResult **rslt );
 
 /* POST
  *  send POST message
  *  query parameters are sent in URL
  *  post parameters are sent in body
  */
-KNS_EXTERN rc_t CC KClientHttpRequestPOST ( KClientHttpRequest *self, KClientHttpResult **rslt ); 
+KNS_EXTERN rc_t CC KClientHttpRequestPOST ( KClientHttpRequest *self, KClientHttpResult **rslt );
 
 
 /* Status

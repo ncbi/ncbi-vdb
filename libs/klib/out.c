@@ -96,6 +96,31 @@ rc_t KOutMsgCharFmt ( uint32_t u32 )
     return rc;
 }
 
+/* Prevent calling memcmp(s1, s2, n) when sizeof (s1) < n */
+static
+int match_format(const char * format, const char * literal, size_t s)
+{
+    static const size_t MAX = 5;
+
+    assert(s <= MAX);
+
+    if (format == NULL)
+        return 1;
+    else {
+        size_t x = 0;
+
+        for (x = 0; x < MAX - 1; ++x)
+            if (format[x] == '\0')
+                break;
+        ++x;
+
+        if (x < s)
+            return x;
+        else
+            return memcmp(format, literal, s);
+    }
+}
+
 LIB_EXPORT rc_t CC KOutVMsg ( const char * fmt, va_list args )
 {
     rc_t rc = 0;
@@ -115,7 +140,7 @@ LIB_EXPORT rc_t CC KOutVMsg ( const char * fmt, va_list args )
 
 #undef MATCH_FORMAT
 #define MATCH_FORMAT(format, literal) \
-    ( memcmp ( ( format ), ( literal ), sizeof ( literal ) ) == 0 )
+    ( match_format ( ( format ), ( literal ), sizeof ( literal ) ) == 0 )
 
     /* slower value comparison */
     else if (MATCH_FORMAT(fmt, "%s"))

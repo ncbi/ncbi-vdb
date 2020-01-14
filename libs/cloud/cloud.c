@@ -30,6 +30,7 @@
 #include <klib/rc.h>
 #include <klib/status.h>
 #include <kns/manager.h>
+#include <kns/stream.h>
 
 #include <assert.h>
 
@@ -122,6 +123,38 @@ LIB_EXPORT rc_t CC CloudMakeComputeEnvironmentToken ( const Cloud * self, struct
     return rc;
 }
 
+/* GetLocation
+ *  get cloud location in form proovider.zone
+ */
+LIB_EXPORT rc_t CC CloudGetLocation( const Cloud * self,
+    struct String const ** location )
+{
+    rc_t rc;
+
+    if (location == NULL )
+        rc = RC ( rcCloud, rcProvider, rcAccessing, rcParam, rcNull );
+    else
+    {
+
+        *location = NULL;
+
+        if ( self == NULL )
+            rc = RC ( rcCloud, rcProvider, rcAccessing, rcSelf, rcNull );
+        else
+        {
+            switch ( self -> vt -> v1 . maj )
+            {
+            case 1:
+                return (*self -> vt -> v1 . get_location) (self, location);
+            }
+
+            rc = RC ( rcCloud, rcProvider, rcAccessing, rcInterface, rcBadVersion );
+        }
+    }
+
+    return rc;
+}
+
 /* AddComputeEnvironmentTokenForSigner
  *  prepare a request object with a compute environment token
  *  for use by an SDL-associated "signer" service
@@ -204,7 +237,8 @@ LIB_EXPORT rc_t CC CloudAddUserPaysCredentials ( const Cloud * self,
  *  initialize a newly allocated cloud object
  */
 LIB_EXPORT rc_t CC CloudInit ( Cloud * self, const Cloud_vt * vt,
-    const char * classname, const KNSManager * kns, bool user_agrees_to_pay )
+    const char * classname, const KNSManager * kns, bool user_agrees_to_pay,
+    bool user_agrees_to_reveal_instance_identity )
 {
     rc_t rc = 0;
 
@@ -230,6 +264,7 @@ LIB_EXPORT rc_t CC CloudInit ( Cloud * self, const Cloud_vt * vt,
             if ( vt -> v1 . add_user_pays_to_req == NULL ||
                  vt -> v1 . add_authn == NULL            ||
                  vt -> v1 . add_cet_to_req == NULL       ||
+                 vt -> v1 . get_location == NULL        ||
                  vt -> v1 . make_cet == NULL             ||
                  vt -> v1 . destroy == NULL              )
                 return RC ( rcCloud, rcProvider, rcConstructing, rcInterface, rcNull );
@@ -250,6 +285,8 @@ LIB_EXPORT rc_t CC CloudInit ( Cloud * self, const Cloud_vt * vt,
         self -> vt = vt;
         self -> kns = kns;
         self -> user_agrees_to_pay = user_agrees_to_pay;
+        self -> user_agrees_to_reveal_instance_identity
+            = user_agrees_to_reveal_instance_identity;
         KRefcountInit ( & self -> refcount, 1, classname, "init", "" );
     }
 
@@ -264,7 +301,36 @@ LIB_EXPORT rc_t CC CloudWhack ( Cloud * self )
     if ( self != NULL )
     {
         KNSManagerRelease ( self -> kns );
+        KStreamRelease( self -> conn );
+
         free ( self );
     }
     return 0;
+}
+
+/* Set a pre-opened HTTP connection, for testing (NULL OK)
+ * TODO: remove when mocked connection becomes a regular feature of KNS
+ */
+LIB_EXPORT rc_t CC CloudSetHttpConnection ( Cloud  * self, struct KStream * conn )
+{
+    if ( self != NULL )
+    {
+        if ( self -> conn != NULL )
+        {
+            KStreamRelease( self -> conn );
+        }
+        self -> conn = conn;
+        if ( self -> conn != NULL )
+        {
+            KStreamAddRef ( self -> conn );
+        }
+    }
+    return 0;
+}
+
+void CloudSetUserAgreesToRevealInstanceIdentity(Cloud  * self,
+    bool value)
+{
+    if (self != NULL)
+        self->user_agrees_to_reveal_instance_identity = value;
 }

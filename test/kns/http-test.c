@@ -58,7 +58,7 @@ void URLBlockInitTest ( void )
 {
     URLBlock b;
     URLBlockInit ( & b );
-    
+
     OUTMSG ( ( "%s - URLBlockInit succeeded.\n"
                "scheme  : '%S'\n"
                "host    : '%S'\n"
@@ -68,7 +68,7 @@ void URLBlockInitTest ( void )
                "port    : '%u'\n\n"
                , __func__,  & b . scheme, & b . host
                , & b . path, & b . query, & b . fragment, b . port ) );
-    
+
 }
 
 
@@ -76,7 +76,7 @@ rc_t ParseUrlTest ( void )
 {
     rc_t rc;
     size_t i;
-    
+
     static const char *test_urls [] =
         {
             /* <scheme>://<host>[:<port>]/<path>[?<query>][#<fragment>]*/
@@ -100,12 +100,12 @@ rc_t ParseUrlTest ( void )
             /* /<path>[?query]*/
             /*12*/ "/library/index.html?x&y=123&z=test",
             /*13*/ "///library"
-            
-            
+
+
         };
     const size_t num_urls = sizeof test_urls / sizeof test_urls [ 0 ];
-    
-    static const char *fail_url [] = 
+
+    static const char *fail_url [] =
         {
             /*<scheme>:/<path>*/
             /*0*/ "http:/library/index.html",
@@ -122,18 +122,18 @@ rc_t ParseUrlTest ( void )
             /*7*/ "www.abc.com:80",
             /* <scheme>://<host>[:<port>]*/
             /*8*/ "ftp://www.abc.com"
-            
-            
+
+
         };
     const size_t num_fail_urls = sizeof fail_url / sizeof fail_url [ 0 ];
-    
+
     for ( i = 0; i < num_urls; ++ i )
     {
         URLBlock b;
-        
+
         String url;
         StringInitCString ( & url, test_urls [ i ] );
-        
+
         rc  = ParseUrl ( & b, url . addr, url . size );
         if ( rc == 0 )
         {
@@ -156,15 +156,15 @@ rc_t ParseUrlTest ( void )
             return rc;
         }
     }
-    
-    
+
+
     for ( i = 0; i < num_fail_urls; ++ i )
     {
         URLBlock b;
-        
+
         String url;
         StringInitCString ( & url, fail_url [ i ] );
-        
+
         rc  = ParseUrl ( & b, url . addr, url . size );
         if ( rc != 0 )
         {
@@ -187,7 +187,7 @@ rc_t ParseUrlTest ( void )
             return rc;
         }
     }
-    
+
     return rc = 0;
 }
 
@@ -229,15 +229,15 @@ rc_t HttpTest ( const KFile *input )
 
                     for ( blank = close_connection = false; ! blank && rc == 0; )
                         rc = KHttpGetHeaderLine ( http, NULL, & hdrs, & blank, & close_connection );
-                    
+
                     if ( rc != 0 )
                         OUTMSG (( "%s: KHttpGetHeaderLine failed with rc=%R\n", __func__, rc ));
                     else
                     {
                         const KHttpHeader * hdr;
-                        
+
                         OUTMSG (( "%s: KHttpGetStatusLine listing:\n", __func__ ));
-                        for ( hdr = ( const KHttpHeader * ) BSTreeFirst ( & hdrs ); 
+                        for ( hdr = ( const KHttpHeader * ) BSTreeFirst ( & hdrs );
                               hdr != NULL;
                               hdr = ( const KHttpHeader * ) BSTNodeNext ( & hdr -> dad ) )
                         {
@@ -268,7 +268,7 @@ rc_t PreHttpTest ( void )
     if ( rc == 0 )
     {
         const KFile *f;
-        rc = KDirectoryOpenFileRead ( dir, &f, "nih_1_out.txt" );
+        rc = KDirectoryOpenFileRead ( dir, &f, "data/nih_1_out.txt" );
         if ( rc == 0 )
         {
             rc = HttpTest ( f );
@@ -357,7 +357,7 @@ rc_t PreHttpsTest ( void )
     if ( rc == 0 )
     {
         const KFile *f;
-        rc = KDirectoryOpenFileRead ( dir, &f, "nih_1_out_https.txt" );
+        rc = KDirectoryOpenFileRead ( dir, &f, "data/nih_1_out_https.txt" );
         if ( rc == 0 )
         {
             rc = HttpsTest ( f );
@@ -372,7 +372,7 @@ rc_t PreHttpsTest ( void )
 /* Version  EXTERN
  *  return 4-part version code: 0xMMmmrrrr, where
  *      MM = major release
- *      mm = minor release 
+ *      mm = minor release
  *    rrrr = bug-fix release
  */
 ver_t CC KAppVersion ( void )
@@ -426,7 +426,7 @@ rc_t CC Usage ( const Args *args )
     return 0;
 }
 
-    
+
 static
 rc_t run ( const char *progname )
 {
@@ -434,7 +434,7 @@ rc_t run ( const char *progname )
 
     URLBlockInitTest ();
     rc = ParseUrlTest ();
-    rc = PreHttpTest ();      
+    rc = PreHttpTest ();
     rc = PreHttpsTest ();
     return 1;
 }

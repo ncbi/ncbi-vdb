@@ -24,6 +24,7 @@
 
 #include <klib/debug.h> /* DBGMSG */
 #include <klib/json.h> /* KJsonValue */
+#include <klib/log.h> /* PLOGERR */
 #include <klib/rc.h> /* RC */
 #include <klib/text.h> /* String */
 
@@ -44,6 +45,7 @@ static void DataInit(Data * self) {
 
     self->id = -1;
     self->exp = -1;
+    self->encryptedForProjectId = -1;
 }
 
 static void DataClone(const Data * self, Data * clone) {
@@ -57,6 +59,7 @@ static void DataClone(const Data * self, Data * clone) {
     clone->ceRequired = self->ceRequired;
     clone->cls = self->cls; /* itemClass */
     clone->code = self->code;
+    clone->encryptedForProjectId = self->encryptedForProjectId;
     clone->exp = self->exp; /* expDate */
     clone->fmt = self->fmt; /* format */
     clone->id = self->id; /* oldCartObjId */
@@ -78,7 +81,7 @@ static void DataClone(const Data * self, Data * clone) {
 }
 
 static rc_t DataUpdate(const Data * self,
-    Data * next, const KJsonObject * node, Stack * path)
+    Data * next, const KJsonObject * node, JsonStack * path)
 {
     const char * name = NULL;
 
@@ -92,10 +95,15 @@ static rc_t DataUpdate(const Data * self,
     name = "bundle";
     StrSet(&next->acc, KJsonObjectGetMember(node, name), name, path);
     StrSet(&next->bundle, KJsonObjectGetMember(node, name), name, path);
-    StrSet(&next->name, KJsonObjectGetMember(node, name), name, path);
 
     name = "ceRequired";
     BulSet(&next->ceRequired, KJsonObjectGetMember(node, name), name, path);
+
+    name = "encryptedForProjectId";
+    StrSet(&next->sEncryptedForProjectId, KJsonObjectGetMember(node, name),
+        name, path);
+    if (next->sEncryptedForProjectId != NULL)
+        next->encryptedForProjectId = atoi(next->sEncryptedForProjectId);
 
     name = "link";
     StrSet(&next->link, KJsonObjectGetMember(node, name), name, path);
@@ -109,6 +117,9 @@ static rc_t DataUpdate(const Data * self,
 
     name = "msg";
     StrSet(&next->msg, KJsonObjectGetMember(node, name), name, path);
+
+    name = "name";
+    StrSet(&next->name, KJsonObjectGetMember(node, name), name, path);
 
     name = "object";
     StrSet(&next->object, KJsonObjectGetMember(node, name), name, path);
@@ -139,24 +150,177 @@ static rc_t DataUpdate(const Data * self,
     return 0;
 }
 
-rc_t ItemAddFormat(Item * self, const char * cType, const Data * dad,
-    struct Locations ** added);
-
-/* We are scanning Item(Run) to find all its Elm-s(Files) -sra, vdbcache, ??? */
+/* We are adding a location to file */
 static
-rc_t ItemAddElmsSdl(Item * self, const KJsonObject * node,
-    const Data * dad, Stack * path)
+rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
+    const Data * dad, JsonStack * path)
 {
     rc_t rc = 0;
 
     const KJsonValue * value = NULL;
 
-    struct Locations * elm = NULL;
+    const char * name = "locations";
+
+    Data data;
+    DataUpdate(dad, &data, node, path);
+
+    value = KJsonObjectGetMember(node, name);
+
+    assert(!value);
+    /*if (value != NULL) {
+          uint32_t i = 0;
+
+          const KJsonArray * array = KJsonValueToArray(value);
+          uint32_t n = KJsonArrayGetLength(array);
+          rc = JsonStackPushArr(path, name);
+          if (rc != 0)
+              return rc;
+          for (i = 0; i < n; ++i) {
+              rc_t r2 = 0;
+
+              const KJsonObject * object = NULL;
+
+              value = KJsonArrayGetElement(array, i);
+              object = KJsonValueToObject(value);
+              r2 = ItemAddElmsSdl(self, object, &data, path);
+              if (r2 != 0 && rc == 0)
+                  rc = r2;
+
+              if (i + 1 < n)
+                  JsonStackArrNext(path);
+          }
+
+          JsonStackPop(path);
+      }*/
+
+    value = KJsonObjectGetMember(node, "link");
+    if (value != NULL) {
+        Data ldata;
+        DataUpdate(&data, &ldata, node, path);
+
+        if (ldata.link != NULL) {
+            bool ceRequired = false;
+            bool payRequired = false;
+
+            int64_t mod = 0;  /* modDate */
+
+            int64_t projectId = -1;
+
+            uint8_t md5[16];
+            bool    hasMd5 = false;
+
+            VPath * path = NULL;
+
+            String id;
+            String objectType;
+            String type;
+
+            String url;
+            StringInitCString(&url, ldata.link);
+
+            StringInitCString(&id, ldata.acc);
+
+            memset(&objectType, 0, sizeof objectType);
+            memset(&type, 0, sizeof type);
+
+            if (ldata.modificationDate != NULL) {
+                KTime        modT; /* modificationDate */
+                const KTime* t = KTimeFromIso8601(&modT, ldata.modificationDate,
+                    string_measure(ldata.modificationDate, NULL));
+                if (t == NULL)
+                    return RC(rcVFS, rcQuery, rcExecuting, rcItem, rcIncorrect);
+                else
+                    mod = KTimeMakeTime(&modT);
+            }
+
+            if (ldata.object != NULL) {
+                size_t size = 0;
+                uint32_t len = 0;
+                const char * c = strchr(ldata.object, '|');
+                if (c != NULL)
+                    size = len = c - data.object;
+                else
+                    len = string_measure(data.object, &size);;
+                StringInit(&objectType, ldata.object, size, len);
+            }
+
+            if (ldata.type != NULL) {
+                size_t size = 0;
+                uint32_t len = string_measure(data.type, &size);;
+                StringInit(&type, ldata.type, size, len);
+            }
+
+            if (ldata.ceRequired == eTrue)
+                ceRequired = true;
+            if (ldata.payRequired == eTrue)
+                payRequired = true;
+            projectId = ldata.encryptedForProjectId;
+
+            if (ldata.md5 != NULL) {
+                int i = 0;
+                for (i = 0; i < 16; ++i) {
+                    if (ldata.md5[2 * i] == '\0')
+                        break;
+                    if (isdigit(ldata.md5[2 * i]))
+                        md5[i] = (ldata.md5[2 * i] - '0') * 16;
+                    else
+                        md5[i] = (ldata.md5[2 * i] - 'a' + 10) * 16;
+                    if (ldata.md5[2 * i + 1] == '\0')
+                        break;
+                    if (isdigit(ldata.md5[2 * i + 1]))
+                        md5[i] += ldata.md5[2 * i + 1] - '0';
+                    else
+                        md5[i] += ldata.md5[2 * i + 1] - 'a' + 10;
+                }
+                if (i == 16)
+                    hasMd5 = true;
+            }
+
+            rc = VPathMakeFromUrl(&path, &url, NULL, true, &id, ldata.sz,
+                mod, hasMd5 ? md5 : NULL, 0, ldata.srv, &objectType, &type,
+                ceRequired, payRequired, ldata.name, projectId, 128);
+
+            if (rc == 0)
+                VPathMarkHighReliability(path, true);
+
+            if (rc != 0)
+                return rc;
+
+            rc = FileAddVPath(file, path, NULL, false, 0);
+
+            RELEASE(VPath, path);
+
+            if (rc == 0)
+                FileLogAddedLink(file, ldata.link);
+        }
+    }
+
+    return rc;
+}
+
+/* We are scanning files(Item(Run)) to find all its locations */
+static
+rc_t ItemAddSdlFile(Item * self, const KJsonObject * node,
+    const Data * dad, JsonStack * path)
+{
+    rc_t rc = 0;
+
+    const KJsonValue * value = NULL;
+
+    struct File * file = NULL;
 
     const char * name = "locations";
 
     Data data;
     DataUpdate(dad, &data, node, path);
+
+    rc = ItemAddFormat(self, data.type, &data, &file, false);
+    if (file == NULL || rc != 0)
+        return rc;
+    else
+        if (THRESHOLD > THRESHOLD_ERROR)
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
+            ("Adding links to a file...\n"));
 
     value = KJsonObjectGetMember ( node, name );
 
@@ -165,7 +329,7 @@ rc_t ItemAddElmsSdl(Item * self, const KJsonObject * node,
 
         const KJsonArray * array = KJsonValueToArray ( value );
         uint32_t n = KJsonArrayGetLength ( array );
-        rc = StackPushArr(path, name);
+        rc = JsonStackPushArr(path, name);
         if (rc != 0)
             return rc;
         for ( i = 0; i < n; ++ i ) {
@@ -175,33 +339,37 @@ rc_t ItemAddElmsSdl(Item * self, const KJsonObject * node,
 
             value = KJsonArrayGetElement ( array, i );
             object = KJsonValueToObject ( value );
-            r2 = ItemAddElmsSdl ( self, object, & data, path );
+            r2 = FileAddSdlLocation( file, object, & data, path );
             if ( r2 != 0 && rc == 0 )
                 rc = r2;
 
             if ( i + 1 < n )
-                StackArrNext ( path );
+                JsonStackArrNext ( path );
         }
 
-        StackPop(path);
+        JsonStackPop(path);
     }
 
     value = KJsonObjectGetMember(node, "link");
-    if (/*data.type != NULL ||*/ value != NULL) {
-        rc = ItemAddFormat(self, data.type, &data, &elm);
-        if (elm == NULL || rc != 0)
+    if (value != NULL) {
+        rc = FileAddSdlLocation(file, node, &data, path);
+        /*rc = ItemAddFormat(self, data.type, &data, &file, false);
+        if (file == NULL || rc != 0)
             return rc;
         else
             if (THRESHOLD > THRESHOLD_ERROR)
                 DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
-                ("Adding links to a file...\n"));
+                ("Adding links to a file...\n"));*/
     }
 
+#if 0
     value = KJsonObjectGetMember ( node, "link" );
     if (value != NULL)
     {
         Data ldata;
         DataUpdate(&data, &ldata, node, path);
+
+        assert(0);
 
         if (ldata.link != NULL) {
             bool ceRequired = false;
@@ -280,7 +448,7 @@ rc_t ItemAddElmsSdl(Item * self, const KJsonObject * node,
 
             rc = VPathMakeFromUrl(&path, &url, NULL, true, &id, ldata.sz,
                 mod, hasMd5 ? md5 : NULL, 0, ldata.srv, &objectType, &type,
-                ceRequired, payRequired);
+                ceRequired, payRequired, ldata.name);
 
             if (rc == 0)
                 VPathMarkHighReliability(path, true);
@@ -289,14 +457,18 @@ rc_t ItemAddElmsSdl(Item * self, const KJsonObject * node,
                 return rc;
             }
 
-            rc = LocationsAddVPath(elm, path, NULL, false, 0);
+            rc = FileAddVPath(file, path, NULL, false, 0);
 
             RELEASE(VPath, path);
 
             if (rc == 0)
-                LocationsLogAddedLink(elm, ldata.link);
+                FileLogAddedLink(file, ldata.link);
         }
     }
+#endif
+
+    if (rc == 0)
+        rc = ItemInitMapping(self);
 
     return rc;
 }
@@ -304,7 +476,7 @@ rc_t ItemAddElmsSdl(Item * self, const KJsonObject * node,
 /* We are inside or above of a Container
    and are looking for Items(runs, gdGaP files) to add */
 static rc_t Response4AddItemsSdl(Response4 * self,
-    const KJsonObject * node, Stack * path)
+    const KJsonObject * node, JsonStack * path)
 {
     rc_t rc = 0;
 
@@ -347,7 +519,7 @@ static rc_t Response4AddItemsSdl(Response4 * self,
 
             const KJsonArray * array = KJsonValueToArray(value);
             uint32_t n = KJsonArrayGetLength(array);
-            rc = StackPushArr(path, name);
+            rc = JsonStackPushArr(path, name);
             if (rc != 0)
                 return rc;
             for (i = 0; i < n; ++i) {
@@ -357,15 +529,15 @@ static rc_t Response4AddItemsSdl(Response4 * self,
 
                 value = KJsonArrayGetElement(array, i);
                 object = KJsonValueToObject(value);
-                r2 = ItemAddElmsSdl(item, object, &data, path);
+                r2 = ItemAddSdlFile(item, object, &data, path);
                 if (r2 != 0 && rc == 0)
                     rc = r2;
 
                 if (i + 1 < n)
-                    StackArrNext(path);
+                    JsonStackArrNext(path);
             }
 
-            StackPop(path);
+            JsonStackPop(path);
         }
     }
 
@@ -383,16 +555,16 @@ static rc_t Response4AddItemsSdl(Response4 * self,
 static rc_t Response4InitSdl(Response4 * self, const char * input) {
     rc_t rc = 0;
 
-    Stack path;
+    JsonStack path;
 
     KJsonValue * root = NULL;
     const KJsonObject * object = NULL;
     const KJsonValue * value = NULL;
     char error[99] = "";
 
-    const char name[] = "result";
+    const char * name = "status";
 
-    StackPrintInput(input);
+    JsonStackPrintInput(input);
 
     rc = KJsonValueMake(&root, input, error, sizeof error);
     if (rc != 0) {
@@ -402,18 +574,82 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
         return rc;
     }
 
-    rc = StackInit(&path);
+    rc = JsonStackInit(&path);
     if (rc != 0)
         return rc;
 
     object = KJsonValueToObject(root);
+
+    name = "status";
+    value = KJsonObjectGetMember(object, name);
+    if (value != NULL) {
+        const char * message = NULL;
+        bool ok = true;
+
+        int64_t status = 0;
+        rc = KJsonGetNumber(value, &status);
+        if (rc != 0) {
+            if (THRESHOLD > THRESHOLD_NO_DEBUG)
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), (
+                    "... error: cannot get '%s'\n", name));
+            return rc;
+        }
+        if (THRESHOLD > THRESHOLD_ERROR)
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), (
+                "\"/%s\" = %ld\n", name, status));
+
+        name = "msg";
+        value = KJsonObjectGetMember(object, name);
+
+        if (value == NULL) {
+            name = "message";
+            value = KJsonObjectGetMember(object, name);
+        }
+
+        if (value != NULL) {
+            rc = KJsonGetString(value, &message);
+            if (rc != 0) {
+                if (THRESHOLD > THRESHOLD_NO_DEBUG)
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), (
+                        "... error: cannot get '%s'\n", name));
+                return rc;
+            }
+            if (THRESHOLD > THRESHOLD_ERROR)
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), (
+                    "\"/%s\" = \"%s\"\n", name, message));
+        }
+
+        if (status != 200)
+            ok = false;
+        else if (message != NULL
+            && (message[0] != 'o' || message[1] != 'k' || message[2] != '\0'))
+        {
+            ok = false;
+        }
+
+        if (!ok) {
+            rc_t r = rc;
+            if (message == NULL)
+                message = "External service returned an error";
+            rc = Response4StatusInit(self, status, message, true);
+            if (rc == 0) {
+                rc = Response4GetRc(self, &r);
+                if (rc != 0)
+                    rc = r;
+            }
+            PLOGERR(klogErr, (klogErr, r, "$(msg) ( $(code) )",
+                "msg=%s,code=%lu", message, status));
+            return rc;
+        }
+    }
+
+    name = "result";
     value = KJsonObjectGetMember(object, name);
     if (value == NULL) {
         rc = RC(rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete);
         if (THRESHOLD > THRESHOLD_NO_DEBUG)
             DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
             ("... error: cannot find '%s'\n", name));
-        KJsonValueWhack(root);
     }
     else {
         const KJsonArray * array = KJsonValueToArray(value);
@@ -422,30 +658,41 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
         else {
             uint32_t n = KJsonArrayGetLength(array);
 
-            rc = StackPushArr(&path, name);
+            rc = JsonStackPushArr(&path, name);
             if (rc != 0)
                 return rc;
 
             if (n == 0) {
                 rc = RC(rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete);
                 if (THRESHOLD > THRESHOLD_NO_DEBUG)
-                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
-                    ("... error: '%s' is empty\n", name));
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), (
+                        "... error: '%s' is empty\n", name));
             }
             else {
                 uint32_t i = 0;
                 for (i = 0; i < n; ++i) {
                     rc_t r2 = 0;
                     value = KJsonArrayGetElement(array, i);
-                    object = KJsonValueToObject(value);
+                    const KJsonObject * object = KJsonValueToObject(value);
                     r2 = Response4AddItemsSdl(self, object, &path);
                     if (r2 != 0 && rc == 0)
                         rc = r2;
                     if (i + 1 < n)
-                        StackArrNext(&path);
+                        JsonStackArrNext(&path);
                 }
             }
-            StackPop(&path);
+            JsonStackPop(&path);
+        }
+    }
+
+    {
+        const char name[] = "nextToken";
+        value = KJsonObjectGetMember(object, name);
+        if (value != NULL) {
+            const char * nextToken = NULL;
+            rc = StrSet(&nextToken, value, name, &path);
+            if (rc == 0)
+                rc = Response4SetNextToken(self, nextToken);
         }
     }
 
@@ -455,7 +702,7 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
         Response4Fini(self);
 
     {
-        rc_t r2 = StackRelease(&path, rc != 0);
+        rc_t r2 = JsonStackRelease(&path, rc != 0);
         if (r2 != 0 && rc == 0)
             rc = r2;
     }

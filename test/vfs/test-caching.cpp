@@ -24,8 +24,9 @@
 *
 */
 
-#include <kfg/config.h> /* KConfig */
+#include <kfg/kfg-priv.h> /* KConfigMakeLocal  */
 #include <kfs/directory.h> /* KDirectory */
+#include <klib/debug.h> /* KDbgSetString */
 #include <ktst/unit_test.hpp> // TEST_SUITE
 #include <sra/sraschema.h> // VDBManagerMakeSRASchema
 #include <vdb/cursor.h> /* VCursor */
@@ -221,7 +222,7 @@ public:
         REQUIRE_RC
             ( KDirectoryOpenDirRead ( native, &dir, false, "caching-kfg" ) );
         KConfig * cfg = NULL;
-        REQUIRE_RC ( KConfigMake ( & cfg, dir ) );
+        REQUIRE_RC ( KConfigMakeLocal ( & cfg, dir ) );
         REQUIRE_RC ( SET :: set ( cfg, v, caching) );
 
         String * test_root = NULL;
@@ -625,6 +626,8 @@ extern "C" {
     }
     rc_t CC KMain ( int argc, char * argv [] ) {
         KConfigDisableUserSettings ();
+if (
+1 ) assert ( ! KDbgSetString ( "VFS" ) );
         return CachingSuite ( argc, argv );
     }
 }

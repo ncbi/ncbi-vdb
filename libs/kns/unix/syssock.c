@@ -1111,6 +1111,8 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
                                 /* if was interrupted by Ctrl-C, return immediately */
                                 if ( rcConnection == GetRCObject ( rc ) && rcInterrupted == GetRCState ( rc ) )
                                 {
+                                    KSocketRelease ( conn );
+                                    * out = NULL;
                                     return rc;
                                 }
 

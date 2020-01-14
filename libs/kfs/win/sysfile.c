@@ -1005,13 +1005,13 @@ static const KFile_vt_v1 vtKSysDiskFile =
     /* end minor version == 1 */
 
     /* start minor version == 2 */
-    KSysDiskTimedFileRead_v1,
-    KSysDiskTimedFileWrite_v1,
+    KSysDiskFileTimedRead_v1,
+    KSysDiskFileTimedWrite_v1,
     /* end minor version == 2 */
 
     /* start minor version == 3 */
     KSysDiskFileReadChunked_v1,
-    KSysDiskTimedFileReadChunked_v1
+    KSysDiskFileTimedReadChunked_v1
     /* end minor version == 3 */
 };
 static const KFile_vt_v1 vtKSysOtherFile =
@@ -1034,13 +1034,13 @@ static const KFile_vt_v1 vtKSysOtherFile =
     /* end minor version == 1 */
 
     /* start minor version == 2 */
-    KSysTimedFileRead_v1,
-    KSysTimedFileWrite_v1,
+    KSysFileTimedRead_v1,
+    KSysFileTimedWrite_v1,
     /* end minor version == 2 */
 
     /* start minor version == 3 */
     KSysFileReadChunked_v1,
-    KSysTimedFileReadChunked_v1
+    KSysFileTimedReadChunked_v1
     /* end minor version == 3 */
 };
 static const KFile_vt_v1 vtKSysStdIODiskFile =
@@ -1063,13 +1063,13 @@ static const KFile_vt_v1 vtKSysStdIODiskFile =
     /* end minor version == 1 */
 
     /* start minor version == 2 */
-    KSysDiskTimedFileRead_v1,
-    KSysDiskTimedFileWrite_v1,
+    KSysDiskFileTimedRead_v1,
+    KSysDiskFileTimedWrite_v1,
     /* end minor version == 2 */
 
     /* start minor version == 3 */
     KSysDiskFileReadChunked_v1,
-    KSysDiskTimedFileReadChunked_v1
+    KSysDiskFileTimedReadChunked_v1
     /* end minor version == 3 */
 };
 static const KFile_vt_v1 vtKSysStdIOOtherFile =
@@ -1092,13 +1092,13 @@ static const KFile_vt_v1 vtKSysStdIOOtherFile =
     /* end minor version == 1 */
 
     /* start minor version == 2 */
-    KSysTimedFileRead_v1,
-    KSysTimedFileWrite_v1,
+    KSysFileTimedRead_v1,
+    KSysFileTimedWrite_v1,
     /* end minor version == 2 */
 
     /* start minor version == 3 */
     KSysFileReadChunked_v1,
-    KSysTimedFileReadChunked_v1
+    KSysFileTimedReadChunked_v1
     /* end minor version == 3 */
 };
 

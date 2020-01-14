@@ -157,7 +157,7 @@ public:
 };
 
 FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_NotCloud, CloudFixture )
-{
+{   //TODO: make sure not in a cloud
     //TestEnv::verbosity = LogLevel::e_message;
     string url = MakeURL(GetName());
 
@@ -184,38 +184,35 @@ FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_NotCloud, CloudFixture
     REQUIRE ( ! StringPresent ( redirReq, "x-amz-request-payer" ) );
 }
 
-/* for AWS, autorization is only added with the payer info
+// for AWS, autorization is only added with the payer info
 FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_AWS_NoToken_NoPayer, CloudFixture )
 {
     setenv ( "AWS_ACCESS_KEY_ID", "access_key_id", 1 );
     setenv ( "AWS_SECRET_ACCESS_KEY", "secret_access_key", 1 );
 
     RespondWithRedirect ( AwsUrl, KTimeStamp () + 65 );
-    RespondToHEAD();
+    RespondToHEAD ( string( 256, 'q' ) );
 
-    MakeHttpFile( MakeURL(GetName()), ! EnvTokenRequired, ! PayRequired );
+    MakeHttpFile( MakeURL(GetName()), EnvTokenRequired, ! PayRequired );
 
     // make sure there is no environment token added to the original URL
     REQUIRE ( ! EnvironmentTokenPresent ( TestStream::m_requests.front() ) );
     // make sure AWS autorization headers but no payer info header are added to the redirect URL
     string redirReq = TestStream::m_requests.back();
-    REQUIRE ( StringPresent ( redirReq, "Authorization: AWS access_key_id:" ) );
-    REQUIRE ( StringPresent ( redirReq, "Date: " ) );
+    REQUIRE ( ! StringPresent ( redirReq, "Authorization: AWS access_key_id:" ) );
     REQUIRE ( ! StringPresent ( redirReq, "x-amz-request-payer: requester" ) );
 }
-*/
 
 #if NOT_IMPLEMENTED
-
 FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_AWS_Token_NoPayer, CloudFixture )
-{
-    //TestEnv::verbosity = LogLevel::e_message;
+{   //TODO: have to be on AWS
+    TestEnv::verbosity = LogLevel::e_message;
     setenv ( "AWS_ACCESS_KEY_ID", "access_key_id", 1 );
     setenv ( "AWS_SECRET_ACCESS_KEY", "secret_access_key", 1 );
     m_mgr -> accept_aws_charges = false;
 
     RespondWithRedirect ( AwsUrl, KTimeStamp () + 65 );
-    RespondToHEAD ();
+    RespondToHEAD ( string( 256, 'q' ) );
 
     MakeHttpFile( MakeURL(GetName()), EnvTokenRequired, ! PayRequired );
 

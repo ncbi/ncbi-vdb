@@ -31,15 +31,16 @@
 
 #include <ktst/unit_test.hpp>
 
-#include <klib/log.h>
 #include <klib/rc.h>
 #include <kfg/config.h>
+#include <kfg/kfg-priv.h>
 
 #include <kns/adapt.h> /* KStreamFromKFilePair */
 #include <kns/manager.h>
 #include <kns/kns-mgr-priv.h>
 #include <kns/http.h>
-#include <kns/http-priv.h> /* KClientHttpRequestFormatMsg */
+#include <kns/stream.h>
+#include <kns/http-priv.h>
 
 #include <../libs/kns/mgr-priv.h>
 #include <../libs/kns/http-priv.h>
@@ -47,11 +48,12 @@
 #include <kfs/directory.h>
 #include <kfs/file.h>
 
+#include <vfs/manager.h>
+#include <vfs/manager-priv.h>
+
 #include <kproc/thread.h>
 
 #include <sstream>
-
-#define ALL
 
 static rc_t argsHandler ( int argc, char * argv [] );
 TEST_SUITE_WITH_ARGS_HANDLER ( HttpTestSuite, argsHandler );
@@ -62,7 +64,6 @@ using namespace ncbi::NK;
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
 
-#ifdef ALL
 //////////////////////////
 // Regular HTTP
 FIXTURE_TEST_CASE(Http_Make, HttpFixture)
@@ -72,7 +73,6 @@ FIXTURE_TEST_CASE(Http_Make, HttpFixture)
     REQUIRE_NOT_NULL ( m_file ) ;
 }
 
-#if 1
 /*FIXME: 100 used to be retried regardless of whether URL is reliable, now it is not, so the test fails */
 FIXTURE_TEST_CASE(Http_Make_Continue_100_Retry, HttpFixture)
 {
@@ -82,7 +82,6 @@ FIXTURE_TEST_CASE(Http_Make_Continue_100_Retry, HttpFixture)
     REQUIRE_RC ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) );
     REQUIRE_NOT_NULL ( m_file ) ;
 }
-#endif
 
 FIXTURE_TEST_CASE(Http_Make_500_Fail, HttpFixture)
 {   // a regular Http client does not retry
@@ -109,6 +108,32 @@ FIXTURE_TEST_CASE(Http_Read, HttpFixture)
     );
     REQUIRE_RC( KFileTimedRead ( m_file, 0, buf, sizeof buf, &num_read, NULL ) );
     REQUIRE_EQ( string ( "content" ), string ( buf, num_read ) );
+}
+
+FIXTURE_TEST_CASE(VDB_3661, HttpFixture)
+{
+    const KFile * file = NULL;
+    REQUIRE_RC ( KNSManagerMakeHttpFile ( m_mgr, & file, NULL, 0x01010000,
+       "http://public_docs.crg.es/rguigo/Papers/2017_lagarde-uszczynska_CLS/data/trackHub//dataFiles/hsAll_Cap1_Brain_hiSeq.bam"
+      ) );
+
+    uint64_t size = 0;
+    REQUIRE_RC ( KFileSize ( file, & size ) );
+    size = std::min(size, decltype(size)(4 * 1024 * 1024));
+
+    void * buffer = malloc ( size );
+    REQUIRE_NOT_NULL ( buffer );
+
+    size_t num_read = 0;
+
+    // read small chunk; should succeed
+    size_t bsize = size;
+    REQUIRE_RC ( KFileRead ( file, 0, buffer, bsize, & num_read ) );
+    REQUIRE_EQ ( num_read, bsize );
+
+    free ( buffer );
+
+    REQUIRE_RC ( KFileRelease ( file ) );
 }
 
 struct ReadThreadData
@@ -238,20 +263,6 @@ FIXTURE_TEST_CASE(Http_Read_Multi_User, HttpFixture)
 
 
 }
-
-FIXTURE_TEST_CASE(HttpRequest_POST_NoParams, HttpFixture)
-{   // Bug: KClientHttpRequestPOST crashed if request had no parameters
-    KClientHttpRequest *req;
-    KNSManagerMakeClientRequest ( m_mgr, &req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
-
-    KClientHttpResult *rslt;
-    TestStream::AddResponse("HTTP/1.1 200 OK\r\n");
-    REQUIRE_RC ( KClientHttpRequestPOST ( req, & rslt ) );
-    REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
-
-    REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
-}
-
 
 //////////////////////////
 // HttpRetrySpecs
@@ -504,6 +515,7 @@ FIXTURE_TEST_CASE(HttpReliable_Make, HttpFixture)
     REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, true, false, false, MakeURL(GetName()).c_str() ) );
     REQUIRE_NOT_NULL ( m_file ) ;
 }
+
 #if 0
 /* 100 used to be retried regardless, now it is not, so the test fails */
 FIXTURE_TEST_CASE(HttpReliable_Make_Continue_100_Retry, HttpFixture)
@@ -573,81 +585,6 @@ FIXTURE_TEST_CASE(HttpReliable_Read_Retry, HttpFixture)
 }
 #endif
 
-//////////////////////////
-// Reliable HTTP request
-FIXTURE_TEST_CASE(HttpReliableRequest_Make, HttpFixture)
-{
-    KClientHttpRequest *req;
-    KNSManagerMakeReliableClientRequest ( m_mgr, &req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
-    REQUIRE_NOT_NULL ( req ) ;
-    REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
-}
-
-FIXTURE_TEST_CASE(HttpReliableRequest_POST_5xx_retry, HttpFixture)
-{   // use default configuration for 5xx to be retried
-    KClientHttpRequest *req;
-    KNSManagerMakeReliableClientRequest ( m_mgr, &req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
-
-    TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n"); // response to GET
-    TestStream::AddResponse("HTTP/1.1 200 OK\r\n");
-
-    KClientHttpResult *rslt;
-    REQUIRE_RC ( KClientHttpRequestPOST ( req, & rslt ) );
-
-    REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
-    REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
-}
-
-#endif
-
-#ifdef ALL
-/* VDB-3059: KHttpRequestPOST generates incorrect Content-Length after retry :
- it makes web server to return 400 Bad Request */
-TEST_CASE(ContentLength) {
-    rc_t rc = 0;
-    KNSManager * kns = NULL;
-    REQUIRE_RC ( KNSManagerMake ( & kns ) );
-
-    uint32_t code = 0;
-    KHttpRequest * req = NULL;
-    KHttpResult * rslt = NULL;
-    KStream * response = NULL;
-
-    /* calling good cgi returns 200 and resolved path */
-    REQUIRE_RC ( KNSManagerMakeReliableClientRequest ( kns, & req, 0x01000000,
-        NULL, "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi" ) );
-    REQUIRE_RC ( KHttpRequestAddPostParam ( req, "acc=AAAB01" ) );
-    REQUIRE_RC ( KHttpRequestAddPostParam ( req, "accept-proto=https" ) );
-    REQUIRE_RC ( KHttpRequestAddPostParam ( req, "version=1.2" ) );
-    REQUIRE_RC ( KHttpRequestPOST ( req, & rslt ) );
-    REQUIRE_RC ( KClientHttpResultStatus ( rslt, & code, NULL, 0, NULL ) );
-    REQUIRE_EQ ( code, 200u );
-    REQUIRE_RC ( KHttpResultGetInputStream ( rslt, & response ) );
-    char buffer [ 512 ] = "";
-    size_t num_read = 0;
-    REQUIRE_RC (KStreamRead( response, buffer, sizeof buffer - 1,  &num_read ));
-    REQUIRE_LT ( num_read, sizeof buffer );
-    buffer [ num_read ] = '\0';
-    REQUIRE_EQ ( string ( buffer + num_read - 7 ), string ( "200|ok\n" ) );
-    RELEASE ( KStream, response );
-    RELEASE ( KHttpResult, rslt );
-    RELEASE ( KHttpRequest, req );
-
-    /* calling non-existing cgi returns 404 */
-    REQUIRE_RC ( KNSManagerMakeReliableClientRequest ( kns, & req, 0x01000000,
-        NULL, "https://trace.ncbi.nlm.nih.gov/Traces/names/bad.cgi" ) );
-    REQUIRE_RC ( KHttpRequestAddPostParam ( req, "acc=AAAB01" ) );
-    REQUIRE_RC ( KHttpRequestPOST ( req, & rslt ) );
-    REQUIRE_RC ( KClientHttpResultStatus ( rslt, & code, NULL, 0, NULL ) );
-    REQUIRE_EQ ( code, 404u );
-    RELEASE ( KHttpResult, rslt );
-    RELEASE ( KHttpRequest, req );
-
-    RELEASE ( KNSManager, kns );
-    REQUIRE_RC ( rc );
-}
-#endif
-
 struct NV {
     String AcceptRanges;
     const string bytes;
@@ -669,7 +606,7 @@ TEST_CASE ( RepeatedHeader ) {
     REQUIRE_RC ( KDirectoryNativeDir ( & dir ) );
 
     const KFile * f = NULL;
-    REQUIRE_RC ( KDirectoryOpenFileRead ( dir, & f, "double_header.txt" ) );
+    REQUIRE_RC ( KDirectoryOpenFileRead ( dir, & f, "data/double_header.txt" ) );
 
     KNSManager * mgr = NULL;
     REQUIRE_RC ( KNSManagerMake ( & mgr ) );
@@ -779,29 +716,8 @@ TEST_CASE ( TestKClientHttpResultTestHeaderValue ) {
     REQUIRE_RC ( rc );
 }
 
-TEST_CASE(TestAcceptHeader) {
-    rc_t rc = 0;
-    KNSManager * mgr = NULL;
-    REQUIRE_RC(KNSManagerMake(&mgr));
-    KClientHttp * http = NULL;
-    REQUIRE_RC(KNSManagerMakeHttp(mgr, &http,
-        NULL, 0x01010000, &s_v.host, 80));
-    string url("http://" HOST);
-    KClientHttpRequest * req = NULL;
-    REQUIRE_RC(KClientHttpMakeRequest(http, &req, url.c_str()));
-    REQUIRE_RC(KClientHttpRequestAddHeader(req, "Accept", "text/html"));
-    char buffer[4096] = "";
-    REQUIRE_RC(KClientHttpRequestFormatMsg(req,
-        buffer, sizeof buffer, "HEAD", NULL));
-    REQUIRE(strstr(buffer, "Accept: */*") == NULL);
-    RELEASE(KClientHttpRequest, req);
-    RELEASE(KClientHttp, http);
-    RELEASE(KNSManager, mgr);
-    REQUIRE_RC(rc);
-}
-
 TEST_CASE ( AllowAllCertificates )
-{   // as of 
+{   // as of
     rc_t rc = 0;
 
     KNSManager * mgr = NULL;
@@ -813,7 +729,7 @@ TEST_CASE ( AllowAllCertificates )
 
     // ensure that manager is NOT allowing, i.e. default behavior
     // as of 7-01-2019, this function is a no-op, so the connection will succeed with
-    // or without this call
+    // or without this call. NOTE: on WINDOWS, it still works as before!
     REQUIRE_RC ( KNSManagerSetAllowAllCerts ( mgr, false ) );
 
     // create a connection to something that normally fails; it should fail
@@ -821,9 +737,12 @@ TEST_CASE ( AllowAllCertificates )
     CONST_STRING ( & host, "www.google.com" );
 
     KClientHttp * https = NULL;
-    REQUIRE ( KNSManagerMakeClientHttps
-              ( mgr, & https, NULL, 0x01010000, & host, 443 ) == 0 ); // success!
-    RELEASE ( KClientHttp, https );
+#if WINDOWS
+    REQUIRE_RC_FAIL( KNSManagerMakeClientHttps( mgr, &https, NULL, 0x01010000, &host, 443 ) );
+#else
+    REQUIRE_RC ( KNSManagerMakeClientHttps( mgr, &https, NULL, 0x01010000, &host, 443 ) );
+#endif
+    RELEASE(KClientHttp, https);
 
     // tell manager to allow all certs
     REQUIRE_RC ( KNSManagerSetAllowAllCerts ( mgr, true ) );
@@ -841,8 +760,7 @@ TEST_CASE ( AllowAllCertificates )
 
 FIXTURE_TEST_CASE( KClientHttpResult_Size_HEAD, HttpFixture)
 {
-    KClientHttpRequest *req;
-    KNSManagerMakeClientRequest ( m_mgr, &req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
+    KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
 
     TestStream::AddResponse(
         "HTTP/1.1 200 \r\n"
@@ -850,20 +768,18 @@ FIXTURE_TEST_CASE( KClientHttpResult_Size_HEAD, HttpFixture)
         "\r\n");
 
     KClientHttpResult *rslt;
-    REQUIRE_RC ( KClientHttpRequestHEAD ( req, & rslt ) );
+    REQUIRE_RC ( KClientHttpRequestHEAD ( m_req, & rslt ) );
     uint64_t size = 0;
     REQUIRE ( KClientHttpResultSize ( rslt, &size ) );
     REQUIRE_EQ ( (uint64_t)2975717, size );
 
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
-    REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
 }
 
 FIXTURE_TEST_CASE( KClientHttpResult_Size_RangedGET, HttpFixture)
 {
-    KClientHttpRequest *req;
-    KNSManagerMakeClientRequest ( m_mgr, &req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
-    REQUIRE_RC ( KClientHttpRequestByteRange ( req, 0, 2 ) );
+    KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
+    REQUIRE_RC ( KClientHttpRequestByteRange ( m_req, 0, 2 ) );
 
     TestStream::AddResponse(
         "HTTP/1.1 206 \r\n"
@@ -872,20 +788,18 @@ FIXTURE_TEST_CASE( KClientHttpResult_Size_RangedGET, HttpFixture)
         "\r\n");
 
     KClientHttpResult *rslt;
-    REQUIRE_RC ( KClientHttpRequestGET ( req, & rslt ) );
+    REQUIRE_RC ( KClientHttpRequestGET ( m_req, & rslt ) );
     uint64_t size = 0;
     REQUIRE ( KClientHttpResultSize ( rslt, &size ) );
     REQUIRE_EQ ( (uint64_t)2975717, size );
 
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
-    REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
 }
 
 FIXTURE_TEST_CASE( KClientHttpResult_Size_RangedPOST, HttpFixture)
 {
-    KClientHttpRequest *req;
-    KNSManagerMakeClientRequest ( m_mgr, &req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
-    REQUIRE_RC ( KClientHttpRequestByteRange ( req, 0, 2 ) );
+    KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
+    REQUIRE_RC ( KClientHttpRequestByteRange ( m_req, 0, 2 ) );
 
     TestStream::AddResponse(
         "HTTP/1.1 206 \r\n"
@@ -894,13 +808,34 @@ FIXTURE_TEST_CASE( KClientHttpResult_Size_RangedPOST, HttpFixture)
         "\r\n");
 
     KClientHttpResult *rslt;
-    REQUIRE_RC ( KClientHttpRequestPOST ( req, & rslt ) );
+    REQUIRE_RC ( KClientHttpRequestPOST ( m_req, & rslt ) );
     uint64_t size = 0;
     REQUIRE ( KClientHttpResultSize ( rslt, &size ) );
     REQUIRE_EQ ( (uint64_t)2975717, size );
 
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
-    REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
+}
+
+FIXTURE_TEST_CASE( KClientHttpResult_FormatMsg, HttpFixture)
+{
+    KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
+    REQUIRE_RC ( KClientHttpRequestByteRange ( m_req, 0, 2 ) );
+
+    TestStream::AddResponse(
+        "HTTP/1.1 206 \r\n"
+        "content-length: 2\r\n"
+        "\r\n");
+    string expected =
+        "->HTTP/1.1 206 \n" // \r is gone
+        "->content-length: 2\r\n";
+
+    KClientHttpResult *rslt;
+    REQUIRE_RC ( KClientHttpRequestPOST ( m_req, & rslt ) );
+    KDataBuffer buffer;
+    REQUIRE_RC ( KDataBufferMake( & buffer, 8, 0 ) );
+    REQUIRE_RC ( KClientHttpResultFormatMsg ( rslt, & buffer, "->", "\n" ) );
+    REQUIRE_EQ ( expected, string ((char*)buffer.base) );
+    REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
 }
 
 //////////////////////////////////////////// Main

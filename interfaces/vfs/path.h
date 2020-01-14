@@ -305,6 +305,12 @@ VFS_EXTERN rc_t CC VPathGetService(const VPath * self, struct String * str);
 /* sra, vdbcache, ... */
 VFS_EXTERN rc_t CC VPathGetType(const VPath * self, struct String * str);
 
+/* refseq, ... */
+VFS_EXTERN rc_t CC VPathGetObjectType(const VPath * self, struct String * str);
+
+VFS_EXTERN rc_t CC VPathGetName(const VPath * self, struct String * str);
+VFS_EXTERN rc_t CC VPathGetNameExt(const VPath * self, struct String * str);
+
 VFS_EXTERN rc_t CC VPathGetCeRequired ( const VPath * self, bool * required );
 VFS_EXTERN rc_t CC VPathGetPayRequired ( const VPath * self, bool * required );
 

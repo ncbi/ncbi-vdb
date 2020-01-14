@@ -309,12 +309,13 @@ LIB_EXPORT rc_t CC KDBManagerRunPeriodicTasks ( const KDBManager *self )
 static void ad(const KDBManager *self, const VPath *aPath, const VPath **path)
 {
     String spath;
+    const char *slash;
     assert(self);
     if (VPathGetPath(aPath, &spath) != 0)
         return;
     if ((KDirectoryPathType(self->wd, spath.addr) & ~kptAlias) != kptDir)
         return;
-    const char *slash = strrchr(spath.addr, '/');
+    slash = strrchr(spath.addr, '/');
     if (slash)
         ++slash;
     else
