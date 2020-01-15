@@ -336,15 +336,15 @@ LIB_EXPORT KTime_t CC KTimeMakeTime ( const KTime *self )
         assert ( self -> year >= 1900 );
         t . tm_year = self -> year - 1900;
         t . tm_mon = self -> month;
-        t . tm_mday = self -> day + 1;
+        t . tm_mday = self -> day;
         t . tm_wday = self -> weekday;
         t . tm_hour = self -> hour;
         t . tm_min = self -> minute;
         t . tm_sec = self -> second;
         t . tm_isdst = self -> dst;
 
-        ts = mktime ( &t );
-#endif /* USE_WINDOWS_NATIVE */
+        ts = _mkgmtime( &t );
+#endif /* USE_WINDOWS_NATIVE */ 
     }
 
     return ts;
