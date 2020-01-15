@@ -1379,11 +1379,13 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
             break;
 
         /* send the message and create a response */
-        rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer.base, buffer.elem_count, NULL, self -> url_buffer . base );
+        rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer.base,
+            buffer.elem_count - 1, NULL, self -> url_buffer . base );
         if ( rc != 0 )
         {
             KClientHttpClose ( self -> http );
-            rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer.base, buffer.elem_count, NULL, self -> url_buffer . base );
+            rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer.base,
+                buffer.elem_count - 1, NULL, self -> url_buffer . base );
             if ( rc != 0 )
                 break;
         }

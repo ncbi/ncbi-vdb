@@ -121,20 +121,31 @@ static size_t roundup(size_t value, unsigned bits)
 }
 
 static
-rc_t allocate(buffer_impl_t **target, size_t capacity) {
-    buffer_impl_t *y = malloc(capacity + sizeof(*y));
+void buffer_impl_wipe ( buffer_impl_t * self )
+{
+    if ( self != NULL )
+        memset ( self + 1, 0, self -> allocated );
+}
 
-    if (y == NULL)
-        return RC(rcRuntime, rcBuffer, rcAllocating, rcMemory, rcExhausted);
+static
+rc_t allocate ( buffer_impl_t ** target, size_t capacity, bool clear )
+{
+    size_t bytes;
+    buffer_impl_t * y;
+    
+    bytes = capacity + sizeof * y;
+    y = clear ? calloc ( bytes, 1 ) : malloc ( bytes );
+    if ( y == NULL )
+        return RC ( rcRuntime, rcBuffer, rcAllocating, rcMemory, rcExhausted );
 
-    y->allocated = capacity;
-    atomic32_set(&y->refcount, 1);
+    y -> allocated = capacity;
+    atomic32_set ( & y -> refcount, 1 );
     
 #if DEBUG_MALLOC_FREE
-    y->foo = 0;
+    y -> foo = 0;
 #endif
 
-    *target = y;
+    * target = y;
     return 0;
 }
 
@@ -148,17 +159,22 @@ static buffer_impl_t *test_add_ref(buffer_impl_t *self) {
     return self;
 }
 
-static void release(buffer_impl_t *self) {
-    int32_t refcount = atomic32_read_and_add(&self->refcount, -1);
+static void release ( buffer_impl_t * self, bool wipe )
+{
+    int32_t refcount = atomic32_read_and_add ( & self -> refcount, -1 );
     
-    if (refcount == 1) {
+    if ( refcount == 1 )
+    {
 #if DEBUG_MALLOC_FREE
         if (self->foo != 0) {
             fprintf(stderr, "DIE DIE\n");
         }
         self->foo = 55;
 #endif
-        free(self);
+        if ( wipe )
+            memset ( self, 0, sizeof * self + self -> allocated );
+        
+        free ( self );
     }
 #if DEBUG_MALLOC_FREE
     else if (refcount < 1) {
@@ -168,49 +184,109 @@ static void release(buffer_impl_t *self) {
 }
 
 /* always returns object (new or original) with refcount == 1 */
-static rc_t reallocate(buffer_impl_t **target, size_t capacity) {
-    buffer_impl_t *temp;
-    buffer_impl_t *self = *target;
+static rc_t reallocate ( buffer_impl_t ** target, size_t capacity, bool clear, bool wipe )
+{
+    buffer_impl_t * temp, * self = * target;
 
-    if (capacity <= self->allocated)
-        return 0;
-
-    /* check reference count for copies */
-    if (atomic32_read(&self->refcount) <= 1)
+    /* if down-sizing, the original behavior was just to ignore */
+    if ( capacity <= self -> allocated )
     {
-        temp = realloc(self, capacity + sizeof(*temp));
-        if (temp == NULL)
-            return RC(rcRuntime, rcBuffer, rcResizing, rcMemory, rcExhausted);
+        /* but there may be some wiping to do */
+        if ( wipe )
+            memset ( ( char * ) ( self + 1 ) + capacity, 0, self -> allocated - capacity );
+
+        /* also, this behavior is reasonable only when the new capacity
+           is close to the existing and/or under some minimum.
+           but if dropping from 4G to 256 bytes, it's unreasonable
+           to leave it alone.
+
+           I won't change the behavior just yet, but it needs to be
+           examined and tested for consequences.
+        */
+        return 0;
+    }
+
+    /* check reference count for copies.
+       a buffer that is only referenced once is only referenced
+       by a single thread ( when properly used ).
+       as soon as we see a refcount < 2, we assume no possibility
+       of contention.
+
+       but if wiping is in effect, then we can't rely upon realloc()
+       unless we can exactly predict when it will create a new
+       allocation. It's easily detected upon return, but by then
+       is too late to wipe the old allocation.
+     */
+    if ( ! wipe && atomic32_read ( & self -> refcount ) <= 1 )
+    {
+        /* realloc() can be more efficient than malloc + copy + free */
+        temp = realloc ( self, capacity + sizeof * temp );
+        if ( temp == NULL )
+            return RC ( rcRuntime, rcBuffer, rcResizing, rcMemory, rcExhausted );
     }
     else
     {
-        temp = malloc(capacity + sizeof(*temp));
-        if (temp == NULL)
-            return RC(rcRuntime, rcBuffer, rcResizing, rcMemory, rcExhausted);
-        memmove(temp, self, self->allocated + sizeof(*temp));
-        release(self);
+        /* if wiping or sharing the allocation, generate another copy */
+        temp = malloc ( capacity + sizeof * temp );
+        if ( temp == NULL )
+            return RC ( rcRuntime, rcBuffer, rcResizing, rcMemory, rcExhausted );
+
+        /* copy from original */
+        if ( self -> allocated <= capacity )
+            memmove ( temp, self, self -> allocated + sizeof * temp );
+        else
+            memmove ( temp, self, capacity + sizeof * temp );
+
+        /* done with original */
+        release ( self, wipe );
     }
+
+    /* check to see if clearing is in effect
+       at the moment this is being written, we know that the size
+       was increased. still testing for it here in case that logic
+       is removed.
+    */
+    if ( clear && temp -> allocated < capacity )
+        memset ( ( char * ) ( temp + 1 ) + temp -> allocated, 0, capacity - temp -> allocated );
+
     self = temp;
-    self->allocated = capacity;
-    atomic32_set(&self->refcount, 1);
-    *target = self;
+    self -> allocated = capacity;
+    atomic32_set ( & self->refcount, 1 );
+    
+    * target = self;
 
     return 0;
 }
 
-static rc_t shrink(buffer_impl_t **target, size_t capacity)
+static rc_t shrink ( buffer_impl_t ** target, size_t capacity, bool wipe )
 {
-    buffer_impl_t *self = *target;
-    
-    if (capacity < self->allocated && atomic32_read(&self->refcount) == 1) {
-        buffer_impl_t *temp = realloc(self, capacity + sizeof(*temp));
-        
-        if (temp == NULL)
-            return RC(rcRuntime, rcBuffer, rcResizing, rcMemory, rcExhausted);
+    buffer_impl_t * self = * target;
 
-        temp->allocated = capacity;
-        *target = temp;
+    /* ignore unless downsizing and the buffer is writable */
+    if ( capacity < self -> allocated && atomic32_read ( & self -> refcount ) == 1 )
+    {
+        buffer_impl_t * temp;
+
+        if ( ! wipe )
+            temp = realloc ( self, capacity + sizeof * temp );
+        else
+        {
+            temp = malloc ( capacity + sizeof * temp );
+            if ( temp != NULL )
+            {
+                memmove ( temp, self, capacity + sizeof * temp );
+                memset ( self, 0, self -> allocated + sizeof * self );
+                free ( self );
+            }
+        }
+        
+        if ( temp == NULL )
+            return RC ( rcRuntime, rcBuffer, rcResizing, rcMemory, rcExhausted );
+
+        temp -> allocated = capacity;
+        * target = temp;
     }
+    
     return 0;
 }
 
@@ -218,17 +294,24 @@ static rc_t shrink(buffer_impl_t **target, size_t capacity)
  either returns original with refcount == 2
  or returns new copy with refcount == 1
  */
-static buffer_impl_t* make_copy(buffer_impl_t *self) {
-    if (atomic32_read_and_add_eq(&self->refcount, 1, 1)==1)
-        return self;
-    else {
-        buffer_impl_t *copy = malloc(self->allocated + sizeof(*self));
-        if (copy) {
-            memmove(copy, self, self->allocated + sizeof(*copy));
-            atomic32_set(&copy->refcount, 1);
+static buffer_impl_t * make_copy ( buffer_impl_t * self )
+{
+    buffer_impl_t * copy = self;
+
+    /* the following line checks for a unique reference with count == 1
+       and increments it to a second reference if so. */
+    if ( atomic32_read_and_add_eq ( & self -> refcount, 1, 1 ) != 1 )
+    {
+        /* falling into here, the reference count was NOT 1
+           so it's not a unique reference and memory should be cloned */
+        copy = malloc ( self -> allocated + sizeof * copy );
+        if ( copy != NULL )
+        {
+            memmove ( copy, self, self -> allocated + sizeof * copy );
+            atomic32_set ( & copy -> refcount, 1 );
         }
-        return copy;
     }
+    return copy;
 }
 
 static void const *get_data(buffer_impl_t const *self)
@@ -290,7 +373,7 @@ LIB_EXPORT rc_t CC KDataBufferMake(KDataBuffer *target, uint64_t elem_bits, uint
 
     if ( bytes > 0 )
     {
-        rc = allocate(impp, bytes);
+        rc = allocate(impp, bytes, false);
         if (rc == 0) {
             target->base = (void *)get_data(*impp);
             target->elem_count = elem_count;
@@ -302,7 +385,9 @@ LIB_EXPORT rc_t CC KDataBufferMake(KDataBuffer *target, uint64_t elem_bits, uint
     return rc;
 }
 
-static rc_t KDataBufferResizeInt(KDataBuffer *self, uint64_t new_count) {
+static rc_t KDataBufferResizeInt ( KDataBuffer * self,
+    uint64_t new_count, bool clear, bool wipe )
+{
     rc_t rc;
     buffer_impl_t *imp;
     buffer_impl_t *new_imp;
@@ -361,7 +446,7 @@ static rc_t KDataBufferResizeInt(KDataBuffer *self, uint64_t new_count) {
     if ( imp == NULL )
     {
         /* new buffer - writable by definition */
-        rc = allocate(&imp, roundup((bits + 7) / 8, 12));
+        rc = allocate(&imp, roundup((bits + 7) / 8, 12), clear);
         if (rc == 0)
         {
             self->ignore = imp;
@@ -381,7 +466,7 @@ static rc_t KDataBufferResizeInt(KDataBuffer *self, uint64_t new_count) {
     
     new_size = roundup((bits + 7) / 8, 12);
     if (self->base == get_data(imp) && self->bit_offset == 0) {
-        rc = reallocate(&imp, new_size);
+        rc = reallocate(&imp, new_size, clear, wipe);
         if (rc == 0) {
             self->ignore = imp;
             self->base = (void *)get_data(imp);
@@ -391,10 +476,10 @@ static rc_t KDataBufferResizeInt(KDataBuffer *self, uint64_t new_count) {
     }
 
     /* is sub-buffer but is sole reference */
-    rc = allocate(&new_imp, roundup(new_size, 12));
+    rc = allocate(&new_imp, roundup(new_size, 12), clear);
     if (rc == 0) {
         memmove((void *)get_data(new_imp), self->base, new_size);
-        release(imp);
+        release(imp, wipe);
         self->base = (void *)get_data(new_imp);
         self->ignore = new_imp;
         self->elem_count = new_count;
@@ -404,7 +489,7 @@ static rc_t KDataBufferResizeInt(KDataBuffer *self, uint64_t new_count) {
 
 LIB_EXPORT rc_t CC KDataBufferResize(KDataBuffer *self, uint64_t new_count)
 {
-    rc_t rc = KDataBufferResizeInt ( self, new_count );
+    rc_t rc = KDataBufferResizeInt ( self, new_count, false, false );
     cc ( self );
     return rc;
 }
@@ -573,7 +658,7 @@ static rc_t KDataBufferMakeWritableInt (const KDataBuffer *cself, KDataBuffer *t
             copy = make_copy(self);
             if (copy) {
                 if ((KDataBuffer const *)target == cself)
-                    release(self);
+                    release(self, false);
                 else 
                     *target = *cself;
                 target->ignore = copy;
@@ -595,7 +680,7 @@ static rc_t KDataBufferMakeWritableInt (const KDataBuffer *cself, KDataBuffer *t
             /* sub-buffer so make new and copy */
             rc_t rc;
             
-            rc = allocate(&copy, roundup(KDataBufferBytes(cself), 12));
+            rc = allocate(&copy, roundup(KDataBufferBytes(cself), 12), false);
             if (rc == 0) {
                 if (cself->bit_offset == 0)
                     memmove((void *)get_data(copy), cself->base, KDataBufferBytes(cself));
@@ -603,7 +688,7 @@ static rc_t KDataBufferMakeWritableInt (const KDataBuffer *cself, KDataBuffer *t
                     bitcpy((void *)get_data(copy), 0, cself->base, cself->bit_offset, KDataBufferBits(cself));
 
                 if ((const KDataBuffer *)target == cself)
-                    release(self);
+                    release(self, false);
                 else 
                     *target = *cself;
                 target->ignore = copy;
@@ -629,7 +714,7 @@ LIB_EXPORT rc_t CC KDataBufferWhack (KDataBuffer *self)
     if (self)
     {
         if (self->ignore)
-            release((buffer_impl_t *)self->ignore);
+            release((buffer_impl_t *)self->ignore, false);
 
         memset(self, 0, sizeof(*self));
     }
@@ -650,7 +735,7 @@ LIB_EXPORT rc_t CC KDataBufferShrink(KDataBuffer *self)
     rc_t rc = 0;
     if (self && self->ignore) {
         rc = shrink((buffer_impl_t **)&self->ignore,
-            (self->elem_bits * self->elem_count + self->bit_offset + 7) / 8);
+            (self->elem_bits * self->elem_count + self->bit_offset + 7) / 8, false);
         cc ( self );
     }
     return rc;
@@ -696,4 +781,55 @@ LIB_EXPORT rc_t CC KDataBufferCheckIntegrity (const KDataBuffer *self)
         self->bit_offset / self->elem_bits, KDataBufferBytes (self));
 }
 
-/* 0x101e9b000 */
+
+/* Wipe
+ *  overwrite allocated memory
+ */
+LIB_EXPORT rc_t CC KDataBufferWipe ( KDataBuffer * self )
+{
+    cc ( self );
+    
+    if ( self == NULL )
+        return RC ( rcRuntime, rcBuffer, rcValidating, rcSelf, rcNull );
+
+    if ( self -> ignore != NULL )
+        buffer_impl_wipe ( ( buffer_impl_t * ) self -> ignore );
+
+    cc ( self );
+    
+    return 0;
+}
+
+
+/* WipeNWhack
+ *  wipes and releases memory associated with a buffer.
+ */
+LIB_EXPORT rc_t CC KDataBufferWipeNWhack ( KDataBuffer * self )
+{
+    cc ( self );
+    
+    if ( self != NULL )
+    {
+        if ( self -> ignore )
+            release ( ( buffer_impl_t * ) self -> ignore, true );
+
+        memset ( self, 0, sizeof * self );
+    }
+    return 0;
+}
+
+
+/* WipeResize
+ *  make a buffer bigger or smaller.
+ *  can fail if not enough memory.
+ *  can fail if not writable.
+ *  wipes memory before release or reallocation
+ *
+ *  "new_count" [ IN ] - new number of elements
+ */
+LIB_EXPORT rc_t CC KDataBufferWipeResize ( KDataBuffer * self, uint64_t new_count )
+{
+    rc_t rc = KDataBufferResizeInt ( self, new_count, true, true );
+    cc ( self );
+    return rc;
+}

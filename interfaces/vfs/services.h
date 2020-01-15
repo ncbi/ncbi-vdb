@@ -70,6 +70,9 @@ rc_t KServiceRelease ( KService * self );
 /* Add an Id ( Accession or Object-Id ) to service request */
 rc_t KServiceAddId     ( KService * self, const char * id );
 
+/* Add an Object ( ObjectId or dbgap|ObjectId ) to service request */
+rc_t KServiceAddObject(KService * self, const char * id);
+
 /* Add a dbGaP Project to service request */
 rc_t KServiceAddProject ( KService * self, uint32_t id );
 

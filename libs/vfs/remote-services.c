@@ -3497,7 +3497,9 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
               if ( SVersionResponseInJson ( request -> version,
                   request ->sdl ) )
               {
-                const char name [] = "acc";
+                const char * name = "acc";
+                if (request->request.object[i].objectType == eOT_sdlObject)
+                    name = "object";
                 rc = SKVMake ( & kv, name,
                                request -> request . object [ i ] . objectId );
                 DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( "  %s=%s\n",
@@ -3832,7 +3834,7 @@ static void KServiceExpectErrors ( KService * self, int n ) {
 }
 
 
-static rc_t KServiceAddObject ( KService * self,
+static rc_t _KServiceAddObject ( KService * self,
     const char * id, size_t id_sz, EObjectType objectType )
 {
     if ( self == NULL )
@@ -3845,9 +3847,12 @@ static rc_t KServiceAddObject ( KService * self,
 
 /* Add an Id ( Accession or Object-Id ) to service request */
 rc_t KServiceAddId ( KService * self, const char * id ) {
-    return KServiceAddObject ( self, id, 0, eOT_undefined );
+    return _KServiceAddObject ( self, id, 0, eOT_undefined );
 }
 
+rc_t KServiceAddObject(KService * self, const char * id) {
+    return _KServiceAddObject(self, id, 0, eOT_sdlObject);
+}
 
 static rc_t KServiceAddTicket ( KService * self, const char * ticket ) {
     if ( self == NULL )
@@ -4012,7 +4017,7 @@ static rc_t KServiceInitNames1 ( KService * self, const KNSManager * mgr,
         rc = KServiceInit ( self, NULL, mgr, NULL );
 
     if ( rc == 0 )
-        rc = KServiceAddObject ( self, acc, acc_sz, objectType );
+        rc = _KServiceAddObject ( self, acc, acc_sz, objectType );
     if ( rc == 0 )
         rc = SRequestAddTicket ( & self -> req, 0, ticket );
     if ( rc == 0 )
@@ -4744,6 +4749,13 @@ static rc_t KSrvRespObj_AttachVdbcaches(const KSrvRespObj * self) {
                     rc = VPathAttachVdbcacheIfEmpty(srr[i], v);
                 }
     }
+    else
+        if (nSrrr == 1)
+            rc = VPathAttachVdbcache(aSrr, NULL);
+        else
+            for (i = 0; rc == 0 && i < sizeof srr / sizeof srr[0]; ++i)
+                if (srr[i] != NULL)
+                    rc = VPathAttachVdbcache(srr[i], NULL);
 
     for (i = 0; i < sizeof srr / sizeof srr[0]; ++i)
         RELEASE(VPath, srr[i]);
@@ -5435,7 +5447,7 @@ rc_t KServiceNamesRequestTest ( const KNSManager * mgr, const char * b,
     va_start ( args, d );
     while ( rc == 0 && d != NULL ) {
         if ( d -> id != NULL ) {
-            rc = KServiceAddObject ( service, d -> id, 0, d -> type );
+            rc = _KServiceAddObject ( service, d -> id, 0, d -> type );
         }
         if ( rc == 0 && d -> ticket != NULL ) {
             rc = KServiceAddTicket ( service, d -> ticket );
@@ -5713,7 +5725,7 @@ rc_t KServiceSearchTest (
     rc = KServiceInit ( & service, NULL, mgr, NULL );
     va_start ( args, acc );
     while ( rc == 0 && acc != NULL ) {
-        rc = KServiceAddObject ( & service, acc, 0, eOT_undefined);
+        rc = _KServiceAddObject ( & service, acc, 0, eOT_undefined);
         acc = va_arg ( args, const char * );
     }
     if ( rc == 0 ) {
