@@ -30,6 +30,7 @@
 
 #include <kapp/args.h> /* ArgsMakeAndHandle */
 
+#include <klib/debug.h> /* KDbgSetString */
 #include <klib/text.h>
 
 #include <ktst/unit_test.hpp>
@@ -44,7 +45,7 @@
 #include <vfs/resolver.h>
 #include <vfs/path.h>
 
-#include "resolver-cgi.h" /* RESOLVER_CGI */
+#include "../../libs/vfs/resolver-cgi.h" /* RESOLVER_CGI */
 
 #include <cstdlib>
 #include <fstream>
@@ -64,6 +65,15 @@ static rc_t argsHandler(int argc, char* argv[]) {
 TEST_SUITE_WITH_ARGS_HANDLER(VResolverTestSuite, argsHandler);
 
 using namespace std;
+
+#ifdef MAC
+#define NETMNT "/net"
+#else
+#define NETMNT "/netmnt"
+#endif
+const string Netmnt(NETMNT);
+
+static bool hasLocal = true;
 
 static string ToString(const VPath* path)
 {
@@ -210,6 +220,22 @@ FIXTURE_TEST_CASE(WGS_with_6letter_prefix_and_version, ResolverFixture)
     VPathRelease(query); query = 0;
     VPathRelease(local); local = 0;
     VPathRelease(remote); remote = 0;
+}
+
+FIXTURE_TEST_CASE(HS37D5, ResolverFixture) {
+    REQUIRE_RC(VFSManagerMakePath(vfs, &query, "hs37d5"));
+
+    REQUIRE_RC(VResolverQuery(resolver, 0, query, NULL, &remote, NULL));
+    REQUIRE_RC(VPathRelease(remote)); remote = NULL;
+
+    if (hasLocal) {
+        REQUIRE_RC(VResolverQuery(resolver, 0, query, &local, NULL, NULL));
+        REQUIRE_RC(VPathRelease(local)); local = NULL;
+    }
+    else
+        REQUIRE_RC_FAIL(VResolverQuery(resolver, 0, query, &local, NULL, NULL));
+
+    REQUIRE_RC(VPathRelease(query)); query = NULL;
 }
 
 class ResolverFixtureCustomConfig
@@ -379,9 +405,25 @@ extern "C"
 
     rc_t CC KMain ( int argc, char *argv [] )
     {
+        if (
+0) assert(!KDbgSetString("VFS"));
+
         KConfigDisableUserSettings ();
 
-        rc_t rc = VResolverTestSuite ( argc, argv );
+        KDirectory * dir = NULL;
+        rc_t rc = KDirectoryNativeDir(&dir);
+        if (rc != 0)
+            return rc;
+        if ((KDirectoryPathType(dir,
+            NETMNT "/traces04") & ~kptAlias) == kptNotFound)
+        {
+            hasLocal = false;
+        }
+        rc = KDirectoryRelease(dir);
+        if (rc != 0)
+            return rc;
+
+        rc = VResolverTestSuite ( argc, argv );
 
         clear_recorded_errors();
 

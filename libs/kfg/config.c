@@ -68,6 +68,8 @@ struct KfgConfigNamelist;
 #include "kfg-parse.h"
 #include "config-tokens.h"
 
+#include "../vfs/resolver-cgi.h" /* RESOLVER_CGI */
+
 #ifndef PATH_MAX
 #define PATH_MAX 4096
 #endif
@@ -78,6 +80,8 @@ struct KfgConfigNamelist;
 
 static bool s_disable_user_settings = false;
 
+static const char * s_ngc_file = NULL;
+
 
 /*----------------------------------------------------------------------------*/
 static const char default_kfg[] = {
@@ -87,15 +91,17 @@ static const char default_kfg[] = {
 "/repository/user/main/public/apps/nannot/volumes/nannotFlat = \"nannot\"\n"
 "/repository/user/main/public/apps/refseq/volumes/refseq = \"refseq\"\n"
 "/repository/user/main/public/apps/sra/volumes/sraFlat = \"sra\"\n"
-"/repository/user/main/public/apps/sraPileup/volumes/flat = \"sra\"\n"
-"/repository/user/main/public/apps/sraRealign/volumes/flat = \"sra\"\n"
+"/repository/user/main/public/apps/sraPileup/volumes/withExtFlat = \"sra\"\n"
+"/repository/user/main/public/apps/sraRealign/volumes/withExtFlat = \"sra\"\n"
 "/repository/user/main/public/apps/wgs/volumes/wgsFlat = \"wgs\"\n"
 "/repository/remote/main/CGI/resolver-cgi = "
              "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
 "/repository/remote/protected/CGI/resolver-cgi = "
              "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
 "/repository/remote/main/SDL.2/resolver-cgi = "
-             "\"https://trace.ncbi.nlm.nih.gov/Traces/sdl/2/retrieve\"\n"
+             "\"https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve\"\n"
+"/repository/remote/protected/SDL.2/resolver-cgi = "
+             "\"https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve\"\n"
 "/tools/ascp/max_rate = \"450m\"\n"
 };
 /*----------------------------------------------------------------------------*/
@@ -3108,6 +3114,82 @@ static rc_t _KConfigFixRepeatedDrives(KConfig *self,
 
 #endif
 
+static rc_t StringRelease(const String *self) {
+    StringWhack(self);
+    return 0;
+}
+
+static rc_t _KConfigUseWithExtFlatAlg(KConfig * self, bool * updated,
+    const char * old_name,
+    const char * new_name,
+    const char * updated_name)
+{
+    rc_t rc = 0;
+
+    String * result = NULL;
+    size_t size = 0;
+    bool newExists = false;
+
+    assert(updated);
+    *updated = false;
+
+    rc = KConfigReadString(self, updated_name, &result);
+    if (rc == 0) { /* was updated already */
+        RELEASE(String, result);
+        return rc;
+    }
+
+    rc = KConfigReadString(self, old_name, &result);
+    if (rc != 0) /* Bad node was not found. Nothing to do. */
+        return 0;
+    assert(result);
+    size = result->size;
+    RELEASE(String, result);
+    if (size == 0) /* Bad node is already empty. Nothing to do. */
+        return 0;
+
+    rc = KConfigReadString(self, new_name, &result);
+    if (rc == 0) { /* Good node was found. */
+        RELEASE(String, result);
+        newExists = true;
+    }
+
+    /* Need to create new node. */
+    if (!newExists)
+        rc = KConfigWriteString(self, new_name, "sra");
+
+    if (rc == 0) {
+        /* Clear old node */
+        rc = KConfigWriteString(self, old_name, "");
+
+        if (rc == 0)
+            rc = KConfigWriteString(self, updated_name, "updated");
+
+        if (rc == 0)
+            *updated = true;
+    }
+
+    return rc;
+}
+
+static rc_t _KConfigUsePileupAppWithExtFlatAlg(KConfig * self,
+    bool * updated)
+{
+    return _KConfigUseWithExtFlatAlg(self, updated,
+        "/repository/user/main/public/apps/sraPileup/volumes/flat",
+        "/repository/user/main/public/apps/sraPileup/volumes/withExtFlat",
+        "/repository/user/main/public/apps/sraPileup/withExtFlat");
+}
+
+static rc_t _KConfigUseRealignAppWithExtFlatAlg(KConfig * self,
+    bool * updated)
+{
+    return _KConfigUseWithExtFlatAlg(self, updated,
+        "/repository/user/main/public/apps/sraRealign/volumes/flat",
+        "/repository/user/main/public/apps/sraRealign/volumes/withExtFlat",
+        "/repository/user/main/public/apps/sraRealign/withExtFlat");
+}
+
 static rc_t _KConfigUpdateDefault( KConfig * self, bool * updated,
     const char * node_name, 
     const char * node2_name,
@@ -3182,7 +3264,7 @@ static rc_t _KConfigUseTraceCgi(KConfig * self, bool * updated) {
         "/repository/remote/main/CGI/resolver-cgi",
         "/repository/remote/protected/CGI/resolver-cgi",
         "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi",
-        "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi",
+        RESOLVER_CGI,
         "/repository_remote/CGI/resolver-cgi/trace");
 }
 
@@ -3196,7 +3278,7 @@ static rc_t _KConfigCheckAd(KConfig * self) {
            when it does not exist */
         if (rc == 0)
             rc = KConfigWriteString(self,
-                "/repository/user/ad/public/apps/file/volumes/flat", ".");
+                "/repository/user/ad/public/apps/file/volumes/flatAd", ".");
         if (rc == 0)
             rc = KConfigWriteString(self,
                 "/repository/user/ad/public/apps/sra/volumes/sraAd", ".");
@@ -3316,12 +3398,24 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
                 bool updated = false;
 
                 if ( ! s_disable_user_settings ) {
+                    bool updatd2 = false;
+
                     rc = _KConfigLowerAscpRate ( mgr,  & updated );
                     if (rc == 0) {
-                        bool updated2 = false;
-                        rc = _KConfigUseTraceCgi(mgr, &updated2);
-                        updated |= updated2;
+                        rc = _KConfigUseTraceCgi(mgr, &updatd2);
+                        updated |= updatd2;
                     }
+
+                    if (rc == 0) {
+                        rc = _KConfigUsePileupAppWithExtFlatAlg(mgr, &updatd2);
+                        updated |= updatd2;
+                    }
+
+                    if (rc == 0) {
+                        rc = _KConfigUseRealignAppWithExtFlatAlg(mgr, &updatd2);
+                        updated |= updatd2;
+                    }
+
                     if ( rc == 0 && updated ) {
                         rc = KConfigCommit ( mgr );
                         updated = false;
@@ -3342,11 +3436,32 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
 
             if ( rc == 0 )
             {
-                if ( ! local ) {
-                    atomic_test_and_set_ptr ( & G_kfg, mgr, NULL );
+                if ( local )
+                {
+                    * cfg = mgr;
                 }
-                * cfg = mgr;
-                return 0;
+                else
+                {
+                    KConfig * prev = atomic_test_and_set_ptr ( & G_kfg, mgr, NULL );
+                    if ( prev != NULL )
+                    {
+                        /* the global singleton was already instantiated: hand out that one */
+                        rc = KConfigAddRef ( G_kfg.ptr );
+                        if ( rc == 0 )
+                        {
+                            * cfg = G_kfg . ptr;
+                        }
+                        /* and we have to deallocate the object we just made! */
+                        KConfigEmpty ( mgr );
+                        free( ( void * ) mgr);
+                    }
+                    else
+                    {
+                        * cfg = mgr;
+                    }
+                        
+                }
+                return rc;
             }
 
             KConfigWhack ( mgr );
@@ -3977,6 +4092,9 @@ LIB_EXPORT void CC KConfigDisableUserSettings ( void )
     s_disable_user_settings = true;
 }
 
+LIB_EXPORT void CC KConfigSetNgcFile(const char * path) { s_ngc_file = path; }
+const char * KConfigGetNgcFile(void) { return s_ngc_file; }
+
 static
 rc_t open_file ( const KFile **f, const char *path )
 {
@@ -4191,8 +4309,7 @@ LIB_EXPORT rc_t KConfigFixMainResolverCgiNode ( KConfig * self ) {
                    "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
         assert(result);
         if ( result->size == 0 || StringEqual ( & http, result ) ) {
-            const char https []
-                = "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
+            const char https[] = RESOLVER_CGI;
             rc = KConfigNodeWrite ( node, https, sizeof https );
         }
     }
@@ -4203,6 +4320,39 @@ LIB_EXPORT rc_t KConfigFixMainResolverCgiNode ( KConfig * self ) {
 
     return rc;
 }
+
+/* We need to call it from KConfigFixProtectedResolverCgiNode:
+ * otherwise we call names.cgi, not SDL for dbGaP resolution. */
+static rc_t KConfigFixProtectedSdlCgiNode(KConfig * self) {
+    rc_t rc = 0;
+
+    KConfigNode *node = NULL;
+    struct String *result = NULL;
+
+    assert(self);
+
+    if (rc == 0)
+        rc = KConfigOpenNodeUpdate(self, &node,
+            "/repository/remote/protected/SDL.2/resolver-cgi");
+
+    if (rc == 0)
+        rc = KConfigNodeReadString(node, &result);
+
+    if (rc == 0) {
+        assert(result);
+        if (result->size == 0) {
+            const char https[] = SDL_CGI;
+            rc = KConfigNodeWrite(node, https, sizeof https);
+        }
+    }
+
+    free(result);
+
+    KConfigNodeRelease(node);
+
+    return rc;
+}
+
 LIB_EXPORT rc_t KConfigFixProtectedResolverCgiNode ( KConfig * self ) {
     rc_t rc = 0;
 
@@ -4226,8 +4376,7 @@ LIB_EXPORT rc_t KConfigFixProtectedResolverCgiNode ( KConfig * self ) {
                    "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
         assert(result);
         if ( result->size == 0 || StringEqual ( & http, result ) ) {
-            const char https []
-                = "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi";
+            const char https[] = RESOLVER_CGI;
             rc = KConfigNodeWrite ( node, https, sizeof https );
         }
     }
@@ -4235,6 +4384,9 @@ LIB_EXPORT rc_t KConfigFixProtectedResolverCgiNode ( KConfig * self ) {
     free(result);
 
     KConfigNodeRelease(node);
+
+    if (rc == 0)
+        rc = KConfigFixProtectedSdlCgiNode(self);
 
     return rc;
 }

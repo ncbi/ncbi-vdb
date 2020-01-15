@@ -505,7 +505,10 @@ rc_t run ( const char *progname )
             rc = make_initial_test ( field_width, precision, " ", "s", "Kurt is having a fit" );
 #if !defined(__SunOS)  &&  !defined(__sun__)
             /* Solaris printf doesn't cope with NULLs */
+#if 0
+            /* The standard says this result is undefined, we shouldn't test for it, it is not consistent */
             rc = make_initial_test ( field_width, precision, " ", "s", NULL );
+#endif
 #endif            
             rc = make_initial_test ( field_width, precision, " ", "s", "" );
             rc = make_initial_test ( field_width, precision, " ", "s", "OK" );

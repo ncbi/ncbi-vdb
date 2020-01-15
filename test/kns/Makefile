@@ -38,8 +38,8 @@ TEST_TOOLS = \
 	test-kns \
 	test-http \
 	test-http-dropconn \
+	test-http-request \
 	KNSManagerSingletonTest \
-	test-VDB-3661 \
 	test-connect \
 	test-refresh-expired
 
@@ -182,18 +182,6 @@ $(TEST_BINDIR)/test200for-whole-file: $(K2_OBJ)
 	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
 #----------------------------------------------------------------
-# test-VDB-3661
-#
-VDB_3661_SRC = \
-	test-VDB-3661
-
-VDB_3661_OBJ = \
-	$(addsuffix .$(OBJX),$(VDB_3661_SRC))
-
-$(TEST_BINDIR)/test-VDB-3661: $(VDB_3661_OBJ)
-	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
-
-#----------------------------------------------------------------
 # test-proxy
 #
 PROXYTEST_SRC = \
@@ -250,6 +238,22 @@ $(TEST_BINDIR)/test-http-dropconn: $(HTTP_DROPCONN_TEST_OBJ)
 
 dropconn: test-http-dropconn
 	$(TEST_BINDIR)/test-http-dropconn  # -l=all
+
+#----------------------------------------------------------------
+# test-http-request
+#
+HTTP_REQUEST_TEST_SRC = \
+	HttpFixture \
+	test-http-request
+
+HTTP_REQUEST_TEST_OBJ = \
+	$(addsuffix .$(OBJX),$(HTTP_REQUEST_TEST_SRC))
+
+$(TEST_BINDIR)/test-http-request: $(HTTP_REQUEST_TEST_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+req: test-http-request
+	$(TEST_BINDIR)/test-http-request
 
 #----------------------------------------------------------------
 # test-proxy-with-env

@@ -67,6 +67,10 @@ struct GCP;
 #include "cloud-cmn.h" /* KNSManager_Read */
 #include "cloud-priv.h"
 
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
 /*TODO: use log.h instead, or promote to cloud-priv.h (there is a copy in cloud-mgr.c) */
 #if 0
 #include <stdio.h>
@@ -118,7 +122,8 @@ static rc_t readCE(GCP const *const self, size_t size, char location[])
         "http://metadata/computeMetadata/v1/instance/service-accounts/"
         "default/identity?audience=https://www.ncbi.nlm.nih.gov&format=full";
 
-    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("Reading location from provider"));
+    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+        ("Reading location from provider\n"));
     return KNSManager_Read(self->dad.kns, location, size,
                          identityUrl, "Metadata-Flavor", "Google");
 }

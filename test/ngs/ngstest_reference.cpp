@@ -27,7 +27,7 @@
 /**
 * Unit tests for NGS C interface, reference accessions
 */
-
+#include <klib/debug.h> /* KDbgSetString */
 #include "ngs_c_fixture.hpp"
 
 #include <string.h>
@@ -49,6 +49,8 @@ using namespace std;
 using namespace ncbi::NK;
 
 TEST_SUITE(NgsReferenceTestSuite);
+
+#define ALL
 
 const char* CSRA1_PrimaryOnly   = "SRR1063272";
 const char* CSRA1_WithSecondary = "SRR833251";
@@ -79,7 +81,7 @@ public:
 
     NGS_Alignment*      m_align;
 };
-
+#ifdef ALL
 // NGS_Reference
 FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetCommonName, CSRA1_ReferenceFixture)
 {
@@ -687,27 +689,44 @@ FIXTURE_TEST_CASE(SRA_Reference_Open_FailsOnNonReference, NGS_C_Fixture)
     REQUIRE_FAILED ();
     EXIT;
 }
+#endif
+
+#include <unistd.h> // gethostname
+static bool expectToFail() {
+    char name[512] ="";
+    gethostname(name, sizeof name);
+    std::cerr << "GETHOSTNAME = '" << name << "': ";
+    const char bad[]="tcmac0";
+    if (strncmp(name,bad, sizeof bad - 1) == 0) {
+      std::cerr << "bad host\n";
+      return true;
+    }
+    std::cerr << "good host\n";
+    return false;
+}
 
 FIXTURE_TEST_CASE(EBI_Reference_Open_EBI_MD5, NGS_C_Fixture)
 {
 /* The following request should success it order to this test to work:
-http://www.ebi.ac.uk/ena/cram/md5/ffd6aeffb54ade3d28ec7644afada2e9
-Otherwise CALL_TO_EBI_RESOLVER_FAILS is set
-and this test is expected to fail */
-    const bool CALL_TO_EBI_RESOLVER_FAILS = false;
+   https://www.ebi.ac.uk/ena/cram/md5/ffd6aeffb54ade3d28ec7644afada2e9
+   Otherwise CALL_TO_EBI_RESOLVER_FAILS is set
+   and this test is expected to fail
+It is known to fail on macs with old certificates file */
+    const bool CALL_TO_EBI_RESOLVER_FAILS = expectToFail();
 
     ENTRY;
     const char* EBI_Accession = "ffd6aeffb54ade3d28ec7644afada2e9";
 
     NGS_ReferenceSequence * ref = NGS_ReferenceSequenceMake ( ctx, EBI_Accession );
 
+// does not seem to fail on tcmacXXs anymore
     if ( CALL_TO_EBI_RESOLVER_FAILS ) {
-        REQUIRE ( FAILED () );
-        REQUIRE_NULL ( ref );
-        LOG(ncbi::NK::LogLevel::e_error,
-            "CANNOT TEST EBI ACCESSION BECAUSE THEIR SITE DOES NOT RESPOND!\n");
-        LOG(ncbi::NK::LogLevel::e_error, "NOW EXPECTING AN ERROR MESSAGE ...");
-        return;
+//        REQUIRE ( FAILED () );
+//        REQUIRE_NULL ( ref );
+//        LOG(ncbi::NK::LogLevel::e_error,
+//            "CANNOT TEST EBI ACCESSION BECAUSE THEIR SITE DOES NOT RESPOND!\n");
+//        LOG(ncbi::NK::LogLevel::e_error, "NOW EXPECTING AN ERROR MESSAGE ...");
+//        return;
     }
 
     REQUIRE ( ! FAILED () );
@@ -726,7 +745,7 @@ and this test is expected to fail */
     NGS_ReferenceSequenceRelease ( ref, ctx );
     EXIT;
 }
-
+#ifdef ALL
 FIXTURE_TEST_CASE(EBI_Reference_Open_EBI_ACC, NGS_C_Fixture)
 {
     ENTRY;
@@ -744,7 +763,7 @@ FIXTURE_TEST_CASE(EBI_Reference_Open_EBI_ACC, NGS_C_Fixture)
     NGS_ReferenceSequenceRelease ( ref, ctx );
     EXIT;
 }
-
+#endif
 //////////////////////////////////////////// Main
 extern "C"
 {
@@ -770,6 +789,10 @@ const char UsageDefaultName[] = "test-ngs_reference";
 rc_t CC KMain ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
+
+    if(
+0)
+        assert(!KDbgSetString("KNS-HTTP"));
 
     KConfig * kfg = NULL;
     rc_t rc = KConfigMake(&kfg, NULL);

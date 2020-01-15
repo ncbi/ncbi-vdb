@@ -46,6 +46,10 @@ endif
 #
 runtests: pytest
 
+ifeq (mac,$(OS))
+pytest:
+
+else
 pytest:
 	python -c "from ngs import NGS" \
 		&& export VDB_CONFIG=$(VDB_CONFIG) ; export NGS_PY_DOWNLOAD_LIBRARY=0; \
@@ -53,5 +57,6 @@ pytest:
 			export LD_LIBRARY_PATH=$(LIBDIR):$(NGS_LIBDIR):$$LD_LIBRARY_PATH; \
 			NCBI_SETTINGS=/ python tests.py \
 		|| echo "NGS Python tests are not run since ngs module does not appear to be installed"
+endif
 
 .PHONY: pytest

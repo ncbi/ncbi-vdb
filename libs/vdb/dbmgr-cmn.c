@@ -316,7 +316,13 @@ rc_t VDBManagerConfigFromKfg ( VDBManager *self, bool update )
 
         /* look for schema paths */
         if ( rc == 0 )
+        {
             rc = VDBManagerGetKfgPath ( kfg, "vdb/schema/paths", full, sizeof full, & num_read );
+            if ( rc == 0 )
+            {
+                PLOGMSG ( klogDebug, ( klogDebug, "VDBManagerConfigFromKfg: vdb/schema/paths = '$(path)'", "path=%s", full ) );
+            }
+        }
         if ( rc != 0 )
             rc = 0;
         else

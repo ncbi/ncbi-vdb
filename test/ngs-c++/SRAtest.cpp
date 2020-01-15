@@ -67,31 +67,6 @@ public:
 };
 const char* SRAFixture::SRA_Accession = "SRR000001";
 
-///// String
-TEST_CASE(SRA_String_StringRefScope)
-{
-    char const* p;
-    size_t size;
-
-    ngs::ReadCollection read_coll = ncbi::NGS::openReadCollection( "SRR618508" );
-    ngs::Reference ref = read_coll.getReference("NC_000002.11");
-    {
-        ngs::StringRef str_ref = ref.getReferenceChunk(20001);
-
-        p = str_ref.data();
-        size = str_ref.size();
-    }
-
-
-    // data under p are still available for the current implementation
-    for (size_t i = 0; i < size; ++i)
-    {
-        // force the compiler not to optimize this loop
-        if ( p[i] == '!' )
-            std::cout << "SRA_String_StringRefScope works" << std::endl;
-    }
-}
-
 ///// ReadCollection
 //TODO: getReadRange (categories)
 //TODO: getReadCount (categories)
@@ -100,30 +75,30 @@ TEST_CASE(SRA_String_StringRefScope)
 
 FIXTURE_TEST_CASE(SRA_ReadCollection_Open, SRAFixture)
 {
-    ngs :: ReadCollection run = ncbi :: NGS :: openReadCollection ( SRA_Accession );
+    ngs :: ReadCollection run = open ( SRA_Accession );
 }
 FIXTURE_TEST_CASE(SRA_ReadCollection_Open_Failed, SRAFixture)
 {
-    REQUIRE_THROW ( ngs :: ReadCollection run = ncbi :: NGS :: openReadCollection ( string(SRA_Accession) + "_BS" ) );
+    REQUIRE_THROW ( ngs :: ReadCollection run = open ( "idonotopen" ) );
 }
 
 FIXTURE_TEST_CASE(SRA_ReadCollection_GetName, SRAFixture)
 {
-    REQUIRE_EQ ( ngs :: String ( SRA_Accession ), ncbi :: NGS :: openReadCollection ( SRA_Accession ) . getName () );
+    REQUIRE_EQ ( ngs :: String ( SRA_Accession ), open ( SRA_Accession ) . getName () );
 }
 
 FIXTURE_TEST_CASE(SRA_ReadCollection_GetReads, SRAFixture)
 {
-    ngs :: ReadIterator readIt = ncbi :: NGS :: openReadCollection ( SRA_Accession ) . getReads ( ngs :: Read :: all );
+    ngs :: ReadIterator readIt = open ( SRA_Accession ) . getReads ( ngs :: Read :: all );
 }
 FIXTURE_TEST_CASE(SRA_ReadCollection_GetReads_Filtered, SRAFixture)
 {
-    ngs :: ReadIterator readIt = ncbi :: NGS :: openReadCollection ( SRA_Accession ) . getReads ( ngs :: Read :: unaligned );
+    ngs :: ReadIterator readIt = open ( SRA_Accession ) . getReads ( ngs :: Read :: unaligned );
 }
 
 FIXTURE_TEST_CASE(SRA_ReadCollection_GetReadRange, SRAFixture)
 {
-    ngs :: ReadIterator readIt = ncbi :: NGS :: openReadCollection ( SRA_Accession ) . getReadRange ( 100, 200 );
+    ngs :: ReadIterator readIt = open ( SRA_Accession ) . getReadRange ( 100, 200 );
 }
 
 FIXTURE_TEST_CASE(SRA_ReadCollection_GetRead, SRAFixture)
@@ -133,12 +108,12 @@ FIXTURE_TEST_CASE(SRA_ReadCollection_GetRead, SRAFixture)
 
 FIXTURE_TEST_CASE(SRA_ReadCollection_GetRead_Failed, SRAFixture)
 {
-    REQUIRE_THROW ( ngs :: Read read = ncbi :: NGS :: openReadCollection ( SRA_Accession ) . getRead ( "notaread" ) );
+    REQUIRE_THROW ( ngs :: Read read = open ( SRA_Accession ) . getRead ( "notaread" ) );
 }
 
 FIXTURE_TEST_CASE(SRA_ReadCollection_ReadCount, SRAFixture)
 {
-    ngs :: ReadCollection run = ncbi :: NGS :: openReadCollection ( SRA_Accession );
+    ngs :: ReadCollection run = open ( SRA_Accession );
     REQUIRE_EQ( (uint64_t)470985, run . getReadCount() );
 }
 
@@ -154,31 +129,31 @@ FIXTURE_TEST_CASE(SRA_ReadCollection_GetReferences, SRAFixture)
 
 FIXTURE_TEST_CASE(SRA_ReadCollection_GetAlignment, SRAFixture)
 {
-    ngs :: ReadCollection run = ncbi :: NGS :: openReadCollection ( SRA_Accession );
+    ngs :: ReadCollection run = open ( SRA_Accession );
     REQUIRE_THROW ( ngs :: Alignment align = run . getAlignment ( "1" ) );
 }
 
 FIXTURE_TEST_CASE(SRA_ReadCollection_GetAlignmentCount, SRAFixture)
 {
-    ngs :: ReadCollection run = ncbi :: NGS :: openReadCollection ( SRA_Accession );
+    ngs :: ReadCollection run = open ( SRA_Accession );
     REQUIRE_EQ( (uint64_t)0, run . getAlignmentCount() );
 }
 
 FIXTURE_TEST_CASE(SRA_ReadCollection_GetAlignmentCountFiltered, SRAFixture)
 {
-    ngs :: ReadCollection run = ncbi :: NGS :: openReadCollection ( SRA_Accession );
+    ngs :: ReadCollection run = open ( SRA_Accession );
     REQUIRE_EQ( (uint64_t)0, run . getAlignmentCount( ngs :: Alignment :: all ) );
 }
 
 FIXTURE_TEST_CASE(SRA_ReadCollection_GetAlignmentRange, SRAFixture)
 {
-    ngs :: ReadCollection run = ncbi :: NGS :: openReadCollection ( SRA_Accession );
+    ngs :: ReadCollection run = open ( SRA_Accession );
     REQUIRE ( ! run . getAlignmentRange ( 1, 2 ) . nextAlignment () );
 }
 
 FIXTURE_TEST_CASE(SRA_ReadCollection_GetAlignmentRangeFiltered, SRAFixture)
 {
-    ngs :: ReadCollection run = ncbi :: NGS :: openReadCollection ( SRA_Accession );
+    ngs :: ReadCollection run = open ( SRA_Accession );
     REQUIRE ( ! run . getAlignmentRange ( 1, 2, ngs :: Alignment :: all ) . nextAlignment () );
 }
 
@@ -246,7 +221,7 @@ FIXTURE_TEST_CASE(SRA_ReadIterator_BeyondEnd, SRAFixture)
 
 FIXTURE_TEST_CASE(SRA_ReadIterator_Range, SRAFixture)
 {
-    ngs :: ReadIterator readIt = ncbi :: NGS :: openReadCollection ( SRA_Accession ) . getReadRange ( 10, 5 );
+    ngs :: ReadIterator readIt = open ( SRA_Accession ) . getReadRange ( 10, 5 );
     REQUIRE( readIt . nextRead () );
     REQUIRE_EQ( ngs :: String ( SRA_Accession ) + ".R.10", readIt . getReadId() . toString () );
     REQUIRE( readIt . nextRead () );
@@ -415,26 +390,26 @@ FIXTURE_TEST_CASE(SRA_Fragment_getSubFragmentQualities_OffsetLength, SRAFixture)
 /////ReferenceIterator
 FIXTURE_TEST_CASE(SRA_ReferenceIterator_Open, SRAFixture)
 {
-    ngs :: ReferenceIterator refIt = ncbi :: NGS :: openReadCollection ( SRA_Accession ) . getReferences ();  // always an empty iterator
+    ngs :: ReferenceIterator refIt = open ( SRA_Accession ) . getReferences ();  // always an empty iterator
     REQUIRE_THROW ( refIt . getCommonName() );
 }
 
 FIXTURE_TEST_CASE(SRA_ReferenceIterator_Next, SRAFixture)
 {
-    ngs :: ReferenceIterator refIt = ncbi :: NGS :: openReadCollection ( SRA_Accession ) .  getReferences ();  // always an empty iterator
+    ngs :: ReferenceIterator refIt = open ( SRA_Accession ) .  getReferences ();  // always an empty iterator
     REQUIRE( ! refIt . nextReference () );
 }
 
 /////AlignmentIterator
 FIXTURE_TEST_CASE(SRA_AlignmentIterator_Open, SRAFixture)
 {
-    ngs :: AlignmentIterator alIt = ncbi :: NGS :: openReadCollection ( SRA_Accession ) .  getAlignments ( ngs :: Alignment :: all );  // always an empty iterator
+    ngs :: AlignmentIterator alIt = open ( SRA_Accession ) .  getAlignments ( ngs :: Alignment :: all );  // always an empty iterator
     REQUIRE_THROW ( alIt . getAlignmentId () );
 }
 
 FIXTURE_TEST_CASE(SRA_AlignmentIterator_Next, SRAFixture)
 {
-    ngs :: AlignmentIterator alIt = ncbi :: NGS :: openReadCollection ( SRA_Accession ) .  getAlignments ( ngs :: Alignment :: all );  // always an empty iterator
+    ngs :: AlignmentIterator alIt = open ( SRA_Accession ) .  getAlignments ( ngs :: Alignment :: all );  // always an empty iterator
     REQUIRE( ! alIt . nextAlignment () );
 }
 
@@ -473,6 +448,7 @@ rc_t CC KMain ( int argc, char *argv [] )
 cerr << "http_proxy = '" << ( p == NULL ? "NULL" : p ) << "'\n";*/
     KConfigDisableUserSettings();
     rc_t rc=NgsSraCppTestSuite(argc, argv);
+    NgsFixture::ReleaseCache();
     return rc;
 }
 

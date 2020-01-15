@@ -627,7 +627,7 @@ extern "C" {
     rc_t CC KMain ( int argc, char * argv [] ) {
         KConfigDisableUserSettings ();
 if (
-0 ) assert ( ! KDbgSetString ( "VFS" ) );
+1 ) assert ( ! KDbgSetString ( "VFS" ) );
         return CachingSuite ( argc, argv );
     }
 }

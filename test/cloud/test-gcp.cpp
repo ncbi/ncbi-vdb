@@ -137,7 +137,8 @@ public:
 
         THROW_ON_RC ( CloudMgrMakeWithProvider ( & mgr, cloud_provider_gcp ) );
 
-        THROW_ON_RC ( CloudMgrMakeCloud ( mgr, & cloud, cloud_provider_gcp ) );        
+        THROW_ON_RC ( CloudMgrMakeCloud ( mgr, & cloud, cloud_provider_gcp ) );   
+        unsetenv ( "GOOGLE_APPLICATION_CREDENTIALS" );     
     }
 
     void MakeClient()
@@ -195,7 +196,6 @@ FIXTURE_TEST_CASE(GCP_AddUserPays_Credentials, GCP_Fixture)
     REQUIRE_NULL ( gcp -> access_token );
 
     REQUIRE_RC ( GCPRelease ( gcp ) );
-    REQUIRE_RC ( CloudRelease ( cloud ) );
 }
 
 FIXTURE_TEST_CASE(GCP_AddUserPays_NoCredentials, GCP_Fixture)

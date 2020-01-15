@@ -24,6 +24,7 @@
 
 #include <klib/debug.h> /* DBGMSG */
 #include <klib/json.h> /* KJsonValue */
+#include <klib/log.h> /* PLOGERR */
 #include <klib/rc.h> /* RC */
 #include <klib/text.h> /* String */
 
@@ -44,6 +45,7 @@ static void DataInit(Data * self) {
 
     self->id = -1;
     self->exp = -1;
+    self->encryptedForProjectId = -1;
 }
 
 static void DataClone(const Data * self, Data * clone) {
@@ -57,6 +59,7 @@ static void DataClone(const Data * self, Data * clone) {
     clone->ceRequired = self->ceRequired;
     clone->cls = self->cls; /* itemClass */
     clone->code = self->code;
+    clone->encryptedForProjectId = self->encryptedForProjectId;
     clone->exp = self->exp; /* expDate */
     clone->fmt = self->fmt; /* format */
     clone->id = self->id; /* oldCartObjId */
@@ -78,7 +81,7 @@ static void DataClone(const Data * self, Data * clone) {
 }
 
 static rc_t DataUpdate(const Data * self,
-    Data * next, const KJsonObject * node, Stack * path)
+    Data * next, const KJsonObject * node, JsonStack * path)
 {
     const char * name = NULL;
 
@@ -95,6 +98,12 @@ static rc_t DataUpdate(const Data * self,
 
     name = "ceRequired";
     BulSet(&next->ceRequired, KJsonObjectGetMember(node, name), name, path);
+
+    name = "encryptedForProjectId";
+    StrSet(&next->sEncryptedForProjectId, KJsonObjectGetMember(node, name),
+        name, path);
+    if (next->sEncryptedForProjectId != NULL)
+        next->encryptedForProjectId = atoi(next->sEncryptedForProjectId);
 
     name = "link";
     StrSet(&next->link, KJsonObjectGetMember(node, name), name, path);
@@ -144,7 +153,7 @@ static rc_t DataUpdate(const Data * self,
 /* We are adding a location to file */
 static
 rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
-    const Data * dad, Stack * path)
+    const Data * dad, JsonStack * path)
 {
     rc_t rc = 0;
 
@@ -163,7 +172,7 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
 
           const KJsonArray * array = KJsonValueToArray(value);
           uint32_t n = KJsonArrayGetLength(array);
-          rc = StackPushArr(path, name);
+          rc = JsonStackPushArr(path, name);
           if (rc != 0)
               return rc;
           for (i = 0; i < n; ++i) {
@@ -178,10 +187,10 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
                   rc = r2;
 
               if (i + 1 < n)
-                  StackArrNext(path);
+                  JsonStackArrNext(path);
           }
 
-          StackPop(path);
+          JsonStackPop(path);
       }*/
 
     value = KJsonObjectGetMember(node, "link");
@@ -194,6 +203,8 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
             bool payRequired = false;
 
             int64_t mod = 0;  /* modDate */
+
+            int64_t projectId = -1;
 
             uint8_t md5[16];
             bool    hasMd5 = false;
@@ -243,6 +254,7 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
                 ceRequired = true;
             if (ldata.payRequired == eTrue)
                 payRequired = true;
+            projectId = ldata.encryptedForProjectId;
 
             if (ldata.md5 != NULL) {
                 int i = 0;
@@ -266,14 +278,13 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
 
             rc = VPathMakeFromUrl(&path, &url, NULL, true, &id, ldata.sz,
                 mod, hasMd5 ? md5 : NULL, 0, ldata.srv, &objectType, &type,
-                ceRequired, payRequired, ldata.name);
+                ceRequired, payRequired, ldata.name, projectId, 128);
 
             if (rc == 0)
                 VPathMarkHighReliability(path, true);
 
-            if (rc != 0) {
+            if (rc != 0)
                 return rc;
-            }
 
             rc = FileAddVPath(file, path, NULL, false, 0);
 
@@ -290,7 +301,7 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
 /* We are scanning files(Item(Run)) to find all its locations */
 static
 rc_t ItemAddSdlFile(Item * self, const KJsonObject * node,
-    const Data * dad, Stack * path)
+    const Data * dad, JsonStack * path)
 {
     rc_t rc = 0;
 
@@ -318,7 +329,7 @@ rc_t ItemAddSdlFile(Item * self, const KJsonObject * node,
 
         const KJsonArray * array = KJsonValueToArray ( value );
         uint32_t n = KJsonArrayGetLength ( array );
-        rc = StackPushArr(path, name);
+        rc = JsonStackPushArr(path, name);
         if (rc != 0)
             return rc;
         for ( i = 0; i < n; ++ i ) {
@@ -333,10 +344,10 @@ rc_t ItemAddSdlFile(Item * self, const KJsonObject * node,
                 rc = r2;
 
             if ( i + 1 < n )
-                StackArrNext ( path );
+                JsonStackArrNext ( path );
         }
 
-        StackPop(path);
+        JsonStackPop(path);
     }
 
     value = KJsonObjectGetMember(node, "link");
@@ -456,13 +467,16 @@ rc_t ItemAddSdlFile(Item * self, const KJsonObject * node,
     }
 #endif
 
+    if (rc == 0)
+        rc = ItemInitMapping(self);
+
     return rc;
 }
 
 /* We are inside or above of a Container
    and are looking for Items(runs, gdGaP files) to add */
 static rc_t Response4AddItemsSdl(Response4 * self,
-    const KJsonObject * node, Stack * path)
+    const KJsonObject * node, JsonStack * path)
 {
     rc_t rc = 0;
 
@@ -505,7 +519,7 @@ static rc_t Response4AddItemsSdl(Response4 * self,
 
             const KJsonArray * array = KJsonValueToArray(value);
             uint32_t n = KJsonArrayGetLength(array);
-            rc = StackPushArr(path, name);
+            rc = JsonStackPushArr(path, name);
             if (rc != 0)
                 return rc;
             for (i = 0; i < n; ++i) {
@@ -520,10 +534,10 @@ static rc_t Response4AddItemsSdl(Response4 * self,
                     rc = r2;
 
                 if (i + 1 < n)
-                    StackArrNext(path);
+                    JsonStackArrNext(path);
             }
 
-            StackPop(path);
+            JsonStackPop(path);
         }
     }
 
@@ -541,16 +555,16 @@ static rc_t Response4AddItemsSdl(Response4 * self,
 static rc_t Response4InitSdl(Response4 * self, const char * input) {
     rc_t rc = 0;
 
-    Stack path;
+    JsonStack path;
 
     KJsonValue * root = NULL;
     const KJsonObject * object = NULL;
     const KJsonValue * value = NULL;
     char error[99] = "";
 
-    const char name[] = "result";
+    const char * name = "status";
 
-    StackPrintInput(input);
+    JsonStackPrintInput(input);
 
     rc = KJsonValueMake(&root, input, error, sizeof error);
     if (rc != 0) {
@@ -560,18 +574,82 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
         return rc;
     }
 
-    rc = StackInit(&path);
+    rc = JsonStackInit(&path);
     if (rc != 0)
         return rc;
 
     object = KJsonValueToObject(root);
+
+    name = "status";
+    value = KJsonObjectGetMember(object, name);
+    if (value != NULL) {
+        const char * message = NULL;
+        bool ok = true;
+
+        int64_t status = 0;
+        rc = KJsonGetNumber(value, &status);
+        if (rc != 0) {
+            if (THRESHOLD > THRESHOLD_NO_DEBUG)
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), (
+                    "... error: cannot get '%s'\n", name));
+            return rc;
+        }
+        if (THRESHOLD > THRESHOLD_ERROR)
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), (
+                "\"/%s\" = %ld\n", name, status));
+
+        name = "msg";
+        value = KJsonObjectGetMember(object, name);
+
+        if (value == NULL) {
+            name = "message";
+            value = KJsonObjectGetMember(object, name);
+        }
+
+        if (value != NULL) {
+            rc = KJsonGetString(value, &message);
+            if (rc != 0) {
+                if (THRESHOLD > THRESHOLD_NO_DEBUG)
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), (
+                        "... error: cannot get '%s'\n", name));
+                return rc;
+            }
+            if (THRESHOLD > THRESHOLD_ERROR)
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), (
+                    "\"/%s\" = \"%s\"\n", name, message));
+        }
+
+        if (status != 200)
+            ok = false;
+        else if (message != NULL
+            && (message[0] != 'o' || message[1] != 'k' || message[2] != '\0'))
+        {
+            ok = false;
+        }
+
+        if (!ok) {
+            rc_t r = rc;
+            if (message == NULL)
+                message = "External service returned an error";
+            rc = Response4StatusInit(self, status, message, true);
+            if (rc == 0) {
+                rc = Response4GetRc(self, &r);
+                if (rc != 0)
+                    rc = r;
+            }
+            PLOGERR(klogErr, (klogErr, r, "$(msg) ( $(code) )",
+                "msg=%s,code=%lu", message, status));
+            return rc;
+        }
+    }
+
+    name = "result";
     value = KJsonObjectGetMember(object, name);
     if (value == NULL) {
         rc = RC(rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete);
         if (THRESHOLD > THRESHOLD_NO_DEBUG)
             DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
             ("... error: cannot find '%s'\n", name));
-        KJsonValueWhack(root);
     }
     else {
         const KJsonArray * array = KJsonValueToArray(value);
@@ -580,30 +658,41 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
         else {
             uint32_t n = KJsonArrayGetLength(array);
 
-            rc = StackPushArr(&path, name);
+            rc = JsonStackPushArr(&path, name);
             if (rc != 0)
                 return rc;
 
             if (n == 0) {
                 rc = RC(rcVFS, rcQuery, rcExecuting, rcDoc, rcIncomplete);
                 if (THRESHOLD > THRESHOLD_NO_DEBUG)
-                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON),
-                    ("... error: '%s' is empty\n", name));
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_JSON), (
+                        "... error: '%s' is empty\n", name));
             }
             else {
                 uint32_t i = 0;
                 for (i = 0; i < n; ++i) {
                     rc_t r2 = 0;
                     value = KJsonArrayGetElement(array, i);
-                    object = KJsonValueToObject(value);
+                    const KJsonObject * object = KJsonValueToObject(value);
                     r2 = Response4AddItemsSdl(self, object, &path);
                     if (r2 != 0 && rc == 0)
                         rc = r2;
                     if (i + 1 < n)
-                        StackArrNext(&path);
+                        JsonStackArrNext(&path);
                 }
             }
-            StackPop(&path);
+            JsonStackPop(&path);
+        }
+    }
+
+    {
+        const char name[] = "nextToken";
+        value = KJsonObjectGetMember(object, name);
+        if (value != NULL) {
+            const char * nextToken = NULL;
+            rc = StrSet(&nextToken, value, name, &path);
+            if (rc == 0)
+                rc = Response4SetNextToken(self, nextToken);
         }
     }
 
@@ -613,7 +702,7 @@ static rc_t Response4InitSdl(Response4 * self, const char * input) {
         Response4Fini(self);
 
     {
-        rc_t r2 = StackRelease(&path, rc != 0);
+        rc_t r2 = JsonStackRelease(&path, rc != 0);
         if (r2 != 0 && rc == 0)
             rc = r2;
     }

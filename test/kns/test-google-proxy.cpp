@@ -38,7 +38,8 @@
 
 #include <../../libs/kns/mgr-priv.h> /* KNSManager */
 
-TEST_SUITE ( GoogleProxyTestSuite )
+static rc_t argsHandler(int argc, char * argv[]);
+TEST_SUITE_WITH_ARGS_HANDLER(GoogleProxyTestSuite, argsHandler)
 
 static KConfig * KFG = NULL;
 
@@ -102,35 +103,32 @@ TEST_CASE ( GoogleProxyTest ) {
        format HTTP request in KClientHttpRequestFormatMsgBegin using
        absoluteURI form of Request-URI */
     if (http_proxy != NULL)
+    {
         REQUIRE_RC ( KNSManagerMakeHttpFile ( mgr, & file, NULL, 0x01010000,
-            "http://www.baidu.com/" ) );
-    else
-        REQUIRE_RC_FAIL(KNSManagerMakeHttpFile(mgr, &file, NULL, 0x01010000,
-            "http://www.baidu.com/"));
+            "http://sra-download-nfs.be-md.ncbi.nlm.nih.gov"
+                "/traces/sra57/SRR/000052/SRR053325" ) );
 
-    char buffer [ 256 ] = "";
-    size_t num_read = 0;
-    /* reuse the same absoluteURI form stored in KFile */
-    if (http_proxy != NULL)
+        char buffer [ 256 ] = "";
+        size_t num_read = 0;
+        /* reuse the same absoluteURI form stored in KFile */
         REQUIRE_RC ( KFileRead ( file, 0, buffer, sizeof buffer, & num_read ) );
-    else
-        REQUIRE_RC_FAIL(KFileRead(file, 0, buffer, sizeof buffer, &num_read));
 
-    REQUIRE_RC ( KFileRelease ( file ) );
-    file = NULL;
+        REQUIRE_RC ( KFileRelease ( file ) );
+        file = NULL;
 
-    /* special connection via proxy:
-       format HTTP request in KClientHttpRequestFormatMsgBegin using
-       origin-form (absolute-path) of Request-URI 
-       ( https://tools.ietf.org/html/rfc7230#section-5.3.1 ) */
+        /* special connection via proxy:
+        format HTTP request in KClientHttpRequestFormatMsgBegin using
+        origin-form (absolute-path) of Request-URI
+        ( https://tools.ietf.org/html/rfc7230#section-5.3.1 ) */
 #if GOOGLE_FILE_EXISTS
-    REQUIRE_RC ( KNSManagerMakeHttpFile ( mgr, & file, NULL, 0x01010000,
-       "https://storage.googleapis.com/yan-blastdb/2018-09-12-08-33-02/fuse.xml"
-      ) );
+        REQUIRE_RC ( KNSManagerMakeHttpFile ( mgr, & file, NULL, 0x01010000,
+        "https://storage.googleapis.com/yan-blastdb/2018-09-12-08-33-02/fuse.xml"
+        ) );
 
-    /* reuse the same origin-form stored in KFile */
-    REQUIRE_RC ( KFileRead ( file, 0, buffer, sizeof buffer, & num_read ) );
+        /* reuse the same origin-form stored in KFile */
+        REQUIRE_RC ( KFileRead ( file, 0, buffer, sizeof buffer, & num_read ) );
 #endif
+    }
 
     REQUIRE_RC ( KFileRelease ( file ) );
     file = NULL;
@@ -138,36 +136,30 @@ TEST_CASE ( GoogleProxyTest ) {
     REQUIRE_RC ( KNSManagerRelease ( mgr ) );
 }
 
-TEST_CASE ( KClientHttpRequestPOSTTest ) {
+TEST_CASE ( KClientHttpRequestPOSTTest )
+{
    /* Here proxy is used from configuration created in the previous test case */
+    if (http_proxy == NULL)
+    {
+        return;
+    }
 
     KNSManager * mgr = NULL;
     REQUIRE_RC ( KNSManagerMake ( & mgr ) );
 
     KHttpRequest * req = NULL;
-    if (http_proxy != NULL)
-        REQUIRE_RC ( KNSManagerMakeClientRequest ( mgr, & req, 0x01000000,
-            NULL, "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi" ) ); 
-    else
-        REQUIRE_RC_FAIL(KNSManagerMakeClientRequest(mgr, &req, 0x01000000,
-            NULL, "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi"));
+    REQUIRE_RC ( KNSManagerMakeClientRequest ( mgr, & req, 0x01000000,
+        NULL, "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi" ) );
 
-    if (http_proxy != NULL) {
-        REQUIRE_RC(KHttpRequestAddPostParam(req, "acc=AAAB01"));
-        REQUIRE_RC(KHttpRequestAddPostParam(req, "accept-proto=https"));
-        REQUIRE_RC(KHttpRequestAddPostParam(req, "version=1.2"));
-    }
-    else
-        REQUIRE_RC_FAIL(KHttpRequestAddPostParam(req, "acc=AAAB01"));
+    REQUIRE_RC(KHttpRequestAddPostParam(req, "acc=AAAB01"));
+    REQUIRE_RC(KHttpRequestAddPostParam(req, "accept-proto=https"));
+    REQUIRE_RC(KHttpRequestAddPostParam(req, "version=1.2"));
 
     KHttpResult * rslt = NULL;
-    /* POST: format HTTP request in KClientHttpRequestFormatMsgBegin using
-       absoluteURI form of Request-URI
-       ( https://tools.ietf.org/html/rfc2616#section-5.1.2 ) */
-    if (http_proxy != NULL)
-        REQUIRE_RC ( KHttpRequestPOST ( req, & rslt ) );
-    else
-        REQUIRE_RC_FAIL(KHttpRequestPOST(req, &rslt));
+/* POST: format HTTP request in KClientHttpRequestFormatMsgBegin using
+    absoluteURI form of Request-URI
+    ( https://tools.ietf.org/html/rfc2616#section-5.1.2 ) */
+    REQUIRE_RC ( KHttpRequestPOST ( req, & rslt ) );
 
     REQUIRE_RC ( KHttpResultRelease ( rslt ) );
 
@@ -176,13 +168,30 @@ TEST_CASE ( KClientHttpRequestPOSTTest ) {
     REQUIRE_RC ( KNSManagerRelease ( mgr ) );
 }
 
+#include <kapp/args.h> // Args
+static rc_t argsHandler(int argc, char * argv[]) {
+    Args * args = NULL;
+    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
+    ArgsWhack(args);
+    return rc;
+}
+
 extern "C" {
+    const char UsageDefaultName[] = "test-google-proxy";
+    rc_t CC UsageSummary(const char     * progname) { return 0; }
+    rc_t CC Usage(const struct Args * args) { return 0; }
+
     ver_t CC KAppVersion ( void ) { return 0; }
 
     rc_t CC KMain ( int argc, char * argv [] ) { if (
 0 ) assert ( ! KDbgSetString ( "KNS-DNS"   ) );   if (
 0 ) assert ( ! KDbgSetString ( "KNS-HTTP"  ) );   if (
-0 ) assert ( ! KDbgSetString ( "KNS-PROXY" ) );
+0 ) assert ( ! KDbgSetString ( "KNS-PROXY" ) );   if (
+0 )     ncbi::NK::TestEnv::verbosity = ncbi::NK::LogLevel::E::e_all;
+
+#if _DEBUGGING
+        if ( 0 )     KStsLevelSet ( 5 );
+#endif
 
         rc_t rc = KConfigMakeEmpty ( & KFG );
 

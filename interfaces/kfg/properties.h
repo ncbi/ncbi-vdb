@@ -141,7 +141,7 @@ KFG_EXTERN rc_t CC KConfigGetProtectedRepositoryCachedById( const KConfig *self,
 KFG_EXTERN rc_t CC KConfigSetProtectedRepositoryCachedById( KConfig *self, uint32_t id, bool enabled );
 
 /* reads /tools/prefetch/download_to_cache
-   return true of not found */
+   return true if not found */
 KFG_EXTERN rc_t CC KConfig_Get_Prefetch_Download_To_Cache ( const KConfig *self, bool * download_to_cache );
 KFG_EXTERN rc_t CC KConfig_Set_Prefetch_Download_To_Cache ( KConfig *self, bool download_to_cache );
 
@@ -205,6 +205,9 @@ KFG_EXTERN rc_t CC KConfig_Set_CacheLogInner( KConfig *self, bool value );
 
 KFG_EXTERN rc_t CC KConfig_Get_CacheDebug( const KConfig *self, bool * value, bool dflt );
 KFG_EXTERN rc_t CC KConfig_Set_CacheDebug( KConfig *self, bool value );
+
+KFG_EXTERN rc_t CC KConfig_Get_GUID( const KConfig *self, char * value, size_t value_size, size_t * written );
+KFG_EXTERN rc_t CC KConfig_Set_GUID( KConfig *self, const char * value );
 
 #ifdef __cplusplus
 }

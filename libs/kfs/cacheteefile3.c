@@ -192,8 +192,9 @@ int64_t CC KCacheTeeFileTreeNodeSort ( const BSTNode *item, const BSTNode *n )
 }
 
 #if WINDOWS
-#include <synchapi.h>
-#include <processthreadsapi.h>
+//#include <synchapi.h>
+//#include <processthreadsapi.h>
+#include <windows.h>
 static CRITICAL_SECTION crit;
 static
 int enter_crit_section ( void )
@@ -1777,7 +1778,7 @@ rc_t KCacheTeeFileInitExisting ( KCacheTeeFile_v3 * self )
     /* first of all, let's get the cache file size */
     rc = KFileSize ( self -> cache_file, & actual_eof );
     STATUS ( STAT_GEEK
-             , "%s - file size = %lu, rc = $R\n"
+             , "%s - file size = %lu, rc = %R\n"
              , __func__
              , actual_eof
              , rc
@@ -2008,7 +2009,7 @@ rc_t KCacheTeeFileOpen ( KCacheTeeFile_v3 * self, KDirectory * dir, const KFile 
                         ( const KFile ** ) & self -> cache_file, "%s.cache", self -> path );
 #if ! WINDOWS
                     STATUS ( STAT_GEEK
-                             , "%s - open read-only file attempt: fd = %d, rc = $R\n"
+                             , "%s - open read-only file attempt: fd = %d, rc = %R\n"
                              , __func__
                              , KFileGetSysFile ( self -> cache_file, & dummy ) -> fd
                              , rc

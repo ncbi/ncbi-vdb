@@ -31,6 +31,9 @@
 #include <kfg/extern.h>
 #endif
 
+#ifndef _h_klib_defs_
+#include <klib/defs.h> /* rc_t */
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -59,6 +62,8 @@ KFG_EXTERN rc_t CC KNgcObjWriteKeyToFile ( const KNgcObj *self, struct KFile * d
 
 KFG_EXTERN rc_t CC KNgcObjGetProjectId ( const KNgcObj *self, uint32_t * id );
 KFG_EXTERN rc_t CC KNgcObjGetProjectName ( const KNgcObj *self, char * buffer, size_t buffer_size, size_t * written );
+KFG_EXTERN rc_t CC KNgcObjGetTicket ( const KNgcObj *self,
+    char * buffer, size_t buffer_size, size_t * written );
 
 #ifdef __cplusplus
 }
