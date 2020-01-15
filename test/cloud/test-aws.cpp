@@ -210,7 +210,8 @@ TEST_CASE(GetPkcs7) {
         "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7",
         NULL, NULL);
     if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy  ) &&
-        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcError     ,rcUnknown) &&
+        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcNotAvailable) &&
+        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcError, rcUnknown) &&
         rc != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout   , rcExhausted))
     {
 #define rcStream rcFile
@@ -255,6 +256,7 @@ TEST_CASE(PrintLocation) {
 
     rc = CloudMakeComputeEnvironmentToken(cloud, &ce_token);
     if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy  ) &&
+        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcNotAvailable) &&
         rc != SILENT_RC(rcNS, rcFile, rcCreating, rcError     ,rcUnknown) &&
         rc != SILENT_RC(rcNS, rcFile, rcCreating,
             rcTimeout, rcExhausted) &&

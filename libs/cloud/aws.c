@@ -87,7 +87,7 @@ static char const *envCE()
     static bool firstTime = true;
     char const *const env = firstTime ? getenv(ENV_MAGIC_CE_TOKEN) : NULL;
     firstTime = false;
-    if (env != NULL)
+    if ( env != NULL && *env != 0 )
         DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
                ("Got location from environment\n"));
     return env;
@@ -505,7 +505,7 @@ static void make_home_node ( char *path, size_t path_size )
         if ( home_node == NULL ) {
             /* just grab the HOME env variable */
             home = getenv ( "HOME" );
-            if ( home != NULL ) {
+            if ( home != NULL && *home != 0 ) {
                 num_read = string_copy_measure ( path, path_size, home );
                 if ( num_read >= path_size ) path[0] = 0;
             }
@@ -514,7 +514,7 @@ static void make_home_node ( char *path, size_t path_size )
             rc = KConfigNodeRead ( home_node, 0, path, path_size, &num_read, NULL );
             if ( rc != 0 ) {
                 home = getenv ( "HOME" );
-                if ( home != NULL ) {
+                if ( home != NULL && *home != 0 ) {
                     num_read = string_copy_measure ( path, path_size, home );
                     if ( num_read >= path_size ) path[0] = 0;
                 }
@@ -536,7 +536,7 @@ static rc_t LoadCredentials ( AWS * self  )
     rc_t rc = KDirectoryNativeDir ( &wd );
     if ( rc ) return rc;
 
-    if ( conf_env ) 
+    if ( conf_env && *conf_env != 0 ) 
     {
         const KFile *cred_file = NULL;
         rc = KDirectoryOpenFileRead ( wd, &cred_file, "%s", conf_env );
@@ -549,7 +549,7 @@ static rc_t LoadCredentials ( AWS * self  )
         return rc;
     }
 
-    if ( cred_env ) 
+    if ( cred_env && *cred_env != 0 ) 
     {
         const KFile *cred_file = NULL;
         rc = KDirectoryOpenFileRead ( wd, &cred_file, "%s", cred_env );
@@ -614,7 +614,7 @@ rc_t PopulateCredentials ( AWS * self )
     }
 
     /* Get Profile */
-    if ( profile != NULL )
+    if ( profile != NULL && *profile != 0 )
     {
         self -> profile = string_dup ( profile, string_size ( profile ) );
     }
@@ -650,11 +650,11 @@ rc_t PopulateCredentials ( AWS * self )
 
     /* Check AWS_CONFIG_FILE and AWS_SHARED_CREDENTIAL_FILE, if specified check for credentials and/or profile name */
     const char *conf_env = getenv ( "AWS_CONFIG_FILE" );
-    if ( conf_env == NULL )
+    if ( conf_env == NULL || *conf_env == 0 )
     {
         conf_env = getenv ( "AWS_SHARED_CREDENTIAL_FILE" );
     }
-    if ( conf_env )
+    if ( conf_env && *conf_env != 0 )
     {
         KDirectory *wd = NULL;
         const KFile *cred_file = NULL;
