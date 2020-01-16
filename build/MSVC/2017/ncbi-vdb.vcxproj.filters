@@ -1424,7 +1424,6 @@
     <ClCompile Include="..\..\..\libs\klib\json-grammar.c" />
     <ClCompile Include="..\..\..\libs\klib\json-lex.c" />
     <ClCompile Include="..\..\..\libs\klib\json.c" />
-    <ClCompile Include="..\..\..\libs\kns\cloud.c" />
     <ClCompile Include="..\..\..\libs\kns\proxy.c" />
     <ClCompile Include="..\..\..\libs\kns\stream-from-buffer.c" />
     <ClCompile Include="..\..\..\libs\kns\tls.c" />
@@ -1440,11 +1439,38 @@
     <ClCompile Include="..\..\..\libs\vdb\bytecode.c" />
     <ClCompile Include="..\..\..\libs\vdb\schema-view.c" />
     <ClCompile Include="..\..\..\libs\vdb\view.c" />
-    <ClCompile Include="..\..\..\libs\vfs\json-response.c" />
     <ClCompile Include="..\..\..\libs\vfs\services.c" />
     <ClCompile Include="..\..\..\libs\vfs\remote-services.c" />
     <ClCompile Include="..\..\..\libs\vfs\srv-response.c" />
     <ClCompile Include="..\..\..\libs\diagnose\diagnose.c" />
     <ClCompile Include="..\..\..\libs\diagnose\endpoint.c" />
+    <ClCompile Include="..\..\..\libs\cloud\aws-auth.c" />
+    <ClCompile Include="..\..\..\libs\cloud\aws.c" />
+    <ClCompile Include="..\..\..\libs\cloud\cloud-cmn.c" />
+    <ClCompile Include="..\..\..\libs\cloud\cloud-mgr.c" />
+    <ClCompile Include="..\..\..\libs\cloud\cloud.c" />
+    <ClCompile Include="..\..\..\libs\cloud\gcp.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\aria.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\chacha20.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\chachapoly.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\hkdf.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\nist_kw.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\platform_util.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\poly1305.c" />
+    <ClCompile Include="..\..\..\libs\ext\mbedtls\rsa_internal.c" />
+    <ClCompile Include="..\..\..\libs\kfs\appendfile.c" />
+    <ClCompile Include="..\..\..\libs\kfs\cacheteefile3.c" />
+    <ClCompile Include="..\..\..\libs\kfs\remove-file-task.c" />
+    <ClCompile Include="..\..\..\libs\kfs\chunk-reader.c" />
+    <ClCompile Include="..\..\..\libs\kfs\callback_file.c" />
+    <ClCompile Include="..\..\..\libs\klib\base64.c" />
+    <ClCompile Include="..\..\..\libs\klib\guid.c" />
+    <ClCompile Include="..\..\..\libs\kns\http-request.c" />
+    <ClCompile Include="..\..\..\libs\sraxf\spot-filter.c" />
+    <ClCompile Include="..\..\..\libs\sraxf\syn_quality.c" />
+    <ClCompile Include="..\..\..\libs\sraxf\use-rna-flag.c" />
+    <ClCompile Include="..\..\..\libs\vfs\jwt.c" />
+    <ClCompile Include="..\..\..\libs\vfs\sdl-response.c" />
+    <ClCompile Include="..\..\..\libs\vfs\names4-response.c" />
   </ItemGroup>
 </Project>
