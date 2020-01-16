@@ -172,6 +172,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-vfs_resolver4", "test-
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-vfs_json-response", "test-vfs_json-response.vcxproj", "{9E70D3CE-C7D4-48A8-BD51-CA9F7D05D87B}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-ext_mbedtls", "test-ext_mbedtls.vcxproj", "{45F03B03-17F9-4127-9845-A3272A003CF6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -518,6 +520,10 @@ Global
 		{9E70D3CE-C7D4-48A8-BD51-CA9F7D05D87B}.Debug|x64.Build.0 = Debug|x64
 		{9E70D3CE-C7D4-48A8-BD51-CA9F7D05D87B}.Release|x64.ActiveCfg = Release|x64
 		{9E70D3CE-C7D4-48A8-BD51-CA9F7D05D87B}.Release|x64.Build.0 = Release|x64
+		{45F03B03-17F9-4127-9845-A3272A003CF6}.Debug|x64.ActiveCfg = Debug|x64
+		{45F03B03-17F9-4127-9845-A3272A003CF6}.Debug|x64.Build.0 = Debug|x64
+		{45F03B03-17F9-4127-9845-A3272A003CF6}.Release|x64.ActiveCfg = Release|x64
+		{45F03B03-17F9-4127-9845-A3272A003CF6}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
