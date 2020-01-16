@@ -53,10 +53,10 @@
 
 #if LINUX
 #include <gnu/libc-version.h>
-#endif
-
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#endif
+
 #include <stdio.h> /* fprintf */
 
 #include "../klib/release-vers.h"
