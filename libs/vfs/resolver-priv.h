@@ -175,6 +175,7 @@ typedef enum
 {
     algCGI,
     algFlat,
+    algFlatAD,
     algWithExtFlat,
     algAD,    /* Accession as Directory */
     algSRAAD,    /* Accession as Directory for SRA */
@@ -205,6 +206,9 @@ typedef enum
     /* leave as last value */
     algUnknown
 } VResolverAlgID;
+
+#define versSDL2 1
+typedef uint8_t VERSNS;
 
 rc_t VResolverAlgMake(struct VResolverAlg **alg, const struct String *root,
      VResolverAppID app_id, VResolverAlgID alg_id, bool protctd, bool disabled);

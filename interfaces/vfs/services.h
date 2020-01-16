@@ -70,6 +70,9 @@ rc_t KServiceRelease ( KService * self );
 /* Add an Id ( Accession or Object-Id ) to service request */
 rc_t KServiceAddId     ( KService * self, const char * id );
 
+/* Add an Object ( ObjectId or dbgap|ObjectId ) to service request */
+rc_t KServiceAddObject(KService * self, const char * id);
+
 /* Add a dbGaP Project to service request */
 rc_t KServiceAddProject ( KService * self, uint32_t id );
 
@@ -102,6 +105,12 @@ rc_t KServiceNamesQueryTo ( KService * self, VRemoteProtocols protocols,
 rc_t KServiceSearchExecute ( KService * self,
                              const struct Kart ** response );
 
+/******************************************************************************/
+/* GetResponseCStr
+ * Returns a pointer to an array that contains a null-terminated sequence
+ * of characters representing the current server response.
+ */
+const char * KServiceGetResponseCStr(const struct KService * self);
 
 /************************** KSrvResponse **************************/
 /* Release:
@@ -126,6 +135,21 @@ rc_t KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
  */
 rc_t KSrvResponseGetCache(const KSrvResponse * self, uint32_t idx,
     const struct VPath ** path);
+
+/* GetNextToken:
+ * is returned in case user need to ask for next page.
+ * Do not release returned value.
+ *
+ * When returned rc == RC(rcVFS, rcQuery, rcExecuting, rcToken, rcUnexpected):
+ *  the server returned nextToken but its processing is not implemented yet.
+ */
+rc_t KSrvResponseGetNextToken(const KSrvResponse * self,
+    const char ** nextToken);
+
+rc_t KSrvResponseGetLocation(const KSrvResponse * self,
+    const char * acc, const char * name,
+    const struct VPath ** local, rc_t * localRc,
+    const struct VPath ** cache, rc_t * cacheRc);
 
 /************************** KSrvError ******************************
  * KSrvError is generated for Id-s from request that produced an error response
@@ -181,6 +205,8 @@ rc_t KSrvRespFileGetClass(const KSrvRespFile * self, const char ** itemClass);
 
 /* type: sra, vdbcache, etc. */
 rc_t KSrvRespFileGetType(const KSrvRespFile * self, const char ** type);
+rc_t KSrvRespFileGetFormat(const struct KSrvRespFile * self,
+    ESrvFileFormat * ff);
 
 rc_t KSrvRespFileGetSize(const KSrvRespFile * self, uint64_t *size);
 rc_t KSrvRespFileGetCache ( const KSrvRespFile * self,

@@ -43,6 +43,11 @@ extern "C" {
 
 #define ENV_MAGIC_CE_TOKEN "VDB_CE_TOKEN"
 
+#define ENV_VAR_SESSION_ID "VDB_SESSION_ID"
+
+
+#define SDL_CGI "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve"
+
 #ifdef __cplusplus
 }
 #endif

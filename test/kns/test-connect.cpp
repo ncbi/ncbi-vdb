@@ -30,7 +30,6 @@
 
 #include <ktst/unit_test.hpp>
 
-#include <unistd.h>
 #include <errno.h>
 
 #include <klib/rc.h>
@@ -68,7 +67,8 @@ public:
 
     ~ConnectFixture()
     {
-        KNSManagerRelease(mgr);
+        KSocketRelease( socket );
+        KNSManagerRelease( mgr );
     }
 
     KNSManager* mgr;
@@ -102,6 +102,9 @@ FIXTURE_TEST_CASE(Connect_OK, ConnectFixture)
     rc_t rc = KNSManagerMakeRetryTimedConnection( mgr, & socket, & tm, 0, 0, NULL, & ep );
     REQUIRE_RC ( rc );
 }
+
+#ifndef WINDOWS
+// VDB-4012:no async connection on Windows
 
 FIXTURE_TEST_CASE(Connect_Timeout, ConnectFixture)
 {   //VDB-3754: asynch connnection, test timeout, no retries
@@ -137,6 +140,8 @@ FIXTURE_TEST_CASE(Connect_CtrlC, ConnectFixture)
     cerr << "^^^ expect to see 'connect_wait() interrupted'" << endl;
 #endif
 }
+
+#endif
 
 //////////////////////////////////////////// Main
 

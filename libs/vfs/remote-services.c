@@ -324,6 +324,7 @@ typedef struct {
 
     const char * fileKey; /* don't free */
     const char * fileVal; /* don't free */
+    bool         fileBase64encode;
 
     Vector params;
 } SCgiRequest;
@@ -387,7 +388,7 @@ typedef struct {
     VRemoteProtocols protocols;
     char * format;
     char * forced; /* forced SDL>=2 location  */
-    char * jwtKartFile;
+    String * jwtKartFile;
     SNgc _ngc;
     bool hasQuery;
 } SRequest;
@@ -428,11 +429,8 @@ static rc_t SHelperInit ( SHelper * self,
             rc = KNSManagerMake(&kns);
             kMgr = kns;
         }
-        else {
+        else
             rc = VFSManagerGetKNSMgr(vMgr, (KNSManager **)(&kMgr));
-            if (rc == 0)
-                rc = KNSManagerAddRef(kMgr);
-        }
     }
     else {
         rc = KNSManagerAddRef ( kMgr );
@@ -633,9 +631,7 @@ static rc_t SVersionInit(SVersion * self, bool * sdl, const char * src,
     String * result = NULL;
     const char * e = NULL;
 
-    bool dummy;
-    if (sdl == NULL)
-        sdl = &dummy;
+/* TODO: needs investigation: using it makes impossibe to call SDL; names.cgi is always called instead: bool dummy; if (sdl == NULL) sdl = &dummy; */
 
     assert(self);
 
@@ -679,7 +675,7 @@ static rc_t SVersionInit(SVersion * self, bool * sdl, const char * src,
 
     rc = SVersionInitFromStr(self, sdl, s);
 
-    if (rc == 0 && *sdl) {
+    if (rc == 0 && sdl != NULL && *sdl) {
         if (ticket != NULL) {
             if (KConfigGetNgcFile() == NULL)
                 /* use version 3 when getting dbGaP data without ngc file */
@@ -739,7 +735,7 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
     const char prt[] = "/repository/remote/protected/CGI/resolver-cgi";
     const char sdl[] = "/repository/remote/main/SDL.2/resolver-cgi";
     const char cgi[] = RESOLVER_CGI;
-    
+
     rc_t rc = 0;
     const char * path = aProtected ? prt : man;
     assert( request );
@@ -2563,7 +2559,8 @@ bool SRequestResponseFromEnv(const SRequest * self, KStream ** stream)
     if (self->request.objects == 1)
         name = self->request.object->objectId;
     else
-        name = self->jwtKartFile;
+        name = self->jwtKartFile == NULL ? NULL : self->jwtKartFile->addr;
+
 
     if (name == NULL)
         return false;
@@ -2862,7 +2859,7 @@ static rc_t STicketsAppend ( STickets * self, uint32_t project,
         return 0;
 
     /* && project>0: dbGaP projectId can be 0*/
-    if ( rc == 0 && ticket [ 0 ] != '\0' ) { 
+    if ( rc == 0 && ticket [ 0 ] != '\0' ) {
         BSTItem * i = NULL;
 
         String str;
@@ -3158,7 +3155,7 @@ static rc_t SRequestFini ( SRequest * self ) {
 
     assert ( self );
 
-    free(self->jwtKartFile);
+    StringWhack(self->jwtKartFile);
     free(self->forced);
     free(self->format);
 
@@ -3242,7 +3239,7 @@ static rc_t SCgiRequestAddCloudEnvironment(
     assert(helper);
     if (helper->cloud == NULL) {
         if (helper->cloudMgr == NULL)
-            rc = CloudMgrMake(&helper->cloudMgr, NULL, NULL);
+            rc = CloudMgrMake(&helper->cloudMgr, helper->kfg, helper->kMgr);
         if (rc == 0) {
             rc = CloudMgrGetCurrentCloud(helper->cloudMgr, &helper->cloud);
             if (rc != 0) {
@@ -3380,15 +3377,17 @@ static rc_t SRequestSetDisabled(SRequest * self, SHelper * helper) {
 }
 
 static rc_t SRequestAddFile(SRequest * self,
-    const char * key, const char * path)
+    const char * key, const char * path, bool base64encode)
 {
-    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), ("  %s=%s\n", key, path));
+    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), ("  %s=%c%s\n",
+        key, base64encode ? '@' : '<', path));
 
     if (key != NULL && path != NULL) {
         assert(self);
 
         self->cgiReq.fileKey = key;
         self->cgiReq.fileVal = path;
+        self->cgiReq.fileBase64encode = base64encode;
 
         self->hasQuery = true;
     }
@@ -3498,7 +3497,9 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
               if ( SVersionResponseInJson ( request -> version,
                   request ->sdl ) )
               {
-                const char name [] = "acc";
+                const char * name = "acc";
+                if (request->request.object[i].objectType == eOT_sdlObject)
+                    name = "object";
                 rc = SKVMake ( & kv, name,
                                request -> request . object [ i ] . objectId );
                 DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( "  %s=%s\n",
@@ -3697,7 +3698,8 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     if (rc == 0) {
         if (SRequestNgcFile(request) != NULL)
             if (request->sdl)
-                rc = SRequestAddFile(request, "ngc", SRequestNgcFile(request));
+                rc = SRequestAddFile(request, "ngc", SRequestNgcFile(request),
+                    true);
             else {
                 char buffer[256] = "";
                 rc = SRequestNgcTicket(request, buffer, sizeof buffer, NULL);
@@ -3718,8 +3720,19 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
         }
     }
 
-    if (rc == 0 && request->sdl && request->jwtKartFile != NULL)
-        rc = SRequestAddFile(request, "cart", request->jwtKartFile);
+    if (rc == 0 && request->sdl && request->jwtKartFile != NULL) {
+        const char n[] = "cart";
+        const char * v = request->jwtKartFile->addr;
+        rc = SKVMake(&kv, n, v);
+        if (rc == 0) {
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
+                ("  %s=%s\n", n, v));
+            rc = VectorAppend(&self->params, NULL, kv);
+        }
+        if (rc != 0)
+            return rc;
+        request->hasQuery = true;
+    }
 
     return rc;
 }
@@ -3821,7 +3834,7 @@ static void KServiceExpectErrors ( KService * self, int n ) {
 }
 
 
-static rc_t KServiceAddObject ( KService * self,
+static rc_t _KServiceAddObject ( KService * self,
     const char * id, size_t id_sz, EObjectType objectType )
 {
     if ( self == NULL )
@@ -3834,9 +3847,12 @@ static rc_t KServiceAddObject ( KService * self,
 
 /* Add an Id ( Accession or Object-Id ) to service request */
 rc_t KServiceAddId ( KService * self, const char * id ) {
-    return KServiceAddObject ( self, id, 0, eOT_undefined );
+    return _KServiceAddObject ( self, id, 0, eOT_undefined );
 }
 
+rc_t KServiceAddObject(KService * self, const char * id) {
+    return _KServiceAddObject(self, id, 0, eOT_sdlObject);
+}
 
 static rc_t KServiceAddTicket ( KService * self, const char * ticket ) {
     if ( self == NULL )
@@ -3900,19 +3916,17 @@ rc_t KServiceSetJwtKartFile(KService * self, const char * path) {
     if (path == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
 
-    rc = JwtKartValidateFile(path);
-    if (rc != 0)
-        return rc;
-
-    free(self->req.jwtKartFile);
-
+    StringWhack(self->req.jwtKartFile);
     self->req.jwtKartFile = NULL;
 
-    self->req.jwtKartFile = string_dup_measure(path, NULL);
-    if (self->req.jwtKartFile == NULL)
-        return RC(rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted);
-    else
-        return 0;
+    rc = JwtKartValidateFile(path, (const String **)&self->req.jwtKartFile);
+    if (rc == 0) {
+        /* remove trailing EOLs; make zero-terminated string */
+        assert(self->req.jwtKartFile && self->req.jwtKartFile->addr);
+        ((char*)(self->req.jwtKartFile->addr))[self->req.jwtKartFile->size]
+            = '\0';
+    }
+    return rc;
 }
 
 
@@ -4003,7 +4017,7 @@ static rc_t KServiceInitNames1 ( KService * self, const KNSManager * mgr,
         rc = KServiceInit ( self, NULL, mgr, NULL );
 
     if ( rc == 0 )
-        rc = KServiceAddObject ( self, acc, acc_sz, objectType );
+        rc = _KServiceAddObject ( self, acc, acc_sz, objectType );
     if ( rc == 0 )
         rc = SRequestAddTicket ( & self -> req, 0, ticket );
     if ( rc == 0 )
@@ -4501,6 +4515,13 @@ static rc_t KServiceGetResponse(const KService * self,
 }
 
 
+const char * KServiceGetResponseCStr(const KService * self) {
+    if (self == NULL)
+        return NULL;
+    return self->helper.input;
+}
+
+
 static rc_t StringRelease(const String *self) {
     StringWhack(self);
     return 0;
@@ -4728,6 +4749,13 @@ static rc_t KSrvRespObj_AttachVdbcaches(const KSrvRespObj * self) {
                     rc = VPathAttachVdbcacheIfEmpty(srr[i], v);
                 }
     }
+    else
+        if (nSrrr == 1)
+            rc = VPathAttachVdbcache(aSrr, NULL);
+        else
+            for (i = 0; rc == 0 && i < sizeof srr / sizeof srr[0]; ++i)
+                if (srr[i] != NULL)
+                    rc = VPathAttachVdbcache(srr[i], NULL);
 
     for (i = 0; i < sizeof srr / sizeof srr[0]; ++i)
         RELEASE(VPath, srr[i]);
@@ -5419,7 +5447,7 @@ rc_t KServiceNamesRequestTest ( const KNSManager * mgr, const char * b,
     va_start ( args, d );
     while ( rc == 0 && d != NULL ) {
         if ( d -> id != NULL ) {
-            rc = KServiceAddObject ( service, d -> id, 0, d -> type );
+            rc = _KServiceAddObject ( service, d -> id, 0, d -> type );
         }
         if ( rc == 0 && d -> ticket != NULL ) {
             rc = KServiceAddTicket ( service, d -> ticket );
@@ -5697,7 +5725,7 @@ rc_t KServiceSearchTest (
     rc = KServiceInit ( & service, NULL, mgr, NULL );
     va_start ( args, acc );
     while ( rc == 0 && acc != NULL ) {
-        rc = KServiceAddObject ( & service, acc, 0, eOT_undefined);
+        rc = _KServiceAddObject ( & service, acc, 0, eOT_undefined);
         acc = va_arg ( args, const char * );
     }
     if ( rc == 0 ) {

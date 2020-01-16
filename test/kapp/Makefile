@@ -178,7 +178,7 @@ $(TEST_BINDIR)/rc-mod-exitcode: $(RC_MOD_EXITCODE_TEST_OBJ)
 #-------------------------------------------------------------------------------
 # scripted tests
 #
-runtests: sig-core-tests kns-agent-tests rc-exitcode-tests append-arg-tests
+runtests: kns-agent-tests rc-exitcode-tests append-arg-tests
 
 sig-core-tests: sig-core
 	@ echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++"

@@ -21,8 +21,10 @@
 *  Please cite the author in any work or product based on this material.
 *
 * ===========================================================================
-* Tests for libs/cloud/aws-auth.c
+* Tests for libs/cloud/aws.c
 */
+
+#include <cmath>
 
 #include <cloud/manager.h> /* CloudMgrMake */
 #include <kapp/args.h> /* ArgsMakeAndHandle */
@@ -208,7 +210,8 @@ TEST_CASE(GetPkcs7) {
         "http://169.254.169.254/latest/dynamic/instance-identity/pkcs7",
         NULL, NULL);
     if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy  ) &&
-        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcError     ,rcUnknown) &&
+        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcNotAvailable) &&
+        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcError, rcUnknown) &&
         rc != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout   , rcExhausted))
     {
 #define rcStream rcFile
@@ -223,7 +226,9 @@ TEST_CASE(GetPkcs7) {
         }
         else {
             REQUIRE_RC(rc);
-            REQUIRE_EQ(string_measure(pkcs7, NULL), (uint32_t)1118);
+            uint32_t len = string_measure(pkcs7, NULL);
+            REQUIRE_LT( 1000u, len);
+            REQUIRE_GT( 3000u, len);            
         }
     }
     REQUIRE_RC(KNSManagerRelease(kns));
@@ -251,6 +256,7 @@ TEST_CASE(PrintLocation) {
 
     rc = CloudMakeComputeEnvironmentToken(cloud, &ce_token);
     if (rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcBusy  ) &&
+        rc != SILENT_RC(rcNS, rcFile, rcCreating, rcConnection, rcNotAvailable) &&
         rc != SILENT_RC(rcNS, rcFile, rcCreating, rcError     ,rcUnknown) &&
         rc != SILENT_RC(rcNS, rcFile, rcCreating,
             rcTimeout, rcExhausted) &&

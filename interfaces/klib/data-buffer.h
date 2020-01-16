@@ -62,6 +62,9 @@ extern "C" {
  *              ...
  *            6  |  1
  *            7  |  0
+ *
+ * NB - there may be limits to the total number of bits within the buffer
+ *      that may be determined by architecture or runtime environment.
  */
 typedef struct KDataBuffer KDataBuffer;
 struct KDataBuffer
@@ -197,6 +200,29 @@ KLIB_EXTERN bool CC KDataBufferWritable ( const KDataBuffer *self );
  *  performs some level of integrity checking on buffer structure
  */
 KLIB_EXTERN rc_t CC KDataBufferCheckIntegrity ( const KDataBuffer *self );
+
+
+/* Wipe
+ *  overwrite allocated memory
+ */
+KLIB_EXTERN rc_t CC KDataBufferWipe ( KDataBuffer * self );
+
+
+/* WipeNWhack
+ *  wipes and releases memory associated with a buffer.
+ */
+KLIB_EXTERN rc_t CC KDataBufferWipeNWhack ( KDataBuffer * self );
+
+
+/* WipeResize
+ *  make a buffer bigger or smaller.
+ *  can fail if not enough memory.
+ *  can fail if not writable.
+ *  wipes memory before release or reallocation
+ *
+ *  "new_count" [ IN ] - new number of elements
+ */
+KLIB_EXTERN rc_t CC KDataBufferWipeResize ( KDataBuffer * self, uint64_t new_count );
 
 
 #ifdef __cplusplus

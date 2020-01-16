@@ -299,10 +299,10 @@ KNS_EXTERN rc_t CC KClientHttpRequestAddPostParam ( KClientHttpRequest *self, co
 KNS_EXTERN rc_t CC KClientHttpRequestVAddPostParam ( KClientHttpRequest *self, const char *fmt, va_list args );
 
 /* AddPostFileParam
- *  adds a file to be transmitted with POST using multipart/form-data
- *  name - field name identifying this file in the resulting HTML form. An empty name is OK
+ *  adds a file to be transmitted with POST on the URL in the form "name=<base64encodedContentsOfTheFile>"
+ *  "name" [ IN ] - field name identifying this file in the resulting HTML form. An empty name is OK
  *  "path" [ IN ] - NUL terminated string in directory-native character set denoting target file
-*/
+**/
 KNS_EXTERN rc_t CC KClientHttpRequestAddPostFileParam ( KClientHttpRequest *self, const char *name, const char *path );
 
 KNS_EXTERN rc_t CC KClientHttpRequestSetCloudParams(KClientHttpRequest * self,

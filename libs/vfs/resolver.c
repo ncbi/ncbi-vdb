@@ -247,7 +247,7 @@ rc_t VResolverAlgMake ( VResolverAlg **algp, const String *root,
 
 static rc_t VResolverAlgMakeCgi(VResolverAlg **algp, const String *root,
     bool isProtected, bool disabled,
-    const String *ticket, const char *name)
+    const String *ticket, const char *name, VERSNS *versions)
 {
     rc_t rc = VResolverAlgMake(algp, root, appAny, algCGI,
         isProtected, disabled);
@@ -258,8 +258,11 @@ static rc_t VResolverAlgMakeCgi(VResolverAlg **algp, const String *root,
         (*algp)->ticket = ticket;
 
         if (name != NULL) {
-            if (strcmp(name, "SDL.2") == 0)
+            assert(versions);
+            if (strcmp(name, "SDL.2") == 0) {
                 (*algp)->version = 0x82000000;
+                *versions |= versSDL2;
+            }
             else if (strcmp(name, "CGI") == 0)
                 (*algp)->version = 0x03000000;
             else if (strcmp(name, "CGI.4") == 0)
@@ -382,6 +385,13 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
         return RC ( rcVFS, rcResolver, rcResolving, rcType, rcIncorrect );
     case algFlat:
         rc = string_printf ( expanded, bsize, size, "%S", & tok -> acc );
+        break;
+    case algFlatAD:
+        if (tok->projectId < 0)
+            rc = string_printf(expanded, bsize, size, "%S", &tok->acc);
+        else
+            rc = string_printf(expanded, bsize, size, "dbGaP-%d/%S",
+                tok->projectId, &tok->acc);
         break;
     case algWithExtFlat:
         if (tok->projectId < 0)
@@ -904,20 +914,26 @@ rc_t VPathCheckFromNamesCGI ( const VPath * path,
         String name, val, req, host;
 
         if (!skip) {
-            CONST_STRING(&host, "trace.ncbi.nlm.nih.gov");
+            CONST_STRING(&host, "locate.ncbi.nlm.nih.gov");
             /* redirector URLs have query */
             if (StringEqual(&path->host, &host))
                 skip = true;
         }
         if (!skip) {
             CONST_STRING(&host, "nih-nhlbi-datacommons.s3.amazonaws.com");
-            /* amazonaws URLs han have query */
+            /* amazonaws URLs can have query */
             if (StringEqual(&path->host, &host))
                 skip = true;
         }
         if (!skip) {
             CONST_STRING(&host, "storage.googleapis.com");
-            /* googleapis URLs han have query */
+            /* googleapis URLs can have query */
+            if (StringEqual(&path->host, &host))
+                skip = true;
+        }
+        if (!skip) {
+            CONST_STRING(&host, "trace.ncbi.nlm.nih.gov");
+            /* redirector URLs have query */
             if (StringEqual(&path->host, &host))
                 skip = true;
         }
@@ -2261,6 +2277,7 @@ struct VResolver
     uint32_t projectId;
 
     char *version;
+    VERSNS versions;
     bool resoveOidName;
 };
 
@@ -2713,15 +2730,21 @@ VResolverAppID get_accession_app ( const String * accession, bool refseq_ctx,
         /* no break */
 
     default:
+    {
+        String hs37d5;
+        CONST_STRING(&hs37d5, "hs37d5");
+        if (accession != NULL && StringEqual(accession, &hs37d5))
+            app = appREFSEQ;
         /* TBD - people appear to be able to throw anything into refseq,
            so anything unrecognized we may as well test out there...
            but this should not stay the case */
-        if ( ! resolveAllAccToCache ) {
+        else if ( ! resolveAllAccToCache ) {
             * forDirAdjusted = true;
             app = appFILE;
         }
         else
             app = appREFSEQ;
+    }
     }
 
     if ( app == appWGS )
@@ -2942,8 +2965,8 @@ static rc_t VResolverRemoteMagicResolve(const VResolver * self,
  */
 static
 rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
-    const VPath ** path, bool refseq_ctx, const char * dir,
-    const String * parentAcc, int64_t projectId )
+    const VPath ** path, bool refseq_ctx, bool resolveAllAccToCache,
+    const char * dir, const String * parentAcc, int64_t projectId )
 {
     rc_t rc = 0;
 
@@ -2954,9 +2977,11 @@ rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
 
     VResolverAppID app;
 
+/*
     bool resolveAllAccToCache = true;
     if ( dir != NULL )
         resolveAllAccToCache = false;
+*/
 
     assert(path);
 
@@ -3596,8 +3621,13 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
                 else
                     rc = VResolverAlgCacheResolve(alg, self->wd, &tok,
                         cache, legacy_wgs_refseq);
-                if (rc == 0)
+                if (rc == 0) {
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
+                        ("VResolverCacheResolve: "
+                        "cache location of '%S' resolved to '%S' with %R\n",
+                        &query->path, &(*cache)->path, rc));
                     return 0;
+                }
 
                 /* just remember the first as best for now */
                 if (alg->app_id == app) {
@@ -3758,6 +3788,27 @@ rc_t VResolverCacheFile ( const VResolver *self, const VPath * query, const VPat
                 /* just remember the first as best for now */
                 if ( best == NULL )
                     best = alg;
+            }
+        }
+        /* check AD */
+        count = VResolverResolveToAd(self) ? VectorLength(&self->ad) : 0;
+        for (i = 0; i < count; ++i) {
+            const VResolverAlg *alg = VectorGet(&self->ad, i);
+            if (alg->cache_capable && alg -> protected == protected
+                && alg->app_id == appFILE)
+            {
+                {
+                    /* try to find an existing cache file
+                       NB - race condition exists unless
+                       we do something with lock files */
+                    rc = VResolverAlgCacheFile(alg, self->wd, query, cache);
+                    if (rc == 0)
+                        return 0;
+
+                    /* just remember the first as best for now */
+                    if (best == NULL)
+                        best = alg;
+                }
             }
         }
     }
@@ -3965,7 +4016,7 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
                     /* resolve from accession to local path
                        will NOT find partial cache files */
                     rc = VResolverLocalResolve ( self, & accession, local,
-                        refseq_ctx, NULL,
+                        refseq_ctx, false, NULL,
                         query -> accOfParentDb, query -> projectId );
                 }
 
@@ -4081,7 +4132,8 @@ rc_t VResolverQueryAcc ( const VResolver * self, VRemoteProtocols protocols,
 
     /* LOCAL RESOLUTION */
     if ( local != NULL )
-        rc = VResolverLocalResolve ( self, accession, local, refseq_ctx, dir,
+        rc = VResolverLocalResolve ( self, accession, local, refseq_ctx,
+            resolveAllAccToCache, dir,
             query -> accOfParentDb, query -> projectId );
 
     if ( local == NULL || * local == NULL )
@@ -4844,7 +4896,7 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
     const VPath ** cache )
 {
     return VResolverQueryImpl ( self, protocols, query, local, remote, cache,
-                                true, NULL, NULL, false, NULL, NULL );
+                               false, NULL, NULL, false, NULL, NULL );
 }
 
 LIB_EXPORT
@@ -5012,6 +5064,9 @@ rc_t VResolverLoadVolumes ( Vector *algs, const String *root,
                     /* stored in a flat directory as-is */
                     else if ( strcmp ( algname, "flat" ) == 0 )
                         alg_id = algFlat;
+                    /* stored in a in Accesion as Directory as-is */
+                    else if (strcmp(algname, "flatAd") == 0)
+                        alg_id = algFlatAD;
                     /* file with extensions stored in a flat directory:
                     as-is for public files,
                     with project-id injected before extension for protected ones
@@ -5308,6 +5363,8 @@ rc_t VResolverLoadRepo ( VResolver *self, Vector *algs, const KConfigNode *repo,
             break;
     }
 
+    assert(self);
+
     /* don't bother recording local, disabled repositories */
     if ( rc == 0 && disabled && algs == & self -> local )
         return 0;
@@ -5388,8 +5445,8 @@ rc_t VResolverLoadRepo ( VResolver *self, Vector *algs, const KConfigNode *repo,
                     if ( resolver_cgi )
                     {
                         VResolverAlg *cgi;
-                        rc = VResolverAlgMakeCgi( & cgi, root,
-                            protected, disabled, ticket, name );
+                        rc = VResolverAlgMakeCgi( & cgi, root, protected,
+                            disabled, ticket, name, &self->versions );
                         if ( rc == 0 )
                         {
                             assert(cgi);
@@ -5662,6 +5719,9 @@ rc_t VResolverForceRemoteProtected ( VResolver *self )
     /* create one from hard-coded constants */
     String cgi_root;
     StringInitCString ( & cgi_root, SDL_CGI );
+
+    assert(self);
+
     rc = StringCopy ( & root, & cgi_root );
     if ( rc == 0 )
     {
@@ -5675,7 +5735,7 @@ rc_t VResolverForceRemoteProtected ( VResolver *self )
 
             VResolverAlg *cgi = NULL;
             rc = VResolverAlgMakeCgi( & cgi, root, protected, disabled,
-                self->ticket, "SDL.2");
+                self->ticket, "SDL.2", &self->versions );
             if ( rc == 0 )
             {
                 /* Remote Protected algorythm should come first: see VDB-2679 */
@@ -6138,8 +6198,11 @@ static rc_t VResolverInitVersion(VResolver * self, const KConfig *kfg) {
         if (self->ticket == NULL)
              /* default version for public data is SDL-2 ( 128(SDL) | 2 ) */
             self->version = string_dup_measure("130", NULL);
-        else /* default version for protected data is SDL-2 */
-            /* self->version = string_dup_measure("3", NULL); */
+        else if (self->versions == 0)
+            /* default version for protected data is 3.0 when calling names.cgi */
+            self->version = string_dup_measure("3", NULL);
+        else
+            /* default version for protected data is SDL-2 when calling sdl */
             self->version = string_dup_measure("130", NULL);
 
         if (self->version == NULL)
@@ -6199,8 +6262,10 @@ rc_t VResolverMake ( VResolver ** objp, const KDirectory *wd,
 
         rc = VResolverLoad ( obj, protected, kfg, kns, ngc );
 
-        obj->kns = kns;
-        kns = NULL;
+        if (obj->kns == NULL)
+            obj->kns = kns;
+        else
+            RELEASE(KNSManager, kns);
 
         KRepositoryProjectId ( protected, & obj -> projectId );
 

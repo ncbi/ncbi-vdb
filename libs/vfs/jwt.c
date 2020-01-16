@@ -50,7 +50,7 @@ static rc_t JwtKartValidateSize(uint64_t size) {
                    ( (c) >= 'A' && (c) <= 'Z' ) || \
                    ( (c) >= '0' && (c) <= '9' ) || (c) == '-' || (c) == '_' )
 
-rc_t JwtKartValidateString(const String * cart) {
+rc_t JwtKartValidateString(const String * cart, size_t * size) {
     rc_t rc = 0;
 
     int MIN1 = 1, MIN2 = 1, MIN3 = 1;
@@ -59,6 +59,12 @@ rc_t JwtKartValidateString(const String * cart) {
 
     size_t j = 0;
 
+    uint64_t dummy = 0;
+    if (size == NULL)
+        size = &dummy;
+
+    *size = 0;
+
     if (cart == NULL || cart->addr == NULL)
         return RC(rcVFS, rcQuery, rcValidating, rcParam, rcNull);
 
@@ -66,10 +72,11 @@ rc_t JwtKartValidateString(const String * cart) {
 
     if (rc == 0) {
         size_t i = 0;
+
         /* section I before first '.' */
-        for (i = 0, j = 0; i < cart->size; ++i, ++j)
-            if (!VALID(cart->addr[i])) {
-                if (cart->addr[i] == '.') {
+        for (*size = 0, j = 0; *size < cart->size; ++(*size), ++j)
+            if (!VALID(cart->addr[*size])) {
+                if (cart->addr[*size] == '.') {
                     if (j < MIN1)
                         return RC(rcVFS,
                             rcQuery, rcValidating, rcChar, rcUnexpected);
@@ -81,9 +88,9 @@ rc_t JwtKartValidateString(const String * cart) {
             }
 
         /* section II after first '.' */
-        for (j = 0, ++i; i < cart->size; ++i, ++j)
-            if (!VALID(cart->addr[i])) {
-                if (cart->addr[i] == '.') {
+        for (j = 0, ++(*size); *size < cart->size; ++(*size), ++j)
+            if (!VALID(cart->addr[*size])) {
+                if (cart->addr[*size] == '.') {
                     if (j < MIN2)
                         return RC(rcVFS,
                             rcQuery, rcValidating, rcChar, rcUnexpected);
@@ -95,8 +102,8 @@ rc_t JwtKartValidateString(const String * cart) {
             }
 
         /* section III after third '.' */
-        for (j = 0, ++i; i < cart->size; ++i, ++j)
-            if (!VALID(cart->addr[i]))
+        for (j = 0, ++(*size); *size < cart->size; ++(*size), ++j)
+            if (!VALID(cart->addr[*size]))
                 break;
         /* trailing EOL-s */
 
@@ -104,7 +111,7 @@ rc_t JwtKartValidateString(const String * cart) {
             return RC(rcVFS,
                 rcQuery, rcValidating, rcChar, rcUnexpected);
 
-        for (; i < cart->size; ++i)
+        for (i = *size; i < cart->size; ++i)
             if (cart->addr[i] != '\r' && cart->addr[i] != '\n')
                 return RC(rcVFS, rcQuery, rcValidating, rcChar, rcInvalid);
     }
@@ -115,7 +122,10 @@ rc_t JwtKartValidateString(const String * cart) {
     return rc;
 }
 
-rc_t JwtKartValidateFile(const char * path) {
+rc_t JwtKartValidateFile(const char * path, const String ** aJwt) {
+    String s;
+    size_t osize = 0;
+
     rc_t rc = 0;
 
     KDirectory * dir = NULL;
@@ -154,12 +164,19 @@ rc_t JwtKartValidateFile(const char * path) {
         rc = KFileReadExactly(f, 0, buffer, size);
 
     if (rc == 0) {
-        String s;
         StringInit(&s, buffer, size, size);
-        rc = JwtKartValidateString(&s);
+        rc = JwtKartValidateString(&s, &osize);
     }
 
-    free(buffer);
+    if (rc == 0 && aJwt != NULL) {
+        String * jwt = NULL;
+        rc = StringCopy(aJwt, &s);
+        if (rc == 0) {
+            assert(*aJwt);
+            jwt = (String *)(*aJwt);
+            jwt->len = jwt->size = osize;
+        }
+    }
 
     RELEASE(KFile, f);
 

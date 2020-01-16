@@ -33,12 +33,14 @@ MODULE = test/klib
 TEST_TOOLS = \
 	test-asm \
 	test-printf \
+	test-data-buffer-print \
 	test-log \
 	test-out \
 	test-SraReleaseVersion \
 	test-time \
 	test-rcenum \
 	test-klib \
+	test-KOutMsgOverflow \
 	test-vnamelist \
 	test-progressbar \
     test-symtab \
@@ -101,6 +103,18 @@ TEST_PRINTF_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_PRINTF_SRC))
 
 $(TEST_BINDIR)/test-printf: $(TEST_PRINTF_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
+
+#-------------------------------------------------------------------------------
+# test-printf
+#
+TEST_BUF_PRINT_SRC = \
+	test-data-buffer-print
+
+TEST_BUF_PRINT_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_BUF_PRINT_SRC))
+
+$(TEST_BINDIR)/test-data-buffer-print: $(TEST_BUF_PRINT_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
 
 #-------------------------------------------------------------------------------
@@ -187,6 +201,17 @@ $(TEST_BINDIR)/test-klib: $(TEST_KLIB_OBJ)
 
 klib: test-klib
 	$(TEST_BINDIR)/test-klib
+
+#-------------------------------------------------------------------------------
+# test-KOutMsgOverflow
+TEST_OMO_SRC = \
+	test-KOutMsgOverflow
+TEST_OMO_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_OMO_SRC))
+$(TEST_BINDIR)/test-KOutMsgOverflow: $(TEST_OMO_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
+KOutMsgOverflow: test-klib
+	$(TEST_BINDIR)/KOutMsgOverflow
 
 #-------------------------------------------------------------------------------
 # test-hashfile

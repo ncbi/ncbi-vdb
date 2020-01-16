@@ -26,8 +26,12 @@
 
 #include <klib/debug.h> /* KDbgSetString */
 #include <ktst/unit_test.hpp> // TEST_SUITE
+#include <vfs/path.h> /* VPathRelease */
+#include <vfs/services-priv.h> /* KServiceTestNamesExecuteExt */
 
 #include "../../libs/vfs/json-response.h" /* Response4MakeSdl */
+
+using std::string;
 
 TEST_SUITE(TestSdlResolver)
 
@@ -76,6 +80,8 @@ TEST_CASE(testArrayExample) {
     REQUIRE_RC      ( Response4Release ( response ) );
 }
 #endif
+
+#ifdef ALL
 TEST_CASE(testExample) {
     Response4 * response = NULL;
 
@@ -117,6 +123,7 @@ TEST_CASE(testExample) {
 ) );
     REQUIRE_RC      ( Response4Release ( response ) );
 }
+#endif
 
 #ifdef ALL
 TEST_CASE(doubleWhack) {
@@ -126,11 +133,310 @@ TEST_CASE(doubleWhack) {
 }
 #endif
 
+#ifdef ALL
+TEST_CASE(testNoNextToken) {
+    const char resl[] =
+        "{"
+        " \"result\" : ["
+        "  {"
+        "   \"files\" : ["
+        "    {"
+        "     \"locations\" : ["
+        "      {"
+        "       \"link\": \"https://sdownload.ncbi.nlm.nih.gov/sra/SRR045450\""
+        "      }"
+        "     ]"
+        "    }"
+        "   ]"
+        "  },"
+        "  {"
+        "   \"files\" : ["
+        "    {"
+        "     \"locations\" : ["
+        "      {"
+        "       \"link\": \"https://sdownload.ncbi.nlm.nih.gov/sra/SRR053325\""
+        "      }"
+        "     ]"
+        "    }"
+        "   ]"
+        "  }"
+        " ]"
+        "}"; // nextToken is not set
+    KService * service = NULL;
+    REQUIRE_RC(KServiceMake(&service));
+    REQUIRE_RC_FAIL(KServiceTestNamesExecuteExt(service, 0, 0, 0, NULL, resl));
+    const KSrvResponse * rspn = NULL;
+    REQUIRE_RC_FAIL(KServiceTestNamesExecuteExt(service, 0, 0, 0, &rspn, resl));
+    REQUIRE_RC(KServiceAddId(service, "SRR045450"));
+    REQUIRE_RC(KServiceAddId(service, "SRR053325"));
+    REQUIRE_RC(KServiceTestNamesExecuteExt(service, 0, 0, 0, &rspn, resl));
+    REQUIRE_EQ(KSrvResponseLength(rspn), (uint32_t)2);
+    for (uint32_t i = 0; i < KSrvResponseLength(rspn); ++i) {
+        const KSrvRespObj * obj = NULL;
+        REQUIRE_RC(KSrvResponseGetObjByIdx(rspn, 0, &obj));
+        KSrvRespObjIterator * it = NULL;
+        REQUIRE_RC(KSrvRespObjMakeIterator(obj, &it));
+        int files = 0;
+        while (true) {
+            KSrvRespFile * file = NULL;
+            REQUIRE_RC(KSrvRespObjIteratorNextFile(it, &file));
+            if (file == NULL)
+                break;
+            ++files;
+            KSrvRespFileIterator * fi = NULL;
+            REQUIRE_RC(KSrvRespFileMakeIterator(file, &fi));
+            int paths = 0;
+            while (true) {
+                const VPath * path = NULL;
+                REQUIRE_RC(KSrvRespFileIteratorNextPath(fi, &path));
+                if (path == NULL)
+                    break;
+                REQUIRE_RC(VPathRelease(path));
+                ++paths;
+            }
+            REQUIRE_EQ(paths, 1);
+            REQUIRE_RC(KSrvRespFileIteratorRelease(fi));
+            REQUIRE_RC(KSrvRespFileRelease(file));
+        }
+        REQUIRE_EQ(files, 1);
+        REQUIRE_RC(KSrvRespObjIteratorRelease(it));
+        REQUIRE_RC(KSrvRespObjRelease(obj));
+    }
+
+    // nextToken is not set
+    const char * nextToken = NULL;
+    REQUIRE_RC(KSrvResponseGetNextToken(rspn, &nextToken));
+    REQUIRE_NULL(nextToken);
+
+    REQUIRE_RC(KSrvResponseRelease(rspn));
+
+    const char * json = KServiceGetResponseCStr(service);
+    REQUIRE_NOT_NULL(json);
+    REQUIRE_EQ(string(resl), string(json));
+
+    REQUIRE_RC(KServiceRelease(service));
+}
+#endif
+
+#ifdef ALL
+TEST_CASE(testNextToken) {
+    const char resl[] =
+        "{"
+        " \"result\" : ["
+        "  {"
+        "   \"files\" : ["
+        "    {"
+        "     \"locations\" : ["
+        "      {"
+        "       \"link\": \"https://sdownload.ncbi.nlm.nih.gov/sra/SRR045450\""
+        "      }"
+        "     ]"
+        "    }"
+        "   ]"
+        "  },"
+        "  {"
+        "   \"files\" : ["
+        "    {"
+        "     \"locations\" : ["
+        "      {"
+        "       \"link\": \"https://sdownload.ncbi.nlm.nih.gov/sra/SRR053325\""
+        "      }"
+        "     ]"
+        "    }"
+        "   ]"
+        "  }"
+        " ], "
+        " \"nextToken\": \"blah\""
+        "}"; // nextToken is set
+    KService * service = NULL;
+    REQUIRE_RC(KServiceMake(&service));
+    REQUIRE_RC_FAIL(KServiceTestNamesExecuteExt(service, 0, 0, 0, NULL, resl));
+    const KSrvResponse * rspn = NULL;
+    REQUIRE_RC_FAIL(KServiceTestNamesExecuteExt(service, 0, 0, 0, &rspn, resl));
+    REQUIRE_RC(KServiceAddId(service, "SRR045450"));
+    REQUIRE_RC(KServiceAddId(service, "SRR053325"));
+    REQUIRE_RC(KServiceAddId(service, "SRR056386"));
+    REQUIRE_RC(KServiceTestNamesExecuteExt(service, 0, 0, 0, &rspn, resl));
+    REQUIRE_EQ(KSrvResponseLength(rspn), (uint32_t)2);
+    for (uint32_t i = 0; i < KSrvResponseLength(rspn); ++i) {
+        const KSrvRespObj * obj = NULL;
+        REQUIRE_RC(KSrvResponseGetObjByIdx(rspn, 0, &obj));
+        KSrvRespObjIterator * it = NULL;
+        REQUIRE_RC(KSrvRespObjMakeIterator(obj, &it));
+        int files = 0;
+        while (true) {
+            KSrvRespFile * file = NULL;
+            REQUIRE_RC(KSrvRespObjIteratorNextFile(it, &file));
+            if (file == NULL)
+                break;
+            ++files;
+            KSrvRespFileIterator * fi = NULL;
+            REQUIRE_RC(KSrvRespFileMakeIterator(file, &fi));
+            int paths = 0;
+            while (true) {
+                const VPath * path = NULL;
+                REQUIRE_RC(KSrvRespFileIteratorNextPath(fi, &path));
+                if (path == NULL)
+                    break;
+                REQUIRE_RC(VPathRelease(path));
+                ++paths;
+            }
+            REQUIRE_EQ(paths, 1);
+            REQUIRE_RC(KSrvRespFileIteratorRelease(fi));
+            REQUIRE_RC(KSrvRespFileRelease(file));
+        }
+        REQUIRE_EQ(files, 1);
+        REQUIRE_RC(KSrvRespObjIteratorRelease(it));
+        REQUIRE_RC(KSrvRespObjRelease(obj));
+    }
+
+    // nextToken is set but currently cannot be processed
+    const char * nextToken = NULL;
+    REQUIRE_RC_FAIL(KSrvResponseGetNextToken(rspn, &nextToken));
+    REQUIRE_NOT_NULL(nextToken);
+
+    REQUIRE_RC(KSrvResponseRelease(rspn));
+
+    const char * json = KServiceGetResponseCStr(service);
+    REQUIRE_NOT_NULL(json);
+    REQUIRE_EQ(string(resl), string(json));
+
+    REQUIRE_RC(KServiceRelease(service));
+}
+#endif
+
+#ifdef ALL
+TEST_CASE(nullMsg) {
+    Response4 * response = NULL;
+
+    REQUIRE_RC_FAIL(Response4MakeSdl(&response,
+        "{"
+        "    \"status\": 200"
+        "}"));
+
+    REQUIRE_RC(Response4Release(response));
+}
+#endif
+
+#ifdef ALL
+TEST_CASE(noMsg) {
+    Response4 * response = NULL;
+
+    std::cerr << "vvvvvvvvvvvvvv expect to see error message vvvvvvvvvvvvvvv\n";
+    REQUIRE_RC(Response4MakeSdl(&response,
+        "{"
+        "    \"status\": 200,"
+        "    \"message\" : \"\""
+        "}"));
+
+    rc_t rc = 0;
+    REQUIRE_RC(Response4GetRc(response, &rc));
+    REQUIRE_RC_FAIL(rc);
+
+    REQUIRE_RC(Response4Release(response));
+}
+#endif
+
+#ifdef ALL
+TEST_CASE(noMsgWithRes) {
+    Response4 * response = NULL;
+
+    REQUIRE_RC(Response4MakeSdl(&response,
+        "{"
+        "  \"status\": 200,"
+        "  \"result\": ["
+        "    {"
+        "    }"
+        "  ]"
+        "}"));
+
+    REQUIRE_RC(Response4Release(response));
+}
+#endif
+
+#ifdef ALL
+TEST_CASE(invalidExpiration) {
+    Response4 * response = NULL;
+
+    std::cerr << "vvvvvvvvvvvvvv expect to see error message vvvvvvvvvvvvvvv\n";
+    REQUIRE_RC(Response4MakeSdl(&response,
+        "{"
+        "    \"status\": 200,"
+        "    \"message\" : \"Claims have expired\""
+        "}"));
+
+    rc_t rc = 0;
+    REQUIRE_RC(Response4GetRc(response, &rc));
+    REQUIRE_RC_FAIL(rc);
+
+    REQUIRE_RC(Response4Release(response));
+}
+#endif
+
+#ifdef ALL
+TEST_CASE(invalidMsg) {
+    Response4 * response = NULL;
+
+    std::cerr << "vvvvvvvvvvvvvv expect to see error message vvvvvvvvvvvvvvv\n";
+    REQUIRE_RC(Response4MakeSdl(&response,
+        "{"
+        "    \"status\": 200,"
+        "    \"msg\" : \"Signature not recognized\""
+        "}"));
+
+    rc_t rc = 0;
+    REQUIRE_RC(Response4GetRc(response, &rc));
+    REQUIRE_RC_FAIL(rc);
+
+    REQUIRE_RC(Response4Release(response));
+}
+#endif
+
+#ifdef ALL
+TEST_CASE(expired) {
+    Response4 * response = NULL;
+    
+    std::cerr << "vvvvvvvvvvvvvv expect to see error message vvvvvvvvvvvvvvv\n";
+    REQUIRE_RC(Response4MakeSdl(&response,
+        "{"
+        "    \"status\": 440,"
+        "    \"message\" : \"Claims have expired\""
+        "}"));
+    
+    rc_t rc = 0;
+    REQUIRE_RC(Response4GetRc(response, &rc));
+    REQUIRE_RC_FAIL(rc);
+
+    REQUIRE_RC(Response4Release(response));
+}
+#endif
+
+#ifdef ALL
+TEST_CASE(expiredNsg) {
+    Response4 * response = NULL;
+
+    std::cerr << "vvvvvvvvvvvvvv expect to see error message vvvvvvvvvvvvvvv\n";
+    REQUIRE_RC(Response4MakeSdl(&response,
+        "{"
+        "    \"status\": 440,"
+        "    \"msg\" : \"Claims have expired\""
+        "}"));
+
+    rc_t rc = 0;
+    REQUIRE_RC(Response4GetRc(response, &rc));
+    REQUIRE_RC_FAIL(rc);
+
+    REQUIRE_RC(Response4Release(response));
+}
+#endif
+
 TEST_SUITE ( TestResolverSdl )
 
 extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
     rc_t CC KMain ( int argc, char * argv [] ) {
+if (
+0 ) assert ( ! KDbgSetString ( "VFS" ) );
 if (
 0 ) assert ( ! KDbgSetString ( "VFS-JSON" ) );
     return TestSdlResolver( argc, argv );

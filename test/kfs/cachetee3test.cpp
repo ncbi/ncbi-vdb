@@ -53,6 +53,9 @@
 #include <kfs/file.h>
 #include <kfs/recorder.h>
 
+#include <vfs/manager.h>
+#include <vfs/path.h>
+
 using namespace std;
 
 #define DATAFILE "org.dat"
@@ -1096,6 +1099,12 @@ FIXTURE_TEST_CASE ( CacheTee3_invalid_path, CT3Fixture )
     remove_file ( CACHEFILE );
     remove_file ( CACHEFILE1 );
 
+#if WINDOWS
+    const char * InvalidPath = "\\sra\\invalid.sra";
+#else
+    const char * InvalidPath = "/sra/invalid.sra";
+#endif
+
     KDirectory *dir;
     REQUIRE_RC ( KDirectoryNativeDir ( &dir ) );
     const KFile *org;
@@ -1108,7 +1117,7 @@ FIXTURE_TEST_CASE ( CacheTee3_invalid_path, CT3Fixture )
     /* open and use cacheteev3 with an invalid path for the first time */
     const KFile *tee1;
     REQUIRE_RC ( KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee1, org, BLOCKSIZE,
-        cluster_factor, ram_pages, false, true, "%s", "/sra/invalid.sra" ) ); // cache.dat
+        cluster_factor, ram_pages, false, true, "%s", InvalidPath) ); // cache.dat
     for ( int i = 0; i < num_chunks; ++i )
     {
         uint64_t pos = rand_32 ( 0, DATAFILESIZE );
@@ -1120,7 +1129,7 @@ FIXTURE_TEST_CASE ( CacheTee3_invalid_path, CT3Fixture )
     /* open and use cacheteev3 with an invalid path for the second time */
     const KFile *tee2;
     REQUIRE_RC ( KDirectoryMakeKCacheTeeFile_v3 ( dir, &tee2, org, BLOCKSIZE,
-        cluster_factor, ram_pages, false, true, "%s", "/sra/invalid.sra" ) ); // cache.dat
+        cluster_factor, ram_pages, false, true, "%s", InvalidPath) ); // cache.dat
     for ( int i = 0; i < num_chunks; ++i )
     {
         uint64_t pos = rand_32 ( 0, DATAFILESIZE );
@@ -1262,6 +1271,107 @@ FIXTURE_TEST_CASE ( CacheTee3_request_record, CT3Fixture )
     KOutMsg ( "recording requests done\n" );
 }
 #endif
+
+TEST_CASE( concurrent_reads_from_different_files )
+{
+    KOutMsg ( "concurrent reads from different files\n" );
+
+    std::string urls[] = {
+        "https://ftp.ncbi.nlm.nih.gov/toolbox/gbench/samples/udc_seqgraphic_rmt_testing/remote_BAM_remap_UUD-324/human/grch38_wgsim_gb_accs.bam",
+        "https://ftp.ncbi.nlm.nih.gov/toolbox/gbench/samples/udc_seqgraphic_rmt_testing/remote_BAM_remap_UUD-324/human/grch38_wgsim_gb_accs.bam.bai",
+        "https://ftp.ncbi.nlm.nih.gov/toolbox/gbench/samples/udc_seqgraphic_rmt_testing/remote_BAM_remap_UUD-324/yeast/yeast_wgsim_ucsc.bam",
+        "https://ftp.ncbi.nlm.nih.gov/toolbox/gbench/samples/udc_seqgraphic_rmt_testing/remote_BAM_remap_UUD-324/yeast/yeast_wgsim_ucsc.bam.bai"
+    };
+    
+    const size_t URL_COUNT = sizeof( urls ) / sizeof( urls[ 0 ] );
+    uint64_t sizes[ URL_COUNT ];
+    uint32_t magics[ URL_COUNT ];
+    
+    VFSManager* mgr = 0;
+    REQUIRE_RC( VFSManagerMake( &mgr ) );
+    for ( size_t i = 0; i < URL_COUNT; ++i )
+    {
+        VPath* path = 0;
+        REQUIRE_RC( VFSManagerMakePath( mgr, &path, urls[ i ].c_str() ) );
+
+        const KFile* file = 0;
+        REQUIRE_RC( VFSManagerOpenFileRead( mgr, &file, path ) );
+        
+        REQUIRE_RC( KFileSize( file, &sizes[ i ] ) );
+        REQUIRE_RC( KFileReadExactly( file, 0, &magics[ i ], sizeof( magics[ i ] ) ) );
+        std::cout << urls[ i ] <<": "<< sizes[ i ] << " " << std::hex << magics[ i ] << std::dec << std::endl;
+        REQUIRE_RC( KFileRelease( file ) );
+        REQUIRE_RC( VPathRelease( path ) );
+    }
+
+    const size_t NUM_PASSES = 2;
+    const size_t NUM_THREADS = 8;
+    size_t thread_errors[ NUM_THREADS ];
+    for ( size_t i = 0; i < NUM_THREADS; ++i )
+        thread_errors[ i ] = 0;
+    
+    for ( size_t pass = 0; pass < NUM_PASSES; ++pass )
+    {
+        vector< thread > tt( NUM_THREADS );
+        for ( size_t i = 0; i < NUM_THREADS; ++i )
+        {
+            size_t url_index = ( i % URL_COUNT );
+            tt[i] = thread( [&]( const string& url, uint64_t exp_size, uint32_t exp_magic, size_t  * num_errors )
+                {
+                    VPath* path = 0;
+                    const KFile* file = 0;
+                    uint64_t size = 0;
+                    char buffer[ 20 * 1024 ];
+
+                    if ( 0 != VFSManagerMakePath( mgr, &path, url.c_str() ) )
+                       (*num_errors)++;
+                    else
+                    {
+                        if ( 0 != VFSManagerOpenFileRead( mgr, &file, path ) )
+                            (*num_errors)++;
+                        else
+                        {
+                            if ( 0 != KFileSize( file, &size ) )
+                               (*num_errors)++;
+                            else
+                            {
+                                if ( 0 != KFileReadExactly( file, 0, &buffer, sizeof( buffer ) ) )
+                                    (*num_errors)++;
+                                else
+                                {
+                                    uint32_t magic = 0;
+                                    memcpy( &magic, buffer, sizeof( magic ) );
+
+                                    if ( size != exp_size )
+                                        (*num_errors)++;
+                                    if ( magic != exp_magic )
+                                        (*num_errors)++;
+                                }
+                            }
+
+                            if ( 0 != KFileRelease( file ) )
+                                (*num_errors)++;
+                        }
+                        if ( 0 != VPathRelease( path ) )
+                            (*num_errors)++;
+                   }
+                }, urls[ url_index ], sizes[ url_index ], magics[ url_index ], &thread_errors[ i ] );
+        }
+        for ( size_t i = 0; i < NUM_THREADS; ++i )
+        {
+            tt[ i ].join();
+        }
+    }
+
+    size_t all_errors = 0;
+    for ( size_t i = 0; i < NUM_THREADS; ++i )
+        all_errors += thread_errors[ i ];
+    REQUIRE( all_errors == 0  );
+    
+    REQUIRE_RC( VFSManagerRelease( mgr ) );
+ 
+    KOutMsg ( "concurrent reads from different files done\n" );
+}
 
 //////////////////////////////////////////// Main
 extern "C" {

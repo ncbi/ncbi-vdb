@@ -70,12 +70,7 @@ typedef struct KClientHttpStream KClientHttpStream;
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
 
-static
-void  KDataBufferClear ( KDataBuffer *buf )
-{
-    memset ( buf, 0, sizeof *buf );
-    buf -> elem_bits = 8;
-}
+#define KDataBufferClear(buf) KDataBufferMakeBytes(buf, 0)
 
 #if _DEBUGGING
 static
@@ -331,8 +326,7 @@ rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint
         uint32_t port_save;
         String hostname_save, hostname_copy;
 
-        size_t len;
-        char buffer [ 4096 ];
+        KDataBuffer buffer;
 
         STATUS ( STAT_GEEK, "%s - saving hostname and port\n", __func__ );
         hostname_save = self -> hostname;
@@ -347,62 +341,68 @@ rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint
         self -> port = pport;
 
         /* format CONNECT request */
-        rc = string_printf ( buffer, sizeof buffer, & len,
-                             "CONNECT %S:%u HTTP/1.1\r\n"
-                             "Host: %S:%u\r\n\r\n"
-                             , & hostname_copy
-                             , port
-                             , & hostname_copy
-                             , port
-            );
+		rc = KDataBufferClear( & buffer );
+		if (rc == 0)
+		{
+			rc = KDataBufferPrintf( & buffer,
+				"CONNECT %S:%u HTTP/1.1\r\n"
+				"Host: %S:%u\r\n\r\n"
+				, &hostname_copy
+				, port
+				, &hostname_copy
+				, port
+			);
 
-        if ( rc != 0 )
-            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to create proxy request: %R\n", rc ) );
-        else
-        {
-            size_t sent;
-            timeout_t tm;
+			if (rc != 0)
+				DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("Failed to create proxy request: %R\n", rc));
+			else
+			{
+				size_t sent;
+				timeout_t tm;
+                                size_t size = buffer.elem_count - 1;
 
-            STATUS ( STAT_QA, "%s - created proxy request '%.*s'\n", __func__, ( uint32_t ) len, buffer );
+				STATUS(STAT_QA, "%s - created proxy request '%.*s'\n", __func__,
+                                    (uint32_t)size, (char*)buffer.base);
 
-            /* send request and receive a response */
-            STATUS ( STAT_PRG, "%s - sending proxy request\n", __func__ );
-            TimeoutInit ( & tm, self -> write_timeout );
-            rc = KStreamTimedWriteAll ( self -> sock, buffer, len, & sent, & tm );
-            if ( rc != 0 )
-                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to send proxy request: %R\n", rc ) );
-            else
-            {
-                String msg;
-                ver_t version;
-                uint32_t status;
+				/* send request and receive a response */
+				STATUS(STAT_PRG, "%s - sending proxy request\n", __func__);
+				TimeoutInit(&tm, self->write_timeout);
+				rc = KStreamTimedWriteAll(self->sock, buffer.base, size, &sent, &tm);
+				if (rc != 0)
+					DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("Failed to send proxy request: %R\n", rc));
+				else
+				{
+					String msg;
+					ver_t version;
+					uint32_t status;
 
-                assert ( sent == len );
+					assert(sent == size);
 
-                STATUS ( STAT_PRG, "%s - reading proxy response status line\n", __func__ );
-                TimeoutInit ( & tm, self -> read_timeout );
-                rc = KClientHttpGetStatusLine ( self, & tm, & msg, & status, & version );
-                if ( rc != 0 )
-                    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to read proxy response: %R\n", rc ) );
-                else
-                {
-                    if ( ( status / 100 ) != 2 )
-                    {
-                        rc = RC ( rcNS, rcNoTarg, rcOpening, rcConnection, rcFailed );
-                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to create proxy tunnel: %03u '%S'\n", status, & msg ) );
-                        KClientHttpBlockBufferReset ( self );
-                        KClientHttpLineBufferReset ( self );
-                    }
-                    else
-                    {
-                        STATUS ( STAT_QA, "%s - read proxy response status line: %03u '%S'\n", __func__, status, & msg );
-                        do
-                            rc = KClientHttpGetLine ( self, & tm );
-                        while ( self -> line_valid != 0 );
-                    }
-                }
-            }
-        }
+					STATUS(STAT_PRG, "%s - reading proxy response status line\n", __func__);
+					TimeoutInit(&tm, self->read_timeout);
+					rc = KClientHttpGetStatusLine(self, &tm, &msg, &status, &version);
+					if (rc != 0)
+						DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("Failed to read proxy response: %R\n", rc));
+					else
+					{
+						if ((status / 100) != 2)
+						{
+							rc = RC(rcNS, rcNoTarg, rcOpening, rcConnection, rcFailed);
+							DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("Failed to create proxy tunnel: %03u '%S'\n", status, &msg));
+							KClientHttpBlockBufferReset(self);
+							KClientHttpLineBufferReset(self);
+						}
+						else
+						{
+							STATUS(STAT_QA, "%s - read proxy response status line: %03u '%S'\n", __func__, status, &msg);
+							do
+								rc = KClientHttpGetLine(self, &tm);
+							while (self->line_valid != 0);
+						}
+					}
+				}
+			}
+		}
 
         STATUS ( STAT_GEEK, "%s - restoring hostname and port\n", __func__ );
         self -> hostname = hostname_save;
@@ -435,17 +435,23 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
     mgr = self -> mgr;
     assert ( mgr );
 
-    if ( self -> sock == NULL && self -> test_sock != NULL ) /* protect mocked stream from overwriting */
-    {
-        self -> sock = self -> test_sock;
-        KStreamAddRef ( self -> test_sock );
-        return 0;
-    }
-
     KEndPointArgsIteratorMake ( & it, mgr, aHostname, aPort, NULL );
     while ( KEndPointArgsIteratorNext ( & it, & hostname, & port,
         & proxy_default_port, & proxy_ep, NULL, NULL ) )
     {
+		/* for an externally provied (likely mocked) stream,
+		   protect the stream from overwriting and pretend
+		   the first endpoint was connected to successfully */
+		if (self->sock == NULL && self->test_sock != NULL)
+		{
+			self->sock = self->test_sock;
+			KStreamAddRef(self->test_sock);
+			self->proxy_default_port = proxy_default_port;
+			self->proxy_ep = proxy_ep;
+			self->ep_valid = true;
+			return 0;
+		}
+
         rc = KNSManagerInitDNSEndpoint ( mgr, & self -> ep, hostname, port );
         DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_DNS ),
             ( "KNSManagerInitDNSEndpoint(%S:%d)=%R\n", hostname, port, rc ) );
@@ -456,13 +462,13 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
         }
         if ( rc == 0 )
         {
-            /* try to establish a connection */
-            rc = KNSManagerMakeTimedConnection ( mgr, & sock,
-              self -> read_timeout, self -> write_timeout, NULL, & self -> ep );
+			/* try to establish a connection */
+			rc = KNSManagerMakeTimedConnection(mgr, &sock,
+				self->read_timeout, self->write_timeout, NULL, &self->ep);
 
-            /* if we connected to a proxy, try to follow-through to server */
-            if ( proxy_ep && self -> tls && rc == 0 )
-                rc = KClientHttpProxyConnect ( self, aHostname, aPort, sock, hostname, port );
+			/* if we connected to a proxy, try to follow-through to server */
+			if (proxy_ep && self->tls && rc == 0)
+				rc = KClientHttpProxyConnect(self, aHostname, aPort, sock, hostname, port);
 
             if ( rc == 0 )
             {
@@ -1072,17 +1078,12 @@ rc_t KClientHttpAddHeaderString
                 rc = RC ( rcNS, rcNoTarg, rcAllocating, rcMemory, rcNull );
             else
             {
-                /* size of the KDataBuffer to store string data */
-                size_t bsize = name -> size + value ->  size + 1;
-                rc = KDataBufferMakeBytes ( & node -> value_storage, bsize );
+                rc = KDataBufferMakeBytes ( & node -> value_storage, 0 );
                 if ( rc == 0 )
                 {
                     /* copy the string data into storage */
-                    rc = string_printf ( ( char *) node -> value_storage . base,
-                                         bsize, NULL,
-                                         "%S%S"
-                                         , name
-                                         , value );
+                    rc = KDataBufferPrintf ( & node -> value_storage,
+                                             "%S%S", name, value );
                     if ( rc == 0 )
                     {
                         /* initialize the Strings to point into KHttpHeader node */
@@ -1108,21 +1109,11 @@ rc_t KClientHttpAddHeaderString
            check that value param has data */
         else if ( value -> size != 0 )
         {
-          /* find the current size of the data in the node */
-          size_t cursize = node -> name . size + node -> value . size;
           if ( add ) { /* add value to node -> value
                           do not add value if node -> value == value */
-           if ( ! StringEqual ( & node -> value, value ) ) {
-         /* resize databuffer to hold the additional value data + comma + nul */
-            rc = KDataBufferResize ( & node -> value_storage, cursize + value -> size + 1 + 1 );
-            if ( rc == 0 )
+            if ( ! StringEqual ( & node -> value, value ) )
             {
-                char * buffer = ( char * ) node -> value_storage . base;
-
-                /* copy string data into buffer */
-                rc = string_printf ( & buffer [ cursize ], value -> size + 2, NULL,
-                                     ",%S"
-                                     , value );
+                rc = KDataBufferPrintf( & node -> value_storage, ",%S", value );
                 if ( rc == 0 )
                 {
                     /* update size and len of value in the node */
@@ -1130,35 +1121,25 @@ rc_t KClientHttpAddHeaderString
                     node -> value . len += value -> len + 1;
                     return 0;
                 }
-
-                /* In case of almost impossible error
-                   restore values to what they were */
-                KDataBufferResize ( & node -> value_storage, cursize + 1 );
             }
-           }
           } else { /* replace value with node -> value */
             if ( ! StringEqual ( & node -> value, value ) )
             /* values are not equal - need to replace */
             {
-                /* size of the KDataBuffer to store string data */
-                size_t bsize = name -> size + value ->  size + 1;
-                if ( value -> size > node -> value . size
-                  || value -> len > node -> value . len )
-                {   /* new value is longer */
-                    KDataBufferResize ( & node -> value_storage, bsize );
-                }
-                /* copy the string data into storage */
-                rc = string_printf ( ( char * ) node -> value_storage . base,
-                    bsize, NULL, "%S%S", name, value );
+                rc = KDataBufferWhack ( & node -> value_storage );
                 if ( rc == 0 )
                 {
-                    /* initialize the Strings to point into KHttpHeader node */
-                    StringInit ( & node -> name,
-                        ( const char * ) node -> value_storage . base,
-                        name -> size, name -> len );
-                    StringInit ( & node -> value,
-                        node -> name . addr + name -> size,
-                        value -> size, value -> len );
+                    rc = KDataBufferPrintf( & node -> value_storage, "%S%S", name, value );
+                    if ( rc == 0 )
+                    {
+                        /* initialize the Strings to point into KHttpHeader node */
+                        StringInit ( & node -> name,
+                            ( const char * ) node -> value_storage . base,
+                            name -> size, name -> len );
+                        StringInit ( & node -> value,
+                            node -> name . addr + name -> size,
+                            value -> size, value -> len );
+                    }
                 }
             }
           }
@@ -1173,25 +1154,31 @@ rc_t KClientHttpVAddHeader ( BSTree *hdrs, bool add,
 {
     rc_t rc;
 
-    size_t bsize;
+    KDataBuffer buf;
     String name, value;
-    char buf [ 4096 ];
+
+    /* initialize data buffer */
+    KDataBufferMakeBytes ( & buf, 0 );
 
     /* initialize name string from param */
     StringInitCString ( & name, _name );
 
     /* copy data into buf, using va_list for value format */
-    rc = string_vprintf ( buf, sizeof buf, &bsize, _val, args );
-    if ( rc == 0 )
+    rc = KDataBufferVPrintf ( & buf, _val, args );
+    if ( rc == 0 && buf . elem_count != 0 )
     {
+        size_t bsize = ( size_t ) buf . elem_count - 1;
+      
         /* get length of buf */
-        size_t blen = string_len ( buf, bsize );
+        size_t blen = string_len ( buf . base, bsize );
 
         /* init value */
-        StringInit ( & value, buf, bsize, ( uint32_t ) blen );
+        StringInit ( & value, buf . base, bsize, ( uint32_t ) blen );
 
         rc = KClientHttpAddHeaderString ( hdrs, add, & name, & value );
     }
+
+    KDataBufferWhack ( & buf );
 
     return rc;
 }
@@ -2571,61 +2558,40 @@ void KClientHttpGetLocalEndpoint ( const KClientHttp * self, KEndPoint * ep )
 {   KClientHttpGetEndpoint ( self, ep, false ); }
 
 LIB_EXPORT rc_t CC KClientHttpResultFormatMsg (
-    const struct KClientHttpResult * self, char * buffer,
-    size_t bsize, size_t * len, const char * bol, const char * eol )
+    const struct KClientHttpResult * self, struct KDataBuffer * buffer, const char * bol, const char * eol )
 {
     rc_t rc = 0;
-    size_t total = 0;
 
     if ( self == NULL ) {
         return RC ( rcNS, rcNoTarg, rcReading, rcSelf, rcNull );
     }
 
-    if ( len == NULL || bol == NULL || eol == NULL ) {
+    if ( bol == NULL || eol == NULL ) {
         return RC ( rcNS, rcNoTarg, rcReading, rcParam, rcNull );
     }
 
-    rc = string_printf ( buffer, bsize, len,
-            "%sHTTP/%.2V %d %S%s", bol
+    rc = KDataBufferPrintf ( buffer, "%sHTTP/%.2V %d %S%s"
+            , bol
             , self -> version
             , self -> status
             , & self -> msg, eol
         );
-    total = * len;
 
-    if ( rc == 0 ||
-        ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
-          GetRCState ( rc ) == rcInsufficient ) )
+    if ( rc == 0 )
     {
         const KHttpHeader * node = NULL;
         for ( node = ( const KHttpHeader* ) BSTreeFirst ( & self -> hdrs );
               node != NULL;
               node = ( const KHttpHeader* ) BSTNodeNext ( & node -> dad ) )
         {
-            size_t p_bsize
-                = rc == 0
-                    ? bsize >= total ? bsize - total : 0
-                    : 0;
             /* add header line */
-            rc_t r2 = string_printf ( & buffer [ total ], p_bsize, len,
-                             "%s%S: %S\r%s", bol
-                             , & node -> name
-                             , & node -> value, eol );
-            total += * len;
-            if ( rc == 0 ) {
-                rc = r2;
-            }
+            rc = KDataBufferPrintf ( buffer, "%s%S: %S\r%s"
+                                            , bol
+                                            , & node -> name
+                                            , & node -> value
+                                            , eol );
         }
     }
-
-    if ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
-        GetRCState ( rc ) == rcInsufficient )
-    {
-        ++ total;
-    }
-
-
-    * len = total;
 
     return rc;
 }

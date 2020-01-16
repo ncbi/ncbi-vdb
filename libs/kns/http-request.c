@@ -30,6 +30,7 @@
 #include <klib/data-buffer.h>
 #include <klib/printf.h>
 #include <klib/log.h>
+#include <klib/base64.h>
 #include <klib/debug.h>
 
 #include <cloud/manager.h>
@@ -477,7 +478,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestByteRange ( KClientHttpRequest *self, uint6
         String name, value;
 
         CONST_STRING ( & name, "Range" );
-        rc = string_printf ( range, sizeof range, & num_writ, "bytes=%lu-%lu"
+        rc = string_printf /* USE IS OKAY */ ( range, sizeof range, & num_writ, "bytes=%lu-%lu"
                              , pos
                              , pos + bytes - 1);
         if ( rc == 0 )
@@ -673,10 +674,6 @@ LIB_EXPORT rc_t CC KClientHttpRequestVAddPostParam ( KClientHttpRequest *self, c
     {
         rc = RC ( rcNS, rcNoTarg, rcValidating, rcParam, rcNull );
     }
-    else if ( self -> file_attached )
-    {   /* not yet supported: mixing name/value and file parameters */
-        rc = RC ( rcNS, rcNoTarg, rcValidating, rcParam, rcUnsupported );
-    }
     else
     {
 
@@ -865,36 +862,6 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddQueryParam ( KClientHttpRequest *self, c
     return rc;
 }
 
-static
-void
-GenerateBoundary( const void * memStart, uint64_t memSize, char * boundary, size_t boundarySize )
-{
-    /* generate a random alphabetical string, make sure "--"boundary"--" does not occur in the memory region  */
-    const char * mem = (const char *)memStart;
-    srand( time ( NULL ) );
-    while ( true )
-    {
-        int64_t i;
-        for ( i = 0; i < boundarySize; ++i)
-        {
-            boundary [ i ] = 'a' + rand() % 26; /* a to z */
-        }
-        /* make sure --boundary-- is not occurring in the given memory region*/
-        for ( i = 0; i < memSize - boundarySize - 4 + 1; ++i )
-        {
-            if ( mem [ i ]      == '-' &&
-                 mem [ i + 1 ]  == '-' &&
-                 mem [ i + 2 + boundarySize ]       == '-' &&
-                 mem [ i + 2 + boundarySize + 1 ]   == '-' &&
-                 memcmp( mem + i + 2, boundary, boundarySize ) == 0 )
-            {   /* however unlikely, it happened, so try again*/
-                continue;
-            }
-        }
-        break;
-    }
-}
-
 LIB_EXPORT rc_t CC KClientHttpRequestAddPostFileParam ( KClientHttpRequest * self, const char * name, const char * path )
 {
     rc_t rc = 0;
@@ -910,10 +877,6 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddPostFileParam ( KClientHttpRequest * sel
     {
         rc = RC ( rcNS, rcNoTarg, rcValidating, rcParam, rcNull );
     }
-    else if ( self -> body . elem_count > 0 )
-    {   /* not yet supported: mixing name/value and file parameters, or having multiple files */
-        rc = RC ( rcNS, rcNoTarg, rcValidating, rcParam, rcUnsupported );
-    }
     else
     {
         KDirectory *wd;
@@ -928,143 +891,38 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddPostFileParam ( KClientHttpRequest * sel
                 uint64_t fileSize;
                 rc = KFileSize( file, & fileSize );
                 if ( rc == 0 )
-                {
-                    KDataBuffer bodyText;
-                    /* this value will be preceded by "--" when inserted before and after the file's contents */
-                    const size_t BoundarySize = 16;
-                    char boundary[100];
-
-                    /* wrap file contents */
-                    rc = KDataBufferMakeBytes( & bodyText, 0 );
-                    if ( rc == 0 )
+                {   /* encode file contents */
+                    if ( fileSize > 0 )
                     {
-                        size_t contentLength;
-
-                        /* extract fileName from the path */
-                        const char * fileName = strrchr ( path, '/' );
-                        if ( fileName == NULL )
-                        {
-                            fileName = path;
-                        }
-                        else
-                        {
-                            ++ fileName;
-                        }
-
-                        contentLength = 108; /* the constant portion of the body */
-                        contentLength += BoundarySize * 2;
-                        contentLength += strlen( name );
-                        contentLength += strlen( fileName );
-                        contentLength += fileSize;
-
+                        const void * fileStart;
+                        const KMMap * mm;
+                        rc = KMMapMakeRead( & mm, file );
                         if ( rc == 0 )
-                        {   /* append the file contents */
-                            if ( fileSize > 0 )
-                            {
-                                const void * fileStart;
-                                const KMMap * mm;
-                                rc = KMMapMakeRead( & mm, file );
-                                if ( rc == 0 )
-                                {
-                                    rc = KMMapAddrRead( mm, & fileStart );
-                                    GenerateBoundary( fileStart, fileSize, boundary, BoundarySize );
-
-                                    if ( rc == 0 )
-                                    {
-                                        rc = KDataBufferPrintf( &bodyText,
-                                                "--%.*s\r\n"
-                                                "Content-Disposition: form-data; name=\"%s\"; filename=\"%s\"\r\n"
-                                                "Content-Type: application/octet-stream\r\n"
-                                                "\r\n",
-                                                BoundarySize, boundary,
-                                                name,
-                                                fileName );
-                                    }
-
-                                    if ( rc == 0 )
-                                    {
-                                        size_t oldSize = bodyText.elem_count - 1; /* overwrite 0-terminator */
-                                        rc = KDataBufferResize( & bodyText, oldSize + fileSize  + 1);
-                                        if ( rc == 0 )
-                                        {
-                                            memmove( (char*)bodyText.base + oldSize, fileStart, fileSize );
-                                            ((char*)bodyText.base) [ bodyText.elem_count - 1 ] = 0; /* for the subsequent KDataBufferPrintf */
-                                        }
-                                    }
-                                    if ( rc == 0 )
-                                    {
-                                        rc = KDataBufferPrintf( &bodyText,
-                                                "\r\n"
-                                                "--%.*s--\r\n",
-                                                BoundarySize, boundary );
-                                    }
-
-                                    rc2 = KMMapRelease( mm );
-                                    if ( rc == 0 )
-                                    {
-                                        rc = rc2;
-                                    }
-                                }
-                            }
-                            else
-                            {   /* fileSize == 0 */
-                                strncpy ( boundary, "0000000000000000", BoundarySize );
-                                rc = KDataBufferPrintf( &bodyText,
-                                        "--%.*s\r\n"
-                                        "Content-Disposition: form-data; name=\"%s\"; filename=\"%s\"\r\n"
-                                        "Content-Type: application/octet-stream\r\n"
-                                        "\r\n"
-                                        "\r\n"
-                                        "--%.*s--\r\n",
-                                        BoundarySize, boundary,
-                                        name,
-                                        fileName,
-                                        BoundarySize, boundary );
-                            }
-                        }
-
-
-                        if ( rc == 0 )
-                        {   /* append bodyText to self->body */
-                            size_t origSize = self -> body . elem_count;
-                            if ( origSize > 0 )
-                            {   /* add separator */
-                                rc = KDataBufferPrintf ( & self -> body, "&" );
-                            }
-
-                            /* origSize may include 0-terminator */
-                            if ( origSize > 0 && ((char*)self -> body . base) [ origSize - 1 ] == 0 )
-                            {
-                                -- origSize;
-                            }
-                            rc = KDataBufferResize ( & self -> body, origSize + bodyText . elem_count );
+                        {
+                            rc = KMMapAddrRead( mm, & fileStart );
                             if ( rc == 0 )
                             {
-                                memmove( (char*)self -> body . base + origSize, bodyText . base, bodyText . elem_count );
+                                const String * encoded;
+                                rc = encodeBase64( & encoded, fileStart, fileSize );
+                                if ( rc == 0 )
+                                {
+                                    rc = KClientHttpRequestAddPostParam( self, "%s=%S", name, encoded );
+                                    StringWhack ( encoded );
+                                }
+                            }
+
+                            rc2 = KMMapRelease( mm );
+                            if ( rc == 0 )
+                            {
+                                rc = rc2;
                             }
                         }
-
-                        rc2 = KDataBufferWhack ( & bodyText );
-                        if ( rc == 0 )
-                        {
-                            rc = rc2;
-                        }
-
-                        /* set expected header */
-                        if ( rc == 0 )
-                        {
-                            rc = KClientHttpReplaceHeader ( & self -> hdrs,
-                                                            "Content-Type",
-                                                            "multipart/form-data; boundary=%.*s", BoundarySize, boundary );
-                        }
-
-                        if ( rc == 0 )
-                        {
-                            self -> file_attached = true;
-                        }
+                    }
+                    else
+                    {
+                        rc = RC ( rcNS, rcNoTarg, rcValidating, rcParam, rcEmpty );
                     }
                 }
-
 
                 rc2 = KFileRelease( file );
                 if ( rc == 0 )
@@ -1116,8 +974,8 @@ static EUriForm EUriFormGuess ( const String * hostname,
 }
 
 static rc_t KClientHttpRequestFormatMsgBegin (
-    const KClientHttpRequest * self, char * buffer, size_t bsize,
-    const char * method, size_t * len, uint32_t uriForm )
+    const KClientHttpRequest * self, struct KDataBuffer * buffer,
+    const char * method, uint32_t uriForm )
 {
     rc_t rc = 0;
     const char * has_query = NULL;
@@ -1144,7 +1002,7 @@ static rc_t KClientHttpRequestFormatMsgBegin (
     }
     if ( ! http -> proxy_ep )
     {   /* direct connection */
-        rc = string_printf ( buffer, bsize, len,
+        rc = KDataBufferPrintf ( buffer,
                              "%s %S%s%S HTTP/%.2V\r\nHost: %S\r\n"
                              , method
                              , & self -> url_block . path
@@ -1158,8 +1016,8 @@ static rc_t KClientHttpRequestFormatMsgBegin (
         http -> uf = EUriFormGuess ( & hostname, uriForm, http -> uf );
         if ( http -> uf == eUFOrigin ) {
         /* the host does not like absoluteURI: use abs_path ( origin-form ) */
-            rc = string_printf ( buffer, bsize, len,
-                         "%s %S%s%S HTTP/%.2V\r\nHost: %S:%u\r\n"
+            rc = KDataBufferPrintf ( buffer,
+                             "%s %S%s%S HTTP/%.2V\r\nHost: %S:%u\r\n"
                              , method
                              , & self -> url_block . path
                              , has_query
@@ -1170,7 +1028,7 @@ static rc_t KClientHttpRequestFormatMsgBegin (
                 );
         }
         else if ( http -> port != 80 ) { /* absoluteURI: non-default port */
-            rc = string_printf ( buffer, bsize, len,
+            rc = KDataBufferPrintf ( buffer,
                              "%s %S://%S:%u%S%s%S HTTP/%.2V\r\nHost: %S\r\n"
                              , method
                              , & self -> url_block . scheme
@@ -1184,7 +1042,7 @@ static rc_t KClientHttpRequestFormatMsgBegin (
                 );
         }
         else {                           /* absoluteURI: default port */
-            rc = string_printf ( buffer, bsize, len,
+            rc = KDataBufferPrintf ( buffer,
                              "%s %S://%S%S%s%S HTTP/%.2V\r\nHost: %S\r\n"
                              , method
                              , & self -> url_block . scheme
@@ -1293,16 +1151,19 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
                         cloud, self);
                 CloudRelease ( cloud );
             }
-            CloudMgrRelease ( cloudMgr );
         }
     }
+
+    if ( cloudMgr != cself->http->mgr->cloud )
+        CloudMgrRelease ( cloudMgr );
+
     return rc;
 }
 
 static
 rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
-    char *buffer, size_t bsize, const char *method,
-    size_t *len, uint32_t uriForm )
+    struct KDataBuffer * buffer, const char *method,
+    uint32_t uriForm )
 {
     rc_t rc;
     rc_t r2 = 0;
@@ -1310,21 +1171,13 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
     bool have_accept = false;
     String user_agent_string;
     String accept_string;
-    size_t total;
-    char * buf_end = buffer;
-    size_t p_bsize = 0;
     const KHttpHeader *node;
-    size_t dummy;
 
     if ( self == NULL ) {
          return RC ( rcNS, rcNoTarg, rcReading, rcSelf, rcNull );
     }
     if ( buffer == NULL ) {
          return RC ( rcNS, rcNoTarg, rcReading, rcParam, rcNull );
-    }
-
-    if ( len == NULL ) {
-        len = & dummy;
     }
 
     CONST_STRING ( &user_agent_string, "User-Agent" );
@@ -1342,20 +1195,11 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
        We are inlining the host:port, instead of
        sending it in its own header */
 
-    rc = KClientHttpRequestFormatMsgBegin
-        ( self, buffer, bsize, method, len, uriForm );
+    rc = KClientHttpRequestFormatMsgBegin( self, buffer, method, uriForm );
 
     /* print all headers remaining into buffer */
-    total = * len;
-    if ( rc == 0 )
-    {
-        buf_end += * len;
-    }
     for ( node = ( const KHttpHeader* ) BSTreeFirst ( & self -> hdrs );
-          ( rc == 0  ||
-            ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
-              GetRCState ( rc ) == rcInsufficient )
-          ) && node != NULL;
+          rc == 0 && node != NULL;
           node = ( const KHttpHeader* ) BSTNodeNext ( & node -> dad ) )
     {
         /* look for "User-Agent" */
@@ -1370,21 +1214,10 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
                 have_accept = true;
         }
 
-        p_bsize = bsize >= total ? bsize - total : 0;
-
         /* add header line */
-        r2 = string_printf ( buf_end, p_bsize, len,
-                             "%S: %S\r\n"
-                             , & node -> name
-                             , & node -> value );
-        total += * len;
-        if ( r2 == 0 )
-        {
-            buf_end += * len;
-        }
-        if ( rc == 0 ) {
-            rc = r2;
-        }
+        rc = KDataBufferPrintf ( buffer, "%S: %S\r\n"
+                                , & node -> name
+                                , & node -> value );
     }
 
     /* add an User-Agent header from the kns-manager if we did not find one already in the header tree */
@@ -1394,14 +1227,7 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
         rc_t r3 = KNSManagerGetUserAgent ( &ua );
         if ( r3 == 0 )
         {
-            p_bsize = bsize >= total ? bsize - total : 0;
-            r2 = string_printf ( buf_end,
-                p_bsize, len, "User-Agent: %s\r\n", ua );
-            total += * len;
-            if ( r2 == 0 )
-            {
-                buf_end += * len;
-            }
+            r2 = KDataBufferPrintf ( buffer, "User-Agent: %s\r\n", ua );
             if ( rc == 0 )
             {
                 rc = r2;
@@ -1410,59 +1236,34 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
     }
 
     if (!have_accept) {
-        r2 = string_printf(buf_end, p_bsize, len, "Accept: */*\r\n");
-        total += * len;
-        if ( r2 == 0 )
-        {
-            buf_end += * len;
-        }
+        r2 = KDataBufferPrintf(buffer, "Accept: */*\r\n");
         if (rc == 0 && r2 != 0)
             rc = r2;
     }
 
     /* add terminating empty header line */
-    if ( rc == 0 ||
-        ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
-          GetRCState ( rc ) == rcInsufficient ) )
+    if ( rc == 0 )
     {
-        p_bsize = bsize >= total ? bsize - total : 0;
-        r2 = string_printf ( buf_end, p_bsize, len, "\r\n" );
-        total += * len;
-        if ( r2 == 0 )
-        {
-            buf_end += * len;
-        }
-        if ( rc == 0 )
-        {
-            rc = r2;
-        }
+        rc = KDataBufferPrintf ( buffer, "\r\n" );
     }
-
-    if ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
-        GetRCState ( rc ) == rcInsufficient )
-    {
-        ++ total;
-    }
-
-    * len = total;
 
     return rc;
 }
 
 LIB_EXPORT
 rc_t CC KClientHttpRequestFormatMsg(const KClientHttpRequest *self,
-    char *buffer, size_t bsize, const char *method, size_t *len)
+    struct KDataBuffer * buffer, const char *method)
 {
     return KClientHttpRequestFormatMsgInt(self,
-        buffer, bsize, method, len, 1);
+        buffer, method, 1);
 }
 
 LIB_EXPORT
 rc_t CC KClientHttpRequestFormatPostMsg(const KClientHttpRequest *self,
-    char *buffer, size_t bsize, size_t *len)
+    struct KDataBuffer * buffer)
 {
     return KClientHttpRequestFormatMsgInt(self,
-        buffer, bsize, "POST", len, 0);
+        buffer, "POST", 0);
 }
 
 static
@@ -1567,21 +1368,24 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
 
         KClientHttpResult *rslt;
 
-        size_t len;
-        char buffer [ 4096 ];
+        KDataBuffer buffer;
+        rc = KDataBufferMake( & buffer, 8, 0 );
+        if ( rc != 0 )
+            break;
 
         /* create message */
-        rc = KClientHttpRequestFormatMsgInt ( self, buffer, sizeof buffer,
-                method, & len, uriForm );
+        rc = KClientHttpRequestFormatMsgInt ( self, & buffer, method, uriForm );
         if ( rc != 0 )
             break;
 
         /* send the message and create a response */
-        rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer, len, NULL, self -> url_buffer . base );
+        rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer.base,
+            buffer.elem_count - 1, NULL, self -> url_buffer . base );
         if ( rc != 0 )
         {
             KClientHttpClose ( self -> http );
-            rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer, len, NULL, self -> url_buffer . base );
+            rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer.base,
+                buffer.elem_count - 1, NULL, self -> url_buffer . base );
             if ( rc != 0 )
                 break;
         }
@@ -1695,58 +1499,49 @@ rc_t KClientHttpRequestSendReceiveNoBody ( KClientHttpRequest *self, KClientHttp
  */
 LIB_EXPORT rc_t CC KClientHttpRequestHEAD ( KClientHttpRequest *self, KClientHttpResult **rslt )
 {
+    rc_t rc=0;
+
     if ( self -> ceRequired || self -> payRequired )
     {   /* use POST or GET for 256 bytes */
-
         /* update UserAgent with -head */
-        const char * user_agent;
-        rc_t rc = KNSManagerGetUserAgent ( & user_agent );
+        KNSManagerSetUserAgentSuffix("-head");
+
+        char buf [ 256 ];
+
+        /* add header "Range bytes = 0,HeadSize" */
+        rc = KClientHttpRequestByteRange ( self, 0, sizeof buf );
         if ( rc == 0 )
         {
-            char * user_agent_saved = string_dup ( user_agent, string_size( user_agent ) );
-            if ( user_agent_saved != NULL )
+            rc = self -> ceRequired ? KClientHttpRequestPOST ( self, rslt ) : KClientHttpRequestGET ( self, rslt );
+            if ( rc == 0 )
             {
-                #define HeadSize 256
-                KNSManagerSetUserAgent ( (KNSManager*)self->http->mgr, "%s-head", user_agent );
+                uint64_t result_size64 = sizeof buf;
+                KStream * response;
 
-                /* add header "Range bytes = 0,HeadSize" */
-                rc = KClientHttpRequestByteRange ( self, 0, HeadSize );
-                if ( rc == 0 )
+                /* extractSize */
+                KClientHttpResultSize ( *rslt, & result_size64 );
+
+                if ( result_size64 > sizeof buf ) /* unlikely but would be very unpleasant */
                 {
-                    rc = self -> ceRequired ? KClientHttpRequestPOST ( self, rslt ) : KClientHttpRequestGET ( self, rslt );
-                    if ( rc == 0 )
-                    {
-                        char buf [ HeadSize ];
-                        uint64_t result_size64 = sizeof buf;
-                        KStream * response;
-
-                        /* extractSize */
-                        KClientHttpResultSize ( *rslt, & result_size64 );
-
-                        if ( result_size64 > sizeof buf ) /* unlikely but would be very unpleasant */
-                        {
-                            result_size64 = sizeof buf;
-                        }
-
-                        /* consume and discard result_size64 bytes */
-                        rc = KClientHttpResultGetInputStream ( *rslt, & response );
-                        if ( rc == 0 )
-                        {
-                            rc = KStreamTimedReadExactly ( response, buf, result_size64, NULL );
-                            KStreamRelease ( response );
-                        }
-                    }
+                    result_size64 = sizeof buf;
                 }
 
-                KNSManagerSetUserAgent ( (KNSManager*)self->http->mgr, "%s", user_agent_saved );
-                #undef HeadSize
-                free ( user_agent_saved );
-            }
-            else
-            {
-                rc = RC ( rcNS, rcString, rcAllocating, rcMemory, rcExhausted );
+                /* consume and discard result_size64 bytes */
+                rc = KClientHttpResultGetInputStream ( *rslt, & response );
+                if ( rc == 0 )
+                {
+                    rc = KStreamTimedReadExactly ( response, buf, result_size64, NULL );
+                    KStreamRelease ( response );
+                }
             }
         }
+        else
+        {
+            rc = RC ( rcNS, rcString, rcAllocating, rcMemory, rcExhausted );
+        }
+
+        /* Restore UserAgent */
+        KNSManagerSetUserAgentSuffix("");
         return rc;
     }
     else
@@ -1812,32 +1607,41 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
     for ( i = 0; i < max_redirect; ++ i )
     {
         const KDataBuffer *body = & self -> body;
-        size_t len;
-        char buffer [ 4096 ];
-
-        /* create message */
-        rc = KClientHttpRequestFormatMsgInt ( self, buffer, sizeof buffer,
-                                           method, & len, 0 );
+        KDataBuffer buffer;
+        rc = KDataBufferMake( & buffer, 8, 0 );
         if ( rc != 0 )
             break;
 
-        /* Try to add body to buffer to avoid double socket write */
-        if (body != NULL && body -> base != NULL && body -> elem_count > 0 &&
-                len + body -> elem_count - 1 <= sizeof buffer)
+        /* create message */
+        rc = KClientHttpRequestFormatMsgInt ( self, & buffer, method, 0 );
+        if ( rc != 0 )
         {
-            memmove(buffer + len, body -> base, body -> elem_count - 1);
-            len += body -> elem_count - 1;
-            body = NULL;
+            KDataBufferWhack( & buffer );
+            break;
+        }
+
+        if (body != NULL && body -> base != NULL && body -> elem_count > 0 )
+        {   /* Try to add body to buffer to avoid double socket write */
+            uint64_t len = buffer.elem_count;
+            rc = KDataBufferResize( & buffer, buffer.elem_count + body -> elem_count - 1 );
+            if ( rc == 0 )
+            {   // insert before 0-terminator
+                memmove( (char*)buffer.base + len - 1, body -> base, body -> elem_count );
+                body = NULL;
+            }
         }
 
         /* send the message and create a response */
-        rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer, len, body, self -> url_buffer . base );
+        rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer.base, buffer.elem_count, body, self -> url_buffer . base );
         if ( rc != 0 )
         {
             KClientHttpClose ( self -> http );
-            rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer, len, NULL, self -> url_buffer . base );
-            if ( rc != 0 )
-                break;
+            rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer.base, buffer.elem_count, NULL, self -> url_buffer . base );
+        }
+        KDataBufferWhack( & buffer );
+        if ( rc != 0 )
+        {
+            break;
         }
 
         rslt = * _rslt;

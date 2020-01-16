@@ -35,13 +35,14 @@
 #include <kns/kns-mgr-priv.h>
 
 #include <../libs/kns/http-priv.h>
+#include <../libs/vfs/resolver-cgi.h> /* SDL_CGI */
 
 #include <kapp/args.h> // Args
 
 #include <ktst/unit_test.hpp>
 
 static rc_t argsHandler ( int argc, char * argv [] );
-TEST_SUITE_WITH_ARGS_HANDLER ( HttpRequestTestSuite, argsHandler );
+TEST_SUITE_WITH_ARGS_HANDLER ( HttpRequestVerifyURLSuite, argsHandler );
 
 using namespace std;
 using namespace ncbi::NK;
@@ -62,13 +63,15 @@ public:
 
     string FormatRequest()
     {
-        char buffer[4096] = "";
-        size_t len;
-        if ( KClientHttpRequestFormatPostMsg(m_req, buffer, sizeof buffer, & len) != 0 )
+        KDataBuffer buffer;
+        THROW_ON_RC( KDataBufferMake( & buffer, 8, 0 ) );
+        if ( KClientHttpRequestFormatPostMsg(m_req, & buffer) != 0 )
         {
             throw logic_error( "HttpRequestFixture::FormatRequest(): KClientHttpRequestFormatPostMsg() failed" );
         }
-        return string ( buffer, len );
+        string ret = string ( (char*)buffer.base, buffer.elem_count );
+        THROW_ON_RC( KDataBufferWhack( &buffer ) );
+        return ret;
     }
 
     string m_url;
@@ -86,10 +89,10 @@ FIXTURE_TEST_CASE(HttpRequest_POST_NoParams, HttpRequestFixture)
 
 // KClientHttpRequestAddQueryParam
 
-class HttpRequestTest : public SharedTest
+class HttpRequestVerifyURL : public SharedTest
 {
 public:
-    HttpRequestTest( TestCase * dad, KClientHttpRequest * req, string expectedUrl )
+    HttpRequestVerifyURL( TestCase * dad, KClientHttpRequest * req, string expectedUrl )
     : SharedTest ( dad, "" )
     {
         KDataBuffer rslt;
@@ -121,7 +124,7 @@ FIXTURE_TEST_CASE(HttpRequestAddQueryParam_First, HttpRequestFixture)
     MakeRequest( GetName() );
     REQUIRE_RC ( KClientHttpRequestAddQueryParam ( m_req, "name", "value" ) );
 
-    HttpRequestTest ( this, m_req, m_url + "?name=value" );
+    HttpRequestVerifyURL ( this, m_req, m_url + "?name=value" );
 }
 FIXTURE_TEST_CASE(HttpRequestAddQueryParam_Second, HttpRequestFixture)
 {
@@ -129,37 +132,47 @@ FIXTURE_TEST_CASE(HttpRequestAddQueryParam_Second, HttpRequestFixture)
     REQUIRE_RC ( KClientHttpRequestAddQueryParam ( m_req, "name1", "value1" ) );
     REQUIRE_RC ( KClientHttpRequestAddQueryParam ( m_req, "name2", "value2" ) );
 
-    HttpRequestTest ( this, m_req, m_url + "?name1=value1&name2=value2" );
+    HttpRequestVerifyURL ( this, m_req, m_url + "?name1=value1&name2=value2" );
 }
 FIXTURE_TEST_CASE(HttpRequestAddQueryParam_NameNull, HttpRequestFixture)
 {
     MakeRequest( GetName() );
     REQUIRE_RC ( KClientHttpRequestAddQueryParam ( m_req, NULL, "value" ) );
 
-    HttpRequestTest ( this, m_req, m_url + "?value" );
+    HttpRequestVerifyURL ( this, m_req, m_url + "?value" );
 }
 FIXTURE_TEST_CASE(HttpRequestAddQueryParam_NameEmpty, HttpRequestFixture)
 {
     MakeRequest( GetName() );
     REQUIRE_RC ( KClientHttpRequestAddQueryParam ( m_req, "", "value" ) );
 
-    HttpRequestTest ( this, m_req, m_url + "?value" );
+    HttpRequestVerifyURL ( this, m_req, m_url + "?value" );
 }
 FIXTURE_TEST_CASE(HttpRequestAddQueryParam_URL_encoding, HttpRequestFixture)
 {
     MakeRequest( GetName() );
     REQUIRE_RC ( KClientHttpRequestAddQueryParam ( m_req, "", "value & \x1f" "a" "\x7f space \x81" ) );
 
-    HttpRequestTest ( this, m_req, m_url + "?value%20%26%20%1fa%7f%20space%20%81" );
+    HttpRequestVerifyURL ( this, m_req, m_url + "?value%20%26%20%1fa%7f%20space%20%81" );
 }
 
 FIXTURE_TEST_CASE(HttpRequestAddHeader, HttpRequestFixture)
 {
     MakeRequest( GetName() );
     REQUIRE_RC( KClientHttpRequestAddHeader(m_req, "Accept", "text/html") );
-    char buffer[4096] = "";
-    REQUIRE_RC( KClientHttpRequestFormatMsg(m_req, buffer, sizeof buffer, "HEAD", NULL) );
-    REQUIRE( strstr(buffer, "Accept: */*") == NULL) ;
+    KDataBuffer buffer;
+    THROW_ON_RC( KDataBufferMake( & buffer, 8, 0 ) );
+    REQUIRE_RC( KClientHttpRequestFormatMsg(m_req, & buffer, "HEAD") );
+    REQUIRE( strstr((char*)buffer.base, "Accept: */*") == NULL) ;
+    REQUIRE_RC ( KDataBufferWhack( &buffer ) );
+}
+
+// KClientHttpRequestAddPostParam
+FIXTURE_TEST_CASE(RequestAddPostParam, HttpRequestFixture)
+{
+    MakeRequest( GetName() );
+    REQUIRE_RC ( KClientHttpRequestAddPostParam ( m_req, "acc=%s", "SRR2043623" ) );
+    REQUIRE_EQ ( string ("acc=SRR2043623"),  string ( KClientHttpRequestGetBody( m_req ) ) );
 }
 
 // KClientHttpRequestAddPostFileParam
@@ -193,76 +206,28 @@ FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_FileMissing, HttpRequestFixture)
 FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_EmptyFile, HttpRequestFixture)
 {
     MakeRequest( GetName() );
-    REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name", "data/empty-file-to-post.txt" ) );
-
-    // boundaries contain random numbers, so we do not try to match them
-    const char * expectedReq = "Content-Type: multipart/form-data; boundary=";
-    const string req = FormatRequest();
-
-//cout << "req=\"" << req << "\"" << endl;
-    REQUIRE_NE( string::npos, req.find( expectedReq ) ) ;
-
-    const string body = KClientHttpRequestGetBody( m_req );
-//cout << "body=\"" << body << "\"" << endl;
-
-    const char * expectedBody =
-        "\r\n"
-        "Content-Disposition: form-data; name=\"name\"; filename=\"empty-file-to-post.txt\"\r\n"
-        "Content-Type: application/octet-stream\r\n"
-        "\r\n"
-        "\r\n"
-        "--";
-
-    REQUIRE_NE( string::npos, body.find( expectedBody ) ) ;
+    REQUIRE_RC_FAIL ( KClientHttpRequestAddPostFileParam ( m_req, "name", "data/empty-file-to-post.txt" ) );
 }
 
 FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_NonEmptyFile, HttpRequestFixture)
 {
     MakeRequest( GetName() );
     REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name", "data/file-to-post.txt" ) );
-
-    // boundaries contain random numbers, so we do not try to match them
-    const char * expectedReq = "Content-Type: multipart/form-data; boundary=";
-    const string req = FormatRequest();
-
-//cout << "req=\"" << req << "\"" << endl;
-    REQUIRE_NE( string::npos, req.find( expectedReq ) ) ;
-
-    const string body = KClientHttpRequestGetBody( m_req );
-//cout << "body=\"" << body << "\"" << endl;
-
-    const char * expectedBody =
-        "Content-Disposition: form-data; name=\"name\"; filename=\"file-to-post.txt\"\r\n"
-        "Content-Type: application/octet-stream\r\n"
-        "\r\n"
-        "contents of the file\n\n"
-        "\r\n"
-        "--";
-
-    REQUIRE_NE( string::npos, body.find( expectedBody ) ) ;
+    REQUIRE_EQ ( string ("name=Y29udGVudHMgb2YgdGhlIGZpbGUKCg=="),
+                 string ( KClientHttpRequestGetBody( m_req ) ) );
 }
 
 FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_SendReceive, HttpRequestFixture)
 {
-    const char * Server = "https://trace.ncbi.nlm.nih.gov/Traces/sdl/unstable/retrieve";
+    const char * Server = SDL_CGI;
 
     REQUIRE_RC ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, NULL, Server ) );
 
     REQUIRE_RC ( KClientHttpRequestAddQueryParam ( m_req, "acc", "SRR2043623" ) );
+    REQUIRE_RC ( KClientHttpRequestAddQueryParam ( m_req, "filetype", "run" ) );
     REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "ngc", "data/prj_phs710EA_test.ngc" ) );
 
-// cout << "req=\"" << FormatRequest() << "\"" << endl;
-
-// cout << "body=\"" ;
-// for (auto i=0u; i < m_req->body.elem_count; ++i)
-// {
-//     unsigned char ch = ((unsigned char*)(m_req->body.base))[i];
-//     if ( ch < 32u || ch >127u )
-//         cout << ".";
-//     else
-//         cout << ch;
-// }
-// cout << "\"" << endl;
+//cout << "req=\"" << FormatRequest() << "\"" << endl;
 
     KClientHttpResult *rslt;
     REQUIRE_RC ( KClientHttpRequestPOST ( m_req, & rslt ) );
@@ -270,42 +235,28 @@ FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_SendReceive, HttpRequestFixture)
     char buf[1024];
     size_t msg_size;
     REQUIRE_RC ( KClientHttpResultStatus ( rslt, & code, buf, sizeof buf, & msg_size ) );
-//cout << "buf=\"" << buf << "\"" << endl;
-
     REQUIRE_EQ ( 200u, code );
-
-//     struct KStream  * s;
-//     REQUIRE_RC ( KClientHttpResultGetInputStream ( rslt, & s ) );
-//     char b[4096];
-//     size_t num_read;
-//     REQUIRE_RC ( KStreamReadAll ( s, b, sizeof b, &num_read ) );
-// cout << "data=\"" << string(b, num_read) << "\"" << endl;
-
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
 }
 
-// temporarily disallow mixing name/value and file paramaters for POST requests
-FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_MixedPOSTparams_1, HttpRequestFixture)
+FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_MixedPOSTparams, HttpRequestFixture)
 {
     MakeRequest( GetName() );
 
-    REQUIRE_RC ( KClientHttpRequestAddPostParam ( m_req, "acc", "SRR2043623" ) );
-    REQUIRE_RC_FAIL ( KClientHttpRequestAddPostFileParam ( m_req, "name", "data/file-to-post.txt" ) );
-}
-FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_MixedPOSTparams_2, HttpRequestFixture)
-{
-    MakeRequest( GetName() );
-
+    REQUIRE_RC ( KClientHttpRequestAddPostParam ( m_req, "acc=%s", "SRR2043623" ) );
     REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name", "data/file-to-post.txt" ) );
-    REQUIRE_RC_FAIL ( KClientHttpRequestAddPostParam ( m_req, "acc", "SRR2043623" ) );
+    // the file goes into the body
+    REQUIRE_EQ ( string ("acc=SRR2043623&name=Y29udGVudHMgb2YgdGhlIGZpbGUKCg=="),
+                 string ( KClientHttpRequestGetBody( m_req ) ) );
 }
 
 FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_POSTmultipleFiles, HttpRequestFixture)
-{   // not yet suporting multiple file parameters for POST requests
+{
     MakeRequest( GetName() );
 
-    REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name", "data/file-to-post.txt" ) );
-    REQUIRE_RC_FAIL ( KClientHttpRequestAddPostFileParam ( m_req, "name", "data/empty-file-to-post.txt" ) );
+    REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name1", "data/file-to-post.txt" ) );
+    REQUIRE_RC ( KClientHttpRequestAddPostFileParam ( m_req, "name2", "data/prj_phs710EA_test.ngc" ) );
+    //TODO: verify body
 }
 
 //////////////////////////
@@ -416,7 +367,7 @@ rc_t CC KMain ( int argc, char *argv [] )
 	// (same as running the executable with "-l=message")
 	// TestEnv::verbosity = LogLevel::e_message;
 
-    rc_t rc=HttpRequestTestSuite(argc, argv);
+    rc_t rc=HttpRequestVerifyURLSuite(argc, argv);
     return rc;
 }
 

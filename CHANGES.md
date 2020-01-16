@@ -1,6 +1,12 @@
 # NCBI External Developer Release:
 
 
+## NCBI VDB 2.10.1
+**December 16, 2019**
+
+  **vfs**: fixed generation of unique file name when caching
+
+
 ## NCBI VDB 2.10.0
 **August 19, 2019**
 

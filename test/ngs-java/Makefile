@@ -40,18 +40,22 @@ include $(TOP)/build/Makefile.env
 ifeq (,$(NGS_JAVA_JAR))
 
 $(ALL_TARGS):
-	@true 
-	
-runtests:
+	@true
+
+runtests: no-library
+
+no-library:
 	@ echo "NGS Java tests are not run since ngs-java library does not appear to be installed"
 
 else
 ifeq (,$(NGS_LIBDIR))
 
 $(ALL_TARGS):
-	@true 
-	
-runtests:
+	@true
+
+runtests: no-library
+
+no-library:
 	@ echo "NGS Java tests are not run since ngs-sdk library does not appear to be installed"
 
 else
@@ -63,20 +67,20 @@ CLASSPATH = $(NGS_JAVA_JAR):$(JUNIT_JAR)
 $(JARS): makejdirs
 	@ $(MAKE_CMD) $(TEST_CLSPATH)/$@
 
-.PHONY: $(JARS)
+.PHONY: $(JARS) no-library
 
 clean: stdclean
 
 %.class: %.java
 	javac $^ -d $(CLASSDIR) -classpath $(CLASSPATH)
-    
+
 #-------------------------------------------------------------------------------
 # tests for ncbi-ngs
 #
 NGS_SRC = \
 	ngs_test_lib_load \
 	ngs_test_CSRA1
-    
+
 NGS_CLS = \
 	$(addsuffix .class,$(NGS_SRC))
 
@@ -101,27 +105,30 @@ $(TEST_CLSPATH)/ngs_jtest: $(NGS_CLS)
 # runtests
 #
 
-runtests: $(JARS) test
+runtests: test
 
-JAVABITS=-d$(BITS)
+# only specify the -d flag if this version of Java supports it
+ifeq ($(shell java -d$(BITS) 2>/dev/null >/dev/null; echo \$?),0)
+    JAVABITS=-d$(BITS)
+endif
 
 # make sure runs are not cached in the user repository when running tests
 ifeq ($(wildcard ../../../asm-trace),)
-	ifeq (,$(VDB_CONFIG))
-		VDB_CONFIG = $(shell pwd)/../only-remote-repository.kfg
-	endif
+    ifeq (,$(VDB_CONFIG))
+    	VDB_CONFIG = $(shell pwd)/../only-remote-repository.kfg
+    endif
 endif
 
-test: $(NGS_CLS)
+test: $(JARS) $(NGS_CLS)
 	@ echo Run $(CLASSDIR)/$(NGS_SRC)
-	@ echo java $(JAVABITS) -cp $(CLASSDIR):$(CLASSPATH) -Dvdb.System.loadLibrary=1 -Djava.library.path=$(NGS_LIBDIR):$(LIBDIR) org.junit.runner.JUnitCore gov.nih.nlm.ncbi.ngs.ngs_test_lib_load
+	@ echo java $(JAVABITS) -cp $(CLASSDIR):$(CLASSPATH) $(VARS) -Djava.library.path=$(NGS_LIBDIR):$(LIBDIR) org.junit.runner.JUnitCore gov.nih.nlm.ncbi.ngs.ngs_test_lib_load
 	@ export VDB_CONFIG=$(VDB_CONFIG) ; \
-		java $(JAVABITS) -cp $(CLASSDIR):$(CLASSPATH) -Dvdb.System.loadLibrary=1 -Djava.library.path=$(NGS_LIBDIR):$(LIBDIR) org.junit.runner.JUnitCore gov.nih.nlm.ncbi.ngs.ngs_test_lib_load
-	@ echo java $(JAVABITS) -cp $(CLASSDIR):$(CLASSPATH) -Dvdb.System.loadLibrary=1 -Djava.library.path=$(NGS_LIBDIR):$(LIBDIR) org.junit.runner.JUnitCore ngs_test_CSRA1
+		java $(JAVABITS) -cp $(CLASSDIR):$(CLASSPATH) $(VARS) -Djava.library.path=$(NGS_LIBDIR):$(LIBDIR) org.junit.runner.JUnitCore gov.nih.nlm.ncbi.ngs.ngs_test_lib_load
+	@ echo java $(JAVABITS) -cp $(CLASSDIR):$(CLASSPATH) $(VARS) -Djava.library.path=$(NGS_LIBDIR):$(LIBDIR) org.junit.runner.JUnitCore ngs_test_CSRA1
 	@ export VDB_CONFIG=$(VDB_CONFIG) ; NCBI_SETTINGS=/ \
-	  java $(JAVABITS) -cp $(CLASSDIR):$(CLASSPATH) -Dvdb.System.loadLibrary=1 \
+	  java $(JAVABITS) -cp $(CLASSDIR):$(CLASSPATH) $(VARS) \
 	    -Djava.library.path=$(NGS_LIBDIR):$(LIBDIR) org.junit.runner.JUnitCore \
-	    ngs_test_CSRA1  
+	    ngs_test_CSRA1
 
-endif    
+endif
 endif

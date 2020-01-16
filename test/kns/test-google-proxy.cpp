@@ -38,7 +38,8 @@
 
 #include <../../libs/kns/mgr-priv.h> /* KNSManager */
 
-TEST_SUITE ( GoogleProxyTestSuite )
+static rc_t argsHandler(int argc, char * argv[]);
+TEST_SUITE_WITH_ARGS_HANDLER(GoogleProxyTestSuite, argsHandler)
 
 static KConfig * KFG = NULL;
 
@@ -104,7 +105,8 @@ TEST_CASE ( GoogleProxyTest ) {
     if (http_proxy != NULL)
     {
         REQUIRE_RC ( KNSManagerMakeHttpFile ( mgr, & file, NULL, 0x01010000,
-            "http://www.baidu.com/" ) );
+            "http://sra-download-nfs.be-md.ncbi.nlm.nih.gov"
+                "/traces/sra57/SRR/000052/SRR053325" ) );
 
         char buffer [ 256 ] = "";
         size_t num_read = 0;
@@ -154,9 +156,9 @@ TEST_CASE ( KClientHttpRequestPOSTTest )
     REQUIRE_RC(KHttpRequestAddPostParam(req, "version=1.2"));
 
     KHttpResult * rslt = NULL;
-    /* POST: format HTTP request in KClientHttpRequestFormatMsgBegin using
-       absoluteURI form of Request-URI
-       ( https://tools.ietf.org/html/rfc2616#section-5.1.2 ) */
+/* POST: format HTTP request in KClientHttpRequestFormatMsgBegin using
+    absoluteURI form of Request-URI
+    ( https://tools.ietf.org/html/rfc2616#section-5.1.2 ) */
     REQUIRE_RC ( KHttpRequestPOST ( req, & rslt ) );
 
     REQUIRE_RC ( KHttpResultRelease ( rslt ) );
@@ -166,13 +168,30 @@ TEST_CASE ( KClientHttpRequestPOSTTest )
     REQUIRE_RC ( KNSManagerRelease ( mgr ) );
 }
 
+#include <kapp/args.h> // Args
+static rc_t argsHandler(int argc, char * argv[]) {
+    Args * args = NULL;
+    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
+    ArgsWhack(args);
+    return rc;
+}
+
 extern "C" {
+    const char UsageDefaultName[] = "test-google-proxy";
+    rc_t CC UsageSummary(const char     * progname) { return 0; }
+    rc_t CC Usage(const struct Args * args) { return 0; }
+
     ver_t CC KAppVersion ( void ) { return 0; }
 
     rc_t CC KMain ( int argc, char * argv [] ) { if (
 0 ) assert ( ! KDbgSetString ( "KNS-DNS"   ) );   if (
 0 ) assert ( ! KDbgSetString ( "KNS-HTTP"  ) );   if (
-0 ) assert ( ! KDbgSetString ( "KNS-PROXY" ) );
+0 ) assert ( ! KDbgSetString ( "KNS-PROXY" ) );   if (
+0 )     ncbi::NK::TestEnv::verbosity = ncbi::NK::LogLevel::E::e_all;
+
+#if _DEBUGGING
+        if ( 0 )     KStsLevelSet ( 5 );
+#endif
 
         rc_t rc = KConfigMakeEmpty ( & KFG );
 

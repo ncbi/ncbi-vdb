@@ -504,15 +504,46 @@ static const String * make_id( const VPath * path )
     /* if we have no id now, as a last resort use a timestamp */
     if ( res == NULL )
     {
+        size_t num_writ = 0;
+        char buffer [ 4096 ];
+        static atomic32_t counter;
+#ifdef _WIN32
         KTime_t t = KTimeStamp();
-        char buffer[ 32 ];
-        size_t num_writ;
-        rc = string_printf ( buffer, sizeof buffer, &num_writ, "t_%lu", t );
+        rc = string_printf ( buffer, sizeof buffer, &num_writ
+                             , "t_%lu.%u"
+                             , t
+                             , atomic32_read_and_add ( & counter, 1 )
+            );
+#else
+        uint32_t sys_GetPID ( void );
+        uint32_t pid = sys_GetPID ();
+        int sys_GetHostName ( char * buffer, size_t buffer_size );
+        int status = sys_GetHostName ( buffer, sizeof buffer );
+        if ( status != 0 )
+        {
+            KTime_t t = KTimeStamp();
+            rc = string_printf ( buffer, sizeof buffer, &num_writ
+                                 , "t%u_%lu.%u"
+                                 , pid
+                                 , t
+                                 , atomic32_read_and_add ( & counter, 1 )
+                );
+        }
+        else
+        {
+            num_writ = strlen ( buffer );
+            rc = string_printf ( & buffer [ num_writ ], sizeof buffer - num_writ, &num_writ
+                                 , "-%u.%u"
+                                 , pid
+                                 , atomic32_read_and_add ( & counter, 1 )
+                );
+        }
+#endif
         if ( rc == 0 )
         {
             String S;
             StringInitCString( &S, buffer );
-            rc = StringCopy ( &res, &path_id );    
+            rc = StringCopy ( &res, &S );
         }
     }
     return res;
@@ -1077,7 +1108,8 @@ static rc_t VFSManagerResolvePathResolver (const VFSManager * self,
          */
         if ((flags & vfsmgr_rflag_no_acc_local) == 0)
         {
-            rc = VResolverLocal (self->resolver, in_path, (const VPath **)out_path);
+            rc = VResolverQuery(self->resolver, 0, in_path,
+                (const VPath **)out_path, NULL, NULL);
             if (rc == 0)
                 not_done = false;
         }

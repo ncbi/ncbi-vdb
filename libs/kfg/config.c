@@ -99,9 +99,9 @@ static const char default_kfg[] = {
 "/repository/remote/protected/CGI/resolver-cgi = "
              "\"https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi\"\n"
 "/repository/remote/main/SDL.2/resolver-cgi = "
-             "\"https://trace.ncbi.nlm.nih.gov/Traces/sdl/2/retrieve\"\n"
+             "\"https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve\"\n"
 "/repository/remote/protected/SDL.2/resolver-cgi = "
-             "\"https://trace.ncbi.nlm.nih.gov/Traces/sdl/2/retrieve\"\n"
+             "\"https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve\"\n"
 "/tools/ascp/max_rate = \"450m\"\n"
 };
 /*----------------------------------------------------------------------------*/
@@ -3278,7 +3278,7 @@ static rc_t _KConfigCheckAd(KConfig * self) {
            when it does not exist */
         if (rc == 0)
             rc = KConfigWriteString(self,
-                "/repository/user/ad/public/apps/file/volumes/flat", ".");
+                "/repository/user/ad/public/apps/file/volumes/flatAd", ".");
         if (rc == 0)
             rc = KConfigWriteString(self,
                 "/repository/user/ad/public/apps/sra/volumes/sraAd", ".");
@@ -3436,11 +3436,32 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
 
             if ( rc == 0 )
             {
-                if ( ! local ) {
-                    atomic_test_and_set_ptr ( & G_kfg, mgr, NULL );
+                if ( local )
+                {
+                    * cfg = mgr;
                 }
-                * cfg = mgr;
-                return 0;
+                else
+                {
+                    KConfig * prev = atomic_test_and_set_ptr ( & G_kfg, mgr, NULL );
+                    if ( prev != NULL )
+                    {
+                        /* the global singleton was already instantiated: hand out that one */
+                        rc = KConfigAddRef ( G_kfg.ptr );
+                        if ( rc == 0 )
+                        {
+                            * cfg = G_kfg . ptr;
+                        }
+                        /* and we have to deallocate the object we just made! */
+                        KConfigEmpty ( mgr );
+                        free( ( void * ) mgr);
+                    }
+                    else
+                    {
+                        * cfg = mgr;
+                    }
+                        
+                }
+                return rc;
             }
 
             KConfigWhack ( mgr );
