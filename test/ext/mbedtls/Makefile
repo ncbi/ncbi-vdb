@@ -22,31 +22,37 @@
 #
 # ===========================================================================
 
-by_default: runtests
+default: runtests
 
-TOP ?= $(abspath ../..)
-MODULE = test/ext
+TOP ?= $(abspath ../../..)
 
-include $(TOP)/build/Makefile.shell
+MODULE = test/ext/mbedtls
 
-include $(TOP)/build/Makefile.config
+TEST_TOOLS = \
+	test-mbedtls
+
+include $(TOP)/build/Makefile.env
+
+$(TEST_TOOLS): makedirs
+	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
+
+.PHONY: $(TEST_TOOLS)
+
+clean: stdclean
 
 #-------------------------------------------------------------------------------
-# default
+# test-mbedtls
 #
-SUBDIRS = \
-	mbedtls
+TEST_MBEDTLS_SRC = \
+	test-mbedtls
 
-# The libmagic tests (and copycat which is the only user of libmagic for now) rely on
-# the correct version of libmagic database installed on the system.
-# Disabling for now.
-#    magic \
+TEST_MBEDTLS_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_MBEDTLS_SRC))
 
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
+TEST_MBEDTLS_LIB = \
+	-skapp \
+    -sncbi-vdb \
+    -sktst
 
-$(SUBDIRS):
-	@ $(MAKE) -C $@
-
-.PHONY: default $(SUBDIRS)
-
+$(TEST_BINDIR)/test-mbedtls: $(TEST_MBEDTLS_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_MBEDTLS_LIB)
