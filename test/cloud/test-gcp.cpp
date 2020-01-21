@@ -137,8 +137,8 @@ public:
 
         THROW_ON_RC ( CloudMgrMakeWithProvider ( & mgr, cloud_provider_gcp ) );
 
-        THROW_ON_RC ( CloudMgrMakeCloud ( mgr, & cloud, cloud_provider_gcp ) );   
-        unsetenv ( "GOOGLE_APPLICATION_CREDENTIALS" );     
+        THROW_ON_RC ( CloudMgrMakeCloud ( mgr, & cloud, cloud_provider_gcp ) );
+        putenv ( "GOOGLE_APPLICATION_CREDENTIALS=" );
     }
 
     void MakeClient()
@@ -163,11 +163,11 @@ public:
     void SetupStream ()
     {
         THROW_ON_RC ( KStreamInit ( & m_stream, ( const KStream_vt* ) & TestStream::vt, "TestStream", "", true, true ) );
-        AddResponse ( 
+        AddResponse (
             "{\"access_token\" : \"bogustokenmadefortesting\","
             "  \"token_type\" : \"Bearer\","
             "   \"expires_in\" : 3600"
-            "}" 
+            "}"
         );
     }
 
@@ -222,7 +222,7 @@ FIXTURE_TEST_CASE(GCP_AddUserPays, GCP_Fixture)
 
     KClientHttpRequest * req;
     REQUIRE_RC ( KClientHttpMakeRequest ( client, & req, "https://storage.googleapis.com/sra-pub-run-1/DRR000711/DRR000711.1" ) );
-        
+
     // to have GCP contact Google authorization server for real, comment out this line:
     // and copy a user credentials file to ./cloud-kfg/gcp_service.json (do not check in!)
     CloudSetHttpConnection( cloud, & m_stream );
@@ -280,13 +280,13 @@ FIXTURE_TEST_CASE(GCP_AddUserPays_NoAccessTokenRefresh, GCP_Fixture)
 
     KClientHttpRequest * req;
     REQUIRE_RC ( KClientHttpMakeRequest ( client, & req, "https://storage.googleapis.com/sra-pub-run-1/DRR000711/DRR000711.1" ) );
-        
+
     // this will only return access token once
     CloudSetHttpConnection( cloud, & m_stream );
 
     REQUIRE_RC ( CloudAddUserPaysCredentials ( cloud, req, "GET" ) );
     // if cloud attempts to refresh the access token, this will fail
-    REQUIRE_RC ( CloudAddUserPaysCredentials ( cloud, req, "GET" ) ); 
+    REQUIRE_RC ( CloudAddUserPaysCredentials ( cloud, req, "GET" ) );
 
     REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
 }
@@ -298,32 +298,32 @@ FIXTURE_TEST_CASE(GCP_AddUserPays_AccessTokenRefreshCloseToExpiration, GCP_Fixtu
 
     // Set up the stream to respond to access token request twice, first time with immediate expiration
     REQUIRE_RC ( KStreamInit ( & m_stream, ( const KStream_vt* ) & TestStream::vt, "TestStream", "", true, true ) );
-    AddResponse ( 
+    AddResponse (
         "{\"access_token\" : \"bogustokenmadefortesting\","
         "  \"token_type\" : \"Bearer\","
         "   \"expires_in\" : 0"
-        "}" 
+        "}"
     );
-    AddResponse ( 
+    AddResponse (
         "{\"access_token\" : \"anotherbogustokenmadefortesting\","
         "  \"token_type\" : \"Bearer\","
         "   \"expires_in\" : 3600"
-        "}" 
+        "}"
     );
 
 
     KClientHttpRequest * req;
     REQUIRE_RC ( KClientHttpMakeRequest ( client, & req, "https://storage.googleapis.com/sra-pub-run-1/DRR000711/DRR000711.1" ) );
-        
+
     CloudSetHttpConnection( cloud, & m_stream );
 
-    GCP * gcp; 
-    REQUIRE_RC ( CloudToGCP ( cloud, & gcp ) ); 
+    GCP * gcp;
+    REQUIRE_RC ( CloudToGCP ( cloud, & gcp ) );
 
     REQUIRE_RC ( CloudAddUserPaysCredentials ( cloud, req, "GET" ) );
     REQUIRE_EQ ( string( "bogustokenmadefortesting" ), string ( gcp -> access_token ) );
     // since the first access token expires immediately, this will refresh it
-    REQUIRE_RC ( CloudAddUserPaysCredentials ( cloud, req, "GET" ) ); 
+    REQUIRE_RC ( CloudAddUserPaysCredentials ( cloud, req, "GET" ) );
     REQUIRE_EQ ( string( "anotherbogustokenmadefortesting" ), string ( gcp -> access_token ) );
 
     REQUIRE_RC ( GCPRelease ( gcp ) );

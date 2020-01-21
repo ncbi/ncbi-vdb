@@ -1,5 +1,5 @@
 ﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-    
+
     <Import Condition="Exists('$(ProjectDir)..\..\Makefile.config.win')" Project="$(ProjectDir)..\..\Makefile.config.win" />
 
     <PropertyGroup Label="Configuration">
@@ -14,11 +14,11 @@
     <PropertyGroup Label="Globals">
         <Platform Condition="'$(Platform)' == ''">x64</Platform>
         <Configuration Condition="'$(Configuration)' == ''">Release</Configuration>
-    
+
         <NGS_ROOT Condition="'$(NGS_ROOT)' == ''">$(ProjectDir)..\..\..\..\ngs\ngs-sdk\</NGS_ROOT>
         <NGS_OUTDIR Condition="'$(NGS_OUTDIR)' == ''">$(NGS_ROOT)..\..\OUTDIR\</NGS_OUTDIR>
         <NGS_TARGET Condition="'$(NGS_TARGET)' == ''">$(NGS_OUTDIR)\ngs-sdk\win\$(PlatformToolset)\$(Platform)\$(Configuration)\</NGS_TARGET>
-    
+
         <VDB_OUTDIR Condition="'$(VDB_OUTDIR)' == ''">$(NGS_OUTDIR)\</VDB_OUTDIR>
         <VDB_ROOT Condition="'$(VDB_ROOT)' == ''">$(ProjectDir)..\..\..\</VDB_ROOT>
         <VDB_TARGET Condition="'$(VDB_TARGET)' == ''">$(VDB_OUTDIR)ncbi-vdb\win\$(PlatformToolset)\$(Platform)\$(Configuration)\</VDB_TARGET>
@@ -26,7 +26,7 @@
         <VDB_TARGET_NAME Condition="'$(VDB_TARGET_NAME)' == ''">$(ProjectName)</VDB_TARGET_NAME>
 
     </PropertyGroup>
-  
+
     <PropertyGroup Label="Configuration">
         <CharacterSet>Unicode</CharacterSet>
         <IntDir>$(VDB_TARGET)obj\$(ProjectName)\</IntDir>
@@ -34,14 +34,14 @@
         <LinkIncremental>false</LinkIncremental>
         <WholeProgramOptimization>false</WholeProgramOptimization>
     </PropertyGroup>
-  
+
     <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
         <UseDebugLibraries>true</UseDebugLibraries>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
         <UseDebugLibraries>false</UseDebugLibraries>
     </PropertyGroup>
-  
+
     <ItemDefinitionGroup>
         <ClCompile>
             <WarningLevel>Level3</WarningLevel>
@@ -60,7 +60,9 @@
             <PreprocessorDefinitions>_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
             <PreprocessorDefinitions>__file_name__=%(Filename);%(PreprocessorDefinitions)</PreprocessorDefinitions>
             <PreprocessorDefinitions>__file_ext__=c;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      
+
+              <TreatSpecificWarningsAsErrors>4307;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
+
         </ClCompile>
     </ItemDefinitionGroup>
 
@@ -88,5 +90,5 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
-  
+
 </Project>
