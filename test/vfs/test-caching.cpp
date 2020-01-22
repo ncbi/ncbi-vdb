@@ -219,8 +219,15 @@ public:
         KDirectory * native  = NULL;
         REQUIRE_RC ( KDirectoryNativeDir ( & native ) );
         const KDirectory * dir = NULL;
-        REQUIRE_RC
-            ( KDirectoryOpenDirRead ( native, &dir, false, "caching-kfg" ) );
+
+#if WINDOWS
+#define KFG_OS "win"
+#else
+#define KFG_OS "unix"
+#endif
+        REQUIRE_RC ( KDirectoryOpenDirRead ( native, &dir, false, "caching-kfg/" KFG_OS) );
+#undef  OS
+
         KConfig * cfg = NULL;
         REQUIRE_RC ( KConfigMakeLocal ( & cfg, dir ) );
         REQUIRE_RC ( SET :: set ( cfg, v, caching) );
@@ -627,7 +634,7 @@ extern "C" {
     rc_t CC KMain ( int argc, char * argv [] ) {
         KConfigDisableUserSettings ();
 if (
-1 ) assert ( ! KDbgSetString ( "VFS" ) );
+0 ) assert ( ! KDbgSetString ( "VFS" ) );
         return CachingSuite ( argc, argv );
     }
 }
