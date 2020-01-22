@@ -1,30 +1,21 @@
 TOP=$1
-
-if [ $(uname) = "Darwin" ]; then
-    echo "cipher test is turned off on Mac"
+CIPHER_DIR=${TOP}/libs/cipher/cipher-1.7
+VIRTUALENV=$(which virtualenv)
+if [ "${VIRTUALENV}" = "" ]; then
+    echo "skipping python cipher test: no virtualenv"
     exit 0
 fi
 
 #installing cipher module into newly created virtual env
 tmp_py_env=$(pwd)/temp_env
 
-#just for debugging
-#python3:
-#which python3
-#python3 -V
-#echo python2:
-#which python2
-#python2 -V
-#echo python:
-#which python
-
 ${PYTHON} -V
-virtualenv -p ${PYTHON} $tmp_py_env
+${VIRTUALENV} -p ${PYTHON} $tmp_py_env
 . $tmp_py_env/bin/activate
-tmp_cur_dir=$(pwd)
-CIPHER_DIR=$TOP/libs/cipher/cipher-1.7
-cd $CIPHER_DIR
+
 # the following creates "build dist .eggs" in $CIPHER_DIR
+tmp_cur_dir=$(pwd)
+cd $CIPHER_DIR
 python setup.py install
 cd $tmp_cur_dir
 unset tmp_cur_dir
@@ -39,8 +30,8 @@ do
     echo "Hello world $i" >> test.in
 done
 
-python $TOP/libs/cipher/cipher-1.7/encrypt.py --password=password123 test.in test.enc
-python $TOP/libs/cipher/cipher-1.7/decrypt.py --password=password123 test.enc test.out
+python ${CIPHER_DIR}/encrypt.py --password=password123 test.in test.enc
+python ${CIPHER_DIR}/decrypt.py --password=password123 test.enc test.out
 
 diff test.in test.out
 exit_code=$?
