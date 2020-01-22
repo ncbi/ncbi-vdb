@@ -190,6 +190,9 @@ TEST_NGS_CSRA1_PILEUP_OBJ = \
 $(TEST_BINDIR)/test-ngs_csra1_pileup: $(TEST_NGS_CSRA1_PILEUP_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
+pileup: test-ngs_csra1_pileup
+	$(TEST_BINDIR)/$^
+
 #-------------------------------------------------------------------------------
 # test-ngs_reference
 #

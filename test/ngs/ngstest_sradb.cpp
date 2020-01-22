@@ -861,8 +861,9 @@ const char UsageDefaultName[] = "test-ngs_sra";
 rc_t CC KMain ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t m_coll=NgsSradbTestSuite(argc, argv);
-    return m_coll;
+    rc_t ret=NgsSradbTestSuite(argc, argv);
+    NGS_C_Fixture::ReleaseCache();
+    return ret;
 }
 
 }
