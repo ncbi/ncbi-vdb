@@ -44,9 +44,15 @@ endif
 #-------------------------------------------------------------------------------
 # runtests
 #
+ifdef PYTHON
 runtests: cipher
 
+else
+runtests: 
+
+endif
+
 cipher:
-	@ export LD_LIBRARY_PATH=$(LIBDIR) ; ./test.sh $(TOP)
+	@ LD_LIBRARY_PATH=$(LIBDIR) PYTHON=$(PYTHON) ./test.sh $(TOP)
 
 .PHONY: cipher

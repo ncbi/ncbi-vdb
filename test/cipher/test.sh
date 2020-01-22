@@ -18,19 +18,14 @@ tmp_py_env=$(pwd)/temp_env
 #echo python:
 #which python
 
-python -V
-python_bin=$(which python)
-#if [ "$python_bin" = "" ]; then    python_bin=$(which python2) fi
-if [ "$python_bin" = "" ]; then
-    python_bin=$(which python)
-fi
-virtualenv -p $python_bin $tmp_py_env
+${PYTHON} -V
+virtualenv -p ${PYTHON} $tmp_py_env
 . $tmp_py_env/bin/activate
 tmp_cur_dir=$(pwd)
 CIPHER_DIR=$TOP/libs/cipher/cipher-1.7
 cd $CIPHER_DIR
 # the following creates "build dist .eggs" in $CIPHER_DIR
-$tmp_py_env/bin/python setup.py install
+python setup.py install
 cd $tmp_cur_dir
 unset tmp_cur_dir
 
@@ -51,7 +46,7 @@ diff test.in test.out
 exit_code=$?
 rm test.in test.enc test.out
 
-echo "pyhon cipher test is complete."
+echo "python cipher test is complete."
 
 # cleanup
 deactivate
