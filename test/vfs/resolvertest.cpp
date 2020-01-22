@@ -414,8 +414,8 @@ extern "C"
         rc_t rc = KDirectoryNativeDir(&dir);
         if (rc != 0)
             return rc;
-        if ((KDirectoryPathType(dir,
-            NETMNT "/traces04") & ~kptAlias) == kptNotFound)
+        uint32_t t = KDirectoryPathType(dir, NETMNT "/traces04") & kptAlias;
+        if (t == kptNotFound || t == kptBadPath)
         {
             hasLocal = false;
         }
