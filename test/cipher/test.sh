@@ -1,6 +1,11 @@
 TOP=$1
 CIPHER_DIR=${TOP}/libs/cipher/cipher-1.7
 VIRTUALENV=$(which virtualenv)
+
+if [ "${PYTHON}" = "" ]; then
+    echo "skipping python cipher test: PYTHON not defined"
+    exit 0
+fi
 if [ "${VIRTUALENV}" = "" ]; then
     echo "skipping python cipher test: no virtualenv"
     exit 0
@@ -10,7 +15,7 @@ fi
 tmp_py_env=$(pwd)/temp_env
 
 ${PYTHON} -V
-${VIRTUALENV} -p ${PYTHON} $tmp_py_env
+${VIRTUALENV} -p ${PYTHON} $tmp_py_env # within the virtual env, python is ${PYTHON}
 . $tmp_py_env/bin/activate
 
 # the following creates "build dist .eggs" in $CIPHER_DIR
