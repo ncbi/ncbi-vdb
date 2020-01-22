@@ -1811,7 +1811,7 @@ rc_t KCacheTeeFileInitExisting ( KCacheTeeFile_v3 * self )
                      , calculated_eof
                 );
             
-            rc = RC ( rcFS, rcFile, rcOpening, rcData, rcUnequal );
+            rc = RC ( rcFS, rcFile, rcOpening, rcData, actual_eof == 0 ? rcEmpty : rcUnequal );
         }
         else
         {
@@ -1879,11 +1879,14 @@ rc_t KCacheTeeFileInitShared ( KCacheTeeFile_v3 * self )
     if ( rc == 0 )
         return rc;
 
-    PLOGMSG ( klogWarn, ( klogWarn, "$(func) - stale cache file '$(path).cache'. Reinitializing."
-                         , "func=%s,path=%s"
-                         , __func__
-                         , self -> path
-                  ) );
+    if (GetRCState(rc) != rcEmpty)
+    {
+        PLOGMSG(klogWarn, (klogWarn, "$(func) - stale cache file '$(path).cache'. Reinitializing."
+            , "func=%s,path=%s"
+            , __func__
+            , self->path
+            ));
+    }
 
     calculated_eof = self -> source_size + self -> bmap_size + sizeof * self -> tail;
     
