@@ -48,7 +48,8 @@ ifdef PYTHON
 runtests: cipher
 
 else
-runtests: 
+runtests:
+    @ echo "Skipped, no Python 3 found"
 
 endif
 
