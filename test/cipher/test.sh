@@ -15,8 +15,10 @@ fi
 tmp_py_env=$(pwd)/temp_env
 
 ${PYTHON} -V
-${VIRTUALENV} -p ${PYTHON} $tmp_py_env # within the virtual env, python is ${PYTHON}
+${VIRTUALENV} -p ${PYTHON} $tmp_py_env
 . $tmp_py_env/bin/activate
+
+#now inside the virtual env, python is ${PYTHON}
 
 # the following creates "build dist .eggs" in $CIPHER_DIR
 tmp_cur_dir=$(pwd)
@@ -46,6 +48,8 @@ echo "python cipher test is complete."
 
 # cleanup
 deactivate
+#now outside the virtual env
+
 rm -rf $tmp_py_env
 unset tmp_py_env
 
