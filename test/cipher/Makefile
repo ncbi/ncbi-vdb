@@ -49,7 +49,7 @@ runtests: cipher
 
 else
 runtests:
-    @ echo "Skipped, no Python 3 found"
+	@ echo "Skipped, no Python 3 found"
 
 endif
 
