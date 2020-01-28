@@ -740,12 +740,7 @@ TEST_CASE ( AllowAllCertificates )
     CONST_STRING ( & host, "www.google.com" );
 
     KClientHttp * https = NULL;
-#if WINDOWS
-    //TODO: figure out certificate validation on Windows
-    REQUIRE_RC_FAIL( KNSManagerMakeClientHttps( mgr, &https, NULL, 0x01010000, &host, 443 ) );
-#else
     REQUIRE_RC ( KNSManagerMakeClientHttps( mgr, &https, NULL, 0x01010000, &host, 443 ) );
-#endif
     RELEASE(KClientHttp, https);
 
     // tell manager to allow all certs

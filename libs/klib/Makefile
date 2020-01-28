@@ -174,26 +174,16 @@ FUZZ_OBJ = \
 fuzz: std $(FUZZ_OBJ)
 	$(AR) $(FLIBDIR)/libklib.$(LIBX) $(FUZZ_OBJ)
 
-ifeq (linux,$(OS))
-
 #-------------------------------------------------------------------------------
 #
 # flex/bison for the Json parser
+#
+# Will not be executed in a regular build. Use 'make bison' and/or 'make flex' to re-generate C files
+#
 
-#json-grammar.$(LOBX): $(SRCDIR)/json-grammar.c
-#	$(CP) -o $@ -fPIC $(OPT) -D_LIBRARY $< $(LOC_INFO) -D__file_ext__=c
-
-$(SRCDIR)/json-grammar.c: $(SRCDIR)/json-grammar.y
+bison: $(SRCDIR)/json-grammar.y
 	bison -Wno-other --no-lines -r state -o $(SRCDIR)/json-grammar.c --defines=$(SRCDIR)/json-tokens.h $(SRCDIR)/json-grammar.y
 
-bison: $(SRCDIR)/json-grammar.c
-
-#json-lex.$(LOBX): $(SRCDIR)/json-lex.c
-#	$(CC)  -Wno-unused-function -o $@ -fPIC $(OPT) -D_LIBRARY $< $(LOC_INFO) -D__file_ext__=c
-
-$(SRCDIR)/json-lex.c: $(SRCDIR)/json-lex.l $(SRCDIR)/json-tokens.h
+flex: $(SRCDIR)/json-lex.l $(SRCDIR)/json-tokens.h
 	flex --noline -d -t $(SRCDIR)/json-lex.l > $(SRCDIR)/json-lex.c
 
-flex: $(SRCDIR)/json-lex.c
-
-endif
