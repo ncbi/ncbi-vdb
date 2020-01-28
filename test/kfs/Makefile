@@ -121,6 +121,9 @@ TEST_RAMFILE_LIB = \
 $(TEST_BINDIR)/test-ramfile: $(TEST_RAMFILE_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_RAMFILE_LIB)
 
+ramfile: test-ramfile
+	$(TEST_BINDIR)/test-ramfile
+
 #-------------------------------------------------------------------------------
 # test-resolve
 #
@@ -156,7 +159,7 @@ $(TEST_BINDIR)/test-cachetee: $(TEST_CACHETEE_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_CACHETEE_LIB)
 	rm *.o *.d
 
-cachetee: $(TEST_BINDIR)/test-cachetee
+cachetee: test-cachetee
 	$(TEST_BINDIR)/test-cachetee
 
 #-------------------------------------------------------------------------------
@@ -177,7 +180,7 @@ $(TEST_BINDIR)/test-cachetee2: $(TEST_CACHETEE2_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_CACHETEE2_LIB)
 	rm *.o *.d
 
-cachetee2: $(TEST_BINDIR)/test-cachetee2
+cachetee2: test-cachetee2
 	$(TEST_BINDIR)/test-cachetee2
 
 #-------------------------------------------------------------------------------
@@ -221,7 +224,7 @@ $(TEST_BINDIR)/test-lru-cache: $(TEST_LRU_CACHE_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_LRU_CACHE_LIB)
 	rm *.o *.d
 
-testlrucache: $(TEST_BINDIR)/test-lru-cache
+testlrucache: test-lru-cache
 	$(TEST_BINDIR)/test-lru-cache
 
 #-------------------------------------------------------------------------------
@@ -276,7 +279,7 @@ $(TEST_BINDIR)/simple_q: $(SIMPLE_Q_TEST_OBJ)
 	$(LP) --exe -o $@ $^ $(SIMPLE_Q_TEST_LIB)
 	rm *.o *.d
 
-simple_q: $(TEST_BINDIR)/simple_q
+simple_q: simple_q
 	$(TEST_BINDIR)/simple_q
 
 ifeq (linux,$(OS))
