@@ -240,7 +240,7 @@ public:
 
         // KConfigReadString creates NULL-terminated strings
         REQUIRE ( user_root );
-        REQUIRE_RC ( KDirectoryRemove ( native, true, user_root -> addr ) );
+        REQUIRE_RC ( KDirectoryRemove ( native, true, "%s", user_root -> addr ) );
 
         VFSManager * vfs = NULL;
 
