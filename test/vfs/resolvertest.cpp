@@ -406,7 +406,7 @@ extern "C"
     rc_t CC KMain ( int argc, char *argv [] )
     {
         if (
-0) assert(!KDbgSetString("VFS"));
+1) assert(!KDbgSetString("VFS"));
 
         KConfigDisableUserSettings ();
 
@@ -414,7 +414,7 @@ extern "C"
         rc_t rc = KDirectoryNativeDir(&dir);
         if (rc != 0)
             return rc;
-        uint32_t t = KDirectoryPathType(dir, NETMNT "/traces04") & kptAlias;
+        uint32_t t = KDirectoryPathType(dir, NETMNT "/traces04") & ~ kptAlias;
         if (t == kptNotFound || t == kptBadPath)
         {
             hasLocal = false;
