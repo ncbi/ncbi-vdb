@@ -240,6 +240,7 @@ public:
 
         // KConfigReadString creates NULL-terminated strings
         REQUIRE ( user_root );
+		std::cout << std::string(user_root->addr) << std::endl;
         REQUIRE_RC ( KDirectoryRemove ( native, true, "%s", user_root -> addr ) );
 
         VFSManager * vfs = NULL;
