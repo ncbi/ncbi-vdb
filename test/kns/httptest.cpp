@@ -114,9 +114,24 @@ FIXTURE_TEST_CASE(Http_Read, HttpFixture)
 //TODO: figure out certificate validation on Windows
 FIXTURE_TEST_CASE(VDB_3661, HttpFixture)
 {
+    KEndPoint ep;
+#define PUBLIC_DOCS "public_docs.crg.es"
+    String dns;
+    CONST_STRING(&dns, PUBLIC_DOCS);
+    rc_t rc = KNSManagerInitDNSEndpoint(m_mgr, &ep, &dns, 80);
+    if (rc ==
+        SILENT_RC(rcNS, rcNoTarg, rcValidating, rcConnection, rcNotFound))
+    {
+        cerr << "unable to resolve host address " << PUBLIC_DOCS <<
+            ". Skipping VDB_3661 test..." << endl;
+        return;
+    }
+    REQUIRE_RC(rc);
+
     const KFile * file = NULL;
     REQUIRE_RC ( KNSManagerMakeHttpFile ( m_mgr, & file, NULL, 0x01010000,
-       "http://public_docs.crg.es/rguigo/Papers/2017_lagarde-uszczynska_CLS/data/trackHub//dataFiles/hsAll_Cap1_Brain_hiSeq.bam"
+       "http://" PUBLIC_DOCS "/rguigo/Papers/2017_lagarde-uszczynska_CLS"
+        "/data/trackHub//dataFiles/hsAll_Cap1_Brain_hiSeq.bam"
       ) );
 
     uint64_t size = 0;
