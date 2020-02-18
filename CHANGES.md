@@ -1,6 +1,12 @@
 # NCBI External Developer Release:
 
 
+## NCBI VDB 2.10.3
+**February 18, 2020**
+
+  **sraxf**: fixed a problem resulting in a segmentation fault 
+
+
 ## NCBI VDB 2.10.2
 **January 15, 2020**
 
