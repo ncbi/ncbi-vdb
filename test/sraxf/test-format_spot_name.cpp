@@ -48,7 +48,7 @@ TEST_CASE(TestFormatSpotName) { // VDB-4097
     REQUIRE_RC(VDBManagerMakeRead(&mgr, NULL));
 
     const VDatabase *db = NULL;
-    REQUIRE_RC(VDBManagerOpenDBRead(mgr, &db, NULL, "SRR9203980"));
+    REQUIRE_RC(VDBManagerOpenDBRead(mgr, &db, NULL, "data/SRR9203980.1"));
 
     const VTable *tbl = NULL;
     REQUIRE_RC(VDatabaseOpenTableRead(db, &tbl, "SEQUENCE"));
