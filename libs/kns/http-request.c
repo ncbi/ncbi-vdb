@@ -145,7 +145,8 @@ rc_t KClientHttpMakeRequestInt ( const KClientHttp *self,
     rc_t rc;
 
     /* create the object with empty buffer */
-    KClientHttpRequest * req = calloc ( 1, sizeof * req );
+    KClientHttpRequest * req
+        = (KClientHttpRequest *) calloc ( 1, sizeof * req );
     if ( req == NULL )
         rc = RC ( rcNS, rcNoTarg, rcAllocating, rcMemory, rcNull );
     else
@@ -160,7 +161,8 @@ rc_t KClientHttpMakeRequestInt ( const KClientHttp *self,
             rc = KDataBufferMakeBytes ( & req -> body, 0 );
             if ( rc == 0 )
             {
-                KRefcountInit ( & req -> refcount, 1, "KClientHttpRequest", "make", buf -> base );
+                KRefcountInit ( & req -> refcount, 1, "KClientHttpRequest",
+                    "make", (char*) buf -> base );
 
                 /* fill out url_buffer with URL */
                 rc = KClientHttpRequestInit ( req, block, buf );
@@ -226,7 +228,8 @@ LIB_EXPORT rc_t CC KClientHttpVMakeRequest ( const KClientHttp *self,
                 {
                     /* parse the URL */
                     URLBlock block;
-                    rc = ParseUrl ( & block, buf . base, buf . elem_count - 1 );
+                    rc = ParseUrl ( & block, (char*) buf . base,
+                        buf . elem_count - 1 );
                     if ( rc == 0 )
                         rc = KClientHttpMakeRequestInt ( self, _req, & block, & buf );
                 }
@@ -303,7 +306,8 @@ rc_t CC KNSManagerMakeClientRequestInt ( const KNSManager *self,
                 {
                     /* parse the URL */
                     URLBlock block;
-                    rc = ParseUrl ( & block, buf . base, buf . elem_count - 1 );
+                    rc = ParseUrl ( & block, (char*) buf . base,
+                        buf . elem_count - 1 );
                     if ( rc == 0 )
                     {
                         KClientHttp * http;
@@ -731,7 +735,7 @@ rc_t
 UrlEncode( const char * source, size_t size, char ** res )
 {   /* source: https://www.tutorialspoint.com/html/html_url_encoding.htm */
     char * cur;
-    int i;
+    size_t i = 0;
     assert ( source != NULL );
     assert ( res != NULL );
 
@@ -837,7 +841,9 @@ LIB_EXPORT rc_t CC KClientHttpRequestVAddQueryParam ( KClientHttpRequest *self,
                             KDataBufferWhack( & self -> url_buffer );
                             self -> url_buffer = newBuf;
                             /* re-parse the new URL */
-                            rc = ParseUrl ( & self -> url_block, self -> url_buffer . base, self -> url_buffer . elem_count - 1 );
+                            rc = ParseUrl ( & self -> url_block,
+                                (char*) self -> url_buffer . base,
+                                self -> url_buffer . elem_count - 1 );
                         }
                     }
                     free ( encValue );
@@ -902,7 +908,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddPostFileParam ( KClientHttpRequest * sel
                             rc = KMMapAddrRead( mm, & fileStart );
                             if ( rc == 0 )
                             {
-                                const String * encoded;
+                                const String * encoded = NULL;
                                 rc = encodeBase64( & encoded, fileStart, fileSize );
                                 if ( rc == 0 )
                                 {
@@ -1315,7 +1321,7 @@ rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, const char 
         if ( rc == 0 )
         {
             /* parse the URI into local url_block */
-            rc = ParseUrl ( &b, uri . base, uri . elem_count - 1 );
+            rc = ParseUrl ( &b, (char *) uri . base, uri . elem_count - 1 );
             if ( rc == 0 )
             {
                 KClientHttp *http = self -> http;
@@ -1379,13 +1385,15 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
             break;
 
         /* send the message and create a response */
-        rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer.base,
-            buffer.elem_count - 1, NULL, self -> url_buffer . base );
+        rc = KClientHttpSendReceiveMsg ( self -> http, _rslt,
+            (char *) buffer.base,
+            buffer.elem_count - 1, NULL, (char *) self -> url_buffer . base );
         if ( rc != 0 )
         {
             KClientHttpClose ( self -> http );
-            rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer.base,
-                buffer.elem_count - 1, NULL, self -> url_buffer . base );
+            rc = KClientHttpSendReceiveMsg ( self -> http, _rslt,
+                (char *) buffer.base, buffer.elem_count - 1, NULL,
+                (char *) self -> url_buffer . base );
             if ( rc != 0 )
                 break;
         }
@@ -1464,7 +1472,8 @@ static
 rc_t KClientHttpRequestSendReceiveNoBody ( KClientHttpRequest *self, KClientHttpResult **_rslt, const char *method )
 {
     KHttpRetrier retrier;
-    rc_t rc = KHttpRetrierInit ( & retrier, self -> url_buffer . base, self -> http -> mgr );
+    rc_t rc = KHttpRetrierInit ( & retrier,
+        (char *) self -> url_buffer . base, self -> http -> mgr );
 
     if ( rc == 0 )
     {
@@ -1632,11 +1641,15 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
         }
 
         /* send the message and create a response */
-        rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer.base, buffer.elem_count, body, self -> url_buffer . base );
+        rc = KClientHttpSendReceiveMsg ( self -> http, _rslt,
+            (char *) buffer.base, buffer.elem_count, body,
+            (char *) self -> url_buffer . base );
         if ( rc != 0 )
         {
             KClientHttpClose ( self -> http );
-            rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer.base, buffer.elem_count, NULL, self -> url_buffer . base );
+            rc = KClientHttpSendReceiveMsg ( self -> http, _rslt,
+                (char *) buffer.base, buffer.elem_count, NULL,
+                (char *) self -> url_buffer . base );
         }
         KDataBufferWhack( & buffer );
         if ( rc != 0 )
@@ -1803,7 +1816,8 @@ LIB_EXPORT rc_t CC KClientHttpRequestPOST ( KClientHttpRequest *self, KClientHtt
         return RC ( rcNS, rcNoTarg, rcUpdating, rcParam, rcNull );
     }
 
-    rc = KHttpRetrierInit ( & retrier, self -> url_buffer . base, self -> http -> mgr );
+    rc = KHttpRetrierInit ( & retrier, (char *) self -> url_buffer . base,
+        self -> http -> mgr );
 
     if ( rc == 0 )
     {
@@ -1818,7 +1832,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestPOST ( KClientHttpRequest *self, KClientHtt
             assert ( * _rslt );
 
             if ( ( * _rslt ) -> status  == 403 &&
-                 GovSiteByHttp ( self -> url_buffer . base ) )
+                 GovSiteByHttp ((char *) self -> url_buffer . base ) )
             {
                 break;
             }
