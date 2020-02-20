@@ -3324,8 +3324,6 @@ rc_t KConfigFill ( KConfig * self, const KDirectory * cfgdir,
 
         _KConfigIniKfgSettings ( self, &ks );
 
-        add_aws_nodes ( self );
-
         if ( ! self -> disableFileLoadOnKfgCreating )
             rc = load_config_files ( self, cfgdir, & ks, & loaded_from_dir );
 
