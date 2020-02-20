@@ -868,6 +868,56 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddQueryParam ( KClientHttpRequest *self, c
     return rc;
 }
 
+static rc_t urlEncodePluses(const String ** encoding) {
+    int n = 0;
+    const char *prev = NULL, *p = NULL;
+    size_t size = 0;
+
+    if (encoding == NULL || *encoding == NULL || (*encoding)->addr == NULL)
+        return 0;
+
+    for (prev = (*encoding)->addr, size = (*encoding)->size; size > 0;)
+    {
+        p = string_chr(prev, size, '+');
+        if (p == NULL)
+            break;
+        ++n;
+        size -= p - prev + 1;
+        prev = p + 1;
+    }
+
+    if (n > 0) {
+        size_t iFrom = 0, iTo = 0;
+        const char *from = (*encoding)->addr;
+        char *to = NULL;
+        uint32_t len = (*encoding)->size + n + n;
+
+        String * encoded = (String *) calloc(1, sizeof * encoded + len + 1);
+        if (encoded == NULL)
+            return RC(rcNS, rcString, rcAllocating, rcMemory, rcExhausted);
+
+        to = (char*)(encoded + 1);
+        StringInit(encoded, to, len, len);
+
+        for (iFrom = 0; iFrom < (*encoding)->size; ++iFrom) {
+            if (from[iFrom] == '+') {
+                to[iTo++] = '%';
+                to[iTo++] = '2';
+                to[iTo++] = 'b';
+            }
+            else
+                to[iTo++] = from[iFrom];
+        }
+        to[iTo] = '\0';
+        assert(iTo == len);
+
+        StringWhack(*encoding);
+        *encoding = encoded;
+    }
+
+    return 0;
+}
+
 LIB_EXPORT rc_t CC KClientHttpRequestAddPostFileParam ( KClientHttpRequest * self, const char * name, const char * path )
 {
     rc_t rc = 0;
@@ -910,6 +960,8 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddPostFileParam ( KClientHttpRequest * sel
                             {
                                 const String * encoded = NULL;
                                 rc = encodeBase64( & encoded, fileStart, fileSize );
+                                if ( rc == 0 )
+                                    rc = urlEncodePluses( & encoded );
                                 if ( rc == 0 )
                                 {
                                     rc = KClientHttpRequestAddPostParam( self, "%s=%S", name, encoded );
