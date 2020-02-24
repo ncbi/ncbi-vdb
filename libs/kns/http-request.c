@@ -868,22 +868,19 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddQueryParam ( KClientHttpRequest *self, c
     return rc;
 }
 
-static rc_t urlEncodePluses(const String ** encoding) {
+static rc_t urlEncodeBase64(const String ** encoding) {
     int n = 0;
-    const char *prev = NULL, *p = NULL;
-    size_t size = 0;
+    size_t i = 0;
 
     if (encoding == NULL || *encoding == NULL || (*encoding)->addr == NULL)
         return 0;
 
-    for (prev = (*encoding)->addr, size = (*encoding)->size; size > 0;)
-    {
-        p = string_chr(prev, size, '+');
-        if (p == NULL)
-            break;
-        ++n;
-        size -= p - prev + 1;
-        prev = p + 1;
+    for (i = 0; i < (*encoding)->size; ++i) {
+        if (((*encoding)->addr)[i] == '+' ||
+            ((*encoding)->addr)[i] == '/')
+        {
+            ++n;
+        }
     }
 
     if (n > 0) {
@@ -904,6 +901,11 @@ static rc_t urlEncodePluses(const String ** encoding) {
                 to[iTo++] = '%';
                 to[iTo++] = '2';
                 to[iTo++] = 'b';
+            }
+            else if (from[iFrom] == '/') {
+                to[iTo++] = '%';
+                to[iTo++] = '2';
+                to[iTo++] = 'f';
             }
             else
                 to[iTo++] = from[iFrom];
@@ -961,7 +963,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddPostFileParam ( KClientHttpRequest * sel
                                 const String * encoded = NULL;
                                 rc = encodeBase64( & encoded, fileStart, fileSize );
                                 if ( rc == 0 )
-                                    rc = urlEncodePluses( & encoded );
+                                    rc = urlEncodeBase64( & encoded );
                                 if ( rc == 0 )
                                 {
                                     rc = KClientHttpRequestAddPostParam( self, "%s=%S", name, encoded );

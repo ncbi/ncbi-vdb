@@ -41,7 +41,7 @@
 
 #include <ktst/unit_test.hpp>
 
-#include "../libs/kns/http-request.c"
+#include "../libs/kns/http-request.c" /* urlEncodeBase64 */
 
 #define ALL
 
@@ -334,33 +334,33 @@ FIXTURE_TEST_CASE(HttpReliableRequest_BadCgi, HttpFixture)
 #endif
 
 TEST_CASE(Test_urlEncodePluses) {
-    REQUIRE_RC(urlEncodePluses(NULL));
+    REQUIRE_RC(urlEncodeBase64(NULL));
 
     const String * encoding = NULL;
-    REQUIRE_RC(urlEncodePluses(&encoding));
+    REQUIRE_RC(urlEncodeBase64(&encoding));
 
     encoding = (String*) calloc(1, sizeof *encoding);
-    REQUIRE_RC(urlEncodePluses(&encoding));
+    REQUIRE_RC(urlEncodeBase64(&encoding));
     free((void*)encoding);
 
     String s, d;
 
     CONST_STRING(&s, "");
     StringCopy(&encoding, &s);
-    REQUIRE_RC(urlEncodePluses(&encoding));
+    REQUIRE_RC(urlEncodeBase64(&encoding));
     REQUIRE_EQ(StringCompare(encoding, &s), 0);
     StringWhack(encoding);
 
     CONST_STRING(&s, "a");
     StringCopy(&encoding, &s);
-    REQUIRE_RC(urlEncodePluses(&encoding));
+    REQUIRE_RC(urlEncodeBase64(&encoding));
     REQUIRE_EQ(StringCompare(encoding, &s), 0);
     StringWhack(encoding);
 
-    CONST_STRING(&s, "+");
+    CONST_STRING(&s, "+/");
     StringCopy(&encoding, &s);
-    REQUIRE_RC(urlEncodePluses(&encoding));
-    CONST_STRING(&d, "%2b");
+    REQUIRE_RC(urlEncodeBase64(&encoding));
+    CONST_STRING(&d, "%2b%2f");
     REQUIRE_EQ(StringCompare(encoding, &d), 0);
     StringWhack(encoding);
 }
