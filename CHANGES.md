@@ -1,6 +1,12 @@
 # NCBI External Developer Release:
 
 
+## NCBI VDB 2.10.4
+**February 26, 2020**
+
+  **kns**: fixed errors when using ngc file
+
+
 ## NCBI VDB 2.10.3
 **February 18, 2020**
 
