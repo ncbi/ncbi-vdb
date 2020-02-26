@@ -1,6 +1,37 @@
 # NCBI External Developer Release:
 
 
+## NCBI VDB 2.10.4
+**February 26, 2020**
+
+  **kns**: fixed errors when using ngc file
+
+
+## NCBI VDB 2.10.3
+**February 18, 2020**
+
+  **sraxf**: fixed a problem resulting in a segmentation fault 
+
+
+## NCBI VDB 2.10.2
+**January 15, 2020**
+
+  **build**: install used to fail on OSX when checking md5  
+  **kfg**: Users now provide the ngc access token on the command line  
+  **kfg**: potential memory leak removed  
+  **kfg, vdb-config, vfs**: new names for caching dbGaP files  
+  **kfg, vfs**: added new configuration node for resolving protected data  
+  **klib**: fixed incorrect access to memory in output writers  
+  **kns**: KNS now provides limited support for attaching files to HTTP POST requests  
+  **kns, vfs**: added support of ngc files and JWT-carts in SDL requests  
+  **krypto**: fixed decryption of dbGaP data on the fly  
+  **vfs**: allow to set dbGaP context by ngc file  
+  **vfs**: fixed detection of cache location of public runs on cloud  
+  **vfs**: fixed double-free when processing names service response  
+  **vfs**: fixed names conflict  
+  **vfs**: new naming scheme for caching dbGaP files  
+
+
 ## NCBI VDB 2.10.1
 **December 16, 2019**
 

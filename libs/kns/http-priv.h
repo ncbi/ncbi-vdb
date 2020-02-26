@@ -256,6 +256,9 @@ struct KClientHttpResult
     char * expiration;
 };
 
+/* internal encodiung  function, exposed for testing */
+extern rc_t KClientHttpRequestUrlEncodeBase64(const String ** encoding);
+
 #ifdef __cplusplus
 }
 #endif

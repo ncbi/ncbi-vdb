@@ -202,6 +202,29 @@ KLIB_EXTERN bool CC KDataBufferWritable ( const KDataBuffer *self );
 KLIB_EXTERN rc_t CC KDataBufferCheckIntegrity ( const KDataBuffer *self );
 
 
+/* Wipe
+ *  overwrite allocated memory
+ */
+KLIB_EXTERN rc_t CC KDataBufferWipe ( KDataBuffer * self );
+
+
+/* WipeNWhack
+ *  wipes and releases memory associated with a buffer.
+ */
+KLIB_EXTERN rc_t CC KDataBufferWipeNWhack ( KDataBuffer * self );
+
+
+/* WipeResize
+ *  make a buffer bigger or smaller.
+ *  can fail if not enough memory.
+ *  can fail if not writable.
+ *  wipes memory before release or reallocation
+ *
+ *  "new_count" [ IN ] - new number of elements
+ */
+KLIB_EXTERN rc_t CC KDataBufferWipeResize ( KDataBuffer * self, uint64_t new_count );
+
+
 #ifdef __cplusplus
 }
 #endif

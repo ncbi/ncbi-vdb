@@ -34,12 +34,14 @@
 #include <kns/manager.h>
 #include <kns/kns-mgr-priv.h>
 
-#include <../libs/kns/http-priv.h>
-#include <../libs/vfs/resolver-cgi.h> /* SDL_CGI */
+#include "../libs/kns/http-priv.h"
+#include "../libs/vfs/resolver-cgi.h" /* SDL_CGI */
 
 #include <kapp/args.h> // Args
 
 #include <ktst/unit_test.hpp>
+
+#define ALL
 
 static rc_t argsHandler ( int argc, char * argv [] );
 TEST_SUITE_WITH_ARGS_HANDLER ( HttpRequestVerifyURLSuite, argsHandler );
@@ -77,6 +79,7 @@ public:
     string m_url;
 };
 
+#ifdef ALL
 FIXTURE_TEST_CASE(HttpRequest_POST_NoParams, HttpRequestFixture)
 {   // Bug: KClientHttpRequestPOST crashed if request had no parameters
     MakeRequest( GetName() );
@@ -86,6 +89,7 @@ FIXTURE_TEST_CASE(HttpRequest_POST_NoParams, HttpRequestFixture)
     REQUIRE_RC ( KClientHttpRequestPOST ( m_req, & rslt ) );
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
 }
+#endif
 
 // KClientHttpRequestAddQueryParam
 
@@ -104,6 +108,7 @@ public:
     }
 };
 
+#ifdef ALL
 FIXTURE_TEST_CASE(HttpRequestAddQueryParam_SelfNull, HttpRequestFixture)
 {
     MakeRequest( GetName() );
@@ -323,6 +328,39 @@ FIXTURE_TEST_CASE(HttpReliableRequest_BadCgi, HttpFixture)
     REQUIRE_RC ( KClientHttpResultStatus ( rslt, & code, NULL, 0, NULL ) );
     REQUIRE_EQ ( code, 404u );
     REQUIRE_RC ( KHttpResultRelease( rslt ) );
+}
+#endif
+
+TEST_CASE(Test_urlEncodePluses) {
+    REQUIRE_RC(KClientHttpRequestUrlEncodeBase64(NULL));
+
+    const String * encoding = NULL;
+    REQUIRE_RC(KClientHttpRequestUrlEncodeBase64(&encoding));
+
+    encoding = (String*) calloc(1, sizeof *encoding);
+    REQUIRE_RC(KClientHttpRequestUrlEncodeBase64(&encoding));
+    free((void*)encoding);
+
+    String s, d;
+
+    CONST_STRING(&s, "");
+    StringCopy(&encoding, &s);
+    REQUIRE_RC(KClientHttpRequestUrlEncodeBase64(&encoding));
+    REQUIRE_EQ(StringCompare(encoding, &s), 0);
+    StringWhack(encoding);
+
+    CONST_STRING(&s, "a");
+    StringCopy(&encoding, &s);
+    REQUIRE_RC(KClientHttpRequestUrlEncodeBase64(&encoding));
+    REQUIRE_EQ(StringCompare(encoding, &s), 0);
+    StringWhack(encoding);
+
+    CONST_STRING(&s, "+/");
+    StringCopy(&encoding, &s);
+    REQUIRE_RC(KClientHttpRequestUrlEncodeBase64(&encoding));
+    CONST_STRING(&d, "%2b%2f");
+    REQUIRE_EQ(StringCompare(encoding, &d), 0);
+    StringWhack(encoding);
 }
 
 //////////////////////////////////////////// Main

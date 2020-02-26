@@ -1239,14 +1239,20 @@ rc_t VCursorFlushPageInt ( VTableCursor *self, bool sync )
 
 rc_t VTableWriteCursorFlushPage ( VTableCursor *self )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     if ( self == NULL )
         rc = RC ( rcVDB, rcCursor, rcFlushing, rcSelf, rcNull );
     else if ( self -> read_only )
         rc = RC ( rcVDB, rcCursor, rcFlushing, rcCursor, rcReadonly );
-    else
-        rc = VCursorFlushPageInt ( self, true );
+    else {
+        if ( self -> dad . state == vcRowCommitted ) {
+            rc = VCursorCloseRow ( (VCursor*)self );
+        }
+        if ( rc == 0 ) {
+            rc = VCursorFlushPageInt ( self, true );
+        }
+    }
 
     if ( rc == 0 )
     {

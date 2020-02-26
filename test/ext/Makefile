@@ -35,8 +35,9 @@ include $(TOP)/build/Makefile.config
 # default
 #
 SUBDIRS = \
+	mbedtls
 
-# The libmagic tests (and copycat which is the only user of libmagic for now) rely on 
+# The libmagic tests (and copycat which is the only user of libmagic for now) rely on
 # the correct version of libmagic database installed on the system.
 # Disabling for now.
 #    magic \

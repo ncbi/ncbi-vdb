@@ -110,16 +110,33 @@ FIXTURE_TEST_CASE(Http_Read, HttpFixture)
     REQUIRE_EQ( string ( "content" ), string ( buf, num_read ) );
 }
 
+#ifndef WINDOWS
+//TODO: figure out certificate validation on Windows
 FIXTURE_TEST_CASE(VDB_3661, HttpFixture)
 {
+    KEndPoint ep;
+#define PUBLIC_DOCS "public_docs.crg.es"
+    String dns;
+    CONST_STRING(&dns, PUBLIC_DOCS);
+    rc_t rc = KNSManagerInitDNSEndpoint(m_mgr, &ep, &dns, 80);
+    if (rc ==
+        SILENT_RC(rcNS, rcNoTarg, rcValidating, rcConnection, rcNotFound))
+    {
+        cerr << "unable to resolve host address " << PUBLIC_DOCS <<
+            ". Skipping VDB_3661 test..." << endl;
+        return;
+    }
+    REQUIRE_RC(rc);
+
     const KFile * file = NULL;
     REQUIRE_RC ( KNSManagerMakeHttpFile ( m_mgr, & file, NULL, 0x01010000,
-       "http://public_docs.crg.es/rguigo/Papers/2017_lagarde-uszczynska_CLS/data/trackHub//dataFiles/hsAll_Cap1_Brain_hiSeq.bam"
+       "http://" PUBLIC_DOCS "/rguigo/Papers/2017_lagarde-uszczynska_CLS"
+        "/data/trackHub//dataFiles/hsAll_Cap1_Brain_hiSeq.bam"
       ) );
 
     uint64_t size = 0;
     REQUIRE_RC ( KFileSize ( file, & size ) );
-    size = std::min(size, decltype(size)(4 * 1024 * 1024));
+    size = min(size, decltype(size)(4 * 1024 * 1024));
 
     void * buffer = malloc ( size );
     REQUIRE_NOT_NULL ( buffer );
@@ -135,6 +152,7 @@ FIXTURE_TEST_CASE(VDB_3661, HttpFixture)
 
     REQUIRE_RC ( KFileRelease ( file ) );
 }
+#endif
 
 struct ReadThreadData
 {
@@ -737,11 +755,7 @@ TEST_CASE ( AllowAllCertificates )
     CONST_STRING ( & host, "www.google.com" );
 
     KClientHttp * https = NULL;
-#if WINDOWS
-    REQUIRE_RC_FAIL( KNSManagerMakeClientHttps( mgr, &https, NULL, 0x01010000, &host, 443 ) );
-#else
     REQUIRE_RC ( KNSManagerMakeClientHttps( mgr, &https, NULL, 0x01010000, &host, 443 ) );
-#endif
     RELEASE(KClientHttp, https);
 
     // tell manager to allow all certs

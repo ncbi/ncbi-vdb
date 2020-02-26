@@ -58,7 +58,7 @@ struct TestCaseCall
     void(TestCase::*method)();
 };
 
-void ThreadProc(void* call)
+unsigned __stdcall ThreadProc(void* call)
 {
     signal(SIGABRT, SigSubHandler);
     signal(SIGFPE, SigSubHandler);
@@ -75,16 +75,16 @@ void ThreadProc(void* call)
     }
     catch (...)
     {
-        _endthreadex(TestEnv::TEST_CASE_FAILED);
+        return TestEnv::TEST_CASE_FAILED;
     }
-    _endthreadex(0);
+    return 0;
 }
 
 int TestEnv::RunProcessTestCase(TestCase& obj, void(TestCase::*meth)(), int timeout)
 {
     TestCaseCall call(obj, meth);
     TestEnv::in_child_process = true;
-    HANDLE thread = (HANDLE)_beginthread( ThreadProc, 0, &call );
+    HANDLE thread = (HANDLE)_beginthreadex( NULL, 0, ThreadProc, &call, 0, NULL );
     if (thread == NULL)
     {
         REPORT_ERROR("TestEnv::RunProcessTestCase: failed to start a test case thread");
@@ -99,7 +99,12 @@ int TestEnv::RunProcessTestCase(TestCase& obj, void(TestCase::*meth)(), int time
         {
         case WAIT_OBJECT_0:
             if (GetExitCodeThread(thread, &rc) == 0)
-                REPORT_ERROR("RunProcessTestCase failed");
+            {
+                DOUBLE error = GetLastError();
+                ostringstream str;
+                str << "RunProcessTestCase failed(" << error << ")" << endl;
+                REPORT_ERROR(str.str());
+            }
             break;
         case WAIT_TIMEOUT:
             if (!CloseHandle(thread))
