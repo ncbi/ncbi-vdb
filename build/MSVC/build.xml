@@ -60,7 +60,6 @@ Options:
                 <arg value="/p:Platform=${Platform}"/>
                 <arg value="/p:Configuration=${Configuration}"/>
                 <arg value="/p:NGS_OUTDIR=${Output}"/>
-                <arg value="/p:Autorun=true"/>
                 </exec>
             <!-->Java/Python tests are run directly, not through msbuild</-->
 
@@ -69,7 +68,6 @@ Options:
                 <property name="Platform" value="${Platform}"/>
                 <property name="Configuration" value="${Configuration}"/>
                 <property name="Output" value="${Output}"/>
-                <property name="PlatformToolset" value="${PlatformToolset}"/>
             </subant>
 
             <subant target="runtests">
@@ -77,7 +75,6 @@ Options:
                 <property name="Platform" value="${Platform}"/>
                 <property name="Configuration" value="${Configuration}"/>
                 <property name="Output" value="${Output}"/>
-                <property name="PlatformToolset" value="${PlatformToolset}"/>
             </subant>
         </sequential>
     </target>
