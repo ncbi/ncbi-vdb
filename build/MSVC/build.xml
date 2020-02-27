@@ -60,6 +60,7 @@ Options:
                 <arg value="/p:Platform=${Platform}"/>
                 <arg value="/p:Configuration=${Configuration}"/>
                 <arg value="/p:NGS_OUTDIR=${Output}"/>
+                <arg value="/p:Autorun=true"/>
                 </exec>
             <!-->Java/Python tests are run directly, not through msbuild</-->
 
