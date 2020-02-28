@@ -41,19 +41,19 @@
 typedef struct progressbar
 {
     char buffer[ BUFFER_SIZE ];
-	percent_t percent;
+    percent_t percent;
     bool initialized;
     void * out_writer;
-	uint8_t digits;
+    uint8_t digits;
 } progressbar;
 
 static rc_t make_progressbar_cmn( progressbar ** pb, const uint8_t digits, bool use_stderr )
 {
-	rc_t rc = 0;
+    rc_t rc = 0;
     if ( pb == NULL )
         rc = RC( rcVDB, rcNoTarg, rcConstructing, rcSelf, rcNull );
-	else
-	{
+    else
+    {
         void * h_stdout;
         void * h_stderr;
         
@@ -71,7 +71,7 @@ static rc_t make_progressbar_cmn( progressbar ** pb, const uint8_t digits, bool 
                 *pb = p;
             }
         }
-	}
+    }
     return rc;
 }
 
@@ -208,11 +208,11 @@ static rc_t progress_forward( progressbar * pb, const percent_t to )
 
 LIB_EXPORT rc_t CC update_progressbar( progressbar * pb, const percent_t percent )
 {
-	rc_t rc = 0;
+    rc_t rc = 0;
     if ( pb == NULL )
         rc = RC( rcVDB, rcNoTarg, rcParsing, rcSelf, rcNull );
-	else
-	{
+    else
+    {
         percent_t to;
         switch( pb -> digits )
         {
@@ -221,26 +221,26 @@ LIB_EXPORT rc_t CC update_progressbar( progressbar * pb, const percent_t percent
             case 2 : to = percent > 10000 ? 10000 : percent; break;
         }
         
-		if ( pb->initialized )
-		{
-			if ( to > pb->percent )
+        if ( pb->initialized )
+        {
+            if ( to > pb->percent )
                 rc = progress_forward( pb, to );
-		}
-		else
-		{
-			switch( pb -> digits )
-			{
-				case 0 : rc = progess_0a( pb, 0 ); break;
-				case 1 : rc = progess_1a( pb, 0 ); break;
-				case 2 : rc = progess_2a( pb, 0 ); break;
-			}
+        }
+        else
+        {
+            switch( pb -> digits )
+            {
+                case 0 : rc = progess_0a( pb, 0 ); break;
+                case 1 : rc = progess_1a( pb, 0 ); break;
+                case 2 : rc = progess_2a( pb, 0 ); break;
+            }
             if ( rc == 0 )
             {
                 pb->initialized = true;
                 if ( to > 0 )
                     rc = progress_forward( pb, to );
             }
-		}
-	}
+        }
+    }
     return rc;
 }
