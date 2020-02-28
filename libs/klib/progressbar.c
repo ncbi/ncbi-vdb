@@ -52,6 +52,8 @@ static rc_t make_progressbar_cmn( progressbar ** pb, const uint8_t digits, bool 
     rc_t rc = 0;
     if ( pb == NULL )
         rc = RC( rcVDB, rcNoTarg, rcConstructing, rcSelf, rcNull );
+    else if ( digits > MAX_DIGITS )
+        rc = RC( rcVDB, rcNoTarg, rcConstructing, rcParam, rcExcessive);
     else
     {
         void * h_stdout;
@@ -64,8 +66,6 @@ static rc_t make_progressbar_cmn( progressbar ** pb, const uint8_t digits, bool 
             progressbar	* p = calloc( 1, sizeof( *p ) );
             if ( p == NULL )
                 rc = RC( rcVDB, rcNoTarg, rcConstructing, rcMemory, rcExhausted );
-            else if ( digits > MAX_DIGITS )
-                rc = RC( rcVDB, rcNoTarg, rcConstructing, rcParam, rcExcessive);
             else
             {
                 p -> digits = digits;
@@ -111,7 +111,7 @@ static rc_t print_newline( progressbar * pb )
 LIB_EXPORT rc_t CC destroy_progressbar( progressbar * pb )
 {
     if ( pb == NULL )
-        return RC( rcVDB, rcNoTarg, rcDestroying, rcSelf, rcNull );
+        return 0;
     print_newline( pb );
     free( pb );
     return 0;
