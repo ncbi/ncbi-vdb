@@ -64,9 +64,11 @@ static rc_t make_progressbar_cmn( progressbar ** pb, const uint8_t digits, bool 
             progressbar	* p = calloc( 1, sizeof( *p ) );
             if ( p == NULL )
                 rc = RC( rcVDB, rcNoTarg, rcConstructing, rcMemory, rcExhausted );
+            else if ( digits > MAX_DIGITS )
+                rc = RC( rcVDB, rcNoTarg, rcConstructing, rcParam, rcExcessive);
             else
             {
-                p -> digits = digits > MAX_DIGITS ? MAX_DIGITS : digits;
+                p -> digits = digits;
                 p -> out_writer = use_stderr ? h_stderr : h_stdout;
                 *pb = p;
             }
