@@ -1206,9 +1206,8 @@ FormatForCloud( const KClientHttpRequest *cself, const char *method )
             if (rc == 0) {
                 if (cself->payRequired)
                     rc = CloudAddUserPaysCredentials(cloud, self, method);
-                else if (cself->ceRequired)
-                    rc = CloudAddComputeEnvironmentTokenForSigner(
-                        cloud, self);
+                if (cself->ceRequired)
+                    rc = CloudAddComputeEnvironmentTokenForSigner(cloud, self);
                 CloudRelease ( cloud );
             }
         }
