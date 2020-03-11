@@ -212,6 +212,8 @@ struct KClientHttpRequest
 
     bool ceRequired; /* computing environment token required to access this URL */
     bool payRequired; /* payment info required to access this URL */
+
+    bool rangeRequested;
 };
 
 void KClientHttpGetRemoteEndpoint ( const struct KClientHttp * self,
@@ -254,6 +256,8 @@ struct KClientHttpResult
     bool len_zero;
 
     char * expiration;
+
+    bool rangeRequested;
 };
 
 /* internal encodiung  function, exposed for testing */

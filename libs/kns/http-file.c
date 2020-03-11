@@ -23,6 +23,7 @@
 * ==============================================================================
 *
 */
+
 #include <kns/extern.h>
 
 #include "http-file-priv.h"
@@ -85,6 +86,10 @@
 
 #define USE_CACHE_CONTROL 1
 #define NO_CACHE_LIMIT ( ( uint64_t ) ( 16 * 1024 * 1024 ) )
+
+/* VDB-4146: Use Content-Length from HEAD in GET
+   when GET doesn't return Content-Length and Range was not requested. */
+#define USE_SIZE_FROM_HEAD
 
 static
 rc_t CC KHttpFileDestroy ( KHttpFile *self )
@@ -187,6 +192,8 @@ rc_t KHttpFileMakeRequest ( const KHttpFile *cself, uint64_t pos, size_t req_siz
                     TRACE ( "KClientHttpRequestByteRange ( req, pos=%lu, bsize=%lu ); failed: rc=%u\n",
                             pos, req_size, rc );
                 }
+                else
+                    req->rangeRequested = true;
             }
 
             if ( rc == 0 )
@@ -238,6 +245,8 @@ rc_t KHttpFileMakeRequest ( const KHttpFile *cself, uint64_t pos, size_t req_siz
             }
         }
 
+        if (rc == 0 && rslt != NULL && *rslt != NULL)
+            (*rslt)->rangeRequested = req->rangeRequested;
         KClientHttpRequestRelease ( req );
     }
     return rc;
@@ -309,6 +318,12 @@ rc_t KHttpFileTimedReadInt ( const KHttpFile * self,
 
                 /* extract stated bytes returned - must be whole file */
                 have_size = KClientHttpResultSize ( rslt, & result_size64 );
+#ifdef USE_SIZE_FROM_HEAD
+                if (!have_size && !rslt->rangeRequested) {
+                    result_size64 = self->file_size;
+                    have_size = true;
+                }
+#endif
                 result_size = ( size_t ) result_size64;
                 if ( pos != 0 || ! have_size || result_size > bsize )
                 {
@@ -958,6 +973,12 @@ rc_t KHttpFileTimedReadChunkedInt ( const KHttpFile * self,
 
                 /* extract stated bytes returned - must be whole file */
                 have_size = KClientHttpResultSize ( rslt, & result_size64 );
+#ifdef USE_SIZE_FROM_HEAD
+                if (!have_size && !rslt->rangeRequested) {
+                    result_size64 = self->file_size;
+                    have_size = true;
+                }
+#endif
                 result_size = ( size_t ) result_size64;
                 if ( pos != 0 || ! have_size || result_size > bytes )
                 {
