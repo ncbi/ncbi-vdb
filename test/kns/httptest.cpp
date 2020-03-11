@@ -64,8 +64,11 @@ using namespace ncbi::NK;
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
 
+#define ALL
+
 //////////////////////////
 // Regular HTTP
+#ifdef ALL
 FIXTURE_TEST_CASE(Http_Make, HttpFixture)
 {
     TestStream::AddResponse("HTTP/1.1 200 OK\r\nAccept-Ranges: bytes\r\nContent-Length: 7\r\n");
@@ -153,6 +156,7 @@ FIXTURE_TEST_CASE(VDB_3661, HttpFixture)
     REQUIRE_RC ( KFileRelease ( file ) );
 }
 #endif
+#endif
 
 struct ReadThreadData
 {
@@ -164,6 +168,7 @@ struct ReadThreadData
     const char ** contents;
 };
 
+#ifdef ALL
 static rc_t CC read_thread_func( const KThread *self, void *data )
 {
     rc_t rc;
@@ -390,7 +395,7 @@ FIXTURE_TEST_CASE(HttpRetrySpecs_Construct_SleepsDoNotDecrease, HttpFixture)
     REQUIRE_RC ( KConfigRelease(kfg) );
     REQUIRE_RC ( HttpRetrySpecsDestroy ( & rs ) );
 }
-
+#endif
 
 //////////////////////////
 // HttpRetrier
@@ -429,6 +434,7 @@ public:
     KHttpRetrier m_retrier;
 };
 
+#ifdef ALL
 FIXTURE_TEST_CASE(HttpRetrier_Construct, RetrierFixture)
 {
     REQUIRE_RC ( KHttpRetrierInit ( & m_retrier, GetName(), m_mgr ) );
@@ -602,6 +608,7 @@ FIXTURE_TEST_CASE(HttpReliable_Read_Retry, HttpFixture)
     REQUIRE_EQ( string ( "content" ), string ( buf, num_read ) );
 }
 #endif
+#endif
 
 struct NV {
     String AcceptRanges;
@@ -618,6 +625,7 @@ struct NV {
 };
 static const NV s_v;
 
+#ifdef ALL
 TEST_CASE ( RepeatedHeader ) {
     rc_t rc = 0;
     KDirectory * dir = NULL;
@@ -851,6 +859,28 @@ FIXTURE_TEST_CASE( KClientHttpResult_FormatMsg, HttpFixture)
     REQUIRE_EQ ( expected, string ((char*)buffer.base) );
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
 }
+#endif
+
+#ifdef ALL
+FIXTURE_TEST_CASE(GET_WITHOUT_CONTENT_LENGHT, HttpFixture) {
+    REQUIRE_RC(KNSManagerMakeHttpFile(m_mgr,
+        (const KFile **)&m_file, NULL, 0x01010000,
+        "http://ftp.ensembl.org/pub/data_files/homo_sapiens"
+        "/GRCh38/rnaseq/GRCh38.illumina.brain.1.bam.bai"));
+
+    uint64_t size;
+    REQUIRE_RC(KFileSize(m_file, &size));
+
+    char* buffer = new char[size];
+    REQUIRE(buffer);
+
+    size_t num_read = 0;
+    REQUIRE_RC(KFileRead(m_file, 0, buffer, size, &num_read));
+    REQUIRE_EQ(num_read, size);
+
+    delete[](buffer);
+}
+#endif
 
 //////////////////////////////////////////// Main
 
