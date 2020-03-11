@@ -247,9 +247,8 @@ FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_AWS_Token_NoPayer, Clo
         return;
     }
 
-//    TestEnv::verbosity = LogLevel::e_message;
-    setenv ( "AWS_ACCESS_KEY_ID", "access_key_id", 1 );
-    setenv ( "AWS_SECRET_ACCESS_KEY", "secret_access_key", 1 );
+    SetEnv();
+
     m_mgr -> accept_aws_charges = false;
 
     RespondWithRedirect ( AwsUrl, KTimeStamp () + 65 );
@@ -286,9 +285,7 @@ FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_AWS_NoToken_Payer, Clo
     //TestEnv::verbosity = LogLevel::e_message;
     string url = MakeURL(GetName());
 
-    setenv ( "AWS_ACCESS_KEY_ID", "access_key_id", 1 );
-    setenv ( "AWS_SECRET_ACCESS_KEY", "secret_access_key", 1 );
-    m_cloud -> user_agrees_to_pay = true;
+    SetEnv();
 
     KTime_t expTime = KTimeStamp () + 65;
     RespondWithRedirect ( AwsUrl, expTime );
@@ -327,8 +324,8 @@ FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_AWS_Token_Payer, Cloud
     //TestEnv::verbosity = LogLevel::e_message;
     string url = MakeURL(GetName());
 
-    setenv ( "AWS_ACCESS_KEY_ID", "access_key_id", 1 );
-    setenv ( "AWS_SECRET_ACCESS_KEY", "secret_access_key", 1 );
+    SetEnv();
+
     m_mgr -> accept_aws_charges = true;
 
     KTime_t expTime = KTimeStamp () + 65;
