@@ -32,6 +32,7 @@
 #include <klib/time.h>
 #include <kproc/timeout.h>
 #include <cloud/manager.h>
+#include <cloud/impl.h>
 
 #include "../../libs/kns/http-file-priv.h"
 #include "../../libs/kns/mgr-priv.h"
@@ -54,11 +55,18 @@ class CloudFixture : public HttpFixture
 {
 public:
     CloudFixture()
+    : m_cloud ( nullptr )
     {
         CloudMgr * cloudMgr;
         THROW_ON_RC ( CloudMgrMake ( & cloudMgr, nullptr, m_mgr ) );
-        THROW_ON_RC ( CloudMgrCurrentProvider ( cloudMgr, & m_cloud ) );
+        THROW_ON_RC ( CloudMgrCurrentProvider ( cloudMgr, & m_cloudProviderId ) );
+        THROW_ON_RC ( CloudMgrGetCurrentCloud ( cloudMgr, & m_cloud ) );
         THROW_ON_RC ( CloudMgrRelease ( cloudMgr ) );
+    }
+
+    ~CloudFixture()
+    {
+        CloudRelease ( m_cloud );
     }
 
 public:
@@ -160,18 +168,25 @@ public:
         THROW_ON_FALSE ( ! StringPresent ( redirReq, "x-amz-request-payer" ) );
     }
 
+    void SetEnv()
+    {
+        putenv ( (char*)"AWS_ACCESS_KEY_ID=access_key_id" );
+        putenv ( (char*)"AWS_SECRET_ACCESS_KEY=secret_access_key" );
+    }
+
     char m_buf[1024];
     size_t num_read;
     static constexpr const char * AwsUrl = "https://amazonaws.com/accession";
     static constexpr const char * NonCloudUrl = "https://ncbi.nlm.nih.gov/accession";
 
-    CloudProviderId m_cloud;
+    CloudProviderId m_cloudProviderId;
+    Cloud * m_cloud;
 };
 
 FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_NotCloud, CloudFixture )
 {
     //make sure not in a cloud
-    if ( m_cloud != cloud_provider_none )
+    if ( m_cloudProviderId != cloud_provider_none )
     {
         return;
     }
@@ -206,13 +221,12 @@ FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_NotCloud, CloudFixture
 FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_AWS_NoAuth_NoPayer, CloudFixture )
 {
     //make sure not in a cloud
-    if ( m_cloud != cloud_provider_aws )
+    if ( m_cloudProviderId != cloud_provider_aws )
     {
         return;
     }
 
-    putenv ( "AWS_ACCESS_KEY_ID=access_key_id" );
-    putenv ( "AWS_SECRET_ACCESS_KEY=secret_access_key" );
+    SetEnv();
 
     RespondWithRedirect ( AwsUrl, KTimeStamp () + 65 );
     RespondToHEAD ( string( 256, 'q' ) );
@@ -228,12 +242,12 @@ FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_AWS_NoAuth_NoPayer, Cl
 FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_AWS_Token_NoPayer, CloudFixture )
 {
     //make sure not in a cloud
-    if ( m_cloud != cloud_provider_aws )
+    if ( m_cloudProviderId != cloud_provider_aws )
     {
         return;
     }
 
-    TestEnv::verbosity = LogLevel::e_message;
+//    TestEnv::verbosity = LogLevel::e_message;
     setenv ( "AWS_ACCESS_KEY_ID", "access_key_id", 1 );
     setenv ( "AWS_SECRET_ACCESS_KEY", "secret_access_key", 1 );
     m_mgr -> accept_aws_charges = false;
@@ -252,15 +266,19 @@ FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_AWS_Token_NoPayer, Clo
     REQUIRE ( StringPresent ( origReq, "0-255" ) );
     REQUIRE ( StringPresent ( origReq, "-head" ) );
 
-    // make sure there is no payer info added to the redirect URL, User-agent header restored
+    // make sure there is no payer info added to the redirect URL
     string lastReq = TestStream::m_requests.back();
     REQUIRE ( ! StringPresent ( lastReq, "x-amz-request-payer" ) );
-    REQUIRE ( ! StringPresent ( lastReq, "-head" ) );
+    // User-agent header restored for future requests
+    const char * suff;
+    REQUIRE_RC ( KNSManagerGetUserAgent ( & suff ) );
+    REQUIRE ( ! StringPresent ( string(suff), "-head" ) );
 }
 
+#if UNIMPLEMENTED
 FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_AWS_NoToken_Payer, CloudFixture )
 {
-    if ( m_cloud != cloud_provider_aws )
+    if ( m_cloudProviderId != cloud_provider_aws )
     {
         return;
     }
@@ -270,6 +288,7 @@ FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_AWS_NoToken_Payer, Clo
 
     setenv ( "AWS_ACCESS_KEY_ID", "access_key_id", 1 );
     setenv ( "AWS_SECRET_ACCESS_KEY", "secret_access_key", 1 );
+    m_cloud -> user_agrees_to_pay = true;
 
     KTime_t expTime = KTimeStamp () + 65;
     RespondWithRedirect ( AwsUrl, expTime );
@@ -288,17 +307,19 @@ FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_AWS_NoToken_Payer, Clo
     REQUIRE ( StringPresent ( origReq, "-head" ) );
 
     // make sure there are authorization and payer info added to the redirect URL
-    // User-Agent restored
     string redirReq = TestStream::m_requests.back();
+cout<<redirReq<<endl;
     REQUIRE ( StringPresent ( redirReq, "Authorization: AWS access_key_id:" ) );
     REQUIRE ( StringPresent ( redirReq, "Date: " ) );
     REQUIRE ( StringPresent ( redirReq, "x-amz-request-payer" ) );
-    REQUIRE ( ! StringPresent ( redirReq, "-head" ) );
 }
+//TODO: user does not agree to pay
+#endif
 
+#if UNIMPLEMENTED
 FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_AWS_Token_Payer, CloudFixture )
 {
-    if ( m_cloud != cloud_provider_aws )
+    if ( m_cloudProviderId != cloud_provider_aws )
     {
         return;
     }
@@ -330,12 +351,13 @@ FIXTURE_TEST_CASE( HttpRefreshTestSuite_RedirectSignedURL_AWS_Token_Payer, Cloud
     REQUIRE ( StringPresent ( redirReq, "Date: " ) );
     REQUIRE ( StringPresent ( redirReq, "x-amz-request-payer" ) );
 }
+#endif
 
 // Refresh temporary URL on a read within 1 min of expiration
 
 FIXTURE_TEST_CASE( HttpRefreshTestSuite_ReadCloseToExpiration_AWS_NoToken_NoPayer, CloudFixture )
 {
-    if ( m_cloud != cloud_provider_aws )
+    if ( m_cloudProviderId != cloud_provider_aws )
     {
         return;
     }
@@ -383,9 +405,10 @@ FIXTURE_TEST_CASE( HttpRefreshTestSuite_ReadCloseToExpiration_AWS_NoToken_NoPaye
     }
 }
 
+#if UNIMPLEMENTED
 FIXTURE_TEST_CASE( HttpRefreshTestSuite_ReadCloseToExpiration_AWS_Token_NoPayer, CloudFixture )
 {
-    if ( m_cloud != cloud_provider_aws )
+    if ( m_cloudProviderId != cloud_provider_aws )
     {
         return;
     }
@@ -428,10 +451,12 @@ FIXTURE_TEST_CASE( HttpRefreshTestSuite_ReadCloseToExpiration_AWS_Token_NoPayer,
     // verify that the last request was done on the same redirected URL
     REQUIRE ( StringPresent ( TestStream::m_requests . back(), newAwsHost ) );
 }
+#endif
 
+#if UNIMPLEMENTED
 FIXTURE_TEST_CASE( HttpRefreshTestSuite_ReadCloseToExpiration_AWS_NoToken_Payer, CloudFixture )
 {
-    if ( m_cloud != cloud_provider_aws )
+    if ( m_cloudProviderId != cloud_provider_aws )
     {
         return;
     }
@@ -474,6 +499,8 @@ FIXTURE_TEST_CASE( HttpRefreshTestSuite_ReadCloseToExpiration_AWS_NoToken_Payer,
     // verify that the last request was done on the same redirected URL
     REQUIRE ( StringPresent ( TestStream::m_requests . back(), newAwsHost ) );
 }
+#endif
+
 //TODO
 //FIXTURE_TEST_CASE( HttpRefreshTestSuite_ReadCloseToExpiration_AWS_NoToken_NoPayer, CloudFixture )
 //FIXTURE_TEST_CASE( HttpRefreshTestSuite_ReadCloseToExpiration_GCP_xxToken_xxPayer, CloudFixture )
@@ -520,6 +547,10 @@ extern "C" {
         // turn off certificate validation to download from storage.googleapis.com
         if ( rc == 0 )
             rc = KConfigWriteString ( kfg, "/tls/allow-all-certs", "true" );
+
+        // in order to run in a cloud, give permission to submit computing environment
+        if (rc == 0)
+            rc = KConfigWriteString(kfg, "/libs/cloud/report_instance_identity", "true");
 
         if ( rc == 0 )
             rc = HttpRefreshTestSuite ( argc, argv );
