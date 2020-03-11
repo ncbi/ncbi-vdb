@@ -57,7 +57,6 @@
             <sysproperty key="java.library.path" path="${vdb.dir};${ngs.dir}" />
             <sysproperty key="vdb.System.loadLibrary" value="1" />
             <sysproperty key="vdb.log" value="FINEST" />
-            <jvmarg value="-d${JVMbits}" />
         	<arg value="gov.nih.nlm.ncbi.ngs.ngs_test_lib_load" />
         	<arg value="ngs_test_CSRA1" />
         </java>
