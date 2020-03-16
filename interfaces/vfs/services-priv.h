@@ -73,6 +73,7 @@ rc_t KSrvRespFileGetHttp ( const KSrvRespFile * self,
 /* DON'T FREE RETURNED STRINGS !!! */
 rc_t KSrvRespFileGetName(const struct KSrvRespFile * self, const char ** name);
 
+
 #ifdef __cplusplus
 }
 #endif
