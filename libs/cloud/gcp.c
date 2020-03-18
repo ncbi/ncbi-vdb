@@ -109,7 +109,8 @@ static char const *envCE()
     char const *const env = firstTime ? getenv(ENV_MAGIC_CE_TOKEN) : NULL;
     firstTime = false;
     if (env != NULL)
-        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), ("Got location from environment"));
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+            "Got location from environment\n"));
     return env;
 }
 
@@ -907,9 +908,10 @@ bool CloudMgrWithinGCP(const CloudMgr * self)
     rc_t rc;
     KEndPoint ep;
     String hostname;
+    const char host[] = "metadata.google.internal";
 
     /* describe address "metadata.google.internal" on port 80 */
-    CONST_STRING(&hostname, "metadata.google.internal");
+    CONST_STRING(&hostname, host);
     rc = KNSManagerInitDNSEndpoint(self->kns, &ep, &hostname, 80);
     if (rc == 0)
     {
@@ -918,6 +920,9 @@ bool CloudMgrWithinGCP(const CloudMgr * self)
            to some other server, e.g. Verizon. This may also occur with
            wireless network access control... */
         if ((ep.u.ipv4.addr >> 16) != ((169U << 8) | 254U)) {
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+                "'%s' DNS endpoint was resolved "
+                "but IP is not in range 169.254...: ignored\n", host));
             return false;
         }
     }
@@ -931,9 +936,11 @@ bool CloudMgrWithinGCP(const CloudMgr * self)
         if (rc == 0)
         {
             /* TBD - is there any sense in finishing the HTTP transaction?
-            somebody answered our call, so it looks like they\"re there,
-            if we use the URL to verify a little more, it will confirm... something.
-            But we\"re not prepared to retain any information, unless it\"s region */
+            somebody answered our call, so it looks like they're there,
+            if we use the URL to verify a little more, it will confirm...
+            something.
+            But we're not prepared to retain any information,
+            unless it's region */
             KSocketRelease(conn);
             return true;
         }
