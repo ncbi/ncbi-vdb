@@ -915,6 +915,8 @@ bool CloudMgrWithinGCP(const CloudMgr * self)
     rc = KNSManagerInitDNSEndpoint(self->kns, &ep, &hostname, 80);
     if (rc == 0)
     {
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
+            "'%s' DNS was resolved to '%s'\n", host, ep.ip_address));
         /* some DNS servers afford themselves the luxury of returning
            a non-authoritative answer in order to direct a web-browser
            to some other server, e.g. Verizon. This may also occur with
