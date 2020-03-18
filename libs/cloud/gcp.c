@@ -913,6 +913,17 @@ bool CloudMgrWithinGCP(const CloudMgr * self)
     rc = KNSManagerInitDNSEndpoint(self->kns, &ep, &hostname, 80);
     if (rc == 0)
     {
+        /* some DNS servers afford themselves the luxury of returning
+           a non-authoritative answer in order to direct a web-browser
+           to some other server, e.g. Verizon. This may also occur with
+           wireless network access control... */
+        if ((ep.u.ipv4.addr >> 16) != ((169U << 8) | 254U)) {
+            return false;
+        }
+    }
+
+    if (rc == 0)
+    {
         KSocket * conn;
 
         /* we already have a good idea that the environment looks like GCP */
