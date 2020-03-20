@@ -30,9 +30,10 @@
 
     <target name="runtests" depends="install">
         <exec executable="${python.exe}" failonerror="true">
-            <env key="Path" value="${vdb.dir};${ngs.dir};${env.Path}"/>
+            <env key="Path" path="${vdb.dir};${ngs.dir};${env.Path}"/>
             <env key="NGS_PY_DOWNLOAD_LIBRARY" value="0"/>
-            <arg value="tests.py" />
+            <env key="NGS_PY_LIBRARY_PATH" path="${vdb.dir};${ngs.dir}"/>
+          <arg value="tests.py" />
         </exec>
     </target>
 
