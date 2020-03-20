@@ -61,7 +61,8 @@ Options:
                 <arg value="/p:Configuration=${Configuration}"/>
                 <arg value="/p:NGS_OUTDIR=${Output}"/>
                 <arg value="/p:Autorun=true"/>
-                </exec>
+                <env key="TMPDIR" path="${Output}\tmp"/>
+            </exec>
             <!-->Java/Python tests are run directly, not through msbuild</-->
 
             <subant target="runtests">
