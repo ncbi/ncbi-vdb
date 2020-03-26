@@ -25,6 +25,6 @@
   <Import Project="..\wb-test-schema-lex.files" />
   <Target Name="AfterBuild" Condition="'$(Autorun)'=='true'">
     <MakeDir Directories="$(WorkingDirectory)\actual" />
-    <Exec Command="&quot;$(OutDir)$(TargetName)$(TargetExt)" WorkingDirectory="$(WorkingDirectory)\&quot;" />
+    <Exec Command="&quot;$(OutDir)$(TargetName)$(TargetExt)&quot;" WorkingDirectory="$(WorkingDirectory)\" />
   </Target>
 </Project>
