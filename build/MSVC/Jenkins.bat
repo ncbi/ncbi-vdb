@@ -1,7 +1,7 @@
 mkdir devel
 cd devel
 git clone -b engineering https://github.com/ncbi/ngs.git
-git clone -b 4138 https://github.com/ncbi/ncbi-vdb.git
+git clone -b VDB-4138 https://github.com/ncbi/ncbi-vdb.git
 
 call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\Tools\VsDevCmd.bat"
 
