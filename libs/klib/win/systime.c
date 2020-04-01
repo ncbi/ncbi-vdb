@@ -336,15 +336,15 @@ LIB_EXPORT KTime_t CC KTimeMakeTime ( const KTime *self )
         assert ( self -> year >= 1900 );
         t . tm_year = self -> year - 1900;
         t . tm_mon = self -> month;
-        t . tm_mday = self -> day + 1;
+        t . tm_mday = self -> day;
         t . tm_wday = self -> weekday;
         t . tm_hour = self -> hour;
         t . tm_min = self -> minute;
         t . tm_sec = self -> second;
         t . tm_isdst = self -> dst;
 
-        ts = mktime ( &t );
-#endif /* USE_WINDOWS_NATIVE */
+        ts = _mkgmtime( &t );
+#endif /* USE_WINDOWS_NATIVE */ 
     }
 
     return ts;
@@ -370,7 +370,7 @@ LIB_EXPORT size_t CC KTimeIso8601 ( KTime_t ts, char * s, size_t size )
     if ( r == NULL )
         return 0;
 
-    rc = string_printf ( s, size, & num_writ, "%04d-02d-02dT02d:%02d:%02dZ",
+    rc = string_printf ( s, size, & num_writ, "%04d-%02d-%02dT%02d:%02d:%02dZ",
         ktime . year, ktime . month + 1, ktime . day + 1,
         ktime . hour, ktime . minute, ktime . second );
     if ( rc == 0 )

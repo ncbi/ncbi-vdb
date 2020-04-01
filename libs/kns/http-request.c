@@ -868,7 +868,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddQueryParam ( KClientHttpRequest *self, c
     return rc;
 }
 
-static rc_t urlEncodeBase64(const String ** encoding) {
+rc_t KClientHttpRequestUrlEncodeBase64(const String ** encoding) {
     int n = 0;
     size_t i = 0;
 
@@ -963,7 +963,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddPostFileParam ( KClientHttpRequest * sel
                                 const String * encoded = NULL;
                                 rc = encodeBase64( & encoded, fileStart, fileSize );
                                 if ( rc == 0 )
-                                    rc = urlEncodeBase64( & encoded );
+                                    rc = KClientHttpRequestUrlEncodeBase64( & encoded );
                                 if ( rc == 0 )
                                 {
                                     rc = KClientHttpRequestAddPostParam( self, "%s=%S", name, encoded );

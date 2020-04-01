@@ -84,8 +84,7 @@ public:
 
     void GetBlob ( const char* p_acc, int64_t p_firstRowId )
     {
-        const VDatabase* db;
-        THROW_ON_RC ( VDBManagerOpenDBRead ( m_ctx -> rsrc -> vdb, & db, NULL, p_acc ) );
+        const VDatabase *db = openDB( p_acc );
         NGS_String* run_name = NGS_StringMake ( m_ctx, "", 0);
 
         if ( m_curs != 0 )
@@ -324,8 +323,9 @@ const char UsageDefaultName[] = "test-ngs_byteblob";
 rc_t CC KMain ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t m_coll=NgsByteBlobTestSuite(argc, argv);
-    return m_coll;
+    rc_t ret=NgsByteBlobTestSuite(argc, argv);
+    ByteBlobFixture::ReleaseCache();
+    return ret;
 }
 
 }

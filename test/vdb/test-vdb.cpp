@@ -43,6 +43,7 @@ extern "C" {
 #include <sysalloc.h>
 #include <cstdlib>
 #include <stdexcept>
+#include <map>
 
 using namespace std;
 
@@ -196,11 +197,18 @@ TEST_CASE(SimultaneousCursors)
 class VdbFixture
 {
 public:
+    typedef std :: map< std :: string, const VDatabase * > Databases;
+
+public:
     VdbFixture()
     : mgr(0), curs(0)
     {
         if ( VDBManagerMakeRead(&mgr, NULL) != 0 )
             throw logic_error ( "VdbFixture: VDBManagerMakeRead failed" );
+        if ( dbs == nullptr )
+        {
+            dbs = new Databases();
+        }
     }
 
     ~VdbFixture()
@@ -211,11 +219,39 @@ public:
             throw logic_error ( "~VdbFixture: VCursorRelease failed" );
     }
 
+    // call once per process
+    static void ReleaseCache()
+    {
+        for (auto d : *dbs )
+        {
+            VDatabaseRelease ( d.second );
+        }
+        delete dbs;
+        dbs = nullptr;
+    }
+
     rc_t Setup( const char * acc, const char* column[], bool open = true )
     {
-        const VDatabase *db = NULL;
-        rc_t rc = VDBManagerOpenDBRead ( mgr, &db, NULL, acc );
+        rc_t rc = 0;
         rc_t rc2;
+        const VDatabase *db = NULL;
+
+        std :: string ac(acc);
+        auto d = dbs->find(ac);
+        if ( d != dbs->end() )
+        {
+            db = d->second;
+            rc = VDatabaseAddRef( db );
+        }
+        else
+        {
+            rc = VDBManagerOpenDBRead ( mgr, &db, NULL, acc );
+            if ( rc == 0 )
+            {
+                dbs->insert( Databases::value_type( ac, db) );
+                rc = VDatabaseAddRef( db );
+            }
+        }
 
         const VTable *tbl = NULL;
         if (rc == 0)
@@ -309,7 +345,10 @@ public:
     const VDBManager * mgr;
     const VCursor * curs;
     uint32_t col_idx[20];
+    static Databases * dbs;
 };
+
+VdbFixture::Databases * VdbFixture::dbs = nullptr;
 
 FIXTURE_TEST_CASE(TestCursorIsStatic_SingleRowRun1, VdbFixture)
 {

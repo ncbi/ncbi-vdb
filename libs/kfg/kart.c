@@ -713,6 +713,21 @@ rc_t KartRegisterObject ( const Kart * self, const KartItem * item )
     return rc;
 }
 
+LIB_EXPORT rc_t CC KartReset(const Kart *cself) {
+    Kart * self = (Kart *)cself;
+    if (self == NULL)
+        return RC(rcKFG, rcFile, rcLoading, rcSelf, rcNull);
+
+    if (self->version < eVersion2) {
+        self->text = self->mem.base;
+        self->len = self->mem.elem_count;
+    }
+    else
+        self->len = 0;
+
+    return 0;
+}
+
 LIB_EXPORT
 rc_t CC KartMakeNextItem ( const Kart * cself, const KartItem **item )
 {

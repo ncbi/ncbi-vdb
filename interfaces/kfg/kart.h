@@ -120,7 +120,10 @@ KFG_EXTERN rc_t CC KartMakeText(const struct KDirectory *dir, const char *path,
 KFG_EXTERN rc_t CC KartPrint(const Kart *self);
 KFG_EXTERN rc_t CC KartPrintNumbered(const Kart *self);
 
+/* kart iterator */
 KFG_EXTERN rc_t CC KartMakeNextItem(const Kart *self, const KartItem **item);
+/* reset kart iterator */
+KFG_EXTERN rc_t CC KartReset(const Kart *self);
 
 KFG_EXTERN rc_t CC KartItemsProcessed(const Kart *self, uint16_t *number);
 

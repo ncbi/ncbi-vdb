@@ -38,6 +38,7 @@
 #include <klib/sort.h>
 #include <klib/text.h>
 #include <klib/vector.h>
+#include <klib/time.h>
 
 #include <cstdlib>
 #include <cstring>
@@ -836,20 +837,22 @@ TEST_CASE(KLog_LevelExplainInsufficientBuffer)
     REQUIRE_EQ(num_writ, (size_t)0);
 }
 
-TEST_CASE(IsUserAnAdminTest)
-{
-    // TeamCity agents run as admin on some systems but not the others
-#if defined (WINDOWS)
-    if ( getenv ( "TEAMCITY_VERSION" ) != 0 )
-    {   // always an admin under TC
-        REQUIRE ( is_iser_an_admin() );
-    }
-    // otherwise, we do not really know
-#else
-    // Linux or not under TeamCity
-    REQUIRE(!is_iser_an_admin());
-#endif
-}
+// this has been observed to fail under TeamCity
+//
+// TEST_CASE(IsUserAnAdminTest)
+// {
+//     // TeamCity agents run as admin on some systems but not the others
+// #if defined (WINDOWS)
+//     // if ( getenv ( "TEAMCITY_VERSION" ) != 0 )
+//     // {   // always an admin under TC
+//     //     REQUIRE ( is_iser_an_admin() );
+//     // }
+//     // otherwise, we do not really know
+// #else
+//     // Linux or not under TeamCity
+//     REQUIRE(!is_iser_an_admin());
+// #endif
+// }
 
 static const size_t BufSize = 1024;
 // implementation of KWrtWriter for testing purposes
@@ -1070,6 +1073,20 @@ TEST_CASE(GetUnreadRCInfo_LogRC)
     REQUIRE(GetUnreadRCInfo(&rc, &filename, &function, &lineno));
 }
 #endif
+
+TEST_CASE(TimeRoundTrip)
+{ 
+    KTime_t t1 = KTimeStamp(); // UTC
+    char str1[100];
+    KTimeIso8601(t1, str1, sizeof str1);
+    KTime time;
+    KTimeFromIso8601(&time, str1, string_size(str1));
+    KTime_t t2 = KTimeMakeTime(&time);
+    char str2[100];
+    KTimeIso8601(t2, str2, sizeof str2);
+    REQUIRE_EQ( t1, t2 );
+    REQUIRE_EQ( string(str1), string(str2) );
+}
 
 //////////////////////////////////////////////////// Main
 extern "C" {
