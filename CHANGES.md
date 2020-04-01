@@ -1,6 +1,21 @@
 # NCBI External Developer Release:
 
 
+## NCBI VDB 2.10.5
+**April 1, 2020**
+
+  **build**: the Windows build now uses MS Visual Studio 2017  
+  **cloud**: cloud-specific test projects have been ported to Windows  
+  **cloud**: SRA Tools now filter out cases when internet providers successfully resolve not found DNS entries  
+  **kfg**: AWS credential files are not opened without user permission  
+  **kns**: Internet socket connections are now blocking on Windows  
+  **kns**: KTimeMakeTime() on Windows now returns UTC, not local time  
+  **kns**: SRA Tools were updated to not hang on HTTP calls when the server doesn't return Content-Length in GET requests without a range  
+  **kns**: use of root CA certificates is now supported on Windows  
+  **ncbi-vdb, ngs, ngs-tools, sra-tools**: all Linux builds now use g++ 7.3 (C++11 ABI)  
+  **vdb**: fixed some POSIX header include issues
+
+
 ## NCBI VDB 2.10.4
 **February 26, 2020**
 
