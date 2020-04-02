@@ -121,7 +121,5 @@ public:
     static Collections * colls;
 };
 
-NgsFixture::Collections * NgsFixture::colls = nullptr;
-
 #endif
 
