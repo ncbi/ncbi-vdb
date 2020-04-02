@@ -57,10 +57,10 @@ ifeq ($(wildcard ../../../asm-trace),)
 endif
 
 
-$(TEST_TOOLS): makedirs
+$(TEST_TOOLS) $(SLOW_TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
-.PHONY: $(TEST_TOOLS)
+.PHONY: $(TEST_TOOLS) $(SLOW_TEST_TOOLS)
 
 clean: stdclean
 
@@ -81,7 +81,8 @@ TEST_NGS_CPP_LIB = \
 # test-ngs_sra-c++
 #
 TEST_NGS_SRA_CPP_SRC = \
-	SRAtest
+	SRAtest \
+	ngsfixture
 
 TEST_NGS_SRA_CPP_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_SRA_CPP_SRC))
@@ -96,7 +97,8 @@ sra: test-ngs_sra-c++
 # test-ngs_sradb-c++
 #
 TEST_NGS_SRADB_CPP_SRC = \
-	SRADBtest
+	SRADBtest \
+	ngsfixture
 
 TEST_NGS_SRADB_CPP_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_SRADB_CPP_SRC))
@@ -111,7 +113,8 @@ sradb: test-ngs_sradb-c++
 # test-ngs_csra1-c++
 #
 TEST_NGS_CSRA1_CPP_SRC = \
-	CSRA1test
+	CSRA1test \
+	ngsfixture
 
 TEST_NGS_CSRA1_CPP_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_CSRA1_CPP_SRC))
@@ -126,7 +129,9 @@ csra1: test-ngs_csra1-c++
 # test-ngs_csra1pileup-c++
 #
 TEST_NGS_CSRA1PILEUP_CPP_SRC = \
-	CSRA1PileupTest
+	CSRA1PileupTest \
+	CSRA1PileupFixture \
+	ngsfixture
 
 TEST_NGS_CSRA1PILEUP_CPP_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_CSRA1PILEUP_CPP_SRC))
@@ -141,7 +146,9 @@ pileup: test-ngs_csra1pileup-c++
 # test-slow_ngs_csra1pileup-c++
 #
 TEST_NGS_SLOW_CSRA1PILEUP_CPP_SRC = \
-	CSRA1PileupTest_Slow
+	CSRA1PileupTest_Slow \
+	CSRA1PileupFixture \
+	ngsfixture
 
 TEST_NGS_SLOW_CSRA1PILEUP_CPP_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_SLOW_CSRA1PILEUP_CPP_SRC))
