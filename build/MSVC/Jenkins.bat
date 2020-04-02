@@ -13,5 +13,6 @@ set path=C:\apache-ant\bin;C:\Program Files\Java\jdk-13.0.2\bin;%PATH%
 
 call ant -f ngs\ngs-sdk\win build
 call ant -f ngs\ngs-java build
+call ant -f ngs\ngs-python build
 call ant -f ncbi-vdb\build\MSVC runtests
 

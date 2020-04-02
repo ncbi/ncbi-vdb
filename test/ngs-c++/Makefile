@@ -34,6 +34,8 @@ TEST_TOOLS = \
     test-ngs_csra1-c++ \
 	test-ngs_csra1pileup-c++ \
 
+SLOW_TEST_TOOLS = \
+	test-slow_ngs_csra1pileup-c++ \
 
 include $(TOP)/build/Makefile.env
 
@@ -42,11 +44,10 @@ ifeq (,$(NGS_LIBDIR))
 $(TEST_TOOLS):
 	@true
 
-runtests:
+runtests slowtests:
 	@ echo "NGS C++ tests are not run since NGS library does not appear to be installed"
 
 else
-
 
 # make sure runs are not cached in the user repository when running tests
 ifeq ($(wildcard ../../../asm-trace),)
@@ -134,6 +135,21 @@ $(TEST_BINDIR)/test-ngs_csra1pileup-c++: $(TEST_NGS_CSRA1PILEUP_CPP_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_CPP_LIB)
 
 pileup: test-ngs_csra1pileup-c++
+	$(TEST_BINDIR)/$^
+
+#-------------------------------------------------------------------------------
+# test-slow_ngs_csra1pileup-c++
+#
+TEST_NGS_SLOW_CSRA1PILEUP_CPP_SRC = \
+	CSRA1PileupTest_Slow
+
+TEST_NGS_SLOW_CSRA1PILEUP_CPP_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_NGS_SLOW_CSRA1PILEUP_CPP_SRC))
+
+$(TEST_BINDIR)/test-slow_ngs_csra1pileup-c++: $(TEST_NGS_SLOW_CSRA1PILEUP_CPP_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_NGS_CPP_LIB)
+
+slowpileup: test-slow_ngs_csra1pileup-c++
 	$(TEST_BINDIR)/$^
 
 endif
