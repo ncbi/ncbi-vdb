@@ -1730,9 +1730,12 @@ static rc_t FileInitMapping ( File * self, const Item * item ) {
             else {
                 if (projectId < 0)
                     rc = VPathMakeFmt(&self->mapping, "ncbi-file:%s", name);
-                else
+                else {
                     rc = VPathMakeFmt(&self->mapping, "ncbi-file:%s?pId=%d",
                         name, projectId);
+                    if (rc == 0 && self->mapping != NULL)
+                        self->mapping->projectId = projectId;
+                }
             }
     }
 
