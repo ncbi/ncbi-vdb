@@ -3575,8 +3575,12 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
             {
                 alg = VectorGet(&self->local, i);
 
-                if (alg->cache_capable && alg -> protected == protected &&
-                    (alg->app_id == app || alg->app_id == appAny))
+                if (alg->cache_capable &&
+                    (alg -> protected == protected
+                        || (protected && alg->alg_id == algSRAFlat)
+   /* protected resolvers are using SRA-Flat to download to public repository */
+                    )
+                    && (alg->app_id == app || alg->app_id == appAny))
                 {
                     /* try to find an existing cache file
                        NB - race condition exists unless
@@ -3609,8 +3613,11 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
         for (i = 0; i < count; ++i)
         {
             const VResolverAlg *alg = VectorGet(&self->ad, i);
-            if (alg->cache_capable && alg -> protected == protected &&
-                (alg->app_id == app || alg->app_id == appAny))
+            if (alg->cache_capable &&
+                (alg -> protected == protected
+                    || (protected && alg->alg_id == algSRAAD) /* SRA-AD alg is*/
+                )        /* not protected but is used for protected resolvers */
+                && (alg->app_id == app || alg->app_id == appAny))
             {
                 /* try to find an existing cache file
                    NB - race condition exists unless
