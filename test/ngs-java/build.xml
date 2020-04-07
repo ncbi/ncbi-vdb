@@ -4,7 +4,7 @@
     <property environment="env"/>
     <property name="Platform"           value="x64" />
     <property name="Configuration"      value="Debug" />
-    <property name="Output"             value="${basedir}..\..\..\..\OUTDIR" />
+    <property name="Output"             value="${basedir}\..\..\..\OUTDIR" />
     <property name="PlatformToolset"    value="v141" />
 
     <property name="vdb.dir"        value="${Output}\ncbi-vdb\win\${PlatformToolset}\${Platform}\${Configuration}\bin" />
@@ -35,10 +35,6 @@
         </javac>
     </target>
 
-    <condition property="JVMbits" value="64" else="32">
-        <equals arg1="${Platform}" arg2="x64"/>
-    </condition>
-
     <target name="runtests" depends="compile" >
 
         <echo message="location=${classes.dir}"/>
@@ -48,18 +44,18 @@
         <echo message="location=${basedir}\..\junit-4.11.jar" />
         <echo message="java.library.path=${vdb.dir};${ngs.dir}" />
 
-        <java classname="org.junit.runner.JUnitCore" fork="true" failonerror="true">
+        <junit printsummary="on" fork="yes" showoutput="yes">
             <classpath>
                 <pathelement location="${classes.dir}" />
                 <pathelement location="${Output}\ngs-java\jar\ngs-java.jar" />
                 <pathelement location="${basedir}\..\junit-4.11.jar" />
             </classpath>
-            <sysproperty key="java.library.path" path="${vdb.dir};${ngs.dir}" />
-            <sysproperty key="vdb.System.loadLibrary" value="1" />
-            <sysproperty key="vdb.log" value="FINEST" />
-        	<arg value="gov.nih.nlm.ncbi.ngs.ngs_test_lib_load" />
-        	<arg value="ngs_test_CSRA1" />
-        </java>
+            <jvmarg value="-Djava.library.path=${vdb.dir};${ngs.dir}" />
+            <jvmarg value="-Dvdb.System.loadLibrary=1" />
+            <jvmarg value="-Dvdb.log=FINEST" />
+        	<test name="gov.nih.nlm.ncbi.ngs.ngs_test_lib_load" />
+        	<test name="ngs_test_CSRA1" />
+        </junit>
     </target>
 
 
