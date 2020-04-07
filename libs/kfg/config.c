@@ -3415,8 +3415,8 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
                     }
 
                     if ( rc == 0 && updated ) {
-                        rc = KConfigCommit ( mgr );
-                        updated = false;
+                        KConfigCommit ( mgr ); /* keep if commit fails: */
+                        updated = false;       /* ignore rc */
                     }
                 }
 
