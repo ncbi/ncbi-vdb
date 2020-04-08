@@ -28,6 +28,6 @@
   <Import Project="..\test-sparse-col.files" />
   <Target Name="AfterBuild" Condition="'$(Autorun)'=='true'">
     <MakeDir Directories="$(WorkingDirectory)\db" />
-    <Exec Command="&quot;$(OutDir)$(TargetName)$(TargetExt)" WorkingDirectory="$(WorkingDirectory)&quot;\" />
+    <Exec Command="&quot;$(OutDir)$(TargetName)$(TargetExt)&quot;" WorkingDirectory="$(WorkingDirectory)\" />
   </Target>
 </Project>
