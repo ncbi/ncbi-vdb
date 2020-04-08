@@ -103,6 +103,7 @@ public:
 
     bool NextId (const string& p_expected)
     {
+        KSleepMs(100); // trying to reduce the incidence of network timeouts in the following call
         if ( ! NGS_AlignmentIteratorNext ( m_align, m_ctx ) || m_ctx -> rc != 0 )
         {
             cout << "NextId: NGS_AlignmentIteratorNext FAILED" << endl;
