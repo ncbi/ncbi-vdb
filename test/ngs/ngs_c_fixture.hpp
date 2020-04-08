@@ -47,6 +47,8 @@
 #include <kfc/ctx.h>
 #include <kfc/rsrc.h>
 
+#include <klib/time.h>
+
 #include <vdb/database.h>
 #include <vdb/table.h>
 
@@ -201,6 +203,7 @@ public:
             return c -> second;
         }
 
+        KSleepMs(500); // trying to reduce the incidence of network timeouts on access to SDL in the following call
         ON_FAIL ( NGS_ReadCollection * ret = NGS_ReadCollectionMake ( ctx, acc ) )
         {
             throw std :: logic_error ( std::string ( "NGS_ReadCollectionMake(" ) + ac + ") failed" );
@@ -223,6 +226,7 @@ public:
         }
         else
         {
+            KSleepMs(500); // trying to reduce the incidence of network timeouts on access to SDL in the following call
             THROW_ON_RC ( VDBManagerOpenDBRead ( m_ctx -> rsrc -> vdb, & db, NULL, p_acc ) );
             dbs->insert( Databases::value_type( ac, db) );
             THROW_ON_RC ( VDatabaseAddRef( db ) );
@@ -243,6 +247,7 @@ public:
         }
         else
         {
+            KSleepMs(500); // trying to reduce the incidence of network timeouts on access to SDL in the following call
             THROW_ON_RC ( VDBManagerOpenTableRead ( m_ctx -> rsrc -> vdb, & tbl, NULL, p_acc ) );
             tbls->insert( Tables::value_type( ac, tbl) );
             THROW_ON_RC ( VTableAddRef( tbl ) );
