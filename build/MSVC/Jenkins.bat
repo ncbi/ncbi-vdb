@@ -9,7 +9,7 @@ git clone -b VDB-4138 https://github.com/ncbi/ncbi-vdb.git
 
 call "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\Common7\Tools\VsDevCmd.bat"
 
-set path=C:\apache-ant\bin;C:\Program Files\Java\jdk-13.0.2\bin;C:\Users\Administrator\AppData\Local\Programs\Python\Python38-32;%PATH%
+set path=C:\apache-ant\bin;C:\Program Files\Java\jdk-13.0.2\bin;C:\Users\Administrator\AppData\Local\Programs\Python\Python38;%PATH%
 
 call ant -f ngs\ngs-sdk\win build
 call ant -f ngs\ngs-java build
