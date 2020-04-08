@@ -1490,10 +1490,10 @@ LIB_EXPORT rc_t CC KDirectoryCopyPath ( const KDirectory_v1 *src_dir,
             if ( rc == 0 )
             {
                 rc = copy_loop( f_src, f_dst, 1024 * 1024 );
-                KDirectoryRelease(f_dst);
+                KFileRelease(f_dst);
             }
         }
-        KDirectoryRelease(f_src);
+        KFileRelease(f_src);
     }
     return rc;
 }
