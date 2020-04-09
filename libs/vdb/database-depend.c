@@ -386,6 +386,8 @@ static rc_t FindRef(Ctx* ctx, const char* seqId, Resolved* resolved,
     if (rc == 0) {
         rc = string_printf(ncbiAcc, sizeof ncbiAcc, &num_writ,
             "ncbi-acc:%s?vdb-ctx=refseq", seqId);
+        rc = string_printf(ncbiAcc, sizeof ncbiAcc, &num_writ,
+            "%s", seqId);
         if (rc == 0 && num_writ > sizeof ncbiAcc) {
             return RC(rcExe, rcFile, rcCopying, rcBuffer, rcInsufficient);
         }
@@ -1172,11 +1174,20 @@ static void CC bstCopy(BSTNode* n, void* data) {
         sn->resolved.local = elm->resolved.local;
         elm->resolved.local = NULL;
 
+        sn->resolved.localP = elm->resolved.localP;
+        elm->resolved.localP = NULL;
+
         sn->resolved.remote = elm->resolved.remote;
         elm->resolved.remote = NULL;
 
+        sn->resolved.remoteP = elm->resolved.remoteP;
+        elm->resolved.remoteP = NULL;
+
         sn->resolved.cache = elm->resolved.cache;
         elm->resolved.cache = NULL;
+
+        sn->resolved.cacheP = elm->resolved.cacheP;
+        elm->resolved.cacheP = NULL;
 
         BSTreeInsert(tr, (BSTNode*)sn, bstSortByRemote);
         ++x->count;
