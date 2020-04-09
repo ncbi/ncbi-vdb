@@ -42,6 +42,7 @@ TEST_TOOLS = \
 	test-tablecursor \
 	test-wtablecursor \
 	test-view-cursor \
+	test-VDB-4156   \
 
 #	test-VDB-3418
 
@@ -360,3 +361,19 @@ $(TEST_BINDIR)/test-VDB-3418: $(VDB_3418_OBJ)
 
 VDB-3418: test-VDB-3418
 	$(TEST_BINDIR)/test-VDB-3418
+
+#-------------------------------------------------------------------------------
+# VDB-4156
+#
+TEST_VDB4156_SRC = \
+	test-VDB-4156
+
+TEST_VDB4156_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_VDB4156_SRC))
+
+$(TEST_BINDIR)/test-VDB-4156: $(TEST_VDB4156_OBJ)
+	$(LP) --exe -o $@ $^ $(WRITE_LIBS)
+
+VDB-4156: test-VDB-4156
+	$(TEST_BINDIR)/test-VDB-4156
+
