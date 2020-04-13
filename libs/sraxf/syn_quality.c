@@ -27,6 +27,7 @@
 
 #include <klib/rc.h>
 #include <insdc/insdc.h>
+#include <sra/sradb.h>
 #include <klib/data-buffer.h>
 #include <sysalloc.h>
 #include <assert.h>
@@ -83,13 +84,54 @@ static rc_t syn_quality_impl(syn_qual_params const *const params,
     return rc;
 }
 
+static void gen_syn_quality( syn_qual_params const *const params
+                           , uint8_t *const dst
+                           , size_t const total_length
+                           , size_t const numreads
+                           , INSDC_coord_zero const *const start
+                           , INSDC_coord_len const *const length
+                           , INSDC_SRA_xread_type const *const type
+                           , INSDC_SRA_read_filter const *const filter
+                           )
+{
+    unsigned i;
+    
+    memset(dst, params->good, total_length);
+    for (i = 0; i < numreads; ++i) {
+        if ((type[i] & SRA_READ_TYPE_BIOLOGICAL) != SRA_READ_TYPE_BIOLOGICAL)
+            continue;
+        if (filter[i] == SRA_READ_FILTER_PASS)
+            continue;
+        assert(start[i] + length[i] <= total_length);
+        memset(dst + start[i], params->bad, length[i]);
+    }
+}
+
+static rc_t syn_quality_read_impl( syn_qual_params const *const params
+                                 , size_t const numreads
+                                 , INSDC_coord_zero const *const start
+                                 , INSDC_coord_len const *const length
+                                 , INSDC_SRA_xread_type const *const type
+                                 , INSDC_SRA_read_filter const *const filter
+                                 , KDataBuffer *rslt)
+{
+    rc_t rc = 0;
+    INSDC_coord_len const total_read_len = sum_read_len(numreads, length);
+
+    rslt->elem_bits = 8;
+    rc = KDataBufferResize(rslt, total_read_len);
+    if ( rc == 0 && total_read_len > 0 )
+        gen_syn_quality(params, rslt->base, total_read_len, numreads, start, length, type, filter);
+    return rc;
+}
+
 #ifndef UNIT_TEST_FUNCTION
 
 #define SAFE_BASE(ELEM, DTYPE) ((ELEM < argc && sizeof(DTYPE) * 8 == (size_t)argv[ELEM].u.data.elem_bits) ? (((DTYPE const *)argv[ELEM].u.data.base) + argv[ELEM].u.data.first_elem) : ((DTYPE const *)NULL))
 #define BIND_COLUMN(ELEM, DTYPE, POINTER) DTYPE const *const POINTER = SAFE_BASE(ELEM, DTYPE)
 #define SAFE_COUNT(ELEM) (ELEM < argc ? argv[ELEM].u.data.elem_count : 0)
 
-static rc_t CC syn_quality_drvr ( void * self,
+static rc_t CC syn_quality_spot_drvr ( void * self,
                                   const VXformInfo * info,
                                   int64_t row_id,
                                   VRowResult * rslt,
@@ -111,6 +153,33 @@ static rc_t CC syn_quality_drvr ( void * self,
     return rc;
 }
 
+static rc_t CC syn_quality_read_drvr ( void * self,
+                                  const VXformInfo * info,
+                                  int64_t row_id,
+                                  VRowResult * rslt,
+                                  uint32_t argc,
+                                  const VRowData argv [] )
+{
+    enum {
+        COL_START,
+        COL_LEN,
+        COL_TYPE,
+        COL_FILTER,
+    };
+    rc_t rc;
+    assert(argc == 4);
+    rc = syn_quality_read_impl(self
+                              , SAFE_COUNT(COL_START)
+                              , SAFE_BASE(COL_START, INSDC_coord_zero)
+                              , SAFE_BASE(COL_LEN, INSDC_coord_len)
+                              , SAFE_BASE(COL_TYPE, INSDC_SRA_xread_type)
+                              , SAFE_BASE(COL_FILTER, INSDC_SRA_read_filter)
+                              , rslt->data
+                              );
+    rslt->elem_count = rslt->data->elem_count;
+    return rc;
+}
+
 static void make_params(syn_qual_params *const params, VFactoryParams const *const fp)
 {
     params->good = 30;
@@ -126,16 +195,22 @@ static void make_params(syn_qual_params *const params, VFactoryParams const *con
     }
 }
 
+enum syn_quality_flavor {
+    sqf_spot,
+    sqf_read,
+};
+
 static rc_t NCBI_SRA_syn_quality_factory(
     VFuncDesc * rslt,
     const VFactoryParams * cp,
-    const VFunctionParams * dp )
+    const VFunctionParams * dp,
+    enum syn_quality_flavor flavor )
 {
     /* expecting 2 data arguments and 0, 1, or 2 factory arguments */
     assert(dp->argc == 2 && 0 <= cp->argc && cp->argc <= 2);
 
     rslt->whack = free;
-    rslt->u.rf = syn_quality_drvr;
+    rslt->u.rf = (flavor == sqf_read) ? syn_quality_read_drvr : syn_quality_spot_drvr;
     rslt->variant = vftRow;
     rslt->self = malloc(sizeof(syn_qual_params));
     if (rslt->self) {
@@ -156,8 +231,25 @@ VTRANSFACT_IMPL ( NCBI_SRA_syn_quality, 1, 0, 0 ) ( const void * Self,
                                            const VFactoryParams * cp,
                                            const VFunctionParams * dp )
 {
-    return NCBI_SRA_syn_quality_factory(rslt, cp, dp);
+    return NCBI_SRA_syn_quality_factory(rslt, cp, dp, sqf_spot);
 }
+
+/*
+ * function INSDC:quality:phred NCBI:SRA:syn_quality #2
+ *     < INSDC:quality:phred good_quality, INSDC:quality:phred bad_quality >
+ *     ( INSDC:coord:zero read_start, INSDC:coord:len read_len,
+ *       INSDC:SRA:xread_type read_type, INSDC:SRA:read_filter read_filter )
+ *     = NCBI:SRA:syn_quality_read;
+ */
+VTRANSFACT_IMPL ( NCBI_SRA_syn_quality_read, 1, 0, 0 ) ( const void * Self,
+                                           const VXfactInfo * info,
+                                           VFuncDesc * rslt,
+                                           const VFactoryParams * cp,
+                                           const VFunctionParams * dp )
+{
+    return NCBI_SRA_syn_quality_factory(rslt, cp, dp, sqf_read);
+}
+
 
 #else /* ifndef UNIT_TEST_FUNCTION */
 
