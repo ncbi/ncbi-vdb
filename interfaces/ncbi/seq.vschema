@@ -52,6 +52,13 @@ function INSDC:quality:phred NCBI:SRA:syn_quality #1
     ( INSDC:coord:len read_len, INSDC:SRA:spot_filter spot_filter );
 
 
+function INSDC:quality:phred NCBI:SRA:syn_quality #2
+    < INSDC:quality:phred good_quality, INSDC:quality:phred bad_quality >
+    ( INSDC:coord:zero read_start, INSDC:coord:len read_len,
+      INSDC:SRA:xread_type read_type, INSDC:SRA:read_filter read_filter )
+    = NCBI:SRA:syn_quality_read;
+
+
 /*--------------------------------------------------------------------------
  * n_encoding - implementation
  *  introduces common virtual productions
@@ -750,7 +757,8 @@ table NCBI:tbl:phred_quality #2.0.4 = INSDC:tbl:sequence #1.0.1
         ;
 
     INSDC:quality:phred syn_qual_phred
-        = NCBI:SRA:syn_quality < 30, 3 > ( out_read_len, out_spot_filter )
+        = NCBI:SRA:syn_quality < 30, 3 > ( out_read_start, out_read_len, out_read_type, out_read_filter )
+        | NCBI:SRA:syn_quality < 30, 3 > ( out_read_len, out_spot_filter )
         | const_qual_phred
         ;
 
