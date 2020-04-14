@@ -736,8 +736,9 @@ table NCBI:tbl:phred_quality #1.0.1 = NCBI:tbl:phred_quality_nocol #1.0.1
  *  2.0.2 - added input of text encodings
  *  2.0.3 - base explicitly upon sequence #1.0.1
  *  2.0.4 - change compression from izip to zip
+ *  2.0.5 - change quality synthesizer to work per read
  */
-table NCBI:tbl:phred_quality #2.0.4 = INSDC:tbl:sequence #1.0.1
+table NCBI:tbl:phred_quality #2.0.5 = INSDC:tbl:sequence #1.0.1
 {
     // read directly quality as  phred
     INSDC:quality:phred phys_qual_phred

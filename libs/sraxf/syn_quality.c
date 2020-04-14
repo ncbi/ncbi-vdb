@@ -121,7 +121,7 @@ static rc_t syn_quality_read_impl( syn_qual_params const *const params
     rslt->elem_bits = 8;
     rc = KDataBufferResize(rslt, total_read_len);
     if ( rc == 0 && total_read_len > 0 )
-        gen_syn_quality(params, rslt->base, total_read_len, numreads, start, length, type, filter);
+        gen_syn_quality(params, (uint8_t *)rslt->base, total_read_len, numreads, start, length, type, filter);
     return rc;
 }
 
