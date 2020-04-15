@@ -206,8 +206,8 @@ static rc_t NCBI_SRA_syn_quality_factory(
     const VFunctionParams * dp,
     enum syn_quality_flavor flavor )
 {
-    /* expecting 2 data arguments and 0, 1, or 2 factory arguments */
-    assert(dp->argc == 2 && 0 <= cp->argc && cp->argc <= 2);
+    /* expecting 2 or 4 data arguments and 0, 1, or 2 factory arguments */
+    assert((dp->argc == 2 || dp->argc == 4) && 0 <= cp->argc && cp->argc <= 2);
 
     rslt->whack = free;
     rslt->u.rf = (flavor == sqf_read) ? syn_quality_read_drvr : syn_quality_spot_drvr;
