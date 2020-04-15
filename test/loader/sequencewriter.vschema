@@ -8,7 +8,7 @@ INSDC:4na:bin NCBI:align:seq_restore_read #1 ( INSDC:4na:bin cmp_rd, I64 align_i
 
 table NCBI:align:tbl:seq #1.0.0 =
     NCBI:tbl:base_space #2.0.3,
-    NCBI:tbl:phred_quality #2.0.4,
+    NCBI:tbl:phred_quality #2.0,
     NCBI:align:tbl:cmp_base_space #1,
     NCBI:SRA:tbl:spotdesc #1.0.2,
     NCBI:SRA:tbl:stats #1.2.0
