@@ -1441,15 +1441,35 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
         /* send the message and create a response */
         rc = KClientHttpSendReceiveMsg ( self -> http, _rslt,
             (char *) buffer.base,
-            buffer.elem_count - 1, NULL, (char *) self -> url_buffer . base );
+            buffer.elem_count - 1, NULL,
+            (char *) self -> url_buffer . base );
         if ( rc != 0 )
         {
             KClientHttpClose ( self -> http );
-            rc = KClientHttpSendReceiveMsg ( self -> http, _rslt,
-                (char *) buffer.base, buffer.elem_count - 1, NULL,
-                (char *) self -> url_buffer . base );
+            do
+            {
+                rc = KClientHttpSendReceiveMsg ( self -> http, _rslt,
+                    (char *) buffer.base, buffer.elem_count - 1, NULL,
+                    (char *) self -> url_buffer . base );
+if ( GetRCState ( rc ) == rcExhausted )
+{
+    printf("***********************timeout, retrying\n");
+}
+else if ( rc != 0 )
+{
+    printf("***********************RC=%u, breaking\n", rc);
+}
+else
+{
+    printf("***********************OK\n");
+}
+            }
+            while ( GetRCState ( rc ) == rcExhausted );
+
             if ( rc != 0 )
+            {
                 break;
+            }
         }
 
         rslt = * _rslt;

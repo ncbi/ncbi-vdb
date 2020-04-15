@@ -100,6 +100,7 @@ rc_t CC KHttpFileDestroy ( KHttpFile *self )
     KDataBufferWhack ( & self -> url_buffer );
     KDataBufferWhack ( & self -> orig_url_buffer );
     free ( self );
+printf("KHttpFileDestroy(%p)\n", (void*)self);
 
     return 0;
 }
@@ -1120,6 +1121,7 @@ rc_t CC KHttpFileTimedReadChunked ( const KHttpFile * self, uint64_t pos,
 {
     rc_t rc;
     KHttpRetrier retrier;
+//printf("KHttpFileTimedReadChunked(%p, %u)\n", (void*)self, tm->mS);
 
     /* this shoud have been checked in the interface dispatch.
        it addresses the concern over attempts to read small amounts
@@ -1150,6 +1152,11 @@ rc_t CC KHttpFileTimedReadChunked ( const KHttpFile * self, uint64_t pos,
 
             if ( rc != 0 )
             {
+if (GetRCState ( rc ) == rcCanceled )
+{
+printf("KHttpFileTimedReadChunked(%p) we are being asked to quit\n", (void*)self);
+    break;
+}
                 rc2 = KClientHttpReopen ( self -> http );
                 DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedReadChunked: "
                     "KHttpFileTimedReadChunkedLocked failed, reopening\n" ) );
@@ -1209,6 +1216,7 @@ rc_t CC KHttpFileTimedReadChunked ( const KHttpFile * self, uint64_t pos,
             self -> url_buffer . base,
             ep . ip_address, bytes, local_ep . ip_address ) );
     }
+printf("KHttpFileTimedReadChunked(%p) = %u\n", (void*)self, rc);
 
     return rc;
 }
@@ -1277,6 +1285,7 @@ rc_t KHttpFileMake( KHttpFile ** self, const char *url, va_list args )
                         if ( rc == 0 )
                         {
                             *self = f;
+printf("KHttpFileMake(%p)\n", (void*)*self);
                             return 0;
                         }
                     }

@@ -856,10 +856,11 @@ static bool CSRA1_Pileup_GetReadFilter ( CSRA1_Pileup * self, ctx_t ctx,
     {
         if ( cd -> cell_len [ pileup_align_col_READ_FILTER ] == 0 )
             return false;
-    }
 
-    * ret_val = *( (INSDC_read_filter*) cd -> cell_data [ pileup_align_col_READ_FILTER ]);
-    return true;
+        * ret_val = *( (INSDC_read_filter*) cd -> cell_data [ pileup_align_col_READ_FILTER ]);
+        return true;
+    }
+    return false;
 }
 
 static

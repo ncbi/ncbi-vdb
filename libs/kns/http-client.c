@@ -1168,7 +1168,7 @@ rc_t KClientHttpVAddHeader ( BSTree *hdrs, bool add,
     if ( rc == 0 && buf . elem_count != 0 )
     {
         size_t bsize = ( size_t ) buf . elem_count - 1;
-      
+
         /* get length of buf */
         size_t blen = string_len ( buf . base, bsize );
 
