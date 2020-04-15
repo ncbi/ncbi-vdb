@@ -6387,9 +6387,8 @@ rc_t CC VFSManagerMakeResolver ( const VFSManager * self,
                     rc = KRepositoryMgrCurrentProtectedRepository ( rmgr, & protected );
                     if ( rc == 0 || GetRCState ( rc ) == rcNotFound )
                     {
-        /* don't use protected repository: use AD from public instead */
                         rc = VResolverMake(new_resolver,
-                            wd, NULL/*protected*/, cfg, self, NULL);
+                            wd, protected, cfg, self, NULL);
                         KRepositoryRelease ( protected );
 
                         if ( rc == 0 )
