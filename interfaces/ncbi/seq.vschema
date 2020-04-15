@@ -757,7 +757,7 @@ table NCBI:tbl:phred_quality #2.0.5 = INSDC:tbl:sequence #1.0.1
         ;
 
     INSDC:quality:phred syn_qual_phred
-        = NCBI:SRA:syn_quality_read < 30, 3 > ( out_read_start, out_read_len, out_read_type, out_read_filter )
+        = NCBI:SRA:syn_quality_read < 30, 3 > ( out_read_start, out_read_len, out_read_type, out_rd_filter )
         | NCBI:SRA:syn_quality < 30, 3 > ( out_read_len, out_spot_filter )
         | const_qual_phred
         ;
