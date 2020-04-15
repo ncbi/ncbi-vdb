@@ -55,7 +55,8 @@ rc_t KWrtSysInit(void** h_stdout, void** h_stderr)
     return 0;
 }
 
-LIB_EXPORT int CC snprintf ( char * buffer, size_t bufsize, const char * format, ... )
+#if _MSC_VER < 1900
+KLIB_EXTERN int CC snprintf(char * buffer, size_t bufsize, const char * format, ...)
 {
     int ret;
     size_t size;
@@ -79,6 +80,7 @@ LIB_EXPORT int CC snprintf ( char * buffer, size_t bufsize, const char * format,
     va_end (args);
     return ret;
 }
+#endif
 
 /* ----
  * write 'count' bytes starting at 'buf'  to a "stream/file" identified by 'fd'

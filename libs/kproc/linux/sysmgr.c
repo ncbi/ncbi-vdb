@@ -28,15 +28,19 @@
 #include <kproc/procmgr.h>
 
 #include <unistd.h>
-#include <sys/syscall.h>
 
-static __thread bool have_tid, on_main_thread;
+#if !defined(_GNU_SOURCE) || !defined(__GLIBC__) || __GLIBC__ < 2|| (__GLIBC__ == 2 && __GLIBC_MINOR__ < 30)
+#include <sys/syscall.h>
 
 static
 pid_t gettid ( void )
 {
     return syscall ( SYS_gettid );
 }
+
+#endif
+
+static __thread bool have_tid, on_main_thread;
 
 /* OnMainThread
  *  returns true if running on main thread

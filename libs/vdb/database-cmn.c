@@ -325,12 +325,13 @@ rc_t VDBManagerVPathOpenRemoteDBRead ( const VDBManager *self,
 static void ad(const KDBManager *self, const VPath *aPath, const VPath **path)
 {
     String spath;
+    const char *slash;
     assert(self);
     if (VPathGetPath(aPath, &spath) != 0)
         return;
     if ((KDirectoryPathType(self->wd, spath.addr) & ~kptAlias) != kptDir)
         return;
-    const char *slash = strrchr(spath.addr, '/');
+    slash = strrchr(spath.addr, '/');
     if (slash)
         ++slash;
     else
@@ -610,10 +611,12 @@ LIB_EXPORT rc_t CC VDBManagerOpenDBReadVPath ( const VDBManager *self,
                         const VPath * plocal = NULL, * premote = NULL, * pcache = NULL;
 
                         const VPath * orig = aOrig;
+                        bool is_accession;
+
                         ad(self->kmgr, aOrig, &orig);
 
                         /* check whether we were given a path or accession */
-                        bool is_accession = VPathIsAccessionOrOID ( orig );
+                        is_accession = VPathIsAccessionOrOID ( orig );
 
                         /* if the original is not an accession */
                         if ( ! is_accession )

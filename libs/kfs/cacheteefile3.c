@@ -62,7 +62,7 @@ struct KCacheTeeChunkReader;
 #define DEFAULT_CLUSTER_FACT 4U
 #define MAX_REQUEST_SIZE ( 256U * 1024U * 1024U )
 #define MAX_PAGE_SIZE ( 256U * 1024U * 1024U )
-#define MAX_RAM_CACHE_BYTES ( 64UL * 1024UL * 1024UL * 1024UL )
+#define MAX_RAM_CACHE_BYTES ( 64ULL * 1024ULL * 1024ULL * 1024ULL )
 #if _DEBUGGING
 #define MIN_PAGE_SIZE ( 256U )
 #else
@@ -192,8 +192,9 @@ int64_t CC KCacheTeeFileTreeNodeSort ( const BSTNode *item, const BSTNode *n )
 }
 
 #if WINDOWS
-#include <synchapi.h>
-#include <processthreadsapi.h>
+//#include <synchapi.h>
+//#include <processthreadsapi.h>
+#include <windows.h>
 static CRITICAL_SECTION crit;
 static
 int enter_crit_section ( void )
@@ -1777,7 +1778,7 @@ rc_t KCacheTeeFileInitExisting ( KCacheTeeFile_v3 * self )
     /* first of all, let's get the cache file size */
     rc = KFileSize ( self -> cache_file, & actual_eof );
     STATUS ( STAT_GEEK
-             , "%s - file size = %lu, rc = $R\n"
+             , "%s - file size = %lu, rc = %R\n"
              , __func__
              , actual_eof
              , rc
@@ -1810,7 +1811,7 @@ rc_t KCacheTeeFileInitExisting ( KCacheTeeFile_v3 * self )
                      , calculated_eof
                 );
             
-            rc = RC ( rcFS, rcFile, rcOpening, rcData, rcUnequal );
+            rc = RC ( rcFS, rcFile, rcOpening, rcData, actual_eof == 0 ? rcEmpty : rcUnequal );
         }
         else
         {
@@ -1878,11 +1879,14 @@ rc_t KCacheTeeFileInitShared ( KCacheTeeFile_v3 * self )
     if ( rc == 0 )
         return rc;
 
-    PLOGMSG ( klogWarn, ( klogWarn, "$(func) - stale cache file '$(path).cache'. Reinitializing."
-                         , "func=%s,path=%s"
-                         , __func__
-                         , self -> path
-                  ) );
+    if (GetRCState(rc) != rcEmpty)
+    {
+        PLOGMSG(klogWarn, (klogWarn, "$(func) - stale cache file '$(path).cache'. Reinitializing."
+            , "func=%s,path=%s"
+            , __func__
+            , self->path
+            ));
+    }
 
     calculated_eof = self -> source_size + self -> bmap_size + sizeof * self -> tail;
     
@@ -2008,7 +2012,7 @@ rc_t KCacheTeeFileOpen ( KCacheTeeFile_v3 * self, KDirectory * dir, const KFile 
                         ( const KFile ** ) & self -> cache_file, "%s.cache", self -> path );
 #if ! WINDOWS
                     STATUS ( STAT_GEEK
-                             , "%s - open read-only file attempt: fd = %d, rc = $R\n"
+                             , "%s - open read-only file attempt: fd = %d, rc = %R\n"
                              , __func__
                              , KFileGetSysFile ( self -> cache_file, & dummy ) -> fd
                              , rc
@@ -2186,8 +2190,10 @@ void KCacheTeeFileBindConstants ( KCacheTeeFile_v3 * self,
     /* set up ram cache page limit */
     ram_cache_size = ( size_t ) self -> page_size * ram_pages;
 
+    STATUS(STAT_GEEK, "%s - ram_cache_size=%lu MAX_RAM_CACHE_BYTES=%lu\n", __func__, ram_cache_size, MAX_RAM_CACHE_BYTES);
+
     if ( ram_cache_size > MAX_RAM_CACHE_BYTES )
-        ram_pages = MAX_RAM_CACHE_BYTES / self -> page_size;
+        ram_pages = (uint32_t) ( MAX_RAM_CACHE_BYTES / self -> page_size );
 
     self -> ram_limit = ram_pages;
     self -> try_promote_on_close = try_promote_on_close;

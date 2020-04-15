@@ -223,7 +223,7 @@ const void *resolve_object ( const KSymTable *tbl,
 {
     rc_t rc;
     const void *obj;
-    
+
     VTypedecl td;
     bool has_type = false;
 
@@ -254,7 +254,7 @@ const void *resolve_object ( const KSymTable *tbl,
     }
 
     /* can also accept a physical name */
-    else 
+    else
     {
         if ( t . id == ePeriod )
             physical_name ( tbl, & src, & t, & env );
@@ -672,6 +672,8 @@ rc_t include_stmt ( KSymTable *tbl, KTokenSource *src, KToken *t,
 
     if ( t -> id != eString )
         return KTokenExpected ( t, klogErr, "file path" );
+
+    PARSE_DEBUG( ("include_stmt %S\n", & t->str ) );
 
     rc = VSchemaParseFile ( self, "%.*s", ( int ) ( t -> str . size - 2 ), t -> str . addr + 1 );
     if ( rc != 0 )

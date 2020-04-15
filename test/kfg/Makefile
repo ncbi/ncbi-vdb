@@ -30,7 +30,6 @@ TOP ?= $(abspath ../..)
 MODULE = test/kfg
 
 TEST_TOOLS = \
-	flat-sra-kfg \
 	wb-test-kfg \
 	test-kfg \
 	test-repository \
@@ -73,18 +72,6 @@ TEST_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_SRC))
 
 $(TEST_BINDIR)/wb-test-kfg: $(TEST_OBJ)
-	$(LP) --exe -o $@ $^ $(TEST_LIB)
-
-#-------------------------------------------------------------------------------
-# flat-sra-kfg
-
-FLAT_SRC = \
-	flat-sra-kfg
-
-FLAT_OBJ = \
-	$(addsuffix .$(OBJX),$(FLAT_SRC))
-
-$(TEST_BINDIR)/flat-sra-kfg: $(FLAT_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_LIB)
 
 #-------------------------------------------------------------------------------

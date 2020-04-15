@@ -777,6 +777,18 @@ LIB_EXPORT rc_t CC VSchemaVAddIncludePath ( VSchema *self, const char *path, va_
     if ( rc == 0 )
     {
         const KDirectory *dir;
+#if _DEBUGGING
+        {
+            char full_name [4096];
+            size_t num_writ;
+            va_list cargs;
+            va_copy ( cargs, args );
+            string_vprintf ( full_name, sizeof( full_name ), &num_writ, path, cargs );
+            PARSE_DEBUG( ("VSchemaVAddIncludePath(%s)\n", full_name) );
+            va_end ( cargs );
+        }
+#endif
+
         rc = KDirectoryVOpenDirRead ( wd, & dir, false, path, args );
         if ( rc == 0 )
         {
@@ -845,6 +857,8 @@ LIB_EXPORT rc_t CC VSchemaParseText ( VSchema *self, const char *name,
 {
     rc_t rc;
 
+    PARSE_DEBUG( ("VSchemaParseText %s\n", name) );
+
     if ( self == NULL )
         rc = RC ( rcVDB, rcSchema, rcParsing, rcSelf, rcNull );
     else if ( bytes == 0 )
@@ -892,18 +906,36 @@ rc_t CC VSchemaTryOpenFile ( const VSchema *self, const KDirectory *dir, const K
     rc_t rc;
     va_list cpy_args;
 
+#if _DEBUGGING
+    {
+        char full_name [4096];
+        size_t num_writ;
+        va_list cargs;
+        va_copy ( cargs, args );
+        string_vprintf ( full_name, sizeof( full_name ), &num_writ, name, cargs );
+        PARSE_DEBUG( ("VSchemaTryOpenFile(%s)\n", full_name) );
+        va_end ( cargs );
+    }
+#endif
+
     va_copy ( cpy_args, args );
     rc = KDirectoryVResolvePath ( dir, true, path, path_max, name, cpy_args );
     va_end ( cpy_args );
 
     if ( rc == 0 )
     {
+        PARSE_DEBUG( ("VSchemaTryOpenFile: path = '%s'\n", path) );
         /* try to find file in already opened list */
         if ( BSTreeFind ( & self -> paths, path, VIncludedPathCmp ) != NULL )
         {
+            PARSE_DEBUG( ("VSchemaTryOpenFile: '%s' already open\n", path) );
             * fp = NULL;
             return 0;
         }
+    }
+    else
+    {
+        PARSE_DEBUG( ("VSchemaTryOpenFile:  failed\n", path) );
     }
 
     if ( rc == 0 )
@@ -916,14 +948,35 @@ rc_t CC VSchemaOpenFile ( const VSchema *self, const KFile **fp,
     char *path, size_t path_max, const char *name, va_list args )
 {
     const VSchema *schema;
+#if _DEBUGGING
+    {
+        char full_name [4096];
+        size_t num_writ;
+        va_list cpy_args;
+        va_copy ( cpy_args, args );
+        string_vprintf ( full_name, sizeof( full_name ), &num_writ, name, cpy_args );
+        va_end ( cpy_args );
+        PARSE_DEBUG( ("VSchemaOpenFile('%s')\n", full_name) );
+    }
+#endif
+
     for ( schema = self; schema != NULL; schema = schema -> dad )
     {
         uint32_t i, end;
-
         for ( i = VectorStart ( & schema -> inc ), end = i + VectorLength ( & schema -> inc );
               i < end; ++ i )
         {
             const KDirectory *dir = ( const KDirectory* ) VectorGet ( & schema -> inc, i );
+#if _DEBUGGING
+            if ( dir != NULL )
+            {
+                char resolved[4096];
+                if (KDirectoryResolvePath_v1 ( dir, true, resolved, sizeof( resolved ), "." ) == 0 )
+                {
+                    PARSE_DEBUG( ("VSchemaOpenFile trying '%s'\n", resolved ) );
+                }
+            }
+#endif
             if ( dir != NULL )
             {
                 rc_t rc = VSchemaTryOpenFile ( self, dir, fp, path, path_max, name, args );
@@ -969,8 +1022,16 @@ LIB_EXPORT rc_t CC VSchemaVParseFile ( VSchema *self, const char *name, va_list 
             if ( rc == 0 )
             {
                 rc = VSchemaTryOpenFile ( self, wd, & f, path, sizeof path, name, args );
+                if ( rc == 0 )
+                {
+                    PARSE_DEBUG( ("VSchemaTryOpenFile = '%s'\n", path) );
+                }
                 KDirectoryRelease ( wd );
             }
+        }
+        else
+        {
+            PARSE_DEBUG( ("VSchemaOpenFile = '%s'\n", path) );
         }
 
         /* if the file was opened... */
@@ -989,7 +1050,10 @@ LIB_EXPORT rc_t CC VSchemaVParseFile ( VSchema *self, const char *name, va_list 
                 {
                     rc = VIncludedPathMake ( & self -> paths, & self -> file_count, path );
                     if ( rc == 0 )
+                    {
+                        PARSE_DEBUG( ("VSchemaVParseFile %s\n", path) );
                         rc = VSchemaParseTextInt ( self, path, addr, size );
+                    }
                 }
 
                 KMMapRelease ( mm );

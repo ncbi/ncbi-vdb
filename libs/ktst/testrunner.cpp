@@ -30,7 +30,7 @@ using namespace ncbi::NK;
 
 TestRunner::TestRunner() : argc(0), argv(NULL) {}
 
-void TestRunner::ReportTestNumber(void) 
+void TestRunner::ReportTestNumber(void)
 {
     T::size_type sz = _cases.size();
     if (sz == 1) {
@@ -40,15 +40,15 @@ void TestRunner::ReportTestNumber(void)
     }
 }
 
-void TestRunner::SetArgs(int argc, char* argv[]) 
+void TestRunner::SetArgs(int argc, char* argv[])
 {
     this->argc = argc;
     this->argv = argv;
 }
 
-void TestRunner::Add(ncbi::NK::TestInvoker* t) 
+void TestRunner::Add(ncbi::NK::TestInvoker* t)
 {
-    if (t) 
+    if (t)
     {
         _cases.push_back(t);
     }
@@ -57,15 +57,17 @@ void TestRunner::Add(ncbi::NK::TestInvoker* t)
 counter_t TestRunner::Run(void* globalFixture) const throw ()
 {
     counter_t ec = 0;
-    for (TCI it = _cases.begin(); it != _cases.end(); ++it) 
+    for (TCI it = _cases.begin(); it != _cases.end(); ++it)
     {
         ncbi::NK::TestInvoker* c = *it;
-        try {
+        auto start = std::chrono::high_resolution_clock::now();
+        try
+        {
             LOG(LogLevel::e_test_suite,
                 "Entering test case \"" << c->GetName() << "\"\n");
             c->Run(globalFixture);
-        } 
-        catch (...) 
+        }
+        catch (...)
         {
             if (c->GetErrorCounter() == 0)
                 ++ec;
@@ -73,13 +75,24 @@ counter_t TestRunner::Run(void* globalFixture) const throw ()
         counter_t tc = c->GetErrorCounter();
         if (tc == 0) {
             LOG(LogLevel::e_test_suite,
-                "Leaving test case \"" << c->GetName() << "\"\n");
+                "Leaving test case \"" << c->GetName() << "\"");
         }
         else {
             LOG(LogLevel::e_test_suite,
-                "Leaving failed test case \"" << c->GetName() << "\"\n");
+                "Leaving failed test case \"" << c->GetName() << "\"");
         }
         ec += tc;
+
+        auto stop = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::seconds>(stop - start);
+        if ( ncbi::NK::TestEnv::verbosity <= LogLevel::e_test_suite )
+        {
+            LOG(LogLevel::e_test_suite, " (" << duration.count() << " s)\n" );
+        }
+        else if ( ncbi::NK::TestEnv::verbosity != LogLevel::e_nothing )
+        {
+            LOG(LogLevel::e_nothing, c->GetName() << " (" << duration.count() << " s)\n" );
+        }
     }
     return ec;
 }

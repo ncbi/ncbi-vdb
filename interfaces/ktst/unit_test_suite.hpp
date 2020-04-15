@@ -37,6 +37,7 @@
 #include <cassert>
 #include <iostream>
 #include <stdexcept>
+#include <chrono>
 
 // it's generally a bad idea to make the test suite rely upon code under test
 #define ALLOW_TESTING_CODE_TO_RELY_UPON_CODE_BEING_TESTED 0
@@ -512,23 +513,29 @@ ncbi::NK::counter_t Main(int argc, char* argv[],
     TFixture globalFixtute;
     LOG(ncbi::NK::LogLevel::e_test_suite,
         "Entering test suite \"" << suite_name << "\"\n");
+    auto start = std::chrono::high_resolution_clock::now();
+
     ec = t->Run(&globalFixtute);
     LOG(ncbi::NK::LogLevel::e_test_suite,
         "Leaving test suite \"" << suite_name << "\"\n");
 
     switch (ec)
     {
-        case 0:
-          LOG(ncbi::NK::LogLevel::e_nothing, "\n*** No errors detected\n");
-          break;
-        case 1:
-          LOG(ncbi::NK::LogLevel::e_nothing, "\n*** " << ec <<
-           " failure detected in test suite \"" << suite_name << "\"\n");
-          break;
-        default:
-          LOG(ncbi::NK::LogLevel::e_nothing, "\n*** " << ec <<
-           " failures detected in test suite \"" << suite_name << "\"\n");
-          break;
+    case 0:
+        {
+            auto stop = std::chrono::high_resolution_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::seconds>(stop - start);
+            LOG(ncbi::NK::LogLevel::e_nothing, "\n*** No errors detected (" << duration.count() << " s total)\n" );
+        }
+        break;
+    case 1:
+        LOG(ncbi::NK::LogLevel::e_nothing, "\n*** " << ec <<
+            " failure detected in test suite \"" << suite_name << "\"\n");
+        break;
+    default:
+        LOG(ncbi::NK::LogLevel::e_nothing, "\n*** " << ec <<
+            " failures detected in test suite \"" << suite_name << "\"\n");
+        break;
     }
     return ec;
 }

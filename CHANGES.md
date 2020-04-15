@@ -1,6 +1,86 @@
 # NCBI External Developer Release:
 
 
+## NCBI VDB 2.10.5
+**April 1, 2020**
+
+  **build**: the Windows build now uses MS Visual Studio 2017  
+  **cloud**: cloud-specific test projects have been ported to Windows  
+  **cloud**: SRA Tools now filter out cases when internet providers successfully resolve not found DNS entries  
+  **kfg**: AWS credential files are not opened without user permission  
+  **kns**: Internet socket connections are now blocking on Windows  
+  **kns**: KTimeMakeTime() on Windows now returns UTC, not local time  
+  **kns**: SRA Tools were updated to not hang on HTTP calls when the server doesn't return Content-Length in GET requests without a range  
+  **kns**: use of root CA certificates is now supported on Windows  
+  **ncbi-vdb, ngs, ngs-tools, sra-tools**: all Linux builds now use g++ 7.3 (C++11 ABI)  
+  **vdb**: fixed some POSIX header include issues
+
+
+## NCBI VDB 2.10.4
+**February 26, 2020**
+
+  **kns**: fixed errors when using ngc file
+
+
+## NCBI VDB 2.10.3
+**February 18, 2020**
+
+  **sraxf**: fixed a problem resulting in a segmentation fault 
+
+
+## NCBI VDB 2.10.2
+**January 15, 2020**
+
+  **build**: install used to fail on OSX when checking md5  
+  **kfg**: Users now provide the ngc access token on the command line  
+  **kfg**: potential memory leak removed  
+  **kfg, vdb-config, vfs**: new names for caching dbGaP files  
+  **kfg, vfs**: added new configuration node for resolving protected data  
+  **klib**: fixed incorrect access to memory in output writers  
+  **kns**: KNS now provides limited support for attaching files to HTTP POST requests  
+  **kns, vfs**: added support of ngc files and JWT-carts in SDL requests  
+  **krypto**: fixed decryption of dbGaP data on the fly  
+  **vfs**: allow to set dbGaP context by ngc file  
+  **vfs**: fixed detection of cache location of public runs on cloud  
+  **vfs**: fixed double-free when processing names service response  
+  **vfs**: fixed names conflict  
+  **vfs**: new naming scheme for caching dbGaP files  
+
+
+## NCBI VDB 2.10.1
+**December 16, 2019**
+
+  **vfs**: fixed generation of unique file name when caching
+
+
+## NCBI VDB 2.10.0
+**August 19, 2019**
+
+  **cloud**: added support for user-pays access to GCP  
+  **cloud**: cloud-related code was moved to new module  
+  **cloud, vfs**: send cloud instance identity just when user allows it  
+  **kfg, sra-tools**: use trace.ncbi.nlm.nih.gov to call names service  
+  **kfg, vdb-config**: alternative remote repository URL was added to default configuration   
+  **kfs**: introduced readahead strategy for cloud storage  
+  **klib, vdb**: error report is saved to ncbi_error_report.txt  
+  **kns**: Don't log mdebtls error messages. Added possibility to enable them.  
+  **kns**: We now use system root CA certs on Unix   
+  **kns**: increased default value of HTTP read to 5 minutes; made it configurable  
+  **kns**: introduced configurable controls over network timeouts  
+  **kns**: special support for handling SDL interaction  
+  **prefetch, vdb**: adjustments for latest name resolution service  
+  **prefetch, vfs**: added support of "run accession as directory"  
+  **prefetch, vfs**: added support of download of reference sequences in "run accession as directory"  
+  **prefetch, vfs**: fixed regression when prefetch does not download vdbcache  
+  **sratools**: VDB can get URLs- for local/remote/cache locations of accession from environment  
+  **tui, vdb-config**: new look and cloud specific options in 'vdb-config -i'  
+  **vdb**: VDBManagerMakeSRASchema() was deprecated  
+  **vdb**: make greater use of data returned by latest name resolver  
+  **vfs**: added possibility to have multiple remote repositories for backward compatibility  
+  **vfs**: added possibility to set resolver version from configuration  
+  **vfs**: allow to use SDL as remote service  
+
+
 ## NCBI VDB 2.9.6
 **March 18, 2019**
 

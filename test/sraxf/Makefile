@@ -29,6 +29,7 @@ TOP ?= $(abspath ../..)
 MODULE = test/sraxf
 
 TEST_TOOLS = \
+	test-format_spot_name \
 	test-fix_read_seg \
 	test_syn_quality \
 
@@ -57,6 +58,20 @@ SRATEST_LIB = \
 	-sncbi-vdb \
 
 $(TEST_BINDIR)/test-fix_read_seg: $(SRATEST_OBJ)
+	$(LP) --exe -o $@ $^ $(SRATEST_LIB)
+
+
+#----------------------------------------------------------------
+# test-format_spot_name
+#
+
+TFSN_SRC = \
+	test-format_spot_name
+
+TFSN_OBJ = \
+	$(addsuffix .$(OBJX),$(TFSN_SRC))
+
+$(TEST_BINDIR)/test-format_spot_name: $(TFSN_OBJ)
 	$(LP) --exe -o $@ $^ $(SRATEST_LIB)
 
 

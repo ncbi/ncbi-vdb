@@ -77,8 +77,10 @@ rc_t CC KTUI_Destroy_platform ( struct KTUI_pf * pf );
 rc_t native_to_internal( VFSManager * vfs_mgr, const char * native, char * buffer, uint32_t buffer_size, size_t * written );
 rc_t internal_to_native( VFSManager * vfs_mgr, const char * internal, char * buffer, uint32_t buffer_size, size_t * written );
 rc_t set_native_caption( struct KTUIDlg * dlg, VFSManager * vfs_mgr, uint32_t id, const char * internal_path );
-rc_t fill_widget_with_dirs( struct KTUIDlg * dlg, KDirectory * dir, uint32_t id, const char * path, const char * to_focus );
-rc_t fill_widget_with_files( struct KTUIDlg * dlg, KDirectory * dir, uint32_t id, const char * path, const char * extension );
+rc_t fill_widget_with_dirs( struct KTUIDlg * dlg, KDirectory * dir, uint32_t id,
+                            const char * path, const char * to_focus, bool clear );
+rc_t fill_widget_with_files( struct KTUIDlg * dlg, KDirectory * dir, uint32_t id,
+                             const char * path, const char * extension, bool clear );
 
 #ifdef __cplusplus
 }

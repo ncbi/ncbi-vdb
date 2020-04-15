@@ -473,7 +473,7 @@ static rc_t wrap_in_rr_cache( KDirectory * dir,
 }
 
 #if WINDOWS
-    static const char * fallback_cache_location = "c:\temp";
+    static const char * fallback_cache_location = "c:\\temp";
     const char * get_fallback_cache_location( void )
     {
         return fallback_cache_location;
@@ -482,6 +482,9 @@ static rc_t wrap_in_rr_cache( KDirectory * dir,
     static const char * fallback_cache_location = "/var/tmp";
     const char * get_fallback_cache_location( void )
     {
+        const char * c = getenv ( "TMPDIR" );
+        if ( c != NULL )
+            return c;
         return fallback_cache_location;
     }
 #endif
@@ -501,15 +504,46 @@ static const String * make_id( const VPath * path )
     /* if we have no id now, as a last resort use a timestamp */
     if ( res == NULL )
     {
+        size_t num_writ = 0;
+        char buffer [ 4096 ];
+        static atomic32_t counter;
+#ifdef _WIN32
         KTime_t t = KTimeStamp();
-        char buffer[ 32 ];
-        size_t num_writ;
-        rc = string_printf ( buffer, sizeof buffer, &num_writ, "t_%lu", t );
+        rc = string_printf ( buffer, sizeof buffer, &num_writ
+                             , "t_%lu.%u"
+                             , t
+                             , atomic32_read_and_add ( & counter, 1 )
+            );
+#else
+        uint32_t sys_GetPID ( void );
+        uint32_t pid = sys_GetPID ();
+        int sys_GetHostName ( char * buffer, size_t buffer_size );
+        int status = sys_GetHostName ( buffer, sizeof buffer );
+        if ( status != 0 )
+        {
+            KTime_t t = KTimeStamp();
+            rc = string_printf ( buffer, sizeof buffer, &num_writ
+                                 , "t%u_%lu.%u"
+                                 , pid
+                                 , t
+                                 , atomic32_read_and_add ( & counter, 1 )
+                );
+        }
+        else
+        {
+            num_writ = strlen ( buffer );
+            rc = string_printf ( & buffer [ num_writ ], sizeof buffer - num_writ, &num_writ
+                                 , "-%u.%u"
+                                 , pid
+                                 , atomic32_read_and_add ( & counter, 1 )
+                );
+        }
+#endif
         if ( rc == 0 )
         {
             String S;
             StringInitCString( &S, buffer );
-            rc = StringCopy ( &res, &path_id );    
+            rc = StringCopy ( &res, &S );
         }
     }
     return res;
@@ -554,9 +588,9 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
     if ( cps -> use_file_cache )
     {
         char location[ 4096 ];
-        location[ 0 ] = 0;
         bool remove_on_close = false;
         bool promote = cps -> promote;
+        location[ 0 ] = 0;
     
         if ( cps -> debug )
             KOutMsg( "use file-cache\n" );
@@ -822,7 +856,10 @@ static rc_t CC VFSManagerGetConfigPWFile (const VFSManager * self, char * b, siz
             rc = KRepositoryMgrCurrentProtectedRepository ( repoMgr, &prot );
             if (rc == 0)
             {
-                rc = KRepositoryEncryptionKeyFile ( prot, b, bz, pz);            
+                rc = KRepositoryEncryptionKeyFile (prot, b, bz, pz);
+                if (rc != 0 || b[0] == '\0')
+                    rc = KRepositoryEncryptionKey (prot, b, bz, pz);
+
                 KRepositoryRelease(prot);
             }
             KRepositoryMgrRelease(repoMgr);
@@ -1071,7 +1108,8 @@ static rc_t VFSManagerResolvePathResolver (const VFSManager * self,
          */
         if ((flags & vfsmgr_rflag_no_acc_local) == 0)
         {
-            rc = VResolverLocal (self->resolver, in_path, (const VPath **)out_path);
+            rc = VResolverQuery(self->resolver, 0, in_path,
+                (const VPath **)out_path, NULL, NULL);
             if (rc == 0)
                 not_done = false;
         }
@@ -2987,16 +3025,18 @@ LIB_EXPORT rc_t CC VFSManagerMake ( VFSManager ** pmanager )
 
 /* Make
  */
-LIB_EXPORT rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
-    struct KConfig * cfg)
+static rc_t CC VFSManagerMakeFromKfgImpl ( struct VFSManager ** pmanager,
+    struct KConfig * cfg, bool local )
 {
     rc_t rc;
 
     if (pmanager == NULL)
         return RC (rcVFS, rcMgr, rcConstructing, rcParam, rcNull);
 
-    *pmanager = singleton;
-    if ( singleton != NULL )
+    *pmanager = NULL;
+    if (!local)
+        *pmanager = singleton;
+    if ( *pmanager != NULL )
     {
         rc = VFSManagerAddRef ( singleton );
         if ( rc != 0 )
@@ -3039,7 +3079,11 @@ LIB_EXPORT rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
                         rc = KKeyStoreMake ( & obj -> keystore, obj -> cfg );
                         if ( rc == 0 )
                         {
-                            rc = KNSManagerMake ( & obj -> kns );
+                            if (local)
+                                rc = KNSManagerMakeLocal ( & obj -> kns, cfg );
+                            else
+                                rc = KNSManagerMakeWithConfig
+                                                         ( & obj -> kns, cfg );
                             if ( rc != 0 )
                             {
                                 LOGERR ( klogWarn, rc, "could not build network manager" );
@@ -3053,7 +3097,9 @@ LIB_EXPORT rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
                                 rc = 0;
                             }
 
-                            *pmanager = singleton = obj;
+                            *pmanager = obj;
+                            if (!local)
+                                singleton = obj;
                             DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_MGR),  ("%s(%p)\n", __func__, cfg));
                             return 0;
                         }
@@ -3067,6 +3113,17 @@ LIB_EXPORT rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
     return rc;
 }
 
+LIB_EXPORT rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
+    struct KConfig * cfg)
+{
+    return VFSManagerMakeFromKfgImpl(pmanager, cfg, false);
+}
+
+LIB_EXPORT rc_t CC VFSManagerMakeLocal ( struct VFSManager ** pmanager,
+    struct KConfig * cfg)
+{
+    return VFSManagerMakeFromKfgImpl(pmanager, cfg, true);
+}
 
 LIB_EXPORT rc_t CC VFSManagerGetCWD (const VFSManager * self, KDirectory ** cwd)
 {

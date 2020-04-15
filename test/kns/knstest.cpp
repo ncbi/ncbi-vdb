@@ -142,6 +142,38 @@ TEST_CASE(KnsManagerMakeRelease)
     REQUIRE_RC(KNSManagerRelease(mgr));
 }
 
+TEST_CASE(KnsManagerSets)
+{
+    KNSManager* mgr;
+    REQUIRE_RC(KNSManagerMake(&mgr));
+    REQUIRE_NOT_NULL(mgr);
+
+    const char * ua=NULL;
+    KNSManagerGetUserAgent(&ua);
+    fprintf ( stderr, "UA #1 is '%s'\n", ua);
+
+    REQUIRE_RC(KNSManagerSetClientIP(mgr,"1.2.3.4"));
+    REQUIRE_RC(KNSManagerSetSessionID(mgr,"0x123"));
+    REQUIRE_RC(KNSManagerSetPageHitID(mgr,"abcd"));
+    KNSManagerGetUserAgent(&ua);
+    fprintf ( stderr, "UA #2 is '%s'\n", ua);
+
+    REQUIRE_RC_FAIL(KNSManagerSetClientIP(NULL, NULL));
+    REQUIRE_RC_FAIL(KNSManagerSetClientIP(mgr, NULL));
+    REQUIRE_RC(KNSManagerSetClientIP(mgr, "5.67.89.12"));
+    KNSManagerGetUserAgent(&ua);
+    fprintf ( stderr, "UA #3 is '%s'\n", ua);
+
+    char toobig[8192];
+    memset(toobig,'X',sizeof toobig);
+    toobig[sizeof toobig-1]='\0';
+    REQUIRE_RC(KNSManagerSetClientIP(mgr, toobig));
+    REQUIRE_RC(KNSManagerSetSessionID(mgr, toobig));
+    REQUIRE_RC(KNSManagerSetPageHitID(mgr, toobig));
+
+    REQUIRE_RC(KNSManagerRelease(mgr));
+}
+
 class KnsManagerFixture
 {
 public:
