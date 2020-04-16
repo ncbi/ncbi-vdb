@@ -1714,24 +1714,24 @@ static rc_t FileInitMapping ( File * self, const Item * item ) {
 
         if ( item -> tic != NULL )
             if (FileMappingByAcc( self ) || name == NULL )
-                rc = VPathMakeFmt ( & self -> mapping, "ncbi-acc:%s?tic=%s",
+                rc = VPathMakeFmt ( & self -> mapping, "ncbi-acc:%s#tic=%s",
                                                     item -> acc, item -> tic );
             else
-                rc = VPathMakeFmt ( & self -> mapping, "ncbi-file:%s?tic=%s",
+                rc = VPathMakeFmt ( & self -> mapping, "ncbi-file:%s#tic=%s",
                                                     name, item -> tic );
         else
             if (FileMappingByAcc(self) || name == NULL) {
                 if (projectId < 0)
                     rc = VPathMakeFmt(&self->mapping, "ncbi-acc:%s", item->acc);
                 else
-                    rc = VPathMakeFmt(&self->mapping, "ncbi-acc:%s?pId=%d",
+                    rc = VPathMakeFmt(&self->mapping, "ncbi-acc:%s#pId=%d",
                         item->acc, projectId);
             }
             else {
                 if (projectId < 0)
                     rc = VPathMakeFmt(&self->mapping, "ncbi-file:%s", name);
                 else {
-                    rc = VPathMakeFmt(&self->mapping, "ncbi-file:%s?pId=%d",
+                    rc = VPathMakeFmt(&self->mapping, "ncbi-file:%s#pId=%d",
                         name, projectId);
                     if (rc == 0 && self->mapping != NULL)
                         self->mapping->projectId = projectId;

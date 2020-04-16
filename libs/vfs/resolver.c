@@ -947,14 +947,14 @@ rc_t VPathCheckFromNamesCGI ( const VPath * path,
             StringSubstr(&path->query, &name, 0, 5);
             StringSubstr(&path->query, &val, 5, 0);
 
-            CONST_STRING(&req, "?tic=");
+            CONST_STRING(&req, "#tic=");
             if (StringEqual(&name, &req)) {
                 if (!StringEqual(&val, ticket))
                     return RC(rcVFS, rcResolver, rcResolving,
                         rcMessage, rcCorrupt);
             }
             else {
-                CONST_STRING(&req, "?pId=");
+                CONST_STRING(&req, "#pId=");
                 if (!StringEqual(&name, &req))
                     return RC(rcVFS, rcResolver, rcResolving,
                         rcMessage, rcCorrupt);
@@ -3046,17 +3046,13 @@ rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
 
     VResolverAppID app;
 
-/*
-    bool resolveAllAccToCache = true;
-    if ( dir != NULL )
-        resolveAllAccToCache = false;
-*/
-
     assert(path);
 
-    if ( VResolverFuseMountedResolve ( self, accession, path ) == 0 ) {
+    if ( VResolverFuseMountedResolve ( self, accession, path ) == 0 )
         return 0;
-    }
+
+    if (projectId == -1)
+        projectId = self->projectId;
 
     app = get_accession_app ( accession, refseq_ctx, & tok,
         & legacy_wgs_refseq, resolveAllAccToCache, NULL, parentAcc, projectId );
@@ -3634,12 +3630,8 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
             {
                 alg = VectorGet(&self->local, i);
 
-                if (alg->cache_capable &&
-                    (alg -> protected == protected
-                        || (protected && alg->alg_id == algSRAFlat)
-   /* protected resolvers are using SRA-Flat to download to public repository */
-                    )
-                    && (alg->app_id == app || alg->app_id == appAny))
+                if (alg->cache_capable && alg -> protected == protected &&
+                    (alg->app_id == app || alg->app_id == appAny))
                 {
                     /* try to find an existing cache file
                        NB - race condition exists unless
@@ -3672,11 +3664,8 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
         for (i = 0; i < count; ++i)
         {
             const VResolverAlg *alg = VectorGet(&self->ad, i);
-            if (alg->cache_capable &&
-                (alg -> protected == protected
-                    || (protected && alg->alg_id == algSRAAD) /* SRA-AD alg is*/
-                )        /* not protected but is used for protected resolvers */
-                && (alg->app_id == app || alg->app_id == appAny))
+            if (alg->cache_capable && alg -> protected == protected &&
+                (alg->app_id == app || alg->app_id == appAny))
             {
                 /* try to find an existing cache file
                    NB - race condition exists unless
@@ -3722,6 +3711,11 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
         if (dir != NULL)    /* out-dir is provided */
             useAd = true;   /* [when prefetch downloads to out-dir]
                                 - use AD, too */
+
+        /* cache references to AD */
+        if (!useAd && app == appREFSEQ && tok.accOfParentDb.size != 0)
+            useAd = true;
+
 #if 0
         if (!protected && VPathGetProjectId(query, NULL)) {
             useAd = true;     /* resolving protected URL returned by SDL */

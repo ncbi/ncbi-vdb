@@ -4150,9 +4150,9 @@ rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
         const char * fmt = NULL;
         assert(url);
         if (string_chr(url->addr, url->size, '?') == NULL)
-            fmt = "%S?tic=%S";
+            fmt = "%S#tic=%S";
         else
-            fmt = "%S&tic=%S";
+            fmt = "%S#tic=%S";
         return VPathMakeFmtExt(new_path, ext, id, tick, osize, date, md5,
             exp_date, service, objectType, type, ceRequired, payRequired, name,
             projectId, version, fmt, url, tick);
@@ -4161,9 +4161,9 @@ rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
         const char * fmt = NULL;
         assert(url);
         if (string_chr(url->addr, url->size, '?') == NULL)
-            fmt = "%S?pId=%d";
+            fmt = "%S#pId=%d";
         else
-            fmt = "%S&pId=%d";
+            fmt = "%S#pId=%d";
         return VPathMakeFmtExt(new_path, ext, id, tick, osize, date, md5,
             exp_date, service, objectType, type, ceRequired, payRequired, name,
             projectId, version, fmt, url, projectId);
@@ -4265,16 +4265,16 @@ VPUri_t LegacyVPathGetUri_t ( const VPath * self )
     return uri_type;
 }
 
-bool VPathGetProjectId(const VPath * self, uint32_t * projectId) {
+LIB_EXPORT
+bool CC VPathGetProjectId(const VPath * self, uint32_t * projectId)
+{
     uint32_t dummy = 0;
     if (projectId == NULL)
         projectId = &dummy;
 
-    assert(self);
-
     *projectId = 0;
 
-    if (self->projectId < 0)
+    if (self == NULL || self->projectId < 0)
         return false;
 
     *projectId = self->projectId;
