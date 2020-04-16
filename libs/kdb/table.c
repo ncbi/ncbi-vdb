@@ -236,9 +236,10 @@ static void ad(const KDBManager * self, const char * aPath, char ** path)
     if (*path != NULL)
         sprintf(*path, "%s/%s.sra", aPath, slash);
 
-    /* YES, DBG_VFS should be used here to be printed along with other VFS messages */
+    /* YES,
+      DBG_VFS should be used here to be printed along with other VFS messages */
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
-        ("'%s' was sesolved to '%s'\n", aPath, *path ));
+        ("'%s' was resolved to '%s'\n", aPath, *path ));
 }
 
 /* OpenTableRead
