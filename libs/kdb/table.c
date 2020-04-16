@@ -41,6 +41,8 @@
 #include <klib/printf.h>
 #include <klib/rc.h>
 
+#include <vfs/path.h> /* VFSManagerMakePath */
+
 #include <kfs/arc.h>
 #include <os-native.h>
 #include <sysalloc.h>
@@ -207,39 +209,12 @@ rc_t KTableMake ( KTable **tblp, const KDirectory *dir, const char *path )
     KRefcountInit ( & tbl -> refcount, 1, "KTable", "make", path );
     strcpy ( tbl -> path, path );
 
-    * tblp = tbl;
-    return 0;
-}
-
-static void ad(const KDBManager * self, const char * aPath, char ** path)
-{
-    const char *slash = strrchr(aPath, '/');
-
-    assert(self && aPath && path);
-
-    if (slash != NULL)
-        ++slash;
-    else
-        slash = aPath;
-
-    if ((KDirectoryPathType(self->wd, aPath) & ~kptAlias) != kptDir)
-        return;
-
-    if ((KDirectoryPathType(self->wd, "%s/%s.sra", aPath, slash)
-        & ~kptAlias) != kptFile)
-    {
-        return;
-    }
-
-    *path = calloc(1, strlen(aPath) + 6 + strlen(slash));
-
-    if (*path != NULL)
-        sprintf(*path, "%s/%s.sra", aPath, slash);
-
     /* YES,
       DBG_VFS should be used here to be printed along with other VFS messages */
-    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
-        ("'%s' was resolved to '%s'\n", aPath, *path ));
+    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), ("Making KTable '%s'\n", path));
+     
+    * tblp = tbl;
+    return 0;
 }
 
 /* OpenTableRead
@@ -270,7 +245,28 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
         const KDirectory *dir;
         bool prerelease = false;
 
-        ad(self, aTblpath, &tblpath);
+        {
+            VPath *path = NULL;
+            rc_t rc = VFSManagerMakePath(self->vfsmgr, & path, "%s", aTblpath);
+            if (rc == 0) {
+                const VPath *path2 = NULL;
+                KDBManagerCheckAd(self, path, &path2);
+                if (path2 != NULL) {
+                    const String * str = NULL;
+                    rc = VPathMakeString(path2, &str);
+                    if (rc == 0) {
+                        assert(str);
+                        tblpath = calloc(1, str->size + 1);
+                        if (tblpath != NULL)
+                            string_printf(tblpath, str->size + 1, NULL,
+                                "%S", str);
+                        StringWhack(str);
+                    }
+                    VPathRelease(path2);
+                }
+                VPathRelease(path);
+            }
+        }
 
         rc = KDBOpenPathTypeRead ( self, wd, tblpath, &dir, kptTable, NULL,
             try_srapath, vpath );
@@ -281,9 +277,6 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
                 try_srapath, vpath );
         }
 
-        if (aTblpath != tblpath)
-            free(tblpath);
-
         if ( rc == 0 )
         {
             rc = KTableMake ( & tbl, dir, tblpath );
@@ -292,11 +285,19 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *self,
                 tbl -> mgr = KDBManagerAttach ( self );
                 tbl -> prerelease = prerelease;
                 * tblp = tbl;
+
+                if (aTblpath != tblpath)
+                    free(tblpath);
+
                 return 0;
             }
             KDirectoryRelease ( dir );
         }
     }
+
+    if (aTblpath != tblpath)
+        free(tblpath);
+
     return rc;
 }
 
