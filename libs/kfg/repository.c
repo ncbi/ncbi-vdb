@@ -41,7 +41,7 @@
 #include <klib/rc.h>
 
 #include "kfg-priv.h" /* KConfigGetNgcFile */
-#include "ngc-priv.h"
+#include "ngc-priv.h" /* KNgcObjMakeFromCmdLine */
 
 #include <sysalloc.h>
 
@@ -1340,17 +1340,17 @@ LIB_EXPORT rc_t CC KRepositoryMgrRemoteRepositories ( const KRepositoryMgr *self
 static rc_t KRepositoryCurrentProtectedRepositoryForNgc(
     const KRepository ** self)
 {
-    rc_t rc = 0;
+    const KNgcObj * ngc = NULL;
 
-    const char * ngc_file = KConfigGetNgcFile();
+    rc_t rc = KNgcObjMakeFromCmdLine(&ngc);
 
-    if (ngc_file == NULL)
-        return SILENT_RC(rcKFG, rcMgr, rcAccessing,
-            rcNode, rcNotFound);
+    if (ngc == NULL) {
+        if (rc != 0)
+            return rc;
+        else
+            return SILENT_RC(rcKFG, rcMgr, rcAccessing, rcNode, rcNotFound);
+    }
     else {
-        KDirectory * dir = NULL;
-        const KFile * f = NULL;
-        const KNgcObj * ngc = NULL;
         KConfig * kfg = NULL;
         const KRepositoryMgr * mgr = NULL;
         KRepositoryVector vc;
@@ -1360,11 +1360,6 @@ static rc_t KRepositoryCurrentProtectedRepositoryForNgc(
         char n[512] = "";
         char v[512] = "";
 
-        rc = KDirectoryNativeDir(&dir);
-        if (rc == 0)
-            rc = KDirectoryOpenFileRead(dir, &f, "%s", ngc_file);
-        if (rc == 0)
-            rc = KNgcObjMakeFromFile(&ngc, f);
         if (rc == 0)
             rc = KNgcObjGetProjectId(ngc, &id);
         if (rc == 0)
@@ -1433,8 +1428,6 @@ static rc_t KRepositoryCurrentProtectedRepositoryForNgc(
         RELEASE(KRepositoryMgr, mgr);
         RELEASE(KConfig, kfg);
         RELEASE(KNgcObj, ngc);
-        RELEASE(KFile, f);
-        RELEASE(KDirectory, dir);
     }
 
     return rc;
