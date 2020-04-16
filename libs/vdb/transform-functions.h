@@ -29,6 +29,8 @@
 * How to add a new transform function to VDB:
 *  Add a VTRANSFACT_DECL for the new function
 *  Add the new function to VLinkerIntFactory fact[]
+*
+*  Copy/paste is your friend
 */
 
 extern VTRANSFACT_DECL ( vdb_cast );
