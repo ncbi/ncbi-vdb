@@ -3051,7 +3051,7 @@ rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
     if ( VResolverFuseMountedResolve ( self, accession, path ) == 0 )
         return 0;
 
-    if (projectId == -1)
+    if (projectId == -1 && self->ticket != NULL)
         projectId = self->projectId;
 
     app = get_accession_app ( accession, refseq_ctx, & tok,
