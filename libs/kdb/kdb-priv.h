@@ -115,6 +115,8 @@ rc_t KDBVMakeSubPath ( const struct KDirectory *dir,
  */
 bool KDBIsPathUri (const char * path);
 
+void KDBManagerCheckAd(const KDBManager *self,
+    const struct VPath *aPath, const struct VPath **path);
 
 #ifdef __cplusplus
 }
