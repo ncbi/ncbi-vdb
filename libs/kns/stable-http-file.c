@@ -26,6 +26,8 @@
 
 #include <kns/extern.h>
 
+#include "stable-http-file-priv.h" /* KStableHttpFile */
+
 #include "http-priv.h" /* SUPPORT_CHUNKED_READ */
 
 #include <kns/manager.h> /* KNSManagerRelease */
@@ -38,39 +40,6 @@
 #include <klib/time.h> /* KSleep */
 
 #include <strtol.h> /* strtou64 */
-
-#define KFILE_IMPL KStableHttpFile
-typedef struct KStableHttpFile KStableHttpFile;
-#include <kfs/impl.h> /* KFile_v1 */
-
-typedef enum {
-    eRSJustRetry,
-    eRSReopen,
-    eRSIncTO,
-    eRSMax,
-} ERetryState;
-
-struct KStableHttpFile
-{
-    KFile dad;
-
-    const KNSManager * mgr;
-    struct KStream * conn;
-    ver_t vers;
-    bool reliable;
-    bool need_env_token;
-    bool payRequired;
-    char * url;
-    KDataBuffer buf;
-
-    const KFile * file;
-    bool live;
-
-    bool _failed;
-    KTime_t _tFailed;
-    ERetryState _state;
-    uint32_t _sleepTO;
-};
 
 static
 void RetrierReset(const KStableHttpFile * cself, const char * func)
@@ -510,8 +479,8 @@ LIB_EXPORT rc_t CC KNSManagerMakeReliableHttpFile(const KNSManager *self,
     rc_t rc = 0;
     va_list args;
     va_start(args, url);
-        rc = KNSManagerVMakeHttpFileInt( self, file, conn,
-            vers, true, need_env_token, payRequired, url, args);
+    rc = KNSManagerVMakeHttpFileInt( self, file, conn,
+        vers, true, need_env_token, payRequired, url, args);
     va_end(args);
     return rc;
 }
