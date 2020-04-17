@@ -38,6 +38,8 @@
 #endif
 
 
+struct KClientHttp;
+struct KClientHttpRequest;
 struct KClientHttpResult;
 struct KDataBuffer;
 struct URLBlock;
