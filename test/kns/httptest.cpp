@@ -876,7 +876,7 @@ FIXTURE_TEST_CASE(GET_WITHOUT_CONTENT_LENGHT, HttpFixture) {
 
     size_t num_read = 0;
     REQUIRE_RC(KFileRead(m_file, 0, buffer, size, &num_read));
-    REQUIRE_EQ(num_read, size);
+    REQUIRE_EQ((uint64_t)num_read, size);
 
     delete[](buffer);
 }
