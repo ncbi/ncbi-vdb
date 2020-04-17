@@ -947,14 +947,14 @@ rc_t VPathCheckFromNamesCGI ( const VPath * path,
             StringSubstr(&path->query, &name, 0, 5);
             StringSubstr(&path->query, &val, 5, 0);
 
-            CONST_STRING(&req, "#tic=");
+            CONST_STRING(&req, "?tic=");
             if (StringEqual(&name, &req)) {
                 if (!StringEqual(&val, ticket))
                     return RC(rcVFS, rcResolver, rcResolving,
                         rcMessage, rcCorrupt);
             }
             else {
-                CONST_STRING(&req, "#pId=");
+                CONST_STRING(&req, "?pId=");
                 if (!StringEqual(&name, &req))
                     return RC(rcVFS, rcResolver, rcResolving,
                         rcMessage, rcCorrupt);
