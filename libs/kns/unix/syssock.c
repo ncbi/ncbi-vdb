@@ -1040,6 +1040,7 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
     struct KEndPoint const * from, struct KEndPoint const * to )
 {
     rc_t rc;
+    return RC ( rcNS, rcSocket, rcCreating, rcError, rcUnknown );
 
     if ( out == NULL )
         rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcNull );
