@@ -28,7 +28,7 @@
 
 #include "http-file-priv.h"
 
-#include "http-priv.h"
+#include "http-priv.h" /* SUPPORT_CHUNKED_READ */
 #include "mgr-priv.h"
 #include "stream-priv.h"
 
@@ -68,8 +68,6 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
-
-#define SUPPORT_CHUNKED_READ 1
 
 #if SUPPORT_CHUNKED_READ
 #include <kfs/chunk-reader.h>
