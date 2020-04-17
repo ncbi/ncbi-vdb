@@ -42,6 +42,7 @@ struct KClientHttp;
 struct KClientHttpRequest;
 struct KClientHttpResult;
 struct KDataBuffer;
+struct String;
 struct URLBlock;
 
 #ifdef __cplusplus
