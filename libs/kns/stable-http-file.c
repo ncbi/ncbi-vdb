@@ -105,7 +105,14 @@ static rc_t RetrierAgain
 
     static bool INITED = false;
     static KTime_t D_T = ~0;
+
+#if 0
+   /* by default retry reliable file even when there were no successful read */
     static bool RETRY_FIRST = true;
+#else
+   /* by default don't retry reliable file when there were no successful read */
+    static bool RETRY_FIRST = false;
+#endif
 
     if (!INITED) {
         const char * str = getenv("NCBI_VDB_HTTP_FILE_RETRY");
@@ -116,8 +123,19 @@ static rc_t RetrierAgain
                 D_T = ~0;
         }
 
-        if (getenv("NCBI_VDB_HTTP_FILE_NO_RETRY_FIRST") != NULL)
-            RETRY_FIRST = false;
+        str = getenv("NCBI_VDB_HTTP_FILE_RETRY_FIRST");
+        if (str != NULL && str[0] != '\0') {
+            switch (str[0]) {
+            case '0':
+                RETRY_FIRST = false;
+                break;
+            case '1':
+                RETRY_FIRST = true;
+                break;
+            default:
+                break;
+            }
+        }
 
         INITED = true;
     }
