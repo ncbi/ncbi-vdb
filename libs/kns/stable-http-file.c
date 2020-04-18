@@ -105,6 +105,8 @@ static rc_t RetrierAgain
 
     static bool INITED = false;
     static KTime_t D_T = ~0;
+    static bool RETRY_FIRST = true;
+
     if (!INITED) {
         const char * str = getenv("NCBI_VDB_HTTP_FILE_RETRY");
         if (str != NULL) {
@@ -113,13 +115,23 @@ static rc_t RetrierAgain
             if (end[0] != 0)
                 D_T = ~0;
         }
+
+        if (getenv("NCBI_VDB_HTTP_FILE_NO_RETRY_FIRST") != NULL)
+            RETRY_FIRST = false;
+
         INITED = true;
     }
 
     assert(self);
 
-    if (D_T == 0 || !self->live)
+    if (D_T == 0)             /* don't retry when overall retry time == 0 */
         retry = false;
+    else if (!self->live      /* don't retry when no READ calls succeed */
+        && (!self->reliable   /* unless file is reliable */
+            || !RETRY_FIRST)) /* and retry was not disabled by env.var. */
+    {
+        retry = false;
+    }
     else
         switch (self->_state) {
         case eRSJustRetry:
@@ -151,17 +163,32 @@ static rc_t RetrierAgain
             else
                 switch (self->_state) {
                 case eRSJustRetry:
-                    PLOGERR(klogErr, (klogErr, rc,
-                        "Cannot $(f): retrying...", "f=%s", func));
+                    if (self->live)
+                        PLOGERR(klogErr, (klogErr, rc,
+                            "Cannot $(f): retrying...", "f=%s", func));
+                    else
+                        PLOGERR(klogErr, (klogErr, rc,
+                            "Cannot $(f): retrying [first]...", "f=%s", func));
                     break;
                 case eRSReopen:
-                    PLOGERR(klogErr, (klogErr, rc,
-                        "Cannot $(f): reopened, retrying...", "f=%s", func));
+                    if (self->live)
+                        PLOGERR(klogErr, (klogErr, rc,
+                            "Cannot $(f): reopened, retrying...",
+                            "f=%s", func));
+                    else
+                        PLOGERR(klogErr, (klogErr, rc,
+                            "Cannot $(f): reopened, retrying [first]...",
+                            "f=%s", func));
                     break;
                 case eRSIncTO:
-                    PLOGERR(klogErr, (klogErr, rc, "Cannot $(f): "
-                        "sleep TO = $(to)s, retrying...",
-                        "f=%s,to=%u", func, self->_sleepTO));
+                    if (self->live)
+                        PLOGERR(klogErr, (klogErr, rc, "Cannot $(f): "
+                            "sleep TO = $(to)s, retrying...",
+                            "f=%s,to=%u", func, self->_sleepTO));
+                    else
+                        PLOGERR(klogErr, (klogErr, rc, "Cannot $(f): "
+                            "sleep TO = $(to)s, retrying [first]...",
+                            "f=%s,to=%u", func, self->_sleepTO));
                     break;
                 default: assert(0); break;
                 }
