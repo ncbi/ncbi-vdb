@@ -681,6 +681,30 @@ static bool KNSManagerLoadRetryFirstRead(const KConfig *kfg) {
     return result;
 }
 
+static bool KNSManagerLoadRetryFile(const KConfig *kfg) {
+    rc_t rc = 0;
+
+    bool result = 0;
+
+    const char * str = getenv("NCBI_VDB_RELIABLE_RETRY_FILE");
+    if (str != NULL && str[0] != '\0') {
+        switch (str[0]) {
+        case 'f':
+            return false;
+        case 't':
+            return true;
+        default:
+            break;
+        }
+    }
+
+    rc = KConfigReadBool(kfg, "/http/reliable/retryFile", &result);
+    if (rc != 0)
+        result = true;
+
+    return result;
+}
+
 static uint8_t KNSManagerLoadMaxNumberOfRetriesOnFailureForReliableURLs
 (const KConfig *kfg)
 {
@@ -790,7 +814,8 @@ static rc_t CC KNSManagerMakeConfigImpl ( KNSManager **mgrp, KConfig *kfg )
             mgr->maxNumberOfRetriesOnFailureForReliableURLs
                 = KNSManagerLoadMaxNumberOfRetriesOnFailureForReliableURLs (
                     kfg );
-            mgr->retryFirstRead = KNSManagerLoadRetryFirstRead ( kfg );
+            mgr->retryFirstRead = KNSManagerLoadRetryFirstRead(kfg);
+            mgr->retryFile = KNSManagerLoadRetryFile ( kfg );
 
             /*          mgr->logTlsErrors = KNSManagerLoadLogTlsErrors(kfg);
                         mgr->emulateTlsReadErrors

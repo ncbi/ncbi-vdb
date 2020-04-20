@@ -71,6 +71,7 @@ struct KNSManager
     uint8_t  maxNumberOfRetriesOnFailureForReliableURLs;
 
     bool retryFirstRead;
+    bool retryFile;
 
     struct KNSProxies * proxies;
 
