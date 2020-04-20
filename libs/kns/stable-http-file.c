@@ -435,7 +435,7 @@ static rc_t KNSManagerVMakeHttpFileInt(const KNSManager *self,
 {
     rc_t rc = 0;
 
-    if (getenv("NCBI_VDB_HTTP_FILE_NO_RETRY") != NULL)
+    if (self != NULL && !self->retryFile)
         return KNSManagerVMakeHttpFileIntUnstable(self, file,
             conn, vers, reliable, need_env_token, payRequired, url, args);
 
