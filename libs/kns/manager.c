@@ -592,7 +592,7 @@ static void KNSManagerSetNCBI_VDB_NET ( KNSManager *self, const KConfig *kfg )
 /* VDB-DESIREMENTS:
 1. to call *[s]/kfg/properties* to read configuration
 2. to create a header file to keep constants (node names) */
-static int32_t KNSManagerPrepareConnTimeout ( KConfig *kfg )
+static int32_t KNSManagerLoadConnTimeout ( KConfig *kfg )
 {
     int64_t result = 0;
     rc_t rc = KConfigReadI64 ( kfg, "/libs/kns/connect/timeout", &result );
@@ -600,7 +600,7 @@ static int32_t KNSManagerPrepareConnTimeout ( KConfig *kfg )
 
     return result;
 }
-static int32_t KNSManagerPrepareConnReadTimeout ( KConfig *kfg )
+static int32_t KNSManagerLoadConnReadTimeout ( KConfig *kfg )
 {
     int64_t result = 0;
     rc_t rc = KConfigReadI64 ( kfg, "/libs/kns/connect/timeout/read", &result );
@@ -608,7 +608,7 @@ static int32_t KNSManagerPrepareConnReadTimeout ( KConfig *kfg )
 
     return result;
 }
-static int32_t KNSManagerPrepareConnWriteTimeout ( KConfig *kfg )
+static int32_t KNSManagerLoadConnWriteTimeout ( KConfig *kfg )
 {
     int64_t result = 0;
     rc_t rc
@@ -618,7 +618,7 @@ static int32_t KNSManagerPrepareConnWriteTimeout ( KConfig *kfg )
     return result;
 }
 
-static int32_t KNSManagerPrepareHttpReadTimeout ( KConfig *kfg )
+static int32_t KNSManagerLoadHttpReadTimeout ( KConfig *kfg )
 {
     int64_t result = 0;
     rc_t rc = KConfigReadI64 ( kfg, "/http/timeout/read", &result );
@@ -626,7 +626,7 @@ static int32_t KNSManagerPrepareHttpReadTimeout ( KConfig *kfg )
 
     return result;
 }
-static int32_t KNSManagerPrepareHttpWriteTimeout ( KConfig *kfg )
+static int32_t KNSManagerLoadHttpWriteTimeout ( KConfig *kfg )
 {
     int64_t result = 0;
     rc_t rc = KConfigReadI64 ( kfg, "/http/timeout/write", &result );
@@ -636,7 +636,7 @@ static int32_t KNSManagerPrepareHttpWriteTimeout ( KConfig *kfg )
 }
 
 #if 0
-static bool KNSManagerPrepareLogTlsErrors(KConfig* kfg) {
+static bool KNSManagerLoadLogTlsErrors(KConfig* kfg) {
     const char * e = getenv("NCBI_VDB_TLS_LOG_ERR");
     if (e != NULL)
         if (e[0] == '\0')
@@ -660,7 +660,7 @@ static bool KNSManagerPrepareLogTlsErrors(KConfig* kfg) {
     }
 }
 
-static int KNSManagerPrepareEmulateTldReadErrors(KConfig* kfg) {
+static int KNSManagerLoadEmulateTldReadErrors(KConfig* kfg) {
     const char * e = getenv("NCBI_VDB_ERR_MBEDTLS_READ");
     if (e != NULL)
         return atoi(e);
@@ -675,7 +675,7 @@ static int KNSManagerPrepareEmulateTldReadErrors(KConfig* kfg) {
 }
 #endif
 
-static bool KNSManagerPrepareResolveToCache ( KConfig *kfg )
+static bool KNSManagerLoadResolveToCache ( KConfig *kfg )
 {
     /* VResolverCache resolve to user's cache vs. cwd/AD */
     bool reslt = true;
@@ -688,7 +688,7 @@ static bool KNSManagerPrepareResolveToCache ( KConfig *kfg )
     return true;
 }
 
-static bool KNSManagerPrepareAcceptAwsCharges ( KConfig *kfg )
+static bool KNSManagerLoadAcceptAwsCharges ( KConfig *kfg )
 {
     bool reslt = false;
 
@@ -699,7 +699,7 @@ static bool KNSManagerPrepareAcceptAwsCharges ( KConfig *kfg )
     return false;
 }
 
-static bool KNSManagerPrepareAcceptGcpCharges ( KConfig *kfg )
+static bool KNSManagerLoadAcceptGcpCharges ( KConfig *kfg )
 {
     bool reslt = false;
 
@@ -722,22 +722,22 @@ static rc_t CC KNSManagerMakeConfigImpl ( KNSManager **mgrp, KConfig *kfg )
             rc = RC ( rcNS, rcMgr, rcAllocating, rcMemory, rcExhausted );
         } else {
             KRefcountInit ( &mgr->refcount, 1, "KNSManager", "init", "kns" );
-            mgr->conn_timeout = KNSManagerPrepareConnTimeout ( kfg );
-            mgr->conn_read_timeout = KNSManagerPrepareConnReadTimeout ( kfg );
-            mgr->conn_write_timeout = KNSManagerPrepareConnWriteTimeout ( kfg );
-            mgr->http_read_timeout = KNSManagerPrepareHttpReadTimeout ( kfg );
-            mgr->http_write_timeout = KNSManagerPrepareHttpWriteTimeout ( kfg );
+            mgr->conn_timeout = KNSManagerLoadConnTimeout ( kfg );
+            mgr->conn_read_timeout = KNSManagerLoadConnReadTimeout ( kfg );
+            mgr->conn_write_timeout = KNSManagerLoadConnWriteTimeout ( kfg );
+            mgr->http_read_timeout = KNSManagerLoadHttpReadTimeout ( kfg );
+            mgr->http_write_timeout = KNSManagerLoadHttpWriteTimeout ( kfg );
             mgr->maxTotalWaitForReliableURLs_ms = 10 * 60 * 1000; /* 10 min */
             mgr->maxNumberOfRetriesOnFailureForReliableURLs = 10;
 
-            /*          mgr->logTlsErrors = KNSManagerPrepareLogTlsErrors(kfg);
+            /*          mgr->logTlsErrors = KNSManagerLoadLogTlsErrors(kfg);
                         mgr->emulateTlsReadErrors
-                            = KNSManagerPrepareEmulateTldReadErrors(kfg); */
+                            = KNSManagerLoadEmulateTldReadErrors(kfg); */
 
-            mgr->resolveToCache = KNSManagerPrepareResolveToCache ( kfg );
+            mgr->resolveToCache = KNSManagerLoadResolveToCache ( kfg );
 
-            mgr->accept_aws_charges = KNSManagerPrepareAcceptAwsCharges ( kfg );
-            mgr->accept_gcp_charges = KNSManagerPrepareAcceptGcpCharges ( kfg );
+            mgr->accept_aws_charges = KNSManagerLoadAcceptAwsCharges ( kfg );
+            mgr->accept_gcp_charges = KNSManagerLoadAcceptGcpCharges ( kfg );
 
             if ( strlen ( kns_manager_guid.base ) == 0 ) {
                 rc = KDataBufferResize ( &kns_manager_guid, 37 );
