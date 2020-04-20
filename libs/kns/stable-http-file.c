@@ -106,14 +106,7 @@ static rc_t RetrierAgain
 
     static bool INITED = false;
     static KTime_t D_T = ~0;
-
-#if 0
-   /* by default retry reliable file even when there were no successful read */
-    static bool RETRY_FIRST = true;
-#else
-   /* by default don't retry reliable file when there were no successful read */
     static bool RETRY_FIRST = false;
-#endif
 
     assert(self && self->mgr);
 
