@@ -26,10 +26,6 @@
 
 #include <kns/extern.h>
 
-#include "stable-http-file-priv.h" /* KStableHttpFile */
-
-#include "http-priv.h" /* SUPPORT_CHUNKED_READ */
-
 #include <kns/manager.h> /* KNSManagerRelease */
 #include <kns/stream.h> /* KStreamRelease */
 
@@ -40,6 +36,11 @@
 #include <klib/time.h> /* KSleep */
 
 #include <strtol.h> /* strtou64 */
+
+#include "http-priv.h" /* SUPPORT_CHUNKED_READ */
+#include "mgr-priv.h" /* KNSManager */
+
+#include "stable-http-file-priv.h" /* KStableHttpFile */
 
 static
 void RetrierReset(const KStableHttpFile * cself, const char * func)
@@ -114,33 +115,14 @@ static rc_t RetrierAgain
     static bool RETRY_FIRST = false;
 #endif
 
-    if (!INITED) {
-        const char * str = getenv("NCBI_VDB_HTTP_FILE_RETRY");
-        if (str != NULL) {
-            char *end = NULL;
-            D_T = strtou64(str, &end, 0);
-            if (end[0] != 0)
-                D_T = ~0;
-        }
+    assert(self && self->mgr);
 
-        str = getenv("NCBI_VDB_HTTP_FILE_RETRY_FIRST");
-        if (str != NULL && str[0] != '\0') {
-            switch (str[0]) {
-            case '0':
-                RETRY_FIRST = false;
-                break;
-            case '1':
-                RETRY_FIRST = true;
-                break;
-            default:
-                break;
-            }
-        }
+    if (!INITED) {
+        D_T = self->mgr->maxTotalWaitForReliableURLs_ms / 1000;
+        RETRY_FIRST = self->mgr->retryFirstRead;
 
         INITED = true;
     }
-
-    assert(self);
 
     if (D_T == 0)             /* don't retry when overall retry time == 0 */
         retry = false;
