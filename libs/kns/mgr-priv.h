@@ -68,8 +68,9 @@ struct KNSManager
     int32_t http_write_timeout;
 
     uint32_t maxTotalWaitForReliableURLs_ms;
-
     uint8_t  maxNumberOfRetriesOnFailureForReliableURLs;
+
+    bool retryFirstRead;
 
     struct KNSProxies * proxies;
 

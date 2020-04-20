@@ -47,6 +47,7 @@
 
 #include <atomic.h> /* atomic_ptr_t */
 #include <ctype.h>
+#include <strtol.h> /* strtou64 */
 #include <sysalloc.h>
 
 #include <assert.h>
@@ -635,6 +636,62 @@ static int32_t KNSManagerLoadHttpWriteTimeout ( KConfig *kfg )
     return result;
 }
 
+static uint32_t KNSManagerLoadTotalWaitForReliableURLs(const KConfig *kfg)
+{
+    rc_t rc = 0;
+
+    int64_t result = 0;
+
+    const char * str = getenv("NCBI_VDB_RELIABLE_WAIT");
+    if (str != NULL) {
+        char *end = NULL;
+        result = strtou64(str, &end, 0);
+        if (end[0] == 0)
+            return result * 1000;
+    }
+
+    rc = KConfigReadI64(kfg, "/http/reliable/wait", &result);
+    if (rc != 0 || result < 0)
+        result = 10 * 60; /* 10 min */
+
+    return result * 1000; /* convert seconds to ms */
+}
+
+static bool KNSManagerLoadRetryFirstRead(const KConfig *kfg) {
+    rc_t rc = 0;
+
+    bool result = 0;
+
+    const char * str = getenv("NCBI_VDB_RELIABLE_RETRY_FIRST_READ");
+    if (str != NULL && str[0] != '\0') {
+        switch (str[0]) {
+        case 'f':
+            return false;
+        case 't':
+            return true;
+        default:
+            break;
+        }
+    }
+
+    rc = KConfigReadBool(kfg, "/http/reliable/retryFirstRead", &result);
+    if (rc != 0)
+        result = false;
+
+    return result;
+}
+
+static uint8_t KNSManagerLoadMaxNumberOfRetriesOnFailureForReliableURLs
+(const KConfig *kfg)
+{
+    int64_t result = 0;
+    rc_t rc = KConfigReadI64(kfg, "/http/reliable/retries", &result);
+    if (rc != 0 || result < 0)
+        result = 10;
+
+    return result;
+}
+
 #if 0
 static bool KNSManagerLoadLogTlsErrors(KConfig* kfg) {
     const char * e = getenv("NCBI_VDB_TLS_LOG_ERR");
@@ -722,13 +779,18 @@ static rc_t CC KNSManagerMakeConfigImpl ( KNSManager **mgrp, KConfig *kfg )
             rc = RC ( rcNS, rcMgr, rcAllocating, rcMemory, rcExhausted );
         } else {
             KRefcountInit ( &mgr->refcount, 1, "KNSManager", "init", "kns" );
+
             mgr->conn_timeout = KNSManagerLoadConnTimeout ( kfg );
             mgr->conn_read_timeout = KNSManagerLoadConnReadTimeout ( kfg );
             mgr->conn_write_timeout = KNSManagerLoadConnWriteTimeout ( kfg );
             mgr->http_read_timeout = KNSManagerLoadHttpReadTimeout ( kfg );
             mgr->http_write_timeout = KNSManagerLoadHttpWriteTimeout ( kfg );
-            mgr->maxTotalWaitForReliableURLs_ms = 10 * 60 * 1000; /* 10 min */
-            mgr->maxNumberOfRetriesOnFailureForReliableURLs = 10;
+            mgr->maxTotalWaitForReliableURLs_ms
+                = KNSManagerLoadTotalWaitForReliableURLs ( kfg );
+            mgr->maxNumberOfRetriesOnFailureForReliableURLs
+                = KNSManagerLoadMaxNumberOfRetriesOnFailureForReliableURLs (
+                    kfg );
+            mgr->retryFirstRead = KNSManagerLoadRetryFirstRead ( kfg );
 
             /*          mgr->logTlsErrors = KNSManagerLoadLogTlsErrors(kfg);
                         mgr->emulateTlsReadErrors
