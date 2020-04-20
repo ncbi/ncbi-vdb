@@ -3775,7 +3775,7 @@ LIB_EXPORT rc_t CC KConfigNodeReadI64 ( const KConfigNode *self, int64_t *result
             rc = ReadNodeValueFixed(self, buf, sizeof(buf));
             if (rc == 0)
             {
-              if ( buf [ 0 ] == '\0' )      /* TODO: to add test */
+              if ( buf [ 0 ] == '\0' )
                 rc = RC(rcKFG, rcNode, rcReading, rcNode, rcEmpty);
               else {
                 char* endptr;
@@ -3818,7 +3818,7 @@ LIB_EXPORT rc_t CC KConfigNodeReadU64 ( const KConfigNode *self, uint64_t* resul
             rc = ReadNodeValueFixed(self, buf, sizeof(buf));
             if (rc == 0)
             {
-              if ( buf [ 0 ] == '\0' )      /* TODO: to add test */
+              if ( buf [ 0 ] == '\0' )
                 rc = RC(rcKFG, rcNode, rcReading, rcNode, rcEmpty);
               else {
                 char* endptr;
@@ -3861,7 +3861,7 @@ LIB_EXPORT rc_t CC KConfigNodeReadF64( const KConfigNode *self, double* result )
             rc = ReadNodeValueFixed(self, buf, sizeof(buf));
             if (rc == 0)
             {
-              if ( buf [ 0 ] == '\0' )      /* TODO: to add test */
+              if ( buf [ 0 ] == '\0' )
                 rc = RC(rcKFG, rcNode, rcReading, rcNode, rcEmpty);
               else {
                 char* endptr;
