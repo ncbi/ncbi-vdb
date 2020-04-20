@@ -266,9 +266,11 @@ rc_t HttpRetrySpecsFromConfig ( HttpRetrySpecs* self, const KConfigNode* node )
         {
             const char *name;
             rc = KNamelistGet ( names, i, & name );  
-            
+
+            if ( string_size(name) != 3 )
+                continue;
+
             /* convert name to code */
-            assert ( string_size(name) == 3 );
             if ( string_cmp ( name, 3, "4xx", 3, 3 ) == 0 )
                 rc = HttpRetrySpecsConfigNode ( node, name, & self -> codes [ cur ], 4 );
             else if ( string_cmp ( name, 3, "5xx", 3, 3 ) == 0 )
