@@ -22,6 +22,7 @@
 *
 * ==============================================================================
 *
+* KStableHttpFile : retry wrapper on KHttpFile
 */
 
 #include <kns/extern.h>

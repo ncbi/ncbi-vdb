@@ -34,7 +34,7 @@ typedef struct KStableHttpFile KStableHttpFile;
 #include <klib/data-buffer.h>
 
 /*--------------------------------------------------------------------------
- * KStableHttpFile
+ * KStableHttpFile: retry wrapper on KHttpFile
  */
 
 /* retrier states */
