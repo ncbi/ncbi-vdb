@@ -107,7 +107,12 @@ bool RetrierIncSleepTO(KStableHttpFile * self)
         return true;
 }
 
-/* the last call to the file was failed: prepare to retry */
+/* The last call to the file was failed: prepare to retry.
+ *
+ * RetrierAgain returns:
+ *  0:        to retry operation
+ *  non-0 rc: to abandon - break retry loop
+ */
 static
 rc_t RetrierAgain(const KStableHttpFile * cself,
     rc_t rc, const char * func)
