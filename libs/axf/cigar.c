@@ -250,6 +250,7 @@ rc_t cigar_string_2_0(KDataBuffer *dst,
     int opcode;
     
 #define BUF_WRITE(OP, LEN) { if ((rc = op2b(dst, (unsigned const)(di + boff), &nwrit, (int const)(OP), (unsigned)(LEN))) != 0) return rc; di += nwrit; }
+    assert ( read_start >= 0 );
     si = read_start;
     if ( /* !use_S && */ read_start == read_end && reflen > 0 ) /** full delete as a last ploidy ends up written nowhere  **/
     {
