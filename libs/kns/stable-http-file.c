@@ -270,6 +270,8 @@ rc_t CC KHttpFileTimedRead ( const KStableHttpFile *self,
     uint64_t pos, void *buffer, size_t bsize,
     size_t *num_read, struct timeout_t *tm )
 {
+    rc_t(CC * quitting) (void) = NULL; /* TODO */
+
     while (true) {
         rc_t rc = KFileTimedRead(self->file, pos, buffer, bsize, num_read, tm);
         if (rc == 0) {
@@ -280,9 +282,11 @@ rc_t CC KHttpFileTimedRead ( const KStableHttpFile *self,
             rc = RetrierAgain(self, rc, __func__);
             if (rc != 0)
                 return rc;
-            rc = Quitting();
-            if (rc != 0)
-                return rc;
+            if (quitting != NULL) {
+                rc = quitting();
+                if (rc != 0)
+                    return rc;
+            }
         }
     }
 }
