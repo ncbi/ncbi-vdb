@@ -647,14 +647,14 @@ static uint32_t KNSManagerLoadTotalWaitForReliableURLs(const KConfig *kfg)
         char *end = NULL;
         result = strtou64(str, &end, 0);
         if (end[0] == 0)
-            return result * 1000;
+            return result;
     }
 
     rc = KConfigReadI64(kfg, "/http/reliable/wait", &result);
     if (rc != 0 || result < 0)
-        result = 10 * 60; /* 10 min */
+        result = 10 * 60 * 1000; /* 10 min */
 
-    return result * 1000; /* convert seconds to ms */
+    return result;
 }
 
 static bool KNSManagerLoadRetryFirstRead(const KConfig *kfg) {
@@ -816,7 +816,7 @@ static rc_t CC KNSManagerMakeConfigImpl ( KNSManager **mgrp, KConfig *kfg )
                     kfg );
             mgr->retryFirstRead = KNSManagerLoadRetryFirstRead(kfg);
             mgr->retryFile = KNSManagerLoadRetryFile ( kfg );
-
+            mgr->max_http_read_timeout = 60 * 1000; /* 1 minute */
             /*          mgr->logTlsErrors = KNSManagerLoadLogTlsErrors(kfg);
                         mgr->emulateTlsReadErrors
                             = KNSManagerLoadEmulateTldReadErrors(kfg); */
