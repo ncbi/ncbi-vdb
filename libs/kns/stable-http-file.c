@@ -99,7 +99,7 @@ bool RetrierIncSleepTO(KStableHttpFile * self)
         self->_sleepTO *= 2;
 
     if (self->_sleepTO == 16)
-        --self->_sleepTO;
+        self->_sleepTO = 15;
 
     if (self->_sleepTO > 20 * 60 /* 20 minutes */)
         return false;
